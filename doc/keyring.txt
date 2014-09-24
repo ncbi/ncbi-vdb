@@ -1,0 +1,256 @@
+The goal is to create a per-user storage for decryption keys associated with encrypted accessions.
+
+Location:
+$HOME/.ncbi/vdb-keyring
+    A VDB database in an encrypted .kar file; encryption key for the file is the user's keyring password
+    VDatabase -> VTable -> KTable -> KDirectory -> archived -> KFile -> encrypted -> KFile
+
+Unlocking the keyring:
+    Each time a FUSE application starts, the user provides a password. The keyring database is loaded into memory and decrypted into a data structure inside a server process (which is started if not yet running for this user). This requires a portable IPC mechanism (e.g. a Linux/Windows IPC API, not yet a part of our system). 
+    The decoded keys are kept in a secure (=non-swappable) RAM (need library support for this).
+    When the FUSE app goes away, it detaches from the keyring server. Once all client apps are gone, the server can shut down (or stick around).
+        Option: Create an unlock utility, independent from FUSE. Will be required if/when we support the ability to work without FUSE.
+        Note: A FUSE app can work without asking for the password (or communicating with the keyring server process), but it will not be able to decrypt encrypted accessions.
+        Note: There is one (or zero) keyring server process per user account per host at any one time. There can be multiple shells/FUSE apps communicating with it. 
+    
+Populating the keyring. Projects.
+    Importing an .ngc file (currently the contents are added to the user's .mkfg file) will register the project with the keyring server, which will add the project's id, download key, encryption key to the database. 
+    
+Populating the keyring. Accessions.
+    Each newly downloaded encrypted accession will be registered with the server, in association with a project. The project's encryption key will be associated with the accession.
+    NOTE. This is not necessarily limited to accessions; can be any object with some sort of id, potentially with an associated object type. After registration, the object is no longer directly associated with a project. This is a shift in our previous "policy" which was more of a description of a technical shortcoming.
+
+Retrieving download keys.
+    The server will provide a method to retrieve a download key by the project's id (for use by the resolver)
+    
+Retrieving encryption keys.
+    The server will provide a method to retrieve an encryption key by the accession's dbGaP id (for use by the krypto code). This will be the key provided when the accession was downloaded (not necessarily the corresponding project's latest key). 
+    
+Managing the keyring password.
+    New functions for the vdb-passwd utility (currently changes the user's global encryption key):
+    - create an initial keyring
+    - change keyring password (reencrypt the KeyRing database file with the new password)
+
+Unlocking a FUSE workspace (=project).
+    FUSE application start up:
+        - start the Keyring server process if not running
+            - ask the user for the Keyring password (only if starting the server?)
+            - server: read/decrypt the keyring database using the provided password
+        - register the project's keys in the keyring
+            - server(?): if not yet registered, locate in the user's configuration, retrieve the project's encryption key file (repository/user/protected/<projName>/key-file) 
+            NOTE. Encryption keys openly exist on disk already, we are trying to address this situation.
+            We will probably allow an existing configuration to be converted to a keyring by swooping up all of these key files and creating the entries, then overwriting and deleting the key files. Currently their only protection is through file system access.
+    
+Keyring database update policy: commit (and encrypt) after each update? 
+
+No need to re-enter the keyring password more than once per lifetime of an instance of the server. The user-provided password has to be stored in non-paged key memory just in case the keyring is updated during the server session.
+
+===========
+    
+Client-side API 
+
+Ideally, all keys (including download tickets) would be stored in a single column of a single table. There will typically be very few keys, so the data - decrypted and decompressed - should fit nicely into a small amount of memory in the server process that would be marked as not-purgeable/pageable. If we have enough control to then ask keys to be mapped into client space, the keys would not need segregation by client application so we should be able to export all of the keys in the keyring to the client code, and return pointers through the API.
+
+In terms of the security, the authority is granted to the user, the connection from client app to server is accepted based upon user identity, at which point the user is allowed access to all contents of the keyring and the only thing we're trying to do is to handle data carefully so that the keys don't get leaked to other users.
+
+    KeyStore: a new interface in KFG; for use in vfs/manager and the new fuser. KRepositoryMgr will accept an (optional?) instance of KeyStore 
+                to use for retrieving encryption keys
+        KeyStoreAddRef(KeyStore*)
+        KeyStoreRelease(KeyStore*)
+        
+        rc_t KeyStoreGetKey(KeyStore*, const char* acc_id, char* buf, size_t bufSize, size_t * valSize)
+            or an alternative that does not involve making copies:
+        rc_t KeyStoreGetKey(KeyStore*, const char* acc_id, shmem_ptr* addr) // returns a "pointer" that allows the client to read the key from a shared memory
+                                                                         // (provided there is adequate support on Windows)
+
+    a (default?) implementation of KeyStore for "a global PW file" policy (located in KFG?)
+        the file is retrieved from getenv(VDB_PWFILE) or .KFG, as now
+
+    an implementation of KeyStore for use in VFSManager (located in VFS?)
+        rc_t KeyPerRepositoryMake(const KeyStore**) 
+        refactor the existing code to replace sequences (getenv(EncFile), open(EncFile), ReadKey(EncFile)) with KeyStoreGetKey()
+
+    a KeyRing client implementation (located in VDB?); possibly invoking the default implementation if necessary
+        rc_t KeyRingMake(const KeyStore**)
+        rc_t KeyRingAddProject(id, downloadKey, encryptKey)
+        rc_t KeyRingAddObject(id, const char* acc)
+
+    Develop an in-process implementation of the KeyRing first (use lock file, or even restrict to one FUSE app at a time).
+    Replace with a client-server implementation later.
+
+    KeyStoreMakeUpdate/KeyStoreMakeRead
+        - locate the KeyRingServer image (use $(APPPATH) from KFG)
+        - spawn a child process (execv or CreateProcess() on the KeyRingServer image) and wait for its completion.
+            The child process will
+            - determine if another server is running (flock/LockFile($(NCBI_HOME)/userid_hostname_krlock) - running if fails)
+                - If yes, will terminate with an OK exit code
+                - If not (file locked now):
+                    - request password from stdin (make sure is inherited from the client process)
+                    - load the keyring database (create if does not exist)
+                    - spawn a demon offspring (make sure it inherits the lock)
+                    - terminate with an OK exit code
+            The demon process will 
+                - hold the lock until completion
+                - count its active clients and shutdown a fixed time after the last client goes away, or if shutdown is requested by the last client.
+                - accept connections on Unix domain socket "$(NCBI_HOME)/userid_hostname_krsock" (permissions 0600) or Windows named pipe "krsock" (restricted to owner-only access)
+        
+        - open an IPC connection to the demon
+        - KeyStoreMakeRead is the same as KeyStoreMakeUpdate but will reject non-const operations
+        
+    KeyStoreAddRef
+    KeyStoreRelease - close IPC connection when refcount reaches 0    
+    
+    KeyStoreShutdown
+        - ask the server to shutdown; will only shutdown if this is the only client; if successful the API object becomes unusable (call KeyRingMakeXXX to restart the server and create a new object).
+    
+    
+Changes to the existing code:
+    VFSManager:
+        add an instance of KFGRepositoryManager, initialize with a GlobalPwFile implementation of KeyStore
+        change VFSManagerGetKryptoPassword() to accept an accession id instead of returning a global key
+            (internally, fall back to old mechanisms if accession is not found on the KeyRing - or not specified?)
+            internally, call KFGRepositoryManager
+            
+    (this can be done inside VFSManager instead)
+    VPath: 
+        add method GetEncryptionKey
+            based on the URI, will retrieve the password from a file/fd specified in the query, or from the KFGRepositoryManager based on the object's name
+        Add a new scheme, ncbi-gap:project-id/object-id for handling dbGap objects. Modify VFSResolver to handle the scheme (need a new CGI to resolve project-id/object-d pairs into downloadable URLs). Use the new scheme to register newly downloaded objects with the KFGRepositoryManager.
+
+    vdb-decrypt: 
+        switch from using a global krypto password to retrieving accession-specific keys
+
+    vdb-validate:
+        address the existence of VFSManagerWGAValidateHack
+    
+    kfg/repository.h (users: VFSManager, VFSResolver, cache-mgr, report-kfg):
+        move .ngc file opening logic behind the KFGRepositoryManager interface (currently on KConfig, with a duplicate somewhere in VDB3/JNI); will return a Repository which can be used by e.g. VFSManager to add the new project to KeyRing (or can this be done by KFGRepositoryManager itself? - would have to add functions to KeyStore object)
+        
+        add an API to retrieve encryption keys for (both keyring and/or non-keyring objects, depending on the KeyStore object used at initialization of KFGRepositoryManager)
+
+        Add a method to register a new file that is being downloaded (object id/type, enc-key-id, display-name, size, checksum, some or all of it in the form of a new-sheme URI)
+        
+        switch to using this interface to access repository data everywhere (in particular, VFSManagerGetKryptoPassword)
+        
+        Consider replacing the use of VFSManagerGetKryptoPassword (VFSManager, vdb-decrypt) with direct calls to KFGRepositoryManager
+        
+===========
+
+Client-server implementation
+    Rather than going directly to sockets, we should further encapsulate the IPC mechanism so that we allow each platform to do what is best.
+    IPC mechanism (a new abstraction): 
+        Linux/Windows sockets (a new interface in kns) 
+        shared memory (another new interface); if the memory can be described as non-paging and shared, then it can be used fairly securely by the applications
+        
+    The server process will be responsible for requesting the password from the user, as part of its initialization.
+        It can use OS-provided support for passwords (if exists; there is a deprecated Linux way - ask Alexei); for now reading from standard input may be ok.
+        
+    The server process has to make sure that incoming IPC requests come from the same user.
+    
+Server process API (one per user per host at any time):
+    on startup (password): creates an empty Keyring file if missing. Or, postpone creation of the file until the first "add" request. In any case, need to be sensitive to the database being created from other hosts (lock file?)
+    
+    change password (old-password, new-password): reencrypts the Keyring file. 
+        How does the change of password propagate to servers on other hosts?
+
+    add project (project-id, download-key, encryption-key) : adds the project, replaces keys if existing
+    
+    add object (project-id, accession-name) : 
+        adds the accession, associates with the project's encryption key.
+        if accession is already being downloaded:
+            check if the accession is being downloaded with a different key; invalidate cache and overwrite key if it is
+            do nothing if exists and is completely downloaded in cache
+    
+    get key (accession-name) : lookup, return the encryption key if found
+        // additionally, return the key id. With that, we can detect partially cached files whose keys have changed
+    get key (project, accession-name) : additionally, return the download ticket and the enc-key of the project
+    
+    delete object
+    delete project (with all associated objects)
+    
+===========
+
+Database schema:
+    Objects:    object : string, keyId (encryption key at the time of object's download), display-name : string, size : uint64, checksum : string (md5 or something else), project-id (one row per object-project pair)
+    Projects:   projectId : uint, download : keyId, encryption : keyId
+    Keys:       keyId -> key : string (this table resides in secure memory: use mlock() on the buffer?)
+
+    Creating a new project (=importing an .ngc file):
+        - adds 2 records (download key, encyption key) to the Keys table
+        - add a record to the Projects table
+    
+    Creating a new local accession (prefetch or auto-download), associate with a project:
+        - add a record to the Objects table (object, project's encryption key)
+        - if the file is already being downloaded into cache with a different key, invalidate the cache (or remove the file), restart the download using the new encryption key
+
+===========
+Tests, tool-level:
+    prefetch
+        get repository by project id. Can then decide if decryption is needed
+        register an encrypted accession before starting the download
+        retrieve enc-key by accession type+id
+        
+    VFSManager, OpenFile(accession)
+        open file, detect if decryption is needed
+        retrieve enc-key by accession type+id
+        
+    vdb-decrypt
+        open file, detect if decryption is needed
+        retrieve enc-key by accession type+id
+
+Server, internal API (C):
+    Create Keyring(password)
+    
+    Open KR(password)
+    Open KR(password') -> error
+    
+    reencrypt KR(pw, pw'), open(pw')
+    reencrypt KR(pw, pw'), open(pw) -> error
+    
+    add project to KR(name, dlkey, enckey)
+    add project to KR(existing name) -> ?
+    
+    // object = accession?
+    create local object // applies the active project's enckey?
+    getkey(object) -> enckey 
+    getkey(object) -> error // unknown object 
+
+    // if enckey is changed while an object is being downloader, restart download with the new key
+    create local object, start downloading, change active project before download finishes, 
+            create the same local object, wait until finished, getkey(object) -> enckey of the new project, open object 
+
+Client API (C):
+    
+            
+Command line (probably inside a FUSE workspace):
+    create KR, set password
+    change KR password
+    start session (e.g. fuse app), specify password and active project
+    
+    with a session open:
+        with an active project:
+            download/open encrypted object (remove from cache, vdb-dump)
+
+            switch active project (how? - e.g. by importing an .ngc file?)
+                open encrypted object (vdb-dump)
+            
+            run prefetch
+                switch active project
+                open prefetched objects
+        
+    close session, open encypted object -> error
+    
+(how to test whether keys are in secure memory??)    
+    
+===========    
+    
+Future directions:
+    - authority delegation, revokation (delegate certain capabilities to other users using 2-part key)
+    - customer access revocation/warning (warn when access rights for a particular project expire; help remove relevant data)
+    
+===========    
+    
+The role of FIPS? Being evaluated by our IT group.
+
+    
+     

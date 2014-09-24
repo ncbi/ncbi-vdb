@@ -1,0 +1,397 @@
+/*===========================================================================
+*
+*                            PUBLIC DOMAIN NOTICE
+*               National Center for Biotechnology Information
+*
+*  This software/database is a "United States Government Work" under the
+*  terms of the United States Copyright Act.  It was written as part of
+*  the author's official duties as a United States Government employee and
+*  thus cannot be copyrighted.  This software/database is freely available
+*  to the public for use. The National Library of Medicine and the U.S.
+*  Government have not placed any restriction on its use or reproduction.
+*
+*  Although all reasonable efforts have been taken to ensure the accuracy
+*  and reliability of the software and data, the NLM and the U.S.
+*  Government do not and cannot warrant the performance or results that
+*  may be obtained by using this software or data. The NLM and the U.S.
+*  Government disclaim all warranties, express or implied, including
+*  warranties of performance, merchantability or fitness for any particular
+*  purpose.
+*
+*  Please cite the author in any work or product based on this material.
+*
+* ===========================================================================
+*
+*/
+
+/*==========================================================================
+ * VDB built-in functions, formats and types
+ */
+version 1;
+
+
+/*--------------------------------------------------------------------------
+ * types
+ */
+
+// Row id range consist of row_id_start and row_id_stop
+typedef I64 vdb:row_id_range [ 2 ];
+
+
+/*--------------------------------------------------------------------------
+ * typesets
+ */
+typeset integer_set { I8, U8, I16, U16, I32, U32, I64, U64 };
+typeset float_set { F32, F64 };
+typeset numeric_set { integer_set, float_set };
+typeset text_set { utf8, utf16, utf32, ascii };
+typeset text8_set { utf8, ascii };
+typeset transpose_set { B8, B16, B32, B64 };
+
+
+/*--------------------------------------------------------------------------
+ * formats
+ */
+fmtdef merged_fmt;
+fmtdef transposed_fmt;
+fmtdef delta_averaged_fmt;
+
+
+/*--------------------------------------------------------------------------
+ * constants
+ */
+const U8 ALIGN_LEFT = 0;
+const U8 ALIGN_RIGHT = 1;
+
+/*--------------------------------------------------------------------------
+ * functions
+ */
+
+
+/* cast
+ *  performs a "C++ reinterpret_cast" style cast
+ *  rewrites input as required to produce output
+ *
+ *  legal operations include numeric_set -> numeric_set,
+ *  numeric <-> character, etc.
+ */
+function
+any cast #1.0 ( any in )
+    = vdb:cast;
+
+/* bit_or
+ *  performs a bitwise operation 'OR' for every byte in A and B
+ *  A and B are not neccesarily have the same size
+ *  the resulting row will have the size of B while OR operation is done for portion of A overlapping B
+ *  For different sizes of A and B 'align' parameter provides what edge of A and B are aligned
+ *  possible values ALIGN_LEFT, ALIGN_RIGHT
+ * 
+ */
+function < type T >
+T  bit_or #1 < U8 align > ( T  A, T B  )
+    = vdb:bit_or;
+
+/* trim
+ * performs trimming of value val from column A
+ * align provides left- or right- trimming
+ */
+function < type T >
+T trim #1 < U8 align, T val > ( T A )
+    = vdb:trim;
+
+
+/* redimension
+ *  performs a change of dimension without changing bit pattern
+ */
+function
+any redimension #1.0 ( any in )
+    = vdb:redimension;
+
+
+/* row_id
+ *  returns the row id of a request
+ */
+function
+I64 row_id #1.0 ()
+    = vdb:row_id;
+
+
+/* row_len
+ *  returns the number of elements in a row
+ *
+ *  "in" [ DATA ] - column supplying row. if row does not exist
+ *  in column, the resultant length is 0.
+ */
+function
+U32 row_len #1.0 ( any in )
+    = vdb:row_len;
+
+
+/* fixed_row_len
+ *  returns non-zero if the entire page
+ *  has a uniform row-length, zero otherwise
+ *
+ *  "in" [ DATA ] - column to query
+ */
+function
+U32 fixed_row_len #1.0 ( any in )
+    = vdb:fixed_row_len;
+
+
+/* compare
+ *  evaluates src [ i ] == cmp [ i ]
+ *  causes writing exception if unequal.
+ *
+ *  For whole types, equality is bitwise equal
+ *  for floating point types see below.
+ *
+ *  "T" [ TYPE ] - base element type to be processed
+ *
+ *  "sig_bits" [ OPTIONAL CONST >= 1 ] - for floating point types, ignored
+ *  otherwise, the number of significant binary digits in the mantissas to
+ *  compare such that |x - y| <= 1, for corresponding numbers x (in a) and
+ *  y (in b) both scaled according to sig_bits and their common magnitude.
+ *  "sig_bits" may be an array, if so "sel" is required (see below).
+ *
+ *  "src" [ DATA ] - standard input data derived from source
+ *
+ *  "cmp" [ DATA ] - feedback data after being written and re-read
+ *
+ */
+validate function < type T >
+void compare #1.0 < * U32 sig_bits > ( T src, T cmp )
+    = vdb:compare;
+
+validate function < type T >
+void no_compare #1.0 ( T src, T cmp )
+    = vdb:no_compare;
+
+
+/* compare2f
+ *  evaluates src [ i ] == cmp [ i ]
+ *  causes writing exception if unequal.
+ *
+ *  "T" [ TYPE ] - base element type to be processed
+ *
+ *  "sig_bits" [ CONST >= 1 ] - for floating point types, ignored otherwise,
+ *  array containing the number of significant binary digits in the mantissas
+ *  to compare such that |x - y| <= 1, for corresponding numbers x (in a) and
+ *  y (in b) both scaled according to sig_bits and their common magnitude.
+ *
+ *  "src" [ DATA ] - standard input data derived from source
+ *
+ *  "cmp" [ DATA ] - feedback data after being written and re-read
+ *
+ *  "sel" [ DATA ] - data to select which element of "sig_bits" to
+ *  use for the comparison.  The valid values of "sel" are
+ *  [0 .. length sig_bits).
+ *
+validate function < type T >
+void compare2f #1.0 < U32 sig_bits > ( float_set src, float_set cmp, T sel )
+    = vdb:compare2f;
+*/
+
+/* range_validate
+ *  passes input through if all values fall between lower and
+ *  upper bounds, INCLUSIVE
+ *
+ *  "T" [ TYPE ] - type to be validated
+ *
+ *  "lower" [ CONST ] and "upper" [ CONST ] - inclusive
+ *  bounds on input values
+ *
+ *  "in" [ DATA ] - data to be validated
+ */
+function < type T >
+T range_validate #1.0 < T lower, T upper > ( T in )
+    = vdb:range_validate;
+
+
+/* select
+ *  return first non-empty input for id
+ *  inputs are taken from first to last
+ *
+ *  "T" [ TYPE ] - data type of selection
+ *
+ *  "first" [ DATA ] - first of N inputs
+ *
+ *  "second" [ DATA ] - second of N inputs
+ *  all other inputs are optional and must
+ *  be compatible with type "T"
+ */
+function < type T >
+T select #1.0 ( T first, T second, ... )
+    = vdb:select;
+
+
+/* transpose
+ *  transpose a page of unformatted data
+ *
+ *  for example - convert a simple page of values,
+ *  where vertical scale is row id and horizontal element index:
+ *
+ *        1   2   3
+ *      +---+---+---+
+ *    1 | a | b | c |
+ *      +---+---+---+
+ *    2 | d | e | f |
+ *      +---+---+---+
+ *    3 | g | h | i |
+ *      +---+---+---+
+ *    4 | j | k | l |
+ *      +---+---+---+
+ *
+ *  into:
+ *
+ *        1   2   3   4
+ *      +---+---+---+---+
+ *    1 | a | d | g | j |
+ *      +---+---+---+---+
+ *    2 | b | e | h | k |
+ *      +---+---+---+---+
+ *    3 | c | f | i | l |
+ *      +---+---+---+---+
+ *
+ *  variable row-lengths are supported. The output blob is
+ *  formatted, meaning that the result can no longer be addressed
+ *  as a matrix, but the transposition has be applied to data.
+ *
+ *  "in" [ DATA ] - unformatted data to be transposed
+ */
+function
+transposed_fmt transpose #1 ( transpose_set in )
+    = vdb:transpose;
+
+
+/* detranspose
+ *  pardoning the awful name, apply a transposition on the result
+ *  of "transpose" to produce the original blob. "transpose"
+ *  itself cannot be reused because of its signature.
+ */
+function
+transpose_set detranspose #1 ( transposed_fmt in )
+    = vdb:detranspose;
+
+/*
+ * delta_average computes average representation of the maximium 
+ * lengh row and deltas every row against it
+ */
+function
+delta_averaged_fmt delta_average #1 ( any in ) 
+     = vdb:delta_average;
+
+function
+any undelta_average #1 ( delta_averaged_fmt in )
+    = vdb:undelta_average;
+
+/* merge
+ *  merges all input blobs of any format/type into a single blob
+ */
+function
+merged_fmt merge #1.0 ( any in, ... )
+    = vdb:merge;
+
+
+/* split
+ *  extracts a single blob from a merged blob by index
+ *
+ *  "idx" [ CONST ] - blob index
+ */
+
+function
+any split #1.0 < U32 idx > ( merged_fmt in )
+    = vdb:split;
+
+
+/* meta:read
+ *  reads table metadata node as a row
+ * meta:value
+ *  reads metadata node as single value,
+ *  performing size conversion if necessary,
+ *  e.g. I8 TO I64, I32 TO I16
+ *
+ *  "T" [ TYPE ] - cast data type of metadata node
+ *
+ *  "node" [ CONST ] - path to metadata node
+ */
+function < type T >
+T meta:read #1.0 < ascii node, * bool deterministic > ();
+
+function < type T >
+T meta:value #1.0 < ascii node, * bool deterministic > ();
+
+
+/* meta:write
+ *  writes row data to table metadata node
+ *
+ *  "T" [ TYPE ] - cast data type of metadata node
+ *
+ *  "node" [ CONST ] - path to metadata node
+ *
+ *  "in" [ DATA ] - source of row data
+ */
+function < type T >
+T meta:write #1.0 < ascii node > ( T in );
+
+
+/* meta:attr:read
+ *  reads table metadata attribute as a row
+ *
+ *  "node" [ CONST ] - path to metadata node
+ *
+ *  "attr" [ CONST ] - attribute name on node
+ */
+function
+ascii meta:attr:read #1.0 < ascii node, ascii attr, * bool deterministic > ();
+
+
+/* meta:attr:write
+ *  write row data as table metadata attribute
+ *
+ *  "node" [ CONST ] - path to metadata node
+ *
+ *  "attr" [ CONST ] - attribute name on node
+ */
+function
+ascii meta:attr:write #1.0 < ascii node, ascii attr > ( ascii in );
+
+
+/* parameter:read
+ *  reads named cursor parameter text
+ *
+ *  "name" [ CONST ] - parameter name
+ */
+function
+text8_set parameter:read #1.0 < ascii name, * bool deterministic > ();
+
+
+/* environment:read
+ *  reads named environment variable text
+ *
+ *  "name" [ CONST ] - environment variable name
+ */
+function
+text8_set environment:read #1.0 < ascii name > ();
+
+
+/* idx:text:project
+ *  perform a reverse lookup in an index
+ *  if key not found then use substitute
+ *
+ *  "index_name" [ CONST ] - name of text index
+ *
+ *  "substitute" [ DATA, OPTIONAL ] - source
+ *  of values to substitute for values not
+ *  found in the index.
+ */
+function text8_set idx:text:project #1.0 < ascii index_name > ( * text8_set substitute );
+
+
+/* idx:text:insert
+ */
+function text8_set idx:text:insert #1.0 < ascii index_name > ( text8_set key );
+
+
+/* vdb:row_id_range
+ */
+function vdb:row_id_range  idx:text:lookup #1 < ascii index_name , ascii query_by_name > ();

@@ -1,0 +1,538 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{AC3EC978-3F36-4156-A922-03B5058AF56C}</ProjectGuid>
+    <RootNamespace>ncbivdbupdate</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>$(ProjectDir)..\..\interfaces\cc\vc++;$(ProjectDir)..\..\interfaces\os\win;$(ProjectDir)..\..\interfaces\ext;$(ProjectDir)..\..\interfaces;$(ProjectDir)..\..\libs\kfs\win;$(ProjectDir)..\klib;$(ProjectDir)..\kns;$(ProjectDir)..\vfs;$(ProjectDir)..\ascp;$(ProjectDir)..\..\interfaces\cc\vc++\i386;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>$(ProjectDir)..\..\interfaces\cc\vc++;$(ProjectDir)..\..\interfaces\os\win;$(ProjectDir)..\..\interfaces\ext;$(ProjectDir)..\..\interfaces;$(ProjectDir)..\..\libs\kfs\win;$(ProjectDir)..\klib;$(ProjectDir)..\kns;$(ProjectDir)..\vfs;$(ProjectDir)..\ascp;$(ProjectDir)..\..\interfaces\cc\vc++\i386;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>$(ProjectDir)..\..\interfaces\cc\vc++;$(ProjectDir)..\..\interfaces\os\win;$(ProjectDir)..\..\interfaces\ext;$(ProjectDir)..\..\interfaces;$(ProjectDir)..\..\libs\kfs\win;$(ProjectDir)..\klib;$(ProjectDir)..\kns;$(ProjectDir)..\vfs;$(ProjectDir)..\ascp;$(ProjectDir)..\..\interfaces\cc\vc++\i386;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>$(ProjectDir)..\..\interfaces\cc\vc++;$(ProjectDir)..\..\interfaces\os\win;$(ProjectDir)..\..\interfaces\ext;$(ProjectDir)..\..\interfaces;$(ProjectDir)..\..\libs\kfs\win;$(ProjectDir)..\klib;$(ProjectDir)..\kns;$(ProjectDir)..\vfs;$(ProjectDir)..\ascp;$(ProjectDir)..\..\interfaces\cc\vc++\i386;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0502;WINDOWS;_LIBRARY;_DEBUGGING;JU_WMAIN;JU_32BIT;_ARCH_BITS=32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0502;WINDOWS;_LIBRARY;_DEBUGGING;JU_WMAIN;JU_64BIT;_ARCH_BITS=64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0502;WINDOWS;_LIBRARY;JU_WMAIN;JU_32BIT;_ARCH_BITS=32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0502;WINDOWS;_LIBRARY;JU_WMAIN;JU_64BIT;_ARCH_BITS=64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\align\align-access.c" />
+    <ClCompile Include="..\align\bam.c" />
+    <ClCompile Include="..\align\dna-reverse-cmpl.c" />
+    <ClCompile Include="..\align\reader-cmn.c" />
+    <ClCompile Include="..\align\reader-refseq.c" />
+    <ClCompile Include="..\align\reference-cmn.c" />
+    <ClCompile Include="..\align\refseq-mgr.c" />
+    <ClCompile Include="..\align\writer-alignment.c" />
+    <ClCompile Include="..\align\writer-cmn.c" />
+    <ClCompile Include="..\align\writer-ref.c" />
+    <ClCompile Include="..\align\writer-reference.c" />
+    <ClCompile Include="..\align\writer-refseq.c" />
+    <ClCompile Include="..\align\writer-sequence.c" />
+    <ClCompile Include="..\axf\align-local_ref_id.c" />
+    <ClCompile Include="..\axf\align-local_ref_start.c" />
+    <ClCompile Include="..\axf\align-ref-name.c" />
+    <ClCompile Include="..\axf\align-ref-pos.c" />
+    <ClCompile Include="..\axf\align-ref-seq-id.c" />
+    <ClCompile Include="..\axf\align-restore-read.c" />
+    <ClCompile Include="..\axf\cigar.c" />
+    <ClCompile Include="..\axf\generate-mismatch-qual.c" />
+    <ClCompile Include="..\axf\get-sam-flags.c" />
+    <ClCompile Include="..\axf\get_mate_align_ids.c" />
+    <ClCompile Include="..\axf\make-cmp-read_desc.c" />
+    <ClCompile Include="..\axf\mismatch-restore-qual.c" />
+    <ClCompile Include="..\axf\not-my-row.c" />
+    <ClCompile Include="..\axf\project_read_from_sequence.c" />
+    <ClCompile Include="..\axf\raw-restore-qual.c" />
+    <ClCompile Include="..\axf\raw-restore-read.c" />
+    <ClCompile Include="..\axf\ref-preserve_qual.c" />
+    <ClCompile Include="..\axf\ref-restore-read.c" />
+    <ClCompile Include="..\axf\ref-tbl-sub-select.c" />
+    <ClCompile Include="..\axf\ref-tbl.c" />
+    <ClCompile Include="..\axf\refseq-stats.c" />
+    <ClCompile Include="..\axf\seq-construct-read.c" />
+    <ClCompile Include="..\axf\seq-restore-read.c" />
+    <ClCompile Include="..\axf\template-len.c" />
+    <ClCompile Include="..\ext\bzip2\blocksort.c" />
+    <ClCompile Include="..\ext\bzip2\bzlib.c" />
+    <ClCompile Include="..\ext\bzip2\compress.c" />
+    <ClCompile Include="..\ext\bzip2\crctable.c" />
+    <ClCompile Include="..\ext\bzip2\decompress.c" />
+    <ClCompile Include="..\ext\bzip2\huffman.c" />
+    <ClCompile Include="..\ext\bzip2\randtable.c" />
+    <ClCompile Include="..\ext\zlib\adler32.c" />
+    <ClCompile Include="..\ext\zlib\compress.c" />
+    <ClCompile Include="..\ext\zlib\crc32.c" />
+    <ClCompile Include="..\ext\zlib\deflate.c" />
+    <ClCompile Include="..\ext\zlib\gzclose.c" />
+    <ClCompile Include="..\ext\zlib\gzlib.c" />
+    <ClCompile Include="..\ext\zlib\gzread.c" />
+    <ClCompile Include="..\ext\zlib\gzwrite.c" />
+    <ClCompile Include="..\ext\zlib\infback.c" />
+    <ClCompile Include="..\ext\zlib\inffast.c" />
+    <ClCompile Include="..\ext\zlib\inflate.c" />
+    <ClCompile Include="..\ext\zlib\inftrees.c" />
+    <ClCompile Include="..\ext\zlib\trees.c" />
+    <ClCompile Include="..\ext\zlib\uncompr.c" />
+    <ClCompile Include="..\ext\zlib\zutil.c" />
+    <ClCompile Include="..\kdb\btree.c" />
+    <ClCompile Include="..\kdb\column-cc.c" />
+    <ClCompile Include="..\kdb\database-cc.c" />
+    <ClCompile Include="..\kdb\dbcc-cmn.c" />
+    <ClCompile Include="..\kdb\dbmgr-cmn.c" />
+    <ClCompile Include="..\kdb\idstats.c" />
+    <ClCompile Include="..\kdb\idxblk.c" />
+    <ClCompile Include="..\kdb\ptrieval-v1.c" />
+    <ClCompile Include="..\kdb\ptrieval-v2.c" />
+    <ClCompile Include="..\kdb\table-cc.c" />
+    <ClCompile Include="..\kdb\trieval-v1.c" />
+    <ClCompile Include="..\kdb\trieval-v2.c" />
+    <ClCompile Include="..\kdb\wcoldata.c" />
+    <ClCompile Include="..\kdb\wcolidx.c" />
+    <ClCompile Include="..\kdb\wcolidx0.c" />
+    <ClCompile Include="..\kdb\wcolidx1.c" />
+    <ClCompile Include="..\kdb\wcolidx2.c" />
+    <ClCompile Include="..\kdb\wcolumn.c" />
+    <ClCompile Include="..\kdb\wdatabase.c" />
+    <ClCompile Include="..\kdb\wdbmgr.c" />
+    <ClCompile Include="..\kdb\widxblk.c" />
+    <ClCompile Include="..\kdb\windex.c" />
+    <ClCompile Include="..\kdb\wkdb.c" />
+    <ClCompile Include="..\kdb\wmeta.c" />
+    <ClCompile Include="..\kdb\wtable.c" />
+    <ClCompile Include="..\kdb\wtrieidx-v1.c" />
+    <ClCompile Include="..\kdb\wtrieidx-v2.c" />
+    <ClCompile Include="..\kdb\wu64idx-v3.c" />
+    <ClCompile Include="..\kfg\config-grammar.c" />
+    <ClCompile Include="..\kfg\config-lex.c" />
+    <ClCompile Include="..\kfg\config.c" />
+    <ClCompile Include="..\kfg\kart.c" />
+    <ClCompile Include="..\kfg\keystore.c" />
+    <ClCompile Include="..\kfg\report-kfg.c" />
+    <ClCompile Include="..\kfg\repository.c" />
+    <ClCompile Include="..\kfs\arc.c" />
+    <ClCompile Include="..\kfs\arrayfile.c" />
+    <ClCompile Include="..\kfs\buffile-read.c" />
+    <ClCompile Include="..\kfs\buffile-write.c" />
+    <ClCompile Include="..\kfs\buffile.c" />
+    <ClCompile Include="..\kfs\bzip.c" />
+    <ClCompile Include="..\kfs\cacheteefile.c" />
+    <ClCompile Include="..\kfs\countfile.c" />
+    <ClCompile Include="..\kfs\crc32.c" />
+    <ClCompile Include="..\kfs\directory.c" />
+    <ClCompile Include="..\kfs\dir_test.c" />
+    <ClCompile Include="..\kfs\file.c" />
+    <ClCompile Include="..\kfs\gzip.c" />
+    <ClCompile Include="..\kfs\lockfile.c" />
+    <ClCompile Include="..\kfs\md5.c" />
+    <ClCompile Include="..\kfs\mmap.c" />
+    <ClCompile Include="..\kfs\nullfile.c" />
+    <ClCompile Include="..\kfs\pagefile.c" />
+    <ClCompile Include="..\kfs\pmem.c" />
+    <ClCompile Include="..\kfs\quickmount.c" />
+    <ClCompile Include="..\kfs\ramfile.c" />
+    <ClCompile Include="..\kfs\readheadfile.c" />
+    <ClCompile Include="..\kfs\report.c" />
+    <ClCompile Include="..\kfs\sra.c" />
+    <ClCompile Include="..\kfs\subfile.c" />
+    <ClCompile Include="..\kfs\tar.c" />
+    <ClCompile Include="..\kfs\teefile.c" />
+    <ClCompile Include="..\kfs\toc.c" />
+    <ClCompile Include="..\kfs\tocdir.c" />
+    <ClCompile Include="..\kfs\tocentry.c" />
+    <ClCompile Include="..\kfs\tocfile.c" />
+    <ClCompile Include="..\kfs\win\sysdir.c" />
+    <ClCompile Include="..\kfs\win\sysdll.c" />
+    <ClCompile Include="..\kfs\win\sysfile.c" />
+    <ClCompile Include="..\kfs\win\syslockfile.c" />
+    <ClCompile Include="..\kfs\win\sysmmap.c" />
+    <ClCompile Include="..\klib\bsearch.c" />
+    <ClCompile Include="..\klib\bstpersist.c" />
+    <ClCompile Include="..\klib\container.c" />
+    <ClCompile Include="..\klib\cp1252.c" />
+    <ClCompile Include="..\klib\crc32.c" />
+    <ClCompile Include="..\klib\data-buffer.c" />
+    <ClCompile Include="..\klib\debug.c" />
+    <ClCompile Include="..\klib\iso8859-1.c" />
+    <ClCompile Include="..\klib\iso8859.c" />
+    <ClCompile Include="..\klib\judy-vector.c" />
+    <ClCompile Include="..\klib\judy\JudyHS.c" />
+    <ClCompile Include="..\klib\judy\JudyMalloc.c" />
+    <ClCompile Include="..\klib\judy\JudySL.c" />
+    <ClCompile Include="..\klib\judy\Judy_Bit.c" />
+    <ClCompile Include="..\klib\judy\Judy_Bit_Cascade.c" />
+    <ClCompile Include="..\klib\judy\Judy_Bit_Count.c" />
+    <ClCompile Include="..\klib\judy\Judy_Bit_Decascade.c" />
+    <ClCompile Include="..\klib\judy\Judy_Bit_Next.c" />
+    <ClCompile Include="..\klib\judy\Judy_Bit_NextEmpty.c" />
+    <ClCompile Include="..\klib\judy\Judy_Bit_Prev.c" />
+    <ClCompile Include="..\klib\judy\Judy_Word.c" />
+    <ClCompile Include="..\klib\judy\Judy_Word_Cascade.c" />
+    <ClCompile Include="..\klib\judy\Judy_Word_Count.c" />
+    <ClCompile Include="..\klib\judy\Judy_Word_Decascade.c" />
+    <ClCompile Include="..\klib\judy\Judy_Word_Next.c" />
+    <ClCompile Include="..\klib\judy\Judy_Word_NextEmpty.c" />
+    <ClCompile Include="..\klib\judy\Judy_Word_Prev.c" />
+    <ClCompile Include="..\klib\ksort.c" />
+    <ClCompile Include="..\klib\log.c" />
+    <ClCompile Include="..\klib\md5.c" />
+    <ClCompile Include="..\klib\namelist.c" />
+    <ClCompile Include="..\klib\out.c" />
+    <ClCompile Include="..\klib\pack.c" />
+    <ClCompile Include="..\klib\pbstree-native.c" />
+    <ClCompile Include="..\klib\pbstree-swapped.c" />
+    <ClCompile Include="..\klib\pbstree.c" />
+    <ClCompile Include="..\klib\printf.c" />
+    <ClCompile Include="..\klib\ptpersist.c" />
+    <ClCompile Include="..\klib\ptrie.c" />
+    <ClCompile Include="..\klib\qsort.c" />
+    <ClCompile Include="..\klib\rc-idx-tbl.c" />
+    <ClCompile Include="..\klib\rc-tbl.c" />
+    <ClCompile Include="..\klib\refcount.c" />
+    <ClCompile Include="..\klib\report.c" />
+    <ClCompile Include="..\klib\SHA-32bit.c" />
+    <ClCompile Include="..\klib\SHA-64bit.c" />
+    <ClCompile Include="..\klib\status-rc-strings.c" />
+    <ClCompile Include="..\klib\status-rc.c" />
+    <ClCompile Include="..\klib\status.c" />
+    <ClCompile Include="..\klib\symtab.c" />
+    <ClCompile Include="..\klib\text.c" />
+    <ClCompile Include="..\klib\token.c" />
+    <ClCompile Include="..\klib\trie.c" />
+    <ClCompile Include="..\klib\unpack.c" />
+    <ClCompile Include="..\klib\utf8.c" />
+    <ClCompile Include="..\klib\vector.c" />
+    <ClCompile Include="..\klib\vector_namelist.c" />
+    <ClCompile Include="..\klib\vlen-encode.c" />
+    <ClCompile Include="..\klib\win\sysalloc.c" />
+    <ClCompile Include="..\klib\win\syserrcode.c" />
+    <ClCompile Include="..\klib\win\syslog.c" />
+    <ClCompile Include="..\klib\win\systime.c" />
+    <ClCompile Include="..\klib\win\syswriter.c" />
+    <ClCompile Include="..\klib\writer.c" />
+    <ClCompile Include="..\kns\endpoint.c" />
+    <ClCompile Include="..\kns\entrez-fetcher.c" />
+    <ClCompile Include="..\kns\http.c" />
+    <ClCompile Include="..\kns\KCurlFile.c" />
+    <ClCompile Include="..\kns\KCurlRequest.c" />
+    <ClCompile Include="..\kns\kns_manager.c" />
+    <ClCompile Include="..\kns\stream-from-files.c" />
+    <ClCompile Include="..\kns\stream-from-streams.c" />
+    <ClCompile Include="..\kns\stream.c" />
+    <ClCompile Include="..\kns\url-fetcher-curl.c" />
+    <ClCompile Include="..\kns\url-fetcher.c" />
+    <ClCompile Include="..\kns\win\sysendpoint.c" />
+    <ClCompile Include="..\kns\win\sysmgr.c" />
+    <ClCompile Include="..\kns\win\syssock.c" />
+    <ClCompile Include="..\kns\win\sysstream.c" />
+    <ClCompile Include="..\kproc\procmgr.c" />
+    <ClCompile Include="..\kproc\task.c" />
+    <ClCompile Include="..\kproc\win\syscond.c" />
+    <ClCompile Include="..\kproc\win\syslock.c" />
+    <ClCompile Include="..\kproc\win\systhread.c" />
+    <ClCompile Include="..\kproc\win\systimeout.c" />
+    <ClCompile Include="..\krypto\aes-byte.c" />
+    <ClCompile Include="..\krypto\aes_core.c" />
+    <ClCompile Include="..\krypto\cipher-no-vec.c" />
+    <ClCompile Include="..\krypto\cipher.c" />
+    <ClCompile Include="..\krypto\ciphermgr.c" />
+    <ClCompile Include="..\krypto\encfile.c" />
+    <ClCompile Include="..\krypto\encfilev2.c" />
+    <ClCompile Include="..\krypto\key.c" />
+    <ClCompile Include="..\krypto\no-null-ncbi.c" />
+    <ClCompile Include="..\krypto\reencfile.c" />
+    <ClCompile Include="..\krypto\wgaencrypt.c" />
+    <ClCompile Include="..\search\agrep-dp.c" />
+    <ClCompile Include="..\search\agrep-myers.c" />
+    <ClCompile Include="..\search\agrep-myersunltd.c" />
+    <ClCompile Include="..\search\agrep-wumanber.c" />
+    <ClCompile Include="..\search\fgrep-aho.c" />
+    <ClCompile Include="..\search\fgrep-boyermoore.c" />
+    <ClCompile Include="..\search\fgrep-dumb.c" />
+    <ClCompile Include="..\search\nucstrstr.c" />
+    <ClCompile Include="..\search\search.c" />
+    <ClCompile Include="..\sraxf\bio-start.c" />
+    <ClCompile Include="..\sraxf\color-from-dna.c" />
+    <ClCompile Include="..\sraxf\denormalize.c" />
+    <ClCompile Include="..\sraxf\dna-from-color.c" />
+    <ClCompile Include="..\sraxf\dynamic-454-read-descriptor.c" />
+    <ClCompile Include="..\sraxf\extract-coordinates.c" />
+    <ClCompile Include="..\sraxf\extract-name_coord.c" />
+    <ClCompile Include="..\sraxf\extract-name_fmt.c" />
+    <ClCompile Include="..\sraxf\extract-spot_name.c" />
+    <ClCompile Include="..\sraxf\format-spot-name.c" />
+    <ClCompile Include="..\sraxf\fpcodec.c" />
+    <ClCompile Include="..\sraxf\index_lookup.c" />
+    <ClCompile Include="..\sraxf\make-position.c" />
+    <ClCompile Include="..\sraxf\normalize.c" />
+    <ClCompile Include="..\sraxf\process-position.c" />
+    <ClCompile Include="..\sraxf\qual4_decode.c" />
+    <ClCompile Include="..\sraxf\qual4_encode.c" />
+    <ClCompile Include="..\sraxf\read-desc.c" />
+    <ClCompile Include="..\sraxf\read-seg-from-readn.c" />
+    <ClCompile Include="..\sraxf\rewrite-spot-name.c" />
+    <ClCompile Include="..\sraxf\rotate.c" />
+    <ClCompile Include="..\sraxf\spot-desc.c" />
+    <ClCompile Include="..\sraxf\stats.c" />
+    <ClCompile Include="..\sraxf\stats_quality.c" />
+    <ClCompile Include="..\sraxf\swap.c" />
+    <ClCompile Include="..\sraxf\tokenize-spot_name-454.c" />
+    <ClCompile Include="..\sraxf\tokenize-spot_name-abi.c" />
+    <ClCompile Include="..\sraxf\tokenize-spot_name-helicos.c" />
+    <ClCompile Include="..\sraxf\tokenize-spot_name-illumina.c" />
+    <ClCompile Include="..\sraxf\tokenize-spot_name-ion-torrent.c" />
+    <ClCompile Include="..\sraxf\untyped.c" />
+    <ClCompile Include="..\sraxf\v0-decompress-init.c" />
+    <ClCompile Include="..\sraxf\v0-decompress.c" />
+    <ClCompile Include="..\sraxf\v0-funcs.c" />
+    <ClCompile Include="..\sraxf\varloc.c" />
+    <ClCompile Include="..\sra\sra-schema.c" />
+    <ClCompile Include="..\sra\sracache.c" />
+    <ClCompile Include="..\sra\sracol.c" />
+    <ClCompile Include="..\sra\sramgr-cmn.c" />
+    <ClCompile Include="..\sra\sraschema.c" />
+    <ClCompile Include="..\sra\sratbl-cmn.c" />
+    <ClCompile Include="..\sra\types.c" />
+    <ClCompile Include="..\sra\wsramgr.c" />
+    <ClCompile Include="..\sra\wsraschema-stub.c" />
+    <ClCompile Include="..\sra\wsratbl.c" />
+    <ClCompile Include="..\vdb\blob-headers.c" />
+    <ClCompile Include="..\vdb\blob.c" />
+    <ClCompile Include="..\vdb\cast.c" />
+    <ClCompile Include="..\vdb\column-cmn.c" />
+    <ClCompile Include="..\vdb\compare.c" />
+    <ClCompile Include="..\vdb\cursor-cmn.c" />
+    <ClCompile Include="..\vdb\database-cmn.c" />
+    <ClCompile Include="..\vdb\database-depend.c" />
+    <ClCompile Include="..\vdb\database-load.c" />
+    <ClCompile Include="..\vdb\dbmgr-cmn.c" />
+    <ClCompile Include="..\vdb\delta_average.c" />
+    <ClCompile Include="..\vdb\environment-read.c" />
+    <ClCompile Include="..\vdb\fixed-row-len.c" />
+    <ClCompile Include="..\vdb\index_insert.c" />
+    <ClCompile Include="..\vdb\index_lookup.c" />
+    <ClCompile Include="..\vdb\index_project.c" />
+    <ClCompile Include="..\vdb\linker-cmn.c" />
+    <ClCompile Include="..\vdb\linker-int.c" />
+    <ClCompile Include="..\vdb\merge.c" />
+    <ClCompile Include="..\vdb\meta-append.c" />
+    <ClCompile Include="..\vdb\meta-attr-read.c" />
+    <ClCompile Include="..\vdb\meta-attr-write.c" />
+    <ClCompile Include="..\vdb\meta-read.c" />
+    <ClCompile Include="..\vdb\meta-value.c" />
+    <ClCompile Include="..\vdb\meta-write.c" />
+    <ClCompile Include="..\vdb\page-map.c" />
+    <ClCompile Include="..\vdb\parameter-read.c" />
+    <ClCompile Include="..\vdb\phys-cmn.c" />
+    <ClCompile Include="..\vdb\phys-load.c" />
+    <ClCompile Include="..\vdb\prod-cmn.c" />
+    <ClCompile Include="..\vdb\prod-expr.c" />
+    <ClCompile Include="..\vdb\prod-func.c" />
+    <ClCompile Include="..\vdb\range-validate.c" />
+    <ClCompile Include="..\vdb\redimension.c" />
+    <ClCompile Include="..\vdb\report-vdb.c" />
+    <ClCompile Include="..\vdb\row-id.c" />
+    <ClCompile Include="..\vdb\row-len.c" />
+    <ClCompile Include="..\vdb\schema-db.c" />
+    <ClCompile Include="..\vdb\schema-dump.c" />
+    <ClCompile Include="..\vdb\schema-eval.c" />
+    <ClCompile Include="..\vdb\schema-expr.c" />
+    <ClCompile Include="..\vdb\schema-func.c" />
+    <ClCompile Include="..\vdb\schema-int.c" />
+    <ClCompile Include="..\vdb\schema-parse.c" />
+    <ClCompile Include="..\vdb\schema-prod.c" />
+    <ClCompile Include="..\vdb\schema-tbl.c" />
+    <ClCompile Include="..\vdb\schema-tok.c" />
+    <ClCompile Include="..\vdb\schema-type.c" />
+    <ClCompile Include="..\vdb\schema.c" />
+    <ClCompile Include="..\vdb\split.c" />
+    <ClCompile Include="..\vdb\table-cmn.c" />
+    <ClCompile Include="..\vdb\table-load.c" />
+    <ClCompile Include="..\vdb\transpose.c" />
+    <ClCompile Include="..\vdb\wcolumn.c" />
+    <ClCompile Include="..\vdb\wcursor.c" />
+    <ClCompile Include="..\vdb\wdatabase.c" />
+    <ClCompile Include="..\vdb\wdbmgr.c" />
+    <ClCompile Include="..\vdb\wlinker.c" />
+    <ClCompile Include="..\vdb\wphys.c" />
+    <ClCompile Include="..\vdb\wprod.c" />
+    <ClCompile Include="..\vdb\wtable.c" />
+    <ClCompile Include="..\vfs\keyring.c" />
+    <ClCompile Include="..\vfs\manager.c" />
+    <ClCompile Include="..\vfs\path.c" />
+    <ClCompile Include="..\vfs\resolver.c" />
+    <ClCompile Include="..\vfs\win\syskeyring.c" />
+    <ClCompile Include="..\vfs\win\syspath.c" />
+    <ClCompile Include="..\vxf\add-row-id.c" />
+    <ClCompile Include="..\vxf\bit_or.c" />
+    <ClCompile Include="..\vxf\bunzip.c" />
+    <ClCompile Include="..\vxf\bzip.c" />
+    <ClCompile Include="..\vxf\ceil.c" />
+    <ClCompile Include="..\vxf\checksum.c" />
+    <ClCompile Include="..\vxf\clip.c" />
+    <ClCompile Include="..\vxf\cut.c" />
+    <ClCompile Include="..\vxf\delta.c" />
+    <ClCompile Include="..\vxf\deriv.c" />
+    <ClCompile Include="..\vxf\diff.c" />
+    <ClCompile Include="..\vxf\echo.c" />
+    <ClCompile Include="..\vxf\entrez.c" />
+    <ClCompile Include="..\vxf\exists.c" />
+    <ClCompile Include="..\vxf\extract_token.c" />
+    <ClCompile Include="..\vxf\floor.c" />
+    <ClCompile Include="..\vxf\funzip.c" />
+    <ClCompile Include="..\vxf\fzip.c" />
+    <ClCompile Include="..\vxf\integral.c" />
+    <ClCompile Include="..\vxf\integral_0.c" />
+    <ClCompile Include="..\vxf\irzip.c" />
+    <ClCompile Include="..\vxf\iunzip.c" />
+    <ClCompile Include="..\vxf\izip.c" />
+    <ClCompile Include="..\vxf\lower-case-tech-reads.c" />
+    <ClCompile Include="..\vxf\map.c" />
+    <ClCompile Include="..\vxf\max.c" />
+    <ClCompile Include="..\vxf\min.c" />
+    <ClCompile Include="..\vxf\outlier-decoder.c" />
+    <ClCompile Include="..\vxf\outlier-encoder.c" />
+    <ClCompile Include="..\vxf\pack.c" />
+    <ClCompile Include="..\vxf\paste.c" />
+    <ClCompile Include="..\vxf\rand_4na_2na.c" />
+    <ClCompile Include="..\vxf\rldecode.c" />
+    <ClCompile Include="..\vxf\rlencode.c" />
+    <ClCompile Include="..\vxf\round.c" />
+    <ClCompile Include="..\vxf\simple-sub-select.c" />
+    <ClCompile Include="..\vxf\sprintf.c" />
+    <ClCompile Include="..\vxf\strtonum.c" />
+    <ClCompile Include="..\vxf\subtract-row-id.c" />
+    <ClCompile Include="..\vxf\sum.c" />
+    <ClCompile Include="..\vxf\trim.c" />
+    <ClCompile Include="..\vxf\trunc.c" />
+    <ClCompile Include="..\vxf\undelta.c" />
+    <ClCompile Include="..\vxf\unpack.c" />
+    <ClCompile Include="..\vxf\unzip.c" />
+    <ClCompile Include="..\vxf\vec-sum.c" />
+    <ClCompile Include="..\vxf\wgs-tokenize-accession.c" />
+    <ClCompile Include="..\vxf\zip.c" />
+    <ClCompile Include="..\wgsxf\build_read_type.c" />
+    <ClCompile Include="..\wgsxf\build_scaffold.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\klib\Judy.h" />
+    <ClInclude Include="..\klib\log-priv.h" />
+    <ClInclude Include="..\klib\maybeswap.h" />
+    <ClInclude Include="..\klib\pbstree-priv.h" />
+    <ClInclude Include="..\klib\trie-priv.h" />
+    <ClInclude Include="..\klib\writer-priv.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

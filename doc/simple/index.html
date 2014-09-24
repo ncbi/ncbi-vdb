@@ -1,0 +1,280 @@
+<html>
+
+  <head>
+
+    <title>NCBI VDB-2: Simple</title>
+    <link href="simple.css" rel="stylesheet" type="text/css"/>
+
+  </head>
+
+  <body>
+
+    <!-- Document Header -->
+
+    <h1>VDB-2 - Simple API</h1>
+
+    <p class="toc">
+    <span class="hdr">Type:</span><br/>
+      <span class="entry">abstract</span>
+    </p>
+
+    <p class="toc">
+    <span class="hdr">Revision History:</span><br/>
+      <table class="entry">
+        <tr><td>2013-Jun-30</td><td>&bull;</td><td>rodarmer</td></tr>
+      </table>
+    </p>
+
+    <p class="toc">
+    <span class="hdr">Contents:</span><br/>
+    <ul class="toc-outer">
+        <li><a href="#abstract">Abstract</a></li>
+        <li><a href="#purpose">Purpose</a></li>
+        <li><a href="#description">Description</a></li>
+		<ul class="toc-inner">
+		  <li><a href="SRAObject.html">SRAObject</a></li>
+		  <li><a href="SRASpot.html">SRASpot</a></li>
+		  <li><a href="SRAReference.html">SRAReference</a></li>
+		  <li><a href="SRAAlignment.html">SRAAlignment</a></li>
+		  <li><a href="SRASequence.html">SRASequence</a></li>
+		</ul>
+        <li><a href="#bam">SAM/BAM Support</a></li>
+		<ul class="toc-inner">
+		  <li><a href="SAMHeaders.html">SAMHeaders</a></li>
+		  <li><a href="SAMAlignment.html">SAMAlignment</a></li>
+		</ul>
+    </ul>
+    </p>
+
+    <hr/>
+
+    <!-- Abstract -->
+
+    <a name="abstract">
+
+    <h2>Abstract</h2>
+
+    <div class="section">
+
+      <p>
+		This document presents an overview of the simplified
+		<strong>SRA</strong> programming interface from <strong>NCBI</strong>.
+		It is an API that presents a more technology-neutral object model, that
+		favors simplicity and consistency.
+	  </p>
+
+	  <p>
+		Users will be able to take advantage of this API from C++, Java, Python
+		and Perl. Future development of tools within the
+		<strong>SRA Toolkit</strong> are likely to adopt this API, so it will be
+		well-supported.
+	  </p>
+
+    </div>
+	
+    </a>
+
+    <!-- Purpose -->
+
+    <a name="purpose">
+
+    <h2>Purpose</h2>
+
+    <div class="section">
+
+	  <p>
+		Provide a reduced-complexity API for use in increasingly higher-level
+		languages, including C++, Java, Python and Perl.
+	  </p>
+
+	  <p>
+		Create a consistent and orthogonal object-model based upon Next
+		Generation Sequencing <em>( NGS )</em> and related data.
+	  </p>
+
+	  <p>
+		Provide greater support for scripted solutions to address researchers'
+		needs when accessing <strong>SRA</strong> data from
+		<strong>NCBI</strong>.
+	  </p>
+
+    </div>
+
+    </a>
+
+    <!-- Description -->
+
+    <a name="description">
+
+    <h2>Description</h2>
+
+    <div class="section">
+
+      <p>
+		The starting point in <em>NGS</em> is a <strong>machine run</strong>. A
+		<em>run</em> consists today of sequences of <strong>bases</strong>
+		<em>( or in the case of ABI, <strong>colors</strong> )</em> that result
+		from the <strong>base calling</strong> process. These bases can include
+		artificial regions called <strong>technical reads</strong>, and should
+		include one or more <strong>biological reads</strong>. The entire
+		sequence of bases is called a <strong>spot</strong> since it is the
+		result of reading a single ( x, y ) location from a region of the
+		substrate being examined.
+	  </p>
+
+	  <p>
+		In addition to sequence bases, the <strong>base caller</strong> also
+		produces <strong>quality</strong> scores for each base to indicate the
+		confidence level of the accuracy of the call.
+	  </p>
+
+	  <p>
+		A <strong>run</strong> consists of a table of <strong>spots</strong>,
+		where each spot is an array of <strong>reads</strong> along with their
+		<strong>qualities</strong>, and each <em>read</em> is deemed to be
+		either <strong>technical</strong> or <strong>biological</strong>.
+	  </p>
+	  <p>
+		<strong>[ A RUN SHOULD ALSO HAVE ITS LIBRARY METADATA AVAILABLE,
+		  BUT THIS IS NOT STORED IN SRA OBJECTS ].</strong>
+	  </p>
+
+	  <p>
+		The individual <em>reads</em> from a <em>run</em> may be aligned against
+		one or more template or <strong>reference</strong> sequences. The result
+		of this process is a number of <strong>alignment records</strong> that
+		describe how a <em>read</em> and a <em>reference</em> appear to be
+		related. An individual <em>read</em> may find a
+		<strong>placement</strong> one or more times upon one or more
+		<em>reference</em> sequences, where a single <em>placement</em> is
+		generally chosen as <strong>primary</strong>, and all others are
+		considered <strong>secondary</strong>.
+	  </p>
+
+	  <p>
+		Our object model currently accommodates both fundamental and aligned runs
+		with the <a href="SRAObject.html">SRAObject</a>. The generalized
+		representation of an <em>SRAObject</em> is as a container of sets of:
+	  </p>
+
+	  <ul>
+		<li>spots</li>
+		<li>references</li>
+		<li>primary alignments</li>
+		<li>secondary alignments</li>
+		<li>unaligned reads</li>
+	  </ul>
+
+	  <p>
+		In the case of <strong>unaligned</strong> <em>runs</em>, the contents
+		will be represented by a set of <strong>spots</strong> with the property
+		that all reads are <em>unaligned</em>. There will be no
+		<strong>fundamental</strong> <em>reads</em>, and no <em>references</em>
+		or <em>alignments</em>, obviously.
+	  </p>
+
+	  <p>
+		In the case of <strong>aligned</strong> <em>runs</em>, the contents will
+		be represented by a set of <strong>references</strong>, a set of
+		<strong>alignments</strong> generally labeled <strong>primary</strong>
+		and <strong>secondary</strong>, a set of
+		<strong>unaligned reads</strong>, and a set	of <strong>spots</strong>.
+		It should be noted that some of these sets may be empty.
+	  </p>
+
+	  <p>
+		<strong>[ NB - THE RUN ITSELF IS NOT MODELED HERE.
+		  SHOULD IT BE? ]</strong>
+	  </p>
+
+	  <p>
+		For <strong>using</strong> an <em>SRAObject</em> we are creating a
+		number of normalized views upon the data. As an abstraction, we have the
+		<a href="SRASequence.html">SRASequence</a> that presents a basic
+		interface for many of the concrete objects.
+		<a href="SRASpot.html">SRASpot</a> is such an object. The
+		<a href="SRAReference.html">SRAReference</a> is its own type of
+		sequence. A <em>read</em> is represented as
+		an <em>SRASequence</em>. That leaves the
+		<a href="SRAAlignment.html">SRAAlignment</a> to complete the basic
+		model. It also extends the <em>SRASequence</em>.
+	  </p>
+
+	  <p>
+		Many of the interfaces provides some means of getting at derived or
+		related views. For example, <em>SRASpot</em> can be cast to	individual
+		reads of <em>SRASequence</em>.
+	  </p>
+
+	  <p>
+		Most of the interfaces are extended with an <strong>iterator</strong>
+		pattern. The basic purpose of the <em>iterator</em> is to walk its
+		contents when given the <strong>next</strong> message. For practical
+		reasons, the only concrete objects exposed in the API for large row
+		sets <em>( reads, spots, alignments )</em> are <em>iterators</em>
+		because we only keep a limited amount of data in <em>RAM</em>.
+		<strong>Welcome to big data!</strong> As a direct result of this
+		restriction, some operations exist only at the level of
+		<em>iterators</em>, e.g. finding a mate alignment, or casting alignments
+		to reads.
+	  </p>
+
+    </div>
+
+    </a>
+
+    <!-- Description -->
+
+    <a name="bam">
+
+    <h2>SAM/BAM Support</h2>
+
+    <div class="section">
+
+      <p>
+		<strong>SAM</strong> and <strong>BAM</strong> <em>( a binary
+		representation of the former )</em> are common file formats used to hold
+		aligned data. We provide <strong>adapter</strong> objects that help
+		format data as normally represented in <em>SAM</em>.
+	  </p>
+
+	  <p>
+		The <a href="SAMHeaders.html">SAMHeaders</a> object may be created from
+		an <strong>SRAObject</strong> if the latter contains the required
+		information. In some cases, this header may have originated in
+		<em>BAM</em> format, while in others it may be synthesized from internal
+		data.
+	  </p>
+
+	  <p>
+		The <a href="SAMAlignment.html">SAMAlignment</a> applies a <em>SAM</em>
+		record view upon the <strong>SRAAlignment</strong>, and may be created
+		from an alignment iterator. It provides the expected columns in their
+		expected formats.
+	  </p>
+
+	  <p>
+		One of the simplest and most trivial of fields in a <em>SAM</em> record
+		is that of its <strong>flags</strong>. These are a collection of bits
+		that are entirely specific to the <em>SAM</em> format. They are
+		<strong>not</strong> preserved verbatim in <strong>SRA</strong>, for
+		example <em>( although the information they encode <strong>is</strong>
+		generally preserved )</em>. To aid in extraction and collection of these
+		bits into a single word, we provide the
+		<a href="SAMFlags.html">SAMFlags</a> adapter object.
+	  </p>
+
+	</div>
+
+	</a>
+
+    <!-- Document Footer -->
+
+    <hr/>
+    <center>
+      <span class="footer">NCBI VDB-2 Documentation</span>
+    </center>
+
+  </body>
+
+</html>

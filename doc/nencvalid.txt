@@ -1,0 +1,139 @@
+Usage:
+  nencvalid [options] <file-path> [ <file-path> ...]
+
+Summary:
+  Validate the consistency of NCBI format encrypted files
+
+Parameters:
+  file-path                        A file in an NCBI encrypted file format.
+                                   The first version encrypted file format
+                                   needs a password to validate the content
+                                   while the second version does not.  If the
+                                   ncbi-file uri format is used if you ask
+                                   file decryption (encrypt in the query)
+                                   the validation will be on the decrypted
+                                   file which might not be the intention.
+                                   The password if needed for validation will
+                                   have to be in the standard NCBI VDB
+                                   configuration as 'krypto/pwfile' or 
+                                   referenced by the environment variable
+                                   VDB_PWFILE or Config parameter
+
+Options:
+  -q|--quiet                       no text output overriding log and status 
+                                   levels 
+  -h|--help                        Output brief explantion for the program. 
+  -V|--version                     Display the version of the program then 
+                                   quit. 
+  -L|--log-level <level>           Logging level as number or enum string. One 
+                                   of (fatal|sys|int|err|warn|info) or (0-5) 
+                                   Current/default is warn 
+  -v|--verbose                     Increase the verbosity level of the program. 
+                                   Use multiple times for more verbosity. 
+  --report <type>                  Control program execution environment 
+                                   report generation (if implemented). One of 
+                                   (never|error|always). Default is error 
+
+nencvalid : 2.1.11
+
+
+* more detailed explanation
+
+nencvalid will try to diagnose any problem with an encrypted file.
+
+The tool will take multiple paths as parameters - which is fine if they are all
+well formed and valid encrypted files.  If not, the results might be a little 
+confusing.  But rerunning the same paths one at a time can clear that up.  The
+exit code for the program will be based on the first found error: messages
+will try to say in what file an error was found after that first error.
+
+Options 'verbose' and 'log-level' are the most useful options at this point.
+Setting 'log-level' to '5' or 'info' will give the most feedback on problems.
+Setting 'verbose' will give more messages to help straighten out what is seen.
+Multiple uses of '-v' (as '-v -v' or as '-vv') will possibly give more messages.
+
+'quiet' is the opposite of increasing messages and could be used to pinpoint
+files with errors from a script. If multiple files are given with quiet but 
+examining the exit code for non-zero will tell you if all files passed and can
+be considered finished or if one or more was problematic and thus need to
+be run individually to isolate which failed.
+
+The option 'report' is not supported.
+
+There are two generations of NCBI encrypted files and both can be handled by
+nencvalid.  With different information and design goals, slightly different
+information can be used to validate the encrypted file.  The first format
+can be validated for length and content and validity from the file header.
+If the password (or phrase) used for encryption is available, the validation
+is more precise.  Without the password the content can not be examined and 
+even the size of the file is just an approximation.
+
+The password is contained in a password file that should be unreadable by
+any other user.  It is best if it is in a directory that can not be written 
+by any other user as well.  The NCBI configuration item 'krypto/pwfile' or
+the environment variable 'VDB_PWFILE' should refer to the file to be used.
+The environment variable takes precedence and overrides a configuration
+set path.  This can help if multiple passwords have been used.
+
+Currently:
+ + errors in constant parts of the header can be found
+ + errors in encrypted file size (must be a multiple of 16)
+ + errors in file length of the decrypted file (more definitive with password)
+ + errors in the file content (with password)
+ + error in password will also be found.
+
+The newer generation encrypted file format was designed with validation without
+the password as a primary goal.
+
+Currently we find:
+ + errors in the constant part of the header
+ + shuffling of encrypted blocks
+ + errors in file size
+ + errors in encrypted file content thus also finding errors in decrypted file
+   content.
+
+In both formats content errors are reported as checksum errors.
+
+The expected file extensions are '.ncbi_enc' for the first generation encrypted
+format and '.nenc' for the second.  But these are not in anyway required.
+
+As an example of usage:
+
+Assume we have five encrypted files
+  a.nenc
+  b.nenc
+  c.ncbi_enc
+  d.nenc
+  e.nenc
+
+Also assume you have a file at /home/myusername/.password-dir/.password-file
+
+You would want the permissions on .password-dir to be 0700 (or 0750) and
+on password-file to be 0600.
+
+Make sure one of the .kfg config files has the line
+
+	krypto/pwfile = '/home/myusername/.password-dir/.password-file'
+
+If the five files are the implied type by extension only c.ncbi_enc needs
+this configuration.
+
+You could find out if all files are valid with
+
+    $ nencvalid *.nenc --quiet
+    $ echo $?
+
+If the echo was 0 then all files are valid.    
+
+If the echo printed another value (probably 3) then one or more was bad.
+
+You could then try to isolate the actual files with errors by rerunning
+nencvalid with a subset of the files.  This makes more sense if there are
+more than a handful of files.
+
+When you know or suspect a particular file is bad
+
+    $ nencvalid -vv --log-level=warn a.nenc
+
+And messages about what is found wrong with the encrypted format will be
+output.

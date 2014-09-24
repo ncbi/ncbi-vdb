@@ -1,0 +1,580 @@
+/*===========================================================================
+*
+*                            PUBLIC DOMAIN NOTICE
+*               National Center for Biotechnology Information
+*
+*  This software/database is a "United States Government Work" under the
+*  terms of the United States Copyright Act.  It was written as part of
+*  the author's official duties as a United States Government employee and
+*  thus cannot be copyrighted.  This software/database is freely available
+*  to the public for use. The National Library of Medicine and the U.S.
+*  Government have not placed any restriction on its use or reproduction.
+*
+*  Although all reasonable efforts have been taken to ensure the accuracy
+*  and reliability of the software and data, the NLM and the U.S.
+*  Government do not and cannot warrant the performance or results that
+*  may be obtained by using this software or data. The NLM and the U.S.
+*  Government disclaim all warranties, express or implied, including
+*  warranties of performance, merchantability or fitness for any particular
+*  purpose.
+*
+*  Please cite the author in any work or product based on this material.
+*
+* ===========================================================================
+*
+*/
+
+/*==========================================================================
+ * libsradb (and libwsradb) built-in schema
+ */
+version 1;
+
+include 'ncbi/ncbi.vschema';
+include 'sra/454.vschema';
+include 'sra/illumina.vschema';
+include 'sra/abi.vschema';
+include 'sra/helicos.vschema';
+include 'sra/ion-torrent.vschema';
+
+/*--------------------------------------------------------------------------
+ * functions
+ */
+
+/* read_seg_from_readn
+ *  reads in old READ_<N> read descriptors
+ *  returns segmentation information for both reads and label in vector
+ *
+ *  "nreads" [ DATA ] - a per-spot value that should generally equal
+ *  the number of READ_N descriptors found during function instantiation
+ *
+ *  "spot_len" [ DATA ] - calculated length of spot, used for dynamic
+ *  read-length calculations
+ */
+const U32 NCBI:SRA:readn:read_type   = 0;
+const U32 NCBI:SRA:readn:read_start  = 1;
+const U32 NCBI:SRA:readn:read_len    = 2;
+const U32 NCBI:SRA:readn:label_start = 3;
+const U32 NCBI:SRA:readn:label_len   = 4;
+
+extern function
+U32 [ 5 ] NCBI:SRA:read_seg_from_readn #1 ( U8 nreads, U32 spot_len );
+
+
+/* rewrite_spot_name
+ *  given an old spotname directly from skey
+ *  write according to platform rules, optionally with a prefix
+ *
+ *  "platform" [ CONST ] - which platform rules to use
+ *
+ *  "skey" [ DATA ] - skey string for row
+ *
+ *  "prefix" [ DATA, OPTIONAL ] - prefix for spot
+ */
+extern function
+ascii NCBI:SRA:rewrite_spot_name #1 < INSDC:SRA:platform_id platform > ( ascii skey * ascii prefix );
+
+/* extract coordinates
+ *  given a spotname with encoded coordinates
+ *  extract them in reverse order into a vector
+ *
+ *  "platform" [ CONST ] - which platform rules to use
+ *
+ *  "skey" [ DATA ] - skey string for row
+ */
+const U32 NCBI:SRA:coord:y      = 0;
+const U32 NCBI:SRA:coord:x      = 1;
+const U32 NCBI:SRA:coord:tile   = 2;
+const U32 NCBI:SRA:coord:lane   = 3;
+const U32 NCBI:SRA:coord:region = 2;
+const U32 NCBI:SRA:coord:panel  = 2;
+
+extern function
+INSDC:coord:val [ * ] NCBI:SRA:extract_coordinates #1 < INSDC:SRA:platform_id platform > ( ascii skey );
+
+/*--------------------------------------------------------------------------
+ * NCBI:SRA:_454_:legacy
+ *  produced by all loaders prior to v2
+ */
+table NCBI:SRA:_454_:legacy #1 = NCBI:SRA:tbl:sra_nopos #1,
+    NCBI:tbl:base_space_nocol #1, NCBI:tbl:phred_quality_nocol #1,
+    NCBI:SRA:tbl:skeyname #1, NCBI:SRA:_454_:common #1
+{
+    /* COORDINATES
+     *  in addition to X and Y,
+     *  454 has REGION
+     */
+    INSDC:coord:val out_y_coord = ( INSDC:coord:val )
+        < I32 > cut < NCBI:SRA:coord:y > ( coords_from_skey );
+    INSDC:coord:val out_x_coord = ( INSDC:coord:val )
+        < I32 > cut < NCBI:SRA:coord:x > ( coords_from_skey );
+    readonly column INSDC:coord:val REGION = ( INSDC:coord:val )
+        < I32 > cut < NCBI:SRA:coord:region > ( coords_from_skey );
+    I32 [ 3 ] coords_from_skey
+        = NCBI:SRA:extract_coordinates < SRA_PLATFORM_454 > ( out_skey );
+}
+
+
+/*--------------------------------------------------------------------------
+ * NCBI:SRA:_454_:tbl:v0
+ *  produced by original loader before the days of schema
+ */
+extern function
+__untyped NCBI:SRA:_454_:untyped_0 ();
+
+extern function U16 NCBI:SRA:decode:CLIP #1 ( opaque in );
+physical __no_header U16 NCBI:SRA:_454_:encoding:CLIP #1 =
+{ return NCBI:SRA:decode:CLIP #1 ( @ ); }
+
+extern function NCBI:SRA:pos16 NCBI:SRA:decode:POSITION #1 ( opaque in );
+physical __no_header NCBI:SRA:pos16 NCBI:SRA:_454_:encoding:POSITION #1 =
+{ return NCBI:SRA:decode:POSITION #1 ( @ ); }
+
+extern function INSDC:2na:packed NCBI:SRA:decode:READ #1 < INSDC:SRA:platform_id platform > ( opaque in );
+physical __no_header INSDC:2na:packed NCBI:SRA:_454_:encoding:READ #1 =
+{ return NCBI:SRA:decode:READ #1 < SRA_PLATFORM_454 > ( @ ); }
+
+extern function any NCBI:SRA:decode:QUALITY #1 < INSDC:SRA:platform_id platform > ( opaque in );
+physical __no_header NCBI:quality:n_encoded:phred NCBI:SRA:_454_:encoding:QUALITY #1 =
+{ return NCBI:SRA:decode:QUALITY #1 < SRA_PLATFORM_454 > ( @ ); }
+
+extern function any NCBI:SRA:decode:SIGNAL #1 < INSDC:SRA:platform_id platform > ( opaque in );
+physical __no_header NCBI:isamp1 NCBI:SRA:_454_:encoding:SIGNAL #1 =
+{ return NCBI:SRA:decode:SIGNAL #1 < SRA_PLATFORM_454 > ( @ ); }
+
+extern function
+NCBI:SRA:pos16 NCBI:SRA:_454_:process_position #1 ( U16 position,
+    * INSDC:SRA:read_filter rd_filt, NCBI:isamp1 sig );
+
+table NCBI:SRA:_454_:tbl:v0 #1 = NCBI:SRA:_454_:legacy #1
+{
+    // recognize original loader
+    __untyped = NCBI:SRA:_454_:untyped_0 ();
+
+    // platform in binary
+    INSDC:SRA:platform_id out_platform
+        = < INSDC:SRA:platform_id > echo < SRA_PLATFORM_454 > ();
+
+    // bases and quality
+    INSDC:2na:packed out_2na_packed = .READ;
+    INSDC:quality:phred out_qual_phred = .QUALITY;
+
+    // synthesized label
+    ascii out_label
+        = < ascii > exists < "AdapterMate1LinkerMate2" > ( out_linker_sequence )
+        | < ascii > echo < "AdapterFragment" > ();
+    INSDC:coord:zero out_label_start
+        = < INSDC:coord:zero > exists < [ 0, 7, 12, 18 ] > ( out_linker_sequence )
+        | < INSDC:coord:zero > echo < [ 0, 7 ] > ();
+    INSDC:coord:len out_label_len
+        = < INSDC:coord:len > exists < [ 7, 5, 6, 5 ] > ( out_linker_sequence )
+        | < INSDC:coord:len > echo < [ 7, 8 ] > ();
+
+    // special sequences
+    INSDC:dna:text out_flow_chars
+        = < INSDC:dna:text > meta:read < "MSC454_FLOW_CHARS" > ();
+    INSDC:dna:text out_key_sequence
+        = < INSDC:dna:text > meta:read < "MSC454_KEY_SEQUENCE" > ();
+    INSDC:dna:text out_linker_sequence
+        = < INSDC:dna:text > meta:read < "MSC454_LINKER_SEQUENCE" > ();
+
+    // position column may be read directly
+    NCBI:SRA:pos16 out_position16
+        = NCBI:SRA:_454_:process_position #1 ( .POSITION, .RD_FILTER, .SIGNAL )
+        | NCBI:SRA:_454_:process_position #1 ( .POSITION, .RD_FILTER )
+        | NCBI:SRA:_454_:process_position #1 ( .POSITION );
+    INSDC:position:one out_position
+        = cast ( out_position16 );
+
+
+    /* READ DESCRIPTION
+     *  this version of 454 always has a key sequence
+     *  and may or may not have a linker
+     *  in the former case, the spot is well defined
+     *  in the latter, the linker must be dynamically located
+     */
+
+    // special function to generate reads
+    U32 [ 3 ] dynamic_read_desc
+        = NCBI:SRA:_454_:dynamic_read_desc < 4 > ( out_2na_bin, out_key_sequence, out_linker_sequence )
+        | NCBI:SRA:_454_:dynamic_read_desc ( out_2na_bin, out_key_sequence );
+
+    // fabricate nreads
+    U8 out_nreads
+        = < U8 > exists < 4 > ( out_linker_sequence )
+        | < U8 > echo < 2 > ();
+
+
+    // read_type
+    U32 read_type32
+        = < U32 > cut < NCBI:SRA:_454_:dyn_read_type > ( dynamic_read_desc );
+    INSDC:SRA:read_type out_read_type = cast ( read_type32 );
+
+    // read_seg and read_len
+    U32 uread_start
+        = < U32 > cut < NCBI:SRA:_454_:dyn_read_start > ( dynamic_read_desc );
+    INSDC:coord:zero out_read_start
+        = ( INSDC:coord:zero ) uread_start;
+    INSDC:coord:len out_read_len = ( INSDC:coord:len )
+        < U32 > cut < NCBI:SRA:_454_:dyn_read_len > ( dynamic_read_desc );
+
+    // read_filter
+    INSDC:SRA:read_filter out_rd_filter
+        = .RD_FILTER
+        | < INSDC:SRA:read_filter > echo < SRA_READ_FILTER_PASS > ( dynamic_read_desc );
+
+
+    /* clips - all may be absent although CQR is expected */
+    physical column NCBI:SRA:_454_:encoding:CLIP #1 .CLIP_ADAPTER_LEFT;
+    physical column NCBI:SRA:_454_:encoding:CLIP #1 .CLIP_ADAPTER_RIGHT;
+    physical column NCBI:SRA:_454_:encoding:CLIP #1 .CLIP_QUALITY_LEFT;
+    physical column NCBI:SRA:_454_:encoding:CLIP #1 .CLIP_QUALITY_RIGHT;
+
+    /* bases */
+    physical column NCBI:SRA:_454_:encoding:READ #1 .READ;
+    physical column NCBI:SRA:_454_:encoding:QUALITY #1 .QUALITY;
+
+    /* signal and base position */
+    physical column NCBI:SRA:_454_:encoding:SIGNAL #1 .SIGNAL;
+    physical column NCBI:SRA:_454_:encoding:POSITION #1 .POSITION;
+};
+
+
+/* NCBI:SRA:_454_:tbl:v1 #1
+ *  written with implicit table schema
+ *  columns have stored schema
+ */
+table NCBI:SRA:_454_:tbl:v1 #1 = NCBI:SRA:_454_:legacy #1, NCBI:SRA:tbl:spotdesc_nophys #1
+{
+    // platform in binary
+    INSDC:SRA:platform_id out_platform
+        = .PLATFORM
+        | < INSDC:SRA:platform_id > echo < SRA_PLATFORM_454 > ();
+
+    // bases and quality
+    INSDC:2na:packed out_2na_packed = .READ;
+    INSDC:quality:phred out_qual_phred = .QUALITY;
+
+    // special sequences
+    INSDC:dna:text out_flow_chars = .FLOW_CHARS;
+    INSDC:dna:text out_key_sequence = .KEY_SEQUENCE;
+    // linker handled by sub-table
+
+    // position needs special processing
+    NCBI:SRA:pos16 out_position16
+        = NCBI:SRA:_454_:process_position #1 ( .POSITION, .RD_FILTER, .SIGNAL )
+        | NCBI:SRA:_454_:process_position #1 ( .POSITION, .RD_FILTER )
+        | NCBI:SRA:_454_:process_position #1 ( .POSITION );
+    INSDC:position:one out_position
+        = cast ( out_position16 );
+};
+
+
+/* NCBI:SRA:_454_:tbl:v1_2 #1
+ *  no stored schema
+ *  linker ignored if present
+ */
+extern function
+__untyped NCBI:SRA:_454_:untyped_1_2a ();
+
+table NCBI:SRA:_454_:tbl:v1_2a #1 = NCBI:SRA:_454_:tbl:v1 #1
+{
+    // single linker present
+    __untyped = NCBI:SRA:_454_:untyped_1_2a ();
+
+    INSDC:dna:text out_linker_sequence = .LINKER_SEQUENCE;
+};
+
+extern function
+__untyped NCBI:SRA:_454_:untyped_1_2b ();
+
+table NCBI:SRA:_454_:tbl:v1_2b #1 = NCBI:SRA:_454_:tbl:v1 #1
+{
+    // linker missing or empty
+    __untyped = NCBI:SRA:_454_:untyped_1_2b ();
+};
+
+
+/*--------------------------------------------------------------------------
+ * NCBI:SRA:Illumina:legacy
+ *  produced by all loaders prior to v2
+ */
+table NCBI:SRA:Illumina:legacy #1 = NCBI:SRA:tbl:sra #1,
+    NCBI:tbl:base_space_nocol #1, NCBI:SRA:Illumina:common #1
+{
+    // signal
+    column NCBI:fsamp4 SIGNAL
+        = ( NCBI:fsamp4 ) < NCBI:SRA:swapped_fsamp4 > NCBI:SRA:swap ( out_signal, out_x2na_bin )
+        | ( NCBI:fsamp4 ) < NCBI:SRA:rotated_fsamp4 > NCBI:SRA:rotate < false > ( out_signal, out_x2na_bin );
+
+    // intensity
+    column NCBI:fsamp4 INTENSITY
+        = < NCBI:fsamp4 > NCBI:SRA:denormalize ( out_norm_intensity, out_x2na_bin );
+    NCBI:fsamp4 out_norm_intensity
+        = ( NCBI:fsamp4 ) < NCBI:SRA:swapped_fsamp4 > NCBI:SRA:swap ( out_intensity, out_x2na_bin )
+        | ( NCBI:fsamp4 ) < NCBI:SRA:rotated_fsamp4 > NCBI:SRA:rotate < false > ( out_intensity, out_x2na_bin );
+
+    // noise
+    column NCBI:fsamp4 NOISE = out_noise;
+};
+
+/* NCBI:SRA:Illumina:tbl:v0
+ *  produced by original loader before the days of schema
+ */
+extern function INSDC:2na:packed NCBI:SRA:decode:READ #1 < INSDC:SRA:platform_id platform > ( opaque in );
+physical __no_header INSDC:2na:packed NCBI:SRA:Illumina:encoding:READ #1 =
+{ return NCBI:SRA:decode:READ #1 < SRA_PLATFORM_ILLUMINA > ( @ ); }
+
+extern function any NCBI:SRA:decode:QUALITY #1 < INSDC:SRA:platform_id platform > ( opaque in );
+physical __no_header NCBI:SRA:rotated_qual4 NCBI:SRA:Illumina:encoding:QUALITY #1 =
+{ return NCBI:SRA:decode:QUALITY #1 < SRA_PLATFORM_ILLUMINA > ( @ ); }
+physical __no_header NCBI:qual1 NCBI:SRA:Illumina:encoding:QUALITY2 #1 =
+{ return NCBI:SRA:decode:QUALITY #1 < SRA_PLATFORM_ILLUMINA > ( @ ); }
+
+extern function any NCBI:SRA:decode:SIGNAL #1 < INSDC:SRA:platform_id platform > ( opaque in );
+physical __no_header NCBI:SRA:rotated_fsamp4 NCBI:SRA:Illumina:encoding:SIGNAL #1 =
+{ return NCBI:SRA:decode:SIGNAL #1 < SRA_PLATFORM_ILLUMINA > ( @ ); }
+
+extern function any NCBI:SRA:decode:INTENSITY #1 ( opaque in );
+physical __no_header NCBI:SRA:rotated_fsamp4 NCBI:SRA:Illumina:encoding:INTENSITY #1 =
+{ return NCBI:SRA:decode:INTENSITY #1 ( @ ); }
+
+extern function any NCBI:SRA:decode:NOISE #1 ( opaque in );
+physical __no_header NCBI:fsamp4 NCBI:SRA:Illumina:encoding:NOISE #1 =
+{ return NCBI:SRA:decode:NOISE #1 ( @ ); }
+
+table NCBI:SRA:Illumina:tbl:v0 #1 = NCBI:SRA:Illumina:legacy #1, NCBI:SRA:tbl:skeyname #1
+{
+    // platform in binary
+    INSDC:SRA:platform_id out_platform
+        = < INSDC:SRA:platform_id > echo < SRA_PLATFORM_ILLUMINA > ();
+
+    // generate rewritten spot_name
+    ascii out_slx_prefix
+        = < ascii > meta:read < 'SLX_PREFIX' > ()
+        | < ascii > echo < '' > ();
+    ascii rewritten_spot_name
+        = NCBI:SRA:rewrite_spot_name < SRA_PLATFORM_ILLUMINA > ( out_skey, out_slx_prefix );
+
+    // coordinates
+    INSDC:coord:val out_y_coord = ( INSDC:coord:val )
+        < I32 > cut < NCBI:SRA:coord:y > ( coords_from_skey );
+    INSDC:coord:val out_x_coord = ( INSDC:coord:val )
+        < I32 > cut < NCBI:SRA:coord:x > ( coords_from_skey );
+    INSDC:coord:val out_tile_coord = ( INSDC:coord:val )
+        < I32 > cut < NCBI:SRA:coord:tile > ( coords_from_skey );
+    INSDC:coord:val out_lane_coord = ( INSDC:coord:val )
+        < I32 > cut < NCBI:SRA:coord:lane > ( coords_from_skey );
+    I32 [ 4 ] coords_from_skey
+        = NCBI:SRA:extract_coordinates < SRA_PLATFORM_ILLUMINA > ( out_skey );
+
+    // bases
+    INSDC:2na:packed out_2na_packed = .READ;
+
+    // fixed_spot_len
+    INSDC:coord:len static_fixed_spot_len = spot_len;
+
+    // nreads
+    U8 out_nreads
+        = < U8 > meta:value < 'NREADS' > ()
+        | < U8 > echo < 1 > ();
+
+    // read_start, read_len
+    INSDC:coord:zero out_read_start
+        = ( INSDC:coord:zero ) < U32 > cut < NCBI:SRA:readn:read_start > ( read_seg_from_readn )
+        | < INSDC:coord:zero > echo < 0 > ();
+    INSDC:coord:len out_read_len
+        = ( INSDC:coord:len ) < U32 > cut < NCBI:SRA:readn:read_len > ( read_seg_from_readn )
+        | spot_len;
+    U32 [ 5 ] read_seg_from_readn
+        = NCBI:SRA:read_seg_from_readn ( out_nreads, spot_len );
+
+    // read_type
+    U32 read_type_from_read_seg
+        = < U32 > cut < NCBI:SRA:readn:read_type > ( read_seg_from_readn );
+    INSDC:SRA:read_type out_read_type
+        = cast ( read_type_from_read_seg )
+        | ( INSDC:SRA:read_type ) < INSDC:SRA:xread_type > echo < SRA_READ_TYPE_BIOLOGICAL > ();
+
+    NCBI:SRA:rotated_fsamp4 out_signal = .SIGNAL;
+    NCBI:SRA:rotated_fsamp4 out_intensity = .INTENSITY;
+    NCBI:fsamp4 out_noise = .NOISE;
+
+    /* bases */
+    physical column NCBI:SRA:Illumina:encoding:READ #1 .READ;
+
+    /* signal, intensity and noise */
+    physical column NCBI:SRA:Illumina:encoding:SIGNAL #1 .SIGNAL;
+    physical column NCBI:SRA:Illumina:encoding:INTENSITY #1 .INTENSITY;
+    physical column NCBI:SRA:Illumina:encoding:NOISE #1 .NOISE;
+};
+
+
+extern function
+__untyped NCBI:SRA:Illumina:untyped_0a ();
+
+table NCBI:SRA:Illumina:tbl:v0a #1 = NCBI:SRA:Illumina:tbl:v0 #1, NCBI:SRA:Illumina:qual4_nocol #1
+{
+    __untyped = NCBI:SRA:Illumina:untyped_0a ();
+
+    // quality
+    NCBI:SRA:rotated_qual4 out_qual4_rotated = .QUALITY;
+    physical column NCBI:SRA:Illumina:encoding:QUALITY #1 .QUALITY;
+
+    INSDC:quality:phred out_qual2_phred = .QUALITY2;
+    physical column NCBI:SRA:Illumina:encoding:QUALITY2 #1 .QUALITY2;
+
+	/* INSDC:SRA:tbl:spotname inherited virtual productions
+	 *  virtual out_name_fmt = 0;
+	 */
+
+	/* INSDC:SRA:tbl:spotdesc inherited virtual productions
+	 *  virtual out_label = 0;
+	 *  virtual out_label_len = 0;
+	 *  virtual out_rd_filter = 0;
+	 *  virtual out_label_start = 0;
+	 */
+};
+
+extern function
+__untyped NCBI:SRA:Illumina:untyped_0b ();
+
+table NCBI:SRA:Illumina:tbl:v0b #1 = NCBI:SRA:Illumina:tbl:v0 #1, NCBI:tbl:phred_quality_nocol #1
+{
+    __untyped = NCBI:SRA:Illumina:untyped_0b ();
+
+    // quality
+    INSDC:quality:phred out_qual_phred
+        = .QUALITY
+        | .QUALITY2;
+
+    physical column NCBI:SRA:Illumina:encoding:QUALITY2 #1 .QUALITY;
+    physical column NCBI:SRA:Illumina:encoding:QUALITY2 #1 .QUALITY2;
+
+	/* INSDC:SRA:tbl:spotname inherited virtual productions
+	 *  virtual out_name_fmt = 0;
+	 */
+
+	/* INSDC:SRA:tbl:spotdesc inherited virtual productions
+	 *  virtual out_label = 0;
+	 *  virtual out_label_len = 0;
+	 *  virtual out_rd_filter = 0;
+	 *  virtual out_label_start = 0;
+	 */
+
+	/* INSDC:SRA:tbl:stats inherited virtual productions
+	 *  virtual max_spot_id = 0;
+	 *  virtual min_spot_id = 0;
+	 *  virtual in_stats_bin = 0;
+	 *  virtual bio_base_count = 0;
+	 */
+};
+
+table NCBI:SRA:Illumina:tbl:v1 #1 = NCBI:SRA:Illumina:legacy #1,
+    NCBI:SRA:tbl:spotdesc_nophys #1, NCBI:SRA:tbl:skeyname_nocol #2
+{
+    // platform in binary
+    INSDC:SRA:platform_id out_platform
+        = .PLATFORM
+        | < INSDC:SRA:platform_id > echo < SRA_PLATFORM_ILLUMINA > ();
+
+    // coordinates
+    INSDC:coord:val out_tile_coord = ( INSDC:coord:val )
+        < I32 > cut < NCBI:SRA:coord:tile > ( coords_from_spotname );
+    INSDC:coord:val out_lane_coord = ( INSDC:coord:val )
+        < I32 > cut < NCBI:SRA:coord:lane > ( coords_from_spotname );
+    I32 [ 4 ] coords_from_spotname
+        = NCBI:SRA:extract_coordinates < SRA_PLATFORM_ILLUMINA > ( _out_name );
+
+    // bases
+    INSDC:2na:packed out_2na_packed = .READ;
+
+    // quality2
+    INSDC:quality:phred out_qual2_phred = .QUALITY2;
+
+    // fixed_spot_len
+    INSDC:coord:len static_fixed_spot_len = spot_len;
+
+    NCBI:SRA:swapped_fsamp4 out_signal = .SIGNAL;
+    NCBI:SRA:swapped_fsamp4 out_intensity = .INTENSITY;
+    NCBI:fsamp4 out_noise = .NOISE;
+
+    // stray compatibility columns
+    physical column INSDC:dna:text .FLOW_CHARS;
+    physical column INSDC:dna:text .KEY_SEQUENCE;
+    physical column INSDC:dna:text .LINKER_SEQUENCE;
+};
+
+extern function
+__untyped NCBI:SRA:Illumina:untyped_1a ();
+
+alias NCBI:SRA:encoded_qual4 NCBI:SRA:comp_qual4;
+
+extern function
+NCBI:SRA:swapped_qual4 NCBI:SRA:qual4_decompress_v1 #1 ( any in );
+
+table NCBI:SRA:Illumina:tbl:v1a #1 = NCBI:SRA:Illumina:tbl:v1 #1, NCBI:SRA:Illumina:qual4_nocol #1
+{
+    __untyped = NCBI:SRA:Illumina:untyped_1a ();
+
+    // 4-channel quality
+    NCBI:SRA:swapped_qual4 out_qual4_swapped = .QUALITY;
+};
+
+extern function
+__untyped NCBI:SRA:Illumina:untyped_1b ();
+
+table NCBI:SRA:Illumina:tbl:v1b #1 = NCBI:SRA:Illumina:tbl:v1 #1, NCBI:tbl:phred_quality_nocol #1
+{
+    __untyped = NCBI:SRA:Illumina:untyped_1b ();
+
+    // single-channel quality
+    INSDC:quality:phred out_qual_phred = .QUALITY;
+};
+
+
+/*--------------------------------------------------------------------------
+ * NCBI:SRA:ABI:legacy
+ *  produced by all loaders prior to v2
+ */
+table NCBI:SRA:ABI:legacy #1 = NCBI:SRA:tbl:sra #1,
+    NCBI:tbl:phred_quality_nocol #1, NCBI:SRA:ABI:common #1
+{
+};
+
+extern function
+__untyped NCBI:SRA:ABI:untyped_1 ();
+
+table NCBI:SRA:ABI:tbl:v1 #1 = NCBI:SRA:ABI:legacy #1,
+    NCBI:tbl:color_space_nocol #1, NCBI:SRA:tbl:spotdesc_nophys #1,
+    NCBI:SRA:tbl:skeyname_nocol #2
+{
+    __untyped = NCBI:SRA:ABI:untyped_1 ();
+
+    // platform in binary
+    INSDC:SRA:platform_id out_platform
+        = .PLATFORM
+        | < INSDC:SRA:platform_id > echo < SRA_PLATFORM_ABSOLID > ();
+
+    // coordinates
+    INSDC:coord:val out_panel_coord = ( INSDC:coord:val )
+        < I32 > cut < NCBI:SRA:coord:panel > ( coords_from_spotname );
+    I32 [ 4 ] coords_from_spotname
+        = NCBI:SRA:extract_coordinates < SRA_PLATFORM_ABSOLID > ( out_spot_name );
+    ascii out_spot_name
+        = INSDC:SRA:format_spot_name ( out_name_fmt, out_x_coord, out_y_coord );
+
+    // bases and quality
+    INSDC:2cs:packed out_2cs_packed = .CSREAD;
+    INSDC:dna:text out_cs_key = .CS_KEY;
+    INSDC:quality:phred out_qual_phred = .QUALITY;
+
+    // fixed_spot_len
+    INSDC:coord:len static_fixed_spot_len = spot_len;
+
+    NCBI:SRA:swapped_fsamp4 out_signal_swapped = .SIGNAL;
+
+    // stray compatibility columns
+    physical column INSDC:dna:text .FLOW_CHARS;
+    physical column INSDC:dna:text .KEY_SEQUENCE;
+    physical column INSDC:dna:text .LINKER_SEQUENCE;
+};

@@ -1,0 +1,405 @@
+SRADB API DOCUMENTATION
+Basic Raw Scraps of Information
+
+VERSION
+
+  Version numbers are represented using 32-bit multi-fixed-point
+  integers, comprised of 3 integer components MAJOR, MINOR and
+  RELEASE. The MAJOR component is stored in the upper byte (bits 24..31), 
+  the MINOR component in the next byte (bits 16..23), and the RELEASE
+  component occupies the lower two bytes (bits 0..15). When displayed in
+  hex where 'M' = major, 'm' = minor and 'r' = release, we have
+
+    MMmmrrrr
+
+  The current version of the sradb is defined in a compile-time
+  constant that adheres to the binary version format:
+
+    #include <sra/sradb.h>
+    SRADB_CURRENT_VERSION
+
+  At the time of this writing, the API version is 3.0. The library
+  version number may be obtained at runtime - see "SRAMgrVersion".
+
+
+CONSTANTS
+
+  SRA tables contain data from several vendors. Supported vendor
+  platforms:
+    SRA_PLATFORM_454
+	SRA_PLATFORM_ILLUMINA
+	SRA_PLATFORM_ABSOLID
+	SRA_PLATFORM_COMPLETE_GENOMICS
+	SRA_PLATFORM_HELICOS
+  More are under development.
+
+  Spots are stored as a single sequence, where reads are delineated by
+  descriptor columns. Each read is typed as either
+    SRA_READ_TYPE_TECHNICAL
+	SRA_READ_TYPE_BIOLOGICAL
+  and may be marked as
+    SRA_READ_TYPE_FORWARD
+    SRA_READ_TYPE_REVERSE
+  by bit-or'ing the direction onto the type.
+
+  Each read also has a filter value:
+    SRA_READ_FILTER_PASS
+	SRA_READ_FILTER_REJECT
+	SRA_READ_FILTER_CRITERIA
+	SRA_READ_FILTER_REDACTED
+  Reads marked "reject" are normally ignored, those marked "criteria"
+  have auxiliary information that may be used [this feature has never
+  been used], while those marked "redacted" may have their biological
+  information replaced with redact values.
+
+TYPES
+
+  A Sequence Read Archive spot is identified within the scope of its
+  run with a 32-bit unsigned integer:
+
+    #include <sra/sradb.h>
+    typedef uint32_t spotid_t;
+
+
+REFERENCE COUNTING
+
+  Most of the objects used in the API are reference counted. Calls to
+  functions that return an object reference should be balanced to
+  calls to functions that release that object reference.
+
+
+OBJECT CLASSES
+
+  SRAMgr
+    an opaque handle to the SRA library module
+
+    SRAMgrMakeRead
+	  read-only SRA functions
+    SRAMgrMakeReadWithDir
+	  esoteric
+
+      include: <sra/sradb.h>
+      library: libsradb
+
+	SRAMgrMakeUpdate
+	  read/write SRA functions
+
+	  include: <sra/wsradb.h>
+	  library: libwsradb
+
+
+	SRAMgrRelease
+	  release reference to manager
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+	SRAMgrAddRef
+	  create a new reference to manager
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+	SRAMgrVersion
+	  query for the full 'MMmmrrrr' version of the library
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRAMgrOpenDatatypesRead - DEPRECATED
+	  get a VDatatypes object used to manage data types
+
+	  include: <sra/sradb.h> and <sra/types.h>
+	  library: libsradb or libwsradb
+
+    SRAMgrGetSchemaRead
+      get the VSchema object used to manage types and table schema
+
+      include: <sra/sradb.h> and <vdb/schema.h>
+	  library: libsradb or libwsradb
+
+    SRAMgrUseSchemaRead
+	  set a new VSchema object used to manage types and table schema
+
+      include: <sra/sradb.h> and <vdb/schema.h>
+	  library: libsradb or libwsradb
+
+    SRAMgrWritable
+    SRAMgrVWritable
+	  ask manager whether the named object is writable.
+	  the "V" version uses "va_list" and is more esoteric than the
+	  normal version.
+
+      include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRAMgrSetMD5Mode
+	  set object creation mode for MD5 property
+	  when enabled, all newly created objects will be generated with
+	  MD5 checksums in the file system wherever applicable and possible.
+
+      include: <sra/wsradb.h>
+	  library: libwsradb
+
+    SRAMgrLock
+	SRAMgrVLock
+	  lock an object in the file system
+
+      include: <sra/wsradb.h>
+	  library: libwsradb
+
+    SRAMgrUnlock
+	SRAMgrVUnlock
+	  unlock an object in the file system
+
+      include: <sra/wsradb.h>
+	  library: libwsradb
+
+    SRAMgrDropTable
+    SRAMgrVDropTable
+	  delete a table
+
+      include: <sra/wsradb.h>
+	  library: libwsradb
+
+
+  SRANamelist
+    a list of NUL terminated names
+
+    SRANamelistRelease
+	  release a reference 
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRANamelistAddRef
+	  add a new reference
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRANamelistCount
+	  return the number of names in the list
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRANamelistGet
+	  access an indexed name in the list
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+
+  SRATable
+    an opaque handle to an SRA table
+
+    SRATableRelease
+	  release a reference
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRATableAddRef
+	  add a reference
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRAMgrCreateTable
+	SRAMgrVCreateTable
+	  send a message to manager to create a named table
+
+	  include: <sra/wsradb.h>
+	  library: libwsradb
+
+    SRAMgrOpenTableRead
+	SRAMgrVOpenTableRead
+	  send a message to manager to open a named table for read
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRAMgrOpenTableUpdate
+	SRAMgrVOpenTableUpdate
+	  send a message to manager to open a named table for update
+
+	  include: <sra/wsradb.h>
+	  library: libwsradb
+
+    SRATableLocked
+	  ask an open table if it is locked against modification
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRATableNewSpot
+	  create a new spot record
+
+	  include: <sra/wsradb.h>
+	  library: libwsradb
+
+    SRATableOpenSpot [ NOT FUNCTIONAL ]
+	  open an existing spot record for update
+
+	  include: <sra/wsradb.h>
+	  library: libwsradb
+
+    SRATableCloseSpot
+	  close a spot record after NewSpot or OpenSpot
+
+	  include: <sra/wsradb.h>
+	  library: libwsradb
+
+    SRATableCommit
+	  commit changes to table
+
+	  include: <sra/wsradb.h>
+	  library: libwsradb
+
+    SRATableOpenColumnWrite
+	  open a named and optionally typed column for writing
+
+	  include: <sra/wsradb.h>
+	  library: libwsradb
+
+    SRATableSetIdxColumnDefault
+	  sets default cell value for column
+
+	  include: <sra/wsradb.h>
+	  library: libwsradb
+
+    SRATableWriteIdxColumn
+  	  write cell data to column
+
+	  include: <sra/wsradb.h>
+	  library: libwsradb
+
+    SRATableBaseCount
+	  return the number of stored bases
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRATableSpotCount
+	  return the number of stored spots
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRATableMinSpotId
+	  return the id of the first spot stored in table
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRATableMaxSpotId
+	  return the id of the last spot stored in table
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRATableGetSpotId
+	  map the original textual spot name to spot id
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRATableListCol
+	  return a list of column names eligable for opening
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRATableColDatatypes
+	  return a list of column datatypes avaiable for a given column
+	  name
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRATableMetaRevision
+	  return the revision number of the active table metadata object
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRATableMaxMetaRevision
+	  return the maximum metadata revision number available under
+	  table
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRATableUseMetaRevision
+	  use a particular metadata revision object
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRATableMetaFreeze
+	  freezes current metadata revision
+
+	  include: <sra/wsradb.h>
+	  library: libwsradb
+
+    SRATableOpenMDataNodeRead
+	SRATableVOpenMDataNodeRead
+	  open a read-only metadata node by path
+
+	  include: <sra/sradb.h> and <kdb/meta.h>
+	  library: libsradb or libwsradb
+
+    SRATableOpenMDataNodeUpdate
+	SRATableVOpenMDataNodeUpdate
+	  open a metadata node by path for update
+
+	  include: <sra/wsradb.h>
+	  library: libwsradb
+
+    SRATableGetSchema
+	  return the schema object of the open table
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+
+  SRAColumn
+    an opaque object representing an individual column
+
+    SRAColumnRelease
+	  release a column reference
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRAColumnAddRef
+	  add a new reference to column
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRATableOpenColumnRead
+	  send a message to table to open a named and optionally typed
+	  column
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRAColumnDatatype
+	  ask column to return its datatype as text
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRAColumnGetRange
+	  ask column for the range of spot ids it contains
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb
+
+    SRAColumnRead
+	  read cell data from column
+
+	  include: <sra/sradb.h>
+	  library: libsradb or libwsradb

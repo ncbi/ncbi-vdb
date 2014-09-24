@@ -1,0 +1,103 @@
+<html>
+
+  <head>
+
+	<title>NCBI VDB-2: Test Plan for the Pileup tool</title>
+    <link href="vdb-2.css" rel="stylesheet" type="text/css"/>
+
+  </head>
+
+  <body>
+
+	<!-- Document Header -->
+
+    <h1>VDB-2: Test Plan for the Pileup tool</h1>
+
+    <p class="toc">
+	  <span class="hdr">Revision History:</span><br/>
+      <table class="entry">
+        <tr><td>2012-Feb-09</td><td>&bull;</td><td>boshkina</td></tr>
+      </table>
+    </p>
+
+    <hr/>
+
+<p>All tests use a reference window (RW) on a reference sequence</p>
+
+<p>Group 1:</p>
+<p>Verifies that the following events are represented correctly:</p>
+<ul>
+<li>match</li>
+<li>mismtach</li>
+<li>insert</li>
+<li>delete</li>
+<li>start of a read ('^')</li>
+<li>end of a read ('$')</li>
+</ul>
+
+<p>Test Cases:</p>
+<ul>
+<li>1-1. No placements in the reference window</li>
+<li>1-2.  1 placement, fully inside RW, containing matches and mismatches</li>
+<li>1-21. 1 placement, fully inside RW, containing an insert</li>
+<li>1-22. 1 placement, fully inside RW, containing a delete</li>
+<li>1-3. More than 1 placements, not overlapping with each other, all fully inside RW</li>
+<li>1-4. 1 placement, starts outside RW</li>
+<li>1-5. 1 placement, ends outside RW</li>
+<li>1-6. 1 placement, starts and ends outside RW</li>
+<li>1-7. RW wraps around the end of a circulat reference</li>
+</ul>
+
+<p>Group 2:</p>
+<p>
+On a set of More than 1 placements, some of which start before RW, some end outside RW.
+Verifies that piled up placements are represented correctly.
+</p>
+<p>Test Cases:</p>
+<ul>
+<li>2-1. No overlap between placements (correct representation of a gap); same as case 1-3</li>
+<li>2-2. 2 placements overlap</li>
+<li>2-3. 3 placements overlap</li>
+<li>2-4. 3 placements overlap, some start at the same position within RW, some end at the same position within RW</li>
+</ul>
+
+<p>Group 3:</p>
+<p>
+Verifies handling of the pileup application parameters.
+</p>
+<p>Test Cases:</p>
+<ul>
+<li>3-1. RW starts at 0</li>
+<li>3-2. RW starts at the beginning of the reference</li>
+<li>3-3. RW ends at the end of the reference</li>
+<li>3-4. RW ends beyond the end of the reference</li>
+<li>3-5. RW starts beyond the end of the reference</li>
+<li>3-6. RW size is 1</li>
+<li>3-7. 2 RWs specified, no overlap, both contain placements</li>
+<li>3-8. 2 overlapping RWs specified, the overlapping part contains a placement</li>
+<li>3-9. 2 input files are specified, only one contains placement in the RW</li>
+<li>3-10. 2 input files are specified, both contain placements in the RW, no overlap</li>
+<li>3-11. 2 input files are specified, both contain overlapping placements in the RW</li>
+<li>3-12. same input file specified twice</li>
+</ul>
+<p>Group 4:</p>
+<p>
+Verifies handling of errors in the application parameters. All test cases should result in error messages on stderr and an empty stdout.
+</p>
+<p>Test Cases:</p>
+<ul>
+<li>4-1. Input file (table, database?) does not exist</li>
+<li>4-2. Input file (table, database?) is not in a recognized format</li>
+<li>4-3. RW size is negative</li>
+</ul>
+	<!-- Document Footer -->
+
+	<hr/>
+
+	<center>
+	  <span class="footer">NCBI VDB-2 Documentation</span>
+	</center>
+
+  </body>
+
+</html>

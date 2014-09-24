@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<!-- Much of each page should be standardized and filled in by make -->
+<head>
+	<title>SRA Toolkit Documentation</title>
+	<link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+<body>
+	<div id="frame">
+		<div id="transom">
+			<hr/><h1>SRA Toolkit</h1><hr/>
+		</div>
+		<div id = "jamb">
+			<div id="sidelite">
+				<ul>
+					<br/>
+					<h4>General Information</h4>
+					<hr/>
+					<li><a href="sra-toolkit.html">Toolkit Home</a></li>
+					<br/>
+					<h4>Toolkit Usage</h4>
+					<hr/>
+					<li><a href="getting-the-tools.html">Getting the Toolkit</a></li>
+					<br/>
+					<li><a href="quick-start.html">Quick Start</a></li>
+					<br/>
+					<li><a href="configuration.html">Toolkit Configuration</a></li>
+					<br/>
+					<li><a href="use-cases.html">Using the Toolkit</a></li>
+					<br/>
+					<h4>Technical Information</h4>
+					<hr/>
+					<li><a href="file-formats.html">Data formats</a></li>
+					<br/>
+					<li><a href="encryption.html">Encryption</a></li>
+					<br/>
+					<h4>Utilities</h4>
+					<hr/>
+					<li><a href="utilities.html">All Utilities</a></li>
+					<br/>
+					<h4>Libraries</h4>
+					<hr/>
+					<li><a href="libraries.html">All Libraries</a></li>
+					<br/>
+					<h4>FAQ</h4>
+					<hr/>
+					<li><a href=frequenty-asked-questions.html>Frequently Asked Questions</a></li>
+					<br/>
+				</lu>
+			</div>
+			<div id="door-panel">
+			<!-- ===================================================== -->
+			<!-- ===================================================== -->
+			<!-- From here until the ending comment is a specific page -->
+			<!-- ===================================================== -->
+			<!-- ===================================================== -->
+
+				<!-- Panel title -->
+				<h2>SRA Toolkit File Formats</h2>
+
+				<!-- database-file-formats -->
+				<!-- I'm expecting that we create sets of these in an XML and these sets can be including into multiple html files by make -->
+				<div id="file-formats">
+					<h3>Database file formats</h3>
+					The contents of the SRA archives are not suitable for off the shelf database management systems
+					due to the large size of archives.  Compression of the contents was critical to cost effectively
+					keeping the database on-line with fast retrieval.
+					<br/>
+					To increase compression a column major format of the data was used rather than a more common
+					row major format where all the contents of a row's tuple are kept together.  Like types compress
+					better than unlike types due to a better predictabilty of the content. Duplicate rows on contiguous
+					columns are commpon and can be comressed with a run length encoding and being like types further
+					compression can be more effective by predicting the range and volitilty of the data within the
+					column.
+					<br/>
+					The native file system of the target platform is used also unlike a DBMS which manages all the space
+					within a large file or even an entire disk volume.  This gains us in efficieny of development and
+					run time where only those file which need to be opened are opened and multiple processes acting on
+					separate database objects do not have to co-ordinate reads and writes.
+					
+					<h4>Columns</h4>
+					A column is kept in its own directory along with any supporting files needed such as various index files.
+					<h4>Tables</h4>
+					A table is a collection of related columns.  It is also kept in it's own directory. A row is made up of an entry from each column to make
+					an N-tuple. Most older DNA file formats are stored within the SRA system as a table.
+					<h4>Databases</h4>
+					In the SRA tool kit a database is typically a set of tables though it can contain additional columns(?) 
+					or other databases. Again it is kept in its own directory.
+					
+					<h4>Archive file</h4>
+					The SRA Toolkit's native file format is a single file archive that contains the files and directories needed
+					for the database object as described above.
+					<br/>
+					Superficially the format resembles the older tar file format or zip compressed archive but with differences
+					to allow efficient processing without extraction.  UNlike a tar file the directory information for the whole
+					file is kept together so it can be read and processed at one time rather than scanning the whole file to
+					find directory information spread throughout the file. UNlike a zip file the individual columns are already
+					compressed and the archive does not attempt a futile effort to compress them further.
+			
+					<h5>SRA</h5>
+					An SRA file is a single file table in an archive format.
+
+					<h5>cSRA</h5>
+					A cSRA file is a single file database with several expected tables in an archive format.
+
+				</div>
+				<!-- database-file-formats -->
+
+
+
+
+				<!-- encryption-file-formats -->
+				<!-- I'm expecting that we create sets of these in an XML and these sets can be including into multiple html files by make -->
+				<div id="file-formats">
+					<h3>Encrypted file formats</h3>
+
+					Currently the SRA Toolkit utilities only use encryption in two file formats defined by NCBI.  In the future it is expected 
+					to be used in more ways as the need arises.
+			
+					<br/>
+			
+					To meet Federal Information Processing Standards (FIPS) the SRA Toolkit uses the Advanced Encryption Standard (AES) for 
+					the actual encryption of data.
+			
+					<h4>Early Encryption Format - ncbi_enc</h4>
+			
+					The first encryption format supported by the SRA Toolkit typically uses the extension ".ncbi_enc".  It was used to encrypt
+					files that were being sent to computers not on the NCBI network.  It is now a deprecated format because a new requirement
+					in file validation could not be supported. The SRA Toolkit fully supports reading and decrypting this format but
+					no longer encrypts into this format.
+			
+					<h4>Current Encryption Format - nenc</h4>
+			
+					The current NCBI encryption format was designed for efficient processing without explicitly decrypting a file to the
+					disk and to allow content validation without needing the password used to encrypt the file.
+
+					<h4>Password File</h4>
+
+					The toolkit starts with the belief that passwords put on command lines have an inherent security risk 
+					in that command line parameters can be seen by other users of a computer through Unix commands like 'ps'.
+					To answer that weakness the SRA Toolkit uses passwords read from secure files or the environment.  The preference
+					being password files.
+					<br/>
+					The SRA Toolkit uses its <a href=configuration.html>configuration</a> to locate the password via an
+					entry named 'krypto/pwfile'.
+					<br/>
+					The contents of an encryption password file is normally some sort of text, but that is not a strict requirement.
+					The password is up to 4096 bytes, which with UTF-8 or other encodings might be fewer characters.  The only characters 
+					that can not be in this are the Carriage Return (CR) or Line Feed (LF) also called Newline ASCII control bytes.  The cryptographic library
+					will use the first part of the file up to the CR or LF.  If the file is longer that 4096 bytes and does not have a CR or LF nefre the 4097th 
+					byte the library will call the file invalid.
+					<br/>
+					Bytes after the first CR or LF are reserved for future use; perhaps as previously used passwords.
+				</div>
+				<!-- encryption-file-formats -->
+
+			<h2>Extraction data formats</h2>
+			The NCBI does not encourage always extracting the data from the archive as our archive formats are compact
+			and easy to use.  But if other formats are needed for specific uses the data can be extracted in full or 
+			part to other formats.  These formats have many variations and options to the extraction programs
+			allow for spcific forms of the formats.
+
+			<ul>
+				<li>fastq</li>
+				<li>sff</li>
+				<li>bam/sam</li>
+			</ul>
+			<h2>Input formats?</h2>
+			Are we documenting loaders yet?
+
+		
+				
+				
+			<!-- ===================================================== -->
+			<!-- ===================================================== -->
+			<!-- This ends what is a specific page                     -->
+			<!-- ===================================================== -->
+			<!-- ===================================================== -->
+			</div>
+		</div>
+	</div>
+</body>
+

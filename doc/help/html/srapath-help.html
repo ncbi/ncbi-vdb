@@ -1,0 +1,47 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+       "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>srapath help</title>
+</head>
+<body>
+
+<pre>
+Usage:
+ srapath 1.2.0
+
+Usage: srapath [ options ] accession ...
+
+    options:
+      --server <repserver-path>       path(s) to replication server(s)
+      --volume <volume-path>          relative path(s) to volume(s)
+
+    Tool to produce a list of full paths to SRA runs from list of
+    accessions.  Output paths are ordered according to accession list.
+    with no path alteration options, the accession search path will be
+    determined according to the local installation.
+    Replication server and volume paths may be compound, adhering to the
+    Unix path convention of ':' separators, e.g.
+
+        '/server1:/server2/subdir'
+
+    The idea behind separate replication servers and volumes is to
+    allow for a matrix of volumes that can hold a run, where the volumes
+    are expected to be replicated across all repservers.  It is possible that
+    this arrangement will be violated and still work, but behavior is less
+    clearly defined.
+
+    The order of search paths is important: rather than alphabetical,
+    specify paths in the preferred order of discovery, usually giving the most
+    recently updated volumes first.  If a run appears more than once in the matrix,
+    it will be found according to the first 'repserver/volume' combination that
+    produces a hit.
+
+    Finally, this tool produces a path that is 'likely' to be a run, in that
+    an entry exists in the file system at the location predicted.  It is possible
+    that this path will fail to produce success upon opening a run if the path does
+    not point to a valid object.
+</pre>
+
+</body>
+</html>

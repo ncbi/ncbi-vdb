@@ -1,0 +1,53 @@
+
+copycat : 1.0.6
+
+Usage: 
+    copycat [ <options> ] src-file dst-file
+    copycat [ <options> ] src-file [src-file...] dst-dir
+    copycat [ <options> ] -o dst-dir src-file [src-file...]
+
+    options:
+      -x cache-dir         location to output cached files
+      -f                   force overwrite of existing files
+      -m magicfile         path to the magic file to use
+      -e extfile           path to the extensions file to use
+      -c classfile         path to the file class/type file
+
+    behavior is intended to mimic 'cp' to a large extent, in that
+    a single source file may be copied to a new name, or multiple
+    source files may be copied to a destination directory.
+
+    when the destination directory is specified using 'cp' semantics,
+    the directory must exist. if specified via '-o' switch, it will be
+    created if necessary.
+
+    the target file may also be a device. in the special case of
+    /dev/null, it may also act as a directory.
+
+    the '-x' option allows small files that are typed as eligible for
+    caching to be copied to the cache directory provided. the directory
+    will be created if necessary.
+    the intent is to capture top-level files, such that files are copied
+    into the flat cache directory without regard to where they were found
+    in the input hierarchy. in the case of name conflict, output files will
+    be renamed.
+
+    the class file, magic file and extension file allow new understandings
+    of files found while cataloging
+    the magic file is of the type used by the unix/linux 'file' command
+    the class file assigns file type to classes
+    the extension file assigns file extensions to file types
+
+    existing classes are 'Archive', 'Cached', 'Compressed', 'Read'
+    Archive and Compresses files are those that have contents that can
+    be examined - new types must be compiled in
+    Cached files are those affected by the -x option
+    Read files are not handled seperately by copy cat except in the catalog
+    new classes would like Read only be added to the catalog with the class
+
+    the format for the class file is lines such as the below
+        'GnuZip<tab>Compressed<lf>' with tabs and linefeeds
+
+    the format for the extension file is lines such as the below
+        'gz<tab>Compressed<lf>' with tabs and linefeeds
+

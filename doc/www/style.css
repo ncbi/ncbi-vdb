@@ -1,0 +1,33 @@
+.COMMAND {
+	font-family: monospace;
+}
+
+#frame {
+}
+
+#head {
+}
+
+#transom {
+	text-align: center;
+}
+
+#sidelite {
+	float: left;
+	display: inline;
+	width: 15%;
+}
+#sidelite ul {
+	disply: block;
+	list-style: none;
+	padding: 10ms;
+}
+#sidelite ul li {
+	disply: block;
+}
+#door-panel {
+	margin-left: 1em;
+	float: left;
+	display: inline;
+	width: 80%;
+}

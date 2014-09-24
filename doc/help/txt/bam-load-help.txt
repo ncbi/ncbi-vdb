@@ -1,0 +1,16 @@
+Usage:
+bam-load [Options] BAMFILE
+    Load a bam file.
+
+Options:
+  -o, --output=TABLEPATH    REQUIRED: path to a table where the table will be put
+  -V, --version             this will cause the program to emit the internal
+                            version number before any other action
+  -v, --verbose             extra information will be output during
+                            processing second occurrence on the command line
+                            means even more
+  -h, -?, --help            print this message
+  -l, --log-level=LEVEL     the next token will affect the logging level of
+                            the program  accepted tokens are the numbers
+                            0-15, fatal, sys, int, err, warn, info
+                          , debug1...debug10

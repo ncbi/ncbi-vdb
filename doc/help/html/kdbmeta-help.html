@@ -1,0 +1,50 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+       "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>kdbmeta help</title>
+</head>
+<body>
+
+<pre>
+Usage:
+  kdbmeta [Options] &lt;target> {&lt;query> ...]
+
+Summary:
+  Display the contents of one or more metadata stores.
+  The target metadata are described by one or more
+  target specifications, giving the path to a database, a table
+  or a column. the command and query are executed on each target.
+
+  queries name one or more objects, and '*' acts as a wildcard.
+  query objects are nodes or attributes. nodes are named with a
+  hierarchical path, like a file-system path. attributes are given
+  as a node path followed by a '@' followed by the attribute name.
+
+target:
+  path-to-database                 access database metadata
+  path-to-table                    access table metadata
+  path-to-column                   access column metadata
+  accession                        sra global access id
+
+query:
+  *                                all nodes and attributes
+  NAME                             a named root node and children
+  PATH/NAME                        an internal node and children
+  &lt;node>@ATTR                      a named attribute
+  &lt;obj>=VALUE                      a simple value assignment where
+                                   value string is text, and binary
+                                   values use hex escape codes
+
+Options:
+  -h|--help                        Output a brief explantion for the program.
+  -V|--version                     Display the version of the program then quit.
+  -L|--log-level &lt;level>           Logging level as number or enum string.
+                                   One of (fatal|sys|int|err|warn|info) or (0-5)
+                                   Current/default is warn
+  -v|--verbose                     Increase the verbosity level of the program.
+                                   Use multiple times for more verbosity.
+</pre>
+
+</body>
+</html>

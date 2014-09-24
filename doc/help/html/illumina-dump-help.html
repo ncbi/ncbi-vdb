@@ -1,0 +1,48 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+       "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>illumina-dump help</title>
+</head>
+<body>
+
+<pre>
+Usage:
+  illumina-dump [options] [ -A ] &lt;accession>
+  illumina-dump [options] &lt;path>
+
+  -A|--accession &lt;accession>       Replaces accession derived from &lt;path> in filename(s) and deflines
+
+Options:
+
+  -O|--outdir &lt;path>               Output directory, default is '.'
+  -N|--minSpotId &lt;rowid>           Minimum spot id
+  -X|--maxSpotId &lt;rowid>           Maximum spot id
+  -G|--spot-group                  Split into files by SPOT_GROUP (member name)
+  --spot-groups &lt;[list]>           Filter by SPOT_GROUP (member): name[,...]
+  -R|--read-filter &lt;[filter]>      Split into files by READ_FILTER value
+                                   optionally filter by a value: pass|reject|criteria|redacted
+  -T|--group-in-dirs               Split into subdirectories instead of files
+  -K|--keep-empty-files            Do not delete empty files
+  --table &lt;table-name>             (New) Table name within SRA format, default is SEQUENCE
+
+  -h|--help                        Output a brief explantion for the program
+  -V|--version                     Display the version of the program then quit
+  -L|--log-level &lt;level>           Logging level as number or enum string
+                                   One of (fatal|sys|int|err|warn|info) or (0-5)
+                                   Current/default is warn
+  -v|--verbose                     Increase the verbosity level of the program
+                                   Use multiple times for more verbosity
+
+Format options:
+
+  -r|--read                        Output READ: "seq", default is on
+  -q|--qual1 &lt;1|2>                 Output QUALITY, whole spot (1) or split by reads (2): "qcal", default is 1
+  -p|--qual4                       Output full QUALITY: "prb", default is off
+  -i|--intensity                   Output INTENSITY, if present: "int", default is off
+  -n|--noise                       Output NOISE, if present: "nse", default is off
+  -s|--signal                      Output SIGNAL, if present: "sig2", default is off
+  -x|--qseq &lt;1|2>                  Output QSEQ format: whole spot (1) or split by reads: "qseq", default is off
+</pre>
+</body>
+</html>

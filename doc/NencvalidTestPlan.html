@@ -1,0 +1,68 @@
+<html>
+
+  <head>
+	<title>NCBI VDB-2: Test Plan for the Nencvalid tool</title>
+    <link href="vdb-2.css" rel="stylesheet" type="text/css"/>
+  </head>
+
+  <body>
+	<!-- Document Header -->
+    <h1>VDB-2: Test Plan for the Nencvalid tool</h1>
+    <p class="toc">
+	  <span class="hdr">Revision History:</span><br/>
+      <table class="entry">
+        <tr><td>2012-Mar-12</td><td>&bull;</td><td>boshkina</td></tr>
+      </table>
+    </p>
+    <hr/>
+
+<p>Group 1:</p>
+<p>Verifies handling of encrypted WGA files in non-compatibility mode.</p>
+
+<p>Test Cases:</p>
+<ul>
+<li>1-1. Valid encrypted file, password not provided</li>
+<li>1-2. Valid file, no checksum in the header</li>
+<li>1-3. Valid encrypted file, correct password from a file ponted to by environment variable VDB_PWFILE</li>
+<li>1-4. Valid encrypted file, incorrect password from a file ponted to by environment variable VDB_PWFILE</li>
+<li>1-5. Valid encrypted file, environment variable VDB_PWFILE points to a non-existing file</li>
+<li>1-6. Valid encrypted file, correct password piped from VDB_PWFILE=/dev/stdin</li>
+<li>1-7. Valid encrypted file, incorrect password piped from VDB_PWFILE=/dev/stdin</li>
+<li>1-8. Valid encrypted file, correct password from a file ponted to by kfg variable krypto/pwfile</li>
+<li>1-9. Valid encrypted file, incorrect password from a file ponted to by kfg variable krypto/pwfile</li>
+<li>1-10. Invalid file (not a WGA format)</li>
+<li>1-11. Invalid file (bad header)</li>
+<li>1-12. Invalid file (truncated)</li>
+<li>1-13. Invalid file (excessive lentgth)</li>
+<li>1-14. Invalid file (checksum present, mismatched)</li>
+<li>1-15. Validation passed, quiet mode</li>
+</ul>
+
+<p>Group 2:</p>
+<p>
+<p>Verifies handling of encrypted WGA files in compatibility mode. Test cases similar to those in Group 1, but with additional checking for extended return ciodes</p>
+</p>
+<p>Test Cases:</p>
+<ul>
+TBD
+</ul>
+
+<p>Group 3:</p>
+<p>Verifies handling of nenc-encrypted files</p>
+<p>TBD</p>
+
+<p>Group 4:</p>
+<p>Verifies handling of multiple files (all WGA, WGA mixed with nenc, all nenc)</p>
+<p>TBD</p>
+
+	<!-- Document Footer -->
+
+	<hr/>
+
+	<center>
+	  <span class="footer">NCBI VDB-2 Documentation</span>
+	</center>
+
+  </body>
+
+</html>

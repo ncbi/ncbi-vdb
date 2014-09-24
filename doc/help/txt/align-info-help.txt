@@ -1,0 +1,23 @@
+Usage:
+  align-info [options] <archive-path>
+
+Summary:
+  Displays which references a csra-archive uses
+
+Parameters:
+  archive-path
+
+Options:
+  -a|--all                         print all information 
+  -r|--ref                         print refseq information [default] 
+  -b|--bam                         print bam header (if present) 
+  -q|--qual                        print quality statistics (if present) 
+
+  -h|--help                        Output brief explantion for the program. 
+  -V|--version                     Display the version of the program then 
+                                   quit. 
+  -L|--log-level <level>           Logging level as number or enum string. One 
+                                   of (fatal|sys|int|err|warn|info) or (0-5) 
+                                   Current/default is warn 
+  -v|--verbose                     Increase the verbosity level of the program. 
+                                   Use multiple times for more verbosity. 

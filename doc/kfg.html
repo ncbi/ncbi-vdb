@@ -1,0 +1,1052 @@
+<html>
+
+  <head>
+
+	<title>NCBI VDB-2: kfg</title>
+    <link href="vdb-2.css" rel="stylesheet" type="text/css"/>
+
+  </head>
+
+  <body>
+
+	<!-- Document Header -->
+
+    <h1>VDB-2 Configuration Files</h1>
+
+	<p class="toc">
+	  <span class="hdr">Type:</span><br/>
+      <span class="entry">file format</span>
+    </p>
+
+    <p class="toc">
+	  <span class="hdr">Revision History:</span><br/>
+      <table class="entry">
+        <tr><td>2012-Jan-23</td><td>&bull;</td><td>sra-tools</td></tr>
+        <tr><td>2012-Jan-30</td><td>&bull;</td><td>sra-tools</td></tr>
+        <tr><td>2012-Feb-13</td><td>&bull;</td><td>sra-tools</td></tr>
+      </table>
+    </p>
+
+	<p class="toc">
+	  <span class="hdr">Contents:</span><br/>
+	  <ul class="toc-outer">
+		<li><a href="#abstract">Background</a></li>
+		<li><a href="#structure">Structure</a></li>
+		<ul class="toc-inner">
+		  <li><a href="#simple-file">Simple file</a></li>
+		  <li><a href="#comments">Comments</a></li>
+		  <li><a href="#definitions">Defining path values</a></li>
+		</ul>
+		<li><a href="#content">File Content</a></li>
+		<ul class="toc-inner">
+		  <li><a href="#vdb">VDB</a></li>
+		  <li><a href="#sra">SRA</a></li>
+		  <li><a href="#refseq">Reference sequence</a></li>
+		</ul>
+		<li><a href="#boot">Finding Files</a></li>
+		<ul class="toc-inner">
+		  <li><a href="#boot-dflt">Default bootstrap</a></li>
+		  <li><a href="#boot-canon">Installed bootstrap</a></li>
+		  <li><a href="#boot-override">Override rules</a></li>
+		</ul>
+		<li><a href="#grammar">Grammar</a></li>
+		<ul class="toc-inner">
+		  <li><a href="#grammar-v1.0">v1.0</a></li>
+		  <li><a href="#grammar-v1.1">v1.1</a></li>
+		</ul>
+	  </ul>
+	</p>
+
+    <hr/>
+
+	<!-- Abstract -->
+
+	<a name="abstract">
+	  
+	  <h2>Background</h2>
+
+	  <div class="section">
+
+		<p>
+		  Most database software runs as a server, with separate client-side
+		  libraries that provide APIs to the application. The app sends requests
+		  through the API to the server, and the server responds to the app
+		  through the API.
+		</p>
+
+		<p>
+		  Both the application and the server maintain separate
+		  configurations. It is as unreasonable to expect that an application
+		  would be able to configure the database server, as it would be for the
+		  server to configure the application. Each is maintained by separate
+		  authorities who need their own control over their own resources.
+		</p>
+
+		<p>
+		  <strong>VDB</strong> is provided as a series of user-space libraries
+		  that implement <em>both</em> the client APIs and the server code within
+		  the application's process. Although the server is not running in a
+		  separate process, it still requires its own configuration.
+		</p>
+
+		<p>
+		  VDB is configured through the use of its own configuration files. This
+		  document will address the structure of these files, their required and
+		  optional content, and the processes used to locate them.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<!-- Content -->
+
+	<a name="structure">
+
+	  <h2>Structure</h2>
+
+	</a>
+
+	<a name="simple-file">
+
+	  <div class="box">
+
+		<h3 class="box">Simple file example</h3>
+
+<pre class="kfg">
+# path to VDB schema files
+vdb/schema/paths = "/home/me/schema"
+
+# path to locally downloaded references
+refseq/paths = "/data/refseq"
+</pre>
+
+		<p class="box-discussion">
+		  Configuration files contain traditional <strong>name=value</strong>
+		  pairs, where the name in this case is formed as a hierarchical
+		  path. Generally, library sub-sections organize their configuration
+		  information under headings, much like a directory.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="comments">
+
+	  <div class="box">
+
+		<h3 class="box">Comments</h3>
+
+		<p class="box">
+		  config files can contain three types of comments
+		</p>
+
+<pre class="kfg">
+## shell-style comments
+#  all text from the hash to the end of line is ignored
+</pre>
+
+		<p class="box-discussion">
+		  The most commonly used comment is the hash-style line comment. All
+		  characters including the hash through the end of line are ignored.
+		</p>
+
+<pre class="kfg">
+/* C-style comments
+   allow for multiple lines
+   terminate with slash-star ( NOT end of line )
+ */
+</pre>
+
+		<p class="box-discussion">
+		  C-style comments are also supported and are useful for both multi-line
+		  and partial line cases. All characters starting from slash-star up to
+		  and including a balancing star-slash are ignored.
+		</p>
+
+		<p class="box-discussion">
+		  PL/I-style, that is BCPL-style, popularly known as C++-style comments
+		  are <strong>NOT</strong> supported since they would potentially
+		  conflict with network path patterns, and they duplicate functionality
+		  provided by hash comments.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="definitions">
+
+	  <div class="box">
+
+		<h3 class="box">Defining path values</h3>
+
+		<p class="box">
+		  VDB-2 config files consist of <strong>path=value</strong> pairs<br/>
+		  these are like name=value pairs except that the name is hierarchical.
+		</p>
+
+<pre class="kfg">
+simple_name = "string value"
+</pre>
+
+		<p class="box-discussion">
+		  The left-hand portion of the definition gives a simple name in this
+		  example. A name must start with a letter and can be followed by any
+		  repeating combination of letters, numerals, underscore ( _ ) and dash
+		  ( - ).
+		</p>
+
+		<p class="box-discussion">
+		  In version 1.0, the assignment operator is a single equal sign ( = ).
+		  Surrounding white space is ignored.
+		</p>
+
+		<p class="box-discussion">
+		  In version 1.0, the value is given as a <strong>string</strong>, which
+		  must be either quoted using double quotes ( "&nbsp;" ) or single
+		  quotes ( '&nbsp;' ).
+		</p>
+
+<pre class="kfg">
+a/hierarchical/name = 'another string value'
+</pre>
+
+		<p class="box-discussion">
+		  In this example, the left-hand side of the assignment is a
+		  hierarchical name, also known as a path. It behaves the same as a
+		  simple name, except that it allows for creation of namespaces. This is
+		  the approach used exclusively by VDB.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="content">
+
+	  <h2>File Content</h2>
+
+	  <div class="section">
+
+		<p>
+		  While there is no prescribed content requirement for well-formed vdb-2
+		  configuration files, VDB-2 itself does make use of certain paths.
+		</p>
+
+		<p>
+		  Within NCBI there are requirements that impact the ability to locate
+		  objects within our archives. Outside of NCBI there are requirements to
+		  process objects compressed by reference.
+		</p>
+
+		<p>
+		  Absence of configuration for these nodes will not cause an error in
+		  and of itself, but it may prevent VDB from operating as expected, e.g.
+		  sam-dump may fail due to the inability to locate a reference sequence.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="vdb">
+
+	  <div class="box">
+
+		<h3 class="box">VDB library</h3>
+
+		<p>
+		  <span class="hdr">vdb/module/paths - OPTIONAL</span><br/>
+		  <span class="entry">a hard-path to architecture-specific
+		  read-only modules</span><br/>
+		  <span class="entry">normally omitted (see below)</span>
+		</p>
+
+		<p>
+		  <span class="hdr">vdb/wmodule/paths - OPTIONAL</span><br/>
+		  <span class="entry">a hard-path to architecture-specific
+		  read/write modules used for loaders</span><br/>
+		  <span class="entry">normally omitted (see below)</span>
+		</p>
+
+		<p>
+		  <span class="hdr">vdb/schema/paths</span><br/>
+		  <span class="entry">a hard-path to root of schema includes</span><br/>
+		  <span class="entry">needed by loaders and vdb-copy</span>
+		</p>
+
+		<p class="box-discussion">
+		  VDB modules can be located either by a hard-coded path in
+		  configuration (as shown above) or by proximity to the vdb library
+		  itself. The latter approach is normally used, since it allows the same
+		  configuration to be used with any architecture or build settings, e.g.
+		  32-bit vs. 64-bit, release vs. debug.
+		</p>
+
+		<p class="box">Examples:</p>
+
+<pre class="kfg">
+# path to VDB read-only external modules
+vdb/module/paths = "/home/vdb/mod"
+
+# path to VDB read/write external modules
+vdb/wmodule/paths = "/home/vdb/wmod"
+
+# path to VDB schema files
+vdb/schema/paths = "/home/vdb/schema"
+</pre>
+
+	  </div>
+
+	</a>
+
+	<a name="sra">
+
+	  <div class="box">
+
+		<h3 class="box">SRA repository</h3>
+
+		<p class="box">
+		  needed to access repository directly<br/>
+		  not currently useful outside of INSDC
+		</p>
+
+		<p>
+		  <span class="hdr">sra/servers</span><br/>
+		  <span class="entry">colon-separated list of paths to file servers</span>
+		</p>
+
+		<p>
+		  <span class="hdr">sra/ncbi/volumes</span><br/>
+		  <span class="entry">colon-separated list of volumes upon file servers</span><br/>
+		  <span class="entry">these volumes use NCBI-style sub-directories</span>
+		</p>
+
+		<p>
+		  <span class="hdr">sra/ebi/volumes</span><br/>
+		  <span class="entry">colon-separated list of volumes upon file servers</span><br/>
+		  <span class="entry">these volumes use EBI-style sub-directories</span>
+		</p>
+
+		<p>
+		  <span class="hdr">sra/ddbj/volumes</span><br/>
+		  <span class="entry">colon-separated list of volumes upon file servers</span><br/>
+		  <span class="entry">these volumes use DDBJ-style sub-directories,
+		  identical to NCBI-style</span>
+		</p>
+
+		<p class="box-discussion">
+		  The SRA is implemented on top of VDB, which needs this information to
+		  resolve accessions to full paths within the repository.
+		</p>
+
+		<p class="box-discussion">
+		  NCBI and DDBJ use the same approach for creating sub-directories upon
+		  an SRA volume: the accession is split into ASCII prefix and number,
+		  and the number is split into banks of 1024 accessions. The volume-relative
+		  path for accession <q>SRR012345</q> would be:
+		</p>
+
+<pre class="code">
+  prefix = "SRR"
+  bank   = 012345 / 1024 = 000012 # ( integer division )
+  path   = "SRR/000012/SRR012345"
+</pre>
+
+		<p class="box-discussion">
+		  EBI uses a slightly different approach designed for human navigation.
+		  They divide the accession number by 1000, and keep the prefix in the
+		  middle. The volume-relative path for accession<q>ERR021966</q> would be:
+		</p>
+
+<pre class="code">
+  prefix = "ERR"
+  bank   = "ERR" + 021966 / 1000 = "ERR021"
+  path   = "ERR/ERR021/ERR021966"
+</pre>
+
+		<p class="box">Examples:</p>
+
+<pre class="kfg">
+# one or more paths to SRA file servers
+sra/servers = "/servers/main"
+
+# SRA volumes upon servers
+sra/ncbi/volumes = "sra4:sra3:sra2:sra1:sra0"
+sra/ebi/volumes = "era1:era0"
+sra/ddbj/volumes = "dra0"
+</pre>
+
+	  </div>
+
+	</a>
+
+	<a name="refseq">
+
+	  <div class="box">
+
+		<h3 class="box">Reference sequence repository</h3>
+
+		<p class="box">
+		  needed to access reference sequences<br/>
+		  required to read most runs compressed by reference
+		</p>
+
+		<p>
+		  <span class="hdr">refseq/paths</span><br/>
+		  <span class="entry">colon-separated list of paths to local repositories</span>
+		</p>
+
+		<p>
+		  <span class="hdr">refseq/servers - DEPRECATED</span><br/>
+		  <span class="entry">colon-separated list of file servers</span>
+		</p>
+
+		<p>
+		  <span class="hdr">refseq/volumes - DEPRECATED</span><br/>
+		  <span class="entry">colon-separated list of volumes upon file servers</span>
+		</p>
+
+		<p class="box-discussion">
+		  The preferred means of indicating paths to reference sequence objects
+		  is via the <q>refseq/paths</q> node. The older method can be used to
+		  construct full paths from the servers and volumes, much like SRA.
+		</p>
+
+		<p class="box-discussion">
+		  A description of where reference sequence objects may be found is
+		  required by VDB any time it is reconstructing sequences that were
+		  compressed against external references, which is the majority of
+		  cases. Absence of this information will cause queries to fail.
+		</p>
+
+		<p class="box">Examples:</p>
+
+<pre class="kfg">
+# one or more paths to reference sequence objects
+refseq/paths = "/servers/main/refseq"
+</pre>
+
+	  </div>
+
+	</a>
+
+	<a name="boot">
+
+	  <h2>Finding Files</h2>
+
+	  <div class="section">
+
+		<p>
+		  One main task of configuration files is to tell VDB where to locate
+		  other files and objects. But there is an issue as to where exactly
+		  it should find configuration files.
+		</p>
+
+
+		<p>
+		  VDB employes three strategies for automatic configuration. They are
+		  listed below as default, installed, and override strategies. Although
+		  listed in this order, they are actually tested in exactly the reverse
+		  order.
+		</p>
+
+	</a>
+
+	<a name="boot-dflt">
+
+	  <div class="box">
+
+		<h3 class="box">Default bootstrap</h3>
+
+		<p class="box">
+		  The method used when all else fails
+		</p>
+
+		<p class="box-discussion">
+		  Many of our users will either run pre-built binaries or will build
+		  tools from sources. In most cases they will not have the ability to
+		  perform any sort of proper <em>installation</em> due to lack of
+		  administrative privileges.
+		</p>
+
+		<p class="box-discussion">
+		  To facilitate boot-strapping without any administrative support, VDB
+		  will trace the location of its configuration code back to the file
+		  system, and use the path to its binary as a starting point.
+		</p>
+
+		<p class="box-discussion">
+		  Specifically, it traces the location of the configuration library,
+		  <span class="code">libkfg</span> to the directory holding its binary**.
+		  For example:
+		</p>
+
+<pre class="kfg">
+    # location of configuration library
+    <span class="code">/usr/local/ncbi/vdb/libs</span>/libkfg.so
+
+    # starting point for locating configuration files
+    <span class="code">/usr/local/ncbi/vdb/libs</span>
+</pre>
+
+		<p class="box-discussion">
+		  <strong>** NB - if the configuration library has been statically linked
+			into your binary, then the starting location will be taken from the
+			path to	your binary.</strong>
+		</p>
+
+		<p class="box-discussion">
+		  The configuration library will then search in its own vicinity for
+		  configuration files:
+		</p>
+
+		<ol class="walk-outer">
+		  <li>test for existence of directory {starting-path}/ncbi</li>
+		  <li>scan directory {starting-path}/ncbi for all files with extension ".kfg"</li>
+		  <li>process each file found in host file system's alphabetical order</li>
+		</ol>
+
+		<p class="box-discussion">
+		  In the example above, one might expect to find:
+		</p>
+
+<pre class="kfg">
+    /usr/local/ncbi/vdb/libs/libkfg.so
+    /usr/local/ncbi/vdb/libs/<span class="code">ncbi/config.kfg</span>
+    /usr/local/ncbi/vdb/libs/<span class="code">ncbi/refseq.kfg</span>
+    /usr/local/ncbi/vdb/libs/<span class="code">ncbi/sra.kfg</span>
+</pre>
+
+	  </div>
+
+	</a>
+
+	<a name="boot-canon">
+
+	  <div class="box">
+
+		<h3 class="box">Installed bootstrap</h3>
+
+		<p class="box">
+		  The second method attempted<br/>
+		  Used when not overridden or when the override did not work
+		</p>
+
+		<p class="box-discussion">
+		  With administrative privileges, VDB can be installed with its
+		  configuration files located in a canonical location:
+		</p>
+
+<pre class="kfg">
+    # canonical location of VDB configuration files
+    /etc/ncbi
+</pre>
+
+		<p class="box-discussion">
+		  The configuration library will search /etc/ncbi for configuration
+		  files:
+		</p>
+
+		<ol class="walk-outer">
+		  <li>test for existence of directory /etc/ncbi</li>
+		  <li>scan directory /etc/ncbi for all files with extension ".kfg"</li>
+		  <li>process each file found in host file system's alphabetical order</li>
+		</ol>
+
+		<p class="box-discussion">
+		  In the example above, one might expect to find:
+		</p>
+
+<pre class="kfg">
+    /etc/ncbi/config.kfg
+    /etc/ncbi/refseq.kfg
+    /etc/ncbi/sra.kfg
+</pre>
+
+	  </div>
+
+	</a>
+
+	<a name="boot-override">
+
+	  <div class="box">
+
+		<h3 class="box">Override rules</h3>
+
+		<p class="box">
+		  The first method attempted<br/>
+		  Useful when no administrative privileges are available<br/>
+		  Also useful when creating/controlling specific configurations
+		</p>
+
+		<p class="box-discussion">
+		  Overrides are accomplished by setting an environment variable and
+		  making it available to VDB:
+		</p>
+
+<pre class="code">
+    # variable to export to VDB
+    VDB_CONFIG
+</pre>
+
+		<p class="box-discussion">
+		  By setting this variable to one or more paths, VDB is given the chance
+		  to look for configuration files. The process is:
+		</p>
+
+		<ol class="walk-outer">
+		  <li>test for existence of $VDB_CONFIG</li>
+		  <li>split $VDB_CONFIG contents on ':' path separator</li>
+		  <li>test each path for existence and type</li>
+		  <li>scan each directory for all files with extension ".kfg"</li>
+		  <li>process each file found in host file system's alphabetical order</li>
+		  <li>process directly each path that names a file</li>
+		</ol>
+
+		<p class="box-discussion">
+		  In the example above, one might expect to find:
+		</p>
+
+<pre class="code">
+    # notice that directly named files do NOT require .kfg extension
+    export VDB_CONFIG=$PRODUCTION/ncbi:$HOME/my-special-config.txt
+</pre>
+
+		<p class="box-discussion">
+		  Within NCBI, the systems team has traditionally used this approach
+		  within <span class="code">~/.ncbi_hints</span> for the vdb facilities
+		  entry. It would typically set up an environment:
+		</p>
+
+<pre class="code">
+    # the first variable is currently NOT exported or used by VDB
+    VDB_ROOT=/net/snowman/vol/projects/trace_software/vdb
+    export VDB_CONFIG=$VDB_ROOT/config:$VDB_ROOT/linux/config
+</pre>
+
+		<p class="box-discussion">
+		  By specifying two directories, we place common configuration within
+		  the first config, and Linux-specific configuration within the second.
+		  They all combine to populate the VDB internal configuration object.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="grammar">
+
+	  <h2>Grammar</h2>
+
+	</a>
+
+	<a name="grammar-v1.0">
+
+	  <div class="box">
+
+		<h3 class="box">Version 1.0 (current)</h3>
+
+		<p class="box">
+		  This grammar describes configuration files current as of January,
+		  2012. It will be extended as more needs are recognized.
+		</p>
+
+<pre class="code">
+config
+    : name_value_pairs
+    | /* empty */
+    ;
+
+name_value_pairs
+    : name_value_pair
+    | name_value_pairs name_value_pair
+    ;
+
+name_value_pair
+    : path assign_op value line_end
+    | EOLN
+    ;
+
+path
+    : ABS_PATH
+    | REL_PATH
+    ;
+
+assign_op
+    : '='
+    ;
+
+value
+    : STRING
+    | ESCAPED_STRING
+    ;
+
+line_end
+    : EOLN
+    | END_INPUT
+    ;
+</pre>
+
+		<p class="box">
+		  The lexical tokens are represented in UPPER CASE in the grammar, and
+		  are defined below:
+		</p>
+
+<pre class="code">
+ /* NAMED EXPRESSIONS */
+
+ /* node/name in a path */
+path_node                       [A-Za-z_0-9][-.A-Za-z_0-9]*
+
+%%
+
+ /* RULES */
+
+ /* multi-line comments */
+\/\*                                            PUSH ( CMT_SLASH_STAR )
+&lt;CMT_SLASH_STAR,CMT_MULTI_LINE&gt;[^*\n]+          IGNORE
+&lt;CMT_SLASH_STAR,CMT_MULTI_LINE&gt;\*+[^*/\n]+      IGNORE
+&lt;CMT_SLASH_STAR,CMT_MULTI_LINE&gt;\**\n            ENTER (CMT_MULTI_LINE )
+&lt;CMT_SLASH_STAR&gt;\*+\/                           POP & IGNORE
+&lt;CMT_MULTI_LINE&gt;\*+\/                           POP & EOLN
+
+ /* line comments */
+#.*                                             IGNORE
+
+[ \t\f\v\r]                                     IGNORE
+
+ /* end of line */
+\n                                              EOLN
+
+ /* normal, POSIX-style paths */
+\/{path_node}(\/{path_node})*                   ABS_PATH
+{path_node}(\/{path_node})*                     REL_PATH
+
+ /* values */
+'[^\\'\f\r\n]*'                                 STRING
+'(\\.|[^\\'\f\r\n])+'                           ESCAPED_STRING
+\"[^\\"\f\r\n]*\"                               STRING
+\"(\\.|[^\\"\f\r\n])+\"                         ESCAPED_STRING
+
+ /* punctuation */
+"="                                             '='
+
+%%
+</pre>
+
+		<p class="box-discussion">
+		  The grammar above accepts input having zero or more path=value pairs.
+		</p>
+
+		<p class="box-discussion">
+		  It also allows for partial, single or multi-line comments as well as
+		  empty lines.
+		</p>
+
+		<p class="box-discussion">
+		  The scanner is responsible for forming correct POSIX-style paths on
+		  the left-hand side of assignments, and in version 1.0 the only value
+		  allowed on the right-hand side is an uninterpreted character string.
+		</p>
+
+		<p class="box-discussion">
+		  The scanner recognizes a single assignment operator for v1.0. The
+		  token id is identity.
+		</p>
+
+		<p class="box-discussion">
+		  The scanner recognizes escape sequences but does not attempt to
+		  convert or limit them to reasonable or meaningful sequences. This
+		  means that any character can be escaped to mean itself, while special
+		  characters will be converted, as discussed below:
+		</p>
+
+		<p>
+		  <span class="hdr">\n</span><br/>
+		  <span class="entry">converted to newline character ( 0x0A )</span>
+		</p>
+
+		<p>
+		  <span class="hdr">\t</span><br/>
+		  <span class="entry">converted to tab character ( 0x09 )</span>
+		</p>
+
+		<p>
+		  <span class="hdr">\r</span><br/>
+		  <span class="entry">converted to return character ( 0x0D )</span>
+		</p>
+
+		<p>
+		  <span class="hdr">\0 ( zero )</span><br/>
+		  <span class="entry">converted to NUL character ( 0x00 )</span>
+		</p>
+
+		<p>
+		  <span class="hdr">\a</span><br/>
+		  <span class="entry">converted to alert ( bell ) character ( 0x07 )</span>
+		</p>
+
+		<p>
+		  <span class="hdr">\v</span><br/>
+		  <span class="entry">converted to vertical tab character ( 0x0B )</span>
+		</p>
+
+		<p>
+		  <span class="hdr">\f</span><br/>
+		  <span class="entry">converted to form-feed character ( 0x0C )</span>
+		</p>
+
+		<p>
+		  <span class="hdr">\[xX][:xdigit:][:xdigit:]</span><br/>
+		  <span class="entry">converted to UTF-8 byte</span>
+		</p>
+
+		<p>
+		  <span class="hdr">\[uU][:xdigit:][:xdigit:][:xdigit:][:xdigit:]</span><br/>
+		  <span class="entry">converted to UCS-2 character</span>
+		</p>
+
+		<p class="box-discussion">
+		  Noticeably absent in the escape sequences above is
+		  <span class="code">\e</span>, which was an unintentional oversight.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="grammar-v1.1">
+
+	  <div class="box">
+
+		<h3 class="box">Version 1.1 (under development)</h3>
+
+		<p class="box">
+		  This grammar describes proposed extensions to configuration files.<br/>
+		  It is intended to be backward compatible with v1.0.
+		</p>
+
+<pre class="code">
+config
+    : config_entries
+    | /* empty */
+    ;
+
+config_entries
+    : config_entry
+    | config_entries config_entry
+    ;
+
+config_entry
+    : path_name path_definition
+    | EOLN
+    ;
+
+path_definition
+    : assign_op expression line_end
+    | '{' config_entries '}' line_end
+    | EOLN '{' config_entries '}' line_end
+    ;
+
+path_name
+    : ABS_PATH
+    | REL_PATH
+    ;
+
+assign_op
+    : '='
+    | PLUS_EQUALS
+    ;
+
+expression
+    : 
+
+unary_expression
+    : postfix_expression
+    | '-' unary_expression
+    ;
+
+postfix_expression
+    : primary_expression
+    | primary_expression size_modifier
+    ;
+
+primary_expression
+    : path
+    | string
+    | integer
+    | float
+    | SYMBOL
+    | '(' expression ')'
+    ;
+
+path
+    : ABS_PATH
+    | REL_PATH
+    | DOS_ABS_PATH
+    | DOS_REL_PATH
+    | UNC_PATH
+    ;
+
+string
+    : STRING
+    | ESCAPED_STRING
+    ;
+
+integer
+    : DECIMAL
+    | HEX
+    ;
+
+float
+    : FLOAT
+    ;
+
+line_end
+    : EOLN
+    | END_INPUT
+    ;
+</pre>
+
+		<p class="box">
+		  The lexical tokens are represented in UPPER CASE in the grammar, and
+		  are defined below:
+		</p>
+
+<pre class="code">
+ /* NAMED EXPRESSIONS */
+
+ /* node/name in a path */
+path_node                       [A-Za-z_0-9][-.A-Za-z_0-9]*
+
+%%
+
+ /* RULES */
+
+ /* multi-line comments */
+\/\*                                            PUSH ( CMT_SLASH_STAR )
+&lt;CMT_SLASH_STAR,CMT_MULTI_LINE&gt;[^*\n]+          IGNORE
+&lt;CMT_SLASH_STAR,CMT_MULTI_LINE&gt;\*+[^*/\n]+      IGNORE
+&lt;CMT_SLASH_STAR,CMT_MULTI_LINE&gt;\**\n            ENTER (CMT_MULTI_LINE )
+&lt;CMT_SLASH_STAR&gt;\*+\/                           POP & IGNORE
+&lt;CMT_MULTI_LINE&gt;\*+\/                           POP & EOLN
+
+ /* line comments */
+#.*                                             IGNORE
+
+[ \t\f\v\r]                                     IGNORE
+
+ /* end of line */
+\n                                              EOLN
+
+ /* normal, POSIX-style paths */
+\/{path_node}(\/{path_node})*                   ABS_PATH
+{path_node}(\/{path_node})*                     REL_PATH
+
+ /* values */
+'[^\\'\f\r\n]*'                                 STRING
+'(\\.|[^\\'\f\r\n])+'                           ESCAPED_STRING
+\"[^\\"\f\r\n]*\"                               STRING
+\"(\\.|[^\\"\f\r\n])+\"                         ESCAPED_STRING
+
+ /* punctuation */
+"="                                             '='
+
+%%
+</pre>
+
+		<p class="box-discussion">
+		  The grammar above accepts input having zero or more path=value pairs.
+		</p>
+
+		<p class="box-discussion">
+		  It also allows for partial, single or multi-line comments as well as
+		  empty lines.
+		</p>
+
+		<p class="box-discussion">
+		  The scanner is responsible for forming correct POSIX-style paths on
+		  the left-hand side of assignments.
+		</p>
+
+		<p class="box-discussion">
+		  The scanner recognizes an assignment operator where the meaning is a
+		  fully recursive value string, i.e. symbolic values will be evaluated
+		  upon retrieval.
+		</p>
+
+		<p class="box-discussion">
+		  The scanner recognizes escape sequences but does not attempt to
+		  convert or limit them to reasonable or meaningful sequences. This
+		  means that any character can be escaped to mean itself, while special
+		  characters will be converted, as discussed below:
+		</p>
+
+		<p>
+		  <span class="hdr">\n</span><br/>
+		  <span class="entry">converted to newline character ( 0x0A )</span>
+		</p>
+
+		<p>
+		  <span class="hdr">\t</span><br/>
+		  <span class="entry">converted to tab character ( 0x09 )</span>
+		</p>
+
+		<p>
+		  <span class="hdr">\r</span><br/>
+		  <span class="entry">converted to return character ( 0x0D )</span>
+		</p>
+
+		<p>
+		  <span class="hdr">\0 ( zero )</span><br/>
+		  <span class="entry">converted to NUL character ( 0x00 )</span>
+		</p>
+
+		<p>
+		  <span class="hdr">\a</span><br/>
+		  <span class="entry">converted to alert ( bell ) character ( 0x07 )</span>
+		</p>
+
+		<p>
+		  <span class="hdr">\v</span><br/>
+		  <span class="entry">converted to vertical tab character ( 0x0B )</span>
+		</p>
+
+		<p>
+		  <span class="hdr">\f</span><br/>
+		  <span class="entry">converted to form-feed character ( 0x0C )</span>
+		</p>
+
+		<p>
+		  <span class="hdr">\e</span><br/>
+		  <span class="entry">converted to escape character ( 0x1B )</span>
+		</p>
+
+		<p>
+		  <span class="hdr">\[xX][:xdigit:][:xdigit:]</span><br/>
+		  <span class="entry">converted to UTF-8 byte</span>
+		</p>
+
+		<p>
+		  <span class="hdr">\[uU][:xdigit:][:xdigit:][:xdigit:][:xdigit:]</span><br/>
+		  <span class="entry">converted to UCS-2 character</span>
+		</p>
+
+	  </div>
+
+	</a>
+
+	<!-- Document Footer -->
+
+	<hr/>
+
+	<center>
+	  <span class="footer">NCBI VDB-2 Documentation</span>
+	</center>
+
+  </body>
+
+</html>

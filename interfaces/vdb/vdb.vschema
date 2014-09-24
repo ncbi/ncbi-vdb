@@ -1,0 +1,820 @@
+/*===========================================================================
+*
+*                            PUBLIC DOMAIN NOTICE
+*               National Center for Biotechnology Information
+*
+*  This software/database is a "United States Government Work" under the
+*  terms of the United States Copyright Act.  It was written as part of
+*  the author's official duties as a United States Government employee and
+*  thus cannot be copyrighted.  This software/database is freely available
+*  to the public for use. The National Library of Medicine and the U.S.
+*  Government have not placed any restriction on its use or reproduction.
+*
+*  Although all reasonable efforts have been taken to ensure the accuracy
+*  and reliability of the software and data, the NLM and the U.S.
+*  Government do not and cannot warrant the performance or results that
+*  may be obtained by using this software or data. The NLM and the U.S.
+*  Government disclaim all warranties, express or implied, including
+*  warranties of performance, merchantability or fitness for any particular
+*  purpose.
+*
+*  Please cite the author in any work or product based on this material.
+*
+* ===========================================================================
+*
+*/
+
+/*==========================================================================
+ * VDB external functions, formats and types
+ */
+version 1;
+
+// built-in functions should be known to all
+include 'vdb/built-in.vschema';
+
+
+/*--------------------------------------------------------------------------
+ * types
+ */
+
+/* text_token
+ *  a vector describing tokens recognized within a text string
+ *
+ * COMPONENTS:
+ *  0 - token id
+ *  1 - token starting coordinate
+ *  2 - token length
+ */
+typedef U16 text:token [ 3 ];
+
+
+/*--------------------------------------------------------------------------
+ * typesets
+ */
+typeset pack_set { B8, B16, B32, B64, integer_set };
+typeset izip_set { integer_set };
+typeset fzip_set { F32 };
+
+
+/*--------------------------------------------------------------------------
+ * formats
+ */
+fmtdef izip_fmt;
+fmtdef fzip_fmt;
+fmtdef rle_fmt;
+fmtdef zlib_fmt;
+fmtdef bzip2_fmt;
+
+
+/*--------------------------------------------------------------------------
+ * functions
+ */
+
+/* echo
+ *  returns single or repeated constant value
+ *
+ *  "T" [ TYPE ] - type of constant data to return
+ *
+ *  "val" [ CONST ] - a data constant
+ *
+ *  "row_len" [ DATA, OPTIONAL ] - if omitted, "val" will be
+ *  issued once and the resultant row-length will be the length
+ *  of "val". otherwise, "val" will be repeated and/or truncated
+ *  as necessary to produce a row-length equal to that of input.
+ *
+ * USAGE:
+ *  to echo a single constant value
+ *    U16 len = row_len ( col ) | < U16 > echo < 0 > ();
+ *
+ *  to create a row of repeated values
+ *    ascii allN = < ascii > echo < 'N' > ( col );
+ */
+function < type T >
+T echo #1.0 < T val > ( * any row_len )
+    = vdb:echo;
+
+
+/* exists
+ *  returns constant or dynamic value if predicate input exists
+ *
+ *  "T" [ TYPE ] - type of data to return
+ *
+ *  "cval" [ CONST, OPTIONAL ] - a data constant. when present,
+ *  the function will behave like "echo" ( see below )
+ *
+ *  "predicate" [ DATA ] - an input whose existence determines
+ *  whether the function will operate or not.
+ *
+ *  "dval" [ DATA, OPTIONAL ] - data value, either passed through
+ *  or used to determine a repeat count of "cval" ( see below )
+ *
+ * USAGE:
+ *  when "cval" is omitted, "dval" must be present and will be
+ *  passed through depending upon the existence of "predicate"
+ *    U8 count = < U8 > exists ( col, count2 );
+ *
+ *  when "cval" is present, "dval" may be omitted, and "cval" will
+ *  be passed through just like echo depending upon "predicate"
+ *   U8 count = < U8 > exists < 2 > ( col2 ) | < U8 > echo < 1 > ();
+ *
+ *  when "cval" and "dval" are both present, the behavior is
+ *  like echo, but gated with "predicate"
+ *    ascii poly = < ascii > exists < 'a' > ( col, repeat );
+ */
+function < type T >
+T exists #1.0 < * T cval > ( any predicate, * T dval )
+    = vdb:exists;
+
+
+/* map
+ *  translate input elements
+ *  behaves much like the Unix "tr" command
+ *  except that charsets are not [currently] supported
+ *
+ *  "A" [ TYPE ] - input data type, e.g. "ascii"
+ *
+ *  "B" [ TYPE ] - output data type, e.g. "ascii" or "U8"
+ *
+ *  "from" [ CONST ] - set of key values.
+ *
+ *  "to" [ CONST ] - set of mapped values,
+ *  where length ( from ) === length ( to )
+ *
+ *  "in" [ DATA ] - input data to be matched against keys
+ *  in "from". also serves as source data when "src" is omitted
+ *
+ *  "src" [ DATA, OPTIONAL ] - source data to be edited by
+ *  substituting "to" values when corresponding "in" value
+ *  matches key in "from". if omitted, "in" is used.
+ *
+ * USAGE:
+ *  to upper case letters from a given alphabet
+ *    ascii upper = < ascii, ascii > map < 'acgtn', 'ACGTN' > ( in );
+ *
+ *  to translate from ascii to binary
+ *    U8 bin = < ascii, U8 > map < 'ACGTN', [ 0, 1, 2, 3, 0 ] > ( in );
+ *
+ *  to alter certain values of a column based upon values in another
+ *    U8 n_encoded = < ascii, U8 > map < 'N', 0 > ( read, quality );
+ *
+ * CAVEATS:
+ *  the full canonical mode of operation uses separate inputs
+ *  for key matching and output source.
+ *
+ *  when a single input is specified:
+ *   - sizeof ( A ) must equal sizeof ( B )
+ *   - A must be a proper subset of B -OR-
+ *   - "from" keys must match every possible "in" value ( total substitution )
+ */
+function < type A, type B >
+B map #1.0 < A from, B to > ( A in, * B src )
+    = vdb:map;
+
+
+/* clip
+ *  limit data values to given bounds
+ *
+ *  "T" [ TYPE ] - input and output data type
+ *
+ *  "dim" [ CONST >= 1 ] - fixed dimension on
+ *  input and output vectors
+ *
+ *  "lower" [ CONST ] - lower bound, inclusive
+ *
+ *  "upper" [ CONST ] - upper bounds, inclusive
+ *
+ *  "in" [ DATA ] - data to be clipped
+ */
+function < type T >
+T clip #1.0 < T lower, T upper > ( T in )
+    = vdb:clip;
+
+function < type T, U32 dim >
+T [ dim ] vclip #1.0 < T lower, T upper > ( T [ dim ] in )
+    = vdb:clip;
+
+
+/* ceil
+ *  round up to the nearest integer
+ *
+ *  "in" [ DATA ] - data to be processed
+ */
+function
+numeric_set ceil #1.0 ( float_set in )
+    = vdb:ceil;
+
+/* floor
+ *  round down to the nearest integer
+ *
+ *  "in" [ DATA ] - data to be processed
+ */
+function
+numeric_set floor #1.0 ( float_set in )
+    = vdb:floor;
+
+/* round
+ *  round to nearest integer away from zero
+ *
+ *  "T" [ TYPE = { F32, F64 } ] - input and output data type
+ *
+ *  "in" [ DATA ] - data to be processed
+ */
+function
+numeric_set round #1.0 ( float_set in )
+    = vdb:round;
+
+/* trunc
+ *  round to the nearest integer not larger in absolute value
+ *
+ *  "T" [ TYPE = { F32, F64 } ] - input and output data type
+ *
+ *  "in" [ DATA ] - data to be processed
+ */
+function
+numeric_set trunc #1.0 ( float_set in )
+    = vdb:trunc;
+
+
+/* min
+ *  return the minimum value of each element
+ * max
+ *  return the maximum value of each element
+ *
+ *  "T" [ TYPE ] - input and output data type
+ *
+ *  "a" [ DATA ] - first operand
+ *
+ *  "b" [ DATA ] - second operand
+ *
+ * SYNOPSIS:
+ *  compares two inputs element by element
+ *  returns min or max element of each
+ *
+ * USAGE:
+ *  intersections
+ *    U32 left = < U32 > max ( left_a, left_b );
+ *    U32 right = < U32 > min ( right_a, right_b );
+ */
+function < type T >
+T min #1.0 ( T a, T b )
+    = vdb:min;
+
+function < type T >
+T max #1.0 ( T a, T b )
+    = vdb:max;
+
+
+/* sum
+ *  return the sum of inputs
+ * diff
+ *  return the difference of inputs
+ *
+ *  "T" [ TYPE ] - input and output data type
+ *  must be member of numeric_set
+ *
+ *  "k" [ CONST, DEFAULT 0 ] - optional constant
+ *  to be added or subtracted
+ *
+ *  "a" [ DATA ] - left-most operand
+ *
+ *  "b" [ DATA ] - optional subtractand
+ *
+ * SYNOPSIS:
+ *  incorporates "k" into expression for every row
+ *  returns sum or difference of inputs for all rows
+ *
+ * USAGE:
+ *  length of half-closed interval
+ *    U32 len = < U32 > diff ( stop, start );
+ *  convert one-based coordinate to zero based
+ *    U32 zero_based = < U32 > diff < 1 > ( one_based );
+ */
+function < type T >
+T sum #1.0 < * T k > ( T a, ... )
+    = vdb:sum;
+
+function < type T >
+T diff #1.0 < * T k > ( T a * T b )
+    = vdb:diff;
+
+/* deriv
+ *  return the 1st derivative of an input row
+ * integral
+ *  return the integral of an input row
+ *   integral   -> starts with 1st value
+ *   integral_0 -> starts with 0
+ *
+ *  "T" [ TYPE ] - input and output data type
+ *  must be signed integer of any size
+ *
+ *  "in" [ DATA ] - input to be modified
+ *
+ * SYNOPSIS:
+ *  Takes/restores chained deltas of integer elements in a row
+ *  Fist element is unmodified
+ */
+
+function < type T > T deriv #1.0  ( T in ) = vdb:deriv;
+function < type T > T integral #1.0  ( T in ) = vdb:integral;
+function < type T > T integral_0 #1.0  ( T in ) = vdb:integral_0;
+
+/* delta
+ *  return the 1st derivative of a whole blob
+ * undelta
+ *  return the integral of a whole blob
+ *
+ *  "T" [ TYPE ] - input and output data type
+ *  must be signed integer of any size
+ *
+ *  "in" [ DATA ] - input to be modified
+ *
+ * SYNOPSIS:
+ *  similar to deriv/integral but operates on full blob
+ */
+
+function < type T > T delta #1.0  ( T in ) = vdb:delta;
+function < type T > T undelta #1.0  ( T in ) = vdb:undelta;
+
+
+/* outlier_encode
+ *  removes a given outlier from a data series
+ * outlier_decode
+ *  removes the effect of outlier_encode
+ *
+ *  "T" [ TYPE ] - input and output data type
+ *  must be an integer of any size
+ *
+ *  "in" [ DATA ] - input to be modified
+ *
+ * SYNOPSIS:
+ *  The encode replaces every element that is equal to the
+ *  outlier with (the value of the previous element) * 2 + 1
+ *  and the remaining elements are replaced with their value * 2.
+ */
+
+function < type T > T outlier_encode #1.0 < T outlier > ( T in ) = vdb:outlier_encode;
+function < type T > T outlier_decode #1.0 < T outlier > ( T in ) = vdb:outlier_decode;
+
+/* add_row_id
+ *  return the sum of an input and its row-id
+ * sub_row_id
+ *  return the difference of an input and its row-id
+ *
+ *  "T" [ TYPE ] - input and output data type
+ *  must be member of numeric_set
+ *
+ *  "in" [ DATA ] - input to be modified
+ *
+ * SYNOPSIS:
+ *  adjusts for relationship between input and row-id
+ *  used primarily to reduce serial ids to constants
+ */
+function < type T >
+T add_row_id #1.0 ( T in )
+    = vdb:add_row_id;
+
+function < type T >
+T sub_row_id #1.0 ( T in )
+    = vdb:sub_row_id;
+
+
+/* cut
+ *  extract one or more elements from input vector
+ *  to form an output vector of equal or less dimension
+ *
+ *  "T" [ TYPE ] - base element type to be processed
+ *
+ *  "idx" [ CONST ] - mandatory initial element index
+ *  count of parameters must equal dimension of output type
+ *
+ *  "in" [ DATA ] - source of input vectors where the vector
+ *  element type is known, but any dimension is accepted.
+ *
+ * USAGE:
+ *  extracting a single channel from a 4 channel vector
+ *    F32 [ 4 ] vect ...
+ *    F32 chan = < F32 > cut < 0 > ( vect );
+ *
+ *  extracting multiple channels
+ *    U8 [ 16 ] in ...
+ *    U8 [ 3 ] out = < U8 > cut < 5, 1, 3 > ( in );
+ *
+ *  reversing channels
+ *    I16 [ 2 ] norm ...
+ *    I16 [ 2 ] rev = < I16 > cut < 1, 0 > ( norm );
+ */
+function < type T >
+T [ * ] cut #1.0 < U32 idx, ... > ( T [ * ] in )
+    = vdb:cut;
+
+
+/* paste
+ *  combine all elements of all inputs into a single vector
+ *  output dimension is sum of all input dimensions after type normalization
+ *
+ *  "T" [ TYPE ] - base element type to be processed
+ *
+ *  "in" [ DATA ] - first of an arbitrary number of columns
+ *  the total of input elements produces an output of "T [ total ]"
+ */
+function < type T >
+T [ * ] paste #1.0 ( T [ * ] in, ... )
+    = vdb:paste;
+
+
+/* vec_sum
+ *  compute the sum of all the elements of the row
+ *
+ *  "T" [ TYPE ] - base element type to be processed
+ *
+ *  "in" [ DATA ] - the input
+ */
+function < type T >
+T vec_sum #1.0 ( T [ * ] in )
+    = vdb:vec_sum;
+
+/* vec_sum
+ *  compute the sum of all the elements of the input vector
+ *
+ *  "T" [ TYPE ] - base element type to be processed
+ *
+ *  "in" [ DATA ] - the input
+ */
+function < type T >
+T fixed_vec_sum #1.0 ( T [ * ] in )
+    = vdb:fixed_vec_sum;
+
+
+/* checksum
+ *  compute a checksum ( hash ) of all of the input bytes
+ *  to be used in a trigger production
+ *
+ *  "node" [ CONST ] - path to metadata node where checksum
+ *   will be stored.
+ *
+ *  "algorithm" [ CONST ] - type of checksum to perform:
+ *    'crc-32'  # match against POSIX cksum
+ *    'md5'     #  "   "  md5sum
+ *    'sha-1'   #  "   "  sha1sum
+ *    'sha-256' #  "   "  sha256sum
+ *    'sha-384' #  "   "  sha384sum
+ *    'sha-512' #  "   "  sha512sum
+ *
+ *  "in" [ DATA ] - the octet-stream to be checksummed
+ */
+function
+bool checksum #1.0 < ascii node, ascii algorithm > ( B8 in )
+    = vdb:checksum;
+
+/* md5sum
+ *  compute an md5 checksum of all of the input bytes
+ */
+function
+bool md5sum #1.0 < ascii node > ( B8 in )
+{
+    return checksum < node, 'md5' > ( in );
+}
+
+
+/* pack
+ *  packs words into bit-aligned units
+ *  words are expected in architecture native byte-order
+ *  and returned in "big-bit-endian" order
+ *
+ *  the packed size is determined by the dimension of the
+ *  left-hand assignment value.
+ *
+ *  "in" [ DATA ] - B8, B16, B32 or B64 data
+ */
+function
+B1 [ * ] pack #1.0 ( pack_set in )
+    = vdb:pack;
+
+
+/* unpack
+ *  unpacks bit-aligned units into words
+ *  input is expected in "big-bit-endian" order
+ *  and returned in architecture native byte-order
+ *
+ *  the unpacked type is determined from the left-hand
+ *  assignment value.
+ *
+ *  "in" [ DATA ] - B[1]..B[64]
+ */
+function
+pack_set unpack #1.0 ( B1 [ * ] in )
+    = vdb:unpack;
+
+
+/* izip
+ * iunzip
+ *  integer compression
+ */
+function
+izip_fmt izip #2.1 ( izip_set in )
+    = vdb:izip;
+
+function
+izip_set iunzip #2.1 ( izip_fmt in )
+    = vdb:iunzip;
+
+physical < type T >
+T izip_encoding #1.0
+{
+    decode { return ( T ) iunzip ( @ ); }
+    encode { return izip ( @ ); }
+};
+
+
+/* fzip
+ * funzip
+ *  floating point compression
+ *
+ *  "mantissa" [ CONST ] - the number of mantissa bits
+ *  to preserve
+ */
+function
+fzip_fmt fzip #1.0 < U32 mantissa > ( fzip_set in )
+    = vdb:fzip;
+
+function
+fzip_set funzip #1.0 ( fzip_fmt in )
+    = vdb:funzip;
+
+physical < type T >
+T fzip_encoding #1.0 < U32 mantissa >
+{
+    decode { return funzip ( @ ); }
+    encode { return fzip < mantissa > ( @ ); }
+};
+
+
+/* rlencode
+ * rldecode
+ *  run-length encoding
+ */
+function
+rle_fmt rlencode #1.0 ( any in )
+    = vdb:rlencode;
+
+function
+any rldecode #1.0 ( rle_fmt in )
+    = vdb:rldecode;
+
+
+/* zip
+ * unzip
+ *  run things through zlib
+ *
+ *  "strategy" [ CONST, OPTIONAL ] - set the compression strategy
+ *
+ *  "level" [ CONST, OPTIONAL ] - set the amount of compression
+ *  from 0..9 ( none to best compression ), or use -1 for zlib
+ *  default behavior.
+ */
+
+// zlib strategy
+const I32 Z_FILTERED            =  1;
+const I32 Z_HUFFMAN_ONLY        =  2;
+const I32 Z_RLE                 =  3;
+const I32 Z_DEFAULT_STRATEGY    =  0;
+
+// zlib level
+const I32 Z_NO_COMPRESSION      =  0;
+const I32 Z_BEST_SPEED          =  1;
+const I32 Z_BEST_COMPRESSION    =  9;
+const I32 Z_DEFAULT_COMPRESSION = -1;
+
+function
+zlib_fmt zip #1.0 < * I32 strategy, I32 level > ( any in )
+    = vdb:zip;
+
+function
+any unzip #1.0 ( zlib_fmt in )
+    = vdb:unzip;
+
+physical < type T >
+T zip_encoding #1.0 < * I32 strategy, I32 level >
+{
+    decode { return unzip ( @ ); }
+    encode { return zip < strategy, level > ( @ ); }
+};
+
+physical
+bool bool_encoding #1.0
+{
+    decode
+    {
+        B1 bit = unzip ( @ );
+        return ( bool ) unpack ( bit );
+    }
+
+    encode
+    {
+        U8 lim = < U8 > clip < 0, 1 > ( @ );
+        B1 bit = pack ( lim );
+        return zip < Z_RLE, Z_BEST_SPEED > ( bit );
+    }
+}
+
+physical < type T >
+T delta_izip_encoding #1.0
+{
+    decode
+    {
+        T dlt = iunzip ( @ );
+        return < T > undelta ( dlt );
+    }
+
+    encode
+    {
+        T dlt = <T> delta ( @ );
+        return izip ( dlt );
+    }
+}
+physical < type T >
+T delta_zip_encoding #1.0
+{
+    decode
+    {
+        T dlt = unzip ( @ );
+        return < T > undelta ( dlt );
+    }
+
+    encode
+    {
+        T dlt = <T> delta ( @ );
+        return zip < Z_RLE, Z_BEST_SPEED > ( dlt );
+    }
+}
+physical < type T >
+T delta_average_zip_encoding #1.0
+{
+    decode
+    {
+        delta_averaged_fmt t = unzip ( @ );
+        return undelta_average ( t );
+    }
+
+    encode
+    {
+        delta_averaged_fmt t = delta_average ( @ );
+        return zip < Z_RLE, Z_BEST_SPEED > ( t );
+    }
+}
+
+/* bzip
+ * bunzip
+ *  run things through bzip2
+ *
+ *  "blockSize100k" [ CONST, OPTIONAL ] - set the compression workspace size
+ *  from 1..9 inclusive, produces a workspace of blockSize100K * 100000 bytes
+ *  default is 5
+ *
+ *  "workFactor" [ CONST, OPTIONAL ] - set compression level
+ *  from 0..250 inclusive, where 0 means bzip2 default, currently 30
+ */
+
+function
+bzip2_fmt bzip #1.0 < * U32 blockSize100k, U32 workFactor > ( any in )
+    = vdb:bzip;
+
+function
+any bunzip #1.0 ( bzip2_fmt in )
+    = vdb:bunzip;
+
+physical < type T >
+T bzip_encoding #1.0 < * U32 blockSize100k, U32 workFactor >
+{
+    decode { return bunzip ( @ ); }
+    encode { return bzip < blockSize100k, workFactor > ( @ ); }
+};
+
+
+/* simple_sub_select
+ *  project a column from another table within database
+ *
+ *  "T" [ TYPE ] - data type of column
+ *   must be compatible with source column
+ *
+ *  "tbl" [ CONST ] - name of table within parent
+ *
+ *  "col" [ CONST ] - column spec, i.e. simple name or
+ *   typed name spec
+ *
+ *  "row" [ DATA ] - row to select
+ *
+ *  "idx" [ DATA ] - one-based indexing of what element to pick, defaults to all if not given
+ */
+function < type T >
+T simple_sub_select #1.0 < ascii tbl, ascii col > ( I64 row *  I32 idx )
+    = vdb:simple_sub_select_1;
+
+
+/* extract_token
+ *  extract a textual token from an input string
+ *
+ *  "idx" [ CONST ] - a zero-based index of the token
+ *  if value < row_len ( tok ), then the substring of
+ *  indexed token is returned. otherwise, returns empty.
+ *
+ *  "str" [ DATA ] - input text. type must be compatible with
+ *  output production, meaning types must be same, or ascii input
+ *  with utf8 output.
+ *
+ *  "tok" [ DATA ] - results of tokenizing "str"
+ */
+function
+text_set extract_token #1.0 < U32 idx > ( text_set str, text:token tok )
+    = vdb:extract_token;
+
+
+/* strtonum
+ *  convert string to number
+ *
+ *  "radix" [ CONST, DEFAULT 10 ]
+ *   if not specified, or if given as 0, the default will be 10
+ *   unless the string begins with "0x" or "0X", in which case radix will be 16
+ *   octal is NOT inferred ( i.e. leading "0" does not imply octal )
+ *
+ *  "str" [ DATA ] - text to be converted
+ */
+function
+numeric_set strtonum #1.0 < * U32 radix > ( text_set str )
+    = vdb:strtonum;
+
+
+/* sprintf
+ *  formatted print to a string
+ *
+ *  formatting rules differ somewhat from C sprintf:
+ *
+ *        '%' [ <flags> ] [ <field-width> ] [ '.' <precision> ] [ ':' <index> ] <storage-class>
+ *
+ *  where:
+ *
+ *    flags
+ *        = ' '           : prepend space to a numeral if it does not have a sign
+ *        | '+'           : always produce a sign on numeric conversion
+ *        | '-'           : left-align parameter within field
+ *        | '0'           : left-pad with zeroes rather than spaces
+ *        | '#'           : use "alternate" representation
+ *        | ','           : produce comma-separated triples
+ *        ;
+ *
+ *    field-width
+ *        = DECIMAL       : a base-10 numeral
+ *        | '*'           : take field width from args
+ *        ;
+ *
+ *    precision
+ *        = DECIMAL       : a base-10 numeral
+ *        | '*'           : take precision from args
+ *        |               : an empty precision means 0
+ *        ;
+ *
+ *    index
+ *        = idx           : a single, zero-based vector element
+ *        | idx '-' idx   : a fully-closed, zero-based interval
+ *        | idx '/' len   : a start index plus length
+ *        ;
+ *
+ *    idx
+ *        = DECIMAL       : an unsigned base-10 numeral
+ *        | '*'           : take index from args
+ *        | '$'           : last element in cell
+ *        |               : an empty index means 0 or $
+ *        ;
+ *
+ *    len
+ *        = DECIMAL       : a base-10 numeral
+ *        | '*'           : take length from args
+ *        | '$'           : row-length of ( cell )
+ *        |               : an empty length means $
+ *        ;
+ *
+ *
+ *    storage-class
+ *        = 'd' | 'i'     : general decimal integer
+ *        | 'u'           : decimal unsigned integer
+ *        | 'x'           : lower-case hex
+ *        | 'X'           : upper-case hex
+ *        | 'o'           : octal
+ *        | 'b'           : binary
+ *        | 'f'           : floating point
+ *        | 'e'           : scientific notation
+ *        | 'g'           : general floating point
+ *        | 'c' | 's'     : character
+ *        ;
+ *
+ *
+ *  "fmt" [ CONST ] - constant format string, adhering to
+ *  the description above
+ *
+ *  "p1" [ DATA ] - first param
+ *  this and any subsequent params must correspond to format
+ *  in type/position/number.
+ */
+function
+text_set sprintf #1.0 < ascii fmt > ( any p1, ... )
+    = vdb:sprintf;

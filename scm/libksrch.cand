@@ -1,0 +1,9 @@
+agrep-dp.pic.o=9749cc99672411a6e2196882f89154a0
+agrep-myers.pic.o=af91243be29a14badb58fef02dc1ce3f
+agrep-myersunltd.pic.o=d6258d54f7f4f10529e69dfbabf56cbb
+agrep-wumanber.pic.o=6923558edbfba297447587f8bd6da1f0
+fgrep-aho.pic.o=0e373f21dbb75e3fc023941cc4c3ca47
+fgrep-boyermoore.pic.o=67a39b1ca65d0beda0f7d874b87a5fdf
+fgrep-dumb.pic.o=09cfe9a24b5d9278f2719a4d50795dea
+nucstrstr-icc-x86_64-rel.pic.o=07a7814ef47dcf8a809d96d38eff0f69
+search.pic.o=c0639a03754f373a4901d07aa8147544

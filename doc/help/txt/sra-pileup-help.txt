@@ -1,0 +1,29 @@
+Usage:
+  sra-pileup <path> [options]
+
+Options:
+  -r|--aligned-region <name[:from-to]>  Filter by position on genome. Name can 
+                                   either be file specific name (ex: "chr1" or 
+                                   "1"). "from" and "to" are 1-based coordinates
+  -q|--minmapq <min. mapq>         Minimum mapq-value,  alignments with lower 
+                                   mapq will be ignored (default=0) 
+  -o|--outfile <output-file>       Output will be written to this file instead 
+                                   of std-out 
+  -t|--table <table>               What table to use (p/s/e) p..primary 
+                                   alignments,  s..secondary alignments 
+                                   e..evidence alignments (default=p) 
+  -d|--duplicates <duplicates>     Don't ignore dups (0/1) 
+  -m|--mode <output-modes>         Output-format: 0...samtools, 1...just 
+                                   counters (default=0) 
+  -h|--help                        Output brief explantion for the program. 
+  -V|--version                     Display the version of the program then 
+                                   quit. 
+  -L|--log-level <level>           Logging level as number or enum string. One 
+                                   of (fatal|sys|int|err|warn|info) or (0-5) 
+                                   Current/default is warn 
+  -v|--verbose                     Increase the verbosity level of the program. 
+                                   Use multiple times for more verbosity. 
+  --report <type>                  Control program execution environment 
+                                   report generation (if implemented). One of 
+                                   (never|error|always). Default is error 
+

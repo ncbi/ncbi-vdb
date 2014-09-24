@@ -1,0 +1,34 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+       "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>pacbio-load help</title>
+</head>
+<body>
+
+<pre>
+Usage:
+  pacbio-load &lt;hdf5-file> -o &lt;target>
+
+Options:
+  -o|--output &lt;output>             target to be created 
+  -S|--schema &lt;schema>             schema-name to be used 
+  -f|--force &lt;force>               forces an existing target to be overwritten 
+  -t|--tabs &lt;tabs>                 load only these tabs (SCPM), dflt=all 
+                                   S...Sequence C...Consensus P...Passes 
+                                   M...Metrics 
+  -p|--with_progressbar &lt;load-progress>  show load-progress 
+  -z|--xml-log                     produce XML-formatted log file 
+
+  -h|--help                        Output brief explantion for the program. 
+  -V|--version                     Display the version of the program then 
+                                   quit. 
+  -L|--log-level &lt;level>           Logging level as number or enum string. One 
+                                   of (fatal|sys|int|err|warn|info) or (0-5) 
+                                   Current/default is warn 
+  -v|--verbose                     Increase the verbosity level of the program. 
+                                   Use multiple times for more verbosity. 
+</pre>
+
+</body>
+</html>

@@ -1,0 +1,8 @@
+Usage: vdb-unlock [Options] <target>
+
+Summary:
+  Unlock a VDB database, table or column.
+
+Options:
+  -h|--help                        Output a brief explantion for the program.
+  -V|--version                     Display the version of the program then quit.

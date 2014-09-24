@@ -1,0 +1,1302 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="VDB_LIB_CMN">
+      <UniqueIdentifier>{964206d0-3a69-44d7-8ce8-8b0f607ed451}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\klib">
+      <UniqueIdentifier>{0ed7efdc-2dc9-40b2-8efa-f213f4f312d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\klib\win">
+      <UniqueIdentifier>{23e6fecb-5d0b-4fc3-9370-4d53899ae46d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\klib\judy">
+      <UniqueIdentifier>{bd33ca43-3ad2-4f79-97ba-d71a7ee3aa10}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\ext">
+      <UniqueIdentifier>{7edb48d4-d8cf-41e5-abec-8f55404c2fb9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\ext\bzip2">
+      <UniqueIdentifier>{7dbf50f7-6a43-4d6d-84bb-3fc4bfcf9119}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\ext\zlib">
+      <UniqueIdentifier>{df01221b-5645-4972-9aef-ceec50265885}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\align-access">
+      <UniqueIdentifier>{eb0425d9-cc8b-4eba-af22-8e21b34e09cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\kfg">
+      <UniqueIdentifier>{d370916c-bb51-44e3-a6a6-ed92b9da1263}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\kfs">
+      <UniqueIdentifier>{7e10d5d5-76a2-48e1-842b-4f5b042d4c2a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\kproc">
+      <UniqueIdentifier>{f3756c44-5e3a-4530-8add-e82d543e31e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\kproc\win">
+      <UniqueIdentifier>{927a306e-5cd1-449f-930a-1db4691a84dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\krypto">
+      <UniqueIdentifier>{9f8b8031-92e3-43b3-bfce-5ae83e387620}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\ksrch">
+      <UniqueIdentifier>{cc92946b-7314-45cb-aac4-d5793c06b0dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\kurl">
+      <UniqueIdentifier>{ac23e647-59a8-46f3-97fb-5951a570ca19}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\kurl\win">
+      <UniqueIdentifier>{ab238ea6-0e54-45d0-95aa-f01798580365}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\vfs">
+      <UniqueIdentifier>{f34ad342-7f71-4af7-bbcf-a0b1394e4336}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\vfs\win">
+      <UniqueIdentifier>{80ad2b5e-cae7-4876-a44e-da2d098588e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="align-writer">
+      <UniqueIdentifier>{217daaf4-d79d-42d8-9acd-a5f84864ff04}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="waxf">
+      <UniqueIdentifier>{18fbbac2-0cd5-47ae-b47e-b3e311303e2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="wkdb">
+      <UniqueIdentifier>{d684a5ee-7f8b-41db-94b7-ad4d7c012438}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="wsradb">
+      <UniqueIdentifier>{6b3cd91d-7b32-49aa-8793-4877351ab114}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="wsraxf">
+      <UniqueIdentifier>{d86be451-ea8c-491b-8ff4-a24d0444c986}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="wvdb">
+      <UniqueIdentifier>{eab89b28-0958-49e2-a62d-3bdcba600bb3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="wvxf">
+      <UniqueIdentifier>{ecea7e6b-cd1f-4ace-a8f1-23cef4ca70fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="wwgsxf">
+      <UniqueIdentifier>{c709aa08-5e41-4c4e-95fe-3db5e81fa887}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\kfs\win">
+      <UniqueIdentifier>{7b619163-53e8-4acc-9d32-b612e655c09f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VDB_LIB_CMN\ncbi-bam">
+      <UniqueIdentifier>{466fbc99-b99a-42de-bc55-b95cfc24890f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\klib\bsearch.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\bstpersist.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\container.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\cp1252.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\crc32.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\data-buffer.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\debug.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\iso8859-1.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\iso8859.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy-vector.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\ksort.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\log.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\md5.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\namelist.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\out.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\pack.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\pbstree-native.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\pbstree-swapped.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\pbstree.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\printf.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\ptpersist.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\ptrie.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\qsort.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\rc-idx-tbl.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\rc-tbl.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\refcount.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\report.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\SHA-32bit.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\SHA-64bit.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\status-rc-strings.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\status-rc.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\status.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\symtab.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\text.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\token.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\trie.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\unpack.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\utf8.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\vector.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\vector_namelist.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\vlen-encode.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\writer.c">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\win\sysalloc.c">
+      <Filter>VDB_LIB_CMN\klib\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\win\syserrcode.c">
+      <Filter>VDB_LIB_CMN\klib\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\win\syslog.c">
+      <Filter>VDB_LIB_CMN\klib\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\win\systime.c">
+      <Filter>VDB_LIB_CMN\klib\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\win\syswriter.c">
+      <Filter>VDB_LIB_CMN\klib\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy\JudyHS.c">
+      <Filter>VDB_LIB_CMN\klib\judy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy\JudyMalloc.c">
+      <Filter>VDB_LIB_CMN\klib\judy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy\Judy_Bit.c">
+      <Filter>VDB_LIB_CMN\klib\judy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy\Judy_Bit_Count.c">
+      <Filter>VDB_LIB_CMN\klib\judy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy\Judy_Bit_Decascade.c">
+      <Filter>VDB_LIB_CMN\klib\judy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy\Judy_Bit_Next.c">
+      <Filter>VDB_LIB_CMN\klib\judy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy\Judy_Bit_NextEmpty.c">
+      <Filter>VDB_LIB_CMN\klib\judy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy\Judy_Bit_Prev.c">
+      <Filter>VDB_LIB_CMN\klib\judy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy\Judy_Word.c">
+      <Filter>VDB_LIB_CMN\klib\judy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy\Judy_Word_Count.c">
+      <Filter>VDB_LIB_CMN\klib\judy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy\Judy_Word_Decascade.c">
+      <Filter>VDB_LIB_CMN\klib\judy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy\Judy_Word_Next.c">
+      <Filter>VDB_LIB_CMN\klib\judy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy\Judy_Word_NextEmpty.c">
+      <Filter>VDB_LIB_CMN\klib\judy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy\Judy_Word_Prev.c">
+      <Filter>VDB_LIB_CMN\klib\judy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\bzip2\blocksort.c">
+      <Filter>VDB_LIB_CMN\ext\bzip2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\bzip2\bzlib.c">
+      <Filter>VDB_LIB_CMN\ext\bzip2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\bzip2\compress.c">
+      <Filter>VDB_LIB_CMN\ext\bzip2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\bzip2\crctable.c">
+      <Filter>VDB_LIB_CMN\ext\bzip2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\bzip2\decompress.c">
+      <Filter>VDB_LIB_CMN\ext\bzip2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\bzip2\huffman.c">
+      <Filter>VDB_LIB_CMN\ext\bzip2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\bzip2\randtable.c">
+      <Filter>VDB_LIB_CMN\ext\bzip2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\zlib\adler32.c">
+      <Filter>VDB_LIB_CMN\ext\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\zlib\compress.c">
+      <Filter>VDB_LIB_CMN\ext\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\zlib\crc32.c">
+      <Filter>VDB_LIB_CMN\ext\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\zlib\deflate.c">
+      <Filter>VDB_LIB_CMN\ext\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\zlib\gzclose.c">
+      <Filter>VDB_LIB_CMN\ext\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\zlib\gzlib.c">
+      <Filter>VDB_LIB_CMN\ext\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\zlib\gzread.c">
+      <Filter>VDB_LIB_CMN\ext\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\zlib\gzwrite.c">
+      <Filter>VDB_LIB_CMN\ext\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\zlib\infback.c">
+      <Filter>VDB_LIB_CMN\ext\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\zlib\inffast.c">
+      <Filter>VDB_LIB_CMN\ext\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\zlib\inflate.c">
+      <Filter>VDB_LIB_CMN\ext\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\zlib\inftrees.c">
+      <Filter>VDB_LIB_CMN\ext\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\zlib\trees.c">
+      <Filter>VDB_LIB_CMN\ext\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\zlib\uncompr.c">
+      <Filter>VDB_LIB_CMN\ext\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\zlib\zutil.c">
+      <Filter>VDB_LIB_CMN\ext\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\align\align-access.c">
+      <Filter>VDB_LIB_CMN\align-access</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfg\config.c">
+      <Filter>VDB_LIB_CMN\kfg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfg\config-grammar.c">
+      <Filter>VDB_LIB_CMN\kfg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfg\config-lex.c">
+      <Filter>VDB_LIB_CMN\kfg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfg\kart.c">
+      <Filter>VDB_LIB_CMN\kfg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfg\keystore.c">
+      <Filter>VDB_LIB_CMN\kfg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfg\report-kfg.c">
+      <Filter>VDB_LIB_CMN\kfg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfg\repository.c">
+      <Filter>VDB_LIB_CMN\kfg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\arc.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\arrayfile.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\buffile.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\buffile-read.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\buffile-write.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\bzip.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\cacheteefile.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\countfile.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\crc32.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\dir_test.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\directory.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\file.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\gzip.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\lockfile.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\md5.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\mmap.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\nullfile.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\pagefile.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\pmem.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\quickmount.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\ramfile.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\readheadfile.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\report.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\sra.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\subfile.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\tar.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\teefile.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\toc.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\tocdir.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\tocentry.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\tocfile.c">
+      <Filter>VDB_LIB_CMN\kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kproc\procmgr.c">
+      <Filter>VDB_LIB_CMN\kproc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kproc\task.c">
+      <Filter>VDB_LIB_CMN\kproc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kproc\win\syscond.c">
+      <Filter>VDB_LIB_CMN\kproc\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kproc\win\syslock.c">
+      <Filter>VDB_LIB_CMN\kproc\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kproc\win\systhread.c">
+      <Filter>VDB_LIB_CMN\kproc\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kproc\win\systimeout.c">
+      <Filter>VDB_LIB_CMN\kproc\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\krypto\aes_core.c">
+      <Filter>VDB_LIB_CMN\krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\krypto\aes-byte.c">
+      <Filter>VDB_LIB_CMN\krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\krypto\cipher.c">
+      <Filter>VDB_LIB_CMN\krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\krypto\ciphermgr.c">
+      <Filter>VDB_LIB_CMN\krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\krypto\cipher-no-vec.c">
+      <Filter>VDB_LIB_CMN\krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\krypto\encfile.c">
+      <Filter>VDB_LIB_CMN\krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\krypto\encfilev2.c">
+      <Filter>VDB_LIB_CMN\krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\krypto\key.c">
+      <Filter>VDB_LIB_CMN\krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\krypto\no-null-ncbi.c">
+      <Filter>VDB_LIB_CMN\krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\krypto\reencfile.c">
+      <Filter>VDB_LIB_CMN\krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\krypto\wgaencrypt.c">
+      <Filter>VDB_LIB_CMN\krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\search\search.c">
+      <Filter>VDB_LIB_CMN\ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\search\nucstrstr.c">
+      <Filter>VDB_LIB_CMN\ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\search\fgrep-dumb.c">
+      <Filter>VDB_LIB_CMN\ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\search\fgrep-boyermoore.c">
+      <Filter>VDB_LIB_CMN\ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\search\fgrep-aho.c">
+      <Filter>VDB_LIB_CMN\ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\search\agrep-wumanber.c">
+      <Filter>VDB_LIB_CMN\ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\search\agrep-myersunltd.c">
+      <Filter>VDB_LIB_CMN\ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\search\agrep-myers.c">
+      <Filter>VDB_LIB_CMN\ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\search\agrep-dp.c">
+      <Filter>VDB_LIB_CMN\ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kns\endpoint.c">
+      <Filter>VDB_LIB_CMN\kurl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kns\entrez-fetcher.c">
+      <Filter>VDB_LIB_CMN\kurl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kns\http.c">
+      <Filter>VDB_LIB_CMN\kurl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kns\KCurlFile.c">
+      <Filter>VDB_LIB_CMN\kurl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kns\KCurlRequest.c">
+      <Filter>VDB_LIB_CMN\kurl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kns\kns_manager.c">
+      <Filter>VDB_LIB_CMN\kurl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kns\stream.c">
+      <Filter>VDB_LIB_CMN\kurl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kns\stream-from-files.c">
+      <Filter>VDB_LIB_CMN\kurl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kns\stream-from-streams.c">
+      <Filter>VDB_LIB_CMN\kurl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kns\url-fetcher.c">
+      <Filter>VDB_LIB_CMN\kurl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kns\url-fetcher-curl.c">
+      <Filter>VDB_LIB_CMN\kurl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kns\win\sysendpoint.c">
+      <Filter>VDB_LIB_CMN\kurl\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kns\win\sysmgr.c">
+      <Filter>VDB_LIB_CMN\kurl\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kns\win\syssock.c">
+      <Filter>VDB_LIB_CMN\kurl\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kns\win\sysstream.c">
+      <Filter>VDB_LIB_CMN\kurl\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vfs\keyring.c">
+      <Filter>VDB_LIB_CMN\vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vfs\manager.c">
+      <Filter>VDB_LIB_CMN\vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vfs\path.c">
+      <Filter>VDB_LIB_CMN\vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vfs\resolver.c">
+      <Filter>VDB_LIB_CMN\vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vfs\win\syskeyring.c">
+      <Filter>VDB_LIB_CMN\vfs\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vfs\win\syspath.c">
+      <Filter>VDB_LIB_CMN\vfs\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\align\dna-reverse-cmpl.c">
+      <Filter>align-writer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\align\reader-cmn.c">
+      <Filter>align-writer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\align\reader-refseq.c">
+      <Filter>align-writer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\align\reference-cmn.c">
+      <Filter>align-writer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\align\refseq-mgr.c">
+      <Filter>align-writer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\align\writer-alignment.c">
+      <Filter>align-writer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\align\writer-cmn.c">
+      <Filter>align-writer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\align\writer-ref.c">
+      <Filter>align-writer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\align\writer-reference.c">
+      <Filter>align-writer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\align\writer-refseq.c">
+      <Filter>align-writer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\align\writer-sequence.c">
+      <Filter>align-writer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\wgsxf\build_read_type.c">
+      <Filter>wwgsxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\wgsxf\build_scaffold.c">
+      <Filter>wwgsxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\add-row-id.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\zip.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\bit_or.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\bunzip.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\bzip.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\ceil.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\checksum.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\clip.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\cut.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\delta.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\deriv.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\diff.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\echo.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\entrez.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\exists.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\extract_token.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\floor.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\funzip.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\fzip.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\integral.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\integral_0.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\irzip.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\iunzip.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\izip.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\lower-case-tech-reads.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\map.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\max.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\min.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\outlier-decoder.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\outlier-encoder.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\pack.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\paste.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\rand_4na_2na.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\rldecode.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\rlencode.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\round.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\simple-sub-select.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\sprintf.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\strtonum.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\subtract-row-id.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\sum.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\trim.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\trunc.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\undelta.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\unpack.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\unzip.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\vec-sum.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vxf\wgs-tokenize-accession.c">
+      <Filter>wvxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\blob-headers.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\transpose.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\blob.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\cast.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\column-cmn.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\compare.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\cursor-cmn.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\database-cmn.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\database-depend.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\database-load.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\dbmgr-cmn.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\delta_average.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\environment-read.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\fixed-row-len.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\index_insert.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\index_lookup.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\index_project.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\linker-cmn.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\linker-int.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\merge.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\meta-attr-read.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\meta-read.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\meta-value.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\page-map.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\parameter-read.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\phys-cmn.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\phys-load.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\prod-cmn.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\prod-expr.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\prod-func.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\range-validate.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\redimension.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\report-vdb.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\row-id.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\row-len.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\schema-db.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\schema-dump.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\schema-eval.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\schema-expr.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\schema-func.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\schema-int.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\schema-parse.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\schema-prod.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\schema-tbl.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\schema-tok.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\schema-type.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\schema.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\split.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\table-cmn.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\table-load.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\meta-append.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\meta-attr-write.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\meta-write.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\wcolumn.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\wcursor.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\wdatabase.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\wdbmgr.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\wlinker.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\wphys.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\wprod.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vdb\wtable.c">
+      <Filter>wvdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\bio-start.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\varloc.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\color-from-dna.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\denormalize.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\dna-from-color.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\dynamic-454-read-descriptor.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\extract-coordinates.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\extract-name_coord.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\format-spot-name.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\fpcodec.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\index_lookup.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\make-position.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\normalize.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\process-position.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\qual4_decode.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\read-desc.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\read-seg-from-readn.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\rewrite-spot-name.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\rotate.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\spot-desc.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\swap.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\tokenize-spot_name-454.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\tokenize-spot_name-abi.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\tokenize-spot_name-helicos.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\tokenize-spot_name-illumina.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\tokenize-spot_name-ion-torrent.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\untyped.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\v0-decompress-init.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\v0-decompress.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\v0-funcs.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\extract-name_fmt.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\extract-spot_name.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\qual4_encode.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\stats.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sraxf\stats_quality.c">
+      <Filter>wsraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sra\sracache.c">
+      <Filter>wsradb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sra\sracol.c">
+      <Filter>wsradb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sra\sramgr-cmn.c">
+      <Filter>wsradb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sra\sratbl-cmn.c">
+      <Filter>wsradb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sra\types.c">
+      <Filter>wsradb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sra\wsramgr.c">
+      <Filter>wsradb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sra\wsratbl.c">
+      <Filter>wsradb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\btree.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\column-cc.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\database-cc.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\dbcc-cmn.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\dbmgr-cmn.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\idstats.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\idxblk.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\ptrieval-v1.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\ptrieval-v2.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\table-cc.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\trieval-v1.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\trieval-v2.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\wcoldata.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\wcolidx.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\wcolidx0.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\wcolidx1.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\wcolidx2.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\wcolumn.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\wdatabase.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\wdbmgr.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\widxblk.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\windex.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\wkdb.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\wmeta.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\wtable.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\wtrieidx-v1.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\wtrieidx-v2.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kdb\wu64idx-v3.c">
+      <Filter>wkdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\align-local_ref_id.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\template-len.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\align-local_ref_start.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\align-ref-name.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\align-ref-pos.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\align-ref-seq-id.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\align-restore-read.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\cigar.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\generate-mismatch-qual.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\get-sam-flags.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\get_mate_align_ids.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\make-cmp-read_desc.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\mismatch-restore-qual.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\not-my-row.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\project_read_from_sequence.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\raw-restore-qual.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\raw-restore-read.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\ref-preserve_qual.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\ref-restore-read.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\ref-tbl-sub-select.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\ref-tbl.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\seq-construct-read.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\seq-restore-read.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\axf\refseq-stats.c">
+      <Filter>waxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\win\sysdir.c">
+      <Filter>VDB_LIB_CMN\kfs\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\win\sysdll.c">
+      <Filter>VDB_LIB_CMN\kfs\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\win\sysfile.c">
+      <Filter>VDB_LIB_CMN\kfs\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\win\syslockfile.c">
+      <Filter>VDB_LIB_CMN\kfs\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\kfs\win\sysmmap.c">
+      <Filter>VDB_LIB_CMN\kfs\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\align\bam.c">
+      <Filter>VDB_LIB_CMN\ncbi-bam</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy\Judy_Bit_Cascade.c">
+      <Filter>VDB_LIB_CMN\klib\judy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy\Judy_Word_Cascade.c">
+      <Filter>VDB_LIB_CMN\klib\judy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sra\wsraschema-stub.c">
+      <Filter>wsradb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sra\sraschema.c">
+      <Filter>wsradb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\klib\judy\JudySL.c">
+      <Filter>VDB_LIB_CMN\klib\judy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sra\sra-schema.c">
+      <Filter>wsradb</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\klib\Judy.h">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\klib\log-priv.h">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\klib\maybeswap.h">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\klib\pbstree-priv.h">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\klib\trie-priv.h">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\klib\writer-priv.h">
+      <Filter>VDB_LIB_CMN\klib</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

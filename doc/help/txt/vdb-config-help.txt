@@ -1,0 +1,22 @@
+Usage:
+  vdb-config [options] [<query> ...]
+
+Summary:
+  Display VDB configuration information
+
+
+Options:
+  -a|--all                         print all information [default] 
+  -p|--cfg                         print current configuration 
+  -f|--files                       print loaded files 
+  -e|--env                         print shell variables 
+
+  -h|--help                        Output brief explantion for the program. 
+  -V|--version                     Display the version of the program then 
+                                   quit. 
+  -L|--log-level <level>           Logging level as number or enum string. One 
+                                   of (fatal|sys|int|err|warn|info) or (0-5) 
+                                   Current/default is warn 
+  -v|--verbose                     Increase the verbosity level of the program. 
+                                   Use multiple times for more verbosity. 
+

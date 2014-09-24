@@ -1,0 +1,21 @@
+Usage:
+  pacbio-load <hdf5-file> -o <target>
+
+Options:
+  -o|--output <output>             target to be created 
+  -S|--schema <schema>             schema-name to be used 
+  -f|--force <force>               forces an existing target to be overwritten 
+  -t|--tabs <tabs>                 load only these tabs (SCPM), dflt=all 
+                                   S...Sequence C...Consensus P...Passes 
+                                   M...Metrics 
+  -p|--with_progressbar <load-progress>  show load-progress 
+  -z|--xml-log                     produce XML-formatted log file 
+
+  -h|--help                        Output brief explantion for the program. 
+  -V|--version                     Display the version of the program then 
+                                   quit. 
+  -L|--log-level <level>           Logging level as number or enum string. One 
+                                   of (fatal|sys|int|err|warn|info) or (0-5) 
+                                   Current/default is warn 
+  -v|--verbose                     Increase the verbosity level of the program. 
+                                   Use multiple times for more verbosity. 

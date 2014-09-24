@@ -1,0 +1,148 @@
+
+
+const char * path           ... path of database
+const char * refname        ... name of reference to walk
+INSDC_coord_zero ref_pos    ... start of window on reference to walk
+INSDC_coord_len ref_len     ... length of window on reference to walk
+int32_t min_mapq            ... minimal mapping quality ( for a alignment to be considered )
+
+KDirectory *wd;
+rc_t rc = KDirectoryNativeDir( &wd );
+if ( rc == 0 )
+{
+    const VDBManager *v_mgr,
+    rc = VDBManagerMakeRead ( &v_mgr, wd );
+    if ( rc == 0 )
+    {
+        const VDatabase *v_db;
+        rc = VDBManagerOpenDBRead( v_mgr, &v_db, NULL, "%s", path );
+        if ( rc == 0 )
+        {
+            const ReferenceList *ref_list;
+            uint32_t reflist_options =  ereferencelist_usePrimaryIds;
+            rc = ReferenceList_MakeDatabase( &ref_list, v_db, reflist_options, 0, NULL, 0 ); /* align/reference.h */
+            if ( rc == 0 )
+            {
+                const AlignMgr * a_mgr;
+                rc = AlignMgrMakeRead( &a_mgr );   /* align/manager.h */
+                if ( rc == 0 )
+                {
+                    PlacementSetIterator * set_iter;
+                    rc = AlignMgrMakePlacementSetIterator( a_mgr, &set_iter ); /* align/iterator.h */
+                    if ( rc == 0 )
+                    {
+                        const ReferenceObj * ref_obj;
+                        rc = ReferenceList_Find( ref_list, &ref_obj, refname, string_size( refname ) ); /* align/reference.h */
+                        if ( rc == 0 )
+                        {
+                            PlacementIterator *pl_iter;
+                            rc = ReferenceObj_MakePlacementIterator( ref_obj, /* align/reference.h */
+                                &pl_iter,
+                                ref_pos,            /* where it starts on the reference */
+                                ref_len,            /* the whole length of this reference/chromosome */
+                                min_mapq,           /* no minimal mapping-quality to filter out */
+                                NULL,               /* no special reference-cursor */
+                                NULL,               /* no special cursor into the PRIMARY/SECONDARY/EVIDENCE-table */
+                                primary_align_ids,  /* what ID-source to select from REFERENCE-table (ref_obj) */
+                                NULL,               /* no placement-record extensions #0 ( or private context #0 )*/
+                                NULL,               /* no placement-record extensions #1 */
+                                NULL );             /* no spotgroup re-grouping (yet) */
+                            if ( rc == 0 )
+                            {
+                                rc = PlacementSetIteratorAddPlacementIterator ( set_iter, pl_iter ); /* align/iterator.h */
+                                if ( rc == 0 )
+                                {
+                                    rc = walk_set_iter( set_iter ); /* see below */
+                                }
+                            }
+                            ReferenceObj_Release( ref_obj );
+                        }
+                        PlacementSetIteratorRelease( set_iter );
+                    }
+                    AlignMgrRelease( a_mgr );
+                }
+                ReferenceList_Release( ref_list );
+            }
+            VDatabaseRelease ( v_db );
+        }
+        VDBManagerRelease ( v_mgr );
+    }
+    KDirectoryRelease( wd );
+}
+
+
+rc_t walk_set_iter( PlacementSetIterator * set_iter )
+{
+    rc_t rc = 0;
+    while ( rc == 0 )
+    {
+        struct ReferenceObj const * ref_obj;
+        rc = PlacementSetIteratorNextReference( set_iter, NULL, NULL, &ref_obj ); /* align/iterator.h */
+
+        if ( rc == 0 )
+        {
+            rc = walk_reference( set_iter, ref_obj ); /* see below */
+        }
+    }
+    if ( GetRCState( rc ) == rcDone ) rc = 0;
+    return rc;
+}
+
+
+rc_t walk_reference( PlacementSetIterator * set_iter, struct ReferenceObj const * ref_obj )
+{
+    rc_t rc = 0;
+    while ( rc == 0 )
+    {
+        INSDC_coord_zero first_pos;
+        INSDC_coord_len len;
+        rc = PlacementSetIteratorNextWindow( set_iter, &first_pos, &len ); /* align/iterator.h */
+        if ( rc == 0 )
+        {
+            rc = walk_window( set_iter, ref_obj, first_pos, len ); /* see below */
+        }
+    }
+    if ( GetRCState( rc ) == rcDone ) rc = 0;
+    return rc;
+}
+
+
+rc_t walk_window( PlacementSetIterator * set_iter, struct ReferenceObj const * ref_obj,
+                  INSDC_coord_zero first_pos, INSDC_coord_len len )
+{
+    rc_t rc = 0;
+    while ( rc == 0 )
+    {
+        INSDC_coord_zero pos;
+        rc = PlacementSetIteratorNextAvailPos( set_iter, &pos, NULL ); /* align/iterator.h */
+        if ( rc == 0 )
+        {
+            rc = walk_position( set_iter, ref_obj, first_pois, len, pos ); /* see below */
+        }
+    }
+    if ( GetRCState( rc ) == rcDone ) rc = 0;
+    return rc;
+}
+
+
+rc_t walk_position( PlacementSetIterator * set_iter, struct ReferenceObj const * ref_obj,
+                    INSDC_coord_zero first_pos, INSDC_coord_len len, INSDC_coord_zero pos )
+{
+    rc_t rc = 0;
+    while ( rc == 0 )
+    {
+        const PlacementRecord *rec; /* align/iterator.h */
+        rc = PlacementSetIteratorNextRecordAt( set_iter, pos, &rec ); /* align/iterator.h */
+        if ( rc == 0 )
+        {
+            private_context * pctx = PlacementRecord_get_ext_data_ptr( rec, placementRecordExtension0 ); /* align/iterator.h */
+            /*
+                available now is:
+                alignment in rec
+                private context ( that means for instance the table-cursor that was used to read this alignment )
+            */
+        }
+    }
+    if ( GetRCState( rc ) == rcDone ) rc = 0;
+    return rc;
+}

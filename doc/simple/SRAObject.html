@@ -1,0 +1,677 @@
+<html>
+
+  <head>
+
+    <title>NCBI VDB-2: SRAObject</title>
+    <link href="simple.css" rel="stylesheet" type="text/css"/>
+
+  </head>
+
+  <body>
+
+    <!-- Document Header -->
+
+    <h1>VDB-2 - Simple API: SRAObject</h1>
+
+    <p class="toc">
+    <span class="hdr">Type:</span><br/>
+      <span class="entry">interface</span>
+    </p>
+
+    <p class="toc">
+    <span class="hdr">Revision History:</span><br/>
+      <table class="entry">
+        <tr><td>2013-Jun-30</td><td>&bull;</td><td>rodarmer</td></tr>
+      </table>
+    </p>
+
+    <p class="toc">
+      <span class="hdr">Header:</span><br/>
+      <span class="entry"><a href="../../interfaces/simple/sra.hpp">&lt;simple/sra.hpp&gt;</a></span>
+    </p>
+
+    <p class="toc">
+      <span class="hdr">Package:</span><br/>
+      <span class="entry">gov.nih.nlm.ncbi.sra</span>
+    </p>
+
+    <p class="toc">
+    <span class="hdr">Contents:</span><br/>
+    <ul class="toc-outer">
+        <li><a href="#description">Description</a></li>
+		<li><a href="#SRAObject">SRAObject</a></li>
+		<ul class="toc-inner">
+		  <li><a href="#SRAObject.create">create</a> - create an object from
+			spec</li>
+		  <li><a href="#SRAObject.combine">combine</a> - create an object by
+			combining two existing objects</li>
+		  <li><a href="#SRAObject.slice">slice</a> - create a vertical slice by
+			reference</li>
+		  <li><a href="#SRAObject.open">open</a> - prepare object for use</li>
+		  <li><a href="#SRAObject.hasSpots">hasSpots</a> - ask if spots are
+			available</li>
+		  <li><a href="#SRAObject.getSpots">getSpots</a> - get an iterator of
+			spots</li>
+		  <li><a href="#SRAObject.hasAlignments">hasAlignments</a> - ask if
+			alignment data are available</li>
+		  <li><a href="#SRAObject.getReferences">getReferences</a> - get an
+			iterator of references</li>
+		  <li><a href="#SRAObject.getAlignments">getAlignments</a> - get an
+			iterator of alignments</li>
+		  <li><a href="#SRAObject.getUnalignedReads">getUnalignedReads</a> - get
+			an iterator of unaligned reads</li>
+		</ul>
+    </ul>
+    </p>
+
+    <hr/>
+
+    <!-- Description -->
+
+    <a name="description">
+
+    <h2>Description</h2>
+
+    <div class="section">
+
+      <p>
+		This is an interface representing any type of object known to SRA.
+		Currently the object types are:
+	  </p>
+
+	  <ul>
+		<li>original SRA tables</li>
+		<ul>
+		  <li>454</li>
+		  <li>Illumina</li>
+		  <li>ABI</li>
+		  <li>Helicos</li>
+		  <li>IonTorrent</li>
+		</ul>
+		<li>multi-table SRA</li>
+		<ul>
+		  <li>PacBio</li>
+		</ul>
+		<li>aligned SRA</li>
+		<ul>
+		  <li>Complete Genomics</li>
+		  <li>other platforms</li>
+		</ul>
+		<li>BAM</li>
+		<li>WGS</li>
+		<li>reference objects</li>
+	  </ul>
+
+    </div>
+
+    </a>
+
+    <!-- Interfaces -->
+    <hr/>
+
+    <a name="SRAObject">
+
+    <h2>SRAObject</h2>
+
+	<div class="section">
+
+	  <p>
+		<span class="hdr">extends</span><br/>
+		<span class="entry">n/a</span>
+	  </p>
+
+	  <p>
+		The <strong>SRAObject</strong> interface represents a combination of
+		<strong>spots</strong>, <strong>references</strong>,
+		<strong>alignments</strong> and <strong>unaligned reads</strong>.
+	  </p>
+
+	  <p>
+		It is apparent that more functionality is needed, particularly in terms
+		of applying filters, and possibly sorting. Ideas so far:
+	  </p>
+
+	  <ul>
+		<li>selecting table for sequence data - really only applies to PacBio</li>
+		<li>perform merge-sort on primary + secondary alignments or serialize</li>
+		<li>filter/group runs by SPOT_GROUP - implies sorting issues</li>
+		<li>filter/group aligned objects by run - implies sorting issues</li>
+		<li>limit the number of rows on a particular source by ordinal
+		  range</li>
+		<li>utilize BLAST as either an indexed query to reference or a filter to
+		  table scan</li>
+	  </ul>
+
+	</div>
+
+    <h3>messages</h3>
+
+    <!-- create -->
+	<a name="SRAObject.create">
+
+    <div class="box">
+
+	  <h3 class="box">create</h3>
+
+	  <p class="box">
+		create an object from a textual specification,<br/>
+		either a path, a URI, or an accession.
+	  </p>
+
+<span class="code"><pre>
+    // C++
+    static SRAObject create ( const String & spec )
+        throw ( SRAException );
+
+    // Java
+    public static SRAObject create ( String spec )
+        throws SRAException { ... }
+</pre></span>
+
+      <p>
+        <span class="hdr">spec</span><br/>
+        <span class="entry">an INSDC accession, a host filesystem path, or a URI</span><br/>
+        <span class="entry">( in C++, <q>String</q> is a typedef
+        for <strong>std::string</strong> )</span>
+      </p>
+
+      <p>
+        <span class="hdr">return value</span><br/>
+        <span class="entry">a new, unopened <strong>SRAObject</strong> from spec</span>
+      </p>
+
+      <p>
+        <span class="hdr">errors</span><br/>
+        <span class="entry"><a href="SRAException.html">SRAException</a></span>
+      </p>
+
+	  <p class="box-discussion">
+		This operation is the most fundamental of the entire API. It utilizes
+		VDB underneath to locate an object either locally or remotely, decrypt
+		it on-the-fly if needed, and to determine its structure. The types of
+		structures supported are:
+	  </p>
+
+	  <ul>
+		<li>original SRA runs - stored as VDB tables</li>
+		<li>multi-table SRA runs - e.g. Pacific Biotech</li>
+		<li>cSRA aligned objects - reads from one or more runs aligned against
+		  one or more references</li>
+		<li>BAM files ( TBD ) - reads from one or more runs aligned against one or more
+		  references</li>
+	  </ul>
+
+	  <p class="box-discussion">
+		Internally, original and multi-table <strong>SRA</strong> objects are
+		represented with the main SEQUENCE table stored as the single member of
+		the <strong>spot</strong> set. All other sets are empty.
+	  </p>
+
+	  <p class="box-discussion">
+		<strong>cSRA</strong> objects are split apart into the
+		<strong>reference</strong>, <strong>primary alignment</strong>,
+		<strong>secondary alignment</strong>, <strong>unaligned reads</strong>
+		and the <strong>spot</strong> sets. Because cSRA can be all things at
+		once, the <em>SRAObject</em> interface combines them.
+	  </p>
+
+	  <p class="box-discussion">
+		<strong>BAM</strong> objects are also split apart, but into
+		<strong>reference</strong>, <strong>combined alignment</strong>,
+		and <strong>unaligned reads</strong> sets. BAM cannot assemble
+		<em>spots</em>.
+	  </p>
+
+    </div>
+
+	</a>
+
+    <!-- combine -->
+	<a name="SRAObject.combine">
+
+    <div class="box">
+
+	  <h3 class="box">combine</h3>
+
+	  <p class="box">
+		create an object from a two existing objects,<br/>
+		performing a full union of the contents of both.
+	  </p>
+
+<span class="code"><pre>
+    // C++
+    static SRAObject combine ( const SRAObject & a, const SRAObject & b )
+        throw ( SRAException );
+
+    // Java
+    public static SRAObject combine ( SRAObject a, SRAObject b )
+        throws SRAException { ... }
+</pre></span>
+
+      <p>
+        <span class="hdr">a, b</span><br/>
+        <span class="entry">unopened objects to combine</span>
+      </p>
+
+      <p>
+        <span class="hdr">return value</span><br/>
+        <span class="entry">a new, unopened <strong>SRAObject</strong>
+          having the union of the contents of its input parameters</span>
+      </p>
+
+      <p>
+        <span class="hdr">errors</span><br/>
+        <span class="entry"><a href="SRAException.html">SRAException</a></span>
+      </p>
+
+	  <p class="box-discussion">
+		A question for Eugene - does it make any sense to allow combination of
+		aligned and unaligned data? By this I mean a raw 454 run and an aligned
+		Illumina run? By the same token, does it makes sense to allow combining
+		color-space and base-space runs?
+	  </p>
+
+	  <p class="box-discussion">
+		The main uses of combining objects are to specify complex slicing and
+		for pileup. Combining raw machine runs or 100% unaligned reads into a
+		single object doesn't accomplish anything that wouldn't be possible by
+		using a list of individual objects.
+	  </p>
+
+    </div>
+
+	</a>
+
+    <!-- slice -->
+	<a name="SRAObject.slice">
+
+    <div class="box">
+
+	  <h3 class="box">slice</h3>
+
+	  <p class="box">
+		create an object representing a vertical <q>slice</q> of original.<br/>
+		limits contents to a region upon a single named reference.
+	  </p>
+
+<span class="code"><pre>
+    // C++
+    SRAObject slice ( const String & refSpec, uint64_t refStart, uint64_t refLength ) const
+        throw ( SRAException );
+
+    // Java
+    public final SRAObject combine ( String refSpec, long refStart, long refLength )
+        throws SRAException { ... }
+</pre></span>
+
+      <p>
+        <span class="hdr">refSpec</span><br/>
+        <span class="entry">name or accession of reference sequence</span><br/>
+        <span class="entry">( as represented internally within object )</span>
+      </p>
+
+      <p>
+        <span class="hdr">refStart</span><br/>
+        <span class="entry">zero-based starting coordinate within reference</span>
+      </p>
+
+      <p>
+        <span class="hdr">refLength</span><br/>
+        <span class="entry">length of slice region upon reference</span><br/>
+        <span class="entry">( use -1 for remainder )</span><br/>
+        <span class="entry">[ WHAT ABOUT CIRCULAR? ]</span>
+      </p>
+
+      <p>
+        <span class="hdr">return value</span><br/>
+        <span class="entry">a new, unopened <strong>SRAObject</strong> limited
+          to a single region of a single reference</span>
+      </p>
+
+      <p>
+        <span class="hdr">errors</span><br/>
+        <span class="entry"><a href="SRAException.html">SRAException</a></span>
+      </p>
+
+	  <p class="box-discussion">
+		The slice operation creates a new sub-object, initially empty, and
+		populates it by locating all contents that align to the specified
+		region, then cloning the intersection into the new object.
+	  </p>
+
+    </div>
+
+	</a>
+
+    <!-- open -->
+	<a name="SRAObject.open">
+
+    <div class="box">
+
+	  <h3 class="box">open</h3>
+
+	  <p class="box">
+		evaluates all source criteria,<br/>
+		opens files, tables, columns, cursors<br/>
+		puts object into operational state
+	  </p>
+
+<span class="code"><pre>
+    // C++
+    void open ()
+        throw ( SRAException );
+
+    // Java
+    public final void open ()
+        throws SRAException { ... }
+</pre></span>
+
+      <p>
+        <span class="hdr">errors</span><br/>
+        <span class="entry"><a href="SRAException.html">SRAException</a></span>
+      </p>
+
+	  <p class="box-discussion">
+		I have to remember the types of parameters I wanted to give before
+		opening, or as parameters to the open message itself. Eugene and I
+		mentioned operating modality. I think it was about whether we wanted to
+		expose sorting, etc. One of them was whether we would want raw SEQUENCE
+		or CONSENSUS reads from PacBio.
+	  </p>
+
+    </div>
+
+	</a>
+
+    <!-- hasSpots -->
+	<a name="SRAObject.hasSpots">
+
+    <div class="box">
+
+	  <h3 class="box">hasSpots</h3>
+
+	  <p class="box">
+		ask if object can produce a spot iterator<br/>
+		only SRA objects can produce spots
+	  </p>
+
+<span class="code"><pre>
+    // C++
+    bool hasSpots () const
+        throw ();
+
+    // Java
+    public final boolean hasSpots () { ... }
+</pre></span>
+
+      <p>
+        <span class="hdr">return value</span><br/>
+        <span class="entry">true if object can produce an
+		  <a href="SRASpot.html#SRASpotIterator">SRASpotIterator</a></span>
+      </p>
+
+	  <p class="box-discussion">
+		An <strong>SRA</strong> object can always produce <strong>spots</strong>
+		representing the raw machine reads. This message allows a user to
+		determine the best way to access an object's contents.
+	  </p>
+
+    </div>
+
+	</a>
+
+    <!-- getSpots -->
+	<a name="SRAObject.getSpots">
+
+    <div class="box">
+
+	  <h3 class="box">getSpots</h3>
+
+	  <p class="box">
+		open an iterator on the object's spots
+	  </p>
+
+<span class="code"><pre>
+    // C++
+    SRASpotIterator getSpots ( bool full_aligned,
+            bool partially_aligned, bool fully_unaligned ) const
+        throw ( SRAException );
+
+    // Java
+    public final SRASpotIterator getSpots ( boolean fully_aligned,
+            boolean partially_aligned, boolean fully_unaligned )
+        throw SRAException { ... }
+</pre></span>
+
+      <p>
+        <span class="hdr">fully_aligned</span><br/>
+        <span class="entry">if true, include spots having no unaligned reads</span>
+      </p>
+
+      <p>
+        <span class="hdr">partially_aligned</span><br/>
+        <span class="entry">if true, include spots having at least one but not all
+          aligned reads</span>
+      </p>
+
+      <p>
+        <span class="hdr">fully_unaligned</span><br/>
+        <span class="entry">if true, include spots having no aligned reads</span>
+      </p>
+
+      <p>
+        <span class="hdr">return value</span><br/>
+        <span class="entry"><a href="SRASpot.html#SRASpotIterator">SRASpotIterator</a></span>
+      </p>
+
+      <p>
+        <span class="hdr">errors</span><br/>
+        <span class="entry"><a href="SRAException.html">SRAException</a></span><br/>
+        <span class="entry">fails with exception if iterator is empty</span>
+      </p>
+
+	  <p class="box-discussion">
+		Returns an iterator over the union of all spots matching the criteria
+		provided.
+	  </p>
+
+    </div>
+
+	</a>
+
+    <!-- hasAlignments -->
+	<a name="SRAObject.hasAlignments">
+
+    <div class="box">
+
+	  <h3 class="box">hasAlignments</h3>
+
+	  <p class="box">
+		ask if object can produce alignment and reference iterators<br/>
+		original SRA only stores raw machine reads
+	  </p>
+
+<span class="code"><pre>
+    // C++
+    bool hasAlignments () const
+        throw ();
+
+    // Java
+    public final boolean hasAlignments () { ... }
+</pre></span>
+
+      <p>
+        <span class="hdr">return value</span><br/>
+        <span class="entry">true if object has alignment data</span>
+      </p>
+
+	  <p class="box-discussion">
+		If an object has alignment data, it can list its references and
+		alignments. In this case, the optimal approach to sequence data will be
+		via the alignments, even if - as is the case for SRA - spots may be
+		iterated.
+	  </p>
+
+    </div>
+
+	</a>
+
+    <!-- getReferences -->
+	<a name="SRAObject.getReferences">
+
+    <div class="box">
+
+	  <h3 class="box">getReferences</h3>
+
+	  <p class="box">
+		open an iterator across all the object's references
+	  </p>
+
+<span class="code"><pre>
+    // C++
+    SRAReferenceIterator getReferences () const
+        throw ( SRAException );
+
+    // Java
+    public final SRAReferenceIterator getReferences ()
+        throw SRAException { ... }
+</pre></span>
+
+      <p>
+        <span class="hdr">return value</span><br/>
+        <span class="entry"><a href="SRAReference.html#SRAReferenceIterator">SRAReferenceIterator</a></span>
+      </p>
+
+      <p>
+        <span class="hdr">errors</span><br/>
+        <span class="entry"><a href="SRAException.html">SRAException</a></span><br/>
+        <span class="entry">fails with exception if iterator is empty</span>
+      </p>
+
+	  <p class="box-discussion">
+		Returns an iterator of all available references in object. Normally each
+		reference will have alignments, but it is possible to have a badly
+		formed object listing a reference for which there are no alignments.
+	  </p>
+
+    </div>
+
+	</a>
+
+    <!-- getAlignments -->
+	<a name="SRAObject.getAlignments">
+
+    <div class="box">
+
+	  <h3 class="box">getAlignments</h3>
+
+	  <p class="box">
+		open an iterator across the object's indicated alignments
+	  </p>
+
+<span class="code"><pre>
+    // C++
+    SRAAlignmentIterator getAlignments ( bool primary, bool secondary ) const
+        throw ( SRAException );
+
+    // Java
+    public final SRAAlignmentIterator getAlignments ( boolean primary, boolean secondary )
+        throw SRAException { ... }
+</pre></span>
+
+      <p>
+        <span class="hdr">primary</span><br/>
+        <span class="entry">if true, include primary alignments</span>
+      </p>
+
+      <p>
+        <span class="hdr">secondary</span><br/>
+        <span class="entry">if true, include secondary alignments</span>
+      </p>
+
+      <p>
+        <span class="hdr">return value</span><br/>
+        <span class="entry"><a href="SRAAlignment.html#SRAAlignmentIterator">SRAAlignmentIterator</a></span>
+      </p>
+
+      <p>
+        <span class="hdr">errors</span><br/>
+        <span class="entry"><a href="SRAException.html">SRAException</a></span><br/>
+        <span class="entry">fails with exception if iterator is empty</span>
+      </p>
+
+	  <p class="box-discussion">
+		Returns an iterator of all available alignments conforming to criteria.
+		An SRA object stores primary and secondary alignments separately, while
+		BAM stores all alignments in a single table.
+	  </p>
+
+    </div>
+
+	</a>
+
+    <!-- getUnalignedReads -->
+	<a name="SRAObject.getUnalignedReads">
+
+    <div class="box">
+
+	  <h3 class="box">getUnalignedReads</h3>
+
+	  <p class="box">
+		open an iterator across the object's unaligned reads
+	  </p>
+
+<span class="code"><pre>
+    // C++
+    SRASequenceIterator getUnalignedReads () const
+        throw ( SRAException );
+
+    // Java
+    public final SRASequenceIterator getUnalignedReads ()
+        throw SRAException { ... }
+</pre></span>
+
+      <p>
+        <span class="hdr">return value</span><br/>
+        <span class="entry"><a href="SRASequence.html#SRASequenceIterator">SRASequenceIterator</a></span>
+      </p>
+
+      <p>
+        <span class="hdr">errors</span><br/>
+        <span class="entry"><a href="SRAException.html">SRAException</a></span><br/>
+        <span class="entry">fails with exception if iterator is empty</span>
+      </p>
+
+	  <p class="box-discussion">
+		Returns an iterator across all unaligned reads. For objects that are
+		spot-oriented, i.e. original SRA, the iterator returned will select all
+		<strong>biological</strong> reads from all spots. For aligned objects,
+		only unaligned reads will be returned.
+	  </p>
+
+	  <p class="box-discussion">
+		Objects such as WGS have neither spots nor alignments. In this case the
+		contigs will be returned as unaligned reads.
+	  </p>
+
+	  <p class="box-discussion">
+		<strong>[ SHOULD WE INTRODUCE A CONTIG OBJECT? ]</strong>
+	  </p>
+
+    </div>
+
+	</a>
+
+	<!-- end of SRAObject -->
+    </a>
+
+    <!-- Document Footer -->
+
+    <hr/>
+    <center>
+      <span class="footer">NCBI VDB-2 Documentation</span>
+    </center>
+
+  </body>
+
+</html>

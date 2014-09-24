@@ -1,0 +1,154 @@
+# ===========================================================================
+#
+#                            PUBLIC DOMAIN NOTICE
+#               National Center for Biotechnology Information
+#
+#  This software/database is a "United States Government Work" under the
+#  terms of the United States Copyright Act.  It was written as part of
+#  the author's official duties as a United States Government employee and
+#  thus cannot be copyrighted.  This software/database is freely available
+#  to the public for use. The National Library of Medicine and the U.S.
+#  Government have not placed any restriction on its use or reproduction.
+#
+#  Although all reasonable efforts have been taken to ensure the accuracy
+#  and reliability of the software and data, the NLM and the U.S.
+#  Government do not and cannot warrant the performance or results that
+#  may be obtained by using this software or data. The NLM and the U.S.
+#  Government disclaim all warranties, express or implied, including
+#  warranties of performance, merchantability or fitness for any particular
+#  purpose.
+#
+#  Please cite the author in any work or product based on this material.
+#
+# ===========================================================================
+
+
+default: std
+
+TOP ?= $(abspath ../..)
+MODULE = libs/kproc
+
+include $(TOP)/build/Makefile.env
+
+INT_LIBS = \
+	libksproc \
+	libkproc
+
+ifneq (win,$(OS))
+INT_LIBS += \
+	libkq
+endif
+
+ALL_LIBS = \
+	$(INT_LIBS)
+
+#-------------------------------------------------------------------------------
+# outer targets
+#
+all std: makedirs
+	@ $(MAKE_CMD) $(TARGDIR)/std
+
+$(INT_LIBS): makedirs
+	@ $(MAKE_CMD) $(ILIBDIR)/$@
+
+.PHONY: all std $(ALL_LIBS)
+
+#-------------------------------------------------------------------------------
+# std
+#
+$(TARGDIR)/std: \
+	$(addprefix $(ILIBDIR)/,$(INT_LIBS))
+
+.PHONY: $(TARGDIR)/std
+
+#-------------------------------------------------------------------------------
+# clean
+#
+clean: stdclean
+
+.PHONY: clean
+
+#-------------------------------------------------------------------------------
+# multi-threaded process support
+#
+$(ILIBDIR)/libkproc: $(addprefix $(ILIBDIR)/libkproc.,$(ILIBEXT))
+
+PROC_CMN = \
+	task \
+	sysmgr \
+	procmgr
+
+PROC_SRC = \
+	$(PROC_CMN)
+
+ifneq (win,$(OS))
+PROC_SRC += \
+	systimeout \
+	syslock \
+	systhread \
+	syscond \
+	sem
+else
+PROC_SRC += \
+	systimeout \
+	syslock \
+	systhread \
+	syscond
+endif
+
+PROC_OBJ = \
+	$(addsuffix .$(LOBX),$(PROC_SRC))
+
+ifneq (win,$(OS))
+PROC_LIB = \
+	-dpthread
+else
+PROC_LIB = \
+	-dklib
+endif
+
+$(ILIBDIR)/libkproc.$(LIBX): $(PROC_OBJ)
+	$(LD) --slib -o $@ $^ $(PROC_LIB)
+
+
+#-------------------------------------------------------------------------------
+# single-threaded process support
+#
+$(ILIBDIR)/libksproc: $(addprefix $(ILIBDIR)/libksproc.,$(ILIBEXT))
+
+SPROC_SRC = \
+	$(PROC_CMN) \
+	sttimeout \
+	stlock \
+	stcond \
+	stsem \
+	stthread \
+	stbarrier
+
+SPROC_OBJ = \
+	$(addsuffix .$(LOBX),$(SPROC_SRC))
+
+SPROC_LIB = \
+	-dklib
+
+$(ILIBDIR)/libksproc.$(LIBX): $(SPROC_OBJ)
+	$(LD) --slib -o $@ $^ $(SPROC_LIB)
+
+
+#-------------------------------------------------------------------------------
+# cross-thread reference queue
+#
+$(ILIBDIR)/libkq: $(addprefix $(ILIBDIR)/libkq.,$(ILIBEXT))
+
+Q_SRC = \
+	queue
+
+Q_OBJ = \
+	$(addsuffix .$(LOBX),$(Q_SRC))
+
+Q_LIB = \
+	-dkproc \
+	-dklib
+
+$(ILIBDIR)/libkq.$(LIBX): $(Q_OBJ)
+	$(LD) --slib -o $@ $^ $(Q_LIB)

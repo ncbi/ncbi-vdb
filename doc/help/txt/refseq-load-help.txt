@@ -1,0 +1,18 @@
+Usage:
+  refseq-load [options] -f <url | accession> -d <dst_path> -c no
+
+  -f|--src <src>                   full url or name of accession
+  -d|--dst-path <dst>              name of the table to write
+  -c|--circular <yes|no>           indicate if refseq is circular (ex: mitochondria)
+
+Options:
+  -s|--schema <schema>             name of the schema-file for dst-table
+  -b|--chunk-size <chunk-size>     size of the seq-chunk (default = 5k)
+
+  -h|--help                        Output a brief explantion for the program.
+  -V|--version                     Display the version of the program then quit.
+  -L|--log-level <level>           Logging level as number or enum string.
+                                   One of (fatal|sys|int|err|warn|info) or (0-5)
+                                   Current/default is warn
+  -v|--verbose                     Increase the verbosity level of the program.
+                                   Use multiple times for more verbosity.

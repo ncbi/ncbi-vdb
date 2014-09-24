@@ -1,0 +1,648 @@
+<html>
+
+  <head>
+
+	<title>NCBI VDB-2: PlacementIterator</title>
+    <link href="vdb-2.css" rel="stylesheet" type="text/css"/>
+
+  </head>
+
+  <body>
+
+	<!-- Document Header -->
+
+    <h1>VDB-2 - PlacementIterator</h1>
+
+	<p class="toc">
+	  <span class="hdr">Type:</span><br/>
+      <span class="entry">interface</span>
+    </p>
+
+    <p class="toc">
+      <span class="hdr">Header:</span><br/>
+      <span class="entry"><a href="../interfaces/align/iterator.h">align/iterator.h</a></span>
+    </p>
+
+    <p class="toc">
+	  <span class="hdr">Revision History:</span><br/>
+      <table class="entry">
+        <tr><td>2012-Feb-02</td><td>&bull;</td><td>initial</td></tr>
+        <tr><td>2012-Feb-28</td><td>&bull;</td><td>reflect API modifications to constructors, structures</td></tr>
+        <tr><td>2012-May-04</td><td>&bull;</td><td>documented negative placement starting coords</td></tr>
+      </table>
+    </p>
+
+	<p class="toc">
+	  <span class="hdr">Contents:</span><br/>
+	  <ul class="toc-outer">
+		<li><a href="#abstract">Description</a></li>
+		<li><a href="#requirements">Requirements</a></li>
+		<li><a href="#record">PlacementRecord</a></li>
+		<ul class="toc-inner">
+		  <li><a href="#structure">Structure</a></li>
+		  <li><a href="#whack">Whack</a></li>
+		</ul>
+		<li><a href="#interface">PlacementIterator</a></li>
+		<ul class="toc-inner">
+		  <li><a href="#make">Make</a></li>
+		  <li><a href="#addref">AddRef</a></li>
+		  <li><a href="#release">Release</a></li>
+		  <li><a href="#next-avail-pos">NextAvailPos</a></li>
+		  <li><a href="#next-record-at">NextRecordAt</a></li>
+		  <li><a href="#next-id-at">NextIdAt</a></li>
+		</ul>
+	  </ul>
+	</p>
+
+    <hr/>
+
+	<!-- Abstract -->
+
+	<a name="abstract">
+	  
+	  <h2>Description</h2>
+
+	  <div class="section">
+
+		<p>
+		  The <strong>PlacementIterator</strong> is an interface that allows for
+		  walking a window of placements along the reference of a single run. On
+		  each iteration, one or more placements become available at a position
+		  until the placements are exhausted within the window.
+		</p>
+
+	  </div>
+
+	</a>
+
+    <!-- Requirements -->
+
+    <a name="requirements">
+
+      <h2>Requirements</h2>
+
+      <ol class="requirements">
+		<li>Must operate within the garbage collection paradigm of the code base</li>
+		<li>Must provide a mechanism for determining the position and length of the next available placement</li>
+		<li>Must provide a mechanism for obtaining all of the placements at a stated position</li>
+		<li>Placements must minimally contain row-id, position on the reference, and length on the reference</li>
+		<li>Placements may optionally contain any other data as chosen by user</li>
+		<li>Must provide a mechanism for allowing user to add data to a placement record</li>
+		<li>Placements must be accessed in canonical order</li>
+		<li>Placements ordered by ascending position, descending length and ascending id</li>
+		<li>Placement objects must be provided if requested</li>
+		<li>Placement ids may be provided if requested</li>
+      </ol>
+
+    </a>
+
+	<!-- Content -->
+
+    <a name="record">
+
+      <h2>PlacementRecord</h2>
+
+	  <div class="section">
+
+		<p>
+		  The placement record is described as an open structure as part of the
+		  requirement to allow a user to extend this record.
+		</p>
+
+	  </div>
+
+    </a>
+
+	<a name="structure">
+
+	  <div class="box">
+
+		<h3 class="box">Structure</h3>
+
+		<p class="box">
+		  open structure of PlacementRecord - to be extended by user
+		</p>
+
+<pre class="code">
+struct PlacementRecord
+{
+    DLNode n;
+    int64_t id;
+    const ReferenceObj *ref;
+    INSDC_coord_zero pos;
+    INSDC_coord_len len;
+    int32_t mapq;
+};
+</pre>
+
+        <p>
+          <span class="hdr">n</span><br/>
+          <span class="entry">the structure is designed for inclusion in a doubly-linked list</span>
+        </p>
+
+        <p>
+          <span class="hdr">id</span><br/>
+          <span class="entry">the row-id of the placement (alignment) within its alignment table</span>
+        </p>
+
+        <p>
+          <span class="hdr">ref</span><br/>
+          <span class="entry">object representing reference sequence</span><br/>
+		  <span class="entry">each record gets its own counted reference</span>
+        </p>
+
+        <p>
+          <span class="hdr">pos</span><br/>
+          <span class="entry">the starting position of the placement on the reference</span><br/>
+          <span class="entry">coordinates are zero-based</span>
+          <span class="entry">NB - pos can be negative (see below)</span>
+        </p>
+
+        <p>
+          <span class="hdr">len</span><br/>
+          <span class="entry">the length of the placement on the reference</span>
+        </p>
+
+        <p>
+          <span class="hdr">mapq</span><br/>
+          <span class="entry">stated mapping quality of alignment</span>
+        </p>
+
+		<p class="box-discussion">
+		  The idea of this structure is to provide an interface both for its
+		  consumer and its producer, to be handled by the iterator.
+		</p>
+
+		<p class="box-discussion">
+		  When the iterator is used only for walking placements but not for
+		  looking within at the actual alignment, this structure is unlikely to
+		  be extended, since it gives the user the ability to quickly determine
+		  spatial relationships without detail at each position.
+		</p>
+
+		<p class="box-discussion">
+		  However, when zooming in on base-per-base alignments, the mode of
+		  operation will shift toward creation of richly populated records that
+		  can be individually examined at the resolution of a single base
+		  position.
+		</p>
+
+		<p class="box-discussion">
+		  The inclusion of <strong>mapq</strong> here is for the purposes of
+		  denormalization, giving the earliest possible filtering.
+		</p>
+
+		<p class="box-discussion">
+		  There is a case when alignment placements may be given with a negative
+		  starting coordinate. This happens when an alignment has been found to
+		  wrap around a circular reference and terminate at a lower coordinate
+		  than where it starts. These alignments are <q>linearized</q> by
+		  subtracting the length of the circular reference from the starting
+		  coordinate. This keeps the start < end.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="cast">
+
+	  <div class="box">
+
+		<h3 class="box">Cast</h3>
+
+		<p class="box">
+		  cast a placement record to one of two possible extension objects<br/>
+		  allows up to three independent classes to be combined
+		</p>
+
+<pre class="code">
+void PlacementRecordWhack ( const PlacementRecord *self );
+</pre>
+
+		<p class="box-discussion">
+		  If the user provided a whack function (automatically stored within
+		  the object), it will be called to clean up and dispose of the record.
+		</p>
+
+		<p class="box-discussion">
+		  Otherwise, the implementation will simply call
+		  <span class="code">free()</span> to release memory.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="whack">
+
+	  <div class="box">
+
+		<h3 class="box">Whack</h3>
+
+		<p class="box">
+		  douse a placement record<br/>
+		  calls user code if provided
+		</p>
+
+<pre class="code">
+void PlacementRecordWhack ( const PlacementRecord *self );
+</pre>
+
+		<p class="box-discussion">
+		  If the user provided a whack function (automatically stored within
+		  the object), it will be called to clean up and dispose of the record.
+		</p>
+
+		<p class="box-discussion">
+		  Otherwise, the implementation will simply call
+		  <span class="code">free()</span> to release memory.
+		</p>
+
+	  </div>
+
+	</a>
+
+    <a name="interface">
+
+      <h2>PlacementIterator</h2>
+
+    </a>
+
+	<a name="make">
+
+	  <div class="box">
+
+		<h3 class="box">Make</h3>
+
+		<p class="box">
+		  ask the alignment manager to create an iterator from individual components
+		</p>
+
+<pre class="code">
+rc_t AlignMgrMakePlacementIterator ( const AlignMgr *self,
+    PlacementIterator **iter, uint64_t ref_pos, uint32_t ref_len,
+    int64_t starting_ref_row, uint32_t ref_row_count,
+    const VCursor *ref, const VCursor *align, bool secondary,
+    rc_t ( * CC populate ) ( PlacementRecord **rec, const VCursor *align,
+        int64_t id, uint64_t pos, uint32_t len, void *data ), void *data,
+    void ( * CC whack ) ( void *obj ) );
+</pre>
+
+        <p>
+          <span class="hdr">iter - OUT</span><br/>
+          <span class="entry">return parameter for the iterator</span>
+        </p>
+
+        <p>
+          <span class="hdr">ref_pos</span><br/>
+          <span class="entry">starting position of alignment in reference coordinates</span>
+        </p>
+
+        <p>
+          <span class="hdr">ref_len</span><br/>
+          <span class="entry">length of projection onto reference in reference space</span>
+        </p>
+
+        <p>
+          <span class="hdr">starting_ref_row</span><br/>
+          <span class="entry">starting row within <strong>ref</strong> cursor</span><br/>
+          <span class="entry">externally determined to include desired window</span>
+        </p>
+
+        <p>
+          <span class="hdr">ref_row_count</span><br/>
+          <span class="entry">the number of rows to read from <strong>ref</strong> cursor</span>
+        </p>
+
+        <p>
+          <span class="hdr">ref</span><br/>
+          <span class="entry">cursor onto <strong>REFERENCE</strong> table of run</span><br/>
+          <span class="entry">will be modified as necessary to include required columns</span><br/>
+          <span class="entry">will be opened by iterator</span>
+        </p>
+
+        <p>
+          <span class="hdr">align</span><br/>
+          <span class="entry">cursor onto either <strong>PRIMARY_ALIGNMENT</strong> or
+			<strong>SECONDARY_ALIGNMENT</strong> of table of run</span><br/>
+          <span class="entry">which one is indicated by <strong>secondary</strong> param</span><br/>
+          <span class="entry">will be modified as necessary to include required columns</span><br/>
+          <span class="entry">will be opened by iterator</span>
+        </p>
+
+        <p>
+          <span class="hdr">secondary</span><br/>
+          <span class="entry">boolean <span class="code">true</span> if
+			<strong>align</strong> cursor is on SECONDARY_ALIGNMENT table</span>
+        </p>
+
+        <p>
+          <span class="hdr">populate - NULL OKAY</span><br/>
+          <span class="entry">optional callback function to generate richly
+			populated <strong>PlacementRecord</strong></span>
+        </p>
+
+        <p>
+          <span class="hdr">data - OPAQUE</span><br/>
+          <span class="entry">user data sent in callback to
+			<strong>populate</strong> function</span>
+        </p>
+
+        <p>
+          <span class="hdr">whack - NULL OKAY</span><br/>
+          <span class="entry">optional destructor/deallocator function</span><br/>
+          <span class="entry">may be ignored if <strong>populate</strong> is
+			<span class="code">NULL</span></span><br/>
+        </p>
+
+		<p class="box-discussion">
+		  The user will translate the position and length of the window onto the
+		  reference into a range of row-ids within the <strong>REFERENCE</strong>
+		  table. This range should be sufficiently ample to discover placements
+		  that may begin BEFORE the window but still intersect with it.
+		</p>
+
+		<p class="box-discussion">
+		  The user will create two read-only cursors for a given cSRA object -
+		  one on the <strong>REFERENCE</strong> table and another on one of the
+		  two possible alignment tables, depending upon whether primary or
+		  secondary alignments are being examined. These will be used to
+		  construct the iterator object.
+		</p>
+
+		<p class="box-discussion">
+		  Indication of whether the align table is primary or secondary affects
+		  the iterator's query onto the reference table, which is why it is
+		  supplied as a stand-alone parameter.
+		</p>
+
+		<p class="box-discussion">
+		  If the user intends to examine a placement in any greater detail than
+		  its id, position and length projected upon the reference, then a
+		  callback function should be supplied. This function will allocate a
+		  structure having as its first member a <strong>PlacementRecord</strong>
+		  and should initialize any additional members within the function:
+		</p>
+
+<pre class="code">
+struct MyPlacementRecord
+{
+    PlacementRecord dad;
+
+    const INSDC_dna_text *read;
+};
+
+static
+rc_t MyPopulateFunc ( PlacementRecord **recp, const VCursor *align,
+    int64_t id, uint64_t pos, uint32_t len, void *data )
+{
+    rc_t rc;
+    struct MyPlacementRecord *rec;
+
+    /* allocate structure - error handling omitted... */
+    rec = malloc ( sizeof * rec );
+
+    /* id, pos and len are provided for convenience,
+       but I don't have to use them or fill out dad. */
+
+    /* initialize my part of the record */
+    rc = read_and_copy_READ ( align, & rec -> read );
+
+    /* return to iterator */
+    * recp = & rec -> dad;
+    return rc;
+}
+
+static
+void MyWhackFunc ( void *obj )
+{
+    struct MyPlacementRecord *rec = obj;
+    free ( rec -> read );
+    free ( rec );
+}
+</pre>
+
+		<p class="box-discussion">
+		  As shown above, a custom <strong>populate</strong> function will often
+		  beg a custom destructor/deallocator function. <strong>NB:</strong> if
+		  you provide such a function, it MUST deallocate the object.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="addref">
+
+	  <div class="box">
+
+		<h3 class="box">AddRef</h3>
+
+		<p class="box">
+		  duplicate an existing reference
+		</p>
+
+<pre class="code">
+rc_t PlacementIteratorAddRef ( const PlacementIterator *self );
+</pre>
+
+		<p class="box-discussion">
+		  The object is defined as being reference counted. In VDB-2, references
+		  are direct pointers to objects and the objects maintain a reference
+		  counter.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="release">
+
+	  <div class="box">
+
+		<h3 class="box">Release</h3>
+
+		<p class="box">
+		  release an existing reference<br/>
+		  potentially whacks object
+		</p>
+
+<pre class="code">
+rc_t PlacementIteratorRelease ( const PlacementIterator *self );
+</pre>
+
+		<p class="box-discussion">
+		  The object is defined as being reference counted. In VDB-2, references
+		  are direct pointers to objects and the objects maintain a reference
+		  counter.
+		</p>
+
+		<p class="box-discussion">
+		  NULL pointers are ignored.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="next-avail-pos">
+
+	  <div class="box">
+
+		<h3 class="box">NextAvailPos</h3>
+
+		<p class="box">
+		  check the next available position on reference having
+		  one or more placements<br/>
+		  returns position and optionally length
+		</p>
+
+<pre class="code">
+rc_t PlacementIteratorNextAvailPos ( const PlacementIterator *self,
+    uint64_t *pos, uint64_t *len );
+</pre>
+
+        <p>
+          <span class="hdr">pos - OUT</span><br/>
+          <span class="entry">the reference position where the next available placement starts</span>
+          <span class="entry">NB - can be negative if the alignment wraps around</span>
+        </p>
+
+        <p>
+          <span class="hdr">len - OUT, NULL OKAY</span><br/>
+          <span class="entry">optional parameter returning the length of the next available placement</span>
+        </p>
+
+		<p class="box-discussion">
+		  This message returns information about the next available placement,
+		  or if none are available, causes the iterator to search for more in
+		  its open cursors.
+		</p>
+
+		<p class="box-discussion">
+		  If no further placements are found, a non-zero return code will be
+		  issued. TBD
+		</p>
+
+		<p class="box-discussion">
+		  The exact position returned is used to read placement records using
+		  either <a href="#next-record-at">NextRecordAt</a> or
+		  <a href="#next-id-at">NextIdAt</a>.
+		</p>
+
+		<p class="box-discussion">
+		  The optional returned length is useful for performing a merge-sort on
+		  the available placements from several iterators. This message may be
+		  safely invoked any number of times, where the only side-effect
+		  possible is a single attempt at retrieving more data (on the initial
+		  invocation).
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="next-record-at">
+
+	  <div class="box">
+
+		<h3 class="box">NextRecordAt</h3>
+
+		<p class="box">
+		  retrieve and consume next available <strong>PlacementRecord</strong>
+		</p>
+
+<pre class="code">
+rc_t PlacementIteratorNextRecordAt ( PlacementIterator *self,
+    uint64_t pos, const PlacementRecord **rec );
+</pre>
+
+        <p>
+          <span class="hdr">pos</span><br/>
+          <span class="entry">the exact position returned by
+			<a href="next-avail-pos">NextAvailPos</a></span><br/>
+          <span class="entry">identifies location being queried</span>
+        </p>
+
+        <p>
+          <span class="hdr">rec - OUT</span><br/>
+          <span class="entry">return parameter for the next available placement
+			at <strong>pos</strong></span>
+        </p>
+
+		<p class="box-discussion">
+		  This message allows a single record to be obtained on each invocation,
+		  where the intent is that the caller will loop until no further records
+		  are found at the stated position.
+		</p>
+
+		<p class="box-discussion">
+		  By looping, the code is not forced to create lists of placements that
+		  align at the exact same starting point, which further allows using
+		  multiple iterators in a sort-merge configuration.
+		</p>
+
+		<p class="box-discussion">
+		  As mentioned before, the record is designed to be held in a
+		  doubly-linked list and freed independently. The caller obtains locally
+		  sorted records from this iterator and places them into the list.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="next-id-at">
+
+	  <div class="box">
+
+		<h3 class="box">NextIdAt</h3>
+
+		<p class="box">
+		  retrieve information from the next available <strong>PlacementRecord</strong><br/>
+		  douse the record upon return
+		</p>
+
+<pre class="code">
+rc_t PlacementIteratorNextIdAt ( PlacementIterator *self,
+    uint64_t pos, int64_t *row_id, uint64_t *len );
+</pre>
+
+        <p>
+          <span class="hdr">pos</span><br/>
+          <span class="entry">the exact position returned by
+			<a href="next-avail-pos">NextAvailPos</a></span><br/>
+          <span class="entry">identifies location being queried</span>
+        </p>
+
+        <p>
+          <span class="hdr">row_id - OUT</span><br/>
+          <span class="entry">return parameter for the next placement's id</span>
+        </p>
+
+        <p>
+          <span class="hdr">len - OUT, NULL OKAY</span><br/>
+          <span class="entry">optional return parameter for the next placement's length</span>
+        </p>
+
+		<p class="box-discussion">
+		  This message simply extracts information held within internal records.
+		  See <a href="#next-record-at">NextRecordAt</a>.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<!-- Document Footer -->
+
+	<hr/>
+
+	<center>
+	  <span class="footer">NCBI VDB-2 Documentation</span>
+	</center>
+
+  </body>
+
+</html>

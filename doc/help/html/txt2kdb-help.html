@@ -1,0 +1,48 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+       "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>txt2kdb help</title>
+</head>
+<body>
+
+<pre>
+ txt2kdb [Options] FILE KCOLUMN
+    Create a KColumn physical column out of a text file.
+
+    FILE:
+        The text file should be ASCII or UTF-8 using LF, CR or CR-LF
+        line termination.  Each text line will be put into the
+        KColumn as a separate Row.  Each Row will be in its own
+        blob.
+    KCOLUMN:
+        The KColumn is either an existing KColumn or a path to one
+        that can be created.    Both paths should be relative to the current directory or full
+    from root "/"
+
+Options:
+  -b, --begin=START         include only lines starting from this line in the
+                            KColumn.  The first line is line 1 (not 0).
+  -e, --end=STOP            stop including lines after this line in the
+                            KColumn.  The first line is line 1 (not 0).
+  -f, --force               (no parameter) this will cause to over-write
+                            existing files.  Without
+                            this option the program will fail if the KColumn
+                            already exists and append mode is not selected
+  -a, --append              (no parameter) this will cause to append the text
+                            file to an existing KColumn.  If the file does not
+                            already exist it will be created.
+  -V, --version             this will cause the program to emit the internal
+                            version number before any other action
+  -v, --verbose             extra information will be output during
+                            processing second occurrence on the command line
+                            means even more
+  -h, -?, --help            print this message
+  -l, --log-level=LEVEL     the next token will affect the logging level of
+                            the program  accepted tokens are the numbers
+                            0-15, fatal, sys, int, err, warn, info
+                          , debug1...debug10
+</pre>
+
+</body>
+</html>

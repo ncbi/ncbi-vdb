@@ -1,0 +1,21 @@
+Usage:
+  sra-stat [options] table
+
+Summary:
+  Display table statistics
+
+Options:
+  -x|--xml                         output as XML (default is text)
+  -b|--start <row-id>              starting spot id ( default 1 )
+  -e|--stop <row-id>               ending spot id ( default max )
+  -m|--meta                        print load metadata
+  -q|--quick                       quick mode: get statistics from metadata
+                                   not to scan the table
+
+  -h|--help                        Output a brief explantion for the program.
+  -V|--version                     Display the version of the program then quit.
+  -L|--log-level <level>           Logging level as number or enum string.
+                                   One of (fatal|sys|int|err|warn|info) or (0-5)
+                                   Current/default is warn
+  -v|--verbose                     Increase the verbosity level of the program.
+                                   Use multiple times for more verbosity.

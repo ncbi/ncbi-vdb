@@ -1,0 +1,31 @@
+ <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+       "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>refseq-load help</title>
+</head>
+<body>
+
+<pre>
+Usage:
+  refseq-load [options] -f &lt;url | accession> -d &lt;dst_path> -c no
+
+  -f|--src &lt;src>                   full url or name of accession
+  -d|--dst-path &lt;dst>              name of the table to write
+  -c|--circular &lt;yes|no>           indicate if refseq is circular (ex: mitochondria)
+
+Options:
+  -s|--schema &lt;schema>             name of the schema-file for dst-table
+  -b|--chunk-size &lt;chunk-size>     size of the seq-chunk (default = 5k)
+
+  -h|--help                        Output a brief explantion for the program.
+  -V|--version                     Display the version of the program then quit.
+  -L|--log-level &lt;level>           Logging level as number or enum string.
+                                   One of (fatal|sys|int|err|warn|info) or (0-5)
+                                   Current/default is warn
+  -v|--verbose                     Increase the verbosity level of the program.
+                                   Use multiple times for more verbosity.
+</pre>
+
+</body>
+</html>

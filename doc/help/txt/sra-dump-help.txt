@@ -1,0 +1,26 @@
+Usage:
+  sra-dump [ options ] table [ column-spec ... ]
+
+Summary:
+  Dump all data in table for specified or all columns
+
+table:
+  path to table or accession id within NCBI
+
+column-spec:
+  NAME                             simple column name
+  (typedecl)NAME                   specifically typed column name
+
+Options:
+  --start <ID>                     beginning spot id (default 1)
+  --stop <ID>                      ending spot id (default max)
+
+  -h|--help                        Output a brief explantion for the program.
+  -V|--version                     Display the version of the program then quit.
+
+  -L|--log-level <level>           Logging level as number or enum string.
+                                   One of (fatal|sys|int|err|warn|info) or (0-5)
+
+                                   Current/default is warn
+  -v|--verbose                     Increase the verbosity level of the program.
+                                   Use multiple times for more verbosity.

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<!-- Much of each page should be standardized and filled in by make -->
+<head>
+	<title>SRA Toolkit Documentation</title>
+	<link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+<body>
+	<div id="frame">
+		<div id="transom">
+			<hr/><h1>SRA Toolkit</h1><hr/>
+		</div>
+		<div id = "jamb">
+			<div id="sidelite">
+				<ul>
+					<br/>
+					<h4>General Information</h4>
+					<hr/>
+					<li><a href="sra-toolkit.html">Toolkit Home</a></li>
+					<br/>
+					<h4>Toolkit Usage</h4>
+					<hr/>
+					<li><a href="getting-the-tools.html">Getting the Toolkit</a></li>
+					<br/>
+					<li><a href="configuration.html">Configuration</a></li>
+					<br/>
+					<li><a href="use-cases.html">Using the Toolkit</a></li>
+					<br/>
+					<h4>Technical Information</h4>
+					<hr/>
+					<li><a href="file-formats.html">Data formats</a></li>
+					<br/>
+					<li><a href="encryption.html">Encryption</a></li>
+					<br/>
+					<h4>I dunno, something</h4>
+					<hr/>
+					<li><a href=frequenty-asked-questions.html>FAQ</a></li>
+					<br/>
+				</lu>
+			</div>
+			<div id="door-panel">
+			<!-- ===================================================== -->
+			<!-- ===================================================== -->
+			<!-- From here until the ending comment is a specific page -->
+			<!-- ===================================================== -->
+			<!-- ===================================================== -->
+
+
+				<!-- Panel title -->
+				<h2>SRAToolkit Encryption</h2>
+
+				The portion of the toolkit that handles encryption and decryption is a module/library called 'krypto'.  
+				This is significant to users of the NCBI utilities only in that that name will show up in various places.  
+				The name is with a 'k' to differenctiate from the common 'crypto' library name particularly in Unix 
+				like platforms using Open SSL.
+			
+				<!-- encryption-configuration -->
+				<!-- I'm expecting that we create sets of these in an XML and these sets can be including into multiple html files by make -->
+				<div id="configuration">
+					<h3>Configuration</h3>
+				</div>
+				<!-- encryption-configuration -->
+
+				<!-- encryption-file-formats -->
+				<!-- I'm expecting that we create sets of these in an XML and these sets can be including into multiple html files by make -->
+				<div id="file-formats">
+					<h3>Encrypted file formats</h3>
+
+					Currently the SRA Toolkit utilities only use encryption in two file formats defined by NCBI.  In the future it is expected 
+					to be used in more ways as the need arises.
+			
+					<br/>
+			
+					To meet Federal Information Processing Standards (FIPS) the SRA Toolkit uses the Advanced Encryption Standard (AES) for 
+					the actual encryption of data.
+			
+					<h4>Early Encryption Format - ncbi_enc</h4>
+			
+					The first encryption format supported by the SRA Toolkit typically uses the extension ".ncbi_enc".  It was used to encrypt
+					files that were being sent to computers not on the NCBI network.  It is now a deprecated format because a new requirement
+					in file validation could not be supported. The SRA Toolkit fully supports reading and decrypting this format but
+					no longer encrypts into this format.
+			
+					<h4>Current Encryption Format - nenc</h4>
+			
+					The current NCBI encryption format was designed for efficient processing without explicitly decrypting a file to the
+					disk and to allow content validation without needing the password used to encrypt the file.
+
+					<h4>Password File</h4>
+
+					The toolkit starts with the belief that passwords put on command lines have an inherent security risk 
+					in that command line parameters can be seen by other users of a computer through Unix commands like 'ps'.
+					To answer that weakness the SRA Toolkit uses passwords read from secure files or the environment.  The preference
+					being password files.
+					<br/>
+					The SRA Toolkit uses its <a href=configuration.html>configuration</a> to locate the password via an
+					entry named 'krypto/pwfile'.
+					<br/>
+					The contents of an encryption password file is normally some sort of text, but that is not a strict requirement.
+					The password is up to 4096 bytes, which with UTF-8 or other encodings might be fewer characters.  The only characters 
+					that can not be in this are the Carriage Return (CR) or Line Feed (LF) also called Newline ASCII control bytes.  The cryptographic library
+					will use the first part of the file up to the CR or LF.  If the file is longer that 4096 bytes and does not have a CR or LF nefre the 4097th 
+					byte the library will call the file invalid.
+					<br/>
+					Bytes after the first CR or LF are reserved for future use; perhaps as previously used passwords.
+				</div>
+				<!-- encryption-file-formats -->
+
+				<!-- encryption-command-line -->
+				<!-- I'm expecting that we create sets of these in an XML and these sets can be including into multiple html files by make -->
+				<div id="command-line">
+					<h3>Encrypted command line arguments</h3>
+
+
+					<h4>Encryption specification in an URL</h3>
+				
+					Some SRA Toolkit utilities use an Universal Resource Identifier (URI) syntax to identify files.
+					The first incarnation of this is the "ncbi-file" scheme.  This is an extension to the standard
+					"file" scheme for an URL.  The extension is addition of a query string.  Two keys have been defined
+					at this point 'encrypt' (or 'enc') and 'pwfile'.  Encrypt has no value while the value for the pwfile
+					is the path to the password file.  The syntax for the hierarchical part of the URI is the same as the file scheme for 
+					the platform on which the Toolkit is running.  As an example "ncbi-file:/home/usr/me/read1.nenc?encrypt&pwfile=/home/usr/me/password"
+					has the 'ncbi-file' scheme, a hierarchical part of '/home/usr/me/read1.nenc' and a query part of 'encrypt&pwfile=/home/usr/me/password'.
+					This is a file named 'read1.nenc' in the Unix common home directory for user 'me' and encrypted using a password that is
+					in the file in the same directory named 'password'.  If the program was being run on Windows that could have looked more like
+					"ncbi-file:C:\Users\me?encrypt&pwfile=C:\Users\me\password" with its different syntax for a hierachical part.
+					
+				</div>
+				<!-- /encryption-command-line -->
+			
+				<!-- encryption-configuration -->
+				<!-- I'm expecting that we create sets of these in an XML and these sets can be including into multiple html files by make -->
+				<div id="configuration">
+					<h3>Encryption Configuration</h3>
+
+					<h4>Password File - krypto/pwfile</h4>
+				
+						Encryption (krypto) expects a symbol that identifies the location of the default password file.  The path should be 
+						in the native file system notation.
+				</div>
+				<!-- /encryption-configuration -->
+
+				<!-- encryption-utilities -->
+				<!-- I'm expecting that we create sets of these in an XML and these sets can be including into multiple html files by make -->
+				<div id="utilities">
+					<h3>Encryption Tools</h3>
+
+					<h4><a href=nenctool.html>nenctool</a></h4>
+				
+						This tool will encrypt, decrypt or re-encrypt a single file.  
+
+					<h4><a href=nencvalid.html>nencvalid</a></h4>
+				
+						This tool will verify the data integrity of an encrypted file.
+						One would typically run this tool after the down load of an encrypted archive or other large file to ensure the download was complete and successful.
+
+					<h4><a href=vdb-password.html>vdb-passwd</a></h4>
+				
+						This tool uses <a href=configuration.html>configuration</a> to find the designated password file and change the contents.
+				</div>
+				<!-- /encryption-utilities -->
+				
+			<!-- ===================================================== -->
+			<!-- ===================================================== -->
+			<!-- This ends what is a specific page                     -->
+			<!-- ===================================================== -->
+			<!-- ===================================================== -->
+			</div>
+		</div>
+	</div>
+</body>

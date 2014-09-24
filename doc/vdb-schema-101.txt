@@ -1,0 +1,380 @@
+VDB SCHEMA 101
+
+* SUMMARY OVERVIEW
+
+  - Lexical Conventions
+
+    VDB schema is purposely based upon C-family (okay, Algol family
+    for any of you who even know what Algol was) languages, and
+    borrows heavily from C++ for familiarity. Even so, there are a few
+    lexical differences.
+
+    Comments are C/C++ style:
+
+      CMT = '/*' ... '*/'
+          | '//' ... '\n'
+
+    Identifiers:
+
+      ID = [A-Za-z_][A-Za-z_0-9]*
+
+    There is a relaxed version of identifier [that is supposed to be
+    allowed within a fully qualified name, but today's code is not
+    allowing it - have to fix this]:
+
+      NAME = [A-Za-z_0-9]+
+
+    There is no difference between single characters and "strings",
+    which are character vectors. Since everything in VDB is treated as
+    a vector (and a character is just a vector of dimension 1), we
+    make no distinction between quote styles:
+
+      CHAR = "'" [^\n]* "'"
+           | '"' [^\n]* '"'
+
+    Normal C-style escapce sequences are allowed within strings:
+      \a     = BEL bell
+      \b     = BS backspace
+      \t     = HT horizontal tab
+      \n     = NL newline
+      \v     = VT vertical tab
+      \f     = FF form feed
+      \r     = CR carriage return
+      \0     = NUL null character
+      \xHH   = hex character literal
+      \uHHHH = hex UCS-2 character literal
+
+    Numeric types include all of the standard C types (DOTs are literal):
+
+      DECIMAL = [1-9][0-9]*
+      OCTAL   = 0[1-7]*
+      HEX     = 0[Xx][0-9A-Fa-f]+
+      FLOAT   = [0-9]+\.[0-9]*
+              | \.[0-9]+
+              | [0-9]*\.[0-9]*[Ee][0-9]+
+
+    There is a tri-part dot-notation version number that is
+    recognized:
+
+      MAJ-MIN-REL = DECIMAL\.DECIMAL\.DECIMAL
+
+    A version may be declared in 3 ways:
+
+      VERSION = MAJ
+              | MAJ-MIN
+              | MAJ-MIN-REL
+
+      MAJ     = DECIMAL
+
+      MAJ-MIN = MAJ \. DECIMAL
+
+
+    Much of the C and C++ punctuation is recognized, but not all
+    (e.g. '::'). The '@' symbol is used with special meaning in
+    certain contexts.
+
+
+  - Document Structure
+
+    Every schema document should begin with a <version> statement that
+    declares the specifics of the language used in the remainder of
+    the document. If absent, version 0 is assumed:
+
+      version = 'version' MAJ-MIN ';'
+
+    Version 0 means the schema language employed by VDB.1, and has
+    been deprecated.
+
+    Global declarations include type definitions, contants, alias names,
+    functions, physical column encodings, and database structures. The
+    language also supports an include directive. These may only be
+    used at global scope, i.e. not nested.
+
+
+  - Included Files
+
+    The language supports an <include> directive:
+
+      'include' CHAR ';'
+
+    The path given may be absolute or relative. It will be resolved
+    against zero or more include paths held by the schema or VDB
+    manager.
+
+    At startup, the VDB manager looks for the environment variable
+    'VDB_ROOT' and will automatically add "$VDB_ROOT/schema" to its
+    system include paths, if found. Include paths are searched in the
+    order provided.
+
+    A file will be included only once, regardless of the number of
+    times it is requested. Files are identified by their full path
+    after being located, and not by relative path.
+
+    Many declarations may be repeated in multiple sources. Conflicting
+    definitions should be caught by the compiler [but at present many
+    are simply ignored].
+
+
+  - Name Declarations and Object Instances
+
+    Within the schema, names are introduced and used in fully
+    qualified form:
+
+      FQN = ID ( ':' NAME )*
+
+    Unlike C++, there is no namespace scope, so all names must be
+    declared fully-qualified at all times. Examples of fully qualified
+    names:
+
+      simple_name
+      INSDC:quality:phred
+      INSDC : quality : phred
+
+    These names identify objects within a schema, but not actual
+    object instances, the latter of which usually reside within the
+    file system and are named by path.
+
+
+  - Type Definitions and Aliases
+
+    In VDB the concept of "type" implies several concurrent
+    properties:
+
+      a) numeric class
+      b) size in bits
+      c) data class
+      d) encoding
+      e) data transform
+
+    As in C, a single type describes all of these concepts. Like C++,
+    types may be described within a hierarchy in order to establish
+    inheritance of parent properties. UNLIKE C++, the inheritance
+    mechanism does not "extend" the parent, but instead "refines" or
+    subsets it. The hierarchy has the purpose of defining class
+    equivalence and casting behavior.
+
+    VDB also supports a separate notion of "format", which allows
+    description of type-independent containers. A good example of this
+    may be gzip compression, which obviously creates a formatted blob
+    but is blissfully ignorant of what it contains. Formats may be
+    hierarchical as well, but generally are not.
+
+    VDB introduces the notion of a "typeset" which allows functions in
+    particular to operate with more than one type of data. In C, this
+    would be accomplished via "void*" parameters. In C++, it might be
+    accomplished with templates, but both C and C++ lack the ability
+    to describe parameter types other than with wildcards.
+
+    Typedef
+
+      typedef       = 'typedef' <type> FQN [ <dim> ] ( ',' FQN [ <dim> ] )* ';'
+      dim           = '[' <const-uint-expr> ']'
+
+    Fmtdef
+
+      fmtdef        = 'fmtdef' FQN ';'
+                    | 'fmtdef' <fmt> FQN ';'
+
+    Typeset
+
+      typeset-decl  = 'typeset' FQN '{' <fmtdecl> ( ',' <fmtdecl> )* '}'
+
+    Typedecl, etc.
+
+      typedecl      = <type> [ <dim> ]
+                    | <typeset> [ <dim> ]
+      fmtdecl       = <typedecl>
+                    | <fmt>
+                    | <fmt> '/' <typedecl>
+
+    Alias
+
+      alias_de      = 'alias' <symbol> FQN ';'
+
+    Intrinsic Types
+
+      'any'         = wildcard, allowed only in function parameters
+      'void'        = no output, allowed only for certain function returns
+      'opaque'      = a type having no class, size of 1 bit
+      'B1'          = a single bit
+      'B8'          = an octet
+      'B16'         = a 16-bit word in native byte-order
+      'B32'         = a 32-bit word in native byte-order
+      'B64'         = a 64-bit word in native byte-order
+      'U1'          = a 1-bit unsigned integer based upon B1
+      'U8'          = an 8-bit unsigned integer based upon B8
+      'U16'         = a 16-bit unsigned integer based upon B16 (native byte-order)
+      'U32'         = a 32-bit unsigned integer based upon B32 ( " " )
+      'U64'         = a 64-bit unsigned integer based upon B64 ( " " )
+      'I8'          = an 8-bit signed integer based upon B8
+      'I16'         = a 16-bit signed integer based upon B16 (native byte-order)
+      'I32'         = a 32-bit signed integer based upon B32 ( " " )
+      'I64'         = a 64-bit signed integer based upon B64 ( " " )
+      'F32'         = a 32-bit IEEE-754 float based upon B32 (native byte-order)
+      'F64'         = a 64-bit IEEE-754 float based upon B64 ( " " )
+      'bool'        = a C++ compatible boolean based upon U8
+      'utf8'        = UNICODE text with UTF-8 transform, based upon B8
+      'utf16'       = UNICODE text with UTF-16 transform, B16 (native-byte-order)
+      'utf32'       = UNICODE text with UTF-32 transform, B32 ( " " )
+      'ascii'       = ASCII encoding based upon utf8
+      
+
+    Examples
+
+      typedef ascii INSDC:dna:text;      
+      typedef U8 INSDC:dna:bin;
+      typedef B1 INSDC:dna:4na [ 4 ];
+      typedef B1 INSDC:dna:2na [ 2 ];
+
+      fmtdef izip_fmt;
+      fmtdef fzip_fmt;
+      fmtdef rle_fmt;
+      fmtdef zlib_fmt;
+
+      typeset integer_set { I8, U8, I16, U16, I32, U32, I64, U64 };
+      typeset float_set { F32, F64 };
+      typeset numeric_set { integer_set, float_set };
+
+      alias INSDC:dna:text INSDC:fasta;
+
+
+  - Constant Definitions
+
+    Symbolic constants are supported. At this time, their
+    initialization expression syntax is limited to simple assignments.
+
+      constdef      = 'const' <typedecl> FQN '=' <const-expr> ';'
+
+    Examples
+
+      const INSDC:dna:text INSDC:dna:CHARSET = "ACGTN";
+      const INSDC:dna:text INSDC:dna:ACCEPTSET = "ACGTNacgtn.";
+      const INSDC:color:text INSDC:color:CHARSET = "0123.";
+      const U8 INSDC:color:default_matrix =
+      [
+          0, 1, 2, 3, 4,
+          1, 0, 3, 2, 4,
+          2, 3, 0, 1, 4,
+          3, 2, 1, 0, 4,
+          4, 4, 4, 4, 4
+      ];
+
+
+  - Function Declarations
+
+    Functions come in two general classes (although there are
+    additional special-case classes): external and schema (script).
+
+    An external function is a named C function and is located at
+    runtime using the underlying OS' dynamic linking facility.
+
+    A schema function is defined inline, and supports calling other
+    functions of any normal type.
+
+    Function parameters provide for zero or more inputs and a single
+    output. They are divided into three categories:
+
+      1. schema (compiler) parameters
+      2. factory parameters
+      3. runtime parameters
+
+    In C, only runtime parameters are described. These are the inputs
+    and return that a function will see when called.
+
+    In C++, the template mechanism introduced a way of providing
+    schema parameters that the compiler uses when generating code,
+    such as types, dimensions, and configuration constants.
+
+    In VDB, the compiler does not generate function code, but instead
+    makes use of pre-compiled factories, written in C, to generate
+    function code at runtime. Any parameters that are intended for the
+    factory and not the compiler are called "factory" parameters, and
+    the only parameters that may be given to the compiler are type and
+    dimension.
+
+    The function factory is normally given the same name as the
+    function it generates, but may optionally be given another
+    name. This mechanism is used for two main purposes:
+
+      a) to allow a single factory to generate multiple functions
+      b) to give a simple schema name a more explicit name
+         within the OS function namespace.
+
+    All of the vdb-level functions are given simple names, without the
+    benefit of a namespace, e.g. "cut", "paste". To avoid possible
+    conflicts with C functions having the same name within a process
+    space, we give each simple function a factory within the vdb
+    namespace.
+
+      # the function is either external or inline
+
+      function-decl = [ 'extern' ] 'function' <func-sig> [ <factory> ] ';'
+                    | 'schema' [ 'function' ] <func-sig> <schema-func>
+                    | 'function' <func-sig> <schema-func>
+
+
+      # parameter lists have a special syntax that allows for optional
+      # items. a '*' within the parameter list declares all subsequent
+      # parameters as optional, and may be used anywhere a ',' would
+      # be used or before the first parameter formal.
+
+      # factory and function parameter lists also support arbitrary
+      # numbers of inputs by allowing an ellipsis '...' as the last
+      # element in the list.
+
+      # the function signature has 2 optional input parameter lists
+      # a required return type and runtime parameter list
+      # functions SHOULD be given a version number, MAJ-MIN in the
+      # case of extern functions, and MAJ-MIN-REL in the case of
+      # schema functions.
+
+      func-sig      = [ <schema-parms> ]
+                      <fmtdecl> FQN [ '#' MAJ-MIN-REL ]
+                      [ <fact-parms> ] '(' <func-parms> ')'
+
+      # schema parameters are declared much like C++ template
+      # parameters, but they are limited to types and dimensions
+
+      schema-parms  = '<' <schema-parm> ( ',' <schema-parm> )* '>'
+      schema-parm   = 'type' ID
+                    | 'U32' ID
+
+      # factory parameters are also declared much like C++ template
+      # parameters, although they come AFTER the function id (name,
+      # version) and may NOT contain types or dimensions, but may
+      # contain arbitrary constant data
+
+      fact-parms    = '<' <fact-parm> ( ',' <fact-parm> )* '>'
+      fact-parm     = <typedecl> ID
+                    | '...'
+
+      # function parameters are much like C parameters, having a
+      # typedecl and ID for each input and a typedecl alone for
+      # output. a special construct exists for typedecls supporting
+      # dynamically determined type dimension, described below
+
+      func-parms    = <func-parm> ( ',' <func-parm> )*
+      func-parm     = <fmtdecl> ID
+                    | <type> '[' '*' ']' ID
+                    | '...'
+
+      # the factory name assignment
+
+      factory       = '=' FQN
+
+      # a schema function body
+      # the statements may be in arbitrary order
+      # but must include a <return-stmt>
+
+      schema-func   = '{' ( <func-stmt> ';' )+ '}'
+
+      func-stmt     = <local-decl>
+                    | <return-stmt>
+
+      local-decl    = <fmtdecl> ID '=' <expression>
+
+      return-stmt   = 'return' <expression>
+
+  - END OF FIRST SEMESTER
+
+  - 2nd semester should include databases, tables and columns.

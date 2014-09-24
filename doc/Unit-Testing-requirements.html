@@ -1,0 +1,259 @@
+<html>
+
+  <head>
+	<title>NCBI VDB-3: Unit Testing</title>
+      <style type="text/css">
+          .style1
+          {
+              margin-left: 40px;
+          }
+      </style>
+  </head>
+
+  <body>
+
+	<h1>VDB-3 Unit Testing</h1>
+
+	<div>
+	  Revision History:<br/>
+	  <div style="position: relative; left: 20;">
+		<table>
+		  <tr><td>2012-Jan-09</td><td>&bull;</td><td>boshkina</td><td>&bull;</td><td>edited, added requirements</td></tr>
+		  <tr><td>2012-Jan-03</td><td>&bull;</td><td>boshkina</td><td>&bull;</td><td>rewrote as a list of requirements</td></tr>
+		  <tr><td>2011-Dec-28</td><td>&bull;</td><td>boshkina</td><td>&bull;</td><td>free form draft</td></tr>
+		</table>
+	  </div>
+	</div>
+
+	<hr/>
+
+	<h2>Unit Testing</h2>
+
+	<ul>
+	    <li><a href="#Introduction">Introduction</a></li>
+	    <li><a href="#Overview">Overview</a></li>
+	    <li><a href="#Requirements">Requirements</a><ul>
+            <li><a href="#Framework">Framework</a></li>
+            <li><a href="#Interfaces">Interfaces Under Test</a></li>
+            <li><a href="#Build">Build process</a></li>
+            <li><a href="#Miscellaneous">Miscellaneous</a></li>
+            </ul>
+        </li>
+        <li><a href="#ContinuousIntegration">Continuous Integration</a></li>
+	</ul>
+
+	<h3><a name="Introduction">Introduction</a></h3>
+<p class="style1">
+    The goal of unit testing is to isolate each part of the system and show that the individual parts are correct.
+    This is different from other kinds of testing, like integration, acceptance, performance, etc. 
+    This document describes requirements on components participating in unit 
+    testing, including testing infrastructure, the software being 
+    tested, the build process, and the development conventions.</p>
+    
+	<h3><a name="Overview">Overview</a></h3>
+<p style="margin-left: 40px">
+    For the purposes of this text, a <strong>Unit</strong> refers to an interface 
+    with an implementation. The interface is called Interface Under Test, or <strong>IUT</strong>. The implementation is called Code Under Test (<strong>CUT</strong>).
+</p>
+<p style="margin-left: 40px">A <strong>Test Case</strong> is a function that executes and verifies one or more operations from the corresponding <em>Unit</em>.</p>
+<p style="margin-left: 40px">
+    A <strong>Test Suite</strong> is a collection of <em>Tests Cases</em> associated with 
+    the same <em>Unit</em>. There may be multiple Suites testing different aspects of a 
+    Unit&#39;s operation. Ideally, the union of all Suites for a Unit should provide a 
+    100% test coverage of the Unit&#39;s code.
+</p>
+<p style="margin-left: 40px"><em>Test Suites</em> can form a hierarchy, where, for example, the leaf Suites are associated with individual units within a library, and the higher level Suite represents a module-test for the entire library.</p>
+<p style="margin-left: 40px">Test Suite is responsible for executing all its Test Cases and sub-suites and collecting the results in form of statistics, usually the number of passed and failed test cases, execution time, etc.</p>
+<p style="margin-left: 40px">When some Test Cases share common prologue/epilogue code, Test Suite should support automatic execution of such code before/after each test case. This is done by introducing a special object called 
+<strong>Test Fixture</strong> which encapsulates a pair of Setup/Teardown methods and a collection of Test Cases relying on them. Test Fixtures can be reused by test cases from different Test Suites.</p>
+
+<h3><a name="Requirements">Requirements</a></h3>
+<h4><a name="Framework">Framework</a></h4>
+<p style="margin-left: 40px">
+    The purpose of a <strong>Unit Testing Framework</strong> is to support creation and mass execution of <em>unit tests</em>. 
+</p>
+
+<p style="margin-left: 40px">RF1. Support creation of Test Cases</p>
+    <div style="position: relative; left: 20; margin-left: 40px;">
+        <p>RF1.1. Test Case must be identifiable by name</p>
+        <p>RF1.2. Test Case can be a C/C++ function, a C++ method, or a shell script</p>
+      </div>
+
+<p style="margin-left: 40px">RF2. Support creation of test suites as collections of Test Cases</p>
+    <div style="position: relative; left: 20; margin-left: 80px;">
+        <p>RF2.1 Test Suite must be identifiable by a globally unique name</p>
+        <p>RF2.2 Test Cases within one Test Suite must have unique names</p>
+        <p>RF2.3 Every Test Case must be assigned to a Test Suite</p>
+    </div>
+
+<p style="margin-left: 40px">RF3. Support a hierarchy of Test Suites. A Test Suite should be able to contain a number or sub-suites, in addition to the suite's own test cases.</p>
+
+<p style="margin-left: 40px">RF4. Support creation of Test Fixtures to contain common setup/teardown code and/or context object shared by multiple test cases.</p>
+    <div style="position: relative; left: 20; margin-left: 80px;">
+        <p>RF4.1 A Text Fixture can be reused by Test Cases from different Suites.</p>
+    </div>
+
+<p style="margin-left: 40px">RF5. Support application of the same test code to different implementations of an <em>IUT</em></p>
+
+<p style="margin-left: 40px">RF6. Support execution of test code using different data sources</p>
+
+<p style="margin-left: 40px">RF7. Test framework must intercept abnormal termination signals sent by <em>CUT</em>, report them and continue execution of tests</p>
+    <div style="position: relative; left: 20; margin-left: 80px;">
+    <p>RF7.1. Test framework should not interfere with signal-handling logic inside <em>CUT</em></p>
+    <p>RF7.2. Each test case should run in its own address space as to not interfere with the test framework and other test cases</p>
+    </div>
+
+<p style="margin-left: 40px">RF8. Support versioning of <em>Test Cases</em> in respect to versions of operations in <em>IUT</em></p>
+<p style="margin-left: 40px">RF9. Collect test execution statistics: unit tests passed, failed, elapsed time</p>
+<p style="margin-left: 40px">RF10. Provide code coverage information: for each IUT, mark messages that were processed/not processed in the current run</p>
+<p style="margin-left: 40px">RF11. Support error reporting from test code. Error reports must identify location in the test code that raised an error condition 
+(suite, test case, source file, line) and provide user-specified or standard message</p>
+    <div style="position: relative; left: 20; margin-left: 80px;">
+    <p>RF11.1. The test execution trace stream must be separate from the log stream used by <em>CUT</em>. The destination of the stream should be configurable.</p>
+    <p>RF11.2. Upon reporting an error, test case should have an option to continue or terminate</p>
+    </div>
+
+<p style="margin-left: 40px">RF12. Support memory allocation monitoring. Report leaked memory blocks separately for <em>CUT</em> and test code</p>
+<p style="margin-left: 40px">RF13. Support execution of selected test suite(s) from a hierarchy</p>
+<p style="margin-left: 40px">RF14. Performance overhead introduced by the test framework should be minimal</p>
+<p style="margin-left: 40px">RF15. Provide trace of test execution in normal, verbose and quiet modes</p>
+
+<p style="margin-left: 40px">RF16. Test framework must protect itself from infinite loops in <em>CUT</em>, terminate test cases that take too long to run, report and continue execution of tests</p>
+    <div style="position: relative; left: 20; margin-left: 80px;">
+    <p>RF16.1. A test case must be able to specify its own timeout value if it requires more time than usual.</p>
+    </div>
+
+<h4><a name="Interfaces">Interfaces and Code Under Test</a></h4>
+<p style="margin-left: 40px">RI1. UIT should allow verification of the results of operations being tested, for operations that are expected to change the state of the object under test.
+One way to achieve that is to have a standard set of testability-oriented methods (e.g. parse/toString/equal) included in IUT.
+</p>
+<p style="margin-left: 40px">RI2. CUT should be isolated from implementations of other modules it may depend on, at least in cases when the dependency modules involve external resources and/or introduce execution delays.
+The common technique for achieving this goal is <em>Dependency Injection</em>; to support it CUT should expose interfaces it depends on and accept externally instantiated implementations for them. 
+The test code would be then responsible for instantiation and configuration of mock (or real if practical) dependencies of CUT before its initialization.</p>
+
+<h4><a name="Build">Build Process and Source Control</a></h4>
+<p style="margin-left: 40px">RB1. Test sources should be kept in a separate source sub-tree that mirrors the main code tree</p>
+<p style="margin-left: 40px">RB2. Build command must provide means to build all test suites defined in the source tree, combined into one executable</p>
+<p style="margin-left: 40px">RB3. Build command must provide means to build selected test suites, combined into one executable</p>
+<p style="margin-left: 40px">RB4. Build command should support building a minimal retest executable based on file update timestamps and dependencies between source files</p>
+<p style="margin-left: 40px">RB5. An auto-build (<em>Continuous Integration</em>) platform should periodically check out latest sources, build and run tests, and report results via email and/or web page update. 
+This should be done on all supported platforms, in all supported configurations (debug/release/etc.)</p>
+
+<h4><a name="Miscellaneous">Miscellaneous</a></h4>
+<p style="margin-left: 40px">M1. Before checking in, developers should merge their changes with the latest code base, and make sure 100% of unit tests pass. </p>
+<p style="margin-left: 40px">M2. There should be a tool that parses an interface definition and generates code for a test suite and stubs for test cases for all opertaions in the interface.</p>
+    <div style="position: relative; left: 20; margin-left: 40px;">
+    <p>M2.1. The test generation tool should not overwrite old test code if it exists. </p>
+    </div>
+
+<h4><a name="ContinuousIntegration">Continuous Integration</a></h4>
+<p style="margin-left: 40px">A roadmap:</p>
+<p style="margin-left: 40px">1. Revive tests under test/ and put them into one "executable"</p>
+<p style="margin-left: 40px">2. Include test projects into standard building targets or add a new target ("tests"). Cover debug, release, etc. (linux only for now)</p>
+<p style="margin-left: 40px">3. Set up a cron job to run make periodically. Check results manually.</p>
+<p style="margin-left: 40px">4. E-mail build results to a buildmaster</p>
+<p style="margin-left: 40px">5. Rotate the buildmaster duty (2 people/week)</p>
+<p style="margin-left: 40px">6. Add text execution to cron job(s):</p>
+<ul style="margin-left: 80px">
+<li>- quick (unit tests for individual interfaces, run 5-10 minutes after the last commit)</li>
+<li>- daily (runs that take more than an hour)</li>
+<li>- weekly (runs that take more than several hours)</li>
+</ul>
+<p style="margin-left: 40px">7. E-mail test results to buildmasters</p>
+<p style="margin-left: 40px">8. Publish build/test results (intranet, lava lamps, desktop widget)</p>
+<p style="margin-left: 40px">9. Port to Mac, Windows, ...</p>
+
+<!--
+<li>Has a body (C/C++ code). The body of a typical test case will follow this pattern:
+    <ul>
+	<li>instantiate an object under test</li>
+	<li>call a method on the object</li>
+	<li>verify the expected result</li>
+    </ul>
+</li>	
+<li>Can optionally depend on an execution context (created and destroyed outside, usually by the fixture)</li>
+
+<p>For the bodies of test cases, the framework should provide sufficiently varied ASSERT-like statements that check conditions and output error messages into an externally configurable log:
+</p>
+<ul>
+    <li>REQUIRE(condition [, usrMag) - evaluate an expression and if it is false, fail 
+        the test case</li>
+   <li>REQUIRE_EQ(actual, expected [, usrMsg]) - if the values do not match, log both 
+       and fail the test case</li>
+        <li>FAIL(usrMsg) - fail the test case unconditionally (e.g. "not implemented" in an initial 
+       stub)</li>
+   <li>etc.</li>
+</ul>
+<p>The standard part of an error message should report the name of the suite and test case that reported the failure, as well as source file and line number.
+Upon reporting the error, ASSERT should normally exit the test case. Additional 
+    control over how to handle assert failures can be useful, such as: report and 
+    continue with the current test case, terminate the suite, terminate the entire 
+    test run, etc.</p>
+<h4><a>Test Fixture</a></h4>
+<ul>
+<li>Contains a collection of test cases (Test Cases can be methods of the TestFixture class, 
+    or elements in a container)</li>
+<li>Provides optional SETUP and TEARDOWN methods that get executed before/after each test case's body. The goal is to factor any similar 
+prologue/epilogue code out of related test cases, and also to insulate test cases from influencing each other.</li>
+<li>Optionally encapsulates a Context object accessible for all test cases of the fixture (re-initialized each time SETUP is called)</li>
+<li>Installs signal handlers to intercept crashes (this can be done at the Suite or Runner level instead)</li>
+<li>Optionally uses fork() to ensure a separate address space for every test case (creates a thread on Windows)</li>
+<li>Collects execution statistics (test cases passed/failed)</li>
+</ul>
+<h4><a>Test Suite</a></h4>
+<ul>
+<li>Has a printable name</li>
+<li>Contains a collection of test fixtures associated with the same unit. 
+	<ul>
+        <li>Provides a default fixture for test cases that do not require setup/teardown </li>
+            </ul>
+        </li>
+<li>Optionally contains a collection of sub-suites</li>
+<li>Collects execution statistics per fixture/sub-suite and total </li>
+<li>May perform its own setup/teardown and provide a global context to fixtures</li>
+</ul>
+<h4><a>Test Runner</a></h4>
+<ul>
+<li>Contains a collection of test suites</li>
+<li>Configures output streams (log, test execution trace, standard output)</li>
+<li>Collects execution statistics per suite and total </li>
+<li>Can be instructed to run a subset of suites </li>
+</ul>
+
+    <p>Additional requirements:</p>
+<ul>
+<li>
+The execution of unit tests should be fairly fast to encourage frequent test runs without undue slowdown in the development process. 
+This is a requirement on both the framework and the test code.
+Executing the entire collection of unit tests on one platform should not take longer than a few minutes (ideally under 90 seconds).</li>
+
+<h3><a name="I nterfaces">Requirements on interfaces under test</a></h3>
+
+<li>A make target builds a unit test library per source directory<ul>
+    <li>at the top level, the target will make an executable that runs all unit tests in the system. This implies a unit testing main which creates and kicks off a TestRunner.</li>
+            </ul>
+        </li>
+        <li>Another make target runs all unit tests</li>
+</ul>					
+<h3><a name="Developers">Unit testing as part of the development process. Recommendations to programmers.</a></h3>
+<ul>
+<li>Add unit test(s) before implementing new functionality, see the test(s) fail, then implement the functionality to make the test(s) pass</li>
+<li>Before changing functionality, modify/add unit tests to verify the new functionality, make sure the modified tests fail, then implement the new logic to make the tests pass</li>
+<li>Add a unit test to expose a reported bug, then fix the code to make the test pass</li>
+<li>Check in procedure
+	<ul>
+        <li>make sure all unit tests pass
+	</li>
+                <li>&nbsp;merge with the latest code
+	</li>
+                <li>re-run all tests, make sure all tests pass
+	</li>
+                <li>check in </li>
+            </ul>
+</li>
+<li>Design for testability (<a href="http://www.testability.de/Publikationen/CONQUEST02_jungmayr.pdf)">a summary</a>)</li>
+<li>Do not attempt to drive design by unit testing</li>
+<li>Avoid writing test cases that take a long time to run</li>
+</ul>
+<p>From Ken: the tests for external database functions should try the functions with emtpy input </p>
+--></html>

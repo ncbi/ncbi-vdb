@@ -1,0 +1,541 @@
+<html>
+
+  <head>
+
+    <title>NCBI VDB-2: xfs</title>
+    <link href="vdb-2.css" rel="stylesheet" type="text/css"/>
+
+  </head>
+
+  <body>
+
+    <!-- Document Header -->
+
+    <h1>VDB-2 - xfs</h1>
+
+    <p class="toc">
+    <span class="hdr">Type:</span><br/>
+      <span class="entry">module</span>
+    </p>
+
+    <p class="toc">
+      <span class="hdr">Header:</span><br/>
+      <span class="entry"><a href="../interfaces/xfs/xfs.h">&lt;xfs/xfs.h&gt;</a></span>
+    </p>
+
+    <p class="toc">
+    <span class="hdr">Revision History:</span><br/>
+      <table class="entry">
+        <tr><td>2013-Jul-05</td><td>&bull;</td><td>rodarmer</td></tr>
+        <tr><td>2013-Sep-04</td><td>&bull;</td><td>rodarmer</td></tr>
+      </table>
+    </p>
+
+    <p class="toc">
+    <span class="hdr">Contents:</span><br/>
+    <ul class="toc-outer">
+        <li><a href="#abstract">Abstract</a></li>
+        <li><a href="#purpose">Purpose</a></li>
+        <li><a href="#description">Description</a></li>
+        <li><a href="#requirements">Requirements</a></li>
+        <li><a href="#implementation">Implementation</a></li>
+    </ul>
+    </p>
+
+    <hr/>
+
+    <!-- Abstract -->
+
+    <a name="abstract">
+
+    <h2>Abstract</h2>
+
+    <div class="section">
+
+      <p>
+		The VDB <strong>xfs</strong> is an externally accessible virtual file
+		system that leverages the technologies from <strong>fuse</strong> on
+		Linux and MacOS, or <strong>dokan</strong> on Windows.
+      </p>
+
+	  <p>
+		<strong>xfs</strong> runs as a service that creates virtual mount points
+		under the host kernel, and uses them as an interface to the VDB file
+		system stack. This provides access to remote repositories, site-local,
+		user-public and user-protected repositories. It also allows VDB code to
+		be invoked dynamically to provide views onto data.
+	  </p>
+
+	  <p>
+		Use of encrypted repositories is supported by providing unencrypted
+		virtual mounts that allow any application to work with files in
+		plaintext.
+	  </p>
+	  
+    </div>
+
+    </a>
+
+    <!-- Purpose -->
+
+    <a name="purpose">
+
+    <h2>Purpose</h2>
+
+    <div class="section">
+
+	  <p>
+		The purpose of VDB <strong>xfs</strong> is to bring the functionality of
+		<strong>vfs</strong>, <strong>kfs</strong> and <strong>kns</strong> -
+		all foundation technologies of VDB, to be accessible from applications
+		that were not written and linked against it. This means that
+		<em>archives</em>, <em>compressed</em> and <em>encrypted</em> files can
+		be transformed for viewing. It also means that a directory's contents
+		may be derived from a manifest file, containing
+		<strong>accessions</strong>	and/or <strong>file-ids</strong> where the
+		actual physical location of these items is determined dynamically.
+	  </p>
+
+    </div>
+
+    </a>
+
+    <!-- Description -->
+
+    <a name="description">
+
+    <h2>Description</h2>
+
+    <div class="section">
+
+	  <p>
+		<strong>xfs</strong> is an application that provides a user-space file
+		system. It has two modes of operation:
+	  </p>
+
+	  <ol>
+		<li>public access</li>
+		<li>protected access</li>
+	  </ol>
+
+	  <p>
+		The principal difference between the modes lies in support for data
+		confidentiality and compartmentalization.
+	  </p>
+
+	</div>
+
+	<a name="public-mode">
+	  
+    <h3>Public Mode</h3>
+
+	<div class="section">
+
+	  <p>
+		The service is started by running <strong>xfs</strong> in public mode,
+		which is indicated by the absence of protected-mode startup parameters.
+		The service will typically be started by another process.
+	  </p>
+
+	  <p>
+		Upon public-mode launch, <em>xfs</em> will determine if there is a
+		currently-running process for this <strong>(user, host)</strong>
+		pair, and will silently exit if so. Otherwise, it will begin its
+		function as a daemon process.
+	  </p>
+
+	  <p>
+		There needs to be a mechanism for tracking all client processes, such
+		that upon exit of the last client, the <em>xfs</em> daemon exits as well.
+	  </p>
+
+	  <p>
+		The daemon will create a virtual mount point in the user's filesystem,
+		obtained in one of four ways and in this order of precedence:
+	  </p>
+
+	  <ol>
+		<li>as a command-line option</li>
+		<li>as an environment variable</li>
+		<li>from VDB configuration</li>
+		<li>as a canonical default under <span class="code">$HOME/ncbi</span>
+		  - exact subdir TBD</li>
+	  </ol>
+
+	  <p>
+		Under this mount point the service will create three subdirectories with
+		modes as shown <em>(must take into account <strong>umask</strong>)</em>:
+	  </p>
+
+	  <ul>
+		<li><strong>cache</strong> - mode <span class="code">0777</span></li>
+		<li><strong>local</strong> - mode <span class="code">0555</span></li>
+		<li><strong>remote</strong> - mode <span class="code">0555</span></li>
+	  </ul>
+
+	</div>
+
+	</a>
+
+	<a name="protected-mode">
+	  
+    <h3>Protected Mode</h3>
+
+	<div class="section">
+
+	  <p>
+		The service is started by running <strong>xfs</strong> in protected mode,
+		which is indicated by the presence of protected-mode startup parameters
+		that indicate a single <strong>dbGaP</strong> project id.
+		The service will typically be started by another process.
+	  </p>
+
+	  <p>
+		Upon protected-mode launch, <em>xfs</em> will determine if there is a
+		currently-running process for this <strong>(user, project, host)</strong>
+		tuple, and will silently exit if so. Otherwise, it will begin its
+		function as a daemon process.
+	  </p>
+
+	  <p>
+		There needs to be a mechanism for tracking all client processes, such
+		that upon exit of the last client, the <em>xfs</em> daemon exits as well.
+	  </p>
+
+	  <p>
+		The daemon will create a virtual mount point in the user's filesystem,
+		obtained in one of three ways and in this order of precedence:
+	  </p>
+
+	  <ol>
+		<li>as a command-line option</li>
+		<li>from VDB configuration</li>
+		<li>as a canonical default under
+		  <span class="code">$HOME/ncbi/$proj-id</span> - again TBD since
+		  there are path conflicts...</li>
+	  </ol>
+
+	  <p>
+		Under this mount point the service will create four subdirectories with
+		modes as shown <em>(must take into account <strong>umask</strong>)</em>:
+	  </p>
+
+	  <ul>
+		<li><strong>cache</strong> - mode <span class="code">0770</span></li>
+		<li><strong>local</strong> - mode <span class="code">0550</span></li>
+		<li><strong>remote</strong> - mode <span class="code">0550</span></li>
+		<li><strong>workspace</strong> - mode <span class="code">0770</span></li>
+	  </ul>
+
+	</div>
+
+	</a>
+
+	<a name="directory-structures">
+
+    <h3>Directory Structures</h3>
+
+	<div class="section">
+
+	  <p>
+		The data from <strong>cache</strong>, <strong>local</strong> and
+		<strong>remote</strong> will be dynamically structured as:
+	  </p>
+
+	  <ol>
+		<li><strong>flat listing</strong> - for quantities 0..1000 items</li>
+		<li><strong>1K listing</strong> - for quantities 1001 items and above</li>
+	  </ol>
+
+	  <p>
+		Data within the <strong>workspace</strong> directory will be
+		hierarchically structured by user.
+	  </p>
+
+	  <p>
+		The <strong>flat</strong> structure will include all items within a
+		single directory. When the count of items does not exceed 1000
+		<em>(or perhaps this will be taken from configuration)</em>, the
+		hierarchy will be flat.
+	  </p>
+
+	  <p>
+		A <strong>1K</strong> structure will be applied for sets with a
+		cardinality exceeding 1000 members. The exact format of the structure
+		depends upon the type of set.
+	  </p>
+
+	</div>
+
+	</a>
+
+	<a name="cache-directory">
+
+    <h3>Cache Directory</h3>
+
+	<div class="section">
+
+	  <p>
+		The <strong>cache</strong> directory will display items that are within
+		a user's local cache. It has the property of being <em>writable</em>,
+		meaning that it will allow its contents to be unlinked, however its
+		contained files will have mode <span class="code">0444</span>.
+	  </p>
+
+	  <p>
+		The public cache contents are stored on one or more volumes under one or
+		more <em>application-domains</em> listed in the user's configuration.
+		<strong>This information should be obtained via the	KRepository</strong>.
+		Since these files are plaintext, they will be displayed in the virtual
+		cache directory, organized according to rules below.
+	  </p>
+
+	  <p>
+		The protected cache contents are similarly stored on one or more
+		volumes under one or more application-domains as listed in the user's
+		configuration. <strong>The contents are expected to be encrypted.</strong>
+		<em>xfs</em> will make use of the <strong>keyring</strong> facility to
+		obtain a decryption key for each of the items in that it needs to
+		display.
+	  </p>
+
+	  <p>
+		The internal structure of the <em>cache</em> directory may be flat - if
+		the number of items is small, or it may be arranged according to
+		application domain, e.g.:
+	  </p>
+
+	  <ul>
+		<li>all</li>
+		<li>sra</li>
+		<li>nannot</li>
+		<li>refseq</li>
+		<li>wgs</li>
+	  </ul>
+
+	  <p>
+		In the example above, <strong>all</strong> is suggested as a flat
+		representation that may be maintained as long as the count of all items
+		does not exceed 1000.
+	  </p>
+
+	</div>
+
+	</a>
+
+	<a name="local-directory">
+
+    <h3>Local Directory</h3>
+
+	<div class="section">
+
+	  <p>
+		The <strong>local</strong> directory will display items that are
+		considered local to the user's site. Neither it nor any of its contents
+		are modifiable.
+	  </p>
+
+	  <p>
+		The public local contents are taken as the combination of all
+		<strong>complete</strong> files within the user's cache plus all files
+		in the <strong>site</strong> repository. Most locations will not have
+		their own site, but large institutions may provide this service.
+	  </p>
+
+	  <p>
+		The protected local contents display <strong>only</strong> the completed
+		files from the active project's cache. Again their decryption keys are
+		obtained from <em>keyring</em>.
+	  </p>
+
+	  <p>
+		The internal structure of the <em>local</em> directory should be
+		arranged according to application domain, e.g.:
+	  </p>
+
+	  <ul>
+		<li>sra</li>
+		<li>nannot</li>
+		<li>refseq</li>
+		<li>wgs</li>
+	  </ul>
+
+	</div>
+
+	</a>
+
+	<a name="remote-directory">
+
+    <h3>Remote Directory</h3>
+
+	<div class="section">
+
+	  <p>
+		The <strong>remote</strong> directory will display items that are
+		considered external to the user's site. Neither it nor any of its
+		contents are modifiable.
+	  </p>
+
+	  <p>
+		The public remote contents will be obtained from a web-service running
+		within NCBI, with a cardinality potentially exceeding one million. The
+		web-service will retrieve appropriate information in banks, according to
+		the needs of the listing, which in no case will exceed 1000.
+	  </p>
+
+	  <p>
+		The protected remote contents will be obtained from one or more
+		<strong>kart</strong> files stored within a user's protected repository.
+		The kart contents will give some number of dbGaP
+		<strong>object-ids</strong> with a hopefully descriptive filename.
+		<em>xfs</em> will utilize <strong>KRepository</strong> to discover which
+		of these ids represents a local file and which is still remote.
+		<strong>WHILE IT MAY BE A CONFIGURATION OPTION</strong>, we have been
+		asked to ensure the user sees remote files separately from local.
+	  </p>
+
+
+	</div>
+
+	</a>
+
+    <!-- Requirements -->
+
+    <a name="requirements">
+
+    <h2>Requirements</h2>
+
+    <ol class="requirements">
+      <li>one service per user per repository</li>
+      <li>first launch creates daemon</li>
+      <li>subsequent launches do not create new daemon</li>
+      <li>all client processes are tracked</li>
+      <li>service exits when last client has exited</li>
+      <li>must be capable of listing directories with remote root</li>
+    </ol>
+
+    </a>
+
+    <!-- Content -->
+
+    <a name="implementation">
+
+    <h2>Implementation</h2>
+
+    <div class="section">
+
+	  <p>
+		TBD
+	  </p>
+
+	</div>
+
+	</a>
+
+	<!-- Milestones -->
+
+    <a name="milestones">
+
+    <h2>Milestone 1</h2>
+
+    <div class="section">
+
+	  <p>
+		The first milestone should consist of a stand-alone executable:
+	  </p>
+
+	  <ul>
+		<li>runs in public mode</li>
+		<li>displays local contents</li>
+		<li>displays cache contents</li>
+		<li>allows user to delete from cache contents</li>
+	  </ul>
+
+	</div>
+
+	<h2>Milestone 2</h2>
+
+    <div class="section">
+
+	  <p>
+		The second milestone should run on all three platforms:
+	  </p>
+	
+	  <ul>
+		<li>Linux FUSE</li>
+		<li>MacOS FUSE</li>
+		<li>Windows Dokan</li>
+	  </ul>
+
+	</div>
+
+	<h2>Milestone 3</h2>
+
+    <div class="section">
+
+	  <p>
+		The third milestone should add public remote capability:
+	  </p>
+	
+	  <ul>
+		<li>query sra-toolkit cgi</li>
+	  </ul>
+
+	</div>
+
+	<h2>Milestone 4</h2>
+
+    <div class="section">
+
+	  <p>
+		The fourth milestone should add keyring and decryption:
+	  </p>
+	
+	  <ul>
+		<li>utilize KRepository</li>
+		<li>project images of decrypted files</li>
+	  </ul>
+
+	</div>
+
+	<h2>Milestone 5</h2>
+
+    <div class="section">
+
+	  <p>
+		The fifth milestone should be able to treat kart files as remote:
+	  </p>
+	
+	  <ul>
+		<li>utilize KRepository</li>
+	  </ul>
+
+	</div>
+
+	<h2>Milestone 6</h2>
+
+    <div class="section">
+
+	  <p>
+		The sixth milestone should add r/w encryption of <em>workspace</em>:
+	  </p>
+	
+	  <ul>
+		<li>utilize KRepository to obtain project encryption key</li>
+		<li>require r/w KFile implementation</li>
+	  </ul>
+
+	</div>
+
+	</a>
+
+    <!-- Document Footer -->
+
+    <hr/>
+    <center>
+        <span class="footer">NCBI VDB-2 Documentation</span>
+    </center>
+
+    </body>
+
+</html>

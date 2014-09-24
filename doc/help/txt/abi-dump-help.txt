@@ -1,0 +1,33 @@
+Usage:
+  abi-dump [options] [ -A ] <accession>
+  abi-dump [options] <path>
+
+  -A|--accession <accession>       Replaces accession derived from <path> in filename(s) and deflines
+
+Options:
+
+  -O|--outdir <path>               Output directory, default is '.'
+  -N|--minSpotId <rowid>           Minimum spot id
+  -X|--maxSpotId <rowid>           Maximum spot id
+  -G|--spot-group                  Split into files by SPOT_GROUP (member name)
+  --spot-groups <[list]>           Filter by SPOT_GROUP (member): name[,...]
+  -R|--read-filter <[filter]>      Split into files by READ_FILTER value
+                                   optionally filter by a value: pass|reject|criteria|redacted
+  -T|--group-in-dirs               Split into subdirectories instead of files
+  -K|--keep-empty-files            Do not delete empty files
+  --table <table-name>             (New) Table name within SRA format, default is SEQUENCE
+
+  -h|--help                        Output a brief explantion for the program
+  -V|--version                     Display the version of the program then quit
+  -L|--log-level <level>           Logging level as number or enum string
+                                   One of (fatal|sys|int|err|warn|info) or (0-5)
+                                   Current/default is warn
+  -v|--verbose                     Increase the verbosity level of the program
+                                   Use multiple times for more verbosity
+
+Format options:
+
+  -M|--minReadLen <len>            Minimum read length to output, default is 25
+  -W|--noclip                      Do not clip quality left and right for spot
+  -F|--origfmt                     Excludes SRR accession on defline
+  -B|--noDotReads                  Do not output reads consisting mostly of dots

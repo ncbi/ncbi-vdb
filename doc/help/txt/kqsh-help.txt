@@ -1,0 +1,7 @@
+Usage: kqsh [ options ] [ file... ]
+
+    options:
+      -h               give tool help
+      -u               enable update operations
+      -l <path>        path(s) for loading dynamic libraries
+

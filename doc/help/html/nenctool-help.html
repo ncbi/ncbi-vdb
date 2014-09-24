@@ -1,0 +1,89 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+       "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>nenctool help</title>
+</head>
+<body>
+
+<pre>
+Usage:
+  nenctool [options] &lt;source-file-path> &lt;destination-file-path>
+
+Summary:
+  Copy a file from the first parameter to the second parameter
+  Encryption, decryption, or re-encryption are the expected purpose.
+
+Parameters:
+  source-file-path                 The path to a file either in native format
+  destination-file-path            in 'file' URI scheme or in 'ncbi-file'
+                                   URI scheme.
+                                   "ncbi-file" scheme adds a query to the "file" scheme
+                                   where 'enc' or 'encrypt' means the file is encrypted
+                                   and 'pwfile=&lt;path>' points to a file to get the password
+                                   or 'pwfd=&lt;fd>' refers to a file descriptor from which to
+                                   read a password.
+
+Options:
+  -f|--force                       force overwrite of existing files 
+  -h|--help                        Output brief explantion for the program. 
+  -V|--version                     Display the version of the program then 
+                                   quit. 
+  -L|--log-level &lt;level>           Logging level as number or enum string. One 
+                                   of (fatal|sys|int|err|warn|info) or (0-5) 
+                                   Current/default is warn 
+  -v|--verbose                     Increase the verbosity level of the program. 
+                                   Use multiple times for more verbosity. 
+  --report &lt;type>                  Control program execution environment 
+                                   report generation (if implemented). One of 
+                                   (never|error|always). Default is error 
+
+ncbi-file uri syntax:
+  'ncbi-file' uris are based on a combination of the standard
+  'file' and 'http' syntax familiar to browser users.
+  Enclosing questions marks are probably necessary.
+
+  URI syntax is 'scheme:'hierarchical-part'?'query'#'fragment'
+  scheme:
+    ncbi-file
+  hierarchical-part:
+    this is the same as for scheme file and can be the native form or
+    the ncbi 'posix' format that matches most flavors of Unix.
+    Environment variables and short hands such as '~' are not interpreted.
+  query:
+    Zero or two symbols separated by the '&'.  The whole query can be omitted.
+      enc or encrypt
+      pwfile='path to a file containing a password'
+      pwfd='file descriptor where the password can be read'
+    If the encrypt is present exactly one of the other two must be present.
+  fragment:
+    No fragment is permitted.
+
+password contents:
+  The file or file descriptor containing the password is read enough to satisfy
+  the following restriction.  The password is terminated by the end of file,
+  a carriage return or a line feed.  The length must be no more than 4096 bytes.
+  The password file should have limited read access to protect it.
+
+Use examples:
+  To encrypt a create a file named 'example' with a password from a file
+  named 'password-file' to a file named 'example.nenc' all in the current
+  directory:
+
+  $ nenctool example "ncbi-file:example.nenc?encrypt&pwfile=password-file"
+
+  To decrypt a file named 'example.nenc' with a password from a file
+  named 'password-file' to a file named 'example' in directories implied
+  in the command:
+
+  $ nenctool "ncbi-file:/home/user/downloads/example.nenc?encrypt&pwfile=/home/user/password-file" example
+
+  To change the encryption of a file from one password to another:
+
+  $ nenctool "ncbi-file:/home/user/downloads/example.nenc?encrypt&pwfile=old-password-file" \
+         "ncbi-file:example.nenc?encrypt&pwfile=/home/user/new-password-file"
+
+</pre>
+
+</body>
+</html>

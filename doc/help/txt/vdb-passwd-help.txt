@@ -1,0 +1,17 @@
+Usage:
+  vdb-passwd [options]
+
+Update user's NCBI VDB crypto password
+
+Options:
+  -h|--help                        Output brief explantion for the program. 
+  -V|--version                     Display the version of the program then 
+                                   quit. 
+  -L|--log-level <level>           Logging level as number or enum string. One 
+                                   of (fatal|sys|int|err|warn|info) or (0-5) 
+                                   Current/default is warn 
+  -v|--verbose                     Increase the verbosity level of the program. 
+                                   Use multiple times for more verbosity. 
+  --report <type>                  Control program execution environment 
+                                   report generation (if implemented). One of 
+                                   (never|error|always). Default is error 

@@ -1,0 +1,48 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+       "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>nencvalid help</title>
+</head>
+<body>
+
+<pre>
+Usage:
+  nencvalid [options] &lt;file-path> [ &lt;file-path> ...]
+
+Summary:
+  Validate the consistency of NCBI format encrypted files
+
+Parameters:
+  file-path                        A file in an NCBI encrypted file format.
+                                   The first version encrypted file format
+                                   needs a password to validate the content
+                                   while the second version does not.  If the
+                                   ncbi-file uri format is used if you ask
+                                   file decryption (encrypt in the query)
+                                   the validation will be on the decrypted
+                                   file which might not be the intention.
+                                   The password if needed for validation will
+                                   have to be in the standard NCBI VDB
+                                   configuration as 'krypto/pwfile' or 
+                                   referenced by the environment variable
+                                   VDB_PWFILE or Config parameter
+
+Options:
+  -q|--quiet                       no text output overriding log and status 
+                                   levels 
+  -h|--help                        Output brief explantion for the program. 
+  -V|--version                     Display the version of the program then 
+                                   quit. 
+  -L|--log-level &lt;level>           Logging level as number or enum string. One
+                                   of (fatal|sys|int|err|warn|info) or (0-5) 
+                                   Current/default is warn 
+  -v|--verbose                     Increase the verbosity level of the program.
+                                   Use multiple times for more verbosity. 
+  --report &lt;type>                  Control program execution environment 
+                                   report generation (if implemented). One of 
+                                   (never|error|always). Default is error 
+</pre>
+
+</body>
+</html>

@@ -1,0 +1,493 @@
+<html>
+
+  <head>
+
+    <title>NCBI VDB-2: SRASpot</title>
+    <link href="simple.css" rel="stylesheet" type="text/css"/>
+
+  </head>
+
+  <body>
+
+    <!-- Document Header -->
+
+    <h1>VDB-2 - Simple API: SRASpot</h1>
+
+    <p class="toc">
+    <span class="hdr">Type:</span><br/>
+      <span class="entry">interface</span>
+    </p>
+
+    <p class="toc">
+    <span class="hdr">Revision History:</span><br/>
+      <table class="entry">
+        <tr><td>2013-Jun-30</td><td>&bull;</td><td>rodarmer</td></tr>
+      </table>
+    </p>
+
+    <p class="toc">
+      <span class="hdr">Header:</span><br/>
+      <span class="entry"><a href="../../interfaces/simple/sra.hpp">&lt;simple/sra.hpp&gt;</a></span>
+    </p>
+
+    <p class="toc">
+      <span class="hdr">Package:</span><br/>
+      <span class="entry">gov.nih.nlm.ncbi.sra</span>
+    </p>
+
+    <p class="toc">
+    <span class="hdr">Contents:</span><br/>
+    <ul class="toc-outer">
+        <li><a href="#description">Description</a></li>
+		<li><a href="#SRASpot">SRASpot</a></li>
+		<ul class="toc-inner">
+		  <li><a href="#SRASpot.platform">platform</a> - hardware platform that
+			produced spot</li>
+		  <li><a href="#SRASpot.spotGroup">spotGroup</a> - optional tag applied
+			to spots by submitter</li>
+		  <li><a href="#SRASpot.spotID">spotID</a> - SRA spot identifier</li>
+		  <li><a href="#SRASpot.numReads">numReads</a> - number of reads
+			within current spot</li>
+		  <li><a href="#SRASpot.getReads">getReads</a> - get an iterator of
+			reads within current spot</li>
+		</ul>
+		<li><a href="#SRASpotIterator">SRASpotIterator</a></li>
+		<ul class="toc-inner">
+		  <li><a href="#SRASpotIterator.next">next</a> - advance to next spot</li>
+		  <li><a href="#SRASpotIterator.toReadIterator">toReadIterator</a> -
+			transform spot iterator to a read iterator</li>
+		</ul>
+    </ul>
+    </p>
+
+    <hr/>
+
+    <!-- Description -->
+
+    <a name="description">
+
+    <h2>Description</h2>
+
+    <div class="section">
+
+      <p>
+		It's really wonderful.
+	  </p>
+
+    </div>
+
+    </a>
+
+    <!-- SRASpot -->
+    <hr/>
+    <a name="SRASpot">
+
+    <h2>SRASpot</h2>
+
+	<div class="section">
+
+	  <p>
+		<span class="hdr">extends</span><br/>
+		<span class="entry"><a href="SRASequence.html#SRASequence">SRASequence</a></span>
+	  </p>
+
+	  <p>
+		The <strong>SRASpot</strong> interface represents a sequence of called
+		based from their original machine read.
+	  </p>
+
+	</div>
+
+    <h3>messages</h3>
+
+	<ul class="toc-outer">
+	  <li><a href="#SRASpot.platform">platform</a> - hardware platform that
+		produced spot</li>
+	  <li><a href="#SRASpot.spotGroup">spotGroup</a> - optional tag applied
+		to spots by submitter</li>
+	  <li><a href="#SRASpot.spotID">spotID</a> - SRA spot identifier</li>
+	  <li><a href="#SRASpot.numReads">numReads</a> - number of reads
+		within current spot</li>
+	  <li><a href="#SRASpot.getReads">getReads</a> - get an iterator of
+		reads within current spot</li>
+	</ul>
+
+    <!-- platform -->
+	<a name="SRASpot.platform">
+
+    <div class="box">
+
+	  <h3 class="box">platform</h3>
+
+	  <p class="box">
+		returns a textual description of hardware platform, if known.
+	  </p>
+
+<span class="code"><pre>
+    // C++
+    String platform () const
+        throw ( SRAException );
+
+    // Java
+    public final String platform ()
+        throws SRAException { ... }
+</pre></span>
+
+      <p>
+        <span class="hdr">return value</span><br/>
+        <span class="entry">a textual description of platform</span><br/>
+        <span class="entry">names include:</span>
+		<ul>
+		  <li><q>UNDEFINED</q></li>
+		  <li><q>454</q></li>
+		  <li><q>ILLUMINA</q></li>
+		  <li><q>ABSOLID</q></li>
+		  <li><q>COMPLETE_GENOMICS</q></li>
+		  <li><q>HELICOS</q></li>
+		  <li><q>PACBIO_SMRT</q></li>
+		  <li><q>ION_TORRENT</q></li>
+		</ul>
+      </p>
+
+      <p>
+        <span class="hdr">errors</span><br/>
+        <span class="entry"><a href="SRAException.html">SRAException</a></span>
+      </p>
+
+	  <p class="box-discussion">
+		The <strong>platform</strong> is an important part of the original SRA
+		specification. It has become less emphasized lately as technologies are
+		mixed and as the scope of SRA expands.
+	  </p>
+
+    </div>
+
+	</a>
+
+    <!-- spotGroup -->
+	<a name="SRASpot.spotGroup">
+
+    <div class="box">
+
+	  <h3 class="box">spotGroup</h3>
+
+	  <p class="box">
+		returns a tag string representing spot-group, if known.<br/>
+		this is a submitter-supplied identifier, used for multiplexing
+	  </p>
+
+<span class="code"><pre>
+    // C++
+    String spotGroup () const
+        throw ( SRAException );
+
+    // Java
+    public final String spotGroup ()
+        throws SRAException { ... }
+</pre></span>
+
+      <p>
+        <span class="hdr">return value</span><br/>
+        <span class="entry">a submitter-supplied tag string</span><br/>
+        <span class="entry">the default group tag is the reserved
+          value <q></q> <em>( empty string )</em></span>
+      </p>
+
+      <p>
+        <span class="hdr">errors</span><br/>
+        <span class="entry"><a href="SRAException.html">SRAException</a></span>
+      </p>
+
+	  <p class="box-discussion">
+		Multiplexed spots are given a tag for the purpose of grouping and
+		demultiplexing. This tag string can be anything chosen by whomever
+		performed the multiplexing. Oftentimes it is an artificial sequence,
+		aka <q>barcode</q>.
+	  </p>
+
+	  <p class="box-discussion">
+		All spots are considered to belong to some spot group, where the default
+		tag is the empty string.
+	  </p>
+
+    </div>
+
+	</a>
+
+    <!-- spotID -->
+	<a name="SRASpot.spotID">
+
+    <div class="box">
+
+	  <h3 class="box">spotID</h3>
+
+	  <p class="box">
+		returns an SRA spot-id
+	  </p>
+
+<span class="code"><pre>
+    // C++
+    uint64_t spotID () const
+        throw ( SRAException );
+
+    // Java
+    public final long spotID ()
+        throws SRAException { ... }
+</pre></span>
+
+      <p>
+        <span class="hdr">return value</span><br/>
+        <span class="entry">the SRA-assigned spot id number</span><br/>
+        <span class="entry">valid ids start at 1 and have no upper limit</span>
+      </p>
+
+      <p>
+        <span class="hdr">errors</span><br/>
+        <span class="entry"><a href="SRAException.html">SRAException</a></span>
+      </p>
+
+	  <p class="box-discussion">
+		Pretty self-evident...
+	  </p>
+
+    </div>
+
+	</a>
+
+    <!-- numReads -->
+	<a name="SRASpot.numReads">
+
+    <div class="box">
+
+	  <h3 class="box">numReads</h3>
+
+	  <p class="box">
+		returns the number of reads within the spot
+	  </p>
+
+<span class="code"><pre>
+    // C++
+    uint32_t numReads ( bool biological ) const
+        throw ( SRAException );
+
+    // Java
+    public final int numReads ( boolean biological )
+        throws SRAException { ... }
+</pre></span>
+
+      <p>
+        <span class="hdr">biological</span><br/>
+        <span class="entry">if true, count only the biological reads</span>
+      </p>
+
+      <p>
+        <span class="hdr">return value</span><br/>
+        <span class="entry">the number of selectable reads within the spot</span>
+      </p>
+
+      <p>
+        <span class="hdr">errors</span><br/>
+        <span class="entry"><a href="SRAException.html">SRAException</a></span>
+      </p>
+
+	  <p class="box-discussion">
+		Also pretty self-evident...
+	  </p>
+
+    </div>
+
+	</a>
+
+    <!-- getReads -->
+	<a name="SRASpot.getReads">
+
+    <div class="box">
+
+	  <h3 class="box">getReads</h3>
+
+	  <p class="box">
+		returns the requested reads from the spot
+	  </p>
+
+<span class="code"><pre>
+    // C++
+    SRASequenceIterator getReads ( bool biological ) const
+        throw ( SRAException );
+
+    // Java
+    public final SRASequenceIterator getReads ( boolean biological )
+        throws SRAException { ... }
+</pre></span>
+
+      <p>
+        <span class="hdr">biological</span><br/>
+        <span class="entry">if true, return only the biological reads</span>
+      </p>
+
+      <p>
+        <span class="hdr">return value</span><br/>
+        <span class="entry"><a href="SRASequence.html#SRASequenceIterator">SRASequenceIterator</a></span>
+      </p>
+
+      <p>
+        <span class="hdr">errors</span><br/>
+        <span class="entry"><a href="SRAException.html">SRAException</a></span>
+      </p>
+
+	  <p class="box-discussion">
+		Returns a short-lived iterator onto the reads of a spot. As I look at
+		this, it seems questionable as to whether this is a good idea... The AGC
+		languages like Java will create a lot of these guys and won't bother to
+		collect them in a timely fashion. For this to work, the iterator will
+		need to be implemented entirely within the higher-level language.
+	  </p>
+
+    </div>
+
+	</a>
+
+	<!-- end of SRASpot -->
+    </a>
+
+	<!-- SRASpotIterator -->
+    <hr/>
+    <a name="SRASpotIterator">
+
+    <h2>SRASpotIterator</h2>
+
+	<div class="section">
+
+	  <p>
+		<span class="hdr">extends</span><br/>
+		<span class="entry"><a href="#SRASpot">SRASpot</a></span>
+	  </p>
+
+	  <p>
+		The <strong>SRASpotIterator</strong> adds standard iteration
+		functionality to the <em>SRASpot</em> interface. In addition, it
+		provides for wholesale casts to <strong>read</strong> iterators across
+		all spots.
+	  </p>
+
+	</div>
+
+    <h3>messages</h3>
+
+	<ul class="toc-outer">
+	  <li><a href="#SRASpotIterator.next">next</a> - advance to next spot</li>
+	  <li><a href="#SRASpotIterator.toReadIterator">toReadIterator</a> -
+		transform spot iterator to a read iterator</li>
+	</ul>
+
+    <!-- next -->
+	<a name="SRASpotIterator.next">
+
+    <div class="box">
+
+	  <h3 class="box">next</h3>
+
+	  <p class="box">
+		advance to first or next spot
+	  </p>
+
+<span class="code"><pre>
+    // C++
+    bool next ()
+        throw ( SRAException );
+
+    // Java
+    public final boolean next ()
+        throws SRAException { ... }
+</pre></span>
+
+      <p>
+        <span class="hdr">return value</span><br/>
+        <span class="entry">true if iterator moved to first or next item</span><br/>
+        <span class="entry">false if no more rows available</span>
+      </p>
+
+      <p>
+        <span class="hdr">errors</span><br/>
+        <span class="entry"><a href="SRAException.html">SRAException</a></span>
+      </p>
+
+	  <p class="box-discussion">
+		When the iterator is created, it is technically not yet focused on the
+		first row, so the caller should first send this message and receive
+		affirmation that the row is available.
+	  </p>
+
+	  <p class="box-discussion">
+		As with all iterators, and in the interest of removing gratuitous error
+		conditions, the iterator will automatically focus on the first row if
+		accessed before sending this message.
+	  </p>
+
+    </div>
+
+	</a>
+
+    <!-- toReadIterator -->
+	<a name="SRASpotIterator.toReadIterator">
+
+    <div class="box">
+
+	  <h3 class="box">toReadIterator</h3>
+
+	  <p class="box">
+		convert the spot iterator into a read iterator,<br/>
+		destroying the spot iterator on success.
+	  </p>
+
+<span class="code"><pre>
+    // C++
+    SRASequenceIterator toReadIterator ( bool biological )
+        throw ( SRAException );
+
+    // Java
+    public final SRASequenceIterator toReadIterator ( boolean biological )
+        throws SRAException { ... }
+</pre></span>
+
+      <p>
+        <span class="hdr">biological</span><br/>
+        <span class="entry">if true, return only biological reads</span>
+      </p>
+
+      <p>
+        <span class="hdr">return value</span><br/>
+        <span class="entry"><a href="SRASequence.html#SRASequenceIterator">SRASequenceIterator</a></span>
+      </p>
+
+      <p>
+        <span class="hdr">errors</span><br/>
+        <span class="entry"><a href="SRAException.html">SRAException</a></span><br/>
+        <span class="entry">fails with exception if iterator is empty</span>
+      </p>
+
+	  <p class="box-discussion">
+		The user has started out with an <em>SRASpotIterator</em>, which is
+		naturally obtained from an original SRA run. If the desire was to
+		iterate across individual reads, especially biological only, the
+		iterator may be transformed. This destroys the original, since doing
+		otherwise would create a copy. The transformed iterator starts at the
+		first read of the next ( not current ) spot of the spot iterator.
+	  </p>
+
+    </div>
+
+	</a>
+
+	<!-- end of SRASpotIterator -->
+    </a>
+
+    <!-- Document Footer -->
+
+    <hr/>
+    <center>
+      <span class="footer">NCBI VDB-2 Documentation</span>
+    </center>
+
+  </body>
+
+</html>

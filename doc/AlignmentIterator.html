@@ -1,0 +1,526 @@
+<html>
+
+  <head>
+
+	<title>NCBI VDB-2: AlignmentIterator</title>
+    <link href="vdb-2.css" rel="stylesheet" type="text/css"/>
+
+  </head>
+
+  <body>
+
+	<!-- Document Header -->
+
+    <h1>VDB-2 - AlignmentIterator</h1>
+
+	<p class="toc">
+	  <span class="hdr">Type:</span><br/>
+      <span class="entry">interface</span>
+    </p>
+
+    <p class="toc">
+      <span class="hdr">Header:</span><br/>
+      <span class="entry"><a href="../interfaces/align/iterator.h">align/iterator.h</a></span>
+    </p>
+
+    <p class="toc">
+	  <span class="hdr">Revision History:</span><br/>
+      <table class="entry">
+        <tr><td>2012-Feb-02</td><td>&bull;</td><td>initial</td></tr>
+        <tr><td>2012-Feb-06</td><td>&bull;</td><td>rodarmer</td></tr>
+        <tr><td>2012-Feb-28</td><td>&bull;</td><td>reflect API modifications to constructors</td></tr>
+      </table>
+    </p>
+
+	<p class="toc">
+	  <span class="hdr">Contents:</span><br/>
+	  <ul class="toc-outer">
+		<li><a href="#abstract">Description</a></li>
+		<li><a href="#requirements">Requirements</a></li>
+		<li><a href="#interface">Interface</a></li>
+		<ul class="toc-inner">
+		  <li><a href="#make">Make</a></li>
+		  <li><a href="#addref">AddRef</a></li>
+		  <li><a href="#release">Release</a></li>
+		  <li><a href="#next">Next</a></li>
+		  <li><a href="#state">State</a></li>
+		  <li><a href="#position">Position</a></li>
+		  <li><a href="#bases-inserted">BasesInserted</a></li>
+		  <li><a href="#bases-deleted">BasesDeleted</a></li>
+		</ul>
+	  </ul>
+	</p>
+
+    <hr/>
+
+	<!-- Abstract -->
+
+	<a name="abstract">
+	  
+	  <h2>Description</h2>
+
+	  <div class="section">
+
+		<p>
+		  The <strong>AlignmentIterator</strong> is an interface that allows for
+		  walking an aligned sequence <em>(or sub-sequence)</em> described by an
+		  alignment record. Its implementation will handle the intricacies of
+		  traversing an alignment transcript, i.e. the results of comparison.
+		</p>
+
+		<p>
+		  The interface is being called an <strong>iterator</strong> due in part
+		  to the tradition in C and its offspring, but for the same reason there
+		  may be good reason to change its name. The name iterator implies an
+		  ability to <em>iterate</em> across a sequence, but does not specify
+		  which direction, or whether multiple passes are supported, etc. It
+		  should be stated that the word does not explicitly imply random access
+		  either.
+		</p>
+
+		<p>
+		  In <em>Java</em> this type of interface is known as an
+		  <strong>Enumeration</strong>, which is meant to imply access to a
+		  single element at a time, in forward order and in series. This is
+		  similar to a result set and a stream in that there is no concept of
+		  addressing elements, only a window onto the current element.
+		</p>
+
+		<p>
+		  It is important to design an interface with this restriction in order
+		  to avoid imposing possibly severe requirements upon any implementation.
+		  We can demonstrate that random or semi-random access can be provided
+		  with interfaces built upon an enumerating interface.
+		</p>
+
+	  </div>
+
+	</a>
+
+    <!-- Requirements -->
+
+    <a name="requirements">
+
+      <h2>Requirements</h2>
+
+      <ol class="requirements">
+		<li>Must operate within the garbage collection paradigm of the code base</li>
+		<li>Must provide a mechanism for advancing forward by exactly one position in reference coordinate space</li>
+		<li>Must maintain a static and non-volatile view of the alignment at a single reference position</li>
+		<li>Must not provide any other means of modifying position on the reference</li>
+		<li>Must not provide access to any other part of the alignment than that which corresponds to the current position</li>
+      </ol>
+
+    </a>
+
+	<!-- Content -->
+
+    <a name="interface">
+
+      <h2>Interface</h2>
+
+    </a>
+
+	<a name="make">
+
+	  <div class="box">
+
+		<h3 class="box">Make</h3>
+
+		<p class="box">
+		  ask the alignment manager to create an iterator from individual components
+		</p>
+
+<pre class="code">
+rc_t AlignMgrMakeAlignmentIterator ( const AlignMgr *self,
+    AlignmentIterator **iter, bool copy,
+    uint64_t ref_pos, uint32_t ref_len,
+    const INSDC_4na_bin *read, uint32_t read_len,
+    const bool *has_mismatch, const bool *has_ref_offset,
+    const int32_t *ref_offset, uint32_t ref_offset_len );
+</pre>
+
+        <p>
+          <span class="hdr">iter - OUT</span><br/>
+          <span class="entry">return parameter for the iterator</span>
+        </p>
+
+        <p>
+          <span class="hdr">copy</span><br/>
+          <span class="entry">if true, alignment mgr should copy data rather than use pointers</span><br/>
+          <span class="entry">otherwise, lifetime of data must meet or exceed that of iterator</span>
+        </p>
+
+        <p>
+          <span class="hdr">ref_pos</span><br/>
+          <span class="entry">starting position of alignment in reference coordinates</span>
+        </p>
+
+        <p>
+          <span class="hdr">ref_len</span><br/>
+          <span class="entry">length of projection onto reference in reference space</span>
+        </p>
+
+        <p>
+          <span class="hdr">read</span><br/>
+          <span class="entry">full sequence of aligned read in base space</span><br/>
+          <span class="entry">this should probably be only mismatches - see discussion</span>
+        </p>
+
+        <p>
+          <span class="hdr">read_len</span><br/>
+          <span class="entry">length in bases of <strong>read</strong></span>
+        </p>
+
+        <p>
+          <span class="hdr">has_mismatch</span><br/>
+          <span class="entry">array of 8-bit <strong>bool</strong> values</strong></span><br/>
+          <span class="entry">one per base in <strong>read</strong></span><br/>
+          <span class="entry">value is <span class="code">true</span> when base at position differs from reference</span>
+        </p>
+
+        <p>
+          <span class="hdr">has_ref_offset</span><br/>
+          <span class="entry">array of 8-bit <strong>bool</strong> values</strong></span><br/>
+          <span class="entry">one per base in <strong>read</strong></span><br/>
+          <span class="entry">value is <span class="code">true</span> when relative position must be adjusted</span>
+        </p>
+
+        <p>
+          <span class="hdr">ref_offset</span><br/>
+          <span class="entry">array of 32-bit signed integer values</strong></span><br/>
+          <span class="entry">one for every <span class="code">true</span> value in <strong>has_ref_offset</strong></span><br/>
+          <span class="entry">value is used to adjust relative alignment of <strong>read</strong> against reference</span>
+        </p>
+
+        <p>
+          <span class="hdr">ref_offset_len</span><br/>
+          <span class="entry">length in elements of <strong>ref_offset</strong></span>
+        </p>
+
+		<p class="box-discussion">
+		  While a bit unwieldy, this factory message allows for isolated creation
+		  of an iterator from external data. It has this as a benefit, while at
+		  the same time due to the requirement of maintaining
+		  <q>a static and non-volatile view</q> it requires either copying of
+		  the input or some guarantee of the lifetime of its inputs.
+		</p>
+
+		<p class="box-discussion">
+		  Specification of the full read sequence in this interface rather than
+		  only the mismatched bases is due to the need to describe insertions
+		  that happen to be identical to surrounding bases, and therefore do not
+		  generate a mismatch. The problem is that the code which generates a
+		  full read is combining mismatched bases with the reference at the
+		  expense of a sub-select when in many situation we may already have all
+		  of the required information cached and at our fingertips. We should
+		  evaluate the performance impact of this.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="addref">
+
+	  <div class="box">
+
+		<h3 class="box">AddRef</h3>
+
+		<p class="box">
+		  duplicate an existing reference
+		</p>
+
+<pre class="code">
+rc_t AlignmentIteratorAddRef ( const AlignmentIterator *self );
+</pre>
+
+		<p class="box-discussion">
+		  The object is defined as being reference counted. In VDB-2, references
+		  are direct pointers to objects and the objects maintain a reference
+		  counter.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="release">
+
+	  <div class="box">
+
+		<h3 class="box">Release</h3>
+
+		<p class="box">
+		  release an existing reference<br/>
+		  potentially whacks object
+		</p>
+
+<pre class="code">
+rc_t AlignmentIteratorRelease ( const AlignmentIterator *self );
+</pre>
+
+		<p class="box-discussion">
+		  The object is defined as being reference counted. In VDB-2, references
+		  are direct pointers to objects and the objects maintain a reference
+		  counter.
+		</p>
+
+		<p class="box-discussion">
+		  NULL pointers are ignored.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="next">
+
+	  <div class="box">
+
+		<h3 class="box">Next</h3>
+
+		<p class="box">
+		  advance position by +1 in reference space<br/>
+		  must be called initially to advance to first element
+		</p>
+
+<pre class="code">
+rc_t AlignmentIteratorNext ( AlignmentIterator *self );
+</pre>
+
+		<p class="box-discussion">
+		  This is the main message for iterating across an alignment. Each
+		  invocation causes an advance in reference space, and the prior window
+		  is permanently lost.
+		</p>
+
+		<p class="box-discussion">
+		  The implementation will detect whether the new position has an insert
+		  or delete, followed by a match, mismatch or skip. This information
+		  is obtained via the <a href="#state">State</a> message.
+		</p>
+
+		<p class="box-discussion">
+		  When the iterator is initially created, its window is invalid. This is
+		  to facilitate use of the Next message within a loop to simultaneously
+		  advance the pointer and return a result code to indicate the validity
+		  of the new location.
+		</p>
+
+		<p class="box-discussion">
+		  TBD - the return code for invalid position should be made explicit.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="state">
+
+	  <div class="box">
+
+		<h3 class="box">State</h3>
+
+		<p class="box">
+		  returns a bitmap of state bits and codes at the current position
+		</p>
+
+<pre class="code">
+int32_t AlignmentIteratorState ( const AlignmentIterator *self,
+    INSDC_coord_zero *seq_pos );
+
+enum
+{
+    align_iter_match      = 64,
+    align_iter_skip       = 128
+};
+</pre>
+
+        <p>
+          <span class="hdr">seq_pos</span><br/>
+          <span class="entry">optional return parameter for the current position within the sequence</span><br/>
+          <span class="entry">NB - this coordinate is within sequence space, not reference space</span>
+        </p>
+
+		<p class="box-discussion">
+		  Most of the interesting information about the alignment at the current
+		  position is returned in a single, highly overloaded integer.
+		</p>
+
+		<p class="box-discussion">
+		  The least significant byte contains one of 17 values:
+		  <table class="entry">
+			<tr><td>A ( 1 )</td><td></td><td>mismatched base</td></tr>
+			<tr><td>C ( 2 )</td><td></td><td>mismatched base</td></tr>
+			<tr><td>M ( 3 )</td><td></td><td>mismatched base</td></tr>
+			<tr><td>G ( 4 )</td><td></td><td>mismatched base</td></tr>
+			<tr><td>R ( 5 )</td><td></td><td>mismatched base</td></tr>
+			<tr><td>S ( 6 )</td><td></td><td>mismatched base</td></tr>
+			<tr><td>V ( 7 )</td><td></td><td>mismatched base</td></tr>
+			<tr><td>T ( 8 )</td><td></td><td>mismatched base</td></tr>
+			<tr><td>W ( 9 )</td><td></td><td>mismatched base</td></tr>
+			<tr><td>Y ( 10 )</td><td></td><td>mismatched base</td></tr>
+			<tr><td>H ( 11 )</td><td></td><td>mismatched base</td></tr>
+			<tr><td>K ( 12 )</td><td></td><td>mismatched base</td></tr>
+			<tr><td>D ( 13 )</td><td></td><td>mismatched base</td></tr>
+			<tr><td>B ( 14 )</td><td></td><td>mismatched base</td></tr>
+			<tr><td>N ( 15 )</td><td></td><td>mismatched base</td></tr>
+			<tr><td>align_iter_match ( 64 )</td><td>&nbsp;</td><td>match</td></tr>
+			<tr><td>align_iter_skip ( 128 )</td><td></td><td>skip</td></tr>
+		  </table>
+		</p>
+
+		<p class="box-discussion">
+		  The remainder of the state word contains zero or more bits:
+		</p>
+
+<pre class="code">
+enum
+{
+    align_iter_insert     = ( 1 <<  8 ),
+    align_iter_delete     = ( 1 <<  9 ),
+    align_iter_first      = ( 1 << 10 ),
+    align_iter_last       = ( 1 << 11 ),
+    align_iter_invalid    = ( 1 << 31 )
+};
+</pre>
+
+		<p class="box-discussion">
+		  When the state word has its <span class="code">align_iter_invalid</span>
+		  bit set, the remainder of the word is invalid and every access to
+		  the single position window of the iterator is invalid. This will
+		  occur before the first <a href="#next">Next</a> message and after all
+		  positions have been visited. Notice that the bit chosen for this is
+		  also the sign bit so that a test of state &lt; 0 can be used.
+		</p>
+
+		<p class="box-discussion">
+		  An insert represents one or more bases in the sequence that are not
+		  present in the reference, and can occupy no length upon the reference
+		  sequence. When an insert is detected, it is indicated by setting this
+		  bit in the state word, at which time the caller may discover both the
+		  size and value of the insertion through the
+		  <a href="#bases-inserted">BasesInserted</a> message. The insertion is
+		  considered to be placed <strong>immediately before</strong> a match or
+		  mismatch.
+		</p>
+
+		<p class="box-discussion">
+		  A deletion represents absence of one or more bases in the sequence that
+		  are present in the reference. When a deletion is detected, the absent
+		  bases are indicated by returning a value of
+		  <span class="code">align_iter_skip</span> in the lower byte of state,
+		  while the end of a deletion is indicated by  setting the
+		  <span class="code">align_iter_delete</span> bit in the state word along
+		  with either a match or mismatch in the lower byte. When this happens
+		  the caller may discover the size and starting position of the deletion
+		  through the <a href="#bases-deleted">BasesDeleted</a> message. The
+		  deletion is reported <strong>immediately before</strong> a match or
+		  mismatch which ends the deletion.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="position">
+
+	  <div class="box">
+
+		<h3 class="box">Position</h3>
+
+		<p class="box">
+		  return current position of iterator relative to reference
+		</p>
+
+<pre class="code">
+rc_t AlignmentIteratorPosition ( const AlignmentIterator *self, uint64_t *pos );
+</pre>
+
+        <p>
+          <span class="hdr">pos - OUT</span><br/>
+          <span class="entry">return parameter for position in reference coordinate space</span>
+        </p>
+
+		<p class="box-discussion">
+		  Will produce non-zero return code if position is invalid.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="bases-inserted">
+
+	  <div class="box">
+
+		<h3 class="box">BasesInserted</h3>
+
+		<p class="box">
+		  return the number of bases inserted<br/>
+		  optionally returns the values of the inserted bases
+		</p>
+
+<pre class="code">
+uint32_t AlignmentIteratorBasesInserted
+    ( const AlignmentIterator *self, const INSDC_4na_bin **bases );
+</pre>
+
+        <p>
+          <span class="hdr">bases - OUT, NULL OKAY</span><br/>
+          <span class="entry">optional return parameter for pointer to internally held inserted bases</span><br/>
+          <span class="entry">not to be freed by caller - owned by iterator</span>
+        </p>
+
+		<p class="box-discussion">
+		  Returns the length of the insertion in bases, and optionally the bases
+		  themselves.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<a name="bases-deleted">
+
+	  <div class="box">
+
+		<h3 class="box">BasesDeleted</h3>
+
+		<p class="box">
+		  return the number of bases deleted<br/>
+		  optionally returns the starting position on the reference of the deletion
+		</p>
+
+<pre class="code">
+uint32_t AlignmentIteratorBasesDeleted ( const AlignmentIterator *self, uint64_t *pos );
+</pre>
+
+        <p>
+          <span class="hdr">pos - OUT, NULL OKAY</span><br/>
+          <span class="entry">optional return parameter for start of deletion on reference</span>
+        </p>
+
+		<p class="box-discussion">
+		  Returns the length of the deletion in bases, and optionally the
+		  starting position of the deletion on the reference. This can be used
+		  to retrieve bases from the reference to show the value of the deletion
+		  if so desired.
+		</p>
+
+	  </div>
+
+	</a>
+
+	<!-- Document Footer -->
+
+	<hr/>
+
+	<center>
+	  <span class="footer">NCBI VDB-2 Documentation</span>
+	</center>
+
+  </body>
+
+</html>

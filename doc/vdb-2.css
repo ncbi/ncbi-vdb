@@ -1,0 +1,38 @@
+/* whole document */
+body { background-color: white; font-family: Helvetica; }
+h1 { color: #222222; font-size: x-large; font-weight: bold; }
+h2 { color: #222222; font-size: large; font-weight: bold; }
+
+/* general entry types */
+.hdr { color: #333333; font-style: italic; font-weight: bold; }
+.entry { margin-left: 20px; color: #555555; }
+table.entry { margin-left: 20px; text-align: left; color: #555555; font-size: small; }
+
+/* table of contents */
+p.toc { font-size: small; width: 100%; }
+ul.toc-outer  { color: #555555; font-size: small; font-style: italic; }
+ul.toc-inner  { list-style-type: circle; color: #666666; font-size: small; font-style: italic; }
+
+/* general section */
+div.section { margin-left: 20px; color: #555555; font-size: small; font-family: Helvetica; font-style: normal; font-stretch: expanded; }
+
+/* requirements list */
+ol.requirements { list-style-type: decimal-leading-zero; color: #555555; font-size: small; font-weight: bold; font-family: Helvetica; }
+
+/* code walk-through */
+ol.walk-outer { color: #555555; font-size: small; font-weight: bold; font-family: Helvetica; }
+ul.walk-inner { list-style-type: square; color: #666666; font-size: small; font-weight: normal; font-style: italic; font-family: Helvetica; }
+
+/* boxes for things */
+div.box { margin-left: 14px; margin-top: 20px; margin-bottom: 20px; width: 900px; border: 5px solid gray; padding: 10px; font-size: small; }
+h3.box { color: #222277; font-size: medium; font-family: Helvetica; font-weight: bold; }
+p.box { margin-left: 10px; color: #222277; font-size: small; font-family: Helvetica; font-style: italic; font-stretch: expanded; }
+p.box-discussion { color: #444444; font-size: small; font-family: Helvetica; font-style: normal; font-stretch: expanded; }
+
+.code { color: #CC2222; font-size: small; font-family: "Courier New"; }
+.html { color: #227722; font-size: small; font-family: "Courier New"; }
+.html-comment { color: #CC2222; font-size: small; font-family: "Courier New"; font-style: italic; }
+.css { color: #2222AA; font-size: small; font-family: "Courier New"; }
+.kfg { color: #22AA22; font-size: small; font-family: "Courier New"; }
+
+.footer { color: #777777; font-size: x-small; font-family: Helvetica; font-style: italic; font-stretch: expanded; }

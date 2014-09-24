@@ -1,0 +1,254 @@
+<html>
+
+  <head>
+
+    <title>NCBI VDB-2: KeyRing</title>
+    <link href="vdb-2.css" rel="stylesheet" type="text/css"/>
+
+  </head>
+
+  <body>
+
+    <!-- Document Header -->
+
+    <h1>VDB-2 - KeyRing</h1>
+
+    <p class="toc">
+    <span class="hdr">Type:</span><br/>
+      <span class="entry">service</span>
+    </p>
+
+    <p class="toc">
+      <span class="hdr">Header:</span><br/>
+      <span class="entry"><a href="../interfaces/ncbi/keyring.h">&lt;ncbi/keyring.h&gt;</a></span>
+    </p>
+
+    <p class="toc">
+    <span class="hdr">Revision History:</span><br/>
+      <table class="entry">
+        <tr><td>2013-Jun-26</td><td>&bull;</td><td>rodarmer</td></tr>
+      </table>
+    </p>
+
+    <p class="toc">
+    <span class="hdr">Contents:</span><br/>
+    <ul class="toc-outer">
+        <li><a href="#abstract">Abstract</a></li>
+        <li><a href="#purpose">Purpose</a></li>
+        <li><a href="#description">Description</a></li>
+        <li><a href="#requirements">Requirements</a></li>
+        <li><a href="#implementation">Implementation</a></li>
+    </ul>
+    </p>
+
+    <hr/>
+
+    <!-- Abstract -->
+
+    <a name="abstract">
+
+    <h2>Abstract</h2>
+
+    <div class="section">
+
+    <p>
+	  <strong>KeyRing</strong> will provide a service to securely hold and
+	  manage keys for a user, and a facility for NCBI tools to access them.
+    </p>
+
+	<p>
+	  Users connect to the <em>KeyRing</em> through password authentication, and
+	  then manage keys using provided administration interfaces.
+	</p>
+
+	<p>
+	  Tools interact with the <em>KeyRing</em> under the user's authority to
+	  obtain keys for downloading, decrypting and encrypting data.
+	</p>
+
+    </div>
+
+    </a>
+
+    <!-- Purpose -->
+
+    <a name="purpose">
+
+    <h2>Purpose</h2>
+
+    <div class="section">
+
+	<p>
+	  The primary usage <em>( 6/26/13 )</em> is to manage <strong>dbGaP</strong>
+	  encryption and download keys. In the <em>dbGaP</em> model, a user will be
+	  granted authority to access data from zero or more
+	  <strong>projects</strong>. This authority is embodied by a special
+	  long-term key known as a <strong>download-ticket</strong>. The possessor
+	  of a <em>download-ticket</em> has authority to download encrypted data
+	  from <em>dbGaP</em> for as long as the ticket remains valid.
+	</p>
+
+	<p>
+	  Each accessible object within <em>dbGaP</em> will be encrypted for the
+	  user using a specifically assigned <strong>encryption-key</strong>. There
+	  is one <em>encryption-key</em> per <em>project</em>. Objects that are
+	  downloaded from <em>dbGaP</em> will be encrypted with this key. The
+	  association between the object and its <em>encryption-key</em> is
+	  maintained in the <em>KeyRing</em>.
+	</p>
+
+    <p>
+	  <strong>NB</strong> - these keys are currently <em>( 6/26/13 )</em> stored
+	  in <strong>VDB</strong> user configuration, via a manual importation
+	  process that stores an <em>encryption-key</em> on a per-dbGaP-process
+	  basis, which is technically incorrect: we should be storing a key on a
+	  per-object basis.
+    </p>
+
+	<p>
+	  Finally, working with encrypted data requires some management of
+	  authority. This means the standard operations: <strong>insert</strong>,
+	  <strong>delete</strong>, <strong>update</strong> and
+	  <strong>select</strong>. It also means <strong>grant</strong> and
+	  <strong>revoke</strong> in order to delegate authority to others -
+	  features that may be added in the future.
+	</p>
+
+    </div>
+
+    </a>
+
+    <!-- Description -->
+
+    <a name="description">
+
+    <h2>Description</h2>
+
+    <div class="section">
+
+    <p>
+	  The <strong>KeyRing</strong> is implemented as a VDB database object
+	  stored within the user's private directory <em><q>~/.ncbi</q></em>. It is
+	  stored as a single-file archive, where the sensitive content ( e.g. the
+	  keys ) are encrypted using a pass-phrase of the user's choosing. This acts
+	  as the user's <em>password</em>, and is set or changed via the
+	  utility <strong>vdb-passwd</strong>. Note that the pass-phrase is not
+	  stored anywhere, so if it is lost the <em>KeyRing</em> will need to be
+	  rebuilt.
+    </p>
+
+	<p>
+	  Logically, the <em>KeyRing</em> maintains tables with entries that
+	  describe <strong>objects</strong>, <strong>projects</strong> and
+	  <strong>keys</strong>. In addition it stores relational links between
+	  them, specifically, <em>objects</em> =&gt; <em>keys</em>, and
+	  <em>projects</em> =&gt; <em>keys</em>.
+	</p>
+
+	<p>
+	   The <em>project</em> should also have a link to a special object which is
+	   its read/write <strong>workspace-volume</strong>. This, in turn, should
+	   have its own key, assigned by the <em>KeyRing</em>.
+	</p>
+
+	<p>
+	  A <em>KeyRing</em> may be created by a number of methods, those being
+	  basically any tool capable of performing <em>insert</em> or
+	  <em>update</em> to the tables, including setting or changing the password.
+	</p>
+
+	<p>
+	  In general, the user will start by requesting authorization to access a
+	  <em>dbGaP</em> project. Currently <em>( 6/26/13 )</em> this translates to
+	  a web-based interaction that results in downloading an
+	  <strong>.ngc</strong> file that contains <strong>project-id</strong>,
+	  <strong>download-key</strong>, <strong>encryption-key</strong> and a brief
+	  textual description of the project. The user then imports this file into
+	  VDB configuration, which will take steps to ensure that
+	  <strong>a)</strong> the <em>KeyRing</em> exists and has a password,
+	  <strong>b)</strong> that the <em>download-key</em> exists and has an id,
+	  <strong>c)</strong> that the <em>encryption-key</em> exists and has an id,
+	  and <strong>d)</strong> that the project exists, has an id, and is linked
+	  to the given download and encryption keys by id.
+	</p>
+
+	<p>
+	  Next, the user will access <em>dbGaP</em> data, either by
+	  <strong>prefetch</strong> or by <strong>on-demand</strong> retrieval. NCBI
+	  tools request the user <em>download-ticket</em> for the project in
+	  question from <em>KeyRing</em> and use its authority to download data.
+	  These are retrieved and potentially cached in encrypted form.
+	</p>
+
+	<p>
+	  Any tool in the <strong>SRA Toolkit</strong> that knows how to access an
+	  object from <em>dbGaP</em> will be able to decrypt it
+	  <em>on-the-fly</em>. This is made possible by having the tool request a
+	  user's <em>encryption-key</em> for the particular object from
+	  <em>KeyRing</em>.
+	</p>
+
+	<p>
+	  As new objects are accessed, each will receive an entry into the
+	  <em>KeyRing</em> object table, and will be associated with its
+	  <em>encryption-key</em>. Similarly, as access to new projects is granted,
+	  the new <em>download-ticket</em> and project-wide <em>encryption-key</em>
+	  will be entered and associated with a new entry into the projects table.
+	</p>
+
+    </div>
+
+    </a>
+
+    <!-- Requirements -->
+
+    <a name="requirements">
+
+    <h2>Requirements</h2>
+
+    <ol class="requirements">
+        <li>stored within <q>~/.ncbi/vdb-keyring</q></li>
+        <li>stored within a kar archive</li>
+		<li>updates to tables are written into RAM files</li>
+        <li>only the data file for KEY column needs to be encrypted</li>
+		<li>must support insert, delete and update operations</li>
+		<li>must support select and join operations</li>
+		<li>any operation capable of modifying keyring will also create from
+		  scratch</li>
+		<li>self-encryption key must be stored in secure RAM</li>
+		<li>must supply a facility to rebuild/recover KeyRing after lost pass-phrase</li>
+		<li>must supply a facility to rebuild/recover KeyRing after lost KeyRing</li>
+		<li>must strictly limit any access to owner</li>
+		<li>must provide an API for obtaining a download-ticket for a given project-id</li>
+		<li>must provide an API for obtaining an encryption-key for a given
+		  object-id and project-id</li>
+		<li>the encryption key for protected workspace MUST differ from project
+		  key</li>
+		<li>must support creating new random keys for workspace volume</li>
+		<li>there should exist a facility for changing encryption keys...</li>
+    </ol>
+
+    </a>
+
+    <!-- Content -->
+
+    <a name="implementation">
+
+    <h2>Implementation</h2>
+
+    <div class="section">
+
+	</div>
+
+	</a>
+
+    <!-- Document Footer -->
+
+    <hr/>
+    <center>
+        <span class="footer">NCBI VDB-2 Documentation</span>
+    </center>
+
+    </body>
+
+</html>

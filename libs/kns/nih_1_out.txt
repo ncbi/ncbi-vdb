@@ -1,0 +1,277 @@
+HTTP/1.1 200 OK
+Date: Mon, 06 May 2013 20:06:38 GMT
+Server: Apache
+Cache-Control: private
+NCBI-SID: CE8903371880D4E1_0008SID
+Content-Type: text/html; charset=UTF-8
+Set-Cookie: ncbi_sid=CE8903371880D4E1_0008SID; domain=.nih.gov; path=/; expires=Tue, 06 May 2014 20:06:38 GMT
+Set-Cookie: WebEnv=1leg_Y%40CE8903371880D4E1_0008SID; domain=.nlm.nih.gov; path=/; expires=Tue, 07 May 2013 04:06:39 GMT
+Vary: Accept-Encoding
+Transfer-Encoding: chunked
+
+1d76
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head xmlns:xi="http://www.w3.org/2001/XInclude"><meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <!-- meta -->
+    <meta name="robots" content="index,nofollow,noarchive" />
+<meta name="ncbi_app" content="entrez" /><meta name="ncbi_db" content="biosample" /><meta name="ncbi_op" content="page_view" /><meta name="ncbi_pdid" content="home" /><meta name="ncbi_sessionid" content="CE8903371880D4E1_0008SID" /><meta name="ncbi_stat" content="false" /><meta name="ncbi_hitstat" content="false" />
+
+    
+    <!-- title -->
+    <title>Home - BioSample - NCBI</title>
+    
+    <!-- Common JS and CSS -->
+    
+		<script type="text/javascript">
+		    var ncbi_startTime = new Date();
+		</script>
+		<script type="text/javascript" src="//static.pubmed.gov/core/jig/1.12.1/js/jig.min.js"></script>
+			
+				<script type="text/javascript" src="/core/lw/2.0/js/esummary.1.js"></script>
+            
+		  
+    
+    <link xmlns="http://www.w3.org/1999/xhtml" type="text/css" rel="stylesheet" href="//static.pubmed.gov/portal/portal3rc.fcgi/3837828/css/3811509/3579733.css" xml:base="http://127.0.0.1/sites/static/header_footer/" /><link xmlns="http://www.w3.org/1999/xhtml" type="text/css" rel="stylesheet" href="//static.pubmed.gov/portal/portal3rc.fcgi/3837828/css/3529739.css" media="print" xml:base="http://127.0.0.1/sites/static/header_footer/" />    
+<link rel="shortcut icon" href="//www.ncbi.nlm.nih.gov/favicon.ico" /><meta name="ncbi_phid" content="CE8903371880D431000000000008E0A9" /><script type="text/javascript"><!--
+var ScriptUrl = 'http://www.ncbi.nlm.nih.gov/biosample';
+var ScriptPath = '/portal/';
+var objHierarchy = {"name":"EntrezSystem2","type":"Layout","realname":"EntrezSystem2",
+"children":[{"name":"EntrezSystem2.PEntrez","type":"Cluster","realname":"EntrezSystem2.PEntrez",
+"children":[{"name":"EntrezSystem2.PEntrez.DbConnector","type":"Portlet","realname":"EntrezSystem2.PEntrez.PEntrez.DbConnector","shortname":"DbConnector"},
+{"name":"EntrezSystem2.PEntrez.ParamContainer","type":"Portlet","realname":"EntrezSystem2.PEntrez.PEntrez.ParamContainer","shortname":"ParamContainer"},
+{"name":"EntrezSystem2.PEntrez.MyNcbi","type":"Portlet","realname":"EntrezSystem2.PEntrez.PEntrez.MyNcbi","shortname":"MyNcbi"},
+{"name":"EntrezSystem2.PEntrez.UserPreferenceUrlParamContainer","type":"Portlet","realname":"EntrezSystem2.PEntrez.PEntrez.UserPreferenceUrlParamContainer","shortname":"UserPreferenceUrlParamContainer"},
+{"name":"EntrezSystem2.PEntrez.GridProperty","type":"Portlet","realname":"EntrezSystem2.PEntrez.PEntrez.GridProperty","shortname":"GridProperty"},
+{"name":"EntrezSystem2.PEntrez.BioSample","type":"Cluster","realname":"EntrezSystem2.PEntrez.BioSample",
+"children":[{"name":"EntrezSystem2.PEntrez.BioSample.NoPortlet","type":"Portlet","realname":"EntrezSystem2.PEntrez.BioSample.Entrez_Database.NoPortlet","shortname":"NoPortlet"},
+{"name":"EntrezSystem2.PEntrez.BioSample.BioSample_PageController","type":"Portlet","realname":"EntrezSystem2.PEntrez.BioSample.BioSample_PageController","shortname":"BioSample_PageController"},
+{"name":"EntrezSystem2.PEntrez.BioSample.Entrez_SearchBar","type":"Portlet","realname":"EntrezSystem2.PEntrez.BioSample.Entrez_Database.Entrez_SearchBar","shortname":"Entrez_SearchBar"},
+{"name":"EntrezSystem2.PEntrez.BioSample.Entrez_BotRequest","type":"Portlet","realname":"EntrezSystem2.PEntrez.BioSample.Entrez_Database.Entrez_BotRequest","shortname":"Entrez_BotRequest"},
+{"name":"EntrezSystem2.PEntrez.BioSample.BioSample_LimitsTab","type":"Portlet","realname":"EntrezSystem2.PEntrez.BioSample.BioSample_LimitsTab","shortname":"BioSample_LimitsTab"},
+{"name":"EntrezSystem2.PEntrez.BioSample.Entrez_Facets","type":"Portlet","realname":"EntrezSystem2.PEntrez.BioSample.Entrez_Database.Entrez_Facets","shortname":"Entrez_Facets"},
+{"name":"EntrezSystem2.PEntrez.BioSample.Entrez_Clipboard","type":"Portlet","realname":"EntrezSystem2.PEntrez.BioSample.Entrez_Database.Entrez_Clipboard","shortname":"Entrez_Clipboard"},
+{"name":"EntrezSystem2.PEntrez.BioSample.BioSample_StaticParts","type":"Portlet","realname":"EntrezSystem2.PEntrez.BioSample.BioSample_StaticParts","shortname":"BioSample_StaticParts"},
+{"name":"EntrezSystem2.PEntrez.BioSample.Entrez_Messages","type":"Portlet","realname":"EntrezSystem2.PEntrez.BioSample.Entrez_Database.Entrez_Messages","shortname":"Entrez_Messages"},
+{"name":"EntrezSystem2.PEntrez.BioSample.NcbiJSCheck","type":"Portlet","realname":"EntrezSystem2.PEntrez.BioSample.Entrez_Database.NcbiJSCheck","shortname":"NcbiJSCheck"},
+{"name":"EntrezSystem2.PEntrez.BioSample.NCBIFooter_dynamic","type":"Cluster","realname":"EntrezSystem2.PEntrez.BioSample.Entrez_Database.NCBIFooter_dynamic",
+"children":[{"name":"EntrezSystem2.PEntrez.BioSample.NCBIFooter_dynamic.NCBIBreadcrumbs","type":"Portlet","realname":"EntrezSystem2.PEntrez.BioSample.Entrez_Database.NCBIFooter_dynamic.NCBIBreadcrumbs","shortname":"NCBIBreadcrumbs"},
+{"name":"EntrezSystem2.PEntrez.BioSample.NCBIFooter_dynamic.NCBIHelpDesk","type":"Portlet","realname":"EntrezSystem2.PEntrez.BioSample.Entrez_Database.NCBIFooter_dynamic.NCBIHelpDesk","shortname":"NCBIHelpDesk"},
+{"name":"EntrezSystem2.PEntrez.BioSample.NCBIFooter_dynamic.NCBIApplog_NoScript_Ping","type":"Portlet","realname":"EntrezSystem2.PEntrez.BioSample.Entrez_Database.NCBIFooter_dynamic.NCBIApplog_NoScript_Ping","shortname":"NCBIApplog_NoScript_Ping"}]},
+{"name":"EntrezSystem2.PEntrez.BioSample.BrowserCheck","type":"Portlet","realname":"EntrezSystem2.PEntrez.BioSample.Entrez_Database.BrowserCheck","shortname":"BrowserCheck"},
+{"name":"EntrezSystem2.PEntrez.BioSample.BioSample_HomePage","type":"Cluster","realname":"EntrezSystem2.PEntrez.BioSample.BioSample_HomePage",
+"children":[{"name":"EntrezSystem2.PEntrez.BioSample.BioSample_HomePage.BioSample_HomePageContent","type":"Portlet","realname":"EntrezSystem2.PEntrez.BioSample.BioSample_HomePage.BioSample_HomePageContent","shortname":"BioSample_HomePageContent"}]}]}]}]};
+--></script><link type="text/css" rel="stylesheet" href="//static.pubmed.gov/portal/portal3rc.fcgi/3865237/css/3808861/3475386/3841922/3751656/3395415/3316/3609340/14534/3762635/3721621/3858027/12930/3858295/3327743/31867/3734262/3767044/3317918/61817.css" /><link type="text/css" rel="stylesheet" href="//static.pubmed.gov/portal/portal3rc.fcgi/3865237/css/3501913/3529739.css" media="print" /><script type="text/javascript">
+
+var ObjectLinks=[{i:0, ename: "p$ExL", esid:"*", sname: "p$ExL", ssid:"*", dname:"p$el", dsid:"0",m:"CopyValue",p:[],f: function(src, dst) {fn_CopyValue(src, dst);}}]
+
+
+var ActiveNames = {"p$ExL":1, "EntrezSystem2.PEntrez.BioSample.BioSample_PageController.PreviousPageName":0, "EntrezSystem2.PEntrez.DbConnector.Cmd":0, "EntrezSystem2.PEntrez.DbConnector.Db":0, "EntrezSystem2.PEntrez.DbConnector.IdsFromResult":0, "EntrezSystem2.PEntrez.DbConnector.LastDb":0, "EntrezSystem2.PEntrez.DbConnector.LastIdsFromResult":0, "EntrezSystem2.PEntrez.DbConnector.LastQueryKey":0, "EntrezSystem2.PEntrez.DbConnector.LastTabCmd":0, "EntrezSystem2.PEntrez.DbConnector.LinkName":0, "EntrezSystem2.PEntrez.DbConnector.LinkReadableName":0, "EntrezSystem2.PEntrez.DbConnector.LinkSrcDb":0, "EntrezSystem2.PEntrez.DbConnector.QueryKey":0, "EntrezSystem2.PEntrez.DbConnector.TabCmd":0, "EntrezSystem2.PEntrez.DbConnector.Term":0};
+</script></head>
+    <b
+28a
+ody>
+    	<div class="grid">
+			<div class="col twelve_col nomargin shadow">
+				<form enctype="application/x-www-form-urlencoded" name="EntrezForm" method="post" onsubmit="return false;" action="/biosample" id="EntrezForm">
+					<div xmlns:xi="http://www.w3.org/2001/XInclude">
+    <!-- no javascript message -->
+    <noscript>
+	<p class="nojs">
+	<strong>Warning:</strong>
+	The NCBI web site requires JavaScript to function. 
+	<a href="http://www.ncbi.nlm.nih.gov/corehtml/query/static/unsupported-browser.html#enablejs" title="Learn how to enable JavaScript" target="_blank">more...</a>
+	</p>
+	</noscript>
+    
+    <div xmlns="http://www.w3.org/199
+169a
+9/xhtml" class="universal_header" id="universal_header" xml:base="http://127.0.0.1/sites/static/header_footer/"><ul class="inline_list jig-ncbimenu ui-ncbimenu resources_list" id="navcontent"><li class="ui-ncbimenu-item-leaf ui-ncbimenu-item-first ui-helper-reset ui-ncbimenu-item-no-hlt"><a class="ui-ncbimenu-link-first" href="/" role="banner" title="NCBI Home" id="ncbihome" accesskey="1"><span class="offscreen_noflow">NCBI</span><img src="//static.pubmed.gov/portal/portal3rc.fcgi/3837828/img/28977" class="ncbi_logo" title="NCBI" alt="NCBI Logo" /></a></li><li class="offscreen_noflow ui-ncbimenu-item-skip access"><a href="#maincontent" title="Skip to the content" tabindex="0" accesskey="3">Skip to main
+                        content</a></li><li class="offscreen_noflow ui-ncbimenu-item-skip access"><a href="#navcontent" title="Skip to the navigation" tabindex="0" accesskey="4">Skip to
+                        navigation</a></li><li id="resource-menu" class="topmenu ui-helper-reset ui-ncbimenu-item-first ui-helper-reset"><a class="ui-ncbimenu-first-link-has-submenu ui-ncbimenu-link-first topanchor" href="/guide/all/">Resources</a><ul id="resources-submenu"><li><a href="/guide/all/">All Resources</a></li><li><a href="#chemicals-bioassays">Chemicals &amp; Bioassays</a><ul class="actual-resources-submenu chemicals-bioassays"><li><a href="/biosystems/" title=" Database that groups biomedical literature, small molecules, and sequence data in terms of biological relationships. ">BioSystems</a></li><li><a href="/pcassay" title=" Contributed bioactivity data for PubChem Substances ">PubChem BioAssay</a></li><li><a href="/pccompound" title=" Unique, standardized chemical structures ">PubChem Compound</a></li><li><a href="http://pubchem.ncbi.nlm.nih.gov/search/search.cgi" title=" Searches PubChem Compound by chemical structure ">PubChem Structure Search</a></li><li><a href="/pcsubstance" title=" Provides information on the biological activities of small molecules. ">PubChem Substance</a></li><li><a href="/guide/chemicals-bioassays/">All Chemicals &amp; Bioassays Resources...</a></li></ul></li><li><a href="#dna-rna">DNA &amp; RNA</a><ul class="actual-resources-submenu dna-rna"><li><a href="http://blast.ncbi.nlm.nih.gov" title=" Tool for finding local regions of sequence similarity ">BLAST (Basic Local Alignment Search Tool)</a></li><li><a href="http://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&amp;PAGE_TYPE=BlastDocs&amp;DOC_TYPE=Download" title=" BLAST programs for a local computer ">BLAST (Stand-alone)</a></li><li><a href="/books/NBK25501/ " title=" URL application programming interface for searching, linking and downloading data within NCBI's Entrez system ">E-Utilities</a></li><li><a href="/genbank/" title=" DNA and RNA sequences submitted to NCBI ">GenBank</a></li><li><a href="/WebSub/?tool=genbank" title=" Web tool for simple submissions of nucleotide sequences ">GenBank: BankIt</a></li><li><a href="/projects/Sequin" title=" Software tool for complex submissions of nucleotide sequences ">GenBank: Sequin</a></li><li><a href="/genbank/tbl2asn2.html" title=" Command-line program for submitting sequence data ">GenBank: tbl2asn</a></li><li><a href="/projects/gbench/" title=" Stand-alone application for analyzing sequence data ">Genome Workbench</a></li><li><a href="/genomes/FLU/" title=" Data from the NIAID Influenza Genome Sequencing Project ">Influenza Virus</a></li><li><a href="/nuccore" title=" Nucleotide sequence data in GenBank and RefSeq ">Nucleotide Database</a></li><li><a href="/popset" title=" Sets of nucleotide sequences representing a population ">PopSet</a></li><li><a href="/tools/primer-blast" title=" Designs PCR primers and analyzes them for target specificity using BLAST. ">Primer-BLAST</a></li><li><a href="/sutils/static/prosplign/prosplign.html" title=" Tool for aligning proteins to genomic DNA ">ProSplign</a></li><li><a href="/RefSeq/" title=" Curated nucleotide and protein sequences produced by NCBI ">Reference Sequence (RefSeq)</a></li><li><a href="/refseq/rsg/" title=" RefSeqGene reference standards for genomic sequences of well-characterized genes ">RefSeqGene</a></li><li><a href="/Traces/sra/sra.cgi?" title=" Database of sequences reads from next generation sequencing technologies ">Sequence Read Archive (SRA)</a></li><li><a href="/sutils/splign" title=" Tool for aligning transcripts to genomic DNA ">Splign</a></li><li><a href="/Traces/trace.cgi" title=" DNA chromatograms, base calls, and quality estimates for single-pass reads. ">Trace Archive</a></li><li><a href="/unigene" title=" Gene-centered clusters of transcripts and ESTs ">UniGene</a></li><li><a href="/unists" title=" Database of Sequence Tagged Sites ">UniSTS</a></li><li><a href="/guide/dna-rna/">All DNA &amp; RNA Resources...</a></li></ul></li><li><a href="#data-software">Data &amp; Software</a><ul class="actual-resources-submenu data-software"><li><a href="http://blast.ncbi.nlm.nih.gov" title=" Tool for finding local regions of sequence similarity ">BLAST (Basic Local Alignment Search Tool)</a></li><li><a href="http://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&amp;PAGE_TYPE=BlastDocs&amp;DOC_TYPE=Download" title=" BLAST programs for a local computer ">BLAST (Stand-alone)</a></li><li><a href="/Structure/CN3D/cn3d.shtml" title=" Program for viewing 3D structures and alignments ">Cn3D</a></li><li><a href="/Structure/cdd/wrpsb.cgi" title=" Locates conserved domains within a protein sequence ">Conserved Domain Search Service (CD Search)</a></li><li><a href="/books/NBK25501/ " title=" URL application programming interface for searching, linking and downloading data within NCBI's Entrez system ">E-Utilities</a></li><li><a href="/WebSub/?tool=genbank" title=" Web tool for simple submissions of nucleotide sequences ">
+966
+GenBank: BankIt</a></li><li><a href="/projects/Sequin" title=" Software tool for complex submissions of nucleotide sequences ">GenBank: Sequin</a></li><li><a href="/genbank/tbl2asn2.html" title=" Command-line program for submitting sequence data ">GenBank: tbl2asn</a></li><li><a href="/sutils/protmap.cgi" title=" Maps proteins from a COG/VOG back to its genome ">Genome ProtMap</a></li><li><a href="/projects/gbench/" title=" Stand-alone application for analyzing sequence data ">Genome Workbench</a></li><li><a href="/tools/primer-blast" title=" Designs PCR primers and analyzes them for target specificity using BLAST. ">Primer-BLAST</a></li><li><a href="/sutils/static/prosplign/prosplign.html" title=" Tool for aligning proteins to genomic DNA ">ProSplign</a></li><li><a href="http://pubchem.ncbi.nlm.nih.gov/search/search.cgi" title=" Searches PubChem Compound by chemical structure ">PubChem Structure Search</a></li><li><a href="http://www.ncbi.nlm.nih.gov/projects/SNP" title=" The SNP database tools page provides links to the general submission guidelines and to the submission handle request. ">SNP Submission Tool</a></li><li><a href="/sutils/splign" title=" Tool for aligning transcripts to genomic DNA ">Splign</a></li><li><a href="/Structure/VAST/vast.html" title=" Tool that generates 3D structural alignments ">Vector Alignment Search Tool (VAST)</a></li><li><a href="/guide/data-software/">All Data &amp; Software Resources...</a></li></ul></li><li><a href="#domains-structures">Domains &amp; Structures</a><ul class="actual-resources-submenu domains-structures"><li><a href="/biosystems/" title=" Database that groups biomedical literature, small molecules, and sequence data in terms of biological relationships. ">BioSystems</a></li><li><a href="/Structure/CN3D/cn3d.shtml" title=" Program for viewing 3D structures and alignments ">Cn3D</a></li><li><a href="/cdd" title=" Database of conserved protein domains represented by multiple sequence alignments ">Conserved Domain Database (CDD)</a></li><li><a href="/Structure/cdd/wrpsb.cgi" title=" Locates conserved domains within a protein sequence ">Conserved Domain Search Service (CD Search)</a></li><li><a href="/sites/entrez?db=structure" title=" Database of 3D macromolecular structures derived from PDB ">Structure (Molecular Modeling Database)</a></li><li><a href="/Structure/VAST/vast.html" title=" Tool that generates 3D struc
+12da
+tural alignments ">Vector Alignment Search Tool (VAST)</a></li><li><a href="/guide/domains-structures/">All Domains &amp; Structures Resources...</a></li></ul></li><li><a href="#genes-expression">Genes &amp; Expression</a><ul class="actual-resources-submenu genes-expression"><li><a href="/biosystems/" title=" Database that groups biomedical literature, small molecules, and sequence data in terms of biological relationships. ">BioSystems</a></li><li><a href="/gap" title=" Genotype/Phenotype association studies ">Database of Genotypes and Phenotypes (dbGaP)</a></li><li><a href="/books/NBK25501/ " title=" URL application programming interface for searching, linking and downloading data within NCBI's Entrez system ">E-Utilities</a></li><li><a href="/gene" title=" Database of gene loci and associated transcripts and proteins ">Gene</a></li><li><a href="/geo/" title=" Gene Expression Omnibus (GEO) Database ">Gene Expression Omnibus (GEO) Database </a></li><li><a href="/gds" title=" Curated collections of gene expression data sets ">Gene Expression Omnibus (GEO) Datasets</a></li><li><a href="/geoprofiles/" title=" Database of gene expression Profiles for individual sequences ">Gene Expression Omnibus (GEO) Profiles</a></li><li><a href="/projects/gbench/" title=" Stand-alone application for analyzing sequence data ">Genome Workbench</a></li><li><a href="/homologene" title=" Sets of homologous eukaryotic genes ">HomoloGene</a></li><li><a href="/mapview/" title=" Tool for searching, viewing and downloading genomic maps and related data ">Map Viewer</a></li><li><a href="/omim" title=" Database of human genes and genetic disorders ">Online Mendelian Inheritance in Man (OMIM)</a></li><li><a href="/refseq/rsg/" title=" RefSeqGene reference standards for genomic sequences of well-characterized genes ">RefSeqGene</a></li><li><a href="/unigene" title=" Gene-centered clusters of transcripts and ESTs ">UniGene</a></li><li><a href="/guide/genes-expression/">All Genes &amp; Expression Resources...</a></li></ul></li><li><a href="#genetics-medicine">Genetics &amp; Medicine</a><ul class="actual-resources-submenu genetics-medicine"><li><a href="/books" title=" Online biomedical books ">Bookshelf</a></li><li><a href="/gap" title=" Genotype/Phenotype association studies ">Database of Genotypes and Phenotypes (dbGaP)</a></li><li><a href="/gtr/" title=" Detailed information about genetic tests and labs ">Genetic Testing Registry</a></li><li><a href="/genomes/FLU/" title=" Data from the NIAID Influenza Genome Sequencing Project ">Influenza Virus</a></li><li><a href="/mapview/" title=" Tool for searching, viewing and downloading genomic maps and related data ">Map Viewer</a></li><li><a href="/omim" title=" Database of human genes and genetic disorders ">Online Mendelian Inheritance in Man (OMIM)</a></li><li><a href="/pubmed" title=" Biomedical literature abstracts ">PubMed</a></li><li><a href="/pmc/" title=" Free, full-text articles ">PubMed Central (PMC)</a></li><li><a href="/pubmed/clinical " title=" Directory of PubMed queries about clinical topics ">PubMed Clinical Queries</a></li><li><a href="/refseq/rsg/" title=" RefSeqGene reference standards for genomic sequences of well-characterized genes ">RefSeqGene</a></li><li><a href="/guide/genetics-medicine/">All Genetics &amp; Medicine Resources...</a></li></ul></li><li><a href="#genomes-maps">Genomes &amp; Maps</a><ul class="actual-resources-submenu genomes-maps"><li><a href="/dbvar" title=" A database of genomic structural variation ">Database of Genomic Structural Variation (dbVar)</a></li><li><a href="/genbank/tbl2asn2.html" title=" Command-line program for submitting sequence data ">GenBank: tbl2asn</a></li><li><a href="/sites/genome" title=" Curated genomic DNA sequences ">Genome</a></li><li><a href="/genomeprj" title=" Central status pages for genome sequencing projects ">Genome Project</a></li><li><a href="/sutils/protmap.cgi" title=" Maps proteins from a COG/VOG back to its genome ">Genome ProtMap</a></li><li><a href="/projects/gbench/" title=" Stand-alone application for analyzing sequence data ">Genome Workbench</a></li><li><a href="/genomes/FLU/" title=" Data from the NIAID Influenza Genome Sequencing Project ">Influenza Virus</a></li><li><a href="/mapview/" title=" Tool for searching, viewing and downloading genomic maps and related data ">Map Viewer</a></li><li><a href="/nuccore" title=" Nucleotide sequence data in GenBank and RefSeq ">Nucleotide Database</a></li><li><a href="/popset" title=" Sets of nucleotide sequences representing a population ">PopSet</a></li><li><a href="/sutils/static/prosplign/prosplign.html" title=" Tool for aligning proteins to genomic DNA ">ProSplign</a></li><li><a href="/Traces/sra/sra.cgi?" title=" Database of sequences reads from next generation sequencing technologies ">Se
+5a8
+quence Read Archive (SRA)</a></li><li><a href="/sutils/splign" title=" Tool for aligning transcripts to genomic DNA ">Splign</a></li><li><a href="/Traces/trace.cgi" title=" DNA chromatograms, base calls, and quality estimates for single-pass reads. ">Trace Archive</a></li><li><a href="/unists" title=" Database of Sequence Tagged Sites ">UniSTS</a></li><li><a href="/guide/genomes-maps/">All Genomes &amp; Maps Resources...</a></li></ul></li><li><a href="#homology">Homology</a><ul class="actual-resources-submenu homology"><li><a href="http://blast.ncbi.nlm.nih.gov" title=" Tool for finding local regions of sequence similarity ">BLAST (Basic Local Alignment Search Tool)</a></li><li><a href="http://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&amp;PAGE_TYPE=BlastDocs&amp;DOC_TYPE=Download" title=" BLAST programs for a local computer ">BLAST (Stand-alone)</a></li><li><a href="/sutils/blink.cgi?mode=query" title=" Pre-computed reports showing proteins with similar sequences ">BLAST Link (BLink)</a></li><li><a href="/cdd" title=" Database of conserved protein domains represented by multiple sequence alignments ">Conserved Domain Database (CDD)</a></li><li><a href="/Structure/cdd/wrpsb.cgi" title=" Locates conserved domains within a protein sequence ">Conserved Domain Search Service (CD Search)</a></li><li><a href="/sutils/protmap.cgi" title=" Maps proteins from a COG/VOG back to its genome ">Genome ProtMap</a></li><li><a href="/homologen
+77e
+e" title=" Sets of homologous eukaryotic genes ">HomoloGene</a></li><li><a href="/proteinclusters" title=" Clusters of related proteins from prokaryotes and organelles ">Protein Clusters</a></li><li><a href="/guide/homology/">All Homology Resources...</a></li></ul></li><li><a href="#literature">Literature</a><ul class="actual-resources-submenu literature"><li><a href="/books" title=" Online biomedical books ">Bookshelf</a></li><li><a href="/books/NBK25501/ " title=" URL application programming interface for searching, linking and downloading data within NCBI's Entrez system ">E-Utilities</a></li><li><a href="/nlmcatalog/journals" title=" Information on journals cited by NCBI records ">Journals in NCBI Databases</a></li><li><a href="/mesh" title=" Controlled vocabulary for MEDLINE ">MeSH Database</a></li><li><a href="/books/NBK21101/" title=" Introductory articles about NCBI resources ">NCBI Handbook</a></li><li><a href="/books/NBK3831/" title=" Online, searchable help documentation ">NCBI Help Manual</a></li><li><a href="/books/NBK1969/" title=" NCBI's monthly newsletter ">NCBI News</a></li><li><a href="/pubmed" title=" Biomedical literature abstracts ">PubMed</a></li><li><a href="/pmc/" title=" Free, full-text articles ">PubMed Central (PMC)</a></li><li><a href="/pubmed/clinical " title=" Directory of PubMed queries about clinical topics ">PubMed Clinical Queries</a></li><li><a href="/pubmedhealth" title=" Reviews of clinical effectiveness research ">PubMed Health</a></li><li><a href="/guide/literature/">All Literature Resources...</a></li></ul></li><li><a href="#proteins">Proteins</a><ul class="actual-resources-submenu proteins"><li><a href="/biosystems/" title=" Database that groups biomedical literature, small molecules, and sequence data in terms of biological relationships. ">BioSystems</a></li><li><a href="http://blast.ncbi.nlm.nih.gov" title=" Tool for finding local regions of 
+5a2
+sequence similarity ">BLAST (Basic Local Alignment Search Tool)</a></li><li><a href="http://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&amp;PAGE_TYPE=BlastDocs&amp;DOC_TYPE=Download" title=" BLAST programs for a local computer ">BLAST (Stand-alone)</a></li><li><a href="/sutils/blink.cgi?mode=query" title=" Pre-computed reports showing proteins with similar sequences ">BLAST Link (BLink)</a></li><li><a href="/cdd" title=" Database of conserved protein domains represented by multiple sequence alignments ">Conserved Domain Database (CDD)</a></li><li><a href="/Structure/cdd/wrpsb.cgi" title=" Locates conserved domains within a protein sequence ">Conserved Domain Search Service (CD Search)</a></li><li><a href="/books/NBK25501/ " title=" URL application programming interface for searching, linking and downloading data within NCBI's Entrez system ">E-Utilities</a></li><li><a href="/sutils/static/prosplign/prosplign.html" title=" Tool for aligning proteins to genomic DNA ">ProSplign</a></li><li><a href="/proteinclusters" title=" Clusters of related proteins from prokaryotes and organelles ">Protein Clusters</a></li><li><a href="/protein" title=" Protein sequence data ">Protein Database</a></li><li><a href="/RefSeq/" title=" Curated nucleotide and protein sequences produced by NCBI ">Reference Sequence (RefSeq)</a></li><li><a href="/guide/proteins/">All Proteins Resources...</a></li></ul></li><li><a href="#sequence-analysis">Seque
+5a8
+nce Analysis</a><ul class="actual-resources-submenu sequence-analysis"><li><a href="http://blast.ncbi.nlm.nih.gov" title=" Tool for finding local regions of sequence similarity ">BLAST (Basic Local Alignment Search Tool)</a></li><li><a href="http://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&amp;PAGE_TYPE=BlastDocs&amp;DOC_TYPE=Download" title=" BLAST programs for a local computer ">BLAST (Stand-alone)</a></li><li><a href="/sutils/blink.cgi?mode=query" title=" Pre-computed reports showing proteins with similar sequences ">BLAST Link (BLink)</a></li><li><a href="/Structure/cdd/wrpsb.cgi" title=" Locates conserved domains within a protein sequence ">Conserved Domain Search Service (CD Search)</a></li><li><a href="/sutils/protmap.cgi" title=" Maps proteins from a COG/VOG back to its genome ">Genome ProtMap</a></li><li><a href="/projects/gbench/" title=" Stand-alone application for analyzing sequence data ">Genome Workbench</a></li><li><a href="/genomes/FLU/" title=" Data from the NIAID Influenza Genome Sequencing Project ">Influenza Virus</a></li><li><a href="/tools/primer-blast" title=" Designs PCR primers and analyzes them for target specificity using BLAST. ">Primer-BLAST</a></li><li><a href="/sutils/static/prosplign/prosplign.html" title=" Tool for aligning proteins to genomic DNA ">ProSplign</a></li><li><a href="/sutils/splign" title=" Tool for aligning transcripts to genomic DNA ">Splign</a></li><li><a href="/guide/sequence-
+5a8
+analysis/">All Sequence Analysis Resources...</a></li></ul></li><li><a href="#taxonomy">Taxonomy</a><ul class="actual-resources-submenu taxonomy"><li><a href="/taxonomy" title=" The NCBI taxonomy tree in Entrez ">Taxonomy</a></li><li><a href="/Taxonomy/Browser/wwwtax.cgi?mode=Root" title=" Displays and links Entrez data to each taxonomic node ">Taxonomy Browser</a></li><li><a href="/Taxonomy/CommonTree/wwwcmt.cgi" title=" Creates custom taxonomic trees ">Taxonomy Common Tree</a></li><li><a href="/guide/taxonomy/">All Taxonomy Resources...</a></li></ul></li><li><a href="#training-tutorials">Training &amp; Tutorials</a><ul class="actual-resources-submenu training-tutorials"><li><a href="/education/" title=" Central page providing links to tutorials and training materials ">NCBI Education Page</a></li><li><a href="/books/NBK21101/" title=" Introductory articles about NCBI resources ">NCBI Handbook</a></li><li><a href="/books/NBK3831/" title=" Online, searchable help documentation ">NCBI Help Manual</a></li><li><a href="/books/NBK1969/" title=" NCBI's monthly newsletter ">NCBI News</a></li><li><a href="/About/primer/" title=" An introduction to bioinformatics at NCBI ">Science Primer</a></li><li><a href="/guide/training-tutorials/">All Training &amp; Tutorials Resources...</a></li></ul></li><li><a href="#variation">Variation</a><ul class="actual-resources-submenu variation"><li><a href="/dbvar" title=" A database of genomic stru
+5a8
+ctural variation ">Database of Genomic Structural Variation (dbVar)</a></li><li><a href="/gap" title=" Genotype/Phenotype association studies ">Database of Genotypes and Phenotypes (dbGaP)</a></li><li><a href="/snp" title=" Database of nucleotide sequence polymorphisms ">Database of Single Nucleotide Polymorphisms (dbSNP)</a></li><li><a href="http://www.ncbi.nlm.nih.gov/projects/SNP" title=" The SNP database tools page provides links to the general submission guidelines and to the submission handle request. ">SNP Submission Tool</a></li><li><a href="/guide/variation/">All Variation Resources...</a></li></ul></li></ul></li><li id="all-howtos-menu" class="topmenu ui-helper-reset ui-ncbimenu-item-first"><a class="ui-ncbimenu-first-link-has-submenu ui-ncbimenu-link-first topanchor" href="/guide/all/#howto_">How To</a><ul id="howto-submenu"><li><a href="/guide/all/#howtos">All How To</a></li><li><a href="/guide/chemicals-bioassays/#howtos">Chemicals &amp; Bioassays</a></li><li><a href="/guide/dna-rna/#howtos">DNA &amp; RNA</a></li><li><a href="/guide/data-software/#howtos">Data &amp; Software</a></li><li><a href="/guide/domains-structures/#howtos">Domains &amp; Structures</a></li><li><a href="/guide/genes-expression/#howtos">Genes &amp; Expression</a></li><li><a href="/guide/genetics-medicine/#howtos">Genetics &amp; Medicine</a></li><li><a href="/guide/genomes-maps/#howtos">Genomes &amp; Maps</a></li><li><a href="/guide/homology/
+5a8
+#howtos">Homology</a></li><li><a href="/guide/literature/#howtos">Literature</a></li><li><a href="/guide/proteins/#howtos">Proteins</a></li><li><a href="/guide/sequence-analysis/#howtos">Sequence Analysis</a></li><li><a href="/guide/taxonomy/#howtos">Taxonomy</a></li><li><a href="/guide/training-tutorials/#howtos">Training &amp; Tutorials</a></li><li><a href="/guide/variation/#howtos">Variation</a></li></ul></li><li class="offscreen_noflow ui-ncbimenu-item-skip access"><a href="/guide/browsers/#accesskeys" title="About My NCBI Accesskeys" tabindex="0" accesskey="0">About NCBI Accesskeys</a></li></ul><div class="myncbi"><span id="myncbiusername" style="display:none"><a href="/account/settings/" id="mnu" title="Edit account settings"></a></span><a accesskey="2" href="/sites/myncbi/" id="myncbi" style="display:none">My NCBI</a><a href="/account/" id="sign_in">Sign in to NCBI</a><a href="/account/signout/" id="sign_out" style="display:none">Sign Out</a></div></div>
+    
+    <div class="header">
+    <!-- logo -->
+    <div class="res_logo"><h1 class="res_name"><a href="/biosample">BioSample</a></h1>
+				<h2 class="res_tagline">National Center for Biotechnology Information</h2></div>
+    <!-- SearchBar -->
+    <div class="search"><div class="search_form"><label for="database" class="offscreen_noflow">Search database</label><select id="database"><option value="gquery">All Databases</option><option value="assembly">Assembly</option><
+3be
+option value="bioproject">BioProject</option><option value="biosample" selected="selected">BioSample</option><option value="biosystems">BioSystems</option><option value="books">Books</option><option value="clinvar">ClinVar</option><option value="clone">Clone</option><option value="cdd">Conserved Domains</option><option value="gap">dbGaP</option><option value="dbvar">dbVar</option><option value="epigenomics">Epigenomics</option><option value="nucest">EST</option><option value="gene">Gene</option><option value="genome">Genome</option><option value="gds">GEO DataSets</option><option value="geoprofiles">GEO Profiles</option><option value="nucgss">GSS</option><option value="homologene">HomoloGene</option><option value="medgen" data-ac_dict="medgen_disease_name">MedGen</option><option value="mesh" data-ac_dict="mesh_suggestions">MeSH</option><option value="ncbisearch">NCBI Web Site</option><option value="nlmcatalog">NLM Catalog</option><option value=
+12da
+"nuccore">Nucleotide</option><option value="omia">OMIA</option><option value="omim">OMIM</option><option value="pmc">PMC</option><option value="popset">PopSet</option><option value="probe">Probe</option><option value="protein">Protein</option><option value="proteinclusters">Protein Clusters</option><option value="pcassay">PubChem BioAssay</option><option value="pccompound">PubChem Compound</option><option value="pcsubstance">PubChem Substance</option><option value="pubmed" data-ac_dict="pm_related_queries_2">PubMed</option><option value="pubmedhealth">PubMed Health</option><option value="snp">SNP</option><option value="sra">SRA</option><option value="structure">Structure</option><option value="taxonomy">Taxonomy</option><option value="toolkit">ToolKit</option><option value="toolkitall">ToolKitAll</option><option value="toolkitbook">ToolKitBook</option><option value="unigene">UniGene</option><option value="unists">UniSTS</option></select><div class="nowrap"><label for="term" class="offscreen_noflow" accesskey="/">Search term</label><div class="nowrap"><input type="text" name="term" id="term" title="Search BioSample" value="" class="jig-ncbiautofocus jig-ncbiclearbutton jig-ncbiautocomplete" config="isEnabled:false,disableUrl:'NcbiSearchBarAutoComplCtrl'" autocomplete="off" data-ds="no" data-pjs="yes" /></div><button id="search" type="submit" class="button_search nowrap" cmd="go">Search</button></div></div><ul class="searchlinks inline_list"><set></set><li><a sid="1" href="/biosample/limits">Limits</a></li><li><a href="/biosample/advanced">Advanced</a></li><li class="help"><a id="help" target="_blank" name="help" href="/books/NBK3837/">Help</a></li></ul></div>
+</div>   
+    <input name="EntrezSystem2.PEntrez.BioSample.BioSample_PageController.PreviousPageName" sid="1" type="hidden" value="home" />
+    <div id="maincontent" class="twelve_col col last">
+    <div class="content">
+        <div id="messagearea" class="empty">
+            <div class="error"><div class="browsername">We are sorry, but NCBI web applications do not support your browser and may not function properly.  <a href="/guide/browsers">More information</a></div></div>
+            <ul id="msgportlet" class="messages"></ul>
+            
+        </div>
+        
+        <div>
+    <div><div class="dbheader"><div class="headerimage"></div><div class="headerintro"><h1>BioSample</h1><div class="dbdescription">The BioSample database contains descriptions of biological source materials used in experimental assays.</div></div></div><div class="tier firsttier"><div class="onecol"><div class="firsttier_portlet"><div class="portlet_head"><h2>Using BioSample</h2></div><div class="portlet_content"><ul><li><a href="/books/NBK3837/">Help</a></li><li><a href="https://submit.ncbi.nlm.nih.gov/subs/biosample/">Submit</a></li></ul></div></div></div><div class="onecol"><div class="firsttier_portlet"><div class="portlet_head"><h2>Sources</h2></div><div class="portlet_content"><ul><li><a href="/GenBank">GenBank</a></li><li><a href="/Traces/sra/sra.cgi">SRA</a></li><li><a href="http://ccr.coriell.org/">Coriell</a></li><li><a href="http://www.atcc.org/">ATCC</a></li></ul></div></div></div><div class="onecol lastcol"><div class="firsttier_portlet"><div class="portlet_head"><h2>Authenticated cell line</h2></div><div class="portlet_content"><ul><li><a href="/biosample?term=human%20cell%20line%20STR%20profile">Browse human cell line STR profiles</a></li></ul></div></div></div></div></div>
+    <div class="tier">
+    <!-- 
+    for two one-column width portlets
+    <div class="onecol">
+        <component id="MyHomePagePortlet1" />
+    </div>
+    <div class="onecol lastcol">
+        <component id="MyHomePagePortlet2" />
+    </div>
+    -->
+</div>
+    
+    
+</div>        
+    </div>
+</div>
+    
+    <div id="NCBIFooter_dynamic">
+    <div class="breadcrumbs">You are here: 
+            <span id="breadcrumb_text"><a href="/guide/">NCBI</a>
+                        &gt; <a href="http://www.ncbi.nlm.nih.gov/guide/dna-rna/">DNA &amp; RNA</a>
+                        
+                        &gt; BioSample</span></div>
+    <a id="help-desk-link" class="help_desk" target="_blank" href="/sites/ehelp?&amp;Ncbi_App=entrez&amp;Db=biosample&amp;Page=home&amp;Snapshot=/projects/Sequences/SeqDb@1.4&amp;Time=2013-05-06T16:06:39-04:00&amp;Host=portal102&amp;Data=JiraApp:BSH;%20NCBI_Phid:CE8903371880D431000000000008E0A9;%20PageURL:http://www.ncbi.nlm.nih.gov/biosample;" onclick="window.open('/sites/ehelp?&amp;Ncbi_App=entrez&amp;Db=biosample&amp;Page=home&amp;Snapshot=/projects/Sequences/SeqDb@1.4&amp;Time=2013-05-06T16:06:39-04:00&amp;Host=portal102&amp;Data=JiraApp:BSH;%20NCBI_Phid:CE8903371880D431000000000008E0A9;%20PageURL:http://www.ncbi.nlm.nih.gov/biosample;','HelpDesk','resizable=no,scrollbars=yes,location=no,status=yes,menu
+d26
+bar=no,top=50,left=200,width=720,height=695');return false;">Write to the Help
+            Desk</a>
+    <noscript><img alt="" src="/stat?jsdisabled=true&amp;ncbi_app=entrez&amp;ncbi_db=biosample&amp;ncbi_pdid=home&amp;ncbi_phid=CE8903371880D431000000000008E0A9" /></noscript>
+</div>
+
+    <div xmlns="http://www.w3.org/1999/xhtml" class="footer" id="footer" xml:base="http://127.0.0.1/sites/static/header_footer/">
+    <!--    <div class="breadcrumbs">You are here: <span id="breadcrumb_text"><a href="#">NCBI</a></span></div>
+        <a id="help-desk-link" class="help_desk" target="_blank">Help Desk</a>-->
+    <div class="subfooter">
+        <h2 class="offscreen_noflow">Simple NCBI Directory</h2>
+        <ul class="foot_list" id="getting_started">
+            <li><h3>Getting Started</h3></li>
+            <!-- removed; hp-250           <li><a href="/guide/all/">Site Map</a></li>-->
+            <li><a href="/Education/">NCBI Education</a></li>
+            <li><a href="/books/NBK3831/">NCBI Help Manual</a></li>
+            <li><a href="/books/NBK21101/">NCBI Handbook</a></li>
+            <li><a href="/guide/training-tutorials/">Training &amp; Tutorials</a></li>
+        </ul>
+        <!-- this section is re-written by an XSLT before output -->
+        <ul class="foot_list" id="resources">
+            <li><h3>Resources</h3></li>
+            <!-- fill this in with categories -->
+        <li><a href="/guide/chemicals-bioassays">Chemicals &amp; Bioassays</a></li><li><a href="/guide/data-software">Data &amp; Software</a></li><li><a href="/guide/dna-rna">DNA &amp; RNA</a></li><li><a href="/guide/domains-structures">Domains &amp; Structures</a></li><li><a href="/guide/genes-expression">Genes &amp; Expression</a></li><li><a href="/guide/genetics-medicine">Genetics &amp; Medicine</a></li><li><a href="/guide/genomes-maps">Genomes &amp; Maps</a></li><li><a href="/guide/homology">Homology</a></li><li><a href="/guide/literature">Literature</a></li><li><a href="/guide/proteins">Proteins</a></li><li><a href="/guide/sequence-analysis">Sequence Analysis</a></li><li><a href="/guide/taxonomy">Taxonomy</a></li><li><a href="/guide/training-tutorials">Training &amp; Tutorials</a></li><li><a href="/guide/variation">Variation</a></li></ul>
+        
+        <ul class="foot_list" id="popular">
+            <li><h3>Popular</h3></li>
+            <li><a href="/pubmed/">PubMed</a></li>
+            <li><a href="/nucleotide/">Nucleotide</a></li>
+            <li><a href="http://blast.ncbi.nlm.nih.gov/">BLAST</a></li>
+            <li><a href="http://www.pubmedcentral.nih.gov/" class="newdomain">PubMed Central</a></li>
+            <li><a href="/gene/">Gene</a></li>
+            <li><a href="/books/">Bookshelf</a></li>
+            <li><a href="/protein/">Protein</a></li>
+            <li><a href="/omim/">OMIM</a></li>
+            <li><a href="/genome/">Genome</a></li>
+            <li><a href="/snp/">SNP</a></li>
+            <li><a href="/Structure/">Structure</a></li>
+        </ul>
+        <ul class="foot_list" id="featured">
+            <li><h3>Featured</h3></li>
+            <li><a href="/gtr/">Genetic Testing Registry</a></li>
+            <li><a href="/pubmedhealth/">PubMed Health</a></li>
+            <li><a href="/Genbank/">GenBank</a></li>
+            <li><a href="/refseq/">Reference Sequences</a></li>
+            <li><a href="/mapview/">Map Viewer<
+14bd
+/a></li>
+            <li><a href="/genome/guide/human/">Human Genome</a></li>
+            <li><a href="/genome/guide/mouse/">Mouse Genome</a></li>
+            <li><a href="/genomes/FLU/">Influenza Virus</a></li>
+            <li><a href="/tools/primer-blast/">Primer-BLAST</a></li>
+            <li><a href="/Traces/sra/">Sequence Read Archive</a></li>
+        </ul>
+        <ul class="foot_list" id="info">
+            <li><h3>NCBI Information</h3></li>
+            <li><a href="/About/">About NCBI</a></li>
+            <li><a href="/research/">Research at NCBI</a></li>
+            <li><a href="/books/NBK1969/">NCBI Newsletter</a></li>
+            <li><a href="/Ftp/">NCBI FTP Site</a></li>
+            <li><a class="external" href="http://www.facebook.com/ncbi.nlm">NCBI on Facebook</a></li>
+            <li><a class="external" href="http://www.twitter.com/ncbi">NCBI on Twitter</a></li>
+            <li><a class="external" href="http://www.youtube.com/ncbinlm">NCBI on YouTube</a></li>
+        </ul>
+    </div>
+    <div id="external-disclaimer" class="offscreen_noflow">
+        External link. Please review our <a href="http://www.nlm.nih.gov/privacy.html">privacy policy</a>.
+    </div>    
+    <div id="ncbifooter" class="contact_info">      
+        <div id="footer-contents-right">
+            <div id="nlm_thumb_logo">
+                <a href="http://www.nlm.nih.gov" title="NLM">NLM</a>
+            </div>
+            <div id="nih_thumb_logo">
+                <a href="http://www.nih.gov" title="NIH">NIH</a>
+            </div>
+            <div id="hhs_thumb_logo">
+                <a href="http://www.dhhs.gov" title="DHHS">DHHS</a>
+            </div>
+            <div id="usagov_thumb_logo">
+                <a href="http://www.usa.gov" title="USA.gov">USA.gov</a>
+            </div>         
+        </div>
+        
+        <div id="footer-contents-left">
+            
+            <a href="/About/disclaimer.html">Copyright</a> | <a href="/About/disclaimer.html#disclaimer">Disclaimer</a> |
+            <a href="http://www.nlm.nih.gov/privacy.html" class="newdomain">Privacy</a> | 
+            <a href="/guide/browsers/">Browsers</a> | <a href="http://www.nlm.nih.gov/accessibility.html">Accessibility</a> | <a href="/About/glance/contact_info.html">Contact</a>
+            <p class="address vcard">
+                <span class="url">
+                    <a class="fn url newdomain" href="http://www.ncbi.nlm.nih.gov">National Center for
+                        Biotechnology Information</a>,
+                </span> <span class="org url"><a href="http://www.nlm.nih.gov/">U.S. National Library of Medicine</a></span>
+                <span class="adr">
+                    <span class="street-address">8600 Rockville Pike</span>, <span class="locality">Bethesda</span>
+                    <span class="region">MD</span>, <span class="postal-code">20894</span>
+                    <span class="country-name">USA</span>
+                </span>
+            </p>
+        </div>
+    </div>
+    <script type="text/javascript" src="/portal/portal3rc.fcgi/rlib/js/InstrumentOmnitureBaseJS/InstrumentNCBIBaseJS/InstrumentPageStarterJS.js?v=1"> </script>    
+    <script type="text/javascript" src="/portal/portal3rc.fcgi/static/js/hfjs.js"> </script>
+</div>
+
+</div>
+					<div><input name="EntrezSystem2.PEntrez.DbConnector.Db" sid="1" type="hidden" value="biosample" /><input name="EntrezSystem2.PEntrez.DbConnector.LastDb" sid="1" type="hidden" value="biosample" /><input name="EntrezSystem2.PEntrez.DbConnector.Term" sid="1" type="hidden" value="" /><input name="EntrezSystem2.PEntrez.DbConnector.LastTabCmd" sid="1" type="hidden" value="" /><input name="EntrezSystem2.PEntrez.DbConnector.LastQueryKey" sid="1" type="hidden" value="" /><input name="EntrezSystem2.PEntrez.DbConnector.IdsFromResult" sid="1" type="hidden" value="" /><input name="EntrezSystem2.PEntrez.DbConnector.LastIdsFromResult" sid="1" type="hidden" value="" /><input name="EntrezSystem2.PEntrez.DbConnector.LinkName" sid="1" type="hidden" /><input name="EntrezSystem2.PEntrez.DbConnector.LinkReadableName" sid="1" type="hidden" /><input name="EntrezSystem2.PEntrez.DbConnector.LinkSrcDb" sid="1" type="hidden" /><input name="EntrezSystem2.PEntrez.DbConnector.Cmd" sid="1" type="hidden" /><input name="EntrezSystem2.PEntrez.DbConnector.TabCmd" sid="1" type="hidden" /><input name="EntrezSystem2.PEntrez.DbConnector.QueryKey" sid="1" type="hidden" /></div>
+				<input type="hidden" name="p$a" id="p$a" /><input type="hidden" name="p$l" id="p$l" value="EntrezSystem2" /><input type="hidden" name="p$st" id="p$st" value="biosample" /><input name="SessionId" id="SessionId" value="CE8903371880D4E1_0008SID" disabled="disabled" type="hidden" /><input name="Snapshot" id="Snapshot" value="/projects/Sequences/SeqDb@1.4" disabled="disabled" type="hidden" /></form>
+			</div>
+		</div>
+    
+
+<!-- CE8903371880D4E1_0008SID /projects/Sequences/SeqDb@1.4 portal102 v3.5.1.r392364: Mon, Mar 25 2013 15:07:09 -->
+
+
+<script type='text/javascript' src='/portal/js/portal.js?v3%2E5%2E1%2Er392364%3A+Mon%2C+Mar+25+2013+15%3A07%3A09'></script><script type="text/javascript" src="//static.pubmed.gov/portal/portal3rc.fcgi/3865237/js/3812534/3865793/3812535/3857406/3812291/3805553/3844708/3728312/3783853.js" snapshot="biosample"></script></body>
+</html>
+0
+

@@ -1,0 +1,42 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+       "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>sra-pileup help</title>
+</head>
+<body>
+
+<pre>
+Usage:
+  sra-pileup &lt;path> [options]
+
+Options:
+  -r|--aligned-region &lt;name[:from-to]>  Filter by position on genome. Name can 
+                                   either be file specific name (ex: "chr1" or 
+                                   "1"). "from" and "to" are 1-based coordinates
+  -q|--minmapq &lt;min. mapq>         Minimum mapq-value,  alignments with lower 
+                                   mapq will be ignored (default=0) 
+  -o|--outfile &lt;output-file>       Output will be written to this file instead 
+                                   of std-out 
+  -t|--table &lt;table>               What table to use (p/s/e) p..primary 
+                                   alignments,  s..secondary alignments 
+                                   e..evidence alignments (default=p) 
+  -d|--duplicates &lt;duplicates>     Don't ignore dups (0/1) 
+  -m|--mode &lt;output-modes>         Output-format: 0...samtools, 1...just 
+                                   counters (default=0) 
+  -h|--help                        Output brief explantion for the program. 
+  -V|--version                     Display the version of the program then 
+                                   quit. 
+  -L|--log-level &lt;level>           Logging level as number or enum string. One 
+                                   of (fatal|sys|int|err|warn|info) or (0-5) 
+                                   Current/default is warn 
+  -v|--verbose                     Increase the verbosity level of the program. 
+                                   Use multiple times for more verbosity. 
+  --report &lt;type>                  Control program execution environment 
+                                   report generation (if implemented). One of 
+                                   (never|error|always). Default is error 
+
+</pre>
+
+</body>
+</html>

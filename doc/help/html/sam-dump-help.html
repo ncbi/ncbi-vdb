@@ -1,0 +1,46 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+       "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>sam-dump help</title>
+</head>
+<body>
+
+<pre>
+Usage:
+   sam-dump [options] path[ path ...]
+
+Options:
+  -s|--seqid                       print reference SEQ_ID in RNAME instead of 
+                                   NAME 
+  -u|--unaligned                   output unaligned reads 
+  -c|--cigar-long                  output long version of CIGAR 
+  -r|--header                      always reconstruct header 
+  --aligned-region &lt;name[:from-to]>  Filter by position on genome. Name can 
+                                   either be file specific name (ex: "chr1" or 
+                                   "1"). "from" and "to" are 1-based coordinates 
+  --matepair-distance &lt;from-to|unknown>  Filter by distance beiween matepairs. 
+                                   Use "unknown" to find matepairs split 
+                                   between the references. Use from-to to limit 
+                                   matepair distance on the same reference 
+  -=|--hide-identical              Output '=' if base is identical to reference 
+  --gzip                           Compress output using gzip 
+  --bzip2                          Compress output using bzip2 
+  -g|--spot-group                  Add .SPOT_GROUP to QNAME 
+  -n|--no-header                   Do not output headers 
+  --fastq                          Produce Fasta formatted ouput 
+  --fasta                          Produce FastQ formatted ouput 
+  -p|--prefix &lt;prefix>             Prefix QNAME: prefix.QNAME 
+
+  -h|--help                        Output brief explantion for the program. 
+  -V|--version                     Display the version of the program then 
+                                   quit. 
+  -L|--log-level &lt;level>           Logging level as number or enum string. One 
+                                   of (fatal|sys|int|err|warn|info) or (0-5) 
+                                   Current/default is warn 
+  -v|--verbose                     Increase the verbosity level of the program. 
+                                   Use multiple times for more verbosity. 
+</pre>
+
+</body>
+</html>

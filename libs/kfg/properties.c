@@ -1,0 +1,669 @@
+/*===========================================================================
+ *
+ *                            PUBLIC DOMAIN NOTICE
+ *               National Center for Biotechnology Information
+ *
+ *  This software/database is a "United States Government Work" under the
+ *  terms of the United States Copyright Act.  It was written as part of
+ *  the author's official duties as a United States Government employee and
+ *  thus cannot be copyrighted.  This software/database is freely available
+ *  to the public for use. The National Library of Medicine and the U.S.
+ *  Government have not placed any restriction on its use or reproduction.
+ *
+ *  Although all reasonable efforts have been taken to ensure the accuracy
+ *  and reliability of the software and data, the NLM and the U.S.
+ *  Government do not and cannot warrant the performance or results that
+ *  may be obtained by using this software or data. The NLM and the U.S.
+ *  Government disclaim all warranties, express or implied, including
+ *  warranties of performance, merchantability or fitness for any particular
+ *  purpose.
+ *
+ *  Please cite the author in any work or product based on this material.
+ *
+ * ===========================================================================
+ *
+ */
+
+#include <klib/rc.h>
+#include <klib/vector.h>
+#include <klib/text.h>
+#include <klib/printf.h>
+#include <klib/namelist.h>
+
+#include <kfs/directory.h>
+#include <kfs/file.h>
+
+#include <kfg/config.h>
+#include <kfg/repository.h>
+#include <kfg/ngc.h>
+#include "ngc-priv.h"
+
+#include <va_copy.h>
+
+/* ---------------------------------------------------------------------------------------------------- */
+
+static rc_t KConfig_Get_Repository_State( const KConfig *self,
+    bool * state, bool negate, bool dflt, const char * path, ... )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else if ( state == NULL || path == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    {
+        va_list args;
+        char tmp[ 4096 ];
+        size_t num_writ;
+
+        *state = dflt;
+        va_start ( args, path );
+        rc = string_vprintf ( tmp, sizeof tmp, & num_writ, path, args );
+        va_end ( args );
+
+        if ( rc == 0 )
+        {
+            bool rd_state;
+            rc = KConfigReadBool ( self, tmp, &rd_state );
+            if ( rc == 0 )
+            {
+                if ( negate )
+                    *state = !rd_state;
+                else
+                    *state = rd_state;
+            }
+            else
+                rc = 0;     /* it is OK to not find the node, return the default then... */
+        }
+    }
+    return rc;
+}
+
+
+static rc_t KConfig_Set_Repository_State( KConfig *self,
+    bool state, bool negate, const char * path, ... )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcWriting, rcSelf, rcNull );
+    else if ( path == NULL )
+        rc = RC ( rcKFG, rcNode, rcWriting, rcParam, rcNull );
+    else
+    {
+        va_list args;
+        char tmp[ 4096 ];
+        size_t num_writ;
+
+        va_start ( args, path );
+        rc = string_vprintf ( tmp, sizeof tmp, & num_writ, path, args );
+        va_end ( args );
+
+        if ( rc == 0 )
+        {
+            if ( negate )
+                rc = KConfigWriteBool( self, tmp, !state );
+            else
+                rc = KConfigWriteBool( self, tmp, state );
+        }
+    }
+    return rc;
+}
+
+
+/* ---------------------------------------------------------------------------------------------------- */
+
+static rc_t KConfig_Get_Repository_String( const KConfig *self,
+    char * buffer, size_t buffer_size, size_t * written, const char * path, ... )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else if ( buffer == NULL || path == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    {
+        va_list args;
+        char tmp[ 4096 ];
+        size_t num_writ;
+
+        va_start ( args, path );
+        rc = string_vprintf ( tmp, sizeof tmp, & num_writ, path, args );
+        va_end ( args );
+
+        if ( rc == 0 )
+        {
+            struct String * res;
+            rc = KConfigReadString ( self, tmp, &res );
+            if ( rc == 0 )
+            {
+                rc = string_printf( buffer, buffer_size, written, "%S", res );
+                StringWhack ( res );
+            }
+        }
+    }
+    return rc;
+}
+
+
+static rc_t KConfig_Set_Repository_String( KConfig *self,
+    const char * value, const char * path, ... )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcWriting, rcSelf, rcNull );
+    else if ( path == NULL )
+        rc = RC ( rcKFG, rcNode, rcWriting, rcParam, rcNull );
+    else
+    {
+        va_list args;
+        char tmp[ 4096 ];
+        size_t num_writ;
+
+        va_start ( args, path );
+        rc = string_vprintf ( tmp, sizeof tmp, & num_writ, path, args );
+        va_end ( args );
+
+        if ( rc == 0 )
+            rc = KConfigWriteString( self, tmp, value );
+    }
+    return rc;
+}
+
+/* ---------------------------------------------------------------------------------------------------- */
+
+LIB_EXPORT rc_t CC KConfig_Get_Home( const KConfig *self, char * buffer, size_t buffer_size, size_t * written )
+{   return KConfig_Get_Repository_String( self, buffer, buffer_size, written, "HOME" ); }
+
+#define USER_DEFAULT_PATH "/repository/user/default-path"
+LIB_EXPORT rc_t CC KConfig_Get_Default_User_Path( const KConfig *self, char * buffer, size_t buffer_size, size_t * written )
+{   return KConfig_Get_Repository_String( self, buffer, buffer_size, written, USER_DEFAULT_PATH ); }
+LIB_EXPORT rc_t CC KConfig_Set_Default_User_Path( KConfig *self, const char * value )
+{   return KConfig_Set_Repository_String( self, value, USER_DEFAULT_PATH ); }
+
+/* -------------------------------------------------------------------------- */
+
+#define PATH_REPOSITORY_REMOTE_DISABLED "/repository/remote/disabled"
+LIB_EXPORT rc_t CC KConfig_Get_Remote_Access_Enabled
+    ( const KConfig *self, bool * enabled )
+{
+    return KConfig_Get_Repository_State( self, enabled,
+        true, true, PATH_REPOSITORY_REMOTE_DISABLED );
+}
+LIB_EXPORT rc_t CC KConfig_Set_Remote_Access_Enabled
+    ( KConfig *self, bool enabled )
+{
+    return KConfig_Set_Repository_State( self, enabled,
+        true, PATH_REPOSITORY_REMOTE_DISABLED );
+}
+
+#define PATH_REPOSITORY_REMOTE_MAIN_CGI_DISABLED \
+    "/repository/remote/main/CGI/disabled"
+LIB_EXPORT rc_t CC KConfig_Get_Remote_Main_Cgi_Access_Enabled
+    ( const KConfig *self, bool * enabled )
+{
+    return KConfig_Get_Repository_State( self, enabled,
+        true, true, PATH_REPOSITORY_REMOTE_MAIN_CGI_DISABLED );
+}
+
+#define PATH_REPOSITORY_REMOTE_AUX_NCBI_DISABLED \
+    "/repository/remote/aux/NCBI/disabled"
+LIB_EXPORT rc_t CC KConfig_Get_Remote_Aux_Ncbi_Access_Enabled
+    ( const KConfig *self, bool * enabled )
+{
+    return KConfig_Get_Repository_State( self, enabled,
+        true, true, PATH_REPOSITORY_REMOTE_DISABLED );
+}
+
+#define PATH_REPOSITORY_SITE_DISABLED "/repository/site/disabled"
+#define PATH_REPOSITORY_USER_DISABLED "/repository/user/disabled"
+LIB_EXPORT rc_t CC KConfig_Get_Site_Access_Enabled( const KConfig *self, bool * enabled )
+{   return KConfig_Get_Repository_State( self, enabled, true, true, PATH_REPOSITORY_SITE_DISABLED ); }
+LIB_EXPORT rc_t CC KConfig_Set_Site_Access_Enabled( KConfig *self, bool enabled )
+{   return KConfig_Set_Repository_State( self, enabled, true, PATH_REPOSITORY_SITE_DISABLED ); }
+
+LIB_EXPORT rc_t CC KConfig_Get_User_Access_Enabled( const KConfig *self, bool * enabled )
+{   return KConfig_Get_Repository_State( self, enabled, true, true, PATH_REPOSITORY_USER_DISABLED ); }
+LIB_EXPORT rc_t CC KConfig_Set_User_Access_Enabled( KConfig *self, bool enabled )
+{   return KConfig_Set_Repository_State( self, enabled, true, PATH_REPOSITORY_USER_DISABLED ); }
+
+
+#define PATH_REPOSITORY_USER_PUBLIC_DISABLED "/repository/user/main/public/disabled"
+LIB_EXPORT rc_t CC KConfig_Get_User_Public_Enabled( const KConfig *self, bool * enabled )
+{   return KConfig_Get_Repository_State( self, enabled, true, true, PATH_REPOSITORY_USER_PUBLIC_DISABLED ); }
+LIB_EXPORT rc_t CC KConfig_Set_User_Public_Enabled( KConfig *self, bool enabled )
+{   return KConfig_Set_Repository_State( self, enabled, true, PATH_REPOSITORY_USER_PUBLIC_DISABLED ); }
+
+#define PATH_REPOSITORY_USER_PUBLIC_CACHE_ENABLED "/repository/user/main/public/cache-enabled"
+LIB_EXPORT rc_t CC KConfig_Get_User_Public_Cached( const KConfig *self, bool * enabled )
+{   return KConfig_Get_Repository_State( self, enabled, false, false, PATH_REPOSITORY_USER_PUBLIC_CACHE_ENABLED ); }
+LIB_EXPORT rc_t CC KConfig_Set_User_Public_Cached( KConfig *self, bool enabled )
+{   return KConfig_Set_Repository_State( self, enabled, false, PATH_REPOSITORY_USER_PUBLIC_CACHE_ENABLED ); }
+
+#define PATH_REPOSITORY_USER_PROTECTED_CACHE_ENABLED "/repository/user/protected/%s/cache-enabled"
+LIB_EXPORT rc_t CC KConfig_Get_User_Protected_Cached( const KConfig *self, bool * enabled, const char * name )
+{   return KConfig_Get_Repository_State( self, enabled, false, false, PATH_REPOSITORY_USER_PROTECTED_CACHE_ENABLED, name ); }
+LIB_EXPORT rc_t CC KConfig_Set_User_Protected_Cached( KConfig *self, bool enabled, const char * name )
+{   return KConfig_Set_Repository_State( self, enabled, false, PATH_REPOSITORY_USER_PROTECTED_CACHE_ENABLED, name ); }
+
+#define PATH_REPOSITORY_USER_PUBLIC_CACHE_LOCATION "/repository/user/main/public/root"
+LIB_EXPORT rc_t CC KConfig_Get_User_Public_Cache_Location( const KConfig *self,
+    char * value, size_t value_size, size_t * written )
+{   return KConfig_Get_Repository_String( self, value, value_size, written, PATH_REPOSITORY_USER_PUBLIC_CACHE_LOCATION ); }
+LIB_EXPORT rc_t CC KConfig_Set_User_Public_Cache_Location( KConfig *self, const char * value )
+{   return KConfig_Set_Repository_String( self, value, PATH_REPOSITORY_USER_PUBLIC_CACHE_LOCATION ); }
+
+/* ---------------------------------------------------------------------------------------------------- */
+
+LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryCount( const KConfig *self, uint32_t * count )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else if ( count == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    else
+    {
+        const struct KConfigNode * node;
+        rc = KConfigOpenNodeRead ( self, &node, "/repository/user/protected" );
+        if ( rc == 0 )
+        {
+            struct KNamelist * names;
+            rc = KConfigNodeListChildren ( node, &names );
+            if ( rc == 0 )
+            {
+                rc = KNamelistCount ( names, count );
+                KNamelistRelease ( names );
+            }
+            KConfigNodeRelease ( node );
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryName( const KConfig *self,
+    uint32_t id, char * buffer, size_t buffer_size, size_t * written )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else if ( buffer == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    else
+    {
+        const struct KConfigNode * node;
+        rc = KConfigOpenNodeRead ( self, &node, "/repository/user/protected" );
+        if ( rc == 0 )
+        {
+            struct KNamelist * names;
+            rc = KConfigNodeListChildren ( node, &names );
+            if ( rc == 0 )
+            {
+                const char * name;
+                rc = KNamelistGet ( names, id, &name );
+                if ( rc == 0 )
+                    rc = string_printf( buffer, buffer_size, written, "%s", name );
+                KNamelistRelease ( names );
+            }
+            KConfigNodeRelease ( node );
+        }
+    }
+    return rc;
+}
+
+
+static rc_t get_root_dir_of_repository( const struct KConfigNode * node,
+    const char * name, char * buffer, size_t buffer_size, size_t * written )
+{
+    const struct KConfigNode * sub_node;
+    rc_t rc = KConfigNodeOpenNodeRead ( node, &sub_node, "%s/root", name );
+    if ( rc == 0 )
+    {
+        struct String * S;
+        rc = KConfigNodeReadString ( sub_node, &S );
+        if ( rc == 0 )
+        {
+            rc = string_printf( buffer, buffer_size, written, "%S", S );
+            StringWhack ( S );
+        }
+        KConfigNodeRelease ( sub_node );
+    }
+    return rc;
+}
+
+
+static rc_t get_description_of_repository( const struct KConfigNode * node,
+    const char * name, char * buffer, size_t buffer_size, size_t * written )
+{
+    const struct KConfigNode * sub_node;
+    rc_t rc = KConfigNodeOpenNodeRead (node, &sub_node, "%s/description", name);
+    if ( rc == 0 )
+    {
+        struct String * S;
+        rc = KConfigNodeReadString ( sub_node, &S );
+        if ( rc == 0 )
+        {
+            rc = string_printf( buffer, buffer_size, written, "%S", S );
+            StringWhack ( S );
+        }
+        KConfigNodeRelease ( sub_node );
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryPathById( const KConfig *self,
+    uint32_t id, char * buffer, size_t buffer_size, size_t * written )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else if ( buffer == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    else
+    {
+        const struct KConfigNode * node;
+        rc = KConfigOpenNodeRead ( self, &node, "/repository/user/protected" );
+        if ( rc == 0 )
+        {
+            struct KNamelist * names;
+            rc = KConfigNodeListChildren ( node, &names );
+            if ( rc == 0 )
+            {
+                const char * name;
+                rc = KNamelistGet ( names, id, &name );
+                if ( rc == 0 )
+                    rc = get_root_dir_of_repository( node, name, buffer, buffer_size, written );
+                KNamelistRelease ( names );
+            }
+            KConfigNodeRelease ( node );
+        }
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KConfigSetProtectedRepositoryPathById( KConfig *self, uint32_t id, const char * value )
+{
+    char repo_name[ 1024 ];
+    size_t written;
+    rc_t rc = KConfigGetProtectedRepositoryName( self, id, repo_name, sizeof repo_name, &written );
+    if ( rc == 0 )
+        rc = KConfig_Set_Repository_String( self, value, "/repository/user/protected/%s/root", repo_name );
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryIdByName
+    (const KConfig *self, const char *name, uint32_t *id)
+{
+    if (self == NULL)
+        return RC(rcKFG, rcNode, rcReading, rcSelf, rcNull);
+    else if (name == NULL || id == NULL)
+        return RC(rcKFG, rcNode, rcReading, rcParam, rcNull);
+    else {
+        const struct KConfigNode *node = NULL;
+        rc_t rc
+            = KConfigOpenNodeRead(self, &node, "/repository/user/protected");
+        if (rc == 0) {
+            struct KNamelist *names = NULL;
+            rc = KConfigNodeListChildren(node, &names);
+            if (rc == 0) {
+                uint32_t count = 0;
+                rc = KNamelistCount(names, &count);
+                if (rc == 0) {
+                    if (count == 0)
+                        rc = RC(rcKFG, rcNode, rcReading, rcName, rcNotFound);
+                    else {        /* loop through the names to find the one */
+                        uint32_t i = 0; /* which matches the name parameter */
+                        bool found = false;
+                        size_t name_size = string_size(name);
+                        for (i = 0; i < count && rc == 0; ++i) {
+                            const char *s = NULL;
+                            rc = KNamelistGet(names, i, &s);
+                            if ( rc == 0 && s != NULL ) {
+                                size_t s_size = string_size(s);
+                                if (name_size == s_size) {
+                                    int cmp = string_cmp
+                                        (name, name_size, s, s_size, s_size);
+                                    found = (cmp == 0);
+                                    if (found) {
+                                        *id = i;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if (rc == 0 && !found) {
+                            rc = RC
+                                (rcKFG, rcNode, rcReading, rcName, rcNotFound);
+                        }
+                    }
+                }
+                KNamelistRelease(names);
+            }
+            KConfigNodeRelease(node);
+        }
+        return rc;
+    }
+}
+
+LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryPathByName( const KConfig *self,
+    const char * name, char * buffer, size_t buffer_size, size_t * written )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else if ( buffer == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    else
+    {
+        const struct KConfigNode * node;
+        rc = KConfigOpenNodeRead ( self, &node, "/repository/user/protected" );
+        if ( rc == 0 )
+        {
+            struct KNamelist * names;
+            rc = KConfigNodeListChildren ( node, &names );
+            if ( rc == 0 )
+            {
+                uint32_t count;
+                rc = KNamelistCount ( names, &count );
+                if ( rc == 0 )
+                {
+                    if ( count == 0 )
+                        rc = RC ( rcKFG, rcNode, rcReading, rcName, rcNotFound );
+                    else
+                    {
+                        /* loop through the names to find the one which matches the name parameter */
+                        uint32_t i;
+                        bool found = false;
+                        size_t name_size = string_size( name );
+                        for ( i = 0; !found && i < count && rc == 0; ++i )
+                        {
+                            const char * s = NULL;
+                            rc = KNamelistGet ( names, i, &s );
+                            if ( rc == 0 && s != NULL )
+                            {
+                                size_t s_size = string_size( s );
+                                if ( name_size == s_size )
+                                {
+                                    int cmp = string_cmp ( name, name_size,
+                                                           s, s_size, s_size );
+                                    found = ( cmp == 0 );
+                                    if ( found )
+                                        rc = get_root_dir_of_repository( node, s, buffer, buffer_size, written );
+                                }
+                            }
+                        }
+                        if ( rc == 0 && !found )
+                            rc = RC ( rcKFG, rcNode, rcReading, rcName, rcNotFound );
+                    }
+                }
+                KNamelistRelease ( names );
+            }
+            KConfigNodeRelease ( node );
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryDescriptionByName(
+    const KConfig *self,
+    const char * name, char * buffer, size_t buffer_size, size_t * written )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else if ( buffer == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    else
+    {
+        const struct KConfigNode * node;
+        rc = KConfigOpenNodeRead ( self, &node, "/repository/user/protected" );
+        if ( rc == 0 )
+        {
+            struct KNamelist * names;
+            rc = KConfigNodeListChildren ( node, &names );
+            if ( rc == 0 )
+            {
+                uint32_t count;
+                rc = KNamelistCount ( names, &count );
+                if ( rc == 0 )
+                {
+                    if ( count == 0 )
+                        rc = RC( rcKFG, rcNode, rcReading, rcName, rcNotFound );
+                    else
+                    {
+   /* loop through the names to find the one which matches the name parameter */
+                        uint32_t i;
+                        bool found = false;
+                        size_t name_size = string_size( name );
+                        for ( i = 0; !found && i < count && rc == 0; ++i )
+                        {
+                            const char * s = NULL;
+                            rc = KNamelistGet ( names, i, &s );
+                            if ( rc == 0 && s != NULL )
+                            {
+                                size_t s_size = string_size( s );
+                                if ( name_size == s_size )
+                                {
+                                    int cmp = string_cmp ( name, name_size,
+                                                           s, s_size, s_size );
+                                    found = ( cmp == 0 );
+                                    if ( found )
+                                        rc = get_description_of_repository(node,
+                                            s, buffer, buffer_size, written );
+                                }
+                            }
+                        }
+                        if ( rc == 0 && !found )
+                            rc = RC
+                                (rcKFG, rcNode, rcReading, rcName, rcNotFound);
+                    }
+                }
+                KNamelistRelease ( names );
+            }
+            KConfigNodeRelease ( node );
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC KConfigDoesProtectedRepositoryExist( const KConfig *self, const char * name, bool * res )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    else if ( res == NULL )
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    else
+    {
+        const struct KConfigNode * node;
+        *res = false;
+        rc = KConfigOpenNodeRead ( self, &node, "/repository/user/protected" );
+        if ( rc == 0 )
+        {
+            struct KNamelist * names;
+            rc = KConfigNodeListChildren ( node, &names );
+            if ( rc == 0 )
+            {
+                uint32_t count;
+                rc = KNamelistCount ( names, &count );
+                if ( rc == 0 )
+                {
+                    if ( count == 0 )
+                        rc = RC ( rcKFG, rcNode, rcReading, rcName, rcNotFound );
+                    else
+                    {
+                        /* loop through the names to find the one which matches the name parameter */
+                        uint32_t i;
+                        bool found = false;
+                        size_t name_size = string_size( name );
+                        for ( i = 0; !found && i < count && rc == 0; ++i )
+                        {
+                            const char * s = NULL;
+                            rc = KNamelistGet ( names, i, &s );
+                            if ( rc == 0 && s != NULL )
+                            {
+                                size_t s_size = string_size( s );
+                                if ( name_size == s_size )
+                                {
+                                    int cmp = string_cmp ( name, name_size,
+                                                           s, s_size, s_size );
+                                    found = ( cmp == 0 );
+                                }
+                            }
+                        }
+                        if ( rc == 0 && found )
+                            *res = true;
+                    }
+                }
+                KNamelistRelease ( names );
+            }
+            KConfigNodeRelease ( node );
+        }
+    }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryEnabledById( const KConfig *self, uint32_t id, bool * enabled )
+{
+    char repo_name[ 1024 ];
+    size_t written;
+    rc_t rc = KConfigGetProtectedRepositoryName( self, id, repo_name, sizeof repo_name, &written );
+    if ( rc == 0 )
+        rc = KConfig_Get_Repository_State( self, enabled, true, true, "/repository/user/protected/%s/disabled", repo_name );
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC KConfigSetProtectedRepositoryEnabledById( KConfig *self, uint32_t id, bool enabled )
+{
+    char repo_name[ 1024 ];
+    size_t written;
+    rc_t rc = KConfigGetProtectedRepositoryName( self, id, repo_name, sizeof repo_name, &written );
+    if ( rc == 0 )
+        rc = KConfig_Set_Repository_State( self, enabled, true, "/repository/user/protected/%s/disabled", repo_name );
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryCachedById( const KConfig *self, uint32_t id, bool * enabled )
+{
+    char repo_name[ 1024 ];
+    size_t written;
+    rc_t rc = KConfigGetProtectedRepositoryName( self, id, repo_name, sizeof repo_name, &written );
+    if ( rc == 0 )
+        rc = KConfig_Get_Repository_State( self, enabled, false, false, "/repository/user/protected/%s/cache-enabled", repo_name );
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC KConfigSetProtectedRepositoryCachedById( KConfig *self, uint32_t id, bool enabled )
+{
+    char repo_name[ 1024 ];
+    size_t written;
+    rc_t rc = KConfigGetProtectedRepositoryName( self, id, repo_name, sizeof repo_name, &written );
+    if ( rc == 0 )
+        rc = KConfig_Set_Repository_State( self, enabled, false, "/repository/user/protected/%s/cache-enabled", repo_name );
+    return rc;
+}

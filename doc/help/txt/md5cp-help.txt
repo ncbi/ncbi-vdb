@@ -1,0 +1,8 @@
+usage: md5cp [-p] [-f] [-r] [file|directory ...] directory
+
+    md5cp [-f] source_filename dest_filename
+    : Copies files and/or directories, creating an md5sum checksum (named file.md5) for all copied files.
+    
+-f forces replacement of existing files.
+-p forces replacement of existing modes on files and directories.
+-r recurses over source directories (directories are ignored otherwise)

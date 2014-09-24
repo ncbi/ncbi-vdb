@@ -1,0 +1,517 @@
+<html>
+
+    <head>
+
+    <title>NCBI VDB-2: ReferenceIterator</title>
+    <link href="vdb-2.css" rel="stylesheet" type="text/css"/>
+
+    </head>
+
+    <body>
+
+    <!-- Document Header -->
+
+    <h1>VDB-2 - ReferenceIterator</h1>
+
+    <p class="toc">
+        <span class="hdr">Type:</span><br/>
+        <span class="entry">interface</span>
+    </p>
+
+    <p class="toc">
+        <span class="hdr">Header:</span><br/>
+        <span class="entry"><a href="../interfaces/align/iterator.h">align/iterator.h</a></span>
+    </p>
+
+    <p class="toc">
+        <span class="hdr">Revision History:</span><br/>
+        <table class="entry">
+            <tr><td>2012-Feb-07</td><td>&bull;</td><td>rodarmer</td></tr>
+        </table>
+    </p>
+
+    <p class="toc">
+        <span class="hdr">Contents:</span><br/>
+        <ul class="toc-outer">
+            <li><a href="#abstract">Description</a></li>
+            <li><a href="#requirements">Requirements</a></li>
+            <li><a href="#interface">ReferenceIterator</a></li>
+            <ul class="toc-inner">
+                <li><a href="#make">Make</a></li>
+                <li><a href="#addref">AddRef</a></li>
+                <li><a href="#release">Release</a></li>
+                <li><a href="#add-placements">AddPlacements</a></li>
+                <li><a href="#next-reference">NextReference</a></li>
+                <li><a href="#next-window">NextWindow</a></li>
+                <li><a href="#next-spotgroup">NextSpotGroup</a></li>
+                <li><a href="#next-pos">NextPos</a></li>
+                <li><a href="#position">Position</a></li>
+                <li><a href="#next-placement">NextPlacement</a></li>
+                <li><a href="#state">State</a></li>
+                <li><a href="#bases-inserted">BasesInserted</a></li>
+                <li><a href="#bases-deleted">BasesDeleted</a></li>
+            </ul>
+        </ul>
+    </p>
+
+    <hr/>
+
+    <!-- Abstract -->
+
+    <a name="abstract">
+
+    <h2>Description</h2>
+
+    <div class="section">
+
+        <p>
+        The <strong>ReferenceIterator</strong> is an interface that allows for
+        walking a window of a reference sequence with zero or more associated
+        alignment tables. This is a two-dimensional iterator, where the
+        primary axis <em>(usually thought of as horizontal)</em> is along the
+        reference sequence, while the secondary axis <em>(similarly considered
+        vertical)</em> represents a stack of individual alignments under the
+        reference at the point in question.
+        </p>
+
+        <p>
+        The purpose of this iterator is as a high-level means of extracting
+        the vertical alignment information base-by-base. The user moves the
+        horizontal position along a window on the reference and can determine
+        the extent of alignments underneath that position, and detect for each
+        the type of alignment event that occurs.
+        </p>
+
+        <p>
+        Since the iteration occurs within the coordinate space of the
+        reference sequence but the events remain in the aligned sequence's
+        coordinate space, the events are restated slightly - semantically
+        mapped to reference space. Matches and mismatches remain as before,
+        but deletions <em>(in the aligned sequence)</em> are expressed
+        as <strong>skips</strong> in reference space, followed by an
+        out-of-band deletion event that describes the deleted
+        interval. Insertions are similarly described as out-of-band events
+        since by definition they occupy no length of the reference sequence.
+        </div>
+
+    </a>
+
+    <!-- Requirements -->
+
+    <a name="requirements">
+
+    <h2>Requirements</h2>
+
+    <ol class="requirements">
+        <li>Must operate within the garbage collection paradigm of the code base</li>
+        <li>TBD</li>
+    </ol>
+
+    </a>
+
+    <!-- Content -->
+
+    <a name="interface">
+        <h2>ReferenceIterator</h2>
+    </a>
+
+
+    <!-- AlignMgrMakeReferenceIterator() ------------------------------------------------->
+    <a name="make">
+    <div class="box">
+
+    <h3 class="box">Make</h3>
+
+    <p class="box">
+        ask the alignment manager to create an iterator from individual components
+    </p>
+
+<pre class="code">
+ALIGN_EXTERN rc_t CC AlignMgrMakeReferenceIterator ( struct AlignMgr const *self,
+    ReferenceIterator **iter, const PlacementRecordExtendFuncs *ext_1, int32_t min_mapq );
+</pre>
+
+    <p>
+        <span class="hdr">iter - OUT</span><br/>
+        <span class="entry">return parameter for the iterator</span>
+    </p>
+
+    <p>
+        <span class="hdr">ext_1</span><br/>
+        <span class="entry">structure containing callback-functions</span><br/>
+        <span class="entry">used to create/destroy the placement-record</span>
+    </p>
+
+    <p>
+        <span class="hdr">min_mapq</span><br/>
+        <span class="entry">mimimal mapping quality an alignment has to have</span>
+        <span class="entry">in order to be not filtered out</span>
+    </p>
+
+    <p class="box-discussion">
+    wonderfulness.
+    </p>
+
+    </div>
+    </a>
+
+
+    <!-- ReferenceIteratorAddRef() ------------------------------------------------->
+    <a name="addref">
+    <div class="box">
+
+    <h3 class="box">AddRef</h3>
+
+    <p class="box">
+        duplicate an existing reference
+    </p>
+
+<pre class="code">
+rc_t ReferenceIteratorAddRef ( const ReferenceIterator *self );
+</pre>
+
+    <p class="box-discussion">
+    The object is defined as being reference counted. In VDB-2, references
+    are direct pointers to objects and the objects maintain a reference
+    counter.
+    </p>
+
+    </div>
+    </a>
+
+
+    <!-- ReferenceIteratorRelease() ------------------------------------------------->
+    <a name="release">
+    <div class="box">
+
+    <h3 class="box">Release</h3>
+
+    <p class="box">
+    release an existing reference<br/>
+    potentially whacks object
+    </p>
+
+<pre class="code">
+rc_t ReferenceIteratorRelease ( const ReferenceIterator *self );
+</pre>
+
+    <p class="box-discussion">
+        The object is defined as being reference counted. In VDB-2, references
+        are direct pointers to objects and the objects maintain a reference
+        counter.
+    </p>
+
+    <p class="box-discussion">
+        NULL pointers are ignored.
+    </p>
+
+    </div>
+    </a>
+
+
+    <!-- ReferenceIteratorRelease() ------------------------------------------------->
+    <a name="add-placements">
+    <div class="box">
+
+    <h3 class="box">AddPlacements</h3>
+
+    <p class="box">
+        adds a source of placements to the set being examined
+    </p>
+
+<pre class="code">
+ALIGN_EXTERN rc_t CC ReferenceIteratorAddPlacements ( ReferenceIterator *self,
+    struct ReferenceObj const *ref_obj, INSDC_coord_zero ref_pos, INSDC_coord_len ref_len,
+    struct VCursor const *ref, struct VCursor const *align, align_id_src ids,
+    const char * spot_group );
+</pre>
+
+    <p>
+        <span class="hdr">ref_obj</span><br/>
+        <span class="entry">reference the placements align against</span><br/>
+    </p>
+
+    <p>
+        <span class="hdr">ref_pos</span><br/>
+        <span class="entry">start of the requested window on the reference</span><br/>
+    </p>
+
+    <p>
+        <span class="hdr">ref_len</span><br/>
+        <span class="entry">length of the requested window on the reference</span><br/>
+    </p>
+
+    <p>
+        <span class="hdr">ref</span><br/>
+        <span class="entry">cursor to read the REFERENCE-table</span><br/>
+    </p>
+
+    <p>
+        <span class="hdr">align</span><br/>
+        <span class="entry">cursor to read one of the *_ALIGNMENT-tables</span><br/>
+    </p>
+
+    <p>
+        <span class="hdr">ids</span><br/>
+        <span class="entry">selector to define which *_IDS column to read</span><br/>
+        <span class="entry">from the REFERENCE-table</span><br/>
+        <ul class="toc-inner">
+            <li>primary_align_ids</li>
+            <li>secondary_align_ids</li>
+            <li>evidence_align_ids</li>
+        </ul>
+
+    </p>
+
+    <p>
+        <span class="hdr">spot-group</span><br/>
+        <span class="entry">string which defines what spot-group the placements</span><br/>
+        <span class="entry">belong to (if any)</span><br/>
+        <ul class="toc-inner">
+            <li>NULL ... do not organize by spotgroup at all</li>
+            <li>empty string ... organize by source (original) spotgroup</li>
+            <li>string ... organize by this string as spotgroup</li>
+        </ul>
+    </p>
+
+    </div>
+    </a>
+
+
+    <!-- ReferenceIteratorNextReference() ------------------------------------------------->
+    <a name="next-reference">
+    <div class="box">
+
+    <h3 class="box">NextReference</h3>
+
+    <p class="box">
+    advance to the next reference
+    </p>
+
+<pre class="code">
+rc_t ReferenceIteratorNextReference ( ReferenceIterator *self,
+    INSDC_coord_zero *first_pos, INSDC_coord_len *len, struct ReferenceObj const ** refobj );
+</pre>
+
+    <p>
+        <span class="hdr">first_pos - OUT</span><br/>
+        <span class="entry">start position of the first alignment on the next reference</span>
+    </p>
+
+    <p>
+        <span class="hdr">len - OUT</span><br/>
+        <span class="entry">outer length of the alignments on the next reference</span>
+    </p>
+
+    <p>
+        <span class="hdr">refobj - OUT</span><br/>
+        <span class="entry">next reference</span>
+    </p>
+
+    <p class="box-discussion">
+    This function has to be called (at least once) to advance to the
+    next reference.
+    </p>
+
+    </div>
+    </a>
+
+
+    <!-- ReferenceIteratorNextWindow() ------------------------------------------------->
+    <a name="next-window">
+    <div class="box">
+
+    <h3 class="box">NextWindow</h3>
+
+    <p class="box">
+    advance to the next window
+    </p>
+
+<pre class="code">
+rc_t ReferenceIteratorNextWindow ( ReferenceIterator *self,
+    INSDC_coord_zero *first_pos, INSDC_coord_len *len );
+</pre>
+
+    <p>
+        <span class="hdr">first_pos - OUT</span><br/>
+        <span class="entry">start position of the window</span>
+    </p>
+
+    <p>
+        <span class="hdr">len - OUT</span><br/>
+        <span class="entry">length of the window</span>
+    </p>
+
+    <p class="box-discussion">
+    This function has to be called (at least once) to advance to the
+    next window on the reference reference.
+    </p>
+
+    </div>
+    </a>
+
+
+    <!-- ReferenceIteratorNextSpotGroup() ------------------------------------------------->
+    <a name="next-spotgroup">
+    <div class="box">
+
+    <h3 class="box">NextSpotGroup</h3>
+
+    </div>
+    </a>
+
+
+    <!-- ReferenceIteratorNextPos() ------------------------------------------------->
+    <a name="next-pos">
+    <div class="box">
+
+    <h3 class="box">NextPos</h3>
+
+    <p class="box">
+        advance the iterator to the next position within reference window<br/>
+        resets vertical iterator<br/>
+        used to advance iterator to the initial valid position
+    </p>
+
+<pre class="code">
+rc_t ReferenceIteratorNextPos ( ReferenceIterator *self, bool skip_empty );
+</pre>
+
+    <p class="box-discussion">
+        sdf
+    </p>
+
+    </div>
+    </a>
+
+
+    <!-- ReferenceIteratorPosition() ------------------------------------------------->
+    <a name="position">
+    <div class="box">
+
+    <h3 class="box">Position</h3>
+
+    <p class="box">
+        obtain the current position of the iterator within the reference window
+    </p>
+
+<pre class="code">
+rc_t ReferenceIteratorPosition ( const ReferenceIterator *self,
+    INSDC_coord_zero *pos, uint32_t * depth, INSDC_4na_bin * base );
+</pre>
+
+    <p class="box-discussion">
+        sdf
+    </p>
+
+    </div>
+    </a>
+
+
+    <!-- ReferenceIteratorNextPlacement() ------------------------------------------------->
+    <a name="next-placement">
+    <div class="box">
+
+    <h3 class="box">NextPlacement</h3>
+
+    <p class="box">
+        retrieve next stacked <strong>PlacementRecord</strong> under current
+        position
+    </p>
+
+<pre class="code">
+rc_t ReferenceIteratorNextPlacement ( ReferenceIterator *self, const PlacementRecord **rec );
+</pre>
+
+    <p>
+        <span class="hdr">rec - OUT</span><br/>
+        <span class="entry">return parameter for the next stacked placement</span><br/>
+    </p>
+
+    <p class="box-discussion">
+        sdf
+    </p>
+
+    </div>
+    </a>
+
+
+    <!-- ReferenceIteratorState() ------------------------------------------------->
+    <a name="state">
+    <div class="box">
+
+    <h3 class="box">State</h3>
+
+    <p class="box">
+        retrieve state from current record's <a href="AlignmentIterator.html#state">AlignmentIterator</a>.
+    </p>
+
+<pre class="code">
+int32_t ReferenceIteratorState ( const ReferenceIterator *self, INSDC_coord_zero *seq_pos );
+</pre>
+
+    <p class="box-discussion">
+        sdf
+    </p>
+
+    </div>
+    </a>
+
+
+    <!-- BasesInserted() ------------------------------------------------->
+    <a name="bases-inserted">
+    <div class="box">
+
+    <h3 class="box">BasesInserted</h3>
+
+    <p class="box">
+        retrieve inserted bases from current record's <a href="AlignmentIterator.html#bases-inserted">AlignmentIterator</a>.
+    </p>
+
+<pre class="code">
+uint32_t ReferenceIteratorBasesInserted ( const ReferenceIterator *self, const INSDC_4na_bin **bases );
+</pre>
+
+    <p class="box-discussion">
+        sdf
+    </p>
+
+    </div>
+    </a>
+
+
+    <!-- BasesDeleted() ------------------------------------------------->
+    <a name="bases-deleted">
+    <div class="box">
+
+    <h3 class="box">BasesDeleted</h3>
+
+    <p class="box">
+    retrieve position of deleted bases from current
+    record's <a href="AlignmentIterator.html#bases-deleted">AlignmentIterator</a>.<br/>
+    may return deleted bases from reference sequence.
+    </p>
+
+<pre class="code">
+uint32_t ReferenceIteratorBasesDeleted ( const ReferenceIterator *self,
+    uint64_t *pos, const INSDC_4na_bin **bases );
+</pre>
+
+    <p class="box-discussion">
+        sdf
+    </p>
+
+    </div>
+    </a>
+
+
+    <!-- Document Footer -->
+
+    <hr/>
+
+    <center>
+        <span class="footer">NCBI VDB-2 Documentation</span>
+    </center>
+
+    </body>
+</html>

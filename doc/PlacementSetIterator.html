@@ -1,0 +1,533 @@
+<html>
+
+  <head>
+
+    <title>NCBI VDB-2: PlacementSetIterator</title>
+    <link href="vdb-2.css" rel="stylesheet" type="text/css"/>
+
+  </head>
+
+  <body>
+
+    <!-- Document Header -->
+
+    <h1>VDB-2 - PlacementSetIterator</h1>
+
+    <p class="toc">
+    <span class="hdr">Type:</span><br/>
+      <span class="entry">interface</span>
+    </p>
+
+    <p class="toc">
+      <span class="hdr">Header:</span><br/>
+      <span class="entry"><a href="../interfaces/align/iterator.h">align/iterator.h</a></span>
+    </p>
+
+    <p class="toc">
+    <span class="hdr">Revision History:</span><br/>
+      <table class="entry">
+        <tr><td>2012-Feb-06</td><td>&bull;</td><td>rodarmer</td></tr>
+        <tr><td>2012-Feb-07</td><td>&bull;</td><td>rodarmer</td></tr>
+        <tr><td>2012-May-04</td><td>&bull;</td><td>documented negative placement starting coords</td></tr>
+      </table>
+    </p>
+
+    <p class="toc">
+    <span class="hdr">Contents:</span><br/>
+    <ul class="toc-outer">
+        <li><a href="#abstract">Description</a></li>
+        <li><a href="#requirements">Requirements</a></li>
+        <li><a href="PlacementIterator.html#record">PlacementRecord</a></li>
+        <li><a href="#interface">PlacementSetIterator</a></li>
+        <ul class="toc-inner">
+            <li><a href="#make">Make</a></li>
+            <li><a href="#addref">AddRef</a></li>
+            <li><a href="#release">Release</a></li>
+            <li><a href="#add-placement-iterator">AddPlacementIterator</a></li>
+            <li><a href="#next-reference">NextReference</a></li>
+            <li><a href="#next-window">NextWindow</a></li>
+            <li><a href="#next-avail-pos">NextAvailPos</a></li>
+            <li><a href="#next-record-at">NextRecordAt</a></li>
+            <li><a href="#next-id-at">NextIdAt</a></li>
+        </ul>
+        <li><a href="#example">Example</a></li>
+    </ul>
+    </p>
+
+    <hr/>
+
+    <!-- Abstract -->
+
+    <a name="abstract">
+
+    <h2>Description</h2>
+
+    <div class="section">
+
+    <p>
+    The <strong>PlacementSetIterator</strong> is an interface that allows
+    for walking a window of placements along the reference of a single
+    run. On each iteration, one or more placements become available at a
+    position until the placements are exhausted within the window.
+    </p>
+
+    <p>
+    It differs from a
+    <a href="PlacementIterator.html#interface">PlacementIterator</a> in
+    that it contains a set of the latter and performs sorted access to
+    them. Otherwise, it presents an identical interface.
+    </p>
+
+    <p>
+    At this point we are considering keeping the interfaces separate to
+    avoid making them polymorphic, but they should not be allowed to
+    diverge in order to protect the possibility of making them polymorphic
+    in the future.
+    </p>
+
+    </div>
+
+    </a>
+
+    <!-- Requirements -->
+
+    <a name="requirements">
+
+    <h2>Requirements</h2>
+
+    <ol class="requirements">
+        <li>Must adhere to all requirements of <a href="PlacementIterator.html#requirements">PlacementIterator</a></li>
+        <li>Must remain compatible in case interfaces are made polymorphic</li>
+    </ol>
+
+    </a>
+
+    <!-- Content -->
+
+    <a name="interface">
+      <h2>PlacementSetIterator</h2>
+    </a>
+
+    <!-- AlignMgrMakePlacementSetIterator() ----------------------------------------------->
+    <a name="make">
+    <div class="box">
+    <h3 class="box">Make</h3>
+
+    <p class="box">
+    ask the alignment manager to create an iterator from individual components
+    </p>
+
+<pre class="code">
+rc_t AlignMgrMakePlacementSetIterator ( const AlignMgr *self,
+    PlacementSetIterator **iter, uint64_t ref_pos, uint32_t ref_len );
+</pre>
+
+        <p>
+          <span class="hdr">iter - OUT</span><br/>
+          <span class="entry">return parameter for the iterator</span>
+        </p>
+
+        <p>
+          <span class="hdr">ref_pos</span><br/>
+          <span class="entry">starting position of alignment in reference coordinates</span>
+        </p>
+
+        <p>
+          <span class="hdr">ref_len</span><br/>
+          <span class="entry">length of projection onto reference in reference space</span>
+        </p>
+
+        <p class="box-discussion">
+        sdf
+        </p>
+
+    </div>
+    </a>
+
+
+    <!-- PlacementSetIteratorAddRef() -------------------------------------------------->
+    <a name="addref">
+    <div class="box">
+    <h3 class="box">AddRef</h3>
+
+    <p class="box">
+    duplicate an existing reference
+    </p>
+
+<pre class="code">
+rc_t PlacementSetIteratorAddRef ( const PlacementSetIterator *self );
+</pre>
+
+    <p class="box-discussion">
+    The object is defined as being reference counted. In VDB-2, references
+    are direct pointers to objects and the objects maintain a reference
+    counter.
+    </p>
+
+    </div>
+    </a>
+
+
+    <!-- PlacementSetIteratorRelease() -------------------------------------------------->
+    <a name="release">
+    <div class="box">
+
+    <h3 class="box">Release</h3>
+
+    <p class="box">
+    release an existing reference<br/>
+    potentially whacks object
+    </p>
+
+<pre class="code">
+rc_t PlacementSetIteratorRelease ( const PlacementSetIterator *self );
+</pre>
+
+        <p class="box-discussion">
+        The object is defined as being reference counted. In VDB-2, references
+        are direct pointers to objects and the objects maintain a reference
+        counter.
+        </p>
+
+        <p class="box-discussion">
+        NULL pointers are ignored.
+        </p>
+
+    </div>
+    </a>
+
+
+    <!-- PlacementSetIteratorAddPlacementIterator() ------------------------------------->
+    <a name="add-placement-iterator">
+    <div class="box">
+
+    <h3 class="box">AddPlacementIterator</h3>
+
+    <p class="box">
+    add an actual iterator to the set
+    </p>
+
+<pre class="code">
+rc_t PlacementSetIteratorAddPlacementIterator ( PlacementSetIterator *self, PlacementIterator *pi );
+</pre>
+
+    <p>
+        <span class="hdr">pi</span><br/>
+        <span class="entry">an iterator over a single pair of reference and alignment tables</span>
+    </p>
+
+    <p class="box-discussion">
+    The job of the <strong>PlacementIterator</strong> is to walk
+    horizontally across all placements within a window of the
+    reference. The job of the <strong>PlacementSetIterator</strong> is to
+    walk vertically over all existing pairs.
+    </p>
+
+    <p class="box-discussion">
+    This is the means of adding sub-iterators to the set.
+    </p>
+
+    <p class="box-discussion">
+    The code is required to behave properly regardless of the number of
+    iterators in the set.
+    </p>
+
+    </div>
+    </a>
+
+    <!-- PlacementSetIteratorNextReference() ------------------------------------->
+    <a name="next-reference">
+    <div class="box">
+
+    <h3 class="box">NextReference</h3>
+
+    <p class="box">
+    advance to the next reference
+    </p>
+
+<pre class="code">
+rc_t PlacementSetIteratorNextReference ( PlacementSetIterator *self,
+    INSDC_coord_zero *first_pos, INSDC_coord_len *len, struct ReferenceObj const ** refobj );
+</pre>
+
+    <p>
+        <span class="hdr">first_pos - OUT</span><br/>
+            <span class="entry">start position of the first alignment on the next reference</span>
+    </p>
+
+    <p>
+        <span class="hdr">len - OUT</span><br/>
+            <span class="entry">outer length of the alignments on the next reference</span>
+    </p>
+
+    <p>
+        <span class="hdr">refobj - OUT</span><br/>
+            <span class="entry">next reference</span>
+    </p>
+
+    <p class="box-discussion">
+    This function has to be called (at least once) to advance to the
+    next reference.
+    </p>
+
+    </div>
+    </a>
+
+
+    <!-- PlacementSetIteratorNextWindow() ------------------------------------->
+    <a name="next-window">
+    <div class="box">
+
+    <h3 class="box">NextWindow</h3>
+
+    <p class="box">
+    advance to the next window
+    </p>
+
+<pre class="code">
+rc_t PlacementSetIteratorNextWindow ( PlacementSetIterator *self,
+    INSDC_coord_zero *first_pos, INSDC_coord_len *len );
+</pre>
+
+    <p>
+        <span class="hdr">first_pos - OUT</span><br/>
+            <span class="entry">start position of the window</span>
+    </p>
+
+    <p>
+        <span class="hdr">len - OUT</span><br/>
+            <span class="entry">length of the window</span>
+    </p>
+
+    <p class="box-discussion">
+    This function has to be called (at least once) to advance to the
+    next window on the reference reference.
+    </p>
+
+    </div>
+    </a>
+
+
+    <!-- PlacementSetIteratorNextAvailPos() ------------------------------------------------>
+    <a name="next-avail-pos">
+    <div class="box">
+
+    <h3 class="box">NextAvailPos</h3>
+
+    <p class="box">
+    check the next available position on reference having
+    one or more placements<br/>
+    returns position and optionally length
+    </p>
+
+<pre class="code">
+rc_t PlacementSetIteratorNextAvailPos ( const PlacementSetIterator *self,
+    uint64_t *pos, uint64_t *len );
+</pre>
+
+    <p>
+      <span class="hdr">pos - OUT</span><br/>
+      <span class="entry">the reference position where the next available placement starts</span>
+      <span class="entry">NB - can be negative if the alignment wraps around</span>
+    </p>
+
+    <p>
+      <span class="hdr">len - OUT, NULL OKAY</span><br/>
+      <span class="entry">optional parameter returning the length of the next available placement</span>
+    </p>
+
+    <p class="box-discussion">
+    This message returns information about the next available placement,
+    or if none are available, causes the iterator to search for more in
+    its open cursors.
+    </p>
+
+    <p class="box-discussion">
+    If no further placements are found, a non-zero return code will be
+    issued (exact code TBD). An empty set will return this code
+    immediately.
+    </p>
+
+    <p class="box-discussion">
+    The exact position returned is used to read placement records using
+    either <a href="#next-record-at">NextRecordAt</a> or
+    <a href="#next-id-at">NextIdAt</a>.
+    </p>
+
+    <p class="box-discussion">
+    The optional returned length is useful for performing a merge-sort on
+    the available placements from several iterators. This message may be
+    safely invoked any number of times, where the only side-effect
+    possible is a single attempt at retrieving more data (on the initial
+    invocation).
+    </p>
+
+    </div>
+    </a>
+
+
+    <!-- PlacementSetIteratorNextRecordAt() ------------------------------------------------>
+    <a name="next-record-at">
+    <div class="box">
+
+    <h3 class="box">NextRecordAt</h3>
+
+    <p class="box">
+    retrieve and consume next available <strong>PlacementRecord</strong>
+    </p>
+
+<pre class="code">
+rc_t PlacementSetIteratorNextRecordAt ( PlacementSetIterator *self,
+    uint64_t pos, const PlacementRecord **rec );
+</pre>
+
+    <p>
+        <span class="hdr">pos</span><br/>
+        <span class="entry">the exact position returned by
+            <a href="next-avail-pos">NextAvailPos</a></span><br/>
+        <span class="entry">identifies location being queried</span>
+    </p>
+
+    <p>
+        <span class="hdr">rec - OUT</span><br/>
+        <span class="entry">return parameter for the next available placement
+            at <strong>pos</strong></span>
+    </p>
+
+    <p class="box-discussion">
+    This message allows a single record to be obtained on each invocation,
+    where the intent is that the caller will loop until no further records
+    are found at the stated position.
+    </p>
+
+    <p class="box-discussion">
+    By looping, the code is not forced to create lists of placements that
+    align at the exact same starting point, which further allows using
+    multiple iterators in a sort-merge configuration.
+    </p>
+
+    <p class="box-discussion">
+    As mentioned before, the record is designed to be held in a
+    doubly-linked list and freed independently. The caller obtains locally
+    sorted records from this iterator and places them into the list.
+    </p>
+
+    </div>
+    </a>
+
+
+    <!-- PlacementSetIteratorNextIdAt() --------------------------------------------------->
+    <a name="next-id-at">
+    <div class="box">
+
+    <h3 class="box">NextIdAt</h3>
+
+    <p class="box">
+    retrieve information from the next available <strong>PlacementRecord</strong><br/>
+    douse the record upon return
+    </p>
+
+<pre class="code">
+rc_t PlacementSetIteratorNextIdAt ( PlacementSetIterator *self,
+    uint64_t pos, int64_t *row_id, uint64_t *len );
+</pre>
+
+    <p>
+        <span class="hdr">pos</span><br/>
+        <span class="entry">the exact position returned by
+            <a href="next-avail-pos">NextAvailPos</a></span><br/>
+        <span class="entry">identifies location being queried</span>
+    </p>
+
+    <p>
+        <span class="hdr">row_id - OUT</span><br/>
+        <span class="entry">return parameter for the next placement's id</span>
+    </p>
+
+    <p>
+        <span class="hdr">len - OUT, NULL OKAY</span><br/>
+        <span class="entry">optional return parameter for the next placement's length</span>
+    </p>
+
+    <p class="box-discussion">
+    This message simply extracts information held within internal records.
+    See <a href="#next-record-at">NextRecordAt</a>.
+    </p>
+
+    </div>
+    </a>
+
+    <!-- code example -->
+    <a name="example">
+
+    <h3 class="box">example:</h3>
+
+<pre class="code">
+PlacementSetIterator *pl_set_iter;
+rc_t rc = AlignMgrMakePlacementSetIterator( alignment_manager, &pl_set_iter );
+if ( rc == 0 )
+{
+    uint32_t i;
+    for ( i = 0; i < n && rc == 0; ++i )
+    {
+        PlacementIterator *pl_iter;
+        rc = make_pl_iter( &pl_iter );  /* user supplied helper function to make a placement-iterator */
+        if ( rc == 0 )
+            rc = PlacementSetIteratorAddPlacementIterator( pl_set_iter, pl_iter );
+    }
+    while ( rc == 0 )
+    {
+        struct ReferenceObj const *refobj;
+        INSDC_coord_zero first_pos;
+        INSDC_coord_len len;
+        rc = PlacementSetIteratorNextReference( pl_set_iter, &first_pos, &len, &refobj );
+        if ( rc == 0 )
+        {
+            while ( rc == 0 )
+            {
+                INSDC_coord_zero w_pos;
+                INSDC_coord_len w_len;
+                rc = PlacementSetIteratorNextWindow ( pl_set_iter, &w_pos, &w_len );
+                if ( rc == 0 )
+                {
+                    while ( rc == 0 )
+                    {
+                        INSDC_coord_len len;
+                        INSDC_coord_zero pos;
+                        rc = PlacementSetIteratorNextAvailPos ( pl_set_iter, &pos, &len );
+                        if ( rc == 0 )
+                        {
+                            while ( rc == 0 )
+                            {
+                                const PlacementRecord *rec;
+                                rc = PlacementSetIteratorNextRecordAt ( pl_set_iter, pos, &rec );
+                                if ( rc == 0 )
+                                {
+                                    /* handle the placement-record... */
+                                }
+                            }
+                            if ( GetRCState( rc ) == rcDone ) rc = 0;
+                        }
+                    }
+                    if ( GetRCState( rc ) == rcDone ) rc = 0;
+                }
+            }
+            if ( GetRCState( rc ) == rcDone ) rc = 0;
+        }
+    }
+    PlacementSetIteratorRelease( pl_set_iter );
+}
+</pre>
+
+    </a>
+
+    <!-- Document Footer -->
+
+    <hr/>
+    <center>
+        <span class="footer">NCBI VDB-2 Documentation</span>
+    </center>
+
+    </body>
+
+</html>
