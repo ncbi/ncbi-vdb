@@ -1,3 +1,8 @@
 /centos
 /mac
 /win
+/lib64 
+/ilib64 
+/test-bin64 
+/bin64 
+/schema
