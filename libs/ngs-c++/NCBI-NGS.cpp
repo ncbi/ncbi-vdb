@@ -29,6 +29,7 @@
 #include <ngs/itf/ErrBlock.hpp>
 
 #include <ngs/itf/ReadCollectionItf.h>
+
 #include "NCBI-NGS.h"
 
 namespace ncbi
@@ -39,7 +40,7 @@ namespace ncbi
      *  "spec" may be a path to an object
      *  or may be an id, accession, or URL
      */
-    ReadCollection NGS :: openReadCollection ( const String & spec )
+    ReadCollection NGS :: openReadCollection ( const String & spec ) 
         throw ( ErrorMsg )
     {
         // call directly into ncbi-vdb library

@@ -38,8 +38,7 @@
  *  link against ncbi-vdb library
  */
 
-/* TBD - this must be LIB_EXPORT for Windows */
-struct NGS_ReadCollection_v1 * NCBI_NGS_OpenReadCollection ( const char * spec, struct NGS_ErrBlock_v1 * err )
+LIB_EXPORT struct NGS_ReadCollection_v1 * NCBI_NGS_OpenReadCollection ( const char * spec, struct NGS_ErrBlock_v1 * err )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcDatabase, rcOpening );
 

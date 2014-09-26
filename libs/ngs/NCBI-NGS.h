@@ -27,6 +27,10 @@
 #ifndef _h_ngs_NCBI_NGS_
 #define _h_ngs_NCBI_NGS_
 
+#ifndef _h_klib_extern_
+#include <klib/extern.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -41,7 +45,7 @@ struct NGS_ReadCollection_v1;
  * NCBI NGS engine
  *  link against ncbi-vdb library
  */
-struct NGS_ReadCollection_v1 * NCBI_NGS_OpenReadCollection ( const char * spec, struct NGS_ErrBlock_v1 * err );
+LIB_EXPORT struct NGS_ReadCollection_v1 * NCBI_NGS_OpenReadCollection ( const char * spec, struct NGS_ErrBlock_v1 * err );
 
 
 

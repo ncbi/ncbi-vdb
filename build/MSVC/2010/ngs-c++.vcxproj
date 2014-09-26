@@ -18,17 +18,14 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  
   <Import Project=".\lib-project.props" />
-  
-  <ItemDefinitionGroup >
+  <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(VDB_ROOT)libs/ngs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <UndefinePreprocessorDefinitions>_LIBRARY</UndefinePreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
-
   <ItemGroup>
     <ClCompile Include="..\..\..\libs\ngs-c++\NCBI-NGS.cpp" />
   </ItemGroup>
-  
 </Project>
