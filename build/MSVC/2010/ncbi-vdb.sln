@@ -27,6 +27,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ncbi-wvdb-dll", "ncbi-wvdb-
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tui_cpp", "tui_cpp.vcxproj", "{73B073FA-CFBB-61B9-E30D-BD74E46E836C}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ngc-c++", "ngc-c++.vcxproj", "{C2F1CCD2-A594-0709-BB96-1BD2E7A1FB05}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -131,6 +133,14 @@ Global
 		{73B073FA-CFBB-61B9-E30D-BD74E46E836C}.Release|Win32.Build.0 = Release|Win32
 		{73B073FA-CFBB-61B9-E30D-BD74E46E836C}.Release|x64.ActiveCfg = Release|x64
 		{73B073FA-CFBB-61B9-E30D-BD74E46E836C}.Release|x64.Build.0 = Release|x64
+		{C2F1CCD2-A594-0709-BB96-1BD2E7A1FB05}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C2F1CCD2-A594-0709-BB96-1BD2E7A1FB05}.Debug|Win32.Build.0 = Debug|Win32
+		{C2F1CCD2-A594-0709-BB96-1BD2E7A1FB05}.Debug|x64.ActiveCfg = Debug|x64
+		{C2F1CCD2-A594-0709-BB96-1BD2E7A1FB05}.Debug|x64.Build.0 = Debug|x64
+		{C2F1CCD2-A594-0709-BB96-1BD2E7A1FB05}.Release|Win32.ActiveCfg = Release|Win32
+		{C2F1CCD2-A594-0709-BB96-1BD2E7A1FB05}.Release|Win32.Build.0 = Release|Win32
+		{C2F1CCD2-A594-0709-BB96-1BD2E7A1FB05}.Release|x64.ActiveCfg = Release|x64
+		{C2F1CCD2-A594-0709-BB96-1BD2E7A1FB05}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

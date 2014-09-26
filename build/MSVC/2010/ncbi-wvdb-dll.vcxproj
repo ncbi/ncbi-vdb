@@ -27,7 +27,7 @@
   
   <ItemDefinitionGroup>
     <Link>
-      <AdditionalDependencies>$(NGS_TARGET)bin\libngs-sdk.lib;$(VDB_TARGET)lib\zlib.lib;$(VDB_TARGET)lib\bz2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(VDB_TARGET)lib\zlib.lib;$(VDB_TARGET)lib\bz2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
 
