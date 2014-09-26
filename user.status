@@ -1,0 +1,4 @@
+BUILD=rel
+bindir=/usr/local/ncbi-vdb/bin
+libdir=/usr/local/ncbi-vdb/lib
+includedir=/usr/local/ncbi-vdb/include
