@@ -103,18 +103,26 @@ die "configure: error: $filename should be run as ./$filename"
 
 $OPT{'prefix'} = $package_default_prefix unless ($OPT{'prefix'});
 
+my $AUTORUN = $OPT{'output-makefile'} || $OPT{status};
+
+print "checking system type... " unless ($AUTORUN);
+my ($OS, $ARCH, $OSTYPE, $MARCH, @ARCHITECTURES) = OsArch();
+println $OSTYPE unless ($AUTORUN);
+
 {
     my $prefix = $OPT{'prefix'};
     $OPT{eprefix} = $prefix unless ($OPT{eprefix});
     my $eprefix = $OPT{eprefix};
-    $OPT{bindir} = File::Spec->catdir($eprefix, 'bin') unless ($OPT{bindir});
-    $OPT{libdir} = File::Spec->catdir($eprefix, 'lib') unless ($OPT{libdir});
-    unless ($OPT{includedir}) {
+    unless ($OPT{bindir} || $OS eq 'win') {
+        $OPT{bindir} = File::Spec->catdir($eprefix, 'bin') ;
+    }
+    unless ($OPT{libdir} || $OS eq 'win') {
+        $OPT{libdir} = File::Spec->catdir($eprefix, 'lib');
+    }
+    unless ($OPT{includedir} || $OS eq 'win') {
         $OPT{includedir} = File::Spec->catdir($eprefix, 'include');
     }
 }
-
-my $AUTORUN = $OPT{'output-makefile'} || $OPT{status};
 
 if ($AUTORUN) {
     while (1) {
@@ -145,11 +153,7 @@ $BUILD = "rel" if ($OPT{'without-debug'});
 my $BUILD_TYPE = "release";
 $BUILD_TYPE = "debug" if ( $BUILD eq "dbg" );
 
-println unless ($AUTORUN);
-
-print "checking system type... " unless ($AUTORUN);
-
-my ($OS, $ARCH, $OSTYPE, $MARCH, @ARCHITECTURES) = OsArch();
+#println unless ($AUTORUN);
 
 if ($OPT{arch}) {
     my $found;
@@ -169,7 +173,6 @@ if ($OPT{arch}) {
 $OUT_MAKEFILE .= ".$OS.$ARCH";
 
 #my $OSTYPE = `uname -s`; chomp $OSTYPE;
-println $OSTYPE unless ($AUTORUN);
 
 print "checking machine architecture... " unless ($AUTORUN);
 #my $MARCH = `uname -m`; chomp $MARCH;
@@ -298,8 +301,7 @@ my $NGS_SDK_PREFIX;
 foreach my $href (@REQ) {
     my $found;
     my %a = %$href;
-    my ($name, $option, $path) = ( $a{name}, $a{option}, $a{path} );
-    my $saved = $path;
+    my ($name, $option) = ( $a{name}, $a{option} );
     my $msg = "checking for $name package... ";
     unless ($AUTORUN) {
         print($msg);
@@ -311,14 +313,14 @@ foreach my $href (@REQ) {
             println 'no' unless ($AUTORUN);
             println "configure: error: required $a{name} package not found.";
         } else {
-            println $p unless ($AUTORUN);
+            println 'yes' unless ($AUTORUN);
             $found = 1;
         }
     } else {
-        print "$path " unless ($AUTORUN);
-        if (-e $path) {
-            $p = $path;
-            println $p unless ($AUTORUN);
+        print "$a{srcpath} " unless ($AUTORUN);
+        if (-e $a{srcpath}) {
+            println 'yes' unless ($AUTORUN);
+            $p = $a{srcpath};
             $found = 1;
         } else {
             println 'no' unless ($AUTORUN);
@@ -630,8 +632,18 @@ if (! $AUTORUN || $OPT{'status'}) {
     println "outputdir: $TARGDIR";
     println "prefix: $OPT{'prefix'}";
     println "eprefix: $OPT{'eprefix'}";
-    println "libdir: $OPT{'libdir'}";
-    println "includedir: $OPT{'includedir'}";
+
+    print "includedir: ";
+    print $OPT{'includedir'} if ($OPT{'includedir'});
+    println;
+
+    print "bindir: ";
+    print $OPT{'bindir'} if ($OPT{'bindir'});
+    println;
+
+    println "libdir: ";
+    print $OPT{'libdir'} if ($OPT{'libdir'});
+    println;
     println "schemadir: $OPT{'shemadir'}" if ($OPT{'shemadir'});
     println;
 }
