@@ -9,3 +9,5 @@
 build/MSVC/2010/ncbi-vdb.opensdf
 build/MSVC/2010/ipch
 /Makefile.config.*
+*.opensdf
+
