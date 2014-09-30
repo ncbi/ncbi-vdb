@@ -1,6 +1,0 @@
-stbarrier.pic.o=490c6dd9e90175f43cdee3ccbeb0165f
-stcond.pic.o=14345b16043eb9a1d88713aec091a978
-stlock.pic.o=a621a34e2c73c0705ba6f4b0e053a844
-stsem.pic.o=d29640d036c12d3cdd925c00a01d6979
-stthread.pic.o=dfa762ef86a929e3d8c766b6f1ea9247
-sttimeout.pic.o=cd3929c43601a422ec263df1ec0c4c57
