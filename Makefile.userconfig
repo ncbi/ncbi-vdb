@@ -4,10 +4,10 @@
 BUILD = rel
 
 # required packages
-NGS_SDK_PREFIX = /home/boshkina/git/ngs/ngs-sdk
+NGS_SDK_PREFIX = /home/rodarmer/devel/ncbi/ngs/ngs-sdk
 
 # install paths
-INST_BINDIR = /usr/local/ncbi-vdb/bin
-INST_LIBDIR = /usr/local/ncbi-vdb/lib
-INST_INCLUDEDIR = /usr/local/ncbi-vdb/include
+INST_BINDIR = /usr/local/ncbi/ncbi-vdb/bin
+INST_LIBDIR = /usr/local/ncbi/ncbi-vdb/lib
+INST_INCLUDEDIR = /usr/local/ncbi/ncbi-vdb/include
 
