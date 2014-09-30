@@ -1,9 +1,0 @@
-sra-schema.pic.o=d4c82b66f4cf185c5aeeff4bddfc5ac1
-sracol.pic.o=78c75a0d4ab7ade79bf51bfe0a82bffe
-sramgr-cmn.pic.o=eb2c2c3a44cf78ff82a23144a4edf41b
-sramgr.pic.o=50f4f0fdb5627a185ab4ded738ac3fe0
-sraschema-stub.pic.o=bcd6d1c73380311e2a83c95b361e469f
-sraschema.pic.o=955c13193c920b321c6423f5b164a295
-sratbl-cmn.pic.o=cf3fb15ae4115299b8e4d7e51e034e8e
-sratbl.pic.o=18323e964d000295bb5deed6632cba0b
-types.pic.o=614d619788e4c35c50f3149d9852eaa0

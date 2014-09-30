@@ -1,6 +1,0 @@
-: usage: crc32sum [<option>] file [file...]
-
-    options:
-      -c          check CRC32 against given list
-      -b          open file in binary mode
-
