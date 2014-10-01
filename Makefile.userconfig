@@ -1,7 +1,7 @@
 ### AUTO-GENERATED FILE ###
 
 # build type
-BUILD = rel
+BUILD = dbg
 
 # required packages
 NGS_SDK_PREFIX = /home/rodarmer/devel/ncbi/ngs/ngs-sdk
