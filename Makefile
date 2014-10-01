@@ -62,7 +62,7 @@ $(SUBDIRS_STD):
 # install
 #
 install: std
-	@ $(MAKE) -C build -f Makefile.scm install
+	@ echo "installing to $(INST_LIBDIR)/$(BITS) " 
 
 .PHONY: install
 
