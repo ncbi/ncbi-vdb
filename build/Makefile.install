@@ -1,0 +1,105 @@
+# ===========================================================================
+#
+#                            PUBLIC DOMAIN NOTICE
+#               National Center for Biotechnology Information
+#
+#  This software/database is a "United States Government Work" under the
+#  terms of the United States Copyright Act.  It was written as part of
+#  the author's official duties as a United States Government employee and
+#  thus cannot be copyrighted.  This software/database is freely available
+#  to the public for use. The National Library of Medicine and the U.S.
+#  Government have not placed any restriction on its use or reproduction.
+#
+#  Although all reasonable efforts have been taken to ensure the accuracy
+#  and reliability of the software and data, the NLM and the U.S.
+#  Government do not and cannot warrant the performance or results that
+#  may be obtained by using this software or data. The NLM and the U.S.
+#  Government disclaim all warranties, express or implied, including
+#  warranties of performance, merchantability or fitness for any particular
+#  purpose.
+#
+#  Please cite the author in any work or product based on this material.
+#
+# ===========================================================================
+
+# determine shell environment
+include $(TOP)/build/Makefile.shell
+
+# load build configuration
+include $(CONFIG_FILE)
+
+#remove after debugging
+ROOT = $(HOME)/root
+$(shell mkdir -p $(ROOT)/etc/profile.d)
+$(shell mkdir -p $(ROOT)/usr/include)
+
+
+#-------------------------------------------------------------------------------
+# install
+# 
+ifeq (linux, $(OS))
+
+LIBRARIES_TO_INSTALL = \
+    ncbi-vdb.$(SHLX) \
+    ncbi-vdb.$(VERSION_SHLX) \
+    ncbi-vdb.$(MAJVERS_SHLX) \
+    ncbi-wvdb.$(SHLX) \
+    ncbi-wvdb.$(VERSION_SHLX) \
+    ncbi-wvdb.$(MAJVERS_SHLX) \
+    ncbi-ngs-c++.$(LIBX) \
+    ncbi-ngs-c++.$(VERSION_LIBX) \
+    ncbi-ngs-c++.$(MAJVERS_LIBX) \
+
+LIB_TARGET = $(INST_LIBDIR)$(BITS)
+
+copylibs:
+	@echo "Installing libraries to $(LIB_TARGET)"
+	@mkdir -p $(LIB_TARGET) 
+	@cp -P $(addprefix  $(LIBDIR)/$(LPFX), $(LIBRARIES_TO_INSTALL)) $(LIB_TARGET)
+
+copyincludes:
+	@echo "Installing includes to $(INST_INCDIR)"
+	@mkdir -p $(INST_INCDIR)
+	@cp $(TOP)/interfaces/ngs/ncbi/NGS.hpp $(INST_INCDIR)
+    
+install: copylibs copyincludes 
+ifeq (0, $(shell id -u))
+	@ # install symlink to includes 
+	@ echo "Updating $(ROOT)/usr/include/ncbi-vdb"
+	@ rm -rf $(ROOT)/usr/include/ncbi-vdb
+	@ ln -s $(INST_INCDIR) $(ROOT)/usr/include/ncbi-vdb
+	@ #
+	@ # install configuration file(s)
+	@ echo "Installing configuration files to $(ROOT)/etc/ncbi/ncbi-vdb.kfg"
+	@ mkdir -p $(ROOT)/etc/ncbi/
+	@ cp $(TOP)/libs/kfg/default.kfg $(ROOT)/etc/ncbi/ncbi-vdb.kfg
+	@ #
+	@ echo "Updating $(ROOT)/etc/profile.d/ncbi-vdb.[c]sh"
+	@ echo -e \
+"#version $(VERSION)\n"\
+"if ! echo \$$LD_LIBRARY_PATH | /bin/grep -q $(LIB_TARGET)\n"\
+"then export LD_LIBRARY_PATH=$(LIB_TARGET):\$$LD_LIBRARY_PATH\n"\
+"fi" \
+        >$(ROOT)/etc/profile.d/ncbi-vdb.sh;
+	@ echo -e \
+"#version 2.4.2\n"\
+"echo \$$LD_LIBRARY_PATH | /bin/grep -q $(LIB_TARGET)\n"\
+"if ( \$$status ) setenv LD_LIBRARY_PATH $(LIB_TARGET):\$$LD_LIBRARY_PATH\n"\
+        >$(ROOT)/etc/profile.d/ncbi-vdb.csh;
+	@ #TODO: check version of the files above
+else    
+	@ #
+	@ echo "Installing configuration files to $(ROOT)/etc/ncbi/ncbi-vdb.kfg"
+	@ mkdir -p $(LIB_TARGET)/ncbi
+	@ cp $(TOP)/libs/kfg/default.kfg $(LIB_TARGET)/ncbi/ncbi-vdb.kfg
+	@ #
+	@ echo "Please add $(LIB_TARGET) to your LD_LIBRARY_PATH, i.e.:"
+	@ echo "      export LD_LIBRARY_PATH=$(LIB_TARGET):\$$LD_LIBRARY_PATH"
+endif
+
+else
+install:
+
+endif
+
+.PHONY: install

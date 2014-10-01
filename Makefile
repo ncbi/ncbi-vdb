@@ -61,8 +61,9 @@ $(SUBDIRS_STD):
 #-------------------------------------------------------------------------------
 # install
 #
+
 install: std
-	@ echo "installing to $(INST_LIBDIR)/$(BITS) " 
+	$(MAKE) -s TOP=$(CURDIR) -f build/Makefile.install install
 
 .PHONY: install
 

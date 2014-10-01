@@ -11,5 +11,6 @@ build/MSVC/2010/ipch
 /Makefile.config.*
 user.status
 build/Makefile.config*
+build/Makefile.userconfig
 *.opensdf
 

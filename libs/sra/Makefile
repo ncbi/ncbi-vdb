@@ -91,7 +91,8 @@ SRA_DFLT_SCHEMA_LIBS = \
 	-skfg \
 	-skfs \
 	-sksproc \
-	-sklib
+	-sklib \
+    -sjudy
 
 SRA_DFLT_SCHEMA_OS_LIBS = \
 	-ldl \
