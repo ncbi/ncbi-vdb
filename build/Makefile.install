@@ -28,11 +28,10 @@ include $(TOP)/build/Makefile.shell
 # load build configuration
 include $(CONFIG_FILE)
 
-#remove after debugging
-ROOT = $(HOME)/root
-$(shell mkdir -p $(ROOT)/etc/profile.d)
-$(shell mkdir -p $(ROOT)/usr/include)
-
+# to debug as a fake root, uncomment the next 3 lines and change "ifeq (0, $(shell id -u))" below to "ifneq(0, ...)"
+#ROOT = $(HOME)/root
+#$(shell mkdir -p $(ROOT)/etc/profile.d)
+#$(shell mkdir -p $(ROOT)/usr/include)
 
 #-------------------------------------------------------------------------------
 # install
