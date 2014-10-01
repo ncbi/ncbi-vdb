@@ -50,7 +50,5 @@
 # Remote access to NCBI's protected repository
 /repository/remote/protected/CGI/resolver-cgi = "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi"
 
-/krypto/pwfile = "$(NCBI_HOME)/vdb-passwd"
-
 # Aspera configuration
 /tools/ascp/max_rate = "300m"
