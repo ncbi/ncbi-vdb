@@ -1,3 +1,4 @@
+################################################################################
 sub PACKAGE      { 'ncbi-vdb' }
 sub VERSION      { '2.4.2a' }
 sub PACKAGE_TYPE { 'L' }
@@ -16,6 +17,8 @@ sub REQ { ( { name    => 'ngs-sdk',
               pkgpath => '/usr/local/ngs/ngs-sdk',
               usrpath =>      '$HOME/ngs/ngs-sdk',
               bldpath => '$HOME/ncbi-outdir/ngs-sdk/$OS',
-              include => 'ngs/itf/Refcount.h'
+              include => 'ngs/itf/Refcount.h',
+              lib => 'libngs-sdk.so',
+              ilib => 'libngs-bind-c++.a',
         } ) }
 1

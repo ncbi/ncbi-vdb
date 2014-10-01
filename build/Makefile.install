@@ -69,7 +69,7 @@ ifeq (0, $(shell id -u))
 	@ ln -s $(INST_INCDIR) $(ROOT)/usr/include/ncbi-vdb
 	@ #
 	@ # install configuration file(s)
-	@ echo "Installing configuration files to $(ROOT)/etc/ncbi/ncbi-vdb.kfg"
+	@ echo "Installing configuration files to $(ROOT)/etc/ncbi/"
 	@ mkdir -p $(ROOT)/etc/ncbi/
 	@ cp $(TOP)/libs/kfg/default.kfg $(ROOT)/etc/ncbi/ncbi-vdb.kfg
 	@ #
@@ -81,14 +81,14 @@ ifeq (0, $(shell id -u))
 "fi" \
         >$(ROOT)/etc/profile.d/ncbi-vdb.sh;
 	@ echo -e \
-"#version 2.4.2\n"\
+"#version $(VERSION)\n"\
 "echo \$$LD_LIBRARY_PATH | /bin/grep -q $(LIB_TARGET)\n"\
 "if ( \$$status ) setenv LD_LIBRARY_PATH $(LIB_TARGET):\$$LD_LIBRARY_PATH\n"\
         >$(ROOT)/etc/profile.d/ncbi-vdb.csh;
 	@ #TODO: check version of the files above
 else    
 	@ #
-	@ echo "Installing configuration files to $(ROOT)/etc/ncbi/ncbi-vdb.kfg"
+	@ echo "Installing configuration files to $(LIB_TARGET)/ncbi/"
 	@ mkdir -p $(LIB_TARGET)/ncbi
 	@ cp $(TOP)/libs/kfg/default.kfg $(LIB_TARGET)/ncbi/ncbi-vdb.kfg
 	@ #
