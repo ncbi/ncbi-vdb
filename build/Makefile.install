@@ -28,63 +28,61 @@ include $(TOP)/build/Makefile.shell
 # load build configuration
 include $(CONFIG_FILE)
 
-# to debug as a fake root, uncomment the next 3 lines and change "ifeq (0, $(shell id -u))" below to "ifneq(0, ...)"
-#ROOT = $(HOME)/root
-#$(shell mkdir -p $(ROOT)/etc/profile.d)
-#$(shell mkdir -p $(ROOT)/usr/include)
-
 #-------------------------------------------------------------------------------
 # install
 # 
 ifeq (linux, $(OS))
 
 LIBRARIES_TO_INSTALL = \
-    ncbi-vdb.$(SHLX) \
     ncbi-vdb.$(VERSION_SHLX) \
-    ncbi-vdb.$(MAJVERS_SHLX) \
-    ncbi-wvdb.$(SHLX) \
     ncbi-wvdb.$(VERSION_SHLX) \
-    ncbi-wvdb.$(MAJVERS_SHLX) \
-    ncbi-ngs-c++.$(LIBX) \
     ncbi-ngs-c++.$(VERSION_LIBX) \
-    ncbi-ngs-c++.$(MAJVERS_LIBX) \
 
 LIB_TARGET = $(INST_LIBDIR)$(BITS)
 
-copylibs:
-	@echo "Installing libraries to $(LIB_TARGET)"
-	@mkdir -p $(LIB_TARGET) 
-	@cp -P $(addprefix  $(LIBDIR)/$(LPFX), $(LIBRARIES_TO_INSTALL)) $(LIB_TARGET)
+LIBRARIES_WITH_PREFIX = \
+	$(addprefix $(LIB_TARGET)/$(LPFX),$(LIBRARIES_TO_INSTALL))
+    
+copylibs: $(LIB_TARGET) $(LIBRARIES_WITH_PREFIX)
 
 copyincludes:
 	@echo "Installing includes to $(INST_INCDIR)"
 	@mkdir -p $(INST_INCDIR)
 	@cp $(TOP)/interfaces/ngs/ncbi/NGS.hpp $(INST_INCDIR)
     
+
+#fake root for debugging
+#uncomment this line and change the test for root ( see under install: ) to succeed:
+#ROOT = ~/root
+
+INCLUDE_SYMLINK = $(ROOT)/usr/include/ncbi-vdb
+PROFILE_FILE = $(ROOT)/etc/profile.d/ncbi-vdb
+KONFIG_DIR = $(ROOT)/etc/ncbi/
+
 install: copylibs copyincludes 
 ifeq (0, $(shell id -u))
 	@ # install symlink to includes 
-	@ echo "Updating $(ROOT)/usr/include/ncbi-vdb"
-	@ rm -rf $(ROOT)/usr/include/ncbi-vdb
-	@ ln -s $(INST_INCDIR) $(ROOT)/usr/include/ncbi-vdb
+	@ echo "Updating $(INCLUDE_SYMLINK)"
+	@ rm -rf $(INCLUDE_SYMLINK)
+	@ ln -s $(INST_INCDIR) $(INCLUDE_SYMLINK)
 	@ #
 	@ # install configuration file(s)
-	@ echo "Installing configuration files to $(ROOT)/etc/ncbi/"
-	@ mkdir -p $(ROOT)/etc/ncbi/
-	@ cp $(TOP)/libs/kfg/default.kfg $(ROOT)/etc/ncbi/ncbi-vdb.kfg
+	@ echo "Installing configuration files to $(KONFIG_DIR)"
+	@ mkdir -p $(KONFIG_DIR)
+	@ cp $(TOP)/libs/kfg/default.kfg $(KONFIG_DIR)/ncbi-vdb.kfg
 	@ #
-	@ echo "Updating $(ROOT)/etc/profile.d/ncbi-vdb.[c]sh"
+	@ echo "Updating $(PROFILE_FILE).[c]sh"
 	@ echo -e \
 "#version $(VERSION)\n"\
 "if ! echo \$$LD_LIBRARY_PATH | /bin/grep -q $(LIB_TARGET)\n"\
 "then export LD_LIBRARY_PATH=$(LIB_TARGET):\$$LD_LIBRARY_PATH\n"\
 "fi" \
-        >$(ROOT)/etc/profile.d/ncbi-vdb.sh;
+        >$(PROFILE_FILE).sh || true;
 	@ echo -e \
 "#version $(VERSION)\n"\
 "echo \$$LD_LIBRARY_PATH | /bin/grep -q $(LIB_TARGET)\n"\
 "if ( \$$status ) setenv LD_LIBRARY_PATH $(LIB_TARGET):\$$LD_LIBRARY_PATH\n"\
-        >$(ROOT)/etc/profile.d/ncbi-vdb.csh;
+        >$(PROFILE_FILE).csh || true;
 	@ #TODO: check version of the files above
 else    
 	@ #
