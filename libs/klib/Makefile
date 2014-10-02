@@ -40,8 +40,8 @@ include $(TOP)/build/Makefile.env
 # outer targets
 #
 all: makedirs
-	 $(MAKE) -C $(SRCDIR)/judy all
-	 $(MAKE_CMD) $(TARGDIR)/all
+	@ $(MAKE) -C $(SRCDIR)/judy all
+	@ $(MAKE_CMD) $(TARGDIR)/all
 
 std: makedirs
 	@ $(MAKE) -C $(SRCDIR)/judy std

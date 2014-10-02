@@ -37,6 +37,8 @@ ALL_LIBS = \
 
 include $(TOP)/build/Makefile.env
 
+INCDIRS += $(addprefix -I,$(XML2_INCDIR))
+
 #-------------------------------------------------------------------------------
 # outer targets
 #

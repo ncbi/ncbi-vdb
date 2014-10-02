@@ -28,6 +28,8 @@ MODULE = libs
 
 include $(TOP)/build/Makefile.shell
 
+include $(TOP)/build/Makefile.config
+
 #-------------------------------------------------------------------------------
 # default
 #
@@ -59,8 +61,6 @@ SUBDIRS = \
     ngs-c++ \
     ngs-jni \
 	ngs-py \
-	ncbi-vdb \
-	tui \
 
 ifeq (1,$(HAVE_XML2))
 	SUBDIRS += kxml
@@ -70,6 +70,10 @@ ifeq (1,$(HAVE_HDF5))
 	SUBDIRS += hdf5
 endif
 
+SUBDIRS += \
+	ncbi-vdb \
+	tui \
+    
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets
 

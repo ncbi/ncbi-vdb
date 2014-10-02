@@ -38,6 +38,8 @@ ALL_LIBS = \
 
 include $(TOP)/build/Makefile.env
 
+INCDIRS += $(addprefix -I,$(HDF5_INCDIR))
+
 #-------------------------------------------------------------------------------
 # outer targets
 #

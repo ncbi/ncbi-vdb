@@ -85,7 +85,11 @@ LIBKQ =
 LIBKXML =
 else
 LIBKQ = kq
-LIBKXML = kxml kxfs
+LIBKXML = kxfs
+endif
+
+ifeq (1,$(HAVE_XML2))
+LIBKXML = kxml
 endif
 
 ## ?? why is this ordering used?
