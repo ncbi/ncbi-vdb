@@ -39,33 +39,16 @@ ALL_LIBS = \
 include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
-# where to find include/libs
-#
-ifdef NCBI
-ifeq (dbg,$(BUILD))
-	DFLT_LIBHDF5_INCLUDES = $(NCBI)/hdf5/Debug/include
-	LIBHDF5_LPATH = $(NCBI)/hdf5/Debug/lib
-else
-	DFLT_LIBHDF5_INCLUDES = $(NCBI)/hdf5/Release/include
-	LIBHDF5_LPATH = $(NCBI)/hdf5/Release/lib
-endif
-endif
-
-DFLT_LIBHDF5_INCLUDES ?= /usr/include/hdf5
-LIBHDF5_INCLUDES ?= $(DFLT_LIBHDF5_INCLUDES)
-INCDIRS += $(addprefix -I,$(LIBHDF5_INCLUDES))
-
-#-------------------------------------------------------------------------------
 # outer targets
 #
 all std: makedirs
-	@ $(MAKE_CMD) LIBHDF5_INCLUDES=$(LIBHDF5_INCLUDES) $(TARGDIR)/std
+	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
-	@ $(MAKE_CMD) LIBHDF5_INCLUDES=$(LIBHDF5_INCLUDES) $(ILIBDIR)/$@
+	@ $(MAKE_CMD) $(ILIBDIR)/$@
 
 $(EXT_LIBS): makedirs
-	@ $(MAKE_CMD) LIBHDF5_INCLUDES=$(LIBHDF5_INCLUDES) $(LIBDIR)/$@
+	@ $(MAKE_CMD) $(LIBDIR)/$@
 
 .PHONY: all std $(ALL_LIBS)
 
@@ -98,15 +81,9 @@ KDF5_SRC = \
 KDF5_OBJ = \
 	$(addsuffix .$(LOBX),$(KDF5_SRC))
 
-ifdef LIBHDF5_LPATH
-KDF5_LIB = \
-	-X$(LIBHDF5_LPATH) \
-	-shdf5
-else
 KDF5_LIB = \
 	-lhdf5 \
 	-lsz
-endif
 
 KDF5_LIB += -lz
 

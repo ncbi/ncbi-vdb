@@ -38,15 +38,6 @@ ALL_LIBS = \
 include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
-# where to find includes
-#
-DFLT_LIBXML_INCLUDES ?= /usr/include/libxml2
-
-LIBXML_INCLUDES ?= $(DFLT_LIBXML_INCLUDES)
-
-INCDIRS += $(addprefix -I,$(LIBXML_INCLUDES))
-
-#-------------------------------------------------------------------------------
 # outer targets
 #
 ifeq (win,$(OS))
@@ -54,11 +45,11 @@ all std:
 	@ true
 else
 all std: makedirs
-	@ $(MAKE_CMD) LIBXML_INCLUDES=$(LIBXML_INCLUDES) $(TARGDIR)/std
+	@ $(MAKE_CMD) $(TARGDIR)/std
 endif
 
 $(INT_LIBS): makedirs
-	@ $(MAKE_CMD) LIBXML_INCLUDES=$(LIBXML_INCLUDES) $(ILIBDIR)/$@
+	@ $(MAKE_CMD) $(ILIBDIR)/$@
 
 .PHONY: all std $(ALL_LIBS)
 
@@ -89,14 +80,7 @@ XML_OBJ = \
 	$(addsuffix .$(LOBX),$(XML_SRC))
 
 XML_LIB = \
-	-dkfs \
-	-dklib 
-
-ifdef LIBXML_LPATH
-XML_LIB += \
-	-X$(LIBXML_LPATH) -lxml2
-endif
-
+    
 $(ILIBDIR)/libkxml.$(LIBX): $(XML_OBJ)
 	$(LD) --slib -o $@ $^ $(XML_LIB)
 
@@ -113,11 +97,6 @@ KXFS_OBJ = \
 	$(addsuffix .$(LOBX),$(KXFS_SRC))
 
 KXFS_LIB = \
-	-dkxml \
-	-dklib \
-	-ddl \
-	-dz \
-	-dbz2 \
 
 $(ILIBDIR)/libkxfs.$(LIBX): $(KXFS_OBJ)
 	$(LD) --slib -o $@ $^ $(KXFS_LIB)

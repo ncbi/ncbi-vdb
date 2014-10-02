@@ -38,7 +38,6 @@ SUBDIRS = \
 	kproc \
 	kfs \
 	kns \
-	kxml \
 	kfg \
 	krypto \
 	vfs \
@@ -63,7 +62,11 @@ SUBDIRS = \
 	ncbi-vdb \
 	tui \
 
-ifeq (linux,$(BUILD_OS))
+ifeq (1,$(HAVE_XML2))
+	SUBDIRS += kxml
+endif
+
+ifeq (1,$(HAVE_HDF5))
 	SUBDIRS += hdf5
 endif
 
