@@ -64,8 +64,8 @@ the reads in runs with accessions ERR039542 ERR047215 ERR039539 ERR039540.
 
 If you have not already downloaded these objects using the vdb "prefetch" tool,
 they will be retrieved on-demand from NCBI under standard configuration. For
-alternative configuration information, please see the "README-vdb-config" file
-in this distribution.
+alternative configuration information, please see
+"https://github.com/ncbi/sra-tools/wiki/Toolkit-Configuration".
 
 Searching with manually downloaded files.
 -----------------------------------------
