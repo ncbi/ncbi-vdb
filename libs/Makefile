@@ -65,10 +65,6 @@ SUBDIRS = \
 
 ifeq (linux,$(BUILD_OS))
 	SUBDIRS += hdf5
-	SUBDIRS += ncbi
-    ifeq (centos,$(OSFLAV))
-	    SUBDIRS += rdbms
-    endif
 endif
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS

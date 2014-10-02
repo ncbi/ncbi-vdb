@@ -36,14 +36,6 @@ include $(TOP)/build/Makefile.env
 
 RWORKDIR = $(BINDIR)
 
-# hack to add in libvxfentrez only on Mac and CentOS
-ifeq (mac,$(OS))
-#	INT_LIBS += libvxfentrez
-endif
-ifeq (centos,$(OSFLAV))
-#	INT_LIBS += libvxfentrez
-endif
-
 ALL_LIBS = \
 	$(INT_LIBS)
 
