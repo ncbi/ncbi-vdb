@@ -1,4 +1,0 @@
-BUILD=dbg
-bindir=/usr/local/ncbi/ncbi-vdb/bin
-libdir=/usr/local/ncbi/ncbi-vdb/lib
-includedir=/usr/local/ncbi/ncbi-vdb/include
