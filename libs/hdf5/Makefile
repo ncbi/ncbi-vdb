@@ -85,7 +85,6 @@ KDF5_OBJ = \
 
 KDF5_LIB = \
 	-lhdf5 \
-	-lsz
 
 KDF5_LIB += -lz
 
