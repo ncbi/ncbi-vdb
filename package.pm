@@ -4,7 +4,7 @@ sub VERSION      { '2.4.2a' }
 sub PACKAGE_TYPE { 'L' }
 sub PACKAGE_NAME { 'NCBI-VDB' }
 sub PACKAGE_NAMW { 'VDB' }
-sub DEPENDS      { qw(hdf5 xml2 magic) }
+sub DEPENDS      { qw(hdf5 xml2) }
 sub CONFIG_OUT   { 'build' }
 sub PKG { ( LNG   => 'C',
             OUT   => 'ncbi-outdir',
