@@ -62,8 +62,9 @@ $(SUBDIRS_STD):
 # install
 #
 
-install: std
-	$(MAKE) -s TOP=$(CURDIR) -f build/Makefile.install install
+install: 
+	@ $(MAKE) -s TOP=$(CURDIR) std
+	@ $(MAKE) -s TOP=$(CURDIR) -f build/Makefile.install install
 
 .PHONY: install
 
