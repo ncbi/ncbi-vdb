@@ -157,25 +157,9 @@ println $OSTYPE unless ($AUTORUN);
     }
 }
 
-if (0 && $AUTORUN) {
-    while (1) {
-        open F,  File::Spec->catdir(CONFIG_OUT(), 'user.status') or last;
-        foreach (<F>) {
-            chomp;
-            @_ = split /=/;
-            if ($#_ == 1) {
-                $OPT{$_[0]} = $_[1] unless ($OPT{$_[0]});
-            }
-        }
-        last;
-    }
-}
-
 # initial values
 my $TARGDIR = File::Spec->catdir($OUTDIR, $PACKAGE);
 $TARGDIR = expand($OPT{'outputdir'}) if ($OPT{'outputdir'});
-
-# $OUT_MAKEFILE = $OPT{'output-makefile'} if ($OPT{'output-makefile'});
 
 my $BUILD = "rel";
 
@@ -961,12 +945,16 @@ sub find_lib {
             $i = '/usr/include/libxml2';
             $library = '-lxml2';
             $cmd = "#include <libxml/xmlreader.h>\n main() { xmlInitParser();}";
+        } elsif ($l eq 'magic') {
+            $i = '/usr/include';
+            $library = '-lmagic';
+            $cmd = "#include <magic.h>\nmain() {magic_open(0);}";
         } else {
             println 'unknown: skipped';
             return;
         }
 
-#print 
+#print TODO
 
         if ($i && ! -d $i) {
             println 'no';
