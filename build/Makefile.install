@@ -42,14 +42,13 @@ LIB_TARGET = $(INST_LIBDIR)$(BITS)
 
 LIBRARIES_WITH_PREFIX = \
 	$(addprefix $(LIB_TARGET)/$(LPFX),$(LIBRARIES_TO_INSTALL))
-    
+
 copylibs: $(LIB_TARGET) $(LIBRARIES_WITH_PREFIX)
 
 copyincludes:
 	@echo "Installing includes to $(INST_INCDIR)"
 	@mkdir -p $(INST_INCDIR)/ncbi-vdb
 	@cp $(TOP)/interfaces/ngs/ncbi/NGS.hpp $(INST_INCDIR)/ncbi-vdb
-    
 
 #fake root for debugging
 #uncomment this line and change the test for root ( see under install: ) to succeed:
@@ -63,7 +62,7 @@ install: copylibs copyincludes
 ifeq (0, $(shell id -u))
 	@ # install symlink to includes 
 	@ echo "Updating $(INCLUDE_SYMLINK)"
-	@ rm -rf $(INCLUDE_SYMLINK)
+	@ rm -f $(INCLUDE_SYMLINK)
 	@ ln -s $(INST_INCDIR)/ncbi-vdb $(INCLUDE_SYMLINK)
 	@ #
 	@ # install configuration file(s)
