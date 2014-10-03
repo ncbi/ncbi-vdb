@@ -30,9 +30,7 @@ MODULE = libs/kfs
 INT_LIBS = \
 	libkfs \
 	libkfs-nommap \
-	libkff \
 #	libkfs.2
-
 
 ALL_LIBS = \
 	$(INT_LIBS)
@@ -40,6 +38,12 @@ ALL_LIBS = \
 TEST_TOOLS = \
 
 include $(TOP)/build/Makefile.env
+
+HAVE_MAGIC = $(shell grep -q HAVE_MAGIC $(TOP)/build/Makefile.config.$(OS).$(ARCH) && echo 1 || echo 0)
+
+ifeq (1,$(HAVE_MAGIC))
+INT_LIBS += libkff
+endif
 
 #-------------------------------------------------------------------------------
 # outer targets
@@ -187,12 +191,7 @@ $(ILIBDIR)/libkfs.2.$(LIBX): $(KFS2_OBJ)
 #-------------------------------------------------------------------------------
 # kff
 #
-ifeq (linux,$(OS))
 $(ILIBDIR)/libkff: $(addprefix $(ILIBDIR)/libkff.,$(ILIBEXT))
-else
-$(ILIBDIR)/libkff:
-	@ echo "not building libkff on "$(OS)
-endif
 
 KFF_SRC = \
 	fileformat \
