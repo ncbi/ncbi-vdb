@@ -57,7 +57,7 @@ $(TARGDIR)/std: \
 #-------------------------------------------------------------------------------
 # clean
 #
-INTERM_SRC = \
+#INTERM_SRC = \
 	$(SRCDIR)/config-lex.c \
 	$(SRCDIR)/config-grammar.c \
 	$(SRCDIR)/config-tokens.h 
@@ -66,7 +66,7 @@ clean: stdclean
 
 .PHONY: clean
 
-.SECONDARY: $(INTERM_SRC)
+#.SECONDARY: $(INTERM_SRC)
 
 #-------------------------------------------------------------------------------
 # kfg
@@ -96,8 +96,8 @@ KFG_SRC = \
 	report-kfg \
     keystore 
 
-$(SRCDIR)/config-grammar.c $(SRCDIR)/config-tokens.h: $(SRCDIR)/config-grammar.y
-	$(YACC) -o $(SRCDIR)/config-grammar.c --defines=$(SRCDIR)/config-tokens.h $^
+#$(SRCDIR)/config-grammar.c $(SRCDIR)/config-tokens.h: $(SRCDIR)/config-grammar.y
+#	$(YACC) -o $(SRCDIR)/config-grammar.c --defines=$(SRCDIR)/config-tokens.h $^
 
 KFG_OBJ = \
 	$(addsuffix .$(LOBX),$(KFG_SRC))
@@ -106,6 +106,5 @@ KFG_LIB = \
 	-dkfs \
 	-dklib
 
-$(ILIBDIR)/libkfg.$(LIBX): $(INTERM_SRC) $(KFG_OBJ)
+$(ILIBDIR)/libkfg.$(LIBX): $(KFG_OBJ)
 	$(LD) --slib -o $@ $^ $(KFG_LIB)
-
