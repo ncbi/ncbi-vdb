@@ -82,14 +82,12 @@ endif
 
 ifeq (win,$(OS))
 LIBKQ =
-LIBKXML =
 else
 LIBKQ = kq
-LIBKXML = kxfs
 endif
 
 ifeq (1,$(HAVE_XML2))
-LIBKXML = kxml
+LIBKXML = kxml kxfs
 endif
 
 ## ?? why is this ordering used?
