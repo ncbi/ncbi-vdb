@@ -157,7 +157,7 @@ WVDB_LIB = \
 	$(addprefix -s,$(VDB_LIB_RDWR))
 
 $(LIBDIR)/libncbi-wvdb.$(SHLX): $(WVDB_OBJ)
-	$(LD) --dlib --vers $(SRCDIR) -o $@ $(WVDB_LIB) -lxml2
+	$(LD) --dlib --vers $(SRCDIR) -o $@ $(WVDB_LIB)
 
 $(LIBDIR)/libncbi-wvdb.$(LIBX): $(WVDB_OBJ)
 	$(LD) --slib --vers $(SRCDIR) -o $@ $(WVDB_LIB)

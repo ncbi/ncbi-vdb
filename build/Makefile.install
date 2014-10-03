@@ -76,11 +76,13 @@ ifeq (0, $(shell id -u))
 "if ! echo \$$LD_LIBRARY_PATH | /bin/grep -q $(LIB_TARGET)\n"\
 "then export LD_LIBRARY_PATH=$(LIB_TARGET):\$$LD_LIBRARY_PATH\n"\
 "fi" \
+"export NCBI_VDB_LIBDIR=$(LIB_TARGET)\n" \
         >$(PROFILE_FILE).sh && chmod 644 $(PROFILE_FILE).sh || true;
 	@ echo -e \
 "#version $(VERSION)\n"\
 "echo \$$LD_LIBRARY_PATH | /bin/grep -q $(LIB_TARGET)\n"\
 "if ( \$$status ) setenv LD_LIBRARY_PATH $(LIB_TARGET):\$$LD_LIBRARY_PATH\n"\
+"setenv NCBI_VDB_LIBDIR $(LIB_TARGET)\n" \
         >$(PROFILE_FILE).csh && chmod 644 $(PROFILE_FILE).csh || true;
 	@ #TODO: check version of the files above
 else    
