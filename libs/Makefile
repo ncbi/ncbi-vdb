@@ -22,6 +22,7 @@
 #
 # ===========================================================================
 
+by_default: default
 
 TOP ?= $(abspath ..)
 MODULE = libs
@@ -35,7 +36,7 @@ include $(TOP)/build/Makefile.config
 #
 SUBDIRS = \
 	ext \
-    kfc \
+	kfc \
 	klib \
 	kproc \
 	kfs \
@@ -57,9 +58,9 @@ SUBDIRS = \
 	blast \
 	ascp \
 	sra \
-    ngs \
-    ngs-c++ \
-    ngs-jni \
+	ngs \
+	ngs-c++ \
+	ngs-jni \
 	ngs-py \
 
 ifeq (1,$(HAVE_XML2))
@@ -73,7 +74,7 @@ endif
 SUBDIRS += \
 	ncbi-vdb \
 	tui \
-    
+
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets
 
