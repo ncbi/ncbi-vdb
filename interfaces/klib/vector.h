@@ -92,6 +92,7 @@ KLIB_EXTERN rc_t CC KVectorGet ( const KVector *self, uint64_t key,
  *  "value" [ OUT ] - return parameter for value
  */
 KLIB_EXTERN rc_t CC KVectorGetBool ( const KVector *self, uint64_t key, bool *value );
+KLIB_EXTERN rc_t CC KVectorGetBoolOld ( const KVector *self, uint64_t key, bool *value );
 
 KLIB_EXTERN rc_t CC KVectorGetI8 ( const KVector *self, uint64_t key, int8_t *value );
 KLIB_EXTERN rc_t CC KVectorGetI16 ( const KVector *self, uint64_t key, int16_t *value );
@@ -127,6 +128,7 @@ KLIB_EXTERN rc_t CC KVectorSet ( KVector *self, uint64_t key,
  *  "data" [ IN ] - value
  */
 KLIB_EXTERN rc_t CC KVectorSetBool ( KVector *self, uint64_t key, bool value );
+KLIB_EXTERN rc_t CC KVectorSetBoolOld ( KVector *self, uint64_t key, bool value );
 
 KLIB_EXTERN rc_t CC KVectorSetI8 ( KVector *self, uint64_t key, int8_t value );
 KLIB_EXTERN rc_t CC KVectorSetI16 ( KVector *self, uint64_t key, int16_t value );
@@ -180,11 +182,17 @@ KLIB_EXTERN rc_t CC KVectorVisit ( const KVector *self, bool reverse,
 KLIB_EXTERN rc_t CC KVectorVisitBool ( const KVector *self, bool reverse,
     rc_t ( CC * f ) ( uint64_t key, bool value, void *user_data ),
     void *user_data );
+KLIB_EXTERN rc_t CC KVectorVisitBoolOld ( const KVector *self, bool reverse,
+    rc_t ( CC * f ) ( uint64_t key, bool value, void *user_data ),
+    void *user_data );
 KLIB_EXTERN rc_t CC KVectorVisitI64 ( const KVector *self, bool reverse,
     rc_t ( CC * f ) ( uint64_t key, int64_t value, void *user_data ),
     void *user_data );
 KLIB_EXTERN rc_t CC KVectorVisitU64 ( const KVector *self, bool reverse,
     rc_t ( CC * f ) ( uint64_t key, uint64_t value, void *user_data ),
+    void *user_data );
+KLIB_EXTERN rc_t CC KVectorVisitU32 ( const KVector *self, bool reverse,
+    rc_t ( CC * f ) ( uint64_t key, uint32_t value, void *user_data ),
     void *user_data );
 KLIB_EXTERN rc_t CC KVectorVisitF64 ( const KVector *self, bool reverse,
     rc_t ( CC * f ) ( uint64_t key, double value, void *user_data ),

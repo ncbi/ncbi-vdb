@@ -63,7 +63,7 @@ rc_t ReferenceInit(Reference *self, const VDBManager *mgr, VDatabase *db,
                    uint32_t maxSeqLen,  /*TODO: save in Reference object, reuse in other functions*/
                    char const** refFiles
                    );
-rc_t ReferenceSetFile(Reference *self, const char *id, uint64_t length, uint8_t const md5[16], uint32_t maxSeqLen);
+rc_t ReferenceSetFile(Reference *self, const char *id, uint64_t length, uint8_t const md5[16], uint32_t maxSeqLen, bool *shouldUnmap);
 rc_t ReferenceVerify(Reference const *self, char const id[], uint64_t length, uint8_t const md5[16]);
 rc_t ReferenceGet1stRow(Reference const *self, int64_t *refID, char const refName[]);
 rc_t ReferenceAddAlignId(Reference *self,

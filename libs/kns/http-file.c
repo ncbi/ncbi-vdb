@@ -72,10 +72,6 @@ typedef struct KHttpFile KHttpFile;
 #include <ctype.h>
 #include <assert.h>
 
-#if !WINDOWS
-#include <unistd.h> /* close */
-#endif
-
 
 /*--------------------------------------------------------------------------
  * KHttpFile
@@ -371,24 +367,6 @@ bool KHttpRetrierWait(KHttpRetrier *self, rc_t rc) {
     }
     return true;
 }
-
-#if 0
-WINDOWS
-void KSocketFail(const KHttpFile *self) {}
-//#else
-struct KSocket
-{
-    KStream dad;
-    const char * path;
-    uint32_t type;
-    int32_t read_timeout;
-    int32_t write_timeout;
-
-    int fd;
-};
-void KSocketFail(const KHttpFile *self)
-{ close(((struct KSocket*)self->http->sock)->fd); }
-#endif
 
 rc_t KHttpRetrierForceFailure(const KHttpRetrier *self, const KHttpFile *socket)
 {

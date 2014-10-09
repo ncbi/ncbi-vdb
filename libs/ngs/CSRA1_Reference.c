@@ -667,7 +667,7 @@ struct NGS_Pileup* CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx
 static struct NGS_Pileup* CSRA1_ReferenceGetPileupSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    UNIMPLEMENTED();
+    UNIMPLEMENTED(); /* CSRA1_ReferenceGetPileupSlice */
     return NULL;
 }
 

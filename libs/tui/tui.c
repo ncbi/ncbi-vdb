@@ -204,7 +204,7 @@ LIB_EXPORT rc_t CC KTUIFlush ( struct KTUI * self, bool forced )
             set_ac( &ac, KTUI_a_none, KTUI_c_white, KTUI_c_white );
             clr_tui_screen( &self->screen, &ac, true );
         }
-        send_tui_screen( &self->screen, self->lines, self->cols );
+            send_tui_screen( &self->screen, self->lines, self->cols );
         /* this is platform specific ! */
     }
 
