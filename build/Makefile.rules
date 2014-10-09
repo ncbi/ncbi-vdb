@@ -100,10 +100,11 @@ LOC_INFO = -D__mod_name__=$(MODULE) -D__file_name__=$*
 	$(CP) -S -o $@ -fPIC $(NOPT) $<
 
 # yacc and lex
-$(SRCDIR)/%.c: %.y
-	$(YACC) -o $@ $^
-$(SRCDIR)/%.c: %.l
-	$(LEX) -DYY_BUF_SIZE=16777216 -t $< | grep -v '^#line' > $@
+# these are disabled for now (and LEX and YACC defined as 'true') - use source controlled .c files;
+#$(SRCDIR)/%.c: %.y
+#	$(YACC) -o $@ $^
+#$(SRCDIR)/%.c: %.l
+#	$(LEX) -DYY_BUF_SIZE=16777216 -t $< | grep -v '^#line' > $@
 
 # version include generation
 %.vers.h: %.vers
