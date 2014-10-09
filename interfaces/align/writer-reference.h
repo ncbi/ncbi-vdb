@@ -77,7 +77,7 @@ ALIGN_EXTERN rc_t CC ReferenceMgr_SetCache(ReferenceMgr const *const self, size_
 typedef struct ReferenceSeq ReferenceSeq;
 
 /* id: chr12 or NC_000001.3 */
-ALIGN_EXTERN rc_t CC ReferenceMgr_GetSeq(const ReferenceMgr* const cself, const ReferenceSeq** const seq, const char* id);
+ALIGN_EXTERN rc_t CC ReferenceMgr_GetSeq(const ReferenceMgr* const cself, const ReferenceSeq** const seq, const char* id, bool *shouldUnmap);
 
 ALIGN_EXTERN rc_t CC ReferenceMgr_Verify(const ReferenceMgr* cself, const char* id, INSDC_coord_len length, const uint8_t md5[16]);
 

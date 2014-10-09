@@ -101,6 +101,7 @@ LIB_EXPORT rc_t CC KNSManagerRelease ( const KNSManager *self )
     return 0;
 }
 
+static
 rc_t KNSManagerSetTestHttpFailures(struct KNSManager *self, uint32_t count) {
     if (self == NULL) {
         return RC(rcNS, rcMgr, rcUpdating, rcSelf, rcNull);
@@ -109,6 +110,7 @@ rc_t KNSManagerSetTestHttpFailures(struct KNSManager *self, uint32_t count) {
     return 0;
 }
 
+static
 rc_t KNSManagerSetLogHttpFailures(struct KNSManager *self, uint32_t count) {
     if (self == NULL) {
         return RC(rcNS, rcMgr, rcUpdating, rcSelf, rcNull);
@@ -117,6 +119,7 @@ rc_t KNSManagerSetLogHttpFailures(struct KNSManager *self, uint32_t count) {
     return 0;
 }
 
+static
 rc_t KNSManagerSetTries(struct KNSManager *self, uint32_t tries) {
     if (self == NULL) {
         return RC(rcNS, rcMgr, rcUpdating, rcSelf, rcNull);
@@ -158,7 +161,8 @@ LIB_EXPORT rc_t KNSManagerSetTriesForReliables(struct KNSManager *self, uint32_t
     return 0;
 }
 
-static bool KNSManagerConfigFromCmdLine(KNSManager *self) {
+static
+bool KNSManagerConfigFromCmdLine(KNSManager *self) {
     bool set = false;
     uint32_t tries = GetHttpTries(&set);
     if (set) {
@@ -168,7 +172,8 @@ static bool KNSManagerConfigFromCmdLine(KNSManager *self) {
     return set;
 }
 
-static void KNSManagerTriesFromConfig(KNSManager *self, const KConfig *kfg) {
+static
+void KNSManagerTriesFromConfig(KNSManager *self, const KConfig *kfg) {
     uint64_t result = 0;
 
     rc_t rc = KConfigReadU64(kfg, "/services/http/tries", &result);
@@ -184,7 +189,8 @@ static void KNSManagerTriesFromConfig(KNSManager *self, const KConfig *kfg) {
     }
 }
 
-static void KNSManagerConfigFromConfig(KNSManager *self, const KConfig *kfg) {
+static
+void KNSManagerConfigFromConfig(KNSManager *self, const KConfig *kfg) {
     uint64_t result = 0;
 
     rc_t rc = KConfigReadU64(kfg,
@@ -201,7 +207,8 @@ static void KNSManagerConfigFromConfig(KNSManager *self, const KConfig *kfg) {
     }
 }
 
-static rc_t KNSManagerConfig(KNSManager *self) {
+static
+rc_t KNSManagerConfig(KNSManager *self) {
     rc_t rc = 0;
     KConfig *kfg = NULL;
     rc = KConfigMake(&kfg, NULL);
@@ -240,7 +247,7 @@ LIB_EXPORT rc_t CC KNSManagerMake ( KNSManager **mgrp )
             KNSManagerSetTriesForReliables(mgr, 9);
             KNSManagerSetLogHttpFailures  (mgr, 2);
 
-            rc = KNSManagerInit (); /* platform specific init in sysmgr.c ( in win/unix etc. subdir ) */
+            rc = KNSManagerInit (); /* platform specific init in sysmgr.c ( in unix|win etc. subdir ) */
             if ( rc == 0 )
             {
                 /* the manager is not a proper singleton */

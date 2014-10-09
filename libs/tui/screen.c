@@ -64,8 +64,11 @@ void CC print_into_screen( tui_screen * screen, int x, int y, const tui_ac * v,
         tui_line * line = &screen->lines[ y ];
         uint32_t column, idx, sl = string_measure ( s, NULL );
         bool any_chars_dirty = false;
+        if ( l > CHR_PER_LINE ) l =CHR_PER_LINE;
+        if ( x + l > CHR_PER_LINE ) l = ( CHR_PER_LINE - x );
         if ( sl > l ) sl = l;
         if ( x + sl > CHR_PER_LINE ) sl = ( CHR_PER_LINE - x );
+
         for ( column = x, idx = 0; idx < sl; ++column, ++idx )
         {
             tui_ac * ac = &line->ac[ column ];
@@ -82,6 +85,7 @@ void CC print_into_screen( tui_screen * screen, int x, int y, const tui_ac * v,
                 any_chars_dirty = true;
             }
         }
+
         if ( sl < l )
         {
             for ( column = x + sl, idx = sl; idx < l; ++column, ++idx )

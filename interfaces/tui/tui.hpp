@@ -194,6 +194,7 @@ class Tui
             { return ( KTUIRect( tui_, &( r.r_ ), &( ac.ac_ ), c ) == 0 ); }
 
         bool Flush( bool forced = false ) { return ( KTUIFlush ( tui_, forced ) == 0 ); };
+
         bool GetExtent ( tui_coord * cols, tui_coord * lines ) const { return ( KTUIGetExtent ( tui_, cols, lines ) == 0 ); };
         bool GetExtent ( Tui_Rect &r )
         {
