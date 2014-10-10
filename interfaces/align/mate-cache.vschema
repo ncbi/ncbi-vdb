@@ -76,6 +76,10 @@ table NCBI:align:tbl:mate_cache #1.1
     /* ALIGNMENT_COUNT
      */
     extern column < U8 > izip_encoding ALIGNMENT_COUNT_CACHE;
+
+    /* RD_FILTER
+     */
+    extern column < INSDC:SRA:read_filter > zip_encoding RD_FILTER_CACHE;
 };
 
 /*--------------------------------------------------------------------------
