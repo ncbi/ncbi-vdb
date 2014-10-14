@@ -34,46 +34,38 @@ include $(TOP)/build/Makefile.config
 #-------------------------------------------------------------------------------
 # default
 #
-SUBDIRS = \
-	ext \
-	kfc \
-	klib \
-	kproc \
-	kfs \
-	kns \
-	kfg \
-	krypto \
-	vfs \
-	kapp \
-	kdb \
-	vdb \
-	vxf \
-	search \
-	sraxf \
-	align \
-	axf \
-	wgsxf \
-	ktst \
-	loader \
-	blast \
-	ascp \
-	sra \
-	ngs \
-	ngs-c++ \
-	ngs-jni \
-	ngs-py \
-
-ifeq (1,$(HAVE_XML2))
-	SUBDIRS += kxml
-endif
-
-ifeq (1,$(HAVE_HDF5))
-	SUBDIRS += hdf5
-endif
-
-SUBDIRS += \
+SUBDIRS =    \
+	ext      \
+	kfc      \
+	klib     \
+	kproc    \
+	kfs      \
+	kns      \
+	kfg      \
+	krypto   \
+	vfs      \
+	kapp     \
+	kdb      \
+	vdb      \
+	vxf      \
+	search   \
+	sraxf    \
+	align    \
+	axf      \
+	wgsxf    \
+	ktst     \
+	loader   \
+	blast    \
+	ascp     \
+	sra      \
+	ngs      \
+	ngs-c++  \
+	ngs-jni  \
+	ngs-py   \
+	kxml     \
+	hdf5     \
 	ncbi-vdb \
-	tui \
+	tui
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets
