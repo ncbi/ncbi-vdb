@@ -24,40 +24,54 @@
  *
  */
 
-#ifndef _h_xfs_defs_
-#define _h_xfs_defs_
+#ifndef _mehr_h_
+#define _mehr_h_
 
-#include <klib/rc.h>
+#include <xfs/xfs-defs.h>
 
-#ifndef _h_xfs_extern_
-#include <xfs/extern.h>
-#endif /* _h_xfs_extern_ */
+#ifdef __cplusplus 
+extern "C" {
+#endif /* __cplusplus */
 
-#define XFS_SIZE_4096       4096
-#define XFS_SIZE_2048       2048
-#define XFS_SIZE_1024       1024
-#define XFS_SIZE_512         512 
-#define XFS_SIZE_128         128 
+/*))))
+ ((((   Thif fail contains temporary methods and definitions, which
+  ))))  should be replaced/removed in future.
+ ((((     All names in that file ends with _MHR
+  ))))
+ ((((*/
 
-/*  That is a part of conspiracy, if You do not like too verbose
- *  programms, comment that part
- */
-#define XFS_EXTENDED_LOGGING
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
-#ifdef XFS_EXTENDED_LOGGING
-    #define XFSMSG(msg) OUTMSG(msg)
-#else   /* XFS_EXTENDED_LOGGING */
-    #define XFSMSG(msg)
-#endif  /* XFS_EXTENDED_LOGGING */
+/*))  Config, and config related. Will use mainstream later.
+ ((*/
 
-/*  Another great masterpiece lol
- */
-#define XFS_RC(State)   RC(rcFS, rcNoTarg, rcProcessing, rcNoObj, State)
+struct KConfig;
 
+XFS_EXTERN rc_t CC XFS_InitAll_MHR ( const char * ConfigFile );
 
-#ifdef __cplusplus
+XFS_EXTERN rc_t CC XFS_DisposeAll_MHR ();
+
+XFS_EXTERN const struct KConfig * XFS_Config_MHR ();
+
+XFS_EXTERN const char * XFS_ConfigPath_MHR ();
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*))  Fancy I/O
+ ((*/
+struct KFile;
+
+XFS_EXTERN rc_t CC XFS_OpenResourceRead_MHR (
+                            const char * Resource,
+                            const struct KFile ** File
+                            );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+#ifdef __cplusplus 
 }
 #endif /* __cplusplus */
 
-
-#endif /* _h_xfs_defs_ */
+#endif /* _mehr_h_ */

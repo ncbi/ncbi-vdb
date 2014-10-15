@@ -28,8 +28,9 @@
 #include <klib/out.h>
 #include <klib/text.h>
 #include <kproc/thread.h>
+
 #include <xfs/xfs.h>
-#include <xfs/xfs-peer.h>
+#include <xfs/tree.h>
 #include "xfs-priv.h"
 
 #include <stdlib.h>     /* using malloc() */
@@ -38,25 +39,23 @@
 /*  Some platform dependent headers
  */
 
-#include "xfs-native-peer-operations.h"
+#include "operations.h"
 
 /*  Some useless pranks
  */
 #define MOO(Moo)    \
     OUTMSG( ( "%s: %d\n", Moo, __LINE__ ) )
 
-XFS_EXTERN rc_t CC XFSControlInitVT ( XFSControl * self );
-
 /*
  *  Virtuhai table and it's methods
  */
-static rc_t XFS_FUSE_init_v1 ( XFSControl * self );
-static rc_t XFS_FUSE_destroy_v1 ( XFSControl * self );
-static rc_t XFS_FUSE_mount_v1 ( XFSControl * self );
-static rc_t XFS_FUSE_loop_v1 ( XFSControl * self );
-static rc_t XFS_FUSE_unmount_v1 ( XFSControl * self);
+static rc_t XFS_FUSE_init_v1 ( struct XFSControl * self );
+static rc_t XFS_FUSE_destroy_v1 ( struct XFSControl * self );
+static rc_t XFS_FUSE_mount_v1 ( struct XFSControl * self );
+static rc_t XFS_FUSE_loop_v1 ( struct XFSControl * self );
+static rc_t XFS_FUSE_unmount_v1 ( struct XFSControl * self);
 
-static XFSControl_vt_v1 XFSControl_VT_V1 = {
+static struct XFSControl_vt_v1 XFSControl_VT_V1 = {
     1,
     1,
     XFS_FUSE_init_v1,
@@ -72,82 +71,63 @@ static struct fuse_operations TheFuseOperations;
  */
 LIB_EXPORT
 rc_t CC
-XFSControlInitVT ( XFSControl * self )
+XFSControlPlatformInit ( struct XFSControl * self )
 {
     if ( self == NULL ) {
-            /*  TODO : not sure about rc */
-        return RC ( rcFS, rcNoTarg, rcConstructing, rcSelf, rcNull );
+        return XFS_RC ( rcNull );
     }
 
-    self -> vt = ( XFSControl_vt * )&XFSControl_VT_V1;
+    self -> vt = ( union XFSControl_vt * ) & XFSControl_VT_V1;
 
     return 0;
-}   /* XFSControlInitVT () */
+}   /* XFSControlPlatformInit () */
 
 /*  Overloadable versions
  */
 rc_t
-XFS_FUSE_init_v1 ( XFSControl * self )
+XFS_FUSE_init_v1 ( struct XFSControl * self )
 {
-    XFSControlArgs * Args;
+    rc_t RCt;
 
-    Args = NULL;
+    RCt = 0;
 
     OUTMSG ( ( "XFS_FUSE_init()\n" ) );
 
-    if ( self -> Control != NULL || self -> ControlOpt != NULL ) {
+    if ( self -> Control != NULL ) {
         OUTMSG ( ( "XFS_FUSE_init(): control is not empty\n" ) );
 
-        return RC ( rcFS, rcNoTarg, rcInitializing, rcSelf, rcUnexpected );
+        return XFS_RC ( rcUnexpected );
     }
 
-    if ( self -> Arguments != NULL ) {
-        OUTMSG ( ( "XFS_FUSE_init(): arguments are not empty\n" ) );
+    if ( self -> Arguments == NULL ) {
+        OUTMSG ( ( "XFS_FUSE_init(): arguments are empty\n" ) );
 
-        return RC ( rcFS, rcNoTarg, rcInitializing, rcSelf, rcUnexpected );
+        return XFS_RC ( rcUnexpected );
     }
 
-    Args = ( XFSControlArgs * ) malloc(
-                                sizeof ( struct XFSControlArgs )
-                                );
-    if ( Args == NULL ) {
-        return RC ( rcFS, rcNoTarg, rcAllocating, rcSelf, rcNull );
+    if ( XFSControlGetLabel ( self ) == NULL ) {
+        RCt = XFSControlSetLabel ( self, "FUSE" );
     }
 
-    * ( Args -> MountPoint ) = 0;
-    string_copy_measure (
-                    Args -> Label,
-                    sizeof ( Args -> Label ),
-                    "XFS"
-                    );
-
-    self -> Arguments = Args;
-
-    return 0;
+    return RCt;
 }   /* XFS_FUSE_init_v1 () */
 
 rc_t
-XFS_FUSE_destroy_v1 ( XFSControl * self )
+XFS_FUSE_destroy_v1 ( struct XFSControl * self )
 {
     OUTMSG ( ( "XFS_FUSE_destroy()\n" ) );
 
-    if ( self -> Arguments == NULL ) {
-        OUTMSG ( ( "XFS_FUSE_destroy(): arguments are empty\n" ) );
+    if ( self == NULL ) {
+        OUTMSG ( ( "XFS_FUSE_destroy_v1(): NULL self passed" ) );
 
-/* Do we really need that ???
-        return RC ( rcFS, rcNoTarg, rcDestroying, rcSelf, rcUnexpected );
-*/
-    }
-    else {
-        free ( self -> Arguments );
-        self -> Arguments = NULL;
+        return XFS_RC ( rcNull );
     }
 
     return 0;
 }   /* XFS_FUSE_destroy_v1 () */
 
 rc_t
-XFS_FUSE_mount_v1 ( XFSControl * self )
+XFS_FUSE_mount_v1 ( struct XFSControl * self )
 {
     rc_t RCt;
 
@@ -163,21 +143,26 @@ XFS_FUSE_mount_v1 ( XFSControl * self )
 
     OUTMSG ( ( "XFS_FUSE_mount()\n" ) );
 
+    if ( self == NULL ) {
+        OUTMSG ( ( "ZERO self passed\n" ) );
+        return XFS_RC ( rcNull );
+    }
+
     RCt = XFS_Private_InitOperations ( & TheFuseOperations );
     if ( RCt != 0 ) {
         OUTMSG ( ( "Can not initialize operations\n" ) );
-        return RC ( rcFS, rcNoTarg, rcExecuting, rcParam, rcFailed ); 
+        return XFS_RC ( rcFailed ); 
     }
 
 
 MOO ( "H" );
 
     memset ( & FuseArgs, 0, sizeof FuseArgs );
-    Result = fuse_opt_add_arg ( & FuseArgs, self -> Arguments -> Label );
-    Result = fuse_opt_add_arg ( & FuseArgs, self -> Arguments -> MountPoint );
+    Result = fuse_opt_add_arg ( & FuseArgs, XFSControlGetLabel ( self ) );
+    Result = fuse_opt_add_arg ( & FuseArgs, XFSControlGetMountPoint ( self ) );
     if ( Result != 0 ) {
         OUTMSG ( ( "Can not mount\n" ) );
-        return RC ( rcFS, rcNoTarg, rcExecuting, rcParam, rcFailed ); 
+        return XFS_RC ( rcFailed ); 
     }
 
 MOO ( "H" );
@@ -191,7 +176,7 @@ MOO ( "H" );
                 );
     if ( Result != 0 ) {
         OUTMSG ( ( "Can not parse arguments\n" ) );
-        return RC ( rcFS, rcNoTarg, rcExecuting, rcParam, rcFailed ); 
+        return XFS_RC ( rcFailed ); 
     }
 
 MOO ( "H" );
@@ -204,20 +189,20 @@ OUTMSG ( ( "Mnt = %s\nMlt = %d\nFrg = %d\n", MountPoint, Multithreaded, Foregrou
         fuse_opt_free_args ( & FuseArgs );
 
         OUTMSG ( ( "Can not mount\n" ) );
-        return RC ( rcFS, rcNoTarg, rcExecuting, rcParam, rcFailed ); 
+        return XFS_RC ( rcFailed ); 
     }
-    self -> ControlOpt = FuseChannel;
+    self -> ControlAux = FuseChannel;
 
 MOO ( "H" );
 
-        /*  Note we are passing Peer as private data to fuse_context
+        /*  Note passing TreeDepot as private data to fuse_context
          */
     FuseStruct = fuse_new (
                         FuseChannel,
                         & FuseArgs,
                         & TheFuseOperations,
                         sizeof ( struct fuse_operations ),
-                        self -> Peer
+                        self -> TreeDepot
                     );
     if ( FuseStruct == NULL ) {
         fuse_unmount ( MountPoint, FuseChannel );
@@ -225,7 +210,7 @@ MOO ( "H" );
         fuse_opt_free_args ( & FuseArgs );
 
         OUTMSG ( ( "Can not fuse_new\n" ) );
-        return RC ( rcFS, rcNoTarg, rcExecuting, rcParam, rcFailed ); 
+        return XFS_RC ( rcFailed ); 
     }
     self -> Control = FuseStruct;
 
@@ -242,7 +227,7 @@ Foreground = 1;
         fuse_opt_free_args ( & FuseArgs );
 
         OUTMSG ( ( "Can not daemonize\n" ) );
-        return RC ( rcFS, rcNoTarg, rcExecuting, rcParam, rcFailed ); 
+        return XFS_RC ( rcFailed ); 
     }
 
 MOO ( "H" );
@@ -253,8 +238,8 @@ MOO ( "H" );
 
         fuse_opt_free_args ( & FuseArgs );
 
-        OUTMSG ( ( "Can not daemonize\n" ) );
-        return RC ( rcFS, rcNoTarg, rcExecuting, rcParam, rcFailed ); 
+        OUTMSG ( ( "Can not set signal handlers\n" ) );
+        return XFS_RC ( rcFailed ); 
     }
 
 /*
@@ -279,7 +264,7 @@ MOO ( "H" );
 }   /* XFS_FUSE_mount_v1 () */
 
 rc_t
-XFS_FUSE_loop_v1( XFSControl * self )
+XFS_FUSE_loop_v1( struct XFSControl * self )
 {
     rc_t RCt;
 
@@ -301,29 +286,41 @@ MOO ( "H" );
         Result = fuse_loop_mt ( FuseStruct );
 
 MOO ( "H" );
-
-        fuse_remove_signal_handlers ( fuse_get_session ( FuseStruct ) );
-
         RCt = Result == 0 ? 0 : 1;
     }
 
     return RCt;
 }   /* XFS_FUSE_loop_v1 () */
+
 rc_t
-XFS_FUSE_unmount_v1 ( XFSControl * self )
+XFS_FUSE_unmount_v1 ( struct XFSControl * self )
 {
+    struct fuse * FuseStruct;
+
+    FuseStruct = (struct fuse * ) self -> Control;
+
     OUTMSG ( ( "XFS_FUSE_unmount()\n" ) );
 
-    if ( self -> Control != NULL && self -> ControlOpt != NULL ) {
+    if ( self -> Control != NULL ) {
+        fuse_exit ( FuseStruct );
+
+OUTMSG ( ( "|o|fuse_remove_signal_handlers()\n" ) );
+        fuse_remove_signal_handlers ( fuse_get_session ( FuseStruct ) );
+
+OUTMSG ( ( "|o|fuse_unmount()\n" ) );
         fuse_unmount (
-                    self -> Arguments -> MountPoint,
-                    ( struct fuse_chan * ) self -> ControlOpt
+                    XFSControlGetMountPoint ( self ),
+                    self -> ControlAux
                     );
 
-        fuse_destroy ( (struct fuse * ) self -> Control );
+OUTMSG ( ( "|o|fuse_destroy()\n" ) );
+        fuse_destroy ( FuseStruct );
 
         self -> Control = NULL;
-        self -> ControlOpt = NULL;
+        self -> ControlAux = NULL;
+
+OUTMSG ( ( "|o|exiting fuse()\n" ) );
+
     }
     else {
         OUTMSG ( ( "XFS_FUSE_unmount(): empty control passed\n" ) );

@@ -24,40 +24,20 @@
  *
  */
 
-#ifndef _h_xfs_defs_
-#define _h_xfs_defs_
+#ifndef _h_platform_
+#define _h_platform_
 
-#include <klib/rc.h>
+#include <xfs/xfs-defs.h>
 
-#ifndef _h_xfs_extern_
-#include <xfs/extern.h>
-#endif /* _h_xfs_extern_ */
+/*))))
+ ((((   This file contains platform dependent forwards.
+  ))))
+ ((((*/
 
-#define XFS_SIZE_4096       4096
-#define XFS_SIZE_2048       2048
-#define XFS_SIZE_1024       1024
-#define XFS_SIZE_512         512 
-#define XFS_SIZE_128         128 
+/*))    Set virtual table for control Fuse or DOKAN based
+ ((*/
+XFS_EXTERN
+rc_t CC
+XFSControlPlatformInit ( struct XFSControl * self );
 
-/*  That is a part of conspiracy, if You do not like too verbose
- *  programms, comment that part
- */
-#define XFS_EXTENDED_LOGGING
-
-#ifdef XFS_EXTENDED_LOGGING
-    #define XFSMSG(msg) OUTMSG(msg)
-#else   /* XFS_EXTENDED_LOGGING */
-    #define XFSMSG(msg)
-#endif  /* XFS_EXTENDED_LOGGING */
-
-/*  Another great masterpiece lol
- */
-#define XFS_RC(State)   RC(rcFS, rcNoTarg, rcProcessing, rcNoObj, State)
-
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
-
-
-#endif /* _h_xfs_defs_ */
+#endif /* _h_platform_ */

@@ -24,26 +24,3 @@
  *
  */
 
-#ifndef _h_xfs_native_peer_operations_
-#define _h_xfs_native_peer_operations_
-
-#include <klib/rc.h>
-
-    /*  We are still working under the version 2.5 because there is
-        port on MAC for that
-    */
-#include <dokan.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
-    /*  Here we are going to fill that evis structure
-    */
-rc_t XFS_Private_InitOperations ( struct _DOKAN_OPERATIONS * Ops );
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
-
-#endif /* _h_xfs_native_peer_operations_ */

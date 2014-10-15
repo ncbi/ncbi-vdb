@@ -41,11 +41,21 @@
   */
 
 #include <klib/out.h>
+#include <klib/namelist.h>
+#include <klib/refcount.h>
+#include <klib/defs.h>
+#include <vfs/path.h>
+#include <vfs/manager.h>
 
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/statvfs.h>
+
+#include <xfs/tree.h>
+#include <xfs/node.h>
+#include <xfs/handle.h>
+#include <xfs/editors.h>
+#include <xfs/perm.h>
+#include <xfs/path.h>
+
+#include "schwarzschraube.h"
 
 #include <sysalloc.h>
 #include <string.h> /* we are using memset() */
@@ -53,13 +63,12 @@
 #include <dirent.h> /* trash, need to be removed, after adding VFM */
 #include <unistd.h> /* trash, need to be removed, after adding VFM */
 
-#include <klib/namelist.h>
-#include <kfs/file.h>
-#include <vfs/path.h>
-#include <vfs/manager.h>
-#include <xfs/xfs-peer.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/statvfs.h>
 
-#include "xfs-native-peer-operations.h"
+#include "operations.h"
 
 
 /****************************************************************
@@ -77,7 +86,7 @@
 #define USE_XFS_FUSE_SYMLINK      0     /* - */ /* ? */
 #define USE_XFS_FUSE_RENAME       1     /* + */
 #define USE_XFS_FUSE_LINK         0     /* - */ /* ? */
-#define USE_XFS_FUSE_CHMOD        0     /* - */ /* ? */
+#define USE_XFS_FUSE_CHMOD        1     /* - */ /* ? */
 #define USE_XFS_FUSE_CHOWN        0     /* - */ /* Do not need */
 #define USE_XFS_FUSE_TRUNCATE     1     /* + */
 #define USE_XFS_FUSE_UTIME        1     /* + */
@@ -118,15 +127,15 @@
  *****************************************************/
 static
 rc_t
-GetPeerFromFuseHaHa ( struct XFSPeer ** Peer )
+_FUSE_tree_depot ( const struct XFSTreeDepot ** Depot )
 {
     struct fuse_context * TheContext;
 
-    if ( Peer == NULL ) {
+    if ( Depot == NULL ) {
         return XFS_RC ( rcNull );
     }
 
-    * Peer = NULL;
+    * Depot = NULL;
 
     TheContext = fuse_get_context();
     if ( TheContext == NULL ) {
@@ -134,60 +143,400 @@ GetPeerFromFuseHaHa ( struct XFSPeer ** Peer )
         return XFS_RC ( rcNull );
     }
 
-    * Peer = ( struct XFSPeer * ) TheContext -> private_data;
-    if ( * Peer == NULL ) {
+    * Depot = ( const struct XFSTreeDepot * ) TheContext -> private_data;
+    if ( * Depot == NULL ) {
         return XFS_RC ( rcNull );
     }
 
     return 0;
-}   /* GetPeerFromFuseHaHa () */
+}   /* _FUSE_tree_depot () */
+
+static
+rc_t
+_FUSE_make_v_path (
+                const char * ThePath,
+                const struct VPath ** DasPath
+)
+{
+    rc_t RCt;
+    struct VPath * Pth;
+
+    RCt = 0;
+    Pth = NULL;
+
+    if ( ThePath == NULL || DasPath == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+    * DasPath = NULL;
+
+    RCt = VFSManagerMakePath ( XFS_VfsManager (), & Pth, ThePath );
+    if ( RCt == 0 ) {
+        * DasPath = Pth;
+    }
+
+
+    return RCt;
+}   /* _FUSE_make_v_path () */
+
+static
+rc_t 
+_FUSE_get_node (
+                const struct VPath * Path,
+                const struct XFSNode ** Node
+)
+{
+    rc_t RCt;
+    const struct XFSTreeDepot * Depot;
+    const struct XFSNode * TheNode;
+
+    RCt = 0;
+
+    if ( Path == NULL || Node == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+    * Node = NULL;
+
+    RCt = _FUSE_tree_depot ( & Depot );
+    if ( RCt == 0 ) {
+        if ( Depot == NULL ) {
+            RCt = XFS_RC ( rcInvalid );
+        }
+        else {
+            RCt = XFSTreeDepotFindNodeForPath (
+                                            Depot,
+                                            Path,
+                                            & TheNode
+                                            );
+            if ( RCt == 0 ) {
+                * Node = TheNode;
+            }
+        }
+    }
+
+    return RCt;
+}   /* _FUSE_get_node () */
+
+static
+rc_t
+_FUSE_get_path_and_node (
+                    const char * ThePath,
+                    const struct VPath ** DasPath,
+                    const struct XFSNode ** Node,
+                    XFSNType * NodeType
+)
+{
+    rc_t RCt;
+    const struct XFSNode * RNode;
+    const struct VPath * RPath;
+    XFSNType Type;
+    const struct XFSAttrEditor * Editor;
+
+    RCt = 0;
+    RNode = NULL;
+    RPath = NULL;
+    Type = kxfsNotFound;
+    Editor = NULL;
+
+    if ( ThePath == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    RCt = _FUSE_make_v_path ( ThePath, & RPath );
+    if ( RCt == 0 ) {
+
+        RCt = _FUSE_get_node ( RPath, & RNode );
+        if ( RCt == 0 ) {
+            if ( NodeType != NULL ) {
+                RCt = XFSNodeAttrEditor ( RNode, & Editor );
+                if ( RCt == 0 ) {
+                    RCt = XFSAttrEditorType ( Editor, & Type );
+
+                    XFSEditorDispose ( & ( Editor -> Papahen ) );
+                }
+            }
+        }
+    }
+
+    if ( RCt == 0 ) {
+        if ( DasPath != NULL ) {
+            * DasPath = RPath;
+        }
+        else {
+            VPathRelease ( RPath );
+        }
+
+        if ( Node != NULL ) {
+            * Node = RNode;
+        }
+        else {
+            XFSNodeRelease ( RNode );
+        }
+
+        if ( NodeType != NULL ) {
+            * NodeType = Type;
+        }
+    }
+    else {
+        if ( RPath != NULL ) {
+            VPathRelease ( RPath );
+        }
+
+        if ( RNode != NULL ) {
+            XFSNodeRelease ( RNode );
+        }
+    }
+
+    return RCt;
+}   /* _FUSE_get_path_and_node () */
+
+static
+rc_t
+_FUSE_get_parent_node (
+                    const char * Path,
+                    const struct XFSNode ** Parent,
+                    XFSNType * ParentType,      /* Could be NULL */
+                    char ** ChildName           /* Could be NULL */
+)
+{
+    rc_t RCt;
+    const struct XFSTreeDepot * Depot;
+    char BB [ XFS_SIZE_4096 ];
+    const struct XFSPath * xPath;
+    uint32_t xPathQ;
+    const struct XFSNode * xNode;
+    const struct XFSAttrEditor * xEditor;
+    char * xName;
+
+    RCt = 0;
+    Depot = NULL;
+    * BB = 0;
+    xPath = NULL;
+    xPathQ = 0;
+    xNode = NULL;
+    xEditor = NULL;
+    xName = NULL;
+
+    if ( Parent == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    * Parent = NULL;
+
+    if ( Path == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    if ( ParentType != NULL ) {
+        * ParentType = kxfsNotFound;
+    }
+
+    if ( ChildName != NULL ) {
+        * ChildName = NULL;
+    }
+
+        /* TreeDepot is a key */
+    RCt = _FUSE_tree_depot ( & Depot );
+    if ( RCt != 0 ) {
+        return RCt;
+    }
+
+        /* Path to parent node is ... */
+    RCt = XFSPathMake ( Path, & xPath );
+    if ( RCt == 0 ) {
+        xPathQ = XFSPathCount ( xPath );
+        if ( xPathQ < 2 ) {
+            RCt = XFS_RC ( rcInvalid );
+        }
+        else {
+                /* So, there is a path to parent */
+            RCt = XFSPathTo ( xPath, xPathQ - 1, BB, sizeof ( BB ) );
+            if ( RCt == 0 ) {
+                    /* Looking for node */
+                RCt = XFSTreeDepotFindNode ( Depot, BB, & xNode );
+                if ( RCt == 0 ) {
+                    if ( ParentType != NULL ) {
+                        RCt = XFSNodeAttrEditor ( xNode, & xEditor );
+                        if ( RCt == 0 ) {
+                            RCt = XFSAttrEditorType ( xEditor, ParentType );
+                            XFSEditorDispose ( & ( xEditor -> Papahen ) );
+                        }
+                    }
+
+                    if ( RCt == 0 ) {
+                        if ( ChildName != NULL ) {
+                            RCt = XFS_StrDup (
+                                            XFSPathName ( xPath ),
+                                            ( const char ** ) & xName
+                                            );
+                            if ( RCt == 0 ) {
+                                * ChildName = xName;
+                            }
+                        }
+                    }
+
+                    if ( RCt == 0 ) {
+                        * Parent = xNode;
+                    }
+                }
+            }
+        }
+
+        XFSPathDispose ( xPath );
+    }
+
+    if ( RCt != 0 ) {
+        * Parent = NULL;
+        if ( ParentType != NULL ) {
+            * ParentType = kxfsNotFound;
+        }
+        if ( ChildName != NULL ) {
+            * ChildName = NULL;
+        }
+        if ( xNode != NULL ) {
+            XFSNodeRelease ( xNode );
+        }
+        if ( xName != NULL ) {
+            free ( xName );
+        }
+    }
+
+    return RCt;
+}   /* _FUSE_get_parent_node () */
+
+static
+rc_t
+_FUSE_delete_file_dir ( const char * Path )
+{
+    rc_t RCt;
+    const struct XFSNode * Parent;
+    char * Child;
+    const struct XFSDirEditor * Editor;
+
+    RCt = 0;
+
+    if ( Path == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    RCt = _FUSE_get_parent_node ( Path, & Parent, NULL, & Child );
+    if ( RCt == 0 ) {
+        RCt = XFSNodeDirEditor ( Parent, & Editor );
+        if ( RCt == 0 ) {
+            RCt = XFSDirEditorDelete ( Editor, Child );
+
+            XFSEditorDispose ( & ( Editor -> Papahen ) );
+        }
+
+        XFSNodeRelease ( Parent );
+        free ( Child );
+    }
+
+    return RCt;
+}   /* _FUSE_delete_file_dir () */
 
 /*****************************************************
  * Here are convertors
  *****************************************************/
+ /*)
+ |*|  Converts permission string to stat mode_t
+ (*/
 static
 rc_t
-StatStructureToXFSPeerObjectInfo (
-                    const struct XFSPeerObjectInfo * TheInfo,
-                    struct stat * TheStat
-)
+_FUSE_char_to_perm ( const char * Perm, XFSNType Type, mode_t * Mode )
 {
-    if ( TheInfo == NULL || TheStat == NULL ) {
+    rc_t RCt;
+    uint32_t Temp;
+
+    RCt = 0;
+    Temp = 0;
+
+    if ( Mode == NULL ) {
         return XFS_RC ( rcNull );
     }
+    * Mode = 0;
 
-                /* Here we are trying to convert ObjectInfo to stat
-                 */
-    memset ( TheStat, 0, sizeof ( struct stat ) );
-    TheStat -> st_mode = TheInfo -> Access;
-    switch ( TheInfo -> Type ) {
-        case kxfsLink:
-            TheStat -> st_mode |= S_IFLNK;
-            break;
-        case kxfsFile:
-            TheStat -> st_mode |= S_IFREG;
-            break;
-        case kxfsDir:
-            TheStat -> st_mode |= S_IFDIR;
-            break;
-        default:
-            TheStat -> st_mode = 0;
-            break;
+    if ( Perm == NULL ) {
+        Temp = Type == kxfsFile ? 0644 : 0744;
+    }
+    else {
+        RCt = XFSPermToAccess ( Perm, & Temp );
     }
 
-    if ( TheStat -> st_mode != 0 ) {
-        TheStat -> st_uid = getuid();
-        TheStat -> st_gid = getgid();
-        TheStat -> st_size = TheInfo -> Size;
-        TheStat -> st_blksize = XFS_SIZE_4096;
-        TheStat -> st_atime = TheInfo -> Time;
-        TheStat -> st_mtime = TheInfo -> Time;
-        TheStat -> st_ctime = TheInfo -> Time;
+    if ( RCt == 0 ) {
+        switch ( Type ) {
+            case kxfsFile : Temp |= S_IFREG; break;
+            case kxfsDir:   Temp |= S_IFDIR; break;
+            case kxfsLink:  Temp |= S_IFLNK; break;
+            default:        Temp = 0;        break;
+        }
+
+        if ( Temp == 0 ) {
+            RCt = XFS_RC ( rcInvalid );
+        }
+        else {
+            * Mode = Temp;
+        }
     }
 
-        /* TODO */
-    return 0;
-}   /* StatStructureToXFSPeerObjectInfo () */
+    return RCt;
+}   /* _FUSE_char_to_perm () */
+
+static
+rc_t
+_FUSE_stat_for_node ( const struct XFSNode * Node, struct stat * Stat )
+{
+    rc_t RCt;
+    XFSNType Type;
+    KTime_t Time;
+    uint64_t Size;
+    const struct XFSAttrEditor * Editor;
+    const char * Perm;
+
+    RCt = 0;
+    Editor = NULL;
+    Perm = NULL;
+
+    if ( Node == NULL || Stat == NULL ) {
+        return XFS_RC ( rcNull ) ;
+    }
+
+    RCt = XFSNodeAttrEditor ( Node, & Editor );
+    if ( RCt != 0 || Editor == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    /*) Here we are doing security ... later 
+     /  TODO Stat -> st_mode = SomeAccess
+    (*/
+
+    RCt = XFSAttrEditorType ( Editor, & Type );
+    if ( RCt == 0 ) {
+        Stat -> st_mode = 0;
+
+        RCt = XFSAttrEditorPermissions ( Editor, & Perm );
+        if ( RCt == 0 ) {
+            RCt = _FUSE_char_to_perm ( Perm, Type, & ( Stat -> st_mode ) );
+
+            if ( RCt == 0 && Stat -> st_mode != 0 ) {
+                if ( XFSAttrEditorDate ( Editor, & Time ) == 0 ) {
+                    if ( XFSAttrEditorSize ( Editor, & Size ) == 0 ) {
+                        Stat -> st_uid = getuid();
+                        Stat -> st_gid = getgid();
+                        Stat -> st_blksize = XFS_SIZE_4096;
+                        Stat -> st_size = Size;
+                        Stat -> st_atime = Time;
+                        Stat -> st_mtime = Time;
+                        Stat -> st_ctime = Time;
+                    }
+                }
+            }
+        }
+    }
+
+    XFSEditorDispose ( & ( Editor -> Papahen ) );
+
+    return RCt;
+}   /* _FUSE_stat_for_node () */
 
 /*
  $  Cache for less :)
@@ -279,42 +628,6 @@ XFS_FUSE_rc_to_errno ( rc_t RCt )
 
 
 /*****************************************************
- * Most of operations are providing Path and FileInfo
- * so, there is most popular checks in one method
- *****************************************************/
-static
-rc_t
-XFS_FUSE_common_check (
-                    const char * ThePath,
-                    XFSPeer ** ThePeer,
-                    VPath ** TheVPath
-)
-{
-    rc_t RCt;
-    VFSManager * Manager;
-
-    if ( ThePath == 0 ) {
-        return RC ( rcFS, rcNoTarg, rcAccessing, rcParam, rcNull );
-    }
-
-    * TheVPath = NULL;
-
-    RCt = GetPeerFromFuseHaHa ( ThePeer );
-    if ( RCt == 0 ) {
-        Manager = ( VFSManager * )( * ThePeer ) -> Data;
-        if ( Manager == NULL ) {
-            RCt = RC ( rcFS, rcNoTarg, rcAccessing, rcParam, rcNull );
-        }
-        else {
-            RCt = VFSManagerMakePath ( Manager, TheVPath, "%s", ThePath );
-        }
-    }
-
-    return RCt;
-}   /* XFS_FUSE_common_check () */
-
-
-/*****************************************************
  * Operations
  *****************************************************/
 
@@ -326,43 +639,34 @@ int
 XFS_FUSE_getattr ( const char * ThePath, struct stat * TheStat )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * TheVPath;
-    XFSPeerObjectInfo ThePeerObjectInfo;
+    const struct XFSNode * Node;
+    XFSNType Type;
+
+    RCt = 0;
+    Node = NULL;
+    Type = kxfsNotFound;
 
     XFSMSG ( ( "GETATTR(Fuse): [%s]\n", ThePath ) );
 
-    RCt = XFS_FUSE_common_check ( ThePath, & ThePeer, & TheVPath );
+    if ( ThePath == NULL || TheStat == NULL ) {
+        return EINVAL * - 1;
+    }
+    memset ( TheStat, 0, sizeof ( struct stat ) );
 
+    RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, & Type );
     if ( RCt == 0 ) {
-        if ( ThePeer -> vt -> v1.getattr != NULL ) {
-            RCt = ThePeer -> vt -> v1.getattr (
-                                            ThePeer,
-                                            TheVPath,
-                                            & ThePeerObjectInfo
-                                            );
+        if ( Type == kxfsNotFound ) {
+            XFSNodeRelease ( Node );
 
-                /* Here we are trying to convert ObjectInfo to stat
-                 */
-            if ( RCt == 0 ) {
-                RCt = StatStructureToXFSPeerObjectInfo (
-                                            & ThePeerObjectInfo,
-                                            TheStat
-                                            );
-            }
-            else {
-                memset ( TheStat, 0, sizeof ( struct stat ) );
-            }
-        }
-        else {
-            XFSMSG ( ( "ERROR: Peer method 'getattr()' is not implemented\n" ) );
-            RCt = XFS_RC ( rcUnsupported );
+            return ENOENT * - 1;
         }
 
-        VPathRelease ( TheVPath );
+        RCt = _FUSE_stat_for_node ( Node, TheStat );
+
+        XFSNodeRelease ( Node );
     }
 
-    return - XFS_FUSE_rc_to_errno ( RCt );
+    return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_getattr() */
 
 #endif /* USE_XFS_FUSE_GETATTR == 1 */
@@ -425,27 +729,35 @@ int
 XFS_FUSE_mkdir ( const char * ThePath, mode_t TheMode )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * TheVPath;
+    const struct XFSNode * Parent;
+    char * Child;
+    const struct XFSDirEditor * Editor;
+
+    RCt = 0;
+    Parent = NULL;
+    Child = NULL;
+    Editor = NULL;
 
     XFSMSG ( ( "MKDIR(Fuse): [%s][mode=%d]\n", ThePath, TheMode ) );
 
-    RCt = XFS_FUSE_common_check ( ThePath, & ThePeer, & TheVPath );
-    if ( RCt == 0 ) {
-        if ( ThePeer -> vt -> v1.mkdir != NULL ) {
-            RCt = ThePeer -> vt -> v1.mkdir ( ThePeer, TheVPath, TheMode );
-        }
-        else {
-            XFSMSG ( ( "ERROR: Peer method 'mkdir()' is not implemented\n" ) );
-            RCt = XFS_RC ( rcUnsupported );
-
-        }
-
-        VPathRelease ( TheVPath );
+    if ( ThePath == NULL ) {
+        return EINVAL * - 1;
     }
 
+    RCt = _FUSE_get_parent_node ( ThePath, & Parent, NULL, & Child );
+    if ( RCt == 0 ) {
+        RCt = XFSNodeDirEditor ( Parent, & Editor );
+        if ( RCt == 0 ) {
+            RCt = XFSDirEditorCreateDir ( Editor, Child );
 
-    return - XFS_FUSE_rc_to_errno ( RCt );
+            XFSEditorDispose ( & ( Editor -> Papahen ) );
+        }
+
+        XFSNodeRelease ( Parent );
+        free ( Child );
+    }
+
+    return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_mkdir() */
 
 #endif /* USE_XFS_FUSE_MKDIR == 1 */
@@ -458,29 +770,18 @@ int
 XFS_FUSE_unlink ( const char * ThePath )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * TheVPath;
+
+    RCt = 0;
 
     XFSMSG ( ( "UNLINK(Fuse): [%s]\n", ThePath ) );
 
-    RCt = XFS_FUSE_common_check ( ThePath, & ThePeer, & TheVPath );
-
-    if ( RCt == 0 ) {
-        if ( ThePeer -> vt -> v1.unlink != NULL ) {
-            RCt = ThePeer -> vt -> v1.unlink (
-                                ThePeer,
-                                ( const struct VPath * ) TheVPath
-                                );
-        }
-        else {
-            XFSMSG ( ( "ERROR: Peer method 'unlink()' is not implemented\n" ) );
-            RCt = XFS_RC ( rcUnsupported );
-        }
-
-        VPathRelease ( TheVPath );
+    if ( ThePath == NULL ) {
+        return EINVAL * - 1;
     }
 
-    return - XFS_FUSE_rc_to_errno ( RCt );
+    RCt = _FUSE_delete_file_dir ( ThePath );
+
+    return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_unlink() */
 
 #endif /* USE_XFS_FUSE_UNLINK == 1 */
@@ -493,29 +794,18 @@ int
 XFS_FUSE_rmdir ( const char * ThePath )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * TheVPath;
+
+    RCt = 0;
 
     XFSMSG ( ( "RMDIR(Fuse): [%s]\n", ThePath ) );
 
-    RCt = XFS_FUSE_common_check ( ThePath, & ThePeer, & TheVPath );
-    if ( RCt == 0 ) {
-        if ( ThePeer -> vt -> v1.rmdir != NULL ) {
-            RCt = ThePeer -> vt -> v1.rmdir (
-                                ThePeer,
-                                ( const struct VPath * ) TheVPath
-                                );
-        }
-        else {
-            XFSMSG ( ( "ERROR: Peer method 'rmdir()' is not implemented\n" ) );
-
-            RCt = XFS_RC ( rcUnsupported );
-        }
-
-        VPathRelease ( TheVPath );
+    if ( ThePath == NULL ) {
+        return EINVAL * - 1;
     }
 
-    return - XFS_FUSE_rc_to_errno ( RCt );
+    RCt = _FUSE_delete_file_dir ( ThePath );
+
+    return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_rmdir() */
 
 #endif /* USE_XFS_FUSE_RMDIR == 1 */
@@ -542,41 +832,42 @@ int
 XFS_FUSE_rename ( const char * OldPath, const char * NewPath )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * OldVPath, * NewVPath;
-    VFSManager * Manager;
+    const struct XFSNode * OldDir, * NewDir;
+    char * OldName, * NewName;
+    const struct XFSDirEditor * Editor;
+
+    RCt = 0;
+    OldDir = NewDir = NULL;
+    OldName = NewName = NULL;
+    Editor = NULL;
+
 
     XFSMSG ( ( "RENAME(Fuse): from [%s] to [%s]\n", OldPath, NewPath ) );
 
-    RCt = XFS_FUSE_common_check ( OldPath, & ThePeer, & OldVPath );
-    if ( RCt == 0 ) {
-        Manager = ( VFSManager * ) ThePeer -> Data;
-        if ( Manager == NULL ) {
-            RCt = XFS_RC ( rcNull );
-        }
-        else {
-            if ( ThePeer -> vt -> v1.rename != NULL ) {
-                RCt = VFSManagerMakePath ( Manager, & NewVPath, "%s", NewPath );
-                if ( RCt == 0 ) {
-                    RCt = ThePeer -> vt -> v1.rename (
-                                    ThePeer,
-                                    ( const struct VPath * ) OldVPath,
-                                    ( const struct VPath * ) NewVPath
-                                    );
-
-                    VPathRelease ( NewVPath );
-                }
-                VPathRelease ( OldVPath );
-            }
-            else {
-                XFSMSG ( ( "ERROR: Peer method 'rename()' is not implemented\n" ) );
-                RCt = XFS_RC ( rcUnsupported );
-            }
-        }
+    if ( OldPath == NULL || NewPath == NULL ) {
+        return EINVAL * - 1;
     }
 
-        /* TODO!!! */
-    return - XFS_FUSE_rc_to_errno ( RCt );
+    RCt = _FUSE_get_parent_node ( OldPath, & OldDir, NULL, & OldName );
+    if ( RCt == 0 ) {
+        RCt = _FUSE_get_parent_node ( NewPath, & NewDir, NULL, & NewName );
+
+        if ( RCt == 0 ) {
+            RCt = XFSNodeDirEditor ( OldDir, & Editor );
+            if ( RCt == 0 ) {
+                RCt = XFSDirEditorMove ( Editor, OldName, NewDir, NewName );
+                XFSEditorDispose ( & ( Editor -> Papahen ) );
+            }
+
+            XFSNodeRelease ( NewDir );
+            free ( NewName );
+        }
+
+        XFSNodeRelease ( OldDir );
+        free ( OldName );
+    }
+
+    return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_rename() */
 
 #endif /* USE_XFS_FUSE_RENAME == 1 */
@@ -602,14 +893,36 @@ static
 int
 XFS_FUSE_chmod ( const char * ThePath, mode_t TheMode )
 {
-    char JJJ [ 2000 ];
-    sprintf ( JJJ, "/home/iskhakov/HLAM%s", ThePath );
+    rc_t RCt;
+    const struct XFSAttrEditor * Editor;
+    const struct XFSNode * Node;
+    char Buf [ 16 ];
 
-    OUTMSG ( ( "CHMOD(): ThePath %s (%s)[mode = %d]\n", ThePath, JJJ, TheMode ) );
+    RCt = 0;
+    Editor = NULL;
+    Node = NULL;
+    * Buf = 0;
 
-    errno = 0;
+    XFSMSG ( ( "CHMOD(Fuse): [%s][mode=%d]\n", ThePath, TheMode ) );
 
-    return chmod ( JJJ, TheMode ) == 0 ? 0 : -errno;
+    if ( ThePath == NULL ) {
+        return EINVAL * - 1;
+    }
+
+    RCt = XFSPermAccessToChar ( TheMode, Buf, sizeof ( Buf ) );
+    if ( RCt == 0 ) {
+        RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, NULL );
+        if ( RCt == 0 ) {
+            RCt = XFSNodeAttrEditor ( Node, & Editor );
+            if ( RCt == 0 ) {
+                RCt = XFSAttrEditorSetPermissions ( Editor, Buf );
+            }
+
+            XFSNodeRelease ( Node );
+        }
+    }
+
+    return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_chmod() */
 
 #endif /* USE_XFS_FUSE_CHMOD == 1 */
@@ -636,30 +949,30 @@ int
 XFS_FUSE_truncate ( const char * ThePath, off_t TheSize )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * TheVPath;
+    const struct XFSAttrEditor * Editor;
+    const struct XFSNode * Node;
+
+    RCt = 0;
+    Editor = NULL;
+    Node = NULL;
 
     XFSMSG ( ( "TRUNCATE(Fuse): [%s][SZ=%d] \n", ThePath, TheSize ) );
 
-    RCt = XFS_FUSE_common_check ( ThePath, & ThePeer, &TheVPath );
-    if ( RCt == 0 ) {
-        if ( ThePeer -> vt -> v1.truncate != NULL ) {
-            RCt = ThePeer -> vt -> v1.truncate (
-                                            ThePeer,
-                                            TheVPath,
-                                            TheSize
-                                            );
-        }
-        else {
-            XFSMSG ( ( "ERROR: Peer method 'truncate()' is not implemented\n" ) );
-
-            RCt = XFS_RC ( rcUnsupported );
-        }
-
-        VPathRelease ( TheVPath );
+    if ( ThePath == NULL ) {
+        return EINVAL * - 1;
     }
 
-    return - XFS_FUSE_rc_to_errno ( RCt );
+    RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, NULL );
+    if ( RCt == 0 ) {
+        RCt = XFSNodeAttrEditor ( Node, & Editor );
+        if ( RCt == 0 ) {
+            RCt = XFSAttrEditorSetSize ( Editor, TheSize );
+        }
+
+        XFSNodeRelease ( Node );
+    }
+
+    return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_truncate() */
 
 #endif /* USE_XFS_FUSE_TRUNCATE == 1 */
@@ -672,30 +985,30 @@ int
 XFS_FUSE_utime ( const char * ThePath, struct utimbuf * TheBuf )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * TheVPath;
+    const struct XFSAttrEditor * Editor;
+    const struct XFSNode * Node;
+
+    RCt = 0;
+    Editor = NULL;
+    Node = NULL;
 
     XFSMSG ( ( "UTIME(Fuse): [%s][AT=%d][MT=%d] \n", ThePath, TheBuf -> actime, TheBuf -> modtime ) );
 
-    RCt = XFS_FUSE_common_check ( ThePath, & ThePeer, &TheVPath );
-    if ( RCt == 0 ) {
-        if ( ThePeer -> vt -> v1.utime != NULL ) {
-            RCt = ThePeer -> vt -> v1.utime (
-                                        ThePeer,
-                                        TheVPath,
-                                        TheBuf -> modtime
-                                        );
-        }
-        else {
-            XFSMSG ( ( "ERROR: Peer method 'utime()' is not implemented\n" ) );
-            RCt = XFS_RC ( rcUnsupported );
-        }
-
-        VPathRelease ( TheVPath );
+    if ( ThePath == NULL ) {
+        return EINVAL * - 1;
     }
 
+    RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, NULL );
+    if ( RCt == 0 ) {
+        RCt = XFSNodeAttrEditor ( Node, & Editor );
+        if ( RCt == 0 ) {
+            RCt = XFSAttrEditorSetDate ( Editor, TheBuf -> modtime );
+        }
 
-    return - XFS_FUSE_rc_to_errno ( RCt );
+        XFSNodeRelease ( Node );
+    }
+
+    return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_utime() */
 
 #endif /* USE_XFS_FUSE_UTIME == 1 */
@@ -708,38 +1021,71 @@ int
 XFS_FUSE_open ( const char * ThePath, struct fuse_file_info * TheInfo )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * TheVPath;
-    struct KFile * TheFile;
+    const struct XFSNode * Node;
+    XFSNType Type;
+    int Flags;
+    const struct XFSFileEditor * Editor;
+    XFSNMode Mode;
+    const struct XFSHandle * Handle;
 
-    XFSMSG ( ( "OPEN(Fuse): [%s][FI=0x%p][flags=%d] \n", ThePath, TheInfo, TheInfo -> flags ) );
+    RCt = 0;
+    Node = NULL;
+    Type = kxfsNotFound;
+    Flags = TheInfo == NULL ? 0xbad : TheInfo -> flags;
+    Editor = NULL;
+    Mode = kxfsNone;
+    Handle = NULL;
 
-    RCt = XFS_FUSE_common_check ( ThePath, & ThePeer, &TheVPath );
-    if ( RCt == 0 ) {
-        if ( ThePeer -> vt -> v1.open != NULL ) {
-            RCt = ThePeer -> vt -> v1.open (
-                                        ThePeer,
-                                        TheVPath,
-                                        & TheFile,
-                                        TheInfo -> flags
-                                        );
-            if ( RCt == 0 ) {
-                    /*  Here we should pass KFile to FileInfo
-                     */
+    XFSMSG ( ( "OPEN(Fuse): [%s][FI=0x%p][flags=%d] \n", ThePath, TheInfo, Flags ) );
 
-                TheInfo -> fh = ( uint64_t ) TheFile;
-XFSMSG ( ( "OPEN(Fuse cont): [%s][FI=0x%p][FH=%p] \n", ThePath, TheInfo, TheFile ) );
-            }
-        }
-        else {
-            XFSMSG ( ( "ERROR: Peer method 'open()' is not implemented\n" ) );
-            RCt = XFS_RC ( rcUnsupported );
-        }
-
-        VPathRelease ( TheVPath );
+    if ( ThePath == NULL || TheInfo == NULL ) {
+        return EINVAL * - 1;
     }
 
-    return - XFS_FUSE_rc_to_errno (RCt );
+    if ( ( Flags & O_RDWR ) == O_RDWR ) {
+        Mode = kxfsReadWrite;
+    }
+    else {
+        if ( ( Flags & O_WRONLY ) == O_WRONLY ) {
+            Mode = kxfsWrite;
+        }
+        else {
+            Mode = kxfsRead;
+        }
+
+    }
+
+    RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, & Type );
+    if ( RCt == 0 ) {
+        if ( Type == kxfsNotFound ) {
+            XFSNodeRelease ( Node );
+            return ENOENT * - 1;
+        }
+
+        RCt = XFSNodeFileEditor ( Node, & Editor );
+        if ( RCt == 0 ) {
+            RCt = XFSFileEditorOpen ( Editor, Mode );
+            if ( RCt == 0 ) {
+                RCt = XFSHandleMake ( Node, & Handle );
+                if ( RCt == 0 ) {
+                    XFSHandleSet ( Handle, ( void * ) Editor );
+                    TheInfo -> fh = ( uint64_t ) Handle;
+                }
+            }
+        }
+
+        XFSNodeRelease ( Node );
+    }
+
+    if ( RCt != 0 ) {
+        if ( Editor != NULL ) {
+            XFSEditorDispose ( & ( Editor -> Papahen ) );
+        }
+    }
+
+    XFSMSG ( ( "OPEN(Fuse cont): [%s][FI=0x%p][FH=%p] \n", ThePath, TheInfo, Handle ) );
+
+    return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_open() */
 
 #endif /* USE_XFS_FUSE_OPEN == 1 */
@@ -758,47 +1104,47 @@ XFS_FUSE_read (
 )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * TheVPath;
-    KFile * TheFile;
+    const struct XFSHandle * Handle;
+    const struct XFSFileEditor * Editor;
     size_t NumBytesReaded;
 
-    TheFile = ( KFile * ) TheFileInfo -> fh;
+    RCt = 0;
+    Editor = NULL;
+    Handle = TheFileInfo == NULL
+                        ? NULL
+                        : ( const struct XFSHandle * ) TheFileInfo -> fh
+                        ;
+    NumBytesReaded = 0;
 
-    XFSMSG ( ( "READ(Fuse): [%s][FI=0x%p][FH=0x%p][OF=%d SZ=%d]\n", ThePath, TheFileInfo, TheFile, TheOffsetRead, TheSizeRead ) );
 
-    if ( TheFile != 0 ) {
-        RCt = XFS_FUSE_common_check ( ThePath, & ThePeer, &TheVPath );
-        if ( RCt == 0 ) {
-            if ( ThePeer -> vt -> v1.read != NULL ) {
-                RCt = ThePeer -> vt -> v1.read (
-                                            ThePeer,
-                                            TheVPath,
-                                            TheFile,
-                                            TheOffsetRead,
-                                            TheBuf,
-                                            TheSizeRead,
-                                            & NumBytesReaded
-                                            );
-                XFSMSG ( ( "READ(Fuse, cont): [%s][FI=0x%p][FH=0x%p][BR=%d]\n", ThePath, TheFileInfo, TheFile, NumBytesReaded ) );
-            }
-            else {
-                XFSMSG ( ( "ERROR: Peer methon 'read()' is not implemented" ) );
-                RCt = XFS_RC ( rcUnsupported );
-            }
+    XFSMSG ( ( "READ(Fuse): [%s][FI=0x%p][FH=0x%p][OF=%d SZ=%d]\n", ThePath, TheFileInfo, Handle, TheOffsetRead, TheSizeRead ) );
 
-            VPathRelease ( TheVPath );
-        }
+    if ( ThePath == NULL || TheBuf == NULL || TheFileInfo == NULL ) {
+        return EINVAL * - 1;
     }
-    else {
-            /* TODO ??? */
-        RCt = XFS_RC ( rcUnsupported );
+
+    if ( Handle == NULL ) {
+        return EBADF * - 1;
     }
+
+    Editor = ( const struct XFSFileEditor * ) XFSHandleGet ( Handle );
+    if ( Editor == NULL ) {
+        return EBADF * - 1;
+    }
+
+    RCt = XFSFileEditorRead (
+                        Editor,
+                        TheOffsetRead,
+                        TheBuf,
+                        TheSizeRead,
+                        & NumBytesReaded
+                        );
 
     return RCt == 0
                 ? NumBytesReaded
-                : ( - XFS_FUSE_rc_to_errno ( RCt ) )
+                : ( XFS_FUSE_rc_to_errno ( RCt ) * - 1)
                 ;
+
 }   /* XFS_FUSE_read() */
 
 #endif /* USE_XFS_FUSE_READ == 1 */
@@ -817,46 +1163,44 @@ XFS_FUSE_write (
 )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * TheVPath;
-    KFile * TheFile;
+    const struct XFSHandle * Handle;
+    const struct XFSFileEditor * Editor;
     size_t NumBytesWritten;
 
-    TheFile = ( KFile * ) TheFileInfo -> fh;
+    RCt = 0;
+    Editor = NULL;
+    Handle = TheFileInfo == NULL
+                        ? NULL
+                        : ( const struct XFSHandle * ) TheFileInfo -> fh
+                        ;
+    NumBytesWritten = 0;
 
-    XFSMSG ( ( "WRITE(Fuse): [%s][FI=0x%p][FH=0x%p][OF=%d SZ=%d]\n", ThePath, TheFileInfo, TheFile, TheOffsetWrite, TheSizeWrite ) );
+    XFSMSG ( ( "WRITE(Fuse): [%s][FI=0x%p][FH=0x%p][OF=%d SZ=%d]\n", ThePath, TheFileInfo, Handle, TheOffsetWrite, TheSizeWrite ) );
 
-    if ( TheFile != 0 ) {
-        RCt = XFS_FUSE_common_check ( ThePath, & ThePeer, &TheVPath );
-        if ( RCt == 0 ) {
-            if ( ThePeer -> vt -> v1.write != NULL ) {
-                RCt = ThePeer -> vt -> v1.write (
-                                            ThePeer,
-                                            TheVPath,
-                                            TheFile,
-                                            TheOffsetWrite,
-                                            ( void * ) TheBuf,
-                                            TheSizeWrite,
-                                            & NumBytesWritten
-                                            );
-                XFSMSG ( ( "WRITE(Fuse, cont): [%s][FI=0x%p][FH=0x%p][BR=%d]\n", ThePath, TheFileInfo, TheFile, NumBytesWritten ) );
-            }
-            else {
-                XFSMSG ( ( "ERROR: Peer methon 'write()' is not implemented" ) );
-                RCt = XFS_RC ( rcUnsupported );
-            }
-
-            VPathRelease ( TheVPath );
-        }
+    if ( ThePath == NULL || TheBuf == NULL || TheFileInfo == NULL ) {
+        return EINVAL * - 1;
     }
-    else {
-            /* TODO ??? */
-        RCt = XFS_RC ( rcUnsupported );
+
+    if ( Handle == NULL ) {
+        return EBADF * - 1;
     }
+
+    Editor = ( const struct XFSFileEditor * ) XFSHandleGet ( Handle );
+    if ( Editor == NULL ) {
+        return EBADF * - 1;
+    }
+
+    RCt = XFSFileEditorWrite (
+                        Editor,
+                        TheOffsetWrite,
+                        TheBuf,
+                        TheSizeWrite,
+                        & NumBytesWritten
+                        );
 
     return RCt == 0
                 ? NumBytesWritten
-                : ( - XFS_FUSE_rc_to_errno ( RCt ) )
+                : ( XFS_FUSE_rc_to_errno ( RCt ) * - 1)
                 ;
 }   /* XFS_FUSE_write() */
 
@@ -910,38 +1254,35 @@ XFS_FUSE_release (
 )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * TheVPath;
-    struct KFile * TheFile;
+    const struct XFSHandle * Handle;
+    const struct XFSFileEditor * Editor;
 
-    TheFile = ( struct KFile * ) TheFileInfo -> fh;
+    RCt = 0;
+    Editor = NULL;
+    Handle = TheFileInfo == NULL
+                        ? NULL
+                        : ( const struct XFSHandle * ) TheFileInfo -> fh
+                        ;
 
-    XFSMSG ( ( "RELEASE(Fuse): [%s][FI=0x%p][FH=0x%p] \n", ThePath, TheFileInfo, TheFile ) );
+    XFSMSG ( ( "RELEASE(Fuse): [%s][FI=0x%p][FH=0x%p]\n", ThePath, TheFileInfo, Handle ) );
 
-    if ( TheFile != NULL ) {
-        RCt = XFS_FUSE_common_check ( ThePath, & ThePeer, & TheVPath );
-        if ( RCt == 0 ) {
-            if ( ThePeer -> vt -> v1.release != NULL ) {
-                RCt = ThePeer -> vt -> v1.release (
-                                            ThePeer,
-                                            TheVPath,
-                                            TheFile
-                                            );
-                TheFileInfo -> fh = -1;
-            }
-            else {
-                XFSMSG ( ( "ERROR: Peer method 'release()' is not implemented\n" ) );
-                RCt = XFS_RC ( rcUnsupported );
-            }
+    if ( ThePath == NULL || TheFileInfo == NULL ) {
+        return EINVAL * - 1;
+    }
 
-            VPathRelease ( TheVPath );
+    if ( Handle != NULL ) {
+        Editor = ( const struct XFSFileEditor * ) XFSHandleGet ( Handle );
+
+        if ( Editor != NULL ) {
+            XFSFileEditorClose ( Editor );
+            XFSEditorDispose ( & ( Editor -> Papahen ) );
+            XFSHandleSet ( Handle, NULL );
         }
-    }
-    else {
-        RCt = XFS_RC ( rcNull );
+
+        XFSHandleRelease ( Handle );
     }
 
-    return - XFS_FUSE_rc_to_errno ( RCt );
+    return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_release() */
 
 #endif /* USE_XFS_FUSE_RELEASE == 1 */
@@ -957,23 +1298,8 @@ XFS_FUSE_fsync (
             struct fuse_file_info * TheFileInfo
 )
 {
-    int Result;
-    int FileHandle;
-    char JJJ [ 2000 ];
-    sprintf ( JJJ, "/home/iskhakov/HLAM%s", ThePath );
-
-    FileHandle = ( int ) TheFileInfo -> fh;
-
-    OUTMSG ( ( "FSYNC: ThePath %s (%s)[FI=0x%p][FH=%d][DT=%d]\n", ThePath, JJJ, TheFileInfo, FileHandle, DataSync ) );
-
-    errno = 0;
-
-    Result = DataSync
-                ? fsync ( FileHandle )
-                : fdatasync ( FileHandle )
-                ;
-
-    return - errno;
+    OUTMSG ( ( "FSYNC: ThePath %s [FI=0x%p][DT=%d]\n", ThePath, TheFileInfo, DataSync ) );
+	return 0;
 }   /* XFS_FUSE_fsync() */
 
 #endif /* USE_XFS_FUSE_FSYNC == 1 */
@@ -1058,38 +1384,38 @@ XFS_FUSE_opendir (
 )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * TheVPath;
-    uint32_t Flags;
-    void * Handle;
+    const struct XFSNode * Node;
+    const struct XFSHandle * Handle;
+    XFSNType Type;
 
-    Flags = TheFileInfo -> flags;
+    RCt = 0;
+    Node = NULL;
+    Handle = NULL;
+    Type = kxfsBadPath;
 
-    XFSMSG ( ( "OPENDIR(Fuse): [%s][FI=0x%p][flags=%d]\n", ThePath, TheFileInfo, Flags ) );
-
-    RCt = XFS_FUSE_common_check ( ThePath, & ThePeer, & TheVPath );
-    if ( RCt == 0 ) {
-        if ( ThePeer -> vt -> v1.opendir != NULL ) {
-            RCt = ThePeer -> vt -> v1.opendir (
-                                            ThePeer,
-                                            TheVPath,
-                                            & Handle
-                                            );
-            if ( RCt == 0 ) {
-                TheFileInfo -> fh = ( uint64_t ) Handle;
-
-XFSMSG ( ( "OPENDIR(Fuse, cont): [%s][FI=0x%p][FH=0x%p]\n", ThePath, TheFileInfo, Handle ) );
-            }
-        }
-        else {
-            XFSMSG ( ( "ERROR: Peer method 'opendir()' is not implemented\n" ) );
-            RCt = XFS_RC ( rcUnsupported );
-        }
-
-        VPathRelease ( TheVPath );
+    if ( ThePath == NULL || TheFileInfo == NULL ) {
+        return EINVAL * - 1;
     }
 
-    return - XFS_FUSE_rc_to_errno ( RCt );
+    XFSMSG ( ( "OPENDIR(Fuse): [%s][FI=0x%p][flags=%d]\n", ThePath, TheFileInfo, TheFileInfo -> flags ) );
+
+    RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, & Type );
+    if ( RCt == 0 ) {
+        if ( Type != kxfsDir ) {
+            XFSNodeRelease ( Node );
+
+            return ENOENT * - 1;
+        }
+
+        RCt = XFSHandleMake ( Node, & Handle );
+        if ( RCt == 0 ) {
+            TheFileInfo -> fh = ( uint64_t ) Handle;
+        }
+
+        XFSNodeRelease ( Node );
+    }
+
+    return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_opendir() */
 
 #endif /* USE_XFS_FUSE_OPENDIR == 1 */
@@ -1120,62 +1446,81 @@ XFS_FUSE_readdir (
 )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * TheVPath;
-    void * Handle;
-    KNamelist * NameList;
+    const struct XFSNode * Node;
+    const struct XFSHandle * Handle;
+    const struct XFSDirEditor * Editor;
+    const struct KNamelist * List;
     uint32_t ListQty, llp;
-    const char *ListEntry;
+    const char * Name;
 
-    Handle = ( void * ) TheFileInfo -> fh;
+    RCt = 0;
+    Node = NULL;
+    Handle = NULL;
+    Editor = NULL;
+    List = NULL;
+    ListQty = llp = 0;
+    Name = NULL;
 
-    XFSMSG ( ( "READDIR(Fuse): [%s][FI=0x%p][FH=0x%p] \n", ThePath, TheFileInfo, Handle ) );
-
-    RCt = XFS_FUSE_common_check ( ThePath, & ThePeer, & TheVPath );
-    if ( RCt == 0 ) {
-        if ( ThePeer -> vt -> v1.readdir != NULL ) {
-            RCt = ThePeer -> vt -> v1.readdir (
-                                        ThePeer,
-                                        TheVPath,
-                                        Handle,
-                                        & NameList
-                                        );
-            if ( RCt == 0 ) { 
-                if ( NameList != NULL ) { 
-                    RCt = KNamelistCount ( NameList, & ListQty );
-                    if ( RCt == 0 ) {
-XFSMSG ( ( "READDIR(Fuse): [%s][files found: %d] \n", ThePath, ListQty ) );
-                        for( llp = 0; llp < ListQty; llp ++ ) {
-                            RCt = KNamelistGet (
-                                                NameList,
-                                                llp,
-                                                & ListEntry
-                                                );
-                            if ( RCt != 0 ) {
-                                break;
-                            }
-                            TheFiller ( TheBuffer, ListEntry, NULL, 0 );
-XFSMSG ( ( "   [%d] %s [%s/%s] \n", llp, ListEntry, ThePath, ListEntry ) );
-                        }
-                    }
-                }
-                else {
-                    RCt = XFS_RC ( rcNull );
-                }
-                /* TODO - reading list and filling buffer */
-
-                KNamelistRelease ( NameList );
-            }
-        }
-        else {
-            XFSMSG ( ( "ERROR: Peer method 'readdir()' is not implemented\n" ) );
-            RCt = XFS_RC ( rcUnsupported );
-        }
-
-        VPathRelease ( TheVPath );
+    if ( ThePath == NULL || TheFileInfo == NULL ) {
+        return EINVAL * - 1;
     }
 
-    return - XFS_FUSE_rc_to_errno ( RCt );
+    Handle = ( const struct XFSHandle * ) TheFileInfo -> fh;
+
+    XFSMSG ( ( "READDIR(Fuse): [%s][FI=0x%p][FH=0x%p] \n", ThePath, TheFileInfo, ( void * ) Handle ) );
+
+    if ( Handle != NULL ) {
+        Node = XFSHandleNode ( Handle );
+        if ( Node == NULL ) {
+            RCt = XFS_RC ( rcInvalid );
+        }
+        else {
+            RCt = XFSNodeDirEditor ( Node, & Editor );
+            if ( RCt == 0 ) {
+                if ( Editor == NULL ) {
+                    RCt = XFS_RC ( rcInvalid );
+                }
+                else {
+                    RCt = XFSDirEditorList ( Editor, & List );
+                    if ( RCt == 0 ) {
+                        RCt = KNamelistCount ( List, & ListQty );
+                        if ( RCt == 0 ) {
+                            for ( llp = 0; llp < ListQty; llp ++ ) {
+                                RCt = KNamelistGet ( List, llp, & Name );
+                                if ( RCt == 0 ) { 
+                                    TheFiller (
+                                            TheBuffer,
+                                            Name,
+                                            NULL,
+                                            0
+                                            );
+                                }
+
+                                if ( RCt != 0 ) {
+/* Do we need that? TODO!!!
+                                    break;
+*/
+                                    RCt = 0; /* Right ? */
+                                }
+                            }
+                        }
+
+                        KNamelistRelease ( List );
+                    }
+
+                    XFSEditorDispose ( & ( Editor -> Papahen ) );
+                }
+            }
+            else {
+                RCt = XFS_RC ( rcInvalid );
+            }
+        }
+    }
+    else {
+        RCt = XFS_RC ( rcInvalid );
+    }
+
+    return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_readdir() */
 
 #endif /* USE_XFS_FUSE_READDIR == 1 */
@@ -1191,33 +1536,27 @@ XFS_FUSE_releasedir (
 )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * TheVPath;
-    void * Handle;
+    const struct XFSHandle * Handle;
 
-    Handle = ( void * ) TheFileInfo -> fh;
+    RCt = 0;
+    Handle = NULL;
 
-    XFSMSG ( ( "RELEASEDIR(Fuse): [%s][FI=0x%p][FH=0x%p] \n", ThePath, TheFileInfo, Handle ) );
-
-    RCt = XFS_FUSE_common_check ( ThePath, & ThePeer, & TheVPath );
-    if ( RCt == 0 ) {
-        if ( ThePeer -> vt -> v1.releasedir != NULL ) {
-            RCt = ThePeer -> vt -> v1.releasedir (
-                                            ThePeer,
-                                            TheVPath,
-                                            Handle
-                                            );
-            TheFileInfo -> fh = -1;
-        }
-        else {
-            XFSMSG ( ( "ERROR: Peer method 'releasedir()' is not implemented\n" ) );
-            RCt = XFS_RC ( rcUnsupported );
-        }
-
-        VPathRelease ( TheVPath );
+    if ( ThePath == NULL || TheFileInfo == NULL ) {
+        return EINVAL * - 1;
     }
 
-    return - XFS_FUSE_rc_to_errno ( RCt );
+    Handle = ( const struct XFSHandle * ) TheFileInfo -> fh;
+
+    XFSMSG ( ( "RELEASEDIR(Fuse): [%s][FI=0x%p][FH=0x%p] \n", ThePath, TheFileInfo, ( void * ) Handle ) );
+
+    if ( Handle != NULL ) {
+        RCt = XFSHandleRelease ( Handle );
+    }
+    else {
+        RCt = XFS_RC ( rcInvalid );
+    }
+
+    return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_releasedir() */
 
 #endif /* USE_XFS_FUSE_RELEASEDIR == 1 */
@@ -1248,13 +1587,13 @@ void *
 XFS_FUSE_init ( struct fuse_conn_info * TheConnInfo )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
+    const struct XFSTreeDepot * Depot;
 
-    RCt = GetPeerFromFuseHaHa ( & ThePeer );
+    RCt = _FUSE_tree_depot ( & Depot );
 
-    OUTMSG ( ( "INIT(): TheConnInfo 0x%p Peer %p\n", TheConnInfo, ThePeer ) );
+    OUTMSG ( ( "INIT(): TheConnInfo 0x%p TreeDepot %p\n", TheConnInfo, Depot ) );
 
-    return RCt != 0 ? NULL : ThePeer;
+    return RCt != 0 ? NULL : ( void * ) Depot;
 }   /* XFS_FUSE_init() */
 
 #endif /* USE_XFS_FUSE_INIT == 1 */
@@ -1277,33 +1616,83 @@ XFS_FUSE_destroy ( void * OnoSamoe )
 
 static
 int
-XFS_FUSE_access ( const char * ThePath, int NonDefPermissions )
+XFS_FUSE_access ( const char * ThePath, int Access )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * TheVPath;
+    const struct XFSAttrEditor * Editor;
+    const struct XFSNode * Node;
+    bool xOK, rOK, wOK, fOK;
+    XFSNType Type;
+    const char * Perm;
+    const struct XFSPerm * xPerm;
+    const struct XFSAuth * Auth;
 
-    XFSMSG ( ( "ACCESS(Fuse): [%s][mode=%d]\n", ThePath, NonDefPermissions ) );
+    RCt = 0;
+    Editor = NULL;
+    Node = NULL;
+    Type = kxfsNotFound;
+    Perm = NULL;
+    xPerm = NULL;
+    Auth = NULL;
 
-    RCt = XFS_FUSE_common_check ( ThePath, & ThePeer, &TheVPath );
-    if ( RCt == 0 ) {
-        if ( ThePeer -> vt -> v1.access != NULL ) {
-            RCt = ThePeer -> vt -> v1.access (
-                                        ThePeer,
-                                        TheVPath,
-                                        NonDefPermissions
-                                        );
-        }
-        else {
-            XFSMSG ( ( "ERROR: Peer method 'access()' is not implemented\n" ) );
-            RCt = XFS_RC ( rcUnsupported );
-        }
+    xOK = ( Access && X_OK ) == X_OK; /* Can Execute */
+    wOK = ( Access && W_OK ) == W_OK; /* Can Write */
+    rOK = ( Access && R_OK ) == R_OK; /* Can Read */
+    fOK = ( Access && F_OK ) == F_OK; /* File Exists */
 
-        VPathRelease ( TheVPath );
+    XFSMSG ( ( "ACCESS(Fuse): [%s][mode=%d][x=%d][w=%d][r=%d][f=%d]\n", ThePath, Access, xOK, wOK, rOK, fOK ) );
+
+    if ( ThePath == NULL ) {
+        return - 1;
     }
 
+    if ( ! xOK && ! wOK && ! rOK && ! fOK ) {
+        return - 1;
+    }
 
-    return - XFS_FUSE_rc_to_errno ( RCt );
+    RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, & Type );
+    if ( RCt == 0 ) {
+            /* Check for fOK */
+        if ( Type == kxfsNotFound ) {
+            RCt = 1;
+        }
+        else {
+            if ( xOK || wOK || rOK ) {
+                RCt = XFSNodeAttrEditor ( Node, & Editor );
+                if ( RCt == 0 ) {
+                    RCt = XFSAttrEditorPermissions ( Editor, & Perm );
+                    if ( RCt == 0 ) {
+                        RCt = XFSPermMake ( Perm, & xPerm );
+                        if ( RCt == 0 ) {
+                            Auth = XFSPermAuth ( xPerm, kxfsUser );
+                            if ( Auth == NULL ) {
+                                RCt = 1;
+                            }
+                            else {
+                                if ( xOK ) {
+                                    RCt = ! XFSAuthCanExecute ( Auth );
+                                }
+                                if ( rOK && RCt == 0 ) {
+                                    RCt = ! XFSAuthCanRead ( Auth );
+                                }
+                                if ( wOK && RCt == 0 ) {
+                                    RCt = ! XFSAuthCanWrite ( Auth );
+                                }
+                            }
+
+                            XFSPermDispose ( xPerm );
+                        }
+                    }
+
+                    XFSEditorDispose ( & ( Editor -> Papahen ) );
+                }
+            }
+        }
+
+        XFSNodeRelease ( Node );
+    }
+
+    return RCt == 0 ? 0 : - 1;
 }   /* XFS_FUSE_access() */
 
 #endif /* USE_XFS_FUSE_ACCESS == 1 */
@@ -1319,48 +1708,62 @@ XFS_FUSE_create (
             struct fuse_file_info * TheFileInfo
 )
 {
-        /*  TODO : I still does not know if it is right to use 
-         *  KDirectoryCreateFile, cuz it required 'update' parameter
-         *  and that parameter is usually passed as flags to 'open'
-         *  I noticed, that 'flags' field from FileInfo struct is
-         *  set 'right' always( ?), but I can not find in documentation
-         *  if it is correct. BTW, using these flags
-         */
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * TheVPath;
-    struct KFile * TheFile;
     uint32_t Flags;
+    const struct XFSNode * Node;
+    const struct XFSDirEditor *Editor;
+    const struct XFSHandle * Handle;
+    char * Child;
+    XFSNMode Mode;
+
+    RCt = 0;
+    Node = NULL;
+    Editor = NULL;
+    Handle = NULL;
+    Child = NULL;
+    Mode = kxfsNone;
 
     Flags = TheFileInfo -> flags;
 
 XFSMSG ( ( "CREATE(Fuse): [%s][FI=0x%p][flags=%d][mode=%d]\n", ThePath, TheFileInfo, Flags, TheMode ) );
 
-    RCt = XFS_FUSE_common_check ( ThePath, & ThePeer, & TheVPath );
-    if ( RCt == 0 ) {
-        if ( ThePeer -> vt -> v1.create != NULL ) {
-            RCt = ThePeer -> vt -> v1.create (
-                                            ThePeer,
-                                            TheVPath,
-                                            & TheFile,
-                                            Flags,
-                                            TheMode
-                                            );
-            if ( RCt == 0 ) {
-                TheFileInfo -> fh = ( uint64_t ) TheFile;
-
-XFSMSG ( ( "CREATE(Fuse, cont): [%s][FI=0x%p][FH=0x%p]\n", ThePath, TheFileInfo, TheFile ) );
-            }
-        }
-        else {
-            XFSMSG ( ( "ERROR: Peer method 'create()' is not implemented\n" ) );
-            RCt = XFS_RC ( rcUnsupported );
-        }
-
-        VPathRelease ( TheVPath );
+    if ( ThePath == NULL ) {
+        return EINVAL * - 1;
     }
 
-    return - XFS_FUSE_rc_to_errno ( RCt );
+    if ( ( Flags & O_RDWR ) == O_RDWR ) {
+        Mode = kxfsReadWrite;
+    }
+    else {
+        if ( ( Flags & O_WRONLY ) == O_WRONLY ) {
+            Mode = kxfsWrite;
+        }
+        else {
+            Mode = kxfsRead;
+        }
+    }
+
+    RCt = _FUSE_get_parent_node ( ThePath, & Node, NULL, & Child );
+    if ( RCt == 0 ) {
+        RCt = XFSNodeDirEditor ( Node, & Editor );
+        if ( RCt == 0 ) {
+            RCt = XFSDirEditorCreate ( Editor, Child, Mode, & Handle );
+            if ( RCt != 0 ) {
+                XFSEditorDispose ( & ( Editor -> Papahen ) );
+                TheFileInfo -> fh = 0;
+            }
+            else {
+                TheFileInfo -> fh = ( uint64_t ) Handle;
+            }
+        }
+
+        XFSNodeRelease ( Node );
+        free ( Child );
+    }
+
+XFSMSG ( ( "CREATE(Fuse, cont): [%s][FI=0x%p][FH=0x%p][mode=%d]\n", ThePath, TheFileInfo, Handle, Mode ) );
+
+    return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_create() */
 
 #endif /* USE_XFS_FUSE_CREATE == 1 */
@@ -1377,39 +1780,30 @@ XFS_FUSE_ftruncate (
 )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * TheVPath;
-    KFile * TheFile;
+    const struct XFSAttrEditor * Editor;
+    const struct XFSNode * Node;
 
-    TheFile = ( KFile * ) TheFileInfo -> fh;
+    RCt = 0;
+    Editor = NULL;
+    Node = NULL;
 
-    XFSMSG ( ( "TRUNCATE(Fuse): [%s][SZ=%d][FH=0x%p] \n", ThePath, TheSize, TheFile ) );
+    XFSMSG ( ( "FTRUNCATE(Fuse): [%s][SZ=%d]\n", ThePath, TheSize ) );
 
-    if ( TheFile != NULL ) {
-        RCt = XFS_FUSE_common_check ( ThePath, & ThePeer, &TheVPath );
+    if ( ThePath == NULL ) {
+        return EINVAL * - 1;
+    }
+
+    RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, NULL );
+    if ( RCt == 0 ) {
+        RCt = XFSNodeAttrEditor ( Node, & Editor );
         if ( RCt == 0 ) {
-            if ( ThePeer -> vt -> v1.ftruncate != NULL ) {
-                RCt = ThePeer -> vt -> v1.ftruncate (
-                                                ThePeer,
-                                                TheVPath,
-                                                TheFile,
-                                                TheSize
-                                                );
-            }
-            else {
-                XFSMSG ( ( "ERROR: Peer method 'ftruncate()' is not implemented\n" ) );
-
-                RCt = XFS_RC ( rcUnsupported );
-            }
-
-            VPathRelease ( TheVPath );
+            RCt = XFSAttrEditorSetSize ( Editor, TheSize );
         }
-    }
-    else {
-        RCt = XFS_RC ( rcNull );
+
+        XFSNodeRelease ( Node );
     }
 
-    return - XFS_FUSE_rc_to_errno ( RCt );
+    return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_ftruncate() */
 
 #endif /* USE_XFS_FUSE_FTRUNCATE == 1 */
@@ -1426,46 +1820,30 @@ XFS_FUSE_fgetattr (
 )
 {
     rc_t RCt;
-    XFSPeer * ThePeer;
-    VPath * TheVPath;
-    KFile * TheFile;
-    XFSPeerObjectInfo ThePeerObjectInfo;
+    const struct XFSHandle * Handle;
+    const struct XFSNode * Node;
 
-    TheFile = ( KFile * ) TheFileInfo -> fh;
+    RCt = 0;
+    Handle = ( const struct XFSHandle * ) TheFileInfo -> fh;
+    Node = NULL;
 
-    XFSMSG ( ( "FGETATTR(Fuse): [%s][FH=0x%p]\n", ThePath, TheFile ) );
+    XFSMSG ( ( "FGETATTR(Fuse): [%s][FI=0x%p][FG=0x%p]\n", ThePath, TheFileInfo, Handle ) );
 
-    RCt = XFS_FUSE_common_check ( ThePath, & ThePeer, & TheVPath );
-
-    if ( RCt == 0 ) {
-        if ( ThePeer -> vt -> v1.fgetattr != NULL ) {
-            RCt = ThePeer -> vt -> v1.fgetattr (
-                                            ThePeer,
-                                            TheVPath,
-                                            TheFile,
-                                            & ThePeerObjectInfo
-                                            );
-            if ( RCt == 0 ) {
-                StatStructureToXFSPeerObjectInfo (
-                                            & ThePeerObjectInfo,
-                                            TheStat
-                                            );
-            }
-            else {
-                memset ( TheStat, 0, sizeof ( struct stat ) );
-            }
-        }
-        else {
-            XFSMSG ( ( "ERROR: Peer method 'fgetattr()' is not implemented\n" ) );
-            RCt = XFS_RC ( rcUnsupported );
-        }
-
-        VPathRelease ( TheVPath );
+    if ( ThePath == NULL || TheStat == NULL || TheFileInfo == NULL ) {
+        return EINVAL * - 1;
     }
 
-    return - XFS_FUSE_rc_to_errno ( RCt );
-    /* return RCt == 0 ? 0 : - ENOENT; */
-}   /* XFS_FUSE_fgetattr() */
+    memset ( TheStat, 0, sizeof ( struct stat ) );
+
+    Node = XFSHandleNode ( Handle );
+    if ( Node == NULL ) {
+        return EINVAL * - 1;
+    }
+
+    RCt = _FUSE_stat_for_node ( Node, TheStat );
+
+    return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
+}   /* XFS_FUSE_fgetattr () */
 
 #endif /* USE_XFS_FUSE_FGETATTR == 1 */
 

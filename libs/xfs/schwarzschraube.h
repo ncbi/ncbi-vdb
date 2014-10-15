@@ -24,24 +24,44 @@
  *
  */
 
-#include <klib/rc.h>
+#ifndef _schwarzschraube_
+#define _schwarzschraube_
+
 #include <xfs/xfs-defs.h>
-#include <xfs/xfs-peer.h>
 
-/*  Something unusual
- */
-extern const char *xfsPrimePeerName;
-const char * xfsDummyPrimeame = "OptimusPrime";
+#ifdef __cplusplus 
+extern "C" {
+#endif /* __cplusplus */
 
-LIB_EXPORT
-rc_t CC
-XFSPrimePeerCreate ( XFSPeer ** self )
-{
-    rc_t RCt;
+/*) Fowards, and others
+ (*/
 
-    RCt = 0;
+/*))))
+  ||||   Unsorted methods which usage was approved by usage
+  ((((*/
 
-    /* TODO */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
-    return RCt;
-}   /* XFSPrimePeerCreate() */
+/*)))   Dupping string, and if NULL is Src, it will be passed to Dst
+ (((*/
+XFS_EXTERN rc_t CC XFS_StrDup ( const char * Src,  const char ** Dst );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*)))   Sometimes I need VFSManager, and from different places, and
+  |||   it is very costly to make on Windows platform
+  (((*/
+struct VFSManager;
+
+XFS_EXTERN rc_t CC XFS_VfsManagerInit ( );
+XFS_EXTERN rc_t CC XFS_VfsManagerDispose ( );
+
+XFS_EXTERN const struct VFSManager * CC XFS_VfsManager ( );
+
+#ifdef __cplusplus 
+}
+#endif /* __cplusplus */
+
+#endif /* _schwarzschraube_ */

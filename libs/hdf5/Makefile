@@ -38,11 +38,15 @@ ALL_LIBS = \
 
 include $(TOP)/build/Makefile.env
 
-INCDIRS += $(addprefix -I,$(HDF5_INCDIR))
+ifdef HDF5_INCDIR
+	INCDIRS += $(addprefix -I,$(HDF5_INCDIR))
+endif
 
 #-------------------------------------------------------------------------------
 # outer targets
 #
+ifeq (1,$(HAVE_HDF5))
+
 all std: makedirs
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
@@ -51,6 +55,19 @@ $(INT_LIBS): makedirs
 
 $(EXT_LIBS): makedirs
 	@ $(MAKE_CMD) $(LIBDIR)/$@
+
+else
+
+all std: $(ALL_LIBS)
+
+$(INT_LIBS):
+	@ echo "NOTE - internal library $(@F) cannot be built:"         \
+	       "It requires 'libhdf5' and its development headers."
+
+$(EXT_LIBS):
+	@ echo "NOTE - library $(@F) cannot be built:"                  \
+	       "It requires 'libhdf5' and its development headers."
+endif
 
 .PHONY: all std $(ALL_LIBS)
 

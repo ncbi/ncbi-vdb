@@ -24,40 +24,27 @@
  *
  */
 
-#ifndef _h_xfs_defs_
-#define _h_xfs_defs_
+#ifndef _h_xfs_native_peer_operations_
+#define _h_xfs_native_peer_operations_
 
 #include <klib/rc.h>
+#include <WTypes.h>
 
-#ifndef _h_xfs_extern_
-#include <xfs/extern.h>
-#endif /* _h_xfs_extern_ */
+    /*  We are still working under the version 2.5 because there is
+        port on MAC for that
+    */
+#include "dokan.h"
 
-#define XFS_SIZE_4096       4096
-#define XFS_SIZE_2048       2048
-#define XFS_SIZE_1024       1024
-#define XFS_SIZE_512         512 
-#define XFS_SIZE_128         128 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-/*  That is a part of conspiracy, if You do not like too verbose
- *  programms, comment that part
- */
-#define XFS_EXTENDED_LOGGING
-
-#ifdef XFS_EXTENDED_LOGGING
-    #define XFSMSG(msg) OUTMSG(msg)
-#else   /* XFS_EXTENDED_LOGGING */
-    #define XFSMSG(msg)
-#endif  /* XFS_EXTENDED_LOGGING */
-
-/*  Another great masterpiece lol
- */
-#define XFS_RC(State)   RC(rcFS, rcNoTarg, rcProcessing, rcNoObj, State)
-
+    /*  Here we are going to fill that evis structure
+    */
+XFS_EXTERN rc_t CC XFS_Private_InitOperations ( DOKAN_OPERATIONS * Ops );
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-
-#endif /* _h_xfs_defs_ */
+#endif /* _h_xfs_native_peer_operations_ */

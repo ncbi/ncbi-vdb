@@ -24,26 +24,26 @@
  *
  */
 
-#include <klib/rc.h>
+#ifndef _h_common_
+#define _h_common_
+
 #include <xfs/xfs-defs.h>
-#include <xfs/xfs-peer.h>
 
-/*  There are no dynamic peer name
- */
+/*))))
+ ((((   This file contains all unsorted common things
+  ))))
+ ((((*/
 
-LIB_EXPORT
-rc_t CC
-XFSDynamicPeerCreate (
-                XFSPeer ** self,
-                const char * Name,
-                void * Data
-)
-{
-    rc_t RCt;
+/*))    Flavors ... all kind
+ ((*/
+static const uint32_t _sFlavorLess                = 0;
+static const uint32_t _sFlavorOfFoo               = 1;
+static const uint32_t _sFlavorOfBogus             = 2;
+static const uint32_t _sFlavorOfSimpleContainer   = 3;
+static const uint32_t _sFlavorOfKfs               = 4;
 
-    RCt = 0;
+/*))    Common name defines for property names
+ ((*/
+#define XFS_MODEL_SOURCE    "source"
 
-    /* TODO */
-
-    return RCt;
-}   /* XFSDynamicPeerCreate() */
+#endif /* _h_common_ */
