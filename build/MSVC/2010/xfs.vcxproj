@@ -1,0 +1,56 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  
+  <Import Project=".\lib-project.props" />  
+
+  <PropertyGroup>
+    <TargetName>lib$(ProjectName)</TargetName>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <ClCompile Include="..\..\..\libs\xfs\xfs.c" />
+    <ClCompile Include="..\..\..\libs\xfs\win\platform.c" />
+    <ClCompile Include="..\..\..\libs\xfs\win\operations.c" />
+    <ClCompile Include="..\..\..\libs\xfs\win\security.c" />
+    <ClCompile Include="..\..\..\libs\xfs\model.c" />
+    <ClCompile Include="..\..\..\libs\xfs\path.c" />
+    <ClCompile Include="..\..\..\libs\xfs\tree.c" />
+    <ClCompile Include="..\..\..\libs\xfs\node.c" />
+    <ClCompile Include="..\..\..\libs\xfs\perm.c" />
+    <ClCompile Include="..\..\..\libs\xfs\editors.c" />
+    <ClCompile Include="..\..\..\libs\xfs\handle.c" />
+    <ClCompile Include="..\..\..\libs\xfs\teleport.c" />
+    <ClCompile Include="..\..\..\libs\xfs\foo.c" />
+    <ClCompile Include="..\..\..\libs\xfs\ncon.c" />
+    <ClCompile Include="..\..\..\libs\xfs\simcon.c" />
+    <ClCompile Include="..\..\..\libs\xfs\kfs.c" />
+    <ClCompile Include="..\..\..\libs\xfs\bogus.c" />
+    <ClCompile Include="..\..\..\libs\xfs\owp.c" />
+    <ClCompile Include="..\..\..\libs\xfs\schwarzschraube.c" />
+    <ClCompile Include="..\..\..\libs\xfs\zehr.c" />
+    <ClCompile Include="..\..\..\libs\xfs\mehr.c" />
+  </ItemGroup>
+  
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{FAA69740-AFC2-463C-AAA5-36F768E393C9}</ProjectGuid>
+  </PropertyGroup>
+
+</Project>
