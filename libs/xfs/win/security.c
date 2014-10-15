@@ -440,7 +440,7 @@ _GetSidAndSizeNoLock ( const  char * Name, SID ** Sid, DWORD * SidSize )
 
         /*) First we should know size of SID
          (*/
-    if ( LookupAccountName (
+    if ( LookupAccountNameA (
                         NULL,
                         Name,
                         NULL,
@@ -460,7 +460,7 @@ _GetSidAndSizeNoLock ( const  char * Name, SID ** Sid, DWORD * SidSize )
         return XFS_RC ( rcExhausted );
     }
 
-    if ( LookupAccountName (
+    if ( LookupAccountNameA (
                         NULL,
                         Name,
                         RetSid,
@@ -516,7 +516,7 @@ _GetUserName ( char * Buffer, size_t BufferSize )
 
     BS = BufferSize;
 
-    if ( GetUserName ( Buffer, & BS ) == 0 ) {
+    if ( GetUserNameA ( Buffer, & BS ) == 0 ) {
         return XFS_RC ( rcExhausted );
     }
 
@@ -562,7 +562,7 @@ _GetGroupNameInLegitWay ( char * Buffer, size_t BufferSize )
         TheSid = ( ( TOKEN_PRIMARY_GROUP * ) TokenInfo ) -> PrimaryGroup;
         if ( TheSid != NULL ) {
             if ( IsValidSid ( TheSid ) ) {
-                if ( ! LookupAccountSid (
+                if ( ! LookupAccountSidA (
                                     NULL,
                                     TheSid,
                                     Buffer,
