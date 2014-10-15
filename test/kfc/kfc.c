@@ -24,38 +24,6 @@
 *
 */
 
-#include <simple/extern.h>
-
-/* until needed later */
-#define NO_SOURCE_LOC 1
-
-#include "vdb-table.h"
-#include "vdb-sra.h"
-
-#include "sra-exception.h"
-#include "sra-object.h"
-
-#include <vdb/table.h>
-#include <vdb/cursor.h>
-#include <klib/rc.h>
-
-#include <stdlib.h>
-#include <assert.h>
-
-
-/*--------------------------------------------------------------------------
- * VDBTableObj
- */
-
-
-/* Make
- *  create a table-based object
- *  these include the classic SRA tables:
- *    454, Illumina, ABI, Helicos, IonTorrent
- *  as well as simple reference sequence types.
- */
-SRAObject *VDBTableObjMake ( SRAException *x, const VTable *tbl )
-{
-    /* TBD - determine the object type */
-    return SRATableObjMake ( x, tbl );
-}
+#include "../libs/kfc/xc.c"
+#include "../libs/kfc/except.c"
+#include "../libs/kfc/tstate.c"

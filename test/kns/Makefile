@@ -22,28 +22,35 @@
 #
 # ===========================================================================
 
-by_default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+default: runtests
 
-include $(TOP)/build/Makefile.shell
+TOP ?= $(abspath ../..)
+MODULE = test/kns
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+	test-http
+
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+INCDIRS += -I$(TOP)/libs/kns
 
 #-------------------------------------------------------------------------------
-# default
+# white-box test
 #
-SUBDIRS =    \
-	kfc      \
-	kns      \
-	vfs      \
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+TEST_SRC = \
+	http-test
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
+TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_SRC))
 
-.PHONY: default $(SUBDIRS)
+TEST_LIB = \
+	-skapp-norsrc \
+	-sncbi-vdb \
 
+$(TEST_BINDIR)/test-http: $(TEST_OBJ)
+	$(LD) --exe -o $@ $^ $(TEST_LIB)

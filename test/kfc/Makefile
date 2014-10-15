@@ -22,28 +22,34 @@
 #
 # ===========================================================================
 
-by_default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+default: runtests
 
-include $(TOP)/build/Makefile.shell
+TOP ?= $(abspath ../..)
+MODULE = test/kfc
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+	test-except
+
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(ALL_LIBS) $(TEST_TOOLS)
 
 #-------------------------------------------------------------------------------
-# default
+# white-box test
 #
-SUBDIRS =    \
-	kfc      \
-	kns      \
-	vfs      \
+TEST_SRC = \
+	test-except \
+	kfc \
+    
+TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_SRC))
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+TEST_LIB = \
+	-sklib
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
-
-.PHONY: default $(SUBDIRS)
-
+$(TEST_BINDIR)/test-except: $(TEST_OBJ)
+	$(LD) --exe -o $@ $^ $(TEST_LIB)

@@ -73,7 +73,10 @@ include $(TOP)/build/Makefile.targets
 $(SUBDIRS):
 	@ $(MAKE) -C $@
 
-.PHONY: default $(SUBDIRS)
+test:
+	@true
+    
+.PHONY: default $(SUBDIRS) test
 
 #-------------------------------------------------------------------------------
 # pass-through

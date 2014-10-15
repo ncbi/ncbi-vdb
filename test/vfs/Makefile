@@ -22,6 +22,35 @@
 #
 # ===========================================================================
 
+default: runtests
 
-PED = $(shell $(SRCDIR)/gcc-ped.sh -std=gnu99 -fgnu89-inline)
+TOP ?= $(abspath ../..)
 
+MODULE = test/vfs
+
+TEST_TOOLS = \
+	path-test
+
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(TEST_TOOLS)
+
+#-------------------------------------------------------------------------------
+# white-box test
+#
+
+TEST_SRC = \
+	path-test
+
+TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_SRC))
+
+TEST_LIB = \
+	-skapp \
+	-sncbi-vdb \
+
+$(TEST_BINDIR)/path-test: $(TEST_OBJ)
+	$(LD) --exe -o $@ $^ $(TEST_LIB)

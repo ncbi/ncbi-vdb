@@ -34,9 +34,6 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
-TEST_TOOLS = \
-	test-except
-
 include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
@@ -51,10 +48,7 @@ std: makedirs
 $(INT_LIBS): makedirs
 	@ $(MAKE_CMD) $(ILIBDIR)/$@
 
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-.PHONY: all std $(ALL_LIBS) $(TEST_TOOLS)
+.PHONY: all std $(ALL_LIBS)
 
 #-------------------------------------------------------------------------------
 # all, std
@@ -96,20 +90,5 @@ $(ILIBDIR)/libkfc.$(LIBX): $(KFC_OBJ)
 
 
 #-------------------------------------------------------------------------------
-# white-box test
+# white-box test moved to $(TOP)/test/kfc
 #
-
-TEST_SRC = \
-	test-except \
-	tstate \
-	except \
-	xc
-
-TEST_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_SRC))
-
-TEST_LIB = \
-	-sklib
-
-$(TEST_BINDIR)/test-except: $(TEST_OBJ)
-	$(LD) --exe -o $@ $^ $(TEST_LIB)
