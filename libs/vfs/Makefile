@@ -34,9 +34,6 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
-TEST_TOOLS = \
-	path-test
-
 include $(TOP)/build/Makefile.env
 
 RWORKDIR=$(TOP)/$(MODULE)
@@ -50,10 +47,7 @@ all std: makedirs
 $(INT_LIBS): makedirs
 	@ $(MAKE_CMD) $(ILIBDIR)/$@
 
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-.PHONY: all std $(ALL_LIBS) $(TEST_TOOLS)
+.PHONY: all std $(ALL_LIBS)
 
 #-------------------------------------------------------------------------------
 # std
@@ -67,7 +61,6 @@ $(TARGDIR)/std: \
 # clean
 #
 clean: stdclean
-	@ rm -f $(addsuffix *,$(addprefix $(TEST_BINDIR)/,$(TEST_TOOLS)))
 
 .PHONY: clean
 
@@ -102,24 +95,5 @@ $(ILIBDIR)/libvfs.$(LIBX): $(VFS_OBJ)
 
 
 #-------------------------------------------------------------------------------
-# white-box test
+# white-box test moved to $(TOP)/test/vfs
 #
-
-TEST_SRC = \
-	path-test
-
-TEST_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_SRC)) \
-	$(addsuffix .$(LOBX),$(VFS_SRC_CMN))
-
-TEST_LIB = \
-	-skapp \
-	-skns \
-	-skrypto \
-	-skfg \
-	-skfs \
-	-skproc \
-	-sklib 
-
-$(TEST_BINDIR)/path-test: $(TEST_OBJ)
-	$(LD) --exe -o $@ $^ $(TEST_LIB)

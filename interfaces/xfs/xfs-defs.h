@@ -28,16 +28,32 @@
 #define _h_xfs_defs_
 
 #include <klib/rc.h>
-#include <xfs/extern.h>
 
-/*  That file contains very important variables and definitions
-    ha-ha
+#ifndef _h_xfs_extern_
+#include <xfs/extern.h>
+#endif /* _h_xfs_extern_ */
+
+#define XFS_SIZE_4096       4096
+#define XFS_SIZE_2048       2048
+#define XFS_SIZE_1024       1024
+#define XFS_SIZE_512         512 
+#define XFS_SIZE_128         128 
+
+/*  That is a part of conspiracy, if You do not like too verbose
+ *  programms, comment that part
  */
-#ifndef MAX_PATH
-    #define XFS_SIZE_4096   4096
-#else   /* MAX_PATH */
-    #define XFS_SIZE_4096   MAX_PATH
-#endif  /* MAX_PATH */
+#define XFS_EXTENDED_LOGGING
+
+#ifdef XFS_EXTENDED_LOGGING
+    #define XFSMSG(msg) OUTMSG(msg)
+#else   /* XFS_EXTENDED_LOGGING */
+    #define XFSMSG(msg)
+#endif  /* XFS_EXTENDED_LOGGING */
+
+/*  Another great masterpiece lol
+ */
+#define XFS_RC(State)   RC(rcFS, rcNoTarg, rcProcessing, rcNoObj, State)
+
 
 #ifdef __cplusplus
 }

@@ -28,17 +28,20 @@ TOP ?= $(abspath ../..)
 
 MODULE = libs/xfs
 
+include $(TOP)/build/Makefile.env
+RWORKDIR=$(TOP)/$(MODULE)
+
+ifeq (mac,$(OS))
+TOP = $(shell cd ../.. && pwd )
+endif
+
+
 INT_LIBS = \
 	libxfs
 
 ALL_LIBS = \
 	$(INT_LIBS)
 
-TEST_TOOLS = \
-
-include $(TOP)/build/Makefile.env
-
-RWORKDIR=$(TOP)/$(MODULE)
 
 #-------------------------------------------------------------------------------
 # outer targets
@@ -49,10 +52,7 @@ all std: vers-includes
 $(INT_LIBS): vers-includes
 	@ $(MAKE_CMD) $(ILIBDIR)/$@
 
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-.PHONY: all std $(ALL_LIBS) $(TEST_TOOLS)
+.PHONY: all std $(ALL_LIBS)
 
 #-------------------------------------------------------------------------------
 # std
@@ -73,9 +73,12 @@ $(TARGDIR)/vers-includes: $(addsuffix .vers.h,$(EXT_LIBS))
 # clean
 #
 clean: stdclean
-	@ rm -f $(addsuffix *,$(addprefix $(TEST_BINDIR)/,$(TEST_TOOLS)))
 
 .PHONY: clean
+
+ifeq (mac,$(OS))
+INCDIRS += -I/usr/local/include/osxfuse/fuse
+endif
 
 #-------------------------------------------------------------------------------
 # xfs
@@ -83,13 +86,27 @@ clean: stdclean
 $(ILIBDIR)/libxfs: $(addprefix $(ILIBDIR)/libxfs.,$(ILIBEXT))
 
 XFS_SRC = \
-    xfs-peer    \
-    xfs-peer-dummy  \
-    xfs-peer-prime  \
-    xfs-peer-dynamic    \
-    xfs-native-peer \
-    xfs-native-peer-operations \
-	xfs
+    xfs \
+    platform \
+    operations  \
+    security    \
+    model    \
+    path    \
+    tree    \
+    node    \
+    perm    \
+    editors \
+    handle  \
+    teleport    \
+    foo \
+    ncon  \
+    simcon  \
+    kfs   \
+    bogus     \
+    owp \
+    schwarzschraube \
+    zehr    \
+    mehr
 
 XFS_OBJ = \
 	$(addsuffix .$(LOBX),$(XFS_SRC))

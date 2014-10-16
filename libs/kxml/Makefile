@@ -42,16 +42,26 @@ INCDIRS += $(addprefix -I,$(XML2_INCDIR))
 #-------------------------------------------------------------------------------
 # outer targets
 #
-ifeq (win,$(OS))
-all std:
-	@ true
-else
+ifeq (1,$(HAVE_XML2))
+
 all std: makedirs
 	@ $(MAKE_CMD) $(TARGDIR)/std
-endif
 
 $(INT_LIBS): makedirs
 	@ $(MAKE_CMD) $(ILIBDIR)/$@
+
+else
+
+all std: $(ALL_LIBS)
+
+$(INT_LIBS):
+	@ echo "NOTE - internal library $(@F) cannot be built:"         \
+	       "It requires 'libxml2' and its development headers."
+
+$(EXT_LIBS):
+	@ echo "NOTE - library $(@F) cannot be built:"                  \
+	       "It requires 'libxml2' and its development headers."
+endif
 
 .PHONY: all std $(ALL_LIBS)
 

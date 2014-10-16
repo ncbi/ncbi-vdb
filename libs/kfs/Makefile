@@ -30,20 +30,13 @@ MODULE = libs/kfs
 INT_LIBS = \
 	libkfs \
 	libkfs-nommap \
+	libkff \
 #	libkfs.2
 
 ALL_LIBS = \
 	$(INT_LIBS)
 
-TEST_TOOLS = \
-
 include $(TOP)/build/Makefile.env
-
-HAVE_MAGIC = $(shell grep -q HAVE_MAGIC $(TOP)/build/Makefile.config.$(OS).$(ARCH) && echo 1 || echo 0)
-
-ifeq (1,$(HAVE_MAGIC))
-INT_LIBS += libkff
-endif
 
 #-------------------------------------------------------------------------------
 # outer targets
@@ -54,13 +47,7 @@ all std: makedirs
 $(INT_LIBS): makedirs
 	@ $(MAKE_CMD) $(ILIBDIR)/$@
 
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-karcdir-entry: makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-.PHONY: all std $(ALL_LIBS) $(TEST_TOOLS)
+.PHONY: all std $(ALL_LIBS)
 
 #-------------------------------------------------------------------------------
 # std
@@ -191,7 +178,17 @@ $(ILIBDIR)/libkfs.2.$(LIBX): $(KFS2_OBJ)
 #-------------------------------------------------------------------------------
 # kff
 #
+ifeq (1,$(HAVE_MAGIC))
+
 $(ILIBDIR)/libkff: $(addprefix $(ILIBDIR)/libkff.,$(ILIBEXT))
+
+else
+
+$(ILIBDIR)/libkff:
+	@ echo "NOTE - internal library $(@F) cannot be built:"         \
+	       "It requires 'libmagic' and its development headers."
+
+endif
 
 KFF_SRC = \
 	fileformat \
@@ -213,22 +210,3 @@ endif
 $(ILIBDIR)/libkff.$(LIBX): $(KFF_OBJ)
 	$(LD) --slib -o $@ $^ $(KFF_LIB)
 
-
-
-#-------------------------------------------------------------------------------
-# white-box test
-#
-TEST_SRC = \
-	KArcDirEntry
-
-TEST_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_SRC))
-
-TEST_DEP = \
-	$(ILIBDIR)/libkfs.$(LIBX)
-
-TEST_LIB = \
-	-lncbi-vdb
-
-$(TEST_BINDIR)/karcdir-entry: $(TEST_OBJ) $(TEST_DEP)
-	$(LD) --exe -o $@ $(TEST_OBJ) $(TEST_LIB)

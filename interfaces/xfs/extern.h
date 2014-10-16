@@ -26,16 +26,19 @@
 
  /* Like a monkey in a fish bowl */
 
- #ifndef _h_xfs_extern_
- #define _h_xfs_extern_
+#ifndef _h_xfs_extern_
+#define _h_xfs_extern_
 
- #if ! defined EXPORT_LATCH && defined _LIBRARY
+#if defined _LIBRARY
  #define XFS_EXTERN LIB_EXPORT
  #define XFS_EXTERN_DATA extern LIB_EXPORT
- #define EXPORT_LATCH 1
- #else
+
+  #if ! defined EXPORT_LATCH
+  #define EXPORT_LATCH 1
+  #endif /* EXPORT_LATCH */
+#else
  #define XFS_EXTERN LIB_IMPORT
- #endif
+#endif /* _LIBRARY */
 
  #ifndef _h_klib_extern_
  #include <klib/extern.h>

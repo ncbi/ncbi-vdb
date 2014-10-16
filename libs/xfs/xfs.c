@@ -24,10 +24,16 @@
  *
  */
 
-#include <xfs/xfs.h>
 #include <klib/out.h>
 #include <klib/text.h>
 #include <kproc/thread.h>
+
+#include <xfs/xfs.h>
+#include <xfs/tree.h>
+
+#include "platform.h"
+#include "schwarzschraube.h"
+#include "owp.h"
 #include "xfs-priv.h"
 
 #include <sysalloc.h>
@@ -36,65 +42,7 @@
 
 /*  Some forwards and declarations
  */
-XFS_EXTERN rc_t CC XFSControlInitVT ( XFSControl * self );
 static rc_t XFSVeryMainLoop ( const KThread * self, void * Data );
-
-/*  The code will init XFSControl, it is calling external method
- *  XFSControlInitVT (), which is platform dependent
- */
-LIB_EXPORT
-rc_t CC
-XFSControlInit ( XFSControl ** self, struct XFSPeer * Peer )
-{
-    rc_t RCt;
-    XFSControl * TheControl;
-
-    RCt = 0;
-    TheControl = NULL;
-
-    if ( self == NULL ) {
-            /*  TODO : not sure about rc */
-        return RC ( rcFS, rcNoTarg, rcConstructing, rcSelf, rcNull );
-    }
-
-    if ( Peer == NULL ) {
-            /*  TODO : not sure about rc */
-        return RC ( rcFS, rcNoTarg, rcConstructing, rcSelf, rcNull );
-    }
-
-    TheControl = *self;
-
-    if ( TheControl != NULL ) {
-        return RC ( rcFS, rcNoTarg, rcConstructing, rcSelf, rcUnexpected );
-    }
-
-    TheControl = calloc ( 1, sizeof ( XFSControl ) );
-    if ( TheControl == NULL ) {
-            /* MESSAGING? */
-        return RC ( rcFS, rcNoTarg, rcAllocating, rcSelf, rcNull );
-    }
-
-    RCt = XFSControlInitVT ( TheControl );
-    if ( RCt != 0 ) {
-        free ( TheControl );
-
-        return RC ( rcFS, rcNoTarg, rcConstructing, rcSelf, rcUnexpected );
-    }
-
-        /*  I think that it is right place to initialize Peer field
-         */
-    TheControl -> Peer = Peer;
-    RCt = TheControl -> vt -> v1.init ( TheControl );
-    if ( RCt != 0 ) {
-        TheControl -> vt -> v1.destroy ( TheControl );
-
-        free ( TheControl );
-    } else {
-        * self = TheControl;
-    }
-
-    return RCt;
-}   /* XFSControlInit () */
 
 /*  The code, which is checking version is quite similar for
  *  destroy/start/stop ... and, possible for other methods,
@@ -102,46 +50,114 @@ XFSControlInit ( XFSControl ** self, struct XFSPeer * Peer )
  */
 static
 rc_t
-XFSControlStandardSelfCheck( const XFSControl * self )
+XFSControlStandardSelfCheck( const struct XFSControl * self )
 {
+        /*  TODO : here and further not sure about rc */
+
     if ( self == NULL ) {
-            /*  TODO : not sure about rc */
-        return RC ( rcFS, rcNoTarg, rcConstructing, rcSelf, rcNull );
+        return XFS_RC ( rcNull );
     }
 
     if ( self -> vt == NULL ) {
-            /*  TODO : not sure about rc */
-        return RC ( rcFS, rcNoTarg, rcConstructing, rcInterface, rcNull );
-    }
-
-    if ( self -> Arguments == NULL ) {
-            /*  TODO : not sure about rc */
-        return RC ( rcFS, rcNoTarg, rcConstructing, rcInterface, rcNull );
+        return XFS_RC ( rcNull );
     }
 
         /*  Should be extended for switch later
          */
     if ( self -> vt -> v1 . maj != 1 && self -> vt -> v1 . min != 1 ) {
-            /*  TODO : not sure about rc */
-        return RC ( rcFS, rcNoTarg, rcConstructing, rcInterface, rcInvalid );
+        return XFS_RC ( rcInvalid );
+    }
+
+    if (    self -> vt -> v1.init == NULL
+        ||  self -> vt -> v1.destroy == NULL 
+        ||  self -> vt -> v1.mount == NULL 
+        ||  self -> vt -> v1.loop == NULL 
+        ||  self -> vt -> v1.unmount == NULL 
+        ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    if ( self -> Arguments == NULL ) {
+        return XFS_RC ( rcNull );
     }
 
     return 0;
 }   /* XFSControlStandardSelfCheck () */
 
+/*  The code will create  and init instance of XFSControl,
+ *  it is calling external method
+ *  XFSControlInitVT (), which is platform dependent
+ */
+LIB_EXPORT
+rc_t CC
+XFSControlMake (
+            const struct XFSTree * Tree,
+            struct XFSControl ** Control
+)
+{
+    rc_t RCt;
+    struct XFSControl * TheControl;
+
+    RCt = 0;
+    TheControl = NULL;
+
+    if ( Control == NULL || Tree == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    * Control = NULL;
+
+    TheControl = calloc ( 1, sizeof ( struct XFSControl ) );
+    if ( TheControl == NULL ) {
+        return XFS_RC ( rcExhausted );
+    }
+
+    RCt = XFSOwpMake ( & ( TheControl -> Arguments ) );
+    if ( RCt == 0 ) {
+
+        RCt = XFSControlPlatformInit ( TheControl );
+        if ( RCt == 0 ) {
+
+            RCt = XFSTreeDepotMake (
+                        ( const struct XFSTreeDepot ** )
+                                & ( TheControl -> TreeDepot )
+                        );
+            if ( RCt == 0 ) {
+
+                RCt = XFSTreeDepotSet ( TheControl -> TreeDepot, Tree );
+                if ( RCt == 0 ) {
+
+                    RCt = TheControl -> vt -> v1.init ( TheControl );
+                    if ( RCt == 0 ) {
+                        * Control = TheControl;
+                    }
+                }
+            }
+        }
+    }
+
+
+    if ( RCt != 0 ) {
+        XFSControlDispose ( TheControl );
+
+        * Control = NULL;
+    }
+
+    return RCt;
+}   /* XFSControlInit () */
+
 /*  Control destroy.
  */
 LIB_EXPORT
 rc_t CC
-XFSControlDestroy ( XFSControl * self )
+XFSControlDispose ( struct XFSControl * self )
 {
     rc_t RCt;
 
-    RCt = XFSControlStandardSelfCheck ( self );
+    RCt = 0;
 
-    if ( RCt != 0 ) {
-            /*  TODO : not sure about rc */
-        return RCt;
+    if ( self == NULL ) {
+        return 0;
     }
 
     if ( self -> Thread != NULL ) {
@@ -150,9 +166,27 @@ XFSControlDestroy ( XFSControl * self )
         self -> Thread = NULL;
     }
 
-    self -> vt -> v1.destroy ( self );
+    if ( self -> TreeDepot != NULL ) {
+        XFSTreeDepotDispose ( self -> TreeDepot );
 
-    memset ( self, 0, sizeof ( XFSControl * ) );
+        self -> TreeDepot = NULL;
+    }
+
+    if ( self -> Arguments != NULL ) {
+        XFSOwpDispose ( self -> Arguments );
+
+        self -> Arguments = NULL;
+    }
+
+    if ( self -> vt != NULL ) {
+        self -> vt -> v1.destroy ( self );
+
+        self -> vt = NULL;
+    }
+
+OUTMSG ( ( "........... LAST CHA\n" ) );
+
+    free ( self );
 
     return RCt;
 }   /* XFSControlDestroy () */
@@ -161,37 +195,35 @@ XFSControlDestroy ( XFSControl * self )
  */
 LIB_EXPORT
 rc_t CC
-XFSStart ( XFSControl * self )
+XFSStart ( struct XFSControl * self )
 {
     rc_t RCt;
 
-    RCt = XFSControlStandardSelfCheck ( self );
-
+    RCt = XFS_VfsManagerInit ();
     if ( RCt != 0 ) {
-            /*  TODO : not sure about rc */
+        return RCt;
+    }
+
+    RCt = XFSControlStandardSelfCheck ( self );
+    if ( RCt != 0 ) {
         return RCt;
     }
 
     if ( self -> Thread != NULL ) {
-        return RC ( rcFS, rcThread, rcConstructing, rcSelf, rcExists );
+        return XFS_RC ( rcExists );
     }
 
         /* TODO */
-    if ( self -> vt -> v1.mount == NULL ) {
-        return RC ( rcFS, rcThread, rcConstructing, rcSelf, rcNull );
-    }
-
     RCt = self -> vt -> v1.mount ( self );
     if ( RCt == 0 ) {
         RCt = KThreadMake ( & self -> Thread, XFSVeryMainLoop, self );
-        if ( RCt == 0 ) {
-            return 0;
-        }
     }
 
-    if ( self -> Thread != NULL ) {
-        KThreadRelease ( self -> Thread );
-        self -> Thread = NULL;
+    if ( RCt != 0 ) {
+        if ( self -> Thread != NULL ) {
+            KThreadRelease ( self -> Thread );
+            self -> Thread = NULL;
+        }
     }
 
     return RCt;
@@ -201,162 +233,131 @@ XFSStart ( XFSControl * self )
  */
 LIB_EXPORT
 rc_t CC
-XFSStop ( XFSControl * self )
+XFSStop ( struct XFSControl * self )
 {
     rc_t RCt;
 
     RCt = XFSControlStandardSelfCheck ( self );
-
     if ( RCt == 0 ) {
+
         RCt = self -> vt -> v1.unmount ( self );
         if ( RCt == 0 ) {
+
             if ( self -> Thread != NULL ) {
                 KThreadRelease ( self -> Thread );
 
                 self -> Thread = NULL;
             }
         }
+
+            /* Not sure if we need to check exit code */
+        XFS_VfsManagerInit ();
     }
 
     return RCt;
 }   /* XFSStop () */
 
-/*  Here we are goint to implement some XFSControlArgs methods
+LIB_EXPORT
+rc_t CC
+XFSControlGetTree (
+                struct XFSControl * self,
+                const struct XFSTree ** Tree
+)
+{
+    if ( self == NULL || Tree == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    return XFSTreeDepotGet ( self -> TreeDepot, Tree );
+}   /* XFSControlGetTree () */
+
+/*  Here we are goint to implement some Arguments methods
  */
 LIB_EXPORT
 rc_t CC
-XFSControlSetMountPoint ( XFSControl * self, const char * MountPoint )
+XFSControlSetArg (
+                struct XFSControl * self,
+                const char * ArgName,
+                const char * ArgValue
+)
 {
-    rc_t RCt;
-
-    if ( MountPoint == NULL ) { 
-        return RC ( rcFS, rcString, rcCopying, rcParam, rcNull );
+    if ( self == NULL ) {
+        return XFS_RC ( rcNull );
     }
 
-    RCt = XFSControlStandardSelfCheck ( self );
-    if ( RCt == 0 ) {
-        char * TheMountPoint = self -> Arguments -> MountPoint;
-        size_t SizeToCopy = sizeof ( self -> Arguments -> MountPoint );
+    return XFSOwpSet ( self -> Arguments, ArgName, ArgValue );
+}   /* XFSControlSetArg () */
 
-        if ( string_copy_measure (
-                            TheMountPoint,
-                            SizeToCopy,
-                            MountPoint
-                            ) <= 0 )
-        {
-            RCt = RC ( rcFS, rcString, rcCopying, rcParam, rcNull );
-        }
-    }
+LIB_EXPORT
+const char * CC
+XFSControlGetArg ( struct XFSControl * self, const char * ArgName )
+{
+    return self == NULL
+                ? NULL
+                : XFSOwpGet ( self -> Arguments, ArgName )
+                ;
+}   /* XFSControlGetArg () */
 
-    return RCt;
-}   /* XFSControlSetMountPoint () */
 
 LIB_EXPORT
 rc_t CC
-XFSControlGetMountPoint (
-                    const XFSControl * self,
-                    char * Buffer,
-                    size_t BufferSize
+XFSControlSetMountPoint (
+                    struct XFSControl * self,
+                    const char * MountPoint
 )
 {
-    rc_t RCt;
+    return MountPoint == NULL
+                ? XFS_RC ( rcNull )
+                : XFSControlSetArg (
+                                    self,
+                                    XFS_CONTROL_MOUNTPOINT,
+                                    MountPoint
+                                    )
+                ;
+}   /* XFSControlSetMountPoint () */
 
-    if ( Buffer == NULL || BufferSize <= 0 ) { 
-        return RC ( rcFS, rcString, rcCopying, rcParam, rcNull );
-    }
-
-    RCt = XFSControlStandardSelfCheck ( self );
-    if ( RCt == 0 ) {
-        const char * MountPoint = self -> Arguments -> MountPoint;
-
-        if ( string_copy_measure (
-                            Buffer,
-                            BufferSize,
-                            MountPoint
-                            ) <= 0 )
-        {
-            RCt = RC ( rcFS, rcString, rcCopying, rcParam, rcNull );
-        }
-    }
-
-    return RCt;
+LIB_EXPORT
+const char * CC
+XFSControlGetMountPoint ( struct XFSControl * self )
+{
+    return XFSControlGetArg ( self, XFS_CONTROL_MOUNTPOINT );
 }   /* XFSControlGetMountPoint () */
 
 LIB_EXPORT
 rc_t CC
-XFSControlSetLabel ( XFSControl * self, const char * Label )
+XFSControlSetLabel ( struct XFSControl * self, const char * Label )
 {
-    rc_t RCt;
-
-    RCt = XFSControlStandardSelfCheck ( self );
-    if ( RCt == 0 ) {
-
-        char * TheLabel = self -> Arguments -> Label;
-        size_t SizeToCopy = sizeof ( self -> Arguments -> Label );
-
-        size_t LabelSize = Label == NULL
-                                ? 0
-                                : string_size ( Label )
-                                ;
-
-        const char * SourceOfInspiration = LabelSize == 0
-                                                ? "XFS"
-                                                : Label
-                                                ;
-
-        if ( string_copy_measure (
-                            TheLabel,
-                            SizeToCopy,
-                            SourceOfInspiration ) <= 0 )
-        {
-            RCt = RC ( rcFS, rcString, rcCopying, rcParam, rcNull );
-        }
-    }
-
-    return RCt;
+    return Label == NULL
+                ? XFS_RC ( rcNull )
+                : XFSControlSetArg ( self, XFS_CONTROL_LABEL, Label )
+                ;
 }   /* XFSControlSetLabel () */
 
 LIB_EXPORT
-rc_t CC
-XFSControlGetLabel (
-                    const XFSControl * self,
-                    char * Buffer,
-                    size_t BufferSize
-)
+const char * CC
+XFSControlGetLabel ( struct XFSControl * self )
 {
-    rc_t RCt;
-
-    if ( Buffer == NULL || BufferSize <= 0 ) { 
-        return RC ( rcFS, rcString, rcCopying, rcParam, rcNull );
-    }
-
-    RCt = XFSControlStandardSelfCheck ( self );
-    if ( RCt == 0 ) {
-        const char * Label = self -> Arguments -> Label;
-
-        if ( string_copy_measure ( Buffer, BufferSize, Label ) <= 0 ) {
-            RCt = RC ( rcFS, rcString, rcCopying, rcParam, rcNull );
-        }
-    }
-
-    return RCt;
+    return XFSControlGetArg ( self, XFS_CONTROL_LABEL );
 }   /* XFSControlGetLabel () */
 
 static
 rc_t
 XFSVeryMainLoop ( const KThread * self, void * Data )
 {
-    XFSControl * TheControl;
+    struct XFSControl * TheControl;
 
-    TheControl = ( XFSControl * ) Data;
+    TheControl = ( struct XFSControl * ) Data;
 
     if ( TheControl == NULL ) {
-        return RC ( rcFS, rcThread, rcExecuting, rcSelf, rcNull );
+        return XFS_RC ( rcNull );
     }
 
-    if ( TheControl -> vt == NULL
-        || TheControl -> vt -> v1.loop == NULL ) {
-        return RC ( rcFS, rcThread, rcExecuting, rcSelf, rcNull );
+    if ( TheControl -> vt == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    if ( TheControl -> vt -> v1.loop == NULL ) {
+        return XFS_RC ( rcNull );
     }
 
     return TheControl -> vt -> v1.loop ( TheControl );
