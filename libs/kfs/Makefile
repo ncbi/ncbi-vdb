@@ -36,8 +36,6 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
-TEST_TOOLS = \
-
 include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
@@ -49,13 +47,7 @@ all std: makedirs
 $(INT_LIBS): makedirs
 	@ $(MAKE_CMD) $(ILIBDIR)/$@
 
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-karcdir-entry: makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-.PHONY: all std $(ALL_LIBS) $(TEST_TOOLS)
+.PHONY: all std $(ALL_LIBS)
 
 #-------------------------------------------------------------------------------
 # std
@@ -218,22 +210,3 @@ endif
 $(ILIBDIR)/libkff.$(LIBX): $(KFF_OBJ)
 	$(LD) --slib -o $@ $^ $(KFF_LIB)
 
-
-
-#-------------------------------------------------------------------------------
-# white-box test
-#
-TEST_SRC = \
-	KArcDirEntry
-
-TEST_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_SRC))
-
-TEST_DEP = \
-	$(ILIBDIR)/libkfs.$(LIBX)
-
-TEST_LIB = \
-	-lncbi-vdb
-
-$(TEST_BINDIR)/karcdir-entry: $(TEST_OBJ) $(TEST_DEP)
-	$(LD) --exe -o $@ $(TEST_OBJ) $(TEST_LIB)

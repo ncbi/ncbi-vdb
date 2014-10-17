@@ -42,9 +42,6 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
-TEST_TOOLS = \
-
-
 
 #-------------------------------------------------------------------------------
 # outer targets
@@ -55,10 +52,7 @@ all std: vers-includes
 $(INT_LIBS): vers-includes
 	@ $(MAKE_CMD) $(ILIBDIR)/$@
 
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-.PHONY: all std $(ALL_LIBS) $(TEST_TOOLS)
+.PHONY: all std $(ALL_LIBS)
 
 #-------------------------------------------------------------------------------
 # std
@@ -79,7 +73,6 @@ $(TARGDIR)/vers-includes: $(addsuffix .vers.h,$(EXT_LIBS))
 # clean
 #
 clean: stdclean
-	@ rm -f $(addsuffix *,$(addprefix $(TEST_BINDIR)/,$(TEST_TOOLS)))
 
 .PHONY: clean
 

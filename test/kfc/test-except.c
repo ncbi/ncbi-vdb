@@ -23,7 +23,6 @@
 * ===========================================================================
 *
 */
-
 #include <kfc/extern.h>
 #include <kfc/tstate.h>
 #include <kfc/rsrc.h>
