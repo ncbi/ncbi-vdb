@@ -102,8 +102,11 @@ KDF5_OBJ = \
 
 KDF5_LIB = \
 	-lhdf5 \
+	-lz \
 
-KDF5_LIB += -lz
+ifdef HDF5_LIBDIR
+	KDF5_LIB += $(addprefix -L,$(HDF5_LIBDIR))
+endif
 
 $(LIBDIR)/libkdf5.$(SHLX): $(KDF5_OBJ)
 	$(LD) --dlib --vers $(SRCDIR) -o $@ $^ $(KDF5_LIB)
