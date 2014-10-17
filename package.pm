@@ -7,7 +7,6 @@ sub PACKAGE_NAMW { 'VDB' }
 sub DEPENDS      { ( { name => 'hdf5' , },
                      { name => 'magic', Include => '/usr/include'        , },
                      { name => 'xml2' , Include => '/usr/include/libxml2', } ) }
-# qw(hdf5 xml2 magic)
 sub CONFIG_OUT   { 'build' }
 sub PKG { ( LNG   => 'C',
             OUT   => 'ncbi-outdir',
