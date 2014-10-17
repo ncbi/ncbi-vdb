@@ -112,15 +112,15 @@ VDB_LIB_RD = \
 	align-reader \
 	ascp \
 	$(EXT_SCHEMA_MODULES) \
+	srareader \
+	sradb \
+	$(LIBVDB_BLAST) \
 	vdb \
 	kdb \
-	sradb \
-	srareader \
-	$(LIBVDB_BLAST) \
 	$(VDB_LIB_CMN) \
-    ngs \
 	ngs-jni \
-	ngs-py
+	ngs-py \
+	ngs \
 
 VDB_OBJ = \
 	$(addprefix $(ILIBDIR)/lib,$(addsuffix .a,$(VDB_LIB_RD)))
