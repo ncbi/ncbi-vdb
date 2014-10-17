@@ -34,7 +34,9 @@ include $(CONFIG_FILE)
 ifeq (linux, $(OS))
 
 LIBRARIES_TO_INSTALL = \
+    ncbi-vdb.$(VERSION_LIBX) \
     ncbi-vdb.$(VERSION_SHLX) \
+    ncbi-wvdb.$(VERSION_LIBX) \
     ncbi-wvdb.$(VERSION_SHLX) \
     ncbi-ngs-c++.$(VERSION_LIBX) \
 
