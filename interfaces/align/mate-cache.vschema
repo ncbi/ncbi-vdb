@@ -80,6 +80,12 @@ table NCBI:align:tbl:mate_cache #1.1
     /* RD_FILTER
      */
     extern column < INSDC:SRA:read_filter > zip_encoding RD_FILTER_CACHE;
+    alias READ_FILTER_CACHE = RD_FILTER_CACHE;
+
+    /* SPOT_GROUP
+     */
+    extern column < ascii > zip_encoding SPOT_GROUP_CACHE;
+    alias SEQ_SPOT_GROUP_CACHE = SPOT_GROUP_CACHE;
 };
 
 /*--------------------------------------------------------------------------
