@@ -402,13 +402,13 @@ _KfsDirNodeFindNode_v1 (
                                         sizeof ( PathBuf ),
                                         KfsNode -> path
                                         );
-        * ( PathBuf + PathBufLen - 1 ) = '/';
+        * ( PathBuf + PathBufLen ) = '/';
             /*) Here we are trying to create new node
              (*/
         RCt = XFSPathFrom (
                         Path,
                         PathIndex + 1,
-                        PathBuf + PathBufLen,
+                        PathBuf + PathBufLen + 1,
                         sizeof ( PathBuf ) - PathBufLen
                         );
         if ( RCt == 0 ) {
