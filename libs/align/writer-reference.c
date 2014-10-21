@@ -2299,7 +2299,7 @@ rc_t cigar2offset(int const options,
 
             for (i = 0; i < maxopcount; ++i) {
                 if (cigar[i].code == 'H') {
-                    rc_t const rc = RC(rcAlign, rcFile, rcProcessing, rcData, rcInvalid);
+                    rc_t const rc = RC(rcAlign, rcFile, rcProcessing, rcData, rcNotAvailable);
                     (void)LOGERR(klogErr, rc, "Hard clipping of sequence data is not allowed");
                     return rc;
                 }
