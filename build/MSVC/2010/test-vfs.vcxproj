@@ -37,7 +37,7 @@
     <ProjectGuid>{7C9FA1C2-DB37-4A73-90A3-7F538D1C2AD1}</ProjectGuid>
   </PropertyGroup>
   
-    <Target Name="AfterBuild">
+    <Target Name="AfterBuild" Condition="'$(Autorun)'=='true'">
         <Exec Command="$(OutDir)$(TargetName)$(TargetExt)" WorkingDirectory="$(VDB_ROOT)test\vfs\"/>
     </Target>
     

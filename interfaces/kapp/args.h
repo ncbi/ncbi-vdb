@@ -340,6 +340,7 @@ rc_t CC Usage ( const Args * args );
 
 uint32_t CC ArgsGetGlobalTries(bool *isSet);
 
+bool CC Is32BitAndDisplayMessage( void );
 
 #ifdef __cplusplus
 }
