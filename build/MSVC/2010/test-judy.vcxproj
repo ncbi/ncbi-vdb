@@ -32,7 +32,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{9DF843FA-AA45-4EB1-BB76-84342AED550C}</ProjectGuid>
   </PropertyGroup>
-  <Target Name="AfterBuild">
+  <Target Name="AfterBuild" Condition="'$(Autorun)'=='true'">
     <Exec Command="$(OutDir)$(TargetName)$(TargetExt)" WorkingDirectory="$(VDB_ROOT)test\vfs\" />
   </Target>
 </Project>
