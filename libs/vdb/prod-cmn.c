@@ -452,9 +452,7 @@ rc_t VFunctionProdCallNDRowFunc(
             argv [ i ] . u . data . base = in -> data . base;
 
             /* get row length and starting element in one pass */
-            argv [ i ] . u . data . elem_count = PageMapGetIdxRowInfo ( in -> pm,
-                (uint32_t)( row_id - in -> start_id ), & first_elem );
-
+            argv [ i ] . u . data . elem_count = PageMapGetIdxRowInfo ( in -> pm, (uint32_t)( row_id - in -> start_id ), & first_elem, NULL ); 
             argv [ i ] . u . data . first_elem = first_elem;
             
             /* finally set the element size */
@@ -510,7 +508,7 @@ rc_t VFunctionProdCallNDRowFunc(
 #define PAGEMAP_PRE_EXPANDING_SINGLE_ROW_FIX 0
 static
 rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_id, 
-    uint32_t row_count, const VXformInfo *info, Vector *args )
+    uint32_t row_count, const VXformInfo *info, Vector *args,int64_t param_start_id,int64_t param_stop_id)
 {
     rc_t rc;
     uint32_t i, argc = VectorLength ( args );
@@ -523,6 +521,8 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
     uint64_t last = 0;
     uint32_t last_len = 0;
     uint64_t  window;
+    int64_t  row_id_max=0;
+    uint32_t MAX_BLOB_REGROUP; /** max rows in blob for regrouping ***/
     
     if (argc == 0) {
         memset(&scratch, 0, sizeof(scratch));
@@ -556,7 +556,14 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
     }
 
 
-#define MAX_BLOB_REGROUP 256 /** max rows in blob for regrouping ***/
+    if(self->curs->cache_curs && self->curs->cache_col_active){
+        /*** since cache_cursor exist, trying to avoid prefetching data which is in cache cursor ***/
+	row_id_max = self->curs->cache_empty_end;
+	MAX_BLOB_REGROUP=256;
+    } else {
+	MAX_BLOB_REGROUP=1024;
+    }
+
     window=self->stop_id-self->start_id+1;/*** from previous fetch **/
     if(row_id == self->stop_id+1){ /** sequentual io ***/
 	if( window < MAX_BLOB_REGROUP && (row_id%(4*window))==1){
@@ -570,11 +577,8 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
 	self->start_id=self->stop_id=row_id;
 	if(row_count > 0) self->stop_id += row_count-1;
     } else { 
-      for (self->start_id=-INT64_MAX - 1,self->stop_id=INT64_MAX,i = 0; i != argc; ++ i) {
-          in = VectorGet(args, i);
-        if(self->start_id < in->start_id) self->start_id=in->start_id;
-        if(self->stop_id  > in->stop_id ) self->stop_id =in->stop_id;
-      }
+      self->start_id=param_start_id;
+      self->stop_id =param_stop_id;
       assert(row_id >= self->start_id && row_id  + row_count -1 <= self->stop_id);
       if(self->start_id==-INT64_MAX - 1 || self->stop_id==INT64_MAX){
         self->start_id=self->stop_id=row_id;
@@ -584,6 +588,7 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
 	int64_t	n=(row_id-1)/window;
 	if(self->start_id <= n*window)      self->start_id=n*window+1;
 	if(self->stop_id > (n+1) * window) self->stop_id = (n+1)*window;
+	if(row_id_max >= row_id && self->stop_id > row_id_max)     self->stop_id = row_id_max;
       }
     }
     
@@ -1081,7 +1086,7 @@ rc_t VFunctionProdCallBlobFuncDecoding( VFunctionProd *self, VBlob *rslt,
             hdr = BlobHeadersCreateDummyHeader(0, 0, 0, (sblob->data.elem_bits * sblob->data.elem_count + 7) >> 3);
         }
         else
-            hdr = BlobHeadersCreateDummyHeader(0, 0, 0, BlobRowCount(sblob) * PageMapGetIdxRowInfo(sblob->pm, 0, 0));
+            hdr = BlobHeadersCreateDummyHeader(0, 0, 0, BlobRowCount(sblob) * PageMapGetIdxRowInfo(sblob->pm, 0, 0, NULL));
         /* leave rslt->headers null so that the next
          * stage will also create a dummy header */
     }
@@ -1591,12 +1596,25 @@ struct fetch_param_blob_data
 {
     int64_t id;
     uint32_t cnt;
+    int64_t range_start_id;
+    int64_t range_stop_id;
     Vector *inputs;
     VBlob *vblob;
     rc_t rc;
     bool no_cache;
 };
 
+static void fetch_param_blob_data_init(fetch_param_blob_data *pb,int64_t id,uint32_t cnt,Vector *inputs)
+{
+    pb->id = id;
+    pb->cnt = cnt;
+    pb->inputs = inputs;
+    pb->rc = 0;
+    pb->vblob = NULL;
+    pb->range_start_id=INT64_MIN;
+    pb->range_stop_id =INT64_MAX;
+    pb->no_cache = false;
+}
 static
 bool CC fetch_param_blob ( void *item, void *data )
 {
@@ -1609,9 +1627,10 @@ bool CC fetch_param_blob ( void *item, void *data )
         pb -> rc = VectorAppend ( pb -> inputs, NULL, blob );
         if ( pb -> rc == 0 ) {
             pb->no_cache |= blob->no_cache;
+	    if(blob->start_id > pb->range_start_id) pb->range_start_id=blob->start_id;
+	    if(blob->stop_id  < pb->range_stop_id)  pb->range_stop_id =blob->stop_id;
             return false;
         }
-
         vblob_release ( blob, NULL );
     }
 
@@ -1628,23 +1647,21 @@ bool CC fetch_first_param_blob ( void *item, void *data )
         return false;
     if ( pb -> vblob -> data.elem_count == 0 )
         return false;
+    pb->range_start_id=pb->vblob->start_id;
+    pb->range_stop_id =pb->vblob->stop_id;
     return true;
 }
 
 static
 rc_t VFunctionProdSelect ( VFunctionProd *self, VBlob **vblob, int64_t id, uint32_t cnt ) {
     fetch_param_blob_data pb;
-    
-    pb.id = id;
-    pb.cnt = cnt;
-    pb.rc = 0;
-    pb.vblob = NULL;
+    fetch_param_blob_data_init(&pb,id,cnt,NULL);
     VectorDoUntil ( & self -> parms, false, fetch_first_param_blob, & pb );
     * vblob = pb.vblob;
     return pb.rc;
 }
 
-static rc_t VFunctionProdReadNormal ( VFunctionProd *self, VBlob **vblob, int64_t id ,uint32_t cnt )
+static rc_t VFunctionProdReadNormal ( VFunctionProd *self, VBlob **vblob, int64_t id ,uint32_t cnt)
 {
     rc_t rc;
     Vector inputs;
@@ -1686,12 +1703,7 @@ static rc_t VFunctionProdReadNormal ( VFunctionProd *self, VBlob **vblob, int64_
 
     /* all other functions take some form of blob input */
     VectorInit ( & inputs, 0, VectorLength ( & self -> parms ) );
-    pb . id = id;
-    pb . cnt = cnt;
-    pb . inputs = & inputs;
-    pb . vblob = NULL;
-    pb . rc = 0;
-    pb.no_cache = 0;
+    fetch_param_blob_data_init(&pb,id,cnt,&inputs);
     if ( VectorDoUntil ( & self -> parms, false, fetch_param_blob, & pb ) )
         rc = pb . rc;
     else for( id_run=id, cnt_run=cnt, rc=0; cnt_run > 0 && rc==0;) 
@@ -1706,7 +1718,7 @@ static rc_t VFunctionProdReadNormal ( VFunctionProd *self, VBlob **vblob, int64_
             break;
         case vftRow:
         case vftIdDepRow:
-            rc = VFunctionProdCallRowFunc ( self, &vb, id_run, cnt_run, & info, & inputs );
+            rc = VFunctionProdCallRowFunc ( self, &vb, id_run, cnt_run, & info, & inputs, pb.range_start_id,pb.range_stop_id );
             break;
         case vftArray:
             rc = VFunctionProdCallArrayFunc ( self, &vb, id_run, & info, & inputs );
@@ -1764,7 +1776,7 @@ static rc_t VFunctionProdReadNormal ( VFunctionProd *self, VBlob **vblob, int64_
     return rc;
 }
 
-rc_t VFunctionProdRead ( VFunctionProd *self, VBlob **vblob, int64_t id , uint32_t cnt )
+rc_t VFunctionProdRead ( VFunctionProd *self, VBlob **vblob, int64_t id , uint32_t cnt)
 {
     if ( self -> dad . sub == vftSelect )
         return VFunctionProdSelect ( self, vblob, id , cnt);
@@ -2086,7 +2098,7 @@ uint32_t VProductionRowLength ( const VProduction *self, int64_t row_id )
     if ( rc != 0 )
         return 0;
     
-    row_len = PageMapGetIdxRowInfo ( blob -> pm, (uint32_t)( row_id - blob -> start_id) , NULL );
+    row_len = PageMapGetIdxRowInfo ( blob -> pm, (uint32_t)( row_id - blob -> start_id) , NULL, NULL );
 
     vblob_release ( blob, NULL );
     
@@ -2181,15 +2193,19 @@ rc_t VProductionReadBlob ( const VProduction *cself, VBlob **vblob, int64_t id, 
                 /* return new reference */
                 * vblob = blob;
 #if PROD_CACHE > 1
+   #if PROD_CACHE > 2
                 /* MRU cache */
                 if ( i > 0 )
                 {
 		    memmove(self -> cache +1,self -> cache,i*sizeof(*self->cache));
                     self -> cache [ 0 ] = blob;
-		    if( i > self->cache_cnt_max / 2 -1 ){ /** this is how wash area is defined **/
-			self->cache_wash_access_cnt++; /** we are accessing  wash area of the cache **/
-		    }
                 }
+   #else 
+		if(i > 0 ){  /** trivial case ***/
+		    self -> cache [ 1 ] =  self -> cache [ 0 ];
+		    self -> cache [ 0 ] = blob;
+		}
+   #endif
 #endif
                 return 0;
             }
@@ -2250,27 +2266,28 @@ rc_t VProductionReadBlob ( const VProduction *cself, VBlob **vblob, int64_t id, 
     if ( rc == 0 )
     {
         VBlobCheckIntegrity ( blob );
-        if(self -> cache_cnt_max == 0){ /*** set the cache size now ***/
-		self -> cache_cnt_max = PROD_CACHE;
-#if 0
-	} else if(   self->var==prodScript
-		  && self -> cache_cnt >= self -> cache_cnt_max
-		  && self -> cache_cnt_max/PROD_CACHE  < PROD_CACHE_MAX_EXTENTS
-		  && self -> cache_wash_access_cnt > PROD_CACHE_WASH_ACCESS_THRESHOLD){  /** try to extend the cache ***/
-			 self -> cache_cnt_max += PROD_CACHE;
-                         self -> cache_wash_access_cnt = 0;
-#endif
-	}
-	if(self -> cache_cnt < self -> cache_cnt_max){
+	if(self -> cache_cnt < PROD_CACHE){
+#if PROD_CACHE > 1
 		if(self -> cache_cnt > 0 ){
+#if PROD_CACHE > 2
 			memmove(self -> cache + 1, self -> cache , self -> cache_cnt * sizeof(*self -> cache));
+#else
+			self -> cache[1]=self -> cache[0];
 		}
+#endif
+#endif
 		self -> cache_cnt ++;
 	} else {
 		/* release whatever was there previously */
         	/* drop LRU */
 		vblob_release ( self -> cache [ self -> cache_cnt - 1 ], NULL );
+#if PROD_CACHE > 1
+#if PROD_CACHE > 2
 		memmove(self -> cache + 1, self -> cache , (self -> cache_cnt -1) * sizeof(*self -> cache));
+#else
+		self -> cache[1]=self -> cache[0];
+#endif
+#endif
         }
         /* insert a head of list */
         self -> cache [ 0 ] = blob;

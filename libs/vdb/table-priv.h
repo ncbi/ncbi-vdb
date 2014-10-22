@@ -139,6 +139,9 @@ struct VTable
     /* cache validity */
     bool read_col_cache_valid;
     bool write_col_cache_valid;
+
+   /* cache table for cached virtual columns if any */
+    const VTable *cache_tbl;
 };
 
 

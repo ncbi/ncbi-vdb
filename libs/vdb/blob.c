@@ -38,6 +38,7 @@
 #include <klib/data-buffer.h>
 #include <klib/container.h>
 #include <klib/vlen-encode.h>
+#include <klib/vector.h>
 #include <kdb/btree.h>
 #include <vdb/schema.h>
 #include <vdb/xform.h>
@@ -55,7 +56,7 @@
 #include <os-native.h>
 
 #include <stdio.h> /* temp for debugging */
-
+#define PHYSPROD_INDEX_OFFSET 1000000000
 #if _DEBUGGING
 void VBlobCheckIntegrity ( const VBlob *self )
 {
@@ -1196,7 +1197,7 @@ LIB_EXPORT rc_t CC VBlobCellData ( const VBlob *self, int64_t row_id,
 
             /* TBD - this may be wrong */
             * elem_bits = self -> data . elem_bits;
-            * row_len = PageMapGetIdxRowInfo ( self -> pm, ( uint32_t ) ( row_id - self -> start_id ), boff );
+            * row_len = PageMapGetIdxRowInfo ( self -> pm, ( uint32_t ) ( row_id - self -> start_id ), boff, NULL );
             start = ( uint64_t ) boff [ 0 ] * elem_bits [ 0 ];
             * base = ( uint8_t* ) self -> data . base + ( start >> 3 );
             * boff = ( uint32_t ) start & 7;
@@ -1381,8 +1382,8 @@ rc_t VBlobCacheMake ( VBlobCache **bcp, const VBlob *blob, uint32_t col_idx, siz
 
     bc -> size = blob_size;
     bc -> blob = blob;
-    VBlobAddRef(blob);
     bc -> col_idx = col_idx;
+    VBlobAddRef(blob);
     * bcp = bc;
     return 0;
 }
@@ -1390,7 +1391,6 @@ typedef struct VBlobCacheKey VBlobCacheKey;
 struct VBlobCacheKey
 {
     int64_t row_id;
-    uint32_t col_idx;
 };
 
 static
@@ -1398,9 +1398,6 @@ int CC VBlobCacheCmp ( const void *a, const BSTNode *b )
 {
     const VBlobCacheKey * key = a;
     const VBlobCache * node = ( const VBlobCache* ) b;
-
-    if ( key -> col_idx != node -> col_idx )
-        return ( int ) key -> col_idx - ( int ) node -> col_idx;
 
     if ( key -> row_id < node -> blob -> start_id )
         return -1;
@@ -1413,21 +1410,20 @@ int CC VBlobCacheSort ( const BSTNode *a, const BSTNode *b )
     const VBlobCache * item = ( const VBlobCache* ) a;
     const VBlobCache * node = ( const VBlobCache* ) b;
 
-    if ( item -> col_idx != node -> col_idx )
-        return ( int ) item -> col_idx - ( int ) node -> col_idx;
-
     if ( item -> blob -> stop_id < node -> blob -> start_id )
         return -1;
     return item -> blob -> start_id > node -> blob -> stop_id;
 }
 
 struct VBlobMRUCache { /* read-only blob cache */
-    BSTree cache;
+    Vector v_cache; /*** cache VDB columns ***/
+    Vector p_cache; /*** cache physical columns ***/
     DLList lru;
     size_t capacity;
     size_t contents;
     /* last blob cache */
-    VBlob *last[LAST_BLOB_CACHE_SIZE]; /** last 4 blob to be cached per given col_idx, limiting col_idx  **/
+    VBlob *v_last[LAST_BLOB_CACHE_SIZE]; /** last blob to be cached per given col_idx, limiting col_idx  **/
+    VBlob *p_last[LAST_BLOB_CACHE_SIZE]; /** last physical blob to be cached per given col_idx, limiting col_idx  **/
 };
 
 
@@ -1437,9 +1433,11 @@ VBlobMRUCache * VBlobMRUCacheMake(uint64_t capacity )
     if(capacity > 0){
 	self = malloc(sizeof(*self));
         if(self){
-		BSTreeInit ( & self -> cache);
+		VectorInit ( & self -> v_cache, 1, 16);
+		VectorInit ( & self -> p_cache, 1, 16);
 		DLListInit ( & self -> lru );
-		memset(self -> last,0,LAST_BLOB_CACHE_SIZE*sizeof(*self -> last));
+		memset(self -> v_last,0,LAST_BLOB_CACHE_SIZE*sizeof(*self -> v_last));
+		memset(self -> p_last,0,LAST_BLOB_CACHE_SIZE*sizeof(*self -> p_last));
 		self->capacity = capacity;
 		self->contents = 0;
 	}
@@ -1447,17 +1445,31 @@ VBlobMRUCache * VBlobMRUCacheMake(uint64_t capacity )
    return self;
 }
 
+static void VBlobMRUCacheItemDestroy( void *item, void *data )
+{
+    if ( item != NULL ) {
+	BSTreeWhack (item, VBlobCacheWhack, data);
+	free(item);
+    }
+}
+
+
 void VBlobMRUCacheDestroy( VBlobMRUCache *self )
 {
     if(self){
 	int i;
-	BSTreeWhack ( & self -> cache, VBlobCacheWhack, NULL );
+	VectorWhack ( & self -> v_cache, VBlobMRUCacheItemDestroy, NULL );
+	VectorWhack ( & self -> p_cache, VBlobMRUCacheItemDestroy, NULL );
 	DLListInit ( & self -> lru );
 	for(i=0;i<LAST_BLOB_CACHE_SIZE;i++){
-		if(self -> last[i]) {
-		    VBlobRelease(self -> last[i]);
-		    self->last[i] = NULL;
+		if(self -> p_last[i]) {
+		    VBlobRelease(self -> p_last[i]);
+		    self->p_last[i] = NULL;
 		}
+		 if(self -> v_last[i]) {
+                    VBlobRelease(self -> v_last[i]);
+                    self->v_last[i] = NULL;
+                }
 	}
 	free(self);
     }
@@ -1465,42 +1477,51 @@ void VBlobMRUCacheDestroy( VBlobMRUCache *self )
 
 const VBlob* VBlobMRUCacheFind(const VBlobMRUCache *cself, uint32_t col_idx, int64_t row_id)
 {
-    const VBlob* blob;
-    VBlobCache *bc;
-    VBlobCacheKey bck;
     VBlobMRUCache *self = (VBlobMRUCache*)cself;
+    const VBlob* blob;
+    BSTree  *cache;
+    bool    is_phys=false;
+    VBlob   **last_blobs;
 
-    /* check MRU blob */
-    if(col_idx <= LAST_BLOB_CACHE_SIZE)
-    {
-	blob = self->last[col_idx-1];
-	if(blob && row_id >= blob->start_id && row_id <= blob->stop_id)
-	{
-	    return blob;
-		
+    if(col_idx > PHYSPROD_INDEX_OFFSET){
+	is_phys=true;
+	last_blobs = self->p_last;
+	col_idx -= PHYSPROD_INDEX_OFFSET;
+    } else {
+	is_phys=false;
+	last_blobs = self->v_last;
+    } 
+
+    if(col_idx <= LAST_BLOB_CACHE_SIZE){
+	blob = last_blobs[col_idx-1];
+	if(blob && row_id >= blob->start_id && row_id <= blob->stop_id){
+		return blob;
 	}
     }
+    cache = is_phys?VectorGet(&cself->p_cache,col_idx):VectorGet(&cself->v_cache,col_idx);
+    if(cache) {
+	    VBlobCache *bc;
+	    VBlobCacheKey bck;
 
-    /* check cache for entry */
-    bck . row_id = row_id;
-    bck . col_idx = col_idx;
-    bc = ( VBlobCache* ) BSTreeFind ( & self -> cache, & bck, VBlobCacheCmp );
-    if ( bc != NULL )
-    {
-        /* save in MRU */
-        if(col_idx <= LAST_BLOB_CACHE_SIZE)
-        {
-            if(self->last[col_idx-1])
-                VBlobRelease(self->last[col_idx-1]);
-            self->last[col_idx-1] = (VBlob*)bc->blob;
-            if(VBlobAddRef (self->last[col_idx-1])!=0)
-		return NULL;
-        }
-        /* maintain LRU */
-        DLListUnlink  (&self->lru,&bc->ln);
-        DLListPushHead(&self->lru,&bc->ln);
-        /* ask column to read from blob */
-        return bc->blob;
+	    /* check cache for entry */
+	    bck . row_id = row_id;
+	    
+	    bc = ( VBlobCache* ) BSTreeFind ( cache, & bck, VBlobCacheCmp );
+	    if ( bc != NULL )
+	    {
+		/* save in MRU */
+		if(col_idx <= LAST_BLOB_CACHE_SIZE) {
+			if(last_blobs[col_idx-1]) VBlobRelease(last_blobs[col_idx-1]);
+			last_blobs[col_idx-1] = (VBlob*)bc->blob;
+			if(VBlobAddRef (last_blobs[col_idx-1])!=0)
+				return NULL;
+		}
+		/* maintain LRU */
+		DLListUnlink  (&self->lru,&bc->ln);
+		DLListPushHead(&self->lru,&bc->ln);
+		/* ask column to read from blob */
+		return bc->blob;
+	    }
     }
     return NULL;
 }
@@ -1523,12 +1544,36 @@ rc_t VBlobMRUCacheSave(const VBlobMRUCache *cself, uint32_t col_idx, const VBlob
     /** auto-raise capacity for large blob **/
     if(blob_size > self -> capacity) self -> capacity = blob_size;
 
+    
+
     /* now cache the blob */
     rc = VBlobCacheMake ( & bc, blob, col_idx, blob_size );
     if ( rc == 0 ) {
         /* attempt a unique insertion */
         VBlobCache *existing;
-        rc = BSTreeInsertUnique ( &self -> cache, & bc -> bn, ( BSTNode** ) & existing, VBlobCacheSort );
+        BSTree *cache;
+        VBlob   **last_blobs;
+
+	if(col_idx > PHYSPROD_INDEX_OFFSET){
+		last_blobs = self->p_last;
+		col_idx -= PHYSPROD_INDEX_OFFSET;
+		cache = VectorGet(&cself->p_cache,col_idx);
+		if(cache==NULL){
+			cache=malloc(sizeof(*cache));
+			BSTreeInit(cache);
+			VectorSet(&self->p_cache,col_idx,cache);
+		}
+	} else {
+		last_blobs = self->v_last;
+		cache = VectorGet(&cself->v_cache,col_idx);
+		if(cache==NULL){
+			cache=malloc(sizeof(*cache));
+			BSTreeInit(cache);
+			VectorSet(&self->v_cache,col_idx,cache);
+		}
+	}
+	
+        rc = BSTreeInsertUnique ( cache, & bc -> bn, ( BSTNode** ) & existing, VBlobCacheSort );
         if ( rc != 0 ){
             VBlobCacheWhack ( & bc -> bn, NULL );
 	    rc = 0;
@@ -1536,10 +1581,10 @@ rc_t VBlobMRUCacheSave(const VBlobMRUCache *cself, uint32_t col_idx, const VBlob
             /* remember as last used  **/
             if(col_idx <= LAST_BLOB_CACHE_SIZE)
             {
-		if(self->last[col_idx-1])
-			VBlobRelease(self->last[col_idx-1]);
-		self->last[col_idx-1] = (VBlob*)bc->blob;
-		rc = VBlobAddRef (self->last[col_idx-1]);
+		if(last_blobs[col_idx-1])
+			VBlobRelease(last_blobs[col_idx-1]);
+		last_blobs[col_idx-1] = (VBlob*)bc->blob;
+		rc = VBlobAddRef (last_blobs[col_idx-1]);
 		if(rc != 0)
 		   return rc;
 	    }
@@ -1554,8 +1599,12 @@ rc_t VBlobMRUCacheSave(const VBlobMRUCache *cself, uint32_t col_idx, const VBlob
 
                 /* drop blob */
                 existing = ( VBlobCache* ) ( ( char* ) last - sizeof existing -> bn );
-
-                BSTreeUnlink ( & self -> cache, & existing -> bn );
+		if(existing->col_idx > PHYSPROD_INDEX_OFFSET){
+			cache = VectorGet(&cself->p_cache,existing->col_idx-PHYSPROD_INDEX_OFFSET);
+		} else {
+			cache = VectorGet(&cself->v_cache,existing->col_idx);
+		}
+                BSTreeUnlink ( cache, & existing -> bn );
                 self -> contents -= existing -> size;
                 VBlobCacheWhack ( & existing -> bn, NULL );
             }

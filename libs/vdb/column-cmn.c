@@ -212,12 +212,12 @@ rc_t VColumnMake ( VColumn **colp, const VSchema *schema, const SColumn *scol )
 }
 
 rc_t VColumnReadCachedBlob ( const VColumn *self, const VBlob *vblob, int64_t row_id,
-    uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len )
+    uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len, uint32_t *repeat_count )
 {
     uint64_t start;
 
     * elem_bits = VTypedescSizeof ( & self -> desc );
-    * row_len = PageMapGetIdxRowInfo ( vblob -> pm, ( uint32_t ) ( row_id - vblob -> start_id ), boff );
+    * row_len = PageMapGetIdxRowInfo ( vblob -> pm, ( uint32_t ) ( row_id - vblob -> start_id ), boff, repeat_count );
     start = ( uint64_t ) boff [ 0 ] * elem_bits [ 0 ];
     * base = ( uint8_t* ) vblob -> data . base + ( start >> 3 );
     * boff = ( uint32_t ) start & 7;
@@ -226,7 +226,7 @@ rc_t VColumnReadCachedBlob ( const VColumn *self, const VBlob *vblob, int64_t ro
 }
 
 rc_t VColumnReadBlob ( const VColumn *cself, const VBlob **vblobp, int64_t row_id,
-   uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len, VBlobMRUCacheCursorContext *cctx )
+   uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len, uint32_t * repeat_count, VBlobMRUCacheCursorContext *cctx )
 {
     rc_t rc;
 
@@ -239,7 +239,7 @@ rc_t VColumnReadBlob ( const VColumn *cself, const VBlob **vblobp, int64_t row_i
         if ( rc == 0 )
         {
             VColumn *self = ( VColumn* ) cself;
-            VColumnReadCachedBlob ( self, vblob, row_id, elem_bits, base, boff, row_len );
+            VColumnReadCachedBlob ( self, vblob, row_id, elem_bits, base, boff, row_len, repeat_count );
 
 #if USE_KURT
             TRACK_BLOB ( VBlobRelease, self -> cache );
@@ -275,7 +275,7 @@ rc_t VColumnRead ( const VColumn *cself, int64_t row_id,
         if ( rc == 0 )
         {
             VColumn *self = ( VColumn* ) cself;
-            VColumnReadCachedBlob ( self, *vblob, row_id, elem_bits, base, boff, row_len );
+            VColumnReadCachedBlob ( self, *vblob, row_id, elem_bits, base, boff, row_len, NULL );
 
 #if USE_KURT
             TRACK_BLOB ( VBlobRelease, self -> cache );

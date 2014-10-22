@@ -348,6 +348,7 @@ rc_t VPhysicalOpenWrite ( VPhysical *self, VSchema *schema, const VTable *tbl )
         {
             /* finish off common initialization */
             rc = VPhysicalFinishKColumn ( self, schema, smbr );
+            if(rc==0) rc = VPhysicalLazySetRange(self);
         }
     }
 
@@ -495,7 +496,7 @@ rc_t VPhysicalCreateStatic ( VPhysical *self, const VBlob *vblob )
         {
             self -> sstart_id = vblob -> start_id;
             self -> sstop_id = vblob -> stop_id;
-            self -> fixed_len = PageMapGetIdxRowInfo ( vblob -> pm, 0, NULL );
+            self -> fixed_len = PageMapGetIdxRowInfo ( vblob -> pm, 0, NULL, NULL );
         }
     }
     
@@ -655,7 +656,7 @@ rc_t VPhysicalConvertStatic ( VPhysical *self )
         int64_t sstart_id, sstop_id;
 
         /* save incoming blob cache on stack */
-        VBlob *cache [ PROD_CACHE * PROD_CACHE_MAX_EXTENTS ];
+        VBlob *cache [ PROD_CACHE ];
         assert ( sizeof cache == sizeof self -> in -> cache );
         memcpy ( cache, self -> in -> cache, sizeof cache );
 
@@ -829,7 +830,7 @@ rc_t VPhysicalWrite ( VPhysical *self, int64_t id, uint32_t cnt )
                      vblob -> start_id <= self -> sstop_id + 1 )
                 {
                     /* compare lengths */
-                    if ( self -> fixed_len == PageMapGetIdxRowInfo ( vblob -> pm, 0, NULL ) )
+                    if ( self -> fixed_len == PageMapGetIdxRowInfo ( vblob -> pm, 0, NULL, NULL ) )
                     {
                         /* compare bits */
                         assert ( KDataBufferBits ( & self -> srow ) == KDataBufferBits ( & vblob -> data ) );

@@ -57,9 +57,6 @@ extern "C" {
 
 
 #define PROD_CACHE  	  2                   	/** default size of Production Cache ***/
-#define PROD_CACHE_MAX_EXTENTS  4		/** maximum multiplier for extending selected production caches when random io is detected ***/
-#define PROD_CACHE_WASH_ACCESS_THRESHOLD 10	/** number of accesses to wash part of the cache to trigger cache extension ***/
-						/** this is to determine random access pattern ***/
 
 /* IT IS A BAD IDEA TO USE EXTERN COLUMNS IN EXPRESSIONS
    but it used to be okay in version 0 of the schema, so
@@ -133,8 +130,7 @@ struct VProduction
 #endif
 #if PROD_CACHE
     /* cached output */
-    struct VBlob *cache [ PROD_CACHE * PROD_CACHE_MAX_EXTENTS];
-    uint32_t cache_cnt_max;
+    struct VBlob *cache [ PROD_CACHE ];
     uint32_t cache_cnt;
     uint32_t cache_wash_access_cnt;
 #endif
@@ -354,7 +350,7 @@ rc_t VFunctionProdMakeBuiltInComp ( VProduction **prod, Vector *owned,
 
 /* Read
  */
-rc_t VFunctionProdRead ( VFunctionProd *self, struct VBlob **vblob, int64_t id , uint32_t cnt );
+rc_t VFunctionProdRead ( VFunctionProd *self, struct VBlob **vblob, int64_t id , uint32_t cnt);
 
 
 /*--------------------------------------------------------------------------

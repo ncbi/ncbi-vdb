@@ -159,8 +159,9 @@ rc_t PageMapAddRef(const PageMap *self);
  *  Returns:
  *      the length of the row
  *      or 0 if not found
+ *      repeat_count - how may times this row is repeated from idx
  */
-uint32_t PageMapGetIdxRowInfo(const PageMap *self, uint32_t idx, uint32_t *starting_element);
+uint32_t PageMapGetIdxRowInfo(const PageMap *self, uint32_t idx, uint32_t *starting_element, uint32_t * repeat_count);
 
 rc_t PageMapNew(PageMap **lhs, uint32_t reserve);
 
