@@ -1635,10 +1635,10 @@ XFS_FUSE_access ( const char * ThePath, int Access )
     xPerm = NULL;
     Auth = NULL;
 
-    xOK = ( Access && X_OK ) == X_OK; /* Can Execute */
-    wOK = ( Access && W_OK ) == W_OK; /* Can Write */
-    rOK = ( Access && R_OK ) == R_OK; /* Can Read */
-    fOK = ( Access && F_OK ) == F_OK; /* File Exists */
+    xOK = ( Access & X_OK ) == X_OK; /* Can Execute */
+    wOK = ( Access & W_OK ) == W_OK; /* Can Write */
+    rOK = ( Access & R_OK ) == R_OK; /* Can Read */
+    fOK = ( Access & F_OK ) == F_OK; /* File Exists */
 
     XFSMSG ( ( "ACCESS(Fuse): [%s][mode=%d][x=%d][w=%d][r=%d][f=%d]\n", ThePath, Access, xOK, wOK, rOK, fOK ) );
 
