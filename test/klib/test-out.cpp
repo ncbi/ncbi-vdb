@@ -132,6 +132,14 @@ TEST_CASE(KOutMsgShortcut_c_utf8)
     REQUIRE_EQ(output[1], '\243');
 }
 
+TEST_CASE(KOutMsgShortcut_no_shortcut)
+{
+    string output;
+    REQUIRE_RC(KOutHandlerSet(writerFn, &output));
+    REQUIRE_RC(KOutMsg("%s\n", "str"));
+    REQUIRE_EQ(output, string("str\n"));
+}
+
 
 //////////////////////////////////////////////////// Main
 extern "C"

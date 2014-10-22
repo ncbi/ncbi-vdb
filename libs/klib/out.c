@@ -52,7 +52,9 @@ LIB_EXPORT rc_t CC KOutMsg ( const char * fmt, ... )
     va_start ( args, fmt );
     
     /* process selected format strings that do not require full blown formatting */
-#define MATCH_FORMAT(format, literal)    ( (format) == (literal) || memcmp ( format, literal, sizeof literal - 1 ) == 0 )
+#define MATCH_FORMAT(format, literal) \
+   ( (format) == (literal) || \
+     ( memcmp ( (format), (literal), sizeof (literal) - 1 ) == 0 && string_size(format) == sizeof (literal) - 1 ) )
     if (MATCH_FORMAT(fmt, "%s"))
     {
         const char* arg = va_arg ( args, const char* );
