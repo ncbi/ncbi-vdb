@@ -37,9 +37,61 @@ LIB_EXPORT KWrtHandler G_out_handler;
 
 LIB_EXPORT rc_t CC KOutInit ( void )
 {
-    rc_t rc;
+    return KOutHandlerSetStdOut ();
+}
 
-    rc = KOutHandlerSetStdOut();
+static
+rc_t KOutMsgNulTermStringFmt ( const char * arg )
+{
+    size_t num_writ;
+    KWrtHandler * kout_msg_handler = KOutHandlerGet ();
+    return ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, arg, string_size ( arg ), & num_writ );        
+}
+
+static
+rc_t KOutMsgPrecNulTermStringFmt ( va_list args )
+{
+    unsigned int arg1 = va_arg ( args, unsigned int );
+    const char* arg2 = va_arg ( args, const char* );
+
+    size_t num_writ;
+    KWrtHandler * kout_msg_handler = KOutHandlerGet ();
+    return ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, arg2, arg1, & num_writ );        
+}
+
+static
+rc_t KOutMsgStringFmt ( const String * arg )
+{
+    size_t num_writ;
+    KWrtHandler * kout_msg_handler = KOutHandlerGet ();
+    return ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, arg->addr, arg->size, & num_writ );
+}
+
+static
+rc_t KOutMsgCharFmt ( uint32_t u32 )
+{
+    rc_t rc;
+    size_t num_writ;
+    KWrtHandler * kout_msg_handler = KOutHandlerGet ();
+
+    if ( u32 < 128 )
+    {
+        char ch = ( char ) u32;
+        rc = ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, &ch, 1, & num_writ );
+    }
+    else
+    {
+        char buf[4];
+        int dbytes = utf32_utf8 ( buf, & buf [ sizeof buf ], u32 );
+        if ( dbytes <= 0 )
+        {   /* invalid character */
+            rc = ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, "?", 1, & num_writ );
+        }
+        else
+        {
+            rc = ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, buf, dbytes, & num_writ );
+        }
+    }
 
     return rc;
 }
@@ -50,57 +102,33 @@ LIB_EXPORT rc_t CC KOutMsg ( const char * fmt, ... )
 
     va_list args;
     va_start ( args, fmt );
-    
-    /* process selected format strings that do not require full blown formatting */
+
 #define MATCH_FORMAT(format, literal) \
-   ( (format) == (literal) || \
-     ( memcmp ( (format), (literal), sizeof (literal) - 1 ) == 0 && string_size(format) == sizeof (literal) - 1 ) )
-    if (MATCH_FORMAT(fmt, "%s"))
-    {
-        const char* arg = va_arg ( args, const char* );
-        size_t num_writ;
-        KWrtHandler * kout_msg_handler = KOutHandlerGet ();
-        rc = ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, arg, string_size ( arg ), & num_writ );        
-    }
+    ( ( const void* ) ( format ) == ( const void* ) ( literal ) )
+
+    /* rapid pointer comparison */
+    if ( MATCH_FORMAT ( fmt, "%s" ) )
+        rc = KOutMsgNulTermStringFmt ( va_arg ( args, const char * ) );
+    else if ( MATCH_FORMAT ( fmt, "%.*s" ) )
+        rc = KOutMsgPrecNulTermStringFmt ( args );
+    else if ( MATCH_FORMAT ( fmt, "%S" ) )
+        rc = KOutMsgStringFmt ( va_arg ( args, const String * ) );
+    else if ( MATCH_FORMAT ( fmt, "%c" ) )
+        rc = KOutMsgCharFmt ( va_arg ( args, unsigned int ) );
+
+#undef MATCH_FORMAT
+#define MATCH_FORMAT(format, literal) \
+    ( memcmp ( ( format ), ( literal ), sizeof ( literal ) ) == 0 )
+
+    /* slower value comparison */
+    else if (MATCH_FORMAT(fmt, "%s"))
+        rc = KOutMsgNulTermStringFmt ( va_arg ( args, const char * ) );
     else if (MATCH_FORMAT(fmt, "%.*s"))
-    {
-        unsigned int arg1 = va_arg ( args, unsigned int );
-        const char* arg2 = va_arg ( args, const char* );
-        size_t num_writ;
-        KWrtHandler * kout_msg_handler = KOutHandlerGet ();
-        rc = ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, arg2, arg1, & num_writ );        
-    }
+        rc = KOutMsgPrecNulTermStringFmt ( args );
     else if (MATCH_FORMAT(fmt, "%S"))
-    {
-        const String* arg = va_arg ( args, const String* );
-        size_t num_writ;
-        KWrtHandler * kout_msg_handler = KOutHandlerGet ();
-        rc = ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, arg->addr, arg->size, & num_writ );
-    }
+        rc = KOutMsgStringFmt ( va_arg ( args, const String * ) );
     else if (MATCH_FORMAT(fmt, "%c"))
-    {   
-        size_t num_writ;
-        KWrtHandler * kout_msg_handler = KOutHandlerGet ();
-        uint32_t u32 = va_arg ( args, unsigned int );
-        if ( u32 < 128 )
-        {
-            char ch = ( char ) u32;
-            rc = ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, &ch, 1, & num_writ );
-        }
-        else
-        {
-            char buf[4];
-            int dbytes = utf32_utf8 ( buf, & buf [ sizeof buf ], u32 );
-            if ( dbytes <= 0 )
-            {   /* invalid character */
-                rc = ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, "?", 1, & num_writ );
-            }
-            else
-            {
-                rc = ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, buf, dbytes, & num_writ );
-            }
-        }
-    }
+        rc = KOutMsgCharFmt ( va_arg ( args, unsigned int ) );
     else if( (rc = vkfprintf(KOutHandlerGet(), NULL, fmt, args)) != 0 ) 
     {
         kfprintf(KOutHandlerGet(), NULL, "outmsg failure: %R in '%s'\n", rc, fmt);
