@@ -22,29 +22,41 @@
 #
 # ===========================================================================
 
-by_default: runtests
+default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+TOP ?= $(abspath ../..)
 
-include $(TOP)/build/Makefile.shell
+MODULE = test/klib
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+	test-out
+
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(TEST_TOOLS)
+
+clean: stdclean
 
 #-------------------------------------------------------------------------------
-# default
+# test-out
 #
-SUBDIRS =    \
-	kfc      \
-    klib     \
-	kns      \
-	vfs      \
+TEST_OUT_SRC = \
+	test-out
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+TEST_OUT_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_OUT_SRC))
+    
+TEST_OUT_LIB = \
+    -sncbi-vdb \
+	-sktst \
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
-
-.PHONY: default $(SUBDIRS)
-
+$(TEST_BINDIR)/test-out: $(TEST_OUT_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_OUT_LIB)
+    
+valgrind_out:
+	valgrind --ncbi $(TEST_BINDIR)/test-out
+    
+.PHONY: valgrind_out

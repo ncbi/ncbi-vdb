@@ -27,9 +27,11 @@
 #include <klib/out.h>
 #include "writer-priv.h"
 #include <klib/rc.h>
+#include <klib/text.h>
 #include <sysalloc.h>
 
 #include <stdarg.h>
+#include <string.h>
 
 LIB_EXPORT KWrtHandler G_out_handler;
 
@@ -48,10 +50,60 @@ LIB_EXPORT rc_t CC KOutMsg ( const char * fmt, ... )
 
     va_list args;
     va_start ( args, fmt );
-
-    if( (rc = vkfprintf(KOutHandlerGet(), NULL, fmt, args)) != 0 ) {
+    
+    /* process selected format strings that do not require full blown formatting */
+#define MATCH_FORMAT(format, literal)    ( (format) == (literal) || memcmp ( format, literal, sizeof literal - 1 ) == 0 )
+    if (MATCH_FORMAT(fmt, "%s"))
+    {
+        const char* arg = va_arg ( args, const char* );
+        size_t num_writ;
+        KWrtHandler * kout_msg_handler = KOutHandlerGet ();
+        rc = ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, arg, string_size ( arg ), & num_writ );        
+    }
+    else if (MATCH_FORMAT(fmt, "%.*s"))
+    {
+        unsigned int arg1 = va_arg ( args, unsigned int );
+        const char* arg2 = va_arg ( args, const char* );
+        size_t num_writ;
+        KWrtHandler * kout_msg_handler = KOutHandlerGet ();
+        rc = ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, arg2, arg1, & num_writ );        
+    }
+    else if (MATCH_FORMAT(fmt, "%S"))
+    {
+        const String* arg = va_arg ( args, const String* );
+        size_t num_writ;
+        KWrtHandler * kout_msg_handler = KOutHandlerGet ();
+        rc = ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, arg->addr, arg->size, & num_writ );
+    }
+    else if (MATCH_FORMAT(fmt, "%c"))
+    {   
+        size_t num_writ;
+        KWrtHandler * kout_msg_handler = KOutHandlerGet ();
+        uint32_t u32 = va_arg ( args, unsigned int );
+        if ( u32 < 128 )
+        {
+            char ch = ( char ) u32;
+            rc = ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, &ch, 1, & num_writ );
+        }
+        else
+        {
+            char buf[4];
+            int dbytes = utf32_utf8 ( buf, & buf [ sizeof buf ], u32 );
+            if ( dbytes <= 0 )
+            {   /* invalid character */
+                rc = ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, "?", 1, & num_writ );
+            }
+            else
+            {
+                rc = ( * kout_msg_handler -> writer ) ( kout_msg_handler -> data, buf, dbytes, & num_writ );
+            }
+        }
+    }
+    else if( (rc = vkfprintf(KOutHandlerGet(), NULL, fmt, args)) != 0 ) 
+    {
         kfprintf(KOutHandlerGet(), NULL, "outmsg failure: %R in '%s'\n", rc, fmt);
     }
+#undef MATCH_FORMAT
 
     va_end ( args );
 
