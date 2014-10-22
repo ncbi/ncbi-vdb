@@ -99,9 +99,9 @@ TUI_OBJ = \
 	$(addsuffix .$(LOBX),$(TUI_SRC))
 
 TUI_LIB = \
-	-dklib \
-	-dkfs \
-	-ddl
+	-lklib \
+	-lkfs \
+	-ldl
 
 $(ILIBDIR)/libtui.$(LIBX): $(TUI_OBJ)
 	$(LD) --slib -o $@ $^ $(TUI_LIB)

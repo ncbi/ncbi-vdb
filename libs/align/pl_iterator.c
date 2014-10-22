@@ -242,7 +242,6 @@ static rc_t add_to_pi_window( pi_window * pw, PlacementIterator *pi )
         rc = PlacementIteratorNextAvailPos ( pi, &(pie->nxt_avail.first), &(pie->nxt_avail.len) );
         if ( rc == 0 )
         {
-            PlacementIteratorAddRef ( pi );
             DLListPushTail ( &pw->pi_entries, ( DLNode * )pie );
             pw->count += 1;
         }
