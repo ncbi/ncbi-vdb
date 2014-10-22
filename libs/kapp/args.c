@@ -2019,3 +2019,14 @@ rc_t CC MiniUsage (const Args * args)
 
     return rc;
 }
+
+
+bool CC Is32BitAndDisplayMessage( void )
+{
+#if _ARCH_BITS == 32
+    KOutMsg ( "\nThis tool cannot run in a 32-bit environment,\nplease use the 64-bit version of this tool\n\n" );
+    return true;
+#else
+    return false;
+#endif
+}

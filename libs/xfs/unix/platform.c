@@ -263,6 +263,8 @@ MOO ( "H" );
     return Result == 0 ? 0 : 1;
 }   /* XFS_FUSE_mount_v1 () */
 
+static bool bashmalton = false;
+
 rc_t
 XFS_FUSE_loop_v1( struct XFSControl * self )
 {
@@ -286,8 +288,11 @@ MOO ( "H" );
         Result = fuse_loop_mt ( FuseStruct );
 
 MOO ( "H" );
+
         RCt = Result == 0 ? 0 : 1;
     }
+
+	bashmalton = true;
 
     return RCt;
 }   /* XFS_FUSE_loop_v1 () */
@@ -302,25 +307,48 @@ XFS_FUSE_unmount_v1 ( struct XFSControl * self )
     OUTMSG ( ( "XFS_FUSE_unmount()\n" ) );
 
     if ( self -> Control != NULL ) {
+#ifndef __APPLE__
+/*
+OUTMSG ( ( "|o|fuse_exit()\n" ) );
+*/
         fuse_exit ( FuseStruct );
+#endif	/* __APPLE__ */
 
-OUTMSG ( ( "|o|fuse_remove_signal_handlers()\n" ) );
-        fuse_remove_signal_handlers ( fuse_get_session ( FuseStruct ) );
-
+/*
 OUTMSG ( ( "|o|fuse_unmount()\n" ) );
+*/
         fuse_unmount (
                     XFSControlGetMountPoint ( self ),
                     self -> ControlAux
                     );
 
+/*
+OUTMSG ( ( "|o|waiting thread()\n" ) );
+*/
+		KThreadWait ( self -> Thread, 0 );
+
+/*
+OUTMSG ( ( "|o|releasing thread()\n" ) );
+*/
+		KThreadRelease ( self -> Thread );
+		self -> Thread = NULL;
+
+/*
+OUTMSG ( ( "|o|fuse_remove_signal_handlers()\n" ) );
+*/
+        fuse_remove_signal_handlers ( fuse_get_session ( FuseStruct ) );
+
+/*
 OUTMSG ( ( "|o|fuse_destroy()\n" ) );
+*/
         fuse_destroy ( FuseStruct );
 
         self -> Control = NULL;
         self -> ControlAux = NULL;
 
+/*
 OUTMSG ( ( "|o|exiting fuse()\n" ) );
-
+*/
     }
     else {
         OUTMSG ( ( "XFS_FUSE_unmount(): empty control passed\n" ) );

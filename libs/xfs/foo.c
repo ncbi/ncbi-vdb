@@ -33,6 +33,7 @@
 #include <xfs/tree.h>
 #include <xfs/node.h>
 #include <xfs/editors.h>
+#include <xfs/perm.h>
 
 #include "mehr.h"
 #include "zehr.h"
@@ -44,8 +45,6 @@
 
 #include <stdio.h>
 
-
-static const char * _sDefPerm = "r--r--r--";
 
 /*)))
  |||
@@ -215,7 +214,7 @@ _FooNodeAttr_permissions_v1 (
         return XFS_RC ( rcInvalid );
     }
 
-    * Permissions = _sDefPerm;
+    * Permissions = XFSPermForNodeDefault ();
 
     return 0;
 }   /* _FooNodeAttr_permisiions_v1 () */
