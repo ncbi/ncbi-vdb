@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-judy", "test-judy.vcxproj", "{9DF843FA-AA45-4EB1-BB76-84342AED550C}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kfc", "test-kfc.vcxproj", "{9DF843FA-AA45-4EB1-BB76-84342AED550C}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kns", "test-kns.vcxproj", "{FC91CF87-4852-42FD-BD18-7D82E52A8AF5}"
