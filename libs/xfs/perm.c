@@ -703,3 +703,23 @@ XFSPermAccessToChar ( uint32_t Access, char * Buf, size_t BufSize )
 
     return RCt;
 }   /* XFSPermAccesToChar () */
+
+/*))))))
+ //////  Defaults ... sorry, hardcoding those
+((((((*/
+static const char * _DefPermForContainer = "r-xr-xr-x";
+static const char * _DefPermForNode = "r--r--r--";
+
+LIB_EXPORT
+const char * CC
+XFSPermForContainerDefault ()
+{
+    return _DefPermForContainer;
+}   /* XFSPermForContainerDefault () */
+
+LIB_EXPORT
+const char * CC
+XFSPermForNodeDefault ()
+{
+    return _DefPermForNode;
+}   /* XFSPermForNodeDefault () */

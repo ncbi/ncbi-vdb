@@ -35,6 +35,7 @@
 #include <xfs/node.h>
 #include <xfs/path.h>
 #include <xfs/editors.h>
+#include <xfs/perm.h>
 
 #include "mehr.h"
 #include "schwarzschraube.h"
@@ -379,6 +380,10 @@ _SimpleContainerAttr_permissions_v1 (
     }
 
     * Permissions = ( ( struct XFSSimpleContainer * ) Node ) -> Security;
+
+	if ( * Permissions == NULL ) {
+		* Permissions = XFSPermForContainerDefault ();
+	}
 
     return 0;
 }   /* _SimpleContainerAttr_permisiions_v1 () */

@@ -244,8 +244,19 @@ XFSStop ( struct XFSControl * self )
         if ( RCt == 0 ) {
 
             if ( self -> Thread != NULL ) {
+/*
+OUTMSG ( ( "|o|waiting thread()\n" ) ); 
+*/
+				KThreadWait ( self -> Thread, 0 );
+
+/*
+OUTMSG ( ( "|o|releasing thread()\n" ) ); 
+*/
                 KThreadRelease ( self -> Thread );
 
+/*
+OUTMSG ( ( "|o|thread done()\n" ) ); 
+*/
                 self -> Thread = NULL;
             }
         }
