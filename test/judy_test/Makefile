@@ -22,29 +22,35 @@
 #
 # ===========================================================================
 
-by_default: runtests
+default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+TOP ?= $(abspath ../..)
 
-include $(TOP)/build/Makefile.shell
+MODULE = test/judy_test
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+	judytest
+
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(TEST_TOOLS)
 
 #-------------------------------------------------------------------------------
-# default
+# my-app
 #
-SUBDIRS =    \
-	judy_test\
-	kfc      \
-	kns      \
-	vfs      \
+JUDYTEST_SRC = \
+	judytest
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+JUDYTEST_OBJ = \
+	$(addsuffix .$(OBJX),$(JUDYTEST_SRC))
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
+JUDYTEST_LIB = \
+	-skapp \
+	-sncbi-vdb 
 
-.PHONY: default $(SUBDIRS)
+$(TEST_BINDIR)/judytest: $(JUDYTEST_OBJ)
+	$(LD) --exe $(SRCDIR) -o $@ $^ $(JUDYTEST_LIB)
 
