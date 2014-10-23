@@ -22,31 +22,38 @@
 #
 # ===========================================================================
 
-by_default: runtests
+default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+TOP ?= $(abspath ../..)
 
-include $(TOP)/build/Makefile.shell
+MODULE = test/ktst
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+	test-ktst
+
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(TEST_TOOLS)
+
+clean: stdclean
 
 #-------------------------------------------------------------------------------
-# default
+# test-ktst
 #
-SUBDIRS =    \
-    ktst     \
-	judy_test\
-	kfc      \
-    klib     \
-	kns      \
-	vfs      \
+TEST_KFG_SRC = \
+	ktsttest 
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+TEST_KFG_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_KFG_SRC))
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
+TEST_KFG_LIB = \
+	-skapp \
+    -sncbi-vdb \
+    -sktst
 
-.PHONY: default $(SUBDIRS)
 
+$(TEST_BINDIR)/test-ktst: $(TEST_KFG_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_KFG_LIB)
