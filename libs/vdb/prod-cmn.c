@@ -2273,8 +2273,8 @@ rc_t VProductionReadBlob ( const VProduction *cself, VBlob **vblob, int64_t id, 
 			memmove(self -> cache + 1, self -> cache , self -> cache_cnt * sizeof(*self -> cache));
 #else
 			self -> cache[1]=self -> cache[0];
-		}
 #endif
+		}
 #endif
 		self -> cache_cnt ++;
 	} else {
