@@ -311,8 +311,8 @@ LIB_EXPORT rc_t CC KVectorGet ( const KVector *self, uint64_t key,
 #define KVectorBoolGetStoredBits KVectorGetU64
 #define KVectorBoolSetStoredBits KVectorSetU64
 #define KVectorBoolVisitStoredBits KVectorVisitU64
-#define KVectorBoolGetPrevStoredBits KVectorGetPrevU64
-#define KVectorBoolGetNextStoredBits KVectorGetNextU64
+#define KVectorBoolGetLowerBoundStoredBits KVectorGetLowerBoundU64
+#define KVectorBoolGetUpperBoundStoredBits KVectorGetUpperBoundU64
 
 #elif _ARCH_BITS == 32
 
@@ -321,8 +321,8 @@ LIB_EXPORT rc_t CC KVectorGet ( const KVector *self, uint64_t key,
 #define KVectorBoolGetStoredBits KVectorGetU32
 #define KVectorBoolSetStoredBits KVectorSetU32
 #define KVectorBoolVisitStoredBits KVectorVisitU32
-#define KVectorBoolGetPrevStoredBits KVectorGetPrevU32
-#define KVectorBoolGetNextStoredBits KVectorGetNextU32
+#define KVectorBoolGetLowerBoundStoredBits KVectorGetLowerBoundU32
+#define KVectorBoolGetUpperBoundStoredBits KVectorGetUpperBoundU32
 
 #endif
 
@@ -439,13 +439,18 @@ LIB_EXPORT rc_t CC KVectorGetPtr ( const KVector *self, uint64_t key, void **dat
     return rc;
 }
 
-/* GetPrev
- *  given a starting key, get first previous non-null element
+/* GetLowerBound
+ *  given a starting key, get its lower bound
+ *  (first previous non-null element if key itself
+ *  is not in the set of keys stored in the vector or
+ *  the key itself otherwise if inclusive == true)
  *  returns key of found element in "prev"
  *
  *  "prev" [ OUT ] - pointer to vector index of the returned value
  *
  *  "key" [ IN ] - vector index
+ *
+ *  "inclusive" [IN] - whether include "key" in the search or not
  *
  *  "buffer" [ OUT ] and "bsize" [ IN ] - return buffer for value
  *
@@ -456,12 +461,14 @@ LIB_EXPORT rc_t CC KVectorGetPtr ( const KVector *self, uint64_t key, void **dat
 */
 
 static
-rc_t Nancy1TestPrev ( const void *nancy, uint64_t* prev, uint64_t idx, bool *value )
+rc_t Nancy1TestLowerBound ( const void *nancy, uint64_t* prev, uint64_t idx, bool *value, bool inclusive )
 {
     JError_t err;
     int data;
     *prev = idx;
-    data = Judy1Prev ( nancy, ( Word_t* ) prev, & err );
+    data = inclusive ?
+        Judy1Last ( nancy, ( Word_t* ) prev, & err ) :
+        Judy1Prev ( nancy, ( Word_t* ) prev, & err );
     if ( data == JERR )
         return NancyError ( & err, rcAccessing );
     * value = data != 0;
@@ -469,12 +476,14 @@ rc_t Nancy1TestPrev ( const void *nancy, uint64_t* prev, uint64_t idx, bool *val
 }
 
 static
-rc_t NancyLGetPrev ( const void *nancy, uint64_t* prev, uint64_t idx, Word_t *value )
+rc_t NancyLGetLowerBound ( const void *nancy, uint64_t* prev, uint64_t idx, Word_t *value, bool inclusive )
 {
     JError_t err;
     PPvoid_t datap;
     *prev = idx;
-    datap = JudyLPrev ( nancy, ( Word_t* ) prev, & err );
+    datap = inclusive ?
+        JudyLLast ( nancy, ( Word_t* ) prev, & err ) :
+        JudyLPrev ( nancy, ( Word_t* ) prev, & err );
     if ( datap == NULL )
         return RC ( rcCont, rcVector, rcAccessing, rcItem, rcNotFound );
     if ( datap == PPJERR )
@@ -484,8 +493,8 @@ rc_t NancyLGetPrev ( const void *nancy, uint64_t* prev, uint64_t idx, Word_t *va
     return 0;
 }
 
-KLIB_EXTERN rc_t CC KVectorGetPrev ( const KVector *self, uint64_t *prev,
-    uint64_t key, void *value_buffer, size_t bsize, size_t *bytes )
+KLIB_EXTERN rc_t CC KVectorGetLowerBound ( const KVector *self, uint64_t *prev,
+    uint64_t key, void *value_buffer, size_t bsize, size_t *bytes, bool inclusive )
 {
     rc_t rc;
 
@@ -504,7 +513,7 @@ KLIB_EXTERN rc_t CC KVectorGetPrev ( const KVector *self, uint64_t *prev,
             if ( self -> nancy_bool )
             {
                 bool data;
-                rc = Nancy1TestPrev ( self -> nancy, prev, key, & data );
+                rc = Nancy1TestLowerBound ( self -> nancy, prev, key, & data, inclusive );
                 if ( rc == 0 )
                 {
                     * bytes = sizeof data;
@@ -518,7 +527,7 @@ KLIB_EXTERN rc_t CC KVectorGetPrev ( const KVector *self, uint64_t *prev,
             else
             {
                 Word_t data;
-                rc = NancyLGetPrev ( self -> nancy, prev, key, & data );
+                rc = NancyLGetLowerBound ( self -> nancy, prev, key, & data, inclusive );
                 if ( rc == 0 )
                 {
                     if ( self -> fixed_size == 0 )
@@ -563,7 +572,7 @@ KLIB_EXTERN rc_t CC KVectorGetPrev ( const KVector *self, uint64_t *prev,
     return rc;
 }
 
-/* GetPrev
+/* GetLowerBound
  *  get prev typed values
  *  returns rc_t state of rcNull if index is not set
  *
@@ -571,23 +580,28 @@ KLIB_EXTERN rc_t CC KVectorGetPrev ( const KVector *self, uint64_t *prev,
  *
  *  "key" [ IN ] - vector index
  *
+ *  "inclusive" [IN] - whether include "key" in the search or not
+ *
  *  "data" [ OUT ] - return parameter for value
  */
 
-LIB_EXPORT rc_t CC KVectorGetPrevBoolOld ( const KVector *self,
-    uint64_t *prev, uint64_t key, bool *value )
+LIB_EXPORT rc_t CC KVectorGetLowerBoundBoolOld ( const KVector *self,
+    uint64_t *prev, uint64_t key, bool *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetPrev ( self, prev, key, value, sizeof * value, & bytes );
+    return KVectorGetLowerBound ( self, prev, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetPrevBool ( const KVector *self,
-    uint64_t *prev, uint64_t key, bool *value )
+LIB_EXPORT rc_t CC KVectorGetLowerBoundBool ( const KVector *self,
+    uint64_t *prev, uint64_t key, bool *value, bool inclusive )
 {
     rc_t rc = 0;
     size_t stored_bits = 0;
     uint64_t key_qword = key / (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS);
     size_t bit_offset_in_qword = (key % (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS)) * BOOL_VECT_RECORD_SIZE_IN_BITS;
+
+    if ( inclusive )
+        bit_offset_in_qword += BOOL_VECT_RECORD_SIZE_IN_BITS;
 
     if ( bit_offset_in_qword )
     {
@@ -614,7 +628,7 @@ LIB_EXPORT rc_t CC KVectorGetPrevBool ( const KVector *self,
             }
         }
 
-        rc = KVectorBoolGetPrevStoredBits ( self, & key_qword, key_qword, & stored_bits );
+        rc = KVectorBoolGetLowerBoundStoredBits ( self, & key_qword, key_qword, & stored_bits, false );
         if (rc)
             break;
         bit_offset_in_qword = sizeof(stored_bits) * 8;
@@ -624,99 +638,101 @@ LIB_EXPORT rc_t CC KVectorGetPrevBool ( const KVector *self,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KVectorGetPrevI8 ( const KVector *self,
-    uint64_t *prev, uint64_t key, int8_t *value )
+LIB_EXPORT rc_t CC KVectorGetLowerBoundI8 ( const KVector *self,
+    uint64_t *prev, uint64_t key, int8_t *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetPrev ( self, prev, key, value, sizeof * value, & bytes );
+    return KVectorGetLowerBound ( self, prev, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetPrevI16 ( const KVector *self,
-    uint64_t *prev, uint64_t key, int16_t *value )
+LIB_EXPORT rc_t CC KVectorGetLowerBoundI16 ( const KVector *self,
+    uint64_t *prev, uint64_t key, int16_t *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetPrev ( self, prev, key, value, sizeof * value, & bytes );
+    return KVectorGetLowerBound ( self, prev, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetPrevI32 ( const KVector *self,
-    uint64_t *prev, uint64_t key, int32_t *value )
+LIB_EXPORT rc_t CC KVectorGetLowerBoundI32 ( const KVector *self,
+    uint64_t *prev, uint64_t key, int32_t *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetPrev ( self, prev, key, value, sizeof * value, & bytes );
+    return KVectorGetLowerBound ( self, prev, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetPrevI64 ( const KVector *self,
-    uint64_t *prev, uint64_t key, int64_t *value )
+LIB_EXPORT rc_t CC KVectorGetLowerBoundI64 ( const KVector *self,
+    uint64_t *prev, uint64_t key, int64_t *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetPrev ( self, prev, key, value, sizeof * value, & bytes );
+    return KVectorGetLowerBound ( self, prev, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetPrevU8 ( const KVector *self,
-    uint64_t *prev, uint64_t key, uint8_t *value )
+LIB_EXPORT rc_t CC KVectorGetLowerBoundU8 ( const KVector *self,
+    uint64_t *prev, uint64_t key, uint8_t *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetPrev ( self, prev, key, value, sizeof * value, & bytes );
+    return KVectorGetLowerBound ( self, prev, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetPrevU16 ( const KVector *self,
-    uint64_t *prev, uint64_t key, uint16_t *value )
+LIB_EXPORT rc_t CC KVectorGetLowerBoundU16 ( const KVector *self,
+    uint64_t *prev, uint64_t key, uint16_t *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetPrev ( self, prev, key, value, sizeof * value, & bytes );
+    return KVectorGetLowerBound ( self, prev, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetPrevU32 ( const KVector *self,
-    uint64_t *prev, uint64_t key, uint32_t *value )
+LIB_EXPORT rc_t CC KVectorGetLowerBoundU32 ( const KVector *self,
+    uint64_t *prev, uint64_t key, uint32_t *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetPrev ( self, prev, key, value, sizeof * value, & bytes );
+    return KVectorGetLowerBound ( self, prev, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetPrevU64 ( const KVector *self,
-    uint64_t *prev, uint64_t key, uint64_t *value )
+LIB_EXPORT rc_t CC KVectorGetLowerBoundU64 ( const KVector *self,
+    uint64_t *prev, uint64_t key, uint64_t *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetPrev ( self, prev, key, value, sizeof * value, & bytes );
+    return KVectorGetLowerBound ( self, prev, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetPrevF32 ( const KVector *self,
-    uint64_t *prev, uint64_t key, float *value )
+LIB_EXPORT rc_t CC KVectorGetLowerBoundF32 ( const KVector *self,
+    uint64_t *prev, uint64_t key, float *value, bool inclusive )
 {
     size_t bytes;
-    rc_t rc = KVectorGetPrev ( self, prev, key, value, sizeof * value, & bytes );
+    rc_t rc = KVectorGetLowerBound ( self, prev, key, value, sizeof * value, & bytes, inclusive );
     if ( rc == 0 && bytes != sizeof * value )
         rc = RC ( rcCont, rcVector, rcAccessing, rcType, rcUnsupported );
     return rc;
 }
 
-LIB_EXPORT rc_t CC KVectorGetPrevF64 ( const KVector *self,
-    uint64_t *prev, uint64_t key, double *value )
+LIB_EXPORT rc_t CC KVectorGetLowerBoundF64 ( const KVector *self,
+    uint64_t *prev, uint64_t key, double *value, bool inclusive )
 {
     size_t bytes;
-    rc_t rc = KVectorGetPrev ( self, prev, key, value, sizeof * value, & bytes );
+    rc_t rc = KVectorGetLowerBound ( self, prev, key, value, sizeof * value, & bytes, inclusive );
     if ( rc == 0 && bytes != sizeof * value )
         rc = RC ( rcCont, rcVector, rcAccessing, rcType, rcUnsupported );
     return rc;
 }
 
-LIB_EXPORT rc_t CC KVectorGetPrevPtr ( const KVector *self,
-    uint64_t *prev, uint64_t key, void **value )
+LIB_EXPORT rc_t CC KVectorGetLowerBoundPtr ( const KVector *self,
+    uint64_t *prev, uint64_t key, void **value, bool inclusive )
 {
     size_t bytes;
-    rc_t rc = KVectorGetNext ( self, prev, key, value, sizeof * value, & bytes );
+    rc_t rc = KVectorGetLowerBound ( self, prev, key, value, sizeof * value, & bytes, inclusive );
     if ( rc == 0 && bytes != sizeof * value )
         rc = RC ( rcCont, rcVector, rcAccessing, rcType, rcUnsupported );
     return rc;
 }
 
-/* GetNext
+/* GetUpperBound
  *  given a starting key, get first following non-null element
  *  returns key of found element in "next"
  *
  *  "next" [ OUT ] - pointer to vector index of the returned value
  *
  *  "key" [ IN ] - vector index
+ *
+ *  "inclusive" [IN] - whether include "key" in the search or not
  *
  *  "buffer" [ OUT ] and "bsize" [ IN ] - return buffer for value
  *
@@ -727,12 +743,14 @@ LIB_EXPORT rc_t CC KVectorGetPrevPtr ( const KVector *self,
 */
 
 static
-rc_t Nancy1TestNext ( const void *nancy, uint64_t* next, uint64_t idx, bool *value )
+rc_t Nancy1TestUpperBound ( const void *nancy, uint64_t* next, uint64_t idx, bool *value, bool inclusive )
 {
     JError_t err;
     int data;
     *next = idx;
-    data = Judy1Next ( nancy, ( Word_t* ) next, & err );
+    data = inclusive ?
+        Judy1First ( nancy, ( Word_t* ) next, & err ) :
+        Judy1Next ( nancy, ( Word_t* ) next, & err );
     if ( data == JERR )
         return NancyError ( & err, rcAccessing );
     * value = data != 0;
@@ -740,12 +758,14 @@ rc_t Nancy1TestNext ( const void *nancy, uint64_t* next, uint64_t idx, bool *val
 }
 
 static
-rc_t NancyLGetNext ( const void *nancy, uint64_t* next, uint64_t idx, Word_t *value )
+rc_t NancyLGetUpperBound ( const void *nancy, uint64_t* next, uint64_t idx, Word_t *value, bool inclusive )
 {
     JError_t err;
     PPvoid_t datap;
     *next = idx;
-    datap = JudyLNext ( nancy, ( Word_t* ) next, & err );
+    datap = inclusive ?
+        JudyLFirst ( nancy, ( Word_t* ) next, & err ) :
+        JudyLNext ( nancy, ( Word_t* ) next, & err );
     if ( datap == NULL )
         return RC ( rcCont, rcVector, rcAccessing, rcItem, rcNotFound );
     if ( datap == PPJERR )
@@ -755,8 +775,8 @@ rc_t NancyLGetNext ( const void *nancy, uint64_t* next, uint64_t idx, Word_t *va
     return 0;
 }
 
-KLIB_EXTERN rc_t CC KVectorGetNext ( const KVector *self, uint64_t *next,
-    uint64_t key, void *value_buffer, size_t bsize, size_t *bytes )
+KLIB_EXTERN rc_t CC KVectorGetUpperBound ( const KVector *self, uint64_t *next,
+    uint64_t key, void *value_buffer, size_t bsize, size_t *bytes, bool inclusive )
 {
     rc_t rc;
 
@@ -775,7 +795,7 @@ KLIB_EXTERN rc_t CC KVectorGetNext ( const KVector *self, uint64_t *next,
             if ( self -> nancy_bool )
             {
                 bool data;
-                rc = Nancy1TestNext ( self -> nancy, next, key, & data );
+                rc = Nancy1TestUpperBound ( self -> nancy, next, key, & data, inclusive );
                 if ( rc == 0 )
                 {
                     * bytes = sizeof data;
@@ -789,7 +809,7 @@ KLIB_EXTERN rc_t CC KVectorGetNext ( const KVector *self, uint64_t *next,
             else
             {
                 Word_t data;
-                rc = NancyLGetNext ( self -> nancy, next, key, & data );
+                rc = NancyLGetUpperBound ( self -> nancy, next, key, & data, inclusive );
                 if ( rc == 0 )
                 {
                     if ( self -> fixed_size == 0 )
@@ -834,26 +854,30 @@ KLIB_EXTERN rc_t CC KVectorGetNext ( const KVector *self, uint64_t *next,
     return rc;
 }
 
-/* GetNext
+/* GetUpperBound
  *  get next typed values
  *  returns rc_t state of rcNull if index is not set
  *
  *  "next" [ OUT ] - pointer to vector index of the returned value
  *
+ *  "inclusive" [IN] - whether include "key" in the search or not
+ *
  *  "key" [ IN ] - vector index
+ *
+ *  "inclusive" [IN] - whether include "key" in the search or not
  *
  *  "data" [ OUT ] - return parameter for value
  */
 
-LIB_EXPORT rc_t CC KVectorGetNextBoolOld ( const KVector *self,
-    uint64_t *next, uint64_t key, bool *value )
+LIB_EXPORT rc_t CC KVectorGetUpperBoundBoolOld ( const KVector *self,
+    uint64_t *next, uint64_t key, bool *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetNext ( self, next, key, value, sizeof * value, & bytes );
+    return KVectorGetUpperBound ( self, next, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetNextBool ( const KVector *self,
-    uint64_t *next, uint64_t key, bool *value )
+LIB_EXPORT rc_t CC KVectorGetUpperBoundBool ( const KVector *self,
+    uint64_t *next, uint64_t key, bool *value, bool inclusive )
 {
     rc_t rc = 0;
     size_t stored_bits = 0;
@@ -861,6 +885,9 @@ LIB_EXPORT rc_t CC KVectorGetNextBool ( const KVector *self,
     size_t bit_offset_in_qword = (key % (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS)) * BOOL_VECT_RECORD_SIZE_IN_BITS;
 
     size_t const MAX_BIT_OFFSET = sizeof(stored_bits) * 8 - BOOL_VECT_RECORD_SIZE_IN_BITS;
+
+    if ( inclusive )
+        bit_offset_in_qword -= BOOL_VECT_RECORD_SIZE_IN_BITS;
 
     if ( bit_offset_in_qword != MAX_BIT_OFFSET )
     {
@@ -887,7 +914,7 @@ LIB_EXPORT rc_t CC KVectorGetNextBool ( const KVector *self,
             }
         }
 
-        rc = KVectorBoolGetNextStoredBits ( self, & key_qword, key_qword, & stored_bits );
+        rc = KVectorBoolGetUpperBoundStoredBits ( self, & key_qword, key_qword, & stored_bits, false );
         if (rc)
             break;
         bit_offset_in_qword = 0 - BOOL_VECT_RECORD_SIZE_IN_BITS;
@@ -897,87 +924,87 @@ LIB_EXPORT rc_t CC KVectorGetNextBool ( const KVector *self,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KVectorGetNextI8 ( const KVector *self,
-    uint64_t *next, uint64_t key, int8_t *value )
+LIB_EXPORT rc_t CC KVectorGetUpperBoundI8 ( const KVector *self,
+    uint64_t *next, uint64_t key, int8_t *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetNext ( self, next, key, value, sizeof * value, & bytes );
+    return KVectorGetUpperBound ( self, next, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetNextI16 ( const KVector *self,
-    uint64_t *next, uint64_t key, int16_t *value )
+LIB_EXPORT rc_t CC KVectorGetUpperBoundI16 ( const KVector *self,
+    uint64_t *next, uint64_t key, int16_t *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetNext ( self, next, key, value, sizeof * value, & bytes );
+    return KVectorGetUpperBound ( self, next, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetNextI32 ( const KVector *self,
-    uint64_t *next, uint64_t key, int32_t *value )
+LIB_EXPORT rc_t CC KVectorGetUpperBoundI32 ( const KVector *self,
+    uint64_t *next, uint64_t key, int32_t *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetNext ( self, next, key, value, sizeof * value, & bytes );
+    return KVectorGetUpperBound ( self, next, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetNextI64 ( const KVector *self,
-    uint64_t *next, uint64_t key, int64_t *value )
+LIB_EXPORT rc_t CC KVectorGetUpperBoundI64 ( const KVector *self,
+    uint64_t *next, uint64_t key, int64_t *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetNext ( self, next, key, value, sizeof * value, & bytes );
+    return KVectorGetUpperBound ( self, next, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetNextU8 ( const KVector *self,
-    uint64_t *next, uint64_t key, uint8_t *value )
+LIB_EXPORT rc_t CC KVectorGetUpperBoundU8 ( const KVector *self,
+    uint64_t *next, uint64_t key, uint8_t *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetNext ( self, next, key, value, sizeof * value, & bytes );
+    return KVectorGetUpperBound ( self, next, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetNextU16 ( const KVector *self,
-    uint64_t *next, uint64_t key, uint16_t *value )
+LIB_EXPORT rc_t CC KVectorGetUpperBoundU16 ( const KVector *self,
+    uint64_t *next, uint64_t key, uint16_t *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetNext ( self, next, key, value, sizeof * value, & bytes );
+    return KVectorGetUpperBound ( self, next, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetNextU32 ( const KVector *self,
-    uint64_t *next, uint64_t key, uint32_t *value )
+LIB_EXPORT rc_t CC KVectorGetUpperBoundU32 ( const KVector *self,
+    uint64_t *next, uint64_t key, uint32_t *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetNext ( self, next, key, value, sizeof * value, & bytes );
+    return KVectorGetUpperBound ( self, next, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetNextU64 ( const KVector *self,
-    uint64_t *next, uint64_t key, uint64_t *value )
+LIB_EXPORT rc_t CC KVectorGetUpperBoundU64 ( const KVector *self,
+    uint64_t *next, uint64_t key, uint64_t *value, bool inclusive )
 {
     size_t bytes;
-    return KVectorGetNext ( self, next, key, value, sizeof * value, & bytes );
+    return KVectorGetUpperBound ( self, next, key, value, sizeof * value, & bytes, inclusive );
 }
 
-LIB_EXPORT rc_t CC KVectorGetNextF32 ( const KVector *self,
-    uint64_t *next, uint64_t key, float *value )
+LIB_EXPORT rc_t CC KVectorGetUpperBoundF32 ( const KVector *self,
+    uint64_t *next, uint64_t key, float *value, bool inclusive )
 {
     size_t bytes;
-    rc_t rc = KVectorGetNext ( self, next, key, value, sizeof * value, & bytes );
+    rc_t rc = KVectorGetUpperBound ( self, next, key, value, sizeof * value, & bytes, inclusive );
     if ( rc == 0 && bytes != sizeof * value )
         rc = RC ( rcCont, rcVector, rcAccessing, rcType, rcUnsupported );
     return rc;
 }
 
-LIB_EXPORT rc_t CC KVectorGetNextF64 ( const KVector *self,
-    uint64_t *next, uint64_t key, double *value )
+LIB_EXPORT rc_t CC KVectorGetUpperBoundF64 ( const KVector *self,
+    uint64_t *next, uint64_t key, double *value, bool inclusive )
 {
     size_t bytes;
-    rc_t rc = KVectorGetNext ( self, next, key, value, sizeof * value, & bytes );
+    rc_t rc = KVectorGetUpperBound ( self, next, key, value, sizeof * value, & bytes, inclusive );
     if ( rc == 0 && bytes != sizeof * value )
         rc = RC ( rcCont, rcVector, rcAccessing, rcType, rcUnsupported );
     return rc;
 }
 
-LIB_EXPORT rc_t CC KVectorGetNextPtr ( const KVector *self,
-    uint64_t *next, uint64_t key, void **value )
+LIB_EXPORT rc_t CC KVectorGetUpperBoundPtr ( const KVector *self,
+    uint64_t *next, uint64_t key, void **value, bool inclusive )
 {
     size_t bytes;
-    rc_t rc = KVectorGetNext ( self, next, key, value, sizeof * value, & bytes );
+    rc_t rc = KVectorGetUpperBound ( self, next, key, value, sizeof * value, & bytes, inclusive );
     if ( rc == 0 && bytes != sizeof * value )
         rc = RC ( rcCont, rcVector, rcAccessing, rcType, rcUnsupported );
     return rc;

@@ -1611,12 +1611,13 @@ static rc_t test_prev_single_i32 ( KVector const* v,
 {
     uint64_t prev_key;
     int32_t prev_value;
-    rc_t rc = KVectorGetPrevI32 ( v, &prev_key, key, &prev_value );
+    rc_t rc = KVectorGetLowerBoundI32 ( v, &prev_key, key, &prev_value, false );
     if (rc)
         OUTMSG(("KVectorGetPrevI32(key=%lu) failed with error %R\n", key, rc));
     else
-        OUTMSG(("The value previous to key=%lu is (%lu, %d); must be (%lu, %d)\n",
-            key, prev_key, prev_value, prev_key_ref, prev_value_ref));
+        OUTMSG(("The value previous to key=%lu is (%lu, %d); must be (%lu, %d)%s\n",
+            key, prev_key, prev_value, prev_key_ref, prev_value_ref,
+            prev_key != prev_key_ref || prev_value != prev_value_ref ? " MISMATCH" : ""));
     return rc;
 }
 
@@ -1625,12 +1626,13 @@ static rc_t test_next_single_i32 ( KVector const* v,
 {
     uint64_t next_key;
     int32_t next_value;
-    rc_t rc = KVectorGetNextI32 ( v, &next_key, key, &next_value );
+    rc_t rc = KVectorGetUpperBoundI32 ( v, &next_key, key, &next_value, false );
     if (rc)
         OUTMSG(("KVectorGetNextI32(key=%lu) failed with error %R\n", key, rc));
     else
-        OUTMSG(("The value following key=%lu is (%lu, %d); must be (%lu, %d)\n",
-            key, next_key, next_value, next_key_ref, next_value_ref));
+        OUTMSG(("The value following key=%lu is (%lu, %d); must be (%lu, %d)%s\n",
+            key, next_key, next_value, next_key_ref, next_value_ref,
+            next_key != next_key_ref || next_value != next_value_ref ? " MISMATCH" : ""));
     return rc;
 }
 
@@ -1684,12 +1686,13 @@ static rc_t test_prev_single_bool ( KVector const* v,
 {
     uint64_t prev_key;
     bool prev_value;
-    rc_t rc = KVectorGetPrevBool ( v, &prev_key, key, &prev_value );
+    rc_t rc = KVectorGetLowerBoundBool ( v, &prev_key, key, &prev_value, false );
     if (rc)
         OUTMSG(("KVectorGetPrevBool(key=%lu) failed with error %R\n", key, rc));
     else
-        OUTMSG(("The value previous to key=%lu is (%lu, %d); must be (%lu, %d)\n",
-            key, prev_key, prev_value, prev_key_ref, prev_value_ref));
+        OUTMSG(("The value previous to key=%lu is (%lu, %d); must be (%lu, %d)%s\n",
+            key, prev_key, prev_value, prev_key_ref, prev_value_ref,
+            prev_key != prev_key_ref || prev_value != prev_value_ref ? " MISMATCH" : ""));
     return rc;
 }
 
@@ -1698,12 +1701,13 @@ static rc_t test_next_single_bool ( KVector const* v,
 {
     uint64_t next_key;
     bool next_value;
-    rc_t rc = KVectorGetNextBool ( v, &next_key, key, &next_value );
+    rc_t rc = KVectorGetUpperBoundBool ( v, &next_key, key, &next_value, false );
     if (rc)
         OUTMSG(("KVectorGetNextBool(key=%lu) failed with error %R\n", key, rc));
     else
-        OUTMSG(("The value following key=%lu is (%lu, %d); must be (%lu, %d)\n",
-            key, next_key, next_value, next_key_ref, next_value_ref));
+        OUTMSG(("The value following key=%lu is (%lu, %d); must be (%lu, %d)%s\n",
+            key, next_key, next_value, next_key_ref, next_value_ref,
+            next_key != next_key_ref || next_value != next_value_ref ? " MISMATCH" : ""));
     return rc;
 }
 
@@ -1730,10 +1734,10 @@ static rc_t perform_prev_next_bool_test()
             test_prev_single_bool (v, 2, 1, true);
             test_prev_single_bool (v, 1, 0, true);
             test_prev_single_bool (v, 32, 4, false);
-            test_prev_single_bool (v, 64, 32, true);
+            test_prev_single_bool (v, 64, 32, false);
             test_prev_single_bool (v, 0, 4, false);
             test_prev_single_bool (v, 123, 64, true);
-            test_prev_single_bool (v, 33, 4, false);
+            test_prev_single_bool (v, 33, 32, false);
 
             OUTMSG(("\n"));
 
