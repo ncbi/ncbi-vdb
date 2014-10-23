@@ -80,6 +80,13 @@ rc_t CC VDatabaseWhack ( VDatabase *self )
         if ( rc == 0 )
             self -> dad = NULL;
     }
+    /* release cache_db */
+    if ( self -> cache_db != NULL)
+    {
+	rc = VDatabaseRelease ( self -> cache_db );
+	if ( rc == 0 )
+		self -> cache_db = NULL;
+    }
 
     /* remove from mgr */
     if ( rc == 0 )
@@ -294,6 +301,22 @@ LIB_EXPORT rc_t CC VDBManagerOpenDBRead ( const VDBManager *self,
     va_start ( args, path );
     rc = VDBManagerVOpenDBRead ( self, db, schema, path, args );
     va_end ( args );
+    if(rc == 0 ){
+        char cpath[4096];
+	size_t n;
+	rc_t rc2=string_printf(cpath,sizeof(cpath),&n,"%s.vdbcache",path);
+	if(rc2==0){
+	    const VDatabase *cdb;
+
+	    va_start ( args, path );
+	    rc2=VDBManagerVOpenDBRead(self,&cdb,NULL,cpath,args );
+	    va_end ( args );
+            DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("VDBManagerOpenDBRead(vdbcache) = %d\n", rc2));
+	    if(rc2 == 0){
+		((VDatabase*) (*db)) -> cache_db = cdb;
+	    }
+	}
+    }
 
     return rc;
 }

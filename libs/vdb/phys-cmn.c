@@ -125,13 +125,25 @@ rc_t pstdout ( void *ignore, const void *buffer, size_t bsize )
 }
 #endif
 
+static rc_t VPhysicalLazySetRange(VPhysical *self)
+{
+    if(self->kstart_id < 0 || self -> kstop_id < self -> kstart_id) {
+	uint64_t count;
+	rc_t rc = KColumnIdRange ( self -> kcol, & self -> kstart_id, & count );
+	self -> kstop_id = self -> kstart_id + count - 1;
+	return rc;
+    }
+    return 0;
+}
+
 rc_t VPhysicalFinishKColumn ( VPhysical *self, VSchema *schema, const SPhysMember *smbr )
 {
     /* determine its range of row ids */
     uint64_t count;
-    rc_t rc = KColumnIdRange ( self -> kcol, & self -> kstart_id, & count );
-    self -> kstop_id = self -> kstart_id + count - 1;
-    if ( rc == 0 )
+    rc_t rc=0;
+    /* lazy settings .. to be set when needed */
+    self -> kstart_id = 1;
+    self -> kstop_id  = 0;
     {
         if ( self -> meta == NULL )
         {
@@ -347,6 +359,8 @@ rc_t VPhysicalReadKColumn ( VPhysical *self, VBlob **vblob, int64_t id, uint32_t
     VBlob *blob;
     const KColumnBlob *kblob;
 
+    rc = VPhysicalLazySetRange(self);
+    if( rc) return rc;
     /* check id against column contents */
     if ( self -> kcol == NULL ||
          id < self -> kstart_id || id > self -> kstop_id )
@@ -653,6 +667,8 @@ rc_t VPhysicalProdColumnIdRange ( const VPhysicalProd *Self,
         return 0;
     }
     if (self->kcol) {
+	rc_t rc=VPhysicalLazySetRange((VPhysical *)self);
+	if(rc) return rc;
         *first = self->kstart_id;
         *last  = self->kstop_id;
         return 0;
