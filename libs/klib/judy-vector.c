@@ -344,7 +344,7 @@ LIB_EXPORT rc_t CC KVectorGetBool ( const KVector *self, uint64_t key, bool *dat
     rc_t rc = 0;
     size_t stored_bits;
     uint64_t key_qword = key / (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS);
-    uint64_t bit_offset_in_qword = (key % (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS)) * BOOL_VECT_RECORD_SIZE_IN_BITS;
+    size_t bit_offset_in_qword = (key % (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS)) * BOOL_VECT_RECORD_SIZE_IN_BITS;
 
     size_t record;
 
@@ -587,7 +587,7 @@ LIB_EXPORT rc_t CC KVectorGetPrevBool ( const KVector *self,
     rc_t rc = 0;
     size_t stored_bits = 0;
     uint64_t key_qword = key / (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS);
-    uint64_t bit_offset_in_qword = (key % (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS)) * BOOL_VECT_RECORD_SIZE_IN_BITS;
+    size_t bit_offset_in_qword = (key % (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS)) * BOOL_VECT_RECORD_SIZE_IN_BITS;
 
     if ( bit_offset_in_qword )
     {
@@ -609,7 +609,7 @@ LIB_EXPORT rc_t CC KVectorGetPrevBool ( const KVector *self,
             {
                 *value = (bool) (record & BOOL_VECT_BIT_VALUE_MASK);
                 *prev = key_qword * (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS) |
-                        bit_offset_in_qword / BOOL_VECT_RECORD_SIZE_IN_BITS;
+                        (uint64_t)(bit_offset_in_qword / BOOL_VECT_RECORD_SIZE_IN_BITS);
                 goto EXIT;
             }
         }
@@ -858,9 +858,9 @@ LIB_EXPORT rc_t CC KVectorGetNextBool ( const KVector *self,
     rc_t rc = 0;
     size_t stored_bits = 0;
     uint64_t key_qword = key / (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS);
-    uint64_t bit_offset_in_qword = (key % (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS)) * BOOL_VECT_RECORD_SIZE_IN_BITS;
+    size_t bit_offset_in_qword = (key % (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS)) * BOOL_VECT_RECORD_SIZE_IN_BITS;
 
-    uint64_t const MAX_BIT_OFFSET = sizeof(stored_bits) * 8 - BOOL_VECT_RECORD_SIZE_IN_BITS;
+    size_t const MAX_BIT_OFFSET = sizeof(stored_bits) * 8 - BOOL_VECT_RECORD_SIZE_IN_BITS;
 
     if ( bit_offset_in_qword != MAX_BIT_OFFSET )
     {
@@ -882,7 +882,7 @@ LIB_EXPORT rc_t CC KVectorGetNextBool ( const KVector *self,
             {
                 *value = (bool) (record & BOOL_VECT_BIT_VALUE_MASK);
                 *next = key_qword * (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS) |
-                        bit_offset_in_qword / BOOL_VECT_RECORD_SIZE_IN_BITS;
+                        (uint64_t)(bit_offset_in_qword / BOOL_VECT_RECORD_SIZE_IN_BITS);
                 goto EXIT;
             }
         }
@@ -890,7 +890,7 @@ LIB_EXPORT rc_t CC KVectorGetNextBool ( const KVector *self,
         rc = KVectorBoolGetNextStoredBits ( self, & key_qword, key_qword, & stored_bits );
         if (rc)
             break;
-        bit_offset_in_qword = (uint64_t)(0 - BOOL_VECT_RECORD_SIZE_IN_BITS);
+        bit_offset_in_qword = 0 - BOOL_VECT_RECORD_SIZE_IN_BITS;
     }
 
     EXIT:
@@ -1121,7 +1121,7 @@ LIB_EXPORT rc_t CC KVectorSetBool ( KVector *self, uint64_t key, bool data )
 
     size_t stored_bits = 0;
     uint64_t key_qword = key / (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS);
-    uint64_t bit_offset_in_qword = (key % (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS)) * BOOL_VECT_RECORD_SIZE_IN_BITS;
+    size_t bit_offset_in_qword = (key % (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS)) * BOOL_VECT_RECORD_SIZE_IN_BITS;
     bool first_time = 0;
     size_t new_bit_record;
     size_t stored_bit_record;
