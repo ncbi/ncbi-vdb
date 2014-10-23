@@ -110,88 +110,82 @@ KLIB_EXTERN rc_t CC KVectorGetF64 ( const KVector *self, uint64_t key, double *v
 KLIB_EXTERN rc_t CC KVectorGetPtr ( const KVector *self, uint64_t key, void **value );
 
 
-/* GetLowerBound
- *  given a starting key, get its lower bound
- *  (first previous non-null element if key itself
- *  is not in the set of keys stored in the vector or
- *  the key itself otherwise if inclusive == true)
+/* GetPrev
+ *  given a starting key, get first previous non-null element
  *  returns key of found element in "prev"
  */
-KLIB_EXTERN rc_t CC KVectorGetLowerBound ( const KVector *self, uint64_t *prev,
-    uint64_t key, void *value_buffer, size_t bsize, size_t *bytes, bool inclusive );
+KLIB_EXTERN rc_t CC KVectorGetPrev ( const KVector *self, uint64_t *prev,
+    uint64_t key, void *value_buffer, size_t bsize, size_t *bytes );
 
-KLIB_EXTERN rc_t CC KVectorGetLowerBoundBool ( const KVector *self,
-    uint64_t *prev, uint64_t key, bool *value, bool inclusive );
-KLIB_EXTERN rc_t CC KVectorGetLowerBoundBoolOld ( const KVector *self,
-    uint64_t *prev, uint64_t key, bool *value, bool inclusive );
+KLIB_EXTERN rc_t CC KVectorGetPrevBool ( const KVector *self,
+    uint64_t *prev, uint64_t key, bool *value );
+KLIB_EXTERN rc_t CC KVectorGetPrevBoolOld ( const KVector *self,
+    uint64_t *prev, uint64_t key, bool *value );
 
-KLIB_EXTERN rc_t CC KVectorGetLowerBoundI8 ( const KVector *self,
-    uint64_t *prev, uint64_t key, int8_t *value, bool inclusive );
-KLIB_EXTERN rc_t CC KVectorGetLowerBoundI16 ( const KVector *self,
-    uint64_t *prev, uint64_t key, int16_t *value, bool inclusive );
-KLIB_EXTERN rc_t CC KVectorGetLowerBoundI32 ( const KVector *self,
-    uint64_t *prev, uint64_t key, int32_t *value, bool inclusive );
-KLIB_EXTERN rc_t CC KVectorGetLowerBoundI64 ( const KVector *self,
-    uint64_t *prev, uint64_t key, int64_t *value, bool inclusive );
+KLIB_EXTERN rc_t CC KVectorGetPrevI8 ( const KVector *self,
+    uint64_t *prev, uint64_t key, int8_t *value );
+KLIB_EXTERN rc_t CC KVectorGetPrevI16 ( const KVector *self,
+    uint64_t *prev, uint64_t key, int16_t *value );
+KLIB_EXTERN rc_t CC KVectorGetPrevI32 ( const KVector *self,
+    uint64_t *prev, uint64_t key, int32_t *value );
+KLIB_EXTERN rc_t CC KVectorGetPrevI64 ( const KVector *self,
+    uint64_t *prev, uint64_t key, int64_t *value );
 
-KLIB_EXTERN rc_t CC KVectorGetLowerBoundU8 ( const KVector *self,
-    uint64_t *prev, uint64_t key, uint8_t *value, bool inclusive );
-KLIB_EXTERN rc_t CC KVectorGetLowerBoundU16 ( const KVector *self,
-    uint64_t *prev, uint64_t key, uint16_t *value, bool inclusive );
-KLIB_EXTERN rc_t CC KVectorGetLowerBoundU32 ( const KVector *self,
-    uint64_t *prev, uint64_t key, uint32_t *value, bool inclusive );
-KLIB_EXTERN rc_t CC KVectorGetLowerBoundU64 ( const KVector *self,
-    uint64_t *prev, uint64_t key, uint64_t *value, bool inclusive );
+KLIB_EXTERN rc_t CC KVectorGetPrevU8 ( const KVector *self,
+    uint64_t *prev, uint64_t key, uint8_t *value );
+KLIB_EXTERN rc_t CC KVectorGetPrevU16 ( const KVector *self,
+    uint64_t *prev, uint64_t key, uint16_t *value );
+KLIB_EXTERN rc_t CC KVectorGetPrevU32 ( const KVector *self,
+    uint64_t *prev, uint64_t key, uint32_t *value );
+KLIB_EXTERN rc_t CC KVectorGetPrevU64 ( const KVector *self,
+    uint64_t *prev, uint64_t key, uint64_t *value );
 
-KLIB_EXTERN rc_t CC KVectorGetLowerBoundF32 ( const KVector *self,
-    uint64_t *prev, uint64_t key, float *value, bool inclusive );
-KLIB_EXTERN rc_t CC KVectorGetLowerBoundF64 ( const KVector *self,
-    uint64_t *prev, uint64_t key, double *value, bool inclusive );
+KLIB_EXTERN rc_t CC KVectorGetPrevF32 ( const KVector *self,
+    uint64_t *prev, uint64_t key, float *value );
+KLIB_EXTERN rc_t CC KVectorGetPrevF64 ( const KVector *self,
+    uint64_t *prev, uint64_t key, double *value );
 
-KLIB_EXTERN rc_t CC KVectorGetLowerBoundPtr ( const KVector *self,
-    uint64_t *prev, uint64_t key, void **value, bool inclusive );
+KLIB_EXTERN rc_t CC KVectorGetPrevPtr ( const KVector *self,
+    uint64_t *prev, uint64_t key, void **value );
 
 
-/* GetUpperBound
- *  given a starting key, get its upper bound
- *  (first following non-null element if key itself
- *  is not in the set of keys stored in the vector or
- *  the key itself otherwise if inclusive == true)
+/* GetNext
+ *  given a starting key, get first following non-null element
  *  returns key of found element in "next"
  */
-KLIB_EXTERN rc_t CC KVectorGetUpperBound ( const KVector *self, uint64_t *next,
-    uint64_t key, void *value_buffer, size_t bsize, size_t *bytes, bool inclusive );
+KLIB_EXTERN rc_t CC KVectorGetNext ( const KVector *self, uint64_t *next,
+    uint64_t key, void *value_buffer, size_t bsize, size_t *bytes );
 
-KLIB_EXTERN rc_t CC KVectorGetUpperBoundBool ( const KVector *self,
-    uint64_t *next, uint64_t key, bool *value, bool inclusive );
-KLIB_EXTERN rc_t CC KVectorGetUpperBoundBoolOld ( const KVector *self,
-    uint64_t *next, uint64_t key, bool *value, bool inclusive );
+KLIB_EXTERN rc_t CC KVectorGetNextBool ( const KVector *self,
+    uint64_t *next, uint64_t key, bool *value );
+KLIB_EXTERN rc_t CC KVectorGetNextBoolOld ( const KVector *self,
+    uint64_t *next, uint64_t key, bool *value );
 
-KLIB_EXTERN rc_t CC KVectorGetUpperBoundI8 ( const KVector *self,
-    uint64_t *next, uint64_t key, int8_t *value, bool inclusive );
-KLIB_EXTERN rc_t CC KVectorGetUpperBoundI16 ( const KVector *self,
-    uint64_t *next, uint64_t key, int16_t *value, bool inclusive );
-KLIB_EXTERN rc_t CC KVectorGetUpperBoundI32 ( const KVector *self,
-    uint64_t *next, uint64_t key, int32_t *value, bool inclusive );
-KLIB_EXTERN rc_t CC KVectorGetUpperBoundI64 ( const KVector *self,
-    uint64_t *next, uint64_t key, int64_t *value, bool inclusive );
+KLIB_EXTERN rc_t CC KVectorGetNextI8 ( const KVector *self,
+    uint64_t *next, uint64_t key, int8_t *value );
+KLIB_EXTERN rc_t CC KVectorGetNextI16 ( const KVector *self,
+    uint64_t *next, uint64_t key, int16_t *value );
+KLIB_EXTERN rc_t CC KVectorGetNextI32 ( const KVector *self,
+    uint64_t *next, uint64_t key, int32_t *value );
+KLIB_EXTERN rc_t CC KVectorGetNextI64 ( const KVector *self,
+    uint64_t *next, uint64_t key, int64_t *value );
 
-KLIB_EXTERN rc_t CC KVectorGetUpperBoundU8 ( const KVector *self,
-    uint64_t *next, uint64_t key, uint8_t *value, bool inclusive );
-KLIB_EXTERN rc_t CC KVectorGetUpperBoundU16 ( const KVector *self,
-    uint64_t *next, uint64_t key, uint16_t *value, bool inclusive );
-KLIB_EXTERN rc_t CC KVectorGetUpperBoundU32 ( const KVector *self,
-    uint64_t *next, uint64_t key, uint32_t *value, bool inclusive );
-KLIB_EXTERN rc_t CC KVectorGetUpperBoundU64 ( const KVector *self,
-    uint64_t *next, uint64_t key, uint64_t *value, bool inclusive );
+KLIB_EXTERN rc_t CC KVectorGetNextU8 ( const KVector *self,
+    uint64_t *next, uint64_t key, uint8_t *value );
+KLIB_EXTERN rc_t CC KVectorGetNextU16 ( const KVector *self,
+    uint64_t *next, uint64_t key, uint16_t *value );
+KLIB_EXTERN rc_t CC KVectorGetNextU32 ( const KVector *self,
+    uint64_t *next, uint64_t key, uint32_t *value );
+KLIB_EXTERN rc_t CC KVectorGetNextU64 ( const KVector *self,
+    uint64_t *next, uint64_t key, uint64_t *value );
 
-KLIB_EXTERN rc_t CC KVectorGetUpperBoundF32 ( const KVector *self,
-    uint64_t *next, uint64_t key, float *value, bool inclusive );
-KLIB_EXTERN rc_t CC KVectorGetUpperBoundF64 ( const KVector *self,
-    uint64_t *next, uint64_t key, double *value, bool inclusive );
+KLIB_EXTERN rc_t CC KVectorGetNextF32 ( const KVector *self,
+    uint64_t *next, uint64_t key, float *value );
+KLIB_EXTERN rc_t CC KVectorGetNextF64 ( const KVector *self,
+    uint64_t *next, uint64_t key, double *value );
 
-KLIB_EXTERN rc_t CC KVectorGetUpperBoundPtr ( const KVector *self,
-    uint64_t *next, uint64_t key, void **value, bool inclusive );
+KLIB_EXTERN rc_t CC KVectorGetNextPtr ( const KVector *self,
+    uint64_t *next, uint64_t key, void **value );
 
 
 /* Set

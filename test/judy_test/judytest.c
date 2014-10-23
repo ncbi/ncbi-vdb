@@ -1611,9 +1611,11 @@ static rc_t test_prev_single_i32 ( KVector const* v,
 {
     uint64_t prev_key;
     int32_t prev_value;
-    rc_t rc = KVectorGetLowerBoundI32 ( v, &prev_key, key, &prev_value, false );
+    rc_t rc = KVectorGetPrevI32 ( v, &prev_key, key, &prev_value );
     if (rc)
-        OUTMSG(("KVectorGetPrevI32(key=%lu) failed with error %R\n", key, rc));
+    {
+        OUTMSG(("KVectorGetPrevI32(key=%lu) failed with e...r %R\n", key, rc));
+    }
     else
         OUTMSG(("The value previous to key=%lu is (%lu, %d); must be (%lu, %d)%s\n",
             key, prev_key, prev_value, prev_key_ref, prev_value_ref,
@@ -1626,9 +1628,9 @@ static rc_t test_next_single_i32 ( KVector const* v,
 {
     uint64_t next_key;
     int32_t next_value;
-    rc_t rc = KVectorGetUpperBoundI32 ( v, &next_key, key, &next_value, false );
+    rc_t rc = KVectorGetNextI32 ( v, &next_key, key, &next_value );
     if (rc)
-        OUTMSG(("KVectorGetNextI32(key=%lu) failed with error %R\n", key, rc));
+        OUTMSG(("KVectorGetNextI32(key=%lu) failed with e...r %R\n", key, rc));
     else
         OUTMSG(("The value following key=%lu is (%lu, %d); must be (%lu, %d)%s\n",
             key, next_key, next_value, next_key_ref, next_value_ref,
@@ -1653,7 +1655,7 @@ static rc_t perform_prev_next_i32_test()
         rc = rc || KVectorSetI32 (v, 64, 640 );
 
         if (rc)
-            OUTMSG(("KVectorSetI32 failed with error %R\n", rc));
+            OUTMSG(("KVectorSetI32 failed with e...r %R\n", rc));
         else
         {
             test_prev_single_i32 (v, 2, 1, 11);
@@ -1686,9 +1688,9 @@ static rc_t test_prev_single_bool ( KVector const* v,
 {
     uint64_t prev_key;
     bool prev_value;
-    rc_t rc = KVectorGetLowerBoundBool ( v, &prev_key, key, &prev_value, false );
+    rc_t rc = KVectorGetPrevBool ( v, &prev_key, key, &prev_value );
     if (rc)
-        OUTMSG(("KVectorGetPrevBool(key=%lu) failed with error %R\n", key, rc));
+        OUTMSG(("KVectorGetPrevBool(key=%lu) failed with e...r %R\n", key, rc));
     else
         OUTMSG(("The value previous to key=%lu is (%lu, %d); must be (%lu, %d)%s\n",
             key, prev_key, prev_value, prev_key_ref, prev_value_ref,
@@ -1701,9 +1703,9 @@ static rc_t test_next_single_bool ( KVector const* v,
 {
     uint64_t next_key;
     bool next_value;
-    rc_t rc = KVectorGetUpperBoundBool ( v, &next_key, key, &next_value, false );
+    rc_t rc = KVectorGetNextBool ( v, &next_key, key, &next_value );
     if (rc)
-        OUTMSG(("KVectorGetNextBool(key=%lu) failed with error %R\n", key, rc));
+        OUTMSG(("KVectorGetNextBool(key=%lu) failed with e...r %R\n", key, rc));
     else
         OUTMSG(("The value following key=%lu is (%lu, %d); must be (%lu, %d)%s\n",
             key, next_key, next_value, next_key_ref, next_value_ref,
@@ -1728,7 +1730,7 @@ static rc_t perform_prev_next_bool_test()
         rc = rc || KVectorSetBool (v, 64, true );
 
         if (rc)
-            OUTMSG(("KVectorSetBool failed with error %R\n", rc));
+            OUTMSG(("KVectorSetBool failed with e...r %R\n", rc));
         else
         {
             test_prev_single_bool (v, 2, 1, true);
@@ -1763,7 +1765,7 @@ rc_t perform_test( const uint32_t count )
     rc_t rc = make_random_numbers( &rnum, count, count * 2 );
     if ( rc != 0 )
     {
-        OUTMSG(( "error making random numbers %R\n", rc ));
+        OUTMSG(( "error making random numbers %u\n", rc ));
     }
     else
     {
@@ -1799,7 +1801,7 @@ rc_t perform_test( const uint32_t count )
             rc = perform_bool_test( &rnum );
         if ( rc == 0 )
             rc = perform_ptr_test( &rnum );
-        
+
         free_random_numbers( &rnum );
 
         perform_prev_next_i32_test();
