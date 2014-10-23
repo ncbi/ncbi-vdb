@@ -29,8 +29,14 @@
     </Link>
   </ItemDefinitionGroup>
   
+  <ItemDefinitionGroup>
+    <ClCompile>
+        <AdditionalIncludeDirectories>$(VDB_ROOT)libs/ngs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  
   <ItemGroup>
-    <ClCompile Include="..\..\..\test\klib\test-out.cpp" />
+    <ClCompile Include="..\..\..\test\ngs\ngstest.cpp" />
   </ItemGroup>
   
     <Target Name="AfterBuild" Condition="'$(Autorun)'=='true'">
