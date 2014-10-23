@@ -7,6 +7,8 @@
     <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
     
     <NGS_ROOT Condition="'$(NGS_ROOT)' == ''">$(ProjectDir)..\..\..\..\ngs\ngs-sdk\</NGS_ROOT>
+    <NGS_OUTDIR Condition="'$(NGS_OUTDIR)' == ''">$(USERPROFILE)\</NGS_OUTDIR>
+    <NGS_TARGET Condition="'$(NGS_TARGET)' == ''">$(NGS_OUTDIR)win\cl\$(Platform)\$(Configuration)\</NGS_TARGET>
     
     <VDB_OUTDIR Condition="'$(VDB_OUTDIR)' == ''">$(USERPROFILE)\</VDB_OUTDIR>
     <VDB_ROOT Condition="'$(VDB_ROOT)' == ''">$(ProjectDir)..\..\..\</VDB_ROOT>
