@@ -126,7 +126,7 @@ TEST_CASE(KOutMsgShortcut_c_utf8)
 {
     string output;
     REQUIRE_RC(KOutHandlerSet(writerFn, &output));
-    uint32_t ch = L'£';
+    uint32_t ch = 163; // pound sign
     REQUIRE_RC(KOutMsg("%c", ch));
     REQUIRE_EQ(output[0], '\302');
     REQUIRE_EQ(output[1], '\243');
