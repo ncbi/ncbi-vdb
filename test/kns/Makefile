@@ -36,6 +36,8 @@ include $(TOP)/build/Makefile.env
 $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
+clean: stdclean
+
 INCDIRS += -I$(TOP)/libs/kns
 
 #-------------------------------------------------------------------------------

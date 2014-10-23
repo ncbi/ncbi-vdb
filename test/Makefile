@@ -40,6 +40,7 @@ SUBDIRS =    \
 	kfc      \
     klib     \
 	kns      \
+    ngs      \
 	vfs      \
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS

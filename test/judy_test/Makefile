@@ -38,6 +38,8 @@ $(TEST_TOOLS): makedirs
 
 .PHONY: $(TEST_TOOLS)
 
+clean: stdclean
+
 #-------------------------------------------------------------------------------
 # my-app
 #

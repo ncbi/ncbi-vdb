@@ -38,6 +38,8 @@ $(TEST_TOOLS): makedirs
 
 .PHONY: $(ALL_LIBS) $(TEST_TOOLS)
 
+clean: stdclean
+
 #-------------------------------------------------------------------------------
 # white-box test
 #
