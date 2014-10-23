@@ -36,12 +36,13 @@ include $(TOP)/build/Makefile.config
 #
 SUBDIRS =    \
     ktst     \
-	judy_test\
-	kfc      \
+    judy_test\
+    kfc      \
     klib     \
-	kns      \
+    kns      \
     ngs      \
-	vfs      \
+    ngs-c++  \
+    vfs      \
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets

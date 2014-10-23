@@ -1,0 +1,12 @@
+{
+   static_cached_KDirectory_in_KConfig_find_home_directory
+   Memcheck:Leak
+    ...
+   fun:find_home_directory
+}
+{
+   vt_cache
+   Memcheck:Leak
+   fun:calloc
+   fun:_ZN3ngs7Resolve*
+}
