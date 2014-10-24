@@ -128,6 +128,9 @@
  *  ReferenceSeq object are created in the unattached state, i.e. not attached
  *  to a fasta file or a RefSeq library object.
  *
+ *  If SEQID is equal to UNMAPPED_SEQID_VALUE (see below) the Reference will be
+ *  considered to be unmapped.
+ *
  * Fasta files:
  *  Fasta file consists of one of more sequences.  A sequence in a fasta file
  *  consists of a seqid line followed by lines containing the bases of the
@@ -148,6 +151,8 @@
  *  sequence in the fasta file.
  *
  */
+
+#define UNMAPPED_SEQID_VALUE "*UNMAPPED"
 
 enum ReferenceSeqType {
     rst_unattached,
@@ -518,7 +523,7 @@ rc_t ReferenceMgr_ProcessConf(ReferenceMgr *const self, char Data[], unsigned co
         if (rs->id == NULL)
             return RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
 
-        if (strcmp(seqId, "UNMAPPED") == 0) {
+        if (strcmp(seqId, UNMAPPED_SEQID_VALUE) == 0) {
             rs->type = rst_unmapped;
         }
         else {
