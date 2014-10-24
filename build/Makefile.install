@@ -31,8 +31,6 @@ include $(CONFIG_FILE)
 #-------------------------------------------------------------------------------
 # install
 # 
-ifeq (linux, $(OS))
-
 LIBRARIES_TO_INSTALL = \
     ncbi-vdb.$(VERSION_LIBX) \
     ncbi-vdb.$(VERSION_SHLX) \
@@ -60,8 +58,14 @@ INCLUDE_SYMLINK = $(ROOT)/usr/include/ncbi-vdb
 PROFILE_FILE = $(ROOT)/etc/profile.d/ncbi-vdb
 KONFIG_DIR = $(ROOT)/etc/ncbi/
 
+ifeq (linux, $(OS))
+    ifeq (0, $(shell id -u))
+        LINUX_ROOT = true
+    endif
+endif
+
 install: copylibs copyincludes 
-ifeq (0, $(shell id -u))
+ifeq (true, $(LINUX_ROOT))
 	@ # install symlink to includes 
 	@ echo "Updating $(INCLUDE_SYMLINK)"
 	@ rm -f $(INCLUDE_SYMLINK)
@@ -104,9 +108,4 @@ else
 	@ echo "      ld -L\$$NCBI_VDB_LIBDIR -lncbi-vdb ..."
 endif
 
-else
-install:
-
-endif
-
-.PHONY: install
+.PHONY: install copylibs copyincludes
