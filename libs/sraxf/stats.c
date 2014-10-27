@@ -329,7 +329,8 @@ static rc_t group_stats_write(group_stats_t const *const self,
     rc_t rc;
 
     memcpy(namepath, namebase, sizeof(namebase));
-    name[3] = '\0';
+    name[4] = '\0';
+    name[3] = nodeid % 26 + 'A'; nodeid /= 26;
     name[2] = nodeid % 26 + 'A'; nodeid /= 26;
     name[1] = nodeid % 26 + 'A'; nodeid /= 26;
     name[0] = nodeid % 26 + 'A'; nodeid /= 26;
