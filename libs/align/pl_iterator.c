@@ -238,10 +238,10 @@ static rc_t add_to_pi_window( pi_window * pw, PlacementIterator *pi )
         rc = RC( rcAlign, rcIterator, rcConstructing, rcMemory, rcExhausted );
     else
     {
-        pie->pi = pi;       /* store the placement-iterator in it's entry-struct */
         rc = PlacementIteratorNextAvailPos ( pi, &(pie->nxt_avail.first), &(pie->nxt_avail.len) );
         if ( rc == 0 )
         {
+            pie->pi = pi;  /* store the placement-iterator in it's entry-struct */
             DLListPushTail ( &pw->pi_entries, ( DLNode * )pie );
             pw->count += 1;
         }
@@ -377,7 +377,11 @@ LIB_EXPORT rc_t CC PlacementSetIteratorAddRef ( const PlacementSetIterator *csel
 static void CC pi_entry_whacker( DLNode *n, void *data )
 {
     pi_entry * pie = ( pi_entry * )n;
-    PlacementIteratorRelease ( pie->pi );
+    if ( pie->pi != NULL )
+    {
+        PlacementIteratorRelease ( pie->pi );
+        pie->pi = NULL;
+    }
     free( pie );
 }
 
