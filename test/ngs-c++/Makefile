@@ -28,11 +28,16 @@ TOP ?= $(abspath ../..)
 
 MODULE = test/ngs-c++
 
+ifeq (,$(NGS_LIBDIR))
+TEST_TOOLS =
+$(warning NGS C++ tests are not run since NGS library does not appear to be installed)
+else
 TEST_TOOLS = \
     test-ngs_sra-c++ \
     test-ngs_sradb-c++ \
-    test-ngs_csra1-c++ \
-
+    test-ngs_csra1-c++
+endif    
+   
 include $(TOP)/build/Makefile.env
 
 $(TEST_TOOLS): makedirs
@@ -58,7 +63,7 @@ TEST_NGS_CPP_LIB = \
 	-sncbi-vdb \
 	-skapp \
     -sktst \
-    -L$(LD_LIBRARY_PATH) \
+    -L$(NGS_LIBDIR) \
 	-sngs-c++ \
 
 #-------------------------------------------------------------------------------
