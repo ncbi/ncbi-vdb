@@ -1337,7 +1337,7 @@ rc_t write_nvp(void* pself, const char* name, size_t nameLen, VNamelist* values)
 }
 
 static
-bool look_up_var(void * self, struct KFGParseBlock* pb)
+bool look_up_var(void * self, struct KFGToken* pb)
 {
     const KConfigNode* node;
     rc_t rc = KConfigOpenNodeRead((KConfig*)self, &node, "%.*s", pb->tokenLength-3, pb->tokenText+2);
@@ -1527,30 +1527,23 @@ rc_t parse_file ( KConfig * self, const char* path, const char * src )
 {
     KFGParseBlock pb;
     KFGScanBlock sb;
-    rc_t rc;
 
-/*  KConfigPrintDebug(self, NULL); */
-
-    pb.tokenLength  = 0;
-    pb.line_no      = 0;
-    pb.column_no    = 0;
+    pb.write_nvp    = write_nvp;
 
     sb.self         = self;
     sb.file         = path;
-    sb.write_nvp    = write_nvp;
     sb.look_up_var  = look_up_var;
     sb.report_error = report_error;
 
-    rc = KFGScan_yylex_init(&sb, src);
-    if (rc == 0)
-    {
-        KFG_parse(&pb, &sb); /* may have reported parse errors into log, but we should have been able to extract enough data to proceed regardless */
-        KFGScan_yylex_destroy(&sb);
+    if  ( ! KFGScan_yylex_init(&sb, src) )
+    {   /* out of memory is the only reason we can get false here */
+        return RC ( rcKFG, rcMgr, rcParsing, rcMemory, rcExhausted );
     }
-
-/*  KConfigPrintDebug(self, path); */
-
-    return rc;
+    
+    KFG_parse(&pb, &sb); /* may have reported parse errors into log, but we should have been able to extract enough data to proceed regardless */
+    KFGScan_yylex_destroy(&sb);
+    
+    return 0;
 }
 
 /* LoadFile

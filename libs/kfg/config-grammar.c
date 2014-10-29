@@ -76,6 +76,8 @@
   
     #include "kfg-parse.h"
     #include <sysalloc.h>
+    #include <klib/rc.h>
+    #include <klib/namelist.h>
     
     #define YYSTYPE KFGSymbol
     #include "config-tokens.h"
@@ -86,7 +88,8 @@
     #define NAMELIST_ALLOC_BLKSIZE 10
     
     static void ReportRc(KFGParseBlock* pb, KFGScanBlock* sb, rc_t rc);
-    static void AppendName(KFGScanBlock* sb, VNamelist*, const KFGParseBlock*);
+    static void AppendName(KFGScanBlock* sb, VNamelist*, const KFGToken*);
+    static void KFG_error(KFGParseBlock* pb, KFGScanBlock* sb, const char* msg);
 
 
 
@@ -137,8 +140,8 @@ typedef union YYSTYPE
 {
 
 
-    KFGParseBlock       pb;
-    const VNamelist*    namelist;
+    KFGToken                pb;
+    const struct VNamelist* namelist;
 
 
 
@@ -442,8 +445,8 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    81,    81,    82,    86,    87,    91,   100,   101,   105,
-     106,   110,   114,   115,   116,   117,   121,   122
+       0,    84,    84,    85,    89,    90,    94,   103,   104,   108,
+     109,   113,   117,   118,   119,   120,   124,   125
 };
 #endif
 
@@ -1403,7 +1406,7 @@ yyreduce:
         case 6:
 
     { 
-            rc_t rc=sb->write_nvp(sb->self, (yyvsp[(1) - (4)].pb).tokenText, (yyvsp[(1) - (4)].pb).tokenLength, (yyvsp[(3) - (4)].namelist));
+            rc_t rc=pb->write_nvp(sb->self, (yyvsp[(1) - (4)].pb).tokenText, (yyvsp[(1) - (4)].pb).tokenLength, (yyvsp[(3) - (4)].namelist));
             if (rc != 0)
             {
                 ReportRc(pb, sb, rc);
@@ -1667,7 +1670,6 @@ yyreturn:
 
 #include <assert.h>
 #include <klib/token.h>
-#include <klib/log.h>
 #include <klib/writer.h>
 
 void KFG_error(KFGParseBlock* pb, KFGScanBlock* sb, const char* msg)
@@ -1684,7 +1686,7 @@ void ReportRc(KFGParseBlock* pb, KFGScanBlock* sb, rc_t rc)
     yyerror(0, sb, buf);
 }
 
-void AppendName(KFGScanBlock* sb, VNamelist* nl, const KFGParseBlock* pb)
+void AppendName(KFGScanBlock* sb, VNamelist* nl, const KFGToken* pb)
 {   /* pb represents either a kfgSTRING or a kfgESCAPED_STRING with opening and closed quotes clipped */
     rc_t rc;
     KToken t;

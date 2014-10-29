@@ -24,18 +24,44 @@
  *
  */
 
-#ifndef _h_kfg_parse_
-#define _h_kfg_parse_
+#ifndef _h_kfg_lex_
+#define _h_kfg_lex_
 
-#include "kfg-lex.h"
+#include <string.h>
+#include <stdbool.h>
 
-#include <klib/rc.h>
-
-typedef struct KFGParseBlock
+typedef struct KFGToken
 {
-    rc_t (*write_nvp)(void * self, const char* name, size_t nameLen, struct VNamelist*);
-} KFGParseBlock;
+    const char* tokenText;
+    size_t tokenLength;
+    int tokenId;
+    size_t line_no;
+    size_t column_no;
+} KFGToken;
 
-extern int KFG_parse(KFGParseBlock* pb, KFGScanBlock* scannerContext);
+typedef struct KFGScanBlock
+{
+    void* scanner;
+    void* buffer;
+    void* self; 
+    const char* file;
+    KFGToken* lastToken; /* used for error reporting */
+    bool (*look_up_var)(void * self, struct KFGToken*);
+    void (*report_error)(struct KFGScanBlock* sb, const char* msg);
+} KFGScanBlock;
 
-#endif /* _h_kfg_parse_ */
+struct VNamelist;
+typedef union 
+{
+	KFGToken            pb;
+	struct VNamelist*   namelist;
+} KFGSymbol;
+
+extern bool KFGScan_yylex_init(KFGScanBlock* sb, const char *str); /* false = out of memory */
+extern void KFGScan_yylex_destroy(KFGScanBlock* sb);
+
+extern void KFGScan_set_debug(bool on, KFGScanBlock* scannerContext);
+
+extern int KFGScan_yylex(KFGSymbol* pb, KFGScanBlock* scannerContext);
+
+#endif /* _h_kfg_lex_ */

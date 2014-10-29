@@ -27,7 +27,10 @@
 %{  
     #include "kfg-parse.h"
     #include <sysalloc.h>
-    
+    #include <klib/rc.h>
+    #include <klib/namelist.h>
+
+    #define YYSTYPE_IS_DECLARED
     #define YYSTYPE KFGSymbol
     #include "config-tokens.h"
         
@@ -37,12 +40,13 @@
     #define NAMELIST_ALLOC_BLKSIZE 10
     
     static void ReportRc(KFGParseBlock* pb, KFGScanBlock* sb, rc_t rc);
-    static void AppendName(KFGScanBlock* sb, VNamelist*, const KFGParseBlock*);
+    static void AppendName(KFGScanBlock* sb, VNamelist*, const KFGToken*);
+    static void KFG_error(KFGParseBlock* pb, KFGScanBlock* sb, const char* msg);
 %}
 
 %pure-parser
 %parse-param {KFGParseBlock* pb }
-%lex-param {KFGScanBlock* sb}
+%lex-param {KFGToken* sb}
 %parse-param {KFGScanBlock* sb }
 
 %name-prefix="KFG_"
@@ -64,8 +68,8 @@
 %token <pb> kfgREL_PATH
 
 %union {
-    KFGParseBlock       pb;
-    const VNamelist*    namelist;
+    KFGToken                pb;
+    const struct VNamelist* namelist;
 }
 %type <pb>          pathname  
 %type <namelist>    value
@@ -90,7 +94,7 @@ name_value_pairs
 name_value_pair
     : pathname assign_op value line_end
         { 
-            rc_t rc=sb->write_nvp(sb->self, $1.tokenText, $1.tokenLength, $3);
+            rc_t rc=pb->write_nvp(sb->self, $1.tokenText, $1.tokenLength, $3);
             if (rc != 0)
             {
                 ReportRc(pb, sb, rc);
@@ -126,7 +130,6 @@ line_end
 
 #include <assert.h>
 #include <klib/token.h>
-#include <klib/log.h>
 #include <klib/writer.h>
 
 void KFG_error(KFGParseBlock* pb, KFGScanBlock* sb, const char* msg)
@@ -143,7 +146,7 @@ void ReportRc(KFGParseBlock* pb, KFGScanBlock* sb, rc_t rc)
     yyerror(0, sb, buf);
 }
 
-void AppendName(KFGScanBlock* sb, VNamelist* nl, const KFGParseBlock* pb)
+void AppendName(KFGScanBlock* sb, VNamelist* nl, const KFGToken* pb)
 {   /* pb represents either a kfgSTRING or a kfgESCAPED_STRING with opening and closed quotes clipped */
     rc_t rc;
     KToken t;
