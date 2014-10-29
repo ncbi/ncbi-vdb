@@ -1,6 +1,6 @@
 ################################################################################
 sub PACKAGE      { 'ncbi-vdb' }
-sub VERSION      { '2.4.2a' }
+sub VERSION      { '2.4.2-3' }
 sub PACKAGE_TYPE { 'L' }
 sub PACKAGE_NAME { 'NCBI-VDB' }
 sub PACKAGE_NAMW { 'VDB' }
@@ -13,25 +13,24 @@ sub PKG { ( LNG   => 'C',
             PATH  => '/usr/local/ncbi/ncbi-vdb',
             UPATH =>      '$HOME/ncbi/ncbi-vdb', ) }
 sub REQ { ( { name    => 'ngs-sdk',
-              namew   => 'NGS',
+              aname   => 'NGS',
               option  => 'with-ngs-sdk-prefix',
               origin  => 'I',
-              type    => 'I',
+              type    => 'F',
               srcpath => '../ngs/ngs-sdk',
               pkgpath => '/usr/local/ngs/ngs-sdk',
               usrpath =>      '$HOME/ngs/ngs-sdk',
               bldpath => '$HOME/ncbi-outdir/ngs-sdk',
               include => 'ngs/itf/Refcount.h',
-              lib => 'libngs-c++.a',
-              ilib => 'libngs-bind-c++.a',
-        },
-        {     name    => 'hdf5',
+              lib     => 'libngs-c++.a',
+            },
+            { name    => 'hdf5',
               option  => 'with-hdf5-prefix',
               origin  => 'E',
               type    => 'LI',
               pkgpath => '/usr',
               usrpath => '$HOME',
               include => 'hdf5.h',
-              lib => 'libhdf5.a',
+              lib     => 'libhdf5.a',
         } ) }
 1
