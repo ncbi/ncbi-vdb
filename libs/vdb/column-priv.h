@@ -252,7 +252,13 @@ bool CC WColumnCommitRow ( void *self, void *end_id );
  *  extend the count by count
  *  data points to this structure
  */
-typedef struct { int64_t end_id; uint64_t count; } WColumnRepeatRowData;
+typedef struct WColumnRepeatRowData WColumnRepeatRowData;
+struct WColumnRepeatRowData
+{
+    uint64_t count;
+    int64_t row_id;
+    int64_t end_id;
+};
 void CC WColumnRepeatRow ( void *self, void *data );
 
 /* CloseRow
