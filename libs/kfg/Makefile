@@ -86,8 +86,8 @@ $(TEST_BINDIR)/ncbi/default.kfg: $(SRCDIR)/default.kfg
 endif
 
 KFG_SRC = \
-	config-grammar \
 	config-lex \
+	config-grammar \
 	config \
 	kart \
 	repository \

@@ -25,11 +25,11 @@
 */
  
 %{ 
-    #include "kfg-parse.h"
+    #include "kfg-lex.h"
     #include <sysalloc.h>
     #include "config-tokens.h"    
     
-    #define YYSTYPE KFGParseBlock
+    #define YYSTYPE KFGToken
     
     /* code to populate token with internal values */
     #define YY_USER_ACTION              \
@@ -154,11 +154,11 @@ dstr_char   ([^\\"\f\r\n$]|$[^(\\])
 
 %%
 
-rc_t CC KFGScan_yylex_init(KFGScanBlock* sb, const char *str)
+bool KFGScan_yylex_init(KFGScanBlock* sb, const char *str)
 {
     if (yylex_init(&sb->scanner) != 0)
-    {
-        return RC ( rcKFG, rcMgr, rcParsing, rcMemory, rcExhausted );
+    {   
+        return false; /*RC ( rcKFG, rcMgr, rcParsing, rcMemory, rcExhausted );*/
     }       
     sb->buffer=yy_scan_string((yyconst char*)str, sb->scanner); 
     
@@ -169,10 +169,10 @@ rc_t CC KFGScan_yylex_init(KFGScanBlock* sb, const char *str)
         yycolumn=1;
     }
     
-    return 0;
+    return true;
 }
 
-void CC KFGScan_yylex_destroy(KFGScanBlock* sb)
+void KFGScan_yylex_destroy(KFGScanBlock* sb)
 {
     yy_delete_buffer(sb->buffer, sb->scanner); 
     if (sb->scanner)
@@ -183,12 +183,12 @@ void CC KFGScan_yylex_destroy(KFGScanBlock* sb)
     sb->buffer=0;
 }
 
-void CC KFGScan_set_debug(bool on, KFGScanBlock* sb)
+void KFGScan_set_debug(bool on, KFGScanBlock* sb)
 {
     yyset_debug(on ? 1 : 0, sb->scanner);
 }
 
-int CC KFGScan_yylex(KFGSymbol* sym, KFGScanBlock* sb) 
+int KFGScan_yylex(KFGSymbol* sym, KFGScanBlock* sb) 
 { 
     sym->pb.tokenId=yylex(&sym->pb, sb->scanner); 
     sb->lastToken= &sym->pb;
@@ -199,18 +199,18 @@ int CC KFGScan_yylex(KFGSymbol* sym, KFGScanBlock* sb)
         if (!sb->look_up_var(sb->self, &sym->pb)) 
         {
             /* undefined variable reference is handled silently, to behave like a shell script */
-            /* KFG_error(&sym->pb, sb, "variable not found");*/
+            /* sb->report_error(sb, "variable not found");*/
             sym->pb.tokenLength = 0; 
         }
         sym->pb.tokenId = kfgSTRING;
         break;
     case kfgUNTERM_VAR_REF: /* convert bad var ref into a string */ 
-        KFG_error(&sym->pb, sb, "unterminated variable reference inside a string (use '\\$(' to avoid this message)");
+        sb->report_error(sb, "unterminated variable reference inside a string (use '\\$(' to avoid this message)");
         sym->pb.tokenId = kfgSTRING; 
         break;
     case kfgUNTERM_STRING:
     case kfgUNTERM_ESCAPED_STRING:
-        KFG_error(&sym->pb, sb, "unterminated string");
+        sb->report_error(sb, "unterminated string");
         break;
     default:
         break;

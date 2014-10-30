@@ -90,37 +90,36 @@ ifeq (1,$(HAVE_XML2))
 LIBKXML = kxml kxfs
 endif
 
-## ?? why is this ordering used?
-VDB_LIB_CMN = \
+VDB_LIB_CMN =    \
 	align-access \
-	ncbi-bam \
-	vfs \
-	$(LIBKXML) \
-	kns \
-	kfg \
-	krypto \
-	ksrch \
-	kfs \
-	klib \
-	kproc \
-	$(LIBKQ) \
-	kfc \
-	bz2 \
+	ncbi-bam     \
+	vfs          \
+	$(LIBKXML)   \
+	kns          \
+	kfg          \
+	krypto       \
+	ksrch        \
+	kfs          \
+	klib         \
+	kproc        \
+	$(LIBKQ)     \
+	kfc          \
+	bz2          \
 	z
 
-VDB_LIB_RD = \
-	align-reader \
-	ascp \
+VDB_LIB_RD =              \
+	align-reader          \
+	ascp                  \
 	$(EXT_SCHEMA_MODULES) \
-	srareader \
-	sradb \
-	$(LIBVDB_BLAST) \
-	vdb \
-	kdb \
-	$(VDB_LIB_CMN) \
-	ngs-jni \
-	ngs-py \
-	ngs \
+	srareader             \
+	sradb                 \
+	$(LIBVDB_BLAST)       \
+	vdb                   \
+	kdb                   \
+	$(VDB_LIB_CMN)        \
+	ngs-jni               \
+	ngs-py                \
+	ngs                   \
 
 VDB_OBJ = \
 	$(addprefix $(ILIBDIR)/lib,$(addsuffix .a,$(VDB_LIB_RD)))
@@ -139,15 +138,12 @@ $(LIBDIR)/libncbi-vdb.$(LIBX): $(VDB_OBJ)
 #
 $(LIBDIR)/libncbi-wvdb: $(addprefix $(LIBDIR)/libncbi-wvdb.,$(LIBX) $(SHLX))
 
-VDB_LIB_RDWR = \
-	align-writer \
-	waxf \
-	wkdb \
-	wsradb \
-	wsraxf \
-	wvdb \
-	wvxf \
-	wwgsxf \
+VDB_LIB_RDWR =                           \
+	align-writer                         \
+	$(addprefix w,$(EXT_SCHEMA_MODULES)) \
+	wsradb                               \
+	wvdb                                 \
+	wkdb                                 \
 	$(VDB_LIB_CMN)
 
 WVDB_OBJ = \
