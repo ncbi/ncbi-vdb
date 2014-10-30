@@ -655,23 +655,31 @@ LIB_EXPORT rc_t CC VCursorRepeatRow ( VCursor *self, uint64_t count )
         rc = RC ( rcVDB, rcCursor, rcUpdating, rcRow, rcNotOpen );
     else if ( self -> state < vcRowCommitted )
         rc = RC ( rcVDB, rcCursor, rcUpdating, rcRow, rcInvalid );
+    else if ( count > 0xFFFFFFFFU )
+        rc = RC ( rcVDB, rcCursor, rcUpdating, rcParam, rcExcessive );
     else if ( count != 0 )
     {
-        WColumnRepeatRowData pb;
-        pb . end_id = self -> row_id;
-        pb . count = count;
-
-        /* tell columns to commit the row, and allow
-           each to return an earlier cutoff id ( half-closed ) */
-        VectorForEach ( & self -> row, false, WColumnRepeatRow, & pb );
-
-        /* extend the current row-id */
-        if ( self -> end_id < self -> row_id )
-            self -> row_id += count;
+        /* check the number of rows that would result */
+        uint64_t total = ( self -> row_id - self -> start_id ) + count;
+        if ( total > 0xFFFFFFFFU )
+            rc = RC ( rcVDB, rcCursor, rcUpdating, rcParam, rcExcessive );
         else
         {
+            WColumnRepeatRowData pb;
+            pb . count = count;
+            pb . row_id = self -> row_id;
+            pb . end_id = self -> end_id;
+
+            /* tell columns to commit the row, and allow
+               each to return an earlier cutoff id ( half-closed ) */
+            VectorForEach ( & self -> row, false, WColumnRepeatRow, & pb );
+
+            /* extend the current row-id, dragging end_id along with it */
+            if ( self -> end_id == self -> row_id )
+                self -> end_id += count;
+
+            /* move the current row id ahead */
             self -> row_id += count;
-            self -> end_id += count;
         }
     }
 
