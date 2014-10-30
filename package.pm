@@ -4,7 +4,7 @@ sub VERSION      { '2.4.2-3' }
 sub PACKAGE_TYPE { 'L' }
 sub PACKAGE_NAME { 'NCBI-VDB' }
 sub PACKAGE_NAMW { 'VDB' }
-sub DEPENDS      { ( { name => 'hdf5' , },
+sub DEPENDS      { ( { name => 'hdf5' , Include => '/usr/include'        , },
                      { name => 'magic', Include => '/usr/include'        , },
                      { name => 'xml2' , Include => '/usr/include/libxml2', } ) }
 sub CONFIG_OUT   { 'build' }
