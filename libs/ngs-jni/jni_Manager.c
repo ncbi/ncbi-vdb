@@ -36,9 +36,12 @@
 
 #include <kfc/rsrc-global.h>
 
+#include <klib/sra-release-version.h> /* SraReleaseVersion */
+
 #include "NGS_ReadCollection.h"
 
 #include <assert.h>
+#include <string.h> /* memset */
 
 /*
  * Class:     gov_nih_nlm_ncbi_ngs_Manager
@@ -111,5 +114,34 @@ JNIEXPORT void JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_release
     {
         HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcReleasing );
         NGS_RefcountRelease ( ( void* ) ( size_t ) jref, ctx );
+    }
+}
+
+/*
+ * Class:     gov_nih_nlm_ncbi_ngs_Manager
+ * Method:    Version
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_Version
+  (JNIEnv *jenv, jclass jcls)
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcMgr, rcAccessing );
+
+    rc_t rc = 0;
+    char v[512] = "";
+
+    SraReleaseVersion version;
+    memset(&version, sizeof version, 0);
+
+    rc = SraReleaseVersionGet(&version);
+    if (rc == 0) {
+        rc = SraReleaseVersionPrint(&version, v, sizeof v, NULL);
+    }
+
+    if (rc == 0) {
+        return JStringMake(ctx, jenv, v);
+    }
+    else {
+        return JStringMake(ctx, jenv, "");
     }
 }
