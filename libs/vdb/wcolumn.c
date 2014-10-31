@@ -528,7 +528,7 @@ bool WColumnCommitRowData ( WColumn *self, int64_t *end_id )
         rm = self -> rowmap . base;
         rm += self -> num_rows - 1;
 
-        if ( rm -> len == row_len )
+        if ( rm -> len == row_len && rm->cnt <= INT32_MAX)
         {
             bitsz_t poff, coff;
             const uint8_t *base;
