@@ -492,13 +492,13 @@ FIXTURE_TEST_CASE(num_gen_MakeFromStr, NumGenFixture)
     REQUIRE_RC ( num_gen_make_from_str ( & m_ng, "1" ) );
     REQUIRE_NOT_NULL ( m_ng );
 }    
-#if SHOW_UNIMPLEMENTED
+
 FIXTURE_TEST_CASE(num_gen_MakeFromEmptyStr, NumGenFixture)
 {
     REQUIRE_RC_FAIL ( num_gen_make_from_str ( & m_ng, "" ) );
     REQUIRE_NULL ( m_ng );
 }    
-#endif
+
 FIXTURE_TEST_CASE(num_gen_MakeFromRange, NumGenFixture)
 {
     REQUIRE_RC ( num_gen_make_from_range ( & m_ng, 1, 2 ) );
