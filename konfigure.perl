@@ -908,7 +908,8 @@ sub status {
     println "javadir: $OPT{'javadir'}" if ($OPT{'javadir'});
     println "pythondir: $OPT{'pythondir'}" if ($OPT{'pythondir'});
 
-    println "configured with: $CONFIGURED";
+    $CONFIGURED =~ s/\t/ /g;
+    println "configured with: \"$CONFIGURED\"";
 }
 
 sub expand {
@@ -1145,7 +1146,7 @@ sub check {
 
 ################################################################################
 
-sub optional { $_[0] =~ /^[LS]I$/ }
+sub optional { $_[0] =~ /O/ }
 
 sub help {
 #  --prefix=PREFIX         install architecture-independent files in PREFIX
