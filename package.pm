@@ -1,17 +1,17 @@
 ################################################################################
 sub PACKAGE      { 'ncbi-vdb' }
-sub VERSION      { '2.4.2-3' }
+sub VERSION      { '2.4.2-4' }
 sub PACKAGE_TYPE { 'L' }
 sub PACKAGE_NAME { 'NCBI-VDB' }
 sub PACKAGE_NAMW { 'VDB' }
-sub DEPENDS      { ( { name => 'hdf5' , Include => '/usr/include'        , },
-                     { name => 'magic', Include => '/usr/include'        , },
-                     { name => 'xml2' , Include => '/usr/include/libxml2', } ) }
 sub CONFIG_OUT   { 'build' }
 sub PKG { ( LNG   => 'C',
             OUT   => 'ncbi-outdir',
             PATH  => '/usr/local/ncbi/ncbi-vdb',
             UPATH =>      '$HOME/ncbi/ncbi-vdb', ) }
+sub DEPENDS { ( { name => 'hdf5' , Include => '/usr/include'        , },
+                { name => 'magic', Include => '/usr/include'        , },
+                { name => 'xml2' , Include => '/usr/include/libxml2', } ) }
 sub REQ { ( { name    => 'ngs-sdk',
               aname   => 'NGS',
               option  => 'with-ngs-sdk-prefix',
@@ -27,7 +27,7 @@ sub REQ { ( { name    => 'ngs-sdk',
             { name    => 'hdf5',
               option  => 'with-hdf5-prefix',
               origin  => 'E',
-              type    => 'LI',
+              type    => 'LIO',
               pkgpath => '/usr',
               usrpath => '$HOME',
               include => 'hdf5.h',
