@@ -37,7 +37,7 @@
 #include <klib/printf.h>
 #include <klib/data-buffer.h>
 #include <klib/log.h>
-
+#include <klib/num-gen.h>
 #include <klib/text.h>
 
 using namespace std;
@@ -458,6 +458,52 @@ TEST_CASE(KLog_ParamFormatting)
     REQUIRE_RC(pLogMsg(klogErr, "message with $(PARAM1) $(P2) etc.", "PARAM1=%s,P2=%s", "parameter1", "param2"));
     REQUIRE_EQ(string("message with parameter1 param2 etc."), string(buffer));
 }    
+
+//////////////////////////////////////////// num-gen
+TEST_CASE(num_gen_Make)
+{
+    struct num_gen * ng;
+    REQUIRE_RC ( num_gen_make ( & ng ) );
+    REQUIRE_RC ( num_gen_destroy ( ng ) );
+}    
+TEST_CASE(num_gen_MakeFromStr)
+{
+    struct num_gen * ng;
+    REQUIRE_RC ( num_gen_make_from_str ( & ng, "1" ) );
+    REQUIRE_RC ( num_gen_destroy ( ng ) );
+}    
+TEST_CASE(num_gen_MakeFromEmptyStr)
+{
+    struct num_gen * ng;
+    REQUIRE_RC_FAIL ( num_gen_make_from_str ( & ng, "" ) );
+}    
+TEST_CASE(num_gen_MakeFromRange)
+{
+    struct num_gen * ng;
+    REQUIRE_RC ( num_gen_make_from_range ( & ng, 1, 2 ) );
+    REQUIRE_RC ( num_gen_destroy ( ng ) );
+}    
+TEST_CASE(num_gen_MakeFromEmptyRange)
+{
+    struct num_gen * ng;
+    REQUIRE_RC_FAIL ( num_gen_make_from_range ( & ng, 1, 0 ) );
+}    
+ 
+//TODO:
+//rc_t num_gen_clear( struct num_gen * self );
+//rc_t num_gen_parse( struct num_gen * self, const char * src );
+//rc_t num_gen_add( struct num_gen * self, const uint64_t first, const uint64_t count );
+//rc_t num_gen_trim( struct num_gen * self, const int64_t first, const uint64_t count );
+//bool num_gen_empty( const struct num_gen * self );
+//rc_t num_gen_as_string( const struct num_gen * self, char * buffer, size_t buffsize, size_t * written, bool full_info );
+//rc_t num_gen_contains_value( const struct num_gen * self, const uint64_t value );
+//rc_t num_gen_range_check( struct num_gen * self, const int64_t first, const uint64_t count );
+//rc_t num_gen_iterator_make( const struct num_gen * self, const struct num_gen_iter ** iter );
+//rc_t num_gen_iterator_destroy( const struct num_gen_iter * self );
+//rc_t num_gen_iterator_count( const struct num_gen_iter * self, uint64_t * count );
+//rc_t num_gen_iterator_next( const struct num_gen_iter * self, uint64_t * value );
+//rc_t num_gen_iterator_percent( const struct num_gen_iter * self, uint8_t fract_digits, uint32_t * value );
+
 
 //////////////////////////////////////////////////// Main
 extern "C"
