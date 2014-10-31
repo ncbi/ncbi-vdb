@@ -39,7 +39,7 @@
 
 typedef struct num_gen_node
 {
-    uint64_t start;
+    int64_t start;
     uint64_t count; /* 0 ... skip, > 0 ... valid */
 } num_gen_node;
 
@@ -63,6 +63,8 @@ struct num_gen_iter
     uint32_t curr_node_sub_pos;
     uint64_t total;
     uint64_t progress;
+    int64_t min_value;
+    int64_t max_value;
 };
 
 /* forward decl. for fixing-function */
@@ -77,7 +79,7 @@ static void CC num_gen_node_destroy( void *item, void *data )
 
 
 /* helper function to create a node from start/count */
-static struct num_gen_node * num_gen_make_node( const uint64_t start, const uint64_t count )
+static struct num_gen_node * num_gen_make_node( const int64_t start, const uint64_t count )
 {
     num_gen_node * p = malloc( sizeof( * p ) );
     if ( p != NULL )
@@ -162,7 +164,7 @@ static uint64_t num_gen_total_count( const Vector * src )
 
 
 /* helper function for the parse-function */
-static rc_t num_gen_add_node( struct num_gen * self, const uint64_t from, const uint64_t to )
+static rc_t num_gen_add_node( struct num_gen * self, const int64_t from, const int64_t to )
 {
     rc_t rc;
 
@@ -170,13 +172,11 @@ static rc_t num_gen_add_node( struct num_gen * self, const uint64_t from, const 
         rc = RC( rcVDB, rcNoTarg, rcInserting, rcSelf, rcNull );
     else
     {
-        num_gen_node * node = NULL;
-        int64_t count = ( to - from );
-
-        if ( count >= 0 )
-            node = num_gen_make_node( from, count + 1 );
+        num_gen_node * node;
+        if ( from < to )
+            node = num_gen_make_node( from, ( to - from ) + 1 );
         else
-            node = num_gen_make_node( to, -( count + 1 ) );
+            node = num_gen_make_node( to, ( from - to ) + 1 );
 
         if ( node == NULL )
             rc = RC( rcVDB, rcNoTarg, rcInserting, rcMemory, rcExhausted );
@@ -193,8 +193,8 @@ typedef struct num_gen_parse_ctx
 {
     uint32_t num_str_idx;
     bool this_is_the_first_number;
-    uint64_t num1;
-    uint64_t num2;
+    int64_t num1;
+    int64_t num2;
     char num_str[ MAX_NUM_STR + 1 ];
 } num_gen_parse_ctx;
 
@@ -207,7 +207,7 @@ static void num_gen_convert_ctx( num_gen_parse_ctx * parse_ctx )
         char * endp;
         
         parse_ctx -> num_str[ parse_ctx -> num_str_idx ] = 0;
-        parse_ctx -> num1 = strtou64( parse_ctx -> num_str, &endp, 10 );
+        parse_ctx -> num1 = strtoi64( parse_ctx -> num_str, &endp, 10 );
         parse_ctx -> this_is_the_first_number = false;
         parse_ctx -> num_str_idx = 0;
     }
@@ -234,12 +234,12 @@ static rc_t num_gen_convert_and_add_ctx( struct num_gen * self, num_gen_parse_ct
         /* convert the string into a uint64_t */
         if ( parse_ctx -> this_is_the_first_number )
         {
-            parse_ctx -> num1 = strtou64( parse_ctx -> num_str, &endp, 10 );
+            parse_ctx -> num1 = strtoi64( parse_ctx -> num_str, &endp, 10 );
             parse_ctx -> num2 = parse_ctx -> num1;
         }
         else
         {
-            parse_ctx -> num2 = strtou64( parse_ctx -> num_str, &endp, 10 );
+            parse_ctx -> num2 = strtoi64( parse_ctx -> num_str, &endp, 10 );
         }
 
         /* empty the source-string to be reused */
@@ -313,7 +313,7 @@ LIB_EXPORT rc_t CC num_gen_parse( struct num_gen * self, const char * src )
 
 /* inserts the given ranges into the number-generator,
    fixes eventual overlaps */
-LIB_EXPORT rc_t CC num_gen_add( struct num_gen * self, const uint64_t first, const uint64_t count )
+LIB_EXPORT rc_t CC num_gen_add( struct num_gen * self, const int64_t first, const uint64_t count )
 {
     rc_t rc;
 
@@ -321,8 +321,8 @@ LIB_EXPORT rc_t CC num_gen_add( struct num_gen * self, const uint64_t first, con
         rc = RC( rcVDB, rcNoTarg, rcInserting, rcSelf, rcNull );
     else
     {
-        uint64_t num_1 = first;
-        uint64_t num_2 = first;
+        int64_t num_1 = first;
+        int64_t num_2 = first;
 
         /* this is necessary because virtual columns which have a
            infinite range, get reported with first = 1, count = 0 */
@@ -337,12 +337,12 @@ LIB_EXPORT rc_t CC num_gen_add( struct num_gen * self, const uint64_t first, con
 
 
 /* helper function for range-check */
-static bool CC num_gen_check_range_start( num_gen_node * node, const uint64_t range_start )
+static bool CC num_gen_check_range_start( num_gen_node * node, const int64_t range_start )
 {
     bool res = ( node != NULL );
     if ( res )
     {
-        uint64_t last = ( node -> start + node -> count ) - 1;
+        int64_t last = ( node -> start + node -> count ) - 1;
         
         if ( node -> start < range_start )
         {
@@ -363,11 +363,11 @@ static bool CC num_gen_check_range_start( num_gen_node * node, const uint64_t ra
 
 
 /* helper function for range-check */
-static void CC num_gen_check_range_end( num_gen_node * node, const uint64_t last )
+static void CC num_gen_check_range_end( num_gen_node * node, const int64_t last )
 {
     if ( node != NULL )
     {
-        uint64_t node_last = ( node -> start + node -> count ) - 1;
+        int64_t node_last = ( node -> start + node -> count ) - 1;
 
         if ( node_last > last )
         {
@@ -618,7 +618,7 @@ static bool CC num_gen_overlap_fix_cb( void *item, void *data )
                 }
                 else
                 {
-                    uint64_t prev_last = ( ov_ctx -> prev -> start + ov_ctx -> prev -> count ) - 1;
+                    int64_t prev_last = ( ov_ctx -> prev -> start + ov_ctx -> prev -> count ) - 1;
 
                     /* if we do not have an overlap, take this node as prev-node and continue */
                     if ( prev_last < node -> start )
@@ -631,7 +631,7 @@ static bool CC num_gen_overlap_fix_cb( void *item, void *data )
                            the current-node, we fix it by expanding the prev-node
                            to the end of this node, and later declaring this
                            node as invalid */
-                        uint64_t this_last = ( node -> start + node -> count ) - 1;
+                        int64_t this_last = ( node -> start + node -> count ) - 1;
                         if ( prev_last < this_last )
                         {
                             ov_ctx -> prev -> count = ( prev_last - ( ov_ctx -> prev -> start ) ) + 1;
@@ -702,12 +702,12 @@ static void CC num_gen_as_string_cb( void * item, void * data )
                 size_t written;
                 if ( node -> count == 1 )
                 {
-                    rc = string_printf ( buf, bsize, &written, "%lu,", node -> start );
+                    rc = string_printf ( buf, bsize, &written, "%ld,", node -> start );
                 }
                 else
                 {
                     uint64_t last = ( ( node -> start ) + ( node -> count ) ) - 1;
-                    rc = string_printf ( buf, bsize, &written, "%lu-%lu,", node -> start, last );
+                    rc = string_printf ( buf, bsize, &written, "%ld-%ld,", node -> start, last );
                 }
                 if ( rc == 0 )
                     str_ctx -> written += written;
@@ -770,10 +770,10 @@ static bool CC num_gen_contains_cb( void * item, void * data )
     num_gen_node * node = item;
     if ( node != NULL && node->count > 0 )
     {
-        uint64_t * value = data;
+        int64_t * value = data;
         if ( value != NULL )
         {
-            uint64_t end = ( node -> start + node -> count ) - 1;
+            int64_t end = ( node -> start + node -> count ) - 1;
             res = ( node -> start <= *value && *value <= end );
         }
     }
@@ -781,7 +781,7 @@ static bool CC num_gen_contains_cb( void * item, void * data )
 }
 
 
-LIB_EXPORT rc_t CC num_gen_contains_value( const struct num_gen * self, const uint64_t value )
+LIB_EXPORT rc_t CC num_gen_contains_value( const struct num_gen * self, const int64_t value )
 {
     rc_t rc = 0;
 
@@ -789,7 +789,7 @@ LIB_EXPORT rc_t CC num_gen_contains_value( const struct num_gen * self, const ui
         rc = RC( rcVDB, rcNoTarg, rcReading, rcSelf, rcNull );
     else
     {
-        uint64_t temp = value;
+        int64_t temp = value;
         if ( !VectorDoUntil ( &( self -> nodes ), false, num_gen_contains_cb, &temp ) )
             rc = RC( rcVDB, rcNoTarg, rcReading, rcData, rcEmpty );
     }
@@ -807,6 +807,30 @@ LIB_EXPORT rc_t CC num_gen_range_check( struct num_gen * self, const int64_t fir
     else
         rc = num_gen_trim( self, first, count );
     return rc;
+}
+
+
+static int64_t min_vector_value( Vector * v )
+{
+    int64_t res = 0;
+    num_gen_node * node = VectorGet( v, 0 );
+    if ( node != NULL )
+        res = node -> start;
+    return res;
+}
+
+
+static int64_t max_vector_value( Vector * v )
+{
+    int64_t res = 0;
+    uint32_t count = VectorLength( v );
+    if ( count > 0 )
+    {
+        num_gen_node * node = VectorGet( v, count - 1 );
+        if ( node != NULL )
+            res = ( node -> start + node -> count ) - 1;
+    }
+    return res;
 }
 
 
@@ -835,6 +859,8 @@ LIB_EXPORT rc_t CC num_gen_iterator_make( const struct num_gen * self, const str
                 VectorInit( &( temp -> nodes ), 0, count );
                 num_gen_copy_vector( &( self -> nodes ), &( temp -> nodes ) );
                 temp -> total = num_gen_total_count( &( temp -> nodes ) );
+                temp -> min_value = min_vector_value( &( temp -> nodes ) );
+                temp -> max_value = max_vector_value( &( temp -> nodes ) );
                 *iter = temp;
             }
         }
@@ -859,36 +885,43 @@ LIB_EXPORT rc_t CC num_gen_iterator_destroy( const struct num_gen_iter *self )
 }
 
 
-LIB_EXPORT rc_t CC num_gen_iterator_next( const struct num_gen_iter * self, uint64_t * value )
+LIB_EXPORT bool CC num_gen_iterator_next( const struct num_gen_iter * self, int64_t * value, rc_t * rc )
 {
-    rc_t rc = 0;
-
+    bool res = false;
     if ( self == NULL )
-        rc = RC( rcVDB, rcNoTarg, rcReading, rcSelf, rcNull );
+    {
+        if ( rc != NULL )
+            *rc = RC( rcVDB, rcNoTarg, rcReading, rcSelf, rcNull );
+    }
     else if ( value == NULL )
-        rc = RC( rcVDB, rcNoTarg, rcReading, rcParam, rcNull );
-    else if ( self -> curr_node >= VectorLength( &( self -> nodes ) ) )
-        rc = RC( rcVDB, rcNoTarg, rcReading, rcId, rcInvalid );
-    else
+    {
+        if ( rc != NULL )
+            *rc = RC( rcVDB, rcNoTarg, rcReading, rcParam, rcNull );
+    }
+    else if ( self -> curr_node < VectorLength( &( self -> nodes ) ) )
     {
         *value = 0;
         {
             struct num_gen_iter * temp = ( struct num_gen_iter * )self;
             num_gen_node * node = VectorGet( &( temp -> nodes ), temp -> curr_node );
             if ( node == NULL )
-                rc = RC( rcVDB, rcNoTarg, rcReading, rcItem, rcInvalid );
+            {
+                if ( rc != NULL )
+                    *rc = RC( rcVDB, rcNoTarg, rcReading, rcItem, rcInvalid );
+            }
             else
             {
-                *value = node -> start;
                 if ( node -> count < 2 )
                 {
                     /* the node is a single-number-node, next node for next time */
+                    *value = node -> start;
                     ( temp -> curr_node )++;
                 }
                 else
                 {
                     /* the node is a number range, add the sub-position */
-                    *value += ( temp -> curr_node_sub_pos )++;
+                    *value = node -> start + temp -> curr_node_sub_pos;
+                    ( temp -> curr_node_sub_pos )++;
                     /* if the sub-positions are use up, switch to next node */
                     if ( temp -> curr_node_sub_pos >= node -> count )
                     {
@@ -897,10 +930,11 @@ LIB_EXPORT rc_t CC num_gen_iterator_next( const struct num_gen_iter * self, uint
                     }
                 }
                 ( temp -> progress )++;
+                res = true;
             }
         }
     }
-    return rc;
+    return res;
 }
 
 
@@ -913,6 +947,32 @@ LIB_EXPORT rc_t CC num_gen_iterator_count( const struct num_gen_iter * self, uin
         rc = RC( rcVDB, rcNoTarg, rcReading, rcParam, rcNull );
     else
         *count = self -> total;
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC num_gen_iterator_min( const struct num_gen_iter * self, int64_t * value )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC( rcVDB, rcNoTarg, rcReading, rcSelf, rcNull );
+    else if ( value == NULL )
+        rc = RC( rcVDB, rcNoTarg, rcReading, rcParam, rcNull );
+    else
+        *value = self -> min_value;
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC num_gen_iterator_max( const struct num_gen_iter * self, int64_t * value )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC( rcVDB, rcNoTarg, rcReading, rcSelf, rcNull );
+    else if ( value == NULL )
+        rc = RC( rcVDB, rcNoTarg, rcReading, rcParam, rcNull );
+    else
+        *value = self -> max_value;
     return rc;
 }
 
