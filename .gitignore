@@ -11,3 +11,4 @@ test-bin64
 ilib64
 lib64
 schema
+vgcore.*
