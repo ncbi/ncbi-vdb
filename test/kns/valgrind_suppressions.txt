@@ -1,0 +1,18 @@
+{
+   curl_easy_init/calloc
+   Memcheck:Leak
+   fun:calloc
+   ...
+   fun:prepare_curl
+   fun:KCurlFileDiscoverSize
+   ...
+}
+{
+   curl_easy_init/malloc
+   Memcheck:Leak
+   fun:malloc
+   ...   
+   fun:prepare_curl
+   fun:KCurlFileDiscoverSize
+   ...
+}
