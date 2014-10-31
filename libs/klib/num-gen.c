@@ -846,16 +846,18 @@ LIB_EXPORT rc_t CC num_gen_iterator_make( const struct num_gen * self, const str
         rc = RC( rcVDB, rcNoTarg, rcReading, rcParam, rcNull );
     else
     {
-        uint32_t count = VectorLength( &( self -> nodes ) );
+        struct num_gen_iter * temp = calloc( 1, sizeof( * temp ) );
         *iter = NULL;
-
-        if ( count < 1 )
-            rc = RC( rcVDB, rcNoTarg, rcReading, rcParam, rcNull );
+        if ( temp == NULL )
+            rc = RC( rcVDB, rcNoTarg, rcConstructing, rcMemory, rcExhausted );
         else
         {
-            struct num_gen_iter * temp = calloc( 1, sizeof( * temp ) );
-            if ( temp == NULL )
-                rc = RC( rcVDB, rcNoTarg, rcConstructing, rcMemory, rcExhausted );
+            uint32_t count = VectorLength( &( self -> nodes ) );
+            if ( count == 0 )
+            {
+                VectorInit( &( temp -> nodes ), 0, 5 );
+                /* everything else is set to zero, because of calloc() above */
+            }
             else
             {
                 VectorInit( &( temp -> nodes ), 0, count );
@@ -863,8 +865,8 @@ LIB_EXPORT rc_t CC num_gen_iterator_make( const struct num_gen * self, const str
                 temp -> total = num_gen_total_count( &( temp -> nodes ) );
                 temp -> min_value = min_vector_value( &( temp -> nodes ) );
                 temp -> max_value = max_vector_value( &( temp -> nodes ) );
-                *iter = temp;
             }
+            *iter = temp;
         }
     }
     return rc;
