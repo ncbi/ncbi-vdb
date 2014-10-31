@@ -18,17 +18,16 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  
   <Import Project=".\dll-project.props" />
-  
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C3689443-C606-47B9-987B-92EBBCF96647}</ProjectGuid>
   </PropertyGroup>
-  
   <ItemGroup>
     <ClCompile Include="..\..\..\libs\ext\bzip2\blocksort.c" />
     <ClCompile Include="..\..\..\libs\ext\bzip2\bzlib.c" />
-    <ClCompile Include="..\..\..\libs\ext\bzip2\compress.c"><ObjectFileName>$(IntDir)bzip2-%(Filename).obj</ObjectFileName></ClCompile>
+    <ClCompile Include="..\..\..\libs\ext\bzip2\compress.c">
+      <ObjectFileName>$(IntDir)bzip2-%(Filename).obj</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\ext\bzip2\crctable.c" />
     <ClCompile Include="..\..\..\libs\ext\bzip2\decompress.c" />
     <ClCompile Include="..\..\..\libs\ext\bzip2\huffman.c" />
@@ -1289,6 +1288,7 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../libs/klib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../libs/klib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\num-gen.c" />
     <ClCompile Include="..\..\..\libs\klib\out.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)klib-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)klib-%(Filename).obj</ObjectFileName>
@@ -2948,5 +2948,4 @@
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)wwgsxf-%(Filename).obj</ObjectFileName>
     </ClCompile>
   </ItemGroup>
-  
 </Project>
