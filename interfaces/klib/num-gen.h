@@ -27,6 +27,9 @@
 #ifndef _h_klib_num_gen_
 #define _h_klib_num_gen_
 
+#ifndef _h_klib_extern_
+#include <klib/extern.h>
+#endif
 
 #ifndef _h_klib_rc_
 #include <klib/rc.h>
@@ -59,9 +62,9 @@ struct num_gen_iter;
  *  or creates a number-generator and parses the string
  *  or creates and presets it with a range
  */
-rc_t num_gen_make( struct num_gen ** self );
-rc_t num_gen_make_from_str( struct num_gen ** self, const char * src );
-rc_t num_gen_make_from_range( struct num_gen ** self, int64_t first, uint64_t count );
+KLIB_EXTERN rc_t CC num_gen_make( struct num_gen ** self );
+KLIB_EXTERN rc_t CC num_gen_make_from_str( struct num_gen ** self, const char * src );
+KLIB_EXTERN rc_t CC num_gen_make_from_range( struct num_gen ** self, int64_t first, uint64_t count );
 
 
 /*--------------------------------------------------------------------------
@@ -69,7 +72,7 @@ rc_t num_gen_make_from_range( struct num_gen ** self, int64_t first, uint64_t co
  *
  *  destroys a number-generator
  */
-rc_t num_gen_destroy( struct num_gen * self );
+KLIB_EXTERN rc_t CC num_gen_destroy( struct num_gen * self );
 
 
 /*--------------------------------------------------------------------------
@@ -77,7 +80,7 @@ rc_t num_gen_destroy( struct num_gen * self );
  *
  *  resets a number-generator, to be empty just like after num_gen_make()
  */
-rc_t num_gen_clear( struct num_gen * self );
+KLIB_EXTERN rc_t CC num_gen_clear( struct num_gen * self );
 
 
 /*--------------------------------------------------------------------------
@@ -87,7 +90,7 @@ rc_t num_gen_clear( struct num_gen * self );
  *  does not clear the number-generator before parsing
  *  eventual overlaps with the previous content are consolidated
  */
-rc_t num_gen_parse( struct num_gen * self, const char * src );
+KLIB_EXTERN rc_t CC num_gen_parse( struct num_gen * self, const char * src );
 
 
 /*--------------------------------------------------------------------------
@@ -101,7 +104,7 @@ rc_t num_gen_parse( struct num_gen * self, const char * src );
  *
  *  eventual overlaps with the previous content are consolidated 
  */
-rc_t num_gen_add( struct num_gen * self, const uint64_t first, const uint64_t count );
+KLIB_EXTERN rc_t CC num_gen_add( struct num_gen * self, const int64_t first, const uint64_t count );
 
 
 /*--------------------------------------------------------------------------
@@ -110,7 +113,7 @@ rc_t num_gen_add( struct num_gen * self, const uint64_t first, const uint64_t co
  *  checks if the content of the number-generator is inside the given interval
  *  removes or shortens internal nodes if necessary
  */
-rc_t num_gen_trim( struct num_gen * self, const int64_t first, const uint64_t count );
+KLIB_EXTERN rc_t CC num_gen_trim( struct num_gen * self, const int64_t first, const uint64_t count );
 
 
 /*--------------------------------------------------------------------------
@@ -118,7 +121,7 @@ rc_t num_gen_trim( struct num_gen * self, const int64_t first, const uint64_t co
  *
  *  checks if the generator has no ranges defined
  */
-bool num_gen_empty( const struct num_gen * self );
+KLIB_EXTERN bool CC num_gen_empty( const struct num_gen * self );
 
 
 /*--------------------------------------------------------------------------
@@ -128,8 +131,8 @@ bool num_gen_empty( const struct num_gen * self );
  *  *s = "1-5,20,24-25"
  *  caller has to free the string
  */
-rc_t num_gen_as_string( const struct num_gen * self, char * buffer, size_t buffsize,
-                        size_t * written, bool full_info );
+KLIB_EXTERN rc_t CC num_gen_as_string( const struct num_gen * self, char * buffer, size_t buffsize,
+                                        size_t * written, bool full_info );
 
 
 /*--------------------------------------------------------------------------
@@ -137,7 +140,7 @@ rc_t num_gen_as_string( const struct num_gen * self, char * buffer, size_t buffs
  *
  *  checks if the generator contains the given value
  */
-rc_t num_gen_contains_value( const struct num_gen * self, const uint64_t value );
+KLIB_EXTERN rc_t CC num_gen_contains_value( const struct num_gen * self, const int64_t value );
 
 
 /*--------------------------------------------------------------------------
@@ -146,7 +149,7 @@ rc_t num_gen_contains_value( const struct num_gen * self, const uint64_t value )
  *  if the generator is empty --> set it to the given range
  *  if it is not empty ---------> trim it to the given range
  */
-rc_t num_gen_range_check( struct num_gen * self, const int64_t first, const uint64_t count );
+KLIB_EXTERN rc_t CC num_gen_range_check( struct num_gen * self, const int64_t first, const uint64_t count );
 
 /*--------------------------------------------------------------------------
  * num_gen_iterator_make
@@ -157,7 +160,7 @@ rc_t num_gen_range_check( struct num_gen * self, const int64_t first, const uint
  *  returns an error-code if the number-generator was empty,
  *  and *iter will be NULL
  */
-rc_t num_gen_iterator_make( const struct num_gen * self, const struct num_gen_iter ** iter );
+KLIB_EXTERN rc_t CC num_gen_iterator_make( const struct num_gen * self, const struct num_gen_iter ** iter );
 
 
 /*--------------------------------------------------------------------------
@@ -165,7 +168,7 @@ rc_t num_gen_iterator_make( const struct num_gen * self, const struct num_gen_it
  *
  *  destroys the iterator
  */
-rc_t num_gen_iterator_destroy( const struct num_gen_iter * self );
+KLIB_EXTERN rc_t CC num_gen_iterator_destroy( const struct num_gen_iter * self );
 
 
 /*--------------------------------------------------------------------------
@@ -173,7 +176,7 @@ rc_t num_gen_iterator_destroy( const struct num_gen_iter * self );
  *
  *  returns how many values the iterator contains
  */
-rc_t num_gen_iterator_count( const struct num_gen_iter * self, uint64_t * count );
+KLIB_EXTERN rc_t CC num_gen_iterator_count( const struct num_gen_iter * self, uint64_t * count );
 
 
 /*--------------------------------------------------------------------------
@@ -182,7 +185,24 @@ rc_t num_gen_iterator_count( const struct num_gen_iter * self, uint64_t * count 
  *  pulls the next value out of the iterator...
  *  returns an error-code if the iterator has no more values
  */
-rc_t num_gen_iterator_next( const struct num_gen_iter * self, uint64_t * value );
+KLIB_EXTERN bool CC num_gen_iterator_next( const struct num_gen_iter * self, int64_t * value, rc_t * rc );
+
+/*--------------------------------------------------------------------------
+ * num_gen_iterator_min
+ *
+ *  pulls the lowest value out of the iterator...
+ *  returns an error-code if the iterator has no more values
+ */
+KLIB_EXTERN rc_t CC num_gen_iterator_min( const struct num_gen_iter * self, int64_t * value );
+
+
+/*--------------------------------------------------------------------------
+ * num_gen_iterator_max
+ *
+ *  pulls the highest value out of the iterator...
+ *  returns an error-code if the iterator has no more values
+ */
+KLIB_EXTERN rc_t CC num_gen_iterator_max( const struct num_gen_iter * self, int64_t * value );
 
 
 /*--------------------------------------------------------------------------
@@ -194,7 +214,7 @@ rc_t num_gen_iterator_next( const struct num_gen_iter * self, uint64_t * value )
  *      fract_digits = 1 ... 1/10-th of a percent
  *      fract_digits = 2 ... 1/100-th of a percent
  */
-rc_t num_gen_iterator_percent( const struct num_gen_iter * self, uint8_t fract_digits, uint32_t * value );
+KLIB_EXTERN rc_t CC num_gen_iterator_percent( const struct num_gen_iter * self, uint8_t fract_digits, uint32_t * value );
 
 
 #ifdef __cplusplus
