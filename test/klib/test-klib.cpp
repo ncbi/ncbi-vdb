@@ -461,20 +461,25 @@ TEST_CASE(KLog_ParamFormatting)
 }    
 
 //////////////////////////////////////////// num-gen
+#define SHOW_UNIMPLEMENTED 0
 class NumGenFixture
 {
 public:
     NumGenFixture()
-    : m_ng(0)
+    : m_ng(0), m_it(0)
     {
     }
     ~NumGenFixture()
     {
+        if ( m_it && num_gen_iterator_destroy ( m_it ) )
+           throw logic_error ( "NumGenFixture: num_gen_iterator_destroy failed" );
+        
         if ( m_ng && num_gen_destroy ( m_ng ) != 0 )
            throw logic_error ( "NumGenFixture: num_gen_destroy failed" );
     }
     
     struct num_gen * m_ng;
+    const struct num_gen_iter * m_it;
 };
 
 FIXTURE_TEST_CASE(num_gen_Make, NumGenFixture)
@@ -505,31 +510,83 @@ FIXTURE_TEST_CASE(num_gen_MakeFromEmptyRange, NumGenFixture)
     REQUIRE_NOT_NULL ( m_ng );
 }    
 
+FIXTURE_TEST_CASE(num_gen_Empty, NumGenFixture)
+{
+    REQUIRE_RC( num_gen_make ( & m_ng ) );
+    REQUIRE ( num_gen_empty ( m_ng ) );
+}    
+
+FIXTURE_TEST_CASE(num_gen_Clear, NumGenFixture)
+{
+    REQUIRE_RC ( num_gen_make_from_range ( & m_ng, 1, 2 ) );
+    REQUIRE ( ! num_gen_empty ( m_ng ) );
+    
+    REQUIRE_RC ( num_gen_clear ( m_ng ) );
+    
+    REQUIRE ( num_gen_empty ( m_ng ) );
+}    
+
 #if SHOW_UNIMPLEMENTED
+FIXTURE_TEST_CASE(num_gen_EmptyRange, NumGenFixture)
+{
+    REQUIRE_RC( num_gen_make_from_range ( & m_ng, 1, 0 ) );
+    REQUIRE_NOT_NULL ( m_ng );
+    REQUIRE ( num_gen_empty ( m_ng ) );
+}    
+#endif
+
 FIXTURE_TEST_CASE(num_gen_IteratorMake, NumGenFixture)
 {
     REQUIRE_RC ( num_gen_make ( & m_ng ) );
-    
-    const struct num_gen_iter * it;
-    REQUIRE_RC ( num_gen_iterator_make( m_ng, &it ) );
-    REQUIRE_RC ( num_gen_iterator_destroy ( it ) ) ;
+    REQUIRE_RC ( num_gen_iterator_make( m_ng, &m_it ) );
 }
-#endif
+
+FIXTURE_TEST_CASE(num_gen_IteratorCount, NumGenFixture)
+{
+    REQUIRE_RC ( num_gen_make_from_range ( & m_ng, 1, 2 ) );
+    REQUIRE_RC ( num_gen_iterator_make( m_ng, &m_it ) );
+    
+    uint64_t count;
+    REQUIRE_RC ( num_gen_iterator_count ( m_it, &count ) );
+    REQUIRE_EQ ( (uint64_t)2, count );
+}
+FIXTURE_TEST_CASE(num_gen_IteratorCountEmpty, NumGenFixture)
+{
+    REQUIRE_RC ( num_gen_make ( & m_ng ) );
+    REQUIRE_RC ( num_gen_iterator_make( m_ng, &m_it ) );
+    
+    uint64_t count;
+    REQUIRE_RC ( num_gen_iterator_count ( m_it, &count ) );
+    REQUIRE_EQ ( (uint64_t)0, count );
+}
  
-#if SHOW_UNIMPLEMENTED
+FIXTURE_TEST_CASE(num_gen_IteratorNext, NumGenFixture)
+{
+    REQUIRE_RC ( num_gen_make_from_range ( & m_ng, 1, 2 ) );
+    REQUIRE_RC ( num_gen_iterator_make( m_ng, &m_it ) );
+    
+    int64_t value;
+    rc_t rc = 0;
+    REQUIRE ( num_gen_iterator_next ( m_it, &value, &rc ) );
+    REQUIRE_EQ ( (int64_t)1, value );
+    REQUIRE_RC ( rc );
+    
+    REQUIRE ( num_gen_iterator_next ( m_it, &value, &rc ) );
+    REQUIRE_EQ ( (int64_t)2, value );
+    REQUIRE_RC ( rc );
+    
+    REQUIRE ( ! num_gen_iterator_next ( m_it, &value, &rc ) );
+    REQUIRE_RC ( rc );
+}
+ 
 //TODO:
-//rc_t num_gen_clear( struct num_gen * self );
 //rc_t num_gen_parse( struct num_gen * self, const char * src );
 //rc_t num_gen_add( struct num_gen * self, const uint64_t first, const uint64_t count );
 //rc_t num_gen_trim( struct num_gen * self, const int64_t first, const uint64_t count );
-//bool num_gen_empty( const struct num_gen * self );
 //rc_t num_gen_as_string( const struct num_gen * self, char * buffer, size_t buffsize, size_t * written, bool full_info );
 //rc_t num_gen_contains_value( const struct num_gen * self, const uint64_t value );
 //rc_t num_gen_range_check( struct num_gen * self, const int64_t first, const uint64_t count );
-//rc_t num_gen_iterator_count( const struct num_gen_iter * self, uint64_t * count );
-//rc_t num_gen_iterator_next( const struct num_gen_iter * self, uint64_t * value );
 //rc_t num_gen_iterator_percent( const struct num_gen_iter * self, uint8_t fract_digits, uint32_t * value );
-#endif
 
 //////////////////////////////////////////////////// Main
 extern "C"
