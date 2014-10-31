@@ -506,8 +506,8 @@ FIXTURE_TEST_CASE(num_gen_MakeFromRange, NumGenFixture)
 }    
 FIXTURE_TEST_CASE(num_gen_MakeFromEmptyRange, NumGenFixture)
 {
-    REQUIRE_RC( num_gen_make_from_range ( & m_ng, 1, 0 ) );
-    REQUIRE_NOT_NULL ( m_ng );
+    REQUIRE_RC_FAIL( num_gen_make_from_range ( & m_ng, 1, 0 ) );
+    REQUIRE_NULL ( m_ng );
 }    
 
 FIXTURE_TEST_CASE(num_gen_Empty, NumGenFixture)
