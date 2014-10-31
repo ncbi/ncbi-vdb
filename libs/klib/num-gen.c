@@ -321,16 +321,11 @@ LIB_EXPORT rc_t CC num_gen_add( struct num_gen * self, const int64_t first, cons
 
     if ( self == NULL )
         rc = RC( rcVDB, rcNoTarg, rcInserting, rcSelf, rcNull );
+    if ( count == 0 )
+        rc = RC( rcVDB, rcNoTarg, rcInserting, rcParam, rcEmpty );
     else
     {
-        int64_t num_1 = first;
-        int64_t num_2 = first;
-
-        /* this is necessary because virtual columns which have a
-           infinite range, get reported with first = 1, count = 0 */
-        if ( count > 0 )
-            num_2 = ( first + count - 1 );
-        rc = num_gen_add_node( self, num_1, num_2 );
+        rc = num_gen_add_node( self, first, ( first + count ) - 1 );
         if ( rc == 0 )
             rc = num_gen_fix_overlaps( self, NULL );
     }
@@ -485,8 +480,6 @@ LIB_EXPORT rc_t CC num_gen_trim( struct num_gen * self, const int64_t first, con
 
     if ( self == NULL )
         rc = RC( rcVDB, rcNoTarg, rcValidating, rcSelf, rcNull );
-    else if ( count == 0 )
-        rc = RC( rcVDB, rcNoTarg, rcValidating, rcParam, rcNull );
     else
     {
         num_gen_node trim_range;
@@ -533,22 +526,60 @@ LIB_EXPORT rc_t CC num_gen_make( struct num_gen ** self )
 
 LIB_EXPORT rc_t CC num_gen_make_from_str( struct num_gen ** self, const char * src )
 {
-    rc_t rc = num_gen_make( self );
-    if ( rc == 0 )
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC( rcVDB, rcNoTarg, rcConstructing, rcSelf, rcNull );
+    else if ( src == NULL || src[ 0 ] == 0 )
     {
-        rc = num_gen_parse( *self, src );
+        *self = NULL;
+        rc = RC( rcVDB, rcNoTarg, rcConstructing, rcSelf, rcNull );
+    }
+    else
+    {
+        struct num_gen * temp;
+        rc = num_gen_make( &temp );
         if ( rc == 0 )
-            rc = num_gen_fix_overlaps( *self, NULL );
-     }
-     return rc;
+        {
+            rc = num_gen_parse( temp, src );
+            if ( rc == 0 )
+                rc = num_gen_fix_overlaps( temp, NULL );
+        }
+        if ( rc == 0 )
+            *self = temp;
+        else
+        {
+            *self = NULL;
+            num_gen_destroy( temp );
+        }
+    }
+    return rc;
 }
 
 
 LIB_EXPORT rc_t CC num_gen_make_from_range( struct num_gen ** self, int64_t first, uint64_t count )
 {
-    rc_t rc = num_gen_make( self );
-    if ( rc == 0 )
-        rc = num_gen_add( *self, first, count );
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC( rcVDB, rcNoTarg, rcConstructing, rcSelf, rcNull );
+    else if ( count == 0 )
+    {
+        *self = NULL;
+        rc = RC( rcVDB, rcNoTarg, rcConstructing, rcParam, rcEmpty );
+    }
+    else
+    {
+        struct num_gen * temp;
+        rc = num_gen_make( &temp );
+        if ( rc == 0 )
+            rc = num_gen_add( *self, first, count );
+        if ( rc == 0 )
+            *self = temp;
+        else
+        {
+            *self = NULL;
+            num_gen_destroy( temp );
+        }
+    }
     return rc;
 }
 
