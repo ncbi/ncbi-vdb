@@ -32,6 +32,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <stdexcept>
 
 #include <klib/sort.h>
 #include <klib/printf.h>
@@ -460,36 +461,62 @@ TEST_CASE(KLog_ParamFormatting)
 }    
 
 //////////////////////////////////////////// num-gen
+class NumGenFixture
+{
+public:
+    NumGenFixture()
+    : m_ng(0)
+    {
+    }
+    ~NumGenFixture()
+    {
+        if ( m_ng && num_gen_destroy ( m_ng ) != 0 )
+           throw logic_error ( "NumGenFixture: num_gen_destroy failed" );
+    }
+    
+    struct num_gen * m_ng;
+};
+
+FIXTURE_TEST_CASE(num_gen_Make, NumGenFixture)
+{
+    REQUIRE_RC ( num_gen_make ( & m_ng ) );
+    REQUIRE_NOT_NULL ( m_ng );
+}    
+FIXTURE_TEST_CASE(num_gen_MakeFromStr, NumGenFixture)
+{
+    REQUIRE_RC ( num_gen_make_from_str ( & m_ng, "1" ) );
+    REQUIRE_NOT_NULL ( m_ng );
+}    
 #if SHOW_UNIMPLEMENTED
-TEST_CASE(num_gen_Make)
+FIXTURE_TEST_CASE(num_gen_MakeFromEmptyStr, NumGenFixture)
 {
-    struct num_gen * ng;
-    REQUIRE_RC ( num_gen_make ( & ng ) );
-    REQUIRE_RC ( num_gen_destroy ( ng ) );
+    REQUIRE_RC_FAIL ( num_gen_make_from_str ( & m_ng, "" ) );
+    REQUIRE_NULL ( m_ng );
 }    
-TEST_CASE(num_gen_MakeFromStr)
+#endif
+FIXTURE_TEST_CASE(num_gen_MakeFromRange, NumGenFixture)
 {
-    struct num_gen * ng;
-    REQUIRE_RC ( num_gen_make_from_str ( & ng, "1" ) );
-    REQUIRE_RC ( num_gen_destroy ( ng ) );
+    REQUIRE_RC ( num_gen_make_from_range ( & m_ng, 1, 2 ) );
+    REQUIRE_NOT_NULL ( m_ng );
 }    
-TEST_CASE(num_gen_MakeFromEmptyStr)
+FIXTURE_TEST_CASE(num_gen_MakeFromEmptyRange, NumGenFixture)
 {
-    struct num_gen * ng;
-    REQUIRE_RC_FAIL ( num_gen_make_from_str ( & ng, "" ) );
+    REQUIRE_RC( num_gen_make_from_range ( & m_ng, 1, 0 ) );
+    REQUIRE_NOT_NULL ( m_ng );
 }    
-TEST_CASE(num_gen_MakeFromRange)
+
+#if SHOW_UNIMPLEMENTED
+FIXTURE_TEST_CASE(num_gen_IteratorMake, NumGenFixture)
 {
-    struct num_gen * ng;
-    REQUIRE_RC ( num_gen_make_from_range ( & ng, 1, 2 ) );
-    REQUIRE_RC ( num_gen_destroy ( ng ) );
-}    
-TEST_CASE(num_gen_MakeFromEmptyRange)
-{
-    struct num_gen * ng;
-    REQUIRE_RC_FAIL ( num_gen_make_from_range ( & ng, 1, 0 ) );
-}    
+    REQUIRE_RC ( num_gen_make ( & m_ng ) );
+    
+    const struct num_gen_iter * it;
+    REQUIRE_RC ( num_gen_iterator_make( m_ng, &it ) );
+    REQUIRE_RC ( num_gen_iterator_destroy ( it ) ) ;
+}
+#endif
  
+#if SHOW_UNIMPLEMENTED
 //TODO:
 //rc_t num_gen_clear( struct num_gen * self );
 //rc_t num_gen_parse( struct num_gen * self, const char * src );
@@ -499,8 +526,6 @@ TEST_CASE(num_gen_MakeFromEmptyRange)
 //rc_t num_gen_as_string( const struct num_gen * self, char * buffer, size_t buffsize, size_t * written, bool full_info );
 //rc_t num_gen_contains_value( const struct num_gen * self, const uint64_t value );
 //rc_t num_gen_range_check( struct num_gen * self, const int64_t first, const uint64_t count );
-//rc_t num_gen_iterator_make( const struct num_gen * self, const struct num_gen_iter ** iter );
-//rc_t num_gen_iterator_destroy( const struct num_gen_iter * self );
 //rc_t num_gen_iterator_count( const struct num_gen_iter * self, uint64_t * count );
 //rc_t num_gen_iterator_next( const struct num_gen_iter * self, uint64_t * value );
 //rc_t num_gen_iterator_percent( const struct num_gen_iter * self, uint8_t fract_digits, uint32_t * value );
