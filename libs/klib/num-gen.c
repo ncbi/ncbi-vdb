@@ -571,7 +571,7 @@ LIB_EXPORT rc_t CC num_gen_make_from_range( struct num_gen ** self, int64_t firs
         struct num_gen * temp;
         rc = num_gen_make( &temp );
         if ( rc == 0 )
-            rc = num_gen_add( *self, first, count );
+            rc = num_gen_add( temp, first, count );
         if ( rc == 0 )
             *self = temp;
         else
