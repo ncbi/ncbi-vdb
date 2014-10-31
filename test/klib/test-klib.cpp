@@ -460,6 +460,7 @@ TEST_CASE(KLog_ParamFormatting)
 }    
 
 //////////////////////////////////////////// num-gen
+#if SHOW_UNIMPLEMENTED
 TEST_CASE(num_gen_Make)
 {
     struct num_gen * ng;
@@ -503,7 +504,7 @@ TEST_CASE(num_gen_MakeFromEmptyRange)
 //rc_t num_gen_iterator_count( const struct num_gen_iter * self, uint64_t * count );
 //rc_t num_gen_iterator_next( const struct num_gen_iter * self, uint64_t * value );
 //rc_t num_gen_iterator_percent( const struct num_gen_iter * self, uint8_t fract_digits, uint32_t * value );
-
+#endif
 
 //////////////////////////////////////////////////// Main
 extern "C"
