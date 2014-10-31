@@ -260,8 +260,10 @@ LIB_EXPORT rc_t CC num_gen_parse( struct num_gen * self, const char * src )
 
     if ( self == NULL )
         rc = RC( rcVDB, rcNoTarg, rcParsing, rcSelf, rcNull );
-    else if ( self == NULL )
+    else if ( src == NULL )
         rc = RC( rcVDB, rcNoTarg, rcParsing, rcParam, rcNull );
+    else if ( src[ 0 ] == 0 )
+        rc = RC( rcVDB, rcNoTarg, rcParsing, rcParam, rcEmpty );
     else
     {
         size_t n = string_measure ( src, NULL );
