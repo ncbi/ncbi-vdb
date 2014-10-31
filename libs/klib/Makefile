@@ -123,6 +123,7 @@ KLIB_SRC = \
 	rc-idx-tbl \
 	judy-vector \
 	report \
+	num-gen \
 	sra-release-version
 #	path
 
