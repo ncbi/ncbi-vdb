@@ -655,7 +655,7 @@ static bool CC num_gen_overlap_fix_cb( void *item, void *data )
 
 static rc_t num_gen_fix_overlaps( struct num_gen * self, uint32_t * count )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( self == NULL )
         rc = RC( rcVDB, rcNoTarg, rcReading, rcSelf, rcNull );
