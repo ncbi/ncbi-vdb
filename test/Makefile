@@ -41,6 +41,7 @@ SUBDIRS =    \
     klib     \
     kfg      \
     kns      \
+    kproc    \
     ngs      \
     ngs-c++  \
     vfs      \
