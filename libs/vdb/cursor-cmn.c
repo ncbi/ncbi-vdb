@@ -2578,3 +2578,14 @@ LIB_EXPORT rc_t CC VCursorIsStaticColumn ( const VCursor *self, uint32_t col_idx
 
     return rc;
 }
+
+LIB_EXPORT uint64_t CC VCursorSetCacheCapacity(VCursor *self,uint64_t capacity)
+{
+	if(self) return VBlobMRUCacheSetCapacity(self->blob_mru_cache,capacity);
+        return 0;
+}
+LIB_EXPORT uint64_t CC VCursorGetCacheCapacity(const VCursor *self)
+{
+	if(self) return VBlobMRUCacheGetCapacity(self->blob_mru_cache);
+	return 0;
+}

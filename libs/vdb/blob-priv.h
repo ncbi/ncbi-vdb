@@ -190,6 +190,9 @@ void VBlobMRUCacheDestroy( VBlobMRUCache *self );
 const VBlob* VBlobMRUCacheFind(const VBlobMRUCache *cself, uint32_t col_idx, int64_t row_id);
 rc_t VBlobMRUCacheSave(const VBlobMRUCache *cself, uint32_t col_idx, const VBlob *blob);
 
+uint64_t VBlobMRUCacheGetCapacity(const VBlobMRUCache *cself);
+uint64_t VBlobMRUCacheSetCapacity(VBlobMRUCache *self,uint64_t capacity );
+
 
 rc_t PageMapProcessGetPagemap(const PageMapProcessRequest *self,struct PageMap **pm);
 

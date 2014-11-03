@@ -1630,3 +1630,20 @@ rc_t VBlobMRUCacheSave(const VBlobMRUCache *cself, uint32_t col_idx, const VBlob
     return 0;
 }
 
+uint64_t VBlobMRUCacheGetCapacity(const VBlobMRUCache *cself)
+{
+	if(cself){
+		return cself->capacity;
+	}
+	return 0;
+}
+uint64_t VBlobMRUCacheSetCapacity(VBlobMRUCache *self,uint64_t capacity )
+{
+	uint64_t old_capacity=0;
+	if(self){
+		old_capacity = self->capacity;
+		self->capacity=capacity;
+	}
+	return old_capacity;
+}
+
