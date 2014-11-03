@@ -24,8 +24,6 @@
   <ItemDefinitionGroup>
     <Link>
       <AdditionalDependencies>$(VDB_TARGET)lib\ncbi-vdb.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies>$(VDB_TARGET)lib\zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies>$(VDB_TARGET)lib\bz2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   
@@ -37,8 +35,4 @@
     <ProjectGuid>{7C9FA1C2-DB37-4A73-90A3-7F538D1C2AD1}</ProjectGuid>
   </PropertyGroup>
   
-    <Target Name="AfterBuild" Condition="'$(Autorun)'=='true'">
-        <Exec Command="$(OutDir)$(TargetName)$(TargetExt)" WorkingDirectory="$(VDB_ROOT)test\vfs\"/>
-    </Target>
-    
 </Project>
