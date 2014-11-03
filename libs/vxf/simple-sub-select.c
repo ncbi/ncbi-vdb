@@ -158,13 +158,22 @@ rc_t open_sub_cursor ( SubSelect **fself, const VXfactInfo *info, const VFactory
             tbl = ftbl;
         } else {
             const VDatabase *db;
+	    uint64_t cache_size = 32*1024*1024;
+	    uint64_t native_cursor_cache_size = VCursorGetCacheCapacity(native_curs);
+
             rc = VTableOpenParentRead ( info -> tbl, & db );
             if(rc != 0) return rc;
             rc = VDatabaseOpenTableRead ( db, & ftbl, "%s", name);
             if(rc != 0) return rc;
             VDatabaseRelease ( db );
             tbl = ftbl;
-            rc = VTableCreateCachedCursorRead ( tbl, (const VCursor**)& curs, 32*1024*1024 ); /*** some random io is expected ***/
+	    if(native_cursor_cache_size/4 > cache_size){
+                /* share cursor size with native cursor **/
+                cache_size = native_cursor_cache_size/4;
+                native_cursor_cache_size -= cache_size;
+                VCursorSetCacheCapacity(native_curs,native_cursor_cache_size);
+            }
+            rc = VTableCreateCachedCursorRead ( tbl, (const VCursor**)& curs, cache_size ); /*** some random io is expected ***/
             if(rc != 0) return rc;
             rc = VCursorPermitPostOpenAdd( curs );
             if(rc != 0) return rc;
@@ -175,7 +184,7 @@ rc_t open_sub_cursor ( SubSelect **fself, const VXfactInfo *info, const VFactory
         }
         native_curs = NULL;
     }
-    else /** we don't now if native_curs permits adding columns **/
+    else /** we don't know if native_curs permits adding columns **/
     {
         tbl = info -> tbl;
         rc = VTableCreateCachedCursorRead ( tbl, & curs, 0 ); /*** some random io is expected ***/
