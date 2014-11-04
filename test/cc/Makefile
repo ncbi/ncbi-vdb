@@ -22,37 +22,39 @@
 #
 # ===========================================================================
 
-by_default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+default: runtests
 
-include $(TOP)/build/Makefile.shell
+TOP ?= $(abspath ../..)
+MODULE = test/cc
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+	test-asm
 
-#-------------------------------------------------------------------------------
-# default
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(ALL_LIBS) $(TEST_TOOLS)
+
+clean: stdclean
+
+#----------------------------------------------------------------
+# asm-test
 #
-SUBDIRS =    \
-    ktst     \
-    cc       \
-    judy_test\
-    kfc      \
-    klib     \
-    kfg      \
-    kns      \
-    kproc    \
-    ngs      \
-    ngs-c++  \
-    vfs      \
-    vxf      \
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+ASM_TEST_SRC = \
+	asm-test
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
+ASM_TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(ASM_TEST_SRC))
 
-.PHONY: default $(SUBDIRS)
+ASM_TEST_LIB = \
+	-skapp \
+    -sncbi-vdb \
+    -sktst
+
+$(TEST_BINDIR)/test-asm: $(ASM_TEST_OBJ)
+	$(LP) --exe -o $@ $^ $(ASM_TEST_LIB)
 

@@ -22,37 +22,46 @@
 #
 # ===========================================================================
 
-by_default: runtests
+default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+TOP ?= $(abspath ../..)
 
-include $(TOP)/build/Makefile.shell
+MODULE = test/vxf
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+	wb-test-vxf
+
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(TEST_TOOLS)
+
+clean: stdclean
 
 #-------------------------------------------------------------------------------
-# default
+# white-box test
 #
-SUBDIRS =    \
-    ktst     \
-    cc       \
-    judy_test\
-    kfc      \
-    klib     \
-    kfg      \
-    kns      \
-    kproc    \
-    ngs      \
-    ngs-c++  \
-    vfs      \
-    vxf      \
+TEST_SRC = \
+	wb-test-vxf \
+	wb-irzip-impl
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_SRC))
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
+TEST_LIBS = \
+    -skapp \
+    -sktst \
+	-sncbi-vdb \
+	-sxml2 \
+	-sm
 
-.PHONY: default $(SUBDIRS)
+$(TEST_BINDIR)/wb-test-vxf: $(TEST_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_LIBS)
+
+#-------------------------------------------------------------------------------
+# valgrind
+valgrind: wb-test-vxf
+	valgrind --ncbi $(TEST_BINDIR)/wb-test-vxf
 

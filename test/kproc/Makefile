@@ -22,37 +22,39 @@
 #
 # ===========================================================================
 
-by_default: runtests
+default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+TOP ?= $(abspath ../..)
+MODULE = test/kproc
 
-include $(TOP)/build/Makefile.shell
+TEST_TOOLS = \
+	test-kproc \
 
-include $(TOP)/build/Makefile.config
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+clean: stdclean
 
 #-------------------------------------------------------------------------------
-# default
+# test-kproc
 #
-SUBDIRS =    \
-    ktst     \
-    cc       \
-    judy_test\
-    kfc      \
-    klib     \
-    kfg      \
-    kns      \
-    kproc    \
-    ngs      \
-    ngs-c++  \
-    vfs      \
-    vxf      \
+TEST_KPROC_SRC = \
+	kproctest 
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+TEST_KPROC_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_KPROC_SRC))
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
+TEST_KPROC_LIB = \
+	-skapp \
+	-sktst \
+    -sncbi-vdb
 
-.PHONY: default $(SUBDIRS)
+$(TEST_BINDIR)/test-kproc: $(TEST_KPROC_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_KPROC_LIB)
 
+#-------------------------------------------------------------------------------
+# valgrind
+valgrind: test-kproc
+	valgrind --ncbi $(TEST_BINDIR)/test-kproc
