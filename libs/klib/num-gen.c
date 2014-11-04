@@ -843,6 +843,17 @@ LIB_EXPORT rc_t CC num_gen_range_check( struct num_gen * self, const int64_t fir
 }
 
 
+LIB_EXPORT rc_t CC num_gen_copy( const struct num_gen * self, struct num_gen ** dest )
+{
+	rc_t rc = num_gen_make( dest );
+	if ( rc == 0 )
+	{
+		num_gen_copy_vector( &( self -> nodes ), &( ( *dest ) -> nodes ) );
+	}
+	return rc;
+}
+
+
 static int64_t min_vector_value( Vector * v )
 {
     int64_t res = 0;
