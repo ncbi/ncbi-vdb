@@ -24,8 +24,6 @@
   <ItemDefinitionGroup>
     <Link>
       <AdditionalDependencies>$(VDB_TARGET)lib\ncbi-vdb.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies>$(VDB_TARGET)lib\zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies>$(VDB_TARGET)lib\bz2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   
@@ -33,9 +31,5 @@
     <ClCompile Include="..\..\..\test\vxf\wb-test-vxf.cpp" />
     <ClCompile Include="..\..\..\test\vxf\wb-irzip-impl.c" />
   </ItemGroup>
-  
-    <Target Name="AfterBuild" Condition="'$(Autorun)'=='true'">
-        <Exec Command="$(OutDir)$(TargetName)$(TargetExt)" WorkingDirectory="$(ProjectDir)"/>
-    </Target>
   
 </Project>

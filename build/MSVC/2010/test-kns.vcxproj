@@ -19,13 +19,15 @@
     </ProjectConfiguration>
   </ItemGroup>
   
+  <PropertyGroup>
+    <WorkingDirectory>kns</WorkingDirectory>
+  </PropertyGroup>    
+  
   <Import Project=".\test-project.props" />
   
   <ItemDefinitionGroup>
     <Link>
       <AdditionalDependencies>$(VDB_TARGET)lib\ncbi-vdb.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies>$(VDB_TARGET)lib\zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies>$(VDB_TARGET)lib\bz2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   
@@ -42,9 +44,5 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{FC91CF87-4852-42FD-BD18-7D82E52A8AF5}</ProjectGuid>
   </PropertyGroup>
-  
-    <Target Name="AfterBuild" Condition="'$(Autorun)'=='true'">
-        <Exec Command="$(OutDir)$(TargetName)$(TargetExt)" WorkingDirectory="$(VDB_ROOT)test\kns\"/>
-    </Target>
   
 </Project>
