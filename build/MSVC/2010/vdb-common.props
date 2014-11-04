@@ -26,8 +26,8 @@
     </PropertyGroup>
   
     <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
-        <WholeProgramOptimization>true</WholeProgramOptimization>
-        <UseDebugLibraries>false</UseDebugLibraries>
+        <WholeProgramOptimization>false</WholeProgramOptimization>
+        <UseDebugLibraries>true</UseDebugLibraries>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
         <WholeProgramOptimization>true</WholeProgramOptimization>
