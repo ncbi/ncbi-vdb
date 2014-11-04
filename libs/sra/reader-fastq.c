@@ -268,7 +268,7 @@ rc_t FastqReader_Header(const FastqReader* self, bool* label,
     if( self->dad.options & eOrigFormat ) {
         char tmp[1024];
         if( spotname_sz == 0 ) {
-            ret = snprintf(tmp, sizeof(tmp) - 1, "%s.%u", self->dad.accession, self->dad.spot);
+            ret = snprintf(tmp, sizeof(tmp) - 1, "%s.%ld", self->dad.accession, self->dad.spot);
             if ( ret < 0 )
                 return RC ( rcSRA, rcString, rcConstructing, rcData, rcCorrupt );
             spotname = tmp;
@@ -284,22 +284,22 @@ rc_t FastqReader_Header(const FastqReader* self, bool* label,
         if( addLabel && readId > 0 ) {
             sep = spotname_sz ? "_" : "";
             if( self->dad.options & ePrintReadId ) {
-                ret = snprintf(buf, maxlen, "%c%s.%u.%d %.*s%s%.*s length=%d",
+                ret = snprintf(buf, maxlen, "%c%s.%ld.%d %.*s%s%.*s length=%d",
                     prefix, self->dad.accession, self->dad.spot, readId, spotname_sz, spotname, sep, read_label_sz, read_label, read_len);
             } else {
-                ret = snprintf(buf, maxlen, "%c%s.%u %.*s%s%.*s length=%d",
+                ret = snprintf(buf, maxlen, "%c%s.%ld %.*s%s%.*s length=%d",
                     prefix, self->dad.accession, self->dad.spot, spotname_sz, spotname, sep, read_label_sz, read_label, read_len);
             }
         } else if( readId > 0 ) {
             if( self->dad.options & ePrintReadId ) {
-                ret = snprintf(buf, maxlen, "%c%s.%u.%d %.*s%slength=%d",
+                ret = snprintf(buf, maxlen, "%c%s.%ld.%d %.*s%slength=%d",
                     prefix, self->dad.accession, self->dad.spot, readId, spotname_sz, spotname, sep, read_len);
             } else {
-                ret = snprintf(buf, maxlen, "%c%s.%u %.*s%slength=%d",
+                ret = snprintf(buf, maxlen, "%c%s.%ld %.*s%slength=%d",
                     prefix, self->dad.accession, self->dad.spot, spotname_sz, spotname, sep, read_len);
             }
         } else {
-            ret = snprintf(buf, maxlen, "%c%s.%u %.*s%slength=%u",
+            ret = snprintf(buf, maxlen, "%c%s.%ld %.*s%slength=%u",
                 prefix, self->dad.accession, self->dad.spot, spotname_sz, spotname, sep, spot_len);
         }
     }

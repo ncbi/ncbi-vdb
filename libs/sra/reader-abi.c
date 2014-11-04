@@ -283,7 +283,7 @@ LIB_EXPORT rc_t CC AbsolidReaderHeader(const AbsolidReader* self, uint32_t readI
     if( self->dad.options & eOrigFormat ) {
         char tmp[1024];
         if( spotname_sz == 0 ) {
-            spotname_sz = snprintf(tmp, sizeof(tmp) - 1, "%s.%u", self->dad.accession, self->dad.spot);
+            spotname_sz = snprintf(tmp, sizeof(tmp) - 1, "%s.%ld", self->dad.accession, self->dad.spot);
             if ( spotname_sz < 0 )
                 return RC ( rcSRA, rcString, rcConstructing, rcData, rcCorrupt );
             spotname = tmp;
@@ -295,10 +295,10 @@ LIB_EXPORT rc_t CC AbsolidReaderHeader(const AbsolidReader* self, uint32_t readI
         }
     } else {
         if( readId > 0 && read_label_sz > 0 ) {
-            ret = snprintf(data, dsize, ">%s.%u %.*s%s%.*s",
+            ret = snprintf(data, dsize, ">%s.%ld %.*s%s%.*s",
                 self->dad.accession, self->dad.spot, spotname_sz, spotname, spotname_sz ? "_" : "", read_label_sz, read_label);
         } else {
-            ret = snprintf(data, dsize, ">%s.%u %.*s",
+            ret = snprintf(data, dsize, ">%s.%ld %.*s",
                            self->dad.accession, self->dad.spot, spotname_sz, spotname);
         }
     }
