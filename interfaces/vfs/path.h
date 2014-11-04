@@ -157,6 +157,12 @@ VFS_EXTERN rc_t CC VPathAddRef ( const VPath *self );
 VFS_EXTERN rc_t CC VPathRelease ( const VPath *self );
 
 
+/* IsAcessionOrOID
+ *  asks if the path pattern could possibly be an accession or oid
+ */
+VFS_EXTERN bool CC VPathIsAccessionOrOID ( const VPath * self );
+
+
 /* IsFSCompatible
  *  asks if the path can be used with the OS' filesystems
  */

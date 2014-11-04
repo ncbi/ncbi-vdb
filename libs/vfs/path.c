@@ -2091,6 +2091,26 @@ LIB_EXPORT rc_t CC VPathRelease ( const VPath *self )
 }
 
 
+/* IsAcessionOrOID
+ *  asks if the path pattern could possibly be an accession or oid
+ */
+LIB_EXPORT bool CC VPathIsAccessionOrOID ( const VPath * self )
+{
+    if ( self != NULL )
+    {
+        switch ( self -> path_type )
+        {
+        case vpOID:
+        case vpAccession:
+        case vpNameOrOID:
+        case vpNameOrAccession:
+            return true;
+        }
+    }
+    return false;
+}
+
+
 /* IsFSCompatible
  *  asks if the path can be used with the OS' filesystems
  */
