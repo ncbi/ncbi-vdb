@@ -193,8 +193,8 @@ typedef struct {
 } U32;
 typedef struct {
     U64 BASE_COUNT;
-    U64 MAX_SPOT_ID;
-    U64 MIN_SPOT_ID;
+    U32 MAX_SPOT_ID;
+    U32 MIN_SPOT_ID;
     U64 SPOT_COUNT;
 } PseudoMeta;
 static
@@ -280,9 +280,9 @@ rc_t PseudoMetaInit(PseudoMeta *self, const VCursor *curs,
 
     rc = VCursor_ReadPseudoMetaU64(rc, curs, "BASE_COUNT", &self->BASE_COUNT);
 
-    rc = VCursor_ReadPseudoMetaU64(rc, curs, "MIN_SPOT_ID", &self->MIN_SPOT_ID);
+    rc = VCursor_ReadPseudoMetaU32(rc, curs, "MIN_SPOT_ID", &self->MIN_SPOT_ID); 
 
-    rc = VCursor_ReadPseudoMetaU64(rc, curs, "MAX_SPOT_ID", &self->MAX_SPOT_ID);
+    rc = VCursor_ReadPseudoMetaU32(rc, curs, "MAX_SPOT_ID", &self->MAX_SPOT_ID);
 
     return rc;
 }
@@ -308,8 +308,8 @@ rc_t PseudoMetaFix(PseudoMeta *self)
                 = self->MIN_SPOT_ID.value + self->SPOT_COUNT.value - 1;
         }
         else if (self->MAX_SPOT_ID.value >= self->MIN_SPOT_ID.value) {
-            if (self->SPOT_COUNT.value
-                > self->MAX_SPOT_ID.value - self->MIN_SPOT_ID.value + 1)
+	    uint32_t delta = (uint32_t) (self->SPOT_COUNT.value - (self->MAX_SPOT_ID.value - self->MIN_SPOT_ID.value + 1)); /** SPOT_COUNT is 64 bit, but M*_SPOT_ID is 32; anticipate rollover **/
+            if ( delta )
             {
                 self->SPOT_COUNT.value
                     = self->MAX_SPOT_ID.value - self->MIN_SPOT_ID.value + 1;
@@ -353,6 +353,13 @@ rc_t SRATableLoadMetadata(SRATable * self)
     self->base_count = meta.BASE_COUNT.value;
     self->min_spot_id = meta.MIN_SPOT_ID.value;
     self->max_spot_id = meta.MAX_SPOT_ID.value;
+
+    {
+	int64_t delta = self->spot_count - (self->max_spot_id-self->min_spot_id+1);
+	if(delta>0 && ((uint32_t)delta)==0){/* there was a rollover*/
+		self->max_spot_id = self->min_spot_id + self->spot_count - 1;
+	}
+    }
 
     return rc;
 }
