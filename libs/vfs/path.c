@@ -2055,6 +2055,175 @@ rc_t VPathMakeFromText ( VPath ** ppath, const char * text, ... )
     return rc;
 }
 
+/* MakePathWithExtension
+ *  makes a copy of original path
+ *  appends an extension to path portion of orig
+ */
+LIB_EXPORT rc_t CC VFSManagerMakePathWithExtension ( struct VFSManager const * self,
+    VPath ** new_path, const VPath * orig, const char * extension )
+{
+    rc_t rc;
+
+    if ( new_path == NULL )
+        rc = RC ( rcVFS, rcPath, rcCopying, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcVFS, rcPath, rcCopying, rcSelf, rcNull );
+        else if ( orig == NULL )
+            rc = RC ( rcVFS, rcPath, rcCopying, rcParam, rcNull );
+        else if ( orig -> path_type == vpInvalid || orig -> path_type > vpEndpoint )
+            rc = RC ( rcVFS, rcPath, rcCopying, rcParam, rcInvalid );
+        else if ( orig -> path_type > vpFullPath )
+            rc = RC ( rcVFS, rcPath, rcCopying, rcParam, rcIncorrect );
+        else if ( extension == NULL || extension [ 0 ] == 0 )
+        {
+            rc = VPathAddRef ( orig );
+            if ( rc == 0 )
+            {
+                * new_path = ( VPath * ) orig;
+                return 0;
+            }
+        }
+        else
+        {
+            char path_prefix [ 4096 ];
+            size_t num_writ, total = 0;
+
+            rc = 0;
+
+            /* add in original scheme */
+            if ( orig -> from_uri && orig -> scheme . size != 0 )
+            {
+                rc = string_printf ( & path_prefix [ total ], sizeof path_prefix - total,
+                    & num_writ, "%S://", & orig -> scheme );
+                if ( rc == 0 )
+                    total += num_writ;
+
+                /* if there's a host spec of some sort */
+                if ( rc == 0 && orig -> host . size != 0 )
+                {
+                    /* add in original auth */
+                    if ( orig -> auth . size != 0 )
+                    {
+                        rc = string_printf ( & path_prefix [ total ], sizeof path_prefix - total,
+                            & num_writ, "%S@", & orig -> auth );
+                        if ( rc == 0 )
+                            total += num_writ;
+                    }
+
+                    /* add in host */
+                    if ( rc == 0 )
+                    {
+                        rc = string_printf ( & path_prefix [ total ], sizeof path_prefix - total,
+                            & num_writ, "%S", & orig -> host );
+                        if ( rc == 0 )
+                            total += num_writ;
+                    }
+
+                    /* add in port */
+                    if ( rc == 0 )
+                    {
+                        num_writ = 0;
+                        if ( orig -> portname . size != 0 )
+                        {
+                            rc = string_printf ( & path_prefix [ total ], sizeof path_prefix - total,
+                                & num_writ, ":%S", & orig -> portname );
+                        }
+                        else if ( orig -> portnum != 0 )
+                        {
+                            rc = string_printf ( & path_prefix [ total ], sizeof path_prefix - total,
+                                & num_writ, ":%u", orig -> portnum );
+                        }
+                        else if ( orig -> missing_port )
+                        {
+                            rc = string_printf ( & path_prefix [ total ], sizeof path_prefix - total,
+                                & num_writ, ":" );
+                        }
+                        if ( rc == 0 )
+                            total += num_writ;
+                    }
+                }
+            }
+
+            if ( rc == 0 )
+            {
+                /* copy orig */
+                switch ( orig -> path_type )
+                {
+                case vpOID:
+
+                    if ( total != 0 )
+                    {
+                        rc = VPathMakeFromText ( new_path
+                                                 , "%.*s/%u%s%S%S"
+                                                 , ( uint32_t ) total, path_prefix
+                                                 , orig -> obj_id
+                                                 , extension
+                                                 , & orig -> query
+                                                 , & orig -> fragment
+                            );
+                    }
+                    else
+                    {
+                        rc = VPathMakeFromText ( new_path
+                                                 , "%u%s%S%S"
+                                                 , orig -> obj_id
+                                                 , extension
+                                                 , & orig -> query
+                                                 , & orig -> fragment
+                            );
+                    }
+                    break;
+
+                case vpAccession:
+                case vpNameOrOID:
+                case vpNameOrAccession:
+                case vpName:
+                case vpRelPath:
+                case vpUNCPath:
+
+                    /* no break */
+
+                case vpFullPath:
+
+                    assert ( orig -> path . size != 0 );
+                    if ( total != 0 )
+                    {
+                        rc = VPathMakeFromText ( new_path
+                                                 , "%.*s%S%s%S%S"
+                                                 , ( uint32_t ) total, path_prefix
+                                                 , & orig -> path
+                                                 , extension
+                                                 , & orig -> query
+                                                 , & orig -> fragment
+                            );
+                    }
+                    else
+                    {
+                        rc = VPathMakeFromText ( new_path
+                                                 , "%S%s%S%S"
+                                                 , & orig -> path
+                                                 , extension
+                                                 , & orig -> query
+                                                 , & orig -> fragment
+                            );
+                    }
+                    break;
+                }
+
+                if ( rc == 0 )
+                    return 0;
+            }
+        }
+
+        * new_path = NULL;
+    }
+
+    return rc;
+}
+
+
 /* AddRef
  * Release
  *  ignores NULL references

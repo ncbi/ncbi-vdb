@@ -427,8 +427,133 @@ rc_t ParseUrlTest ( const VFSManager * vfs )
         }
     }
     
-    return rc;
+    return 0;
 }
+
+static
+rc_t ModifyPathTest ( const VFSManager * vfs )
+{
+    rc_t rc;
+    size_t i;
+    static const char *test_urls [] =
+    {
+        /* simple accessions */
+        "SRR123456",
+        "NZ_AAEW01000001",
+        "NA000008777.1",
+        "GCA_012345678.1_S",
+
+        /* oid */
+        "123456",
+
+        /* names */
+        "SRR000123.sra",
+
+        /* urls */
+        "http://www.abc.com/library/index.html",
+        "http://www.abc.com/library/index.html?x&y=123&z=test#ignore-me",
+
+        /* having auth portion */
+        "ftp://anonftp@ftp.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByRun/sra/SRR/SRR053/SRR053325/SRR053325.sra",
+
+        /* unc */
+        "//this/is/a/really/nice/UNC/path",
+        "ncbi-file://here/is/another",
+        "ncbi-file://here/is/yet/another#fraggy-the-bear",
+
+        /* degenerate fs paths */
+        "/path/10315_3#63.bam"
+    };
+    const size_t num_urls = sizeof test_urls / sizeof test_urls [ 0 ];
+
+    static const char *fail_url [] = 
+    {
+        /* host */
+        "http://www.abc.com",
+        "http://www.abc.com:80"
+    };
+    const size_t num_fail_urls = sizeof fail_url / sizeof fail_url [ 0 ];
+
+    static const char *test_ext [] =
+    {
+        ".vdbcache",
+        "_underscore_ext",
+        "",
+        NULL
+    };
+    const size_t num_ext = sizeof test_ext / sizeof test_ext [ 0 ];
+    
+    for ( i = 0; i < num_urls; ++ i )
+    {
+        VPath * orig;
+        
+        String url;
+        StringInitCString ( & url, test_urls [ i ] );
+        
+        rc  = VFSManagerMakePath ( vfs, & orig, "%S", & url );
+        if ( rc == 0 )
+        {
+            size_t j;
+            for ( j = 0; j < num_ext; ++ j )
+            {
+                VPath * vpath;
+                rc = VFSManagerMakePathWithExtension ( vfs, & vpath, orig, test_ext [ j ] );
+                if ( rc == 0 )
+                {
+                    OUTMSG ( ( "%s - VFSManagerMakePathWithExtension succeeded -- %zu:%zu: '%S' + '%s'\n"
+                               , __func__, i, j, & url, test_ext [ j ] ) );
+                    VPathDisplay ( vpath );
+                    VPathRelease ( vpath );
+                }
+                else
+                {
+                    OUTMSG (( "%s: VFSManagerMakePathWithExtension failed on iteration: '%zu:%zu' url: '%S' + '%s'\n"
+                              "with rc=%R\n\n", __func__, i, j, & url, test_ext [ j ], rc ));
+                    return rc;
+                }
+            }
+
+            VPathRelease ( orig );
+        }
+    }
+    
+    for ( i = 0; i < num_fail_urls; ++ i )
+    {
+        VPath * orig;
+        
+        String url;
+        StringInitCString ( & url, fail_url [ i ] );
+        
+        rc  = VFSManagerMakePath ( vfs, & orig, "%S", & url );
+        if ( rc == 0 )
+        {
+            size_t j;
+            for ( j = 0; j < num_ext; ++ j )
+            {
+                VPath * vpath;
+                rc = VFSManagerMakePathWithExtension ( vfs, & vpath, orig, test_ext [ j ] );
+                if ( rc != 0 )
+                {
+                    OUTMSG ( ( "%s - VFSManagerMakePathWithExtension properly caught error -- %zu:%zu: '%S' + '%s'\n"
+                               "with rc=%R\n\n", __func__, i, j, & url, test_ext [ j ], rc ) );
+                    rc = 0;
+                }
+                else
+                {
+                    OUTMSG (( "%s: VFSManagerMakePathWithExtension failed to catch error on iteration: '%zu:%zu' url: '%S' + '%s'\n"
+                              , __func__, i, j, & url, test_ext [ j ] ));
+                    VPathDisplay ( vpath );
+                    VPathRelease ( vpath );
+                }
+            }
+
+            VPathRelease ( orig );
+        }
+    }
+
+    return 0;
+}
+
 
 /* Version  EXTERN
  *  return 4-part version code: 0xMMmmrrrr, where
@@ -467,6 +592,8 @@ rc_t run ( const char *progname )
     if ( rc == 0 )
     {
         rc = ParseUrlTest ( vfs );
+        if ( rc == 0 )
+            rc = ModifyPathTest ( vfs );
         VFSManagerRelease ( vfs );
     }
     return rc;
