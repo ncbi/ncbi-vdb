@@ -193,8 +193,8 @@ typedef struct {
 } U32;
 typedef struct {
     U64 BASE_COUNT;
-    U32 MAX_SPOT_ID;
-    U32 MIN_SPOT_ID;
+    U64 MAX_SPOT_ID;
+    U64 MIN_SPOT_ID;
     U64 SPOT_COUNT;
 } PseudoMeta;
 static
@@ -280,9 +280,9 @@ rc_t PseudoMetaInit(PseudoMeta *self, const VCursor *curs,
 
     rc = VCursor_ReadPseudoMetaU64(rc, curs, "BASE_COUNT", &self->BASE_COUNT);
 
-    rc = VCursor_ReadPseudoMetaU32(rc, curs, "MIN_SPOT_ID", &self->MIN_SPOT_ID);
+    rc = VCursor_ReadPseudoMetaU64(rc, curs, "MIN_SPOT_ID", &self->MIN_SPOT_ID);
 
-    rc = VCursor_ReadPseudoMetaU32(rc, curs, "MAX_SPOT_ID", &self->MAX_SPOT_ID);
+    rc = VCursor_ReadPseudoMetaU64(rc, curs, "MAX_SPOT_ID", &self->MAX_SPOT_ID);
 
     return rc;
 }
