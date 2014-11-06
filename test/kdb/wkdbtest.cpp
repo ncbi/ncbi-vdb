@@ -30,13 +30,19 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <sysalloc.h>
+
 #include <kdb/manager.h>
 #include <kdb/database.h>
 #include <kdb/index.h>
+#include <kdb/table.h>
 
 using namespace std;
 
 TEST_SUITE(KdbTestSuite);
+
+#define KDB_MANAGER_MAKE(mgr, wd) KDBManagerMakeUpdate((KDBManager **)mgr, (struct KDirectory *)wd)
+#include "remote_open_test.cpp"
 
 TEST_CASE(MissingRows)
 {   // VDB-177
@@ -78,6 +84,8 @@ TEST_CASE(MissingRows)
     REQUIRE_RC(KDirectoryRelease(wd));
     
 }
+
+
 
 //////////////////////////////////////////// Main
 extern "C"

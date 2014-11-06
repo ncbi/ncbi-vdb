@@ -75,7 +75,7 @@ TEST_KDB_LIB = \
 $(TEST_BINDIR)/test-kdb: $(TEST_KDB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KDB_LIB)
 
-valgrind_kdb: $(TEST_BINDIR)/test-kdb
+valgrind_kdb: test-kdb
 	valgrind --ncbi $(TEST_BINDIR)/test-kdb
 
 #-------------------------------------------------------------------------------
@@ -94,3 +94,6 @@ TEST_WKDB_LIB = \
 
 $(TEST_BINDIR)/test-wkdb: $(TEST_WKDB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_WKDB_LIB)
+
+valgrind_wkdb: test-wkdb
+	valgrind --ncbi $(TEST_BINDIR)/test-wkdb
