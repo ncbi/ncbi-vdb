@@ -493,3 +493,4 @@ rc_t KDatabaseListIdx ( struct KDatabase const *self, KNamelist **names )
 
     return RC ( rcDB, rcDatabase, rcListing, rcSelf, rcNull );
 }
+   
