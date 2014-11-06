@@ -305,9 +305,42 @@ FIXTURE_TEST_CASE(KDBManagerVPathOpenDB_Remote_Table, RemoteDBFixture)
     REQUIRE_RC(KDBManagerRelease(mgr));
 }
 
-//TODO: KDBManagerVPathOpenRemoteDBRead(bad URL)
-//TODO: KDBManagerVPathOpenRemoteDBRead(bad cache)
-//TODO: KDBManagerVPathOpenLocalDBRead(bad path)
+FIXTURE_TEST_CASE(KDBManagerVPathOpenDB_Remote_BadPath, RemoteDBFixture)
+{
+    Configure(GetName());
+    
+    const KDBManager* mgr;
+    REQUIRE_RC(KDBManagerMakeRead(&mgr, NULL));
+    const KDatabase * db;
+
+    REQUIRE_RC(VFSManagerMakePath(m_vfsmgr, (VPath**)&m_path, "xxxx"));
+    REQUIRE_RC_FAIL(KDBManagerVPathOpenRemoteDBRead ( mgr, &db, m_path, NULL )); 
+    
+    REQUIRE_RC(KDBManagerRelease(mgr));
+}
+
+FIXTURE_TEST_CASE(KDBManagerVPathOpenDB_Remote_BadCache, RemoteDBFixture)
+{
+    Configure(GetName());
+    Resolve("SRR600096");
+    
+    const KDBManager* mgr;
+    REQUIRE_RC(KDBManagerMakeRead(&mgr, NULL));
+    const KDatabase * db;
+    
+    VPath* cache;
+    REQUIRE_RC(VFSManagerMakePath(m_vfsmgr, &cache, "/dev/null")); // unlikely to be usable
+    REQUIRE_RC(KDBManagerVPathOpenRemoteDBRead ( mgr, &db, m_path, cache )); 
+    REQUIRE_RC(VPathRelease(cache));
+
+    /* read something */
+    const KTable *tbl;
+    REQUIRE_RC(KDatabaseOpenTableRead(db, &tbl, "SEQUENCE")); // works anyway, just not caching
+    REQUIRE_RC(KTableRelease(tbl));
+    
+    REQUIRE_RC(KDatabaseRelease(db));
+    REQUIRE_RC(KDBManagerRelease(mgr));
+}
 
 //////////////////////////////////////////// Main
 extern "C"
