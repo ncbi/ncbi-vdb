@@ -2224,6 +2224,111 @@ LIB_EXPORT rc_t CC VFSManagerMakePathWithExtension ( struct VFSManager const * s
 }
 
 
+/* ExtractAccessionOrOID
+ *  given an arbitrary path, possibly with extensions,
+ *  extract the portion of the leaf qualifying as an
+ *  accession or OID
+ */
+LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
+    VPath ** acc_or_oid, const VPath * orig )
+{
+    rc_t rc;
+
+    if ( acc_or_oid == NULL )
+        rc = RC ( rcVFS, rcPath, rcConstructing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcVFS, rcPath, rcConstructing, rcSelf, rcNull );
+        else if ( orig == NULL )
+            rc = RC ( rcVFS, rcPath, rcConstructing, rcParam, rcNull );
+        else if ( VPathIsAccessionOrOID ( orig ) )
+        {
+            rc = VPathAddRef ( orig );
+            if ( rc == 0 )
+            {
+                * acc_or_oid = ( VPath* ) orig;
+                return 0;
+            }
+        }
+        else
+        {
+            String path = orig -> path;
+            const char * sep, * start = path . addr;
+            const char * end = path . addr + path . size;
+
+            switch ( orig -> path_type )
+            {
+            case vpInvalid:
+                rc = RC ( rcVFS, rcPath, rcConstructing, rcParam, rcInvalid );
+                break;
+
+            case vpName:
+                break;
+
+            case vpRelPath:
+            case vpUNCPath:
+            case vpFullPath:
+                sep = string_rchr ( start, path . size, '/' );
+                if ( sep != NULL )
+                    start = sep + 1;
+                break;
+
+            default:
+                rc = RC ( rcVFS, rcPath, rcConstructing, rcParam, rcIncorrect );
+            }
+
+            /* strip off known extensions */
+            while ( 1 )
+            {
+                sep = string_rchr ( start, end - start, '.' );
+                if ( sep == NULL )
+                    break;
+
+                switch ( end - sep )
+                {
+                case 4:
+                    if ( strcase_cmp ( ".sra", 4, sep, 4, 4 ) == 0 ||
+                         strcase_cmp ( ".wgs", 4, sep, 4, 4 ) == 0 )
+                        end = sep;
+                    {
+                        end = sep;
+                        continue;
+                    }
+                case 9:
+                    if ( strcase_cmp ( ".vdbcache", 9, sep, 9, 9 ) == 0 ||
+                         strcase_cmp ( ".ncbi_enc", 9, sep, 9, 9 ) == 0 )
+                    {
+                        end = sep;
+                        continue;
+                    }
+                    break;
+                }
+                break;
+            }
+
+            /* create a new VPath */
+            rc = VPathMakeFromText ( acc_or_oid, "%.*s", ( uint32_t ) ( end - start ), start );
+            if ( rc == 0 )
+            {
+                const VPath * vpath = * acc_or_oid;
+                if ( VPathIsAccessionOrOID ( vpath ) )
+                    return 0;
+
+                VPathRelease ( vpath );
+
+                rc = RC ( rcVFS, rcPath, rcConstructing, rcParam, rcIncorrect );
+            }
+        }
+
+        * acc_or_oid = NULL;
+    }
+
+    return rc;
+}
+
+
+
 /* AddRef
  * Release
  *  ignores NULL references
