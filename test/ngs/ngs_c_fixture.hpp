@@ -115,10 +115,6 @@ public:
     }
     ~NGS_C_Fixture()
     {
-        if (m_ctx != 0)
-        {
-            std::cout << "NGS_C_Fixture::Release() was not called! Memory leaked." << std::endl;
-        }
     }
     
     virtual void Release()
