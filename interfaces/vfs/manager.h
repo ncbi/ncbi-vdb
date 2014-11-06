@@ -90,9 +90,12 @@ VFS_EXTERN rc_t CC VFSManagerOpenDirectoryRead ( const VFSManager *self,
 VFS_EXTERN rc_t CC VFSManagerOpenDirectoryReadDecrypt ( const VFSManager *self,
     struct KDirectory const **d, const struct VPath * path );
 
+/* VPath has already been resolved to a URL and an optional cache file */
+VFS_EXTERN rc_t CC VFSManagerOpenDirectoryReadDecryptRemote (const struct VFSManager *self,
+    struct KDirectory const **d, const struct VPath * path, const struct VPath * cache);
+
 VFS_EXTERN rc_t CC VFSManagerOpenDirectoryUpdate ( const VFSManager *self,
     struct KDirectory **d, const struct VPath * path );
-
 
 /* OpenFileWrite
  *  opens an existing file with write access

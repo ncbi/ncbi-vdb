@@ -38,6 +38,10 @@
 #include <os-native.h>
 #include <sysalloc.h>
 
+#include <vfs/path.h>
+#include <vfs/manager.h>
+#include <vfs/manager-priv.h>
+
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -703,4 +707,101 @@ LIB_EXPORT rc_t CC KDatabaseListIdx ( struct KDatabase const *self, KNamelist **
         * names = NULL;
 
     return RC ( rcDB, rcDatabase, rcListing, rcSelf, rcNull );
+}
+
+LIB_EXPORT rc_t CC KDBManagerVPathOpenLocalDBRead ( struct KDBManager const * self,
+    struct KDatabase const ** p_db, struct VPath const * vpath )
+{
+    if ( self == NULL )
+        return RC ( rcDB, rcDatabase, rcAccessing, rcSelf, rcNull );
+    if ( p_db == NULL )
+        return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
+    if ( vpath == NULL )
+        return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
+        
+    {   
+        /* vpath has already been resolved and is known to be a local path. 
+           open it if it is a database; avoid an additional round of resolution */
+        const KDirectory *dir;
+        rc_t rc = VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt ( self -> vfsmgr, self -> wd, &dir, vpath );
+        if ( rc == 0 )
+        {
+            if ( ( (~kptAlias) & KDBPathType ( dir, NULL, "." ) ) != kptDatabase )
+            {
+                rc = RC ( rcDB, rcMgr, rcOpening, rcDatabase, rcIncorrect );
+            }
+            else
+            {
+                const String* dbpathStr;
+                rc_t rc = VPathMakeString ( vpath, &dbpathStr );    /* NUL-terminated */
+                if ( rc == 0 )
+                {
+                    KDatabase *db;
+
+                    /* allocate a new guy */
+                    rc = KDatabaseMake ( & db, dir, dbpathStr->addr );/*make it acept VPath*/
+                    if ( rc == 0 )
+                    {
+                        db -> mgr = KDBManagerAttach ( self ); 
+                        * p_db = db;
+                        StringWhack(dbpathStr);
+                        return 0;
+                    }
+                    StringWhack(dbpathStr);
+                }
+            }
+
+            KDirectoryRelease ( dir );
+        }
+        return rc;
+    }
+} 
+
+LIB_EXPORT rc_t CC KDBManagerVPathOpenRemoteDBRead ( struct KDBManager const * self,
+    struct KDatabase const ** p_db, struct VPath const * remote, struct VPath const * cache )
+{
+    if ( self == NULL )
+        return RC ( rcDB, rcDatabase, rcAccessing, rcSelf, rcNull );
+    if ( p_db == NULL )
+        return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
+    if ( remote == NULL )
+        return RC ( rcDB, rcDatabase, rcAccessing, rcParam, rcNull );
+    /* cache == NULL is OK */    
+    
+    {   
+        /*  vpath has already been resolved and is known to be a remote URL. 
+            Open it if it is a database; use the provided cache; avoid an additional round of resolution */
+        const KDirectory *dir;
+        rc_t rc = VFSManagerOpenDirectoryReadDecryptRemote( self -> vfsmgr, &dir, remote, cache );
+        if ( rc == 0 )
+        {
+            if ( ( (~kptAlias) & KDBPathType ( dir, NULL, "." ) ) != kptDatabase )
+            {
+                rc = RC ( rcDB, rcMgr, rcOpening, rcDatabase, rcIncorrect );
+            }
+            else
+            {
+                const String* dbpathStr;
+                rc_t rc = VPathMakeString ( remote, &dbpathStr );    /* NUL-terminated */
+                if ( rc == 0 )
+                {
+                    KDatabase *db;
+
+                    /* allocate a new guy */
+                    rc = KDatabaseMake ( & db, dir, dbpathStr->addr );/*make it acept VPath*/
+                    if ( rc == 0 )
+                    {
+                        db -> mgr = KDBManagerAttach ( self ); 
+                        * p_db = db;
+                        StringWhack(dbpathStr);
+                        return 0;
+                    }
+                    StringWhack(dbpathStr);
+                }
+            }
+
+            KDirectoryRelease ( dir );
+        }
+        return rc;
+    }
 }
