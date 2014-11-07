@@ -20,7 +20,7 @@
   </ItemGroup>
   
     <PropertyGroup>
-        <WorkingDirectory>$(ProjectDir)..\..\..\test\kdb\</WorkingDirectory>
+        <WorkingDirectory>kdb</WorkingDirectory>
     </PropertyGroup>    
   
   <Import Project=".\test-project.props" />
