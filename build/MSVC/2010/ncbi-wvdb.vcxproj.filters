@@ -1195,5 +1195,8 @@
     <ClCompile Include="..\..\..\libs\klib\num-gen.c">
       <Filter>klib</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\progressbar.c">
+      <Filter>klib</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
