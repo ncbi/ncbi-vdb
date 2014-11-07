@@ -199,6 +199,19 @@ rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path )
     return 0;
 }
 
+static
+rc_t KDatabaseMakeVPath ( KDatabase **dbp, const KDirectory *dir, const VPath* path )
+{
+    const String* dbpathStr;
+    rc_t rc = VPathMakeString ( path, &dbpathStr );    /* NUL-terminated */
+    if ( rc == 0 )
+    {
+        rc = KDatabaseMake ( dbp, dir, dbpathStr->addr );
+        StringWhack(dbpathStr);
+    }
+    return rc;
+}
+
 
 /* OpenDBRead
  * VOpenDBRead
@@ -731,23 +744,14 @@ LIB_EXPORT rc_t CC KDBManagerVPathOpenLocalDBRead ( struct KDBManager const * se
                 rc = RC ( rcDB, rcMgr, rcOpening, rcDatabase, rcIncorrect );
             }
             else
-            {
-                const String* dbpathStr;
-                rc_t rc = VPathMakeString ( vpath, &dbpathStr );    /* NUL-terminated */
+            {   /* allocate a new guy */
+                KDatabase *db;
+                rc = KDatabaseMakeVPath ( & db, dir, vpath );
                 if ( rc == 0 )
                 {
-                    KDatabase *db;
-
-                    /* allocate a new guy */
-                    rc = KDatabaseMake ( & db, dir, dbpathStr->addr );/*make it acept VPath*/
-                    if ( rc == 0 )
-                    {
-                        db -> mgr = KDBManagerAttach ( self ); 
-                        * p_db = db;
-                        StringWhack(dbpathStr);
-                        return 0;
-                    }
-                    StringWhack(dbpathStr);
+                    db -> mgr = KDBManagerAttach ( self ); 
+                    * p_db = db;
+                    return 0;
                 }
             }
 
@@ -780,23 +784,14 @@ LIB_EXPORT rc_t CC KDBManagerVPathOpenRemoteDBRead ( struct KDBManager const * s
                 rc = RC ( rcDB, rcMgr, rcOpening, rcDatabase, rcIncorrect );
             }
             else
-            {
-                const String* dbpathStr;
-                rc_t rc = VPathMakeString ( remote, &dbpathStr );    /* NUL-terminated */
+            {   /* allocate a new guy */
+                KDatabase *db;
+                rc = KDatabaseMakeVPath ( & db, dir, remote );
                 if ( rc == 0 )
                 {
-                    KDatabase *db;
-
-                    /* allocate a new guy */
-                    rc = KDatabaseMake ( & db, dir, dbpathStr->addr );/*make it acept VPath*/
-                    if ( rc == 0 )
-                    {
-                        db -> mgr = KDBManagerAttach ( self ); 
-                        * p_db = db;
-                        StringWhack(dbpathStr);
-                        return 0;
-                    }
-                    StringWhack(dbpathStr);
+                    db -> mgr = KDBManagerAttach ( self ); 
+                    * p_db = db;
+                    return 0;
                 }
             }
 
