@@ -124,6 +124,7 @@ KLIB_SRC = \
 	judy-vector \
 	report \
 	num-gen \
+	progressbar \
 	sra-release-version
 #	path
 
