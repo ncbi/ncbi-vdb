@@ -72,9 +72,10 @@ void CC RestoreReadWhack ( void *obj )
 }
 
 static
-rc_t RestoreReadMake ( RestoreRead **objp, const VTable *tbl )
+rc_t RestoreReadMake ( RestoreRead **objp, const VTable *tbl, const VCursor* native_curs )
 {
     rc_t rc;
+    char name[]="PRIMARY_ALIGNMENT";
 
     /* create the object */
     RestoreRead *obj = malloc ( sizeof * obj );
@@ -84,43 +85,46 @@ rc_t RestoreReadMake ( RestoreRead **objp, const VTable *tbl )
     }
     else
     {
-        /* get at the parent database */
-        const VDatabase *db;
-        rc = VTableOpenParentRead ( tbl, & db );
-        if ( rc == 0 )
-        {
-            /* open the primary alignment table */
-            const VTable *patbl;
-            rc = VDatabaseOpenTableRead ( db, & patbl, "PRIMARY_ALIGNMENT" );
-            VDatabaseRelease ( db );
-            if ( rc == 0 )
-            {
-                /* create a cursor */
-                rc = VTableCreateCachedCursorRead( patbl, &obj->curs, 32*1024*1024UL );
-                VTableRelease ( patbl );
-                if ( rc == 0 )
-                {
-                    /* add columns to cursor */
-                    rc = VCursorAddColumn ( obj -> curs, & obj -> read_idx, "( INSDC:4na:bin ) READ" );
-                    if ( rc == 0 )
-                    {
-                        rc = VCursorOpen ( obj -> curs );
-                        if ( rc == 0 )
-                        {
-
-                            SUB_DEBUG( ( "SUB.Make in 'seq-restore-read.c'\n" ) );
-
-                            * objp = obj;
-                        return 0;
-                        }
-                    }
-                    VCursorRelease ( obj -> curs );
-                }
-            }
-        }
-        free ( obj );
+	rc = VCursorLinkedCursorGet(native_curs,name,&obj->curs);
+	if(rc == 0){
+	    VCursorAddRef(obj->curs);
+	} else {
+		/* get at the parent database */
+		const VDatabase *db;
+		rc = VTableOpenParentRead ( tbl, & db );
+		if ( rc == 0 )
+		{
+		    const VTable *patbl;
+		    /* open the primary alignment table */
+		    rc = VDatabaseOpenTableRead ( db, & patbl, name );
+		    VDatabaseRelease ( db );
+		    if ( rc == 0 )
+		    {
+			/* create a cursor */
+			rc = VTableCreateCachedCursorRead( patbl, &obj->curs, 32*1024*1024UL );
+			VTableRelease ( patbl );
+			if ( rc == 0 )
+			{
+			    /* add columns to cursor */
+			    rc = VCursorAddColumn ( obj -> curs, & obj -> read_idx, "( INSDC:4na:bin ) READ" );
+			    if ( rc == 0 )
+			    {
+				rc = VCursorOpen ( obj -> curs );
+				if ( rc == 0 )
+				{
+				    VCursorLinkedCursorSet( native_curs, name, obj->curs );
+				    SUB_DEBUG( ( "SUB.Make in 'seq-restore-read.c'\n" ) );
+				    * objp = obj;
+				return 0;
+				}
+			    }
+			    VCursorRelease ( obj -> curs );
+			}
+		    }
+		}
+		free ( obj );
+	}
     }
-
     return rc;
 }
 
@@ -253,7 +257,7 @@ VTRANSFACT_IMPL ( ALIGN_seq_restore_read, 1, 0, 0 ) ( const void *Self, const VX
                                                      VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
     RestoreRead *fself;
-    rc_t rc = RestoreReadMake ( & fself, info -> tbl );
+    rc_t rc = RestoreReadMake ( & fself, info -> tbl,  (const VCursor*)info->parms );
     if ( rc == 0 )
     {
         rslt->self = fself;
