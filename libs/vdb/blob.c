@@ -1392,8 +1392,6 @@ rc_t VBlobCacheMake ( VBlobCache **bcp, const VBlob *blob, uint32_t col_idx, siz
 typedef struct VBlobLast {
 	const VBlob *b1;
 	const VBlob *b2;
-	int64_t min;
-        int64_t max;
 } VBlobLast;
 
 struct VBlobMRUCache { /* read-only blob cache */
@@ -1483,8 +1481,6 @@ const VBlob* VBlobMRUCacheFind(const VBlobMRUCache *cself, uint32_t col_idx, int
 	is_phys=false;
 	last_blobs = self->v_last;
     } 
-
-    if(last_blobs->min > row_id || last_blobs->max < row_id) return NULL;
 
     if(col_idx <= LAST_BLOB_CACHE_SIZE){
 	blob = last_blobs[col_idx-1].b1;
@@ -1584,8 +1580,6 @@ rc_t VBlobMRUCacheSave(const VBlobMRUCache *cself, uint32_t col_idx, const VBlob
 			VectorSet(&self->v_cache,col_idx,cache);
 		}
 	}
-        if(last_blobs->min > bc->blob->start_id) last_blobs->min = bc->blob->start_id;
-	if(last_blobs->max < bc->blob->stop_id)  last_blobs->max = bc->blob->stop_id;
 	
         rc = insert_unique_into_kvector(self,cache,bc->blob->start_id,bc,&existing);
         if ( rc != 0 ){
