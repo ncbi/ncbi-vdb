@@ -110,7 +110,8 @@ rc_t KColumnIdx2OpenRead ( KColumnIdx2 *self,
     if ( rc == 0 )
     {
         const KFile * orig = self -> f;
-        rc = KBufFileMakeRead ( & self -> f, self -> f, IDX2_READ_FILE_BUFFER );
+
+        rc = KBufFileMakeRead ( & self -> f, self -> f, eof+1);
 	if ( rc == 0 )
         {
             KFileRelease ( orig );
@@ -255,6 +256,7 @@ BSEARCH_DONE:
                         loc, bloc, count, first, upper );
                     if ( rc == 0 )
                     {
+#if 0			
                         KColumnIdx2BlockCache * cache;
                         KDataBufferResize(&((KColumnIdx2 *)self)->cstorage,self->cstorage.elem_count+1);
                         cache=(KColumnIdx2BlockCache *)self -> cstorage.base;
@@ -266,6 +268,7 @@ BSEARCH_DONE:
                         cache -> start_id = bloc -> start_id;
                         cache -> count = count;
                         cache -> iblk = iblk;
+#endif
                         return 0;
                     }
                 }
