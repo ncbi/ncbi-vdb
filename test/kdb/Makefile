@@ -22,38 +22,78 @@
 #
 # ===========================================================================
 
-by_default: runtests
+#TODO: revive test-btree
 
-TOP ?= $(abspath ..)
-MODULE = test
+default: runtests
 
-include $(TOP)/build/Makefile.shell
+TOP ?= $(abspath ../..)
+MODULE = test/kdb
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+    test-kdb \
+    test-wkdb
+
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(ALL_LIBS) $(TEST_TOOLS)
+
+clean: stdclean
 
 #-------------------------------------------------------------------------------
-# default
+# test btree
 #
-SUBDIRS =    \
-    ktst     \
-    cc       \
-    judy_test\
-    kfc      \
-    klib     \
-    kfg      \
-    kns      \
-    kdb      \
-    kproc    \
-    ngs      \
-    ngs-c++  \
-    vfs      \
-    vxf      \
+TEST_BTREE_SRC = \
+	test-btree
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+TEST_BTREE_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_BTREE_SRC))
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
+TEST_BTREE_LIB = \
+	-skapp \
+	-sncbi-vdb
 
-.PHONY: default $(SUBDIRS)
+$(BINDIR)/test-btree: $(TEST_BTREE_OBJ)
+	$(LD) --exe -o $@ $^ $(TEST_BTREE_LIB)
 
+#-------------------------------------------------------------------------------
+# test-kdb
+#
+TEST_KDB_SRC = \
+	kdbtest 
+
+TEST_KDB_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_KDB_SRC))
+
+TEST_KDB_LIB = \
+    -skapp \
+    -sktst \
+	-sncbi-vdb
+
+$(TEST_BINDIR)/test-kdb: $(TEST_KDB_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_KDB_LIB)
+
+valgrind_kdb: test-kdb
+	valgrind --ncbi $(TEST_BINDIR)/test-kdb
+
+#-------------------------------------------------------------------------------
+# test-wkdb
+#
+TEST_WKDB_SRC = \
+	wkdbtest 
+
+TEST_WKDB_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_WKDB_SRC))
+
+TEST_WKDB_LIB = \
+    -skapp \
+    -sktst \
+	-sncbi-wvdb
+
+$(TEST_BINDIR)/test-wkdb: $(TEST_WKDB_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_WKDB_LIB)
+
+valgrind_wkdb: test-wkdb
+	valgrind --ncbi $(TEST_BINDIR)/test-wkdb

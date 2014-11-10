@@ -157,6 +157,15 @@ VFS_EXTERN rc_t CC VFSManagerMakePathWithExtension ( struct VFSManager const * s
     VPath ** new_path, const VPath * orig, const char * extension );
 
 
+/* ExtractAccessionOrOID
+ *  given an arbitrary path, possibly with extensions,
+ *  extract the portion of the leaf qualifying as an
+ *  accession or OID
+ */
+VFS_EXTERN rc_t CC VFSManagerExtractAccessionOrOID ( struct VFSManager const * self,
+    VPath ** acc_or_oid, const VPath * orig );
+
+
 /* AddRef
  * Release
  *  ignores NULL references

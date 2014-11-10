@@ -106,7 +106,6 @@ KNS_SRC = \
 	http-file          \
 	http-client        \
 	http               \
-#	undyinghttp        \
 
 KNS_OBJ = \
 	$(addsuffix .$(LOBX),$(KNS_SRC))
