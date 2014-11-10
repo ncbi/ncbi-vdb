@@ -556,7 +556,9 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
     }
 
 
-    if(self->curs->cache_curs && self->curs->cache_col_active){
+    if(self->curs->is_sub_cursor){
+	MAX_BLOB_REGROUP=4;
+    }else if(self->curs->cache_curs && self->curs->cache_col_active){
         /*** since cache_cursor exist, trying to avoid prefetching data which is in cache cursor ***/
 	row_id_max = self->curs->cache_empty_end;
 	MAX_BLOB_REGROUP=256;
@@ -2253,7 +2255,7 @@ rc_t VProductionReadBlob ( const VProduction *cself, VBlob **vblob, int64_t id, 
     if ( ! blob -> no_cache )
         return 0;
 #endif
-    if(cctx == NULL && self->cctx.cache != NULL && blob->stop_id > blob->start_id + 4){/** we will benefit from caching here **/
+    if(cctx == NULL && self->cctx.cache != NULL && blob->stop_id > blob->start_id + 2){/** we will benefit from caching here **/
 	VBlobMRUCacheSave(self->cctx.cache,self->cctx.col_idx,blob);
 	return 0;
     }

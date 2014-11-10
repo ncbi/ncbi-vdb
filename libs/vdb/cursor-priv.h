@@ -232,6 +232,8 @@ struct VCursor
     bool permit_post_open_add;
     /* support suspension of schema-declared triggers **/
     bool suspend_triggers;
+    /* cursor used in sub-selects */
+    bool is_sub_cursor; 
     /* cursor for VDB columns located in separate db.tbl ***/
     const struct VCursor* cache_curs;
 };

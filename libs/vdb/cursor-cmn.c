@@ -2273,10 +2273,12 @@ LIB_EXPORT rc_t CC VCursorLinkedCursorSet(const VCursor *cself,const char *tbl,V
     strncpy(node->tbl,tbl,sizeof(node->tbl));
     node->curs=(VCursor*)curs;
     rc = BSTreeInsertUnique(&self->linked_cursors, (BSTNode *)node, NULL, LinkedCursorNodeComp);
-    if (rc)
+    if (rc){
        free(node); 
-    else 
+    } else {
 	VCursorAddRef(curs);
+	((VCursor*)curs)->is_sub_cursor = true;
+    }
     return rc;
 }
 
