@@ -302,8 +302,8 @@ static rc_t deserialize_v0( BlobHeaders **dst, const uint8_t *src, uint64_t ssiz
     uint8_t version;
     uint32_t fmt;
     uint64_t osize;
-    uint32_t op_count;
-    uint32_t arg_count;
+    volatile uint32_t op_count;
+    volatile uint32_t arg_count;
     int64_t x;
     uint64_t sz;
     rc_t rc;
