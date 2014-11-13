@@ -365,7 +365,11 @@ foreach my $href (DEPENDS()) {
     my $o = "with-$_-prefix";
     ++$DEPEND_OPTIONS{$o};
     if ($OPT{$o}) {
-        $I = File::Spec->catdir($OPT{$o}, 'include'); 
+        $I = File::Spec->catdir($OPT{$o}, 'include');
+        if (/^xml2$/) {
+            my $t = File::Spec->catdir($I, 'libxml2');
+            $I = $t if (-e $t);
+        }
         $L = File::Spec->catdir($OPT{$o}, 'lib');
     }
     my ($i, $l) = find_lib($_, $I, $L);
