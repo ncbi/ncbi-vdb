@@ -82,235 +82,6 @@ typedef struct RefSeqMgr_Db_struct {
     const VDatabase* db;
 } RefSeqMgr_Db;
 
-static
-rc_t RefSeqMgr_ConfigValue ( const KConfig *kfg, const char *node_path, char *value, size_t value_size )
-{
-    const KConfigNode *node;
-    rc_t rc = KConfigOpenNodeRead ( kfg, & node, "%s", node_path );
-    if ( rc == 0 )
-    {
-        size_t num_read, remaining;
-        rc = KConfigNodeRead ( node, 0, value, value_size - 1, & num_read,  & remaining );
-        if ( rc == 0 )
-        {
-            if ( remaining != 0 )
-                rc = RC ( rcSRA, rcMgr, rcConstructing, rcString, rcExcessive );
-            else
-                value [ num_read ] = 0;
-        }
-        
-        KConfigNodeRelease ( node );
-    }
-    return rc;
-}
-
-static
-rc_t RefSeqMgr_KfgReadRepositories(const KConfig* kfg, char* paths, size_t paths_sz)
-{
-    /* servers are children of refseq/repository, e.g.:             /refseq/repository/main="..." */ 
-    /* volumes are in refseq/repository/<serverName>/volumes, e.g.: /refseq/repository/main/volumes="..." */
-    /* all server/volume combinations are returned in paths separated by ':' */
-    
-    rc_t rc = 0;
-    const KConfigNode *node;
-#define KFG_PATH "/refseq/repository/"
-    paths[0] = 0;
-    
-    rc = KConfigOpenNodeRead ( kfg, & node, KFG_PATH );
-    if ( rc == 0 )
-    {
-        KNamelist* children;
-        rc = KConfigNodeListChild ( node, &children );
-        if ( rc == 0 )
-        {
-            uint32_t count;
-            rc = KNamelistCount ( children, &count );
-            if ( rc == 0 )
-            {
-                uint32_t i;
-                for (i = 0; i < count; ++i) /* for all servers */
-                {
-                    const char* name;
-                    rc = KNamelistGet ( children, i, &name );
-                    if ( rc == 0 )
-                    {
-#define BufSize 4096
-                        char server[ BufSize ];
-                        char buf[ BufSize ];
-                        size_t num_writ;
-                        
-                        rc = string_printf(buf, BufSize, &num_writ, KFG_PATH "%s", name);
-                        if (rc == 0)
-                        {
-                            rc = RefSeqMgr_ConfigValue ( kfg, buf, server, sizeof(server) );
-                            if (rc == 0)
-                            {
-                                rc = string_printf(buf, BufSize, &num_writ, KFG_PATH "%s/volumes", name);
-                                if (rc == 0)
-                                {
-                                    char volumes[ BufSize ];
-                                    rc = RefSeqMgr_ConfigValue ( kfg, buf, volumes, sizeof(volumes) );
-                                    if (rc == 0)
-                                    {   /* create a server/volume pair for every combination, append to paths, ':' - separate */ 
-                                        char *vol_rem = volumes;
-                                        char *vol_sep;
-                                        
-                                        do {
-                                            char const *volume = vol_rem;
-                                            vol_sep = string_chr(volume, string_size(volume), ':');
-                                            if(vol_sep) {
-                                                vol_rem = vol_sep + 1;
-                                                *vol_sep = 0;
-                                            }
-                                            string_copy(paths + string_size(paths), paths_sz - string_size(paths), server, string_size(server));
-                                            if (paths[string_size(paths)-1] != '/')
-                                            {
-                                                string_copy(paths + string_size(paths), paths_sz - string_size(paths), "/", 1);
-                                            }
-                                            string_copy(paths + string_size(paths), paths_sz - string_size(paths), volume, string_size(volume));
-                                            string_copy(paths + string_size(paths), paths_sz - string_size(paths), ":", 1);
-                                        } while(vol_sep);
-                                    }
-                                }
-                            }
-                        }
-#undef BufSize
-                    }
-                    if ( rc != 0 )
-                    {
-                        break;
-                    }
-                }
-            }
-            KNamelistRelease ( children );
-        }
-        
-        KConfigNodeRelease ( node );
-    }
-    if (GetRCState(rc) == rcNotFound)
-    {
-        paths[0] = '\0';
-        return 0;
-    }
-    return 0;
-}
-
-static
-rc_t RefSeqMgr_KfgReadStr(const KConfig* kfg, const char* path, char* value, size_t value_sz)
-{
-    rc_t rc = 0;
-    const KConfigNode *node;
-    
-    if ( (rc = KConfigOpenNodeRead(kfg, &node, "%s", path)) == 0 ) {
-        size_t num_read, remaining;
-        if( (rc = KConfigNodeRead(node, 0, value, value_sz - 1, &num_read, &remaining)) == 0 ) {
-            if( remaining != 0 ) {
-                rc = RC(rcAlign, rcIndex, rcConstructing, rcString, rcTooLong);
-            } else {
-                value[num_read] = '\0';
-            }
-        }
-        KConfigNodeRelease(node);
-    } else if( GetRCState(rc) == rcNotFound ) {
-        rc = 0;
-        value[0] = '\0';
-    }
-    return rc;
-}
-
-rc_t RefSeqMgr_ForEachVolume(const RefSeqMgr* cself, RefSeqMgr_ForEachVolume_callback cb, void *data)
-{
-    rc_t rc = 0;
-    char servers[4096];
-    char volumes[4096];
-    
-    if( cself == NULL || cb == NULL ) {
-        rc = RC(rcAlign, rcType, rcConstructing, rcParam, rcNull);
-    } else if( cb(".", NULL, data) ) {
-        /* found in local dir */
-    } else if( (rc = RefSeqMgr_KfgReadStr(cself->kfg, "refseq/paths", servers, sizeof(servers))) != 0 ) {
-        ALIGN_DBGERRP("%s", rc, "RefSeqMgr_KfgReadStr(paths)");
-    } else {
-        bool found = false;
-        if( servers[0] != '\0' ) {
-            char *srv_sep;
-            char *srv_rem = servers;
-            do {
-                char const* server = srv_rem;
-                
-                srv_sep = strchr(server, ':');
-                if(srv_sep) {
-                    srv_rem = srv_sep + 1;
-                    *srv_sep = 0;
-                }
-                if( cb(server, NULL, data) ) {
-                    found = true;
-                    break;
-                }
-            } while(srv_sep);
-        }
-        if( !found ) {
-            /* locate refseq servers/volumes in possibly multiple repositories */
-            if( (rc = RefSeqMgr_KfgReadRepositories(cself->kfg, servers, sizeof(servers))) != 0 ) {
-                ALIGN_DBGERRP("%s", rc, "RefSeqMgr_KfgReadStr(refseq/repository/*)");
-            };
-            if( servers[0] != '\0' ) {
-                char *srv_sep;
-                char *srv_rem = servers;
-                do {
-                    char const* server = srv_rem;
-                    
-                    srv_sep = strchr(server, ':');
-                    if(srv_sep) {
-                        srv_rem = srv_sep + 1;
-                        *srv_sep = 0;
-                    }
-                    if( cb(server, NULL, data) ) {
-                        found = true;
-                        break;
-                    }
-                } while(srv_sep);
-            }
-        }
-        if( !found ) {
-            if ( (rc = RefSeqMgr_KfgReadStr(cself->kfg, "refseq/servers", servers, sizeof(servers))) != 0 ||
-                (rc = RefSeqMgr_KfgReadStr(cself->kfg, "refseq/volumes", volumes, sizeof(volumes))) != 0 ) {
-                ALIGN_DBGERRP("%s", rc, "RefSeqMgr_KfgReadStr(servers/volumes)");
-            } 
-            /* servers and volumes are deprecated and optional */
-            if( rc == 0 && (servers[0] != '\0' || volumes[0] != '\0') ) {
-                char *srv_sep;
-                char *srv_rem = servers;
-                do {
-                    char vol[ 4096 ];
-                    char const *server = srv_rem;
-                    char *vol_rem = vol;
-                    char *vol_sep;
-                    
-                    string_copy ( vol, sizeof vol, volumes, string_size( volumes ) );
-                    srv_sep = strchr(server, ':');
-                    if(srv_sep) {
-                        srv_rem = srv_sep + 1;
-                        *srv_sep = 0;
-                    }
-                    do {
-                        char const *volume = vol_rem;
-                        
-                        vol_sep = strchr(volume, ':');
-                        if(vol_sep) {
-                            vol_rem = vol_sep + 1;
-                            *vol_sep = 0;
-                        }
-                        found = cb(server, volume, data);
-                    } while(!found && vol_sep);
-                } while(!found && srv_sep);
-            }
-        }
-    }
-    return rc;
-}
-
-
 static void RefSeqMgr_WhackAllReaders(RefSeqMgr *const mgr);
 
 LIB_EXPORT rc_t CC RefSeqMgr_SetCache(RefSeqMgr const *const cself, size_t cache, uint32_t keep_open_num)
@@ -673,3 +444,230 @@ LIB_EXPORT rc_t CC RefSeq_Release(const RefSeq* cself)
     return 0;
 }
 
+static
+rc_t RefSeqMgr_ConfigValue ( const KConfig *kfg, const char *node_path, char *value, size_t value_size )
+{
+    const KConfigNode *node;
+    rc_t rc = KConfigOpenNodeRead ( kfg, & node, "%s", node_path );
+    if ( rc == 0 )
+    {
+        size_t num_read, remaining;
+        rc = KConfigNodeRead ( node, 0, value, value_size - 1, & num_read,  & remaining );
+        if ( rc == 0 )
+        {
+            if ( remaining != 0 )
+                rc = RC ( rcSRA, rcMgr, rcConstructing, rcString, rcExcessive );
+            else
+                value [ num_read ] = 0;
+        }
+        
+        KConfigNodeRelease ( node );
+    }
+    return rc;
+}
+
+static
+rc_t RefSeqMgr_KfgReadRepositories(const KConfig* kfg, char* paths, size_t paths_sz)
+{
+    /* servers are children of refseq/repository, e.g.:             /refseq/repository/main="..." */
+    /* volumes are in refseq/repository/<serverName>/volumes, e.g.: /refseq/repository/main/volumes="..." */
+    /* all server/volume combinations are returned in paths separated by ':' */
+    
+    rc_t rc = 0;
+    const KConfigNode *node;
+#define KFG_PATH "/refseq/repository/"
+    paths[0] = 0;
+    
+    rc = KConfigOpenNodeRead ( kfg, & node, KFG_PATH );
+    if ( rc == 0 )
+    {
+        KNamelist* children;
+        rc = KConfigNodeListChild ( node, &children );
+        if ( rc == 0 )
+        {
+            uint32_t count;
+            rc = KNamelistCount ( children, &count );
+            if ( rc == 0 )
+            {
+                uint32_t i;
+                for (i = 0; i < count; ++i) /* for all servers */
+                {
+                    const char* name;
+                    rc = KNamelistGet ( children, i, &name );
+                    if ( rc == 0 )
+                    {
+#define BufSize 4096
+                        char server[ BufSize ];
+                        char buf[ BufSize ];
+                        size_t num_writ;
+                        
+                        rc = string_printf(buf, BufSize, &num_writ, KFG_PATH "%s", name);
+                        if (rc == 0)
+                        {
+                            rc = RefSeqMgr_ConfigValue ( kfg, buf, server, sizeof(server) );
+                            if (rc == 0)
+                            {
+                                rc = string_printf(buf, BufSize, &num_writ, KFG_PATH "%s/volumes", name);
+                                if (rc == 0)
+                                {
+                                    char volumes[ BufSize ];
+                                    rc = RefSeqMgr_ConfigValue ( kfg, buf, volumes, sizeof(volumes) );
+                                    if (rc == 0)
+                                    {   /* create a server/volume pair for every combination, append to paths, ':' - separate */
+                                        char *vol_rem = volumes;
+                                        char *vol_sep;
+                                        
+                                        do {
+                                            char const *volume = vol_rem;
+                                            vol_sep = string_chr(volume, string_size(volume), ':');
+                                            if(vol_sep) {
+                                                vol_rem = vol_sep + 1;
+                                                *vol_sep = 0;
+                                            }
+                                            string_copy(paths + string_size(paths), paths_sz - string_size(paths), server, string_size(server));
+                                            if (paths[string_size(paths)-1] != '/')
+                                            {
+                                                string_copy(paths + string_size(paths), paths_sz - string_size(paths), "/", 1);
+                                            }
+                                            string_copy(paths + string_size(paths), paths_sz - string_size(paths), volume, string_size(volume));
+                                            string_copy(paths + string_size(paths), paths_sz - string_size(paths), ":", 1);
+                                        } while(vol_sep);
+                                    }
+                                }
+                            }
+                        }
+#undef BufSize
+                    }
+                    if ( rc != 0 )
+                    {
+                        break;
+                    }
+                }
+            }
+            KNamelistRelease ( children );
+        }
+        
+        KConfigNodeRelease ( node );
+    }
+    if (GetRCState(rc) == rcNotFound)
+    {
+        paths[0] = '\0';
+        return 0;
+    }
+    return 0;
+}
+
+static
+rc_t RefSeqMgr_KfgReadStr(const KConfig* kfg, const char* path, char* value, size_t value_sz)
+{
+    rc_t rc = 0;
+    const KConfigNode *node;
+    
+    if ( (rc = KConfigOpenNodeRead(kfg, &node, "%s", path)) == 0 ) {
+        size_t num_read, remaining;
+        if( (rc = KConfigNodeRead(node, 0, value, value_sz - 1, &num_read, &remaining)) == 0 ) {
+            if( remaining != 0 ) {
+                rc = RC(rcAlign, rcIndex, rcConstructing, rcString, rcTooLong);
+            } else {
+                value[num_read] = '\0';
+            }
+        }
+        KConfigNodeRelease(node);
+    } else if( GetRCState(rc) == rcNotFound ) {
+        rc = 0;
+        value[0] = '\0';
+    }
+    return rc;
+}
+
+rc_t RefSeqMgr_ForEachVolume(const RefSeqMgr* cself, RefSeqMgr_ForEachVolume_callback cb, void *data)
+{
+    rc_t rc = 0;
+    char servers[4096];
+    char volumes[4096];
+    
+    if( cself == NULL || cb == NULL ) {
+        rc = RC(rcAlign, rcType, rcConstructing, rcParam, rcNull);
+    } else if( cb(".", NULL, data) ) {
+        /* found in local dir */
+    } else if( (rc = RefSeqMgr_KfgReadStr(cself->kfg, "refseq/paths", servers, sizeof(servers))) != 0 ) {
+        ALIGN_DBGERRP("%s", rc, "RefSeqMgr_KfgReadStr(paths)");
+    } else {
+        bool found = false;
+        if( servers[0] != '\0' ) {
+            char *srv_sep;
+            char *srv_rem = servers;
+            do {
+                char const* server = srv_rem;
+                
+                srv_sep = strchr(server, ':');
+                if(srv_sep) {
+                    srv_rem = srv_sep + 1;
+                    *srv_sep = 0;
+                }
+                if( cb(server, NULL, data) ) {
+                    found = true;
+                    break;
+                }
+            } while(srv_sep);
+        }
+        if( !found ) {
+            /* locate refseq servers/volumes in possibly multiple repositories */
+            if( (rc = RefSeqMgr_KfgReadRepositories(cself->kfg, servers, sizeof(servers))) != 0 ) {
+                ALIGN_DBGERRP("%s", rc, "RefSeqMgr_KfgReadStr(refseq/repository/*)");
+            };
+            if( servers[0] != '\0' ) {
+                char *srv_sep;
+                char *srv_rem = servers;
+                do {
+                    char const* server = srv_rem;
+                    
+                    srv_sep = strchr(server, ':');
+                    if(srv_sep) {
+                        srv_rem = srv_sep + 1;
+                        *srv_sep = 0;
+                    }
+                    if( cb(server, NULL, data) ) {
+                        found = true;
+                        break;
+                    }
+                } while(srv_sep);
+            }
+        }
+        if( !found ) {
+            if ( (rc = RefSeqMgr_KfgReadStr(cself->kfg, "refseq/servers", servers, sizeof(servers))) != 0 ||
+                (rc = RefSeqMgr_KfgReadStr(cself->kfg, "refseq/volumes", volumes, sizeof(volumes))) != 0 ) {
+                ALIGN_DBGERRP("%s", rc, "RefSeqMgr_KfgReadStr(servers/volumes)");
+            }
+            /* servers and volumes are deprecated and optional */
+            if( rc == 0 && (servers[0] != '\0' || volumes[0] != '\0') ) {
+                char *srv_sep;
+                char *srv_rem = servers;
+                do {
+                    char vol[ 4096 ];
+                    char const *server = srv_rem;
+                    char *vol_rem = vol;
+                    char *vol_sep;
+                    
+                    string_copy ( vol, sizeof vol, volumes, string_size( volumes ) );
+                    srv_sep = strchr(server, ':');
+                    if(srv_sep) {
+                        srv_rem = srv_sep + 1;
+                        *srv_sep = 0;
+                    }
+                    do {
+                        char const *volume = vol_rem;
+                        
+                        vol_sep = strchr(volume, ':');
+                        if(vol_sep) {
+                            vol_rem = vol_sep + 1;
+                            *vol_sep = 0;
+                        }
+                        found = cb(server, volume, data);
+                    } while(!found && vol_sep);
+                } while(!found && srv_sep);
+            }
+        }
+    }
+    return rc;
+}
