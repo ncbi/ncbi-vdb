@@ -548,7 +548,7 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
                 if (rc == 0)
                     *prslt = blob;
                 else
-		  vblob_release(blob, NULL);
+				  vblob_release(blob, NULL);
             }
         }
         KDataBufferWhack(&scratch);
@@ -556,24 +556,26 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
     }
 
 
-    if(self->curs->is_sub_cursor){
-	MAX_BLOB_REGROUP=4;
-    }else if(self->curs->cache_curs && self->curs->cache_col_active){
+    if(self->curs->cache_curs && self->curs->cache_col_active){
         /*** since cache_cursor exist, trying to avoid prefetching data which is in cache cursor ***/
-	row_id_max = self->curs->cache_empty_end;
-	MAX_BLOB_REGROUP=256;
+		row_id_max = self->curs->cache_empty_end;
+		MAX_BLOB_REGROUP=256;
     } else {
-	MAX_BLOB_REGROUP=1024;
+		MAX_BLOB_REGROUP=1024;
     }
 
-    window=self->stop_id-self->start_id+1;/*** from previous fetch **/
-    if(row_id == self->stop_id+1){ /** sequentual io ***/
-	if( window < MAX_BLOB_REGROUP && (row_id%(4*window))==1){
-		window *=4;
-	}
-    } else {
-	window = 1;
-    } 
+	if(self->dad.sub == vftRowFast){
+		window = MAX_BLOB_REGROUP;
+	} else {
+		window=self->stop_id-self->start_id+1;/*** from previous fetch **/
+		if(row_id == self->stop_id+1){ /** sequentual io ***/
+			if( window < MAX_BLOB_REGROUP && (row_id%(4*window))==1){
+				window *=4;
+			}
+		} else {
+			window = 1;
+		}
+	} 
 
     if(window == 1){
 	self->start_id=self->stop_id=row_id;
@@ -642,13 +644,15 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
         }
 **********/
         argv[i].variant = vrdData;
+        argv[i].blob_stop_id = in->stop_id;
         argv[i].u.data.elem_bits = in->data.elem_bits;
         argv[i].u.data.base = in->data.base;
+        argv[i].u.data.base_elem_count = in->data.elem_count;
     }
     
     for (row_id = self->start_id; row_id <= self->stop_id && rc == 0; ) {
         uint32_t row_count = 1;
-	if(self->dad.sub == vftRow ){
+	if(self->dad.sub == vftRow || self->dad.sub ==vftRowFast ){
 		row_count = PageMapIteratorRepeatCount(&iter[0]);
 		
 		for (i = 1; i != argc; ++i) {
@@ -1719,6 +1723,7 @@ static rc_t VFunctionProdReadNormal ( VFunctionProd *self, VBlob **vblob, int64_
             rc = VFunctionProdCallNDRowFunc ( self, &vb, id_run, & info, & inputs );
             break;
         case vftRow:
+	    case vftRowFast:
         case vftIdDepRow:
             rc = VFunctionProdCallRowFunc ( self, &vb, id_run, cnt_run, & info, & inputs, pb.range_start_id,pb.range_stop_id );
             break;
@@ -1876,6 +1881,7 @@ uint32_t VFunctionProdFixedRowLength ( const VFunctionProd *self, int64_t row_id
         switch ( self -> dad . sub )
         {
         case vftRow:
+		case vftRowFast:
         case vftNonDetRow:
         case vftIdDepRow:
             return 0;
@@ -2255,9 +2261,9 @@ rc_t VProductionReadBlob ( const VProduction *cself, VBlob **vblob, int64_t id, 
     if ( ! blob -> no_cache )
         return 0;
 #endif
-    if(cctx == NULL && self->cctx.cache != NULL && blob->stop_id > blob->start_id + 2){/** we will benefit from caching here **/
-	VBlobMRUCacheSave(self->cctx.cache,self->cctx.col_idx,blob);
-	return 0;
+    if(cctx == NULL && self->cctx.cache != NULL && blob->stop_id > blob->start_id + 4){/** we will benefit from caching here **/
+		VBlobMRUCacheSave(self->cctx.cache,self->cctx.col_idx,blob);
+		return 0;
     }
 
     if(blob->pm == NULL) return 0;

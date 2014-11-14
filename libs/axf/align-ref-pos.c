@@ -297,7 +297,7 @@ VTRANSFACT_IMPL ( NCBI_align_ref_pos, 1, 0, 0 ) ( const void *self, const VXfact
         rslt -> self = fself;
         rslt -> whack = RefPosWhack;
         rslt -> u . rf = align_ref_pos;
-        rslt -> variant = vftRow;
+        rslt -> variant = vftRowFast;
     }
 
     return rc;
