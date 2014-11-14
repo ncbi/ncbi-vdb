@@ -1403,6 +1403,7 @@ struct VBlobMRUCache { /* read-only blob cache */
     /* last blob cache */
     VBlobLast v_last[LAST_BLOB_CACHE_SIZE]; /** last blob to be cached per given col_idx, limiting col_idx  **/
     VBlobLast p_last[LAST_BLOB_CACHE_SIZE]; /** last physical blob to be cached per given col_idx, limiting col_idx  **/
+	bool suspend_flush;
 };
 
 
@@ -1419,6 +1420,7 @@ VBlobMRUCache * VBlobMRUCacheMake(uint64_t capacity )
 		memset(self -> p_last,0,LAST_BLOB_CACHE_SIZE*sizeof(*self -> p_last));
 		self->capacity = capacity;
 		self->contents = 0;
+		self->suspend_flush = false;
 	}
    }
    return self;
@@ -1584,42 +1586,39 @@ rc_t VBlobMRUCacheSave(const VBlobMRUCache *cself, uint32_t col_idx, const VBlob
         rc = insert_unique_into_kvector(self,cache,bc->blob->start_id,bc,&existing);
         if ( rc != 0 ){
             VBlobCacheWhack (bc->blob->start_id, bc, NULL );
-	    rc = 0;
-        } else {
-            /* remember as last used  **/
-            if(col_idx <= LAST_BLOB_CACHE_SIZE)
-            {
-		if(last_blobs[col_idx-1].b2) VBlobRelease(last_blobs[col_idx-1].b2);
-		last_blobs[col_idx-1].b2 = last_blobs[col_idx-1].b1;
-		last_blobs[col_idx-1].b1 = bc->blob;
-		rc = VBlobAddRef ((VBlob*)bc->blob);
-		if(rc != 0)
-		   return rc;
-	    }
-            /* perform accounting */
-            self -> contents += blob_size;
-            while ( self -> contents > self -> capacity )
-            {
-                /* get least recently used */
-                DLNode *last = DLListPopTail ( & self -> lru );
-                if ( last == NULL )
-                    break;
-
-                /* drop blob */
-                existing = ( VBlobCache* ) last;
-		if(existing->col_idx > PHYSPROD_INDEX_OFFSET){
-			cache = VectorGet(&cself->p_cache,existing->col_idx-PHYSPROD_INDEX_OFFSET);
+			rc = 0;
 		} else {
-			cache = VectorGet(&cself->v_cache,existing->col_idx);
+				/* remember as last used  **/
+			if(col_idx <= LAST_BLOB_CACHE_SIZE) {
+				if(last_blobs[col_idx-1].b2) VBlobRelease(last_blobs[col_idx-1].b2);
+				last_blobs[col_idx-1].b2 = last_blobs[col_idx-1].b1;
+				last_blobs[col_idx-1].b1 = bc->blob;
+				rc = VBlobAddRef ((VBlob*)bc->blob);
+				if(rc != 0)
+				   return rc;
+			}
+			/* perform accounting */
+			self -> contents += blob_size;
+			if(!self->suspend_flush) while ( self -> contents > self -> capacity )
+			{
+				/* get least recently used */
+				DLNode *last = DLListPopTail ( & self -> lru );
+				if ( last == NULL )
+						break;
+				/* drop blob */
+				existing = ( VBlobCache* ) last;
+				if(existing->col_idx > PHYSPROD_INDEX_OFFSET){
+					cache = VectorGet(&cself->p_cache,existing->col_idx-PHYSPROD_INDEX_OFFSET);
+				} else {
+					cache = VectorGet(&cself->v_cache,existing->col_idx);
+				}
+				KVectorUnset(cache,existing->blob->start_id);
+				self -> contents -= existing -> size;
+				VBlobCacheWhack (existing->blob->start_id,existing,NULL);
+			}
+			/* insert at head of list */
+			DLListPushHead ( & self -> lru, & bc -> ln ); 
 		}
-		KVectorUnset(cache,existing->blob->start_id);
-                self -> contents -= existing -> size;
-                VBlobCacheWhack (existing->blob->start_id,existing,NULL);
-            }
-
-            /* insert at head of list */
-            DLListPushHead ( & self -> lru, & bc -> ln );
-        }
     }
     return 0;
 }
@@ -1639,5 +1638,14 @@ uint64_t VBlobMRUCacheSetCapacity(VBlobMRUCache *self,uint64_t capacity )
 		self->capacity=capacity;
 	}
 	return old_capacity;
+}
+void VBlobMRUCacheSuspendFlush(VBlobMRUCache *self)
+{
+	self->suspend_flush=true;
+}
+	
+void VBlobMRUCacheResumeFlush(VBlobMRUCache *self)
+{
+	self->suspend_flush=false;
 }
 

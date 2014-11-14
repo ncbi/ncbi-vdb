@@ -193,6 +193,9 @@ rc_t VBlobMRUCacheSave(const VBlobMRUCache *cself, uint32_t col_idx, const VBlob
 uint64_t VBlobMRUCacheGetCapacity(const VBlobMRUCache *cself);
 uint64_t VBlobMRUCacheSetCapacity(VBlobMRUCache *self,uint64_t capacity );
 
+void VBlobMRUCacheSuspendFlush(VBlobMRUCache *self);
+void VBlobMRUCacheResumeFlush (VBlobMRUCache *self);
+
 
 rc_t PageMapProcessGetPagemap(const PageMapProcessRequest *self,struct PageMap **pm);
 
