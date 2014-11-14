@@ -60,6 +60,7 @@
 #include <klib/log.h>
 #include <klib/rc.h>
 #include <klib/printf.h>
+#include <klib/sort.h>
 #include <bitstr.h>
 #include <os-native.h>
 #include <sysalloc.h>
@@ -2070,6 +2071,72 @@ LIB_EXPORT rc_t CC VCursorCellDataDirect ( const VCursor *self, int64_t row_id, 
     * row_len = 0;
 
     return rc;
+}
+
+LIB_EXPORT rc_t CC VCursorDataPrefetch ( const VCursor *cself, const int64_t *row_ids, uint32_t col_idx, uint32_t num_rows,int64_t min_valid_row_id, int64_t max_valid_row_id, bool continue_on_error)
+{
+	rc_t rc=0;
+	const VColumn *col = ( const void* ) VectorGet ( & cself -> row, col_idx );
+	if ( col == NULL )
+		return RC ( rcVDB, rcCursor, rcReading, rcColumn, rcInvalid );
+
+	if(cself->blob_mru_cache && num_rows > 0){
+		int64_t *row_ids_sorted = malloc(num_rows*sizeof(*row_ids_sorted));
+		if(row_ids_sorted){
+			uint32_t i,num_rows_sorted;
+			for(i=0,num_rows_sorted=0;i < num_rows; i++){
+				int64_t row_id=row_ids[i];
+				if(row_id >= min_valid_row_id && row_id <= max_valid_row_id){
+					row_ids_sorted[num_rows_sorted++]=row_id;
+				}
+			}
+			if(num_rows_sorted > 0){
+				int64_t last_cached_row_id=INT64_MIN;
+				bool	first_time=true;
+				ksort_int64_t(row_ids_sorted,num_rows_sorted);
+				for(i=0;rc==0 && i<num_rows_sorted;i++){
+					int64_t row_id=row_ids_sorted[i];
+					VBlob *blob;
+					if(last_cached_row_id < row_id){
+						blob=(VBlob*)VBlobMRUCacheFind(cself->blob_mru_cache,col_idx,row_id);
+						if(blob){
+							last_cached_row_id = blob->stop_id;
+						} else { /* prefetch it **/
+							/** ask production for the blob **/
+							VBlobMRUCacheCursorContext cctx;
+
+							cctx.cache=cself -> blob_mru_cache;
+							cctx.col_idx = col_idx;
+							rc = VProductionReadBlob ( col->in, & blob, row_id, 1, &cctx );
+							if(rc == 0){
+								rc_t rc_cache;
+								/** always cache prefetch requests **/
+								if(first_time){ 
+									VBlobMRUCacheResumeFlush(cself->blob_mru_cache); /** next call will clean cache if too big **/
+									rc_cache=VBlobMRUCacheSave(cself->blob_mru_cache, col_idx, blob);
+									VBlobMRUCacheSuspendFlush(cself->blob_mru_cache); /** suspending for the rest **/
+									first_time=false;
+								} else {
+									rc_cache=VBlobMRUCacheSave(cself->blob_mru_cache, col_idx, blob);
+								}
+								if(rc_cache == 0){
+									VBlobRelease(blob);
+									last_cached_row_id = blob->stop_id;
+								}
+							} else if(continue_on_error){
+								rc=0; /** reset failed row ***/
+								last_cached_row_id = row_id; /*** and skip it **/
+							}
+						}
+					}
+				}
+			}
+			free(row_ids_sorted);
+		} else {
+			rc= RC(rcVDB, rcCursor, rcReading, rcMemory, rcExhausted);
+		}
+	}
+	return rc;
 }
 
 

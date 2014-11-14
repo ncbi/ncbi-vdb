@@ -362,6 +362,27 @@ VDB_EXTERN rc_t CC VCursorCellDataDirect ( const VCursor *self, int64_t row_id,
     uint32_t *boff, uint32_t *row_len );
 
 
+/* VCursorDataPrefetch
+ * -- will prefecth rows into CursorCache (if it exists)
+ * -- no OUT parameters - just primes the cache 
+ * -- will cache every produced blob (even a small one)
+ * -- will suspend flushing the cache after inserting first row
+ * -- conducts sort-unique on row_ids to linearize data access
+ *
+ * "row_ids" [ IN ] - rows to be prefetched
+ * 
+ * "col_idx" [ IN ] - index of column to be read, returned by "AddColumn"
+ * 
+ * "num_rows" [ IN ] -  number of rows in row_ids
+ *
+ * "min/max_valid_row_id [IN] - ignor all row_ids[i] which will not hit this range
+ * 
+ * "continue_on_error" [ IN ] - whether to continue on a failure to prefetch a rows
+ */
+
+LIB_EXPORT rc_t CC VCursorDataPrefetch ( const VCursor *cself, const int64_t *row_ids, uint32_t col_idx, uint32_t num_rows,int64_t min_valid_row_id,int64_t max_valid_row_id,bool continue_on_error);
+
+
 /* Default
  *  give a default row value for cell
  *  TBD - document full cell data, not append
