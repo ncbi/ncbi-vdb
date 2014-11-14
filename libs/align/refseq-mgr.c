@@ -63,7 +63,6 @@ struct RefSeqMgr {
     uint32_t num_open;
     uint64_t usage;
     RefSeq* last_used;
-    BSTree vdbs;
 };
 
 struct RefSeq {
@@ -75,12 +74,6 @@ struct RefSeq {
     /* must be last member of struct */
     char accession[1];
 };
-
-typedef struct RefSeqMgr_Db_struct {
-    BSTNode dad;
-    char key[4096];
-    const VDatabase* db;
-} RefSeqMgr_Db;
 
 static void RefSeqMgr_WhackAllReaders(RefSeqMgr *const mgr);
 
@@ -123,7 +116,6 @@ LIB_EXPORT rc_t CC RefSeqMgr_Make( const RefSeqMgr** cself, const VDBManager* vm
                 if ( rc == 0 )
                 {
                     BSTreeInit( &obj->tree );
-                    BSTreeInit( &obj->vdbs );
                     obj->vmgr = vmgr;
                     obj->cache = cache;
                     obj->num_open_max = keep_open_num;
@@ -167,7 +159,6 @@ LIB_EXPORT rc_t CC RefSeqMgr_Release(const RefSeqMgr* cself)
     if( cself != NULL ) {
         RefSeqMgr* self = (RefSeqMgr*)cself;
         BSTreeWhack(&self->tree, RefSeqMgr_RefSeqWhack, NULL);
-        BSTreeWhack(&self->vdbs, RefSeqMgr_VDbRelease, NULL);
         VDBManagerRelease(self->vmgr);
         KConfigRelease(self->kfg);
         free(self);
