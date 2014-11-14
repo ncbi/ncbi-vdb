@@ -344,8 +344,8 @@ static
 rc_t ReferenceMgr_AddId(ReferenceMgr *const self, char const ID[],
                         ReferenceSeq const *const obj)
 {
-    char *id = string_dup(ID, string_size(ID));
     unsigned const last_id = (unsigned)self->refSeqsById.elem_count;
+    char *const id = string_dup(ID, string_size(ID));
     
     if (id) {
         rc_t rc = KDataBufferResize(&self->refSeqsById, last_id + 1);
@@ -788,6 +788,7 @@ void ReferenceSeq_Dump(ReferenceSeq const *const rs, unsigned const i, key_id_t 
         "'fasta'",
         "'RefSeq-by-id'",
         "'RefSeq-by-seqid'",
+        "'unmapped'",
         "'dead'"
     };
     unsigned j;
@@ -883,7 +884,10 @@ rc_t ReferenceSeq_GetRefSeqInfo(ReferenceSeq *const self)
     if ((rc = RefSeq_MD5(self->u.refseq, &md5)) != 0)
         return rc;
     
-    memcpy(self->md5, md5, 16);
+    if (md5)
+        memcpy(self->md5, md5, 16);
+    else
+        memset(self->md5, 0, 16);
     return 0;
 }
 
@@ -962,9 +966,18 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self, ReferenceSeq **const rslt,
     assert(rslt != NULL);
     *rslt = NULL;
     if (fnd) {
-        if (self->refSeq[fnd->id].type == rst_dead)
+        ReferenceSeq *const obj = &self->refSeq[fnd->id];
+        
+        if (obj->type == rst_dead)
             return RC(rcAlign, rcIndex, rcSearching, rcItem, rcInvalid);
-        *rslt = &self->refSeq[fnd->id];
+        if (obj->type == rst_refSeqBySeqId) {
+            RefSeq const *dummy;
+            rc_t const rc = RefSeqMgr_GetSeq(self->rmgr, &dummy, obj->seqId, (unsigned)string_size(obj->seqId));
+            
+            assert(rc == 0);
+            assert(dummy == obj->u.refseq);
+        }
+        *rslt = obj;
         return 0;
     }
     else {
