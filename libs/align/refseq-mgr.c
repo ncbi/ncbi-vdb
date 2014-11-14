@@ -53,8 +53,6 @@
 
 /*#define ALIGN_DBG KOutMsg*/
 
-#define USE_OWN_REFSEQ_RESOLVER 0
-
 struct RefSeqMgr {
     BSTree tree;
     KConfig *kfg;
@@ -83,19 +81,6 @@ typedef struct RefSeqMgr_Db_struct {
     char key[4096];
     const VDatabase* db;
 } RefSeqMgr_Db;
-
-#if USE_OWN_REFSEQ_RESOLVER
-struct FindTable_ctx {
-    RefSeqMgr* self;
-    const KDBManager* kmgr;
-    const VTable** tbl;
-    char const* name;
-    uint32_t name_sz;
-    bool found;
-    rc_t rc;
-    char** path; /* optional */
-};
-#endif
 
 static
 rc_t RefSeqMgr_ConfigValue ( const KConfig *kfg, const char *node_path, char *value, size_t value_size )
@@ -325,147 +310,6 @@ rc_t RefSeqMgr_ForEachVolume(const RefSeqMgr* cself, RefSeqMgr_ForEachVolume_cal
     return rc;
 }
 
-#if USE_OWN_REFSEQ_RESOLVER
-static
-int CC RefSeqMgr_DbSort(const BSTNode* item, const BSTNode* node)
-{
-    return strcmp(((const RefSeqMgr_Db*)item)->key, ((const RefSeqMgr_Db*)node)->key);
-}
-
-static
-int CC RefSeqMgr_FindDb(const void *item, const BSTNode *node)
-{
-    return strcmp((const char*)item, ((const RefSeqMgr_Db*)node)->key);
-}
-
-static
-bool FindTable(char const server[], char const volume[], void *data)
-{
-    const VTable* tbl = NULL;
-    struct FindTable_ctx *ctx = data;
-    const char* vol_sep = "/";
-    
-    if( volume == NULL || string_size(volume) == 0) {
-        volume = "";
-        vol_sep = "";
-    }
-    ctx->rc = VDBManagerOpenTableRead(ctx->self->vmgr, &tbl, NULL, "%s%s%s/%.*s", server, vol_sep, volume, ctx->name_sz, ctx->name);
-    ALIGN_DBG("trying '%s%s%s/%.*s'...", server, vol_sep, volume, ctx->name_sz, ctx->name);
-    
-    ctx->found = false;
-    
-    if(ctx->rc == 0){
-        ALIGN_DBG("found\n", "");
-	    ctx->found = true;
-    }
-    else if (GetRCState(ctx->rc) == rcNotFound) {
-        ctx->rc = 0;
-        ALIGN_DBG("not found\n", "");
-        
-        /* can be kar */
-        if( ctx->name_sz > 7 ) {
-            uint32_t i = 0;
-            
-            /* check for pattern '\w{4}\d{2}[\.\d]+' */
-            while( isalpha(ctx->name[i]) && i < 4 ) {
-                i++;
-            }
-            if( i == 4 && isdigit(ctx->name[i]) && isdigit(ctx->name[++i]) ) {
-                while( ++i < ctx->name_sz ) {
-                    if( !isdigit(ctx->name[i]) && ctx->name[i] != '.' ) {
-                        break;
-                    }
-                }
-            }
-            if( i == ctx->name_sz ) {
-                char key[4096];
-                size_t n;
-                
-                if( string_printf(key, sizeof(key), &n, "%s%s%s/%.*s", server, vol_sep, volume, 6, ctx->name) != 0 ) {
-                    (void)LOGMSG(klogWarn, "kar-vdb lookup buffer");
-                } else {
-                    RefSeqMgr_Db *db = (RefSeqMgr_Db*)BSTreeFind(&ctx->self->vdbs, key, RefSeqMgr_FindDb);
-                    
-                    ALIGN_DBG("trying database '%s%s%s/%.*s'...", server, vol_sep, volume, 6, ctx->name);
-                    if( db == NULL ) {
-                        const VDatabase* vdb = NULL;
-                        if( (ctx->rc = VDBManagerOpenDBRead(ctx->self->vmgr, &vdb, NULL, "%s", key)) == 0 ) {
-                            db = malloc(sizeof(*db));
-                            if( db == NULL ) {
-                                ctx->rc = RC(rcAlign, rcDatabase, rcOpening, rcMemory, rcExhausted);
-                            } else {
-                                string_copy( db->key, sizeof db->key, key, string_size( key ) );
-                                db->db = vdb;
-                                ctx->rc = BSTreeInsertUnique(&ctx->self->vdbs, &db->dad, NULL, RefSeqMgr_DbSort);
-                            }
-                        }
-                        if( ctx->rc != 0 ) {
-                            VDatabaseRelease(vdb);
-                            free(db);
-                            db = NULL;
-                        }
-                    }
-                    if( db != NULL ) {
-                        ALIGN_DBG(" table '%.*s'", ctx->name_sz, ctx->name);
-                        if( (ctx->rc = VDatabaseOpenTableRead(db->db, &tbl, "%.*s", ctx->name_sz, ctx->name)) == 0 ) {
-                            ctx->found = true;
-                            ALIGN_DBG("found\n", "");
-                        }
-                        else
-                            ALIGN_DBG("not found\n", "");
-                    }
-                    else
-                        ALIGN_DBG("not found\n", "");
-                }
-            }
-        }
-    }
-    if( ctx->found){
-        if(ctx->tbl)  *(ctx->tbl) = tbl;
-        else VTableRelease(tbl);
-    }
-    if( ctx->found && ctx->path != NULL ) {
-        size_t path_sz = string_size( server ) + string_size( vol_sep ) + string_size( volume ) + 1 + ctx->name_sz + 1;
-        char* path = malloc(path_sz);
-        if( path == NULL ) {
-            ctx->rc = RC(rcAlign, rcPath, rcConstructing, rcMemory, rcExhausted);
-        } else {
-            if( (ctx->rc = string_printf(path, path_sz, &path_sz, "%s%s%s/%.*s", server, vol_sep, volume, ctx->name_sz, ctx->name)) == 0 ) {
-                *(ctx->path) = path;
-            } else {
-                free(path);
-            }
-        }
-    }
-    return ctx->found;
-}
-
-static
-rc_t RefSeqMgr_FindTable(const RefSeqMgr* cself, char const accession[], uint32_t accession_sz, VTable const **tbl, char** path)
-{
-    rc_t rc;
-    struct FindTable_ctx ctx;
-    
-    if( (rc = VDBManagerOpenKDBManagerRead(cself->vmgr, &ctx.kmgr)) != 0 ) {
-        ALIGN_DBGERRP("%s", rc, "VDBManagerOpenKDBManagerRead");
-    } else {
-        ctx.self = (RefSeqMgr*)cself;
-        ctx.name = accession;
-        ctx.name_sz = accession_sz;
-        ctx.found = false;
-        ctx.tbl = tbl;
-        ctx.rc = 0;
-        ctx.path = path;
-        
-        rc = RefSeqMgr_ForEachVolume(cself, FindTable, &ctx);
-        if(rc == 0 && ctx.rc == 0 && !ctx.found) {
-            rc = RC(rcAlign, rcTable, rcOpening, rcTable, rcNotFound);
-        }
-        KDBManagerRelease(ctx.kmgr);
-    }
-    return rc ? rc : ctx.rc;
-}
-#endif
 
 static void RefSeqMgr_WhackAllReaders(RefSeqMgr *const mgr);
 
@@ -568,9 +412,6 @@ LIB_EXPORT rc_t RefSeqMgr_Exists(const RefSeqMgr* cself, const char* accession, 
         rc = RC(rcAlign, rcIndex, rcAccessing, rcParam, rcNull);
     }
     else {
-#if USE_OWN_REFSEQ_RESOLVER
-        rc = RefSeqMgr_FindTable(cself, accession, accession_sz, NULL, path);
-#else
         VTable const *tbl = NULL;
 
         /* if "accession" is not a path,
@@ -585,7 +426,6 @@ LIB_EXPORT rc_t RefSeqMgr_Exists(const RefSeqMgr* cself, const char* accession, 
             ALIGN_DBGERR(rc);
         }
         VTableRelease(tbl);
-#endif
     }
     return rc;
 }
@@ -681,9 +521,6 @@ rc_t RefSeqMgr_GetReader(RefSeqMgr *const mgr, RefSeq *const obj)
             
             RefSeqMgr_WhackReader(mgr, old);
         }
-#if USE_OWN_REFSEQ_RESOLVER
-        rc = RefSeqMgr_FindTable(mgr, obj->accession, obj->accession_sz, &tbl, NULL);
-#else
         /* if "accession" is not a path,
            prepend special scheme to tell VResolver
            to treat WGS accessions as Refseq */
@@ -691,7 +528,7 @@ rc_t RefSeqMgr_GetReader(RefSeqMgr *const mgr, RefSeq *const obj)
             rc = VDBManagerOpenTableRead(mgr->vmgr, &tbl, NULL, "ncbi-acc:%.*s?vdb-ctx=refseq", obj->accession_sz, obj->accession);
         else
             rc = VDBManagerOpenTableRead(mgr->vmgr, &tbl, NULL, "%.*s", obj->accession_sz, obj->accession);
-#endif
+
         if (rc == 0)
             rc = TableReaderRefSeq_MakeTable(&obj->reader, mgr->vmgr, tbl,
                                              mgr->reader_options, mgr->cache);
