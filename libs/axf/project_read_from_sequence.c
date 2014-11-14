@@ -112,7 +112,7 @@ rc_t RestoreReadMake ( RestoreRead **objp, const VXfactInfo *info, const VFactor
 		/* share cursor size with native cursor **/
 		cache_size = native_cursor_cache_size/4;
 		native_cursor_cache_size -= cache_size;
-		VCursorSetCacheCapacity(native_curs,native_cursor_cache_size);
+		VCursorSetCacheCapacity((VCursor*)native_curs,native_cursor_cache_size);
 	    }
             /* create a cursor */
             rc = VTableCreateCachedCursorRead( tbl, &obj->curs, cache_size );
@@ -182,7 +182,7 @@ static
 rc_t CC project_from_sequence_impl ( void *data, const VXformInfo *info,
     int64_t row_id, VRowResult *rslt, uint32_t argc, const VRowData argv [] )
 {
-    const RestoreRead *self = ( const void* ) data;
+    RestoreRead *self =  data;
 
     rc_t rc;
     INSDC_coord_zero read_id;
