@@ -81,6 +81,7 @@ struct VPath
 
     bool from_uri;
     bool missing_port;
+    bool highly_reliable;
 };
 
 enum VPathVariant

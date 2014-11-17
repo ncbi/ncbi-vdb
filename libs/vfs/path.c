@@ -3216,6 +3216,37 @@ LIB_EXPORT uint32_t CC VPathGetOid ( const VPath * self )
     return 0;
 }
 
+
+/* MarkHighReliability
+ *  mark a path as representing either a reliable URL
+ *  or one where the reliability is unknown.
+ *
+ *  a highly-reliable URL is one that should be expected
+ *  to work. this property makes errors more suspicious,
+ *  and more likely to be temporary, leading to harder work
+ *  within the networking module.
+ *
+ *  "high_reliability" [ IN ] - set to true for high reliability
+ */
+LIB_EXPORT void CC VPathMarkHighReliability ( VPath * self, bool high_reliability )
+{
+    rc_t rc;
+
+    if ( self == NULL )
+        rc = RC ( rcVFS, rcPath, rcUpdating, rcSelf, rcNull );
+    else
+    {
+    }
+}
+
+/* IsHighlyReliable
+ *  returns "true" if the path represents a high-reliability URL
+ */
+LIB_EXPORT bool CC VPathIsHighlyReliable ( const VPath * self )
+{
+}
+
+
 /*--------------------------------------------------------------------------
  * VFSManager
  */
@@ -3376,7 +3407,6 @@ LIB_EXPORT rc_t CC VFSManagerMakeOidPath ( const VFSManager * self,
     }
     return rc;
 }
-
 
 
 /* ==========================================
