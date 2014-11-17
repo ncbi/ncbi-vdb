@@ -711,19 +711,19 @@ static rc_t exists(RefSeqMgr *const self, unsigned const N, char const accession
                                       N, accession, &matched);
     if (matched)
         return 0;
-    
-    int const type = AccessionType(self->vmgr, N, accession, &rc);
-    if (type)
-        rc = 0;
-    else if (rc == 0)
-        rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
-    if (rc == 0)
-        rc = NewRefSeq(self, type, at, N, accession);
-    else {
-        ALIGN_CF_DBG("failed to open %.*s", N, accession);
-        ALIGN_DBGERR(rc);
-    }
-    
+    {
+        int const type = AccessionType(self->vmgr, N, accession, &rc);
+        if (type)
+            rc = 0;
+        else if (rc == 0)
+            rc = RC(rcAlign, rcTable, rcAccessing, rcType, rcUnexpected);
+        if (rc == 0)
+            rc = NewRefSeq(self, type, at, N, accession);
+        else {
+            ALIGN_CF_DBG("failed to open %.*s", N, accession);
+            ALIGN_DBGERR(rc);
+        }
+    }    
     return rc;
 }
 
@@ -828,23 +828,25 @@ static rc_t GetReader(RefSeqMgr *const self, RefSeq *const obj)
 {
     if (obj->vt->isopen(obj))
         return 0;
+    {
+        unsigned const max_open = self->num_open_max;
 
-    unsigned const max_open = self->num_open_max;
+        while (max_open > 0 && self->num_open >= max_open) {
+            RefSeq *const lru = self->lru;
 
-    while (max_open > 0 && self->num_open >= max_open) {
-        RefSeq *const lru = self->lru;
-
-        assert(lru);
-        ALIGN_CF_DBG("closing %s", lru->vt->name(lru));
-        self->lru = lru->newer;
-        --self->num_open;
-        lru->vt->close(lru);
-        lru->newer = lru->older = NULL;
+            assert(lru);
+            ALIGN_CF_DBG("closing %s", lru->vt->name(lru));
+            self->lru = lru->newer;
+            --self->num_open;
+            lru->vt->close(lru);
+            lru->newer = lru->older = NULL;
+        }
     }
-    rc_t const rc = obj->vt->open(obj, self);
+    {
+        rc_t const rc = obj->vt->open(obj, self);
 
-    if (rc) return rc;
-    
+        if (rc) return rc;
+    }
     MakeNewest(self, obj);
     ++self->num_open;
     ALIGN_CF_DBG("opened %s", obj->vt->name(obj));
@@ -858,19 +860,19 @@ static rc_t GetSeqInternal(RefSeqMgr *const self,
                               char const seq_id[])
 {
     RefSeq *obj = NULL;
-    rc_t rc = 0;
     
     if (self->mru == NULL || self->mru->vt->compare(self->mru, seq_id_sz, seq_id) != 0) {
-        rc = GetSeq(self, &obj, seq_id_sz, seq_id);
+        rc_t const rc = GetSeq(self, &obj, seq_id_sz, seq_id);
         if (rc)
             return rc;
     }
     else
         obj = self->mru;
-    
-    rc = GetReader(self, obj);
-    if (rc)
-        return rc;
+    {
+        rc_t const rc = GetReader(self, obj);
+        if (rc)
+            return rc;
+    }
     obj->vt->setRow(obj, seq_id_sz, seq_id);
     *result = obj;
     return 0;
@@ -899,17 +901,15 @@ LIB_EXPORT rc_t CC RefSeq_Read(const RefSeq* cself, INSDC_coord_zero offset, INS
 {
     rc_t rc = 0;
 
-    if( cself == NULL || buffer == NULL || written == NULL ) {
+    if (cself == NULL || buffer == NULL || written == NULL)
         rc = RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
-    }
     else {
         RefSeq *const self = (RefSeq *)cself;
         RefSeqMgr *const mgr = (RefSeqMgr *)self->mgr;
         
         rc = GetReader(mgr, self);
-        if (rc == 0) {
+        if (rc == 0)
             rc = self->vt->read(self, offset, len, buffer, written);
-        }
     }
     ALIGN_DBGERR(rc);
     return rc;
@@ -919,9 +919,9 @@ LIB_EXPORT rc_t CC RefSeq_Circular(const RefSeq* cself, bool* circular)
 {
     rc_t rc = 0;
 
-    if( cself == NULL ) {
+    if (cself == NULL)
         rc = RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
-    } else {
+    else {
         RefSeq const *const self = (RefSeq *)cself;
         
         rc = self->vt->circular(self, circular);
@@ -934,9 +934,9 @@ LIB_EXPORT rc_t CC RefSeq_SeqLength(const RefSeq* cself, INSDC_coord_len* len)
 {
     rc_t rc = 0;
 
-    if( cself == NULL ) {
+    if (cself == NULL)
         rc = RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
-    } else {
+    else {
         RefSeq const *const self = (RefSeq *)cself;
         
         rc = self->vt->length(self, len);
@@ -949,9 +949,9 @@ LIB_EXPORT rc_t CC RefSeq_MD5(const RefSeq* cself, const uint8_t** md5)
 {
     rc_t rc = 0;
 
-    if( cself == NULL ) {
+    if (cself == NULL)
         rc = RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
-    } else {
+    else {
         RefSeq const *const self = (RefSeq *)cself;
         
         rc = self->vt->checksum(self, md5);
