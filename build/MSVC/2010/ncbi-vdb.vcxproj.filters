@@ -1321,5 +1321,6 @@
     <ClCompile Include="..\..\..\libs\klib\progressbar.c">
       <Filter>klib</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\align\reader-wgs.c" />
   </ItemGroup>
 </Project>
