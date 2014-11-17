@@ -66,32 +66,30 @@ rc_t TableReaderWGS_MakeTable(TableReaderWGS const **const pself,
                               uint32_t const options,
                               size_t const cache)
 {
-    rc_t rc;
-
     assert(pself != NULL);
     assert(table != NULL);
-    
     {
         TableReaderWGS *const self = calloc(1, sizeof(*self));
-
+    
         memcpy(self->cols, TableReaderWGS_cols, sizeof(TableReaderWGS_cols));
         self->read = &self->cols[0];
-
+    
         if (options != 0) {
             self->cols[0].flags |=  ercol_Skip;
             self->cols[1].flags &= ~ercol_Skip;
             self->read = &self->cols[1];
         }
+        {
+            rc_t const rc = TableReader_Make(&self->base, table, self->cols, cache);
+            if (rc == 0) {
+                *pself = self;
+                return 0;
+            }
+            free(self);
 
-        rc = TableReader_Make(&self->base, table, self->cols, cache);
-        if (rc == 0) {
-            *pself = self;
-            return 0;
+            return rc;
         }
-        free(self);
     }
-
-    return rc;
 }
 
 void TableReaderWGS_Whack(TableReaderWGS const *const self)
@@ -106,7 +104,6 @@ rc_t TableReaderWGS_SeqLength(TableReaderWGS const *const self, int64_t row, INS
 {
     assert(self != NULL);
     assert(result != NULL);
-
     {
         rc_t const rc = TableReader_ReadRow(self->base, row);
         if (rc == 0)
@@ -150,7 +147,6 @@ rc_t TableReaderWGS_Read(TableReaderWGS const *const self, int64_t const row,
     *written = 0;
     if (len == 0)
         return 0;
-
     {
         rc_t const rc = TableReader_ReadRow(self->base, row);
         if (rc == 0) {
@@ -158,7 +154,6 @@ rc_t TableReaderWGS_Read(TableReaderWGS const *const self, int64_t const row,
 
             if (offset >= max)
                 return 0;
-            else
             {
                 uint8_t const *const src = self->read->base.u8 + offset;
                 INSDC_coord_len const end = offset + len;
