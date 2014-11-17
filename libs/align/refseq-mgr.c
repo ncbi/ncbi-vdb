@@ -678,10 +678,10 @@ static rc_t NewRefSeq(RefSeqMgr *const self,
     ALIGN_CF_DBG("Inserting '%.*s' at %u", N, accession, at);
     memmove(&self->refSeq[at + 1], &self->refSeq[at], sizeof(self->refSeq[0]) * (self->nRefSeqs - at));
     ++self->nRefSeqs;
+    {
+        RefSeq *rs = NULL;
     
-    RefSeq *rs = NULL;
-    
-    switch (type) {
+        switch (type) {
         case refSeqType_RefSeq:
             rs = RefSeq_RefSeq_alloc(N);
             break;
@@ -691,13 +691,14 @@ static rc_t NewRefSeq(RefSeqMgr *const self,
         default:
             assert("unknown type of RefSeq object");
             break;
-    }
-    self->refSeq[at] = rs;
+        }
+        self->refSeq[at] = rs;
     
-    if (rs == NULL)
-        return RC(rcAlign, rcTable, rcAccessing, rcMemory, rcExhausted);
+        if (rs == NULL)
+            return RC(rcAlign, rcTable, rcAccessing, rcMemory, rcExhausted);
 
-    rs->vt->init(rs, self, N, accession);
+        rs->vt->init(rs, self, N, accession);
+    }
     return 0;
 }
 
