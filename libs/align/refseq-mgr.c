@@ -776,10 +776,11 @@ static rc_t GetSeq(RefSeqMgr *const self, RefSeq **result,
     }
     if (rc)
         return rc;
-    
-    RefSeq *const fnd = self->refSeq[at];
+    {
+        RefSeq *const fnd = self->refSeq[at];
 
-    *result = fnd;
+        *result = fnd;
+    }
     return 0;
 }
 
