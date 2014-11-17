@@ -2504,7 +2504,6 @@ rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttp
         }
 
         /* reset connection, reset request */
-        KOutMsg ( "\nRedirected!!!\n\n" );
         rc = KClientHttpRequestHandleRedirection ( self, rslt );
         if ( rc != 0 )
             break;
