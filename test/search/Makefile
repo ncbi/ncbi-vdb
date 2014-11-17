@@ -22,39 +22,38 @@
 #
 # ===========================================================================
 
-by_default: runtests
+default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+TOP ?= $(abspath ../..)
 
-include $(TOP)/build/Makefile.shell
+MODULE = test/search
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+	test-agrep
+
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(TEST_TOOLS)
+
+clean: stdclean
 
 #-------------------------------------------------------------------------------
-# default
+# test-agrep
 #
-SUBDIRS =    \
-    ktst     \
-    cc       \
-    judy_test\
-    kfc      \
-    klib     \
-    kfg      \
-    kns      \
-    kdb      \
-    kproc    \
-    ngs      \
-    ngs-c++  \
-	search	 \
-    vfs      \
-    vxf      \
+TEST_AGREP_SRC = \
+	test-agrep agrep-main search-vdb
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+TEST_AGREP_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_AGREP_SRC))
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
+TEST_AGREP_LIB = \
+	-skapp \
+    -sncbi-wvdb \
+    -sktst
 
-.PHONY: default $(SUBDIRS)
 
+$(TEST_BINDIR)/test-agrep: $(TEST_AGREP_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_AGREP_LIB)
