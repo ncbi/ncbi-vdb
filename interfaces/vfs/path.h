@@ -192,6 +192,25 @@ VFS_EXTERN bool CC VPathIsFSCompatible ( const VPath * self );
 VFS_EXTERN bool CC VPathFromUri ( const VPath * self );
 
 
+/* MarkHighReliability
+ *  mark a path as representing either a reliable URL
+ *  or one where the reliability is unknown.
+ *
+ *  a highly-reliable URL is one that should be expected
+ *  to work. this property makes errors more suspicious,
+ *  and more likely to be temporary, leading to harder work
+ *  within the networking module.
+ *
+ *  "high_reliability" [ IN ] - set to true for high reliability
+ */
+VFS_EXTERN void CC VPathMarkHighReliability ( VPath * self, bool high_reliability );
+
+/* IsHighlyReliable
+ *  returns "true" if the path represents a high-reliability URL
+ */
+VFS_EXTERN bool CC VPathIsHighlyReliable ( const VPath * self );
+
+
 /* Read*
  *  read the various parts
  *  copies out data into user-supplied buffer
