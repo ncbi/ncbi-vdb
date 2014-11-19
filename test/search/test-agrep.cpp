@@ -32,6 +32,7 @@
 #include <kapp/main.h> /* KMain */
 #include <stdio.h>
 #include "search-vdb.h"
+#include <klib/checksum.h>
 
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(TestSuiteSearch, argsHandler);
@@ -51,6 +52,41 @@ void trim_eol(char* psz)
     else if (psz[len - 1] == '\n' || psz[len - 1] == '\r')
         psz[len - 1] = '\0';
 }
+
+#if 0
+TEST_CASE(TempCRC)
+{
+    std::cout << "Testing crc32 speed..." << std::endl;
+    size_t const size = (size_t)10 << 20;
+    char* buf = new char [size];
+
+    for ( size_t i = 0; i < size; ++i )
+    {
+        buf[i] = i;
+    }
+
+    size_t const bits = _ARCH_BITS;
+
+    printf ("allocated %saligned (%u) (_ARCH_BITS == %zu)\n", (int)((size_t)buf & 3) ? "un" : "", (int)(size_t)buf & 3, bits);
+
+    size_t offset = 1;
+
+    uint32_t crc32 = ::CRC32 ( 0, buf + offset, size - offset );
+
+    printf ("Caclulated CRC32: 0x%08X\n", crc32);
+
+    for ( size_t i = 0; i < size; ++i )
+    {
+        buf[i] = i < 1024 ? 0 : i;
+    }
+    offset = 100;
+    crc32 = ::CRC32 ( 0, buf + offset, size - offset );
+
+    printf ("Caclulated CRC32: 0x%08X\n", crc32);
+
+    delete[]buf;
+}
+#endif
 
 TEST_CASE(SearchCompare)
 {
