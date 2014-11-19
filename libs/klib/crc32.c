@@ -439,13 +439,14 @@ LIB_EXPORT uint32_t CC CRC32(uint32_t previousCrc32, const void *data, size_t le
 
 #if QWORD_READ == 1
     const uint64_t* current = (const uint64_t*) data;
+    size_t const ALIGN_BYTES = 8;
 #else
     const uint32_t* current = (const uint32_t*) data;
+    size_t const ALIGN_BYTES = 4;
 #endif
 
     /* if 'data' is unaligned, process first unaligned bytes with simple algorithm,
     then apply slicing to the aligned remainder */
-    size_t const ALIGN_BYTES = _ARCH_BITS / 8;
     size_t nFisrtUnalignedBytes = ((size_t)data % ALIGN_BYTES);
     if (nFisrtUnalignedBytes)
     {
