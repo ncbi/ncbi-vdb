@@ -3228,7 +3228,7 @@ LIB_EXPORT uint32_t CC VPathGetOid ( const VPath * self )
  *
  *  "high_reliability" [ IN ] - set to true for high reliability
  */
-LIB_EXPORT void CC VPathMarkHighReliability ( VPath * self, bool high_reliability )
+LIB_EXPORT rc_t CC VPathMarkHighReliability ( VPath * self, bool high_reliability )
 {
     rc_t rc;
 
@@ -3236,7 +3236,10 @@ LIB_EXPORT void CC VPathMarkHighReliability ( VPath * self, bool high_reliabilit
         rc = RC ( rcVFS, rcPath, rcUpdating, rcSelf, rcNull );
     else
     {
+        self -> highly_reliable = high_reliability;
+        rc = 0;
     }
+    return rc;
 }
 
 /* IsHighlyReliable
@@ -3244,6 +3247,7 @@ LIB_EXPORT void CC VPathMarkHighReliability ( VPath * self, bool high_reliabilit
  */
 LIB_EXPORT bool CC VPathIsHighlyReliable ( const VPath * self )
 {
+    return self != NULL && self -> highly_reliable;
 }
 
 

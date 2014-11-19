@@ -1579,7 +1579,7 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                                 /* remember that we can have chunked encoding,
                                    so "Content-Length" may not exist. */
                                 * pos = start_pos;
-                                * bytes = end_pos - start_pos; 
+                                * bytes = end_pos - start_pos + 1; 
                                             
                                 return 0;
                             }

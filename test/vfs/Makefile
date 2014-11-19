@@ -29,7 +29,9 @@ TOP ?= $(abspath ../..)
 MODULE = test/vfs
 
 TEST_TOOLS = \
-	path-test
+	path-test \
+	test-path \
+
 
 include $(TOP)/build/Makefile.env
 
@@ -41,7 +43,7 @@ $(TEST_TOOLS): makedirs
 clean: stdclean
 
 #-------------------------------------------------------------------------------
-# white-box test
+# C test on VPath
 #
 
 TEST_SRC = \
@@ -56,3 +58,27 @@ TEST_LIB = \
 
 $(TEST_BINDIR)/path-test: $(TEST_OBJ)
 	$(LD) --exe -o $@ $^ $(TEST_LIB)
+
+valgrind_path_c: std
+	valgrind --ncbi --show-reachable=no --suppressions=$(SRCDIR)/valgrind_suppressions.txt $(TEST_BINDIR)/path-test    
+    
+#----------------------------------------------------------------
+# C++ test on VPath
+#
+
+PATHTEST_SRC = \
+	pathtest 
+
+PATHTEST_OBJ = \
+	$(addsuffix .$(OBJX),$(PATHTEST_SRC))
+
+PATHTEST_LIB = \
+	-skapp \
+	-sktst \
+	-sncbi-vdb \
+
+$(TEST_BINDIR)/test-path: $(PATHTEST_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+valgrind_path_c++: std
+	valgrind --ncbi --show-reachable=no --suppressions=$(SRCDIR)/valgrind_suppressions.txt $(TEST_BINDIR)/test-path    

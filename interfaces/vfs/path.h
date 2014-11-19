@@ -203,7 +203,7 @@ VFS_EXTERN bool CC VPathFromUri ( const VPath * self );
  *
  *  "high_reliability" [ IN ] - set to true for high reliability
  */
-VFS_EXTERN void CC VPathMarkHighReliability ( VPath * self, bool high_reliability );
+VFS_EXTERN rc_t CC VPathMarkHighReliability ( VPath * self, bool high_reliability );
 
 /* IsHighlyReliable
  *  returns "true" if the path represents a high-reliability URL
