@@ -32,7 +32,6 @@
 #include <kapp/main.h> /* KMain */
 #include <stdio.h>
 #include "search-vdb.h"
-#include <klib/checksum.h>
 
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(TestSuiteSearch, argsHandler);
@@ -54,35 +53,34 @@ void trim_eol(char* psz)
 }
 
 #if 0
+#include "PerfCounter.h"
+#include <klib/checksum.h>
+
 TEST_CASE(TempCRC)
 {
     std::cout << "Testing crc32 speed..." << std::endl;
     size_t const size = (size_t)10 << 20;
     char* buf = new char [size];
+    CPerfCounter counter( "CRC32" );
 
     for ( size_t i = 0; i < size; ++i )
     {
         buf[i] = i;
     }
 
-    size_t const bits = _ARCH_BITS;
+    size_t const ALIGN_BYTES = _ARCH_BITS / 8;
 
-    printf ("allocated %saligned (%u) (_ARCH_BITS == %zu)\n", (int)((size_t)buf & 3) ? "un" : "", (int)(size_t)buf & 3, bits);
+    printf ("allocated %saligned (address=%p)\n", (int)((size_t)buf % ALIGN_BYTES) ? "un" : "", buf);
 
-    size_t offset = 1;
+    size_t offset = 2;
+    uint32_t crc32;
 
-    uint32_t crc32 = ::CRC32 ( 0, buf + offset, size - offset );
-
-    printf ("Caclulated CRC32: 0x%08X\n", crc32);
-
-    for ( size_t i = 0; i < size; ++i )
     {
-        buf[i] = i < 1024 ? 0 : i;
+        CPCount count(counter);
+        crc32 = ::CRC32 ( 0, buf + offset, size - offset );
     }
-    offset = 100;
-    crc32 = ::CRC32 ( 0, buf + offset, size - offset );
 
-    printf ("Caclulated CRC32: 0x%08X\n", crc32);
+    printf ("Caclulated CRC32: 0x%08X (%.2lf MB/s)\n", crc32, (size >> 20)/counter.GetSeconds());
 
     delete[]buf;
 }
