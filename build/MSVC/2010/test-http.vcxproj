@@ -18,31 +18,24 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  
   <PropertyGroup>
     <WorkingDirectory>kns</WorkingDirectory>
-  </PropertyGroup>    
-  
+  </PropertyGroup>
   <Import Project=".\test-project.props" />
-  
   <ItemDefinitionGroup>
     <Link>
       <AdditionalDependencies>$(VDB_TARGET)lib\ncbi-vdb.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  
   <ItemDefinitionGroup>
     <ClCompile>
-        <AdditionalIncludeDirectories>$(VDB_ROOT)libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VDB_ROOT)libs/kns;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
-  
   <ItemGroup>
-    <ClCompile Include="..\..\..\test\kns\knstest.cpp" />
+    <ClCompile Include="..\..\..\test\kns\httptest.cpp" />
   </ItemGroup>
-  
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{FC91CF87-4852-42FD-BD18-7D82E52A8AF5}</ProjectGuid>
+    <ProjectGuid>{CEB65800-26CF-4FD8-B33A-9AFFE8D5B3B0}</ProjectGuid>
   </PropertyGroup>
-  
 </Project>
