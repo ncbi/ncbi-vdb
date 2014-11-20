@@ -30,17 +30,14 @@
 
 #include <ktst/unit_test.hpp>
 
-#include <klib/text.h>
 #include <klib/rc.h>
 #include <klib/log.h>
 
 #include <kns/manager.h>
 #include <kns/endpoint.h>
 #include <kns/stream.h>
-#include <kns/http.h>
 #include <kns/adapt.h>
 #include <kns/socket.h>
-#include <kns/kns-mgr-priv.h>
 
 #include <kfs/directory.h>
 #include <kfs/file.h>
@@ -49,8 +46,6 @@
 #include <kproc/timeout.h>
 
 #include <os-native.h>
-
-#include <kapp/main.h>
 
 #include <sysalloc.h>
 #include <stdexcept>
@@ -62,7 +57,7 @@ TEST_SUITE(KnsTestSuite);
 
 using namespace std;
 using namespace ncbi::NK;
-#if 0
+
 //////////////////////////////////////////// KStream
 class KnsStreamFixture
 {
@@ -168,10 +163,10 @@ public:
 
 FIXTURE_TEST_CASE(IPCEndpoint_Create, KnsManagerFixture)
 {
-    StringInitCString(&name, GetName().c_str());
+    StringInitCString(&name, GetName());
     REQUIRE_RC(KNSManagerInitIPCEndpoint(mgr, &ep, &name));
     REQUIRE_EQ(ep.type, (KEndPointType)epIPC);
-    REQUIRE_EQ(string(ep.u.ipc_name), GetName());
+    REQUIRE_EQ(string(ep.u.ipc_name), string(GetName()));
 }
 
 FIXTURE_TEST_CASE(MakeListener, KnsManagerFixture)
@@ -399,12 +394,11 @@ public:
     // for use in test cases
     size_t num;
     char buf[MaxMessageSize];
-    string content;
 };
 
 PROCESS_FIXTURE_TEST_CASE(IPCEndpoint_Basic, SocketFixture, 0, 5)
 {   // client runs in a child process
-    content = GetName();
+    string content = GetName();
     
     KStream* stream = MakeStream ( 50 ); /* this might make some retries while the server is setting up */
     LOG(LogLevel::e_message, "client '" << GetName() << "' after KNSMakeConnection" << endl);    
@@ -431,12 +425,12 @@ PROCESS_FIXTURE_TEST_CASE(IPCEndpoint_MultipleListeners, SocketFixture, 0, 100)
     KStream* stream2 = MakeStream ( 5 ); /* should work from the first try now*/
     LOG(LogLevel::e_message, "client '" << GetName() << "' after KNSMakeConnection2" << endl);    
     
-    content = GetName()+"_1";
+    string content = string(GetName())+"_1";
     REQUIRE_RC(KStreamWrite(stream, content.c_str(), content.length(), &num));
     LOG(LogLevel::e_message, "client after KStreamWrite1" << endl);    
     REQUIRE_EQ(content.length(), num);
     
-    string content2(GetName()+"_2");
+    string content2(string(GetName())+"_2");
     REQUIRE_RC(KStreamWrite(stream2, content2.c_str(), content2.length(), &num));
     LOG(LogLevel::e_message, "client after KStreamWrite2" << endl);    
     REQUIRE_EQ(content2.length(), num);
@@ -455,7 +449,7 @@ PROCESS_FIXTURE_TEST_CASE(IPCEndpoint_MultipleListeners, SocketFixture, 0, 100)
 
 PROCESS_FIXTURE_TEST_CASE(IPCEndpoint_ReadAll, SocketFixture, 0, 5)
 {   // call ReadAll requesting more bytes than available, see it return only what is available
-    content = GetName();
+    string content = GetName();
     
     KStream* stream = MakeStream ( 5 ); 
     LOG(LogLevel::e_message, "client '" << GetName() << "' after KNSMakeConnection" << endl);    
@@ -505,8 +499,6 @@ public:
 
         m_stream = MakeStream ( 5 ); 
         LOG(LogLevel::e_message, "client '" << p_content << "' after KNSMakeConnection" << endl);    
-	
-		content = p_content;
 	}
 	void SetupClient(const string& p_content, size_t p_timeoutMs)
 	{
@@ -572,14 +564,13 @@ public:
     // for use in test cases
     KStream* m_stream;
     timeout_t tm;
-	
-	string content;
 };
 
 ////////////////////// 1. KNSManagerMakeConnection (no time-out specified), then use KStreamTimedRead/Write
 PROCESS_FIXTURE_TEST_CASE(TimedRead_NULL_Timeout, TimedReadSocketFixture, 0, 20)
 {   // 1.1. wait indefinitely until the server responds
-	SetupClient(GetName());
+    string content = GetName();
+	SetupClient(content);
 	
     REQUIRE_RC(KStreamTimedWrite(m_stream, content.c_str(), content.length(), &num, NULL)); // waits indefinitely
     LOG(LogLevel::e_message, "client after KStreamWrite" << endl);    
@@ -594,7 +585,8 @@ PROCESS_FIXTURE_TEST_CASE(TimedRead_NULL_Timeout, TimedReadSocketFixture, 0, 20)
 
 PROCESS_FIXTURE_TEST_CASE(TimedRead_0_Timeout, TimedReadSocketFixture, 0, 20)
 {   // 1.2. time out immediately when the server has not yet responded
-	SetupClient(GetName(), 0); /* no wait */
+    string content = GetName();
+	SetupClient(content, 0); /* no wait */
 
     REQUIRE_RC(KStreamTimedWrite(m_stream, content.c_str(), content.length(), &num, &tm)); // returns immediately if socket is not writeable
     LOG(LogLevel::e_message, "client after KStreamWrite" << endl);    
@@ -612,7 +604,8 @@ PROCESS_FIXTURE_TEST_CASE(TimedRead_0_Timeout, TimedReadSocketFixture, 0, 20)
 
 PROCESS_FIXTURE_TEST_CASE(TimedRead_Short_Timeout, TimedReadSocketFixture, 0, 20)
 {   // 1.3. time out when the server has not responded quickly enough
-	SetupClient(GetName(), SERVER_WRITE_DELAY_MS / 2);
+    string content = GetName();
+	SetupClient(content, SERVER_WRITE_DELAY_MS / 2);
 	
     REQUIRE_RC(KStreamTimedWrite(m_stream, content.c_str(), content.length(), &num, &tm)); // times out if socket is not writeable
     LOG(LogLevel::e_message, "client after KStreamWrite" << endl);    
@@ -629,7 +622,8 @@ PROCESS_FIXTURE_TEST_CASE(TimedRead_Short_Timeout, TimedReadSocketFixture, 0, 20
 
 PROCESS_FIXTURE_TEST_CASE(TimedRead_Long_Timeout, TimedReadSocketFixture, 0, 20)
 {   // 1.4. wait enough time time for the server to respond
-	SetupClient(GetName(), SERVER_WRITE_DELAY_MS * 2);
+    string content = GetName();
+	SetupClient(content, SERVER_WRITE_DELAY_MS * 2);
 	
     REQUIRE_RC(KStreamTimedWrite(m_stream, content.c_str(), content.length(), &num, &tm)); // times out if socket is not writeable
     LOG(LogLevel::e_message, "client after KStreamWrite" << endl);    
@@ -656,8 +650,6 @@ public:
     
         m_stream = MakeStreamTimed( 5, p_readMillis, p_writeMillis );
         LOG(LogLevel::e_message, "client '" << p_content << "' after KNSMakeConnection" << endl);    
-	
-		content = p_content;
 	}
 
     KStream* MakeStreamTimed( int32_t p_retryTimeout, int32_t p_readMillis, int32_t p_writeMillis  )
@@ -681,7 +673,8 @@ public:
 
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_NULL_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.1. wait indefinitely until the server responds
-	SetupClient(GetName(), -1, -1); // wait indefinitely
+    string content = GetName();
+	SetupClient(content, -1, -1); // wait indefinitely
 	
     REQUIRE_RC(KStreamWrite(m_stream, content.c_str(), content.length(), &num)); 
     LOG(LogLevel::e_message, "client after KStreamWrite" << endl); // waits indefinitely   
@@ -695,7 +688,8 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_NULL_Timeout, TimedConnection_Rea
 }
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_TimedReadOverride_NULL_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.1.1 wait indefinitely until the server responds
-	SetupClient(GetName(), 0, 0); // the connection is created as no-wait
+    string content = GetName();
+	SetupClient(content, 0, 0); // the connection is created as no-wait
                             // but the reads/writes override that with "wait indefinitely"
     
     REQUIRE_RC(KStreamTimedWrite(m_stream, content.c_str(), content.length(), &num, NULL)); // waits indefinitely
@@ -711,7 +705,8 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_TimedReadOverride_NULL_Timeout, TimedC
 
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_0_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.2. time out immediately when the server has not yet responded
-	SetupClient(GetName(), 0, 0); /* no wait */
+    string content = GetName();
+	SetupClient(content, 0, 0); /* no wait */
 
     REQUIRE_RC(KStreamWrite(m_stream, content.c_str(), content.length(), &num)); // returns immediately if socket is not writeable
     LOG(LogLevel::e_message, "client after KStreamWrite" << endl);    
@@ -728,7 +723,8 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_0_Timeout, TimedConnection_ReadSo
 }
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_0_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.2.1 time out immediately when the server has not yet responded
-	SetupClient(GetName(), -1, -1);   // the connection is created as "wait indefinitely"
+    string content = GetName();
+	SetupClient(content, -1, -1);   // the connection is created as "wait indefinitely"
     TimeoutInit(&tm, 0);       // but the reads/writes override that with "no wait"
 
     REQUIRE_RC(KStreamTimedWrite(m_stream, content.c_str(), content.length(), &num, &tm)); // returns immediately if socket is not writeable
@@ -747,7 +743,8 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_0_Timeout, TimedConnectio
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_SettingsOverride_0_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.2.2 time out immediately when the server has not yet responded
     REQUIRE_RC(KNSManagerSetConnectionTimeouts(mgr, 5, 0, 0)); // override default setting (long time-out) to "no wait"
-	TimedReadSocketFixture::SetupClient(GetName()); 
+    string content = GetName();
+	TimedReadSocketFixture::SetupClient(content); 
 
     REQUIRE_RC(KStreamWrite(m_stream, content.c_str(), content.length(), &num)); // returns immediately if socket is not writeable
     LOG(LogLevel::e_message, "client after KStreamWrite" << endl);    
@@ -765,7 +762,8 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_SettingsOverride_0_Timeout, TimedConne
 
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_Short_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.3. time out when the server has not responded quickly enough
-	SetupClient(GetName(), SERVER_WRITE_DELAY_MS / 2, SERVER_WRITE_DELAY_MS / 2);
+    string content = GetName();
+	SetupClient(content, SERVER_WRITE_DELAY_MS / 2, SERVER_WRITE_DELAY_MS / 2);
 	
     REQUIRE_RC(KStreamWrite(m_stream, content.c_str(), content.length(), &num)); // times out if socket is not writeable
     LOG(LogLevel::e_message, "client after KStreamWrite" << endl);    
@@ -781,7 +779,8 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_Short_Timeout, TimedConnection_Re
 }
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_Short_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.3.1. time out when the server has not responded quickly enough
-	SetupClient(GetName(), -1, -1);                       // the connection is created as "wait indefinitely"
+    string content = GetName();
+	SetupClient(content, -1, -1);                       // the connection is created as "wait indefinitely"
     TimeoutInit(&tm, SERVER_WRITE_DELAY_MS / 2);    // but the reads/writes override that with a short time-out
 	
     REQUIRE_RC(KStreamTimedWrite(m_stream, content.c_str(), content.length(), &num, &tm)); // times out if socket is not writeable
@@ -799,7 +798,8 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_Short_Timeout, TimedConne
 
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_Long_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.4. wait enough time for the server to respond
-	SetupClient(GetName(), SERVER_WRITE_DELAY_MS * 2, SERVER_WRITE_DELAY_MS * 2);
+    string content = GetName();
+	SetupClient(content, SERVER_WRITE_DELAY_MS * 2, SERVER_WRITE_DELAY_MS * 2);
 	
     REQUIRE_RC(KStreamWrite(m_stream, content.c_str(), content.length(), &num)); // times out if socket is not writeable
     LOG(LogLevel::e_message, "client after KStreamWrite" << endl);    
@@ -813,7 +813,8 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_Long_Timeout, TimedConnection_Rea
 }
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_Long_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.4.1. wait enough time for the server to respond
-	SetupClient(GetName(), 0, 0);                         // the connection is created as "no wait"
+    string content = GetName();
+	SetupClient(content, 0, 0);                         // the connection is created as "no wait"
     TimeoutInit(&tm, SERVER_WRITE_DELAY_MS * 2);    // but the reads/writes override that with a sufficient time-out
 	
     REQUIRE_RC(KStreamTimedWrite(m_stream, content.c_str(), content.length(), &num, &tm)); // times out if socket is not writeable
@@ -845,6 +846,7 @@ public:
     }
     ~TimedWriteSocketFixture()
     {
+        
     }
 	
 	void SetupClient(const string& p_name)
@@ -905,17 +907,28 @@ public:
 	static volatile bool go;
     static rc_t TimedWriteServerFn ( const KThread *self, void *data )  
     {
-        ostringstream pref;
-        pref << "TimedWriteSocketFixture worker " << (void*)self << ": ";
-        string prefix = pref.str();
+        static string prefix;
+        {
+            ostringstream pref;
+            pref << "TimedWriteSocketFixture worker " << (void*)self << ": ";
+            prefix = pref.str();
+        }
         
         try
         {
             KStream* stream = (KStream*)data;
             
-			string message = ReadMessage(stream, 4, 1000);
+            // local STL string here leaks somehow; use C string for now
+			// string message = ReadMessage(stream, 4, 1000);
+            char message[MaxMessageSize];
+            size_t num;
+            timeout_t tm;
+            tm.mS = 1000;
+            if (KStreamTimedRead(stream, message, 4, &num, &tm) != 0) 
+                throw logic_error ( "TimedWriteSocketFixture::ReadMessage KStreamRead failed" );
+            
             LOG(LogLevel::e_message, (prefix + " after KStreamRead(" + message + ")\n"));    
-			if (message == "data")
+			if (string(message, num) == "data")
 			{	// from now on, wait until control thread allows us to read
                 LOG(LogLevel::e_message, "data thread waiting for 'go'\n");
 				while (!go)
@@ -939,19 +952,19 @@ public:
 				}
                 LOG(LogLevel::e_message, "data thread complete\n");
             }
-			else if (message == "ctrl")
+			else if (string(message, num) == "ctrl")
 			{	// when received "go", allow the data thread to read
                 WriteMessage(stream, "ready", -1);
             
 				while (true)
 				{
-					message = ReadMessage(stream, 4, 10000);
-					if (message == "gogo")
+					string ctrlMessage = ReadMessage(stream, 4, 10000);
+					if (ctrlMessage == "gogo")
                     {
                         LOG(LogLevel::e_message, "control thread received 'gogo'\n");
 						go = true;
                     }
-					else if (message == "done")
+					else if (ctrlMessage == "done")
 					{
                         LOG(LogLevel::e_message, "control thread received 'done'\n");
 						break;
@@ -975,7 +988,7 @@ public:
             cout << (prefix + "threw something\n"); 
             throw;
         }
-        LOG(LogLevel::e_message, (prefix + " exiting\n"));    
+        LOG(LogLevel::e_message, (prefix + " exiting\n"));  
         return KThreadRelease(self);
     }
 
@@ -1014,9 +1027,6 @@ volatile bool TimedWriteSocketFixture::go = false;
 //  1. flood the socket, see KStreamTimedWrite time out
 PROCESS_FIXTURE_TEST_CASE(TimedWrite_Short_Timeout, TimedWriteSocketFixture, 0, 20)
 {   
-    //KLogLevelSet(klogInfo);
-	//TestEnv::verbosity = LogLevel::e_message;
-    
 	SetupClient(GetName());
 	FloodDataChannel(); // the last WriteMessage(data) failed since nobody is reading from the server side
     
@@ -1030,9 +1040,6 @@ PROCESS_FIXTURE_TEST_CASE(TimedWrite_Short_Timeout, TimedWriteSocketFixture, 0, 
     TestEnv::SleepMs(100);
     
     TeardownClient();
-
-    //KLogLevelSet(klogErr);
-	//TestEnv::verbosity = LogLevel::e_error;
 }
 
 //  2. flood the socket, see KStreamTimedWrite wait indefinitely
@@ -1056,141 +1063,6 @@ PROCESS_FIXTURE_TEST_CASE(TimedWrite_NULL_Timeout, TimedWriteSocketFixture, 0, 2
 
 //  TODO: KStreamReadExactly, KStreamTimedReadExactly
 //  TODO: KStreamWriteExactly, KStreamTimedWriteExactly
-
-#endif
-
-////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////// HTTP connections
-
-class TestStream;
-#define KSTREAM_IMPL TestStream
-#include <kns/impl.h>
-
-class TestStream
-{
-public:
-    static KStream_vt_v1 vt;
-
-    static rc_t CC Whack ( KSTREAM_IMPL *self ) 
-    { 
-        if ( TestEnv::verbosity == LogLevel::e_message )
-            cout << "TestStream::Whack() called" << endl;
-        return 0; 
-    }
-    static rc_t CC Read ( const KSTREAM_IMPL *self, void *buffer, size_t bsize, size_t *num_read )
-    { 
-        if ( TestEnv::verbosity == LogLevel::e_message )
-            cout << "TestStream::Read() called" << endl;
-        * num_read = 0; 
-        return 0; 
-    }
-    static rc_t CC Write ( KSTREAM_IMPL *self, const void *buffer, size_t size, size_t *num_writ )
-    { 
-        if ( TestEnv::verbosity == LogLevel::e_message )
-            cout << "TestStream::Write() called" << endl;
-        * num_writ = size; 
-        return 0; 
-    }
-    static rc_t CC TimedRead ( const KSTREAM_IMPL *self, void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm )
-    { 
-        if ( TestEnv::verbosity == LogLevel::e_message )
-            cout << "TestStream::TimedRead() called" << endl;
-        if ( m_response.size() > bsize )
-        {
-            memcpy(buffer, m_response.c_str(), bsize);
-            * num_read = bsize; 
-            m_response = m_response.substr(bsize);
-        }
-        else
-        {
-            memcpy(buffer, m_response.c_str(), m_response.size());
-            * num_read = m_response.size(); 
-            m_response.clear();
-        }
-        if ( TestEnv::verbosity == LogLevel::e_message )
-            cout << "TestStream::TimedRead returned \"" << string((const char*)buffer, * num_read) << "\"" << endl;
-        
-        return 0; 
-    }
-    static rc_t CC TimedWrite ( KSTREAM_IMPL *self, const void *buffer, size_t size, size_t *num_writ, struct timeout_t *tm )
-    { 
-        if ( TestEnv::verbosity == LogLevel::e_message )
-            cout << "TestStream::TimedWrite(\"" << string((const char*)buffer, size) << "\") called" << endl;
-        * num_writ = size; 
-        return 0; 
-    }
-
-    static void SetResponse ( const string& p_str )
-    {
-        m_response = p_str;
-    }
-    
-    static string m_response;
-};
-
-KStream_vt_v1 TestStream::vt =
-{
-    1, 1,
-    TestStream::Whack,
-    TestStream::Read,
-    TestStream::Write,
-    TestStream::TimedRead,
-    TestStream::TimedWrite
-};
-
-string TestStream::m_response;
-
-class HttpFixture
-{
-public:
-    HttpFixture()
-    : m_mgr(0), m_file(0)
-    {
-        if ( KNSManagerMake ( & m_mgr ) != 0 )
-            throw logic_error ( "HttpFixture: KNSManagerMake failed" );
-                
-        if ( KStreamInit ( & m_stream, ( const KStream_vt* ) & TestStream::vt, "TestStream", "", true, true ) != 0 )
-            throw logic_error ( "HttpFixture: KStreamInit failed" );
-    }
-    
-    ~HttpFixture()
-    {
-        if ( m_mgr && KNSManagerRelease ( m_mgr ) != 0 )
-            throw logic_error ( "HttpFixture: KNSManagerRelease failed" );
-        if ( m_file && KFileRelease ( m_file ) != 0 )
-            throw logic_error ( "HttpFixture: KFileRelease failed" );
-    }
-    
-    KNSManager* m_mgr;
-    KStream m_stream;
-    KFile* m_file;
-};
-
-FIXTURE_TEST_CASE(HttpReliable_Make, HttpFixture)
-{
-    TestStream::SetResponse("HTTP/1.1 200 OK\nContent-Length: 7\n");
-    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, "http://abc.go.com/") ); 
-    REQUIRE_NOT_NULL ( m_file ) ;
-}
-
-FIXTURE_TEST_CASE(HttpReliable_Read, HttpFixture)
-{
-    TestStream::SetResponse("HTTP/1.1 200 OK\nContent-Length: 7\n"); // response to HEAD
-    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, "http://abc.go.com/") ); 
-    char buf[1024];
-    size_t num_read;
-    TestStream::SetResponse(    // response to GET
-        "HTTP/1.1 206 Partial Content\n"
-        "Transfer-Encoding: chunked\n"
-        /*"Content-Length: 7\n" */ /* bug fix in KClientHttpResultHandleContentRange: used to break if Content-Length was not there */
-        "Content-Range: bytes 0-6/7\n" 
-        "\n"
-        "7\n"
-        "content\n"
-    ); 
-    REQUIRE_RC( KFileTimedRead ( m_file, 0, buf, sizeof buf, &num_read, NULL ) );
-    REQUIRE_EQ( string ( "content" ), string ( buf, num_read ) );
-}
 
 //////////////////////////////////////////// Main
 extern "C"
@@ -1223,7 +1095,7 @@ rc_t CC KMain ( int argc, char *argv [] )
 	
 	// this makes messages from the test code appear
 	// (same as running the executable with "-l=message")
-	// TestEnv::verbosity = LogLevel::e_message;
+	//TestEnv::verbosity = LogLevel::e_message;
 	
     rc_t rc=KnsTestSuite(argc, argv);
     return rc;

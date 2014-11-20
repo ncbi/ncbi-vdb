@@ -1095,7 +1095,6 @@ rc_t KListenerAcceptIPv4 ( KSocket *self, KSocket *conn )
         return HandleErrno ( __func__, __LINE__ );
     if ( len > sizeof conn->remote_addr.v4 )
         return RC ( rcNS, rcConnection, rcWaiting, rcBuffer, rcInsufficient );
-    conn -> remote_addr_valid = true;
     return 0;
 }
 
@@ -1109,7 +1108,6 @@ rc_t KListenerAcceptIPv6 ( KSocket *self, KSocket *conn )
         return HandleErrno ( __func__, __LINE__ );
     if ( len > sizeof conn->remote_addr.v6 )
         return RC ( rcNS, rcConnection, rcWaiting, rcBuffer, rcInsufficient );
-    conn -> remote_addr_valid = true;
     return 0;
 }
 
@@ -1140,45 +1138,48 @@ LIB_EXPORT rc_t CC KListenerAccept ( KListener *iself, struct KSocket **out )
             rc = RC ( rcNS, rcConnection, rcWaiting, rcSelf, rcNull);
         else
         {
-            KSocket * new_socket = calloc ( 1, sizeof * new_socket );
-            if ( new_socket == NULL )
-                rc = RC ( rcNS, rcConnection, rcWaiting, rcMemory, rcExhausted );
-            else
+            KSocket tmp_socket; /* we only need to populate fd and remote_addr */
+            tmp_socket . fd = -1;
+
+            switch ( self -> type )
             {
-                new_socket -> fd = -1;
-                new_socket -> read_timeout = self -> read_timeout;
-                new_socket -> write_timeout = self -> write_timeout;
-                new_socket -> remote_addr_valid = false;
+            case epIPV6:
+                rc = KListenerAcceptIPv6 ( self, & tmp_socket );
+                break;
 
+            case epIPV4:
+                rc = KListenerAcceptIPv4 ( self, & tmp_socket );
+                break;
 
-                rc = KStreamInit ( & new_socket -> dad, ( const KStream_vt* ) & vtKSocket,
-                                   "KSocket", "", true, true );
-                if ( rc == 0 )
+            case epIPC:
+                rc = KListenerAcceptIPC ( self, & tmp_socket );
+                break;
+
+            default:
+                rc = RC ( rcNS, rcSocket, rcConstructing, rcSelf, rcCorrupt );
+            }
+
+            if ( rc == 0 )
+            {
+                KSocket * new_socket = calloc ( 1, sizeof * new_socket );
+                if ( new_socket == NULL )
+                    rc = RC ( rcNS, rcConnection, rcWaiting, rcMemory, rcExhausted );
+                else
                 {
-                    switch ( self -> type )
-                    {
-                    case epIPV6:
-                        rc = KListenerAcceptIPv6 ( self, new_socket );
-                        break;
+                    new_socket -> fd                = tmp_socket . fd;
+                    new_socket -> remote_addr       = tmp_socket . remote_addr;
+                    new_socket -> read_timeout      = self -> read_timeout;
+                    new_socket -> write_timeout     = self -> write_timeout;
+                    new_socket -> remote_addr_valid = true;
 
-                    case epIPV4:
-                        rc = KListenerAcceptIPv4 ( self, new_socket );
-                        break;
-
-                    case epIPC:
-                        rc = KListenerAcceptIPC ( self, new_socket );
-                        break;
-
-                    default:
-                        rc = RC ( rcNS, rcSocket, rcConstructing, rcSelf, rcCorrupt );
-                    }
-
+                    rc = KStreamInit ( & new_socket -> dad, ( const KStream_vt* ) & vtKSocket,
+                                       "KSocket", "", true, true );
                     if ( rc == 0 )
                     {
                         * out = new_socket;
                         return 0;
                     }
-
+                    
                     free ( new_socket );
                 }
             }
