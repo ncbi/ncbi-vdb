@@ -1,18 +1,9 @@
 {
-   curl_easy_init/calloc
+   last_worker_standing
    Memcheck:Leak
    fun:calloc
-   ...
-   fun:prepare_curl
-   fun:KCurlFileDiscoverSize
-   ...
-}
-{
-   curl_easy_init/malloc
-   Memcheck:Leak
-   fun:malloc
-   ...   
-   fun:prepare_curl
-   fun:KCurlFileDiscoverSize
+   fun:_dl_allocate_tls
+   fun:pthread_create@@GLIBC_2.2.5
+   fun:KThreadMake
    ...
 }

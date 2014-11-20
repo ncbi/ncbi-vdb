@@ -29,8 +29,8 @@ TOP ?= $(abspath ../..)
 MODULE = test/kns
 
 TEST_TOOLS = \
-	test-http \
 	test-kns \
+	test-http \
 
 include $(TOP)/build/Makefile.env
 
@@ -42,21 +42,21 @@ clean: stdclean
 INCDIRS += -I$(TOP)/libs/kns
 
 #-------------------------------------------------------------------------------
-# white-box test
+# white-box test. TODO: combine with the old test/kns/http-test.c, roll into the C++ test-http
 #
-
-TEST_SRC = \
-	http-test
-
-TEST_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_SRC))
-
-TEST_LIB = \
-	-skapp-norsrc \
-	-sncbi-vdb \
-
-$(TEST_BINDIR)/test-http: $(TEST_OBJ)
-	$(LD) --exe -o $@ $^ $(TEST_LIB)
+#
+#TEST_SRC = \
+#	wb-http-test
+#
+#TEST_OBJ = \
+#	$(addsuffix .$(OBJX),$(TEST_SRC))
+#
+#TEST_LIB = \
+#	-skapp-norsrc \
+#	-sncbi-vdb \
+#
+#$(TEST_BINDIR)/test-http: $(TEST_OBJ)
+#	$(LD) --exe -o $@ $^ $(TEST_LIB)
 
 #----------------------------------------------------------------
 # test-kns
@@ -75,8 +75,32 @@ KNSTEST_OBJ = \
 $(TEST_BINDIR)/test-kns: $(KNSTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
-kns: std  
-	$(TEST_BINDIR)/test-kns  # -l=all
+kns: $(TEST_BINDIR)/test-kns 
+	test-kns  # -l=all
     
-valgrind_kns: std 
-	valgrind --ncbi --show-reachable=no --suppressions=$(SRCDIR)/valgrind_suppressions.txt $(TEST_BINDIR)/test-kns  
+valgrind_kns: test-kns
+	valgrind --ncbi --show-reachable=no --suppressions=$(SRCDIR)/valgrind_suppressions.txt $(TEST_BINDIR)/test-kns
+
+#----------------------------------------------------------------
+# test-http
+#
+KNSTEST_LIB = \
+	-skapp \
+    -sncbi-vdb \
+    -sktst \
+
+KNSTEST_SRC = \
+	httptest
+
+KNSTEST_OBJ = \
+	$(addsuffix .$(OBJX),$(KNSTEST_SRC))
+
+$(TEST_BINDIR)/test-http: $(KNSTEST_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+http: test-http  
+	$(TEST_BINDIR)/test-http  # -l=all
+    
+valgrind_http: test-http 
+	valgrind --ncbi --show-reachable=no --suppressions=$(SRCDIR)/valgrind_suppressions.txt $(TEST_BINDIR)/test-http
+    

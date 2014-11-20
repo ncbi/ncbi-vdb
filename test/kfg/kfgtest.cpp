@@ -258,19 +258,19 @@ FIXTURE_TEST_CASE(KConfigLoadFile_should_report_null_inputs, KfgFixture)
 
 FIXTURE_TEST_CASE(one_name_value_double_quotes, KfgFixture)
 {
-    CreateAndLoad(GetName().c_str(), "name=\"value\"");
+    CreateAndLoad(GetName(), "name=\"value\"");
     REQUIRE(ValueMatches("name", "value"));
 }
 
 FIXTURE_TEST_CASE(one_pathname_value_single_quotes, KfgFixture)
 {
-    CreateAndLoad(GetName().c_str(), "root/subname/name='val'");
+    CreateAndLoad(GetName(), "root/subname/name='val'");
     REQUIRE(ValueMatches("root/subname/name", "val"));
 }
 
 FIXTURE_TEST_CASE(numeric_pathnames, KfgFixture)
 {   
-    CreateAndLoad(GetName().c_str(), " root1/1 = 'val1'\n");
+    CreateAndLoad(GetName(), " root1/1 = 'val1'\n");
     REQUIRE(ValueMatches("root1/1", "val1"));
 }
 
@@ -282,7 +282,7 @@ FIXTURE_TEST_CASE(multiple_pathnames, KfgFixture)
                          "root1/subname2/name4\t = \"val4\"\n"
                          "root2/subname1/name5 =\t \"val5\"\n"
                          "root2/subname2/name6 = \"val6\"\n";
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
 
     REQUIRE(ValueMatches("root1/subname1/name1", "val1"));
     REQUIRE(ValueMatches("root1/subname1/name2", "val2"));
@@ -298,7 +298,7 @@ FIXTURE_TEST_CASE(comments, KfgFixture)
                          "root1/subname1/name2 ='val2'\n"
                          "#root1/subname1/name1='val11'\n"       // the commented out lines do not override the lines with the same paths above
                          "/*root1/subname1/name2=\"val12\"*/\n";
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
 
     REQUIRE(ValueMatches("root1/subname1/name1", "val1"));
     REQUIRE(ValueMatches("root1/subname1/name2", "val2"));
@@ -306,13 +306,13 @@ FIXTURE_TEST_CASE(comments, KfgFixture)
 
 FIXTURE_TEST_CASE(unescaping_escapes, KfgFixture)
 {   
-    CreateAndLoad(GetName().c_str(), "name='\\a'\n");
+    CreateAndLoad(GetName(), "name='\\a'\n");
     REQUIRE(ValueMatches("name", "\a"));
 }
 
 FIXTURE_TEST_CASE(dots_in_pathnames, KfgFixture)
 {   
-    CreateAndLoad(GetName().c_str(), "root.1./subname1.ext='val100'\n");
+    CreateAndLoad(GetName(), "root.1./subname1.ext='val100'\n");
     REQUIRE(ValueMatches("root.1./subname1.ext", "val100"));
 }
 
@@ -320,7 +320,7 @@ FIXTURE_TEST_CASE(variable_expansion_simple, KfgFixture)
 {
     const char* contents="var='value'\n"
                          "ref=$(var)\n";
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
 
     REQUIRE(ValueMatches("var", "value"));
     REQUIRE(ValueMatches("ref", "value"));
@@ -331,7 +331,7 @@ FIXTURE_TEST_CASE(variable_expansion_concat, KfgFixture)
     const char* contents="var1='value1'\n"
                          "var2='value2'\n"
                          "ref=\"$(var1)'$(var2)\"\n";
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
 
     REQUIRE(ValueMatches("ref", "value1'value2"));
 }
@@ -340,7 +340,7 @@ FIXTURE_TEST_CASE(variable_expansion_path, KfgFixture)
 {
     const char* contents="root/var='value'\n"
                          "ref=$(root/var)\n";
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
 
     REQUIRE(ValueMatches("ref", "value"));
 }
@@ -349,7 +349,7 @@ FIXTURE_TEST_CASE(in_string_variable_expansion_path, KfgFixture)
 {
     const char* contents="root/var='value'\n"
                          "ref=\"+$(root/var)+\"\n";
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
 
     REQUIRE(ValueMatches("ref", "+value+"));
 }
@@ -357,9 +357,9 @@ FIXTURE_TEST_CASE(in_string_variable_expansion_path, KfgFixture)
 FIXTURE_TEST_CASE(can_reference_keys_across_files, KfgFixture)
 {  
     const char* contents1="root/var='Value'\n";
-    CreateAndLoad((GetName()+"1").c_str(), contents1);
+    CreateAndLoad((string(GetName())+"1").c_str(), contents1);
     const char* contents2="ref=$(root/var)\n";
-    CreateAndLoad((GetName()+"2").c_str(), contents2);
+    CreateAndLoad((string(GetName())+"2").c_str(), contents2);
 
     REQUIRE(ValueMatches("ref", "Value"));
 }
@@ -367,7 +367,7 @@ FIXTURE_TEST_CASE(can_reference_keys_across_files, KfgFixture)
 FIXTURE_TEST_CASE(long_key, KfgFixture)
 {
     string key(1025, 'k');
-    CreateAndLoad(GetName().c_str(), (key+"='value'").c_str());
+    CreateAndLoad(GetName(), (key+"='value'").c_str());
     REQUIRE(ValueMatches(key.c_str(), "value"));
 }
 
@@ -377,7 +377,7 @@ FIXTURE_TEST_CASE(long_path, KfgFixture)
     string line("k='");
     line+=path;
     line+="'";
-    CreateAndLoad(GetName().c_str(), line.c_str());
+    CreateAndLoad(GetName(), line.c_str());
     REQUIRE(ValueMatches("k", path.c_str()));
 }
 
@@ -389,7 +389,7 @@ FIXTURE_TEST_CASE(predef_LIBPATH, KfgFixture)
     // so we cannot compare them
 #else
     const char* contents="var=$(vdb/lib/paths/kfg)\n";
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
 
     KDyld *dyld;
     REQUIRE_RC(KDyldMake ( & dyld ));
@@ -403,19 +403,19 @@ FIXTURE_TEST_CASE(predef_LIBPATH, KfgFixture)
 
 FIXTURE_TEST_CASE(predef_KFGDIR, KfgFixture)
 {
-    CreateAndLoad(GetName().c_str(), "var=$(kfg/dir)\n");
+    CreateAndLoad(GetName(), "var=$(kfg/dir)\n");
     REQUIRE(ValueMatches("var", DirPath(wd).c_str()));
 }
 FIXTURE_TEST_CASE(predef_KFGNAME, KfgFixture)
 {
-    CreateAndLoad(GetName().c_str(), "var=$(kfg/name)\n");
-    REQUIRE(ValueMatches("var", GetName().c_str()));
+    CreateAndLoad(GetName(), "var=$(kfg/name)\n");
+    REQUIRE(ValueMatches("var", GetName()));
 }
 
 
 FIXTURE_TEST_CASE(predef_ARCHNAME, KfgFixture)
 {
-    CreateAndLoad(GetName().c_str(), "var=$(kfg/arch/name)\n");
+    CreateAndLoad(GetName(), "var=$(kfg/arch/name)\n");
     #if WINDOWS
         REQUIRE(ValueMatches("var", ""));
     #else
@@ -426,14 +426,14 @@ FIXTURE_TEST_CASE(predef_ARCHNAME, KfgFixture)
 }
 FIXTURE_TEST_CASE(predef_ARCHBITS, KfgFixture)
 {
-    CreateAndLoad(GetName().c_str(), "var=$(kfg/arch/bits)\n");
+    CreateAndLoad(GetName(), "var=$(kfg/arch/bits)\n");
     string_printf(buf, sizeof(buf), &num_writ, "%d", _ARCH_BITS);
     REQUIRE(ValueMatches("var", buf));
 }
 
 FIXTURE_TEST_CASE(predef_OS, KfgFixture)
 {
-    CreateAndLoad(GetName().c_str(), "var=$(OS)\n");
+    CreateAndLoad(GetName(), "var=$(OS)\n");
     #if LINUX
         #define OS "linux"
     #elif SUN
@@ -450,7 +450,7 @@ FIXTURE_TEST_CASE(predef_OS, KfgFixture)
 #if 0 // 8/11/14 - no longer distinguishing linkage
 FIXTURE_TEST_CASE(predef_BUILD_LINKAGE, KfgFixture)
 {
-    CreateAndLoad(GetName().c_str(), "var=$(BUILD_LINKAGE)\n");
+    CreateAndLoad(GetName(), "var=$(BUILD_LINKAGE)\n");
     #if _STATIC
         #define BUILD_LINKAGE "STATIC"
     #else
@@ -463,7 +463,7 @@ FIXTURE_TEST_CASE(predef_BUILD_LINKAGE, KfgFixture)
 
 FIXTURE_TEST_CASE(predef_BUILD, KfgFixture)
 {
-    CreateAndLoad(GetName().c_str(), "var=$(BUILD)\n");
+    CreateAndLoad(GetName(), "var=$(BUILD)\n");
     #if _PROFILING
         #define BUILD "PROFILE"
     #else
@@ -480,7 +480,7 @@ FIXTURE_TEST_CASE(predef_BUILD, KfgFixture)
 #if 0 // only appropriate when invoked by a canonical path ?
 FIXTURE_TEST_CASE(predef_APPPATH, KfgFixture)
 {
-    // REQUIRE_RC(CreateAndLoad(GetName().c_str(), "var=$(APPPATH)\n")); 
+    // REQUIRE_RC(CreateAndLoad(GetName(), "var=$(APPPATH)\n")); 
     // APPPATH is only set correctly for the 1st instance of KConfig, so we saved it off in the first call to fixture's 
     // constructor, test here
     string path(ncbi::NK::GetTestSuite()->argv[0]);
@@ -502,7 +502,7 @@ FIXTURE_TEST_CASE(predef_APPPATH, KfgFixture)
 
 FIXTURE_TEST_CASE(predef_APPNAME, KfgFixture)
 {
-    CreateAndLoad(GetName().c_str(), "var=$(APPNAME)\n");
+    CreateAndLoad(GetName(), "var=$(APPNAME)\n");
     REQUIRE_RC(LogAppName(buf, sizeof(buf), &num_writ));
     buf[num_writ]=0;
     REQUIRE(ValueMatches("var", buf));
@@ -510,7 +510,7 @@ FIXTURE_TEST_CASE(predef_APPNAME, KfgFixture)
 
 FIXTURE_TEST_CASE(predef_PWD, KfgFixture)
 {
-    CreateAndLoad(GetName().c_str(), "var=$(PWD)\n");
+    CreateAndLoad(GetName(), "var=$(PWD)\n");
     KDirectory* dir;
     REQUIRE_RC(KDirectoryNativeDir(&dir));
     REQUIRE(ValueMatches("var", DirPath(dir).c_str()));
@@ -528,7 +528,7 @@ FIXTURE_TEST_CASE(predef_ENV, KfgFixture)
         "ncbi_home=$(NCBI_HOME)\n"
         "ncbi_settings=$(NCBI_SETTINGS)\n"
         ;
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
     REQUIRE(ValueMatches("host",            getenv("HOST"), true));
     REQUIRE(ValueMatches("user",            getenv("USER"), true));
     REQUIRE(ValueMatches("vdb_root",        getenv("VDB_ROOT"), true));
@@ -575,7 +575,7 @@ FIXTURE_TEST_CASE(ChangeCommit, KfgFixture)
     // override NCBI_SETTINGS 
     const char* LocalSettingsFile = "settings.mkfg";
     string FullMagicPath = DirPath(wd) + "/" + LocalSettingsFile;
-    CreateAndLoad( GetName().c_str(), (string(contents) + "NCBI_SETTINGS=\"" + FullMagicPath + "\"\n").c_str() );
+    CreateAndLoad( GetName(), (string(contents) + "NCBI_SETTINGS=\"" + FullMagicPath + "\"\n").c_str() );
     
     // make, commit changes
     UpdateNode("one", "1+0");
@@ -600,7 +600,7 @@ FIXTURE_TEST_CASE(ChangeCommitEscapes, KfgFixture)
 {
     const char* LocalSettingsFile = "settings.mkfg";
     string FullMagicPath = DirPath(wd) + "/" + LocalSettingsFile;
-    CreateAndLoad( GetName().c_str(), (string() + "NCBI_SETTINGS=\"" + FullMagicPath + "\"\n").c_str() );
+    CreateAndLoad( GetName(), (string() + "NCBI_SETTINGS=\"" + FullMagicPath + "\"\n").c_str() );
     
     // make, commit changes
     UpdateNode("double/quote", "\"");
@@ -621,7 +621,7 @@ FIXTURE_TEST_CASE(ChangeCommitEscapes, KfgFixture)
 
 FIXTURE_TEST_CASE(DropAllChildren, KfgFixture)
 {
-    CreateAndLoad(GetName().c_str(), "parent/one='1'\nparent/two='2'");
+    CreateAndLoad(GetName(), "parent/one='1'\nparent/two='2'");
     GetNode("parent");
     struct KNamelist *children;
     REQUIRE_RC(KConfigNodeListChildren(node, &children));
@@ -674,7 +674,7 @@ FIXTURE_TEST_CASE(ConfigAccessBool, KfgFixture)
         "bool/t=\"true\"\n"
         "bool=\"dunno\"\n"
         ;
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
     bool b = true;
     REQUIRE_RC(KConfigReadBool(kfg, "bool/f", &b));
     REQUIRE(! b);
@@ -690,7 +690,7 @@ FIXTURE_TEST_CASE(ConfigAccessInt, KfgFixture)
         "int/i2=\"-100000000000\"\n"
         "int=\"0dunno\"\n"
         ;
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
     int64_t i = 0;
     REQUIRE_RC(KConfigReadI64(kfg, "int/i1", &i));
     REQUIRE_EQ(i, INT64_C(100));
@@ -705,7 +705,7 @@ FIXTURE_TEST_CASE(ConfigAccessUnsigned, KfgFixture)
         "uint/i1=\"100000000000\"\n"
         "uint=\"1dunno\"\n"
         ;
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
     uint64_t i = 0;
     REQUIRE_RC(KConfigReadU64(kfg, "uint/i1", &i));
     REQUIRE_EQ(i, UINT64_C(100000000000));
@@ -718,7 +718,7 @@ FIXTURE_TEST_CASE(ConfigAccessF64, KfgFixture)
         "f64/i1=\"3.14\"\n"
         "f64=\"2.3dunno\"\n"
         ;
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
     double f = 0.0;
     REQUIRE_RC(KConfigReadF64(kfg, "f64/i1", &f));
     REQUIRE_CLOSE(f, 3.14, 0.001);
@@ -735,7 +735,7 @@ FIXTURE_TEST_CASE(ConfigAccessVPath, KfgFixture)
         "vpath/i1=\"" VPATH "\"\n" 
         ;
         
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
     REQUIRE_RC(KConfigReadVPath(kfg, "vpath/i1", &path));
     VPathReadUri(path, buf, sizeof(buf), &num_read);
     REQUIRE_EQ(string(buf), string(VPATH));
@@ -750,7 +750,7 @@ FIXTURE_TEST_CASE(ConfigAccessString, KfgFixture)
         "string/i1=\"" STRING "\"\n" 
         ;
         
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
     String* str;
     REQUIRE_RC(KConfigReadString(kfg, "string/i1", &str));
     REQUIRE_NOT_NULL(str);
@@ -765,7 +765,7 @@ FIXTURE_TEST_CASE(ConfigNodeAccessBool, KfgFixture)
     const char* contents=
         "bool/f=\"FALSE\"\n"
         ;
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
     bool b = true;
     REQUIRE_RC(KConfigNodeReadBool(GetNode("bool/f"), &b));
     REQUIRE(! b);
@@ -776,7 +776,7 @@ FIXTURE_TEST_CASE(ConfigNodeAccessInt, KfgFixture)
     const char* contents=
         "int/i1=\"100\"\n"
         ;
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
     int64_t i = 0;
     REQUIRE_RC(KConfigNodeReadI64(GetNode("int/i1"), &i));
     REQUIRE_EQ(i, (int64_t)100);
@@ -787,7 +787,7 @@ FIXTURE_TEST_CASE(ConfigNodeAccessUnsigned, KfgFixture)
     const char* contents=
         "uint/i1=\"100000000000\"\n"
         ;
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
     uint64_t i = 0;
     REQUIRE_RC(KConfigNodeReadU64(GetNode("uint/i1"), &i));
     REQUIRE_EQ(i, UINT64_C(100000000000));
@@ -798,7 +798,7 @@ FIXTURE_TEST_CASE(ConfigNodeAccessF64, KfgFixture)
     const char* contents=
         "f64/i1=\"3.14\"\n"
         ;
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
     double f = 0.0;
     REQUIRE_RC(KConfigNodeReadF64(GetNode("f64/i1"), &f));
     REQUIRE_CLOSE(f, 3.14, 0.001);
@@ -814,7 +814,7 @@ FIXTURE_TEST_CASE(ConfigNodeAccessVPath, KfgFixture)
         "vpath/i1=\"" VPATH "\"\n" 
         ;
         
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
     REQUIRE_RC(KConfigNodeReadVPath(GetNode("vpath/i1"), &path));
     VPathReadUri(path, buf, sizeof(buf), &num_read);
     REQUIRE_EQ(string(buf), string(VPATH));
@@ -827,7 +827,7 @@ FIXTURE_TEST_CASE(ConfigNodeAccessString, KfgFixture)
         "string/i1=\"" STRING "\"\n" 
         ;
      
-    CreateAndLoad(GetName().c_str(), contents);
+    CreateAndLoad(GetName(), contents);
     String* str;
     REQUIRE_RC(KConfigNodeReadString(GetNode("string/i1"), &str));
     REQUIRE_NOT_NULL(str);
@@ -847,7 +847,7 @@ namespace {
 
 FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
 {
-    string s(GetName().c_str());
+    string s(GetName());
     cout << "FIXTURE_TEST_CASE(KConfigImportNgc_Basic) " << s << "\n";
     TEST_MESSAGE(s);
     CreateAndLoad(s.c_str(), "\n");
@@ -931,7 +931,7 @@ FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
 
 FIXTURE_TEST_CASE(KConfigImportNgc_NullLocation, KfgFixture)
 {
-    CreateAndLoad(GetName().c_str(), "\n");
+    CreateAndLoad(GetName(), "\n");
     const char* newRepo;
     REQUIRE_RC(KConfigImportNgc(kfg, "./prj_2956.ngc", NULL, &newRepo));
     string encDirName = "/ncbi/dbGaP-2956";
@@ -939,7 +939,7 @@ FIXTURE_TEST_CASE(KConfigImportNgc_NullLocation, KfgFixture)
 }
 FIXTURE_TEST_CASE(KConfigImportNgc_NullLocation_NullNewRepo, KfgFixture)
 {
-    CreateAndLoad(GetName().c_str(), "\n");
+    CreateAndLoad(GetName(), "\n");
     REQUIRE_RC(KConfigImportNgc(kfg, "./prj_2956.ngc", NULL, NULL));
 }
 

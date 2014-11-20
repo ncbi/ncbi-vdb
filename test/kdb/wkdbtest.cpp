@@ -48,7 +48,7 @@ TEST_CASE(MissingRows)
 {   // VDB-177
     KDirectory* wd;
     REQUIRE_RC(KDirectoryNativeDir(&wd));
-    KDirectoryRemove(wd, true, GetName().c_str());
+    KDirectoryRemove(wd, true, GetName());
     
     {
         KDBManager* mgr;
@@ -56,7 +56,7 @@ TEST_CASE(MissingRows)
 
         {
             KDatabase* db;
-            REQUIRE_RC(KDBManagerCreateDB(mgr, &db, kcmCreate, GetName().c_str()));
+            REQUIRE_RC(KDBManagerCreateDB(mgr, &db, kcmCreate, GetName()));
          
             {
                 KIndex *idx;
@@ -86,7 +86,7 @@ TEST_CASE(MissingRows)
         REQUIRE_RC(KDBManagerRelease(mgr));
     }
     
-    KDirectoryRemove(wd, true, GetName().c_str());
+    KDirectoryRemove(wd, true, GetName());
     REQUIRE_RC(KDirectoryRelease(wd));
     
 }
