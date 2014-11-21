@@ -22,86 +22,43 @@
 #
 # ===========================================================================
 
-
-default: std
+default: runtests
 
 TOP ?= $(abspath ../../..)
-MODULE = libs/ext/libmagic
 
-INT_LIBS = \
-	libmagic
+MODULE = test/ext/libmagic
 
-ALL_LIBS = \
-	$(INT_LIBS) \
+TEST_TOOLS = \
+	test-magic
 
 include $(TOP)/build/Makefile.env
 
-#-------------------------------------------------------------------------------
-# outer targets
-#
-std all: $(INT_LIBS) 
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
-$(INT_LIBS): makedirs 
-	@ $(MAKE_CMD) $(ILIBDIR)/$@
+.PHONY: $(TEST_TOOLS)
 
-.PHONY: all std $(ALL_LIBS)
-
-#-------------------------------------------------------------------------------
-# clean
-#
 clean: stdclean
 
-.PHONY: clean
-
 #-------------------------------------------------------------------------------
-# libmagic
+# test-magic
 #
-$(ILIBDIR)/libmagic: $(addprefix $(ILIBDIR)/libmagic.,$(LIBX))
+TEST_MAGIC_SRC = \
+	magictest 
 
-#CFLAGS += -DHAVE_SYS_PARAM 
-CFLAGS += -DHAVE_CONFIG_H -DHAVE_STDDEF_H
+TEST_MAGIC_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_MAGIC_SRC))
 
-# 5.04
-#LIBMAGIC_SRC = \
-#	magic \
-#	apprentice \
-#	softmagic \
-#	ascmagic \
-#	encoding \
-#	compress \
-#	is_tar \
-#	readelf \
-#	print \
-#	fsmagic \
-#	funcs \
-#	apptype \
-#	cdf \
-#	cdf_time \
-#	readcdf
+TEST_MAGIC_LIB = \
+	-skapp \
+    -smagic \
+    -sncbi-vdb \
+    -sktst
 
-# 5.20
-LIBMAGIC_SRC =  \
-    magic       \
-    apprentice  \
-    softmagic   \
-    ascmagic    \
-	encoding    \
-    compress    \
-    is_tar      \
-    readelf     \
-    print       \
-    fsmagic     \
-	funcs       \
-    apptype     \
-	cdf         \
-    cdf_time    \
-    readcdf     \
-    strlcpy     \
-    strlcat     \
-    fmtcheck    \
+
+$(TEST_BINDIR)/test-magic: $(TEST_MAGIC_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_MAGIC_LIB)
+
+valgrind_magic: test-magic
+	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-magic # --suppressions=$(SRCDIR)/valgrind_suppressions.txt   
     
-LIBMAGIC_OBJ = \
-	$(addsuffix .$(LOBX),$(LIBMAGIC_SRC))
-
-$(ILIBDIR)/libmagic.$(LIBX): $(LIBMAGIC_OBJ)
-	$(LD) --slib --vers $(SRCDIR) -o $@ $^
