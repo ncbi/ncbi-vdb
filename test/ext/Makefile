@@ -24,8 +24,8 @@
 
 by_default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+TOP ?= $(abspath ../..)
+MODULE = test/ext
 
 include $(TOP)/build/Makefile.shell
 
@@ -34,22 +34,7 @@ include $(TOP)/build/Makefile.config
 #-------------------------------------------------------------------------------
 # default
 #
-SUBDIRS =       \
-    ktst        \
-    cc          \
-    ext         \
-    judy_test   \
-    kfc         \
-    klib        \
-    kfg         \
-    kns         \
-    kdb         \
-    kproc       \
-    ngs         \
-    ngs-c++     \
-	search	    \
-    vfs         \
-    vxf         \
+SUBDIRS =    \
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets

@@ -29,48 +29,22 @@ TOP ?= $(abspath ../../..)
 MODULE = libs/ext/libmagic
 
 INT_LIBS = \
-
-EXT_LIBS = \
 	libmagic
 
 ALL_LIBS = \
 	$(INT_LIBS) \
-	$(EXT_LIBS)
 
 include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
-	@ $(MAKE_CMD) $(TARGDIR)/$@
+std all: $(INT_LIBS) 
 
-full: makedirs
-	@ [ -f libmagic.vers ] && $(MAKE_CMD) $(TARGDIR)/all || $(MAKE_CMD) $(TARGDIR)/std
-
-$(INT_LIBS): makedirs
+$(INT_LIBS): makedirs 
 	@ $(MAKE_CMD) $(ILIBDIR)/$@
 
-$(EXT_LIBS): makedirs
-	@ $(MAKE_CMD) $(LIBDIR)/$@
-
 .PHONY: all std $(ALL_LIBS)
-
-#-------------------------------------------------------------------------------
-# all
-#
-$(TARGDIR)/all: \
-	$(addprefix $(ILIBDIR)/,$(INT_LIBS)) \
-	$(addprefix $(LIBDIR)/,$(EXT_LIBS))
-
-.PHONY: $(TARGDIR)/all
-
-#-------------------------------------------------------------------------------
-# std
-#
-$(TARGDIR)/std: $(LIBDIR)/libmagic-$(OS).exp
-
-.PHONY: $(TARGDIR)/std
 
 #-------------------------------------------------------------------------------
 # clean
@@ -82,44 +56,52 @@ clean: stdclean
 #-------------------------------------------------------------------------------
 # libmagic
 #
-$(LIBDIR)/libmagic: $(addprefix $(LIBDIR)/libmagic.,$(LIBEXT))
+$(ILIBDIR)/libmagic: $(addprefix $(ILIBDIR)/libmagic.,$(LIBX))
 
-LIBMAGIC_SRC = \
-	magic \
-	apprentice \
-	softmagic \
-	ascmagic \
-	encoding \
-	compress \
-	is_tar \
-	readelf \
-	print \
-	fsmagic \
-	funcs \
-	apptype \
-	cdf \
-	cdf_time \
-	readcdf
+#CFLAGS += -DHAVE_SYS_PARAM 
+CFLAGS += -DHAVE_CONFIG_H -DHAVE_STDDEF_H
 
+# 5.04
+#LIBMAGIC_SRC = \
+#	magic \
+#	apprentice \
+#	softmagic \
+#	ascmagic \
+#	encoding \
+#	compress \
+#	is_tar \
+#	readelf \
+#	print \
+#	fsmagic \
+#	funcs \
+#	apptype \
+#	cdf \
+#	cdf_time \
+#	readcdf
+
+# 5.20
+LIBMAGIC_SRC =  \
+    magic       \
+    apprentice  \
+    softmagic   \
+    ascmagic    \
+	encoding    \
+    compress    \
+    is_tar      \
+    readelf     \
+    print       \
+    fsmagic     \
+	funcs       \
+    apptype     \
+	cdf         \
+    cdf_time    \
+    readcdf     \
+    strlcpy     \
+    strlcat     \
+    fmtcheck    \
+    
 LIBMAGIC_OBJ = \
 	$(addsuffix .$(LOBX),$(LIBMAGIC_SRC))
 
-LIBMAGIC_LIB = \
-
-$(LIBDIR)/libmagic.$(SHLX): $(LIBMAGIC_OBJ)
-	$(LD) --dlib --vers $(SRCDIR) -o $@ $^ $(LIBMAGIC_LIB)
-
-$(LIBDIR)/libmagic.$(LIBX): $(LIBMAGIC_OBJ)
-	$(LD) --slib --vers $(SRCDIR) -o $@ $^ $(LIBMAGIC_LIB)
-
-
-#-------------------------------------------------------------------------------
-# libmagic-win.exp
-#
-$(LIBDIR)/libmagic-linux.exp $(LIBDIR)/libmagic-mac.exp $(LIBDIR)/libmagic-sun.exp:
-	@ true
-
-$(LIBDIR)/libmagic-win.exp: $(LIBDIR)/libmagic.exp
-
-$(LIBDIR)/libmagic.exp: $(SRCDIR)/libmagic.def
-	$(LD) --stub -o $(LIBDIR)/libmagic
+$(ILIBDIR)/libmagic.$(LIBX): $(LIBMAGIC_OBJ)
+	$(LD) --slib --vers $(SRCDIR) -o $@ $^

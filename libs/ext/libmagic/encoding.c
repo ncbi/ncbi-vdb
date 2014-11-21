@@ -35,7 +35,7 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: encoding.c,v 1.4 2009/09/13 19:02:22 christos Exp $")
+FILE_RCSID("@(#)$File: encoding.c,v 1.10 2014/09/11 12:08:52 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
@@ -71,29 +71,32 @@ file_encoding(struct magic_set *ms, const unsigned char *buf, size_t nbytes, uni
 	int rv = 1, ucs_type;
 	unsigned char *nbuf = NULL;
 
-	mlen = (nbytes + 1) * sizeof(nbuf[0]);
-	if ((nbuf = CAST(unsigned char *, calloc((size_t)1, mlen))) == NULL) {
-		file_oomem(ms, mlen);
-		goto done;
-	}
+	*type = "text";
+	*ulen = 0;
+	*code = "unknown";
+	*code_mime = "binary";
+
 	mlen = (nbytes + 1) * sizeof((*ubuf)[0]);
 	if ((*ubuf = CAST(unichar *, calloc((size_t)1, mlen))) == NULL) {
 		file_oomem(ms, mlen);
 		goto done;
 	}
+	mlen = (nbytes + 1) * sizeof(nbuf[0]);
+	if ((nbuf = CAST(unsigned char *, calloc((size_t)1, mlen))) == NULL) {
+		file_oomem(ms, mlen);
+		goto done;
+	}
 
-	*type = "text";
 	if (looks_ascii(buf, nbytes, *ubuf, ulen)) {
-		DPRINTF(("ascii %zu\n", *ulen));
+		DPRINTF(("ascii %" SIZE_T_FORMAT "u\n", *ulen));
 		*code = "ASCII";
 		*code_mime = "us-ascii";
 	} else if (looks_utf8_with_BOM(buf, nbytes, *ubuf, ulen) > 0) {
-		DPRINTF(("utf8/bom %zu\n", *ulen));
+		DPRINTF(("utf8/bom %" SIZE_T_FORMAT "u\n", *ulen));
 		*code = "UTF-8 Unicode (with BOM)";
 		*code_mime = "utf-8";
 	} else if (file_looks_utf8(buf, nbytes, *ubuf, ulen) > 1) {
-		DPRINTF(("utf8 %zu\n", *ulen));
-		*code = "UTF-8 Unicode (with BOM)";
+		DPRINTF(("utf8 %" SIZE_T_FORMAT "u\n", *ulen));
 		*code = "UTF-8 Unicode";
 		*code_mime = "utf-8";
 	} else if ((ucs_type = looks_ucs16(buf, nbytes, *ubuf, ulen)) != 0) {
@@ -104,24 +107,25 @@ file_encoding(struct magic_set *ms, const unsigned char *buf, size_t nbytes, uni
 			*code = "Big-endian UTF-16 Unicode";
 			*code_mime = "utf-16be";
 		}
-		DPRINTF(("ucs16 %zu\n", *ulen));
+		DPRINTF(("ucs16 %" SIZE_T_FORMAT "u\n", *ulen));
 	} else if (looks_latin1(buf, nbytes, *ubuf, ulen)) {
-		DPRINTF(("latin1 %zu\n", *ulen));
+		DPRINTF(("latin1 %" SIZE_T_FORMAT "u\n", *ulen));
 		*code = "ISO-8859";
 		*code_mime = "iso-8859-1";
 	} else if (looks_extended(buf, nbytes, *ubuf, ulen)) {
-		DPRINTF(("extended %zu\n", *ulen));
+		DPRINTF(("extended %" SIZE_T_FORMAT "u\n", *ulen));
 		*code = "Non-ISO extended-ASCII";
 		*code_mime = "unknown-8bit";
 	} else {
 		from_ebcdic(buf, nbytes, nbuf);
 
 		if (looks_ascii(nbuf, nbytes, *ubuf, ulen)) {
-			DPRINTF(("ebcdic %zu\n", *ulen));
+			DPRINTF(("ebcdic %" SIZE_T_FORMAT "u\n", *ulen));
 			*code = "EBCDIC";
 			*code_mime = "ebcdic";
 		} else if (looks_latin1(nbuf, nbytes, *ubuf, ulen)) {
-			DPRINTF(("ebcdic/international %zu\n", *ulen));
+			DPRINTF(("ebcdic/international %" SIZE_T_FORMAT "u\n",
+			    *ulen));
 			*code = "International EBCDIC";
 			*code_mime = "ebcdic";
 		} else { /* Doesn't look like text at all */
@@ -132,8 +136,7 @@ file_encoding(struct magic_set *ms, const unsigned char *buf, size_t nbytes, uni
 	}
 
  done:
-	if (nbuf)
-		free(nbuf);
+	free(nbuf);
 
 	return rv;
 }

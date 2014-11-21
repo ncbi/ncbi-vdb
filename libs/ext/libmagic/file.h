@@ -27,42 +27,44 @@
  */
 /*
  * file.h - definitions for file(1) program
- * @(#)$File: file.h,v 1.124 2010/01/16 17:45:12 chl Exp $
+ * @(#)$File: file.h,v 1.154 2014/09/10 18:41:51 christos Exp $
  */
 
 #ifndef __file_h__
 #define __file_h__
 
-/*
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-*/
-#include <config.h>
+
+#ifdef WIN32
+  #ifdef _WIN64
+    #define SIZE_T_FORMAT "I64"
+  #else
+    #define SIZE_T_FORMAT ""
+  #endif
+  #define INT64_T_FORMAT "I64"
+#else
+  #define SIZE_T_FORMAT "z"
+  #define INT64_T_FORMAT "ll"
+#endif
 
 #include <stdio.h>	/* Include that here, to make sure __P gets defined */
 #include <errno.h>
 #include <fcntl.h>	/* For open and flags */
-
 #ifdef HAVE_STDINT_H
 #ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS
 #endif
 #include <stdint.h>
 #endif
-
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #endif
-
 #include <regex.h>
+#include <time.h>
 #include <sys/types.h>
-#include <os-native.h>
-
-#ifdef HAVE_SYS_PARAM
 #include <sys/param.h>
-#endif
-
 /* Do this here and now, because struct stat gets re-defined on solaris */
 #include <sys/stat.h>
 #include <stdarg.h>
@@ -73,17 +75,29 @@
 #define MAGIC "/etc/magic"
 #endif
 
-#ifdef __EMX__
+#if defined(__EMX__) || defined (WIN32)
 #define PATHSEP	';'
 #else
 #define PATHSEP	':'
 #endif
 
 #define private static
+
+#if HAVE_VISIBILITY && !defined(WIN32)
+#define public  __attribute__ ((__visibility__("default")))
+#ifndef protected
+#define protected __attribute__ ((__visibility__("hidden")))
+#endif
+#else
+#define public
 #ifndef protected
 #define protected
 #endif
-#define public
+#endif
+
+#ifndef __arraycount
+#define __arraycount(a) (sizeof(a) / sizeof(a[0]))
+#endif
 
 #ifndef __GNUC_PREREQ__
 #ifdef __GNUC__
@@ -114,16 +128,18 @@
 #endif
 #define MAXMAGIS 8192		/* max entries in any one magic file
 				   or directory */
-#define MAXDESC	64		/* max leng of text description/MIME type */
-#define MAXstring 32		/* max leng of "string" types */
+#define MAXDESC	64		/* max len of text description/MIME type */
+#define MAXMIME	80		/* max len of text MIME type */
+#define MAXstring 64		/* max len of "string" types */
 
 #define MAGICNO		0xF11E041C
-#define VERSIONNO	7
-#define FILE_MAGICSIZE	200
+#define VERSIONNO	12
+#define FILE_MAGICSIZE	248
 
 #define	FILE_LOAD	0
 #define FILE_CHECK	1
 #define FILE_COMPILE	2
+#define FILE_LIST	3
 
 union VALUETYPE {
 	uint8_t b;
@@ -201,7 +217,13 @@ struct magic {
 #define				FILE_BEID3	39
 #define				FILE_LEID3	40
 #define				FILE_INDIRECT	41
-#define				FILE_NAMES_SIZE	42/* size of array to contain all names */
+#define				FILE_QWDATE	42
+#define				FILE_LEQWDATE	43
+#define				FILE_BEQWDATE	44
+#define				FILE_NAME	45
+#define				FILE_USE	46
+#define				FILE_CLEAR	47
+#define				FILE_NAMES_SIZE	48 /* size of array to contain all names */
 
 #define IS_STRING(t) \
 	((t) == FILE_STRING || \
@@ -210,7 +232,8 @@ struct magic {
 	 (t) == FILE_LESTRING16 || \
 	 (t) == FILE_REGEX || \
 	 (t) == FILE_SEARCH || \
-	 (t) == FILE_DEFAULT)
+	 (t) == FILE_NAME || \
+	 (t) == FILE_USE)
 
 #define FILE_FMT_NONE 0
 #define FILE_FMT_NUM  1 /* "cduxXi" */
@@ -276,11 +299,11 @@ struct magic {
 #define str_flags _u._s._flags
 	/* Words 9-16 */
 	union VALUETYPE value;	/* either number or string */
-	/* Words 17-24 */
+	/* Words 17-32 */
 	char desc[MAXDESC];	/* description */
-	/* Words 25-32 */
-	char mimetype[MAXDESC]; /* MIME type */
-	/* Words 33-34 */
+	/* Words 33-52 */
+	char mimetype[MAXMIME]; /* MIME type */
+	/* Words 53-54 */
 	char apple[8];
 };
 
@@ -292,13 +315,32 @@ struct magic {
 #define REGEX_OFFSET_START			BIT(4)
 #define STRING_TEXTTEST				BIT(5)
 #define STRING_BINTEST				BIT(6)
+#define PSTRING_1_BE				BIT(7)
+#define PSTRING_1_LE				BIT(7)
+#define PSTRING_2_BE				BIT(8)
+#define PSTRING_2_LE				BIT(9)
+#define PSTRING_4_BE				BIT(10)
+#define PSTRING_4_LE				BIT(11)
+#define REGEX_LINE_COUNT			BIT(11)
+#define PSTRING_LEN	\
+    (PSTRING_1_BE|PSTRING_2_LE|PSTRING_2_BE|PSTRING_4_LE|PSTRING_4_BE)
+#define PSTRING_LENGTH_INCLUDES_ITSELF		BIT(12)
+#define	STRING_TRIM				BIT(13)
 #define CHAR_COMPACT_WHITESPACE			'W'
 #define CHAR_COMPACT_OPTIONAL_WHITESPACE	'w'
 #define CHAR_IGNORE_LOWERCASE			'c'
 #define CHAR_IGNORE_UPPERCASE			'C'
 #define CHAR_REGEX_OFFSET_START			's'
 #define CHAR_TEXTTEST				't'
+#define	CHAR_TRIM				'T'
 #define CHAR_BINTEST				'b'
+#define CHAR_PSTRING_1_BE			'B'
+#define CHAR_PSTRING_1_LE			'B'
+#define CHAR_PSTRING_2_BE			'H'
+#define CHAR_PSTRING_2_LE			'h'
+#define CHAR_PSTRING_4_BE			'L'
+#define CHAR_PSTRING_4_LE			'l'
+#define CHAR_PSTRING_LENGTH_INCLUDES_ITSELF     'J'
 #define STRING_IGNORE_CASE		(STRING_IGNORE_LOWERCASE|STRING_IGNORE_UPPERCASE)
 #define STRING_DEFAULT_RANGE		100
 
@@ -306,17 +348,17 @@ struct magic {
 /* list of magic entries */
 struct mlist {
 	struct magic *magic;		/* array of magic entries */
-	uint32_t nmagic;			/* number of entries in array */
-	int mapped;  /* allocation type: 0 => apprentice_file
-		      *                  1 => apprentice_map + malloc
-		      *                  2 => apprentice_map + mmap */
+	uint32_t nmagic;		/* number of entries in array */
+	void *map;			/* internal resources used by entry */
 	struct mlist *next, *prev;
 };
 
 #ifdef __cplusplus
 #define CAST(T, b)	static_cast<T>(b)
+#define RCAST(T, b)	reinterpret_cast<T>(b)
 #else
 #define CAST(T, b)	(T)(b)
+#define RCAST(T, b)	(T)(b)
 #endif
 
 struct level_info {
@@ -327,8 +369,11 @@ struct level_info {
 	int last_cond;	/* used for error checking by parse() */
 #endif
 };
+
+#define MAGIC_SETS	2
+
 struct magic_set {
-	struct mlist *mlist;
+	struct mlist *mlist[MAGIC_SETS];	/* list of regular entries */
 	struct cont {
 		size_t len;
 		struct level_info *li;
@@ -362,12 +407,19 @@ struct magic_set {
 typedef unsigned long unichar;
 
 struct stat;
-protected const char *file_fmttime(uint32_t, int);
+#define FILE_T_LOCAL	1
+#define FILE_T_WINDOWS	2
+protected const char *file_fmttime(uint64_t, int, char *);
+protected struct magic_set *file_ms_alloc(int);
+protected void file_ms_free(struct magic_set *);
 protected int file_buffer(struct magic_set *, int, const char *, const void *,
     size_t);
 protected int file_fsmagic(struct magic_set *, const char *, struct stat *);
 protected int file_pipe2file(struct magic_set *, int, const void *, size_t);
-protected int file_vprintf(struct magic_set *, const char *, va_list);
+protected int file_vprintf(struct magic_set *, const char *, va_list)
+    __attribute__((__format__(__printf__, 2, 0)));
+protected size_t file_printedlen(const struct magic_set *);
+protected int file_replace(struct magic_set *, const char *, const char *);
 protected int file_printf(struct magic_set *, const char *, ...)
     __attribute__((__format__(__printf__, 2, 3)));
 protected int file_reset(struct magic_set *);
@@ -375,21 +427,26 @@ protected int file_tryelf(struct magic_set *, int, const unsigned char *,
     size_t);
 protected int file_trycdf(struct magic_set *, int, const unsigned char *,
     size_t);
+#if HAVE_FORK
 protected int file_zmagic(struct magic_set *, int, const char *,
     const unsigned char *, size_t);
-protected int file_ascmagic(struct magic_set *, const unsigned char *, size_t);
+#endif
+protected int file_ascmagic(struct magic_set *, const unsigned char *, size_t,
+    int);
 protected int file_ascmagic_with_encoding(struct magic_set *,
     const unsigned char *, size_t, unichar *, size_t, const char *,
-    const char *);
+    const char *, int);
 protected int file_encoding(struct magic_set *, const unsigned char *, size_t,
     unichar **, size_t *, const char **, const char **, const char **);
 protected int file_is_tar(struct magic_set *, const unsigned char *, size_t);
 protected int file_softmagic(struct magic_set *, const unsigned char *, size_t,
-    int);
-protected struct mlist *file_apprentice(struct magic_set *, const char *, int);
+    size_t, int, int);
+protected int file_apprentice(struct magic_set *, const char *, int);
+protected int buffer_apprentice(struct magic_set *, struct magic **,
+    size_t *, size_t);
+protected int file_magicfind(struct magic_set *, const char *, struct mlist *);
 protected uint64_t file_signextend(struct magic_set *, struct magic *,
     uint64_t);
-protected void file_delmagic(struct magic *, int type, size_t entries);
 protected void file_badread(struct magic_set *);
 protected void file_badseek(struct magic_set *);
 protected void file_oomem(struct magic_set *, size_t);
@@ -403,15 +460,37 @@ protected void file_mdump(struct magic *);
 protected void file_showstr(FILE *, const char *, size_t);
 protected size_t file_mbswidth(const char *);
 protected const char *file_getbuffer(struct magic_set *);
-protected size_t sread(int, void *, size_t, int);
+protected ssize_t sread(int, void *, size_t, int);
 protected int file_check_mem(struct magic_set *, unsigned int);
 protected int file_looks_utf8(const unsigned char *, size_t, unichar *,
     size_t *);
+protected size_t file_pstring_length_size(const struct magic *);
+protected size_t file_pstring_get_length(const struct magic *, const char *);
 #ifdef __EMX__
 protected int file_os2_apptype(struct magic_set *, const char *, const void *,
     size_t);
 #endif /* __EMX__ */
 
+#if defined(HAVE_LOCALE_H)
+#include <locale.h>
+#endif
+
+typedef struct {
+	const char *pat;
+#if defined(HAVE_NEWLOCALE) && defined(HAVE_USELOCALE) && defined(HAVE_FREELOCALE)
+#define USE_C_LOCALE
+	locale_t old_lc_ctype;
+	locale_t c_lc_ctype;
+#endif
+	int rc;
+	regex_t rx;
+} file_regex_t;
+
+protected int file_regcomp(file_regex_t *, const char *, int);
+protected int file_regexec(file_regex_t *, const char *, size_t, regmatch_t *,
+    int);
+protected void file_regfree(file_regex_t *);
+protected void file_regerror(file_regex_t *, int, struct magic_set *);
 
 #ifndef COMPILE_ONLY
 extern const char *file_names[];
@@ -429,18 +508,38 @@ extern char *sys_errlist[];
 #define strtoul(a, b, c)	strtol(a, b, c)
 #endif
 
+#ifndef HAVE_PREAD
+ssize_t pread(int, void *, size_t, off_t);
+#endif
 #ifndef HAVE_VASPRINTF
 int vasprintf(char **, const char *, va_list);
 #endif
 #ifndef HAVE_ASPRINTF
-int asprintf(char **ptr, const char *format_string, ...);
+int asprintf(char **, const char *, ...);
 #endif
 
 #ifndef HAVE_STRLCPY
-size_t strlcpy(char *dst, const char *src, size_t siz);
+size_t strlcpy(char *, const char *, size_t);
 #endif
 #ifndef HAVE_STRLCAT
-size_t strlcat(char *dst, const char *src, size_t siz);
+size_t strlcat(char *, const char *, size_t);
+#endif
+#ifndef HAVE_STRCASESTR
+char *strcasestr(const char *, const char *);
+#endif
+#ifndef HAVE_GETLINE
+ssize_t getline(char **, size_t *, FILE *);
+ssize_t getdelim(char **, size_t *, int, FILE *);
+#endif
+#ifndef HAVE_CTIME_R
+char   *ctime_r(const time_t *, char *);
+#endif
+#ifndef HAVE_ASCTIME_R
+char   *asctime_r(const struct tm *, char *);
+#endif
+#ifndef HAVE_FMTCHECK
+const char *fmtcheck(const char *, const char *) 
+     __attribute__((__format_arg__(2)));
 #endif
 
 #if defined(HAVE_MMAP) && defined(HAVE_SYS_MMAN_H) && !defined(QUICK)

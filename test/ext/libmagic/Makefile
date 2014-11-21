@@ -22,40 +22,43 @@
 #
 # ===========================================================================
 
-by_default: runtests
+default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+TOP ?= $(abspath ../../..)
 
-include $(TOP)/build/Makefile.shell
+MODULE = test/ext/libmagic
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+	test-magic
+
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(TEST_TOOLS)
+
+clean: stdclean
 
 #-------------------------------------------------------------------------------
-# default
+# test-magic
 #
-SUBDIRS =       \
-    ktst        \
-    cc          \
-    ext         \
-    judy_test   \
-    kfc         \
-    klib        \
-    kfg         \
-    kns         \
-    kdb         \
-    kproc       \
-    ngs         \
-    ngs-c++     \
-	search	    \
-    vfs         \
-    vxf         \
+TEST_MAGIC_SRC = \
+	magictest 
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+TEST_MAGIC_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_MAGIC_SRC))
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
+TEST_MAGIC_LIB = \
+	-skapp \
+    -smagic \
+    -sncbi-vdb \
+    -sktst
 
-.PHONY: default $(SUBDIRS)
 
+$(TEST_BINDIR)/test-magic: $(TEST_MAGIC_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_MAGIC_LIB)
+
+valgrind_magic: test-magic
+	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-magic # --suppressions=$(SRCDIR)/valgrind_suppressions.txt   
+    
