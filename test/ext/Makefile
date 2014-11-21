@@ -35,7 +35,6 @@ include $(TOP)/build/Makefile.config
 # default
 #
 SUBDIRS =    \
-    libmagic     \
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets
