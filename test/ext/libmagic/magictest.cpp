@@ -42,6 +42,24 @@ TEST_CASE(version)
     REQUIRE_EQ(519, magic_version());
 }
 
+TEST_CASE(openClose)
+{
+    magic_t cookie = magic_open(0);
+    REQUIRE_NOT_NULL(cookie);
+    magic_close(cookie);
+}
+
+TEST_CASE(ASCII)
+{
+    magic_t cookie = magic_open(0);
+    REQUIRE_NOT_NULL(cookie);
+    
+    REQUIRE_EQ(0, magic_load(cookie, NULL));
+    REQUIRE_EQ(string("ASCII text"), string(magic_file(cookie, "./Makefile"))); 
+    
+    magic_close(cookie);
+}
+
 //////////////////////////////////////////// Main
 extern "C"
 {
