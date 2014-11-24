@@ -175,6 +175,20 @@ TEST_CASE(a32_read_and_add_even_false)
     REQUIRE_EQ ( ( int ) atomic32_read ( & v ), 1 );
 }
 
+TEST_CASE(atomic32_dec_and_test_true)
+{
+    atomic32_t v;
+    atomic32_set ( & v, 1 );
+    REQUIRE ( atomic32_dec_and_test ( & v ) );
+}
+TEST_CASE(atomic32_dec_and_test_false)
+{
+    atomic32_t v;
+    atomic32_set ( & v, 2 );
+    REQUIRE ( ! atomic32_dec_and_test ( & v ) );
+}
+
+
 #ifdef USE_GCC_BUILTIN
 #undef USE_GCC_BUILTIN
 TEST_CASE(uint16_lsbit_0_asm)
