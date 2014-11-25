@@ -34,6 +34,7 @@ include $(TOP)/build/Makefile.shell
 SUBDIRS = \
 	zlib \
 	bzip2 \
+    magic \
 
 include $(TOP)/build/Makefile.targets
 
