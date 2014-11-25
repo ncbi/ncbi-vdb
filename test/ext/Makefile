@@ -34,8 +34,12 @@ include $(TOP)/build/Makefile.config
 #-------------------------------------------------------------------------------
 # default
 #
-SUBDIRS =    \
-    magic \
+SUBDIRS = \
+
+# The libmagic tests (and copycat which is the only user of libmagic for now) rely on 
+# the correct version of libmagic database installed on the system.
+# Disabling for now.
+#    magic \
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets
