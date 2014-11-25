@@ -84,7 +84,7 @@ $(ILIBDIR)/magic:
 ifeq (linux,$(OS))
 ifeq (64,$(BITS))
     
-$(ILIBDIR)/magic: $(addprefix $(ILIBDIR)/$(LPFX)magic.,$(LIBX))
+$(ILIBDIR)/magic: $(addprefix $(ILIBDIR)/$(LPFX)magic-static.,$(LIBX))
 
 CFLAGS += -DHAVE_CONFIG_H
 
@@ -112,7 +112,7 @@ LIBMAGIC_OBJ = \
 
 LIBMAGIC_LIB = \
 
-$(ILIBDIR)/libmagic.$(LIBX): $(LIBMAGIC_OBJ)
+$(ILIBDIR)/libmagic-static.$(LIBX): $(LIBMAGIC_OBJ)
 	$(LD) --slib -o $@ $^ $(LIBMAGIC_LIB)
 
 endif
