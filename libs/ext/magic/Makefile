@@ -31,12 +31,7 @@ MODULE = libs/ext/magic
 INT_LIBS = \
 
 EXT_LIBS = \
-
-ifeq (Linux,$(OS))
-    ifeq (64,$(BITS))
-        EXT_LIBS += libmagic
-    endif
-endif
+    magic
 
 ALL_LIBS = \
 	$(INT_LIBS) \
@@ -70,7 +65,7 @@ $(TARGDIR)/all: \
 #-------------------------------------------------------------------------------
 # std
 #
-$(TARGDIR)/std: $(LIBDIR)/libmagic
+$(TARGDIR)/std: $(LIBDIR)/magic
 
 .PHONY: $(TARGDIR)/std
 
@@ -84,7 +79,12 @@ clean: stdclean
 #-------------------------------------------------------------------------------
 # libmagic, version 5.04 (ftp://ftp.astron.com/pub/file/file-5.04.tar.gz) configured for 64 bit Linux
 #
-$(LIBDIR)/libmagic: $(addprefix $(LIBDIR)/libmagic.,$(LIBX))
+$(LIBDIR)/magic: 
+
+ifeq (linux,$(OS))
+ifeq (64,$(BITS))
+    
+$(LIBDIR)/magic: $(addprefix $(LIBDIR)/$(LPFX)magic.,$(LIBX))
 
 CFLAGS += -DHAVE_CONFIG_H
 
@@ -114,3 +114,7 @@ LIBMAGIC_LIB = \
 
 $(LIBDIR)/libmagic.$(LIBX): $(LIBMAGIC_OBJ)
 	$(LD) --slib --vers $(SRCDIR) -o $@ $^ $(LIBMAGIC_LIB)
+
+endif
+endif
+    
