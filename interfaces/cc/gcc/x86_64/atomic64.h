@@ -122,8 +122,8 @@ static __inline__ int atomic64_dec_and_test ( atomic64_t *v )
     __asm__ __volatile__
     (
     "lock;"
-        "decq %2;"
-        "sete %%al"
+        "decq %1;"
+        "sete %0"
         : "=r" ( c ), "=m" ( v -> counter )
         : "m" ( v -> counter )
     );
@@ -138,8 +138,8 @@ static __inline__ int atomic64_inc_and_test ( atomic64_t *v )
     __asm__ __volatile__
     (
     "lock;"
-        "incq %2;"
-        "sete %%al"
+        "incq %1;"
+        "sete %0"
         : "=r" ( c ), "=m" ( v -> counter )
         : "m" ( v -> counter )
     );
@@ -156,7 +156,7 @@ static __inline__ long int atomic64_test_and_set ( atomic64_t *v, long int s, lo
     __asm__ __volatile__
     (
     "lock;"
-        "cmpxchg %%rsi,(%%rdi)"
+        "cmpxchg %2, (%1)"
         : "=a" ( rtn )
         : "r" ( & v -> counter ), "r" ( s ), "a" ( t )
     );
