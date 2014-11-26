@@ -3,11 +3,13 @@
 /win
 *.opensdf
 bin64
+build/COMP.mac
 build/Makefile.config*
 build/MSVC/2010/ipch
 build/MSVC/2010/ncbi-vdb.opensdf
 ilib64
 lib64
+Makefile.config.mac.arch
 schema
 test-bin64
 user.status
