@@ -175,6 +175,19 @@ TEST_CASE(a32_read_and_add_even_false)
     REQUIRE_EQ ( ( int ) atomic32_read ( & v ), 1 );
 }
 
+TEST_CASE(atomic32_inc_and_test_true)
+{
+    atomic32_t v;
+    atomic32_set ( & v, -1 );
+    REQUIRE ( atomic32_inc_and_test ( & v ) );
+}
+TEST_CASE(atomic32_inc_and_test_false)
+{
+    atomic32_t v;
+    atomic32_set ( & v, 1 );
+    REQUIRE ( ! atomic32_inc_and_test ( & v ) );
+}
+
 TEST_CASE(atomic32_dec_and_test_true)
 {
     atomic32_t v;
@@ -188,6 +201,20 @@ TEST_CASE(atomic32_dec_and_test_false)
     REQUIRE ( ! atomic32_dec_and_test ( & v ) );
 }
 
+TEST_CASE(atomic32_test_and_set_true)
+{
+    atomic32_t v;
+    atomic32_set ( & v, 0 );
+    REQUIRE_EQ ( 0, atomic32_test_and_set ( & v, 1, 0 ) );  // returns prior value of v
+    REQUIRE_EQ ( ( int ) atomic32_read ( & v ), 1 );
+}
+TEST_CASE(atomic32_test_and_set_false)
+{
+    atomic32_t v;
+    atomic32_set ( & v, 0 );
+    REQUIRE_EQ ( 0, atomic32_test_and_set ( & v, 1, 2 ) ); // returns prior value of v
+    REQUIRE_EQ ( ( int ) atomic32_read ( & v ), 0 );
+}
 
 #ifdef USE_GCC_BUILTIN
 #undef USE_GCC_BUILTIN
