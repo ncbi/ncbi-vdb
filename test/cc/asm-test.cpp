@@ -205,14 +205,14 @@ TEST_CASE(atomic32_test_and_set_true)
 {
     atomic32_t v;
     atomic32_set ( & v, 0 );
-    REQUIRE_EQ ( 0, atomic32_test_and_set ( & v, 1, 0 ) );  // returns prior value of v
+    REQUIRE_EQ ( ( int ) 0, ( int ) atomic32_test_and_set ( & v, 1, 0 ) );  // returns prior value of v
     REQUIRE_EQ ( ( int ) atomic32_read ( & v ), 1 );
 }
 TEST_CASE(atomic32_test_and_set_false)
 {
     atomic32_t v;
     atomic32_set ( & v, 0 );
-    REQUIRE_EQ ( 0, atomic32_test_and_set ( & v, 1, 2 ) ); // returns prior value of v
+    REQUIRE_EQ ( ( int ) 0,  ( int ) atomic32_test_and_set ( & v, 1, 2 ) ); // returns prior value of v
     REQUIRE_EQ ( ( int ) atomic32_read ( & v ), 0 );
 }
 
