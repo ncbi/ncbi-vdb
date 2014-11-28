@@ -110,7 +110,8 @@ rc_t KColumnIdx2OpenRead ( KColumnIdx2 *self,
     if ( rc == 0 )
     {
         const KFile * orig = self -> f;
-        rc = KBufFileMakeRead ( & self -> f, self -> f, IDX2_READ_FILE_BUFFER );
+
+        rc = KBufFileMakeRead ( & self -> f, self -> f, eof+1);
 	if ( rc == 0 )
         {
             KFileRelease ( orig );
@@ -171,108 +172,73 @@ rc_t KColIdxBlockLocateBlob ( const KColIdxBlock *iblk,
     return 0;
 }
 
+/* LocateBlob
+ *  locate an existing blob
+ */
 rc_t KColumnIdx2LocateBlob ( const KColumnIdx2 *self,
     KColBlobLoc *loc, const KColBlockLoc *bloc,
     int64_t first, int64_t upper, bool bswap )
 {
     rc_t rc;
-    uint32_t count;
-    size_t block_size, orig;
-    uint32_t slot=0;
 
-    void *block;
-
-    /* check within page cache */
-    if(self -> cstorage.elem_count > 0){
-        KColumnIdx2BlockCache * cache=(KColumnIdx2BlockCache *)self -> cstorage.base;
-        assert(self->last < self->cstorage.elem_count);
-        if(bloc -> start_id == cache[self->last].start_id){
-            rc = KColIdxBlockLocateBlob ( & cache[self->last].iblk, loc, bloc, ( uint32_t ) cache[self->last].count, first, upper );
-            if ( rc == 0) return 0;
-        } else {
-            uint32_t lower,upper,pivot;
-            if(bloc -> start_id > cache[self->last].start_id){
-                lower=self->last+1;
-                upper=self->cstorage.elem_count;
-            } else {
-                lower=0;
-                upper = self->last;
-            }
-            while(lower < upper){
-                pivot = (lower + upper) / 2;
-                if(bloc -> start_id == cache[pivot].start_id){
-                    KColumnIdx2 * nc_self=(KColumnIdx2 *)self;
-                    nc_self->last = pivot;
-                    rc = KColIdxBlockLocateBlob ( & cache[self->last].iblk, loc, bloc, ( uint32_t ) cache[self->last].count, first, upper );
-                    if ( rc == 0) return 0;
-                    goto BSEARCH_DONE;
-                } else if(bloc -> start_id < cache[pivot].start_id){
-                    upper=pivot;
-                } else {
-                    lower =pivot+1;
-                }
-            }
-            assert(lower == upper );
-            slot = upper;
-        }
-    }
-BSEARCH_DONE:
-
-    /* file may be empty or non-existent */
-    if ( self -> eof == 0 )
-        return RC ( rcDB, rcColumn, rcSelecting, rcBlob, rcNotFound );
-
-    /* TBD - compression not supported */
+    /* compression not supported */
     if ( bloc -> u . blk . compressed )
-        return RC ( rcDB, rcColumn, rcSelecting, rcData, rcUnsupported );
-
-    /* determine the number of entries in block */
-    orig = bloc -> u . blk . size;
-    count = KColBlockLocEntryCount ( bloc, & orig );
-
-    /* determine the size to allocate */
-    block_size = KColBlockLocAllocSize ( bloc, orig, count );
-
-    /* allocate a block */
-        block = malloc ( block_size );
-    if ( block == NULL )
-        rc = RC ( rcDB, rcColumn, rcSelecting, rcMemory, rcExhausted );
+        rc = RC ( rcDB, rcIndex, rcSelecting, rcNoObj, rcUnsupported );
     else
     {
-        size_t num_read;
-        rc = KFileReadAll ( self -> f, bloc -> pg, block, orig, & num_read );
-        if ( rc == 0 )
+        uint64_t buffer [ 1024 / 8 ]; /* make sure is uint64_t aligned */
+        void *block = buffer;
+
+        /* determine the number of entries in block */
+        size_t orig = bloc -> u . blk . size;
+        uint32_t count = KColBlockLocEntryCount ( bloc, & orig );
+
+        /* determine the size to allocate */
+        size_t block_size = KColBlockLocAllocSize ( bloc, orig, count );
+
+        /* allocate a block */
+        if ( block_size > sizeof buffer )
+            block = malloc ( block_size );
+        if ( block == NULL )
+            rc = RC ( rcDB, rcIndex, rcSelecting, rcMemory, rcExhausted );
+        else
         {
-            if ( num_read != orig )
-                rc = RC ( rcDB, rcIndex, rcReading, rcTransfer, rcIncomplete );
-            else
+            size_t num_read;
+            rc = KFileReadAll ( self -> f, bloc -> pg, block, orig, & num_read );
+            if ( rc == 0 )
             {
-                KColIdxBlock iblk;
-                rc = KColIdxBlockInit ( & iblk, bloc, orig, block, block_size, bswap );
-                if ( rc == 0 )
+                if ( num_read != orig )
+                    rc = RC ( rcDB, rcIndex, rcSelecting, rcTransfer, rcIncomplete );
+                else
                 {
-                    rc = KColIdxBlockLocateBlob ( & iblk,
-                        loc, bloc, count, first, upper );
+                    KColIdxBlock iblk;
+                    rc = KColIdxBlockInit ( & iblk, bloc, orig, block, block_size, bswap );
                     if ( rc == 0 )
                     {
-                        KColumnIdx2BlockCache * cache;
-                        KDataBufferResize(&((KColumnIdx2 *)self)->cstorage,self->cstorage.elem_count+1);
-                        cache=(KColumnIdx2BlockCache *)self -> cstorage.base;
-                        if(slot < self->cstorage.elem_count -1){ /** not adding to the end **/
-                            memmove(cache+slot+1,cache+slot,sizeof(*cache)*(self->cstorage.elem_count - slot - 1));
+                        uint32_t span;
+                        int64_t start_id;
+                        int slot = KColIdxBlockFind ( & iblk,
+                            bloc, count, first, & start_id, & span );
+                        if ( slot < 0 )
+                            rc = RC ( rcDB, rcIndex, rcSelecting, rcRange, rcNotFound );
+                        else if ( upper > ( start_id + span ) )
+                            rc = RC ( rcDB, rcIndex, rcSelecting, rcRange, rcInvalid );
+                        else
+                        {
+                            loc -> start_id = start_id;
+                            loc -> id_range = span;
+
+                            KColIdxBlockGet ( & iblk,
+                                bloc, count, slot, & loc -> pg, & span );
+                            loc -> u . blob . size = span;
                         }
-                        cache += slot; 
-                        cache -> block = block;
-                        cache -> start_id = bloc -> start_id;
-                        cache -> count = count;
-                        cache -> iblk = iblk;
-                        return 0;
                     }
                 }
             }
+
+            if ( block != buffer )
+                free ( block );
         }
-        
-            free ( block );
     }
 
     return rc;

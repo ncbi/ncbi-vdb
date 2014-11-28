@@ -53,6 +53,7 @@ struct KColumn;
 struct KMetadata;
 struct KDirectory;
 struct VFSManager;
+struct VPath;
 
 
 /*--------------------------------------------------------------------------
@@ -78,6 +79,11 @@ KDB_EXTERN rc_t CC KDBManagerMakeUpdateWithVFSManager (
 
 KDB_EXTERN rc_t CC KDBManagerGetVFSManager ( struct KDBManager const *self,
     struct VFSManager ** vfs );
+
+KDB_EXTERN rc_t CC KDBManagerVPathOpenLocalDBRead ( struct KDBManager const * self,
+    struct KDatabase const ** db, struct VPath const * path );
+KDB_EXTERN rc_t CC KDBManagerVPathOpenRemoteDBRead ( struct KDBManager const * self,
+    struct KDatabase const ** db, struct VPath const * remote, struct VPath const * cache );
 
 
 /*--------------------------------------------------------------------------

@@ -88,9 +88,9 @@ rc_t KExtNodeRelease (const KExtNode * cself)
 
     if (cself != NULL)
     {
-	KFileFormat *self = (KFileFormat*)cself;
+        KExtNode *self = (KExtNode*)cself;
         if (atomic32_dec_and_test (&self->refcount))
-	    return  KExtNodeDestroy (cself);
+            return  KExtNodeDestroy (cself);
     }
     return rc;
 }
@@ -260,13 +260,14 @@ rc_t KExtTableMake (KExtTable ** kmmtp)
     self = malloc (sizeof *self);
     if (self == NULL)
     {
-	rc = RC (rcFF, rcTable, rcConstructing, rcParam, rcNull);
-	LOGERR (klogErr, rc, "KExtTableMake: self could not be allocated");
+        rc = RC (rcFF, rcTable, rcConstructing, rcParam, rcNull);
+        LOGERR (klogErr, rc, "KExtTableMake: self could not be allocated");
     }
     else
     {
-	BSTreeInit (&self->tree);
-	*kmmtp = self;
+        atomic32_set (&self->refcount,1);
+        BSTreeInit (&self->tree);
+        *kmmtp = self;
     }
     return rc;
 }
@@ -645,9 +646,14 @@ KFileFormat_vt_v1 vt_v1 =
 static
 rc_t KExtFileFormatDestroy (KExtFileFormat *self)
 {
-
     FUNC_ENTRY();
-
+    rc_t rc = KFFTablesRelease (self->dad.tables);
+    {
+        rc_t rc2 = KExtTableRelease (self->table);
+        if (rc == 0)
+            rc = rc2;
+    }
+    free (self);
     return 0;
 }
 

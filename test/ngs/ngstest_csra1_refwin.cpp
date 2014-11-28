@@ -131,7 +131,7 @@ public:
             }
             if ( prevPos == newPos ) 
             {
-                if ( prevLen < newLen );
+                if ( prevLen < newLen )
                 {
                     PrintAlignment();
                     return false;

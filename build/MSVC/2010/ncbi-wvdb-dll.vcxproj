@@ -18,20 +18,35 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  
   <Import Project=".\dll-project.props" />
-  
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C3689443-C606-47B9-987B-92EBBCF96647}</ProjectGuid>
   </PropertyGroup>
-  
-  <ItemDefinitionGroup>
-    <Link>
-      <AdditionalDependencies>$(VDB_TARGET)lib\zlib.lib;$(VDB_TARGET)lib\bz2.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
-  </ItemDefinitionGroup>
-
   <ItemGroup>
+    <ClCompile Include="..\..\..\libs\ext\bzip2\blocksort.c" />
+    <ClCompile Include="..\..\..\libs\ext\bzip2\bzlib.c" />
+    <ClCompile Include="..\..\..\libs\ext\bzip2\compress.c">
+      <ObjectFileName>$(IntDir)bzip2-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ext\bzip2\crctable.c" />
+    <ClCompile Include="..\..\..\libs\ext\bzip2\decompress.c" />
+    <ClCompile Include="..\..\..\libs\ext\bzip2\huffman.c" />
+    <ClCompile Include="..\..\..\libs\ext\bzip2\randtable.c" />
+    <ClCompile Include="..\..\..\libs\ext\zlib\adler32.c" />
+    <ClCompile Include="..\..\..\libs\ext\zlib\compress.c" />
+    <ClCompile Include="..\..\..\libs\ext\zlib\crc32.c" />
+    <ClCompile Include="..\..\..\libs\ext\zlib\deflate.c" />
+    <ClCompile Include="..\..\..\libs\ext\zlib\gzclose.c" />
+    <ClCompile Include="..\..\..\libs\ext\zlib\gzlib.c" />
+    <ClCompile Include="..\..\..\libs\ext\zlib\gzread.c" />
+    <ClCompile Include="..\..\..\libs\ext\zlib\gzwrite.c" />
+    <ClCompile Include="..\..\..\libs\ext\zlib\infback.c" />
+    <ClCompile Include="..\..\..\libs\ext\zlib\inffast.c" />
+    <ClCompile Include="..\..\..\libs\ext\zlib\inflate.c" />
+    <ClCompile Include="..\..\..\libs\ext\zlib\inftrees.c" />
+    <ClCompile Include="..\..\..\libs\ext\zlib\trees.c" />
+    <ClCompile Include="..\..\..\libs\ext\zlib\uncompr.c" />
+    <ClCompile Include="..\..\..\libs\ext\zlib\zutil.c" />
     <ClCompile Include="..\..\..\libs\align\align-access.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)walign-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)walign-%(Filename).obj</ObjectFileName>
@@ -61,6 +76,12 @@
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)walign-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)walign-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)walign-%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\align\reader-wgs.c">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)align-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)align-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)align-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)align-%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\align\reference-cmn.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)walign-%(Filename).obj</ObjectFileName>
@@ -1273,6 +1294,7 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../libs/klib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../libs/klib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\num-gen.c" />
     <ClCompile Include="..\..\..\libs\klib\out.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)klib-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)klib-%(Filename).obj</ObjectFileName>
@@ -1640,6 +1662,10 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)../../../libs/klib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../libs/klib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../libs/klib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\progressbar.c">
+      <ObjectFileName>$(IntDir)klib-%(Filename).obj</ObjectFileName>
+      <AdditionalIncludeDirectories>$(ProjectDir)../../../libs/klib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\kns\endpoint.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)kns-%(Filename).obj</ObjectFileName>
@@ -2932,5 +2958,4 @@
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)wwgsxf-%(Filename).obj</ObjectFileName>
     </ClCompile>
   </ItemGroup>
-  
 </Project>

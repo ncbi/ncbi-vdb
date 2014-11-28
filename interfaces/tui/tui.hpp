@@ -95,7 +95,7 @@ class Tui_Rect
         const tui_coord get_y( void ) const { return r_.top_left.y; };
         const tui_coord get_w( void ) const { return r_.w; };
         const tui_coord get_h( void ) const { return r_.h; };
-        void get( tui_coord &x, tui_coord &y, tui_coord &w, tui_coord &h )
+        void get( tui_coord &x, tui_coord &y, tui_coord &w, tui_coord &h ) const
         { x = r_.top_left.x; y = r_.top_left.y; w = r_.w; h = r_.h; }
 
         void set_x( const tui_coord x ) { r_.top_left.x = x; };

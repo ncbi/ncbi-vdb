@@ -298,10 +298,11 @@ struct VRowData
                offset to first element of row */
             uint64_t first_elem;
             const void *base;
-
+			uint64_t base_elem_count; /*** the number of elements memory is valid from base; needed for prefetch***/
         } data;
 
     } u;
+    int64_t blob_stop_id;
 
     /* describes variant of "u" */
     VRowDataVariant variant;
@@ -709,6 +710,7 @@ enum
     vftInvalid,
     vftReserved,
     vftRow,
+	vftRowFast,  /*** function is fast, so window can be stretched to the max **/
     vftIdDepRow, /*** function dependent on row_id ***/
     vftFixedRow,
     vftNonDetRow,

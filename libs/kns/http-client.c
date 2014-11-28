@@ -1579,7 +1579,7 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                                 /* remember that we can have chunked encoding,
                                    so "Content-Length" may not exist. */
                                 * pos = start_pos;
-                                * bytes = end_pos - start_pos; 
+                                * bytes = end_pos - start_pos + 1; 
                                             
                                 return 0;
                             }
@@ -2504,7 +2504,6 @@ rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttp
         }
 
         /* reset connection, reset request */
-        KOutMsg ( "\nRedirected!!!\n\n" );
         rc = KClientHttpRequestHandleRedirection ( self, rslt );
         if ( rc != 0 )
             break;

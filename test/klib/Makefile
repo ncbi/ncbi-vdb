@@ -29,7 +29,8 @@ TOP ?= $(abspath ../..)
 MODULE = test/klib
 
 TEST_TOOLS = \
-	test-out
+	test-out \
+    test-klib \
 
 include $(TOP)/build/Makefile.env
 
@@ -60,3 +61,27 @@ valgrind_out:
 	valgrind --ncbi $(TEST_BINDIR)/test-out
     
 .PHONY: valgrind_out
+
+#-------------------------------------------------------------------------------
+# test-klib
+#
+TEST_KLIB_SRC = \
+	test-klib
+
+TEST_KLIB_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_KLIB_SRC))
+
+TEST_KLIB_LIB = \
+	-skapp \
+    -sncbi-vdb \
+	-sktst \
+
+$(TEST_BINDIR)/test-klib: $(TEST_KLIB_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
+    
+valgrind_klib:
+	valgrind --ncbi $(TEST_BINDIR)/test-klib
+    
+.PHONY: valgrind_klib
+
+

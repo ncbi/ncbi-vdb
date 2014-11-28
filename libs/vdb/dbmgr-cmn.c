@@ -732,6 +732,7 @@ LIB_EXPORT rc_t CC VDBManagerGetObjModDate ( const VDBManager *self, KTime_t *ti
                 break;
 
             case kptPrereleaseTbl:
+                rc = 0;
                 * timestamp = 0;
                 meta = NULL;
                 break;

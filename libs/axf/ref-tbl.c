@@ -74,7 +74,7 @@ rc_t AlignRefTableCursor( const VTable* table, const VCursor *native_curs,
             return rc;
 
         /* create a cursor */
-        rc = VTableCreateCachedCursorRead( tbl, &curs, 32*1024*1024 );
+        rc = VTableCreateCachedCursorRead( tbl, &curs, 1024*1024*1024 );
 		if ( reftbl != NULL )
         {
 			*reftbl = tbl;

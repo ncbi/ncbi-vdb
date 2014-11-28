@@ -91,7 +91,7 @@ rc_t KColumnIdx2OpenRead ( KColumnIdx2 *self,
     if ( rc == 0 )
     {
         KFile * orig = self -> f;
-        rc = KBufFileMakeRead ( ( const KFile** ) & self -> f, self -> f, IDX2_READ_FILE_BUFFER );
+        rc = KBufFileMakeRead ( ( const KFile** ) & self -> f, self -> f, eof + 1 );
 	if ( rc == 0 )
         {
             KFileRelease ( orig );

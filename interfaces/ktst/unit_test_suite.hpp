@@ -154,11 +154,15 @@ public:
     typedef void ( TestCase ::* TestMethod ) ();
 
 protected:
-    TestCase(const std::string& name);
+    TestCase(const char* name);
+
+public:    
+    // explicit destruction, to be used before calling exit() in out-of-process test runner
+    virtual void clear() {}
 
 public:
     ncbi::NK::counter_t GetErrorCounter(void) { return _ec; }
-    const std::string& GetName(void) const { return _name; }
+    const char* GetName(void) const { return _name; }
     void ErrorCounterAdd(ncbi::NK::counter_t ec) { _ec += ec; }
 
 protected:
@@ -408,7 +412,7 @@ protected:
 #define REQUIRE_NOT_NULL(e1) AssertNotNull((e1), #e1, __FILE__,__LINE__, true)
 
 private:
-    const std::string _name;
+    const char* _name;
     ncbi::NK::counter_t _ec;
 };
 

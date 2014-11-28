@@ -2525,7 +2525,8 @@ rc_t VPathExtractAcc ( const VPath * url, VPath ** acc )
                 end = sep;
             break;
         case 9:
-            if ( strcase_cmp ( ".ncbi_enc", 9, sep, 9, 9 ) == 0 )
+            if ( strcase_cmp ( ".vdbcache", 9, sep, 9, 9 ) == 0 ||
+                 strcase_cmp ( ".ncbi_enc", 9, sep, 9, 9 ) == 0 )
             {
                 end = sep;
                 sep = string_rchr ( start, end - start, '.' );

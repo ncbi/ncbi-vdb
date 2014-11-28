@@ -1110,7 +1110,6 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
     return rc;
 }
 
-
 LIB_EXPORT
 rc_t CC VFSManagerOpenFileReadDirectoryRelative (const VFSManager *self,
                                                  const KDirectory * dir,
@@ -1442,6 +1441,78 @@ rc_t VFSManagerOpenDirectoryReadHttp (const VFSManager *self,
     return rc;
 }
 
+/* similar to VFSManagerOpenDirectoryReadHttp but already resolved */
+static
+rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
+                                              KDirectory const **d,
+                                              const VPath * path,
+                                              const VPath * cache,
+                                              bool force_decrypt)
+{
+    const String * uri = NULL;
+    rc_t rc = VPathMakeString ( path, &uri );
+    if ( rc == 0 )
+    {
+        const KFile * file = NULL;
+        rc = VFSManagerMakeHTTPFile( self, &file, uri->addr, cache == NULL ? NULL : cache->path.addr );
+        free( ( void * )uri );
+        if ( rc != 0 )
+        {
+            PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(U)'",
+                                 "U=%S:%S", & path -> scheme, & path -> path ) );
+        }
+        else
+        {
+            const char mountpointpath[] = "/";
+            const KDirectory * mountpoint;
+
+            rc = KQuickMountDirMake (self->cwd, &mountpoint, file,
+                                     mountpointpath, sizeof mountpointpath - 1, 
+                                     path->path.addr, path->path.size);
+            if (rc)
+            {
+                PLOGERR (klogInt, (klogErr, rc, "error creating mount "
+                                   "'$(M)' for '$(F)", "M=%s,F=%S",
+                                   mountpointpath, &path->path));
+            }
+            else
+            {
+                const KFile * f;
+                bool was_encrypted = false;
+
+                rc = VFSManagerOpenFileReadDecryption (self, mountpoint, &f,
+                                                       file, path,
+                                                       force_decrypt,
+                                                       &was_encrypted);
+                if (rc == 0)
+                {
+                        
+                    rc = TransformFileToDirectory (mountpoint, f, d, 
+                                                   path->path.addr,
+                                                   was_encrypted);
+                    /* hacking in the fragment bit */
+                    if ((rc == 0) && (path->fragment . size > 1 ) )
+                    {
+                        const KDirectory * tempd = * d;
+                        const char * fragment = path -> fragment . addr + 1;
+                        int frag_size = ( int ) path -> fragment . size - 1;
+
+                        assert ( fragment [ -1 ] == '#' );
+                            
+                        rc = KDirectoryOpenDirRead (tempd, d, false, "%.*s", frag_size, fragment );
+                        
+                        KDirectoryRelease (tempd);
+                    }
+                    KFileRelease (f);
+                }
+                KDirectoryRelease (mountpoint);
+            }
+            KFileRelease (file);
+        }
+    }
+    return rc;
+}
+
 
 static
 rc_t VFSManagerOpenDirectoryReadKfs (const VFSManager *self,
@@ -1743,6 +1814,37 @@ LIB_EXPORT rc_t CC VFSManagerOpenDirectoryRead (const VFSManager *self,
                                                 const VPath * path)
 {
     return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, self->cwd, d, path, false);
+}
+
+LIB_EXPORT 
+rc_t CC VFSManagerOpenDirectoryReadDecryptRemote (const VFSManager *self,
+                                                  KDirectory const **d,
+                                                  const VPath * path,
+                                                  const VPath * cache)
+{
+    rc_t rc;
+    if ( self == NULL )
+        return RC (rcVFS, rcDirectory, rcOpening, rcSelf, rcNull);
+    if ( path == NULL )
+        return RC (rcVFS, rcDirectory, rcOpening, rcParam, rcNull);
+    /* cache == NULL is ok */
+    if ( d == NULL )
+        return RC (rcVFS, rcDirectory, rcOpening, rcParam, rcNull);
+    *d = NULL;
+
+    switch ( VPathGetUri_t ( path ) )
+    {
+    case vpuri_http:
+    case vpuri_ftp:
+        rc = VFSManagerOpenDirectoryReadHttpResolved ( self, d, path, cache, true );
+        break;
+        
+    default:
+        rc = RC (rcVFS, rcDirectory, rcOpening, rcPath, rcInvalid);
+        break;
+    }
+    
+    return rc;
 }
 
 
