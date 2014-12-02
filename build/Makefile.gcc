@@ -51,9 +51,6 @@ ifneq (sun,$(OS))
     WARN += -Wno-variadic-macros
 endif
 
-#VDB-1362: older versions of gcc do not support this option: 
-#NO_ARRAY_BOUNDS_WARNING = -Wno-array-bounds
-
 ifeq (64,$(BITS))
 	CARCH = -m64
 else

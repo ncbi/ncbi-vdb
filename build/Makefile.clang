@@ -47,9 +47,6 @@ LP = @ $(TOP)/build/ld.sh $(OS) $(ARCH) clang++ \
 
 # tool options
 WARN = -Wall -Wno-variadic-macros -Wno-long-long # -Wconversion
-ifeq (linux,$(OS))
-    NO_ARRAY_BOUNDS_WARNING = -Wno-array-bounds
-endif
 
 ifeq (64,$(BITS))
 	CARCH = -m64
