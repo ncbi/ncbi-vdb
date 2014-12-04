@@ -289,7 +289,7 @@ then
 fi
 
 # add in xml
-if [ $HAVE_XML2 -ne 0 ]
+if [ "$HAVE_XML2" == "1" ]
 then
     CMD="$CMD -lxml2"
 fi
