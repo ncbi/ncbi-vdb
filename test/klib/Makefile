@@ -29,6 +29,7 @@ TOP ?= $(abspath ../..)
 MODULE = test/klib
 
 TEST_TOOLS = \
+	test-asm \
 	test-out \
     test-klib \
 
@@ -40,6 +41,28 @@ $(TEST_TOOLS): makedirs
 .PHONY: $(TEST_TOOLS)
 
 clean: stdclean
+
+#-------------------------------------------------------------------------------
+# test-asm
+#
+TEST_ASM_SRC = \
+	asm-test
+
+TEST_ASM_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_ASM_SRC))
+    
+TEST_ASM_LIB = \
+	-skapp \
+    -sncbi-vdb \
+	-sktst \
+
+$(TEST_BINDIR)/test-asm: $(TEST_ASM_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_ASM_LIB)
+    
+valgrind_out:
+	valgrind --ncbi $(TEST_BINDIR)/test-asm
+    
+.PHONY: valgrind_asm
 
 #-------------------------------------------------------------------------------
 # test-out
