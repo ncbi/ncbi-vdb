@@ -107,9 +107,10 @@ extern rc_t KHttpGetStatusLine ( struct KClientHttp *self, struct timeout_t *tm,
  * KClientHttp
  */
 
-rc_t KClientHttpOpen(struct KClientHttp *self,
-    const String *hostname, uint32_t port);
-void KClientHttpClose ( struct KClientHttp *self );
+rc_t KClientHttpOpen ( struct KClientHttp * self, const String * hostname, uint32_t port );
+void KClientHttpClose ( struct KClientHttp * self );
+rc_t KClientHttpReopen ( struct KClientHttp * self );
+
 rc_t KNSManagerMakeClientHttpInt ( struct KNSManager const *self, struct KClientHttp **_http,
     const KDataBuffer *hostname_buffer,  struct KStream *opt_conn,
     ver_t vers, int32_t readMillis, int32_t writeMillis,
@@ -127,10 +128,11 @@ rc_t KClientHttpMakeRequestInt ( struct KClientHttp const *self,
 
 /* exported private functions
 */
-extern rc_t HttpTest ( struct KFile const *input );
-extern void URLBlockInitTest ( void );
-extern rc_t ParseUrlTest ( void );
-extern rc_t MakeRequestTest ( void );    
+
+/* a hook to redefine KClientHttpReopen (for testing,_DEBUG only) */
+#if _DEBUGGING
+extern void SetClientHttpReopenCallback ( rc_t (*fn) ( struct KClientHttp * self ) ); 
+#endif
 
 #ifdef __cplusplus
 }

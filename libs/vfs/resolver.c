@@ -1472,17 +1472,17 @@ static rc_t VResolverAlgRemoteProtectedResolve ( const VResolverAlg *self,
 {
     bool canRetry = true;
     KHttpRetrier retrier;
-    KHttpRetrierInit(&retrier,
+    KHttpRetrierInit_RemoveMe(&retrier,
         KNSManagerGetNumberOfRetriesOnFailure(kns),
         KNSManagerGetTestFailuresNumber(kns), acc->addr,
         KNSManagerGetLogFailuresNumber(kns));
     while (true) {
-        rc_t rc = KHttpRetrierForceFailure(&retrier, NULL);
+        rc_t rc = KHttpRetrierForceFailure_RemoveMe(&retrier, NULL);
         if (rc == 0) {
             rc = VResolverAlgRemoteProtectedResolveImpl(self, kns,
                 protocols, acc, path, mapping, legacy_wgs_refseq, &canRetry);
         }
-        if (rc == 0 || !KHttpRetrierWait(&retrier, rc)/*|| !canRetry*/) {
+        if (rc == 0 || !KHttpRetrierWait_RemoveMe(&retrier, rc)/*|| !canRetry*/) {
             return rc;
         }
     }

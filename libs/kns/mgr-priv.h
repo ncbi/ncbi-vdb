@@ -35,34 +35,45 @@
 #include <klib/refcount.h>
 #endif
 
+#ifndef _h_kns_mgr_priv_
+#include <kns/kns-mgr-priv.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+struct KConfig;
+struct HttpRetrySpecs;
+
 struct KNSManager
 {
     KRefcount refcount;
+    
+    struct KConfig *kfg;
+    
+    struct HttpRetrySpecs retry_specs;
+    
     int32_t conn_timeout;
     int32_t conn_read_timeout;
     int32_t conn_write_timeout;
     int32_t http_read_timeout;
     int32_t http_write_timeout;
+    
+    uint32_t maxTotalWaitForReliableURLs_ms;
+    uint8_t  maxNumberOfRetriesOnFailureForReliableURLs;
 
+/*TODO: cleanup*/
 /* N.B. "RETRIES number" = TRIES number + 1 */
-
     /* retries on HTTP failure for any URL */
     uint32_t maxNumberOfRetriesOnFailure;
-
     /* retries on HTTP failure for a reliable URL */
-    uint32_t maxNumberOfRetriesOnFailureForReliableURLs;
-
+    /*uint32_t maxNumberOfRetriesOnFailureForReliableURLs;*/
     /* test:
        force HTTP request to fail when try number is <= this number */
     uint32_t testFailuresNumber;
-
     /* log HTTP failure when try number is >= than this number */
     uint32_t logFailures;
-
     bool verbose;
 };
 

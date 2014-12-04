@@ -194,6 +194,29 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t por
     return rc;
 }
 
+#if _DEBUGGING
+/* we need this hook to be able to test the re-connection logic */
+static rc_t (*ClientHttpReopenCallback) ( struct KClientHttp * self ) = NULL;
+
+void SetClientHttpReopenCallback ( rc_t (*fn) ( struct KClientHttp * self ) )
+{
+    ClientHttpReopenCallback = fn;
+}
+#endif
+
+rc_t KClientHttpReopen ( KClientHttp * self )
+{
+#if _DEBUGGING
+    if ( ClientHttpReopenCallback != NULL )
+    {
+        return ClientHttpReopenCallback ( self );
+    }
+#endif
+    
+    KClientHttpClose ( self );
+    return KClientHttpOpen ( self, & self -> hostname, self -> port );
+}
+
 /* Initialize KClientHttp object */
 static
 rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, KStream * conn, ver_t _vers, const String * _host, uint32_t port )
@@ -2499,7 +2522,7 @@ rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttp
 
         default:
 
-            /* TBD - should all status codes be interpreted as rc ? */
+            /* rslt -> status may be looked at by the caller to determine actual success */
             return 0;
         }
 
