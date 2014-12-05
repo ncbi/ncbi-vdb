@@ -406,10 +406,14 @@ TEST_CASE(KLog_LevelExplainInsufficientBuffer)
 TEST_CASE(IsUserAnAdminTest) 
 {
     // TeamCity agents run as admin on some systems but not the others
-#if defined (MAC) || defined (WINDOWS)
+#if defined (WINDOWS)
     if ( getenv ( "TEAMCITY_VERSION" ) != 0 )
     {
         REQUIRE ( is_iser_an_admin() );
+    }
+    else
+    {
+        REQUIRE ( !is_iser_an_admin() );
     }
 #else
     // Linux or not under TeamCity
