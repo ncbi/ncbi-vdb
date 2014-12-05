@@ -28,7 +28,12 @@ TOP ?= $(abspath ../..)
 
 MODULE = test/klib
 
+# WARNING: test-md5append is excluded from TEST_TOOLS since it's supposed
+# to be run manually
 TEST_TOOLS = \
+	test-asm \
+	test-printf \
+	test-log \
 	test-out \
     test-klib \
 
@@ -40,6 +45,95 @@ $(TEST_TOOLS): makedirs
 .PHONY: $(TEST_TOOLS)
 
 clean: stdclean
+
+#-------------------------------------------------------------------------------
+# test-asm
+#
+TEST_ASM_SRC = \
+	asm-test
+
+TEST_ASM_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_ASM_SRC))
+    
+TEST_ASM_LIB = \
+	-skapp \
+    -sncbi-vdb \
+	-sktst \
+
+$(TEST_BINDIR)/test-asm: $(TEST_ASM_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_ASM_LIB)
+    
+valgrind_asm:
+	valgrind --ncbi $(TEST_BINDIR)/test-asm
+    
+.PHONY: valgrind_asm
+
+#-------------------------------------------------------------------------------
+# test-md5append
+#
+TEST_MD5APPEND_SRC = \
+	md5appendtest
+
+TEST_MD5APPEND_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_MD5APPEND_SRC))
+    
+TEST_MD5APPEND_LIB = \
+	-skapp \
+    -sncbi-vdb \
+	-sktst \
+
+$(TEST_BINDIR)/test-md5append: $(TEST_MD5APPEND_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_MD5APPEND_LIB)
+    
+valgrind_md5append:
+	valgrind --ncbi $(TEST_BINDIR)/test-md5append
+    
+.PHONY: valgrind_md5append
+
+#-------------------------------------------------------------------------------
+# test-printf
+#
+TEST_PRINTF_SRC = \
+	printf-test
+
+TEST_PRINTF_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_PRINTF_SRC))
+    
+TEST_PRINTF_LIB = \
+	-skapp \
+    -sncbi-vdb \
+	-sktst \
+
+$(TEST_BINDIR)/test-printf: $(TEST_PRINTF_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_PRINTF_LIB)
+    
+valgrind_printf:
+	valgrind --ncbi $(TEST_BINDIR)/test-printf
+    
+.PHONY: valgrind_printf
+
+#-------------------------------------------------------------------------------
+# test-log
+#
+TEST_LOG_SRC = \
+	test-log
+
+TEST_LOG_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_LOG_SRC))
+    
+TEST_LOG_LIB = \
+	-skapp \
+    -sncbi-vdb \
+	-sktst \
+
+$(TEST_BINDIR)/test-log: $(TEST_LOG_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_LOG_LIB)
+    
+valgrind_log:
+	valgrind --ncbi $(TEST_BINDIR)/test-log
+    
+.PHONY: valgrind_log
+
 
 #-------------------------------------------------------------------------------
 # test-out

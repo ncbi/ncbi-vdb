@@ -40,6 +40,7 @@
 #include <klib/log.h>
 #include <klib/num-gen.h>
 #include <klib/text.h>
+#include <klib/misc.h> /* is_user_admin() */
 
 using namespace std;
 
@@ -401,6 +402,26 @@ TEST_CASE(KLog_LevelExplainInsufficientBuffer)
     REQUIRE_RC_FAIL(KLogLevelExplain(klogInfo, buf, sizeof(buf), &num_writ));
     REQUIRE_EQ(num_writ, (size_t)0);
 }
+
+TEST_CASE(IsUserAnAdminTest) 
+{
+    // TeamCity agents run as admin on some systems but not the others
+#if defined (WINDOWS)
+    if ( getenv ( "TEAMCITY_VERSION" ) != 0 )
+    {
+        REQUIRE ( is_iser_an_admin() );
+    }
+    else
+    {
+        REQUIRE ( !is_iser_an_admin() );
+    }
+#else
+    // Linux or not under TeamCity
+    REQUIRE ( !is_iser_an_admin() );
+#endif
+}
+
+
 
 static const size_t BufSize = 1024;
 // implementation of KWrtWriter for testing purposes
