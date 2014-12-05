@@ -33,6 +33,7 @@ MODULE = test/klib
 TEST_TOOLS = \
 	test-asm \
 	test-printf \
+	test-log \
 	test-out \
     test-klib \
 
@@ -110,6 +111,28 @@ valgrind_printf:
 	valgrind --ncbi $(TEST_BINDIR)/test-printf
     
 .PHONY: valgrind_printf
+
+#-------------------------------------------------------------------------------
+# test-log
+#
+TEST_LOG_SRC = \
+	test-log
+
+TEST_LOG_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_LOG_SRC))
+    
+TEST_LOG_LIB = \
+	-skapp \
+    -sncbi-vdb \
+	-sktst \
+
+$(TEST_BINDIR)/test-log: $(TEST_LOG_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_LOG_LIB)
+    
+valgrind_log:
+	valgrind --ncbi $(TEST_BINDIR)/test-log
+    
+.PHONY: valgrind_log
 
 
 #-------------------------------------------------------------------------------
