@@ -62,7 +62,7 @@ TEST_ASM_LIB = \
 $(TEST_BINDIR)/test-asm: $(TEST_ASM_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_ASM_LIB)
     
-valgrind_out:
+valgrind_asm:
 	valgrind --ncbi $(TEST_BINDIR)/test-asm
     
 .PHONY: valgrind_asm
@@ -84,7 +84,7 @@ TEST_MD5APPEND_LIB = \
 $(TEST_BINDIR)/test-md5append: $(TEST_MD5APPEND_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_MD5APPEND_LIB)
     
-valgrind_out:
+valgrind_md5append:
 	valgrind --ncbi $(TEST_BINDIR)/test-md5append
     
 .PHONY: valgrind_md5append
@@ -106,7 +106,7 @@ TEST_PRINTF_LIB = \
 $(TEST_BINDIR)/test-printf: $(TEST_PRINTF_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_PRINTF_LIB)
     
-valgrind_out:
+valgrind_printf:
 	valgrind --ncbi $(TEST_BINDIR)/test-printf
     
 .PHONY: valgrind_printf
