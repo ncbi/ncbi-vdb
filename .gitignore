@@ -10,6 +10,7 @@ build/MSVC/2010/ncbi-vdb.opensdf
 ilib64
 lib64
 Makefile.config.mac.arch
+reconfigure
 schema
 test-bin64
 user.status
