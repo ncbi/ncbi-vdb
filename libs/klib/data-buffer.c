@@ -38,6 +38,38 @@
 #if _DEBUGGING
 #define DEBUG_MALLOC_FREE 1
 #include <stdio.h>
+
+static
+void cc_impl ( const KDataBuffer * self, const char * func, uint32_t lineno )
+{
+    /* if not byte-aligned, pointer is always a byte pointer */
+    if ( ( self -> elem_bits & 7 ) == 0 )
+    {
+        /* convert from bits to bytes */
+        uint64_t elem_bytes = self -> elem_bits >> 3;
+
+        /* if the size is an integral power of 2 */
+        if ( ( ( elem_bytes - 1 ) & elem_bytes ) == 0 )
+        {
+            /* never should be called with < 2 bytes ( see "cc" macro ) */
+            assert ( elem_bytes >= 2 );
+
+            /* test pointer alignment against 1 ( 16-bit ), 3 ( 32-bit ), 7 ( 64-bit ) */
+            if ( ( ( size_t ) self -> base & ( elem_bytes - 1 ) ) != 0 )
+            {
+                /* this buffer has bad pointer alignment */
+                fprintf ( stderr, "%s:%u: %s - WARNING: bad pointer alignment: 0x%08lx -> %lu bytes\n",
+                         __FILE__, lineno, func, ( size_t ) self -> base, elem_bytes );
+            }
+        }
+    }
+}
+
+#define cc( self )                                          \
+    if ( ( self ) != NULL && ( self ) -> elem_bits > 16 )   \
+        cc_impl ( self, __func__, __LINE__ )
+#else
+#define cc( self ) ( ( void ) 0 )
 #endif
 
 /*--------------------------------------------------------------------------
@@ -47,9 +79,7 @@ typedef struct buffer_impl_t buffer_impl_t;
 struct buffer_impl_t {
     size_t allocated;
     atomic32_t refcount;
-#if DEBUG_MALLOC_FREE
     uint32_t foo;
-#endif
 };
 
 static size_t roundup(size_t value, unsigned bits)
@@ -231,10 +261,13 @@ LIB_EXPORT rc_t CC KDataBufferMake(KDataBuffer *target, uint64_t elem_bits, uint
         target->elem_bits = elem_bits;
         target->elem_count = elem_count;
     }
+
+    cc ( target );
+
     return rc;
 }
 
-LIB_EXPORT rc_t CC KDataBufferResize(KDataBuffer *self, uint64_t new_count) {
+static rc_t KDataBufferResizeInt(KDataBuffer *self, uint64_t new_count) {
     rc_t rc;
     buffer_impl_t *imp;
     buffer_impl_t *new_imp;
@@ -301,7 +334,14 @@ LIB_EXPORT rc_t CC KDataBufferResize(KDataBuffer *self, uint64_t new_count) {
     return rc;
 }
 
-LIB_EXPORT rc_t CC KDataBufferSub (const KDataBuffer *self,
+LIB_EXPORT rc_t CC KDataBufferResize(KDataBuffer *self, uint64_t new_count)
+{
+    rc_t rc = KDataBufferResizeInt ( self, new_count );
+    cc ( self );
+    return rc;
+}
+
+static rc_t KDataBufferSubInt (const KDataBuffer *self,
     KDataBuffer *target, uint64_t start, uint64_t count)
 {
     if (self == NULL || target == NULL)
@@ -339,7 +379,17 @@ LIB_EXPORT rc_t CC KDataBufferSub (const KDataBuffer *self,
     return 0;
 }
 
-LIB_EXPORT rc_t CC KDataBufferCast(const KDataBuffer *self, KDataBuffer *target, uint64_t new_elem_bits, bool can_shrink) {
+LIB_EXPORT rc_t CC KDataBufferSub (const KDataBuffer *self,
+    KDataBuffer *target, uint64_t start, uint64_t count)
+{
+    rc_t rc = KDataBufferSubInt ( self, target, start, count );
+    cc ( self );
+    return rc;
+}
+
+static
+rc_t KDataBufferCastInt(const KDataBuffer *self, KDataBuffer *target, uint64_t new_elem_bits, bool can_shrink)
+{
     bitsz_t bits;
     size_t new_elem_count;
     bitsz_t new_bits;
@@ -355,19 +405,75 @@ LIB_EXPORT rc_t CC KDataBufferCast(const KDataBuffer *self, KDataBuffer *target,
     new_elem_count = bits / new_elem_bits;
     new_bits = new_elem_bits * new_elem_count;
     
-    if (new_bits == bits || (can_shrink && new_bits < bits)) {
-        if ((const KDataBuffer *)target != self) {
-            *target = *self;
-            target->ignore = test_add_ref((buffer_impl_t *)self->ignore);
+    if (new_bits != bits && ! (can_shrink && new_bits < bits))
+        return RC(rcRuntime, rcBuffer, rcCasting, rcParam, rcInvalid);
+
+    /* check alignment - if new element size is integral power of 2 and >= 16 bits */
+    if ( ( ( new_elem_bits - 1 ) & new_elem_bits ) == 0 && new_elem_bits >= 16 )
+    {
+        uint64_t elem_bytes = new_elem_bits >> 3;
+        if ( ( ( size_t ) self -> base & ( elem_bytes - 1 ) ) != 0 )
+        {
+            buffer_impl_t * buffer = ( buffer_impl_t * ) self -> ignore;
+            size_t total_bytes = KDataBufferBytes ( self );
+
+            /* need to realign data */
+            if ( ( const KDataBuffer * ) target == self && atomic32_read ( & buffer -> refcount ) == 1 )
+            {
+                /* can simply memmove */
+                memmove ( buffer + 1, target -> base, total_bytes );
+                target -> base = buffer + 1;
+                assert ( ( ( size_t ) target -> base & 15 ) == 0 );
+
+                /* perform cast */
+                target-> elem_count = new_elem_count;
+                target-> elem_bits = new_elem_bits;
+            }
+            else
+            {
+                /* must realloc */
+                KDataBuffer tmp;
+                rc_t rc = KDataBufferMakeBytes ( & tmp, total_bytes );
+                if ( rc != 0 )
+                    return rc;
+                assert ( ( ( size_t ) tmp . base & 15 ) == 0 );
+
+                /* copy */
+                memcpy ( tmp . base, self -> base, total_bytes );
+
+                /* if assigning target would overwrite self, whack original */
+                if ( ( const KDataBuffer * ) target == self )
+                    KDataBufferWhack ( target );
+
+                /* new buffer is now output */
+                * target = tmp;
+            }
+
+            return 0;
         }
-        target->elem_count = new_elem_count;
-        target->elem_bits = new_elem_bits;
-        return 0;
     }
-    return RC(rcRuntime, rcBuffer, rcCasting, rcParam, rcInvalid);
+
+    if ((const KDataBuffer *)target != self)
+    {
+        *target = *self;
+        target->ignore = test_add_ref((buffer_impl_t *)self->ignore);
+    }
+
+    target->elem_count = new_elem_count;
+    target->elem_bits = new_elem_bits;
+
+    return 0;
+
 }
 
-LIB_EXPORT rc_t CC KDataBufferMakeWritable (const KDataBuffer *cself, KDataBuffer *target)
+LIB_EXPORT rc_t CC KDataBufferCast(const KDataBuffer *self, KDataBuffer *target, uint64_t new_elem_bits, bool can_shrink)
+{
+    rc_t rc = KDataBufferCastInt ( self, target, new_elem_bits, can_shrink );
+    cc ( self );
+    return rc;
+}
+
+static rc_t KDataBufferMakeWritableInt (const KDataBuffer *cself, KDataBuffer *target)
 {
     if (cself == NULL)
     	return RC(rcRuntime, rcBuffer, rcConstructing, rcParam, rcNull);
@@ -432,8 +538,16 @@ LIB_EXPORT rc_t CC KDataBufferMakeWritable (const KDataBuffer *cself, KDataBuffe
     }
 }
 
+LIB_EXPORT rc_t CC KDataBufferMakeWritable (const KDataBuffer *cself, KDataBuffer *target)
+{
+    rc_t rc = KDataBufferMakeWritableInt ( cself, target );
+    cc ( cself );
+    return rc;
+}
+
 LIB_EXPORT rc_t CC KDataBufferWhack (KDataBuffer *self)
 {
+    cc ( self );
     if (self)
     {
         if (self->ignore)
@@ -446,21 +560,25 @@ LIB_EXPORT rc_t CC KDataBufferWhack (KDataBuffer *self)
 
 LIB_EXPORT bool CC KDataBufferWritable(const KDataBuffer *cself)
 {
+    cc ( cself );
     return (cself != NULL && cself->ignore != NULL &&
             atomic32_read(&((buffer_impl_t *)cself->ignore)->refcount) == 1) ? true : false;
 }
 
 LIB_EXPORT rc_t CC KDataBufferShrink(KDataBuffer *self)
 {
+    rc_t rc = 0;
     if (self && self->ignore) {
-        return shrink((buffer_impl_t **)&self->ignore,
+        rc = shrink((buffer_impl_t **)&self->ignore,
             (self->elem_bits * self->elem_count + self->bit_offset + 7) / 8);
+        cc ( self );
     }
-    return 0;
+    return rc;
 }
 
 LIB_EXPORT size_t CC KDataBufferMemorySize(KDataBuffer const *self)
 {
+    cc ( self );
     if (self && self->ignore) {
         return ((buffer_impl_t const *)self->ignore)->allocated + sizeof(buffer_impl_t);
     }

@@ -387,7 +387,7 @@ LIB_EXPORT void CC XMLLogger_Usage(void)
     size_t i;
     for(i = 0; i < XMLLogger_ArgsQty; i++ ) {
         if( XMLLogger_Args[i].help[0] != NULL ) {
-            HelpOptionLine(XMLLogger_Args[i].aliases, XMLLogger_Args[i].name, NULL, XMLLogger_Args[i].help);
+            HelpOptionLine(XMLLogger_Args[i].aliases, XMLLogger_Args[i].name, "logfile", XMLLogger_Args[i].help);
         }
     }
 }

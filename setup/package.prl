@@ -7,6 +7,7 @@ sub PACKAGE_NAMW { 'VDB' }
 sub CONFIG_OUT   { 'build' }
 sub PKG { ( LNG   => 'C',
             OUT   => 'ncbi-outdir',
+            LOCOUT=> '../../OUTDIR',
             PATH  => '/usr/local/ncbi/ncbi-vdb',
             UPATH =>      '$HOME/ncbi/ncbi-vdb', ) }
 sub DEPENDS { ( { name => 'hdf5' , Include => '/usr/include'        , },
@@ -21,6 +22,7 @@ sub REQ { ( { name    => 'ngs-sdk',
               pkgpath => '/usr/local/ngs/ngs-sdk',
               usrpath =>      '$HOME/ngs/ngs-sdk',
               bldpath => '$HOME/ncbi-outdir/ngs-sdk',
+              locbldpath=>'$Bin/../../OUTDIR/ngs-sdk',
               include => 'ngs/itf/Refcount.h',
               lib     => 'libngs-c++.a',
             },
