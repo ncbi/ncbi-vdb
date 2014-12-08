@@ -87,12 +87,6 @@ struct KHttpFile
 
     char* url;
     KDataBuffer url_buffer;
-
-    uint32_t maxNumberOfRetriesOnFailure;
-    uint32_t testFailuresNumber;
-    uint32_t logFailures;
-    
-    bool reliable;
 };
 
 static
@@ -147,7 +141,7 @@ rc_t KHttpFileTimedReadInt ( const KHttpFile *cself,
     KHttpFile *self = ( KHttpFile * ) cself;
     KClientHttp *http = self -> http;
     
-    * http_status = 0; /* 0 will not trigger any retries if this function fails */
+    * http_status = 0; 
 
     /* starting position was beyond EOF */
     if ( pos >= self -> file_size )
@@ -214,13 +208,11 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
                 rc = KClientHttpRequestGET ( req, &rslt );
                 if ( rc == 0 )
                 {
-                    uint32_t code;
-                    
                     /* dont need to know what the response message was */
-                    rc = KClientHttpResultStatus ( rslt, &code, NULL, 0, NULL );
+                    rc = KClientHttpResultStatus ( rslt, http_status, NULL, 0, NULL );
                     if ( rc == 0 )
                     {
-                        switch ( code )
+                        switch ( * http_status )
                         {
                         case 206:
                         {
@@ -245,6 +237,7 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
                                     if ( rc != 0 )
                                     {
                                         KClientHttpClose ( http );
+                                        KClientHttpResultRelease ( rslt );
                                         return ResetRCContext ( rc, rcNS, rcFile, rcReading );
                                     }
 
@@ -277,10 +270,8 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
                         }
                         case 416:
                         default:
-                            rc = RC ( rcNS, rcFile, rcReading, rcFileDesc, rcInvalid );
+                            break;
                         }
-                        
-                        * http_status = code;
                     }
                     KClientHttpResultRelease ( rslt );
                 }
@@ -296,7 +287,6 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
     uint64_t pos, void *buffer, size_t bsize,
     size_t *num_read, struct timeout_t *tm )
 {
-    /* THIS COULD BE A PLACE TO INSERT UNDYING READ */
     KHttpRetrier retrier;
     rc_t rc = KHttpRetrierInit ( & retrier, self -> url, self -> kns );
     
@@ -307,15 +297,15 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
         {
             uint32_t http_status;
             rc_t rc = KHttpFileTimedReadInt ( self, pos, buffer, bsize, num_read, tm, & http_status );
-            if ( rc == 0 ) 
+            if ( rc != 0 ) 
+            {   
+                break;
+            }
+            if ( ! KHttpRetrierWait ( & retrier, http_status ) )
             {
                 break;
             }
-            
-            if ( self -> reliable && KHttpRetrierWait ( & retrier, http_status ) ) 
-            {
-                rc = KClientHttpReopen ( self -> http );
-            }
+            rc = KClientHttpReopen ( self -> http );
         }
         
         {
@@ -413,75 +403,49 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                         rc = ParseUrl ( &block, buf -> base, buf -> elem_count - 1 );
                         if ( rc == 0 ) 
                         {
-                            KHttpRetrier retrier;
-                            rc = KHttpRetrierInit ( & retrier, url, self );
+                            KClientHttp *http;
+                          
+                            rc = KNSManagerMakeClientHttpInt ( self, & http, buf, conn, vers,
+                                self -> http_read_timeout, self -> http_write_timeout, &block . host, block . port, reliable );
                             if ( rc == 0 )
                             {
-                                while ( true ) 
+                                KClientHttpRequest *req;
+
+                                rc = KClientHttpMakeRequestInt ( http, &req, &block, buf );
+                                if ( rc == 0 )
                                 {
-                                    KClientHttp *http;
-                                  
-                                    rc = KNSManagerMakeClientHttpInt ( self, & http, buf, conn, vers,
-                                        self -> http_read_timeout, self -> http_write_timeout, &block . host, block . port );
+                                    KClientHttpResult *rslt;
+                                    rc = KClientHttpRequestHEAD(req, &rslt);
+                                    KClientHttpRequestRelease ( req );
+                                    
                                     if ( rc == 0 )
                                     {
-                                        KClientHttpRequest *req;
+                                        uint64_t size;
+                                        bool have_size = KClientHttpResultSize ( rslt, &size );
+                                        KClientHttpResultRelease ( rslt );
 
-                                        rc = KClientHttpMakeRequestInt ( http, &req, &block, buf );
-                                        if ( rc == 0 )
+                                        if ( ! have_size )
                                         {
-                                            uint32_t http_status;
-                                            KClientHttpResult *rslt;
-                                            rc = KClientHttpRequestHEAD(req, &rslt);
-                                            KClientHttpRequestRelease ( req );
-                                            
+                                            rc = RC ( rcNS, rcFile, rcValidating, rcNoObj, rcError );
+                                        }
+                                        else
+                                        {
+                                            rc = KNSManagerAddRef ( self );
                                             if ( rc == 0 )
                                             {
-                                                rc = KClientHttpResultStatus ( rslt, & http_status, NULL, 0, NULL );
-                                                if ( rc == 0 )
-                                                {
-                                                    /* some status values may trigger a retry for "reliable" urls */
-                                                    if ( ! reliable || ! KHttpRetrierWait ( & retrier, http_status ) ) 
-                                                    {   /* no retry */
-                                                        uint64_t size;
-                                                        bool have_size = KClientHttpResultSize ( rslt, &size );
-                                                        KClientHttpResultRelease ( rslt );
+                                                f -> kns = self;
+                                                f -> file_size = size;
+                                                f -> http = http;
+                                                f -> url = string_dup ( url, string_size ( url ) );
 
-                                                        if ( ! have_size )
-                                                        {
-                                                            rc = RC ( rcNS, rcFile, rcValidating, rcNoObj, rcError );
-                                                            KClientHttpRelease ( http );
-                                                            break;
-                                                        }
-                                                        else
-                                                        {
-                                                            rc = KNSManagerAddRef ( self );
-                                                            if ( rc == 0 )
-                                                            {
-                                                                f -> kns = self;
-                                                                f -> file_size = size;
-                                                                f -> http = http;
-                                                                f -> url = string_dup ( url, string_size ( url ) );
-                                                                f -> reliable = reliable;
-
-                                                                * file = & f -> dad;
-
-                                                                KHttpRetrierDestroy ( & retrier );
-                                                                return 0;
-                                                            }
-                                                        }
-                                                    }
-                                                    /* will retry now */
-                                                }
-                                                KClientHttpResultRelease ( rslt );
+                                                * file = & f -> dad;
+                                                return 0;
                                             }
                                         }
-
-                                        KClientHttpRelease ( http );
                                     }
-                                } /* while */
-                                
-                                KHttpRetrierDestroy ( & retrier );
+                                }
+
+                                KClientHttpRelease ( http );
                             }
                         }
                     }

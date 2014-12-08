@@ -114,6 +114,8 @@ struct KClientHttp
 
     KEndPoint ep;
     bool ep_valid;
+    
+    bool reliable;
 };
 
 
@@ -277,7 +279,7 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, K
 rc_t KNSManagerMakeClientHttpInt ( const KNSManager *self, KClientHttp **_http,
     const KDataBuffer *hostname_buffer,  KStream *opt_conn,
     ver_t vers, int32_t readMillis, int32_t writeMillis,
-    const String *host, uint32_t port )
+    const String *host, uint32_t port, bool reliable )
 {
     rc_t rc;
 
@@ -318,6 +320,7 @@ rc_t KNSManagerMakeClientHttpInt ( const KNSManager *self, KClientHttp **_http,
             rc = KClientHttpInit ( http, hostname_buffer, opt_conn, vers, host, port );
             if ( rc == 0 )
             {
+                http -> reliable = reliable;
                 /* assign to OUT http param */
                 * _http = http;
                 return 0;
@@ -383,7 +386,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttp ( const KNSManager *self,
 
                 /* initialize http object - will create a new reference to hostname buffer */
                 rc = KNSManagerMakeClientHttpInt ( self, _http, & hostname_buffer,
-                    opt_conn, vers, readMillis, writeMillis, &_host, port );
+                    opt_conn, vers, readMillis, writeMillis, &_host, port, false );
 
                 /* release our reference to buffer */
                 KDataBufferWhack ( & hostname_buffer );
@@ -1289,7 +1292,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     /* check the data was completely sent */
     if ( rc == 0 && sent != len )
         rc = RC ( rcNS, rcNoTarg, rcWriting, rcTransfer, rcIncomplete );
-    if ( rc == 0 && body != NULL )
+    if ( rc == 0 && body != NULL  && body -> elem_count > 0 )
     {
         /* "body" contains bytes plus trailing NUL */
         size_t to_send = ( size_t ) body -> elem_count - 1;
@@ -2037,8 +2040,9 @@ LIB_EXPORT rc_t CC KClientHttpMakeRequest ( const KClientHttp *self,
  *  "url" [ IN ] - full resource identifier. if "conn" is NULL,
  *   the url is parsed for remote endpoint and is opened by mgr.
  */
-LIB_EXPORT rc_t CC KNSManagerMakeClientRequest ( const KNSManager *self,
-    KClientHttpRequest **req, ver_t vers, KStream *conn, const char *url, ... )
+static
+rc_t CC KNSManagerMakeClientRequestInt ( const KNSManager *self,
+    KClientHttpRequest **req, ver_t vers, KStream *conn, bool reliable, const char *url, va_list args )
 {
     rc_t rc;
 
@@ -2058,14 +2062,11 @@ LIB_EXPORT rc_t CC KNSManagerMakeClientRequest ( const KNSManager *self,
             rc = RC ( rcNS, rcNoTarg, rcValidating, rcString, rcEmpty );
         else
         {
-            va_list args;
             KDataBuffer buf;
             
             KDataBufferClear ( &buf );
                 /* convert var-arg "url" to a full string */
-            va_start ( args, url );
             rc = KDataBufferVPrintf ( & buf, url, args );
-            va_end ( args );
             if ( rc == 0 )
             {
                 /* parse the URL */
@@ -2076,7 +2077,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeClientRequest ( const KNSManager *self,
                     KClientHttp * http;
                     
                     rc = KNSManagerMakeClientHttpInt ( self, & http, & buf, conn, vers,
-                        self -> http_read_timeout, self -> http_write_timeout, & block . host, block . port );
+                        self -> http_read_timeout, self -> http_write_timeout, & block . host, block . port, reliable );
                     if ( rc == 0 )
                     {
                         rc = KClientHttpMakeRequestInt ( http, req, & block, & buf );
@@ -2087,6 +2088,28 @@ LIB_EXPORT rc_t CC KNSManagerMakeClientRequest ( const KNSManager *self,
             KDataBufferWhack ( & buf );
         }
     }
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakeClientRequest ( const KNSManager *self,
+    KClientHttpRequest **req, ver_t vers, KStream *conn, const char *url, ... )
+{
+    rc_t rc;
+    va_list args;
+    va_start ( args, url );
+    rc = KNSManagerMakeClientRequestInt ( self, req, vers, conn, false, url, args );
+    va_end ( args );
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakeReliableClientRequest ( const KNSManager *self,
+    KClientHttpRequest **req, ver_t vers, KStream *conn, const char *url, ... )
+{
+    rc_t rc;
+    va_list args;
+    va_start ( args, url );
+    rc = KNSManagerMakeClientRequestInt ( self, req, vers, conn, true, url, args );
+    va_end ( args );
     return rc;
 }
 
@@ -2457,8 +2480,8 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttp
 }
 
 static
-rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttpResult **_rslt, const char *method )
-{
+rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientHttpResult **_rslt, const char *method )
+{   
     rc_t rc = 0;
 
     KClientHttpResult *rslt;
@@ -2502,7 +2525,7 @@ rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttp
 
             /* TBD - should not see this, but needs to be handled */
             return 0;
-
+            
             /* TBD - need to include RFC rule for handling codes for HEAD and GET */
         case 301: /* "moved permanently" */
         case 302: /* "found" - okay to reissue for HEAD and GET, but not for POST */
@@ -2534,6 +2557,39 @@ rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttp
     return rc;
 }
 
+static
+rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttpResult **_rslt, const char *method )
+{   
+    KHttpRetrier retrier;
+    rc_t rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> http -> mgr ); 
+    
+    if ( rc == 0 )
+    {
+        while ( rc == 0 ) 
+        {
+            rc = KClientHttpRequestSendReceiveNoBodyInt ( self, _rslt, method );
+            if ( rc != 0 ) 
+            {   /* a non-HTTP problem */
+                break;
+            }
+            if ( ! self -> http -> reliable || ! KHttpRetrierWait ( & retrier, ( * _rslt ) -> status ) )
+            {   /* We are either not configured to retry, or HTTP status is not retriable, or we exhausted
+                    the max number of retries or the total wait time.
+                    rc is 0, but the caller will have to look at _rslt->status to determine success */
+                break;
+            }
+            KClientHttpResultRelease ( * _rslt );
+        }
+        
+        {
+            rc_t rc2 = KHttpRetrierDestroy ( & retrier );
+            if ( rc == 0 ) rc = rc2;
+        }
+    }
+    
+    return rc;
+}
+
 /* HEAD
  *  send HEAD message
  */
@@ -2551,13 +2607,8 @@ LIB_EXPORT rc_t CC KClientHttpRequestGET ( KClientHttpRequest *self, KClientHttp
     return KClientHttpRequestSendReceiveNoBody ( self, rslt, "GET" );
 }
 
-/* POST
- *  send POST message
- *  query parameters are sent in URL
- *  post parameters are sent in body
- */
-LIB_EXPORT rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHttpResult **_rslt )
-{
+rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult **_rslt )
+{   
     rc_t rc = 0;
 
     KClientHttpResult *rslt;
@@ -2601,7 +2652,9 @@ LIB_EXPORT rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHtt
             break;
 
         /* Try to add body to buffer to avoid double socket write */
-        if (body != NULL && len + body -> elem_count - 1 <= sizeof buffer) {
+        if (body != NULL && body -> base != NULL && body -> elem_count > 0 && 
+                len + body -> elem_count - 1 <= sizeof buffer) 
+        {
             memcpy(buffer + len, body -> base, body -> elem_count - 1);
             len += body -> elem_count - 1;
             body = NULL;
@@ -2656,5 +2709,42 @@ LIB_EXPORT rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHtt
         if ( rc != 0 )
             break;
     }
+    return rc;
+}
+
+/* POST
+ *  send POST message
+ *  query parameters are sent in URL
+ *  post parameters are sent in body
+ */
+LIB_EXPORT rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHttpResult **_rslt )
+{
+    KHttpRetrier retrier;
+    rc_t rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> http -> mgr ); 
+    
+    if ( rc == 0 )
+    {
+        while ( rc == 0 ) 
+        {
+            rc = KClientHttpRequestPOST_Int ( self, _rslt );
+            if ( rc != 0 ) 
+            {   /* a non-HTTP problem */
+                break;
+            }
+            if ( ! self -> http -> reliable || ! KHttpRetrierWait ( & retrier, ( * _rslt ) -> status ) )
+            {   /* We are either not configured to retry, or HTTP status is not retriable, or we exhausted
+                    the max number of retries or the total wait time.
+                    rc is 0, but the caller will have to look at _rslt->status to determine success */
+                break;
+            }
+            KClientHttpResultRelease ( * _rslt );
+        }
+        
+        {
+            rc_t rc2 = KHttpRetrierDestroy ( & retrier );
+            if ( rc == 0 ) rc = rc2;
+        }
+    }
+    
     return rc;
 }

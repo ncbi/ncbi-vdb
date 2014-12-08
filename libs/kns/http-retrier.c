@@ -488,7 +488,7 @@ bool KHttpRetrierWait ( KHttpRetrier * self, uint32_t status )
         self -> total_wait_ms += to_sleep;
         ++ self -> retries_count;
         
-        PLOGMSG (klogSys, ( klogSys, "HTTP read failure: URL=\"$(u)\" status=$(s); tried $(c)/$(m) times for $(t) milliseconds total",
+        PLOGMSG (klogInfo, ( klogInfo, "HTTP read failure: URL=\"$(u)\" status=$(s); tried $(c)/$(m) times for $(t) milliseconds total",
                             "u=%s,s=%d,c=%d,m=%d,t=%d", 
                             self -> url, 
                             status,
@@ -498,107 +498,5 @@ bool KHttpRetrierWait ( KHttpRetrier * self, uint32_t status )
         
         return true;
     }
-}
-
-
-void KHttpRetrierInit_RemoveMe(KHttpRetrier *self, uint32_t maxRetryNumber,
-    uint32_t testFailuresNumber, const char *url, uint32_t logNumber)
-{
-    assert(self);
-
-    memset(self, 0, sizeof *self);
-
-    self->maxRetriesNumber = maxRetryNumber;
-    self->testFailuresNumber = testFailuresNumber;
-    self->url = url;
-
-    self->logNumber = logNumber;
-}
-
-static bool KHttpRetrierDone(const KHttpRetrier *self) {
-    return self->triesNumber > self->maxRetriesNumber;
-}
-
-static rc_t KHttpRetrierReport(KHttpRetrier *self, rc_t rc) {
-    const char *dummy = "";
-    const char *url = dummy;
-    assert(self);
-    if (self->url != NULL) {
-        url = self->url;
-    }
-    if (self->triesNumber < self->logNumber ||
-        (self->logged && self->logNumber > 0))
-    {
-        return 0;
-    }
-    if (self->reportedTime == self->waitTime) {
-/*      return 0; */
-    }
-    self->logged = true;
-    self->reportedTime = self->waitTime;
-    if (self->logNumber == 0) {
-        return PLOGERR(klogSys, (klogSys, rc,
-            "HTTP read failure: tried $(c)/$(m) times for $(t) seconds: $(u)",
-            "c=%d,m=%d,t=%d,u=%s", self->triesNumber,
-            self->maxRetriesNumber + 1, self->waitTime, url));
-    }
-    else {
-        return
-            LOGERR(klogSys, rc, "HTTP read failure: retrying...");
-    }
-}
-
-bool KHttpRetrierWait_RemoveMe(KHttpRetrier *self, rc_t rc) {
-    uint32_t seconds = 0;
-    assert(self);
-    ++self->triesNumber;
-    if (KHttpRetrierDone(self)) {
-        KHttpRetrierReport(self, rc);
-        return false;
-    }
-    switch (self->triesNumber) {
-        case 1:
-            seconds = 0;
-            break;
-        case 2:
-            seconds = 5;
-            break;
-        case 3:
-            seconds = 10;
-            break;
-        case 4:
-            seconds = 15;
-            break;
-        case 5:
-            seconds = 30;
-            break;
-        default:
-            seconds = 60;
-            break;
-    }
-    KHttpRetrierReport(self, rc);
-    if (seconds > 0) {
-        if (seconds > 0) {
-        }
-        KSleep(seconds);
-        self->waitTime += seconds;
-    }
-    return true;
-}
-
-rc_t KHttpRetrierForceFailure_RemoveMe(const KHttpRetrier *self, const KHttpFile *socket)
-{
-/*TODO: remove 
-    assert(self);
-    if (self->triesNumber + 1 <= self->testFailuresNumber) {
-        if (socket != NULL && socket->http != NULL) {
-            KClientHttpForceSocketClose(socket->http);
-        }
-        else {
-            return RC(rcNS, rcFile, rcAccessing, rcError, rcUnknown);
-        }
-    }
-*/    
-    return 0;
 }
 

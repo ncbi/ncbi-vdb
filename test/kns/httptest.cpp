@@ -217,6 +217,11 @@ public:
         return 0;
     }
     
+    static string MakeURL(const char* base)
+    {
+        return string("http://") + base + ".com/";
+    }    
+    
     KNSManager* m_mgr;
     KStream m_stream;
     KFile* m_file;
@@ -227,7 +232,7 @@ public:
 FIXTURE_TEST_CASE(Http_Make, HttpFixture)
 {
     TestStream::AddResponse("HTTP/1.1 200 OK\nContent-Length: 7\n");
-    REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, "http://abc.go.com/") ); 
+    REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
     REQUIRE_NOT_NULL ( m_file ) ;
 }
 
@@ -238,7 +243,7 @@ FIXTURE_TEST_CASE(Http_Make_Continue_100_Retry, HttpFixture)
     TestStream::AddResponse("HTTP/1.1 100 continue\n");
     TestStream::AddResponse("HTTP/1.1 100 continue\n");
     TestStream::AddResponse("HTTP/1.1 200 OK\nContent-Length: 7\n");
-    REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, "http://abc.go.com/") ); 
+    REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
     REQUIRE_NOT_NULL ( m_file ) ;
 }
 #endif
@@ -246,13 +251,13 @@ FIXTURE_TEST_CASE(Http_Make_Continue_100_Retry, HttpFixture)
 FIXTURE_TEST_CASE(Http_Make_500_Fail, HttpFixture)
 {   // a regular Http client does not retry
     TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\n");
-    REQUIRE_RC_FAIL ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, "http://abc.go.com/") ); 
+    REQUIRE_RC_FAIL ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
 }
 
 FIXTURE_TEST_CASE(Http_Read, HttpFixture)
 {
     TestStream::AddResponse("HTTP/1.1 200 OK\nContent-Length: 7\n"); // response to HEAD
-    REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, "http://abc.go.com/") ); 
+    REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
     char buf[1024];
     size_t num_read;
     TestStream::AddResponse(    // response to GET
@@ -267,6 +272,20 @@ FIXTURE_TEST_CASE(Http_Read, HttpFixture)
     REQUIRE_RC( KFileTimedRead ( m_file, 0, buf, sizeof buf, &num_read, NULL ) );
     REQUIRE_EQ( string ( "content" ), string ( buf, num_read ) );
 }
+
+FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpFixture)
+{   // Bug: KClientHttpRequestPOST crashed if request had no parameters
+    KClientHttpRequest *req;
+    KNSManagerMakeClientRequest ( m_mgr, &req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
+    
+    KClientHttpResult *rslt;
+    TestStream::AddResponse("HTTP/1.1 200 OK\n");
+    REQUIRE_RC ( KClientHttpRequestPOST ( req, & rslt ) );
+    REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
+    
+    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
+}
+
 
 //////////////////////////
 // HttpRetrySpecs
@@ -406,7 +425,7 @@ public:
         m_mgr -> maxNumberOfRetriesOnFailureForReliableURLs = max_retries;
         m_mgr -> maxTotalWaitForReliableURLs_ms = max_total_wait;
        
-        if ( KHttpRetrierInit ( & m_retrier, "url", m_mgr ) != 0 )
+        if ( KHttpRetrierInit ( & m_retrier, kfg_name, m_mgr ) != 0 )
             throw logic_error ( "RetrierFixture::Configure KHttpRetrierInit failed" );
             
         KConfigRelease ( kfg );
@@ -417,7 +436,7 @@ public:
 
 FIXTURE_TEST_CASE(HttpRetrier_Construct, RetrierFixture)
 {
-    REQUIRE_RC ( KHttpRetrierInit ( & m_retrier, "url", m_mgr ) );
+    REQUIRE_RC ( KHttpRetrierInit ( & m_retrier, GetName(), m_mgr ) );
 }
 
 FIXTURE_TEST_CASE(HttpRetrier_NoRetry, RetrierFixture)
@@ -433,7 +452,7 @@ FIXTURE_TEST_CASE(HttpRetrier_NoRetry, RetrierFixture)
 
 FIXTURE_TEST_CASE(HttpRetrier_RetryDefault4xx, RetrierFixture)
 {
-    REQUIRE_RC ( KHttpRetrierInit ( & m_retrier, "url", m_mgr ) );
+    REQUIRE_RC ( KHttpRetrierInit ( & m_retrier, GetName(), m_mgr ) );
     
     REQUIRE ( KHttpRetrierWait ( & m_retrier, 400 ) );  // default for 4xx retries
     REQUIRE_EQ ( 0u, m_retrier . last_sleep );
@@ -441,7 +460,7 @@ FIXTURE_TEST_CASE(HttpRetrier_RetryDefault4xx, RetrierFixture)
 
 FIXTURE_TEST_CASE(HttpRetrier_RetryDefault5xx, RetrierFixture)
 {
-    REQUIRE_RC ( KHttpRetrierInit ( & m_retrier, "url", m_mgr ) );
+    REQUIRE_RC ( KHttpRetrierInit ( & m_retrier, GetName(), m_mgr ) );
     
     REQUIRE ( KHttpRetrierWait ( & m_retrier, 500 ) );  // default for 5xx retries
     REQUIRE_EQ ( 0u, m_retrier . last_sleep );
@@ -511,11 +530,12 @@ FIXTURE_TEST_CASE(HttpRetrier_Retry_OpenEnded_MaxRetries, RetrierFixture)
 }
 
 //////////////////////////
-// Reliable HTTP 
+// Reliable HTTP file
+
 FIXTURE_TEST_CASE(HttpReliable_Make, HttpFixture)
 {
     TestStream::AddResponse("HTTP/1.1 200 OK\nContent-Length: 7\n");
-    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, "http://abc.go.com/") ); 
+    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str()  ) ); 
     REQUIRE_NOT_NULL ( m_file ) ;
 }
 #if 0 
@@ -525,7 +545,7 @@ FIXTURE_TEST_CASE(HttpReliable_Make_Continue_100_Retry, HttpFixture)
     TestStream::AddResponse("HTTP/1.1 100 continue\n");
     TestStream::AddResponse("HTTP/1.1 100 continue\n");
     TestStream::AddResponse("HTTP/1.1 200 OK\nContent-Length: 7\n");
-    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, "http://abc.go.com/") ); 
+    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str()  ) ); 
     REQUIRE_NOT_NULL ( m_file ) ;
 }
 #endif
@@ -534,7 +554,7 @@ FIXTURE_TEST_CASE(HttpReliable_Make_5xx_retry, HttpFixture)
 {   // use default configuration for 5xx to be retried
     TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\n");
     TestStream::AddResponse("HTTP/1.1 200 OK\nContent-Length: 7\n");
-    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, "http://abc.go.com/") ); 
+    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str()  ) ); 
     REQUIRE_NOT_NULL ( m_file ) ;
 }
 
@@ -542,7 +562,7 @@ FIXTURE_TEST_CASE(HttpReliable_Make_500_Fail, RetrierFixture)
 {   
     Configure ( GetName(), "http/reliable/500=\"\"\n"); // do not retry 500
     TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\n");
-    REQUIRE_RC_FAIL ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, "http://abc.go.com/") ); 
+    REQUIRE_RC_FAIL ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str()  ) ); 
 }
 
 FIXTURE_TEST_CASE(HttpReliable_Make_500_Retry, RetrierFixture)
@@ -550,7 +570,7 @@ FIXTURE_TEST_CASE(HttpReliable_Make_500_Retry, RetrierFixture)
     Configure ( GetName(), "http/reliable/500=\"0+\"\n" "http/reliable/5xx=\"\"\n"); // do not retry 5xx, retry 500
     TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\n");
     TestStream::AddResponse("HTTP/1.1 200 OK\nContent-Length: 7\n");
-    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, "http://abc.go.com/") ); 
+    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str()  ) ); 
     REQUIRE_NOT_NULL ( m_file ) ;
 }
 
@@ -559,7 +579,7 @@ FIXTURE_TEST_CASE(HttpReliable_Make_500_TooManyRetries, RetrierFixture)
     Configure ( GetName(), "http/reliable/500=\"0\"\n" "http/reliable/5xx=\"\"\n"); // do not retry 5xx, retry 500 once
     TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\n");
     TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\n");
-    REQUIRE_RC_FAIL ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, "http://abc.go.com/") ); 
+    REQUIRE_RC_FAIL ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str()  ) ); 
 }
 
 FIXTURE_TEST_CASE(HttpReliable_Read_Retry, HttpFixture)
@@ -567,7 +587,7 @@ FIXTURE_TEST_CASE(HttpReliable_Read_Retry, HttpFixture)
     SetClientHttpReopenCallback ( Reconnect );
 
     TestStream::AddResponse("HTTP/1.1 200 OK\nContent-Length: 7\n"); // response to HEAD
-    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, "http://abc.go.com/") ); 
+    REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str()  ) ); 
     char buf[1024];
     size_t num_read;
     TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\n"); // response to GET
@@ -582,6 +602,31 @@ FIXTURE_TEST_CASE(HttpReliable_Read_Retry, HttpFixture)
     ); 
     REQUIRE_RC( KFileTimedRead ( m_file, 0, buf, sizeof buf, &num_read, NULL ) );
     REQUIRE_EQ( string ( "content" ), string ( buf, num_read ) );
+}
+
+//////////////////////////
+// Reliable HTTP request
+FIXTURE_TEST_CASE(HttpReliableRequest_Make, HttpFixture)
+{
+    KClientHttpRequest *req;
+    KNSManagerMakeReliableClientRequest ( m_mgr, &req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
+    REQUIRE_NOT_NULL ( req ) ;
+    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
+}
+
+FIXTURE_TEST_CASE(HttpReliableRequest_POST_5xx_retry, HttpFixture)
+{   // use default configuration for 5xx to be retried
+    KClientHttpRequest *req;
+    KNSManagerMakeReliableClientRequest ( m_mgr, &req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
+    
+    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\n"); // response to GET
+    TestStream::AddResponse("HTTP/1.1 200 OK\n");
+    
+    KClientHttpResult *rslt;
+    REQUIRE_RC ( KClientHttpRequestPOST ( req, & rslt ) );
+    
+    REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
+    REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
 }
 
 //////////////////////////////////////////// Main

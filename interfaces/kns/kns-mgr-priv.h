@@ -43,6 +43,7 @@ struct KHttpFile;
 struct KNSManager;
 struct KFile;
 struct KConfig;
+struct KClientHttpRequest;
 
 /************************** HTTP-retry-related stuff **************************/
 struct HttpRetrySchedule;
@@ -65,23 +66,20 @@ bool HttpGetRetryCodes ( const HttpRetrySpecs* self, uint16_t code, uint8_t * ma
  */
 KNS_EXTERN rc_t CC KNSManagerMakeConfig ( struct KNSManager **mgr, struct KConfig* kfg );
 
-/** MakeReliableHttpFile:
- * Make HTTP file from a reliable URL:
+/** MakeReliableHttpFile, KNSManagerMakeReliableClientRequest:
+ * Make HTTP file/request from a reliable URL:
  * we will try harder to recover upon any error
  * (make more retries)
  */
 KNS_EXTERN rc_t CC KNSManagerMakeReliableHttpFile(
     struct KNSManager const *self, struct KFile const **file,
     struct KStream *conn, ver_t vers, const char *url, ...);
+KNS_EXTERN rc_t CC KNSManagerMakeReliableClientRequest ( 
+    struct KNSManager const *self, struct KClientHttpRequest **req, 
+    ver_t version, struct KStream *conn, const char *url, ... );
 
 typedef struct {
-    uint32_t triesNumber;
-    uint32_t maxRetriesNumber;
-    uint32_t testFailuresNumber;
-    uint32_t logNumber; /* do not log if triesNumber < logNumber */
     const char *url;
-    uint32_t waitTime;
-    uint32_t reportedTime;
     
     const struct KNSManager * kns; /* used to retrieve HttpRetrySpecs */
     uint32_t last_sleep;
@@ -92,14 +90,8 @@ typedef struct {
     
     uint8_t max_retries;    
     uint8_t retries_count;    
-    
-    bool logged; /* log just once */
 } KHttpRetrier;
 
-void KHttpRetrierInit_RemoveMe(KHttpRetrier *self, uint32_t maxRetryNumber, uint32_t testFailuresNumber, const char *url, uint32_t logNumber);
-bool KHttpRetrierWait_RemoveMe(KHttpRetrier *self, rc_t rc); /* true - try again */
-rc_t KHttpRetrierForceFailure_RemoveMe(const KHttpRetrier *self, const struct KHttpFile *socket);
-    
 rc_t KHttpRetrierInit ( KHttpRetrier * self, const char * url, const struct KNSManager * kns );
 bool KHttpRetrierWait ( KHttpRetrier * self, uint32_t status );
 rc_t KHttpRetrierDestroy ( KHttpRetrier * self );

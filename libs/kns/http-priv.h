@@ -114,7 +114,7 @@ rc_t KClientHttpReopen ( struct KClientHttp * self );
 rc_t KNSManagerMakeClientHttpInt ( struct KNSManager const *self, struct KClientHttp **_http,
     const KDataBuffer *hostname_buffer,  struct KStream *opt_conn,
     ver_t vers, int32_t readMillis, int32_t writeMillis,
-    const String *host, uint32_t port );
+    const String *host, uint32_t port, bool reliable );
 
 /* test */
 void KClientHttpForceSocketClose(const struct KClientHttp *self);

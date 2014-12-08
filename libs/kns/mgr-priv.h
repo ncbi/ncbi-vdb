@@ -63,17 +63,6 @@ struct KNSManager
     uint32_t maxTotalWaitForReliableURLs_ms;
     uint8_t  maxNumberOfRetriesOnFailureForReliableURLs;
 
-/*TODO: cleanup*/
-/* N.B. "RETRIES number" = TRIES number + 1 */
-    /* retries on HTTP failure for any URL */
-    uint32_t maxNumberOfRetriesOnFailure;
-    /* retries on HTTP failure for a reliable URL */
-    /*uint32_t maxNumberOfRetriesOnFailureForReliableURLs;*/
-    /* test:
-       force HTTP request to fail when try number is <= this number */
-    uint32_t testFailuresNumber;
-    /* log HTTP failure when try number is >= than this number */
-    uint32_t logFailures;
     bool verbose;
 };
 

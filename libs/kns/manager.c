@@ -388,31 +388,3 @@ rc_t CC KNSManagerGetUserAgent ( const char ** user_agent )
     }
     return rc;
 }
-
-/*TODO:remove*/
-uint32_t KNSManagerGetNumberOfRetriesOnFailure(const KNSManager *self) {
-    if (self == NULL) {
-        return 0;
-    }
-    return self->maxNumberOfRetriesOnFailure;
-}
-uint32_t KNSManagerGetNumberOfRetriesOnFailureForReliableURLs
-    (const KNSManager *self)
-{
-    if (self == NULL) {
-        return 0;
-    }
-    return self->maxNumberOfRetriesOnFailureForReliableURLs;
-}
-uint32_t KNSManagerGetLogFailuresNumber(const KNSManager *self) {
-    if (self == NULL) {
-        return 0;
-    }
-    return self->logFailures;
-}
-uint32_t KNSManagerGetTestFailuresNumber(const KNSManager *self) {
-    if (self == NULL) {
-        return 0;
-    }
-    return self->testFailuresNumber;
-}
