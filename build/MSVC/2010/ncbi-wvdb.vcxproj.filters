@@ -318,9 +318,6 @@
     <ClCompile Include="..\..\..\libs\klib\debug.c">
       <Filter>klib</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\klib\http-tries.c">
-      <Filter>klib</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\libs\klib\iso8859-1.c">
       <Filter>klib</Filter>
     </ClCompile>
@@ -1198,5 +1195,7 @@
     <ClCompile Include="..\..\..\libs\klib\progressbar.c">
       <Filter>klib</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\align\reader-wgs.c" />
+    <ClCompile Include="..\..\..\libs\kns\http-retrier.c" />
   </ItemGroup>
 </Project>
