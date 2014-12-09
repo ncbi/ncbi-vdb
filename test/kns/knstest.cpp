@@ -478,7 +478,7 @@ class TimedReadSocketFixture : public SocketFixture
 // (this is different from SocketFixture) Call SetupClient() to initialize timeout value
 // The fixture on the client will send "done" from the destructor and close its IPC connection
 public:
-    static const size_t SERVER_WRITE_DELAY_MS = 2000;
+    static const uint32_t SERVER_WRITE_DELAY_MS = 2000;
 public:
     TimedReadSocketFixture()
     : m_stream(0)
@@ -499,7 +499,7 @@ public:
         m_stream = MakeStream ( 5 ); 
         LOG(LogLevel::e_message, "client '" << p_content << "' after KNSMakeConnection" << endl);    
 	}
-	void SetupClient(const string& p_content, size_t p_timeoutMs)
+	void SetupClient(const string& p_content, uint32_t p_timeoutMs)
 	{
 		TimeoutInit(&tm, p_timeoutMs);
 		SetupClient(p_content);
