@@ -106,7 +106,6 @@ KLIB_SRC = \
 	unpack \
 	vlen-encode \
 	data-buffer \
-	http-tries \
 	refcount \
 	printf \
 	status-rc-strings \

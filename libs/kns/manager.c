@@ -34,7 +34,6 @@
 
 #include <kfg/config.h>
 
-#include <klib/misc.h> /* GetHttpTries */
 #include <klib/printf.h>
 #include <klib/refcount.h>
 #include <klib/rc.h>
