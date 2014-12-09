@@ -54,13 +54,23 @@ void cc_impl ( const KDataBuffer * self, const char * func, uint32_t lineno )
             /* never should be called with < 2 bytes ( see "cc" macro ) */
             assert ( elem_bytes >= 2 );
 
-            /* test pointer alignment against 1 ( 16-bit ), 3 ( 32-bit ), 7 ( 64-bit ) */
-            if ( ( ( size_t ) self -> base & ( elem_bytes - 1 ) ) != 0 )
+#if _ARCH_BITS == 32
+            /* test pointer alignment against 1 ( 16-bit ), 3 ( 32-bit ) */
+            if ( ( ( size_t ) self -> base & ( elem_bytes - 1 ) & 3 ) != 0 )
             {
                 /* this buffer has bad pointer alignment */
                 fprintf ( stderr, "%s:%u: %s - WARNING: bad pointer alignment: 0x%08lx -> %lu bytes\n",
-                         __FILE__, lineno, func, ( size_t ) self -> base, elem_bytes );
+                          __FILE__, lineno, func, ( size_t ) self -> base, ( size_t ) elem_bytes );
             }
+#else
+            /* test pointer alignment against 1 ( 16-bit ), 3 ( 32-bit ), 7 ( 64-bit ), 15 ( 128-bit ) */
+            if ( ( ( size_t ) self -> base & ( elem_bytes - 1 ) & 15 ) != 0 )
+            {
+                /* this buffer has bad pointer alignment */
+                fprintf ( stderr, "%s:%u: %s - WARNING: bad pointer alignment: 0x%016lx -> %lu bytes\n",
+                          __FILE__, lineno, func, ( size_t ) self -> base, ( size_t ) elem_bytes );
+            }
+#endif
         }
     }
 }
@@ -79,7 +89,12 @@ typedef struct buffer_impl_t buffer_impl_t;
 struct buffer_impl_t {
     size_t allocated;
     atomic32_t refcount;
+#if _ARCH_BITS == 64 || DEBUG_MALLOC_FREE
     uint32_t foo;
+#if _ARCH_BITS == 32
+    uint32_t foo2;
+#endif
+#endif
 };
 
 static size_t roundup(size_t value, unsigned bits)
@@ -408,6 +423,7 @@ rc_t KDataBufferCastInt(const KDataBuffer *self, KDataBuffer *target, uint64_t n
     if (new_bits != bits && ! (can_shrink && new_bits < bits))
         return RC(rcRuntime, rcBuffer, rcCasting, rcParam, rcInvalid);
 
+#if 1
     /* check alignment - if new element size is integral power of 2 and >= 16 bits */
     if ( ( ( new_elem_bits - 1 ) & new_elem_bits ) == 0 && new_elem_bits >= 16 )
     {
@@ -452,6 +468,7 @@ rc_t KDataBufferCastInt(const KDataBuffer *self, KDataBuffer *target, uint64_t n
             return 0;
         }
     }
+#endif
 
     if ((const KDataBuffer *)target != self)
     {
