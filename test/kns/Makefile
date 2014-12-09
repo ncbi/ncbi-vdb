@@ -30,8 +30,7 @@ MODULE = test/kns
 
 TEST_TOOLS = \
 	test-http \
-
-#	test-kns \
+	test-kns \
 
 include $(TOP)/build/Makefile.env
 
