@@ -372,6 +372,14 @@ TEST_CASE(KDataBuffer_Resize)
     KDataBufferWhack ( & src );
 }
 
+TEST_CASE(KDataBuffer_Cast_W32Assert)
+{   
+    KDataBuffer src;
+    REQUIRE_RC ( KDataBufferMake ( &src, 64, 1 ) );
+    REQUIRE_RC ( KDataBufferCast ( &src, &src, 64, true ) ); /* used to throw am assert on Win32 */
+    KDataBufferWhack ( & src );
+}
+
 //////////////////////////////////////////// Log
 TEST_CASE(KLog_Formatting)
 {
