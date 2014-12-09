@@ -39,6 +39,12 @@
 #define DEBUG_MALLOC_FREE 1
 #include <stdio.h>
 
+#if _ARCH_BITS == 32
+#define BASE_PTR_ALIGNMENT 8
+#else
+#define BASE_PTR_ALIGNMENT 16
+#endif
+
 static
 void cc_impl ( const KDataBuffer * self, const char * func, uint32_t lineno )
 {
@@ -89,11 +95,9 @@ typedef struct buffer_impl_t buffer_impl_t;
 struct buffer_impl_t {
     size_t allocated;
     atomic32_t refcount;
-#if _ARCH_BITS == 64 || DEBUG_MALLOC_FREE
     uint32_t foo;
 #if _ARCH_BITS == 32
     uint32_t foo2;
-#endif
 #endif
 };
 
@@ -423,7 +427,6 @@ rc_t KDataBufferCastInt(const KDataBuffer *self, KDataBuffer *target, uint64_t n
     if (new_bits != bits && ! (can_shrink && new_bits < bits))
         return RC(rcRuntime, rcBuffer, rcCasting, rcParam, rcInvalid);
 
-#if 1
     /* check alignment - if new element size is integral power of 2 and >= 16 bits */
     if ( ( ( new_elem_bits - 1 ) & new_elem_bits ) == 0 && new_elem_bits >= 16 )
     {
@@ -439,7 +442,7 @@ rc_t KDataBufferCastInt(const KDataBuffer *self, KDataBuffer *target, uint64_t n
                 /* can simply memmove */
                 memmove ( buffer + 1, target -> base, total_bytes );
                 target -> base = buffer + 1;
-                assert ( ( ( size_t ) target -> base & 15 ) == 0 );
+                assert ( ( ( size_t ) target -> base & ( BASE_PTR_ALIGNMENT - 1 ) ) == 0 );
 
                 /* perform cast */
                 target-> elem_count = new_elem_count;
@@ -468,7 +471,6 @@ rc_t KDataBufferCastInt(const KDataBuffer *self, KDataBuffer *target, uint64_t n
             return 0;
         }
     }
-#endif
 
     if ((const KDataBuffer *)target != self)
     {
