@@ -531,7 +531,7 @@ rc_t run ( const char *progname )
 
              you can make use of a pre-processor symbol to do this properly - I'll do it below. 
              */
-        int64_t l [ ] = { INT64_C(-9223372036854775808), INT64_C(-67283678467328376), INT64_C(-2837640198), INT64_C(0),  INT64_C(187267509872), INT64_C(9223372036854775807) }; 
+        int64_t l [ ] = { INT64_C(-9223372036854775807) - INT64_C(1), INT64_C(-67283678467328376), INT64_C(-2837640198), INT64_C(0),  INT64_C(187267509872), INT64_C(9223372036854775807) }; 
 
         /* d, i */
 
