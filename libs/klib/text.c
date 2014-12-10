@@ -446,6 +446,204 @@ LIB_EXPORT void CC StringWhack ( const String* self )
 }
 
 
+/* StringToInt
+ *  simple string conversion functions
+ */
+LIB_EXPORT int64_t StringToI64 ( const String * self, rc_t * optional_rc )
+{
+    rc_t rc = 0;
+
+    if ( self != NULL )
+    {
+        int64_t val;
+
+        uint8_t negate = 0;
+        size_t i, start, bytes = self -> size;
+        const char * text = self -> addr;
+
+        /* allow white space */
+        for ( i = 0; i < bytes; ++ i )
+        {
+            if ( ! isspace ( text [ i ] ) )
+                break;
+        }
+
+        /* allow sign */
+        for ( ; i < bytes; ++ i )
+        {
+            switch ( text [ i ] )
+            {
+            case '-':
+                negate ^= 1;
+                continue;
+            case '+':
+                continue;
+            }
+            break;
+        }
+
+        start = i;
+        for ( val = 0; i < bytes; ++ i )
+        {
+            uint8_t digit;
+
+            if ( ! isdigit ( text [ i ] ) )
+                break;
+
+            /* want to bring this digit into number */
+            digit = text [ i ] - '0';
+
+            /* detect overflow on multiplication */
+            if ( val > INT64_MAX / 10 )
+            {
+                rc = RC ( rcText, rcString, rcEvaluating, rcRange, rcExcessive );
+                val = INT64_MAX;
+                break;
+            }
+
+            val *= 10;
+            assert ( val >= 0 );
+
+            /* detect overflow on addition */
+            if ( ( val + digit - negate ) < 0 )
+            {
+                rc = RC ( rcText, rcString, rcEvaluating, rcRange, rcExcessive );
+                val = INT64_MAX;
+                break;
+            }
+
+            val += digit;
+        }
+
+        if ( negate )
+            val = ( rc != 0 ) ? INT64_MIN : - val;
+
+        if ( start != i )
+        {
+            if ( optional_rc != NULL )
+            {
+                if ( rc == 0 && i != bytes )
+                    rc = RC ( rcText, rcString, rcParsing, rcTransfer, rcIncomplete );
+
+                * optional_rc = rc;
+            }
+
+            return val;
+        }
+    }
+
+    /* no digits were converted */
+    rc = RC ( rcText, rcString, rcParsing, rcData, rcInsufficient );
+
+    if ( optional_rc != NULL )
+        * optional_rc = rc;
+
+    return 0;
+}
+
+LIB_EXPORT uint64_t StringToU64 ( const String * self, rc_t * optional_rc )
+{
+    rc_t rc = 0;
+
+    if ( self != NULL )
+    {
+        uint64_t val;
+
+        size_t i, start, bytes = self -> size;
+        const char * text = self -> addr;
+
+        /* allow white space */
+        for ( i = 0; i < bytes; ++ i )
+        {
+            if ( ! isspace ( text [ i ] ) )
+                break;
+        }
+
+        /* detect hex */
+        if ( bytes - i >= 3 && text [ i ] == '0' && tolower ( text [ i + 1 ] ) == 'x' )
+        {
+            start = i += 2;
+            for ( val = 0; i < bytes; ++ i )
+            {
+                uint8_t xdigit;
+
+                if ( ! isxdigit ( text [ i ] ) )
+                    break;
+
+                /* want to bring this digit into number */
+                xdigit = isdigit ( text [ i ] ) ?
+                    text [ i ] - '0' : tolower ( text [ i ] ) - 'a' + 10;
+
+                /* detect overflow */
+                if ( i - start > 16 )
+                {
+                    rc = RC ( rcText, rcString, rcEvaluating, rcRange, rcExcessive );
+                    val = UINT64_MAX;
+                    break;
+                }
+
+                val = ( val << 4 ) | xdigit;
+            }
+        }
+        else
+        {
+            start = i;
+            for ( val = 0; i < bytes; ++ i )
+            {
+                uint8_t digit;
+
+                if ( ! isdigit ( text [ i ] ) )
+                    break;
+
+                /* want to bring this digit into number */
+                digit = text [ i ] - '0';
+
+                /* detect overflow on multiplication */
+                if ( val > UINT64_MAX / 10 )
+                {
+                    rc = RC ( rcText, rcString, rcEvaluating, rcRange, rcExcessive );
+                    val = UINT64_MAX;
+                    break;
+                }
+
+                val *= 10;
+
+                /* detect overflow on addition */
+                if ( val > UINT64_MAX - digit )
+                {
+                    rc = RC ( rcText, rcString, rcEvaluating, rcRange, rcExcessive );
+                    val = UINT64_MAX;
+                    break;
+                }
+
+                val += digit;
+            }
+        }
+
+        if ( start != i )
+        {
+            if ( optional_rc != NULL )
+            {
+                if ( rc == 0 && i != bytes )
+                    rc = RC ( rcText, rcString, rcEvaluating, rcTransfer, rcIncomplete );
+
+                * optional_rc = rc;
+            }
+
+            return val;
+        }
+    }
+
+    /* no digits were converted */
+    rc = RC ( rcText, rcString, rcParsing, rcData, rcInsufficient );
+
+    if ( optional_rc != NULL )
+        * optional_rc = rc;
+
+    return 0;
+}
+
+
 /*--------------------------------------------------------------------------
  * raw text strings
  */
