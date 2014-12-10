@@ -582,9 +582,10 @@ FIXTURE_TEST_CASE(HttpReliable_Make_500_TooManyRetries, RetrierFixture)
     REQUIRE_RC_FAIL ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str()  ) ); 
 }
 
+#ifdef _DEBUGGING
 FIXTURE_TEST_CASE(HttpReliable_Read_Retry, HttpFixture)
 {
-    SetClientHttpReopenCallback ( Reconnect );
+    SetClientHttpReopenCallback ( Reconnect ); // this hook is only available in DEBUG mode
 
     TestStream::AddResponse("HTTP/1.1 200 OK\nContent-Length: 7\n"); // response to HEAD
     REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str()  ) ); 
@@ -603,6 +604,7 @@ FIXTURE_TEST_CASE(HttpReliable_Read_Retry, HttpFixture)
     REQUIRE_RC( KFileTimedRead ( m_file, 0, buf, sizeof buf, &num_read, NULL ) );
     REQUIRE_EQ( string ( "content" ), string ( buf, num_read ) );
 }
+#endif
 
 //////////////////////////
 // Reliable HTTP request
