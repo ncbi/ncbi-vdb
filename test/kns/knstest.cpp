@@ -899,12 +899,10 @@ public:
 	static volatile bool go;
     static rc_t TimedWriteServerFn ( const KThread *self, void *data )  
     {
-        static string prefix;
-        {
-            ostringstream pref;
-            pref << "TimedWriteSocketFixture worker " << (void*)self << ": ";
-            prefix = pref.str();
-        }
+        // this function does not always exit, so using STL string in this function leads to occasional leaks.
+        // for this reason, C strings are used for local variables (STL temporaries seems to be ok)
+        char prefix[1024];
+        string_printf ( prefix, sizeof prefix, NULL, "TimedWriteSocketFixture worker %p: ", (void*)self );
         
         try
         {
@@ -918,7 +916,7 @@ public:
             tm.mS = 1000;
             THROW_ON_RC ( KStreamTimedRead(stream, message, 4, &num, &tm) );
             
-            LOG(LogLevel::e_message, (prefix + " after KStreamRead(" + message + ")\n"));    
+            LOG(LogLevel::e_message, (string(prefix) + " after KStreamRead(" + message + ")\n"));    
 			if (string(message, num) == "data")
 			{	// from now on, wait until control thread allows us to read
                 LOG(LogLevel::e_message, "data thread waiting for 'go'\n");
@@ -964,21 +962,21 @@ public:
                 LOG(LogLevel::e_message, "control thread complete\n");
 			}
 			else
-                throw logic_error ( prefix + "unexpected message\n" );
+                throw logic_error ( string(prefix) + "unexpected message\n" );
 				
 			THROW_ON_RC ( KStreamRelease(stream) );
 		}
         catch (const exception& ex)
         {
-            cout << (prefix + "threw " + ex.what() +"\n"); 
+            cout << (string(prefix) + "threw " + ex.what() +"\n"); 
             throw;
         }
         catch (...)
         {
-            cout << (prefix + "threw something\n"); 
+            cout << (string(prefix) + "threw something\n"); 
             throw;
         }
-        LOG(LogLevel::e_message, (prefix + " exiting\n"));  
+        LOG(LogLevel::e_message, (string(prefix) + " exiting\n"));  
         return KThreadRelease(self);
     }
 
