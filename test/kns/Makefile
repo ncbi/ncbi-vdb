@@ -76,7 +76,7 @@ $(TEST_BINDIR)/test-kns: $(KNSTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 kns: test-kns 
-	$(TEST_BINDIR)/test-kns  -l=all
+	$(TEST_BINDIR)/test-kns  #-l=all
     
 valgrind_kns: test-kns
 	valgrind --ncbi --show-reachable=no --suppressions=$(SRCDIR)/valgrind_suppressions.txt $(TEST_BINDIR)/test-kns

@@ -637,6 +637,7 @@ extern "C"
 
 #include <kapp/args.h>
 #include <kfg/config.h>
+#include <klib/debug.h>
 
 ver_t CC KAppVersion ( void )
 {
@@ -657,9 +658,6 @@ rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
 
-	// uncomment to see messages from KNS
-    // KLogLevelSet(klogInfo);
-	
 	// this makes messages from the test code appear
 	// (same as running the executable with "-l=message")
 	// TestEnv::verbosity = LogLevel::e_message;
