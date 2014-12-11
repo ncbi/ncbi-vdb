@@ -1081,7 +1081,7 @@ rc_t CC KMain ( int argc, char *argv [] )
 
 	// uncomment to see messages from socket code
     // KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), DBG_FLAG ( DBG_KNS_SOCKET ) );
-	
+
 	// this makes messages from the test code appear
 	// (same as running the executable with "-l=message")
 	//TestEnv::verbosity = LogLevel::e_message;

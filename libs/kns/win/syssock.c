@@ -37,6 +37,7 @@ typedef struct KSocket KSocket;
 #include <kns/impl.h>
 #include <kns/endpoint.h>
 #include <klib/rc.h>
+#include <klib/debug.h>
 #include <klib/log.h>
 #include <klib/printf.h>
 #include <sysalloc.h>
@@ -738,7 +739,7 @@ static rc_t KIPCSocketWhack_unconnected_server_side_pipe ( KSocket * self )
     rc_t rc = 0;
     KSocketIPC * data = &( self -> type_data.ipc_data );
 
-    pLogLibMsg( klogInfo, "$(b): isIpcListener", "b=%p", self );    
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: isIpcListener\n", self ) );    
     if ( data->listenerPipe != INVALID_HANDLE_VALUE )
     {
         /* !!! In case there is an active call to ConnectNamedPipe()
@@ -759,13 +760,13 @@ static rc_t KIPCSocketWhack_unconnected_server_side_pipe ( KSocket * self )
         if ( !DisconnectNamedPipe( data->listenerPipe ) )
         {
             rc = HandleErrno();
-            pLogLibMsg( klogInfo, "$(b): DisconnectNamedPipe failed", "b=%p", self );
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: DisconnectNamedPipe failed\n", self ) );
         }
         
         if ( !CloseHandle( data->listenerPipe ) )
         {
             rc = HandleErrno();
-            pLogLibMsg( klogInfo, "$(b): CloseHandle failed", "b=%p", self );
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: CloseHandle failed\n", self ) );
         }
     }
     return rc;
@@ -778,24 +779,24 @@ static rc_t KIPCSocketWhack_server_side_pipe ( KSocket * self )
     rc_t rc = 0;
     KSocketIPC * data = &( self -> type_data.ipc_data );
 
-    pLogLibMsg( klogInfo, "$(b): isIpcPipeServer", "b=%p", self );
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: isIpcPipeServer\n", self ) );
     if ( !FlushFileBuffers( data->pipe ) )
     {
         if ( GetLastError() != ERROR_BROKEN_PIPE )
         {
             rc = HandleErrno();
-            pLogLibMsg( klogInfo, "$(b): FlushFileBuffers failed, err=$(e)", "b=%p,e=%d", self, GetLastError() );    
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: FlushFileBuffers failed, err=%d\n", self, GetLastError() ) );    
         }
     }
     if ( !DisconnectNamedPipe( data -> pipe ) )
     {
         rc = HandleErrno();
-        pLogLibMsg(klogInfo, "$(b): DisconnectNamedPipe failed", "b=%p", self );    
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: DisconnectNamedPipe failed\n", self ) );    
     }
     if ( !CloseHandle( data -> pipe ) )
     {
         rc = HandleErrno();
-        pLogLibMsg( klogInfo, "$(b): CloseHandle failed", "b=%p", self );
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: CloseHandle failed\n", self ) );
     }
     return rc;
 }
@@ -807,11 +808,11 @@ static rc_t KIPCSocketWhack_client_side_pipe ( KSocket * self )
     rc_t rc = 0;
     KSocketIPC * data = &( self -> type_data.ipc_data );
 
-    pLogLibMsg( klogInfo, "$(b): isIpcPipeClient", "b=%p", self );
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: isIpcPipeClient\n", self ) );
     if ( !CloseHandle( data -> pipe ) )
     {
         rc = HandleErrno();
-        pLogLibMsg( klogInfo, "$(b): CloseHandle failed", "b=%p", self );
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: CloseHandle failed\n", self ) );
     }
     return rc;
 }
@@ -824,7 +825,7 @@ static rc_t CC KIPCSocketWhack ( KSocket * self )
     /* we tolerate a whack on a NULL-pointer */
     if ( self == NULL ) return rc;
 
-    pLogLibMsg( klogInfo, "$(b): KIPCSocketWhack()...", "b=%p", self ); 
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: KIPCSocketWhack()...\n", self ) ); 
     switch ( self -> type_data.ipc_data.type )
     {
         case isIpcListener   : rc = KIPCSocketWhack_unconnected_server_side_pipe ( self ); break;
@@ -849,8 +850,9 @@ static rc_t WaitForData( const KSocket * self, void * buffer, size_t bsize,
     const KSocketIPC * data = &( self -> type_data.ipc_data );
     uint32_t tm_decrement = 100; 
 
-    pLogLibMsg( klogInfo, "$(b): no data on the pipe - going into a wait loop, tm=$(t)", "b=%p,t=%d",
-                self, tmMs == 0 ? -1 : *tmMs );
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
+            ( "%p: no data on the pipe - going into a wait loop, tm=%d\n", 
+                self, tmMs == 0 ? -1 : *tmMs ) );
     while ( true )
     {
         BOOL ret;
@@ -870,8 +872,9 @@ static rc_t WaitForData( const KSocket * self, void * buffer, size_t bsize,
         ret = ReadFile( data -> pipe, buffer, ( DWORD )bsize, &count, overlap );
         if ( ret )
         {
-            pLogLibMsg( klogInfo, "$(b): (wait loop) ReadFile completed synchronously, count=$(c)", "b=%p,c=%d",
-                        self, count );
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
+                    ( "%p: (wait loop) ReadFile completed synchronously, count=%d\n", 
+                        self, count ) );
             assert ( num_read != NULL );
             * num_read = ( size_t ) count;
             CloseHandle( overlap -> hEvent );
@@ -883,7 +886,7 @@ static rc_t WaitForData( const KSocket * self, void * buffer, size_t bsize,
             case ERROR_IO_PENDING : return 0; /* the caller will wait for completion */
             
             case ERROR_NO_DATA :
-                pLogLibMsg( klogInfo, "$(b): (wait loop) Sleep($(t))", "b=%p,t=%d", self, tm_decrement );
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: (wait loop) Sleep(%d)\n", self, tm_decrement ) );
                 Sleep( tm_decrement );
                 break;
             
@@ -909,8 +912,9 @@ static rc_t CC KIPCSocketTimedRead ( const KSocket * self, void * buffer, size_t
     if ( num_read == NULL )
         return RC ( rcNS, rcConnection, rcReading, rcParam, rcNull );
 
-    pLogLibMsg( klogInfo, "$(b): KIPCSocketTimedRead($(t), $(buf), $(s))... ", "b=%p,t=%d,buf=%p,s=%d",
-                self, tm == NULL ? -1 : tm -> mS, buffer, bsize );
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
+                ( "%p: KIPCSocketTimedRead(%d, %p, %d)... \n",
+                  self, tm == NULL ? -1 : tm -> mS, buffer, bsize ) );
 
     /* TODO: wait for pipe to become readable? */
     memset( &overlap, 0, sizeof( overlap ) );
@@ -927,7 +931,7 @@ static rc_t CC KIPCSocketTimedRead ( const KSocket * self, void * buffer, size_t
         if ( ret )
         {
             /* done: must be synch mode */
-            pLogLibMsg( klogInfo, "$(b): ReadFile completed synchronously, count=$(c)", "b=%p,c=%d", self, count );
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: ReadFile completed synchronously, count=%d\n", self, count ) );
             * num_read = ( size_t ) count;
             CloseHandle( overlap.hEvent );
             return 0;
@@ -938,9 +942,8 @@ static rc_t CC KIPCSocketTimedRead ( const KSocket * self, void * buffer, size_t
         /* asynch mode - wait for the operation to complete */
         if ( GetLastError() == ERROR_NO_DATA ) /* 232 */
         {
-            pLogLibMsg( klogInfo,
-                        "$(b): ReadFile($(h)) returned FALSE, GetLastError() = ERROR_NO_DATA", "b=%p,h=%x",
-                        self, data -> pipe );
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
+                ( "%p: ReadFile(%x) returned FALSE, GetLastError() = ERROR_NO_DATA\n", self, data -> pipe ) );
             rc = WaitForData( self, buffer, bsize, num_read, tm == NULL ? NULL : &tm -> mS, &overlap );
             if ( *num_read != 0 ) /* read completed*/
             {
@@ -956,52 +959,52 @@ static rc_t CC KIPCSocketTimedRead ( const KSocket * self, void * buffer, size_t
 
         if ( GetLastError() == ERROR_IO_PENDING ) /* 997 */
         {
-            pLogLibMsg( klogInfo,
-                        "$(b): ReadFile($(h)) returned FALSE, GetLastError() = ERROR_IO_PENDING", "b=%p,h=%x",
-                        self, data -> pipe );
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
+                ( "%p: ReadFile(%x) returned FALSE, GetLastError() = ERROR_IO_PENDING\n",
+                        self, data -> pipe ) );
 
             if ( tm == NULL )
-                pLogLibMsg( klogInfo, "$(b): waiting forever", "b=%p", self );
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: waiting forever\n", self ) );
             else
-                pLogLibMsg( klogInfo, "$(b): waiting for $(t) ms", "b=%p,t=%d", self, tm -> mS );
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: waiting for %d ms\n", self, tm -> mS ) );
                 
             switch ( WaitForSingleObject( overlap.hEvent, tm == NULL ? INFINITE : tm -> mS ) )
             {
                 case WAIT_TIMEOUT :
-                    pLogLibMsg( klogInfo, "$(b): timed out", "b=%p", self );
+                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: timed out\n", self ) );
                     rc = RC ( rcNS, rcFile, rcReading, rcTimeout, rcExhausted );
                     break;
                     
                 case WAIT_OBJECT_0 :
                 {
                     DWORD count;
-                    pLogLibMsg( klogInfo, "$(b): successful", "b=%p", self );
+                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: successful\n", self ) );
                     /* wait to complete if necessary */
                     if ( GetOverlappedResult( data->pipe, &overlap, &count, TRUE ) )
                     {
-                        pLogLibMsg( klogInfo, "$(b): $(c) bytes read", "b=%p,c=%d", self, count );
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: %d bytes read\n", self, count ) );
                         * num_read = ( size_t ) count;
                         rc = 0;
                     }
                     else
                     {
                         rc = HandleErrno();
-                        pLogLibMsg( klogInfo, "$(b): GetOverlappedResult() failed", "b=%p", self );
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: GetOverlappedResult() failed\n", self ) );
                     }
                     break;
                 }
                 
                 default:
                     rc = HandleErrno();
-                    pLogLibMsg( klogInfo, "$(b): WaitForSingleObject() failed", "b=%p", self );
+                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: WaitForSingleObject() failed\n", self ) );
                     break;
             }
         }
         else if ( GetLastError() == ERROR_SUCCESS )
         {
-            pLogLibMsg( klogInfo,
-                        "$(b): ReadFile($(h)) returned FALSE, GetLastError() = ERROR_SUCCESS", "b=%p,h=%x",
-                        self, data -> pipe );
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
+                        ( "%p: ReadFile(%x) returned FALSE, GetLastError() = ERROR_SUCCESS\n",
+                        self, data -> pipe ) );
             rc = RC ( rcNS, rcFile, rcReading, rcError, rcUnexpected );
         }
         else
@@ -1046,9 +1049,9 @@ static rc_t CC KIPCSocketTimedWrite ( KSocket * self, const void * buffer, size_
 
     data = &( self -> type_data.ipc_data );
 
-    pLogLibMsg( klogInfo,
-                "$(b): KIPCSocketTimedWrite($(s), $(t))...", "b=%p,s=%d,t=%d",
-                self, bsize, tm == NULL ? -1 : tm -> mS );
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
+                ( "%p: KIPCSocketTimedWrite(%d, %d)...", "b=%p,s=%d,t=%d\n",
+                self, bsize, tm == NULL ? -1 : tm -> mS ) );
 
     memset( &overlap, 0, sizeof( overlap ) );
 
@@ -1063,14 +1066,14 @@ static rc_t CC KIPCSocketTimedWrite ( KSocket * self, const void * buffer, size_
         /* returns FALSE in asynch mode */
         BOOL ret = WriteFile( data->pipe, buffer, ( DWORD )bsize, &count, &overlap );
         int err = GetLastError();
-        /*pLogLibMsg(klogInfo, "$(b): WriteFile returned $(r), GetError() = $(e)", "b=%p,r=%s,e=%d", base, ret ? "TRUE" : "FALSE", err); */
+        /*DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: WriteFile returned %s, GetError() = %d\n", base, ret ? "TRUE" : "FALSE", err ) ); */
 
         /* completed synchronously; either message is so short that is went out immediately, or the pipe is full */
         if ( ret )
         {   
             if ( count > 0 )
             {
-                pLogLibMsg( klogInfo, "$(b): $(c) bytes written", "b=%p,c=%d", self, count );
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: %d bytes written\n", self, count ) );
                 if ( num_writ != NULL )
                     * num_writ = ( size_t ) count;
                 CloseHandle( overlap.hEvent );
@@ -1081,9 +1084,9 @@ static rc_t CC KIPCSocketTimedWrite ( KSocket * self, const void * buffer, size_
                 /* pipe is full - go into a wait loop */
                 uint32_t tm_left = ( tm == NULL ) ? 0 : tm -> mS;
                 uint32_t tm_decrement = 100; 
-                pLogLibMsg( klogInfo,
-                            "$(b): pipe full - going into a wait loop for $(t) ms", "b=%p,t=%d",
-                            self, ( tm == NULL ) ? -1 : tm -> mS );
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
+                            ( "%p: pipe full - going into a wait loop for %d ms\n", 
+                                self, ( tm == NULL ) ? -1 : tm -> mS ) );
                 while ( count == 0 )
                 {
                     if ( tm != NULL )
@@ -1098,12 +1101,12 @@ static rc_t CC KIPCSocketTimedWrite ( KSocket * self, const void * buffer, size_
                     
                     Sleep( 1 ); /*ms*/
                     
-                    pLogLibMsg( klogInfo, "$(b): write wait loop: attempting to WriteFile", "b=%p", self );   
+                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: write wait loop: attempting to WriteFile\n", self ) );   
 
                     /* returns FALSE in asynch mode */
                     ret = WriteFile( data->pipe, buffer, ( DWORD )bsize, &count, &overlap );
                     err = GetLastError();
-                    /* pLogLibMsg(klogInfo, "$(b): WriteFile returned $(r), GetError() = $(e)", "b=%p,r=%s,e=%d", base, ret ? "TRUE" : "FALSE", err); */
+                    /* DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: WriteFile returned %s, GetError() = %d\n", base, ret ? "TRUE" : "FALSE", err ) ); */
                     if ( !ret )
                         break; /* and proceed to handling the asynch mode */
                 }
@@ -1119,30 +1122,30 @@ static rc_t CC KIPCSocketTimedWrite ( KSocket * self, const void * buffer, size_
             switch ( WaitForSingleObject( overlap.hEvent, tm == NULL ? INFINITE : tm -> mS ) )
             {
             case WAIT_TIMEOUT:
-                pLogLibMsg( klogInfo, "$(b): timed out ", "b=%p", self );
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: timed out\n", self ) );
                 CloseHandle( overlap.hEvent );
                 return RC ( rcNS, rcStream, rcWriting, rcTimeout, rcExhausted );
 
             case WAIT_OBJECT_0:
             {
-                pLogLibMsg( klogInfo, "$(b): successful", "b=%p", self );
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: successful\n", self ) );
                 /* wait to complete if necessary */
                 if ( GetOverlappedResult( data->pipe, &overlap, &count, TRUE ) )
                 {
-                    pLogLibMsg( klogInfo, "$(b): $(c) bytes written", "b=%p,c=%d", self, count );
+                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: %d bytes written\n", self, count ) );
                     if ( num_writ != NULL )
                         * num_writ = count;
                     CloseHandle( overlap.hEvent );
                     return 0;
                 }
                 rc = HandleErrno();
-                pLogLibMsg( klogInfo, "$(b): GetOverlappedResult() failed", "b=%p", self );
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: GetOverlappedResult() failed\n", self ) );
                 break;
             }
             
             default:
                 rc = HandleErrno();
-                pLogLibMsg( klogInfo, "$(b): WaitForSingleObject() failed", "b=%p", self );
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: WaitForSingleObject() failed\n", self ) );
                 break;
             }
         }
@@ -1154,7 +1157,7 @@ static rc_t CC KIPCSocketTimedWrite ( KSocket * self, const void * buffer, size_
 
         default:
             rc = HandleErrno();
-            pLogLibMsg( klogInfo, "$(b): WriteFile() failed", "b=%p", self );
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: WriteFile() failed\n", self ) );
             break;
         }
 
@@ -1254,9 +1257,9 @@ static rc_t KNSManagerMakeIPCConnection ( struct KNSManager const *self,
                                        "KSocket", "tcp", true, true );
                     if ( rc == 0 )
                     {
-                        pLogLibMsg( klogInfo,
-                                   "$(b): KNSManagerMakeIPCConnection($(e),'$(n)')", "b=%p,e=%p,n=%s",
-                                    ksock, to, pipename );
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
+                                ( "%p: KNSManagerMakeIPCConnection(%p,'%s')\n", 
+                                    ksock, to, pipename ) );
                     
                         ksock -> read_timeout  = readMillis;
                         ksock -> write_timeout = writeMillis;
@@ -1278,17 +1281,17 @@ static rc_t KNSManagerMakeIPCConnection ( struct KNSManager const *self,
             switch ( GetLastError() )
             {
                 case ERROR_PIPE_BUSY :
-                    LogLibMsg( klogInfo, "KNSManagerMakeIPCConnection: pipe busy, retrying" );
+                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KNSManagerMakeIPCConnection: pipe busy, retrying\n" ) );
                     {
                         BOOL pipeAvailable = WaitNamedPipeW( pipenameW, NMPWAIT_USE_DEFAULT_WAIT );
                         if ( pipeAvailable )
                         {
-                            LogLibMsg( klogInfo, "KNSManagerMakeIPCConnection: WaitNamedPipeW returned TRUE" );
+                            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KNSManagerMakeIPCConnection: WaitNamedPipeW returned TRUE\n" ) );
                             continue;
                         }
                         /* time-out, try again */
                         rc = HandleErrno();
-                        LogLibMsg( klogInfo, "KNSManagerMakeIPCConnection: WaitNamedPipeW returned FALSE(timeout)" );
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KNSManagerMakeIPCConnection: WaitNamedPipeW returned FALSE(timeout)\n" ) );
                         if ( retryTimeout < 0 || retry_count < retryTimeout )
                         {
                             Sleep( 1000 ); /* ms */
@@ -1302,7 +1305,7 @@ static rc_t KNSManagerMakeIPCConnection ( struct KNSManager const *self,
                 case ERROR_FILE_NOT_FOUND :
                     if ( retryTimeout < 0 || retry_count < retryTimeout )
                     {
-                        LogLibMsg( klogInfo, "KNSManagerMakeIPCConnection: pipe not found, retrying" );
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KNSManagerMakeIPCConnection: pipe not found, retrying\n" ) );
                         Sleep( 1000 ); /* ms */
                         ++retry_count;
                         rc = 0;
@@ -1368,9 +1371,8 @@ static rc_t KNSManagerMakeIPCListener( struct KNSManager const *self, struct KSo
                 ksock -> type = epIPC;
                 *out = ( KSocket * )& ksock -> dad;
                 
-                pLogLibMsg( klogInfo,
-                            "$(b): KNSManagerMakeIPCListener($(e),'$(n)')", "b=%p,e=%p,n=%s",
-                            ksock, ep, pipename );
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: KNSManagerMakeIPCListener(%p,'%s')\n", 
+                            ksock, ep, pipename ) );
                 return 0;
             }
             KIPCSocketWhack( ksock );
@@ -1379,7 +1381,7 @@ static rc_t KNSManagerMakeIPCListener( struct KNSManager const *self, struct KSo
             free ( ksock );
     }
         
-    pLogLibMsg( klogInfo, "$(b): KNSManagerMakeIPCListener failed", "b=%p", ksock );
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: KNSManagerMakeIPCListener failed\n", ksock ) );
     return rc;
 }
 
@@ -1389,7 +1391,7 @@ static rc_t KListenerIPCAccept ( KSocket * self, struct KSocket ** out )
     rc_t rc = 0;
     KSocketIPC * data = &( self -> type_data.ipc_data );
 
-    pLogLibMsg( klogInfo, "$(b): KSocketAccept", "b=%p", self );
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: KSocketAccept\n", self ) );
 
     /* make sure listener points to a KIPCSocket */
     if ( data->type != isIpcListener )
@@ -1409,7 +1411,7 @@ static rc_t KListenerIPCAccept ( KSocket * self, struct KSocket ** out )
     if ( data -> listenerPipe != INVALID_HANDLE_VALUE )
     {
         OVERLAPPED overlap;
-        LogLibMsg( klogInfo, "KSocketAccept: calling CreateEvent" );
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KSocketAccept: calling CreateEvent\n" ) );
         overlap.hEvent = CreateEvent( NULL,    /* default security attribute */
                                       TRUE,     /* manual reset event */
                                       FALSE,    /* initial state = nonsignalled */
@@ -1417,7 +1419,7 @@ static rc_t KListenerIPCAccept ( KSocket * self, struct KSocket ** out )
         if ( overlap.hEvent != NULL )
         {
             BOOL connected =  ConnectNamedPipe( data -> listenerPipe, &overlap );
-            /*LogLibMsg(klogInfo, "KSocketAccept: calling ConnectNamedPipe");*/
+            /*DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KSocketAccept: calling ConnectNamedPipe\n") );*/
             if ( !connected ) /* normal for asynch mode */
             {
                 switch ( GetLastError() )
@@ -1426,12 +1428,12 @@ static rc_t KListenerIPCAccept ( KSocket * self, struct KSocket ** out )
                     break;
                     
                 case ERROR_IO_PENDING:
-                    LogLibMsg( klogInfo, "KSocketAccept: calling WaitForSingleObject" );
+                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KSocketAccept: calling WaitForSingleObject\n" ) );
                     if ( WaitForSingleObject( overlap.hEvent, INFINITE ) != WAIT_OBJECT_0 )
                     {
                         rc = HandleErrno();
                         CloseHandle( overlap.hEvent );
-                        LogLibMsg( klogInfo, "KSocketAccept: WaitForSingleObject failed" );
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KSocketAccept: WaitForSingleObject failed\n" ) );
                         return rc;
                     }
                     break;
@@ -1439,19 +1441,19 @@ static rc_t KListenerIPCAccept ( KSocket * self, struct KSocket ** out )
                 default:
                     rc = HandleErrno();
                     CloseHandle( overlap.hEvent );
-                    LogLibMsg( klogInfo, "KSocketAccept: ConnectNamedPipe failed" );
+                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KSocketAccept: ConnectNamedPipe failed\n" ) );
                     return rc;
                 }
             }
             /* we are connected, create the socket stream */
             {
                 KSocket * ksock = calloc ( sizeof * ksock, 1 );
-                pLogLibMsg( klogInfo, "$(b): KSocketAccept", "b=%p", ksock );
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "%p: KSocketAccept\n", ksock ) );
                 
                 if ( ksock == NULL )
                 {
                     rc = RC ( rcNS, rcSocket, rcAllocating, rcNoObj, rcNull ); 
-                    LogLibMsg( klogInfo, "KSocketAccept: calloc failed" );
+                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KSocketAccept: calloc failed\n" ) );
                 }
                 else
                 {
@@ -1469,7 +1471,7 @@ static rc_t KListenerIPCAccept ( KSocket * self, struct KSocket ** out )
                         return 0;
                     }
                     free ( ksock );
-                    LogLibMsg( klogInfo, "KSocketAccept: KStreamInit failed" );
+                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KSocketAccept: KStreamInit failed\n" ) );
                 }
                 CloseHandle( overlap.hEvent );
                 return rc;
@@ -1479,7 +1481,7 @@ static rc_t KListenerIPCAccept ( KSocket * self, struct KSocket ** out )
     else
     {
         rc = HandleErrno();
-        LogLibMsg( klogInfo, "KSocketAccept: CreateNamedPipeW failed" );
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KSocketAccept: CreateNamedPipeW failed\n" ) );
     }
     return rc;
 }   
