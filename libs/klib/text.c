@@ -451,15 +451,130 @@ LIB_EXPORT void CC StringWhack ( const String* self )
  */
 LIB_EXPORT int64_t StringToI64 ( const String * self, rc_t * optional_rc )
 {
+    if ( self != NULL )
+        return string_to_I64 ( self -> addr, self -> size, optional_rc );
+
+    if ( optional_rc != NULL )
+        * optional_rc = RC ( rcText, rcString, rcEvaluating, rcSelf, rcNull );
+
+    return 0;
+}
+
+LIB_EXPORT uint64_t StringToU64 ( const String * self, rc_t * optional_rc )
+{
+    if ( self != NULL )
+        return string_to_U64 ( self -> addr, self -> size, optional_rc );
+
+    if ( optional_rc != NULL )
+        * optional_rc = RC ( rcText, rcString, rcEvaluating, rcSelf, rcNull );
+
+    return 0;
+}
+
+
+/*--------------------------------------------------------------------------
+ * raw text strings
+ */
+
+/* string_size
+ *  length of string in bytes
+ */
+LIB_EXPORT size_t CC string_size ( const char *str )
+{
+    if ( str == NULL )
+        return 0;
+    return strlen ( str );
+}
+
+/* string_dup
+ *  replaces the broken C library strndup
+ *  creates a NUL-terminated malloc'd string
+ */
+LIB_EXPORT char * CC string_dup ( const char *str, size_t size )
+{
+    char *dst;
+    if ( str == NULL )
+        dst = NULL;
+    else
+    {
+        dst = malloc ( size + 1 );
+        if ( dst != NULL )
+            string_copy ( dst, size + 1, str, size );
+    }
+    return dst;
+}
+
+/* string_dup_measure
+ *  replaces the broken C library strdup
+ *  creates a NUL-terminated malloc'd string
+ *  returns size of string unless "size" is NULL
+ */
+LIB_EXPORT char * CC string_dup_measure ( const char *str, size_t *size )
+{
+    size_t bytes = string_size ( str );
+    if ( size != NULL )
+        * size = bytes;
+    return string_dup ( str, bytes );
+}
+
+/* string_hash
+ *  hashes a string
+ */
+LIB_EXPORT uint32_t CC string_hash ( const char *str, size_t size )
+{
+    size_t i;
+    uint32_t hash;
+
+    assert ( str != NULL );
+
+    if ( str == NULL )
+        return 0;
+
+    for ( hash = 0, i = 0; i < size; ++ i )
+    {
+        uint32_t ch = ( ( const unsigned char* )  str ) [ i ];
+        hash = ( ( hash << 1 ) - ( hash >> 16 ) ) ^ ch;
+    }
+    return hash ^ ( hash >> 16 );
+}
+
+/* string_to_int
+ *  simple string conversion functions
+ *
+ *  these functions are defined to consume the entire string.
+ *  leading spaces are tolerated, repeated signs are accepted for signed conversion,
+ *  decimal and hex encodings are accepted for unsigned conversion,
+ *  decimal only for signed conversion.
+ *
+ *  "optional_rc" [ OUT, NULL OKAY ] - if non-null, user is interested
+ *  in error conditions. if the parameter is present, the string must be
+ *  completely consumed without overflow.
+ *
+ *  optional return values ( with { GetRCObject ( rc ), GetRCState ( rc ) }:
+ *   0                            : no error
+ *   { rcRange, rcExcessive }     : integer overflow
+ *   { rcTransfer, rcIncomplete } : extra characters remain in string
+ *   { rcData, rcInsufficient }   : no numeric text was found
+ *
+ *  return values - regardless of "optional_rc":
+ *    val             : when no error
+ *    val             : on incomplete transfer
+ *    +/- max int64_t : when signed overflow occurs ( StringToI64 only )
+ *    max uint64_t    : when unsigned overflow occurs ( StringToU64 only )
+ *    0               : when no input text is found
+ */
+LIB_EXPORT int64_t string_to_I64 ( const char * text, size_t bytes, rc_t * optional_rc )
+{
     rc_t rc = 0;
 
-    if ( self != NULL )
+    if ( text == NULL )
+        rc = RC ( rcText, rcString, rcEvaluating, rcParam, rcNull );
+    else
     {
         int64_t val;
 
+        size_t i, start;
         uint8_t negate = 0;
-        size_t i, start, bytes = self -> size;
-        const char * text = self -> addr;
 
         /* allow white space */
         for ( i = 0; i < bytes; ++ i )
@@ -530,10 +645,10 @@ LIB_EXPORT int64_t StringToI64 ( const String * self, rc_t * optional_rc )
 
             return val;
         }
-    }
 
-    /* no digits were converted */
-    rc = RC ( rcText, rcString, rcParsing, rcData, rcInsufficient );
+        /* no digits were converted */
+        rc = RC ( rcText, rcString, rcParsing, rcData, rcInsufficient );
+    }
 
     if ( optional_rc != NULL )
         * optional_rc = rc;
@@ -541,16 +656,16 @@ LIB_EXPORT int64_t StringToI64 ( const String * self, rc_t * optional_rc )
     return 0;
 }
 
-LIB_EXPORT uint64_t StringToU64 ( const String * self, rc_t * optional_rc )
+LIB_EXPORT uint64_t string_to_U64 ( const char * text, size_t bytes, rc_t * optional_rc )
 {
     rc_t rc = 0;
 
-    if ( self != NULL )
+    if ( text == NULL )
+        rc = RC ( rcText, rcString, rcEvaluating, rcParam, rcNull );
+    else
     {
         uint64_t val;
-
-        size_t i, start, bytes = self -> size;
-        const char * text = self -> addr;
+        size_t i, start;
 
         /* allow white space */
         for ( i = 0; i < bytes; ++ i )
@@ -632,82 +747,15 @@ LIB_EXPORT uint64_t StringToU64 ( const String * self, rc_t * optional_rc )
 
             return val;
         }
-    }
 
-    /* no digits were converted */
-    rc = RC ( rcText, rcString, rcParsing, rcData, rcInsufficient );
+        /* no digits were converted */
+        rc = RC ( rcText, rcString, rcParsing, rcData, rcInsufficient );
+    }
 
     if ( optional_rc != NULL )
         * optional_rc = rc;
 
     return 0;
-}
-
-
-/*--------------------------------------------------------------------------
- * raw text strings
- */
-
-/* string_size
- *  length of string in bytes
- */
-LIB_EXPORT size_t CC string_size ( const char *str )
-{
-    if ( str == NULL )
-        return 0;
-    return strlen ( str );
-}
-
-/* string_dup
- *  replaces the broken C library strndup
- *  creates a NUL-terminated malloc'd string
- */
-LIB_EXPORT char * CC string_dup ( const char *str, size_t size )
-{
-    char *dst;
-    if ( str == NULL )
-        dst = NULL;
-    else
-    {
-        dst = malloc ( size + 1 );
-        if ( dst != NULL )
-            string_copy ( dst, size + 1, str, size );
-    }
-    return dst;
-}
-
-/* string_dup_measure
- *  replaces the broken C library strdup
- *  creates a NUL-terminated malloc'd string
- *  returns size of string unless "size" is NULL
- */
-LIB_EXPORT char * CC string_dup_measure ( const char *str, size_t *size )
-{
-    size_t bytes = string_size ( str );
-    if ( size != NULL )
-        * size = bytes;
-    return string_dup ( str, bytes );
-}
-
-/* string_hash
- *  hashes a string
- */
-LIB_EXPORT uint32_t CC string_hash ( const char *str, size_t size )
-{
-    size_t i;
-    uint32_t hash;
-
-    assert ( str != NULL );
-
-    if ( str == NULL )
-        return 0;
-
-    for ( hash = 0, i = 0; i < size; ++ i )
-    {
-        uint32_t ch = ( ( const unsigned char* )  str ) [ i ];
-        hash = ( ( hash << 1 ) - ( hash >> 16 ) ) ^ ch;
-    }
-    return hash ^ ( hash >> 16 );
 }
 
 /* utf8_utf32
