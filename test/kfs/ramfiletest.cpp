@@ -150,7 +150,6 @@ TEST_CASE(KRamFileWrite_shift_right)
 
     char buffer[4 * 1024];
 
-    uint64_t tot_writ;
     size_t num_writ;
 
     KFile * wfile;
