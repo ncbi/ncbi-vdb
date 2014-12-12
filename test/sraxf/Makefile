@@ -45,7 +45,7 @@ clean: stdclean
 #
 
 SRATEST_SRC = \
-	fix_read_seg-test 
+	test-fix_read_seg
 
 SRATEST_OBJ = \
 	$(addsuffix .$(OBJX),$(SRATEST_SRC))
@@ -55,6 +55,6 @@ SRATEST_LIB = \
 	-sktst \
 	-sncbi-vdb \
 
-$(TEST_BINDIR)/fix_read_seg-test: $(SRATEST_OBJ)
+$(TEST_BINDIR)/test-fix_read_seg: $(SRATEST_OBJ)
 	$(LP) --exe -o $@ $^ $(SRATEST_LIB)
 
