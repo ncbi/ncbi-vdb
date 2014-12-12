@@ -42,6 +42,7 @@ SUBDIRS =       \
     kfc         \
     klib        \
     kfg         \
+    kapp        \
     kns         \
     kdb         \
     kproc       \
