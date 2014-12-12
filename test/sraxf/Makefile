@@ -29,7 +29,7 @@ TOP ?= $(abspath ../..)
 MODULE = test/sraxf
 
 TEST_TOOLS = \
-	fix_read_seg-test \
+	test-fix_read_seg \
 
 include $(TOP)/build/Makefile.env
 
@@ -45,7 +45,7 @@ clean: stdclean
 #
 
 SRATEST_SRC = \
-	test-fix_read_seg
+	fix_read_seg-test
 
 SRATEST_OBJ = \
 	$(addsuffix .$(OBJX),$(SRATEST_SRC))
