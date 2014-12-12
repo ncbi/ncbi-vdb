@@ -22,43 +22,57 @@
 #
 # ===========================================================================
 
-by_default: runtests
+#TODO: update qfiletest
 
-TOP ?= $(abspath ..)
-MODULE = test
+default: runtests
 
-include $(TOP)/build/Makefile.shell
+TOP ?= $(abspath ../..)
+MODULE = test/kapp
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+    args-test
+    
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(ALL_LIBS) $(TEST_TOOLS)
+
+clean: stdclean
 
 #-------------------------------------------------------------------------------
-# default
+# args-test
 #
-SUBDIRS =       \
-    ktst        \
-    cc          \
-    ext         \
-    judy_test   \
-    kfc         \
-    klib        \
-    kfg         \
-    kapp        \
-    kns         \
-    kdb         \
-    kproc       \
-    vdb         \
-    ngs         \
-    ngs-c++     \
-	search	    \
-    vfs         \
-    sraxf       \
-    vxf         \
+ARGS_TEST_SRC = \
+	args-test
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+ARGS_TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(ARGS_TEST_SRC))
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
+ARGS_TEST_LIB = \
+	-lkapp \
+    -lktst \
+    -lload \
+    -lncbi-wvdb \
 
-.PHONY: default $(SUBDIRS)
+$(TEST_BINDIR)/args-test: $(ARGS_TEST_OBJ)
+	$(LP) --exe -o $@ $^ $(ARGS_TEST_LIB)
 
+#-------------------------------------------------------------------------------
+# qfiletest
+#
+QFILETEST_SRC = \
+	qfiletest
+
+QFILETEST_OBJ = \
+	$(addsuffix .$(OBJX),$(QFILETEST_SRC))
+
+QFILETEST_LIB = \
+	-lkapp \
+    -lload \
+    -lncbi-wvdb \
+
+
+$(TEST_BINDIR)/qfiletest: $(QFILETEST_OBJ)
+	$(LD) --exe $(SRCDIR) -o $@ $^ $(QFILETEST_LIB)

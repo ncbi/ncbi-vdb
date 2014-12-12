@@ -105,6 +105,7 @@ KNS_SRC = \
 	$(KNS_NO_HTTP_SRC) \
 	http-file          \
 	http-client        \
+	http-retrier       \
 	http               \
 
 KNS_OBJ = \

@@ -220,6 +220,35 @@ KLIB_EXTERN rc_t CC StringCopyUTF32 ( const String **cpy,
 KLIB_EXTERN void CC StringWhack ( const String* self );
 
 
+/* StringToInt
+ *  simple string conversion functions
+ *
+ *  these functions are defined to consume the entire string.
+ *  leading spaces are tolerated, repeated signs are accepted for signed conversion,
+ *  decimal and hex encodings are accepted for unsigned conversion,
+ *  decimal only for signed conversion.
+ *
+ *  "optional_rc" [ OUT, NULL OKAY ] - if non-null, user is interested
+ *  in error conditions. if the parameter is present, the string must be
+ *  completely consumed without overflow.
+ *
+ *  optional return values ( with { GetRCObject ( rc ), GetRCState ( rc ) }:
+ *   0                            : no error
+ *   { rcRange, rcExcessive }     : integer overflow
+ *   { rcTransfer, rcIncomplete } : extra characters remain in string
+ *   { rcData, rcInsufficient }   : no numeric text was found
+ *
+ *  return values - regardless of "optional_rc":
+ *    val             : when no error
+ *    val             : on incomplete transfer
+ *    +/- max int64_t : when signed overflow occurs ( StringToI64 only )
+ *    max uint64_t    : when unsigned overflow occurs ( StringToU64 only )
+ *    0               : when no input text is found
+ */
+KLIB_EXTERN int64_t StringToI64 ( const String * self, rc_t * optional_rc );
+KLIB_EXTERN uint64_t StringToU64 ( const String * self, rc_t * optional_rc );
+
+
 /*--------------------------------------------------------------------------
  * raw text strings
  *  the internal representation of text strings is implementation
@@ -377,6 +406,35 @@ KLIB_EXTERN uint32_t CC string_hash ( const char *str, size_t size );
  *  character is found.
  */
 KLIB_EXTERN char* CC string_idx ( const char *str, size_t size, uint32_t idx );
+
+
+/* string_to_int
+ *  simple string conversion functions
+ *
+ *  these functions are defined to consume the entire string.
+ *  leading spaces are tolerated, repeated signs are accepted for signed conversion,
+ *  decimal and hex encodings are accepted for unsigned conversion,
+ *  decimal only for signed conversion.
+ *
+ *  "optional_rc" [ OUT, NULL OKAY ] - if non-null, user is interested
+ *  in error conditions. if the parameter is present, the string must be
+ *  completely consumed without overflow.
+ *
+ *  optional return values ( with { GetRCObject ( rc ), GetRCState ( rc ) }:
+ *   0                            : no error
+ *   { rcRange, rcExcessive }     : integer overflow
+ *   { rcTransfer, rcIncomplete } : extra characters remain in string
+ *   { rcData, rcInsufficient }   : no numeric text was found
+ *
+ *  return values - regardless of "optional_rc":
+ *    val             : when no error
+ *    val             : on incomplete transfer
+ *    +/- max int64_t : when signed overflow occurs ( StringToI64 only )
+ *    max uint64_t    : when unsigned overflow occurs ( StringToU64 only )
+ *    0               : when no input text is found
+ */
+KLIB_EXTERN int64_t string_to_I64 ( const char * str, size_t size, rc_t * optional_rc );
+KLIB_EXTERN uint64_t string_to_U64 ( const char * str, size_t size, rc_t * optional_rc );
 
 
 /*--------------------------------------------------------------------------

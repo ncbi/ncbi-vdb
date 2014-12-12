@@ -22,43 +22,39 @@
 #
 # ===========================================================================
 
-by_default: runtests
+default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+TOP ?= $(abspath ../..)
 
-include $(TOP)/build/Makefile.shell
+MODULE = test/sraxf
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+	fix_read_seg-test \
 
-#-------------------------------------------------------------------------------
-# default
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(TEST_TOOLS)
+
+clean: stdclean
+
+#----------------------------------------------------------------
+# fix_read_seg-test
 #
-SUBDIRS =       \
-    ktst        \
-    cc          \
-    ext         \
-    judy_test   \
-    kfc         \
-    klib        \
-    kfg         \
-    kapp        \
-    kns         \
-    kdb         \
-    kproc       \
-    vdb         \
-    ngs         \
-    ngs-c++     \
-	search	    \
-    vfs         \
-    sraxf       \
-    vxf         \
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+SRATEST_SRC = \
+	test-fix_read_seg
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
+SRATEST_OBJ = \
+	$(addsuffix .$(OBJX),$(SRATEST_SRC))
 
-.PHONY: default $(SUBDIRS)
+SRATEST_LIB = \
+	-skapp \
+	-sktst \
+	-sncbi-vdb \
+
+$(TEST_BINDIR)/test-fix_read_seg: $(SRATEST_OBJ)
+	$(LP) --exe -o $@ $^ $(SRATEST_LIB)
 

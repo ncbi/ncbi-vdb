@@ -476,6 +476,8 @@ rc_t KDylibSetLogging ( const KDylib *self )
 static
 rc_t KDyldLoad ( KDyld *self, KDylib *lib, const wchar_t *path )
 {
+#if USE_DYLOAD
+
     DWORD err;
 #if WE_WERE_BUILDING_FOR_WINDOWS_7_ALONE
     UINT errMode = GetErrorMode();
@@ -507,6 +509,11 @@ rc_t KDyldLoad ( KDyld *self, KDylib *lib, const wchar_t *path )
     }
 
     return RC ( rcFS, rcDylib, rcLoading, rcNoObj, rcUnknown );
+
+#else
+    lib -> handle = NULL;
+    return 0;
+#endif
 }
 
 static

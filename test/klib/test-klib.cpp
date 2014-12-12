@@ -30,10 +30,6 @@
 
 #include <ktst/unit_test.hpp>
 
-#include <cstdlib>
-#include <cstring>
-#include <stdexcept>
-
 #include <klib/sort.h>
 #include <klib/printf.h>
 #include <klib/data-buffer.h>
@@ -42,9 +38,199 @@
 #include <klib/text.h>
 #include <klib/misc.h> /* is_user_admin() */
 
+#include <cstdlib>
+#include <cstring>
+#include <stdexcept>
+#include <stdint.h>
+
 using namespace std;
 
 TEST_SUITE(KlibTestSuite);
+
+///////////////////////////////////////////////// text
+
+TEST_CASE ( KLib_text_StringToI64 )
+{
+    rc_t rc;
+    String str;
+    int64_t val;
+
+    CONST_STRING ( & str, "12345678" );
+    val = StringToI64 ( & str, & rc );
+    REQUIRE_RC ( rc );
+    REQUIRE_EQ ( val, ( int64_t ) 12345678 );
+
+    CONST_STRING ( & str, "   12345678" );
+    val = StringToI64 ( & str, & rc );
+    REQUIRE_RC ( rc );
+    REQUIRE_EQ ( val, ( int64_t ) 12345678 );
+
+    CONST_STRING ( & str, "   ++12345678" );
+    val = StringToI64 ( & str, & rc );
+    REQUIRE_RC ( rc );
+    REQUIRE_EQ ( val, ( int64_t ) 12345678 );
+
+    CONST_STRING ( & str, "   ++12345678 " );
+    val = StringToI64 ( & str, & rc );
+    REQUIRE_RC_FAIL ( rc );
+    REQUIRE_EQ ( GetRCObject ( rc ), rcTransfer );
+    REQUIRE_EQ ( GetRCState ( rc ), rcIncomplete );
+    REQUIRE_EQ ( val, ( int64_t ) 12345678 );
+
+    CONST_STRING ( & str, "   ++c12345678 " );
+    val = StringToI64 ( & str, & rc );
+    REQUIRE_RC_FAIL ( rc );
+    REQUIRE_EQ ( GetRCObject ( rc ), ( RCObject ) rcData );
+    REQUIRE_EQ ( GetRCState ( rc ), rcInsufficient );
+    REQUIRE_EQ ( val, ( int64_t ) 0 );
+
+    CONST_STRING ( & str, "   -++-12345678" );
+    val = StringToI64 ( & str, & rc );
+    REQUIRE_RC ( rc );
+    REQUIRE_EQ ( val, ( int64_t ) 12345678 );
+
+    CONST_STRING ( & str, "   -++12345678" );
+    val = StringToI64 ( & str, & rc );
+    REQUIRE_RC ( rc );
+    REQUIRE_EQ ( val, ( int64_t ) -12345678 );
+
+    CONST_STRING ( & str, "" );
+    val = StringToI64 ( & str, 0 );
+    REQUIRE_EQ ( val, ( int64_t ) 0 );
+
+    CONST_STRING ( & str, "0" );
+    val = StringToI64 ( & str, 0 );
+    REQUIRE_EQ ( val, ( int64_t ) 0 );
+
+    CONST_STRING ( & str, "1" );
+    val = StringToI64 ( & str, 0 );
+    REQUIRE_EQ ( val, ( int64_t ) 1 );
+
+    CONST_STRING ( & str, "9223372036854775805" );
+    val = StringToI64 ( & str, & rc );
+    REQUIRE_RC ( rc );
+    REQUIRE_EQ ( val, INT64_C ( 9223372036854775805 ) );
+
+    CONST_STRING ( & str, "9223372036854775807" );
+    val = StringToI64 ( & str, & rc );
+    REQUIRE_RC ( rc );
+    REQUIRE_EQ ( val, INT64_C ( 9223372036854775807 ) );
+
+    CONST_STRING ( & str, "9223372036854775808" );
+    val = StringToI64 ( & str, & rc );
+    REQUIRE_RC_FAIL ( rc );
+    REQUIRE_EQ ( GetRCObject ( rc ), rcRange );
+    REQUIRE_EQ ( GetRCState ( rc ), rcExcessive );
+    REQUIRE_EQ ( val, INT64_C ( 9223372036854775807 ) );
+    val = StringToI64 ( & str, 0 );
+    REQUIRE_EQ ( val, INT64_C ( 9223372036854775807 ) );
+
+    CONST_STRING ( & str, "92233720368547758071" );
+    val = StringToI64 ( & str, & rc );
+    REQUIRE_RC_FAIL ( rc );
+    REQUIRE_EQ ( GetRCObject ( rc ), rcRange );
+    REQUIRE_EQ ( GetRCState ( rc ), rcExcessive );
+    REQUIRE_EQ ( val, INT64_C ( 9223372036854775807 ) );
+
+    CONST_STRING ( & str, "-9223372036854775805" );
+    val = StringToI64 ( & str, & rc );
+    REQUIRE_RC ( rc );
+    REQUIRE_EQ ( val, INT64_C ( -9223372036854775805 ) );
+
+    CONST_STRING ( & str, "-9223372036854775807" );
+    val = StringToI64 ( & str, & rc );
+    REQUIRE_RC ( rc );
+    REQUIRE_EQ ( val, INT64_C ( -9223372036854775807 ) );
+
+    // the value -9223372036854775808 causes complaint
+    // because it is first parsed as signed, which overflows
+    // and then is negated after the complaint
+    // use -9223372036854775807 - 1
+    // WHY AREN'T INT64_MIN/MAX WORKING?
+
+    CONST_STRING ( & str, "-9223372036854775808" );
+    val = StringToI64 ( & str, & rc );
+    REQUIRE_RC ( rc );
+    REQUIRE_EQ ( val, INT64_C ( -9223372036854775807 ) - INT64_C ( 1 ) );
+
+    CONST_STRING ( & str, "-9223372036854775809" );
+    val = StringToI64 ( & str, & rc );
+    REQUIRE_RC_FAIL ( rc );
+    REQUIRE_EQ ( GetRCObject ( rc ), rcRange );
+    REQUIRE_EQ ( GetRCState ( rc ), rcExcessive );
+    REQUIRE_EQ ( val, INT64_C ( -9223372036854775807 ) - INT64_C ( 1 ) );
+    val = StringToI64 ( & str, 0 );
+    REQUIRE_EQ ( val, INT64_C ( -9223372036854775807 ) - INT64_C ( 1 ) );
+} 
+
+TEST_CASE ( KLib_text_StringToU64 )
+{
+    rc_t rc;
+    String str;
+    uint64_t val;
+
+    CONST_STRING ( & str, "12345678" );
+    val = StringToU64 ( & str, & rc );
+    REQUIRE_RC ( rc );
+    REQUIRE_EQ ( val, ( uint64_t ) 12345678 );
+
+    CONST_STRING ( & str, "   12345678" );
+    val = StringToU64 ( & str, & rc );
+    REQUIRE_RC ( rc );
+    REQUIRE_EQ ( val, ( uint64_t ) 12345678 );
+
+    CONST_STRING ( & str, "   ++12345678" );
+    val = StringToU64 ( & str, & rc );
+    REQUIRE_RC_FAIL ( rc );
+    REQUIRE_EQ ( GetRCObject ( rc ), ( RCObject ) rcData );
+    REQUIRE_EQ ( GetRCState ( rc ), rcInsufficient );
+    REQUIRE_EQ ( val, ( uint64_t ) 0 );
+
+    CONST_STRING ( & str, "   12345678 " );
+    val = StringToU64 ( & str, & rc );
+    REQUIRE_RC_FAIL ( rc );
+    REQUIRE_EQ ( GetRCObject ( rc ), rcTransfer );
+    REQUIRE_EQ ( GetRCState ( rc ), rcIncomplete );
+    REQUIRE_EQ ( val, ( uint64_t ) 12345678 );
+
+    CONST_STRING ( & str, "" );
+    val = StringToU64 ( & str, 0 );
+    REQUIRE_EQ ( val, ( uint64_t ) 0 );
+
+    CONST_STRING ( & str, "0" );
+    val = StringToU64 ( & str, 0 );
+    REQUIRE_EQ ( val, ( uint64_t ) 0 );
+
+    CONST_STRING ( & str, "1" );
+    val = StringToU64 ( & str, 0 );
+    REQUIRE_EQ ( val, ( uint64_t ) 1 );
+
+    CONST_STRING ( & str, "18446744073709551610" );
+    val = StringToU64 ( & str, & rc );
+    REQUIRE_RC ( rc );
+    REQUIRE_EQ ( val, UINT64_C ( 18446744073709551610 ) );
+
+    CONST_STRING ( & str, "18446744073709551615" );
+    val = StringToU64 ( & str, & rc );
+    REQUIRE_RC ( rc );
+    REQUIRE_EQ ( val, UINT64_C ( 18446744073709551615 ) );
+
+    CONST_STRING ( & str, "18446744073709551616" );
+    val = StringToU64 ( & str, & rc );
+    REQUIRE_RC_FAIL ( rc );
+    REQUIRE_EQ ( GetRCObject ( rc ), rcRange );
+    REQUIRE_EQ ( GetRCState ( rc ), rcExcessive );
+    REQUIRE_EQ ( val, UINT64_C ( 18446744073709551615 ) );
+    val = StringToU64 ( & str, 0 );
+    REQUIRE_EQ ( val, UINT64_C ( 18446744073709551615 ) );
+
+    CONST_STRING ( & str, "184467440737095516151" );
+    val = StringToU64 ( & str, & rc );
+    REQUIRE_RC_FAIL ( rc );
+    REQUIRE_EQ ( GetRCObject ( rc ), rcRange );
+    REQUIRE_EQ ( GetRCState ( rc ), rcExcessive );
+    REQUIRE_EQ ( val, UINT64_C ( 18446744073709551615 ) );
+} 
 
 ///////////////////////////////////////////////// ksort 
 
@@ -369,6 +555,14 @@ TEST_CASE(KDataBuffer_Resize)
     REQUIRE_RC(KDataBufferResize ( &dst, (blob_size - hdr_size) * 4 ));
 
     KDataBufferWhack ( & dst );
+    KDataBufferWhack ( & src );
+}
+
+TEST_CASE(KDataBuffer_Cast_W32Assert)
+{   
+    KDataBuffer src;
+    REQUIRE_RC ( KDataBufferMake ( &src, 64, 1 ) );
+    REQUIRE_RC ( KDataBufferCast ( &src, &src, 64, true ) ); /* used to throw am assert on Win32 */
     KDataBufferWhack ( & src );
 }
 

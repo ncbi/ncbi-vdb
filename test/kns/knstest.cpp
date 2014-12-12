@@ -33,6 +33,8 @@
 #include <klib/rc.h>
 #include <klib/log.h>
 
+#include <klib/printf.h>
+
 #include <kns/manager.h>
 #include <kns/endpoint.h>
 #include <kns/stream.h>
@@ -55,6 +57,25 @@
 
 TEST_SUITE(KnsTestSuite);
 
+namespace ncbi
+{
+    namespace NK
+    {   // TODO: move to a ktst header
+        static void ThrowOnRc(rc_t rc, const char* expr, const char* file, unsigned int line, const char* func) throw(std::logic_error)
+        {
+            if ( rc != 0 )
+            {
+                char buf[1024];
+                string_printf(buf, sizeof buf, NULL, "Unexpected rc in %s (%s:%u) : %s returned %R", func, file, line, expr, rc);
+                std::cout << buf << std::endl;
+                throw std::logic_error ( buf );
+            }
+        }
+    }
+}
+
+#define THROW_ON_RC(v) ncbi::NK::ThrowOnRc(v, #v, __FILE__, __LINE__, __func__)
+
 using namespace std;
 using namespace ncbi::NK;
 
@@ -67,25 +88,20 @@ public:
         {
             write_buffer = "something nice";
 
-            if (  KDirectoryNativeDir ( &dir ) != 0 )
-                throw logic_error ( "KnsStreamFixture: KDirectoryNativeDir failed" );
+            THROW_ON_RC (  KDirectoryNativeDir ( &dir ) );
             KDirectoryRemove ( dir, true, name );
-            if ( KDirectoryCreateFile ( dir, &file, false, 0664, kcmCreate, name ) != 0 )
-                throw logic_error ( "KnsStreamFixture: KDirectoryCreateFile failed" );
-            
-                
+            THROW_ON_RC ( KDirectoryCreateFile ( dir, &file, false, 0664, kcmCreate, name ) );
         }
     ~KnsStreamFixture ()
         {                    
             if ( strm )
-                KStreamRelease ( strm );
+                THROW_ON_RC ( KStreamRelease ( strm ) );
             if ( file )
-                KFileRelease ( file );
+                THROW_ON_RC ( KFileRelease ( file ) );
             if ( dir )
             {
-                if ( KDirectoryRemove ( dir, true, name ) != 0 )
-                    throw logic_error ( "~KnsStreamFixture: KDirectoryRemove failed" );
-                KDirectoryRelease ( dir );
+                THROW_ON_RC ( KDirectoryRemove ( dir, true, name ) );
+                THROW_ON_RC ( KDirectoryRelease ( dir ) );
             }
         }
 
@@ -146,13 +162,12 @@ public:
     KnsManagerFixture()
     : mgr(0)
     {
-        if (KNSManagerMake(&mgr) != 0)
-            throw logic_error("KnsManagerFixture: KNSManagerMake failed");
+        THROW_ON_RC ( KNSManagerMake(&mgr) );
     }
     ~KnsManagerFixture()
     {
-        if (mgr && KNSManagerRelease(mgr) != 0)
-            throw logic_error("~KnsManagerFixture: KNSManagerRelease failed");
+        if (mgr)
+            THROW_ON_RC ( KNSManagerRelease(mgr) );
     }
     
     KNSManager* mgr;
@@ -214,8 +229,7 @@ public:
     : server(0), listener(0), threadWorker(0)
     {
         StringInitCString(&name, SocketName.c_str());
-        if (KNSManagerInitIPCEndpoint(mgr, &ep, &name) != 0)
-            throw logic_error ( "SocketFixture: KNSManagerInitIPCEndpoint failed" );
+        THROW_ON_RC (KNSManagerInitIPCEndpoint(mgr, &ep, &name) );
 
         if ( ! TestEnv::in_child_process)
         {   // start a server thread
@@ -235,18 +249,15 @@ public:
             {
                 LOG(LogLevel::e_message, "server stopping" << endl);    
 
-                if (KThreadCancel(server) != 0)
-                    throw logic_error ( "~SocketFixture: KThreadCancel failed" );
-                if (KThreadWait(server, NULL) != 0)
-                    throw logic_error ( "~SocketFixture: KThreadWait failed" );
-                if (KThreadRelease(server) != 0 || KThreadRelease(server) != 0) /* for some reason KThread is initialized with refcout = 2 */
-                    throw logic_error ( "~SocketFixture: KThreadRelease failed" );
+                THROW_ON_RC ( KThreadCancel(server) );
+                THROW_ON_RC ( KThreadWait(server, NULL) );
+                THROW_ON_RC ( KThreadRelease(server) );
+                THROW_ON_RC ( KThreadRelease(server) );/* for some reason KThread is initialized with refcout = 2 */
                     
                 if (listener)
                 {   /* shutdown the (possibly blocked) listener */
                     LOG(LogLevel::e_message, "server releasing the listener" << endl);    
-                    if (KListenerRelease(listener) != 0)
-                        throw logic_error ( "~SocketFixture: KListenerRelease failed" );
+                    THROW_ON_RC ( KListenerRelease(listener) );
                 }
             }
         }
@@ -287,12 +298,8 @@ public:
                 if (rc == 0)
                 {
                     KStream* stream;
-                    rc = KSocketGetStream ( socket, & stream );
-                    if ( rc != 0 )                                          
-                    {                                                       
-                        throw logic_error ( "SocketFixture: KSocketGetStream failed" );
-                    }                      
-                    KSocketRelease ( socket );                            
+                    THROW_ON_RC ( KSocketGetStream ( socket, & stream ) );
+                    THROW_ON_RC ( KSocketRelease ( socket ) );
                     
                     LOG(LogLevel::e_message, "server detected connection, starting worker" << endl);    
                     KThread* worker;
@@ -316,20 +323,17 @@ public:
             KStream* stream = (KStream*)data;
             char localBuf[MaxMessageSize];
             size_t num;
-            if (KStreamTimedRead(stream, localBuf, sizeof(localBuf), &num, NULL) != 0) // wait forever
-                throw logic_error ( "SocketFixture worker: KStreamRead failed" );
+            THROW_ON_RC (KStreamTimedRead(stream, localBuf, sizeof(localBuf), &num, NULL) ); // wait forever
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamRead(" << string(localBuf, num) << ")" << endl);    
             
             for (size_t i = 0 ; i < num; ++i)
                 localBuf[i] = toupper(localBuf[i]);
                 
-            if (KStreamWrite(stream, localBuf, num, &num) != 0)
-                throw logic_error ( "SocketFixture worker: KStreamWrite failed" );
+            THROW_ON_RC ( KStreamWrite(stream, localBuf, num, &num) );
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamWrite" << endl);    
             
             // wait until the reader says "done"
-            if (KStreamTimedRead(stream, localBuf, sizeof(localBuf), &num, NULL) != 0) // wait forever
-                throw logic_error ( "SocketFixture worker: KStreamRead failed" );
+            THROW_ON_RC ( KStreamTimedRead(stream, localBuf, sizeof(localBuf), &num, NULL) ); // wait forever
 
             string doneMsg(localBuf, num);
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamRead = '" << doneMsg << "'" << endl);    
@@ -338,8 +342,7 @@ public:
             
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamRelease" << endl);    
 
-            if (KStreamRelease(stream) != 0)
-                throw logic_error ( "SocketFixture worker: KStreamRelease failed" );
+            THROW_ON_RC ( KStreamRelease(stream) );
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamRelease" << endl);    
         }
         catch (const exception& ex)
@@ -358,24 +361,20 @@ public:
             // signal to server to shut down the connection
             string done("done");
             size_t num;
-            if (KStreamTimedWrite(p_stream, done.c_str(), done.length(), &num, NULL) != 0)
-                throw logic_error ( "CloseClientStream: KStreamTimedWrite failed" );
-            if (KStreamRelease(p_stream) != 0)
-                throw logic_error ( "CloseClientStream: KStreamRelease failed" );
+            THROW_ON_RC ( KStreamTimedWrite(p_stream, done.c_str(), done.length(), &num, NULL) );
+            THROW_ON_RC ( KStreamRelease(p_stream) );
         }
     }
     
     KStream* MakeStream( int32_t p_retryTimeout )
     {
         KSocket* socket;
-        if (KNSManagerMakeRetryConnection(mgr, &socket, p_retryTimeout, NULL, &ep) != 0)
-           throw logic_error ( "MakeStream: KStreamRelease failed" );
+        THROW_ON_RC ( KNSManagerMakeRetryConnection(mgr, &socket, p_retryTimeout, NULL, &ep) );
         if (socket == 0)
            throw logic_error ( "MakeStream: KStreamRelease failed" );
            
         KStream* stream;
-        if (KSocketGetStream ( socket, & stream ) != 0)
-           throw logic_error ( "MakeStream: KStreamRelease failed" );
+        THROW_ON_RC ( KSocketGetStream ( socket, & stream ) );
         if (stream == 0)
            throw logic_error ( "MakeStream: KStreamRelease failed" );
         KSocketRelease ( socket );
@@ -479,7 +478,7 @@ class TimedReadSocketFixture : public SocketFixture
 // (this is different from SocketFixture) Call SetupClient() to initialize timeout value
 // The fixture on the client will send "done" from the destructor and close its IPC connection
 public:
-    static const size_t SERVER_WRITE_DELAY_MS = 2000;
+    static const uint32_t SERVER_WRITE_DELAY_MS = 2000;
 public:
     TimedReadSocketFixture()
     : m_stream(0)
@@ -500,7 +499,7 @@ public:
         m_stream = MakeStream ( 5 ); 
         LOG(LogLevel::e_message, "client '" << p_content << "' after KNSMakeConnection" << endl);    
 	}
-	void SetupClient(const string& p_content, size_t p_timeoutMs)
+	void SetupClient(const string& p_content, uint32_t p_timeoutMs)
 	{
 		TimeoutInit(&tm, p_timeoutMs);
 		SetupClient(p_content);
@@ -518,8 +517,7 @@ public:
             
             char localBuf[MaxMessageSize];
             size_t localNumRead;
-            if (KStreamTimedRead(stream, localBuf, sizeof(localBuf), &localNumRead, NULL) != 0) // wait forever
-                throw logic_error ( "TimedReadSocketFixture worker: KStreamRead failed" );
+            THROW_ON_RC ( KStreamTimedRead(stream, localBuf, sizeof(localBuf), &localNumRead, NULL) ); // wait forever
             if (localNumRead == 0)
                 throw logic_error ( "TimedReadSocketFixture worker: 0 bytes read" );
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamRead(" << string(localBuf, localNumRead) << ")" << endl);    
@@ -533,14 +531,12 @@ public:
 
             LOG(LogLevel::e_message, "worker "  << (void*)self << " writing " << localNumRead << " bytes" << endl);    
             size_t localNumWrit;
-            if (KStreamWrite(stream, localBuf, localNumRead, &localNumWrit) != 0) // localNumWrit may be 0 if the client is not reading, as in timeout cases
-                throw logic_error ( "TimedReadSocketFixture worker: KStreamWrite failed" );
+            THROW_ON_RC ( KStreamWrite(stream, localBuf, localNumRead, &localNumWrit) ); // localNumWrit may be 0 if the client is not reading, as in timeout cases
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamWrite" << endl);    
             
             // wait until the reader says "done"
             LOG(LogLevel::e_message, "worker "  << (void*)self << " waiting for 'done'" << endl);    
-            if (KStreamTimedRead(stream, localBuf, sizeof(localBuf), &localNumRead, NULL) != 0) // wait forever
-                throw logic_error ( "TimedReadSocketFixture worker: KStreamRead failed" );
+            THROW_ON_RC ( KStreamTimedRead(stream, localBuf, sizeof(localBuf), &localNumRead, NULL) ); // wait forever
             
             string doneMsg(localBuf, localNumRead);
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamRead = '" << doneMsg << "'" << endl);    
@@ -548,8 +544,7 @@ public:
                 throw logic_error ( "SocketFixture worker: out of sequence message received: '" + doneMsg + "'" );
 
             LOG(LogLevel::e_message, "worker "  << (void*)self << " closing stream" << endl);    
-            if (KStreamRelease(stream) != 0)
-                throw logic_error ( "TimedReadSocketFixture worker: KStreamRelease failed" );
+            THROW_ON_RC ( KStreamRelease(stream) );
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamRelease" << endl);    
         }
         catch (const exception& ex)
@@ -655,14 +650,12 @@ public:
     KStream* MakeStreamTimed( int32_t p_retryTimeout, int32_t p_readMillis, int32_t p_writeMillis  )
     {
         KSocket* socket;
-        if (KNSManagerMakeRetryTimedConnection(mgr, &socket, p_retryTimeout, p_readMillis, p_writeMillis, NULL, &ep) != 0) 
-           throw logic_error ( "MakeStreamTimed: KStreamRelease failed" );
+        THROW_ON_RC ( KNSManagerMakeRetryTimedConnection(mgr, &socket, p_retryTimeout, p_readMillis, p_writeMillis, NULL, &ep) );
         if (socket == 0)
            throw logic_error ( "MakeStreamTimed: KStreamRelease failed" );
            
         KStream* stream;
-        if (KSocketGetStream ( socket, & stream ) != 0)
-           throw logic_error ( "MakeStreamTimed: KStreamRelease failed" );
+        THROW_ON_RC ( KSocketGetStream ( socket, & stream ) );
         if (stream == 0)
            throw logic_error ( "MakeStreamTimed: KStreamRelease failed" );
         KSocketRelease ( socket );
@@ -882,8 +875,7 @@ public:
 		size_t num;
         timeout_t tm;
         tm.mS = p_timeoutMs;
-		if (KStreamTimedRead(p_stream, localBuf, size == 0 ? sizeof(localBuf) : size, &num, p_timeoutMs == -1 ? NULL : &tm) != 0) 
-			throw logic_error ( "TimedWriteSocketFixture::ReadMessage KStreamRead failed" );
+		THROW_ON_RC ( KStreamTimedRead(p_stream, localBuf, size == 0 ? sizeof(localBuf) : size, &num, p_timeoutMs == -1 ? NULL : &tm) );
 		
 		return string(localBuf, num);
 	}
@@ -907,12 +899,10 @@ public:
 	static volatile bool go;
     static rc_t TimedWriteServerFn ( const KThread *self, void *data )  
     {
-        static string prefix;
-        {
-            ostringstream pref;
-            pref << "TimedWriteSocketFixture worker " << (void*)self << ": ";
-            prefix = pref.str();
-        }
+        // this function does not always exit, so using STL string in this function leads to occasional leaks.
+        // for this reason, C strings are used for local variables (STL temporaries seems to be ok)
+        char prefix[1024];
+        string_printf ( prefix, sizeof prefix, NULL, "TimedWriteSocketFixture worker %p: ", (void*)self );
         
         try
         {
@@ -924,10 +914,9 @@ public:
             size_t num;
             timeout_t tm;
             tm.mS = 1000;
-            if (KStreamTimedRead(stream, message, 4, &num, &tm) != 0) 
-                throw logic_error ( "TimedWriteSocketFixture::ReadMessage KStreamRead failed" );
+            THROW_ON_RC ( KStreamTimedRead(stream, message, 4, &num, &tm) );
             
-            LOG(LogLevel::e_message, (prefix + " after KStreamRead(" + message + ")\n"));    
+            LOG(LogLevel::e_message, (string(prefix) + " after KStreamRead(" + message + ")\n"));    
 			if (string(message, num) == "data")
 			{	// from now on, wait until control thread allows us to read
                 LOG(LogLevel::e_message, "data thread waiting for 'go'\n");
@@ -973,22 +962,21 @@ public:
                 LOG(LogLevel::e_message, "control thread complete\n");
 			}
 			else
-                throw logic_error ( prefix + "unexpected message\n" );
+                throw logic_error ( string(prefix) + "unexpected message\n" );
 				
-			if (KStreamRelease(stream) != 0)
-				throw logic_error ( prefix + "KStreamRelease failed\n" );
+			THROW_ON_RC ( KStreamRelease(stream) );
 		}
         catch (const exception& ex)
         {
-            cout << (prefix + "threw " + ex.what() +"\n"); 
+            cout << (string(prefix) + "threw " + ex.what() +"\n"); 
             throw;
         }
         catch (...)
         {
-            cout << (prefix + "threw something\n"); 
+            cout << (string(prefix) + "threw something\n"); 
             throw;
         }
-        LOG(LogLevel::e_message, (prefix + " exiting\n"));  
+        LOG(LogLevel::e_message, (string(prefix) + " exiting\n"));  
         return KThreadRelease(self);
     }
 
@@ -1070,6 +1058,7 @@ extern "C"
 
 #include <kapp/args.h>
 #include <kfg/config.h>
+#include <klib/debug.h>
 
 ver_t CC KAppVersion ( void )
 {
@@ -1090,9 +1079,9 @@ rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
 
-	// uncomment to see messages from KNS
-    //KLogLevelSet(klogInfo);
-	
+	// uncomment to see messages from socket code
+    // KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), DBG_FLAG ( DBG_KNS_SOCKET ) );
+
 	// this makes messages from the test code appear
 	// (same as running the executable with "-l=message")
 	//TestEnv::verbosity = LogLevel::e_message;

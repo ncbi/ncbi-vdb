@@ -63,6 +63,7 @@ $(TARGDIR)/std: \
 	$(SRCDIR)/config-tokens.h 
 
 clean: stdclean
+	@ rm -f $(addsuffix /default.kfg,$(NCBIDIR)) $(TEST_BINDIR)/ncbi/default.kfg
 
 .PHONY: clean
 
@@ -73,10 +74,9 @@ clean: stdclean
 #
 $(ILIBDIR)/libkfg: $(TARGDIR)/default.kfg $(addprefix $(ILIBDIR)/libkfg.,$(ILIBEXT))
 
-$(TARGDIR)/default.kfg: $(NCBIDIR)/default.kfg $(TEST_BINDIR)/ncbi/default.kfg
+$(TARGDIR)/default.kfg: $(addsuffix /default.kfg,$(NCBIDIR)) $(TEST_BINDIR)/ncbi/default.kfg
 
-$(NCBIDIR)/default.kfg: $(SRCDIR)/default.kfg
-	rm -f $(addsuffix /config.kfg,$(NCBIDIR))
+$(addsuffix /default.kfg,$(NCBIDIR)): $(SRCDIR)/default.kfg
 	cp $^ $@
 
 ifneq ($(NCBIDIR),$(TEST_BINDIR)/ncbi)

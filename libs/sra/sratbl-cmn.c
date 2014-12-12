@@ -469,7 +469,7 @@ rc_t ResolveTablePath ( const SRAMgr *mgr,
     {
         VPath *accession;
         const VPath *tblpath = NULL;
-        rc = VFSManagerMakePath ( vfs, & accession, spec, args );
+        rc = VFSManagerVMakePath ( vfs, & accession, spec, args );
         if ( rc == 0 )
         {
             rc = VResolverLocal ( ( const VResolver* ) mgr -> _pmgr, accession, & tblpath );

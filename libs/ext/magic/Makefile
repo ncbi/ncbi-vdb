@@ -73,6 +73,7 @@ $(TARGDIR)/std: $(ILIBDIR)/magic
 # clean
 #
 clean: stdclean
+	@ rm -f $(ILIBDIR)/libmagic-static.$(LIBX)
 
 .PHONY: clean
 
