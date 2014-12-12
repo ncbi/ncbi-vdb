@@ -32,10 +32,6 @@ MODULE = test/kapp
 TEST_TOOLS = \
     args-test
     
-#	TEST_TOOLS += qfiletest
-
-SLOW_TEST_TOOLS = args-test
-
 include $(TOP)/build/Makefile.env
 
 $(TEST_TOOLS): makedirs
@@ -62,26 +58,6 @@ ARGS_TEST_LIB = \
 
 $(TEST_BINDIR)/args-test: $(ARGS_TEST_OBJ)
 	$(LP) --exe -o $@ $^ $(ARGS_TEST_LIB)
-
-#-------------------------------------------------------------------------------
-# test-byteorder
-#
-BYTEORDER_SRC = \
-	test-byteorder
-
-BYTEORDER_OBJ = \
-	$(addsuffix .$(OBJX),$(BYTEORDER_SRC))
-
-BYTEORDER_LIB = \
-
-$(BINDIR)/test-byteorder: $(addprefix $(SRCDIR)/,$(BYTEORDER_COL))
-
-.PHONY: test-byteorder
-
-test-byteorder: $(BINDIR)/test-byteorder
-
-$(BINDIR)/test-byteorder: $(BYTEORDER_OBJ)
-	$(LD) --exe -o $@ $^ $(BYTEORDER_LIB)
 
 #-------------------------------------------------------------------------------
 # qfiletest
