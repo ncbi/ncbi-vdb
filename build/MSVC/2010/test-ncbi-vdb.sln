@@ -69,6 +69,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ramfile", "test-ramfil
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-resolve", "test-resolve.vcxproj", "{5ADC546B-C520-1D7C-CC32-90679CC545F8}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-sraxf", "test-sraxf.vcxproj", "{FC0B249F-6F04-EE73-CA7D-36ACFC76E9B5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -349,6 +351,14 @@ Global
 		{5ADC546B-C520-1D7C-CC32-90679CC545F8}.Release|Win32.Build.0 = Release|Win32
 		{5ADC546B-C520-1D7C-CC32-90679CC545F8}.Release|x64.ActiveCfg = Release|x64
 		{5ADC546B-C520-1D7C-CC32-90679CC545F8}.Release|x64.Build.0 = Release|x64
+		{FC0B249F-6F04-EE73-CA7D-36ACFC76E9B5}.Debug|Win32.ActiveCfg = Debug|Win32
+		{FC0B249F-6F04-EE73-CA7D-36ACFC76E9B5}.Debug|Win32.Build.0 = Debug|Win32
+		{FC0B249F-6F04-EE73-CA7D-36ACFC76E9B5}.Debug|x64.ActiveCfg = Debug|x64
+		{FC0B249F-6F04-EE73-CA7D-36ACFC76E9B5}.Debug|x64.Build.0 = Debug|x64
+		{FC0B249F-6F04-EE73-CA7D-36ACFC76E9B5}.Release|Win32.ActiveCfg = Release|Win32
+		{FC0B249F-6F04-EE73-CA7D-36ACFC76E9B5}.Release|Win32.Build.0 = Release|Win32
+		{FC0B249F-6F04-EE73-CA7D-36ACFC76E9B5}.Release|x64.ActiveCfg = Release|x64
+		{FC0B249F-6F04-EE73-CA7D-36ACFC76E9B5}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
