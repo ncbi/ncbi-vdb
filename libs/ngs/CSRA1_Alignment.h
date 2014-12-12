@@ -69,6 +69,7 @@ enum AlignmentTableColumns
     align_SEQ_SPOT_ID,
     align_SPOT_GROUP,
     align_TEMPLATE_LEN,
+    align_RNA_ORIENTATION,
     align_MATE_ALIGN_ID,
     align_MATE_REF_NAME,
     align_MATE_REF_ORIENTATION,
