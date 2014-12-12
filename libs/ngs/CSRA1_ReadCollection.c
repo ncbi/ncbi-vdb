@@ -153,6 +153,7 @@ static const char * align_col_specs [] =
     "(I64)SEQ_SPOT_ID",
     "(ascii)SPOT_GROUP",
     "(I32)TEMPLATE_LEN",
+    "(ascii)RNA_ORIENTATION",
     "(I64)MATE_ALIGN_ID",
     "(ascii)MATE_REF_NAME",
     "(bool)MATE_REF_ORIENTATION",
