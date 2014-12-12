@@ -65,6 +65,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-http", "test-http.vcxp
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kapp", "test-kapp.vcxproj", "{68F315DE-950E-8D11-3B68-CDC88F548F1C}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ramfile", "test-ramfile.vcxproj", "{B7B985F8-6E49-ABE5-FAB1-8A225ED3559E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -329,6 +331,14 @@ Global
 		{68F315DE-950E-8D11-3B68-CDC88F548F1C}.Release|Win32.Build.0 = Release|Win32
 		{68F315DE-950E-8D11-3B68-CDC88F548F1C}.Release|x64.ActiveCfg = Release|x64
 		{68F315DE-950E-8D11-3B68-CDC88F548F1C}.Release|x64.Build.0 = Release|x64
+		{B7B985F8-6E49-ABE5-FAB1-8A225ED3559E}.Debug|Win32.ActiveCfg = Debug|Win32
+		{B7B985F8-6E49-ABE5-FAB1-8A225ED3559E}.Debug|Win32.Build.0 = Debug|Win32
+		{B7B985F8-6E49-ABE5-FAB1-8A225ED3559E}.Debug|x64.ActiveCfg = Debug|x64
+		{B7B985F8-6E49-ABE5-FAB1-8A225ED3559E}.Debug|x64.Build.0 = Debug|x64
+		{B7B985F8-6E49-ABE5-FAB1-8A225ED3559E}.Release|Win32.ActiveCfg = Release|Win32
+		{B7B985F8-6E49-ABE5-FAB1-8A225ED3559E}.Release|Win32.Build.0 = Release|Win32
+		{B7B985F8-6E49-ABE5-FAB1-8A225ED3559E}.Release|x64.ActiveCfg = Release|x64
+		{B7B985F8-6E49-ABE5-FAB1-8A225ED3559E}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
