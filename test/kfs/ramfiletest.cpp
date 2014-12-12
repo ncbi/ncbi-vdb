@@ -137,6 +137,7 @@ TEST_CASE(KRamFileWrite_oversized_writes)
             REQUIRE(0 == memcmp(buffer, input, num_writ));
             REQUIRE(0 != memcmp(buffer, input, num_writ+1));
         }
+        REQUIRE_RC(KFileRelease(wfile));            
     }
 }
 
@@ -161,6 +162,8 @@ TEST_CASE(KRamFileWrite_shift_right)
 
         REQUIRE_RC(KFileWrite(wfile, 0, input, bsize, &num_writ));
         REQUIRE(bsize = num_writ);
+        
+        REQUIRE_RC(KFileRelease(wfile));            
     }
     
 }

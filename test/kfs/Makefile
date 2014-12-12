@@ -31,7 +31,8 @@ MODULE = test/kfs
 
 TEST_TOOLS = \
 	test-kfs \
-    test-ramfile
+    test-ramfile \
+    test-resolve \
 
 include $(TOP)/build/Makefile.env
 
@@ -85,4 +86,24 @@ $(TEST_BINDIR)/test-ramfile: $(TEST_RAMFILE_OBJ)
 
 valgrind_ramfile: std
 	valgrind --ncbi $(TEST_BINDIR)/test-ramfile
+    
+#-------------------------------------------------------------------------------
+# test-resolve
+#
+TEST_RESOLVE_SRC = \
+	resolvetest 
+
+TEST_RESOLVE_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_RESOLVE_SRC))
+
+TEST_RESOLVE_LIB = \
+	-lkapp \
+    -sncbi-vdb \
+	-lktst
+
+$(TEST_BINDIR)/test-resolve: $(TEST_RESOLVE_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_RESOLVE_LIB)
+
+valgrind_resolve: std
+	valgrind --ncbi $(TEST_BINDIR)/test-resolve
     
