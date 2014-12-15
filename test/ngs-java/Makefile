@@ -49,6 +49,7 @@ $(JARS): makejdirs
 clean: stdclean
 
 %.class: %.java
+	$(warning javac $^ -d $(CLASSDIR) -classpath $(CLASSPATH))
 	javac $^ -d $(CLASSDIR) -classpath $(CLASSPATH)
     
 #-------------------------------------------------------------------------------
