@@ -132,6 +132,15 @@ KFG_EXTERN rc_t CC KRepositoryRoot ( const KRepository *self,
     char *buffer, size_t bsize, size_t *root_size );
 
 
+/* SetRoot
+ *  set the root path
+ *
+ *  "root" [ IN ] and "root_size" [ IN ] - path input parameter
+ */
+KFG_EXTERN rc_t CC KRepositorySetRoot(KRepository *self,
+    const char *root, size_t root_size);
+
+
 /* Resolver
  *  read the url of the CGI-resolver
  *
@@ -336,7 +345,8 @@ enum
     INP_CREATE_REPOSITORY  = ( 1 << 0 ),   /* permission to create a new entry         */
     INP_UPDATE_DNLD_TICKET = ( 1 << 1 ),   /* permission to modifify a download ticket */
     INP_UPDATE_ENC_KEY     = ( 1 << 2 ),   /* permission to modify an encryption key   */
-    INP_UPDATE_DESC        = ( 1 << 3 )    /* permission to modify a description       */
+    INP_UPDATE_DESC        = ( 1 << 3 ),   /* permission to modify a description       */
+    INP_UPDATE_ROOT        = ( 1 << 4 ),   /* permission to modify root path */
 };
 
 /* Import of a KNgcObj
