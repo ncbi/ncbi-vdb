@@ -855,9 +855,7 @@ FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
 
     const char* newRepo;
 
-#ifdef _DEBUGGING
-    KDbgSetModConds(DBG_KFG, DBG_FLAG(DBG_KFG), DBG_FLAG(DBG_KFG));
-#endif    
+//    KDbgSetModConds(DBG_KFG, DBG_FLAG(DBG_KFG), DBG_FLAG(DBG_KFG));
 
     TEST_MESSAGE("KConfigImportNgc");
     string ngcPath("./prj_2956.ngc");

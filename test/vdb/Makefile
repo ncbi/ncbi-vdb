@@ -22,43 +22,62 @@
 #
 # ===========================================================================
 
-by_default: runtests
+default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+TOP ?= $(abspath ../..)
 
-include $(TOP)/build/Makefile.shell
+MODULE = test/vdb
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+	test-vdb \
+	test-dependencies \
+
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(TEST_TOOLS)
+
+clean: stdclean
 
 #-------------------------------------------------------------------------------
-# default
+# test-vdb
 #
-SUBDIRS =       \
-    ktst        \
-    cc          \
-    ext         \
-    judy_test   \
-    kfc         \
-    klib        \
-    kfg         \
-    kapp        \
-    kns         \
-    kdb         \
-    kproc       \
-    vdb         \
-    ngs         \
-    ngs-c++     \
-	search	    \
-    vfs         \
-    sraxf       \
-    vxf         \
+TEST_VDB_SRC = \
+	test-vdb
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+TEST_VDB_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_VDB_SRC))
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
+TEST_VDB_LIB = \
+    -skapp \
+	-sktst \
+	-sncbi-vdb \
 
-.PHONY: default $(SUBDIRS)
+$(TEST_BINDIR)/test-vdb: $(TEST_VDB_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_VDB_LIB)
 
+valgrind_vdb: std
+	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-vdb    
+    
+#-------------------------------------------------------------------------------
+# test-dependencies
+#
+TEST_DEPS_SRC = \
+	test-dependencies
+
+TEST_DEPS_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_DEPS_SRC))
+
+TEST_DEPS_LIB = \
+    -skapp \
+	-sktst \
+	-sncbi-vdb \
+
+$(TEST_BINDIR)/test-dependencies: $(TEST_DEPS_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_DEPS_LIB)
+   
+valgrind_deps: std
+	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-dependencies    
+   

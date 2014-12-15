@@ -103,6 +103,10 @@ uint32_t NGS_CursorGetUInt32 ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId
 */                                
 bool NGS_CursorGetBool ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t colIdx );
 
+/* GetChar
+*/                                
+char NGS_CursorGetChar ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t colIdx );
+
 /* GetRowCount
  */
 uint64_t NGS_CursorGetRowCount ( const NGS_Cursor * self, ctx_t ctx );

@@ -1,0 +1,3 @@
+repository/site/main/tracearc/apps/sra/volumes/ncbi = "sra17:sra16:sra15:sra14:sra13:sra12:sra11:sra10:sra9:sra8:sra7:sra6:sra5:sra4:sra3:sra2:sra1:sra0"
+repository/site/main/tracearc/apps/refseq/volumes/refseq = "refseq"
+repository/site/main/tracearc/root = "//traces04"
