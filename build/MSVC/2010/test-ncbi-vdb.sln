@@ -63,6 +63,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-wkdb", "test-wkdb.vcxp
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-http", "test-http.vcxproj", "{CEB65800-26CF-4FD8-B33A-9AFFE8D5B3B0}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pileup_dev", "pileup_dev.vcxproj", "{8F98579F-B880-1FEA-7243-63F5A9064695}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -319,6 +321,14 @@ Global
 		{CEB65800-26CF-4FD8-B33A-9AFFE8D5B3B0}.Release|Win32.Build.0 = Release|Win32
 		{CEB65800-26CF-4FD8-B33A-9AFFE8D5B3B0}.Release|x64.ActiveCfg = Release|x64
 		{CEB65800-26CF-4FD8-B33A-9AFFE8D5B3B0}.Release|x64.Build.0 = Release|x64
+		{8F98579F-B880-1FEA-7243-63F5A9064695}.Debug|Win32.ActiveCfg = Debug|Win32
+		{8F98579F-B880-1FEA-7243-63F5A9064695}.Debug|Win32.Build.0 = Debug|Win32
+		{8F98579F-B880-1FEA-7243-63F5A9064695}.Debug|x64.ActiveCfg = Debug|x64
+		{8F98579F-B880-1FEA-7243-63F5A9064695}.Debug|x64.Build.0 = Debug|x64
+		{8F98579F-B880-1FEA-7243-63F5A9064695}.Release|Win32.ActiveCfg = Release|Win32
+		{8F98579F-B880-1FEA-7243-63F5A9064695}.Release|Win32.Build.0 = Release|Win32
+		{8F98579F-B880-1FEA-7243-63F5A9064695}.Release|x64.ActiveCfg = Release|x64
+		{8F98579F-B880-1FEA-7243-63F5A9064695}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
