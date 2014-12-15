@@ -22,44 +22,68 @@
 #
 # ===========================================================================
 
-by_default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+default: runtests
 
-include $(TOP)/build/Makefile.shell
+TOP ?= $(abspath ../..)
 
-include $(TOP)/build/Makefile.config
+MODULE = test/ngs-java
+
+JARS = \
+	ngs_jtest
+
+ALL_TARGS = \
+	$(JARS)
+
+JUNIT_JAR = $(SRCDIR)/../junit-4.11.jar
+NGS_JAR = $(NGS_LIBDIR)/../../../../../../ngs-java/jar/ngs-java.jar
+CLASSPATH = $(NGS_JAR):$(JUNIT_JAR)
+
+include $(TOP)/build/Makefile.env
+
+$(JARS): makejdirs
+	@ $(MAKE_CMD) $(TEST_CLSPATH)/$@
+
+.PHONY: $(JARS)
+
+clean: stdclean
+
+%.class: %.java
+	javac $^ -d $(CLASSDIR) -classpath $(CLASSPATH)
+    
+#-------------------------------------------------------------------------------
+# tests for ncbi-ngs
+#
+NGS_SRC =                      \
+	ngs_test_CSRA1
+    
+NGS_CLS = \
+	$(addsuffix .class,$(NGS_SRC))
+
+# use standard java System.loadLibrary
+VARS += -Dvdb.System.loadLibrary=1
+
+# remove all found JNI DLL-s
+#VARS += -Dvdb.deleteLibraries=1
+
+# custom load library search
+#VARS += -Dvdb.loadLibraryLocations=W
+
+#VARS += -Dvdb.log=FINEST
+
+#J=/net/pan1/sra-test/local/jdk1.7.0_51/bin/
+
+$(TEST_CLSPATH)/ngs_jtest: $(NGS_CLS)
+
+.PHONY: $(TEST_CLSPATH)/ngs_jtest
 
 #-------------------------------------------------------------------------------
-# default
+# runtests
 #
-SUBDIRS =       \
-    ktst        \
-    cc          \
-    ext         \
-    judy_test   \
-    kfc         \
-    klib        \
-    kfg         \
-    kapp        \
-    kns         \
-    kdb         \
-    kproc       \
-    vdb         \
-    ngs         \
-    ngs-c++     \
-    ngs-java    \
-	search	    \
-    vfs         \
-    sraxf       \
-    vxf         \
+runtests: $(JARS) test
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+JAVABITS=-d$(BITS)
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
-
-.PHONY: default $(SUBDIRS)
-
+test: $(NGS_CLS)
+	@ echo Run $(CLASSDIR)/$(NGS_SRC)
+	$(J)java $(JAVABITS) $(VARS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore $(NGS_SRC)  
