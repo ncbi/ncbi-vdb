@@ -613,7 +613,7 @@ bool nextPileup (
 
     if ( pileup_state->ref_pos == pileup_state->slice_start + pileup_state->slice_length )
     {
-        error_buf[0] = '\0'; /* indicating that no error has no error has occured */
+        error_buf[0] = '\0'; /* indicating that no error has occured */
         return false;
     }
 
@@ -783,9 +783,9 @@ ver_t CC KAppVersion ( void )
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
-    printf ( "Pileup is under constructon...\n" );
+    /*printf ( "Pileup is under constructon...\n" );
 
-    run();
+    run();*/
 
     return 0;
 }
