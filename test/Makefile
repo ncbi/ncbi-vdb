@@ -49,6 +49,7 @@ SUBDIRS =       \
     vdb         \
     ngs         \
     ngs-c++     \
+    ngs-java    \
 	search	    \
     vfs         \
     sraxf       \
