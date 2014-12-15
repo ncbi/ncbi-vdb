@@ -81,10 +81,12 @@ $(TEST_CLSPATH)/ngs_jtest: $(NGS_CLS)
 #-------------------------------------------------------------------------------
 # runtests
 #
-runtests: $(JARS) test
+
+#disabled for now (see VDB-1397)
+#runtests: $(JARS) test
 
 JAVABITS=-d$(BITS)
 
 test: $(NGS_CLS)
-	@ echo Run $(CLASSDIR)/$(NGS_SRC)
-	$(J)java $(JAVABITS) $(VARS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore $(NGS_SRC)  
+	#@ echo Run $(CLASSDIR)/$(NGS_SRC)
+	#$(J)java $(JAVABITS) $(VARS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) #org.junit.runner.JUnitCore $(NGS_SRC)  
