@@ -22,44 +22,37 @@
 #
 # ===========================================================================
 
-by_default: runtests
+default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+TOP ?= $(abspath ../..)
 
-include $(TOP)/build/Makefile.shell
+MODULE = test/pileup_dev
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+	pileup_dev
+
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(TEST_TOOLS)
+
+clean: stdclean
 
 #-------------------------------------------------------------------------------
-# default
+# pileup_dev
 #
-SUBDIRS =       \
-    ktst        \
-    cc          \
-    ext         \
-    judy_test   \
-    kfc         \
-    klib        \
-    kfg         \
-    kapp        \
-    kns         \
-    kdb         \
-    kproc       \
-    vdb         \
-    ngs         \
-    ngs-c++     \
-    ngs-java    \
-	search	    \
-    vfs         \
-    sraxf       \
-    vxf         \
+PILEUP_DEV_SRC = \
+	main my_utils
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+PILEUP_DEV_OBJ = \
+	$(addsuffix .$(OBJX),$(PILEUP_DEV_SRC))
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
+PILEUP_DEV_LIB = \
+	-skapp \
+	-sncbi-vdb \
+	-sktst
 
-.PHONY: default $(SUBDIRS)
-
+$(TEST_BINDIR)/pileup_dev: $(PILEUP_DEV_OBJ)
+	$(LP) --exe -o $@ $^ $(PILEUP_DEV_LIB)
