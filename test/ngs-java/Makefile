@@ -35,11 +35,21 @@ JARS = \
 ALL_TARGS = \
 	$(JARS)
 
-JUNIT_JAR = $(SRCDIR)/../junit-4.11.jar
-NGS_JAR = $(NGS_LIBDIR)/../../../../../../ngs-java/jar/ngs-java.jar
-CLASSPATH = $(NGS_JAR):$(JUNIT_JAR)
-
 include $(TOP)/build/Makefile.env
+
+ifeq (,$(NGS_JAVA_JAR))
+
+$(ALL_TARGS):
+	@true 
+	
+runtests:
+	@ echo "NGS Java tests are not run since ngs-java library does not appear to be installed"
+
+else
+
+JUNIT_JAR = $(SRCDIR)/../junit-4.11.jar
+
+CLASSPATH = $(NGS_JAVA_JAR):$(JUNIT_JAR)
 
 $(JARS): makejdirs
 	@ $(MAKE_CMD) $(TEST_CLSPATH)/$@
@@ -82,11 +92,12 @@ $(TEST_CLSPATH)/ngs_jtest: $(NGS_CLS)
 # runtests
 #
 
-#disabled for now (see VDB-1397)
-#runtests: $(JARS) test
+runtests: $(JARS) test
 
 JAVABITS=-d$(BITS)
 
 test: $(NGS_CLS)
-	#@ echo Run $(CLASSDIR)/$(NGS_SRC)
-	#$(J)java $(JAVABITS) $(VARS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) #org.junit.runner.JUnitCore $(NGS_SRC)  
+	@ echo Run $(CLASSDIR)/$(NGS_SRC)
+	$(J)java $(JAVABITS) $(VARS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore $(NGS_SRC)  
+
+endif    
