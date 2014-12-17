@@ -454,10 +454,17 @@ foreach my $href (@REQ) {
         }
     }
     my %has_option;
+    my $tolib = $need_itf || $need_lib;
+    my $tojar = $need_jar;
     foreach my $option ($a{option}, $a{boption}) {
         next unless ($option);
         if ($OPT{$option}) {
             my $try = expand_path($OPT{$option});
+            if ($tojar && ! $found_jar && -f $try) {
+                println "\tjar... $try" unless ($AUTORUN);
+                $found_jar = $try;
+            }
+            next unless ($tolib);
             my ($i, $l, $il) = ($inc, $lib, $ilib);
             if ($option =~ /-build$/) {
                 undef $i;
@@ -475,8 +482,7 @@ foreach my $href (@REQ) {
                 $found_itf  = $fi  if (! $found_itf  && $fi);
                 $found_lib  = $fl  if (! $found_lib  && $fl);
                 $found_ilib = $fil if (! $found_ilib && $fil);
-            }
-            elsif (! ($try =~ /$a{name}$/)) {
+            } elsif (! ($try =~ /$a{name}$/)) {
                 $try = File::Spec->catdir($try, $a{name});
                 ($fi, $fl, $fil) = find_in_dir($try, $i, $l, $il);
                 $found_itf  = $fi  if (! $found_itf  && $fi);
