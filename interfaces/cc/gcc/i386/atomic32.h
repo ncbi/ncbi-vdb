@@ -122,8 +122,8 @@ static __inline__ int atomic32_dec_and_test ( atomic32_t *v )
     __asm__ __volatile__
     (
     "lock;"
-        "decl %2;"
-        "sete %%al"
+        "decl %1;"
+        "sete %0"
         : "=r" ( c ), "=m" ( v -> counter )
         : "m" ( v -> counter )
     );
@@ -138,8 +138,8 @@ static __inline__ int atomic32_inc_and_test ( atomic32_t *v )
     __asm__ __volatile__
     (
     "lock;"
-        "incl %2;"
-        "sete %%al"
+        "incl %1;"
+        "sete %0"
         : "=r" ( c ), "=m" ( v -> counter )
         : "m" ( v -> counter )
     );
@@ -156,7 +156,7 @@ static __inline__ int atomic32_test_and_set ( atomic32_t *v, int s, int t )
     __asm__ __volatile__
     (
     "lock;"
-        "cmpxchg %%esi,(%%rdi)"
+        "cmpxchg %2, (%1)"
         : "=a" ( rtn )
         : "r" ( & v -> counter ), "r" ( s ), "a" ( t )
     );
