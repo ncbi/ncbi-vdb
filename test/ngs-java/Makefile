@@ -46,6 +46,15 @@ runtests:
 	@ echo "NGS Java tests are not run since ngs-java library does not appear to be installed"
 
 else
+ifeq (,$(NGS_LIBDIR))
+
+$(ALL_TARGS):
+	@true 
+	
+runtests:
+	@ echo "NGS Java tests are not run since ngs-sdk library does not appear to be installed"
+
+else
 
 JUNIT_JAR = $(SRCDIR)/../junit-4.11.jar
 
@@ -98,6 +107,7 @@ JAVABITS=-d$(BITS)
 
 test: $(NGS_CLS)
 	@ echo Run $(CLASSDIR)/$(NGS_SRC)
-	$(J)java $(JAVABITS) $(VARS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore $(NGS_SRC)  
+	java $(JAVABITS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore $(NGS_SRC)  
 
 endif    
+endif
