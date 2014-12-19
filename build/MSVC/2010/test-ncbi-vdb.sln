@@ -67,6 +67,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pileup_dev", "pileup_dev.vc
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-path", "test-path.vcxproj", "{C5FDC6F2-5FEA-F4CA-033D-EAA25D0DDDFD}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-vfsmanager", "test-vfsmanager.vcxproj", "{550E3969-174B-427C-9257-3018BD5592C5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -339,6 +341,14 @@ Global
 		{C5FDC6F2-5FEA-F4CA-033D-EAA25D0DDDFD}.Release|Win32.Build.0 = Release|Win32
 		{C5FDC6F2-5FEA-F4CA-033D-EAA25D0DDDFD}.Release|x64.ActiveCfg = Release|x64
 		{C5FDC6F2-5FEA-F4CA-033D-EAA25D0DDDFD}.Release|x64.Build.0 = Release|x64
+		{550E3969-174B-427C-9257-3018BD5592C5}.Debug|Win32.ActiveCfg = Debug|Win32
+		{550E3969-174B-427C-9257-3018BD5592C5}.Debug|Win32.Build.0 = Debug|Win32
+		{550E3969-174B-427C-9257-3018BD5592C5}.Debug|x64.ActiveCfg = Debug|x64
+		{550E3969-174B-427C-9257-3018BD5592C5}.Debug|x64.Build.0 = Debug|x64
+		{550E3969-174B-427C-9257-3018BD5592C5}.Release|Win32.ActiveCfg = Release|Win32
+		{550E3969-174B-427C-9257-3018BD5592C5}.Release|Win32.Build.0 = Release|Win32
+		{550E3969-174B-427C-9257-3018BD5592C5}.Release|x64.ActiveCfg = Release|x64
+		{550E3969-174B-427C-9257-3018BD5592C5}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -51,10 +51,10 @@ ARGS_TEST_OBJ = \
 	$(addsuffix .$(OBJX),$(ARGS_TEST_SRC))
 
 ARGS_TEST_LIB = \
-	-lkapp \
-    -lktst \
-    -lload \
-    -lncbi-wvdb \
+    -sktst \
+	-skapp \
+    -sload \
+    -sncbi-wvdb \
 
 $(TEST_BINDIR)/args-test: $(ARGS_TEST_OBJ)
 	$(LP) --exe -o $@ $^ $(ARGS_TEST_LIB)
@@ -69,9 +69,9 @@ QFILETEST_OBJ = \
 	$(addsuffix .$(OBJX),$(QFILETEST_SRC))
 
 QFILETEST_LIB = \
-	-lkapp \
-    -lload \
-    -lncbi-wvdb \
+	-skapp \
+    -sload \
+    -sncbi-wvdb \
 
 
 $(TEST_BINDIR)/qfiletest: $(QFILETEST_OBJ)
