@@ -601,6 +601,7 @@ LIB_EXPORT int64_t string_to_I64 ( const char * text, size_t bytes, rc_t * optio
         for ( val = 0; i < bytes; ++ i )
         {
             uint8_t digit;
+            volatile int64_t x = 0;
 
             if ( ! isdigit ( text [ i ] ) )
                 break;
@@ -620,7 +621,8 @@ LIB_EXPORT int64_t string_to_I64 ( const char * text, size_t bytes, rc_t * optio
             assert ( val >= 0 );
 
             /* detect overflow on addition */
-            if ( ( val + digit - negate ) < 0 )
+            x = val + digit - negate;
+            if ( x < 0 )
             {
                 rc = RC ( rcText, rcString, rcEvaluating, rcRange, rcExcessive );
                 val = INT64_MAX;
