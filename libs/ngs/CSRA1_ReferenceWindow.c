@@ -406,18 +406,6 @@ struct NGS_String* CSRA1_ReferenceWindowGetLongCigar( CSRA1_ReferenceWindow* sel
 }
 
 static
-char CSRA1_ReferenceWindowGetRNAOrientation( CSRA1_ReferenceWindow* self, ctx_t ctx )
-{
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
-    TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
-    {
-        return NGS_AlignmentGetRNAOrientation ( ref, ctx );
-    }
-    return false;
-}
-
-static
 bool CSRA1_ReferenceWindowHasMate( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
@@ -782,7 +770,6 @@ static NGS_Alignment_vt CSRA1_ReferenceWindow_vt_inst =
     CSRA1_ReferenceWindowGetTemplateLength,
     CSRA1_ReferenceWindowGetShortCigar,
     CSRA1_ReferenceWindowGetLongCigar,
-    CSRA1_ReferenceWindowGetRNAOrientation,
     CSRA1_ReferenceWindowHasMate,
     CSRA1_ReferenceWindowGetMateAlignmentId,
     CSRA1_ReferenceWindowGetMateAlignment,
