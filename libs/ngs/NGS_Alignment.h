@@ -108,8 +108,6 @@ struct NGS_String* NGS_AlignmentGetShortCigar( NGS_Alignment* self, ctx_t ctx, b
 
 struct NGS_String* NGS_AlignmentGetLongCigar( NGS_Alignment* self, ctx_t ctx, bool clipped );
 
-char NGS_AlignmentGetRNAOrientation( NGS_Alignment* self, ctx_t ctx );
-
 bool NGS_AlignmentHasMate ( NGS_Alignment* self, ctx_t ctx );
 
 struct NGS_String* NGS_AlignmentGetMateAlignmentId( NGS_Alignment* self, ctx_t ctx );
@@ -157,7 +155,6 @@ struct NGS_Alignment_vt
     uint64_t                ( * getTemplateLength )             ( NGS_ALIGNMENT* self, ctx_t ctx );
     struct NGS_String*      ( * getShortCigar )                 ( NGS_ALIGNMENT* self, ctx_t ctx, bool clipped );
     struct NGS_String*      ( * getLongCigar )                  ( NGS_ALIGNMENT* self, ctx_t ctx, bool clipped );
-    char                    ( * getRNAOrientation )             ( NGS_ALIGNMENT* self, ctx_t ctx );
     bool                    ( * hasMate )                       ( NGS_ALIGNMENT* self, ctx_t ctx );
     struct NGS_String*      ( * getMateAlignmentId )            ( NGS_ALIGNMENT* self, ctx_t ctx );
     NGS_ALIGNMENT*          ( * getMateAlignment )              ( NGS_ALIGNMENT* self, ctx_t ctx );

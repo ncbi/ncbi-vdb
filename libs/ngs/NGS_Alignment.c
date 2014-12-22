@@ -256,18 +256,6 @@ static NGS_String_v1 * ITF_Alignment_v1_get_long_cigar ( const NGS_Alignment_v1 
     return ( NGS_String_v1 * ) ret;
 }
 
-static char ITF_Alignment_v1_get_rna_orientation ( const NGS_Alignment_v1 * self, NGS_ErrBlock_v1 * err )
-{
-    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
-    ON_FAIL ( char ret = NGS_AlignmentGetRNAOrientation ( Self ( self ), ctx ) )
-    {
-        NGS_ErrBlockThrow ( err, ctx );
-    }
-
-    CLEAR ();
-    return ret;
-}
-
 static bool ITF_Alignment_v1_has_mate ( const NGS_Alignment_v1 * self, NGS_ErrBlock_v1 * err )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
@@ -348,11 +336,10 @@ NGS_Alignment_v1_vt ITF_Alignment_vt =
     {
         "NGS_Alignment",
         "NGS_Alignment_v1",
-        1,
+        0,
         & ITF_Fragment_vt . dad
     },
 
-    /* v1.0 */
     ITF_Alignment_v1_get_id,
     ITF_Alignment_v1_get_ref_spec,
     ITF_Alignment_v1_get_map_qual,
@@ -375,10 +362,7 @@ NGS_Alignment_v1_vt ITF_Alignment_vt =
     ITF_Alignment_v1_get_mate_alignment,
     ITF_Alignment_v1_get_mate_ref_spec,
     ITF_Alignment_v1_get_mate_is_reversed,
-    ITF_Alignment_v1_next,
-
-    /* v1.1 */
-    ITF_Alignment_v1_get_rna_orientation
+    ITF_Alignment_v1_next
 };
 
 
@@ -639,20 +623,6 @@ struct NGS_String* NGS_AlignmentGetLongCigar( NGS_Alignment* self, ctx_t ctx, bo
     return NULL;
 }
 
-char NGS_AlignmentGetRNAOrientation( NGS_Alignment* self, ctx_t ctx )
-{
-    if ( self == NULL )
-    {
-        FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
-        INTERNAL_ERROR ( xcSelfNull, "NGS_AlignmentGetRNAOrientation failed" );
-    }
-    else
-    {
-        return VT ( self, getRNAOrientation ) ( self, ctx );
-    }
-    return '?';
-}
-
 bool NGS_AlignmentHasMate ( NGS_Alignment* self, ctx_t ctx )
 {
     if ( self == NULL )
@@ -835,11 +805,6 @@ static bool NullAlignment_noNext( NGS_ALIGNMENT* self, ctx_t ctx )
 {   /* trying to advance an empty iterator - not an error */
     return false;
 }
-
-static char NullAlignment_RNAOrientation ( NGS_ALIGNMENT * self, ctx_t ctx )
-{
-    return '?';
-}
   
 static NGS_Alignment_vt NullAlignment_vt_inst =
 {
@@ -856,32 +821,31 @@ static NGS_Alignment_vt NullAlignment_vt_inst =
         NullAlignment_FragmentToBool
     },
     
-    NullAlignment_toString,        /* getId                        */
-    NullAlignment_toString,        /* getReferenceSpec             */
-    NullAlignment_toInt,           /* getMappingQuality            */
-    NullAlignment_toString,        /* getReferenceBases            */
-    NullAlignment_toString,        /* getReadGroup                 */
-    NullAlignment_toString,        /* getReadId                    */
-    NullAlignment_toString,        /* getClippedFragmentBases      */
-    NullAlignment_toString,        /* getClippedFragmentQualities  */
-    NullAlignment_toString,        /* getAlignedFragmentBases      */
-    NullAlignment_toBool,          /* isPrimary                    */
-    NullAlignment_toI64,           /* getAlignmentPosition         */
-    NullAlignment_toU64,           /* getAlignmentLength           */
-    NullAlignment_toBool,          /* getIsReversedOrientation     */
-    NullAlignment_boolToInt,       /* getSoftClip                  */
-    NullAlignment_toU64,           /* getTemplateLength            */
-    NullAlignment_boolToString,    /* getShortCigar                */
-    NullAlignment_boolToString,    /* getLongCigar                 */
-    NullAlignment_RNAOrientation,  /* getRNAOrientation            */
-    NullAlignment_toBool,          /* hasMate                      */
-    NullAlignment_toString,        /* getMateAlignmentId           */
-    NullAlignment_toAlignment,     /* getMateAlignment             */
-    NullAlignment_toString,        /* getMateReferenceSpec         */
-    NullAlignment_toBool,          /* getMateIsReversedOrientation */
+    NullAlignment_toString,
+    NullAlignment_toString,
+    NullAlignment_toInt,
+    NullAlignment_toString,
+    NullAlignment_toString,
+    NullAlignment_toString,
+    NullAlignment_toString,
+    NullAlignment_toString,
+    NullAlignment_toString,
+    NullAlignment_toBool,
+    NullAlignment_toI64,
+    NullAlignment_toU64,
+    NullAlignment_toBool,
+    NullAlignment_boolToInt,
+    NullAlignment_toU64,
+    NullAlignment_boolToString,
+    NullAlignment_boolToString,
+    NullAlignment_toBool,
+    NullAlignment_toString,
+    NullAlignment_toAlignment,
+    NullAlignment_toString,
+    NullAlignment_toBool,
 
     /* Iterator */
-    NullAlignment_noNext           /* next                         */
+    NullAlignment_noNext,
 };
 
 struct NGS_Alignment * NGS_AlignmentMakeNull ( ctx_t ctx, const struct NGS_String * run_name )
