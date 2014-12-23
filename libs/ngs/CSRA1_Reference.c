@@ -228,7 +228,7 @@ bool CSRA1_ReferenceGetIsCircular ( const CSRA1_Reference * self, ctx_t ctx )
 
 static
 uint64_t CountRows ( CSRA1_Reference * self, ctx_t ctx, uint32_t colIdx, const void* value, int64_t firstRow, uint64_t end_row)
-{   /* count consecutive rows having the same value in column # colIdx as in firstRow, starting and including firstRow */
+{   /* count consecutive rows having the same value in column # colIdx as in firstRow, starting from and including firstRow */
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     
     uint64_t cur_row = (uint64_t)firstRow + 1;
@@ -710,14 +710,17 @@ bool CSRA1_ReferenceFind ( CSRA1_Reference * self, ctx_t ctx, const char * spec,
         StringInitCString( &specStr, spec );
         TRY ( NGS_CursorGetRowRange ( self -> curs, ctx, & cur_row, & total_row_count ) )
         {
+            const void * prev_base = NULL;
             end_row = cur_row + total_row_count;
             while ( cur_row < end_row )
-            {   /* TODO: scan until base pointer changes, instead of StringCompare */
+            {   
                 const void * base;
                 uint32_t elem_bits, boff, row_len;
                 ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, cur_row, reference_NAME, & elem_bits, & base, & boff, & row_len ) )
                     return false;
                     
+                /* if the value has not changed, the base ptr will not be updated */ 
+                if ( prev_base == NULL || prev_base != base )
                 {
                     String name;
                     StringInit( &name, base, row_len, string_len(base, row_len) );
@@ -731,6 +734,7 @@ bool CSRA1_ReferenceFind ( CSRA1_Reference * self, ctx_t ctx, const char * spec,
                         *rowCount = CountRows( self, ctx, reference_NAME, base, * firstRow, end_row );
                         return true;
                     }
+                    prev_base = base;
                 }
 
                 ++cur_row;
@@ -864,65 +868,69 @@ NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx,
  */
 bool CSRA1_ReferenceIteratorNext ( CSRA1_Reference * self, ctx_t ctx )
 {
-    const void * ref_name_base = NULL;
-
     assert ( self != NULL );
     
     if ( self -> curs == NULL  || self -> first_row > self -> iteration_row_last)
-        return false;
+        return false; /* iteration over or not initialized */
 
+    self -> cur_length = 0;
+    
     if ( self -> seen_first )
     {   /* skip to the next reference */
-        NGS_String* ngs_prevName = NGS_CursorGetString ( self -> curs, ctx, self -> first_row, reference_NAME );
-        String prevName;
-        StringInit ( &prevName, 
-                     NGS_StringData ( ngs_prevName, ctx ), 
-                     NGS_StringSize ( ngs_prevName, ctx ), 
-                     string_len ( NGS_StringData ( ngs_prevName, ctx ), NGS_StringSize ( ngs_prevName, ctx ) ) );
-        ++ self -> first_row;
-        
-        while ( self -> first_row <= self -> iteration_row_last )
-        {
-            uint32_t elem_bits, boff, row_len;
-            ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, self -> first_row, reference_NAME, & elem_bits, & ref_name_base, & boff, & row_len ) )
-                return false;
-
-            {
-                String name;
-                StringInit( &name, ref_name_base, row_len, string_len(ref_name_base, row_len) );
-
-                assert ( elem_bits == 8 );
-                assert ( boff == 0 );
-                
-                if ( StringCompare ( & name, & prevName ) != 0 )
-                {
-                    break;
-                }
-            }
-
-            ++ self -> first_row;
+        self -> first_row = self -> last_row + 1;
+        if ( self -> first_row > self -> iteration_row_last)
+        {   /* end of iteration */
+            self -> last_row = self -> first_row;
+            return false;
         }
-        
-        self -> cur_length = 0;
-        NGS_StringRelease ( ngs_prevName, ctx );
     }
     else
     {   /* first reference */
         self -> seen_first = true;
-        uint32_t elem_bits, boff, row_len;
-        ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, self -> first_row, reference_NAME, & elem_bits, & ref_name_base, & boff, & row_len ) )
-            return false;
     }
     
-    if ( self -> first_row > self -> iteration_row_last )
-    {
-        self -> last_row = self -> last_row;
-        return false;
-    }
+    {   /* update self -> last_row */
+        const void * refNameBase = NULL;
+        uint32_t nameLength;
+
+        {   /* get the new reference's name */
+            uint32_t elem_bits, boff;
+            ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, self -> first_row, reference_NAME, 
+                                                 & elem_bits, & refNameBase, & boff, & nameLength ) )
+                return false;
+            assert ( elem_bits == 8 );
+            assert ( boff == 0 );
+        }
     
-    /* now, calculate last_row*/
-    /*TODO: use row repeat count on the reference_NAME field (see FindReference) */
-    self -> last_row = self -> first_row + CountRows ( self, ctx, reference_NAME, ref_name_base, self -> first_row, self -> iteration_row_last ) - 1;
+        {   /* use index on reference name if available */
+            uint64_t rowCount;
+            rc_t rc = 1; /* != 0 in case the following TRY fails */
+            TRY ( const VTable* table = NGS_CursorGetTable ( self -> curs, ctx ) )
+            {
+                const KIndex *index;
+                rc = VTableOpenIndexRead( table, & index, "i_name" );
+                VTableRelease( table );
+                if ( rc == 0 )
+                {
+                    char* key = string_dup ( ( const char * ) refNameBase, nameLength );
+                    int64_t firstRow;
+                    rc = KIndexFindText ( index, key, & firstRow, & rowCount, NULL, NULL );
+                    assert ( firstRow == self -> first_row );
+                    KIndexRelease ( index );
+                    free ( key );
+                }
+            }
+            
+            CLEAR();
+            
+            if ( rc != 0 )
+            {   /* index is not available, do a table scan */
+                rowCount = CountRows ( self, ctx, reference_NAME, refNameBase, self -> first_row, self -> iteration_row_last );
+            }
+            
+            self -> last_row = self -> first_row + rowCount - 1;
+        }
+    }
     
     return true;
 }

@@ -948,7 +948,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIterator_GetLastRowId, CSRA1_Fixture)
     REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
     REQUIRE_EQ ( (int64_t)3595, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
     REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
-    REQUIRE_EQ ( (int64_t)3780, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)3781, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
     REQUIRE ( ! NGS_ReferenceIteratorNext ( refIt, ctx ) );
     
     NGS_ReferenceRelease ( refIt, ctx );
