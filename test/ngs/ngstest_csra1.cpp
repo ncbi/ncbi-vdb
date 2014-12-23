@@ -30,6 +30,8 @@
 
 #include "ngs_c_fixture.hpp"
 
+#include "CSRA1_Reference.h"
+
 #include <kdb/manager.h>
 
 #include <vdb/manager.h>
@@ -703,6 +705,19 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetLength, CSRA1_Fixture)
     EXIT;
 }
 
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFirstRowId, CSRA1_Fixture)
+{
+    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
+    REQUIRE_EQ ( (int64_t)1, CSRA1_Reference_GetFirstRowId ( m_ref, ctx ) );
+    EXIT;
+}
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetLastRowId, CSRA1_Fixture)
+{
+    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
+    REQUIRE_EQ ( (int64_t)459, CSRA1_Reference_GetLastRowId ( m_ref, ctx ) );
+    EXIT;
+}
+
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetBases_Full, CSRA1_Fixture)
 {
     ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
@@ -862,6 +877,85 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIterator_GetLength_2, CSRA1_Fixture)
     
     EXIT;
 }
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIterator_GetFirstRowId, CSRA1_Fixture)
+{
+    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
+    NGS_Reference* refIt = NGS_ReadCollectionGetReferences ( m_coll, m_ctx );
+    
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)1, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)460, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)785, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)1101, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)1318, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)1681, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)1966, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)2246, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)2526, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)2764, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)2976, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)3289, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)3444, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)3596, CSRA1_Reference_GetFirstRowId ( refIt, ctx ) );
+    REQUIRE ( ! NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    
+    NGS_ReferenceRelease ( refIt, ctx );
+    EXIT;
+}
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIterator_GetLastRowId, CSRA1_Fixture)
+{
+    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
+    NGS_Reference* refIt = NGS_ReadCollectionGetReferences ( m_coll, m_ctx );
+    
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)459, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)784, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)1100, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)1317, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)1680, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)1965, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)2245, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)2525, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)2763, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)2975, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)3288, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)3443, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)3595, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
+    REQUIRE ( NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    REQUIRE_EQ ( (int64_t)3780, CSRA1_Reference_GetLastRowId ( refIt, ctx ) );
+    REQUIRE ( ! NGS_ReferenceIteratorNext ( refIt, ctx ) );
+    
+    NGS_ReferenceRelease ( refIt, ctx );
+    EXIT;
+}
+
+
 
 // ReadGroups
 FIXTURE_TEST_CASE(CSRA1_NGS_ReadGroupGetName, CSRA1_Fixture)

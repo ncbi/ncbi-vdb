@@ -111,14 +111,30 @@ struct CSRA1_Reference
     
     uint32_t chunk_size;
     
-    int64_t row_begin;
-    int64_t row_end;
+    int64_t first_row;
+    int64_t last_row;
     const NGS_Cursor * curs; /* can be NULL if created for an empty iterator */
     uint64_t align_id_offset;
     uint64_t cur_length; /* size of current reference in bases (0 = not yet counted) */
-    bool iterating;
+    
+    int64_t iteration_row_last; /* 0 = not iterating */
+    
     bool seen_first;
 };
+
+int64_t CSRA1_Reference_GetFirstRowId ( const struct NGS_Reference * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading);
+    assert ( ( void * ) self -> dad . vt == ( void * ) & CSRA1_Reference_vt_inst );
+    return ( ( CSRA1_Reference const * ) self ) -> first_row;
+}
+
+int64_t CSRA1_Reference_GetLastRowId ( const struct NGS_Reference * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+    assert ( ( void * ) self -> dad . vt == ( void * ) & CSRA1_Reference_vt_inst );
+    return ( ( CSRA1_Reference const * ) self ) -> last_row;
+}
 
 /* Init
  */
@@ -167,7 +183,7 @@ NGS_String * CSRA1_ReferenceGetCommonName ( CSRA1_Reference * self, ctx_t ctx )
         return NULL;        
     }
     
-    return NGS_CursorGetString ( self -> curs, ctx, self -> row_begin, reference_NAME );
+    return NGS_CursorGetString ( self -> curs, ctx, self -> first_row, reference_NAME );
 }
 
 NGS_String * CSRA1_ReferenceGetCanonicalName ( CSRA1_Reference * self, ctx_t ctx )
@@ -181,7 +197,7 @@ NGS_String * CSRA1_ReferenceGetCanonicalName ( CSRA1_Reference * self, ctx_t ctx
         return NULL;        
     }
     
-    return NGS_CursorGetString ( self -> curs, ctx, self -> row_begin, reference_SEQ_ID);
+    return NGS_CursorGetString ( self -> curs, ctx, self -> first_row, reference_SEQ_ID);
 }
 
 bool CSRA1_ReferenceGetIsCircular ( const CSRA1_Reference * self, ctx_t ctx )
@@ -202,9 +218,9 @@ bool CSRA1_ReferenceGetIsCircular ( const CSRA1_Reference * self, ctx_t ctx )
     }
     
     /* if current row is valid, read data */
-    if ( self -> row_begin < self -> row_end )
+    if ( self -> first_row <= self -> last_row )
     {
-        return NGS_CursorGetBool ( self -> curs, ctx, self -> row_begin, reference_CIRCULAR );
+        return NGS_CursorGetBool ( self -> curs, ctx, self -> first_row, reference_CIRCULAR );
     }
 
     return false;
@@ -233,8 +249,6 @@ uint64_t CountRows ( CSRA1_Reference * self, ctx_t ctx, uint32_t colIdx, const v
     return cur_row - firstRow;
 }
 
-
-
 uint64_t CSRA1_ReferenceGetLength ( CSRA1_Reference * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
@@ -251,28 +265,12 @@ uint64_t CSRA1_ReferenceGetLength ( CSRA1_Reference * self, ctx_t ctx )
         return 0;        
     }
     
-    if ( self -> cur_length == 0) /* not yet calculated */
-    {
-        uint64_t chunk_count;
-        if ( ! self -> iterating )
-        {   /* row_end can be used as the end of reference */
-            chunk_count = self -> row_end - self -> row_begin;
-        }
-        else
-        {   /* scan to count chunks */
-            
-            const void * base;
-            uint32_t elem_bits, boff, row_len;
-            ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, self -> row_begin, reference_NAME, & elem_bits, & base, & boff, & row_len ) )
-                return 0;
-            
-            chunk_count = CountRows( self, ctx, reference_NAME, base, self -> row_begin, self -> row_end );
-        }
-        
-        self -> cur_length =  self -> chunk_size * ( chunk_count - 1 ) + 
+    if ( self -> cur_length == 0 ) /* not yet calculated */
+    {   
+        self -> cur_length =  self -> chunk_size * ( self -> last_row - self -> first_row ) + 
                               NGS_CursorGetUInt32 ( self -> curs, 
                                                     ctx, 
-                                                    self -> row_begin + chunk_count - 1, 
+                                                    self -> last_row, 
                                                     reference_SEQ_LEN );
     }
     
@@ -355,7 +353,7 @@ struct NGS_String * CSRA1_ReferenceGetChunk ( CSRA1_Reference * self, ctx_t ctx,
     }
     else
     {
-        const NGS_String* read = NGS_CursorGetString ( self -> curs, ctx, self -> row_begin + offset / self -> chunk_size, reference_READ);
+        const NGS_String* read = NGS_CursorGetString ( self -> curs, ctx, self -> first_row + offset / self -> chunk_size, reference_READ);
         NGS_String* ret;
         if ( size == (size_t)-1 )
             ret = NGS_StringSubstrOffset ( read, ctx, offset % self -> chunk_size );
@@ -442,9 +440,9 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx
                                                    circular,
                                                    ref_len,
                                                    self -> chunk_size,
-                                                   self -> row_begin, 
-                                                   self -> row_begin, 
-                                                   self -> row_end, 
+                                                   self -> first_row, 
+                                                   self -> first_row, 
+                                                   self -> last_row + 1, 
                                                    0,
                                                    0,
                                                    wants_primary, 
@@ -476,7 +474,7 @@ void LoadOverlaps ( CSRA1_Reference * self,
                     int64_t * primary_begin, 
                     int64_t * secondary_begin) 
 {
-    int64_t first_row = self -> row_begin + offset / chunk_size;
+    int64_t first_row = self -> first_row + offset / chunk_size;
     uint32_t primary_len;
     uint32_t secondary_len;
     int32_t primary_pos;
@@ -534,7 +532,7 @@ void LoadOverlaps ( CSRA1_Reference * self,
         }
         else
         {
-            * primary_begin = self -> row_begin + primary_pos / chunk_size;
+            * primary_begin = self -> first_row + primary_pos / chunk_size;
         }
         
         if ( secondary_len == 0 || secondary_len < offset_in_chunk )
@@ -543,7 +541,7 @@ void LoadOverlaps ( CSRA1_Reference * self,
         }
         else
         {
-            * secondary_begin = self -> row_begin + secondary_pos / chunk_size;
+            * secondary_begin = self -> first_row + secondary_pos / chunk_size;
         }
     }
 }               
@@ -593,9 +591,9 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
                                                        true, /* circular */
                                                        ref_len,
                                                        self -> chunk_size,
-                                                       self->row_begin, /*primary_begin*/
-                                                       self->row_begin, /*secondary_begin*/
-                                                       self -> row_end, 
+                                                       self->first_row, /*primary_begin*/
+                                                       self->first_row, /*secondary_begin*/
+                                                       self -> last_row + 1, 
                                                        offset,
                                                        size,
                                                        wants_primary, 
@@ -604,16 +602,16 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
                 }
                 else
                 {   /* for non-circular references, restrict the set of chunks to go through */
-                    int64_t primary_begin   = self->row_begin;
-                    int64_t secondary_begin = self->row_begin;
+                    int64_t primary_begin   = self->first_row;
+                    int64_t secondary_begin = self->first_row;
 
                     /* calculate the row range taking "overlaps" into account */
                     TRY ( LoadOverlaps ( self, ctx, self -> chunk_size, offset, & primary_begin, & secondary_begin ) )
                     {
                         /* calculate the last chunk (same for all types of alignments) */
-                        int64_t end = self -> row_begin + ( offset + size - 1 ) / self -> chunk_size + 1;
-                        if ( end > self -> row_end )
-                            end = self -> row_end;
+                        int64_t end = self -> first_row + ( offset + size - 1 ) / self -> chunk_size + 1;
+                        if ( end > self -> last_row )
+                            end = self -> last_row + 1;
                             
                         return CSRA1_ReferenceWindowMake ( ctx, 
                                                            self -> coll, 
@@ -653,7 +651,7 @@ struct NGS_Pileup* CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx
         return NULL;        
     }
 
-    {   //TODO: GetName or GetCanonicalName?
+    {   /*TODO: GetName or GetCanonicalName? */
         TRY ( NGS_String* spec = CSRA1_ReferenceGetCommonName ( self, ctx ) ) 
         {
             struct NGS_Pileup* ret = CSRA1_PileupIteratorMake ( ctx, spec, wants_primary, wants_secondary );
@@ -714,7 +712,7 @@ bool CSRA1_ReferenceFind ( CSRA1_Reference * self, ctx_t ctx, const char * spec,
         {
             end_row = cur_row + total_row_count;
             while ( cur_row < end_row )
-            {
+            {   /* TODO: scan until base pointer changes, instead of StringCompare */
                 const void * base;
                 uint32_t elem_bits, boff, row_len;
                 ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, cur_row, reference_NAME, & elem_bits, & base, & boff, & row_len ) )
@@ -722,7 +720,7 @@ bool CSRA1_ReferenceFind ( CSRA1_Reference * self, ctx_t ctx, const char * spec,
                     
                 {
                     String name;
-                    StringInit( &name, base, string_len(base, row_len), row_len);
+                    StringInit( &name, base, row_len, string_len(base, row_len) );
 
                     assert ( elem_bits == 8 );
                     assert ( boff == 0 );
@@ -777,12 +775,12 @@ NGS_Reference * CSRA1_ReferenceMake ( ctx_t ctx,
                     
                     
                     /* find requested name */
-                    if ( CSRA1_ReferenceFind ( ref, ctx, spec, & ref -> row_begin, & rowCount ) )
+                    if ( CSRA1_ReferenceFind ( ref, ctx, spec, & ref -> first_row, & rowCount ) )
                     {
-                        TRY ( ref -> chunk_size = NGS_CursorGetUInt32 ( ref -> curs, ctx, ref -> row_begin, reference_MAX_SEQ_LEN ) )
+                        TRY ( ref -> chunk_size = NGS_CursorGetUInt32 ( ref -> curs, ctx, ref -> first_row, reference_MAX_SEQ_LEN ) )
                         {
-                            ref -> iterating = false;
-                            ref -> row_end = ref -> row_begin + rowCount;
+                            ref -> iteration_row_last = 0;
+                            ref -> last_row = ref -> first_row + rowCount - 1;
                             ref -> seen_first = true;
                             NGS_StringRelease ( collName, ctx );
                             return ( NGS_Reference * ) ref;
@@ -839,12 +837,12 @@ NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx,
                    
                     ref -> curs = curs;
                     
-                    TRY ( NGS_CursorGetRowRange ( ref -> curs, ctx, & ref -> row_begin, & row_count ) )
+                    TRY ( NGS_CursorGetRowRange ( ref -> curs, ctx, & ref -> first_row, & row_count ) )
                     {
-                        TRY ( ref -> chunk_size = NGS_CursorGetUInt32 ( ref -> curs, ctx, ref -> row_begin, reference_MAX_SEQ_LEN ) )
+                        TRY ( ref -> chunk_size = NGS_CursorGetUInt32 ( ref -> curs, ctx, ref -> first_row, reference_MAX_SEQ_LEN ) )
                         {
-                            ref -> iterating    = true;
-                            ref -> row_end      = ref -> row_begin + row_count;
+                            ref -> iteration_row_last = ref -> first_row + row_count - 1;
+                            ref -> last_row     = 0; /* will be set by CSRA1_ReferenceIteratorNext*/
                             ref -> seen_first   = false;
                             NGS_StringRelease ( collName, ctx );
                             return & ref -> dad;
@@ -866,31 +864,32 @@ NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx,
  */
 bool CSRA1_ReferenceIteratorNext ( CSRA1_Reference * self, ctx_t ctx )
 {
+    const void * ref_name_base = NULL;
+
     assert ( self != NULL );
     
-    if ( self -> curs == NULL )
+    if ( self -> curs == NULL  || self -> first_row > self -> iteration_row_last)
         return false;
 
     if ( self -> seen_first )
     {   /* skip to the next reference */
-        NGS_String* ngs_prevName = NGS_CursorGetString ( self -> curs, ctx, self -> row_begin, reference_NAME );
+        NGS_String* ngs_prevName = NGS_CursorGetString ( self -> curs, ctx, self -> first_row, reference_NAME );
         String prevName;
         StringInit ( &prevName, 
                      NGS_StringData ( ngs_prevName, ctx ), 
                      NGS_StringSize ( ngs_prevName, ctx ), 
                      string_len ( NGS_StringData ( ngs_prevName, ctx ), NGS_StringSize ( ngs_prevName, ctx ) ) );
-        ++ self -> row_begin;
+        ++ self -> first_row;
         
-        while ( self -> row_begin < self -> row_end )
+        while ( self -> first_row <= self -> iteration_row_last )
         {
-            const void * base;
             uint32_t elem_bits, boff, row_len;
-            ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, self -> row_begin, reference_NAME, & elem_bits, & base, & boff, & row_len ) )
+            ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, self -> first_row, reference_NAME, & elem_bits, & ref_name_base, & boff, & row_len ) )
                 return false;
 
             {
                 String name;
-                StringInit( &name, base, string_len(base, row_len), row_len);
+                StringInit( &name, ref_name_base, row_len, string_len(ref_name_base, row_len) );
 
                 assert ( elem_bits == 8 );
                 assert ( boff == 0 );
@@ -901,15 +900,29 @@ bool CSRA1_ReferenceIteratorNext ( CSRA1_Reference * self, ctx_t ctx )
                 }
             }
 
-            ++ self -> row_begin;
+            ++ self -> first_row;
         }
         
         self -> cur_length = 0;
         NGS_StringRelease ( ngs_prevName, ctx );
     }
     else
-    {
+    {   /* first reference */
         self -> seen_first = true;
+        uint32_t elem_bits, boff, row_len;
+        ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, self -> first_row, reference_NAME, & elem_bits, & ref_name_base, & boff, & row_len ) )
+            return false;
     }
-    return ( self -> row_begin < self -> row_end );
+    
+    if ( self -> first_row > self -> iteration_row_last )
+    {
+        self -> last_row = self -> last_row;
+        return false;
+    }
+    
+    /* now, calculate last_row*/
+    /*TODO: use row repeat count on the reference_NAME field (see FindReference) */
+    self -> last_row = self -> first_row + CountRows ( self, ctx, reference_NAME, ref_name_base, self -> first_row, self -> iteration_row_last ) - 1;
+    
+    return true;
 }
