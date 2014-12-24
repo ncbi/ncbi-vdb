@@ -109,11 +109,11 @@ VdbBlastMgr* CC VdbBlastInit(uint32_t *status)
 
     *status = eVdbBlastErr;
 
-    if (getenv("CheckVdbBlastInitIsCalledAfter2014_08_24") != NULL) {
+    if (getenv("CheckVdbBlastInitIsCalledAfter2014_12_23") != NULL) {
 #if _DEBUGGING
-fprintf(stderr, "DEBUG VdbBlastInit Is Called After 2014 08 24 eeeeeeeeed\n");
+fprintf(stderr, "DEBUG VdbBlastInit Is Called After 2014 12 23 eeeeeeeed\n");
 #else
-fprintf(stderr, "RLEAS VdbBlastInit Is Called After 2014 08 24 eeeeeeeeed\n");
+fprintf(stderr, "RLEAS VdbBlastInit Is Called After 2014 12 23 eeeeeeeed\n");
 #endif
     }
     item = calloc(1, sizeof *item);
