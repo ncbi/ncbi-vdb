@@ -72,6 +72,8 @@ struct NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx,
                                                      const struct NGS_Cursor * curs,
                                                      uint64_t align_id_offset );
 
+int64_t CSRA1_Reference_GetFirstRowId ( const struct NGS_Reference * self, ctx_t ctx );
+int64_t CSRA1_Reference_GetLastRowId ( const struct NGS_Reference * self, ctx_t ctx );
 
 #ifdef __cplusplus
 }
