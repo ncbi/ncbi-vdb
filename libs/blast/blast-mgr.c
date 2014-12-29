@@ -109,11 +109,11 @@ VdbBlastMgr* CC VdbBlastInit(uint32_t *status)
 
     *status = eVdbBlastErr;
 
-    if (getenv("CheckVdbBlastInitIsCalledAfter2014_12_23") != NULL) {
+    if (getenv("sratoolkit.2.4.3) != NULL) {
 #if _DEBUGGING
-fprintf(stderr, "DEBUG VdbBlastInit Is Called After 2014 12 23 eeeeeeeed\n");
+fprintf(stderr, "DEBUGNG with sratoolkit.2.4.3 release\n");
 #else
-fprintf(stderr, "RLEAS VdbBlastInit Is Called After 2014 12 23 eeeeeeeed\n");
+fprintf(stderr, "RELEASE with sratoolkit.2.4.3 release");
 #endif
     }
     item = calloc(1, sizeof *item);
