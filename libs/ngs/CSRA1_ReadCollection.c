@@ -308,7 +308,7 @@ NGS_Reference * CSRA1_ReadCollectionGetReferences ( CSRA1_ReadCollection * self,
     /* Iterators have their own cursors */
     TRY ( const NGS_Cursor* curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "REFERENCE", reference_col_specs, reference_NUM_COLS ) )
     {
-        return CSRA1_ReferenceIteratorMake ( ctx, & self -> dad, curs, self -> primaryId_count );
+        return CSRA1_ReferenceIteratorMake ( ctx, & self -> dad, self -> db, curs, self -> primaryId_count );
     }
     
     return NULL;

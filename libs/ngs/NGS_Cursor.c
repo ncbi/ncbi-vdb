@@ -534,3 +534,16 @@ const VTable* NGS_CursorGetTable ( const NGS_Cursor * self, ctx_t ctx )
     INTERNAL_ERROR ( xcCursorAccessFailed, "VCursorOpenParentRead rc = %R", rc );
     return NULL;
 }
+
+/* GetVCursor
+ */
+const VCursor* NGS_CursorGetVCursor ( const NGS_Cursor * self )
+{
+    return self -> curs;
+}
+
+uint32_t NGS_CursorGetColumnIndex ( const NGS_Cursor * self, uint32_t column_id )
+{
+    return self -> col_idx [column_id];
+}
+

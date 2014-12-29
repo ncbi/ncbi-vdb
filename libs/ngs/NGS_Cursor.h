@@ -119,6 +119,14 @@ void NGS_CursorGetRowRange ( const NGS_Cursor * self, ctx_t ctx, int64_t* first,
  */
 const struct VTable* NGS_CursorGetTable ( const NGS_Cursor * self, ctx_t ctx ); 
 
+/* GetVCursor
+ */
+const struct VCursor* NGS_CursorGetVCursor ( const NGS_Cursor * self ); 
+
+/* GetColumnIndex
+ */
+uint32_t NGS_CursorGetColumnIndex ( const NGS_Cursor * self, uint32_t column_id );
+
 #ifdef __cplusplus
 }
 #endif

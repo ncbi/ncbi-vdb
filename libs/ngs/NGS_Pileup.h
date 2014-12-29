@@ -101,7 +101,7 @@ struct NGS_Pileup_vt
     unsigned int                ( * get_pileup_depth )          ( const NGS_PILEUP * self, ctx_t ctx );
 
     /* PileupIterator interface */
-    bool ( * next ) ( const NGS_PILEUP * self, ctx_t ctx );
+    bool ( * next ) ( NGS_PILEUP * self, ctx_t ctx );
 };
 
 /* Init

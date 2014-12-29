@@ -113,7 +113,8 @@ struct CSRA1_Reference
     
     int64_t first_row;
     int64_t last_row;
-    const NGS_Cursor * curs; /* can be NULL if created for an empty iterator */
+    const struct VDatabase * db; /* pointer to the opened db, cannot be NULL */
+    const struct NGS_Cursor * curs; /* can be NULL if created for an empty iterator */
     uint64_t align_id_offset;
     uint64_t cur_length; /* size of current reference in bases (0 = not yet counted) */
     
@@ -654,7 +655,11 @@ struct NGS_Pileup* CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx
     {   /*TODO: GetName or GetCanonicalName? */
         TRY ( NGS_String* spec = CSRA1_ReferenceGetCommonName ( self, ctx ) ) 
         {
-            struct NGS_Pileup* ret = CSRA1_PileupIteratorMake ( ctx, spec, wants_primary, wants_secondary );
+            struct NGS_Pileup* ret = CSRA1_PileupIteratorMake ( ctx, self -> db, self->curs,
+                spec,
+                CSRA1_Reference_GetFirstRowId ( (NGS_Reference const*)self, ctx ),
+                CSRA1_Reference_GetLastRowId ( (NGS_Reference const*)self, ctx ),
+                wants_primary, wants_secondary );
             NGS_StringRelease ( spec, ctx );
             return ret;
         }
@@ -811,13 +816,15 @@ NGS_Reference * CSRA1_ReferenceMake ( ctx_t ctx,
 /* Make
  */
 NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx, 
-                                                    struct NGS_ReadCollection * coll, 
+                                                    struct NGS_ReadCollection * coll,
+                                                    const struct VDatabase * db,
                                                     const struct NGS_Cursor * curs,
                                                     uint64_t align_id_offset )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
 
     assert ( coll != NULL );
+    assert ( db != NULL );
     assert ( curs != NULL );
     
     {
@@ -835,6 +842,7 @@ NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx,
 #else
                 const char *instname = "";
 #endif
+                ref -> db = db;
                 TRY ( CSRA1_ReferenceInit ( ctx, ref, coll, "CSRA1_Reference", instname, align_id_offset ) )
                 {
                     uint64_t row_count;

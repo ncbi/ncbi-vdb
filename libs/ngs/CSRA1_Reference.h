@@ -41,6 +41,7 @@ extern "C" {
 struct NGS_Cursor;
 struct NGS_ReadCollection;
 struct NGS_Reference;
+struct VDatabase;
 
 
 enum ReferenceTableColumns
@@ -69,6 +70,7 @@ struct NGS_Reference * CSRA1_ReferenceMake ( ctx_t ctx,
 
 struct NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx, 
                                                      struct NGS_ReadCollection * coll,
+                                                     const struct VDatabase * db,
                                                      const struct NGS_Cursor * curs,
                                                      uint64_t align_id_offset );
 
