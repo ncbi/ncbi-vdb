@@ -66,7 +66,6 @@ struct VdbBlastMgr {
 
 rc_t _VdbBlastMgrNativeToPosix(const VdbBlastMgr *self, const char *native, char *posix, size_t size) {
     rc_t rc = 0;
-    VdbBlastStatus status = eVdbBlastNoErr;
     VPath *temp_v_path = NULL;
     assert(self);
     rc = VFSManagerMakeSysPath(self->vfs, &temp_v_path, native);
@@ -109,11 +108,11 @@ VdbBlastMgr* CC VdbBlastInit(uint32_t *status)
 
     *status = eVdbBlastErr;
 
-    if (getenv("sratoolkit.2.4.3) != NULL) {
+    if (getenv("sratoolkit.2.4.3") != NULL) {
 #if _DEBUGGING
 fprintf(stderr, "DEBUGNG with sratoolkit.2.4.3 release\n");
 #else
-fprintf(stderr, "RELEASE with sratoolkit.2.4.3 release");
+fprintf(stderr, "RELEASE with sratoolkit.2.4.3 release\n");
 #endif
     }
     item = calloc(1, sizeof *item);
