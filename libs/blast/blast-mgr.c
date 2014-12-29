@@ -108,7 +108,7 @@ VdbBlastMgr* CC VdbBlastInit(uint32_t *status)
 
     *status = eVdbBlastErr;
 
-    if (getenv("sratoolkit.2.4.3") != NULL) {
+    if (getenv("sratoolkit2_4_3") != NULL) {
 #if _DEBUGGING
 fprintf(stderr, "DEBUGNG with sratoolkit.2.4.3 release\n");
 #else
