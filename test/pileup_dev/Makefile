@@ -50,11 +50,11 @@ PILEUP_DEV_OBJ = \
 	$(addsuffix .$(OBJX),$(PILEUP_DEV_SRC))
 
 PILEUP_DEV_LIB = \
-	-sncbi-ngs-c++ \
+	-L$(NGS_LIBDIR)   \
+	-sngs-c++         \
+	-sncbi-ngs-c++    \
+	-sncbi-vdb-static \
 	-skapp \
-	-sncbi-vdb \
-	-L$(NGS_LIBDIR) \
-	-sngs-c++ \
 	-sktst
 
 $(TEST_BINDIR)/pileup_dev: $(PILEUP_DEV_OBJ)
