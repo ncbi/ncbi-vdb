@@ -325,7 +325,7 @@ NGS_Reference * CSRA1_ReadCollectionGetReference ( CSRA1_ReadCollection * self, 
             return NULL;
     }
     
-    return CSRA1_ReferenceMake ( ctx, & self -> dad, self -> reference_curs, spec, self -> primaryId_count );
+    return CSRA1_ReferenceMake ( ctx, & self -> dad, self -> db, self -> reference_curs, spec, self -> primaryId_count );
 }
 
 static

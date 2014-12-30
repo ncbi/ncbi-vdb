@@ -1193,6 +1193,12 @@ void CSRA1_PileupWhack ( CSRA1_Pileup * self, ctx_t ctx )
     self -> is_started = 0;
    
     NGS_StringRelease ( self -> ref_spec, ctx );
+
+    VDatabaseRelease ( self -> db );
+    self -> db = NULL;
+
+    NGS_CursorRelease ( self -> curs_ref, ctx );
+    self -> curs_ref = NULL;
 }
 
 struct NGS_String * CSRA1_PileupGetReferenceSpec ( const CSRA1_Pileup * self, ctx_t ctx )
@@ -1219,7 +1225,13 @@ struct NGS_PileupEvent * CSRA1_PileupGetEvents ( const CSRA1_Pileup * self, ctx_
 unsigned int CSRA1_PileupGetDepth ( const CSRA1_Pileup * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
-    return (unsigned int) self -> pileup_state . cache_alignment . size;
+    if ( ! self -> is_started )
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Pileup accessed before a call to PileupIteratorNext()" );
+        return 0;
+    }
+    else
+        return (unsigned int) self -> pileup_state . cache_alignment . size;
 }
 
 bool CSRA1_PileupIteratorGetNext ( CSRA1_Pileup * self, ctx_t ctx )
@@ -1281,7 +1293,9 @@ struct NGS_Pileup* CSRA1_PileupIteratorMake ( ctx_t ctx,
         TRY ( CSRA1_PileupInit ( ref, ctx, "CSRA1_Pileup", instname, ref_spec, wants_primary, wants_secondary ) )
         {
             ref -> db = db;
-            ref -> curs_ref = curs_ref;
+            VDatabaseAddRef ( ref -> db );
+
+            ref -> curs_ref = NGS_CursorDuplicate ( curs_ref, ctx );
 
             Alignment_Init ( & ref->pileup_state.cache_alignment );
             PileupIteratorState_Init ( & ref->pileup_state );
@@ -1308,9 +1322,7 @@ struct NGS_Pileup* CSRA1_PileupIteratorMake ( ctx_t ctx,
             }
             else
             {
-                release_vdb_objects ( & ref ->table_pa, & ref -> cursor_pa );
-                Alignment_Release ( & ref -> pileup_state.cache_alignment );
-                PileupIteratorState_Release ( & ref -> pileup_state );
+                CSRA1_PileupWhack ( ref, ctx );
             }
         }
         free ( ref );

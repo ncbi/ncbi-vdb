@@ -169,6 +169,9 @@ void CSRA1_ReferenceWhack ( CSRA1_Reference * self, ctx_t ctx )
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcDestroying );
 
     NGS_CursorRelease ( self -> curs, ctx );
+
+    VDatabaseRelease ( self -> db );
+    self -> db = NULL;
     
     NGS_RefcountRelease ( & self -> coll -> dad, ctx );
 }
@@ -752,6 +755,7 @@ bool CSRA1_ReferenceFind ( CSRA1_Reference * self, ctx_t ctx, const char * spec,
 
 NGS_Reference * CSRA1_ReferenceMake ( ctx_t ctx, 
                                       struct NGS_ReadCollection * coll,
+                                      const struct VDatabase * db,
                                       const struct NGS_Cursor * curs, 
                                       const char * spec,
                                       uint64_t align_id_offset )
@@ -781,7 +785,10 @@ NGS_Reference * CSRA1_ReferenceMake ( ctx_t ctx,
                     uint64_t rowCount;
                     
                     ref -> curs = NGS_CursorDuplicate ( curs, ctx );
-                    
+
+                    ref -> db = db;
+                    VDatabaseAddRef ( ref -> db );
+
                     
                     /* find requested name */
                     if ( CSRA1_ReferenceFind ( ref, ctx, spec, & ref -> first_row, & rowCount ) )
@@ -842,12 +849,14 @@ NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx,
 #else
                 const char *instname = "";
 #endif
-                ref -> db = db;
                 TRY ( CSRA1_ReferenceInit ( ctx, ref, coll, "CSRA1_Reference", instname, align_id_offset ) )
                 {
                     uint64_t row_count;
                    
-                    ref -> curs = curs;
+                    ref -> curs = NGS_CursorDuplicate ( curs, ctx );
+
+                    ref -> db = db;
+                    VDatabaseAddRef ( ref -> db );
                     
                     TRY ( NGS_CursorGetRowRange ( ref -> curs, ctx, & ref -> first_row, & row_count ) )
                     {
