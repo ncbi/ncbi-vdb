@@ -380,7 +380,9 @@ VDB_EXTERN rc_t CC VCursorCellDataDirect ( const VCursor *self, int64_t row_id,
  * "continue_on_error" [ IN ] - whether to continue on a failure to prefetch a rows
  */
 
-LIB_EXPORT rc_t CC VCursorDataPrefetch ( const VCursor *cself, const int64_t *row_ids, uint32_t col_idx, uint32_t num_rows,int64_t min_valid_row_id,int64_t max_valid_row_id,bool continue_on_error);
+LIB_EXPORT rc_t CC VCursorDataPrefetch ( const VCursor * self,
+    const int64_t * row_ids, uint32_t col_idx, uint32_t num_rows,
+    int64_t min_valid_row_id, int64_t max_valid_row_id, bool continue_on_error );
 
 
 /* Default
