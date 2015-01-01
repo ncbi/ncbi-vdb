@@ -44,31 +44,43 @@ include $(TOP)/build/Makefile.env
 #  from a single set of sources
 #
 %.n.32.$(OBJX): %.c
-	$(CC) -o $@ $(OPT) $(CFLAGS) -DJU_32BIT $<
+	$(CC) -o $@ $(OPT) $(CFLAGS) $<
 %.n.64.$(OBJX): %.c
-	$(CC) -o $@ $(OPT) $(CFLAGS) -DJU_64BIT $<
+	$(CC) -o $@ $(OPT) $(CFLAGS) $<
+%.n.32_64.$(OBJX): %.c
+	$(CC) -o $@ $(OPT) $(CFLAGS) $<
 %.n.32.$(LOBX): %.c
-	$(CC) -o $@ -fPIC $(OPT) $(CFLAGS) -DJU_32BIT $<
+	$(CC) -o $@ -fPIC $(OPT) $(CFLAGS) $<
 %.n.64.$(LOBX): %.c
-	$(CC) -o $@ -fPIC $(OPT) $(CFLAGS) -DJU_64BIT $<
+	$(CC) -o $@ -fPIC $(OPT) $(CFLAGS) $<
+%.n.32_64.$(LOBX): %.c
+	$(CC) -o $@ $(OPT) $(CFLAGS) $<
 
 %.b.32.$(OBJX): %.c
-	$(CC) -o $@ $(OPT) $(CFLAGS) -DJUDY1 -DJU_32BIT $<
+	$(CC) -o $@ $(OPT) $(CFLAGS) -DJUDY1 $<
 %.b.64.$(OBJX): %.c
-	$(CC) -o $@ $(OPT) $(CFLAGS) -DJUDY1 -DJU_64BIT $<
+	$(CC) -o $@ $(OPT) $(CFLAGS) -DJUDY1 $<
+%.b.32_64.$(OBJX): %.c
+	$(CC) -o $@ $(OPT) $(CFLAGS) -DJUDY1 $<
 %.b.32.$(LOBX): %.c
-	$(CC) -o $@ -fPIC $(OPT) $(CFLAGS) -DJUDY1 -DJU_32BIT $<
+	$(CC) -o $@ -fPIC $(OPT) $(CFLAGS) -DJUDY1 $<
 %.b.64.$(LOBX): %.c
-	$(CC) -o $@ -fPIC $(OPT) $(CFLAGS) -DJUDY1 -DJU_64BIT $<
+	$(CC) -o $@ -fPIC $(OPT) $(CFLAGS) -DJUDY1 $<
+%.b.32_64.$(LOBX): %.c
+	$(CC) -o $@ -fPIC $(OPT) $(CFLAGS) -DJUDY1 $<
 
 %.w.32.$(OBJX): %.c
-	$(CC) -o $@ $(OPT) $(CFLAGS) -DJUDYL -DJU_32BIT $<
+	$(CC) -o $@ $(OPT) $(CFLAGS) -DJUDYL $<
 %.w.64.$(OBJX): %.c
-	$(CC) -o $@ $(OPT) $(CFLAGS) -DJUDYL -DJU_64BIT $<
+	$(CC) -o $@ $(OPT) $(CFLAGS) -DJUDYL $<
+%.w.32_64.$(OBJX): %.c
+	$(CC) -o $@ $(OPT) $(CFLAGS) -DJUDYL $<
 %.w.32.$(LOBX): %.c
-	$(CC) -o $@ -fPIC $(OPT) $(CFLAGS) -DJUDYL -DJU_32BIT $<
+	$(CC) -o $@ -fPIC $(OPT) $(CFLAGS) -DJUDYL $<
 %.w.64.$(LOBX): %.c
-	$(CC) -o $@ -fPIC $(OPT) $(CFLAGS) -DJUDYL -DJU_64BIT $<
+	$(CC) -o $@ -fPIC $(OPT) $(CFLAGS) -DJUDYL $<
+%.w.32_64.$(LOBX): %.c
+	$(CC) -o $@ -fPIC $(OPT) $(CFLAGS) -DJUDYL $<
 
 ifeq (win,$(OS))
 #JUDY_WIN = -DJU_WIN
@@ -173,10 +185,10 @@ JUDY_CMN = \
 	j__udyGet
 
 JUDY_WORD = \
-	JudyLTables
+	_JudyLTables
 
 JUDY_BIT = \
-	Judy1Tables
+	_Judy1Tables
 
 JUDY_SRC = \
 	$(addsuffix .n,$(JUDY_NEUTRAL)) \

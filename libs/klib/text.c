@@ -446,6 +446,32 @@ LIB_EXPORT void CC StringWhack ( const String* self )
 }
 
 
+/* StringToInt
+ *  simple string conversion functions
+ */
+LIB_EXPORT int64_t StringToI64 ( const String * self, rc_t * optional_rc )
+{
+    if ( self != NULL )
+        return string_to_I64 ( self -> addr, self -> size, optional_rc );
+
+    if ( optional_rc != NULL )
+        * optional_rc = RC ( rcText, rcString, rcEvaluating, rcSelf, rcNull );
+
+    return 0;
+}
+
+LIB_EXPORT uint64_t StringToU64 ( const String * self, rc_t * optional_rc )
+{
+    if ( self != NULL )
+        return string_to_U64 ( self -> addr, self -> size, optional_rc );
+
+    if ( optional_rc != NULL )
+        * optional_rc = RC ( rcText, rcString, rcEvaluating, rcSelf, rcNull );
+
+    return 0;
+}
+
+
 /*--------------------------------------------------------------------------
  * raw text strings
  */
@@ -510,6 +536,228 @@ LIB_EXPORT uint32_t CC string_hash ( const char *str, size_t size )
         hash = ( ( hash << 1 ) - ( hash >> 16 ) ) ^ ch;
     }
     return hash ^ ( hash >> 16 );
+}
+
+/* string_to_int
+ *  simple string conversion functions
+ *
+ *  these functions are defined to consume the entire string.
+ *  leading spaces are tolerated, repeated signs are accepted for signed conversion,
+ *  decimal and hex encodings are accepted for unsigned conversion,
+ *  decimal only for signed conversion.
+ *
+ *  "optional_rc" [ OUT, NULL OKAY ] - if non-null, user is interested
+ *  in error conditions. if the parameter is present, the string must be
+ *  completely consumed without overflow.
+ *
+ *  optional return values ( with { GetRCObject ( rc ), GetRCState ( rc ) }:
+ *   0                            : no error
+ *   { rcRange, rcExcessive }     : integer overflow
+ *   { rcTransfer, rcIncomplete } : extra characters remain in string
+ *   { rcData, rcInsufficient }   : no numeric text was found
+ *
+ *  return values - regardless of "optional_rc":
+ *    val             : when no error
+ *    val             : on incomplete transfer
+ *    +/- max int64_t : when signed overflow occurs ( StringToI64 only )
+ *    max uint64_t    : when unsigned overflow occurs ( StringToU64 only )
+ *    0               : when no input text is found
+ */
+LIB_EXPORT int64_t string_to_I64 ( const char * text, size_t bytes, rc_t * optional_rc )
+{
+    rc_t rc = 0;
+
+    if ( text == NULL )
+        rc = RC ( rcText, rcString, rcEvaluating, rcParam, rcNull );
+    else
+    {
+        int64_t val;
+
+        size_t i, start;
+        uint8_t negate = 0;
+
+        /* allow white space */
+        for ( i = 0; i < bytes; ++ i )
+        {
+            if ( ! isspace ( text [ i ] ) )
+                break;
+        }
+
+        /* allow sign */
+        for ( ; i < bytes; ++ i )
+        {
+            switch ( text [ i ] )
+            {
+            case '-':
+                negate ^= 1;
+                continue;
+            case '+':
+                continue;
+            }
+            break;
+        }
+
+        start = i;
+        for ( val = 0; i < bytes; ++ i )
+        {
+            uint8_t digit;
+            volatile int64_t x = 0;
+
+            if ( ! isdigit ( text [ i ] ) )
+                break;
+
+            /* want to bring this digit into number */
+            digit = text [ i ] - '0';
+
+            /* detect overflow on multiplication */
+            if ( val > INT64_MAX / 10 )
+            {
+                rc = RC ( rcText, rcString, rcEvaluating, rcRange, rcExcessive );
+                val = INT64_MAX;
+                break;
+            }
+
+            val *= 10;
+            assert ( val >= 0 );
+
+            /* detect overflow on addition */
+            x = val + digit - negate;
+            if ( x < 0 )
+            {
+                rc = RC ( rcText, rcString, rcEvaluating, rcRange, rcExcessive );
+                val = INT64_MAX;
+                break;
+            }
+
+            val += digit;
+        }
+
+        if ( negate )
+            val = ( rc != 0 ) ? INT64_MIN : - val;
+
+        if ( start != i )
+        {
+            if ( optional_rc != NULL )
+            {
+                if ( rc == 0 && i != bytes )
+                    rc = RC ( rcText, rcString, rcParsing, rcTransfer, rcIncomplete );
+
+                * optional_rc = rc;
+            }
+
+            return val;
+        }
+
+        /* no digits were converted */
+        rc = RC ( rcText, rcString, rcParsing, rcData, rcInsufficient );
+    }
+
+    if ( optional_rc != NULL )
+        * optional_rc = rc;
+
+    return 0;
+}
+
+LIB_EXPORT uint64_t string_to_U64 ( const char * text, size_t bytes, rc_t * optional_rc )
+{
+    rc_t rc = 0;
+
+    if ( text == NULL )
+        rc = RC ( rcText, rcString, rcEvaluating, rcParam, rcNull );
+    else
+    {
+        uint64_t val;
+        size_t i, start;
+
+        /* allow white space */
+        for ( i = 0; i < bytes; ++ i )
+        {
+            if ( ! isspace ( text [ i ] ) )
+                break;
+        }
+
+        /* detect hex */
+        if ( bytes - i >= 3 && text [ i ] == '0' && tolower ( text [ i + 1 ] ) == 'x' )
+        {
+            start = i += 2;
+            for ( val = 0; i < bytes; ++ i )
+            {
+                uint8_t xdigit;
+
+                if ( ! isxdigit ( text [ i ] ) )
+                    break;
+
+                /* want to bring this digit into number */
+                xdigit = isdigit ( text [ i ] ) ?
+                    text [ i ] - '0' : tolower ( text [ i ] ) - 'a' + 10;
+
+                /* detect overflow */
+                if ( i - start > 16 )
+                {
+                    rc = RC ( rcText, rcString, rcEvaluating, rcRange, rcExcessive );
+                    val = UINT64_MAX;
+                    break;
+                }
+
+                val = ( val << 4 ) | xdigit;
+            }
+        }
+        else
+        {
+            start = i;
+            for ( val = 0; i < bytes; ++ i )
+            {
+                uint8_t digit;
+
+                if ( ! isdigit ( text [ i ] ) )
+                    break;
+
+                /* want to bring this digit into number */
+                digit = text [ i ] - '0';
+
+                /* detect overflow on multiplication */
+                if ( val > UINT64_MAX / 10 )
+                {
+                    rc = RC ( rcText, rcString, rcEvaluating, rcRange, rcExcessive );
+                    val = UINT64_MAX;
+                    break;
+                }
+
+                val *= 10;
+
+                /* detect overflow on addition */
+                if ( val > UINT64_MAX - digit )
+                {
+                    rc = RC ( rcText, rcString, rcEvaluating, rcRange, rcExcessive );
+                    val = UINT64_MAX;
+                    break;
+                }
+
+                val += digit;
+            }
+        }
+
+        if ( start != i )
+        {
+            if ( optional_rc != NULL )
+            {
+                if ( rc == 0 && i != bytes )
+                    rc = RC ( rcText, rcString, rcEvaluating, rcTransfer, rcIncomplete );
+
+                * optional_rc = rc;
+            }
+
+            return val;
+        }
+
+        /* no digits were converted */
+        rc = RC ( rcText, rcString, rcParsing, rcData, rcInsufficient );
+    }
+
+    if ( optional_rc != NULL )
+        * optional_rc = rc;
+
+    return 0;
 }
 
 /* utf8_utf32

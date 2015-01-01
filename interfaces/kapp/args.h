@@ -100,10 +100,6 @@ extern OptDef StandardOptions [];
 #define ALIAS_REPORT    ""
 #define OPTION_REPORT   "ncbi_error_report"
 
-#define TRIES_OPTION    "tries"
-#define TRIES_ARGUMENT  "NUMBER"
-#define TRIES_HELP      "Set number of HTTP retries to NUMBER (1-10)."
-
 /*--------------------------------------------------------------------------
  * Args
  *  opaque class to build up option lists and parse the command line argc/argv

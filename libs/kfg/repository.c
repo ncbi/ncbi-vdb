@@ -48,6 +48,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <limits.h> /* PATH_MAX */
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 
 /*--------------------------------------------------------------------------
  * KRepository
@@ -329,6 +333,30 @@ LIB_EXPORT rc_t CC KRepositoryRoot ( const KRepository *self,
     return rc;
 }
 
+LIB_EXPORT rc_t CC KRepositorySetRoot(KRepository *self,
+    const char *root, size_t root_size)
+{
+    rc_t rc = 0;
+
+    if (self == NULL) {
+        return RC(rcKFG, rcNode, rcUpdating, rcSelf, rcNull);
+    }
+    else if (root == NULL) {
+        return RC(rcKFG, rcNode, rcUpdating, rcParam, rcNull);
+    }
+    else {
+        KConfigNode *self_node = (KConfigNode*)self->node;
+        KConfigNode *node = NULL;
+
+        rc = KConfigNodeOpenNodeUpdate(self_node, &node, "root");
+        if (rc == 0) {
+            rc = KConfigNodeWrite(node, root, root_size);
+            KConfigNodeRelease(node);
+        }
+    }
+
+    return rc;
+}
 
 /* Resolver
  *  read the url of the CGI-resolver
@@ -1357,7 +1385,8 @@ static rc_t create_new_protected_repository( KRepositoryMgr * self,
             char key_file_path[ 4096 ];
             rc = make_key_file( self, ngc, key_file_path, sizeof key_file_path, &written );
             if ( rc == 0 )
-                rc = create_child_node( new_repository, "encryption-key-path", key_file_path, written );
+                rc = create_child_node(new_repository,
+                    "encryption-key-path", key_file_path, (uint32_t)written);
         }
         KConfigNodeRelease( new_repository );
     }
@@ -1365,39 +1394,93 @@ static rc_t create_new_protected_repository( KRepositoryMgr * self,
 }
 
 
-static rc_t check_for_modifications( KRepository * repository, const struct KNgcObj * ngc, uint32_t * modifications )
+static rc_t check_for_modifications(
+    const KRepository *repository, const KNgcObj *ngc,
+    uint32_t *modifications, uint32_t *notFoundNodes)
 {
+    rc_t rc = 0;
     size_t written;
     char buffer[ 1024 ];
-    rc_t rc = KRepositoryDownloadTicket ( repository, buffer, sizeof buffer, &written );
-    if ( rc == 0 )
-    {
-        if ( strcase_cmp( buffer, written, ngc->downloadTicket.addr, ngc->downloadTicket.len, sizeof buffer ) != 0 )   
+    assert(modifications && notFoundNodes);
+
+    if (rc == 0) {
+        rc = KRepositoryDownloadTicket(repository,
+            buffer, sizeof buffer, &written);
+        if (rc == 0) {
+            if (strcase_cmp(buffer, written, ngc->downloadTicket.addr,
+                ngc->downloadTicket.len, sizeof buffer) != 0)
+            {
+                *modifications |= INP_UPDATE_DNLD_TICKET;
+            }
+        }
+        else if (rc == SILENT_RC(rcKFG, rcNode, rcOpening, rcPath, rcNotFound)) 
         {
-            *modifications |= INP_UPDATE_DNLD_TICKET;
+            rc = 0;
+            *notFoundNodes |= INP_UPDATE_DNLD_TICKET;
         }
     }
-    if ( rc == 0 )
+
+    if (rc == 0) {
         rc = KRepositoryEncryptionKey ( repository, buffer, sizeof buffer, &written );
-    if ( rc == 0 )
-    {
-        if ( strcase_cmp( buffer, written, ngc->encryptionKey.addr, ngc->encryptionKey.len, sizeof buffer ) != 0 )   
+        if (rc == 0) {
+            if (strcase_cmp(buffer, written, ngc->encryptionKey.addr,
+                ngc->encryptionKey.len, sizeof buffer) != 0)
+            {
+                *modifications |= INP_UPDATE_ENC_KEY;
+            }
+        }
+        else if (rc == SILENT_RC(rcKFG, rcNode, rcOpening, rcPath, rcNotFound))
         {
-            *modifications |= INP_UPDATE_ENC_KEY;
+            rc = 0;
+            *notFoundNodes |= INP_UPDATE_ENC_KEY;
         }
     }
-    if ( rc == 0 )
+
+    if (rc == 0) {
         rc = KRepositoryDescription ( repository, buffer, sizeof buffer, &written );
-    if ( rc == 0 )
-    {
-        if ( strcase_cmp( buffer, written, ngc->description.addr, ngc->description.len, sizeof buffer ) != 0 )   
+        if (rc == 0) {
+            if (strcase_cmp(buffer, written, ngc->description.addr,
+                ngc->description.len, sizeof buffer) != 0)
+            {
+                *modifications |= INP_UPDATE_DESC;
+            }
+        }
+        else if (rc == SILENT_RC(rcKFG, rcNode,
+            rcOpening, rcPath, rcNotFound))
         {
-            *modifications |=INP_UPDATE_DESC;
+            rc = 0;
+            *notFoundNodes |= INP_UPDATE_DESC;
         }
     }
+
     return rc;
 }
 
+
+static rc_t check_for_root_modification(const KRepository *repository,
+    const char *root, uint32_t *modifications)
+{
+    rc_t rc = 0;
+    size_t root_size = 0;
+    char buffer[PATH_MAX] = "";
+    size_t bsize = 0;
+
+    if (root == NULL || modifications == NULL) {
+        return RC(rcKFG, rcMgr, rcAccessing, rcSelf, rcNull);
+    }
+
+    rc = KRepositoryRoot(repository, buffer, sizeof buffer, &root_size);
+    if (rc != 0) {
+        return rc;
+    }
+
+    bsize = string_measure(root, NULL);
+    if (strcase_cmp(buffer, root_size, root, bsize, sizeof buffer) != 0) {
+        *modifications |= INP_UPDATE_ROOT;
+    }
+
+    return rc;
+}
 
 /* we have an existing repository that corresponds with the given ngc-object, see if we have to / or can update its values */
 static rc_t update_existing_protected_repository( KRepositoryMgr * self,
@@ -1416,7 +1499,8 @@ static rc_t update_existing_protected_repository( KRepositoryMgr * self,
         char key_file_path[ 4096 ];
         rc = make_key_file( self, ngc, key_file_path, sizeof key_file_path, &written );
         if ( rc == 0 )
-            rc = create_child_node( repository->node, "encryption-key-path", key_file_path, written );
+            rc = create_child_node(repository->node,
+                "encryption-key-path", key_file_path, (uint32_t)written);
     }
 
     if ( rc == 0 && ( modifications & INP_UPDATE_DESC ) )
@@ -1432,28 +1516,30 @@ LIB_EXPORT rc_t CC KRepositoryMgrImportNgcObj( KRepositoryMgr * self,
 {
     rc_t rc = 0;
     if ( self == NULL )
-        rc = RC ( rcKFG, rcMgr, rcAccessing, rcSelf, rcNull );
+        rc = RC ( rcKFG, rcMgr, rcUpdating, rcSelf, rcNull );
     if ( ngc == NULL || location == NULL || result_flags == NULL )
-        rc = RC ( rcKFG, rcMgr, rcAccessing, rcParam, rcNull );
+        rc = RC ( rcKFG, rcMgr, rcUpdating, rcParam, rcNull );
     else
     {
+        KRepositoryVector user_repositories;
         size_t written;
         char ngc_repo_name[ 512 ];
         *result_flags = 0;
         rc = string_printf( ngc_repo_name, sizeof ngc_repo_name, &written, "dbGaP-%u", ngc->projectId );
         if ( rc == 0 )
         {
+            KRepository *repository = NULL;
             bool exists = false;
 
-            KRepositoryVector user_repositories;
             rc = KRepositoryMgrUserRepositories ( self, &user_repositories );
             if ( rc == 0 )
             {
-                KRepository * repository;
-                rc = find_repository_in_vector( &user_repositories, &repository, ngc_repo_name, written );
+                rc = find_repository_in_vector(&user_repositories,
+                    &repository, ngc_repo_name, (uint32_t)written);
                 if ( rc == 0 )
                 {
                     uint32_t modifications = 0;
+                    uint32_t notFoundNodes = 0;
 
                     exists = true;
 
@@ -1464,15 +1550,22 @@ LIB_EXPORT rc_t CC KRepositoryMgrImportNgcObj( KRepositoryMgr * self,
 
                        mark each bit that differs
                     */
-                    rc = check_for_modifications( repository, ngc, &modifications );
+                    rc = check_for_modifications(repository,
+                        ngc, &modifications, &notFoundNodes);
                     if ( rc == 0 )
                     {
+                        if (notFoundNodes != 0) {
+                            permissions |= notFoundNodes;
+                            modifications |= notFoundNodes;
+                        }
+
                         /* reject if any modification was not authorized */
                         if ( ( modifications & ( modifications ^ permissions ) ) != 0 )
                         {
                             /* tell what was wrong, set rc */
                             * result_flags = modifications & ( modifications ^ permissions );
-                            rc = RC ( rcKFG, rcMgr, rcCreating, rcConstraint, rcViolated );
+                            rc = RC(rcKFG, rcMgr, rcUpdating,
+                                rcConstraint, rcViolated);
                         }
                         else if ( modifications != 0 )
                         {
@@ -1485,26 +1578,48 @@ LIB_EXPORT rc_t CC KRepositoryMgrImportNgcObj( KRepositoryMgr * self,
                     }
                 }
 
-                KRepositoryVectorWhack ( &user_repositories );
-            }
-
-            if ( ! exists )
-            {
-                if ( permissions & INP_CREATE_REPOSITORY )
-                {
-                    uint32_t location_len = string_measure ( location, NULL );
-                    rc = create_new_protected_repository( self, ngc,
-                        location, location_len, ngc_repo_name, written );
-                    if ( rc == 0 )
+                if (! exists) {
+                    if (permissions & INP_CREATE_REPOSITORY) {
+                        uint32_t location_len = string_measure (location, NULL);
+                        rc = create_new_protected_repository(
+                            self, ngc, location, location_len,
+                            ngc_repo_name, (uint32_t)written);
+                        if (rc == 0) {
+                            *result_flags |= INP_CREATE_REPOSITORY;
+                        }
+                    }
+                    else {
                         *result_flags |= INP_CREATE_REPOSITORY;
+                        rc = RC(rcKFG, rcMgr, rcUpdating,
+                            rcConstraint, rcViolated);
+                    }
                 }
-                else
-                {
-                    *result_flags |= INP_CREATE_REPOSITORY;
-                    rc = RC ( rcKFG, rcMgr, rcCreating, rcConstraint, rcViolated );
+                else if (rc == 0 && permissions & INP_UPDATE_ROOT) {
+                    uint32_t modifications = 0;
+                    rc = check_for_root_modification(
+                        repository, location, &modifications);
+                    if (rc == 0) {
+                        if (modifications & INP_UPDATE_ROOT) {
+                            uint32_t location_len =
+                                string_measure(location, NULL);
+                            rc = KRepositorySetRoot(repository,
+                                location, location_len);
+                            if (rc == 0) {
+                                *result_flags |= INP_UPDATE_ROOT;
+                            }
+                        }
+                        else if (modifications != 0) {
+                            *result_flags |= INP_UPDATE_ROOT;
+                            rc = RC(rcKFG, rcMgr, rcCreating,
+                                rcConstraint, rcViolated);
+                        }
+                    }
                 }
+
+                KRepositoryVectorWhack ( &user_repositories );
             }
         }
     }
+
     return rc;
 }

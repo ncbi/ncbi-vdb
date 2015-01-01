@@ -29,8 +29,8 @@ TOP ?= $(abspath ../..)
 MODULE = test/kns
 
 TEST_TOOLS = \
-	test-kns \
 	test-http \
+	test-kns \
 
 include $(TOP)/build/Makefile.env
 
@@ -75,8 +75,8 @@ KNSTEST_OBJ = \
 $(TEST_BINDIR)/test-kns: $(KNSTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
-kns: $(TEST_BINDIR)/test-kns 
-	test-kns  # -l=all
+kns: test-kns 
+	$(TEST_BINDIR)/test-kns  #-l=all
     
 valgrind_kns: test-kns
 	valgrind --ncbi --show-reachable=no --suppressions=$(SRCDIR)/valgrind_suppressions.txt $(TEST_BINDIR)/test-kns

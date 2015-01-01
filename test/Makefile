@@ -42,13 +42,17 @@ SUBDIRS =       \
     kfc         \
     klib        \
     kfg         \
+    kapp        \
     kns         \
     kdb         \
     kproc       \
+    vdb         \
     ngs         \
     ngs-c++     \
+    ngs-java    \
 	search	    \
     vfs         \
+    sraxf       \
     vxf         \
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS

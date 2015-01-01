@@ -44,14 +44,6 @@ extern "C" {
 KLIB_EXTERN bool CC is_iser_an_admin(void);
 
 
-/** Set the number of HTTP try attempts. */
-KLIB_EXTERN void CC SetHttpTries(uint32_t tries);
-
-/** Get the previously set number of HTTP try attempts.
-isTriesSet returns whether SetHttpTries was called before.*/
-uint32_t GetHttpTries(bool *isTriesSet);
-
-
 #ifdef __cplusplus
 }
 #endif

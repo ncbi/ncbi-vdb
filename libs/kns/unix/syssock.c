@@ -292,10 +292,10 @@ rc_t HandleErrno ( const char *func_name, unsigned int lineno )
                   "S=%!,E=%d", lerrno, lerrno));
     }
     
-#if _DEBUGGING
     if ( rc != 0 )
-        pLogMsg ( klogInfo, "$(RC)\n", "RC=%R", rc );
-#endif
+    {
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%R\n", rc ) );
+    }
 
     return rc;
 }
@@ -419,7 +419,7 @@ rc_t CC KSocketTimedRead ( const KSocket *self,
     assert ( self != NULL );
     assert ( num_read != NULL );
 
-    pLogLibMsg(klogInfo, "$(b): KSocketTimedRead($(s), $(t))...", "b=%p,s=%d,t=%d", self, bsize, tm == NULL ? -1 : tm -> mS);
+    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead(%d, %d)...\n", self, bsize, tm == NULL ? -1 : tm -> mS ) );
     
     /* wait for socket to become readable */
     revents = socket_wait ( self -> fd
@@ -436,8 +436,7 @@ rc_t CC KSocketTimedRead ( const KSocket *self,
         if ( errno != 0 )
         {
             rc_t rc = HandleErrno ( __func__, __LINE__ );
-            pLogLibMsg(klogInfo, "$(b): KSocketTimedRead socket_wait "
-                "returned errno $(e)", "b=%p,e=%d", self, errno);
+            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead socket_wait returned '%s'\n", self, strerror(errno) ) );
             return rc;
         }
 
@@ -449,19 +448,13 @@ rc_t CC KSocketTimedRead ( const KSocket *self,
                 && optval > 0)
             {
                 errno = optval;
-                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_ERR), (
-"@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@1 %s getsockopt = %s @@@@@@@@@@@@@@@@"
-                    "\n", __FILE__, strerror(optval)));
-                rc_t rc = HandleErrno(__func__, __LINE__);
-                pLogLibMsg(klogInfo, "$(b): KSocketTimedRead "
-                    "socket_wait/getsockopt returned errno $(e)",
-                    "b=%p,e=%d", self, errno);
-                return rc;
+                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead socket_wait/getsockopt returned '%s'\n", 
+                                                            self, strerror(optval) ) );
+                return HandleErrno(__func__, __LINE__);
             }
         }
 
-        pLogLibMsg(klogInfo, "$(b): KSocketTimedRead socket_wait "
-            "returned POLLERR | POLLNVAL", "b=%p", self);
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead socket_wait returned POLLERR | POLLNVAL\n", self ) );
         return RC ( rcNS, rcStream, rcReading, rcNoObj, rcUnknown );
     }
 
@@ -475,14 +468,14 @@ rc_t CC KSocketTimedRead ( const KSocket *self,
             return 0;
         }
         rc_t rc = HandleErrno ( __func__, __LINE__ );
-        pLogLibMsg(klogInfo, "$(b): KSocketTimedRead recv returned count $(c)", "b=%p,c=%d", self, count);
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead recv returned count %d\n", self, count ) );
         return rc;
     }
 
     /* check for broken connection */
     if ( ( revents & ( POLLHUP | POLLRDHUP ) ) != 0 )
     {
-        pLogLibMsg(klogInfo, "$(b): KSocketTimedRead broken connection", "b=%p", self);
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead broken connection\n", self ) );
         * num_read = 0;
         return 0;
     }
@@ -491,12 +484,12 @@ rc_t CC KSocketTimedRead ( const KSocket *self,
     if ( ( revents & ~ POLLIN ) != 0 && errno != 0 )
     {
         rc_t rc = HandleErrno ( __func__, __LINE__ );
-        pLogLibMsg(klogInfo, "$(b): KSocketTimedRead error=$(e)", "b=%p,e=%e", self, errno);
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead error '%s'\n", self, strerror ( errno ) ) );
         return rc;
     }
 
     /* finally, call this a timeout */
-    pLogLibMsg(klogInfo, "$(b): KSocketTimedRead timeout", "b=%p", self);
+    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead timeout\n", self ) );
     return RC ( rcNS, rcStream, rcReading, rcTimeout, rcExhausted );
 }
 
@@ -524,7 +517,7 @@ rc_t CC KSocketTimedWrite ( KSocket *self,
     assert ( self != NULL );
     assert ( num_writ != NULL );
 
-    pLogLibMsg(klogInfo, "$(b): KSocketTimedWrite($(s), $(t))...", "b=%p,s=%d,t=%d", self, bsize, tm == NULL ? -1 : tm -> mS);
+    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedWrite(%d, %d)...\n", self, bsize, tm == NULL ? -1 : tm -> mS ) );
 
     /* wait for socket to become writable */
     revents = socket_wait ( self -> fd
@@ -539,17 +532,17 @@ rc_t CC KSocketTimedWrite ( KSocket *self,
         if ( errno != 0 )
         {
             rc_t rc = HandleErrno ( __func__, __LINE__ );
-            pLogLibMsg(klogInfo, "$(b): KSocketTimedWrite socket_wait returned errno $(e)", "b=%p,e=%d", self, errno);
+            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedWrite socket_wait returned '%s'\n", self, strerror ( errno ) ) );
             return rc;
         }
-        pLogLibMsg(klogInfo, "$(b): KSocketTimedWrite socket_wait returned POLLERR | POLLNVAL", "b=%p", self);
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedWrite socket_wait returned POLLERR | POLLNVAL\n", self ) );
         return RC ( rcNS, rcStream, rcWriting, rcNoObj, rcUnknown );
     }
 
     /* check for broken connection */
     if ( ( revents & POLLHUP ) != 0 )
     {
-        pLogLibMsg(klogInfo, "$(b): POLLHUP received", "b=%p", self);            
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: POLLHUP received\n", self ) );
         * num_writ = 0;
         return 0;
     }
@@ -561,13 +554,13 @@ rc_t CC KSocketTimedWrite ( KSocket *self,
         count = send ( self -> fd, buffer, bsize, 0 );
         if ( count >= 0 )
         {
-            pLogLibMsg(klogInfo, "$(b): $(s) bytes written", "b=%p,s=%d", self, count);            
+            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: %d bytes written\n", self, count ) );
             * num_writ = count;
             return 0;
         }
 
         rc = HandleErrno ( __func__, __LINE__ );
-        pLogLibMsg(klogInfo, "$(b): KSocketTimedWrite recv returned count $(c)", "b=%p,c=%d", self, count);
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedWrite recv returned count %d\n", self, count ) );
         return rc;
     }
 
@@ -575,12 +568,12 @@ rc_t CC KSocketTimedWrite ( KSocket *self,
     if ( ( revents & ~ POLLOUT ) != 0 && errno != 0 )
     {
         rc_t rc = HandleErrno ( __func__, __LINE__ );
-        pLogLibMsg(klogInfo, "$(b): KSocketTimedWrite error=$(e)", "b=%p,e=%e", self, errno);
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedWrite error '%s'\n", self, strerror ( errno ) ) );
         return rc;
     }
 
     /* finally, call this a timeout */
-    pLogLibMsg(klogInfo, "$(b): KSocketTimedWrite timeout", "b=%p", self);            
+    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedWrite timeout\n", self ) );
     return RC ( rcNS, rcStream, rcWriting, rcTimeout, rcExhausted );
 }
 
@@ -698,7 +691,7 @@ rc_t KSocketConnectIPv4 ( KSocket *self, int32_t retryTimeout, const KEndPoint *
     }
     while (rc == 0);
     
-    pLogLibMsg(klogInfo, "$(b): KSocketConnectIPv4 timed out", "b=%p", self);            
+    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketConnectIPv4 timed out\n", self ) );
 
     return rc;
 }
@@ -772,7 +765,7 @@ rc_t KSocketConnectIPv6 ( KSocket *self, int32_t retryTimeout, const KEndPoint *
     }
     while (rc == 0);
     
-    pLogLibMsg(klogInfo, "$(b): KSocketConnectIPv6 timed out", "b=%p", self);            
+    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketConnectIPv6 timed out\n", self ) );
 
     return rc;
 }
@@ -819,7 +812,7 @@ rc_t KSocketConnectIPC ( KSocket *self, int32_t retryTimeout, const KEndPoint *t
     }
     while (rc == 0);
 
-    pLogLibMsg(klogInfo, "$(b): KSocketConnectIPC timed out", "b=%p", self);            
+    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketConnectIPC timed out\n", self ) );            
 
     return rc;
  }

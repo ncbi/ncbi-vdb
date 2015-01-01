@@ -490,6 +490,36 @@ bool NGS_CursorGetBool ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint
     return false;
 }
 
+/* GetChar
+*/                                
+char NGS_CursorGetChar ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t colIdx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+    
+    assert ( self );
+    assert ( self -> col_data );
+    assert ( self -> col_idx );
+    
+    {
+        const void * base;
+        uint32_t elem_bits, boff, row_len;
+        TRY ( NGS_CursorCellDataDirect ( self, ctx, rowId, colIdx, & elem_bits, & base, & boff, & row_len ) )
+        {
+            if ( base == 0 || row_len == 0 )
+                INTERNAL_ERROR ( xcColumnReadFailed, "cell value is missing" );
+            else
+            {
+                assert ( elem_bits == 8 );
+                assert ( boff == 0 );
+
+                return *(char*)base;
+            }
+        }
+    }
+
+    return '?';
+}
+
 
 /* GetTable
  */
@@ -504,3 +534,16 @@ const VTable* NGS_CursorGetTable ( const NGS_Cursor * self, ctx_t ctx )
     INTERNAL_ERROR ( xcCursorAccessFailed, "VCursorOpenParentRead rc = %R", rc );
     return NULL;
 }
+
+/* GetVCursor
+ */
+const VCursor* NGS_CursorGetVCursor ( const NGS_Cursor * self )
+{
+    return self -> curs;
+}
+
+uint32_t NGS_CursorGetColumnIndex ( const NGS_Cursor * self, uint32_t column_id )
+{
+    return self -> col_idx [column_id];
+}
+

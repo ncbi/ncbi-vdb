@@ -36,6 +36,8 @@ include 'ncbi/stats.vschema';
 include 'align/seq.vschema';
 include 'align/qstat.vschema';
 include 'sra/abi.vschema';
+include 'align/mate-cache.vschema';
+
 
 /*--------------------------------------------------------------------------
  * data types

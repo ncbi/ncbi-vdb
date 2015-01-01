@@ -153,6 +153,7 @@ static const char * align_col_specs [] =
     "(I64)SEQ_SPOT_ID",
     "(ascii)SPOT_GROUP",
     "(I32)TEMPLATE_LEN",
+    "(ascii)RNA_ORIENTATION",
     "(I64)MATE_ALIGN_ID",
     "(ascii)MATE_REF_NAME",
     "(bool)MATE_REF_ORIENTATION",
@@ -307,7 +308,7 @@ NGS_Reference * CSRA1_ReadCollectionGetReferences ( CSRA1_ReadCollection * self,
     /* Iterators have their own cursors */
     TRY ( const NGS_Cursor* curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "REFERENCE", reference_col_specs, reference_NUM_COLS ) )
     {
-        return CSRA1_ReferenceIteratorMake ( ctx, & self -> dad, curs, self -> primaryId_count );
+        return CSRA1_ReferenceIteratorMake ( ctx, & self -> dad, self -> db, curs, self -> primaryId_count );
     }
     
     return NULL;
@@ -324,7 +325,7 @@ NGS_Reference * CSRA1_ReadCollectionGetReference ( CSRA1_ReadCollection * self, 
             return NULL;
     }
     
-    return CSRA1_ReferenceMake ( ctx, & self -> dad, self -> reference_curs, spec, self -> primaryId_count );
+    return CSRA1_ReferenceMake ( ctx, & self -> dad, self -> db, self -> reference_curs, spec, self -> primaryId_count );
 }
 
 static

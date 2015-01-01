@@ -239,7 +239,7 @@ NGS_String* SRA_StatisticsGetAsString ( const SRA_Statistics * self, ctx_t ctx, 
     return 0;
 }
 
-static int64_t StringToI64( const NGS_String * str, ctx_t ctx )
+static int64_t NGS_StringToI64( const NGS_String * str, ctx_t ctx )
 {
     /* have to guarantee NUL-termination for strtoi64/strtod */
     char buf[4096];
@@ -319,7 +319,7 @@ int64_t SRA_StatisticsGetAsI64 ( const SRA_Statistics * self, ctx_t ctx, const c
                 break;
                 
             case NGS_StatisticValueType_String: 
-                return StringToI64 ( node -> value . str, ctx );
+                return NGS_StringToI64 ( node -> value . str, ctx );
                 
             default :
                 INTERNAL_ERROR ( xcUnexpected, "unexpected type %u for dictionary item '%s'", node -> type, path );
@@ -331,7 +331,7 @@ int64_t SRA_StatisticsGetAsI64 ( const SRA_Statistics * self, ctx_t ctx, const c
     return 0;
 }
 
-static uint64_t StringToU64( const NGS_String * str, ctx_t ctx )
+static uint64_t NGS_StringToU64( const NGS_String * str, ctx_t ctx )
 {
     /* have to guarantee NUL-termination for strtou64/strtod */
     char buf[4096];
@@ -411,7 +411,7 @@ uint64_t SRA_StatisticsGetAsU64 ( const SRA_Statistics * self, ctx_t ctx, const 
                 break;
             
             case NGS_StatisticValueType_String: 
-                return StringToU64 ( node -> value . str, ctx );
+                return NGS_StringToU64 ( node -> value . str, ctx );
                 
             default :
                 INTERNAL_ERROR ( xcUnexpected, "unexpected type %u for dictionary item '%s'", node -> type, path );
@@ -423,7 +423,7 @@ uint64_t SRA_StatisticsGetAsU64 ( const SRA_Statistics * self, ctx_t ctx, const 
     return 0;
 }
 
-static double StringToReal ( const NGS_String * str, ctx_t ctx )
+static double NGS_StringToReal ( const NGS_String * str, ctx_t ctx )
 {
     /* have to guarantee NUL-termination for strtod */
     char buf[4096];
@@ -474,7 +474,7 @@ double SRA_StatisticsGetAsDouble ( const SRA_Statistics * self, ctx_t ctx, const
                 return node -> value . real;
                 
             case NGS_StatisticValueType_String: 
-                return StringToReal ( node -> value . str, ctx );
+                return NGS_StringToReal ( node -> value . str, ctx );
                 break;
                 
             default :

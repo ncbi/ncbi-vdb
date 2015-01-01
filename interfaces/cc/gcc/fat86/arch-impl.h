@@ -20,25 +20,14 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ==============================================================================
+* ===========================================================================
 *
 */
 
-#include <klib/misc.h> /* SetHttpTries */
-
-static uint32_t s_tries = 0;
-static bool s_tries_set = false;
-
-LIB_EXPORT void CC SetHttpTries(uint32_t tries) {
-    s_tries = tries;
-    s_tries_set = true;
-}
-
-uint32_t GetHttpTries(bool *isTriesSet) {
-    bool dummy = false;
-    if (isTriesSet == NULL) {
-        isTriesSet = &dummy;
-    }
-    *isTriesSet = s_tries_set;
-    return s_tries;
-}
+#if _ARCH_BITS == 32
+#include "../i386/arch-impl.h"
+#elif _ARCH_BITS == 64
+#include "../x86_64/arch-impl.h"
+#else
+#error "_ARCH_BITS not defined to be 32 or 64"
+#endif

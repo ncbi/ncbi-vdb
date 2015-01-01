@@ -32,7 +32,7 @@
 #include <vfs/path.h>
 
 #include <kns/http.h>
-#include <kns/kns-mgr-priv.h> /* KHttpRetrier */
+#include <kns/kns-mgr-priv.h> /* KNSManagerMakeReliableHttpFile */
 #include <kns/manager.h>
 #include <kns/stream.h>
 
@@ -937,7 +937,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_0 ( const char *start, size_t size,
 static
 rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
     const VPath ** path, const VPath ** mapping, const String *acc,
-    const String *ticket, bool *canRetry )
+    const String *ticket )
 {
     const char *start = astart;
     rc_t rc;
@@ -1141,9 +1141,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
             break;
         case 404: /* 404|no data :
                     If it is a real response then this assession is not found.
-                    What if it is a DB failure? Let's retry? */
-            assert(canRetry);
-            *canRetry = false;
+                    What if it is a DB failure? Will be retried if configured to do so? */
             return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
         case 410:
             rc = RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
@@ -1187,7 +1185,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
 static
 rc_t VResolverAlgParseResolverCGIResponse_2_0 ( const char *start, size_t size,
     const VPath ** path, const VPath ** mapping, const String *acc,
-    const String *ticket, bool *canRetry )
+    const String *ticket )
 {
     size_t i;
 
@@ -1208,7 +1206,7 @@ rc_t VResolverAlgParseResolverCGIResponse_2_0 ( const char *start, size_t size,
 
             /* parse as 1.1 response table */
             return VResolverAlgParseResolverCGIResponse_1_1 ( & start [ i ],
-                size - i, path, mapping, acc, ticket, canRetry );
+                size - i, path, mapping, acc, ticket );
         }
         while ( false );
     }
@@ -1224,7 +1222,7 @@ rc_t VResolverAlgParseResolverCGIResponse_2_0 ( const char *start, size_t size,
 static
 rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
     const VPath ** path, const VPath ** mapping, const String *acc,
-    const String *ticket, bool * canRetry )
+    const String *ticket )
 {
     /* the textual response */
     const char *start = ( const void* ) result -> base;
@@ -1282,8 +1280,7 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
                 break;
 
             /* parse 1.1 response table */
-            return VResolverAlgParseResolverCGIResponse_1_1 ( & start [ i ],
-                size - i, path, mapping, acc, ticket, canRetry );
+            return VResolverAlgParseResolverCGIResponse_1_1 ( & start [ i ], size - i, path, mapping, acc, ticket );
         }
         while ( false );
     }
@@ -1305,8 +1302,7 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
                 break;
 
             /* parse 2.0 response */
-            return VResolverAlgParseResolverCGIResponse_2_0 ( & start [ i ],
-                size - i, path, mapping, acc, ticket, canRetry );
+            return VResolverAlgParseResolverCGIResponse_2_0 ( & start [ i ], size - i, path, mapping, acc, ticket );
         }
         while ( false );
     }
@@ -1318,19 +1314,17 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
  *  use NCBI CGI to resolve accession into URL
  */
 static
-rc_t VResolverAlgRemoteProtectedResolveImpl ( const VResolverAlg *self,
+rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     const KNSManager *kns, VRemoteProtocols protocols, const String *acc,
-    const VPath ** path, const VPath ** mapping, bool legacy_wgs_refseq,
-    bool *canRetry )
+    const VPath ** path, const VPath ** mapping, bool legacy_wgs_refseq )
 {
     rc_t rc;
     KHttpRequest *req;
 
-    assert(path && canRetry);
-    *canRetry = true;
+    assert(path);
 
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("names.cgi = %S\n", self -> root));
-    rc = KNSManagerMakeRequest ( kns, & req, 0x01000000, NULL, self -> root -> addr );
+    rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000, NULL, self -> root -> addr ); 
     if ( rc == 0 )
     {
         /* build up POST information: */
@@ -1388,12 +1382,10 @@ rc_t VResolverAlgRemoteProtectedResolveImpl ( const VResolverAlg *self,
         {
             KHttpResult *rslt;
             
-            rc = KHttpRequestPOST ( req, &rslt );
+            rc = KHttpRequestPOST ( req, &rslt ); /* will retry if needed `*/
             if ( rc == 0 )
             {
                 uint32_t code;
-
-                *canRetry = false;
 
                 rc = KHttpResultStatus ( rslt, &code, NULL, 0, NULL );
                 if ( code == 200 )
@@ -1442,8 +1434,7 @@ rc_t VResolverAlgRemoteProtectedResolveImpl ( const VResolverAlg *self,
                         {
                             result.elem_count = total;
 
-                            rc = VResolverAlgParseResolverCGIResponse(&result,
-                                path, mapping, acc, self->ticket, canRetry);
+                            rc = VResolverAlgParseResolverCGIResponse(&result, path, mapping, acc, self->ticket);
                             KDataBufferWhack ( &result );
                         }
 
@@ -1458,63 +1449,12 @@ rc_t VResolverAlgRemoteProtectedResolveImpl ( const VResolverAlg *self,
 
     assert(*path != NULL || rc != 0);
 
-    if (rc == 0 && *path == NULL) {
-        *canRetry = true;
+    if (rc == 0 && *path == NULL) 
+    {
         rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNull);
     }
 
     return rc;
-}
-
-static rc_t VResolverAlgRemoteProtectedResolve ( const VResolverAlg *self,
-    const KNSManager *kns, VRemoteProtocols protocols, const String *acc,
-    const VPath ** path, const VPath ** mapping, bool legacy_wgs_refseq )
-{
-    bool canRetry = true;
-    KHttpRetrier retrier;
-    KHttpRetrierInit(&retrier,
-        KNSManagerGetNumberOfRetriesOnFailure(kns),
-        KNSManagerGetTestFailuresNumber(kns), acc->addr,
-        KNSManagerGetLogFailuresNumber(kns));
-    while (true) {
-        rc_t rc = KHttpRetrierForceFailure(&retrier, NULL);
-        if (rc == 0) {
-            rc = VResolverAlgRemoteProtectedResolveImpl(self, kns,
-                protocols, acc, path, mapping, legacy_wgs_refseq, &canRetry);
-        }
-        if (rc == 0 || !KHttpRetrierWait(&retrier, rc)/*|| !canRetry*/) {
-            return rc;
-        }
-    }
-#if 0
-    rc_t rc = 0;
-    int i = 0, retryOnFailure = 3;
-    for (i = 0; i < retryOnFailure; ++i) {
-        bool canRetry = false;
-        rc = VResolverAlgRemoteProtectedResolveImpl(self, kns, protocols,
-            acc, path, mapping, legacy_wgs_refseq, &canRetry);
-        if (rc == 0) {
-            break;
-        }
-        if (!canRetry) {
-            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_ERR), (
-"@@@@@@@@2 %s: VResolverAlgRemoteProtectedResolveImpl %d/%d = cannot retry = %R"
-                "\n", __FUNCTION__, i + 1, retryOnFailure, rc));
-            break;
-        }
-        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_ERR), (
-"@@@@@@@@2 %s: VResolverAlgRemoteProtectedResolveImpl %d/%d = can retry = %R"
-            "\n", __FUNCTION__, i + 1, retryOnFailure, rc));
-    }
-
-    if (rc != 0) {
-        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_ERR), (
-            "@@@@@@@@2 %s: returning %R\n", __FUNCTION__, rc));
-        return RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
-    }
-
-    return 0;
-#endif
 }
 
 /* RemoteResolve
