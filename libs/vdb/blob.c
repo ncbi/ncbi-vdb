@@ -1174,14 +1174,14 @@ LIB_EXPORT rc_t CC VBlobCellData ( const VBlob *self, int64_t row_id,
     uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len )
 {
     rc_t rc;
-    uint32_t dummy;
+    uint32_t dummy [ 3 ];
 
     if ( elem_bits == NULL )
-        elem_bits = & dummy;
+        elem_bits = & dummy [ 0 ];
     if ( boff == NULL )
-        boff = & dummy;
+        boff = & dummy [ 1 ];
     if ( row_len == NULL )
-        row_len = & dummy;
+        row_len = & dummy [ 2 ];
 
     if ( base == NULL )
         rc = RC ( rcVDB, rcBlob, rcAccessing, rcParam, rcNull );
