@@ -31,6 +31,7 @@
 #include "ngs_c_fixture.hpp"
 
 #include "NGS_Pileup.h"
+#include "NGS_PileupEvent.h"
 
 #include <kdb/manager.h>
 
@@ -50,6 +51,15 @@ const char* CSRA1_PrimaryOnly   = "SRR1063272";
 const char* CSRA1_WithSecondary = "SRR833251";
 const char* CSRA1_WithCircularReference = "SRR821492";
 
+#define ENTRY_GET_PILEUP(acc,ref) \
+    ENTRY_GET_REF(acc,ref) \
+    m_pileup = NGS_ReferenceGetPileups( m_ref, ctx, true, false); \
+    REQUIRE ( ! FAILED () && m_pileup );
+
+#define ENTRY_GET_PILEUP_NEXT(acc,ref) \
+    ENTRY_GET_PILEUP(acc,ref) \
+    REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
+    
 class CSRA1_Fixture : public NGS_C_Fixture
 {
 public:
@@ -57,6 +67,7 @@ public:
     : m_pileup (0)
     {
     }
+
     virtual void Release()
     {
         if (m_ctx != 0)
@@ -69,68 +80,168 @@ public:
         NGS_C_Fixture :: Release ();
     }
     
+    void Advance ( uint32_t count )
+    {
+        while ( count > 0 )
+        {
+            if  ( ! NGS_PileupIteratorNext ( m_pileup, m_ctx ) )
+                throw std :: logic_error ( "CSRA1_Fixture::Advance : NGS_PileupIteratorNext() failed" );
+            --count;
+        }
+    }
+    
     NGS_Pileup*     m_pileup;
 };
 
 // PileupIterator, full reference
-//TODO: CSRA1_PileupIteratorFull_NoAccessBeyondEnd
-FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessBeforeNext, CSRA1_Fixture)
+
+// no access before a call to NGS_PileupIteratorNext():
+
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessBeforeNext_PileupGetReferenceSpec, CSRA1_Fixture)
 {
-    ENTRY_GET_REF ( CSRA1_PrimaryOnly, "supercont2.1" );
-    
-    m_pileup = NGS_ReferenceGetPileups( m_ref, ctx, true, false); 
-    REQUIRE ( ! FAILED () && m_pileup );
+    ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
 
     REQUIRE_NULL ( NGS_PileupGetReferenceSpec ( m_pileup, ctx ) ); 
     REQUIRE_FAILED ();
     
+    EXIT;
+}
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessBeforeNext_PileupGetReferencePosition, CSRA1_Fixture)
+{
+    ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
+
     NGS_PileupGetReferencePosition ( m_pileup, ctx ); 
     REQUIRE_FAILED ();
     
+    EXIT;
+}
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessBeforeNext_PileupGetPileupEvents, CSRA1_Fixture)
+{
+    ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
+
     REQUIRE_NULL ( NGS_PileupGetPileupEvents ( m_pileup, ctx ) ); 
     REQUIRE_FAILED ();
     
+    EXIT;
+}
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessBeforeNext_PileupGetPileupDepth, CSRA1_Fixture)
+{
+    ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
+
     NGS_PileupGetPileupDepth ( m_pileup, ctx ); 
     REQUIRE_FAILED ();
     
     EXIT;
 }
 
-#if SHOW_UNIMPLEMENTED
-FIXTURE_TEST_CASE(CSRA1_PileupIterator_AccessAfterNext, CSRA1_Fixture)
-{
-    ENTRY_GET_REF ( CSRA1_PrimaryOnly, "supercont2.1" );
-    
-    m_pileup = NGS_ReferenceGetPileups( m_ref, ctx, true, false); 
-    REQUIRE ( ! FAILED () && m_pileup );
-    REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
+// access after a call to NGS_PileupIteratorNext():
 
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_AccessAfterNext_PileupGetReferenceSpec, CSRA1_Fixture)
+{
+    ENTRY_GET_PILEUP_NEXT ( CSRA1_PrimaryOnly, "supercont2.1" );
     REQUIRE_STRING ( "supercont2.1", NGS_PileupGetReferenceSpec ( m_pileup, ctx ) ); 
-    
-    REQUIRE_EQ ( (int64_t)0, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_AccessAfterNext_PileupGetReferencePosition, CSRA1_Fixture)
+{
+    ENTRY_GET_PILEUP_NEXT ( CSRA1_PrimaryOnly, "supercont2.1" );
+
+    REQUIRE_EQ ( (int64_t)0, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); // 0 is probably wrong - find out the correct answer
     REQUIRE ( ! FAILED () );
     
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_AccessAfterNext_PileupGetPileupEvents, CSRA1_Fixture)
+{
+    ENTRY_GET_PILEUP_NEXT ( CSRA1_PrimaryOnly, "supercont2.1" );
+
     NGS_PileupEvent * events = NGS_PileupGetPileupEvents ( m_pileup, ctx ); 
     REQUIRE ( ! FAILED () && events );
     
-    REQUIRE_EQ ( (unsigned int)0, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    NGS_PileupEventRelease ( events, ctx );
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_AccessAfterNext_PileupGetPileupDepth, CSRA1_Fixture)
+{
+    ENTRY_GET_PILEUP_NEXT ( CSRA1_PrimaryOnly, "supercont2.1" );
+    REQUIRE_EQ ( (unsigned int)0, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); // TODO: verify that 0 is correct
+    EXIT;
+}
+
+// no access after the end of iteration
+#if SHOW_UNIMPLEMENTED
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupGetReferenceSpec, CSRA1_Fixture)
+{
+    ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
+    while ( NGS_PileupIteratorNext ( m_pileup, ctx ) ) {}
+
+    REQUIRE_NULL ( NGS_PileupGetReferenceSpec ( m_pileup, ctx ) ); 
+    REQUIRE_FAILED ();
+    
+    EXIT;
+}
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupGetReferencePosition, CSRA1_Fixture)
+{
+    ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
+    while ( NGS_PileupIteratorNext ( m_pileup, ctx ) ) {}
+    
+    NGS_PileupGetReferencePosition ( m_pileup, ctx ); 
+    REQUIRE_FAILED ();
+    
+    EXIT;
+}
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupGetPileupEvents, CSRA1_Fixture)
+{
+    ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
+    while ( NGS_PileupIteratorNext ( m_pileup, ctx ) ) {}
+
+    REQUIRE_NULL ( NGS_PileupGetPileupEvents ( m_pileup, ctx ) ); 
+    REQUIRE_FAILED ();
+    
+    EXIT;
+}
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupGetPileupDepth, CSRA1_Fixture)
+{
+    ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
+    while ( NGS_PileupIteratorNext ( m_pileup, ctx ) ) {}
+
+    NGS_PileupGetPileupDepth ( m_pileup, ctx ); 
+    REQUIRE_FAILED ();
     
     EXIT;
 }
 #endif
-////TODO: Pileup
-// NGS_PileupGetReferenceSpec
-// NGS_PileupGetReferencePosition
-// NGS_PileupGetPileupEvents
-// NGS_PileupGetPileupDepth
 
+// regular operation
 
-////TODO: PileupEventIterator
-//TODO: CSRA1_PileupEventIterator_NoAccessBeyondEnd
-//TODO: CSRA1_PileupEventIterator_NoAccessBeforeNext
-//TODO: CSRA1_PileupEventIterator_AccessAfterNext
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetReferencePosition, CSRA1_Fixture)
+{
+    ENTRY_GET_PILEUP_NEXT ( CSRA1_PrimaryOnly, "supercont2.1" );
+    
+    REQUIRE_EQ ( (int64_t)0, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
+    REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
+    REQUIRE_EQ ( (int64_t)1, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
+    REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
+    REQUIRE_EQ ( (int64_t)2, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
+    
+    EXIT;
+}
 
-////TODO: PileupEvent
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetPileupDepth, CSRA1_Fixture)
+{
+    ENTRY_GET_PILEUP_NEXT ( CSRA1_PrimaryOnly, "supercont2.1" );
+    
+    Advance(85);
+    REQUIRE_EQ ( (unsigned int)1, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); // TODO: verify that 1 is correct
+    
+    EXIT;
+}
+
+//// PileupEvent
+
 //TODO: NGS_PileupEventGetReferenceSpec
 //TODO: NGS_PileupEventGetReferencePosition
 //TODO: NGS_PileupEventGetMappingQuality

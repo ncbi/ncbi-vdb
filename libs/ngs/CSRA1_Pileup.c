@@ -42,6 +42,7 @@ typedef struct CSRA1_Pileup CSRA1_Pileup;
 #include <klib/rc.h>
 
 #include "CSRA1_Reference.h"
+#include "CSRA1_PileupEvent.h"
 
 #ifndef min
 #define min(x, y) ((y) < (x) ? (y) : (x))
@@ -1204,22 +1205,36 @@ void CSRA1_PileupWhack ( CSRA1_Pileup * self, ctx_t ctx )
 struct NGS_String * CSRA1_PileupGetReferenceSpec ( const CSRA1_Pileup * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
-    UNIMPLEMENTED ();
-    return NULL;
+    if ( ! self -> is_started )
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Pileup accessed before a call to PileupIteratorNext()" );
+        return 0;
+    }
+    
+    return NGS_StringDuplicate ( self -> ref_spec, ctx );
 }
 
 int64_t CSRA1_PileupGetReferencePosition ( const CSRA1_Pileup * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
-    UNIMPLEMENTED ();
-    return 0;
+    if ( ! self -> is_started )
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Pileup accessed before a call to PileupIteratorNext()" );
+        return 0;
+    }
+    return self -> pileup_state . ref_pos;
 }
 
 struct NGS_PileupEvent * CSRA1_PileupGetEvents ( const CSRA1_Pileup * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
-    UNIMPLEMENTED ();
-    return NULL;
+    if ( ! self -> is_started )
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Pileup accessed before a call to PileupIteratorNext()" );
+        return 0;
+    }
+    
+    return CSRA1_PileupEventIteratorMake ( ctx, self -> ref_spec, self -> primary, self -> secondary );
 }
 
 unsigned int CSRA1_PileupGetDepth ( const CSRA1_Pileup * self, ctx_t ctx )

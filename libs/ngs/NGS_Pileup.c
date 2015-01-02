@@ -147,7 +147,6 @@ void NGS_PileupInit ( ctx_t ctx, struct NGS_Pileup * self, NGS_Pileup_vt * vt, c
     
 struct NGS_String* NGS_PileupGetReferenceSpec ( const NGS_Pileup* self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -163,7 +162,6 @@ struct NGS_String* NGS_PileupGetReferenceSpec ( const NGS_Pileup* self, ctx_t ct
 
 int64_t NGS_PileupGetReferencePosition ( const NGS_Pileup* self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -179,7 +177,6 @@ int64_t NGS_PileupGetReferencePosition ( const NGS_Pileup* self, ctx_t ctx )
 
 struct NGS_PileupEvent* NGS_PileupGetPileupEvents ( const NGS_Pileup* self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -195,7 +192,6 @@ struct NGS_PileupEvent* NGS_PileupGetPileupEvents ( const NGS_Pileup* self, ctx_
 
 unsigned int NGS_PileupGetPileupDepth ( const NGS_Pileup* self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -211,7 +207,6 @@ unsigned int NGS_PileupGetPileupDepth ( const NGS_Pileup* self, ctx_t ctx )
 
 bool NGS_PileupIteratorNext ( const NGS_Pileup* self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );

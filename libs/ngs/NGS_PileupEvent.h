@@ -53,6 +53,24 @@ extern struct NGS_PileupEvent_v1_vt ITF_PileupEvent_vt;
  * NGS_PileupEvent
  */
  
+/* ToRefcount
+ *  inline cast that preserves const
+ */
+#define NGS_PileupEventToRefcount( self ) \
+    ( & ( self ) -> dad )
+
+/* Release
+ *  release reference
+ */
+#define NGS_PileupEventRelease( self, ctx ) \
+    NGS_RefcountRelease ( NGS_PileupEventToRefcount ( self ), ctx )
+
+/* Duplicate
+ *  duplicate reference
+ */
+#define NGS_PileupEventDuplicate( self, ctx ) \
+    ( ( NGS_PileupEvent* ) NGS_RefcountDuplicate ( NGS_PileupEventToRefcount ( self ), ctx ) ) 
+ 
 struct NGS_String * NGS_PileupEventGetReferenceSpec( const NGS_PileupEvent * self, ctx_t ctx );
 
 int64_t NGS_PileupEventGetReferencePosition( const NGS_PileupEvent * self, ctx_t ctx );

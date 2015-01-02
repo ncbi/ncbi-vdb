@@ -286,7 +286,6 @@ void NGS_PileupEventInit ( ctx_t ctx, struct NGS_PileupEvent * self, NGS_PileupE
     
 struct NGS_String * NGS_PileupEventGetReferenceSpec( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -302,7 +301,6 @@ struct NGS_String * NGS_PileupEventGetReferenceSpec( const NGS_PileupEvent * sel
 
 int64_t NGS_PileupEventGetReferencePosition( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -318,7 +316,6 @@ int64_t NGS_PileupEventGetReferencePosition( const NGS_PileupEvent * self, ctx_t
 
 int NGS_PileupEventGetMappingQuality( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -334,7 +331,6 @@ int NGS_PileupEventGetMappingQuality( const NGS_PileupEvent * self, ctx_t ctx )
 
 struct NGS_String * NGS_PileupEventGetAlignmentId( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -350,7 +346,6 @@ struct NGS_String * NGS_PileupEventGetAlignmentId( const NGS_PileupEvent * self,
 
 struct NGS_Alignment * NGS_PileupEventGetAlignment( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -366,7 +361,6 @@ struct NGS_Alignment * NGS_PileupEventGetAlignment( const NGS_PileupEvent * self
 
 int64_t NGS_PileupEventGetAlignmentPosition( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -382,7 +376,6 @@ int64_t NGS_PileupEventGetAlignmentPosition( const NGS_PileupEvent * self, ctx_t
 
 int64_t NGS_PileupEventGetFirstAlignmentPosition( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -398,7 +391,6 @@ int64_t NGS_PileupEventGetFirstAlignmentPosition( const NGS_PileupEvent * self, 
 
 int64_t NGS_PileupEventGetLastAlignmentPosition( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -414,7 +406,6 @@ int64_t NGS_PileupEventGetLastAlignmentPosition( const NGS_PileupEvent * self, c
 
 int NGS_PileupEventGetEventType( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -430,7 +421,6 @@ int NGS_PileupEventGetEventType( const NGS_PileupEvent * self, ctx_t ctx )
 
 char NGS_PileupEventGetAlignmentBase( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -446,7 +436,6 @@ char NGS_PileupEventGetAlignmentBase( const NGS_PileupEvent * self, ctx_t ctx )
 
 char NGS_PileupEventGetAlignmentQuality( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -462,7 +451,6 @@ char NGS_PileupEventGetAlignmentQuality( const NGS_PileupEvent * self, ctx_t ctx
 
 struct NGS_String * NGS_PileupEventGetInsertionBases( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -478,7 +466,6 @@ struct NGS_String * NGS_PileupEventGetInsertionBases( const NGS_PileupEvent * se
 
 struct NGS_String * NGS_PileupEventGetInsertionQualities( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -494,7 +481,6 @@ struct NGS_String * NGS_PileupEventGetInsertionQualities( const NGS_PileupEvent 
 
 unsigned int NGS_PileupEventGetDeletionCount( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -513,7 +499,6 @@ unsigned int NGS_PileupEventGetDeletionCount( const NGS_PileupEvent * self, ctx_
  */
 bool NGS_PileupEventIteratorNext ( NGS_PileupEvent* self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
