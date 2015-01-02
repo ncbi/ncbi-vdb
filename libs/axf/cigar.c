@@ -1967,14 +1967,9 @@ rc_t CC get_ref_len_2_impl ( void *data, const VXformInfo *info, int64_t row_id,
     rc_t rc;
     ARG_ALIAS(int32_t, refOffset, 1);
     unsigned const n = (unsigned)argv[1].u.data.elem_count;
-    /* volatile is used to prevent for-loop-vectorization by gcc - may cause coredumps for n=7 ???*/
-    /* observed during: vdb-dump -C RAW_READ -T PRIMARY_ALIGNMENT SRR1582903 -R 2565305*/
-    /* REF_OFFSET: -3, 3, 9, -19, 10, 2, -2 ***/
-    /* another: vdb-dump -C RAW_READ -T PRIMARY_ALIGNMENT SRR1582903 -R 2233359 */
-    /* REF_OFFSET: -10, 18, -2, -11, 3, -2, -1 */
-    volatile int result = (unsigned)argv[0].u.data.elem_count; 
+    int result = (unsigned)argv[0].u.data.elem_count; 
     unsigned i;
-    
+
     for (i = 0; i < n; ++i)
         result += (int)refOffset[i];
     

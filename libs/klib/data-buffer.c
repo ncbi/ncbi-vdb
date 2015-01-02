@@ -35,9 +35,17 @@
 #include <string.h>
 #include <assert.h>
 
+#define DEBUG_ALIGNMENT 0
+
 #if _DEBUGGING
 #define DEBUG_MALLOC_FREE 1
 #include <stdio.h>
+#endif
+
+#if DEBUG_ALIGNMENT
+#if ! _DEBUGGING
+#include <stdio.h>
+#endif
 
 #if _ARCH_BITS == 32
 #define BASE_PTR_ALIGNMENT 8
@@ -436,9 +444,16 @@ rc_t KDataBufferCastInt(const KDataBuffer *self, KDataBuffer *target, uint64_t n
             buffer_impl_t * buffer = ( buffer_impl_t * ) self -> ignore;
             size_t total_bytes = KDataBufferBytes ( self );
 
+#if DEBUG_ALIGNMENT
+            fprintf ( stderr, "NOTICE: %s - adjusting pointer alignment of %zu byte buffer: ", __func__, total_bytes );
+#endif
+
             /* need to realign data */
             if ( ( const KDataBuffer * ) target == self && atomic32_read ( & buffer -> refcount ) == 1 )
             {
+#if DEBUG_ALIGNMENT
+                fprintf ( stderr, "using memmove within buffer\n" );
+#endif
                 /* can simply memmove */
                 memmove ( buffer + 1, target -> base, total_bytes );
                 target -> base = buffer + 1;
@@ -457,6 +472,9 @@ rc_t KDataBufferCastInt(const KDataBuffer *self, KDataBuffer *target, uint64_t n
                     return rc;
                 assert ( ( ( size_t ) tmp . base & BASE_PTR_ALIGNMENT - 1 ) == 0 );
 
+#if DEBUG_ALIGNMENT
+                fprintf ( stderr, "reallocating and copying buffer\n" );
+#endif
                 /* copy */
                 memcpy ( tmp . base, self -> base, total_bytes );
 
