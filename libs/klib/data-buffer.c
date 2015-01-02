@@ -35,6 +35,12 @@
 #include <string.h>
 #include <assert.h>
 
+#if _ARCH_BITS == 32
+#define BASE_PTR_ALIGNMENT 8
+#else
+#define BASE_PTR_ALIGNMENT 16
+#endif
+
 #define DEBUG_ALIGNMENT 0
 
 #if _DEBUGGING
@@ -45,12 +51,6 @@
 #if DEBUG_ALIGNMENT
 #if ! _DEBUGGING
 #include <stdio.h>
-#endif
-
-#if _ARCH_BITS == 32
-#define BASE_PTR_ALIGNMENT 8
-#else
-#define BASE_PTR_ALIGNMENT 16
 #endif
 
 static
