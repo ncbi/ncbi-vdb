@@ -205,7 +205,7 @@ unsigned int NGS_PileupGetPileupDepth ( const NGS_Pileup* self, ctx_t ctx )
     return 0;
 }
 
-bool NGS_PileupIteratorNext ( const NGS_Pileup* self, ctx_t ctx )
+bool NGS_PileupIteratorNext ( NGS_Pileup* self, ctx_t ctx )
 {
     if ( self == NULL )
     {

@@ -50,6 +50,7 @@ typedef struct CSRA1_Reference CSRA1_Reference;
 #include <klib/refcount.h>
 
 #include <vdb/table.h>
+#include <vdb/database.h>
 #include <vdb/cursor.h>
 #include <vdb/schema.h>
 #include <vdb/vdb-priv.h>

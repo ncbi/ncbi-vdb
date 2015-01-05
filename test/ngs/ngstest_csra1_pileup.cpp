@@ -172,7 +172,6 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_AccessAfterNext_PileupGetPileupDepth, CSR
 }
 
 // no access after the end of iteration
-#if SHOW_UNIMPLEMENTED
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupGetReferenceSpec, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
@@ -213,7 +212,15 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupGetPileupDepth, CS
     
     EXIT;
 }
-#endif
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupIteratorNext, CSRA1_Fixture)
+{
+    ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
+    while ( NGS_PileupIteratorNext ( m_pileup, ctx ) ) {}
+
+    REQUIRE ( ! NGS_PileupIteratorNext ( m_pileup, ctx ) ); 
+    
+    EXIT;
+}
 
 // regular operation
 
@@ -232,13 +239,38 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetReferencePosition, CSRA1_Fixture
 
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetPileupDepth, CSRA1_Fixture)
 {
-    ENTRY_GET_PILEUP_NEXT ( CSRA1_PrimaryOnly, "supercont2.1" );
-    
+    ENTRY_GET_PILEUP_NEXT( CSRA1_PrimaryOnly, "supercont2.1" );
+
     Advance(85);
-    REQUIRE_EQ ( (unsigned int)1, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); // TODO: verify that 1 is correct
+    REQUIRE_EQ ( (int64_t)85, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)1, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
     
     EXIT;
 }
+
+#if 0
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_PrintOut, CSRA1_Fixture)
+{
+    ENTRY_GET_PILEUP( CSRA1_PrimaryOnly, "supercont2.1" );
+
+    while (NGS_PileupIteratorNext ( m_pileup, ctx ))
+    {
+        int64_t pos = NGS_PileupGetReferencePosition ( m_pileup, ctx );
+        REQUIRE ( ! FAILED() );
+        unsigned int depth = NGS_PileupGetPileupDepth ( m_pileup, ctx );
+        REQUIRE ( ! FAILED() );
+        string ref = toString ( NGS_PileupGetReferenceSpec ( m_pileup, ctx ), ctx, true );
+        REQUIRE ( ! FAILED() );
+        if ( depth != 0 )
+            cout <<  ref << "\t" << pos << "\t" << depth << endl;
+    }
+    EXIT;
+}
+#endif
+
+////TODO: PileupIterator, reference slice
+////TODO: PileupIterator, full circular reference 
+////TODO: PileupIterator, circular reference slice
 
 //// PileupEvent
 
@@ -256,10 +288,6 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetPileupDepth, CSRA1_Fixture)
 //TODO: NGS_PileupEventGetInsertionBases
 //TODO: NGS_PileupEventGetInsertionQualities
 //TODO: NGS_PileupEventGetDeletionCount
-
-////TODO: PileupIterator, reference slice
-////TODO: PileupIterator, full circular reference 
-////TODO: PileupIterator, circular reference slice
 
 //////////////////////////////////////////// Main
 extern "C"
