@@ -45,10 +45,11 @@ bool ascp_path(const char **cmd, const char **key) {
         "/opt/aspera/etc/asperaweb_id_dsa.putty",
     };
     static const char *c[]
-        = {                 "ascp",                "ascp",
-                   "/usr/bin/ascp",       "/usr/bin/ascp",
-            "/opt/aspera/bin/ascp" "/opt/aspera/bin/ascp" };
-    assert(cmd && key && sizeof c / sizeof c[0] == sizeof k / sizeof k[0]);
+        = {                 "ascp",                 "ascp",
+                   "/usr/bin/ascp",        "/usr/bin/ascp",
+            "/opt/aspera/bin/ascp", "/opt/aspera/bin/ascp" };
+    assert(cmd != NULL && key != NULL);
+    assert(sizeof c / sizeof c[0] == sizeof k / sizeof k[0]);
     if (idx < sizeof c / sizeof c[0]) {
         *cmd = c[idx];
         *key = k[idx];
@@ -64,7 +65,7 @@ bool ascp_path(const char **cmd, const char **key) {
             idx = 0;
             return false;
         }
-        if (k[0] == '\0') {
+        /*if (k[0] == '\0')*/ {
             size_t num_writ = 0;
             const char* home = getenv("HOME");
             if (home == NULL) {
