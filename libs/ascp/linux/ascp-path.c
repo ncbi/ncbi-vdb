@@ -32,6 +32,14 @@
 #include <limits.h> /* PATH_MAX */
 #include <stdlib.h> /* getenv */
 
+static int size_of(const char **array) {
+    int i = 0;
+    while (*(array++) != NULL) {
+        ++i;
+    }
+    return i;
+}
+
 bool ascp_path(const char **cmd, const char **key) {
     static int idx = 0;
     static const char *k[] = {
@@ -43,35 +51,39 @@ bool ascp_path(const char **cmd, const char **key) {
 
         "/opt/aspera/etc/asperaweb_id_dsa.openssh",
         "/opt/aspera/etc/asperaweb_id_dsa.putty",
+        NULL
     };
-    static const char *c[]
-        = {                 "ascp",                 "ascp",
+    static const char *c[] = {
+                            "ascp",                 "ascp",
                    "/usr/bin/ascp",        "/usr/bin/ascp",
-            "/opt/aspera/bin/ascp", "/opt/aspera/bin/ascp" };
+            "/opt/aspera/bin/ascp", "/opt/aspera/bin/ascp",
+            NULL
+        };
+    int size = size_of(c);
     assert(cmd != NULL && key != NULL);
-    assert(sizeof c / sizeof c[0] == sizeof k / sizeof k[0]);
-    if (idx < sizeof c / sizeof c[0]) {
+    assert(size_of(c) == size_of(k));
+    if (idx < size) {
         *cmd = c[idx];
         *key = k[idx];
         ++idx;
         return true;
     }
-    else if (idx >= sizeof c / sizeof c[0]) {
+    else {
         rc_t rc = 0;
         static char k[PATH_MAX] = "";
         static char c[PATH_MAX] = "";
-        if (idx > sizeof c / sizeof c[0] + 1) {
+        if (idx > size + 1) {
             *cmd = *key = NULL;
             idx = 0;
             return false;
         }
-        /*if (k[0] == '\0')*/ {
+        {
             size_t num_writ = 0;
             const char* home = getenv("HOME");
             if (home == NULL) {
                 home = "";
             }
-            if (idx == sizeof c / sizeof c[0]) {
+            if (idx == size) {
                 rc = string_printf(k, sizeof k, &num_writ,
                     "%s/.aspera/connect/etc/asperaweb_id_dsa.openssh", home);
             }
