@@ -27,6 +27,14 @@
 #include "ascp-priv.h" /* ascp_path */
 #include <assert.h>
 
+static int size_of(const char **array) {
+    int i = 0;
+    while (*(array++) != NULL) {
+        ++i;
+    }
+    return i;
+}
+
 bool ascp_path(const char **cmd, const char **key) {
     static int idx = 0;
 
@@ -48,9 +56,12 @@ bool ascp_path(const char **cmd, const char **key) {
       "C:\\Program Files\\Aspera\\Aspera Connect\\etc\\asperaweb_id_dsa.putty",
     };
 
-    assert(cmd && key && sizeof c / sizeof c[0] == sizeof k / sizeof k[0]);
+    int size = size_of(c);
 
-    if (idx < sizeof c / sizeof c[0]) {
+    assert(cmd != NULL && key != NULL);
+    assert(size_of(c) == size_of(k));
+
+    if (idx < size) {
         *cmd = c[idx];
         *key = k[idx];
         ++idx;

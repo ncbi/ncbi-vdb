@@ -12,7 +12,7 @@ bool ascp_path(const char **cmd, const char **key) {
     };
     static const char c[] = "/Applications/Aspera Connect.app/Contents/"
         "Resources/ascp";
-    assert(cmd && key);
+    assert(cmd != NULL && key != NULL);
     if (idx == 0 || idx == 1) {
         ++idx;
         *cmd = c;
@@ -23,7 +23,7 @@ bool ascp_path(const char **cmd, const char **key) {
         rc_t rc = 0;
         static char k[PATH_MAX] = "";
         static char c[PATH_MAX] = "";
-        if (k[0] == '\0') {
+        {
             size_t num_writ = 0;
             const char* home = getenv("HOME");
             if (home == NULL) {
