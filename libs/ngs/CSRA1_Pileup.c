@@ -620,18 +620,18 @@ static rc_t add_ref_row_to_cache (
         ref_end = ref_start + (int64_t)ref_len;
 
         /* skip all alignments that are to the left of slice (if we have slice specified) */
-        if ( pileup_state->slice_length && ref_end < slice_start)
+        if ( pileup_state->slice_length && ref_end <= slice_start)
             continue;
 
         /* stop processing current alignments that are to the right of slice (if we have slice specified) */
-        if ( pileup_state->slice_length && ref_start > (slice_start + (int64_t)pileup_state->slice_length))
+        if ( pileup_state->slice_length && ref_start >= (slice_start + (int64_t)pileup_state->slice_length))
         {
             /*pileup_state->next_alignment_idx = pileup_state->size_alignment_ids;*/
             break;
         }
 
         /* if alignment intersects slice_start - cache it */
-        if ( ref_start <= (int64_t)ref_pos && ref_end >= (int64_t)ref_pos )
+        if ( ref_start <= (int64_t)ref_pos && ref_end > (int64_t)ref_pos )
         {
             rc = Alignment_Add ( & pileup_state->cache_alignment, pa_ids[i], ref_start, ref_len, seq_start );
             if ( rc != 0 )
@@ -934,9 +934,9 @@ static bool next_pileup (
     rc_t rc;
 
     /* TODO: check the case when slice_end is beyond the reference end*/
-    if ( pileup_state->slice_length && pileup_state->ref_pos == pileup_state->slice_start + pileup_state->slice_length )
+    if ( pileup_state->slice_length && pileup_state->ref_pos + 1 >= pileup_state->slice_start + pileup_state->slice_length )
     {
-        return false;
+        return false; /* end of slice */
     }
 
     /* drop cached alignments that we will not need anymore */
@@ -1358,11 +1358,9 @@ struct NGS_Pileup* CSRA1_PileupIteratorMake ( ctx_t ctx,
             ref -> pileup_state.reference_start_id = first_row_id;
             ref -> pileup_state.reference_last_id = last_row_id;
 
-            /* TODO: add slice boundaries*/
-            ref -> pileup_state.slice_start = 0; /*20000-10;*/
-            ref -> pileup_state.slice_length = 0; /*32;*/
-
-            ref -> pileup_state.ref_pos = ref -> pileup_state.slice_start;
+            ref -> pileup_state.slice_start     = 0; 
+            ref -> pileup_state.slice_length    = 0;
+            ref -> pileup_state.ref_pos         = 0;
 
             rc = init_vdb_objects ( ctx,
                     ref->db, & ref->table_pa,
@@ -1379,6 +1377,36 @@ struct NGS_Pileup* CSRA1_PileupIteratorMake ( ctx_t ctx,
             }
         }
         free ( ref );
+    }
+
+    return NULL;
+}
+
+struct NGS_Pileup* CSRA1_PileupIteratorMakeSlice ( 
+    ctx_t ctx,
+    VDatabase const* db, 
+    NGS_Cursor const* curs_ref,
+    const NGS_String* ref_spec,
+    int64_t first_row_id, 
+    int64_t last_row_id,
+    uint64_t slice_start, 
+    uint64_t slice_size,
+    bool wants_primary, 
+    bool wants_secondary )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
+    
+    struct NGS_Pileup* ret;
+
+    TRY ( ret = CSRA1_PileupIteratorMake ( ctx, db, curs_ref, ref_spec, first_row_id, last_row_id, wants_primary, wants_secondary ) )
+    {
+        CSRA1_Pileup * csra1_pileup = (CSRA1_Pileup *) ret;
+        /* add slice boundaries*/
+        csra1_pileup -> pileup_state.ref_pos         = slice_start;
+        csra1_pileup -> pileup_state.slice_start     = slice_start; 
+        csra1_pileup -> pileup_state.slice_length    = slice_size;
+        
+        return ret;
     }
 
     return NULL;
