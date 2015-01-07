@@ -116,7 +116,7 @@ void CSRA1_PileupEventInit ( CSRA1_PileupEvent * self,
 static void CSRA1_PileupEventWhack ( CSRA1_PileupEvent * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcDestroying );
-    UNIMPLEMENTED();
+    NGS_StringRelease ( self -> ref_spec, ctx );
 }
 
 struct NGS_String * CSRA1_PileupEventGetReferenceSpec ( const NGS_PileupEvent * self, ctx_t ctx )

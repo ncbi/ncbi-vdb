@@ -28,12 +28,17 @@
 #include <vdb/cursor.h> 
 #include <vdb/vdb-priv.h>
 //#include <sra/sradb-priv.h>
+#include <sra/sraschema.h> // VDBManagerMakeSRASchema
+#include <vdb/schema.h> /* VSchemaRelease */
 
 #include <ktst/unit_test.hpp> // TEST_CASE
 #include <kfg/config.h> 
 
 #include <sysalloc.h>
 #include <cstdlib>
+#include <stdexcept>
+
+using namespace std;
 
 TEST_SUITE( VdbTestSuite )
 
@@ -182,6 +187,133 @@ TEST_CASE(SimultaneousCursors)
     }
 }
 #endif
+
+class VdbFixture
+{
+public:
+    VdbFixture()
+    : mgr(0), curs(0), col_idx(~0)
+    {
+        if ( VDBManagerMakeRead(&mgr, NULL) != 0 )
+            throw logic_error ( "VdbFixture: VDBManagerMakeRead failed" );
+    }
+    
+    ~VdbFixture()
+    {
+        if ( mgr && VDBManagerRelease ( mgr ) != 0 )
+            throw logic_error ( "~VdbFixture: VDBManagerRelease failed" );
+        if ( curs && VCursorRelease ( curs ) != 0 )
+            throw logic_error ( "~VdbFixture: VCursorRelease failed" );
+    }
+    
+    rc_t Setup( const char * acc )
+    {
+        const VDatabase *db = NULL;
+        rc_t rc = VDBManagerOpenDBRead ( mgr, &db, NULL, acc );
+        rc_t rc2;
+
+        const VTable *tbl = NULL;
+        if (rc == 0) 
+        {
+            rc = VDatabaseOpenTableRead ( db, &tbl, "SEQUENCE" );
+        }
+        else 
+        {
+            rc = VDBManagerOpenTableRead ( mgr, &tbl, NULL, acc );
+            if (rc != 0) 
+            {
+                VSchema *schema = NULL;
+                rc = VDBManagerMakeSRASchema(mgr, &schema);
+                if ( rc != 0 )
+                {
+                    return rc;
+                }
+                    
+                rc = VDBManagerOpenTableRead ( mgr, &tbl, schema, acc );
+                
+                rc2 = VSchemaRelease ( schema );
+                if ( rc == 0 )
+                    rc = rc2;
+            }
+        }
+
+        if ( rc == 0 )
+        {
+            rc = VTableCreateCursorRead(tbl, &curs);
+            if ( rc == 0 )
+            {
+                col_idx = ~0;
+                rc = VCursorAddColumn ( curs, &col_idx, "READ_LEN" );
+                if ( rc == 0 )
+                {
+                    rc = VCursorOpen(curs);
+                }
+            }
+        }
+        
+        rc2 = VTableRelease ( tbl );
+        if ( rc == 0 )
+            rc = rc2;
+        
+        if ( db != NULL )
+        {
+            rc2 = VDatabaseRelease ( db );
+            if ( rc == 0 )
+               rc = rc2;
+        }
+            
+        return rc;
+    }
+    
+    const VDBManager * mgr;
+    const VCursor * curs;
+    uint32_t col_idx;
+};
+
+FIXTURE_TEST_CASE(TestCursorIsStatic_SingleRowRun1, VdbFixture) 
+{
+    REQUIRE_RC ( Setup ( "SRR002749" ) );
+    bool is_static = false;
+    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
+    REQUIRE ( is_static );
+}
+FIXTURE_TEST_CASE(TestCursorIsStatic_VariableREAD_LEN, VdbFixture) 
+{
+    REQUIRE_RC ( Setup ( "SRR050566" ) );
+    bool is_static = true;
+    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
+    REQUIRE ( ! is_static );
+}
+#if 0
+FIXTURE_TEST_CASE(TestCursorIsStatic_SingleRowRun2, VdbFixture) 
+{
+    REQUIRE_RC ( Setup ( "SRR053325" ) );
+    bool is_static = false;
+    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
+    REQUIRE ( is_static );
+}
+#endif
+FIXTURE_TEST_CASE(TestCursorIsStatic_FixedREAD_LEN_MultipleRows, VdbFixture) 
+{
+    REQUIRE_RC ( Setup ( "SRR125365" ) );
+    bool is_static = false;
+    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
+    REQUIRE ( is_static );
+}
+FIXTURE_TEST_CASE(TestCursorIsStatic_DB_FixedREAD_LEN_MultipleRows, VdbFixture) 
+{
+    REQUIRE_RC ( Setup ( "SRR600096" ) );
+    bool is_static = false;
+    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
+    REQUIRE ( is_static );
+}
+FIXTURE_TEST_CASE(TestCursorIsStatic_DB_VariableREAD_LEN_MultipleRows, VdbFixture) 
+{
+    REQUIRE_RC ( Setup ( "SRR619505" ) );
+    bool is_static = true;
+    REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
+    REQUIRE ( ! is_static );
+}
 
 //////////////////////////////////////////// Main
 extern "C"

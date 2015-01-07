@@ -6,30 +6,39 @@
 
 bool ascp_path(const char **cmd, const char **key) {
     static int idx = 0;
-    static const char k[] = "/Applications/Aspera Connect.app/Contents/"
-        "Resources/asperaweb_id_dsa.putty";
+    static const char *k[] = {
+ "/Applications/Aspera Connect.app/Contents/Resources/asperaweb_id_dsa.openssh",
+ "/Applications/Aspera Connect.app/Contents/Resources/asperaweb_id_dsa.putty",
+    };
     static const char c[] = "/Applications/Aspera Connect.app/Contents/"
         "Resources/ascp";
-    assert(cmd && key);
-    if (idx == 0) {
+    assert(cmd != NULL && key != NULL);
+    if (idx == 0 || idx == 1) {
         ++idx;
         *cmd = c;
-        *key = k;
+        *key = k[idx];
         return true;
     }
-    else if (idx == 1) {
+    else if (idx == 2 || idx == 3) {
         rc_t rc = 0;
         static char k[PATH_MAX] = "";
         static char c[PATH_MAX] = "";
-        if (k[0] == '\0') {
+        {
             size_t num_writ = 0;
             const char* home = getenv("HOME");
             if (home == NULL) {
                 home = "";
             }
-            rc = string_printf(k, sizeof k, &num_writ,
- "%s/Applications/Aspera Connect.app/Contents/Resources/asperaweb_id_dsa.putty"
+            if (idx == 2) {
+                rc = string_printf(k, sizeof k, &num_writ,
+"%s/Applications/Aspera Connect.app/Contents/Resources/asperaweb_id_dsa.openssh"
                 , home);
+            }
+            else {
+                rc = string_printf(k, sizeof k, &num_writ,
+"%s/Applications/Aspera Connect.app/Contents/Resources/asperaweb_id_dsa.putty"
+                , home);
+            }
             if (rc != 0 || num_writ >= PATH_MAX) {
                 assert(0);
                 k[0] = '\0';

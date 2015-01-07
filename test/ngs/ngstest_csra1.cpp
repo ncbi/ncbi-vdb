@@ -31,6 +31,7 @@
 #include "ngs_c_fixture.hpp"
 
 #include "CSRA1_Reference.h"
+#include "NGS_Pileup.h"
 
 #include <kdb/manager.h>
 
@@ -838,6 +839,28 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetStats, CSRA1_Fixture)
     EXIT;
 }
 
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetPileups, CSRA1_Fixture)
+{   
+    ENTRY_GET_REF ( CSRA1_PrimaryOnly, "supercont2.1" );
+    
+    NGS_Pileup* pileup = NGS_ReferenceGetPileups( m_ref, ctx, true, false); 
+    REQUIRE ( ! FAILED () && pileup );
+    
+    NGS_PileupRelease ( pileup, ctx );
+    EXIT;
+}    
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetPileupSlice, CSRA1_Fixture)
+{   
+    ENTRY_GET_REF ( CSRA1_PrimaryOnly, "supercont2.1" );
+    
+    NGS_Pileup* pileup = NGS_ReferenceGetPileupSlice( m_ref, ctx, 500, 10, true, false); 
+    REQUIRE ( ! FAILED () && pileup );
+    
+    NGS_PileupRelease ( pileup, ctx );
+    EXIT;
+}    
+
 // Iteration over References
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIterator_GetLength_1, CSRA1_Fixture)
 {
@@ -851,6 +874,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIterator_GetLength_1, CSRA1_Fixture)
     REQUIRE ( ! FAILED () );
     
     NGS_ReferenceRelease ( refIt, ctx );
+    
     EXIT;
 }
 
@@ -1055,8 +1079,6 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReadGroupNext_BeyondEnd, CSRA1_Fixture)
     
     EXIT;
 }
-
-//TODO: NGS_ReferenceGetPileups
 
 //////////////////////////////////////////// Main
 extern "C"

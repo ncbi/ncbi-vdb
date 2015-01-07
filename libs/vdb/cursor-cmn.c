@@ -1467,8 +1467,11 @@ rc_t VCursorReadColumnDirectInt ( const VCursor *cself, int64_t row_id, uint32_t
     /* check MRU blob */
     blob = VBlobMRUCacheFind(cself->blob_mru_cache,col_idx,row_id);
     if(blob){
+        assert(row_id >= blob->start_id && row_id <= blob->stop_id);
+        /* if the caller wants the blob back... */
+        if ( rslt != NULL )
+                * rslt = blob;
         /* ask column to read from blob */
-	assert(row_id >= blob->start_id && row_id <= blob->stop_id);
         return VColumnReadCachedBlob ( col, blob, row_id, elem_bits, base, boff, row_len, repeat_count);
     }
     { /* ask column to produce a blob to be cached */
@@ -1478,17 +1481,17 @@ rc_t VCursorReadColumnDirectInt ( const VCursor *cself, int64_t row_id, uint32_t
 	rc = VColumnReadBlob(col,&blob,row_id,elem_bits,base,boff,row_len,repeat_count,&cctx);
     }
     if ( rc != 0 || blob == NULL ){
-	if(rslt) *rslt = NULL;
+        if(rslt) *rslt = NULL;
         return rc;
     }
     if(blob->stop_id > blob->start_id + 4)
 	    rc_cache=VBlobMRUCacheSave(cself->blob_mru_cache, col_idx, blob);
     if(rslt==NULL){ /** user does not care about the blob ***/
-	if( rc_cache == 0){
-		VBlobRelease((VBlob*)blob);
-	} /** else the memory will leak **/
+        if( rc_cache == 0){
+            VBlobRelease((VBlob*)blob);
+        } /** else the memory will leak **/
     } else {
-	*rslt=blob;
+        *rslt=blob;
     }
     return 0;
 }
@@ -2004,13 +2007,13 @@ LIB_EXPORT rc_t CC VCursorCellData ( const VCursor *self, uint32_t col_idx,
 {
     rc_t rc;
 
-    uint32_t dummy1, dummy2, dummy3;
+    uint32_t dummy [ 3 ];
     if ( row_len == NULL )
-        row_len = & dummy1;
+        row_len = & dummy [ 0 ];
     if ( boff == NULL )
-        boff = & dummy2;
+        boff = & dummy [ 1 ];
     if ( elem_bits == NULL )
-        elem_bits = & dummy3;
+        elem_bits = & dummy [ 2 ];
 
     if ( base == NULL )
         rc = RC ( rcVDB, rcCursor, rcReading, rcParam, rcNull );
@@ -2041,13 +2044,13 @@ LIB_EXPORT rc_t CC VCursorCellDataDirect ( const VCursor *self, int64_t row_id, 
 {
     rc_t rc;
 
-    uint32_t dummy1, dummy2, dummy3;
+    uint32_t dummy [ 3 ];
     if ( row_len == NULL )
-        row_len = & dummy1;
+        row_len = & dummy[ 0 ];
     if ( boff == NULL )
-        boff = & dummy2;
+        boff = & dummy [ 1 ];
     if ( elem_bits == NULL )
-        elem_bits = & dummy3;
+        elem_bits = & dummy [ 2 ];
 
     if ( base == NULL )
         rc = RC ( rcVDB, rcCursor, rcReading, rcParam, rcNull );
@@ -2423,23 +2426,30 @@ LIB_EXPORT rc_t CC VCursorParamsVSet(struct VCursorParams const *cself,
     rc = VCursorParamsLookupOrCreate(cself, Name, &value);
     if (rc == 0) {
         int n;
-        char dummy[1];
+        char dummy[1], * buffer = dummy;
+        size_t bsize = sizeof dummy;
 
         va_list copy;
         va_copy(copy, args);
 
+        if ( value -> base != NULL )
+        {
+            buffer = value -> base;
+            bsize = KDataBufferBytes ( value );
+        }        
+
         /* optimistic printf */
-        n = vsnprintf ( ( value -> base == NULL ) ?
-            dummy : value -> base, value -> elem_count, fmt, copy );
+        n = vsnprintf ( buffer, bsize, fmt, copy );
         va_end(copy);
 
-        if ( n < 0 || n >= (int)value -> elem_count )
+        if ( n < 0 || ( size_t ) n >= bsize )
         {
-            rc = KDataBufferResize ( value, ( n < 0 ) ? 4000 : n + 1 );
+            rc = KDataBufferResize ( value, ( n < 0 ) ? 4096 : n + 1 );
             if (rc == 0)
             {
-                n = vsnprintf(value->base, value->elem_count, fmt, args);
-                if ( n < 0 || n >= (int)value->elem_count )
+                bsize = KDataBufferBytes ( value );
+                n = vsnprintf(value->base, bsize, fmt, args);
+                if ( n < 0 || ( size_t ) n >= bsize )
                 {
                     rc = RC ( rcVDB, rcCursor, rcUpdating, rcParam, rcInvalid );
                     KDataBufferWhack ( value );

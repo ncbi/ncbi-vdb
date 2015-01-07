@@ -78,7 +78,7 @@ struct NGS_PileupEvent* NGS_PileupGetPileupEvents ( const NGS_Pileup* self, ctx_
 
 unsigned int NGS_PileupGetPileupDepth ( const NGS_Pileup* self, ctx_t ctx );
  
-bool NGS_PileupIteratorNext ( const NGS_Pileup* self, ctx_t ctx );
+bool NGS_PileupIteratorNext ( NGS_Pileup* self, ctx_t ctx );
 
 
 /*--------------------------------------------------------------------------
