@@ -96,9 +96,6 @@ struct XFSModelNode {
                                             to have */
 #define XFS_MODEL_AS        "as"         /* use this node as template
                                             overridden properties */
-#define XFS_MODEL_CHILDREN  "children"   /* usually any container, it
-                                            is list of names of children
-                                            with labels */
 #define XFS_MODEL_TYPE      "type"       /* mandatory, used for tree
                                             rendering */
 #define XFS_MODEL_LABEL     "label"      /* name which will be used at
@@ -106,6 +103,9 @@ struct XFSModelNode {
                                             overriden by alias */
 #define XFS_MODEL_SECURITY  "security"   /* in real life those are 
                                             permissions */
+#define XFS_MODEL_CHILDREN  "children"   /* usually any container, it
+                                            is list of names of children
+                                            with labels */
 
 /*)))
  ///    ModelNode Make and Destroy

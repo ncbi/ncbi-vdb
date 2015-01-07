@@ -332,7 +332,6 @@ XFSTreeRelease ( const struct XFSTree * self )
     rc_t RCt;
 
     RCt = 0;
-
     if ( self != NULL ) {
         switch ( KRefcountDrop (
                         & ( self -> refcount ),
@@ -344,7 +343,7 @@ XFSTreeRelease ( const struct XFSTree * self )
                 RCt = 0;
                 break;
             case krefWhack :
-                RCt = XFSModelDispose ( ( struct XFSModel * ) self );
+                RCt = XFSTreeDispose ( ( struct XFSTree * ) self );
                 break;
             case krefNegative :
                 RCt = XFS_RC ( rcInvalid );
@@ -480,6 +479,10 @@ XFSTreeDepotDispose ( const struct XFSTreeDepot * self )
     RCt = 0;
     Tree = NULL;
     mutabor = NULL;
+
+/*
+printf ( " |<- DepotDispose ( 0x%p )\n", ( void * ) self );
+*/
 
     if ( self == 0 ) {
         return 0;

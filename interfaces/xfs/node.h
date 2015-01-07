@@ -125,6 +125,13 @@ XFS_EXTERN rc_t CC XFSNodeInit (
                             const char * NodeName
                             );
 
+XFS_EXTERN rc_t CC XFSNodeInitVT (
+                            const struct XFSNode * self,
+                            const char * NodeName,
+                            const union XFSNode_vt * VT /*  Could be
+                                                            NULL */
+                            );
+
 XFS_EXTERN rc_t CC XFSNodeMake (
                             const struct XFSModel * ModelNode,
                             const char * NodeName,

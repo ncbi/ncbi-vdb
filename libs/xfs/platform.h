@@ -29,6 +29,10 @@
 
 #include <xfs/xfs-defs.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /*))))
  ((((   This file contains platform dependent forwards.
   ))))
@@ -39,5 +43,9 @@
 XFS_EXTERN
 rc_t CC
 XFSControlPlatformInit ( struct XFSControl * self );
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* _h_platform_ */

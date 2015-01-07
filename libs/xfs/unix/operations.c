@@ -459,7 +459,7 @@ _FUSE_char_to_perm ( const char * Perm, XFSNType Type, mode_t * Mode )
         Temp = Type == kxfsFile ? 0644 : 0744;
     }
     else {
-        RCt = XFSPermToAccess ( Perm, & Temp );
+        RCt = XFSPermToNum ( Perm, & Temp );
     }
 
     if ( RCt == 0 ) {
@@ -909,7 +909,7 @@ XFS_FUSE_chmod ( const char * ThePath, mode_t TheMode )
         return EINVAL * - 1;
     }
 
-    RCt = XFSPermAccessToChar ( TheMode, Buf, sizeof ( Buf ) );
+    RCt = XFSPermToChar ( TheMode, Buf, sizeof ( Buf ) );
     if ( RCt == 0 ) {
         RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, NULL );
         if ( RCt == 0 ) {
@@ -1083,7 +1083,7 @@ XFS_FUSE_open ( const char * ThePath, struct fuse_file_info * TheInfo )
         }
     }
 
-    XFSMSG ( ( "OPEN(Fuse cont): [%s][FI=0x%p][FH=%p] \n", ThePath, TheInfo, Handle ) );
+    XFSMSG ( ( "OPEN(Fuse cont): [%s][RC=%d][FI=0x%p][FH=%p] \n", ThePath, RCt, TheInfo, Handle ) );
 
     return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_open() */

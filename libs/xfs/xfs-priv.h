@@ -29,6 +29,10 @@
 
 #include <xfs/xfs-defs.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 
 /*  Forwards forewer
  */
@@ -109,5 +113,9 @@ union XFSControl_vt {
  ((*/
 #define XFS_CONTROL_MOUNTPOINT  "mountpoint"
 #define XFS_CONTROL_LABEL       "label"
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* _h_xfs_priv_ */

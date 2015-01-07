@@ -38,6 +38,7 @@
 #define XFS_SIZE_1024       1024
 #define XFS_SIZE_512         512 
 #define XFS_SIZE_128         128 
+#define XFS_SIZE_64           64
 
 /*  That is a part of conspiracy, if You do not like too verbose
  *  programms, comment that part

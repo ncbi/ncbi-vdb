@@ -49,7 +49,6 @@
 #include <sysalloc.h>
 
 #include <stdio.h>
-#include <string.h>     /* memset */
 
 /*)))
  |||    That file contains 'native' KFile and KDirectory based nodes
@@ -182,7 +181,14 @@ XFSKfsNodeMake (
         RCt = XFS_RC ( rcExhausted );
     }
     else {
-        RCt = XFSNodeInit ( & ( TheNode -> node), Name );
+        RCt = XFSNodeInitVT (
+                & ( TheNode -> node),
+                Name,
+                ( const union XFSNode_vt * ) ( Type == kxfsDir
+                                        ? ( & _sKfsDirNodeVT_v1 )
+                                        : ( & _sKfsFileNodeVT_v1 )
+                )
+                );
         if ( RCt == 0 ) {
 
             TheNode -> type = Type;
@@ -454,9 +460,6 @@ _KfsDirNodeFindNode_v1 (
  +++  Unified DirEditor
  |||
 (((*/
-static const uint32_t _sDefaultFileAccess = 0644;
-static const uint32_t _sDefaultDirAccess = 0755;
-
 static
 rc_t CC
 _KfsDir_dispose_v1 ( const struct XFSEditor * self )
@@ -686,7 +689,7 @@ _KfsDir_create_file_v1 (
                                 NativeDir,
                                 & File, 
                                 Update,
-                                _sDefaultFileAccess,
+                                XFSPermDefNodeNum (),
                                 CreateMode,
                                 Path
                                 );
@@ -787,7 +790,7 @@ _KfsDir_create_dir_v1 (
     if ( RCt == 0 ) {
         RCt = KDirectoryCreateDir (
                                 NativeDir,
-                                _sDefaultDirAccess,
+                                XFSPermDefContNum (),
                                 kcmCreate,
                                 Path
                                 );
@@ -959,8 +962,6 @@ _KfsNodeDir_v1 (
         return XFS_RC ( rcExhausted );
     }
 
-    memset ( Editor, 0, sizeof ( struct XFSDirEditor ) );
-
     RCt = XFSEditorInit (
                     & ( Editor -> Papahen ),
                     self,
@@ -994,12 +995,20 @@ static
 rc_t CC
 _KfsFile_dispose_v1 ( const struct XFSEditor * self )
 {
+    struct XFSKfsFileEditor * Editor = ( struct XFSKfsFileEditor * ) self;
+
 /*
     printf ( "_KfsNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
-    if ( self != NULL ) {
-        free ( ( struct XFSKfsFileEditor * ) self );
+    if ( Editor != NULL ) {
+        if ( Editor -> File != NULL ) {
+            KFileRelease ( Editor -> File );
+
+            Editor -> File = NULL;
+        }
+
+        free ( Editor );
     }
 
     return 0;
@@ -1202,8 +1211,6 @@ _KfsNodeFile_v1 (
         return XFS_RC ( rcExhausted );
     }
 
-    memset ( FileEditor, 0, sizeof ( struct XFSKfsFileEditor ) );
-
     Editor = & ( FileEditor -> Papahen );
 
     RCt = XFSEditorInit (
@@ -1340,7 +1347,7 @@ _KfsAttr_permissions_v1 (
             RCt = KDirectoryAccess ( NativeDir, & Access, Node -> path );
             if ( RCt == 0 ) {
                 BF = ( ( struct XFSKfsAttrEditor * ) self ) -> perm;
-                RCt = XFSPermAccessToChar (
+                RCt = XFSPermToChar (
                                     Access,
                                     BF,
                                     sizeof ( ( ( struct XFSKfsAttrEditor * ) self ) -> perm )
@@ -1385,7 +1392,7 @@ _KfsAttr_set_permissions_v1 (
     RCt = _KfsAttr_init_check_v1 ( self, & Node, & NativeDir );
     if ( RCt == 0 ) {
         if ( Node -> perm != NULL ) {
-            RCt = XFSPermToAccess ( Node -> perm, & Access );
+            RCt = XFSPermToNum ( Node -> perm, & Access );
             if ( RCt == 0 ) {
                 RCt = KDirectorySetAccess (
                                         NativeDir,
@@ -1589,8 +1596,6 @@ _KfsNodeAttr_v1 (
         return XFS_RC ( rcExhausted );
     }
 
-    memset ( KfsEditor, 0, sizeof ( struct XFSKfsAttrEditor ) );
-
     Editor = & ( KfsEditor -> Papahen );
 
     RCt = XFSEditorInit (
@@ -1732,6 +1737,73 @@ _KfsNodeConstructor (
 
 /*)))
  |||
+ +++    Non-Teleport methods to create nodes
+ |||
+(((*/
+LIB_EXPORT
+rc_t CC
+XFSFileNodeMake (
+            const char * Path,
+            const char * Name,
+            const char * Perm,
+            struct XFSNode ** Node
+)
+{
+    rc_t RCt;
+    struct XFSKfsNode * TheNode;
+
+    RCt = 0;
+    TheNode = NULL;
+
+    if ( Node != NULL ) {
+        * Node = NULL;
+    }
+
+    if ( Path == NULL || Name == NULL || Node == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    RCt = XFSKfsNodeMakeEx ( & TheNode, kxfsFile, Name, Path, Perm );
+    if ( RCt == 0 ) {
+        * Node = & ( TheNode -> node );
+    }
+
+    return RCt;
+}   /* XFSFileNodeMake () */
+
+LIB_EXPORT
+rc_t CC
+XFSDirNodeMake (
+            const char * Path,
+            const char * Name,
+            const char * Perm,
+            struct XFSNode ** Node
+)
+{
+    rc_t RCt;
+    struct XFSKfsNode * TheNode;
+
+    RCt = 0;
+    TheNode = NULL;
+
+    if ( Node != NULL ) {
+        * Node = NULL;
+    }
+
+    if ( Path == NULL || Name == NULL || Node == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    RCt = XFSKfsNodeMakeEx ( & TheNode, kxfsDir, Name, Path, Perm );
+    if ( RCt == 0 ) {
+        * Node = & ( TheNode -> node );
+    }
+
+    return RCt;
+}   /* XFSDirNodeMake () */
+
+/*)))
+ |||
  +++    FileNode has a Teleport, and it is HERE
  |||
 (((*/
@@ -1783,7 +1855,8 @@ printf ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Mode
 
 static const struct XFSTeleport _sFileNodeTeleport = {
                                         _FileNodeConstructor,
-                                        _FileNodeValidator
+                                        _FileNodeValidator,
+                                        false
                                         };
 
 
@@ -1853,7 +1926,8 @@ printf ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Mode
 
 static const struct XFSTeleport _sDirNodeTeleport = {
                                             _DirNodeConstructor,
-                                            _DirNodeValidator
+                                            _DirNodeValidator,
+                                            false
                                             };
 
 

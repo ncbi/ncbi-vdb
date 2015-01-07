@@ -141,12 +141,12 @@ XFS_EXTERN bool CC XFSAuthCanExecute ( const struct XFSAuth * self );
 /*))
  //     That method will convert XFSPerm to unix like access uint32_t
 ((*/
-XFS_EXTERN rc_t CC XFSPermToAccess (
+XFS_EXTERN rc_t CC XFSPermToNum (
                                     const char * Perm,
                                     uint32_t * Access
                                     );
 
-XFS_EXTERN rc_t CC XFSPermAccessToChar (
+XFS_EXTERN rc_t CC XFSPermToChar (
                                     uint32_t Access,
                                     char * Buf,
                                     size_t BufSize
@@ -155,8 +155,10 @@ XFS_EXTERN rc_t CC XFSPermAccessToChar (
 /*))
  //     Some usefull defaults ... not sure
 ((*/
-XFS_EXTERN const char * CC XFSPermForContainerDefault ();
-XFS_EXTERN const char * CC XFSPermForNodeDefault ();
+XFS_EXTERN const char * CC XFSPermDefContChar ();
+XFS_EXTERN const char * CC XFSPermDefNodeChar ();
+XFS_EXTERN uint32_t CC XFSPermDefContNum ();
+XFS_EXTERN uint32_t CC XFSPermDefNodeNum ();
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 

@@ -79,6 +79,8 @@ struct XFSTeleport {
         /* ??? mb. version */
     XFSNodeC_t Constructor;
     XFSNodeV_t Validator;
+
+    bool DeleteOnWhack;
 };
 
 /*))))
@@ -90,6 +92,12 @@ XFSTeleportLookup (
             const char * NodeType,
             const struct XFSTeleport ** Teleport
 );
+
+/*))))
+ ////   Here we are initem'n'disposing Teleport
+((((*/
+XFS_EXTERN rc_t CC XFSTeleportInit ();
+XFS_EXTERN rc_t CC XFSTeleportDispose ();
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 

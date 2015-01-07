@@ -169,13 +169,18 @@ XFS_EXTERN rc_t CC XFSDirectoryProvider (
                                 const struct XFSTeleport ** Teleport
                                 );
 
-#define HELP_NAME                   "help"
-XFS_EXTERN rc_t CC XFSHelpProvider (
+#define README_NAME                "readme"
+XFS_EXTERN rc_t CC XFSReadMeProvider (
                                 const struct XFSTeleport ** Teleport
                                 );
 
 #define KART_COLLECTION_NAME        "kart-collection"
 XFS_EXTERN rc_t CC XFSKartCollectionProvider (
+                                const struct XFSTeleport ** Teleport
+                                );
+
+#define KART_NAME                   "kart"
+XFS_EXTERN rc_t CC XFSKartProvider (
                                 const struct XFSTeleport ** Teleport
                                 );
 
@@ -193,6 +198,13 @@ XFS_EXTERN rc_t CC XFSLocalRepositoryProvider (
 XFS_EXTERN rc_t CC XFSRemoteRepositoryProvider (
                                 const struct XFSTeleport ** Teleport
                                 );
+
+/* TODO !!!
+#define REMOTE_FILE_NAME            "remote-File"
+XFS_EXTERN rc_t CC XFSRemoteFileProvider (
+                                const struct XFSTeleport ** Teleport
+                                );
+*/
 
 #define WORKSPACE_NAME              "workspace"
 XFS_EXTERN rc_t CC XFSWorkspaceProvider (
@@ -244,7 +256,7 @@ _TeleportInit ()
             break;
         }
 
-        RCt = _TeleportAdd ( HELP_NAME, XFSHelpProvider );
+        RCt = _TeleportAdd ( README_NAME, XFSReadMeProvider );
         if ( RCt != 0 ) { 
             break;
         }
@@ -252,6 +264,14 @@ _TeleportInit ()
         RCt = _TeleportAdd (
                         KART_COLLECTION_NAME,
                         XFSKartCollectionProvider
+                        );
+        if ( RCt != 0 ) { 
+            break;
+        }
+
+        RCt = _TeleportAdd (
+                        KART_NAME,
+                        XFSKartProvider
                         );
         if ( RCt != 0 ) { 
             break;
@@ -312,8 +332,10 @@ _TeleportWhacker ( BSTNode * Node, void * Unused )
         }
 
         if ( Tode -> Teleport != NULL ) {
-            free ( ( struct XFSTeleport * ) Tode -> Teleport );
+            if ( Tode -> Teleport -> DeleteOnWhack ) {
+                free ( ( struct XFSTeleport * ) Tode -> Teleport );
 
+            }
             Tode -> Teleport = NULL;
         }
 
@@ -363,7 +385,10 @@ XFSTeleportLookup (
     * Teleport = NULL;
 
     if ( _sTeleportInited == false ) {
-        RCt = _TeleportInit ();
+        /* HOHOA, will init it somewhere else
+            RCt = _TeleportInit ();
+         */
+        return XFS_RC ( rcInvalid );
     }
 
     if ( RCt == 0 ) {
@@ -379,3 +404,16 @@ XFSTeleportLookup (
     return RCt;
 }   /* XFSTeleportLookup () */
 
+LIB_EXPORT
+rc_t CC
+XFSTeleportInit ()
+{
+    return _TeleportInit ();
+}   /* XFSTeleportInit () */
+
+LIB_EXPORT
+rc_t CC
+XFSTeleportDispose ()
+{
+    return _TeleportWhack ();
+}   /* XFSTeleportDispose () */
