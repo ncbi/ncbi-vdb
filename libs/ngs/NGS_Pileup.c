@@ -175,7 +175,7 @@ int64_t NGS_PileupGetReferencePosition ( const NGS_Pileup* self, ctx_t ctx )
     return 0;
 }
 
-struct NGS_PileupEvent* NGS_PileupGetPileupEvents ( const NGS_Pileup* self, ctx_t ctx )
+struct NGS_PileupEvent* NGS_PileupGetPileupEvents ( NGS_Pileup* self, ctx_t ctx )
 {
     if ( self == NULL )
     {

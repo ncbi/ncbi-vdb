@@ -1089,7 +1089,7 @@ uint64_t DEBUG_CSRA1_Pileup_GetRefPos (void const* self)
 static void                     CSRA1_PileupWhack                   ( CSRA1_Pileup * self, ctx_t ctx );
 static struct NGS_String *      CSRA1_PileupGetReferenceSpec        ( const CSRA1_Pileup * self, ctx_t ctx );
 static int64_t                  CSRA1_PileupGetReferencePosition    ( const CSRA1_Pileup * self, ctx_t ctx );
-static struct NGS_PileupEvent * CSRA1_PileupGetEvents               ( const CSRA1_Pileup * self, ctx_t ctx );
+static struct NGS_PileupEvent * CSRA1_PileupGetEvents               ( CSRA1_Pileup * self, ctx_t ctx );
 static unsigned int             CSRA1_PileupGetDepth                ( const CSRA1_Pileup * self, ctx_t ctx );
 static bool                     CSRA1_PileupIteratorGetNext         ( CSRA1_Pileup * self, ctx_t ctx );
 
@@ -1207,7 +1207,7 @@ int64_t CSRA1_PileupGetReferencePosition ( const CSRA1_Pileup * self, ctx_t ctx 
     return self -> pileup_state . ref_pos;
 }
 
-struct NGS_PileupEvent * CSRA1_PileupGetEvents ( const CSRA1_Pileup * self, ctx_t ctx )
+struct NGS_PileupEvent * CSRA1_PileupGetEvents ( CSRA1_Pileup * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
     if ( ! self -> is_started )
@@ -1221,7 +1221,7 @@ struct NGS_PileupEvent * CSRA1_PileupGetEvents ( const CSRA1_Pileup * self, ctx_
         return NULL;
     }
     
-    return CSRA1_PileupEventIteratorMake ( ctx, self -> ref_spec, self -> primary, self -> secondary );
+    return CSRA1_PileupEventIteratorMake ( ctx, self );
 }
 
 unsigned int CSRA1_PileupGetDepth ( const CSRA1_Pileup * self, ctx_t ctx )

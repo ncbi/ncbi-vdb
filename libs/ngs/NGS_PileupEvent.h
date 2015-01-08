@@ -89,10 +89,16 @@ int64_t NGS_PileupEventGetLastAlignmentPosition( const NGS_PileupEvent * self, c
 
 enum NGS_PileupEventType
 {
-    NGS_PileupEventType_match     = 0,
-    NGS_PileupEventType_mismatch  = 1,
-    NGS_PileupEventType_insertion = 2,
-    NGS_PileupEventType_deletion  = 3
+    /* basic event types */
+    NGS_PileupEventType_match        = 0,
+    NGS_PileupEventType_mismatch     = 1,
+    NGS_PileupEventType_deletion     = 2,
+
+    /* event modifiers */
+    NGS_PileupEventType_insertion    = 0x08,
+    NGS_PileupEventType_minus_strand = 0x20,
+    NGS_PileupEventType_stop         = 0x40,
+    NGS_PileupEventType_start        = 0x80
 };        
 int NGS_PileupEventGetEventType( const NGS_PileupEvent * self, ctx_t ctx );
 
@@ -104,7 +110,18 @@ struct NGS_String * NGS_PileupEventGetInsertionBases( const NGS_PileupEvent * se
 
 struct NGS_String * NGS_PileupEventGetInsertionQualities( const NGS_PileupEvent * self, ctx_t ctx );
 
-unsigned int NGS_PileupEventGetDeletionCount( const NGS_PileupEvent * self, ctx_t ctx );
+unsigned int NGS_PileupEventGetRepeatCount( const NGS_PileupEvent * self, ctx_t ctx );
+
+enum NGS_PileupIndelType
+{
+    NGS_PileupIndelType_normal         = 0,
+    NGS_PileupIndelType_intron_plus    = 1,
+    NGS_PileupIndelType_intron_minus   = 2,
+    NGS_PileupIndelType_intron_unknown = 3,
+    NGS_PileupIndelType_read_overlap   = 4,
+    NGS_PileupIndelType_read_gap       = 5
+};
+int NGS_PileupEventGetIndelType( const NGS_PileupEvent * self, ctx_t ctx );
 
 /*--------------------------------------------------------------------------
  * NGS_PileupEventIterator
@@ -141,8 +158,9 @@ struct NGS_PileupEvent_vt
     char                    ( * get_alignment_quality )         ( const NGS_PileupEvent * self, ctx_t ctx );
     struct NGS_String *     ( * get_insertion_bases )           ( const NGS_PileupEvent * self, ctx_t ctx );
     struct NGS_String *     ( * get_insertion_qualities )       ( const NGS_PileupEvent * self, ctx_t ctx );
-    unsigned int            ( * get_deletion_count )            ( const NGS_PileupEvent * self, ctx_t ctx );
-    bool                    ( * next )                          ( const NGS_PileupEvent * self, ctx_t ctx );    
+    unsigned int            ( * get_repeat_count )              ( const NGS_PileupEvent * self, ctx_t ctx );
+    int                     ( * get_indel_type )                ( const NGS_PileupEvent * self, ctx_t ctx );
+    bool                    ( * next )                          ( NGS_PileupEvent * self, ctx_t ctx );    
 };
 
 /* Init
