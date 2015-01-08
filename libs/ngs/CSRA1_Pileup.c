@@ -24,11 +24,10 @@
 *
 */
 
-#include "CSRA1_Pileup.h"
-
 typedef struct CSRA1_Pileup CSRA1_Pileup;
 #define NGS_PILEUP CSRA1_Pileup
-#include "NGS_Pileup.h"
+#include "CSRA1_Pileup.h"
+
 #include "NGS_Cursor.h"
 #include "NGS_Reference.h"
 
@@ -55,21 +54,12 @@ typedef struct CSRA1_Pileup CSRA1_Pileup;
 #define max(x, y) ((y) < (x) ? (x) : (y))
 #endif
 
-
-#define CACHE_IMPL_AS_LIST 1 /* ==1 if using DLList to store a set of cached alignments, otherwise - use array-based cache */
-#define USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS 1 /* ==1 if using 1 blob to be able to have persistent pointer to PRIMARY_ALIGNMENT_IDS CellData, otherwise - copy data */
-#define USE_SINGLE_BLOB_FOR_ALIGNMENTS 1 /* ==1 if using 1 blob to be able to have persistent pointer to PRIMARY_ALIGNMENT CellData, otherwise - copy data */
-
 #if    USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS == 1\
     || USE_SINGLE_BLOB_FOR_ALIGNMENTS == 1
 
 #define USE_BLOBS 1
 #else
 #define USE_BLOBS 0
-#endif
-
-#if CACHE_IMPL_AS_LIST == 1
-#include <klib/container.h>
 #endif
 
 #if USE_BLOBS == 1
@@ -85,8 +75,6 @@ typedef struct CSRA1_Pileup CSRA1_Pileup;
 #ifndef countof
 #define countof(arr) (sizeof(arr)/sizeof(arr[0]))
 #endif
-
-#define SAM_FLAG_DUPLICATE 0x400
 
 /* --------------------------------- */
 /* TODO: here is a copy of test/pileup_dev code, needs to be rearranged later */
@@ -105,72 +93,6 @@ char const* column_names_pa[] =
 };
 uint32_t column_index_pa [ countof (column_names_pa) ];
 
-typedef struct Alignment_CacheItem
-{
-#if CACHE_IMPL_AS_LIST == 1
-    DLNode node; /* list node */
-#endif
-    int64_t row_id;
-    int64_t start;
-    uint64_t len;
-    uint32_t seq_start; /* zero-based! Each alignment's REF_START (start) is relative to corresponding REFERENCE.SEQ_START, so we have to store this relation here */
-} Alignment_CacheItem;
-
-typedef struct Alignment_Cache
-{
-    size_t size;
-#if CACHE_IMPL_AS_LIST == 1
-    DLList list_alignments;
-#else
-    size_t capacity;
-    Alignment_CacheItem* data;
-#endif
-
-} Alignment_Cache;
-
-typedef struct PileupIteratorState
-{
-    /* Static data */
-    int64_t reference_start_id;
-    int64_t reference_last_id;
-
-    uint64_t total_row_count; /* row count of all references' row ids */
-
-    int64_t slice_start;
-    uint64_t slice_length;
-
-    int64_t slice_start_id;
-    int64_t slice_end_id;
-
-    /* Blobs that we want to have manual control over */
-#if USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS == 1
-    VBlob const* blob_alignment_ids; /* Here we store the blob containig current reference row */
-#endif
-#if USE_SINGLE_BLOB_FOR_ALIGNMENTS == 1
-    VBlob const* blob_alignments_ref_start;
-    VBlob const* blob_alignments_ref_len;
-    VBlob const* blob_alignments_rd_filter;
-#endif
-
-    uint32_t max_seq_len;
-
-    /* Current State */
-    uint32_t current_seq_start;
-
-    uint64_t ref_pos;
-    Alignment_Cache cache_alignment;        /* Alignments intersecting ref_pos */
-
-    size_t size_alignment_ids;
-    size_t next_alignment_idx; /* index in alignment_ids pointing to the first id that has not been cached yet */
-#if USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS != 1
-    size_t capacity_alignment_ids;
-    int64_t* alignment_ids; /* alignment_ids of the current reference row_id */
-#else
-    int64_t const* alignment_ids; /* alignment_ids of the current reference row_id */
-#endif
-
-} PileupIteratorState;
-
 /* Forward declarations can be removed now, and 'static' can be added to each function */
 void Alignment_Init ( Alignment_Cache* self );
 void Alignment_InitCacheWithNull ( Alignment_Cache* self );
@@ -183,9 +105,9 @@ Alignment_CacheItem const* Alignment_Get ( Alignment_Cache const* self, size_t i
 void CC Alignment_CacheItemWhack ( DLNode* n, void* data );
 #endif
 
-void PileupIteratorState_Init (PileupIteratorState* self);
-rc_t PileupIteratorState_SetAlignmentIds ( PileupIteratorState* self, int64_t const* alignment_ids, size_t count );
-void PileupIteratorState_Release ( PileupIteratorState* self );
+void PileupIteratorState_Init (CSRA1_Pileup* self);
+rc_t PileupIteratorState_SetAlignmentIds ( CSRA1_Pileup* self, int64_t const* alignment_ids, size_t count );
+void PileupIteratorState_Release ( CSRA1_Pileup* self );
 
 /* --------------------------------------- */
 
@@ -308,7 +230,7 @@ Alignment_CacheItem const* Alignment_Get ( Alignment_Cache const* self, size_t i
 
 
 #if USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS != 1
-rc_t PileupIteratorState_SetAlignmentIds ( PileupIteratorState* self, int64_t const* alignment_ids, size_t count )
+rc_t PileupIteratorState_SetAlignmentIds ( CSRA1_Pileup* self, int64_t const* alignment_ids, size_t count )
 {
     if ( count > self->capacity_alignment_ids )
     {
@@ -327,7 +249,7 @@ rc_t PileupIteratorState_SetAlignmentIds ( PileupIteratorState* self, int64_t co
 }
 #endif
 
-void PileupIteratorState_Init (PileupIteratorState* self)
+void PileupIteratorState_Init (CSRA1_Pileup* self)
 {
     self -> size_alignment_ids = 0;
     self -> next_alignment_idx = 0;
@@ -351,7 +273,7 @@ void PileupIteratorState_Init (PileupIteratorState* self)
 
 }
 
-void PileupIteratorState_Release ( PileupIteratorState* self )
+void PileupIteratorState_Release ( CSRA1_Pileup* self )
 {
     if ( self -> alignment_ids != NULL )
     {
@@ -541,7 +463,7 @@ static rc_t open_blob_for_current_id (
 
 static rc_t add_ref_row_to_cache (
     ctx_t ctx,
-    PileupIteratorState* pileup_state,
+    CSRA1_Pileup * pileup_state,
     VCursor const* cursor_pa, uint32_t seq_start,
     uint64_t ref_pos, /*TODO: make all ref positions signed */
     int64_t const* pa_ids, uint32_t pa_count,
@@ -700,7 +622,7 @@ static rc_t add_ref_row_to_cache (
 
 
 static rc_t initialize_ref_pos ( ctx_t ctx,
-                                 PileupIteratorState* pileup_state,
+                                 CSRA1_Pileup* pileup_state,
                                  NGS_Cursor const* curs_ref, 
                                  VCursor const* cursor_pa,
                                  char const* const* column_names_pa, 
@@ -858,7 +780,7 @@ static rc_t initialize_ref_pos ( ctx_t ctx,
 }
 
 
-static void remove_unneeded_alignments (PileupIteratorState* pileup_state, uint64_t ref_pos)
+static void remove_unneeded_alignments (CSRA1_Pileup* pileup_state, uint64_t ref_pos)
 {
     /*int64_t max_removed_id = 0;*/
 #if CACHE_IMPL_AS_LIST == 1
@@ -913,7 +835,7 @@ static void remove_unneeded_alignments (PileupIteratorState* pileup_state, uint6
 
 static bool next_pileup (
     ctx_t ctx,
-    PileupIteratorState* pileup_state,
+    CSRA1_Pileup* pileup_state,
     NGS_Cursor const* curs_ref, VCursor const* cursor_pa,
     char const* const* column_names_pa, uint32_t* column_index_pa, size_t column_count_pa
     )
@@ -1061,30 +983,6 @@ static bool next_pileup (
 
 
 /* --------------------------------------- */
-struct CSRA1_Pileup
-{
-    NGS_Pileup dad;   
-    
-    bool primary;
-    bool secondary;
-
-    VDatabase const* db;
-    VTable const* table_pa;
-
-    NGS_Cursor const* curs_ref;
-    VCursor const* cursor_pa;
-
-    /* TODO: put all the fields of pileup_state into CSRA1_Pileup directly */
-    PileupIteratorState pileup_state;
-
-    bool is_started;    /* NextIterator has been called at least one time */
-    bool is_finished;   /* NextIterator has seen the end, no more operations are allowed */
-};
-
-uint64_t DEBUG_CSRA1_Pileup_GetRefPos (void const* self)
-{
-    return ((CSRA1_Pileup*)self)->pileup_state.ref_pos;
-}
 
 static void                     CSRA1_PileupWhack                   ( CSRA1_Pileup * self, ctx_t ctx );
 static struct NGS_String *      CSRA1_PileupGetReferenceSpec        ( const CSRA1_Pileup * self, ctx_t ctx );
@@ -1135,18 +1033,18 @@ void CSRA1_PileupInit ( CSRA1_Pileup * self,
 
         
 #if CACHE_IMPL_AS_LIST == 1
-        self->pileup_state.cache_alignment.size = 0;
-        Alignment_InitCacheWithNull ( & self->pileup_state.cache_alignment );
+        self->cache_alignment.size = 0;
+        Alignment_InitCacheWithNull ( & self->cache_alignment );
 #else
-        self->pileup_state.cache_alignment.data = NULL;
+        self->cache_alignment.data = NULL;
 #endif
-        self->pileup_state.alignment_ids = NULL;
+        self->alignment_ids = NULL;
 #if USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS == 1
-        self->pileup_state.blob_alignment_ids = NULL;
+        self->blob_alignment_ids = NULL;
 #endif
 #if USE_SINGLE_BLOB_FOR_ALIGNMENTS == 1
-        self->pileup_state.blob_alignments_ref_start = NULL;
-        self->pileup_state.blob_alignments_ref_len = NULL;
+        self->blob_alignments_ref_start = NULL;
+        self->blob_alignments_ref_len = NULL;
 #endif
 
     }
@@ -1157,8 +1055,8 @@ void CSRA1_PileupWhack ( CSRA1_Pileup * self, ctx_t ctx )
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
 
     release_vdb_objects ( & self -> table_pa, & self -> cursor_pa );
-    Alignment_Release ( & self -> pileup_state.cache_alignment );
-    PileupIteratorState_Release ( & self -> pileup_state );
+    Alignment_Release ( & self -> cache_alignment );
+    PileupIteratorState_Release ( self );
 
     self -> is_started = false;
     self -> is_finished = true;
@@ -1203,7 +1101,7 @@ int64_t CSRA1_PileupGetReferencePosition ( const CSRA1_Pileup * self, ctx_t ctx 
         return 0;
     }
     
-    return self -> pileup_state . ref_pos;
+    return self -> ref_pos;
 }
 
 struct NGS_PileupEvent * CSRA1_PileupGetEvents ( CSRA1_Pileup * self, ctx_t ctx )
@@ -1237,7 +1135,7 @@ unsigned int CSRA1_PileupGetDepth ( const CSRA1_Pileup * self, ctx_t ctx )
         return 0;
     }
     
-    return (unsigned int) self -> pileup_state . cache_alignment . size;
+    return (unsigned int) self -> cache_alignment . size;
 }
 
 bool CSRA1_PileupIteratorGetNext ( CSRA1_Pileup * self, ctx_t ctx )
@@ -1247,7 +1145,7 @@ bool CSRA1_PileupIteratorGetNext ( CSRA1_Pileup * self, ctx_t ctx )
 
     if ( self -> is_started )
     {
-        bool ret = next_pileup ( ctx, & self -> pileup_state,
+        bool ret = next_pileup ( ctx, self, /*TODO: remove extra args*/
             self -> curs_ref, self -> cursor_pa,
             column_names_pa, column_index_pa, countof (column_names_pa));
         if ( ! ret )
@@ -1258,7 +1156,7 @@ bool CSRA1_PileupIteratorGetNext ( CSRA1_Pileup * self, ctx_t ctx )
     }
     else 
     {
-        rc = initialize_ref_pos ( ctx, & self -> pileup_state,
+        rc = initialize_ref_pos ( ctx, self,/*TODO: remove extra args*/
             self -> curs_ref, self -> cursor_pa,
             column_names_pa, column_index_pa, countof (column_names_pa));
         if (rc == 0)
@@ -1327,16 +1225,16 @@ struct NGS_Pileup* CSRA1_PileupIteratorMake (
 
             ret -> curs_ref = NGS_CursorDuplicate ( curs_ref, ctx );
 
-            Alignment_Init ( & ret->pileup_state.cache_alignment );
-            PileupIteratorState_Init ( & ret->pileup_state );
+            Alignment_Init ( & ret->cache_alignment );
+            PileupIteratorState_Init ( ret );
 
 
-            ret -> pileup_state.reference_start_id = first_row_id;
-            ret -> pileup_state.reference_last_id = last_row_id;
+            ret -> reference_start_id = first_row_id;
+            ret -> reference_last_id = last_row_id;
 
-            ret -> pileup_state.slice_start     = 0; 
-            ret -> pileup_state.slice_length    = 0;
-            ret -> pileup_state.ref_pos         = 0;
+            ret -> slice_start     = 0; 
+            ret -> slice_length    = 0;
+            ret -> ref_pos         = 0;
 
             rc = init_vdb_objects ( ctx,
                     ret->db, & ret->table_pa,
@@ -1378,9 +1276,9 @@ struct NGS_Pileup* CSRA1_PileupIteratorMakeSlice (
     {
         CSRA1_Pileup * csra1_pileup = (CSRA1_Pileup *) ret;
         /* add slice boundaries*/
-        csra1_pileup -> pileup_state.ref_pos         = slice_start;
-        csra1_pileup -> pileup_state.slice_start     = slice_start; 
-        csra1_pileup -> pileup_state.slice_length    = slice_size;
+        csra1_pileup -> ref_pos         = slice_start;
+        csra1_pileup -> slice_start     = slice_start; 
+        csra1_pileup -> slice_length    = slice_size;
         
         return ret;
     }
