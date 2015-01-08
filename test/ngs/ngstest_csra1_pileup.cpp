@@ -266,13 +266,13 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetPileupDepth_2, CSRA1_Fixture)
     
     EXIT;
 }
-FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetPileupDepth_4, CSRA1_Fixture)
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetPileupDepth_3, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP_NEXT( CSRA1_PrimaryOnly, "supercont2.1" );
     
     Advance(5491);
     REQUIRE_EQ ( (int64_t)5491, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
-    REQUIRE_EQ ( (unsigned int)4, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)3, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
     
     EXIT;
 }
@@ -432,22 +432,47 @@ FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_PileupGetReferencePosition, CSRA1_Fi
     
     EXIT;
 }
-FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_PileupGetPileupDepth, CSRA1_Fixture)
+FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_PileupGetPileupDepth_NoFiltering, CSRA1_Fixture)
 {
-    ENTRY_GET_PILEUP_SLICE( CSRA1_PrimaryOnly, "supercont2.1", 5505, 4 );
+    ENTRY_GET_PILEUP_SLICE( CSRA1_PrimaryOnly, "supercont2.1", 404, 4 );
 
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (unsigned int)3, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)1, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (unsigned int)3, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)1, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (unsigned int)4, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
     REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
-    REQUIRE_EQ ( (unsigned int)4, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
     REQUIRE ( ! NGS_PileupIteratorNext ( m_pileup, ctx ) );
     
     EXIT;
 }
+
+FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_PileupGetPileupDepth_WithFiltering, CSRA1_Fixture)
+{   // alignments marked as rejected are not included into pileup depth counts
+    ENTRY_GET_PILEUP_SLICE( CSRA1_PrimaryOnly, "supercont2.1", 5505, 4 );
+
+// positions 5505-5508 match a rejected alignment; with filtering turned off the reported depths would be 3, 3, 4, 4.
+
+    REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
+    REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
+    REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
+    REQUIRE_EQ ( (unsigned int)3, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
+    REQUIRE_EQ ( (unsigned int)3, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE ( ! NGS_PileupIteratorNext ( m_pileup, ctx ) );
+    
+    EXIT;
+}
+//TODO: alignment filtering-related schema variations
+// no RD_FILTER physically exists in either PRIMARY_ALIGNMENT or SEQUENCE (no filtering) 
+//      (use VTableListPhysColumns) (NB. READ_FILTER may be present but virtual!)
+// RD_FILTER physically exists in PRIMARY_ALIGNMENT
+// RD_FILTER_CACHE appears to exist virtually in PRIMARY_ALIGNMENT:
+// RD_FILTER physically exists in SEQUENCE and RD_FILTER_CACHE does not exist in PRIMARY_ALIGNMENT
 
 ////TODO: PileupIterator, full circular reference 
 ////TODO: PileupIterator, circular reference slice

@@ -143,7 +143,7 @@ NGS_Reference * SRA_ReadCollectionGetReferences ( SRA_ReadCollection * self, ctx
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
 
     // create empty reference iterator
-    return NGS_ReferenceMakeNull ( ctx );
+    return NGS_ReferenceMakeNull ( ctx, & self -> dad );
 }
 
 static

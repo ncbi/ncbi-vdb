@@ -32,6 +32,7 @@
 #include <ngs/itf/ReferenceItf.h>
 
 #include "NGS_String.h"
+#include "NGS_ReadCollection.h"
 
 #include <sysalloc.h>
 
@@ -225,9 +226,17 @@ NGS_Reference_v1_vt ITF_Reference_vt =
     
 /* Init
 */
-void NGS_ReferenceInit ( ctx_t ctx, struct NGS_Reference * self, NGS_Reference_vt * vt, const char *clsname, const char *instname )
+void NGS_ReferenceInit ( ctx_t ctx, 
+                         struct NGS_Reference * self, 
+                         NGS_Reference_vt * vt, 
+                         const char *clsname, 
+                         const char *instname, 
+                         struct NGS_ReadCollection * coll )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcRow, rcConstructing );
+    
+    assert ( self );
+    assert ( vt );
     
     TRY ( NGS_RefcountInit ( ctx, & self -> dad, & ITF_Reference_vt . dad, & vt -> dad, clsname, instname ) )
     {
@@ -246,8 +255,16 @@ void NGS_ReferenceInit ( ctx_t ctx, struct NGS_Reference * self, NGS_Reference_v
         assert ( vt -> get_statistics     != NULL );
         assert ( vt -> next               != NULL );
     }
+    
+    assert ( coll );
+    self -> coll = NGS_ReadCollectionDuplicate ( coll, ctx );
 }
 
+void NGS_ReferenceWhack( NGS_Reference * self, ctx_t ctx )
+{
+    NGS_ReadCollectionRelease ( self -> coll, ctx );
+}
+                         
 /*--------------------------------------------------------------------------
  * NGS_ReferenceIterator
  */
@@ -640,7 +657,7 @@ static NGS_Reference_vt Null_Reference_vt_inst =
     Null_ReferenceIteratorNext,
 };
  
-struct NGS_Reference * NGS_ReferenceMakeNull ( ctx_t ctx )
+struct NGS_Reference * NGS_ReferenceMakeNull ( ctx_t ctx, struct NGS_ReadCollection * coll )
  {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
 
@@ -649,7 +666,7 @@ struct NGS_Reference * NGS_ReferenceMakeNull ( ctx_t ctx )
         SYSTEM_ERROR ( xcNoMemory, "allocating an empty NGS_ReferenceIterator" );
     else
     {
-        TRY ( NGS_ReferenceInit ( ctx, ref, & Null_Reference_vt_inst, "NGS_Reference", "NullReference" ) )
+        TRY ( NGS_ReferenceInit ( ctx, ref, & Null_Reference_vt_inst, "NGS_Reference", "NullReference", coll ) )
         {
             return ref;
         }

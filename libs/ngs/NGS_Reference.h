@@ -45,6 +45,7 @@ extern "C" {
  * forwards
  */
 struct VCursor;
+struct NGS_ReadCollection;
 struct NGS_Alignment;
 struct NGS_Pileup;
 struct NGS_Reference_v1_vt;
@@ -139,6 +140,8 @@ bool NGS_ReferenceIteratorNext ( NGS_Reference * self, ctx_t ctx );
 struct NGS_Reference
 {
     NGS_Refcount dad;
+    
+    struct NGS_ReadCollection * coll;
 };
 
 typedef struct NGS_Reference_vt NGS_Reference_vt;
@@ -164,12 +167,21 @@ struct NGS_Reference_vt
 
 /* Init
 */
-void NGS_ReferenceInit ( ctx_t ctx, struct NGS_Reference * self, NGS_Reference_vt * vt, const char *clsname, const char *instname );
-
+void NGS_ReferenceInit ( ctx_t ctx, 
+                         struct NGS_Reference * self, 
+                         NGS_Reference_vt * vt, 
+                         const char *clsname, 
+                         const char *instname, 
+                         struct NGS_ReadCollection * coll );
+                         
+/* Whack
+*/                         
+void NGS_ReferenceWhack ( NGS_Reference * self, ctx_t ctx );
+                         
 /* NullReference
  * will error out on any call
  */
-struct NGS_Reference * NGS_ReferenceMakeNull ( ctx_t ctx );
+struct NGS_Reference * NGS_ReferenceMakeNull ( ctx_t ctx, struct NGS_ReadCollection * coll );
 
 #ifdef __cplusplus
 }

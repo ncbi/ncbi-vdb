@@ -41,6 +41,8 @@ typedef struct CSRA1_Pileup CSRA1_Pileup;
 
 #include <klib/rc.h>
 
+#include <insdc/sra.h>
+
 #include "CSRA1_Reference.h"
 #include "CSRA1_PileupEvent.h"
 
@@ -83,22 +85,24 @@ typedef struct CSRA1_Pileup CSRA1_Pileup;
 #define countof(arr) (sizeof(arr)/sizeof(arr[0]))
 #endif
 
+#define SAM_FLAG_DUPLICATE 0x400
+
 /* --------------------------------- */
 /* TODO: here is a copy of test/pileup_dev code, needs to be rearranged later */
 
 enum
 {
     COL_REF_START,
-    COL_REF_LEN
+    COL_REF_LEN,
+    COL_READ_FILTER /* this is the physical column as opposed to RD_FILTER which may be virtual */
 };
 char const* column_names_pa[] =
 {
     "REF_START",
-    "REF_LEN"
+    "REF_LEN",
+    "READ_FILTER"
 };
 uint32_t column_index_pa [ countof (column_names_pa) ];
-
-
 
 typedef struct Alignment_CacheItem
 {
@@ -144,10 +148,10 @@ typedef struct PileupIteratorState
 #if USE_SINGLE_BLOB_FOR_ALIGNMENTS == 1
     VBlob const* blob_alignments_ref_start;
     VBlob const* blob_alignments_ref_len;
+    VBlob const* blob_alignments_rd_filter;
 #endif
 
     uint32_t max_seq_len;
-    char ref_name [64]; /* TODO: now we have start and end ref id, so we have to get rid of this field */
 
     /* Current State */
     uint32_t current_seq_start;
@@ -341,6 +345,7 @@ void PileupIteratorState_Init (PileupIteratorState* self)
 #if USE_SINGLE_BLOB_FOR_ALIGNMENTS == 1
     self -> blob_alignments_ref_start = NULL;
     self -> blob_alignments_ref_len = NULL;
+    self -> blob_alignments_rd_filter = NULL;
 #endif
 
 }
@@ -377,6 +382,11 @@ void PileupIteratorState_Release ( PileupIteratorState* self )
     {
         VBlobRelease ( self -> blob_alignments_ref_len );
         self -> blob_alignments_ref_len = NULL;
+    }
+    if ( self -> blob_alignments_rd_filter != NULL )
+    {
+        VBlobRelease ( self -> blob_alignments_rd_filter );
+        self -> blob_alignments_rd_filter = NULL;
     }
 #endif
 }
@@ -541,6 +551,7 @@ static rc_t add_ref_row_to_cache (
     rc_t rc = 0;
     int32_t ref_start;
     uint32_t ref_len; /* TODO: fix types */
+    uint32_t rd_filter; 
     uint32_t row_len; /* TODO: fix types */
     int64_t slice_start = pileup_state->slice_start;
 
@@ -589,6 +600,22 @@ static rc_t add_ref_row_to_cache (
                 column_names_pa[COL_REF_LEN], rc, rc, rc);
             return rc;
         }
+        
+        rc = open_blob_for_current_id ( ctx, pa_ids[i],
+            cursor_pa, & pileup_state->blob_alignments_rd_filter,
+            column_index_pa [COL_READ_FILTER]);
+        if (rc != 0)
+            return rc;
+
+        rc = VBlobRead ( pileup_state->blob_alignments_rd_filter,
+            pa_ids[i], sizeof (rd_filter) * 8, & rd_filter, 1, & row_len );
+        if ( rc != 0 )
+        {
+            INTERNAL_ERROR ( xcCursorAccessFailed,
+                "ERROR: VBlobRead(pa, %s) failed with error: 0x%08x (%u) [%R]",
+                column_names_pa[COL_READ_FILTER], rc, rc, rc);
+            return rc;
+        }
 #else
         /* TODO: this branch might not work due to transfer from test to ngs */
         rc = VCursorReadDirect ( cursor_pa, pa_ids[i], column_index_pa [COL_REF_START],
@@ -630,18 +657,18 @@ static rc_t add_ref_row_to_cache (
             break;
         }
 
-        /* if alignment intersects slice_start - cache it */
-        if ( ref_start <= (int64_t)ref_pos && ref_end > (int64_t)ref_pos )
-        {
+        /* if alignment intersects slice_start and passes filtering criteria - cache it */
+        if ( ref_start <= (int64_t)ref_pos && ref_end > (int64_t)ref_pos && 
+            ( rd_filter & SRA_READ_FILTER_REJECT ) == 0 )
+        {   
             rc = Alignment_Add ( & pileup_state->cache_alignment, pa_ids[i], ref_start, ref_len, seq_start );
             if ( rc != 0 )
             {
                 INTERNAL_ERROR ( xcCursorAccessFailed,
-                    "ERROR: Alignment_Add (%lld, %d, %u, %u) failed with error: 0x%08x (%u) [%R], cache_size=%zu, ref_start_id=%lld, name=\"%s\", ref_pos=%llu",
+                    "ERROR: Alignment_Add (%lld, %d, %u, %u) failed with error: 0x%08x (%u) [%R], cache_size=%zu, ref_start_id=%lld, ref_pos=%llu",
                     pa_ids[i], ref_start, ref_len, seq_start, rc, rc, rc,
                     pileup_state->cache_alignment.size,
                     pileup_state->reference_start_id,
-                    pileup_state->ref_name,
                     pileup_state->ref_pos);
                 return rc;
             }
@@ -671,12 +698,13 @@ static rc_t add_ref_row_to_cache (
 
 
 
-static rc_t initialize_ref_pos (
-    ctx_t ctx,
-    PileupIteratorState* pileup_state,
-    NGS_Cursor const* curs_ref, VCursor const* cursor_pa,
-    char const* const* column_names_pa, uint32_t* column_index_pa, size_t column_count_pa
-    )
+static rc_t initialize_ref_pos ( ctx_t ctx,
+                                 PileupIteratorState* pileup_state,
+                                 NGS_Cursor const* curs_ref, 
+                                 VCursor const* cursor_pa,
+                                 char const* const* column_names_pa, 
+                                 uint32_t* column_index_pa, 
+                                 size_t column_count_pa )
 {
     int64_t row_id;
     uint64_t row_count;
@@ -695,19 +723,6 @@ static rc_t initialize_ref_pos (
         return (rc_t)(-1);
     }
     pileup_state->total_row_count = row_count;
-
-    /* We don't know the reference end id use its name to notice the moment when it changes - this will be the end */
-    NGS_CursorCellDataDirect ( curs_ref, ctx, pileup_state->reference_start_id, reference_NAME,
-        & dummy, & buf, NULL, & row_len );
-    if ( FAILED () )
-    {
-        rc = ctx->rc;
-        INTERNAL_ERROR( xcCursorAccessFailed,
-            "ERROR: NGS_CursorCellDataDirect(ref) failed with error: 0x%08x (%u) [%R]", rc, rc, rc);
-        return ctx->rc;
-    }
-    string_copy ( pileup_state->ref_name, countof(pileup_state->ref_name), (char const*)buf, row_len );
-    pileup_state->ref_name[ min ( countof(pileup_state->ref_name) - 1, row_len) ] = '\0';
 
     /* Read MAX_SEQ_LEN from the start_row_id and assume that it's the same for all the rest */
     NGS_CursorCellDataDirect ( curs_ref, ctx, pileup_state->reference_start_id, reference_MAX_SEQ_LEN,
@@ -743,43 +758,14 @@ static rc_t initialize_ref_pos (
             "ERROR: NGS_CursorCellDataDirect(pa) failed with error: 0x%08x (%u) [%R]", rc, rc, rc);
         return ctx->rc;
     }
-
-
+    else
     {
-        int64_t current_id = max (pileup_state->reference_start_id, pileup_state->slice_start_id - 10);
-        int64_t stop_id = pileup_state->slice_start_id;
-        uint32_t seq_start;
-        uint32_t dummy;
-#if USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS != 1
-        int64_t const* alignment_ids;
-#endif
-
-        for (; ; ++current_id)
+        int64_t current_id = max ( pileup_state->reference_start_id, pileup_state->slice_start_id - 10);
+        int64_t last_id = min ( pileup_state->reference_last_id, pileup_state->slice_start_id );
+        for (; current_id <= last_id; ++current_id)
         {
-            /* We don't know the current reference end_id
-               read it's name and break when it changes
-
-               TODO: Now we have access to end_id - use it
-            */
-
-            char ref_name[ countof (pileup_state->ref_name) ];
-            NGS_CursorCellDataDirect ( curs_ref, ctx, current_id, reference_NAME,
-                & dummy, & buf, NULL, & row_len );
-            if ( FAILED () )
-            {
-                rc = ctx->rc;
-                INTERNAL_ERROR( xcCursorAccessFailed,
-                    "ERROR: NGS_CursorCellDataDirect(ref) failed with error: 0x%08x (%u) [%R]", rc, rc, rc);
-                return ctx->rc;
-            }
-            string_copy ( ref_name, countof(ref_name), (char const*)buf, row_len );
-            ref_name[ min ( countof(ref_name) - 1, row_len) ] = '\0';
-
-            if ( current_id > stop_id || string_cmp ( ref_name, string_size ( ref_name ), 
-                                                      pileup_state -> ref_name, string_size ( pileup_state -> ref_name ), 
-                                                      string_size ( ref_name ) ) )
-                break;
-
+            uint32_t seq_start;
+            uint32_t dummy;
 #if USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS == 1
             rc = open_blob_for_current_id ( ctx, current_id,
                 NGS_CursorGetVCursor (curs_ref), & pileup_state->blob_alignment_ids,
@@ -815,39 +801,42 @@ static rc_t initialize_ref_pos (
             }
             pileup_state -> size_alignment_ids = row_len;
 #else
-
+            
             /* TODO: this branch isn't working now after moving code from test to ngs */
+            { 
+                int64_t const* alignment_ids;
 
-            rc = VCursorCellDataDirect ( cursor_ref, current_id,
-                        column_index_ref [COL_PRIMARY_ALIGNMENT_IDS],
-                        NULL,
-                        (void const**)(& alignment_ids), 0, & row_len );
+                rc = VCursorCellDataDirect ( cursor_ref, current_id,
+                            column_index_ref [COL_PRIMARY_ALIGNMENT_IDS],
+                            NULL,
+                            (void const**)(& alignment_ids), 0, & row_len );
 
-            /*rc = VCursorReadDirect ( cursor_ref, current_id,
-                        column_index_ref [COL_PRIMARY_ALIGNMENT_IDS],
-                        sizeof (*pileup_state->alignment_ids) * 8,
-                        pileup_state->alignment_ids,
-                        countof (pileup_state->alignment_ids), & row_len );*/
-            if ( rc != 0 )
-            {
-                rc_t res = string_printf ( error_buf, error_buf_size, NULL,
-                    "ERROR: VCursorCellDataDirect(ref-pa_ids) failed with error: 0x%08x (%u) [%R], row_len=%u",
-                    rc, rc, rc, row_len);
-                if (res == rcBuffer || res == rcInsufficient)
-                    error_buf [ error_buf_size - 1 ] = '\0';
+                /*rc = VCursorReadDirect ( cursor_ref, current_id,
+                            column_index_ref [COL_PRIMARY_ALIGNMENT_IDS],
+                            sizeof (*pileup_state->alignment_ids) * 8,
+                            pileup_state->alignment_ids,
+                            countof (pileup_state->alignment_ids), & row_len );*/
+                if ( rc != 0 )
+                {
+                    rc_t res = string_printf ( error_buf, error_buf_size, NULL,
+                        "ERROR: VCursorCellDataDirect(ref-pa_ids) failed with error: 0x%08x (%u) [%R], row_len=%u",
+                        rc, rc, rc, row_len);
+                    if (res == rcBuffer || res == rcInsufficient)
+                        error_buf [ error_buf_size - 1 ] = '\0';
 
-                return rc;
-            }
-            rc = PileupIteratorState_SetAlignmentIds ( pileup_state, alignment_ids, row_len );
-            if ( rc != 0 )
-            {
-                rc_t res = string_printf ( error_buf, error_buf_size, NULL,
-                    "ERROR: PileupIteratorState_SetAlignmentIds failed with error: 0x%08x (%u), row_len=%u",
-                    rc, rc, row_len);
-                if (res == rcBuffer || res == rcInsufficient)
-                    error_buf [ error_buf_size - 1 ] = '\0';
+                    return rc;
+                }
+                rc = PileupIteratorState_SetAlignmentIds ( pileup_state, alignment_ids, row_len );
+                if ( rc != 0 )
+                {
+                    rc_t res = string_printf ( error_buf, error_buf_size, NULL,
+                        "ERROR: PileupIteratorState_SetAlignmentIds failed with error: 0x%08x (%u), row_len=%u",
+                        rc, rc, row_len);
+                    if (res == rcBuffer || res == rcInsufficient)
+                        error_buf [ error_buf_size - 1 ] = '\0';
 
-                return rc;
+                    return rc;
+                }
             }
 #endif
             pileup_state->next_alignment_idx = 0;
@@ -959,29 +948,9 @@ static bool next_pileup (
         int64_t const* alignment_ids;
 #endif
 
-        /* TODO: use LastRowId from reference*/
-        char ref_name[ countof (pileup_state->ref_name) ];
-        void const* buf;
-
-        if ( ref_row_id < pileup_state->slice_start_id || ref_row_id > pileup_state->slice_end_id )
-        {
-            return false;
-        }
-
-        NGS_CursorCellDataDirect ( curs_ref, ctx, ref_row_id, reference_NAME,
-            & dummy, & buf, NULL, & row_len );
-        if ( FAILED () )
-        {
-            rc = ctx->rc;
-            INTERNAL_ERROR( xcCursorAccessFailed,
-                "ERROR: NGS_CursorCellDataDirect(ref) failed with error: 0x%08x (%u) [%R]", rc, rc, rc);
-            return false;
-        }
-        string_copy ( ref_name, countof(ref_name), (char const*)buf, row_len );
-        ref_name[ min ( countof(ref_name) - 1, row_len) ] = '\0';
-        if ( string_cmp ( ref_name, string_size ( ref_name ), 
-                          pileup_state->ref_name, string_size ( pileup_state->ref_name ), 
-                          string_size ( ref_name ) ) )
+        if ( ref_row_id < pileup_state->slice_start_id || 
+            ref_row_id > pileup_state->slice_end_id || 
+            ref_row_id > pileup_state->reference_last_id )
         {
             return false;
         }
@@ -1161,8 +1130,6 @@ void CSRA1_PileupInit ( CSRA1_Pileup * self,
         self->table_pa   = NULL;
         self->curs_ref   = NULL;
         self->cursor_pa  = NULL;
-
-        self -> pileup_state.ref_name [0] = '\0';
 
         self -> is_started = false;
         self -> is_finished = false;

@@ -57,7 +57,24 @@ extern struct NGS_ReadCollection_v1_vt ITF_ReadCollection_vt;
  * NGS_ReadCollection
  */
 
+/* ToRefcount
+ *  inline cast that preserves const
+ */
+#define NGS_ReadCollectionToRefcount( self ) \
+    ( & ( self ) -> dad )
 
+/* Release
+ *  release reference
+ */
+#define NGS_ReadCollectionRelease( self, ctx ) \
+    NGS_RefcountRelease ( NGS_ReadCollectionToRefcount ( self ), ctx )
+
+/* Duplicate
+ *  duplicate reference
+ */
+#define NGS_ReadCollectionDuplicate( self, ctx ) \
+    ( ( NGS_ReadCollection* ) NGS_RefcountDuplicate ( NGS_ReadCollectionToRefcount ( self ), ctx ) )
+ 
 /* Make
  *  use provided specification to create an object
  *  any error returns NULL as a result and sets error in ctx

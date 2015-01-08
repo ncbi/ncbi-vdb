@@ -108,7 +108,6 @@ static NGS_Reference_vt CSRA1_Reference_vt_inst =
 struct CSRA1_Reference
 {
     NGS_Reference dad;   
-    NGS_ReadCollection * coll;
     
     uint32_t chunk_size;
     
@@ -154,9 +153,8 @@ void CSRA1_ReferenceInit ( ctx_t ctx,
         INTERNAL_ERROR ( xcParamNull, "bad object reference" );
     else
     {
-        TRY ( NGS_ReferenceInit ( ctx, & ref -> dad, & CSRA1_Reference_vt_inst, clsname, instname ) )
+        TRY ( NGS_ReferenceInit ( ctx, & ref -> dad, & CSRA1_Reference_vt_inst, clsname, instname, coll ) )
         {
-            ref -> coll = (NGS_ReadCollection *) NGS_RefcountDuplicate ( & coll -> dad, ctx );
             ref -> align_id_offset = align_id_offset;
         }
     }
@@ -174,7 +172,7 @@ void CSRA1_ReferenceWhack ( CSRA1_Reference * self, ctx_t ctx )
     VDatabaseRelease ( self -> db );
     self -> db = NULL;
     
-    NGS_RefcountRelease ( & self -> coll -> dad, ctx );
+    NGS_ReferenceWhack ( & self -> dad, ctx );
 }
 
 NGS_String * CSRA1_ReferenceGetCommonName ( CSRA1_Reference * self, ctx_t ctx )
@@ -386,7 +384,7 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignment ( CSRA1_Reference * self, ctx_
     }
 
     {
-        TRY ( NGS_Alignment* ref = NGS_ReadCollectionGetAlignment ( self -> coll, ctx, alignmentIdStr ) )
+        TRY ( NGS_Alignment* ref = NGS_ReadCollectionGetAlignment ( self -> dad . coll, ctx, alignmentIdStr ) )
         {
             TRY ( NGS_String * spec = NGS_AlignmentGetReferenceSpec( ref, ctx ) )
             {
@@ -440,7 +438,7 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx
             TRY ( uint64_t ref_len = CSRA1_ReferenceGetLength ( self, ctx ) )
             {
                 return CSRA1_ReferenceWindowMake ( ctx, 
-                                                   self -> coll, 
+                                                   self -> dad . coll, 
                                                    self -> curs,
                                                    circular,
                                                    ref_len,
@@ -591,7 +589,7 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
                 {   /* for a circular reference, always look at the whole of it 
                        (to account for alignments that start near the end and overlap with the first chunk) */
                     return CSRA1_ReferenceWindowMake ( ctx, 
-                                                       self -> coll, 
+                                                       self -> dad . coll, 
                                                        self -> curs,
                                                        true, /* circular */
                                                        ref_len,
@@ -619,7 +617,7 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
                             end = self -> last_row + 1;
                             
                         return CSRA1_ReferenceWindowMake ( ctx, 
-                                                           self -> coll, 
+                                                           self -> dad . coll, 
                                                            self -> curs,
                                                            false,
                                                            ref_len,
