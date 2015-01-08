@@ -112,6 +112,7 @@ ALIGN_READER_SRC = \
 	reference-cmn \
 	reader-cmn \
 	reader-refseq \
+	reader-wgs \
 	reference \
 	refseq-mgr \
 	quality-quantizer
@@ -134,6 +135,7 @@ ALIGN_WRITER_SRC = \
 	reader-cmn \
 	reference-cmn \
 	reader-refseq \
+	reader-wgs \
 	refseq-mgr \
 	writer-cmn \
 	writer-refseq \

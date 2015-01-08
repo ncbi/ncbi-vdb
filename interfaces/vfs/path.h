@@ -149,12 +149,35 @@ VFS_EXTERN rc_t CC VFSManagerMakeOidPath ( struct VFSManager const * self,
     VPath ** new_path, uint32_t oid );
 
 
+/* MakePathWithExtension
+ *  makes a copy of original path
+ *  appends an extension to path portion of orig
+ */
+VFS_EXTERN rc_t CC VFSManagerMakePathWithExtension ( struct VFSManager const * self,
+    VPath ** new_path, const VPath * orig, const char * extension );
+
+
+/* ExtractAccessionOrOID
+ *  given an arbitrary path, possibly with extensions,
+ *  extract the portion of the leaf qualifying as an
+ *  accession or OID
+ */
+VFS_EXTERN rc_t CC VFSManagerExtractAccessionOrOID ( struct VFSManager const * self,
+    VPath ** acc_or_oid, const VPath * orig );
+
+
 /* AddRef
  * Release
  *  ignores NULL references
  */
 VFS_EXTERN rc_t CC VPathAddRef ( const VPath *self );
 VFS_EXTERN rc_t CC VPathRelease ( const VPath *self );
+
+
+/* IsAcessionOrOID
+ *  asks if the path pattern could possibly be an accession or oid
+ */
+VFS_EXTERN bool CC VPathIsAccessionOrOID ( const VPath * self );
 
 
 /* IsFSCompatible
@@ -167,6 +190,25 @@ VFS_EXTERN bool CC VPathIsFSCompatible ( const VPath * self );
  *  asks if the path was created from a formal URI
  */
 VFS_EXTERN bool CC VPathFromUri ( const VPath * self );
+
+
+/* MarkHighReliability
+ *  mark a path as representing either a reliable URL
+ *  or one where the reliability is unknown.
+ *
+ *  a highly-reliable URL is one that should be expected
+ *  to work. this property makes errors more suspicious,
+ *  and more likely to be temporary, leading to harder work
+ *  within the networking module.
+ *
+ *  "high_reliability" [ IN ] - set to true for high reliability
+ */
+VFS_EXTERN rc_t CC VPathMarkHighReliability ( VPath * self, bool high_reliability );
+
+/* IsHighlyReliable
+ *  returns "true" if the path represents a high-reliability URL
+ */
+VFS_EXTERN bool CC VPathIsHighlyReliable ( const VPath * self );
 
 
 /* Read*
@@ -244,17 +286,6 @@ VFS_EXTERN rc_t CC VPathGetFragment ( const VPath * self, struct String * str );
 /* TEMPORARY */
 VFS_EXTERN uint32_t CC VPathGetOid ( const VPath * self );
 
-#if 0
-/* legacy support */
-#define VPathMake LegacyVPathMake
-VFS_EXTERN rc_t VPathMake ( VPath ** new_path, const char * posix_path );
-#define VPathMakeFmt LegacyVPathMakeFmt
-rc_t VPathMakeFmt ( VPath ** new_path, const char * fmt, ... );
-#define VPathMakeVFmt LegacyVPathMakeVFmt
-rc_t VPathMakeVFmt ( VPath ** new_path, const char * fmt, va_list args );
-#define VPathMakeSysPath LegacyVPathMakeSysPath
-VFS_EXTERN rc_t VPathMakeSysPath ( VPath ** new_path, const char * sys_path );
-#endif
 
 #ifdef __cplusplus
 }

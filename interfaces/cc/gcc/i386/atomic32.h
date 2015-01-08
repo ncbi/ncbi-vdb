@@ -53,20 +53,18 @@ struct atomic32_t
 /* add to v -> counter and return the prior value */
 static __inline__ int atomic32_read_and_add ( atomic32_t *v, int i )
 {
-    int rtn;
+    int rtn, sum;
     __asm__ __volatile__
     (
-        "push %%ebx;"
-        "mov (%%ecx), %%eax;"
-        "mov %%edx, %%ebx;"
-        "1:"
-        "add %%eax, %%ebx;"
-        "lock;"
-        "cmpxchg %%ebx, (%%ecx);"
-        "jne 1b;"
-        "pop %%ebx"
-        : "=a" ( rtn ), "=c" ( v )
-        : "c" ( v ), "d" ( i )
+        "mov (%2), %0;"
+    "1:"
+        "mov %3, %1;"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
+        "jne 1b"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i )
     );
     return rtn;
 }
@@ -78,21 +76,18 @@ static __inline__ int atomic32_read_and_add ( atomic32_t *v, int i )
 /* add to v -> counter and return the result */
 static __inline__ int atomic32_add_and_read ( atomic32_t *v, int i )
 {
-    int rtn;
+    int rtn, cmp;
     __asm__ __volatile__
     (
-        "push %%ebx;"
-        "mov (%%ecx), %%eax;"
-        "mov %%edx, %%ebx;"
-        "1:"
-        "add %%eax, %%ebx;"
-        "lock;"
-        "cmpxchg %%ebx, (%%ecx);"
+        "mov (%2), %0;"
+    "1:"
+        "mov %3, %1;"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1,(%2);"
         "jne 1b;"
-        "mov %%ebx, %%eax;"
-        "pop %%ebx"
-        : "=a" ( rtn ), "=c" ( v )
-        : "c" ( v ), "d" ( i )
+        : "=&a" ( cmp ), "=&r" ( rtn )
+        : "r" ( & v -> counter ), "r" ( i )
     );
     return rtn;
 }
@@ -102,10 +97,10 @@ static __inline__ void atomic32_inc ( atomic32_t *v )
 {
     __asm__ __volatile__
     (
-        "lock;"
+    "lock;"
         "incl %0"
-        :"=m" (v->counter)
-        :"m" (v->counter)
+        : "=m" ( v -> counter )
+        : "m" ( v -> counter )
     );
 }
 
@@ -113,10 +108,10 @@ static __inline__ void atomic32_dec ( atomic32_t *v )
 {
     __asm__ __volatile__
     (
-        "lock;"
+    "lock;"
         "decl %0"
-        :"=m" (v->counter)
-        :"m" (v->counter)
+        : "=m" ( v -> counter )
+        : "m" ( v -> counter )
     );
 }
 
@@ -126,11 +121,11 @@ static __inline__ int atomic32_dec_and_test ( atomic32_t *v )
     unsigned char c;
     __asm__ __volatile__
     (
-        "lock;"
-        "decl %0;"
-        "sete %1"
-        :"=m" (v->counter), "=qm" (c)
-        :"m" (v->counter) : "memory"
+    "lock;"
+        "decl %1;"
+        "sete %0"
+        : "=r" ( c ), "=m" ( v -> counter )
+        : "m" ( v -> counter )
     );
     return c;
 }
@@ -142,11 +137,11 @@ static __inline__ int atomic32_inc_and_test ( atomic32_t *v )
     unsigned char c;
     __asm__ __volatile__
     (
-        "lock;"
-        "incl %0;"
-        "sete %1"
-        :"=m" (v->counter), "=qm" (c)
-        :"m" (v->counter) : "memory"
+    "lock;"
+        "incl %1;"
+        "sete %0"
+        : "=r" ( c ), "=m" ( v -> counter )
+        : "m" ( v -> counter )
     );
     return c;
 }
@@ -160,10 +155,10 @@ static __inline__ int atomic32_test_and_set ( atomic32_t *v, int s, int t )
     int rtn;
     __asm__ __volatile__
     (
-        "lock;"
-        "cmpxchg %%edx,(%%ecx)"
-        : "=a" ( rtn ), "=c" ( v )
-        : "c" ( v ), "d" ( s ), "a" ( t )
+    "lock;"
+        "cmpxchg %2, (%1)"
+        : "=a" ( rtn )
+        : "r" ( & v -> counter ), "r" ( s ), "a" ( t )
     );
     return rtn;
 }
@@ -172,23 +167,21 @@ static __inline__ int atomic32_test_and_set ( atomic32_t *v, int s, int t )
 static __inline__
 int atomic32_read_and_add_lt ( atomic32_t *v, int i, int t )
 {
-    int rtn;
+    int rtn, sum;
     __asm__ __volatile__
     (
-        "push %%ebx;"
-        "mov (%%ecx), %%eax;"
-        "1:"
-        "cmp %%esi, %%eax;"
-        "mov %%edx, %%ebx;"
+        "mov (%2), %0;"
+    "1:"
+        "cmp %4, %0;"
+        "mov %3, %1;"
         "jge 2f;"
-        "add %%eax, %%ebx;"
-        "lock;"
-        "cmpxchg %%ebx, (%%ecx);"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
         "jne 1b;"
-        "2:"
-        "pop %%ebx"
-        : "=a" ( rtn ), "=c" ( v )
-        : "c" ( v ), "d" ( i ), "S" ( t )
+    "2:"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
     );
     return rtn;
 }
@@ -199,23 +192,21 @@ int atomic32_read_and_add_lt ( atomic32_t *v, int i, int t )
 static __inline__
 int atomic32_read_and_add_le ( atomic32_t *v, int i, int t )
 {
-    int rtn;
+    int rtn, sum;
     __asm__ __volatile__
     (
-        "push %%ebx;"
-        "mov (%%ecx), %%eax;"
-        "1:"
-        "cmp %%esi, %%eax;"
-        "mov %%edx, %%ebx;"
+        "mov (%2), %0;"
+    "1:"
+        "cmp %4, %0;"
+        "mov %3, %1;"
         "jg 2f;"
-        "add %%eax, %%ebx;"
-        "lock;"
-        "cmpxchg %%ebx, (%%ecx);"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
         "jne 1b;"
-        "2:"
-        "pop %%ebx"
-        : "=a" ( rtn ), "=c" ( v )
-        : "c" ( v ), "d" ( i ), "S" ( t )
+    "2:"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
     );
     return rtn;
 }
@@ -226,23 +217,21 @@ int atomic32_read_and_add_le ( atomic32_t *v, int i, int t )
 static __inline__
 int atomic32_read_and_add_eq ( atomic32_t *v, int i, int t )
 {
-    int rtn;
+    int rtn, sum;
     __asm__ __volatile__
     (
-        "push %%ebx;"
-        "mov (%%ecx), %%eax;"
-        "1:"
-        "cmp %%esi, %%eax;"
-        "mov %%edx, %%ebx;"
+        "mov (%2), %0;"
+    "1:"
+        "cmp %4, %0;"
+        "mov %3, %1;"
         "jne 2f;"
-        "add %%eax, %%ebx;"
-        "lock;"
-        "cmpxchg %%ebx, (%%ecx);"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
         "jne 1b;"
-        "2:"
-        "pop %%ebx"
-        : "=a" ( rtn ), "=c" ( v )
-        : "c" ( v ), "d" ( i ), "S" ( t )
+    "2:"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
     );
     return rtn;
 }
@@ -253,23 +242,21 @@ int atomic32_read_and_add_eq ( atomic32_t *v, int i, int t )
 static __inline__
 int atomic32_read_and_add_ne ( atomic32_t *v, int i, int t )
 {
-    int rtn;
+    int rtn, sum;
     __asm__ __volatile__
     (
-        "push %%ebx;"
-        "mov (%%ecx), %%eax;"
-        "1:"
-        "cmp %%esi, %%eax;"
-        "mov %%edx, %%ebx;"
+        "mov (%2), %0;"
+    "1:"
+        "cmp %4, %0;"
+        "mov %3, %1;"
         "je 2f;"
-        "add %%eax, %%ebx;"
-        "lock;"
-        "cmpxchg %%ebx, (%%ecx);"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
         "jne 1b;"
-        "2:"
-        "pop %%ebx"
-        : "=a" ( rtn ), "=c" ( v )
-        : "c" ( v ), "d" ( i ), "S" ( t )
+    "2:"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
     );
     return rtn;
 }
@@ -280,23 +267,21 @@ int atomic32_read_and_add_ne ( atomic32_t *v, int i, int t )
 static __inline__
 int atomic32_read_and_add_ge ( atomic32_t *v, int i, int t )
 {
-    int rtn;
+    int rtn, sum;
     __asm__ __volatile__
     (
-        "push %%ebx;"
-        "mov (%%ecx), %%eax;"
-        "1:"
-        "cmp %%esi, %%eax;"
-        "mov %%edx, %%ebx;"
+        "mov (%2), %0;"
+    "1:"
+        "cmp %4, %0;"
+        "mov %3, %1;"
         "jl 2f;"
-        "add %%eax, %%ebx;"
-        "lock;"
-        "cmpxchg %%ebx, (%%ecx);"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
         "jne 1b;"
-        "2:"
-        "pop %%ebx"
-        : "=a" ( rtn ), "=c" ( v )
-        : "c" ( v ), "d" ( i ), "S" ( t )
+    "2:"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
     );
     return rtn;
 }
@@ -307,23 +292,21 @@ int atomic32_read_and_add_ge ( atomic32_t *v, int i, int t )
 static __inline__
 int atomic32_read_and_add_gt ( atomic32_t *v, int i, int t )
 {
-    int rtn;
+    int rtn, sum;
     __asm__ __volatile__
     (
-        "push %%ebx;"
-        "mov (%%ecx), %%eax;"
-        "1:"
-        "cmp %%esi, %%eax;"
-        "mov %%edx, %%ebx;"
+        "mov (%2), %0;"
+    "1:"
+        "cmp %4, %0;"
+        "mov %3, %1;"
         "jle 2f;"
-        "add %%eax, %%ebx;"
-        "lock;"
-        "cmpxchg %%ebx, (%%ecx);"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
         "jne 1b;"
-        "2:"
-        "pop %%ebx"
-        : "=a" ( rtn ), "=c" ( v )
-        : "c" ( v ), "d" ( i ), "S" ( t )
+    "2:"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
     );
     return rtn;
 }
@@ -334,23 +317,21 @@ int atomic32_read_and_add_gt ( atomic32_t *v, int i, int t )
 static __inline__
 int atomic32_read_and_add_odd ( atomic32_t *v, int i )
 {
-    int rtn;
+    int rtn, sum;
     __asm__ __volatile__
     (
-        "push %%ebx;"
-        "mov (%%ecx), %%eax;"
-        "1:"
-        "bt $0, %%ax;"
-        "mov %%edx, %%ebx;"
+        "mov (%2), %0;"
+    "1:"
+        "bt $0, %0;"
+        "mov %3, %1;"
         "jnc 2f;"
-        "add %%eax, %%ebx;"
-        "lock;"
-        "cmpxchg %%ebx, (%%ecx);"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
         "jne 1b;"
-        "2:"
-        "pop %%ebx"
-        : "=a" ( rtn ), "=c" ( v )
-        : "c" ( v ), "d" ( i )
+    "2:"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i )
     );
     return rtn;
 }
@@ -358,23 +339,21 @@ int atomic32_read_and_add_odd ( atomic32_t *v, int i )
 static __inline__
 int atomic32_read_and_add_even ( atomic32_t *v, int i )
 {
-    int rtn;
+    int rtn, sum;
     __asm__ __volatile__
     (
-        "push %%ebx;"
-        "mov (%%ecx), %%eax;"
-        "1:"
-        "bt $0, %%ax;"
-        "mov %%edx, %%ebx;"
+        "mov (%2), %0;"
+    "1:"
+        "bt $0, %0;"
+        "mov %3, %1;"
         "jc 2f;"
-        "add %%eax, %%ebx;"
-        "lock;"
-        "cmpxchg %%ebx, (%%ecx);"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
         "jne 1b;"
-        "2:"
-        "pop %%ebx"
-        : "=a" ( rtn ), "=c" ( v )
-        : "c" ( v ), "d" ( i )
+    "2:"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i )
     );
     return rtn;
 }

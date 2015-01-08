@@ -51,10 +51,6 @@ ifneq (sun,$(OS))
     WARN += -Wno-variadic-macros
 endif
 
-ifeq (linux,$(OS))
-    NO_ARRAY_BOUNDS_WARNING = -Wno-array-bounds
-endif
-
 ifeq (64,$(BITS))
 	CARCH = -m64
 else

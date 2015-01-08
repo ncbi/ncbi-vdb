@@ -288,9 +288,6 @@
     <ClCompile Include="..\..\..\libs\kfc\rsrc.c">
       <Filter>kfc</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\kfc\test-except.c">
-      <Filter>kfc</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\libs\kfc\tstate.c">
       <Filter>kfc</Filter>
     </ClCompile>
@@ -463,9 +460,6 @@
       <Filter>klib</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\klib\debug.c">
-      <Filter>klib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\klib\http-tries.c">
       <Filter>klib</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\klib\iso8859-1.c">
@@ -673,9 +667,6 @@
       <Filter>kns</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\kns\stream.c">
-      <Filter>kns</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\libs\kns\undyinghttp.c">
       <Filter>kns</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\kns\win\sysendpoint.c">
@@ -1320,8 +1311,14 @@
     <ClCompile Include="..\..\..\libs\wgsxf\build_scaffold.c">
       <Filter>wgsxf</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\ngs-c++\NCBI-NGS.cpp">
-      <Filter>ngs-c++</Filter>
+    <ClCompile Include="..\..\..\libs\kfg\ngc.c" />
+    <ClCompile Include="..\..\..\libs\klib\num-gen.c">
+      <Filter>klib</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\progressbar.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\align\reader-wgs.c" />
+    <ClCompile Include="..\..\..\libs\kns\http-retrier.c" />
   </ItemGroup>
 </Project>

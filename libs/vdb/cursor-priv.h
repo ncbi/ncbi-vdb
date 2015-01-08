@@ -191,6 +191,13 @@ struct VCursor
 
     /* external row of VColumn* by ord ( owned ) */
     Vector row;
+    
+    Vector v_cache_curs;
+    Vector v_cache_cidx;
+    /** trying to prevent forward prefetch on rows which are cached ***/
+    bool    cache_col_active;
+    int64_t cache_empty_start; /** first rowid where cache is detected to be empty **/
+    int64_t cache_empty_end;   /** last  rowid  **/ 
 
     /* column objects by cid ( not-owned ) */
     VCursorCache col;
@@ -225,6 +232,10 @@ struct VCursor
     bool permit_post_open_add;
     /* support suspension of schema-declared triggers **/
     bool suspend_triggers;
+    /* cursor used in sub-selects */
+    bool is_sub_cursor; 
+    /* cursor for VDB columns located in separate db.tbl ***/
+    const struct VCursor* cache_curs;
 };
 
 

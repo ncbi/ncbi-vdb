@@ -75,6 +75,7 @@ rc_t VTableWhack ( VTable *self )
 
     BSTreeWhack ( & self -> read_col_cache, VColumnRefWhack, NULL );
     BSTreeWhack ( & self -> write_col_cache, VColumnRefWhack, NULL );
+    VTableRelease(self -> cache_tbl);
 
     KMDataNodeRelease ( self -> col_node );
     KMetadataRelease ( self -> meta );
@@ -343,7 +344,18 @@ LIB_EXPORT rc_t CC VDatabaseOpenTableRead ( const VDatabase *self,
     va_start ( args, path );
     rc = VDatabaseVOpenTableRead ( self, tbl, path, args );
     va_end ( args );
+    if(rc == 0 && self->cache_db != NULL) {
+	rc_t rc2;
+	const VTable *ctbl;
 
+	va_start ( args, path );
+	rc2 = VDatabaseVOpenTableRead ( self->cache_db, &ctbl, path, args );
+	va_end ( args );
+	DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("VDatabaseOpenTableRead(vdbcache) = %d\n", rc2));
+	if(rc2 == 0){
+		((VTable*) (*tbl)) -> cache_tbl = ctbl;
+	}
+    }
     return rc;
 }
 

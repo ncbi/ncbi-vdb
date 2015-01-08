@@ -139,6 +139,8 @@ static int execute(const char *command, uint64_t heartbeat,
     PROCESS_INFORMATION pi;
     STARTUPINFO si;
 
+    wchar_t wcommand[5000];
+
     assert(writeFailed && canceled);
     *writeFailed = false;
 
@@ -194,9 +196,11 @@ static int execute(const char *command, uint64_t heartbeat,
     si.hStdInput = g_hChildStd_IN_Rd;
     si.dwFlags |= STARTF_USESTDHANDLES;
 
+    mbstowcs(wcommand, command, strlen(command) + 1);
+
     bSuccess = CreateProcess(
         NULL,//_In_opt_ LPCTSTR              lpApplicationName,
-        (char*)command,//_Inout_opt_  LPTSTR lpCommandLine, command line 
+        wcommand,//_Inout_opt_  LPTSTR lpCommandLine, command line 
         NULL,//_In_opt_ LPSECURITY_ATTRIBUTES process security attributes 
         NULL,//_In_opt_ LPSECURITY_ATTRIBUTES primary thread security attributes
         TRUE,//_In_     BOOL                  handles are inherited 
@@ -462,6 +466,8 @@ int silent_system(const char *command) {
     STARTUPINFO si;
     SECURITY_ATTRIBUTES saAttr; 
 
+    wchar_t wcommand[5000];
+
     // Set the bInheritHandle flag so pipe handles are inherited. 
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES); 
     saAttr.bInheritHandle = TRUE; 
@@ -489,9 +495,11 @@ int silent_system(const char *command) {
     si.hStdOutput = g_hChildStd_OUT_Wr;
     si.dwFlags |= STARTF_USESTDHANDLES;
 
+    mbstowcs(wcommand, command, strlen(command) + 1);
+
     bSuccess = CreateProcess(
         NULL,           //_In_opt_    LPCTSTR               lpApplicationName,
-        (char*)command, //_Inout_opt_ LPTSTR                lpCommandLine,
+        wcommand,       //_Inout_opt_ LPTSTR                lpCommandLine,
         NULL,           //_In_opt_    LPSECURITY_ATTRIBUTES lpProcessAttributes,
         NULL,           //_In_opt_    LPSECURITY_ATTRIBUTES lpThreadAttributes,
         TRUE,           //_In_        BOOL                  bInheritHandles,

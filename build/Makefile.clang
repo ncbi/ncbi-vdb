@@ -38,6 +38,8 @@ LD = @ $(TOP)/build/ld.sh $(OS) $(ARCH) clang \
 	$(STATICSYSLIBS) $(CHECKSUM) --objx $(OBJX) --shlx $(SHLX) --libx $(LIBX) \
 	-MD --srcdir $(SRCDIR) --bindir $(BINDIR) -L$(LIBDIR):$(ILIBDIR)
 
+LPFLAGS = $(LDFLAGS)
+
 LP = @ $(TOP)/build/ld.sh $(OS) $(ARCH) clang++ \
 	--build $(BUILD) --ldflags "$(LDFLAGS)" $(STATIC) \
 	$(STATICSYSLIBS) $(CHECKSUM) --objx $(OBJX) --shlx $(SHLX) --libx $(LIBX) \
@@ -45,9 +47,6 @@ LP = @ $(TOP)/build/ld.sh $(OS) $(ARCH) clang++ \
 
 # tool options
 WARN = -Wall -Wno-variadic-macros -Wno-long-long # -Wconversion
-ifeq (linux,$(OS))
-    NO_ARRAY_BOUNDS_WARNING = -Wno-array-bounds
-endif
 
 ifeq (64,$(BITS))
 	CARCH = -m64

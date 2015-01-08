@@ -421,8 +421,8 @@ LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryIdByName
                             if ( rc == 0 && s != NULL ) {
                                 size_t s_size = string_size(s);
                                 if (name_size == s_size) {
-                                    int cmp = string_cmp
-                                        (name, name_size, s, s_size, s_size);
+                                    int cmp = string_cmp(name, name_size,
+                                        s, s_size, (uint32_t)s_size);
                                     found = (cmp == 0);
                                     if (found) {
                                         *id = i;
@@ -485,7 +485,7 @@ LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryPathByName( const KConfig *self,
                                 if ( name_size == s_size )
                                 {
                                     int cmp = string_cmp ( name, name_size,
-                                                           s, s_size, s_size );
+                                        s, s_size, (uint32_t)s_size);
                                     found = ( cmp == 0 );
                                     if ( found )
                                         rc = get_root_dir_of_repository( node, s, buffer, buffer_size, written );
@@ -546,7 +546,7 @@ LIB_EXPORT rc_t CC KConfigGetProtectedRepositoryDescriptionByName(
                                 if ( name_size == s_size )
                                 {
                                     int cmp = string_cmp ( name, name_size,
-                                                           s, s_size, s_size );
+                                        s, s_size, (uint32_t)s_size);
                                     found = ( cmp == 0 );
                                     if ( found )
                                         rc = get_description_of_repository(node,
@@ -608,7 +608,7 @@ LIB_EXPORT rc_t CC KConfigDoesProtectedRepositoryExist( const KConfig *self, con
                                 if ( name_size == s_size )
                                 {
                                     int cmp = string_cmp ( name, name_size,
-                                                           s, s_size, s_size );
+                                        s, s_size, (uint32_t)s_size);
                                     found = ( cmp == 0 );
                                 }
                             }

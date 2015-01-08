@@ -312,13 +312,28 @@ rc_t KColumnIdx0Create ( KColumnIdx0 *self, KDirectory *dir,
  */
 rc_t KColumnIdx0OpenRead_v1 ( KColumnIdx0 *self, const KDirectory *dir, bool bswap )
 {
-    rc_t rc = KDirectoryOpenFileRead ( dir,
-        ( const KFile** ) & self -> f, "idx0" );
+    rc_t rc;
+    uint64_t eof;
 
+    BSTreeInit ( & self -> bst );
+    self -> count = 0;
+
+    rc = KDirectoryVFileSize ( dir, & eof, "idx0", NULL );
     if ( rc == 0 )
-        rc = KColumnIdx0Init_v1 ( self, bswap );
+    {
+        if ( eof != 0 )
+        {
+            rc = KDirectoryOpenFileRead ( dir,
+                ( const KFile** ) & self -> f, "idx0" );
+
+            if ( rc == 0 )
+                rc = KColumnIdx0Init_v1 ( self, bswap );
+        }
+    }
     else if ( GetRCState ( rc ) == rcNotFound )
+    {
         rc = 0;
+    }
 
     return rc;
 }
@@ -326,13 +341,21 @@ rc_t KColumnIdx0OpenRead_v1 ( KColumnIdx0 *self, const KDirectory *dir, bool bsw
 rc_t KColumnIdx0OpenRead ( KColumnIdx0 *self,
     const KDirectory *dir, uint32_t count, bool bswap )
 {
-    rc_t rc = KDirectoryOpenFileRead ( dir,
-        ( const KFile** ) & self -> f, "idx0" );
+    BSTreeInit ( & self -> bst );
+    self -> count = 0;
 
-    if ( rc == 0 )
-        rc = KColumnIdx0Init ( self, count, bswap );
+    if ( count != 0 )
+    {
+        rc_t rc = KDirectoryOpenFileRead ( dir,
+            ( const KFile** ) & self -> f, "idx0" );
 
-    return rc;
+        if ( rc == 0 )
+            rc = KColumnIdx0Init ( self, count, bswap );
+
+        return rc;
+    }
+
+    return 0;
 }
 
 /* Whack

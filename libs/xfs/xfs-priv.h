@@ -32,48 +32,48 @@
 
 /*  Forwards forewer
  */
-struct XFSPeer;
+struct XFSTreeDepot;
 struct KThread;
 
-typedef union XFSControl_vt XFSControl_vt;
-typedef struct XFSControlArgs XFSControlArgs;
+union XFSControl_vt;
+struct XFSControlArgs;
+struct XFSOwp;
 
 /*
  *  XFSControl structure
  *
- *  Note, that structure is using two members : Peer and Control.
- *  Peer is an object which is rendering tree, and it is accepting
+ *  Note, that structure is using two members : Tree and Control.
+ *  Tree is an object which is rendering tree, and it is accepting
  *  callbacks from Control, which is definitely implementation of
- *  Fuse/Dokan interface. THAT IS VERY IMPORTANT that Peer should
+ *  Fuse/Dokan interface. THAT IS VERY IMPORTANT that Tree should
  *  be initialized before Control.
  *
  */
 struct XFSControl {
-    const XFSControl_vt *vt;
+    const union XFSControl_vt *vt;
 
-        /*  "struct XFSPeer", which should be responsible for rendering
+        /*  "struct XFSTree", which should be responsible for rendering
             tree structure into Fuse/Dokan terms of filesystem
             NOTE: it should be initialized before Control
         */
-    struct XFSPeer * Peer;
+    struct XFSTreeDepot * TreeDepot;
 
         /*  "struct fuse" for Fuse, and something else for all
             other platforms
             "struct fuse" contains pointer for "fuse_session",
             and it contains pointer for "fuse_chan", so it will
             allow to define practically everything in environment.
-            BTW, I introduced ContolOpt to store fuze_chan here.
-            NOTE: it should be initialized after Peer
+            NOTE: it should be initialized after Tree
          */
     void * Control;
-    void * ControlOpt;
+    void * ControlAux;
 
         /*  That is for storeing of arguments to run fuse
             I am not sure if we need it, but arguments for initializing
             fuse and docan are passing in difeerent way.
             BTW, prolly I need to use BSTree here, not sure.
          */
-    XFSControlArgs * Arguments;
+    struct XFSOwp * Arguments;
 
         /*  That is a thread which will start Fuse/Dokan loop
             and it will be called from XFSStart() method
@@ -84,7 +84,6 @@ struct XFSControl {
 /*
  *  Vertuhai table.
  */
-typedef struct XFSControl_vt_v1 XFSControl_vt_v1;
 struct XFSControl_vt_v1 {
         /*  version == 1.x
          */
@@ -95,22 +94,20 @@ struct XFSControl_vt_v1 {
          */
         /*  version 0.0
          */
-    rc_t ( CC * init ) ( XFSControl * self );
-    rc_t ( CC * destroy ) ( XFSControl * self );
-    rc_t ( CC * mount ) ( XFSControl * self );
-    rc_t ( CC * loop ) ( XFSControl * self );
-    rc_t ( CC * unmount ) ( XFSControl * self );
+    rc_t ( CC * init ) ( struct XFSControl * self );
+    rc_t ( CC * destroy ) ( struct XFSControl * self );
+    rc_t ( CC * mount ) ( struct XFSControl * self );
+    rc_t ( CC * loop ) ( struct XFSControl * self );
+    rc_t ( CC * unmount ) ( struct XFSControl * self );
 };
 
 union XFSControl_vt {
-    XFSControl_vt_v1 v1;
+    struct XFSControl_vt_v1 v1;
 };
 
-/*  Note, more than temporal structure.
- */
-struct XFSControlArgs {
-    char Label [ XFS_SIZE_4096 ];
-    char MountPoint [ XFS_SIZE_4096 ];
-};
+/*))    Some usefull defines, used in Arguments
+ ((*/
+#define XFS_CONTROL_MOUNTPOINT  "mountpoint"
+#define XFS_CONTROL_LABEL       "label"
 
 #endif /* _h_xfs_priv_ */

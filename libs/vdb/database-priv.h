@@ -106,6 +106,9 @@ struct VDatabase
 
     /* open mode */
     bool read_only;
+
+    /* cache database id any */
+    KONST VDatabase *cache_db;
 };
 
 

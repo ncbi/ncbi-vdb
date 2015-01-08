@@ -9,6 +9,14 @@ extern "C" {
 #endif
 /*
  * Class:     gov_nih_nlm_ncbi_ngs_Manager
+ * Method:    Version
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_Version
+  (JNIEnv *, jclass);
+
+/*
+ * Class:     gov_nih_nlm_ncbi_ngs_Manager
  * Method:    Initialize
  * Signature: ()Ljava/lang/String;
  */

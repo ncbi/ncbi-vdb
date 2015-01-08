@@ -130,7 +130,7 @@ rc_t CC template_len_impl( void * data, const VXformInfo * info, int64_t row_id,
 VTRANSFACT_IMPL ( NCBI_align_template_len, 1, 0, 0 ) ( const void *self, const VXfactInfo *info, VFuncDesc *rslt,
                                                  const VFactoryParams *cp, const VFunctionParams *dp )
 {
-    rslt->variant = vftRow;
+    rslt->variant = vftRowFast;
     rslt->u.rf = template_len_impl;
     return 0;
 }

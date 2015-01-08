@@ -58,6 +58,10 @@ struct RestoreRead
 {
     const VCursor *curs;
     uint32_t read_idx;
+    int64_t  last_row_id;
+    int64_t  last_sequentual_row_id;
+	int64_t  prefetch_start_id;
+	int64_t  prefetch_stop_id;
 };
 
 static
@@ -72,55 +76,61 @@ void CC RestoreReadWhack ( void *obj )
 }
 
 static
-rc_t RestoreReadMake ( RestoreRead **objp, const VTable *tbl )
+rc_t RestoreReadMake ( RestoreRead **objp, const VTable *tbl, const VCursor* native_curs )
 {
     rc_t rc;
+    char name[]="PRIMARY_ALIGNMENT";
 
     /* create the object */
     RestoreRead *obj = malloc ( sizeof * obj );
+    memset(obj,0,sizeof * obj);
     if ( obj == NULL )
     {
+		*objp=0;
         rc = RC ( rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted );
     }
     else
-    {
-        /* get at the parent database */
-        const VDatabase *db;
-        rc = VTableOpenParentRead ( tbl, & db );
-        if ( rc == 0 )
-        {
-            /* open the primary alignment table */
-            const VTable *patbl;
-            rc = VDatabaseOpenTableRead ( db, & patbl, "PRIMARY_ALIGNMENT" );
-            VDatabaseRelease ( db );
-            if ( rc == 0 )
-            {
-                /* create a cursor */
-                rc = VTableCreateCachedCursorRead( patbl, &obj->curs, 32*1024*1024UL );
-                VTableRelease ( patbl );
-                if ( rc == 0 )
-                {
-                    /* add columns to cursor */
-                    rc = VCursorAddColumn ( obj -> curs, & obj -> read_idx, "( INSDC:4na:bin ) READ" );
-                    if ( rc == 0 )
-                    {
-                        rc = VCursorOpen ( obj -> curs );
-                        if ( rc == 0 )
-                        {
-
-                            SUB_DEBUG( ( "SUB.Make in 'seq-restore-read.c'\n" ) );
-
-                            * objp = obj;
-                        return 0;
-                        }
-                    }
-                    VCursorRelease ( obj -> curs );
-                }
-            }
-        }
-        free ( obj );
-    }
-
+	{
+		rc = VCursorLinkedCursorGet(native_curs,name,&obj->curs);
+		if(rc == 0){
+			VCursorAddRef(obj->curs);
+		} else {
+			/* get at the parent database */
+			const VDatabase *db;
+			rc = VTableOpenParentRead ( tbl, & db );
+			if ( rc == 0 )
+			{
+				const VTable *patbl;
+				/* open the primary alignment table */
+				rc = VDatabaseOpenTableRead ( db, & patbl, name );
+				VDatabaseRelease ( db );
+				if ( rc == 0 )
+				{
+					/* create a cursor */
+					rc = VTableCreateCachedCursorRead( patbl, &obj->curs, 32*1024*1024UL );
+					VTableRelease ( patbl );
+					if ( rc == 0 )
+					{
+						/* add columns to cursor */
+						rc = VCursorAddColumn ( obj -> curs, & obj -> read_idx, "( INSDC:4na:bin ) READ" );
+						if ( rc == 0 )
+						{
+							rc = VCursorOpen ( obj -> curs );
+							if ( rc == 0 )
+							{
+								VCursorLinkedCursorSet( native_curs, name, obj->curs );
+								SUB_DEBUG( ( "SUB.Make in 'seq-restore-read.c'\n" ) );
+								* objp = obj;
+								return 0;
+							}
+						}
+						VCursorRelease ( obj -> curs );
+					}
+				}
+			}
+			free ( obj );
+		}
+	}
     return rc;
 }
 
@@ -158,6 +168,7 @@ rc_t CC seq_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
     const int64_t	*align_id	= argv[ 1 ].u.data.base;
     const INSDC_coord_len *read_len = argv[ 2 ].u.data.base;
     const uint8_t	*read_type	= argv[ 3 ].u.data.base;
+	bool	is_sequential=false;
     
     assert( argv[ 0 ].u.data.elem_bits == 8 );
     assert( argv[ 1 ].u.data.elem_bits == 64 );
@@ -170,6 +181,16 @@ rc_t CC seq_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
     align_id  += argv [ 1 ] . u . data . first_elem;
     read_len  += argv [ 2 ] . u . data . first_elem;
     read_type += argv [ 3 ] . u . data . first_elem;
+
+    if(row_id != self->last_row_id  && row_id != self->last_row_id + 1){
+		self->last_sequentual_row_id = row_id;
+		is_sequential = false;
+    } else if(row_id > self->last_sequentual_row_id + 100){
+		is_sequential = true;
+	}
+    self->last_row_id = row_id;
+
+    
     
     for ( i = 0, len = 0; i < (int)num_reads; i++ )
     {
@@ -186,60 +207,66 @@ rc_t CC seq_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
         if ( len == src_len ) /*** shortcut - all data is local ***/
         {
             memcpy( dst, src, len );
-        }
-        else for( i = 0; i < (int)num_reads && rc == 0; i++ ) /*** checking read by read ***/
-        {
-            if ( align_id[ i ] > 0 )
-            {
-                const INSDC_4na_bin *r_src;
-                uint32_t             r_src_len;
+        } else {
+			if( is_sequential && (row_id < self->prefetch_start_id || row_id > self->prefetch_stop_id )){ /* do prefetch */
+				VCursorDataPrefetch(self->curs,align_id,self->read_idx,argv[1].u.data.base_elem_count-argv[1].u.data.first_elem,1,INT64_MAX,true);
+				self->prefetch_start_id=row_id;
+				self->prefetch_stop_id =argv[1].blob_stop_id;
+			}
+			for( i = 0; i < (int)num_reads && rc == 0; i++ ) /*** checking read by read ***/
+			{
+				if ( align_id[ i ] > 0 )
+				{
+					const INSDC_4na_bin *r_src;
+					uint32_t             r_src_len;
 
-                SUB_DEBUG( ( "SUB.Rd in 'seq-restore-read.c' at #%lu\n", align_id[ i ] ) );
+					SUB_DEBUG( ( "SUB.Rd in 'seq-restore-read.c' at #%lu\n", align_id[ i ] ) );
 
-                rc = VCursorCellDataDirect( self -> curs, align_id[ i ], self -> read_idx,
-                                            NULL, ( const void** ) &r_src, NULL, &r_src_len );
-                if ( rc == 0 )
-                {
-                    if ( r_src_len == read_len[ i ] )
-                    {
-                        if ( read_type[ i ] & SRA_READ_TYPE_FORWARD )
-                        {
-                            memcpy( dst, r_src, read_len[ i ] );
-                        }
-                        else if ( read_type[ i ] & SRA_READ_TYPE_REVERSE )
-                        {
-                            int j, k;
-                            for( j = 0, k = read_len[ i ] - 1; j < (int)read_len[ i ]; j++, k-- )
-                            {
-                                dst[ j ] = map [ r_src[ k ] & 15 ];
-                            }
-                        }
-                        else
-                        {
-                            rc = RC( rcXF, rcFunction, rcExecuting, rcData, rcInconsistent );
-                        }
-                    }
-                    else
-                    {
-                        rc = RC( rcXF, rcFunction, rcExecuting, rcData, rcInconsistent );
-                    }
-                }
-            }
-            else /*** data is in READ column **/
-            {
-                if ( src_len >= read_len[ i ] )
-                {
-                    memcpy( dst, src, read_len[ i ] );
-                    src_len -= read_len[ i ];
-                    src     += read_len[ i ];
-                }
-                else
-                {
-                    return RC( rcXF, rcFunction, rcExecuting, rcData, rcInconsistent );
-                }
-            }
-            dst += read_len[ i ];
-        }
+					rc = VCursorCellDataDirect( self -> curs, align_id[ i ], self -> read_idx,
+												NULL, ( const void** ) &r_src, NULL, &r_src_len );
+					if ( rc == 0 )
+					{
+						if ( r_src_len == read_len[ i ] )
+						{
+							if ( read_type[ i ] & SRA_READ_TYPE_FORWARD )
+							{
+								memcpy( dst, r_src, read_len[ i ] );
+							}
+							else if ( read_type[ i ] & SRA_READ_TYPE_REVERSE )
+							{
+								int j, k;
+								for( j = 0, k = read_len[ i ] - 1; j < (int)read_len[ i ]; j++, k-- )
+								{
+									dst[ j ] = map [ r_src[ k ] & 15 ];
+								}
+							}
+							else
+							{
+								rc = RC( rcXF, rcFunction, rcExecuting, rcData, rcInconsistent );
+							}
+						}
+						else
+						{
+							rc = RC( rcXF, rcFunction, rcExecuting, rcData, rcInconsistent );
+						}
+					}
+				}
+				else /*** data is in READ column **/
+				{
+					if ( src_len >= read_len[ i ] )
+					{
+						memcpy( dst, src, read_len[ i ] );
+						src_len -= read_len[ i ];
+						src     += read_len[ i ];
+					}
+					else
+					{
+						return RC( rcXF, rcFunction, rcExecuting, rcData, rcInconsistent );
+					}
+				}
+				dst += read_len[ i ];
+			}
+		}
     }
 
     return rc;
@@ -253,7 +280,7 @@ VTRANSFACT_IMPL ( ALIGN_seq_restore_read, 1, 0, 0 ) ( const void *Self, const VX
                                                      VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
     RestoreRead *fself;
-    rc_t rc = RestoreReadMake ( & fself, info -> tbl );
+    rc_t rc = RestoreReadMake ( & fself, info -> tbl,  (const VCursor*)info->parms );
     if ( rc == 0 )
     {
         rslt->self = fself;

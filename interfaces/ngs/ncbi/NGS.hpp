@@ -52,7 +52,7 @@ namespace ncbi
      * NGS
      *  static implementation root
      */
-    class  NGS
+    class NGS
     {
     public:
 

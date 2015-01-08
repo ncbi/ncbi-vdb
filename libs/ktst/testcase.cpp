@@ -30,7 +30,7 @@
 
 using namespace ncbi::NK;
 
-TestCase::TestCase(const std::string& name) 
+TestCase::TestCase(const char* name) 
 : _name(name), _ec(0) 
 {
 }

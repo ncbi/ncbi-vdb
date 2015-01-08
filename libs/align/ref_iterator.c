@@ -436,9 +436,6 @@ LIB_EXPORT rc_t CC ReferenceIteratorAddPlacements( ReferenceIterator *self,
                     if ( GetRCState( rc ) == rcDone ) { rc = 0; }
                 }
             }
-            /* if rc != 0 then ref_obj had NO AddRef inside  ReferenceObj_MakePlacementIterator() ! */
-            if ( rc == 0 )
-                ReferenceObj_Release( ref_obj );
         }
     }
     return rc;

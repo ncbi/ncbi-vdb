@@ -106,7 +106,6 @@ KLIB_SRC = \
 	unpack \
 	vlen-encode \
 	data-buffer \
-	http-tries \
 	refcount \
 	printf \
 	status-rc-strings \
@@ -123,6 +122,8 @@ KLIB_SRC = \
 	rc-idx-tbl \
 	judy-vector \
 	report \
+	num-gen \
+	progressbar \
 	sra-release-version
 #	path
 

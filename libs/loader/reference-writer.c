@@ -112,13 +112,15 @@ rc_t ReferenceInit(Reference *self,
 
 static
 void Unsorted(Reference *self) {
+    bool dummy;
+    
     (void)LOGMSG(klogWarn, "Alignments are unsorted");
     
     self->out_of_order = true;
     
     ReferenceSeq_Release(self->rseq);
     ReferenceMgr_SetCache(self->mgr, UNSORTED_CACHE_SIZE, UNSORTED_OPEN_TABLE_LIMIT);
-    ReferenceMgr_GetSeq(self->mgr, &self->rseq, self->last_id);
+    ReferenceMgr_GetSeq(self->mgr, &self->rseq, self->last_id, &dummy);
     
     KDataBufferWhack(&self->sec_align);
     KDataBufferWhack(&self->pri_align);
@@ -217,9 +219,10 @@ static rc_t FlushBuffers(Reference *self, uint64_t upto, bool full, bool final, 
 }
 
 rc_t ReferenceSetFile(Reference *self, const char id[],
-                      uint64_t length, uint8_t const md5[16], uint32_t maxSeqLen)
+                      uint64_t length, uint8_t const md5[16],
+                      uint32_t maxSeqLen, bool *shouldUnmap)
 {
-    const ReferenceSeq *rseq;
+    ReferenceSeq const *rseq;
     unsigned n;
     
     for (n = 0; ; ++n) {
@@ -234,10 +237,11 @@ rc_t ReferenceSetFile(Reference *self, const char id[],
         return RC(rcApp, rcTable, rcAccessing, rcParam, rcTooLong);
     
     BAIL_ON_FAIL(FlushBuffers(self, self->length, true, true, maxSeqLen));
-    BAIL_ON_FAIL(ReferenceMgr_GetSeq(self->mgr, &rseq, id));
+    BAIL_ON_FAIL(ReferenceMgr_GetSeq(self->mgr, &rseq, id, shouldUnmap));
 
     if (self->rseq)
         ReferenceSeq_Release(self->rseq);
+
     self->rseq = rseq;
     
     memcpy(self->last_id, id, n + 1);
@@ -257,9 +261,11 @@ rc_t ReferenceVerify(Reference const *self, char const id[], uint64_t length, ui
 
 rc_t ReferenceGet1stRow(Reference const *self, int64_t *refID, char const refName[])
 {
-    const ReferenceSeq* rseq;
-    rc_t rc = ReferenceMgr_GetSeq(self->mgr, &rseq, refName);
-    if( rc == 0 ) {
+    ReferenceSeq const *rseq;
+    bool shouldUnmap = false;
+    rc_t rc = ReferenceMgr_GetSeq(self->mgr, &rseq, refName, &shouldUnmap);
+    if (rc == 0) {
+        assert(shouldUnmap == false);
         rc = ReferenceSeq_Get1stRow(rseq, refID);
         ReferenceSeq_Release(rseq);
     }

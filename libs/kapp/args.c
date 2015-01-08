@@ -30,7 +30,6 @@
 #include <klib/container.h>
 #include <klib/debug.h>
 #include <klib/log.h>
-#include <klib/misc.h> /* SetHttpTries */
 #include <klib/out.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
@@ -1317,7 +1316,6 @@ static
 const char * quiet_usage[] = 
 { "Turn off all status messages for the program.",
   "Negated by verbose.", NULL };
-const char *TRIES_USAGE[] = { TRIES_HELP, NULL };
 static
 const char * debug_usage[] = 
 { "Turn on debug output for module.",
@@ -1442,10 +1440,6 @@ OptDef StandardOptions[]  =
         OPTION_QUIET           , ALIAS_QUIET    , NULL, quiet_usage,
         OPT_UNLIM, false, false
     },
-    {
-        TRIES_OPTION           , NULL           , NULL, TRIES_USAGE,
-        OPT_UNLIM, true , false
-    },
 #if USE_OPTFILE
     {
         OPTION_OPTFILE         , ALIAS_OPTFILE  , NULL, optfile_usage,
@@ -1529,21 +1523,6 @@ rc_t CC ArgsHandleVersion (Args * self)
 
             ArgsWhack (self);
             exit (0);
-        }
-    }
-    return rc;
-}
-
-rc_t ArgsHandleHttpTries(const Args *self) {
-    rc_t rc = 0;
-    uint32_t count = 0;
-    assert(self);
-    rc = ArgsOptionCount(self, TRIES_OPTION, &count);
-    if (rc == 0 && count > 0) {
-        const char *arg;
-        rc = ArgsOptionValue(self, TRIES_OPTION, 0, &arg);
-        if (rc == 0) {
-            SetHttpTries(AsciiToU32(arg, NULL, NULL));
         }
     }
     return rc;
@@ -1670,10 +1649,6 @@ rc_t CC ArgsHandleStandardOptions (Args * self)
     do
     {
         rc = ArgsHandleHelp (self);
-        if (rc != 0)
-            break;
-
-        rc = ArgsHandleHttpTries (self);
         if (rc != 0)
             break;
 
@@ -1981,7 +1956,6 @@ void CC HelpOptionsStandard(void){
     HelpOptionLine(ALIAS_LOG_LEVEL,OPTION_LOG_LEVEL, "level" , log_usage);
 
     HelpOptionLine(ALIAS_VERBOSE  ,OPTION_VERBOSE  , NULL    , verbose_usage);
-    HelpOptionLine(NULL           ,TRIES_OPTION    ,TRIES_ARGUMENT,TRIES_USAGE);
     HelpOptionLine(ALIAS_QUIET    ,OPTION_QUIET    , NULL    , quiet_usage);
 #if USE_OPTFILE
     HelpOptionLine(ALIAS_OPTFILE  ,OPTION_OPTFILE  , "file"  , optfile_usage);
@@ -2018,4 +1992,15 @@ rc_t CC MiniUsage (const Args * args)
     KOutHandlerSet (w,d);
 
     return rc;
+}
+
+
+bool CC Is32BitAndDisplayMessage( void )
+{
+#if _ARCH_BITS == 32
+    KOutMsg ( "\nThis tool cannot run in a 32-bit environment,\nplease use the 64-bit version of this tool\n\n" );
+    return true;
+#else
+    return false;
+#endif
 }

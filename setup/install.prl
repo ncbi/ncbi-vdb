@@ -1,0 +1,9 @@
+sub PACKAGE_NAME { 'NCBI-VDB' }
+sub HAVE        { ( CONFIG => 1, DLLS => 1, LIBS => 1, USR_INCLUDES => 1, ) }
+sub CONFIG_OUT  {  'build' }
+sub INCLUDES    {  'interfaces/ngs/ncbi/NGS.hpp' }
+sub INCLUDES_OUT{  'ncbi-vdb' }
+sub LIBS
+    { ( 'ncbi-ngs-c++' => 'LIB', 'ncbi-vdb'  => 'LIB', 'ncbi-vdb'  => 'SHL',
+                                 'ncbi-wvdb' => 'LIB', 'ncbi-wvdb' => 'SHL', ) }
+1

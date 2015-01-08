@@ -53,19 +53,18 @@ struct atomic64_t
 /* add to v -> counter and return the prior value */
 static __inline__ long int atomic64_read_and_add ( atomic64_t *v, long int i )
 {
-    long int rtn;
+    long int rtn, sum;
     __asm__ __volatile__
     (
-        "mov (%%rdi), %%rax;"
-        "mov %%rsi, %%rcx;"
-        "1:"
-        "add %%rax, %%rcx;"
-        "lock;"
-        "cmpxchg %%rcx, (%%rdi);"
+        "mov (%2), %0;"
+    "1:"
+        "mov %3, %1;"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
         "jne 1b"
-        : "=a" ( rtn )
-        : "D" ( v ), "S" ( i )
-        : "%rcx"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i )
     );
     return rtn;
 }
@@ -77,20 +76,18 @@ static __inline__ long int atomic64_read_and_add ( atomic64_t *v, long int i )
 /* add to v -> counter and return the result */
 static __inline__ long int atomic64_add_and_read ( atomic64_t *v, long int i )
 {
-    long int rtn;
+    long int rtn, cmp;
     __asm__ __volatile__
     (
-        "mov (%%rdi), %%rax;"
-        "mov %%rsi, %%rcx;"
-        "1:"
-        "add %%rax, %%rcx;"
-        "lock;"
-        "cmpxchg %%rcx, (%%rdi);"
+        "mov (%2), %0;"
+    "1:"
+        "mov %3, %1;"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1,(%2);"
         "jne 1b;"
-        "mov %%rcx, %%rax"
-        : "=a" ( rtn )
-        : "D" ( v ), "S" ( i )
-        : "%rcx"
+        : "=&a" ( cmp ), "=&r" ( rtn )
+        : "r" ( & v -> counter ), "r" ( i )
     );
     return rtn;
 }
@@ -100,7 +97,7 @@ static __inline__ void atomic64_inc ( atomic64_t *v )
 {
     __asm__ __volatile__
     (
-        "lock;"
+    "lock;"
         "incq %0"
         : "=m" ( v -> counter )
         : "m" ( v -> counter )
@@ -111,7 +108,7 @@ static __inline__ void atomic64_dec ( atomic64_t *v )
 {
     __asm__ __volatile__
     (
-        "lock;"
+    "lock;"
         "decq %0"
         : "=m" ( v -> counter )
         : "m" ( v -> counter )
@@ -124,10 +121,10 @@ static __inline__ int atomic64_dec_and_test ( atomic64_t *v )
     unsigned char c;
     __asm__ __volatile__
     (
-        "lock;"
-        "decq %2;"
-        "sete %%al"
-        : "=a" ( c ), "=m" ( v -> counter )
+    "lock;"
+        "decq %1;"
+        "sete %0"
+        : "=r" ( c ), "=m" ( v -> counter )
         : "m" ( v -> counter )
     );
     return c;
@@ -140,10 +137,10 @@ static __inline__ int atomic64_inc_and_test ( atomic64_t *v )
     unsigned char c;
     __asm__ __volatile__
     (
-        "lock;"
-        "incq %2;"
-        "sete %%al"
-        : "=a" ( c ), "=m" ( v -> counter )
+    "lock;"
+        "incq %1;"
+        "sete %0"
+        : "=r" ( c ), "=m" ( v -> counter )
         : "m" ( v -> counter )
     );
     return c;
@@ -158,10 +155,10 @@ static __inline__ long int atomic64_test_and_set ( atomic64_t *v, long int s, lo
     long int rtn;
     __asm__ __volatile__
     (
-        "lock;"
-        "cmpxchg %%rsi,(%%rdi)"
+    "lock;"
+        "cmpxchg %2, (%1)"
         : "=a" ( rtn )
-        : "D" ( v ), "S" ( s ), "a" ( t )
+        : "r" ( & v -> counter ), "r" ( s ), "a" ( t )
     );
     return rtn;
 }
@@ -170,22 +167,21 @@ static __inline__ long int atomic64_test_and_set ( atomic64_t *v, long int s, lo
 static __inline__
 long int atomic64_read_and_add_lt ( atomic64_t *v, long int i, long int t )
 {
-    long int rtn;
+    long int rtn, sum;
     __asm__ __volatile__
     (
-        "mov (%%rdi), %%rax;"
-        "1:"
-        "cmp %%rdx, %%rax;"
-        "mov %%rsi, %%rcx;"
+        "mov (%2), %0;"
+    "1:"
+        "cmp %4, %0;"
+        "mov %3, %1;"
         "jge 2f;"
-        "add %%rax, %%rcx;"
-        "lock;"
-        "cmpxchg %%rcx, (%%rdi);"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
         "jne 1b;"
-        "2:"
-        : "=a" ( rtn )
-        : "D" ( v ), "S" ( i ), "d" ( t )
-        : "%rcx"
+    "2:"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
     );
     return rtn;
 }
@@ -196,22 +192,21 @@ long int atomic64_read_and_add_lt ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_le ( atomic64_t *v, long int i, long int t )
 {
-    long int rtn;
+    long int rtn, sum;
     __asm__ __volatile__
     (
-        "mov (%%rdi), %%rax;"
-        "1:"
-        "cmp %%rdx, %%rax;"
-        "mov %%rsi, %%rcx;"
+        "mov (%2), %0;"
+    "1:"
+        "cmp %4, %0;"
+        "mov %3, %1;"
         "jg 2f;"
-        "add %%rax, %%rcx;"
-        "lock;"
-        "cmpxchg %%rcx, (%%rdi);"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
         "jne 1b;"
-        "2:"
-        : "=a" ( rtn )
-        : "D" ( v ), "S" ( i ), "d" ( t )
-        : "%rcx"
+    "2:"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
     );
     return rtn;
 }
@@ -222,22 +217,21 @@ long int atomic64_read_and_add_le ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_eq ( atomic64_t *v, long int i, long int t )
 {
-    long int rtn;
+    long int rtn, sum;
     __asm__ __volatile__
     (
-        "mov (%%rdi), %%rax;"
-        "1:"
-        "cmp %%rdx, %%rax;"
-        "mov %%rsi, %%rcx;"
+        "mov (%2), %0;"
+    "1:"
+        "cmp %4, %0;"
+        "mov %3, %1;"
         "jne 2f;"
-        "add %%rax, %%rcx;"
-        "lock;"
-        "cmpxchg %%rcx, (%%rdi);"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
         "jne 1b;"
-        "2:"
-        : "=a" ( rtn )
-        : "D" ( v ), "S" ( i ), "d" ( t )
-        : "%rcx"
+    "2:"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
     );
     return rtn;
 }
@@ -248,22 +242,21 @@ long int atomic64_read_and_add_eq ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_ne ( atomic64_t *v, long int i, long int t )
 {
-    long int rtn;
+    long int rtn, sum;
     __asm__ __volatile__
     (
-        "mov (%%rdi), %%rax;"
-        "1:"
-        "cmp %%rdx, %%rax;"
-        "mov %%rsi, %%rcx;"
+        "mov (%2), %0;"
+    "1:"
+        "cmp %4, %0;"
+        "mov %3, %1;"
         "je 2f;"
-        "add %%rax, %%rcx;"
-        "lock;"
-        "cmpxchg %%rcx, (%%rdi);"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
         "jne 1b;"
-        "2:"
-        : "=a" ( rtn )
-        : "D" ( v ), "S" ( i ), "d" ( t )
-        : "%rcx"
+    "2:"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
     );
     return rtn;
 }
@@ -274,22 +267,21 @@ long int atomic64_read_and_add_ne ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_ge ( atomic64_t *v, long int i, long int t )
 {
-    long int rtn;
+    long int rtn, sum;
     __asm__ __volatile__
     (
-        "mov (%%rdi), %%rax;"
-        "1:"
-        "cmp %%rdx, %%rax;"
-        "mov %%rsi, %%rcx;"
+        "mov (%2), %0;"
+    "1:"
+        "cmp %4, %0;"
+        "mov %3, %1;"
         "jl 2f;"
-        "add %%rax, %%rcx;"
-        "lock;"
-        "cmpxchg %%rcx, (%%rdi);"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
         "jne 1b;"
-        "2:"
-        : "=a" ( rtn )
-        : "D" ( v ), "S" ( i ), "d" ( t )
-        : "%rcx"
+    "2:"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
     );
     return rtn;
 }
@@ -300,22 +292,21 @@ long int atomic64_read_and_add_ge ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_gt ( atomic64_t *v, long int i, long int t )
 {
-    long int rtn;
+    long int rtn, sum;
     __asm__ __volatile__
     (
-        "mov (%%rdi), %%rax;"
-        "1:"
-        "cmp %%rdx, %%rax;"
-        "mov %%rsi, %%rcx;"
+        "mov (%2), %0;"
+    "1:"
+        "cmp %4, %0;"
+        "mov %3, %1;"
         "jle 2f;"
-        "add %%rax, %%rcx;"
-        "lock;"
-        "cmpxchg %%rcx, (%%rdi);"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
         "jne 1b;"
-        "2:"
-        : "=a" ( rtn )
-        : "D" ( v ), "S" ( i ), "d" ( t )
-        : "%rcx"
+    "2:"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
     );
     return rtn;
 }
@@ -326,22 +317,21 @@ long int atomic64_read_and_add_gt ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_odd ( atomic64_t *v, long int i )
 {
-    long int rtn;
+    long int rtn, sum;
     __asm__ __volatile__
     (
-        "mov (%%rdi), %%rax;"
-        "1:"
-        "bt $0, %%ax;"
-        "mov %%rsi, %%rcx;"
+        "mov (%2), %0;"
+    "1:"
+        "bt $0, %0;"
+        "mov %3, %1;"
         "jnc 2f;"
-        "add %%rax, %%rcx;"
-        "lock;"
-        "cmpxchg %%rcx, (%%rdi);"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
         "jne 1b;"
-        "2:"
-        : "=a" ( rtn )
-        : "D" ( v ), "S" ( i )
-        : "%rcx"
+    "2:"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i )
     );
     return rtn;
 }
@@ -349,22 +339,21 @@ long int atomic64_read_and_add_odd ( atomic64_t *v, long int i )
 static __inline__
 long int atomic64_read_and_add_even ( atomic64_t *v, long int i )
 {
-    long int rtn;
+    long int rtn, sum;
     __asm__ __volatile__
     (
-        "mov (%%rdi), %%rax;"
-        "1:"
-        "bt $0, %%ax;"
-        "mov %%rsi, %%rcx;"
+        "mov (%2), %0;"
+    "1:"
+        "bt $0, %0;"
+        "mov %3, %1;"
         "jc 2f;"
-        "add %%rax, %%rcx;"
-        "lock;"
-        "cmpxchg %%rcx, (%%rdi);"
+        "add %0, %1;"
+    "lock;"
+        "cmpxchg %1, (%2);"
         "jne 1b;"
-        "2:"
-        : "=a" ( rtn )
-        : "D" ( v ), "S" ( i )
-        : "%rcx"
+    "2:"
+        : "=&a" ( rtn ), "=&r" ( sum )
+        : "r" ( & v -> counter ), "r" ( i )
     );
     return rtn;
 }

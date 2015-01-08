@@ -985,7 +985,8 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
     unsigned warned = 0;
     long     fcountBoth=0;
     long     fcountOne=0;
-    int skipRefSeqID = -1;
+    int skipRefSeqId = -1;
+    int unmapRefSeqId = -1;
     uint64_t recordsProcessed = 0;
     uint64_t filterFlagConflictRecords=0; /*** counts number of conflicts between flags 'duplicate' and 'lowQuality' ***/
 #define MAX_WARNINGS_FLAG_CONFLICT 10000 /*** maximum errors to report ***/
@@ -1332,8 +1333,12 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
                 AlignmentGetPosition(alignment, &rpos);
                 AlignmentGetRefSeqId(alignment, &refSeqId);
                 if (rpos >= 0 && refSeqId >= 0) {
-                    if (refSeqId == skipRefSeqID)
+                    if (refSeqId == skipRefSeqId)
                         goto LOOP_END;
+                    if (refSeqId == unmapRefSeqId) {
+                        aligned = false;
+                        break;
+                    }
                     if (refSeqId == lastRefSeqId)
                         break;
                     rc = ReferenceInfoGetRefSeq(header, refSeqId, &refSeq);
@@ -1344,15 +1349,21 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
                         goto LOOP_END;
                     }
                     else {
+                        bool shouldUnmap = false;
+                        
                         if (G->refFilter && strcmp(G->refFilter, refSeq.name) != 0) {
                             (void)PLOGMSG(klogInfo, (klogInfo, "Skipping Reference '$(name)'", "name=%s", refSeq.name));
-                            skipRefSeqID = refSeqId;
+                            skipRefSeqId = refSeqId;
                             goto LOOP_END;
                         }
                         
-                        rc = ReferenceSetFile(ref, refSeq.name, refSeq.length, refSeq.checksum, G->maxSeqLen);
+                        rc = ReferenceSetFile(ref, refSeq.name, refSeq.length, refSeq.checksum, G->maxSeqLen, &shouldUnmap);
                         if (rc == 0) {
                             lastRefSeqId = refSeqId;
+                            if (shouldUnmap) {
+                                unmapRefSeqId = refSeqId;
+                                aligned = false;
+                            }
                             break;
                         }
                         if (GetRCObject(rc) == rcConstraint && GetRCState(rc) == rcViolated) {

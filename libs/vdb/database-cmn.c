@@ -50,6 +50,9 @@
 #include <string.h>
 #include <assert.h>
 
+#include <va_copy.h>
+#define OPEN_VDBCACHE_HERE 1
+
 
 /*--------------------------------------------------------------------------
  * VDatabase
@@ -79,6 +82,13 @@ rc_t CC VDatabaseWhack ( VDatabase *self )
         rc = VDatabaseSever ( self -> dad );
         if ( rc == 0 )
             self -> dad = NULL;
+    }
+    /* release cache_db */
+    if ( self -> cache_db != NULL)
+    {
+	rc = VDatabaseRelease ( self -> cache_db );
+	if ( rc == 0 )
+		self -> cache_db = NULL;
     }
 
     /* remove from mgr */
@@ -240,8 +250,41 @@ rc_t CC VDatabaseOpenRead ( VDatabase *self )
  *  "path" [ IN ] - NUL terminated string in
  *  wd-native character set giving path to database
  */
-LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
+static
+rc_t VDBManagerVOpenDBReadInt ( const VDBManager *self,
     const VDatabase **dbp, const VSchema *schema,
+    const char *path, va_list args )
+{
+    rc_t rc;
+    VDatabase *db;
+
+    if ( schema == NULL )
+        schema = self -> schema;
+
+    rc = VDatabaseMake ( & db, self, NULL, schema );
+    if ( rc == 0 )
+    {
+        db -> read_only = true;
+
+        rc = KDBManagerVOpenDBRead ( self -> kmgr, & db -> kdb, path, args );
+        if ( rc == 0 )
+        {
+            rc = VDatabaseOpenRead ( db );
+            if ( rc == 0 )
+            {
+                * dbp = db;
+                return 0;
+            }
+        }
+        
+        VDatabaseWhack ( db );
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
+    const VDatabase ** dbp, const VSchema *schema,
     const char *path, va_list args )
 {
     rc_t rc;
@@ -254,29 +297,38 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
             rc = RC ( rcVDB, rcMgr, rcOpening, rcSelf, rcNull );
         else
         {
-            VDatabase *db;
+            const VDatabase * db;
 
-            if ( schema == NULL )
-                schema = self -> schema;
-
-            rc = VDatabaseMake ( & db, self, NULL, schema );
+#if OPEN_VDBCACHE_HERE
+            va_list args_copy;
+            va_copy ( args_copy, args );
+#endif
+            rc = VDBManagerVOpenDBReadInt ( self, & db, schema, path, args );
             if ( rc == 0 )
             {
-                db -> read_only = true;
-
-                rc = KDBManagerVOpenDBRead ( self -> kmgr, & db -> kdb, path, args );
-                if ( rc == 0 )
+#if OPEN_VDBCACHE_HERE
+                size_t n;
+                char fmt_ext [ 4096 ];
+                rc = string_printf ( fmt_ext, sizeof fmt_ext, & n, "%s.vdbcache", path );
+                if ( rc != 0 )
+                    va_end ( args_copy );
+                else
                 {
-                    rc = VDatabaseOpenRead ( db );
-                    if ( rc == 0 )
-                    {
-                        * dbp = db;
-                        return 0;
-                    }
-                }
+                    const VDatabase * cdb;
+                    rc = VDBManagerVOpenDBReadInt ( self, & cdb, NULL, fmt_ext, args_copy );
+                    va_end ( args_copy );
 
-                VDatabaseWhack ( db );
+                    DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("VDBManagerVOpenDBRead(vdbcache) = %d\n", rc));
+                    if ( rc == 0 )
+                        ( ( VDatabase* ) db ) -> cache_db = cdb;
+                }
+#endif
+                * dbp = db;
+                return 0;
             }
+#if OPEN_VDBCACHE_HERE
+            va_end ( args_copy );
+#endif
         }
 
         * dbp = NULL;

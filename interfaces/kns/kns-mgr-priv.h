@@ -26,52 +26,75 @@
 #ifndef _h_kns_mgr_priv_
 #define _h_kns_mgr_priv_
 
+#ifndef _h_kns_extern_
+#include <kns/extern.h>
+#endif
+
+#ifndef _h_klib_defs_
+#include <klib/defs.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 struct KStream;
 struct KHttpFile;
-
+struct KNSManager;
+struct KFile;
+struct KConfig;
+struct KClientHttpRequest;
 
 /************************** HTTP-retry-related stuff **************************/
+struct HttpRetrySchedule;
 
-/** MakeReliableHttpFile:
- * Make HTTP file from a reliable URL:
+struct HttpRetrySpecs
+{
+    struct HttpRetrySchedule** codes;
+    uint8_t count;
+};
+typedef struct HttpRetrySpecs HttpRetrySpecs;
+
+rc_t CC HttpRetrySpecsDestroy ( HttpRetrySpecs* self );
+
+rc_t CC HttpRetrySpecsInit ( HttpRetrySpecs* self, struct KConfig* kfg);
+
+bool HttpGetRetryCodes ( const HttpRetrySpecs* self, uint16_t code, uint8_t * max_retries, const uint16_t ** sleep_before_retry, bool * open_ended );
+
+/* MakeConfig
+ *  create a manager instance using a custom configuration, for testing
+ */
+KNS_EXTERN rc_t CC KNSManagerMakeConfig ( struct KNSManager **mgr, struct KConfig* kfg );
+
+/** MakeReliableHttpFile, KNSManagerMakeReliableClientRequest:
+ * Make HTTP file/request from a reliable URL:
  * we will try harder to recover upon any error
  * (make more retries)
  */
 KNS_EXTERN rc_t CC KNSManagerMakeReliableHttpFile(
     struct KNSManager const *self, struct KFile const **file,
     struct KStream *conn, ver_t vers, const char *url, ...);
-
-
-rc_t KNSManagerSetTriesForReliables(struct KNSManager *self, uint32_t tries);
-
-uint32_t KNSManagerGetNumberOfRetriesOnFailure(const struct KNSManager *self);
-uint32_t KNSManagerGetNumberOfRetriesOnFailureForReliableURLs
-    (const struct KNSManager *self);
-uint32_t KNSManagerGetLogFailuresNumber (const struct KNSManager *self);
-uint32_t KNSManagerGetTestFailuresNumber(const struct KNSManager *self);
-
+KNS_EXTERN rc_t CC KNSManagerMakeReliableClientRequest ( 
+    struct KNSManager const *self, struct KClientHttpRequest **req, 
+    ver_t version, struct KStream *conn, const char *url, ... );
 
 typedef struct {
-    uint32_t triesNumber;
-    uint32_t maxRetriesNumber;
-    uint32_t testFailuresNumber;
-    uint32_t logNumber; /* do not log if triesNumber < logNumber */
-    bool logged; /* log just once */
     const char *url;
-    uint32_t waitTime;
-    uint32_t reportedTime;
+    
+    const struct KNSManager * kns; /* used to retrieve HttpRetrySpecs */
+    uint32_t last_sleep;
+    uint32_t total_wait_ms;
+    uint32_t max_total_wait_ms;
+    
+    uint32_t last_status;
+    
+    uint8_t max_retries;    
+    uint8_t retries_count;    
 } KHttpRetrier;
 
-void KHttpRetrierInit(KHttpRetrier *self, uint32_t maxRetryNumber,
-    uint32_t testFailuresNumber, const char *url, uint32_t logNumber);
-bool KHttpRetrierWait(KHttpRetrier *self, rc_t rc);
-rc_t KHttpRetrierForceFailure(const KHttpRetrier *self,
-    const struct KHttpFile *socket);
-
+rc_t KHttpRetrierInit ( KHttpRetrier * self, const char * url, const struct KNSManager * kns );
+bool KHttpRetrierWait ( KHttpRetrier * self, uint32_t status );
+rc_t KHttpRetrierDestroy ( KHttpRetrier * self );
 
 #ifdef __cplusplus
 }

@@ -421,7 +421,7 @@ rc_t KDylibWhack ( KDylib *self )
 /* Darwin, especially before 10.5 doesn't/didn't do this well */
 #if ! MAC
     /* try to close library */
-    if ( dlclose ( self -> handle ) )
+    if ( self -> handle && dlclose ( self -> handle ) )
     {
         /* report error */
         const char *msg = dlerror ();
@@ -464,6 +464,11 @@ rc_t KDylibSetLogging ( const KDylib *self )
     rc_t ( CC * set_formatter ) ( KFmtWriter writer, KLogFmtFlags flags, void *data );
     rc_t ( CC * set_writer ) ( KWrtWriter writer, void *data );
     rc_t ( CC * set_level ) ( KLogLevel lvl );
+    
+    if ( ! self -> handle )
+    {
+        return 0;
+    }
 
     /* set the current logging level */
     set_level = ( rc_t ( * ) ( KLogLevel ) ) dlsym ( self -> handle, "KLogLevelSet" );
@@ -524,6 +529,8 @@ rc_t KDylibSetLogging ( const KDylib *self )
 static
 rc_t KDyldLoad ( KDyld *self, KDylib *lib, const char *path )
 {
+/* (VDB-1391) remove dynamic linker interfaces from system */
+#if USE_DYLOAD
     rc_t rc;
     const char *msg;
     size_t msg_len;
@@ -558,6 +565,10 @@ rc_t KDyldLoad ( KDyld *self, KDylib *lib, const char *path )
     }
     
     return rc;
+#else
+    lib -> handle = NULL;
+    return 0;
+#endif    
 }
 
 static
@@ -1119,22 +1130,24 @@ static
 rc_t KSymAddrMake ( KSymAddr **symp,
     const KDylib *lib, const char *name )
 {
-    void *addr = dlsym ( lib -> handle, name );
-    const char *estr = dlerror();
-    
-    if ( addr != NULL || estr == NULL )
+    if ( lib -> handle )
     {
-        KSymAddr *sym = malloc ( sizeof * sym );
-        if ( sym == NULL )
-            return RC ( rcFS, rcDylib, rcConstructing, rcMemory, rcExhausted );
+        void *addr = dlsym ( lib -> handle, name );
+        const char *estr = dlerror();
+        
+        if ( addr != NULL || estr == NULL )
+        {
+            KSymAddr *sym = malloc ( sizeof * sym );
+            if ( sym == NULL )
+                return RC ( rcFS, rcDylib, rcConstructing, rcMemory, rcExhausted );
 
-        sym -> lib = KDylibAttach ( lib );
-        sym -> addr = addr;
-        KRefcountInit ( & sym -> refcount, 1, "KSymAddr", "make", name );
-        * symp = sym;
-        return 0;
+            sym -> lib = KDylibAttach ( lib );
+            sym -> addr = addr;
+            KRefcountInit ( & sym -> refcount, 1, "KSymAddr", "make", name );
+            * symp = sym;
+            return 0;
+        }
     }
-
     * symp = NULL;
     return RC ( rcFS, rcDylib, rcSelecting, rcName, rcNotFound );
 }

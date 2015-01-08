@@ -123,10 +123,11 @@ rc_t VColumnRead ( const VColumn *self, int64_t row_id,
    struct VBlob **vblob );
 
 rc_t VColumnReadBlob ( const VColumn *self, struct VBlob const **blob, int64_t row_id,
-   uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len, struct VBlobMRUCacheCursorContext *cctx);
+   uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len, uint32_t *repeat_count,
+   struct VBlobMRUCacheCursorContext *cctx);
 
 rc_t VColumnReadCachedBlob ( const VColumn *self, struct VBlob const *blob, int64_t row_id,
-   uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len );
+   uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len, uint32_t *repeat_count );
 
 rc_t VColumnIsStatic ( const VColumn *self, bool *is_static );
 
@@ -251,7 +252,13 @@ bool CC WColumnCommitRow ( void *self, void *end_id );
  *  extend the count by count
  *  data points to this structure
  */
-typedef struct { int64_t end_id; uint64_t count; } WColumnRepeatRowData;
+typedef struct WColumnRepeatRowData WColumnRepeatRowData;
+struct WColumnRepeatRowData
+{
+    uint64_t count;
+    int64_t row_id;
+    int64_t end_id;
+};
 void CC WColumnRepeatRow ( void *self, void *data );
 
 /* CloseRow

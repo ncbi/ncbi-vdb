@@ -544,7 +544,7 @@ uint32_t _Reader2naGetBlob(Reader2na *self,
             return eVdbBlastErr;
         }
 
-        if (desc->spot >= *first && desc->spot < *first + *count) {
+        if ((int64_t)desc->spot >= *first && desc->spot < *first + *count) {
             S
             return eVdbBlastNoErr;
         }
@@ -573,7 +573,7 @@ uint32_t _Reader2naCalcReadReaderColsParams(const ReadDesc *desc,
     uint32_t *start,
     uint32_t min_read_length)
 {
-    int i = ~0;
+    uint32_t i = 1;
     uint32_t to_read = 0;
     assert(desc && cols && start);
     assert(desc->run && desc->run->path);
@@ -626,7 +626,7 @@ uint32_t _Reader2naCalcReadReaderColsParams(const ReadDesc *desc,
         else {
             to_read = cols->read_len[desc->read - 1];
             end = *start + to_read;
-            if (cols->TRIM_LEN > 0 && cols->TRIM_START > *start) {
+            if (cols->TRIM_LEN > 0 && cols->TRIM_START > (int32_t)*start) {
                 uint32_t delta = cols->TRIM_START - *start;
                 if (to_read > delta) {
                     *start = cols->TRIM_START;
@@ -878,20 +878,20 @@ uint64_t _Reader2naRead(Reader2na *self,
         to_read = 0;
     }
     else {
-        to_read -= self->starting_base;
-        start += self->starting_base;
+        to_read -= (uint32_t)self->starting_base;
+        start   += (uint32_t)self->starting_base;
     }
     if (to_read > 0) {
         S
         rc = VCursorReadBitsDirect(self->curs, desc->spot, self->col_READ, 2,
-            start, buffer, 0, buffer_size * 4, &num_read, &remaining);
+            start, buffer, 0, (uint32_t)buffer_size * 4, &num_read, &remaining);
         if (rc) {
             if (rc == SILENT_RC
                 (rcVDB, rcCursor, rcReading, rcBuffer, rcInsufficient))
             {
                 S
                 rc = 0;
-                num_read = buffer_size * 4;
+                num_read = (uint32_t)buffer_size * 4;
             }
             else {
                 PLOGERR(klogInt, (klogInt, rc,
@@ -1245,10 +1245,10 @@ static size_t _Core4naRead(Core4na *self, const RunSet *runs,
                 }
                 else {
                     if (to_read >= starting_base) {
-                        to_read -= starting_base;
-                        start += starting_base;
+                        to_read -= (uint32_t)starting_base;
+                        start   += (uint32_t)starting_base;
                        if (buffer_length < to_read) {
-                           to_read = buffer_length;
+                           to_read = (uint32_t)buffer_length;
                        }
                         S
                         rc = VCursorReadBitsDirect(self->curs,

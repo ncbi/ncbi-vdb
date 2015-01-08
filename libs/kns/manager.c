@@ -34,7 +34,6 @@
 
 #include <kfg/config.h>
 
-#include <klib/misc.h> /* GetHttpTries */
 #include <klib/printf.h>
 #include <klib/refcount.h>
 #include <klib/rc.h>
@@ -65,9 +64,12 @@ static char kns_manager_user_agent [ 128 ] = "ncbi-vdb";
 static
 rc_t KNSManagerWhack ( KNSManager * self )
 {
+    rc_t rc;
+    KConfigRelease ( self -> kfg );
+    rc = HttpRetrySpecsDestroy ( & self -> retry_specs );
     free ( self );
     KNSManagerCleanup ();
-    return 0;
+    return rc;
 }
 
 LIB_EXPORT rc_t CC KNSManagerAddRef ( const KNSManager *self )
@@ -101,121 +103,7 @@ LIB_EXPORT rc_t CC KNSManagerRelease ( const KNSManager *self )
     return 0;
 }
 
-rc_t KNSManagerSetTestHttpFailures(struct KNSManager *self, uint32_t count) {
-    if (self == NULL) {
-        return RC(rcNS, rcMgr, rcUpdating, rcSelf, rcNull);
-    }
-    self->testFailuresNumber = count;
-    return 0;
-}
-
-rc_t KNSManagerSetLogHttpFailures(struct KNSManager *self, uint32_t count) {
-    if (self == NULL) {
-        return RC(rcNS, rcMgr, rcUpdating, rcSelf, rcNull);
-    }
-    self->logFailures = count;
-    return 0;
-}
-
-rc_t KNSManagerSetTries(struct KNSManager *self, uint32_t tries) {
-    if (self == NULL) {
-        return RC(rcNS, rcMgr, rcUpdating, rcSelf, rcNull);
-    }
-    if (tries <= 0) {
-        tries = 1;
-    }
-    else if (tries > 10) {
-        tries = 10;
-    }
-    self->maxNumberOfRetriesOnFailure = tries - 1;
-    if (self->maxNumberOfRetriesOnFailureForReliableURLs
-        < self->maxNumberOfRetriesOnFailure)
-    {
-        self->maxNumberOfRetriesOnFailureForReliableURLs
-            = self->maxNumberOfRetriesOnFailure;
-    }
-    return 0;
-}
-
-LIB_EXPORT rc_t KNSManagerSetTriesForReliables(struct KNSManager *self, uint32_t tries)
-{
-    if (self == NULL) {
-        return RC(rcNS, rcMgr, rcUpdating, rcSelf, rcNull);
-    }
-    if (tries <= 0) {
-        tries = 1;
-    }
-    else if (tries > 10) {
-        tries = 10;
-    }
-    self->maxNumberOfRetriesOnFailureForReliableURLs = tries - 1;
-    if (self->maxNumberOfRetriesOnFailureForReliableURLs
-        < self->maxNumberOfRetriesOnFailure)
-    {
-        self->maxNumberOfRetriesOnFailure
-            = self->maxNumberOfRetriesOnFailureForReliableURLs;
-    }
-    return 0;
-}
-
-static bool KNSManagerConfigFromCmdLine(KNSManager *self) {
-    bool set = false;
-    uint32_t tries = GetHttpTries(&set);
-    if (set) {
-        KNSManagerSetTries            (self, tries);
-        KNSManagerSetTriesForReliables(self, tries);
-    }
-    return set;
-}
-
-static void KNSManagerTriesFromConfig(KNSManager *self, const KConfig *kfg) {
-    uint64_t result = 0;
-
-    rc_t rc = KConfigReadU64(kfg, "/services/http/tries", &result);
-    if (rc == 0) {
-        result &= 0xFFFFFFFF;
-        KNSManagerSetTries(self, result);
-    }
-
-    rc = KConfigReadU64(kfg, "/services/http/reliable_tries", &result);
-    if (rc == 0) {
-        result &= 0xFFFFFFFF;
-        KNSManagerSetTriesForReliables(self, result);
-    }
-}
-
-static void KNSManagerConfigFromConfig(KNSManager *self, const KConfig *kfg) {
-    uint64_t result = 0;
-
-    rc_t rc = KConfigReadU64(kfg,
-                     "/services/http/force_test_http_failures_number", &result);
-    if (rc == 0) {
-        result &= 0xFFFFFFFF;
-        KNSManagerSetTestHttpFailures(self, result);
-    }
-
-    rc = KConfigReadU64(kfg, "/services/http/log_http_failures", &result);
-    if (rc == 0) {
-        result &= 0xFFFFFFFF;
-        KNSManagerSetLogHttpFailures(self, result);
-    }
-}
-
-static rc_t KNSManagerConfig(KNSManager *self) {
-    rc_t rc = 0;
-    KConfig *kfg = NULL;
-    rc = KConfigMake(&kfg, NULL);
-    if (!KNSManagerConfigFromCmdLine(self)) {
-        if (rc == 0) {
-            KNSManagerTriesFromConfig(self, kfg);
-        }
-    }
-    KNSManagerConfigFromConfig(self, kfg);
-    KConfigRelease(kfg);
-    return rc;
-}
-
-LIB_EXPORT rc_t CC KNSManagerMake ( KNSManager **mgrp )
+LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
 {
     rc_t rc;
 
@@ -234,13 +122,11 @@ LIB_EXPORT rc_t CC KNSManagerMake ( KNSManager **mgrp )
             mgr -> conn_write_timeout = MAX_CONN_WRITE_LIMIT;
             mgr -> http_read_timeout = MAX_HTTP_READ_LIMIT;
             mgr -> http_write_timeout = MAX_HTTP_WRITE_LIMIT;
+            mgr -> maxTotalWaitForReliableURLs_ms = 10 * 60 * 1000; /* 10 min */
+            mgr -> maxNumberOfRetriesOnFailureForReliableURLs = 10;
             mgr -> verbose = false;
 
-            KNSManagerSetTries            (mgr, 2);
-            KNSManagerSetTriesForReliables(mgr, 9);
-            KNSManagerSetLogHttpFailures  (mgr, 2);
-
-            rc = KNSManagerInit (); /* platform specific init in sysmgr.c ( in win/unix etc. subdir ) */
+            rc = KNSManagerInit (); /* platform specific init in sysmgr.c ( in unix|win etc. subdir ) */
             if ( rc == 0 )
             {
                 /* the manager is not a proper singleton */
@@ -250,10 +136,18 @@ LIB_EXPORT rc_t CC KNSManagerMake ( KNSManager **mgrp )
                     KNSManagerSetUserAgent ( mgr, PKGNAMESTR " ncbi-vdb.%V", version );
                 }
 
-                KNSManagerConfig(mgr);
-
-                * mgrp = mgr;
-                return 0;
+                rc = KConfigAddRef ( kfg );
+                if ( rc == 0 )
+                {
+                    mgr -> kfg = kfg;
+                    rc = HttpRetrySpecsInit ( & mgr -> retry_specs, mgr -> kfg );
+                    if ( rc == 0 )
+                    {
+                        * mgrp = mgr;
+                        return 0;
+                    }
+                    KConfigRelease ( kfg );
+                }
             }
 
             free ( mgr );
@@ -265,6 +159,22 @@ LIB_EXPORT rc_t CC KNSManagerMake ( KNSManager **mgrp )
     return rc;
 }
 
+LIB_EXPORT rc_t CC KNSManagerMake ( KNSManager **mgrp )
+{
+    KConfig* kfg;
+    rc_t rc = KConfigMake(&kfg, NULL);
+    if ( rc == 0 )
+    {
+        rc_t rc2;
+        rc = KNSManagerMakeConfig ( mgrp, kfg );
+        rc2 = KConfigRelease ( kfg );
+        if ( rc == 0 )
+        {   
+            rc = rc2;
+        }
+    }
+    return rc;
+}
 
 LIB_EXPORT void KNSManagerSetVerbose ( KNSManager *self, bool verbosity )
 {
@@ -476,34 +386,4 @@ rc_t CC KNSManagerGetUserAgent ( const char ** user_agent )
         ( *user_agent ) = kns_manager_user_agent;
     }
     return rc;
-}
-
-uint32_t KNSManagerGetNumberOfRetriesOnFailure(const KNSManager *self) {
-    if (self == NULL) {
-        return 0;
-    }
-    return self->maxNumberOfRetriesOnFailure;
-}
-
-uint32_t KNSManagerGetNumberOfRetriesOnFailureForReliableURLs
-    (const KNSManager *self)
-{
-    if (self == NULL) {
-        return 0;
-    }
-    return self->maxNumberOfRetriesOnFailureForReliableURLs;
-}
-
-uint32_t KNSManagerGetLogFailuresNumber(const KNSManager *self) {
-    if (self == NULL) {
-        return 0;
-    }
-    return self->logFailures;
-}
-
-uint32_t KNSManagerGetTestFailuresNumber(const KNSManager *self) {
-    if (self == NULL) {
-        return 0;
-    }
-    return self->testFailuresNumber;
 }

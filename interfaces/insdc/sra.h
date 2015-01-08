@@ -44,7 +44,7 @@ extern "C" {
 /* spotid_t
  *  unique id given to every spot
  */
-typedef uint32_t INSDC_SRA_spotid_t;
+typedef int64_t INSDC_SRA_spotid_t;
 
 
 /* spot_ids_found

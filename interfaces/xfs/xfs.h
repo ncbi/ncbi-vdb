@@ -35,72 +35,88 @@ extern "C" {
 
 /*  Lyrics - that part should be used in client programs.
  *  There are no any data handling, just filesystem start and stop.
- *  Client should create instance of XFSControl structure and init
- *  it by XFSControlInit. File system will start and mounted by call
- *  XFSStart method. To stop filesystem, XFSStop method should be 
- *  called, and control should be destroyed by XFSControlDestroy
+ *  Client should create instance of XFSControl structure by calling
+ *  XFSControlMake method. File system will start and mounted by call
+ *  XFSStart method. To stop filesystem, XFSStop method
+ *  should be called, and mount should be destroyed by XFSControlDipsose
  *  method.
  *
  *  The typical scheme of usage is :
  *
- *      XFSPeer * ThePeer;
+ *      struct XFSModel * TheModel;
+ *      struct XFSTree * TheTree;
  *      XFSControl TheControl;
- *      XFSPeerCreateDummy(&Peer);
- *      XFSControlInit(&TheControl, Peer);
+ *      
+ *      XFSModelMake ( & TheModel );
+ *      XFSTreeMake ( Model, & TheTree );
+ *      XFSControlMake ( TheTree, & TheControl );
  *          ... here some initialisation action, like arg settings
- *      XFSControlSetArg(&TheControl, Arg, Value);
- *      XFSStart(&TheControl, true/false);
+ *      XFSControlSetArg ( TheControl, Arg, Value );
+ *      XFSStart ( TheControl, true/false );
  *          ... here some action
- *      XFSStop(&TheControl);
- *      XFSControlDestroy(&TheControl);
+ *      XFSStop ( TheControl );
+ *      XFSControlDispose ( TheControl );
  *      XFSPeerDestroyDummy(Peer);
  */
 
 /*  Struct XFSControl. Apparently need to have XFS arguments, which
  *  are different on Dokan and Fuse, and may be some handle
  */
-typedef struct XFSControl XFSControl;
-struct XFSPeer;
+struct XFSControl;
+struct XFSTree;
 
 /*  Init/Destroy XFSControl structure
  */
-XFS_EXTERN rc_t CC XFSControlInit(
-                            XFSControl ** self,
-                            struct XFSPeer * Peer
+XFS_EXTERN rc_t CC XFSControlMake(
+                            const struct XFSTree * Tree,
+                            struct XFSControl ** Control
                             );
-XFS_EXTERN rc_t CC XFSControlDestroy( XFSControl * self );
+XFS_EXTERN rc_t CC XFSControlDispose( struct XFSControl * self );
 
 /*  Started filesystem, and creating mount point.
  */
-XFS_EXTERN rc_t CC XFSStart( XFSControl * self );
+XFS_EXTERN rc_t CC XFSStart( struct XFSControl * self );
 /*  Unmount and stoping filesystem
  */
-XFS_EXTERN rc_t CC XFSStop( XFSControl * self ); 
+XFS_EXTERN rc_t CC XFSStop( struct XFSControl * self ); 
+
+/*  Returns current XFSTree structure from control
+ */
+XFS_EXTERN rc_t CC XFSControlGetTree (
+                                    struct XFSControl * self,
+                                    const struct XFSTree ** Tree
+                                    );
 
 /*  Control argumenting, not sure it will be left in the same way
     These methods will not take affect after XFSStart
  */
+XFS_EXTERN rc_t CC XFSControlSetArg (
+                    struct XFSControl * self,
+                    const char * Arg,
+                    const char * Value
+                    );
+XFS_EXTERN const char * CC XFSControlGetArg (
+                    struct XFSControl * self,
+                    const char * Arg
+                    );
+
 XFS_EXTERN rc_t CC XFSControlSetMountPoint(
-                    XFSControl * self,
+                    struct XFSControl * self,
                     const char * MountPoint
                     );
-XFS_EXTERN rc_t CC XFSControlGetMountPoint(
-                    const XFSControl * self,
-                    char * Buffer,
-                    size_t BufferSize
+XFS_EXTERN const char * CC XFSControlGetMountPoint(
+                    struct XFSControl * self
                     );
 
 /*  That method setup a label which will be shown in /etc/mtab entry
     You may use NULL, and in that case label will be "XFS"
  */
 XFS_EXTERN rc_t CC XFSControlSetLabel(
-                    XFSControl * self,
+                    struct XFSControl * self,
                     const char * Label
                     );
-XFS_EXTERN rc_t CC XFSControlGetLabel(
-                    const XFSControl * self,
-                    char * Buffer,
-                    size_t BufferSize
+XFS_EXTERN const char * CC XFSControlGetLabel(
+                    struct XFSControl * self
                     );
 
 #ifdef __cplusplus

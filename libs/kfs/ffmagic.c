@@ -90,9 +90,9 @@ rc_t KMagicNodeRelease (const KMagicNode * cself)
 
     if (cself != NULL)
     {
-	KFileFormat *self = (KFileFormat*)cself;
+        KMagicNode *self = (KMagicNode*)cself;
         if (atomic32_dec_and_test (&self->refcount))
-	    return  KMagicNodeDestroy (cself);
+            return  KMagicNodeDestroy (cself);
     }
     return rc;
 }
@@ -264,13 +264,14 @@ rc_t KMagicTableMake (KMagicTable ** kmmtp)
     self = malloc (sizeof *self);
     if (self == NULL)
     {
-	rc = RC (rcFF, rcTable, rcConstructing, rcParam, rcNull);
-	LOGERR (klogErr, rc, "KMagicTableMake: self could not be allocated");
+        rc = RC (rcFF, rcTable, rcConstructing, rcParam, rcNull);
+        LOGERR (klogErr, rc, "KMagicTableMake: self could not be allocated");
     }
     else
     {
-	BSTreeInit (&self->tree);
-	*kmmtp = self;
+        atomic32_set (&self->refcount,1);
+        BSTreeInit (&self->tree);
+        *kmmtp = self;
     }
     return rc;
 }
@@ -652,8 +653,15 @@ rc_t KMagicFileFormatDestroy (KMagicFileFormat *self)
 {
     FUNC_ENTRY();
 
+    rc_t rc = KMagicTableRelease (self->table);
     magic_close (self->cookie);
-    return 0;
+    {
+        rc_t rc2 = KFFTablesRelease (self->dad.tables);
+        if ( rc == 0 )
+            rc = rc2;
+    }
+    free (self);
+    return rc;
 }
 
 /* Type
@@ -791,31 +799,29 @@ LIB_EXPORT rc_t CC KMagicFileFormatMake (KFileFormat ** pft, const char * magic_
     self = malloc (sizeof * self);
     if (self == NULL)
     {
-	rc = RC (rcFF, rcFileFormat, rcAllocating, rcMemory, rcExhausted);
-	LOGERR (klogFatal, rc, "Failed to allocate for KMagicFileFormat");
+        rc = RC (rcFF, rcFileFormat, rcAllocating, rcMemory, rcExhausted);
+        LOGERR (klogFatal, rc, "Failed to allocate for KMagicFileFormat");
     }
     else
-
-
     {
-	rc = KFileFormatInit (&self->dad, (const KFileFormat_vt *)&vt_v1, typeAndClass, tclen);
-	if (rc == 0)
-	{
-	    rc = KMagicTableMake (&self->table);
-	    if (rc == 0)
-	    {
-		rc = KMagicTableInit (self->table, self->dad.tables, magic, magiclen);
-		if (rc == 0)
-		{
- 		    self->cookie = magic_open (MAGIC_PRESERVE_ATIME);
-/* 		    self->cookie = magic_open (MAGIC_PRESERVE_ATIME|MAGIC_DEBUG|MAGIC_CHECK); */
-		    if (self->cookie == NULL)
-		    {
-			rc = RC (rcFF, rcFileFormat, rcConstructing, rcResources, rcNull);
-			LOGERR (klogFatal, rc, "Unable to obtain libmagic cookie");
-		    }
-		    else
-		    {
+        rc = KFileFormatInit (&self->dad, (const KFileFormat_vt *)&vt_v1, typeAndClass, tclen);
+        if (rc == 0)
+        {
+            rc = KMagicTableMake (&self->table);
+            if (rc == 0)
+            {
+                rc = KMagicTableInit (self->table, self->dad.tables, magic, magiclen);
+                if (rc == 0)
+                {
+                    self->cookie = magic_open (MAGIC_PRESERVE_ATIME);
+        /* 		    self->cookie = magic_open (MAGIC_PRESERVE_ATIME|MAGIC_DEBUG|MAGIC_CHECK); */
+                    if (self->cookie == NULL)
+                    {
+                        rc = RC (rcFF, rcFileFormat, rcConstructing, rcResources, rcNull);
+                        LOGERR (klogFatal, rc, "Unable to obtain libmagic cookie");
+                    }
+                    else
+                    {
                         KDirectory * pwd;
                         KConfig * kfg;
                         static const char unix_magic_path[] = "/usr/share/file/magic";
@@ -824,8 +830,7 @@ LIB_EXPORT rc_t CC KMagicFileFormatMake (KFileFormat ** pft, const char * magic_
                         char kfg_magic_path_buff [1024];
                         char magic_path_buff [4096];
                         size_t z;
-			int load_code;
-
+                        int load_code;
 
                         magic_path_cursor = magic_path_buff;
 
@@ -857,11 +862,10 @@ LIB_EXPORT rc_t CC KMagicFileFormatMake (KFileFormat ** pft, const char * magic_
                                 {
                                     if (remaining != 0)
                                     {
-                                        rc = RC (rcFF, rcFileFormat, rcLoading, 
-                                                 rcString, rcExcessive);
+                                        rc = RC (rcFF, rcFileFormat, rcLoading, rcString, rcExcessive);
                                         DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_KFF),
                                                 ("%s: failed KConfigOpenNodeRead remaining %zu %R\n",
-                                                 __func__, remaining, rc));
+                                                __func__, remaining, rc));
                                     }
                                     else if (z)
                                     {
@@ -877,65 +881,85 @@ LIB_EXPORT rc_t CC KMagicFileFormatMake (KFileFormat ** pft, const char * magic_
                                 }
                                 else
                                     DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_KFF),
-                                            ("%s: failed KConfigNodeRead %R\n", __func__, rc));
+                                        ("%s: failed KConfigNodeRead %R\n", __func__, rc));
+                                        
+                                {
+                                    rc_t rc2 = KConfigNodeRelease(node);
+                                    if (rc == 0)
+                                        rc = rc2;
+                                }
                             }
                             else
+                            {   /* no magic path konfigured; report but this is not an error */
                                 DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_KFF),
                                         ("%s: failed KConfigOpenNodeRead %R\n", __func__, rc));
-                        }
-                        else
-                            DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_KFF),
-                                    ("%s: failed KConfigMake %R\n", __func__, rc));
-			
-                        rc = KDirectoryNativeDir (&pwd);
-                        if (rc == 0)
-                        {
-                            KPathType kpt = KDirectoryPathType (pwd, unix_magic_path);
-                            DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_KFF),
-                                    ("%s: %s %x\n", __func__, unix_magic_path, kpt));
-                            if ((kpt & ~ kptAlias) == kptFile)
+                                rc = 0;
+                            }
+                                    
                             {
-                                z = strlen (unix_magic_path);
-                                if (magic_path_cursor != magic_path_buff)
-                                    *magic_path_cursor++ = ':';
-                                memcpy (magic_path_cursor, unix_magic_path, z);
-                                magic_path_cursor += z;
-                                *magic_path_cursor = '\0';
-                                DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_KFF),
-                                        ("%s: 2 magic_path_buff %s\n", __func__, magic_path_buff));
+                                rc_t rc2 = KConfigRelease(kfg);
+                                if (rc == 0)
+                                    rc = rc2;
                             }
                         }
-                        else
-                            LOGERR (klogErr, rc, "Failed to open NativeDir for Magic");
+                        else 
+                            DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_KFF),
+                                    ("%s: failed KConfigMake %R\n", __func__, rc));
+        
+                        if (rc == 0)
+                        {
+                            rc = KDirectoryNativeDir (&pwd);
+                            if (rc == 0)
+                            {
+                                KPathType kpt = KDirectoryPathType (pwd, unix_magic_path);
+                                rc = KDirectoryRelease(pwd);
+                                DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_KFF),
+                                        ("%s: %s %x\n", __func__, unix_magic_path, kpt));
+                                if ((kpt & ~ kptAlias) == kptFile)
+                                {
+                                    z = strlen (unix_magic_path);
+                                    if (magic_path_cursor != magic_path_buff)
+                                        *magic_path_cursor++ = ':';
+                                    memcpy (magic_path_cursor, unix_magic_path, z);
+                                    magic_path_cursor += z;
+                                    *magic_path_cursor = '\0';
+                                    DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_KFF),
+                                            ("%s: 2 magic_path_buff %s\n", __func__, magic_path_buff));
+                                }
+                            }
+                            else
+                                LOGERR (klogErr, rc, "Failed to open NativeDir for Magic");
 
-                        DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_KFF),
-                                ("%s: loading path %s\n", __func__, magic_path_buff));
+                            DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_KFF),
+                                    ("%s: loading path %s\n", __func__, magic_path_buff));
 
-			load_code = magic_load (self->cookie, magic_path_buff);
-			if (load_code != 0) /* defined as 0 success and -1 as fail */
-			{
-                            KFF_DEBUG (("%s: magic_load() failed with load code %d\n", __func__, load_code));
-			    rc = RC (rcFF, rcFileFormat, rcLoading, rcLibrary, rcUnexpected);
-			}
-			else
-			{
-			    *pft = &self->dad;
-                            KFF_DEBUG (("%s Success\n", __func__));
-			    return 0;
-			}
-			magic_close (self->cookie);
-		    }
-		}
-		else
-		    LOGERR (klogErr, rc, "Fail from KMagicTableInit");
-		KMagicTableRelease (self->table);
-	    }
-	    else
-		LOGERR (klogErr, rc, "Fail from KMagicTableMake");
-	}
-	else
-	    LOGERR (klogErr, rc, "Fail from KFileFormatInit");
-	free (self);
+                            load_code = magic_load (self->cookie, magic_path_buff);
+                            if (load_code != 0) /* defined as 0 success and -1 as fail */
+                            {
+                                KFF_DEBUG (("%s: magic_load() failed with load code %d\n", __func__, load_code));
+                                rc = RC (rcFF, rcFileFormat, rcLoading, rcLibrary, rcUnexpected);
+                            }
+                            else
+                            {
+                                *pft = &self->dad;
+                                KFF_DEBUG (("%s Success\n", __func__));
+                                return 0;
+                            }
+                        }
+                        magic_close (self->cookie);
+                    }
+                }
+                else
+                    LOGERR (klogErr, rc, "Fail from KMagicTableInit");
+                    
+                KMagicTableRelease (self->table);
+            }
+            else
+                LOGERR (klogErr, rc, "Fail from KMagicTableMake");
+        }
+        else
+            LOGERR (klogErr, rc, "Fail from KFileFormatInit");
+        free (self);
     }
     return rc;
 }

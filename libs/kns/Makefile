@@ -34,9 +34,6 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
-TEST_TOOLS = \
-	test-http
-
 include $(TOP)/build/Makefile.env
 
 RWORKDIR = $(TOP)/$(MODULE)
@@ -51,9 +48,6 @@ all std: makedirs vers-includes
 
 $(INT_LIBS): makedirs vers-includes
 	@ $(MAKE_CMD) $(ILIBDIR)/$@
-
-$(TEST_TOOLS): makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
 .PHONY: all std $(ALL_LIBS)
 
@@ -111,8 +105,8 @@ KNS_SRC = \
 	$(KNS_NO_HTTP_SRC) \
 	http-file          \
 	http-client        \
+	http-retrier       \
 	http               \
-#	undyinghttp        \
 
 KNS_OBJ = \
 	$(addsuffix .$(LOBX),$(KNS_SRC))
@@ -126,24 +120,5 @@ $(ILIBDIR)/libkns.$(LIBX): $(KNS_OBJ)
 
 
 #-------------------------------------------------------------------------------
-# white-box test
+# white-box test moved to $(TOP)/test/kns
 #
-
-TEST_SRC = \
-	http-test
-
-TEST_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_SRC))
-
-TEST_LIB = \
-	-skapp-norsrc \
-	-svfs \
-    -skns \
-	-skrypto \
-	-skfg \
-	-skfs \
-	-skproc \
-	-sklib
-
-$(TEST_BINDIR)/test-http: $(TEST_OBJ)
-	$(LD) --exe -o $@ $^ $(TEST_LIB)

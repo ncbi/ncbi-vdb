@@ -128,6 +128,9 @@
  *  ReferenceSeq object are created in the unattached state, i.e. not attached
  *  to a fasta file or a RefSeq library object.
  *
+ *  If SEQID is equal to UNMAPPED_SEQID_VALUE (see below) the Reference will be
+ *  considered to be unmapped.
+ *
  * Fasta files:
  *  Fasta file consists of one of more sequences.  A sequence in a fasta file
  *  consists of a seqid line followed by lines containing the bases of the
@@ -149,11 +152,14 @@
  *
  */
 
+#define UNMAPPED_SEQID_VALUE "*UNMAPPED"
+
 enum ReferenceSeqType {
     rst_unattached,
     rst_local,
     rst_refSeqById,
     rst_refSeqBySeqId,
+    rst_unmapped,
     rst_dead
 };
 
@@ -245,7 +251,7 @@ bool OpenConfigFile(char const server[], char const volume[], void *Ctx)
     struct OpenConfigFile_ctx *ctx = Ctx;
     KDirectory const *dir;
     
-    if( volume == NULL ) {
+    if(volume == NULL) {
         ctx->rc = KDirectoryOpenDirRead(ctx->dir, &dir, false, "%s", server);
     } else {
         ctx->rc = KDirectoryOpenDirRead(ctx->dir, &dir, false, "%s/%s", server, volume);
@@ -299,7 +305,7 @@ unsigned str_weight(char const str[], char const qry[], unsigned const qry_len)
     unsigned wt = no_match;
     
     if (fnd) {
-        unsigned const fnd_len = string_size( fnd );
+        unsigned const fnd_len = (unsigned)string_size(fnd);
         unsigned const fndlen = (fnd_len > qry_len && fnd[qry_len] == '|') ? qry_len : fnd_len;
         
         if (fndlen == qry_len && (fnd == str || fnd[-1] == '|')) {
@@ -324,7 +330,7 @@ unsigned str_weight(char const str[], char const qry[], unsigned const qry_len)
                     || memcmp(ns, "tpd|", 4) == 0
                     || memcmp(ns, "gpp|", 4) == 0
                     || memcmp(ns,  "gb|", 3) == 0
-                    )
+                   )
                 {
                     wt |= expected_prefix;
                 }
@@ -338,8 +344,8 @@ static
 rc_t ReferenceMgr_AddId(ReferenceMgr *const self, char const ID[],
                         ReferenceSeq const *const obj)
 {
-    char *id = string_dup( ID, string_size( ID ) );
-    unsigned const last_id = self->refSeqsById.elem_count;
+    unsigned const last_id = (unsigned)self->refSeqsById.elem_count;
+    char *const id = string_dup(ID, string_size(ID));
     
     if (id) {
         rc_t rc = KDataBufferResize(&self->refSeqsById, last_id + 1);
@@ -377,7 +383,7 @@ key_id_t *ReferenceMgr_FindId(ReferenceMgr const *const self, char const id[])
 static
 rc_t ReferenceMgr_NewReferenceSeq(ReferenceMgr *const self, ReferenceSeq **const rslt)
 {
-    unsigned const last_rs = self->refSeqs.elem_count;
+    unsigned const last_rs = (unsigned)self->refSeqs.elem_count;
     rc_t rc = KDataBufferResize(&self->refSeqs, last_rs + 1);
     
     if (rc) return rc;
@@ -510,16 +516,21 @@ rc_t ReferenceMgr_ProcessConf(ReferenceMgr *const self, char Data[], unsigned co
             circular = circ && (circ == extra || isspace(circ[-1])) &&
                        (circ[8] == '\0' || isspace(circ[8]));
         }
-        if ((rc = ReferenceMgr_NewReferenceSeq(self, &rs)) != 0) return rc;
+        rc = ReferenceMgr_NewReferenceSeq(self, &rs);
+        if (rc) return rc;
         
-        rs->id = string_dup( id, string_size( id ) );
-        if ( rs->id == NULL )
+        rs->id = string_dup(id, string_size(id));
+        if (rs->id == NULL)
             return RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
 
-        rs->seqId = string_dup( seqId, string_size( seqId ) );
-        if ( rs->seqId == NULL )
-            return RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
-        
+        if (strcmp(seqId, UNMAPPED_SEQID_VALUE) == 0) {
+            rs->type = rst_unmapped;
+        }
+        else {
+            rs->seqId = string_dup(seqId, string_size(seqId));
+            if (rs->seqId == NULL)
+                return RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
+        }
         rs->circular = circular;
     }
     KDataBufferWhack(&buf);
@@ -553,7 +564,7 @@ rc_t ReferenceMgr_Conf(ReferenceMgr *const self, char const conf[])
                 if (rc == 0) {
                     assert(nread == sz);
                     ((char *)buf.base)[sz] = '\n'; /* make sure that last line is terminated */
-                    rc = ReferenceMgr_ProcessConf(self, buf.base, sz + 1);
+                    rc = ReferenceMgr_ProcessConf(self, buf.base, (unsigned)(sz + 1));
                 }
                 KDataBufferWhack(&buf);
             }
@@ -599,7 +610,7 @@ rc_t ReferenceMgr_ImportFasta(ReferenceMgr *const self, ReferenceSeq *obj, KData
     unsigned dst;
     unsigned start=0;
     char *const data = buf->base;
-    unsigned const len = buf->elem_count;
+    unsigned const len = (unsigned)buf->elem_count;
     rc_t rc;
     MD5State mds;
     
@@ -633,8 +644,8 @@ rc_t ReferenceMgr_ImportFasta(ReferenceMgr *const self, ReferenceSeq *obj, KData
     if (seqIdLen == 0)
         return RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
     
-    obj->fastaSeqId = string_dup( &data[ seqId ], string_size( &data[ seqId ] ) );
-    if ( obj->fastaSeqId == NULL )
+    obj->fastaSeqId = string_dup(&data[ seqId ], string_size(&data[ seqId ]));
+    if (obj->fastaSeqId == NULL)
         return RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
     
     MD5StateInit(&mds);
@@ -697,7 +708,7 @@ rc_t ReferenceMgr_ImportFastaFile(ReferenceMgr *const self, KFile const *kf,
                 rc = ReferenceMgr_FastaFile_GetSeqIds(&seqIdBuf, base, file_size);
                 if (rc == 0) {
                     uint64_t const *const seqIdOffset = seqIdBuf.base;
-                    unsigned const seqIds = seqIdBuf.elem_count;
+                    unsigned const seqIds = (unsigned)seqIdBuf.elem_count;
                     unsigned i;
                     KDataBuffer sub;
                     
@@ -777,10 +788,12 @@ void ReferenceSeq_Dump(ReferenceSeq const *const rs, unsigned const i, key_id_t 
         "'fasta'",
         "'RefSeq-by-id'",
         "'RefSeq-by-seqid'",
+        "'unmapped'",
         "'dead'"
     };
     unsigned j;
     
+    ((void)types); /* stupid warning */
     ALIGN_CF_DBGF(("{ "));
     ALIGN_CF_DBGF(("type: %s, ", (rs->type < 0 || rs->type > rst_dead) ? "null" : types[rs->type]));
     
@@ -824,8 +837,8 @@ void ReferenceSeq_Dump(ReferenceSeq const *const rs, unsigned const i, key_id_t 
 
 LIB_EXPORT void ReferenceMgr_DumpConfig(ReferenceMgr const *const self)
 {
-    unsigned const n = self->refSeqs.elem_count;
-    unsigned const m = self->refSeqsById.elem_count;
+    unsigned const n = (unsigned)self->refSeqs.elem_count;
+    unsigned const m = (unsigned)self->refSeqsById.elem_count;
     key_id_t const *const key_id_array = self->refSeqsById.base;
     unsigned i;
     
@@ -871,15 +884,18 @@ rc_t ReferenceSeq_GetRefSeqInfo(ReferenceSeq *const self)
     if ((rc = RefSeq_MD5(self->u.refseq, &md5)) != 0)
         return rc;
     
-    memcpy(self->md5, md5, 16);
+    if (md5)
+        memcpy(self->md5, md5, 16);
+    else
+        memset(self->md5, 0, 16);
     return 0;
 }
 
 static
 rc_t ReferenceSeq_Attach(ReferenceMgr *const self, ReferenceSeq *const rs)
 {
-    unsigned const seqid_len = rs->seqId ? string_size( rs->seqId ) : 0;
-    unsigned const id_len = rs->id ? string_size( rs->id ) : 0;
+    unsigned const seqid_len = rs->seqId ? (unsigned)string_size(rs->seqId) : 0;
+    unsigned const id_len = rs->id ? (unsigned)string_size(rs->id) : 0;
     rc_t rc = 0;
     KFile const *kf = NULL;
     
@@ -944,19 +960,28 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self, ReferenceSeq **const rslt,
                           unsigned const seq_len,
                           uint8_t const md5[16])
 {
-    unsigned const idLen = string_size( id );
+    unsigned const idLen = (unsigned)string_size(id);
     key_id_t const *const fnd = ReferenceMgr_FindId(self, id);
     
     assert(rslt != NULL);
     *rslt = NULL;
     if (fnd) {
-        if (self->refSeq[fnd->id].type == rst_dead)
+        ReferenceSeq *const obj = &self->refSeq[fnd->id];
+        
+        if (obj->type == rst_dead)
             return RC(rcAlign, rcIndex, rcSearching, rcItem, rcInvalid);
-        *rslt = &self->refSeq[fnd->id];
+        if (obj->type == rst_refSeqBySeqId) {
+            RefSeq const *dummy;
+            rc_t const rc = RefSeqMgr_GetSeq(self->rmgr, &dummy, obj->seqId, (unsigned)string_size(obj->seqId));
+            
+            assert(rc == 0);
+            assert(dummy == obj->u.refseq);
+        }
+        *rslt = obj;
         return 0;
     }
     else {
-        unsigned const n = self->refSeqs.elem_count;
+        unsigned const n = (unsigned)self->refSeqs.elem_count;
         unsigned i;
         ReferenceSeq *seq = NULL;
         rc_t rc = 0;
@@ -1018,7 +1043,7 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self, ReferenceSeq **const rslt,
             rc = ReferenceMgr_NewReferenceSeq(self, &seq);
             if (rc) return rc;
             rc = ReferenceMgr_TryFasta(self, seq, id, idLen);
-            if ( GetRCState( rc ) == rcNotFound && GetRCObject( rc ) == (enum RCObject)rcPath )
+            if (GetRCState(rc) == rcNotFound && GetRCObject(rc) == (enum RCObject)rcPath)
                 rc = 0;
             else if (rc) return rc;
         }
@@ -1040,7 +1065,7 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self, ReferenceSeq **const rslt,
             
             if (seq->type == rst_unattached && seq->seqId != NULL) {
                 /* attach didn't work for id; try to find seqId within fasta seqIds */
-                unsigned const seqIdLen = string_size( seq->seqId );
+                unsigned const seqIdLen = (unsigned)string_size(seq->seqId);
                 unsigned best_wt = 0;
                 unsigned best = n;
                 
@@ -1097,7 +1122,7 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self, ReferenceSeq **const rslt,
             for (i = 0; i != n; ++i) {
                 ReferenceSeq *const rs = &self->refSeq[i];
                 
-                if (   rs->type != rst_dead
+                if (  rs->type != rst_dead
                     && rs->type != rst_unattached
                     && rs != seq
                     && rs->id != NULL
@@ -1112,7 +1137,7 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self, ReferenceSeq **const rslt,
                 for (i = 0; i != n; ++i) {
                     ReferenceSeq *const rs = &self->refSeq[i];
                     
-                    if (   rs->type != rst_dead
+                    if (  rs->type != rst_dead
                         && rs->type != rst_unattached
                         && rs != seq
                         && rs->seqId != NULL
@@ -1162,10 +1187,10 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self, ReferenceSeq **const rslt,
                 rc = RC(rcAlign, rcFile, rcConstructing, rcId, rcAmbiguous);
             }
         }
-        if ( seq->id == NULL )
+        if (seq->id == NULL)
         {
-            seq->id = string_dup( id, string_size( id ) );
-            if ( seq->id == NULL )
+            seq->id = string_dup(id, string_size(id));
+            if (seq->id == NULL)
                 return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
         }
         /* finally, associate the id with the object and put it in the index */
@@ -1293,7 +1318,7 @@ static uint64_t AlignIdListCount(AlignIdList *l)
 }
 static int int64_compare(const void *A, const void *B, void *ignore)
 {
-	return *(int64_t*)A -  *(int64_t*)B;
+	return (int)(*(int64_t*)A -  *(int64_t*)B);
 }
 static uint64_t AlignIdListFlatCopy(AlignIdList *l,int64_t *buf,uint64_t num_elem,bool do_sort)
 {
@@ -1417,7 +1442,7 @@ rc_t ReferenceMgr_TCoverSetMaxId(TCover* c,int64_t id)
 		if(c->idlist==NULL) return RC(rcAlign, rcTable, rcCommitting, rcMemory, rcExhausted);
 		c->idlist->sub_list_count = sub_id+1;
 		c->idlist->sub_list = calloc(c->idlist->sub_list_count,sizeof(c->idlist->sub_list[0]));
-		if( c->idlist->sub_list == NULL) return RC(rcAlign, rcTable, rcCommitting, rcMemory, rcExhausted);
+		if(c->idlist->sub_list == NULL) return RC(rcAlign, rcTable, rcCommitting, rcMemory, rcExhausted);
 	} else {
 		return RC(rcAlign, rcTable, rcCommitting, rcParam, rcUnexpected);
 	}
@@ -1489,7 +1514,7 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
     TCover* data = NULL;
     
     /* allocate mem for ref_rows of reference coverage*/
-    if((data = calloc(ref_rows, (sizeof(*data) + cself->max_seq_len))) == NULL ) {
+    if((data = calloc(ref_rows, (sizeof(*data) + cself->max_seq_len))) == NULL) {
 		rc = RC(rcAlign, rcTable, rcCommitting, rcMemory, rcExhausted);
     } else {
 		/** allocation for both data and hilo was done in 1 shot ***/
@@ -1505,8 +1530,8 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
         uint64_t al_qty;
         
         ALIGN_R_DBG("covering REFERENCE with %s", tbls[i].nm);
-        if( (rc = VDatabaseOpenTableRead(cself->db, &table, "%s", tbls[i].nm)) != 0 ) {
-            if( GetRCState(rc) == rcNotFound ) {
+        if((rc = VDatabaseOpenTableRead(cself->db, &table, "%s", tbls[i].nm)) != 0) {
+            if(GetRCState(rc) == rcNotFound) {
                 ALIGN_R_DBG("table %s was not found, ignored", tbls[i].nm);
                 rc = 0;
                 continue;
@@ -1514,17 +1539,17 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
                 break;
             }
         }
-        if( (rc = TableReader_Make(&reader, table, acols, cself->cache)) == 0 &&
-           (rc = TableReader_IdRange(reader, &al_from, &al_qty)) == 0 ) {
+        if((rc = TableReader_Make(&reader, table, acols, cself->cache)) == 0 &&
+           (rc = TableReader_IdRange(reader, &al_from, &al_qty)) == 0) {
             int64_t al_rowid;
             
             for(al_rowid = al_from; rc == 0 && al_rowid < al_from + al_qty; al_rowid++) {
-                if( (rc = TableReader_ReadRow(reader, al_rowid)) != 0 ) {
+                if((rc = TableReader_ReadRow(reader, al_rowid)) != 0) {
                     break;
                 }
                 rr    = **al_ref_id-1;
                 /**** Record ALIGNMENT_IDS ***/
-                if(   data[rr].idlist == NULL 
+                if(  data[rr].idlist == NULL 
                    && (rc = ReferenceMgr_TCoverSetMaxId(data+rr,al_from + al_qty))!=0){
                     break; /*** out-of-memory ***/
                 }
@@ -1532,12 +1557,12 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
                     break; /*** out-of-memory ***/
                 }
                 /**** Done alignment ids ***/
-                if( !tbls[i].ids_only ) { /*** work on statistics ***/
+                if(!tbls[i].ids_only) { /*** work on statistics ***/
                     char const *c = cigar->base.str;
                     const char *c_end = c + cigar->len;
                     int64_t const global_ref_pos = rr*cself->max_seq_len + **al_ref_start; /** global_ref_start **/
                     int64_t const global_refseq_start = global_ref_pos -  **al_ref_pos;   /** global_ref_start of current reference **/
-                    unsigned const bin_no = global_ref_pos / cself->max_seq_len;
+                    unsigned const bin_no = (unsigned)(global_ref_pos / cself->max_seq_len);
                     TCover *const bin = &data[bin_no];
                     uint8_t *const cov = &hilo[global_ref_pos];
                     int64_t ref_offset = 0;
@@ -1546,7 +1571,7 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
                     int64_t j;
 
                     while (rc == 0 && c < c_end) {
-                        int op_len = strtol(c, (char **)&c, 10);
+                        int op_len = (int)strtol(c, (char **)&c, 10);
                         int const op = *c++;
                         
                         switch (op){
@@ -1605,18 +1630,18 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
                             else {
                                 overlap_ref_pos = 1;
                             }
-                            for ( ; min_rr < max_rr; ++min_rr) {
-                                if (   data[min_rr].cover.overlap_ref_pos[i] == 0 /*** NOT SET***/
+                            for (; min_rr < max_rr; ++min_rr) {
+                                if (  data[min_rr].cover.overlap_ref_pos[i] == 0 /*** NOT SET***/
                                     || overlap_ref_pos < data[min_rr].cover.overlap_ref_pos[i])
                                 {
-									data[min_rr].cover.overlap_ref_pos[i] = overlap_ref_pos;
+									data[min_rr].cover.overlap_ref_pos[i] = (INSDC_coord_zero)overlap_ref_pos;
                                 }
                                 data[min_rr].cover.overlap_ref_len[i] = cself->max_seq_len; /*** in between chunks get full length of overlap **/
                             }
-                            if (   data[min_rr].cover.overlap_ref_pos[i] == 0
+                            if (  data[min_rr].cover.overlap_ref_pos[i] == 0
                                 || overlap_ref_pos < data[min_rr].cover.overlap_ref_pos[i])
                             {
-								data[min_rr].cover.overlap_ref_pos[i] = overlap_ref_pos;
+								data[min_rr].cover.overlap_ref_pos[i] = (INSDC_coord_zero)overlap_ref_pos;
                             }
                             if (overlap_ref_len > data[min_rr].cover.overlap_ref_len[i])
 								data[min_rr].cover.overlap_ref_len[i] = overlap_ref_len;
@@ -1630,11 +1655,11 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
 		    TableReader_Whack(reader);
 		    VTableRelease(table);
 		    /*** NOW SAVE AND RELEASE THE COLUMN ***/
-		    if( (rc = TableWriterRefCoverage_MakeIds(&cover_writer, cself->db, tbls[i].col)) == 0 ) {
+		    if((rc = TableWriterRefCoverage_MakeIds(&cover_writer, cself->db, tbls[i].col)) == 0) {
                 for(rr=0; rc ==0 &&  rr < ref_rows; rr ++){
-                    uint64_t num_elem = AlignIdListCount( data[rr].idlist);
+                    uint64_t num_elem = AlignIdListCount(data[rr].idlist);
                     uint64_t num_elem_copied = 0;
-                    if(num_elem > 0 ){
+                    if(num_elem > 0){
 #define BUF_STACK_COUNT 128 * 1024
                         int64_t buf_stack[BUF_STACK_COUNT];
                         int64_t *buf_alloc = NULL;
@@ -1650,7 +1675,7 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
                         }
                         ReferenceMgr_TCoverRelease(data+rr); /** release memory ***/
                         if(rc == 0){
-                            rc = TableWriterRefCoverage_WriteIds(cover_writer, rr+1, buf,num_elem);
+                            rc = TableWriterRefCoverage_WriteIds(cover_writer, rr+1, buf, (uint32_t)num_elem);
                         }
                         if(buf_alloc) free(buf_alloc);
                     } else {
@@ -1659,7 +1684,7 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
                 }
                 if(rc == 0){
                     rc = TableWriterRefCoverage_Whack(cover_writer, rc == 0, &new_rows);
-                    if( rc == 0  && ref_rows != new_rows ) {
+                    if(rc == 0  && ref_rows != new_rows) {
                         rc = RC(rcAlign, rcTable, rcCommitting, rcData, rcInconsistent);
                     }
                 }
@@ -1692,7 +1717,7 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
 		free(data);
 		rc1 = TableWriterRefCoverage_Whack(cover_writer, rc == 0, &new_rows);
 		rc = rc ? rc : rc1;
-		if( rc == 0 && ref_rows != new_rows ) {
+		if(rc == 0 && ref_rows != new_rows) {
 		    rc = RC(rcAlign, rcTable, rcCommitting, rcData, rcInconsistent);
 		}
 	}
@@ -1705,7 +1730,7 @@ LIB_EXPORT rc_t CC ReferenceMgr_Release(const ReferenceMgr *cself,
                                         uint64_t *const Rows,
                                         const bool build_coverage,
                                         rc_t (*const quitting)(void)
-                                        )
+                                       )
 {
     rc_t rc = 0;
 
@@ -1819,10 +1844,10 @@ rc_t ReferenceMgr_LoadSeq(ReferenceMgr *const self, ReferenceSeq *obj)
         
         obj->start_rowid = self->ref_rowid + 1;
         data.name.buffer = id;
-        data.name.elements = string_size( id );
+        data.name.elements = string_size(id);
         data.read.buffer = readBuf.base;
         data.seq_id.buffer = seqId;
-        data.seq_id.elements = string_size( seqId );
+        data.seq_id.elements = string_size(seqId);
         data.force_READ_write = obj->type == rst_local || (self->options & ewrefmgr_co_allREADs);
         data.circular = obj->circular;
         
@@ -1831,12 +1856,12 @@ rc_t ReferenceMgr_LoadSeq(ReferenceMgr *const self, ReferenceSeq *obj)
             
             wopt |= (self->options & ewrefmgr_co_allREADs) ? ewref_co_SaveRead : 0;
             wopt |= (self->options & ewrefmgr_co_Coverage) ? ewref_co_Coverage : 0;
-            if( (rc = TableWriterRef_Make(&self->writer, self->db, wopt)) == 0 ) {
+            if((rc = TableWriterRef_Make(&self->writer, self->db, wopt)) == 0) {
                 TableWriterData mlen;
                 
                 mlen.buffer = &self->max_seq_len;
                 mlen.elements = 1;
-                rc = TableWriterRef_WriteDefaultData(self->writer, ewrefseq_cn_MAX_SEQ_LEN, &mlen);
+                rc = TableWriterRef_WriteDefaultData(self->writer, ewrefd_cn_MAX_SEQ_LEN, &mlen);
             }
         }
         while (rc == 0 && offset < obj->seq_len) {
@@ -1858,19 +1883,24 @@ rc_t ReferenceMgr_LoadSeq(ReferenceMgr *const self, ReferenceSeq *obj)
 
 LIB_EXPORT rc_t CC ReferenceMgr_GetSeq(ReferenceMgr const *const cself,
                                        ReferenceSeq const **const seq,
-                                       char const id[])
+                                       char const id[], bool *shouldUnmap)
 {
     ReferenceMgr *const self = (ReferenceMgr *)cself;
     
-    if  (self == NULL || seq == NULL || id == NULL )
+    if  (self == NULL || seq == NULL || id == NULL)
         return RC(rcAlign, rcFile, rcConstructing, rcParam, rcNull);
     
     *seq = NULL;
+    *shouldUnmap = false;
     {
         ReferenceSeq *obj;
         rc_t rc = ReferenceMgr_OpenSeq(self, &obj, id, 0, NULL);
         
         if (rc) return rc;
+        if (obj->type == rst_unmapped) {
+            *shouldUnmap = true;
+            return 0;
+        }
         if (obj->start_rowid == 0) {
             rc = ReferenceMgr_LoadSeq(self, obj);
             if (rc) return rc;
@@ -1887,21 +1917,21 @@ LIB_EXPORT rc_t CC ReferenceMgr_Verify(const ReferenceMgr* cself, const char* id
     ReferenceSeq* rseq;
     const KFile* kf;
     
-    if( cself == NULL || id == NULL ) {
+    if(cself == NULL || id == NULL) {
         rc = RC(rcAlign, rcFile, rcConstructing, rcParam, rcNull);
-    } else if( (rc = ReferenceMgr_Find(cself, id, &rseq, &kf)) == 0 ) {
-        if( rseq == NULL ) {
+    } else if((rc = ReferenceMgr_Find(cself, id, &rseq, &kf)) == 0) {
+        if(rseq == NULL) {
             uint64_t size = 0;
-            if( (rc = KFileSize(kf, &size)) == 0 && size == 0 ) {
+            if((rc = KFileSize(kf, &size)) == 0 && size == 0) {
                 rc = RC(rcAlign, rcTable, rcValidating, rcSize, rcEmpty);
             }
             KFileRelease(kf);
-        } else if( rseq->local ) {
-            if( rseq->seq_len != seq_len ) {
+        } else if(rseq->local) {
+            if(rseq->seq_len != seq_len) {
                 rc = RC(rcAlign, rcFile, rcValidating, rcSize, rcUnequal);
                 ALIGN_DBGERRP("%s->%s SEQ_LEN verification", rc, id, rseq->accession);
             }
-            if( rc == 0 && md5 != NULL && memcmp(md5, rseq->u.local.md5, sizeof(rseq->u.local.md5)) != 0 ) {
+            if(rc == 0 && md5 != NULL && memcmp(md5, rseq->u.local.md5, sizeof(rseq->u.local.md5)) != 0) {
                 unsigned i;
                 rc = RC(rcAlign, rcTable, rcValidating, rcChecksum, rcUnequal);
                 ALIGN_DBGERRP("%s->%s MD5 verification", rc, id, rseq->accession);
@@ -1922,36 +1952,36 @@ LIB_EXPORT rc_t CC ReferenceMgr_Verify(const ReferenceMgr* cself, const char* id
             INSDC_coord_len o_len;
             const uint8_t* o_md5;
 
-            if( tmp == NULL ) {
-                if( (rc = RefSeqMgr_GetSeq(cself->rmgr, &tmp, rseq->accession, string_size( rseq->accession ))) != 0 ||
-                    (rc = RefSeq_SeqLength(tmp, &o_len)) != 0 ) {
+            if(tmp == NULL) {
+                if((rc = RefSeqMgr_GetSeq(cself->rmgr, &tmp, rseq->accession, string_size(rseq->accession))) != 0 ||
+                    (rc = RefSeq_SeqLength(tmp, &o_len)) != 0) {
                     ALIGN_DBGERRP("%s->%s verification", rc, id, rseq->accession);
                 }
             } else {
                 o_len = rseq->seq_len;
             }
-            if( rc == 0 ) {
-                if( seq_len != 0 && o_len != seq_len ) {
+            if(rc == 0) {
+                if(seq_len != 0 && o_len != seq_len) {
                     rc = RC(rcAlign, rcTable, rcValidating, rcSize, rcUnequal);
                     ALIGN_DBGERRP("%s->%s SEQ_LEN verification", rc, id, rseq->accession);
                 } else {
                     ALIGN_DBG("%s->%s SEQ_LEN verification ok", id, rseq->accession);
                 }
             }
-            if( rc == 0 && (rc = RefSeq_MD5(tmp, &o_md5)) == 0 ) {
-                if( md5 != NULL && o_md5 != NULL && memcmp(md5, o_md5, sizeof(rseq->u.local.md5)) != 0 ) {
+            if(rc == 0 && (rc = RefSeq_MD5(tmp, &o_md5)) == 0) {
+                if(md5 != NULL && o_md5 != NULL && memcmp(md5, o_md5, sizeof(rseq->u.local.md5)) != 0) {
                     rc = RC(rcAlign, rcTable, rcValidating, rcChecksum, rcUnequal);
                     ALIGN_DBGERRP("%s->%s MD5 verification", rc, id, rseq->accession);
                 } else {
                     ALIGN_DBG("%s->%s MD5 verification ok", id, rseq->accession);
                 }
             }
-            if( tmp != rseq->u.refseq.o ) {
+            if(tmp != rseq->u.refseq.o) {
                 RefSeq_Release(tmp);
             }
         }
     }
-    if( rc == 0 ) {
+    if(rc == 0) {
         ALIGN_DBG("%s verification ok", id);
     } else {
         ALIGN_DBGERRP("%s verification", rc, id);
@@ -1970,7 +2000,7 @@ LIB_EXPORT rc_t CC ReferenceMgr_Verify(const ReferenceMgr* cself, const char* id
             rc = RC(rcAlign, rcFile, rcValidating, rcSize, rcUnequal);
             ALIGN_DBGERRP("%s->%s SEQ_LEN verification", rc, id, rseq->seqId);
         }
-        if (md5 && memcmp(md5, rseq->md5, sizeof(rseq->md5)) != 0 ) {
+        if (md5 && memcmp(md5, rseq->md5, sizeof(rseq->md5)) != 0) {
             unsigned i;
             
             rc = RC(rcAlign, rcTable, rcValidating, rcChecksum, rcUnequal);
@@ -1987,7 +2017,7 @@ LIB_EXPORT rc_t CC ReferenceMgr_Verify(const ReferenceMgr* cself, const char* id
         } else {
             ALIGN_DBG("%s->%s MD5 verification ok", id, rseq->seqId);
         }
-        if( rc == 0 ) {
+        if(rc == 0) {
             ALIGN_DBG("%s verification ok", id);
         } else {
             ALIGN_DBGERRP("%s verification", rc, id);
@@ -2002,11 +2032,11 @@ LIB_EXPORT rc_t CC ReferenceMgr_FastaPath(const ReferenceMgr* cself, const char*
     rc_t rc = 0;
     KDirectory* dir;
 
-    if( cself == NULL || fasta_path == NULL ) {
+    if(cself == NULL || fasta_path == NULL) {
         rc = RC(rcAlign, rcFile, rcConstructing, rcParam, rcNull);
-    } else if( (rc = KDirectoryNativeDir(&dir)) == 0 ) {
+    } else if((rc = KDirectoryNativeDir(&dir)) == 0) {
         const KFile* kf;
-        if( (rc = KDirectoryOpenFileRead(dir, &kf, "%s", fasta_path)) == 0 ) {
+        if((rc = KDirectoryOpenFileRead(dir, &kf, "%s", fasta_path)) == 0) {
             rc = ReferenceMgr_FastaFile(cself, kf);
             KFileRelease(kf);
         }
@@ -2018,7 +2048,7 @@ LIB_EXPORT rc_t CC ReferenceMgr_FastaPath(const ReferenceMgr* cself, const char*
 
 LIB_EXPORT rc_t CC ReferenceMgr_FastaFile(const ReferenceMgr* cself, const KFile* file)
 {
-    if( cself == NULL || file == NULL ) {
+    if(cself == NULL || file == NULL) {
         return RC(rcAlign, rcFile, rcConstructing, rcParam, rcNull);
     }
     return ReferenceMgr_ImportFastaFile((ReferenceMgr *)cself, file, NULL);
@@ -2183,7 +2213,7 @@ rc_t cigar_string(cigar_bin_t cigar[],
     for (i = j = 0; j < cigar_len; ++j) {
         int len = 0;
         
-        for ( ; ; ) {
+        for (; ;) {
             int const ch = cigar_string[i++];
             
             if (isdigit(ch))
@@ -2217,7 +2247,7 @@ static int cigar_string_op_count(char const cigar[])
     int st = 0;
     int i = 0;
     
-    for ( ; ; ) {
+    for (; ;) {
         int const ch = cigar[i];
         
         if (ch == '\0')
@@ -2287,7 +2317,7 @@ rc_t cigar2offset(int const options,
 
             for (i = 0; i < maxopcount; ++i) {
                 if (cigar[i].code == 'H') {
-                    rc_t const rc = RC(rcAlign, rcFile, rcProcessing, rcData, rcInvalid);
+                    rc_t const rc = RC(rcAlign, rcFile, rcProcessing, rcData, rcNotAvailable);
                     (void)LOGERR(klogErr, rc, "Hard clipping of sequence data is not allowed");
                     return rc;
                 }
@@ -2340,7 +2370,7 @@ rc_t cigar2offset(int const options,
                     {
                         unsigned i;
                         
-                        for (i = first + 1; i < opcount; ) {
+                        for (i = first + 1; i < opcount;) {
                             if (cigar[i].gentype == gen_delete_type && cigar[i-1].gentype == gen_delete_type) {
                                 cigar[i].length += cigar[i-1].length;
                                 if (cigar[i].type == NCBI_align_ro_normal && cigar[i-1].type == NCBI_align_ro_normal) {
@@ -2397,7 +2427,7 @@ LIB_EXPORT rc_t CC ReferenceSeq_TranslateOffset_int(ReferenceSeq const *const cs
                                                     INSDC_coord_zero *const ref_start,
                                                     uint64_t *const global_ref_start)
 {
-    if( cself == NULL )
+    if(cself == NULL)
         return RC(rcAlign, rcFile, rcProcessing, rcSelf, rcNull);
         
     if (ref_id)
@@ -2430,14 +2460,17 @@ LIB_EXPORT rc_t CC ReferenceMgr_Compress(const ReferenceMgr* cself,
                                          TableWriterAlgnData* data)
 {
     rc_t rc = 0;
+    bool shouldUnmap = false;
     const ReferenceSeq* refseq;
 
-    if( cself == NULL || id == NULL ) {
+    if(cself == NULL || id == NULL) {
         rc = RC(rcAlign, rcFile, rcProcessing, rcParam, rcNull);
-    } else if( (rc = ReferenceMgr_GetSeq(cself, &refseq, id)) == 0 ) {
+    }
+    else if((rc = ReferenceMgr_GetSeq(cself, &refseq, id, &shouldUnmap)) == 0) {
+        assert(shouldUnmap == false);
         rc = ReferenceSeq_Compress(refseq, options, offset, seq, seq_len, cigar, cigar_len,
                                    allele_offset, allele, allele_len,offset_in_allele,
-				   allele_cigar, allele_cigar_len, rna_orient, data);
+                                   allele_cigar, allele_cigar_len, rna_orient, data);
         ReferenceSeq_Release(refseq);
     }
     ALIGN_C_DBGERR(rc);
@@ -2461,7 +2494,7 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
 
     if (self == NULL || seq == NULL || cigar == NULL || cigar_len == 0 || data == NULL ||
         (!(allele == NULL && allele_len == 0 && allele_cigar == NULL && allele_cigar_len == 0) &&
-         !(allele != NULL && allele_cigar != NULL && allele_cigar_len != 0)) )
+         !(allele != NULL && allele_cigar != NULL && allele_cigar_len != 0)))
     {
         return RC(rcAlign, rcFile, rcProcessing, rcParam, rcInvalid);
     }
@@ -2488,7 +2521,7 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
         char x[4096];
 #endif
 
-        if( data->ploidy == 0 ) {
+        if(data->ploidy == 0) {
             data->has_ref_offset.elements = seq_len;
             data->ref_offset.elements = 0;
             data->has_mismatch.elements = seq_len;
@@ -2511,7 +2544,7 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
         ALIGN_C_DBG("align%s '%.*s'[%u] to '%s:%s' at %i", (options & ewrefmgr_cmp_Exact) ? " EXACT" : "",
                     seq_len, seq, seq_len, cself->id, cself->seqId, offset);
 #endif
-        if( allele != NULL ) {
+        if(allele != NULL) {
             /* determine length of reference for subst by allele */
             ALIGN_C_DBG("apply allele %.*s[%u] at %i w/cigar below",
                         allele_len, allele, allele_len, allele_offset);
@@ -2529,7 +2562,7 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
             /* where allele ends on reference */
             allele_ref_end += allele_offset;
         }
-        if( rc == 0 ) {
+        if(rc == 0) {
             rc = cigar2offset(options,
                               cigar_len,
                               cigar,
@@ -2543,8 +2576,8 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                               &position_adjust);
             offset += position_adjust;
         }
-        if( allele != NULL ) {
-            if( allele_offset + allele_ref_end < offset || allele_offset >= offset + rl ) {
+        if(allele != NULL) {
+            if(allele_offset + allele_ref_end < offset || allele_offset >= offset + rl) {
                 (void)PLOGMSG(klogWarn, (klogWarn,
                     "allele $(a) offset $(ao) $(ac) is not within referenced region in $(id) at offset $(ro) $(rc)",
                     "a=%.*s,ao=%i,ac=%.*s,id=%s,ro=%i,rc=%.*s",
@@ -2553,11 +2586,11 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                 allele = NULL;
             }
         }
-        if( rc == 0 ) {
+        if(rc == 0) {
             ref_len = rl;
-            if( (offset + max_rl) > self->seq_len && !self->circular ) {
+            if((offset + max_rl) > self->seq_len && !self->circular) {
                 max_rl = self->seq_len - offset;
-                if( max_rl < rl ) {
+                if(max_rl < rl) {
                     /* ref_len used for compression cannot be shorter than ref_len derived from cigar,
                        if there is a shortage it will fail later here */
                     max_rl = rl;
@@ -2581,9 +2614,9 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                 }
             }
             if (rc == 0) {
-                if( allele != NULL ) {
+                if(allele != NULL) {
                     /* subst allele in reference */
-                    if( allele_offset <= offset ) {
+                    if(allele_offset <= offset) {
                         /* move allele start inside referenced chunk */
                         allele     += offset_in_allele;
                         allele_len -= offset_in_allele;
@@ -2592,18 +2625,18 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                         /* fetch portion of reference which comes before allele */
                         rl = allele_offset - offset;
                         rc = ReferenceSeq_ReadDirect(self, offset, rl, true, ref_buf, &i, false);
-                        if( rc == 0 && rl != i ) {
+                        if(rc == 0 && rl != i) {
                             /* here we need to test it otherwise excessive portion of allele could be fetch in next if */
                             rc = RC(rcAlign, rcFile, rcProcessing, rcRange, rcExcessive);
                         }
                     }
-                    if( rc == 0 && allele_len < (max_rl - rl) ) {
+                    if(rc == 0 && allele_len < (max_rl - rl)) {
                         memcpy(&ref_buf[rl], allele, allele_len);
                         rl += allele_len;
                         /* append tail of actual reference */
                         rc = ReferenceSeq_ReadDirect(self, allele_ref_end, max_rl - rl, true, &ref_buf[rl], &i, false);
                         rl += i;
-                    } else if( rc == 0 ) {
+                    } else if(rc == 0) {
                         /* allele is longer than needed */
                         memcpy(&ref_buf[rl], allele, max_rl - rl);
                         rl = max_rl;
@@ -2635,8 +2668,8 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                             ref_pos += length;
                             ++ro;
                         }
-                        if( (ref_pos < 0) || (ref_pos >= max_rl) || 
-                            ((toupper(ref_buf[ref_pos]) != toupper(seq[seq_pos])) && (seq[seq_pos] != '=')) )
+                        if (ref_pos >= max_rl ||
+                            ((toupper(ref_buf[ref_pos]) != toupper(seq[seq_pos])) && (seq[seq_pos] != '=')))
                         {
                             has_mismatch[seq_pos] = 1;
                             mismatch[data->mismatch.elements++] = seq[seq_pos];
@@ -2650,7 +2683,7 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
             }
         }
 #if _DEBUGGING
-        if(rc == 0 ) {
+        if(rc == 0) {
             int32_t j;
             memset(x, '-', sizeof(x) - 1);
             x[sizeof(x) - 2] = '\0';
@@ -2658,8 +2691,8 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
             ALIGN_C_DBG("ref: %.*s [%u]", max_rl, ref_buf, max_rl);
             ALIGN_C_DBGF(("%s:%u: ref: ", __func__, __LINE__));
             for(seq_pos = 0, j = 0, rl = 0, i = 0; seq_pos < seq_len; seq_pos++, j++) {
-                if( has_ref_offset[seq_pos] ) {
-                    if( ref_offset[i_ref_offset_elements + rl] > 0 ) {
+                if(has_ref_offset[seq_pos]) {
+                    if(ref_offset[i_ref_offset_elements + rl] > 0) {
                         ALIGN_C_DBGF(("%.*s", (uint32_t)(ref_offset[i_ref_offset_elements + rl]), &ref_buf[j]));
                     } else {
                         i = -ref_offset[i_ref_offset_elements + rl];
@@ -2668,13 +2701,13 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                     rl++;
                 }
                 ALIGN_C_DBGF(("%c", (j < 0 || j >= max_rl) ? '-' : (i > 0) ? tolower(ref_buf[j]) : ref_buf[j]));
-                if( i > 0  ) {
+                if(i > 0 ) {
                     i--;
                 }
             }
             ALIGN_C_DBGF(("\n%s:%u: seq: ", __func__, __LINE__));
             for(i = 0, j = 0; i < seq_len; i++) {
-                if( has_ref_offset[i] && ref_offset[i_ref_offset_elements + j++] > 0 ) {
+                if(has_ref_offset[i] && ref_offset[i_ref_offset_elements + j++] > 0) {
                     ALIGN_C_DBGF(("%.*s", ref_offset[i_ref_offset_elements + j - 1], x));
                 }
                 ALIGN_C_DBGF(("%c", seq[i]));
@@ -2682,7 +2715,7 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
             ALIGN_C_DBGF((" [%u]\n", seq_len));
             ALIGN_C_DBGF(("%s:%u: hro: ", __func__, __LINE__));
             for(i = 0, j = 0; i < seq_len; i++) {
-                if( has_ref_offset[i] && ref_offset[i_ref_offset_elements + j++] > 0 ) {
+                if(has_ref_offset[i] && ref_offset[i_ref_offset_elements + j++] > 0) {
                     ALIGN_C_DBGF(("%.*s", ref_offset[i_ref_offset_elements + j - 1], x));
                 }
                 ALIGN_C_DBGF(("%c", has_ref_offset[i] + '0'));
@@ -2694,7 +2727,7 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
             ALIGN_C_DBGF(("[%u]\n", data->ref_offset.elements - i_ref_offset_elements));
             ALIGN_C_DBGF(("%s:%u: hmm: ", __func__, __LINE__));
             for(i = 0, j = 0; i < seq_len; i++) {
-                if( has_ref_offset[i] && ref_offset[i_ref_offset_elements + j++] > 0 ) {
+                if(has_ref_offset[i] && ref_offset[i_ref_offset_elements + j++] > 0) {
                     ALIGN_C_DBGF(("%.*s", ref_offset[i_ref_offset_elements + j - 1], x));
                 }
                 ALIGN_C_DBGF(("%c", has_mismatch[i] + '0'));
@@ -2703,8 +2736,8 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                 &mismatch[i_mismatch_elements], data->mismatch.elements - i_mismatch_elements));
         }
 #endif
-        if( rc == 0 ) {
-            if( data->ploidy == 0 ) {
+        if(rc == 0) {
+            if(data->ploidy == 0) {
                 int64_t *const ref_id = (int64_t *)data->ref_id.buffer;
                 INSDC_coord_zero *const ref_start = (INSDC_coord_zero *)data->ref_start.buffer;
                 uint64_t *const global_ref_start = (uint64_t *)data->global_ref_start.buffer;
@@ -2731,12 +2764,12 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                 }
                 ALIGN_C_DBGF(("\n"));
             } else {
-                if( data->ref_1st_row_id != self->start_rowid || data->effective_offset != offset ) {
+                if(data->ref_1st_row_id != self->start_rowid || data->effective_offset != offset) {
                     rc = RC(rcAlign, rcFile, rcProcessing, rcData, rcInconsistent);
                     (void)PLOGERR(klogErr, (klogErr, rc,
                         "all reads in alignment record must align to same refseq at same location $(r1)@$(o1) <> $(r2):$(a2)@$(o2)",
                         "r1=%li,o1=%i,r2=%s,a2=%s,o2=%i", data->ref_1st_row_id, data->effective_offset, self->id, self->seqId, offset));
-                } else if( data->ref_len != ref_len ) {
+                } else if(data->ref_len != ref_len) {
                     rc = RC(rcAlign, rcFile, rcProcessing, rcData, rcInconsistent);
                     (void)PLOGERR(klogErr, (klogErr, rc,
                         "all reads in alignment record must have same size projection on refseq $(rl1) <> $(rl2) $(r):$(a)@$(o)",
@@ -2744,7 +2777,7 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                 }
             }
         }
-        if( rc == 0 ) {
+        if(rc == 0) {
             data->ploidy++;
             data->read_start.elements = data->ploidy;
             data->read_len.elements = data->ploidy;
@@ -2761,7 +2794,7 @@ LIB_EXPORT rc_t CC ReferenceSeq_Read(const ReferenceSeq* cself, INSDC_coord_zero
 {
     rc_t rc = 0;
 
-    if( cself == NULL || buffer == NULL || ref_len == NULL ) {
+    if(cself == NULL || buffer == NULL || ref_len == NULL) {
         rc = RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
     } else {
         rc = ReferenceSeq_ReadDirect((ReferenceSeq*)cself, offset, len, true, buffer, ref_len, false);
@@ -2774,7 +2807,7 @@ LIB_EXPORT rc_t CC ReferenceSeq_Get1stRow(const ReferenceSeq* cself, int64_t* ro
 {
     rc_t rc = 0;
 
-    if( cself == NULL || row_id == NULL ) {
+    if(cself == NULL || row_id == NULL) {
         rc = RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
     } else {
         *row_id = cself->start_rowid;
@@ -2786,12 +2819,12 @@ LIB_EXPORT rc_t CC ReferenceSeq_AddCoverage(const ReferenceSeq* cself, INSDC_coo
 {
     rc_t rc = 0;
 
-    if( cself == NULL || data == NULL) {
+    if(cself == NULL || data == NULL) {
         rc = RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
-    } else if( !(cself->mgr->options & ewrefmgr_co_Coverage) ) {
-        rc = RC( rcAlign, rcType, rcWriting, rcData, rcUnexpected);
+    } else if(!(cself->mgr->options & ewrefmgr_co_Coverage)) {
+        rc = RC(rcAlign, rcType, rcWriting, rcData, rcUnexpected);
         ALIGN_R_DBGERRP("coverage %s", rc, "data");
-    } else if( (rc = ReferenceSeq_ReOffset(cself->circular, cself->seq_len, &offset)) == 0 ) {
+    } else if((rc = ReferenceSeq_ReOffset(cself->circular, cself->seq_len, &offset)) == 0) {
         rc = TableWriterRef_WriteCoverage(cself->mgr->writer, cself->start_rowid, offset, data);
     }
     ALIGN_DBGERR(rc);

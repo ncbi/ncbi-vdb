@@ -95,6 +95,9 @@ class Tui_Rect
         const tui_coord get_y( void ) const { return r_.top_left.y; };
         const tui_coord get_w( void ) const { return r_.w; };
         const tui_coord get_h( void ) const { return r_.h; };
+        void get( tui_coord &x, tui_coord &y, tui_coord &w, tui_coord &h ) const
+        { x = r_.top_left.x; y = r_.top_left.y; w = r_.w; h = r_.h; }
+
         void set_x( const tui_coord x ) { r_.top_left.x = x; };
         void set_y( const tui_coord y ) { r_.top_left.y = y; };
         void set_w( const tui_coord w ) { r_.w = w; };
@@ -187,11 +190,20 @@ class Tui
         bool Print ( const Tui_Point &p, const Tui_Ac &ac, const std::string &s, const int l = 0 )
             { return ( KTUIPrint( tui_, &( p.p_ ), &( ac.ac_ ), s.c_str(), ( l == 0 ) ? (int)s.length() : l ) == 0 ); };
 
-        bool PaintRect( Tui_Rect &r, Tui_Ac &ac, const char c = ' ' )
+        bool PaintRect( const Tui_Rect &r, const Tui_Ac &ac, const char c = ' ' )
             { return ( KTUIRect( tui_, &( r.r_ ), &( ac.ac_ ), c ) == 0 ); }
 
         bool Flush( bool forced = false ) { return ( KTUIFlush ( tui_, forced ) == 0 ); };
+
         bool GetExtent ( tui_coord * cols, tui_coord * lines ) const { return ( KTUIGetExtent ( tui_, cols, lines ) == 0 ); };
+        bool GetExtent ( Tui_Rect &r )
+        {
+            tui_coord cols, lines;
+            bool res = ( KTUIGetExtent ( tui_, &cols, &lines ) == 0 );
+            if ( res ) r.set( 0, 0, cols, lines );
+            return res;
+        }
+
         bool ClrScr( const KTUI_color bg ) { return ( KTUIClrScr( tui_, bg ) == 0 ); };
 
         friend class Tui_Event;

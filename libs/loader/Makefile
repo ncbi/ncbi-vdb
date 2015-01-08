@@ -33,8 +33,6 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
-TEST_TOOLS = 
-
 include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
@@ -46,10 +44,7 @@ all std: makedirs
 $(INT_LIBS): makedirs
 	@ $(MAKE_CMD) $(ILIBDIR)/$@
 
-$(TEST_TOOLS): std makedirs
-	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
-
-.PHONY: all std $(ALL_LIBS) $(TEST_TOOLS)
+.PHONY: all std $(ALL_LIBS)
 
 #-------------------------------------------------------------------------------
 # std
