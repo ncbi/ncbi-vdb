@@ -43,6 +43,7 @@ class CSRA1_Fixture : public NgsFixture
 public:
     static const char* CSRA1_PrimaryOnly;
     static const char* CSRA1_WithSecondary;
+    static const char* CSRA1_WithGroups;
     
 public:
     CSRA1_Fixture()
@@ -79,6 +80,7 @@ public:
 };
 const char* CSRA1_Fixture::CSRA1_PrimaryOnly   = "SRR1063272";
 const char* CSRA1_Fixture::CSRA1_WithSecondary = "SRR833251";
+const char* CSRA1_Fixture::CSRA1_WithGroups = "SRR822962";
 
 #include "CSRA1_ReadCollection_test.cpp"
 
@@ -830,6 +832,18 @@ FIXTURE_TEST_CASE(CSRA1_ReadGroup_GetName, CSRA1_Fixture)
 {
     ngs :: ReadGroup rg = ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getReadGroup ( "C1ELY.6" );
     REQUIRE_EQ ( ngs :: String("C1ELY.6"), rg . getName () );
+}
+
+FIXTURE_TEST_CASE(CSRA1_ReadGroup_GetStatistics, CSRA1_Fixture)
+{
+    ngs :: ReadGroup rg = ncbi :: NGS :: openReadCollection ( CSRA1_WithGroups ) . getReadGroup ( "GS57510-FS3-L03" );
+    ngs :: Statistics stats = rg . getStatistics ();
+    
+    REQUIRE_EQ ( (uint64_t)34164461870, stats . getAsU64 ( "BASE_COUNT" ) );
+    REQUIRE_EQ ( (uint64_t)34164461870, stats . getAsU64 ( "BIO_BASE_COUNT" ) );
+    REQUIRE_EQ ( (uint64_t)488063741,   stats . getAsU64 ( "SPOT_COUNT" ) );
+    REQUIRE_EQ ( (uint64_t)5368875807,  stats . getAsU64 ( "SPOT_MAX" ) );
+    REQUIRE_EQ ( (uint64_t)4880812067,  stats . getAsU64 ( "SPOT_MIN" ) );
 }
 
 /////TODO: ReadGroupIterator

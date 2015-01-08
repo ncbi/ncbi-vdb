@@ -19,7 +19,8 @@ public class ngs_test_CSRA1 {
 // ReadCollection
     String PrimaryOnly      = "SRR1063272";
     String WithSecondary    = "SRR833251";
-
+    String WithGroups       = "SRR822962";
+    
     @Test
     public void open_success() throws ngs.ErrorMsg
     {
@@ -648,6 +649,19 @@ public class ngs_test_CSRA1 {
     {
         ngs.ReadGroup gr = NGS . openReadCollection ( PrimaryOnly ) . getReadGroup ( "C1ELY.6" );
         assertEquals( "C1ELY.6", gr . getName () );
+    }
+    @Test
+    public void ReadGroup_getStatistics() throws ngs.ErrorMsg
+    {
+        ngs.ReadGroup gr = NGS . openReadCollection ( WithGroups ) . getReadGroup ( "GS57510-FS3-L03" );
+
+        ngs . Statistics stats = gr . getStatistics ();
+    
+        assertEquals ( 34164461870L, stats . getAsU64 ( "BASE_COUNT" ) );
+        assertEquals ( 34164461870L, stats . getAsU64 ( "BIO_BASE_COUNT" ) );
+        assertEquals ( 488063741L,   stats . getAsU64 ( "SPOT_COUNT" ) );
+        assertEquals ( 5368875807L,  stats . getAsU64 ( "SPOT_MAX" ) );
+        assertEquals ( 4880812067L,  stats . getAsU64 ( "SPOT_MIN" ) );        
     }
 
 /* ReadGroup no longer supports Reads
