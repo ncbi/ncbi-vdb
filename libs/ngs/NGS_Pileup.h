@@ -46,6 +46,7 @@ extern "C" {
  */
 struct NGS_String;
 struct NGS_PileupEvent;
+struct NGS_Reference;
 
 /*--------------------------------------------------------------------------
  * NGS_Pileup
@@ -87,6 +88,7 @@ bool NGS_PileupIteratorNext ( NGS_Pileup* self, ctx_t ctx );
 struct NGS_Pileup
 {
     NGS_Refcount dad;
+    struct NGS_Reference * ref;
 };
 
 typedef struct NGS_Pileup_vt NGS_Pileup_vt;
@@ -106,12 +108,16 @@ struct NGS_Pileup_vt
 
 /* Init
 */
-void NGS_PileupInit ( ctx_t ctx, struct NGS_Pileup * self, NGS_Pileup_vt * vt, const char *clsname, const char *instname );
+void NGS_PileupInit ( ctx_t ctx, 
+                      struct NGS_Pileup * self, 
+                      NGS_Pileup_vt * vt, 
+                      const char *clsname, 
+                      const char *instname, 
+                      struct NGS_Reference* ref );
 
-/* NullPileup
- * will error out on any call
- */
-struct NGS_Pileup * NGS_PileupMakeNull ( ctx_t ctx, struct NGS_String const * spec );
+/* Whack
+*/                         
+void NGS_PileupWhack ( struct NGS_Pileup * self, ctx_t ctx );                      
 
 #ifdef __cplusplus
 }

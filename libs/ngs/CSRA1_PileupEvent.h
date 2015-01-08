@@ -38,10 +38,10 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * forwards
  */
-struct CSRA1_Pileup;
 struct NGS_PileupEvent;
+struct NGS_Pileup;
 
-struct NGS_PileupEvent * CSRA1_PileupEventIteratorMake ( ctx_t ctx, struct CSRA1_Pileup * pileup );
+struct NGS_PileupEvent * CSRA1_PileupEventIteratorMake( ctx_t ctx, struct NGS_Pileup * pileup );
 
 #ifdef __cplusplus
 }

@@ -30,6 +30,7 @@ typedef struct CSRA1_Pileup CSRA1_Pileup;
 #define NGS_PILEUP CSRA1_Pileup
 #include "NGS_Pileup.h"
 #include "NGS_Cursor.h"
+#include "NGS_Reference.h"
 
 #include <kfc/ctx.h>
 #include <kfc/except.h>
@@ -542,7 +543,7 @@ static rc_t add_ref_row_to_cache (
     ctx_t ctx,
     PileupIteratorState* pileup_state,
     VCursor const* cursor_pa, uint32_t seq_start,
-    uint64_t ref_pos,
+    uint64_t ref_pos, /*TODO: make all ref positions signed */
     int64_t const* pa_ids, uint32_t pa_count,
     char const* const* column_names_pa, uint32_t* column_index_pa, size_t column_count_pa
     )
@@ -1063,7 +1064,6 @@ static bool next_pileup (
 struct CSRA1_Pileup
 {
     NGS_Pileup dad;   
-    const NGS_String * ref_spec;
     
     bool primary;
     bool secondary;
@@ -1108,21 +1108,20 @@ static NGS_Pileup_vt CSRA1_Pileup_vt_inst =
 };
 
 void CSRA1_PileupInit ( CSRA1_Pileup * self, 
+                        struct NGS_Reference* ref,
                         ctx_t ctx, 
                         const char *clsname, 
                         const char *instname, 
-                        const NGS_String* ref_spec, 
                         bool wants_primary, 
                         bool wants_secondary )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     
     assert ( self );
-    assert ( ref_spec );
+    assert ( ref );
     
-    TRY ( NGS_PileupInit ( ctx, & self -> dad, & CSRA1_Pileup_vt_inst, clsname, instname ) ) 
+    TRY ( NGS_PileupInit ( ctx, & self -> dad, & CSRA1_Pileup_vt_inst, clsname, instname, ref ) ) 
     {
-        self -> ref_spec = NGS_StringDuplicate ( ref_spec, ctx );
         self -> primary = wants_primary;
         self -> secondary = wants_secondary;
 
@@ -1164,13 +1163,13 @@ void CSRA1_PileupWhack ( CSRA1_Pileup * self, ctx_t ctx )
     self -> is_started = false;
     self -> is_finished = true;
    
-    NGS_StringRelease ( self -> ref_spec, ctx );
-
     VDatabaseRelease ( self -> db );
     self -> db = NULL;
 
     NGS_CursorRelease ( self -> curs_ref, ctx );
     self -> curs_ref = NULL;
+    
+    NGS_PileupWhack ( & self -> dad, ctx );
 }
 
 struct NGS_String * CSRA1_PileupGetReferenceSpec ( const CSRA1_Pileup * self, ctx_t ctx )
@@ -1186,8 +1185,8 @@ struct NGS_String * CSRA1_PileupGetReferenceSpec ( const CSRA1_Pileup * self, ct
         USER_ERROR ( xcCursorExhausted, "No more rows available" );
         return NULL;
     }
-    
-    return NGS_StringDuplicate ( self -> ref_spec, ctx );
+    // NGS_ReferenceGetCanonicalName?
+    return NGS_ReferenceGetCommonName ( self -> dad . ref, ctx );
 }
 
 int64_t CSRA1_PileupGetReferencePosition ( const CSRA1_Pileup * self, ctx_t ctx )
@@ -1221,7 +1220,7 @@ struct NGS_PileupEvent * CSRA1_PileupGetEvents ( CSRA1_Pileup * self, ctx_t ctx 
         return NULL;
     }
     
-    return CSRA1_PileupEventIteratorMake ( ctx, self );
+    return CSRA1_PileupEventIteratorMake ( ctx, & self -> dad );
 }
 
 unsigned int CSRA1_PileupGetDepth ( const CSRA1_Pileup * self, ctx_t ctx )
@@ -1277,73 +1276,83 @@ bool CSRA1_PileupIteratorGetNext ( CSRA1_Pileup * self, ctx_t ctx )
     }
 }
 
-struct NGS_Pileup* CSRA1_PileupIteratorMake ( ctx_t ctx,
-    VDatabase const* db, NGS_Cursor const* curs_ref,
-    const NGS_String* ref_spec,
-    int64_t first_row_id, int64_t last_row_id,
-    bool wants_primary, bool wants_secondary )
+struct NGS_Pileup* CSRA1_PileupIteratorMake ( 
+    ctx_t ctx,
+    NGS_Reference* reference,
+    VDatabase const* db, 
+    NGS_Cursor const* curs_ref,
+    int64_t first_row_id, 
+    int64_t last_row_id,
+    bool wants_primary, 
+    bool wants_secondary )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     
-    CSRA1_Pileup * ref;
+    CSRA1_Pileup * ret;
     rc_t rc = 0;
 
     assert ( db != NULL );
     assert ( curs_ref != NULL );
 
-    ref = calloc ( 1, sizeof * ref );
-    if ( ref == NULL )
+    ret = calloc ( 1, sizeof * ret );
+    if ( ret == NULL )
+    {
+        NGS_String* ref_spec = NGS_ReferenceGetCommonName ( reference, ctx );
         SYSTEM_ERROR ( xcNoMemory, 
                        "allocating CSRA1_Pileup on '%.*s'", 
                        NGS_StringSize ( ref_spec, ctx ), 
                        NGS_StringData ( ref_spec, ctx ) );
+        NGS_StringRelease ( ref_spec, ctx );
+    }
     else
     {
 #if _DEBUGGING
         char instname [ 256 ];
+        NGS_String* ref_spec = NGS_ReferenceGetCommonName ( reference, ctx );
         string_printf ( instname, 
                         sizeof instname, 
                         NULL, 
                         "%.*s", 
                         NGS_StringSize ( ref_spec, ctx ), 
                         NGS_StringData ( ref_spec, ctx ) );
+        NGS_StringRelease ( ref_spec, ctx );
         instname [ sizeof instname - 1 ] = 0;
 #else
         const char *instname = "";
 #endif
-        TRY ( CSRA1_PileupInit ( ref, ctx, "CSRA1_Pileup", instname, ref_spec, wants_primary, wants_secondary ) )
+        TRY ( CSRA1_PileupInit ( ret, reference, ctx, "CSRA1_Pileup", instname, wants_primary, wants_secondary ) )
         {
-            ref -> db = db;
-            VDatabaseAddRef ( ref -> db );
+            ret -> db = db;
+            VDatabaseAddRef ( ret -> db );
 
-            ref -> curs_ref = NGS_CursorDuplicate ( curs_ref, ctx );
+            ret -> curs_ref = NGS_CursorDuplicate ( curs_ref, ctx );
 
-            Alignment_Init ( & ref->pileup_state.cache_alignment );
-            PileupIteratorState_Init ( & ref->pileup_state );
+            Alignment_Init ( & ret->pileup_state.cache_alignment );
+            PileupIteratorState_Init ( & ret->pileup_state );
 
 
-            ref -> pileup_state.reference_start_id = first_row_id;
-            ref -> pileup_state.reference_last_id = last_row_id;
+            ret -> pileup_state.reference_start_id = first_row_id;
+            ret -> pileup_state.reference_last_id = last_row_id;
 
-            ref -> pileup_state.slice_start     = 0; 
-            ref -> pileup_state.slice_length    = 0;
-            ref -> pileup_state.ref_pos         = 0;
+            ret -> pileup_state.slice_start     = 0; 
+            ret -> pileup_state.slice_length    = 0;
+            ret -> pileup_state.ref_pos         = 0;
 
             rc = init_vdb_objects ( ctx,
-                    ref->db, & ref->table_pa,
-                    & ref->cursor_pa,
+                    ret->db, & ret->table_pa,
+                    & ret->cursor_pa,
                     column_names_pa, column_index_pa, countof (column_names_pa));
 
             if ( rc == 0 )
             {
-                return ( NGS_Pileup* ) ref;
+                return ( NGS_Pileup* ) ret;
             }
             else
             {
-                CSRA1_PileupWhack ( ref, ctx );
+                CSRA1_PileupWhack ( ret, ctx );
             }
         }
-        free ( ref );
+        free ( ret );
     }
 
     return NULL;
@@ -1351,9 +1360,9 @@ struct NGS_Pileup* CSRA1_PileupIteratorMake ( ctx_t ctx,
 
 struct NGS_Pileup* CSRA1_PileupIteratorMakeSlice ( 
     ctx_t ctx,
+    NGS_Reference* ref,
     VDatabase const* db, 
     NGS_Cursor const* curs_ref,
-    const NGS_String* ref_spec,
     int64_t first_row_id, 
     int64_t last_row_id,
     uint64_t slice_start, 
@@ -1365,7 +1374,7 @@ struct NGS_Pileup* CSRA1_PileupIteratorMakeSlice (
     
     struct NGS_Pileup* ret;
 
-    TRY ( ret = CSRA1_PileupIteratorMake ( ctx, db, curs_ref, ref_spec, first_row_id, last_row_id, wants_primary, wants_secondary ) )
+    TRY ( ret = CSRA1_PileupIteratorMake ( ctx, ref, db, curs_ref, first_row_id, last_row_id, wants_primary, wants_secondary ) )
     {
         CSRA1_Pileup * csra1_pileup = (CSRA1_Pileup *) ret;
         /* add slice boundaries*/

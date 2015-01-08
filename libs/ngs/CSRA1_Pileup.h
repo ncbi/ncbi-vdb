@@ -38,24 +38,28 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * forwards
  */
-struct NGS_Pileup;
-struct NGS_String;
 struct VDatabase;
 struct NGS_Cursor;
+struct NGS_Reference;
+struct NGS_Pileup;
 
-struct NGS_Pileup * CSRA1_PileupIteratorMake( ctx_t ctx,
+/*define CSRA1_Pileup here */
+
+struct NGS_Pileup * CSRA1_PileupIteratorMake( 
+    ctx_t ctx,
+    struct NGS_Reference* ref,
     struct VDatabase const* db,
     struct NGS_Cursor const* curs_ref,
-    const struct NGS_String* spec,
     int64_t first_row_id, 
     int64_t last_row_id,
     bool wants_primary, 
     bool wants_secondary );
 
-struct NGS_Pileup * CSRA1_PileupIteratorMakeSlice( ctx_t ctx,
+struct NGS_Pileup * CSRA1_PileupIteratorMakeSlice( 
+    ctx_t ctx,
+    struct NGS_Reference* ref,
     struct VDatabase const* db,
     struct NGS_Cursor const* curs_ref,
-    const struct NGS_String* spec,
     int64_t first_row_id, 
     int64_t last_row_id,
     uint64_t slice_start, 

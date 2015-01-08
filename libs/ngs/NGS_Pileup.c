@@ -31,6 +31,7 @@
 #include <ngs/itf/PileupItf.h>
 
 #include "NGS_String.h"
+#include "NGS_Reference.h"
 
 #include <kfc/ctx.h>
 #include <kfc/rsrc.h>
@@ -68,7 +69,7 @@ static int64_t NGS_Pileup_v1_get_ref_pos ( const NGS_Pileup_v1 * self, NGS_ErrBl
     return ret;
 }
 
-static struct NGS_PileupEvent_v1 * NGS_Pileup_v1_get_pileup_events ( const NGS_Pileup_v1 * self, NGS_ErrBlock_v1 * err )
+static struct NGS_PileupEvent_v1 * NGS_Pileup_v1_get_pileup_events ( NGS_Pileup_v1 * self, NGS_ErrBlock_v1 * err )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
     ON_FAIL ( struct NGS_PileupEvent * ret = NGS_PileupGetPileupEvents ( Self ( self ), ctx ) )
@@ -131,7 +132,12 @@ NGS_Pileup_v1_vt ITF_Pileup_vt =
 #define VT( self, msg ) \
     ( ( ( const NGS_Pileup_vt* ) ( self ) -> dad . vt ) -> msg )
 
-void NGS_PileupInit ( ctx_t ctx, struct NGS_Pileup * self, NGS_Pileup_vt * vt, const char *clsname, const char *instname )
+void NGS_PileupInit ( ctx_t ctx, 
+                      struct NGS_Pileup * self, 
+                      NGS_Pileup_vt * vt, 
+                      const char *clsname, 
+                      const char *instname, 
+                      struct NGS_Reference* ref )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcRow, rcConstructing );
     
@@ -143,6 +149,16 @@ void NGS_PileupInit ( ctx_t ctx, struct NGS_Pileup * self, NGS_Pileup_vt * vt, c
         assert ( vt -> get_pileup_depth != NULL );
         assert ( vt -> next != NULL );
     }
+    
+    assert ( ref );
+    self -> ref = NGS_ReferenceDuplicate ( ref, ctx );
+}
+
+/* Whack
+*/                         
+void NGS_PileupWhack ( struct NGS_Pileup * self, ctx_t ctx )
+{
+    NGS_ReferenceRelease ( self -> ref, ctx );
 }
     
 struct NGS_String* NGS_PileupGetReferenceSpec ( const NGS_Pileup* self, ctx_t ctx )

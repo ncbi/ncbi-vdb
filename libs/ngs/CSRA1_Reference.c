@@ -654,19 +654,14 @@ struct NGS_Pileup* CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx
         return NULL;        
     }
 
-    {   /*TODO: GetName or GetCanonicalName? */
-        TRY ( NGS_String* spec = CSRA1_ReferenceGetCommonName ( self, ctx ) ) 
-        {
-            struct NGS_Pileup* ret = CSRA1_PileupIteratorMake ( ctx, self -> db, self->curs,
-                spec,
-                CSRA1_Reference_GetFirstRowId ( (NGS_Reference const*)self, ctx ),
-                CSRA1_Reference_GetLastRowId ( (NGS_Reference const*)self, ctx ),
-                wants_primary, wants_secondary );
-            NGS_StringRelease ( spec, ctx );
-            return ret;
-        }
-    }
-    return NULL;
+    return CSRA1_PileupIteratorMake ( ctx, 
+                                      & self -> dad,
+                                      self -> db, 
+                                      self -> curs,
+                                      CSRA1_Reference_GetFirstRowId ( (NGS_Reference const*)self, ctx ),
+                                      CSRA1_Reference_GetLastRowId ( (NGS_Reference const*)self, ctx ),
+                                      wants_primary, 
+                                      wants_secondary );
 }
 
 static struct NGS_Pileup* CSRA1_ReferenceGetPileupSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary )
@@ -685,24 +680,16 @@ static struct NGS_Pileup* CSRA1_ReferenceGetPileupSlice ( CSRA1_Reference * self
         return NULL;        
     }
     
-    {   /*TODO: GetName or GetCanonicalName? */
-        TRY ( NGS_String* spec = CSRA1_ReferenceGetCommonName ( self, ctx ) ) 
-        {
-            struct NGS_Pileup* ret = CSRA1_PileupIteratorMakeSlice ( 
-                ctx, 
-                self -> db, 
-                self->curs,
-                spec,
-                CSRA1_Reference_GetFirstRowId ( (NGS_Reference const*)self, ctx ),
-                CSRA1_Reference_GetLastRowId ( (NGS_Reference const*)self, ctx ),
-                offset,
-                size,
-                wants_primary, wants_secondary );
-            NGS_StringRelease ( spec, ctx );
-            return ret;
-        }
-    }
-    return NULL;
+    return CSRA1_PileupIteratorMakeSlice ( ctx, 
+                                           & self -> dad,
+                                           self -> db, 
+                                           self -> curs,
+                                           CSRA1_Reference_GetFirstRowId ( (NGS_Reference const*)self, ctx ),
+                                           CSRA1_Reference_GetLastRowId ( (NGS_Reference const*)self, ctx ),
+                                           offset,
+                                           size,
+                                           wants_primary, 
+                                           wants_secondary );
 }
 
 struct NGS_Statistics* CSRA1_ReferenceGetStatistics ( const CSRA1_Reference * self, ctx_t ctx )

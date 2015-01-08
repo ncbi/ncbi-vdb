@@ -31,6 +31,7 @@
 #include <ngs/itf/PileupEventItf.h>
 
 #include "NGS_String.h"
+#include "NGS_Pileup.h"
 
 #include <kfc/ctx.h>
 #include <kfc/rsrc.h>
@@ -273,7 +274,12 @@ NGS_PileupEvent_v1_vt ITF_PileupEvent_vt =
 #define VT( self, msg ) \
     ( ( ( const NGS_PileupEvent_vt* ) ( self ) -> dad . vt ) -> msg )
 
-void NGS_PileupEventInit ( ctx_t ctx, struct NGS_PileupEvent * self, NGS_PileupEvent_vt * vt, const char *clsname, const char *instname )
+void NGS_PileupEventInit ( ctx_t ctx, 
+                           struct NGS_PileupEvent * self, 
+                           NGS_PileupEvent_vt * vt, 
+                           const char *clsname, 
+                           const char *instname,
+                           const struct NGS_Pileup * pileup )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcRow, rcConstructing );
     
@@ -296,6 +302,14 @@ void NGS_PileupEventInit ( ctx_t ctx, struct NGS_PileupEvent * self, NGS_PileupE
         assert ( vt -> get_indel_type != NULL );
         assert ( vt -> next != NULL );
     }
+    
+    assert ( pileup );
+    self -> pileup = NGS_PileupDuplicate ( pileup, ctx );
+}
+
+void NGS_PileupEventWhack( struct NGS_PileupEvent * self, ctx_t ctx )
+{
+    NGS_PileupRelease ( self -> pileup, ctx );
 }
     
 struct NGS_String * NGS_PileupEventGetReferenceSpec( const NGS_PileupEvent * self, ctx_t ctx )
@@ -418,6 +432,7 @@ int64_t NGS_PileupEventGetLastAlignmentPosition( const NGS_PileupEvent * self, c
     return 0;
 }
 
+/*TODO: use uint32_t to represent all enums */
 int NGS_PileupEventGetEventType( const NGS_PileupEvent * self, ctx_t ctx )
 {
     if ( self == NULL )

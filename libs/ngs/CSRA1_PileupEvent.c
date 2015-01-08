@@ -39,21 +39,13 @@ typedef struct CSRA1_PileupEvent CSRA1_PileupEvent;
 #include <klib/printf.h>
 
 #include "NGS_String.h"
+#include "NGS_Pileup.h"
 
 #include <sysalloc.h>
-
-/* TEMPORARY HACK!! */
-typedef struct CSRA1_Pileup CSRA1_Pileup;
-struct CSRA1_Pileup
-{
-    NGS_Pileup dad;
-};
-
 
 struct CSRA1_PileupEvent
 {
     NGS_PileupEvent dad;
-    CSRA1_Pileup * pileup;
 };
 
 static void                    CSRA1_PileupEventWhack                      ( CSRA1_PileupEvent * self, ctx_t ctx );
@@ -104,26 +96,21 @@ static
 void CSRA1_PileupEventInit ( CSRA1_PileupEvent * self, 
                              ctx_t ctx, 
                              const char *clsname, 
-                             const char *instname,
-                             CSRA1_Pileup * pileup )
+                             const char *instname, 
+                             struct NGS_Pileup* pileup )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     
     assert ( self != NULL );
     
-    TRY ( NGS_PileupEventInit ( ctx, & self -> dad, & CSRA1_PileupEvent_vt_inst, clsname, instname ) ) 
-    {
-        self -> pileup = NGS_RefcountDuplicate ( NGS_PileupToRefcount ( & pileup -> dad ), ctx );
-    }
+    NGS_PileupEventInit ( ctx, & self -> dad, & CSRA1_PileupEvent_vt_inst, clsname, instname, pileup );
 }
 
 static
 void CSRA1_PileupEventWhack ( CSRA1_PileupEvent * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcDestroying );
-    CSRA1_Pileup * pileup = self -> pileup;
-    self -> pileup = NULL;
-    NGS_PileupRelease ( & pileup ->  dad, ctx );
+    NGS_PileupEventWhack ( & self -> dad, ctx );
 }
 
 static
@@ -258,14 +245,14 @@ bool CSRA1_PileupEventIteratorNext ( NGS_PileupEvent * self, ctx_t ctx )
     return false;
 }
 
-struct NGS_PileupEvent* CSRA1_PileupEventIteratorMake ( ctx_t ctx, CSRA1_Pileup * pileup )
+struct NGS_PileupEvent* CSRA1_PileupEventIteratorMake ( ctx_t ctx, struct NGS_Pileup * pileup )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     
     CSRA1_PileupEvent * ref = calloc ( 1, sizeof * ref );
     if ( ref == NULL )
     {
-        NGS_String * ref_spec = NGS_PileupGetReferenceSpec ( & pileup -> dad, ctx );
+        NGS_String* ref_spec = NGS_PileupGetReferenceSpec ( pileup, ctx );
         SYSTEM_ERROR ( xcNoMemory, 
                        "allocating CSRA1_PileupEventIterator on '%.*s'", 
                        NGS_StringSize ( ref_spec, ctx ), 
@@ -275,8 +262,7 @@ struct NGS_PileupEvent* CSRA1_PileupEventIteratorMake ( ctx_t ctx, CSRA1_Pileup 
     else
     {
 #if _DEBUGGING
-        NGS_String * ref_spec = NGS_PileupGetReferenceSpec ( & pileup -> dad, ctx );
-
+        NGS_String * ref_spec = NGS_PileupGetReferenceSpec ( pileup, ctx );
         char instname [ 256 ];
         string_printf ( instname, 
                         sizeof instname, 

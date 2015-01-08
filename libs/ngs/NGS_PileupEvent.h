@@ -46,6 +46,7 @@ extern "C" {
  */
 struct NGS_String;
 struct NGS_Alignment;
+struct NGS_Pileup;
 struct NGS_PileupEvent_v1_vt;
 extern struct NGS_PileupEvent_v1_vt ITF_PileupEvent_vt;
 
@@ -138,6 +139,7 @@ bool NGS_PileupEventIteratorNext ( NGS_PileupEvent * self, ctx_t ctx );
 struct NGS_PileupEvent
 {
     NGS_Refcount dad;
+    struct NGS_Pileup * pileup;
 };
 
 typedef struct NGS_PileupEvent_vt NGS_PileupEvent_vt;
@@ -165,8 +167,17 @@ struct NGS_PileupEvent_vt
 
 /* Init
 */
-void NGS_PileupEventInit ( ctx_t ctx, struct NGS_PileupEvent * self, NGS_PileupEvent_vt * vt, const char *clsname, const char *instname );
+void NGS_PileupEventInit ( ctx_t ctx, 
+                           struct NGS_PileupEvent * self, 
+                           NGS_PileupEvent_vt * vt, 
+                           const char *clsname, 
+                           const char *instname, 
+                           const struct NGS_Pileup * pileup );
 
+/* Whack
+*/
+void NGS_PileupEventWhack( struct NGS_PileupEvent * self, ctx_t ctx );
+                           
 #ifdef __cplusplus
 }
 #endif
