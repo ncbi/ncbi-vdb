@@ -1041,7 +1041,7 @@ static unsigned ParseHD(char const **rslt, unsigned const hlen, char hdata[])
             break;
         }
     }
-    return 0;
+    return st == 4 ? i : 0;
 }
 
 static unsigned ParseSQ(BAMRefSeq *rs, unsigned const hlen, char hdata[])
@@ -1151,7 +1151,7 @@ static unsigned ParseSQ(BAMRefSeq *rs, unsigned const hlen, char hdata[])
             break;
         }
     }
-    return 0;
+    return st == 4 ? i : 0;
 }
 
 static unsigned ParseRG(BAMReadGroup *dst, unsigned const hlen, char hdata[])
@@ -1232,7 +1232,7 @@ static unsigned ParseRG(BAMReadGroup *dst, unsigned const hlen, char hdata[])
             break;
         }
     }
-    return 0;
+    return st == 4 ? i : 0;
 }
 
 static bool ParseHeader(BAMFile *self, char hdata[], size_t hlen) {
@@ -1723,16 +1723,19 @@ static rc_t ProcessSAMHeader(BAMFile *self, char const substitute[])
 
     if (substitute)
         rc = ProcessHeaderText(self, substitute, true);
-    else
+    else if (headerText)
         rc = ProcessHeaderText(self, headerText, false);
-
-    if (rc) return rc;
-    {
-        unsigned i;
-    for (i = 0; i < self->refSeqs; ++i)
-        self->refSeq[i].id = i;
+    else {
+        rc = RC(rcAlign, rcFile, rcConstructing, rcHeader, rcNotFound);
+        (void)LOGERR(klogErr, rc, "SAM header required");
     }
-    return 0;
+    if (rc == 0) {
+        unsigned i;
+
+        for (i = 0; i < self->refSeqs; ++i)
+            self->refSeq[i].id = i;
+    }
+    return rc;
 }
 
 /* MARK: BAM File destructor */
