@@ -82,7 +82,150 @@ static  int64_t  LE2HI64(void const *X) {  int64_t y; memcpy(&y, X, sizeof(y)); 
 #endif
 
 typedef struct BAMIndex BAMIndex;
+typedef struct BufferredFile BufferredFile;
+typedef struct SAMFile SAMFile;
 typedef struct BGZFile BGZFile;
+
+#define ZLIB_BLOCK_SIZE ( 64 * 1024 )
+typedef uint8_t zlib_block_t[ZLIB_BLOCK_SIZE];
+
+typedef struct RawFile_vt_s {
+    rc_t (*FileRead)(void *, zlib_block_t, unsigned *);
+    uint64_t (*FileGetPos)(void const *);
+    float (*FileProPos)(void const *);
+    uint64_t (*FileGetSize)(void const *);
+    rc_t (*FileSetPos)(void *, uint64_t);
+    void (*FileWhack)(void *);
+} RawFile_vt;
+
+/* MARK: SAMFile */
+
+struct BufferredFile {
+    KFile const *kfp;
+    void *buf;
+    uint64_t fpos;      /* position in file of first byte in buffer */
+    size_t bpos;        /* position in buffer of read head */
+    size_t bmax;        /* number of valid bytes in buffer */
+};
+
+#define SAM_FILE_BUFFER_SIZE (4096u)
+struct SAMFile {
+    BufferredFile file;
+    int putback;
+    rc_t last;
+};
+
+static rc_t SAMFileGetMoreBytes(SAMFile *const self)
+{
+    self->last = KFileRead(self->file.kfp, self->file.fpos += self->file.bmax,
+                           self->file.buf, SAM_FILE_BUFFER_SIZE, &self->file.bmax);
+    if (self->last) {
+        DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("Error reading SAM file: %R\n", self->last));
+        return self->last;
+    }
+    self->file.bpos = 0;
+    if (self->file.bmax == 0)
+        return RC(rcAlign, rcFile, rcReading, rcData, rcInsufficient);
+    
+    return 0;
+}
+
+static int SAMFileRead1(SAMFile *const self)
+{
+    if (self->putback >= 0) {
+        int const x = self->putback;
+        self->putback = -1;
+        return x;
+    }
+    if (self->file.bpos == self->file.bmax) {
+        rc_t const rc = SAMFileGetMoreBytes(self);
+        if (rc) return -1;
+    }
+    return ((char const *)self->file.buf)[self->file.bpos++];
+}
+
+static rc_t SAMFileLastError(SAMFile const *const self)
+{
+    return self->last ? self->last : SILENT_RC(rcAlign, rcFile, rcReading, rcData, rcInsufficient);
+}
+
+static void SAMFilePutBack(SAMFile *const self, int ch)
+{
+    self->putback = ch;
+}
+
+static rc_t SAMFileRead(SAMFile *const self, zlib_block_t dst, unsigned *pNumRead)
+{
+    unsigned n;
+    
+    for (n = 0; n < ZLIB_BLOCK_SIZE; ) {
+        int const ch = SAMFileRead1(self);
+        if (ch < 0)
+            return SAMFileLastError(self);
+
+        if (ch == '\n') {
+            *pNumRead = n;
+            return 0;
+        }
+        dst[n++] = ch;
+    }
+    *pNumRead = ZLIB_BLOCK_SIZE;
+    return RC(rcAlign, rcFile, rcReading, rcData, rcInsufficient);
+}
+
+static uint64_t SAMFileGetPos(SAMFile const *const self)
+{
+    return self->file.fpos + self->file.bpos;
+}
+
+static float SAMFileProPos(SAMFile const *const self)
+{
+    return -1.0;
+}
+
+static rc_t SAMFileSetPos(SAMFile *const self, uint64_t const pos)
+{
+    return RC(rcAlign, rcFile, rcPositioning, rcFunction, rcUnsupported);
+}
+
+static uint64_t SAMFileGetSize(SAMFile const *const self)
+{
+    return 0;
+}
+
+static void SAMFileWhack(SAMFile *self)
+{
+    KFileRelease(self->file.kfp);
+    if (self->file.buf)
+        free(self->file.buf);
+}
+
+static
+rc_t SAMFileInit(SAMFile *self, KFile const *kfp, RawFile_vt *vt)
+{
+    static RawFile_vt const my_vt = {
+        (rc_t (*)(void *, zlib_block_t, unsigned *))SAMFileRead,
+        (uint64_t (*)(void const *))SAMFileGetPos,
+        (float (*)(void const *))SAMFileProPos,
+        (uint64_t (*)(void const *))SAMFileGetSize,
+        (rc_t (*)(void *, uint64_t))SAMFileSetPos,
+        (void (*)(void *))SAMFileWhack
+    };
+    
+    memset(self, 0, sizeof(*self));
+    memset(vt, 0, sizeof(*vt));
+    
+    self->file.buf = malloc(4096);
+    if (self->file.buf == NULL)
+        return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
+    self->file.kfp = kfp;
+    KFileAddRef(kfp);
+
+    self->putback = -1;
+    *vt = my_vt;
+    
+    return 0;
+}
 
 /* MARK: BGZFile *** Start *** */
 
@@ -93,34 +236,18 @@ typedef struct BGZFile BGZFile;
 #else
 #endif
 
-#define ZLIB_BLOCK_SIZE ( 64 * 1024 )
-typedef uint8_t zlib_block_t[ZLIB_BLOCK_SIZE];
-
 #define MEM_ALIGN_SIZE ( 64 * 1024 )
 /* MEM_CHUNK_SIZE must be an integer multiple of ZLIB_BLOCK_SIZE.
  * The multiple must be >= 2 shouldn't be < 3.
  */
-#define MEM_CHUNK_SIZE ( 256 * ZLIB_BLOCK_SIZE )
+#define BGZF_MEM_CHUNK_SIZE ( 256 * ZLIB_BLOCK_SIZE )
 #define CG_NUM_SEGS 4
 
-typedef struct BGZFile_vt_s {
-    rc_t (*FileRead)(void *, zlib_block_t, unsigned *);
-    uint64_t (*FileGetPos)(void const *);
-    float (*FileProPos)(void const *);
-    uint64_t (*FileGetSize)(void const *);
-    rc_t (*FileSetPos)(void *, uint64_t);
-    void (*FileWhack)(void *);
-} BGZFile_vt;
-
 struct BGZFile {
+    BufferredFile file;
+    void *_buf;  /* allocated */
     uint64_t fsize;
-    uint64_t fpos;  /* position in file of first byte in buffer */
-    const uint8_t *buf;   /* page aligned or memmapped */
-    const KFile *kfp;
-    uint8_t *_buf;  /* allocated */
     unsigned malign;
-    size_t bcount;  /* number of valid bytes in buffer */
-    uint32_t bpos;  /* position in buffer of read head */
     z_stream zs;
 };
 
@@ -129,22 +256,22 @@ rc_t BGZFileGetMoreBytes(BGZFile *self)
 {
     rc_t rc;
     
-    self->fpos += self->bpos;
-    self->bpos &= (MEM_ALIGN_SIZE - 1);
-    self->fpos -= self->bpos;
+    self->file.fpos += self->file.bpos;
+    self->file.bpos &= (MEM_ALIGN_SIZE - 1);
+    self->file.fpos -= self->file.bpos;
 
-    rc = KFileRead(self->kfp, self->fpos, self->_buf + self->malign,
-                   MEM_CHUNK_SIZE, &self->bcount);
+    rc = KFileRead(self->file.kfp, self->file.fpos, ((char *)self->_buf) + self->malign,
+                   BGZF_MEM_CHUNK_SIZE, &self->file.bmax);
     if (rc) {
         DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("Error reading BAM file: %R\n", rc));
         return rc;
     }
-    if (self->bcount == 0 || self->bcount == self->bpos)
+    if (self->file.bmax == 0 || self->file.bmax == self->file.bpos)
         return RC(rcAlign, rcFile, rcReading, rcData, rcInsufficient);
 
-    self->zs.avail_in = (uInt)(self->bcount - self->bpos);
-    self->zs.next_in = (Bytef *)&self->buf[self->bpos];
-    DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("Read %u bytes from BAM file at position %lu\n", self->zs.avail_in, self->fpos));
+    self->zs.avail_in = (uInt)(self->file.bmax - self->file.bpos);
+    self->zs.next_in = &((Bytef *)self->file.buf)[self->file.bpos];
+    DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("Read %u bytes from BAM file at position %lu\n", self->zs.avail_in, self->file.fpos));
     
     return 0;
 }
@@ -161,7 +288,7 @@ rc_t BGZFileRead(BGZFile *self, zlib_block_t dst, unsigned *pNumRead)
     int zr;
     
     *pNumRead = 0;
-    if (self->bcount == 0 || self->zs.avail_in == 0) {
+    if (self->file.bmax == 0 || self->zs.avail_in == 0) {
         rc = BGZFileGetMoreBytes(self);
         if (rc)
             return rc;
@@ -188,10 +315,10 @@ rc_t BGZFileRead(BGZFile *self, zlib_block_t dst, unsigned *pNumRead)
                 uLong const final = self->zs.total_in;
                 uLong const len = final - initial;
                 
-                self->bpos += len;
+                self->file.bpos += len;
             }
         }
-        assert(self->zs.avail_in == self->bcount - self->bpos);
+        assert(self->zs.avail_in == self->file.bmax - self->file.bpos);
         
         switch (zr) {
         case Z_OK:
@@ -201,7 +328,7 @@ rc_t BGZFileRead(BGZFile *self, zlib_block_t dst, unsigned *pNumRead)
             {
                 if ( GetRCObject( rc ) == (enum RCObject)rcData && GetRCState( rc ) == rcInsufficient )
                 {
-                    DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("EOF in Zlib block after %lu bytes\n", self->fpos + self->bpos));
+                    DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("EOF in Zlib block after %lu bytes\n", self->file.fpos + self->file.bpos));
                     rc = RC( rcAlign, rcFile, rcReading, rcFile, rcTooShort );
                 }
                 return rc;
@@ -248,13 +375,13 @@ rc_t BGZFileRead(BGZFile *self, zlib_block_t dst, unsigned *pNumRead)
             return RC(rcAlign, rcFile, rcReading, rcFile, rcCorrupt);
         }
     }
-    DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("Failed reading BAM file after %lu bytes\n", self->fpos + self->bpos));
+    DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("Failed reading BAM file after %lu bytes\n", self->file.fpos + self->file.bpos));
     return RC(rcAlign, rcFile, rcReading, rcFile, rcTooShort);
 }
 
 static uint64_t BGZFileGetPos(const BGZFile *self)
 {
-    return self->fpos + self->bpos;
+    return self->file.fpos + self->file.bpos;
 }
 
 /* returns the position as proportion of the whole file */ 
@@ -265,19 +392,19 @@ static float BGZFileProPos(BGZFile const *const self)
 
 static rc_t BGZFileSetPos(BGZFile *const self, uint64_t const pos)
 {
-    if (self->fpos > pos || pos >= self->fpos + self->bcount) {
+    if (self->file.fpos > pos || pos >= self->file.fpos + self->file.bmax) {
         /* desired position is outside of current buffer */
-        self->fpos = pos ^ (pos & ((uint64_t)(MEM_ALIGN_SIZE - 1)));
-        self->bpos = (unsigned)(pos - self->fpos);
-        self->bcount = 0; /* force re-read */
+        self->file.fpos = pos ^ (pos & ((uint64_t)(MEM_ALIGN_SIZE - 1)));
+        self->file.bpos = (unsigned)(pos - self->file.fpos);
+        self->file.bmax = 0; /* force re-read */
     }
     else {
         /* desired position is inside of current buffer */
-        unsigned const bpos = (unsigned)(pos - self->fpos); /* < 64k */
+        unsigned const bpos = (unsigned)(pos - self->file.fpos); /* < 64k */
 
-        self->bpos = bpos; /* pos - self->fpos; */
-        self->zs.avail_in = (uInt)(self->bcount - bpos);
-        self->zs.next_in = (Bytef *)&self->buf[bpos];
+        self->file.bpos = bpos; /* pos - self->fpos; */
+        self->zs.avail_in = (uInt)(self->file.bmax - bpos);
+        self->zs.next_in = &((Bytef *)self->file.buf)[bpos];
     }
     return 0;
 }
@@ -305,7 +432,7 @@ static rc_t BGZFileWalkBlocksND(BGZFile *const self, BGZFileWalkBlocks_cb const 
         unsigned hsize = 0;
         unsigned bsize = 0;
         unsigned bsize2;
-        uint64_t const fpos = self->fpos + self->bpos;
+        uint64_t const fpos = self->file.fpos + self->file.bpos;
         
         self->zs.next_out = (Bytef *)dummy;
         self->zs.avail_out = sizeof(dummy);
@@ -322,7 +449,7 @@ static rc_t BGZFileWalkBlocksND(BGZFile *const self, BGZFileWalkBlocks_cb const 
                     uLong const final = self->zs.total_in;
                     uLong const bytes = final - orig;
                     
-                    self->bpos += bytes;
+                    self->file.bpos += bytes;
                     hsize += bytes;
                 }
             }
@@ -357,12 +484,12 @@ static rc_t BGZFileWalkBlocksND(BGZFile *const self, BGZFileWalkBlocks_cb const 
         bsize2 = bsize;
         bsize -= hsize;
         for ( ; ; ) {
-            unsigned const max = (unsigned)(self->bcount - self->bpos); /* <= 64k */
+            unsigned const max = (unsigned)(self->file.bmax - self->file.bpos); /* <= 64k */
             unsigned const len = bsize > max ? max : bsize;
             
-            self->bpos += len;
+            self->file.bpos += len;
             bsize -= len;
-            if (self->bpos == self->bcount) {
+            if (self->file.bpos == self->file.bmax) {
                 rc = BGZFileGetMoreBytes(self);
                 if (rc) {
                     if (bsize)
@@ -373,8 +500,8 @@ static rc_t BGZFileWalkBlocksND(BGZFile *const self, BGZFileWalkBlocks_cb const 
             else {
                 zr = inflateReset(&self->zs);
                 assert(zr == Z_OK);
-                self->zs.avail_in = (uInt)(self->bcount - self->bpos);
-                self->zs.next_in = (Bytef *)&self->buf[self->bpos];
+                self->zs.avail_in = (uInt)(self->file.bmax - self->file.bpos);
+                self->zs.next_in = &((Bytef *)self->file.buf)[self->file.bpos];
                 rc = cb(ctx, self, 0, fpos, NULL, bsize2);
                 break;
             }
@@ -383,7 +510,7 @@ static rc_t BGZFileWalkBlocksND(BGZFile *const self, BGZFileWalkBlocks_cb const 
 DONE:
     if ( GetRCState( rc ) == rcInsufficient && GetRCObject( rc ) == (enum RCObject)rcData )
         rc = 0;
-    rc = cb( ctx, self, rc, self->fpos + self->bpos, NULL, 0 );
+    rc = cb( ctx, self, rc, self->file.fpos + self->file.bpos, NULL, 0 );
 #endif
     return rc;
 }
@@ -394,7 +521,7 @@ static rc_t BGZFileWalkBlocksUnzip(BGZFile *const self, zlib_block_t *const bufp
     rc_t rc2;
     
     do {
-        uint64_t const fpos = self->fpos + self->bpos;
+        uint64_t const fpos = self->file.fpos + self->file.bpos;
         unsigned dsize;
         
         rc2 = BGZFileRead(self, *bufp, &dsize);
@@ -402,7 +529,7 @@ static rc_t BGZFileWalkBlocksUnzip(BGZFile *const self, zlib_block_t *const bufp
     } while (rc == 0 && rc2 == 0);
     if ( GetRCState( rc2 ) == rcInsufficient && GetRCObject( rc2 ) == (enum RCObject)rcData )
         rc2 = 0;
-    rc = cb( ctx, self, rc2, self->fpos + self->bpos, NULL, 0 );
+    rc = cb( ctx, self, rc2, self->file.fpos + self->file.bpos, NULL, 0 );
     return rc ? rc : rc2;
 }
 
@@ -415,8 +542,8 @@ static rc_t BGZFileWalkBlocks(BGZFile *self, bool decompress, zlib_block_t *bufp
 #else
     decompress = true;
 #endif
-    self->fpos = 0;
-    self->bpos = 0;
+    self->file.fpos = 0;
+    self->file.bpos = 0;
     
     rc = BGZFileGetMoreBytes(self);
     if (rc)
@@ -436,16 +563,16 @@ static uint64_t BGZFileGetSize(BGZFile const *const self)
 static void BGZFileWhack(BGZFile *self)
 {
     inflateEnd(&self->zs);
-    KFileRelease(self->kfp);
+    KFileRelease(self->file.kfp);
     if (self->_buf)
         free(self->_buf);
 }
 
-static rc_t BGZFileInit(BGZFile *self, const KFile *kfp, BGZFile_vt *vt)
+static rc_t BGZFileInit(BGZFile *self, const KFile *kfp, RawFile_vt *vt)
 {
     int i;
     rc_t rc;
-    static BGZFile_vt const my_vt = {
+    static RawFile_vt const my_vt = {
         (rc_t (*)(void *, zlib_block_t, unsigned *))BGZFileRead,
         (uint64_t (*)(void const *))BGZFileGetPos,
         (float (*)(void const *))BGZFileProPos,
@@ -457,6 +584,10 @@ static rc_t BGZFileInit(BGZFile *self, const KFile *kfp, BGZFile_vt *vt)
     memset(self, 0, sizeof(*self));
     memset(vt, 0, sizeof(*vt));
     
+    rc = KFileSize(kfp, &self->fsize);
+    if (rc)
+        return rc;
+    
     i = inflateInit2(&self->zs, MAX_WBITS + 16); /* max + enable gzip headers */
     switch (i) {
     case Z_OK:
@@ -467,189 +598,19 @@ static rc_t BGZFileInit(BGZFile *self, const KFile *kfp, BGZFile_vt *vt)
         return RC(rcAlign, rcFile, rcConstructing, rcNoObj, rcUnexpected);
     }
     
-    rc = KFileSize(kfp, &self->fsize);
-    if (rc)
-        return rc;
-    
-    self->_buf = malloc(MEM_CHUNK_SIZE + MEM_ALIGN_SIZE);
+    self->_buf = malloc(BGZF_MEM_CHUNK_SIZE + MEM_ALIGN_SIZE);
     if (self->_buf == NULL)
         return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
     self->malign = (MEM_ALIGN_SIZE - ((intptr_t)self->_buf & (MEM_ALIGN_SIZE - 1))) & (MEM_ALIGN_SIZE - 1);
-    self->buf = self->_buf + self->malign;
+    self->file.buf = &((char *)self->_buf)[self->malign];
     
-    self->kfp = kfp;
+    self->file.kfp = kfp;
     KFileAddRef(kfp);
 
     *vt = my_vt;
     
     return 0;
 }
-
-#ifndef WINDOWS
-
-/* MARK: BGZThreadFile *** Start *** */
-
-#include <kproc/thread.h>
-#include <kproc/lock.h>
-#include <kproc/cond.h>
-
-typedef struct BGZThreadFile_s BGZThreadFile;
-
-#define BUFFER_COUNT (3)
-
-typedef struct BGZThreadFileWorkQElem_s BGZThreadFileWorkQElem;
-
-struct BGZThreadFileWorkQElem_s {
-    uint8_t *buf;
-    uint64_t pos;
-    unsigned bsz;
-};
-
-struct BGZThreadFile_s {
-    BGZFile file;
-    KLock *lock;
-    KCondition *have_data;
-    KCondition *need_data;
-    KThread *th;
-    uint64_t pos;
-    BGZThreadFileWorkQElem que[BUFFER_COUNT];
-    rc_t volatile rc;
-    unsigned volatile nque;
-    bool eof;
-    uint8_t buffer[sizeof(zlib_block_t) * BUFFER_COUNT];
-};
-
-static rc_t BGZThreadFileRead(BGZThreadFile *self, zlib_block_t dst, unsigned *pNumRead)
-{
-    rc_t rc;
-    
-    *pNumRead = 0;
-    
-    KLockAcquire(self->lock);
-    if ((rc = self->rc) == 0) {
-        while (self->nque == 0 && (rc = self->rc) == 0)
-            KConditionWait(self->have_data, self->lock);
-        if (rc == 0) {
-            BGZThreadFileWorkQElem const work = self->que[0];
-            
-            self->pos = work.pos;
-            if (work.buf) {
-                memcpy(dst, work.buf, *pNumRead = work.bsz);
-                memmove(&self->que[0], &self->que[1], --self->nque * sizeof(self->que[0]));
-                KConditionSignal(self->need_data);
-            }
-            else {
-                self->eof = true;
-                self->rc = rc = RC(rcAlign, rcFile, rcReading, rcData, rcInsufficient);
-            }
-        }
-    }
-    KLockUnlock(self->lock);
-    return rc;
-}
-
-static rc_t CC BGZThreadFileMain(KThread const *const th, void *const vp)
-{
-    BGZThreadFile *const self = (BGZThreadFile *)vp;
-    rc_t rc = 0;
-    unsigned bufno;
-    
-    KLockAcquire(self->lock);
-    for (bufno = 0; ; bufno = (bufno + 1) % BUFFER_COUNT) {
-        while (self->nque == BUFFER_COUNT)
-            KConditionWait(self->need_data, self->lock);
-        {
-            BGZThreadFileWorkQElem work;
-            
-            work.pos = BGZFileGetPos(&self->file);
-            work.buf = &self->buffer[bufno * sizeof(zlib_block_t)];
-            rc = BGZFileRead(&self->file, work.buf, &work.bsz);
-            if ( GetRCObject( rc ) == (enum RCObject)rcData && GetRCState( rc ) == rcInsufficient )
-                work.buf = NULL;
-            else if ( rc != 0 )
-                break;
-            self->que[self->nque++] = work;
-            KConditionSignal(self->have_data);
-        }
-    }
-    self->rc = rc;
-    KLockUnlock(self->lock);
-    return 0;
-}
-
-static uint64_t BGZThreadFileGetPos(BGZThreadFile const *const self)
-{
-    return self->pos;
-}
-
-/* returns the position as proportion of the whole file */ 
-static float BGZThreadFileProPos(BGZThreadFile const *const self)
-{
-    return BGZThreadFileGetPos(self) / (double)self->file.fsize;
-}
-
-static uint64_t BGZThreadFileGetSize(BGZThreadFile const *const self)
-{
-    return BGZFileGetSize(&self->file);
-}
-
-static rc_t BGZThreadFileSetPos(BGZThreadFile *const self)
-{
-    return RC(rcAlign, rcFile, rcPositioning, rcFunction, rcUnsupported);
-}
-
-static void BGZThreadFileWhack(BGZThreadFile *const self)
-{
-    KThreadCancel(self->th);
-    KThreadWait(self->th, NULL);
-    BGZFileWhack(&self->file);
-    KConditionRelease(self->need_data);
-    KConditionRelease(self->have_data);
-    KLockRelease(self->lock);
-    KThreadRelease(self->th);
-}
-
-static rc_t BGZThreadFileInit(BGZThreadFile *self, const KFile *kfp, BGZFile_vt *vt)
-{
-    rc_t rc;
-    static BGZFile_vt const my_vt = {
-        (rc_t (*)(void *, zlib_block_t, unsigned *))BGZThreadFileRead,
-        (uint64_t (*)(void const *))BGZThreadFileGetPos,
-        (float (*)(void const *))BGZThreadFileProPos,
-        (uint64_t (*)(void const *))BGZThreadFileGetSize,
-        (rc_t (*)(void *, uint64_t))BGZThreadFileSetPos,
-        (void (*)(void *))BGZThreadFileWhack
-    };
-    
-    memset(self, 0, sizeof(*self));
-    
-    rc = BGZFileInit(&self->file, kfp, vt);
-    if (rc == 0) {
-        rc = KLockMake(&self->lock);
-        if (rc == 0) {
-            rc = KConditionMake(&self->have_data);
-            if (rc == 0) {
-                rc = KConditionMake(&self->need_data);
-                if (rc == 0) {
-                    rc = KThreadMake(&self->th, BGZThreadFileMain, self);
-                    if (rc == 0) {
-                        *vt = my_vt;
-                        return 0;
-                    }
-                    KConditionRelease(self->need_data);
-                }
-                KConditionRelease(self->have_data);
-            }
-            KLockRelease(self->lock);
-        }
-        BGZFileWhack(&self->file);
-    }
-    memset(self, 0, sizeof(*self));
-    memset(vt, 0, sizeof(*vt));
-    return rc;
-}
-
-#endif
 
 /* MARK: BAMFile structures */
 
@@ -658,38 +619,35 @@ struct BAMIndex {
 };
 
 struct BAMFile {
-    uint64_t fpos_first;
-    uint64_t fpos_cur;
-    
     union {
-        BGZFile plain;
-#ifndef WINDOWS
-        BGZThreadFile thread;
-#endif
+        BGZFile bam;
+        SAMFile sam;
     } file;
-    BGZFile_vt vt;
+    RawFile_vt vt;
     
     BAMRefSeq *refSeq;          /* pointers into headerData1 except name points into headerData2 */ 
     BAMReadGroup *readGroup;    /* pointers into headerData1 */
     char const *version;
     char const *header;
-    char    *headerData1;       /* gets used for refSeq and readGroup */
-    uint8_t *headerData2;       /* gets used for refSeq */
+    void *headerData1;          /* gets used for refSeq and readGroup */
+    void *headerData2;          /* gets used for refSeq */
     BAMAlignment *bufLocker;
     BAMAlignment *nocopy;       /* used to hold current record for BAMFileRead2 */
     BAMIndex const *ndx;
     
+    uint64_t fpos_first;
+    uint64_t fpos_cur;
+    
     size_t nocopy_size;
     
+    KRefcount refcount;
     unsigned refSeqs;
     unsigned readGroups;
-    
-    KRefcount refcount;
     unsigned ucfirst;           /* offset of first record in uncompressed buffer */
     unsigned bufSize;           /* current size of uncompressed buffer */
     unsigned bufCurrent;        /* location in uncompressed buffer of read head */
     bool eof;
-    bool threaded;
+    bool isSAM;
     zlib_block_t buffer;        /* uncompressed buffer */
 };
 
@@ -811,7 +769,7 @@ static void const *getCigarBase(BAMAlignment const *cself)
     return &cself->data->raw[cself->cigar];
 }
 
-static int opt_tag_cmp(uint8_t const a[2], uint8_t const b[2])
+static int opt_tag_cmp(char const a[2], char const b[2])
 {
     int const d0 = (int)a[0] - (int)b[0];
     return d0 ? d0 : ((int)a[1] - (int)b[1]);
@@ -822,8 +780,8 @@ static int CC OptTag_sort(void const *A, void const *B, void *ctx)
     BAMAlignment const *const self = ctx;
     unsigned const a_off = ((struct offset_size_s const *)A)->offset;
     unsigned const b_off = ((struct offset_size_s const *)B)->offset;
-    uint8_t const *const a = &self->data->raw[a_off];
-    uint8_t const *const b = &self->data->raw[b_off];
+    char const *const a = (char const *)&self->data->raw[a_off];
+    char const *const b = (char const *)&self->data->raw[b_off];
     int const diff = opt_tag_cmp(a, b);
     
     return diff ? diff : (int)(a - b);
@@ -835,8 +793,8 @@ static unsigned tag_findfirst(BAMAlignment const *const self, char const tag[2])
     unsigned e = self->numExtra;
     
     while (f < e) {
-        unsigned const m = (f + e) >> 1;
-        char const *const mtag = &self->data->raw[self->extra[m].offset];
+        unsigned const m = f + ((e - f) >> 1);
+        char const *const mtag = (char const *)&self->data->raw[self->extra[m].offset];
         int const d = opt_tag_cmp(tag, mtag);
         
         if (d > 0)
@@ -854,7 +812,7 @@ static unsigned tag_runlength(BAMAlignment const *const self,
     unsigned n;
     
     for (n = 0; n + at < self->numExtra; ++n) {
-        if (opt_tag_cmp(tag, &self->data->raw[self->extra[n + at].offset]) != 0)
+        if (opt_tag_cmp(tag, (char const *)&self->data->raw[self->extra[n + at].offset]) != 0)
             break;
     }
     return n;
@@ -1032,11 +990,7 @@ static rc_t BAMFileReadI32(BAMFile *self, int32_t *rhs)
 
 /* MARK: BAM File header parsing functions */
 
-static int CC comp_ReadGroup(const void *a, const void *b, void *ignored) {
-    return strcmp(((BAMReadGroup const *)a)->name, ((BAMReadGroup const *)b)->name);
-}
-
-static rc_t ParseHD(BAMFile *self, char hdata[], size_t hlen, unsigned *used)
+static unsigned ParseHD(char const **rslt, unsigned const hlen, char hdata[])
 {
     unsigned i;
     unsigned tag;
@@ -1058,12 +1012,12 @@ static rc_t ParseHD(BAMFile *self, char hdata[], size_t hlen, unsigned *used)
             break;
         case 1:
             if (isspace(cc))
-                return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
+                return 0;
             ++st;
             break;
         case 2:
             if (cc != ':')
-                return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
+                return 0;
             hdata[i] = '\0';
             value = i + 1;
             ++st;
@@ -1073,7 +1027,7 @@ static rc_t ParseHD(BAMFile *self, char hdata[], size_t hlen, unsigned *used)
                 hdata[i] = '\0';
                 
                 if (strcmp(&hdata[tag], "VN") == 0)
-                    self->version = &hdata[value];
+                    *rslt = &hdata[value];
                 
                 ++st;
                 ws = 1;
@@ -1081,30 +1035,22 @@ static rc_t ParseHD(BAMFile *self, char hdata[], size_t hlen, unsigned *used)
             break;
         case 4:
             if (cc == '@')
-                goto DONE;
+                return i;
             tag = i;
             st = 1;
             break;
         }
     }
-    if (st == 4) {
-DONE:
-        *used = i;
-        return 0;
-    }
-    return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
+    return 0;
 }
 
-static rc_t ParseSQ(BAMFile *self, char hdata[], size_t hlen, unsigned *used, unsigned const rs_by_name[])
+static unsigned ParseSQ(BAMRefSeq *rs, unsigned const hlen, char hdata[])
 {
     unsigned i;
     unsigned tag;
     unsigned value;
     int st = 0;
     int ws = 1;
-    BAMRefSeq rs;
-    
-    memset(&rs, 0, sizeof(rs));
     
     for (i = 0; i < hlen; ++i) {
         char const cc = hdata[i];
@@ -1120,7 +1066,7 @@ static rc_t ParseSQ(BAMFile *self, char hdata[], size_t hlen, unsigned *used, un
             break;
         case 1:
             if (isspace(cc))
-                return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
+                return 0;
             ++st;
             break;
         case 2:
@@ -1128,13 +1074,13 @@ static rc_t ParseSQ(BAMFile *self, char hdata[], size_t hlen, unsigned *used, un
 #if HACKAMATIC
             if (cc != ':') {
                 if (i + 1 >= hlen || hdata[i+1] != ':')
-                    return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
+                    return 0;
                 else
                     ++i;
             }
 #else
             if (cc != ':')
-                return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
+                return 0;
 #endif
             hdata[i] = '\0';
             value = i + 1;
@@ -1152,11 +1098,11 @@ static rc_t ParseSQ(BAMFile *self, char hdata[], size_t hlen, unsigned *used, un
                     hdata[--j] = '\0';
                 
                 if (strcmp(&hdata[tag], "SN") == 0)
-                    rs.name = &hdata[value];
+                    rs->name = &hdata[value];
                 else if (strcmp(&hdata[tag], "LN") == 0)
-                    rs.length = strtou64(&hdata[value], NULL, 10);
+                    rs->length = strtou64(&hdata[value], NULL, 10);
                 else if (strcmp(&hdata[tag], "AS") == 0)
-                    rs.assemblyId = &hdata[value];
+                    rs->assemblyId = &hdata[value];
 #if HACKAMATIC
                 else if (strcmp(&hdata[tag], "M5") == 0 || strcmp(&hdata[tag], "MD5") == 0)
 #else
@@ -1171,27 +1117,27 @@ static rc_t ParseSQ(BAMFile *self, char hdata[], size_t hlen, unsigned *used, un
                         len -= 2;
                     }
                     if (len == 32) {
-                        rs.checksum = &rs.checksum_array[0];
+                        rs->checksum = &rs->checksum_array[0];
                         for (j = 0; j != 16; ++j) {
                             int const ch1 = toupper(hdata[value + j * 2 + 0]);
                             int const ch2 = toupper(hdata[value + j * 2 + 1]);
                             
                             if (isxdigit(ch1) && isxdigit(ch2)) {
-                                rs.checksum_array[j] =
+                                rs->checksum_array[j] =
                                     ((ch1 > '9' ? (ch1 - ('A' - 10)) : (ch1 - '0')) << 4) +
                                      (ch2 > '9' ? (ch2 - ('A' - 10)) : (ch2 - '0'));
                             }
                             else {
-                                rs.checksum = NULL;
+                                rs->checksum = NULL;
                                 break;
                             }
                         }
                     }
                 }
                 else if (strcmp(&hdata[tag], "UR") == 0)
-                    rs.uri = &hdata[value];
+                    rs->uri = &hdata[value];
                 else if (strcmp(&hdata[tag], "SP") == 0)
-                    rs.species = &hdata[value];
+                    rs->species = &hdata[value];
                 
                 ++st;
                 ws = 1;
@@ -1199,60 +1145,22 @@ static rc_t ParseSQ(BAMFile *self, char hdata[], size_t hlen, unsigned *used, un
             break;
         case 4:
             if (cc == '@')
-                goto DONE;
+                return i;
             tag = i;
             st = 1;
             break;
         }
     }
-DONE:
-    if (st == 4) {
-        unsigned f = 0;
-        unsigned e = self->refSeqs;
-        
-        if (rs.name == NULL) /* required tags */
-            return RC(rcAlign, rcFile, rcParsing, rcConstraint, rcViolated);
-        
-        while (f < e) {
-            unsigned const m = (f + e) >> 1;
-            BAMRefSeq *const x = &self->refSeq[rs_by_name[m]];
-            int const cmp = strcmp(rs.name, x->name);
-            
-            if (cmp < 0)
-                e = m;
-            else if (cmp > 0)
-                f = m + 1;
-            else {
-                x->assemblyId = rs.assemblyId;
-                x->uri = rs.uri;
-                x->species = rs.species;
-                if (rs.checksum) {
-                    x->checksum = &x->checksum_array[0];
-                    memcpy(x->checksum_array, rs.checksum_array, 16);
-                }
-                else
-                    x->checksum = NULL;
-                break;
-            }
-        }
-        *used = i;
-        return 0;
-    }
-    return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
+    return 0;
 }
 
-static rc_t ParseRG(BAMFile *self, char hdata[], size_t hlen, unsigned *used, BAMReadGroup *dst)
+static unsigned ParseRG(BAMReadGroup *dst, unsigned const hlen, char hdata[])
 {
     unsigned i;
     unsigned tag;
     unsigned value;
     int st = 0;
     int ws = 1;
-#if _DEBUGGING
-/*    char const *cur = hdata; */
-#endif
-    
-    memset(dst, 0, sizeof(*dst));
     
     for (i = 0; i < hlen; ++i) {
         char const cc = hdata[i];
@@ -1268,15 +1176,12 @@ static rc_t ParseRG(BAMFile *self, char hdata[], size_t hlen, unsigned *used, BA
             break;
         case 1:
             if (isspace(cc))
-                return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
+                return 0;
             ++st;
             break;
         case 2:
             if (cc != ':')
-                return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
-#if _DEBUGGING
-            /* cur = hdata + i + 1; */
-#endif
+                return 0;
             hdata[i] = '\0';
             value = i + 1;
             ++st;
@@ -1284,9 +1189,7 @@ static rc_t ParseRG(BAMFile *self, char hdata[], size_t hlen, unsigned *used, BA
         case 3:
             if (cc == '\t' || cc == '\r' || cc == '\n') {
                 unsigned j = i;
-#if _DEBUGGING
-                /* cur = hdata + i + 1; */
-#endif
+
                 hdata[i] = '\0';
 
                 while (value < i && isspace(hdata[value]))
@@ -1323,30 +1226,22 @@ static rc_t ParseRG(BAMFile *self, char hdata[], size_t hlen, unsigned *used, BA
             break;
         case 4:
             if (cc == '@')
-                goto DONE;
+                return i;
             tag = i;
             st = 1;
             break;
         }
     }
-    if (st == 4) {
-DONE:
-        *used = i;
-        if (dst->name == NULL) /* required */
-            return RC(rcAlign, rcFile, rcParsing, rcConstraint, rcViolated);
-        return 0;
-    }
-    return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
+    return 0;
 }
 
-static rc_t ParseHeader(BAMFile *self, char hdata[], size_t hlen, unsigned const rs_by_name[]) {
+static bool ParseHeader(BAMFile *self, char hdata[], size_t hlen) {
     unsigned rg = 0;
+    unsigned sq = 0;
     unsigned i;
     unsigned tag;
     int st = 0;
     int ws = 1;
-    unsigned used;
-    rc_t rc;
     
     for (i = 0; i < hlen; ++i) {
         char const cc = hdata[i];
@@ -1360,11 +1255,11 @@ static rc_t ParseHeader(BAMFile *self, char hdata[], size_t hlen, unsigned const
             if (cc == '@')
                 ++st;
             else
-                return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
+                return false;
             break;
         case 1:
             if (isspace(cc))
-                return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
+                return false;
             tag = i;
             ++st;
             break;
@@ -1373,30 +1268,25 @@ static rc_t ParseHeader(BAMFile *self, char hdata[], size_t hlen, unsigned const
                 hdata[i] = '\0';
                 if (i - tag == 2) {
                     if (strcmp(&hdata[tag], "HD") == 0) {
-                        rc = ParseHD(self, &hdata[i + 1], hlen - i - 1, &used);
-                        if (rc) return rc;
+                        unsigned const used = ParseHD(&self->version, hlen - i - 1, &hdata[i + 1]);
+                        if (used == 0) return false;
                         i += used;
                         st = 0;
+                        break;
                     }
-                    else if (strcmp(&hdata[tag], "SQ") == 0) {
-                        rc = ParseSQ(self, &hdata[i + 1], hlen - i - 1, &used, rs_by_name);
-                        if (rc) return rc;
+                    if (strcmp(&hdata[tag], "SQ") == 0) {
+                        unsigned const used = ParseSQ(&self->refSeq[sq++], hlen - i - 1, &hdata[i + 1]);
+                        if (used == 0) return false;
                         i += used;
                         st = 0;
+                        break;
                     }
-                    else if (strcmp(&hdata[tag], "RG") == 0) {
-                        rc = ParseRG(self, &hdata[i + 1], hlen - i - 1, &used, &self->readGroup[rg]);
-                        if (GetRCObject(rc) == rcConstraint && GetRCState(rc) == rcViolated) {
-                            (void)LOGERR(klogWarn, rc, "Read Group is missing ID in BAM header");
-                            rc = 0;
-                            if (self->readGroups) --self->readGroups;
-                        }
-                        else if (rc)
-                            return rc;
-                        else
-                            ++rg;
+                    if (strcmp(&hdata[tag], "RG") == 0) {
+                        unsigned const used = ParseRG(&self->readGroup[rg++], hlen - i - 1, &hdata[i + 1]);
+                        if (used == 0) return false;
                         i += used;
                         st = 0;
+                        break;
                     }
                 }
                 if (st == 2) {
@@ -1415,37 +1305,189 @@ static rc_t ParseHeader(BAMFile *self, char hdata[], size_t hlen, unsigned const
             break;
         }
     }
-    ksort( self->readGroup, self->readGroups, sizeof(self->readGroup[0]), comp_ReadGroup, NULL );
-    for (rg = 0; rg != self->readGroups; ++rg) {
-        if (rg > 0 && strcmp(self->readGroup[rg - 1].name, self->readGroup[rg].name) == 0)
-            return RC(rcAlign, rcFile, rcParsing, rcConstraint, rcViolated);  /* name must be unique */
-        self->readGroup[rg].id = rg;
+    return true;
+}
+
+static int CC comp_ReadGroup(const void *A, const void *B, void *ignored) {
+    BAMReadGroup const *const a = A;
+    BAMReadGroup const *const b = B;
+
+    /* make null names sort to the bottom */
+    if (a->name == NULL || b->name == NULL)
+        return 0;
+    if (a->name == NULL)
+        return 1;
+    if (b->name == NULL)
+        return -1;
+    
+    /* make empty names sort to the bottom */
+    if (a->name[0] == '\0' || b->name[0] == '\0')
+        return 0;
+    if (a->name[0] == '\0')
+        return 1;
+    if (b->name[0] == '\0')
+        return -1;
+    
+    return strcmp(a->name, b->name);
+}
+
+static int CC comp_RefSeqName(const void *A, const void *B, void *ignored) {
+    BAMRefSeq const *const a = A;
+    BAMRefSeq const *const b = B;
+    
+    /* make null names sort to the bottom */
+    if (a->name == NULL || b->name == NULL)
+        return 0;
+    if (a->name == NULL)
+        return 1;
+    if (b->name == NULL)
+        return -1;
+    
+    /* make empty names sort to the bottom */
+    if (a->name[0] == '\0' || b->name[0] == '\0')
+        return 0;
+    if (a->name[0] == '\0')
+        return 1;
+    if (b->name[0] == '\0')
+        return -1;
+    
+    int const cmp = strcmp(a->name, b->name);
+    return cmp == 0 ? a->id - b->id : cmp;
+}
+
+static unsigned MeasureHeader(unsigned *RG, unsigned *SQ, char const text[])
+{
+    unsigned size;
+    unsigned cur = 0;
+
+    for (size = 0; ; ++size) {
+        int const ch = text[size];
+
+        if (ch == '\0')
+            return size;
+        if (ch == '\n') {
+            cur = 0;
+            continue;
+        }
+        if (++cur == 3) {
+            if (text[size - 1] == 'R' && ch == 'G') {
+                ++*RG;
+                continue;
+            }
+            if (text[size - 1] == 'S' && ch == 'Q') {
+                ++*SQ;
+                continue;
+            }
+        }
     }
-    for (i = 0; i < self->refSeqs; ++i) {
-        if (self->refSeq[i].length == 0) {
-            (void)PLOGMSG(klogWarn, (klogWarn, "Reference '$(ref)' has zero length", "ref=%s", self->refSeq[i].name));
+}
+
+static rc_t ProcessHeaderText(BAMFile *self, char const text[], bool makeCopy)
+{
+    unsigned RG = 0;
+    unsigned SQ = 0;
+    unsigned const size = MeasureHeader(&RG, &SQ, text);
+
+    if (SQ) {
+        self->refSeq = calloc(SQ, sizeof(self->refSeq[0]));
+        if (self->refSeq == NULL)
+            return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
+    }
+    self->refSeqs = SQ;
+
+    if (RG) {
+        self->readGroup = calloc(RG, sizeof(self->readGroup[0]));
+        if (self->readGroup == NULL)
+            return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
+    }
+    self->readGroups = RG;
+
+    if (makeCopy) {
+        void *const tmp = malloc(size + 1);
+        if (tmp == NULL)
+            return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
+        self->header = tmp;  /* a const copy of the original */
+        memcpy(tmp, text, size + 1);
+    }
+    else
+        self->header = text;
+    
+    char *const copy = malloc(size + 1); /* an editable copy */
+    if (copy == NULL)
+        return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
+    self->headerData1 = copy; /* so it's not leaked */
+    memcpy(copy, text, size + 1);
+
+    bool const parsed = ParseHeader(self, copy, size);
+    if (!parsed)
+        return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
+    
+    for (unsigned i = 0; i < self->readGroups; ++i)
+        self->readGroup[i].id = i;
+    
+    ksort(self->readGroup, self->readGroups, sizeof(self->readGroup[0]), comp_ReadGroup, NULL);
+    
+    /* remove read groups with missing and empty names */
+    for (unsigned i = self->readGroups; i != 0; ) {
+        BAMReadGroup const *const rg = &self->readGroup[--i];
+        char const *const name = rg->name;
+        if (name == NULL || name[0] == '\0') {
+            (void)PLOGMSG(klogWarn, (klogWarn, "Read Group #$(rg) is missing ID in SAM header", "rg=%i", (int)rg->id));
+            --self->readGroups;
         }
     }
     
-    return 0;
-}
+    /* check for duplicate read groups names */
+    for (unsigned i = 1; i < self->readGroups; ++i) {
+        BAMReadGroup const *const a = &self->readGroup[i - 1];
+        BAMReadGroup const *const b = &self->readGroup[i - 0];
+        
+        if (strcmp(a->name, b->name) == 0) {
+            (void)PLOGMSG(klogWarn, (klogWarn, "Read Groups #$(r1) and #$(r2) have the same ID '$(id)' in SAM header",
+                                     "r1=%i,r2=%i,id=%s", (int)a->id, (int)b->id, a->name));
+        }
+    }
 
-static rc_t CountReadGroups(char const txt[], size_t len, unsigned *reads) {
-    const char *const endp = txt + len;
+    /* these id's are temporary, for reporting only
+     * in BAM, they'll get the id from the second part of the header
+     * in SAM, they'll get reassigned in alphabetical order
+     */
+    for (unsigned i = 0; i < self->refSeqs; ++i)
+        self->refSeq[i].id = i;
     
-    *reads = 0;
+    ksort(self->refSeq, self->refSeqs, sizeof(self->refSeq[0]), comp_RefSeqName, NULL);
     
-    do {
-        while (txt != endp && isspace(*txt))
-            ++txt;
-        if (txt == endp || txt + 3 >= endp)
-            break;
+    /* remove references with missing and empty names */
+    for (unsigned i = self->refSeqs; i != 0; ) {
+        BAMRefSeq const *const ref = &self->refSeq[--i];
+        char const *const name = ref->name;
+        if (name == NULL || name[0] == '\0') {
+            (void)PLOGMSG(klogWarn, (klogWarn, "Reference #$(rg) is missing name in SAM header", "rg=%i", (int)ref->id));
+            --self->refSeqs;
+        }
+    }
+    
+    /* check for and remove duplicate reference names */
+    for (unsigned i = self->refSeqs; i > 1; --i) {
+        BAMRefSeq *const a = &self->refSeq[i - 2];
+        BAMRefSeq *const b = &self->refSeq[i - 1];
         
-        if (txt[0] == '@' && txt[1] == 'R' && txt[2] == 'G')
-            ++*reads;
+        if (strcmp(a->name, b->name) == 0) {
+            (void)PLOGMSG(klogWarn, (klogWarn, "References #$(r1) and #$(r2) have the same name '$(id)' in SAM header",
+                                     "r1=%i,r2=%i,id=%s", (int)a->id, (int)b->id, a->name));
+            memmove(a, b, (self->refSeqs - i + 1) * sizeof(self->refSeq[0]));
+            --self->refSeqs;
+        }
+    }
+    
+    /* check for zero-length references */
+    for (unsigned i = 0; i != self->refSeqs; ++i) {
+        BAMRefSeq const *const rs = &self->refSeq[i];
         
-        txt = memchr(txt, '\n', endp - txt);
-    } while (txt);
+        if (rs->length == 0)
+            (void)PLOGMSG(klogWarn, (klogWarn, "Reference '$(ref)' has zero length", "ref=%s", rs->name));
+    }
+
     return 0;
 }
 
@@ -1462,12 +1504,12 @@ static rc_t ReadMagic(BAMFile *self)
 
 static rc_t ReadHeaders(BAMFile *self,
                         char **headerText, size_t *headerTextLen,
-                        uint8_t **refData, unsigned *numrefs)
+                        char **refData, unsigned *numrefs)
 {
     unsigned hlen;
     char *htxt = NULL;
     unsigned nrefs;
-    uint8_t *rdat = NULL;
+    char *rdat = NULL;
     unsigned rdsz;
     unsigned rdms;
     unsigned i;
@@ -1527,7 +1569,7 @@ static rc_t ReadHeaders(BAMFile *self,
             }
             memcpy(rdat + rdsz, &i32, 4);
             rdsz += 4;
-            rc = BAMFileReadn(self, i32, &rdat[rdsz]); if (rc) goto BAILOUT;
+            rc = BAMFileReadn(self, i32, (uint8_t *)&rdat[rdsz]); if (rc) goto BAILOUT;
             rdsz += i32;
             rc = BAMFileReadI32(self, &i32); if (rc) goto BAILOUT;
             memcpy(rdat + rdsz, &i32, 4);
@@ -1551,23 +1593,50 @@ BAILOUT:
     return rc;
 }
 
-static int CC comp_RefSeqName(const void *A, const void *B, void *ignored) {
-    BAMFile const *self = (BAMFile const *)ignored;
-    unsigned const a = *(unsigned const *)A;
-    unsigned const b = *(unsigned const *)B;
-    
-    return strcmp(self->refSeq[a].name, self->refSeq[b].name);
+static unsigned FindRefSeqByName(char const name[], bool match, unsigned const N, BAMRefSeq const refSeq[])
+{
+    unsigned f = 0;
+    unsigned e = N;
+        
+    while (f < e) {
+        unsigned const m = f + ((e - f) >> 1);
+        int const cmp = strcmp(name, refSeq[m].name);
+            
+        if (cmp < 0)
+            e = m;
+        else if (cmp > 0)
+            f = m + 1;
+        else
+            return m;
+    }
+    return match ? N : f;
 }
 
-static rc_t ProcessHeader(BAMFile *self, char const headerText[])
+static void FindAndSetupRefSeq(BAMRefSeq *rs, unsigned const refSeqs, BAMRefSeq const refSeq[])
 {
-    unsigned *rs_by_name = NULL;
+    unsigned const fnd = FindRefSeqByName(rs->name, true, refSeqs, refSeq);
+    if (fnd != refSeqs) {
+        rs->assemblyId = refSeq[fnd].assemblyId;
+        rs->uri = refSeq[fnd].uri;
+        rs->species = refSeq[fnd].species;
+        if (refSeq[fnd].checksum) {
+            rs->checksum = &rs->checksum_array[0];
+            memcpy(rs->checksum_array, refSeq[fnd].checksum_array, 16);
+        }
+        else
+            rs->checksum = NULL;
+    }
+}
+
+static rc_t ProcessBAMHeader(BAMFile *self, char const headerText[])
+{
     unsigned i;
     unsigned cp;
     char *htxt;
-    uint8_t *rdat;
+    char *rdat;
     size_t hlen;
     unsigned nrefs;
+    BAMRefSeq *refSeq;
     rc_t rc = ReadMagic(self);
 
     if (rc) return rc;
@@ -1579,72 +1648,86 @@ static rc_t ProcessHeader(BAMFile *self, char const headerText[])
     self->ucfirst = self->bufCurrent;
     DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BAM), ("BAM Data records start at: %lu+%u\n", self->ucfirst, self->fpos_first));
 
+    if (nrefs) {
+        refSeq = calloc(nrefs, sizeof(self->refSeq[0]));
+        if (refSeq == NULL)
+            return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
+    }
+
     if (headerText) {
         free(htxt);
-        hlen = string_size( headerText );
-        htxt = malloc(hlen + 1);
-        if (htxt == NULL) {
-            free(rdat);
-            return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
-        }
-        memcpy(htxt, headerText, hlen + 1);
+        rc = ProcessHeaderText(self, headerText, true);
     }
-    
-    self->headerData2 = rdat;
-    if (hlen) {
-        self->header = htxt;
-        self->headerData1 = malloc(hlen + 1);
-        if (self->headerData1 == NULL)
-            return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
-        memcpy(self->headerData1, self->header, hlen + 1);
+    else
+        rc = ProcessHeaderText(self, htxt, false);
+
+    if (rc) return rc;
+        
+    for (i = cp = 0; i < nrefs; ++i) {
+        unsigned const nlen = LE2HUI32(rdat + cp);
+        char *const name = rdat + cp + 4;
+        unsigned const rlen = LE2HUI32(rdat + cp + nlen + 4);
+        
+        cp += nlen + 8;
+        name[nlen] = '\0';
+
+        refSeq[i].id = i;
+        refSeq[i].name = name;
+        refSeq[i].length = rlen;
+        FindAndSetupRefSeq(&refSeq[i], self->refSeqs, self->refSeq);
     }
-    else {
-        htxt = malloc(1);
-        htxt[0] = '\0';
-        self->header = htxt;
-        self->headerData1 = NULL;
-    }
+    free(self->refSeq);
+    self->refSeq = refSeq;
     self->refSeqs = nrefs;
-    if (nrefs) {
-        self->refSeq = calloc(nrefs, sizeof(self->refSeq[0]));
-        if (self->refSeq == NULL)
-            return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
-        
-        rs_by_name = calloc(nrefs, sizeof(rs_by_name[0]));
-        if (rs_by_name == NULL)
-            return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
-        
-        for (i = cp = 0; i < nrefs; ++i) {
-            uint32_t nlen;
-            uint32_t rlen;
-            
-            rs_by_name[i] = i;
-            self->refSeq[i].id = i;
-            memcpy(&nlen, &self->headerData2[cp], 4);
-            cp += 4;
-            self->refSeq[i].name = (char const *)&self->headerData2[cp];
-            cp += nlen;
-            memcpy(&rlen, &self->headerData2[cp], 4);
-            self->headerData2[cp] = 0;
-            cp += 4;
-            self->refSeq[i].length = rlen;
-        }
-        ksort((void *)rs_by_name, self->refSeqs, sizeof(rs_by_name[0]), comp_RefSeqName, self);
-    }
-    if (self->headerData1) {
-        rc = CountReadGroups(self->headerData1, hlen, &self->readGroups);
-        if (rc == 0) {
-            self->readGroup = calloc(self->readGroups, sizeof(self->readGroup[0]));
-            if (self->readGroup != NULL)
-                rc = ParseHeader(self, self->headerData1, hlen, rs_by_name);
-            else
-                rc = RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
-        }
-    }
-    if (rs_by_name != NULL)
-        free((void *)rs_by_name);
+    self->headerData2 = rdat; /* so it's not leaked */
     
-    return rc;
+    return 0;
+}
+
+static rc_t ProcessSAMHeader(BAMFile *self, char const substitute[])
+{
+    SAMFile *const file = &self->file.sam;
+    size_t headerSize = 0;
+    char *headerText = NULL;
+    rc_t rc;
+    int st = 0;
+    
+    for ( ; ; ) {
+        void *const tmp = headerText;
+        int const ch = SAMFileRead1(file);
+        
+        if (ch < 0)
+            return SAMFileLastError(file);
+        
+        if (st == 0) {
+            if (ch != '@') {
+                SAMFilePutBack(file, ch);
+                break;
+            }
+            st = 1;
+        }
+        headerText = realloc(headerText, headerSize + 2);
+        if (headerText == NULL) {
+            free(tmp);
+            return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
+        }
+        headerText[headerSize++] = ch;
+        headerText[headerSize] = '\0';
+        if (ch == '\n')
+            st = 0;
+    }
+
+    if (substitute)
+        rc = ProcessHeaderText(self, substitute, true);
+    else
+        rc = ProcessHeaderText(self, headerText, false);
+
+    if (rc) return rc;
+
+    for (unsigned i = 0; i < self->refSeqs; ++i)
+        self->refSeq[i].id = i;
+
+    return 0;
 }
 
 /* MARK: BAM File destructor */
@@ -1677,8 +1760,7 @@ static rc_t BAMFileWhack(BAMFile *self) {
 /* file is retained */
 static rc_t BAMFileMakeWithKFileAndHeader(BAMFile const **cself,
                                           KFile const *file,
-                                          char const *headerText,
-                                          bool threaded)
+                                          char const *headerText)
 {
     BAMFile *self = calloc(1, sizeof(*self));
     rc_t rc;
@@ -1687,28 +1769,40 @@ static rc_t BAMFileMakeWithKFileAndHeader(BAMFile const **cself,
         return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
     
     KRefcountInit(&self->refcount, 1, "BAMFile", "new", "");
-#ifndef WINDOWS
-    if (threaded)
-        rc = BGZThreadFileInit(&self->file.thread, file, &self->vt);
-    else
-#endif
-        rc = BGZFileInit(&self->file.plain, file, &self->vt);
+    rc = BGZFileInit(&self->file.bam, file, &self->vt);
 
     if (rc == 0) {
-        rc = ProcessHeader(self, headerText);
+        rc = ProcessBAMHeader(self, headerText);
         if (rc == 0) {
             *cself = self;
             return 0;
         }
     }
-    BAMFileWhack(self);
+    BAMFileRelease(self);
+
+    self = calloc(1, sizeof(*self));
+    if (self == NULL)
+        return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
+    
+    KRefcountInit(&self->refcount, 1, "BAMFile", "new", "");
+    rc = SAMFileInit(&self->file.sam, file, &self->vt);
+    if (rc == 0) {
+        self->isSAM = true;
+        rc = ProcessSAMHeader(self, headerText);
+        if (rc == 0) {
+            *cself = self;
+            return 0;
+        }
+    }
+    BAMFileRelease(self);
+
     return rc;
 }
 
 /* file is retained */
 LIB_EXPORT rc_t CC BAMFileMakeWithKFile(const BAMFile **cself, const KFile *file)
 {
-    return BAMFileMakeWithKFileAndHeader(cself, file, NULL, false);
+    return BAMFileMakeWithKFileAndHeader(cself, file, NULL);
 }
 
 LIB_EXPORT rc_t CC BAMFileVMakeWithDir(const BAMFile **result,
@@ -1782,7 +1876,7 @@ LIB_EXPORT rc_t CC BAMFileMakeWithHeader ( const BAMFile **cself,
     va_start(args, path);
     rc = KDirectoryVOpenFileRead(dir, &kf, path, args);
     if (rc == 0) {
-        rc = BAMFileMakeWithKFileAndHeader(cself, kf, headerText, false);
+        rc = BAMFileMakeWithKFileAndHeader(cself, kf, headerText);
         KFileRelease(kf);
     }
     va_end(args);
@@ -2352,6 +2446,524 @@ rc_t BAMFileBreakLock(BAMFile *const self)
     return 0;
 }
 
+/* MARK: SAM code */
+
+static void SAM2BAM_ConvertShort(void *const Dst, int value)
+{
+    uint8_t *const dst = Dst;
+    dst[0] = (uint8_t)(value >> 0);
+    dst[1] = (uint8_t)(value >> 8);
+}
+
+static void SAM2BAM_ConvertInt(void *const Dst, int value)
+{
+    uint8_t *const dst = Dst;
+    dst[0] = (uint8_t)(value >>  0);
+    dst[1] = (uint8_t)(value >>  8);
+    dst[2] = (uint8_t)(value >> 16);
+    dst[3] = (uint8_t)(value >> 24);
+}
+
+static int SAM2BAM_CIGAR_OpCount(char const cigar[])
+{
+    unsigned n = 0;
+    int st = 0;
+    
+    if (cigar[0] == '*' && cigar[1] == '\0')
+        return 0;
+    
+    for (unsigned i = 0; ; ++i) {
+        int const ch = cigar[i];
+        
+        if (ch == '\0')
+            break;
+
+        if (st == 0) {
+            if (!isdigit(ch))
+                return -1;
+            st = 1;
+        }
+        else if (!isdigit(ch)) {
+            ++n;
+            st = 0;
+        }
+    }
+    return st == 0 ? n : -1;
+}
+
+static int SAM2BAM_ConvertCIGAR1(uint8_t dst[4], char const value[])
+{
+    int len = 0;
+    int code = 0;
+    unsigned i = 0;
+    
+    if (value[0] == '\0')
+        return 0;
+    
+    for ( ; ; ) {
+        int const ch = value[i++];
+        
+        if (!isdigit(ch)) {
+            switch (ch) {
+            case 'M':
+                code = 0;
+                break;
+            case 'I':
+                code = 1;
+                break;
+            case 'D':
+                code = 2;
+                break;
+            case 'N':
+                code = 3;
+                break;
+            case 'S':
+                code = 4;
+                break;
+            case 'H':
+                code = 5;
+                break;
+            case 'P':
+                code = 6;
+                break;
+            case '=':
+                code = 7;
+                break;
+            case 'X':
+                code = 8;
+                break;
+            default:
+                return -1;
+            }
+            break;
+        }
+        len = (len * 10) + (ch - '0');
+        if (len >= (1 << 24))
+            return -2;
+    }
+    SAM2BAM_ConvertInt(dst, (len << 4) | code);
+    return i;
+}
+
+static rc_t SAM2BAM_ConvertCIGAR(unsigned const insize, void /* inout */ *const data, void const *const endp)
+{
+    char *const value = data;
+    uint8_t *const dst = (void *)(value + insize);
+    unsigned j = 0;
+
+    for (unsigned i = 0; i < insize; ++j) {
+        if ((void const *)(dst + j * 4 + 4) >= endp)
+            return RC(rcAlign, rcFile, rcReading, rcBuffer, rcInsufficient);
+
+        int const k = SAM2BAM_ConvertCIGAR1(dst + j * 4, value + i);
+        if (k > 0)
+            i += k;
+        else
+            return k == 0 ? 0 : RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
+    }
+    memcpy(data, dst, 4 * j);
+    return 0;
+}
+
+static int SAM2BAM_ConvertBase(int base)
+{
+    static char const tr[] = {
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,0x0, -1, -1,
+        -1,0x1,0xE,0x2,0xD, -1, -1,0x4,0xB, -1, -1,0xC, -1,0x3,0xF, -1,
+        -1, -1,0x5,0x6,0x8, -1,0x7,0x9, -1,0xA, -1, -1, -1, -1, -1, -1,
+        -1,0x1,0xE,0x2,0xD, -1, -1,0x4,0xB, -1, -1,0xC, -1,0x3,0xF, -1,
+        -1, -1,0x5,0x6,0x8, -1,0x7,0x9, -1,0xA, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    };
+    return tr[base];
+}
+
+static rc_t SAM2BAM_ConvertSEQ(unsigned const insize, void /* inout */ *const data, void const *const endp)
+{
+    char const *const value = data;
+    uint8_t *const dst = data;
+    unsigned const n = insize & ~((unsigned)1);
+    unsigned j = 0;
+    
+    for (unsigned i = 0; i < n; i += 2, ++j) {
+        int const hi = SAM2BAM_ConvertBase(value[i + 0]);
+        int const lo = SAM2BAM_ConvertBase(value[i + 1]);
+        
+        if (hi < 0 || lo < 0)
+            return RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
+
+        dst[j] = (hi << 4) | lo;
+    }
+    if (n != insize) {
+        int const hi = SAM2BAM_ConvertBase(value[n]);
+        int const lo = 0;
+        
+        if (hi < 0 || lo < 0)
+            return RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
+        
+        dst[j] = (hi << 4) | lo;
+    }
+    return 0;
+}
+
+static rc_t SAM2BAM_ConvertQUAL(unsigned const insize, void /* inout */ *const data, void const *const endp)
+{
+    char const *const value = data;
+    uint8_t *const dst = data;
+
+    for (unsigned i = 0; i < insize; ++i) {
+        int const ch = value[i];
+        
+        if (ch < '!' || ch > '~')
+            return RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
+        dst[i] = ch - 33;
+    }
+    return 0;
+}
+
+static int SAM2BAM_ScanValue(void *const dst, char const *src, bool isFloat, bool isArray)
+{
+    static char const *Fmt[] = {
+        ",%f%n",
+        ",%i%n"
+    };
+    char const *const fmt = Fmt[isFloat ? 0 : 1] + (isArray ? 0 : 1);
+    union { int i; float f; } x;
+    int n = 0;
+
+    x.i = 0;
+    if (sscanf(src, fmt, &x, &n) != 1)
+        return -1;
+    SAM2BAM_ConvertInt(dst, x.i);
+    return n;
+}
+
+static int SAM2BAM_ConvertEXTRA(unsigned const insize, void /* inout */ *const data, void const *const endp)
+{
+    if (insize < 5) /* XX:T:\0 */
+        return -1;
+
+    char const *const src = data;
+
+    if (src[2] != ':' || src[4] != ':')
+        return -3;
+
+    int const type = src[3];
+    char *const dst = data;
+
+    dst[2] = type;
+
+    switch (type) {
+    case 'A':
+        dst[3] = src[5];
+        return 4;
+    case 'H':
+    case 'Z':
+        memmove(dst + 3, src + 5, insize - 5);
+        dst[insize - 2] = '\0';
+        return insize - 1;
+    case 'i':
+    case 'f': {
+        if ((void const *)&dst[7] >= endp)
+            return -2;
+
+        int const n = SAM2BAM_ScanValue(&dst[3], src + 5, type == 'f', false);
+        return (n < 0 || n + 5 != insize) ? -4 : 7;
+    }
+    case 'B':
+        break;
+    default:
+        return -3;
+    }
+
+    if (insize < 8) /* XX:B:T,x\0 */
+        return -1;
+
+    switch (src[5]) {
+    case 'c':
+    case 'C':
+    case 's':
+    case 'S':
+    case 'i':
+    case 'I':
+    case 'f':
+        break;
+    default:
+        return -3;
+    }
+
+    uint8_t *scratch = (void *)(src + insize);
+    int const subtype = src[5] == 'f' ? 'f' : 'i';
+
+    dst[3] = subtype;
+    for (unsigned i = 6; i < insize; ) {
+        if ((void const *)&scratch[4] >= endp)
+            return -2;
+
+        int const n = SAM2BAM_ScanValue(scratch, src + 5, subtype == 'f', true);
+        if (n < 0)
+            return -4;
+        i += n;
+        scratch += 4;
+    }
+    unsigned const written = scratch - (uint8_t const *)(src + insize);
+    memmove(dst + 4, src + insize, written);
+    return written + 5;
+}
+
+static rc_t BAMFileReadSAM(BAMFile *const self, BAMAlignment const **const rslt)
+{
+    char buffer[64 * 1024];
+    void const *const endp = buffer + sizeof(buffer);
+    struct bam_alignment_s *raw = (void *)buffer;
+    struct {
+        int namelen;
+        int FLAG;
+        int RNAME;
+        int POS;
+        int MAPQ;
+        int cigars;
+        int RNEXT;
+        int PNEXT;
+        int TLEN;
+        
+        int readlen;
+        
+        char *QNAME;
+        uint32_t *CIGAR; /* probably not aligned */
+        uint8_t *SEQ;
+        uint8_t *QUAL;
+        char *EXTRA;
+    } temp;
+    unsigned field = 1;
+    char *scratch;
+    unsigned i = 0;
+    int n = 0;
+    
+    memset(raw, 0, sizeof(*raw));
+    memset(&temp, 0, sizeof(temp));
+    scratch = temp.QNAME = &raw->read_name[0];
+    
+    for ( ; ; ) {
+        int const ch = SAMFileRead1(&self->file.sam);
+        if (ch < 0)
+            return SAMFileLastError(&self->file.sam);
+
+        if ((void const *)&scratch[i] >= endp)
+            return RC(rcAlign, rcFile, rcReading, rcBuffer, rcInsufficient);
+
+        if (!(ch == '\t' || ch == '\n')) {
+            if (field != 0)
+                scratch[i++] = ch;
+            continue;
+        }
+        scratch[i] = '\0';
+        switch (field) {
+            case 0:
+                if (ch == '\n')
+                    return RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
+                break;
+            case 1:
+                if (i == 1 && scratch[0] == '*') {
+                    temp.namelen = 0;
+                }
+                else {
+                    temp.namelen = i + 1; /* includes NULL terminator */
+                    scratch += i + 1;     /* don't want to overwrite it */
+                    if (temp.namelen > 255) {
+                        LOGERR(klogErr, RC(rcAlign, rcFile, rcReading, rcRow, rcInvalid), "SAM Record error QNAME is too long");
+                        field = 0;
+                    }
+                }
+                temp.CIGAR = (void *)scratch;
+                break;
+            case 2:
+                if (sscanf(scratch, "%i%n", &temp.FLAG, &n) != 1 || n != i) {
+                    LOGERR(klogErr, RC(rcAlign, rcFile, rcReading, rcRow, rcInvalid), "SAM Record error parsing FLAG");
+                    field = 0;
+                }
+                break;
+            case 3:
+                if (i == 1 && scratch[0] == '*')
+                    temp.RNAME = -1;
+                else {
+                    unsigned const id = FindRefSeqByName(scratch, true, self->refSeqs, self->refSeq);
+                    if (id < self->refSeqs)
+                        temp.RNAME = id;
+                    else {
+                        LOGERR(klogErr, RC(rcAlign, rcFile, rcReading, rcRow, rcInvalid), "SAM Record missing reference");
+                        field = 0;
+                    }
+                }
+                break;
+            case 4:
+                if (sscanf(scratch, "%i%n", &temp.POS, &n) != 1 || n != i) {
+                    LOGERR(klogErr, RC(rcAlign, rcFile, rcReading, rcRow, rcInvalid), "SAM Record error parsing POS");
+                    field = 0;
+                }
+                break;
+            case 5:
+                if (sscanf(scratch, "%i%n", &temp.MAPQ, &n) != 1 || n != i) {
+                    LOGERR(klogErr, RC(rcAlign, rcFile, rcReading, rcRow, rcInvalid), "SAM Record error parsing MAPQ");
+                    field = 0;
+                }
+                if (temp.MAPQ > 255) {
+                    LOGERR(klogErr, RC(rcAlign, rcFile, rcReading, rcRow, rcInvalid), "SAM Record error MAPQ > 255");
+                    field = 0;
+                }
+                break;
+            case 6:
+                temp.cigars = SAM2BAM_CIGAR_OpCount(scratch);
+                if (temp.cigars < 0) {
+                    LOGERR(klogErr, RC(rcAlign, rcFile, rcReading, rcRow, rcInvalid), "SAM Record error parsing CIGAR");
+                    field = 0;
+                }
+                else if (temp.cigars > 0) {
+                    scratch += 4 * temp.cigars;
+                    temp.SEQ = (uint8_t *)scratch;
+
+                    rc_t const rc = SAM2BAM_ConvertCIGAR(i, temp.CIGAR, endp);
+                    if (rc) {
+                        LOGERR(klogErr, rc, "SAM Record error parsing CIGAR");
+                        field = 0;
+                    }
+                }
+                else
+                    temp.SEQ = (uint8_t *)scratch;
+                break;
+            case 7:
+                if (i == 1 && scratch[0] == '*')
+                    temp.RNEXT = -1;
+                else if (i == 1 && scratch[0] == '=')
+                    temp.RNEXT = temp.RNAME;
+                else {
+                    unsigned const id = FindRefSeqByName(scratch, true, self->refSeqs, self->refSeq);
+                    if (id < self->refSeqs)
+                        temp.RNEXT = id;
+                    else {
+                        LOGERR(klogErr, RC(rcAlign, rcFile, rcReading, rcRow, rcInvalid), "SAM Record missing reference");
+                        field = 0;
+                    }
+                }
+                break;
+            case 8:
+                if (sscanf(scratch, "%i%n", &temp.PNEXT, &n) != 1 || n != i) {
+                    LOGERR(klogErr, RC(rcAlign, rcFile, rcReading, rcRow, rcInvalid), "SAM Record error parsing PNEXT");
+                    field = 0;
+                }
+                break;
+            case 9:
+                if (sscanf(scratch, "%i%n", &temp.TLEN, &n) != 1 || n != i) {
+                    LOGERR(klogErr, RC(rcAlign, rcFile, rcReading, rcRow, rcInvalid), "SAM Record error parsing TLEN");
+                    field = 0;
+                }
+                break;
+            case 10:
+                if (i == 1 && scratch[0] == '*')
+                    temp.readlen = 0;
+                else {
+                    temp.readlen = i;
+                    scratch += (i + 1) >> 1;
+                    temp.QUAL = (uint8_t *)scratch;
+
+                    rc_t const rc = SAM2BAM_ConvertSEQ(i, temp.SEQ, endp);
+                    if (rc) {
+                        LOGERR(klogErr, rc, "SAM Record error converting SEQ");
+                        field = 0;
+                    }
+                }
+                break;
+            case 11:
+                if (temp.readlen == 0)
+                    break;
+                if (i == 1 && scratch[0] == '*')
+                    memset(temp.QUAL, 0xFF, temp.readlen);
+                else if (i == temp.readlen) {
+                    rc_t const rc = SAM2BAM_ConvertQUAL(i, temp.QUAL, endp);
+                    if (rc) {
+                        LOGERR(klogErr, rc, "SAM Record error converting QUAL");
+                        field = 0;
+                    }
+                }
+                else {
+                    LOGERR(klogErr, RC(rcAlign, rcFile, rcReading, rcRow, rcInvalid), "SAM Record error length of SEQ != length of QUAL");
+                    field = 0;
+                }
+                scratch += temp.readlen;
+                break;
+            default:
+            {
+                int const n = SAM2BAM_ConvertEXTRA(i, scratch, endp);
+                if (n < 0) {
+                    LOGERR(klogErr, RC(rcAlign, rcFile, rcReading, rcRow, rcInvalid), "SAM Record error parsing optional field");
+                    field = 0;
+                }
+                else {
+                    if (n == 0)
+                        --field;
+                    else
+                        scratch += n;
+                }
+                break;
+            }
+        }
+        if (ch == '\n') {
+            if (field < 11) {
+                rc_t const rc = RC(rcAlign, rcFile, rcReading, rcRow, rcTooShort);
+                LOGERR(klogErr, rc, "SAM Record error too few fields");
+                return rc;
+            }
+            break;
+        }
+        i = 0;
+        if (field > 0)
+            ++field;
+    }
+
+    SAM2BAM_ConvertInt(raw->rID, temp.RNAME);
+    SAM2BAM_ConvertInt(raw->pos, temp.POS - 1);
+    raw->read_name_len = temp.namelen;
+    raw->mapQual = temp.MAPQ;
+    SAM2BAM_ConvertShort(raw->n_cigars, temp.cigars);
+    SAM2BAM_ConvertShort(raw->flags, temp.FLAG);
+    SAM2BAM_ConvertInt(raw->read_len, temp.readlen);
+    SAM2BAM_ConvertInt(raw->mate_rID, temp.RNEXT);
+    SAM2BAM_ConvertInt(raw->mate_pos, temp.PNEXT - 1);
+    SAM2BAM_ConvertInt(raw->ins_size, temp.TLEN);
+    
+    unsigned const datasize = scratch - buffer;
+    unsigned const rsltsize = BAMAlignmentSizeFromData(datasize, buffer);
+    BAMAlignment *const y = malloc(rsltsize + datasize);
+    void *const data = ((uint8_t *)y) + rsltsize;
+    
+    if (y == NULL)
+        return RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
+
+    memcpy(data, buffer, datasize);
+    if (BAMAlignmentInitLog(y, rsltsize, datasize, data)) {
+        y->parent = self;
+        KRefcountInit(&y->refcount, 1, "BAMAlignment", "ReadCopy", "");
+        BAMFileAddRef(self);
+        rslt[0] = y;
+        
+        if (BAMAlignmentIsEmpty(y))
+            return RC(rcAlign, rcFile, rcReading, rcRow, rcEmpty);
+        return 0;
+    }
+    free(y);
+    return RC(rcAlign, rcFile, rcReading, rcRow, rcInvalid);
+}
+
 LIB_EXPORT rc_t CC BAMFileRead2(const BAMFile *cself, const BAMAlignment **rhs)
 {
     BAMFile *const self = (BAMFile *)cself;
@@ -2365,6 +2977,8 @@ LIB_EXPORT rc_t CC BAMFileRead2(const BAMFile *cself, const BAMAlignment **rhs)
     
     if (self->bufCurrent >= self->bufSize && self->eof)
         return RC(rcAlign, rcFile, rcReading, rcRow, rcNotFound);
+
+    if (self->isSAM) return BAMFileReadSAM(self, rhs);
 
     rc = BAMFileBreakLock(self);
     if (rc)
@@ -4446,7 +5060,7 @@ static rc_t ReadVPath(void **data, size_t *dsize, struct VPath const *path)
 static rc_t VPath2BGZF(BGZFile *bgzf, struct VPath const *path)
 {
     const KFile *fp;
-    BGZFile_vt dummy;
+    RawFile_vt dummy;
     rc_t rc = OpenVPathRead(&fp, path);
     
     if (rc == 0) {
