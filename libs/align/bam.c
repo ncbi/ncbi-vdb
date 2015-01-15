@@ -1388,6 +1388,7 @@ static rc_t ProcessHeaderText(BAMFile *self, char const text[], bool makeCopy)
     unsigned RG = 0;
     unsigned SQ = 0;
     unsigned const size = MeasureHeader(&RG, &SQ, text);
+    unsigned i;
 
     if (SQ) {
         self->refSeq = calloc(SQ, sizeof(self->refSeq[0]));
@@ -1425,13 +1426,13 @@ static rc_t ProcessHeaderText(BAMFile *self, char const text[], bool makeCopy)
         return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
     }
     }
-    for (unsigned i = 0; i < self->readGroups; ++i)
+    for (i = 0; i < self->readGroups; ++i)
         self->readGroup[i].id = i;
     
     ksort(self->readGroup, self->readGroups, sizeof(self->readGroup[0]), comp_ReadGroup, NULL);
     
     /* remove read groups with missing and empty names */
-    for (unsigned i = self->readGroups; i != 0; ) {
+    for (i = self->readGroups; i != 0; ) {
         BAMReadGroup const *const rg = &self->readGroup[--i];
         char const *const name = rg->name;
         if (name == NULL || name[0] == '\0') {
@@ -1441,7 +1442,7 @@ static rc_t ProcessHeaderText(BAMFile *self, char const text[], bool makeCopy)
     }
     
     /* check for duplicate read groups names */
-    for (unsigned i = 1; i < self->readGroups; ++i) {
+    for (i = 1; i < self->readGroups; ++i) {
         BAMReadGroup const *const a = &self->readGroup[i - 1];
         BAMReadGroup const *const b = &self->readGroup[i - 0];
         
@@ -1455,13 +1456,13 @@ static rc_t ProcessHeaderText(BAMFile *self, char const text[], bool makeCopy)
      * in BAM, they'll get the id from the second part of the header
      * in SAM, they'll get reassigned in alphabetical order
      */
-    for (unsigned i = 0; i < self->refSeqs; ++i)
+    for (i = 0; i < self->refSeqs; ++i)
         self->refSeq[i].id = i;
     
     ksort(self->refSeq, self->refSeqs, sizeof(self->refSeq[0]), comp_RefSeqName, NULL);
     
     /* remove references with missing and empty names */
-    for (unsigned i = self->refSeqs; i != 0; ) {
+    for (i = self->refSeqs; i != 0; ) {
         BAMRefSeq const *const ref = &self->refSeq[--i];
         char const *const name = ref->name;
         if (name == NULL || name[0] == '\0') {
@@ -1471,7 +1472,7 @@ static rc_t ProcessHeaderText(BAMFile *self, char const text[], bool makeCopy)
     }
     
     /* check for and remove duplicate reference names */
-    for (unsigned i = self->refSeqs; i > 1; --i) {
+    for (i = self->refSeqs; i > 1; --i) {
         BAMRefSeq *const a = &self->refSeq[i - 2];
         BAMRefSeq *const b = &self->refSeq[i - 1];
         
@@ -1484,7 +1485,7 @@ static rc_t ProcessHeaderText(BAMFile *self, char const text[], bool makeCopy)
     }
     
     /* check for zero-length references */
-    for (unsigned i = 0; i != self->refSeqs; ++i) {
+    for (i = 0; i != self->refSeqs; ++i) {
         BAMRefSeq const *const rs = &self->refSeq[i];
         
         if (rs->length == 0)
@@ -1726,10 +1727,11 @@ static rc_t ProcessSAMHeader(BAMFile *self, char const substitute[])
         rc = ProcessHeaderText(self, headerText, false);
 
     if (rc) return rc;
-
-    for (unsigned i = 0; i < self->refSeqs; ++i)
+    {
+        unsigned i;
+    for (i = 0; i < self->refSeqs; ++i)
         self->refSeq[i].id = i;
-
+    }
     return 0;
 }
 
@@ -2469,13 +2471,14 @@ static void SAM2BAM_ConvertInt(void *const Dst, int value)
 
 static int SAM2BAM_CIGAR_OpCount(char const cigar[])
 {
+    unsigned i;
     unsigned n = 0;
     int st = 0;
     
     if (cigar[0] == '*' && cigar[1] == '\0')
         return 0;
     
-    for (unsigned i = 0; ; ++i) {
+    for (i = 0; ; ++i) {
         int const ch = cigar[i];
         
         if (ch == '\0')
@@ -2553,16 +2556,18 @@ static rc_t SAM2BAM_ConvertCIGAR(unsigned const insize, void /* inout */ *const 
     char *const value = data;
     uint8_t *const dst = (void *)(value + insize);
     unsigned j = 0;
+    unsigned i;
 
-    for (unsigned i = 0; i < insize; ++j) {
+    for (i = 0; i < insize; ++j) {
         if ((void const *)(dst + j * 4 + 4) >= endp)
             return RC(rcAlign, rcFile, rcReading, rcBuffer, rcInsufficient);
-
+        {
         int const k = SAM2BAM_ConvertCIGAR1(dst + j * 4, value + i);
         if (k > 0)
             i += k;
         else
             return k == 0 ? 0 : RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
+        }
     }
     memcpy(data, dst, 4 * j);
     return 0;
@@ -2597,8 +2602,9 @@ static rc_t SAM2BAM_ConvertSEQ(unsigned const insize, void /* inout */ *const da
     uint8_t *const dst = data;
     unsigned const n = insize & ~((unsigned)1);
     unsigned j = 0;
-    
-    for (unsigned i = 0; i < n; i += 2, ++j) {
+    unsigned i;
+
+    for (i = 0; i < n; i += 2, ++j) {
         int const hi = SAM2BAM_ConvertBase(value[i + 0]);
         int const lo = SAM2BAM_ConvertBase(value[i + 1]);
         
@@ -2623,8 +2629,9 @@ static rc_t SAM2BAM_ConvertQUAL(unsigned const insize, void /* inout */ *const d
 {
     char const *const value = data;
     uint8_t *const dst = data;
+    unsigned i;
 
-    for (unsigned i = 0; i < insize; ++i) {
+    for (i = 0; i < insize; ++i) {
         int const ch = value[i];
         
         if (ch < '!' || ch > '~')
