@@ -1350,9 +1350,10 @@ static int CC comp_RefSeqName(const void *A, const void *B, void *ignored) {
         return 1;
     if (b->name[0] == '\0')
         return -1;
-    
-    int const cmp = strcmp(a->name, b->name);
-    return cmp == 0 ? a->id - b->id : cmp;
+    {
+        int const cmp = strcmp(a->name, b->name);
+        return cmp == 0 ? a->id - b->id : cmp;
+    }
 }
 
 static unsigned MeasureHeader(unsigned *RG, unsigned *SQ, char const text[])
@@ -1411,17 +1412,19 @@ static rc_t ProcessHeaderText(BAMFile *self, char const text[], bool makeCopy)
     }
     else
         self->header = text;
-    
+    {
     char *const copy = malloc(size + 1); /* an editable copy */
     if (copy == NULL)
         return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
     self->headerData1 = copy; /* so it's not leaked */
     memcpy(copy, text, size + 1);
-
+    
+    {
     bool const parsed = ParseHeader(self, copy, size);
     if (!parsed)
         return RC(rcAlign, rcFile, rcParsing, rcData, rcInvalid);
-    
+    }
+    }
     for (unsigned i = 0; i < self->readGroups; ++i)
         self->readGroup[i].id = i;
     
@@ -2652,80 +2655,84 @@ static int SAM2BAM_ConvertEXTRA(unsigned const insize, void /* inout */ *const d
 {
     if (insize < 5) /* XX:T:\0 */
         return -1;
+    {
+        char const *const src = data;
 
-    char const *const src = data;
+        if (src[2] != ':' || src[4] != ':')
+            return -3;
+        {
+            int const type = src[3];
+            char *const dst = data;
 
-    if (src[2] != ':' || src[4] != ':')
-        return -3;
+            dst[2] = type;
 
-    int const type = src[3];
-    char *const dst = data;
+            switch (type) {
+            case 'A':
+                dst[3] = src[5];
+                return 4;
+            case 'H':
+            case 'Z':
+                memmove(dst + 3, src + 5, insize - 5);
+                dst[insize - 2] = '\0';
+                return insize - 1;
+            case 'i':
+            case 'f': {
+                if ((void const *)&dst[7] >= endp)
+                    return -2;
 
-    dst[2] = type;
+                int const n = SAM2BAM_ScanValue(&dst[3], src + 5, type == 'f', false);
+                return (n < 0 || n + 5 != insize) ? -4 : 7;
+            }
+            case 'B':
+                break;
+            default:
+                return -3;
+            }
 
-    switch (type) {
-    case 'A':
-        dst[3] = src[5];
-        return 4;
-    case 'H':
-    case 'Z':
-        memmove(dst + 3, src + 5, insize - 5);
-        dst[insize - 2] = '\0';
-        return insize - 1;
-    case 'i':
-    case 'f': {
-        if ((void const *)&dst[7] >= endp)
-            return -2;
+            if (insize < 8) /* XX:B:T,x\0 */
+                return -1;
 
-        int const n = SAM2BAM_ScanValue(&dst[3], src + 5, type == 'f', false);
-        return (n < 0 || n + 5 != insize) ? -4 : 7;
+            switch (src[5]) {
+            case 'c':
+            case 'C':
+            case 's':
+            case 'S':
+            case 'i':
+            case 'I':
+            case 'f':
+                break;
+            default:
+                return -3;
+            }
+            {
+                uint8_t *scratch = (void *)(src + insize);
+                int const subtype = src[5] == 'f' ? 'f' : 'i';
+
+                dst[3] = subtype;
+                for (unsigned i = 6; i < insize; ) {
+                    if ((void const *)&scratch[4] >= endp)
+                        return -2;
+
+                    int const n = SAM2BAM_ScanValue(scratch, src + 5, subtype == 'f', true);
+                    if (n < 0)
+                        return -4;
+                    i += n;
+                    scratch += 4;
+                }
+                {
+                    unsigned const written = scratch - (uint8_t const *)(src + insize);
+                    memmove(dst + 4, src + insize, written);
+                    return written + 5;
+                }
+            }
+        }
     }
-    case 'B':
-        break;
-    default:
-        return -3;
-    }
-
-    if (insize < 8) /* XX:B:T,x\0 */
-        return -1;
-
-    switch (src[5]) {
-    case 'c':
-    case 'C':
-    case 's':
-    case 'S':
-    case 'i':
-    case 'I':
-    case 'f':
-        break;
-    default:
-        return -3;
-    }
-
-    uint8_t *scratch = (void *)(src + insize);
-    int const subtype = src[5] == 'f' ? 'f' : 'i';
-
-    dst[3] = subtype;
-    for (unsigned i = 6; i < insize; ) {
-        if ((void const *)&scratch[4] >= endp)
-            return -2;
-
-        int const n = SAM2BAM_ScanValue(scratch, src + 5, subtype == 'f', true);
-        if (n < 0)
-            return -4;
-        i += n;
-        scratch += 4;
-    }
-    unsigned const written = scratch - (uint8_t const *)(src + insize);
-    memmove(dst + 4, src + insize, written);
-    return written + 5;
 }
 
 static rc_t BAMFileReadSAM(BAMFile *const self, BAMAlignment const **const rslt)
 {
-    char buffer[64 * 1024];
-    void const *const endp = buffer + sizeof(buffer);
-    struct bam_alignment_s *raw = (void *)buffer;
+    void const *const endp = self->buffer + sizeof(self->buffer);
+    struct bam_alignment_s *raw = (void *)self->buffer;
     struct {
         int namelen;
         int FLAG;
@@ -2831,11 +2838,12 @@ static rc_t BAMFileReadSAM(BAMFile *const self, BAMAlignment const **const rslt)
                 else if (temp.cigars > 0) {
                     scratch += 4 * temp.cigars;
                     temp.SEQ = (uint8_t *)scratch;
-
-                    rc_t const rc = SAM2BAM_ConvertCIGAR(i, temp.CIGAR, endp);
-                    if (rc) {
-                        LOGERR(klogErr, rc, "SAM Record error parsing CIGAR");
-                        field = 0;
+                    {
+                        rc_t const rc = SAM2BAM_ConvertCIGAR(i, temp.CIGAR, endp);
+                        if (rc) {
+                            LOGERR(klogErr, rc, "SAM Record error parsing CIGAR");
+                            field = 0;
+                        }
                     }
                 }
                 else
@@ -2875,11 +2883,12 @@ static rc_t BAMFileReadSAM(BAMFile *const self, BAMAlignment const **const rslt)
                     temp.readlen = i;
                     scratch += (i + 1) >> 1;
                     temp.QUAL = (uint8_t *)scratch;
-
-                    rc_t const rc = SAM2BAM_ConvertSEQ(i, temp.SEQ, endp);
-                    if (rc) {
-                        LOGERR(klogErr, rc, "SAM Record error converting SEQ");
-                        field = 0;
+                    {
+                        rc_t const rc = SAM2BAM_ConvertSEQ(i, temp.SEQ, endp);
+                        if (rc) {
+                            LOGERR(klogErr, rc, "SAM Record error converting SEQ");
+                            field = 0;
+                        }
                     }
                 }
                 break;
@@ -2940,27 +2949,26 @@ static rc_t BAMFileReadSAM(BAMFile *const self, BAMAlignment const **const rslt)
     SAM2BAM_ConvertInt(raw->mate_rID, temp.RNEXT);
     SAM2BAM_ConvertInt(raw->mate_pos, temp.PNEXT - 1);
     SAM2BAM_ConvertInt(raw->ins_size, temp.TLEN);
+    {    
+        unsigned const datasize = (char *)scratch - (char *)self->buffer;
+        unsigned const rsltsize = BAMAlignmentSizeFromData(datasize, self->buffer);
+        BAMAlignment *const y = malloc(rsltsize);
     
-    unsigned const datasize = scratch - buffer;
-    unsigned const rsltsize = BAMAlignmentSizeFromData(datasize, buffer);
-    BAMAlignment *const y = malloc(rsltsize + datasize);
-    void *const data = ((uint8_t *)y) + rsltsize;
-    
-    if (y == NULL)
-        return RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
+        if (y == NULL)
+            return RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
 
-    memcpy(data, buffer, datasize);
-    if (BAMAlignmentInitLog(y, rsltsize, datasize, data)) {
-        y->parent = self;
-        KRefcountInit(&y->refcount, 1, "BAMAlignment", "ReadCopy", "");
-        BAMFileAddRef(self);
-        rslt[0] = y;
+        if (BAMAlignmentInitLog(y, rsltsize, datasize, self->buffer)) {
+            y->parent = self;
+            KRefcountInit(&y->refcount, 1, "BAMAlignment", "ReadSAM", "");
+            BAMFileAddRef(self);
+            rslt[0] = y;
         
-        if (BAMAlignmentIsEmpty(y))
-            return RC(rcAlign, rcFile, rcReading, rcRow, rcEmpty);
-        return 0;
+            if (BAMAlignmentIsEmpty(y))
+                return RC(rcAlign, rcFile, rcReading, rcRow, rcEmpty);
+            return 0;
+        }
+        free(y);
     }
-    free(y);
     return RC(rcAlign, rcFile, rcReading, rcRow, rcInvalid);
 }
 
