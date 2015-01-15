@@ -2686,9 +2686,10 @@ static int SAM2BAM_ConvertEXTRA(unsigned const insize, void /* inout */ *const d
             case 'f': {
                 if ((void const *)&dst[7] >= endp)
                     return -2;
-
+                {
                 int const n = SAM2BAM_ScanValue(&dst[3], src + 5, type == 'f', false);
                 return (n < 0 || n + 5 != insize) ? -4 : 7;
+                }
             }
             case 'B':
                 break;
@@ -2719,11 +2720,12 @@ static int SAM2BAM_ConvertEXTRA(unsigned const insize, void /* inout */ *const d
                 for (unsigned i = 6; i < insize; ) {
                     if ((void const *)&scratch[4] >= endp)
                         return -2;
-
+                    {
                     int const n = SAM2BAM_ScanValue(scratch, src + 5, subtype == 'f', true);
                     if (n < 0)
                         return -4;
                     i += n;
+                    }
                     scratch += 4;
                 }
                 {
