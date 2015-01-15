@@ -2715,9 +2715,10 @@ static int SAM2BAM_ConvertEXTRA(unsigned const insize, void /* inout */ *const d
             {
                 uint8_t *scratch = (void *)(src + insize);
                 int const subtype = src[5] == 'f' ? 'f' : 'i';
+                unsigned i;
 
                 dst[3] = subtype;
-                for (unsigned i = 6; i < insize; ) {
+                for (i = 6; i < insize; ) {
                     if ((void const *)&scratch[4] >= endp)
                         return -2;
                     {
