@@ -65,8 +65,9 @@ enum
     eVdbBlastEndOfSequence,
     eVdbBlastChunkedSequence, /* can't hand out direct pointer into cache */
     eVdbBlastTooExpensive,
-    eVdbBlastInvalidId /* an invalid read_id was used as an input parameter:
+    eVdbBlastInvalidId, /* an invalid read_id was used as an input parameter:
                           usually accessing a filtered read via 4naReader */
+    eVdbBlastNotImplemented,
 };
 
 /*------------------------------------------------------------------------------

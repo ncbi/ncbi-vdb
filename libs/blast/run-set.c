@@ -458,6 +458,24 @@ static uint32_t _VTableReadFirstRow(const VTable *self,
     return _VTableReadFirstRowImpl(self, name, buffer, blen, is_static, false);
 }
 
+static INSDC_SRA_platform_id _VTableReadPLATFORM(const VTable *self) {
+    INSDC_SRA_platform_id platform = SRA_PLATFORM_UNDEFINED;
+
+    VdbBlastStatus status = _VTableReadFirstRow(self,
+        "PLATFORM", &platform, sizeof platform, NULL);
+
+    if (status == eVdbBlastNoErr) {
+        return platform;
+    }
+    else {
+        return SRA_PLATFORM_UNDEFINED;
+    }
+}
+
+static bool _VTableVarReadNum(const VTable *self) {
+    return _VTableReadPLATFORM(self) == SRA_PLATFORM_PACBIO_SMRT;
+}
+
 static uint64_t BIG = 10000 /*11*/; 
 static rc_t _VTableBioBaseCntApprox(const VTable *self,
     uint64_t nspots, uint32_t nreads, uint64_t *bio_base_count)
@@ -1877,6 +1895,10 @@ VdbBlastStatus CC VdbBlastRunSetAddRun(VdbBlastRunSet *self,
     }
 
     rc = _VdbBlastMgrNativeToPosix(self->mgr, native, rundesc, sizeof rundesc);
+    if (rc != 0) {
+        S
+        status = eVdbBlastErr;
+    }
 
     status = _VdbBlastMgrFindNOpenSeqTable(self->mgr,
         rundesc, &obj->seqTbl, &type, &fullpath, &db);
@@ -1899,6 +1921,12 @@ VdbBlastStatus CC VdbBlastRunSetAddRun(VdbBlastRunSet *self,
         else {
             status = _VDatabaseOpenAlignmentTable(db, rundesc, &obj->prAlgnTbl);
         }
+    }
+
+    if (status == eVdbBlastNoErr && _VTableVarReadNum(obj->seqTbl)) {
+        /* VDB-1430: temporarily skip runs with variable read length */
+        S
+        status = eVdbBlastNotImplemented;
     }
 
     if (status == eVdbBlastNoErr) {
