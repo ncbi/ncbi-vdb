@@ -77,6 +77,8 @@ ALIGN_EXTERN rc_t CC RefSeq_SeqLength(const RefSeq* cself, INSDC_coord_len* len)
 
 ALIGN_EXTERN rc_t CC RefSeq_MD5(const RefSeq* cself, const uint8_t** md5);
 
+ALIGN_EXTERN rc_t CC RefSeq_Name(const RefSeq* cself, const char** name);
+    
 ALIGN_EXTERN rc_t CC RefSeq_Release(const RefSeq* cself);
 
 #ifdef __cplusplus

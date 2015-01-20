@@ -82,11 +82,14 @@ static  int64_t  LE2HI64(void const *X) {  int64_t y; memcpy(&y, X, sizeof(y)); 
 #endif
 
 typedef struct BAMIndex BAMIndex;
-typedef struct BufferredFile BufferredFile;
+typedef struct BufferedFile BufferedFile;
 typedef struct SAMFile SAMFile;
 typedef struct BGZFile BGZFile;
 
-#define ZLIB_BLOCK_SIZE ( 64 * 1024 )
+#define ZLIB_BLOCK_SIZE  (64u * 1024u)
+#define RGLR_BUFFER_SIZE (256u * ZLIB_BLOCK_SIZE)
+#define PIPE_BUFFER_SIZE (4096u)
+
 typedef uint8_t zlib_block_t[ZLIB_BLOCK_SIZE];
 
 typedef struct RawFile_vt_s {
@@ -100,48 +103,106 @@ typedef struct RawFile_vt_s {
 
 /* MARK: SAMFile */
 
-struct BufferredFile {
-    KFile const *kfp;
+struct BufferedFile {
+    KFile const *kf;
     void *buf;
+    uint64_t fmax;      /* file size if known or 0 */
     uint64_t fpos;      /* position in file of first byte in buffer */
     size_t bpos;        /* position in buffer of read head */
     size_t bmax;        /* number of valid bytes in buffer */
+    size_t size;        /* maximum number of that can be read into buffer */
 };
 
-#define SAM_FILE_BUFFER_SIZE (4096u)
+static rc_t BufferedFileRead(BufferedFile *const self)
+{
+    uint64_t const fpos = self->fpos + self->bmax;
+    rc_t const rc = KFileRead(self->kf, fpos, self->buf, self->size, &self->bmax);
+    if (rc) {
+        DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("Error reading BAM file: %R\n", rc));
+        return rc;
+    }
+    DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("Read %u bytes from SAM/BAM file at position %lu\n", self->bmax, fpos));
+    self->fpos = fpos;
+    self->bpos = 0;
+    return 0;
+}
+
+static rc_t BufferedFileInit(BufferedFile *const self, KFile const *const kf)
+{
+    rc_t const rc = KFileSize(kf, &self->fmax);
+    if (rc) {
+        self->fmax = 0;
+        self->size = PIPE_BUFFER_SIZE;
+    }
+    else
+        self->size = self->fmax < RGLR_BUFFER_SIZE ? self->fmax : RGLR_BUFFER_SIZE;
+
+    self->buf = malloc(self->size);
+    self->fpos = 0;
+    self->bpos = 0;
+    self->bmax = 0;
+    self->kf = kf;
+    KFileAddRef(kf);
+
+    return self->buf != NULL ? 0 : RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
+}
+
+static void BufferedFileWhack(BufferedFile *const self)
+{
+    KFileRelease(self->kf);
+    free(self->buf);
+}
+
+static uint64_t BufferedFileGetPos(BufferedFile const *const self)
+{
+    return self->fpos + self->bpos;
+}
+
+static float BufferedFileProPos(BufferedFile const *const self)
+{
+    return self->fmax == 0 ? -1.0 : (BufferedFileGetPos(self) / (double)self->fmax);
+}
+
+static rc_t BufferedFileSetPos(BufferedFile *const self, uint64_t const pos)
+{
+    if (pos >= self->fpos && pos < self->fpos + self->bmax) {
+        self->bpos = (size_t)(pos - self->fpos);
+    }
+    else if (pos < self->fmax) {
+        self->fpos = pos;
+        self->bpos = 0;
+        self->bmax = 0;
+    }
+    else
+        return RC(rcAlign, rcFile, rcPositioning, rcParam, rcInvalid);
+    return 0;
+}
+
+static uint64_t BufferedFileGetSize(BufferedFile const *const self)
+{
+    return self->fmax;
+}
+
 struct SAMFile {
-    BufferredFile file;
+    BufferedFile file;
     int putback;
     rc_t last;
 };
 
-static rc_t SAMFileGetMoreBytes(SAMFile *const self)
-{
-    self->last = KFileRead(self->file.kfp, self->file.fpos += self->file.bmax,
-                           self->file.buf, SAM_FILE_BUFFER_SIZE, &self->file.bmax);
-    if (self->last) {
-        DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("Error reading SAM file: %R\n", self->last));
-        return self->last;
-    }
-    self->file.bpos = 0;
-    if (self->file.bmax == 0)
-        return RC(rcAlign, rcFile, rcReading, rcData, rcInsufficient);
-    
-    return 0;
-}
-
 static int SAMFileRead1(SAMFile *const self)
 {
-    if (self->putback >= 0) {
+    if (self->putback < 0) {
+        if (self->file.bpos == self->file.bmax) {
+            rc_t const rc = BufferedFileRead(&self->file);
+            if (rc || self->file.bmax == 0) return -1;
+        }
+        return ((char const *)self->file.buf)[self->file.bpos++];
+    }
+    else {
         int const x = self->putback;
         self->putback = -1;
         return x;
     }
-    if (self->file.bpos == self->file.bmax) {
-        rc_t const rc = SAMFileGetMoreBytes(self);
-        if (rc) return -1;
-    }
-    return ((char const *)self->file.buf)[self->file.bpos++];
 }
 
 static rc_t SAMFileLastError(SAMFile const *const self)
@@ -151,7 +212,10 @@ static rc_t SAMFileLastError(SAMFile const *const self)
 
 static void SAMFilePutBack(SAMFile *const self, int ch)
 {
-    self->putback = ch;
+    if (self->file.bpos > 0)
+        --self->file.bpos;
+    else
+        self->putback = ch;
 }
 
 static rc_t SAMFileRead(SAMFile *const self, zlib_block_t dst, unsigned *pNumRead)
@@ -173,58 +237,25 @@ static rc_t SAMFileRead(SAMFile *const self, zlib_block_t dst, unsigned *pNumRea
     return RC(rcAlign, rcFile, rcReading, rcData, rcInsufficient);
 }
 
-static uint64_t SAMFileGetPos(SAMFile const *const self)
-{
-    return self->file.fpos + self->file.bpos;
-}
-
-static float SAMFileProPos(SAMFile const *const self)
-{
-    return -1.0;
-}
-
-static rc_t SAMFileSetPos(SAMFile *const self, uint64_t const pos)
-{
-    return RC(rcAlign, rcFile, rcPositioning, rcFunction, rcUnsupported);
-}
-
-static uint64_t SAMFileGetSize(SAMFile const *const self)
-{
-    return 0;
-}
-
-static void SAMFileWhack(SAMFile *self)
-{
-    KFileRelease(self->file.kfp);
-    if (self->file.buf)
-        free(self->file.buf);
-}
-
 static
 rc_t SAMFileInit(SAMFile *self, KFile const *kfp, RawFile_vt *vt)
 {
     static RawFile_vt const my_vt = {
         (rc_t (*)(void *, zlib_block_t, unsigned *))SAMFileRead,
-        (uint64_t (*)(void const *))SAMFileGetPos,
-        (float (*)(void const *))SAMFileProPos,
-        (uint64_t (*)(void const *))SAMFileGetSize,
-        (rc_t (*)(void *, uint64_t))SAMFileSetPos,
-        (void (*)(void *))SAMFileWhack
+        (uint64_t (*)(void const *))BufferedFileGetPos,
+        (float (*)(void const *))BufferedFileProPos,
+        (uint64_t (*)(void const *))BufferedFileGetSize,
+        (rc_t (*)(void *, uint64_t))BufferedFileSetPos,
+        (void (*)(void *))BufferedFileWhack
     };
     
     memset(self, 0, sizeof(*self));
     memset(vt, 0, sizeof(*vt));
     
-    self->file.buf = malloc(4096);
-    if (self->file.buf == NULL)
-        return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
-    self->file.kfp = kfp;
-    KFileAddRef(kfp);
-
     self->putback = -1;
     *vt = my_vt;
     
-    return 0;
+    return BufferedFileInit(&self->file, kfp);
 }
 
 /* MARK: BGZFile *** Start *** */
@@ -236,42 +267,25 @@ rc_t SAMFileInit(SAMFile *self, KFile const *kfp, RawFile_vt *vt)
 #else
 #endif
 
-#define MEM_ALIGN_SIZE ( 64 * 1024 )
-/* MEM_CHUNK_SIZE must be an integer multiple of ZLIB_BLOCK_SIZE.
- * The multiple must be >= 2 shouldn't be < 3.
- */
-#define BGZF_MEM_CHUNK_SIZE ( 256 * ZLIB_BLOCK_SIZE )
 #define CG_NUM_SEGS 4
 
 struct BGZFile {
-    BufferredFile file;
-    void *_buf;  /* allocated */
-    uint64_t fsize;
-    unsigned malign;
+    BufferedFile file;
     z_stream zs;
 };
 
 static
 rc_t BGZFileGetMoreBytes(BGZFile *self)
 {
-    rc_t rc;
-    
-    self->file.fpos += self->file.bpos;
-    self->file.bpos &= (MEM_ALIGN_SIZE - 1);
-    self->file.fpos -= self->file.bpos;
-
-    rc = KFileRead(self->file.kfp, self->file.fpos, ((char *)self->_buf) + self->malign,
-                   BGZF_MEM_CHUNK_SIZE, &self->file.bmax);
-    if (rc) {
-        DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("Error reading BAM file: %R\n", rc));
+    rc_t const rc = BufferedFileRead(&self->file);
+    if (rc)
         return rc;
-    }
-    if (self->file.bmax == 0 || self->file.bmax == self->file.bpos)
+    
+    if (self->file.bmax == 0)
         return RC(rcAlign, rcFile, rcReading, rcData, rcInsufficient);
 
-    self->zs.avail_in = (uInt)(self->file.bmax - self->file.bpos);
-    self->zs.next_in = &((Bytef *)self->file.buf)[self->file.bpos];
-    DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("Read %u bytes from BAM file at position %lu\n", self->zs.avail_in, self->file.fpos));
+    self->zs.avail_in = (uInt)(self->file.bmax);
+    self->zs.next_in = (Bytef *)self->file.buf;
     
     return 0;
 }
@@ -379,34 +393,14 @@ rc_t BGZFileRead(BGZFile *self, zlib_block_t dst, unsigned *pNumRead)
     return RC(rcAlign, rcFile, rcReading, rcFile, rcTooShort);
 }
 
-static uint64_t BGZFileGetPos(const BGZFile *self)
-{
-    return self->file.fpos + self->file.bpos;
-}
-
-/* returns the position as proportion of the whole file */ 
-static float BGZFileProPos(BGZFile const *const self)
-{
-    return BGZFileGetPos(self) / (double)self->fsize;
-}
-
 static rc_t BGZFileSetPos(BGZFile *const self, uint64_t const pos)
 {
-    if (self->file.fpos > pos || pos >= self->file.fpos + self->file.bmax) {
-        /* desired position is outside of current buffer */
-        self->file.fpos = pos ^ (pos & ((uint64_t)(MEM_ALIGN_SIZE - 1)));
-        self->file.bpos = (unsigned)(pos - self->file.fpos);
-        self->file.bmax = 0; /* force re-read */
+    rc_t const rc = BufferedFileSetPos(&self->file, pos);
+    if (rc == 0) {
+        self->zs.avail_in = (uInt)(self->file.bmax - self->file.bpos);
+        self->zs.next_in = &((Bytef *)self->file.buf)[self->file.bpos];
     }
-    else {
-        /* desired position is inside of current buffer */
-        unsigned const bpos = (unsigned)(pos - self->file.fpos); /* < 64k */
-
-        self->file.bpos = bpos; /* pos - self->fpos; */
-        self->zs.avail_in = (uInt)(self->file.bmax - bpos);
-        self->zs.next_in = &((Bytef *)self->file.buf)[bpos];
-    }
-    return 0;
+    return rc;
 }
 
 typedef rc_t (*BGZFileWalkBlocks_cb)(void *ctx, const BGZFile *file,
@@ -555,17 +549,10 @@ static rc_t BGZFileWalkBlocks(BGZFile *self, bool decompress, zlib_block_t *bufp
         return BGZFileWalkBlocksND(self, cb, ctx);
 }
 
-static uint64_t BGZFileGetSize(BGZFile const *const self)
-{
-    return self->fsize;
-}
-
 static void BGZFileWhack(BGZFile *self)
 {
     inflateEnd(&self->zs);
-    KFileRelease(self->file.kfp);
-    if (self->_buf)
-        free(self->_buf);
+    BufferedFileWhack(&self->file);
 }
 
 static rc_t BGZFileInit(BGZFile *self, const KFile *kfp, RawFile_vt *vt)
@@ -574,20 +561,16 @@ static rc_t BGZFileInit(BGZFile *self, const KFile *kfp, RawFile_vt *vt)
     rc_t rc;
     static RawFile_vt const my_vt = {
         (rc_t (*)(void *, zlib_block_t, unsigned *))BGZFileRead,
-        (uint64_t (*)(void const *))BGZFileGetPos,
-        (float (*)(void const *))BGZFileProPos,
-        (uint64_t (*)(void const *))BGZFileGetSize,
-        (rc_t (*)(void *, uint64_t))BGZFileSetPos,
+        (uint64_t (*)(void const *))BufferedFileGetPos,
+        (float (*)(void const *))BufferedFileProPos,
+        (uint64_t (*)(void const *))BufferedFileGetSize,
+        (rc_t (*)(void *, uint64_t))BufferedFileSetPos,
         (void (*)(void *))BGZFileWhack
     };
     
     memset(self, 0, sizeof(*self));
     memset(vt, 0, sizeof(*vt));
-    
-    rc = KFileSize(kfp, &self->fsize);
-    if (rc)
-        return rc;
-    
+
     i = inflateInit2(&self->zs, MAX_WBITS + 16); /* max + enable gzip headers */
     switch (i) {
     case Z_OK:
@@ -598,14 +581,9 @@ static rc_t BGZFileInit(BGZFile *self, const KFile *kfp, RawFile_vt *vt)
         return RC(rcAlign, rcFile, rcConstructing, rcNoObj, rcUnexpected);
     }
     
-    self->_buf = malloc(BGZF_MEM_CHUNK_SIZE + MEM_ALIGN_SIZE);
-    if (self->_buf == NULL)
-        return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
-    self->malign = (MEM_ALIGN_SIZE - ((intptr_t)self->_buf & (MEM_ALIGN_SIZE - 1))) & (MEM_ALIGN_SIZE - 1);
-    self->file.buf = &((char *)self->_buf)[self->malign];
-    
-    self->file.kfp = kfp;
-    KFileAddRef(kfp);
+    rc = BufferedFileInit(&self->file, kfp);
+    if (rc)
+        return rc;
 
     *vt = my_vt;
     
@@ -2776,9 +2754,10 @@ static rc_t BAMFileReadSAM(BAMFile *const self, BAMAlignment const **const rslt)
     
     for ( ; ; ) {
         int const ch = SAMFileRead1(&self->file.sam);
-        if (ch < 0)
-            return SAMFileLastError(&self->file.sam);
-
+        if (ch < 0) {
+            rc_t const rc = SAMFileLastError(&self->file.sam);
+            return (i == 0 && field == 1 && GetRCState(rc) == rcInsufficient) ? RC(rcAlign, rcFile, rcReading, rcRow, rcNotFound) : rc;
+        }
         if ((void const *)&scratch[i] >= endp)
             return RC(rcAlign, rcFile, rcReading, rcBuffer, rcInsufficient);
 
@@ -5315,7 +5294,7 @@ static rc_t BAMValidateIndex(struct VPath const *bampath,
             
             ksort(ctx.position, ctx.npositions, sizeof(ctx.position[0]), comp_index_data, 0);
             
-            stats.bamFileSize = bam.fsize;
+            stats.bamFileSize = bam.file.size;
             
             while (i < ctx.npositions) {
                 uint64_t const ifpos = ctx.position[i].position >> 16;
@@ -5640,7 +5619,7 @@ static rc_t BAMValidateBAM(struct VPath const *bampath,
     
     rc = VPath2BGZF(&bam, bampath);
     if (rc == 0) {
-        stats.bamFileSize = bam.fsize;
+        stats.bamFileSize = bam.file.size;
         if ((options & 7) > bvo_BlockHeaders)
             rc = BGZFileWalkBlocks(&bam, true, (zlib_block_t *)&ctx.nxt, BAMValidate2, &ctx);
         else
