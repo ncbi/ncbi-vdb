@@ -160,7 +160,7 @@ static uint64_t BufferedFileGetPos(BufferedFile const *const self)
 
 static float BufferedFileProPos(BufferedFile const *const self)
 {
-    return self->size == 0 ? -1.0 : (BufferedFileGetPos(self) / (double)self->size);
+    return self->fmax == 0 ? -1.0 : (BufferedFileGetPos(self) / (double)self->fmax);
 }
 
 static rc_t BufferedFileSetPos(BufferedFile *const self, uint64_t const pos)
@@ -191,16 +191,18 @@ struct SAMFile {
 
 static int SAMFileRead1(SAMFile *const self)
 {
-    if (self->putback >= 0) {
+    if (self->putback < 0) {
+        if (self->file.bpos == self->file.bmax) {
+            rc_t const rc = BufferedFileRead(&self->file);
+            if (rc || self->file.bmax == 0) return -1;
+        }
+        return ((char const *)self->file.buf)[self->file.bpos++];
+    }
+    else {
         int const x = self->putback;
         self->putback = -1;
         return x;
     }
-    if (self->file.bpos == self->file.bmax) {
-        rc_t const rc = BufferedFileRead(&self->file);
-        if (rc || self->file.bmax == 0) return -1;
-    }
-    return ((char const *)self->file.buf)[self->file.bpos++];
 }
 
 static rc_t SAMFileLastError(SAMFile const *const self)
@@ -210,7 +212,10 @@ static rc_t SAMFileLastError(SAMFile const *const self)
 
 static void SAMFilePutBack(SAMFile *const self, int ch)
 {
-    self->putback = ch;
+    if (self->file.bpos > 0)
+        --self->file.bpos;
+    else
+        self->putback = ch;
 }
 
 static rc_t SAMFileRead(SAMFile *const self, zlib_block_t dst, unsigned *pNumRead)
@@ -546,8 +551,8 @@ static rc_t BGZFileWalkBlocks(BGZFile *self, bool decompress, zlib_block_t *bufp
 
 static void BGZFileWhack(BGZFile *self)
 {
-    BufferedFileWhack(&self->file);
     inflateEnd(&self->zs);
+    BufferedFileWhack(&self->file);
 }
 
 static rc_t BGZFileInit(BGZFile *self, const KFile *kfp, RawFile_vt *vt)
