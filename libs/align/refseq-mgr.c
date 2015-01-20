@@ -72,6 +72,7 @@ typedef struct RefSeq_VT RefSeq_VT;
 
 enum {
     refSeqType_RefSeq = 1,
+    refSeqType_RefSeq_odd, /* for some weirdos, like hs37d5, that aren't accessioned */
     refSeqType_WGS,
     refSeqType_MAX
 };
@@ -121,6 +122,7 @@ static RefSeq *RefSeq_RefSeq_init(RefSeq *self,
 static char const *RefSeq_RefSeq_name(RefSeq const *self);
 static bool RefSeq_RefSeq_isopen(RefSeq const *self);
 static rc_t RefSeq_RefSeq_open(RefSeq *self, RefSeqMgr const *mgr);
+static rc_t RefSeq_RefSeq_odd_open(RefSeq *self, RefSeqMgr const *mgr);
 static void RefSeq_RefSeq_close(RefSeq *self);
 static rc_t RefSeq_RefSeq_setRow(RefSeq *self, unsigned N, char const name[]);
 static rc_t RefSeq_RefSeq_read(RefSeq const *self,
@@ -142,6 +144,20 @@ static RefSeq_VT const RefSeq_RefSeq_VT = {
     RefSeq_RefSeq_name,
     RefSeq_RefSeq_isopen,
     RefSeq_RefSeq_open,
+    RefSeq_RefSeq_close,
+    RefSeq_RefSeq_setRow,
+    RefSeq_RefSeq_read,
+    RefSeq_RefSeq_circular,
+    RefSeq_RefSeq_length,
+    RefSeq_RefSeq_checksum,
+    RefSeq_RefSeq_compare
+};
+
+static RefSeq_VT const RefSeq_RefSeq_odd_VT = {
+    RefSeq_RefSeq_init,
+    RefSeq_RefSeq_name,
+    RefSeq_RefSeq_isopen,
+    RefSeq_RefSeq_odd_open,
     RefSeq_RefSeq_close,
     RefSeq_RefSeq_setRow,
     RefSeq_RefSeq_read,
@@ -194,6 +210,14 @@ static RefSeq *RefSeq_RefSeq_alloc(unsigned const namelen)
     RefSeq *const self = calloc(1, sizeof(RefSeq) + namelen);
     if (self)
         self->vt = &RefSeq_RefSeq_VT;
+    return self;
+}
+
+static RefSeq *RefSeq_RefSeq_odd_alloc(unsigned const namelen)
+{
+    RefSeq *const self = RefSeq_RefSeq_alloc(namelen);
+    if (self)
+        self->vt = &RefSeq_RefSeq_odd_VT;
     return self;
 }
 
@@ -500,6 +524,28 @@ static rc_t RefSeq_RefSeq_open(RefSeq *const super, RefSeqMgr const *const mgr)
     return rc;
 }
 
+static rc_t RefSeq_RefSeq_odd_open(RefSeq *const super, RefSeqMgr const *const mgr)
+{
+    struct RefSeq_RefSeq *const self = &super->u.refSeq;
+    VTable const *tbl;
+    rc_t rc = VDBManagerOpenTableRead(mgr->vmgr, &tbl, NULL, "ncbi-acc:%s?vdb-ctx-refseq", self->name);
+    
+    if (tbl) {
+        char scheme[1024];
+        
+        get_tbl_schema_info(tbl, sizeof(scheme), scheme);
+        if (strcmp(scheme, "NCBI:refseq:tbl:reference") == 0) {
+            rc = TableReaderRefSeq_MakeTable(&self->reader, mgr->vmgr, tbl,
+                                             mgr->reader_options, mgr->cache);
+        }
+        else {
+            rc = RC(rcAlign, rcTable, rcOpening, rcType, rcInvalid);
+        }
+        VTableRelease(tbl);
+    }
+    return rc;
+}
+
 static rc_t RefSeq_WGS_open(RefSeq *const super, RefSeqMgr const *const mgr)
 {
     struct RefSeq_WGS *const self = &super->u.wgs;
@@ -533,6 +579,7 @@ static int AccessionType(VDBManager const *const mgr,
                          rc_t *const rc)
 {
     char scheme[1024];
+    bool isOdd = false;
 
     scheme[0] = '\0';
     {
@@ -552,6 +599,14 @@ static int AccessionType(VDBManager const *const mgr,
                 if (tbl) {
                     *rc = VTableOpenMetadataRead(tbl, &meta);
                     VTableRelease(tbl);
+                }
+                else {
+                    isOdd = true;
+                    *rc = VDBManagerOpenTableRead(mgr, &tbl, NULL, "ncbi-acc:%.*s?vdb-ctx=refseq", (int)N, accession);
+                    if (tbl) {
+                        *rc = VTableOpenMetadataRead(tbl, &meta);
+                        VTableRelease(tbl);
+                    }
                 }
             }
         }
@@ -579,7 +634,7 @@ static int AccessionType(VDBManager const *const mgr,
     if (strcmp(scheme, "NCBI:WGS:db:contig") == 0)
         return refSeqType_WGS;
     if (strcmp(scheme, "NCBI:refseq:tbl:reference") == 0)
-        return refSeqType_RefSeq;
+        return isOdd ? refSeqType_RefSeq_odd : refSeqType_RefSeq;
     return 0;
 }
 
@@ -684,6 +739,9 @@ static rc_t NewRefSeq(RefSeqMgr *const self,
         switch (type) {
         case refSeqType_RefSeq:
             rs = RefSeq_RefSeq_alloc(N);
+            break;
+        case refSeqType_RefSeq_odd:
+            rs = RefSeq_RefSeq_odd_alloc(N);
             break;
         case refSeqType_WGS:
             rs = RefSeq_WGS_alloc(N);
@@ -956,6 +1014,21 @@ LIB_EXPORT rc_t CC RefSeq_MD5(const RefSeq* cself, const uint8_t** md5)
         RefSeq const *const self = (RefSeq *)cself;
         
         rc = self->vt->checksum(self, md5);
+    }
+    ALIGN_DBGERR(rc);
+    return rc;
+}
+
+LIB_EXPORT rc_t CC RefSeq_Name(const RefSeq* cself, const char** name)
+{
+    rc_t rc = 0;
+    
+    if (cself == NULL)
+        rc = RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
+    else {
+        RefSeq const *const self = (RefSeq *)cself;
+        
+        *name = self->vt->name(self);
     }
     ALIGN_DBGERR(rc);
     return rc;
