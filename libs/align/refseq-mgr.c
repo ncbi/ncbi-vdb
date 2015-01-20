@@ -528,7 +528,7 @@ static rc_t RefSeq_RefSeq_odd_open(RefSeq *const super, RefSeqMgr const *const m
 {
     struct RefSeq_RefSeq *const self = &super->u.refSeq;
     VTable const *tbl;
-    rc_t rc = VDBManagerOpenTableRead(mgr->vmgr, &tbl, NULL, "ncbi-acc:%s?vdb-ctx-refseq", self->name);
+    rc_t rc = VDBManagerOpenTableRead(mgr->vmgr, &tbl, NULL, "ncbi-acc:%s?vdb-ctx=refseq", self->name);
     
     if (tbl) {
         char scheme[1024];
