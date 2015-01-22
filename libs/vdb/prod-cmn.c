@@ -1845,9 +1845,12 @@ LIB_EXPORT rc_t CC VFunctionProdColumnIdRange ( const VFunctionProd *self, int64
     VectorDoUntil ( & self -> parms, false, fetch_param_IdRange, & pb );
 
     if (pb.rc == 0) {
+#if 0 
+/* this causes problems in the loaders */   
         if(pb.first_time){ /** no parameters - some function which generated data; f.e.  meta_value() ***/
-              pb.last = 1;
+              pb.last = INT64_MAX;
         } 
+#endif        
         *first = pb.first;
         *last = pb.last;
     }
