@@ -153,8 +153,8 @@ rc_t CC TableReader_OpenCursor( const TableReader* cself )
 rc_t CC TableReader_ReadRow( const TableReader* cself, int64_t rowid )
 {
     rc_t rc = 0;
-    TableReaderColumn* c = NULL;
-
+	TableReaderColumn * c = NULL;
+	
     if ( cself == NULL )
     {
         rc = RC(rcAlign, rcType, rcOpening, rcSelf, rcNull);

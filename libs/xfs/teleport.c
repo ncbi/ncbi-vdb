@@ -216,6 +216,11 @@ XFS_EXTERN rc_t CC XFSSimpleContainerProvider (
                                 const struct XFSTeleport ** Teleport
                                 );
 
+#define TAR_ARCHIVE_NAME            "tar-archive"
+XFS_EXTERN rc_t CC XFSTarArchiveProvider (
+                                const struct XFSTeleport ** Teleport
+                                );
+
 static
 rc_t CC
 _TeleportInit ()
@@ -306,6 +311,14 @@ _TeleportInit ()
         RCt = _TeleportAdd (
                         SIMPLE_CONTAINER_NAME,
                         XFSSimpleContainerProvider
+                        );
+        if ( RCt != 0 ) { 
+            break;
+        }
+
+        RCt = _TeleportAdd (
+                        TAR_ARCHIVE_NAME,
+                        XFSTarArchiveProvider
                         );
         if ( RCt != 0 ) { 
             break;

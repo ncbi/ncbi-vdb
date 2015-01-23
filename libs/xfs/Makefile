@@ -113,6 +113,8 @@ XFS_SRC = \
     karts   \
     xhttp    \
     http    \
+    xtar     \
+    tar     \
     lockdpt \
     schwarzschraube \
     zehr    \

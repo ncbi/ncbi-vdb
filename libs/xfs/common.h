@@ -51,6 +51,7 @@ static const uint32_t _sFlavorOfKart              = 7;
 static const uint32_t _sFlavorOfKartItem          = 8;
 static const uint32_t _sFlavorOfKartCollection    = 9;
 static const uint32_t _sFlavorOfHttp              = 10;
+static const uint32_t _sFlavorOfTar               = 11;
 
 /*))    Methods related to all commonly used nodes
  ((*/
