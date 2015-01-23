@@ -1122,16 +1122,19 @@ LIB_EXPORT rc_t CC KVectorSetBool ( KVector *self, uint64_t key, bool data )
     size_t stored_bits = 0;
     uint64_t key_qword = key / (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS);
     size_t bit_offset_in_qword = (key % (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS)) * BOOL_VECT_RECORD_SIZE_IN_BITS;
-    bool first_time = 0;
+    bool first_time = false;
     size_t new_bit_record;
     size_t stored_bit_record;
 
     data = !!data; /* forcing bool to be E {0, 1} */
 
     rc = KVectorBoolGetStoredBits ( self, key_qword, &stored_bits );
-    first_time = rc == RC ( rcCont, rcVector, rcAccessing, rcItem, rcNotFound );
-    if ( !first_time && rc )
-        return rc;
+    if ( rc != 0 )
+    {
+        if ( GetRCState ( rc ) != rcNotFound )
+            return rc;
+        first_time = true;
+    }
 
     new_bit_record = (BOOL_VECT_BIT_SET_MASK | (uint64_t)data) << bit_offset_in_qword;
     stored_bit_record = BOOL_VECT_BIT_RECORD_MASK << bit_offset_in_qword & stored_bits;
