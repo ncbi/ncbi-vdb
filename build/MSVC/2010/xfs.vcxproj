@@ -53,6 +53,8 @@
     <ClCompile Include="..\..\..\libs\xfs\karts.c" />
     <ClCompile Include="..\..\..\libs\xfs\xhttp.c" />
     <ClCompile Include="..\..\..\libs\xfs\http.c" />
+    <ClCompile Include="..\..\..\libs\xfs\xtar.c" />
+    <ClCompile Include="..\..\..\libs\xfs\tar.c" />
     <ClCompile Include="..\..\..\libs\xfs\lockdpt.c" />
     <ClCompile Include="..\..\..\libs\xfs\schwarzschraube.c" />
     <ClCompile Include="..\..\..\libs\xfs\zehr.c" />

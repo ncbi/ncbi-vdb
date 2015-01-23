@@ -178,15 +178,15 @@ struct _HttpHs {
 
 static
 rc_t CC
-_HttpHsEnMake ( struct XFSHttpEntry * Entry, struct _HttpHsEn ** Sisi )
+_HttpHsEnMake ( struct XFSHttpEntry * Entry, struct _HttpHsEn ** HsEn )
 {
     struct _HttpHsEn * TheSi = NULL;
 
-    if ( Sisi != NULL ) {
-        * Sisi = NULL;
+    if ( HsEn != NULL ) {
+        * HsEn = NULL;
     }
 
-    if ( Entry == NULL || Sisi == NULL ) {
+    if ( Entry == NULL || HsEn == NULL ) {
         return XFS_RC ( rcNull );
     }
 
@@ -197,7 +197,7 @@ _HttpHsEnMake ( struct XFSHttpEntry * Entry, struct _HttpHsEn ** Sisi )
 
     TheSi -> entry = Entry;
 
-    * Sisi = TheSi;
+    * HsEn = TheSi;
 
     return 0;
 }   /* _HttpHsEnMake () */
@@ -280,55 +280,55 @@ _HttpHsEnConnect ( struct _HttpHsEn * self )
 
 static
 void CC
-_HttpHsRemNoLock ( struct _HttpHs * self, struct _HttpHsEn * Sisi )
+_HttpHsRemNoLock ( struct _HttpHs * self, struct _HttpHsEn * HsEn )
 {
-    if ( self == NULL || Sisi == NULL ) {
+    if ( self == NULL || HsEn == NULL ) {
         return;
     }
 
-    if ( Sisi -> prev == NULL ) {       /* at the kopf */
-        if ( Sisi -> next == NULL ) {
+    if ( HsEn -> prev == NULL ) {       /* at the kopf */
+        if ( HsEn -> next == NULL ) {
             self -> kopf = self -> arse = NULL;
         }
         else {
-            self -> kopf = Sisi -> next;
+            self -> kopf = HsEn -> next;
             self -> kopf -> prev = NULL;
         }
     }
     else {
-        if ( Sisi -> next == NULL ) {   /* at the arse */
-            self -> arse = Sisi -> prev;
+        if ( HsEn -> next == NULL ) {   /* at the arse */
+            self -> arse = HsEn -> prev;
             self -> arse -> next = NULL;
         }
         else {                          /* in between */
-            Sisi -> prev -> next = Sisi -> next;
-            Sisi -> next -> prev = Sisi -> prev;
+            HsEn -> prev -> next = HsEn -> next;
+            HsEn -> next -> prev = HsEn -> prev;
         }
     }
 
-    Sisi -> prev = Sisi -> next = NULL;
+    HsEn -> prev = HsEn -> next = NULL;
 
     self -> qty ++;
 }   /* _HttpHsRemNoLock () */
 
 static
 void CC
-_HttpHsAddNoLock ( struct _HttpHs * self, struct _HttpHsEn * Sisi )
+_HttpHsAddNoLock ( struct _HttpHs * self, struct _HttpHsEn * HsEn )
 {
-    if ( self == NULL || Sisi == NULL ) {
+    if ( self == NULL || HsEn == NULL ) {
         return;
     }
 
         /*)) Note, addidng always to head
          ((*/
     if ( self -> kopf == NULL ) {
-        Sisi -> next = Sisi -> prev = NULL;
-        self -> kopf = self -> arse = Sisi;
+        HsEn -> next = HsEn -> prev = NULL;
+        self -> kopf = self -> arse = HsEn;
     }
     else {
-        self -> kopf -> prev = Sisi;
-        Sisi -> next = self -> kopf;
-        self -> kopf = Sisi;
+        self -> kopf -> prev = HsEn;
+        HsEn -> next = self -> kopf;
+        self -> kopf = HsEn;
     }
 
     self -> qty ++;
@@ -338,7 +338,7 @@ static
 void CC
 _HttpHsMakeSlotNoLock ( const struct _HttpHs * self )
 {
-    struct _HttpHsEn * Sisi;
+    struct _HttpHsEn * HsEn;
 
     if ( self == NULL ) {
         return;
@@ -349,13 +349,13 @@ _HttpHsMakeSlotNoLock ( const struct _HttpHs * self )
     }
 
     while ( self -> size <= self -> qty ) {
-        Sisi = self -> arse;
-        if ( Sisi == NULL ) {
+        HsEn = self -> arse;
+        if ( HsEn == NULL ) {
             break;
         }
 
-        _HttpHsRemNoLock ( ( struct _HttpHs * ) self, Sisi );
-        _HttpHsEnDispose ( Sisi );
+        _HttpHsRemNoLock ( ( struct _HttpHs * ) self, HsEn );
+        _HttpHsEnDispose ( HsEn );
     }
 }   /* _HttpHsMakeSlotNoLock () */
 
@@ -366,22 +366,22 @@ _HttpHsFindNoLock (
                 const struct XFSHttpEntry * Entry
 )
 {
-    struct _HttpHsEn * Sisi = NULL;
+    struct _HttpHsEn * HsEn = NULL;
 
     if ( self == NULL || Entry == NULL ) {
         return NULL;
     }
 
-    Sisi = self -> kopf;
+    HsEn = self -> kopf;
 
-    while ( Sisi != NULL ) {
-        if ( Sisi -> entry == Entry ) {
-            _HttpHsRemNoLock ( ( struct _HttpHs * ) self, Sisi );
-            _HttpHsAddNoLock ( ( struct _HttpHs * ) self, Sisi );
-            return Sisi;
+    while ( HsEn != NULL ) {
+        if ( HsEn -> entry == Entry ) {
+            _HttpHsRemNoLock ( ( struct _HttpHs * ) self, HsEn );
+            _HttpHsAddNoLock ( ( struct _HttpHs * ) self, HsEn );
+            return HsEn;
         }
 
-        Sisi = Sisi -> next;
+        HsEn = HsEn -> next;
     }
 
     return NULL;
@@ -389,32 +389,32 @@ _HttpHsFindNoLock (
 
 static 
 rc_t CC
-_HttpHsMake ( uint32_t Size, struct _HttpHs ** Pipi )
+_HttpHsMake ( uint32_t Size, struct _HttpHs ** Hs )
 {
     rc_t RCt;
-    struct _HttpHs * ThePipi;
+    struct _HttpHs * TheHs;
 
     RCt = 0;
-    ThePipi = NULL;
+    TheHs = NULL;
 
-    if ( Pipi == NULL ) {
+    if ( Hs == NULL ) {
         return XFS_RC ( rcNull );
     }
-    * Pipi = NULL;
+    * Hs = NULL;
 
-    ThePipi = calloc ( 1, sizeof ( struct _HttpHs ) );
-    if ( ThePipi == NULL ) {
+    TheHs = calloc ( 1, sizeof ( struct _HttpHs ) );
+    if ( TheHs == NULL ) {
         return XFS_RC ( rcExhausted );
     }
 
-    RCt = KLockMake ( & ( ThePipi -> mutabor ) );
+    RCt = KLockMake ( & ( TheHs -> mutabor ) );
     if ( RCt == 0 ) {
-        ThePipi -> size = Size == 0 ? DEFAULT_PIPIRDA_SIZE : Size ;
-        ThePipi -> qty = 0;
-        * Pipi = ThePipi;
+        TheHs -> size = Size == 0 ? DEFAULT_PIPIRDA_SIZE : Size ;
+        TheHs -> qty = 0;
+        * Hs = TheHs;
     }
     else {
-        free ( ThePipi );
+        free ( TheHs );
     }
 
     return RCt;
@@ -425,10 +425,10 @@ rc_t CC
 _HttpHsDispose ( struct _HttpHs * self )
 {
     bool AbleToLock;
-    struct _HttpHsEn * Sisi;
+    struct _HttpHsEn * HsEn;
 
     AbleToLock = false;
-    Sisi = NULL;
+    HsEn = NULL;
 
     if ( self == NULL ) {
         return 0;
@@ -439,10 +439,10 @@ _HttpHsDispose ( struct _HttpHs * self )
     }
 
     while ( self -> kopf != NULL ) {
-        Sisi = self -> kopf;
+        HsEn = self -> kopf;
 
-        _HttpHsRemNoLock ( ( struct _HttpHs * ) self, Sisi );
-        _HttpHsEnDispose ( Sisi );
+        _HttpHsRemNoLock ( ( struct _HttpHs * ) self, HsEn );
+        _HttpHsEnDispose ( HsEn );
     }
 
     self -> kopf = self -> arse = NULL;
@@ -465,7 +465,7 @@ rc_t CC
 _HttpHsFindOrCreate (
                     const struct _HttpHs * self,
                     const struct XFSHttpEntry * Entry,
-                    const struct _HttpHsEn ** Sisi
+                    const struct _HttpHsEn ** HsEn
 )
 {
     rc_t RCt;
@@ -474,11 +474,11 @@ _HttpHsFindOrCreate (
     RCt = 0;
     TheSi = NULL;
 
-    if ( Sisi != NULL ) {
-        * Sisi = NULL;
+    if ( HsEn != NULL ) {
+        * HsEn = NULL;
     }
 
-    if ( self == NULL || Entry == NULL || Sisi == NULL ) {
+    if ( self == NULL || Entry == NULL || HsEn == NULL ) {
         return XFS_RC ( rcNull );
     }
 
@@ -512,7 +512,7 @@ _HttpHsFindOrCreate (
         else {
             RCt = _HttpHsEnConnect ( TheSi );
             if ( RCt == 0 ) {
-                * Sisi = TheSi;
+                * HsEn = TheSi;
             }
         }
     }
@@ -528,10 +528,10 @@ _HttpHsDelete (
 )
 {
     rc_t RCt;
-    struct _HttpHsEn * Sisi;
+    struct _HttpHsEn * HsEn;
 
     RCt = 0;
-    Sisi = NULL;
+    HsEn = NULL;
 
     if ( self == NULL || Entry == NULL ) {
         return XFS_RC ( rcNull );
@@ -539,10 +539,10 @@ _HttpHsDelete (
 
     RCt = KLockAcquire ( self -> mutabor );
     if ( RCt == 0 ) {
-        Sisi = _HttpHsFindNoLock ( self, Entry );
-        if ( Sisi != NULL ) {
-            _HttpHsRemNoLock ( ( struct _HttpHs * ) self, Sisi );
-            _HttpHsEnDispose ( Sisi );
+        HsEn = _HttpHsFindNoLock ( self, Entry );
+        if ( HsEn != NULL ) {
+            _HttpHsRemNoLock ( ( struct _HttpHs * ) self, HsEn );
+            _HttpHsEnDispose ( HsEn );
         }
 
         KLockUnlock ( self -> mutabor );
@@ -560,21 +560,21 @@ _HttpHsGetKFile (
 )
 {
     rc_t RCt;
-    const struct _HttpHsEn * Sisi;
+    const struct _HttpHsEn * HsEn;
 
     RCt = 0;
-    Sisi = NULL;
+    HsEn = NULL;
 
-    RCt = _HttpHsFindOrCreate ( self, Entry, & Sisi );
+    RCt = _HttpHsFindOrCreate ( self, Entry, & HsEn );
     if ( RCt == 0 ) {
-        RCt = KFileAddRef ( Sisi -> file );
+        RCt = KFileAddRef ( HsEn -> file );
         if ( RCt == 0 ) {
-            * File = Sisi -> file;
+            * File = HsEn -> file;
         }
     }
 
     return RCt;
-}   /* __PipidraGetKFile () */
+}   /* _HttpHsGetKFile () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /* _HttpED Methods ...                                               */
@@ -1151,7 +1151,7 @@ _HttpMakeUrlFromPath (
                 ;
         /*  Second we are allocating string
          */
-    RetUrl = calloc ( 1, sizeof ( char ) * RetSize );
+    RetUrl = calloc ( RetSize, sizeof ( char ) );
     if ( RetUrl == NULL ) {
         return XFS_RC ( rcExhausted );
     }
@@ -1211,7 +1211,7 @@ _HttpExtractNameFromPath ( const char * Path, const char ** Name )
 
     RetSize = PathSize - Pos + 1;
 
-    RetName = calloc ( 1, sizeof ( char ) * RetSize );
+    RetName = calloc ( RetSize, sizeof ( char ) );
     if ( RetName == NULL ) {
         return XFS_RC ( rcExhausted );
     }
@@ -1284,7 +1284,6 @@ _HttpCreateEntry (
                 RetEntry -> is_folder = IsFolder;
                 RetEntry -> size = IsFolder ? 0 : Size;
                 RetEntry -> time = Time;
-                RetEntry -> status = kxfshComplete;
                 RetEntry -> url_hash = string_hash (
                                             RetEntry -> url,
                                             string_size ( RetEntry -> url )
@@ -2320,7 +2319,7 @@ _HttpMakeBuffer ( uint64_t Size, void ** Buffer )
 
         BF = malloc ( sizeof ( char ) * Size );
     */
-    BF = calloc ( 1, sizeof ( char ) * Size );
+    BF = calloc ( Size, sizeof ( char ) );
     if ( BF == NULL ) {
         return XFS_RC ( rcExhausted );
     }
