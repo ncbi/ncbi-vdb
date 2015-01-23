@@ -433,7 +433,7 @@ rc_t CC KSocketTimedRead ( const KSocket *self,
     /* check for error */
     if ( revents < 0 || ( revents & ( POLLERR | POLLNVAL ) ) != 0 )
     {
-        if ( errno != 0 )
+        if ( revents < 0 )
         {
             rc_t rc = HandleErrno ( __func__, __LINE__ );
             DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead socket_wait returned '%s'\n", self, strerror(errno) ) );
@@ -529,7 +529,7 @@ rc_t CC KSocketTimedWrite ( KSocket *self,
     /* check for error */
     if ( revents < 0 || ( revents & ( POLLERR | POLLNVAL ) ) != 0 )
     {
-        if ( errno != 0 )
+        if ( revents < 0 )
         {
             rc_t rc = HandleErrno ( __func__, __LINE__ );
             DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedWrite socket_wait returned '%s'\n", self, strerror ( errno ) ) );
