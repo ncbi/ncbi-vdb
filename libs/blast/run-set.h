@@ -58,6 +58,16 @@ typedef enum {
     eColTypeNonStatic
 } EColType;
 
+typedef enum {
+    eFixedReadN,
+    eFactor10,
+} EReadIdType;
+
+typedef struct {
+    EReadIdType type;
+    bool varReadN;
+} ReadIdDesc;
+
 typedef struct {
     uint64_t spotCount;
     uint8_t nReads;
@@ -78,6 +88,7 @@ typedef struct {
     EColType rdFilterStatic;
 
     bool varReadLen;
+    ReadIdDesc readIdDesc;
 } RunDesc;
 
 typedef struct {
@@ -93,6 +104,7 @@ typedef struct {
     /* rundesc; */
     char *acc;
     char *path;
+    uint32_t idx;
 
     VdbBlastDb *obj;
     BTableType type;
@@ -104,11 +116,11 @@ typedef struct {
     uint64_t alignments; /* rows number in PRIMARY_ALIGNMENT table */
 
     bool bioReadsTooExpensive; /* numSequences is TooExpensive */
-    uint64_t bioReadsApprox; /* numSequencesApprox; */
+    uint64_t bioReadsApprox;   /* numSequencesApprox; */
 
-    uint64_t bioBases;       /* length; */
+    uint64_t bioBases;         /* length; */
     bool bioBasesTooExpensive; /* totalLength is TooExpensive */
-    uint64_t bioBasesApprox; /* lengthApprox; */
+    uint64_t bioBasesApprox;   /* lengthApprox; */
 
     RunDesc rd;
 
@@ -196,6 +208,7 @@ struct VdbBlastRunSet {
     RunSet runs;
 
     bool beingRead;
+    ReadIdDesc readIdDesc;
     Core2na core2na;
     Core4na core4na;
 
@@ -206,6 +219,8 @@ struct VdbBlastRunSet {
 
 rc_t _VTableMakeCursor(const struct VTable *self,
      const struct VCursor **curs, uint32_t *col_idx, const char *col_name);
+
+void ReadDescFixReadId(ReadDesc *self);
 
 #ifdef TEST_VdbBlastRunFillReadDesc
 VDB_EXTERN
