@@ -804,7 +804,7 @@ FIXTURE_TEST_CASE(num_gen_IteratorNext, NumGenFixture)
 //rc_t num_gen_iterator_percent( const struct num_gen_iter * self, uint8_t fract_digits, uint32_t * value );
 
 // Error reporting
-
+#if _DEBUGGING
 TEST_CASE(GetUnreadRCInfo_LogRC)
 {   // bug report: only 1 RC is reported at the end of KMane in _DEBUGGING mode
 
@@ -827,6 +827,7 @@ TEST_CASE(GetUnreadRCInfo_LogRC)
               );
     REQUIRE ( GetUnreadRCInfo ( & rc, & filename, & function, & lineno ) );
 }
+#endif
 
 //////////////////////////////////////////////////// Main
 extern "C"
