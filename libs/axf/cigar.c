@@ -1603,7 +1603,7 @@ rc_t CC right_soft_clip_5_impl ( void *data, const VXformInfo *info, int64_t row
                     int const type = ref_offset_type[cur_ro];
                     
                     ++cur_ro;
-                    if (j > 0 && offset < 0 && type != 0) {
+                    if (j > 0 && offset < 0 && type == 1) {
                         assert(clip == 0);
                         clip = -offset;
                     }
