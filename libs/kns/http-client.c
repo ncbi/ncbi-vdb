@@ -497,11 +497,16 @@ rc_t KClientHttpGetCharFromResponse ( KClientHttp *self, char *ch, struct timeou
            drops the connection */
         rc = KStreamTimedRead ( self -> sock, buffer, bsize, & self -> block_valid, tm );
         if ( rc != 0 )
+        {
+            KClientHttpClose ( self );
             return rc;
+        }
 
         /* if nothing was read, we have reached the end of the stream */
         if ( self -> block_valid == 0 )
         {
+            KClientHttpClose ( self );
+
             /* return nul char */
             * ch = 0;
             return 0;
@@ -936,7 +941,7 @@ rc_t CC KClientHttpStreamWhack ( KClientHttpStream *self )
     return 0;
 }
 
-/* Read from stream - not chunked or within a chunk */
+/* Read from stream - either not chunked or within a chunk */
 static
 rc_t CC KClientHttpStreamTimedRead ( const KClientHttpStream *cself,
     void *buffer, size_t bsize, size_t *num_read, struct timeout_t *tm )
@@ -968,18 +973,22 @@ rc_t CC KClientHttpStreamTimedRead ( const KClientHttpStream *cself,
         if ( rc != 0 )
         {
             /* TBD - handle dropped connection - may want to reestablish */
+            KClientHttpClose ( http );
 
             /* LOOK FOR DROPPED CONNECTION && SIZE UNKNOWN - HTTP/1.0 DYNAMIC CASE */
             if ( self -> size_unknown )
                 rc = 0;
         }
 
-        /* if nothing was read - incomplete transfer */
-        else if ( ! self -> size_unknown && * num_read == 0 )
+        /* if nothing was read - end of stream */
+        else if ( * num_read == 0 )
         {
-            rc = RC ( rcNS, rcNoTarg, rcTransfer, rcNoObj, rcIncomplete);
-        }
+            KClientHttpClose ( http );
 
+            /* if the size was known, it is an incomplete transfer */
+            if ( ! self -> size_unknown )
+                rc = RC ( rcNS, rcNoTarg, rcTransfer, rcNoObj, rcIncomplete);
+        }
     }
     else
     {
@@ -1291,14 +1300,20 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
 
     /* check the data was completely sent */
     if ( rc == 0 && sent != len )
+    {
         rc = RC ( rcNS, rcNoTarg, rcWriting, rcTransfer, rcIncomplete );
+        KClientHttpClose ( self );
+    }
     if ( rc == 0 && body != NULL  && body -> elem_count > 0 )
     {
         /* "body" contains bytes plus trailing NUL */
         size_t to_send = ( size_t ) body -> elem_count - 1;
         rc = KStreamTimedWriteAll ( self -> sock, body -> base, to_send, & sent, & tm );
         if ( rc == 0 && sent != to_send )
+        {
             rc = RC ( rcNS, rcNoTarg, rcWriting, rcTransfer, rcIncomplete );
+            KClientHttpClose ( self );
+        }
     }
     if ( rc == 0 )
     {

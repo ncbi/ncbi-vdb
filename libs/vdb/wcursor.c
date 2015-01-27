@@ -675,7 +675,7 @@ LIB_EXPORT rc_t CC VCursorRepeatRow ( VCursor *self, uint64_t count )
             VectorForEach ( & self -> row, false, WColumnRepeatRow, & pb );
 
             /* extend the current row-id, dragging end_id along with it */
-            if ( self -> end_id == self -> row_id )
+            if ( self -> end_id >= self -> row_id )
                 self -> end_id += count;
 
             /* move the current row id ahead */

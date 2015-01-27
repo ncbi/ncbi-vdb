@@ -414,6 +414,7 @@ static
 rc_t CC KSocketTimedRead ( const KSocket *self,
     void *buffer, size_t bsize, size_t *num_read, timeout_t *tm )
 {
+    rc_t rc;
     int revents;
     
     assert ( self != NULL );
@@ -431,21 +432,20 @@ rc_t CC KSocketTimedRead ( const KSocket *self,
                             , tm );
 
     /* check for error */
-    if ( revents < 0 || ( revents & ( POLLERR | POLLNVAL ) ) != 0 )
+    if ( revents < 0 )
     {
-        if ( errno != 0 )
+        rc = HandleErrno ( __func__, __LINE__ );
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead socket_wait returned '%s'\n", self, strerror(errno) ) );
+        return rc;
+    }
+    if ( ( revents & ( POLLERR | POLLNVAL ) ) != 0 )
+    {
+        if ( ( revents & POLLERR ) != 0)
         {
-            rc_t rc = HandleErrno ( __func__, __LINE__ );
-            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead socket_wait returned '%s'\n", self, strerror(errno) ) );
-            return rc;
-        }
-
-        if ((revents & POLLERR) != 0) {
             int optval = 0;
             socklen_t optlen = sizeof optval;
-            if ((getsockopt(self->fd, SOL_SOCKET, SO_ERROR, &optval, &optlen)
-                    == 0)
-                && optval > 0)
+            if ( ( getsockopt ( self -> fd, SOL_SOCKET, SO_ERROR, & optval, & optlen ) == 0 )
+                 && optval > 0)
             {
                 errno = optval;
                 DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead socket_wait/getsockopt returned '%s'\n", 
@@ -467,7 +467,7 @@ rc_t CC KSocketTimedRead ( const KSocket *self,
             * num_read = count;
             return 0;
         }
-        rc_t rc = HandleErrno ( __func__, __LINE__ );
+        rc = HandleErrno ( __func__, __LINE__ );
         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead recv returned count %d\n", self, count ) );
         return rc;
     }
@@ -483,7 +483,7 @@ rc_t CC KSocketTimedRead ( const KSocket *self,
     /* anything else in revents is an error */
     if ( ( revents & ~ POLLIN ) != 0 && errno != 0 )
     {
-        rc_t rc = HandleErrno ( __func__, __LINE__ );
+        rc = HandleErrno ( __func__, __LINE__ );
         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead error '%s'\n", self, strerror ( errno ) ) );
         return rc;
     }
@@ -511,6 +511,7 @@ static
 rc_t CC KSocketTimedWrite ( KSocket *self,
     const void *buffer, size_t bsize, size_t *num_writ, timeout_t *tm )
 {
+    rc_t rc;
     int revents;
     ssize_t count;
 
@@ -527,14 +528,14 @@ rc_t CC KSocketTimedWrite ( KSocket *self,
                             , tm );
 
     /* check for error */
-    if ( revents < 0 || ( revents & ( POLLERR | POLLNVAL ) ) != 0 )
+    if ( revents < 0 )
     {
-        if ( errno != 0 )
-        {
-            rc_t rc = HandleErrno ( __func__, __LINE__ );
-            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedWrite socket_wait returned '%s'\n", self, strerror ( errno ) ) );
-            return rc;
-        }
+        rc = HandleErrno ( __func__, __LINE__ );
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedWrite socket_wait returned '%s'\n", self, strerror ( errno ) ) );
+        return rc;
+    }
+    if ( ( revents & ( POLLERR | POLLNVAL ) ) != 0 )
+    {
         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedWrite socket_wait returned POLLERR | POLLNVAL\n", self ) );
         return RC ( rcNS, rcStream, rcWriting, rcNoObj, rcUnknown );
     }
@@ -550,7 +551,6 @@ rc_t CC KSocketTimedWrite ( KSocket *self,
     /* check for ability to send */
     if ( ( revents & ( POLLWRNORM | POLLWRBAND ) ) != 0 )
     {
-        rc_t rc = 0;
         count = send ( self -> fd, buffer, bsize, 0 );
         if ( count >= 0 )
         {
@@ -567,7 +567,7 @@ rc_t CC KSocketTimedWrite ( KSocket *self,
     /* anything else in revents is an error */
     if ( ( revents & ~ POLLOUT ) != 0 && errno != 0 )
     {
-        rc_t rc = HandleErrno ( __func__, __LINE__ );
+        rc = HandleErrno ( __func__, __LINE__ );
         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedWrite error '%s'\n", self, strerror ( errno ) ) );
         return rc;
     }
