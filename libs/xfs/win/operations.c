@@ -754,7 +754,7 @@ _HandleCreateNewFileEdit (
 }   /* _HandleCreateNewFileEdit () */
 
 /*))
- ((     Really crappy method, long and stupid.
+ ((     Really strange method, long and stupid.
   ))
  ((*/
 static
