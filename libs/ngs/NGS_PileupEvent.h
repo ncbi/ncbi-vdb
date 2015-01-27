@@ -147,22 +147,22 @@ struct NGS_PileupEvent_vt
 {
     NGS_Refcount_vt dad;
     
-    struct NGS_String *     ( * get_reference_spec )            ( const NGS_PileupEvent * self, ctx_t ctx );
-    int64_t                 ( * get_reference_position )        ( const NGS_PileupEvent * self, ctx_t ctx );
-    int                     ( * get_mapping_quality )           ( const NGS_PileupEvent * self, ctx_t ctx );
-    struct NGS_String *     ( * get_alignment_id )              ( const NGS_PileupEvent * self, ctx_t ctx );
-    struct NGS_Alignment *  ( * get_alignment )                 ( const NGS_PileupEvent * self, ctx_t ctx );
-    int64_t                 ( * get_alignment_position )        ( const NGS_PileupEvent * self, ctx_t ctx );
-    int64_t                 ( * get_first_alignment_position )  ( const NGS_PileupEvent * self, ctx_t ctx );
-    int64_t                 ( * get_last_alignment_position )   ( const NGS_PileupEvent * self, ctx_t ctx );
-    int                     ( * get_event_type )                ( const NGS_PileupEvent * self, ctx_t ctx );
-    char                    ( * get_alignment_base )            ( const NGS_PileupEvent * self, ctx_t ctx );
-    char                    ( * get_alignment_quality )         ( const NGS_PileupEvent * self, ctx_t ctx );
-    struct NGS_String *     ( * get_insertion_bases )           ( const NGS_PileupEvent * self, ctx_t ctx );
-    struct NGS_String *     ( * get_insertion_qualities )       ( const NGS_PileupEvent * self, ctx_t ctx );
-    unsigned int            ( * get_repeat_count )              ( const NGS_PileupEvent * self, ctx_t ctx );
-    int                     ( * get_indel_type )                ( const NGS_PileupEvent * self, ctx_t ctx );
-    bool                    ( * next )                          ( NGS_PileupEvent * self, ctx_t ctx );    
+    struct NGS_String *     ( * get_reference_spec )            ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    int64_t                 ( * get_reference_position )        ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    int                     ( * get_mapping_quality )           ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    struct NGS_String *     ( * get_alignment_id )              ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    struct NGS_Alignment *  ( * get_alignment )                 ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    int64_t                 ( * get_alignment_position )        ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    int64_t                 ( * get_first_alignment_position )  ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    int64_t                 ( * get_last_alignment_position )   ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    int                     ( * get_event_type )                ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    char                    ( * get_alignment_base )            ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    char                    ( * get_alignment_quality )         ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    struct NGS_String *     ( * get_insertion_bases )           ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    struct NGS_String *     ( * get_insertion_qualities )       ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    unsigned int            ( * get_repeat_count )              ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    int                     ( * get_indel_type )                ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    bool                    ( * next )                          ( NGS_PILEUPEVENT * self, ctx_t ctx );    
 };
 
 /* Init

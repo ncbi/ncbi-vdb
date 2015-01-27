@@ -248,9 +248,15 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetReferencePosition, CSRA1_Fixture
 
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetPileupDepth_1, CSRA1_Fixture)
 {
-    ENTRY_GET_PILEUP_NEXT( CSRA1_PrimaryOnly, "supercont2.1" );
+    ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
 
     Advance(85);
+
+    REQUIRE_EQ ( (int64_t)84, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)0, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+
+    Advance(1);
+
     REQUIRE_EQ ( (int64_t)85, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
     REQUIRE_EQ ( (unsigned int)1, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
     
@@ -258,19 +264,25 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetPileupDepth_1, CSRA1_Fixture)
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetPileupDepth_2, CSRA1_Fixture)
 {
-    ENTRY_GET_PILEUP_NEXT( CSRA1_PrimaryOnly, "supercont2.1" );
+    ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
 
     Advance(186);
-    REQUIRE_EQ ( (int64_t)186, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (int64_t)185, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
     REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
     
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetPileupDepth_3, CSRA1_Fixture)
 {
-    ENTRY_GET_PILEUP_NEXT( CSRA1_PrimaryOnly, "supercont2.1" );
-    
+    ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
+
     Advance(5491);
+
+    REQUIRE_EQ ( (int64_t)5490, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)2, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+
+    Advance(1);
+
     REQUIRE_EQ ( (int64_t)5491, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
     REQUIRE_EQ ( (unsigned int)3, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
     
