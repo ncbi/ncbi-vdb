@@ -803,6 +803,31 @@ FIXTURE_TEST_CASE(num_gen_IteratorNext, NumGenFixture)
 //rc_t num_gen_range_check( struct num_gen * self, const int64_t first, const uint64_t count );
 //rc_t num_gen_iterator_percent( const struct num_gen_iter * self, uint8_t fract_digits, uint32_t * value );
 
+// Error reporting
+
+TEST_CASE(GetUnreadRCInfo_LogRC)
+{   // bug report: only 1 RC is reported at the end of KMane in _DEBUGGING mode
+
+    // create a couple of RCs
+    RC ( rcApp, rcFile, rcConstructing, rcFile, rcNull );
+    RC ( rcXF, rcFunction, rcExecuting, rcParam, rcInvalid );
+    
+    rc_t rc;
+    uint32_t lineno;
+    const char *filename, *function;
+    REQUIRE ( GetUnreadRCInfo ( & rc, & filename, & function, & lineno ) );
+    // bug: call to pLogErr invokes GetRCFunction (and others alike),
+    // which as a side effect changes "last read RC" to equal "last written RC"
+    // causing the subsequent call to GetUnreadRCInfo to return "no more unread RCs"
+    pLogErr ( klogWarn, rc, "$(filename):$(lineno) within $(function)"
+              , "filename=%s,lineno=%u,function=%s"
+              , filename
+              , lineno
+              , function
+              );
+    REQUIRE ( GetUnreadRCInfo ( & rc, & filename, & function, & lineno ) );
+}
+
 //////////////////////////////////////////////////// Main
 extern "C"
 {
