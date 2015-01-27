@@ -596,10 +596,12 @@ LIB_EXPORT rc_t CC SetRCFileFuncLine ( rc_t rc, const char *filename, const char
  */
 LIB_EXPORT bool CC GetUnreadRCInfo ( rc_t *rc, const char **filename, const char **funcname, uint32_t *lineno )
 {
+    int32_t last_writ;
+
     reporting_unread = true;
 
     /* these are not atomic, but the ordering is important */
-    int32_t last_writ = atomic32_read ( & RC_loc_written );
+    last_writ = atomic32_read ( & RC_loc_written );
     if ( last_writ > 0 )
     {
         /* this arrangement attempts to make the access to
