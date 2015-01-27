@@ -110,6 +110,31 @@ KLIB_EXTERN rc_t CC KVectorGetF64 ( const KVector *self, uint64_t key, double *v
 KLIB_EXTERN rc_t CC KVectorGetPtr ( const KVector *self, uint64_t key, void **value );
 
 
+/* GetFirst
+ *  get first non-null element
+ *  returns key of found element in "first"
+ */
+KLIB_EXTERN rc_t CC KVectorGetFirst ( const KVector *self, uint64_t *first,
+    void *value_buffer, size_t bsize, size_t *bytes );
+
+KLIB_EXTERN rc_t CC KVectorGetFirstBool ( const KVector *self, uint64_t *first, bool *value );
+
+KLIB_EXTERN rc_t CC KVectorGetFirstI8 ( const KVector *self, uint64_t *first, int8_t *value );
+KLIB_EXTERN rc_t CC KVectorGetFirstI16 ( const KVector *self, uint64_t *first, int16_t *value );
+KLIB_EXTERN rc_t CC KVectorGetFirstI32 ( const KVector *self, uint64_t *first, int32_t *value );
+KLIB_EXTERN rc_t CC KVectorGetFirstI64 ( const KVector *self, uint64_t *first, int64_t *value );
+
+KLIB_EXTERN rc_t CC KVectorGetFirstU8 ( const KVector *self, uint64_t *first, uint8_t *value );
+KLIB_EXTERN rc_t CC KVectorGetFirstU16 ( const KVector *self, uint64_t *first, uint16_t *value );
+KLIB_EXTERN rc_t CC KVectorGetFirstU32 ( const KVector *self, uint64_t *first, uint32_t *value );
+KLIB_EXTERN rc_t CC KVectorGetFirstU64 ( const KVector *self, uint64_t *first, uint64_t *value );
+
+KLIB_EXTERN rc_t CC KVectorGetFirstF32 ( const KVector *self, uint64_t *first, float *value );
+KLIB_EXTERN rc_t CC KVectorGetFirstF64 ( const KVector *self, uint64_t *first, double *value );
+
+KLIB_EXTERN rc_t CC KVectorGetFirstPtr ( const KVector *self, uint64_t *first, void **value );
+
+
 /* GetPrev
  *  given a starting key, get first previous non-null element
  *  returns key of found element in "prev"
