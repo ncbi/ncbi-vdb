@@ -77,34 +77,34 @@ clean: stdclean
 #
 $(ILIBDIR)/libngs: $(addprefix $(ILIBDIR)/libngs.,$(ILIBEXT))
 
-NGS_SRC = \
-	NGS_ErrBlock \
-	NGS_Id \
-	NGS_String \
-	NGS_Refcount \
-	NGS_Cursor \
-	NGS_Fragment \
-	NGS_Read \
-    NGS_Reference \
-    NGS_Alignment\
-	NGS_ReadGroup \
-    NGS_Pileup \
-    NGS_PileupEvent \
-	NGS_ReadCollection \
-	NGS_Statistics \
-	SRA_ReadCollection \
-    SRA_ReadGroupInfo \
-    SRA_ReadGroup \
-    SRA_Read \
-	SRA_DB_ReadCollection \
-	SRA_Statistics \
-	CSRA1_ReadCollection \
-	CSRA1_Reference \
+NGS_SRC =                 \
+	NCBI-NGS              \
+	CSRA1_PileupEvent     \
+	CSRA1_Pileup          \
+	CSRA1_Alignment       \
 	CSRA1_ReferenceWindow \
-	CSRA1_Alignment \
-	CSRA1_Pileup \
-	CSRA1_PileupEvent \
-    NCBI-NGS \
+	CSRA1_Reference       \
+	CSRA1_ReadCollection  \
+	SRA_Statistics        \
+	SRA_DB_ReadCollection \
+	SRA_Read              \
+	SRA_ReadGroup         \
+	SRA_ReadGroupInfo     \
+	SRA_ReadCollection    \
+	NGS_Statistics        \
+	NGS_ReadCollection    \
+	NGS_PileupEvent       \
+	NGS_Pileup            \
+	NGS_ReadGroup         \
+	NGS_Alignment         \
+	NGS_Reference         \
+	NGS_Read              \
+	NGS_Fragment          \
+	NGS_Cursor            \
+	NGS_Refcount          \
+	NGS_String            \
+	NGS_Id                \
+	NGS_ErrBlock
 
 NGS_OBJ = \
 	$(addsuffix .$(LOBX),$(NGS_SRC))

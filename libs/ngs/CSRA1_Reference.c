@@ -112,7 +112,7 @@ struct CSRA1_Reference
     uint32_t chunk_size;
     
     int64_t first_row;
-    int64_t last_row;
+    int64_t last_row;  /* inclusive */
     const struct VDatabase * db; /* pointer to the opened db, cannot be NULL */
     const struct NGS_Cursor * curs; /* can be NULL if created for an empty iterator */
     uint64_t align_id_offset;
@@ -125,14 +125,12 @@ struct CSRA1_Reference
 
 int64_t CSRA1_Reference_GetFirstRowId ( const struct NGS_Reference * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading);
     assert ( ( void * ) self -> dad . vt == ( void * ) & CSRA1_Reference_vt_inst );
     return ( ( CSRA1_Reference const * ) self ) -> first_row;
 }
 
 int64_t CSRA1_Reference_GetLastRowId ( const struct NGS_Reference * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     assert ( ( void * ) self -> dad . vt == ( void * ) & CSRA1_Reference_vt_inst );
     return ( ( CSRA1_Reference const * ) self ) -> last_row;
 }
