@@ -130,7 +130,7 @@ KFS_EXTERN rc_t CC TruncateCacheFile( struct KFile * self );
  * examens the file, and reports what percentage of blocks are in the cache...
  *
  */
-KFS_EXTERN rc_t CC GetCacheCompleteness( const struct KFile * self, float * percent );
+KFS_EXTERN rc_t CC GetCacheCompleteness( const struct KFile * self, float * percent, uint64_t * bytes_in_cache );
 
 
 /* -----
@@ -139,6 +139,11 @@ KFS_EXTERN rc_t CC GetCacheCompleteness( const struct KFile * self, float * perc
  */
 KFS_EXTERN rc_t CC GetCacheTruncatedSize( const struct KFile * self, uint64_t * truncated_size, bool silent );
 
+/* -----
+ * examens the file, and reports how many blocks have data in them, and how many of these are zero'd out
+ *
+ */
+KFS_EXTERN rc_t CC Has_Cache_Zero_Blocks( const struct KFile * self, uint64_t * checked_blocks, uint64_t * empty_blocks );
 
 #ifdef __cplusplus
 }
