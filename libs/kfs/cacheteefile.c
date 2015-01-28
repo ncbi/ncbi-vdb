@@ -24,6 +24,7 @@
  */
 
 #include <kfs/extern.h>
+#include <stdio.h>
 
 struct KCacheTeeFile;
 #define KFILE_IMPL struct KCacheTeeFile
@@ -760,6 +761,13 @@ static rc_t rd_remote_wr_local( const KCacheTeeFile *cself, uint64_t pos,
         size_t bytes_read;
         *num_read = 0;
         rc = KFileReadAll( cself->remote, pos, buffer, bsize, &bytes_read );
+        if(rc == 0 && bytes_read == 0){
+            if ( cself->report ) OUTMSG(( "0 bytes read from remote source, possible HUP, retrying\n"));
+            rc = KFileReadAll( cself->remote, pos, buffer, bsize, &bytes_read );
+            if(rc == 0 && bytes_read == 0){
+                rc = RC ( rcFS, rcFile, rcReading, rcBuffer, rcEmpty );
+            }
+        }
         if ( rc == 0 )
         {
             if ( cself->report )
@@ -1126,7 +1134,6 @@ static rc_t KCacheTeeFileRead_simple_cached( const KCacheTeeFile *cself, uint64_
             to_read = check_rd_len( cself, pos, bsize );
         else
             to_read = check_rd_len( cself, pos, reachable );
-
         rc = KFileReadAll( cself->local, pos, buffer, to_read, num_read );
     }
 
@@ -1197,6 +1204,95 @@ static rc_t KCacheTeeFileRead_simple_not_cached( const KCacheTeeFile *cself, uin
     }
     return rc;
 }
+
+
+static rc_t KCacheTeeFileRead_simple2( const KCacheTeeFile *cself, uint64_t pos,
+                                      void *buffer, size_t bsize, size_t *num_read )
+{
+    rc_t rc=0;
+    uint64_t block = pos / cself->block_size;
+    size_t   offset = pos % cself->block_size;
+    size_t   to_read_total = bsize;
+    
+    if ( cself->report )
+        OUTMSG(( "\nREQUEST '%s': %,lu .[%,lu] ( first_req_block=%,lu )\n",
+                 cself->local_path, pos, bsize, block ));
+    *num_read = 0;
+    rc = resize_scratch_buffer( cself, cself->block_size );
+
+    while(rc == 0 && to_read_total > 0){
+        int64_t salvage_block=-1;
+        size_t to_read = cself->block_size - offset;
+        if(to_read > to_read_total) to_read = to_read_total;
+
+        if(cself->valid_scratch_bytes >= offset+to_read && cself -> first_block_in_scratch == block ){
+            memcpy(buffer,cself->scratch_buffer+offset,to_read);
+            /*** move source counters **/
+            offset += to_read;
+            block  += offset / cself->block_size;
+            offset %= cself->block_size;
+            /*** move output counters **/       
+            to_read_total -= to_read;
+            *num_read += to_read;
+            buffer = ((char*)buffer) + to_read;
+        } else if (IS_CACHE_BIT(cself,block)){
+            uint64_t fpos = block * cself->block_size;
+            int64_t  fbsize = cself->remote_size - fpos;
+            size_t   nread=0;
+
+            if(fbsize > cself->block_size) fbsize = cself->block_size;
+
+            rc = KFileReadAll( cself->local, fpos, cself->scratch_buffer, fbsize, &nread );
+            if(rc == 0){
+                int i;
+                uint64_t *b = (uint64_t*)cself->scratch_buffer;
+                ( ( KCacheTeeFile * )cself ) -> first_block_in_scratch = block;
+                ( ( KCacheTeeFile * )cself ) -> valid_scratch_bytes = nread;
+                if(block != salvage_block){ /** check for fully space page, but don't do it in infinite loop **/
+                    for(i=0;i<nread/sizeof(*b) && b[i]==0;i++){} 
+                    if(i==nread/sizeof(*b)){
+                        if ( cself->report ) OUTMSG(( "Cached page is filled with zeros, possibly a sparse page. Attempting to reload from remote source\n"));
+                        rc = rd_remote_wr_local( cself, block*cself->block_size, cself->scratch_buffer, fbsize, &nread );
+                        if(rc == 0) salvage_block = block;
+                    } else {
+                        salvage_block = -1;
+                    }
+                }
+            }
+        } else {
+            uint64_t fpos = block * cself->block_size;
+            int64_t  fbsize = cself->remote_size - fpos;
+            size_t   nread=0;
+
+            if(fbsize > cself->block_size) fbsize = cself->block_size;
+
+            if(!cself->locking){
+                rc = read_bitmap_partial( ( KCacheTeeFile * )cself, block >> 3, 1 );
+                if (IS_CACHE_BIT(cself,block)) /** bit was recently set by parallel activity **/
+                        continue; /** will pick it up next cycle ***/
+            }
+            rc = rd_remote_wr_local( cself, fpos, cself->scratch_buffer, fbsize, &nread );
+            if(rc == 0 ){
+                ( ( KCacheTeeFile * )cself ) -> first_block_in_scratch = block;
+                ( ( KCacheTeeFile * )cself ) -> valid_scratch_bytes = nread;
+                if ( !cself->local_read_only ) {
+                    set_bitmap( cself, block, 1 );
+                    rc = write_bitmap( cself, block, 1 );
+                }
+            }
+        }
+
+    }
+
+    if ( cself->logger != NULL )
+    {
+        KCacheTeeFile * self = ( KCacheTeeFile * ) cself;
+        log_to_file( self->logger, &self->log_file_pos, pos, bsize, *num_read );
+    }
+
+    return rc;
+}
+
 
 
 static rc_t KCacheTeeFileRead_simple( const KCacheTeeFile *cself, uint64_t pos,
@@ -1285,7 +1381,7 @@ static rc_t KCacheTeeFileRead( const KCacheTeeFile *cself, uint64_t pos,
         return KCacheTeeFileRead_simple( cself, pos, buffer, bsize, num_read );
     */
 
-    return KCacheTeeFileRead_simple( cself, pos, buffer, bsize, num_read );
+    return KCacheTeeFileRead_simple2( cself, pos, buffer, bsize, num_read );
 }
 
 
