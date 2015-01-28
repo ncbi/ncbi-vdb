@@ -19,6 +19,9 @@
 #include "../../libs/ngs/NGS_Reference.h"
 #include "../../libs/ngs/NGS_Pileup.h"
 
+#include <vector>
+#include <algorithm>
+
 extern "C" uint64_t DEBUG_CSRA1_Pileup_GetRefPos (void const* self);
 
 #if 0
@@ -235,6 +238,80 @@ namespace PileupTest
     }
 #endif
 
+    void Test_SliceVsEntireRef ()
+    {
+        std::cout << "Running Test_SliceVsEntireRef " << std::endl;
+        char const db_path[] = "SRR341578";
+
+        std::vector <uint32_t> vecDepthSlice, vecDepthEntire, vecRef;
+
+        int64_t const pos_start = 20017;
+        uint64_t const len = 5;
+
+        vecRef.push_back(1); // 20017
+        vecRef.push_back(0); // 20018
+        vecRef.push_back(1); // 20019
+        vecRef.push_back(1); // 20020
+        vecRef.push_back(3); // 20021
+
+        {
+            ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
+            ngs::ReferenceIterator ri = run.getReferences ();
+
+            ri.nextReference ();
+            ri.nextReference ();
+
+            std::cout
+                << ri.getCanonicalName()
+                << ": len="  << ri.getLength()
+                << std::endl;
+
+
+            ngs::PileupIterator pi = ri.getPileups ( ngs::Alignment::primaryAlignment );
+
+            uint64_t ref_pos = 0;
+            for (; pi.nextPileup (); ++ ref_pos)
+            {
+                if ( ref_pos >= (uint64_t)pos_start && ref_pos < (uint64_t)pos_start + len )
+                {
+                    std::cout
+                        << " pos=" << ref_pos
+                        << ", depth=" << pi.getPileupDepth ()
+                        << std::endl;
+                    vecDepthEntire.push_back ( pi.getPileupDepth () );
+                }
+            }
+        }
+        {
+            ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
+            ngs::ReferenceIterator ri = run.getReferences ();
+
+            ri.nextReference ();
+            ri.nextReference ();
+
+            std::cout
+                << ri.getCanonicalName()
+                << ": len="  << ri.getLength()
+                << std::endl;
+
+
+            ngs::PileupIterator pi = ri.getPileupSlice ( pos_start, len, ngs::Alignment::primaryAlignment );
+
+            uint64_t ref_pos = 0;
+            for (; pi.nextPileup (); ++ ref_pos)
+            {
+                if ( ref_pos >= (uint64_t)pos_start && ref_pos < (uint64_t)pos_start + len )
+                {
+                    std::cout
+                        << " pos=" << ref_pos
+                        << ", depth=" << pi.getPileupDepth ()
+                        << std::endl;
+                    vecDepthSlice.push_back ( pi.getPileupDepth () );
+                }
+            }
+        }
+    }
+
     void RunUnsafe (char const* db_path)
     {
         ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
@@ -252,7 +329,7 @@ namespace PileupTest
                 //<< " row_end=" << DEBUG_CSRA1_Reference_GetRowEnd ( ri.self )
                 << std::endl;
 
-            ngs::PileupIterator pi = ri.getPileups ( ngs::Alignment::all );
+            ngs::PileupIterator pi = ri.getPileups ( ngs::Alignment::primaryAlignment /*all*/ );
 
             uint64_t ref_pos = 0;
             for (; pi.nextPileup (); ++ ref_pos)
@@ -292,7 +369,8 @@ namespace PileupTest
 
         try
         {
-            RunUnsafe (db_path);
+            //RunUnsafe (db_path);
+            Test_SliceVsEntireRef ();
         }
         catch ( ngs::ErrorMsg & x )
         {
