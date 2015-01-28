@@ -1073,16 +1073,17 @@ void CSRA1_PileupRevOverlap ( CSRA1_Pileup * self, ctx_t ctx )
         {
             int64_t stop_xid = self -> ref_chunk_id;
             int64_t overlap_zstart = self -> slice_zstart - self -> align . max_ref_len;
-            int64_t overlap_chunk_id = overlap_zstart / self -> ref . max_seq_len;
 
             if ( overlap_zstart >= 0 )
-                self -> ref_chunk_id = overlap_chunk_id + self -> reference_start_id;
+                self -> ref_chunk_id = overlap_zstart / self -> ref . max_seq_len + self -> reference_start_id;
             else if ( ! self -> circular )
                 self -> ref_chunk_id = self -> reference_start_id;
             else
             {
-                self -> ref_chunk_id = overlap_chunk_id + self -> reference_last_id + 1;
-                self -> effective_ref_zstart -= NGS_ReferenceGetLength ( self -> dad . ref, ctx );
+                uint64_t ref_len = NGS_ReferenceGetLength ( self -> dad . ref, ctx );
+                overlap_zstart += ref_len;
+                self -> ref_chunk_id = overlap_zstart / self -> ref . max_seq_len + self -> reference_start_id;
+                self -> effective_ref_zstart -= ref_len;
             }
 
             CSRA1_PileupOverlap ( self, ctx, stop_xid );
