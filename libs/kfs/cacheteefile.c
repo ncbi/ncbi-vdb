@@ -61,7 +61,7 @@ struct KCacheTeeFile;
  * KCacheTeeFile
  */
 
-#define CACHE_TEE_DEFAULT_BLOCKSIZE ( 32 * 1024 )
+#define CACHE_TEE_DEFAULT_BLOCKSIZE ( 32 * 1024 * 4 )
 #define CACHE_TEE_REPORT 0
 #define CACHE_TEE_LOCKING 0
 
@@ -102,9 +102,9 @@ const uint8_t BitNr2Mask[ 8 ] =
             1, 2, 4, 8, 16, 32, 64, 128
 };
 
-#define IS_CACHE_BIT( CacheFile, Block_Nr ) ( CacheFile->bitmap[ (Block_Nr) >> 3 ] & BitNr2Mask[ (Block_Nr) & 7 ] ) > 0
+#define IS_CACHE_BIT( CacheFile, Block_Nr ) ( ( CacheFile->bitmap[ (Block_Nr) >> 3 ] & BitNr2Mask[ (Block_Nr) & 7 ] ) > 0 )
 
-#define IS_BITMAP_BIT( BitMap, Block_Nr ) ( BitMap[ (Block_Nr) >> 3 ] & BitNr2Mask[ (Block_Nr) & 7 ] ) > 0
+#define IS_BITMAP_BIT( BitMap, Block_Nr ) ( ( BitMap[ (Block_Nr) >> 3 ] & BitNr2Mask[ (Block_Nr) & 7 ] ) > 0 )
 
 #define BITS_2_BYTES( BitCount ) ( ( ( BitCount ) + 7 ) >> 3 )
 
@@ -684,6 +684,18 @@ static void set_bitmap( const KCacheTeeFile *cself, uint64_t start_block, uint64
 }
 
 
+static void clr_bitmap( const KCacheTeeFile *cself, uint64_t start_block, uint64_t block_count )
+{
+    uint64_t block_idx, block_nr;
+    for ( block_idx = 0, block_nr = start_block; 
+          block_idx < block_count; 
+          ++block_idx, ++block_nr )
+    {
+        cself->bitmap[ block_nr >> 3 ] &= ~( BitNr2Mask[ block_nr & 0x07 ] );
+    }
+}
+
+
 static rc_t write_bitmap( const KCacheTeeFile *cself, uint64_t start_block, uint64_t block_count )
 {
     size_t written;
@@ -706,7 +718,7 @@ static rc_t write_bitmap( const KCacheTeeFile *cself, uint64_t start_block, uint
 }
 
 
-static rc_t resize_scratch_buffer( const KCacheTeeFile *cself, /* size_t */ uint64_t new_size )
+static rc_t resize_scratch_buffer( const KCacheTeeFile *cself, uint64_t new_size )
 {
     rc_t rc = 0;
     KCacheTeeFile *self = ( KCacheTeeFile * )cself;
@@ -1242,9 +1254,172 @@ static rc_t KCacheTeeFileRead_simple( const KCacheTeeFile *cself, uint64_t pos,
         log_to_file( self->logger, &self->log_file_pos, pos, bsize, *num_read );
     }
 
+	/* test that the buffer does not contain zero bytes ... */
+	{
+		uint32_t * wb = buffer;
+		if ( wb[ 0 ] == 0 && wb[ 1 ] == 0 )
+		{
+			rc = KCacheTeeFileRead_simple_not_cached( cself, pos, buffer, bsize, num_read, first_req_block );
+		}
+	}
+	
     return rc;
 }
 
+
+/**********************************************************************************************
+    try #3
+**********************************************************************************************/
+static rc_t KCacheTeeFileRead_3( const KCacheTeeFile *cself, uint64_t pos,
+                                 void * buffer, size_t bsize, size_t *num_read )
+{
+	rc_t rc = 0;
+	uint64_t i_pos = pos;
+	uint8_t * i_buffer = buffer;
+	size_t still_to_read = bsize;
+	size_t total_read = 0;
+	size_t bytes_read;
+	
+	if ( i_pos + still_to_read > cself -> remote_size )
+	{
+		still_to_read = ( cself -> remote_size - i_pos );
+	}
+	
+	while ( rc == 0 && still_to_read > 0 )
+	{
+		uint64_t block = ( i_pos / cself->block_size );
+		if ( IS_CACHE_BIT( cself, block ) )
+		{
+			/* i_pos is in a cached block... */
+			size_t to_read = ( ( ( block + 1 ) * cself->block_size ) - i_pos );
+			if ( to_read > still_to_read ) to_read = still_to_read;
+			rc = KFileReadAll( cself->local, i_pos, i_buffer, to_read, &bytes_read );
+			if ( rc == 0 )
+			{
+				/* check what we read from the local file is completely empty */
+				size_t i = 0;
+				while ( i_buffer[ i ] == 0 && i < bytes_read ) { i++; }
+				if ( i == ( bytes_read + 1 ) )
+				{
+					/* we have to read from remote because this segment is zero!
+					   this is a fix for broken cache-files */
+					clr_bitmap( cself, block, 1 );
+					rc = write_bitmap( cself, block, 1 );
+					/* do not advance the buffer, because in the loop this will be read remotely now */
+				}
+				else
+				{
+					i_buffer += bytes_read;
+					total_read += bytes_read;
+					i_pos += bytes_read;
+					still_to_read -= bytes_read;
+				}
+			}
+        }
+		else
+		{
+			/* i_pos is not in a cached block... */
+			uint64_t block_pos = ( block * cself->block_size );
+			uint64_t ofs = ( i_pos - block_pos );
+			if ( ofs == 0 && still_to_read >= cself->block_size )
+			{
+				/* read the whole block remotely, this can return less than requested if last block...
+				   and it can return 0 bytes if the http-connection times out... */
+				rc = KFileReadAll( cself->remote, i_pos, i_buffer, cself->block_size, &bytes_read );
+				if ( rc == 0 )
+				{
+					if ( bytes_read == 0 )
+					{
+						still_to_read = 0;	/* terminate the loop, return as much as read so far, return rc ==0 */
+					}
+					else
+					{
+						/* write it to the local file */
+						size_t bytes_written;
+						rc = KFileWriteAll( cself->local, i_pos, i_buffer, bytes_read, &bytes_written );
+						if ( rc == 0 )
+						{
+							if ( bytes_written != bytes_read )
+							{
+								rc = RC ( rcFS, rcFile, rcWriting, rcTransfer, rcTooShort );
+							}
+							else
+							{
+								/* write the bitmap */
+								set_bitmap( cself, block, 1 );
+								rc = write_bitmap( cself, block, 1 );
+								if ( rc == 0 )
+								{
+									i_buffer += bytes_read;
+									total_read += bytes_read;
+									i_pos += bytes_read;
+									still_to_read -= bytes_read;
+								}
+							}
+						}
+					}
+				}
+			}
+			else
+			{
+				/* use the scratch-buffer to read the whole block, copy the smaller part that was requested */
+				if ( cself->scratch_size < cself->block_size )
+				{
+					rc = resize_scratch_buffer( cself, cself->block_size );
+				}
+				if ( rc == 0 )
+				{
+					/* read the whole block remotely, this can return less than requested if last block...
+				       and it can return 0 bytes if the http-connection times out... */
+					rc = KFileReadAll( cself->remote, block_pos, cself->scratch_buffer, cself->block_size, &bytes_read );
+					if ( rc == 0 )
+					{
+						if ( bytes_read == 0 )
+						{
+							still_to_read = 0;	/* terminate the loop, return as much as read so far, return rc ==0 */
+						}
+						else
+						{
+							/* write it to the local file */
+							size_t bytes_written;
+							rc = KFileWriteAll( cself->local, block_pos, cself->scratch_buffer, bytes_read, &bytes_written );
+							if ( rc == 0 )
+							{
+								if ( bytes_written != bytes_read )
+								{
+									rc = RC ( rcFS, rcFile, rcWriting, rcTransfer, rcTooShort );
+								}
+								else
+								{
+									/* write the bitmap */
+									set_bitmap( cself, block, 1 );
+									rc = write_bitmap( cself, block, 1 );
+									if ( rc == 0 )
+									{
+										/* here comes the difference: copy the bytes from the offset */
+										size_t to_copy = ( cself->block_size - ofs );
+										if ( to_copy > still_to_read ) to_copy = still_to_read;
+										memmove ( i_buffer, &( cself->scratch_buffer[ ofs ] ), to_copy );
+										
+										i_buffer += to_copy;
+										total_read += to_copy;
+										i_pos += to_copy;
+										still_to_read -= to_copy;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if ( rc == 0 )
+		*num_read = total_read;
+
+	return rc;
+}
 
 /**********************************************************************************************
     START vt-functions
@@ -1285,7 +1460,8 @@ static rc_t KCacheTeeFileRead( const KCacheTeeFile *cself, uint64_t pos,
         return KCacheTeeFileRead_simple( cself, pos, buffer, bsize, num_read );
     */
 
-    return KCacheTeeFileRead_simple( cself, pos, buffer, bsize, num_read );
+	return KCacheTeeFileRead_3( cself, pos, buffer, bsize, num_read );
+    /* return KCacheTeeFileRead_simple( cself, pos, buffer, bsize, num_read ); */
 }
 
 
@@ -1625,17 +1801,15 @@ LIB_EXPORT rc_t CC KDirectoryMakeCacheTee ( struct KDirectory *self,
 }
 
 
-LIB_EXPORT rc_t CC GetCacheCompleteness( const struct KFile * self, float * percent )
+LIB_EXPORT rc_t CC GetCacheCompleteness( const struct KFile * self, float * percent, uint64_t * bytes_in_cache )
 {
     rc_t rc;
     if ( self == NULL )
         rc = RC( rcFS, rcFile, rcValidating, rcSelf, rcNull );
-    else if ( percent == NULL )
-        rc = RC( rcFS, rcFile, rcValidating, rcParam, rcNull );
     else
     {
         uint64_t local_size;
-        *percent = 0;
+		if ( percent != NULL ) *percent = 0;
         rc = KFileSize( self, &local_size );
         if ( rc != 0 )
         {
@@ -1683,12 +1857,14 @@ LIB_EXPORT rc_t CC GetCacheCompleteness( const struct KFile * self, float * perc
                                 if ( IS_BITMAP_BIT( bitmap, idx ) )
                                     in_cache++;
                             }
+							
                             if ( in_cache > 0 && block_count > 0 )
                             {
                                 float res = (float) in_cache;
                                 res *= 100;
                                 res /= block_count;
-                                * percent = res;
+                                if ( percent != NULL ) ( *percent ) = res;
+								if ( bytes_in_cache != NULL ) ( *bytes_in_cache ) = ( in_cache * block_count );
                             }
                         }
                         if ( bitmap != NULL )
@@ -1756,4 +1932,95 @@ LIB_EXPORT rc_t CC GetCacheTruncatedSize( const struct KFile * self, uint64_t * 
         }
     }
     return rc;
+}
+
+LIB_EXPORT rc_t CC Has_Cache_Zero_Blocks( const struct KFile * self, uint64_t * checked_blocks, uint64_t * empty_blocks )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC( rcFS, rcFile, rcValidating, rcSelf, rcNull );
+    else if ( checked_blocks == NULL || empty_blocks == NULL )
+        rc = RC( rcFS, rcFile, rcValidating, rcParam, rcNull );
+    else
+    {
+        uint64_t local_size;
+        *checked_blocks = 0;
+		*empty_blocks = 0;
+        rc = KFileSize( self, &local_size );
+        if ( rc != 0 )
+        {
+            LOGERR( klogErr, rc, "cannot detect filesize when checking if cached file is complete" );
+        }
+        else
+        {
+            uint32_t block_size;
+            rc = read_block_size( self, local_size, &block_size, false );
+            if ( rc == 0 )
+            {
+                uint64_t content_size;
+                rc = read_content_size( self, local_size, &content_size, false );
+                /* create bitmap buffer */
+                if ( rc == 0 )
+                {
+                    uint64_t block_count;
+                    uint64_t bitmap_bytes;
+                    rc = verify_file_structure( local_size, block_size, content_size, &block_count, &bitmap_bytes, false );
+                    if ( rc == 0 )
+                    {
+                        uint8_t * bitmap = NULL;
+                        rc = create_bitmap_buffer( &bitmap, bitmap_bytes );
+                        if ( rc == 0 )
+                        {
+                            size_t num_read;
+                            /* read the bitmap into the memory ... */
+                            rc = KFileReadAll ( self, content_size, bitmap, bitmap_bytes, &num_read );
+                            if ( rc != 0 )
+                            {
+                                LOGERR( klogErr, rc, "cannot read bitmap from local file" );
+                            }
+                            else if ( num_read != bitmap_bytes )
+                            {
+                                rc = RC ( rcFS, rcFile, rcConstructing, rcParam, rcInvalid );
+                                PLOGERR( klogErr, ( klogErr, rc, "cannot read $(ls) bitmap-bytes from local file, read $(rs) instead", 
+                                               "ls=%lu,rs=%lu", bitmap_bytes, num_read ));
+                            }
+                        }
+                        if ( rc == 0 )
+                        {
+							/* loop through the bitmap for each bit set verify that the corresponding block is not zero */
+							uint8_t * buffer = malloc( block_size );
+							if ( buffer != NULL )
+							{
+								uint64_t idx;
+								for ( idx = 0; idx < block_count && rc == 0; ++idx )
+								{
+									if ( IS_BITMAP_BIT( bitmap, idx ) )
+									{
+										size_t num_read;
+										rc = KFileReadAll ( self, idx * block_size, buffer, block_size, &num_read );
+										if ( rc == 0 )
+										{
+											( *checked_blocks )++;
+											if ( num_read > 0 )
+											{
+												size_t i, n;
+												for ( i = 0, n = 0; i < num_read; ++i )
+													if ( buffer[ i ] != 0 ) n++;
+												if ( n == num_read ) ( * empty_blocks )++;
+											}
+										}
+									}
+								}
+								free( buffer );
+							}
+                        }
+                        if ( bitmap != NULL )
+                            free( bitmap );
+                    }
+                }
+            }
+        }
+	
+	}
+	return rc;
 }
