@@ -1512,7 +1512,15 @@ void CSRA1_PileupInit ( ctx_t ctx, CSRA1_Pileup * obj, const char * instname,
                     if ( wants_primary )
                         CSRA1_PileupInitAlignment ( obj, ctx, db, "PRIMARY_ALIGNMENT", & obj -> pa . curs, CSRA1_PileupPopulatePACurs );
                     if ( wants_secondary && ! FAILED () )
-                        CSRA1_PileupInitAlignment ( obj, ctx, db, "SECONDARY_ALIGNMENT", & obj -> sa . curs, CSRA1_PileupPopulateSACurs );
+                    {
+                        ON_FAIL ( CSRA1_PileupInitAlignment ( obj, ctx, db, "SECONDARY_ALIGNMENT", & obj -> sa . curs, CSRA1_PileupPopulateSACurs ) )
+                        {
+                            /* TBD - need the ability to convert hard error to warning
+                               stating that we have primary, but no secondary */
+                            if ( wants_primary )
+                                CLEAR ();
+                        }
+                    }
                 }
             }
         }
