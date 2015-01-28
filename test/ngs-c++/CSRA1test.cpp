@@ -37,7 +37,6 @@ using namespace ncbi::NK;
 
 TEST_SUITE(NgsCsra1CppTestSuite);
 
-
 class CSRA1_Fixture : public NgsFixture
 {
 public:
@@ -826,6 +825,95 @@ FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice, CSRA1_Fixture)
 //TODO: getDeletionCount
 
 /////TODO: PileupEventIterator
+
+TEST_CASE(CSRA1_PileupIterator_GetDepth)
+{
+    char const db_path[] = "SRR341578";
+
+    std::vector <uint32_t> vecDepthSlice, vecDepthEntire, vecRef;
+
+    int64_t const pos_start = 20017;
+    uint64_t const len = 5;
+
+    vecRef.push_back(1); // 20017
+    vecRef.push_back(0); // 20018
+    vecRef.push_back(1); // 20019
+    vecRef.push_back(1); // 20020
+    vecRef.push_back(3); // 20021
+
+    {
+        ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
+        ngs::ReferenceIterator ri = run.getReferences ();
+
+        ri.nextReference ();
+        ri.nextReference ();
+
+        ngs::PileupIterator pi = ri.getPileups ( ngs::Alignment::primaryAlignment );
+
+        uint64_t ref_pos = 0;
+        for (; pi.nextPileup (); ++ ref_pos)
+        {
+            if ( ref_pos >= (uint64_t)pos_start && ref_pos < (uint64_t)pos_start + len )
+                vecDepthEntire.push_back ( pi.getPileupDepth () );
+        }
+    }
+    {
+        ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
+        ngs::ReferenceIterator ri = run.getReferences ();
+
+        ri.nextReference ();
+        ri.nextReference ();
+
+        ngs::PileupIterator pi = ri.getPileupSlice ( pos_start, len, ngs::Alignment::primaryAlignment );
+
+        uint64_t ref_pos = (uint64_t)pos_start;
+        for (; pi.nextPileup (); ++ ref_pos)
+        {
+            if ( ref_pos >= (uint64_t)pos_start && ref_pos < (uint64_t)pos_start + len )
+                vecDepthSlice.push_back ( pi.getPileupDepth () );
+        }
+    }
+
+    REQUIRE_EQ ( vecRef.size(), vecDepthEntire.size() );
+    REQUIRE_EQ ( vecRef.size(), vecDepthSlice.size() );
+
+    for ( size_t i = 0; i < (size_t)len; ++i )
+    {
+        REQUIRE_EQ ( vecRef [i], vecDepthEntire [i] );
+        REQUIRE_EQ ( vecRef [i], vecDepthSlice [i] );
+    }
+}
+
+
+TEST_CASE(CSRA1_PileupEventIterator_GetType)
+{
+    char const db_path[] = "SRR341578";
+
+    int64_t const pos_start = 20022;
+    uint64_t const len = 1;
+
+    ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
+    ngs::ReferenceIterator ri = run.getReferences ();
+
+    ri.nextReference ();
+    ri.nextReference ();
+
+    ngs::PileupIterator pi = ri.getPileupSlice ( pos_start, len, ngs::Alignment::primaryAlignment );
+
+    for (; pi.nextPileup (); )
+    {
+        ngs::PileupEventIterator pei = pi.getPileupEvents ();
+        REQUIRE_EQ ( pi.getPileupDepth(), (uint32_t)6 );
+        for (; pei.nextPileupEvent (); )
+        {
+            std::cout
+                << "Event type: "
+                << pei.getEventType ()
+                << std::endl;
+        }
+    }
+}
+
 
 ///// ReadGroup
 FIXTURE_TEST_CASE(CSRA1_ReadGroup_GetName, CSRA1_Fixture)

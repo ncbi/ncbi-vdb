@@ -297,7 +297,7 @@ namespace PileupTest
 
             ngs::PileupIterator pi = ri.getPileupSlice ( pos_start, len, ngs::Alignment::primaryAlignment );
 
-            uint64_t ref_pos = 0;
+            uint64_t ref_pos = (uint64_t)pos_start;
             for (; pi.nextPileup (); ++ ref_pos)
             {
                 if ( ref_pos >= (uint64_t)pos_start && ref_pos < (uint64_t)pos_start + len )
