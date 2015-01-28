@@ -1019,6 +1019,10 @@ bool CSRA1_PileupGetOverlapChunkId ( CSRA1_Pileup * self, ctx_t ctx )
         self -> ref_chunk_id = ref_chunk_id;
         return have_overlap_ref_pos;
     }
+    CATCH_ALL ()
+    {
+        CLEAR ();
+    }
 
     return false;
 }
