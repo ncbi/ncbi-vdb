@@ -1035,7 +1035,7 @@ void CSRA1_PileupOverlap ( CSRA1_Pileup * self, ctx_t ctx, int64_t stop_xid )
     while ( ! FAILED () )
     {
         /* exit condition #1: at end of overlap */
-        if ( self -> idx_chunk_id == stop_xid )
+        if ( self -> ref_chunk_id == stop_xid )
             break;
 
         /* detect circular wrap around */
@@ -1049,6 +1049,7 @@ void CSRA1_PileupOverlap ( CSRA1_Pileup * self, ctx_t ctx, int64_t stop_xid )
 
         /* run population from ref_chunk_id to stop_xid ( exclusive ) */
         CSRA1_PileupPopulate ( self, ctx, 0 );
+        self -> ref_chunk_id = self -> idx_chunk_id;
     }
 }
 
