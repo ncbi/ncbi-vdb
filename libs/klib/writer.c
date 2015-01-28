@@ -67,6 +67,7 @@ static RCCreateLoc RC_loc_queue [ 4096 ];
 static atomic32_t RC_loc_reserve, RC_loc_written, RC_loc_read;
 #define RC_LOC_QUEUE_SIZE ( sizeof RC_loc_queue / sizeof RC_loc_queue [ 0 ] )
 #define RC_LOC_QUEUE_MASK ( RC_LOC_QUEUE_SIZE - 1 )
+static bool reporting_unread = false;
 
 /*
  *  "appname" [ IN ] - identity of executable, usually argv[0]
@@ -416,7 +417,10 @@ static
 uint32_t read_rc_loc_head ( void )
 {
     int32_t idx = atomic32_read ( & RC_loc_written );
-    atomic32_set ( & RC_loc_read, idx );
+    if ( ! reporting_unread )
+    {
+        atomic32_set ( & RC_loc_read, idx );
+    }
     return idx;
 }
 
@@ -592,8 +596,12 @@ LIB_EXPORT rc_t CC SetRCFileFuncLine ( rc_t rc, const char *filename, const char
  */
 LIB_EXPORT bool CC GetUnreadRCInfo ( rc_t *rc, const char **filename, const char **funcname, uint32_t *lineno )
 {
+    int32_t last_writ;
+
+    reporting_unread = true;
+
     /* these are not atomic, but the ordering is important */
-    int32_t last_writ = atomic32_read ( & RC_loc_written );
+    last_writ = atomic32_read ( & RC_loc_written );
     if ( last_writ > 0 )
     {
         /* this arrangement attempts to make the access to
@@ -630,5 +638,6 @@ LIB_EXPORT bool CC GetUnreadRCInfo ( rc_t *rc, const char **filename, const char
             }
         }
     }
+    reporting_unread = false;
     return false;
 }

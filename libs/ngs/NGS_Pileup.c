@@ -69,7 +69,7 @@ static int64_t NGS_Pileup_v1_get_ref_pos ( const NGS_Pileup_v1 * self, NGS_ErrBl
     return ret;
 }
 
-static struct NGS_PileupEvent_v1 * NGS_Pileup_v1_get_pileup_events ( NGS_Pileup_v1 * self, NGS_ErrBlock_v1 * err )
+static struct NGS_PileupEvent_v1 * NGS_Pileup_v1_get_pileup_events ( const NGS_Pileup_v1 * self, NGS_ErrBlock_v1 * err )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
     ON_FAIL ( struct NGS_PileupEvent * ret = NGS_PileupGetPileupEvents ( Self ( self ), ctx ) )

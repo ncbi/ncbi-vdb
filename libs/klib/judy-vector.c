@@ -311,6 +311,7 @@ LIB_EXPORT rc_t CC KVectorGet ( const KVector *self, uint64_t key,
 #define KVectorBoolGetStoredBits KVectorGetU64
 #define KVectorBoolSetStoredBits KVectorSetU64
 #define KVectorBoolVisitStoredBits KVectorVisitU64
+#define KVectorBoolGetFirstStoredBits KVectorGetFirstU64
 #define KVectorBoolGetPrevStoredBits KVectorGetPrevU64
 #define KVectorBoolGetNextStoredBits KVectorGetNextU64
 
@@ -321,6 +322,7 @@ LIB_EXPORT rc_t CC KVectorGet ( const KVector *self, uint64_t key,
 #define KVectorBoolGetStoredBits KVectorGetU32
 #define KVectorBoolSetStoredBits KVectorSetU32
 #define KVectorBoolVisitStoredBits KVectorVisitU32
+#define KVectorBoolGetFirstStoredBits KVectorGetFirstU32
 #define KVectorBoolGetPrevStoredBits KVectorGetPrevU32
 #define KVectorBoolGetNextStoredBits KVectorGetNextU32
 
@@ -355,13 +357,14 @@ LIB_EXPORT rc_t CC KVectorGetBool ( const KVector *self, uint64_t key, bool *dat
     if ( rc )
         return rc;
 
-    record = stored_bits >> bit_offset_in_qword & BOOL_VECT_BIT_RECORD_MASK;
-    if ( record & BOOL_VECT_BIT_SET_MASK )
-        *data = (bool) (record & BOOL_VECT_BIT_VALUE_MASK);
-    else
-        rc = RC ( rcCont, rcVector, rcAccessing, rcItem, rcNotFound );
-
-    return rc;
+    record = stored_bits >> bit_offset_in_qword;
+    if ( ( record & BOOL_VECT_BIT_SET_MASK ) == 0 )
+    {
+        * data = false;
+        return RC ( rcCont, rcVector, rcAccessing, rcItem, rcNotFound );
+    }
+    * data = (bool) (record & BOOL_VECT_BIT_VALUE_MASK);
+    return 0;
 }
 
 LIB_EXPORT rc_t CC KVectorGetI8 ( const KVector *self, uint64_t key, int8_t *data )
@@ -435,6 +438,197 @@ LIB_EXPORT rc_t CC KVectorGetPtr ( const KVector *self, uint64_t key, void **dat
     size_t bytes;
     rc_t rc = KVectorGet ( self, key, data, sizeof * data, & bytes );
     if ( rc == 0 && bytes != sizeof * data )
+        rc = RC ( rcCont, rcVector, rcAccessing, rcType, rcUnsupported );
+    return rc;
+}
+
+
+/* GetFirst
+ *  get first non-null element
+ *  returns key of found element in "first"
+ */
+
+static
+rc_t NancyLGetFirst ( const void *nancy, uint64_t * first, Word_t * value )
+{
+    JError_t err;
+    Word_t idx = 0;
+    PPvoid_t datap = JudyLFirst ( nancy, & idx, & err );
+    if ( datap == NULL )
+        return RC ( rcCont, rcVector, rcAccessing, rcItem, rcNotFound );
+    if ( datap == PPJERR )
+        return NancyError ( & err, rcAccessing );
+
+    * first = idx;
+    * value = * ( const Word_t* ) datap;
+
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KVectorGetFirst ( const KVector *self, uint64_t *first,
+    void * buffer, size_t bsize, size_t * bytes )
+{
+    rc_t rc;
+
+    if ( bytes == NULL )
+        rc = RC ( rcCont, rcVector, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcCont, rcVector, rcAccessing, rcSelf, rcNull );
+        else if ( buffer == NULL && bsize != 0 )
+            rc = RC ( rcCont, rcVector, rcAccessing, rcParam, rcNull );
+        else if ( self -> nancy_bool )
+            rc = RC ( rcCont, rcVector, rcAccessing, rcType, rcUnsupported );
+        else
+        {
+            Word_t data;
+            rc = NancyLGetFirst ( self -> nancy, first, & data );
+            if ( rc == 0 )
+            {
+                if ( self -> fixed_size == 0 )
+                    rc = RC ( rcCont, rcVector, rcAccessing, rcFunction, rcUnsupported );
+                else
+                {
+                    * bytes = self -> fixed_size;
+                    if ( bsize < self -> fixed_size )
+                        rc = RC ( rcCont, rcVector, rcAccessing, rcBuffer, rcInsufficient );
+                    else switch ( self -> fixed_size )
+                    {
+                    case 1:
+                        if ( data >= 0x100 )
+                            rc = RC ( rcCont, rcVector, rcAccessing, rcData, rcCorrupt );
+                        * ( uint8_t* ) buffer = ( uint8_t ) data;
+                        break;
+                    case 2:
+                        if ( data >= 0x10000 )
+                            rc = RC ( rcCont, rcVector, rcAccessing, rcData, rcCorrupt );
+                        * ( uint16_t* ) buffer = ( uint16_t ) data;
+                        break;
+                    case 4:
+                        if ( sizeof data > 4 && ( ( uint64_t ) data >> 32 ) != 0 )
+                            rc = RC ( rcCont, rcVector, rcAccessing, rcData, rcCorrupt );
+                        * ( uint32_t* ) buffer = ( uint32_t ) data;
+                        break;
+                    case 8:
+                        * ( uint64_t* ) buffer = ( uint64_t ) data;
+                        break;
+                    default:
+                        rc = RC ( rcCont, rcVector, rcAccessing, rcType, rcUnsupported );
+                    }
+                    return rc;
+                }
+            }
+        }
+
+        * bytes = 0;
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KVectorGetFirstBool ( const KVector *self, uint64_t *first, bool *data )
+{
+    rc_t rc;
+    uint64_t i;
+    size_t stored_bits;
+    const uint64_t width = sizeof stored_bits * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS;
+
+    /* THIS IS INCORRECT - have to test "self" first to return correct error code */
+    if ( data == NULL )
+        return RC ( rcCont, rcVector, rcAccessing, rcParam, rcNull );
+
+    rc = KVectorBoolGetFirstStoredBits ( self, first, & stored_bits );
+    while ( rc == 0 && stored_bits == 0 )
+        rc = KVectorBoolGetNextStoredBits ( self, first, * first, & stored_bits );
+    if ( rc != 0 )
+        return rc;
+
+    * first *= width;
+
+    for ( i = 0; i < width; ++ i )
+    {
+        if ( ( stored_bits & ( ( size_t ) BOOL_VECT_BIT_SET_MASK << i * BOOL_VECT_RECORD_SIZE_IN_BITS ) ) != 0 )
+            break;
+    }
+
+    * first += i;
+    * data = ( bool ) ( ( stored_bits >> i * BOOL_VECT_RECORD_SIZE_IN_BITS ) & BOOL_VECT_BIT_VALUE_MASK );
+
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KVectorGetFirstI8 ( const KVector *self, uint64_t *first, int8_t *value )
+{
+    size_t bytes;
+    return KVectorGetFirst ( self, first, value, sizeof * value, & bytes );
+}
+
+LIB_EXPORT rc_t CC KVectorGetFirstI16 ( const KVector *self, uint64_t *first, int16_t *value )
+{
+    size_t bytes;
+    return KVectorGetFirst ( self, first, value, sizeof * value, & bytes );
+}
+
+LIB_EXPORT rc_t CC KVectorGetFirstI32 ( const KVector *self, uint64_t *first, int32_t *value )
+{
+    size_t bytes;
+    return KVectorGetFirst ( self, first, value, sizeof * value, & bytes );
+}
+
+LIB_EXPORT rc_t CC KVectorGetFirstI64 ( const KVector *self, uint64_t *first, int64_t *value )
+{
+    size_t bytes;
+    return KVectorGetFirst ( self, first, value, sizeof * value, & bytes );
+}
+
+LIB_EXPORT rc_t CC KVectorGetFirstU8 ( const KVector *self, uint64_t *first, uint8_t *value )
+{
+    size_t bytes;
+    return KVectorGetFirst ( self, first, value, sizeof * value, & bytes );
+}
+
+LIB_EXPORT rc_t CC KVectorGetFirstU16 ( const KVector *self, uint64_t *first, uint16_t *value )
+{
+    size_t bytes;
+    return KVectorGetFirst ( self, first, value, sizeof * value, & bytes );
+}
+
+LIB_EXPORT rc_t CC KVectorGetFirstU32 ( const KVector *self, uint64_t *first, uint32_t *value )
+{
+    size_t bytes;
+    return KVectorGetFirst ( self, first, value, sizeof * value, & bytes );
+}
+
+LIB_EXPORT rc_t CC KVectorGetFirstU64 ( const KVector *self, uint64_t *first, uint64_t *value )
+{
+    size_t bytes;
+    return KVectorGetFirst ( self, first, value, sizeof * value, & bytes );
+}
+
+LIB_EXPORT rc_t CC KVectorGetFirstF32 ( const KVector *self, uint64_t *first, float *value )
+{
+    size_t bytes;
+    rc_t rc = KVectorGetFirst ( self, first, value, sizeof * value, & bytes );
+    if ( rc == 0 && bytes != sizeof * value )
+        rc = RC ( rcCont, rcVector, rcAccessing, rcType, rcUnsupported );
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KVectorGetFirstF64 ( const KVector *self, uint64_t *first, double *value )
+{
+    size_t bytes;
+    rc_t rc = KVectorGetFirst ( self, first, value, sizeof * value, & bytes );
+    if ( rc == 0 && bytes != sizeof * value )
+        rc = RC ( rcCont, rcVector, rcAccessing, rcType, rcUnsupported );
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KVectorGetFirstPtr ( const KVector *self, uint64_t *first, void **value )
+{
+    size_t bytes;
+    rc_t rc = KVectorGetFirst ( self, first, value, sizeof * value, & bytes );
+    if ( rc == 0 && bytes != sizeof * value )
         rc = RC ( rcCont, rcVector, rcAccessing, rcType, rcUnsupported );
     return rc;
 }
@@ -862,11 +1056,21 @@ LIB_EXPORT rc_t CC KVectorGetNextBool ( const KVector *self,
 
     size_t const MAX_BIT_OFFSET = sizeof(stored_bits) * 8 - BOOL_VECT_RECORD_SIZE_IN_BITS;
 
+    /* unless the "previous" value is the last entry in a word,
+       try to get the word and look for its next value */
     if ( bit_offset_in_qword != MAX_BIT_OFFSET )
     {
+        /* if the initial value does not exist, this may fail */
         rc = KVectorBoolGetStoredBits ( self, key_qword, & stored_bits );
-        if ( rc )
-            return rc;
+        if ( rc != 0 )
+        {
+            /* any failure other than "not found" is considered hard */
+            if ( GetRCState ( rc ) != rcNotFound )
+                return rc;
+
+            /* the "key" passed in may be fake. */
+            rc = KVectorBoolGetNextStoredBits ( self, & key_qword, key_qword, & stored_bits );
+        }
     }
 
     for (;;)
@@ -1122,7 +1326,6 @@ LIB_EXPORT rc_t CC KVectorSetBool ( KVector *self, uint64_t key, bool data )
     size_t stored_bits = 0;
     uint64_t key_qword = key / (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS);
     size_t bit_offset_in_qword = (key % (sizeof(stored_bits) * 8 / BOOL_VECT_RECORD_SIZE_IN_BITS)) * BOOL_VECT_RECORD_SIZE_IN_BITS;
-    bool first_time = false;
     size_t new_bit_record;
     size_t stored_bit_record;
 
@@ -1133,21 +1336,24 @@ LIB_EXPORT rc_t CC KVectorSetBool ( KVector *self, uint64_t key, bool data )
     {
         if ( GetRCState ( rc ) != rcNotFound )
             return rc;
-        first_time = true;
+
+        assert ( stored_bits == 0 );
+        rc = 0;
     }
 
     new_bit_record = (BOOL_VECT_BIT_SET_MASK | (uint64_t)data) << bit_offset_in_qword;
     stored_bit_record = BOOL_VECT_BIT_RECORD_MASK << bit_offset_in_qword & stored_bits;
 
-    if ( first_time || new_bit_record != stored_bit_record )
+    assert ( new_bit_record != 0 );
+    assert ( rc == 0 );
+
+    if ( new_bit_record != stored_bit_record )
     {
         stored_bits &= ~(BOOL_VECT_BIT_RECORD_MASK << bit_offset_in_qword); // clear stored record to assign a new value by bitwise OR
         stored_bits |= new_bit_record;
 
         rc = KVectorBoolSetStoredBits ( self, key_qword, stored_bits );
     }
-    else
-        rc = 0;
 
     return rc;
 }
