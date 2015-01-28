@@ -24,13 +24,20 @@
 *
 */
 
-typedef struct CSRA1_Pileup CSRA1_Pileup;
-#define NGS_PILEUP CSRA1_Pileup
+struct CSRA1_Pileup;
+#define NGS_PILEUP struct CSRA1_Pileup
+
 #include "CSRA1_Pileup.h"
-
-#include "NGS_Cursor.h"
+#include "CSRA1_PileupEvent.h"
 #include "NGS_Reference.h"
+#include "NGS_Cursor.h"
+#include "NGS_String.h"
 
+#include <vdb/blob.h>
+#include <vdb/cursor.h>
+#include <klib/refcount.h>
+#include <klib/vector.h>
+#include <klib/sort.h>
 #include <kfc/ctx.h>
 #include <kfc/except.h>
 #include <kfc/xc.h>
@@ -38,958 +45,1283 @@ typedef struct CSRA1_Pileup CSRA1_Pileup;
 #include <vdb/database.h>
 #include <vdb/table.h>
 #include <vdb/cursor.h>
+#include <insdc/insdc.h>
 
 #include <klib/rc.h>
 
-#include <insdc/sra.h>
+/* The READ_AHEAD_LIMIT sets the total number of alignment ids to gather
+   at one time from the REFERENCE table indices. This is given as a constant,
+   although in the code it is passed as a parameter. We may want to make it
+   dependent upon detecting whether alignments are sorted. */
+#define READ_AHEAD_LIMIT 10000
 
-#include "CSRA1_Reference.h"
-#include "CSRA1_PileupEvent.h"
+/* Heuristic quantity for gathering maximum projected alignment length */
+#define MIN_ALIGN_OBSERVE 100
 
-#ifndef min
-#define min(x, y) ((y) < (x) ? (y) : (x))
-#endif
+#if _DEBUGGING
 
-#ifndef max
-#define max(x, y) ((y) < (x) ? (x) : (y))
-#endif
+#define IGNORE_OVERLAP_REF_POS 0
+#define IGNORE_OVERLAP_REF_LEN 0
 
-#if    USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS == 1\
-    || USE_SINGLE_BLOB_FOR_ALIGNMENTS == 1
+#include <stdio.h>
+static bool printing;
+void enable_pileup_printing ( void ) { printing = true; }
+#define PRINT( fmt, ... ) if ( printing ) fprintf ( stderr, fmt, __VA_ARGS__ )
 
-#define USE_BLOBS 1
 #else
-#define USE_BLOBS 0
+#define PRINT( fmt, ... ) ( ( void ) 0 )
 #endif
 
-#if USE_BLOBS == 1
-#include <vdb/blob.h>
-#endif
 
-#include <klib/printf.h>
+/*--------------------------------------------------------------------------
+ * CSRA1_Pileup_Entry
+ */
 
-#include "NGS_String.h"
-
-#include <sysalloc.h>
-
-#ifndef countof
-#define countof(arr) (sizeof(arr)/sizeof(arr[0]))
-#endif
-
-/* --------------------------------- */
-/* TODO: here is a copy of test/pileup_dev code, needs to be rearranged later */
-
-enum
+static
+void CC CSRA1_Pileup_EntryWhack ( DLNode * node, void * param )
 {
-    COL_REF_START,
-    COL_REF_LEN,
-    COL_READ_FILTER /* this is the physical column as opposed to RD_FILTER which may be virtual */
-};
-char const* column_names_pa[] =
-{
-    "REF_START",
-    "REF_LEN",
-    "READ_FILTER"
-};
-uint32_t column_index_pa [ countof (column_names_pa) ];
+    ctx_t ctx = ( ctx_t ) param;
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcDestroying );
 
-/* Forward declarations can be removed now, and 'static' can be added to each function */
-void Alignment_Init ( Alignment_Cache* self );
-void Alignment_InitCacheWithNull ( Alignment_Cache* self );
-void Alignment_Release ( Alignment_Cache* self );
-void Alignment_ResetCache ( Alignment_Cache* self );
-rc_t Alignment_Add ( Alignment_Cache* self, int64_t row_id, int64_t start, uint64_t len, uint32_t seq_start );
-Alignment_CacheItem const* Alignment_Get ( Alignment_Cache const* self, size_t i );
+    CSRA1_Pileup_Entry * self = ( CSRA1_Pileup_Entry * ) node;
 
-#if CACHE_IMPL_AS_LIST == 1
-void CC Alignment_CacheItemWhack ( DLNode* n, void* data );
-#endif
+    /* tear down stuff here */
 
-void PileupIteratorState_Init (CSRA1_Pileup* self);
-rc_t PileupIteratorState_SetAlignmentIds ( CSRA1_Pileup* self, int64_t const* alignment_ids, size_t count );
-void PileupIteratorState_Release ( CSRA1_Pileup* self );
-
-/* --------------------------------------- */
-
-#if CACHE_IMPL_AS_LIST == 1
-void CC Alignment_CacheItemWhack ( DLNode* n, void* data )
-{
-    free ( n );
-}
-#endif
-void Alignment_InitCacheWithNull ( Alignment_Cache* self )
-{
-    self -> size = 0;
-
-#if CACHE_IMPL_AS_LIST == 1
-    DLListInit ( & self->list_alignments );
-#else
-    self -> capacity = 128;
-    self -> data = NULL;
-#endif
+    free ( self );
 }
 
-void Alignment_Init ( Alignment_Cache* self )
+static
+CSRA1_Pileup_Entry * CSRA1_Pileup_EntryMake ( ctx_t ctx, int64_t row_id,
+    int64_t ref_zstart, uint64_t ref_len, bool secondary )
 {
-    self -> size = 0;
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
-#if CACHE_IMPL_AS_LIST == 1
-    DLListInit ( & self->list_alignments );
-#else
-    self -> capacity = 128;
-    self -> data = (Alignment_CacheItem*) malloc ( self -> capacity * sizeof (Alignment_CacheItem) );
-#endif
-
-}
-
-void Alignment_Release ( Alignment_Cache* self )
-{
-
-#if CACHE_IMPL_AS_LIST == 1
-
-    DLListWhack ( & self->list_alignments, Alignment_CacheItemWhack, NULL );
-    self -> size = 0;
-
-#else
-    if ( self -> data != NULL )
+    CSRA1_Pileup_Entry * obj = calloc ( 1, sizeof * obj );
+    if ( obj == NULL )
+        SYSTEM_ERROR ( xcNoMemory, "allocating CSRA1_Pileup_Entry" );
+    else
     {
-        free ( self -> data );
-        self -> data = NULL;
-        self -> capacity = 128;
+        obj -> row_id = row_id;
+        obj -> zstart = ref_zstart;
+        obj -> xend = ref_zstart + ref_len;
+        obj -> secondary = secondary;
     }
-#endif
 
+    return obj;
 }
 
-void Alignment_ResetCache ( Alignment_Cache* self )
+static
+int CSRA1_Pileup_EntryCmp ( const CSRA1_Pileup_Entry * a, const CSRA1_Pileup_Entry * b )
 {
-    self -> size = 0;
-
-#if CACHE_IMPL_AS_LIST == 1
-    DLListWhack ( & self->list_alignments, Alignment_CacheItemWhack, NULL );
-#endif
+    if ( a -> zstart < b -> zstart )
+        return -1;
+    if ( a -> zstart > b -> zstart )
+        return 1;
+    if ( a -> xend > b -> xend )
+        return -1;
+    if ( a -> xend < b -> xend )
+        return 1;
+    if ( a -> secondary != b -> secondary )
+        return a -> secondary - b -> secondary;
+    if ( a -> row_id < b -> row_id )
+        return -1;
+    return a -> row_id > b -> row_id;
 }
 
-rc_t Alignment_Add ( Alignment_Cache* self, int64_t row_id, int64_t start, uint64_t len, uint32_t seq_start )
+static
+void CSRA1_Pileup_EntrySort ( CSRA1_Pileup_Entry ** base, size_t count )
 {
-#if CACHE_IMPL_AS_LIST == 1
-    Alignment_CacheItem* item = (Alignment_CacheItem*) malloc (sizeof (Alignment_CacheItem));
+#define SWAP( a, b, off, size )                                                \
+    do                                                                         \
+    {                                                                          \
+        CSRA1_Pileup_Entry * tmp = * ( CSRA1_Pileup_Entry ** ) ( a );          \
+        * ( CSRA1_Pileup_Entry ** ) ( a ) = * ( CSRA1_Pileup_Entry ** ) ( b ); \
+        * ( CSRA1_Pileup_Entry ** ) ( b ) = tmp;                               \
+    }                                                                          \
+    while ( 0 )
 
-    if ( item == NULL )
-        return RC ( rcRuntime, rcData, rcAllocating, rcMemory, rcExhausted );
+#define CMP( a, b )                                                                                 \
+    CSRA1_Pileup_EntryCmp ( * ( CSRA1_Pileup_Entry ** ) ( a ), * ( CSRA1_Pileup_Entry ** ) ( b ) )
 
-    item->row_id = row_id;
-    item->start = start;
-    item->len = len;
-    item->seq_start = seq_start;
+    KSORT ( base, count, sizeof * base, 0, sizeof * base );
 
-    DLListPushTail ( & self->list_alignments, & item -> node );
+#undef SWAP
+#undef CMP
+}
 
-    ++self->size;
+/*--------------------------------------------------------------------------
+ * CSRA1_Pileup_AlignList
+ */
 
-#else
-    size_t size = self->size;
+static
+void CSRA1_Pileup_AlignListWhack ( CSRA1_Pileup_AlignList * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcDestroying );
+    DLListWhack ( & self -> pileup, CSRA1_Pileup_EntryWhack, ( void* ) ctx );
+    DLListWhack ( & self -> waiting, CSRA1_Pileup_EntryWhack, ( void* ) ctx );
+    self -> depth = self -> avail = 0;
+}
 
-    if ( size == self->capacity )
+static
+void CSRA1_PileupAlignListSort ( CSRA1_Pileup_AlignList * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    if ( self -> avail > 1 )
     {
-        void* new_data = realloc ( self->data, sizeof (Alignment_CacheItem) * self->capacity*2 );
-        if ( new_data == NULL )
-            return (rc_t)(-1);
+        CSRA1_Pileup_Entry ** a = malloc ( self -> avail * sizeof * a );
+        if ( a == NULL )
+            SYSTEM_ERROR ( xcNoMemory, "allocating CSRA1_Pileup_Entry" );
         else
         {
-            self->capacity *= 2;
-            self->data = (Alignment_CacheItem*) new_data;
+            CSRA1_Pileup_Entry * e = ( CSRA1_Pileup_Entry * )
+                DLListHead ( & self -> waiting );
+
+            uint32_t i, count = self -> avail;
+            for ( i = 0; i < count; ++ i )
+            {
+                a [ i ] = e;
+                e = ( CSRA1_Pileup_Entry * ) DLNodeNext ( & e -> node );
+            }
+
+            CSRA1_Pileup_EntrySort ( a, count );
+
+            DLListInit ( & self -> waiting );
+            for ( i = 0; i < count; ++ i )
+            {
+                e = a [ i ];
+                DLListPushTail ( & self -> waiting, & e -> node );
+            }
+
+            free ( a );
         }
     }
-
-    self->data [ size ] . row_id = row_id;
-    self->data [ size ] . start = start;
-    self->data [ size ] . len = len;
-    self->data [ size ] . seq_start = seq_start;
-
-    ++ self->size;
-#endif
-
-    return 0;
 }
 
-Alignment_CacheItem const* Alignment_Get ( Alignment_Cache const* self, size_t i )
+static
+void CSRA1_PileupAlignListMerge ( CSRA1_Pileup_AlignList * self, DLList * pa_waiting )
 {
-#if CACHE_IMPL_AS_LIST == 1
-    /* TODO: it's better not to have this function for list-based cache
-        It's here only for testing purposes, for main.c:print_current_state()
-    */
-    Alignment_CacheItem const* item = ( Alignment_CacheItem const* ) DLListHead ( & self->list_alignments );
-    for (; i > 0 && item != NULL; --i, item = ( Alignment_CacheItem const* ) DLNodeNext (& item->node) );
+    DLList sa_waiting = self -> waiting;
+    CSRA1_Pileup_Entry * pe = ( CSRA1_Pileup_Entry * ) DLListHead ( pa_waiting );
+    CSRA1_Pileup_Entry * se = ( CSRA1_Pileup_Entry * ) DLListHead ( & sa_waiting );
 
-    return item;
-#else
-    return & self->data [ i ];
-#endif
-}
+    DLListInit ( & self -> waiting );
 
-
-#if USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS != 1
-rc_t PileupIteratorState_SetAlignmentIds ( CSRA1_Pileup* self, int64_t const* alignment_ids, size_t count )
-{
-    if ( count > self->capacity_alignment_ids )
+    while ( pe != NULL && se != NULL )
     {
-        self->capacity_alignment_ids *= 2;
-        if ( self->capacity_alignment_ids < count )
-            self->capacity_alignment_ids = count;
-        free ( self->alignment_ids );
-        self->alignment_ids = (int64_t*) malloc ( self->capacity_alignment_ids * sizeof (int64_t) );
-        if ( self->alignment_ids == NULL )
-            return (rc_t)(-1);
-    }
-
-    memcpy ( self->alignment_ids, alignment_ids, count * sizeof (int64_t));
-    self->size_alignment_ids = count;
-    return 0;
-}
-#endif
-
-void PileupIteratorState_Init (CSRA1_Pileup* self)
-{
-    self -> size_alignment_ids = 0;
-    self -> next_alignment_idx = 0;
-#if USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS != 1
-    self -> capacity_alignment_ids = 128;
-    self -> alignment_ids = (int64_t*) malloc ( self -> capacity_alignment_ids * sizeof (int64_t) );
-#else
-    self -> alignment_ids = NULL;
-    self -> blob_alignment_ids = NULL;
-#endif
-
-#if USE_BLOB_CACHE_FOR_ALIGNMENTS == 1
-    BlobCache_Init ( & self -> blobs_alignments );
-#endif
-
-#if USE_SINGLE_BLOB_FOR_ALIGNMENTS == 1
-    self -> blob_alignments_ref_start = NULL;
-    self -> blob_alignments_ref_len = NULL;
-    self -> blob_alignments_rd_filter = NULL;
-#endif
-
-}
-
-void PileupIteratorState_Release ( CSRA1_Pileup* self )
-{
-    if ( self -> alignment_ids != NULL )
-    {
-#if USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS != 1
-        free ( self -> alignment_ids );
-        self -> capacity_alignment_ids = 128;
-#endif
-        self -> alignment_ids = NULL;
-    }
-#if USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS == 1
-    if ( self -> blob_alignment_ids != NULL )
-    {
-        VBlobRelease ( self -> blob_alignment_ids );
-        self -> blob_alignment_ids = NULL;
-    }
-#endif
-
-#if USE_BLOB_CACHE_FOR_ALIGNMENTS == 1
-    BlobCache_Whack ( & self -> blobs_alignments );
-#endif
-
-#if USE_SINGLE_BLOB_FOR_ALIGNMENTS == 1
-    if ( self -> blob_alignments_ref_start != NULL )
-    {
-        VBlobRelease ( self -> blob_alignments_ref_start );
-        self -> blob_alignments_ref_start = NULL;
-    }
-    if ( self -> blob_alignments_ref_len != NULL )
-    {
-        VBlobRelease ( self -> blob_alignments_ref_len );
-        self -> blob_alignments_ref_len = NULL;
-    }
-    if ( self -> blob_alignments_rd_filter != NULL )
-    {
-        VBlobRelease ( self -> blob_alignments_rd_filter );
-        self -> blob_alignments_rd_filter = NULL;
-    }
-#endif
-}
-
-
-
-static rc_t init_column_index (
-    ctx_t ctx,
-    VCursor const* cursor,
-    char const* const* column_names, uint32_t* column_index, size_t column_count
-    )
-{
-    rc_t rc = 0;
-    size_t i;
-    for ( i = 0; i < column_count; ++i )
-    {
-        rc = VCursorAddColumn ( cursor, & column_index [i], column_names [i] );
-        if ( rc != 0 )
+        if ( CSRA1_Pileup_EntryCmp ( pe, se ) < 0 )
         {
-            INTERNAL_ERROR ( xcCursorCreateFailed,
-                "ERROR: VCursorAddColumn - [%s] failed with error: 0x%08x (%u) [%R]",
-                column_names [i], rc, rc, rc);
-            break;
+            DLListUnlink ( pa_waiting, & pe -> node );
+            DLListPushTail ( & self -> waiting, & pe -> node );
+            pe = ( CSRA1_Pileup_Entry * ) DLListHead ( pa_waiting );
+        }
+        else
+        {
+            DLListUnlink ( & sa_waiting, & se -> node );
+            DLListPushTail ( & self -> waiting, & se -> node );
+            se = ( CSRA1_Pileup_Entry * ) DLListHead ( & sa_waiting );
         }
     }
 
-    return rc;
-}
-
-static void release_vdb_objects (
-    VTable const** table_pa,
-    VCursor const** cursor_pa
-    )
-{
-    /* TODO: process *Release-functions error return codes */
-    if ( *cursor_pa)
-    {
-        VCursorRelease ( *cursor_pa );
-        *cursor_pa = NULL;
-    }
-    if ( *table_pa )
-    {
-        VTableRelease ( *table_pa );
-        *table_pa = NULL;
-    }
+    DLListAppendList ( & self -> waiting, pa_waiting );
+    DLListAppendList ( & self -> waiting, & sa_waiting );
 }
 
 
-rc_t init_vdb_objects (
-    ctx_t ctx,
-    VDatabase const* db,
-    VTable const** table_pa,
-    VCursor const** cursor_pa,
-    char const* const* column_names_pa, uint32_t* column_index_pa, size_t column_count_pa
-    )
+/*--------------------------------------------------------------------------
+ * CSRA1_Pileup_RefCursorData
+ */
+
+static
+void CSRA1_Pileup_RefCursorDataWhack ( CSRA1_Pileup_RefCursorData * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
 
-    rc_t rc = 0;
+    assert ( self != NULL );
 
-    rc = VDatabaseOpenTableRead ( db, table_pa, "PRIMARY_ALIGNMENT" );
-    if ( rc != 0 )
-    {
-        INTERNAL_ERROR ( xcTableOpenFailed, 
-            "ERROR: VDatabaseOpenTableRead(PRIMARY_ALIGNMENT) failed with error: 0x%08x (%u) [%R]", 
-            rc, rc, rc );
-
-        return rc;
-    }
-
-    rc = VTableCreateCursorRead ( *table_pa, cursor_pa );
-    /*rc = VTableCreateCachedCursorRead ( *table_pa, cursor_pa, (size_t)64 << 30 );*/
-    if ( rc != 0 )
-    {
-        INTERNAL_ERROR ( xcCursorCreateFailed,
-            "ERROR: VTableCreateCursorRead(pa) failed with error: 0x%08x (%u) [%R]", rc, rc, rc);
-
-        return rc;
-    }
-
-    rc = init_column_index ( ctx, *cursor_pa, column_names_pa, column_index_pa, column_count_pa );
-    if ( rc != 0 )
-    {
-        return rc;
-    }
-
-    rc = VCursorOpen ( *cursor_pa );
-    if ( rc != 0 )
-    {
-        INTERNAL_ERROR ( xcCursorOpenFailed,
-            "ERROR: VCursorOpen(pa) failed with error: 0x%08x (%u) [%R]", rc, rc, rc);
-
-        return rc;
-    }
-
-    return rc;
+    NGS_CursorRelease ( self -> curs, ctx );
 }
 
-#if USE_BLOBS == 1
-/* opens blob containing given row id
-   if blob_ref contains given id already - do nothing
-   otherwise - close current blob and open new one
-*/
-static rc_t open_blob_for_current_id (
-    ctx_t ctx,
-    int64_t id,
-    VCursor const* cursor, VBlob const** blob, uint32_t col_idx
-    )
+static
+void CSRA1_Pileup_RefCursorDataInit ( ctx_t ctx, CSRA1_Pileup_RefCursorData * obj,
+    const NGS_Cursor * curs, int64_t reference_start_id )
 {
-    rc_t rc = 0;
-    if (*blob == NULL)
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcDestroying );
+
+    assert ( obj != NULL );
+    assert ( curs != NULL );    
+
+    TRY ( obj -> curs = NGS_CursorDuplicate ( curs, ctx ) )
     {
-        rc = VCursorGetBlobDirect ( cursor, blob, id, col_idx);
-        if ( rc != 0)
-        {
-            INTERNAL_ERROR ( xcCursorAccessFailed,
-                "ERROR: VCursorGetBlobDirect(init) failed with error: 0x%08x (%u) [%R]", rc, rc, rc);
-            return rc;
-        }
+        obj -> max_seq_len = NGS_CursorGetUInt32 ( curs, ctx, reference_start_id, reference_MAX_SEQ_LEN );
     }
+}
+
+
+/*--------------------------------------------------------------------------
+ * CSRA1_Pileup_AlignCursorData
+ */
+
+static
+void CSRA1_Pileup_AlignCursorDataWhack ( CSRA1_Pileup_AlignCursorData * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcDestroying );
+
+    uint32_t i;
+    for ( i = 0; i < sizeof self -> blob / sizeof self -> blob [ 0 ]; ++ i )
+        VBlobRelease ( self -> blob [ i ] );
+
+    VCursorRelease ( self -> curs );
+}
+
+static
+void CSRA1_Pileup_AlignCursorDataGetCell ( CSRA1_Pileup_AlignCursorData * self, ctx_t ctx,
+    int64_t row_id, uint32_t col_idx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    rc_t rc;
+    uint32_t elem_bits, boff;
+
+    if ( self -> blob [ col_idx ] != NULL )
+    {
+        rc = VBlobCellData ( self -> blob [ col_idx ], row_id, & elem_bits,
+            & self -> cell_data [ col_idx ], & boff, & self -> cell_len [ col_idx ] );
+        if ( rc == 0 )
+            return;
+
+        VBlobRelease ( self -> blob [ col_idx ] );
+        self -> blob [ col_idx ] = NULL;
+    }
+
+    self -> cell_data [ col_idx ] = NULL;
+
+    rc = VCursorGetBlobDirect ( self -> curs, & self -> blob [ col_idx ], row_id, self -> col_idx [ col_idx ] );
+    if ( rc != 0 )
+        INTERNAL_ERROR ( xcStorageExhausted, "VCursorGetBlobDirect rc = %R", rc );
     else
     {
-        int64_t start_id;
-        uint64_t count;
-        rc = VBlobIdRange ( *blob, & start_id, & count );
-        if ( rc != 0)
+        rc = VBlobCellData ( self -> blob [ col_idx ], row_id, & elem_bits,
+            & self -> cell_data [ col_idx ], & boff, & self -> cell_len [ col_idx ] );
+        if ( rc != 0 )
+            INTERNAL_ERROR ( xcStorageExhausted, "VBlobCellData rc = %R", rc );
+    }
+}
+
+static
+void CSRA1_Pileup_AlignCursorDataGetNonEmptyCell ( CSRA1_Pileup_AlignCursorData * self, ctx_t ctx,
+    int64_t row_id, uint32_t col_idx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    TRY ( CSRA1_Pileup_AlignCursorDataGetCell ( self, ctx, row_id, col_idx ) )
+    {
+        if ( self -> cell_len [ col_idx ] == 0 )
+            INTERNAL_ERROR ( xcStorageExhausted, "zero-length cell data" );
+    }
+}
+
+static
+uint8_t CSRA1_Pileup_AlignCursorDataGetUInt8 ( CSRA1_Pileup_AlignCursorData * self, ctx_t ctx,
+    int64_t row_id, uint32_t col_idx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    TRY ( CSRA1_Pileup_AlignCursorDataGetNonEmptyCell ( self, ctx, row_id, col_idx ) )
+    {
+        const uint8_t * p = self -> cell_data [ col_idx ];
+        return p [ 0 ];
+    }
+
+    return 0;
+}
+
+static
+uint32_t CSRA1_Pileup_AlignCursorDataGetUInt32 ( CSRA1_Pileup_AlignCursorData * self, ctx_t ctx,
+    int64_t row_id, uint32_t col_idx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    TRY ( CSRA1_Pileup_AlignCursorDataGetNonEmptyCell ( self, ctx, row_id, col_idx ) )
+    {
+        const uint32_t * p = self -> cell_data [ col_idx ];
+        return p [ 0 ];
+    }
+
+    return 0;
+}
+
+/*--------------------------------------------------------------------------
+ * CSRA1_Pileup
+ */
+
+enum
+{
+    /* the initial state of a pileup iterator object */
+    pileup_state_invalid,
+
+    /* the iterator needs to advance to the next position */
+    pileup_state_position,
+
+    /* the iterator needs to advance to the next chunk */
+    pileup_state_chunk,
+
+    /* the iterator needs to read alignment ids
+       and populate the alignment list */
+    pileup_state_populate,
+
+    /* the iterator has not yet had "next" called,
+       and needs to be primed for further operation */
+    pileup_state_initial,
+    pileup_state_initial_position,
+    pileup_state_initial_chunk,
+    pileup_state_initial_populate,
+
+    /* terminated states */
+    pileup_state_finished,
+    pileup_state_err,
+
+    /* object has been destroyed */
+    pileup_state_zombie
+};
+
+
+/* TBD - check these error types */
+static
+void CSRA1_PileupStateTest ( const CSRA1_Pileup * self, ctx_t ctx, uint32_t lineno )
+{
+    assert ( self != NULL );
+
+    switch ( self -> state )
+    {
+    case pileup_state_invalid:
+        ctx_event ( ctx, lineno, xc_sev_fail, xc_org_internal, xcIteratorUninitialized, "PileupIterator invalid state" );
+        break;
+    case pileup_state_position:
+    case pileup_state_chunk:
+    case pileup_state_populate:
+        break;
+    case pileup_state_initial:
+    case pileup_state_initial_position:
+    case pileup_state_initial_chunk:
+    case pileup_state_initial_populate:
+        ctx_event ( ctx, lineno, xc_sev_fail, xc_org_user, xcIteratorUninitialized,
+                    "Pileup accessed before a call to PileupIteratorNext()" );
+        break;
+    case pileup_state_finished:
+        ctx_event ( ctx, lineno, xc_sev_fail, xc_org_user, xcCursorExhausted, "No more rows available" );
+        break;
+    case pileup_state_err:
+        ctx_event ( ctx, lineno, xc_sev_fail, xc_org_user, xcIteratorUninitialized, "PileupIterator invalid state" );
+        break;
+    case pileup_state_zombie:
+        ctx_event ( ctx, lineno, xc_sev_fail, xc_org_internal, xcIteratorUninitialized, "PileupIterator accessed after destruction" );
+        break;
+    default:
+        ctx_event ( ctx, lineno, xc_sev_fail, xc_org_internal, xcIteratorUninitialized, "PileupIterator unknown state" );
+    }
+}
+
+#define CHECK_STATE( self, ctx ) \
+    CSRA1_PileupStateTest ( self, ctx, __LINE__ )
+
+
+static
+void CSRA1_PileupWhack ( CSRA1_Pileup * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
+
+    self -> state = pileup_state_zombie;
+
+    /* any alignments */
+    CSRA1_Pileup_AlignListWhack ( & self -> align, ctx );
+
+    /* alignment cursors, blobs */
+    CSRA1_Pileup_AlignCursorDataWhack ( & self -> pa, ctx );
+    CSRA1_Pileup_AlignCursorDataWhack ( & self -> sa, ctx );
+
+    /* reference cursor, blobs */
+    CSRA1_Pileup_RefCursorDataWhack ( & self -> ref, ctx );
+    
+    NGS_PileupWhack ( & self -> dad, ctx );
+}
+
+static
+NGS_String * CSRA1_PileupGetReferenceSpec ( const CSRA1_Pileup * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    TRY ( CHECK_STATE ( self, ctx ) )
+    {
+        return NGS_ReferenceGetCanonicalName ( self -> dad . ref, ctx );
+    }
+
+    return NULL;
+}
+
+static
+int64_t CSRA1_PileupGetReferencePosition ( const CSRA1_Pileup * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    TRY ( CHECK_STATE ( self, ctx ) )
+    {
+        return self -> ref_zpos;
+    }
+
+    return 0;
+}
+
+static
+struct NGS_PileupEvent * CSRA1_PileupGetEvents ( CSRA1_Pileup * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    TRY ( CHECK_STATE ( self, ctx ) )
+    {
+        TRY ( struct NGS_PileupEvent * ret = CSRA1_PileupEventIteratorMake ( ctx, self ) )
         {
-            INTERNAL_ERROR ( xcCursorAccessFailed,
-                "ERROR: VBlobIdRange failed with error: 0x%08x (%u) [%R]", rc, rc, rc);
-            return rc;
+            return ret;
         }
 
-        if (id >= start_id + (int64_t)count || id < start_id)
-        {
-            VBlobRelease ( *blob );
-            *blob = NULL;
+        /* TBD - is this what we want? */
+        self -> state = pileup_state_err;
+    }
 
-            rc = VCursorGetBlobDirect ( cursor, blob, id, col_idx);
-            if ( rc != 0)
+    return NULL;
+}
+
+static
+unsigned int CSRA1_PileupGetDepth ( const CSRA1_Pileup * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    TRY ( CHECK_STATE ( self, ctx ) )
+    {
+        return ( unsigned int ) self -> align . depth;
+    }
+
+    return 0;
+}
+
+static
+bool CSRA1_PileupPosition ( CSRA1_Pileup * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    if ( self -> align . avail != 0 )
+    {
+
+        CSRA1_Pileup_Entry * head = ( CSRA1_Pileup_Entry * )
+            DLListHead ( & self -> align . waiting );
+
+        uint32_t avail = 0;
+        CSRA1_Pileup_Entry * prev = NULL;
+        CSRA1_Pileup_Entry * entry = head;
+
+        /* walk the waiting list, adding everything to the end of pileup list */
+        while ( entry != NULL )
+        {
+            if ( entry -> zstart > self -> ref_zpos )
+                break;
+
+PRINT ( ">>> adding alignment at refpos %ld, row-id %ld: %ld-%ld ( zero-based, half-closed )\n",
+         self -> ref_zpos, entry -> row_id, entry -> zstart, entry -> xend );
+
+            prev = entry;
+
+            ++ avail;
+
+            entry = ( CSRA1_Pileup_Entry * )
+                DLNodeNext ( & entry -> node );
+        }
+
+        /* if "entry" is NULL, then everything waiting is ready */
+        if ( entry == NULL )
+        {
+            assert ( self -> align . avail == avail );
+
+            DLListAppendList ( & self -> align . pileup, & self -> align . waiting );
+            self -> align . depth += avail;
+            self -> align . avail = 0;
+        }
+
+        /* otherwise, just take the top guys off the end */
+        else if ( prev != NULL )
+        {
+            if ( head == prev )
             {
-                INTERNAL_ERROR ( xcCursorAccessFailed,
-                    "ERROR: VCursorGetBlobDirect failed with error: 0x%08x (%u) [%R]", rc, rc, rc);
-                return rc;
+                assert ( avail == 1 );
+                DLListPopHead ( & self -> align . waiting );
+                DLListPushTail ( & self -> align . pileup, & head -> node );
+                self -> align . avail -= 1;
+                self -> align . depth += 1;
+            }
+            else
+            {
+                DLList transfer;
+
+                /* TBD - add this functionality to DLList */
+
+                /* sever the ties */
+                prev -> node . next = NULL;
+                entry -> node . prev = NULL;
+
+                /* put the new guys onto transfer list */
+                transfer . head = & head -> node;
+                transfer . tail = & prev -> node;
+
+                /* update the waiting list */
+                self -> align . waiting . head = & entry -> node;
+                self -> align . avail -= avail;
+
+                /* transfer elements */
+                DLListAppendList ( & self -> align . pileup, & transfer );
+                self -> align . depth += avail;
             }
         }
     }
-    return rc;
+
+    /* update cached REFERENCE values at current position */
+    self -> ref_base = 0;
+    
+    return self -> ref_zpos< self -> slice_xend;
 }
-#endif
 
-
-static rc_t add_ref_row_to_cache (
-    ctx_t ctx,
-    CSRA1_Pileup * pileup_state,
-    VCursor const* cursor_pa, uint32_t seq_start,
-    uint64_t ref_pos, /*TODO: make all ref positions signed */
-    int64_t const* pa_ids, uint32_t pa_count,
-    char const* const* column_names_pa, uint32_t* column_index_pa, size_t column_count_pa
-    )
+static
+bool CSRA1_PileupAdvance ( CSRA1_Pileup * self, ctx_t ctx )
 {
-    size_t i = 0;
-    rc_t rc = 0;
-    int32_t ref_start;
-    uint32_t ref_len; /* TODO: fix types */
-    uint32_t rd_filter; 
-    uint32_t row_len; /* TODO: fix types */
-    int64_t slice_start = pileup_state->slice_start;
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
-    -- seq_start; /* SEQ_START is one-based coord, and we will need zero-based one */
-    /* Making slice_start and slice_end relative to the current reference row_id */
+    CSRA1_Pileup_Entry * entry;
 
-    slice_start -= seq_start;
-    ref_pos -= seq_start;
-
-    for (; i < (size_t)pa_count; ++i)
+    /* see if advance is possible */
+    if ( ++ self -> ref_zpos >= self -> slice_xend )
     {
-        /* Read current PRIMARY_ALIGNMENT: REF_START and REF_LEN
-           if it intersects slice - add this primary alignment to the cache
-        */
-        int64_t ref_end;
+        /* should never go over */
+        assert ( self -> ref_zpos == self -> slice_xend );
+        self -> state = pileup_state_finished;
+        return false;
+    }
 
-#if USE_SINGLE_BLOB_FOR_ALIGNMENTS == 1
-        rc = open_blob_for_current_id ( ctx, pa_ids[i],
-            cursor_pa, & pileup_state->blob_alignments_ref_start,
-            column_index_pa [COL_REF_START]);
-        if (rc != 0)
-            return rc;
+    /* test for end of chunk */
+    if ( self -> ref_zpos == self -> ref_chunk_xend )
+    {
+        -- self -> ref_zpos;
+        self -> ref_chunk_id += 1;
+        self -> state = pileup_state_chunk;
+        return false;
+    }
 
-        rc = VBlobRead ( pileup_state->blob_alignments_ref_start,
-            pa_ids[i], sizeof (ref_start) * 8, & ref_start, 1, & row_len );
-        if ( rc != 0 )
+    /* drop everything that ends at current position */
+    entry = ( CSRA1_Pileup_Entry * )
+        DLListHead ( & self -> align . pileup );
+
+    while ( entry != NULL )
+    {
+        CSRA1_Pileup_Entry * next = ( CSRA1_Pileup_Entry * )
+            DLNodeNext ( & entry -> node );
+
+        if ( entry -> xend == self -> ref_zpos )
         {
-            INTERNAL_ERROR ( xcCursorAccessFailed,
-                "ERROR: VBlobRead(pa, %s) failed with error: 0x%08x (%u) [%R]",
-                column_names_pa[COL_REF_START], rc, rc, rc);
-            return rc;
+PRINT ( ">>> dropping alignment at refpos %ld, row-id %ld: %ld-%ld ( zero-based, half-closed )\n",
+         self -> ref_zpos, entry -> row_id, entry -> zstart, entry -> xend );
+
+            DLListUnlink ( & self -> align . pileup, & entry -> node );
+            self -> align . depth -= 1;
+            CSRA1_Pileup_EntryWhack ( & entry -> node, ( void* ) ctx );
         }
 
-        rc = open_blob_for_current_id ( ctx, pa_ids[i],
-            cursor_pa, & pileup_state->blob_alignments_ref_len,
-            column_index_pa [COL_REF_LEN]);
-        if (rc != 0)
-            return rc;
+        entry = next;
+    }
 
-        rc = VBlobRead ( pileup_state->blob_alignments_ref_len,
-            pa_ids[i], sizeof (ref_len) * 8, & ref_len, 1, & row_len );
-        if ( rc != 0 )
+    return CSRA1_PileupPosition ( self, ctx );
+}
+
+static
+void CSRA1_PileupChunk ( CSRA1_Pileup * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    /* zero out any cached REFERENCE cells for current chunk */
+    self -> ref_chunk_bases = NULL;
+    self -> ref_base = 0;
+
+    /* prepare next chunk */
+    self -> ref_chunk_xend = ( self -> ref_chunk_id - self -> reference_start_id + 1 ) * self -> ref . max_seq_len;
+
+    /* detect need to populate */
+    if ( self -> ref_chunk_id >= self -> idx_chunk_id )
+        self -> state = pileup_state_populate;
+    else
+        self -> state = pileup_state_position;
+}
+
+static
+uint32_t CSRA1_PileupGatherCategoryIds ( CSRA1_Pileup * self, ctx_t ctx, const KVector * ids, uint32_t col_idx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    const void * base;
+    uint32_t elem_bits, boff, row_len = 0;
+
+    TRY ( NGS_CursorCellDataDirect ( self -> ref . curs, ctx,
+          self -> idx_chunk_id, col_idx, & elem_bits, & base, & boff, & row_len ) )
+    {
+        uint32_t i;
+        const int64_t * cell = base;
+
+        /* test for alignment */
+        assert ( ( ( size_t ) cell & ( sizeof * cell - 1 ) ) == 0 );
+
+        /* copy the row ids */
+        for ( i = 0; i < row_len; ++ i )
         {
-            INTERNAL_ERROR ( xcCursorAccessFailed,
-                "ERROR: VBlobRead(pa, %s) failed with error: 0x%08x (%u) [%R]",
-                column_names_pa[COL_REF_LEN], rc, rc, rc);
-            return rc;
+            rc_t rc = KVectorSetBool ( ( KVector * ) ids, cell [ i ], true );
+            if ( rc != 0 )
+            {
+                INTERNAL_ERROR ( xcStorageExhausted, "KVectorSetBool rc = %R", rc );
+                break;
+            }
         }
-        
-        rc = open_blob_for_current_id ( ctx, pa_ids[i],
-            cursor_pa, & pileup_state->blob_alignments_rd_filter,
-            column_index_pa [COL_READ_FILTER]);
-        if (rc != 0)
-            return rc;
+    }
 
-        rc = VBlobRead ( pileup_state->blob_alignments_rd_filter,
-            pa_ids[i], sizeof (rd_filter) * 8, & rd_filter, 1, & row_len );
+    return row_len;
+}
+
+static
+uint32_t CSRA1_PileupGatherChunkIds ( CSRA1_Pileup * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    uint32_t pa_ids = 0;
+    uint32_t sa_ids = 0;
+
+    if ( self -> pa . curs != NULL )
+    {
+        ON_FAIL ( pa_ids = CSRA1_PileupGatherCategoryIds ( self, ctx, self -> ref . pa_ids, reference_PRIMARY_ALIGNMENT_IDS ) )
+            return 0;
+    }
+
+    if ( self -> sa . curs != NULL )
+    {
+        ON_FAIL ( sa_ids = CSRA1_PileupGatherCategoryIds ( self, ctx, self -> ref . sa_ids, reference_SECONDARY_ALIGNMENT_IDS ) )
+            return 0;
+    }
+
+    ++ self -> idx_chunk_id;
+    return pa_ids + sa_ids;
+}
+
+static
+void CSRA1_PileupGatherIds ( CSRA1_Pileup * self, ctx_t ctx, uint32_t id_limit )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    rc_t rc;
+    KVector * v;
+    uint32_t total_ids;
+
+    /* create empty KVectors for each category in use */
+    if ( self -> pa . curs != NULL )
+    {
+        KVectorRelease ( self -> ref . pa_ids );
+        rc = KVectorMake ( & v );
+        self -> ref . pa_ids = v;
         if ( rc != 0 )
-        {
-            INTERNAL_ERROR ( xcCursorAccessFailed,
-                "ERROR: VBlobRead(pa, %s) failed with error: 0x%08x (%u) [%R]",
-                column_names_pa[COL_READ_FILTER], rc, rc, rc);
-            return rc;
-        }
-#else
-        /* TODO: this branch might not work due to transfer from test to ngs */
-        rc = VCursorReadDirect ( cursor_pa, pa_ids[i], column_index_pa [COL_REF_START],
-                                 sizeof (ref_start) * 8, & ref_start, 1, & row_len );
+            INTERNAL_ERROR ( xcStorageExhausted, "KVectorMake rc = %R", rc );
+    }
+    if ( ! FAILED () && self -> sa . curs != NULL )
+    {
+        KVectorRelease ( self -> ref . sa_ids );
+        rc = KVectorMake ( & v );
+        self -> ref . sa_ids = v;
         if ( rc != 0 )
+            INTERNAL_ERROR ( xcStorageExhausted, "KVectorMake rc = %R", rc );
+    }
+
+    /* set row ids appropriately */
+    self -> idx_chunk_id = self -> ref_chunk_id;
+
+    /* loop until we reach a limit */
+    total_ids = 0;
+    do
+    {
+        ON_FAIL ( uint32_t chunk_ids = CSRA1_PileupGatherChunkIds ( self, ctx ) )
+            break;
+
+        total_ids += chunk_ids;
+    }
+    while ( total_ids < id_limit && self -> idx_chunk_id <= self -> slice_end_id );
+}
+
+static
+bool CSRA1_PileupFilterAlignment ( CSRA1_Pileup * self, ctx_t ctx,
+    int64_t row_id, CSRA1_Pileup_AlignCursorData * cd )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    INSDC_read_filter read_filter;
+
+    TRY ( read_filter = CSRA1_Pileup_AlignCursorDataGetUInt8 ( cd, ctx, row_id, pileup_align_col_READ_FILTER ) )
+    {
+        switch ( read_filter )
         {
-            rc_t res = string_printf ( error_buf, error_buf_size, NULL,
-                "ERROR: VCursorReadDirect(pa, %s) failed with error: 0x%08x (%u) [%R]",
-                column_names_pa[COL_REF_START], rc, rc, rc);
-            if (res == rcBuffer || res == rcInsufficient)
-                error_buf [ error_buf_size - 1 ] = '\0';
+        case READ_FILTER_PASS:
+            return true;
 
-            return rc;
-        }
-        rc = VCursorReadDirect ( cursor_pa, pa_ids[i], column_index_pa [COL_REF_LEN],
-                                 sizeof (ref_len) * 8, & ref_len, 1, & row_len );
-        if ( rc != 0 )
-        {
-            rc_t res = string_printf ( error_buf, error_buf_size, NULL,
-                "ERROR: VCursorReadDirect(pa, %s) failed with error: 0x%08x (%u) [%R]",
-                column_names_pa[COL_REF_LEN], rc, rc, rc);
-            if (res == rcBuffer || res == rcInsufficient)
-                error_buf [ error_buf_size - 1 ] = '\0';
+        case READ_FILTER_REJECT:
+            /* simply a bad read */
+            break;
 
-            return rc;
-        }
-#endif
+        case READ_FILTER_CRITERIA:
+            /* TBD - this means a duplicate - may allow later on */
+            break;
 
-        ref_end = ref_start + (int64_t)ref_len;
-
-        /* skip all alignments that are to the left of slice (if we have slice specified) */
-        if ( pileup_state->slice_length && ref_end <= slice_start)
-            continue;
-
-        /* stop processing current alignments that are to the right of slice (if we have slice specified) */
-        if ( pileup_state->slice_length && ref_start >= (slice_start + (int64_t)pileup_state->slice_length))
-        {
-            /*pileup_state->next_alignment_idx = pileup_state->size_alignment_ids;*/
+        case READ_FILTER_REDACTED:
+            /* do not include */
             break;
         }
-
-        /* if alignment intersects slice_start and passes filtering criteria - cache it */
-        if ( ref_start <= (int64_t)ref_pos && ref_end > (int64_t)ref_pos && 
-            ( rd_filter & SRA_READ_FILTER_REJECT ) == 0 )
-        {   
-            rc = Alignment_Add ( & pileup_state->cache_alignment, pa_ids[i], ref_start, ref_len, seq_start );
-            if ( rc != 0 )
-            {
-                INTERNAL_ERROR ( xcCursorAccessFailed,
-                    "ERROR: Alignment_Add (%lld, %d, %u, %u) failed with error: 0x%08x (%u) [%R], cache_size=%zu, ref_start_id=%lld, ref_pos=%llu",
-                    pa_ids[i], ref_start, ref_len, seq_start, rc, rc, rc,
-                    pileup_state->cache_alignment.size,
-                    pileup_state->reference_start_id,
-                    pileup_state->ref_pos);
-                return rc;
-            }
-        }
-        else if ( ref_start > ref_pos )
-        {
-            /*Alignment_AddPrefetch ();*/
-/*            rc = Alignment_Add ( & pileup_state->cache_alignment, pa_ids[i], ref_start, ref_len, seq_start );
-            if ( rc != 0 )
-            {
-                rc_t res = string_printf ( error_buf, error_buf_size, NULL,
-                    "ERROR: Alignment_Add failed with error: 0x%08x (%u)", rc, rc);
-                if (res == rcBuffer || res == rcInsufficient)
-                    error_buf [ error_buf_size - 1 ] = '\0';
-
-                return rc;
-            }
-            ++i;*/
-            break; /* This is only for alignments ordered by ref_start !!*/
-        }
     }
-    pileup_state->next_alignment_idx =
-        & pa_ids[i] - pileup_state->alignment_ids; /* TODO: i-th alignment will be read again on the next step, so consider caching it here and ignoring it when looking it up for cached items relevant to current ref_pos */
 
-    return rc;
+    return false;
 }
 
-
-
-static rc_t initialize_ref_pos ( ctx_t ctx,
-                                 CSRA1_Pileup* pileup_state,
-                                 NGS_Cursor const* curs_ref, 
-                                 VCursor const* cursor_pa,
-                                 char const* const* column_names_pa, 
-                                 uint32_t* column_index_pa, 
-                                 size_t column_count_pa )
+static
+CSRA1_Pileup_Entry * CSRA1_PileupReadAlignment ( CSRA1_Pileup * self, ctx_t ctx,
+    int64_t row_id, CSRA1_Pileup_AlignCursorData * cd )
 {
-    int64_t row_id;
-    uint64_t row_count;
-    uint32_t dummy;
-    void const* buf;
-    rc_t rc;
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
-    uint32_t max_seq_len, row_len;
+    bool pass;
+    uint64_t ref_len;
+    int64_t ref_zstart;
+    bool secondary = ( cd == & self -> sa );
 
-    NGS_CursorGetRowRange ( curs_ref, ctx, & row_id, & row_count );
-
-    if ( row_count < 1 )
+    TRY ( pass = CSRA1_PileupFilterAlignment ( self, ctx, row_id, cd ) )
     {
-        USER_ERROR ( xcRowNotFound, "There is no rows in REFERENCE table");
-
-        return (rc_t)(-1);
-    }
-    pileup_state->total_row_count = row_count;
-
-    /* Read MAX_SEQ_LEN from the start_row_id and assume that it's the same for all the rest */
-    NGS_CursorCellDataDirect ( curs_ref, ctx, pileup_state->reference_start_id, reference_MAX_SEQ_LEN,
-        & dummy, & buf, NULL, & row_len );
-    max_seq_len = *(uint32_t*)buf;
-    if ( FAILED () )
-    {
-        rc = ctx->rc;
-        INTERNAL_ERROR( xcCursorAccessFailed,
-            "ERROR: NGS_CursorCellDataDirect(ref-seq_start) failed with error: 0x%08x (%u) [%R]", rc, rc, rc);
-        return ctx->rc;
-    }
-
-    if ( row_len < 1 )
-    {
-        USER_ERROR ( xcRowNotFound, "There is no MAX_SEQ_LEN column for row_id=%ld in REFERENCE table", row_id);
-        return (rc_t)(-1);
-    }
-    pileup_state->max_seq_len = max_seq_len;
-
-    pileup_state->slice_start_id = pileup_state->reference_start_id + pileup_state->slice_start/max_seq_len;
-    pileup_state->slice_end_id = pileup_state->slice_length != 0 ?
-        pileup_state->reference_start_id + (pileup_state->slice_start + (int64_t)pileup_state->slice_length)/max_seq_len :
-        (int64_t)pileup_state->total_row_count;
-
-    /* lazy add of PRIMARY_ALIGNMENT_IDS column */
-    NGS_CursorCellDataDirect ( curs_ref, ctx, pileup_state->reference_start_id,
-        reference_PRIMARY_ALIGNMENT_IDS, & dummy, & buf, NULL, & row_len );
-    if ( FAILED () )
-    {
-        rc = ctx->rc;
-        INTERNAL_ERROR( xcCursorAccessFailed,
-            "ERROR: NGS_CursorCellDataDirect(pa) failed with error: 0x%08x (%u) [%R]", rc, rc, rc);
-        return ctx->rc;
-    }
-    else
-    {
-        int64_t current_id = max ( pileup_state->reference_start_id, pileup_state->slice_start_id - 10);
-        int64_t last_id = min ( pileup_state->reference_last_id, pileup_state->slice_start_id );
-        for (; current_id <= last_id; ++current_id)
+        if ( pass )
         {
-            uint32_t seq_start;
-            uint32_t dummy;
-#if USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS == 1
-            rc = open_blob_for_current_id ( ctx, current_id,
-                NGS_CursorGetVCursor (curs_ref), & pileup_state->blob_alignment_ids,
-                NGS_CursorGetColumnIndex ( curs_ref, reference_PRIMARY_ALIGNMENT_IDS));
-            if (rc != 0)
-                return rc;
-#endif
-
-            /* Read REFERENCE row's SEQ_START column to know the offset */
-
-            seq_start = NGS_CursorGetUInt32 (curs_ref, ctx, current_id, reference_SEQ_START);
-            if ( FAILED () )
+            TRY ( ref_zstart = CSRA1_Pileup_AlignCursorDataGetUInt32 ( cd, ctx, row_id, pileup_align_col_REF_POS ) )
             {
-                rc = ctx->rc;
-                INTERNAL_ERROR( xcCursorAccessFailed,
-                    "ERROR: VCursorReadDirect(ref-seq_start) failed with error: 0x%08x (%u) [%R]",
-                    rc, rc, rc);
-                return ctx->rc;
-            }
-            pileup_state->current_seq_start = seq_start;
+                /* adjust for circular reference wrap-around.
+                   applied when gathering initial alignments whose
+                   effective starting coordinates will go negative */
+                ref_zstart += self -> effective_ref_zstart;
 
-            /* Read REFERENCE row's PRIMARY_ALIGNMENT_IDS column to iterate through them */
-            /* elem_bits = sizeof (*pileup_state->alignment_ids) * 8;*/
-#if USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS == 1
-            rc = VBlobCellData ( pileup_state->blob_alignment_ids, current_id,
-                & dummy, ( const void** ) & pileup_state->alignment_ids, NULL, & row_len );
-            if ( rc != 0 )
-            {
-                INTERNAL_ERROR ( xcCursorAccessFailed,
-                    "ERROR: VBlobCellData(ref-pa_ids) failed with error: 0x%08x (%u) [%R], row_len=%u",
-                    rc, rc, rc, row_len);
-                return rc;
-            }
-            pileup_state -> size_alignment_ids = row_len;
-#else
-            
-            /* TODO: this branch isn't working now after moving code from test to ngs */
-            { 
-                int64_t const* alignment_ids;
-
-                rc = VCursorCellDataDirect ( cursor_ref, current_id,
-                            column_index_ref [COL_PRIMARY_ALIGNMENT_IDS],
-                            NULL,
-                            (void const**)(& alignment_ids), 0, & row_len );
-
-                /*rc = VCursorReadDirect ( cursor_ref, current_id,
-                            column_index_ref [COL_PRIMARY_ALIGNMENT_IDS],
-                            sizeof (*pileup_state->alignment_ids) * 8,
-                            pileup_state->alignment_ids,
-                            countof (pileup_state->alignment_ids), & row_len );*/
-                if ( rc != 0 )
+                /* could perform early filtering here, but we want to
+                   detect the longest REF_LEN, so don't exclude */
+                TRY ( ref_len = CSRA1_Pileup_AlignCursorDataGetUInt32 ( cd, ctx, row_id, pileup_align_col_REF_LEN ) )
                 {
-                    rc_t res = string_printf ( error_buf, error_buf_size, NULL,
-                        "ERROR: VCursorCellDataDirect(ref-pa_ids) failed with error: 0x%08x (%u) [%R], row_len=%u",
-                        rc, rc, rc, row_len);
-                    if (res == rcBuffer || res == rcInsufficient)
-                        error_buf [ error_buf_size - 1 ] = '\0';
+                    int64_t ref_xend = ref_zstart + ref_len;
 
-                    return rc;
-                }
-                rc = PileupIteratorState_SetAlignmentIds ( pileup_state, alignment_ids, row_len );
-                if ( rc != 0 )
-                {
-                    rc_t res = string_printf ( error_buf, error_buf_size, NULL,
-                        "ERROR: PileupIteratorState_SetAlignmentIds failed with error: 0x%08x (%u), row_len=%u",
-                        rc, rc, row_len);
-                    if (res == rcBuffer || res == rcInsufficient)
-                        error_buf [ error_buf_size - 1 ] = '\0';
+                    self -> align . observed += 1;
+                    if ( ( uint32_t ) ref_len > self -> align . max_ref_len )
+                        self -> align . max_ref_len = ( uint32_t ) ref_len;
 
-                    return rc;
+                    if ( ref_zstart < self -> slice_xend && ref_xend > self -> slice_zstart )
+                    {
+                        CSRA1_Pileup_Entry * entry;
+
+                        TRY ( entry = CSRA1_Pileup_EntryMake ( ctx, row_id, ref_zstart, ref_len, secondary ) )
+                        {
+                            DLListPushTail ( & self -> align . waiting, & entry -> node );
+                            self -> align . avail += 1;
+                            return entry;
+                        }
+                    }
                 }
             }
-#endif
-            pileup_state->next_alignment_idx = 0;
-
-            /* For each PRIMARY_ALIGNMENT_ID in alignment_ids: read its start, length and
-               cache it if it intersects the starting position
-            */
-            rc = add_ref_row_to_cache ( ctx, pileup_state, cursor_pa, seq_start,
-                        pileup_state->slice_start,
-                        pileup_state->alignment_ids, row_len,
-                        column_names_pa, column_index_pa, column_count_pa);
-            if ( rc != 0 )
-                return rc;
         }
     }
 
-    return rc;
+    return NULL;
 }
 
-
-static void remove_unneeded_alignments (CSRA1_Pileup* pileup_state, uint64_t ref_pos)
+static
+bool CSRA1_PileupPopulateCategory ( CSRA1_Pileup * self, ctx_t ctx,
+    const KVector * ids, CSRA1_Pileup_AlignCursorData * cd )
 {
-    /*int64_t max_removed_id = 0;*/
-#if CACHE_IMPL_AS_LIST == 1
-    Alignment_CacheItem* item = ( Alignment_CacheItem* ) DLListHead ( & pileup_state->cache_alignment.list_alignments );
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
-    for (; item != NULL; )
+    uint64_t cur, next;
+    bool ordered = true;
+    CSRA1_Pileup_Entry * last = NULL;
+
+    /* get first id */
+    bool ignore;
+    const char * vfunc = "First";
+    rc_t rc = KVectorGetFirstBool ( ids, & next, & ignore );
+
+    for ( cur = next; rc == 0; cur = next )
     {
-        uint64_t local_ref_pos = ref_pos - item->seq_start;
-        if ( item->start + item->len <= local_ref_pos ) /* not "<" here because local_ref_pos here is the old position that will be incremented right after we exit from this function */
-        {
-            Alignment_CacheItem* item_cur = item;
-            item = (Alignment_CacheItem*) DLNodeNext( & item->node );
+        CSRA1_Pileup_Entry * entry;
 
-            DLListUnlink ( & pileup_state->cache_alignment.list_alignments, & item_cur->node);
-            Alignment_CacheItemWhack ( & item_cur->node, NULL );
-            -- pileup_state->cache_alignment.size;
-        }
-        else
-            item = (Alignment_CacheItem*) DLNodeNext( & item->node );
-    }
-#else
-    size_t i_src, i_dst;
-    Alignment_Cache* cache = & pileup_state->cache_alignment;
-    size_t size = cache->size;
-
-    for (i_src = 0; i_src < size; ++ i_src)
-    {
-        Alignment_CacheItem const* item = & cache->data [i_src];
-        uint64_t local_ref_pos = ref_pos - item->seq_start;
-        if ( item->start + item->len > local_ref_pos ) /* not ">=" here because local_ref_pos here is the old position that will be incremented right after we exit from this function */
+        /* "next" is our row-id */
+        ON_FAIL ( entry = CSRA1_PileupReadAlignment ( self, ctx, ( int64_t ) cur, cd ) )
             break;
-    }
 
-    for (i_dst = 0; i_src < size; ++ i_src)
-    {
-        Alignment_CacheItem const* item = & cache->data [i_src];
-        uint64_t local_ref_pos = ref_pos - item->seq_start;
-        if ( item->start + item->len > local_ref_pos ) /* not ">=" here because local_ref_pos here is the old position that will be incremented right after we exit from this function */
+        /* detect out of order alignments */
+        if ( ordered && entry != NULL )
         {
-            if (i_dst != i_src)
-                cache->data [i_dst] = cache->data [i_src];
-            ++ i_dst;
+            if ( last != NULL && CSRA1_Pileup_EntryCmp ( entry, last ) < 0 )
+                ordered = false;
+
+            last = entry;
         }
+
+        /* get next id */
+        vfunc = "Next";
+        rc = KVectorGetNextBool ( ids, & next, cur, & ignore );
     }
 
-    cache->size = i_dst;
+    if ( rc != 0 && GetRCState ( rc ) != rcNotFound )
+        INTERNAL_ERROR ( xcStorageExhausted, "KVectorGet%sBool rc = %R", vfunc, rc );
 
-#endif
-
+    return ordered;
 }
 
-
-static bool next_pileup (
-    ctx_t ctx,
-    CSRA1_Pileup* pileup_state,
-    NGS_Cursor const* curs_ref, VCursor const* cursor_pa,
-    char const* const* column_names_pa, uint32_t* column_index_pa, size_t column_count_pa
-    )
+static
+void CSRA1_PileupPopulate ( CSRA1_Pileup * self, ctx_t ctx, uint32_t id_limit )
 {
-    int64_t ref_row_id; /* current row_id */
-    int64_t prev_ref_row_id;
-    uint64_t ref_pos = pileup_state->ref_pos;
-    rc_t rc;
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
-    /* TODO: check the case when slice_end is beyond the reference end*/
-    if ( pileup_state->slice_length && pileup_state->ref_pos + 1 >= pileup_state->slice_start + pileup_state->slice_length )
+    /* read some ids */
+    TRY ( CSRA1_PileupGatherIds ( self, ctx, id_limit ) )
     {
-        return false; /* end of slice */
-    }
+        bool ordered = true;
 
-    /* drop cached alignments that we will not need anymore */
-    remove_unneeded_alignments ( pileup_state, ref_pos );
-
-    /* Check if we moved to the next reference row_id,
-       if yes - read it and add appropriate alignments to cache
-    */
-
-    prev_ref_row_id = pileup_state->reference_start_id + ref_pos / pileup_state->max_seq_len;
-    ++ ref_pos;
-    ref_row_id = pileup_state->reference_start_id + ref_pos / pileup_state->max_seq_len;
-
-    if ( ref_row_id != prev_ref_row_id ) /* moved to the next row_id */
-    {
-        uint32_t dummy;
-        uint32_t row_len;
-        uint32_t seq_start;
-#if USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS != 1
-        int64_t const* alignment_ids;
-#endif
-
-        if ( ref_row_id < pileup_state->slice_start_id || 
-            ref_row_id > pileup_state->slice_end_id || 
-            ref_row_id > pileup_state->reference_last_id )
+        /* gather primary alignments */
+        if ( self -> pa . curs != NULL )
         {
-            return false;
+            TRY ( ordered = CSRA1_PileupPopulateCategory ( self, ctx, self -> ref . pa_ids, & self -> pa ) )
+            {
+                if ( ! ordered )
+                    CSRA1_PileupAlignListSort ( & self -> align, ctx );
+            }
         }
 
-#if USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS == 1
-        rc = open_blob_for_current_id ( ctx, ref_row_id,
-            NGS_CursorGetVCursor(curs_ref), & pileup_state->blob_alignment_ids,
-            NGS_CursorGetColumnIndex ( curs_ref, reference_PRIMARY_ALIGNMENT_IDS));
-        if (rc != 0)
-            return false;
-#endif
-
-        /* Read new SEQ_START */
-
-        seq_start = NGS_CursorGetUInt32 (curs_ref, ctx, ref_row_id, reference_SEQ_START);
-        if ( FAILED () )
+        /* gather secondary alignments */
+        if ( ! FAILED () && self -> sa . curs != NULL )
         {
-            rc = ctx->rc;
-            INTERNAL_ERROR( xcCursorAccessFailed,
-                "ERROR: VCursorReadDirect(ref-seq_start) failed with error: 0x%08x (%u) [%R]",
-                rc, rc, rc);
-            return false;
-        }
-        pileup_state->current_seq_start = seq_start;
+            /* capture the waiting guys from primary alignment */
+            DLList pa_waiting = self -> align . waiting;
+            uint32_t pa_avail = self -> align . avail;
 
-        /* Read REFERENCE row's PRIMARY_ALIGNMENT_IDS column to iterate through them */
-        /* elem_bits = sizeof (*pileup_state->alignment_ids) * 8; */
-#if USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS == 1
-        rc = VBlobCellData ( pileup_state->blob_alignment_ids, ref_row_id,
-            & dummy, ( const void ** ) & pileup_state->alignment_ids, NULL, & row_len );
-        if ( rc != 0 )
-        {
-            INTERNAL_ERROR( xcCursorAccessFailed,
-                "ERROR: VBlobCellData(ref-pa_ids) failed with error: 0x%08x (%u) [%R], row_len=%u",
-                rc, rc, rc, row_len);
-            return false;
-        }
-        pileup_state -> size_alignment_ids = row_len;
-#else
-        /* TODO: this branch isn't working now after moving code from test to ngs */
-        rc = VCursorCellDataDirect ( cursor_ref, ref_row_id,
-                    column_index_ref [COL_PRIMARY_ALIGNMENT_IDS],
-                    NULL,
-                    (void const**)(& alignment_ids), 0, & row_len );
+            /* erase the list for secondary */
+            DLListInit ( & self -> align . waiting );
+            self -> align . avail = 0;
 
-        /*rc = VCursorReadDirect ( cursor_ref, ref_row_id,
-                                 column_index_ref [COL_PRIMARY_ALIGNMENT_IDS],
-                                 sizeof (*pileup_state->alignment_ids) * 8,
-                                 pileup_state->alignment_ids,
-                                 countof (pileup_state->alignment_ids),
-                                 & row_len );*/
-        if ( rc != 0 )
-        {
-            rc_t res = string_printf ( error_buf, error_buf_size, NULL,
-                "ERROR: VCursorCellDataDirect(ref-pa_ids) failed with error: 0x%08x (%u) [%R], row_len=%u",
-                rc, rc, rc, row_len);
-            if (res == rcBuffer || res == rcInsufficient)
-                error_buf [ error_buf_size - 1 ] = '\0';
+            /* populate with secondary alignments */
+            TRY ( ordered = CSRA1_PileupPopulateCategory ( self, ctx, self -> ref . sa_ids, & self -> sa ) )
+            {
+                if ( ! ordered )
+                    CSRA1_PileupAlignListSort ( & self -> align, ctx );
 
-            return false;
-        }
-        rc = PileupIteratorState_SetAlignmentIds ( pileup_state, alignment_ids, row_len );
-        if ( rc != 0 )
-        {
-            rc_t res = string_printf ( error_buf, error_buf_size, NULL,
-                "ERROR: PileupIteratorState_SetAlignmentIds failed with error: 0x%08x (%u), row_len=%u",
-                rc, rc, row_len);
-            if (res == rcBuffer || res == rcInsufficient)
-                error_buf [ error_buf_size - 1 ] = '\0';
-
-            return rc;
-        }
-#endif
-        pileup_state->next_alignment_idx = 0;
-
-        /* For each PRIMARY_ALIGNMENT_ID in pa_ids: read its start, length and
-           cache it if it intersects the slice
-        */
-        rc = add_ref_row_to_cache ( ctx, pileup_state, cursor_pa, seq_start, ref_pos,
-                pileup_state->alignment_ids, row_len,
-                column_names_pa, column_index_pa, column_count_pa);
-        if ( rc != 0 )
-            return false;
-
-        /*pileup_state -> seq_start = seq_start;*/
-    }
-    else
-    {
-        /* read remaining alignment_ids and check if they must be cached */
-        size_t count = pileup_state->size_alignment_ids - pileup_state->next_alignment_idx;
-        if (count > 0)
-        {
-            rc_t rc = add_ref_row_to_cache ( ctx, pileup_state, cursor_pa,
-                pileup_state->current_seq_start, ref_pos,
-                & pileup_state->alignment_ids[ pileup_state->next_alignment_idx ],
-                (uint32_t)count,
-                column_names_pa, column_index_pa, column_count_pa);
-            if ( rc != 0 )
-                return false;
+                if ( pa_avail != 0 )
+                    CSRA1_PileupAlignListMerge ( & self -> align, & pa_waiting );
+            }
+            CATCH_ALL ()
+            {
+                /* put anything that was already gathered onto list for destruction */
+                DLListPrependList ( & self -> align . waiting, & pa_waiting );
+                self -> align . avail += pa_avail;
+            }
         }
     }
+}
 
-    ++ pileup_state->ref_pos;
+static
+bool CSRA1_PileupGetOverlapPossible ( const CSRA1_Pileup * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    const void * base;
+    uint32_t elem_bits, boff, row_len;
+
+#if IGNORE_OVERLAP_REF_LEN
+    return true;
+#endif
+
+    /* read OVERLAP_REF_LEN */
+    TRY ( NGS_CursorCellDataDirect ( self -> ref . curs, ctx, self -> slice_start_id,
+              reference_OVERLAP_REF_LEN, & elem_bits, & base, & boff, & row_len ) )
+    {
+        const uint32_t * OVERLAP_REF_LEN = base;
+        uint32_t slice_start = ( uint32_t ) ( self -> slice_zstart % self -> ref . max_seq_len );
+
+        assert ( ( ( size_t ) OVERLAP_REF_LEN & ( sizeof * OVERLAP_REF_LEN - 1 ) ) == 0 );
+
+        if ( self -> pa . curs != NULL )
+        {
+            if ( OVERLAP_REF_LEN [ 0 ] > slice_start )
+                return true;
+        }
+        if ( self -> sa . curs != NULL )
+        {
+            if ( OVERLAP_REF_LEN [ 1 ] > slice_start )
+                return true;
+        }
+
+        /* according to the recorded data, no overlap is possible for linear references */
+        return self -> circular;
+    }
+    CATCH_ALL ()
+    {
+        CLEAR ();
+    }
+
     return true;
 }
 
+static
+bool CSRA1_PileupGetOverlapChunkId ( CSRA1_Pileup * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
+    const void * base;
+    uint32_t elem_bits, boff, row_len;
 
-/* --------------------------------------- */
+    /* TBD - there are cases when this may be valid even when circular */
+    if ( self -> circular )
+        return false;
 
-static void                     CSRA1_PileupWhack                   ( CSRA1_Pileup * self, ctx_t ctx );
-static struct NGS_String *      CSRA1_PileupGetReferenceSpec        ( const CSRA1_Pileup * self, ctx_t ctx );
-static int64_t                  CSRA1_PileupGetReferencePosition    ( const CSRA1_Pileup * self, ctx_t ctx );
-static struct NGS_PileupEvent * CSRA1_PileupGetEvents               ( CSRA1_Pileup * self, ctx_t ctx );
-static unsigned int             CSRA1_PileupGetDepth                ( const CSRA1_Pileup * self, ctx_t ctx );
-static bool                     CSRA1_PileupIteratorGetNext         ( CSRA1_Pileup * self, ctx_t ctx );
+#if IGNORE_OVERLAP_REF_POS
+    return false;
+#endif
+
+    /* read OVERLAP_REF_POS */
+    TRY ( NGS_CursorCellDataDirect ( self -> ref . curs, ctx, self -> slice_start_id,
+              reference_OVERLAP_REF_POS, & elem_bits, & base, & boff, & row_len ) )
+    {
+        bool have_overlap_ref_pos = false;
+        const int32_t * OVERLAP_REF_POS = base;
+        int64_t new_chunk_id, ref_chunk_id = self -> ref_chunk_id;
+
+        assert ( ( ( size_t ) OVERLAP_REF_POS & ( sizeof * OVERLAP_REF_POS - 1 ) ) == 0 );
+
+        if ( self -> pa . curs != NULL && OVERLAP_REF_POS [ 0 ] > 0 )
+        {
+            new_chunk_id = ( OVERLAP_REF_POS [ 0 ] - 1 ) % self -> ref . max_seq_len + self -> reference_start_id;
+            if ( new_chunk_id < ref_chunk_id )
+                ref_chunk_id = new_chunk_id;
+            have_overlap_ref_pos = true;
+        }
+
+        if ( self -> sa . curs != NULL && OVERLAP_REF_POS [ 1 ] > 0 )
+        {
+            new_chunk_id = ( OVERLAP_REF_POS [ 1 ] - 1 ) % self -> ref . max_seq_len + self -> reference_start_id;
+            if ( new_chunk_id < ref_chunk_id )
+                ref_chunk_id = new_chunk_id;
+            have_overlap_ref_pos = true;
+        }
+
+        self -> ref_chunk_id = ref_chunk_id;
+        return have_overlap_ref_pos;
+    }
+    CATCH_ALL ()
+    {
+        CLEAR ();
+    }
+
+    return false;
+}
+
+static
+void CSRA1_PileupOverlap ( CSRA1_Pileup * self, ctx_t ctx, int64_t stop_xid )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    while ( ! FAILED () )
+    {
+        /* exit condition #1: at end of overlap */
+        if ( self -> ref_chunk_id == stop_xid )
+            break;
+
+        /* detect circular wrap around */
+        if ( self -> ref_chunk_id > self -> reference_last_id )
+        {
+            assert ( self -> circular );
+            assert ( self -> effective_ref_zstart != 0 );
+            self -> ref_chunk_id = self -> reference_start_id;
+            self -> effective_ref_zstart = 0;
+        }
+
+        /* run population from ref_chunk_id to stop_xid ( exclusive ) */
+        CSRA1_PileupPopulate ( self, ctx, 0 );
+    }
+}
+
+static
+void CSRA1_PileupRevOverlap ( CSRA1_Pileup * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    while ( ! FAILED () )
+    {
+        DLList waiting;
+        uint32_t avail;
+
+        /* exit condition #1: at start of non-circular reference */
+        if ( ! self -> circular && self -> ref_chunk_id == self -> reference_start_id )
+            break;
+
+        /* exit condition #2: have seen sufficient alignments to
+           obtain a maximum projected length, and have backed up
+           far enough to include this length */
+        if ( self -> align . observed >= MIN_ALIGN_OBSERVE )
+        {
+            int64_t stop_xid = self -> ref_chunk_id;
+            int64_t overlap_zstart = self -> slice_zstart - self -> align . max_ref_len;
+            int64_t overlap_chunk_id = overlap_zstart / self -> ref . max_seq_len;
+
+            if ( overlap_zstart >= 0 )
+                self -> ref_chunk_id = overlap_chunk_id + self -> reference_start_id;
+            else if ( ! self -> circular )
+                self -> ref_chunk_id = self -> reference_start_id;
+            else
+            {
+                self -> ref_chunk_id = overlap_chunk_id + self -> reference_last_id + 1;
+                self -> effective_ref_zstart -= NGS_ReferenceGetLength ( self -> dad . ref, ctx );
+            }
+
+            CSRA1_PileupOverlap ( self, ctx, stop_xid );
+            break;
+        }
+
+        /* save previous results */
+        waiting = self -> align . waiting;
+        avail = self -> align . avail;
+
+        /* reset accumulator */
+        DLListInit ( & self -> align . waiting );
+        self -> align . avail = 0;
+
+        /* need to back up one chunk and continue */
+        if ( self -> ref_chunk_id != self -> reference_start_id )
+            self -> ref_chunk_id -= 1;
+        else
+        {
+            assert ( self -> circular );
+
+            /* this should never occur */
+            if ( self -> effective_ref_zstart != 0 )
+                break;
+
+            /* linearize circularity */
+            self -> effective_ref_zstart -= NGS_ReferenceGetLength ( self -> dad . ref, ctx );
+
+            /* wrap around */
+            self -> ref_chunk_id = self -> reference_last_id;
+        }
+
+        CSRA1_PileupPopulate ( self, ctx, 0 );
+
+        /* regardless of error state, merge old results back in */
+        DLListAppendList ( & self -> align . waiting, & waiting );
+        self -> align . avail += avail;
+    }
+}
+
+static
+void CSRA1_PileupFirst ( CSRA1_Pileup * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    /* APPROACH
+
+       The general task here is to get all of the alignments in the
+       first chunk whose projection contains THE CURRENT POSITION,
+       in addition to all alignments within preceding chunks that also
+       contain the current position. So the process is almost exactly
+       like processing every normal chunk, with the differences that
+
+         a) we look for intersection rather than entry
+         b) we look outside ( to the left ) of the slice
+
+       Circular references with chunks 1..N may be linearized as
+
+         -N..2N
+
+       When looking to the left of the first chunk, we are limited by
+
+         a) the start of non-circular references
+         b) the maximum length of any alignment's projection, i.e.
+            only back up to current position - length of longest projection
+
+       An optimization exists that utilizes pre-calculated overlap
+       chunk row-ids. This optimization does not apply for circular
+       references.
+
+       In reality, we are interested in knowing the exact value of the
+       longest projection onto the reference of any alignment. If this is
+       not known a-priori, then a sampling of some number of alignments gives
+       a reasonable estimate. This sample count needs to be added to the
+       limitation "b" above, such that we can only know the maximum projection
+       once the sample size conditions are met.
+
+     */
+
+    /* initialize current chunk */
+    self -> ref_chunk_id = self -> slice_start_id;
+    self -> state = pileup_state_initial_populate;
+
+    /* test if there is even any possibility of overlap */
+    if ( ! CSRA1_PileupGetOverlapPossible ( self, ctx ) )
+        return;
+
+    /* process the current chunk */
+    TRY ( CSRA1_PileupPopulate ( self, ctx, READ_AHEAD_LIMIT ) )
+    {
+        /* we read ahead this far */
+        int64_t idx_chunk_id = self -> idx_chunk_id;
+
+        /* must save current avail list */
+        DLList waiting = self -> align . waiting;
+        uint32_t avail = self -> align . avail;
+
+        /* reinitialize */
+        DLListInit ( & self -> align . waiting );
+        self -> align . avail = 0;
+
+        /* look for OVERLAP_REF_POS optimization */
+        if ( CSRA1_PileupGetOverlapChunkId ( self, ctx ) )
+            CSRA1_PileupOverlap ( self, ctx, self -> slice_start_id );
+
+        /* scan backward for overlaps */
+        else
+            CSRA1_PileupRevOverlap ( self, ctx );
+
+        /* append previously saved waiting */
+        DLListAppendList ( & self -> align . waiting, & waiting );
+        self -> align . avail += avail;
+
+        /* restore to prior value */
+        self -> idx_chunk_id = idx_chunk_id;
+    }
+
+    /* restore to original value */
+    self -> ref_chunk_id = self -> slice_start_id;
+    self -> effective_ref_zstart = 0;
+    self -> state = pileup_state_initial_chunk;
+}
+
+static
+bool CSRA1_PileupIteratorGetNext ( CSRA1_Pileup * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    bool pos_valid = false;
+
+    assert ( self != NULL );
+
+    while ( 1 )
+    {
+        switch ( self -> state )
+        {
+
+        case pileup_state_position:
+
+            ON_FAIL ( pos_valid = CSRA1_PileupAdvance ( self, ctx ) )
+            {
+                self -> state = pileup_state_err;
+                break;
+            }
+
+            if ( ! pos_valid )
+            {
+                assert ( self -> state != pileup_state_position );
+                continue;
+            }
+
+            break;
+
+        case pileup_state_chunk:
+
+            ON_FAIL ( CSRA1_PileupChunk ( self, ctx ) )
+            {
+                self -> state = pileup_state_err;
+                break;
+            }
+
+            assert ( self -> state != pileup_state_chunk );
+            continue;
+
+        case pileup_state_populate:
+
+            ON_FAIL ( CSRA1_PileupPopulate ( self, ctx, READ_AHEAD_LIMIT ) )
+            {
+                self -> state = pileup_state_err;
+                break;
+            }
+
+            self -> state = pileup_state_position;
+            continue;
+
+        case pileup_state_initial:
+
+            ON_FAIL ( CSRA1_PileupFirst ( self, ctx ) )
+            {
+                self -> state = pileup_state_err;
+                break;
+            }
+            continue;
+
+        case pileup_state_initial_position:
+
+            ON_FAIL ( pos_valid = CSRA1_PileupPosition ( self, ctx ) )
+            {
+                self -> state = pileup_state_err;
+                break;
+            }
+
+            if ( ! pos_valid )
+            {
+                assert ( self -> state != pileup_state_position );
+                continue;
+            }
+
+            self -> state = pileup_state_position;
+            break;
+
+        case pileup_state_initial_chunk:
+
+            ON_FAIL ( CSRA1_PileupChunk ( self, ctx ) )
+            {
+                self -> state = pileup_state_err;
+                break;
+            }
+
+            self -> state = pileup_state_initial_position;
+            continue;
+
+        case pileup_state_initial_populate:
+
+            ON_FAIL ( CSRA1_PileupPopulate ( self, ctx, READ_AHEAD_LIMIT ) )
+            {
+                self -> state = pileup_state_err;
+                break;
+            }
+
+            self -> state = pileup_state_initial_chunk;
+            continue;
+
+        case pileup_state_finished:
+
+            /* nothing to do */
+            break;
+
+        default:
+
+            /* generate exception */
+            CSRA1_PileupStateTest ( self, ctx, __LINE__ );
+        }
+
+        break;
+    }
+
+    return pos_valid;
+}
 
 static NGS_Pileup_vt CSRA1_Pileup_vt_inst =
 {
@@ -1005,284 +1337,356 @@ static NGS_Pileup_vt CSRA1_Pileup_vt_inst =
     CSRA1_PileupIteratorGetNext,     
 };
 
-void CSRA1_PileupInit ( CSRA1_Pileup * self, 
-                        struct NGS_Reference* ref,
-                        ctx_t ctx, 
-                        const char *clsname, 
-                        const char *instname, 
-                        bool wants_primary, 
-                        bool wants_secondary )
+
+static
+void CSRA1_PileupPopulateAlignCurs ( ctx_t ctx, const VCursor * curs, uint32_t * col_idx, const char * tblname )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
-    
-    assert ( self );
-    assert ( ref );
-    
-    TRY ( NGS_PileupInit ( ctx, & self -> dad, & CSRA1_Pileup_vt_inst, clsname, instname, ref ) ) 
-    {
-        self -> primary = wants_primary;
-        self -> secondary = wants_secondary;
 
-        self->db         = NULL;
-        self->table_pa   = NULL;
-        self->curs_ref   = NULL;
-        self->cursor_pa  = NULL;
-
-        self -> is_started = false;
-        self -> is_finished = false;
-
-        
-#if CACHE_IMPL_AS_LIST == 1
-        self->cache_alignment.size = 0;
-        Alignment_InitCacheWithNull ( & self->cache_alignment );
+    /* use preprocessor symbol that will disable assert() macro */
+#if defined NDEBUG
+#define COL_STRUCT                                                                          \
+    struct { const char * spec; bool opt; }
+#define COL_SPEC1( cast, name )                                                             \
+    { cast stringize ( name ), false }
+#define COL_SPEC2( cast, name )                                                             \
+    { cast stringize ( name ), false }
+#define COL_SPEC3( cast, name )                                                             \
+    { cast stringize ( name ), true }
 #else
-        self->cache_alignment.data = NULL;
+    /* assert() macro will evaluate expression */
+#define COL_STRUCT                                                                          \
+    struct { const char * spec; size_t idx; bool opt; }
+#define COL_SPEC1( cast, name )                                                             \
+    { cast stringize ( name ), pileup_align_col_ ## name, false }
+#define COL_SPEC2( cast, name )                                                             \
+    { cast stringize ( name ), pileup_align_col_count + pileup_event_col_ ## name, false }
+#define COL_SPEC3( cast, name )                                                             \
+    { cast stringize ( name ), pileup_align_col_count + pileup_event_col_ ## name, true }
 #endif
-        self->alignment_ids = NULL;
-#if USE_SINGLE_BLOB_FOR_ALIGNMENT_IDS == 1
-        self->blob_alignment_ids = NULL;
-#endif
-#if USE_SINGLE_BLOB_FOR_ALIGNMENTS == 1
-        self->blob_alignments_ref_start = NULL;
-        self->blob_alignments_ref_len = NULL;
-#endif
 
-    }
-}
-
-void CSRA1_PileupWhack ( CSRA1_Pileup * self, ctx_t ctx )
-{
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
-
-    release_vdb_objects ( & self -> table_pa, & self -> cursor_pa );
-    Alignment_Release ( & self -> cache_alignment );
-    PileupIteratorState_Release ( self );
-
-    self -> is_started = false;
-    self -> is_finished = true;
-   
-    VDatabaseRelease ( self -> db );
-    self -> db = NULL;
-
-    NGS_CursorRelease ( self -> curs_ref, ctx );
-    self -> curs_ref = NULL;
-    
-    NGS_PileupWhack ( & self -> dad, ctx );
-}
-
-struct NGS_String * CSRA1_PileupGetReferenceSpec ( const CSRA1_Pileup * self, ctx_t ctx )
-{
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
-    if ( ! self -> is_started )
+    static COL_STRUCT cols [] =
     {
-        USER_ERROR ( xcIteratorUninitialized, "Pileup accessed before a call to PileupIteratorNext()" );
-        return NULL;
-    }
-    else if ( self -> is_finished )
-    {
-        USER_ERROR ( xcCursorExhausted, "No more rows available" );
-        return NULL;
-    }
-    // NGS_ReferenceGetCanonicalName?
-    return NGS_ReferenceGetCommonName ( self -> dad . ref, ctx );
-}
+        /* pileup */
+        COL_SPEC1 ( "(INSDC:coord:zero)", REF_POS ),
+        COL_SPEC1 ( "(INSDC:coord:len)", REF_LEN ),
+        COL_SPEC1 ( "(INSDC:SRA:read_filter)", READ_FILTER ),
 
-int64_t CSRA1_PileupGetReferencePosition ( const CSRA1_Pileup * self, ctx_t ctx )
-{
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
-    if ( ! self -> is_started )
-    {
-        USER_ERROR ( xcIteratorUninitialized, "Pileup accessed before a call to PileupIteratorNext()" );
-        return 0;
-    }
-    else if ( self -> is_finished )
-    {
-        USER_ERROR ( xcCursorExhausted, "No more rows available" );
-        return 0;
-    }
-    
-    return self -> ref_pos;
-}
+        /* pileup-event only */
+        COL_SPEC2 ( "", MAPQ ),
+        COL_SPEC2 ( "", REF_OFFSET ),
+        COL_SPEC2 ( "", HAS_REF_OFFSET ),
+        COL_SPEC2 ( "", MISMATCH ),
+        COL_SPEC2 ( "", HAS_MISMATCH ),
+        COL_SPEC2 ( "", REF_ORIENTATION ),
+        COL_SPEC2 ( "", QUALITY ),
 
-struct NGS_PileupEvent * CSRA1_PileupGetEvents ( CSRA1_Pileup * self, ctx_t ctx )
-{
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
-    if ( ! self -> is_started )
-    {
-        USER_ERROR ( xcIteratorUninitialized, "Pileup accessed before a call to PileupIteratorNext()" );
-        return NULL;
-    }
-    else if ( self -> is_finished )
-    {
-        USER_ERROR ( xcCursorExhausted, "No more rows available" );
-        return NULL;
-    }
-    
-    return CSRA1_PileupEventIteratorMake ( ctx, & self -> dad );
-}
+        /* optional */
+        COL_SPEC3 ( "", REF_OFFSET_TYPE )
+    };
 
-unsigned int CSRA1_PileupGetDepth ( const CSRA1_Pileup * self, ctx_t ctx )
-{
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
-    if ( ! self -> is_started )
-    {
-        USER_ERROR ( xcIteratorUninitialized, "Pileup accessed before a call to PileupIteratorNext()" );
-        return 0;
-    }
-    else if ( self -> is_finished )
-    {
-        USER_ERROR ( xcCursorExhausted, "No more rows available" );
-        return 0;
-    }
-    
-    return (unsigned int) self -> cache_alignment . size;
-}
-
-bool CSRA1_PileupIteratorGetNext ( CSRA1_Pileup * self, ctx_t ctx )
-{
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
     rc_t rc;
+    size_t i;
 
-    if ( self -> is_started )
+    for ( i = 0; i < sizeof cols / sizeof cols [ 0 ]; ++ i )
     {
-        bool ret = next_pileup ( ctx, self, /*TODO: remove extra args*/
-            self -> curs_ref, self -> cursor_pa,
-            column_names_pa, column_index_pa, countof (column_names_pa));
-        if ( ! ret )
+        assert ( i == cols [ i ] . idx );
+
+        rc = VCursorAddColumn ( curs, & col_idx [ i ], "%s", cols [ i ] . spec );
+        if ( rc != 0 && ! cols [ i ] . opt )
         {
-            self -> is_finished = true;
+            INTERNAL_ERROR ( xcColumnNotFound, "VCursorAddColumn '%s' rc = %R", cols [ i ] . spec, rc );
+            return;
         }
-        return ret;
     }
-    else 
+
+    rc = VCursorOpen ( curs );
+    if ( rc != 0 )
     {
-        rc = initialize_ref_pos ( ctx, self,/*TODO: remove extra args*/
-            self -> curs_ref, self -> cursor_pa,
-            column_names_pa, column_index_pa, countof (column_names_pa));
-        if (rc == 0)
-        {
-            self -> is_started = true;
-            self -> is_finished = false;
-            return true;
-        }
-        else
-        {
-            self -> is_started = true;
-            self -> is_finished = true;
-            return false;
-        }
+        INTERNAL_ERROR ( xcCursorOpenFailed,
+                         "ERROR: VCursorOpen(%s) failed with error: 0x%08x (%u) [%R]",
+                         tblname, rc, rc, rc );
+        return;
+    }
+
+    for ( i = 0; i < sizeof cols / sizeof cols [ 0 ]; ++ i )
+    {
+        assert ( i == cols [ i ] . idx );
+
+        if ( cols [ i ] . opt && col_idx [ i ] == 0 )
+            VCursorAddColumn ( curs, & col_idx [ i ], "%s", cols [ i ] . spec );
     }
 }
 
-struct NGS_Pileup* CSRA1_PileupIteratorMake ( 
-    ctx_t ctx,
-    NGS_Reference* reference,
-    VDatabase const* db, 
-    NGS_Cursor const* curs_ref,
-    int64_t first_row_id, 
-    int64_t last_row_id,
-    bool wants_primary, 
-    bool wants_secondary )
+static
+void CSRA1_PileupPopulatePACurs ( CSRA1_Pileup * obj, ctx_t ctx, const char * tblname )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
+
+    const void * base;
+    uint32_t elem_bits, boff, row_len;
+    
+    /* need to ensure PRIMARY_ALIGNMENT_IDS are in ref_curs */
+    TRY ( NGS_CursorCellDataDirect ( obj -> ref . curs, ctx, obj -> reference_start_id,
+              reference_PRIMARY_ALIGNMENT_IDS, & elem_bits, & base, & boff, & row_len ) )
+    {
+        /* populate cursor with known stuff */
+        CSRA1_PileupPopulateAlignCurs ( ctx, obj -> pa . curs, obj -> pa . col_idx, tblname );
+    }
+}
+
+static
+void CSRA1_PileupPopulateSACurs ( CSRA1_Pileup * obj, ctx_t ctx, const char * tblname )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
+
+    const void * base;
+    uint32_t elem_bits, boff, row_len;
+    
+    /* need to ensure SECONDARY_ALIGNMENT_IDS are in ref_curs */
+    TRY ( NGS_CursorCellDataDirect ( obj -> ref . curs, ctx, obj -> reference_start_id,
+              reference_SECONDARY_ALIGNMENT_IDS, & elem_bits, & base, & boff, & row_len ) )
+    {
+        /* populate cursor with known stuff */
+        CSRA1_PileupPopulateAlignCurs ( ctx, obj -> sa . curs, obj -> sa . col_idx, tblname );
+    }
+}
+
+static
+void CSRA1_PileupInitAlignment ( CSRA1_Pileup * obj, ctx_t ctx,
+    const VDatabase * db, const char * tblname, const VCursor ** curs,
+    void ( * init_curs ) ( CSRA1_Pileup * obj, ctx_t ctx, const char * tblname ) )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     
-    CSRA1_Pileup * ret;
-    rc_t rc = 0;
-
-    assert ( db != NULL );
-    assert ( curs_ref != NULL );
-
-    ret = calloc ( 1, sizeof * ret );
-    if ( ret == NULL )
+    const VTable * tbl;
+    rc_t rc = VDatabaseOpenTableRead ( db, & tbl, "%s", tblname );
+    if ( rc != 0 )
     {
-        NGS_String* ref_spec = NGS_ReferenceGetCommonName ( reference, ctx );
-        SYSTEM_ERROR ( xcNoMemory, 
-                       "allocating CSRA1_Pileup on '%.*s'", 
-                       NGS_StringSize ( ref_spec, ctx ), 
-                       NGS_StringData ( ref_spec, ctx ) );
-        NGS_StringRelease ( ref_spec, ctx );
+        INTERNAL_ERROR ( xcTableOpenFailed, 
+                         "ERROR: VDatabaseOpenTableRead(%s) failed with error: 0x%08x (%u) [%R]", 
+                         tblname, rc, rc, rc );
     }
     else
     {
-#if _DEBUGGING
-        char instname [ 256 ];
-        NGS_String* ref_spec = NGS_ReferenceGetCommonName ( reference, ctx );
-        string_printf ( instname, 
-                        sizeof instname, 
-                        NULL, 
-                        "%.*s", 
-                        NGS_StringSize ( ref_spec, ctx ), 
-                        NGS_StringData ( ref_spec, ctx ) );
-        NGS_StringRelease ( ref_spec, ctx );
-        instname [ sizeof instname - 1 ] = 0;
-#else
-        const char *instname = "";
-#endif
-        TRY ( CSRA1_PileupInit ( ret, reference, ctx, "CSRA1_Pileup", instname, wants_primary, wants_secondary ) )
+        rc = VTableCreateCursorRead ( tbl, curs );
+        if ( rc != 0 )
         {
-            ret -> db = db;
-            VDatabaseAddRef ( ret -> db );
-
-            ret -> curs_ref = NGS_CursorDuplicate ( curs_ref, ctx );
-
-            Alignment_Init ( & ret->cache_alignment );
-            PileupIteratorState_Init ( ret );
-
-
-            ret -> reference_start_id = first_row_id;
-            ret -> reference_last_id = last_row_id;
-
-            ret -> slice_start     = 0; 
-            ret -> slice_length    = 0;
-            ret -> ref_pos         = 0;
-
-            rc = init_vdb_objects ( ctx,
-                    ret->db, & ret->table_pa,
-                    & ret->cursor_pa,
-                    column_names_pa, column_index_pa, countof (column_names_pa));
-
-            if ( rc == 0 )
-            {
-                return ( NGS_Pileup* ) ret;
-            }
-            else
-            {
-                CSRA1_PileupWhack ( ret, ctx );
-            }
+            INTERNAL_ERROR ( xcCursorCreateFailed,
+                             "ERROR: VTableCreateCursorRead(%s) failed with error: 0x%08x (%u) [%R]",
+                             tblname, rc, rc, rc);
         }
-        free ( ret );
-    }
+        else
+        {
+            ( * init_curs ) ( obj, ctx, tblname );
+        }
 
-    return NULL;
+        VTableRelease ( tbl );
+    }
 }
 
-struct NGS_Pileup* CSRA1_PileupIteratorMakeSlice ( 
-    ctx_t ctx,
-    NGS_Reference* ref,
-    VDatabase const* db, 
-    NGS_Cursor const* curs_ref,
-    int64_t first_row_id, 
-    int64_t last_row_id,
-    uint64_t slice_start, 
-    uint64_t slice_size,
-    bool wants_primary, 
-    bool wants_secondary )
+
+static
+void CSRA1_PileupInit ( ctx_t ctx, CSRA1_Pileup * obj, const char * instname, 
+    NGS_Reference * ref, const VDatabase * db, const NGS_Cursor * ref_curs,
+    int64_t first_row_id, int64_t last_row_id, bool wants_primary, bool wants_secondary )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     
-    struct NGS_Pileup* ret;
+    assert ( obj != NULL );
+    assert ( ref != NULL );
 
-    TRY ( ret = CSRA1_PileupIteratorMake ( ctx, ref, db, curs_ref, first_row_id, last_row_id, wants_primary, wants_secondary ) )
+    /* initialize superclass */    
+    TRY ( NGS_PileupInit ( ctx, & obj -> dad, & CSRA1_Pileup_vt_inst, "CSRA1_Pileup", instname, ref ) ) 
     {
-        CSRA1_Pileup * csra1_pileup = (CSRA1_Pileup *) ret;
-        /* add slice boundaries*/
-        csra1_pileup -> ref_pos         = slice_start;
-        csra1_pileup -> slice_start     = slice_start; 
-        csra1_pileup -> slice_length    = slice_size;
-        
-        return ret;
+        /* capture reference cursor */
+        TRY ( CSRA1_Pileup_RefCursorDataInit ( ctx, & obj -> ref, ref_curs, first_row_id ) )
+        {
+            TRY ( obj -> slice_xend = ( int64_t ) NGS_ReferenceGetLength ( ref, ctx ) )
+            {
+                /* determine whether the reference is circular */
+                TRY ( obj -> circular = NGS_ReferenceGetIsCircular ( ref, ctx ) )
+                {
+                    /* capture row range - these are the rows within REFERENCE table
+                       that represent the actual chromosome being analyzed */
+                    obj -> reference_start_id = obj -> slice_start_id = first_row_id;
+                    obj -> reference_last_id = obj -> slice_end_id = last_row_id;
+                
+                    /* initialize against one or more alignment tables */
+                    if ( wants_primary )
+                        CSRA1_PileupInitAlignment ( obj, ctx, db, "PRIMARY_ALIGNMENT", & obj -> pa . curs, CSRA1_PileupPopulatePACurs );
+                    if ( wants_secondary && ! FAILED () )
+                    {
+                        ON_FAIL ( CSRA1_PileupInitAlignment ( obj, ctx, db, "SECONDARY_ALIGNMENT", & obj -> sa . curs, CSRA1_PileupPopulateSACurs ) )
+                        {
+                            /* TBD - need the ability to convert hard error to warning
+                               stating that we have primary, but no secondary */
+                            if ( wants_primary )
+                                CLEAR ();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+NGS_Pileup * CSRA1_PileupIteratorMake ( ctx_t ctx,
+    NGS_Reference * ref, const VDatabase * db, const NGS_Cursor * curs_ref,
+    int64_t first_row_id, int64_t last_row_id, bool wants_primary, bool wants_secondary )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
+
+    CSRA1_Pileup * obj;
+
+    assert ( db != NULL );
+    assert ( curs_ref != NULL );
+    assert ( wants_primary || wants_secondary );
+
+    obj = calloc ( 1, sizeof * obj );
+    if ( obj == NULL )
+    {
+        TRY ( NGS_String * ref_spec = NGS_ReferenceGetCommonName ( ref, ctx ) )
+        {
+            SYSTEM_ERROR ( xcNoMemory, 
+                           "allocating CSRA1_Pileup on '%.*s'", 
+                           NGS_StringSize ( ref_spec, ctx ), 
+                           NGS_StringData ( ref_spec, ctx ) );
+            NGS_StringRelease ( ref_spec, ctx );
+        }
+        CATCH_ALL ()
+        {
+            CLEAR ();
+            SYSTEM_ERROR ( xcNoMemory, "allocating CSRA1_Pileup" );
+        }
+    }
+    else
+    {
+#if TRACK_REFERENCES
+        char instname [ 256 ];
+        TRY ( NGS_String * ref_spec = NGS_ReferenceGetCommonName ( ref, ctx ) )
+        {
+            string_printf ( instname, 
+                            sizeof instname, 
+                            NULL, 
+                            "%.*s", 
+                            NGS_StringSize ( ref_spec, ctx ), 
+                            NGS_StringData ( ref_spec, ctx )
+                );
+            NGS_StringRelease ( ref_spec, ctx );
+            instname [ sizeof instname - 1 ] = 0;
+        }
+        CATCH_ALL ()
+        {
+            CLEAR ();
+            string_copy_measure ( instname, sizeof instname, "unknown" );
+        }
+#else
+        const char * instname = "unknown";
+#endif
+        TRY ( CSRA1_PileupInit ( ctx, obj, instname, ref, db, curs_ref, first_row_id, last_row_id, wants_primary, wants_secondary ) )
+        {
+            obj -> state = pileup_state_initial;
+            return & obj -> dad;
+        }
+
+        CSRA1_PileupWhack ( obj, ctx );
+        free ( obj );
     }
 
     return NULL;
 }
 
+NGS_Pileup * CSRA1_PileupIteratorMakeSlice ( ctx_t ctx,
+    NGS_Reference * ref, const VDatabase * db, const NGS_Cursor * curs_ref,
+    int64_t first_row_id, int64_t last_row_id, uint64_t slice_zstart, 
+    uint64_t slice_size, bool wants_primary, bool wants_secondary )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
+    uint64_t ref_len;
+
+    assert ( ref != NULL );
+
+    TRY ( ref_len = NGS_ReferenceGetLength ( ref, ctx ) )
+    {
+        if ( slice_zstart >= ref_len )
+        {
+            TRY ( NGS_String * ref_spec = NGS_ReferenceGetCommonName ( ref, ctx ) )
+            {
+                USER_ERROR ( xcParamOutOfBounds, 
+                             "slice start %lu, reference length %lu, "
+                             "allocating CSRA1_Pileup on '%.*s'", 
+                             slice_zstart,
+                             ref_len,
+                             NGS_StringSize ( ref_spec, ctx ), 
+                             NGS_StringData ( ref_spec, ctx ) );
+                NGS_StringRelease ( ref_spec, ctx );
+            }
+            CATCH_ALL ()
+            {
+                CLEAR ();
+                USER_ERROR ( xcParamOutOfBounds, "slice start %lu, reference length %lu, "
+                             "allocating CSRA1_Pileup", slice_zstart, ref_len );
+            }
+        }
+        else
+        {
+            TRY ( NGS_Pileup * obj = CSRA1_PileupIteratorMake ( ctx, ref, db, curs_ref,
+                      first_row_id, last_row_id, wants_primary, wants_secondary ) )
+            {
+                CSRA1_Pileup * self = ( CSRA1_Pileup * ) obj;
+
+                /* limit slice length */
+                if ( self -> circular )
+                {
+                    /* limit to 2 * ref_len */
+                    if ( slice_zstart + slice_size > 2 * ref_len ) 
+                        slice_size = 2 * ref_len - slice_zstart;
+                }
+                else
+                {
+                    /* limit to end of reference */
+                    if ( slice_zstart + slice_size > ref_len )
+                        slice_size = ref_len - slice_zstart;
+                }
+
+                /* add slice boundaries */
+                self -> ref_zpos        = slice_zstart;
+                self -> slice_zstart    = slice_zstart;
+                self -> slice_xend      = slice_zstart + slice_size;
+
+                return obj;
+            }
+        }
+    }
+
+    return NULL;
+}
+
+/* GetEntry
+ */
+const void * CSRA1_PileupGetEntry ( CSRA1_Pileup * self, ctx_t ctx,
+    CSRA1_Pileup_Entry * entry, uint32_t col_idx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    rc_t rc;
+    uint32_t cd_col_idx = pileup_align_col_count + col_idx;
+    CSRA1_Pileup_AlignCursorData * cd = entry -> secondary ? & self -> sa : & self -> pa;
+
+    assert ( entry -> blob [ col_idx ] == NULL );
+
+    ON_FAIL ( CSRA1_Pileup_AlignCursorDataGetCell ( cd, ctx, entry -> row_id, cd_col_idx ) )
+        return NULL;
+
+    rc = VBlobAddRef ( cd -> blob [ cd_col_idx ] );
+    if ( rc != 0 )
+    {
+        INTERNAL_ERROR ( xcRefcountOutOfBounds, "VBlob at %#p", cd -> blob [ cd_col_idx ] );
+        return NULL;
+    }
+
+    entry -> blob [ col_idx ] = cd -> blob [ cd_col_idx ];
+    entry -> cell_len [ col_idx ] = cd -> cell_len [ cd_col_idx ];
+    return entry -> cell_data [ col_idx ] = cd -> cell_data [ cd_col_idx ];
+}

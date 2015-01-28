@@ -436,6 +436,7 @@ bool _ReadDescNextRead(ReadDesc *self)
         S
         self->read = read;
         ++self->read_id;
+        ReadDescFixReadId(self);
     }
     else
     {   S }
@@ -1070,6 +1071,7 @@ VdbBlastStatus _Core2naOpenNextRunOrTbl(Core2na *core, const RunSet *runs)
         }
 
         desc->read_id = read_id;
+        ReadDescFixReadId(desc);
         status = _Reader2naOpenCursor(reader);
         if (status == eVdbBlastNoErr)
         {      S }

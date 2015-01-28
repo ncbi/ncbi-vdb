@@ -301,10 +301,10 @@ void NGS_PileupEventInit ( ctx_t ctx,
         assert ( vt -> get_repeat_count != NULL );
         assert ( vt -> get_indel_type != NULL );
         assert ( vt -> next != NULL );
-    }
     
-    assert ( pileup );
-    self -> pileup = NGS_PileupDuplicate ( pileup, ctx );
+        assert ( pileup != NULL );
+        self -> pileup = NGS_PileupDuplicate ( pileup, ctx );
+    }
 }
 
 void NGS_PileupEventWhack( struct NGS_PileupEvent * self, ctx_t ctx )
