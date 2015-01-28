@@ -1591,10 +1591,11 @@ NGS_Pileup * CSRA1_PileupIteratorMakeSlice ( ctx_t ctx,
     uint64_t slice_size, bool wants_primary, bool wants_secondary )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
+    uint64_t ref_len;
 
     assert ( ref != NULL );
 
-    TRY ( uint64_t ref_len = NGS_ReferenceGetLength ( ref, ctx ) )
+    TRY ( ref_len = NGS_ReferenceGetLength ( ref, ctx ) )
     {
         if ( slice_zstart >= ref_len )
         {

@@ -99,6 +99,26 @@ public:
         }
     }
     
+    void PrintAll ()
+    {
+        HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
+        while (NGS_PileupIteratorNext ( m_pileup, ctx ))
+        {
+            int64_t pos = NGS_PileupGetReferencePosition ( m_pileup, ctx );
+            if  ( FAILED () )
+                throw std :: logic_error ( "CSRA1_Fixture::PrintAll : NGS_PileupGetReferencePosition() failed" );
+            unsigned int depth = NGS_PileupGetPileupDepth ( m_pileup, ctx );
+            if  ( FAILED () )
+                throw std :: logic_error ( "CSRA1_Fixture::PrintAll : NGS_PileupGetPileupDepth() failed" );
+            string ref = toString ( NGS_PileupGetReferenceSpec ( m_pileup, ctx ), ctx, true );
+            if  ( FAILED () )
+                throw std :: logic_error ( "CSRA1_Fixture::PrintAll : NGS_PileupGetReferenceSpec() failed" );
+            if ( depth != 0 )
+                cout <<  ref << "\t" << pos << "\t" << depth << endl;
+        }
+    }
+
+    
     NGS_Pileup*     m_pileup;
 };
 
@@ -293,18 +313,7 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_PileupGetPileupDepth_3, CSRA1_Fixture)
 FIXTURE_TEST_CASE(CSRA1_PileupIterator_PrintOut, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP( CSRA1_PrimaryOnly, "supercont2.1" );
-
-    while (NGS_PileupIteratorNext ( m_pileup, ctx ))
-    {
-        int64_t pos = NGS_PileupGetReferencePosition ( m_pileup, ctx );
-        REQUIRE ( ! FAILED() );
-        unsigned int depth = NGS_PileupGetPileupDepth ( m_pileup, ctx );
-        REQUIRE ( ! FAILED() );
-        string ref = toString ( NGS_PileupGetReferenceSpec ( m_pileup, ctx ), ctx, true );
-        REQUIRE ( ! FAILED() );
-        if ( depth != 0 )
-            cout <<  ref << "\t" << pos << "\t" << depth << endl;
-    }
+    PrintAll ();
     EXIT;
 }
 #endif
@@ -488,6 +497,38 @@ FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_PileupGetPileupDepth_WithFiltering, 
 
 ////TODO: PileupIterator, full circular reference 
 ////TODO: PileupIterator, circular reference slice
+
+// discrepancies with sra-pileup
+
+#if SHOW_UNIMPLEMENTED
+FIXTURE_TEST_CASE(CSRA1_Pileup_ExtraPileupReported, CSRA1_Fixture)
+{
+    ENTRY_GET_PILEUP_SLICE( "SRR833251", "gi|169794206|ref|NC_010410.1|", 19416, 2 );
+    // sra-pileup stops at position 19417 (0-based), ngs-pileup at position 19418
+
+    REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
+    REQUIRE_EQ ( (int64_t)19416, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)1, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
+    REQUIRE_EQ ( (int64_t)19417, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)0, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    REQUIRE ( ! NGS_PileupIteratorNext ( m_pileup, ctx ) );
+    
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_Pileup_ExtraEventReported, CSRA1_Fixture)
+{
+    ENTRY_GET_PILEUP_SLICE( "SRR1063272", "supercont2.1", 12979, 1 );
+    // at position 12980 (0-based) sra-pileup reports depth of 15, ngs-pileup 16
+
+    REQUIRE ( NGS_PileupIteratorNext ( m_pileup, ctx ) );
+    REQUIRE_EQ ( (int64_t)12979, NGS_PileupGetReferencePosition ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (unsigned int)15, NGS_PileupGetPileupDepth ( m_pileup, ctx ) ); 
+    
+    EXIT;
+}
+#endif
 
 //// PileupEvent
 
