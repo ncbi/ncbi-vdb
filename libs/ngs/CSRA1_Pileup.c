@@ -747,10 +747,10 @@ void CSRA1_PileupGatherIds ( CSRA1_Pileup * self, ctx_t ctx, uint32_t id_limit )
     total_ids = 0;
     do
     {
-        ON_FAIL ( uint32_t chunk_ids = CSRA1_PileupGatherChunkIds ( self, ctx ) )
+        ON_FAIL ( uint32_t align_ids = CSRA1_PileupGatherChunkIds ( self, ctx ) )
             break;
 
-        total_ids += chunk_ids;
+        total_ids += align_ids;
     }
     while ( total_ids < id_limit && self -> idx_chunk_id <= self -> slice_end_id );
 }
@@ -1035,7 +1035,7 @@ void CSRA1_PileupOverlap ( CSRA1_Pileup * self, ctx_t ctx, int64_t stop_xid )
     while ( ! FAILED () )
     {
         /* exit condition #1: at end of overlap */
-        if ( self -> ref_chunk_id == stop_xid )
+        if ( self -> idx_chunk_id == stop_xid )
             break;
 
         /* detect circular wrap around */
@@ -1654,6 +1654,11 @@ NGS_Pileup * CSRA1_PileupIteratorMakeSlice ( ctx_t ctx,
                 self -> ref_zpos        = slice_zstart;
                 self -> slice_zstart    = slice_zstart;
                 self -> slice_xend      = slice_zstart + slice_size;
+
+                /* update slice row-ids */
+                assert ( self -> ref . max_seq_len != 0 );
+                self -> slice_start_id  = slice_zstart / self -> ref . max_seq_len;
+                self -> slice_end_id    = ( self -> slice_xend - 1 ) / self -> ref . max_seq_len;
 
                 return obj;
             }
