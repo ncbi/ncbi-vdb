@@ -1659,8 +1659,8 @@ NGS_Pileup * CSRA1_PileupIteratorMakeSlice ( ctx_t ctx,
 
                 /* update slice row-ids */
                 assert ( self -> ref . max_seq_len != 0 );
-                self -> slice_start_id  = slice_zstart / self -> ref . max_seq_len;
-                self -> slice_end_id    = ( self -> slice_xend - 1 ) / self -> ref . max_seq_len;
+                self -> slice_start_id  = slice_zstart / self -> ref . max_seq_len + self -> reference_start_id;
+                self -> slice_end_id    = ( self -> slice_xend - 1 ) / self -> ref . max_seq_len + self -> reference_start_id;
 
                 return obj;
             }

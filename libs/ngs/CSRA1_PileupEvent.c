@@ -805,14 +805,13 @@ void CSRA1_PileupEventEntryInit ( CSRA1_PileupEvent * self, ctx_t ctx, CSRA1_Pil
         {
             const bool * HAS_REF_OFFSET;
 
-            /* if there are no offsets, then there are no indels, which means
-               that there are only match and mismatch events */
-            if ( entry -> cell_len [ pileup_event_col_REF_OFFSET ] == 0 )
-                return;
-
-            /* get HAS_REF_OFFSET */
             TRY ( HAS_REF_OFFSET = CSRA1_PileupEventGetEntry ( self, ctx, entry, pileup_event_col_HAS_REF_OFFSET ) )
             {
+                /* if there are no offsets, then there are no indels, which means
+                   that there are only match and mismatch events */
+                if ( entry -> cell_len [ pileup_event_col_REF_OFFSET ] == 0 )
+                    return;
+
                 /* check for left soft-clip */
                 while ( HAS_REF_OFFSET [ entry -> seq_idx ] && REF_OFFSET [ entry -> ref_off_idx ] < 0 )
                 {
