@@ -95,6 +95,13 @@ NGS_String * NGS_StringSubstrOffset ( const NGS_String * self, ctx_t ctx, uint64
 NGS_String * NGS_StringSubstrOffsetSize ( const NGS_String * self, ctx_t ctx, uint64_t offset, uint64_t size );
 
 
+/* MakeNULTerminatedString
+ *  allocates a NUL-terminated version of self
+ *  returned value should be disposed using "free()"
+ */
+char * NGS_StringMakeNULTerminatedString ( const NGS_String * self, ctx_t ctx );
+
+
 #ifdef __cplusplus
 }
 #endif

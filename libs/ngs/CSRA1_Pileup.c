@@ -288,7 +288,7 @@ void CSRA1_Pileup_AlignCursorDataGetCell ( CSRA1_Pileup_AlignCursorData * self, 
         rc = VBlobCellData ( self -> blob [ col_idx ], row_id, & elem_bits,
             & self -> cell_data [ col_idx ], & boff, & self -> cell_len [ col_idx ] );
         if ( rc == 0 )
-            goto have_cell_data;
+            return;
 
         VBlobRelease ( self -> blob [ col_idx ] );
         self -> blob [ col_idx ] = NULL;
@@ -297,21 +297,28 @@ void CSRA1_Pileup_AlignCursorDataGetCell ( CSRA1_Pileup_AlignCursorData * self, 
     self -> cell_data [ col_idx ] = NULL;
 
     rc = VCursorGetBlobDirect ( self -> curs, & self -> blob [ col_idx ], row_id, self -> col_idx [ col_idx ] );
-    if ( rc == 0 )
+    if ( rc != 0 )
+        INTERNAL_ERROR ( xcStorageExhausted, "VCursorGetBlobDirect rc = %R", rc );
+    else
     {
         rc = VBlobCellData ( self -> blob [ col_idx ], row_id, & elem_bits,
             & self -> cell_data [ col_idx ], & boff, & self -> cell_len [ col_idx ] );
+        if ( rc != 0 )
+            INTERNAL_ERROR ( xcStorageExhausted, "VBlobCellData rc = %R", rc );
     }
-    if ( rc != 0 )
+}
+
+static
+void CSRA1_Pileup_AlignCursorDataGetNonEmptyCell ( CSRA1_Pileup_AlignCursorData * self, ctx_t ctx,
+    int64_t row_id, uint32_t col_idx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    TRY ( CSRA1_Pileup_AlignCursorDataGetCell ( self, ctx, row_id, col_idx ) )
     {
-        INTERNAL_ERROR ( xcStorageExhausted, "VCursorGetBlobDirect rc = %R", rc );
-        return;
+        if ( self -> cell_len [ col_idx ] == 0 )
+            INTERNAL_ERROR ( xcStorageExhausted, "zero-length cell data" );
     }
-
-have_cell_data:
-
-    if ( self -> cell_len [ col_idx ] == 0 )
-        INTERNAL_ERROR ( xcStorageExhausted, "VCursorGetBlobDirect rc = %R", rc );
 }
 
 static
@@ -320,7 +327,7 @@ uint8_t CSRA1_Pileup_AlignCursorDataGetUInt8 ( CSRA1_Pileup_AlignCursorData * se
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
-    TRY ( CSRA1_Pileup_AlignCursorDataGetCell ( self, ctx, row_id, col_idx ) )
+    TRY ( CSRA1_Pileup_AlignCursorDataGetNonEmptyCell ( self, ctx, row_id, col_idx ) )
     {
         const uint8_t * p = self -> cell_data [ col_idx ];
         return p [ 0 ];
@@ -335,7 +342,7 @@ uint32_t CSRA1_Pileup_AlignCursorDataGetUInt32 ( CSRA1_Pileup_AlignCursorData * 
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
-    TRY ( CSRA1_Pileup_AlignCursorDataGetCell ( self, ctx, row_id, col_idx ) )
+    TRY ( CSRA1_Pileup_AlignCursorDataGetNonEmptyCell ( self, ctx, row_id, col_idx ) )
     {
         const uint32_t * p = self -> cell_data [ col_idx ];
         return p [ 0 ];
@@ -575,7 +582,8 @@ PRINT ( ">>> adding alignment at refpos %ld, row-id %ld: %ld-%ld ( zero-based, h
         }
     }
 
-    /* TBD - zero out cached REFERENCE values at current position */
+    /* update cached REFERENCE values at current position */
+    self -> ref_base = 0;
     
     return self -> ref_zpos< self -> slice_xend;
 }
@@ -635,7 +643,9 @@ void CSRA1_PileupChunk ( CSRA1_Pileup * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
-    /* TBD - zero out any cached REFERENCE cells for current chunk */
+    /* zero out any cached REFERENCE cells for current chunk */
+    self -> ref_chunk_bases = NULL;
+    self -> ref_base = 0;
 
     /* prepare next chunk */
     self -> ref_chunk_xend = ( self -> ref_chunk_id - self -> reference_start_id + 1 ) * self -> ref . max_seq_len;
@@ -737,10 +747,10 @@ void CSRA1_PileupGatherIds ( CSRA1_Pileup * self, ctx_t ctx, uint32_t id_limit )
     total_ids = 0;
     do
     {
-        ON_FAIL ( uint32_t chunk_ids = CSRA1_PileupGatherChunkIds ( self, ctx ) )
+        ON_FAIL ( uint32_t align_ids = CSRA1_PileupGatherChunkIds ( self, ctx ) )
             break;
 
-        total_ids += chunk_ids;
+        total_ids += align_ids;
     }
     while ( total_ids < id_limit && self -> idx_chunk_id <= self -> slice_end_id );
 }
@@ -934,8 +944,8 @@ bool CSRA1_PileupGetOverlapPossible ( const CSRA1_Pileup * self, ctx_t ctx )
 #endif
 
     /* read OVERLAP_REF_LEN */
-    TRY ( NGS_CursorCellDataDirect ( self -> ref . curs, ctx, self -> slice_start_id, reference_OVERLAP_REF_LEN,
-                                     & elem_bits, & base, & boff, & row_len ) )
+    TRY ( NGS_CursorCellDataDirect ( self -> ref . curs, ctx, self -> slice_start_id,
+              reference_OVERLAP_REF_LEN, & elem_bits, & base, & boff, & row_len ) )
     {
         const uint32_t * OVERLAP_REF_LEN = base;
         uint32_t slice_start = ( uint32_t ) ( self -> slice_zstart % self -> ref . max_seq_len );
@@ -981,8 +991,8 @@ bool CSRA1_PileupGetOverlapChunkId ( CSRA1_Pileup * self, ctx_t ctx )
 #endif
 
     /* read OVERLAP_REF_POS */
-    TRY ( NGS_CursorCellDataDirect ( self -> ref . curs, ctx, self -> slice_start_id, reference_OVERLAP_REF_POS,
-                                     & elem_bits, & base, & boff, & row_len ) )
+    TRY ( NGS_CursorCellDataDirect ( self -> ref . curs, ctx, self -> slice_start_id,
+              reference_OVERLAP_REF_POS, & elem_bits, & base, & boff, & row_len ) )
     {
         bool have_overlap_ref_pos = false;
         const int32_t * OVERLAP_REF_POS = base;
@@ -1009,6 +1019,10 @@ bool CSRA1_PileupGetOverlapChunkId ( CSRA1_Pileup * self, ctx_t ctx )
         self -> ref_chunk_id = ref_chunk_id;
         return have_overlap_ref_pos;
     }
+    CATCH_ALL ()
+    {
+        CLEAR ();
+    }
 
     return false;
 }
@@ -1020,10 +1034,6 @@ void CSRA1_PileupOverlap ( CSRA1_Pileup * self, ctx_t ctx, int64_t stop_xid )
 
     while ( ! FAILED () )
     {
-        /* exit condition #1: at end of overlap */
-        if ( self -> ref_chunk_id == stop_xid )
-            break;
-
         /* detect circular wrap around */
         if ( self -> ref_chunk_id > self -> reference_last_id )
         {
@@ -1033,8 +1043,13 @@ void CSRA1_PileupOverlap ( CSRA1_Pileup * self, ctx_t ctx, int64_t stop_xid )
             self -> effective_ref_zstart = 0;
         }
 
+        /* exit condition #1: at end of overlap */
+        if ( self -> ref_chunk_id == stop_xid )
+            break;
+
         /* run population from ref_chunk_id to stop_xid ( exclusive ) */
         CSRA1_PileupPopulate ( self, ctx, 0 );
+        self -> ref_chunk_id = self -> idx_chunk_id;
     }
 }
 
@@ -1059,16 +1074,17 @@ void CSRA1_PileupRevOverlap ( CSRA1_Pileup * self, ctx_t ctx )
         {
             int64_t stop_xid = self -> ref_chunk_id;
             int64_t overlap_zstart = self -> slice_zstart - self -> align . max_ref_len;
-            int64_t overlap_chunk_id = overlap_zstart / self -> ref . max_seq_len;
 
             if ( overlap_zstart >= 0 )
-                self -> ref_chunk_id = overlap_chunk_id + self -> reference_start_id;
+                self -> ref_chunk_id = overlap_zstart / self -> ref . max_seq_len + self -> reference_start_id;
             else if ( ! self -> circular )
                 self -> ref_chunk_id = self -> reference_start_id;
             else
             {
-                self -> ref_chunk_id = overlap_chunk_id + self -> reference_last_id + 1;
-                self -> effective_ref_zstart -= NGS_ReferenceGetLength ( self -> dad . ref, ctx );
+                uint64_t ref_len = NGS_ReferenceGetLength ( self -> dad . ref, ctx );
+                overlap_zstart += ref_len;
+                self -> ref_chunk_id = overlap_zstart / self -> ref . max_seq_len + self -> reference_start_id;
+                self -> effective_ref_zstart -= ref_len;
             }
 
             CSRA1_PileupOverlap ( self, ctx, stop_xid );
@@ -1162,6 +1178,14 @@ void CSRA1_PileupFirst ( CSRA1_Pileup * self, ctx_t ctx )
         /* we read ahead this far */
         int64_t idx_chunk_id = self -> idx_chunk_id;
 
+        /* must save current avail list */
+        DLList waiting = self -> align . waiting;
+        uint32_t avail = self -> align . avail;
+
+        /* reinitialize */
+        DLListInit ( & self -> align . waiting );
+        self -> align . avail = 0;
+
         /* look for OVERLAP_REF_POS optimization */
         if ( CSRA1_PileupGetOverlapChunkId ( self, ctx ) )
             CSRA1_PileupOverlap ( self, ctx, self -> slice_start_id );
@@ -1170,6 +1194,10 @@ void CSRA1_PileupFirst ( CSRA1_Pileup * self, ctx_t ctx )
         else
             CSRA1_PileupRevOverlap ( self, ctx );
 
+        /* append previously saved waiting */
+        DLListAppendList ( & self -> align . waiting, & waiting );
+        self -> align . avail += avail;
+
         /* restore to prior value */
         self -> idx_chunk_id = idx_chunk_id;
     }
@@ -1177,8 +1205,7 @@ void CSRA1_PileupFirst ( CSRA1_Pileup * self, ctx_t ctx )
     /* restore to original value */
     self -> ref_chunk_id = self -> slice_start_id;
     self -> effective_ref_zstart = 0;
-
-    self -> state = FAILED () ? pileup_state_err : pileup_state_initial_chunk;
+    self -> state = pileup_state_initial_chunk;
 }
 
 static
@@ -1314,60 +1341,87 @@ static NGS_Pileup_vt CSRA1_Pileup_vt_inst =
 
 
 static
-void CSRA1_PileupPopulateAlignCurs ( ctx_t ctx, const VCursor * curs, uint32_t * col_idx )
+void CSRA1_PileupPopulateAlignCurs ( ctx_t ctx, const VCursor * curs, uint32_t * col_idx, const char * tblname )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
 
     /* use preprocessor symbol that will disable assert() macro */
 #if defined NDEBUG
-#define COL_STRUCT                                                                  \
-    struct { const char * spec; }
-#define COL_SPEC1( cast, name )                                                     \
-    { cast stringize ( name ) }
-#define COL_SPEC2( cast, name )                                                     \
-    { cast stringize ( name ) }
+#define COL_STRUCT                                                      \
+    struct { const char * spec; bool opt; }
+#define COL_SPEC1( cast, name )                                         \
+    { cast stringize ( name ), false }
+#define COL_SPEC2( cast, name )                                         \
+    { cast stringize ( name ), true }
+#define COL_SPEC3( cast, name )                                         \
+    { cast stringize ( name ), false }
 #else
     /* assert() macro will evaluate expression */
-#define COL_STRUCT                                                                  \
-    struct { const char * spec; size_t idx; }
-#define COL_SPEC1( cast, name )                                                     \
-    { cast stringize ( name ), pileup_align_col_ ## name }
-#define COL_SPEC2( cast, name )                                                     \
-    { cast stringize ( name ), pileup_align_col_count + pileup_event_col_ ## name }
+#define COL_STRUCT                                                      \
+    struct { const char * spec; size_t idx; bool opt; }
+#define COL_SPEC1( cast, name )                                         \
+    { cast stringize ( name ), pileup_event_col_ ## name, false }
+#define COL_SPEC2( cast, name )                                         \
+    { cast stringize ( name ), pileup_event_col_ ## name, true }
+#define COL_SPEC3( cast, name )                                         \
+    { cast stringize ( name ), pileup_align_col_ ## name, false }
 #endif
 
     static COL_STRUCT cols [] =
     {
-        /* pileup */
-        COL_SPEC1 ( "(INSDC:coord:zero)", REF_POS ),
-        COL_SPEC1 ( "(INSDC:coord:len)", REF_LEN ),
-        COL_SPEC1 ( "(INSDC:SRA:read_filter)", READ_FILTER ),
+        /* pileup-event */
+        COL_SPEC1 ( "", MAPQ ),
+        COL_SPEC1 ( "", REF_OFFSET ),
+        COL_SPEC1 ( "(bool)", HAS_REF_OFFSET ),
+        COL_SPEC1 ( "", MISMATCH ),
+        COL_SPEC1 ( "(bool)", HAS_MISMATCH ),
+        COL_SPEC1 ( "", REF_ORIENTATION ),
+        COL_SPEC1 ( "", QUALITY ),
 
-        /* pileup-event only */
-        COL_SPEC2 ( "", MAPQ ),
-        COL_SPEC2 ( "", REF_OFFSET ),
-        COL_SPEC2 ( "", HAS_REF_OFFSET ),
-        COL_SPEC2 ( "", MISMATCH ),
-        COL_SPEC2 ( "", HAS_MISMATCH )
+        /* optional pileup-event */
+        COL_SPEC2 ( "", REF_OFFSET_TYPE ),
+
+        /* pileup only */
+        COL_SPEC3 ( "(INSDC:coord:zero)", REF_POS ),
+        COL_SPEC3 ( "(INSDC:coord:len)", REF_LEN ),
+        COL_SPEC3 ( "(INSDC:SRA:read_filter)", READ_FILTER )
     };
 
+    rc_t rc;
     size_t i;
+
     for ( i = 0; i < sizeof cols / sizeof cols [ 0 ]; ++ i )
     {
-        rc_t rc;
-
         assert ( i == cols [ i ] . idx );
+
         rc = VCursorAddColumn ( curs, & col_idx [ i ], "%s", cols [ i ] . spec );
-        if ( rc != 0 )
+        if ( rc != 0 && ! cols [ i ] . opt )
         {
             INTERNAL_ERROR ( xcColumnNotFound, "VCursorAddColumn '%s' rc = %R", cols [ i ] . spec, rc );
             return;
         }
     }
+
+    rc = VCursorOpen ( curs );
+    if ( rc != 0 )
+    {
+        INTERNAL_ERROR ( xcCursorOpenFailed,
+                         "ERROR: VCursorOpen(%s) failed with error: 0x%08x (%u) [%R]",
+                         tblname, rc, rc, rc );
+        return;
+    }
+
+    for ( i = 0; i < sizeof cols / sizeof cols [ 0 ]; ++ i )
+    {
+        assert ( i == cols [ i ] . idx );
+
+        if ( cols [ i ] . opt && col_idx [ i ] == 0 )
+            VCursorAddColumn ( curs, & col_idx [ i ], "%s", cols [ i ] . spec );
+    }
 }
 
 static
-void CSRA1_PileupPopulatePACurs ( CSRA1_Pileup * obj, ctx_t ctx )
+void CSRA1_PileupPopulatePACurs ( CSRA1_Pileup * obj, ctx_t ctx, const char * tblname )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
 
@@ -1379,15 +1433,12 @@ void CSRA1_PileupPopulatePACurs ( CSRA1_Pileup * obj, ctx_t ctx )
               reference_PRIMARY_ALIGNMENT_IDS, & elem_bits, & base, & boff, & row_len ) )
     {
         /* populate cursor with known stuff */
-        TRY ( CSRA1_PileupPopulateAlignCurs ( ctx, obj -> pa . curs, obj -> pa . col_idx ) )
-        {
-            /* add in columns particular to primary alignment */
-        }
+        CSRA1_PileupPopulateAlignCurs ( ctx, obj -> pa . curs, obj -> pa . col_idx, tblname );
     }
 }
 
 static
-void CSRA1_PileupPopulateSACurs ( CSRA1_Pileup * obj, ctx_t ctx )
+void CSRA1_PileupPopulateSACurs ( CSRA1_Pileup * obj, ctx_t ctx, const char * tblname )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
 
@@ -1399,17 +1450,14 @@ void CSRA1_PileupPopulateSACurs ( CSRA1_Pileup * obj, ctx_t ctx )
               reference_SECONDARY_ALIGNMENT_IDS, & elem_bits, & base, & boff, & row_len ) )
     {
         /* populate cursor with known stuff */
-        TRY ( CSRA1_PileupPopulateAlignCurs ( ctx, obj -> sa . curs, obj -> sa . col_idx ) )
-        {
-            /* add in columns particular to secondary alignment */
-        }
+        CSRA1_PileupPopulateAlignCurs ( ctx, obj -> sa . curs, obj -> sa . col_idx, tblname );
     }
 }
 
 static
 void CSRA1_PileupInitAlignment ( CSRA1_Pileup * obj, ctx_t ctx,
     const VDatabase * db, const char * tblname, const VCursor ** curs,
-    void ( * init_curs ) ( CSRA1_Pileup * obj, ctx_t ctx ) )
+    void ( * init_curs ) ( CSRA1_Pileup * obj, ctx_t ctx, const char * tblname ) )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     
@@ -1432,16 +1480,7 @@ void CSRA1_PileupInitAlignment ( CSRA1_Pileup * obj, ctx_t ctx,
         }
         else
         {
-            TRY ( ( * init_curs ) ( obj, ctx ) )
-            {
-                rc = VCursorOpen ( * curs );
-                if ( rc != 0 )
-                {
-                    INTERNAL_ERROR ( xcCursorOpenFailed,
-                                     "ERROR: VCursorOpen(%s) failed with error: 0x%08x (%u) [%R]",
-                                     tblname, rc, rc, rc);
-                }
-            }
+            ( * init_curs ) ( obj, ctx, tblname );
         }
 
         VTableRelease ( tbl );
@@ -1479,7 +1518,15 @@ void CSRA1_PileupInit ( ctx_t ctx, CSRA1_Pileup * obj, const char * instname,
                     if ( wants_primary )
                         CSRA1_PileupInitAlignment ( obj, ctx, db, "PRIMARY_ALIGNMENT", & obj -> pa . curs, CSRA1_PileupPopulatePACurs );
                     if ( wants_secondary && ! FAILED () )
-                        CSRA1_PileupInitAlignment ( obj, ctx, db, "SECONDARY_ALIGNMENT", & obj -> sa . curs, CSRA1_PileupPopulateSACurs );
+                    {
+                        ON_FAIL ( CSRA1_PileupInitAlignment ( obj, ctx, db, "SECONDARY_ALIGNMENT", & obj -> sa . curs, CSRA1_PileupPopulateSACurs ) )
+                        {
+                            /* TBD - need the ability to convert hard error to warning
+                               stating that we have primary, but no secondary */
+                            if ( wants_primary )
+                                CLEAR ();
+                        }
+                    }
                 }
             }
         }
@@ -1558,10 +1605,11 @@ NGS_Pileup * CSRA1_PileupIteratorMakeSlice ( ctx_t ctx,
     uint64_t slice_size, bool wants_primary, bool wants_secondary )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
+    uint64_t ref_len;
 
     assert ( ref != NULL );
 
-    TRY ( uint64_t ref_len = NGS_ReferenceGetLength ( ref, ctx ) )
+    TRY ( ref_len = NGS_ReferenceGetLength ( ref, ctx ) )
     {
         if ( slice_zstart >= ref_len )
         {
@@ -1609,6 +1657,11 @@ NGS_Pileup * CSRA1_PileupIteratorMakeSlice ( ctx_t ctx,
                 self -> slice_zstart    = slice_zstart;
                 self -> slice_xend      = slice_zstart + slice_size;
 
+                /* update slice row-ids */
+                assert ( self -> ref . max_seq_len != 0 );
+                self -> slice_start_id  = slice_zstart / self -> ref . max_seq_len + self -> reference_start_id;
+                self -> slice_end_id    = ( self -> slice_xend - 1 ) / self -> ref . max_seq_len + self -> reference_start_id;
+
                 return obj;
             }
         }
@@ -1625,22 +1678,21 @@ const void * CSRA1_PileupGetEntry ( CSRA1_Pileup * self, ctx_t ctx,
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
     rc_t rc;
-    uint32_t cd_col_idx = pileup_align_col_count + col_idx;
     CSRA1_Pileup_AlignCursorData * cd = entry -> secondary ? & self -> sa : & self -> pa;
 
     assert ( entry -> blob [ col_idx ] == NULL );
 
-    ON_FAIL ( CSRA1_Pileup_AlignCursorDataGetCell ( cd, ctx, entry -> row_id, cd_col_idx ) )
+    ON_FAIL ( CSRA1_Pileup_AlignCursorDataGetCell ( cd, ctx, entry -> row_id, col_idx ) )
         return NULL;
 
-    rc = VBlobAddRef ( cd -> blob [ cd_col_idx ] );
+    rc = VBlobAddRef ( cd -> blob [ col_idx ] );
     if ( rc != 0 )
     {
-        INTERNAL_ERROR ( xcRefcountOutOfBounds, "VBlob at %#p", cd -> blob [ cd_col_idx ] );
+        INTERNAL_ERROR ( xcRefcountOutOfBounds, "VBlob at %#p", cd -> blob [ col_idx ] );
         return NULL;
     }
 
-    entry -> blob [ col_idx ] = cd -> blob [ cd_col_idx ];
-    entry -> cell_len [ col_idx ] = cd -> cell_len [ cd_col_idx ];
-    return entry -> cell_data [ col_idx ] = cd -> cell_data [ cd_col_idx ];
+    entry -> blob [ col_idx ] = cd -> blob [ col_idx ];
+    entry -> cell_len [ col_idx ] = cd -> cell_len [ col_idx ];
+    return entry -> cell_data [ col_idx ] = cd -> cell_data [ col_idx ];
 }

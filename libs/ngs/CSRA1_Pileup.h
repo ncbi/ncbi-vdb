@@ -35,6 +35,10 @@
 #include <klib/container.h>
 #endif
 
+#ifndef _h_insdc_insdc_
+#include <insdc/insdc.h>
+#endif
+
 #ifndef _h_ngs_pileup_
 #include "NGS_Pileup.h"
 #endif
@@ -72,6 +76,10 @@ enum
     pileup_event_col_HAS_REF_OFFSET,
     pileup_event_col_MISMATCH,
     pileup_event_col_HAS_MISMATCH,
+    pileup_event_col_REF_ORIENTATION,
+    pileup_event_col_QUALITY,
+
+    pileup_event_col_REF_OFFSET_TYPE,           /* OPTIONAL */
 
     pileup_event_col_count
 };
@@ -96,6 +104,12 @@ struct CSRA1_Pileup_Entry
     const void * cell_data [ pileup_event_col_count ];
     uint32_t cell_len [ pileup_event_col_count ];
 
+    /* insertion count */
+    uint32_t ins_cnt;
+
+    /* deletion count */
+    uint32_t del_cnt;
+
     /* offset into REF_OFFSET */
     uint32_t ref_off_idx;
 
@@ -105,14 +119,17 @@ struct CSRA1_Pileup_Entry
     /* offset into aligned sequence */
     uint32_t seq_idx;
 
-    /* insertion or deletion count */
-    int32_t indel_cnt;
+    /* adjustment to "zstart" for current alignment */
+    volatile int32_t zstart_adj;
 
     /* set to a base or NUL if not set */
     char mismatch;
 
     /* true if alignment comes from secondary table */
     bool secondary;
+
+    /* true if has been seen by PileupEvent iterator */
+    bool seen_first;
 };
 
 
@@ -153,15 +170,12 @@ struct CSRA1_Pileup_RefCursorData
 enum
 {
     /* pileup-align columns are in a different space from pileup-event columns */
-    pileup_align_col_REF_POS,
+    pileup_align_col_REF_POS = pileup_event_col_count,
     pileup_align_col_REF_LEN,
     pileup_align_col_READ_FILTER,
 
-    /* the number of "pileup-only" columns */
-    pileup_align_col_count,
-
     /* total of combined columns managed by pileup */
-    pileup_align_col_total = pileup_align_col_count + pileup_event_col_count
+    pileup_align_col_total
 };
 
 typedef struct CSRA1_Pileup_AlignCursorData CSRA1_Pileup_AlignCursorData;
@@ -169,9 +183,10 @@ struct CSRA1_Pileup_AlignCursorData
 {
     struct VCursor const * curs;
     struct VBlob const * blob [ pileup_align_col_total ];
-    const void * cell_data [ pileup_align_col_count ];
-    uint32_t cell_len [ pileup_align_col_count ];
+    const void * cell_data [ pileup_align_col_total ];
+    uint32_t cell_len [ pileup_align_col_total ];
     uint32_t col_idx [ pileup_align_col_total ];
+    bool missing_REF_OFFSET_TYPE;
 };
 
 
@@ -209,6 +224,9 @@ struct CSRA1_Pileup
     /* current chunk for reading alignment ids */
     int64_t idx_chunk_id;
 
+    /* pointer to bases of current reference chunk */
+    const INSDC_dna_text * ref_chunk_bases;
+
     /* list of alignments under this position */
     CSRA1_Pileup_AlignList align;
 
@@ -217,6 +235,9 @@ struct CSRA1_Pileup
 
     /* alignment cursor/data */
     CSRA1_Pileup_AlignCursorData pa, sa;
+
+    /* reference base - lazily populated */
+    char ref_base;
 
     uint8_t state;
     bool circular;      /* true iff Reference is circular */

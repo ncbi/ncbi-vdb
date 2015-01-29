@@ -31,6 +31,7 @@
 #include <kfc/xc.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/text.h>
 
 #include "NGS_ErrBlock.h"
 #include <ngs/itf/Refcount.h>
@@ -383,4 +384,30 @@ NGS_String * NGS_StringFromI64 ( ctx_t ctx, int64_t i )
 
     INTERNAL_ERROR ( xcStringCreateFailed, "rc = %R", rc );
     return NULL;
+}
+
+
+/* MakeNULTerminatedString
+ *  allocates a NUL-terminated version of self
+ *  returned value should be disposed using "free()"
+ */
+char * NGS_StringMakeNULTerminatedString ( const NGS_String * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcString, rcConstructing );
+
+    char * nul_term = NULL;
+
+    if ( self == NULL )
+        INTERNAL_ERROR ( xcSelfNull, "attempt to access NULL NGS_String" );
+    else
+    {
+        size_t dst_size = self -> size + 1;
+        nul_term = malloc ( dst_size );
+        if ( nul_term == NULL )
+            SYSTEM_ERROR ( xcNoMemory, "allocating %zu bytes", dst_size );
+        else
+            string_copy ( nul_term, dst_size, self -> str, self -> size );
+    }
+
+    return nul_term;
 }

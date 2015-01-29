@@ -1296,6 +1296,19 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     {
         TimeoutInit ( & tm, self -> write_timeout );
         rc = KStreamTimedWriteAll ( self -> sock, buffer, len, & sent, & tm ); 
+        if ( rc != 0 )
+        {
+            rc_t rc2;
+            KClientHttpClose ( self );
+            rc2 = KClientHttpOpen ( self, & self -> hostname, self -> port );
+            if ( rc2 == 0 )
+            {
+                TimeoutInit ( & tm, self -> write_timeout );
+                rc2 = KStreamTimedWriteAll ( self -> sock, buffer, len, & sent, & tm );
+                if ( rc2 == 0 )
+                    rc = 0;
+            }
+        }
     }
 
     /* check the data was completely sent */
