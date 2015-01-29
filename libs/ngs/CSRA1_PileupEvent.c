@@ -110,7 +110,7 @@ static
 const void * CSRA1_PileupEventGetEntry ( const CSRA1_PileupEvent * self, ctx_t ctx,
     CSRA1_Pileup_Entry * entry, uint32_t col_idx )
 {
-    if ( entry -> cell_data [ col_idx ] != NULL )
+    if ( entry -> cell_data [ col_idx ] == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
         return CSRA1_PileupGetEntry ( CSRA1_PileupEventGetPileup ( self ), ctx, entry, col_idx );
@@ -818,8 +818,8 @@ void CSRA1_PileupEventEntryInit ( CSRA1_PileupEvent * self, ctx_t ctx, CSRA1_Pil
                     uint32_t i, count = - REF_OFFSET [ entry -> ref_off_idx ++ ];
 
                     /* safety check */
-                    if ( ( int64_t ) count > entry -> xend - entry -> zstart )
-                        count = ( uint32_t ) ( entry -> xend - entry -> zstart );
+                    if ( count > entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
+                        count = entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ];
 
                     /* skip over soft-clip */
                     for ( i = 0; i < count; ++ i )

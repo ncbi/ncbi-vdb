@@ -1347,44 +1347,44 @@ void CSRA1_PileupPopulateAlignCurs ( ctx_t ctx, const VCursor * curs, uint32_t *
 
     /* use preprocessor symbol that will disable assert() macro */
 #if defined NDEBUG
-#define COL_STRUCT                                                                          \
+#define COL_STRUCT                                                      \
     struct { const char * spec; bool opt; }
-#define COL_SPEC1( cast, name )                                                             \
+#define COL_SPEC1( cast, name )                                         \
     { cast stringize ( name ), false }
-#define COL_SPEC2( cast, name )                                                             \
-    { cast stringize ( name ), false }
-#define COL_SPEC3( cast, name )                                                             \
+#define COL_SPEC2( cast, name )                                         \
     { cast stringize ( name ), true }
+#define COL_SPEC3( cast, name )                                         \
+    { cast stringize ( name ), false }
 #else
     /* assert() macro will evaluate expression */
-#define COL_STRUCT                                                                          \
+#define COL_STRUCT                                                      \
     struct { const char * spec; size_t idx; bool opt; }
-#define COL_SPEC1( cast, name )                                                             \
+#define COL_SPEC1( cast, name )                                         \
+    { cast stringize ( name ), pileup_event_col_ ## name, false }
+#define COL_SPEC2( cast, name )                                         \
+    { cast stringize ( name ), pileup_event_col_ ## name, true }
+#define COL_SPEC3( cast, name )                                         \
     { cast stringize ( name ), pileup_align_col_ ## name, false }
-#define COL_SPEC2( cast, name )                                                             \
-    { cast stringize ( name ), pileup_align_col_count + pileup_event_col_ ## name, false }
-#define COL_SPEC3( cast, name )                                                             \
-    { cast stringize ( name ), pileup_align_col_count + pileup_event_col_ ## name, true }
 #endif
 
     static COL_STRUCT cols [] =
     {
-        /* pileup */
-        COL_SPEC1 ( "(INSDC:coord:zero)", REF_POS ),
-        COL_SPEC1 ( "(INSDC:coord:len)", REF_LEN ),
-        COL_SPEC1 ( "(INSDC:SRA:read_filter)", READ_FILTER ),
+        /* pileup-event */
+        COL_SPEC1 ( "", MAPQ ),
+        COL_SPEC1 ( "", REF_OFFSET ),
+        COL_SPEC1 ( "(bool)", HAS_REF_OFFSET ),
+        COL_SPEC1 ( "", MISMATCH ),
+        COL_SPEC1 ( "(bool)", HAS_MISMATCH ),
+        COL_SPEC1 ( "", REF_ORIENTATION ),
+        COL_SPEC1 ( "", QUALITY ),
 
-        /* pileup-event only */
-        COL_SPEC2 ( "", MAPQ ),
-        COL_SPEC2 ( "", REF_OFFSET ),
-        COL_SPEC2 ( "", HAS_REF_OFFSET ),
-        COL_SPEC2 ( "", MISMATCH ),
-        COL_SPEC2 ( "", HAS_MISMATCH ),
-        COL_SPEC2 ( "", REF_ORIENTATION ),
-        COL_SPEC2 ( "", QUALITY ),
+        /* optional pileup-event */
+        COL_SPEC2 ( "", REF_OFFSET_TYPE ),
 
-        /* optional */
-        COL_SPEC3 ( "", REF_OFFSET_TYPE )
+        /* pileup only */
+        COL_SPEC3 ( "(INSDC:coord:zero)", REF_POS ),
+        COL_SPEC3 ( "(INSDC:coord:len)", REF_LEN ),
+        COL_SPEC3 ( "(INSDC:SRA:read_filter)", READ_FILTER )
     };
 
     rc_t rc;
@@ -1678,22 +1678,21 @@ const void * CSRA1_PileupGetEntry ( CSRA1_Pileup * self, ctx_t ctx,
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
     rc_t rc;
-    uint32_t cd_col_idx = pileup_align_col_count + col_idx;
     CSRA1_Pileup_AlignCursorData * cd = entry -> secondary ? & self -> sa : & self -> pa;
 
     assert ( entry -> blob [ col_idx ] == NULL );
 
-    ON_FAIL ( CSRA1_Pileup_AlignCursorDataGetCell ( cd, ctx, entry -> row_id, cd_col_idx ) )
+    ON_FAIL ( CSRA1_Pileup_AlignCursorDataGetCell ( cd, ctx, entry -> row_id, col_idx ) )
         return NULL;
 
-    rc = VBlobAddRef ( cd -> blob [ cd_col_idx ] );
+    rc = VBlobAddRef ( cd -> blob [ col_idx ] );
     if ( rc != 0 )
     {
-        INTERNAL_ERROR ( xcRefcountOutOfBounds, "VBlob at %#p", cd -> blob [ cd_col_idx ] );
+        INTERNAL_ERROR ( xcRefcountOutOfBounds, "VBlob at %#p", cd -> blob [ col_idx ] );
         return NULL;
     }
 
-    entry -> blob [ col_idx ] = cd -> blob [ cd_col_idx ];
-    entry -> cell_len [ col_idx ] = cd -> cell_len [ cd_col_idx ];
-    return entry -> cell_data [ col_idx ] = cd -> cell_data [ cd_col_idx ];
+    entry -> blob [ col_idx ] = cd -> blob [ col_idx ];
+    entry -> cell_len [ col_idx ] = cd -> cell_len [ col_idx ];
+    return entry -> cell_data [ col_idx ] = cd -> cell_data [ col_idx ];
 }

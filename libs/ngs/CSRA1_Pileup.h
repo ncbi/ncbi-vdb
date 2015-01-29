@@ -170,15 +170,12 @@ struct CSRA1_Pileup_RefCursorData
 enum
 {
     /* pileup-align columns are in a different space from pileup-event columns */
-    pileup_align_col_REF_POS,
+    pileup_align_col_REF_POS = pileup_event_col_count,
     pileup_align_col_REF_LEN,
     pileup_align_col_READ_FILTER,
 
-    /* the number of "pileup-only" columns */
-    pileup_align_col_count,
-
     /* total of combined columns managed by pileup */
-    pileup_align_col_total = pileup_align_col_count + pileup_event_col_count
+    pileup_align_col_total
 };
 
 typedef struct CSRA1_Pileup_AlignCursorData CSRA1_Pileup_AlignCursorData;
@@ -186,8 +183,8 @@ struct CSRA1_Pileup_AlignCursorData
 {
     struct VCursor const * curs;
     struct VBlob const * blob [ pileup_align_col_total ];
-    const void * cell_data [ pileup_align_col_count ];
-    uint32_t cell_len [ pileup_align_col_count ];
+    const void * cell_data [ pileup_align_col_total ];
+    uint32_t cell_len [ pileup_align_col_total ];
     uint32_t col_idx [ pileup_align_col_total ];
     bool missing_REF_OFFSET_TYPE;
 };
