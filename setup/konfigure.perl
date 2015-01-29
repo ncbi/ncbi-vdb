@@ -287,10 +287,10 @@ my $BITS;
 
 if ($MARCH =~ /x86_64/i) {
     $BITS = 64;
-} elsif ($MARCH =~ /^fat86$/) {
-    $BITS = '32_64';
 } elsif ($MARCH =~ /i?86/i) {
     $BITS = 32;
+} elsif ($MARCH eq 'fat86') {
+    $BITS = '32_64';
 } else {
     die "unrecognized Architecture '$ARCH'";
 }
@@ -755,7 +755,6 @@ EndText
     L($F, "JAVAC = $JAVAC") if ($JAVAC);
     L($F, "JAVAH = $JAVAH") if ($JAVAH);
     L($F, "JAR   = $JAR"  ) if ($JAR);
-    L($F, "MAKE_MANIFEST = $MAKE_MANIFEST") if ($MAKE_MANIFEST);
     L($F);
 
     L($F, '# tool options');
@@ -780,7 +779,13 @@ EndText
     } elsif ($PKG{LNG} eq 'JAVA') {
         L($F, 'SRCINC  = -sourcepath $(INCPATHS)');
     }
-    L($F, "INCDIRS = \$(SRCINC) $INC\$(TOP)") if ($PIC);
+    if ($PIC) {
+        if (PACKAGE_NAMW() eq 'NGS') {
+   L($F, "INCDIRS = \$(SRCINC) $INC\$(TOP) $INC\$(TOP)/ngs/\$(OSINC)/\$(ARCH)")
+        } else {
+   L($F, "INCDIRS = \$(SRCINC) $INC\$(TOP)")
+        }
+    }
     if ($PKG{LNG} eq 'C') {
         L($F, "CFLAGS  = \$(DBG) \$(OPT) \$(INCDIRS) $MD");
     }
@@ -1049,6 +1054,8 @@ unless ($OPT{'reconfigure'}) {
     open my $F, '>reconfigure' or die 'cannot open reconfigure to write';
     print $F "./configure $CONFIGURED\n";
     close $F;
+   # my $perm = (stat $fh)[2] & 07777;
+#   print "==================================================== $perm\n";
 }
 
 status() if ($OS ne 'win');
