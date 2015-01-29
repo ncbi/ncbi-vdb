@@ -86,7 +86,7 @@ typedef struct KCacheTeeFile
     uint64_t local_size;					/* the size of the local cache file ( remote_size + bitmap + tail ) */
     uint64_t block_count;					/* how many blocks do we need to cache the remote file ( last block may be shorter ) */
 
-    uint64_t first_block_in_scratch;		/* what is the block-id of the first block in the scratch-buffer */
+    int64_t first_block_in_scratch;		    /* what is the block-id of the first block in the scratch-buffer; negative at init*/
     uint64_t scratch_size;					/* how many bytes are allocated for the scratch-buffer */
     uint64_t valid_scratch_bytes;			/* how many bytes store valid data in the scratch-buffer */
 
@@ -766,12 +766,12 @@ static rc_t rd_remote_wr_local( const KCacheTeeFile *cself, uint64_t pos,
         size_t bytes_read;
         *num_read = 0;
         rc = KFileReadAll( cself->remote, pos, buffer, bsize, &bytes_read );
-        if ( rc == 0 && bytes_read == 0 )
+        if ( rc != 0 || bytes_read == 0) /** try again **/
 		{
-            if ( cself->report ) OUTMSG(( "0 bytes read from remote source, possible HUP, retrying\n" ));
+            if ( cself->report ) OUTMSG(( "incomplete read from remote source, possible HUP, retrying\n" ));
             rc = KFileReadAll( cself->remote, pos, buffer, bsize, &bytes_read );
             if ( rc == 0 && bytes_read == 0 )
-			{
+			{ /*old behavior */
                 rc = RC ( rcFS, rcFile, rcReading, rcBuffer, rcEmpty );
             }
         }
@@ -1024,16 +1024,16 @@ static rc_t KCacheTeeFileRead_simple2( const KCacheTeeFile *cself, uint64_t pos,
 		
         if( to_read > to_read_total ) to_read = to_read_total;
 
-        if ( cself -> valid_scratch_bytes >= offset &&
-		     cself -> first_block_in_scratch == block )
+        if ( cself -> first_block_in_scratch == block )
 		{
-			if(to_read > cself -> valid_scratch_bytes - offset){ /** triggered when approaching EOF in remote file **/
-				to_read = cself -> valid_scratch_bytes - offset;
-				/** it also means that we can not complete the full size **/
-				to_read_total = to_read;
-				
+            if(cself -> valid_scratch_bytes <= offset){ /** EOF in remote file and nothing to read **/
+                to_read_total = to_read = 0; 
+			} else { 
+                if(to_read > cself -> valid_scratch_bytes - offset){ /** EOF in remote file something left**/
+				   to_read_total = to_read = cself -> valid_scratch_bytes - offset;
+                }
+                memcpy( buffer, cself -> scratch_buffer + offset, to_read );
 			}
-            memcpy( buffer, cself -> scratch_buffer + offset, to_read );
 
             /*** move source counters **/
             offset += to_read;
@@ -1380,7 +1380,7 @@ static rc_t make_cache_tee( struct KDirectory *self, struct KFile const **tee,
         cf -> bitmap = NULL;
         cf -> scratch_buffer = NULL;
         cf -> scratch_size = 0;
-        cf -> first_block_in_scratch = 0;
+        cf -> first_block_in_scratch = -1;
         cf -> valid_scratch_bytes = 0;
 
         rc = KFileSize( local, &cf -> local_size );
