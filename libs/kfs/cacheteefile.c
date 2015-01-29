@@ -78,11 +78,14 @@ typedef struct CacheStatistic
 	uint64_t delivered_bytes;	
 	uint64_t requests_below_32k;
 	uint64_t requests_consecutive;
+	uint64_t requests_in_first32k;
 	
 	uint64_t prev_pos;
 	uint64_t requests_same_pos;
 	uint64_t requests_same_pos_and_len;
 	size_t prev_len;
+	size_t min_len;
+	size_t max_len;
 	
 } CacheStatistic;
 
@@ -94,10 +97,13 @@ static void init_cache_stat( CacheStatistic * stat )
 	stat -> delivered_bytes = 0;	
 	stat -> requests_below_32k = 0;
 	stat -> requests_consecutive = 0;
+	stat -> requests_in_first32k = 0;
 	stat -> prev_pos = 0xFFFFFFFFFFFFFFFF;
 	stat -> requests_same_pos = 0;
 	stat -> requests_same_pos_and_len = 0;
 	stat -> prev_len = 0;
+	stat -> min_len = -1;	
+	stat -> max_len = 0;
 }
 
 static void write_cache_stat( CacheStatistic * stat, uint64_t pos, size_t requested, size_t delivered )
@@ -109,6 +115,15 @@ static void write_cache_stat( CacheStatistic * stat, uint64_t pos, size_t reques
 	if ( requested < 0x08000 )
 		( stat -> requests_below_32k )++;
 
+	if ( delivered < stat -> min_len )
+		stat -> min_len	= delivered;
+
+	if ( delivered > stat -> max_len )
+		stat -> max_len	= delivered;
+
+	if ( pos + requested < 0x08000 )
+		( stat -> requests_in_first32k )++;
+		
 	if ( stat -> prev_pos != pos )
 	{
 		if ( stat -> prev_pos + stat -> prev_len == pos )
@@ -138,14 +153,18 @@ static void report_cache_stat( CacheStatistic * stat )
     fprintf( stderr, "cache-stat.delivered_bytes ............ %lu\n", stat -> delivered_bytes );	
     fprintf( stderr, "cache-stat.requests_below_32k ......... %lu\n", stat -> requests_below_32k );
 	fprintf( stderr, "cache-stat.requests_consecutive........ %lu\n", stat -> requests_consecutive );
+	fprintf( stderr, "cache-stat.requests_in_first32k........ %lu\n", stat -> requests_in_first32k );
 	
     fprintf( stderr, "cache-stat.requests_same_pos .......... %lu\n", stat -> requests_same_pos );
     fprintf( stderr, "cache-stat.requests_same_pos_and_len .. %lu\n", stat -> requests_same_pos );
+    fprintf( stderr, "cache-stat.min_len .................... %u\n", stat -> min_len );
+    fprintf( stderr, "cache-stat.max_len .................... %u\n", stat -> max_len );
 	
     fprintf( stderr, "\n" );
 }
 
 #endif
+
 
 typedef struct KCacheTeeFile
 {
@@ -166,7 +185,6 @@ typedef struct KCacheTeeFile
     uint64_t bitmap_bytes;					/* how many bytes do we need to store the bitmap */
 
 	uint8_t * scratch_buffer;
-	
     uint64_t first_block_in_scratch;		/* what is the block-id of the first block in the scratch-buffer */
     uint64_t scratch_size;					/* how many bytes are allocated for the scratch-buffer */
     uint64_t valid_scratch_bytes;			/* how many bytes store valid data in the scratch-buffer */
@@ -857,12 +875,12 @@ static rc_t rd_remote_wr_local( const KCacheTeeFile *cself, uint64_t pos,
         size_t bytes_read;
         *num_read = 0;
         rc = KFileReadAll( cself->remote, pos, buffer, bsize, &bytes_read );
-        if ( rc == 0 && bytes_read == 0 )
+        if ( rc != 0 || bytes_read == 0) /** try again **/
 		{
-            if ( cself->report ) OUTMSG(( "0 bytes read from remote source, possible HUP, retrying\n" ));
+            if ( cself->report ) OUTMSG(( "incomplete read from remote source, possible HUP, retrying\n" ));
             rc = KFileReadAll( cself->remote, pos, buffer, bsize, &bytes_read );
             if ( rc == 0 && bytes_read == 0 )
-			{
+			{ /*old behavior */
                 rc = RC ( rcFS, rcFile, rcReading, rcBuffer, rcEmpty );
             }
         }
@@ -1115,17 +1133,20 @@ static rc_t KCacheTeeFileRead_simple2( const KCacheTeeFile *cself, uint64_t pos,
 		
         if ( to_read > to_read_total ) to_read = to_read_total;
 
-        if ( cself -> valid_scratch_bytes >= offset &&
-		     cself -> first_block_in_scratch == block )
+        if ( cself -> first_block_in_scratch == block )
 		{
-			if ( to_read > cself -> valid_scratch_bytes - offset )
-			{ /** triggered when approaching EOF in remote file **/
-				to_read = cself -> valid_scratch_bytes - offset;
-				/** it also means that we can not complete the full size **/
-				to_read_total = to_read;
+            if ( cself -> valid_scratch_bytes <= offset )
+			{ /** EOF in remote file and nothing to read **/
+                to_read_total = to_read = 0; 
 			}
-
-            memcpy( buffer, cself -> scratch_buffer + offset, to_read );
+			else
+			{ 
+                if ( to_read > cself -> valid_scratch_bytes - offset )
+				{ /** EOF in remote file something left**/
+				   to_read_total = to_read = cself -> valid_scratch_bytes - offset;
+                }
+                memcpy( buffer, cself -> scratch_buffer + offset, to_read );
+			}
 
             /*** move source counters **/
             offset += to_read;
@@ -1405,8 +1426,8 @@ static rc_t KCacheTeeFileRead( const KCacheTeeFile *cself, uint64_t pos,
                                void *buffer, size_t bsize, size_t *num_read )
 {
 
-	rc_t rc = KCacheTeeFileRead_3( cself, pos, buffer, bsize, num_read );
-    /* rc_t rc = KCacheTeeFileRead_simple2( cself, pos, buffer, bsize, num_read ); */
+	/* rc_t rc = KCacheTeeFileRead_3( cself, pos, buffer, bsize, num_read ); */
+    rc_t rc = KCacheTeeFileRead_simple2( cself, pos, buffer, bsize, num_read );
 
 #if( CACHE_STAT > 0 )
 	write_cache_stat( & ( ( ( KCacheTeeFile * )cself ) -> stat ), pos, bsize, *num_read );
@@ -1468,7 +1489,7 @@ static rc_t make_cache_tee( struct KDirectory *self, struct KFile const **tee,
         cf -> bitmap = NULL;
         cf -> scratch_buffer = NULL;
         cf -> scratch_size = 0;
-        cf -> first_block_in_scratch = 0;
+        cf -> first_block_in_scratch = -1;
         cf -> valid_scratch_bytes = 0;
 
 #if( CACHE_STAT > 0 )
