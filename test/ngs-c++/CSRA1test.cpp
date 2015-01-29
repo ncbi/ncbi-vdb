@@ -944,8 +944,8 @@ TEST_CASE(CSRA1_PileupEventIterator_MimicSraPileup)
 {
     char const db_path[] = "SRR341578";
 
-    int64_t const pos_start = 19960;//20017;//;
-    uint64_t const len = 5+40+17;
+    int64_t const pos_start = 2427;//19960;//20017;//;
+    uint64_t const len = 2;//5+40+17;
 
     ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
     ngs::ReferenceIterator ri = run.getReferences ();
@@ -977,7 +977,7 @@ TEST_CASE(CSRA1_PileupEventIterator_MimicSraPileup)
 
             if ( ( eventType & ngs::PileupEvent::alignment_start ) != 0 )
             {
-                char c = pei.getAlignmentQuality() + 33;
+                char c = pei.getMappingQuality() + 33;
                 if ( c > '~' ) { c = '~'; }
                 if ( c < 33 ) { c = 33; }
 
@@ -998,9 +998,17 @@ TEST_CASE(CSRA1_PileupEventIterator_MimicSraPileup)
                         : (char)toupper(pei.getAlignmentBase()));
                 break;
             case ngs::PileupEvent::deletion:
+                uint32_t count = pei.getEventRepeatCount ();
+                //printf ("-%d%.*s", count, count, & strRefSlice [pos - pos_start]);
+                std::cout << "-" << count;
 
-                for (uint32_t i = 0; i <= pei.getEventRepeatCount (); ++i )
-                    std::cout << "-";
+                for ( uint32_t i = 0; i < count; ++i )
+                {
+                    std::cout
+                        << (reverse ?
+                            (char)tolower(strRefSlice [pos - pos_start + i])
+                            : (char)toupper(strRefSlice [pos - pos_start + i]));
+                }
                 break;
             }
 
