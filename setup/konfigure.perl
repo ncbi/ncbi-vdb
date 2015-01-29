@@ -287,10 +287,10 @@ my $BITS;
 
 if ($MARCH =~ /x86_64/i) {
     $BITS = 64;
-} elsif ($MARCH =~ /^fat86$/) {
-    $BITS = '32_64';
 } elsif ($MARCH =~ /i?86/i) {
     $BITS = 32;
+} elsif ($MARCH eq 'fat86') {
+    $BITS = '32_64';
 } else {
     die "unrecognized Architecture '$ARCH'";
 }
@@ -755,7 +755,6 @@ EndText
     L($F, "JAVAC = $JAVAC") if ($JAVAC);
     L($F, "JAVAH = $JAVAH") if ($JAVAH);
     L($F, "JAR   = $JAR"  ) if ($JAR);
-    L($F, "MAKE_MANIFEST = $MAKE_MANIFEST") if ($MAKE_MANIFEST);
     L($F);
 
     L($F, '# tool options');
