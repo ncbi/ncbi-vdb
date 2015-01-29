@@ -545,7 +545,7 @@ rc_t CC KSocketTimedWrite ( KSocket *self,
     {
         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: POLLHUP received\n", self ) );
         * num_writ = 0;
-        return 0;
+        return  RC ( rcNS, rcFile, rcWriting, rcTransfer, rcIncomplete );
     }
 
     /* check for ability to send */

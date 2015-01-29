@@ -296,9 +296,10 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
         while ( rc == 0 ) 
         {
             uint32_t http_status;
-            rc_t rc = KHttpFileTimedReadInt ( self, pos, buffer, bsize, num_read, tm, & http_status );
+            rc = KHttpFileTimedReadInt ( self, pos, buffer, bsize, num_read, tm, & http_status );
             if ( rc != 0 ) 
             {   
+                /* if rc indicates a dropped connection, try again */
                 break;
             }
             if ( ! KHttpRetrierWait ( & retrier, http_status ) )
