@@ -940,6 +940,79 @@ TEST_CASE(CSRA1_PileupEventIterator_GetType)
     }
 }
 
+TEST_CASE(CSRA1_PileupEventIterator_MimicSraPileup)
+{
+    char const db_path[] = "SRR341578";
+
+    int64_t const pos_start = 20017;//19960;
+    uint64_t const len = 5;//+40+17;
+
+    ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
+    ngs::ReferenceIterator ri = run.getReferences ();
+
+    ri.nextReference ();
+    ri.nextReference ();
+
+    ngs::String strRefSlice = ri.getReferenceBases ( pos_start, len );
+
+    ngs::PileupIterator pi = ri.getPileupSlice ( pos_start, len, ngs::Alignment::primaryAlignment );
+
+    for (int64_t pos = pos_start; pi.nextPileup (); ++ pos)
+    {
+        ngs::PileupEventIterator pei = pi.getPileupEvents ();
+
+        std::cout
+            << ri.getCanonicalName ()
+            << "\t" << (pos + 1)
+            << "\t" << strRefSlice [pos - pos_start]
+            << "\t" << pi.getPileupDepth ()
+            << "\t";
+
+        for (; pei.nextPileupEvent (); )
+        {
+            ngs::PileupEvent::PileupEventType eventType = pei.getEventType ();
+
+//            if ( ( eventType & ngs::PileupEvent::insertion ) != 0 )
+//                std::cout << "insertion followed by ";
+
+            if ( ( eventType & ngs::PileupEvent::alignment_start ) != 0 )
+            {
+                char c = pei.getAlignmentQuality() + 33;
+                if ( c > '~' ) { c = '~'; }
+                if ( c < 33 ) { c = 33; }
+
+                std::cout << "^" << c;
+            }
+
+            bool reverse = ( eventType & ngs::PileupEvent::alignment_minus_strand ) != 0;
+
+            switch ( eventType & 7 )
+            {
+            case ngs::PileupEvent::match:
+                std::cout << (reverse ? "," : ".");
+                break;
+            case ngs::PileupEvent::mismatch:
+                std::cout
+                    << (reverse ?
+                        (char)tolower(pei.getAlignmentBase())
+                        : (char)toupper(pei.getAlignmentBase()));
+                break;
+            case ngs::PileupEvent::deletion:
+                std::cout
+                    << (reverse ?
+                        (char)tolower( strRefSlice [pos - pos_start] )
+                        : (char)toupper( strRefSlice [pos - pos_start] ));
+                break;
+            }
+
+            if ( ( eventType & ngs::PileupEvent::alignment_stop ) != 0 )
+                std::cout << "$";
+
+        }
+        std::cout << std::endl;
+
+    }
+}
 
 ///// ReadGroup
 FIXTURE_TEST_CASE(CSRA1_ReadGroup_GetName, CSRA1_Fixture)
