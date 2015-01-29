@@ -906,10 +906,36 @@ TEST_CASE(CSRA1_PileupEventIterator_GetType)
         REQUIRE_EQ ( pi.getPileupDepth(), (uint32_t)6 );
         for (; pei.nextPileupEvent (); )
         {
-            std::cout
-                << "Event type: "
-                << pei.getEventType ()
-                << std::endl;
+            std::cout << "Event type: ";
+
+            ngs::PileupEvent::PileupEventType eventType = pei.getEventType ();
+
+            if ( ( eventType & ngs::PileupEvent::insertion ) != 0 )
+                std::cout << "insertion followed by ";
+
+            switch ( eventType & 7 )
+            {
+            case ngs::PileupEvent::match:
+                std::cout << "match";
+                break;
+            case ngs::PileupEvent::mismatch:
+                std::cout << "mismatch";
+                break;
+            case ngs::PileupEvent::deletion:
+                std::cout << "deletion";
+                break;
+            }
+
+            if ( ( eventType & ngs::PileupEvent::alignment_minus_strand ) != 0 )
+                std::cout << " on minus strand";
+
+            if ( ( eventType & ngs::PileupEvent::alignment_start ) != 0 )
+                std::cout << ", (first)";
+
+            if ( ( eventType & ngs::PileupEvent::alignment_stop ) != 0 )
+                std::cout << ", (last)";
+
+            std::cout << std::endl;
         }
     }
 }
