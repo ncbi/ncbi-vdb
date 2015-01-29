@@ -24,6 +24,10 @@
 *
 */
 
+#ifndef _ARCH_BITS
+#define _ARCH_BITS __SIZEOF_POINTER__*__CHAR_BIT__
+#endif
+
 #if _ARCH_BITS == 32
 #include "../i386/atomic32.h"
 #elif _ARCH_BITS == 64
