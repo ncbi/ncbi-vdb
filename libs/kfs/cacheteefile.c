@@ -1799,7 +1799,7 @@ LIB_EXPORT rc_t CC GetCacheCompleteness( const struct KFile * self, float * perc
                 if ( rc == 0 )
                 {
                     uint64_t block_count;
-                    /* size_t */ uint64_t bitmap_bytes;
+                    uint64_t bitmap_bytes;
                     rc = verify_file_structure( local_size, block_size, content_size, &block_count, &bitmap_bytes, false );
                     if ( rc == 0 )
                     {
@@ -1832,11 +1832,11 @@ LIB_EXPORT rc_t CC GetCacheCompleteness( const struct KFile * self, float * perc
 							
                             if ( in_cache > 0 && block_count > 0 )
                             {
-                                float res = (float) in_cache;
+                                float res = ( float ) in_cache;
                                 res *= 100;
                                 res /= block_count;
                                 if ( percent != NULL ) ( *percent ) = res;
-								if ( bytes_in_cache != NULL ) ( *bytes_in_cache ) = ( in_cache * block_count );
+								if ( bytes_in_cache != NULL ) ( *bytes_in_cache ) = ( in_cache * block_size );
                             }
                         }
                         if ( bitmap != NULL )
