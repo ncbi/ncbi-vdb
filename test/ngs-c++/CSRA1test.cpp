@@ -1047,8 +1047,11 @@ void mark_line_as_starting_deletion ( PileupLine& line, uint32_t repeat_count, n
         PileupEvent& pileup_event = *it;
         if (pileup_event.alignment_id == alignment_id)
         {
-            pileup_event.next_repeat_count = repeat_count;
-            pileup_event.deletion_after_this_pos = true;
+            if ( ( pileup_event.event_type & 7 ) != ngs::PileupEvent::deletion)
+            {
+                pileup_event.next_repeat_count = repeat_count;
+                pileup_event.deletion_after_this_pos = true;
+            }
             break;
         }
     }
