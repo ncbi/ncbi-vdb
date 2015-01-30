@@ -347,6 +347,7 @@ static rc_t KartItemInitFromKartRow(const Kart *self, const KartItem **item,
         rc = KartAddRef(self);
     }
     if (rc == 0) {
+        KRefcountInit(&obj->refcount, 1, "KartItem", "KartItemInitFromKartRow", "kartitem");
         ++((Kart*)self)->itemsProcessed;
         obj->dad = self;
         *item = obj;
@@ -651,7 +652,7 @@ KFG_EXTERN rc_t CC KartMakeText(const struct KDirectory *dir, const char *path,
             rc = KartProcessHeader(obj);
         }
         if (rc == 0) {
-            KRefcountInit(&obj->refcount, 0, "Kart", "MakeText", "kart");
+            KRefcountInit(&obj->refcount, 1, "Kart", "MakeText", "kart");
             *kart = obj;
         }
         else {
@@ -702,7 +703,7 @@ LIB_EXPORT rc_t KartMake(const KDirectory *dir, const char *path,
             rc = KartProcessHeader(obj);
         }
         if (rc == 0) {
-            KRefcountInit(&obj->refcount, 0, "Kart", "Make", "kart");
+            KRefcountInit(&obj->refcount, 1, "Kart", "Make", "kart");
             *kart = obj;
         }
         else {
