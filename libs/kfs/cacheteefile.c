@@ -68,7 +68,7 @@ struct KCacheTeeFile;
 #define CACHE_TEE_REPORT 0
 #define CACHE_TEE_LOCKING 0
 
-#define CACHE_STAT 1
+#define CACHE_STAT 0
 
 #if( CACHE_STAT > 0 )
 typedef struct CacheStatistic
