@@ -134,7 +134,7 @@ LIB_EXPORT rc_t CC VectorSet ( Vector *self, uint32_t idx, const void *item )
     if ( ( idx -= self -> start ) < self -> len )
     {
         if ( self -> v [ idx ] != NULL )
-            return RC ( rcCont, rcVector, rcInserting, rcItem, rcExists );
+            return SILENT_RC ( rcCont, rcVector, rcInserting, rcItem, rcExists );
         self -> v [ idx ] = ( void* ) item;
         return 0;
     }
