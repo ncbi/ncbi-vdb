@@ -898,14 +898,26 @@ TEST_CASE(CSRA1_PileupEventIterator_GetType)
     ri.nextReference ();
     ri.nextReference ();
 
+    ngs::PileupEvent::PileupEventType arrRefEvents [] =
+    {
+        (ngs::PileupEvent::PileupEventType)(ngs::PileupEvent::mismatch | ngs::PileupEvent::alignment_minus_strand),
+        ngs::PileupEvent::mismatch,
+        ngs::PileupEvent::mismatch,
+        (ngs::PileupEvent::PileupEventType)(ngs::PileupEvent::mismatch | ngs::PileupEvent::alignment_start),
+        (ngs::PileupEvent::PileupEventType)(ngs::PileupEvent::mismatch | ngs::PileupEvent::alignment_minus_strand  | ngs::PileupEvent::alignment_start),
+        (ngs::PileupEvent::PileupEventType)(ngs::PileupEvent::mismatch | ngs::PileupEvent::alignment_start)
+    };
+
     ngs::PileupIterator pi = ri.getPileupSlice ( pos_start, len, ngs::Alignment::primaryAlignment );
 
     for (; pi.nextPileup (); )
     {
         ngs::PileupEventIterator pei = pi.getPileupEvents ();
         REQUIRE_EQ ( pi.getPileupDepth(), (uint32_t)6 );
-        for (; pei.nextPileupEvent (); )
+        for (size_t i = 0; pei.nextPileupEvent (); ++i)
         {
+            REQUIRE_EQ ( pei.getEventType (), arrRefEvents [i] );
+#if 0 // turning off output
             std::cout << "Event type: ";
 
             ngs::PileupEvent::PileupEventType eventType = pei.getEventType ();
@@ -936,17 +948,10 @@ TEST_CASE(CSRA1_PileupEventIterator_GetType)
                 std::cout << ", (last)";
 
             std::cout << std::endl;
+#endif
         }
     }
 }
-
-// structured pileup line:
-// -reference name - constant
-// -pos - always (pos-1) for the current step or end of pileup iteration
-// -reference base - always ref_bases[pos-1] for the current step or end of pileup iteration
-// -depth - previous depth, needs to be saved
-// structured pileup event line:
-// -previously saved getEventType() + info on deletion added later
 
 struct PileupEvent
 {
@@ -1061,7 +1066,7 @@ TEST_CASE(CSRA1_PileupEventIterator_MimicSraPileup)
 {
     char const db_path[] = "SRR341578";
 
-    int64_t const pos_start = 2427;//19960;//20017;//;
+    int64_t const pos_start = 2434;//19960;//20017;//;
     uint64_t const len = 2;//5+40+17;
 
     // pos_start = 2427, len = 2 behaves like "sra-pileup SRR341578 -r NC_011752.1:2428-2429 -s -n"
