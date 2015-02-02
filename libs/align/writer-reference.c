@@ -2356,14 +2356,18 @@ rc_t cigar2offset(int const options,
                     {
                         unsigned i;
                         
-                        for (i = first + 1; i < opcount; ++i) {
+                        for (i = first + 1; i < opcount; ) {
                             if (cigar[i].gentype == gen_insert_type && cigar[i-1].gentype == gen_delete_type) {
                                 cigar_bin_t const prv = cigar[i - 1];
                                 cigar_bin_t const cur = cigar[i];
                                 
-                                cigar[i] = prv;
-                                cigar[i-1] = cur;
+                                cigar[  i] = prv;
+                                cigar[--i] = cur;
+                                if (i <= first + 1)
+                                    i  = first + 1;
                             }
+                            else
+                                ++i;
                         }
                     }
                     /* merge adjacent delete type operations D+D -> D else becomes N */
