@@ -263,7 +263,7 @@ NGS_PileupEvent_v1_vt ITF_PileupEvent_vt =
     NGS_PileupEvent_v1_get_ins_bases,
     NGS_PileupEvent_v1_get_ins_quals,
     NGS_PileupEvent_v1_get_rpt_count,
-    NGS_PileupEvent_v1_get_indel_type,
+    /* NGS_PileupEvent_v1_get_indel_type, */
     NGS_PileupEvent_v1_next
 };
 

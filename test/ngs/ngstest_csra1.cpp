@@ -839,6 +839,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetStats, CSRA1_Fixture)
     EXIT;
 }
 
+#if 0
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetPileups, CSRA1_Fixture)
 {   
     ENTRY_GET_REF ( CSRA1_PrimaryOnly, "supercont2.1" );
@@ -859,7 +860,8 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetPileupSlice, CSRA1_Fixture)
     
     NGS_PileupRelease ( pileup, ctx );
     EXIT;
-}    
+}
+#endif
 
 // Iteration over References
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceIterator_GetLength_1, CSRA1_Fixture)

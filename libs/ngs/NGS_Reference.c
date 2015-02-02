@@ -40,6 +40,8 @@
 #include <kfc/except.h>
 #include <kfc/xc.h>
 
+#define ALLOW_PILEUPS 0
+
 /*--------------------------------------------------------------------------
  * NGS_Reference_v1
  */
@@ -457,7 +459,12 @@ struct NGS_Pileup* NGS_ReferenceGetPileups ( NGS_Reference * self, ctx_t ctx, bo
     }
     else
     {
+#if ALLOW_PILEUPS
         return VT ( self, get_pileups ) ( self, ctx, wants_primary, wants_secondary );
+#else
+        FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+        UNIMPLEMENTED ();
+#endif
     }
 
     return NULL;
@@ -479,7 +486,12 @@ struct NGS_Pileup* NGS_ReferenceGetPileupSlice ( NGS_Reference * self,
     }
     else
     {
+#if ALLOW_PILEUPS
         return VT ( self, get_pileup_slice ) ( self, ctx, offset, size, wants_primary, wants_secondary );
+#else
+        FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+        UNIMPLEMENTED ();
+#endif
     }
 
     return NULL;
