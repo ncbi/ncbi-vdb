@@ -215,7 +215,7 @@ XFSDocNodeDispose ( const struct XFSDocNode * self )
     struct XFSDocNode * Node = ( struct XFSDocNode * ) self;
 
 /*
-printf ( "XFSDocNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+printf ( "XFSDocNodeDispose ( 0x%p ) [%p]\n", ( void * ) Node, ( void * ) Node -> doc );
 */
 
     if ( Node == 0 ) {

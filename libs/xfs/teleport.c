@@ -200,7 +200,7 @@ XFS_EXTERN rc_t CC XFSRemoteRepositoryProvider (
                                 );
 
 /* TODO !!!
-#define REMOTE_FILE_NAME            "remote-File"
+#define REMOTE_FILE_NAME            "remote-file"
 XFS_EXTERN rc_t CC XFSRemoteFileProvider (
                                 const struct XFSTeleport ** Teleport
                                 );

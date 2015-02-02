@@ -103,7 +103,6 @@ rc_t CC
 XFSHandleDestroy ( const struct XFSHandle * self )
 {
     struct XFSHandle * Handle = ( struct XFSHandle * ) self;
-
     if ( Handle != NULL ) { 
         KRefcountWhack ( & ( Handle -> refcount ), XFSHandle_classname );
 
@@ -118,6 +117,8 @@ XFSHandleDestroy ( const struct XFSHandle * self )
 
             Handle -> Handle = NULL;
         }
+
+        free ( Handle );
     }
 
     return 0;
@@ -134,7 +135,6 @@ XFSHandleAddRef ( const struct XFSHandle * self )
     RCt = 0;
     RetCode = 0;
     Handle = ( struct XFSHandle * ) self;
-
     if ( Handle != NULL ) {
         RetCode = KRefcountAdd (
                         & ( Handle -> refcount ),
@@ -169,7 +169,6 @@ XFSHandleRelease ( const struct XFSHandle * self )
     RCt = 0;
     RetCode = 0;
     Handle = ( struct XFSHandle * ) self;
-
     if ( Handle != NULL ) {
         RetCode = KRefcountDrop (
                         & ( Handle -> refcount ),

@@ -114,7 +114,9 @@ _AddKartItem ( struct XFSKartNode * Node, const char * ItemName )
         return XFS_RC ( rcInvalid );
     }
 
-    if ( XFSTextDocMake ( & ItemDoc ) != 0 ) {
+    RCt = XFSTextDocMake ( & ItemDoc );
+
+    if ( RCt != 0 ) {
         return XFS_RC ( rcExhausted );
     }
 
@@ -174,14 +176,13 @@ _AddKartItem ( struct XFSKartNode * Node, const char * ItemName )
         }
     }
 
+    XFSDocRelease ( ItemDoc );
+    ItemDoc = NULL;
+
     if ( RCt != 0 ) {
         if ( ItemNode != NULL ) { 
             XFSNodeDispose ( ItemNode );
             ItemNode = NULL;
-        }
-        if ( ItemDoc != NULL ) {
-            XFSDocRelease ( ItemDoc );
-            ItemDoc = NULL;
         }
     }
 
@@ -206,67 +207,65 @@ _AddReadMe ( struct XFSKartNode * Node, struct KNamelist * List )
     ListQ = ListI = 0;
     TheItem = NULL;
 
-    if ( XFSTextDocMake ( & Doc ) != 0 ) {
+    RCt = XFSTextDocMake ( & Doc );
+    if ( RCt != 0 ) {
         return XFS_RC ( rcExhausted );
     }
 
     RCt = XFSTextDocAppend ( Doc, "KART\n====\nSource : %s\n\nITEMS\n====\n", XFSKartPath ( Node -> kart ) );
-    if ( RCt != 0 ) {
-        XFSDocDispose ( Doc );
-
-        return XFS_RC ( rcExhausted );
-    }
-
-    RCt = KNamelistCount ( List, & ListQ );
     if ( RCt == 0 ) {
-        for ( ListI = 0; ListI < ListQ; ListI ++ ) {
-            RCt = KNamelistGet ( List, ListI, & DisplayName );
-            if ( RCt != 0 ) { 
-                break;
-            }
-
-            TheItem = XFSKartGet ( Node -> kart, DisplayName );
-            if ( TheItem == NULL ) {
-                RCt = XFS_RC ( rcInvalid );
-                break;
-            } 
-
-            Name = XFSKartItemName ( TheItem );
-            Accession = XFSKartItemAccession ( TheItem );
-            Description = XFSKartItemDescription ( TheItem );
-
-            RCt = XFSTextDocAppend (
-                            Doc,
-                            "%s|%s|%s|%s|%s|%s\n",
-                            DisplayName,
-                            XFSKartItemProject ( TheItem ),
-                            XFSKartItemId ( TheItem ),
-                            ( Accession == NULL ? "" : Accession),
-                            ( Name == NULL ? "" : Name),
-                            ( Description == NULL ? "" : Description)
-                            );
-            if ( RCt != 0 ) {
-                break;
-            }
-        }
-    }
-
-    if ( RCt == 0 ) {
-        RCt = XFSDocNodeMakeWithFlavor (
-                                        Doc,
-                                        "README.txt",
-                                        NULL,
-                                        _sFlavorOfReadMe,
-                                        & Readme
-                                        );
+        RCt = KNamelistCount ( List, & ListQ );
         if ( RCt == 0 ) {
-            RCt = XFSContNodeAddChild (
-                                    & ( Node -> node . node ),
-                                    Readme
-                                    );
-            /* We do not dispose node here, but on the caller level */
+            for ( ListI = 0; ListI < ListQ; ListI ++ ) {
+                RCt = KNamelistGet ( List, ListI, & DisplayName );
+                if ( RCt != 0 ) { 
+                    break;
+                }
+
+                TheItem = XFSKartGet ( Node -> kart, DisplayName );
+                if ( TheItem == NULL ) {
+                    RCt = XFS_RC ( rcInvalid );
+                    break;
+                } 
+
+                Name = XFSKartItemName ( TheItem );
+                Accession = XFSKartItemAccession ( TheItem );
+                Description = XFSKartItemDescription ( TheItem );
+
+                RCt = XFSTextDocAppend (
+                                Doc,
+                                "%s|%s|%s|%s|%s|%s\n",
+                                DisplayName,
+                                XFSKartItemProject ( TheItem ),
+                                XFSKartItemId ( TheItem ),
+                                ( Accession == NULL ? "" : Accession),
+                                ( Name == NULL ? "" : Name),
+                                ( Description == NULL ? "" : Description)
+                                );
+                if ( RCt != 0 ) {
+                    break;
+                }
+            }
+        }
+
+        if ( RCt == 0 ) {
+            RCt = XFSDocNodeMakeWithFlavor (
+                                            Doc,
+                                            "README.txt",
+                                            NULL,
+                                            _sFlavorOfReadMe,
+                                            & Readme
+                                            );
+            if ( RCt == 0 ) {
+                RCt = XFSContNodeAddChild (
+                                        & ( Node -> node . node ),
+                                        Readme
+                                        );
+            }
         }
     }
+
+    XFSDocRelease ( Doc );
 
     return RCt;
 }   /* _AddReadMe () */

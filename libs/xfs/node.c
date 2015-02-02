@@ -72,6 +72,24 @@ XFSNodeInit (
     return XFSNodeInitVT ( self, NodeName, NULL );
 }   /* XFSNodeInit () */
 
+static
+rc_t CC
+_NodeSetName ( const struct XFSNode * self, const char * Name )
+{
+    struct XFSNode * Node = ( struct XFSNode * ) self;
+
+    if ( Node == NULL || Name == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    if ( Node -> Name != NULL ) {
+        free ( Node -> Name );
+        Node -> Name = NULL;
+    }
+
+    return XFS_StrDup ( Name, ( const char ** ) & ( Node -> Name ) );
+}   /* _NodeSetName () */
+
 LIB_EXPORT
 rc_t CC
 XFSNodeInitVT (
@@ -94,10 +112,7 @@ XFSNodeInitVT (
         Node -> vt = VT;
     }
 
-    RCt = XFS_StrDup (
-                    NodeName,
-                    ( const char ** ) & ( Node -> Name )
-                    );
+    RCt = _NodeSetName ( self, NodeName );
 /*
 printf ( " [XFSNodeInit] [%p] [%s]\n", ( void * ) Node, Node -> Name );
 */
@@ -112,7 +127,7 @@ printf ( " [XFSNodeInit] [%p] [%s]\n", ( void * ) Node, Node -> Name );
     }
 
     return RCt;
-}   /* XFSNodeInit () */
+}   /* XFSNodeInitVT () */
 
 LIB_EXPORT
 rc_t CC
@@ -185,11 +200,9 @@ XFSNodeMake (
                                     ( const struct XFSNode ** )& NewNode
                                     );
                 if ( RCt == 0 ) {
-
-                    RCt = XFSNodeInit ( NewNode, NewNodeName );
+                    RCt = _NodeSetName ( NewNode, NewNodeName );
                     if ( RCt != 0 ) {
                         XFSNodeDispose ( NewNode );
-                        RCt = XFS_RC ( rcExhausted );
                     }
                     else {
                         * Node = NewNode;

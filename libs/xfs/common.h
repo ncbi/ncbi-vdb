@@ -52,6 +52,7 @@ static const uint32_t _sFlavorOfKartItem          = 8;
 static const uint32_t _sFlavorOfKartCollection    = 9;
 static const uint32_t _sFlavorOfHttp              = 10;
 static const uint32_t _sFlavorOfTar               = 11;
+static const uint32_t _sFlavorOfEncode            = 12;
 
 /*))    Methods related to all commonly used nodes
  ((*/
@@ -112,6 +113,30 @@ XFS_EXTERN rc_t CC XFSKartCollectionNodeMake (
                             const char * Name,
                             const char * Path,
                             const char * Perm,      /* Could be NULL */
+                            struct XFSNode ** Node
+                            );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/* TarArchiveNode - implemented in tar.c                             */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+XFS_EXTERN rc_t CC XFSTarArchiveNodeMake (
+                            const char * Name,
+                            const char * Path,
+                            const char * Perm,      /* Could be NULL */
+                                                    /* Not used nos */
+                            struct XFSNode ** Node
+                            );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/* EncryptedFileNode - implemented in encro.c                        */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+XFS_EXTERN rc_t CC XFSEncryptedFileNodeMake (
+                            const char * Name,
+                            const char * Path,
+                            const char * Passwd,
+                            const char * EncType,   /* could be NULL */
                             struct XFSNode ** Node
                             );
 

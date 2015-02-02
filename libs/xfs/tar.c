@@ -1014,8 +1014,8 @@ _TarNodeDescribe_v1 (
     }
 
     Abbr = XFSTarEntryIsFolder ( ( ( const struct XFSTarNode * ) self ) -> entry )
-            ? "HTTP FOLDER"
-            : "HTTP NODE"
+            ? "TAR FOLDER"
+            : "TAR NODE"
             ;
 
     if ( self == NULL ) {
@@ -1185,3 +1185,38 @@ XFSTarArchiveProvider ( const struct XFSTeleport ** Teleport )
 
     return 0;
 }   /* XFSTarArchiveProvider () */
+
+LIB_EXPORT
+rc_t CC
+XFSTarArchiveNodeMake (
+                const char * Name,
+                const char * Path,
+                const char * Perm,
+                struct XFSNode ** Node
+)
+{
+    rc_t RCt;
+    struct XFSNode * TheNode;
+
+    RCt = 0;
+
+    if ( Node != NULL ) {
+        * Node = NULL;
+    }
+
+    if ( Name == NULL || Path == NULL || Node == NULL ) {
+        return XFS_RC ( rcNull ) ;
+    }
+
+    RCt = XFSTarRootNodeMake ( & TheNode, Name, Path );
+    if ( RCt == 0 ) {
+        * Node = TheNode;
+    }
+    else {
+        if ( TheNode != NULL ) {
+            XFSTarRootNodeDispose ( ( const struct XFSTarRootNode * ) TheNode );
+        }
+    }
+
+    return RCt;
+}   /* XFSTarArchiveNodeMake () */

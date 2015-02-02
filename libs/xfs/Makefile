@@ -115,6 +115,8 @@ XFS_SRC = \
     http    \
     xtar     \
     tar     \
+    xencro     \
+    encro     \
     lockdpt \
     schwarzschraube \
     zehr    \

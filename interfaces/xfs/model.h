@@ -50,6 +50,8 @@ struct KNamelist;
  ((*/
 #define XFS_MODEL_SOURCE    "source"
 #define XFS_MODEL_TEXT      "text"
+#define XFS_MODEL_PASSWD    "password"
+#define XFS_MODEL_ENCTYPE   "enctype"
 
 /*)))
  ///   Methods
