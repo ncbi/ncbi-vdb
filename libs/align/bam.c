@@ -130,7 +130,7 @@ static rc_t BufferedFileRead(BufferedFile *const self)
 static rc_t BufferedFileInit(BufferedFile *const self, KFile const *const kf)
 {
     rc_t const rc = KFileSize(kf, &self->fmax);
-    if (rc) {
+    if (rc || self->fmax == 0) {
         self->fmax = 0;
         self->size = PIPE_BUFFER_SIZE;
     }
