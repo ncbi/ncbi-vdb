@@ -912,15 +912,14 @@ TEST_CASE(CSRA1_PileupEventIterator_GetType)
 
     for (; pi.nextPileup (); )
     {
-        ngs::PileupEventIterator pei = pi.getPileupEvents ();
         REQUIRE_EQ ( pi.getPileupDepth(), (uint32_t)6 );
-        for (size_t i = 0; pei.nextPileupEvent (); ++i)
+        for (size_t i = 0; pi.nextPileupEvent (); ++i)
         {
-            REQUIRE_EQ ( pei.getEventType (), arrRefEvents [i] );
+            REQUIRE_EQ ( pi.getEventType (), arrRefEvents [i] );
 #if 0 // turning off output
             std::cout << "Event type: ";
 
-            ngs::PileupEvent::PileupEventType eventType = pei.getEventType ();
+            ngs::PileupEvent::PileupEventType eventType = pi.getEventType ();
 
             if ( ( eventType & ngs::PileupEvent::insertion ) != 0 )
                 std::cout << "insertion followed by ";
@@ -1086,22 +1085,21 @@ TEST_CASE(CSRA1_PileupEventIterator_MimicSraPileup)
     int64_t pos = pos_start;
     for (; pi.nextPileup (); ++ pos)
     {
-        ngs::PileupEventIterator pei = pi.getPileupEvents ();
         ri.getCanonicalName ();
 
         line_curr.depth = pi.getPileupDepth ();
         line_curr.vecEvents.reserve (line_curr.depth);
 
-        for (; pei.nextPileupEvent (); )
+        for (; pi.nextPileupEvent (); )
         {
             PileupEvent pileup_event;
 
-            pileup_event.alignment_id = pei.getAlignmentId().toString();
+            pileup_event.alignment_id = pi.getAlignmentId().toString();
             pileup_event.deletion_after_this_pos = false;
-            pileup_event.event_type = pei.getEventType ();
-            pileup_event.repeat_count = pei.getEventRepeatCount ();
-            pileup_event.mapping_quality = pei.getMappingQuality();
-            pileup_event.alignment_base = pei.getAlignmentBase();
+            pileup_event.event_type = pi.getEventType ();
+            pileup_event.repeat_count = pi.getEventRepeatCount ();
+            pileup_event.mapping_quality = pi.getMappingQuality();
+            pileup_event.alignment_base = pi.getAlignmentBase();
 
             if ( pos != pos_start &&
                 (pileup_event.event_type & 7) == ngs::PileupEvent::deletion )

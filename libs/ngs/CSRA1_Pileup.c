@@ -443,7 +443,7 @@ void CSRA1_PileupWhack ( CSRA1_Pileup * self, ctx_t ctx )
     /* reference cursor, blobs */
     CSRA1_Pileup_RefCursorDataWhack ( & self -> ref, ctx );
     
-    NGS_PileupWhack ( & self -> dad, ctx );
+    CSRA1_PileupEventWhack ( & self -> dad, ctx );
 }
 
 static
@@ -453,7 +453,7 @@ NGS_String * CSRA1_PileupGetReferenceSpec ( const CSRA1_Pileup * self, ctx_t ctx
 
     TRY ( CHECK_STATE ( self, ctx ) )
     {
-        return NGS_ReferenceGetCanonicalName ( self -> dad . ref, ctx );
+        return NGS_ReferenceGetCanonicalName ( self -> dad . dad . dad . ref, ctx );
     }
 
     return NULL;
@@ -473,22 +473,40 @@ int64_t CSRA1_PileupGetReferencePosition ( const CSRA1_Pileup * self, ctx_t ctx 
 }
 
 static
-struct NGS_PileupEvent * CSRA1_PileupGetEvents ( CSRA1_Pileup * self, ctx_t ctx )
+char CSRA1_PileupGetReferenceBase ( const CSRA1_Pileup * cself, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
+    CSRA1_Pileup * self = ( CSRA1_Pileup * ) cself;
+
     TRY ( CHECK_STATE ( self, ctx ) )
     {
-        TRY ( struct NGS_PileupEvent * ret = CSRA1_PileupEventIteratorMake ( ctx, self ) )
+        if ( self -> ref_base == 0 )
         {
-            return ret;
+            if ( self -> ref_chunk_bases == NULL )
+            {
+                const void * base;
+                uint32_t elem_bits, boff, row_len;
+                ON_FAIL ( NGS_CursorCellDataDirect ( self -> ref . curs, ctx, self -> ref_chunk_id,
+                    reference_READ, & elem_bits, & base, & boff, & row_len ) )
+                {
+                    return 0;
+                }
+
+                self -> ref_chunk_bases = base;
+                assert ( row_len == self -> ref . max_seq_len ||
+                         self -> ref_chunk_xend - self -> ref . max_seq_len + row_len >= self -> slice_xend );
+            }
+
+            assert ( self -> ref . max_seq_len != 0 );
+            self -> ref_base = self -> ref_chunk_bases [ self -> ref_zpos % self -> ref . max_seq_len ]; 
         }
 
-        /* TBD - is this what we want? */
-        self -> state = pileup_state_err;
+        return self -> ref_base;
+
     }
 
-    return NULL;
+    return 0;
 }
 
 static
@@ -1081,7 +1099,7 @@ void CSRA1_PileupRevOverlap ( CSRA1_Pileup * self, ctx_t ctx )
                 self -> ref_chunk_id = self -> reference_start_id;
             else
             {
-                uint64_t ref_len = NGS_ReferenceGetLength ( self -> dad . ref, ctx );
+                uint64_t ref_len = NGS_ReferenceGetLength ( self -> dad . dad . dad . ref, ctx );
                 overlap_zstart += ref_len;
                 self -> ref_chunk_id = overlap_zstart / self -> ref . max_seq_len + self -> reference_start_id;
                 self -> effective_ref_zstart -= ref_len;
@@ -1111,7 +1129,7 @@ void CSRA1_PileupRevOverlap ( CSRA1_Pileup * self, ctx_t ctx )
                 break;
 
             /* linearize circularity */
-            self -> effective_ref_zstart -= NGS_ReferenceGetLength ( self -> dad . ref, ctx );
+            self -> effective_ref_zstart -= NGS_ReferenceGetLength ( self -> dad . dad . dad . ref, ctx );
 
             /* wrap around */
             self -> ref_chunk_id = self -> reference_last_id;
@@ -1322,21 +1340,44 @@ bool CSRA1_PileupIteratorGetNext ( CSRA1_Pileup * self, ctx_t ctx )
         break;
     }
 
+    /* reset the event iterator */
+    if ( ! FAILED () )
+        CSRA1_PileupEventIteratorReset ( & self -> dad, ctx );
+
     return pos_valid;
 }
 
-static NGS_Pileup_vt CSRA1_Pileup_vt_inst =
+static NGS_Pileup_vt CSRA1_Pileup_vt =
 {
     {
-        /* NGS_Refcount */
-        CSRA1_PileupWhack
+        {
+            /* NGS_Refcount */
+            CSRA1_PileupWhack
+        },
+
+        /* NGS_PileupEvent */
+        CSRA1_PileupEventGetMappingQuality,
+        CSRA1_PileupEventGetAlignmentId,
+        CSRA1_PileupEventGetAlignment,
+        CSRA1_PileupEventGetAlignmentPosition,
+        CSRA1_PileupEventGetFirstAlignmentPosition,
+        CSRA1_PileupEventGetLastAlignmentPosition,
+        CSRA1_PileupEventGetEventType,
+        CSRA1_PileupEventGetAlignmentBase,
+        CSRA1_PileupEventGetAlignmentQuality,
+        CSRA1_PileupEventGetInsertionBases,
+        CSRA1_PileupEventGetInsertionQualities,
+        CSRA1_PileupEventGetRepeatCount,
+        CSRA1_PileupEventGetIndelType,
+        CSRA1_PileupEventIteratorNext,
+        CSRA1_PileupEventIteratorReset
     },
 
     CSRA1_PileupGetReferenceSpec,    
     CSRA1_PileupGetReferencePosition,
-    CSRA1_PileupGetEvents,           
+    CSRA1_PileupGetReferenceBase,           
     CSRA1_PileupGetDepth,            
-    CSRA1_PileupIteratorGetNext,     
+    CSRA1_PileupIteratorGetNext     
 };
 
 
@@ -1499,7 +1540,7 @@ void CSRA1_PileupInit ( ctx_t ctx, CSRA1_Pileup * obj, const char * instname,
     assert ( ref != NULL );
 
     /* initialize superclass */    
-    TRY ( NGS_PileupInit ( ctx, & obj -> dad, & CSRA1_Pileup_vt_inst, "CSRA1_Pileup", instname, ref ) ) 
+    TRY ( CSRA1_PileupEventInit ( ctx, & obj -> dad, & CSRA1_Pileup_vt, "CSRA1_Pileup", instname, ref ) ) 
     {
         /* capture reference cursor */
         TRY ( CSRA1_Pileup_RefCursorDataInit ( ctx, & obj -> ref, ref_curs, first_row_id ) )
@@ -1589,7 +1630,7 @@ NGS_Pileup * CSRA1_PileupIteratorMake ( ctx_t ctx,
         TRY ( CSRA1_PileupInit ( ctx, obj, instname, ref, db, curs_ref, first_row_id, last_row_id, wants_primary, wants_secondary ) )
         {
             obj -> state = pileup_state_initial;
-            return & obj -> dad;
+            return & obj -> dad . dad;
         }
 
         CSRA1_PileupWhack ( obj, ctx );

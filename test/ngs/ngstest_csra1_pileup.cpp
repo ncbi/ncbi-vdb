@@ -144,11 +144,11 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessBeforeNext_PileupGetReferencePosi
     
     EXIT;
 }
-FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessBeforeNext_PileupGetPileupEvents, CSRA1_Fixture)
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessBeforeNext_PileupGetReferenceBase, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
 
-    REQUIRE_NULL ( NGS_PileupGetPileupEvents ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (char)0, NGS_PileupGetReferenceBase ( m_pileup, ctx ) ); 
     REQUIRE_FAILED ();
     
     EXIT;
@@ -182,14 +182,13 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_AccessAfterNext_PileupGetReferencePositio
     EXIT;
 }
 
-FIXTURE_TEST_CASE(CSRA1_PileupIterator_AccessAfterNext_PileupGetPileupEvents, CSRA1_Fixture)
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_AccessAfterNext_PileupGetReferenceBase, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP_NEXT ( CSRA1_PrimaryOnly, "supercont2.1" );
 
-    NGS_PileupEvent * events = NGS_PileupGetPileupEvents ( m_pileup, ctx ); 
-    REQUIRE ( ! FAILED () && events );
+    char base = NGS_PileupGetReferenceBase ( m_pileup, ctx ); 
+    //REQUIRE ( ! FAILED () && base != 0 );
     
-    NGS_PileupEventRelease ( events, ctx );
     EXIT;
 }
 
@@ -221,12 +220,12 @@ FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupGetReferencePositi
     
     EXIT;
 }
-FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupGetPileupEvents, CSRA1_Fixture)
+FIXTURE_TEST_CASE(CSRA1_PileupIterator_NoAccessAfterEnd_PileupGetReferenceBase, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP ( CSRA1_PrimaryOnly, "supercont2.1" );
     while ( NGS_PileupIteratorNext ( m_pileup, ctx ) ) {}
 
-    REQUIRE_NULL ( NGS_PileupGetPileupEvents ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (char)0, NGS_PileupGetReferenceBase ( m_pileup, ctx ) ); 
     REQUIRE_FAILED ();
     
     EXIT;
@@ -340,11 +339,11 @@ FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessBeforeNext_PileupGetReferenc
     
     EXIT;
 }
-FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessBeforeNext_PileupGetPileupEvents, CSRA1_Fixture)
+FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessBeforeNext_PileupGetReferenceBase, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP_SLICE( CSRA1_PrimaryOnly, "supercont2.1", 5431, 4 );
 
-    REQUIRE_NULL ( NGS_PileupGetPileupEvents ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (char)0, NGS_PileupGetReferenceBase ( m_pileup, ctx ) ); 
     REQUIRE_FAILED ();
     
     EXIT;
@@ -378,14 +377,13 @@ FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_AccessAfterNext_PileupGetReferencePo
     EXIT;
 }
 
-FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_AccessAfterNext_PileupGetPileupEvents, CSRA1_Fixture)
+FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_AccessAfterNext_PileupGetReferenceBase, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP_SLICE_NEXT( CSRA1_PrimaryOnly, "supercont2.1", 5431, 4 );
 
-    NGS_PileupEvent * events = NGS_PileupGetPileupEvents ( m_pileup, ctx ); 
-    REQUIRE ( ! FAILED () && events );
+    char base = NGS_PileupGetReferenceBase ( m_pileup, ctx ); 
+    //REQUIRE ( ! FAILED () && base != 0 );
     
-    NGS_PileupEventRelease ( events, ctx );
     EXIT;
 }
 
@@ -418,12 +416,12 @@ FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessAfterEnd_PileupGetReferenceP
     
     EXIT;
 }
-FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessAfterEnd_PileupGetPileupEvents, CSRA1_Fixture)
+FIXTURE_TEST_CASE(CSRA1_PileupIteratorSlice_NoAccessAfterEnd_PileupGetReferenceBase, CSRA1_Fixture)
 {
     ENTRY_GET_PILEUP_SLICE( CSRA1_PrimaryOnly, "supercont2.1", 5431, 4 );
     while ( NGS_PileupIteratorNext ( m_pileup, ctx ) ) {}
 
-    REQUIRE_NULL ( NGS_PileupGetPileupEvents ( m_pileup, ctx ) ); 
+    REQUIRE_EQ ( (char) 0, NGS_PileupGetReferenceBase ( m_pileup, ctx ) ); 
     REQUIRE_FAILED ();
     
     EXIT;

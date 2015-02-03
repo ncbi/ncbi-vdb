@@ -134,6 +134,22 @@ struct CSRA1_Pileup_Entry
 
 
 /*--------------------------------------------------------------------------
+ * CSRA1_PileupEvent
+ *  built-in base class iterator
+ */
+struct CSRA1_PileupEvent
+{
+    NGS_Pileup dad;
+
+    /* current alignment being examined */
+    CSRA1_Pileup_Entry * entry;
+
+    /* set to true within "next" */
+    bool seen_first;
+};
+
+
+/*--------------------------------------------------------------------------
  * CSRA1_Pileup_AlignList
  *  list of alignments that intersect the current pileup position
  */
@@ -197,7 +213,7 @@ struct CSRA1_Pileup_AlignCursorData
 typedef struct CSRA1_Pileup CSRA1_Pileup;
 struct CSRA1_Pileup
 {
-    NGS_Pileup dad;   
+    struct CSRA1_PileupEvent dad;   
 
     /* rows for this chromosome: [ reference_start_id, reference_last_id ] */
     int64_t reference_start_id;
@@ -262,6 +278,28 @@ struct NGS_Pileup * CSRA1_PileupIteratorMakeSlice ( ctx_t ctx, struct NGS_Refere
  */
 const void * CSRA1_PileupGetEntry ( CSRA1_Pileup * self, ctx_t ctx,
     CSRA1_Pileup_Entry * entry, uint32_t col_idx );
+
+
+/* PileupEntry method declarations */
+void CSRA1_PileupEventWhack ( struct CSRA1_PileupEvent * self, ctx_t ctx );
+int CSRA1_PileupEventGetMappingQuality ( struct CSRA1_PileupEvent const * self, ctx_t ctx );
+struct NGS_String * CSRA1_PileupEventGetAlignmentId ( struct CSRA1_PileupEvent const * self, ctx_t ctx );
+struct NGS_Alignment * CSRA1_PileupEventGetAlignment ( struct CSRA1_PileupEvent const * self, ctx_t ctx );
+int64_t CSRA1_PileupEventGetAlignmentPosition ( struct CSRA1_PileupEvent const * self, ctx_t ctx );
+int64_t CSRA1_PileupEventGetFirstAlignmentPosition ( struct CSRA1_PileupEvent const * self, ctx_t ctx );
+int64_t CSRA1_PileupEventGetLastAlignmentPosition ( struct CSRA1_PileupEvent const * self, ctx_t ctx );
+int CSRA1_PileupEventGetEventType ( struct CSRA1_PileupEvent const * self, ctx_t ctx );
+char CSRA1_PileupEventGetAlignmentBase ( struct CSRA1_PileupEvent const * self, ctx_t ctx );
+char CSRA1_PileupEventGetAlignmentQuality ( struct CSRA1_PileupEvent const * self, ctx_t ctx );
+struct NGS_String * CSRA1_PileupEventGetInsertionBases ( struct CSRA1_PileupEvent const * self, ctx_t ctx );
+struct NGS_String * CSRA1_PileupEventGetInsertionQualities ( struct CSRA1_PileupEvent const * self, ctx_t ctx );
+unsigned int CSRA1_PileupEventGetRepeatCount ( struct CSRA1_PileupEvent const * self, ctx_t ctx );
+int CSRA1_PileupEventGetIndelType ( struct CSRA1_PileupEvent const * self, ctx_t ctx );
+bool CSRA1_PileupEventIteratorNext ( struct CSRA1_PileupEvent * self, ctx_t ctx );
+void CSRA1_PileupEventIteratorReset ( struct CSRA1_PileupEvent * self, ctx_t ctx );
+void CSRA1_PileupEventInit ( ctx_t ctx, struct CSRA1_PileupEvent * obj, const NGS_Pileup_vt * vt,
+    const char * clsname, const char * instname, struct NGS_Reference * ref );
+
 
 #ifdef __cplusplus
 }

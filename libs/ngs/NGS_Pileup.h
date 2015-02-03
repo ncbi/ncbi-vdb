@@ -37,6 +37,16 @@ typedef struct NGS_Pileup NGS_Pileup;
 #include "NGS_Refcount.h"
 #endif
 
+#ifndef _h_ngs_pileupevent_
+
+#ifndef NGS_PILEUPEVENT
+struct CSRA1_PileupEvent;
+#define NGS_PILEUPEVENT struct CSRA1_PileupEvent
+#endif
+
+#include "NGS_PileupEvent.h"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -53,29 +63,29 @@ struct NGS_Reference;
  */
  
 
-/* ToRefcount
+/* ToPileupEvent
  *  inline cast that preserves const
  */
-#define NGS_PileupToRefcount( self ) \
+#define NGS_PileupToPileupEvent( self ) \
     ( & ( self ) -> dad )
 
 /* Release
  *  release reference
  */
 #define NGS_PileupRelease( self, ctx ) \
-    NGS_RefcountRelease ( NGS_PileupToRefcount ( self ), ctx )
+    NGS_PileupEventRelease ( NGS_PileupToPileupEvent ( self ), ctx )
 
 /* Duplicate
  *  duplicate reference
  */
 #define NGS_PileupDuplicate( self, ctx ) \
-    ( ( NGS_Pileup* ) NGS_RefcountDuplicate ( NGS_PileupToRefcount ( self ), ctx ) )
+    ( ( NGS_Pileup* ) NGS_PileupEventDuplicate ( NGS_PileupToPileupEvent ( self ), ctx ) )
 
 struct NGS_String* NGS_PileupGetReferenceSpec ( const NGS_Pileup* self, ctx_t ctx );
 
 int64_t NGS_PileupGetReferencePosition ( const NGS_Pileup* self, ctx_t ctx );
 
-struct NGS_PileupEvent* NGS_PileupGetPileupEvents ( NGS_Pileup* self, ctx_t ctx );
+char NGS_PileupGetReferenceBase ( const NGS_Pileup* self, ctx_t ctx );
 
 unsigned int NGS_PileupGetPileupDepth ( const NGS_Pileup* self, ctx_t ctx );
  
@@ -87,19 +97,18 @@ bool NGS_PileupIteratorNext ( NGS_Pileup* self, ctx_t ctx );
  */
 struct NGS_Pileup
 {
-    NGS_Refcount dad;
-    struct NGS_Reference * ref;
+    NGS_PileupEvent dad;
 };
 
 typedef struct NGS_Pileup_vt NGS_Pileup_vt;
 struct NGS_Pileup_vt
 {
-    NGS_Refcount_vt dad;
+    NGS_PileupEvent_vt dad;
 
     /* Pileup interface */
     struct NGS_String *         ( * get_reference_spec )        ( const NGS_PILEUP * self, ctx_t ctx );
     int64_t                     ( * get_reference_position )    ( const NGS_PILEUP * self, ctx_t ctx );
-    struct NGS_PileupEvent *    ( * get_pileup_events )         ( NGS_PILEUP * self, ctx_t ctx );
+    char                        ( * get_reference_base )        ( const NGS_PILEUP * self, ctx_t ctx );
     unsigned int                ( * get_pileup_depth )          ( const NGS_PILEUP * self, ctx_t ctx );
 
     /* PileupIterator interface */
@@ -110,7 +119,7 @@ struct NGS_Pileup_vt
 */
 void NGS_PileupInit ( ctx_t ctx, 
                       struct NGS_Pileup * self, 
-                      NGS_Pileup_vt * vt, 
+                      const NGS_Pileup_vt * vt, 
                       const char *clsname, 
                       const char *instname, 
                       struct NGS_Reference* ref );
