@@ -345,8 +345,12 @@ static rc_t cache_access( int id )
 			rc = KDirectoryMakeCacheTee ( dir, &tee, org, 0, "%s", CACHEFILE );
 			if ( rc == 0 )
 			{
-				KOutMsg( "Test: Thread #%d\n", id );
 				rc = compare_file_content( org, tee, id * 1024 * 32, 100 );
+				if ( rc == 0 )
+					KOutMsg( "Test: Thread #%d OK\n", id );
+				else
+					KOutMsg( "Test: Thread #%d failed\n", id );
+					
 				KFileRelease( tee );
 			}
 			KFileRelease( org );
@@ -370,8 +374,6 @@ TEST_CASE( CacheTee_Multiple_Users )
 	remove_file( CACHEFILE );	// to start with a clean slate on caching...
 	remove_file( CACHEFILE1 );
 
-	// REQUIRE_RC( cache_access( 0 ) ); // if this line is commented out: at least one of the threads will fail!
-	
 	int n = 8;
 	KThread *t [ n ];
 	int id[ n ];
@@ -390,6 +392,50 @@ TEST_CASE( CacheTee_Multiple_Users )
 		REQUIRE_RC( rc );
 		REQUIRE_RC( rc_thread );
 	}
+}
+
+
+
+TEST_CASE( CacheTee_ReadOnly )
+{
+	KOutMsg( "Test: CacheTee_ReadOnly\n" );
+	remove_file( CACHEFILE );	// to start with a clean slate on caching...
+	remove_file( CACHEFILE1 );
+
+    KDirectory * dir;
+    REQUIRE_RC( KDirectoryNativeDir( &dir ) );
+
+	const KFile * org;
+    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
+
+	/* make a fresh cache-tee and read 100 bytes from it... */
+	const KFile * tee;
+	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, 0, "%s", CACHEFILE ) );
+	REQUIRE_RC( read_partial( tee, 100, 100 ) );
+	REQUIRE_RC( KFileRelease( tee ) );
+
+	/* switch the cache-file to read-only */
+	REQUIRE_RC( KDirectorySetAccess ( dir, false, 0, 0222, "%s", CACHEFILE1 ) );
+
+	/* make a second cache-tee and read all from it... */
+	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, 0, "%s", CACHEFILE ) );
+	REQUIRE_RC( read_all( tee, 1024 * 32 )	);
+	REQUIRE_RC( KFileRelease( tee ) );
+
+	/* we read all from the tee-file that should have promoted it on Release,
+	   but we made it read only before the creation of the 2nd tee-file
+	   because of that it should not be promoted and not complete */
+	
+	const KFile * cache;
+	REQUIRE_RC_FAIL( KDirectoryOpenFileRead( dir, &cache, "%s", CACHEFILE ) );
+	REQUIRE_RC( KDirectoryOpenFileRead( dir, &cache, "%s", CACHEFILE1 ) );
+	
+	bool is_complete;
+	REQUIRE_RC( IsCacheFileComplete( cache, &is_complete ) );	
+	REQUIRE( !is_complete );
+	
+	REQUIRE_RC( KFileRelease( org ) );	
+	REQUIRE_RC( KDirectoryRelease( dir ) );
 }
 
 
