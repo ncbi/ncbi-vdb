@@ -35,6 +35,8 @@
 #include <klib/out.h>
 #include <klib/rc.h>
 
+#include <kproc/thread.h>
+
 #include <kfs/directory.h>
 #include <kfs/file.h>
 #include <kfs/cacheteefile.h>
@@ -225,6 +227,8 @@ static void finish_cachetee_tests( void )
 
 TEST_CASE( CacheTee_Basic )
 {
+	KOutMsg( "Test: CacheTee_Basic\n" );
+	
     KDirectory * dir;
     REQUIRE_RC( KDirectoryNativeDir( &dir ) );
 
@@ -257,6 +261,8 @@ TEST_CASE( CacheTee_Basic )
 
 TEST_CASE( CacheTee_Read )
 {
+	KOutMsg( "Test: CacheTee_Read\n" );
+	
     KDirectory * dir;
     REQUIRE_RC( KDirectoryNativeDir( &dir ) );
 
@@ -283,6 +289,8 @@ TEST_CASE( CacheTee_Read )
 
 TEST_CASE( CacheTee_Promoting )
 {
+	KOutMsg( "Test: CacheTee_Promoting\n" );
+	
 	remove_file( CACHEFILE );	// to start with a clean slate on caching...
 	remove_file( CACHEFILE1 );
 
@@ -320,6 +328,68 @@ TEST_CASE( CacheTee_Promoting )
 	
 	REQUIRE_RC( KFileRelease( org ) );	
 	REQUIRE_RC( KDirectoryRelease( dir ) );
+}
+
+
+static rc_t cache_access( int id )
+{
+    KDirectory * dir;
+    rc_t rc = KDirectoryNativeDir( &dir );
+	if ( rc == 0 )
+	{
+		const KFile * org;
+		rc = KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE );
+		if ( rc == 0 )
+		{
+			const KFile * tee;
+			rc = KDirectoryMakeCacheTee ( dir, &tee, org, NULL, 0, 0, false, "%s", CACHEFILE );
+			if ( rc == 0 )
+			{
+				KOutMsg( "Test: Thread #%d\n", id );
+				rc = compare_file_content( org, tee, 0, 100 );
+				KFileRelease( tee );
+			}
+			KFileRelease( org );
+		}
+		KDirectoryRelease( dir );
+	}
+	return rc;
+}
+
+
+static rc_t CC thread_func( const KThread *self, void *data )
+{
+	int * id = ( int * ) data;
+	return cache_access( * id );
+}
+
+
+TEST_CASE( CacheTee_Multiple_Users )
+{
+	KOutMsg( "Test: CacheTee_Multiple_Users\n" );
+	remove_file( CACHEFILE );	// to start with a clean slate on caching...
+	remove_file( CACHEFILE1 );
+
+	REQUIRE_RC( cache_access( 0 ) ); // if this line is commented out: at least one of the threads will fail!
+	
+	int n = 8;
+	KThread *t [ n ];
+	int id[ n ];
+	rc_t rc = 0;
+	for ( int i = 0; i < n && rc == 0; ++i )
+	{
+		id[ i ] = i + 1;
+		rc = KThreadMake ( &( t[ i ] ), thread_func, &( id[ i ] ) );
+		REQUIRE_RC( rc );
+	}
+	
+	for ( int i = 0; i < n && rc == 0; ++i )
+	{
+		rc_t rc_thread;
+		rc = KThreadWait ( t[ i ], &rc_thread );
+		REQUIRE_RC( rc );
+		REQUIRE_RC( rc_thread );
+	}
 }
 
 
