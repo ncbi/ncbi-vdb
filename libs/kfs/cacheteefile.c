@@ -29,7 +29,6 @@
 struct KCacheTeeFile;
 #define KFILE_IMPL struct KCacheTeeFile
 #include <kfs/impl.h>
-#include <kfs/lockfile.h>
 
 #include <klib/rc.h>
 #include <klib/log.h>
@@ -171,7 +170,6 @@ typedef struct KCacheTeeFile
     KFile dad;
     const KFile * remote;					/* the remote file we are wrapping (can be a local one too, we make no assumptions about that) */
     KFile * local;							/* the local cache of the remote one */
-	KLockFile * lock;						/* optional lock to make shure that only one client writes to the cache */
     KDirectory * dir;						/* we have to store a KDirectory because we need it at closing the file, where we test for promoting the cache */
 
     uint64_t remote_size;					/* the size of the wrapped file */
@@ -191,9 +189,8 @@ typedef struct KCacheTeeFile
 #if( CACHE_STAT > 0 )
 	CacheStatistic stat;					/* optional cache statistic */
 #endif
-	
-    bool locking;							/* flag to indicate that locking is required ( OFF for now ) */
-    bool local_read_only;					/* flag to indicate that we have cannot write to the cache, because a lock is active */
+
+	bool local_read_only;
     char local_path [ 1 ];					/* stores the path to the local cache, for eventual promoting at close */
 } KCacheTeeFile;
 
@@ -447,28 +444,6 @@ static rc_t read_bitmap( KCacheTeeFile * cf )
 }
 
 
-static rc_t read_bitmap_partial( KCacheTeeFile * cf, uint64_t offset, uint64_t count )
-{
-    rc_t rc = 0;
-    uint8_t * temp = malloc( count );
-    if ( temp == NULL )
-        rc = read_bitmap( cf );
-    else
-    {
-        uint64_t ofs = cf -> remote_size + offset;
-        size_t num_read;
-        rc = KFileReadAll ( cf -> local, ofs, temp, count, &num_read );
-        if ( rc == 0 )
-        {
-            uint64_t i;
-            for ( i = 0; i < num_read; ++i )
-                cf->bitmap[ offset + i ] |= temp[ i ];
-        }
-        free( ( void * ) temp );
-    }
-    return rc;
-}
-
 static rc_t verify_existing_local_file( KCacheTeeFile * cf, bool * fully_in_cache )
 {
     uint64_t bitmap_bytes, content_size, block_count;
@@ -687,11 +662,7 @@ static rc_t CC KCacheTeeFileDestroy( KCacheTeeFile *self )
 	report_cache_stat( & self -> stat );
 #endif
 	
-#if( CACHE_TEE_LOCKING == 0 )
 	promote_test = ( !self -> local_read_only );
-#else
-	promote_test = ( !self -> local_read_only && self -> lock != NULL );
-#endif
 
     if ( promote_test )
     {
@@ -709,9 +680,6 @@ static rc_t CC KCacheTeeFileDestroy( KCacheTeeFile *self )
     KDirectoryRelease ( self->dir );
     KFileRelease ( self -> remote );
     KFileRelease ( self -> local );
-
-    if ( self->locking )
-        KLockFileRelease ( self -> lock );
 
     free ( self );
     return 0;
@@ -820,199 +788,6 @@ static rc_t rd_remote_wr_local( const KCacheTeeFile *cself, uint64_t pos,
 }
 
 
-#if 0
-static uint64_t calc_req_blocks( uint64_t pos, uint64_t first_req_block, size_t bsize, uint32_t block_size )
-{
-    uint64_t temp;
-    uint64_t res = pos;
-    res += bsize;
-    temp = first_req_block;
-    temp *= block_size;
-    res -= temp;
-    res += block_size;
-    res--;
-    res /= block_size;
-    return res;
-}
-
-static rc_t KCacheTeeFileRead_simple_cached( const KCacheTeeFile *cself, uint64_t pos,
-                                             void *buffer, size_t bsize, size_t *num_read, uint64_t first_req_block )
-{
-    rc_t rc = 0;
-    bool found_in_scratch = false;
-    size_t to_read;
-    size_t block_count = 1;
-    uint64_t req_blocks = calc_req_blocks( pos, first_req_block, bsize, cself->block_size );
-
-    /* we read as much as we have from the local cache, forcing the caller
-       to eventually make another request ( the non-cached part of it ) afterwards */
-    if ( req_blocks > 1 )
-    {
-        /* detect how many blocks are in cache after the first_req_block */
-        uint64_t block = first_req_block;
-        block_count = 0;
-        do
-        {
-            block++;
-            block_count++;
-        }
-        while ( ( block_count < req_blocks ) && ( IS_CACHE_BIT( cself, block ) ) );
-    }
-
-    /* check if we eventually have the requested bytes in the scratch-buffer */
-    if ( cself -> first_block_in_scratch == first_req_block )
-    {
-        uint64_t first_pos_in_scratch = first_req_block;
-        first_pos_in_scratch *= cself->block_size;
-        if ( pos >= first_pos_in_scratch )
-        {
-            uint64_t last_pos_in_scratch = first_pos_in_scratch;
-            last_pos_in_scratch += cself -> valid_scratch_bytes;
-            found_in_scratch = ( pos < last_pos_in_scratch );
-            if ( found_in_scratch )
-            {
-                uint64_t available_in_scratch = ( last_pos_in_scratch - pos );
-                if ( bsize > available_in_scratch )
-                    to_read = available_in_scratch;
-                else
-                    to_read = bsize;
-
-                memmove ( buffer, &( cself->scratch_buffer[ pos - first_pos_in_scratch ] ), to_read );
-                *num_read = to_read;
-            }
-        }
-    }
-
-    if ( !found_in_scratch )
-    {
-        /* now we have to check how much of the request can be satisfied from the local file */
-        uint64_t reachable = first_req_block;
-        reachable += block_count;
-        reachable *= cself->block_size;
-        reachable -= pos;
-
-        /* are we requesting beyond the end of file? */
-        if ( reachable >= bsize )
-            to_read = check_rd_len( cself, pos, bsize );
-        else
-            to_read = check_rd_len( cself, pos, reachable );
-        rc = KFileReadAll( cself->local, pos, buffer, to_read, num_read );
-    }
-
-    return rc;
-}
-
-
-static rc_t KCacheTeeFileRead_simple_not_cached( const KCacheTeeFile *cself, uint64_t pos,
-                                                 void *buffer, size_t bsize, size_t *num_read, uint64_t first_req_block )
-{
-    rc_t rc;
-    size_t to_read_remote;
-    size_t block_count = 1;
-    uint64_t req_blocks = calc_req_blocks( pos, first_req_block, bsize, cself->block_size );
-
-    if ( req_blocks >  1 )
-    {
-        uint64_t block = first_req_block;
-        block_count = 0;
-        do
-        {
-            block++;
-            block_count++;
-        }
-        while ( ( block_count < req_blocks ) && ( !( IS_CACHE_BIT( cself, block ) ) ) );
-    }
-
-    to_read_remote = ( block_count * cself->block_size );
-    rc = resize_scratch_buffer( cself, to_read_remote );
-    if ( rc == 0 )
-    {
-        size_t l_num_read;
-        uint64_t block_start = first_req_block;
-        block_start *= cself->block_size;
-        to_read_remote = check_rd_len( cself, block_start, to_read_remote );
-        rc = rd_remote_wr_local( cself, block_start, cself->scratch_buffer, to_read_remote, &l_num_read );
-        if ( rc == 0 )
-        {
-            ( ( KCacheTeeFile * )cself ) -> first_block_in_scratch = first_req_block;
-            ( ( KCacheTeeFile * )cself ) -> valid_scratch_bytes = l_num_read;
-            if ( !cself->local_read_only )
-            {
-                set_bitmap( cself, first_req_block, block_count );
-                rc = write_bitmap( cself, first_req_block, block_count );
-            }
-        }
-        if ( rc == 0 )
-        {
-            /* what we have to return to the caller is somewhere in the scratch_buffer */
-            uint64_t offset = pos;
-            offset -= block_start;
-
-            /* how much we can copy depends on how much was not in cache,
-               and how much was requested in the first place... */
-            if ( l_num_read >= offset )
-            {
-                l_num_read -= offset;
-                if ( l_num_read > bsize )
-                    l_num_read = bsize;
-                memmove ( buffer, &( cself->scratch_buffer[ offset ] ), l_num_read );
-            }
-            else
-            {
-                l_num_read = 0;
-            }
-            *num_read = l_num_read;
-        }
-    }
-    return rc;
-}
-
-static rc_t KCacheTeeFileRead_simple( const KCacheTeeFile *cself, uint64_t pos,
-                                      void *buffer, size_t bsize, size_t *num_read )
-{
-    rc_t rc;
-    uint64_t first_req_block = pos;
-    first_req_block /= cself->block_size;
-
-    *num_read = 0;
-    /* "simple" strategy, read only that much as requested... */
-    if ( IS_CACHE_BIT( cself, first_req_block ) )
-        rc = KCacheTeeFileRead_simple_cached( cself, pos, buffer, bsize, num_read, first_req_block );
-    else
-    {
-        if ( cself->locking )
-        {
-            rc = KCacheTeeFileRead_simple_not_cached( cself, pos, buffer, bsize, num_read, first_req_block );
-        }
-        else
-        {
-            uint64_t offset = ( first_req_block >> 3 );
-            uint64_t count = ( ( bsize /  cself->block_size ) >> 3 );
-            if ( count < 1 ) count = 1;
-            rc = read_bitmap_partial( ( KCacheTeeFile * )cself, offset, count );
-            if ( rc == 0 )
-            {
-                if ( IS_CACHE_BIT( cself, first_req_block ) )
-                    rc = KCacheTeeFileRead_simple_cached( cself, pos, buffer, bsize, num_read, first_req_block );
-                else
-                    rc = KCacheTeeFileRead_simple_not_cached( cself, pos, buffer, bsize, num_read, first_req_block );
-            }
-        }
-    }
-
-	/* test that the buffer does not contain zero bytes ... */
-	{
-		uint32_t * wb = buffer;
-		if ( wb[ 0 ] == 0 && wb[ 1 ] == 0 )
-		{
-			rc = KCacheTeeFileRead_simple_not_cached( cself, pos, buffer, bsize, num_read, first_req_block );
-		}
-	}
-	
-    return rc;
-}
-#endif 
-
 static rc_t KCacheTeeFileRead_simple2( const KCacheTeeFile *cself, uint64_t pos,
                                        void *buffer, size_t bsize, size_t *num_read )
 {
@@ -1094,13 +869,6 @@ static rc_t KCacheTeeFileRead_simple2( const KCacheTeeFile *cself, uint64_t pos,
             size_t   nread = 0;
 
             if ( fbsize > cself->block_size ) fbsize = cself->block_size;
-
-            if ( !cself->locking )
-			{
-                rc = read_bitmap_partial( ( KCacheTeeFile * )cself, block >> 3, 1 );
-                if ( IS_CACHE_BIT( cself,block ) ) /** bit was recently set by parallel activity **/
-                        continue; /** will pick it up next cycle ***/
-            }
             rc = rd_remote_wr_local( cself, fpos, cself->scratch_buffer, fbsize, &nread );
             if ( rc == 0 )
 			{
@@ -1351,8 +1119,7 @@ static KFile_vt_v1 vtKCacheTeeFile =
 
 
 static rc_t make_cache_tee( struct KDirectory *self, struct KFile const **tee,
-    struct KFile const *remote, struct KFile *local, KLockFile *lock,
-    uint32_t blocksize, bool locking, const char *path )
+    struct KFile const *remote, struct KFile *local, uint32_t blocksize, bool read_only, const char *path )
 {
     rc_t rc;
     size_t path_size = string_size ( path );
@@ -1365,15 +1132,13 @@ static rc_t make_cache_tee( struct KDirectory *self, struct KFile const **tee,
         string_copy( cf -> local_path, path_size + 1, path, path_size );
         cf -> remote = remote;     /* store the file-objects but no AddRef()'s yet! */
         cf -> local  = local;
-        cf -> lock = lock;
-        cf -> locking = locking;
-        cf -> local_read_only = !( local -> write_enabled );
         cf -> block_size = ( blocksize > 0 ) ? blocksize : CACHE_TEE_DEFAULT_BLOCKSIZE;
         cf -> bitmap = NULL;
         cf -> scratch_buffer = NULL;
         cf -> scratch_size = 0;
         cf -> first_block_in_scratch = -1;
         cf -> valid_scratch_bytes = 0;
+		cf -> local_read_only = read_only;
 
 #if( CACHE_STAT > 0 )
 		init_cache_stat( & cf -> stat );
@@ -1386,7 +1151,6 @@ static rc_t make_cache_tee( struct KDirectory *self, struct KFile const **tee,
         }
         else
         {
-            bool promote = false;
 			bool fully_in_cache = false;
 			
             rc = KFileSize( cf -> remote, &cf -> remote_size );
@@ -1396,7 +1160,7 @@ static rc_t make_cache_tee( struct KDirectory *self, struct KFile const **tee,
             }
             else
             {
-                if ( cf -> local_size == 0 )
+                if ( cf -> local_size == 0 && ! cf -> local_read_only )
                 {
                     /* the local file was just created... */
                     if ( cf -> remote_size == 0 )
@@ -1425,22 +1189,13 @@ static rc_t make_cache_tee( struct KDirectory *self, struct KFile const **tee,
                     rc = verify_existing_local_file( cf, &fully_in_cache );
             }
 
-            if ( locking )
-                promote = ( rc == 0 && fully_in_cache && ! cf -> local_read_only && cf -> lock != NULL );
-            else
-                promote = ( rc == 0 && fully_in_cache && ! cf -> local_read_only );
-
-            if ( promote )
+			if ( rc == 0 && fully_in_cache && ! cf -> local_read_only )
             {
                 /* here is the up-front-test: the cache is complete and we have write access! */
                 rc = promote_cache( cf );
                 if ( rc == 0 )
                 {
                     *tee = cf -> local;
-
-                    if ( locking )
-                        KLockFileRelease ( cf -> lock );
-
                     free ( cf );
                     return rc;  /* here we return the truncated, promoted cache as tee-file ! */
                 }
@@ -1449,8 +1204,10 @@ static rc_t make_cache_tee( struct KDirectory *self, struct KFile const **tee,
             if ( rc == 0 )
             {
                 if ( cf -> remote_size == 0 )
+				{
                     cf -> remote_size = cf -> local_size;
-
+				}
+				
                 /* now we have to AddRef() everything we hang on until the final release! */
                 rc = KDirectoryAddRef ( cf -> dir );
                 if ( rc == 0 )
@@ -1493,14 +1250,12 @@ static rc_t make_cache_tee( struct KDirectory *self, struct KFile const **tee,
 
 
 static rc_t make_read_only_cache_tee( struct KDirectory *self,
-    struct KFile const **tee, struct KFile const *remote,
-    uint32_t blocksize, const char *path )
+    struct KFile const **tee, struct KFile const *remote, uint32_t blocksize, const char *path )
 {
     const struct KFile * local;
     rc_t rc = KDirectoryOpenFileRead( self, &local, "%s.cache", path );
     if ( rc == 0 )
-        rc = make_cache_tee( self, tee, remote, ( struct KFile * )local, NULL,
-                             blocksize, false, path );
+        rc = make_cache_tee( self, tee, remote, ( struct KFile * )local, blocksize, true, path );
     else
     {
         /* we cannot even open the local cache in read-only mode,
@@ -1531,7 +1286,6 @@ LIB_EXPORT rc_t CC KDirectoryVMakeCacheTee ( struct KDirectory *self,
         else
         {
             char full [ 4096 ];
-            bool locking = ( CACHE_TEE_LOCKING > 0 );
 
             rc = KDirectoryVResolvePath ( self, false, full, sizeof full, path, args );
             if ( rc != 0 )
@@ -1541,11 +1295,6 @@ LIB_EXPORT rc_t CC KDirectoryVMakeCacheTee ( struct KDirectory *self,
             }
             else
             {
-                KLockFile *lock = NULL;
-
-                if ( locking )
-                    rc = KDirectoryCreateLockFile ( self, &lock, "%s.cache.lock", full );
-
                 if ( rc == 0 )
                 {
                     /* it was possible to aquire the lock on the cache-file */
@@ -1554,8 +1303,7 @@ LIB_EXPORT rc_t CC KDirectoryVMakeCacheTee ( struct KDirectory *self,
                     if ( rc == 0 )
                     {
                         /* we have the exclusive rd/wr access to the cache file !*/
-                        rc = make_cache_tee( self, tee, remote, local, lock,
-                                             blocksize, locking, full );
+                        rc = make_cache_tee( self, tee, remote, local, blocksize, false, full );
                     }
                     else if ( GetRCState( rc ) == rcNotFound )
                     {
@@ -1564,26 +1312,19 @@ LIB_EXPORT rc_t CC KDirectoryVMakeCacheTee ( struct KDirectory *self,
                         if ( rc == 0 )
                         {
                             /* we have the exclusive rd/wr access to the cache file !*/
-                            rc = make_cache_tee( self, tee, remote, local, lock,
-                                                 blocksize, locking,  full );
+                            rc = make_cache_tee( self, tee, remote, local, blocksize, false, full );
                         }
                     }
                     else
                     {
                         /* we do not have the exclusive rd/wr access to the cache file !*/
-                        if ( locking )
-                            rc = KLockFileRelease ( lock );
-
-                        if ( rc == 0 )
-                            rc = make_read_only_cache_tee( self, tee, remote,
-                                    blocksize, full );
+						rc = make_read_only_cache_tee( self, tee, remote, blocksize, full );
                     }
                 }
                 else if ( GetRCState ( rc ) == rcBusy )
                 {
                     /* it was NOT possible to aquire the lock on the cache-file */
-                    rc = make_read_only_cache_tee( self, tee, remote,
-                            blocksize, full );
+                    rc = make_read_only_cache_tee( self, tee, remote, blocksize, full );
                 }
                 else
                 {
