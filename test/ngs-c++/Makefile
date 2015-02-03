@@ -32,7 +32,10 @@ TEST_TOOLS = \
     test-ngs_sra-c++ \
     test-ngs_sradb-c++ \
     test-ngs_csra1-c++ \
-   
+
+SLOW_TEST_TOOLS = \
+    test-ngs_sra_pileup_diff
+    
 include $(TOP)/build/Makefile.env
 
 ifeq (,$(NGS_LIBDIR))
@@ -40,15 +43,15 @@ ifeq (,$(NGS_LIBDIR))
 $(TEST_TOOLS):
 	@true 
 	
-runtests:
+runtests slowtests:
 	@ echo "NGS C++ tests are not run since NGS library does not appear to be installed"
 
 else
 
-$(TEST_TOOLS): makedirs
+$(TEST_TOOLS) $(SLOW_TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
-.PHONY: $(TEST_TOOLS)
+.PHONY: $(TEST_TOOLS) $(SLOW_TEST_TOOLS)
 
 clean: stdclean
 
@@ -117,3 +120,19 @@ valgrind_csra1-c++: std
 	$(VALGRIND) $(TEST_BINDIR)/test-ngs_csra1-c++     
         
 endif
+
+#-------------------------------------------------------------------------------
+# test-ngs_sra_pileup_diff
+#
+TEST_NGS_SRA_PILEUP_DIFF_SRC = \
+	ngs_sra_pileup_diff
+
+TEST_NGS_SRA_PILEUP_DIFF_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_NGS_SRA_PILEUP_DIFF_SRC))
+
+$(TEST_BINDIR)/test-ngs_sra_pileup_diff: $(TEST_NGS_SRA_PILEUP_DIFF_OBJ) 
+	$(LP) --exe -o $@ $^ $(TEST_NGS_CPP_LIB)
+
+valgrind_ngs_sra_pileup_diff: std
+	valgrind --ncbi --suppressions=$(SRCDIR)/valgrind.suppress  --error-exitcode=1 $(TEST_BINDIR)/test-ngs_sra_pileup_diff    
+

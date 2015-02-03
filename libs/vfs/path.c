@@ -2076,6 +2076,7 @@ LIB_EXPORT rc_t CC VFSManagerMakePathWithExtension ( struct VFSManager const * s
             rc = RC ( rcVFS, rcPath, rcCopying, rcParam, rcInvalid );
         else if ( orig -> path_type > vpFullPath )
             rc = RC ( rcVFS, rcPath, rcCopying, rcParam, rcIncorrect );
+#if ALLOW_ADDREF_WITHIN_MAKEPATH
         else if ( extension == NULL || extension [ 0 ] == 0 )
         {
             rc = VPathAddRef ( orig );
@@ -2085,12 +2086,18 @@ LIB_EXPORT rc_t CC VFSManagerMakePathWithExtension ( struct VFSManager const * s
                 return 0;
             }
         }
+#endif
         else
         {
             char path_prefix [ 4096 ];
             size_t num_writ, total = 0;
 
             rc = 0;
+
+#if ! ALLOW_ADDREF_WITHIN_MAKEPATH
+            if ( extension == NULL )
+                extension = "";
+#endif
 
             /* add in original scheme */
             if ( orig -> from_uri && orig -> scheme . size != 0 )

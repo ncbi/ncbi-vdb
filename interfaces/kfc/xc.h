@@ -125,6 +125,7 @@ XC ( xcCursorAccessFailed, xoCursor, xsAccessFailed );
 XC ( xcRowNotFound, xoRow, xsNotFound );
 XC ( xcSelfZombie, xoSelf, xsZombie );
 XC ( xcRefcountOutOfBounds, xoRefcount, xsOutOfBounds );
+XC ( xcParamOutOfBounds, xoParam, xsOutOfBounds );
 XC ( xcResourceExists, xoResource, xsExists );
 XC ( xcCursorExhausted, xoCursor, xsExhausted );
 XC ( xcStringCreateFailed, xoString, xsCreateFailed );

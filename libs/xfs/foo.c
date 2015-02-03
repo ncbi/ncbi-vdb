@@ -34,6 +34,7 @@
 #include <xfs/node.h>
 #include <xfs/editors.h>
 #include <xfs/perm.h>
+#include <xfs/doc.h>
 
 #include "mehr.h"
 #include "zehr.h"
@@ -52,317 +53,6 @@
  |||
 (((*/
 
-struct XFSFooNode {
-    struct XFSNode Node;
-
-    const char * Security;
-};
-
-/*)))
- |||
- +++    FooNode virtual table is Living here :lol:
- |||
-(((*/
-static rc_t CC _FooNodeFlavor_v1 (
-                                const struct XFSNode * self
-                                );
-static rc_t CC _FooNodeDispose_v1 (
-                                const struct XFSNode * self
-                                );
-static rc_t CC _FooNodeFindNode_v1 (
-                                const struct XFSNode * self,
-                                const struct XFSPath * Path,
-                                uint32_t PathIndex,
-                                const struct XFSNode ** Node
-                                );
-static rc_t CC _FooNodeDir_v1 (
-                                const struct XFSNode * self,
-                                const struct XFSDirEditor ** Dir
-                                );
-static rc_t CC _FooNodeFile_v1 (
-                                const struct XFSNode * self,
-                                const struct XFSFileEditor ** File
-                                );
-static rc_t CC _FooNodeAttr_v1 (
-                                const struct XFSNode * self,
-                                const struct XFSAttrEditor ** Attr
-                                );
-static rc_t CC _FooNodeDescribe_v1 (
-                                const struct XFSNode * self,
-                                char * Buffer,
-                                size_t BufferSize
-                                );
-
-static const struct XFSNode_vt_v1 _sFooNodeVT_v1 = {
-                                        1, 1,   /* nin naj */
-                                        _FooNodeFlavor_v1,
-                                        _FooNodeDispose_v1,
-                                        _FooNodeFindNode_v1,
-                                        _FooNodeDir_v1,
-                                        _FooNodeFile_v1,
-                                        _FooNodeAttr_v1,
-                                        _FooNodeDescribe_v1
-                                        };
-
-static rc_t CC _FooNodeDispose ( const struct XFSFooNode * self );
-
-uint32_t CC
-_FooNodeFlavor_v1 ( const struct XFSNode * self )
-{
-    return _sFlavorOfFoo;
-}   /* _FooNodeFlavor_v1 () */
-
-rc_t CC
-_FooNodeDispose_v1 ( const struct XFSNode * self )
-{
-    return _FooNodeDispose ( ( struct XFSFooNode * ) self );
-}   /* _FooNodeDispose_v1 () */
-
-rc_t CC
-_FooNodeFindNode_v1 (
-            const struct XFSNode * self,
-            const struct XFSPath * Path,
-            uint32_t PathIndex,
-            const struct XFSNode ** Node
-)
-{
-    rc_t RCt;
-    uint32_t PathCount;
-    const char * NodeName;
-    bool IsLast;
-
-    RCt = 0;
-    PathCount = 0;
-    NodeName = NULL;
-    IsLast = false;
-
-    RCt = XFSNodeFindNodeCheckInitStandard (
-                                            self,
-                                            Path,
-                                            PathIndex,
-                                            Node,
-                                            & NodeName,
-                                            & PathCount,
-                                            & IsLast
-                                            );
-    if ( RCt == 0 ) {
-        if ( IsLast ) {
-            RCt = XFSNodeAddRef ( self );
-
-            * Node = self;
-        }
-    }
-
-    return RCt;
-}   /* _FooNodeFindNode () */
-
-rc_t CC
-_FooNodeDir_v1 (
-            const struct XFSNode * self,
-            const struct XFSDirEditor ** Dir
-)
-{
-    if ( self == NULL || Dir == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * Dir = NULL;
-
-    return XFS_RC ( rcInvalid );
-}   /* _FooNodeDir_v1 () */
-
-rc_t CC
-_FooNodeFile_v1 (
-            const struct XFSNode * self,
-            const struct XFSFileEditor ** File
-)
-{
-    return XFS_RC ( rcInvalid );
-}   /* _FooNodeFile_v1 () */
-
-static
-rc_t CC
-_FooNodeAttr_dispose_v1 ( const struct XFSEditor * self )
-{
-    struct XFSAttrEditor * Editor;
-
-    Editor = ( struct XFSAttrEditor * ) self;
-/*
-printf ( "_FooNodeAttr_dispose_v1 ( 0x%p )\n", ( void * ) Editor );
-*/
-
-    if ( Editor != NULL ) {
-        free ( Editor );
-    }
-
-    return 0;
-}   /* _FooNodeAttr_dispose_v1 () */
-
-static
-rc_t CC
-_FooNodeAttr_permissions_v1 (
-            const struct XFSAttrEditor * self,
-            const char ** Permissions
-)
-{
-    if ( self == NULL || Permissions == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    * Permissions = NULL;
-
-    if ( XFSEditorNode ( & ( self -> Papahen ) ) == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    * Permissions = XFSPermForNodeDefault ();
-
-    return 0;
-}   /* _FooNodeAttr_permisiions_v1 () */
-
-static
-rc_t CC
-_FooNodeAttr_size_v1 (
-            const struct XFSAttrEditor * self,
-            uint64_t * Size
-)
-{
-    if ( self == NULL || Size == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    * Size = 0;
-
-    if ( XFSEditorNode ( & ( self -> Papahen ) ) == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    return 0;
-}   /* _FooNodeAttr_size_v1 () */
-
-static
-rc_t CC
-_FooNodeAttr_date_v1 (
-            const struct XFSAttrEditor * self,
-            KTime_t * Time
-)
-{
-    if ( self == NULL || Time == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    * Time = 0;
-
-    if ( XFSEditorNode ( & ( self -> Papahen ) ) == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    return 0;
-}   /* _FooNodeAttr_date_v1 () */
-
-static
-rc_t CC
-_FooNodeAttr_type_v1 (
-            const struct XFSAttrEditor * self,
-            XFSNType * Type
-)
-{
-    if ( self == NULL || Type == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    * Type = kxfsNotFound;
-    
-    if ( XFSEditorNode ( & ( self -> Papahen ) ) == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    * Type = kxfsFile;
-
-    return 0;
-}   /* _FooNodeAttr_type_v1 () */
-
-rc_t CC
-_FooNodeAttr_v1 (
-            const struct XFSNode * self,
-            const struct XFSAttrEditor ** Attr
-)
-{
-    rc_t RCt;
-    struct XFSAttrEditor * Editor;
-
-    RCt = 0;
-
-    if ( self == NULL || Attr == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * Attr = NULL;
-
-    Editor = calloc ( 1, sizeof ( struct XFSAttrEditor ) );
-    if ( Editor == NULL ) {
-        return XFS_RC ( rcExhausted );
-    }
-
-    RCt = XFSEditorInit (
-                    & ( Editor -> Papahen ),
-                    self,
-                    _FooNodeAttr_dispose_v1
-                    );
-
-    if ( RCt == 0 ) {
-        Editor -> permissions = _FooNodeAttr_permissions_v1;
-        Editor -> size = _FooNodeAttr_size_v1;
-        Editor -> date = _FooNodeAttr_date_v1;
-        Editor -> type = _FooNodeAttr_type_v1;
-
-        * Attr = Editor;
-    }
-    else {
-        free ( Editor );
-    }
-
-    return RCt;
-}   /* _FooNodeAttr_v1 () */
-
-rc_t CC
-_FooNodeDescribe_v1 (
-            const struct XFSNode * self,
-            char * Buffer,
-            size_t BufferSize
-)
-{
-    rc_t RCt;
-    size_t NumWrit;
-
-    RCt = 0;
-    NumWrit = 0;
-
-    if ( Buffer == NULL || BufferSize == 0 ) {
-        return XFS_RC ( rcNull );
-    }
-    * Buffer = 0;
-
-    if ( self == NULL ) {
-        RCt = string_printf (
-                    Buffer,
-                    BufferSize,
-                    & NumWrit,
-                    "NODE (FOO)[NULL][NULL]"
-                    );
-    }
-    else {
-        RCt = string_printf (
-                    Buffer,
-                    BufferSize,
-                    & NumWrit,
-                    "NODE (FOO)[%s][0x%p]",
-                    self -> Name,
-                    self
-                    );
-    }
-
-    return RCt;
-}   /* _FooNodeDescribe_v1 () */
-
 /*)))
  |||
  +++    FooNode lives here
@@ -376,34 +66,47 @@ _FooNodeDescribe_v1 (
 
 static
 rc_t CC
-_FooNodeMake ( struct XFSFooNode ** Foo, const char * NodeName )
+_FooNodeMake ( struct XFSNode ** Foo, const char * NodeName )
 {
     rc_t RCt;
-    struct XFSFooNode * TheFoo;
+    struct XFSDoc * Doc;
+    struct XFSNode * TheFoo;
 
     RCt = 0;
     TheFoo = NULL;
 
+    if ( Foo != NULL ) {
+        * Foo = NULL;
+    }
+
     if ( Foo == NULL || NodeName == NULL ) {
         return XFS_RC ( rcNull );
     }
-    * Foo = NULL;
 
-    TheFoo = calloc ( 1, sizeof ( struct XFSFooNode ) );
-    if ( TheFoo == NULL ) {
-        RCt = XFS_RC ( rcExhausted );
-    }
-    else {
-        RCt = XFSNodeInit ( & ( TheFoo -> Node ), NodeName );
-        if ( RCt == 0 ) {
-            ( & ( TheFoo -> Node ) ) -> vt =
-                    ( const union XFSNode_vt * ) & _sFooNodeVT_v1;
-
-            TheFoo -> Security = NULL;
-
-            * Foo = TheFoo;
+    RCt = XFSTextDocMake ( & Doc );
+    if ( RCt == 0 ) {
+        RCt = XFSTextDocAppend ( Doc, "FOO FILE: placeholder for not implemented node type\n\n" );
+        if ( RCt  == 0 ) {
+            RCt = XFSDocNodeMakeWithFlavor (
+                                        Doc,
+                                        NodeName,
+                                        XFSPermDefNodeChar (),
+                                        _sFlavorOfFoo,
+                                        & TheFoo
+                                        );
+            if ( RCt == 0 ) {
+                * Foo = TheFoo;
+            }
+            else {
+                if ( TheFoo != NULL ) {
+                    XFSNodeDispose ( TheFoo );
+                }
+            }
         }
+
+        XFSDocRelease ( Doc );
     }
+
 /*
 printf ( "_FooNodeMake ND[0x%p] NM[%s]\n", ( void * ) TheFoo, NodeName );
 */
@@ -413,9 +116,9 @@ printf ( "_FooNodeMake ND[0x%p] NM[%s]\n", ( void * ) TheFoo, NodeName );
 
 static
 rc_t CC
-_FooNodeDispose ( const struct XFSFooNode * self )
+_FooNodeDispose ( const struct XFSNode * self )
 {
-    struct XFSFooNode * Foo = ( struct XFSFooNode * ) self;
+    struct XFSNode * Foo = ( struct XFSNode * ) self;
 
 /*
 printf ( "_FooNodeDispose ( 0x%p )\n", ( void * ) Foo );
@@ -425,12 +128,7 @@ printf ( "_FooNodeDispose ( 0x%p )\n", ( void * ) Foo );
         return 0;
     }
 
-    if ( Foo -> Security != NULL ) {
-        free ( ( char * ) Foo -> Security );
-        Foo -> Security = NULL;
-    }
-
-    free ( Foo );
+    XFSNodeDispose ( Foo );
 
     return 0;
 }   /* _FooNodeDispose () */
@@ -450,7 +148,7 @@ _FooNodeConstructor (
 )
 {
     rc_t RCt;
-    struct XFSFooNode * TheNode;
+    struct XFSNode * TheNode;
     const char * NodeName;
 
     RCt = 0;
@@ -506,7 +204,8 @@ printf ( "_FooNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model
 
 static const struct XFSTeleport _sFooNodeTeleport = {
                                         _FooNodeConstructor,
-                                        _FooNodeValidator
+                                        _FooNodeValidator,
+                                        false
                                         };
 
 
@@ -545,20 +244,6 @@ XFSEncryptedFileProvider ( const struct XFSTeleport ** Teleport )
 
 LIB_EXPORT
 rc_t CC
-XFSHelpProvider ( const struct XFSTeleport ** Teleport )
-{
-    return XFSFooNodeProvider ( Teleport );
-}
-
-LIB_EXPORT
-rc_t CC
-XFSKartCollectionProvider ( const struct XFSTeleport ** Teleport )
-{
-    return XFSFooNodeProvider ( Teleport );
-}
-
-LIB_EXPORT
-rc_t CC
 XFSLinkProvider ( const struct XFSTeleport ** Teleport )
 {
     return XFSFooNodeProvider ( Teleport );
@@ -567,13 +252,6 @@ XFSLinkProvider ( const struct XFSTeleport ** Teleport )
 LIB_EXPORT
 rc_t CC
 XFSLocalRepositoryProvider ( const struct XFSTeleport ** Teleport )
-{
-    return XFSFooNodeProvider ( Teleport );
-}
-
-LIB_EXPORT
-rc_t CC
-XFSRemoteRepositoryProvider ( const struct XFSTeleport ** Teleport )
 {
     return XFSFooNodeProvider ( Teleport );
 }

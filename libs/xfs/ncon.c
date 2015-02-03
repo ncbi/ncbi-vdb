@@ -58,8 +58,6 @@ static const char * _sXFSNodeContainer_classname = "XFSNodeContainer";
 struct XFSNodeContainer {
     BSTree tree;
     KRefcount refcount;
-
-    bool Editable;
 };
 
 struct XFSNodeContainerNode {
@@ -123,12 +121,9 @@ _NodeContainerNodeMake (
         RCt = XFS_RC ( rcExhausted );
     }
     else {
-        RCt = XFSNodeAddRef ( Node );
-        if ( RCt == 0 ) {
-            TheNode -> Node = Node;
+        TheNode -> Node = Node;
 
-            * RetNode = TheNode;
-        }
+        * RetNode = TheNode;
     }
 
     if ( RCt != 0 ) {
@@ -178,8 +173,6 @@ XFSNodeContainerMake (
                     "XFSNodeContainer"
                     );
 
-        NewCont -> Editable = true;
-
         * Container = NewCont;
     }
 
@@ -194,10 +187,11 @@ static
 void CC
 _TreeWhackCallback ( BSTNode * Node, void * Data )
 {
-    struct XFSNode * TheNode = ( struct XFSNode * ) Node;
+    struct XFSNodeContainerNode * CNode =
+                            ( struct XFSNodeContainerNode * ) Node;
 
-    if ( TheNode != NULL ) {
-        XFSNodeRelease ( TheNode );
+    if ( CNode != NULL ) {
+        _NodeContainerNodeDispose ( CNode );
     }
 }   /* _TreeWhackCallback () */
 
@@ -287,25 +281,6 @@ XFSNodeContainerRelease ( const struct XFSNodeContainer * self )
 
     return RCt;
 }   /* XFSNodeContainerRelease () */
-
-LIB_EXPORT
-bool CC
-XFSNodeContainerIsEditable ( const struct XFSNodeContainer * self )
-{
-    return self == NULL ? false : self -> Editable;
-}   /* XFSNodeContainerIsEditable () */
-
-LIB_EXPORT
-void CC
-XFSNodeContainerSetEditable (
-                        const struct XFSNodeContainer * self,
-                        bool Editable
-)
-{
-    if ( self != NULL ) {
-        ( ( struct XFSNodeContainer * ) self ) -> Editable = Editable;
-    }
-}   /* XFSNodeContainerSetEditable () */
 
 LIB_EXPORT
 bool CC
@@ -405,10 +380,6 @@ XFSNodeContainerAdd (
     TheNode = NULL;
     Container = ( struct XFSNodeContainer * ) self;
 
-    if ( ! XFSNodeContainerIsEditable ( self ) ) {
-        return XFS_RC ( rcReadonly );
-    }
-
     if ( Container == NULL || Node == NULL ) {
         return XFS_RC ( rcNull );
     }
@@ -445,10 +416,6 @@ XFSNodeContainerDel (
 
     RCt = 0;
     Container = ( struct XFSNodeContainer * ) self;
-
-    if ( ! XFSNodeContainerIsEditable ( Container ) ) {
-        return XFS_RC ( rcReadonly );
-    }
 
     RCt = _NodeContainerNodeGet (
                     Container,

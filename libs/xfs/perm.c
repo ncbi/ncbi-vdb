@@ -614,22 +614,22 @@ XFSAuthCanExecute ( const struct XFSAuth * self )
 
 LIB_EXPORT
 rc_t CC
-XFSPermToAccess ( const char * Perm, uint32_t * Access )
+XFSPermToNum ( const char * Perm, uint32_t * Num )
 {
     rc_t RCt;
-    uint32_t xAccess;
+    uint32_t xNum;
     const struct XFSPerm * xPerm;
     const struct XFSAuth * xAuth;
 
     RCt = 0;
-    xAccess = 0;
+    xNum = 0;
     xPerm = NULL;
     xAuth = NULL;
 
-    if ( Access == NULL ) {
+    if ( Num == NULL ) {
         return XFS_RC ( rcNull );
     }
-    * Access = 0;
+    * Num = 0;
 
     if ( Perm == NULL ) {
         return XFS_RC ( rcNull );
@@ -639,37 +639,37 @@ XFSPermToAccess ( const char * Perm, uint32_t * Access )
     if ( RCt == 0 ) {
         xAuth = XFSPermAuth ( xPerm, kxfsUser );
         if ( xAuth != NULL ) {
-            if ( XFSAuthCanRead    ( xAuth ) ) { xAccess |= 0400; }
-            if ( XFSAuthCanWrite   ( xAuth ) ) { xAccess |= 0200; }
-            if ( XFSAuthCanExecute ( xAuth ) ) { xAccess |= 0100; }
+            if ( XFSAuthCanRead    ( xAuth ) ) { xNum |= 0400; }
+            if ( XFSAuthCanWrite   ( xAuth ) ) { xNum |= 0200; }
+            if ( XFSAuthCanExecute ( xAuth ) ) { xNum |= 0100; }
         }
 
         xAuth = XFSPermAuth ( xPerm, kxfsGroup );
         if ( xAuth != NULL ) {
-            if ( XFSAuthCanRead    ( xAuth ) ) { xAccess |= 040; }
-            if ( XFSAuthCanWrite   ( xAuth ) ) { xAccess |= 020; }
-            if ( XFSAuthCanExecute ( xAuth ) ) { xAccess |= 010; }
+            if ( XFSAuthCanRead    ( xAuth ) ) { xNum |= 040; }
+            if ( XFSAuthCanWrite   ( xAuth ) ) { xNum |= 020; }
+            if ( XFSAuthCanExecute ( xAuth ) ) { xNum |= 010; }
         }
 
         xAuth = XFSPermAuth ( xPerm, kxfsOther );
         if ( xAuth != NULL ) {
-            if ( XFSAuthCanRead    ( xAuth ) ) { xAccess |= 04; }
-            if ( XFSAuthCanWrite   ( xAuth ) ) { xAccess |= 02; }
-            if ( XFSAuthCanExecute ( xAuth ) ) { xAccess |= 01; }
+            if ( XFSAuthCanRead    ( xAuth ) ) { xNum |= 04; }
+            if ( XFSAuthCanWrite   ( xAuth ) ) { xNum |= 02; }
+            if ( XFSAuthCanExecute ( xAuth ) ) { xNum |= 01; }
         }
 
-        * Access = xAccess;
+        * Num = xNum;
 
         XFSPermDispose ( xPerm );
     }
 
     return RCt;
-}   /* XFSPermToAccess () */
+}   /* XFSPermToNum () */
 
 
 LIB_EXPORT
 rc_t CC
-XFSPermAccessToChar ( uint32_t Access, char * Buf, size_t BufSize )
+XFSPermToChar ( uint32_t Num, char * Buf, size_t BufSize )
 {
     rc_t RCt;
 
@@ -686,40 +686,70 @@ XFSPermAccessToChar ( uint32_t Access, char * Buf, size_t BufSize )
     * Buf = 0;
 
         /* owner */
-    Buf [ 0 ] = ( Access & 0400 ) == 0400 ? 'r' : '-';
-    Buf [ 1 ] = ( Access & 0200 ) == 0200 ? 'w' : '-';
-    Buf [ 2 ] = ( Access & 0100 ) == 0100 ? 'x' : '-';
+    Buf [ 0 ] = ( Num & 0400 ) == 0400 ? 'r' : '-';
+    Buf [ 1 ] = ( Num & 0200 ) == 0200 ? 'w' : '-';
+    Buf [ 2 ] = ( Num & 0100 ) == 0100 ? 'x' : '-';
         /* group */
-    Buf [ 3 ] = ( Access & 040 ) == 040 ? 'r' : '-';
-    Buf [ 4 ] = ( Access & 020 ) == 020 ? 'w' : '-';
-    Buf [ 5 ] = ( Access & 010 ) == 010 ? 'x' : '-';
+    Buf [ 3 ] = ( Num & 040 ) == 040 ? 'r' : '-';
+    Buf [ 4 ] = ( Num & 020 ) == 020 ? 'w' : '-';
+    Buf [ 5 ] = ( Num & 010 ) == 010 ? 'x' : '-';
         /* others */
-    Buf [ 6 ] = ( Access & 04 ) == 04 ? 'r' : '-';
-    Buf [ 7 ] = ( Access & 02 ) == 02 ? 'w' : '-';
-    Buf [ 8 ] = ( Access & 01 ) == 01 ? 'x' : '-';
+    Buf [ 6 ] = ( Num & 04 ) == 04 ? 'r' : '-';
+    Buf [ 7 ] = ( Num & 02 ) == 02 ? 'w' : '-';
+    Buf [ 8 ] = ( Num & 01 ) == 01 ? 'x' : '-';
 
         /* internet users */
     Buf [ 9 ] = 0;
 
     return RCt;
-}   /* XFSPermAccesToChar () */
+}   /* XFSPermToChar () */
 
 /*))))))
  //////  Defaults ... sorry, hardcoding those
 ((((((*/
 static const char * _DefPermForContainer = "r-xr-xr-x";
 static const char * _DefPermForNode = "r--r--r--";
+static uint32_t _DefPermForContainerNum = 0;
+static uint32_t _DefPermForNodeNum = 0;
 
 LIB_EXPORT
 const char * CC
-XFSPermForContainerDefault ()
+XFSPermDefContChar ()
 {
     return _DefPermForContainer;
-}   /* XFSPermForContainerDefault () */
+}   /* XFSPermDefContChar () */
 
 LIB_EXPORT
 const char * CC
-XFSPermForNodeDefault ()
+XFSPermDefNodeChar ()
 {
     return _DefPermForNode;
-}   /* XFSPermForNodeDefault () */
+}   /* XFSPermDefNodeChar () */
+
+LIB_EXPORT
+uint32_t CC
+XFSPermDefContNum ()
+{
+    uint32_t T;
+
+    if ( _DefPermForContainerNum == 0 ) {
+        XFSPermToNum ( XFSPermDefContChar (), & T );
+        _DefPermForContainerNum = T;
+    }
+
+    return _DefPermForContainerNum;
+}   /* XFSPermDefContNum () */
+
+LIB_EXPORT
+uint32_t CC
+XFSPermDefNodeNum ()
+{
+    uint32_t T;
+
+    if ( _DefPermForNodeNum == 0 ) {
+        XFSPermToNum ( XFSPermDefNodeChar (), & T );
+        _DefPermForNodeNum = T;
+    }
+
+    return _DefPermForNodeNum;
+}   /* XFSPermDefNodeNum () */

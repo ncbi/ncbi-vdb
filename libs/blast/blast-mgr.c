@@ -64,7 +64,9 @@ struct VdbBlastMgr {
     VResolver *resolver;
 };
 
-rc_t _VdbBlastMgrNativeToPosix(const VdbBlastMgr *self, const char *native, char *posix, size_t size) {
+rc_t _VdbBlastMgrNativeToPosix(const VdbBlastMgr *self,
+    const char *native, char *posix, size_t size)
+{
     rc_t rc = 0;
     VPath *temp_v_path = NULL;
     assert(self);
@@ -108,11 +110,11 @@ VdbBlastMgr* CC VdbBlastInit(uint32_t *status)
 
     *status = eVdbBlastErr;
 
-    if (getenv("sratoolkit2_4_3") != NULL) {
+    if (getenv("sratoolkit2_4_4") != NULL) {
 #if _DEBUGGING
-fprintf(stderr, "DEBUGNG with sratoolkit.2.4.3 release\n");
+fprintf(stderr, "DEBUGNG with sratoolkit.2.4.4 release\n");
 #else
-fprintf(stderr, "RELEASE with sratoolkit.2.4.3 release\n");
+fprintf(stderr, "RELEASE with sratoolkit.2.4.4 release\n");
 #endif
     }
     item = calloc(1, sizeof *item);

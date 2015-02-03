@@ -100,10 +100,22 @@ XFS_SRC = \
     teleport    \
     foo \
     ncon  \
+    contnode    \
+    docnode \
     simcon  \
     kfs   \
+    readme  \
     bogus     \
     owp \
+    doc \
+    xkart    \
+    kart    \
+    karts   \
+    xhttp    \
+    http    \
+    xtar     \
+    tar     \
+    lockdpt \
     schwarzschraube \
     zehr    \
     mehr

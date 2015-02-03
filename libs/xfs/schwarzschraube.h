@@ -42,9 +42,18 @@ extern "C" {
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
+struct String;
+
 /*)))   Dupping string, and if NULL is Src, it will be passed to Dst
  (((*/
 XFS_EXTERN rc_t CC XFS_StrDup ( const char * Src,  const char ** Dst );
+
+/*)))   Dupping String, and if NULL is Src, it will be passed to Dst
+ (((*/
+XFS_EXTERN rc_t CC XFS_SStrDup (
+                                const struct String * Src,
+                                const char ** Dst
+                                );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
@@ -59,6 +68,18 @@ XFS_EXTERN rc_t CC XFS_VfsManagerInit ( );
 XFS_EXTERN rc_t CC XFS_VfsManagerDispose ( );
 
 XFS_EXTERN const struct VFSManager * CC XFS_VfsManager ( );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*)))   Sometimes I need KNSManager, and from different places, and
+  |||   it is costly too
+  (((*/
+struct VFSManager;
+
+XFS_EXTERN rc_t CC XFS_KnsManagerInit ( );
+XFS_EXTERN rc_t CC XFS_KnsManagerDispose ( );
+
+XFS_EXTERN const struct KNSManager * CC XFS_KnsManager ( );
 
 #ifdef __cplusplus 
 }

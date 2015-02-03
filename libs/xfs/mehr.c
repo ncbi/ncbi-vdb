@@ -38,7 +38,9 @@
 #include <kns/manager.h>
 #include <kns/http.h>
 
+#include "teleport.h"
 #include "mehr.h"
+#include "schwarzschraube.h"
 #include "zehr.h"
 
 #include <sysalloc.h>
@@ -47,6 +49,11 @@
 #include <string.h>
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*)) Forwards
+ ((*/
+XFS_EXTERN rc_t CC XFSTarDepotInit ();
+XFS_EXTERN rc_t CC XFSTarDepotDispose ();
 
 /*)) Config and all config related
  ((*/
@@ -75,6 +82,11 @@ printf ( "WARNING(MEHR): InitAll [%s]\n", ConfigFile );
     if ( RCt == 0 ) {
         _sConfig_MHR = Config;
         _sConfigPath_MHR = string_dup_measure ( ConfigFile, NULL );
+
+        RCt = XFSTeleportInit ();
+        if ( RCt == 0 ) {
+            RCt = XFSTarDepotInit ();
+        }
     }
 
     return RCt;
@@ -84,11 +96,11 @@ LIB_EXPORT
 rc_t CC
 XFS_DisposeAll_MHR ()
 {
-    rc_t RCt;
-
-    RCt = 0;
-
 printf ( "WARNING(MEHR): DisposeAll [%s]\n", _sConfigPath_MHR );
+
+    XFSTarDepotDispose ();
+
+    XFSTeleportDispose ();
 
     if ( _sConfig_MHR != NULL ) {
         KConfigRelease ( _sConfig_MHR );
@@ -102,7 +114,7 @@ printf ( "WARNING(MEHR): DisposeAll [%s]\n", _sConfigPath_MHR );
         _sConfigPath_MHR = NULL;
     }
 
-    return RCt;
+    return 0;
 }   /* XFS_DisposeAll_MHR () */
 
 LIB_EXPORT
@@ -134,7 +146,7 @@ XFS_OpenResourceRead_MHR (
 )
 {
     rc_t RCt;
-    struct KNSManager * knsManager;
+    const struct KNSManager * knsManager;
     const struct KFile * File;
     struct KDirectory * Directory;
 
@@ -151,7 +163,10 @@ XFS_OpenResourceRead_MHR (
 
     if ( strstr ( Resource, "http" ) == Resource ) {
             /* That is stupid, but ... prolly this is URL */
-        RCt = KNSManagerMake ( & knsManager );
+        knsManager = XFS_KnsManager ();
+        if ( knsManager == NULL ) {
+            RCt = XFS_RC ( rcInvalid );
+        }
         if ( RCt == 0 ) {
             RCt = KNSManagerMakeHttpFile (
                                 knsManager,

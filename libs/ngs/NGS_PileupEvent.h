@@ -46,12 +46,31 @@ extern "C" {
  */
 struct NGS_String;
 struct NGS_Alignment;
+struct NGS_Pileup;
 struct NGS_PileupEvent_v1_vt;
 extern struct NGS_PileupEvent_v1_vt ITF_PileupEvent_vt;
 
 /*--------------------------------------------------------------------------
  * NGS_PileupEvent
  */
+ 
+/* ToRefcount
+ *  inline cast that preserves const
+ */
+#define NGS_PileupEventToRefcount( self ) \
+    ( & ( self ) -> dad )
+
+/* Release
+ *  release reference
+ */
+#define NGS_PileupEventRelease( self, ctx ) \
+    NGS_RefcountRelease ( NGS_PileupEventToRefcount ( self ), ctx )
+
+/* Duplicate
+ *  duplicate reference
+ */
+#define NGS_PileupEventDuplicate( self, ctx ) \
+    ( ( NGS_PileupEvent* ) NGS_RefcountDuplicate ( NGS_PileupEventToRefcount ( self ), ctx ) ) 
  
 struct NGS_String * NGS_PileupEventGetReferenceSpec( const NGS_PileupEvent * self, ctx_t ctx );
 
@@ -71,10 +90,16 @@ int64_t NGS_PileupEventGetLastAlignmentPosition( const NGS_PileupEvent * self, c
 
 enum NGS_PileupEventType
 {
-    NGS_PileupEventType_match     = 0,
-    NGS_PileupEventType_mismatch  = 1,
-    NGS_PileupEventType_insertion = 2,
-    NGS_PileupEventType_deletion  = 3
+    /* basic event types */
+    NGS_PileupEventType_match        = 0,
+    NGS_PileupEventType_mismatch     = 1,
+    NGS_PileupEventType_deletion     = 2,
+
+    /* event modifiers */
+    NGS_PileupEventType_insertion    = 0x08,
+    NGS_PileupEventType_minus_strand = 0x20,
+    NGS_PileupEventType_stop         = 0x40,
+    NGS_PileupEventType_start        = 0x80
 };        
 int NGS_PileupEventGetEventType( const NGS_PileupEvent * self, ctx_t ctx );
 
@@ -86,7 +111,18 @@ struct NGS_String * NGS_PileupEventGetInsertionBases( const NGS_PileupEvent * se
 
 struct NGS_String * NGS_PileupEventGetInsertionQualities( const NGS_PileupEvent * self, ctx_t ctx );
 
-unsigned int NGS_PileupEventGetDeletionCount( const NGS_PileupEvent * self, ctx_t ctx );
+unsigned int NGS_PileupEventGetRepeatCount( const NGS_PileupEvent * self, ctx_t ctx );
+
+enum NGS_PileupIndelType
+{
+    NGS_PileupIndelType_normal         = 0,
+    NGS_PileupIndelType_intron_plus    = 1,
+    NGS_PileupIndelType_intron_minus   = 2,
+    NGS_PileupIndelType_intron_unknown = 3,
+    NGS_PileupIndelType_read_overlap   = 4,
+    NGS_PileupIndelType_read_gap       = 5
+};
+int NGS_PileupEventGetIndelType( const NGS_PileupEvent * self, ctx_t ctx );
 
 /*--------------------------------------------------------------------------
  * NGS_PileupEventIterator
@@ -103,6 +139,7 @@ bool NGS_PileupEventIteratorNext ( NGS_PileupEvent * self, ctx_t ctx );
 struct NGS_PileupEvent
 {
     NGS_Refcount dad;
+    struct NGS_Pileup * pileup;
 };
 
 typedef struct NGS_PileupEvent_vt NGS_PileupEvent_vt;
@@ -110,27 +147,37 @@ struct NGS_PileupEvent_vt
 {
     NGS_Refcount_vt dad;
     
-    struct NGS_String *     ( * get_reference_spec )            ( const NGS_PileupEvent * self, ctx_t ctx );
-    int64_t                 ( * get_reference_position )        ( const NGS_PileupEvent * self, ctx_t ctx );
-    int                     ( * get_mapping_quality )           ( const NGS_PileupEvent * self, ctx_t ctx );
-    struct NGS_String *     ( * get_alignment_id )              ( const NGS_PileupEvent * self, ctx_t ctx );
-    struct NGS_Alignment *  ( * get_alignment )                 ( const NGS_PileupEvent * self, ctx_t ctx );
-    int64_t                 ( * get_alignment_position )        ( const NGS_PileupEvent * self, ctx_t ctx );
-    int64_t                 ( * get_first_alignment_position )  ( const NGS_PileupEvent * self, ctx_t ctx );
-    int64_t                 ( * get_last_alignment_position )   ( const NGS_PileupEvent * self, ctx_t ctx );
-    int                     ( * get_event_type )                ( const NGS_PileupEvent * self, ctx_t ctx );
-    char                    ( * get_alignment_base )            ( const NGS_PileupEvent * self, ctx_t ctx );
-    char                    ( * get_alignment_quality )         ( const NGS_PileupEvent * self, ctx_t ctx );
-    struct NGS_String *     ( * get_insertion_bases )           ( const NGS_PileupEvent * self, ctx_t ctx );
-    struct NGS_String *     ( * get_insertion_qualities )       ( const NGS_PileupEvent * self, ctx_t ctx );
-    unsigned int            ( * get_deletion_count )            ( const NGS_PileupEvent * self, ctx_t ctx );
-    bool                    ( * next )                          ( const NGS_PileupEvent * self, ctx_t ctx );    
+    struct NGS_String *     ( * get_reference_spec )            ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    int64_t                 ( * get_reference_position )        ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    int                     ( * get_mapping_quality )           ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    struct NGS_String *     ( * get_alignment_id )              ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    struct NGS_Alignment *  ( * get_alignment )                 ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    int64_t                 ( * get_alignment_position )        ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    int64_t                 ( * get_first_alignment_position )  ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    int64_t                 ( * get_last_alignment_position )   ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    int                     ( * get_event_type )                ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    char                    ( * get_alignment_base )            ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    char                    ( * get_alignment_quality )         ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    struct NGS_String *     ( * get_insertion_bases )           ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    struct NGS_String *     ( * get_insertion_qualities )       ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    unsigned int            ( * get_repeat_count )              ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    int                     ( * get_indel_type )                ( const NGS_PILEUPEVENT * self, ctx_t ctx );
+    bool                    ( * next )                          ( NGS_PILEUPEVENT * self, ctx_t ctx );    
 };
 
 /* Init
 */
-void NGS_PileupEventInit ( ctx_t ctx, struct NGS_PileupEvent * self, NGS_PileupEvent_vt * vt, const char *clsname, const char *instname );
+void NGS_PileupEventInit ( ctx_t ctx, 
+                           struct NGS_PileupEvent * self, 
+                           NGS_PileupEvent_vt * vt, 
+                           const char *clsname, 
+                           const char *instname, 
+                           const struct NGS_Pileup * pileup );
 
+/* Whack
+*/
+void NGS_PileupEventWhack( struct NGS_PileupEvent * self, ctx_t ctx );
+                           
 #ifdef __cplusplus
 }
 #endif

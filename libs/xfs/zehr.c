@@ -36,7 +36,11 @@
 
 #include <kfs/file.h>
 #include <vfs/path.h>
+#include <kns/manager.h>
+#include <kns/http.h>
+#include <kns/stream.h>
 
+#include "schwarzschraube.h"
 #include "zehr.h"
 #include "mehr.h"
 
@@ -280,6 +284,8 @@ XFS_ReadVEverything_ZHR (
         return XFS_RC ( rcNull );
     }
 
+    * Buffer = 0;
+
     if ( Path != NULL ) {
         RCt = Reader ( Path, Buffer, BufferSize, & NR );
     }
@@ -295,6 +301,52 @@ XFS_ReadVEverything_ZHR (
 
     return RCt;
 }   /* XFS_ReadVEverything_ZHR () */
+
+static
+rc_t CC
+XFS_ReadCEverything_ZHR (
+                const char * Url,
+                char * Buffer,
+                size_t BufferSize,
+                const char * Filler,
+                XFS_ReadV_ZHR Reader
+)
+{
+    rc_t RCt;
+    size_t NR;
+    const char * DefaultFiller = "NULL";
+    struct VPath * Path;
+
+    RCt = 0;
+    NR = 0;
+    Path = NULL;
+
+    if ( Buffer == NULL || BufferSize <= 0 ) {
+        return XFS_RC ( rcNull );
+    }
+
+    * Buffer = 0;
+
+    if ( Url == NULL ) {
+        RCt = XFS_RC ( rcNull );
+
+        string_copy_measure (
+                        Buffer,
+                        sizeof ( Buffer ),
+                        ( Filler == NULL ? DefaultFiller : Filler )
+                        );
+    }
+    else {
+        RCt = VFSManagerMakePath ( XFS_VfsManager (), & Path, Url );
+        if ( RCt == 0 ) {
+            RCt = Reader ( Path, Buffer, BufferSize, & NR );
+
+            VPathRelease ( Path );
+        }
+    }
+
+    return RCt;
+}   /* XFS_ReadCEverything_ZHR () */
 
 LIB_EXPORT
 rc_t CC
@@ -316,6 +368,24 @@ XFS_ReadVPath_ZHR (
 
 LIB_EXPORT
 rc_t CC
+XFS_ReadCPath_ZHR (
+                const char * Url,
+                char * Buffer,
+                size_t BufferSize,
+                const char * Filler
+)
+{
+    return XFS_ReadCEverything_ZHR (
+                                Url,
+                                Buffer,
+                                BufferSize,
+                                Filler,
+                                VPathReadPath
+                                );
+}   /* XFS_ReadCPath_ZHR () */
+
+LIB_EXPORT
+rc_t CC
 XFS_ReadVUri_ZHR (
                 const struct VPath * Path,
                 char * Buffer,
@@ -332,6 +402,389 @@ XFS_ReadVUri_ZHR (
                                 );
 }   /* XFS_ReadVUri_ZHR () */
 
+LIB_EXPORT
+rc_t CC
+XFS_ReadCUri_ZHR (
+                const char * Url,
+                char * Buffer,
+                size_t BufferSize,
+                const char * Filler
+)
+{
+    return XFS_ReadCEverything_ZHR (
+                                Url,
+                                Buffer,
+                                BufferSize,
+                                Filler,
+                                VPathReadUri
+                                );
+}   /* XFS_ReadCUri_ZHR () */
+
+LIB_EXPORT
+rc_t CC
+XFS_ReadVHost_ZHR (
+                const struct VPath * Path,
+                char * Buffer,
+                size_t BufferSize,
+                const char * Filler
+)
+{
+    return XFS_ReadVEverything_ZHR (
+                                Path,
+                                Buffer,
+                                BufferSize,
+                                Filler,
+                                VPathReadHost
+                                );
+}   /* XFS_ReadVHost_ZHR () */
+
+LIB_EXPORT
+rc_t CC
+XFS_ReadCHost_ZHR (
+                const char * Url,
+                char * Buffer,
+                size_t BufferSize,
+                const char * Filler
+)
+{
+    return XFS_ReadCEverything_ZHR (
+                                Url,
+                                Buffer,
+                                BufferSize,
+                                Filler,
+                                VPathReadHost
+                                );
+}   /* XFS_ReadCHost_ZHR () */
+
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+LIB_EXPORT
+const char * CC
+XFS_SkipSpaces_ZHR ( const char * Start, const char * End )
+{
+    if ( Start != NULL && End != NULL ) {
+        while ( Start < End ) {
+            if ( ! isspace ( * Start ) ) {
+                return Start;
+            }
+
+            Start ++;
+        }
+    }
+    return NULL;
+}   /* XFS_SkipSpaces_ZHR () */
+
+LIB_EXPORT
+const char * CC
+XFS_SkipLetters_ZHR ( const char * Start, const char * End )
+{
+    if ( Start != NULL && End != NULL ) {
+        while ( Start < End ) {
+            if ( isspace ( * Start ) ) {
+                return Start;
+            }
+
+            Start ++;
+        }
+    }
+    return NULL;
+}   /* XFS_SkipLetters_ZHR () */
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+struct XFSHttpStream {
+    KClientHttp * http;
+    KHttpRequest * req;
+    KHttpResult * res;
+    KStream * str;
+
+    rc_t last_error;
+    bool completed;
+};
+
+LIB_EXPORT
+rc_t CC
+XFS_HttpStreamMake_ZHR (
+                    const char * Url,
+                    const struct XFSHttpStream ** Stream
+)
+{
+    rc_t RCt;
+    struct VPath * Path;
+    struct String Host;
+    uint32_t Port;
+    struct XFSHttpStream * TheStream;
+
+    RCt = 0;
+    Path = NULL;
+
+    if ( Stream != NULL ) {
+        * Stream = NULL;
+    }
+
+    if ( Url == NULL || Stream == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    RCt = VFSManagerMakePath ( XFS_VfsManager (), & Path, Url );
+    if ( RCt == 0 ) {
+        RCt = VPathGetHost ( Path, & Host );
+        if ( RCt == 0 ) {
+            Port = VPathGetPortNum ( Path );
+
+            TheStream = calloc ( 1, sizeof ( struct XFSHttpStream ) );
+            if ( TheStream == NULL ) {
+                RCt = XFS_RC ( rcExhausted );
+            }
+            else {
+                RCt = KNSManagerMakeHttp (
+                                    XFS_KnsManager(),
+                                    & ( TheStream -> http ),
+                                    NULL,
+                                    0x01010000,
+                                    & Host,
+                                    Port
+                                    );
+                if ( RCt == 0 ) {
+                    RCt = KHttpMakeRequest (
+                                        TheStream -> http,
+                                        & ( TheStream -> req ),
+                                        Url
+                                        );
+                    if ( RCt == 0 ) {
+                        RCt = KHttpRequestGET (
+                                        TheStream -> req,
+                                        & ( TheStream -> res )
+                                        );
+                        if ( RCt == 0 ) {
+                            RCt = KHttpResultGetInputStream (
+                                                TheStream -> res,
+                                                & ( TheStream -> str )
+                                                );
+                            if ( RCt == 0 ) {
+                                TheStream -> completed = false;
+                                TheStream -> last_error = 0;
+
+                                * Stream = TheStream;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        VPathRelease ( Path );
+    }
+
+    if ( RCt != 0 ) {
+        * Stream = NULL;
+
+        if ( TheStream != NULL ) {
+            XFS_HttpStreamDispose_ZHR ( TheStream );
+        }
+    }
+
+    return RCt;
+}   /* XFS_HttpStreamMake_ZHR () */
+
+static
+rc_t CC
+_HttpStreamCloseInternals_ZHR ( const struct XFSHttpStream * self )
+{
+    struct XFSHttpStream * Stream = ( struct XFSHttpStream * ) self;
+
+    if ( Stream == 0 ) {
+        return 0;
+    }
+
+    if ( Stream -> str != NULL ) {
+        KStreamRelease ( Stream -> str );
+
+        Stream -> str = NULL;
+    }
+
+    if ( Stream -> res != NULL ) {
+        KClientHttpResultRelease ( Stream -> res );
+
+        Stream -> res = NULL;
+    }
+
+    if ( Stream -> req != NULL ) {
+        KClientHttpRequestRelease ( Stream -> req );
+
+        Stream -> req = NULL;
+    }
+
+    if ( Stream -> http != NULL ) {
+        KClientHttpRelease ( Stream -> http );
+
+        Stream -> http = NULL;
+    }
+
+    return 0;
+}   /* _HttpStreamCloseInternals_ZHR () */
+
+LIB_EXPORT
+rc_t CC
+XFS_HttpStreamDispose_ZHR ( const struct XFSHttpStream * self )
+{
+    struct XFSHttpStream * Stream = ( struct XFSHttpStream * ) self;
+
+    if ( Stream == NULL ) {
+        return 0;
+    }
+
+    Stream -> completed = false;
+    Stream -> last_error = XFS_RC ( rcInvalid );
+
+    _HttpStreamCloseInternals_ZHR ( self );
+
+    free ( Stream );
+
+    return 0;
+}   /* XFS_HttpStreamDispose_ZHR () */
+
+LIB_EXPORT
+bool CC
+XFS_HttpStreamGood_ZHR ( const struct XFSHttpStream * self )
+{
+    if ( self != NULL ) {
+        return self -> last_error == 0;
+    }
+    return false;
+}   /* XFS_HttpStreamGood_ZHR () */
+
+LIB_EXPORT
+bool CC
+XFS_HttpStreamCompleted_ZHR ( const struct XFSHttpStream * self )
+{
+    if ( self != NULL ) {
+        return self -> completed;
+    }
+    return true;
+}   /* XFS_HttpStreamCompleted_ZHR () */
+
+LIB_EXPORT
+rc_t CC
+XFS_HttpStreamRead_ZHR (
+                    const struct XFSHttpStream * self,
+                    void * Buffer,
+                    size_t Size,
+                    size_t * NumRead
+)
+{
+    struct XFSHttpStream * Stream = ( struct XFSHttpStream * ) self;
+
+    if ( NumRead != NULL ) {
+        * NumRead = 0;
+    }
+
+    if ( Stream == NULL || Buffer == NULL || Size == 0 || NumRead == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    if ( Stream -> last_error != 0 ) {
+        return Stream -> last_error;
+    }
+
+    if ( Stream -> completed ) {
+        * NumRead = 0;
+
+        return 0;
+    }
+
+    if ( Stream -> str == NULL ) {
+        _HttpStreamCloseInternals_ZHR ( Stream );
+
+        Stream -> last_error = XFS_RC ( rcInvalid );
+
+        return Stream -> last_error;
+    }
+
+    Stream -> last_error = KStreamRead ( 
+                                    Stream -> str,
+                                    Buffer,
+                                    Size,
+                                    NumRead
+                                    );
+    if ( Stream -> last_error == 0 ) {
+        if ( * NumRead == 0 ) {
+            _HttpStreamCloseInternals_ZHR ( Stream );
+
+            Stream -> completed = true;
+        }
+    }
+    else {
+        _HttpStreamCloseInternals_ZHR ( Stream );
+    }
+
+    return self -> last_error;
+}   /* XFS_HttpStreamRead_ZHR */
+
+LIB_EXPORT
+rc_t CC
+XFS_HttpStreamTimedRead_ZHR (
+                    const struct XFSHttpStream * self,
+                    void * Buffer,
+                    size_t Size,
+                    size_t * NumRead,
+                    struct timeout_t * Tm
+)
+{
+    struct XFSHttpStream * Stream = ( struct XFSHttpStream * ) self;
+
+    if ( NumRead != NULL ) {
+        * NumRead = 0;
+    }
+
+    if ( Stream == NULL || Buffer == NULL || Size == 0 || NumRead == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    if ( Stream -> last_error != 0 ) {
+        return Stream -> last_error;
+    }
+
+    if ( Stream -> completed ) {
+        * NumRead = 0;
+
+        return 0;
+    }
+
+    if ( Stream -> str == NULL ) {
+        _HttpStreamCloseInternals_ZHR ( Stream );
+
+        Stream -> last_error = XFS_RC ( rcInvalid );
+
+        return Stream -> last_error;
+    }
+
+    Stream -> last_error = KStreamTimedRead ( 
+                                    Stream -> str,
+                                    Buffer,
+                                    Size,
+                                    NumRead,
+                                    Tm
+                                    );
+    if ( Stream -> last_error == 0 ) {
+        if ( * NumRead == 0 ) {
+            _HttpStreamCloseInternals_ZHR ( Stream );
+
+            Stream -> completed = true;
+        }
+    }
+    else {
+        _HttpStreamCloseInternals_ZHR ( Stream );
+    }
+
+    return self -> last_error;
+}   /* XFS_HttpStreamTimedRead_ZHR */
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+

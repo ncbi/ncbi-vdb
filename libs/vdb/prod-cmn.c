@@ -520,7 +520,8 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
     PageMapIterator iter_os[16], *iter_oh, *iter;
     uint64_t last = 0;
     uint32_t last_len = 0;
-    uint64_t  window;
+    uint32_t window;
+	uint32_t min_row_count=UINT32_MAX; /* will increase row_count due to larger common repeat count of parameters */
     int64_t  row_id_max=0;
     uint32_t MAX_BLOB_REGROUP; /** max rows in blob for regrouping ***/
     
@@ -555,7 +556,6 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
         return rc;
     }
 
-
     if(self->curs->cache_curs && self->curs->cache_col_active){
         /*** since cache_cursor exist, trying to avoid prefetching data which is in cache cursor ***/
 		row_id_max = self->curs->cache_empty_end;
@@ -578,8 +578,8 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
 	} 
 
     if(window == 1){
-	self->start_id=self->stop_id=row_id;
-	if(row_count > 0) self->stop_id += row_count-1;
+		self->start_id=self->stop_id=row_id;
+		if(row_count > 0) self->stop_id += row_count-1;
     } else { 
       self->start_id=param_start_id;
       self->stop_id =param_stop_id;
@@ -589,13 +589,45 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
         if(row_count > 0) self->stop_id += row_count-1;
       } else if (    row_count ==1 /*we are re-blobing */
                   && self->stop_id - self->start_id > 2*window){
-	int64_t	n=(row_id-1)/window;
-	if(self->start_id <= n*window)      self->start_id=n*window+1;
-	if(self->stop_id > (n+1) * window) self->stop_id = (n+1)*window;
-	if(row_id_max >= row_id && self->stop_id > row_id_max)     self->stop_id = row_id_max;
+		int64_t	n=(row_id-1)/window;
+		if(self->start_id <= n*window)      self->start_id=n*window+1;
+		if(self->stop_id > (n+1) * window) self->stop_id = (n+1)*window;
       }
     }
-    
+
+    /* create and populate array of input parameters */
+    VECTOR_ALLOC_ARRAY(argc, argv, args_os, args_oh);
+    VECTOR_ALLOC_ARRAY(argc, iter, iter_os, iter_oh);
+    for (i = 0; i != argc; ++ i){
+		
+        in = VectorGet(args, i);
+       
+		if(in->start_id == -INT64_MAX - 1 ) {
+			rc = PageMapNewIterator(in->pm, &iter[i],0,-1);
+		} else if(param_stop_id>self->stop_id && param_stop_id < INT64_MAX){
+			rc = PageMapNewIterator(in->pm, &iter[i], self->start_id-in->start_id, param_stop_id - self->start_id + 1);
+			if(rc == 0){
+				uint32_t n = PageMapIteratorRepeatCount(&iter[i]);
+				if(n < min_row_count) min_row_count=n;
+			}
+		} else {
+			rc = PageMapNewIterator(in->pm, &iter[i], self->start_id-in->start_id, self->stop_id - self->start_id + 1);
+		}
+        if ( rc ) break;
+        argv[i].variant = vrdData;
+        argv[i].blob_stop_id = in->stop_id;
+        argv[i].u.data.elem_bits = in->data.elem_bits;
+        argv[i].u.data.base = in->data.base;
+        argv[i].u.data.base_elem_count = in->data.elem_count;
+    }
+	if(min_row_count < UINT32_MAX && self->start_id + min_row_count -1 > self->stop_id ){
+		self->stop_id = self->start_id + min_row_count - 1;
+	}
+	if(row_id_max >= row_id && self->stop_id > row_id_max)     self->stop_id = row_id_max;
+
+
+
+
 #if PROD_NAME
     rc = VBlobNew ( &blob, self->start_id, self->stop_id, self->dad.name );
 #else
@@ -624,31 +656,7 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
     rslt.elem_bits = scratch.elem_bits = blob->data.elem_bits = VTypedescSizeof(&self->dad.desc);
     blob->byte_order = vboNative;
     
-    /* create and populate array of input parameters */
-    VECTOR_ALLOC_ARRAY(argc, argv, args_os, args_oh);
-    VECTOR_ALLOC_ARRAY(argc, iter, iter_os, iter_oh);
     
-    for (i = 0; i != argc; ++ i) {
-        in = VectorGet(args, i);
-       
-	if(in->start_id == -INT64_MAX - 1 ) {
-		rc = PageMapNewIterator(in->pm, &iter[i],0,-1);
-	} else {
-		rc = PageMapNewIterator(in->pm, &iter[i], self->start_id-in->start_id, self->stop_id - self->start_id + 1);
-	}
-        if ( rc ) break;
-/*********
-        if ( !PageMapIteratorAdvance( &iter[i], (uint32_t)( start_id - in->start_id ) ) ) {
-            rc = RC(rcVDB, rcFunction, rcExecuting, rcBlob, rcCorrupt);
-            break;
-        }
-**********/
-        argv[i].variant = vrdData;
-        argv[i].blob_stop_id = in->stop_id;
-        argv[i].u.data.elem_bits = in->data.elem_bits;
-        argv[i].u.data.base = in->data.base;
-        argv[i].u.data.base_elem_count = in->data.elem_count;
-    }
     
     for (row_id = self->start_id; row_id <= self->stop_id && rc == 0; ) {
         uint32_t row_count = 1;
@@ -1835,11 +1843,17 @@ LIB_EXPORT rc_t CC VFunctionProdColumnIdRange ( const VFunctionProd *self, int64
     pb.last = 0;
     
     VectorDoUntil ( & self -> parms, false, fetch_param_IdRange, & pb );
+
     if (pb.rc == 0) {
+#if 0 
+/* this causes problems in the loaders */   
+        if(pb.first_time){ /** no parameters - some function which generated data; f.e.  meta_value() ***/
+              pb.last = INT64_MAX;
+        } 
+#endif        
         *first = pb.first;
         *last = pb.last;
     }
-    
     return pb . rc;
 }
 

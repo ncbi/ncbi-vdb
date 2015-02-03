@@ -52,6 +52,7 @@ XFS_EXTERN rc_t CC XFSOwpMake ( struct XFSOwp ** Owp );
 XFS_EXTERN rc_t CC XFSOwpInit ( struct XFSOwp * self );
 XFS_EXTERN rc_t CC XFSOwpWhack ( struct XFSOwp * self );
 XFS_EXTERN rc_t CC XFSOwpDispose ( struct XFSOwp * self );
+XFS_EXTERN rc_t CC XFSOwpClear ( struct XFSOwp * self );
 
 XFS_EXTERN bool CC XFSOwpHas (
                                 const struct XFSOwp * self,

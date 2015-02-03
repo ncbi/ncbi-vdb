@@ -221,35 +221,59 @@ LIB_EXPORT rc_t CC TableReaderRefSeq_Read(const TableReaderRefSeq* cself, INSDC_
 {
     rc_t rc = 0;
 
-    if( cself == NULL || buffer == NULL || written == NULL ) {
-        rc = RC(rcAlign, rcType, rcReading, rcParam, rcNull);
-    } else if( len == 0 ) {
-        *written = 0;
-    } else if( (rc = ReferenceSeq_ReOffset(cself->circular, cself->total_seq_len, &offset)) == 0 ) {
-        INSDC_coord_len q = 0;
-        *written = 0;
-        do {
-            int64_t rowid = offset / cself->max_seq_len + 1;
-            INSDC_coord_zero s = offset % cself->max_seq_len;
-            if( (rc = TableReader_ReadRow(cself->base, rowid)) == 0 ) {
-                q = cself->seq_len->base.coord_len[0] - s;
-                if( q > len ) {
-                    q = len;
-                }
-                memcpy(&buffer[*written], cself->read->base.str + s, q);
-                *written += q;
-                offset += q;
-                len -= q;
-            }
-            /* SEQ_LEN < MAX_SEQ_LEN is last row unless it is CIRCULAR */
-            if( cself->seq_len->base.coord_len[0] < cself->max_seq_len ) {
-                if( !cself->circular ) {
-                    break;
-                }
-                offset = 0;
-            }
-        } while(rc == 0 && q > 0 && len > 0 );
+    if ( cself == NULL || buffer == NULL || written == NULL )
+	{
+        rc = RC( rcAlign, rcType, rcReading, rcParam, rcNull );
     }
-    ALIGN_DBGERR(rc);
+	else if( len == 0 )
+	{
+        *written = 0;
+    }
+	else
+	{
+		rc = ReferenceSeq_ReOffset( cself->circular, cself->total_seq_len, &offset );
+		if ( rc == 0 )
+		{
+			INSDC_coord_len q = 0;
+			*written = 0;
+			do
+			{
+				int64_t rowid = offset / cself->max_seq_len + 1;
+				INSDC_coord_zero s = offset % cself->max_seq_len;
+				
+				rc = TableReader_ReadRow( cself->base, rowid );
+				if ( rc == 0 && ( cself->read->len == 0 || cself->read->base.str == NULL ) )
+				{
+					/* TableReader_ReadRow() can return rc == 0 for an optional column!
+					   in these cases len/base.str are zero/NULL */
+					rc = RC( rcAlign, rcType, rcReading, rcItem, rcNull );			
+				}
+				
+				if ( rc == 0 )
+				{
+					q = cself->seq_len->base.coord_len[0] - s;
+					if ( q > len )
+					{
+						q = len;
+					}
+					memcpy( &buffer[*written], cself->read->base.str + s, q );
+					*written += q;
+					offset += q;
+					len -= q;
+				}
+				
+				/* SEQ_LEN < MAX_SEQ_LEN is last row unless it is CIRCULAR */
+				if ( rc == 0 && ( cself->seq_len->base.coord_len[ 0 ] < cself->max_seq_len ) )
+				{
+					if ( !cself->circular )
+					{
+						break;
+					}
+					offset = 0;
+				}
+			} while( rc == 0 && q > 0 && len > 0 );
+		}
+	}
+    ALIGN_DBGERR( rc );
     return rc;
 }

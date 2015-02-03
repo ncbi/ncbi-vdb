@@ -31,6 +31,7 @@
 #include <ngs/itf/PileupEventItf.h>
 
 #include "NGS_String.h"
+#include "NGS_Pileup.h"
 
 #include <kfc/ctx.h>
 #include <kfc/rsrc.h>
@@ -200,10 +201,22 @@ static NGS_String_v1 * NGS_PileupEvent_v1_get_ins_quals ( const NGS_PileupEvent_
     return ( NGS_String_v1 * ) ret;
 }
 
-static uint32_t NGS_PileupEvent_v1_get_del_count ( const NGS_PileupEvent_v1 * self, NGS_ErrBlock_v1 * err )
+static uint32_t NGS_PileupEvent_v1_get_rpt_count ( const NGS_PileupEvent_v1 * self, NGS_ErrBlock_v1 * err )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
-    ON_FAIL ( uint32_t ret = NGS_PileupEventGetDeletionCount ( Self ( self ), ctx ) )
+    ON_FAIL ( uint32_t ret = NGS_PileupEventGetRepeatCount ( Self ( self ), ctx ) )
+    {
+        NGS_ErrBlockThrow ( err, ctx );
+    }
+
+    CLEAR ();
+    return ret;
+}
+
+static uint32_t NGS_PileupEvent_v1_get_indel_type ( const NGS_PileupEvent_v1 * self, NGS_ErrBlock_v1 * err )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+    ON_FAIL ( uint32_t ret = NGS_PileupEventGetIndelType ( Self ( self ), ctx ) )
     {
         NGS_ErrBlockThrow ( err, ctx );
     }
@@ -249,7 +262,8 @@ NGS_PileupEvent_v1_vt ITF_PileupEvent_vt =
     NGS_PileupEvent_v1_get_align_qual,
     NGS_PileupEvent_v1_get_ins_bases,
     NGS_PileupEvent_v1_get_ins_quals,
-    NGS_PileupEvent_v1_get_del_count,
+    NGS_PileupEvent_v1_get_rpt_count,
+    NGS_PileupEvent_v1_get_indel_type,
     NGS_PileupEvent_v1_next
 };
 
@@ -260,7 +274,12 @@ NGS_PileupEvent_v1_vt ITF_PileupEvent_vt =
 #define VT( self, msg ) \
     ( ( ( const NGS_PileupEvent_vt* ) ( self ) -> dad . vt ) -> msg )
 
-void NGS_PileupEventInit ( ctx_t ctx, struct NGS_PileupEvent * self, NGS_PileupEvent_vt * vt, const char *clsname, const char *instname )
+void NGS_PileupEventInit ( ctx_t ctx, 
+                           struct NGS_PileupEvent * self, 
+                           NGS_PileupEvent_vt * vt, 
+                           const char *clsname, 
+                           const char *instname,
+                           const struct NGS_Pileup * pileup )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcRow, rcConstructing );
     
@@ -279,14 +298,22 @@ void NGS_PileupEventInit ( ctx_t ctx, struct NGS_PileupEvent * self, NGS_PileupE
         assert ( vt -> get_alignment_quality != NULL );
         assert ( vt -> get_insertion_bases != NULL );
         assert ( vt -> get_insertion_qualities != NULL );
-        assert ( vt -> get_deletion_count != NULL );
+        assert ( vt -> get_repeat_count != NULL );
+        assert ( vt -> get_indel_type != NULL );
         assert ( vt -> next != NULL );
+    
+        assert ( pileup != NULL );
+        self -> pileup = NGS_PileupDuplicate ( pileup, ctx );
     }
+}
+
+void NGS_PileupEventWhack( struct NGS_PileupEvent * self, ctx_t ctx )
+{
+    NGS_PileupRelease ( self -> pileup, ctx );
 }
     
 struct NGS_String * NGS_PileupEventGetReferenceSpec( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -302,7 +329,6 @@ struct NGS_String * NGS_PileupEventGetReferenceSpec( const NGS_PileupEvent * sel
 
 int64_t NGS_PileupEventGetReferencePosition( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -318,7 +344,6 @@ int64_t NGS_PileupEventGetReferencePosition( const NGS_PileupEvent * self, ctx_t
 
 int NGS_PileupEventGetMappingQuality( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -334,7 +359,6 @@ int NGS_PileupEventGetMappingQuality( const NGS_PileupEvent * self, ctx_t ctx )
 
 struct NGS_String * NGS_PileupEventGetAlignmentId( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -350,7 +374,6 @@ struct NGS_String * NGS_PileupEventGetAlignmentId( const NGS_PileupEvent * self,
 
 struct NGS_Alignment * NGS_PileupEventGetAlignment( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -366,7 +389,6 @@ struct NGS_Alignment * NGS_PileupEventGetAlignment( const NGS_PileupEvent * self
 
 int64_t NGS_PileupEventGetAlignmentPosition( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -382,7 +404,6 @@ int64_t NGS_PileupEventGetAlignmentPosition( const NGS_PileupEvent * self, ctx_t
 
 int64_t NGS_PileupEventGetFirstAlignmentPosition( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -398,7 +419,6 @@ int64_t NGS_PileupEventGetFirstAlignmentPosition( const NGS_PileupEvent * self, 
 
 int64_t NGS_PileupEventGetLastAlignmentPosition( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -412,9 +432,9 @@ int64_t NGS_PileupEventGetLastAlignmentPosition( const NGS_PileupEvent * self, c
     return 0;
 }
 
+/*TODO: use uint32_t to represent all enums */
 int NGS_PileupEventGetEventType( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -430,7 +450,6 @@ int NGS_PileupEventGetEventType( const NGS_PileupEvent * self, ctx_t ctx )
 
 char NGS_PileupEventGetAlignmentBase( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -446,7 +465,6 @@ char NGS_PileupEventGetAlignmentBase( const NGS_PileupEvent * self, ctx_t ctx )
 
 char NGS_PileupEventGetAlignmentQuality( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -462,7 +480,6 @@ char NGS_PileupEventGetAlignmentQuality( const NGS_PileupEvent * self, ctx_t ctx
 
 struct NGS_String * NGS_PileupEventGetInsertionBases( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -478,7 +495,6 @@ struct NGS_String * NGS_PileupEventGetInsertionBases( const NGS_PileupEvent * se
 
 struct NGS_String * NGS_PileupEventGetInsertionQualities( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -492,17 +508,31 @@ struct NGS_String * NGS_PileupEventGetInsertionQualities( const NGS_PileupEvent 
     return NULL;
 }
 
-unsigned int NGS_PileupEventGetDeletionCount( const NGS_PileupEvent * self, ctx_t ctx )
+unsigned int NGS_PileupEventGetRepeatCount( const NGS_PileupEvent * self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
-        INTERNAL_ERROR ( xcSelfNull, "failed to get deletion count" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get repeat count" );
     }
     else
     {
-        return VT ( self, get_deletion_count ) ( self, ctx );
+        return VT ( self, get_repeat_count ) ( self, ctx );
+    }
+
+    return 0;
+}
+
+int NGS_PileupEventGetIndelType( const NGS_PileupEvent * self, ctx_t ctx )
+{
+    if ( self == NULL )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get indel type " );
+    }
+    else
+    {
+        return VT ( self, get_indel_type ) ( self, ctx );
     }
 
     return 0;
@@ -513,7 +543,6 @@ unsigned int NGS_PileupEventGetDeletionCount( const NGS_PileupEvent * self, ctx_
  */
 bool NGS_PileupEventIteratorNext ( NGS_PileupEvent* self, ctx_t ctx )
 {
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );

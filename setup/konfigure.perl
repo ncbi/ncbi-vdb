@@ -263,6 +263,7 @@ if ($OPT{arch}) {
             close F;
             last;
         }
+        println "build architecture: $ARCH" unless ($AUTORUN);
     } else {
         delete $OPT{arch};
     }
@@ -286,6 +287,8 @@ my $BITS;
 
 if ($MARCH =~ /x86_64/i) {
     $BITS = 64;
+} elsif ($MARCH eq 'fat86') {
+    $BITS = '32_64';
 } elsif ($MARCH =~ /i?86/i) {
     $BITS = 32;
 } else {
@@ -323,9 +326,9 @@ if ($OSTYPE =~ /linux/i) {
 println "$OSTYPE ($OS) is supported" unless ($AUTORUN);
 
 # tool chain
-my ($CPP, $CC, $CP, $AR, $ARX, $ARLS, $LD, $LP);
+my ($CPP, $CC, $CP, $AR, $ARX, $ARLS, $LD, $LP, $MAKE_MANIFEST);
 my ($JAVAC, $JAVAH, $JAR);
-my ($DBG, $OPT, $PIC, $INC, $MD);
+my ($ARCH_FL, $DBG, $OPT, $PIC, $INC, $MD) = ('');
 
 print "checking for supported tool chain... " unless ($AUTORUN);
 if ($TOOLS eq 'gcc') {
@@ -346,15 +349,26 @@ if ($TOOLS eq 'gcc') {
 } elsif ($TOOLS eq 'clang') {
     $CPP  = 'clang++';
     $CC   = 'clang -c';
-    $CP   = "$CPP -c -mmacosx-version-min=10.6";
-    $AR   = 'ar rc';
+    my $versionMin = '-mmacosx-version-min=10.6';
+    $CP   = "$CPP -c $versionMin";
+    if ($BITS ne '32_64') {
+        $ARCH_FL = '-arch i386' if ($BITS == 32);
+        $OPT = '-O3';
+        $AR      = 'ar rc';
+        $LD      = "clang $ARCH_FL";
+        $LP      = "$CPP $versionMin $ARCH_FL";
+    } else {
+        $MAKE_MANIFEST = '( echo "$^" > $@/manifest )';
+        $ARCH_FL       = '-arch i386 -arch x86_64';
+        $OPT    = '-O3';
+        $AR     = 'libtool -static -o';
+        $LD     = "clang -Wl,-arch_multiple $ARCH_FL";
+        $LP     = "$CPP $versionMin -Wl,-arch_multiple $ARCH_FL";
+    }
     $ARX  = 'ar x';
     $ARLS = 'ar t';
-    $LD   = 'clang';
-    $LP   = "$CPP -mmacosx-version-min=10.6";
 
     $DBG = '-g -DDEBUG';
-    $OPT = '-O3';
     $PIC = '-fPIC';
     $INC = '-I';
     $MD  = '-MD';
@@ -527,7 +541,8 @@ foreach my $href (@REQ) {
                 if ($OPT{'build-prefix'}) {
                     my $try = $OPT{'build-prefix'};
                     if ($tolib) {
-                        (undef, $fl, $fil) = find_in_dir($try, undef, $lib, $ilib);
+                        (undef, $fl, $fil)
+                            = find_in_dir($try, undef, $lib, $ilib);
                         if ($fl || $fil) {
                             $found_lib  = $fl  if (! $found_lib  && $fl);
                             $found_ilib = $fil if (! $found_ilib && $fil);
@@ -541,7 +556,8 @@ foreach my $href (@REQ) {
                     if (! ($try =~ /$a{name}$/)) {
                         $try = File::Spec->catdir($try, $a{name});
                         if ($tolib && ! $found) {
-                            (undef, $fl, $fil) = find_in_dir($try, undef, $lib, $ilib);
+                            (undef, $fl, $fil)
+                                = find_in_dir($try, undef, $lib, $ilib);
                             if ($fl || $fil) {
                                 $found_lib  = $fl  if (! $found_lib  && $fl);
                                 $found_ilib = $fil if (! $found_ilib && $fil);
@@ -558,7 +574,8 @@ foreach my $href (@REQ) {
                     my $try = $a{bldpath};
                     $try = $a{locbldpath} if ($OPT{'local-build-out'});
                     if ($tolib && ! $found) {
-                        (undef, $fl, $fil) = find_in_dir($try, undef, $lib, $ilib);
+                        (undef, $fl, $fil)
+                            = find_in_dir($try, undef, $lib, $ilib);
                         $found_lib  = $fl  if (! $found_lib  && $fl);
                         $found_ilib = $fil if (! $found_ilib && $fil);
                     }
@@ -710,7 +727,7 @@ VERSION_LIBX = \$(LIBX).\$(VERSION)
 MAJMIN_LIBX  = \$(LIBX).\$(MAJMIN)
 MAJVERS_LIBX = \$(LIBX).\$(MAJVERS)
 
-SHLX = $SHLX
+SHLX         = $SHLX
 VERSION_SHLX = $VERSION_SHLX
 MAJMIN_SHLX  = $MAJMIN_SHLX
 MAJVERS_SHLX = $MAJVERS_SHLX
@@ -720,7 +737,7 @@ OBJX = $OBJX
 LOBX = $LOBX
 
 # suffix string for system executable
-EXEX = $EXEX
+EXEX         = $EXEX
 VERSION_EXEX = \$(EXEX).\$(VERSION)
 MAJMIN_EXEX  = \$(EXEX).\$(MAJMIN)
 MAJVERS_EXEX = \$(EXEX).\$(MAJVERS)
@@ -737,16 +754,17 @@ BITS = $BITS
 # tools
 EndText
 
-    L($F, "CC    = $CC"   ) if ($CC);
-    L($F, "CP    = $CP"   ) if ($CP);
-    L($F, "AR    = $AR"   ) if ($AR);
-    L($F, "ARX   = $ARX"  ) if ($ARX);
-    L($F, "ARLS  = $ARLS" ) if ($ARLS);
-    L($F, "LD    = $LD"   ) if ($LD);
-    L($F, "LP    = $LP"   ) if ($LP);
-    L($F, "JAVAC = $JAVAC") if ($JAVAC);
-    L($F, "JAVAH = $JAVAH") if ($JAVAH);
-    L($F, "JAR   = $JAR"  ) if ($JAR);
+    L($F, "CC            = $CC"           ) if ($CC);
+    L($F, "CP            = $CP"           ) if ($CP);
+    L($F, "AR            = $AR"           ) if ($AR);
+    L($F, "ARX           = $ARX"          ) if ($ARX);
+    L($F, "ARLS          = $ARLS"         ) if ($ARLS);
+    L($F, "LD            = $LD"           ) if ($LD);
+    L($F, "LP            = $LP"           ) if ($LP);
+    L($F, "JAVAC         = $JAVAC"        ) if ($JAVAC);
+    L($F, "JAVAH         = $JAVAH"        ) if ($JAVAH);
+    L($F, "JAR           = $JAR"          ) if ($JAR);
+    L($F, "MAKE_MANIFEST = $MAKE_MANIFEST") if ($MAKE_MANIFEST);
     L($F);
 
     L($F, '# tool options');
@@ -771,9 +789,19 @@ EndText
     } elsif ($PKG{LNG} eq 'JAVA') {
         L($F, 'SRCINC  = -sourcepath $(INCPATHS)');
     }
-    L($F, "INCDIRS = \$(SRCINC) $INC\$(TOP)") if ($PIC);
+    if ($PIC) {
+        if (PACKAGE_NAMW() eq 'NGS') {
+            L($F, "INCDIRS = \$(SRCINC) $INC\$(TOP) "
+                .        "$INC\$(TOP)/ngs/\$(OSINC)/\$(ARCH)")
+        } elsif (PACKAGE_NAMW() eq 'NGS_BAM') {
+            L($F, "INCDIRS = \$(SRCINC) $INC\$(TOP) "
+                . "$INC\$(NGS_INCDIR)/ngs/\$(OSINC)/\$(ARCH)")
+        } else {
+            L($F, "INCDIRS = \$(SRCINC) $INC\$(TOP)")
+        }
+    }
     if ($PKG{LNG} eq 'C') {
-        L($F, "CFLAGS  = \$(DBG) \$(OPT) \$(INCDIRS) $MD");
+        L($F, "CFLAGS  = \$(DBG) \$(OPT) \$(INCDIRS) $MD $ARCH_FL");
     }
 
     L($F, 'CLSPATH = -classpath $(CLSDIR)');
@@ -1040,6 +1068,8 @@ unless ($OPT{'reconfigure'}) {
     open my $F, '>reconfigure' or die 'cannot open reconfigure to write';
     print $F "./configure $CONFIGURED\n";
     close $F;
+   # my $perm = (stat $fh)[2] & 07777;
+#   print "==================================================== $perm\n";
 }
 
 status() if ($OS ne 'win');
@@ -1566,7 +1596,7 @@ EndText
   --clean                 remove all configuration results
   --debug                 print lots of debugging information
 
-If `configure' was arleady run running `configure' without options
+If `configure' was already run running `configure' without options
 will rerun `configure' using the same command-line arguments.
 
 Report bugs to sra-tools\@ncbi.nlm.nih.gov

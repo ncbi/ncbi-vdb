@@ -29,6 +29,10 @@
 
 #include <xfs/xfs-defs.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /*))))
  ((((   This file contains all unsorted common things
   ))))
@@ -39,11 +43,80 @@
 static const uint32_t _sFlavorLess                = 0;
 static const uint32_t _sFlavorOfFoo               = 1;
 static const uint32_t _sFlavorOfBogus             = 2;
-static const uint32_t _sFlavorOfSimpleContainer   = 3;
-static const uint32_t _sFlavorOfKfs               = 4;
+static const uint32_t _sFlavorOfContNode          = 3;
+static const uint32_t _sFlavorOfSimpleContainer   = 4;
+static const uint32_t _sFlavorOfKfs               = 5;
+static const uint32_t _sFlavorOfReadMe            = 6;
+static const uint32_t _sFlavorOfKart              = 7;
+static const uint32_t _sFlavorOfKartItem          = 8;
+static const uint32_t _sFlavorOfKartCollection    = 9;
+static const uint32_t _sFlavorOfHttp              = 10;
+static const uint32_t _sFlavorOfTar               = 11;
 
-/*))    Common name defines for property names
+/*))    Methods related to all commonly used nodes
  ((*/
-#define XFS_MODEL_SOURCE    "source"
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/* FileNode and DirNode - implemented in kfs.c                       */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+XFS_EXTERN rc_t CC XFSFileNodeMake (
+                            const char * Path,
+                            const char * Name,
+                            const char * Perm,  /* Could be NULL */
+                            struct XFSNode ** Node
+                            );
+
+XFS_EXTERN rc_t CC XFSDirNodeMake (
+                            const char * Path,
+                            const char * Name,
+                            const char * Perm,  /* Could be NULL */
+                            struct XFSNode ** Node
+                            );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/* DocNode - implemented in docnode.c                                */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+struct XFSDoc;
+
+XFS_EXTERN rc_t CC XFSDocNodeMake (
+                            const struct XFSDoc * Doc,
+                            const char * Name,
+                            const char * Perm,      /* Could be NULL */
+                            struct XFSNode ** Node
+                            );
+
+XFS_EXTERN rc_t CC XFSDocNodeMakeWithFlavor (
+                            const struct XFSDoc * Doc,
+                            const char * Name,
+                            const char * Perm,      /* Could be NULL */
+                            uint32_t Flavor,
+                            struct XFSNode ** Node
+                            );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/* KartNode - implemented in kart.c                                  */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+XFS_EXTERN rc_t CC XFSKartNodeMake (
+                            const char * Name,
+                            const char * Path,
+                            const char * Perm,      /* Could be NULL */
+                            struct XFSNode ** Node
+                            );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/* KartCollectionNode - implemented in karts.c                       */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+XFS_EXTERN rc_t CC XFSKartCollectionNodeMake (
+                            const char * Name,
+                            const char * Path,
+                            const char * Perm,      /* Could be NULL */
+                            struct XFSNode ** Node
+                            );
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* _h_common_ */

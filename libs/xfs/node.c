@@ -69,6 +69,17 @@ XFSNodeInit (
             const char * NodeName
 )
 {
+    return XFSNodeInitVT ( self, NodeName, NULL );
+}   /* XFSNodeInit () */
+
+LIB_EXPORT
+rc_t CC
+XFSNodeInitVT (
+            const struct XFSNode * self,
+            const char * NodeName,
+            const union XFSNode_vt * VT
+)
+{
     rc_t RCt;
     struct XFSNode * Node;
 
@@ -79,10 +90,17 @@ XFSNodeInit (
         return XFS_RC ( rcNull );
     }
 
+    if ( VT != NULL ) {
+        Node -> vt = VT;
+    }
+
     RCt = XFS_StrDup (
                     NodeName,
                     ( const char ** ) & ( Node -> Name )
                     );
+/*
+printf ( " [XFSNodeInit] [%p] [%s]\n", ( void * ) Node, Node -> Name );
+*/
     if ( RCt == 0 ) {
         KRefcountInit (
                     & ( Node -> refcount ),
@@ -209,6 +227,9 @@ printf ( "XFSNodeDispose ( 0x%p )\n", ( void * ) self );
     KRefcountWhack ( & ( Node -> refcount ), _sXFSNode_classname );
 
     if ( Node -> Name != NULL ) {
+/*
+printf ( " [XFSNodeDispose] [%p] [%s]\n", ( void * ) Node, Node -> Name );
+*/
         free ( Node -> Name );
         Node -> Name = NULL;
     }

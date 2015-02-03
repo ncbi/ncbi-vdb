@@ -259,13 +259,17 @@ rc_t VColumnReadBlob ( const VColumn *cself, const VBlob **vblobp, int64_t row_i
 }
 
 rc_t VColumnRead ( const VColumn *cself, int64_t row_id,
-   uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len,
-   VBlob **vblob)
+    uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len,
+    VBlob ** vblob)
 {
     rc_t rc;
-    VBlob *dummy = NULL;
-    if (vblob == NULL)
-    {   vblob = &dummy; }
+
+    VBlob * dummy;
+    if ( vblob == NULL )
+    {
+        dummy = NULL;
+        vblob = & dummy;
+    }
 
     if ( cself -> in == NULL )
         rc = RC ( rcVDB, rcColumn, rcReading, rcColumn, rcNotOpen );

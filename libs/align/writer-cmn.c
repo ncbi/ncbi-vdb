@@ -523,24 +523,41 @@ rc_t CC TableWriter_ColumnDefault(const TableWriter* cself, const uint8_t cursor
     return rc;
 }
 
-rc_t CC TableWriter_ColumnWrite(const TableWriter* cself, const TableWriterColumn* column, const TableWriterData *data)
+rc_t CC TableWriter_ColumnWrite(const TableWriter* cself,
+    const TableWriterColumn* column, const TableWriterData *data)
 {
     rc_t rc = 0;
+
     if( cself == NULL || column == NULL || data == NULL ) {
         rc = RC( rcAlign, rcType, rcWriting, rcParam, rcInvalid);
-    } else if( cself->curr == NULL || cself->curr->cursor == NULL ) {
+    }
+    else if( cself->curr == NULL || cself->curr->cursor == NULL ) {
         rc = RC( rcAlign, rcType, rcWriting, rcMode, rcInvalid);
-    } else if( !(column->flags & ewcol_IsArray) && data->elements > 1 ) {
+    }
+    else if( !(column->flags & ewcol_IsArray) && data->elements > 1 ) {
         rc = RC( rcAlign, rcType, rcWriting, rcData, rcTooLong);
         ALIGN_DBGERRP("column %s is not an array of values", rc, column->name);
-    } else if( column->idx != 0 ) {
-        rc = VCursorWrite(cself->curr->cursor, column->idx, column->element_bits, data->buffer, 0, data->elements);
     }
+    else if (column->idx != 0) {
+        const char platform[] = "PLATFORM";
+        /* Do not try to write PLATFORM column when it is empty
+          (e.g. cg-load writes PLATFORM defult) */
+        if (data->buffer != NULL || data-> elements != 0 ||
+            string_cmp(platform, sizeof platform - 1, column->name,
+                string_measure(column->name, NULL), sizeof platform - 1) != 0)
+        {
+            rc = VCursorWrite(cself->curr->cursor, column->idx,
+                column->element_bits, data->buffer, 0, data->elements);
+        }
+    }
+
     if( rc != 0 ) {
         ALIGN_DBGERRP("table %s column %s row %ld", rc, cself->table, column->name, cself->curr->rows + 1);
-    } else {
+    }
+    else {
         ALIGN_DBG("table %s column %s value %lu elements", cself->table, column->name, data->elements);
     }
+
     return rc;
 }
 

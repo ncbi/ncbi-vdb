@@ -160,6 +160,16 @@ XFSOwpDispose ( struct XFSOwp * self )
     return RCt;
 }   /* XFSOwpDispose () */
 
+LIB_EXPORT
+rc_t CC
+XFSOwpClear ( struct XFSOwp * self )
+{
+    XFSOwpWhack ( self );
+    XFSOwpInit ( self );
+
+    return 0;
+}   /* XFSOwpClear () */
+
 static
 int CC
 _OWPStringCmp ( const char * Str1, const char * Str2 )

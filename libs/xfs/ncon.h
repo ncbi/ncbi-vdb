@@ -59,15 +59,6 @@ XFS_EXTERN rc_t CC XFSNodeContainerRelease (
                             const struct XFSNodeContainer * self
                             );
 
-XFS_EXTERN bool CC XFSNodeContainerIsEditable (
-                            const struct XFSNodeContainer * self
-                            );
-
-XFS_EXTERN void CC XFSNodeContainerSetEditable (
-                            const struct XFSNodeContainer * self,
-                            bool Editable
-                            );
-
 XFS_EXTERN bool CC XFSNodeContainerHas (
                             const struct XFSNodeContainer * self,
                             const char * NodeName

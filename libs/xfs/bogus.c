@@ -319,11 +319,13 @@ _BogusNodeMake (
         RCt = XFS_RC ( rcExhausted );
     }
     else {
-        ( & ( TheNode -> Node ) ) -> vt =
-                    ( const union XFSNode_vt * ) & _sBogusNodeVT_v1;
         TheNode -> NotFoundType = NotFoundType;
 
-        RCt = XFSNodeInit ( & ( TheNode -> Node ) , NodeName );
+        RCt = XFSNodeInitVT (
+                        & ( TheNode -> Node ),
+                        NodeName,
+                        ( const union XFSNode_vt * ) & _sBogusNodeVT_v1
+                        );
 
         if ( RCt == 0 ) {
             * Node = TheNode;

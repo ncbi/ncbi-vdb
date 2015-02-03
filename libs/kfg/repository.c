@@ -1394,36 +1394,65 @@ static rc_t create_new_protected_repository( KRepositoryMgr * self,
 }
 
 
-static rc_t check_for_modifications( KRepository * repository, const struct KNgcObj * ngc, uint32_t * modifications )
+static rc_t check_for_modifications(
+    const KRepository *repository, const KNgcObj *ngc,
+    uint32_t *modifications, uint32_t *notFoundNodes)
 {
+    rc_t rc = 0;
     size_t written;
     char buffer[ 1024 ];
-    rc_t rc = KRepositoryDownloadTicket ( repository, buffer, sizeof buffer, &written );
-    if ( rc == 0 )
-    {
-        if ( strcase_cmp( buffer, written, ngc->downloadTicket.addr, ngc->downloadTicket.len, sizeof buffer ) != 0 )   
+    assert(modifications && notFoundNodes);
+
+    if (rc == 0) {
+        rc = KRepositoryDownloadTicket(repository,
+            buffer, sizeof buffer, &written);
+        if (rc == 0) {
+            if (strcase_cmp(buffer, written, ngc->downloadTicket.addr,
+                ngc->downloadTicket.len, sizeof buffer) != 0)
+            {
+                *modifications |= INP_UPDATE_DNLD_TICKET;
+            }
+        }
+        else if (rc == SILENT_RC(rcKFG, rcNode, rcOpening, rcPath, rcNotFound)) 
         {
-            *modifications |= INP_UPDATE_DNLD_TICKET;
+            rc = 0;
+            *notFoundNodes |= INP_UPDATE_DNLD_TICKET;
         }
     }
-    if ( rc == 0 )
+
+    if (rc == 0) {
         rc = KRepositoryEncryptionKey ( repository, buffer, sizeof buffer, &written );
-    if ( rc == 0 )
-    {
-        if ( strcase_cmp( buffer, written, ngc->encryptionKey.addr, ngc->encryptionKey.len, sizeof buffer ) != 0 )   
+        if (rc == 0) {
+            if (strcase_cmp(buffer, written, ngc->encryptionKey.addr,
+                ngc->encryptionKey.len, sizeof buffer) != 0)
+            {
+                *modifications |= INP_UPDATE_ENC_KEY;
+            }
+        }
+        else if (rc == SILENT_RC(rcKFG, rcNode, rcOpening, rcPath, rcNotFound))
         {
-            *modifications |= INP_UPDATE_ENC_KEY;
+            rc = 0;
+            *notFoundNodes |= INP_UPDATE_ENC_KEY;
         }
     }
-    if ( rc == 0 )
+
+    if (rc == 0) {
         rc = KRepositoryDescription ( repository, buffer, sizeof buffer, &written );
-    if ( rc == 0 )
-    {
-        if ( strcase_cmp( buffer, written, ngc->description.addr, ngc->description.len, sizeof buffer ) != 0 )   
+        if (rc == 0) {
+            if (strcase_cmp(buffer, written, ngc->description.addr,
+                ngc->description.len, sizeof buffer) != 0)
+            {
+                *modifications |= INP_UPDATE_DESC;
+            }
+        }
+        else if (rc == SILENT_RC(rcKFG, rcNode,
+            rcOpening, rcPath, rcNotFound))
         {
-            *modifications |=INP_UPDATE_DESC;
+            rc = 0;
+            *notFoundNodes |= INP_UPDATE_DESC;
         }
     }
+
     return rc;
 }
 
@@ -1510,6 +1539,7 @@ LIB_EXPORT rc_t CC KRepositoryMgrImportNgcObj( KRepositoryMgr * self,
                 if ( rc == 0 )
                 {
                     uint32_t modifications = 0;
+                    uint32_t notFoundNodes = 0;
 
                     exists = true;
 
@@ -1520,9 +1550,15 @@ LIB_EXPORT rc_t CC KRepositoryMgrImportNgcObj( KRepositoryMgr * self,
 
                        mark each bit that differs
                     */
-                    rc = check_for_modifications( repository, ngc, &modifications );
+                    rc = check_for_modifications(repository,
+                        ngc, &modifications, &notFoundNodes);
                     if ( rc == 0 )
                     {
+                        if (notFoundNodes != 0) {
+                            permissions |= notFoundNodes;
+                            modifications |= notFoundNodes;
+                        }
+
                         /* reject if any modification was not authorized */
                         if ( ( modifications & ( modifications ^ permissions ) ) != 0 )
                         {
@@ -1572,16 +1608,18 @@ LIB_EXPORT rc_t CC KRepositoryMgrImportNgcObj( KRepositoryMgr * self,
                                 *result_flags |= INP_UPDATE_ROOT;
                             }
                         }
-                        else {
+                        else if (modifications != 0) {
                             *result_flags |= INP_UPDATE_ROOT;
                             rc = RC(rcKFG, rcMgr, rcCreating,
                                 rcConstraint, rcViolated);
                         }
                     }
                 }
+
                 KRepositoryVectorWhack ( &user_repositories );
             }
         }
     }
+
     return rc;
 }

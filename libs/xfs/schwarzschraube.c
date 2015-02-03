@@ -29,6 +29,7 @@
 #include <klib/text.h>
 
 #include <vfs/manager.h>
+#include <kns/manager.h>
 
 #include "schwarzschraube.h"
 
@@ -57,18 +58,50 @@ XFS_StrDup ( const char * Src,  const char ** Dst )
     }
 
     if ( Src == NULL ) {
-        * Dst = NULL;
+        * TheDst = NULL;
 
         return 0;
     }
 
     * TheDst = string_dup_measure ( Src, NULL );
-    if ( TheDst == NULL ) {
+    if ( * TheDst == NULL ) {
         return XFS_RC ( rcExhausted );
     }
 
     return 0;
 }   /* XFS_StrDup () */
+
+/*))  if Source is NULL, it will be passed to Destination
+ ((*/
+LIB_EXPORT
+rc_t CC
+XFS_SStrDup ( const struct String * Src,  const char ** Dst )
+{
+    char ** TheDst = ( char ** ) Dst;
+
+    if ( TheDst == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    if ( Src == NULL ) {
+        * TheDst = NULL;
+
+        return 0;
+    }
+
+    if ( Src -> size == 0 ) {
+        * TheDst = NULL;
+
+        return 0;
+    }
+
+    * TheDst = string_dup ( Src -> addr, Src -> size );
+    if ( * TheDst == NULL ) {
+        return XFS_RC ( rcExhausted );
+    }
+
+    return 0;
+}   /* XFS_SStrDup () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
@@ -132,3 +165,74 @@ XFS_VfsManager ()
 {
     return _sVfsManager;
 }   /* XFS_VfsManager () */
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*)))   Sometime we need KNSManager, and it is very costly to
+ |||    make it each time on demand ... so here is it
+ |||    NOTE: Initializing and Destroying code arent thread safe!!!
+ |||          will add mutexes if it really need to :)
+(((*/
+
+static struct KNSManager * _sKnsManager = NULL;
+
+LIB_EXPORT
+rc_t CC
+XFS_KnsManagerInit ()
+{
+    rc_t RCt;
+    struct KNSManager * Manager;
+
+    RCt = 0;
+    Manager = NULL;
+
+    if ( _sKnsManager == NULL ) {
+        RCt = KNSManagerMake ( & Manager );
+        if ( RCt == 0 ) {
+            if ( Manager == NULL ) {
+                RCt = XFS_RC ( rcNull );
+            }
+            else {
+                RCt = KNSManagerSetUserAgent (
+                                            Manager,
+                                            "evil smoozzer.%V",
+                                            666
+                                            );
+                if ( RCt == 0 ) {
+                    _sKnsManager = Manager;
+                }
+                else {
+                    KNSManagerRelease ( Manager );
+                }
+            }
+        }
+    }
+
+    return RCt;
+}   /* XFS_KnsManagerInit () */
+
+LIB_EXPORT
+rc_t CC
+XFS_KnsManagerDispose ()
+{
+    rc_t RCt;
+    struct KNSManager * Manager;
+
+    RCt = 0;
+    Manager = _sKnsManager;
+
+    if ( Manager != NULL ) {
+        _sKnsManager = NULL;
+
+        RCt = KNSManagerRelease ( Manager );
+    }
+
+    return RCt;
+}   /* XFS_KnsManagerDispose () */
+
+LIB_EXPORT
+const struct KNSManager * CC
+XFS_KnsManager ()
+{
+    return _sKnsManager;
+}   /* XFS_KnsManager () */

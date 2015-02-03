@@ -44,14 +44,17 @@ clean: stdclean
 # pileup_dev
 #
 PILEUP_DEV_SRC = \
-	main my_utils
+	main my_utils ngs_test
 
 PILEUP_DEV_OBJ = \
 	$(addsuffix .$(OBJX),$(PILEUP_DEV_SRC))
 
 PILEUP_DEV_LIB = \
+	-L$(NGS_LIBDIR)   \
+	-sngs-c++         \
+	-sncbi-ngs-c++    \
+	-sncbi-vdb-static \
 	-skapp \
-	-sncbi-vdb \
 	-sktst
 
 $(TEST_BINDIR)/pileup_dev: $(PILEUP_DEV_OBJ)

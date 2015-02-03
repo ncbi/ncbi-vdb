@@ -212,10 +212,16 @@ LIB_EXPORT rc_t CC VFSManagerRelease ( const VFSManager *self )
  */
 static
 rc_t VFSManagerMakeHTTPFile( const VFSManager * self, const KFile **cfp,
-                             const char * url, const char * cache_location )
+                             const char * url, const char * cache_location,
+                             bool high_reliability )
 {
-    rc_t rc = KNSManagerMakeReliableHttpFile(
-        self->kns, cfp, NULL, 0x01010000, url);
+    rc_t rc;
+
+    if ( high_reliability )
+        rc = KNSManagerMakeReliableHttpFile ( self -> kns, cfp, NULL, 0x01010000, url );
+    else
+        rc = KNSManagerMakeHttpFile ( self -> kns, cfp, NULL, 0x01010000, url );
+
     if ( rc == 0 )
     {
         const KFile *temp_file;
@@ -1091,20 +1097,24 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
     rc = VPathMakeString ( path, &uri );
     if ( rc == 0 )
     {
+        bool high_reliability = VPathIsHighlyReliable ( path );
         if ( self->resolver != NULL )
         {
             const VPath * local_cache;
+
             /* find cache - vresolver call */
             rc = VResolverCache ( self->resolver, path, &local_cache, 0 );
             if ( rc == 0 )
                 /* we did find a place for local cache --> use it! */
-                rc = VFSManagerMakeHTTPFile( self, f, uri->addr, local_cache->path.addr );
+                rc = VFSManagerMakeHTTPFile( self, f, uri->addr, local_cache->path.addr, high_reliability );
             else
                 /* we did NOT find a place for local cache --> we are not caching! */
-                rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL );
+                rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL, high_reliability );
         }
         else
-            rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL );
+        {
+            rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL, high_reliability );
+        }
         free( ( void * )uri );
     }
     return rc;
@@ -1453,13 +1463,19 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
     rc_t rc = VPathMakeString ( path, &uri );
     if ( rc == 0 )
     {
+        /* check how the path has been marked */
+        bool high_reliability = VPathIsHighlyReliable ( path );
+
         const KFile * file = NULL;
-        rc = VFSManagerMakeHTTPFile( self, &file, uri->addr, cache == NULL ? NULL : cache->path.addr );
+        rc = VFSManagerMakeHTTPFile( self, &file, uri->addr, cache == NULL ? NULL : cache->path.addr, high_reliability );
         free( ( void * )uri );
         if ( rc != 0 )
         {
-            PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(U)'",
-                                 "U=%S:%S", & path -> scheme, & path -> path ) );
+            if ( high_reliability )
+            {
+                PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(U)'",
+                                     "U=%S:%S", & path -> scheme, & path -> path ) );
+            }
         }
         else
         {

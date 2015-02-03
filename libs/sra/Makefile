@@ -106,8 +106,8 @@ RWORKDIR=$(OBJDIR)
 $(ILIBDIR)/sra-dflt-schema: sra-dflt-schema.$(OBJX)
 	$(LD) --exe -o $@ $^ $(SRA_DFLT_SCHEMA_LIBS) $(SRA_DFLT_SCHEMA_OS_LIBS)
 
-sra-schema.c: $(ILIBDIR)/sra-dflt-schema $(SRCDIR)/built-in.vschema $(TOP)/build/sra-dflt-schema.sh
-	@ $(TOP)/build/sra-dflt-schema.sh $(BUILD_OS) "$(RUN_REMOTELY) $(ILIBDIR)/sra-dflt-schema" -o$@ -I$(TOP)/interfaces -T$(OBJDIR)/$@.d $(SRCDIR)/built-in.vschema
+sra-schema.c: $(ILIBDIR)/sra-dflt-schema $(SRCDIR)/built-in.vschema
+	$(ILIBDIR)/sra-dflt-schema -o$@ -I$(TOP)/interfaces -T$(OBJDIR)/$@.d $(SRCDIR)/built-in.vschema
 	cp $@ $(SRCDIR)
 
 SRA_SCHEMA_SRC = \

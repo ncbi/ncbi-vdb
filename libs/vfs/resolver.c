@@ -3117,8 +3117,8 @@ rc_t VResolverQueryURL ( const VResolver * self, VRemoteProtocols protocols,
  *  a query that is resolved locally will always return NULL for
  *  "remote" and "cache", if the parameters are provided.
  */
-LIB_EXPORT
-rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
+static
+rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
     const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache )
 {
     rc_t rc;
@@ -3137,8 +3137,10 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
         if ( remote != NULL )
         {
             * remote = NULL;
+
             if ( protocols >= eProtocolLastDefined )
                 return RC ( rcVFS, rcResolver, rcResolving, rcParam, rcInvalid );
+
             if ( atomic32_read ( & enable_remote ) == vrAlwaysDisable )
                 remote = NULL;
         }
@@ -3247,7 +3249,23 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
     return rc;
 }
 
-
+LIB_EXPORT
+rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
+    const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache )
+{
+    rc_t rc = VResolverQueryInt ( self, protocols, query, local, remote, cache );
+    if ( rc == 0 )
+    {
+        /* the paths returned from resolver are highly reliable */
+        if ( local != NULL && * local != NULL )
+            VPathMarkHighReliability ( * ( VPath ** ) local, true );
+        if ( remote != NULL && * remote != NULL )
+            VPathMarkHighReliability ( * ( VPath ** ) remote, true );
+        if ( cache != NULL && * cache != NULL )
+            VPathMarkHighReliability ( * ( VPath ** ) cache, true );
+    }
+    return rc;
+}
 
 /* LoadVolume
  *  capture volume path and other information

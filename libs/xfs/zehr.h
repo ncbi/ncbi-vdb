@@ -105,6 +105,13 @@ XFS_EXTERN rc_t CC XFS_ReadVPath_ZHR (
                                     size_t BufferSize,
                                     const char * Filler
                                     );
+XFS_EXTERN rc_t CC XFS_ReadCPath_ZHR (
+                                    const char * Url,
+                                    char * Buffer,
+                                    size_t BufferSize,
+                                    const char * Filler
+                                    );
+
 /*))
   ||   Prints VPath Uri to buffer, and, if there was error of reading,
   ||   or Path is NULL, the Filler value will be copied to buffer.
@@ -116,6 +123,99 @@ XFS_EXTERN rc_t CC XFS_ReadVUri_ZHR (
                                     char * Buffer,
                                     size_t BufferSize,
                                     const char * Filler
+                                    );
+XFS_EXTERN rc_t CC XFS_ReadCUri_ZHR (
+                                    const char * Url,
+                                    char * Buffer,
+                                    size_t BufferSize,
+                                    const char * Filler
+                                    );
+
+/*))
+  ||   Prints VPath Host to buffer, and, if there was error of reading,
+  ||   or Path is NULL, the Filler value will be copied to buffer.
+  ||   Filler should be 0 terminated string, or NULL If Filler is
+  ||   NULL, the "NULL" will be copied to buffer then.
+  ((*/
+XFS_EXTERN rc_t CC XFS_ReadVHost_ZHR (
+                                    const struct VPath * Path,
+                                    char * Buffer,
+                                    size_t BufferSize,
+                                    const char * Filler
+                                    );
+
+XFS_EXTERN rc_t CC XFS_ReadCHost_ZHR (
+                                    const char * Url,
+                                    char * Buffer,
+                                    size_t BufferSize,
+                                    const char * Filler
+                                    );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*|
+|*  Those methods does not do any error handling and returns NULL in 
+ *| the case of error, or if condition was not found
+|*/
+XFS_EXTERN const char * CC XFS_SkipSpaces_ZHR (
+                                    const char * Start,
+                                    const char * End
+                                    );
+
+XFS_EXTERN const char * CC XFS_SkipLetters_ZHR (
+                                    const char * Start,
+                                    const char * End
+                                    );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*\
+|*| That is representing HttpStreamer. The reason why I do it here,
+|*| is : KHttpFile does not work if "content-length" field missed
+|*| at header
+\*/
+struct XFSHttpStream;
+struct timeout_t;
+
+XFS_EXTERN rc_t CC XFS_HttpStreamMake_ZHR (
+                                    const char * Url,
+                                    const struct XFSHttpStream ** Stream
+                                    );
+
+XFS_EXTERN rc_t CC XFS_HttpStreamDispose_ZHR (
+                                    const struct XFSHttpStream * self
+                                    );
+
+XFS_EXTERN bool CC XFS_HttpStreamGood_ZHR (
+                                    const struct XFSHttpStream * self
+                                    );
+
+XFS_EXTERN bool CC XFS_HttpStreamCompleted_ZHR (
+                                    const struct XFSHttpStream * self
+                                    );
+
+    /*>>
+     // Reading :
+     \\     End of stream indicator is NumRead == 0 and rc_t == 0
+     //     If timeout == NULL - will block indefinitely
+    <<*/
+XFS_EXTERN rc_t CC XFS_HttpStreamRead_ZHR (
+                                    const struct XFSHttpStream * self,
+                                    void * Buffer,
+                                    size_t Size,
+                                    size_t * NumRead
+                                    );
+
+XFS_EXTERN rc_t CC XFS_HttpStreamTimedRead_ZHR (
+                                    const struct XFSHttpStream * self,
+                                    void * Buffer,
+                                    size_t Size,
+                                    size_t * NumRead,
+                                    struct timeout_t * Tm
                                     );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/

@@ -307,12 +307,15 @@ XFS_FUSE_unmount_v1 ( struct XFSControl * self )
     OUTMSG ( ( "XFS_FUSE_unmount()\n" ) );
 
     if ( self -> Control != NULL ) {
-#ifndef __APPLE__
+
+#if ! MAC
+/* #ifndef __APPLE__ */
 /*
 OUTMSG ( ( "|o|fuse_exit()\n" ) );
 */
         fuse_exit ( FuseStruct );
-#endif	/* __APPLE__ */
+/* #endif	__APPLE__ */
+#endif /* MAC */
 
 /*
 OUTMSG ( ( "|o|fuse_unmount()\n" ) );

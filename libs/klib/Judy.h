@@ -32,6 +32,12 @@
 // PLATFORM-SPECIFIC
 */
 
+#if __SIZEOF_POINTER__*__CHAR_BIT__ == 64
+#define JU_64BIT 1
+#else
+#define JU_32BIT 1
+#endif
+
 #if ! JUST_DEFINE_YOUR_STUFF
 
 #ifdef JU_WIN /* =============================================== */

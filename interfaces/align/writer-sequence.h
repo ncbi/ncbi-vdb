@@ -69,8 +69,10 @@ enum ETableWriterSeq_ColOptions {
 };
 
 typedef struct TableWriterSeqData_struct {
+    uint64_t        spot_len;
     TableWriterData sequence; /* writes sequence ONLY if alignment_count == 0 */
     TableWriterData quality;
+
     TableWriterData primary_alignment_id;
     TableWriterData alignment_count;
     TableWriterData label;

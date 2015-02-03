@@ -603,13 +603,23 @@ LIB_EXPORT int64_t string_to_I64 ( const char * text, size_t bytes, rc_t * optio
             uint8_t digit;
             volatile int64_t x = 0;
 
+            /* HACK ALERT: by declaring this variable "volatile",
+               we prevent gcc-4.8.1 and friends from trying to optimize
+               this loop, and producing bad code ( see below ).
+               gcc-4.9.1 does not exhibit this behavior.
+            */
+            volatile int64_t x = 0;
+
             if ( ! isdigit ( text [ i ] ) )
                 break;
 
             /* want to bring this digit into number */
             digit = text [ i ] - '0';
 
-            /* detect overflow on multiplication */
+            /* detect overflow on multiplication
+               The gcc optimization replaced a signed int-max
+               with an unsigned int-max, destroying the test.
+             */
             if ( val > INT64_MAX / 10 )
             {
                 rc = RC ( rcText, rcString, rcEvaluating, rcRange, rcExcessive );

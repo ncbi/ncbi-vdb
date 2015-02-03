@@ -46,6 +46,11 @@ struct XFSModel;
 struct XFSModelNode;
 struct KNamelist;
 
+/*))    Common name defines for model property names
+ ((*/
+#define XFS_MODEL_SOURCE    "source"
+#define XFS_MODEL_TEXT      "text"
+
 /*)))
  ///   Methods
 (((*/
