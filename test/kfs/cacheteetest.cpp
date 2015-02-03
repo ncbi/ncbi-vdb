@@ -236,7 +236,7 @@ TEST_CASE( CacheTee_Basic )
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
 	
 	const KFile * tee;
-	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, NULL, 0, 0, false, "%s", CACHEFILE ) );
+	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, 0, "%s", CACHEFILE ) );
 
 	REQUIRE_RC( KFileRelease( tee ) );
 	REQUIRE_RC( KFileRelease( org ) );
@@ -245,7 +245,7 @@ TEST_CASE( CacheTee_Basic )
 	REQUIRE_RC( KDirectoryOpenFileRead( dir, &cache, "%s.cache", CACHEFILE ) );
 	
 	bool is_complete;
-	REQUIRE_RC( IsCacheFileComplete( cache, &is_complete, true ) );	
+	REQUIRE_RC( IsCacheFileComplete( cache, &is_complete ) );	
 	REQUIRE( !is_complete );
 	
 	float percent;
@@ -270,7 +270,7 @@ TEST_CASE( CacheTee_Read )
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
 	
 	const KFile * tee;
-	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, NULL, 0, 0, false, "%s", CACHEFILE ) );
+	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, 0, "%s", CACHEFILE ) );
 
 	REQUIRE_RC( compare_file_content( org, tee, 0, 100 ) );						// small read at pos zero
 	REQUIRE_RC( compare_file_content( org, tee, 10, 100 ) );						// small read at pos 10
@@ -301,7 +301,7 @@ TEST_CASE( CacheTee_Promoting )
     REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
 	
 	const KFile * tee;
-	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, NULL, 0, 0, false, "%s", CACHEFILE ) );
+	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, 0, "%s", CACHEFILE ) );
 
 	REQUIRE_RC( read_partial( tee, 1024 * 32, DATAFILESIZE / 2 ) );
 	REQUIRE_RC( KFileRelease( tee ) );
@@ -310,7 +310,7 @@ TEST_CASE( CacheTee_Promoting )
 	REQUIRE_RC( KDirectoryOpenFileRead( dir, &cache, "%s.cache", CACHEFILE ) );
 
 	bool is_complete;
-	REQUIRE_RC( IsCacheFileComplete( cache, &is_complete, true ) );	
+	REQUIRE_RC( IsCacheFileComplete( cache, &is_complete ) );	
 	REQUIRE( !is_complete );
 
 	float percent;
@@ -319,7 +319,7 @@ TEST_CASE( CacheTee_Promoting )
 
 	remove_file( CACHEFILE1 );
 
-	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, NULL, 0, 0, false, "%s", CACHEFILE ) );
+	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, 0, "%s", CACHEFILE ) );
 	REQUIRE_RC( read_all( tee, 1024 * 32 ) );	//	this should trigger the promotion of the cache file from cache.dat.cache to cache.dat
 	REQUIRE_RC( KFileRelease( tee ) );	
 	
@@ -342,11 +342,11 @@ static rc_t cache_access( int id )
 		if ( rc == 0 )
 		{
 			const KFile * tee;
-			rc = KDirectoryMakeCacheTee ( dir, &tee, org, NULL, 0, 0, false, "%s", CACHEFILE );
+			rc = KDirectoryMakeCacheTee ( dir, &tee, org, 0, "%s", CACHEFILE );
 			if ( rc == 0 )
 			{
 				KOutMsg( "Test: Thread #%d\n", id );
-				rc = compare_file_content( org, tee, 0, 100 );
+				rc = compare_file_content( org, tee, id * 1024 * 32, 100 );
 				KFileRelease( tee );
 			}
 			KFileRelease( org );
@@ -370,7 +370,7 @@ TEST_CASE( CacheTee_Multiple_Users )
 	remove_file( CACHEFILE );	// to start with a clean slate on caching...
 	remove_file( CACHEFILE1 );
 
-	REQUIRE_RC( cache_access( 0 ) ); // if this line is commented out: at least one of the threads will fail!
+	// REQUIRE_RC( cache_access( 0 ) ); // if this line is commented out: at least one of the threads will fail!
 	
 	int n = 8;
 	KThread *t [ n ];
