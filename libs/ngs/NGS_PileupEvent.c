@@ -31,7 +31,7 @@
 #include <ngs/itf/PileupEventItf.h>
 
 #include "NGS_String.h"
-#include "NGS_Pileup.h"
+#include "NGS_Reference.h"
 
 #include <kfc/ctx.h>
 #include <kfc/rsrc.h>
@@ -45,30 +45,6 @@
 #define Self( obj ) \
     ( ( NGS_PileupEvent* ) ( obj ) )
     
-static NGS_String_v1 * NGS_PileupEvent_v1_get_ref_spec ( const NGS_PileupEvent_v1 * self, NGS_ErrBlock_v1 * err )
-{
-    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
-    ON_FAIL ( NGS_String * ret = NGS_PileupEventGetReferenceSpec ( Self ( self ), ctx ) )
-    {
-        NGS_ErrBlockThrow ( err, ctx );
-    }
-
-    CLEAR ();
-    return ( NGS_String_v1 * ) ret;
-}
-
-static int64_t NGS_PileupEvent_v1_get_ref_pos ( const NGS_PileupEvent_v1 * self, NGS_ErrBlock_v1 * err )
-{
-    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
-    ON_FAIL ( int64_t ret = NGS_PileupEventGetReferencePosition ( Self ( self ), ctx ) )
-    {
-        NGS_ErrBlockThrow ( err, ctx );
-    }
-
-    CLEAR ();
-    return ret;
-}
-
 static int32_t NGS_PileupEvent_v1_get_map_qual ( const NGS_PileupEvent_v1 * self, NGS_ErrBlock_v1 * err )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
@@ -227,7 +203,7 @@ static uint32_t NGS_PileupEvent_v1_get_indel_type ( const NGS_PileupEvent_v1 * s
 
 static bool NGS_PileupEvent_v1_next ( NGS_PileupEvent_v1 * self, NGS_ErrBlock_v1 * err )
 {
-    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+    HYBRID_FUNC_ENTRY ( rcSRA, rcCursor, rcAccessing );
     ON_FAIL ( bool ret = NGS_PileupEventIteratorNext ( Self ( self ), ctx ) )
     {
         NGS_ErrBlockThrow ( err, ctx );
@@ -235,6 +211,17 @@ static bool NGS_PileupEvent_v1_next ( NGS_PileupEvent_v1 * self, NGS_ErrBlock_v1
 
     CLEAR ();
     return ret;
+}
+
+static void NGS_PileupEvent_v1_reset ( NGS_PileupEvent_v1 * self, NGS_ErrBlock_v1 * err )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcCursor, rcUpdating );
+    ON_FAIL ( NGS_PileupEventIteratorReset ( Self ( self ), ctx ) )
+    {
+        NGS_ErrBlockThrow ( err, ctx );
+    }
+
+    CLEAR ();
 }
 
 #undef Self
@@ -249,8 +236,6 @@ NGS_PileupEvent_v1_vt ITF_PileupEvent_vt =
         & ITF_Refcount_vt . dad
     },
 
-    NGS_PileupEvent_v1_get_ref_spec,
-    NGS_PileupEvent_v1_get_ref_pos,
     NGS_PileupEvent_v1_get_map_qual,
     NGS_PileupEvent_v1_get_align_id,
     NGS_PileupEvent_v1_get_alignment,
@@ -264,7 +249,8 @@ NGS_PileupEvent_v1_vt ITF_PileupEvent_vt =
     NGS_PileupEvent_v1_get_ins_quals,
     NGS_PileupEvent_v1_get_rpt_count,
     NGS_PileupEvent_v1_get_indel_type,
-    NGS_PileupEvent_v1_next
+    NGS_PileupEvent_v1_next,
+    NGS_PileupEvent_v1_reset
 };
 
 /*--------------------------------------------------------------------------
@@ -274,19 +260,14 @@ NGS_PileupEvent_v1_vt ITF_PileupEvent_vt =
 #define VT( self, msg ) \
     ( ( ( const NGS_PileupEvent_vt* ) ( self ) -> dad . vt ) -> msg )
 
-void NGS_PileupEventInit ( ctx_t ctx, 
-                           struct NGS_PileupEvent * self, 
-                           NGS_PileupEvent_vt * vt, 
-                           const char *clsname, 
-                           const char *instname,
-                           const struct NGS_Pileup * pileup )
+void NGS_PileupEventInit ( ctx_t ctx, struct NGS_PileupEvent * obj, 
+    struct NGS_VTable const * ivt, const NGS_PileupEvent_vt * vt, 
+    const char *clsname, const char *instname, struct NGS_Reference * ref )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcRow, rcConstructing );
     
-    TRY ( NGS_RefcountInit ( ctx, & self -> dad, & ITF_PileupEvent_vt . dad, & vt -> dad, clsname, instname ) )
+    TRY ( NGS_RefcountInit ( ctx, & obj -> dad, ivt, & vt -> dad, clsname, instname ) )
     {
-        assert ( vt -> get_reference_spec != NULL );
-        assert ( vt -> get_reference_position != NULL );
         assert ( vt -> get_mapping_quality != NULL );
         assert ( vt -> get_alignment_id != NULL );
         assert ( vt -> get_alignment != NULL );
@@ -301,47 +282,18 @@ void NGS_PileupEventInit ( ctx_t ctx,
         assert ( vt -> get_repeat_count != NULL );
         assert ( vt -> get_indel_type != NULL );
         assert ( vt -> next != NULL );
+        assert ( vt -> reset != NULL );
     
-        assert ( pileup != NULL );
-        self -> pileup = NGS_PileupDuplicate ( pileup, ctx );
+        assert ( ref != NULL );
+        obj -> ref = NGS_ReferenceDuplicate ( ref, ctx );
     }
 }
 
 void NGS_PileupEventWhack( struct NGS_PileupEvent * self, ctx_t ctx )
 {
-    NGS_PileupRelease ( self -> pileup, ctx );
+    NGS_ReferenceRelease ( self -> ref, ctx );
 }
     
-struct NGS_String * NGS_PileupEventGetReferenceSpec( const NGS_PileupEvent * self, ctx_t ctx )
-{
-    if ( self == NULL )
-    {
-        FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
-        INTERNAL_ERROR ( xcSelfNull, "failed to get reference spec" );
-    }
-    else
-    {
-        return VT ( self, get_reference_spec ) ( self, ctx );
-    }
-
-    return NULL;
-}
-
-int64_t NGS_PileupEventGetReferencePosition( const NGS_PileupEvent * self, ctx_t ctx )
-{
-    if ( self == NULL )
-    {
-        FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
-        INTERNAL_ERROR ( xcSelfNull, "failed to get reference pos" );
-    }
-    else
-    {
-        return VT ( self, get_reference_position ) ( self, ctx );
-    }
-
-    return 0;
-}
-
 int NGS_PileupEventGetMappingQuality( const NGS_PileupEvent * self, ctx_t ctx )
 {
     if ( self == NULL )
@@ -554,4 +506,17 @@ bool NGS_PileupEventIteratorNext ( NGS_PileupEvent* self, ctx_t ctx )
     }
 
     return false;
+}
+
+void NGS_PileupEventIteratorReset ( NGS_PileupEvent* self, ctx_t ctx )
+{
+    if ( self == NULL )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+        INTERNAL_ERROR ( xcSelfNull, "failed to reset pileup event iterator" );
+    }
+    else
+    {
+        VT ( self, reset ) ( self, ctx );
+    }
 }

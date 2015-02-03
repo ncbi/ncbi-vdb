@@ -29,6 +29,7 @@
 #include "NGS_ErrBlock.h"
 #include <ngs/itf/Refcount.h>
 #include <ngs/itf/PileupItf.h>
+#include <ngs/itf/PileupEventItf.h>
 
 #include "NGS_String.h"
 #include "NGS_Reference.h"
@@ -47,7 +48,7 @@
     
 static NGS_String_v1 * NGS_Pileup_v1_get_ref_spec ( const NGS_Pileup_v1 * self, NGS_ErrBlock_v1 * err )
 {
-    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+    HYBRID_FUNC_ENTRY ( rcSRA, rcCursor, rcAccessing );
     ON_FAIL ( NGS_String * ret = NGS_PileupGetReferenceSpec ( Self ( self ), ctx ) )
     {
         NGS_ErrBlockThrow ( err, ctx );
@@ -59,7 +60,7 @@ static NGS_String_v1 * NGS_Pileup_v1_get_ref_spec ( const NGS_Pileup_v1 * self, 
 
 static int64_t NGS_Pileup_v1_get_ref_pos ( const NGS_Pileup_v1 * self, NGS_ErrBlock_v1 * err )
 {
-    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+    HYBRID_FUNC_ENTRY ( rcSRA, rcCursor, rcAccessing );
     ON_FAIL ( int64_t ret = NGS_PileupGetReferencePosition ( Self ( self ), ctx ) )
     {
         NGS_ErrBlockThrow ( err, ctx );
@@ -69,21 +70,21 @@ static int64_t NGS_Pileup_v1_get_ref_pos ( const NGS_Pileup_v1 * self, NGS_ErrBl
     return ret;
 }
 
-static struct NGS_PileupEvent_v1 * NGS_Pileup_v1_get_pileup_events ( const NGS_Pileup_v1 * self, NGS_ErrBlock_v1 * err )
+static char NGS_Pileup_v1_get_ref_base ( const NGS_Pileup_v1 * self, NGS_ErrBlock_v1 * err )
 {
-    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
-    ON_FAIL ( struct NGS_PileupEvent * ret = NGS_PileupGetPileupEvents ( Self ( self ), ctx ) )
+    HYBRID_FUNC_ENTRY ( rcSRA, rcCursor, rcAccessing );
+    ON_FAIL ( char ret = NGS_PileupGetReferenceBase ( Self ( self ), ctx ) )
     {
         NGS_ErrBlockThrow ( err, ctx );
     }
 
     CLEAR ();
-    return ( struct NGS_PileupEvent_v1 * ) ret;
+    return ret;
 }
 
 static uint32_t NGS_Pileup_v1_get_pileup_depth ( const NGS_Pileup_v1 * self, NGS_ErrBlock_v1 * err )
 {
-    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+    HYBRID_FUNC_ENTRY ( rcSRA, rcCursor, rcAccessing );
     ON_FAIL ( uint32_t ret = NGS_PileupGetPileupDepth ( Self ( self ), ctx ) )
     {
         NGS_ErrBlockThrow ( err, ctx );
@@ -95,7 +96,7 @@ static uint32_t NGS_Pileup_v1_get_pileup_depth ( const NGS_Pileup_v1 * self, NGS
 
 static bool NGS_Pileup_v1_next ( NGS_Pileup_v1 * self, NGS_ErrBlock_v1 * err )
 {
-    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+    HYBRID_FUNC_ENTRY ( rcSRA, rcCursor, rcAccessing );
     ON_FAIL ( bool ret = NGS_PileupIteratorNext ( Self ( self ), ctx ) )
     {
         NGS_ErrBlockThrow ( err, ctx );
@@ -114,51 +115,47 @@ NGS_Pileup_v1_vt ITF_Pileup_vt =
         "NGS_Pileup",
         "NGS_Pileup_v1",
         0,
-        & ITF_Refcount_vt . dad
+        & ITF_PileupEvent_vt . dad
     },
 
     NGS_Pileup_v1_get_ref_spec,
     NGS_Pileup_v1_get_ref_pos,
-    NGS_Pileup_v1_get_pileup_events,
+    NGS_Pileup_v1_get_ref_base,
     NGS_Pileup_v1_get_pileup_depth,
     NGS_Pileup_v1_next
 };
-
 
 /*--------------------------------------------------------------------------
  * NGS_Pileup
  */
 
 #define VT( self, msg ) \
-    ( ( ( const NGS_Pileup_vt* ) ( self ) -> dad . vt ) -> msg )
+    ( ( ( const NGS_Pileup_vt* ) ( self ) -> dad . dad . vt ) -> msg )
 
 void NGS_PileupInit ( ctx_t ctx, 
-                      struct NGS_Pileup * self, 
-                      NGS_Pileup_vt * vt, 
+                      struct NGS_Pileup * obj, 
+                      const NGS_Pileup_vt * vt, 
                       const char *clsname, 
                       const char *instname, 
                       struct NGS_Reference* ref )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcRow, rcConstructing );
     
-    TRY ( NGS_RefcountInit ( ctx, & self -> dad, & ITF_Pileup_vt . dad, & vt -> dad, clsname, instname ) )
+    TRY ( NGS_PileupEventInit ( ctx, & obj -> dad, & ITF_Pileup_vt . dad, & vt -> dad, clsname, instname, ref ) )
     {
         assert ( vt -> get_reference_spec != NULL );
         assert ( vt -> get_reference_position != NULL );
-        assert ( vt -> get_pileup_events != NULL );
+        assert ( vt -> get_reference_base != NULL );
         assert ( vt -> get_pileup_depth != NULL );
         assert ( vt -> next != NULL );
     }
-    
-    assert ( ref );
-    self -> ref = NGS_ReferenceDuplicate ( ref, ctx );
 }
 
 /* Whack
 */                         
 void NGS_PileupWhack ( struct NGS_Pileup * self, ctx_t ctx )
 {
-    NGS_ReferenceRelease ( self -> ref, ctx );
+    NGS_PileupEventWhack ( & self -> dad, ctx );
 }
     
 struct NGS_String* NGS_PileupGetReferenceSpec ( const NGS_Pileup* self, ctx_t ctx )
@@ -191,19 +188,19 @@ int64_t NGS_PileupGetReferencePosition ( const NGS_Pileup* self, ctx_t ctx )
     return 0;
 }
 
-struct NGS_PileupEvent* NGS_PileupGetPileupEvents ( NGS_Pileup* self, ctx_t ctx )
+char NGS_PileupGetReferenceBase ( const NGS_Pileup* self, ctx_t ctx )
 {
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
-        INTERNAL_ERROR ( xcSelfNull, "failed to get pileup events" );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get reference base" );
     }
     else
     {
-        return VT ( self, get_pileup_events ) ( self, ctx );
+        return VT ( self, get_reference_base ) ( self, ctx );
     }
 
-    return NULL;
+    return 0;
 }
 
 unsigned int NGS_PileupGetPileupDepth ( const NGS_Pileup* self, ctx_t ctx )
