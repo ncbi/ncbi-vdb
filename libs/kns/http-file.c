@@ -299,8 +299,12 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
             rc = KHttpFileTimedReadInt ( self, pos, buffer, bsize, num_read, tm, & http_status );
             if ( rc != 0 ) 
             {   
-                /* if rc indicates a dropped connection, try again */
-                break;
+                rc_t rc2=KClientHttpReopen ( self -> http );
+                if(rc2==0){
+                    rc2= KHttpFileTimedReadInt ( self, pos, buffer, bsize, num_read, tm, & http_status );
+                    if(rc2 == 0) rc= 0;/** retry successful **/
+                    else break;
+                }
             }
             if ( ! KHttpRetrierWait ( & retrier, http_status ) )
             {
