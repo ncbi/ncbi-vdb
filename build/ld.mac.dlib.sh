@@ -63,6 +63,34 @@ CMD="$DLIB_CMD $LDFLAGS"
 # tack on object files
 CMD="$CMD $OBJS"
 
+# function to convert an archive into individual object files
+convert-static ()
+{
+    # list members
+    local path="$1"
+    local mbrs="$(ar -t $path | grep -v '__.SYMDEF SORTED')"
+
+    # unpack archive into temporary directory
+    mkdir -p ld-tmp
+    if ! cd ld-tmp
+    then
+        echo "$SELF_NAME: failed to cd to ld-tmp"
+        exit 5
+    fi
+    ar -x "$path"
+
+    # rename and add to source files list
+    local m=
+    for m in $mbrs
+    do
+        mv $m $LIBNAME-$m
+        CMD="$CMD ld-tmp/$LIBNAME-$m"
+    done
+
+    # return to prior location
+    cd - > /dev/null
+}
+
 # initial dependency upon Makefile and vers file
 DEPS="$SRCDIR/Makefile"
 if [ "$LIBS" != "" ]
@@ -129,7 +157,11 @@ then
                     DEPS="$DEPS $LIBPATH"
 
                     # load static
-                    CMD="$CMD $LIBPATH"
+#                    load-static
+#                    load-all-symbols
+#                    CMD="$CMD -l$LIBNAME-static"
+                    convert-static "$LIBPATH" || exit $?
+
                 fi
             fi
 
@@ -146,7 +178,11 @@ then
                     DEPS="$DEPS $LIBPATH"
 
                     # load static
-                    CMD="$CMD $LIBPATH"
+#                    load-static
+#                    load-all-symbols
+#                    CMD="$CMD -l$LIBNAME"
+                    convert-static "$LIBPATH" || exit $?
+
                 fi
             fi
 
@@ -194,7 +230,12 @@ then
                 # add it to dependencies
                 DEPS="$DEPS $LIBPATH"
 
-                CMD="$CMD $LIBPATH"
+                # load static
+#                load-static
+#                load-all-symbols
+#                CMD="$CMD -l$LIBNAME-static"
+                convert-static "$LIBPATH" || exit $?
+
             fi
 
             if [ $FOUND -eq 0 ]
@@ -209,7 +250,11 @@ then
                     # add it to dependencies
                     DEPS="$DEPS $LIBPATH"
 
-                    CMD="$CMD $LIBPATH"
+                    # load static
+#                    load-static
+#                    load-all-symbols
+#                    CMD="$CMD -l$LIBNAME"
+                    convert-static "$LIBPATH" || exit $?
 
                 fi
             fi
