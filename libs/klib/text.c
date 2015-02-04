@@ -601,7 +601,6 @@ LIB_EXPORT int64_t string_to_I64 ( const char * text, size_t bytes, rc_t * optio
         for ( val = 0; i < bytes; ++ i )
         {
             uint8_t digit;
-            volatile int64_t x = 0;
 
             /* HACK ALERT: by declaring this variable "volatile",
                we prevent gcc-4.8.1 and friends from trying to optimize
