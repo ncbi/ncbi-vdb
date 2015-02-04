@@ -39,6 +39,7 @@ struct KCacheTeeFile;
 #include <klib/time.h>
 
 #include <kfs/cacheteefile.h>
+#include <kfs/defs.h>
 
 #include <sysalloc.h>
 #include <stdlib.h>
@@ -605,48 +606,55 @@ LIB_EXPORT rc_t CC TruncateCacheFile( struct KFile * self )
 }
 
 
-static rc_t promote_cache( KCacheTeeFile * cf )
+static bool file_exist( KDirectory * dir, const char * filename )
+{
+	uint32_t pt = KDirectoryPathType ( dir, "%s", filename );
+	return ( ( pt & ~kptAlias ) == kptFile );
+}
+
+
+static rc_t promote_cache( KCacheTeeFile * self )
 {
     char cache_file_name [ 4096 ];
     char temp_file_name [ 4096 ];
     size_t num_writ;
-    rc_t rc = string_printf ( cache_file_name, sizeof cache_file_name, &num_writ, "%s.cache", cf -> local_path );
+    rc_t rc = string_printf ( cache_file_name, sizeof cache_file_name, &num_writ, "%s.cache", self -> local_path );
     if ( rc == 0 )
-        rc = string_printf ( temp_file_name, sizeof temp_file_name, &num_writ, "%s.cache.temp", cf -> local_path );
+        rc = string_printf ( temp_file_name, sizeof temp_file_name, &num_writ, "%s.cache.temp", self -> local_path );
 
     /* (1) releaes open cache file ( windows cannot rename open files ) */
     if ( rc == 0 )
-        rc = KFileRelease( cf -> local );
+        rc = KFileRelease( self -> local );
 
     /* (2) rename to temporary name */
     if ( rc == 0 )
     {
-        cf -> local = NULL;
-        rc = KDirectoryRename ( cf -> dir, true, cache_file_name, temp_file_name );
+        self -> local = NULL;
+        rc = KDirectoryRename ( self -> dir, true, cache_file_name, temp_file_name );
     }
 
     /* (3) open from temporary name */
     if ( rc == 0 )
-        rc = KDirectoryOpenFileWrite( cf -> dir, &cf -> local, true, "%s", temp_file_name );
+        rc = KDirectoryOpenFileWrite( self -> dir, &self -> local, true, "%s", temp_file_name );
 
     /* (4) perform truncation */
     if ( rc == 0 )
-        rc = TruncateCacheFile( cf -> local );
+        rc = TruncateCacheFile( self -> local );
     
     /* (5) releaes open temp. cache file ( windows cannot rename open files ) */
     if ( rc == 0 )
-        rc = KFileRelease( cf -> local );
+        rc = KFileRelease( self -> local );
 
     /* (6) rename to final filename ( windows cannot rename open files ) */
     if ( rc == 0 )
     {
-        cf -> local = NULL;
-        rc = KDirectoryRename ( cf -> dir, true, temp_file_name, cf -> local_path );
+        self -> local = NULL;
+        rc = KDirectoryRename ( self -> dir, true, temp_file_name, self -> local_path );
     }
 
     /* (6) open from final filename */
     if ( rc == 0 )
-        rc = KDirectoryOpenFileWrite( cf -> dir, &cf -> local, true, "%s", cf -> local_path );
+        rc = KDirectoryOpenFileWrite( self -> dir, &self -> local, true, "%s", self -> local_path );
 
     return rc;
 }
@@ -654,22 +662,22 @@ static rc_t promote_cache( KCacheTeeFile * cf )
 
 /* Destroy
  */
-static rc_t CC KCacheTeeFileDestroy( KCacheTeeFile *self )
+static rc_t CC KCacheTeeFileDestroy( KCacheTeeFile * self )
 {
-    bool promote_test;
-
+	bool already_promoted_by_other_instance = file_exist( self -> dir, self -> local_path );
+	
 #if( CACHE_STAT > 0 )
 	report_cache_stat( & self -> stat );
 #endif
 	
-	promote_test = ( !self -> local_read_only );
-
-    if ( promote_test )
+    if ( !self -> local_read_only && !already_promoted_by_other_instance )
     {
 		bool fully_in_cache;
         rc_t rc = IsCacheFileComplete ( self -> local, &fully_in_cache );
         if ( rc == 0 && fully_in_cache )
+		{
             promote_cache( self );
+		}
     }
 
     if ( self->bitmap != NULL )
@@ -677,10 +685,14 @@ static rc_t CC KCacheTeeFileDestroy( KCacheTeeFile *self )
     if ( self->scratch_buffer != NULL )
         free( self->scratch_buffer );
 
-    KDirectoryRelease ( self->dir );
     KFileRelease ( self -> remote );
     KFileRelease ( self -> local );
 
+	if ( already_promoted_by_other_instance )
+		KDirectoryRemove ( self -> dir, true, "%s.cache", self -> local_path );
+		
+    KDirectoryRelease ( self -> dir );
+	
     free ( self );
     return 0;
 }
