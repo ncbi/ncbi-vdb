@@ -1020,7 +1020,7 @@ bool CSRA1_PileupGetOverlapChunkId ( CSRA1_Pileup * self, ctx_t ctx )
 
         if ( self -> pa . curs != NULL && OVERLAP_REF_POS [ 0 ] > 0 )
         {
-            new_chunk_id = ( OVERLAP_REF_POS [ 0 ] - 1 ) % self -> ref . max_seq_len + self -> reference_start_id;
+            new_chunk_id = ( OVERLAP_REF_POS [ 0 ] - 1 ) / self -> ref . max_seq_len + self -> reference_start_id;
             if ( new_chunk_id < ref_chunk_id )
                 ref_chunk_id = new_chunk_id;
             have_overlap_ref_pos = true;
@@ -1028,7 +1028,7 @@ bool CSRA1_PileupGetOverlapChunkId ( CSRA1_Pileup * self, ctx_t ctx )
 
         if ( self -> sa . curs != NULL && OVERLAP_REF_POS [ 1 ] > 0 )
         {
-            new_chunk_id = ( OVERLAP_REF_POS [ 1 ] - 1 ) % self -> ref . max_seq_len + self -> reference_start_id;
+            new_chunk_id = ( OVERLAP_REF_POS [ 1 ] - 1 ) / self -> ref . max_seq_len + self -> reference_start_id;
             if ( new_chunk_id < ref_chunk_id )
                 ref_chunk_id = new_chunk_id;
             have_overlap_ref_pos = true;
