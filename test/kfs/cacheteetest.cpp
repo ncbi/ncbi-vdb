@@ -37,6 +37,7 @@
 
 #include <kproc/thread.h>
 
+#include <kfs/defs.h>
 #include <kfs/directory.h>
 #include <kfs/file.h>
 #include <kfs/cacheteefile.h>
@@ -103,6 +104,7 @@ static rc_t create_random_file( const char * filename, uint64_t file_size )
 	}
 	return rc;
 }
+
 
 static rc_t remove_file( const char * filename )
 {
@@ -395,7 +397,6 @@ TEST_CASE( CacheTee_Multiple_Users )
 }
 
 
-
 TEST_CASE( CacheTee_ReadOnly )
 {
 	KOutMsg( "Test: CacheTee_ReadOnly\n" );
@@ -433,6 +434,45 @@ TEST_CASE( CacheTee_ReadOnly )
 	bool is_complete;
 	REQUIRE_RC( IsCacheFileComplete( cache, &is_complete ) );	
 	REQUIRE( !is_complete );
+	
+	REQUIRE_RC( KFileRelease( org ) );	
+	REQUIRE_RC( KDirectoryRelease( dir ) );
+}
+
+
+TEST_CASE( CacheTee_Multiple_Users_with_Promoting )
+{
+	KOutMsg( "Test: CacheTee_Multiple_Users_with_Promoting\n" );
+	remove_file( CACHEFILE );	// to start with a clean slate on caching...
+	remove_file( CACHEFILE1 );
+
+    KDirectory * dir;
+    REQUIRE_RC( KDirectoryNativeDir( &dir ) );
+
+	const KFile * org;
+    REQUIRE_RC( KDirectoryOpenFileRead( dir, &org, "%s", DATAFILE ) );
+
+	/* make 2 cache-tee's */
+	const KFile * tee1;
+	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee1, org, 0, "%s", CACHEFILE ) );
+	const KFile * tee2;
+	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee2, org, 0, "%s", CACHEFILE ) );
+
+	/* read all from tee1 and release it, that will trigger promotion */
+	REQUIRE_RC( read_all( tee1, 1024 * 32 )	);
+	REQUIRE_RC( KFileRelease( tee1 ) );
+
+	/* read a little bit from tee2 and release it, will it corrupt the cache? */	
+	REQUIRE_RC( read_partial( tee2, 100, 100 ) );
+	REQUIRE_RC( KFileRelease( tee2 ) );
+
+	/* the ( newly ) promoted cache file has to be not corrupt */
+	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee1, org, 0, "%s", CACHEFILE ) );
+	REQUIRE_RC( KFileRelease( tee1 ) );
+
+	/* the .cache - file has to be gone */
+	uint32_t pt = KDirectoryPathType ( dir, "%s", CACHEFILE1 );
+	REQUIRE( pt == kptNotFound );
 	
 	REQUIRE_RC( KFileRelease( org ) );	
 	REQUIRE_RC( KDirectoryRelease( dir ) );
