@@ -35,12 +35,13 @@ LD_REF_SYMBOLS=""
 if [ "$ARCH" = "fat86" ] 
 then
 LD="$LD -Wl,-arch_multiple"
+DLIB_CMD="libtool -dynamic"
 else
 LD="$LD -Wl,-arch,$ARCH"
+DLIB_CMD="$LD -dynamiclib $LDFLAGS"
 fi
 
 # build command
-DLIB_CMD="$LD -dynamiclib"
 EXE_CMD="$LD"
 
 # Mach install-name sans extension
