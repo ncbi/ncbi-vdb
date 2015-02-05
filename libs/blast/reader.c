@@ -1441,13 +1441,13 @@ VdbBlast2naReader *_VdbBlastRunSetMake2naReader(VdbBlastRunSet *self,
         core2na->reader.mode = mode;
     }
     if (!core2na->hasReader) {
+        _VdbBlastRunSetBeingRead(self);
         *status = _Core2naOpen1stRun(core2na, &self->runs, initial_read_id);
         if (*status != eVdbBlastNoErr) {
             STSMSG(1, ("Error: failed to create VdbBlast2naReader: "
                 "cannot open the first read"));
             return NULL;
         }
-        _VdbBlastRunSetBeingRead(self);
         core2na->initial_read_id = initial_read_id;
         core2na->reader.mode = mode;
         core2na->hasReader = true;
