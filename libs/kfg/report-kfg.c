@@ -402,18 +402,27 @@ rc_t ReportKrypto(const ReportFuncs *f, int indent, const KConfig* cfg)
     return rc;
 }
 
-static
-rc_t ReportCrntRepository(const ReportFuncs *f, int indent, const KConfig *cfg)
+static rc_t ReportRemoteAccess(const ReportFuncs *f,
+    int indent, const KRepositoryMgr *mgr)
+{
+    const char root[] = "RemoteAccess";
+
+    bool available = KRepositoryMgrHasRemoteAccess(mgr);
+    report(indent, root, 1, "available", 's', available ? "true" : "false");
+
+    return 0;
+}
+
+static rc_t ReportCrntRepository(const ReportFuncs *f,
+    int indent, const KRepositoryMgr *mgr)
 {
     rc_t rc = 0;
-    const KRepositoryMgr *mgr = NULL;
+
     const KRepository *protectd = NULL;
+
     const char root[] = "CurrentProtectedRepository";
     bool open = false;
-    rc = KConfigMakeRepositoryMgrRead(cfg, &mgr);
-    if (rc != 0) {
-        reportError(indent, rc, "KConfigMakeRepositoryMgrRead");
-    }
+
     if (rc == 0) {
         rc = KRepositoryMgrCurrentProtectedRepository(mgr, &protectd);
         if (rc != 0) {
@@ -444,11 +453,12 @@ rc_t ReportCrntRepository(const ReportFuncs *f, int indent, const KConfig *cfg)
             reportData(indent + 1, "name", buffer, 0);
         }
     }
-    RELEASE(KRepository, protectd);
-    RELEASE(KRepositoryMgr, mgr);
     if (open) {
         reportClose(indent, root);
     }
+
+    RELEASE(KRepository, protectd);
+
     return rc;
 }
 
@@ -456,7 +466,8 @@ rc_t ReportKfg ( const ReportFuncs *f, uint32_t indent )
 {
     rc_t rc = 0;
 
-    KConfig* cfg = NULL;
+    KConfig *cfg = NULL;
+    const KRepositoryMgr *mgr = NULL;
 
     const char tag[] = "Configuration";
     reportOpen(indent, tag, 0);
@@ -464,6 +475,9 @@ rc_t ReportKfg ( const ReportFuncs *f, uint32_t indent )
     rc = KConfigMake(&cfg, NULL);
     if (rc != 0) {
         reportError(indent + 1, rc, "KConfigMake");
+    }
+    else if ((rc = KConfigMakeRepositoryMgrRead(cfg, &mgr)) != 0) {
+        reportError(indent + 1, rc, "KConfigMakeRepositoryMgrRead");
     }
     else {
         {
@@ -492,7 +506,12 @@ rc_t ReportKfg ( const ReportFuncs *f, uint32_t indent )
             {   rc = rc2; }
         }
         {
-            rc_t rc2 = ReportCrntRepository(f, indent + 1, cfg);
+            rc_t rc2 = ReportRemoteAccess(f, indent + 1, mgr);
+            if (rc == 0 && rc2 != 0)
+            {   rc = rc2; }
+        }
+        {
+            rc_t rc2 = ReportCrntRepository(f, indent + 1, mgr);
             if (rc == 0 && rc2 != 0)
             {   rc = rc2; }
         }
@@ -500,6 +519,7 @@ rc_t ReportKfg ( const ReportFuncs *f, uint32_t indent )
 
     reportClose(indent, tag);
 
+    RELEASE(KRepositoryMgr, mgr);
     RELEASE(KConfig, cfg);
 
     return rc;
