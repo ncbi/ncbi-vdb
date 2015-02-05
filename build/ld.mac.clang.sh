@@ -35,7 +35,7 @@ LD_REF_SYMBOLS=""
 if [ "$ARCH" = "fat86" ] 
 then
 LD="$LD -Wl,-arch_multiple"
-DLIB_CMD="libtool -dynamic -macosx_version_min 10.6"
+DLIB_CMD="$LD -dynamiclib -Wl,-all_load $LDFLAGS"
 else
 LD="$LD -Wl,-arch,$ARCH"
 DLIB_CMD="$LD -dynamiclib $LDFLAGS"
