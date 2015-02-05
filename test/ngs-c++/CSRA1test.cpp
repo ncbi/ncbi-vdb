@@ -960,6 +960,7 @@ struct PileupEvent
     char alignment_base;
     bool deletion_after_this_pos;
     ngs::String alignment_id;
+    ngs::String insertion_bases;
 };
 
 struct PileupLine
@@ -1016,6 +1017,22 @@ void print_line (PileupLine const& line, ngs::String const& name, int64_t pos_st
             break;
         }
 
+        if ( pileup_event.insertion_bases.size() != 0 )
+        {
+            std::cout
+                << "+"
+                << pileup_event.insertion_bases.size();
+
+                for ( uint32_t i = 0; i < pileup_event.insertion_bases.size(); ++i )
+                {
+                    std::cout
+                        << (reverse ?
+                        (char)tolower(pileup_event.insertion_bases[i])
+                        : (char)toupper(pileup_event.insertion_bases[i]));
+                }
+
+        }
+
         if ( pileup_event.deletion_after_this_pos )
         {
             uint32_t count = pileup_event.next_repeat_count;
@@ -1061,12 +1078,28 @@ void mark_line_as_starting_deletion ( PileupLine& line, uint32_t repeat_count, n
     }
 }
 
+void mark_line_as_starting_insertion ( PileupLine& line, ngs::String const& insertion_bases, ngs::String const& alignment_id )
+{
+    for (PileupLine::TEvents::iterator it = line.vecEvents.begin(); it != line.vecEvents.end(); ++ it)
+    {
+        PileupEvent& pileup_event = *it;
+        if (pileup_event.alignment_id == alignment_id)
+        {
+            pileup_event.insertion_bases = insertion_bases;
+            break;
+        }
+    }
+}
+
 TEST_CASE(CSRA1_PileupEventIterator_MimicSraPileup)
 {
     char const db_path[] = "SRR341578";
 
     int64_t const pos_start = 2434;//19960;//20017;//;
     uint64_t const len = 2;//5+40+17;
+
+    //int64_t const pos_start = 10;
+    //uint64_t const len = 40000;
 
     // pos_start = 2427, len = 2 behaves like "sra-pileup SRR341578 -r NC_011752.1:2428-2429 -s -n"
 
@@ -1101,10 +1134,12 @@ TEST_CASE(CSRA1_PileupEventIterator_MimicSraPileup)
             pileup_event.mapping_quality = pi.getMappingQuality();
             pileup_event.alignment_base = pi.getAlignmentBase();
 
-            if ( pos != pos_start &&
-                (pileup_event.event_type & 7) == ngs::PileupEvent::deletion )
+            if ( pos != pos_start )
             {
-                mark_line_as_starting_deletion ( line_prev, pileup_event.repeat_count, pileup_event.alignment_id );
+                if ((pileup_event.event_type & 7) == ngs::PileupEvent::deletion)
+                    mark_line_as_starting_deletion ( line_prev, pileup_event.repeat_count, pileup_event.alignment_id );
+                if ( pileup_event.event_type & ngs::PileupEvent::insertion )
+                    mark_line_as_starting_insertion ( line_prev, pi.getInsertionBases().toString(), pileup_event.alignment_id );
             }
 
             line_curr.vecEvents.push_back ( pileup_event );
