@@ -1623,3 +1623,53 @@ LIB_EXPORT rc_t CC KRepositoryMgrImportNgcObj( KRepositoryMgr * self,
 
     return rc;
 }
+
+
+LIB_EXPORT bool CC KRepositoryMgrHasRemoteAccess(const KRepositoryMgr *self)
+{
+    bool has = false;
+
+    rc_t rc = 0, r2 = 0;
+
+    uint32_t len = 0;
+
+    KRepositoryVector remote_repositories;
+    memset(&remote_repositories, 0, sizeof remote_repositories);
+
+    rc = KRepositoryMgrRemoteRepositories(self, &remote_repositories);
+
+    if (rc == 0) {
+        len = VectorLength(&remote_repositories);
+    }
+
+    if (rc == 0 && len > 0) {
+        uint32_t i = 0;
+        if (! KRepositoryMgrCategoryDisabled(self, krepRemoteCategory)) {
+            for (i = 0; i < len; ++ i) {
+                const KRepository *r = VectorGet(&remote_repositories, i);
+                if (r != NULL) {
+                    if (KRepositoryDisabled(r)) {
+                        continue;
+                    }
+
+                    if (KRepositorySubCategory(r)
+                        != krepProtectedSubCategory)
+                    {
+                        has = true;
+                    }
+                }
+            }
+        }
+    }
+
+    r2 = KRepositoryVectorWhack(&remote_repositories);
+    if (r2 != 0 && rc == 0) {
+        rc = r2;
+    }
+
+    if (rc != 0) {
+        return false;
+    }
+
+    return has;
+}
