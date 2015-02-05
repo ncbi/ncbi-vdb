@@ -349,13 +349,21 @@ enum
     INP_UPDATE_ROOT        = ( 1 << 4 ),   /* permission to modify root path */
 };
 
-/* Import of a KNgcObj
+/* ImportNgcObj
+ *   import of a KNgcObj
+ *
  *  the KNgcObj has to be created with KNgcObjMakeFromFile() kfg/ngc.h
  *  the permission-flags define what the functions is allowd to do
  *  result flags show what was done according to the permissions
  */
 KFG_EXTERN rc_t CC KRepositoryMgrImportNgcObj( KRepositoryMgr *self,
     const struct KNgcObj * ngc, const char * location, uint32_t permissions, uint32_t * result_flags );
+
+
+/* HasRemoteAccess
+ *  whether remote access is available (has an enabled remote repository)
+ */
+KFG_EXTERN bool CC KRepositoryMgrHasRemoteAccess ( const KRepositoryMgr *self );
 
 
 #ifdef __cplusplus
