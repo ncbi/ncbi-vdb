@@ -661,9 +661,6 @@ bool CSRA1_PileupEventEntryAdvance ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entr
             assert ( HAS_REF_OFFSET != NULL );
             assert ( prior_seq_idx < entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] );
             entry -> ref_off_idx += HAS_REF_OFFSET [ prior_seq_idx ];
-
-            /* move to the next reference position */
-            ++ entry -> zstart_adj;
         }
 
         /* if the current sequence address is beyond end, bail */
@@ -671,7 +668,12 @@ bool CSRA1_PileupEventEntryAdvance ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entr
             return false;
 
         /* adjust alignment */
-        if ( HAS_REF_OFFSET [ entry -> seq_idx ] )
+        if ( ! HAS_REF_OFFSET [ entry -> seq_idx ] )
+        {
+            /* move to the next reference position */
+            entry -> zstart_adj += entry -> seen_first;
+        }
+        else
         {
             int32_t indel_cnt;
 
