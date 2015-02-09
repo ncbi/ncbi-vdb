@@ -982,9 +982,6 @@ void print_line (PileupLine const& line, ngs::String const& name, int64_t pos_st
 
     for (PileupLine::TEvents::const_iterator cit = line.vecEvents.begin(); cit != line.vecEvents.end(); ++ cit)
     {
-//            if ( ( eventType & ngs::PileupEvent::insertion ) != 0 )
-//                std::cout << "insertion followed by ";
-
         PileupEvent const& pileup_event = *cit;
 
         ngs::PileupEvent::PileupEventType eventType = pileup_event.event_type;
@@ -1012,7 +1009,6 @@ void print_line (PileupLine const& line, ngs::String const& name, int64_t pos_st
                 : (char)toupper( pileup_event.alignment_base ));
             break;
         case ngs::PileupEvent::deletion:
-            //printf ("-%d%.*s", count, count, & strRefSlice [pos - pos_start]);
             std::cout << (reverse ? "<" : ">");
             break;
         }
@@ -1036,7 +1032,6 @@ void print_line (PileupLine const& line, ngs::String const& name, int64_t pos_st
         if ( pileup_event.deletion_after_this_pos )
         {
             uint32_t count = pileup_event.next_repeat_count;
-            //printf ("-%d%.*s", count, count, & strRefSlice [pos - pos_start]);
             std::cout << "-" << count;
 
             for ( uint32_t i = 0; i < count; ++i )
@@ -1091,23 +1086,32 @@ void mark_line_as_starting_insertion ( PileupLine& line, ngs::String const& inse
     }
 }
 
-TEST_CASE(CSRA1_PileupEventIterator_MimicSraPileup)
+bool find_reference ( ngs::ReferenceIterator& ri, char const* ref_name )
 {
-    char const db_path[] = "SRR341578";
+    bool ref_found = false;
+    while ( ri.nextReference () )
+    {
+        if ( ri.getCanonicalName() == ref_name )
+        {
+            ref_found = true;
+            break;
+        }
+    }
 
-    int64_t const pos_start = 2434;//19960;//20017;//;
-    uint64_t const len = 2;//5+40+17;
+    return ref_found;
+}
 
-    //int64_t const pos_start = 10;
-    //uint64_t const len = 40000;
-
-    // pos_start = 2427, len = 2 behaves like "sra-pileup SRR341578 -r NC_011752.1:2428-2429 -s -n"
-
+void mimic_sra_pileup (
+            char const* db_path,
+            char const* ref_name,
+            ngs::Alignment::AlignmentCategory category,
+            int64_t const pos_start, uint64_t const len )
+{
     ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
     ngs::ReferenceIterator ri = run.getReferences ();
 
-    ri.nextReference ();
-    ri.nextReference ();
+    if ( ! find_reference ( ri, ref_name) )
+        return;
 
     ngs::String strRefSlice = ri.getReferenceBases ( pos_start, len );
 
@@ -1118,8 +1122,6 @@ TEST_CASE(CSRA1_PileupEventIterator_MimicSraPileup)
     int64_t pos = pos_start;
     for (; pi.nextPileup (); ++ pos)
     {
-        ri.getCanonicalName ();
-
         line_curr.depth = pi.getPileupDepth ();
         line_curr.vecEvents.reserve (line_curr.depth);
 
@@ -1156,6 +1158,43 @@ TEST_CASE(CSRA1_PileupEventIterator_MimicSraPileup)
     }
     print_line ( line_prev, ri.getCanonicalName(), pos_start, pos - 1, strRefSlice );
 }
+
+TEST_CASE(CSRA1_PileupEventIterator_Insertions)
+{
+    char const db_path[] = "SRR341578";
+
+    int64_t const pos_start = 2017;
+    uint64_t const len = 2;
+
+    // pos_start = 2427, len = 2 behaves like "sra-pileup SRR341578 -r NC_011752.1:2428-2429 -s -n"
+
+    // discrepancy here is at: if (pileup_event.alignment_id == "SRR341578.PA.10578020" && (pileup_event.event_type & ngs::PileupEvent::insertion) != 0)
+    mimic_sra_pileup ( db_path, "NC_011752.1", ngs::Alignment::all, pos_start, len );
+}
+
+#if 0
+TEST_CASE(CSRA1_PileupIterator_CheckBound)
+{
+
+    ngs :: ReadCollection coll = ncbi :: NGS :: openReadCollection ( "SRR833251" );
+    ngs :: Reference ref = coll.getReference ("gi|169794206|ref|NC_010410.1|" );
+    ngs :: PileupIterator p = ref . getPileups ( ngs :: Alignment ::all);//primaryAlignment ); 
+
+    while ( p . nextPileup() )
+    {
+        if (p.getReferencePosition() == 204135)
+        {
+            int debug = 1;
+        }
+
+        if ( true || p . getPileupDepth () > 0 )
+        {
+            std::cout << p . getReferencePosition () << ": " << p . getPileupDepth () << std::endl;    
+        }
+    }
+
+}
+#endif
 
 ///// ReadGroup
 FIXTURE_TEST_CASE(CSRA1_ReadGroup_GetName, CSRA1_Fixture)
