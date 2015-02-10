@@ -763,6 +763,10 @@ void CSRA1_PileupEventEntryInit ( CSRA1_PileupEvent * self, ctx_t ctx, CSRA1_Pil
                     entry -> seq_idx = end;
                 }
 
+                /* capture initial deletion - should never occur */
+                if ( HAS_REF_OFFSET [ entry -> seq_idx ] && REF_OFFSET [ entry -> ref_off_idx ] > 0 )
+                    entry -> del_cnt = REF_OFFSET [ entry -> ref_off_idx ];
+
                 return;
             }
         }
