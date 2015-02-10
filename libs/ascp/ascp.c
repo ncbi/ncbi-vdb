@@ -418,6 +418,9 @@ rc_t ascpParse(const char *buf, size_t len, const char *filename,
     if (sStatus) {
         STSMSG(STS_FIN, ("%.*s", len, buf));
     }
+    if (failure) {
+        // ignore it
+    }
     return 0;
 }
 
@@ -715,7 +718,10 @@ LIB_EXPORT rc_t CC aspera_get(
                 return RC(rcNS, rcFile, rcCopying, rcBuffer, rcInsufficient);
             }
             else {
-                size_t s = string_copy(path, sizeof path, aSrc, n - aSrc);
+#if _DEBUGGING
+                size_t s =
+#endif
+                    string_copy(path, sizeof path, aSrc, n - aSrc);
                 assert(s <= sizeof path);
                 src = path;
             }

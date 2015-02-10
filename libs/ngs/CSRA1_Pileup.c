@@ -199,7 +199,7 @@ void CSRA1_PileupAlignListSort ( CSRA1_Pileup_AlignList * self, ctx_t ctx )
 }
 
 static
-void CSRA1_PileupAlignListMerge ( CSRA1_Pileup_AlignList * self, DLList * pa_waiting )
+void CSRA1_PileupAlignListMerge ( CSRA1_Pileup_AlignList * self, DLList * pa_waiting, uint32_t pa_avail )
 {
     DLList sa_waiting = self -> waiting;
     CSRA1_Pileup_Entry * pe = ( CSRA1_Pileup_Entry * ) DLListHead ( pa_waiting );
@@ -225,6 +225,8 @@ void CSRA1_PileupAlignListMerge ( CSRA1_Pileup_AlignList * self, DLList * pa_wai
 
     DLListAppendList ( & self -> waiting, pa_waiting );
     DLListAppendList ( & self -> waiting, & sa_waiting );
+
+    self -> avail += pa_avail;
 }
 
 
@@ -937,7 +939,7 @@ void CSRA1_PileupPopulate ( CSRA1_Pileup * self, ctx_t ctx, uint32_t id_limit )
                     CSRA1_PileupAlignListSort ( & self -> align, ctx );
 
                 if ( pa_avail != 0 )
-                    CSRA1_PileupAlignListMerge ( & self -> align, & pa_waiting );
+                    CSRA1_PileupAlignListMerge ( & self -> align, & pa_waiting, pa_avail );
             }
             CATCH_ALL ()
             {
