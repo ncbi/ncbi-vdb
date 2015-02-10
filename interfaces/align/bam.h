@@ -450,11 +450,13 @@ ALIGN_EXTERN rc_t CC BAMAlignmentOptDataForEach
     
 ALIGN_EXTERN bool CC BAMAlignmentHasCGData(BAMAlignment const *self);
 
-    
+ALIGN_EXTERN
+rc_t CC BAMAlignmentCGReadLength(BAMAlignment const *self, uint32_t *readlen);
+
 ALIGN_EXTERN
 rc_t CC BAMAlignmentGetCGSeqQual(BAMAlignment const *self,
-                                 char sequence[/* 35 */],
-                                 uint8_t quality[/* 35 */]);
+                                 char sequence[],
+                                 uint8_t quality[]);
 
 ALIGN_EXTERN
 rc_t CC BAMAlignmentGetCGCigar(BAMAlignment const *self,
