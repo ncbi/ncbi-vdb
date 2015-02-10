@@ -632,23 +632,31 @@ int CSRA1_PileupEventGetIndelType ( const CSRA1_PileupEvent * self, ctx_t ctx )
     }
     return 0;
 }
-
 static
-bool CSRA1_PileupEventEntryAdvance ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry * entry )
+bool CSRA1_PileupEventEntryFocus ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry * entry )
 {
-    /* within a deletion */
-    if ( entry -> del_cnt != 0 )
-    {
-        -- entry -> del_cnt;
-        entry -> zstart_adj += entry -> seen_first;
-    }
-    else
-    {
-        const bool * HAS_MISMATCH = entry -> cell_data [ pileup_event_col_HAS_MISMATCH ];
-        const bool * HAS_REF_OFFSET = entry -> cell_data [ pileup_event_col_HAS_REF_OFFSET ];
+    const bool * HAS_MISMATCH = entry -> cell_data [ pileup_event_col_HAS_MISMATCH ];
+    const bool * HAS_REF_OFFSET = entry -> cell_data [ pileup_event_col_HAS_REF_OFFSET ];
+    const int32_t * REF_OFFSET = entry -> cell_data [ pileup_event_col_REF_OFFSET ];
 
-        /* recover from previous position */
-        if ( entry -> seen_first )
+    /* we need the entry to be fast-forwarded */
+    int32_t ref_zpos_adj = CSRA1_PileupEventGetPileup ( self ) -> ref_zpos - entry -> zstart;
+
+    /* always lose any insertion, forget cached values */
+    entry -> ins_cnt = 0;
+    entry -> mismatch = 0;
+
+    /* must advance in all but initial case */
+    assert ( ref_zpos_adj > entry -> zstart_adj || entry -> zstart_adj == 0 );
+
+    /* walk forward */
+    while ( ref_zpos_adj > entry -> zstart_adj )
+    {
+        /* within a deletion */
+        if ( entry -> del_cnt != 0 )
+            -- entry -> del_cnt;
+
+        else
         {
             uint32_t prior_seq_idx = entry -> seq_idx ++;
 
@@ -661,69 +669,57 @@ bool CSRA1_PileupEventEntryAdvance ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entr
             assert ( HAS_REF_OFFSET != NULL );
             assert ( prior_seq_idx < entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] );
             entry -> ref_off_idx += HAS_REF_OFFSET [ prior_seq_idx ];
-        }
 
-        /* if the current sequence address is beyond end, bail */
-        if ( entry -> seq_idx >= entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
-            return false;
-
-        /* adjust alignment */
-        if ( ! HAS_REF_OFFSET [ entry -> seq_idx ] )
-        {
-            /* move to the next reference position */
-            entry -> zstart_adj += entry -> seen_first;
-        }
-        else
-        {
-            int32_t indel_cnt;
-
-            const int32_t * REF_OFFSET = entry -> cell_data [ pileup_event_col_REF_OFFSET ];
-            assert ( REF_OFFSET != NULL );
-
-            indel_cnt = REF_OFFSET [ entry -> ref_off_idx ];
-            if ( indel_cnt < 0 )
-            {
-                entry -> ins_cnt += - indel_cnt;
-
-                /* insertion - clip to SEQUENCE length */
-                if ( ( uint32_t ) entry -> ins_cnt > entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
-                    entry -> ins_cnt = ( int32_t ) entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ];
-            }
-
-            else
-            {
-                entry -> del_cnt = indel_cnt;
-
-                /* deletion - clip to PROJECTION length */
-                if ( ( int64_t ) indel_cnt > entry -> xend - ( entry -> zstart + entry -> zstart_adj ) )
-                    entry -> del_cnt = ( int32_t ) ( entry -> xend - ( entry -> zstart + entry -> zstart_adj ) );
-            }
+            /* if the current sequence address is beyond end, bail */
+            if ( entry -> seq_idx >= entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
+                return false;
 
             /* adjust alignment */
-            entry -> zstart_adj += ( int32_t ) entry -> del_cnt - ( int32_t ) entry -> ins_cnt;
+            if ( HAS_REF_OFFSET [ entry -> seq_idx ] )
+            {
+                assert ( REF_OFFSET != NULL );
+                if ( REF_OFFSET [ entry -> ref_off_idx ] < 0 )
+                {
+                    /* insertion */
+                    uint32_t i, ins_cnt = - REF_OFFSET [ entry -> ref_off_idx ];
+
+                    /* clip to SEQUENCE length */
+                    if ( ( uint32_t ) ( entry -> ins_cnt + ins_cnt ) > entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
+                        ins_cnt = ( int32_t ) entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] - entry -> ins_cnt;
+
+                    /* combine adjacent inserts */
+                    entry -> ins_cnt += ins_cnt;
+
+                    /* scan over insertion to adjust mismatch index */
+                    for ( i = 0; i < ins_cnt; ++ i )
+                        entry -> mismatch_idx += HAS_MISMATCH [ entry -> seq_idx + i ];
+
+                    entry -> seq_idx += ins_cnt;
+
+                    /* NB - there may be entries in HAS_REF_OFFSET that are set
+                       within the insertion. These are used to split the insertion
+                       for preserving boundaries indicated by Complete Genomics BAM
+                       cigar encoding. for Pileup, we treat the entire subsequence as a
+                       single insertion.
+
+                       The "true" values in HAS_REF_OFFSET within an insertion do NOT
+                       represent a corresponding entry in REF_OFFSET, so they are ignored here.
+                    */
+                }
+
+                else
+                {
+                    /* deletion */
+                    entry -> del_cnt = REF_OFFSET [ entry -> ref_off_idx ];
+
+                    /* clip to PROJECTION length */
+                    if ( ( int64_t ) entry -> del_cnt > entry -> xend - ( entry -> zstart + entry -> zstart_adj ) )
+                        entry -> del_cnt = ( int32_t ) ( entry -> xend - ( entry -> zstart + entry -> zstart_adj ) );
+                }
+            }
         }
-    }
 
-    entry -> seen_first = true;
-    return true;
-}
-
-static
-bool CSRA1_PileupEventEntryFocus ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry * entry )
-{
-    /* we need the entry to be fast-forwarded */
-    int32_t ref_zpos_adj = CSRA1_PileupEventGetPileup ( self ) -> ref_zpos - entry -> zstart;
-
-    /* always lose any insertion, forget cached values */
-    entry -> ins_cnt = 0;
-    entry -> mismatch = 0;
-
-    /* walk forward */
-    while ( ref_zpos_adj > entry -> zstart_adj )
-    {
-        /* go forward one step */
-        if ( ! CSRA1_PileupEventEntryAdvance ( self, entry ) )
-            return false;
+        ++ entry -> zstart_adj;
     }
 
     return true;
@@ -754,27 +750,17 @@ void CSRA1_PileupEventEntryInit ( CSRA1_PileupEvent * self, ctx_t ctx, CSRA1_Pil
                 /* check for left soft-clip */
                 while ( HAS_REF_OFFSET [ entry -> seq_idx ] && REF_OFFSET [ entry -> ref_off_idx ] < 0 )
                 {
-                    uint32_t i, count = - REF_OFFSET [ entry -> ref_off_idx ++ ];
+                    uint32_t i, end = entry -> seq_idx - REF_OFFSET [ entry -> ref_off_idx ++ ];
 
                     /* safety check */
-                    if ( count > entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
-                        count = entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ];
+                    if ( end > entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
+                        end = entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ];
 
                     /* skip over soft-clip */
-                    for ( i = 0; i < count; ++ i )
+                    for ( i = entry -> seq_idx; i < end; ++ i )
                         entry -> mismatch_idx += HAS_MISMATCH [ i ];
 
-                    entry -> seq_idx = count;
-                }
-
-                /* detect a deletion */
-                if ( HAS_REF_OFFSET [ entry -> seq_idx ] && REF_OFFSET [ entry -> ref_off_idx ] > 0 )
-                {
-                    entry -> del_cnt = REF_OFFSET [ entry -> ref_off_idx ];
-
-                    /* safety check */
-                    if ( ( int64_t ) entry -> del_cnt > entry -> xend - entry -> zstart )
-                        entry -> del_cnt = ( uint32_t ) ( entry -> xend - entry -> zstart );
+                    entry -> seq_idx = end;
                 }
 
                 return;

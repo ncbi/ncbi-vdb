@@ -127,9 +127,6 @@ struct CSRA1_Pileup_Entry
 
     /* true if alignment comes from secondary table */
     bool secondary;
-
-    /* true if has been seen by PileupEvent iterator */
-    bool seen_first;
 };
 
 
