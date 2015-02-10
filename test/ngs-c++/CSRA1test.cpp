@@ -971,7 +971,7 @@ struct PileupLine
     TEvents vecEvents;
 };
 
-void print_line (PileupLine const& line, ngs::String const& name, int64_t pos_start, int64_t pos, ngs::String const& strRefSlice )
+void print_line (PileupLine const& line, char const* name, int64_t pos_start, int64_t pos, ngs::String const& strRefSlice )
 {
     std::cout
         << name
@@ -1086,21 +1086,6 @@ void mark_line_as_starting_insertion ( PileupLine& line, ngs::String const& inse
     }
 }
 
-bool find_reference ( ngs::ReferenceIterator& ri, char const* ref_name )
-{
-    bool ref_found = false;
-    while ( ri.nextReference () )
-    {
-        if ( ri.getCanonicalName() == ref_name )
-        {
-            ref_found = true;
-            break;
-        }
-    }
-
-    return ref_found;
-}
-
 void mimic_sra_pileup (
             char const* db_path,
             char const* ref_name,
@@ -1108,14 +1093,12 @@ void mimic_sra_pileup (
             int64_t const pos_start, uint64_t const len )
 {
     ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
-    ngs::ReferenceIterator ri = run.getReferences ();
+    ngs::Reference r = run.getReference ( ref_name );
+    ngs::String const& canonical_name = r.getCanonicalName ();
 
-    if ( ! find_reference ( ri, ref_name) )
-        return;
+    ngs::String strRefSlice = r.getReferenceBases ( pos_start, len );
 
-    ngs::String strRefSlice = ri.getReferenceBases ( pos_start, len );
-
-    ngs::PileupIterator pi = ri.getPileupSlice ( pos_start, len, ngs::Alignment::primaryAlignment );
+    ngs::PileupIterator pi = r.getPileupSlice ( pos_start, len, category );
 
     PileupLine line_prev, line_curr;
 
@@ -1150,13 +1133,13 @@ void mimic_sra_pileup (
         if ( pos != pos_start ) // there is no line_prev for the first line - nothing to print
         {
             // print previous line
-            print_line ( line_prev, ri.getCanonicalName(), pos_start, pos - 1, strRefSlice );
+            print_line ( line_prev, canonical_name.c_str(), pos_start, pos - 1, strRefSlice );
         }
 
         line_prev = line_curr;
         clear_line ( line_curr );
     }
-    print_line ( line_prev, ri.getCanonicalName(), pos_start, pos - 1, strRefSlice );
+    print_line ( line_prev, canonical_name.c_str(), pos_start, pos - 1, strRefSlice );
 }
 
 TEST_CASE(CSRA1_PileupEventIterator_Insertions)
@@ -1166,35 +1149,23 @@ TEST_CASE(CSRA1_PileupEventIterator_Insertions)
     int64_t const pos_start = 2017;
     uint64_t const len = 2;
 
-    // pos_start = 2427, len = 2 behaves like "sra-pileup SRR341578 -r NC_011752.1:2428-2429 -s -n"
-
-    // discrepancy here is at: if (pileup_event.alignment_id == "SRR341578.PA.10578020" && (pileup_event.event_type & ngs::PileupEvent::insertion) != 0)
-    mimic_sra_pileup ( db_path, "NC_011752.1", ngs::Alignment::all, pos_start, len );
+    // The output must be the same as for "sra-pileup SRR341578 -r NC_011752.1:2018-2019 -s -n"
+    mimic_sra_pileup ( db_path, "gi|218511148|ref|NC_011752.1|", ngs::Alignment::primaryAlignment, pos_start, len );
 }
 
-#if 0
-TEST_CASE(CSRA1_PileupIterator_CheckBound)
+
+TEST_CASE(CSRA1_PileupIterator_CheckAllAlignmentsZero)
 {
+    int64_t const pos_start = 19374;
+    int64_t const pos_end = 19375;
+    uint64_t const len = (uint64_t)(pos_end - pos_start + 1); //3906625;
 
-    ngs :: ReadCollection coll = ncbi :: NGS :: openReadCollection ( "SRR833251" );
-    ngs :: Reference ref = coll.getReference ("gi|169794206|ref|NC_010410.1|" );
-    ngs :: PileupIterator p = ref . getPileups ( ngs :: Alignment ::all);//primaryAlignment ); 
-
-    while ( p . nextPileup() )
-    {
-        if (p.getReferencePosition() == 204135)
-        {
-            int debug = 1;
-        }
-
-        if ( true || p . getPileupDepth () > 0 )
-        {
-            std::cout << p . getReferencePosition () << ": " << p . getPileupDepth () << std::endl;    
-        }
-    }
-
+    // when requesting category == all, the output must be the same as with
+    // primaryAlignments
+    // reference output: sra-pileup SRR833251 -r "gi|169794206|ref|NC_010410.1|":19374-19375 -s -n
+    mimic_sra_pileup ( "SRR833251", "gi|169794206|ref|NC_010410.1|", ngs::Alignment::all, pos_start, len );
 }
-#endif
+
 
 ///// ReadGroup
 FIXTURE_TEST_CASE(CSRA1_ReadGroup_GetName, CSRA1_Fixture)
