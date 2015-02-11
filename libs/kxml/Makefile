@@ -37,12 +37,12 @@ ALL_LIBS = \
 
 include $(TOP)/build/Makefile.env
 
-INCDIRS += $(addprefix -I,$(XML2_INCDIR))
-
 #-------------------------------------------------------------------------------
 # outer targets
 #
 ifeq (1,$(HAVE_XML2))
+
+INCDIRS += $(addprefix -I,$(XML2_INCDIR))
 
 all std: makedirs
 	@ $(MAKE_CMD) $(TARGDIR)/std
