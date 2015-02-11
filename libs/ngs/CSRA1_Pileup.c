@@ -1684,9 +1684,9 @@ NGS_Pileup * CSRA1_PileupIteratorMakeSlice ( ctx_t ctx,
                 /* limit slice length */
                 if ( self -> circular )
                 {
-                    /* limit to 2 * ref_len */
-                    if ( slice_zstart + slice_size > 2 * ref_len ) 
-                        slice_size = 2 * ref_len - slice_zstart;
+                    /* limit to ref_len */
+                    if ( slice_size > ref_len ) 
+                        slice_size = ref_len;
                 }
                 else
                 {
