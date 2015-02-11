@@ -405,6 +405,7 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                         int64_t ins_ref_last = CSRA1_PileupEventGetPileup ( self ) -> ref_zpos - 1;
                         int64_t ins_ref_start_id = ins_ref_zstart / pileup -> ref . max_seq_len + pileup -> reference_start_id;
                         int64_t ins_ref_last_id = ins_ref_last / pileup -> ref . max_seq_len + pileup -> reference_start_id;
+                        uint32_t ref_off = ( uint32_t ) ( ins_ref_zstart % pileup -> ref . max_seq_len );
 
                         /* try to take advantage of the chunk that's loaded right now */
                         if ( READ != NULL && pileup -> ref_chunk_id == ins_ref_last_id )
@@ -412,7 +413,8 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                             /* most common case - everything within this chunk */
                             if ( ins_ref_start_id == ins_ref_last_id )
                             {
-                                uint32_t ref_off = ( uint32_t ) ( ins_ref_zstart % pileup -> ref . max_seq_len );
+                                /* "seq_off" is implied 0, i.e. start of insertion sequence.
+                                   "ref_off" is calculated start of insert in reference coords modulo chunk size */
                                 for ( seq_idx = 0; seq_idx < str_len; ++ seq_idx )
                                 {
                                     if ( buffer [ seq_idx ] == 0 )
@@ -423,6 +425,11 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                             /* less common case - share only part of this chunk */
                             else
                             {
+                                /* "ref_off" is implied 0, i.e. start of reference chunk which is
+                                   known to be the last but not first chunk, therefore the start is
+                                   at 0 where the insertion crosses chunk boundaries.
+                                   "seq_off" is the start of the last portion of the string to
+                                   intersect this reference chunk. */
                                 uint32_t seq_off = str_len - ( uint32_t ) ( CSRA1_PileupEventGetPileup ( self ) -> ref_zpos % pileup -> ref . max_seq_len );
                                 for ( seq_idx = seq_off; seq_idx < str_len; ++ seq_idx )
                                 {
@@ -430,16 +437,21 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                                         buffer [ seq_idx ] = READ [ seq_idx - seq_off ];
                                 }
 
+                                /* the last part of the string has been completed */
                                 str_len = seq_off;
                                 -- ins_ref_last_id;
                             }
                         }
 
+                        /* forget current reference chunk */
                         pileup -> ref_chunk_bases = NULL;
                         pileup -> ref_base = 0;
 
+                        /* set the reference offset of initial chunk */
+                        ref_off = ( uint32_t ) ( ins_ref_zstart % pileup -> ref . max_seq_len );
+
                         /* walk from ins_ref_start_id to ins_ref_last_id */
-                        for ( seq_idx = 0; ins_ref_start_id <= ins_ref_last_id; ++ ins_ref_start_id )
+                        for ( seq_idx = 0; ins_ref_start_id <= ins_ref_last_id; ++ ins_ref_start_id, ref_off = 0 )
                         {
                             const void * base;
                             uint32_t limit, seq_off, row_len;
@@ -452,16 +464,20 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
 
                             READ = base;
 
+                            /* the total number of bases left in insertion string */
                             limit = str_len - seq_idx;
-                            if ( limit > row_len )
-                                limit = row_len;
 
+                            /* cannot exceed the bases available in this chunk */
+                            if ( ref_off + limit > row_len )
+                                limit = row_len - ref_off;
+
+                            /* end index within string */
                             limit += seq_idx;
 
                             for ( seq_off = seq_idx; seq_idx < limit; ++ seq_idx )
                             {
                                 if ( buffer [ seq_idx ] == 0 )
-                                    buffer [ seq_idx ] = READ [ seq_idx - seq_off ];
+                                    buffer [ seq_idx ] = READ [ ref_off + seq_idx - seq_off ];
                             }
 
                             /* we stopped either due to:
