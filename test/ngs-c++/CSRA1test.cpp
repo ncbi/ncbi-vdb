@@ -1019,15 +1019,15 @@ void print_line (PileupLine const& line, char const* name, int64_t pos_start, in
                 << "+"
                 << pileup_event.insertion_bases.size();
 
-                for ( uint32_t i = 0; i < pileup_event.insertion_bases.size(); ++i )
-                {
-                    std::cout
-                        << (reverse ?
-                        (char)tolower(pileup_event.insertion_bases[i])
-                        : (char)toupper(pileup_event.insertion_bases[i]));
-                }
-
+            for ( uint32_t i = 0; i < pileup_event.insertion_bases.size(); ++i )
+            {
+                std::cout
+                    << (reverse ?
+                    (char)tolower(pileup_event.insertion_bases[i])
+                    : (char)toupper(pileup_event.insertion_bases[i]));
+            }
         }
+
 
         if ( pileup_event.deletion_after_this_pos )
         {
@@ -1139,6 +1139,10 @@ void mimic_sra_pileup (
         line_prev = line_curr;
         clear_line ( line_curr );
     }
+    // TODO: if the last line should contain insertion or deletion start ([-+]<number><seq>)
+    // we have to look ahead 1 more position to be able to discover this and
+    // modify line_prev, but if the last line is the very last one for the whole
+    // reference - we shouldn't do that. This all isn't implemented yet in this function
     print_line ( line_prev, canonical_name.c_str(), pos_start, pos - 1, strRefSlice );
 }
 
@@ -1146,11 +1150,13 @@ TEST_CASE(CSRA1_PileupEventIterator_Insertions)
 {
     char const db_path[] = "SRR341578";
 
-    int64_t const pos_start = 2017;
-    uint64_t const len = 2;
+    int64_t const pos_start = 380000;//2017;
+    int64_t const pos_end = 380001;
+    uint64_t const len = (uint64_t)(pos_end - pos_start + 1);//4860000;//2;
 
     // The output must be the same as for "sra-pileup SRR341578 -r NC_011752.1:2018-2019 -s -n"
-    mimic_sra_pileup ( db_path, "gi|218511148|ref|NC_011752.1|", ngs::Alignment::primaryAlignment, pos_start, len );
+    //mimic_sra_pileup ( db_path, "gi|218511148|ref|NC_011752.1|", ngs::Alignment::primaryAlignment, pos_start, len );
+    mimic_sra_pileup ( db_path, "gi|218693476|ref|NC_011748.1|", ngs::Alignment::primaryAlignment, pos_start, len );
 }
 
 
@@ -1165,7 +1171,6 @@ TEST_CASE(CSRA1_PileupIterator_CheckAllAlignmentsZero)
     // reference output: sra-pileup SRR833251 -r "gi|169794206|ref|NC_010410.1|":19374-19375 -s -n
     mimic_sra_pileup ( "SRR833251", "gi|169794206|ref|NC_010410.1|", ngs::Alignment::all, pos_start, len );
 }
-
 
 ///// ReadGroup
 FIXTURE_TEST_CASE(CSRA1_ReadGroup_GetName, CSRA1_Fixture)
