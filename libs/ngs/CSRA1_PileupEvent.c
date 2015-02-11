@@ -377,6 +377,7 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                    but even so, it should not be a problem to prefetch MISMATCH */
                 TRY ( MISMATCH = CSRA1_PileupEventGetEntry ( self, ctx, entry, pileup_event_col_MISMATCH ) )
                 {
+                    uint32_t ref_first = entry -> seq_idx;
                     uint32_t ins_start = entry -> seq_idx - entry -> ins_cnt;
                     uint32_t seq_idx, mismatch_idx = entry -> mismatch_idx;
 
@@ -385,8 +386,13 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                     /* fill in the buffer with each entry from mismatch */
                     for ( seq_idx = entry -> seq_idx - 1; seq_idx >= ins_start; -- seq_idx )
                     {
+                        /* pull base from MISMATCH */
                         if ( HAS_MISMATCH [ seq_idx ] )
                             buffer [ seq_idx - ins_start ] = MISMATCH [ -- mismatch_idx ];
+
+                        /* will need to get base from reference */
+                        else
+                            ref_first = seq_idx;
                     }
 
                     /* if there are some to be filled from reference */
@@ -399,13 +405,33 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                            is in our current chunk, but it's not guaranteed,
                            nor is it guaranteed to be in a single chunk. */
 
-                        uint32_t str_len = entry -> ins_cnt;
+                        /* the number of characters in string that could come from reference */
+                        uint32_t str_len = entry -> seq_idx - ref_first;
+
+                        /* offset the string buffer to the first base to be filled by reference */
+                        char * rbuffer = & buffer [ entry -> ins_cnt - str_len ];
+
+                        /* the current chunk of reference bases or NULL */
                         const INSDC_dna_text * READ = pileup -> ref_chunk_bases;
+
+                        /* generate range of reference positions */
                         int64_t ins_ref_zstart = CSRA1_PileupEventGetPileup ( self ) -> ref_zpos - ( int64_t ) str_len;
                         int64_t ins_ref_last = CSRA1_PileupEventGetPileup ( self ) -> ref_zpos - 1;
+
+                        /* generate range of reference chunk ids */
                         int64_t ins_ref_start_id = ins_ref_zstart / pileup -> ref . max_seq_len + pileup -> reference_start_id;
                         int64_t ins_ref_last_id = ins_ref_last / pileup -> ref . max_seq_len + pileup -> reference_start_id;
+
+                        /* the starting offset into the left-most reference chunk */
                         uint32_t ref_off = ( uint32_t ) ( ins_ref_zstart % pileup -> ref . max_seq_len );
+
+                        /* check for error in the starting position: must be >= 0 */
+                        if ( ins_ref_zstart < 0 )
+                        {
+                            INTERNAL_ERROR ( xcParamOutOfBounds, "insertion string accessing reference at position %ld", ins_ref_zstart );
+                            free ( buffer );
+                            return NULL;
+                        }
 
                         /* try to take advantage of the chunk that's loaded right now */
                         if ( READ != NULL && pileup -> ref_chunk_id == ins_ref_last_id )
@@ -417,8 +443,8 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                                    "ref_off" is calculated start of insert in reference coords modulo chunk size */
                                 for ( seq_idx = 0; seq_idx < str_len; ++ seq_idx )
                                 {
-                                    if ( buffer [ seq_idx ] == 0 )
-                                        buffer [ seq_idx ] = READ [ ref_off + seq_idx ];
+                                    if ( rbuffer [ seq_idx ] == 0 )
+                                        rbuffer [ seq_idx ] = READ [ ref_off + seq_idx ];
                                 }
                                 goto buffer_complete;
                             }
@@ -433,8 +459,8 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                                 uint32_t seq_off = str_len - ( uint32_t ) ( CSRA1_PileupEventGetPileup ( self ) -> ref_zpos % pileup -> ref . max_seq_len );
                                 for ( seq_idx = seq_off; seq_idx < str_len; ++ seq_idx )
                                 {
-                                    if ( buffer [ seq_idx ] == 0 )
-                                        buffer [ seq_idx ] = READ [ seq_idx - seq_off ];
+                                    if ( rbuffer [ seq_idx ] == 0 )
+                                        rbuffer [ seq_idx ] = READ [ seq_idx - seq_off ];
                                 }
 
                                 /* the last part of the string has been completed */
@@ -476,8 +502,8 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
 
                             for ( seq_off = seq_idx; seq_idx < limit; ++ seq_idx )
                             {
-                                if ( buffer [ seq_idx ] == 0 )
-                                    buffer [ seq_idx ] = READ [ ref_off + seq_idx - seq_off ];
+                                if ( rbuffer [ seq_idx ] == 0 )
+                                    rbuffer [ seq_idx ] = READ [ ref_off + seq_idx - seq_off ];
                             }
 
                             /* we stopped either due to:
