@@ -761,13 +761,27 @@ TEST_CASE(NGS_Statistics_ConversionString_TrailingSpace)
 }
 
 //////////////////////////////////////////// Errors opening read collection
+
 #define BAD_ACCESSION "that refuses to open"
-TEST_CASE(NGS_WithRemoteAccess)
+TEST_CASE(NGS_FailedToOpen)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_ReadCollectionMake ( ctx, BAD_ACCESSION);
-    REQUIRE_EQ ( string ( "Cannot open accession '" BAD_ACCESSION "'"), 
+    
+    KConfig* kfg;
+    REQUIRE_RC ( KConfigMakeLocal ( &kfg, NULL ) );
+    const KRepositoryMgr* repoMgr;
+    REQUIRE_RC ( KConfigMakeRepositoryMgrRead ( kfg, &repoMgr ) );
+    if ( KRepositoryMgrHasRemoteAccess ( repoMgr ) )
+    {
+        REQUIRE_EQ ( string ( "Cannot open accession '" BAD_ACCESSION "'"), 
                  string ( WHAT () ) );
+    }
+    else
+    {
+        REQUIRE_EQ ( string ( "Cannot open accession '" BAD_ACCESSION "'. Note: remote access is disabled in the configuration."), 
+                 string ( WHAT () ) );
+    }
     REQUIRE_FAILED ();
 }
 
