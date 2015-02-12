@@ -972,7 +972,7 @@ rc_t CC KClientHttpStreamTimedRead ( const KClientHttpStream *cself,
         rc =  KStreamTimedRead ( http -> sock, buffer, num_to_read, num_read, tm );
         if ( rc != 0 )
         {
-            /* TBD - handle dropped connection - may want to reestablish */
+            /* handle dropped connection - may want to reestablish */
             KClientHttpClose ( http );
 
             /* LOOK FOR DROPPED CONNECTION && SIZE UNKNOWN - HTTP/1.0 DYNAMIC CASE */
@@ -1046,9 +1046,16 @@ rc_t CC KClientHttpStreamTimedReadChunked ( const KClientHttpStream *cself,
     {
     case end_chunk:
         rc = KClientHttpGetLine ( http, tm );
-        /* this should be the CRLF following chunk */
-        if ( rc != 0 || http -> line_valid != 0 )
+        if ( rc != 0 )
         {
+            self -> state = error_state;
+            break;
+        }
+
+        /* this should be the CRLF following chunk */
+        if ( http -> line_valid != 0 )
+        {
+            KClientHttpClose ( http );
             rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcIncorrect);
             self -> state = error_state;
             break;
@@ -1077,6 +1084,7 @@ rc_t CC KClientHttpStreamTimedReadChunked ( const KClientHttpStream *cself,
         /* check if there was no hex number, or sep isn't pointing to nul byte */
         if ( sep == http -> line_buffer . base || ( * sep != 0 && * sep != ';' ) )
         {
+            KClientHttpClose ( http );
             rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcIncorrect);
             self -> state = error_state;
             break;
@@ -1100,11 +1108,12 @@ rc_t CC KClientHttpStreamTimedReadChunked ( const KClientHttpStream *cself,
     case within_chunk: 
         /* start reading */
         rc = KClientHttpStreamRead ( self, buffer, bsize, num_read );
-        if ( rc != 0 ) /* TBD - handle connection errors */
+        if ( rc != 0 )
             self -> state = error_state;
         /* incomplete if nothing to read */
         else if ( * num_read == 0 )
         {
+            KClientHttpClose ( http );
             rc = RC ( rcNS, rcNoTarg, rcTransfer, rcNoObj, rcIncomplete);
             self -> state = error_state;
         }
