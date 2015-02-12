@@ -37,6 +37,10 @@
 #include <kfc/rsrc.h>
 #include <kfc/except.h>
 #include <kfc/xc.h>
+
+#include <kfg/kfg-priv.h>
+#include <kfg/repository.h>
+
 #include <vdb/vdb-priv.h>
 #include <vdb/manager.h>
 #include <vdb/schema.h>
@@ -530,9 +534,23 @@ NGS_ReadCollection * NGS_ReadCollectionMake ( ctx_t ctx, const char * spec )
 
             if ( rc == 0 )
                 return NGS_ReadCollectionMakeVTable ( ctx, tbl, spec );
-
-            /* at this point, we try as BAM file */
-            INTERNAL_ERROR ( xcUnimplemented, "cannot detect BAM or other NGS file" );
+            else
+            {
+                KConfig* kfg;
+                const KRepositoryMgr* repoMgr;
+                if ( KConfigMakeLocal ( & kfg, NULL ) != 0 || 
+                     KConfigMakeRepositoryMgrRead ( kfg, & repoMgr ) != 0 ||
+                     KRepositoryMgrHasRemoteAccess ( repoMgr ) )
+                {
+                    INTERNAL_ERROR ( xcUnimplemented, "Cannot open accession '%s'.", spec );
+                }
+                else
+                {
+                    INTERNAL_ERROR ( xcUnimplemented, "Cannot open accession '%s'. Note: remote access is disabled in the configuration.", spec );
+                }
+                KRepositoryMgrRelease ( repoMgr );
+                KConfigRelease ( kfg );
+            }
         }
     }
 
