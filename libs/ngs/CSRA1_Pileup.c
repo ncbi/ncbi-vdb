@@ -339,6 +339,21 @@ uint8_t CSRA1_Pileup_AlignCursorDataGetUInt8 ( CSRA1_Pileup_AlignCursorData * se
 }
 
 static
+int32_t CSRA1_Pileup_AlignCursorDataGetInt32 ( CSRA1_Pileup_AlignCursorData * self, ctx_t ctx,
+    int64_t row_id, uint32_t col_idx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    TRY ( CSRA1_Pileup_AlignCursorDataGetNonEmptyCell ( self, ctx, row_id, col_idx ) )
+    {
+        const int32_t * p = self -> cell_data [ col_idx ];
+        return p [ 0 ];
+    }
+
+    return 0;
+}
+
+static
 uint32_t CSRA1_Pileup_AlignCursorDataGetUInt32 ( CSRA1_Pileup_AlignCursorData * self, ctx_t ctx,
     int64_t row_id, uint32_t col_idx )
 {
@@ -784,6 +799,7 @@ bool CSRA1_PileupFilterAlignment ( CSRA1_Pileup * self, ctx_t ctx,
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
+    int32_t map_qual;
     INSDC_read_filter read_filter;
 
     TRY ( read_filter = CSRA1_Pileup_AlignCursorDataGetUInt8 ( cd, ctx, row_id, pileup_align_col_READ_FILTER ) )
@@ -791,15 +807,28 @@ bool CSRA1_PileupFilterAlignment ( CSRA1_Pileup * self, ctx_t ctx,
         switch ( read_filter )
         {
         case READ_FILTER_PASS:
-            return true;
+
+            /* unless looking at mapping quality, accept */
+            if ( ( self -> filters & NGS_PileupFilterBits_map_qual ) == 0 )
+                return true;
+
+            /* look at mapping quality for alignment */
+            TRY ( map_qual = CSRA1_Pileup_AlignCursorDataGetInt32 ( cd, ctx, row_id, pileup_event_col_MAPQ ) )
+            {
+                /* generally specify a minimum mapping quality */
+                if ( ( self -> filters & NGS_PileupFilterBits_min_map_qual ) != 0 )
+                    return map_qual >= self -> map_qual;
+
+                /* but allow a maximum as well */
+                return map_qual <= self -> map_qual;
+            }
+            break;
 
         case READ_FILTER_REJECT:
-            /* simply a bad read */
-            break;
+            return ( self -> filters & NGS_PileupFilterBits_pass_bad ) != 0;
 
         case READ_FILTER_CRITERIA:
-            /* TBD - this means a duplicate - may allow later on */
-            break;
+            return ( self -> filters & NGS_PileupFilterBits_pass_dups ) != 0;
 
         case READ_FILTER_REDACTED:
             /* do not include */
@@ -1537,7 +1566,8 @@ void CSRA1_PileupInitAlignment ( CSRA1_Pileup * obj, ctx_t ctx,
 static
 void CSRA1_PileupInit ( ctx_t ctx, CSRA1_Pileup * obj, const char * instname, 
     NGS_Reference * ref, const VDatabase * db, const NGS_Cursor * ref_curs,
-    int64_t first_row_id, int64_t last_row_id, bool wants_primary, bool wants_secondary )
+    int64_t first_row_id, int64_t last_row_id, bool wants_primary, bool wants_secondary,
+    uint32_t filters, int32_t map_qual )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     
@@ -1559,6 +1589,10 @@ void CSRA1_PileupInit ( ctx_t ctx, CSRA1_Pileup * obj, const char * instname,
                        that represent the actual chromosome being analyzed */
                     obj -> reference_start_id = obj -> slice_start_id = first_row_id;
                     obj -> reference_last_id = obj -> slice_end_id = last_row_id;
+
+                    /* record filter criteria */
+                    obj -> filters = filters;
+                    obj -> map_qual = map_qual;
                 
                     /* initialize against one or more alignment tables */
                     if ( wants_primary )
@@ -1581,7 +1615,8 @@ void CSRA1_PileupInit ( ctx_t ctx, CSRA1_Pileup * obj, const char * instname,
 
 NGS_Pileup * CSRA1_PileupIteratorMake ( ctx_t ctx,
     NGS_Reference * ref, const VDatabase * db, const NGS_Cursor * curs_ref,
-    int64_t first_row_id, int64_t last_row_id, bool wants_primary, bool wants_secondary )
+    int64_t first_row_id, int64_t last_row_id, bool wants_primary, bool wants_secondary,
+    uint32_t filters, int32_t map_qual )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
 
@@ -1632,7 +1667,7 @@ NGS_Pileup * CSRA1_PileupIteratorMake ( ctx_t ctx,
 #else
         const char * instname = "unknown";
 #endif
-        TRY ( CSRA1_PileupInit ( ctx, obj, instname, ref, db, curs_ref, first_row_id, last_row_id, wants_primary, wants_secondary ) )
+        TRY ( CSRA1_PileupInit ( ctx, obj, instname, ref, db, curs_ref, first_row_id, last_row_id, wants_primary, wants_secondary, filters, map_qual ) )
         {
             obj -> state = pileup_state_initial;
             return & obj -> dad . dad;
@@ -1648,7 +1683,8 @@ NGS_Pileup * CSRA1_PileupIteratorMake ( ctx_t ctx,
 NGS_Pileup * CSRA1_PileupIteratorMakeSlice ( ctx_t ctx,
     NGS_Reference * ref, const VDatabase * db, const NGS_Cursor * curs_ref,
     int64_t first_row_id, int64_t last_row_id, uint64_t slice_zstart, 
-    uint64_t slice_size, bool wants_primary, bool wants_secondary )
+    uint64_t slice_size, bool wants_primary, bool wants_secondary,
+    uint32_t filters, int32_t map_qual )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     uint64_t ref_len;
@@ -1680,7 +1716,7 @@ NGS_Pileup * CSRA1_PileupIteratorMakeSlice ( ctx_t ctx,
         else
         {
             TRY ( NGS_Pileup * obj = CSRA1_PileupIteratorMake ( ctx, ref, db, curs_ref,
-                      first_row_id, last_row_id, wants_primary, wants_secondary ) )
+                first_row_id, last_row_id, wants_primary, wants_secondary, filters, map_qual ) )
             {
                 CSRA1_Pileup * self = ( CSRA1_Pileup * ) obj;
 

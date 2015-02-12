@@ -76,8 +76,8 @@ static struct NGS_Alignment*    CSRA1_ReferenceGetAlignment ( CSRA1_Reference * 
 static struct NGS_Alignment*    CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary );
 static uint64_t                 CSRA1_ReferenceGetAlignmentCount ( const CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary );
 static struct NGS_Alignment*    CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary );
-static struct NGS_Pileup*       CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary );
-static struct NGS_Pileup*       CSRA1_ReferenceGetPileupSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary );
+static struct NGS_Pileup*       CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
+static struct NGS_Pileup*       CSRA1_ReferenceGetPileupSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 struct NGS_Statistics*          CSRA1_ReferenceGetStatistics ( const CSRA1_Reference * self, ctx_t ctx );
 static bool                     CSRA1_ReferenceIteratorNext ( CSRA1_Reference * self, ctx_t ctx );
 
@@ -636,7 +636,7 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
     }
 }                                                         
 
-struct NGS_Pileup* CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary )
+struct NGS_Pileup* CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual )
 {   
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
@@ -659,10 +659,12 @@ struct NGS_Pileup* CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx
                                       CSRA1_Reference_GetFirstRowId ( (NGS_Reference const*)self, ctx ),
                                       CSRA1_Reference_GetLastRowId ( (NGS_Reference const*)self, ctx ),
                                       wants_primary, 
-                                      wants_secondary );
+                                      wants_secondary,
+                                      filters,
+                                      map_qual );
 }
 
-static struct NGS_Pileup* CSRA1_ReferenceGetPileupSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary )
+static struct NGS_Pileup* CSRA1_ReferenceGetPileupSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
@@ -687,7 +689,9 @@ static struct NGS_Pileup* CSRA1_ReferenceGetPileupSlice ( CSRA1_Reference * self
                                            offset,
                                            size,
                                            wants_primary, 
-                                           wants_secondary );
+                                           wants_secondary,
+                                           filters,
+                                           map_qual );
 }
 
 struct NGS_Statistics* CSRA1_ReferenceGetStatistics ( const CSRA1_Reference * self, ctx_t ctx )

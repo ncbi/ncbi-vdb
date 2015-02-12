@@ -61,6 +61,16 @@ struct NGS_Reference;
 /*--------------------------------------------------------------------------
  * NGS_Pileup
  */
+
+enum NGS_PileupFilterBits
+{
+    NGS_PileupFilterBits_pass_bad = 1,
+    NGS_PileupFilterBits_pass_dups = 2,
+    NGS_PileupFilterBits_min_map_qual = 4,
+    NGS_PileupFilterBits_max_map_qual = 8,
+
+    NGS_PileupFilterBits_map_qual = NGS_PileupFilterBits_min_map_qual | NGS_PileupFilterBits_max_map_qual
+};
  
 
 /* ToPileupEvent

@@ -249,6 +249,10 @@ struct CSRA1_Pileup
     /* alignment cursor/data */
     CSRA1_Pileup_AlignCursorData pa, sa;
 
+    /* alignment filters */
+    uint32_t filters;
+    int32_t map_qual;
+
     /* reference base - lazily populated */
     char ref_base;
 
@@ -261,7 +265,8 @@ struct CSRA1_Pileup
  */
 struct NGS_Pileup * CSRA1_PileupIteratorMake ( ctx_t ctx, struct NGS_Reference * ref,
     struct VDatabase const * db, struct NGS_Cursor const * curs_ref,
-    int64_t first_row_id, int64_t last_row_id, bool wants_primary, bool wants_secondary );
+    int64_t first_row_id, int64_t last_row_id, bool wants_primary, bool wants_secondary,
+    uint32_t filters, int32_t map_qual );
 
 /* MakeSlice
  *  make an iterator across a portion of reference
@@ -269,7 +274,8 @@ struct NGS_Pileup * CSRA1_PileupIteratorMake ( ctx_t ctx, struct NGS_Reference *
 struct NGS_Pileup * CSRA1_PileupIteratorMakeSlice ( ctx_t ctx, struct NGS_Reference * ref,
     struct VDatabase const * db, struct NGS_Cursor const * curs_ref,
     int64_t first_row_id, int64_t last_row_id, uint64_t slice_start, 
-    uint64_t slice_size, bool wants_primary, bool wants_secondary );
+    uint64_t slice_size, bool wants_primary, bool wants_secondary,
+    uint32_t filters, int32_t map_qual );
 
 /* GetEntry
  */
