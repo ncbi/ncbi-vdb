@@ -779,7 +779,7 @@ TEST_CASE(NGS_FailedToOpen)
     }
     else
     {
-        REQUIRE_EQ ( string ( "Cannot open accession '" BAD_ACCESSION "'. Note: remote access is disabled in the configuration."), 
+        REQUIRE_EQ ( string ( "Cannot open accession '" BAD_ACCESSION "'. Note: remote access is disabled in the configuration"), 
                  string ( WHAT () ) );
     }
     REQUIRE_FAILED ();
