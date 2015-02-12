@@ -729,7 +729,6 @@ uint32_t CSRA1_PileupGatherChunkIds ( CSRA1_Pileup * self, ctx_t ctx )
             return 0;
     }
 
-    ++ self -> idx_chunk_id;
     return pa_ids + sa_ids;
 }
 
@@ -767,10 +766,14 @@ void CSRA1_PileupGatherIds ( CSRA1_Pileup * self, ctx_t ctx, uint32_t id_limit )
     total_ids = 0;
     do
     {
-        ON_FAIL ( uint32_t align_ids = CSRA1_PileupGatherChunkIds ( self, ctx ) )
+        uint32_t align_ids;
+
+        ON_FAIL ( align_ids = CSRA1_PileupGatherChunkIds ( self, ctx ) )
             break;
 
         total_ids += align_ids;
+        ++ self -> idx_chunk_id;
+
     }
     while ( total_ids < id_limit && self -> idx_chunk_id <= self -> slice_end_id );
 }
