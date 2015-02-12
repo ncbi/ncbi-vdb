@@ -959,7 +959,6 @@ struct PileupEvent
     int mapping_quality;
     char alignment_base;
     bool deletion_after_this_pos;
-    ngs::String alignment_id;
     ngs::String insertion_bases;
 };
 
@@ -971,9 +970,15 @@ struct PileupLine
     TEvents vecEvents;
 };
 
-void print_line (PileupLine const& line, char const* name, int64_t pos_start, int64_t pos, ngs::String const& strRefSlice )
+void print_line (
+    PileupLine const& line,
+    char const* name,
+    int64_t pos_start,
+    int64_t pos,
+    ngs::String const& strRefSlice,
+    std::ostream& os)
 {
-    std::cout
+    os
         << name
         << "\t" << (pos + 1)    // + 1 to be like sra-pileup - 1-based position
         << "\t" << strRefSlice [pos - pos_start]
@@ -992,7 +997,7 @@ void print_line (PileupLine const& line, char const* name, int64_t pos_start, in
             if ( c > '~' ) { c = '~'; }
             if ( c < 33 ) { c = 33; }
 
-            std::cout << "^" << c;
+            os << "^" << c;
         }
 
         bool reverse = ( eventType & ngs::PileupEvent::alignment_minus_strand ) != 0;
@@ -1000,28 +1005,28 @@ void print_line (PileupLine const& line, char const* name, int64_t pos_start, in
         switch ( eventType & 7 )
         {
         case ngs::PileupEvent::match:
-            std::cout << (reverse ? "," : ".");
+            os << (reverse ? "," : ".");
             break;
         case ngs::PileupEvent::mismatch:
-            std::cout
+            os
                 << (reverse ?
                 (char)tolower( pileup_event.alignment_base )
                 : (char)toupper( pileup_event.alignment_base ));
             break;
         case ngs::PileupEvent::deletion:
-            std::cout << (reverse ? "<" : ">");
+            os << (reverse ? "<" : ">");
             break;
         }
 
         if ( pileup_event.insertion_bases.size() != 0 )
         {
-            std::cout
+            os
                 << "+"
                 << pileup_event.insertion_bases.size();
 
             for ( uint32_t i = 0; i < pileup_event.insertion_bases.size(); ++i )
             {
-                std::cout
+                os
                     << (reverse ?
                     (char)tolower(pileup_event.insertion_bases[i])
                     : (char)toupper(pileup_event.insertion_bases[i]));
@@ -1032,11 +1037,11 @@ void print_line (PileupLine const& line, char const* name, int64_t pos_start, in
         if ( pileup_event.deletion_after_this_pos )
         {
             uint32_t count = pileup_event.next_repeat_count;
-            std::cout << "-" << count;
+            os << "-" << count;
 
             for ( uint32_t i = 0; i < count; ++i )
             {
-                std::cout
+                os
                     << (reverse ?
                     (char)tolower(strRefSlice [pos - pos_start + i + 1]) // + 1 means "deletion is at the NEXT position"
                     : (char)toupper(strRefSlice [pos - pos_start + i + 1])); // + 1 means "deletion is at the NEXT position"
@@ -1045,9 +1050,9 @@ void print_line (PileupLine const& line, char const* name, int64_t pos_start, in
         }
 
         if ( ( eventType & ngs::PileupEvent::alignment_stop ) != 0 )
-            std::cout << "$";
+            os << "$";
     }
-    std::cout << std::endl;
+    os << std::endl;
 }
 
 void clear_line ( PileupLine& line )
@@ -1056,41 +1061,28 @@ void clear_line ( PileupLine& line )
     line.vecEvents.clear ();
 }
 
-void mark_line_as_starting_deletion ( PileupLine& line, uint32_t repeat_count, ngs::String const& alignment_id )
+void mark_line_as_starting_deletion ( PileupLine& line, uint32_t repeat_count, size_t alignment_index )
 {
-    for (PileupLine::TEvents::iterator it = line.vecEvents.begin(); it != line.vecEvents.end(); ++ it)
+    PileupEvent& pileup_event = line.vecEvents [ alignment_index ];
+    if ( ( pileup_event.event_type & 7 ) != ngs::PileupEvent::deletion)
     {
-        PileupEvent& pileup_event = *it;
-        if (pileup_event.alignment_id == alignment_id)
-        {
-            if ( ( pileup_event.event_type & 7 ) != ngs::PileupEvent::deletion)
-            {
-                pileup_event.next_repeat_count = repeat_count;
-                pileup_event.deletion_after_this_pos = true;
-            }
-            break;
-        }
+        pileup_event.next_repeat_count = repeat_count;
+        pileup_event.deletion_after_this_pos = true;
     }
 }
 
-void mark_line_as_starting_insertion ( PileupLine& line, ngs::String const& insertion_bases, ngs::String const& alignment_id )
+void mark_line_as_starting_insertion ( PileupLine& line, ngs::String const& insertion_bases, size_t alignment_index )
 {
-    for (PileupLine::TEvents::iterator it = line.vecEvents.begin(); it != line.vecEvents.end(); ++ it)
-    {
-        PileupEvent& pileup_event = *it;
-        if (pileup_event.alignment_id == alignment_id)
-        {
-            pileup_event.insertion_bases = insertion_bases;
-            break;
-        }
-    }
+    PileupEvent& pileup_event = line.vecEvents [ alignment_index ];
+    pileup_event.insertion_bases = insertion_bases;
 }
 
 void mimic_sra_pileup (
             char const* db_path,
             char const* ref_name,
             ngs::Alignment::AlignmentCategory category,
-            int64_t const pos_start, uint64_t const len )
+            int64_t const pos_start, uint64_t const len,
+            std::ostream& os)
 {
     ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
     ngs::Reference r = run.getReference ( ref_name );
@@ -1102,29 +1094,63 @@ void mimic_sra_pileup (
 
     PileupLine line_prev, line_curr;
 
+    // maps current line alignment vector index to
+    // previous line alignment vector index
+    // mapAlignmentIdx[i] contains adjustment for index, not the absolute value
+    std::vector <int64_t> mapAlignmentIdxPrev, mapAlignmentIdxCurr;
+
     int64_t pos = pos_start;
     for (; pi.nextPileup (); ++ pos)
     {
         line_curr.depth = pi.getPileupDepth ();
         line_curr.vecEvents.reserve (line_curr.depth);
+        mapAlignmentIdxCurr.reserve (line_curr.depth);
+
+        size_t idx_map_init = 0; // index of the element ti be initialized next
+        int64_t current_del_count = 0; // number of encountered stops
 
         for (; pi.nextPileupEvent (); )
         {
             PileupEvent pileup_event;
 
-            pileup_event.alignment_id = pi.getAlignmentId().toString();
+            //pileup_event.alignment_id = pi.getAlignmentId().toString();
             pileup_event.deletion_after_this_pos = false;
             pileup_event.event_type = pi.getEventType ();
-            pileup_event.repeat_count = pi.getEventRepeatCount ();
-            pileup_event.mapping_quality = pi.getMappingQuality();
-            pileup_event.alignment_base = pi.getAlignmentBase();
+
+            if ( ( pileup_event.event_type & ngs::PileupEvent::alignment_start ) != 0 )
+                pileup_event.mapping_quality = pi.getMappingQuality();
+
+            if ((pileup_event.event_type & 7) == ngs::PileupEvent::mismatch)
+                pileup_event.alignment_base = pi.getAlignmentBase();
+
+            if (pileup_event.event_type & ngs::PileupEvent::alignment_stop)
+            {
+                ++current_del_count;
+                mapAlignmentIdxCurr [ idx_map_init ] = current_del_count;
+            }
+            else
+            {
+                mapAlignmentIdxCurr.push_back ( current_del_count );
+                ++ idx_map_init;
+            }
 
             if ( pos != pos_start )
             {
-                if ((pileup_event.event_type & 7) == ngs::PileupEvent::deletion)
-                    mark_line_as_starting_deletion ( line_prev, pileup_event.repeat_count, pileup_event.alignment_id );
-                if ( pileup_event.event_type & ngs::PileupEvent::insertion )
-                    mark_line_as_starting_insertion ( line_prev, pi.getInsertionBases().toString(), pileup_event.alignment_id );
+                // here in mapAlignmentIdxPrev we have already initialized
+                // indicies for line_prev
+                // so we can find corresponding alignment by doing:
+                // int64_t idx = line_curr.vecEvents.size()
+                // line_prev.vecEvents [ idx + mapAlignmentIdxPrev [idx] ]
+
+                size_t idx_curr_align = line_curr.vecEvents.size();
+
+                if (mapAlignmentIdxPrev.size() > idx_curr_align)
+                {
+                    if ((pileup_event.event_type & 7) == ngs::PileupEvent::deletion)
+                        mark_line_as_starting_deletion ( line_prev, pi.getEventRepeatCount(), mapAlignmentIdxPrev [idx_curr_align] + idx_curr_align );
+                    if ( pileup_event.event_type & ngs::PileupEvent::insertion )
+                        mark_line_as_starting_insertion ( line_prev, pi.getInsertionBases().toString(), mapAlignmentIdxPrev [idx_curr_align] + idx_curr_align );
+                }
             }
 
             line_curr.vecEvents.push_back ( pileup_event );
@@ -1133,43 +1159,109 @@ void mimic_sra_pileup (
         if ( pos != pos_start ) // there is no line_prev for the first line - nothing to print
         {
             // print previous line
-            print_line ( line_prev, canonical_name.c_str(), pos_start, pos - 1, strRefSlice );
+            print_line ( line_prev, canonical_name.c_str(), pos_start, pos - 1, strRefSlice, os );
         }
 
         line_prev = line_curr;
+        mapAlignmentIdxPrev = mapAlignmentIdxCurr;
+
         clear_line ( line_curr );
+        mapAlignmentIdxCurr.clear();
     }
     // TODO: if the last line should contain insertion or deletion start ([-+]<number><seq>)
     // we have to look ahead 1 more position to be able to discover this and
     // modify line_prev, but if the last line is the very last one for the whole
     // reference - we shouldn't do that. This all isn't implemented yet in this function
-    print_line ( line_prev, canonical_name.c_str(), pos_start, pos - 1, strRefSlice );
+    print_line ( line_prev, canonical_name.c_str(), pos_start, pos - 1, strRefSlice, os );
 }
 
-TEST_CASE(CSRA1_PileupEventIterator_Insertions)
+TEST_CASE(CSRA1_PileupEventIterator_Deletion)
 {
+    // deletions
     char const db_path[] = "SRR341578";
 
-    int64_t const pos_start = 380000;//2017;
-    int64_t const pos_end = 380001;
-    uint64_t const len = (uint64_t)(pos_end - pos_start + 1);//4860000;//2;
+    int64_t const pos_start = 2427;
+    int64_t const pos_end = 2428;
+    uint64_t const len = (uint64_t)(pos_end - pos_start + 1);
+
+    // The output must be the same as for "sra-pileup SRR341578 -r NC_011752.1:2428-2429 -s -n"
+    std::ostringstream sstream;
+    std::ostringstream sstream_ref;
+
+    sstream_ref << "NC_011752.1\t2428\tG\t34\t..,.,.-1A.-1A.-1A.-1A.-1A.-1A,-1a,-1a.-1A,-1a,-1a.-1A.-1A.-1A,-1a,-1a,-1a,-1a.-1A,-1a,-1a.-1A,-1a.-1A.-1A,-1a.^F,^F," << std::endl;
+    sstream_ref << "NC_011752.1\t2429\tA\t34\t.$.$,$.,>>>>>><<><<>>><<<<><<><>><Ggg" << std::endl;
+
+    mimic_sra_pileup ( db_path, "gi|218511148|ref|NC_011752.1|", ngs::Alignment::all, pos_start, len, sstream );
+
+    REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
+}
+
+TEST_CASE(CSRA1_PileupEventIterator_Insertion)
+{
+    // simple matches, mismatch, insertion, mapping quality
+    char const db_path[] = "SRR341578";
+
+    int64_t const pos_start = 2017;
+    int64_t const pos_end = 2018;
+    uint64_t const len = (uint64_t)(pos_end - pos_start + 1);
 
     // The output must be the same as for "sra-pileup SRR341578 -r NC_011752.1:2018-2019 -s -n"
-    //mimic_sra_pileup ( db_path, "gi|218511148|ref|NC_011752.1|", ngs::Alignment::primaryAlignment, pos_start, len );
-    mimic_sra_pileup ( db_path, "gi|218693476|ref|NC_011748.1|", ngs::Alignment::primaryAlignment, pos_start, len );
+    std::ostringstream sstream;
+    std::ostringstream sstream_ref;
+
+    sstream_ref << "NC_011752.1\t2018\tT\t17\t.....,,A,,..+2CA..^F.^F.^:N" << std::endl;
+    sstream_ref << "NC_011752.1\t2019\tC\t19\t.....,,.,,.......^F.^F," << std::endl;
+
+    mimic_sra_pileup ( db_path, "gi|218511148|ref|NC_011752.1|", ngs::Alignment::all, pos_start, len, sstream );
+
+    REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
+}
+
+TEST_CASE(CSRA1_PileupEventIterator_TrickyInsertion)
+{
+    // the insertion occurs in 1 or more previous chunks but not the current
+
+    char const db_path[] = "SRR341578";
+
+    int64_t const pos_start = 380000;
+    int64_t const pos_end = 380001;
+    uint64_t const len = (uint64_t)(pos_end - pos_start + 1);
+
+    // The output must be the same as for "sra-pileup SRR341578 -r NC_011748.1:380001-380002 -s -n"
+    std::ostringstream sstream;
+    std::ostringstream sstream_ref;
+
+    sstream_ref << "NC_011748.1\t380001\tT\t61\t....,,...,......,,...,,.....,,..,.,,,,...,,,,,,,+2tc.,.....G....," << std::endl;
+    sstream_ref << "NC_011748.1\t380002\tT\t61\t.$.$.$.$,$,$...,......,,...,,.....,,A.,.,,,,...,,,,,,,.,.....G....," << std::endl;
+
+    mimic_sra_pileup ( db_path, "gi|218693476|ref|NC_011748.1|", ngs::Alignment::primaryAlignment, pos_start, len, sstream );
+
+    REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
 }
 
 
-TEST_CASE(CSRA1_PileupIterator_CheckAllAlignmentsZero)
+TEST_CASE(CSRA1_PileupIterator_StartingZeros)
 {
+    // this is transition from depth == 0 to depth == 1
+    // initial code had different output for primaryAlignments vs all
+
     int64_t const pos_start = 19374;
     int64_t const pos_end = 19375;
     uint64_t const len = (uint64_t)(pos_end - pos_start + 1); //3906625;
 
     // when requesting category == all, the output must be the same as with
     // primaryAlignments
-    // reference output: sra-pileup SRR833251 -r "gi|169794206|ref|NC_010410.1|":19374-19375 -s -n
-    mimic_sra_pileup ( "SRR833251", "gi|169794206|ref|NC_010410.1|", ngs::Alignment::all, pos_start, len );
+    // reference output: sra-pileup SRR833251 -r "gi|169794206|ref|NC_010410.1|":19375-19376 -s -n
+
+    std::ostringstream sstream;
+    std::ostringstream sstream_ref;
+
+    sstream_ref << "gi|169794206|ref|NC_010410.1|\t19375\tC\t0\t" << std::endl;
+    sstream_ref << "gi|169794206|ref|NC_010410.1|\t19376\tA\t1\t^!." << std::endl;
+
+    mimic_sra_pileup ( "SRR833251", "gi|169794206|ref|NC_010410.1|", ngs::Alignment::all, pos_start, len, sstream );
+
+    REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
 }
 
 ///// ReadGroup
