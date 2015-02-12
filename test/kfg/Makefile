@@ -61,6 +61,9 @@ TEST_LIB = \
 $(TEST_BINDIR)/wb-test-kfg: $(TEST_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB) 
 
+valgrind_wb: std
+	valgrind --ncbi $(TEST_BINDIR)/wb-test-kfg 
+    
 #-------------------------------------------------------------------------------
 # test-kfg
 #
