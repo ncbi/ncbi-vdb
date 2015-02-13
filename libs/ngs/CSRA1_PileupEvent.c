@@ -632,8 +632,7 @@ int CSRA1_PileupEventGetIndelType ( const CSRA1_PileupEvent * self, ctx_t ctx )
     {
         CSRA1_Pileup_Entry * entry = self -> entry;
 
-        const bool * HAS_REF_OFFSET = entry -> cell_data [ pileup_event_col_HAS_REF_OFFSET ];
-        if ( HAS_REF_OFFSET [ entry -> seq_idx ] )
+        if ( entry -> del_cnt != 0 || entry -> ins_cnt != 0 )
         {
             CSRA1_Pileup * pileup = CSRA1_PileupEventGetPileup ( self );
             CSRA1_Pileup_AlignCursorData * cd = entry -> secondary ? & pileup -> sa : & pileup -> pa;
@@ -643,8 +642,9 @@ int CSRA1_PileupEventGetIndelType ( const CSRA1_PileupEvent * self, ctx_t ctx )
                 TRY ( REF_OFFSET_TYPE = CSRA1_PileupEventGetEntry ( self, ctx, entry, pileup_event_col_REF_OFFSET_TYPE ) )
                 {
                     assert ( REF_OFFSET_TYPE != NULL );
-                    assert ( entry -> ref_off_idx < entry -> cell_len [ pileup_event_col_REF_OFFSET_TYPE ] );
-                    switch ( REF_OFFSET_TYPE [ entry -> ref_off_idx ] )
+                    assert ( entry -> ref_off_idx > 0 );
+                    assert ( entry -> ref_off_idx <= entry -> cell_len [ pileup_event_col_REF_OFFSET_TYPE ] );
+                    switch ( REF_OFFSET_TYPE [ entry -> ref_off_idx - 1 ] )
                     {
                     case NCBI_align_ro_normal:
                     case NCBI_align_ro_soft_clip:
@@ -674,6 +674,7 @@ int CSRA1_PileupEventGetIndelType ( const CSRA1_PileupEvent * self, ctx_t ctx )
     }
     return 0;
 }
+
 static
 bool CSRA1_PileupEventEntryFocus ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry * entry )
 {
@@ -683,6 +684,7 @@ bool CSRA1_PileupEventEntryFocus ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry 
 
     /* we need the entry to be fast-forwarded */
     int32_t ref_zpos_adj = CSRA1_PileupEventGetPileup ( self ) -> ref_zpos - entry -> zstart;
+    assert ( ref_zpos_adj >= 0 );
 
     /* always lose any insertion, forget cached values */
     entry -> ins_cnt = 0;
@@ -706,11 +708,6 @@ bool CSRA1_PileupEventEntryFocus ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry 
             assert ( HAS_MISMATCH != NULL );
             assert ( prior_seq_idx < entry -> cell_len [ pileup_event_col_HAS_MISMATCH ] );
             entry -> mismatch_idx += HAS_MISMATCH [ prior_seq_idx ];
-
-            /* for the case where there are indels */
-            assert ( HAS_REF_OFFSET != NULL );
-            assert ( prior_seq_idx < entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] );
-            entry -> ref_off_idx += HAS_REF_OFFSET [ prior_seq_idx ];
 
             /* if the current sequence address is beyond end, bail */
             if ( entry -> seq_idx >= entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
@@ -758,6 +755,8 @@ bool CSRA1_PileupEventEntryFocus ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry 
                     if ( ( int64_t ) entry -> del_cnt > entry -> xend - ( entry -> zstart + entry -> zstart_adj ) )
                         entry -> del_cnt = ( int32_t ) ( entry -> xend - ( entry -> zstart + entry -> zstart_adj ) );
                 }
+
+                ++ entry -> ref_off_idx;
             }
         }
 
