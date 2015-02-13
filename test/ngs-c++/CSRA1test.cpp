@@ -1106,7 +1106,6 @@ void mimic_sra_pileup (
         line_curr.vecEvents.reserve (line_curr.depth);
         mapAlignmentIdxCurr.reserve (line_curr.depth);
 
-        size_t idx_map_init = 0; // index of the element ti be initialized next
         int64_t current_del_count = 0; // number of encountered stops
 
         for (; pi.nextPileupEvent (); )
@@ -1126,12 +1125,14 @@ void mimic_sra_pileup (
             if (pileup_event.event_type & ngs::PileupEvent::alignment_stop)
             {
                 ++current_del_count;
-                mapAlignmentIdxCurr [ idx_map_init ] = current_del_count;
+                if (mapAlignmentIdxCurr.size() != 0)
+                    mapAlignmentIdxCurr [ mapAlignmentIdxCurr.size() - 1 ] = current_del_count;
+                else
+                    mapAlignmentIdxCurr.push_back ( current_del_count );
             }
             else
             {
                 mapAlignmentIdxCurr.push_back ( current_del_count );
-                ++ idx_map_init;
             }
 
             if ( pos != pos_start )
