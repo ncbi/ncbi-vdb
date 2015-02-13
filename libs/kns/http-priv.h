@@ -131,7 +131,7 @@ rc_t KClientHttpMakeRequestInt ( struct KClientHttp const *self,
 
 /* a hook to redefine KClientHttpReopen (for testing,_DEBUG only) */
 #if _DEBUGGING
-extern void SetClientHttpReopenCallback ( rc_t (*fn) ( struct KClientHttp * self ) ); 
+extern void SetClientHttpReopenCallback ( struct KStream * (*fn) ( void ) ); 
 #endif
 
 #ifdef __cplusplus

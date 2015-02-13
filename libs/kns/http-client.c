@@ -198,9 +198,9 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t por
 
 #if _DEBUGGING
 /* we need this hook to be able to test the re-connection logic */
-static rc_t (*ClientHttpReopenCallback) ( struct KClientHttp * self ) = NULL;
+static struct KStream * (*ClientHttpReopenCallback) ( void ) = NULL;
 
-void SetClientHttpReopenCallback ( rc_t (*fn) ( struct KClientHttp * self ) )
+void SetClientHttpReopenCallback ( struct KStream * (*fn) ( void ) )
 {
     ClientHttpReopenCallback = fn;
 }
@@ -211,7 +211,8 @@ rc_t KClientHttpReopen ( KClientHttp * self )
 #if _DEBUGGING
     if ( ClientHttpReopenCallback != NULL )
     {
-        return ClientHttpReopenCallback ( self );
+        self -> sock = ClientHttpReopenCallback ();
+        return 0;
     }
 #endif
     
@@ -577,7 +578,7 @@ rc_t KClientHttpGetLine ( KClientHttp *self, struct timeout_t *tm )
 #if _DEBUGGING
             if ( KNSManagerIsVerbose ( self -> mgr ) ) {
                 size_t i = 0;
-                KOutMsg ( "RX:" );
+                KOutMsg ( "KClientHttpGetLine: '" );
                 for (i = 0; i <= self->line_valid; ++i) {
                     if (isprint(buffer[i])) {
                         KOutMsg("%c", buffer[i]);
@@ -586,7 +587,7 @@ rc_t KClientHttpGetLine ( KClientHttp *self, struct timeout_t *tm )
                         KOutMsg("\\%02X", buffer[i]);
                     }
                 }
-                KOutMsg ( "\n" );
+                KOutMsg ( "'\n" );
             }
 #endif
             break;
@@ -1288,12 +1289,10 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     size_t sent;
     timeout_t tm;
 
-
     /* TBD - may want to assert that there is an empty line in "buffer" */
-    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("TX:%.*s", len, buffer));
 #if _DEBUGGING
     if ( KNSManagerIsVerbose ( self -> mgr ) )
-        KOutMsg ( "TX:%.*s", len, buffer );
+        KOutMsg ( "KClientHttpSendReceiveMsg: '%.*s'\n", len, buffer );
 #endif
 
     /* reopen connection if NULL */
