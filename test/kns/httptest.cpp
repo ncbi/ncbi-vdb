@@ -212,9 +212,9 @@ public:
         return ret;
     }
     
-    static rc_t Reconnect ( struct KClientHttp * self )
-    {
-        return 0;
+    static struct KStream * Reconnect ()
+    {   
+        return & m_stream; 
     }
     
     static string MakeURL(const char* base)
@@ -223,9 +223,11 @@ public:
     }    
     
     KNSManager* m_mgr;
-    KStream m_stream;
+    static KStream m_stream;
     KFile* m_file;
 };
+
+KStream HttpFixture::m_stream;
 
 //////////////////////////
 // Regular HTTP 

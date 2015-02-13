@@ -29,8 +29,9 @@ TOP ?= $(abspath ../..)
 MODULE = test/kns
 
 TEST_TOOLS = \
-	test-http \
 	test-kns \
+	test-http \
+	test-http-dropconn \
 
 include $(TOP)/build/Makefile.env
 
@@ -58,14 +59,14 @@ INCDIRS += -I$(TOP)/libs/kns
 #$(TEST_BINDIR)/test-http: $(TEST_OBJ)
 #	$(LD) --exe -o $@ $^ $(TEST_LIB)
 
-#----------------------------------------------------------------
-# test-kns
-#
 KNSTEST_LIB = \
 	-skapp \
     -sncbi-vdb \
     -sktst \
 
+#----------------------------------------------------------------
+# test-kns
+#
 KNSTEST_SRC = \
 	knstest
 
@@ -78,29 +79,42 @@ $(TEST_BINDIR)/test-kns: $(KNSTEST_OBJ)
 kns: test-kns 
 	$(TEST_BINDIR)/test-kns  #-l=all
     
-valgrind_kns: test-kns
+vg_kns: test-kns
 	valgrind --ncbi --show-reachable=no --suppressions=$(SRCDIR)/valgrind_suppressions.txt $(TEST_BINDIR)/test-kns
 
 #----------------------------------------------------------------
 # test-http
 #
-KNSTEST_LIB = \
-	-skapp \
-    -sncbi-vdb \
-    -sktst \
-
-KNSTEST_SRC = \
+HTTPTEST_SRC = \
 	httptest
 
-KNSTEST_OBJ = \
-	$(addsuffix .$(OBJX),$(KNSTEST_SRC))
+HTTPTEST_OBJ = \
+	$(addsuffix .$(OBJX),$(HTTPTEST_SRC))
 
-$(TEST_BINDIR)/test-http: $(KNSTEST_OBJ)
+$(TEST_BINDIR)/test-http: $(HTTPTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 http: test-http  
 	$(TEST_BINDIR)/test-http  # -l=all
     
-valgrind_http: test-http 
+vg_http: test-http 
 	valgrind --ncbi --show-reachable=no --suppressions=$(SRCDIR)/valgrind_suppressions.txt $(TEST_BINDIR)/test-http
+    
+#----------------------------------------------------------------
+# test-http-dropconn
+#
+HTTP_DROPCONN_TEST_SRC = \
+	http_dropconnection_test
+
+HTTP_DROPCONN_TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(HTTP_DROPCONN_TEST_SRC))
+
+$(TEST_BINDIR)/test-http-dropconn: $(HTTP_DROPCONN_TEST_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+dropconn: test-http-dropconn  
+	$(TEST_BINDIR)/test-http-dropconn  # -l=all
+    
+vg_dropconn: test-http-dropconn
+	valgrind --ncbi --show-reachable=no --suppressions=$(SRCDIR)/valgrind_suppressions.txt $(TEST_BINDIR)/test-http-dropconn
     
