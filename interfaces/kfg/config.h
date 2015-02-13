@@ -169,6 +169,8 @@ KFG_EXTERN rc_t CC KConfigWriteString( KConfig *self, const char * path, const c
  */
 KFG_EXTERN rc_t CC KConfigPrint ( const KConfig * self, int indent );
 
+KFG_EXTERN rc_t CC KConfigToFile ( const KConfig * self, struct KFile * file );
+
 /* DisableUserSettings
  *  for testing purposes
  */
