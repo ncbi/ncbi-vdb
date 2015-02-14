@@ -507,25 +507,38 @@ static bool _SystemHelp(const char *command, bool status) {
     }
 }
 
-static rc_t _KConfigGetAscpRate(const KConfig *self, const char **max_rate) {
+static rc_t _KConfigGetAscpRate(const KConfig *self,
+    char *max_rate, size_t max_rate_sz)
+{
     String *s = NULL;
-    assert(self && max_rate);
-    *max_rate = NULL;
+
+    assert(self && max_rate && max_rate_sz);
+
+    max_rate[0] = '\0';
+
     s = _KConfigAscpString(self, "tools/ascp/max_rate", "Aspera max rate");
     if (s != NULL) {
         if (s->size == 0) {
             free(s);
         }
         else {
-            *max_rate = string_dup_measure(s->addr, NULL);
+            size_t sz = string_copy(max_rate, max_rate_sz, s->addr, s->size);
+
             free(s);
+
+            if (sz < max_rate_sz) {
+                return RC(rcNS, rcNode, rcReading, rcBuffer, rcInsufficient);
+            }
+/*          *max_rate = string_dup_measure(s->addr, NULL);
             if (*max_rate == NULL) {
                 free((void*)*max_rate);
                 return RC(rcNS, rcStorage, rcAllocating, rcMemory, rcExhausted);
-            }
+            }*/
         }
+
         return 0;
     }
+
     return 0;
 }
 
@@ -690,12 +703,13 @@ LIB_EXPORT rc_t CC aspera_get(
         opt = &dummy;
     }
 
-    if (opt->target_rate == NULL) {
+    if (opt->target_rate[0] == '\0') {
         KConfig *cfg = NULL;
         rc_t rc = KConfigMake(&cfg, NULL);
         DISP_RC(rc, "cannot KConfigMake");
         if (rc == 0) {
-            rc = _KConfigGetAscpRate(cfg, &opt->target_rate);
+            rc = _KConfigGetAscpRate(cfg,
+                opt->target_rate, sizeof opt->target_rate);
             DISP_RC(rc, "cannot get aspera max rate");
         }
         RELEASE(KConfig, cfg);
@@ -814,7 +828,8 @@ LIB_EXPORT rc_t CC aspera_options(AscpOptions *opt) {
     memset(opt, 0, sizeof *opt);
     rc = KConfigMake(&cfg, NULL);
     if (rc == 0) {
-        rc = _KConfigGetAscpRate(cfg, &opt->target_rate);
+        rc = _KConfigGetAscpRate(cfg,
+            opt->target_rate, sizeof opt->target_rate);
         opt->disabled = _KConfigAscpDisabled(cfg, false);
     }
     RELEASE(KConfig, cfg);
