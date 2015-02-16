@@ -538,7 +538,7 @@ static rc_t reportToStdErrSet(const Report* self, KWrtHandler* old_handler) {
  * When "--" OPTION_REPORT "always" command line argument is passed
  * then the report [usually] goes to strerr.
  *
- * When aForce == truethen the report goes to strout:
+ * When aForce == true then the report goes to strout:
  * it is done to insert it into test-sra output.
  */
 static rc_t _ReportFinalize(rc_t rc_in, bool aForce) {
