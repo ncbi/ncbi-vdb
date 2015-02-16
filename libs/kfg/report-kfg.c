@@ -278,6 +278,7 @@ static rc_t ReportChildNode(const ReportFuncs *f, int indent,
     }
     else {
         const KConfigNode* child = NULL;
+
         rc = KConfigNodeOpenNodeRead(node, &child, "%s", name);
         if (rc != 0) {
             reportOpen(indent, name, 0);
@@ -285,8 +286,11 @@ static rc_t ReportChildNode(const ReportFuncs *f, int indent,
                 "node", root, "/", name, true);
             reportClose(indent, name);
         }
-        else
-        {   rc = ReportConfigNode(f, indent, root, name, child, NULL); }
+        else {
+            rc = ReportConfigNode(f, indent, root, name, child, NULL);
+        }
+
+        RELEASE(KConfigNode, child);
     }
 
     return rc;
