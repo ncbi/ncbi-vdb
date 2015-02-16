@@ -31,7 +31,6 @@ INT_LIBS = \
 	libkfs \
 	libkfs-nommap \
 	libkff \
-#	libkfs.2
 
 ALL_LIBS = \
 	$(INT_LIBS)
@@ -111,6 +110,7 @@ KFS_CMN = \
 	pmem \
 	readheadfile \
 	ramfile \
+	extendable-ramfile \
 	quickmount \
 	report \
 	lockfile \
