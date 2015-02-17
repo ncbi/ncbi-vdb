@@ -3,8 +3,6 @@ from ngs import NGS
 from ngs.ErrorMsg import ErrorMsg
 from ngs.ReadCollection import ReadCollection
 from ngs.Alignment import Alignment
-from ngs.AlignmentIterator import AlignmentIterator
-from ngs.Reference import Reference
 from ngs.Read import Read
 
 PrimaryOnly      = "SRR1063272"
