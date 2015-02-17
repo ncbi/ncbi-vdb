@@ -191,6 +191,15 @@ FIXTURE_TEST_CASE(CSRA1_ReadCollection_GetAlignment_IdLow, CSRA1_Fixture)
     EXIT;
 }
 
+FIXTURE_TEST_CASE(CSRA1_ReadCollection_GetAlignment_Secondary, CSRA1_Fixture)
+{
+    ENTRY_ACC( CSRA1_WithSecondary );
+    m_align = NGS_ReadCollectionGetAlignment ( m_coll, ctx, ( string ( CSRA1_WithSecondary ) + ".SA.169" ) . c_str () );
+    REQUIRE_NOT_NULL ( m_align );
+    REQUIRE_STRING ( string ( CSRA1_WithSecondary ) + ".SA.169", NGS_AlignmentGetAlignmentId ( m_align, ctx ) );
+    EXIT;
+}
+
 FIXTURE_TEST_CASE(CSRA1_ReadCollectionGetReference, CSRA1_Fixture)
 {
     ENTRY_ACC( CSRA1_PrimaryOnly );
