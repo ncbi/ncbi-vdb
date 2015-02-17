@@ -55,6 +55,16 @@ class TestStream;
 #define KSTREAM_IMPL TestStream
 #include <kns/impl.h>
 
+#if _DEBUGGING
+#   define DBG_KNS_ON()  \
+        KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), DBG_FLAG ( DBG_KNS_HTTP ) );          
+#   define DBG_KNS_OFF() \
+        KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ~ DBG_FLAG ( DBG_KNS_HTTP ) );          
+#else
+#   define DBG_KNS_ON()
+#   define DBG_KNS_OFF() 
+#endif
+
 class TestStream
 {
 public:
@@ -170,8 +180,8 @@ public:
             
         if ( ! TestStream::m_responses.empty() )
             throw logic_error ( "HttpFixture::~HttpFixture not all TestStream::m_responses have been consumed" );
-            
-        KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ~ DBG_FLAG ( DBG_KNS_HTTP ) );          
+
+        DBG_KNS_OFF();
         KNSManagerSetVerbose ( m_mgr, false );
         if ( m_mgr && KNSManagerRelease ( m_mgr ) != 0 )
             throw logic_error ( "HttpFixture::~HttpFixture KNSManagerRelease failed" );
@@ -189,7 +199,7 @@ public:
     void TraceOn()
     {
         KNSManagerSetVerbose ( m_mgr, true );
-        KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), DBG_FLAG ( DBG_KNS_HTTP ) );
+        DBG_KNS_ON();
     }
     
     KNSManager* m_mgr;
@@ -200,9 +210,10 @@ public:
 KStream HttpFixture::m_stream;
 
 //////////////////////////
+#if _DEBUGGING
 FIXTURE_TEST_CASE(Http_Read_Drop, HttpFixture)
 {
-    SetClientHttpReopenCallback ( Reconnect ); // NB. this hook is only available in DEBUG mode
+    SetClientHttpReopenCallback( Reconnect ); // NB. this hook is only available in DEBUG mode
 
     //TraceOn();
 
@@ -228,6 +239,7 @@ FIXTURE_TEST_CASE(Http_Read_Drop, HttpFixture)
     REQUIRE_RC( KFileTimedRead ( m_file, 0, buf, sizeof buf, &num_read, NULL ) );
     REQUIRE_EQ( (size_t)7, num_read );
 }
+#endif
 
 //////////////////////////////////////////// Main
 extern "C"
