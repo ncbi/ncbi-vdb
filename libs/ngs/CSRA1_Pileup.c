@@ -1392,7 +1392,6 @@ static NGS_Pileup_vt CSRA1_Pileup_vt =
         /* NGS_PileupEvent */
         CSRA1_PileupEventGetMappingQuality,
         CSRA1_PileupEventGetAlignmentId,
-        CSRA1_PileupEventGetAlignment,
         CSRA1_PileupEventGetAlignmentPosition,
         CSRA1_PileupEventGetFirstAlignmentPosition,
         CSRA1_PileupEventGetLastAlignmentPosition,

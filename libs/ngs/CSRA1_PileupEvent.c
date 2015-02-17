@@ -141,38 +141,6 @@ struct NGS_String * CSRA1_PileupEventGetAlignmentId ( const CSRA1_PileupEvent * 
     return NULL;
 }
 
-struct NGS_Alignment * CSRA1_PileupEventGetAlignment ( const CSRA1_PileupEvent * self, ctx_t ctx )
-{
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
-
-    /* TBD - the REASON this method exists is that we already have
-       most of what's needed to create a single Alignment record.
-       The intention is to create a mostly pre-populated record
-       here, since the user can already grab the id and ask the
-       ReadCollection for one. */
-
-    TRY ( NGS_String * id = CSRA1_PileupEventGetAlignmentId ( self, ctx ) )
-    {
-        /* unfortunately, as of today, our C API takes a NUL-terminated
-           string as the alignment id, but we only have an NGS_String. */
-        char * idz = NGS_StringMakeNULTerminatedString ( id, ctx );
-        NGS_StringRelease ( id, ctx );
-
-        if ( ! FAILED () )
-        {
-            NGS_ReadCollection * coll = self -> dad . dad . ref -> coll;
-            struct NGS_Alignment * alignment = NGS_ReadCollectionGetAlignment ( coll, ctx, idz );
-
-            free ( idz );
-
-            if ( ! FAILED () )
-                return alignment;
-        }
-    }
-
-    return NULL;
-}
-
 int64_t CSRA1_PileupEventGetAlignmentPosition ( const CSRA1_PileupEvent * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );

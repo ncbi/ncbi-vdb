@@ -69,18 +69,6 @@ static NGS_String_v1 * NGS_PileupEvent_v1_get_align_id ( const NGS_PileupEvent_v
     return ( NGS_String_v1 * ) ret;
 }
 
-static struct NGS_Alignment_v1 * NGS_PileupEvent_v1_get_alignment ( const NGS_PileupEvent_v1 * self, NGS_ErrBlock_v1 * err )
-{
-    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
-    ON_FAIL ( struct NGS_Alignment * ret = NGS_PileupEventGetAlignment ( Self ( self ), ctx ) )
-    {
-        NGS_ErrBlockThrow ( err, ctx );
-    }
-
-    CLEAR ();
-    return ( struct NGS_Alignment_v1 * ) ret;
-}
-
 static int64_t NGS_PileupEvent_v1_get_align_pos ( const NGS_PileupEvent_v1 * self, NGS_ErrBlock_v1 * err )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
@@ -238,7 +226,6 @@ NGS_PileupEvent_v1_vt ITF_PileupEvent_vt =
 
     NGS_PileupEvent_v1_get_map_qual,
     NGS_PileupEvent_v1_get_align_id,
-    NGS_PileupEvent_v1_get_alignment,
     NGS_PileupEvent_v1_get_align_pos,
     NGS_PileupEvent_v1_get_first_align_pos,
     NGS_PileupEvent_v1_get_last_align_pos,
@@ -270,7 +257,6 @@ void NGS_PileupEventInit ( ctx_t ctx, struct NGS_PileupEvent * obj,
     {
         assert ( vt -> get_mapping_quality != NULL );
         assert ( vt -> get_alignment_id != NULL );
-        assert ( vt -> get_alignment != NULL );
         assert ( vt -> get_alignment_position != NULL );
         assert ( vt -> get_first_alignment_position != NULL );
         assert ( vt -> get_last_alignment_position != NULL );
@@ -322,21 +308,6 @@ struct NGS_String * NGS_PileupEventGetAlignmentId( const NGS_PileupEvent * self,
     }
 
     return 0;
-}
-
-struct NGS_Alignment * NGS_PileupEventGetAlignment( const NGS_PileupEvent * self, ctx_t ctx )
-{
-    if ( self == NULL )
-    {
-        FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
-        INTERNAL_ERROR ( xcSelfNull, "failed to get alignment" );
-    }
-    else
-    {
-        return VT ( self, get_alignment ) ( self, ctx );
-    }
-
-    return NULL;
 }
 
 int64_t NGS_PileupEventGetAlignmentPosition( const NGS_PileupEvent * self, ctx_t ctx )

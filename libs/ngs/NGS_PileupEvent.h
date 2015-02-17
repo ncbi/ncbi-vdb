@@ -76,8 +76,6 @@ int NGS_PileupEventGetMappingQuality( const NGS_PileupEvent * self, ctx_t ctx );
 
 struct NGS_String * NGS_PileupEventGetAlignmentId( const NGS_PileupEvent * self, ctx_t ctx );
 
-struct NGS_Alignment * NGS_PileupEventGetAlignment( const NGS_PileupEvent * self, ctx_t ctx );
-
 int64_t NGS_PileupEventGetAlignmentPosition( const NGS_PileupEvent * self, ctx_t ctx );
 
 int64_t NGS_PileupEventGetFirstAlignmentPosition( const NGS_PileupEvent * self, ctx_t ctx );
@@ -149,7 +147,6 @@ struct NGS_PileupEvent_vt
     
     int                     ( * get_mapping_quality )           ( const NGS_PILEUPEVENT * self, ctx_t ctx );
     struct NGS_String *     ( * get_alignment_id )              ( const NGS_PILEUPEVENT * self, ctx_t ctx );
-    struct NGS_Alignment *  ( * get_alignment )                 ( const NGS_PILEUPEVENT * self, ctx_t ctx );
     int64_t                 ( * get_alignment_position )        ( const NGS_PILEUPEVENT * self, ctx_t ctx );
     int64_t                 ( * get_first_alignment_position )  ( const NGS_PILEUPEVENT * self, ctx_t ctx );
     int64_t                 ( * get_last_alignment_position )   ( const NGS_PILEUPEVENT * self, ctx_t ctx );
