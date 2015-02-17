@@ -419,7 +419,7 @@ rc_t ascpParse(const char *buf, size_t len, const char *filename,
         STSMSG(STS_FIN, ("%.*s", len, buf));
     }
     if (failure) {
-        // ignore it
+        /* ignore it */
     }
     return 0;
 }
