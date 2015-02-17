@@ -298,6 +298,7 @@ struct KConfig
     bool initialized;
 };
 
+static KConfig *G_kfg = NULL;
 
 rc_t KConfigAppendToLoadPath(KConfig *self, const char* chunk)
 {
@@ -429,6 +430,9 @@ rc_t KConfigWhack ( KConfig *self )
 {
     bool release_cached_dir = true;
     find_home_directory(NULL, NULL, release_cached_dir);
+
+    if ( self == G_kfg )
+        G_kfg = NULL;
 
     KConfigEmpty (self);
 
@@ -2580,7 +2584,20 @@ rc_t KConfigMakeImpl ( KConfig **cfg, const KDirectory * cfgdir, bool local )
         rc = RC ( rcKFG, rcMgr, rcCreating, rcParam, rcNull );
     else
     {
-        KConfig *mgr = calloc ( 1, sizeof * mgr );
+        KConfig *mgr = G_kfg;
+        if (local) {
+            mgr = NULL;
+        }
+        if ( mgr != NULL )      /* if already made, just attach */
+        {
+            KConfigAddRef ( mgr );
+            * cfg = mgr;
+            return 0;
+        }
+
+        /* TODO consider possible concurrency problems
+        use atomic_test_and_set_ptr from atomic.h */
+        mgr = calloc ( 1, sizeof * mgr );
         if ( mgr == NULL )
             rc = RC ( rcKFG, rcMgr, rcCreating, rcMemory, rcExhausted );
         else
@@ -2590,6 +2607,9 @@ rc_t KConfigMakeImpl ( KConfig **cfg, const KDirectory * cfgdir, bool local )
             mgr -> initialized = true;
             if ( rc == 0 )
             {
+                if (!local) {
+                    G_kfg = mgr;
+                }
                 * cfg = mgr;
                 return 0;
             }
@@ -2605,7 +2625,10 @@ rc_t KConfigMakeImpl ( KConfig **cfg, const KDirectory * cfgdir, bool local )
 
 /* call KConfigMake; do not initialize G_kfg */
 LIB_EXPORT rc_t CC KConfigMakeLocal ( KConfig **cfg, const KDirectory * cfgdir )
-{   return KConfigMakeImpl(cfg, cfgdir, true); }
+{
+    return KConfigMake(cfg, cfgdir);
+/*  return KConfigMakeImpl(cfg, cfgdir, true); */
+}
 
 /* Make
  *  create a process-global configuration manager
