@@ -32,6 +32,8 @@ TEST_TOOLS = \
     test-ngs_sra-c++ \
     test-ngs_sradb-c++ \
     test-ngs_csra1-c++ \
+	test-ngs_csra1pileup-c++ \
+
 
 SLOW_TEST_TOOLS = \
     test-ngs_sra_pileup_diff
@@ -118,7 +120,22 @@ $(TEST_BINDIR)/test-ngs_csra1-c++: $(TEST_NGS_CSRA1_CPP_OBJ)
 
 valgrind_csra1-c++: std
 	$(VALGRIND) $(TEST_BINDIR)/test-ngs_csra1-c++     
-        
+ 
+#-------------------------------------------------------------------------------
+# test-ngs_csra1pileup-c++
+#
+TEST_NGS_CSRA1PILEUP_CPP_SRC = \
+	CSRA1PileupTest
+
+TEST_NGS_CSRA1PILEUP_CPP_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_NGS_CSRA1PILEUP_CPP_SRC))
+
+$(TEST_BINDIR)/test-ngs_csra1pileup-c++: $(TEST_NGS_CSRA1PILEUP_CPP_OBJ) 
+	$(LP) --exe -o $@ $^ $(TEST_NGS_CPP_LIB)
+
+valgrind_csra1pileup-c++: std
+	$(VALGRIND) $(TEST_BINDIR)/test-ngs_csra1pileup-c++     
+
 endif
 
 #-------------------------------------------------------------------------------
