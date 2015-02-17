@@ -661,7 +661,7 @@ TEST_CASE(CSRA1_PileupIterator_TestAllFunctions)
 {
     uint64_t ret = 0;
     ret = pileup_test_all_functions ( "SRR822962", "chr2"/*"NC_000002.11"*/, ngs::Alignment::all, 0, 20000 );
-    //std::cout << "Magic nubmer == " << ret << std::endl;
+    REQUIRE_EQ ( ret, (uint64_t)46433887435 );
 }
 
 /*
