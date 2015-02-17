@@ -30,6 +30,7 @@
 
 #include "ngsfixture.hpp"
 
+#include <memory.h> // memset
 #include <sstream>
 
 using namespace std;
@@ -952,7 +953,7 @@ TEST_CASE(CSRA1_PileupEventIterator_GetType)
     }
 }
 
-struct PileupEvent
+struct PileupEventStruct
 {
     ngs::PileupEvent::PileupEventType event_type;
     uint32_t repeat_count, next_repeat_count;
@@ -964,7 +965,7 @@ struct PileupEvent
 
 struct PileupLine
 {
-    typedef std::vector <PileupEvent> TEvents;
+    typedef std::vector <PileupEventStruct> TEvents;
 
     uint32_t depth;
     TEvents vecEvents;
@@ -987,7 +988,7 @@ void print_line (
 
     for (PileupLine::TEvents::const_iterator cit = line.vecEvents.begin(); cit != line.vecEvents.end(); ++ cit)
     {
-        PileupEvent const& pileup_event = *cit;
+        PileupEventStruct const& pileup_event = *cit;
 
         ngs::PileupEvent::PileupEventType eventType = pileup_event.event_type;
 
@@ -1063,7 +1064,7 @@ void clear_line ( PileupLine& line )
 
 void mark_line_as_starting_deletion ( PileupLine& line, uint32_t repeat_count, size_t alignment_index )
 {
-    PileupEvent& pileup_event = line.vecEvents [ alignment_index ];
+    PileupEventStruct& pileup_event = line.vecEvents [ alignment_index ];
     if ( ( pileup_event.event_type & 7 ) != ngs::PileupEvent::deletion)
     {
         pileup_event.next_repeat_count = repeat_count;
@@ -1073,7 +1074,7 @@ void mark_line_as_starting_deletion ( PileupLine& line, uint32_t repeat_count, s
 
 void mark_line_as_starting_insertion ( PileupLine& line, ngs::String const& insertion_bases, size_t alignment_index )
 {
-    PileupEvent& pileup_event = line.vecEvents [ alignment_index ];
+    PileupEventStruct& pileup_event = line.vecEvents [ alignment_index ];
     pileup_event.insertion_bases = insertion_bases;
 }
 
@@ -1110,7 +1111,7 @@ void mimic_sra_pileup (
 
         for (; pi.nextPileupEvent (); )
         {
-            PileupEvent pileup_event;
+            PileupEventStruct pileup_event;
 
             //pileup_event.alignment_id = pi.getAlignmentId().toString();
             pileup_event.deletion_after_this_pos = false;
@@ -1264,6 +1265,235 @@ TEST_CASE(CSRA1_PileupIterator_StartingZeros)
 
     REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
 }
+
+
+
+// Kurt's test to investigate:
+
+// TODO: make test out of the following run() function
+namespace ref_cover
+{
+    using namespace ngs;
+    static
+    void run ( const String & runName, const String & refName, PileupIterator & pileup )
+    {
+        for ( int64_t ref_zpos = -1; pileup . nextPileup (); ++ ref_zpos )
+        {
+            if ( ref_zpos < 0 )
+                ref_zpos = pileup . getReferencePosition ();
+
+            uint32_t ref_base_idx = 0;
+            char ref_base = pileup . getReferenceBase ();
+            switch ( ref_base )
+            {
+            case 'C': ref_base_idx = 1; break;
+            case 'G': ref_base_idx = 2; break;
+            case 'T': ref_base_idx = 3; break;
+            }
+
+            uint32_t depth = pileup . getPileupDepth ();
+            if ( depth != 0 )
+            {
+                uint32_t base_counts [ 4 ];
+                memset ( base_counts, 0, sizeof base_counts );
+                uint32_t ins_counts [ 4 ];
+                memset ( ins_counts, 0, sizeof ins_counts );
+                uint32_t del_cnt = 0;
+
+                char mismatch;
+                uint32_t mismatch_idx;
+
+                while ( pileup . nextPileupEvent () )
+                {
+                    PileupEvent :: PileupEventType et = pileup . getEventType ();
+                    switch ( et & 7 )
+                    {
+                    case PileupEvent :: match:
+                        if ( ( et & PileupEvent :: insertion ) != 0 )
+                            ++ ins_counts [ ref_base_idx ];
+                        break;
+
+                    case PileupEvent :: mismatch:
+                        mismatch = pileup . getAlignmentBase ();
+                        mismatch_idx = 0;
+                        switch ( mismatch )
+                        {
+                        case 'C': mismatch_idx = 1; break;
+                        case 'G': mismatch_idx = 2; break;
+                        case 'T': mismatch_idx = 3; break;
+                        }
+                        ++ base_counts [ mismatch_idx ];
+                        if ( ( et & PileupEvent :: insertion ) != 0 )
+                            ++ ins_counts [ mismatch_idx ];
+                        break;
+
+                    case PileupEvent :: deletion:
+                        if ( pileup . getEventIndelType () == PileupEvent :: normal_indel )
+                            ++ del_cnt;
+                        else
+                            -- depth;
+                        break;
+                    }
+                }
+
+                if ( depth != 0 )
+                {
+                    std :: cout
+                        << runName
+                        << '\t' << refName
+                        << '\t' << ref_zpos + 1
+                        << '\t' << ref_base
+                        << '\t' << depth
+                        << "\t{" << base_counts [ 0 ]
+                        << ',' << base_counts [ 1 ]
+                        << ',' << base_counts [ 2 ]
+                        << ',' << base_counts [ 3 ]
+                        << "}\t{" << ins_counts [ 0 ]
+                        << ',' << ins_counts [ 1 ]
+                        << ',' << ins_counts [ 2 ]
+                        << ',' << ins_counts [ 3 ]
+                        << "}\t" << del_cnt
+                        << '\n'
+                        ;
+                }
+            }
+        }
+    }
+
+    static
+    void run ( const char * spec )
+    {
+        std :: cerr << "# Opening run '" << spec << "'\n";
+        ReadCollection obj = ncbi :: NGS :: openReadCollection ( spec );
+        String runName = obj . getName ();
+
+        std :: cerr << "# Accessing all references\n";
+        ReferenceIterator ref = obj . getReferences ();
+
+        while ( ref . nextReference () )
+        {
+            String refName = ref . getCanonicalName ();
+            //String const& ref_full = ref.getReferenceBases(10000, 1000);
+
+            std :: cerr << "# Processing reference '" << refName << "'\n";
+
+            std :: cerr << "# Accessing all pileups\n";
+            PileupIterator pileup = ref . getPileups ( Alignment :: all );
+            run ( runName, refName, pileup );
+        }
+    }
+}
+
+
+int fake_main (int argc, char const* const* argv)
+{
+    rc_t rc = 0;
+
+    try
+    {
+        for ( int i = 1; i < argc; ++ i )
+        {
+            ref_cover :: run ( argv [ i ] );
+        }
+    }
+    catch ( ngs::ErrorMsg & x )
+    {
+        std :: cerr
+            << "ERROR: "
+            << argv [ 0 ]
+        << ": "
+            << x . what ()
+            << '\n'
+            ;
+        rc = -1;
+    }
+    catch ( ... )
+    {
+        std :: cerr
+            << "ERROR: "
+            << argv [ 0 ]
+        << ": unknown\n"
+            ;
+        rc = -1;
+    }
+
+    return rc;
+}
+
+
+uint64_t pileup_test_all_functions (
+            char const* db_path,
+            char const* ref_name,
+            ngs::Alignment::AlignmentCategory category,
+            int64_t const pos_start, uint64_t const len)
+{
+    uint64_t ret = 0;
+
+    ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
+    ngs::Reference r = run.getReference ( ref_name );
+    ngs::String strRefSlice = r.getReferenceBases ( pos_start, len );
+
+    ngs::PileupIterator pi = r.getPileupSlice ( pos_start, len, category );
+
+    int64_t pos = pos_start;
+    for (; pi.nextPileup (); ++ pos)
+    {
+        ret += 1000000;
+
+        size_t event_count = 0;
+        for (; pi.nextPileupEvent () && pos % 17 != 0; ++ event_count)
+        {
+            //ngs::Alignment alignment = pi.getAlignment();
+            //ret += (uint64_t)(alignment.getAlignmentLength() + alignment.getAlignmentPosition());
+
+            ret += (uint64_t)pi.getAlignmentBase();
+            ret += (uint64_t)pi.getAlignmentPosition();
+            ret += (uint64_t)pi.getAlignmentQuality();
+            ret += (uint64_t)pi.getEventIndelType();
+            ret += (uint64_t)pi.getEventRepeatCount();
+            ret += (uint64_t)pi.getEventType();
+            ret += (uint64_t)pi.getFirstAlignmentPosition();
+            ret += (uint64_t)pi.getInsertionBases().size();
+            ret += (uint64_t)pi.getInsertionQualities().size();
+            ret += (uint64_t)pi.getLastAlignmentPosition();
+            ret += (uint64_t)pi.getMappingQuality();
+            ret += (uint64_t)pi.getPileupDepth();
+            ret += (uint64_t)pi.getReferenceBase();
+            ret += (uint64_t)pi.getReferencePosition();
+            ret += (uint64_t)pi.getReferenceSpec().size();
+
+            if ( (event_count + 1) % 67 == 0 )
+            {
+                ret += 100000;
+                pi.resetPileupEvent();
+                break;
+            }
+        }
+    }
+
+    return ret;
+}
+
+TEST_CASE(CSRA1_PileupIterator_TestAllFunctions)
+{
+    uint64_t ret = 0;
+    ret = pileup_test_all_functions ( "SRR822962", "chr2"/*"NC_000002.11"*/, ngs::Alignment::all, 0, 20000 );
+    //std::cout << "Magic nubmer == " << ret << std::endl;
+}
+
+/*
+TEST_CASE(CSRA1_PileupEvent_Coverage)
+{
+    char const* argv[] = {
+        "fake_line",
+        "SRR822962"
+    };
+
+    int res = fake_main ( sizeof(argv)/sizeof (argv[0]) , argv );
+
+    REQUIRE_EQ ( res, 0 );
+}
+*/
 
 ///// ReadGroup
 FIXTURE_TEST_CASE(CSRA1_ReadGroup_GetName, CSRA1_Fixture)
