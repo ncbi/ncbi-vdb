@@ -2567,8 +2567,8 @@ extern rc_t ReportKfg ( const ReportFuncs *f, uint32_t indent );
 
 /* "cfg" [ OUT ] - return parameter for mgr
    if ("local" == true) do not initialize G_kfg */
-static
-rc_t KConfigMakeImpl ( KConfig **cfg, const KDirectory * cfgdir, bool local )
+static rc_t KConfigMakeImpl(KConfig **cfg,
+    const KDirectory *cfgdir, bool local)
 {
     rc_t rc;
     const char *appname = NULL;
@@ -2624,7 +2624,8 @@ rc_t KConfigMakeImpl ( KConfig **cfg, const KDirectory * cfgdir, bool local )
 }
 
 /* call KConfigMake; do not initialize G_kfg */
-LIB_EXPORT rc_t CC KConfigMakeLocal ( KConfig **cfg, const KDirectory * cfgdir )
+LIB_EXPORT
+rc_t CC KConfigMakeLocal(KConfig **cfg, const KDirectory *cfgdir)
 {
     return KConfigMake(cfg, cfgdir);
 /*  return KConfigMakeImpl(cfg, cfgdir, true); */
@@ -2635,8 +2636,10 @@ LIB_EXPORT rc_t CC KConfigMakeLocal ( KConfig **cfg, const KDirectory * cfgdir )
  *
  *  "cfg" [ OUT ] - return parameter for mgr
  */
-LIB_EXPORT rc_t CC KConfigMake ( KConfig **cfg, const KDirectory * cfgdir )
-{   return KConfigMakeImpl(cfg, cfgdir, false); }
+LIB_EXPORT rc_t CC KConfigMake(KConfig **cfg, const KDirectory *cfgdir)
+{
+    return KConfigMakeImpl(cfg, cfgdir, false);
+}
 
 /*--------------------------------------------------------------------------
  * KNamelist
