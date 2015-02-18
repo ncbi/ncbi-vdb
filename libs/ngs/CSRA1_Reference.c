@@ -59,6 +59,7 @@ typedef struct CSRA1_Reference CSRA1_Reference;
 #include <assert.h>
 
 #include <strtol.h>
+#include <string.h>
 
 #include <sysalloc.h>
 
@@ -730,36 +731,63 @@ bool CSRA1_ReferenceFind ( CSRA1_Reference * self, ctx_t ctx, const char * spec,
         int64_t cur_row;
         int64_t end_row;
         uint64_t total_row_count;
-        String specStr;
+
+        size_t spec_size = string_size ( spec );
         
-        StringInitCString( &specStr, spec );
         TRY ( NGS_CursorGetRowRange ( self -> curs, ctx, & cur_row, & total_row_count ) )
         {
-            const void * prev_base = NULL;
+            const void * prev_NAME_base = NULL;
+            const void * prev_SEQ_ID_base = NULL;
             end_row = cur_row + total_row_count;
             while ( cur_row < end_row )
             {   
                 const void * base;
                 uint32_t elem_bits, boff, row_len;
+
+                /* try NAME */
                 ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, cur_row, reference_NAME, & elem_bits, & base, & boff, & row_len ) )
                     return false;
-                    
-                /* if the value has not changed, the base ptr will not be updated */ 
-                if ( prev_base == NULL || prev_base != base )
-                {
-                    String name;
-                    StringInit( &name, base, row_len, string_len(base, row_len) );
 
-                    assert ( elem_bits == 8 );
-                    assert ( boff == 0 );
-                    
-                    if ( StringCompare ( & name, & specStr ) == 0 )
+                /* if the value has not changed, the base ptr will not be updated */ 
+                if ( prev_NAME_base != base )
+                {
+                    if ( ( size_t ) row_len == spec_size )
                     {
-                        *firstRow = cur_row;
-                        *rowCount = CountRows( self, ctx, reference_NAME, base, * firstRow, end_row );
-                        return true;
+                        assert ( elem_bits == 8 );
+                        assert ( boff == 0 );
+
+                        if ( memcmp ( spec, base, row_len ) == 0 )
+                        {
+                            *firstRow = cur_row;
+                            *rowCount = CountRows( self, ctx, reference_NAME, base, * firstRow, end_row );
+                            return true;
+                        }
                     }
-                    prev_base = base;
+
+                    prev_NAME_base = base;
+                }
+
+                /* try SEQ_ID */
+                ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, cur_row, reference_SEQ_ID, & elem_bits, & base, & boff, & row_len ) )
+                    return false;
+
+                /* if the value has not changed, the base ptr will not be updated */ 
+                if ( prev_SEQ_ID_base != base )
+                {
+                    if ( ( size_t ) row_len == spec_size )
+                    {
+                        assert ( elem_bits == 8 );
+                        assert ( boff == 0 );
+
+                        if ( memcmp ( spec, base, row_len ) == 0 )
+                        {
+                            *firstRow = cur_row;
+                            *rowCount = CountRows( self, ctx, reference_SEQ_ID, base, * firstRow, end_row );
+                            return true;
+                        }
+                    }
+
+                    prev_SEQ_ID_base = base;
                 }
 
                 ++cur_row;
@@ -787,12 +815,19 @@ NGS_Reference * CSRA1_ReferenceMake ( ctx_t ctx,
         {
             CSRA1_Reference * ref = calloc ( 1, sizeof * ref );
             if ( ref == NULL )
-                SYSTEM_ERROR ( xcNoMemory, "allocating CSRA1_Reference(%s) on '%S'", spec, collName );
+            {
+                SYSTEM_ERROR ( xcNoMemory, "allocating CSRA1_Reference(%s) on '%.*s'"
+                               , spec
+                               , ( uint32_t ) NGS_StringSize ( collName, ctx ), NGS_StringData ( collName, ctx )
+                    );
+            }
             else
             {
 #if _DEBUGGING
                 char instname [ 256 ];
-                string_printf ( instname, sizeof instname, NULL, "%S(%s)", collName, spec );
+                string_printf ( instname, sizeof instname, NULL, "%.*s(%s)"
+                               , ( uint32_t ) NGS_StringSize ( collName, ctx ), NGS_StringData ( collName, ctx )
+                                , spec );
                 instname [ sizeof instname - 1 ] = 0;
 #else
                 const char *instname = "";
@@ -856,12 +891,18 @@ NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx,
         {
             CSRA1_Reference * ref = calloc ( 1, sizeof * ref );
             if ( ref == NULL )
-                SYSTEM_ERROR ( xcNoMemory, "allocating CSRA1_ReferenceIterator on '%S'", collName );
+            {
+                SYSTEM_ERROR ( xcNoMemory, "allocating CSRA1_ReferenceIterator on '%.*s'"
+                               , ( uint32_t ) NGS_StringSize ( collName, ctx ), NGS_StringData ( collName, ctx )
+                    );
+            }
             else
             {
 #if _DEBUGGING
                 char instname [ 256 ];
-                string_printf ( instname, sizeof instname, NULL, "%S", collName );
+                string_printf ( instname, sizeof instname, NULL, "%.*s"
+                               , ( uint32_t ) NGS_StringSize ( collName, ctx ), NGS_StringData ( collName, ctx )
+                    );
                 instname [ sizeof instname - 1 ] = 0;
 #else
                 const char *instname = "";
