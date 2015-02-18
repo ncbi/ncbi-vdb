@@ -2079,48 +2079,51 @@ rc_t cigar2offset_2(unsigned const cigar_len,
         uint8_t const type = cigar[i].type;
         
         switch(op) {
-        case 'M':
-        case '=':
-        case 'X':
-            seq_len += op_len;
-            ref_len += op_len;
-	    if(max_ref_len < ref_len)
-		max_ref_len = ref_len;
-            break;
-        case 'B':
-            /* Complete Genomics CIGAR style specific:
-             overlap between consecutive reads
-             ex: sequence 6 bases: ACACTG, reference 2 bases: ACTG,
-             cigar will be: 2M2B2M
-             no need to move sequence position
-             */
-        case 'S':
-        case 'I':
-            if (seq_len < out_sz) {
-                out_offset[seq_len].length = -op_len;
-                out_offset[seq_len].type   = type;
-		if (op == 'B') ref_len -= op_len;
-                else           seq_len += op_len;
-            }
-            else
-                return RC(rcAlign, rcFile, rcProcessing, rcData, rcInconsistent);
-            break;
-        case 'N':
-        case 'D':
-            if (seq_len < out_sz) {
-                out_offset[seq_len].length = op_len;
-                out_offset[seq_len].type   = type;
-            }
-            else {
-                out_offset[seq_len-1].length = op_len;
-                out_offset[seq_len-1].type   = type;
-            }
-            ref_len += op_len;
-	    if(max_ref_len < ref_len)
-		max_ref_len = ref_len;
-            break;
-        default:
-            break;
+            case 'M':
+            case '=':
+            case 'X':
+                seq_len += op_len;
+                ref_len += op_len;
+                if(max_ref_len < ref_len)
+                    max_ref_len = ref_len;
+                break;
+            case 'B':
+                /* Complete Genomics CIGAR style specific:
+                 overlap between consecutive reads
+                 ex: sequence 6 bases: ACACTG, reference 2 bases: ACTG,
+                 cigar will be: 2M2B2M
+                 no need to move sequence position
+                 */
+            case 'S':
+            case 'I':
+                if (seq_len < out_sz) {
+                    out_offset[seq_len].length = -op_len;
+                    out_offset[seq_len].type   = type;
+                    ALIGN_C_DBGF(("%s:%u: seq_pos: %u, ref_pos: %u, offset: %i\n", __func__, __LINE__, seq_len, ref_len, -op_len));
+                    if (op == 'B') ref_len -= op_len;
+                    else           seq_len += op_len;
+                }
+                else
+                    return RC(rcAlign, rcFile, rcProcessing, rcData, rcInconsistent);
+                break;
+            case 'N':
+            case 'D':
+                if (seq_len < out_sz) {
+                    out_offset[seq_len].length = op_len;
+                    out_offset[seq_len].type   = type;
+                    ALIGN_C_DBGF(("%s:%u: seq_pos: %u, ref_pos: %u, offset: %i\n", __func__, __LINE__, seq_len, ref_len, op_len));
+                }
+                else {
+                    out_offset[seq_len-1].length = op_len;
+                    out_offset[seq_len-1].type   = type;
+                    ALIGN_C_DBGF(("%s:%u: seq_pos: %u, ref_pos: %u, offset: %i\n", __func__, __LINE__, seq_len-1, ref_len, op_len));
+                }
+                ref_len += op_len;
+                if(max_ref_len < ref_len)
+                    max_ref_len = ref_len;
+                break;
+            default:
+                break;
         }
     }
     out_seq_len[0] = seq_len;
@@ -2355,7 +2358,28 @@ rc_t cigar2offset(int const options,
                      */
                     {
                         unsigned i;
+#if 1
+                        unsigned const N = opcount - 1;
                         
+                        for (i = first; i < N; ++i) {
+                            cigar_bin_t const cur = cigar[i + 0];
+                            cigar_bin_t const nxt = cigar[i + 1];
+                            
+                            if (cur.gentype == gen_delete_type && nxt.gentype == gen_insert_type) {
+                                if (nxt.type == NCBI_align_ro_complete_genomics) {
+                                    assert(i + 2 < opcount);
+                                    cigar[i + 0] = nxt;
+                                    cigar[i + 1] = cigar[i + 2];
+                                    cigar[i + 2] = cur;
+                                    ++i;
+                                }
+                                else {
+                                    cigar[i + 0] = nxt;
+                                    cigar[i + 1] = cur;
+                                }
+                            }
+                        }
+#else
                         for (i = first + 1; i < opcount; ) {
                             if (cigar[i].gentype == gen_insert_type && cigar[i-1].gentype == gen_delete_type) {
                                 cigar_bin_t const prv = cigar[i - 1];
@@ -2369,6 +2393,7 @@ rc_t cigar2offset(int const options,
                             else
                                 ++i;
                         }
+#endif
                     }
                     /* merge adjacent delete type operations D+D -> D else becomes N */
                     {
@@ -2656,23 +2681,25 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                 else {
                     compress_buffer_t *const compress_buf = self->mgr->compress.base;
                     unsigned ro = (unsigned)data->ref_offset.elements;
-                    unsigned ref_pos;
+                    int ref_pos;
                     
                     for (seq_pos = 0, ref_pos = 0; seq_pos < seq_len; seq_pos++, ref_pos++) {
                         int const length = compress_buf[seq_pos].length;
                         int const type = compress_buf[seq_pos].type;
-                        
+
+#if 0
+                        ALIGN_C_DBG("seq_pos: %u, ref_pos: %i, offset: %i, type: %i, ro: %u", seq_pos, ref_pos, length, type, ro);
+#endif
                         if (length == 0 && type == 0)
                             has_ref_offset[seq_pos] = 0;
                         else {
-                            ALIGN_C_DBG("seq_pos: %u, ref_pos: %u, offset: %i, type: %i, ro: %u", seq_pos, ref_pos, length, type, ro);
                             has_ref_offset[seq_pos] = 1;
                             ref_offset[ro] = length;
                             ref_offset_type[ro] = type;
                             ref_pos += length;
                             ++ro;
                         }
-                        if (ref_pos >= max_rl ||
+                        if (ref_pos < 0 || ref_pos >= max_rl ||
                             ((toupper(ref_buf[ref_pos]) != toupper(seq[seq_pos])) && (seq[seq_pos] != '=')))
                         {
                             has_mismatch[seq_pos] = 1;
