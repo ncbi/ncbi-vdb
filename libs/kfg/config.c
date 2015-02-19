@@ -2293,6 +2293,12 @@ rc_t load_from_fs_location ( KConfig *self )
     return rc;
 }
 
+static rc_t load_from_default_string(KConfig *self) {
+    DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG), ("KFG: loading from default string\n"));
+    return
+        parse_file(self, "enbedded default configuration string", default_kfg);
+}
+
 LIB_EXPORT rc_t CC KConfigGetLoadPath ( const KConfig *self,
     const char **path )
 {
@@ -2399,7 +2405,10 @@ void load_config_files ( KConfig *self, const KDirectory *dir )
     /* check for config as the result of a user install
        i.e. not an admin installation */
     if ( ! loaded )
-        load_from_fs_location ( self );
+        loaded = load_from_fs_location ( self );
+
+    if ( ! loaded )
+        loaded = load_from_default_string ( self );
 
     if ( ! s_disable_user_settings )
         loaded |= load_from_home ( self, wd );
