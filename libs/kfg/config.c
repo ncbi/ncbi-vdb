@@ -77,6 +77,32 @@ struct KfgConfigNamelist;
 static bool s_disable_user_settings = false;
 
 
+/*----------------------------------------------------------------------------*/
+static char default_kfg[] = {
+"/config/default = \"true\"\n"
+"/repository/user/main/public/apps/file/volumes/flat = \"files\"\n"
+"/repository/user/main/public/apps/nakmer/volumes/nakmerFlat = \"nannot\"\n"
+"/repository/user/main/public/apps/nannot/volumes/nannotFlat = \"nannot\"\n"
+"/repository/user/main/public/apps/refseq/volumes/refseq = \"refseq\"\n"
+"/repository/user/main/public/apps/sra/volumes/sraFlat = \"sra\"\n"
+"/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"
+"/repository/user/main/public/cache-enabled = \"true\"\n"
+"/repository/user/main/public/root = \"$(HOME)/ncbi/public\"\n"
+"/repository/remote/main/CGI/resolver-cgi = "
+                      "\"http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
+"/repository/remote/aux/NCBI/apps/nakmer/volumes/fuseNAKMER = \"sadb\"\n"
+"/repository/remote/aux/NCBI/apps/nannot/volumes/fuseNANNOT = \"sadb\"\n"
+"/repository/remote/aux/NCBI/apps/refseq/volumes/refseq = \"refseq\"\n"
+"/repository/remote/aux/NCBI/apps/sra/volumes/fuse1000 = "
+                      "\"sra-instant/reads/ByRun/sra\"\n"
+"/repository/remote/aux/NCBI/apps/wgs/volumes/fuseWGS = \"wgs\"\n"
+"/repository/remote/aux/NCBI/root = \"http://ftp-trace.ncbi.nlm.nih.gov/sra\"\n"
+"/repository/remote/protected/CGI/resolver-cgi = "
+                      "\"http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
+"/tools/ascp/max_rate = \"800m\"\n"
+};
+/*----------------------------------------------------------------------------*/
+
 /*--------------------------------------------------------------------------
  * KConfig
  */
