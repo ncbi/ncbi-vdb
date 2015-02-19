@@ -526,14 +526,9 @@ static rc_t _KConfigGetAscpRate(const KConfig *self,
 
             free(s);
 
-            if (sz < max_rate_sz) {
+            if (sz >= max_rate_sz) {
                 return RC(rcNS, rcNode, rcReading, rcBuffer, rcInsufficient);
             }
-/*          *max_rate = string_dup_measure(s->addr, NULL);
-            if (*max_rate == NULL) {
-                free((void*)*max_rate);
-                return RC(rcNS, rcStorage, rcAllocating, rcMemory, rcExhausted);
-            }*/
         }
 
         return 0;
