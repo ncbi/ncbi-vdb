@@ -2543,7 +2543,15 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         /* send the message and create a response */
         rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer, len, NULL, self -> url_buffer . base );
         if ( rc != 0 )
-            break;
+        {
+            if ( GetRCState ( rc ) != rcIncomplete || GetRCContext ( rc ) != rcReading )
+                break;
+
+            KClientHttpClose ( self -> http );
+            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer, len, NULL, self -> url_buffer . base );
+            if ( rc != 0 )
+                break;
+        }
 
         /* look at status code */
         rslt = * _rslt;
@@ -2699,7 +2707,15 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         /* send the message and create a response */
         rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer, len, body, self -> url_buffer . base );
         if ( rc != 0 )
-            break;
+        {
+            if ( GetRCState ( rc ) != rcIncomplete || GetRCContext ( rc ) != rcReading )
+                break;
+
+            KClientHttpClose ( self -> http );
+            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer, len, NULL, self -> url_buffer . base );
+            if ( rc != 0 )
+                break;
+        }
 
         /* look at status code */
         rslt = * _rslt;
