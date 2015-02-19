@@ -78,7 +78,7 @@ static bool s_disable_user_settings = false;
 
 
 /*----------------------------------------------------------------------------*/
-static char default_kfg[] = {
+static const char default_kfg[] = {
 "/config/default = \"true\"\n"
 "/repository/user/main/public/apps/file/volumes/flat = \"files\"\n"
 "/repository/user/main/public/apps/nakmer/volumes/nakmerFlat = \"nannot\"\n"
