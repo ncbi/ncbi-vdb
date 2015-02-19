@@ -340,7 +340,9 @@ static
 rc_t CC KHttpFileRead ( const KHttpFile *self, uint64_t pos,
      void *buffer, size_t bsize, size_t *num_read )
 {
-    return KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, NULL );
+    struct timeout_t tm;
+    TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+    return KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
 }
 
 static
