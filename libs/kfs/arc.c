@@ -1556,7 +1556,6 @@ rc_t	KArcDirResolvePathNode	(const KArcDir *	self,
                              */
                             if (symlink_path[0] == '/')
                             {
-                                free (abpath); /* abandon the last presumed absolute path */
                                 temp_path = symlink_path;
                                 continue; /* back to for(;;) */
                             }
