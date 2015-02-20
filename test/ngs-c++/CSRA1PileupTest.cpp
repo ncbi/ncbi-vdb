@@ -177,11 +177,11 @@ void print_line (
 
         if ( ( eventType & ngs::PileupEvent::alignment_start ) != 0 )
         {
-            char c = pileup_event.mapping_quality + 33;
+            int32_t c = pileup_event.mapping_quality + 33;
             if ( c > '~' ) { c = '~'; }
             if ( c < 33 ) { c = 33; }
 
-            os << "^" << c;
+            os << "^" << (char)(c);
         }
 
         bool reverse = ( eventType & ngs::PileupEvent::alignment_minus_strand ) != 0;
@@ -449,160 +449,44 @@ TEST_CASE(CSRA1_PileupIterator_StartingZeros)
     REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
 }
 
-
-
-// Kurt's test to investigate:
-
-// TODO: make test out of the following run() function
-namespace ref_cover
+TEST_CASE(CSRA1_PileupIterator_MapQuality)
 {
-    using namespace ngs;
-    static
-    void run ( const String & runName, const String & refName, PileupIterator & pileup )
-    {
-        for ( int64_t ref_zpos = -1; pileup . nextPileup (); ++ ref_zpos )
-        {
-            if ( ref_zpos < 0 )
-                ref_zpos = pileup . getReferencePosition ();
+    // different mapping quality
+    // there was a bug caused by usage of char c instead int32_t c
+    // in printing code inside mimic_sra_pileup
 
-            uint32_t ref_base_idx = 0;
-            char ref_base = pileup . getReferenceBase ();
-            switch ( ref_base )
-            {
-            case 'C': ref_base_idx = 1; break;
-            case 'G': ref_base_idx = 2; break;
-            case 'T': ref_base_idx = 3; break;
-            }
+    int64_t const pos_start = 183830-1;
+    int64_t const pos_end = pos_start;
+    uint64_t const len = (uint64_t)(pos_end - pos_start + 1);
 
-            uint32_t depth = pileup . getPileupDepth ();
-            if ( depth != 0 )
-            {
-                uint32_t base_counts [ 4 ];
-                memset ( base_counts, 0, sizeof base_counts );
-                uint32_t ins_counts [ 4 ];
-                memset ( ins_counts, 0, sizeof ins_counts );
-                uint32_t del_cnt = 0;
+    std::ostringstream sstream;
+    std::ostringstream sstream_ref;
 
-                char mismatch;
-                uint32_t mismatch_idx;
+    sstream_ref << "gi|169794206|ref|NC_010410.1|\t183830\tA\t1\t^~," << std::endl;
 
-                while ( pileup . nextPileupEvent () )
-                {
-                    PileupEvent :: PileupEventType et = pileup . getEventType ();
-                    switch ( et & 7 )
-                    {
-                    case PileupEvent :: match:
-                        if ( ( et & PileupEvent :: insertion ) != 0 )
-                            ++ ins_counts [ ref_base_idx ];
-                        break;
+    mimic_sra_pileup ( "SRR833251", "gi|169794206|ref|NC_010410.1|", ngs::Alignment::all, pos_start, len, sstream );
 
-                    case PileupEvent :: mismatch:
-                        mismatch = pileup . getAlignmentBase ();
-                        mismatch_idx = 0;
-                        switch ( mismatch )
-                        {
-                        case 'C': mismatch_idx = 1; break;
-                        case 'G': mismatch_idx = 2; break;
-                        case 'T': mismatch_idx = 3; break;
-                        }
-                        ++ base_counts [ mismatch_idx ];
-                        if ( ( et & PileupEvent :: insertion ) != 0 )
-                            ++ ins_counts [ mismatch_idx ];
-                        break;
-
-                    case PileupEvent :: deletion:
-                        if ( pileup . getEventIndelType () == PileupEvent :: normal_indel )
-                            ++ del_cnt;
-                        else
-                            -- depth;
-                        break;
-                    }
-                }
-
-                if ( depth != 0 )
-                {
-                    std :: cout
-                        << runName
-                        << '\t' << refName
-                        << '\t' << ref_zpos + 1
-                        << '\t' << ref_base
-                        << '\t' << depth
-                        << "\t{" << base_counts [ 0 ]
-                        << ',' << base_counts [ 1 ]
-                        << ',' << base_counts [ 2 ]
-                        << ',' << base_counts [ 3 ]
-                        << "}\t{" << ins_counts [ 0 ]
-                        << ',' << ins_counts [ 1 ]
-                        << ',' << ins_counts [ 2 ]
-                        << ',' << ins_counts [ 3 ]
-                        << "}\t" << del_cnt
-                        << '\n'
-                        ;
-                }
-            }
-        }
-    }
-
-    static
-    void run ( const char * spec )
-    {
-        std :: cerr << "# Opening run '" << spec << "'\n";
-        ReadCollection obj = ncbi :: NGS :: openReadCollection ( spec );
-        String runName = obj . getName ();
-
-        std :: cerr << "# Accessing all references\n";
-        ReferenceIterator ref = obj . getReferences ();
-
-        while ( ref . nextReference () )
-        {
-            String refName = ref . getCanonicalName ();
-            //String const& ref_full = ref.getReferenceBases(10000, 1000);
-
-            std :: cerr << "# Processing reference '" << refName << "'\n";
-
-            std :: cerr << "# Accessing all pileups\n";
-            PileupIterator pileup = ref . getPileups ( Alignment :: all );
-            run ( runName, refName, pileup );
-        }
-    }
+    REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
 }
 
-
-int fake_main (int argc, char const* const* argv)
+TEST_CASE(CSRA1_PileupIterator_Depth)
 {
-    rc_t rc = 0;
+    // if ngs::Alignment::all is used here
+    // there will be discrepancy with sra-pileup
 
-    try
-    {
-        for ( int i = 1; i < argc; ++ i )
-        {
-            ref_cover :: run ( argv [ i ] );
-        }
-    }
-    catch ( ngs::ErrorMsg & x )
-    {
-        std :: cerr
-            << "ERROR: "
-            << argv [ 0 ]
-        << ": "
-            << x . what ()
-            << '\n'
-            ;
-        rc = -1;
-    }
-    catch ( ... )
-    {
-        std :: cerr
-            << "ERROR: "
-            << argv [ 0 ]
-        << ": unknown\n"
-            ;
-        rc = -1;
-    }
+    int64_t const pos_start = 519533-1;
+    int64_t const pos_end = pos_start;
+    uint64_t const len = (uint64_t)(pos_end - pos_start + 1);
 
-    return rc;
+    std::ostringstream sstream;
+    std::ostringstream sstream_ref;
+
+    sstream_ref << "gi|169794206|ref|NC_010410.1|\t519533\tC\t1\t," << std::endl;
+
+    mimic_sra_pileup ( "SRR833251", "gi|169794206|ref|NC_010410.1|", ngs::Alignment::primaryAlignment, pos_start, len, sstream );
+
+    REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
 }
-
 
 uint64_t pileup_test_all_functions (
             char const* db_path,
