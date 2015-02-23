@@ -198,9 +198,9 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t por
 
 #if _DEBUGGING
 /* we need this hook to be able to test the re-connection logic */
-static rc_t (*ClientHttpReopenCallback) ( struct KClientHttp * self ) = NULL;
+static struct KStream * (*ClientHttpReopenCallback) ( void ) = NULL;
 
-void SetClientHttpReopenCallback ( rc_t (*fn) ( struct KClientHttp * self ) )
+void SetClientHttpReopenCallback ( struct KStream * (*fn) ( void ) )
 {
     ClientHttpReopenCallback = fn;
 }
@@ -211,7 +211,8 @@ rc_t KClientHttpReopen ( KClientHttp * self )
 #if _DEBUGGING
     if ( ClientHttpReopenCallback != NULL )
     {
-        return ClientHttpReopenCallback ( self );
+        self -> sock = ClientHttpReopenCallback ();
+        return 0;
     }
 #endif
     
@@ -577,7 +578,7 @@ rc_t KClientHttpGetLine ( KClientHttp *self, struct timeout_t *tm )
 #if _DEBUGGING
             if ( KNSManagerIsVerbose ( self -> mgr ) ) {
                 size_t i = 0;
-                KOutMsg ( "RX:" );
+                KOutMsg ( "KClientHttpGetLine: '" );
                 for (i = 0; i <= self->line_valid; ++i) {
                     if (isprint(buffer[i])) {
                         KOutMsg("%c", buffer[i]);
@@ -586,7 +587,7 @@ rc_t KClientHttpGetLine ( KClientHttp *self, struct timeout_t *tm )
                         KOutMsg("\\%02X", buffer[i]);
                     }
                 }
-                KOutMsg ( "\n" );
+                KOutMsg ( "'\n" );
             }
 #endif
             break;
@@ -972,7 +973,7 @@ rc_t CC KClientHttpStreamTimedRead ( const KClientHttpStream *cself,
         rc =  KStreamTimedRead ( http -> sock, buffer, num_to_read, num_read, tm );
         if ( rc != 0 )
         {
-            /* TBD - handle dropped connection - may want to reestablish */
+            /* handle dropped connection - may want to reestablish */
             KClientHttpClose ( http );
 
             /* LOOK FOR DROPPED CONNECTION && SIZE UNKNOWN - HTTP/1.0 DYNAMIC CASE */
@@ -1046,9 +1047,16 @@ rc_t CC KClientHttpStreamTimedReadChunked ( const KClientHttpStream *cself,
     {
     case end_chunk:
         rc = KClientHttpGetLine ( http, tm );
-        /* this should be the CRLF following chunk */
-        if ( rc != 0 || http -> line_valid != 0 )
+        if ( rc != 0 )
         {
+            self -> state = error_state;
+            break;
+        }
+
+        /* this should be the CRLF following chunk */
+        if ( http -> line_valid != 0 )
+        {
+            KClientHttpClose ( http );
             rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcIncorrect);
             self -> state = error_state;
             break;
@@ -1077,6 +1085,7 @@ rc_t CC KClientHttpStreamTimedReadChunked ( const KClientHttpStream *cself,
         /* check if there was no hex number, or sep isn't pointing to nul byte */
         if ( sep == http -> line_buffer . base || ( * sep != 0 && * sep != ';' ) )
         {
+            KClientHttpClose ( http );
             rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcIncorrect);
             self -> state = error_state;
             break;
@@ -1100,11 +1109,12 @@ rc_t CC KClientHttpStreamTimedReadChunked ( const KClientHttpStream *cself,
     case within_chunk: 
         /* start reading */
         rc = KClientHttpStreamRead ( self, buffer, bsize, num_read );
-        if ( rc != 0 ) /* TBD - handle connection errors */
+        if ( rc != 0 )
             self -> state = error_state;
         /* incomplete if nothing to read */
         else if ( * num_read == 0 )
         {
+            KClientHttpClose ( http );
             rc = RC ( rcNS, rcNoTarg, rcTransfer, rcNoObj, rcIncomplete);
             self -> state = error_state;
         }
@@ -1279,12 +1289,10 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     size_t sent;
     timeout_t tm;
 
-
     /* TBD - may want to assert that there is an empty line in "buffer" */
-    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("TX:%.*s", len, buffer));
 #if _DEBUGGING
     if ( KNSManagerIsVerbose ( self -> mgr ) )
-        KOutMsg ( "TX:%.*s", len, buffer );
+        KOutMsg ( "KClientHttpSendReceiveMsg: '%.*s'\n", len, buffer );
 #endif
 
     /* reopen connection if NULL */
@@ -2535,7 +2543,12 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         /* send the message and create a response */
         rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer, len, NULL, self -> url_buffer . base );
         if ( rc != 0 )
-            break;
+        {
+            KClientHttpClose ( self -> http );
+            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer, len, NULL, self -> url_buffer . base );
+            if ( rc != 0 )
+                break;
+        }
 
         /* look at status code */
         rslt = * _rslt;
@@ -2691,7 +2704,12 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         /* send the message and create a response */
         rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer, len, body, self -> url_buffer . base );
         if ( rc != 0 )
-            break;
+        {
+            KClientHttpClose ( self -> http );
+            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt, buffer, len, NULL, self -> url_buffer . base );
+            if ( rc != 0 )
+                break;
+        }
 
         /* look at status code */
         rslt = * _rslt;

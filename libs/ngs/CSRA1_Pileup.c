@@ -199,7 +199,7 @@ void CSRA1_PileupAlignListSort ( CSRA1_Pileup_AlignList * self, ctx_t ctx )
 }
 
 static
-void CSRA1_PileupAlignListMerge ( CSRA1_Pileup_AlignList * self, DLList * pa_waiting )
+void CSRA1_PileupAlignListMerge ( CSRA1_Pileup_AlignList * self, DLList * pa_waiting, uint32_t pa_avail )
 {
     DLList sa_waiting = self -> waiting;
     CSRA1_Pileup_Entry * pe = ( CSRA1_Pileup_Entry * ) DLListHead ( pa_waiting );
@@ -225,6 +225,8 @@ void CSRA1_PileupAlignListMerge ( CSRA1_Pileup_AlignList * self, DLList * pa_wai
 
     DLListAppendList ( & self -> waiting, pa_waiting );
     DLListAppendList ( & self -> waiting, & sa_waiting );
+
+    self -> avail += pa_avail;
 }
 
 
@@ -330,6 +332,21 @@ uint8_t CSRA1_Pileup_AlignCursorDataGetUInt8 ( CSRA1_Pileup_AlignCursorData * se
     TRY ( CSRA1_Pileup_AlignCursorDataGetNonEmptyCell ( self, ctx, row_id, col_idx ) )
     {
         const uint8_t * p = self -> cell_data [ col_idx ];
+        return p [ 0 ];
+    }
+
+    return 0;
+}
+
+static
+int32_t CSRA1_Pileup_AlignCursorDataGetInt32 ( CSRA1_Pileup_AlignCursorData * self, ctx_t ctx,
+    int64_t row_id, uint32_t col_idx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    TRY ( CSRA1_Pileup_AlignCursorDataGetNonEmptyCell ( self, ctx, row_id, col_idx ) )
+    {
+        const int32_t * p = self -> cell_data [ col_idx ];
         return p [ 0 ];
     }
 
@@ -443,7 +460,7 @@ void CSRA1_PileupWhack ( CSRA1_Pileup * self, ctx_t ctx )
     /* reference cursor, blobs */
     CSRA1_Pileup_RefCursorDataWhack ( & self -> ref, ctx );
     
-    NGS_PileupWhack ( & self -> dad, ctx );
+    CSRA1_PileupEventWhack ( & self -> dad, ctx );
 }
 
 static
@@ -453,7 +470,7 @@ NGS_String * CSRA1_PileupGetReferenceSpec ( const CSRA1_Pileup * self, ctx_t ctx
 
     TRY ( CHECK_STATE ( self, ctx ) )
     {
-        return NGS_ReferenceGetCanonicalName ( self -> dad . ref, ctx );
+        return NGS_ReferenceGetCanonicalName ( self -> dad . dad . dad . ref, ctx );
     }
 
     return NULL;
@@ -473,22 +490,40 @@ int64_t CSRA1_PileupGetReferencePosition ( const CSRA1_Pileup * self, ctx_t ctx 
 }
 
 static
-struct NGS_PileupEvent * CSRA1_PileupGetEvents ( CSRA1_Pileup * self, ctx_t ctx )
+char CSRA1_PileupGetReferenceBase ( const CSRA1_Pileup * cself, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
+    CSRA1_Pileup * self = ( CSRA1_Pileup * ) cself;
+
     TRY ( CHECK_STATE ( self, ctx ) )
     {
-        TRY ( struct NGS_PileupEvent * ret = CSRA1_PileupEventIteratorMake ( ctx, self ) )
+        if ( self -> ref_base == 0 )
         {
-            return ret;
+            if ( self -> ref_chunk_bases == NULL )
+            {
+                const void * base;
+                uint32_t elem_bits, boff, row_len;
+                ON_FAIL ( NGS_CursorCellDataDirect ( self -> ref . curs, ctx, self -> ref_chunk_id,
+                    reference_READ, & elem_bits, & base, & boff, & row_len ) )
+                {
+                    return 0;
+                }
+
+                self -> ref_chunk_bases = base;
+                assert ( row_len == self -> ref . max_seq_len ||
+                         self -> ref_chunk_xend - self -> ref . max_seq_len + row_len >= self -> slice_xend );
+            }
+
+            assert ( self -> ref . max_seq_len != 0 );
+            self -> ref_base = self -> ref_chunk_bases [ self -> ref_zpos % self -> ref . max_seq_len ]; 
         }
 
-        /* TBD - is this what we want? */
-        self -> state = pileup_state_err;
+        return self -> ref_base;
+
     }
 
-    return NULL;
+    return 0;
 }
 
 static
@@ -709,7 +744,6 @@ uint32_t CSRA1_PileupGatherChunkIds ( CSRA1_Pileup * self, ctx_t ctx )
             return 0;
     }
 
-    ++ self -> idx_chunk_id;
     return pa_ids + sa_ids;
 }
 
@@ -747,10 +781,14 @@ void CSRA1_PileupGatherIds ( CSRA1_Pileup * self, ctx_t ctx, uint32_t id_limit )
     total_ids = 0;
     do
     {
-        ON_FAIL ( uint32_t align_ids = CSRA1_PileupGatherChunkIds ( self, ctx ) )
+        uint32_t align_ids;
+
+        ON_FAIL ( align_ids = CSRA1_PileupGatherChunkIds ( self, ctx ) )
             break;
 
         total_ids += align_ids;
+        ++ self -> idx_chunk_id;
+
     }
     while ( total_ids < id_limit && self -> idx_chunk_id <= self -> slice_end_id );
 }
@@ -761,6 +799,7 @@ bool CSRA1_PileupFilterAlignment ( CSRA1_Pileup * self, ctx_t ctx,
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
+    int32_t map_qual;
     INSDC_read_filter read_filter;
 
     TRY ( read_filter = CSRA1_Pileup_AlignCursorDataGetUInt8 ( cd, ctx, row_id, pileup_align_col_READ_FILTER ) )
@@ -768,15 +807,28 @@ bool CSRA1_PileupFilterAlignment ( CSRA1_Pileup * self, ctx_t ctx,
         switch ( read_filter )
         {
         case READ_FILTER_PASS:
-            return true;
+
+            /* unless looking at mapping quality, accept */
+            if ( ( self -> filters & NGS_PileupFilterBits_map_qual ) == 0 )
+                return true;
+
+            /* look at mapping quality for alignment */
+            TRY ( map_qual = CSRA1_Pileup_AlignCursorDataGetInt32 ( cd, ctx, row_id, pileup_event_col_MAPQ ) )
+            {
+                /* generally specify a minimum mapping quality */
+                if ( ( self -> filters & NGS_PileupFilterBits_min_map_qual ) != 0 )
+                    return map_qual >= self -> map_qual;
+
+                /* but allow a maximum as well */
+                return map_qual <= self -> map_qual;
+            }
+            break;
 
         case READ_FILTER_REJECT:
-            /* simply a bad read */
-            break;
+            return ( self -> filters & NGS_PileupFilterBits_pass_bad ) != 0;
 
         case READ_FILTER_CRITERIA:
-            /* TBD - this means a duplicate - may allow later on */
-            break;
+            return ( self -> filters & NGS_PileupFilterBits_pass_dups ) != 0;
 
         case READ_FILTER_REDACTED:
             /* do not include */
@@ -919,7 +971,7 @@ void CSRA1_PileupPopulate ( CSRA1_Pileup * self, ctx_t ctx, uint32_t id_limit )
                     CSRA1_PileupAlignListSort ( & self -> align, ctx );
 
                 if ( pa_avail != 0 )
-                    CSRA1_PileupAlignListMerge ( & self -> align, & pa_waiting );
+                    CSRA1_PileupAlignListMerge ( & self -> align, & pa_waiting, pa_avail );
             }
             CATCH_ALL ()
             {
@@ -1002,7 +1054,7 @@ bool CSRA1_PileupGetOverlapChunkId ( CSRA1_Pileup * self, ctx_t ctx )
 
         if ( self -> pa . curs != NULL && OVERLAP_REF_POS [ 0 ] > 0 )
         {
-            new_chunk_id = ( OVERLAP_REF_POS [ 0 ] - 1 ) % self -> ref . max_seq_len + self -> reference_start_id;
+            new_chunk_id = ( OVERLAP_REF_POS [ 0 ] - 1 ) / self -> ref . max_seq_len + self -> reference_start_id;
             if ( new_chunk_id < ref_chunk_id )
                 ref_chunk_id = new_chunk_id;
             have_overlap_ref_pos = true;
@@ -1010,7 +1062,7 @@ bool CSRA1_PileupGetOverlapChunkId ( CSRA1_Pileup * self, ctx_t ctx )
 
         if ( self -> sa . curs != NULL && OVERLAP_REF_POS [ 1 ] > 0 )
         {
-            new_chunk_id = ( OVERLAP_REF_POS [ 1 ] - 1 ) % self -> ref . max_seq_len + self -> reference_start_id;
+            new_chunk_id = ( OVERLAP_REF_POS [ 1 ] - 1 ) / self -> ref . max_seq_len + self -> reference_start_id;
             if ( new_chunk_id < ref_chunk_id )
                 ref_chunk_id = new_chunk_id;
             have_overlap_ref_pos = true;
@@ -1081,7 +1133,7 @@ void CSRA1_PileupRevOverlap ( CSRA1_Pileup * self, ctx_t ctx )
                 self -> ref_chunk_id = self -> reference_start_id;
             else
             {
-                uint64_t ref_len = NGS_ReferenceGetLength ( self -> dad . ref, ctx );
+                uint64_t ref_len = NGS_ReferenceGetLength ( self -> dad . dad . dad . ref, ctx );
                 overlap_zstart += ref_len;
                 self -> ref_chunk_id = overlap_zstart / self -> ref . max_seq_len + self -> reference_start_id;
                 self -> effective_ref_zstart -= ref_len;
@@ -1111,7 +1163,7 @@ void CSRA1_PileupRevOverlap ( CSRA1_Pileup * self, ctx_t ctx )
                 break;
 
             /* linearize circularity */
-            self -> effective_ref_zstart -= NGS_ReferenceGetLength ( self -> dad . ref, ctx );
+            self -> effective_ref_zstart -= NGS_ReferenceGetLength ( self -> dad . dad . dad . ref, ctx );
 
             /* wrap around */
             self -> ref_chunk_id = self -> reference_last_id;
@@ -1322,21 +1374,43 @@ bool CSRA1_PileupIteratorGetNext ( CSRA1_Pileup * self, ctx_t ctx )
         break;
     }
 
+    /* reset the event iterator */
+    if ( ! FAILED () )
+        CSRA1_PileupEventIteratorReset ( & self -> dad, ctx );
+
     return pos_valid;
 }
 
-static NGS_Pileup_vt CSRA1_Pileup_vt_inst =
+static NGS_Pileup_vt CSRA1_Pileup_vt =
 {
     {
-        /* NGS_Refcount */
-        CSRA1_PileupWhack
+        {
+            /* NGS_Refcount */
+            CSRA1_PileupWhack
+        },
+
+        /* NGS_PileupEvent */
+        CSRA1_PileupEventGetMappingQuality,
+        CSRA1_PileupEventGetAlignmentId,
+        CSRA1_PileupEventGetAlignmentPosition,
+        CSRA1_PileupEventGetFirstAlignmentPosition,
+        CSRA1_PileupEventGetLastAlignmentPosition,
+        CSRA1_PileupEventGetEventType,
+        CSRA1_PileupEventGetAlignmentBase,
+        CSRA1_PileupEventGetAlignmentQuality,
+        CSRA1_PileupEventGetInsertionBases,
+        CSRA1_PileupEventGetInsertionQualities,
+        CSRA1_PileupEventGetRepeatCount,
+        CSRA1_PileupEventGetIndelType,
+        CSRA1_PileupEventIteratorNext,
+        CSRA1_PileupEventIteratorReset
     },
 
     CSRA1_PileupGetReferenceSpec,    
     CSRA1_PileupGetReferencePosition,
-    CSRA1_PileupGetEvents,           
+    CSRA1_PileupGetReferenceBase,           
     CSRA1_PileupGetDepth,            
-    CSRA1_PileupIteratorGetNext,     
+    CSRA1_PileupIteratorGetNext     
 };
 
 
@@ -1491,7 +1565,8 @@ void CSRA1_PileupInitAlignment ( CSRA1_Pileup * obj, ctx_t ctx,
 static
 void CSRA1_PileupInit ( ctx_t ctx, CSRA1_Pileup * obj, const char * instname, 
     NGS_Reference * ref, const VDatabase * db, const NGS_Cursor * ref_curs,
-    int64_t first_row_id, int64_t last_row_id, bool wants_primary, bool wants_secondary )
+    int64_t first_row_id, int64_t last_row_id, bool wants_primary, bool wants_secondary,
+    uint32_t filters, int32_t map_qual )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     
@@ -1499,7 +1574,7 @@ void CSRA1_PileupInit ( ctx_t ctx, CSRA1_Pileup * obj, const char * instname,
     assert ( ref != NULL );
 
     /* initialize superclass */    
-    TRY ( NGS_PileupInit ( ctx, & obj -> dad, & CSRA1_Pileup_vt_inst, "CSRA1_Pileup", instname, ref ) ) 
+    TRY ( CSRA1_PileupEventInit ( ctx, & obj -> dad, & CSRA1_Pileup_vt, "CSRA1_Pileup", instname, ref ) ) 
     {
         /* capture reference cursor */
         TRY ( CSRA1_Pileup_RefCursorDataInit ( ctx, & obj -> ref, ref_curs, first_row_id ) )
@@ -1513,6 +1588,10 @@ void CSRA1_PileupInit ( ctx_t ctx, CSRA1_Pileup * obj, const char * instname,
                        that represent the actual chromosome being analyzed */
                     obj -> reference_start_id = obj -> slice_start_id = first_row_id;
                     obj -> reference_last_id = obj -> slice_end_id = last_row_id;
+
+                    /* record filter criteria */
+                    obj -> filters = filters;
+                    obj -> map_qual = map_qual;
                 
                     /* initialize against one or more alignment tables */
                     if ( wants_primary )
@@ -1535,7 +1614,8 @@ void CSRA1_PileupInit ( ctx_t ctx, CSRA1_Pileup * obj, const char * instname,
 
 NGS_Pileup * CSRA1_PileupIteratorMake ( ctx_t ctx,
     NGS_Reference * ref, const VDatabase * db, const NGS_Cursor * curs_ref,
-    int64_t first_row_id, int64_t last_row_id, bool wants_primary, bool wants_secondary )
+    int64_t first_row_id, int64_t last_row_id, bool wants_primary, bool wants_secondary,
+    uint32_t filters, int32_t map_qual )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
 
@@ -1586,10 +1666,10 @@ NGS_Pileup * CSRA1_PileupIteratorMake ( ctx_t ctx,
 #else
         const char * instname = "unknown";
 #endif
-        TRY ( CSRA1_PileupInit ( ctx, obj, instname, ref, db, curs_ref, first_row_id, last_row_id, wants_primary, wants_secondary ) )
+        TRY ( CSRA1_PileupInit ( ctx, obj, instname, ref, db, curs_ref, first_row_id, last_row_id, wants_primary, wants_secondary, filters, map_qual ) )
         {
             obj -> state = pileup_state_initial;
-            return & obj -> dad;
+            return & obj -> dad . dad;
         }
 
         CSRA1_PileupWhack ( obj, ctx );
@@ -1602,7 +1682,8 @@ NGS_Pileup * CSRA1_PileupIteratorMake ( ctx_t ctx,
 NGS_Pileup * CSRA1_PileupIteratorMakeSlice ( ctx_t ctx,
     NGS_Reference * ref, const VDatabase * db, const NGS_Cursor * curs_ref,
     int64_t first_row_id, int64_t last_row_id, uint64_t slice_zstart, 
-    uint64_t slice_size, bool wants_primary, bool wants_secondary )
+    uint64_t slice_size, bool wants_primary, bool wants_secondary,
+    uint32_t filters, int32_t map_qual )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     uint64_t ref_len;
@@ -1634,16 +1715,16 @@ NGS_Pileup * CSRA1_PileupIteratorMakeSlice ( ctx_t ctx,
         else
         {
             TRY ( NGS_Pileup * obj = CSRA1_PileupIteratorMake ( ctx, ref, db, curs_ref,
-                      first_row_id, last_row_id, wants_primary, wants_secondary ) )
+                first_row_id, last_row_id, wants_primary, wants_secondary, filters, map_qual ) )
             {
                 CSRA1_Pileup * self = ( CSRA1_Pileup * ) obj;
 
                 /* limit slice length */
                 if ( self -> circular )
                 {
-                    /* limit to 2 * ref_len */
-                    if ( slice_zstart + slice_size > 2 * ref_len ) 
-                        slice_size = 2 * ref_len - slice_zstart;
+                    /* limit to ref_len */
+                    if ( slice_size > ref_len ) 
+                        slice_size = ref_len;
                 }
                 else
                 {

@@ -49,47 +49,20 @@ typedef struct CSRA1_PileupEvent CSRA1_PileupEvent;
 
 #include <sysalloc.h>
 
-struct CSRA1_PileupEvent
-{
-    NGS_PileupEvent dad;
-
-    /* capture the pileup iterator's position:
-       this will be used to validate our iterator */
-    int64_t ref_zpos;
-
-    /* current alignment being examined */
-    CSRA1_Pileup_Entry * entry;
-
-    /* set to true within "next" */
-    bool seen_first;
-};
-
 #define CSRA1_PileupEventGetPileup( self ) \
-    ( ( CSRA1_Pileup * ) ( self ) -> dad . pileup )
+    ( ( CSRA1_Pileup * ) ( self ) )
 
 static
 void CSRA1_PileupEventStateTest ( const CSRA1_PileupEvent * self, ctx_t ctx, uint32_t lineno )
 {
     assert ( self != NULL );
 
-    if ( self -> entry != NULL )
-    {
-        CSRA1_Pileup * pileup = CSRA1_PileupEventGetPileup ( self );
-        assert ( pileup != NULL );
-
-        if ( self -> ref_zpos != pileup -> ref_zpos )
-        {
-            ctx_event ( ctx, lineno, xc_sev_fail, xc_org_user, xcIteratorUninitialized,
-                        "PileupEvent accessed after advancing PileupIterator" );
-        }
-    }
-
-    else if ( ! self -> seen_first )
+    if ( ! self -> seen_first )
     {
         ctx_event ( ctx, lineno, xc_sev_fail, xc_org_user, xcIteratorUninitialized,
                     "PileupEvent accessed before a call to PileupEventIteratorNext()" );
     }
-    else
+    else if ( self -> entry == NULL )
     {
         ctx_event ( ctx, lineno, xc_sev_fail, xc_org_user, xcCursorExhausted, "No more rows available" );
     }
@@ -99,11 +72,10 @@ void CSRA1_PileupEventStateTest ( const CSRA1_PileupEvent * self, ctx_t ctx, uin
     CSRA1_PileupEventStateTest ( self, ctx, __LINE__ )
 
 
-static
 void CSRA1_PileupEventWhack ( CSRA1_PileupEvent * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcDestroying );
-    NGS_PileupEventWhack ( & self -> dad, ctx );
+    NGS_PileupWhack ( & self -> dad, ctx );
 }
 
 static
@@ -139,29 +111,6 @@ const void * CSRA1_PileupEventGetNonEmptyEntry ( const CSRA1_PileupEvent * self,
     return entry -> cell_data [ col_idx ];
 }
 
-static
-struct NGS_String * CSRA1_PileupEventGetReferenceSpec ( const CSRA1_PileupEvent * self, ctx_t ctx )
-{
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
-    TRY ( CHECK_STATE ( self, ctx ) )
-    {
-        return NGS_PileupGetReferenceSpec ( self -> dad . pileup, ctx );
-    }
-    return NULL;
-}
-
-static
-int64_t CSRA1_PileupEventGetReferencePosition ( const CSRA1_PileupEvent * self, ctx_t ctx )
-{
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
-    TRY ( CHECK_STATE ( self, ctx ) )
-    {
-        return self -> ref_zpos;
-    }
-    return 0;
-}
-
-static
 int CSRA1_PileupEventGetMappingQuality ( const CSRA1_PileupEvent * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
@@ -176,13 +125,12 @@ int CSRA1_PileupEventGetMappingQuality ( const CSRA1_PileupEvent * self, ctx_t c
     return 0;
 }
 
-static
 struct NGS_String * CSRA1_PileupEventGetAlignmentId ( const CSRA1_PileupEvent * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
     TRY ( CHECK_STATE ( self, ctx ) )
     {
-        NGS_ReadCollection * coll = self -> dad . pileup -> ref -> coll;
+        NGS_ReadCollection * coll = self -> dad . dad . ref -> coll;
         TRY ( const NGS_String * run = NGS_ReadCollectionGetName ( coll, ctx ) )
         {
             enum NGS_Object obj_type = self -> entry -> secondary ?
@@ -193,40 +141,6 @@ struct NGS_String * CSRA1_PileupEventGetAlignmentId ( const CSRA1_PileupEvent * 
     return NULL;
 }
 
-static
-struct NGS_Alignment * CSRA1_PileupEventGetAlignment ( const CSRA1_PileupEvent * self, ctx_t ctx )
-{
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
-
-    /* TBD - the REASON this method exists is that we already have
-       most of what's needed to create a single Alignment record.
-       The intention is to create a mostly pre-populated record
-       here, since the user can already grab the id and ask the
-       ReadCollection for one. */
-
-    TRY ( NGS_String * id = CSRA1_PileupEventGetAlignmentId ( self, ctx ) )
-    {
-        /* unfortunately, as of today, our C API takes a NUL-terminated
-           string as the alignment id, but we only have an NGS_String. */
-        char * idz = NGS_StringMakeNULTerminatedString ( id, ctx );
-        NGS_StringRelease ( id, ctx );
-
-        if ( ! FAILED () )
-        {
-            NGS_ReadCollection * coll = self -> dad . pileup -> ref -> coll;
-            struct NGS_Alignment * alignment = NGS_ReadCollectionGetAlignment ( coll, ctx, idz );
-
-            free ( idz );
-
-            if ( ! FAILED () )
-                return alignment;
-        }
-    }
-
-    return NULL;
-}
-
-static
 int64_t CSRA1_PileupEventGetAlignmentPosition ( const CSRA1_PileupEvent * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
@@ -238,7 +152,6 @@ int64_t CSRA1_PileupEventGetAlignmentPosition ( const CSRA1_PileupEvent * self, 
     return 0;
 }
 
-static
 int64_t CSRA1_PileupEventGetFirstAlignmentPosition ( const CSRA1_PileupEvent * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
@@ -250,7 +163,6 @@ int64_t CSRA1_PileupEventGetFirstAlignmentPosition ( const CSRA1_PileupEvent * s
     return 0;
 }
 
-static
 int64_t CSRA1_PileupEventGetLastAlignmentPosition ( const CSRA1_PileupEvent * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
@@ -261,7 +173,6 @@ int64_t CSRA1_PileupEventGetLastAlignmentPosition ( const CSRA1_PileupEvent * se
     return 0;
 }
 
-static
 int CSRA1_PileupEventGetEventType ( const CSRA1_PileupEvent * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
@@ -304,11 +215,11 @@ int CSRA1_PileupEventGetEventType ( const CSRA1_PileupEvent * self, ctx_t ctx )
             event_type |= NGS_PileupEventType_insertion;
 
         /* detect initial event */
-        if ( self -> ref_zpos == entry -> zstart )
+        if ( CSRA1_PileupEventGetPileup ( self ) -> ref_zpos == entry -> zstart )
             event_type |= NGS_PileupEventType_start;
 
         /* detect final event */
-        if ( self -> ref_zpos + 1 == entry -> xend )
+        if ( CSRA1_PileupEventGetPileup ( self ) -> ref_zpos + 1 == entry -> xend )
             event_type |= NGS_PileupEventType_stop;
 
         /* detect minus strand */
@@ -325,7 +236,6 @@ int CSRA1_PileupEventGetEventType ( const CSRA1_PileupEvent * self, ctx_t ctx )
     return event_type;
 }
 
-static
 char CSRA1_PileupEventGetAlignmentBase ( const CSRA1_PileupEvent * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
@@ -375,7 +285,7 @@ char CSRA1_PileupEventGetAlignmentBase ( const CSRA1_PileupEvent * self, ctx_t c
             }
 
             assert ( pileup -> ref . max_seq_len != 0 );
-            pileup -> ref_base = pileup -> ref_chunk_bases [ self -> ref_zpos % pileup -> ref . max_seq_len ]; 
+            pileup -> ref_base = pileup -> ref_chunk_bases [ CSRA1_PileupEventGetPileup ( self ) -> ref_zpos % pileup -> ref . max_seq_len ]; 
         }
 
         return pileup -> ref_base;
@@ -383,7 +293,6 @@ char CSRA1_PileupEventGetAlignmentBase ( const CSRA1_PileupEvent * self, ctx_t c
     return 0;
 }
 
-static
 char CSRA1_PileupEventGetAlignmentQuality ( const CSRA1_PileupEvent * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
@@ -406,7 +315,6 @@ char CSRA1_PileupEventGetAlignmentQuality ( const CSRA1_PileupEvent * self, ctx_
     return 0;
 }
 
-static
 struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
@@ -437,6 +345,7 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                    but even so, it should not be a problem to prefetch MISMATCH */
                 TRY ( MISMATCH = CSRA1_PileupEventGetEntry ( self, ctx, entry, pileup_event_col_MISMATCH ) )
                 {
+                    uint32_t ref_first = entry -> seq_idx;
                     uint32_t ins_start = entry -> seq_idx - entry -> ins_cnt;
                     uint32_t seq_idx, mismatch_idx = entry -> mismatch_idx;
 
@@ -445,8 +354,13 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                     /* fill in the buffer with each entry from mismatch */
                     for ( seq_idx = entry -> seq_idx - 1; seq_idx >= ins_start; -- seq_idx )
                     {
+                        /* pull base from MISMATCH */
                         if ( HAS_MISMATCH [ seq_idx ] )
                             buffer [ seq_idx - ins_start ] = MISMATCH [ -- mismatch_idx ];
+
+                        /* will need to get base from reference */
+                        else
+                            ref_first = seq_idx;
                     }
 
                     /* if there are some to be filled from reference */
@@ -459,12 +373,33 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                            is in our current chunk, but it's not guaranteed,
                            nor is it guaranteed to be in a single chunk. */
 
-                        uint32_t str_len = entry -> ins_cnt;
+                        /* the number of characters in string that could come from reference */
+                        uint32_t str_len = entry -> seq_idx - ref_first;
+
+                        /* offset the string buffer to the first base to be filled by reference */
+                        char * rbuffer = & buffer [ entry -> ins_cnt - str_len ];
+
+                        /* the current chunk of reference bases or NULL */
                         const INSDC_dna_text * READ = pileup -> ref_chunk_bases;
-                        int64_t ins_ref_zstart = self -> ref_zpos - ( int64_t ) str_len;
-                        int64_t ins_ref_last = self -> ref_zpos - 1;
+
+                        /* generate range of reference positions */
+                        int64_t ins_ref_zstart = CSRA1_PileupEventGetPileup ( self ) -> ref_zpos - ( int64_t ) str_len;
+                        int64_t ins_ref_last = CSRA1_PileupEventGetPileup ( self ) -> ref_zpos - 1;
+
+                        /* generate range of reference chunk ids */
                         int64_t ins_ref_start_id = ins_ref_zstart / pileup -> ref . max_seq_len + pileup -> reference_start_id;
                         int64_t ins_ref_last_id = ins_ref_last / pileup -> ref . max_seq_len + pileup -> reference_start_id;
+
+                        /* the starting offset into the left-most reference chunk */
+                        uint32_t ref_off = ( uint32_t ) ( ins_ref_zstart % pileup -> ref . max_seq_len );
+
+                        /* check for error in the starting position: must be >= 0 */
+                        if ( ins_ref_zstart < 0 )
+                        {
+                            INTERNAL_ERROR ( xcParamOutOfBounds, "insertion string accessing reference at position %ld", ins_ref_zstart );
+                            free ( buffer );
+                            return NULL;
+                        }
 
                         /* try to take advantage of the chunk that's loaded right now */
                         if ( READ != NULL && pileup -> ref_chunk_id == ins_ref_last_id )
@@ -472,34 +407,45 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                             /* most common case - everything within this chunk */
                             if ( ins_ref_start_id == ins_ref_last_id )
                             {
-                                uint32_t ref_off = ( uint32_t ) ( ins_ref_zstart % pileup -> ref . max_seq_len );
+                                /* "seq_off" is implied 0, i.e. start of insertion sequence.
+                                   "ref_off" is calculated start of insert in reference coords modulo chunk size */
                                 for ( seq_idx = 0; seq_idx < str_len; ++ seq_idx )
                                 {
-                                    if ( buffer [ seq_idx ] == 0 )
-                                        buffer [ seq_idx ] = READ [ ref_off + seq_idx ];
+                                    if ( rbuffer [ seq_idx ] == 0 )
+                                        rbuffer [ seq_idx ] = READ [ ref_off + seq_idx ];
                                 }
                                 goto buffer_complete;
                             }
                             /* less common case - share only part of this chunk */
                             else
                             {
-                                uint32_t seq_off = str_len - ( uint32_t ) ( self -> ref_zpos % pileup -> ref . max_seq_len );
+                                /* "ref_off" is implied 0, i.e. start of reference chunk which is
+                                   known to be the last but not first chunk, therefore the start is
+                                   at 0 where the insertion crosses chunk boundaries.
+                                   "seq_off" is the start of the last portion of the string to
+                                   intersect this reference chunk. */
+                                uint32_t seq_off = str_len - ( uint32_t ) ( CSRA1_PileupEventGetPileup ( self ) -> ref_zpos % pileup -> ref . max_seq_len );
                                 for ( seq_idx = seq_off; seq_idx < str_len; ++ seq_idx )
                                 {
-                                    if ( buffer [ seq_idx ] == 0 )
-                                        buffer [ seq_idx ] = READ [ seq_idx - seq_off ];
+                                    if ( rbuffer [ seq_idx ] == 0 )
+                                        rbuffer [ seq_idx ] = READ [ seq_idx - seq_off ];
                                 }
 
+                                /* the last part of the string has been completed */
                                 str_len = seq_off;
                                 -- ins_ref_last_id;
                             }
                         }
 
+                        /* forget current reference chunk */
                         pileup -> ref_chunk_bases = NULL;
                         pileup -> ref_base = 0;
 
+                        /* set the reference offset of initial chunk */
+                        ref_off = ( uint32_t ) ( ins_ref_zstart % pileup -> ref . max_seq_len );
+
                         /* walk from ins_ref_start_id to ins_ref_last_id */
-                        for ( seq_idx = 0; ins_ref_start_id <= ins_ref_last_id; ++ ins_ref_start_id )
+                        for ( seq_idx = 0; ins_ref_start_id <= ins_ref_last_id; ++ ins_ref_start_id, ref_off = 0 )
                         {
                             const void * base;
                             uint32_t limit, seq_off, row_len;
@@ -512,16 +458,20 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
 
                             READ = base;
 
+                            /* the total number of bases left in insertion string */
                             limit = str_len - seq_idx;
-                            if ( limit > row_len )
-                                limit = row_len;
 
+                            /* cannot exceed the bases available in this chunk */
+                            if ( ref_off + limit > row_len )
+                                limit = row_len - ref_off;
+
+                            /* end index within string */
                             limit += seq_idx;
 
                             for ( seq_off = seq_idx; seq_idx < limit; ++ seq_idx )
                             {
-                                if ( buffer [ seq_idx ] == 0 )
-                                    buffer [ seq_idx ] = READ [ seq_idx - seq_off ];
+                                if ( rbuffer [ seq_idx ] == 0 )
+                                    rbuffer [ seq_idx ] = READ [ ref_off + seq_idx - seq_off ];
                             }
 
                             /* we stopped either due to:
@@ -560,7 +510,6 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
     return NULL;
 }
 
-static
 struct NGS_String * CSRA1_PileupEventGetInsertionQualities ( const CSRA1_PileupEvent * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
@@ -608,7 +557,6 @@ struct NGS_String * CSRA1_PileupEventGetInsertionQualities ( const CSRA1_PileupE
     return NULL;
 }
 
-static
 unsigned int CSRA1_PileupEventGetRepeatCount ( const CSRA1_PileupEvent * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
@@ -645,7 +593,6 @@ unsigned int CSRA1_PileupEventGetRepeatCount ( const CSRA1_PileupEvent * self, c
     return 0;
 }
 
-static
 int CSRA1_PileupEventGetIndelType ( const CSRA1_PileupEvent * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
@@ -653,8 +600,7 @@ int CSRA1_PileupEventGetIndelType ( const CSRA1_PileupEvent * self, ctx_t ctx )
     {
         CSRA1_Pileup_Entry * entry = self -> entry;
 
-        const bool * HAS_REF_OFFSET = entry -> cell_data [ pileup_event_col_HAS_REF_OFFSET ];
-        if ( HAS_REF_OFFSET [ entry -> seq_idx ] )
+        if ( entry -> del_cnt != 0 || entry -> ins_cnt != 0 )
         {
             CSRA1_Pileup * pileup = CSRA1_PileupEventGetPileup ( self );
             CSRA1_Pileup_AlignCursorData * cd = entry -> secondary ? & pileup -> sa : & pileup -> pa;
@@ -664,8 +610,9 @@ int CSRA1_PileupEventGetIndelType ( const CSRA1_PileupEvent * self, ctx_t ctx )
                 TRY ( REF_OFFSET_TYPE = CSRA1_PileupEventGetEntry ( self, ctx, entry, pileup_event_col_REF_OFFSET_TYPE ) )
                 {
                     assert ( REF_OFFSET_TYPE != NULL );
-                    assert ( entry -> ref_off_idx < entry -> cell_len [ pileup_event_col_REF_OFFSET_TYPE ] );
-                    switch ( REF_OFFSET_TYPE [ entry -> ref_off_idx ] )
+                    assert ( entry -> ref_off_idx > 0 );
+                    assert ( entry -> ref_off_idx <= entry -> cell_len [ pileup_event_col_REF_OFFSET_TYPE ] );
+                    switch ( REF_OFFSET_TYPE [ entry -> ref_off_idx - 1 ] )
                     {
                     case NCBI_align_ro_normal:
                     case NCBI_align_ro_soft_clip:
@@ -697,21 +644,31 @@ int CSRA1_PileupEventGetIndelType ( const CSRA1_PileupEvent * self, ctx_t ctx )
 }
 
 static
-bool CSRA1_PileupEventEntryAdvance ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry * entry )
+bool CSRA1_PileupEventEntryFocus ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry * entry )
 {
-    /* within a deletion */
-    if ( entry -> del_cnt != 0 )
-    {
-        -- entry -> del_cnt;
-        entry -> zstart_adj += entry -> seen_first;
-    }
-    else
-    {
-        const bool * HAS_MISMATCH = entry -> cell_data [ pileup_event_col_HAS_MISMATCH ];
-        const bool * HAS_REF_OFFSET = entry -> cell_data [ pileup_event_col_HAS_REF_OFFSET ];
+    const bool * HAS_MISMATCH = entry -> cell_data [ pileup_event_col_HAS_MISMATCH ];
+    const bool * HAS_REF_OFFSET = entry -> cell_data [ pileup_event_col_HAS_REF_OFFSET ];
+    const int32_t * REF_OFFSET = entry -> cell_data [ pileup_event_col_REF_OFFSET ];
 
-        /* recover from previous position */
-        if ( entry -> seen_first )
+    /* we need the entry to be fast-forwarded */
+    int32_t ref_zpos_adj = CSRA1_PileupEventGetPileup ( self ) -> ref_zpos - entry -> zstart;
+    assert ( ref_zpos_adj >= 0 );
+
+    /* always lose any insertion, forget cached values */
+    entry -> ins_cnt = 0;
+    entry -> mismatch = 0;
+
+    /* must advance in all but initial case */
+    assert ( ref_zpos_adj > entry -> zstart_adj || entry -> zstart_adj == 0 );
+
+    /* walk forward */
+    while ( ref_zpos_adj > entry -> zstart_adj )
+    {
+        /* within a deletion */
+        if ( entry -> del_cnt != 0 )
+            -- entry -> del_cnt;
+
+        else
         {
             uint32_t prior_seq_idx = entry -> seq_idx ++;
 
@@ -720,71 +677,58 @@ bool CSRA1_PileupEventEntryAdvance ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entr
             assert ( prior_seq_idx < entry -> cell_len [ pileup_event_col_HAS_MISMATCH ] );
             entry -> mismatch_idx += HAS_MISMATCH [ prior_seq_idx ];
 
-            /* for the case where there are indels */
-            assert ( HAS_REF_OFFSET != NULL );
-            assert ( prior_seq_idx < entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] );
-            entry -> ref_off_idx += HAS_REF_OFFSET [ prior_seq_idx ];
-
-            /* move to the next reference position */
-            ++ entry -> zstart_adj;
-        }
-
-        /* if the current sequence address is beyond end, bail */
-        if ( entry -> seq_idx >= entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
-            return false;
-
-        /* adjust alignment */
-        if ( HAS_REF_OFFSET [ entry -> seq_idx ] )
-        {
-            int32_t indel_cnt;
-
-            const int32_t * REF_OFFSET = entry -> cell_data [ pileup_event_col_REF_OFFSET ];
-            assert ( REF_OFFSET != NULL );
-
-            indel_cnt = REF_OFFSET [ entry -> ref_off_idx ];
-            if ( indel_cnt < 0 )
-            {
-                entry -> ins_cnt += - indel_cnt;
-
-                /* insertion - clip to SEQUENCE length */
-                if ( ( uint32_t ) entry -> ins_cnt > entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
-                    entry -> ins_cnt = ( int32_t ) entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ];
-            }
-
-            else
-            {
-                entry -> del_cnt = indel_cnt;
-
-                /* deletion - clip to PROJECTION length */
-                if ( ( int64_t ) indel_cnt > entry -> xend - ( entry -> zstart + entry -> zstart_adj ) )
-                    entry -> del_cnt = ( int32_t ) ( entry -> xend - ( entry -> zstart + entry -> zstart_adj ) );
-            }
+            /* if the current sequence address is beyond end, bail */
+            if ( entry -> seq_idx >= entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
+                return false;
 
             /* adjust alignment */
-            entry -> zstart_adj += ( int32_t ) entry -> del_cnt - ( int32_t ) entry -> ins_cnt;
+            if ( HAS_REF_OFFSET [ entry -> seq_idx ] )
+            {
+                assert ( REF_OFFSET != NULL );
+                if ( REF_OFFSET [ entry -> ref_off_idx ] < 0 )
+                {
+                    /* insertion */
+                    uint32_t i, ins_cnt = - REF_OFFSET [ entry -> ref_off_idx ];
+
+                    /* clip to SEQUENCE length */
+                    if ( ( uint32_t ) ( entry -> ins_cnt + ins_cnt ) > entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
+                        ins_cnt = ( int32_t ) entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] - entry -> ins_cnt;
+
+                    /* combine adjacent inserts */
+                    entry -> ins_cnt += ins_cnt;
+
+                    /* scan over insertion to adjust mismatch index */
+                    for ( i = 0; i < ins_cnt; ++ i )
+                        entry -> mismatch_idx += HAS_MISMATCH [ entry -> seq_idx + i ];
+
+                    entry -> seq_idx += ins_cnt;
+
+                    /* NB - there may be entries in HAS_REF_OFFSET that are set
+                       within the insertion. These are used to split the insertion
+                       for preserving boundaries indicated by Complete Genomics BAM
+                       cigar encoding. for Pileup, we treat the entire subsequence as a
+                       single insertion.
+
+                       The "true" values in HAS_REF_OFFSET within an insertion do NOT
+                       represent a corresponding entry in REF_OFFSET, so they are ignored here.
+                    */
+                }
+
+                else
+                {
+                    /* deletion */
+                    entry -> del_cnt = REF_OFFSET [ entry -> ref_off_idx ];
+
+                    /* clip to PROJECTION length */
+                    if ( ( int64_t ) entry -> del_cnt > entry -> xend - ( entry -> zstart + entry -> zstart_adj ) )
+                        entry -> del_cnt = ( int32_t ) ( entry -> xend - ( entry -> zstart + entry -> zstart_adj ) );
+                }
+
+                ++ entry -> ref_off_idx;
+            }
         }
-    }
 
-    entry -> seen_first = true;
-    return true;
-}
-
-static
-bool CSRA1_PileupEventEntryFocus ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry * entry )
-{
-    /* we need the entry to be fast-forwarded */
-    int32_t ref_zpos_adj = self -> ref_zpos - entry -> zstart;
-
-    /* always lose any insertion, forget cached values */
-    entry -> ins_cnt = 0;
-    entry -> mismatch = 0;
-
-    /* walk forward */
-    while ( ref_zpos_adj > entry -> zstart_adj )
-    {
-        /* go forward one step */
-        if ( ! CSRA1_PileupEventEntryAdvance ( self, entry ) )
-            return false;
+        ++ entry -> zstart_adj;
     }
 
     return true;
@@ -815,28 +759,22 @@ void CSRA1_PileupEventEntryInit ( CSRA1_PileupEvent * self, ctx_t ctx, CSRA1_Pil
                 /* check for left soft-clip */
                 while ( HAS_REF_OFFSET [ entry -> seq_idx ] && REF_OFFSET [ entry -> ref_off_idx ] < 0 )
                 {
-                    uint32_t i, count = - REF_OFFSET [ entry -> ref_off_idx ++ ];
+                    uint32_t i, end = entry -> seq_idx - REF_OFFSET [ entry -> ref_off_idx ++ ];
 
                     /* safety check */
-                    if ( count > entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
-                        count = entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ];
+                    if ( end > entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
+                        end = entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ];
 
                     /* skip over soft-clip */
-                    for ( i = 0; i < count; ++ i )
+                    for ( i = entry -> seq_idx; i < end; ++ i )
                         entry -> mismatch_idx += HAS_MISMATCH [ i ];
 
-                    entry -> seq_idx = count;
+                    entry -> seq_idx = end;
                 }
 
-                /* detect a deletion */
+                /* capture initial deletion - should never occur */
                 if ( HAS_REF_OFFSET [ entry -> seq_idx ] && REF_OFFSET [ entry -> ref_off_idx ] > 0 )
-                {
                     entry -> del_cnt = REF_OFFSET [ entry -> ref_off_idx ];
-
-                    /* safety check */
-                    if ( ( int64_t ) entry -> del_cnt > entry -> xend - entry -> zstart )
-                        entry -> del_cnt = ( uint32_t ) ( entry -> xend - entry -> zstart );
-                }
 
                 return;
             }
@@ -846,20 +784,11 @@ void CSRA1_PileupEventEntryInit ( CSRA1_PileupEvent * self, ctx_t ctx, CSRA1_Pil
     self -> entry = NULL;
 }
 
-static
 bool CSRA1_PileupEventIteratorNext ( CSRA1_PileupEvent * self, ctx_t ctx )
 {
     CSRA1_Pileup_Entry * entry;
     CSRA1_Pileup * pileup = CSRA1_PileupEventGetPileup ( self );
     assert ( pileup != NULL );
-
-    /* integrity check */
-    if ( self -> ref_zpos != pileup -> ref_zpos )
-    {
-        FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
-        USER_ERROR ( xcIteratorUninitialized, "PileupEvent accessed after advancing PileupIterator" );
-        return false;
-    }
 
     /* go to next entry */
     if ( ! self -> seen_first )
@@ -884,86 +813,19 @@ bool CSRA1_PileupEventIteratorNext ( CSRA1_PileupEvent * self, ctx_t ctx )
     return CSRA1_PileupEventEntryFocus ( self, entry );
 }
 
-static NGS_PileupEvent_vt CSRA1_PileupEvent_vt_inst =
+void CSRA1_PileupEventIteratorReset ( CSRA1_PileupEvent * self, ctx_t ctx )
 {
-    {
-        /* NGS_Refcount */
-        CSRA1_PileupEventWhack
-    },
+    CSRA1_Pileup * pileup = CSRA1_PileupEventGetPileup ( self );
+    self -> entry = ( CSRA1_Pileup_Entry * ) DLListHead ( & pileup -> align . pileup );
+    self -> seen_first = false;
+}
 
-    CSRA1_PileupEventGetReferenceSpec,
-    CSRA1_PileupEventGetReferencePosition,
-    CSRA1_PileupEventGetMappingQuality,
-    CSRA1_PileupEventGetAlignmentId,
-    CSRA1_PileupEventGetAlignment,
-    CSRA1_PileupEventGetAlignmentPosition,
-    CSRA1_PileupEventGetFirstAlignmentPosition,
-    CSRA1_PileupEventGetLastAlignmentPosition,
-    CSRA1_PileupEventGetEventType,
-    CSRA1_PileupEventGetAlignmentBase,
-    CSRA1_PileupEventGetAlignmentQuality,
-    CSRA1_PileupEventGetInsertionBases,
-    CSRA1_PileupEventGetInsertionQualities,
-    CSRA1_PileupEventGetRepeatCount,
-    CSRA1_PileupEventGetIndelType,
-    
-    CSRA1_PileupEventIteratorNext,
-};
-
-static
-void CSRA1_PileupEventInit ( CSRA1_PileupEvent * self, ctx_t ctx, 
-    const char * clsname, const char * instname, CSRA1_Pileup * pileup )
+void CSRA1_PileupEventInit ( ctx_t ctx, CSRA1_PileupEvent * obj, const NGS_Pileup_vt * vt,
+    const char * clsname, const char * instname, NGS_Reference * ref )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     
-    assert ( self != NULL );
+    assert ( obj != NULL );
     
-    TRY ( NGS_PileupEventInit ( ctx, & self -> dad, & CSRA1_PileupEvent_vt_inst, clsname, instname, & pileup -> dad ) )
-    {
-        self -> ref_zpos = pileup -> ref_zpos;
-        self -> entry = ( CSRA1_Pileup_Entry * ) DLListHead ( & pileup -> align . pileup );
-    }
+    NGS_PileupInit ( ctx, & obj -> dad, vt, clsname, instname, ref );
 }
-
-NGS_PileupEvent * CSRA1_PileupEventIteratorMake ( ctx_t ctx, CSRA1_Pileup * pileup )
-{
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
-    
-    CSRA1_PileupEvent * obj = calloc ( 1, sizeof * obj );
-    if ( obj == NULL )
-    {
-        NGS_String* ref_spec = NGS_PileupGetReferenceSpec ( & pileup -> dad, ctx );
-        SYSTEM_ERROR ( xcNoMemory, 
-                       "allocating CSRA1_PileupEventIterator on '%.*s'", 
-                       NGS_StringSize ( ref_spec, ctx ), 
-                       NGS_StringData ( ref_spec, ctx ) );
-        NGS_StringRelease ( ref_spec, ctx );
-    }
-    else
-    {
-#if _DEBUGGING
-        NGS_String * ref_spec = NGS_PileupGetReferenceSpec ( & pileup -> dad, ctx );
-        char instname [ 256 ];
-        string_printf ( instname, 
-                        sizeof instname, 
-                        NULL, 
-                        "%.*s", 
-                        NGS_StringSize ( ref_spec, ctx ), 
-                        NGS_StringData ( ref_spec, ctx ) );
-        instname [ sizeof instname - 1 ] = 0;
-        NGS_StringRelease ( ref_spec, ctx );
-#else
-        const char *instname = "";
-#endif
-        TRY ( CSRA1_PileupEventInit ( obj, ctx, "CSRA1_PileupEvent", instname, pileup ) )
-        {
-            return & obj -> dad;
-        }
-
-        CSRA1_PileupEventWhack ( obj, ctx );
-        free ( obj );
-    }
-
-    return NULL;
-}
-

@@ -65,16 +65,6 @@
 ((*/
 
 /*))
- //  Status we will use in that module
-((*/
-typedef enum {
-    kxfstInvalid = 0,
-    kxfstReady,
-    kxfstGood,
-    kxfstBroken
-} _TarStatus;
-
-/*))
  //  EntryDepot this is responsible for sharing Tar resources
 ((*/
 struct _TarDpt {
@@ -95,7 +85,7 @@ struct XFSTar {
     const char * source;
     const struct KDirectory * dir;
 
-    _TarStatus status;
+    XFSStatus status;
 };
 
 /*)) 
@@ -111,7 +101,7 @@ struct XFSTarEntry {
 
     bool is_folder;
 
-    _TarStatus status;
+    XFSStatus status;
 
     const struct KFile * file;
 };
@@ -413,7 +403,7 @@ _TarOpen ( const struct XFSTar * self )
 
     RCt = KLockAcquire ( Tar -> mutabor );
     if ( RCt == 0 ) { 
-        if ( Tar -> status != kxfstReady ) {
+        if ( Tar -> status != kxfsReady ) {
             RCt = XFS_RC ( rcInvalid );
         }
         else {
@@ -428,11 +418,13 @@ _TarOpen ( const struct XFSTar * self )
                                                         );
                     if ( RCt == 0 ) {
                         Tar -> dir = Dir;
-                        Tar -> status = kxfstGood;
+                        Tar -> status = kxfsGood;
                     }
                     else {
-                        Tar -> status = kxfstBroken;
+                        Tar -> status = kxfsBroken;
                     }
+
+                    KDirectoryRelease ( NativeDir );
                 }
             }
         }
@@ -459,14 +451,14 @@ _TarClose ( const struct XFSTar * self )
 
     RCt = KLockAcquire ( Tar -> mutabor );
     if ( RCt == 0 ) {
-        if ( Tar -> status == kxfstGood
-                || Tar -> status == kxfstReady /* shouldn't happen */
+        if ( Tar -> status == kxfsGood
+                || Tar -> status == kxfsReady /* shouldn't happen */
         ) {
             if ( Tar -> dir != NULL ) {
                 KDirectoryRelease ( Tar -> dir );
 
                 Tar -> dir = NULL;
-                Tar -> status = kxfstReady;
+                Tar -> status = kxfsReady;
             }
         }
         else {
@@ -486,7 +478,7 @@ XFSTarDispose ( const struct XFSTar * self )
     struct XFSTar * Tar = ( struct XFSTar * ) self;
 
     if ( Tar != NULL ) {
-        Tar -> status = kxfstInvalid;
+        Tar -> status = kxfsInvalid;
 
         if ( Tar -> source != NULL ) {
             free ( ( char * ) Tar -> source );
@@ -602,7 +594,7 @@ _TarMake ( const char * Resource, const struct XFSTar ** Tar )
         return XFS_RC ( rcExhausted );
     }
 
-    RetTar -> status = kxfstInvalid;
+    RetTar -> status = kxfsInvalid;
 
     RCt = KLockMake ( & ( RetTar -> mutabor ) );
     if ( RCt == 0 ) {
@@ -616,7 +608,7 @@ _TarMake ( const char * Resource, const struct XFSTar ** Tar )
 
         RCt = XFS_StrDup ( Resource, & ( RetTar -> source ) );
         if ( RCt == 0 ) {
-            RetTar -> status = kxfstReady;
+            RetTar -> status = kxfsReady;
 
             * Tar = RetTar;
         }
@@ -781,7 +773,7 @@ rc_t CC
 _TarEntryDispose ( struct XFSTarEntry * self )
 {
     if ( self != NULL ) {
-        self -> status = kxfstInvalid;
+        self -> status = kxfsInvalid;
 
         if ( XFSTarEntryIsOpen ( self ) ) {
             XFSTarEntryClose ( self );
@@ -853,7 +845,7 @@ _TarCreateEntry (
         return XFS_RC ( rcExhausted );
     }
 
-    RetEntry -> status = kxfstReady;
+    RetEntry -> status = kxfsReady;
 
     RCt = _TarAddRef ( self ); 
     if ( RCt == 0 ) {
@@ -881,12 +873,12 @@ _TarCreateEntry (
                         RetEntry -> is_folder = true;
                         break;
                     default :
-                        RetEntry -> status = kxfstBroken;
+                        RetEntry -> status = kxfsBroken;
                         RCt = XFS_RC ( rcInvalid );
                         break;
                 }
                 if ( RCt == 0 ) {
-                    RetEntry -> status = kxfstGood;
+                    RetEntry -> status = kxfsGood;
 
                     * Entry = RetEntry;
                 }
@@ -1035,7 +1027,7 @@ XFSTarEntryList (
         return XFS_RC ( rcNull );
     }
 
-    if ( ! self -> is_folder || ! self -> status == kxfstGood ) {
+    if ( ! self -> is_folder || ! self -> status == kxfsGood ) {
         return XFS_RC ( rcInvalid );
     }
 
@@ -1069,7 +1061,7 @@ XFSTarEntrySize ( const struct XFSTarEntry * self, uint64_t * Size )
         return XFS_RC ( rcNull );
     }
 
-    if ( self -> status != kxfstGood ) {
+    if ( self -> status != kxfsGood ) {
         return XFS_RC ( rcInvalid );
     }
 
@@ -1104,7 +1096,7 @@ XFSTarEntryTime ( const struct XFSTarEntry * self, KTime_t * Time )
         return XFS_RC ( rcNull );
     }
 
-    if ( self -> status != kxfstGood ) {
+    if ( self -> status != kxfsGood ) {
         return XFS_RC ( rcInvalid );
     }
 
@@ -1130,7 +1122,7 @@ XFSTarEntryGood ( const struct XFSTarEntry * self )
 
     if ( self != NULL ) {
         if ( KLockAcquire ( self -> tar -> mutabor ) == 0 ) {
-            RV = self -> status == kxfstGood;
+            RV = self -> status == kxfsGood;
 
             KLockUnlock ( self -> tar -> mutabor );
         }
@@ -1207,7 +1199,7 @@ XFSTarEntryOpen ( const struct XFSTarEntry * self )
         return XFS_RC ( rcNull );
     }
 
-    if ( Entry -> status != kxfstGood || Entry -> is_folder == true ) {
+    if ( Entry -> status != kxfsGood || Entry -> is_folder == true ) {
         RCt = XFS_RC ( rcInvalid );
     }
 
@@ -1220,7 +1212,7 @@ XFSTarEntryOpen ( const struct XFSTarEntry * self )
                                 Entry -> path
                                 );
         if ( RCt != 0 ) {
-            Entry -> status = kxfstBroken;
+            Entry -> status = kxfsBroken;
         }
 
         KLockUnlock ( Entry -> tar -> mutabor );

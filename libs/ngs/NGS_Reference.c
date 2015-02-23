@@ -33,14 +33,13 @@
 
 #include "NGS_String.h"
 #include "NGS_ReadCollection.h"
+#include "NGS_Pileup.h"
 
 #include <sysalloc.h>
 
 #include <kfc/ctx.h>
 #include <kfc/except.h>
 #include <kfc/xc.h>
-
-#define ALLOW_PILEUPS 0
 
 /*--------------------------------------------------------------------------
  * NGS_Reference_v1
@@ -193,6 +192,63 @@ static bool ITF_Reference_v1_next ( NGS_Reference_v1 * self, NGS_ErrBlock_v1 * e
     return ret;
 }
 
+#if _DEBUGGING
+static
+uint32_t flags_to_filters ( uint32_t flags )
+{
+    static bool tested_bits;
+    if ( ! tested_bits )
+    {
+        assert ( NGS_ReferenceAlignFlags_pass_bad >> 2 == NGS_PileupFilterBits_pass_bad );
+        assert ( NGS_ReferenceAlignFlags_pass_dups >> 2 == NGS_PileupFilterBits_pass_dups );
+        assert ( NGS_ReferenceAlignFlags_min_map_qual >> 2 == NGS_PileupFilterBits_min_map_qual );
+        assert ( NGS_ReferenceAlignFlags_max_map_qual >> 2 == NGS_PileupFilterBits_max_map_qual);
+        tested_bits = true;
+    }
+    return flags >> 2;
+}
+#else
+#define flags_to_filters( flags ) \
+    ( ( flags ) >> 2 )
+#endif
+
+static struct NGS_Pileup_v1 * ITF_Reference_v1_get_filtered_pileups ( const NGS_Reference_v1 * self, NGS_ErrBlock_v1 * err,
+    uint32_t flags, int32_t map_qual )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+
+    bool wants_primary = ( flags & NGS_ReferenceAlignFlags_wants_primary ) != 0;
+    bool wants_secondary = ( flags & NGS_ReferenceAlignFlags_wants_secondary ) != 0;
+    uint32_t filters = flags_to_filters ( flags );
+
+    ON_FAIL ( struct NGS_Pileup * ret = NGS_ReferenceGetFilteredPileups ( Self ( self ), ctx, wants_primary, wants_secondary, filters, map_qual ) )
+    {
+        NGS_ErrBlockThrow ( err, ctx );
+    }
+
+    CLEAR ();
+    return ( struct NGS_Pileup_v1 * ) ret;
+}
+
+static struct NGS_Pileup_v1 * ITF_Reference_v1_get_filtered_pileup_slice ( const NGS_Reference_v1 * self, NGS_ErrBlock_v1 * err,
+    int64_t start, uint64_t length, uint32_t flags, int32_t map_qual )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+
+    bool wants_primary = ( flags & NGS_ReferenceAlignFlags_wants_primary ) != 0;
+    bool wants_secondary = ( flags & NGS_ReferenceAlignFlags_wants_secondary ) != 0;
+    uint32_t filters = flags_to_filters ( flags );
+
+    ON_FAIL ( struct NGS_Pileup * ret = NGS_ReferenceGetFilteredPileupSlice ( Self ( self ), ctx, start, length, wants_primary, wants_secondary, filters, map_qual ) )
+    {
+        NGS_ErrBlockThrow ( err, ctx );
+    }
+
+    CLEAR ();
+    return ( struct NGS_Pileup_v1 * ) ret;
+}
+
+
 #undef Self
 
 
@@ -201,10 +257,11 @@ NGS_Reference_v1_vt ITF_Reference_vt =
     {
         "NGS_Reference",
         "NGS_Reference_v1",
-        0,
+        1,
         & ITF_Refcount_vt . dad
     },
 
+    /* 1.0 */
     ITF_Reference_v1_get_cmn_name,
     ITF_Reference_v1_get_canon_name,
     ITF_Reference_v1_is_circular,
@@ -216,7 +273,11 @@ NGS_Reference_v1_vt ITF_Reference_vt =
     ITF_Reference_v1_get_align_slice,
     ITF_Reference_v1_get_pileups,
     ITF_Reference_v1_get_pileup_slice,
-    ITF_Reference_v1_next
+    ITF_Reference_v1_next,
+
+    /* 1.1 */
+    ITF_Reference_v1_get_filtered_pileups,
+    ITF_Reference_v1_get_filtered_pileup_slice
 };
 
 
@@ -459,12 +520,24 @@ struct NGS_Pileup* NGS_ReferenceGetPileups ( NGS_Reference * self, ctx_t ctx, bo
     }
     else
     {
-#if ALLOW_PILEUPS
-        return VT ( self, get_pileups ) ( self, ctx, wants_primary, wants_secondary );
-#else
+        return VT ( self, get_pileups ) ( self, ctx, wants_primary, wants_secondary, 0, 0 );
+    }
+
+    return NULL;
+}
+
+/* GetFilteredPileups
+ */
+struct NGS_Pileup* NGS_ReferenceGetFilteredPileups ( NGS_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual )
+{
+    if ( self == NULL )
+    {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
-        UNIMPLEMENTED ();
-#endif
+        INTERNAL_ERROR ( xcSelfNull, "failed to get pileups" );
+    }
+    else
+    {
+        return VT ( self, get_pileups ) ( self, ctx, wants_primary, wants_secondary, filters, map_qual );
     }
 
     return NULL;
@@ -486,12 +559,31 @@ struct NGS_Pileup* NGS_ReferenceGetPileupSlice ( NGS_Reference * self,
     }
     else
     {
-#if ALLOW_PILEUPS
-        return VT ( self, get_pileup_slice ) ( self, ctx, offset, size, wants_primary, wants_secondary );
-#else
+        return VT ( self, get_pileup_slice ) ( self, ctx, offset, size, wants_primary, wants_secondary, 0, 0 );
+    }
+
+    return NULL;
+}
+
+/* GetFilteredPileupSlice
+ */
+struct NGS_Pileup* NGS_ReferenceGetFilteredPileupSlice ( NGS_Reference * self, 
+                                                         ctx_t ctx, 
+                                                         uint64_t offset, 
+                                                         uint64_t size,
+                                                         bool wants_primary, 
+                                                         bool wants_secondary,
+                                                         uint32_t filters,
+                                                         int32_t map_qual ) 
+{
+    if ( self == NULL )
+    {
         FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
-        UNIMPLEMENTED ();
-#endif
+        INTERNAL_ERROR ( xcSelfNull, "failed to get pileups" );
+    }
+    else
+    {
+        return VT ( self, get_pileup_slice ) ( self, ctx, offset, size, wants_primary, wants_secondary, filters, map_qual );
     }
 
     return NULL;
@@ -618,14 +710,14 @@ static struct NGS_Alignment* Null_ReferenceGetAlignmentSlice ( NGS_Reference * s
     return NULL;
 }
 
-static struct NGS_Pileup * Null_ReferenceGetPileups ( NGS_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary )
+static struct NGS_Pileup * Null_ReferenceGetPileups ( NGS_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing);
     INTERNAL_ERROR ( xcSelfNull, "NULL Reference accessed" );
     return NULL;
 }
 
-static struct NGS_Pileup * Null_ReferenceGetPileupSlice ( NGS_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary )
+static struct NGS_Pileup * Null_ReferenceGetPileupSlice ( NGS_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing);
     INTERNAL_ERROR ( xcSelfNull, "NULL Reference accessed" );

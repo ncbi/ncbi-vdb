@@ -237,13 +237,6 @@ XFSCacheProvider ( const struct XFSTeleport ** Teleport )
 
 LIB_EXPORT
 rc_t CC
-XFSEncryptedFileProvider ( const struct XFSTeleport ** Teleport )
-{
-    return XFSFooNodeProvider ( Teleport );
-}
-
-LIB_EXPORT
-rc_t CC
 XFSLinkProvider ( const struct XFSTeleport ** Teleport )
 {
     return XFSFooNodeProvider ( Teleport );

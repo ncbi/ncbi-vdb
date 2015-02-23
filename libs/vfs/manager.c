@@ -88,7 +88,6 @@
 
 
 #define DEFAULT_CACHE_BLOCKSIZE ( 32768 * 4 )
-#define DEFAULT_CACHE_CLUSTER 1
 
 #define VFS_KRYPTO_PASSWORD_MAX_SIZE 4096
 
@@ -234,9 +233,8 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self, const KFile **cfp,
         else
         {
             /* we do have a cache_location! wrap the remote file in a cacheteefile */
-            rc2 = KDirectoryMakeCacheTee ( self->cwd, &temp_file, *cfp, NULL,
-                                           DEFAULT_CACHE_BLOCKSIZE, DEFAULT_CACHE_CLUSTER,
-                                           false, "%s", cache_location );
+            rc2 = KDirectoryMakeCacheTee ( self->cwd, &temp_file, *cfp,
+                                           DEFAULT_CACHE_BLOCKSIZE, "%s", cache_location );
         }
         if ( rc2 == 0 )
         {

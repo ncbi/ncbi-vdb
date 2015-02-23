@@ -301,7 +301,7 @@ _Perm_StringParse (
 static
 rc_t CC
 _MakeAuth (
-        enum XFSAType Type,
+        XFSAType Type,
         const char * Name,
         const char * Perm,
         const struct XFSAuth ** Auth
@@ -473,7 +473,7 @@ _Perm_SetDefault (
 
 LIB_EXPORT
 const struct XFSAuth * CC
-XFSPermAuth ( const struct XFSPerm * self, enum XFSAType Type )
+XFSPermAuth ( const struct XFSPerm * self, XFSAType Type )
 {
     if ( self != NULL ) {
         switch ( Type ) {
@@ -543,7 +543,7 @@ XFSPermToString (
 
 LIB_EXPORT
 const char * CC
-XFSPermDefaultName ( enum XFSAType Type )
+XFSPermDefaultName ( XFSAType Type )
 {
     switch ( Type ) {
         case kxfsUser :  return _sUserDefault;
@@ -555,7 +555,7 @@ XFSPermDefaultName ( enum XFSAType Type )
 
 LIB_EXPORT
 rc_t CC
-XFSPermSetDefaultName ( enum XFSAType Type, const char * Name )
+XFSPermSetDefaultName ( XFSAType Type, const char * Name )
 {
     switch ( Type ) {
         case kxfsUser :

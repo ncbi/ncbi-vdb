@@ -33,6 +33,7 @@ TEST_TOOLS = \
 	test-kfs \
     test-ramfile \
     test-resolve \
+    test-cachetee
 
 include $(TOP)/build/Makefile.env
 
@@ -106,4 +107,23 @@ $(TEST_BINDIR)/test-resolve: $(TEST_RESOLVE_OBJ)
 
 valgrind_resolve: std
 	valgrind --ncbi $(TEST_BINDIR)/test-resolve
-    
+
+#-------------------------------------------------------------------------------
+# test-cachetee
+#
+TEST_CACHETEE_SRC = \
+	cacheteetest
+
+TEST_CACHETEE_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_CACHETEE_SRC))
+
+TEST_CACHETEE_LIB = \
+	-lkapp \
+    -sncbi-vdb \
+	-lktst
+
+$(TEST_BINDIR)/test-cachetee: $(TEST_CACHETEE_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_CACHETEE_LIB)
+
+valgrind_cachetee: std
+	valgrind --ncbi $(TEST_BINDIR)/test-cachetee

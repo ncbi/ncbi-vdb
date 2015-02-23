@@ -73,11 +73,6 @@ struct XFSAuth;
 /*))
  //    Currently used types
 (*/
-enum XFSAType {
-    kxfsUser = 0,
-    kxfsGroup,
-    kxfsOther
-};
 
 /*))
  //    Parses permission string and makes XFSPerm 
@@ -99,7 +94,7 @@ XFS_EXTERN rc_t CC XFSPermDispose (
 (*/
 XFS_EXTERN const struct XFSAuth * CC XFSPermAuth (
                             const struct XFSPerm * self,
-                            enum XFSAType Type
+                            XFSAType Type
                             );
 
 
@@ -115,9 +110,9 @@ XFS_EXTERN rc_t CC XFSPermToString (
 /*))
  //    Some defaults Don't yet know for what ... to make configurable ?
 ((*/
-XFS_EXTERN const char * CC XFSPermDefaultName ( enum XFSAType Type );
+XFS_EXTERN const char * CC XFSPermDefaultName ( XFSAType Type );
 XFS_EXTERN rc_t CC XFSPermSetDefaultName (
-                            enum XFSAType Type,
+                            XFSAType Type,
                             const char * Name
                             );
 

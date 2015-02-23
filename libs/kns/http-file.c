@@ -236,8 +236,10 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
                                          response, bPtr, result_size, tm);
                                     if ( rc != 0 )
                                     {
-                                        KClientHttpClose ( http );
+                                        KStreamRelease ( response );
                                         KClientHttpResultRelease ( rslt );
+                                        KClientHttpRequestRelease ( req );
+                                        KClientHttpClose ( http );
                                         return ResetRCContext ( rc, rcNS, rcFile, rcReading );
                                     }
 
@@ -292,6 +294,8 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
     
     if ( rc == 0 )
     {
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead(pos=%lu)\n", pos ) );
+        
         /* loop using existing KClientHttp object */
         while ( rc == 0 ) 
         {
@@ -299,8 +303,22 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
             rc = KHttpFileTimedReadInt ( self, pos, buffer, bsize, num_read, tm, & http_status );
             if ( rc != 0 ) 
             {   
-                /* if rc indicates a dropped connection, try again */
-                break;
+                rc_t rc2=KClientHttpReopen ( self -> http );
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead: KHttpFileTimedReadInt failed, reopening\n" ) );
+                if ( rc2 == 0 )
+                {
+                    rc2 = KHttpFileTimedReadInt ( self, pos, buffer, bsize, num_read, tm, & http_status );
+                    if ( rc2 == 0 ) 
+                    {
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead: reopened successfully\n" ) );
+                        rc= 0;
+                    }
+                    else 
+                    {
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead: reopen failed\n" ) );
+                        break;
+                    }
+                }
             }
             if ( ! KHttpRetrierWait ( & retrier, http_status ) )
             {
@@ -322,7 +340,9 @@ static
 rc_t CC KHttpFileRead ( const KHttpFile *self, uint64_t pos,
      void *buffer, size_t bsize, size_t *num_read )
 {
-    return KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, NULL );
+    struct timeout_t tm;
+    TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+    return KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
 }
 
 static

@@ -118,7 +118,7 @@ static rc_t BufferedFileRead(BufferedFile *const self)
     uint64_t const fpos = self->fpos + self->bmax;
     rc_t const rc = KFileRead(self->kf, fpos, self->buf, self->size, &self->bmax);
     if (rc) {
-        DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("Error reading BAM file: %R\n", rc));
+        DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("Error %R read %u bytes from SAM/BAM file at position %lu\n", rc, self->bmax, fpos));
         return rc;
     }
     DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("Read %u bytes from SAM/BAM file at position %lu\n", self->bmax, fpos));
@@ -130,13 +130,14 @@ static rc_t BufferedFileRead(BufferedFile *const self)
 static rc_t BufferedFileInit(BufferedFile *const self, KFile const *const kf)
 {
     rc_t const rc = KFileSize(kf, &self->fmax);
-    if (rc) {
+    if (rc || self->fmax == 0) {
         self->fmax = 0;
         self->size = PIPE_BUFFER_SIZE;
     }
     else
         self->size = self->fmax < RGLR_BUFFER_SIZE ? self->fmax : RGLR_BUFFER_SIZE;
 
+    DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("File size is %lu; Read buffer is %lu\n", self->fmax, self->size));
     self->buf = malloc(self->size);
     self->fpos = 0;
     self->bpos = 0;
@@ -194,6 +195,8 @@ static int SAMFileRead1(SAMFile *const self)
     if (self->putback < 0) {
         if (self->file.bpos == self->file.bmax) {
             rc_t const rc = BufferedFileRead(&self->file);
+            
+            self->last = rc;
             if (rc || self->file.bmax == 0) return -1;
         }
         return ((char const *)self->file.buf)[self->file.bpos++];
@@ -218,44 +221,23 @@ static void SAMFilePutBack(SAMFile *const self, int ch)
         self->putback = ch;
 }
 
-static rc_t SAMFileRead(SAMFile *const self, zlib_block_t dst, unsigned *pNumRead)
-{
-    unsigned n;
-    
-    for (n = 0; n < ZLIB_BLOCK_SIZE; ) {
-        int const ch = SAMFileRead1(self);
-        if (ch < 0)
-            return SAMFileLastError(self);
-
-        if (ch == '\n') {
-            *pNumRead = n;
-            return 0;
-        }
-        dst[n++] = ch;
-    }
-    *pNumRead = ZLIB_BLOCK_SIZE;
-    return RC(rcAlign, rcFile, rcReading, rcData, rcInsufficient);
-}
-
 static
-rc_t SAMFileInit(SAMFile *self, KFile const *kfp, RawFile_vt *vt)
+rc_t SAMFileInit(SAMFile *self, RawFile_vt *vt)
 {
     static RawFile_vt const my_vt = {
-        (rc_t (*)(void *, zlib_block_t, unsigned *))SAMFileRead,
+        (rc_t (*)(void *, zlib_block_t, unsigned *))NULL,
         (uint64_t (*)(void const *))BufferedFileGetPos,
         (float (*)(void const *))BufferedFileProPos,
         (uint64_t (*)(void const *))BufferedFileGetSize,
         (rc_t (*)(void *, uint64_t))BufferedFileSetPos,
-        (void (*)(void *))BufferedFileWhack
+        (void (*)(void *))NULL
     };
     
-    memset(self, 0, sizeof(*self));
-    memset(vt, 0, sizeof(*vt));
-    
     self->putback = -1;
+    self->last = 0;
     *vt = my_vt;
     
-    return BufferedFileInit(&self->file, kfp);
+    return 0;
 }
 
 /* MARK: BGZFile *** Start *** */
@@ -385,7 +367,7 @@ rc_t BGZFileRead(BGZFile *self, zlib_block_t dst, unsigned *pNumRead)
             assert(zr == Z_OK);
             return rc;
         default:
-            DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("Unexpected Zlib result %i\n", zr));
+            DBGMSG(DBG_ALIGN, DBG_FLAG(DBG_ALIGN_BGZF), ("Unexpected Zlib result %i: %s\n", zr, self->zs.msg ? self->zs.msg : "unknown"));
             return RC(rcAlign, rcFile, rcReading, rcFile, rcCorrupt);
         }
     }
@@ -552,13 +534,11 @@ static rc_t BGZFileWalkBlocks(BGZFile *self, bool decompress, zlib_block_t *bufp
 static void BGZFileWhack(BGZFile *self)
 {
     inflateEnd(&self->zs);
-    BufferedFileWhack(&self->file);
 }
 
-static rc_t BGZFileInit(BGZFile *self, const KFile *kfp, RawFile_vt *vt)
+static rc_t BGZFileInit(BGZFile *const self, RawFile_vt *const vt)
 {
     int i;
-    rc_t rc;
     static RawFile_vt const my_vt = {
         (rc_t (*)(void *, zlib_block_t, unsigned *))BGZFileRead,
         (uint64_t (*)(void const *))BufferedFileGetPos,
@@ -568,8 +548,7 @@ static rc_t BGZFileInit(BGZFile *self, const KFile *kfp, RawFile_vt *vt)
         (void (*)(void *))BGZFileWhack
     };
     
-    memset(self, 0, sizeof(*self));
-    memset(vt, 0, sizeof(*vt));
+    *vt = my_vt;
 
     i = inflateInit2(&self->zs, MAX_WBITS + 16); /* max + enable gzip headers */
     switch (i) {
@@ -580,12 +559,6 @@ static rc_t BGZFileInit(BGZFile *self, const KFile *kfp, RawFile_vt *vt)
     default:
         return RC(rcAlign, rcFile, rcConstructing, rcNoObj, rcUnexpected);
     }
-    
-    rc = BufferedFileInit(&self->file, kfp);
-    if (rc)
-        return rc;
-
-    *vt = my_vt;
     
     return 0;
 }
@@ -1720,7 +1693,7 @@ static rc_t ProcessSAMHeader(BAMFile *self, char const substitute[])
 
 static rc_t BAMIndexWhack(const BAMIndex *);
 
-static rc_t BAMFileWhack(BAMFile *self) {
+static void BAMFileWhack(BAMFile *self) {
     if (self->refSeq)
         free(self->refSeq);
     if (self->readGroup)
@@ -1737,8 +1710,7 @@ static rc_t BAMFileWhack(BAMFile *self) {
         free(self->nocopy);
     if (self->vt.FileWhack)
         self->vt.FileWhack(&self->file);
-
-    return 0;
+    BufferedFileWhack(&self->file.bam.file);
 }
 
 /* MARK: BAM File constructors */
@@ -1754,9 +1726,14 @@ static rc_t BAMFileMakeWithKFileAndHeader(BAMFile const **cself,
     if (self == NULL)
         return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
     
+    rc = BufferedFileInit(&self->file.bam.file, file);
+    if (rc) {
+        free(self);
+        return rc;
+    }
+    
     KRefcountInit(&self->refcount, 1, "BAMFile", "new", "");
-    rc = BGZFileInit(&self->file.bam, file, &self->vt);
-
+    rc = BGZFileInit(&self->file.bam, &self->vt);
     if (rc == 0) {
         rc = ProcessBAMHeader(self, headerText);
         if (rc == 0) {
@@ -1764,14 +1741,11 @@ static rc_t BAMFileMakeWithKFileAndHeader(BAMFile const **cself,
             return 0;
         }
     }
-    BAMFileRelease(self);
+    BGZFileWhack(&self->file.bam);
 
-    self = calloc(1, sizeof(*self));
-    if (self == NULL)
-        return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
-    
-    KRefcountInit(&self->refcount, 1, "BAMFile", "new", "");
-    rc = SAMFileInit(&self->file.sam, file, &self->vt);
+    self->file.sam.file.bpos = 0;
+    KRefcountInit(&self->refcount, 1, "SAMFile", "new", "");
+    rc = SAMFileInit(&self->file.sam, &self->vt);
     if (rc == 0) {
         self->isSAM = true;
         rc = ProcessSAMHeader(self, headerText);
@@ -1780,7 +1754,8 @@ static rc_t BAMFileMakeWithKFileAndHeader(BAMFile const **cself,
             return 0;
         }
     }
-    BAMFileRelease(self);
+    BufferedFileWhack(&self->file.sam.file);
+    free(self);
 
     return rc;
 }
@@ -1892,16 +1867,15 @@ LIB_EXPORT rc_t CC BAMFileAddRef(const BAMFile *cself) {
 }
 
 LIB_EXPORT rc_t CC BAMFileRelease(const BAMFile *cself) {
-    rc_t rc = 0;
     BAMFile *self = (BAMFile *)cself;
     
     if (cself != NULL) {
         if (KRefcountDrop(&self->refcount, "BAMFile") == krefWhack) {
-            rc = BAMFileWhack(self);
+            BAMFileWhack(self);
             free(self);
         }
     }
-    return rc;
+    return 0;
 }
 
 /* MARK: BAM File positioning */
@@ -2550,7 +2524,7 @@ static rc_t SAM2BAM_ConvertCIGAR(unsigned const insize, void /* inout */ *const 
             return k == 0 ? 0 : RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
         }
     }
-    memcpy(data, dst, 4 * j);
+    memmove(data, dst, 4 * j);
     return 0;
 }
 
@@ -2756,7 +2730,7 @@ static rc_t BAMFileReadSAM(BAMFile *const self, BAMAlignment const **const rslt)
         int const ch = SAMFileRead1(&self->file.sam);
         if (ch < 0) {
             rc_t const rc = SAMFileLastError(&self->file.sam);
-            return (i == 0 && field == 1 && GetRCState(rc) == rcInsufficient) ? RC(rcAlign, rcFile, rcReading, rcRow, rcNotFound) : rc;
+            return (i == 0 && field == 1 && (rc == 0 || GetRCState(rc) == rcInsufficient)) ? RC(rcAlign, rcFile, rcReading, rcRow, rcNotFound) : rc;
         }
         if ((void const *)&scratch[i] >= endp)
             return RC(rcAlign, rcFile, rcReading, rcBuffer, rcInsufficient);
@@ -2767,6 +2741,7 @@ static rc_t BAMFileReadSAM(BAMFile *const self, BAMAlignment const **const rslt)
             continue;
         }
         scratch[i] = '\0';
+
         switch (field) {
             case 0:
                 if (ch == '\n')
@@ -3301,8 +3276,7 @@ unsigned ReferenceLengthFromCIGAR(const BAMAlignment *self)
     return y;
 }
 
-static
-unsigned SequenceLengthFromCIGAR(const BAMAlignment *self)
+static unsigned SequenceLengthFromCIGAR(const BAMAlignment *self)
 {
     unsigned i;
     unsigned n = getCigarCount(self);
@@ -3419,28 +3393,40 @@ LIB_EXPORT rc_t CC BAMAlignmentGetReadLength(const BAMAlignment *cself, uint32_t
     return 0;
 }
 
+static int get1Base(BAMAlignment const *const self, unsigned const i)
+{
+/*
+ *   =    A    C    M    G    R    S    V    T    W    Y    H    K    D    B    N
+ * 0000 0001 0010 0011 0100 0101 0110 0111 1000 1001 1010 1011 1100 1101 1110 1111
+ * 1111 1000 0100 1100 0010 1010 0110 1110 0001 1001 0101 1101 0011 1011 0111 0000
+ *   N    T    G    K    C    Y    S    B    A    W    R    D    M    H    V    =
+ */
+    static const char  tr[16] = "=ACMGRSVTWYHKDBN";
+/*  static const char ctr[16] = "=TGKCYSBAWRDMHVN"; */
+    uint8_t const *const seq = &self->data->raw[self->seq];
+    unsigned const b4na2 = seq[i >> 1];
+    unsigned const b4na = (i & 1) == 0 ? (b4na2 >> 4) : (b4na2 & 0x0F);
+    
+    return tr[b4na];
+}
+
+static int get1Qual(BAMAlignment const *const self, unsigned const i)
+{
+    uint8_t const *const src = &self->data->raw[self->qual];
+    
+    return src[i];
+}
+
 LIB_EXPORT rc_t CC BAMAlignmentGetSequence2(const BAMAlignment *cself, char *rhs, uint32_t start, uint32_t stop)
 {
-    /*
-     *   =    A    C    M    G    R    S    V    T    W    Y    H    K    D    B    N
-     * 0000 0001 0010 0011 0100 0101 0110 0111 1000 1001 1010 1011 1100 1101 1110 1111
-     * 1111 1000 0100 1100 0010 1010 0110 1110 0001 1001 0101 1101 0011 1011 0111 0000
-     *   N    T    G    K    C    Y    S    B    A    W    R    D    M    H    V    =
-     */
-    static const char  tr[16] = "=ACMGRSVTWYHKDBN";
- /* static const char ctr[16] = "=TGKCYSBAWRDMHVN"; */
     unsigned const n = getReadLen(cself);
-    const uint8_t * const seq = &cself->data->raw[cself->seq];
     unsigned si, di;
     
     if (stop == 0 || stop > n)
         stop = n;
     
     for (di = 0, si = start; si != stop; ++si, ++di) {
-        unsigned const b4na2 = seq[si >> 1];
-        unsigned const b4na = (si & 1) == 0 ? (b4na2 >> 4) : (b4na2 & 0x0F);
-        
-        rhs[di] = tr[b4na];
+        rhs[di] = get1Base(cself, si);
     }
     return 0;
 }
@@ -4006,33 +3992,103 @@ LIB_EXPORT bool CC BAMAlignmentHasCGData(BAMAlignment const *self)
     return get_CG_GC_info(self) && get_CG_GS_info(self) && get_CG_GQ_info(self);
 }
 
-static bool BAMAlignmentParseCGTag(BAMAlignment const *self, size_t const max_cg_segs, unsigned cg_segs[/* max_cg_segs */])
+LIB_EXPORT rc_t CC BAMAlignmentCGReadLength(BAMAlignment const *self, uint32_t *readlen)
 {
-    /*** patern in cg_segs should be nSnGnSnG - no more then 7 segments **/
     struct offset_size_s const *const GCi = get_CG_GC_info(self);
-    char const *cg  = (char const *)&self->data->raw[GCi->offset + 3];
-    char const *const end = cg + GCi->size - 4;
-    unsigned iseg = 0;
-    char last_op = 'S';
+    struct offset_size_s const *const GSi = get_CG_GS_info(self);
+    struct offset_size_s const *const GQi = get_CG_GQ_info(self);
+    
+    if (GCi && GSi && GQi) {
+        char const *GS = (char const *)&self->data->raw[GSi->offset + 3];
+        char const *GQ = (char const *)&self->data->raw[GQi->offset + 3];
+        char const *GC = (char const *)&self->data->raw[GCi->offset + 3];
+        unsigned oplen = 0;
+        unsigned i;
+        unsigned di = 0;
+        unsigned si = 0;
+        
+        for (i = 0; ; ++i) {
+            int const ch = GC[i];
+            
+            if (ch == '\0')
+                break;
+            if (isdigit(ch)) {
+                oplen = oplen * 10 + (ch - '0');
+            }
+            else if (ch != 'S' && ch != 'G')
+                return RC(rcAlign, rcRow, rcReading, rcData, rcUnexpected);
+            else {
+                unsigned const jmax = (ch == 'G') ? (oplen * 2) : oplen;
+                unsigned j;
+                
+                if (ch == 'S') {
+                    ;
+                }
+                else {
+                    for (j = 0; j < jmax; ++j) {
+                        int const base = *GS++;
+                        int const qual = *GQ++;
+                        
+                        switch (base) {
+                            case 'A':
+                            case 'C':
+                            case 'M':
+                            case 'G':
+                            case 'R':
+                            case 'S':
+                            case 'V':
+                            case 'T':
+                            case 'W':
+                            case 'Y':
+                            case 'H':
+                            case 'K':
+                            case 'D':
+                            case 'B':
+                            case 'N':
+                                break;
+                            default:
+                                return RC(rcAlign, rcRow, rcReading, rcData, rcInvalid);
+                        }
+                        if (qual < 33)
+                            return RC(rcAlign, rcRow, rcReading, rcData, rcInvalid);
+                    }
+                }
+                si += oplen;
+                di += jmax;
+                oplen = 0;
+            }
+        }
+        if (*GS != '\0' || *GQ != '\0' || si != getReadLen(self))
+            return RC(rcAlign, rcRow, rcReading, rcData, rcInvalid);
+        
+        *readlen = di;
+        return 0;
+    }
+    return RC(rcAlign, rcRow, rcReading, rcData, rcNotFound);
+}
+
+static unsigned BAMAlignmentParseCGTag(BAMAlignment const *self, size_t const max_cg_segs, unsigned cg_segs[/* max_cg_segs */])
+{
+    struct offset_size_s const *const GCi = get_CG_GC_info(self);
+    char const *cur = (char const *)&self->data->raw[GCi->offset + 3];
+    unsigned i = 0;
+    int last_op = 0;
 
     memset(cg_segs, 0, max_cg_segs * sizeof(cg_segs[0]));
     
-    while (cg < end && iseg < max_cg_segs) {
+    while (*cur != '\0' && i < max_cg_segs) {
         char *endp;
-        long const op_len = strtol(cg, &endp, 10);
-        char const op = *(cg = endp);
+        unsigned const op_len = (unsigned)strtol(cur, &endp, 10);
+        int const op = *endp;
         
-        ++cg;
-        if (op==last_op) {
-            cg_segs[iseg] += op_len;
-        }
-        else {
-            last_op = op;
-            ++iseg;
-            cg_segs[iseg] = (unsigned)op_len;
-        }
+        cur = endp + 1;
+        if (op == last_op)
+            cg_segs[i - 1] += op_len;
+        else
+            cg_segs[i++] = op_len;
+        last_op = op;
     }
-    return true;
+    return i;
 }
 
 static
@@ -4121,61 +4177,46 @@ rc_t CC BAMAlignmentGetCGSeqQual(BAMAlignment const *self,
     struct offset_size_s const *const GQi = get_CG_GQ_info(self);
     
     if (GCi && GSi && GQi) {
-        char const *const vGS = (char const *)&self->data->raw[GSi->offset + 3];
-        char const *const GQ  = (char const *)&self->data->raw[GQi->offset + 3];
-        unsigned const GSsize = GSi->size - 4;
-        unsigned const sn = getReadLen(self);
-        unsigned cg_segs[2*CG_NUM_SEGS-1]; /** 4 segments + 3gaps **/
-        unsigned i,G,S;
+        char const *GS = (char const *)&self->data->raw[GSi->offset + 3];
+        char const *GQ = (char const *)&self->data->raw[GQi->offset + 3];
+        char const *GC = (char const *)&self->data->raw[GCi->offset + 3];
+        unsigned oplen = 0;
+        unsigned di = 0;
+        unsigned si = 0;
         
-        if (GSi->size != GQi->size)
-            return RC(rcAlign, rcRow, rcReading, rcData, rcInvalid);
-        
-        if (SequenceLengthFromCIGAR(self) != sn)
-            return RC(rcAlign, rcRow, rcReading, rcData, rcInvalid);
+        for ( ; ; ) {
+            int const ch = *GC++;
 
-        if (!BAMAlignmentParseCGTag(self, 2*CG_NUM_SEGS-1, cg_segs))
-            return RC(rcAlign, rcRow, rcReading, rcData, rcInvalid);
-        
-        for (S = cg_segs[0], G = 0, i = 1; i < CG_NUM_SEGS; ++i) { /** sum all S and G **/
-            S += cg_segs[2*i];
-            G += cg_segs[2*i-1];
-        }
-        if (G + G != GSsize || S + G > sn || sn + G != 35) {
-            /*fprintf(stderr, "GSsize: %u; sn: %u; S: %u; G: %u\n", GSsize, sn, S, G);*/
-            return RC(rcAlign, rcRow, rcReading, rcData, rcInvalid);
-        }
-        if (G > 0) {
-            unsigned nsi = cg_segs[0];   /** new index into sequence */
-            unsigned osi = nsi + G;      /** old index into sequence */
-            unsigned k;                  /** index into inserted sequence **/
-            
-            /***make room for inserts **/
-            memmove(sequence + osi, sequence + nsi, sn - nsi);
-            memmove(quality  + osi, quality  + nsi, sn - nsi);
-            
-            for (i = 1, k = 0; i < CG_NUM_SEGS && nsi < osi; ++i) {/*** when osi and nsi meet we are done ***/
-                unsigned j;
+            if (ch == '\0')
+                break;
+            if (isdigit(ch)) {
+                oplen = oplen * 10 + (ch - '0');
+                continue;
+            }
+            if (ch == 'S') {
+                unsigned i;
                 
-                for (j = cg_segs[2*i-1]; j > 0; --j) { /** insert mode **/
-                    sequence[nsi] = vGS[k];
-                    quality [nsi] = GQ[k] - 33;
-                    ++nsi; ++k;
-                    sequence[nsi] = vGS[k];
-                    quality [nsi] = GQ[k] - 33;
-                    ++nsi;
-                    ++osi;
-                    ++k;
-                }
-                if (nsi < osi){
-                    for (j = cg_segs[2*i]; j > 0; --j) { /** copy mode **/
-                        sequence[nsi] = sequence[osi];
-                        quality[nsi]  = quality[osi];
-                        ++nsi;
-                        ++osi;
-                    }
+                for (i = 0; i < oplen; ++i, ++di, ++si) {
+                    unsigned const base = get1Base(self, si);
+                    unsigned const qual = get1Qual(self, si);
+                    
+                    sequence[di] = base;
+                    quality [di] = qual;
                 }
             }
+            else {
+                unsigned i;
+                
+                for (i = 0; i < oplen * 2; ++i, ++di) {
+                    unsigned const base = *GS++;
+                    unsigned const qual = *GQ++ - 33;
+                    
+                    sequence[di] = base;
+                    quality [di] = qual;
+                }
+                si += oplen;
+            }
+            oplen = 0;
         }
         return 0;
     }
@@ -4194,11 +4235,10 @@ static unsigned splice(uint32_t cigar[], unsigned n, unsigned at, unsigned out, 
 
 #define OPCODE_2_FIX (0xF)
 
-static unsigned insert_B(unsigned S, unsigned G, unsigned const n, uint32_t cigar[/* n */])
+static unsigned insert_B(unsigned const T, unsigned const G, unsigned const n, uint32_t cigar[/* n */])
 {
     unsigned i;
     unsigned pos;
-    unsigned const T = S + G;
     
     for (pos = i = 0; i < n; ++i) {
         int const opcode = cigar[i] & 0xF;
@@ -4216,24 +4256,16 @@ static unsigned insert_B(unsigned S, unsigned G, unsigned const n, uint32_t ciga
                 if (pos <= T && T <= nxt) {
                     unsigned const l = T - pos;
                     unsigned const r = len - l;
-                    unsigned B = i + 2;
-                    unsigned in = 4;
-                    uint32_t Ops[4];
-                    uint32_t *ops = Ops;
+                    uint32_t op[4];
                     
-                    Ops[0] = (l << 4) | opcode;
-                    Ops[1] = (G << 4) | 9; /* B */
-                    Ops[2] = (G << 4) | 0; /* M this is not backwards */
-                    Ops[3] = (r << 4) | opcode;
+                    op[0] = (l << 4) | opcode;
+                    op[1] = (G << 4) | 9; /* B */
+                    op[2] = (G << 4) | 0; /* M this is not backwards */
+                    op[3] = (r << 4) | opcode;
                     
-                    if (r == 0)
-                        --in;
-                    if (l == 0) {
-                        ++ops;
-                        --in;
-                        --B;
-                    }
-                    return splice(cigar, n, i, 1, in, ops);
+                    return splice(cigar, n, i, 1,
+                                   4 - (l == 0 ? 1 : 0) - (r == 0 ? 1 : 0),
+                                  op + (l == 0 ? 1 : 0));
                 }
                 pos = nxt;
             }}
@@ -4245,81 +4277,17 @@ static unsigned insert_B(unsigned S, unsigned G, unsigned const n, uint32_t ciga
     return n;
 }
 
-#if 0
-static unsigned fix_I(uint32_t cigar[], unsigned n)
-{
-    unsigned i;
-    /* int last_b = 0; */
-    
-    for (i = 0; i < n; ++i) {
-        unsigned const opcode = cigar[i] & 0xF;
-        
-        if (opcode == 0xF) {
-            unsigned const oplen = cigar[i] >> 4;
-            uint32_t ops[2];
-            
-            if (0/*last_b*/) {
-                ops[0] = (oplen << 4) | 0; /* M */
-                ops[1] = (oplen << 4) | 9; /* B */
-            }
-            else {
-                ops[0] = (oplen << 4) | 9; /* B */
-                ops[1] = (oplen << 4) | 0; /* M */
-            }
-            
-            n = splice(cigar, n, i, 1, 2, ops);
-            ++i;
-        }
-/*      else if (opcode == 9)
-            last_b = 1;
-        else
-            last_b = 0; */
-    }
-    return n;
-}
-
-static unsigned fix_IN(uint32_t cigar[], unsigned n)
-{
-    unsigned i;
-    
-    for (i = 1; i < n; ++i) {
-        unsigned const opL = cigar[i-1] & 0xF;
-        unsigned const opI = cigar[ i ] & 0xF;
-        
-        if (opL == 1 && opI == 3) {
-            unsigned const oplen = cigar[i-1] >> 4;
-            uint32_t ops[2];
-            
-            ops[0] = (oplen << 4) | 9; /* B */
-            ops[1] = (oplen << 4) | 0; /* M */
-            
-            n = splice(cigar, n, i-1, 1, 2, ops);
-            ++i;
-        }
-        else if (opL == 3 && opI == 1) {
-            unsigned const oplen = cigar[i] >> 4;
-            uint32_t ops[2];
-            
-            ops[0] = (oplen << 4) | 9; /* M */
-            ops[1] = (oplen << 4) | 0; /* B */
-            
-            n = splice(cigar, n, i, 1, 2, ops);
-            ++i;
-        }
-    }
-    return n;
-}
-#endif
-
 static unsigned canonicalize(uint32_t cigar[], unsigned n)
 {
     unsigned i;
     
+    /* remove zero-length and P operations */
     for (i = n; i > 0; ) {
         --i;
         if (cigar[i] >> 4 == 0 || (cigar[i] & 0xF) == 6)
             n = splice(cigar, n, i, 1, 0, NULL);
     }
+    /* merge adjacent operations of the same type */
     for (i = 1; i < n; ) {
         unsigned const opL = cigar[i-1] & 0xF;
         unsigned const opI = cigar[ i ] & 0xF;
@@ -4333,50 +4301,37 @@ static unsigned canonicalize(uint32_t cigar[], unsigned n)
         else
             ++i;
     }
-#if 0
-    if ((cigar[0] & 0xF) == 1)
-        cigar[0] = (cigar[0] & ~(uint32_t)0xF) | 4; /* I -> S */
-    if ((cigar[n - 1] & 0xF) == 1)
-        cigar[n - 1] = (cigar[n - 1] & ~(uint32_t)0xF) | 4; /* I -> S */
-#endif
     return n;
 }
-
-/* static void reverse(uint32_t cigar[], unsigned n)
-{
-    unsigned i;
-    unsigned j;
-    
-    for (j = n - 1, i = 0; i < j; ++i, --j) {
-        uint32_t const tmp = cigar[i];
-        cigar[i] = cigar[j];
-        cigar[j] = tmp;
-    }
-} */
 
 static unsigned GetCGCigar(BAMAlignment const *self, unsigned const N, uint32_t cigar[/* N */])
 {
     unsigned i;
-    unsigned G;
     unsigned S;
     unsigned n = getCigarCount(self);
-    unsigned cg_segs[2*CG_NUM_SEGS-1]; /** 4 segments + 3 gaps **/
+    unsigned seg[64];
+    unsigned const segs = BAMAlignmentParseCGTag(self, sizeof(seg)/sizeof(seg[0]), seg);
+    unsigned const gaps = (segs - 1) >> 1;
     
-    if (!BAMAlignmentParseCGTag(self, 2*CG_NUM_SEGS-1, cg_segs))
-        return RC(rcAlign, rcRow, rcReading, rcData, rcInvalid);
+    if (2 * gaps + 1 != segs)
+        return RC(rcAlign, rcRow, rcReading, rcData, rcUnexpected);
     
-    if (N < n + 5)
+    if (N < n + 2 * gaps)
         return RC(rcAlign, rcRow, rcReading, rcBuffer, rcInsufficient);
     
     memcpy(cigar, getCigarBase(self), n * 4);
-    n = canonicalize(cigar, n); /* just in case */
-    for (i = 0, S = 0; i < CG_NUM_SEGS - 1; ++i) {
-        S += cg_segs[2*i];
-        G  = cg_segs[2*i+1];
-        if (G > 0) {
-            n = insert_B(S, G, n, cigar);
-            S += G;
-        }
+
+    if (n > 1)
+        n = canonicalize(cigar, n); /* just in case */
+    
+    for (i = 0, S = 0; i < gaps; ++i) {
+        unsigned const s = seg[2 * i + 0];
+        unsigned const g = seg[2 * i + 1];
+
+        S += s + g;
+        if (g > 0)
+            n = insert_B(S, g, n, cigar);
+        S += g;
     }
     return n;
 }
@@ -5059,15 +5014,19 @@ static rc_t ReadVPath(void **data, size_t *dsize, struct VPath const *path)
 
 static rc_t VPath2BGZF(BGZFile *bgzf, struct VPath const *path)
 {
+#if 0
     const KFile *fp;
     RawFile_vt dummy;
     rc_t rc = OpenVPathRead(&fp, path);
-    
+
     if (rc == 0) {
         rc = BGZFileInit(bgzf, fp, &dummy);
         KFileRelease(fp);
     }
     return rc;
+#else
+    return -1;
+#endif
 }
 
 struct index_data {

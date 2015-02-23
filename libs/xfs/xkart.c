@@ -457,6 +457,7 @@ XFSKartReload ( struct XFSKart * self )
     RCt = KDirectoryNativeDir ( & Directory );
     if ( RCt == 0 ) {
         RCt = KartMake ( Directory, self -> path, & TheKart, & IsKart );
+printf ( " __MOOO [%d][%p]\n", __LINE__, TheKart );
         if ( RCt == 0 ) {
             if ( ! IsKart ) {
                 RCt = XFS_RC ( rcInvalid );
@@ -482,7 +483,10 @@ XFSKartReload ( struct XFSKart * self )
                 }
             }
 
-            KartRelease ( TheKart );
+            if ( TheKart != NULL ) {
+printf ( " __DOOO [%d][%p]\n", __LINE__, TheKart );
+                KartRelease ( TheKart );
+            }
         }
 
         KDirectoryRelease ( Directory );

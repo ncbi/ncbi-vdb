@@ -87,12 +87,6 @@
 /*))
  //  Status we will use in that module
 ((*/
-typedef enum {
-    kxfshInvalid = 0,
-    kxfshReady,
-    kxfshComplete,
-    kxfshBroken
-} _HttpStatus;
 
 /*)) Forward
  ((*/
@@ -136,7 +130,7 @@ struct XFSHttpEntry {
     uint64_t size;              /* is ZERO if a folder */
     KTime_t time;
 
-    _HttpStatus status;
+    XFSStatus status;
 };
 
 struct XFSHttpReader {
@@ -1266,7 +1260,7 @@ _HttpCreateEntry (
         return XFS_RC ( rcExhausted );
     }
 
-    RetEntry -> status = kxfshInvalid;
+    RetEntry -> status = kxfsInvalid;
 
     RCt = VNamelistMake ( & ( RetEntry -> list ), 128 );
     if ( RCt == 0 ) { 
@@ -1289,7 +1283,7 @@ _HttpCreateEntry (
                                             string_size ( RetEntry -> url )
                                             );
                     /* Last thing to do, it is Ready, not Complete !!! */
-                RetEntry -> status = kxfshReady;
+                RetEntry -> status = kxfsReady;
 
                 * Entry = RetEntry;
             }
@@ -1634,7 +1628,7 @@ _HttpOrCreateEntry (
 
                 if ( RCt == 0 ) {
                         /* Checking and loading parent entry */
-                    if ( Parent -> status == kxfshReady ) {
+                    if ( Parent -> status == kxfsReady ) {
                         RCt = _HttpLoadDirEntry ( Parent );
                     }
 
@@ -1704,7 +1698,7 @@ _HttpEntryDispose ( struct XFSHttpEntry * self )
 {
     if ( self != NULL ) {
 printf ( " [_HttpEntryDispose] %p [%s]\n", ( void * ) self, self -> name );
-        self -> status = kxfshInvalid;
+        self -> status = kxfsInvalid;
 
         KRefcountWhack (
                     & ( self -> refcount ),
@@ -1843,15 +1837,15 @@ _HttpCheckLoadList ( const struct XFSHttpEntry * self )
     }
 
     if ( self -> is_folder ) {
-        if ( self -> status == kxfshReady ) {
+        if ( self -> status == kxfsReady ) {
             RCt = _HttpLoadDirEntry ( self );
 
-            Entry -> status = ( RCt == 0 ? kxfshComplete : kxfshBroken );
+            Entry -> status = ( RCt == 0 ? kxfsComplete : kxfsBroken );
         }
     }
 
-    if ( self -> status != kxfshComplete
-        && self -> status != kxfshReady ) {
+    if ( self -> status != kxfsComplete
+        && self -> status != kxfsReady ) {
         RCt = XFS_RC ( rcInvalid );
     }
 
@@ -1930,8 +1924,8 @@ bool CC
 XFSHttpEntryGood ( const struct XFSHttpEntry * self )
 {
     if ( self != NULL ) {
-        return self -> status == kxfshReady
-                    || self -> status == kxfshComplete;
+        return self -> status == kxfsReady
+                    || self -> status == kxfsComplete;
     }
     return false;
 }   /* XFSHttpEntryGood () */
@@ -2221,18 +2215,18 @@ _CheckResoveOpen (
         return XFS_RC ( rcNull );
     }
 
-    if ( self -> status == kxfshInvalid
-        || self -> status == kxfshBroken ) {
+    if ( self -> status == kxfsInvalid
+        || self -> status == kxfsBroken ) {
         return XFS_RC ( rcInvalid );
     }
 
 
     RCt = _HttpEDGetFileForEntry ( self, & TheFile );
     if ( RCt != 0 ) {
-        ( ( struct XFSHttpEntry * ) self ) -> status = kxfshBroken;
+        ( ( struct XFSHttpEntry * ) self ) -> status = kxfsBroken;
     }
     else {
-        if ( self -> status == kxfshReady ) {
+        if ( self -> status == kxfsReady ) {
             if ( ! self -> is_folder ) {
                     /* Here we are reading real file size */
                 RCt = KFileSize ( TheFile, & Size );
@@ -2245,7 +2239,7 @@ _CheckResoveOpen (
             }
         }
 
-        ( ( struct XFSHttpEntry * ) self ) -> status = kxfshComplete;
+        ( ( struct XFSHttpEntry * ) self ) -> status = kxfsComplete;
         * File = TheFile;
     }
 
@@ -3034,11 +3028,11 @@ _HttpLoadDirEntry ( const struct XFSHttpEntry * self )
                 RCt = 0;
 
                 ( ( struct XFSHttpEntry * ) self ) -> status
-                                                        = kxfshBroken;
+                                                        = kxfsBroken;
             }
             else {
                 ( ( struct XFSHttpEntry * ) self ) -> status
-                                                        = kxfshComplete;
+                                                        = kxfsComplete;
             }
 
             free ( Buffer );

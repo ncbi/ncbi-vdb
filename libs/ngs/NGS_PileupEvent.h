@@ -46,7 +46,7 @@ extern "C" {
  */
 struct NGS_String;
 struct NGS_Alignment;
-struct NGS_Pileup;
+struct NGS_Reference;
 struct NGS_PileupEvent_v1_vt;
 extern struct NGS_PileupEvent_v1_vt ITF_PileupEvent_vt;
 
@@ -72,15 +72,9 @@ extern struct NGS_PileupEvent_v1_vt ITF_PileupEvent_vt;
 #define NGS_PileupEventDuplicate( self, ctx ) \
     ( ( NGS_PileupEvent* ) NGS_RefcountDuplicate ( NGS_PileupEventToRefcount ( self ), ctx ) ) 
  
-struct NGS_String * NGS_PileupEventGetReferenceSpec( const NGS_PileupEvent * self, ctx_t ctx );
-
-int64_t NGS_PileupEventGetReferencePosition( const NGS_PileupEvent * self, ctx_t ctx );
-
 int NGS_PileupEventGetMappingQuality( const NGS_PileupEvent * self, ctx_t ctx );
 
 struct NGS_String * NGS_PileupEventGetAlignmentId( const NGS_PileupEvent * self, ctx_t ctx );
-
-struct NGS_Alignment * NGS_PileupEventGetAlignment( const NGS_PileupEvent * self, ctx_t ctx );
 
 int64_t NGS_PileupEventGetAlignmentPosition( const NGS_PileupEvent * self, ctx_t ctx );
 
@@ -132,6 +126,10 @@ int NGS_PileupEventGetIndelType( const NGS_PileupEvent * self, ctx_t ctx );
  */
 bool NGS_PileupEventIteratorNext ( NGS_PileupEvent * self, ctx_t ctx );
 
+/* Reset
+ */
+void NGS_PileupEventIteratorReset ( NGS_PileupEvent * self, ctx_t ctx );
+
 
 /*--------------------------------------------------------------------------
  * implementation details
@@ -139,7 +137,7 @@ bool NGS_PileupEventIteratorNext ( NGS_PileupEvent * self, ctx_t ctx );
 struct NGS_PileupEvent
 {
     NGS_Refcount dad;
-    struct NGS_Pileup * pileup;
+    struct NGS_Reference * ref;
 };
 
 typedef struct NGS_PileupEvent_vt NGS_PileupEvent_vt;
@@ -147,11 +145,8 @@ struct NGS_PileupEvent_vt
 {
     NGS_Refcount_vt dad;
     
-    struct NGS_String *     ( * get_reference_spec )            ( const NGS_PILEUPEVENT * self, ctx_t ctx );
-    int64_t                 ( * get_reference_position )        ( const NGS_PILEUPEVENT * self, ctx_t ctx );
     int                     ( * get_mapping_quality )           ( const NGS_PILEUPEVENT * self, ctx_t ctx );
     struct NGS_String *     ( * get_alignment_id )              ( const NGS_PILEUPEVENT * self, ctx_t ctx );
-    struct NGS_Alignment *  ( * get_alignment )                 ( const NGS_PILEUPEVENT * self, ctx_t ctx );
     int64_t                 ( * get_alignment_position )        ( const NGS_PILEUPEVENT * self, ctx_t ctx );
     int64_t                 ( * get_first_alignment_position )  ( const NGS_PILEUPEVENT * self, ctx_t ctx );
     int64_t                 ( * get_last_alignment_position )   ( const NGS_PILEUPEVENT * self, ctx_t ctx );
@@ -163,21 +158,20 @@ struct NGS_PileupEvent_vt
     unsigned int            ( * get_repeat_count )              ( const NGS_PILEUPEVENT * self, ctx_t ctx );
     int                     ( * get_indel_type )                ( const NGS_PILEUPEVENT * self, ctx_t ctx );
     bool                    ( * next )                          ( NGS_PILEUPEVENT * self, ctx_t ctx );    
+    void                    ( * reset )                         ( NGS_PILEUPEVENT * self, ctx_t ctx );    
 };
+
 
 /* Init
 */
-void NGS_PileupEventInit ( ctx_t ctx, 
-                           struct NGS_PileupEvent * self, 
-                           NGS_PileupEvent_vt * vt, 
-                           const char *clsname, 
-                           const char *instname, 
-                           const struct NGS_Pileup * pileup );
+void NGS_PileupEventInit ( ctx_t ctx, struct NGS_PileupEvent * obj, 
+    struct NGS_VTable const * ivt, const NGS_PileupEvent_vt * vt, 
+    const char *clsname, const char *instname, struct NGS_Reference * ref );
 
 /* Whack
 */
-void NGS_PileupEventWhack( struct NGS_PileupEvent * self, ctx_t ctx );
-                           
+void NGS_PileupEventWhack ( struct NGS_PileupEvent * self, ctx_t ctx );
+
 #ifdef __cplusplus
 }
 #endif

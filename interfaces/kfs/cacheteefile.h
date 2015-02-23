@@ -101,11 +101,11 @@ struct KDirectory;
  *
  */
 KFS_EXTERN rc_t CC KDirectoryMakeCacheTee ( struct KDirectory *self,
-    struct KFile const **tee, struct KFile const *remote, struct KFile *logger,
-    uint32_t blocksize, uint32_t cluster, bool report, const char *path, ... );
+    struct KFile const **tee, struct KFile const *remote,
+    uint32_t blocksize, const char *path, ... );
 KFS_EXTERN rc_t CC KDirectoryVMakeCacheTee ( struct KDirectory *self,
-    struct KFile const **tee, struct KFile const *remote, struct KFile *logger,
-    uint32_t blocksize, uint32_t cluster, bool report, const char *path, va_list args );
+    struct KFile const **tee, struct KFile const *remote,
+    uint32_t blocksize, const char *path, va_list args );
 
 /* -----
  * checks if a given file ( has to be a local file )
@@ -115,7 +115,7 @@ KFS_EXTERN rc_t CC KDirectoryVMakeCacheTee ( struct KDirectory *self,
  *
  * it returns the result of the check in *is_complete
  */
-KFS_EXTERN rc_t CC IsCacheFileComplete( const struct KFile * self, bool * is_complete, bool silent);
+KFS_EXTERN rc_t CC IsCacheFileComplete( const struct KFile * self, bool * is_complete );
 
 
 /* -----
@@ -137,7 +137,7 @@ KFS_EXTERN rc_t CC GetCacheCompleteness( const struct KFile * self, float * perc
  * examens the file, and reports the size of the original file ( without the cachefile-footer )
  *
  */
-KFS_EXTERN rc_t CC GetCacheTruncatedSize( const struct KFile * self, uint64_t * truncated_size, bool silent );
+KFS_EXTERN rc_t CC GetCacheTruncatedSize( const struct KFile * self, uint64_t * truncated_size );
 
 /* -----
  * examens the file, and reports how many blocks have data in them, and how many of these are zero'd out

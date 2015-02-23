@@ -30,6 +30,8 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 
+static __thread bool have_tid, on_main_thread;
+
 static
 pid_t gettid ( void )
 {
@@ -41,5 +43,10 @@ pid_t gettid ( void )
  */
 LIB_EXPORT bool CC KProcMgrOnMainThread ( void )
 {
-    return gettid () == getpid ();
+    if ( ! have_tid )
+    {
+        on_main_thread = gettid () == getpid ();
+        have_tid = true;
+    }
+    return on_main_thread;
 }

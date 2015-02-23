@@ -76,13 +76,6 @@ XFS_EXTERN const struct XFSNode * CC XFSEditorNode (
 /*))   Editors, which are Dir, File and Attr
  ((*/
 
-typedef enum {
-    kxfsNone  = 00,
-    kxfsRead  = 01,
-    kxfsWrite = 02,
-    kxfsReadWrite = kxfsRead | kxfsWrite
-} XFSNMode;
-
 /*))   Forwards
  ((*/
 struct XFSFileEditor;
@@ -226,13 +219,6 @@ XFS_EXTERN rc_t CC XFSFileEditorWrite (
  (((    Attribute editor, and relative methods
   )))
  (((*/
-typedef enum {
-    kxfsNotFound = 0,
-    kxfsBadPath,
-    kxfsFile,
-    kxfsDir,
-    kxfsLink
-} XFSNType;
 
 struct XFSAttrEditor {
     struct XFSEditor Papahen;

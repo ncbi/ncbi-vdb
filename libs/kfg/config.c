@@ -48,7 +48,6 @@ struct KfgConfigNamelist;
 #include <kfs/file.h>
 #include <kfs/dyload.h>
 #include <kfs/mmap.h>
-#include <os-native.h>
 #include <vfs/path.h>
 #include <strtol.h>
 #include <sysalloc.h>
@@ -77,6 +76,32 @@ struct KfgConfigNamelist;
 
 static bool s_disable_user_settings = false;
 
+
+/*----------------------------------------------------------------------------*/
+static const char default_kfg[] = {
+"/config/default = \"true\"\n"
+"/repository/user/main/public/apps/file/volumes/flat = \"files\"\n"
+"/repository/user/main/public/apps/nakmer/volumes/nakmerFlat = \"nannot\"\n"
+"/repository/user/main/public/apps/nannot/volumes/nannotFlat = \"nannot\"\n"
+"/repository/user/main/public/apps/refseq/volumes/refseq = \"refseq\"\n"
+"/repository/user/main/public/apps/sra/volumes/sraFlat = \"sra\"\n"
+"/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"
+"/repository/user/main/public/cache-enabled = \"true\"\n"
+"/repository/user/main/public/root = \"$(HOME)/ncbi/public\"\n"
+"/repository/remote/main/CGI/resolver-cgi = "
+                      "\"http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
+"/repository/remote/aux/NCBI/apps/nakmer/volumes/fuseNAKMER = \"sadb\"\n"
+"/repository/remote/aux/NCBI/apps/nannot/volumes/fuseNANNOT = \"sadb\"\n"
+"/repository/remote/aux/NCBI/apps/refseq/volumes/refseq = \"refseq\"\n"
+"/repository/remote/aux/NCBI/apps/sra/volumes/fuse1000 = "
+                      "\"sra-instant/reads/ByRun/sra\"\n"
+"/repository/remote/aux/NCBI/apps/wgs/volumes/fuseWGS = \"wgs\"\n"
+"/repository/remote/aux/NCBI/root = \"http://ftp-trace.ncbi.nlm.nih.gov/sra\"\n"
+"/repository/remote/protected/CGI/resolver-cgi = "
+                      "\"http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
+"/tools/ascp/max_rate = \"800m\"\n"
+};
+/*----------------------------------------------------------------------------*/
 
 /*--------------------------------------------------------------------------
  * KConfig
@@ -299,6 +324,7 @@ struct KConfig
     bool initialized;
 };
 
+static KConfig *G_kfg = NULL;
 
 rc_t KConfigAppendToLoadPath(KConfig *self, const char* chunk)
 {
@@ -430,6 +456,9 @@ rc_t KConfigWhack ( KConfig *self )
 {
     bool release_cached_dir = true;
     find_home_directory(NULL, NULL, release_cached_dir);
+
+    if ( self == G_kfg )
+        G_kfg = NULL;
 
     KConfigEmpty (self);
 
@@ -1368,12 +1397,111 @@ void CC report_error(KFGScanBlock* sb, const char* msg)
     PLOGERR(klogInt, (klogInt, rc, \
         "$(name): $(msg)", "name=%s,msg=%s", name, msg)))
 
-static rc_t printIndent(int indent) {
+typedef struct PrintBuff PrintBuff;
+struct PrintBuff
+{
+    KFile *f;
+    /* total bytes flushed to the file*/
+    size_t flushed;
+    /* total bytes in buffer */
+    size_t buffered;
+    
+    rc_t rc;
+    
+    /* buffer */
+    char buffer [ 32 * 1024 ];
+    
+};
+
+/* Init
+ *  initialize your structure    
+ */
+static
+void PrintBuffInit ( PrintBuff *pb, KFile *f )
+{
+    assert ( pb != NULL );
+    pb -> f = f;
+    pb -> flushed = 0;
+    pb -> buffered = 0;
+    pb -> rc = 0;
+}
+
+/* Flush
+ * Write buffer out to file
+ */
+static rc_t PrintBuffFlush ( PrintBuff *self )
+{
+    rc_t rc = 0;
+
+    assert ( self != NULL );
+    if ( self -> buffered != 0 )
+    {
+        size_t num_writ;
+        rc = KFileWriteAll ( self -> f, self -> flushed,
+            self -> buffer, self -> buffered, & num_writ );
+        
+        if ( rc == 0 )
+        {
+            if ( num_writ != self -> buffered )
+                rc = RC ( rcKFG, rcBuffer, rcFlushing,
+                    rcTransfer, rcIncomplete );
+            else
+            {
+                self -> flushed += num_writ;
+                self -> buffered = 0;
+            }
+        }
+    }
+
+    return self -> rc = rc;
+}
+
+/* Print
+ *  printf style writing to the buffer
+ */
+static
+rc_t PrintBuffPrint ( PrintBuff *self, const char *fmt, ... )
+{
+    rc_t rc;
+    size_t num_writ;
+    va_list args1, args2;
+
+    assert ( self != NULL );
+    assert ( fmt != NULL );
+    assert ( fmt [ 0 ] != 0 );
+
+    va_start ( args1, fmt );
+    va_copy ( args2, args1 );
+
+    rc = string_vprintf ( & self -> buffer [ self -> buffered ], 
+            sizeof self -> buffer - self -> buffered, & num_writ, fmt, args1 );
+    if ( rc == 0 )
+        self -> buffered += num_writ;
+    else if ( GetRCObject ( rc ) == (enum RCObject)rcBuffer
+        && GetRCState ( rc ) == rcInsufficient )
+    {
+        rc = PrintBuffFlush ( self );
+        if ( rc == 0 )
+        {
+            rc = string_vprintf ( & self -> buffer [ self -> buffered ],
+             sizeof self -> buffer - self -> buffered, & num_writ, fmt, args2 );
+            if ( rc == 0 )
+                self -> buffered += num_writ;
+        }
+    }
+
+    va_end ( args2 );
+    va_end ( args1 );
+
+    return self -> rc = rc;
+}
+
+static rc_t printIndent(int indent, PrintBuff *pb) {
     rc_t rc = 0;
 
     int i = 0;
     for (i = 0; i < indent * 2; ++i) {
-        rc_t rc2 = OUTMSG((" "));
+        rc_t rc2 = PrintBuffPrint(pb, " "); /* = OUTMSG((" ")); */
         if (rc == 0 && rc2 != 0) {
             rc = rc2;
         }
@@ -1398,11 +1526,52 @@ static rc_t KConfigNodeReadData(const KConfigNode* self,
     return rc;
 }
 
-static rc_t _printNodeData(const char *name, const char *data, uint32_t dlen) {
+char ToHex(uint32_t i)
+{
+    if (i <= 9)
+        return '0' + i;
+    return 'A' + (i - 10);
+}
+
+static
+rc_t CC PrintBuffPrintQuoted ( PrintBuff *self, const String* data )
+{
+    rc_t rc = PrintBuffPrint(self, "\"");
+    const char* str = (const char*)(data->addr);
+    uint32_t i;
+    for ( i = 0; i < StringLength(data); ++i )
+    {
+        if (rc != 0)
+            break;
+        if (str[i] < ' ')
+        {
+            rc = PrintBuffPrint(self, "\\x%c%c",
+                ToHex(str[i]/16), ToHex(str[i]%16) );
+        }
+        else
+        {
+            switch (str[i])
+            {
+            case '"':
+                rc = PrintBuffPrint(self, "\\\"");
+                break;
+            default:
+                rc = PrintBuffPrint(self, "%c", str[i]);
+            }
+        }
+    }
+    if (rc == 0)
+        rc = PrintBuffPrint(self, "\"");
+    return rc;
+}
+
+static rc_t _printNodeData(const char *name, const char *data, uint32_t dlen,
+    bool native, const char *fullpath, bool hide, PrintBuff *pb)
+{
     const char ticket[] = "download-ticket";
     size_t l = sizeof ticket - 1;
-    if (string_cmp(name, string_measure(name, NULL),
-        ticket, l, (uint32_t)l) == 0)
+    if (hide && !native && string_cmp(name,
+        string_measure(name, NULL), ticket, l, (uint32_t)l) == 0)
     {
         const char *ellipsis = "";
         const char replace[] =
@@ -1411,16 +1580,34 @@ static rc_t _printNodeData(const char *name, const char *data, uint32_t dlen) {
             dlen = 70;
             ellipsis = "...";
         }
-        return OUTMSG(("%.*s%s", dlen, replace, ellipsis));
+        return PrintBuffPrint(pb, "%.*s%s", dlen, replace, ellipsis);
+/*      return OUTMSG(("%.*s%s", dlen, replace, ellipsis)); */
+    }
+    else if (!native) {
+        String s;
+        StringInit(&s, data, dlen, dlen);
+        return PrintBuffPrintQuoted(pb, &s);
+/*      return OUTMSG(("%.*s", dlen, data)); */
     }
     else {
-        return OUTMSG(("%.*s", dlen, data));
+        rc_t rc = PrintBuffPrint(pb, "%s = ", fullpath);
+        if (rc == 0) {
+            String s;
+            StringInit(&s, data, dlen, dlen);
+            rc = PrintBuffPrintQuoted(pb, &s);
+        }
+        if (rc == 0) {
+            rc = PrintBuffPrint(pb, "\n");
+        }
+        return rc;
+/*      return PrintBuffPrint(pb, "%s = \"%.*s\"", fullpath, dlen, data);
+        return OUTMSG(("%s = \"%.*s\"", fullpath, dlen, data)); */
     }
 }
 
-static
-rc_t KConfigNodePrint(const KConfigNode* self,
-    int indent, const char* root, bool debug)
+static rc_t KConfigNodePrint(const KConfigNode* self,
+     int indent, const char* root, bool debug,
+     bool native, const char* aFullpath, PrintBuff *pb)
 {
     rc_t rc = 0;
     KNamelist* names = NULL;
@@ -1430,14 +1617,19 @@ rc_t KConfigNodePrint(const KConfigNode* self,
     size_t num_data = 0;
     assert(self);
 
-    printIndent(indent);
-    OUTMSG(("<%s>", root));
+    if (!native) {
+        rc = printIndent(indent, pb);
+        if (rc == 0) {
+            rc = PrintBuffPrint(pb, "<%s>", root); /* OUTMSG(("<%s>", root)); */
+        }
+    }
 
     if (rc == 0) {
         rc_t rc = KConfigNodeReadData(self, data, sizeof data, &num_data);
         DISP_RC2(rc, "KConfigNodeReadData()", root);
         if (rc == 0 && num_data > 0) {
-            _printNodeData(root, data, num_data);
+            _printNodeData(root, data, num_data,
+                native, aFullpath, !native, pb);
         }
         if (debug && self->came_from) {
             OUTMSG(("<came_from is_magic_file=\"%s\"/>",
@@ -1455,10 +1647,11 @@ rc_t KConfigNodePrint(const KConfigNode* self,
     }
 
     if (rc == 0) {
-        if (count > 0) {
-            OUTMSG(("\n"));
+        if (count > 0 && !native) {
+            rc = PrintBuffPrint(pb, "\n"); /* OUTMSG(("\n")); */
         }
         for (i = 0; i < count; ++i) {
+            char *fullpath = NULL;
             const char* name = NULL;
             const KConfigNode* node = NULL;
             if (rc == 0) {
@@ -1470,16 +1663,34 @@ rc_t KConfigNodePrint(const KConfigNode* self,
                 DISP_RC2(rc, "KConfigNodeOpenNodeRead()", name);
             }
             if (rc == 0) {
-                KConfigNodePrint(node, indent + 1, name, debug);
+                size_t bsize = strlen(aFullpath) + 1 + strlen(name) + 1;
+                fullpath = malloc(bsize + 1);
+                if (fullpath == NULL) {
+                    rc = RC(rcKFG, rcStorage, rcAllocating,
+                        rcMemory, rcExhausted);
+                }
+                else {
+                    string_printf(fullpath, bsize, NULL,
+                        "%s/%s", aFullpath, name);
+                }
+            }
+            if (rc == 0) {
+                KConfigNodePrint(node, indent + 1,
+                    name, debug, native, fullpath, pb);
             }
             KConfigNodeRelease(node);
+            free(fullpath);
         }
     }
 
-    if (count > 0) {
-        printIndent(indent);
+    if (count > 0 && !native) {
+        printIndent(indent, pb);
     }
-    OUTMSG(("</%s>\n", root));
+
+    if (rc == 0 && !native) {
+        rc = PrintBuffPrint(pb, "</%s>\n", root);
+/*      OUTMSG(("</%s>\n", root)); */
+    }
 
     KNamelistRelease(names);
 
@@ -1487,7 +1698,7 @@ rc_t KConfigNodePrint(const KConfigNode* self,
 }
 
 static rc_t CC KConfigPrintImpl(const KConfig* self, int indent,
-    const char *root, bool debug)
+    const char *root, bool debug, bool native, PrintBuff *pb)
 {
     rc_t rc = 0;
 
@@ -1507,7 +1718,7 @@ static rc_t CC KConfigPrintImpl(const KConfig* self, int indent,
             DISP_RC2(rc, "KConfigOpenNodeRead()", "/");
         }
         if (rc == 0) {
-            KConfigNodePrint(node, indent, root, debug);
+            KConfigNodePrint(node, indent, root, debug, native, "", pb);
         }
         KConfigNodeRelease(node);
     }
@@ -1515,8 +1726,24 @@ static rc_t CC KConfigPrintImpl(const KConfig* self, int indent,
     return rc;
 }
 
+#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
+    if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
+
 LIB_EXPORT rc_t CC KConfigPrintDebug(const KConfig* self, const char *path) {
-    return KConfigPrintImpl(self, 0, path, true);
+    KFile *f = NULL;
+    rc_t rc = KFileMakeStdOut(&f);
+    PrintBuff pb;
+    if (rc == 0) {
+        PrintBuffInit(&pb, f);
+    }
+    if (rc == 0) {
+        rc = KConfigPrintImpl(self, 0, path, true, false, &pb);
+    }
+    if (rc == 0) {
+        rc = PrintBuffFlush(&pb);
+    }
+    RELEASE(KFile, f);
+    return rc;
 }
 
 /*
@@ -1643,141 +1870,6 @@ LIB_EXPORT rc_t CC KConfigLoadFile ( KConfig * self, const char * path, const KF
         self -> initialized = entry_initialized;
     }
 
-    return rc;
-}
-
-
-typedef struct PrintBuff PrintBuff;
-struct PrintBuff
-{
-    KFile *f;
-    /* total bytes flushed to the file*/
-    size_t flushed;
-    /* total bytes in buffer */
-    size_t buffered;
-    
-    rc_t rc;
-    
-    /* buffer */
-    char buffer [ 32 * 1024 ];
-    
-};
-
-/* Init
- *  initialize your structure    
- */
-static
-void PrintBuffInit ( PrintBuff *pb, KFile *f )
-{
-    assert ( pb != NULL );
-    pb -> f = f;
-    pb -> flushed = 0;
-    pb -> buffered = 0;
-    pb -> rc = 0;
-}
-
-/* Flush
- * Write buffer out to file
- */
-static rc_t PrintBuffFlush ( PrintBuff *self )
-{
-    rc_t rc = 0;
-
-    assert ( self != NULL );
-    if ( self -> buffered != 0 )
-    {
-        size_t num_writ;
-        rc = KFileWriteAll ( self -> f, self -> flushed, self -> buffer, self -> buffered, & num_writ );
-        
-        if ( rc == 0 )
-        {
-            if ( num_writ != self -> buffered )
-                rc = RC ( rcKFG, rcBuffer, rcFlushing, rcTransfer, rcIncomplete );
-            else
-            {
-                self -> flushed += num_writ;
-                self -> buffered = 0;
-            }
-        }
-    }
-    return self -> rc = rc;
-}
-
-/* Print
- *  printf style writing to the buffer
- */
-static
-rc_t PrintBuffPrint ( PrintBuff *self, const char *fmt, ... )
-{
-    rc_t rc;
-    size_t num_writ;
-    va_list args1, args2;
-
-    assert ( self != NULL );
-    assert ( fmt != NULL );
-    assert ( fmt [ 0 ] != 0 );
-
-    va_start ( args1, fmt );
-    va_copy ( args2, args1 );
-
-    rc = string_vprintf ( & self -> buffer [ self -> buffered ], 
-                          sizeof self -> buffer - self -> buffered, & num_writ, fmt, args1 );
-    if ( rc == 0 )
-        self -> buffered += num_writ;
-    else if ( GetRCObject ( rc ) == (enum RCObject)rcBuffer && GetRCState ( rc ) == rcInsufficient )
-    {
-        rc = PrintBuffFlush ( self );
-        if ( rc == 0 )
-        {
-            rc = string_vprintf ( & self -> buffer [ self -> buffered ],
-                                  sizeof self -> buffer - self -> buffered, & num_writ, fmt, args2 );
-            if ( rc == 0 )
-                self -> buffered += num_writ;
-        }
-    }
-
-    va_end ( args2 );
-    va_end ( args1 );
-
-    return self -> rc = rc;
-    
-}
-
-char ToHex(uint32_t i)
-{
-    if (i <= 9)
-        return '0' + i;
-    return 'A' + (i - 10);
-}
-
-static
-rc_t CC PrintBuffPrintQuoted ( PrintBuff *self, const String* data )
-{
-    rc_t rc = PrintBuffPrint(self, "\"");
-    const char* str = (const char*)(data->addr);
-    uint32_t i;
-    for ( i = 0; i < StringLength(data); ++i )
-    {
-        if (rc != 0)
-            break;
-        if (str[i] < ' ')
-        {
-            rc = PrintBuffPrint(self, "\\x%c%c", ToHex(str[i]/16), ToHex(str[i]%16) );
-        }
-        else
-        {
-            switch (str[i])
-            {
-            case '"':
-                rc = PrintBuffPrint(self, "\\\"");
-                break;
-            default:
-                rc = PrintBuffPrint(self, "%c", str[i]);
-            }
-        }
-    }
-    if (rc == 0)
-        rc = PrintBuffPrint(self, "\"");
     return rc;
 }
 
@@ -2201,6 +2293,12 @@ rc_t load_from_fs_location ( KConfig *self )
     return rc;
 }
 
+static rc_t load_from_default_string(KConfig *self) {
+    DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG), ("KFG: loading from default string\n"));
+    return
+        parse_file(self, "enbedded default configuration string", default_kfg);
+}
+
 LIB_EXPORT rc_t CC KConfigGetLoadPath ( const KConfig *self,
     const char **path )
 {
@@ -2307,7 +2405,10 @@ void load_config_files ( KConfig *self, const KDirectory *dir )
     /* check for config as the result of a user install
        i.e. not an admin installation */
     if ( ! loaded )
-        load_from_fs_location ( self );
+        loaded = load_from_fs_location ( self );
+
+    if ( ! loaded )
+        loaded = load_from_default_string ( self );
 
     if ( ! s_disable_user_settings )
         loaded |= load_from_home ( self, wd );
@@ -2501,8 +2602,8 @@ extern rc_t ReportKfg ( const ReportFuncs *f, uint32_t indent );
 
 /* "cfg" [ OUT ] - return parameter for mgr
    if ("local" == true) do not initialize G_kfg */
-static
-rc_t KConfigMakeImpl ( KConfig **cfg, const KDirectory * cfgdir, bool local )
+static rc_t KConfigMakeImpl(KConfig **cfg,
+    const KDirectory *cfgdir, bool local)
 {
     rc_t rc;
     const char *appname = NULL;
@@ -2518,7 +2619,20 @@ rc_t KConfigMakeImpl ( KConfig **cfg, const KDirectory * cfgdir, bool local )
         rc = RC ( rcKFG, rcMgr, rcCreating, rcParam, rcNull );
     else
     {
-        KConfig *mgr = calloc ( 1, sizeof * mgr );
+        KConfig *mgr = G_kfg;
+        if (local) {
+            mgr = NULL;
+        }
+        if ( mgr != NULL )      /* if already made, just attach */
+        {
+            KConfigAddRef ( mgr );
+            * cfg = mgr;
+            return 0;
+        }
+
+        /* TODO consider possible concurrency problems
+        use atomic_test_and_set_ptr from atomic.h */
+        mgr = calloc ( 1, sizeof * mgr );
         if ( mgr == NULL )
             rc = RC ( rcKFG, rcMgr, rcCreating, rcMemory, rcExhausted );
         else
@@ -2528,6 +2642,9 @@ rc_t KConfigMakeImpl ( KConfig **cfg, const KDirectory * cfgdir, bool local )
             mgr -> initialized = true;
             if ( rc == 0 )
             {
+                if (!local) {
+                    G_kfg = mgr;
+                }
                 * cfg = mgr;
                 return 0;
             }
@@ -2542,16 +2659,22 @@ rc_t KConfigMakeImpl ( KConfig **cfg, const KDirectory * cfgdir, bool local )
 }
 
 /* call KConfigMake; do not initialize G_kfg */
-LIB_EXPORT rc_t CC KConfigMakeLocal ( KConfig **cfg, const KDirectory * cfgdir )
-{   return KConfigMakeImpl(cfg, cfgdir, true); }
+LIB_EXPORT
+rc_t CC KConfigMakeLocal(KConfig **cfg, const KDirectory *cfgdir)
+{
+    return KConfigMake(cfg, cfgdir);
+/*  return KConfigMakeImpl(cfg, cfgdir, true); */
+}
 
 /* Make
  *  create a process-global configuration manager
  *
  *  "cfg" [ OUT ] - return parameter for mgr
  */
-LIB_EXPORT rc_t CC KConfigMake ( KConfig **cfg, const KDirectory * cfgdir )
-{   return KConfigMakeImpl(cfg, cfgdir, false); }
+LIB_EXPORT rc_t CC KConfigMake(KConfig **cfg, const KDirectory *cfgdir)
+{
+    return KConfigMakeImpl(cfg, cfgdir, false);
+}
 
 /*--------------------------------------------------------------------------
  * KNamelist
@@ -3082,7 +3205,33 @@ LIB_EXPORT rc_t CC KConfigReadString ( const KConfig* self, const char* path, st
 #define DISP_RC(rc, msg) (void)((rc == 0) ? 0 : LOGERR(klogInt, rc, msg))
 
 LIB_EXPORT rc_t CC KConfigPrint(const KConfig* self, int indent) {
-    return KConfigPrintImpl(self, indent, NULL, false);
+    KFile *f = NULL;
+    rc_t rc = KFileMakeStdOut(&f);
+    PrintBuff pb;
+    if (rc == 0) {
+        PrintBuffInit(&pb, f);
+    }
+    if (rc == 0) {
+        rc = KConfigPrintImpl(self, indent, NULL, false, false, &pb);
+    }
+    if (rc == 0) {
+        rc = PrintBuffFlush(&pb);
+    }
+    RELEASE(KFile, f);
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KConfigToFile(const KConfig* self, KFile *file) {
+    rc_t rc = 0;
+    PrintBuff pb;
+    PrintBuffInit(&pb, file);
+    if (rc == 0) {
+        rc = KConfigPrintImpl(self, 0, NULL, false, true, &pb);
+    }
+    if (rc == 0) {
+        rc = PrintBuffFlush(&pb);
+    }
+    return rc;
 }
 
 LIB_EXPORT void CC KConfigDisableUserSettings ( void )

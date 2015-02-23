@@ -225,6 +225,27 @@ FIXTURE_TEST_CASE(Mgr_GetProtectedRepository, RepositoryFixture)
 
 //TODO: KRepositoryMgrCurrentProtectedRepository
 
+// remote repository access
+FIXTURE_TEST_CASE(Mgr_RemoteOnSingle, RepositoryFixture)
+{
+    UpdateNode ( "/repository/remote/main/repo4/", "" );
+    REQUIRE ( KRepositoryMgrHasRemoteAccess ( mgr ) );
+}
+FIXTURE_TEST_CASE(Mgr_RemoteOnMultiple, RepositoryFixture)
+{
+    UpdateNode ( "/repository/remote/main/repo4/", "" );
+    UpdateNode ( "/repository/remote/aux/repo1/disabled", "true" );
+    REQUIRE ( KRepositoryMgrHasRemoteAccess ( mgr ) );
+}
+FIXTURE_TEST_CASE(Mgr_RemoteOff, RepositoryFixture)
+{
+    UpdateNode ( "/repository/remote/main/repo4/disabled", "true" );
+    UpdateNode ( "/repository/remote/aux/repo1/disabled", "true" );
+
+    REQUIRE ( ! KRepositoryMgrHasRemoteAccess ( mgr ) );
+}
+
+
 //////////////////////////////////////////// Main
 
 extern "C"

@@ -1288,7 +1288,7 @@ LIB_EXPORT rc_t CC ReferenceObj_MakePlacementIterator ( const ReferenceObj* csel
     rc_t rc = 0;
     PlacementIterator* o = NULL;
 
-    if ( cself == NULL || iter == NULL )
+    if ( cself == NULL || iter == NULL || ref_window_len < 1 )
     {
         rc = RC(rcAlign, rcType, rcAccessing, rcParam, rcInvalid);
     }
@@ -1381,7 +1381,7 @@ LIB_EXPORT rc_t CC ReferenceObj_MakePlacementIterator ( const ReferenceObj* csel
 
                 /* in reference-rows */
                 o->last_ref_row_of_window_rel = ref_window_start;
-                o->last_ref_row_of_window_rel += ref_window_len;
+                o->last_ref_row_of_window_rel += ( ref_window_len - 1 );
                 o->last_ref_row_of_window_rel /= mgr->max_seq_len;
                 o->rowcount_of_ref = ( cself->end_rowid - cself->start_rowid ) + 1;
 
