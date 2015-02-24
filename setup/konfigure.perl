@@ -344,7 +344,7 @@ $LDFLAGS = $OPT{LDFLAGS} if ($OPT{LDFLAGS});
 
 if ($TOOLS =~ /gcc$/) {
     $CPP  = 'g++' unless ($CPP);
-    $CC   = '$TOOLS -c';
+    $CC   = "$TOOLS -c";
     $CP   = "$CPP -c";
     $AR   = 'ar rc';
     $ARX  = 'ar x';
@@ -766,6 +766,7 @@ BITS = $BITS
 EndText
 
     L($F, "CC            = $CC"           ) if ($CC);
+    L($F, "CPP           = $CPP"          ) if ($CPP);
     L($F, "CP            = $CP"           ) if ($CP);
     L($F, "AR            = $AR"           ) if ($AR);
     L($F, "ARX           = $ARX"          ) if ($ARX);
@@ -1111,8 +1112,14 @@ sub status {
                 $BUILD_TYPE = $_ unless ($BUILD_TYPE);
             } elsif (/BUILD_PREFIX = /) {
                 $BUILD_PREFIX = $_;
+            } elsif (/^CC += (.+)/) {
+                $CC = $1;
             } elsif (/CONFIGURED = (.*)/) {
                 $CONFIGURED = $1;
+            } elsif (/CPP += (.+)/) {
+                $CPP = $1;
+            } elsif (/LDFLAGS += (.+)/) {
+                $LDFLAGS = $1;
             } elsif (/TARGDIR = /) {
                 $TARGDIR = $_;
                 println "\t\tgot $_" if ($OPT{'debug'});
