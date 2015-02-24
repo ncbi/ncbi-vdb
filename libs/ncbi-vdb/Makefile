@@ -86,7 +86,7 @@ else
 LIBKQ = kq
 endif
 
-ifeq (1,$(HAVE_XML2))
+ifneq (,$(XML2_LIBDIR))
 LIBKXML = kxml kxfs
 LDFLAGS += -L$(XML2_LIBDIR)
 endif
