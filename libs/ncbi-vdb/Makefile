@@ -88,7 +88,9 @@ endif
 
 ifneq (,$(XML2_LIBDIR))
 LIBKXML = kxml kxfs
+ifneq (,$(XML2_LIBDIR))
 LDFLAGS += -L$(XML2_LIBDIR)
+endif
 endif
 
 VDB_LIB_CMN =    \
