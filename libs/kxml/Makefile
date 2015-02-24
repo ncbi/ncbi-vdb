@@ -42,7 +42,9 @@ include $(TOP)/build/Makefile.env
 #
 ifeq (1,$(HAVE_XML2))
 
+ifneq (,$(XML2_INCDIR))
 INCDIRS += $(addprefix -I,$(XML2_INCDIR))
+endif
 
 all std: makedirs
 	@ $(MAKE_CMD) $(TARGDIR)/std
