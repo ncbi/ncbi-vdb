@@ -177,6 +177,9 @@ rc_t SequenceWriteRecord(SequenceWriter *self,
     data.ti.buffer = rec->ti;
     data.ti.elements = nreads;
     
+    data.spot_name.buffer = rec->spotName;
+    data.spot_name.elements = rec->spotNameLen;
+    
     if (!no_real_output) {
         if (self->tbl == NULL) {
             int csoption = (color ? ewseq_co_ColorSpace : 0);
@@ -269,6 +272,8 @@ rc_t SequenceRecordResize(SequenceRecord *self,
 
     self->spotGroup = NULL;
     self->spotGroupLen = 0;
+    self->spotName = NULL;
+    self->spotNameLen = 0;
     
     return 0;
 }
