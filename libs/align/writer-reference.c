@@ -2274,6 +2274,22 @@ static int cigar_string_op_count(char const cigar[])
     return st == 0 ? n : -1;
 }
 
+static unsigned cigar_remove_ignored(unsigned opcount, cigar_bin_t cigar[])
+{
+    unsigned i = opcount;
+    
+    while (i) {
+        unsigned const oi = i;
+        unsigned const type = cigar[--i].gentype;
+        
+        if (type == gen_ignore_type) {
+            memmove(cigar + i, cigar + oi, (opcount - oi) * sizeof(cigar[0]));
+            --opcount;
+        }
+    }
+    return opcount;
+}
+
 static
 rc_t cigar2offset(int const options,
                   unsigned const cigar_len,
@@ -2327,8 +2343,100 @@ rc_t cigar2offset(int const options,
             }
         }
         {
+            unsigned first = 0;
+            unsigned opcount = cigar_remove_ignored(maxopcount, cigar);
+            
+            out_adjust[0] = 0;
+            if ((options & ewrefmgr_cmp_Exact) == 0) {
+                /* remove any leading delete operations */
+                for (first = 0; first < opcount; ++first) {
+                    if (cigar[first].gentype != gen_delete_type)
+                        break;
+                    out_adjust[0] += cigar[first].length;
+                }
+                /* make sure any adjacent deletes and inserts are ordered so that
+                 * the delete follows the insert
+                 */
+                {
+                    unsigned i;
+#if 1
+                    for (i = first; i < opcount - 1; ++i) {
+                        cigar_bin_t const cur = cigar[i + 0];
+                        cigar_bin_t const nxt = cigar[i + 1];
+                        
+                        if (cur.gentype == gen_ignore_type) {
+                            unsigned const ni = i + 1;
+                            memmove(cigar + i, cigar + ni, (opcount - ni) * sizeof(cigar[0]));
+                            --i;
+                            --opcount;
+                        }
+                        else if (cur.gentype != gen_delete_type)
+                            ;
+                        else if (nxt.gentype == gen_delete_type) {
+                            unsigned const type = (cur.type == NCBI_align_ro_normal && nxt.type == NCBI_align_ro_normal) ? NCBI_align_ro_normal : NCBI_align_ro_intron_unknown;
+                            int const code = type == NCBI_align_ro_normal ? 'D' : 'N';
+                            unsigned const length = cur.length + nxt.length;
+                            
+                            cigar[i].type = type;
+                            cigar[i].code = code;
+                            cigar[i].length = length;
+                            
+                            cigar[i + 1].gentype = gen_ignore_type;
+                        }
+                        else if (nxt.gentype == gen_insert_type) {
+                            if (nxt.type == NCBI_align_ro_complete_genomics) {
+                                assert(i + 2 < opcount);
+                                cigar[i + 0] = nxt;
+                                cigar[i + 1] = cigar[i + 2];
+                                cigar[i + 2] = cur;
+                                ++i;
+                            }
+                            else {
+                                cigar[i + 0] = nxt;
+                                cigar[i + 1] = cur;
+                            }
+                        }
+                    }
+#else
+                    for (i = first + 1; i < opcount; ) {
+                        if (cigar[i].gentype == gen_insert_type && cigar[i-1].gentype == gen_delete_type) {
+                            cigar_bin_t const prv = cigar[i - 1];
+                            cigar_bin_t const cur = cigar[i];
+                            
+                            cigar[  i] = prv;
+                            cigar[--i] = cur;
+                            if (i <= first + 1)
+                                i  = first + 1;
+                        }
+                        else
+                            ++i;
+                    }
+#endif
+                }
+                /* merge adjacent delete type operations D+D -> D else becomes N */
+                {
+                    unsigned i;
+                    
+                    for (i = first + 1; i < opcount;) {
+                        if (cigar[i].gentype == gen_delete_type && cigar[i-1].gentype == gen_delete_type) {
+                            cigar[i].length += cigar[i-1].length;
+                            if (cigar[i].type == NCBI_align_ro_normal && cigar[i-1].type == NCBI_align_ro_normal) {
+                                cigar[i].type = NCBI_align_ro_normal;
+                                cigar[i].code = 'D';
+                            }
+                            else {
+                                cigar[i].type = NCBI_align_ro_intron_unknown;
+                                cigar[i].code = 'N';
+                            }
+                            memcpy(cigar + i - 1, cigar + i, (opcount - i) * sizeof(cigar[0]));
+                            --opcount;
+                        }
+                        else
+                            ++i;
+                    }
+                }
+            }
             /* remove any ignored operations */
-            unsigned opcount = maxopcount;
             {
                 unsigned i = opcount;
                 
@@ -2342,105 +2450,30 @@ rc_t cigar2offset(int const options,
                     }
                 }
             }
+            /* make the intron the known type */
             {
-                unsigned first = 0;
+                unsigned i;
                 
-                out_adjust[0] = 0;
-                if ((options & ewrefmgr_cmp_Exact) == 0) {
-                    /* remove any leading delete operations */
-                    for (first = 0; first < opcount; ++first) {
-                        if (cigar[first].gentype != gen_delete_type)
-                            break;
-                        out_adjust[0] += cigar[first].length;
-                    }
-                    /* make sure any adjacent deletes and inserts are ordered so that
-                     * the delete follows the insert
-                     */
-                    {
-                        unsigned i;
-#if 1
-                        unsigned const N = opcount - 1;
-                        
-                        for (i = first; i < N; ++i) {
-                            cigar_bin_t const cur = cigar[i + 0];
-                            cigar_bin_t const nxt = cigar[i + 1];
-                            
-                            if (cur.gentype == gen_delete_type && nxt.gentype == gen_insert_type) {
-                                if (nxt.type == NCBI_align_ro_complete_genomics) {
-                                    assert(i + 2 < opcount);
-                                    cigar[i + 0] = nxt;
-                                    cigar[i + 1] = cigar[i + 2];
-                                    cigar[i + 2] = cur;
-                                    ++i;
-                                }
-                                else {
-                                    cigar[i + 0] = nxt;
-                                    cigar[i + 1] = cur;
-                                }
-                            }
-                        }
-#else
-                        for (i = first + 1; i < opcount; ) {
-                            if (cigar[i].gentype == gen_insert_type && cigar[i-1].gentype == gen_delete_type) {
-                                cigar_bin_t const prv = cigar[i - 1];
-                                cigar_bin_t const cur = cigar[i];
-                                
-                                cigar[  i] = prv;
-                                cigar[--i] = cur;
-                                if (i <= first + 1)
-                                    i  = first + 1;
-                            }
-                            else
-                                ++i;
-                        }
-#endif
-                    }
-                    /* merge adjacent delete type operations D+D -> D else becomes N */
-                    {
-                        unsigned i;
-                        
-                        for (i = first + 1; i < opcount;) {
-                            if (cigar[i].gentype == gen_delete_type && cigar[i-1].gentype == gen_delete_type) {
-                                cigar[i].length += cigar[i-1].length;
-                                if (cigar[i].type == NCBI_align_ro_normal && cigar[i-1].type == NCBI_align_ro_normal) {
-                                    cigar[i].type = NCBI_align_ro_normal;
-                                    cigar[i].code = 'D';
-                                }
-                                else {
-                                    cigar[i].type = NCBI_align_ro_intron_unknown;
-                                    cigar[i].code = 'N';
-                                }
-                                memcpy(cigar + i - 1, cigar + i, (opcount - i) * sizeof(cigar[0]));
-                                --opcount;
-                            }
-                            else
-                                ++i;
-                        }
-                    }
-                }
-                /* make the intron the known type */
-                {
-                    unsigned i;
-                    
-                    for (i = first; i < opcount; ++i) {
-                        if (cigar[i].type == NCBI_align_ro_intron_unknown)
-                            cigar[i].type = intron_type;
-                    }
-                }
-                {
-                    rc_t const rc = cigar2offset_2(opcount - first,
-                                                   cigar + first,
-                                                   out_sz,
-                                                   out_used,
-                                                   out_offset,
-                                                   out_seq_len,
-                                                   out_ref_len,
-                                                   out_max_ref_len);
-                    if (hcigar)
-                        free(hcigar);
-                    return rc;
+                for (i = first; i < opcount; ++i) {
+                    if (cigar[i].type == NCBI_align_ro_intron_unknown)
+                        cigar[i].type = intron_type;
                 }
             }
+            {
+                rc_t const rc = cigar2offset_2(opcount - first,
+                                               cigar + first,
+                                               out_sz,
+                                               out_used,
+                                               out_offset,
+                                               out_seq_len,
+                                               out_ref_len,
+                                               out_max_ref_len);
+                if (hcigar)
+                    free(hcigar);
+                return rc;
+            }
+        }
+        {
         }
     }
     else {
