@@ -2265,8 +2265,9 @@ bool load_from_std_location ( KConfig *self, const KDirectory *dir )
 }
 
 static
-rc_t load_from_fs_location ( KConfig *self )
+bool load_from_fs_location ( KConfig *self )
 {
+    bool loaded = false;
     KDyld *dyld;
     rc_t rc = KDyldMake ( & dyld );
     if ( rc == 0 )
@@ -2284,19 +2285,19 @@ rc_t load_from_fs_location ( KConfig *self )
             {
                 rc = KConfigAppendToLoadPath(self, resolved);
             }
-            if ( load_from_dir_path ( self, dir, "ncbi", 4 ) )
+            if ((loaded = load_from_dir_path(self, dir, "ncbi", 4)))
                 DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: found from dyn. loader\n" ) );
             KDirectoryRelease ( dir );
         }
         KDyldRelease ( dyld );
     }
-    return rc;
+    return loaded;
 }
 
-static rc_t load_from_default_string(KConfig *self) {
+static bool load_from_default_string(KConfig *self) {
     DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG), ("KFG: loading from default string\n"));
-    return
-        parse_file(self, "enbedded default configuration string", default_kfg);
+    return parse_file(self,
+        "enbedded default configuration string", default_kfg) == 0;
 }
 
 LIB_EXPORT rc_t CC KConfigGetLoadPath ( const KConfig *self,
