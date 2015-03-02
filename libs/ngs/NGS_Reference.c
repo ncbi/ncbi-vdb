@@ -120,6 +120,18 @@ static NGS_String_v1 * ITF_Reference_v1_get_ref_chunk ( const NGS_Reference_v1 *
     return ( NGS_String_v1 * ) ret;
 }
 
+static uint64_t ITF_Reference_v1_get_align_count ( const NGS_Reference_v1 * self, NGS_ErrBlock_v1 * err, bool wants_primary, bool wants_secondary )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+    ON_FAIL ( uint64_t ret = NGS_ReferenceGetAlignmentCount ( Self ( self ), ctx, wants_primary, wants_secondary ) )
+    {
+        NGS_ErrBlockThrow ( err, ctx );
+    }
+
+    CLEAR ();
+    return ret;
+}
+
 static struct NGS_Alignment_v1 * ITF_Reference_v1_get_alignment ( const NGS_Reference_v1 * self, NGS_ErrBlock_v1 * err, const char * alignmentId )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
@@ -257,7 +269,7 @@ NGS_Reference_v1_vt ITF_Reference_vt =
     {
         "NGS_Reference",
         "NGS_Reference_v1",
-        1,
+        2,
         & ITF_Refcount_vt . dad
     },
 
@@ -277,7 +289,10 @@ NGS_Reference_v1_vt ITF_Reference_vt =
 
     /* 1.1 */
     ITF_Reference_v1_get_filtered_pileups,
-    ITF_Reference_v1_get_filtered_pileup_slice
+    ITF_Reference_v1_get_filtered_pileup_slice,
+
+    /* 1.2 */
+    ITF_Reference_v1_get_align_count
 };
 
 
