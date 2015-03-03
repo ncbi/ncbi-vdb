@@ -1525,6 +1525,7 @@ LIB_EXPORT rc_t CC KRepositoryMgrImportNgcObj( KRepositoryMgr * self,
         size_t written;
         char ngc_repo_name[ 512 ];
         *result_flags = 0;
+        memset(&user_repositories, 0, sizeof user_repositories);
         rc = string_printf( ngc_repo_name, sizeof ngc_repo_name, &written, "dbGaP-%u", ngc->projectId );
         if ( rc == 0 )
         {
@@ -1577,55 +1578,54 @@ LIB_EXPORT rc_t CC KRepositoryMgrImportNgcObj( KRepositoryMgr * self,
                         }
                     }
                 }
+            }
 
-                if (! exists) {
-                    if (permissions & INP_CREATE_REPOSITORY) {
-                        uint32_t location_len = string_measure (location, NULL);
-                        rc = create_new_protected_repository(
-                            self, ngc, location, location_len,
-                            ngc_repo_name, (uint32_t)written);
+            if (! exists) {
+                if (permissions & INP_CREATE_REPOSITORY) {
+                    uint32_t location_len = string_measure (location, NULL);
+                    rc = create_new_protected_repository(
+                        self, ngc, location, location_len,
+                        ngc_repo_name, (uint32_t)written);
+                    if (rc == 0) {
+                        *result_flags |= INP_CREATE_REPOSITORY;
+                    }
+                }
+                else {
+                    *result_flags |= INP_CREATE_REPOSITORY;
+                    rc = RC(rcKFG, rcMgr, rcUpdating, rcConstraint, rcViolated);
+                }
+            }
+            else if (rc == 0 && permissions & INP_UPDATE_ROOT) {
+                uint32_t modifications = 0;
+                rc = check_for_root_modification(
+                    repository, location, &modifications);
+                if (rc == 0) {
+                    if (modifications & INP_UPDATE_ROOT) {
+                        uint32_t location_len = string_measure(location, NULL);
+                        rc = KRepositorySetRoot(repository,
+                            location, location_len);
                         if (rc == 0) {
-                            *result_flags |= INP_CREATE_REPOSITORY;
+                            *result_flags |= INP_UPDATE_ROOT;
                         }
                     }
-                    else {
-                        *result_flags |= INP_CREATE_REPOSITORY;
-                        rc = RC(rcKFG, rcMgr, rcUpdating,
+                    else if (modifications != 0) {
+                        *result_flags |= INP_UPDATE_ROOT;
+                        rc = RC(rcKFG, rcMgr, rcCreating,
                             rcConstraint, rcViolated);
                     }
                 }
-                else if (rc == 0 && permissions & INP_UPDATE_ROOT) {
-                    uint32_t modifications = 0;
-                    rc = check_for_root_modification(
-                        repository, location, &modifications);
-                    if (rc == 0) {
-                        if (modifications & INP_UPDATE_ROOT) {
-                            uint32_t location_len =
-                                string_measure(location, NULL);
-                            rc = KRepositorySetRoot(repository,
-                                location, location_len);
-                            if (rc == 0) {
-                                *result_flags |= INP_UPDATE_ROOT;
-                            }
-                        }
-                        else if (modifications != 0) {
-                            *result_flags |= INP_UPDATE_ROOT;
-                            rc = RC(rcKFG, rcMgr, rcCreating,
-                                rcConstraint, rcViolated);
-                        }
-                    }
-                }
-
-                KRepositoryVectorWhack ( &user_repositories );
             }
         }
+
+        KRepositoryVectorWhack ( &user_repositories );
     }
 
     return rc;
 }
 
 
-LIB_EXPORT bool CC KRepositoryMgrHasRemoteAccess(const KRepositoryMgr *self)
+LIB_EXPORT
+bool CC KRepositoryMgrHasRemoteAccess(const KRepositoryMgr *self)
 {
     bool has = false;
 
