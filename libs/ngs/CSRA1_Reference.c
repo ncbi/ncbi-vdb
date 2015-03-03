@@ -457,11 +457,49 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx
     return NULL;
 }
 
+
 uint64_t CSRA1_ReferenceGetAlignmentCount ( const CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    UNIMPLEMENTED(); /* CSRA1_ReferenceGetAlignmentCount */
-    return 0;
+
+    assert ( self );
+    if ( self -> curs == NULL )
+    {
+        USER_ERROR ( xcCursorExhausted, "No more rows available" );
+        return 0;
+    }
+
+    {
+        uint64_t res = 0;
+        uint64_t cur_row = self -> first_row;
+
+        while ( cur_row <= self -> last_row )
+        {
+            const void * base;
+            uint32_t elem_bits, boff, row_len;
+
+            if ( wants_primary )
+            {
+                ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, cur_row, reference_PRIMARY_ALIGNMENT_IDS,
+                                                     & elem_bits, & base, & boff, & row_len ) )
+                    return res;
+
+                res += row_len;
+            }
+
+            if ( wants_secondary )
+            {
+                ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, cur_row, reference_SECONDARY_ALIGNMENT_IDS,
+                                                     & elem_bits, & base, & boff, & row_len ) )
+                    return res;
+
+                res += row_len;
+            }
+
+            cur_row ++;
+        }
+        return res;
+    }
 }
 
 /*
