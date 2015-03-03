@@ -496,7 +496,7 @@ uint64_t NGS_ReferenceGetAlignmentCount ( NGS_Reference * self, ctx_t ctx, bool 
     }
     else
     {
-        return VT ( self, get_count) ( self, ctx, wants_primary, wants_secondary );
+        return VT ( self, get_count ) ( self, ctx, wants_primary, wants_secondary );
     }
 
     return 0;
