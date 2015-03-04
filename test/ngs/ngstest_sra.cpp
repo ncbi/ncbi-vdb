@@ -67,7 +67,7 @@ FIXTURE_TEST_CASE(SRA_ReadCollection_Open, SRA_Fixture)
 FIXTURE_TEST_CASE(SRA_ReadCollection_GetReadCount, SRA_Fixture)
 {
     ENTRY_ACC(SRA_Accession);
-    REQUIRE_EQ ( SRA_Accession_ReadCount, NGS_ReadCollectionGetReadCount ( m_coll, ctx ) );
+    REQUIRE_EQ ( SRA_Accession_ReadCount, NGS_ReadCollectionGetReadCount ( m_coll, ctx, true, true, true ) );
     EXIT;
 }
 

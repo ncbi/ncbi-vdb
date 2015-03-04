@@ -61,7 +61,7 @@ FIXTURE_TEST_CASE(SRADB_ReadCollection_Open, SRADB_Fixture)
 FIXTURE_TEST_CASE(SRADB_ReadCollection_GetReadCount, SRADB_Fixture)
 {
     ENTRY_ACC(SRADB_Accession);
-    REQUIRE_EQ ( SRADB_Accession_ReadCount, NGS_ReadCollectionGetReadCount ( m_coll, ctx ) );
+    REQUIRE_EQ ( SRADB_Accession_ReadCount, NGS_ReadCollectionGetReadCount ( m_coll, ctx, true, true, true ) );
     EXIT;
 }
 
