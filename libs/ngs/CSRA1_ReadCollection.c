@@ -483,16 +483,26 @@ struct NGS_Read * CSRA1_ReadCollectionGetRead ( CSRA1_ReadCollection * self, ctx
 }
 
 static
-uint64_t CSRA1_ReadCollectionGetReadCount ( CSRA1_ReadCollection * self, ctx_t ctx )
+uint64_t CSRA1_ReadCollectionGetReadCount ( CSRA1_ReadCollection * self, ctx_t ctx,
+    bool wants_full, bool wants_partial, bool wants_unaligned )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
     
     if ( self -> sequence_curs == NULL )
     {
-        self -> sequence_curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS );
+        ON_FAIL ( self -> sequence_curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ) )
+        {
+            return 0;
+        }
     }
-    
-    return NGS_CursorGetRowCount ( self -> sequence_curs, ctx );
+
+    if ( wants_full && wants_partial && wants_unaligned )    
+        return NGS_CursorGetRowCount ( self -> sequence_curs, ctx );
+
+    /* have a problem here */
+    UNIMPLEMENTED ();
+
+    return 0;
 }
 
 struct NGS_Read * CSRA1_ReadCollectionGetReadRange ( CSRA1_ReadCollection * self, 
