@@ -298,13 +298,13 @@ void mimic_sra_pileup (
         line_curr.vecEvents.reserve (line_curr.depth);
         mapAlignmentIdxCurr.reserve (line_curr.depth);
 
-        int64_t current_del_count = 0; // number of encountered stops
+        int64_t current_stop_count = 0; // number of encountered stops
+        bool increased_stop_count = false; // we have increased count (skipped position) on the last step
 
         for (; pi.nextPileupEvent (); )
         {
             PileupEventStruct pileup_event;
 
-            //pileup_event.alignment_id = pi.getAlignmentId().toString();
             pileup_event.deletion_after_this_pos = false;
             pileup_event.event_type = pi.getEventType ();
 
@@ -314,17 +314,24 @@ void mimic_sra_pileup (
             if ((pileup_event.event_type & 7) == ngs::PileupEvent::mismatch)
                 pileup_event.alignment_base = pi.getAlignmentBase();
 
-            if (pileup_event.event_type & ngs::PileupEvent::alignment_stop)
+            if (increased_stop_count)
             {
-                ++current_del_count;
-                if (mapAlignmentIdxCurr.size() != 0)
-                    mapAlignmentIdxCurr [ mapAlignmentIdxCurr.size() - 1 ] = current_del_count;
+                if (pileup_event.event_type & ngs::PileupEvent::alignment_stop)
+                {
+                    ++current_stop_count;
+                    mapAlignmentIdxCurr [mapAlignmentIdxCurr.size() - 1] = current_stop_count;
+                }
                 else
-                    mapAlignmentIdxCurr.push_back ( current_del_count );
+                    increased_stop_count = false;
             }
             else
             {
-                mapAlignmentIdxCurr.push_back ( current_del_count );
+                if (pileup_event.event_type & ngs::PileupEvent::alignment_stop)
+                {
+                    ++current_stop_count;
+                    increased_stop_count = true;
+                }
+                mapAlignmentIdxCurr.push_back ( current_stop_count );
             }
 
             if ( pos != pos_start )
@@ -366,6 +373,31 @@ void mimic_sra_pileup (
     // modify line_prev, but if the last line is the very last one for the whole
     // reference - we shouldn't do that. This all isn't implemented yet in this function
     print_line ( line_prev, canonical_name.c_str(), pos_start, pos - 1, strRefSlice, os );
+}
+
+TEST_CASE(CSRA1_PileupEventIterator_DeletionAndEnding)
+{
+
+    //sra-pileup SRR497541 -r "Contig307.Contig78.Contig363_2872688_2872915.Contig307.Contig78.Contig363_1_2872687":106436-106438 -s -n
+    // There should be no "g-3taa$" for the position 106438, only "g$" must be there
+
+    char const db_path[] = "SRR497541";
+    char const ref_name[] = "Contig307.Contig78.Contig363_2872688_2872915.Contig307.Contig78.Contig363_1_2872687";
+
+    int64_t const pos_start = 106436-1;
+    int64_t const pos_end = 106438 - 1;
+    uint64_t const len = (uint64_t)(pos_end - pos_start + 1);
+
+    std::ostringstream sstream;
+    std::ostringstream sstream_ref;
+
+    sstream_ref << ref_name << "\t106436\tT\t106\tC$C$,$.,$,$,$,$.-5TATAA.-5TATAA,-5tataa.-5TATAA.-5TATAA.$.-5TATAA.-5TATAA,-5tataa.-5TATAA,-5tataa,-5tataa.-5TATAA,-5tataa,-5tataa.-5TATAA,-5tataa,-5tataa,-5tataa,-5tataa.-5TATAA.-5TATAA,-5tataa.-5TATAA,-5tataa,$.-5TATAA,-5tataa,,-5tataa,$.-5TATAA,-5tataa,-5tataa.-5TATAA,-5tataa.$.$.-5TATAA.-5TATAA.-5TATAA.-5TATAA,-5tataa.-5TATAA.-5TATAA.-5TATAA.-5TATAA.-5TATAA.-5TATAA.-5TATAA,-5tataa.-5TATAA,-5tataa,-5tataa,-5tataa.-5TATAA.$,-5tataa.-5TATAA.-5TATAA.-5TATAA.-5TATAA,-5tataa,-5tataa,-5tataa.-5TATAA,-5tataa,-5tataa.-5TATAA,-5tataa,-5tataa.-5TATAA.-5TATAA.$.-5TATAA,-5tataa.-5TATAA.-5TATAA.-5TATAA.-5TATAA,-5tataa,-5tataa.-5TATAA,-5tataa.-5TATAA.-5TATAA.-5TATAA,-5tataa,-5tataa,-5tataa,-5tataa,-5tataa,-5tataa.-5TATAA.-5TATAA,-5tataa,-5tataa^]g" << std::endl;
+    sstream_ref << ref_name << "\t106437\tT\t92\tC$>><>>>><><<><<><<<<>><><><c<><<><>>>><>>>>>>><><<<><>>>><<<><<><<>>><>>>><<><>>><<<<<<>><<," << std::endl;
+    sstream_ref << ref_name << "\t106438\tA\t91\t>><>>>><><<><<><<<<>><><><g$<><<><>>>><>>>>>>><><<<><>>>><<<><<><<>>><>>>><<><>>><<<<<<>><<," << std::endl;
+
+    mimic_sra_pileup ( db_path, ref_name, ngs::Alignment::primaryAlignment, pos_start, len, sstream );
+
+    REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
 }
 
 TEST_CASE(CSRA1_PileupEventIterator_LongDeletions)
