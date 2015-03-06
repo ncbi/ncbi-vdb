@@ -450,15 +450,22 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
 
                                         if ( ! have_size )
                                         {
-                                            if ( status == 404 ) {
+                                            switch ( status ) {
+                                              case 403:
+                                                rc = RC ( rcNS, rcFile,
+                                                    rcOpening,
+                                                    rcFile, rcUnauthorized );
+                                                break;
+                                              case 404:
                                                 rc = RC ( rcNS, rcFile,
                                                     rcOpening,
                                                     rcFile, rcNotFound );
-                                            }
-                                            else {
+                                                break;
+                                              default:
                                                 rc = RC ( rcNS, rcFile,
                                                     rcValidating,
-                                                    rcNoObj, rcError );
+                                                    rcNoObj, rcEmpty );
+                                                break;
                                             }
                                         }
                                         else
