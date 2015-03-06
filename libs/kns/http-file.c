@@ -443,11 +443,23 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                     {
                                         uint64_t size;
                                         bool have_size = KClientHttpResultSize ( rslt, &size );
+                                        uint32_t status = 0;
+                                        KClientHttpResultStatus ( rslt,
+                                            &status, NULL, 0, NULL );
                                         KClientHttpResultRelease ( rslt );
 
                                         if ( ! have_size )
                                         {
-                                            rc = RC ( rcNS, rcFile, rcValidating, rcNoObj, rcError );
+                                            if ( status == 404 ) {
+                                                rc = RC ( rcNS, rcFile,
+                                                    rcOpening,
+                                                    rcFile, rcNotFound );
+                                            }
+                                            else {
+                                                rc = RC ( rcNS, rcFile,
+                                                    rcValidating,
+                                                    rcNoObj, rcError );
+                                            }
                                         }
                                         else
                                         {
