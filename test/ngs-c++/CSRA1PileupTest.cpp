@@ -139,6 +139,7 @@ TEST_CASE(CSRA1_PileupEventIterator_GetType)
 struct PileupEventStruct
 {
     ngs::PileupEvent::PileupEventType event_type;
+    ngs::PileupEvent::PileupEventType next_event_type;
     uint32_t repeat_count, next_repeat_count;
     int mapping_quality;
     char alignment_base;
@@ -204,6 +205,7 @@ void print_line (
 
         if ( pileup_event.insertion_bases.size() != 0 )
         {
+            bool next_reverse = ( pileup_event.next_event_type & ngs::PileupEvent::alignment_minus_strand ) != 0;
             os
                 << "+"
                 << pileup_event.insertion_bases.size();
@@ -211,7 +213,7 @@ void print_line (
             for ( uint32_t i = 0; i < pileup_event.insertion_bases.size(); ++i )
             {
                 os
-                    << (reverse ?
+                    << (next_reverse ?
                     (char)tolower(pileup_event.insertion_bases[i])
                     : (char)toupper(pileup_event.insertion_bases[i]));
             }
@@ -255,10 +257,11 @@ void mark_line_as_starting_deletion ( PileupLine& line, uint32_t repeat_count, s
     }
 }
 
-void mark_line_as_starting_insertion ( PileupLine& line, ngs::String const& insertion_bases, size_t alignment_index )
+void mark_line_as_starting_insertion ( PileupLine& line, ngs::String const& insertion_bases, size_t alignment_index, ngs::PileupEvent::PileupEventType next_event_type )
 {
     PileupEventStruct& pileup_event = line.vecEvents [ alignment_index ];
     pileup_event.insertion_bases = insertion_bases;
+    pileup_event.next_event_type = next_event_type;
 }
 
 void mimic_sra_pileup (
@@ -339,7 +342,7 @@ void mimic_sra_pileup (
                     if ((pileup_event.event_type & 7) == ngs::PileupEvent::deletion)
                         mark_line_as_starting_deletion ( line_prev, pi.getEventRepeatCount(), mapAlignmentIdxPrev [idx_curr_align] + idx_curr_align );
                     if ( pileup_event.event_type & ngs::PileupEvent::insertion )
-                        mark_line_as_starting_insertion ( line_prev, pi.getInsertionBases().toString(), mapAlignmentIdxPrev [idx_curr_align] + idx_curr_align );
+                        mark_line_as_starting_insertion ( line_prev, pi.getInsertionBases().toString(), mapAlignmentIdxPrev [idx_curr_align] + idx_curr_align, pileup_event.event_type );
                 }
             }
 
@@ -382,7 +385,9 @@ TEST_CASE(CSRA1_PileupEventIterator_LongDeletions)
     std::ostringstream sstream;
     std::ostringstream sstream_ref;
 
+    // this line is different from sra-pileup
     //sstream_ref << "NC_000004.11\t10204\tT\t37\ta,$c+2tc,,+3att.$.$.+2TT.,,.......,..<......,...g...^!." << std::endl;
+
     sstream_ref << "NC_000004.11\t10205\tC\t37\t,$,t+3ttt,..,t.......,A.<....-6TCGGCT.-6TCGGCT.,...,....^$,^!.^$." << std::endl;
     // commenting out the real 10206 line since we don't test for it
     // and mimic_sra_pileup now reports the last line incorecctly in this case
