@@ -825,8 +825,9 @@ table NCBI:tbl:log_odds_quality #1.0.1 = NCBI:tbl:log_odds_quality_nocol #1.0.1
 
 /* history:
  *  2.0.1 - base explicitly upon sequence #1.0.1
+ *  2.1.0 - added production of in_qual_phred
  */
-table NCBI:tbl:log_odds_quality_nocol #2.0.1 = INSDC:tbl:sequence #1.0.1
+table NCBI:tbl:log_odds_quality_nocol #2.1.0 = INSDC:tbl:sequence #1.0.1
 {
     /* QUALITY
      *  declared in INSDC:tbl:sequence as phred
@@ -836,6 +837,9 @@ table NCBI:tbl:log_odds_quality_nocol #2.0.1 = INSDC:tbl:sequence #1.0.1
         = out_qual_log_odds;
 
     // resolve for phred
+    INSDC:quality:phred in_qual_phred
+        = NCBI:log_odds_to_phred ( in_qual_log_odds );
+
     INSDC:quality:phred out_qual_phred
         = NCBI:log_odds_to_phred ( out_qual_log_odds );
 
@@ -855,8 +859,9 @@ table NCBI:tbl:log_odds_quality_nocol #2.0.1 = INSDC:tbl:sequence #1.0.1
  *  2.0.2 - added input of text encodings
  *  2.0.3 - base explicitly upon log_odds_quality_nocol #2.0.1
  *  2.0.4 - changed compression from izip to zip
+ *  2.1.0 - base explicitly upon log_odds_quality_nocol #2.1.0
  */
-table NCBI:tbl:log_odds_quality #2.0.4 = NCBI:tbl:log_odds_quality_nocol #2.0.1
+table NCBI:tbl:log_odds_quality #2.1.0 = NCBI:tbl:log_odds_quality_nocol #2.1.0
 {
     INSDC:quality:log_odds out_qual_log_odds= .QUALITY;
 

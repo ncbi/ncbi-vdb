@@ -174,10 +174,11 @@ table NCBI:SRA:Illumina:qual4 #1.0.1 = NCBI:SRA:Illumina:qual4_nocol #1.0.1
  *  2.0.2 - base upon updated ancestry
  *  2.0.3 - base upon updated ancestry
  *  2.0.4 - base upon updated ancestry
+ *  2.1.0 - base upon updated ancestry, added in_qual_log_odds
  */
-table NCBI:SRA:Illumina:qual4 #2.0.4
+table NCBI:SRA:Illumina:qual4 #2.1.0
     = NCBI:tbl:base_space #2.0.3
-    , NCBI:tbl:log_odds_quality_nocol #2.0.1
+    , NCBI:tbl:log_odds_quality_nocol #2.1.0
 {
     /* QUALITY
      *  4-channel log-odds
@@ -197,6 +198,8 @@ table NCBI:SRA:Illumina:qual4 #2.0.4
     NCBI:qual4 in_stats_qual = in_qual4;
 
     // single channel
+    INSDC:quality:log_odds in_qual_log_odds
+        = < INSDC:quality:log_odds > cut < 0 > ( in_qual4 );
     INSDC:quality:log_odds out_qual_log_odds
         = < INSDC:quality:log_odds > cut < 0 > ( .QUALITY );
 };
