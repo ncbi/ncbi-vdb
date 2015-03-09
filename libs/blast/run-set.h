@@ -65,11 +65,16 @@ typedef enum {
 
 typedef struct {
     EReadIdType type;
+    uint32_t runBits;
     bool varReadN;
 } ReadIdDesc;
 
 typedef struct {
+    uint32_t index;
+
     uint64_t spotCount;
+    uint32_t spotBits;
+
     uint8_t nReads;
     uint8_t nBioReads; /* knowing filtering (if static) and min_read_len info */
     uint64_t bioLen; /* per read. is assigned just when allStatic */
@@ -104,7 +109,6 @@ typedef struct {
     /* rundesc; */
     char *acc;
     char *path;
-    uint32_t idx;
 
     VdbBlastDb *obj;
     BTableType type;
