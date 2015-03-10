@@ -193,7 +193,7 @@ struct ReferenceMgr {
     KDirectory const *dir;
     RefSeqMgr const *rmgr;
     VDatabase *db;
-    ReferenceSeq *refSeq;
+    ReferenceSeq *refSeq;       /* == refSeqs.base      */
     
     int64_t ref_rowid;
     
@@ -204,10 +204,10 @@ struct ReferenceMgr {
     uint32_t num_open;
     uint32_t max_seq_len;
     
-    KDataBuffer compress;
-    KDataBuffer seq;
-    KDataBuffer refSeqs;
-    KDataBuffer refSeqsById;
+    KDataBuffer compress;       /* [compress_buffer_t]  */
+    KDataBuffer seq;            /* [byte](max_seq_len)  */
+    KDataBuffer refSeqs;        /* [ReferenceSeq]       */
+    KDataBuffer refSeqsById;    /* [key_id_t]           */
 };
 
 typedef struct key_id_t {
@@ -2360,28 +2360,25 @@ rc_t cigar2offset(int const options,
                 {
                     unsigned i;
 #if 1
-                    for (i = first; i < opcount - 1; ++i) {
+                    for (i = first; i < opcount - 1; ) {
                         cigar_bin_t const cur = cigar[i + 0];
                         cigar_bin_t const nxt = cigar[i + 1];
                         
-                        if (cur.gentype == gen_ignore_type) {
-                            unsigned const ni = i + 1;
-                            memmove(cigar + i, cigar + ni, (opcount - ni) * sizeof(cigar[0]));
-                            --i;
-                            --opcount;
-                        }
-                        else if (cur.gentype != gen_delete_type)
+                        if (cur.gentype != gen_delete_type)
                             ;
                         else if (nxt.gentype == gen_delete_type) {
                             unsigned const type = (cur.type == NCBI_align_ro_normal && nxt.type == NCBI_align_ro_normal) ? NCBI_align_ro_normal : NCBI_align_ro_intron_unknown;
                             int const code = type == NCBI_align_ro_normal ? 'D' : 'N';
                             unsigned const length = cur.length + nxt.length;
                             
+                            --opcount;
+                            memmove(cigar + i, cigar + i + 1, (opcount - i) * sizeof(cigar[0]));
+                            
                             cigar[i].type = type;
                             cigar[i].code = code;
                             cigar[i].length = length;
-                            
-                            cigar[i + 1].gentype = gen_ignore_type;
+
+                            continue;
                         }
                         else if (nxt.gentype == gen_insert_type) {
                             if (nxt.type == NCBI_align_ro_complete_genomics) {
@@ -2396,6 +2393,7 @@ rc_t cigar2offset(int const options,
                                 cigar[i + 1] = cur;
                             }
                         }
+                        ++i;
                     }
 #else
                     for (i = first + 1; i < opcount; ) {
