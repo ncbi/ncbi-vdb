@@ -408,7 +408,8 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                                                     assert ( premote == NULL );
                                                     assert ( pcache == NULL );
                                                     rc2 = VResolverQuery ( resolver, eProtocolHttp, orig, NULL, & premote, & pcache );
-                                                    assert ( ( rc2 == 0 && premote != NULL ) || ( rc2 != 0 && premote == NULL ) );
+                                                    assert ( ( rc2 == 0 ) ||
+                                                        ( rc2 != 0 && premote == NULL ) );
                                                 }
                                             }
                                         }
