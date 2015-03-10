@@ -363,10 +363,11 @@ table NCBI:SRA:Illumina:tbl:v2 #1.0.4
  *  1.0.2 - updated ancestry
  *  1.0.3 - updated ancestry
  *  1.0.4 - updated ancestry
+ *  1.1.0 - updated ancestry
  */
-table NCBI:SRA:Illumina:tbl:q4:v2 #1.0.4
+table NCBI:SRA:Illumina:tbl:q4:v2 #1.1.0
     = NCBI:SRA:Illumina:tbl:v2 #1.0.4
-    , NCBI:SRA:Illumina:qual4 #2.0.4
+    , NCBI:SRA:Illumina:qual4 #2.1.0
 {
 	/* INSDC:SRA:tbl:spotdesc inherited virtual productions
 	 *  static_fixed_spot_len
@@ -379,10 +380,11 @@ table NCBI:SRA:Illumina:tbl:q4:v2 #1.0.4
  *  1.0.2 - updated ancestry
  *  1.0.3 - updated ancestry
  *  1.0.4 - updated ancestry
+ *  1.1.0 - updated ancestry
  */
-table NCBI:SRA:Illumina:tbl:q1:v2 #1.0.4
+table NCBI:SRA:Illumina:tbl:q1:v2 #1.1
     = NCBI:SRA:Illumina:tbl:v2 #1.0.4
-    , NCBI:tbl:log_odds_quality #2.0.3
+    , NCBI:tbl:log_odds_quality #2.1.0
 {
 	/* INSDC:SRA:tbl:spotdesc inherited productions
 	 *  static_fixed_spot_len
