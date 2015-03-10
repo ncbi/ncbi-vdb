@@ -537,11 +537,11 @@ rc_t VPhysicalReadStatic ( VPhysical *self, VBlob **vblob, int64_t id, uint32_t 
                         self->fixed_len = buffer.elem_count;
 
                         /* limit row range */
-                        if ( ( ( sstop_id - sstart_id ) >> 32 ) != 0 )
+                        if ( ( ( sstop_id - sstart_id ) >> 30 ) != 0 )
                         {
-                            sstart_id  =   ((id-1) &  ~0x7fffffffUL ) + 1;  /** Truncate to the nearest 2 billion **/
-                            if ( ( ( sstop_id - sstart_id ) >> 32 ) != 0 ) /** still not enough ***/
-                                sstop_id = sstart_id + 0x80000000UL ; /** leave only 2 billion */
+                            sstart_id  =   ((id-1) &  ~0x3fffffffUL ) + 1;  /** Truncate to the nearest 1 billion **/
+                            if ( ( ( sstop_id - sstart_id ) >> 30 ) != 0 ) /** still not enough ***/
+                                sstop_id = sstart_id + 0x40000000UL ; /** leave only 1 billion */
                         }
 
                         rc = VBlobCreateFromSingleRow ( vblob,
