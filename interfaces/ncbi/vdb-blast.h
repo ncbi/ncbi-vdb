@@ -63,7 +63,8 @@ enum
     eVdbBlastMemErr,
     eVdbBlastRunErr,
     eVdbBlastEndOfSequence,
-    eVdbBlastChunkedSequence, /* can't hand out direct pointer into cache */
+    eVdbBlastChunkedSequence,  /* can't hand out direct pointer into cache */
+    eVdbBlastCircularSequence, /* chunked, where the 2nd chunk is a repeat of first */
     eVdbBlastTooExpensive,
     eVdbBlastInvalidId, /* an invalid read_id was used as an input parameter:
                           usually accessing a filtered read via 4naReader */
@@ -92,6 +93,13 @@ VDB_EXTERN VdbBlastMgr* CC VdbBlastInit ( VdbBlastStatus *status );
  */
 VDB_EXTERN VdbBlastMgr* CC VdbBlastMgrAddRef ( VdbBlastMgr *self );
 VDB_EXTERN void CC VdbBlastMgrRelease ( VdbBlastMgr *self );
+
+
+/* IsCSraRun
+ *  calls through to VDatabaseIsCSRA
+ *  expensive...
+ */
+VDB_EXTERN bool CC VdbBlastMgrIsCSraRun ( const VdbBlastMgr * self, const char *rundesc );
 
 
 /* OTHER FUNCTIONS FOR CONFIGURING SESSION BEHAVIOR */
@@ -214,7 +222,7 @@ VDB_EXTERN size_t CC VdbBlastRunSetGetReadName ( const VdbBlastRunSet *self,
  *
  *  returns status code
  */
-VDB_EXTERN VdbBlastStatus CC VdbBlastRunSetGetReadId(const VdbBlastRunSet *self,
+VDB_EXTERN VdbBlastStatus CC VdbBlastRunSetGetReadId ( const VdbBlastRunSet *self,
     const char *name_buffer, size_t bsize, uint64_t *read_id );
 
 #if NOT_DEFERRED
@@ -228,6 +236,56 @@ VDB_EXTERN VdbBlastStatus CC VdbBlastRunSetGetReadId(const VdbBlastRunSet *self,
 uint64_t VdbBlastRunSetGetReadLength ( const VdbBlastRunSet *self,
     uint64_t read_id );
 #endif
+
+
+/*------------------------------------------------------------------------------
+ * VdbBlastReferenceSet
+ */
+VDB_BLAST_DECLARE ( VdbBlastReferenceSet );
+
+
+/* GetReferenceSet
+ *  return a set of all reference ( chromosome ) sequences within run set
+ *  can be empty
+ */
+VDB_EXTERN VdbBlastReferenceSet* CC VdbBlastRunSetMakeReferenceSet
+    ( const VdbBlastRunSet *self, VdbBlastStatus *status );
+
+
+/* AddRef
+ *  attach a reference to existing object
+ * Release
+ *  drop reference to object
+ *  deletes object when last reference is gone
+ */
+VDB_EXTERN VdbBlastReferenceSet* CC VdbBlastReferenceSetAddRef
+    ( VdbBlastReferenceSet *self );
+VDB_EXTERN void CC VdbBlastReferenceSetRelease ( VdbBlastReferenceSet *self );
+
+
+/*------------------------------------------------------------------------------
+ * VdbBlastReadSet
+ */
+VDB_BLAST_DECLARE ( VdbBlastReadSet );
+
+
+#if 0
+/* MapHSP
+ *  map a single HSP from result of ReferenceSet blast
+ *  to a slice of all reads within ReadSet that align to the same region
+ */
+VDB_EXTERN VdbBlastReadSet* CC VdbBlastReferenceSetMapHSP ( const VdbBlastReferenceSet * self, ... );
+#endif
+
+
+/* AddRef
+ *  attach a reference to existing object
+ * Release
+ *  drop reference to object
+ *  deletes object when last reference is gone
+ */
+VDB_EXTERN VdbBlastReadSet* CC VdbBlastReadSetAddRef ( VdbBlastReadSet *self );
+VDB_EXTERN void CC VdbBlastReadSetRelease ( VdbBlastReadSet *self );
 
 
 /*------------------------------------------------------------------------------
@@ -245,6 +303,14 @@ VDB_BLAST_DECLARE ( VdbBlast2naReader );
  */
 VDB_EXTERN VdbBlast2naReader* CC VdbBlastRunSetMake2naReader
     ( const VdbBlastRunSet *self, VdbBlastStatus *status,
+      uint64_t initial_read_id );
+
+VDB_EXTERN VdbBlast2naReader* CC VdbBlastReferenceSetMake2naReader
+    ( const VdbBlastReferenceSet *self, VdbBlastStatus *status,
+      uint64_t initial_read_id );
+
+VDB_EXTERN VdbBlast2naReader* CC VdbBlastReadSetMake2naReader
+    ( const VdbBlastReadSet *self, VdbBlastStatus *status,
       uint64_t initial_read_id );
 
 
@@ -313,6 +379,12 @@ VDB_BLAST_DECLARE ( VdbBlast4naReader );
  */
 VDB_EXTERN VdbBlast4naReader* CC VdbBlastRunSetMake4naReader
     ( const VdbBlastRunSet *self, VdbBlastStatus *status );
+
+VDB_EXTERN VdbBlast4naReader* CC VdbBlastReferenceSetMake4naReader
+    ( const VdbBlastReferenceSet *self, VdbBlastStatus *status );
+
+VDB_EXTERN VdbBlast4naReader* CC VdbBlastReadSetMake4naReader
+    ( const VdbBlastReadSet *self, VdbBlastStatus *status );
 
 
 /* AddRef
