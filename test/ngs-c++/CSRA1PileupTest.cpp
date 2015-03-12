@@ -403,28 +403,25 @@ TEST_CASE(CSRA1_PileupEventIterator_DeletionAndEnding)
 TEST_CASE(CSRA1_PileupEventIterator_LongDeletions)
 {
 
-    //SRR1113221 "chr4" 10204 10216
+    //SRR1113221 "chr4" 10204 10208
     // 1. At the position 10205 we want to have the full lenght (6) deletion
-    // 2. Now we have a misplaced insertion at the position 10204
+    // 2. Previously we had a misplaced insertion at the position 10204 (+3att)
 
     char const db_path[] = "SRR1113221";
 
-    int64_t const pos_start = 10205-1; // TODO: make it start at 10204 to test the insertion
-    int64_t const pos_end = 10206 - 1;
+    int64_t const pos_start = 10204-1;
+    int64_t const pos_end = 10208 - 1;
     uint64_t const len = (uint64_t)(pos_end - pos_start + 1);
 
-    // The output must be the same as for "sra-pileup SRR341578 -r NC_011752.1:2428-2429 -s -n"
+    // The output must be the same as for "sra-pileup SRR1113221 -r "chr4":10204-10208 -s -n"
     std::ostringstream sstream;
     std::ostringstream sstream_ref;
 
-    // this line is different from sra-pileup
-    //sstream_ref << "NC_000004.11\t10204\tT\t37\ta,$c+2tc,,+3att.$.$.+2TT.,,.......,..<......,...g...^!." << std::endl;
-
+    sstream_ref << "NC_000004.11\t10204\tT\t37\ta,$c+2tc,,+3att.$.$.+2TT.,,.......,..<......,...g...^!." << std::endl;
     sstream_ref << "NC_000004.11\t10205\tC\t37\t,$,t+3ttt,..,t.......,A.<....-6TCGGCT.-6TCGGCT.,...,....^$,^!.^$." << std::endl;
-    // commenting out the real 10206 line since we don't test for it
-    // and mimic_sra_pileup now reports the last line incorecctly in this case
-    // sstream_ref << "NC_000004.11\t10206\tT\t40\t,,,$..a$g$....$.$N.,..,...-6CGGCTG>>.,...-6CGGCTGa....,..^$.^$.^%.^$." << std::endl;
-    sstream_ref << "NC_000004.11\t10206\tT\t40\t,,,$..a$g$....$.$N.,..,...>>.,...a....,..^$.^$.^%.^$." << std::endl;
+    sstream_ref << "NC_000004.11\t10206\tT\t40\t,,,$..a$g$....$.$N.,..,...-6CGGCTG>>.,...-6CGGCTGa....,..^$.^$.^%.^$." << std::endl;
+    sstream_ref << "NC_000004.11\t10207\tC\t40\t,$,$.$.$.....,..,..>>>.,..>t-6ggctgc...+2TC.,......^$.^$.^$.^$.^A." << std::endl;
+    sstream_ref << "NC_000004.11\t10208\tG\t39\t.....,..,..>>>.,..><....,...........^$,^M.^$." << std::endl;
 
     mimic_sra_pileup ( db_path, "chr4", ngs::Alignment::primaryAlignment, pos_start, len, sstream );
 
