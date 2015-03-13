@@ -214,6 +214,41 @@ void CC VdbBlastMgrRelease(VdbBlastMgr *self)
     _VdbBlastMgrWhack(self);
 }
 
+
+LIB_EXPORT bool CC VdbBlastMgrIsCSraRun(
+    const VdbBlastMgr *self, const char *rundesc)
+{
+    bool csra = false;
+    rc_t rc = 0;
+    const VDBManager *aMgr = NULL;
+    const VDBManager *mgr = NULL;
+    const VDatabase *db = NULL;
+    if (self != NULL) {
+        mgr = self->mgr;
+    }
+    if (mgr == NULL) {
+        rc = VDBManagerMakeRead(&mgr, NULL);
+        if (rc != 0) {
+            return false;
+        }
+        if (self != NULL && self->mgr == NULL) {
+            ((VdbBlastMgr*)self)->mgr = mgr;
+        }
+        else {
+            aMgr = mgr;
+        }
+    }
+    rc = VDBManagerOpenDBRead(mgr, &db,
+        self == NULL ? NULL : self->schema, "%s", rundesc);
+    if (rc == 0) {
+        csra = VDatabaseIsCSRA(db);
+    }
+    RELEASE(VDatabase, db);
+    RELEASE(VDBManager, aMgr);
+    return csra;
+}
+
+
 static bool _VdbBlastMgrSchemaEquals(const VdbBlastMgr *self,
     const VDatabase *db, const char *rundesc,
     const char* name, uint32_t max_chars)
@@ -269,7 +304,8 @@ static bool _VdbBlastMgrSchemaEquals(const VdbBlastMgr *self,
     return equals;
 }
 
-BTableType _VdbBlastMgrBTableType(const VdbBlastMgr *self, const char *rundesc)
+BTableType _VdbBlastMgrBTableType(
+    const VdbBlastMgr *self, const char *rundesc)
 {
     BTableType type = btpSRA;
 
