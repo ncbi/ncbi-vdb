@@ -37,12 +37,18 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES =              \
+	$(BAM_OBJ)          \
+	$(ALIGN_ACCESS_OBJ) \
+	$(ALIGN_READER_OBJ) \
+	$(ALIGN_WRITER_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -151,3 +157,7 @@ ALIGN_WRITER_LIB =
 
 $(ILIBDIR)/libalign-writer.$(LIBX): $(ALIGN_WRITER_OBJ)
 	$(LD) --slib -o $@ $^ $(ALIGN_WRITER_LIB)
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

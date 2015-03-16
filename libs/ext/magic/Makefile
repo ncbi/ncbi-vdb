@@ -37,12 +37,15 @@ ALL_LIBS = \
 	$(INT_LIBS) \
 	$(EXT_LIBS)
 
+OBJFILES = \
+	$(LIBMAGIC_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: $(ALL_LIBS)
+all std: makedirs compile # $(ALL_LIBS)
 	@ $(MAKE_CMD) $(TARGDIR)/$@
 
 $(INT_LIBS): makedirs
@@ -84,7 +87,7 @@ $(ILIBDIR)/magic:
 
 ifeq (linux,$(OS))
 ifeq (64,$(BITS))
-    
+
 $(ILIBDIR)/magic: $(addprefix $(ILIBDIR)/$(LPFX)magic-static.,$(LIBX))
 
 CFLAGS += -DHAVE_CONFIG_H
@@ -118,4 +121,7 @@ $(ILIBDIR)/libmagic-static.$(LIBX): $(LIBMAGIC_OBJ)
 
 endif
 endif
-    
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

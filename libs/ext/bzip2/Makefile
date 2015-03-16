@@ -36,10 +36,13 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES = \
+	$(LIBBZ2_OBJ)
+
 #-------------------------------------------------------------------------------
 # outer targets
 #
-std all: makedirs # download
+std all: makedirs compile # download
 	@ $(MAKE_CMD) $(TARGDIR)/$@
 
 $(INT_LIBS): makedirs # download
@@ -145,3 +148,7 @@ endif
 download: libbz2.vers
 
 .PHONY: download
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

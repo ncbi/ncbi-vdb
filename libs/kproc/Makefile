@@ -34,18 +34,22 @@ INT_LIBS = \
 	libksproc \
 	libkproc
 
-ifneq (win,$(OS))
-INT_LIBS += \
-	libkq
-endif
-
 ALL_LIBS = \
 	$(INT_LIBS)
+
+OBJFILES =       \
+	$(PROC_OBJ)  \
+	$(SPROC_OBJ)
+
+ifneq (win,$(OS))
+INT_LIBS += libkq
+OBJFILES += $(Q_OBJ)
+endif
 
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -152,3 +156,7 @@ Q_LIB = \
 
 $(ILIBDIR)/libkq.$(LIBX): $(Q_OBJ)
 	$(LD) --slib -o $@ $^ $(Q_LIB)
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

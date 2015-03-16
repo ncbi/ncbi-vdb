@@ -34,6 +34,9 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES = \
+	$(JUDY_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 
@@ -200,3 +203,7 @@ JUDY_OBJ = \
 
 $(ILIBDIR)/libjudy.$(LIBX): $(JUDY_OBJ)
 	$(LD) --slib -o $@ $^
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

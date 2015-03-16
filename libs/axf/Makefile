@@ -35,12 +35,16 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES =     \
+	$(AXF_OBJ) \
+	$(WAXF_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(ALL_LIBS): makedirs
@@ -131,3 +135,7 @@ WAXF_LIB = \
 
 $(ILIBDIR)/libwaxf.$(LIBX): $(WAXF_OBJ)
 	$(LD) --slib -o $@ $^ $(WAXF_LIB)
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

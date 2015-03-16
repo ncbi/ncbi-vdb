@@ -35,6 +35,10 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES = \
+	$(KDB_OBJ) \
+	$(WKDB_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 DEFINES += -DUSE_BSTREE_IN_COLUMN_IDX1
@@ -43,7 +47,7 @@ DEFINES += -DUSE_BSTREE_IN_COLUMN_IDX1
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -154,3 +158,7 @@ WKDB_LIB = \
 
 $(ILIBDIR)/libwkdb.$(LIBX): $(WKDB_OBJ)
 	$(LD) --slib -o $@ $^ $(WKDB_LIB)
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

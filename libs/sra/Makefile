@@ -38,6 +38,13 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES =            \
+	$(SRADB_OBJ)      \
+	$(WSRADB_OBJ)     \
+	$(SRAREADER_OBJ)  \
+#	$(SRA_SCHEMA_OBJ) \
+	$(WSRA_SCHEMA_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 VPATH += $(OBJDIR)
@@ -45,7 +52,7 @@ VPATH += $(OBJDIR)
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -233,3 +240,7 @@ SRAREADER_LIB = \
 
 $(ILIBDIR)/libsrareader.$(LIBX): $(SRAREADER_OBJ)
 	$(LD) --slib -o $@ $^ $(SRAREADER_LIB)
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

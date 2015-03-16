@@ -34,12 +34,15 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES = \
+	$(SEARCH_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -95,3 +98,7 @@ SEARCH_LIB = \
 
 $(ILIBDIR)/libksrch.$(LIBX): $(SEARCH_OBJ)
 	$(LD) --slib -o $@ $^ $(SEARCH_LIB)
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

@@ -32,6 +32,10 @@ INT_LIBS = \
 	libvxf \
 	libwvxf
 
+OBJFILES = \
+	$(VXF_OBJ) \
+	$(WVXF_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 RWORKDIR = $(BINDIR)
@@ -42,7 +46,7 @@ ALL_LIBS = \
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -186,3 +190,7 @@ VXF_ENTREZ_LIB = \
 
 $(ILIBDIR)/libvxfentrez.$(LIBX): $(VXF_ENTREZ_OBJ)
 	$(LD) --slib -o $@ $^ $(VXF_ENTREZ_LIB)
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

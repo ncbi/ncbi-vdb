@@ -35,12 +35,16 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES =           \
+	$(KFS_OBJ)       \
+	$(KFS_NOMMAP_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -182,6 +186,8 @@ ifeq (1,$(HAVE_MAGIC))
 
 $(ILIBDIR)/libkff: $(addprefix $(ILIBDIR)/libkff.,$(ILIBEXT))
 
+OBJFILES += $(KFF_OBJ)
+
 else
 
 $(ILIBDIR)/libkff:
@@ -210,3 +216,6 @@ endif
 $(ILIBDIR)/libkff.$(LIBX): $(KFF_OBJ)
 	$(LD) --slib -o $@ $^ $(KFF_LIB)
 
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

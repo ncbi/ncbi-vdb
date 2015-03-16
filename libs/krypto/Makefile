@@ -35,10 +35,14 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES = \
+	$(KRYPTO_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 ifeq ($(OS),linux)
 	INT_LIBS += libkryptotest
+	OBJFILES += $(KRYPTOTEST_OBJ)
 endif
 
 
@@ -54,7 +58,7 @@ endif
 #
 # The prerequisite call to make compiler-test will have tried to compile objects
 # that show such support if the objec can be made
-all std: makedirs compiler-test
+all std: makedirs compiler-test compile
 	@ $(MAKE_CMD) \
 		VEC_SUPPORTED=$(shell if test -f $(OBJDIR)/compile-test.vec.$(LOBX) ; then echo "true"; else echo "false" ; fi) \
 		VECREG_SUPPORTED=$(shell if test -f $(OBJDIR)/compile-test.vecreg.$(LOBX) ; then echo "true"; else echo "false" ; fi) \
@@ -288,5 +292,6 @@ $(ILIBDIR)/libkryptotest.$(LIBX): $(KRYPTOTEST_OBJ)
 	$(LD) --slib -o $@ $^ $(KRYPTOTEST_LIB)
 
 
+compile: stdcompile
 
-
+$(TARGDIR)/compile: $(OBJFILES)

@@ -34,16 +34,19 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES = \
+	$(KLIB_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all: makedirs
+all: makedirs compile
 	@ $(MAKE) -C $(SRCDIR)/judy all
 	@ $(MAKE_CMD) $(TARGDIR)/all
 
-std: makedirs
+std: makedirs compile
 	@ $(MAKE) -C $(SRCDIR)/judy std
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
@@ -144,3 +147,11 @@ KLIB_LIB = \
 
 $(ILIBDIR)/libklib.$(LIBX): $(KLIB_OBJ)
 	$(LD) --slib -o $@ $^ $(KLIB_LIB)
+
+
+# compilation
+compile: makedirs
+	@ $(MAKE) -C $(SRCDIR)/judy compile
+	@ $(MAKE_CMD) -j$(MAKE_JOBS) $(TARGDIR)/compile
+
+$(TARGDIR)/compile: $(OBJFILES)

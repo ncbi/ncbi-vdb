@@ -38,10 +38,15 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES = \
+	$(KAPP_OBJ) \
+	$(KAPPR_OBJ) \
+	$(LOADLIB_OBJ)
+
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -138,3 +143,7 @@ endif
 
 $(ILIBDIR)/libload.$(LIBX): $(LOADLIB_OBJ)
 	$(LD) --slib -o $@ $^ $(LOADLIB_LIB)
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

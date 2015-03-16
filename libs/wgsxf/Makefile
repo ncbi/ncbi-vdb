@@ -35,6 +35,10 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES =       \
+	$(WGSXF_OBJ) \
+	$(WWGSXF_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 RWORKDIR = $(BINDIR)
@@ -42,7 +46,7 @@ RWORKDIR = $(BINDIR)
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -117,3 +121,7 @@ libwwgsxf.vers.h:
 	@ true
 
 .PHONY: $(TARGDIR)/libwwgsxf
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)
