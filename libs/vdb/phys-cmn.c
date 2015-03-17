@@ -539,7 +539,7 @@ rc_t VPhysicalReadStatic ( VPhysical *self, VBlob **vblob, int64_t id, uint32_t 
                         /* limit row range */
                         if ( ( ( sstop_id - sstart_id ) >> 30 ) != 0 )
                         {
-                            sstart_id  =   ((id-1) &  ~0x3fffffffUL ) + 1;  /** Truncate to the nearest 1 billion **/
+                            sstart_id  =   ((id-1) &  ~0x1fffffffUL ) + 1;  /** Truncate to the nearest 1/2 billion; making sure that id is in the middle of 1 billion max window**/
                             if ( ( ( sstop_id - sstart_id ) >> 30 ) != 0 ) /** still not enough ***/
                                 sstop_id = sstart_id + 0x40000000UL ; /** leave only 1 billion */
                         }
