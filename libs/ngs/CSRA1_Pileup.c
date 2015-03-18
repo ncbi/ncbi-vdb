@@ -319,7 +319,7 @@ void CSRA1_Pileup_AlignCursorDataGetNonEmptyCell ( CSRA1_Pileup_AlignCursorData 
     TRY ( CSRA1_Pileup_AlignCursorDataGetCell ( self, ctx, row_id, col_idx ) )
     {
         if ( self -> cell_len [ col_idx ] == 0 )
-            INTERNAL_ERROR ( xcStorageExhausted, "zero-length cell data" );
+            INTERNAL_ERROR ( xcColumnEmpty, "zero-length cell data (row_id = %ld, col_idx = %u)", row_id, col_idx );
     }
 }
 

@@ -165,6 +165,7 @@ XC ( xcDirectoryWriteOnly, xoDirectory, xsWriteOnly );
 XC ( xcFunctionUnsupported, xoFunction, xsUnsupported );
 XC ( xcInterfaceIncorrect, xoInterface, xsIncorrect );
 XC ( xcInterfaceInvalid, xoInterface, xsInvalid );
+XC ( xcColumnEmpty, xoColumn, xsEmpty );
 
 #ifdef __cplusplus
 }

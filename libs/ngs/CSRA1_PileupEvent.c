@@ -104,7 +104,7 @@ const void * CSRA1_PileupEventGetNonEmptyEntry ( const CSRA1_PileupEvent * self,
         
         if ( entry -> cell_len [ col_idx ] == 0 )
         {
-            INTERNAL_ERROR ( xcStorageExhausted, "zero-length cell data" );
+            INTERNAL_ERROR ( xcColumnEmpty, "zero-length cell data (row_id = %ld, col_idx = %u)", entry->row_id, col_idx );
             return NULL;
         }
     }
