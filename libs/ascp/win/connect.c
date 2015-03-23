@@ -97,12 +97,19 @@ static rc_t mkAscpCommand(char *buffer, size_t len,
         return rc;
     }
 
-    rc = KDirectoryPosixStringToSystemString(dir, system, sizeof system, "%s", dest);
+    rc = KDirectoryPosixStringToSystemString(
+        dir, system, sizeof system, "%s", dest);
     if (rc == 0) {
         if (opt != NULL) {
-            host = opt->host;
-            maxRate = opt->target_rate;
-            user = opt->user;
+            if (opt->host != NULL && opt->host[0] != '\0') {
+                host = opt->host;
+            }
+            if (opt->target_rate != NULL && opt->target_rate[0] != '\0') {
+                maxRate = opt->target_rate;
+            }
+            if (opt->user != NULL && opt->user[0] != '\0') {
+                user = opt->user;
+            }
         }
 
         rc = string_printf(buffer, len, &num_writ,

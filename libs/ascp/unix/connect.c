@@ -228,7 +228,7 @@ rc_t run_ascp(const char *path, const char *key,
     argv[i++] = "-i";
     argv[i++] = (char*)key;
     argv[i++] = "-pQTk1";
-    if (maxRate != NULL) {
+    if (maxRate != NULL && maxRate[0] != '\0') {
         argv[i++] = "-l";
         argv[i++] = (char*)maxRate;
     }
