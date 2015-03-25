@@ -793,6 +793,29 @@ void CSRA1_PileupGatherIds ( CSRA1_Pileup * self, ctx_t ctx, uint32_t id_limit )
     while ( total_ids < id_limit && self -> idx_chunk_id <= self -> slice_end_id );
 }
 
+/*  Get RD_FILTER and check if it's present
+    e.g for SRR1164787 SECONDARY_ALIGNMENT row_id == 3
+    has invalid data (SEQ_ID == 0, no RD_FILTER) - 
+    we need to ignore such records
+
+    return: true - there is a valid RD_FILTER value in the db
+            false - there is no RD_FILTER in the db
+*/
+static bool CSRA1_Pileup_GetReadFilter ( CSRA1_Pileup * self, ctx_t ctx,
+    int64_t row_id, CSRA1_Pileup_AlignCursorData * cd, INSDC_read_filter* ret_val )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    TRY ( CSRA1_Pileup_AlignCursorDataGetCell ( cd, ctx, row_id, pileup_align_col_READ_FILTER ) )
+    {
+        if ( cd -> cell_len [ pileup_align_col_READ_FILTER ] == 0 )
+            return false;
+    }
+
+    * ret_val = *( (INSDC_read_filter*) cd -> cell_data [ pileup_align_col_READ_FILTER ]);
+    return true;
+}
+
 static
 bool CSRA1_PileupFilterAlignment ( CSRA1_Pileup * self, ctx_t ctx,
     int64_t row_id, CSRA1_Pileup_AlignCursorData * cd )
@@ -802,7 +825,8 @@ bool CSRA1_PileupFilterAlignment ( CSRA1_Pileup * self, ctx_t ctx,
     int32_t map_qual;
     INSDC_read_filter read_filter;
 
-    TRY ( read_filter = CSRA1_Pileup_AlignCursorDataGetUInt8 ( cd, ctx, row_id, pileup_align_col_READ_FILTER ) )
+    if ( CSRA1_Pileup_GetReadFilter ( self, ctx, row_id, cd, & read_filter ) == true )
+    /*TRY ( read_filter = CSRA1_Pileup_AlignCursorDataGetUInt8 ( cd, ctx, row_id, pileup_align_col_READ_FILTER ) )*/
     {
         switch ( read_filter )
         {
@@ -835,7 +859,6 @@ bool CSRA1_PileupFilterAlignment ( CSRA1_Pileup * self, ctx_t ctx,
             break;
         }
     }
-
     return false;
 }
 
