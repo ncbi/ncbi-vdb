@@ -375,30 +375,23 @@ void mimic_sra_pileup (
     print_line ( line_prev, canonical_name.c_str(), pos_start, pos - 1, strRefSlice, os );
 }
 
-//TEST_CASE(CSRA1_PileupEventIterator_Temp)
-//{
-//
-//    //sra-pileup SRR497541 -r "Contig307.Contig78.Contig363_2872688_2872915.Contig307.Contig78.Contig363_1_2872687":106436-106438 -s -n
-//    // There should be no "g-3taa$" for the position 106438, only "g$" must be there
-//
-//    char const db_path[] = "SRR1164787";
-//    char const ref_name[] = "chr1";
-//
-//    int64_t const pos_start = 1386093;
-//    int64_t const pos_end = 9999999;
-//    uint64_t const len = (uint64_t)(pos_end - pos_start + 1);
-//
-//    std::ostringstream sstream;
-//    std::ostringstream sstream_ref;
-//
-//    //sstream_ref << ref_name << "\t106436\tT\t106\tC$C$,$.,$,$,$,$.-5TATAA.-5TATAA,-5tataa.-5TATAA.-5TATAA.$.-5TATAA.-5TATAA,-5tataa.-5TATAA,-5tataa,-5tataa.-5TATAA,-5tataa,-5tataa.-5TATAA,-5tataa,-5tataa,-5tataa,-5tataa.-5TATAA.-5TATAA,-5tataa.-5TATAA,-5tataa,$.-5TATAA,-5tataa,,-5tataa,$.-5TATAA,-5tataa,-5tataa.-5TATAA,-5tataa.$.$.-5TATAA.-5TATAA.-5TATAA.-5TATAA,-5tataa.-5TATAA.-5TATAA.-5TATAA.-5TATAA.-5TATAA.-5TATAA.-5TATAA,-5tataa.-5TATAA,-5tataa,-5tataa,-5tataa.-5TATAA.$,-5tataa.-5TATAA.-5TATAA.-5TATAA.-5TATAA,-5tataa,-5tataa,-5tataa.-5TATAA,-5tataa,-5tataa.-5TATAA,-5tataa,-5tataa.-5TATAA.-5TATAA.$.-5TATAA,-5tataa.-5TATAA.-5TATAA.-5TATAA.-5TATAA,-5tataa,-5tataa.-5TATAA,-5tataa.-5TATAA.-5TATAA.-5TATAA,-5tataa,-5tataa,-5tataa,-5tataa,-5tataa,-5tataa.-5TATAA.-5TATAA,-5tataa,-5tataa^]g" << std::endl;
-//    //sstream_ref << ref_name << "\t106437\tT\t92\tC$>><>>>><><<><<><<<<>><><><c<><<><>>>><>>>>>>><><<<><>>>><<<><<><<>>><>>>><<><>>><<<<<<>><<," << std::endl;
-//    //sstream_ref << ref_name << "\t106438\tA\t91\t>><>>>><><<><<><<<<>><><><g$<><<><>>>><>>>>>>><><<<><>>>><<<><<><<>>><>>>><<><>>><<<<<<>><<," << std::endl;
-//
-//    mimic_sra_pileup ( db_path, ref_name, ngs::Alignment::primaryAlignment, pos_start, len, sstream );
-//
-//    //REQUIRE_EQ ( sstream.str (), sstream_ref.str () );
-//}
+TEST_CASE(CSRA1_PileupEventIterator_AdjacentIndels)
+{
+    // This test crashed in CSRA1_PileupEvent.c because of
+    // insertion followed by deletion (see vdb-dump SRR1164787 -T PRIMARY_ALIGNMENT -R 209167)
+    // So now this test has to just run with no crashes to be considered as passed successfully
+
+    char const db_path[] = "SRR1164787";
+    char const ref_name[] = "chr1";
+
+    int64_t const pos_start = 1386093;
+    int64_t const pos_end = 9999999;
+    uint64_t const len = (uint64_t)(pos_end - pos_start + 1);
+
+    std::ostringstream sstream;
+
+    mimic_sra_pileup ( db_path, ref_name, ngs::Alignment::primaryAlignment, pos_start, len, sstream );
+}
 
 TEST_CASE(CSRA1_PileupEventIterator_DeletionAndEnding)
 {
