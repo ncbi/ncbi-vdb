@@ -144,7 +144,7 @@ static const char * align_col_specs [] =
     "(INSDC:dna:text)READ",
     "(I64)REF_ID",
     "(INSDC:coord:len)REF_LEN",
-    "(ascii)REF_NAME",
+    "(ascii)REF_SEQ_ID",	/* was REF_NAME changed March 23 2015 */
     "(bool)REF_ORIENTATION",
     "(INSDC:coord:zero)REF_POS",
     "(INSDC:dna:text)REF_READ",
@@ -155,7 +155,7 @@ static const char * align_col_specs [] =
     "(I32)TEMPLATE_LEN",
     "(ascii)RNA_ORIENTATION",
     "(I64)MATE_ALIGN_ID",
-    "(ascii)MATE_REF_NAME",
+    "(ascii)MATE_REF_SEQ_ID",	/* was MATE_REF_NAME changed March 23 2015 */
     "(bool)MATE_REF_ORIENTATION",
 };
 
