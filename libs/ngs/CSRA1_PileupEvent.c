@@ -681,6 +681,9 @@ bool CSRA1_PileupEventEntryFocus ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry 
             if ( entry -> seq_idx >= entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
                 return false;
 
+            /* retry point for merging events */
+        merge_adjacent_indel_events:
+
             /* adjust alignment */
             if ( HAS_REF_OFFSET [ entry -> seq_idx ] )
             {
@@ -712,12 +715,19 @@ bool CSRA1_PileupEventEntryFocus ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry 
                        The "true" values in HAS_REF_OFFSET within an insertion do NOT
                        represent a corresponding entry in REF_OFFSET, so they are ignored here.
                     */
+
+                    /* detect the case of an insertion followed by a deletion */
+                    if ( entry -> seq_idx < entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
+                    {
+                        ++ entry -> ref_off_idx;
+                        goto merge_adjacent_indel_events;
+                    }
                 }
 
                 else
                 {
                     /* deletion */
-                    entry -> del_cnt = REF_OFFSET [ entry -> ref_off_idx ];
+                    entry -> del_cnt += REF_OFFSET [ entry -> ref_off_idx ];
 
                     /* clip to PROJECTION length */
                     if ( ( int64_t ) entry -> del_cnt > entry -> xend - ( entry -> zstart + entry -> zstart_adj ) )
