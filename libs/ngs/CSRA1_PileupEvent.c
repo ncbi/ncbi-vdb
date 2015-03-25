@@ -346,10 +346,17 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                 TRY ( MISMATCH = CSRA1_PileupEventGetEntry ( self, ctx, entry, pileup_event_col_MISMATCH ) )
                 {
                     uint32_t ref_first = entry -> seq_idx;
-                    uint32_t ins_start = entry -> seq_idx - entry -> ins_cnt;
-                    uint32_t seq_idx, mismatch_idx = entry -> mismatch_idx;
+                    uint32_t mismatch_idx = entry -> mismatch_idx;
+                    uint32_t seq_idx, ins_start = entry -> seq_idx - entry -> ins_cnt;
 
                     assert ( MISMATCH != 0 );
+
+                    /* seq_idx MUST be > ins_cnt, which is non-zero, ...
+                       for seq_idx to be == ins_cnt implies that the sequence
+                       starts with an insertion, otherwise considered a soft-clip,
+                       and not an insertion at all.
+                     */
+                    assert ( entry -> seq_idx > entry -> ins_cnt );
 
                     /* fill in the buffer with each entry from mismatch */
                     for ( seq_idx = entry -> seq_idx - 1; seq_idx >= ins_start; -- seq_idx )
