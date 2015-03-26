@@ -1,0 +1,18 @@
+function < type T >
+T echo #1.0 < T val > ( * any row_len )
+    = vdb:echo;
+
+table spotdesc #1
+{
+    extern column ascii LABEL = out_label;
+};
+
+table reference #1 = spotdesc #1
+{
+    ascii out_label = < ascii > echo < "reference" > ();
+}
+
+database db #1
+{
+    table reference #1 REFERENCE;
+};

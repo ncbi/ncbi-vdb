@@ -33,6 +33,9 @@
 
 #include <sysalloc.h>
 
+#include <sstream>
+#include <cstdlib>
+
 using namespace std;
 
 TEST_SUITE( WVdbTestSuite )
@@ -47,9 +50,9 @@ TEST_CASE(BlobCorruptOnCommit)
         REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
         VSchema* schema;
         REQUIRE_RC ( VDBManagerMakeSchema ( mgr, & schema ) );
-        const char * schemaFile = "align/align.vschema";
+        const char * schemaFile = "blobcorrupt.vschema";
         REQUIRE_RC ( VSchemaParseFile(schema, "%s", schemaFile ) );
-        const char * schemaSpec = "NCBI:align:db:alignment_sorted";
+        const char * schemaSpec = "db";
         const char * databaseName = GetName();
         
         REQUIRE_RC ( VDBManagerCreateDB ( mgr, 
@@ -79,10 +82,20 @@ TEST_CASE(BlobCorruptOnCommit)
     //REQUIRE_RC ( VCursorAddColumn ( cursor, & columnIdx, "%s", "SPOT_ID" ) );
     
     REQUIRE_RC ( VCursorOpen ( cursor  ) );
-    REQUIRE_RC ( VCursorOpenRow ( cursor ) );
-    REQUIRE_RC ( VCursorWrite ( cursor, columnIdx, 8, "", 0, 0 ) );
-    REQUIRE_RC ( VCursorCommitRow ( cursor ) );
-    REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+    
+    for ( int i = 0; i < 4096; ++i)
+    {
+        ostringstream out;
+        out << rand();
+
+        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, columnIdx, 8, out.str().c_str(), 0, out.str().size() ) );
+        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
+        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+        
+        //REQUIRE_RC ( VCursorFlushPage ( cursor ) ); // kaboom
+    }
+    
     REQUIRE_RC ( VCursorCommit ( cursor ) ); // kaboom
     REQUIRE_RC ( VCursorRelease ( cursor ) );
     

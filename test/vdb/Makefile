@@ -99,6 +99,9 @@ TEST_WVDB_LIB = \
 $(TEST_BINDIR)/test-wvdb: $(TEST_WVDB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_WVDB_LIB)
 
+wvdb: test-wvdb
+	$(TEST_BINDIR)/test-wvdb    
+    
 valgrind_wvdb: std
 	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-wvdb    
     
