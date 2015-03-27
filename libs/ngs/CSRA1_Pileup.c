@@ -80,12 +80,19 @@ void enable_pileup_printing ( void ) { printing = true; }
 static
 void CC CSRA1_Pileup_EntryWhack ( DLNode * node, void * param )
 {
+    uint32_t i;
     ctx_t ctx = ( ctx_t ) param;
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcDestroying );
 
     CSRA1_Pileup_Entry * self = ( CSRA1_Pileup_Entry * ) node;
 
     /* tear down stuff here */
+    for ( i = 0; i < sizeof self -> blob / sizeof self -> blob [ 0 ]; ++ i )
+    {
+        const VBlob * blob = self -> blob [ i ];
+        if ( blob != NULL )
+            VBlobRelease ( blob );
+    }
 
     free ( self );
 }
