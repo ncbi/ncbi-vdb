@@ -1352,6 +1352,39 @@ LIB_EXPORT rc_t CC VBlobRelease ( const VBlob *self )
     return rc;
 }
 
+
+LIB_EXPORT rc_t CC VBlobSize ( const VBlob * self, size_t * bytes )
+{
+    rc_t rc;
+
+    if ( bytes == NULL )
+        rc = RC ( rcVDB, rcBlob, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcVDB, rcBlob, rcAccessing, rcSelf, rcNull );
+        else
+        {
+            const PageMap * pm = self -> pm;
+            size_t blob_size = sizeof * self + KDataBufferBytes ( & self -> data );
+            if ( self -> pm != NULL )
+            {
+                blob_size += KDataBufferBytes ( & pm -> cstorage )
+                          +  KDataBufferBytes ( & pm -> dstorage )
+                          +  KDataBufferBytes ( & pm -> istorage )
+                          ;
+            }
+
+            * bytes = blob_size;
+            return 0;
+        }
+
+        * bytes = 0;
+    }
+
+    return rc;
+}
+
 /*--------------------------------------------------------------------------
  * VBlobCache
  */

@@ -71,6 +71,13 @@ VDB_EXTERN rc_t CC VBlobRelease ( const VBlob *self );
 VDB_EXTERN rc_t CC VBlobIdRange ( const VBlob *self,
     int64_t *first, uint64_t *count );
 
+/* Size
+ *  returns the size of a blob in bytes
+ *
+ *  AVAILABILITY: version 2.7
+ */
+VDB_EXTERN rc_t CC VBlobSize ( const VBlob * self, size_t * bytes );
+
 
 /* Read
  *  read entire single cell of byte-aligned data into a buffer
