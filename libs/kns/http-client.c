@@ -35,6 +35,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 #include <kns/socket.h>
 #include <kns/stream.h>
 #include <kns/impl.h>
+#include <vfs/path.h>
 #include <kfs/file.h>
 #include <kfs/directory.h>
 
@@ -114,6 +115,7 @@ struct KClientHttp
 
     KEndPoint ep;
     bool ep_valid;
+    bool proxy_ep;
     
     bool reliable;
 };
@@ -164,6 +166,37 @@ rc_t KClientHttpWhack ( KClientHttp * self )
     return 0;
 }
 
+static
+rc_t KClientHttpInitDNSEndpoint ( KClientHttp * self, const String * hostname, uint32_t port )
+{
+    rc_t rc = 0;
+
+    const KNSManager * mgr = self -> mgr;
+
+    if ( mgr -> http_proxy_enabled && mgr -> http_proxy != NULL )
+    {
+        bool dflt = false;
+        uint16_t proxy_port = mgr -> http_proxy_port;
+        if ( proxy_port == 0 )
+        {
+            proxy_port = 3128;
+            dflt = true;
+        }
+
+        rc = KNSManagerInitDNSEndpoint ( mgr, & self -> ep, mgr -> http_proxy, proxy_port );
+        if ( rc != 0 && dflt )
+            rc = KNSManagerInitDNSEndpoint ( mgr, & self -> ep, mgr -> http_proxy, 8080 );
+        if ( rc == 0 )
+        {
+            self -> proxy_ep = true;
+            return 0;
+        }
+    }
+
+    self -> proxy_ep = false;
+    return KNSManagerInitDNSEndpoint ( mgr, & self -> ep, hostname, port );
+}
+
 rc_t KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t port )
 {
     rc_t rc;
@@ -171,7 +204,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t por
 
     if ( ! self -> ep_valid )
     {
-        rc = KNSManagerInitDNSEndpoint ( self -> mgr, & self -> ep, hostname, port );
+        rc = KClientHttpInitDNSEndpoint ( self, hostname, port );
         if ( rc != 0 )
             return rc;
 
@@ -2352,7 +2385,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostParam ( KClientHttpRequest *self, co
 
 
 static
-rc_t KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
+rc_t KClientHttpRequestFormatMsg ( KClientHttpRequest *self,
     char *buffer, size_t bsize, const char *method, size_t *len )
 {
     rc_t rc;
@@ -2379,6 +2412,27 @@ rc_t KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
         hostname = http -> hostname;
         if ( hostname . size == 0 )
             return RC ( rcNS, rcNoTarg, rcValidating, rcName, rcEmpty );
+    }
+
+    /* if using proxy, also setup headers */
+    if ( http -> proxy_ep )
+    {
+        String Host;
+        KHttpHeader * node;
+
+        CONST_STRING ( & Host, "Host" );
+        node = ( KHttpHeader * ) BSTreeFind ( & self -> hdrs, & Host, KHttpHeaderCmp );
+        if ( node != NULL && ! StringCaseEqual ( & node -> value, & hostname ) )
+        {
+            BSTreeUnlink ( & self -> hdrs, & node -> dad );
+            KHttpHeaderWhack ( & node -> dad, NULL );
+        }
+        if ( node == NULL )
+        {
+            rc = KClientHttpAddHeaderString ( & self -> hdrs, & Host, & hostname );
+            if ( rc != 0 )
+                return rc;
+        }
     }
 
     CONST_STRING ( &user_agent_string, "User-Agent" );
@@ -2622,7 +2676,8 @@ rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttp
         
         {
             rc_t rc2 = KHttpRetrierDestroy ( & retrier );
-            if ( rc == 0 ) rc = rc2;
+            if ( rc == 0 )
+                rc = rc2;
         }
     }
     
@@ -2677,6 +2732,9 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
                 rc = KClientHttpAddHeader ( & self -> hdrs, "Content-Type", "application/x-www-form-urlencoded" );
             }
         }
+
+        if ( rc != 0 )
+            return rc;
     }
 
     for ( i = 0; i < max_redirect; ++ i )
