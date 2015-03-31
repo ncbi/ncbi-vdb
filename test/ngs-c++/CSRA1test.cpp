@@ -43,6 +43,7 @@ public:
     static const char* CSRA1_PrimaryOnly;
     static const char* CSRA1_WithSecondary;
     static const char* CSRA1_WithGroups;
+    static const char* CSRA1_NoReadGroups;
     
 public:
     CSRA1_Fixture()
@@ -77,9 +78,10 @@ public:
         return ncbi :: NGS :: openReadCollection ( CSRA1_WithSecondary ) . getAlignments ( category );
     }
 };
-const char* CSRA1_Fixture::CSRA1_PrimaryOnly   = "SRR1063272";
-const char* CSRA1_Fixture::CSRA1_WithSecondary = "SRR833251";
-const char* CSRA1_Fixture::CSRA1_WithGroups = "SRR822962";
+const char* CSRA1_Fixture::CSRA1_PrimaryOnly    = "SRR1063272";
+const char* CSRA1_Fixture::CSRA1_WithSecondary  = "SRR833251";
+const char* CSRA1_Fixture::CSRA1_WithGroups     = "SRR822962";
+const char* CSRA1_Fixture::CSRA1_NoReadGroups   = "SRR1237963";
 
 #include "CSRA1_ReadCollection_test.cpp"
 
@@ -460,6 +462,7 @@ FIXTURE_TEST_CASE(CSRA1_ReferenceIterator_BeyondEnd, CSRA1_Fixture)
 ///// Alignment
 //TODO: CG's EVIDENCE?
 //TODO: add tests for missing optional columns
+//TODO: getRNAOrientatation__Present
 
 FIXTURE_TEST_CASE(CSRA1_Alignment_getAlignmentId, CSRA1_Fixture)
 {
@@ -489,6 +492,12 @@ FIXTURE_TEST_CASE(CSRA1_Alignment_getReadGroup, CSRA1_Fixture)
 {
     REQUIRE_EQ( string("C1ELY.6"), 
                 ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.1" ) . getReadGroup () );
+}
+
+FIXTURE_TEST_CASE(CSRA1_Alignment_getReadGroup_Empty, CSRA1_Fixture)
+{
+    REQUIRE_EQ( string(""), 
+                ncbi :: NGS :: openReadCollection ( CSRA1_NoReadGroups ) . getAlignment ( ngs :: String ( CSRA1_NoReadGroups ) + ".PA.1" ) . getReadGroup () );
 }
 
 FIXTURE_TEST_CASE(CSRA1_Alignment_getReadId, CSRA1_Fixture)
@@ -602,6 +611,12 @@ FIXTURE_TEST_CASE(CSRA1_Alignment_getLongCigar_Clipped, CSRA1_Fixture)
 {
     REQUIRE_EQ( string("1X8=1X39=1X46="), 
                 ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.4" ) . getLongCigar ( true ) . toString () );
+}
+
+FIXTURE_TEST_CASE(CSRA1_Alignment_getRNAOrientation_Missing, CSRA1_Fixture)
+{
+    REQUIRE_EQ( '?', 
+                ncbi :: NGS :: openReadCollection ( CSRA1_NoReadGroups ) . getAlignment ( ngs :: String ( CSRA1_NoReadGroups ) + ".PA.1" ) . getRNAOrientation() );
 }
 
 // Mate alignment
