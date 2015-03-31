@@ -278,15 +278,18 @@ struct NGS_String* CSRA1_AlignmentGetReadGroup( CSRA1_Alignment* self, ctx_t ctx
         USER_ERROR ( xcIteratorUninitialized, "Alignment accessed before a call to AlignmentIteratorNext()" );
         return NULL;
     }
-    TRY ( NGS_String* ret = NGS_CursorGetString ( GetCursor ( self ), ctx, self -> cur_row, align_SPOT_GROUP ) )
+    else
     {
-        return ret;
+        TRY ( NGS_String* ret = NGS_CursorGetString ( GetCursor ( self ), ctx, self -> cur_row, align_SPOT_GROUP ) )
+        {
+            return ret;
+        }
+        CATCH_ALL ()
+        {
+            CLEAR();
+        }
+        return NGS_StringMake ( ctx, "", 0 );
     }
-    CATCH_ALL ()
-    {
-        CLEAR();
-    }
-    return NGS_StringMake ( ctx, "", 0 );
 }
 
 NGS_String * CSRA1_AlignmentGetReadId( CSRA1_Alignment* self, ctx_t ctx )
