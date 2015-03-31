@@ -99,6 +99,7 @@ struct CSRA1_Pileup_Entry
 
     /* blob cache to ensure cell-data remain valid */
     struct VBlob const * blob [ pileup_event_col_count ];
+    size_t blob_total;
 
     /* cell data of interest to pileup event */
     const void * cell_data [ pileup_event_col_count ];
@@ -127,6 +128,12 @@ struct CSRA1_Pileup_Entry
 
     /* true if alignment comes from secondary table */
     bool secondary;
+
+    /* true if blobs were not entirely cached */
+    bool temporary;
+
+    /* true if event has already been seen */
+    bool seen;
 };
 
 
@@ -236,6 +243,10 @@ struct CSRA1_Pileup
 
     /* current chunk for reading alignment ids */
     int64_t idx_chunk_id;
+
+    /* cached vblob limit and sum */
+    size_t cached_blob_limit;
+    size_t cached_blob_total;
 
     /* pointer to bases of current reference chunk */
     const INSDC_dna_text * ref_chunk_bases;

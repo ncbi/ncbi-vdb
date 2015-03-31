@@ -801,8 +801,33 @@ void CSRA1_PileupEventEntryInit ( CSRA1_PileupEvent * self, ctx_t ctx, CSRA1_Pil
     self -> entry = NULL;
 }
 
+static
+void CSRA1_PileupEventRefreshEntry ( CSRA1_PileupEvent * self, ctx_t ctx, CSRA1_Pileup_Entry * entry )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    const bool * HAS_MISMATCH;
+    TRY ( HAS_MISMATCH = CSRA1_PileupEventGetEntry ( self, ctx, entry, pileup_event_col_HAS_MISMATCH ) )
+    {
+        const int32_t * REF_OFFSET;
+        TRY ( REF_OFFSET = CSRA1_PileupEventGetEntry ( self, ctx, entry, pileup_event_col_REF_OFFSET ) )
+        {
+            const bool * HAS_REF_OFFSET;
+            TRY ( HAS_REF_OFFSET = CSRA1_PileupEventGetEntry ( self, ctx, entry, pileup_event_col_HAS_REF_OFFSET ) )
+            {
+                assert ( HAS_MISMATCH != NULL );
+                assert ( HAS_REF_OFFSET != NULL );
+                assert ( REF_OFFSET != NULL );
+            }
+        }
+    }
+}
+
+
 bool CSRA1_PileupEventIteratorNext ( CSRA1_PileupEvent * self, ctx_t ctx )
 {
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
     CSRA1_Pileup_Entry * entry;
     CSRA1_Pileup * pileup = CSRA1_PileupEventGetPileup ( self );
     assert ( pileup != NULL );
@@ -819,11 +844,17 @@ bool CSRA1_PileupEventIteratorNext ( CSRA1_PileupEvent * self, ctx_t ctx )
         return false;
 
     /* detect new entry */
-    if ( entry -> cell_data [ pileup_event_col_REF_OFFSET ] == NULL )
+    if ( ! entry -> seen )
     {
         ON_FAIL ( CSRA1_PileupEventEntryInit ( self, ctx, entry ) )
             return false;
+        entry -> seen = true;
         assert ( self -> entry != NULL );
+    }
+    else if ( entry -> cell_data [ pileup_event_col_REF_OFFSET ] == NULL )
+    {
+        ON_FAIL ( CSRA1_PileupEventRefreshEntry ( self, ctx, entry ) )
+            return false;
     }
 
     /* this is an entry we've seen before */
