@@ -153,3 +153,7 @@ $(TEST_BINDIR)/test-ngs_sra_pileup_diff: $(TEST_NGS_SRA_PILEUP_DIFF_OBJ)
 valgrind_ngs_sra_pileup_diff: std
 	valgrind --ncbi --suppressions=$(SRCDIR)/valgrind.suppress  --error-exitcode=1 $(TEST_BINDIR)/test-ngs_sra_pileup_diff    
 
+runtests:
+	$(BINDIR)/vdb-config
+	$(BINDIR)/vdb-dump SRR1237963 -E
+    

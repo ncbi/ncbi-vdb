@@ -493,13 +493,13 @@ FIXTURE_TEST_CASE(CSRA1_Alignment_getReadGroup, CSRA1_Fixture)
     REQUIRE_EQ( string("C1ELY.6"), 
                 ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.1" ) . getReadGroup () );
 }
-#if 0
+
 FIXTURE_TEST_CASE(CSRA1_Alignment_getReadGroup_Empty, CSRA1_Fixture)
 {
     REQUIRE_EQ( string(""), 
                 ncbi :: NGS :: openReadCollection ( CSRA1_NoReadGroups ) . getAlignment ( ngs :: String ( CSRA1_NoReadGroups ) + ".PA.1" ) . getReadGroup () );
 }
-#endif
+
 FIXTURE_TEST_CASE(CSRA1_Alignment_getReadId, CSRA1_Fixture)
 {
     REQUIRE_EQ( string ( CSRA1_PrimaryOnly ) + ".R.165753", 
@@ -612,13 +612,13 @@ FIXTURE_TEST_CASE(CSRA1_Alignment_getLongCigar_Clipped, CSRA1_Fixture)
     REQUIRE_EQ( string("1X8=1X39=1X46="), 
                 ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.4" ) . getLongCigar ( true ) . toString () );
 }
-#if 0
+
 FIXTURE_TEST_CASE(CSRA1_Alignment_getRNAOrientation_Missing, CSRA1_Fixture)
 {
     REQUIRE_EQ( '?', 
                 ncbi :: NGS :: openReadCollection ( CSRA1_NoReadGroups ) . getAlignment ( ngs :: String ( CSRA1_NoReadGroups ) + ".PA.1" ) . getRNAOrientation() );
 }
-#endif
+
 // Mate alignment
 FIXTURE_TEST_CASE(CSRA1_Alignment_hasMate_Primary_NoMate, CSRA1_Fixture)
 {
