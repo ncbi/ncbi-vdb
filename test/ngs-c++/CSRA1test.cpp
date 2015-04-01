@@ -867,6 +867,7 @@ extern "C"
 {
 
 #include <kapp/args.h>
+#include <kfg/config.h>
 
 ver_t CC KAppVersion ( void )
 {
