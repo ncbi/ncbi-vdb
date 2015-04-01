@@ -29,7 +29,6 @@
 */
 
 #include "ngsfixture.hpp"
-#include <klib/debug.h>
 
 #include <sstream>
 
@@ -52,7 +51,6 @@ public:
     }
     ~CSRA1_Fixture()
     {
-        KDbgSetModConds ( DBG_VFS, DBG_FLAG ( DBG_VFS ), ~ DBG_FLAG ( DBG_VFS ) );          
     }
 
     ngs :: ReadIterator getReads ( ngs :: Read :: ReadCategory cat = ngs :: Read :: all )
@@ -83,7 +81,7 @@ public:
 const char* CSRA1_Fixture::CSRA1_PrimaryOnly    = "SRR1063272";
 const char* CSRA1_Fixture::CSRA1_WithSecondary  = "SRR833251";
 const char* CSRA1_Fixture::CSRA1_WithGroups     = "SRR822962";
-const char* CSRA1_Fixture::CSRA1_NoReadGroups   = "SRR1237963";
+const char* CSRA1_Fixture::CSRA1_NoReadGroups   = "SRR1237962";
 
 #include "CSRA1_ReadCollection_test.cpp"
 
@@ -498,8 +496,6 @@ FIXTURE_TEST_CASE(CSRA1_Alignment_getReadGroup, CSRA1_Fixture)
 
 FIXTURE_TEST_CASE(CSRA1_Alignment_getReadGroup_Empty, CSRA1_Fixture)
 {
-    KDbgSetModConds ( DBG_VFS, DBG_FLAG ( DBG_VFS ), DBG_FLAG ( DBG_VFS ) );          
-
     REQUIRE_EQ( string(""), 
                 ncbi :: NGS :: openReadCollection ( CSRA1_NoReadGroups ) . getAlignment ( ngs :: String ( CSRA1_NoReadGroups ) + ".PA.1" ) . getReadGroup () );
 }
@@ -619,7 +615,6 @@ FIXTURE_TEST_CASE(CSRA1_Alignment_getLongCigar_Clipped, CSRA1_Fixture)
 
 FIXTURE_TEST_CASE(CSRA1_Alignment_getRNAOrientation_Missing, CSRA1_Fixture)
 {
-    KDbgSetModConds ( DBG_VFS, DBG_FLAG ( DBG_VFS ), DBG_FLAG ( DBG_VFS ) );          
     REQUIRE_EQ( '?', 
                 ncbi :: NGS :: openReadCollection ( CSRA1_NoReadGroups ) . getAlignment ( ngs :: String ( CSRA1_NoReadGroups ) + ".PA.1" ) . getRNAOrientation() );
 }
