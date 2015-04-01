@@ -38,6 +38,8 @@
 #include <kfc/except.h>
 #include <kfc/xc.h>
 
+#include <klib/log.h>
+
 #include <kfg/kfg-priv.h>
 #include <kfg/repository.h>
 
@@ -521,7 +523,11 @@ NGS_ReadCollection * NGS_ReadCollectionMake ( ctx_t ctx, const char * spec )
             /* non-aligned */
             return NGS_ReadCollectionMakeVDatabase ( ctx, db, spec );
         }
-
+        else
+        {
+            LOGERR ( klogErr, rc, "VDBManagerOpenDBRead failed" );
+        }
+        
         /* try as VDB table */
         rc = VDBManagerMakeSRASchema ( mgr, & sra_schema );
         if ( rc != 0 )
