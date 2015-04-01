@@ -116,6 +116,7 @@ struct KClientHttp
     KEndPoint ep;
     bool ep_valid;
     bool proxy_ep;
+    bool proxy_default_port;
     
     bool reliable;
 };
@@ -167,25 +168,24 @@ rc_t KClientHttpWhack ( KClientHttp * self )
 }
 
 static
-rc_t KClientHttpInitDNSEndpoint ( KClientHttp * self, const String * hostname, uint32_t port )
+rc_t KClientHttpInitDNSEndpoint ( KClientHttp * self, const String * hostname, uint32_t port, uint16_t dflt_proxy_port )
 {
     rc_t rc = 0;
 
     const KNSManager * mgr = self -> mgr;
 
-    if ( mgr -> http_proxy_enabled && mgr -> http_proxy != NULL )
+    self -> proxy_default_port = false;
+
+    if ( dflt_proxy_port != 0 && mgr -> http_proxy_enabled && mgr -> http_proxy != NULL )
     {
-        bool dflt = false;
         uint16_t proxy_port = mgr -> http_proxy_port;
         if ( proxy_port == 0 )
         {
-            proxy_port = 3128;
-            dflt = true;
+            proxy_port = dflt_proxy_port;
+            self -> proxy_default_port = true;
         }
 
         rc = KNSManagerInitDNSEndpoint ( mgr, & self -> ep, mgr -> http_proxy, proxy_port );
-        if ( rc != 0 && dflt )
-            rc = KNSManagerInitDNSEndpoint ( mgr, & self -> ep, mgr -> http_proxy, 8080 );
         if ( rc == 0 )
         {
             self -> proxy_ep = true;
@@ -194,25 +194,46 @@ rc_t KClientHttpInitDNSEndpoint ( KClientHttp * self, const String * hostname, u
     }
 
     self -> proxy_ep = false;
+
     return KNSManagerInitDNSEndpoint ( mgr, & self -> ep, hostname, port );
 }
 
 rc_t KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t port )
 {
-    rc_t rc;
+    rc_t rc = 0;
     KSocket * sock;
+    const KNSManager * mgr = self -> mgr;
 
-    if ( ! self -> ep_valid )
+    /* default port list MUST end with 0 to try without proxy */
+    uint32_t pp_idx;
+    static uint16_t dflt_proxy_ports [] = { 3128, 8080, 0 };
+
+    for ( pp_idx = 0; pp_idx < sizeof dflt_proxy_ports / sizeof dflt_proxy_ports [ 0 ]; ++ pp_idx )
     {
-        rc = KClientHttpInitDNSEndpoint ( self, hostname, port );
-        if ( rc != 0 )
-            return rc;
+        /* if endpoint was not successfully opened on previous attempt */
+        if ( ! self -> ep_valid )
+        {
+            rc = KClientHttpInitDNSEndpoint ( self, hostname, port, dflt_proxy_ports [ pp_idx ] );
+            if ( rc != 0 )
+                break;
+        }
 
-        self -> ep_valid = true;
+        /* try to connect to endpoint */
+        rc = KNSManagerMakeTimedConnection ( mgr, & sock,
+            self -> read_timeout, self -> write_timeout, NULL, & self -> ep );
+        if ( rc == 0 )
+        {
+            /* this is a good endpoint */
+            self -> ep_valid = true;
+            break;
+        }
+
+        /* if we did not try a proxy server before, exit loop */
+        if ( self -> ep_valid || ! self -> proxy_ep )
+            break;
     }
 
-    /* TBD - retries? default for now */
-    rc = KNSManagerMakeTimedConnection ( self -> mgr, & sock, self -> read_timeout, self -> write_timeout, NULL, & self -> ep );
+    /* if the connection is open */
     if ( rc == 0 )
     {
         rc = KSocketGetStream ( sock, & self -> sock );
@@ -2414,54 +2435,53 @@ rc_t KClientHttpRequestFormatMsg ( KClientHttpRequest *self,
             return RC ( rcNS, rcNoTarg, rcValidating, rcName, rcEmpty );
     }
 
-    /* if using proxy, also setup headers */
-    if ( http -> proxy_ep )
-    {
-        String Host;
-        KHttpHeader * node;
-
-        CONST_STRING ( & Host, "Host" );
-        node = ( KHttpHeader * ) BSTreeFind ( & self -> hdrs, & Host, KHttpHeaderCmp );
-        if ( node != NULL && ! StringCaseEqual ( & node -> value, & hostname ) )
-        {
-            BSTreeUnlink ( & self -> hdrs, & node -> dad );
-            KHttpHeaderWhack ( & node -> dad, NULL );
-        }
-        if ( node == NULL )
-        {
-            rc = KClientHttpAddHeaderString ( & self -> hdrs, & Host, & hostname );
-            if ( rc != 0 )
-                return rc;
-        }
-    }
-
     CONST_STRING ( &user_agent_string, "User-Agent" );
 
     /* start building the buffer that will be sent 
        We are inlining the host:port, instead of
        sending it in its own header */
 
-    /* TBD - should we include the port with the host name? */
-    #if 0
-    rc = string_printf ( buffer, bsize, len, 
-                         "%s %S://%S%S%s%S HTTP/%.2V\r\n"
-                         , method
-                         , & self -> url_block . scheme
-                         , & hostname
-                         , & self -> url_block . path
-                         , has_query
-                         , & self -> url_block . query
-                         , http -> vers );
-     #else
-    rc = string_printf ( buffer, bsize, len, 
-                         "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\nAccept: */*\r\n"
-                         , method
-                         , & self -> url_block . path
-                         , has_query
-                         , & self -> url_block . query
-                         , http -> vers
-                         , & hostname );
-     #endif
+    if ( ! http -> proxy_ep )
+    {
+        rc = string_printf ( buffer, bsize, len, 
+                             "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\nAccept: */*\r\n"
+                             , method
+                             , & self -> url_block . path
+                             , has_query
+                             , & self -> url_block . query
+                             , http -> vers
+                             , & hostname
+            );
+    }
+    else if ( http -> port != 80 )
+    {
+        rc = string_printf ( buffer, bsize, len, 
+                             "%s %S://%S:%u%S%s%S HTTP/%.2V\r\nHost: %S\r\nAccept: */*\r\n"
+                             , method
+                             , & self -> url_block . scheme
+                             , & hostname
+                             , http -> port
+                             , & self -> url_block . path
+                             , has_query
+                             , & self -> url_block . query
+                             , http -> vers
+                             , & hostname
+            );
+    }
+    else
+    {
+        rc = string_printf ( buffer, bsize, len, 
+                             "%s %S://%S%S%s%S HTTP/%.2V\r\nHost: %S\r\nAccept: */*\r\n"
+                             , method
+                             , & self -> url_block . scheme
+                             , & hostname
+                             , & self -> url_block . path
+                             , has_query
+                             , & self -> url_block . query
+                             , http -> vers
+                             , & hostname
+            );
+    }
 
     /* print all headers remaining into buffer */
     total = * len;
