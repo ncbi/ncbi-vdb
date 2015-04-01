@@ -40,6 +40,10 @@
 
 #include <kns/manager.h>
 #include <kns/socket.h>
+#include <kns/http.h>
+
+#include <vfs/manager.h>
+#include <vfs/path.h>
 
 #include <sysalloc.h>
 
@@ -66,6 +70,8 @@ rc_t KNSManagerWhack ( KNSManager * self )
 {
     rc_t rc;
     KConfigRelease ( self -> kfg );
+    if ( self -> http_proxy != NULL )
+        StringWhack ( self -> http_proxy );
     rc = HttpRetrySpecsDestroy ( & self -> retry_specs );
     free ( self );
     KNSManagerCleanup ();
@@ -102,6 +108,54 @@ LIB_EXPORT rc_t CC KNSManagerRelease ( const KNSManager *self )
     }
     return 0;
 }
+
+static
+void KNSManagerHttpProxyInit ( KNSManager * self )
+{
+    const KConfigNode * proxy;
+    rc_t rc = KConfigOpenNodeRead ( self -> kfg, & proxy, "http/proxy" );
+    if ( rc == 0 )
+    {
+        const KConfigNode * proxy_path;
+        rc = KConfigNodeOpenNodeRead ( proxy, & proxy_path, "path" );
+        if ( rc == 0 )
+        {
+            String * path;
+            rc = KConfigNodeReadString ( proxy_path, & path );
+            if ( rc == 0 )
+            {
+                rc = KNSManagerSetHTTPProxyPath ( self, "%S", path );
+                if ( rc == 0 )
+                {
+                    const KConfigNode * proxy_enabled;
+                    rc = KConfigNodeOpenNodeRead ( proxy, & proxy_enabled, "enabled" );
+                    if ( rc == 0 )
+                    {
+                        rc = KConfigNodeReadBool ( proxy_enabled, & self -> http_proxy_enabled );
+                        KConfigNodeRelease ( proxy_enabled );
+                    }
+                    else if ( GetRCState ( rc ) == rcNotFound )
+                    {
+                        rc = 0;
+                    }
+
+                    if ( rc != 0 )
+                    {
+                        KNSManagerSetHTTPProxyPath ( self, NULL );
+                        assert ( self -> http_proxy_enabled == false );
+                    }
+                }
+
+                StringWhack ( path );
+            }
+
+            KConfigNodeRelease ( proxy_path );
+        }
+
+        KConfigNodeRelease ( proxy );
+    }
+}
+
 
 LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
 {
@@ -143,6 +197,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
                     rc = HttpRetrySpecsInit ( & mgr -> retry_specs, mgr -> kfg );
                     if ( rc == 0 )
                     {
+                        KNSManagerHttpProxyInit ( mgr );
                         * mgrp = mgr;
                         return 0;
                     }
@@ -348,6 +403,140 @@ LIB_EXPORT rc_t CC KNSManagerSetHTTPTimeouts ( KNSManager *self,
     self -> http_write_timeout = writeMillis;
 
     return 0;
+}
+
+/* GetHTTPProxyPath
+ *  returns path to HTTP proxy server ( if set ) or NULL.
+ *  return status is 0 if the path is valid, non-zero otherwise
+ */
+LIB_EXPORT rc_t CC KNSManagerGetHTTPProxyPath ( const KNSManager * self, const String ** proxy )
+{
+    rc_t rc = 0;
+
+    if ( proxy == NULL )
+        rc = RC ( rcNS, rcMgr, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcNS, rcMgr, rcAccessing, rcSelf, rcNull );
+        else if ( self -> http_proxy != NULL )
+        {
+            return StringCopy ( proxy, self -> http_proxy );
+        }
+
+        * proxy = NULL;
+    }
+
+    return rc;
+}
+
+
+/* SetHTTPProxyPath
+ *  sets a path to HTTP proxy server.
+ *  a NULL path value removes all proxy settings.
+ *
+ *  the VPath passed in must still be released using VPathRelease,
+ *  because KNSManager will attach a new reference to it.
+ */
+LIB_EXPORT rc_t CC KNSManagerSetHTTPProxyPath ( KNSManager * self, const char * fmt, ... )
+{
+    rc_t rc;
+
+    va_list args;
+    va_start ( args, fmt );
+    rc = KNSManagerVSetHTTPProxyPath ( self, fmt, args );
+    va_end ( args );
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerVSetHTTPProxyPath ( KNSManager * self, const char * fmt, va_list args )
+{
+    rc_t rc = 0;
+
+    if ( self == NULL )
+        rc = RC ( rcNS, rcMgr, rcUpdating, rcSelf, rcNull );
+    else
+    {
+        uint16_t proxy_port = 0;
+        const String * proxy = NULL;
+
+        if ( fmt != NULL && fmt [ 0 ] != 0 )
+        {
+            size_t psize;
+            char path [ 4096 ];
+            rc = string_vprintf ( path, sizeof path, & psize, fmt, args );
+            if ( rc == 0 && psize != 0 )
+            {
+                char * colon = string_rchr ( path, psize, ':' );
+                if ( colon != NULL )
+                {
+                    char * end;
+                    const char * port_spec = colon + 1;
+                    /* it is true that some day we might read symbolic port names... */
+                    long port_num = strtol ( port_spec, & end, 10 );
+                    if ( port_num <= 0 || port_num >= 0x10000 || end [ 0 ] != 0 )
+                        rc = RC ( rcNS, rcMgr, rcUpdating, rcPath, rcInvalid );
+                    else
+                    {
+                        proxy_port = ( uint64_t ) port_num;
+                        psize = colon - path;
+                    }
+                }
+
+                if ( rc == 0 )
+                {
+                    String tmp;
+                    StringInit ( & tmp, path, psize, string_len ( path, psize ) );
+                    rc = StringCopy ( & proxy, & tmp );
+                }
+            }
+        }
+
+        if ( rc == 0 )
+        {
+            if ( self -> http_proxy != NULL )
+            {
+                StringWhack ( self -> http_proxy );
+                self -> http_proxy_port = 0;
+            }
+
+            self -> http_proxy = proxy;
+            self -> http_proxy_enabled = ( proxy != NULL );
+            self -> http_proxy_port = proxy_port;
+        }
+    }
+
+    return rc;
+}
+
+
+/* GetHTTPProxyEnabled
+ *  returns true iff a non-NULL proxy path exists and user wants to use it
+ *  users indicate desire to use proxy through configuration or SetHTTPProxyEnabled
+ */
+LIB_EXPORT bool CC KNSManagerGetHTTPProxyEnabled ( const KNSManager * self )
+{
+    if ( self != NULL )
+        return self -> http_proxy_enabled;
+
+    return false;
+}
+
+
+/* SetHTTPProxyEnabled
+ *  sets http-proxy enabled state to supplied value
+ *  returns the prior value as a convenience
+ */
+LIB_EXPORT bool CC KNSManagerSetHTTPProxyEnabled ( KNSManager * self, bool enabled )
+{
+    bool prior = false;
+    if ( self != NULL )
+    {
+        prior = self -> http_proxy_enabled;
+        self -> http_proxy_enabled = enabled;
+    }
+    return prior;
 }
 
 
