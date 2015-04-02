@@ -50,7 +50,7 @@ static rc_t KConfig_Get_Repository_State( const KConfig *self,
         rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
     else if ( state == NULL || path == NULL )
         rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
-    {
+    else {
         va_list args;
         char tmp[ 4096 ];
         size_t num_writ;
@@ -167,7 +167,59 @@ static rc_t KConfig_Set_Repository_String( KConfig *self,
     return rc;
 }
 
-/* ---------------------------------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+
+/* get/set HTTP proxy path */
+LIB_EXPORT rc_t CC KConfig_Get_Http_Proxy_Path( const KConfig *self,
+    char *buffer, size_t buffer_size, size_t *written )
+{
+    return KConfig_Get_Repository_String
+        (self, buffer, buffer_size, written, "http/proxy/path");
+}
+
+LIB_EXPORT rc_t CC KConfig_Set_Http_Proxy_Path
+    ( KConfig *self, const char *value )
+{
+    return KConfig_Set_Repository_String(self, value, "http/proxy/path");
+}
+
+/* get/set enabled-state for HTTP proxy */
+LIB_EXPORT rc_t CC KConfig_Get_Http_Proxy_Enabled
+    ( const KConfig *self, bool *enabled, bool dflt )
+{
+    rc_t rc = 0;
+
+    if ( self == NULL ) {
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    }
+    else if ( enabled == NULL ) {
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    }
+    else {
+        *enabled = dflt;
+        KConfigReadBool ( self, "http/proxy/enabled", enabled );
+        /* errors are ignored - then default value is returned */
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KConfig_Set_Http_Proxy_Enabled
+    ( KConfig *self, bool enabled )
+{
+    rc_t rc = 0;
+
+    if ( self == NULL ) {
+        rc = RC ( rcKFG, rcNode, rcWriting, rcSelf, rcNull );
+    }
+    else {
+        rc = KConfigWriteBool( self, "http/proxy/enabled", enabled );
+    }
+
+    return rc;
+}
+
+/* -------------------------------------------------------------------------- */
 
 LIB_EXPORT rc_t CC KConfig_Get_Home( const KConfig *self, char * buffer, size_t buffer_size, size_t * written )
 {   return KConfig_Get_Repository_String( self, buffer, buffer_size, written, "HOME" ); }
