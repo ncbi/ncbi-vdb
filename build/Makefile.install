@@ -43,9 +43,15 @@ LIB_TARGET = $(INST_LIBDIR)$(BITS)
 LIBRARIES_WITH_PREFIX = \
 	$(addprefix $(LIB_TARGET)/$(LPFX),$(LIBRARIES_TO_INSTALL))
 
-copylibs: $(LIB_TARGET) $(LIBRARIES_WITH_PREFIX)
+checkversion:
+	grep '$(VERSION)' $(TOP)/build/Makefile.config.install.$(OS).$(ARCH).prl -q || \
+        echo "NOTE - the currently configured version number ($(VERSION)) does not match the version of the source code." && \
+        echo "Please re-configure and run 'make install' again." && \
+        exit 1
 
-copyincludes:
+copylibs: checkversion $(LIB_TARGET) $(LIBRARIES_WITH_PREFIX)
+
+copyincludes: checkversion
 	@echo "Installing includes to $(INST_INCDIR)"
 	@mkdir -p $(INST_INCDIR)/ncbi-vdb
 	@cp $(TOP)/interfaces/ngs/ncbi/NGS.hpp $(INST_INCDIR)/ncbi-vdb
@@ -108,4 +114,4 @@ else
 	@ echo "      ld -L\$$NCBI_VDB_LIBDIR -lncbi-vdb ..."
 endif
 
-.PHONY: install copylibs copyincludes
+.PHONY: install copylibs copyincludes checkversion
