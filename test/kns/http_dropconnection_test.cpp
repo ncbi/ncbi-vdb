@@ -265,7 +265,12 @@ public:
 
 KStream HttpFixture::m_stream;
 bool HttpFixture::m_reconnected = false;
+
 //////////////////////////
+
+// the tests involving reconnection require Reconnect hook, thus cannot be run in Release build
+#define CAN_USE_RECONNECT_HOOK _DEBUGGING
+
 FIXTURE_TEST_CASE(Http_Normal, HttpFixture)
 {
     TestStream::AddWriteRC ( 0 ); // send HEAD succeeds
@@ -277,17 +282,25 @@ FIXTURE_TEST_CASE(Http_Normal, HttpFixture)
     
     REQUIRE_RC( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, &m_numRead, NULL ) );
     REQUIRE_EQ( string("content"), string(m_buf, m_numRead) );
-    
-#if _DEBUGGING
-    REQUIRE ( ! m_reconnected );
-#endif    
 }
-
-#if _DEBUGGING
-// these tests require Reconnect hook, thus cannot be run in Release build
 
 // problems with HEAD
 
+FIXTURE_TEST_CASE(HEAD_BadResponse, HttpFixture)
+{
+    TestStream::AddWriteRC(0); // send HEAD succeeds
+    TestStream::AddReadResponse("garbage"); // bad response to HEAD
+    REQUIRE_RC_FAIL ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
+}
+
+FIXTURE_TEST_CASE(HEAD_BrokenConnection, HttpFixture)
+{
+    TestStream::AddWriteRC(0); // send HEAD succeeds
+    TestStream::AddReadResponse(""); // simulates reaction to POLLHUP/POLLRDHUP
+    REQUIRE_RC_FAIL ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
+}
+
+#if CAN_USE_RECONNECT_HOOK
 FIXTURE_TEST_CASE(HEAD_Invalid_Reconnect_Succeed, HttpFixture)
 {
     TestStream::AddWriteRC ( RC_TransferIncomplete ); // first send HEAD fails
@@ -303,7 +316,9 @@ FIXTURE_TEST_CASE(HEAD_Invalid_Reconnect_Succeed, HttpFixture)
     REQUIRE_RC( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, &m_numRead, NULL ) );
     REQUIRE_EQ( string("content"), string(m_buf, m_numRead) );
 }
+#endif
 
+#if CAN_USE_RECONNECT_HOOK
 FIXTURE_TEST_CASE(HEAD_Invalid_Reconnect_Fail, HttpFixture)
 {
     TestStream::AddWriteRC( RC_TransferIncomplete ); // first send HEAD fails
@@ -311,25 +326,11 @@ FIXTURE_TEST_CASE(HEAD_Invalid_Reconnect_Fail, HttpFixture)
     REQUIRE_RC_FAIL ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
     REQUIRE ( m_reconnected );
 }
-
-FIXTURE_TEST_CASE(HEAD_BadResponse, HttpFixture)
-{
-    TestStream::AddWriteRC(0); // send HEAD succeeds
-    TestStream::AddReadResponse("garbage"); // bad response to HEAD
-    REQUIRE_RC_FAIL ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
-    REQUIRE ( ! m_reconnected );
-}
-
-FIXTURE_TEST_CASE(HEAD_BrokenConnection, HttpFixture)
-{
-    TestStream::AddWriteRC(0); // send HEAD succeeds
-    TestStream::AddReadResponse(""); // simulates reaction to POLLHUP/POLLRDHUP
-    REQUIRE_RC_FAIL ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
-    REQUIRE ( ! m_reconnected );
-}
+#endif
 
 // problems with GET
 
+#if CAN_USE_RECONNECT_HOOK
 FIXTURE_TEST_CASE(GET_Invalid_Reconnect_Succeed, HttpFixture)
 {
     SendReceiveHEAD(GetName());
@@ -345,8 +346,12 @@ FIXTURE_TEST_CASE(GET_Invalid_Reconnect_Succeed, HttpFixture)
     
     REQUIRE_RC( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, &m_numRead, NULL ) );
     REQUIRE_EQ( string("content"), string(m_buf, m_numRead) );
+    
+    REQUIRE ( m_reconnected );
 }
+#endif
 
+#if CAN_USE_RECONNECT_HOOK
 FIXTURE_TEST_CASE(GET_Failed_Reconnect_Succeed, HttpFixture)
 {
     SendReceiveHEAD(GetName());
@@ -357,8 +362,12 @@ FIXTURE_TEST_CASE(GET_Failed_Reconnect_Succeed, HttpFixture)
     
     REQUIRE_RC( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, &m_numRead, NULL ) );
     REQUIRE_EQ( string("content"), string(m_buf, m_numRead) );
+    
+    REQUIRE ( m_reconnected );
 }
+#endif
 
+#if CAN_USE_RECONNECT_HOOK
 FIXTURE_TEST_CASE(GET_Timedout_Reconnect_Succeed, HttpFixture)
 {
     SendReceiveHEAD(GetName());
@@ -369,8 +378,12 @@ FIXTURE_TEST_CASE(GET_Timedout_Reconnect_Succeed, HttpFixture)
     TestStream::AddReadResponse( Response_GET_Content ); 
     REQUIRE_RC ( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, &m_numRead, NULL ) );
     REQUIRE_EQ( string("content"), string(m_buf, m_numRead) );
+    
+    REQUIRE ( m_reconnected );
 }
+#endif
 
+#if CAN_USE_RECONNECT_HOOK
 FIXTURE_TEST_CASE(GET_Read_Failed_Reconnect_Failed, HttpFixture)
 {
     SendReceiveHEAD(GetName());
@@ -380,14 +393,10 @@ FIXTURE_TEST_CASE(GET_Read_Failed_Reconnect_Failed, HttpFixture)
     TestStream::AddWriteRC(0); // reconnect GET succeeds
     TestStream::AddReadResponse( "TIMEOUT" ); // response to GET times out
     REQUIRE_RC_FAIL ( KFileTimedRead ( m_file, 0, m_buf, sizeof m_buf, &m_numRead, NULL ) );
+    
+    REQUIRE ( m_reconnected );
 }
-#endif    
-
-//TODO:
-//  failed GET:
-//      return rcIncomplete from the 3nd call to TimedWrite: rcIncomplete
-//      return an RC from second call to TimedRead: same RC
-//      return num_read == 0 from second call to TimedRead: rcIncomplete
+#endif
 
 //////////////////////////////////////////// Main
 extern "C"
