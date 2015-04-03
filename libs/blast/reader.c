@@ -1458,6 +1458,7 @@ static uint32_t _ReferencesData(References *self,
             self->rfdi != self->read_id) /* should switch to a next reference */
         {
             const VdbBlastRef *rfd1 = NULL;
+            const VTable *t = NULL;
             if (self->rfdi != self->read_id) {/* switching to a next reference*/
                 if (self->rfdi + 1 != self->read_id) { /* should never happen */
                     S
@@ -1473,7 +1474,6 @@ static uint32_t _ReferencesData(References *self,
                 rfd1 = rfd;
                 rfd = &self->refs->rfd[self->rfdi];
             }
-            const VTable *t = NULL;
             if (rfd->iRun >= self->rs->krun) {
                 S
                 return 0;
@@ -1592,8 +1592,8 @@ static uint32_t _ReferencesData(References *self,
     return num_read;
 }
 
-static
-uint32_t _Core2naDataRef(Core2na *self, Data2na *data, VdbBlastStatus *status,
+static uint32_t _Core2naDataRef(struct Core2na *self,
+    Data2na *data, VdbBlastStatus *status,
     Packed2naRead *buffer, uint32_t buffer_length)
 {
     uint32_t num_read = 0;
