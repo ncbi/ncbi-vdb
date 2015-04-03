@@ -40,9 +40,35 @@ using namespace std;
 
 TEST_SUITE( WVdbTestSuite )
 
-#if 0
+// this test case is not very useful but is here as a blueprint for other write-side tests 
 TEST_CASE(BlobCorruptOnCommit) 
 {
+    const string schemaText = 
+"function < type T > T echo #1.0 < T val > ( * any row_len ) = vdb:echo;\n"
+"table spotdesc #1\n"
+"{\n"
+"    extern column ascii LABEL = out_label;\n"
+"};\n"
+"table reference #1 = spotdesc #1\n"
+"{\n"
+
+//  this will break the test
+//"    ascii out_label = < ascii > echo < \"reference\" > ();\n"
+
+// this will work
+"    physical column ascii .LABEL = in_label;\n"
+"    ascii in_label = LABEL;\n"
+"    ascii out_label = .LABEL | < ascii > echo < 'label' > ();\n"
+
+"};\n"
+"database db #1\n"
+"{\n"
+"    table reference #1 REFERENCE;\n"
+"};\n"
+;
+    const char * schemaSpec = "db";
+    const char * databaseName = GetName();
+
     // MakeDatabase
     VDatabase* db;
     {
@@ -50,10 +76,7 @@ TEST_CASE(BlobCorruptOnCommit)
         REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
         VSchema* schema;
         REQUIRE_RC ( VDBManagerMakeSchema ( mgr, & schema ) );
-        const char * schemaFile = "blobcorrupt.vschema";
-        REQUIRE_RC ( VSchemaParseFile(schema, "%s", schemaFile ) );
-        const char * schemaSpec = "db";
-        const char * databaseName = GetName();
+        REQUIRE_RC ( VSchemaParseText(schema, NULL, schemaText . c_str(), schemaText . size () ) );
         
         REQUIRE_RC ( VDBManagerCreateDB ( mgr, 
                                           & db, 
@@ -78,8 +101,6 @@ TEST_CASE(BlobCorruptOnCommit)
     // AddColumns
     uint32_t columnIdx;
     REQUIRE_RC ( VCursorAddColumn ( cursor, & columnIdx, "%s", "LABEL" ) );
-    // this column has no problem:
-    //REQUIRE_RC ( VCursorAddColumn ( cursor, & columnIdx, "%s", "SPOT_ID" ) );
     
     REQUIRE_RC ( VCursorOpen ( cursor  ) );
     
@@ -96,12 +117,19 @@ TEST_CASE(BlobCorruptOnCommit)
         //REQUIRE_RC ( VCursorFlushPage ( cursor ) ); // kaboom
     }
     
-    REQUIRE_RC ( VCursorCommit ( cursor ) ); // kaboom
+    REQUIRE_RC ( VCursorCommit ( cursor ) );    // this returns rcVDB,rcBlob,rcValidating,rcBlob,rcCorrupt if the schema does not support 
+                                                // writing to the LABEL column from the code
     REQUIRE_RC ( VCursorRelease ( cursor ) );
     
     REQUIRE_RC ( VDatabaseRelease ( db ) );
+    
+    {
+        KDirectory* wd;
+        REQUIRE_RC ( KDirectoryNativeDir ( & wd ) );
+        REQUIRE_RC ( KDirectoryRemove ( wd, true, databaseName ) );
+    }
+    
 }
-#endif
 
 //////////////////////////////////////////// Main
 extern "C"
