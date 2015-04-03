@@ -1,0 +1,47 @@
+include 'ncbi/sra.vschema';
+include 'align/seq.vschema';
+
+extern function
+INSDC:4na:bin NCBI:align:seq_restore_read #1 ( INSDC:4na:bin cmp_rd, I64 align_id,
+        INSDC:coord:len read_len, INSDC:SRA:xread_type rd_type )
+    = ALIGN:seq_restore_read;
+
+table NCBI:align:tbl:seq #1.0.0 =
+    NCBI:tbl:base_space #2.0.3,
+    NCBI:tbl:phred_quality #2.0.4,
+    NCBI:align:tbl:cmp_base_space #1,
+    NCBI:SRA:tbl:spotdesc #1.0.2,
+    NCBI:SRA:tbl:stats #1.2.0
+{
+    // 128K
+    column default limit = 131072;
+
+    // gets primary record in alignment table (size of column is NREADS)
+    // if sorted - should used special encoding
+    extern column <I64> izip_encoding PRIMARY_ALIGNMENT_ID;
+
+    INSDC:coord:zero trim_start = < INSDC:coord:zero > echo < 0 > ();
+    INSDC:coord:len trim_len = _spot_len;
+
+    // size is NREADS
+    extern column < U8 > zip_encoding ALIGNMENT_COUNT;
+
+    // allow NAME to be set externally. otherwise, auto-generate name from row-id
+    physical column < ascii > zip_encoding .NAME = name_in;
+    ascii name_in = NAME;
+    ascii out_name_fmt = .NAME | < ascii > echo < '$R' > ();
+
+    // temparary column
+    extern column < U64 > izip_encoding TMP_KEY_ID;
+
+    // restored  READ
+    INSDC:4na:bin out_dcmp_4na_bin
+        = NCBI:align:seq_restore_read (out_cmp_4na_bin, .PRIMARY_ALIGNMENT_ID, .READ_LEN, .READ_TYPE);
+
+    extern column < U64 > izip_encoding TI;
+};
+
+database NCBI:align:db:alignment_sorted #1.3
+{
+    table NCBI:align:tbl:seq #1.0 SEQUENCE;
+};
