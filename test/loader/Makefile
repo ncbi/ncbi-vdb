@@ -22,45 +22,36 @@
 #
 # ===========================================================================
 
-by_default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+default: runtests
 
-include $(TOP)/build/Makefile.shell
+TOP ?= $(abspath ../..)
+MODULE = test/loader
 
-include $(TOP)/build/Makefile.config
+TEST_TOOLS = \
+	test-loader \
 
+include $(TOP)/build/Makefile.env
+
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+clean: stdclean
 #-------------------------------------------------------------------------------
-# default
+# test-loader
 #
-SUBDIRS =       \
-    ktst        \
-    cc          \
-    ext         \
-    judy_test   \
-    kfc         \
-    klib        \
-    kfg         \
-    kapp        \
-    kns         \
-    kdb         \
-    kproc       \
-    vdb         \
-    ngs         \
-    ngs-c++     \
-    ngs-java    \
-	search	    \
-    vfs         \
-    sraxf       \
-    vxf         \
-    loader      \
+TEST_LOADER_SRC = \
+	loadertest 
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+TEST_LOADER_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_LOADER_SRC))
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
+TEST_LOADER_LIB = \
+	-lkapp \
+    -lktst \
+    -lncbi-wvdb \
+    -lloader
 
-.PHONY: default $(SUBDIRS)
+$(TEST_BINDIR)/test-loader: $(TEST_LOADER_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_LOADER_LIB)
 
