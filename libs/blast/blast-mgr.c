@@ -188,12 +188,12 @@ LIB_EXPORT
 VdbBlastMgr* CC VdbBlastMgrAddRef(VdbBlastMgr *self)
 {
     if (self == NULL) {
-        STSMSG(1, ("VdbBlastMgrAddRef(NULL)"));
+        STSMSG(2, ("VdbBlastMgrAddRef(NULL)"));
         return self;
     }
 
     if (KRefcountAdd(&self->refcount, VDB_BLAST_MGR) == krefOkay) {
-        STSMSG(1, ("VdbBlastMgrAddRef"));
+        STSMSG(2, ("VdbBlastMgrAddRef"));
         return self;
     }
 
@@ -207,7 +207,7 @@ void CC VdbBlastMgrRelease(VdbBlastMgr *self)
     if (self == NULL)
     {   return; }
 
-    STSMSG(1, ("VdbBlastMgrRelease"));
+    STSMSG(2, ("VdbBlastMgrRelease"));
     if (KRefcountDrop(&self->refcount, VDB_BLAST_MGR) != krefWhack)
     {   return; }
 
