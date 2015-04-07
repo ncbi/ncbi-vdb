@@ -45,9 +45,9 @@ LIBRARIES_WITH_PREFIX = \
 
 checkversion:
 	grep '$(VERSION)' $(TOP)/build/Makefile.config.install.$(OS).$(ARCH).prl -q || \
-        echo "NOTE - the currently configured version number ($(VERSION)) does not match the version of the source code." && \
+        ( echo "NOTE - the currently configured version number ($(VERSION)) does not match the version of the source code." && \
         echo "Please re-configure and run 'make install' again." && \
-        exit 1
+        exit 1 )
 
 copylibs: checkversion $(LIB_TARGET) $(LIBRARIES_WITH_PREFIX)
 
