@@ -273,7 +273,7 @@ FIXTURE_TEST_CASE(SRA_ReadCollectionGetReadGroup_WithGroups_Found, SRA_Fixture)
 FIXTURE_TEST_CASE(SRA_NGS_ReadGetReadName, SRA_Fixture)
 {
     ENTRY_GET_READ(SRA_Accession, 1);
-    REQUIRE_STRING ( "EM7LVYS01C1LWG", NGS_ReadGetReadName ( m_read, ctx ) );
+    REQUIRE_STRING ( "EM7LVYS02FOYNU", NGS_ReadGetReadName ( m_read, ctx ) );
     EXIT;
 }
  
@@ -312,9 +312,11 @@ FIXTURE_TEST_CASE(SRA_NGS_ReadGetReadSequence_Full, SRA_Fixture)
 {
     ENTRY_GET_READ(SRA_Accession, 1);
     
-    string expected ("TCAGGGGGGAGCTTAAATTTGAAACTAGAAAAATTTTGAACAAAATAATCATAATTGTTAGCTGATGAAAAACTAGAAAAGATTTTCTGAGTGTTGGAAC"
-                     "CGAAAGGGTTTGAATTCAAACCCTTTCGGTTCCAACGGTATCCCGTAGTGTGCATTCATCCCTGCTCTGGATACAGTCAGCTCCCAAATTCCATAAACAA"
-                     "CTCCTTTGTAAGTAACCTCCTTTTGACAGGGGGTACTGAGCGGGCTGGCAAGGCN");
+    string expected (
+        "TCAGATTCTCCTAGCCTACATCCGTACGAGTTAGCGTGGGATTACGAGGTGCACACCATTTCATTCCGTACGGGTAAATT"
+        "TTTGTATTTTTAGCAGACGGCAGGGTTTCACCATGGTTGACCAACGTACTAATCTTGAACTCCTGACCTCAAGTGATTTG"
+        "CCTGCCTTCAGCCTCCCAAAGTGACTGGGTATTACAGATGTGAGCGAGTTTGTGCCCAAGCCTTATAAGTAAATTTATAA"
+        "ATTTACATAATTTAAATGACTTATGCTTAGCGAAATAGGGTAAG");
     REQUIRE_STRING ( expected, NGS_ReadGetReadSequence ( m_read, ctx, 0, (size_t)-1 ) );
     
     EXIT;
@@ -323,7 +325,7 @@ FIXTURE_TEST_CASE(SRA_NGS_ReadGetReadSequence_Full, SRA_Fixture)
 FIXTURE_TEST_CASE(SRA_NGS_ReadGetReadSequence_PartialNoLength, SRA_Fixture)
 {
     ENTRY_GET_READ(SRA_Accession, 1);
-    string expected ("CTCCTTTGTAAGTAACCTCCTTTTGACAGGGGGTACTGAGCGGGCTGGCAAGGCN");
+    string expected ("TGAGCGAGTTTGTGCCCAAGCCTTATAAGTAAATTTATAAATTTACATAATTTAAATGACTTATGCTTAGCGAAATAGGGTAAG" );
     REQUIRE_STRING ( expected,  NGS_ReadGetReadSequence ( m_read, ctx, 200, (size_t)-1 ) );
     EXIT;
 }
@@ -331,7 +333,7 @@ FIXTURE_TEST_CASE(SRA_NGS_ReadGetReadSequence_PartialNoLength, SRA_Fixture)
 FIXTURE_TEST_CASE(SRA_NGS_ReadGetReadSequence_PartialLength, SRA_Fixture)
 {
     ENTRY_GET_READ(SRA_Accession, 1);
-    string expected ("CTCCTTTGTA");
+    string expected ("TGAGCGAGTT");
     REQUIRE_STRING ( expected, NGS_ReadGetReadSequence ( m_read, ctx, 200, 10 ) );
     EXIT;
 }
@@ -341,9 +343,10 @@ FIXTURE_TEST_CASE(SRA_NGS_ReadGetReadQualities_Full, SRA_Fixture)
     ENTRY_GET_READ(SRA_Accession, 1);
     
     string expected (
-        "=;8GC91*#==<C=EA.EA/<B=(<<:=HC90'FB5&;B:<GC6(=D=<<==C=C==B<=<<<=;<<GC8.#<<9=FB4%<8EA4%87:<<8=B;C<@8>"
-        "5=C?*A<&A<&<=49/2A='@;#A<&<A9C=@9B::B:<;=C?+<<;<===<=;C<==<FB0=<=<<<D=9=;;=<=<=<;=FB2FB2C<C<;=FB0<C="
-        "=;C<D@-<=B:<=C=C;<C=GD7*=;:=HD90'==<<=<=:FB0<<C<;C=C=<!");
+        "=<8<85)9=9/3-8?68<7=8<3657747==49==+;FB2;A;5:'*>69<:74)9.;C?+;<B<B;(<';FA/;C>*GC"
+        "8/%9<=GC8.#=2:5:16D==<EA2EA.;5=44<;2C=5;@73&<<2;5;6+9<?776+:24'26:7,<9A;=:;0C>*6"
+        "?7<<C=D=<52?:9CA2CA23<2<;3CA12:A<9414<7<<6;99<2/=9#<;9B@27.;=6>:77>:1<A>+CA138?<"
+        ")C@2166:A<B?->:%<<9<;33<;6?9;<;4=:%<$CA1+1%1");
     REQUIRE_STRING ( expected, NGS_ReadGetReadQualities ( m_read, ctx, 0, (size_t)-1 ) );
     
     EXIT;
@@ -352,7 +355,7 @@ FIXTURE_TEST_CASE(SRA_NGS_ReadGetReadQualities_Full, SRA_Fixture)
 FIXTURE_TEST_CASE(SRA_NGS_ReadGetReadQualities_PartialNoLength, SRA_Fixture)
 {
     ENTRY_GET_READ(SRA_Accession, 1);
-    string expected ( "=;C<D@-<=B:<=C=C;<C=GD7*=;:=HD90'==<<=<=:FB0<<C<;C=C=<!" );
+    string expected ( "<6;99<2/=9#<;9B@27.;=6>:77>:1<A>+CA138?<)C@2166:A<B?->:%<<9<;33<;6?9;<;4=:%<$CA1+1%1" );
     REQUIRE_STRING ( expected, NGS_ReadGetReadQualities ( m_read, ctx, 200, (size_t)-1 ) );
     EXIT;
 }
@@ -360,7 +363,7 @@ FIXTURE_TEST_CASE(SRA_NGS_ReadGetReadQualities_PartialNoLength, SRA_Fixture)
 FIXTURE_TEST_CASE(SRA_NGS_ReadGetReadQualities_PartialLength, SRA_Fixture)
 {
     ENTRY_GET_READ(SRA_Accession, 1);
-    REQUIRE_STRING ( "=;C<D@-<=B", NGS_ReadGetReadQualities ( m_read, ctx, 200, 10 ) );
+    REQUIRE_STRING ( "<6;99<2/=9", NGS_ReadGetReadQualities ( m_read, ctx, 200, 10 ) );
     EXIT;
 }
 
@@ -400,7 +403,11 @@ FIXTURE_TEST_CASE(SRA_NGS_FragmentGetId, SRA_Fixture)
 FIXTURE_TEST_CASE(SRA_NGS_FragmentGetSequence_Full, SRA_Fixture)
 {   
     ENTRY_GET_READ(SRA_Accession, 1);
-    string expected = "GGGGGAGCTTAAATTTGAAACTAGAAAAATTTTGAACAAAATAATCATAATTGTTAGCTGATGAAAAACTAGAAAAGATTTTCTGAGT";
+    string expected = 
+        "ATTCTCCTAGCCTACATCCGTACGAGTTAGCGTGGGATTACGAGGTGCACACCATTTCATTCCGTACGGGTAAATTTTTG"
+        "TATTTTTAGCAGACGGCAGGGTTTCACCATGGTTGACCAACGTACTAATCTTGAACTCCTGACCTCAAGTGATTTGCCTG"
+        "CCTTCAGCCTCCCAAAGTGACTGGGTATTACAGATGTGAGCGAGTTTGTGCCCAAGCCTTATAAGTAAATTTAT"
+        "AAATTTACATAATTTAAATGACTTATGCTTAGCGAAATAGGGTAAG";
     REQUIRE_STRING ( expected, NGS_FragmentGetSequence ( (NGS_Fragment*)m_read, ctx, 0, (size_t)-1 ) );
     EXIT;
 }
@@ -408,21 +415,29 @@ FIXTURE_TEST_CASE(SRA_NGS_FragmentGetSequence_Full, SRA_Fixture)
 FIXTURE_TEST_CASE(SRA_NGS_FragmentGetSequence_PartialNoLength, SRA_Fixture)
 {   
     ENTRY_GET_READ(SRA_Accession, 1);
-    REQUIRE_STRING ( "TTCTGAGT",  NGS_FragmentGetSequence ( (NGS_Fragment*)m_read, ctx, 80, (size_t)-1 ) );
+    REQUIRE_STRING ( 
+        "TATTTTTAGCAGACGGCAGGGTTTCACCATGGTTGACCAACGTACTAATCTTGAACTCCTGACCTCAAGTGATTTGCCTG"
+        "CCTTCAGCCTCCCAAAGTGACTGGGTATTACAGATGTGAGCGAGTTTGTGCCCAAGCCTTATAAGTAAATTTAT"
+        "AAATTTACATAATTTAAATGACTTATGCTTAGCGAAATAGGGTAAG",  
+        NGS_FragmentGetSequence ( (NGS_Fragment*)m_read, ctx, 80, (size_t)-1 ) );
     EXIT;
 }
 
 FIXTURE_TEST_CASE(SRA_NGS_FragmentGetSequence_PartialLength, SRA_Fixture)
 {   
     ENTRY_GET_READ(SRA_Accession, 1);
-    REQUIRE_STRING ( "TTCT",  NGS_FragmentGetSequence ( (NGS_Fragment*)m_read, ctx, 80, 4 ) );
+    REQUIRE_STRING ( "TATT",  NGS_FragmentGetSequence ( (NGS_Fragment*)m_read, ctx, 80, 4 ) );
     EXIT;
 }
 
 FIXTURE_TEST_CASE(SRA_NGS_FragmentGetQualities_Full, SRA_Fixture)
 {   
     ENTRY_GET_READ(SRA_Accession, 1);
-    string expected = "C91*#==<C=EA.EA/<B=(<<:=HC90'FB5&;B:<GC6(=D=<<==C=C==B<=<<<=;<<GC8.#<<9=FB4%<8EA4%87:<<8";
+    string expected = 
+        "85)9=9/3-8?68<7=8<3657747==49==+;FB2;A;5:'*>69<:74)9.;C?+;<B<B;(<';FA/;C>*GC8/%9"
+        "<=GC8.#=2:5:16D==<EA2EA.;5=44<;2C=5;@73&<<2;5;6+9<?776+:24'26:7,<9A;=:;0C>*6?7<<"
+        "C=D=<52?:9CA2CA23<2<;3CA12:A<9414<7<<6;99<2/=9#<;9B@27.;=6>:77>:1<A>+CA138?<)C@2"
+        "166:A<B?->:%<<9<;33<;6?9;<;4=:%<$CA1+1%1";
     REQUIRE_STRING ( expected,  NGS_FragmentGetQualities ( (NGS_Fragment*)m_read, ctx, 0, (size_t)-1 ) );
     EXIT;
 }
