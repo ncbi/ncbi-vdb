@@ -250,7 +250,7 @@ FIXTURE_TEST_CASE(SRA_Read_getNumFragments, SRAFixture)
 
 FIXTURE_TEST_CASE(SRA_Read_ReadName, SRAFixture)
 {
-    REQUIRE_EQ( ngs :: String("EM7LVYS01C1LWG"), getRead ( ngs :: String ( SRA_Accession ) + ".R.1" ) . getReadName() . toString() );
+    REQUIRE_EQ( ngs :: String("EM7LVYS02FOYNU"), getRead ( ngs :: String ( SRA_Accession ) + ".R.1" ) . getReadName() . toString() );
 }
 
 FIXTURE_TEST_CASE(SRA_Read_ReadGroup, SRAFixture)
@@ -267,9 +267,10 @@ FIXTURE_TEST_CASE(SRA_Read_getReadBases, SRAFixture)
 {
     ngs :: String bases = getRead ( ngs :: String ( SRA_Accession ) + ".R.1" ) . getReadBases () . toString (); 
     ngs :: String expected(    
-        "TCAGGGGGGAGCTTAAATTTGAAACTAGAAAAATTTTGAACAAAATAATCATAATTGTTAGCTGATGAAAAACTAGAAAAGATTTTCTGAGTGTTGGAAC"
-        "CGAAAGGGTTTGAATTCAAACCCTTTCGGTTCCAACGGTATCCCGTAGTGTGCATTCATCCCTGCTCTGGATACAGTCAGCTCCCAAATTCCATAAACAA"
-        "CTCCTTTGTAAGTAACCTCCTTTTGACAGGGGGTACTGAGCGGGCTGGCAAGGCN"
+        "TCAGATTCTCCTAGCCTACATCCGTACGAGTTAGCGTGGGATTACGAGGTGCACACCATTTCATTCCGTACGGGTAAATT"
+        "TTTGTATTTTTAGCAGACGGCAGGGTTTCACCATGGTTGACCAACGTACTAATCTTGAACTCCTGACCTCAAGTGATTTG"
+        "CCTGCCTTCAGCCTCCCAAAGTGACTGGGTATTACAGATGTGAGCGAGTTTGTGCCCAAGCCTTATAAGTAAATTTATAA"
+        "ATTTACATAATTTAAATGACTTATGCTTAGCGAAATAGGGTAAG"
     );
     REQUIRE_EQ( expected, bases );    
 }
@@ -277,14 +278,16 @@ FIXTURE_TEST_CASE(SRA_Read_getReadBases, SRAFixture)
 FIXTURE_TEST_CASE(SRA_Read_getReadBases_Offset, SRAFixture)
 {
     ngs :: String bases = getRead ( ngs :: String ( SRA_Accession ) + ".R.1" ) . getReadBases ( 200 ) . toString( ); 
-    ngs :: String expected("CTCCTTTGTAAGTAACCTCCTTTTGACAGGGGGTACTGAGCGGGCTGGCAAGGCN");
+    ngs :: String expected(
+        "TGAGCGAGTTTGTGCCCAAGCCTTATAAGTAAATTTATAAATTTACATAATTTAAATGACTTATGCTTAGCGAAATAGGGTAAG"
+    );
     REQUIRE_EQ( expected, bases );    
 }
 
 FIXTURE_TEST_CASE(SRA_Read_getReadBases_OffsetLength, SRAFixture)
 {
     ngs :: String bases = getRead ( ngs :: String ( SRA_Accession ) + ".R.1" ) . getReadBases ( 200, 6 ) . toString (); 
-    ngs :: String expected("CTCCTT");
+    ngs :: String expected("TGAGCG");
     REQUIRE_EQ( expected, bases );    
 }
 
@@ -292,23 +295,26 @@ FIXTURE_TEST_CASE(SRA_Read_getReadQualities, SRAFixture)
 {
     ngs :: String quals = getRead ( ngs :: String ( SRA_Accession ) + ".R.1" ) . getReadQualities() . toString (); 
     ngs :: String expected(
-        "=;8GC91*#==<C=EA.EA/<B=(<<:=HC90'FB5&;B:<GC6(=D=<<==C=C==B<=<<<=;<<GC8.#<<9=FB4%<8EA4%87:<<8=B;C<@8>"
-        "5=C?*A<&A<&<=49/2A='@;#A<&<A9C=@9B::B:<;=C?+<<;<===<=;C<==<FB0=<=<<<D=9=;;=<=<=<;=FB2FB2C<C<;=FB0<C="
-        "=;C<D@-<=B:<=C=C;<C=GD7*=;:=HD90'==<<=<=:FB0<<C<;C=C=<!");
+        "=<8<85)9=9/3-8?68<7=8<3657747==49==+;FB2;A;5:'*>69<:74)9.;C?+;<B<B;(<';FA/;C>*GC"
+        "8/%9<=GC8.#=2:5:16D==<EA2EA.;5=44<;2C=5;@73&<<2;5;6+9<?776+:24'26:7,<9A;=:;0C>*6"
+        "?7<<C=D=<52?:9CA2CA23<2<;3CA12:A<9414<7<<6;99<2/=9#<;9B@27.;=6>:77>:1<A>+CA138?<"
+        ")C@2166:A<B?->:%<<9<;33<;6?9;<;4=:%<$CA1+1%1");
     REQUIRE_EQ( expected, quals );    
 }
 
 FIXTURE_TEST_CASE(SRA_Read_getReadQualities_Offset, SRAFixture)
 {
     ngs :: String quals = getRead ( ngs :: String ( SRA_Accession ) + ".R.1" ) . getReadQualities( 200 ) . toString (); 
-    ngs :: String expected("=;C<D@-<=B:<=C=C;<C=GD7*=;:=HD90'==<<=<=:FB0<<C<;C=C=<!");
+    ngs :: String expected(
+        "<6;99<2/=9#<;9B@27.;=6>:77>:1<A>+CA138?<)C@2166:A<B?->:%<<9<;33<;6?9;<;4=:%<$CA1+1%1"
+    );
     REQUIRE_EQ( expected, quals );    
 }
 
 FIXTURE_TEST_CASE(SRA_Read_getReadQualities_OffsetLength, SRAFixture)
 {
     ngs :: String quals = getRead ( ngs :: String ( SRA_Accession ) + ".R.1" ) . getReadQualities( 200, 10 ) . toString (); 
-    ngs :: String expected("=;C<D@-<=B");
+    ngs :: String expected("<6;99<2/=9");
     REQUIRE_EQ( expected, quals );    
 }
 
@@ -340,43 +346,45 @@ FIXTURE_TEST_CASE(SRA_Fragment_Id, SRAFixture)
 FIXTURE_TEST_CASE(SRA_Fragment_getFragmentBases, SRAFixture)
 {
     ngs :: String expected(
-        "GGTATCCCGTAGTGTGCATTCATCCCTGCTCTGGATACAGTCAGCTCCCAAATTCCATAAACAACTCCTTTGTAAGTAACCTCCTTTTGACAGGGGGTAC"
+        "ACAGACTCAACCTGCATAATAAATAACATTGAAACTTAGTTTCCTTCTTGGGCTTTCGGTGAGAAAACATAAGTTAAAAC"
         "TGAGCGGGCTGGCAAGGCN"
     );
-    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRA_Accession ) + ".R.1", 2 ) . getFragmentBases () . toString () );    
+    REQUIRE_EQ( expected, 
+                getFragment ( ngs :: String ( SRA_Accession ) + ".R.2", 2 ) . getFragmentBases () . toString () 
+    );    
 }
 
 FIXTURE_TEST_CASE(SRA_Fragment_getSubFragmentBases_Offset, SRAFixture)
 {
-    ngs :: String expected("TGAGCGGGCTGGCAAGGCN");
-    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRA_Accession ) + ".R.1", 2 ) . getFragmentBases ( 100 ) . toString () );    
+    ngs :: String expected("GGCAAGGCN");
+    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRA_Accession ) + ".R.2", 2 ) . getFragmentBases ( 90 ) . toString () );    
 }
 
 FIXTURE_TEST_CASE(SRA_Fragment_getSubFragmentBases_OffsetLength, SRAFixture)
 {
-    ngs :: String expected("TGAGCG");
-    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRA_Accession ) + ".R.1", 2 ) . getFragmentBases ( 100, 6 ) . toString () );    
+    ngs :: String expected("GGCAAG");
+    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRA_Accession ) + ".R.2", 2 ) . getFragmentBases ( 90, 6 ) . toString () );    
 }
 
 FIXTURE_TEST_CASE(SRA_Fragment_getFragmentQualities, SRAFixture)
 {
     ngs :: String expected(
-        "B:<;=C?+<<;<===<=;C<==<FB0=<=<<<D=9=;;=<=<=<;=FB2FB2C<C<;=FB0<C==;C<D@-<=B:<=C=C;<C=GD7*=;:=HD90'==<"
-        "<=<=:FB0<<C<;C=C=<!"
+        "<=::=<8=D=C<<<<<<A=;CA1<=7<;A<;CA1<@:<9>;&>7;4<>7CA0<C@0:<5<;:<CA7+:7<@9<B=CA7+<"
+        "<99<:B?.<;:2<A<A;:!"
     );
-    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRA_Accession ) + ".R.1", 2 ) . getFragmentQualities () . toString () );    
+    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRA_Accession ) + ".R.2", 2 ) . getFragmentQualities () . toString () );    
 }
 
 FIXTURE_TEST_CASE(SRA_Fragment_getSubFragmentQualities_Offset, SRAFixture)
 {
-    ngs :: String expected("<=<=:FB0<<C<;C=C=<!");
-    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRA_Accession ) + ".R.1", 2 ) . getFragmentQualities ( 100 ) . toString () );    
+    ngs :: String expected(":2<A<A;:!");
+    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRA_Accession ) + ".R.2", 2 ) . getFragmentQualities ( 90 ) . toString () );    
 }
 
 FIXTURE_TEST_CASE(SRA_Fragment_getSubFragmentQualities_OffsetLength, SRAFixture)
 {
-    ngs :: String expected("<=<=:F");
-    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRA_Accession ) + ".R.1", 2 ) . getFragmentQualities ( 100, 6 ) . toString () );    
+    ngs :: String expected(":2<A<A");
+    REQUIRE_EQ( expected, getFragment ( ngs :: String ( SRA_Accession ) + ".R.2", 2 ) . getFragmentQualities ( 90, 6 ) . toString () );    
 }
 
 /////ReferenceIterator
