@@ -570,7 +570,7 @@
     <ClCompile Include="..\..\..\libs\klib\refcount.c">
       <Filter>klib</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\libs\klib\report.c">
+    <ClCompile Include="..\..\..\libs\klib\report-klib.c">
       <Filter>klib</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\klib\SHA-32bit.c">
