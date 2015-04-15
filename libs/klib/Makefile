@@ -124,7 +124,7 @@ KLIB_SRC = \
 	rc-tbl \
 	rc-idx-tbl \
 	judy-vector \
-	report \
+	report-klib \
 	num-gen \
 	progressbar \
 	sra-release-version
