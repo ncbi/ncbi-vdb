@@ -27,6 +27,7 @@
 #include <vfs/extern.h>
 
 #include "path-priv.h"
+#include "resolver-priv.h" /* VResolverGetProjectId */
 
 #include <sra/srapath.h>
 
@@ -382,7 +383,8 @@ rc_t GetEncryptionKey(const VFSManager * self, const VPath * vpath, char* obuff,
     rc_t rc2;
     size_t z;
 
-    if (VPathOption (vpath, vpopt_pwpath, obuff, buf_size - 1, &z) == 0)
+    if (VPathOption (vpath, vpopt_pwpath, obuff, buf_size - 1, &z)
+        == 0)
     {
         const KFile * pwfile;
         obuff [z] = '\0';
@@ -395,7 +397,8 @@ rc_t GetEncryptionKey(const VFSManager * self, const VPath * vpath, char* obuff,
                 rc = rc2;
         }
     }
-    else if (VPathOption (vpath, vpopt_pwfd, obuff, buf_size - 1, &z) == 0)
+    else if (VPathOption (vpath, vpopt_pwfd, obuff, buf_size - 1, &z)
+        == 0)
     {
         /* -----
          * pwfd is not fully a VPath at this point: we 
@@ -415,8 +418,25 @@ rc_t GetEncryptionKey(const VFSManager * self, const VPath * vpath, char* obuff,
     
     if (rc == 0)
     {
-        KEncryptionKey* enc_key;
-        rc = KKeyStoreGetKey(self->keystore, NULL, &enc_key); /* here, we are only interested in global keys - at least for now */
+        KEncryptionKey* enc_key = NULL;
+
+        /* here, we are only interested in global keys - at least for now */
+
+        /* Get Key for current protected repository ( or global ) */
+        rc = KKeyStoreGetKey(self->keystore, NULL, &enc_key);
+        if (rc != 0 && self->resolver != NULL) {
+            bool has_project_id = false;
+            uint32_t projectId = 0;
+            rc = VResolverGetProjectId(self->resolver, &projectId);
+            has_project_id = projectId != 0;
+  
+  /* Get Key for protected repository that was used to create self's resolver */
+            if (rc == 0 && has_project_id) {
+                rc = KKeyStoreGetKeyByProjectId(
+                    self->keystore, NULL, &enc_key,projectId);
+            }
+        }
+
         if (rc == 0)
         {
             *pwd_size = string_copy(obuff, buf_size, enc_key->value.addr, enc_key->value.size);
@@ -2349,6 +2369,32 @@ LIB_EXPORT rc_t CC VFSManagerGetResolver ( const VFSManager * self, struct VReso
         }
 
         * resolver = NULL;
+    }
+
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC VFSManagerSetResolver
+    ( VFSManager * self, VResolver * resolver )
+{
+    rc_t rc = 0;
+
+    if ( self == NULL )
+        rc = RC (rcVFS, rcMgr, rcUpdating, rcSelf, rcNull);
+    else if ( resolver == NULL )
+        rc = RC (rcVFS, rcMgr, rcUpdating, rcParam, rcNull);
+    else if (self -> resolver != resolver ) {
+        rc = VResolverAddRef ( resolver );
+        if (rc == 0) {
+            rc = VResolverRelease ( self -> resolver );
+            if (rc == 0) {
+                self -> resolver = resolver;
+                return 0;
+            }
+        }
+
+        VResolverRelease ( resolver );
     }
 
     return rc;

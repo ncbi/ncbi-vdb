@@ -45,6 +45,7 @@
 #include <sysalloc.h>
 
 #include <assert.h>
+#include <ctype.h> /* isdigit */
 #include <stdlib.h>
 #include <string.h>
 
@@ -737,6 +738,60 @@ LIB_EXPORT rc_t CC KRepositoryDescription ( const KRepository *self,
 }
 
 
+/* ProjectId
+ *  return project id for protected user repository
+ *  return RC when repository is not user protected
+ *
+ *  "projectId" [ OUT ] - returns the project id
+ */
+LIB_EXPORT rc_t CC KRepositoryProjectId
+    ( const KRepository * self, uint32_t * projectId )
+{
+    rc_t rc = 0;
+
+    if ( projectId == NULL )
+        rc = RC ( rcKFG, rcMgr, rcAccessing, rcParam, rcNull );
+    else if ( self == NULL )
+        rc = RC ( rcKFG, rcMgr, rcAccessing, rcSelf, rcNull );
+    else if ( self -> category != krepUserCategory
+           || self -> subcategory != krepProtectedSubCategory )
+        rc = RC ( rcKFG, rcMgr, rcAccessing, rcSelf, rcWrongType );
+    else {
+        uint32_t id = 0;
+        const char prefix [] = "dbGaP-";
+        char localName [512] = "";
+        size_t localNumWrit = 0;
+
+        * projectId = 0;
+
+        KRepositoryName (self, localName, sizeof ( localName ), & localNumWrit);
+        assert ( localNumWrit < sizeof localName );
+
+        if ( strcase_cmp ( localName, localNumWrit,
+            prefix, sizeof prefix - 1, sizeof prefix - 1) == 0)
+        {
+            int i = sizeof prefix - 1;
+            for ( i = sizeof prefix - 1; i < localNumWrit; ++ i ) {
+                if ( ! isdigit ( localName [ i ] ) ) {
+                    rc = RC (rcKFG, rcMgr, rcAccessing, rcSelf, rcUnrecognized);
+                    break;
+                }
+                id = id * 10 + localName [ i ] - '0';
+            }
+
+            if ( rc == 0 ) {
+                * projectId = id;
+                return 0;
+            }
+        }
+
+        rc = RC (rcKFG, rcMgr, rcAccessing, rcSelf, rcUnrecognized);
+    }
+        
+    return rc;
+}
+
+
 /*--------------------------------------------------------------------------
  * KRepositoryVector
  *  uses Vector API
@@ -1212,6 +1267,7 @@ LIB_EXPORT rc_t CC KRepositoryMgrCurrentProtectedRepository ( const KRepositoryM
 
     return rc;
 }
+
 
 /* GetProtectedRepository
  *  retrieves a user protected repository by its associated project-id

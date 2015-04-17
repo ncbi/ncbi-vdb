@@ -80,14 +80,20 @@ KFG_EXTERN rc_t CC KKeyStoreRelease ( const KKeyStore *self );
 KFG_EXTERN rc_t CC KKeyStoreSetTemporaryKeyFromFile(KKeyStore* self, const struct KFile* enc_file);
 
 /* KKeyStoreGetKey
+ * KKeyStoreGetKeyByProjectId
  *  returns the encryption key associated with the specified object
  * 
  *  obj_key [ IN, NULL OK ] - NUL-terminated key of the object in question. The key can be an accession name, or a file system path.
- *      If NULL, will return the current protected repository's key, or, if not within a protected repository, the global key if available
+ *      If NULL, will return the current protected repository's key,
+ *      or, if projectId is passed, will return project's repository's key,
+ *      or, if not within a protected repository, the global key if available
  *      from environment or configuration 
  *  enc_key [ OUT ] 
  */
 KFG_EXTERN rc_t CC KKeyStoreGetKey(const KKeyStore* self, const char* obj_key, KEncryptionKey** enc_key);
+
+KFG_EXTERN rc_t CC KKeyStoreGetKeyByProjectId(const KKeyStore* self,
+    const char* obj_key, KEncryptionKey** enc_key, uint32_t projectId);
 
 /*
  * Registering bindings between numeric object Ids and object names

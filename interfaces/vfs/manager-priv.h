@@ -47,6 +47,7 @@ struct VFSManager;
 struct KDirectory;
 struct KFile;
 struct VPath;
+struct VResolver;
 struct SRAPath;
 struct KConfig;
 
@@ -118,6 +119,12 @@ VFS_EXTERN rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
  */
 VFS_EXTERN void VFSManagerSetBindingsFile(struct VFSManager * self, const char* path);
 VFS_EXTERN const char* VFSManagerGetBindingsFile(struct VFSManager * self);
+
+
+/** Reset VResolver when we need to change protected repository context */
+VFS_EXTERN rc_t CC VFSManagerSetResolver
+    ( struct VFSManager * self, struct VResolver * resolver );
+
 
 #ifdef __cplusplus
 }

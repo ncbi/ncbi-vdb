@@ -171,6 +171,31 @@ FIXTURE_TEST_CASE(KeyStoreGetKey_Protected, KeyStoreFixture)
     REQUIRE_RC(KDirectoryRemove(wd, true, GetName()));
 }
 
+FIXTURE_TEST_CASE(KeyStoreGetKeyById_Protected, KeyStoreFixture)
+{
+    const char tempKey[] = "another tempkey from file";
+    {
+        ofstream f(GetName());
+        f << tempKey << endl;
+    }
+    
+    KfgUpdateNode("/repository/user/protected/dbGaP-2956/root", ".");
+    KfgUpdateNode("/repository/user/protected/dbGaP-2956/encryption-key-path",
+        "wrong file!");
+    KfgUpdateNode("/repository/user/protected/dbGaP-2957/root", ".");
+    KfgUpdateNode("/repository/user/protected/dbGaP-2957/encryption-key-path",
+        GetName());
+
+    REQUIRE_RC(KKeyStoreSetConfig(ks, kfg));
+    
+    REQUIRE_RC(KKeyStoreGetKeyByProjectId(ks,
+        "give us the key for 2957", &key, 2957));
+    REQUIRE_NOT_NULL(key);
+    REQUIRE_EQ(string(tempKey), string(key->value.addr, key->value.len));
+    
+    REQUIRE_RC(KDirectoryRemove(wd, true, GetName()));
+}
+
 //
 //  Object Id / Object name bindings
 //
