@@ -40,10 +40,16 @@
 #include <vdb/database.h>
 #include <vdb/table.h>
 #include <vdb/vdb-priv.h>
+
+#include <vfs/manager.h> /* VFSManager */
+#include <vfs/manager-priv.h> /* VFSManagerSetResolver */
+
 #include <kdb/manager.h>
 #include <kdb/database.h>
+#include <kdb/kdb-priv.h> /* KDBManagerGetVFSManager */
 #include <kdb/table.h>
 #include <kdb/meta.h>
+
 #include <kfg/config.h>
 #include <kfs/directory.h>
 #include <kfs/dyload.h>
@@ -823,4 +829,27 @@ LIB_EXPORT int CC VDBManagerVPathType ( const VDBManager * self,
         return KDBManagerVPathType ( self -> kmgr, path, args );
 
     return kptBadPath;
+}
+
+/** Reset VResolver to set protected repository context */
+LIB_EXPORT rc_t CC VDBManagerSetResolver
+    ( const VDBManager * self, struct VResolver * resolver )
+{
+    const KDBManager * kbd = NULL;
+    rc_t rc = VDBManagerGetKDBManagerRead ( self, & kbd );
+    if (rc == 0) {
+        VFSManager * vfs = NULL;
+        rc = KDBManagerGetVFSManager ( kbd, & vfs );
+        if (rc == 0) {
+            rc = VFSManagerSetResolver ( vfs, resolver );
+
+            VFSManagerRelease ( vfs );
+            vfs = NULL;
+        }
+
+        KDBManagerRelease ( kbd );
+        kbd = NULL;
+    }
+
+    return rc;
 }
