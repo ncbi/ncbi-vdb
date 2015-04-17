@@ -1695,6 +1695,10 @@ struct VResolver
 
     /* preferred protocols preferences. Default: HTTP */
     VRemoteProtocols protocols;
+
+    /** projectId of protected user repository;
+        0 when repository is not user protected */
+    uint32_t projectId;
 };
 
 
@@ -4364,6 +4368,25 @@ rc_t CC VResolverProtocols ( VResolver * self,
 }
 
 
+rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId ) {
+    if ( self == NULL )
+        return RC ( rcVFS, rcResolver, rcAccessing, rcSelf, rcNull );
+    else if ( projectId == NULL )
+        return RC ( rcVFS, rcResolver, rcUpdating, rcParam, rcNull );
+    else {
+        bool has_project_id = self -> projectId != 0;
+
+        * projectId = 0;
+
+        if ( has_project_id ) {
+            * projectId = self -> projectId;
+        }
+
+        return 0;
+    }
+}
+
+
 /* Make
  *  internal factory function
  */
@@ -4398,6 +4421,8 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
 
         KNSManagerRelease(kns);
         kns = NULL;
+
+        KRepositoryProjectId ( protected, & obj -> projectId );
 
         if ( rc == 0 )
         {
