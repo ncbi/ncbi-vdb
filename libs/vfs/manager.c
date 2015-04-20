@@ -427,11 +427,11 @@ rc_t GetEncryptionKey(const VFSManager * self, const VPath * vpath, char* obuff,
         if (rc != 0 && self->resolver != NULL) {
             bool has_project_id = false;
             uint32_t projectId = 0;
-            rc = VResolverGetProjectId(self->resolver, &projectId);
+            rc_t r2 = VResolverGetProjectId(self->resolver, &projectId);
             has_project_id = projectId != 0;
   
   /* Get Key for protected repository that was used to create self's resolver */
-            if (rc == 0 && has_project_id) {
+            if (r2 == 0 && has_project_id) {
                 rc = KKeyStoreGetKeyByProjectId(
                     self->keystore, NULL, &enc_key,projectId);
             }
