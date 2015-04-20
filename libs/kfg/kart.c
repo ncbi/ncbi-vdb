@@ -118,6 +118,10 @@ static rc_t StringAsUint64(const String *self, uint64_t *pid) {
         return RC(rcKFG, rcFile, rcAccessing, rcBuffer, rcInsufficient);
     }
 
+    if (self->len == 0 || self->size == 0) {
+        return RC(rcKFG, rcFile, rcAccessing, rcItem, rcEmpty);
+    }
+
     bytes = string_copy(buffer, sizeof buffer, self->addr, self->len);
     if (bytes != self->len) {
         return RC(rcKFG, rcFile, rcAccessing, rcBuffer, rcInsufficient);
