@@ -383,10 +383,17 @@ static void CC reportErrorStrImpl(uint32_t indent, rc_t rc,
 {
     int sign = eol ? 1 : -1;
     if (rc || function) {
-        report(indent, "Error", sign * 3,
-            "rc", 'R', rc,
-            "function", 's', function,
-            name, 's', val);
+        if (name != NULL || val != NULL) {
+            report(indent, "Error", sign * 3,
+                "rc", 'R', rc,
+                "function", 's', function,
+                name, 's', val);
+        }
+        else {
+            report(indent, "Error", sign * 2,
+                "rc", 'R', rc,
+                "function", 's', function);
+        }
     }
     else {
         report(indent, "Error", sign,
