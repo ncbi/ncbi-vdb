@@ -61,3 +61,10 @@ table NCBI:SRA:Nanopore:sequence #1
 
     extern column < U32 > izip_encoding #1 READ_NUMBER;
 }
+
+
+database NCBI:SRA:Nanopore:db #1
+{
+    table NCBI:SRA:Nanopore:sequence #1.0 SEQUENCE;
+    table NCBI:SRA:Nanopore:consensus #1.0 CONSENSUS;
+};
