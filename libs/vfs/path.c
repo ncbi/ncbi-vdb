@@ -1810,7 +1810,6 @@ rc_t VPathParse ( VPath * self, const char * uri, size_t uri_size )
         case vppRelPath:
         case vppFullPath:
 
-
             if(self->scheme_type != vpuri_none) switch ( ch )
             {
             case ':':
@@ -3206,6 +3205,9 @@ LIB_EXPORT rc_t CC VPathGetFragment ( const VPath * self, String * str )
         rc = VPathGetTestSelf ( self );
         if ( rc == 0 )
         {
+            /* returning a NULL String when there is no fragment */
+            StringInit ( str, NULL, 0, 0 );
+
             StringSubstr ( & self -> fragment, str, 1, 0 );
             return 0;
         }
