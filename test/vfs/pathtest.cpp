@@ -380,7 +380,7 @@ FIXTURE_TEST_CASE(X, PathFixture) {
         {
             String str;
             REQUIRE_RC(VPathGetFragment(path, &str));
-            REQUIRE(! str.addr);
+            REQUIRE_EQ(str.addr, NULL);
             REQUIRE_EQ(str.size, e.size());
             REQUIRE_EQ(str.size, (size_t)str.len);
         }
