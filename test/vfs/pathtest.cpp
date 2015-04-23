@@ -196,7 +196,198 @@ FIXTURE_TEST_CASE(MarkHighReliability, PathFixture)
     REQUIRE ( ! VPathIsHighlyReliable ( path ) );
 }
 
+FIXTURE_TEST_CASE(X, PathFixture) {
+    {
+#define HOST "gap-download.ncbi.nlm.nih.gov"
+#define PATH "/1234ABCD-22BB-CC33-4C4C-D5E6F7890A1B/SRR123456.sra"
+#define URL "http://" HOST PATH
+#define TIC "1A2B3C4D-2B3C-4D5E-6F78-90A1B23C4D5E"
+        String download_ticket, url;
+        CONST_STRING(&download_ticket, TIC);
+        CONST_STRING(&url, URL);
+        REQUIRE_RC(VPathMakeFmt(&path, "%S?tic=%S", &url, &download_ticket));
+        REQUIRE(path);
+    }
+/*  {   TODO VFSManagerExtractAccessionOrOID should extract SRR123456
+        VPath *acc_or_oid = NULL;
+        REQUIRE_RC(VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
+        REQUIRE(acc_or_oid);
+        REQUIRE_RC(VPathRelease(acc_or_oid));
+        acc_or_oid = NULL;
+    }*/
+    REQUIRE(!VPathIsAccessionOrOID(path));
+    REQUIRE(VPathIsFSCompatible(path));
+    REQUIRE(VPathFromUri(path));
+    REQUIRE(!VPathIsHighlyReliable(path));
 
+    size_t num_read = 0;
+    {
+        const string e(URL "?tic=" TIC);
+        char buffer[4096] = "";
+        REQUIRE_RC(VPathReadUri(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+        {
+            const String *str = NULL;
+            REQUIRE_RC(VPathMakeUri(path, &str));
+            REQUIRE(str);
+            REQUIRE_EQ(string(str->addr), e);
+            REQUIRE_EQ(str->size, e.size());
+            REQUIRE_EQ(str->size, (size_t)str->len);
+            free(const_cast<String*>(str));
+        }
+        {
+            const String *str = NULL;
+            REQUIRE_RC(VPathMakeString(path, &str));
+            REQUIRE(str);
+            REQUIRE_EQ(string(str->addr), e);
+            REQUIRE_EQ(str->size, e.size());
+            REQUIRE_EQ(str->size, (size_t)str->len);
+            free(const_cast<String*>(str));
+        }
+    }
+    {
+        char buffer[4096] = "";
+        const string e("http");
+        REQUIRE_RC(VPathReadScheme(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+        {
+            String str;
+            REQUIRE_RC(VPathGetScheme(path, &str));
+            REQUIRE_EQ(string(str.addr, 0, str.len), e);
+            REQUIRE_EQ(str.size, e.size());
+            REQUIRE_EQ(str.size, (size_t)str.len);
+        }
+    }
+    {
+        char buffer[4096] = "";
+        const string e;
+        REQUIRE_RC(VPathReadAuth(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+        {
+            String str;
+            REQUIRE_RC(VPathGetAuth(path, &str));
+            REQUIRE(! str.addr);
+            REQUIRE_EQ(str.size, e.size());
+            REQUIRE_EQ(str.size, (size_t)str.len);
+        }
+    }
+    {
+        char buffer[4096] = "";
+        const string e(HOST);
+        REQUIRE_RC(VPathReadHost(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+        {
+            String str;
+            REQUIRE_RC(VPathGetHost(path, &str));
+            REQUIRE_EQ(string(str.addr, 0, str.len), e);
+            REQUIRE_EQ(str.size, e.size());
+            REQUIRE_EQ(str.size, (size_t)str.len);
+        }
+    }
+    {
+        char buffer[4096] = "";
+        const string e;
+        REQUIRE_RC(VPathReadPortName(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+        {
+            String str;
+            REQUIRE_RC(VPathGetPortName(path, &str));
+            REQUIRE(! str.addr);
+            REQUIRE_EQ(str.size, e.size());
+            REQUIRE_EQ(str.size, (size_t)str.len);
+            REQUIRE( ! VPathGetPortNum(path));
+        }
+    }
+    {
+        char buffer[4096] = "";
+        const string e(PATH);
+        REQUIRE_RC(VPathReadPath(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+        {
+            String str;
+            REQUIRE_RC(VPathGetPath(path, &str));
+            REQUIRE_EQ(string(str.addr, 0, str.len), e);
+            REQUIRE_EQ(str.size, e.size());
+            REQUIRE_EQ(str.size, (size_t)str.len);
+        }
+    }
+    {
+        char buffer[4096] = "";
+        const string e(PATH);
+        REQUIRE_RC(VPathReadSysPath(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+        {
+            const String *s = NULL;
+            REQUIRE_RC(VPathMakeSysPath(path, &s));
+            REQUIRE(s);
+            REQUIRE_EQ(string(s->addr), e);
+            REQUIRE_EQ(s->size, e.size());
+            REQUIRE_EQ(s->size, (size_t)s->len);
+            free(const_cast<String*>(s));
+        }
+    }
+    {
+        char buffer[4096] = "";
+        const string e("tic=" TIC);
+        REQUIRE_RC(VPathReadQuery(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size()); REQUIRE_EQ(string(buffer), e);
+        {
+            String str;
+            REQUIRE_RC(VPathGetQuery(path, &str));
+            REQUIRE_EQ(string(str.addr, 0, str.len), e);
+            REQUIRE_EQ(str.size, e.size());
+            REQUIRE_EQ(str.size, (size_t)str.len);
+        }
+    }
+    {
+        char buffer[4096] = "";
+        const string e(TIC);
+        REQUIRE_RC
+            (VPathReadParam(path, "tic", buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size()); REQUIRE_EQ(string(buffer), e);
+        {
+            String str;
+            REQUIRE_RC(VPathGetParam(path, "tic", &str));
+            REQUIRE_EQ(string(str.addr, 0, str.len), e);
+            REQUIRE_EQ(str.size, e.size());
+            REQUIRE_EQ(str.size, (size_t)str.len);
+        }
+    }
+        REQUIRE(num_read);
+    {
+        char buffer[4096] = "";
+        const string e;
+        REQUIRE_RC_FAIL
+            (VPathReadParam(path, "ti", buffer, sizeof buffer, &num_read));
+        REQUIRE(! num_read);
+        {
+            String str;
+            REQUIRE_RC_FAIL(VPathGetParam(path, "ti", &str));
+        }
+    }
+    {
+        char buffer[4096] = "";
+        const string e;
+        REQUIRE_RC(VPathReadFragment(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size()); REQUIRE_EQ(string(buffer), e);
+        {
+            String str;
+            REQUIRE_RC(VPathGetFragment(path, &str));
+            REQUIRE(! str.addr);
+            REQUIRE_EQ(str.size, e.size());
+            REQUIRE_EQ(str.size, (size_t)str.len);
+        }
+    }
+
+    REQUIRE( ! VPathGetOid(path));
+}
 
 //////////////////////////////////////////// Main
 extern "C"
