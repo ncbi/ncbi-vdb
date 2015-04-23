@@ -1225,10 +1225,11 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
     const String *ticket )
 {
     /* the textual response */
+    size_t i = 0;
     const char *start = ( const void* ) result -> base;
-    size_t i, size = KDataBufferBytes ( result );
+    size_t size = KDataBufferBytes ( result );
 
-    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (" Response = %s\n", start));
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (" Response = %.*s\n", size, start));
 
     /* peel back buffer to significant bytes */
     while ( size > 0 && start [ size - 1 ] == 0 )
