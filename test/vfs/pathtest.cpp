@@ -430,6 +430,95 @@ FIXTURE_TEST_CASE(FILENAME, PathFixture) {
     }
 }
 
+FIXTURE_TEST_CASE(SPACE_IN_FILENAME, PathFixture) {
+#undef PATH
+#define PATH "file elif.txt"
+    REQUIRE_RC(VFSManagerMakePath(vfs, &path, "%s", PATH));
+    REQUIRE(path);
+    {
+        char buffer[4096] = "";
+        const string e("file");
+        REQUIRE_RC(VPathReadScheme(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+    }
+    {
+        char buffer[4096] = "";
+        const string e(PATH);
+        REQUIRE_RC(VPathReadPath(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+    }
+}
+
+FIXTURE_TEST_CASE(CYRYLLIC_WIN_IN_FILENAME, PathFixture) {
+#undef PATH
+#define PATH "./:OJDF800"
+    REQUIRE_RC(VFSManagerMakePath(vfs, &path, "%s", PATH));
+    REQUIRE(path);
+    {
+        char buffer[4096] = "";
+        const string e("file");
+        REQUIRE_RC(VPathReadScheme(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+    }
+    {
+        char buffer[4096] = "";
+        const string e(PATH);
+        REQUIRE_RC(VPathReadPath(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+    }
+}
+
+FIXTURE_TEST_CASE(CYRYLLIC_IN_FILENAME, PathFixture) {
+#undef PATH
+//   #define PATH "Ä°¹».txt"
+    char PATH[] = "file.txt";
+    PATH[0] = 0xC4;
+    PATH[1] = 0xB0;
+    PATH[2] = 0xB9;
+    PATH[2] = 0xBB;
+    REQUIRE_RC(VFSManagerMakePath(vfs, &path, "%s", PATH));
+    REQUIRE(path);
+    {
+        char buffer[4096] = "";
+        const string e("file");
+        REQUIRE_RC(VPathReadScheme(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+    }
+    {
+        char buffer[4096] = "";
+        const string e(PATH);
+        REQUIRE_RC(VPathReadPath(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+    }
+}
+
+FIXTURE_TEST_CASE(TAB_IN_FILENAME, PathFixture) {
+#undef PATH
+#define PATH "file\telif.txt"
+    REQUIRE_RC(VFSManagerMakePath(vfs, &path, "%s", PATH));
+    REQUIRE(path);
+    {
+        char buffer[4096] = "";
+        const string e("file");
+        REQUIRE_RC(VPathReadScheme(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+    }
+    {
+        char buffer[4096] = "";
+        const string e(PATH);
+        REQUIRE_RC(VPathReadPath(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+    }
+}
+
 FIXTURE_TEST_CASE(POUNT_IN_FILENAME, PathFixture) {
 #undef PATH
 #define PATH "./file#elif.txt"
