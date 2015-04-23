@@ -390,6 +390,107 @@ FIXTURE_TEST_CASE(NAME_SERVER_PROTECTED_HTTP, PathFixture) {
 }
 
 FIXTURE_TEST_CASE(NAME_SERVER_PROTECTED_FASP, PathFixture) {
+    {
+#undef URL
+#define URL "fasp://dbtest@gap-download.ncbi.nlm.nih.gov:data/sracloud/1234ABCD-22BB-CC33-4C4C-D5E6F7890A1B/SRR123456.sra"
+        String download_ticket, url;
+        CONST_STRING(&download_ticket, TIC);
+        CONST_STRING(&url, URL);
+        REQUIRE_RC(VPathMakeFmt(&path, "%S?tic=%S", &url, &download_ticket));
+        REQUIRE(path);
+    }
+    {
+        const string e(URL "?tic=" TIC);
+        char buffer[4096] = "";
+        size_t num_read = 0;
+        REQUIRE_RC(VPathReadUri(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+    }
+}
+
+FIXTURE_TEST_CASE(FILENAME, PathFixture) {
+#undef PATH
+#define PATH "file.txt"
+    REQUIRE_RC(VFSManagerMakePath(vfs, &path, "%s", PATH));
+    REQUIRE(path);
+    {
+        char buffer[4096] = "";
+        const string e("file");
+        REQUIRE_RC(VPathReadScheme(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+    }
+    {
+        char buffer[4096] = "";
+        const string e(PATH);
+        REQUIRE_RC(VPathReadPath(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+    }
+}
+
+FIXTURE_TEST_CASE(POUNT_IN_FILENAME, PathFixture) {
+#undef PATH
+#define PATH "./file#elif.txt"
+    REQUIRE_RC(VFSManagerMakePath(vfs, &path, "%s", PATH));
+    REQUIRE(path);
+    {
+        char buffer[4096] = "";
+        const string e("file");
+        REQUIRE_RC(VPathReadScheme(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+    }
+    {
+        char buffer[4096] = "";
+        const string e(PATH);
+        REQUIRE_RC(VPathReadPath(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+    }
+}
+
+FIXTURE_TEST_CASE(QUESTION_IN_FILENAME, PathFixture) {
+#undef PATH
+#define PATH "./file?elif.txt"
+    REQUIRE_RC(VFSManagerMakePath(vfs, &path, "%s", PATH));
+    REQUIRE(path);
+    {
+        char buffer[4096] = "";
+        const string e("file");
+        REQUIRE_RC(VPathReadScheme(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+    }
+    {
+        char buffer[4096] = "";
+        const string e(PATH);
+        REQUIRE_RC(VPathReadPath(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+    }
+}
+
+FIXTURE_TEST_CASE(COLON_IN_FILENAME, PathFixture) {
+#undef PATH
+#define PATH "./file:elif.txt"
+    REQUIRE_RC(VFSManagerMakePath(vfs, &path, "%s", PATH));
+    REQUIRE(path);
+    {
+        char buffer[4096] = "";
+        const string e("file");
+        REQUIRE_RC(VPathReadScheme(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+    }
+    {
+        char buffer[4096] = "";
+        const string e(PATH);
+        REQUIRE_RC(VPathReadPath(path, buffer, sizeof buffer, &num_read));
+        REQUIRE_EQ(num_read, e.size());
+        REQUIRE_EQ(string(buffer), e);
+    }
 }
 
 //////////////////////////////////////////// Main
