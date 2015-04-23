@@ -196,7 +196,7 @@ FIXTURE_TEST_CASE(MarkHighReliability, PathFixture)
     REQUIRE ( ! VPathIsHighlyReliable ( path ) );
 }
 
-FIXTURE_TEST_CASE(X, PathFixture) {
+FIXTURE_TEST_CASE(NAME_SERVER_PROTECTED_HTTP, PathFixture) {
     {
 #define HOST "gap-download.ncbi.nlm.nih.gov"
 #define PATH "/1234ABCD-22BB-CC33-4C4C-D5E6F7890A1B/SRR123456.sra"
@@ -380,13 +380,16 @@ FIXTURE_TEST_CASE(X, PathFixture) {
         {
             String str;
             REQUIRE_RC(VPathGetFragment(path, &str));
-            REQUIRE_EQ(str.addr, 0);
+            REQUIRE_EQ(str.addr, (const char*)NULL);
             REQUIRE_EQ(str.size, e.size());
             REQUIRE_EQ(str.size, (size_t)str.len);
         }
     }
 
     REQUIRE( ! VPathGetOid(path));
+}
+
+FIXTURE_TEST_CASE(NAME_SERVER_PROTECTED_FASP, PathFixture) {
 }
 
 //////////////////////////////////////////// Main
