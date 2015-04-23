@@ -1810,9 +1810,8 @@ rc_t VPathParse ( VPath * self, const char * uri, size_t uri_size )
         case vppRelPath:
         case vppFullPath:
 
-#if 0
 
-            switch ( ch )
+            if(self->scheme_type != vpuri_none) switch ( ch )
             {
             case ':':
                 return RC ( rcVFS, rcPath, rcParsing, rcChar, rcUnexpected );
@@ -1831,7 +1830,6 @@ rc_t VPathParse ( VPath * self, const char * uri, size_t uri_size )
                 VPathParseResetAnchor ( i );
                 break;
             }
-#endif
 
             break;
 
