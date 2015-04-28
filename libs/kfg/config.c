@@ -2616,6 +2616,7 @@ rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir, const char *appnam
     {
         KConfigInit ( self, root );
         add_predefined_nodes ( self, appname );
+        add_aws_nodes ( self );
         load_config_files ( self, cfgdir );
         KConfigCommit ( self ); /* commit changes made to magic file nodes duting parsing (e.g. fixed spelling of dbGaP names) */
     }

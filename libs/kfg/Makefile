@@ -92,6 +92,7 @@ KFG_SRC = \
 	config-lex \
 	config-grammar \
 	config \
+	config-aws \
 	kart \
 	repository \
 	properties \
