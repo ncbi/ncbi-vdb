@@ -38,7 +38,11 @@ include 'insdc/insdc.vschema';
 table NCBI:pileup:tbl:pileup_stats #1
 {
     extern column ascii RUN_NAME;
-    extern column ascii REFERENCE_SPEC;
+    extern column ascii REFERENCE_SPEC = out_reference_spec;
+    physical < ascii > zip_encoding .REFERENCE_SPEC
+        = idx:text:insert < 'ref_spec' > ( REFERENCE_SPEC );
+    ascii out_reference_spec
+        = idx:text:project < 'ref_spec' > ( .REFERENCE_SPEC );
     extern column < I64 > izip_encoding REF_POS;
     extern column < INSDC:dna:text > zip_encoding REF_BASE;
     extern column < U32 > izip_encoding DEPTH;
