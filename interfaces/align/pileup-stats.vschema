@@ -37,17 +37,55 @@ include 'insdc/insdc.vschema';
 
 table NCBI:pileup:tbl:pileup_stats #1
 {
+    /* RUN_NAME
+     *  expected to be a single value for entire object
+     */
     extern column ascii RUN_NAME;
+
+    /* REFERENCE_SPEC
+     *  the canonical reference accession
+     *  an index is stored in 'ref_spec'.
+     */
     extern column ascii REFERENCE_SPEC = out_reference_spec;
     physical < ascii > zip_encoding .REFERENCE_SPEC
         = idx:text:insert < 'ref_spec' > ( REFERENCE_SPEC );
     ascii out_reference_spec
         = idx:text:project < 'ref_spec' > ( .REFERENCE_SPEC );
-    extern column < I64 > izip_encoding REF_POS;
+
+    /* REF_POS
+     *  we dedicate a row to every position on the reference
+     *  some rows are empty, other than their position
+     */
+    extern column I64 REF_POS = out_ref_pos;
+    physical < I64 > izip_encoding .REF_POS = sub_row_id ( REF_POS );
+    I64 out_ref_pos = add_row_id ( .REF_POS );
+
+    /* REF_BASE
+     *  this optional column records data extracted from reference
+     *  it is the base at REF_POS
+     */
     extern column < INSDC:dna:text > zip_encoding REF_BASE;
+
+    /* DEPTH
+     *  depth of coverage at REF_POS
+     */
     extern column < U32 > izip_encoding DEPTH;
+
+    /* MISMATCH_COUNTS
+     *  the number of pileup bases that do not match against REF_BASE
+     *  the normal vector MISMATCH_COUNTS [ 4 ] is recorded as MISMATCH_COUNTS [ 3 ]
+     *  where the element representing REF_BASE has been eliminated.
+     */
     extern column < U32 > izip_encoding MISMATCH_COUNTS;
+
+    /* INSERTION_COUNTS
+     *  the number of insertions-before-bases
+     */
     extern column < U32 > izip_encoding INSERTION_COUNTS;
+
+    /* DELETION_COUNT
+     *  the number of deletions at REF_POS
+     */
     extern column < U32 > izip_encoding DELETION_COUNT;
 }
 
