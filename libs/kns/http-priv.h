@@ -66,6 +66,13 @@ struct timeout_t;
  * URLBlock
  *  RFC 3986
  */
+typedef enum 
+{
+    NONE,
+    HTTP,
+    S3
+} SchemeType;
+
 typedef struct URLBlock URLBlock;
 struct URLBlock
 {
@@ -74,6 +81,8 @@ struct URLBlock
     String path; /* Path includes any parameter portion */
     String query;
     String fragment;
+
+    SchemeType scheme_type;
 
     uint32_t port;
 };
