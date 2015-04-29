@@ -68,9 +68,9 @@ struct timeout_t;
  */
 typedef enum 
 {
-    NONE,
-    HTTP,
-    S3
+    st_NONE,
+    st_HTTP,
+    st_S3
 } SchemeType;
 
 typedef struct URLBlock URLBlock;
@@ -82,9 +82,9 @@ struct URLBlock
     String query;
     String fragment;
 
-    SchemeType scheme_type;
-
     uint32_t port;
+
+    SchemeType scheme_type;
 };
 extern void URLBlockInit ( URLBlock *self );
 extern rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size );

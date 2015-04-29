@@ -72,6 +72,15 @@ rc_t KNSManagerWhack ( KNSManager * self )
     KConfigRelease ( self -> kfg );
     if ( self -> http_proxy != NULL )
         StringWhack ( self -> http_proxy );
+    if ( self -> aws_access_key_id != NULL )
+        StringWhack ( self -> aws_access_key_id );
+    if ( self -> aws_secret_access_key != NULL )
+        StringWhack ( self -> aws_secret_access_key );
+    if ( self -> aws_region != NULL )
+        StringWhack ( self -> aws_region );
+    if ( self -> aws_output != NULL )
+        StringWhack ( self -> aws_output );
+    
     rc = HttpRetrySpecsDestroy ( & self -> retry_specs );
     free ( self );
     KNSManagerCleanup ();
@@ -157,6 +166,81 @@ void KNSManagerHttpProxyInit ( KNSManager * self )
 }
 
 
+static
+void KNSManagerLoadAWS ( struct KNSManager *self )
+{
+    rc_t rc;
+
+    const KConfigNode *aws_node;
+    const KConfig *kfg = self -> kfg;
+
+    if ( self == NULL )
+        return;
+
+    rc = KConfigOpenNodeRead ( kfg, &aws_node, "AWS" );
+    if ( rc == 0 )
+    {
+        do
+        {
+            String *access_key_id = NULL, *secret_access_key = NULL, *region = NULL, *output = NULL;
+            const KConfigNode *access_key_id_node, *secret_access_key_node, *region_node, *output_node;
+
+            rc = KConfigNodeOpenNodeRead ( aws_node, &access_key_id_node, "aws_access_key_id" );
+            if ( rc == 0 )
+            {
+                rc = KConfigNodeReadString ( access_key_id_node, &access_key_id );
+
+                KConfigNodeRelease ( access_key_id_node );
+
+                if( rc != 0 )
+                    break;
+            }
+
+
+            rc = KConfigNodeOpenNodeRead ( aws_node, &secret_access_key_node, "aws_secret_access_key" );
+            if ( rc == 0 )
+            {
+                rc = KConfigNodeReadString ( secret_access_key_node, &secret_access_key );
+
+                KConfigNodeRelease ( secret_access_key_node );
+
+                if ( rc != 0 )
+                    break;
+            }
+        
+            rc = KConfigNodeOpenNodeRead ( aws_node, &region_node, "region" );
+            if ( rc == 0 )
+            {
+                rc = KConfigNodeReadString ( region_node, &region );
+
+                KConfigNodeRelease ( region_node );
+
+                if ( rc != 0 )
+                    break;
+            }
+
+            rc = KConfigNodeOpenNodeRead ( aws_node, &output_node, "output" );
+            if ( rc == 0 )
+            {
+                rc = KConfigNodeReadString ( output_node, &output );
+
+                KConfigNodeRelease ( output_node );
+                
+                if ( rc != 0 )
+                    break;
+            }
+
+            self -> aws_access_key_id = access_key_id;
+            self -> aws_secret_access_key = secret_access_key;
+            self -> aws_region = region;
+            self -> aws_output = output;
+
+        } while ( 0 );
+
+        KConfigNodeRelease ( aws_node );
+    }
+}
+
 LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
 {
     rc_t rc;
@@ -222,6 +306,9 @@ LIB_EXPORT rc_t CC KNSManagerMake ( KNSManager **mgrp )
     {
         rc_t rc2;
         rc = KNSManagerMakeConfig ( mgrp, kfg );
+        if ( rc == 0 )
+            KNSManagerLoadAWS ( *mgrp );
+
         rc2 = KConfigRelease ( kfg );
         if ( rc == 0 )
         {   

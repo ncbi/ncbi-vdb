@@ -53,6 +53,11 @@ struct KNSManager
     
     struct KConfig * kfg;
     struct String const * http_proxy;
+
+    struct String const *aws_access_key_id;
+    struct String const *aws_secret_access_key;
+    struct String const *aws_region;
+    struct String const *aws_output;
     
     struct HttpRetrySpecs retry_specs;
     

@@ -83,9 +83,9 @@ void URLBlockInit ( URLBlock *self )
     CONST_STRING ( & self -> query, "" );
     CONST_STRING ( & self -> fragment, "" );
 
-    self -> scheme_type = NONE;
-
     self -> port = 0; /* 0 = DEFAULT 80 for http */
+
+    self -> scheme_type = st_NONE;
 }
 
 /* ParseUrl
@@ -132,7 +132,7 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
             CONST_STRING ( & http, "http" );
 
             /* here we assume the scheme will be http */
-            b -> scheme_type = HTTP;
+            b -> scheme_type = st_HTTP;
 
             /* assign scheme to the url_block */
             StringInit ( & b -> scheme, buf, sep - buf, ( uint32_t ) ( sep - buf ) );
@@ -146,12 +146,12 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
                 
                 if ( ! StringCaseEqual ( & b -> scheme, & s3 ) )
                 {
-                    b -> scheme_type = NONE;
+                    b -> scheme_type = st_NONE;
                     rc = RC ( rcNS, rcUrl, rcEvaluating, rcName, rcIncorrect );
                     PLOGERR ( klogErr ,( klogErr, rc, "Scheme is '$(scheme)'", "scheme=%S", & b -> scheme ) );
                     return rc;
                 }
-                b -> scheme_type = S3;
+                b -> scheme_type = st_S3;
             }
 
             /* accept scheme - skip past */
