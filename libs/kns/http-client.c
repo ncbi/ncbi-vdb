@@ -2279,6 +2279,29 @@ LIB_EXPORT rc_t CC KClientHttpRequestConnection ( KClientHttpRequest *self, bool
 }
 
 
+/* SetNoCache
+ *  guard against over-eager proxies that try to cache entire files
+ *  and handle byte-ranges locally.
+ */
+LIB_EXPORT rc_t CC KClientHttpRequestSetNoCache ( KClientHttpRequest *self )
+{
+    rc_t rc;
+
+    if ( self == NULL )
+        rc = RC ( rcNS, rcNoTarg, rcUpdating, rcSelf, rcNull );
+    else
+    {
+        rc = KClientHttpRequestAddHeader ( self, "Cache-Control", "no-cache, no-store, max=age=0, no-transform, must-revalidate" );
+        if ( rc == 0 )
+            rc = KClientHttpRequestAddHeader ( self, "Pragma", "no-cache" );
+        if ( rc == 0 )
+            rc = KClientHttpRequestAddHeader ( self, "Expires", "0" );
+    }
+
+    return rc;
+}
+
+
 /* ByteRange
  *  set requested byte range of response
  *
