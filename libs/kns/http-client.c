@@ -2291,7 +2291,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestSetNoCache ( KClientHttpRequest *self )
         rc = RC ( rcNS, rcNoTarg, rcUpdating, rcSelf, rcNull );
     else
     {
-        rc = KClientHttpRequestAddHeader ( self, "Cache-Control", "no-cache, no-store, max=age=0, no-transform, must-revalidate" );
+        rc = KClientHttpRequestAddHeader ( self, "Cache-Control", "no-cache, no-store, max-age=0, no-transform, must-revalidate" );
         if ( rc == 0 )
             rc = KClientHttpRequestAddHeader ( self, "Pragma", "no-cache" );
         if ( rc == 0 )
