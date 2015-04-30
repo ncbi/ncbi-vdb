@@ -24,4 +24,9 @@
 *
 */
 
-#define LIBVDB_VERS 0x02070001
+#ifndef _h_kfg_priv_
+#define _h_kfg_priv_
+
+extern void add_aws_nodes ( KConfig *self );
+
+#endif /* _h_kfg_priv_ */

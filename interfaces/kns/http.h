@@ -210,6 +210,13 @@ KNS_EXTERN rc_t CC KClientHttpRequestRelease ( const KClientHttpRequest *self );
 KNS_EXTERN rc_t CC KClientHttpRequestConnection ( KClientHttpRequest *self, bool close );
 
 
+/* SetNoCache
+ *  guard against over-eager proxies that try to cache entire files
+ *  and handle byte-ranges locally.
+ */
+KNS_EXTERN rc_t CC KClientHttpRequestSetNoCache ( KClientHttpRequest *self );
+
+
 /* ByteRange
  *  set requested byte range of response
  *

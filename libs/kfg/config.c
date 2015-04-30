@@ -1610,9 +1610,9 @@ static rc_t _printNodeData(const char *name, const char *data, uint32_t dlen,
     }
 }
 
-static rc_t KConfigNodePrint(const KConfigNode* self,
-     int indent, const char* root, bool debug,
-     bool native, const char* aFullpath, PrintBuff *pb)
+static rc_t KConfigNodePrint(const KConfigNode *self, int indent,
+    const char* root, bool debug, bool native, const char* aFullpath,
+    PrintBuff *pb, uint32_t skipCount, va_list args)
 {
     rc_t rc = 0;
     KNamelist* names = NULL;
@@ -1620,11 +1620,24 @@ static rc_t KConfigNodePrint(const KConfigNode* self,
     uint32_t i = 0;
     char data[4097] = "";
     size_t num_data = 0;
+
     assert(self);
 
     if (!native) {
         rc = printIndent(indent, pb);
         if (rc == 0) {
+            uint32_t i = 0;
+            for (i = 0; i < skipCount; ++i) {
+                const char *skip = va_arg(args, const char*);
+                if (string_cmp(skip, string_measure(skip, NULL), root,
+                        string_measure(root, NULL), string_measure(root, NULL))
+                    == 0)
+                {
+                    rc = PrintBuffPrint(pb, "<%s><!-- skipped --></%s>", root);
+                    return rc;
+                }
+            }
+
             rc = PrintBuffPrint(pb, "<%s>", root);
         }
     }
@@ -1682,7 +1695,7 @@ static rc_t KConfigNodePrint(const KConfigNode* self,
             if (rc == 0) {
                 if (! isdigit(name[0])) {
                     KConfigNodePrint(node, indent + 1,
-                        name, debug, native, fullpath, pb);
+                        name, debug, native, fullpath, pb, 0, NULL);
                 }
                 else {
                     /* XML node names cannot start with a number */
@@ -1695,7 +1708,7 @@ static rc_t KConfigNodePrint(const KConfigNode* self,
                     else {
                         string_printf(dname, dsize, NULL, "_%s", name);
                         KConfigNodePrint(node, indent + 1,
-                            dname, debug, native, fullpath, pb);
+                            dname, debug, native, fullpath, pb, 0, NULL);
                         free(dname);
                     }
                 }
@@ -1718,8 +1731,9 @@ static rc_t KConfigNodePrint(const KConfigNode* self,
     return rc;
 }
 
-static rc_t CC KConfigPrintImpl(const KConfig* self, int indent,
-    const char *root, bool debug, bool native, PrintBuff *pb)
+static rc_t CC KConfigPrintImpl(const KConfig* self,
+    int indent, const char *root, bool debug, bool native, 
+    PrintBuff *pb, uint32_t skipCount, va_list args)
 {
     rc_t rc = 0;
 
@@ -1739,7 +1753,8 @@ static rc_t CC KConfigPrintImpl(const KConfig* self, int indent,
             DISP_RC2(rc, "KConfigOpenNodeRead()", "/");
         }
         if (rc == 0) {
-            KConfigNodePrint(node, indent, root, debug, native, "", pb);
+            KConfigNodePrint
+                (node, indent, root, debug, native, "", pb, skipCount, args);
         }
         KConfigNodeRelease(node);
     }
@@ -1760,7 +1775,7 @@ LIB_EXPORT rc_t CC KConfigPrintDebug(const KConfig* self, const char *path) {
     }
 
     if (rc == 0) {
-        rc = KConfigPrintImpl(self, 0, path, true, false, &pb);
+        rc = KConfigPrintImpl(self, 0, path, true, false, &pb, 0, NULL);
     }
 
     if (rc == 0) {
@@ -2616,6 +2631,7 @@ rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir, const char *appnam
     {
         KConfigInit ( self, root );
         add_predefined_nodes ( self, appname );
+        add_aws_nodes ( self );
         load_config_files ( self, cfgdir );
         KConfigCommit ( self ); /* commit changes made to magic file nodes duting parsing (e.g. fixed spelling of dbGaP names) */
     }
@@ -3235,7 +3251,7 @@ LIB_EXPORT rc_t CC KConfigPrint(const KConfig* self, int indent) {
     }
 
     if (rc == 0) {
-        rc = KConfigPrintImpl(self, indent, NULL, false, false, &pb);
+        rc = KConfigPrintImpl(self, indent, NULL, false, false, &pb, 0, NULL);
     }
 
     if (rc == 0) {
@@ -3250,7 +3266,7 @@ LIB_EXPORT rc_t CC KConfigToFile(const KConfig* self, KFile *file) {
     PrintBuff pb;
     PrintBuffInit(&pb, file);
     if (rc == 0) {
-        rc = KConfigPrintImpl(self, 0, NULL, false, true, &pb);
+        rc = KConfigPrintImpl(self, 0, NULL, false, true, &pb, 0, NULL);
     }
     if (rc == 0) {
         rc = PrintBuffFlush(&pb);

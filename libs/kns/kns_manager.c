@@ -249,6 +249,7 @@ LIB_EXPORT rc_t CC KNSManagerMake( struct KNSManager **self )
             {
                 tmp->create_rc = KNSManagerLoadLib( tmp );
                 KRefcountInit( &tmp->refcount, 1, "KNS", "make", knsmanager_classname );
+
 /*              fprintf(stderr,
                     "%p KNSManagerLoadLib = %d\n", tmp, tmp->create_rc); */
             }

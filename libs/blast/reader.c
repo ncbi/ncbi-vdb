@@ -3039,6 +3039,26 @@ void _VdbBlastReferenceSetWhack(VdbBlastReferenceSet *self)
     free(self);
 }
 
+LIB_EXPORT VdbBlastReferenceSet* CC VdbBlastReferenceSetAddRef
+    (VdbBlastReferenceSet *self)
+{
+    if (self == NULL) {
+        STSMSG(1, ("VdbBlastReferenceSetAddRef(NULL)"));
+        return self;
+    }
+
+    if (KRefcountAdd(&self->refcount, VDB_BLAST_REFERENCE_SET)
+        == krefOkay)
+    {
+        STSMSG(1, ("VdbBlastReferenceSetAddRef"));
+        return self;
+    }
+
+    STSMSG(1, ("Error: failed to VdbBlastReferenceSetAddRef"));
+    return NULL;
+}
+
+
 LIB_EXPORT
 void CC VdbBlastReferenceSetRelease(VdbBlastReferenceSet *self)
 {
