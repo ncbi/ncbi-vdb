@@ -376,7 +376,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeConnection ( const KNSManager * self,
  *
  *  both endpoints have to be of type epIP; creates a TCP connection
  */
-KNS_EXTERN rc_t CC KNSManagerMakeTimedConnection ( struct KNSManager const * self,
+LIB_EXPORT rc_t CC KNSManagerMakeTimedConnection ( struct KNSManager const * self,
     struct KSocket **conn, int32_t readMillis, int32_t writeMillis,
     struct KEndPoint const *from, struct KEndPoint const *to )
 {
@@ -408,7 +408,7 @@ KNS_EXTERN rc_t CC KNSManagerMakeTimedConnection ( struct KNSManager const * sel
  *
  *  both endpoints have to be of type epIP; creates a TCP connection
  */    
-KNS_EXTERN rc_t CC KNSManagerMakeRetryConnection ( struct KNSManager const * self,
+LIB_EXPORT rc_t CC KNSManagerMakeRetryConnection ( struct KNSManager const * self,
     struct KSocket **conn, int32_t retryTimeout, struct KEndPoint const *from, struct KEndPoint const *to )
 {
     if ( self == NULL )
@@ -652,7 +652,7 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent ( KNSManager * self, const char * fmt,
 }
 
 
-rc_t CC KNSManagerGetUserAgent ( const char ** user_agent )
+LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char ** user_agent )
 {
     rc_t rc = 0;
     if ( user_agent == NULL )
