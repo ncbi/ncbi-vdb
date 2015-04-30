@@ -43,7 +43,7 @@
 #define UNIX_EPOCH_IN_WIN       116444736000000000UL
 #endif
 #define UNIX_TIME_UNITS_IN_WIN  10000000
-
+#define MS_TIME_UNITS_IN_WIN  	10000
 
 /* KTime2FILETIME
  *  convert from Unix to Windows
@@ -66,6 +66,15 @@ KTime_t FILETIME2KTime ( const FILETIME *ft )
     return ( KTime_t ) ( win_time - UNIX_EPOCH_IN_WIN ) / UNIX_TIME_UNITS_IN_WIN;
 }
 
+/* FILETIME2KTimeMs
+ */
+static
+KTimeMs_t FILETIME2KTimeMs ( const FILETIME *ft )
+{
+    uint64_t win_time = ft -> dwLowDateTime + ( ( int64_t ) ft -> dwHighDateTime << 32 );
+    return ( KTimeMs_t ) ( win_time - UNIX_EPOCH_IN_WIN ) / MS_TIME_UNITS_IN_WIN;
+}
+
 
 /* Stamp
  *  current timestamp
@@ -77,6 +86,12 @@ LIB_EXPORT KTime_t CC KTimeStamp ( void )
     return FILETIME2KTime ( & ft );
 }
 
+LIB_EXPORT KTimeMs_t CC KTimeMsStamp ( void )
+{
+    FILETIME ft;
+    GetSystemTimeAsFileTime ( & ft );
+    return FILETIME2KTimeMs ( & ft );
+}
 
 /*--------------------------------------------------------------------------
  * SYSTEMTIME

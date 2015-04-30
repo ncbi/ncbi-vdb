@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <time.h>
+#include <sys/time.h>
 #include <errno.h>
 
 
@@ -50,6 +51,12 @@ LIB_EXPORT KTime_t CC KTimeStamp ( void )
     return time ( NULL );
 }
 
+LIB_EXPORT KTimeMs_t CC KTimeMsStamp ( void )
+{
+	struct timeval tm;
+    gettimeofday( &tm, NULL );
+	return ( ( tm.tv_sec * 1000 ) + ( tm.tv_usec / 1000 ) );
+}
 
 /*--------------------------------------------------------------------------
  * KTime

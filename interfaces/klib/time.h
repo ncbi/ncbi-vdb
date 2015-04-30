@@ -50,7 +50,7 @@ extern "C" {
  *  current timestamp
  */
 KLIB_EXTERN KTime_t CC KTimeStamp ( void );
-
+KLIB_EXTERN KTimeMs_t CC KTimeMsStamp ( void );
 
 /*--------------------------------------------------------------------------
  * KTime
@@ -89,8 +89,8 @@ KLIB_EXTERN const KTime* CC KTimeGlobal ( KTime *kt, KTime_t ts );
 KLIB_EXTERN KTime_t CC KTimeMakeTime ( const KTime *self );
 
 
-KLIB_EXTERN rc_t CC KSleep(uint32_t seconds);
-KLIB_EXTERN rc_t CC KSleepMs(uint32_t milliseconds);
+KLIB_EXTERN rc_t CC KSleep( uint32_t seconds );
+KLIB_EXTERN rc_t CC KSleepMs( uint32_t milliseconds );
 
 
 #ifdef __cplusplus
