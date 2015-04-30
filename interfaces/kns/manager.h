@@ -89,10 +89,11 @@ KNS_EXTERN rc_t CC KNSManagerSetConnectionTimeouts ( KNSManager *self,
     int32_t connectSecs, int32_t readMillis, int32_t writeMillis );
 
 
-/* SetUserAgent
+/* Set/Get UserAgent
  *  for http connections
  */
 KNS_EXTERN rc_t CC KNSManagerSetUserAgent ( KNSManager *self, const char * fmt, ... );
+KNS_EXTERN rc_t CC KNSManagerGetUserAgent ( const char ** user_agent );
 
 
 #ifdef __cplusplus
