@@ -27,10 +27,10 @@
 /* THIS FILE IS NOT GENERATED AUTOMATICALLY! */
 
 /* The Version of current SRA Toolkit Release */
-#define RELEASE_VERS 0x02040006
+#define RELEASE_VERS 0x02050000
 
 /* The Revision of Version of current SRA Toolkit Release */
-#define RELEASE_REVISION 1
+#define RELEASE_REVISION 0
 
 /* The Type of Version of current SRA Toolkit Release is one of:
  *  'a' - alpha
