@@ -77,12 +77,6 @@ struct KNSManager
     bool verbose;
 };
 
-/*
-    private getter for the user-agent...
-    currently "STATIC", i.e. doesn't take "self" param
-*/
-rc_t CC KNSManagerGetUserAgent ( const char ** user_agent );
-
 /* test */
 struct KStream;
 void KStreamForceSocketClose ( struct KStream const * self );
