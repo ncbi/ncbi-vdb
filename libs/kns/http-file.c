@@ -72,6 +72,7 @@ typedef struct KHttpFile KHttpFile;
 #include <ctype.h>
 #include <assert.h>
 
+#define USE_CACHE_CONTROL 0
 #define NO_CACHE_LIMIT ( ( uint64_t ) ( 128 * 1024 * 1024 ) )
 
 
@@ -202,10 +203,12 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
 
         rc = KClientHttpMakeRequest ( http, &req, self -> url_buffer . base );
 
+#if USE_CACHE_CONTROL
         /* tell proxies not to cache if file is above limit */
         if ( rc == 0 && self -> no_cache )
             rc = KClientHttpRequestSetNoCache ( req );
-
+#warning "using cache control"
+#endif
         if ( rc == 0 )
         {
             /* request min ( bsize, file_size ) bytes */
