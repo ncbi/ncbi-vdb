@@ -85,12 +85,5 @@ public:
     bool suppress_errors;
 };
 
-#define REQUIRE_THROW(code) \
-    do {   \
-        bool threw = false; \
-        try { suppress_errors = true; code; } catch(...) { threw = true; } \
-        if (!threw) FAIL("expected exception not thrown"); \
-    } while (0)
-
 #endif
 
