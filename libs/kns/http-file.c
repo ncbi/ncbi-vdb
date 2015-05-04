@@ -73,7 +73,7 @@ typedef struct KHttpFile KHttpFile;
 #include <assert.h>
 
 #define USE_CACHE_CONTROL 0
-#define NO_CACHE_LIMIT ( ( uint64_t ) ( 128 * 1024 * 1024 ) )
+#define NO_CACHE_LIMIT ( ( uint64_t ) ( 16 * 1024 * 1024 ) )
 
 
 /*--------------------------------------------------------------------------
