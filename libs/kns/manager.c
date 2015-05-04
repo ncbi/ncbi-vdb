@@ -652,7 +652,7 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent ( KNSManager * self, const char * fmt,
 }
 
 
-rc_t CC KNSManagerGetUserAgent ( const char ** user_agent )
+LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char ** user_agent )
 {
     rc_t rc = 0;
     if ( user_agent == NULL )
