@@ -76,12 +76,14 @@ void  KDataBufferClear ( KDataBuffer *buf )
     buf -> elem_bits = 8;
 }
 
+#if _DEBUGGING
 static
 bool KDataBufferContainsString ( const KDataBuffer *buf, const String *str )
 {
     return str -> addr >= ( const char* ) buf -> base &&
         & str -> addr [ str -> size ] <= & ( ( const char* ) buf -> base ) [ buf -> elem_count ];
 }
+#endif
 
 /*--------------------------------------------------------------------------
  * KClientHttp
