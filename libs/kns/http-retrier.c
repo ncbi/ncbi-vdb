@@ -119,7 +119,7 @@ rc_t HttpRetryCodesConfig( HttpRetrySchedule** self, uint16_t code, const String
     (*self) -> open_ended = false;
     
     {   /* populate sleep_before_retry and open_ended */
-        uint16_t cur_value;
+        uint16_t cur_value = 0;
         uint16_t curRetry = 0;
         s = *retries; 
         in_number = false;
