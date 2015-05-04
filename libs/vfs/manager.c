@@ -1415,8 +1415,19 @@ rc_t VFSManagerOpenDirectoryReadHttp (const VFSManager *self,
     rc = VFSManagerOpenCurlFile ( self, &file, path );
     if ( rc != 0 )
     {
-        PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(U)'",
-                             "U=%S:%S", & path -> scheme, & path -> path ) );
+        const char extension[] = ".vdbcache";
+        const String * s = & path -> path;
+        assert ( s );
+        /* do not log error for .vdbcache http files : find a better solution */
+        if ( s -> addr == NULL
+            || s -> size < sizeof extension || s -> len < sizeof extension
+            || string_cmp ( s -> addr + s -> size - sizeof extension + 1,
+                sizeof extension - 1,
+                extension, sizeof extension - 1, sizeof extension - 1 ) != 0 )
+        {
+            PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(U)'",
+                             "U=%S:%S", & path -> scheme, & s ) );
+        }
     }
     else
     {
