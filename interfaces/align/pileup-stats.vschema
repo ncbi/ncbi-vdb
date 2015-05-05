@@ -57,8 +57,29 @@ table NCBI:pileup:tbl:pileup_stats #1
      *  some rows are empty, other than their position
      */
     extern column I64 REF_POS = out_ref_pos;
-    physical < I64 > izip_encoding .REF_POS = sub_row_id ( REF_POS );
-    I64 out_ref_pos = add_row_id ( .REF_POS );
+    physical < I64 > izip_encoding .REF_POS = in_ref_pos;
+    I64 in_ref_pos
+        = sub_row_id ( REF_POS )
+        ;
+    I64 out_ref_pos
+        = add_row_id ( .REF_POS )
+        | < I64 > add_row_id ( .REF_POS_TRANS )
+        ;
+
+    /* REF_POS_TRANS
+     *  records the translation between current row-id
+     *  and REF_POS, such that
+     *    row-id () - REF_POS_TRANS == REF_POS
+     */
+    extern column I64 REF_POS_TRANS = out_ref_pos_trans;
+    physical < I64 > izip_encoding .REF_POS_TRANS = in_ref_pos_trans;
+    I64 in_ref_pos_trans
+        = REF_POS_TRANS
+        ;
+    I64 out_ref_pos_trans
+        = .REF_POS_TRANS
+        | < I64 > sub_row_id ( .REF_POS )
+        ;
 
     /* REF_BASE
      *  this optional column records data extracted from reference
