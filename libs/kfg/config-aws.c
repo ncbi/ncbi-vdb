@@ -240,12 +240,10 @@ rc_t aws_find_nodes ( KConfigNode *aws_node, const char *aws_path )
 
 
 static
-char * check_env ( const KConfig *self )
+void check_env ( const KConfig *self, char *path, size_t path_size )
 {
-    char *home;
-
     size_t num_read;
-    char path [ 4096 ];
+    const char *home;
     
     const KConfigNode *home_node;
     
@@ -255,36 +253,48 @@ char * check_env ( const KConfig *self )
     {
         /* just grab the HOME env variable */
         home = getenv ( "HOME" );
+        if ( home != NULL )
+        {
+            num_read = string_copy_measure ( path, path_size, home );
+            if ( num_read >= path_size )
+                path [ 0 ] = 0;
+        }
     }
     else
     {
         /* if it exists check for a path */
-        rc = KConfigNodeRead ( home_node, 0, path, sizeof path, &num_read, NULL );
-        if ( rc == 0 && num_read != 0 )
-            home = & path [ 0 ];
-        else
+        rc = KConfigNodeRead ( home_node, 0, path, path_size, &num_read, NULL );
+        if ( rc != 0 )
         {
-            /* if no path, get env variable */
             home = getenv ( "HOME" );
+            if ( home != NULL )
+            {
+                num_read = string_copy_measure ( path, path_size, home );
+                if ( num_read >= path_size )
+                    path [ 0 ] = 0;
+            }
+
         }
+        
+        rc = KConfigNodeRelease ( home_node );
     }
-
-    rc = KConfigNodeRelease ( home_node );
-
-    return home;
 }
 
 extern
 void add_aws_nodes ( KConfig *self )
 {
-    char *home = check_env ( self );
-    /* if home environtment is found, create AWS root node */
-    if ( home != NULL )
-    {
-        size_t num_writ;
-        char path [ 1024 ];
+    char home [ 4096 ] = "";
 
-        rc_t rc = string_printf ( path, sizeof path, &num_writ, "%s/.aws", home );
+    size_t num_writ;
+    char path [ 4096 ];
+    rc_t rc;
+
+    check_env ( self, home, sizeof home );
+    /* if home environtment is found, create AWS root node */
+
+    if ( home [ 0 ] != 0 )
+    {
+        rc = string_printf ( path, sizeof path, &num_writ, "%s/.aws", home );
         if ( rc == 0 && num_writ != 0 )
         {
             KConfigNode *aws_node;
@@ -295,6 +305,6 @@ void add_aws_nodes ( KConfig *self )
                 rc = aws_find_nodes ( aws_node, path );
             
             rc = KConfigNodeRelease ( aws_node );
-        } 
+        }
     }
 }
