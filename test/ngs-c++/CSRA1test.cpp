@@ -37,7 +37,6 @@ using namespace ncbi::NK;
 
 TEST_SUITE(NgsCsra1CppTestSuite);
 
-
 class CSRA1_Fixture : public NgsFixture
 {
 public:

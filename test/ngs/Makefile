@@ -31,11 +31,11 @@ MODULE = test/ngs
 TEST_TOOLS = \
     test-ngs \
     test-ngs_sra \
-	test-ngs_sradb \
-	test-ngs_csra1 \
-	test-ngs_csra1_readcollection \
+ 	test-ngs_sradb \
+ 	test-ngs_csra1 \
+ 	test-ngs_csra1_readcollection \
     test-ngs_csra1_refwin \
-#    test-ngs_csra1_pileup \
+    test-ngs_csra1_pileup \
     
 include $(TOP)/build/Makefile.env
 
