@@ -30,6 +30,7 @@ MODULE = test/vdb
 
 TEST_TOOLS = \
 	test-vdb \
+	test-wvdb \
 	test-dependencies \
 
 include $(TOP)/build/Makefile.env
@@ -80,4 +81,28 @@ $(TEST_BINDIR)/test-dependencies: $(TEST_DEPS_OBJ)
    
 valgrind_deps: std
 	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-dependencies    
+   
+#-------------------------------------------------------------------------------
+# test-wvdb
+#
+TEST_WVDB_SRC = \
+	test-wvdb
+
+TEST_WVDB_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_WVDB_SRC))
+
+TEST_WVDB_LIB = \
+    -skapp \
+	-sktst \
+	-sncbi-wvdb \
+
+$(TEST_BINDIR)/test-wvdb: $(TEST_WVDB_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_WVDB_LIB)
+
+wvdb: test-wvdb
+	$(TEST_BINDIR)/test-wvdb    
+    
+valgrind_wvdb: std
+	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-wvdb    
+    
    

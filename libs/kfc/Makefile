@@ -34,15 +34,18 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES = \
+	$(KFC_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all: makedirs
+all: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/all
 
-std: makedirs
+std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/all
 
 $(INT_LIBS): makedirs
@@ -89,6 +92,6 @@ $(ILIBDIR)/libkfc.$(LIBX): $(KFC_OBJ)
 	$(LD) --slib -o $@ $^ $(KFC_LIB)
 
 
-#-------------------------------------------------------------------------------
-# white-box test moved to $(TOP)/test/kfc
-#
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

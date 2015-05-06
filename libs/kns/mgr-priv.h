@@ -43,6 +43,7 @@
 extern "C" {
 #endif
 
+struct String;
 struct KConfig;
 struct HttpRetrySpecs;
 
@@ -50,7 +51,13 @@ struct KNSManager
 {
     KRefcount refcount;
     
-    struct KConfig *kfg;
+    struct KConfig * kfg;
+    struct String const * http_proxy;
+
+    struct String const *aws_access_key_id;
+    struct String const *aws_secret_access_key;
+    struct String const *aws_region;
+    struct String const *aws_output;
     
     struct HttpRetrySpecs retry_specs;
     
@@ -61,20 +68,18 @@ struct KNSManager
     int32_t http_write_timeout;
     
     uint32_t maxTotalWaitForReliableURLs_ms;
+
+    uint16_t http_proxy_port;
+
     uint8_t  maxNumberOfRetriesOnFailureForReliableURLs;
 
+    bool http_proxy_enabled; /* TBD - does this need to be static today? */
     bool verbose;
 };
 
-/*
-    private getter for the user-agent...
-    currently "STATIC", i.e. doesn't take "self" param
-*/
-rc_t CC KNSManagerGetUserAgent ( const char ** user_agent );
-
 /* test */
 struct KStream;
-void KStreamForceSocketClose(const struct KStream *self);
+void KStreamForceSocketClose ( struct KStream const * self );
 
 #ifdef __cplusplus
 }

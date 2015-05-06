@@ -51,8 +51,10 @@ typedef struct s_sequence_record {
     bool *aligned;
     char *cskey;
     uint64_t *ti;
+    char *spotName;
     uint64_t keyId;
     unsigned spotGroupLen;
+    unsigned spotNameLen;
     KDataBuffer storage;
     uint8_t numreads;
 } SequenceRecord;

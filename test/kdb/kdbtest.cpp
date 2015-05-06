@@ -67,11 +67,11 @@ TEST_CASE(KDBManagerVPathType)
         REQUIRE_RC(VFSManagerRelease(vfsmgr));
     }
 
-//cout << path << endl;
 
     const KDBManager* mgr;
     REQUIRE_RC(KDBManagerMakeRead(&mgr, NULL));
 
+cout << path << endl;
     REQUIRE_EQ((int)kptTable, KDBManagerPathType(mgr, path.c_str()));
     
     REQUIRE_RC(KDBManagerRelease(mgr));

@@ -230,6 +230,17 @@ KFG_EXTERN rc_t CC KRepositoryEncryptionKeyFile ( const KRepository *self,
 KFG_EXTERN rc_t CC KRepositoryDescription ( const KRepository *self,
     char *buffer, size_t bsize, size_t *desc_size );
 
+
+/* ProjectId
+ *  return project id for protected user repository
+ *  return RC when repository is not user protected
+ *
+ *  "projectId" [ OUT ] - returns the project id
+ */
+KFG_EXTERN rc_t CC KRepositoryProjectId
+    ( const KRepository * self, uint32_t * projectId );
+
+
 /* Description
  *  register an encrypted object in association with the repository's encryption key
  */

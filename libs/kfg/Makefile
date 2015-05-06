@@ -33,12 +33,15 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES = \
+	$(KFG_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -89,6 +92,7 @@ KFG_SRC = \
 	config-lex \
 	config-grammar \
 	config \
+	config-aws \
 	kart \
 	repository \
 	properties \
@@ -103,7 +107,7 @@ bison:
 
 flex:    
 	flex -t $(SRCDIR)/config-lex.l | grep -v '^#line' > $(SRCDIR)/config-lex.c
-    
+
 #$(SRCDIR)/config-grammar.c $(SRCDIR)/config-tokens.h: $(SRCDIR)/config-grammar.y
 #	$(YACC) -o $(SRCDIR)/config-grammar.c --defines=$(SRCDIR)/config-tokens.h $^
 
@@ -116,3 +120,7 @@ KFG_LIB = \
 
 $(ILIBDIR)/libkfg.$(LIBX): $(KFG_OBJ)
 	$(LD) --slib -o $@ $^ $(KFG_LIB)
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

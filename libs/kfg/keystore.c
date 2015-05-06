@@ -224,7 +224,9 @@ LIB_EXPORT rc_t CC KKeyStoreSetTemporaryKeyFromFile(KKeyStore* self, const struc
     return rc;
 }
 
-LIB_EXPORT rc_t CC KKeyStoreGetKey(const KKeyStore* self, const char* obj_key, KEncryptionKey** enc_key)
+
+static rc_t CC KKeyStoreGetKeyInt(const KKeyStore* self, const char* obj_key,
+    KEncryptionKey** enc_key, bool by_project_id, uint32_t projectId)
 {
     rc_t rc = 0;
     
@@ -256,7 +258,14 @@ LIB_EXPORT rc_t CC KKeyStoreGetKey(const KKeyStore* self, const char* obj_key, K
                 if ( rc == 0 )
                 {
                     const KRepository *protected;
-                    rc = KRepositoryMgrCurrentProtectedRepository ( rmgr, & protected );
+                    if (by_project_id) {
+                        rc = KRepositoryMgrGetProtectedRepository
+                            ( rmgr, projectId, & protected );
+                    }
+                    else {
+                        rc = KRepositoryMgrCurrentProtectedRepository
+                            ( rmgr, & protected );
+                    }
                     if ( rc == 0 )
                     {   /* in a protected area */
                         char path [ MAX_PATH_SIZE ];
@@ -289,6 +298,19 @@ LIB_EXPORT rc_t CC KKeyStoreGetKey(const KKeyStore* self, const char* obj_key, K
     }
     return rc;
 }
+
+LIB_EXPORT rc_t CC KKeyStoreGetKey(const KKeyStore* self,
+    const char* obj_key, KEncryptionKey** enc_key)
+{
+    return KKeyStoreGetKeyInt(self, obj_key, enc_key, false, 0);
+}
+
+LIB_EXPORT rc_t CC KKeyStoreGetKeyByProjectId(const KKeyStore* self,
+    const char* obj_key, KEncryptionKey** enc_key, uint32_t projectId)
+{
+    return KKeyStoreGetKeyInt(self, obj_key, enc_key, true, projectId);
+}
+
 
 LIB_EXPORT rc_t CC KKeyStoreSetConfig(struct KKeyStore* self, const struct KConfig* kfg)
 {

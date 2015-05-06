@@ -106,7 +106,7 @@ FIXTURE_TEST_CASE(CSRA1_ReadCollection_GetRead, CSRA1_Fixture)
 FIXTURE_TEST_CASE(CSRA1_ReadCollection_GetReadCount, CSRA1_Fixture)
 {
     ENTRY_ACC( CSRA1_PrimaryOnly );
-    REQUIRE_EQ( (uint64_t)2280633, NGS_ReadCollectionGetReadCount ( m_coll, ctx ) ); 
+    REQUIRE_EQ( (uint64_t)2280633, NGS_ReadCollectionGetReadCount ( m_coll, ctx, true, true, true ) ); 
     EXIT;
 }
 

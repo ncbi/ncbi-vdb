@@ -515,6 +515,9 @@ static rc_t compute_posofs(  AlignmentIterator * self,
                         */
                         if ( ro < 0 )
                         {
+							/* Jan 15 2015 */
+							/* fix the increment in case of 2 subsequent inserts ( which should be merged, but are not ) */
+							
                             seq_position -= ( ro + 1 );
                         }
                     }

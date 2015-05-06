@@ -54,7 +54,8 @@ enum ETableWriterSeq_ColNames {
     ewseq_cn_SPOT_GROUP,
     ewseq_cn_READ_FILTER,
     ewseq_cn_TI,
-    ewseq_cn_Last = ewseq_cn_TI
+    ewseq_cn_NAME,
+    ewseq_cn_Last = ewseq_cn_NAME
 };
 
 enum ETableWriterSeq_ColOptions {
@@ -65,7 +66,8 @@ enum ETableWriterSeq_ColOptions {
     ewseq_co_ColorSpace = 0x10,  /* CMP_CSREAD will be written instead of CMP_READ */
     ewseq_co_SpotGroup = 0x20,   /* SPOT_GROUP will be written */
     ewseq_co_TI = 0x40,          /* TI will be written */
-    ewseq_co_SaveQual = 0x80     /* write quality even when there are alignments */
+    ewseq_co_SaveQual = 0x80,    /* write quality even when there are alignments */
+    ewseq_co_SpotName = 0x100    /* NAME will be written */
 };
 
 typedef struct TableWriterSeqData_struct {
@@ -89,6 +91,7 @@ typedef struct TableWriterSeqData_struct {
     TableWriterData no_quantize_mask;
     TableWriterData platform;
     TableWriterData ti;
+    TableWriterData spot_name;
 } TableWriterSeqData;
 
 typedef struct TableWriterSeq TableWriterSeq;

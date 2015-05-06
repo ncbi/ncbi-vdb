@@ -36,6 +36,9 @@ ALL_LIBS = \
 	$(INT_LIBS) \
 	$(EXT_LIBS)
 
+OBJFILES = \
+	$(NGS_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 INCDIRS += \
@@ -46,7 +49,7 @@ INCDIRS += \
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
+all std: makedirs # compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -94,3 +97,7 @@ testy-the-bear: $(TEST_BINDIR)/testy-the-ngs-bear
 
 $(TEST_BINDIR)/testy-the-ngs-bear: testy-the-bear.o
 	$(LP) --exe -o $@ $^ -lkapp -lncbi-ngs-c++ -lncbi-vdb
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

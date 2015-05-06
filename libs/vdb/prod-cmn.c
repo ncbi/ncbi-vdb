@@ -639,7 +639,7 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
     
 #if PAGEMAP_PRE_EXPANDING_SINGLE_ROW_FIX
 #else
-    rc = PageMapNew(&blob->pm, BlobRowCount(blob));
+    rc = PageMapNew(&blob->pm, row_count /**BlobRowCount(blob)**/);
 #if 0
     /* disabled for causing problems with accumulating static columns */
     if (rc == 0)

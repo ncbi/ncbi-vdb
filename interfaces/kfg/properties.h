@@ -43,6 +43,20 @@
 extern "C" {
 #endif
 
+
+/* get/set HTTP proxy path */
+KFG_EXTERN rc_t CC KConfig_Get_Http_Proxy_Path
+    ( const KConfig *self, char *buffer, size_t buffer_size, size_t *written );
+KFG_EXTERN rc_t CC KConfig_Set_Http_Proxy_Path
+    ( KConfig *self, const char *value );
+
+/* get/set enabled-state for HTTP proxy */
+KFG_EXTERN rc_t CC KConfig_Get_Http_Proxy_Enabled
+    ( const KConfig *self, bool *enabled, bool dflt );
+KFG_EXTERN rc_t CC KConfig_Set_Http_Proxy_Enabled
+    ( KConfig *self, bool enabled );
+
+
 /* get the %HOME% path from config
  */
 KFG_EXTERN rc_t CC KConfig_Get_Home( const KConfig *self, char * buffer, size_t buffer_size, size_t * written );
@@ -52,7 +66,7 @@ KFG_EXTERN rc_t CC KConfig_Get_Home( const KConfig *self, char * buffer, size_t 
 KFG_EXTERN rc_t CC KConfig_Get_Default_User_Path( const KConfig *self, char * buffer, size_t buffer_size, size_t * written );
 KFG_EXTERN rc_t CC KConfig_Set_Default_User_Path( const KConfig *self, const char * value );
 
-/* get/set the the enabled-state for the 3 repository-categories
+/* get/set the enabled-state for the 3 repository-categories
  */
 KFG_EXTERN rc_t CC KConfig_Get_Remote_Access_Enabled
     ( const KConfig *self, bool * enabled );

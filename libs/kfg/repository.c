@@ -45,6 +45,7 @@
 #include <sysalloc.h>
 
 #include <assert.h>
+#include <ctype.h> /* isdigit */
 #include <stdlib.h>
 #include <string.h>
 
@@ -737,6 +738,60 @@ LIB_EXPORT rc_t CC KRepositoryDescription ( const KRepository *self,
 }
 
 
+/* ProjectId
+ *  return project id for protected user repository
+ *  return RC when repository is not user protected
+ *
+ *  "projectId" [ OUT ] - returns the project id
+ */
+LIB_EXPORT rc_t CC KRepositoryProjectId
+    ( const KRepository * self, uint32_t * projectId )
+{
+    rc_t rc = 0;
+
+    if ( projectId == NULL )
+        rc = RC ( rcKFG, rcMgr, rcAccessing, rcParam, rcNull );
+    else if ( self == NULL )
+        rc = RC ( rcKFG, rcMgr, rcAccessing, rcSelf, rcNull );
+    else if ( self -> category != krepUserCategory
+           || self -> subcategory != krepProtectedSubCategory )
+        rc = RC ( rcKFG, rcMgr, rcAccessing, rcSelf, rcWrongType );
+    else {
+        uint32_t id = 0;
+        const char prefix [] = "dbGaP-";
+        char localName [512] = "";
+        size_t localNumWrit = 0;
+
+        * projectId = 0;
+
+        KRepositoryName (self, localName, sizeof ( localName ), & localNumWrit);
+        assert ( localNumWrit < sizeof localName );
+
+        if ( strcase_cmp ( localName, localNumWrit,
+            prefix, sizeof prefix - 1, sizeof prefix - 1) == 0)
+        {
+            int i = sizeof prefix - 1;
+            for ( i = sizeof prefix - 1; i < localNumWrit; ++ i ) {
+                if ( ! isdigit ( localName [ i ] ) ) {
+                    rc = RC (rcKFG, rcMgr, rcAccessing, rcSelf, rcUnrecognized);
+                    break;
+                }
+                id = id * 10 + localName [ i ] - '0';
+            }
+
+            if ( rc == 0 ) {
+                * projectId = id;
+                return 0;
+            }
+        }
+
+        rc = RC (rcKFG, rcMgr, rcAccessing, rcSelf, rcUnrecognized);
+    }
+        
+    return rc;
+}
+
+
 /*--------------------------------------------------------------------------
  * KRepositoryVector
  *  uses Vector API
@@ -1204,14 +1259,20 @@ LIB_EXPORT rc_t CC KRepositoryMgrCurrentProtectedRepository ( const KRepositoryM
 
                 KRepositoryVectorWhack ( & v );
             }
+            else if (rc ==
+                SILENT_RC(rcKFG, rcNode, rcOpening, rcPath, rcNotFound))
+            {
+                return RC ( rcKFG, rcMgr, rcAccessing, rcNode, rcNotFound );
+            }
 
             if ( rc == 0 && * protected == NULL )
-                rc = RC ( rcKFG, rcMgr, rcAccessing, rcNode, rcNotFound );
+                return RC ( rcKFG, rcMgr, rcAccessing, rcNode, rcNotFound );
         }
     }
 
     return rc;
 }
+
 
 /* GetProtectedRepository
  *  retrieves a user protected repository by its associated project-id
@@ -1525,6 +1586,7 @@ LIB_EXPORT rc_t CC KRepositoryMgrImportNgcObj( KRepositoryMgr * self,
         size_t written;
         char ngc_repo_name[ 512 ];
         *result_flags = 0;
+        memset(&user_repositories, 0, sizeof user_repositories);
         rc = string_printf( ngc_repo_name, sizeof ngc_repo_name, &written, "dbGaP-%u", ngc->projectId );
         if ( rc == 0 )
         {
@@ -1577,55 +1639,54 @@ LIB_EXPORT rc_t CC KRepositoryMgrImportNgcObj( KRepositoryMgr * self,
                         }
                     }
                 }
+            }
 
-                if (! exists) {
-                    if (permissions & INP_CREATE_REPOSITORY) {
-                        uint32_t location_len = string_measure (location, NULL);
-                        rc = create_new_protected_repository(
-                            self, ngc, location, location_len,
-                            ngc_repo_name, (uint32_t)written);
+            if (! exists) {
+                if (permissions & INP_CREATE_REPOSITORY) {
+                    uint32_t location_len = string_measure (location, NULL);
+                    rc = create_new_protected_repository(
+                        self, ngc, location, location_len,
+                        ngc_repo_name, (uint32_t)written);
+                    if (rc == 0) {
+                        *result_flags |= INP_CREATE_REPOSITORY;
+                    }
+                }
+                else {
+                    *result_flags |= INP_CREATE_REPOSITORY;
+                    rc = RC(rcKFG, rcMgr, rcUpdating, rcConstraint, rcViolated);
+                }
+            }
+            else if (rc == 0 && permissions & INP_UPDATE_ROOT) {
+                uint32_t modifications = 0;
+                rc = check_for_root_modification(
+                    repository, location, &modifications);
+                if (rc == 0) {
+                    if (modifications & INP_UPDATE_ROOT) {
+                        uint32_t location_len = string_measure(location, NULL);
+                        rc = KRepositorySetRoot(repository,
+                            location, location_len);
                         if (rc == 0) {
-                            *result_flags |= INP_CREATE_REPOSITORY;
+                            *result_flags |= INP_UPDATE_ROOT;
                         }
                     }
-                    else {
-                        *result_flags |= INP_CREATE_REPOSITORY;
-                        rc = RC(rcKFG, rcMgr, rcUpdating,
+                    else if (modifications != 0) {
+                        *result_flags |= INP_UPDATE_ROOT;
+                        rc = RC(rcKFG, rcMgr, rcCreating,
                             rcConstraint, rcViolated);
                     }
                 }
-                else if (rc == 0 && permissions & INP_UPDATE_ROOT) {
-                    uint32_t modifications = 0;
-                    rc = check_for_root_modification(
-                        repository, location, &modifications);
-                    if (rc == 0) {
-                        if (modifications & INP_UPDATE_ROOT) {
-                            uint32_t location_len =
-                                string_measure(location, NULL);
-                            rc = KRepositorySetRoot(repository,
-                                location, location_len);
-                            if (rc == 0) {
-                                *result_flags |= INP_UPDATE_ROOT;
-                            }
-                        }
-                        else if (modifications != 0) {
-                            *result_flags |= INP_UPDATE_ROOT;
-                            rc = RC(rcKFG, rcMgr, rcCreating,
-                                rcConstraint, rcViolated);
-                        }
-                    }
-                }
-
-                KRepositoryVectorWhack ( &user_repositories );
             }
         }
+
+        KRepositoryVectorWhack ( &user_repositories );
     }
 
     return rc;
 }
 
 
-LIB_EXPORT bool CC KRepositoryMgrHasRemoteAccess(const KRepositoryMgr *self)
+LIB_EXPORT
+bool CC KRepositoryMgrHasRemoteAccess(const KRepositoryMgr *self)
 {
     bool has = false;
 

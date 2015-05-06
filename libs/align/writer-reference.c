@@ -193,7 +193,7 @@ struct ReferenceMgr {
     KDirectory const *dir;
     RefSeqMgr const *rmgr;
     VDatabase *db;
-    ReferenceSeq *refSeq;
+    ReferenceSeq *refSeq;       /* == refSeqs.base      */
     
     int64_t ref_rowid;
     
@@ -204,10 +204,10 @@ struct ReferenceMgr {
     uint32_t num_open;
     uint32_t max_seq_len;
     
-    KDataBuffer compress;
-    KDataBuffer seq;
-    KDataBuffer refSeqs;
-    KDataBuffer refSeqsById;
+    KDataBuffer compress;       /* [compress_buffer_t]  */
+    KDataBuffer seq;            /* [byte](max_seq_len)  */
+    KDataBuffer refSeqs;        /* [ReferenceSeq]       */
+    KDataBuffer refSeqsById;    /* [key_id_t]           */
 };
 
 typedef struct key_id_t {
@@ -2079,48 +2079,51 @@ rc_t cigar2offset_2(unsigned const cigar_len,
         uint8_t const type = cigar[i].type;
         
         switch(op) {
-        case 'M':
-        case '=':
-        case 'X':
-            seq_len += op_len;
-            ref_len += op_len;
-	    if(max_ref_len < ref_len)
-		max_ref_len = ref_len;
-            break;
-        case 'B':
-            /* Complete Genomics CIGAR style specific:
-             overlap between consecutive reads
-             ex: sequence 6 bases: ACACTG, reference 2 bases: ACTG,
-             cigar will be: 2M2B2M
-             no need to move sequence position
-             */
-        case 'S':
-        case 'I':
-            if (seq_len < out_sz) {
-                out_offset[seq_len].length = -op_len;
-                out_offset[seq_len].type   = type;
-		if (op == 'B') ref_len -= op_len;
-                else           seq_len += op_len;
-            }
-            else
-                return RC(rcAlign, rcFile, rcProcessing, rcData, rcInconsistent);
-            break;
-        case 'N':
-        case 'D':
-            if (seq_len < out_sz) {
-                out_offset[seq_len].length = op_len;
-                out_offset[seq_len].type   = type;
-            }
-            else {
-                out_offset[seq_len-1].length = op_len;
-                out_offset[seq_len-1].type   = type;
-            }
-            ref_len += op_len;
-	    if(max_ref_len < ref_len)
-		max_ref_len = ref_len;
-            break;
-        default:
-            break;
+            case 'M':
+            case '=':
+            case 'X':
+                seq_len += op_len;
+                ref_len += op_len;
+                if(max_ref_len < ref_len)
+                    max_ref_len = ref_len;
+                break;
+            case 'B':
+                /* Complete Genomics CIGAR style specific:
+                 overlap between consecutive reads
+                 ex: sequence 6 bases: ACACTG, reference 2 bases: ACTG,
+                 cigar will be: 2M2B2M
+                 no need to move sequence position
+                 */
+            case 'S':
+            case 'I':
+                if (seq_len < out_sz) {
+                    out_offset[seq_len].length = -op_len;
+                    out_offset[seq_len].type   = type;
+                    ALIGN_C_DBGF(("%s:%u: seq_pos: %u, ref_pos: %u, offset: %i\n", __func__, __LINE__, seq_len, ref_len, -op_len));
+                    if (op == 'B') ref_len -= op_len;
+                    else           seq_len += op_len;
+                }
+                else
+                    return RC(rcAlign, rcFile, rcProcessing, rcData, rcInconsistent);
+                break;
+            case 'N':
+            case 'D':
+                if (seq_len < out_sz) {
+                    out_offset[seq_len].length = op_len;
+                    out_offset[seq_len].type   = type;
+                    ALIGN_C_DBGF(("%s:%u: seq_pos: %u, ref_pos: %u, offset: %i\n", __func__, __LINE__, seq_len, ref_len, op_len));
+                }
+                else {
+                    out_offset[seq_len-1].length = op_len;
+                    out_offset[seq_len-1].type   = type;
+                    ALIGN_C_DBGF(("%s:%u: seq_pos: %u, ref_pos: %u, offset: %i\n", __func__, __LINE__, seq_len-1, ref_len, op_len));
+                }
+                ref_len += op_len;
+                if(max_ref_len < ref_len)
+                    max_ref_len = ref_len;
+                break;
+            default:
+                break;
         }
     }
     out_seq_len[0] = seq_len;
@@ -2271,6 +2274,22 @@ static int cigar_string_op_count(char const cigar[])
     return st == 0 ? n : -1;
 }
 
+static unsigned cigar_remove_ignored(unsigned opcount, cigar_bin_t cigar[])
+{
+    unsigned i = opcount;
+    
+    while (i) {
+        unsigned const oi = i;
+        unsigned const type = cigar[--i].gentype;
+        
+        if (type == gen_ignore_type) {
+            memmove(cigar + i, cigar + oi, (opcount - oi) * sizeof(cigar[0]));
+            --opcount;
+        }
+    }
+    return opcount;
+}
+
 static
 rc_t cigar2offset(int const options,
                   unsigned const cigar_len,
@@ -2324,8 +2343,98 @@ rc_t cigar2offset(int const options,
             }
         }
         {
+            unsigned first = 0;
+            unsigned opcount = cigar_remove_ignored(maxopcount, cigar);
+            
+            out_adjust[0] = 0;
+            if ((options & ewrefmgr_cmp_Exact) == 0) {
+                /* remove any leading delete operations */
+                for (first = 0; first < opcount; ++first) {
+                    if (cigar[first].gentype != gen_delete_type)
+                        break;
+                    out_adjust[0] += cigar[first].length;
+                }
+                /* make sure any adjacent deletes and inserts are ordered so that
+                 * the delete follows the insert
+                 */
+                {
+                    unsigned i;
+#if 1
+                    for (i = first; i < opcount - 1; ) {
+                        cigar_bin_t const cur = cigar[i + 0];
+                        cigar_bin_t const nxt = cigar[i + 1];
+                        
+                        if (cur.gentype != gen_delete_type)
+                            ;
+                        else if (nxt.gentype == gen_delete_type) {
+                            unsigned const type = (cur.type == NCBI_align_ro_normal && nxt.type == NCBI_align_ro_normal) ? NCBI_align_ro_normal : NCBI_align_ro_intron_unknown;
+                            int const code = type == NCBI_align_ro_normal ? 'D' : 'N';
+                            unsigned const length = cur.length + nxt.length;
+                            
+                            --opcount;
+                            memmove(cigar + i, cigar + i + 1, (opcount - i) * sizeof(cigar[0]));
+                            
+                            cigar[i].type = type;
+                            cigar[i].code = code;
+                            cigar[i].length = length;
+
+                            continue;
+                        }
+                        else if (nxt.gentype == gen_insert_type) {
+                            if (nxt.type == NCBI_align_ro_complete_genomics) {
+                                assert(i + 2 < opcount);
+                                cigar[i + 0] = nxt;
+                                cigar[i + 1] = cigar[i + 2];
+                                cigar[i + 2] = cur;
+                                ++i;
+                            }
+                            else {
+                                cigar[i + 0] = nxt;
+                                cigar[i + 1] = cur;
+                            }
+                        }
+                        ++i;
+                    }
+#else
+                    for (i = first + 1; i < opcount; ) {
+                        if (cigar[i].gentype == gen_insert_type && cigar[i-1].gentype == gen_delete_type) {
+                            cigar_bin_t const prv = cigar[i - 1];
+                            cigar_bin_t const cur = cigar[i];
+                            
+                            cigar[  i] = prv;
+                            cigar[--i] = cur;
+                            if (i <= first + 1)
+                                i  = first + 1;
+                        }
+                        else
+                            ++i;
+                    }
+#endif
+                }
+                /* merge adjacent delete type operations D+D -> D else becomes N */
+                {
+                    unsigned i;
+                    
+                    for (i = first + 1; i < opcount;) {
+                        if (cigar[i].gentype == gen_delete_type && cigar[i-1].gentype == gen_delete_type) {
+                            cigar[i].length += cigar[i-1].length;
+                            if (cigar[i].type == NCBI_align_ro_normal && cigar[i-1].type == NCBI_align_ro_normal) {
+                                cigar[i].type = NCBI_align_ro_normal;
+                                cigar[i].code = 'D';
+                            }
+                            else {
+                                cigar[i].type = NCBI_align_ro_intron_unknown;
+                                cigar[i].code = 'N';
+                            }
+                            memcpy(cigar + i - 1, cigar + i, (opcount - i) * sizeof(cigar[0]));
+                            --opcount;
+                        }
+                        else
+                            ++i;
+                    }
+                }
+            }
             /* remove any ignored operations */
-            unsigned opcount = maxopcount;
             {
                 unsigned i = opcount;
                 
@@ -2339,83 +2448,30 @@ rc_t cigar2offset(int const options,
                     }
                 }
             }
+            /* make the intron the known type */
             {
-                unsigned first = 0;
+                unsigned i;
                 
-                out_adjust[0] = 0;
-                if ((options & ewrefmgr_cmp_Exact) == 0) {
-                    /* remove any leading delete operations */
-                    for (first = 0; first < opcount; ++first) {
-                        if (cigar[first].gentype != gen_delete_type)
-                            break;
-                        out_adjust[0] += cigar[first].length;
-                    }
-                    /* make sure any adjacent deletes and inserts are ordered so that
-                     * the delete follows the insert
-                     */
-                    {
-                        unsigned i;
-                        
-                        for (i = first + 1; i < opcount; ) {
-                            if (cigar[i].gentype == gen_insert_type && cigar[i-1].gentype == gen_delete_type) {
-                                cigar_bin_t const prv = cigar[i - 1];
-                                cigar_bin_t const cur = cigar[i];
-                                
-                                cigar[  i] = prv;
-                                cigar[--i] = cur;
-                                if (i <= first + 1)
-                                    i  = first + 1;
-                            }
-                            else
-                                ++i;
-                        }
-                    }
-                    /* merge adjacent delete type operations D+D -> D else becomes N */
-                    {
-                        unsigned i;
-                        
-                        for (i = first + 1; i < opcount;) {
-                            if (cigar[i].gentype == gen_delete_type && cigar[i-1].gentype == gen_delete_type) {
-                                cigar[i].length += cigar[i-1].length;
-                                if (cigar[i].type == NCBI_align_ro_normal && cigar[i-1].type == NCBI_align_ro_normal) {
-                                    cigar[i].type = NCBI_align_ro_normal;
-                                    cigar[i].code = 'D';
-                                }
-                                else {
-                                    cigar[i].type = NCBI_align_ro_intron_unknown;
-                                    cigar[i].code = 'N';
-                                }
-                                memcpy(cigar + i - 1, cigar + i, (opcount - i) * sizeof(cigar[0]));
-                                --opcount;
-                            }
-                            else
-                                ++i;
-                        }
-                    }
-                }
-                /* make the intron the known type */
-                {
-                    unsigned i;
-                    
-                    for (i = first; i < opcount; ++i) {
-                        if (cigar[i].type == NCBI_align_ro_intron_unknown)
-                            cigar[i].type = intron_type;
-                    }
-                }
-                {
-                    rc_t const rc = cigar2offset_2(opcount - first,
-                                                   cigar + first,
-                                                   out_sz,
-                                                   out_used,
-                                                   out_offset,
-                                                   out_seq_len,
-                                                   out_ref_len,
-                                                   out_max_ref_len);
-                    if (hcigar)
-                        free(hcigar);
-                    return rc;
+                for (i = first; i < opcount; ++i) {
+                    if (cigar[i].type == NCBI_align_ro_intron_unknown)
+                        cigar[i].type = intron_type;
                 }
             }
+            {
+                rc_t const rc = cigar2offset_2(opcount - first,
+                                               cigar + first,
+                                               out_sz,
+                                               out_used,
+                                               out_offset,
+                                               out_seq_len,
+                                               out_ref_len,
+                                               out_max_ref_len);
+                if (hcigar)
+                    free(hcigar);
+                return rc;
+            }
+        }
+        {
         }
     }
     else {
@@ -2656,23 +2712,25 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                 else {
                     compress_buffer_t *const compress_buf = self->mgr->compress.base;
                     unsigned ro = (unsigned)data->ref_offset.elements;
-                    unsigned ref_pos;
+                    int ref_pos;
                     
                     for (seq_pos = 0, ref_pos = 0; seq_pos < seq_len; seq_pos++, ref_pos++) {
                         int const length = compress_buf[seq_pos].length;
                         int const type = compress_buf[seq_pos].type;
-                        
+
+#if 0
+                        ALIGN_C_DBG("seq_pos: %u, ref_pos: %i, offset: %i, type: %i, ro: %u", seq_pos, ref_pos, length, type, ro);
+#endif
                         if (length == 0 && type == 0)
                             has_ref_offset[seq_pos] = 0;
                         else {
-                            ALIGN_C_DBG("seq_pos: %u, ref_pos: %u, offset: %i, type: %i, ro: %u", seq_pos, ref_pos, length, type, ro);
                             has_ref_offset[seq_pos] = 1;
                             ref_offset[ro] = length;
                             ref_offset_type[ro] = type;
                             ref_pos += length;
                             ++ro;
                         }
-                        if (ref_pos >= max_rl ||
+                        if (ref_pos < 0 || ref_pos >= max_rl ||
                             ((toupper(ref_buf[ref_pos]) != toupper(seq[seq_pos])) && (seq[seq_pos] != '=')))
                         {
                             has_mismatch[seq_pos] = 1;

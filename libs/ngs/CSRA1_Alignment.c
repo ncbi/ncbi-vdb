@@ -278,7 +278,18 @@ struct NGS_String* CSRA1_AlignmentGetReadGroup( CSRA1_Alignment* self, ctx_t ctx
         USER_ERROR ( xcIteratorUninitialized, "Alignment accessed before a call to AlignmentIteratorNext()" );
         return NULL;
     }
-    return NGS_CursorGetString ( GetCursor ( self ), ctx, self -> cur_row, align_SPOT_GROUP );
+    else
+    {
+        TRY ( NGS_String* ret = NGS_CursorGetString ( GetCursor ( self ), ctx, self -> cur_row, align_SPOT_GROUP ) )
+        {
+            return ret;
+        }
+        CATCH_ALL ()
+        {
+            CLEAR();
+        }
+        return NGS_StringMake ( ctx, "", 0 );
+    }
 }
 
 NGS_String * CSRA1_AlignmentGetReadId( CSRA1_Alignment* self, ctx_t ctx )
@@ -460,6 +471,27 @@ struct NGS_String* CSRA1_AlignmentGetLongCigar( CSRA1_Alignment* self, ctx_t ctx
     }
 
     return NGS_CursorGetString ( GetCursor ( self ), ctx, self -> cur_row, clipped ? align_CLIPPED_CIGAR_LONG : align_CIGAR_LONG );
+}
+
+char CSRA1_AlignmentGetRNAOrientation( CSRA1_Alignment* self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+    if ( ! self -> seen_first ) 
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Alignment accessed before a call to AlignmentIteratorNext()" );
+    }
+    else
+    {
+        TRY ( char ret = NGS_CursorGetChar ( GetCursor ( self ), ctx, self -> cur_row, align_RNA_ORIENTATION ) )
+        {
+            return ret;
+        }
+        CATCH_ALL ()
+        {
+            CLEAR();
+        }
+    }
+    return '?';
 }
 
 bool CSRA1_AlignmentHasMate( CSRA1_Alignment* self, ctx_t ctx )
@@ -682,6 +714,7 @@ static NGS_Alignment_vt CSRA1_Alignment_vt_inst =
     CSRA1_AlignmentGetTemplateLength,
     CSRA1_AlignmentGetShortCigar,
     CSRA1_AlignmentGetLongCigar,
+    CSRA1_AlignmentGetRNAOrientation,
     CSRA1_AlignmentHasMate,
     CSRA1_AlignmentGetMateAlignmentId,
     CSRA1_AlignmentGetMateAlignment,

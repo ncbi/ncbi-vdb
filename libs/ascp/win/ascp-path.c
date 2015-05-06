@@ -56,10 +56,10 @@ bool ascp_path(const char **cmd, const char **key) {
       "C:\\Program Files\\Aspera\\Aspera Connect\\etc\\asperaweb_id_dsa.putty",
     };
 
-    int size = size_of(c);
+    int size = 4;
 
     assert(cmd != NULL && key != NULL);
-    assert(size_of(c) == size_of(k));
+//  assert(size_of(c) == size_of(k));
 
     if (idx < size) {
         *cmd = c[idx];

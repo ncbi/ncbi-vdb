@@ -65,11 +65,16 @@ typedef enum {
 
 typedef struct {
     EReadIdType type;
+    uint32_t runBits;
     bool varReadN;
 } ReadIdDesc;
 
 typedef struct {
+    uint32_t index;
+
     uint64_t spotCount;
+    uint32_t spotBits;
+
     uint8_t nReads;
     uint8_t nBioReads; /* knowing filtering (if static) and min_read_len info */
     uint64_t bioLen; /* per read. is assigned just when allStatic */
@@ -92,8 +97,11 @@ typedef struct {
 } RunDesc;
 
 typedef struct {
+    const struct VDatabase *db;
+
     const struct VTable *seqTbl;
     const struct VTable *prAlgnTbl;
+    const struct VTable *refTbl;
 
     /* WGS */
     const struct VCursor *cursACCESSION;
@@ -104,7 +112,6 @@ typedef struct {
     /* rundesc; */
     char *acc;
     char *path;
-    uint32_t idx;
 
     VdbBlastDb *obj;
     BTableType type;
@@ -127,10 +134,21 @@ typedef struct {
     uint32_t min_read_length;
 } VdbBlastRun;
 
+typedef struct VdbBlastRef VdbBlastRef;
+typedef struct {
+    VdbBlastRef  *rfd;
+    size_t        rfdk; /* number of rfd members */
+    size_t        rfdn; /* allocated rfd members */
+} RefSet;
+
+void _RefSetFini(RefSet *self);
+
 typedef struct RunSet {
     VdbBlastRun *run;
     uint32_t krun; /* number of run-s */
     uint32_t nrun; /* sizeof of run-s */
+
+    RefSet refs;
 } RunSet;
 
 typedef struct {
@@ -168,7 +186,10 @@ typedef uint32_t KVdbBlastReadMode;
 enum {
     VDB_READ_UNALIGNED =       1, /* return unaligned reads */
     VDB_READ_ALIGNED   =       2, /* return aligned reads */
+    VDB_READ_REFERENCE =       3, /* return reference sequence */
 };
+
+struct References;
 
 typedef struct {
     bool eor;
@@ -178,6 +199,7 @@ typedef struct {
     size_t starting_base; /* 0-based, in current read */
     ReaderCols cols;
     KVdbBlastReadMode mode;
+    const struct References *refs;
 } Reader2na;
 
 typedef struct Core2na {
@@ -198,6 +220,7 @@ typedef struct {
     const struct VBlob *blob; /* TODO */
     ReaderCols cols;
     uint32_t col_READ;
+    KVdbBlastReadMode mode;
 } Core4na;
 
 struct VdbBlastRunSet {
@@ -209,8 +232,12 @@ struct VdbBlastRunSet {
 
     bool beingRead;
     ReadIdDesc readIdDesc;
+
     Core2na core2na;
     Core4na core4na;
+
+    Core2na core2naRef;
+    Core4na core4naRef;
 
     uint64_t minSeqLen;
     uint64_t avgSeqLen;
@@ -239,7 +266,7 @@ uint32_t _RunSetFindReadDesc(const struct RunSet *self,
 
 uint64_t _VdbBlastRunSet2naRead(const VdbBlastRunSet *self,
     uint32_t *status, uint64_t *read_id, size_t *starting_base,
-    uint8_t *buffer, size_t buffer_size);
+    uint8_t *buffer, size_t buffer_size, KVdbBlastReadMode mode);
 
 void _VdbBlastRunSetBeingRead(const VdbBlastRunSet *self);
 

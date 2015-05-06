@@ -250,11 +250,15 @@ rc_t WColumnSetDefault ( VColumn *vcol,
     if ( elem_bits > elem_size && elem_bits % elem_size != 0 )
         return RC ( rcVDB, rcColumn, rcUpdating, rcType, rcInconsistent );
 
+    /* forget about prior value */
+    KDataBufferWhack ( & self -> dflt );
+    memset ( & self -> dflt, 0, sizeof self -> dflt );
+    self -> have_dflt = false;
+    self -> dflt_last = false;
+
     /* allow NULL setting */
     if ( buffer == NULL )
     {
-        KDataBufferWhack ( & self -> dflt );
-        memset ( & self -> dflt, 0, sizeof self -> dflt );
         self -> have_dflt = true;
         return 0;
     }
@@ -278,6 +282,7 @@ rc_t WColumnSetDefault ( VColumn *vcol,
         bitcpy ( self -> dflt . base, 0, buffer, boff, to_copy );
     else
         memcpy ( self -> dflt . base, & ( ( const uint8_t* ) buffer ) [ boff >> 3 ], to_copy >> 3 );
+
     self -> have_dflt = true;
     return 0;
 }

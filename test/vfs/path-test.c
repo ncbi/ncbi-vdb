@@ -605,10 +605,10 @@ rc_t ExtractAccessionTest ( const VFSManager * vfs )
     for ( i = 0; i < num_urls; ++ i )
     {
         VPath * orig;
-        
+
         String url;
         StringInitCString ( & url, test_urls [ i ] );
-        
+
         rc  = VFSManagerMakePath ( vfs, & orig, "%S", & url );
         if ( rc == 0 )
         {
@@ -631,14 +631,14 @@ rc_t ExtractAccessionTest ( const VFSManager * vfs )
             VPathRelease ( orig );
         }
     }
-    
+
     for ( i = 0; i < num_fail_urls; ++ i )
     {
         VPath * orig;
-        
+
         String url;
         StringInitCString ( & url, fail_url [ i ] );
-        
+
         rc  = VFSManagerMakePath ( vfs, & orig, "%S", & url );
         if ( rc == 0 )
         {

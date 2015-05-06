@@ -1225,10 +1225,11 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
     const String *ticket )
 {
     /* the textual response */
+    size_t i = 0;
     const char *start = ( const void* ) result -> base;
-    size_t i, size = KDataBufferBytes ( result );
+    size_t size = KDataBufferBytes ( result );
 
-    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (" Response = %s\n", start));
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (" Response = %.*s\n", size, start));
 
     /* peel back buffer to significant bytes */
     while ( size > 0 && start [ size - 1 ] == 0 )
@@ -1695,6 +1696,10 @@ struct VResolver
 
     /* preferred protocols preferences. Default: HTTP */
     VRemoteProtocols protocols;
+
+    /** projectId of protected user repository;
+        0 when repository is not user protected */
+    uint32_t projectId;
 };
 
 
@@ -4364,6 +4369,25 @@ rc_t CC VResolverProtocols ( VResolver * self,
 }
 
 
+rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId ) {
+    if ( self == NULL )
+        return RC ( rcVFS, rcResolver, rcAccessing, rcSelf, rcNull );
+    else if ( projectId == NULL )
+        return RC ( rcVFS, rcResolver, rcUpdating, rcParam, rcNull );
+    else {
+        bool has_project_id = self -> projectId != 0;
+
+        * projectId = 0;
+
+        if ( has_project_id ) {
+            * projectId = self -> projectId;
+        }
+
+        return 0;
+    }
+}
+
+
 /* Make
  *  internal factory function
  */
@@ -4398,6 +4422,8 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
 
         KNSManagerRelease(kns);
         kns = NULL;
+
+        KRepositoryProjectId ( protected, & obj -> projectId );
 
         if ( rc == 0 )
         {

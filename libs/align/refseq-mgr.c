@@ -704,8 +704,11 @@ LIB_EXPORT rc_t CC RefSeqMgr_Release(const RefSeqMgr* cself)
 {
     if( cself != NULL ) {
         RefSeqMgr* self = (RefSeqMgr*)cself;
-        
+        unsigned i;
+
         WhackAllReaders(self);
+        for (i = 0; i < self->nRefSeqs; ++i)
+            free(self->refSeq[i]);
         free(self->refSeq);
         VDBManagerRelease(self->vmgr);
         KConfigRelease(self->kfg);

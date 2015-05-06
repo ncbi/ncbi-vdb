@@ -275,6 +275,7 @@ rc_t CC KDatabaseConsistencyCheck (const KDatabase *self,
     rc_t rc = 0;
     uint32_t type;
 
+    uint32_t aLevel = level;
     bool indexOnly = level & CC_INDEX_ONLY;
     if (indexOnly) {
         level &= ~CC_INDEX_ONLY;
@@ -326,7 +327,7 @@ rc_t CC KDatabaseConsistencyCheck (const KDatabase *self,
     
 
     if (rc == 0)
-        rc = KDatabaseCheckTables (self, depth, level, report, ctx);
+        rc = KDatabaseCheckTables (self, depth, aLevel, report, ctx);
 
     if (rc == 0)
         rc = KDatabaseCheckIndices (self, depth, level, report, ctx);

@@ -54,6 +54,7 @@ SUBDIRS =       \
     vfs         \
     sraxf       \
     vxf         \
+    loader      \
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets

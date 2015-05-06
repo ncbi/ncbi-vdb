@@ -34,6 +34,9 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES = \
+	$(KNS_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 RWORKDIR = $(TOP)/$(MODULE)
@@ -43,7 +46,7 @@ RWORKDIR = $(TOP)/$(MODULE)
 #
 
 # we are building it on all platforms now, because dependency on libcurl is removed
-all std: makedirs vers-includes
+all std: makedirs vers-includes compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs vers-includes
@@ -119,6 +122,6 @@ $(ILIBDIR)/libkns.$(LIBX): $(KNS_OBJ)
 	$(LD) --slib -o $@ $^ $(KNS_LIB)
 
 
-#-------------------------------------------------------------------------------
-# white-box test moved to $(TOP)/test/kns
-#
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

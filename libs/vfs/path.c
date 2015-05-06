@@ -512,7 +512,8 @@ void VPathCaptureFragment ( VPath * self, const char * uri, size_t start, size_t
     do { anchor = ( i ); count = 0; } while ( 0 )
 
 static
-rc_t VPathParse ( VPath * self, const char * uri, size_t uri_size )
+rc_t VPathParseInt ( VPath * self, const char * uri, size_t uri_size,
+                    bool uri_is_utf )
 {
     rc_t rc;
     int bytes;
@@ -546,6 +547,8 @@ rc_t VPathParse ( VPath * self, const char * uri, size_t uri_size )
         bytes = 1;
         if ( ( char ) ch  < 0 )
         {
+          if ( uri_is_utf ) {
+/* expect uri in utf8  */
             uint32_t utf32;
 
             /* read into UTF-32 */
@@ -558,6 +561,11 @@ rc_t VPathParse ( VPath * self, const char * uri, size_t uri_size )
             }
 
             ch = utf32;
+          }
+          else {
+/* uri is in extended ASCII  */
+              ch &= 0xff;
+          }
         }
 
         /* enter state */
@@ -1810,7 +1818,7 @@ rc_t VPathParse ( VPath * self, const char * uri, size_t uri_size )
         case vppRelPath:
         case vppFullPath:
 
-            switch ( ch )
+            if(self->scheme_type != vpuri_none) switch ( ch )
             {
             case ':':
                 return RC ( rcVFS, rcPath, rcParsing, rcChar, rcUnexpected );
@@ -1994,6 +2002,22 @@ rc_t VPathParse ( VPath * self, const char * uri, size_t uri_size )
     return 0;
 }
 
+static
+rc_t VPathParse ( VPath * self, const char * uri, size_t uri_size )
+{
+    /* Parse uri as UTF-8 */
+    rc_t rc = VPathParseInt ( self, uri, uri_size, true );
+
+    if ( rc == SILENT_RC ( rcVFS, rcPath, rcParsing, rcChar, rcInvalid ) /* ||
+        rc == SILENT_RC ( rcVFS, rcPath, rcParsing, rcData, rcInsufficient ) */
+       )
+    {
+        /* Parse uri as extended ASCII */
+        rc = VPathParseInt ( self, uri, uri_size, false );
+    }
+
+    return rc;
+}
 
 /* MakeFromText
  *  could be anything...
@@ -3205,6 +3229,9 @@ LIB_EXPORT rc_t CC VPathGetFragment ( const VPath * self, String * str )
         rc = VPathGetTestSelf ( self );
         if ( rc == 0 )
         {
+            /* returning a NULL String when there is no fragment */
+            StringInit ( str, NULL, 0, 0 );
+
             StringSubstr ( & self -> fragment, str, 1, 0 );
             return 0;
         }

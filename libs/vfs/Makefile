@@ -34,6 +34,9 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES = \
+	$(VFS_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 RWORKDIR=$(TOP)/$(MODULE)
@@ -41,7 +44,7 @@ RWORKDIR=$(TOP)/$(MODULE)
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -93,7 +96,6 @@ $(ILIBDIR)/libvfs.$(LIBX): $(VFS_OBJ)
 	$(LD) --slib -o $@ $^ $(VFS_LIB)
 
 
+compile: stdcompile
 
-#-------------------------------------------------------------------------------
-# white-box test moved to $(TOP)/test/vfs
-#
+$(TARGDIR)/compile: $(OBJFILES)

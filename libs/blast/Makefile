@@ -38,12 +38,13 @@ include $(TOP)/build/Makefile.env
 
 ifeq (64,$(BITS))
 	INT_LIBS += libvdb-blast
+	OBJFILES = $(BLAST_OBJ)
 endif    
 
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -83,3 +84,7 @@ BLAST_LIB = \
 
 $(ILIBDIR)/libvdb-blast.$(LIBX): $(BLAST_OBJ)
 	$(LD) --slib -o $@ $^ $(BLAST_LIB)
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

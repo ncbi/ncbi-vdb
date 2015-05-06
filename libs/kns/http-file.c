@@ -72,6 +72,9 @@ typedef struct KHttpFile KHttpFile;
 #include <ctype.h>
 #include <assert.h>
 
+#define USE_CACHE_CONTROL 0
+#define NO_CACHE_LIMIT ( ( uint64_t ) ( 128 * 1024 * 1024 ) )
+
 
 /*--------------------------------------------------------------------------
  * KHttpFile
@@ -85,8 +88,10 @@ struct KHttpFile
 
     KClientHttp *http;
 
-    char* url;
+    char * url;
     KDataBuffer url_buffer;
+
+    bool no_cache;
 };
 
 static
@@ -197,6 +202,13 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
         assert(bsize >= MIN_SZ || (pos == 0 && bsize == self -> file_size));
 
         rc = KClientHttpMakeRequest ( http, &req, self -> url_buffer . base );
+
+#if USE_CACHE_CONTROL
+        /* tell proxies not to cache if file is above limit */
+        if ( rc == 0 && self -> no_cache )
+            rc = KClientHttpRequestSetNoCache ( req );
+#warning "using cache control"
+#endif
         if ( rc == 0 )
         {
             /* request min ( bsize, file_size ) bytes */
@@ -443,11 +455,30 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                     {
                                         uint64_t size;
                                         bool have_size = KClientHttpResultSize ( rslt, &size );
+                                        uint32_t status = 0;
+                                        KClientHttpResultStatus ( rslt,
+                                            &status, NULL, 0, NULL );
                                         KClientHttpResultRelease ( rslt );
 
                                         if ( ! have_size )
                                         {
-                                            rc = RC ( rcNS, rcFile, rcValidating, rcNoObj, rcError );
+                                            switch ( status ) {
+                                              case 403:
+                                                rc = RC ( rcNS, rcFile,
+                                                    rcOpening,
+                                                    rcFile, rcUnauthorized );
+                                                break;
+                                              case 404:
+                                                rc = RC ( rcNS, rcFile,
+                                                    rcOpening,
+                                                    rcFile, rcNotFound );
+                                                break;
+                                              default:
+                                                rc = RC ( rcNS, rcFile,
+                                                    rcValidating,
+                                                    rcNoObj, rcEmpty );
+                                                break;
+                                            }
                                         }
                                         else
                                         {
@@ -458,6 +489,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                                 f -> file_size = size;
                                                 f -> http = http;
                                                 f -> url = string_dup ( url, string_size ( url ) );
+                                                f -> no_cache = size >= NO_CACHE_LIMIT;
 
                                                 * file = & f -> dad;
                                                 return 0;

@@ -36,6 +36,9 @@ ALL_LIBS = \
 	$(INT_LIBS) \
 	$(EXT_LIBS)
 
+OBJFILES = \
+	$(KDF5_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 ifdef HDF5_INCDIR
@@ -47,7 +50,7 @@ endif
 #
 ifeq (1,$(HAVE_HDF5))
 
-all std: makedirs
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -113,3 +116,7 @@ $(LIBDIR)/libkdf5.$(SHLX): $(KDF5_OBJ)
 
 $(LIBDIR)/libkdf5.$(LIBX): $(KDF5_OBJ)
 	$(LD) --slib --vers $(SRCDIR) -o $@ $^ $(KDF5_LIB)
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

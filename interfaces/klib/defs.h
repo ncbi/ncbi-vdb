@@ -71,7 +71,7 @@ typedef struct remove_t remove_t;
  *  operations are declared in <klib/time.h>
  */
 typedef int64_t KTime_t;
-
+typedef int64_t KTimeMs_t;
 
 /*--------------------------------------------------------------------------
  * KCreateMode

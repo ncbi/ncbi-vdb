@@ -40,6 +40,10 @@
 
 #include <kns/manager.h>
 #include <kns/socket.h>
+#include <kns/http.h>
+
+#include <vfs/manager.h>
+#include <vfs/path.h>
 
 #include <sysalloc.h>
 
@@ -66,6 +70,17 @@ rc_t KNSManagerWhack ( KNSManager * self )
 {
     rc_t rc;
     KConfigRelease ( self -> kfg );
+    if ( self -> http_proxy != NULL )
+        StringWhack ( self -> http_proxy );
+    if ( self -> aws_access_key_id != NULL )
+        StringWhack ( self -> aws_access_key_id );
+    if ( self -> aws_secret_access_key != NULL )
+        StringWhack ( self -> aws_secret_access_key );
+    if ( self -> aws_region != NULL )
+        StringWhack ( self -> aws_region );
+    if ( self -> aws_output != NULL )
+        StringWhack ( self -> aws_output );
+    
     rc = HttpRetrySpecsDestroy ( & self -> retry_specs );
     free ( self );
     KNSManagerCleanup ();
@@ -101,6 +116,129 @@ LIB_EXPORT rc_t CC KNSManagerRelease ( const KNSManager *self )
         }
     }
     return 0;
+}
+
+static
+void KNSManagerHttpProxyInit ( KNSManager * self )
+{
+    const KConfigNode * proxy;
+    rc_t rc = KConfigOpenNodeRead ( self -> kfg, & proxy, "http/proxy" );
+    if ( rc == 0 )
+    {
+        const KConfigNode * proxy_path;
+        rc = KConfigNodeOpenNodeRead ( proxy, & proxy_path, "path" );
+        if ( rc == 0 )
+        {
+            String * path;
+            rc = KConfigNodeReadString ( proxy_path, & path );
+            if ( rc == 0 )
+            {
+                rc = KNSManagerSetHTTPProxyPath ( self, "%S", path );
+                if ( rc == 0 )
+                {
+                    const KConfigNode * proxy_enabled;
+                    rc = KConfigNodeOpenNodeRead ( proxy, & proxy_enabled, "enabled" );
+                    if ( rc == 0 )
+                    {
+                        rc = KConfigNodeReadBool ( proxy_enabled, & self -> http_proxy_enabled );
+                        KConfigNodeRelease ( proxy_enabled );
+                    }
+                    else if ( GetRCState ( rc ) == rcNotFound )
+                    {
+                        rc = 0;
+                    }
+
+                    if ( rc != 0 )
+                    {
+                        KNSManagerSetHTTPProxyPath ( self, NULL );
+                        assert ( self -> http_proxy_enabled == false );
+                    }
+                }
+
+                StringWhack ( path );
+            }
+
+            KConfigNodeRelease ( proxy_path );
+        }
+
+        KConfigNodeRelease ( proxy );
+    }
+}
+
+
+static
+void KNSManagerLoadAWS ( struct KNSManager *self )
+{
+    rc_t rc;
+
+    const KConfigNode *aws_node;
+    const KConfig *kfg = self -> kfg;
+
+    if ( self == NULL )
+        return;
+
+    rc = KConfigOpenNodeRead ( kfg, &aws_node, "AWS" );
+    if ( rc == 0 )
+    {
+        do
+        {
+            String *access_key_id = NULL, *secret_access_key = NULL, *region = NULL, *output = NULL;
+            const KConfigNode *access_key_id_node, *secret_access_key_node, *region_node, *output_node;
+
+            rc = KConfigNodeOpenNodeRead ( aws_node, &access_key_id_node, "aws_access_key_id" );
+            if ( rc == 0 )
+            {
+                rc = KConfigNodeReadString ( access_key_id_node, &access_key_id );
+
+                KConfigNodeRelease ( access_key_id_node );
+
+                if( rc != 0 )
+                    break;
+            }
+
+
+            rc = KConfigNodeOpenNodeRead ( aws_node, &secret_access_key_node, "aws_secret_access_key" );
+            if ( rc == 0 )
+            {
+                rc = KConfigNodeReadString ( secret_access_key_node, &secret_access_key );
+
+                KConfigNodeRelease ( secret_access_key_node );
+
+                if ( rc != 0 )
+                    break;
+            }
+        
+            rc = KConfigNodeOpenNodeRead ( aws_node, &region_node, "region" );
+            if ( rc == 0 )
+            {
+                rc = KConfigNodeReadString ( region_node, &region );
+
+                KConfigNodeRelease ( region_node );
+
+                if ( rc != 0 )
+                    break;
+            }
+
+            rc = KConfigNodeOpenNodeRead ( aws_node, &output_node, "output" );
+            if ( rc == 0 )
+            {
+                rc = KConfigNodeReadString ( output_node, &output );
+
+                KConfigNodeRelease ( output_node );
+                
+                if ( rc != 0 )
+                    break;
+            }
+
+            self -> aws_access_key_id = access_key_id;
+            self -> aws_secret_access_key = secret_access_key;
+            self -> aws_region = region;
+            self -> aws_output = output;
+
+        } while ( 0 );
+
+        KConfigNodeRelease ( aws_node );
+    }
 }
 
 LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
@@ -143,6 +281,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
                     rc = HttpRetrySpecsInit ( & mgr -> retry_specs, mgr -> kfg );
                     if ( rc == 0 )
                     {
+                        KNSManagerHttpProxyInit ( mgr );
                         * mgrp = mgr;
                         return 0;
                     }
@@ -167,6 +306,9 @@ LIB_EXPORT rc_t CC KNSManagerMake ( KNSManager **mgrp )
     {
         rc_t rc2;
         rc = KNSManagerMakeConfig ( mgrp, kfg );
+        if ( rc == 0 )
+            KNSManagerLoadAWS ( *mgrp );
+
         rc2 = KConfigRelease ( kfg );
         if ( rc == 0 )
         {   
@@ -350,6 +492,140 @@ LIB_EXPORT rc_t CC KNSManagerSetHTTPTimeouts ( KNSManager *self,
     return 0;
 }
 
+/* GetHTTPProxyPath
+ *  returns path to HTTP proxy server ( if set ) or NULL.
+ *  return status is 0 if the path is valid, non-zero otherwise
+ */
+LIB_EXPORT rc_t CC KNSManagerGetHTTPProxyPath ( const KNSManager * self, const String ** proxy )
+{
+    rc_t rc = 0;
+
+    if ( proxy == NULL )
+        rc = RC ( rcNS, rcMgr, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcNS, rcMgr, rcAccessing, rcSelf, rcNull );
+        else if ( self -> http_proxy != NULL )
+        {
+            return StringCopy ( proxy, self -> http_proxy );
+        }
+
+        * proxy = NULL;
+    }
+
+    return rc;
+}
+
+
+/* SetHTTPProxyPath
+ *  sets a path to HTTP proxy server.
+ *  a NULL path value removes all proxy settings.
+ *
+ *  the VPath passed in must still be released using VPathRelease,
+ *  because KNSManager will attach a new reference to it.
+ */
+LIB_EXPORT rc_t CC KNSManagerSetHTTPProxyPath ( KNSManager * self, const char * fmt, ... )
+{
+    rc_t rc;
+
+    va_list args;
+    va_start ( args, fmt );
+    rc = KNSManagerVSetHTTPProxyPath ( self, fmt, args );
+    va_end ( args );
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerVSetHTTPProxyPath ( KNSManager * self, const char * fmt, va_list args )
+{
+    rc_t rc = 0;
+
+    if ( self == NULL )
+        rc = RC ( rcNS, rcMgr, rcUpdating, rcSelf, rcNull );
+    else
+    {
+        uint16_t proxy_port = 0;
+        const String * proxy = NULL;
+
+        if ( fmt != NULL && fmt [ 0 ] != 0 )
+        {
+            size_t psize;
+            char path [ 4096 ];
+            rc = string_vprintf ( path, sizeof path, & psize, fmt, args );
+            if ( rc == 0 && psize != 0 )
+            {
+                char * colon = string_rchr ( path, psize, ':' );
+                if ( colon != NULL )
+                {
+                    char * end;
+                    const char * port_spec = colon + 1;
+                    /* it is true that some day we might read symbolic port names... */
+                    long port_num = strtol ( port_spec, & end, 10 );
+                    if ( port_num <= 0 || port_num >= 0x10000 || end [ 0 ] != 0 )
+                        rc = RC ( rcNS, rcMgr, rcUpdating, rcPath, rcInvalid );
+                    else
+                    {
+                        proxy_port = ( uint64_t ) port_num;
+                        psize = colon - path;
+                    }
+                }
+
+                if ( rc == 0 )
+                {
+                    String tmp;
+                    StringInit ( & tmp, path, psize, string_len ( path, psize ) );
+                    rc = StringCopy ( & proxy, & tmp );
+                }
+            }
+        }
+
+        if ( rc == 0 )
+        {
+            if ( self -> http_proxy != NULL )
+            {
+                StringWhack ( self -> http_proxy );
+                self -> http_proxy_port = 0;
+            }
+
+            self -> http_proxy = proxy;
+            self -> http_proxy_enabled = ( proxy != NULL );
+            self -> http_proxy_port = proxy_port;
+        }
+    }
+
+    return rc;
+}
+
+
+/* GetHTTPProxyEnabled
+ *  returns true iff a non-NULL proxy path exists and user wants to use it
+ *  users indicate desire to use proxy through configuration or SetHTTPProxyEnabled
+ */
+LIB_EXPORT bool CC KNSManagerGetHTTPProxyEnabled ( const KNSManager * self )
+{
+    if ( self != NULL )
+        return self -> http_proxy_enabled;
+
+    return false;
+}
+
+
+/* SetHTTPProxyEnabled
+ *  sets http-proxy enabled state to supplied value
+ *  returns the prior value as a convenience
+ */
+LIB_EXPORT bool CC KNSManagerSetHTTPProxyEnabled ( KNSManager * self, bool enabled )
+{
+    bool prior = false;
+    if ( self != NULL )
+    {
+        prior = self -> http_proxy_enabled;
+        self -> http_proxy_enabled = enabled;
+    }
+    return prior;
+}
+
 
 LIB_EXPORT rc_t CC KNSManagerSetUserAgent ( KNSManager * self, const char * fmt, ... )
 {
@@ -376,7 +652,7 @@ LIB_EXPORT rc_t CC KNSManagerSetUserAgent ( KNSManager * self, const char * fmt,
 }
 
 
-rc_t CC KNSManagerGetUserAgent ( const char ** user_agent )
+LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char ** user_agent )
 {
     rc_t rc = 0;
     if ( user_agent == NULL )

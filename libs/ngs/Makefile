@@ -36,6 +36,9 @@ ALL_LIBS = \
 	$(INT_LIBS) \
 	$(EXT_LIBS)
 
+OBJFILES = \
+	$(NGS_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 INCDIRS += -I$(TOP)/../ngs/ngs-sdk
@@ -44,7 +47,7 @@ INCDIRS += -I$(TOP)/../ngs/ngs-sdk
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -113,3 +116,7 @@ NGS_LIB = \
 
 $(ILIBDIR)/libngs.$(LIBX): $(NGS_OBJ)
 	$(LD) --slib -o $@ $^ $(NGS_LIB)
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

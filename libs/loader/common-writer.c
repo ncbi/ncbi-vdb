@@ -1255,7 +1255,7 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
                     {
                     case QT_LogOdds:
                         for (i = 0; i != readlen; ++i)
-                            qual[i] = LogOddsToPhred(squal[i]);
+                            qual[i] = LogOddsToPhred(squal[i] - qoffset);
                         break;
                         
                     case QT_Phred:
@@ -1847,8 +1847,12 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
                 }
                 else if (filterFlagConflictRecords == MAX_WARNINGS_FLAG_CONFLICT) {
                     (void)PLOGMSG(klogWarn, (klogWarn, "Last reported warning: Spot '$(name)': both 'duplicate' and 'lowQuality' flag bits set, only 'duplicate' will be saved", "name=%s", name));
-        }
+                }
             }
+            
+            srec.spotName = (char*)name;
+            srec.spotNameLen = namelen;
+            
             rc = SequenceWriteRecord(seq, &srec, isColorSpace, value->pcr_dup, value->platform, 
                                                 G->keepMismatchQual, G->no_real_output, G->hasTI, G->QualQuantizer);
             if (rc) {

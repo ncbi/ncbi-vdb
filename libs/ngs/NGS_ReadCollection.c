@@ -195,8 +195,7 @@ static struct NGS_Read_v1 * NGS_ReadCollection_v1_get_reads ( const NGS_ReadColl
 static uint64_t NGS_ReadCollection_v1_get_read_count ( const NGS_ReadCollection_v1 * self, NGS_ErrBlock_v1 * err, bool wants_full, bool wants_partial, bool wants_unaligned )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
-    /*NB: filtering is ignored */
-    ON_FAIL ( uint64_t ret = NGS_ReadCollectionGetReadCount ( Self ( self ), ctx ) )
+    ON_FAIL ( uint64_t ret = NGS_ReadCollectionGetReadCount ( Self ( self ), ctx, wants_full, wants_partial, wants_unaligned ) )
     {
         NGS_ErrBlockThrow ( err, ctx );
     }
@@ -441,7 +440,8 @@ struct NGS_Read * NGS_ReadCollectionGetRead ( NGS_ReadCollection * self, ctx_t c
     return NULL;
 }
 
-uint64_t NGS_ReadCollectionGetReadCount ( NGS_ReadCollection * self, ctx_t ctx )
+uint64_t NGS_ReadCollectionGetReadCount ( NGS_ReadCollection * self, ctx_t ctx,
+    bool wants_full, bool wants_partial, bool wants_unaligned )
 {
     if ( self == NULL )
     {
@@ -450,7 +450,7 @@ uint64_t NGS_ReadCollectionGetReadCount ( NGS_ReadCollection * self, ctx_t ctx )
     }
     else
     {
-        return VT ( self, get_read_count ) ( self, ctx );
+        return VT ( self, get_read_count ) ( self, ctx, wants_full, wants_partial, wants_unaligned );
     }
 
     return 0;

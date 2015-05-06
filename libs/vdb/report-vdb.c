@@ -659,7 +659,22 @@ static rc_t ReportBinary(const ReportFuncs *f, uint32_t indent, const char* argv
                 }
             }
             name = last_name ? last_name : argv0;
-            rc = KDirectoryResolvePath(dir, true, binary, sizeof binary, "%s", name);
+            rc = KDirectoryResolvePath(dir, true,
+                binary, sizeof binary, "%s", name);
+#if defined(WINDOWS)
+            if (rc == 0) {
+                if (KDirectoryPathType(dir, "%s", binary) == kptNotFound) {
+                    const char ext[] = ".exe";
+                    size_t s = string_size(name);
+                    if (s > sizeof ext - 1 &&
+                        strcmp(name + s - sizeof ext, ext) != 0)
+                    {
+                        rc = KDirectoryResolvePath(dir, true,
+                            binary, sizeof binary, "%s%s", name, ext);
+                    }
+                }
+            }
+#endif
             if (rc != 0) {
                 reportErrorStr(indent + 1, rc, "KDirectoryResolvePath",
                     "origin", "KDyldHomeDirectory");
@@ -682,8 +697,9 @@ static rc_t ReportBinary(const ReportFuncs *f, uint32_t indent, const char* argv
                         sType = "unknown";
                         break;
                 }
-                if (found)
-                {   rc = md5(name, digest, dir); }
+                if (found) {
+                    rc = md5(binary, digest, dir);
+                }
                 if (type & kptAlias) {
                     if (found && rc == 0)  {
                         reportOpen(indent, tag, 3, "path", 's', binary,
@@ -693,8 +709,9 @@ static rc_t ReportBinary(const ReportFuncs *f, uint32_t indent, const char* argv
                         reportOpen(indent, tag, 2, "path", 's', binary,
                             "type", 's', sType);
                     }
-                    if (rc == 0 && type & kptAlias)
-                    {   rc = ReportAlias(f, indent + 1, name, dir); }
+                    if (rc == 0 && type & kptAlias) {
+                        rc = ReportAlias(f, indent + 1, name, dir);
+                    }
                     reportClose(indent, tag);
                 }
                 else {

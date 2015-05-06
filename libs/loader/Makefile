@@ -33,12 +33,15 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES = \
+	$(LOADER_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs 
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -80,3 +83,7 @@ LOADER_OBJ = \
 $(ILIBDIR)/libloader.$(LIBX): $(LOADER_OBJ)
 	$(LD) --slib -o $@ $^ $(LOADER_LIB)
 
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

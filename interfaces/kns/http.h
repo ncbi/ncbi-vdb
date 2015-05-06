@@ -62,9 +62,42 @@ struct KNSManager;
  *   when 0, return immediately, positive gives maximum wait time in mS
  *   for reads and writes respectively.
  */
-KNS_EXTERN rc_t CC KNSManagerSetHTTPTimeouts ( struct KNSManager *self,
+KNS_EXTERN rc_t CC KNSManagerSetHTTPTimeouts ( struct KNSManager * self,
     int32_t readMillis, int32_t writeMillis );
 
+
+/* GetHTTPProxyPath
+ *  returns path to HTTP proxy server ( if set ) or NULL.
+ *  return status is 0 if the path is valid, non-zero otherwise
+ *
+ *  returned reference to String must be freed via StringWhack.
+ */
+KNS_EXTERN rc_t CC KNSManagerGetHTTPProxyPath ( struct KNSManager const * self,
+    struct String const ** proxy );
+
+
+/* SetHTTPProxyPath
+ *  sets a path to HTTP proxy server.
+ *  a NULL path format value removes all proxy settings.
+ */
+KNS_EXTERN rc_t CC KNSManagerSetHTTPProxyPath ( struct KNSManager * self,
+    const char * fmt, ... );
+KNS_EXTERN rc_t CC KNSManagerVSetHTTPProxyPath ( struct KNSManager * self,
+    const char * fmt, va_list args );
+
+
+/* GetHTTPProxyEnabled
+ *  returns true iff a non-NULL proxy path exists and user wants to use it
+ *  users indicate desire to use proxy through configuration or SetHTTPProxyEnabled
+ */
+KNS_EXTERN bool CC KNSManagerGetHTTPProxyEnabled ( struct KNSManager const * self );
+
+
+/* SetHTTPProxyEnabled
+ *  sets http-proxy enabled state to supplied value
+ *  returns the prior value as a convenience
+ */
+KNS_EXTERN bool CC KNSManagerSetHTTPProxyEnabled ( struct KNSManager * self, bool enabled );
 
 
 /*------------------------------------------------------------------------------
@@ -175,6 +208,13 @@ KNS_EXTERN rc_t CC KClientHttpRequestRelease ( const KClientHttpRequest *self );
  * NB - the server is not required to honor the request
  */
 KNS_EXTERN rc_t CC KClientHttpRequestConnection ( KClientHttpRequest *self, bool close );
+
+
+/* SetNoCache
+ *  guard against over-eager proxies that try to cache entire files
+ *  and handle byte-ranges locally.
+ */
+KNS_EXTERN rc_t CC KClientHttpRequestSetNoCache ( KClientHttpRequest *self );
 
 
 /* ByteRange

@@ -49,6 +49,13 @@ struct CSRA1_Pileup;
 
 #include <klib/rc.h>
 
+#if UNIX
+#include <sys/resource.h>
+#endif
+
+/* to turn off blob caching entirely, set to 0 */
+#define CACHED_BLOB_LIMIT ( 1 << 30 )
+
 /* The READ_AHEAD_LIMIT sets the total number of alignment ids to gather
    at one time from the REFERENCE table indices. This is given as a constant,
    although in the code it is passed as a parameter. We may want to make it
@@ -62,6 +69,7 @@ struct CSRA1_Pileup;
 
 #define IGNORE_OVERLAP_REF_POS 0
 #define IGNORE_OVERLAP_REF_LEN 0
+#define IGNORE_SYSTEM_RLIMIT   0
 
 #include <stdio.h>
 static bool printing;
@@ -80,12 +88,19 @@ void enable_pileup_printing ( void ) { printing = true; }
 static
 void CC CSRA1_Pileup_EntryWhack ( DLNode * node, void * param )
 {
+    uint32_t i;
     ctx_t ctx = ( ctx_t ) param;
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcDestroying );
 
     CSRA1_Pileup_Entry * self = ( CSRA1_Pileup_Entry * ) node;
 
     /* tear down stuff here */
+    for ( i = 0; i < sizeof self -> blob / sizeof self -> blob [ 0 ]; ++ i )
+    {
+        const VBlob * blob = self -> blob [ i ];
+        if ( blob != NULL )
+            VBlobRelease ( blob );
+    }
 
     free ( self );
 }
@@ -240,6 +255,8 @@ void CSRA1_Pileup_RefCursorDataWhack ( CSRA1_Pileup_RefCursorData * self, ctx_t 
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
 
     assert ( self != NULL );
+    KVectorRelease ( self -> pa_ids );
+    KVectorRelease ( self -> sa_ids );
 
     NGS_CursorRelease ( self -> curs, ctx );
 }
@@ -319,7 +336,7 @@ void CSRA1_Pileup_AlignCursorDataGetNonEmptyCell ( CSRA1_Pileup_AlignCursorData 
     TRY ( CSRA1_Pileup_AlignCursorDataGetCell ( self, ctx, row_id, col_idx ) )
     {
         if ( self -> cell_len [ col_idx ] == 0 )
-            INTERNAL_ERROR ( xcStorageExhausted, "zero-length cell data" );
+            INTERNAL_ERROR ( xcColumnEmpty, "zero-length cell data (row_id = %ld, col_idx = %u)", row_id, col_idx );
     }
 }
 
@@ -657,6 +674,31 @@ bool CSRA1_PileupAdvance ( CSRA1_Pileup * self, ctx_t ctx )
         CSRA1_Pileup_Entry * next = ( CSRA1_Pileup_Entry * )
             DLNodeNext ( & entry -> node );
 
+        /* test for temporarily cached data */
+        if ( entry -> temporary )
+        {
+            uint32_t i;
+#if _DEBUGGING
+            uint32_t num_flushed = 0;
+#endif
+
+            for ( i = 0; i < sizeof entry -> cell_data / sizeof entry -> cell_data [ 0 ]; ++ i )
+            {
+                if ( entry -> cell_data [ i ] != NULL && entry -> blob [ i ] == NULL )
+                {
+                    entry -> cell_data [ i ] = NULL;
+                    entry -> cell_len [ i ] = 0;
+#if _DEBUGGING
+                    ++ num_flushed;
+#endif
+                }
+            }
+
+PRINT ( ">>> flushed %u columns of temporary cell data\n", num_flushed );
+
+            entry -> temporary = false;
+        }
+
         if ( entry -> xend == self -> ref_zpos )
         {
 PRINT ( ">>> dropping alignment at refpos %ld, row-id %ld: %ld-%ld ( zero-based, half-closed )\n",
@@ -664,6 +706,7 @@ PRINT ( ">>> dropping alignment at refpos %ld, row-id %ld: %ld-%ld ( zero-based,
 
             DLListUnlink ( & self -> align . pileup, & entry -> node );
             self -> align . depth -= 1;
+            self -> cached_blob_total -= entry -> blob_total;
             CSRA1_Pileup_EntryWhack ( & entry -> node, ( void* ) ctx );
         }
 
@@ -793,6 +836,29 @@ void CSRA1_PileupGatherIds ( CSRA1_Pileup * self, ctx_t ctx, uint32_t id_limit )
     while ( total_ids < id_limit && self -> idx_chunk_id <= self -> slice_end_id );
 }
 
+/*  Get RD_FILTER and check if it's present
+    e.g for SRR1164787 SECONDARY_ALIGNMENT row_id == 3
+    has invalid data (SEQ_ID == 0, no RD_FILTER) - 
+    we need to ignore such records
+
+    return: true - there is a valid RD_FILTER value in the db
+            false - there is no RD_FILTER in the db
+*/
+static bool CSRA1_Pileup_GetReadFilter ( CSRA1_Pileup * self, ctx_t ctx,
+    int64_t row_id, CSRA1_Pileup_AlignCursorData * cd, INSDC_read_filter* ret_val )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    TRY ( CSRA1_Pileup_AlignCursorDataGetCell ( cd, ctx, row_id, pileup_align_col_READ_FILTER ) )
+    {
+        if ( cd -> cell_len [ pileup_align_col_READ_FILTER ] == 0 )
+            return false;
+    }
+
+    * ret_val = *( (INSDC_read_filter*) cd -> cell_data [ pileup_align_col_READ_FILTER ]);
+    return true;
+}
+
 static
 bool CSRA1_PileupFilterAlignment ( CSRA1_Pileup * self, ctx_t ctx,
     int64_t row_id, CSRA1_Pileup_AlignCursorData * cd )
@@ -802,7 +868,8 @@ bool CSRA1_PileupFilterAlignment ( CSRA1_Pileup * self, ctx_t ctx,
     int32_t map_qual;
     INSDC_read_filter read_filter;
 
-    TRY ( read_filter = CSRA1_Pileup_AlignCursorDataGetUInt8 ( cd, ctx, row_id, pileup_align_col_READ_FILTER ) )
+    if ( CSRA1_Pileup_GetReadFilter ( self, ctx, row_id, cd, & read_filter ) == true )
+    /*TRY ( read_filter = CSRA1_Pileup_AlignCursorDataGetUInt8 ( cd, ctx, row_id, pileup_align_col_READ_FILTER ) )*/
     {
         switch ( read_filter )
         {
@@ -835,7 +902,6 @@ bool CSRA1_PileupFilterAlignment ( CSRA1_Pileup * self, ctx_t ctx,
             break;
         }
     }
-
     return false;
 }
 
@@ -1592,7 +1658,19 @@ void CSRA1_PileupInit ( ctx_t ctx, CSRA1_Pileup * obj, const char * instname,
                     /* record filter criteria */
                     obj -> filters = filters;
                     obj -> map_qual = map_qual;
-                
+
+                    /* set cache limits */
+                    obj -> cached_blob_limit = CACHED_BLOB_LIMIT;
+#if ! IGNORE_SYSTEM_RLIMIT
+#if UNIX
+                    {
+                        struct rlimit rlim;
+                        int status = getrlimit ( RLIMIT_AS, & rlim );
+                        if ( status == 0 )
+                            obj -> cached_blob_limit = rlim . rlim_cur >> 1;
+                    }
+#endif
+#endif
                     /* initialize against one or more alignment tables */
                     if ( wants_primary )
                         CSRA1_PileupInitAlignment ( obj, ctx, db, "PRIMARY_ALIGNMENT", & obj -> pa . curs, CSRA1_PileupPopulatePACurs );
@@ -1766,14 +1844,59 @@ const void * CSRA1_PileupGetEntry ( CSRA1_Pileup * self, ctx_t ctx,
     ON_FAIL ( CSRA1_Pileup_AlignCursorDataGetCell ( cd, ctx, entry -> row_id, col_idx ) )
         return NULL;
 
-    rc = VBlobAddRef ( cd -> blob [ col_idx ] );
-    if ( rc != 0 )
+    /* if the entry is not already marked as having temporary data */
+    if ( ! entry -> temporary )
     {
-        INTERNAL_ERROR ( xcRefcountOutOfBounds, "VBlob at %#p", cd -> blob [ col_idx ] );
-        return NULL;
+        /* get the size of the newly loaded blob */
+        size_t blob_size;
+        const VBlob * blob = cd -> blob [ col_idx ];
+        rc = VBlobSize ( blob, & blob_size );
+
+        /* a failure would generally represent an internal error */
+        if ( rc != 0 )
+        {
+PRINT ( ">>> failed to determine blob size: rc = %u\n", rc );
+            entry -> temporary = true;
+        }
+
+        /* test if caching this blob would exceed limit, and mark temporary if so */
+        else if ( self -> cached_blob_total + blob_size > self -> cached_blob_limit )
+        {
+PRINT ( ">>> marking blob caching as temporary due to limits: %lu in cache, %lu in blob, limit %lu.\n"
+        , ( unsigned long ) self -> cached_blob_total
+        , ( unsigned long ) blob_size
+        , ( unsigned long ) self -> cached_blob_limit
+    );
+
+            entry -> temporary = true;
+        }
+        else
+        {
+            /* cache the blob on entry */
+            rc = VBlobAddRef ( blob );
+            if ( rc != 0 )
+            {
+#if 1
+                /* having the ability to NOT cache, eat error */
+                entry -> temporary = true;
+#else
+                INTERNAL_ERROR ( xcRefcountOutOfBounds, "VBlob at %#p", cd -> blob [ col_idx ] );
+                return NULL;
+#endif
+            }
+            else
+            {
+                /* record the blob reference on entry */
+                entry -> blob [ col_idx ] = cd -> blob [ col_idx ];
+
+                /* accounting */
+                entry -> blob_total += blob_size;
+                self -> cached_blob_total += blob_size;
+            }
+        }
     }
 
-    entry -> blob [ col_idx ] = cd -> blob [ col_idx ];
+    /* in all cases, record the cell data */
     entry -> cell_len [ col_idx ] = cd -> cell_len [ col_idx ];
     return entry -> cell_data [ col_idx ] = cd -> cell_data [ col_idx ];
 }

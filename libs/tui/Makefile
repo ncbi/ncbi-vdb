@@ -36,12 +36,16 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES =        \
+	$(TUI_OBJ)    \
+	$(TUI_CPP_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -126,3 +130,8 @@ TUI_CPP_LIB = \
 
 $(ILIBDIR)/libtui_cpp.$(LIBX): $(TUI_CPP_OBJ)
 	$(LD) --slib -o $@ $^ $(TUI_CPP_LIB)
+
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

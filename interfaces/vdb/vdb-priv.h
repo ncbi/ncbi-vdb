@@ -52,6 +52,7 @@ struct KDBManager;
 struct KDirectory;
 struct VDBManager;
 struct VFSManager;
+struct VResolver;
 struct VSchema;
 struct VTypedef;
 struct VDatabase;
@@ -104,6 +105,10 @@ VDB_EXTERN rc_t CC VDBManagerMakeReadWithVFSManager (
 VDB_EXTERN rc_t CC VDBManagerMakeUpdateWithVFSManager (
     struct VDBManager **mgr, struct KDirectory *wd, struct VFSManager *vmgr );
 
+
+/** Reset VResolver to set protected repository context */
+VDB_EXTERN rc_t CC VDBManagerSetResolver
+    ( struct VDBManager const * self, struct VResolver * resolver );
 
 /*--------------------------------------------------------------------------
  * VSchema

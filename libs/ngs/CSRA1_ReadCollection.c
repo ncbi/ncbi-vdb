@@ -144,7 +144,7 @@ static const char * align_col_specs [] =
     "(INSDC:dna:text)READ",
     "(I64)REF_ID",
     "(INSDC:coord:len)REF_LEN",
-    "(ascii)REF_NAME",
+    "(ascii)REF_SEQ_ID",	/* was REF_NAME changed March 23 2015 */
     "(bool)REF_ORIENTATION",
     "(INSDC:coord:zero)REF_POS",
     "(INSDC:dna:text)REF_READ",
@@ -155,7 +155,7 @@ static const char * align_col_specs [] =
     "(I32)TEMPLATE_LEN",
     "(ascii)RNA_ORIENTATION",
     "(I64)MATE_ALIGN_ID",
-    "(ascii)MATE_REF_NAME",
+    "(ascii)MATE_REF_SEQ_ID",	/* was MATE_REF_NAME changed March 23 2015 */
     "(bool)MATE_REF_ORIENTATION",
 };
 
@@ -483,16 +483,26 @@ struct NGS_Read * CSRA1_ReadCollectionGetRead ( CSRA1_ReadCollection * self, ctx
 }
 
 static
-uint64_t CSRA1_ReadCollectionGetReadCount ( CSRA1_ReadCollection * self, ctx_t ctx )
+uint64_t CSRA1_ReadCollectionGetReadCount ( CSRA1_ReadCollection * self, ctx_t ctx,
+    bool wants_full, bool wants_partial, bool wants_unaligned )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
     
     if ( self -> sequence_curs == NULL )
     {
-        self -> sequence_curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS );
+        ON_FAIL ( self -> sequence_curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ) )
+        {
+            return 0;
+        }
     }
-    
-    return NGS_CursorGetRowCount ( self -> sequence_curs, ctx );
+
+    if ( wants_full && wants_partial && wants_unaligned )    
+        return NGS_CursorGetRowCount ( self -> sequence_curs, ctx );
+
+    /* have a problem here */
+    UNIMPLEMENTED ();
+
+    return 0;
 }
 
 struct NGS_Read * CSRA1_ReadCollectionGetReadRange ( CSRA1_ReadCollection * self, 

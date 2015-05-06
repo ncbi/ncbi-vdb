@@ -137,6 +137,10 @@ extern "C" {
 #define rcRepository rcDirectory
 
 
+/** get projectId ( valid for protected user repository ) */
+rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId );
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -34,12 +34,15 @@ INT_LIBS = \
 ALL_LIBS = \
 	$(INT_LIBS)
 
+OBJFILES = \
+	$(TST_OBJ)
+
 include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
 # outer targets
 #
-all std: makedirs
+all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
 $(INT_LIBS): makedirs
@@ -79,3 +82,6 @@ TST_OBJ = \
 $(ILIBDIR)/libktst.$(LIBX): $(TST_OBJ)
 	$(LP) --slib -o $@ $^ $(TST_LIB)
 
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)

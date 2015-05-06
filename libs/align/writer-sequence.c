@@ -66,7 +66,8 @@ static const TableWriterColumn TableWriterSeq_cols[ewseq_cn_Last + 1] =
     {0, "TMP_KEY_ID", sizeof(uint64_t) * 8, ewcol_Temporary},
     {0, "SPOT_GROUP", sizeof(char) * 8, ewcol_IsArray | ewcol_Ignore},
     {0, "READ_FILTER", sizeof(uint8_t) * 8, ewcol_IsArray},
-    {0, "TI", sizeof(uint64_t) * 8, ewcol_IsArray | ewcol_Ignore}
+    {0, "TI", sizeof(uint64_t) * 8, ewcol_IsArray | ewcol_Ignore},
+    {0, "NAME", sizeof(char) * 8, ewcol_IsArray | ewcol_Ignore},
 };
 
 static const TableReaderColumn TableSeqReadTmpKey_cols[] = {
@@ -310,6 +311,9 @@ LIB_EXPORT rc_t CC TableWriterSeq_Make(const TableWriterSeq** cself, VDatabase* 
             if( options & ewseq_co_TI) {
                 self->cols[ewseq_cn_TI].flags &= ~ewcol_Ignore;
             }
+            if( options & ewseq_co_SpotName) {
+                self->cols[ewseq_cn_NAME].flags &= ~ewcol_Ignore;
+            }
             if( (rc = TableWriter_Make(&self->base, db, tblName, "SEQUENCE")) == 0 ) {
                 rc = TableWriter_AddCursor(self->base, self->cols, sizeof(self->cols)/sizeof(self->cols[0]), &self->cursor_id);
             }
@@ -415,32 +419,42 @@ LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const Table
     if( cself == NULL || data == NULL ) {
         rc = RC( rcAlign, rcType, rcWriting, rcParam, rcNull);
         ALIGN_DBGERR(rc);
-    } else if( !cself->init && (rc = TableWriteSeq_WriteDefaults(cself)) != 0 ) {
+    }
+    else if( !cself->init && (rc = TableWriteSeq_WriteDefaults(cself)) != 0 ) {
         ALIGN_DBGERR(rc);
-    } else if( data->quality.buffer == NULL || data->sequence.elements != data->quality.elements ) {
+    }
+    else if( data->quality.buffer == NULL || data->sequence.elements != data->quality.elements ) {
         rc = RC(rcAlign, rcType, rcWriting, rcData, data->quality.buffer ? rcInconsistent : rcEmpty);
         ALIGN_DBGERRP("sequence and quality length %lu <> %lu", rc, data->sequence.elements, data->quality.elements);
-    } else if( data->read_start.elements != data->nreads ) {
+    }
+    else if( data->read_start.elements != data->nreads ) {
         rc = RC(rcAlign, rcType, rcWriting, rcData, rcInconsistent);
         ALIGN_DBGERRP("nreads and read_start length %u <> %lu", rc, data->nreads, data->read_start.elements);
-    } else if( data->read_len.elements != data->nreads ) {
+    }
+    else if( data->read_len.elements != data->nreads ) {
         rc = RC(rcAlign, rcType, rcWriting, rcData, rcInconsistent );
         ALIGN_DBGERRP("nreads and read_len length %u <> %lu", rc, data->nreads, data->read_len.elements);
-    } else if( (cself->options & ewseq_co_AlignData) && data->primary_alignment_id.elements != data->nreads ) {
+    }
+    else if( (cself->options & ewseq_co_AlignData) && data->primary_alignment_id.elements != data->nreads ) {
         rc = RC(rcAlign, rcType, rcWriting, rcData, rcInconsistent);
         ALIGN_DBGERRP("nreads and primary_alignment_id length %u <> %lu", rc, data->nreads, data->primary_alignment_id.elements);
-    } else if( (cself->options & ewseq_co_AlignData) && data->alignment_count.elements != data->nreads ) {
+    }
+    else if( (cself->options & ewseq_co_AlignData) && data->alignment_count.elements != data->nreads ) {
         rc = RC(rcAlign, rcType, rcWriting, rcData, rcInconsistent);
         ALIGN_DBGERRP("nreads and alignment_count length %u <> %lu", rc, data->nreads, data->alignment_count.elements);
-    } else if( data->no_quantize_mask.buffer && data->no_quantize_mask.elements != data->quality.elements ) {
+    }
+    else if( data->no_quantize_mask.buffer && data->no_quantize_mask.elements != data->quality.elements ) {
         rc = RC(rcAlign, rcType, rcWriting, rcData, rcInconsistent);
         ALIGN_DBGERRP("quality and no_quantize_mask length %u <> %lu", rc, data->quality.elements, data->no_quantize_mask.elements);
-    } else if( !(cself->options & ewseq_co_NoLabelData) &&
+    }
+    else if( !(cself->options & ewseq_co_NoLabelData) &&
                (lbl = ((data->label.buffer ? 1 : 0) + (data->label_start.buffer ? 1 : 0) +
-                                                  (data->label_len.buffer ? 1 : 0))) != 0 && lbl != 3 ) {
+                                                  (data->label_len.buffer ? 1 : 0))) != 0 && lbl != 3 )
+    {
         rc = RC(rcAlign, rcType, rcWriting, rcData, rcInconsistent);
         ALIGN_DBGERRP("LABEL %s", rc, "incomplete");
-    } else if( (rc = TableWriter_OpenRow(cself->base, rowid, cself->cursor_id)) == 0 ) {
+    }
+    else if( (rc = TableWriter_OpenRow(cself->base, rowid, cself->cursor_id)) == 0 ) {
         if( cself->options & ewseq_co_AlignData ) {
             TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_PRIMARY_ALIGNMENT_ID], data->primary_alignment_id);
             TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_ALIGNMENT_COUNT], data->alignment_count);
@@ -530,6 +544,7 @@ LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const Table
         TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_READ_FILTER], data->read_filter);
         TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_PLATFORM], data->platform);
         TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_TI], data->ti);
+        TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_NAME], data->spot_name);
         if( rc == 0 ) {
             rc = TableWriter_CloseRow(cself->base);
         }

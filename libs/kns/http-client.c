@@ -35,6 +35,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 #include <kns/socket.h>
 #include <kns/stream.h>
 #include <kns/impl.h>
+#include <vfs/path.h>
 #include <kfs/file.h>
 #include <kfs/directory.h>
 
@@ -75,12 +76,14 @@ void  KDataBufferClear ( KDataBuffer *buf )
     buf -> elem_bits = 8;
 }
 
+#if _DEBUGGING
 static
 bool KDataBufferContainsString ( const KDataBuffer *buf, const String *str )
 {
     return str -> addr >= ( const char* ) buf -> base &&
         & str -> addr [ str -> size ] <= & ( ( const char* ) buf -> base ) [ buf -> elem_count ];
 }
+#endif
 
 /*--------------------------------------------------------------------------
  * KClientHttp
@@ -114,6 +117,8 @@ struct KClientHttp
 
     KEndPoint ep;
     bool ep_valid;
+    bool proxy_ep;
+    bool proxy_default_port;
     
     bool reliable;
 };
@@ -164,22 +169,73 @@ rc_t KClientHttpWhack ( KClientHttp * self )
     return 0;
 }
 
-rc_t KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t port )
+static
+rc_t KClientHttpInitDNSEndpoint ( KClientHttp * self, const String * hostname, uint32_t port, uint16_t dflt_proxy_port )
 {
-    rc_t rc;
-    KSocket * sock;
+    rc_t rc = 0;
 
-    if ( ! self -> ep_valid )
+    const KNSManager * mgr = self -> mgr;
+
+    self -> proxy_default_port = false;
+
+    if ( dflt_proxy_port != 0 && mgr -> http_proxy_enabled && mgr -> http_proxy != NULL )
     {
-        rc = KNSManagerInitDNSEndpoint ( self -> mgr, & self -> ep, hostname, port );
-        if ( rc != 0 )
-            return rc;
+        uint16_t proxy_port = mgr -> http_proxy_port;
+        if ( proxy_port == 0 )
+        {
+            proxy_port = dflt_proxy_port;
+            self -> proxy_default_port = true;
+        }
 
-        self -> ep_valid = true;
+        rc = KNSManagerInitDNSEndpoint ( mgr, & self -> ep, mgr -> http_proxy, proxy_port );
+        if ( rc == 0 )
+        {
+            self -> proxy_ep = true;
+            return 0;
+        }
     }
 
-    /* TBD - retries? default for now */
-    rc = KNSManagerMakeTimedConnection ( self -> mgr, & sock, self -> read_timeout, self -> write_timeout, NULL, & self -> ep );
+    self -> proxy_ep = false;
+
+    return KNSManagerInitDNSEndpoint ( mgr, & self -> ep, hostname, port );
+}
+
+rc_t KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t port )
+{
+    rc_t rc = 0;
+    KSocket * sock;
+    const KNSManager * mgr = self -> mgr;
+
+    /* default port list MUST end with 0 to try without proxy */
+    uint32_t pp_idx;
+    static uint16_t dflt_proxy_ports [] = { 3128, 8080, 0 };
+
+    for ( pp_idx = 0; pp_idx < sizeof dflt_proxy_ports / sizeof dflt_proxy_ports [ 0 ]; ++ pp_idx )
+    {
+        /* if endpoint was not successfully opened on previous attempt */
+        if ( ! self -> ep_valid )
+        {
+            rc = KClientHttpInitDNSEndpoint ( self, hostname, port, dflt_proxy_ports [ pp_idx ] );
+            if ( rc != 0 )
+                break;
+        }
+
+        /* try to connect to endpoint */
+        rc = KNSManagerMakeTimedConnection ( mgr, & sock,
+            self -> read_timeout, self -> write_timeout, NULL, & self -> ep );
+        if ( rc == 0 )
+        {
+            /* this is a good endpoint */
+            self -> ep_valid = true;
+            break;
+        }
+
+        /* if we did not try a proxy server before, exit loop */
+        if ( self -> ep_valid || ! self -> proxy_ep )
+            break;
+    }
+
+    /* if the connection is open */
     if ( rc == 0 )
     {
         rc = KSocketGetStream ( sock, & self -> sock );
@@ -1306,9 +1362,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
         rc = KStreamTimedWriteAll ( self -> sock, buffer, len, & sent, & tm ); 
         if ( rc != 0 )
         {
-            rc_t rc2;
-            KClientHttpClose ( self );
-            rc2 = KClientHttpOpen ( self, & self -> hostname, self -> port );
+            rc_t rc2 = KClientHttpReopen ( self );
             if ( rc2 == 0 )
             {
                 TimeoutInit ( & tm, self -> write_timeout );
@@ -2227,6 +2281,29 @@ LIB_EXPORT rc_t CC KClientHttpRequestConnection ( KClientHttpRequest *self, bool
 }
 
 
+/* SetNoCache
+ *  guard against over-eager proxies that try to cache entire files
+ *  and handle byte-ranges locally.
+ */
+LIB_EXPORT rc_t CC KClientHttpRequestSetNoCache ( KClientHttpRequest *self )
+{
+    rc_t rc;
+
+    if ( self == NULL )
+        rc = RC ( rcNS, rcNoTarg, rcUpdating, rcSelf, rcNull );
+    else
+    {
+        rc = KClientHttpRequestAddHeader ( self, "Cache-Control", "no-cache, no-store, max-age=0, no-transform, must-revalidate" );
+        if ( rc == 0 )
+            rc = KClientHttpRequestAddHeader ( self, "Pragma", "no-cache" );
+        if ( rc == 0 )
+            rc = KClientHttpRequestAddHeader ( self, "Expires", "0" );
+    }
+
+    return rc;
+}
+
+
 /* ByteRange
  *  set requested byte range of response
  *
@@ -2354,7 +2431,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostParam ( KClientHttpRequest *self, co
 
 
 static
-rc_t KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
+rc_t KClientHttpRequestFormatMsg ( KClientHttpRequest *self,
     char *buffer, size_t bsize, const char *method, size_t *len )
 {
     rc_t rc;
@@ -2389,27 +2466,47 @@ rc_t KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
        We are inlining the host:port, instead of
        sending it in its own header */
 
-    /* TBD - should we include the port with the host name? */
-    #if 0
-    rc = string_printf ( buffer, bsize, len, 
-                         "%s %S://%S%S%s%S HTTP/%.2V\r\n"
-                         , method
-                         , & self -> url_block . scheme
-                         , & hostname
-                         , & self -> url_block . path
-                         , has_query
-                         , & self -> url_block . query
-                         , http -> vers );
-     #else
-    rc = string_printf ( buffer, bsize, len, 
-                         "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\nAccept: */*\r\n"
-                         , method
-                         , & self -> url_block . path
-                         , has_query
-                         , & self -> url_block . query
-                         , http -> vers
-                         , & hostname );
-     #endif
+    if ( ! http -> proxy_ep )
+    {
+        rc = string_printf ( buffer, bsize, len, 
+                             "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\nAccept: */*\r\n"
+                             , method
+                             , & self -> url_block . path
+                             , has_query
+                             , & self -> url_block . query
+                             , http -> vers
+                             , & hostname
+            );
+    }
+    else if ( http -> port != 80 )
+    {
+        rc = string_printf ( buffer, bsize, len, 
+                             "%s %S://%S:%u%S%s%S HTTP/%.2V\r\nHost: %S\r\nAccept: */*\r\n"
+                             , method
+                             , & self -> url_block . scheme
+                             , & hostname
+                             , http -> port
+                             , & self -> url_block . path
+                             , has_query
+                             , & self -> url_block . query
+                             , http -> vers
+                             , & hostname
+            );
+    }
+    else
+    {
+        rc = string_printf ( buffer, bsize, len, 
+                             "%s %S://%S%S%s%S HTTP/%.2V\r\nHost: %S\r\nAccept: */*\r\n"
+                             , method
+                             , & self -> url_block . scheme
+                             , & hostname
+                             , & self -> url_block . path
+                             , has_query
+                             , & self -> url_block . query
+                             , http -> vers
+                             , & hostname
+            );
+    }
 
     /* print all headers remaining into buffer */
     total = * len;
@@ -2624,7 +2721,8 @@ rc_t KClientHttpRequestSendReceiveNoBody ( KClientHttpRequest *self, KClientHttp
         
         {
             rc_t rc2 = KHttpRetrierDestroy ( & retrier );
-            if ( rc == 0 ) rc = rc2;
+            if ( rc == 0 )
+                rc = rc2;
         }
     }
     
@@ -2679,6 +2777,9 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
                 rc = KClientHttpAddHeader ( & self -> hdrs, "Content-Type", "application/x-www-form-urlencoded" );
             }
         }
+
+        if ( rc != 0 )
+            return rc;
     }
 
     for ( i = 0; i < max_redirect; ++ i )

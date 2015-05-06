@@ -383,10 +383,17 @@ static void CC reportErrorStrImpl(uint32_t indent, rc_t rc,
 {
     int sign = eol ? 1 : -1;
     if (rc || function) {
-        report(indent, "Error", sign * 3,
-            "rc", 'R', rc,
-            "function", 's', function,
-            name, 's', val);
+        if (name != NULL || val != NULL) {
+            report(indent, "Error", sign * 3,
+                "rc", 'R', rc,
+                "function", 's', function,
+                name, 's', val);
+        }
+        else {
+            report(indent, "Error", sign * 2,
+                "rc", 'R', rc,
+                "function", 's', function);
+        }
     }
     else {
         report(indent, "Error", sign,
@@ -498,6 +505,33 @@ static rc_t ReportRun(int indent, rc_t rc_in) {
     return rc;
 }
 
+static rc_t ReportEnv(int indent) {
+    rc_t rc = 0;
+
+    const char tag[] = "Env";
+
+    const char *env_list[] = {
+        "KLIB_CONFIG",
+        "VDBCONFIG",
+        "VDB_CONFIG",
+        "VDB_PWFILE",
+    };
+
+    int i = 0;
+
+    reportOpen(indent, tag, 0);
+
+    for (i = 0; i < sizeof env_list / sizeof env_list[0]; ++i) {
+        const char *val = getenv(env_list[i]);
+        if (val != NULL) {
+            report(indent + 1, env_list[i], 1, "value", 's', val);
+        }
+    }
+
+    reportClose(indent, tag);
+
+    return rc;
+}
 
 /* Silence
  *  tell report to be silent at exit
@@ -687,6 +721,12 @@ static rc_t _ReportFinalize(rc_t rc_in, bool aForce) {
                     rc_t rc2 = ( * self -> report_software )
                         ( & report_funcs, indent + 1,
                             argv_0, self -> date, self -> tool_ver );
+                    if (rc == 0 && rc2 != 0)
+                    {   rc = rc2; }
+                }
+
+                {
+                    rc_t rc2 = ReportEnv(indent + 1);
                     if (rc == 0 && rc2 != 0)
                     {   rc = rc2; }
                 }
