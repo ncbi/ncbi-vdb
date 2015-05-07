@@ -59,10 +59,10 @@ table NCBI:pileup:tbl:pileup_stats #1
     extern column I64 REF_POS = out_ref_pos;
     physical < I64 > izip_encoding .REF_POS = in_ref_pos;
     I64 in_ref_pos
-        = sub_row_id ( REF_POS )
+        = < I64 > sub_row_id ( REF_POS )
         ;
     I64 out_ref_pos
-        = add_row_id ( .REF_POS )
+        = < I64 > add_row_id ( .REF_POS )
         | < I64 > add_row_id ( .REF_POS_TRANS )
         ;
 
