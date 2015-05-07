@@ -167,7 +167,7 @@ TEST_CASE(KLog_pLogMsg)
 
 TEST_CASE(KLog_vLogMsg)
 {   
-    va_list l;
+    va_list l = { 0 };
     REQUIRE_RC(vLogMsg(klogFatal, "test $(a) $(b)\n", "a=%s,b=%d", l));
 }
 
@@ -178,7 +178,7 @@ TEST_CASE(KLog_pLogLibMsg)
 
 TEST_CASE(KLog_vLogLibMsg)
 {   
-    va_list l;
+    va_list l = { 0 };
     REQUIRE_RC(vLogLibMsg(klogFatal, "test $(a) $(b)\n", "a=%s,b=%d", l));
 }
 
@@ -199,7 +199,7 @@ TEST_CASE(KLog_pLogErr)
 
 TEST_CASE(KLog_vLogErr)
 {   
-    va_list l;
+    va_list l = { 0 };
     REQUIRE_RC(vLogErr(klogFatal, RC(rcNS,rcFile,rcWriting,rcTimeout,rcExhausted), "bad $(s)", "s=%s", l));
 }
 
@@ -210,7 +210,7 @@ TEST_CASE(KLog_pLogLibErr)
 
 TEST_CASE(KLog_vLogLibErr)
 {   
-    va_list l;
+    va_list l = { 0 };
     REQUIRE_RC(vLogLibErr(klogFatal, RC(rcNS,rcFile,rcWriting,rcTimeout,rcExhausted), "bad $(s)", "s=%s", l));
 }
 
