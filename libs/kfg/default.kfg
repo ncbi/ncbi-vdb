@@ -35,7 +35,6 @@
 /repository/user/main/public/apps/refseq/volumes/refseq = "refseq"
 /repository/user/main/public/apps/sra/volumes/sraFlat = "sra"
 /repository/user/main/public/apps/wgs/volumes/wgsFlat = "wgs"
-/repository/user/main/public/cache-enabled = "true"
 /repository/user/main/public/root = "$(HOME)/ncbi/public"
 
 # Remote access to NCBI's public repository
