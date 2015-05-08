@@ -22,46 +22,22 @@
 #
 # ===========================================================================
 
-by_default: runtests
+default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+TOP ?= $(abspath ../..)
 
-include $(TOP)/build/Makefile.shell
+MODULE = test/ngs-python
 
-include $(TOP)/build/Makefile.config
+ALL_TARGS = \
+
+include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
-# default
+# runtests
 #
-SUBDIRS =       \
-    ktst        \
-    cc          \
-    ext         \
-    judy_test   \
-    kfc         \
-    klib        \
-    kfg         \
-    kapp        \
-    kns         \
-    kdb         \
-    kproc       \
-    vdb         \
-    ngs         \
-    ngs-c++     \
-    ngs-java    \
-    ngs-python  \
-	search	    \
-    vfs         \
-    sraxf       \
-    vxf         \
-    loader      \
+runtests: pytest
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+pytest:
+	python tests.py
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
-
-.PHONY: default $(SUBDIRS)
-
+.PHONY: pytest

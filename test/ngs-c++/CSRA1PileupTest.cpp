@@ -35,6 +35,7 @@
 #include <sysalloc.h>
 #include <assert.h>
 #include <memory.h> // memset
+#include <stdio.h>
 
 #include <sstream>
 
@@ -280,7 +281,7 @@ void mimic_sra_pileup (
     // but for deletions we might have situation when we want
     // to report a deletion that goes beyond (pos_start + len) on the reference
     // so we have to read some bases beyond our slice end
-    ngs::String strRefSlice = r.getReferenceBases ( pos_start, len + 100 );
+    ngs::String strRefSlice = r.getReferenceBases ( pos_start, len + 10000 );
 
     ngs::PileupIterator pi = r.getPileupSlice ( pos_start, len, category );
 
@@ -641,19 +642,430 @@ TEST_CASE(CSRA1_PileupIterator_TestAllFunctions)
     REQUIRE_EQ ( ret, (uint64_t)46433887435 );
 }
 
-/*
-TEST_CASE(CSRA1_PileupEvent_Coverage)
+/////////////////////////////////////////
+// Experimenting with Smith-Waterman
+#if 0
+
+#ifndef max
+#define max(x,y) ((y) >= (x) ? (y) : (x))
+#endif
+
+#define max4(x1, x2, x3, x4) (max( max((x1),(x2)), max((x3),(x4)) ))
+
+unsigned char const map_char_to_4na [256] =
 {
-    char const* argv[] = {
-        "fake_line",
-        "SRR822962"
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 1,14, 2,13, 0, 0, 4,11, 0, 0,12, 0, 3,15, 0,
+    0, 0, 5, 6, 8, 0, 7, 9, 0,10, 0, 0, 0, 0, 0, 0,
+    0, 1,14, 2,13, 0, 0, 4,11, 0, 0,12, 0, 3,15, 0,
+    0, 0, 5, 6, 8, 0, 7, 9, 0,10, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
+int similarity_func (char a, char b)
+{
+    return a == b ? 2 : -1;
+}
+
+int gap_score_func ( size_t idx )
+{
+    return -(int)idx;
+}
+
+#define CACHE_MAX_COLS 1
+#define CACHE_MAX_ROWS 1
+
+void calculate_similarity_matrix (
+    char const* text, size_t size_text,
+    char const* query, size_t size_query,
+    int* matrix)
+{
+    size_t ROWS = size_text + 1;
+    size_t COLUMNS = size_query + 1;
+
+    // init 1st row and column with zeros
+    memset ( matrix, 0, COLUMNS * sizeof(matrix[0]) );
+    for ( size_t i = 1; i < ROWS; ++i )
+        matrix [i * COLUMNS] = 0;
+
+    // arrays to store maximums for all previous rows and columns
+#ifdef CACHE_MAX_COLS
+    typedef std::pair<int, size_t> TMaxPos;
+    std::vector<TMaxPos> vec_max_cols(COLUMNS, TMaxPos(0, 0));
+    std::vector<TMaxPos> vec_max_rows(ROWS, TMaxPos(0, 0));
+#endif
+
+    for ( size_t i = 1; i < ROWS; ++i )
+    {
+        for ( size_t j = 1; j < COLUMNS; ++j )
+        {
+            int sim = similarity_func ( text[i-1], query[j-1] );
+
+#ifdef CACHE_MAX_COLS
+            int cur_score_del = vec_max_cols[j].first + gap_score_func(j - vec_max_cols[j].second);
+#else
+            int cur_score_del = -1;
+            for ( size_t k = 1; k < i; ++k )
+            {
+                int cur = matrix [ (i - k)*COLUMNS + j ] + gap_score_func(k);
+                if ( cur > cur_score_del )
+                    cur_score_del = cur;
+            }
+#endif
+
+#ifdef CACHE_MAX_ROWS
+            int cur_score_ins = vec_max_rows[i].first + gap_score_func(i - vec_max_rows[i].second);;
+#else
+            int cur_score_ins = -1;
+            for ( size_t l = 1; l < j; ++l )
+            {
+                int cur = matrix [ i*COLUMNS + (j - l) ] + gap_score_func(l);
+                if ( cur > cur_score_ins )
+                    cur_score_ins = cur;
+            }
+#endif
+
+            matrix[i*COLUMNS + j] = max4 (0,
+                                          matrix[(i-1)*COLUMNS + j - 1] + sim,
+                                          cur_score_del,
+                                          cur_score_ins);
+
+#ifdef CACHE_MAX_COLS
+            if ( matrix[i*COLUMNS + j] > vec_max_cols[j].first )
+                vec_max_cols[j] = TMaxPos(matrix[i*COLUMNS + j], j);
+
+            vec_max_cols[j].first += gap_score_func(1);
+#endif
+#ifdef CACHE_MAX_ROWS
+            if ( matrix[i*COLUMNS + j] > vec_max_rows[i].first )
+                vec_max_rows[i] = TMaxPos(matrix[i*COLUMNS + j], i);
+
+            vec_max_rows[i].first += gap_score_func(1);
+#endif
+
+        }
+    }
+
+}
+
+void sw_find_indel_box ( int* matrix, size_t ROWS, size_t COLUMNS,
+                         int* ret_row_start, int* ret_row_end,
+                         int* ret_col_start, int* ret_col_end )
+{
+    // find maximum score in the matrix
+    size_t max_row = 0, max_col = 0;
+    size_t max_i = 0;
+
+    size_t i = ROWS*COLUMNS - 1;
+    //do
+    //{
+    //    if ( matrix[i] > matrix[max_i] )
+    //        max_i = i;
+    //    --i;
+    //}
+    //while (i > 0);
+
+    // TODO: prove the lemma: for all i: matrix[i] <= matrix[ROWS*COLUMNS - 1]
+    // (i.e. matrix[ROWS*COLUMNS - 1] is always the maximum element in the valid SW-matrix)
+
+    max_i = ROWS*COLUMNS - 1;
+
+    max_row = max_i / COLUMNS;
+    max_col = max_i % COLUMNS;
+
+
+    // traceback to (0,0)-th element of the matrix
+    *ret_row_start = *ret_row_end = *ret_col_start = *ret_col_end = -1;
+
+    i = max_row;
+    size_t j = max_col;
+    bool prev_indel = false;
+    while (true)
+    {
+        if (i > 0 && j > 0)
+        {
+            if ( matrix [(i - 1)*COLUMNS + (j - 1)] >= matrix [i*COLUMNS + (j - 1)] &&
+                 matrix [(i - 1)*COLUMNS + (j - 1)] >= matrix [(i - 1)*COLUMNS + j])
+            {
+                --i;
+                --j;
+
+                if (prev_indel)
+                {
+                    *ret_row_start = i;
+                    *ret_col_start = j;
+                }
+                prev_indel = false;
+            }
+            else if ( matrix [(i - 1)*COLUMNS + (j - 1)] < matrix [i*COLUMNS + (j - 1)] )
+            {
+                if ( *ret_row_end == -1 )
+                {
+                    *ret_row_end = i;
+                    *ret_col_end = j;
+                }
+                --j;
+                prev_indel = true;
+            }
+            else
+            {
+                if ( *ret_row_end == -1 )
+                {
+                    *ret_row_end = i;
+                    *ret_col_end = j;
+                }
+                --i;
+                prev_indel = true;
+            }
+        }
+        else if ( i > 0 )
+        {
+            if ( *ret_row_end == -1 )
+            {
+                *ret_row_end = i;
+                *ret_col_end = 0;
+            }
+            *ret_row_start = 0;
+            *ret_col_start = 0;
+            break;
+        }
+        else if ( j > 0 )
+        {
+            if ( *ret_row_end == -1 )
+            {
+                *ret_row_end = 0;
+                *ret_col_end = j;
+            }
+            *ret_row_start = 0;
+            *ret_col_start = 0;
+            break;
+        }
+        else
+        {
+            break;
+        }
+
+    }
+}
+
+// get_ref_slice returns reference slice of sufficient length for Smith-Waterman algorithm
+ngs::String get_ref_slice ( ngs::Reference const& ref,
+                            int64_t ref_pos_ins,
+                            int64_t ins_bases_length)
+{
+    int64_t safe_half_length = ins_bases_length / 2 + 1;
+
+    int64_t ref_start = (ref_pos_ins - safe_half_length) >= 0 ?
+                        (ref_pos_ins - safe_half_length) : 0;
+
+    return ref.getReferenceBases ( ref_start, safe_half_length * 2 );
+}
+
+// make_query returns the query for Smith-Waterman algorithm as follows:
+// <1st half of reference slice> + <insertion bases> + <2nd half of the reference slice>
+// reference slice must be of sufficient length - get_ref_slice() retruns it
+ngs::String make_query ( ngs::String const& ref_slice,
+                         char const* ins_bases, size_t ins_bases_length)
+{
+    assert ( ref_slice.size() >= 2 * ( ins_bases_length / 2 + 1 ) );
+
+    ngs::String ret;
+    ret.reserve ( ref_slice.size() + ins_bases_length );
+
+    ret.append ( ref_slice.begin(), ref_slice.begin() + ref_slice.size()/2 );
+    ret.append ( ins_bases, ins_bases + ins_bases_length );
+    ret.append ( ref_slice.begin() + ref_slice.size()/2, ref_slice.end() );
+
+    return ret;
+}
+
+
+void analyse_run ( ngs::String const& ref_slice, char const* ins_bases, size_t ins_bases_length )
+{
+    ngs::String query = make_query ( ref_slice, ins_bases, ins_bases_length );
+
+    std::cout
+        << "ref_slice: "
+        << ref_slice << std::endl
+        << "query    : " << query << std::endl;
+
+    // building sw-matrix for chosen reference slice and sequence
+
+    size_t COLUMNS = ref_slice.size() + 1;
+    size_t ROWS = query.size() + 1;
+    std::vector<int> matrix( ROWS * COLUMNS );
+
+    calculate_similarity_matrix ( query.c_str(), query.size(), ref_slice.c_str(), ref_slice.size(), &matrix[0] );
+
+    int print_width = 2;
+
+    printf ("  %*c ", print_width, '-');
+    for (size_t j = 0; j < COLUMNS; ++j)
+        printf ("%*c ", print_width, ref_slice[j]);
+    printf ("\n");
+
+    for (size_t i = 0; i < ROWS; ++i)
+    {
+        if ( i == 0 )
+            printf ("%c ", '-');
+        else
+            printf ("%c ", query[i-1]);
+        
+        for (size_t j = 0; j < COLUMNS; ++j)
+        {
+            printf ("%*d ", print_width, matrix[i*COLUMNS + j]);
+        }
+        printf ("\n");
+    }
+
+    int row_start, col_start, row_end, col_end;
+    sw_find_indel_box ( & matrix[0], ROWS, COLUMNS, &row_start, &row_end, &col_start, &col_end );
+
+    printf ("indel box found: (%d, %d) - (%d, %d)\n", row_start, col_start, row_end, col_end );
+
+    printf ( "Possible indel:\n"
+             "reference: %.*s[%.*s]%.*s\n"
+             "query    : %.*s[%.*s]%.*s\n",
+                (col_start + 1), ref_slice.c_str(),
+                col_end - (col_start + 1), ref_slice.c_str() + (col_start + 1),
+                (int)(ref_slice.size() - col_end), ref_slice.c_str() + col_end,
+
+                (row_start + 1), query.c_str(),
+                row_end - (row_start + 1), query.c_str() + (row_start + 1),
+                (int)(query.size() - row_end), query.c_str() + row_end
+           );
+}
+
+void find_ref_in_runs (char const* ref_name, int64_t pos)
+{
+    //"SRR341578" "gi|218511148|ref|NC_011752.1|" 2018
+    ngs::ReadCollection run = ncbi::NGS::openReadCollection ("SRR341578");
+    ngs::Reference ref = run.getReference ( /*"gi|218511148|ref|*/ref_name );
+
+    ngs::String ref_slice = get_ref_slice ( ref, pos, 2 );
+
+    std::cout << "Reference around pos=" << pos << ": " << ref_slice << std::endl;
+
+    char const* db_names[] =
+    {
+        "SRR341575",
+        "SRR341576",
+        "SRR341577",
+        "SRR341579",
+        "SRR341580",
+        "SRR341581",
+        "SRR341582",
+        "SRR341578",
     };
 
-    int res = fake_main ( sizeof(argv)/sizeof (argv[0]) , argv );
+    for (size_t i = 0; i < sizeof (db_names)/sizeof (db_names[0]); ++i )
+    {
+        try
+        {
+            ngs::ReadCollection r = ncbi::NGS::openReadCollection ( db_names[i] );
+            ngs::Reference rr = r.getReference ( ref_name );
+            ngs::String ref_slice_cur = get_ref_slice ( rr, pos, 2 );
 
-    REQUIRE_EQ ( res, 0 );
+            if ( ref_slice_cur ==  ref_slice )
+            {
+                std::cout << db_names[i] << " has the same reference" << std::endl;
+                analyse_run ( ref_slice_cur, "CA", 2 );
+            }
+            else
+            {
+                std::cout << db_names[i] << " has DIFFERENT reference: " << ref_slice_cur << std::endl;
+            }
+        }
+        catch (ngs::ErrorMsg const& e)
+        {
+            std::cout << db_names[i] << " failed: " << e.what() << std::endl;
+        }
+    }
 }
-*/
+
+TEST_CASE(CSRA1_Experimenting)
+{
+    // given: ref_name, position, insertion bases at this position
+    // to find: the real insertion position and bases
+
+    find_ref_in_runs ( "NC_011752.1", 2018 );
+
+    char const ref_name[] = "chr2";
+    int64_t ref_pos_ins = 100689;
+    char const insertion_bases[] = "AGTCAA";
+    char const db_path[] = "SRR822962";
+
+    ngs::ReadCollection run = ncbi::NGS::openReadCollection (db_path);
+    ngs::Reference ref = run.getReference ( ref_name );
+    
+    ngs::String ref_slice = get_ref_slice ( ref, ref_pos_ins, sizeof (insertion_bases) - 1 );
+    ngs::String query = make_query ( ref_slice, insertion_bases, sizeof (insertion_bases) - 1 );
+
+    std::cout
+        << "ref_slice: "
+        << ref_slice << std::endl
+        << "query    : " << query << std::endl;
+
+    // building sw-matrix for chosen reference slice and sequence
+
+    size_t COLUMNS = ref_slice.size() + 1;
+    size_t ROWS = query.size() + 1;
+    std::vector<int> matrix( ROWS * COLUMNS );
+
+    calculate_similarity_matrix ( query.c_str(), query.size(), ref_slice.c_str(), ref_slice.size(), &matrix[0] );
+
+    int print_width = 2;
+
+    printf ("  %*c ", print_width, '-');
+    for (size_t j = 1; j < COLUMNS; ++j)
+        printf ("%*c ", print_width, ref_slice[j - 1]);
+    printf ("\n");
+
+    for (size_t i = 0; i < ROWS; ++i)
+    {
+        if ( i == 0 )
+            printf ("%c ", '-');
+        else
+            printf ("%c ", query[i-1]);
+        
+        for (size_t j = 0; j < COLUMNS; ++j)
+        {
+            printf ("%*d ", print_width, matrix[i*COLUMNS + j]);
+        }
+        printf ("\n");
+    }
+
+    int row_start, col_start, row_end, col_end;
+    sw_find_indel_box ( & matrix[0], ROWS, COLUMNS, &row_start, &row_end, &col_start, &col_end );
+
+    printf ("indel box found: (%d, %d) - (%d, %d)\n", row_start, col_start, row_end, col_end );
+
+    printf ( "Possible indel:\n"
+             "reference: %.*s[%.*s]%.*s\n"
+             "query    : %.*s[%.*s]%.*s\n",
+                (col_start + 1), ref_slice.c_str(),
+                col_end - (col_start + 1), ref_slice.c_str() + (col_start + 1),
+                (int)(ref_slice.size() - col_end), ref_slice.c_str() + col_end,
+
+                (row_start + 1), query.c_str(),
+                row_end - (row_start + 1), query.c_str() + (row_start + 1),
+                (int)(query.size() - row_end), query.c_str() + row_end
+           );
+
+
+    REQUIRE_EQ ( 0, 0 );
+}
+#endif
 
 
 //////////////////////////////////////////// Main
