@@ -37,6 +37,7 @@
 #include <klib/rc.h> /* RC */
 
 #include <assert.h>
+#include <ctype.h> /* isspace */
 #include <errno.h>
 #include <fcntl.h> /* open */
 #include <signal.h> /* kill */
@@ -181,7 +182,9 @@ rc_t run_ascp(const char *path, const char *key,
     pid_t nPid = 0;
     int pipeto[2];      /* pipe to feed the exec'ed program input */
     int pipefrom[2];    /* pipe to get the exec'ed program output */
-    char *argv[64];
+#define ARGV_SZ 64
+    char *argv[ARGV_SZ];
+    char extraOptions[4096] = "";
 
     int i = 0;
     int ret = 0;
@@ -194,10 +197,27 @@ rc_t run_ascp(const char *path, const char *key,
         heartbeat = opt->heartbeat;
         host = opt->host;
         id = opt->id;
-        maxRate = opt->target_rate;
         quitting = opt->quitting;
         srcSz = opt->src_size;
         user = opt->user;
+
+        if (opt->ascp_options != NULL) {
+            size_t s = string_size(opt->ascp_options);
+            if (s >= sizeof extraOptions) {
+                LOGERR(klogErr,
+                    RC(rcExe, rcProcess, rcCreating, rcBuffer, rcInsufficient),
+                    "extra ascp options are ignored");
+                
+                maxRate = opt->target_rate;
+            }
+            else {
+                string_copy
+                    (extraOptions, sizeof extraOptions, opt->ascp_options, s);
+            }
+        }
+        else {
+            maxRate = opt->target_rate;
+        }
     }
 
     if (acc == NULL) {
@@ -240,6 +260,48 @@ rc_t run_ascp(const char *path, const char *key,
         argv[i++] = "--host";
         argv[i++] = (char*)user;
     }
+
+    if (extraOptions[0] != '\0') {
+        bool done = false;
+        char *c = extraOptions;
+        while (!done) {
+            while (true) {
+                if (*c == '\0') {
+                    break;
+                }
+                else if (isspace(*c)) {
+                    ++c;
+                }
+                else {
+                    break;
+                }
+            }
+            if (*c == '\0') {
+                break;
+            }
+            else {
+                argv[i++] = c;
+            }
+            while (true) {
+                if (*c == '\0') {
+                    done = true;
+                    break;
+                }
+                else if (isspace(*c)) {
+                    *(c++) = '\0';
+                    break;
+                }
+                ++c;
+            }
+            if (i > ARGV_SZ - 4) {
+                LOGERR(klogErr,
+                    RC(rcExe, rcProcess, rcCreating, rcBuffer, rcInsufficient),
+                    "too mary extra ascp options - some of them are ignored");
+                break;
+            }
+        }
+    }
+
     argv[i++] = (char*)src;
     argv[i++] = (char*)dest;
     argv[i++] = NULL;
