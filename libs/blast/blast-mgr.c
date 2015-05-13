@@ -110,11 +110,11 @@ VdbBlastMgr* CC VdbBlastInit(uint32_t *status)
 
     *status = eVdbBlastErr;
 
-    if (getenv("sratoolkit2_5_0") != NULL) {
+    if (getenv("sratoolkit2_5_1") != NULL) {
 #if _DEBUGGING
-fprintf(stderr, "DEBUGNG with sratoolkit.2.5.0 release\n");
+fprintf(stderr, "DEBUGNG with sratoolkit.2.5.1 release\n");
 #else
-fprintf(stderr, "RELEASE with sratoolkit.2.5.0 release\n");
+fprintf(stderr, "RELEASE with sratoolkit.2.5.1 release\n");
 #endif
     }
     item = calloc(1, sizeof *item);
