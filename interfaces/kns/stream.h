@@ -203,6 +203,18 @@ KNS_EXTERN rc_t CC KStreamMakeStdOut ( KStream **std_out );
 KNS_EXTERN rc_t CC KStreamMakeStdErr ( KStream **std_err );
 
 
+/* MakeBuffered
+ *  makes a one or two-way stream buffer
+ *  either "in" or "out" may be NULL, but not both
+ *  if neither are NULL, then the stream is two-way
+ *
+ *  each non-NULL stream will get a fixed-sized buffer
+ *  of the size indicated, or default value if size == 0
+ */
+KNS_EXTERN rc_t CC KStreamMakeBuffered ( KStream ** buffered,
+    const KStream * in, KStream * out, size_t bufer_size );
+
+
 #ifdef __cplusplus
 }
 #endif
