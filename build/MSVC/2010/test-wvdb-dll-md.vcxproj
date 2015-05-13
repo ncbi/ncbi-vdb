@@ -39,7 +39,7 @@
         <AdditionalDependencies>$(VDB_TARGET)lib\ktst-md.lib;%(AdditionalDependencies)</AdditionalDependencies>
         <AdditionalDependencies>$(VDB_TARGET)lib\zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
         <AdditionalDependencies>$(VDB_TARGET)lib\bz2.lib;%(AdditionalDependencies)</AdditionalDependencies>
-        <AdditionalDependencies>$(VDB_TARGET)bin\ncbi-wvdb-dll-md.lib;%(AdditionalDependencies)</AdditionalDependencies>
+        <AdditionalDependencies>$(VDB_TARGET)bin\ncbi-wvdb-md.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   

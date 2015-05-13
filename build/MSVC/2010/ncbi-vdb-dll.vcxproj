@@ -18,7 +18,13 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  
+    <PropertyGroup Label="Globals">
+        <VDB_TARGET_NAME>ncbi-vdb</VDB_TARGET_NAME>
+    </PropertyGroup>
+  
   <Import Project=".\dll-project.props" />
+    
   <PropertyGroup Label="Globals">
     <ProjectGuid>{5EBE08A5-476B-4005-A620-73F00E1C9235}</ProjectGuid>
   </PropertyGroup>

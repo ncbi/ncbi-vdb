@@ -23,7 +23,7 @@
   
   <ItemDefinitionGroup>
     <Link>
-      <AdditionalDependencies>$(VDB_TARGET)bin\ncbi-wvdb-dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(VDB_TARGET)bin\ncbi-wvdb.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   

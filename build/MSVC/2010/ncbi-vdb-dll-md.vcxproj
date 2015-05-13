@@ -19,6 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   
+    <PropertyGroup Label="Globals">
+        <VDB_TARGET_NAME>ncbi-vdb-md</VDB_TARGET_NAME>
+    </PropertyGroup>
   <Import Project=".\dll-project.props" />
   
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
