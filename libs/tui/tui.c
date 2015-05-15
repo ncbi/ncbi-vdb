@@ -66,7 +66,6 @@ LIB_EXPORT rc_t CC KTUIMake ( const KTUIMgr * mgr, struct KTUI ** self, uint32_t
             {
                 tui->mgr = mgr;
                 tui->timeout = timeout;
-                /* rc = KTUIMgrAddRef ( mgr );*/
                 if ( rc == 0 )
                     KRefcountInit( &tui->refcount, 1, "TUI", "make", tui_classname );
             }
@@ -204,8 +203,9 @@ LIB_EXPORT rc_t CC KTUIFlush ( struct KTUI * self, bool forced )
             set_ac( &ac, KTUI_a_none, KTUI_c_white, KTUI_c_white );
             clr_tui_screen( &self->screen, &ac, true );
         }
-            send_tui_screen( &self->screen, self->lines, self->cols );
-        /* this is platform specific ! */
+		
+		/* this is platform specific! in systui.c */
+        send_tui_screen( &self->screen, self->lines, self->cols );
     }
 
     return rc;
@@ -346,17 +346,18 @@ void CC put_kb_event( struct KTUI * self, int key, KTUI_key code )
     }
 }
 
-
 void CC put_mouse_event( struct KTUI * self, unsigned int x, unsigned int y, 
-                         KTUI_mouse_button button )
+                         KTUI_mouse_button button, KTUI_mouse_action action, uint32_t raw_event )
 {
     tui_event * event = event_ring_get_from_stock_or_make( &self->ev_ring );
     if ( event != NULL )
     {
         event->event_type = ktui_event_mouse;
         event->data.mouse_data.button = button;
+        event->data.mouse_data.action = action;	
         event->data.mouse_data.x = x;
         event->data.mouse_data.y = y;
+		event->data.mouse_data.raw_event = raw_event;
         event_ring_put( &self->ev_ring, event );
     }
 }

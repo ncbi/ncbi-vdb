@@ -87,21 +87,10 @@ void copy_event( tui_event * src, tui_event * dst )
     dst->event_type = src->event_type;
     switch( src->event_type )
     {
-        case ktui_event_none :  break;
-
-        case ktui_event_kb :   dst->data.kb_data.key = src->data.kb_data.key;
-                                dst->data.kb_data.code = src->data.kb_data.code;
-                                break;
-
-        case ktui_event_mouse : dst->data.mouse_data.x = src->data.mouse_data.x;
-                                dst->data.mouse_data.y = src->data.mouse_data.y;
-                                dst->data.mouse_data.button = src->data.mouse_data.button;
-                                break;
-
-        case ktui_event_window: dst->data.win_data.w = src->data.win_data.w;
-                                dst->data.win_data.h = src->data.win_data.h;
-                                break;
-
+        case ktui_event_none	: break;
+        case ktui_event_kb		: dst->data.kb_data = src->data.kb_data; break;
+        case ktui_event_mouse	: dst->data.mouse_data = src->data.mouse_data; break;
+        case ktui_event_window	: dst->data.win_data = src->data.win_data; break;
     }
 }
 
