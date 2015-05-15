@@ -1381,12 +1381,16 @@ rc_t TransformFileToDirectory(const KDirectory * dir,
                         TODO: check tools/libraries
                             that expect this returned code and fix them
                         rc = RC(rcVFS, rcEncryptionKey, rcOpening, rcEncryption,
-                             rcIncorrect ); */
+                             rcIncorrect );
                         PLOGERR (klogErr, (klogErr, rc,
                             "could not use '$(P)' as an "
                             "archive it was encrypted so the password"
                             " was possibly wrong or it is not SRA or"
-                            " TAR file", "P=%s", path_str));
+                            " TAR file", "P=%s", path_str)); */
+                        MGR_DEBUG(("TransformFileToDirectory: could not use "
+                            "'%s' as an archive - it was encrypted and "
+                            "the password was possibly wrong "
+                            "or it is not SRA or TAR file\n", path_str));
                     }
                     else {
                         PLOGERR (klogInfo, (klogInfo, rc,
