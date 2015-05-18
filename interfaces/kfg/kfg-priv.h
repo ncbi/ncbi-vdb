@@ -83,6 +83,13 @@ KFG_EXTERN rc_t CC KConfigMakeLocal ( KConfig **cfg,
 KFG_EXTERN rc_t CC KConfigPrintDebug ( const KConfig *self,
     const char *root_node_name );
 
+/* PrintPartial
+ *  print configuration while skipping some nodes
+ */
+KFG_EXTERN rc_t CC KConfigPrintPartial
+    ( const KConfig *self, int indent, uint32_t skipCount, va_list args );
+
+
 #ifdef __cplusplus
 }
 #endif

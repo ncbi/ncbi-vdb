@@ -466,7 +466,8 @@ static rc_t ReportCrntRepository(const ReportFuncs *f,
     return rc;
 }
 
-rc_t ReportKfg ( const ReportFuncs *f, uint32_t indent )
+rc_t ReportKfg
+    ( const ReportFuncs *f, uint32_t indent, uint32_t skipCount, va_list args )
 {
     rc_t rc = 0;
 
@@ -474,6 +475,7 @@ rc_t ReportKfg ( const ReportFuncs *f, uint32_t indent )
     const KRepositoryMgr *mgr = NULL;
 
     const char tag[] = "Configuration";
+
     reportOpen(indent, tag, 0);
 
     rc = KConfigMake(&cfg, NULL);
@@ -505,7 +507,7 @@ rc_t ReportKfg ( const ReportFuncs *f, uint32_t indent )
             {   rc = rc2; }
         }
         {
-            rc_t rc2 = KConfigPrint(cfg, indent);
+            rc_t rc2 = KConfigPrintPartial(cfg, indent, skipCount, args);
             if (rc == 0 && rc2 != 0)
             {   rc = rc2; }
         }

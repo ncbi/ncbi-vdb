@@ -124,7 +124,8 @@ typedef struct Report {
     rc_t ( CC * report_redirect ) ( KWrtHandler* handler,
         const char* filename, bool* to_file, bool finalize );
     rc_t ( CC * report_cwd ) ( const ReportFuncs *f, uint32_t indent );
-    rc_t ( CC * report_config ) ( const ReportFuncs *f, uint32_t indent );
+    rc_t ( CC * report_config ) ( const ReportFuncs *f,
+        uint32_t indent, uint32_t configNodesSkipCount, va_list args );
     ReportObj *report_vdb;
     ReportSoftware *report_software;
     Whack *whack_vdb;
@@ -575,8 +576,12 @@ static rc_t reportToStdErrSet(const Report* self, KWrtHandler* old_handler) {
  * When aForce == true then the report goes to strout:
  * it is done to insert it into test-sra output.
  */
-static rc_t _ReportFinalize(rc_t rc_in, bool aForce) {
+static rc_t _ReportFinalize
+    (rc_t rc_in, bool aForce, uint32_t configNodesSkipCount, ...)
+{
     rc_t rc = 0;
+
+    va_list args;
 
     const char* report_arg = NULL;
 
@@ -588,6 +593,8 @@ static rc_t _ReportFinalize(rc_t rc_in, bool aForce) {
     if (self == NULL) {
         return rc;
     }
+
+    va_start(args, configNodesSkipCount);
 
     if (GetRCTarget(rc_in) == rcArgv) {
         force = false;
@@ -701,8 +708,8 @@ static rc_t _ReportFinalize(rc_t rc_in, bool aForce) {
 
                 if ( self -> report_config != NULL )
                 {
-                    rc_t rc2 = ( * self -> report_config )
-                        ( & report_funcs, indent + 1);
+                    rc_t rc2 = ( * self -> report_config ) ( & report_funcs,
+                        indent + 1, configNodesSkipCount, args );
                     if (rc == 0 && rc2 != 0)
                     {   rc = rc2; }
                 }
@@ -756,6 +763,8 @@ static rc_t _ReportFinalize(rc_t rc_in, bool aForce) {
 
     ReportRelease();
 
+    va_end(args);
+
     return rc;
 }
 
@@ -764,11 +773,11 @@ static rc_t _ReportFinalize(rc_t rc_in, bool aForce) {
  * Then clean itself.
  */
 LIB_EXPORT rc_t CC ReportFinalize(rc_t rc_in) {
-    return _ReportFinalize(rc_in, false);
+    return _ReportFinalize(rc_in, false, 0);
 }
 
 LIB_EXPORT rc_t CC ReportForceFinalize(void) {
-    return _ReportFinalize(0, true);
+    return _ReportFinalize(0, true, 1, "VDBCOPY");
 }
 
 static
@@ -841,7 +850,9 @@ LIB_EXPORT void CC ReportInitKFS (
 
 /* InitConfig
  */
-LIB_EXPORT const char* CC ReportInitConfig ( rc_t ( CC * report ) ( const ReportFuncs *f, uint32_t indent ) )
+LIB_EXPORT const char* CC ReportInitConfig ( rc_t ( CC * report )
+    ( const ReportFuncs *f, uint32_t indent,
+      uint32_t configNodesSkipCount, va_list args ) )
 {
     Report* self = NULL;
     ReportGet(&self);
