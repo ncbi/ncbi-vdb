@@ -256,17 +256,17 @@ rc_t WColumnSetDefault ( VColumn *vcol,
     self -> have_dflt = false;
     self -> dflt_last = false;
 
+    /* set the element size */
+    rc = KDataBufferCast ( & self -> dflt, & self -> dflt, elem_bits, false );
+    if ( rc != 0 )
+        return rc;
+        
     /* allow NULL setting */
     if ( buffer == NULL )
     {
         self -> have_dflt = true;
         return 0;
     }
-
-    /* set the element size */
-    rc = KDataBufferCast ( & self -> dflt, & self -> dflt, elem_bits, false );
-    if ( rc != 0 )
-        return rc;
 
     /* set the length */
     rc = KDataBufferResize ( & self -> dflt, len );
