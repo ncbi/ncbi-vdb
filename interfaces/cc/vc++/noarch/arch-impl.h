@@ -89,6 +89,60 @@ int32_t uint32_lsbit ( uint32_t self )
     return uint16_lsbit ( self >> 16 ) + 16;
 }
 
+static const int8_t msbit_map [] =
+{
+    -1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3,
+     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+     5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+     5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+     6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+     6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+     6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+     6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+     7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+     7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+     7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+     7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+     7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+     7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+     7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+     7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7
+};
+
+static __inline
+int16_t uint16_msbit ( uint16_t self )
+{
+    uint8_t upper = ( uint8_t ) ( self >> 8 );
+
+    /* detect no bits are set */
+    if ( self == 0 )
+        return -1;
+
+    /* detect bits set in upper byte */
+    if ( upper != 0 )
+        return msbit_map [ upper ] + 8;
+
+    /* return bit set in lower byte */
+    return msbit_map [ ( uint8_t ) self ];
+}
+
+static __inline
+int32_t uint32_msbit ( uint32_t self )
+{
+    uint16_t upper = ( uint16_t ) ( self >> 16 );
+
+    /* detect no bits are set */
+    if ( self == 0 )
+        return -1;
+
+    /* detect bits set in upper word */
+    if ( upper != 0 )
+        return uint16_msbit ( upper ) + 16;
+
+    /* return bit set in lower word */
+    return uint16_msbit ( ( uint16_t ) self );
+}
+
 typedef struct int128_t int128_t;
 struct int128_t
 {

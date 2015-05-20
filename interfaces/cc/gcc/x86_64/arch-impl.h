@@ -90,6 +90,50 @@ int32_t uint32_lsbit ( uint32_t self )
     return rtn;
 }
 
+static __inline__
+int16_t uint16_msbit ( uint16_t self )
+{
+    int16_t rtn;
+#if USE_GCC_BUILTIN
+    if ( self == 0 ) return -1;
+    rtn = ( int16_t ) 31 - __builtin_clz ( ( uint32_t ) self );
+#else
+    __asm__ __volatile__
+    (
+        "bsr %%ax, %%ax;"
+        "jnz 1f;"
+        "xor %%eax, %%eax;"
+        "dec %%eax;"
+        "1:"
+        : "=a" ( rtn )
+        : "a" ( self )
+    );
+#endif
+    return rtn;
+}
+
+static __inline__
+int32_t uint32_msbit ( uint32_t self )
+{
+    int32_t rtn;
+#if USE_GCC_BUILTIN
+    if ( self == 0 ) return -1;
+    rtn = 31 - __builtin_clz ( self );
+#else
+    __asm__ __volatile__
+    (
+        "bsr %%eax, %%eax;"
+        "jnz 1f;"
+        "xor %%eax, %%eax;"
+        "dec %%eax;"
+        "1:"
+        : "=a" ( rtn )
+        : "a" ( self )
+    );
+#endif
+    return rtn;
+}
+
 typedef struct int128_t int128_t;
 struct int128_t
 {
