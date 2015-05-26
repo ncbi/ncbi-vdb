@@ -60,6 +60,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <assert.h>
 #include <errno.h>
 

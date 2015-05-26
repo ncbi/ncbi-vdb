@@ -51,10 +51,10 @@ struct KfgConfigNamelist;
 #include <vfs/path.h>
 #include <strtol.h>
 #include <sysalloc.h>
-#include <os-native.h>
 
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <va_copy.h>

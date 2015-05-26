@@ -33,6 +33,7 @@
 
 
 #include <ctype.h>
+#include <os-native.h>
 #include <stdlib.h>
 
 #include <kfg/kfg-priv.h>

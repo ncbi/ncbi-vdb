@@ -38,6 +38,7 @@
 
 #include <assert.h>
 #include <ctype.h> /* isspace */
+#include <os-native.h>
 #include <errno.h>
 #include <fcntl.h> /* open */
 #include <signal.h> /* kill */

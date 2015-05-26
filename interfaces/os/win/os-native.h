@@ -32,6 +32,14 @@
 #include "stdint.h"
 #endif
 
+#ifndef _h_klib_defs_
+#include <klib/defs.h>
+#endif
+
+#ifndef _h_klib_text_
+#include <klib/text.h>
+#endif
+
 /* specify at least NT 4.0 */
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0400
@@ -44,14 +52,6 @@
 #include <ws2tcpip.h>
 
 #include <limits.h>
-
-#ifndef _h_klib_defs_
-#include <klib/defs.h>
-#endif
-
-#ifndef _h_klib_text_
-#include <klib/text.h>
-#endif
 
 #include <ctype.h>
 #include <direct.h>
@@ -97,6 +97,21 @@ struct timeout_t
 #define strndup( str, n ) \
     string_dup ( ( str ), ( n ) )
 
+int __cdecl isalnum ( int ch );
+int __cdecl isalpha ( int ch );
+int __cdecl isascii ( int ch );
+int __cdecl iscntrl ( int ch );
+int __cdecl isdigit ( int ch );
+int __cdecl isgraph ( int ch );
+int __cdecl islower ( int ch );
+int __cdecl isupper ( int ch );
+int __cdecl isprint ( int ch );
+int __cdecl ispunct ( int ch );
+int __cdecl isspace ( int ch );
+int __cdecl isxdigit ( int ch );
+int __cdecl tolower ( int ch );
+int __cdecl toupper ( int ch );
+
 static __inline int isblank(int x)
 {
     return (((x) == ' ') || ((x) == '\t'));
@@ -104,7 +119,7 @@ static __inline int isblank(int x)
 
 KLIB_EXTERN int CC snprintf ( char * buffer, size_t bufsize, const char * format, ... );
 
-static __inline__
+static __inline
 void *memrchr ( const void *s, int c, size_t n )
 {
     size_t i;
@@ -198,6 +213,21 @@ long int lround ( double x )
         return LONG_MIN;
     return ( long int ) val;
 }
+
+#define isalnum( ch ) isalnum   ( ( unsigned char ) ( ch ) )
+#define isalpha( ch ) isalpha   ( ( unsigned char ) ( ch ) )
+#define isascii( ch ) isascii   ( ( unsigned char ) ( ch ) )
+#define iscntrl( ch ) iscntrl   ( ( unsigned char ) ( ch ) )
+#define isdigit( ch ) isdigit   ( ( unsigned char ) ( ch ) )
+#define isgraph( ch ) isgraph   ( ( unsigned char ) ( ch ) )
+#define islower( ch ) islower   ( ( unsigned char ) ( ch ) )
+#define isupper( ch ) isupper   ( ( unsigned char ) ( ch ) )
+#define isprint( ch ) isprint   ( ( unsigned char ) ( ch ) )
+#define ispunct( ch ) ispunct   ( ( unsigned char ) ( ch ) )
+#define isspace( ch ) isspace   ( ( unsigned char ) ( ch ) )
+#define isxdigit( ch ) isxdigit ( ( unsigned char ) ( ch ) )
+#define tolower( ch ) tolower ( ( unsigned char ) ( ch ) )
+#define toupper( ch ) toupper ( ( unsigned char ) ( ch ) )
 
 #ifdef __cplusplus
 }

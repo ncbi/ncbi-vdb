@@ -56,13 +56,15 @@
 #if 1
 /*_DEBUGGING*/
 #include <stdio.h>
-#include <os-native.h>
 #endif
 
 #include <endian.h>
 #include <byteswap.h>
 
 #include <zlib.h>
+
+#include <os-native.h>
+
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 static uint16_t LE2HUI16(void const *X) { uint16_t y; memcpy(&y, X, sizeof(y)); return y; }
@@ -2227,7 +2229,7 @@ rc_t BAMFileReadNoCopy(BAMFile *const self, unsigned actsize[], BAMAlignment rhs
         if (i32 <= 0)
             return RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
         
-        if (maxPeek < i32 + 4)
+        if (maxPeek < ( uint32_t ) i32 + 4)
             return RC(rcAlign, rcFile, rcReading, rcBuffer, rcNotAvailable);
         
         isgood = BAMAlignmentInitLog(rhs, maxsize, i32, BAMFilePeek(self, 4));

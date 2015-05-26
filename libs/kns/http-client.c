@@ -54,7 +54,6 @@ typedef struct KClientHttpStream KClientHttpStream;
 #include <klib/vector.h>
 #include <kproc/timeout.h>
 
-#include <os-native.h>
 #include <strtol.h>
 #include <va_copy.h>
 
@@ -65,6 +64,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <assert.h>
 
 #include "http-priv.h"

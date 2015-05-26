@@ -50,13 +50,13 @@
 #include "reader-cmn.h"
 #include "reference-cmn.h"
 #include "debug.h"
-#include <os-native.h>
 #include <sysalloc.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <assert.h>
 
 /*

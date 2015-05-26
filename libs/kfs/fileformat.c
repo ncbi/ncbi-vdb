@@ -38,6 +38,7 @@
 
 #include <stdio.h> /* remove after debugging */
 #include <ctype.h>
+#include <os-native.h>
 #include <string.h>
 
 struct KDirectory;
