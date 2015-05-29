@@ -963,11 +963,12 @@ rc_t ReferenceSeq_Attach(ReferenceMgr *const self, ReferenceSeq *const rs)
 }
 
 static
-rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self, ReferenceSeq **const rslt,
+rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
+                          ReferenceSeq **const rslt,
                           char const id[],
                           unsigned const seq_len,
                           uint8_t const md5[16],
-                          bool allowMultiMapping,
+                          bool const allowMultiMapping,
                           bool wasRenamed[])
 {
     unsigned const idLen = (unsigned)string_size(id);
@@ -1924,7 +1925,10 @@ rc_t ReferenceMgr_LoadSeq(ReferenceMgr *const self, ReferenceSeq *obj)
 
 LIB_EXPORT rc_t CC ReferenceMgr_GetSeq(ReferenceMgr const *const cself,
                                        ReferenceSeq const **const seq,
-                                       char const id[], bool *shouldUnmap)
+                                       const char *const id,
+                                       bool *const shouldUnmap,
+                                       bool const allowMultiMapping,
+                                       bool wasRenamed[])
 {
     ReferenceMgr *const self = (ReferenceMgr *)cself;
     
@@ -1935,8 +1939,7 @@ LIB_EXPORT rc_t CC ReferenceMgr_GetSeq(ReferenceMgr const *const cself,
     *shouldUnmap = false;
     {
         ReferenceSeq *obj;
-        bool wasRenamed = false;
-        rc_t rc = ReferenceMgr_OpenSeq(self, &obj, id, 0, NULL, true, &wasRenamed);
+        rc_t rc = ReferenceMgr_OpenSeq(self, &obj, id, 0, NULL, allowMultiMapping, wasRenamed);
         
         if (rc) return rc;
         if (obj->type == rst_unmapped) {
@@ -1952,94 +1955,22 @@ LIB_EXPORT rc_t CC ReferenceMgr_GetSeq(ReferenceMgr const *const cself,
     return 0;
 }
 
-LIB_EXPORT rc_t CC ReferenceMgr_Verify(const ReferenceMgr* cself, const char* id, INSDC_coord_len seq_len, const uint8_t* md5)
+LIB_EXPORT rc_t CC ReferenceMgr_Verify(ReferenceMgr const *const cself,
+                                       char const id[],
+                                       INSDC_coord_len const length,
+                                       uint8_t const md5[16],
+                                       bool const allowMultiMapping,
+                                       bool wasRenamed[])
 {
-#if 0
-    rc_t rc = 0;
-    ReferenceSeq* rseq;
-    const KFile* kf;
-    
-    if(cself == NULL || id == NULL) {
-        rc = RC(rcAlign, rcFile, rcConstructing, rcParam, rcNull);
-    } else if((rc = ReferenceMgr_Find(cself, id, &rseq, &kf)) == 0) {
-        if(rseq == NULL) {
-            uint64_t size = 0;
-            if((rc = KFileSize(kf, &size)) == 0 && size == 0) {
-                rc = RC(rcAlign, rcTable, rcValidating, rcSize, rcEmpty);
-            }
-            KFileRelease(kf);
-        } else if(rseq->local) {
-            if(rseq->seq_len != seq_len) {
-                rc = RC(rcAlign, rcFile, rcValidating, rcSize, rcUnequal);
-                ALIGN_DBGERRP("%s->%s SEQ_LEN verification", rc, id, rseq->accession);
-            }
-            if(rc == 0 && md5 != NULL && memcmp(md5, rseq->u.local.md5, sizeof(rseq->u.local.md5)) != 0) {
-                unsigned i;
-                rc = RC(rcAlign, rcTable, rcValidating, rcChecksum, rcUnequal);
-                ALIGN_DBGERRP("%s->%s MD5 verification", rc, id, rseq->accession);
-                ALIGN_DBGF((" local '"));
-                for(i = 0; i < sizeof(rseq->u.local.md5); i++) {
-                    ALIGN_DBGF(("%02hx", rseq->u.local.md5[i]));
-                }
-                ALIGN_DBGF(("'  <> match '"));
-                for(i = 0; i < sizeof(rseq->u.local.md5); i++) {
-                    ALIGN_DBGF(("%02hx", md5[i]));
-                }
-                ALIGN_DBGF(("'\n"));
-            } else {
-                ALIGN_DBG("%s->%s MD5 verification ok", id, rseq->accession);
-            }
-        } else {
-            const RefSeq* tmp = rseq->u.refseq.o;
-            INSDC_coord_len o_len;
-            const uint8_t* o_md5;
-
-            if(tmp == NULL) {
-                if((rc = RefSeqMgr_GetSeq(cself->rmgr, &tmp, rseq->accession, string_size(rseq->accession))) != 0 ||
-                    (rc = RefSeq_SeqLength(tmp, &o_len)) != 0) {
-                    ALIGN_DBGERRP("%s->%s verification", rc, id, rseq->accession);
-                }
-            } else {
-                o_len = rseq->seq_len;
-            }
-            if(rc == 0) {
-                if(seq_len != 0 && o_len != seq_len) {
-                    rc = RC(rcAlign, rcTable, rcValidating, rcSize, rcUnequal);
-                    ALIGN_DBGERRP("%s->%s SEQ_LEN verification", rc, id, rseq->accession);
-                } else {
-                    ALIGN_DBG("%s->%s SEQ_LEN verification ok", id, rseq->accession);
-                }
-            }
-            if(rc == 0 && (rc = RefSeq_MD5(tmp, &o_md5)) == 0) {
-                if(md5 != NULL && o_md5 != NULL && memcmp(md5, o_md5, sizeof(rseq->u.local.md5)) != 0) {
-                    rc = RC(rcAlign, rcTable, rcValidating, rcChecksum, rcUnequal);
-                    ALIGN_DBGERRP("%s->%s MD5 verification", rc, id, rseq->accession);
-                } else {
-                    ALIGN_DBG("%s->%s MD5 verification ok", id, rseq->accession);
-                }
-            }
-            if(tmp != rseq->u.refseq.o) {
-                RefSeq_Release(tmp);
-            }
-        }
-    }
-    if(rc == 0) {
-        ALIGN_DBG("%s verification ok", id);
-    } else {
-        ALIGN_DBGERRP("%s verification", rc, id);
-    }
-    return rc;
-#else
     if (cself == NULL || id == NULL)
         return RC(rcAlign, rcFile, rcValidating, rcParam, rcNull);
     {
         ReferenceMgr *self = (ReferenceMgr *)cself;
         ReferenceSeq *rseq;
-        bool wasRenamed = false;
-        rc_t rc = ReferenceMgr_OpenSeq(self, &rseq, id, seq_len, md5, true, &wasRenamed);
+        rc_t rc = ReferenceMgr_OpenSeq(self, &rseq, id, length, md5, allowMultiMapping, wasRenamed);
         
         if (rc) return rc;
-        if (rseq->seq_len != seq_len) {
+        if (rseq->seq_len != length) {
             rc = RC(rcAlign, rcFile, rcValidating, rcSize, rcUnequal);
             ALIGN_DBGERRP("%s->%s SEQ_LEN verification", rc, id, rseq->seqId);
         }
@@ -2067,7 +1998,6 @@ LIB_EXPORT rc_t CC ReferenceMgr_Verify(const ReferenceMgr* cself, const char* id
         }
         return rc;
     }
-#endif
 }
 
 LIB_EXPORT rc_t CC ReferenceMgr_FastaPath(const ReferenceMgr* cself, const char* fasta_path)
@@ -2564,13 +2494,15 @@ LIB_EXPORT rc_t CC ReferenceMgr_Compress(const ReferenceMgr* cself,
 {
     rc_t rc = 0;
     bool shouldUnmap = false;
+    bool wasRenamed = false;
     const ReferenceSeq* refseq;
 
     if(cself == NULL || id == NULL) {
         rc = RC(rcAlign, rcFile, rcProcessing, rcParam, rcNull);
     }
-    else if((rc = ReferenceMgr_GetSeq(cself, &refseq, id, &shouldUnmap)) == 0) {
+    else if((rc = ReferenceMgr_GetSeq(cself, &refseq, id, &shouldUnmap, false, &wasRenamed)) == 0) {
         assert(shouldUnmap == false);
+        assert(wasRenamed == false);
         rc = ReferenceSeq_Compress(refseq, options, offset, seq, seq_len, cigar, cigar_len,
                                    allele_offset, allele, allele_len,offset_in_allele,
                                    allele_cigar, allele_cigar_len, rna_orient, data);
@@ -2918,6 +2850,14 @@ LIB_EXPORT rc_t CC ReferenceSeq_Get1stRow(const ReferenceSeq* cself, int64_t* ro
         *row_id = cself->start_rowid;
     }
     return rc;
+}
+
+LIB_EXPORT rc_t CC ReferenceSeq_GetID(ReferenceSeq const *const self, char const **const rslt)
+{
+    assert(self != NULL);
+    assert(rslt != NULL);
+    *rslt = self->id;
+    return 0;
 }
 
 LIB_EXPORT rc_t CC ReferenceSeq_AddCoverage(const ReferenceSeq* cself, INSDC_coord_zero offset, const ReferenceSeqCoverage* data)

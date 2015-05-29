@@ -112,7 +112,8 @@ rc_t ReferenceInit(Reference *self,
 
 static
 void Unsorted(Reference *self) {
-    bool dummy;
+    bool dummy1 = false;
+    bool dummy2 = false;
     
     (void)LOGMSG(klogWarn, "Alignments are unsorted");
     
@@ -120,7 +121,7 @@ void Unsorted(Reference *self) {
     
     ReferenceSeq_Release(self->rseq);
     ReferenceMgr_SetCache(self->mgr, UNSORTED_CACHE_SIZE, UNSORTED_OPEN_TABLE_LIMIT);
-    ReferenceMgr_GetSeq(self->mgr, &self->rseq, self->last_id, &dummy);
+    ReferenceMgr_GetSeq(self->mgr, &self->rseq, self->last_id, &dummy1, true, &dummy2);
     
     KDataBufferWhack(&self->sec_align);
     KDataBufferWhack(&self->pri_align);
@@ -223,6 +224,7 @@ rc_t ReferenceSetFile(Reference *self, const char id[],
                       uint32_t maxSeqLen, bool *shouldUnmap)
 {
     ReferenceSeq const *rseq;
+    bool wasRenamed = false;
     unsigned n;
     
     for (n = 0; ; ++n) {
@@ -237,7 +239,7 @@ rc_t ReferenceSetFile(Reference *self, const char id[],
         return RC(rcApp, rcTable, rcAccessing, rcParam, rcTooLong);
     
     BAIL_ON_FAIL(FlushBuffers(self, self->length, true, true, maxSeqLen));
-    BAIL_ON_FAIL(ReferenceMgr_GetSeq(self->mgr, &rseq, id, shouldUnmap));
+    BAIL_ON_FAIL(ReferenceMgr_GetSeq(self->mgr, &rseq, id, shouldUnmap, true, &wasRenamed));
 
     if (self->rseq)
         ReferenceSeq_Release(self->rseq);
@@ -256,14 +258,16 @@ rc_t ReferenceSetFile(Reference *self, const char id[],
 
 rc_t ReferenceVerify(Reference const *self, char const id[], uint64_t length, uint8_t const md5[16])
 {
-    return ReferenceMgr_Verify(self->mgr, id, length, md5);
+    bool dummy = false;
+    return ReferenceMgr_Verify(self->mgr, id, length, md5, true, &dummy);
 }
 
 rc_t ReferenceGet1stRow(Reference const *self, int64_t *refID, char const refName[])
 {
     ReferenceSeq const *rseq;
     bool shouldUnmap = false;
-    rc_t rc = ReferenceMgr_GetSeq(self->mgr, &rseq, refName, &shouldUnmap);
+    bool wasRenamed = false;
+    rc_t rc = ReferenceMgr_GetSeq(self->mgr, &rseq, refName, &shouldUnmap, true, &wasRenamed);
     if (rc == 0) {
         assert(shouldUnmap == false);
         rc = ReferenceSeq_Get1stRow(rseq, refID);
