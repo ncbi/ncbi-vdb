@@ -50,13 +50,13 @@
 #include "reader-cmn.h"
 #include "reference-cmn.h"
 #include "debug.h"
+#include <os-native.h>
 #include <sysalloc.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <os-native.h>
 #include <assert.h>
 
 /*
@@ -340,31 +340,39 @@ unsigned str_weight(char const str[], char const qry[], unsigned const qry_len)
     return wt;
 }
 
+static key_id_t key_id_make(char const key[], size_t const id)
+{
+    key_id_t kid;
+    
+    kid.id = id;
+    kid.key = string_dup(key, string_size(key));
+
+    return kid;
+}
+
 static
 rc_t ReferenceMgr_AddId(ReferenceMgr *const self, char const ID[],
                         ReferenceSeq const *const obj)
 {
-    unsigned const last_id = (unsigned)self->refSeqsById.elem_count;
-    char *const id = string_dup(ID, string_size(ID));
+    key_id_t const k_id = key_id_make(ID, obj - self->refSeq);
     
-    if (id) {
+    if (k_id.key) {
+        unsigned const last_id = (unsigned)self->refSeqsById.elem_count;
         rc_t rc = KDataBufferResize(&self->refSeqsById, last_id + 1);
         
         if (rc == 0) {
-            key_id_t *kid = &((key_id_t *)self->refSeqsById.base)[last_id];
+            key_id_t *const k_ids = (key_id_t *)self->refSeqsById.base;
             
-            kid->key = id;
-            kid->id = obj - self->refSeq;
+            k_ids[last_id] = k_id;
             
-            ksort(self->refSeqsById.base, self->refSeqsById.elem_count, sizeof(key_id_t), key_id_cmp, NULL);
+            ksort(k_ids, self->refSeqsById.elem_count, sizeof(key_id_t), key_id_cmp, NULL);
         }
         else
-            free(id);
+            free((void *)k_id.key);
         
         return rc;
     }
-    else
-        return RC(rcAlign, rcIndex, rcInserting, rcMemory, rcExhausted);
+    return RC(rcAlign, rcIndex, rcInserting, rcMemory, rcExhausted);
 }
 
 static
@@ -958,7 +966,9 @@ static
 rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self, ReferenceSeq **const rslt,
                           char const id[],
                           unsigned const seq_len,
-                          uint8_t const md5[16])
+                          uint8_t const md5[16],
+                          bool allowMultiMapping,
+                          bool wasRenamed[])
 {
     unsigned const idLen = (unsigned)string_size(id);
     key_id_t const *const fnd = ReferenceMgr_FindId(self, id);
@@ -1112,17 +1122,42 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self, ReferenceSeq **const rslt,
         }
         else {
             ReferenceSeq *alt = NULL;
-            
+
+            if (!allowMultiMapping) {
+                /* The old behavior was to allow multiple name to SEQID mappings
+                 * but this causes some troubles with other tools.
+                 * This loop is to re-use any open reference with the same
+                 * SEQID.
+                 */
+                for (i = 0; i != n; ++i) {
+                    ReferenceSeq *const rs = &self->refSeq[i];
+                    
+                    if (   rs->type != rst_dead
+                        && rs->type != rst_unattached
+                        && rs != seq
+                        && rs->seqId != NULL
+                        && strcasecmp(id, rs->seqId) == 0)
+                    {
+                        *rslt = rs;
+                        wasRenamed[0] = true;
+                        return 0;
+                    }
+                }
+            }
             /* perform ambiguity check
              *
              * This search follows the same pattern as the main search but has
              * more stringent conditions.  One hopes that it fails to find
              * anything.
              */
+            
+            /* This loop checks to see if there are any open references with
+             * the same ID and sequence length
+             */
             for (i = 0; i != n; ++i) {
                 ReferenceSeq *const rs = &self->refSeq[i];
                 
-                if (  rs->type != rst_dead
+                if (   rs->type != rst_dead
                     && rs->type != rst_unattached
                     && rs != seq
                     && rs->id != NULL
@@ -1134,10 +1169,13 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self, ReferenceSeq **const rslt,
                 }
             }
             if (alt == NULL) {
+                /* This loop checks to see if there are any open references with
+                 * the same SEQID and sequence length
+                 */
                 for (i = 0; i != n; ++i) {
                     ReferenceSeq *const rs = &self->refSeq[i];
                     
-                    if (  rs->type != rst_dead
+                    if (   rs->type != rst_dead
                         && rs->type != rst_unattached
                         && rs != seq
                         && rs->seqId != NULL
@@ -1153,6 +1191,9 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self, ReferenceSeq **const rslt,
                 unsigned best_wt = 0;
                 unsigned best = n;
                 
+                /* This loop checks to see if there are any references with
+                 * a better fuzzy match
+                 */
                 for (i = 0; i != n; ++i) {
                     ReferenceSeq const *const rs = &self->refSeq[i];
                     
@@ -1894,7 +1935,8 @@ LIB_EXPORT rc_t CC ReferenceMgr_GetSeq(ReferenceMgr const *const cself,
     *shouldUnmap = false;
     {
         ReferenceSeq *obj;
-        rc_t rc = ReferenceMgr_OpenSeq(self, &obj, id, 0, NULL);
+        bool wasRenamed = false;
+        rc_t rc = ReferenceMgr_OpenSeq(self, &obj, id, 0, NULL, true, &wasRenamed);
         
         if (rc) return rc;
         if (obj->type == rst_unmapped) {
@@ -1993,7 +2035,8 @@ LIB_EXPORT rc_t CC ReferenceMgr_Verify(const ReferenceMgr* cself, const char* id
     {
         ReferenceMgr *self = (ReferenceMgr *)cself;
         ReferenceSeq *rseq;
-        rc_t rc = ReferenceMgr_OpenSeq(self, &rseq, id, seq_len, md5);
+        bool wasRenamed = false;
+        rc_t rc = ReferenceMgr_OpenSeq(self, &rseq, id, seq_len, md5, true, &wasRenamed);
         
         if (rc) return rc;
         if (rseq->seq_len != seq_len) {
