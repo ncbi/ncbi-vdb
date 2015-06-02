@@ -49,13 +49,13 @@
 #include <klib/printf.h>
 #include <klib/out.h>
 #include <klib/rc.h>
-#include <os-native.h>      /* because of snprintf on windows */
 #include <sysalloc.h>
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <assert.h>
 
 
@@ -405,7 +405,7 @@ struct VIncludedPath
  * Sort
  */
 static
-int CC VIncludedPathCmp ( const void *item, const BSTNode *n )
+int64_t CC VIncludedPathCmp ( const void *item, const BSTNode *n )
 {
     const char *a = item;
     const VIncludedPath *b = ( const VIncludedPath* ) n;
@@ -413,7 +413,7 @@ int CC VIncludedPathCmp ( const void *item, const BSTNode *n )
 }
 
 static
-int CC VIncludedPathSort ( const BSTNode *item, const BSTNode *n )
+int64_t CC VIncludedPathSort ( const BSTNode *item, const BSTNode *n )
 {
     const VIncludedPath *a = ( const VIncludedPath* ) item;
     const VIncludedPath *b = ( const VIncludedPath* ) n;
@@ -421,11 +421,11 @@ int CC VIncludedPathSort ( const BSTNode *item, const BSTNode *n )
 }
 
 static
-int CC VIncludedPathSortByOrder ( const BSTNode *item, const BSTNode *n )
+int64_t CC VIncludedPathSortByOrder ( const BSTNode *item, const BSTNode *n )
 {
     const VIncludedPath *a = ( const VIncludedPath* ) item;
     const VIncludedPath *b = ( const VIncludedPath* ) n;
-    return ( int ) a -> ord - ( int ) b -> ord;
+    return ( int64_t ) a -> ord - ( int64_t ) b -> ord;
 }
 
 /* Make

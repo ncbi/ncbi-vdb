@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 
 #include <strtol.h>
 
@@ -348,13 +349,13 @@ LIB_EXPORT rc_t CC SRACacheGetUsage(SRACache* self, SRACacheUsage* usage)
 }
 
 static
-int CC IndexCmp (const BSTNode * item, const BSTNode * n)
+int64_t CC IndexCmp (const BSTNode * item, const BSTNode * n)
 {
     return StringCompare( ((const SRACacheIndex *)item)->prefix, ((const SRACacheIndex *)n)->prefix );
 }
     
 static
-int CC PrefixCmp (const void * item, const BSTNode * n)
+int64_t CC PrefixCmp (const void * item, const BSTNode * n)
 {
     return StringCompare( (const String*)item, ((const SRACacheIndex *)n)->prefix );
 }

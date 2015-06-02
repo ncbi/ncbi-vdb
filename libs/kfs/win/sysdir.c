@@ -56,6 +56,8 @@ struct KSysDir;
 
 #include "lnk_tools.c"
 
+#include <os-native.h>
+
 #ifndef IO_REPARSE_TAG_SYMLINK
 #define IO_REPARSE_TAG_SYMLINK 0xA000000C
 #endif

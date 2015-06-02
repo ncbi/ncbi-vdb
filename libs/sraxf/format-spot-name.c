@@ -37,6 +37,7 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
+#include <os-native.h>
 
 /* format_spot_name ( ascii name_fmt, I32 X, I32 Y * ascii spot_name );
  *  given a name format string, X, and Y

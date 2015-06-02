@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <assert.h>
 
 enum

@@ -55,9 +55,10 @@
 #include <klib/log.h>
 #include <klib/debug.h>
 #include <klib/rc.h>
-#include <os-native.h>
 #include <sysalloc.h>
 
+#include <ctype.h>
+#include <os-native.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -1363,7 +1364,6 @@ rc_t VFunctionProdCallByteswap ( VFunctionProd *self, VBlob **vblob,
 }
 
 #if _DEBUGGING
-#include <ctype.h>
 
 static
 rc_t VFunctionProdCallCompare1(VFunctionProd *self, VBlob **vblob, int64_t id, uint32_t cnt) {
@@ -2050,14 +2050,14 @@ void CC VProductionWhack ( void *item, void *owned )
  *  sort item is a VProduction
  *  n is always a VProduction
  */
-LIB_EXPORT int CC VProductionCmp ( const void *item, const void *n )
+LIB_EXPORT int64_t CC VProductionCmp ( const void *item, const void *n )
 {
     const VCtxId *a = item;
     const VProduction *b = n;
     return VCtxIdCmp ( a, & b -> cid );
 }
 
-LIB_EXPORT int CC VProductionSort ( const void *item, const void *n )
+LIB_EXPORT int64_t CC VProductionSort ( const void *item, const void *n )
 {
     const VProduction *a = item;
     const VProduction *b = n;

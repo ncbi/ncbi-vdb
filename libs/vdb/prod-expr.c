@@ -260,14 +260,12 @@ rc_t VProdResolveBestColumn ( const VProdResolve *self,
 }
 
 static
-int CC order_column ( const BSTNode *item, const BSTNode *n )
+int64_t CC order_column ( const BSTNode *item, const BSTNode *n )
 {
     const SColumnBestFit *a = ( const SColumnBestFit* ) item;
     const SColumnBestFit *b = ( const SColumnBestFit* ) n;
-    if ( a -> distance < b -> distance )
-        return -1;
-    if ( a -> distance > b -> distance )
-        return 1;
+    if ( a -> distance != b -> distance )
+        return (int64_t) a -> distance - (int64_t) b -> distance;
     return VCtxIdCmp ( & a -> scol -> cid, & b -> scol -> cid );
 }
 

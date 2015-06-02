@@ -125,7 +125,7 @@ struct KMAttrNode
 };
 
 static
-int CC KMAttrNodeCmp ( const void *item, const BSTNode *n )
+int64_t CC KMAttrNodeCmp ( const void *item, const BSTNode *n )
 {
 #define a ( ( const char* ) item )
 #define b ( ( const KMAttrNode* ) n )
@@ -137,7 +137,7 @@ int CC KMAttrNodeCmp ( const void *item, const BSTNode *n )
 }
 
 static
-int CC KMAttrNodeSort ( const BSTNode *item, const BSTNode *n )
+int64_t CC KMAttrNodeSort ( const BSTNode *item, const BSTNode *n )
 {
 #define a ( ( const KMAttrNode* ) item )
 #define b ( ( const KMAttrNode* ) n )
@@ -208,7 +208,7 @@ struct KMDataNode
 };
 
 static
-int CC KMDataNodeCmp ( const void *item, const BSTNode *n )
+int64_t CC KMDataNodeCmp ( const void *item, const BSTNode *n )
 {
 #define a ( ( const char* ) item )
 #define b ( ( const KMDataNode* ) n )
@@ -220,7 +220,7 @@ int CC KMDataNodeCmp ( const void *item, const BSTNode *n )
 }
 
 static
-int CC KMDataNodeSort ( const BSTNode *item, const BSTNode *n )
+int64_t CC KMDataNodeSort ( const BSTNode *item, const BSTNode *n )
 {
 #define a ( ( const KMDataNode* ) item )
 #define b ( ( const KMDataNode* ) n )

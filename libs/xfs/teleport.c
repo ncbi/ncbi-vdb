@@ -62,7 +62,7 @@ struct _TNode {
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 static
-int
+int64_t
 _TeleportLookupCallback ( const void * Item, const BSTNode * Node )
 {
     return XFS_StringCompare4BST_ZHR (
@@ -94,7 +94,7 @@ _TeleportHas ( const char * Type )
 }   /* _TeleportHas () */
 
 static
-int
+int64_t
 _TeleportAddCallback ( const BSTNode * Item, const BSTNode * Node )
 {
     return XFS_StringCompare4BST_ZHR (

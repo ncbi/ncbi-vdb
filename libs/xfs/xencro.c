@@ -228,7 +228,7 @@ XFSEncDepotInit ()
 }   /* XFSEncDepotInit () */
 
 static
-int CC
+int64_t CC
 _EncCmpCallback ( const void * Item, const BSTNode * Node )
 {
     const char * Str1, * Str2;
@@ -273,7 +273,7 @@ _EncDptGetNoLock (
 }   /* _EncDptGetNoLock () */
 
 static
-int CC
+int64_t CC
 _EncAddCallback ( const BSTNode * N1, const BSTNode * N2 )
 {
     return XFS_StringCompare4BST_ZHR (

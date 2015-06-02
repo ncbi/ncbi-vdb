@@ -78,7 +78,7 @@ LIB_EXPORT void CC TNodeWhack ( TNode *n )
 /* TNodeCmp
  */
 static
-int CC TNodeCmp ( const void *item, const void *n )
+int64_t CC TNodeCmp ( const void *item, const void *n )
 {
 #define a ( ( const String* ) item )
 #define b ( ( const TNode* ) n )
@@ -92,7 +92,7 @@ int CC TNodeCmp ( const void *item, const void *n )
 /* TNodeSort
  */
 static
-int CC TNodeSort ( const BSTNode *item, const BSTNode *n )
+int64_t CC TNodeSort ( const BSTNode *item, const BSTNode *n )
 {
 #define a ( ( const TNode* ) item )
 #define b ( ( const TNode* ) n )
@@ -1227,7 +1227,7 @@ LIB_EXPORT TNode * CC TrieFind ( const Trie *tt, const String *item )
 	if (rc == 0)
         {
 	    return ( TNode* ) BSTreeFind ( & trans -> vals, item,
-                ( int ( CC * ) ( const void*, const BSTNode* ) ) TNodeCmp );
+                ( int64_t ( CC * ) ( const void*, const BSTNode* ) ) TNodeCmp );
 	}
     }
 
@@ -1277,7 +1277,7 @@ LIB_EXPORT rc_t CC TrieFindAll ( const Trie *tt, const String *item,
     if ( rc == 0 )
     {
         TNode *node = ( TNode* ) BSTreeFind ( & trans -> vals, item,
-            ( int ( CC * ) ( const void*, const BSTNode* ) ) TNodeCmp );
+            ( int64_t ( CC * ) ( const void*, const BSTNode* ) ) TNodeCmp );
         if ( node == NULL )
             rc = RC ( rcCont, rcTrie, rcSelecting, rcString, rcNotFound );
         else

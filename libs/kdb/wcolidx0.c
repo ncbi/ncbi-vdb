@@ -53,21 +53,14 @@ struct KColumnIdx0Node
 /* Match
  */
 static
-int CC KColumnIdx0NodeMatch ( const void *item, const BSTNode *n )
+int64_t CC KColumnIdx0NodeMatch ( const void *item, const BSTNode *n )
 {
 #define a ( ( const KColBlobLoc* ) item )
 #define b ( ( const KColumnIdx0Node* ) n )
 
-    if ( a -> start_id == b -> loc . start_id )
-    {
-        if ( a -> id_range < b -> loc . id_range )
-            return -1;
-        return a -> id_range > b -> loc . id_range;
-    }
-
-    if ( a -> start_id < b -> loc . start_id )
-        return -1;
-    return a -> start_id > b -> loc . start_id;
+    if ( a -> start_id != b -> loc . start_id )
+        return a -> start_id - b -> loc . start_id;
+    return (int64_t) a -> id_range - (int64_t) b -> loc . id_range;
 
 #undef a
 #undef b
@@ -76,7 +69,7 @@ int CC KColumnIdx0NodeMatch ( const void *item, const BSTNode *n )
 /* Find
  */
 static
-int CC KColumnIdx0NodeFind ( const void *item, const BSTNode *n )
+int64_t CC KColumnIdx0NodeFind ( const void *item, const BSTNode *n )
 {
 #define a ( * ( const int64_t* ) item )
 #define b ( ( const KColumnIdx0Node* ) n )
@@ -92,7 +85,7 @@ int CC KColumnIdx0NodeFind ( const void *item, const BSTNode *n )
 /* Sort
  */
 static
-int CC KColumnIdx0NodeSort ( const BSTNode *item, const BSTNode *n )
+int64_t CC KColumnIdx0NodeSort ( const BSTNode *item, const BSTNode *n )
 {
 #define a ( ( const KColumnIdx0Node* ) item )
 #define b ( ( const KColumnIdx0Node* ) n )

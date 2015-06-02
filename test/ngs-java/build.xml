@@ -1,0 +1,42 @@
+<project>
+
+    <!-- This file is currently for use on Windows; Linux/Mac builds are run via gmake -->
+    <property environment="env"/>
+    <property name="vdb.build"      value="Debug" />
+    <property name="vdb.platform"   value="x64" />
+    
+    <property name="build.dir"   value="${env.USERPROFILE}\win\cl\${vdb.platform}\${vdb.build}" />
+    <property name="ngs.dir" value="${env.USERPROFILE}\ncbi-outdir\ngs-java" />
+    
+    <property name="classes.dir" value="${build.dir}\test\ngs-java" />
+
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+    </target>
+
+    <target name="compile">
+        <mkdir dir="${classes.dir}"/>
+        <javac includeantruntime="false" srcdir="${basedir}" includes="ngs_test_CSRA1.java" destdir="${classes.dir}" > 
+            <classpath>
+                <pathelement location="${ngs.dir}\jar\ngs-java.jar" />
+                <pathelement location="${basedir}\..\junit-4.11.jar" />
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="runtests" depends="compile" >
+        <java classname="org.junit.runner.JUnitCore" fork="true" failonerror="true" >
+            <classpath>
+                <pathelement location="${classes.dir}" />
+                <pathelement location="${ngs.dir}\jar\ngs-java.jar" />
+                <pathelement location="${basedir}\..\junit-4.11.jar" />
+            </classpath>
+            <sysproperty key="java.library.path" path="${build.dir}\bin" />
+            <sysproperty key="vdb.System.loadLibrary" value="1" />
+            <sysproperty key="vdb.log" value="FINEST" />
+            <arg value="ngs_test_CSRA1" />
+        </java>
+    </target>
+    
+
+</project>

@@ -46,6 +46,7 @@
 
 #include <assert.h>
 #include <ctype.h> /* isdigit */
+#include <os-native.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -84,19 +85,17 @@ rc_t KRepositoryWhack ( KRepository *self )
 /* Sort
  */
 static
-int CC KRepositorySort ( const void **a, const void **b, void *ignore )
+int64_t CC KRepositorySort ( const void **a, const void **b, void *ignore )
 {
     const KRepository *left = * a;
     const KRepository *right = * b;
 
-    if ( left -> category < right -> category )
-        return -1;
-    if ( left -> category > right -> category )
-        return 1;
-    if ( left -> subcategory < right -> subcategory )
-        return -1;
-    if ( left -> subcategory > right -> subcategory )
-        return 1;
+    if ( left -> category != right -> category )
+        return (int64_t)left -> category - (int64_t)right -> category;
+
+    if ( left -> subcategory != right -> subcategory )
+        return (int64_t)left -> subcategory - (int64_t)right -> subcategory;
+
     return StringCompare ( & left -> name, & right -> name );
 }
 

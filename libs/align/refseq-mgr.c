@@ -40,7 +40,6 @@
 #include <vdb/cursor.h>
 #include <vdb/vdb-priv.h>
 #include <align/refseq-mgr.h>
-#include <os-native.h>
 #include <sysalloc.h>
 
 #include "refseq-mgr-priv.h"
@@ -52,6 +51,7 @@
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <assert.h>
 
 struct RefSeqMgr {

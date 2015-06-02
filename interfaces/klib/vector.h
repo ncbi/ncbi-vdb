@@ -420,7 +420,7 @@ KLIB_EXTERN void* CC VectorLast ( const Vector *self );
  *  equivalent of "key" - "n"
  */
 KLIB_EXTERN void* CC VectorFind ( const Vector *self, const void *key, uint32_t *idx,
-    int ( CC * cmp ) ( const void *key, const void *n ) );
+    int64_t ( CC * cmp ) ( const void *key, const void *n ) );
 
 
 /* Insert
@@ -442,7 +442,7 @@ KLIB_EXTERN void* CC VectorFind ( const Vector *self, const void *key, uint32_t 
  *  but this should not be relied upon.
  */
 KLIB_EXTERN rc_t CC VectorInsert ( Vector *self, const void *item, uint32_t *idx,
-    int ( CC * sort ) ( const void *item, const void *n ) );
+    int64_t ( CC * sort ) ( const void *item, const void *n ) );
 
 
 /* InsertUnique
@@ -458,7 +458,7 @@ KLIB_EXTERN rc_t CC VectorInsert ( Vector *self, const void *item, uint32_t *idx
  *  equivalent of "item" - "n"
  */
 KLIB_EXTERN rc_t CC VectorInsertUnique ( Vector *self, const void *item, uint32_t *idx,
-    int ( CC * sort ) ( const void *item, const void *n ) );
+    int64_t ( CC * sort ) ( const void *item, const void *n ) );
 
 
 /* Merge
@@ -472,7 +472,7 @@ KLIB_EXTERN rc_t CC VectorInsertUnique ( Vector *self, const void *item, uint32_
  *  equivalent of "item" - "n"
  */
 KLIB_EXTERN rc_t CC VectorMerge ( Vector *self, bool unique, const Vector *v,
-    int ( CC * sort ) ( const void *item, const void *n ) );
+    int64_t ( CC * sort ) ( const void *item, const void *n ) );
 
 
 /* Remove
@@ -492,7 +492,7 @@ KLIB_EXTERN rc_t CC VectorRemove ( Vector *self, uint32_t idx, void **removed );
  *  execute ksort on vector with provided function
  */
 KLIB_EXTERN void CC VectorReorder ( Vector *self,
-    int ( CC * cmp ) ( const void**, const void**, void *data ), void *data );
+    int64_t ( CC * cmp ) ( const void**, const void**, void *data ), void *data );
 
 
 /* ForEach

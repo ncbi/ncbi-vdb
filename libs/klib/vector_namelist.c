@@ -309,13 +309,13 @@ LIB_EXPORT rc_t CC VNamelistRemoveAll( VNamelist *self )
  *   each character before compare
  */
 static
-int CC vect_string_cmp ( const void **a, const void **b, void *ignore )
+int64_t CC vect_string_cmp ( const void **a, const void **b, void *ignore )
 {
     return strcmp ( * a, * b );
 }
 
 static
-int CC vect_string_cmp_case ( const void **a, const void **b, void *ignore )
+int64_t CC vect_string_cmp_case ( const void **a, const void **b, void *ignore )
 {
     uint32_t i;
 
@@ -333,7 +333,7 @@ int CC vect_string_cmp_case ( const void **a, const void **b, void *ignore )
         {
             /* TBD - this should perform UTF-8 to UNICODE conversion
                but for that, create a function in text module */
-            int diff = tolower ( ap [ i ] ) - tolower ( bp [ i ] );
+            int64_t diff = (int64_t)tolower ( ap [ i ] ) - (int64_t)tolower ( bp [ i ] );
             if ( diff == 0 )
                 continue;
 

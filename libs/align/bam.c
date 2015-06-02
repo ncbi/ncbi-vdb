@@ -56,13 +56,15 @@
 #if 1
 /*_DEBUGGING*/
 #include <stdio.h>
-#include <os-native.h>
 #endif
 
 #include <endian.h>
 #include <byteswap.h>
 
 #include <zlib.h>
+
+#include <os-native.h>
+
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 static uint16_t LE2HUI16(void const *X) { uint16_t y; memcpy(&y, X, sizeof(y)); return y; }
@@ -817,7 +819,7 @@ static int opt_tag_cmp(uint8_t const a[2], uint8_t const b[2])
     return d0 ? d0 : ((int)a[1] - (int)b[1]);
 }
 
-static int CC OptTag_sort(void const *A, void const *B, void *ctx)
+static int64_t CC OptTag_sort(void const *A, void const *B, void *ctx)
 {
     BAMAlignment const *const self = ctx;
     unsigned const a_off = ((struct offset_size_s const *)A)->offset;
@@ -826,7 +828,7 @@ static int CC OptTag_sort(void const *A, void const *B, void *ctx)
     uint8_t const *const b = &self->data->raw[b_off];
     int const diff = opt_tag_cmp(a, b);
     
-    return diff ? diff : (int)(a - b);
+    return diff ? (int64_t)diff : (int64_t)a - (int64_t)b;
 }
 
 static unsigned tag_findfirst(BAMAlignment const *const self, char const tag[2])
@@ -1032,7 +1034,7 @@ static rc_t BAMFileReadI32(BAMFile *self, int32_t *rhs)
 
 /* MARK: BAM File header parsing functions */
 
-static int CC comp_ReadGroup(const void *a, const void *b, void *ignored) {
+static int64_t CC comp_ReadGroup(const void *a, const void *b, void *ignored) {
     return strcmp(((BAMReadGroup const *)a)->name, ((BAMReadGroup const *)b)->name);
 }
 
@@ -1551,7 +1553,7 @@ BAILOUT:
     return rc;
 }
 
-static int CC comp_RefSeqName(const void *A, const void *B, void *ignored) {
+static int64_t CC comp_RefSeqName(const void *A, const void *B, void *ignored) {
     BAMFile const *self = (BAMFile const *)ignored;
     unsigned const a = *(unsigned const *)A;
     unsigned const b = *(unsigned const *)B;
@@ -2227,7 +2229,7 @@ rc_t BAMFileReadNoCopy(BAMFile *const self, unsigned actsize[], BAMAlignment rhs
         if (i32 <= 0)
             return RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
         
-        if (maxPeek < i32 + 4)
+        if (maxPeek < ( uint32_t ) i32 + 4)
             return RC(rcAlign, rcFile, rcReading, rcBuffer, rcNotAvailable);
         
         isgood = BAMAlignmentInitLog(rhs, maxsize, i32, BAMFilePeek(self, 4));
@@ -4510,7 +4512,7 @@ rc_t IndexValidateStructure(const uint8_t data[], size_t dlen,
     return rc;
 }
 
-static int CC comp_index_data(const void *A, const void *B, void *ignored)
+static int64_t CC comp_index_data(const void *A, const void *B, void *ignored)
 {
     const struct index_data *a = A;
     const struct index_data *b = B;

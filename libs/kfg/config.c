@@ -51,10 +51,10 @@ struct KfgConfigNamelist;
 #include <vfs/path.h>
 #include <strtol.h>
 #include <sysalloc.h>
-#include <os-native.h>
 
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <va_copy.h>
@@ -130,7 +130,7 @@ void CC KConfigIncludedWhack ( BSTNode *n, void *ignore )
 }
 
 static
-int CC KConfigIncludedSort ( const BSTNode *item, const BSTNode *n )
+int64_t CC KConfigIncludedSort ( const BSTNode *item, const BSTNode *n )
 {
     const KConfigIncluded *a = ( const KConfigIncluded* ) item;
     const KConfigIncluded *b = ( const KConfigIncluded* ) n;
@@ -251,7 +251,7 @@ rc_t KConfigNodeMake ( KConfigNode **n, const String *name )
  * Sort
  */
 static
-int CC KConfigNodeCmp ( const void *item, const BSTNode *n )
+int64_t CC KConfigNodeCmp ( const void *item, const BSTNode *n )
 {
     const String *a = ( const String* ) item;
     const KConfigNode *b = ( const KConfigNode* ) n;
@@ -259,7 +259,7 @@ int CC KConfigNodeCmp ( const void *item, const BSTNode *n )
 }
 
 static
-int CC KConfigNodeSort ( const BSTNode *item, const BSTNode *n )
+int64_t CC KConfigNodeSort ( const BSTNode *item, const BSTNode *n )
 {
     const KConfigNode *a = ( const KConfigNode* ) item;
     const KConfigNode *b = ( const KConfigNode* ) n;

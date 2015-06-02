@@ -137,25 +137,25 @@ struct ReferenceObj
 };
 
 
-static int CC ReferenceObj_CmpSeqId( const void *item, const BSTNode *n )
+static int64_t CC ReferenceObj_CmpSeqId( const void *item, const BSTNode *n )
 {
     return strcasecmp( ( const char* )item, ( ( const ReferenceObj* )n )->seqid );
 }
 
 
-static int CC ReferenceObj_SortSeqId( const BSTNode *item, const BSTNode *n )
+static int64_t CC ReferenceObj_SortSeqId( const BSTNode *item, const BSTNode *n )
 {
     return ReferenceObj_CmpSeqId( ( ( const ReferenceObj* )item )->seqid, n );
 }
 
 
-static int CC ReferenceObj_CmpName( const void *item, const BSTNode *n )
+static int64_t CC ReferenceObj_CmpName( const void *item, const BSTNode *n )
 {
     return strcasecmp( ( const char* )item, ( ( const ReferenceObj* )&n[ -1 ] )->name );
 }
 
 
-static int CC ReferenceObj_SortName( const BSTNode *item, const BSTNode *n )
+static int64_t CC ReferenceObj_SortName( const BSTNode *item, const BSTNode *n )
 {
     return ReferenceObj_CmpName( ( ( const ReferenceObj* )&item[ -1 ] )->name, n );
 }
@@ -1522,7 +1522,7 @@ static void CC PlacementRecordVector_dump( void *item, void *data )
 /* this comparison function performs last-to-first
    ordering in the Vector. for this reason, all
    comparisons and return values are reversed. */
-static int CC PlacementRecordVector_cmp( const void** left, const void** right, void* data )
+static int64_t CC PlacementRecordVector_cmp( const void** left, const void** right, void* data )
 {
     const PlacementRecord* l = *( ( const PlacementRecord** )left );
     const PlacementRecord* r = *( ( const PlacementRecord** )right );
@@ -1535,17 +1535,11 @@ static int CC PlacementRecordVector_cmp( const void** left, const void** right, 
         return d;
 
     /* ...len asc */
-    if ( l -> len < r -> len )
-        return -1;
-    if ( l -> len > r -> len )
-        return 1;
+    if ( l -> len != r -> len )
+        return (int64_t)l -> len - (int64_t)r -> len;
 
     /* ...id desc */
-    if ( l -> id > r -> id )
-        return -1;
-    if ( l -> id < r -> id )
-        return 1;
-    return 0;
+    return r -> id - l -> id;
 }
 
 

@@ -307,7 +307,7 @@ void CC KHttpHeaderWhack ( BSTNode *n, void *ignore )
     free ( self );
 }
 
-int CC KHttpHeaderSort ( const BSTNode *na, const BSTNode *nb )
+int64_t CC KHttpHeaderSort ( const BSTNode *na, const BSTNode *nb )
 {
     const KHttpHeader *a = ( const KHttpHeader* ) na;
     const KHttpHeader *b = ( const KHttpHeader* ) nb;
@@ -315,7 +315,7 @@ int CC KHttpHeaderSort ( const BSTNode *na, const BSTNode *nb )
     return StringCaseCompare ( & a -> name, & b -> name );
 }
 
-int CC KHttpHeaderCmp ( const void *item, const BSTNode *n )
+int64_t CC KHttpHeaderCmp ( const void *item, const BSTNode *n )
 {
     const String *a = item;
     const KHttpHeader *b = ( const KHttpHeader * ) n;

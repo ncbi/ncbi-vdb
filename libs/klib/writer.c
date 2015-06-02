@@ -42,6 +42,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <assert.h>
 
 #include <os-native.h>
@@ -147,7 +148,7 @@ LIB_EXPORT rc_t CC KWrtInit( const char* appname, uint32_t vers )
  * nvp - name/value pair
  */
 static
-int CC wrt_nvp_cmp_func(const void *a, const void *b, void * ignored)
+int64_t CC wrt_nvp_cmp_func(const void *a, const void *b, void * ignored)
 {
     int i = 0;
     const char *key = a;
@@ -157,17 +158,17 @@ int CC wrt_nvp_cmp_func(const void *a, const void *b, void * ignored)
         if( key[i] == '\0' || name[i] == '\0' ) {
             break;
         }
-        i++;
+        ++i;
     }
     /* treat \0 or right-paren as key terminator */
     if( key[i] != 0 && key[i] != ')' ) {
-        return key[i] - name[i];
+        return (int64_t)key[i] - (int64_t)name[i];
     }
-    return 0 - name[i];
+    return (int64_t)0 - (int64_t)name[i];
 }
 
 static
-int CC wrt_nvp_sort_func(const void *a, const void *b, void * ignored)
+int64_t CC wrt_nvp_sort_func(const void *a, const void *b, void * ignored)
 {
     const wrt_nvp_t *left = a;
     const wrt_nvp_t *right = b;

@@ -46,6 +46,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <os-native.h>
 
 #include <insdc/insdc.h>
 

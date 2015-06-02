@@ -63,6 +63,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <assert.h>
 
 /* to turn off CGI name resolution for

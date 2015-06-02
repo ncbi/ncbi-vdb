@@ -102,7 +102,7 @@ static void DictionaryEntryWhack ( BSTNode *n, void *data )
     free ( n );
 }
 
-static int DictionaryEntryCompare ( const BSTNode *p_a, const BSTNode *p_b )
+static int64_t DictionaryEntryCompare ( const BSTNode *p_a, const BSTNode *p_b )
 {
     DictionaryEntry* a = ( DictionaryEntry * ) p_a;
     DictionaryEntry* b = ( DictionaryEntry * ) p_b;
@@ -111,7 +111,7 @@ static int DictionaryEntryCompare ( const BSTNode *p_a, const BSTNode *p_b )
     return string_cmp ( a -> path, a_path_size, b -> path, string_size ( b -> path ), ( uint32_t ) a_path_size );
 }
 
-static int DictionaryEntryFind ( const void *p_a, const BSTNode *p_b )
+static int64_t DictionaryEntryFind ( const void *p_a, const BSTNode *p_b )
 {
     const char * a = ( const char * ) p_a;
     DictionaryEntry* b = ( DictionaryEntry * ) p_b;

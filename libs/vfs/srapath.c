@@ -51,12 +51,12 @@ struct NCBISRAPath;
 #include <kfg/kfg-priv.h>
 #include <klib/debug.h>
 #include <klib/log.h>
-#include <os-native.h>
 #include <sysalloc.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <assert.h>
 
 #include "path-priv.h"

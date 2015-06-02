@@ -24,12 +24,16 @@
  *
  */
 
+#include <align/extern.h>
+#include <klib/defs.h>
+#include <align/quality-quantizer.h>
+
 #include <stdint.h>
 #include <string.h>
 #include <ctype.h>
 
-#include <klib/defs.h>
-#include <align/quality-quantizer.h>
+#include <os-native.h>
+
 
 LIB_EXPORT
 bool CC QualityQuantizerInitMatrix(uint8_t dst[256], char const quant[])

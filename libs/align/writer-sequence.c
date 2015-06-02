@@ -45,6 +45,7 @@
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <assert.h>
 
 static const TableWriterColumn TableWriterSeq_cols[ewseq_cn_Last + 1] =

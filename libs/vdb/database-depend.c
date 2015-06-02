@@ -132,7 +132,7 @@ static void CC bstWhack( BSTNode* n, void* ignore )
 }
 
 static
-int CC bstCmpBySeqId(const void* item, const BSTNode* n)
+int64_t CC bstCmpBySeqId(const void* item, const BSTNode* n)
 {
     const char* s1 = item;
     const RefNode* sn = (const RefNode*) n;
@@ -142,7 +142,7 @@ int CC bstCmpBySeqId(const void* item, const BSTNode* n)
     return strcmp(s1, sn->seqId);
 }
 
-static int CC bstCmpByRemote(const void* item, const BSTNode* n)
+static int64_t CC bstCmpByRemote(const void* item, const BSTNode* n)
 {
     const String* s1 = item;
     const RefNode* sn = (const RefNode*) n;
@@ -153,14 +153,14 @@ static int CC bstCmpByRemote(const void* item, const BSTNode* n)
         return sn->resolved.remote != NULL;
     }
     else {
-        int min = s1->size < sn->resolved.remote->size
+        size_t min = s1->size < sn->resolved.remote->size
             ? s1->size : sn->resolved.remote->size;
         return strncmp(s1->addr, sn->resolved.remote->addr, min);
     }
 }
 
 static
-int CC bstSortBySeqId(const BSTNode* item, const BSTNode* n)
+int64_t CC bstSortBySeqId(const BSTNode* item, const BSTNode* n)
 {
     const RefNode* sn = (const RefNode*) item;
 
@@ -168,7 +168,7 @@ int CC bstSortBySeqId(const BSTNode* item, const BSTNode* n)
 }
 
 static
-int CC bstSortByRemote(const BSTNode* item, const BSTNode* n)
+int64_t CC bstSortByRemote(const BSTNode* item, const BSTNode* n)
 {
     const RefNode* sn = (const RefNode*) item;
 

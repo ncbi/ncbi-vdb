@@ -373,7 +373,7 @@ KLIB_EXTERN BSTNode* CC BSTreeLast ( const BSTree *bt );
  *  "cmp" function returns equivalent of "item" - "n"
  */
 KLIB_EXTERN BSTNode* CC BSTreeFind ( const BSTree *bt, const void *item,
-    int ( CC * cmp ) ( const void *item, const BSTNode *n ) );
+    int64_t ( CC * cmp ) ( const void *item, const BSTNode *n ) );
 
 /* BSTreeInsert
  *  insert an object within tree, even if duplicate
@@ -390,7 +390,7 @@ KLIB_EXTERN BSTNode* CC BSTreeFind ( const BSTree *bt, const void *item,
  *  returns 0 if insert succeeded or an OS error code otherwise.
  */
 KLIB_EXTERN rc_t CC BSTreeInsert ( BSTree *bt, BSTNode *item,
-    int ( CC * sort ) ( const BSTNode *item, const BSTNode *n ) );
+    int64_t ( CC * sort ) ( const BSTNode *item, const BSTNode *n ) );
 
 /* BSTreeInsertUnique
  *  insert an object within tree, but only if unique.
@@ -400,7 +400,7 @@ KLIB_EXTERN rc_t CC BSTreeInsert ( BSTree *bt, BSTNode *item,
  *  if error code is EEXIST, the existing object is returned in "exist".
  */
 KLIB_EXTERN rc_t CC BSTreeInsertUnique ( BSTree *bt, BSTNode *item, BSTNode **exist,
-    int ( CC * sort ) ( const BSTNode *item, const BSTNode *n ) );
+    int64_t ( CC * sort ) ( const BSTNode *item, const BSTNode *n ) );
 
 /* BSTreeResort
  *  an optimized removal and re-insertion of
@@ -415,7 +415,7 @@ KLIB_EXTERN rc_t CC BSTreeInsertUnique ( BSTree *bt, BSTNode *item, BSTNode **ex
  *  but this should not be relied upon.
  */
 KLIB_EXTERN void CC BSTreeResort ( BSTree *bt,
-    int ( CC * resort ) ( const BSTNode *item, const BSTNode *n ) );
+    int64_t ( CC * resort ) ( const BSTNode *item, const BSTNode *n ) );
 
 /* BSTreeUnlink
  *  removes a node from tree

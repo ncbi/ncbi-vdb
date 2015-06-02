@@ -34,6 +34,7 @@
 #include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/report.h>
+#include <klib/sra-release-version.h> /* SraReleaseVersionGet */
 #include <klib/status.h>
 #include <klib/text.h>
 #include <klib/vector.h>
@@ -46,6 +47,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -317,7 +319,7 @@ rc_t CC OptionAddValue (Option * self, const char * value, size_t size)
 }
 
 static
-int CC OptionCmp (const void * item, const BSTNode * n)
+int64_t CC OptionCmp (const void * item, const BSTNode * n)
 {
     const char * name;
     const Option * option;
@@ -333,7 +335,7 @@ int CC OptionCmp (const void * item, const BSTNode * n)
 }
 
 static
-int CC OptionSort (const BSTNode * item, const BSTNode * n)
+int64_t CC OptionSort (const BSTNode * item, const BSTNode * n)
 {
     const Option * l = (Option*)item;
     const Option * r = (Option*)n;
@@ -416,7 +418,7 @@ Option * CC OptAliasOption (const OptAlias *self)
 }
 
 static
-int CC OptAliasCmp (const void * item, const BSTNode * n)
+int64_t CC OptAliasCmp (const void * item, const BSTNode * n)
 {
     const char * name;
     const OptAlias * option;
@@ -432,7 +434,7 @@ int CC OptAliasCmp (const void * item, const BSTNode * n)
 }
 
 static
-int CC OptAliasSort (const BSTNode * item, const BSTNode * n)
+int64_t CC OptAliasSort (const BSTNode * item, const BSTNode * n)
 {
     const OptAlias * l;
     const OptAlias * r;
@@ -1516,6 +1518,17 @@ rc_t CC ArgsHandleVersion (Args * self)
             const char * progname = UsageDefaultName;
             const char * fullpath = UsageDefaultName;
 
+            char cSra [ 512 ] = "";
+            SraReleaseVersion sraVersion;
+            memset ( & sraVersion, 0, sizeof sraVersion );
+            {
+                rc_t rc = SraReleaseVersionGet ( & sraVersion );
+                if ( rc == 0 ) {
+                    rc = SraReleaseVersionPrint
+                        ( & sraVersion, cSra, sizeof cSra, NULL );
+                }
+            }
+
             if (self)
                 rc = ArgsProgram (self, &fullpath, &progname);
 
@@ -1812,7 +1825,23 @@ rc_t CC ArgsProgram (const Args * args, const char ** fullpath, const char ** pr
 
 void CC HelpVersion (const char * fullpath, ver_t version)
 {
-    OUTMSG (("\n%s : %.3V\n\n", fullpath, version));
+    rc_t rc = 0;
+    char cSra[512] = "";
+    SraReleaseVersion sraVersion;
+    memset(&sraVersion, 0, sizeof sraVersion);
+    rc = SraReleaseVersionGet(&sraVersion);
+    if (rc == 0) {
+        rc = SraReleaseVersionPrint(&sraVersion, cSra, sizeof cSra, NULL);
+    }
+    if (rc != 0 || cSra[0] == '\0' ||
+        (sraVersion.version == version && sraVersion.revision == 0 &&
+         sraVersion.type == eSraReleaseVersionTypeFinal))
+    {
+        OUTMSG (("\n%s : %.3V\n\n", fullpath, version));
+    }
+    else {
+        OUTMSG (("\n%s : %.3V ( %s )\n\n", fullpath, version, cSra));
+    }
 }
 
 

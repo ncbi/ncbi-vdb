@@ -261,7 +261,7 @@ LIB_EXPORT  void* CC VectorLast ( const Vector *self )
  *  equivalent of "key" - "n"
  */
 LIB_EXPORT void* CC VectorFind ( const Vector *self, const void *key, uint32_t *idx,
-    int ( CC * cmp ) ( const void *key, const void *n ) )
+    int64_t ( CC * cmp ) ( const void *key, const void *n ) )
 {
     if ( self != NULL && cmp != NULL )
     {
@@ -277,7 +277,7 @@ LIB_EXPORT void* CC VectorFind ( const Vector *self, const void *key, uint32_t *
                 left = mid + 1;
             else
             {
-                int diff = ( * cmp ) ( key, n );
+                int64_t diff = ( * cmp ) ( key, n );
                 if ( diff == 0 )
                 {
                     if ( idx != NULL )
@@ -315,7 +315,7 @@ LIB_EXPORT void* CC VectorFind ( const Vector *self, const void *key, uint32_t *
  *  but this should not be relied upon.
  */
 LIB_EXPORT rc_t CC VectorInsert ( Vector *self, const void *item, uint32_t *idx,
-    int ( CC * sort ) ( const void *item, const void *n ) )
+    int64_t ( CC * sort ) ( const void *item, const void *n ) )
 {
     rc_t rc;
 
@@ -340,7 +340,7 @@ LIB_EXPORT rc_t CC VectorInsert ( Vector *self, const void *item, uint32_t *idx,
                 left = mid + 1;
             else
             {
-                int diff = ( * sort ) ( item, n );
+                int64_t diff = ( * sort ) ( item, n );
                 if ( diff <= 0 )
                     right = mid;
                 else
@@ -376,7 +376,7 @@ LIB_EXPORT rc_t CC VectorInsert ( Vector *self, const void *item, uint32_t *idx,
  *  equivalent of "item" - "n"
  */
 LIB_EXPORT rc_t CC VectorInsertUnique ( Vector *self, const void *item, uint32_t *idx,
-    int ( CC * sort ) ( const void *item, const void *n ) )
+    int64_t ( CC * sort ) ( const void *item, const void *n ) )
 {
     rc_t rc;
 
@@ -400,7 +400,7 @@ LIB_EXPORT rc_t CC VectorInsertUnique ( Vector *self, const void *item, uint32_t
                 left = mid + 1;
             else
             {
-                int diff = ( * sort ) ( item, n );
+                int64_t diff = ( * sort ) ( item, n );
                 if ( diff == 0 )
                 {
                     -- self -> len;
@@ -441,7 +441,7 @@ LIB_EXPORT rc_t CC VectorInsertUnique ( Vector *self, const void *item, uint32_t
  *  equivalent of "item" - "n"
  */
 LIB_EXPORT rc_t CC VectorMerge ( Vector *self, bool unique, const Vector *v,
-    int ( CC * sort ) ( const void *item, const void *n ) )
+    int64_t ( CC * sort ) ( const void *item, const void *n ) )
 {
     rc_t rc;
 
@@ -461,7 +461,7 @@ LIB_EXPORT rc_t CC VectorMerge ( Vector *self, bool unique, const Vector *v,
             uint32_t i, a, b;
             for ( rc = 0, i = a = b = 0; a < self -> len && b < v -> len; ++ i )
             {
-                int diff = ( * sort ) ( self -> v [ a ], v -> v [ b ] );
+                int64_t diff = ( * sort ) ( self -> v [ a ], v -> v [ b ] );
                 if ( diff == 0 )
                 {
                     out [ i ] = self -> v [ a ++ ];
@@ -535,13 +535,13 @@ LIB_EXPORT rc_t CC VectorRemove ( Vector *self, uint32_t idx, void **removed )
  *  but works within a limited context
  */
 LIB_EXPORT void CC VectorReorder ( Vector *self,
-    int ( CC * f ) ( const void**, const void**, void* ), void *data )
+    int64_t ( CC * f ) ( const void**, const void**, void* ), void *data )
 {
     if ( self != NULL && f != NULL && self -> len != 0 )
     {
         assert ( self -> v != NULL );
         ksort ( self -> v, self -> len, sizeof self -> v [ 0 ],
-            ( int ( CC * ) ( const void*, const void*, void* ) ) f, data );
+            ( int64_t ( CC * ) ( const void*, const void*, void* ) ) f, data );
     }
 }
 

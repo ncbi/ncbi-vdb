@@ -28,7 +28,6 @@
 #include <klib/rc.h>
 #include <sra/types.h>
 #include <sra/abi.h>
-#include <os-native.h>
 #include <sysalloc.h>
 #include <klib/text.h>
 
@@ -37,6 +36,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 
 typedef enum AbsolidReaderOptions_enum {
     eOrigFormat  = 0x02,

@@ -556,7 +556,7 @@ _SetModelNodeProperty (
 }   /* _SetModelNodeProperty () */
 
 static
-int CC
+int64_t CC
 _LoadNodeCallback ( const BSTNode * N1, const BSTNode * N2 )
 {
     return XFS_StringCompare4BST_ZHR (
@@ -875,7 +875,7 @@ XFSModelRootNode ( const struct XFSModel * self )
 }   /* XFSModelRootNode () */
 
 static
-int CC
+int64_t CC
 _LookupNodeCallback ( const void * Item, const BSTNode * Node )
 {
     return XFS_StringCompare4BST_ZHR (
