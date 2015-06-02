@@ -787,7 +787,11 @@ TEST_CASE(NGS_FailedToOpen)
 
 //////////////////////////////////////////// Open read collection using system path
 
+#ifdef WIN32
+#define SYSPATH_ACCESSION ".\\data\\SysPathTest"
+#else
 #define SYSPATH_ACCESSION "./data/SysPathTest"
+#endif
 TEST_CASE(NGS_OpenBySysPath)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
