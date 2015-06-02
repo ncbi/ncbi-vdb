@@ -986,7 +986,7 @@ _DirEMakeContent (
 ((*/
 
 static
-int CC
+int64_t CC
 _DirFindCallback ( const void * Item, const BSTNode * Node )
 {
     const char * Str1, * Str2;
@@ -1118,7 +1118,7 @@ _DirCModifyLast ( const struct _DirC * self, const char * Name )
 }   /* _DirCModifyLast () */
 
 static
-int CC
+int64_t CC
 _DirEAddCallback ( const BSTNode * N1, const BSTNode * N2 )
 {
     return XFS_StringCompare4BST_ZHR (
@@ -4353,7 +4353,7 @@ XFSEncDirectoryDepotDispose ()
 }   /* XFSEncDirectoryDepotDispose () */
 
 static
-int CC
+int64_t CC
 _WsDptCmpCallback (const void * Item, const BSTNode * Node )
 {
     const char * Str1, * Str2;
@@ -4396,7 +4396,7 @@ _WsDptGetNoLock (
 }   /* _WsDptGetNoLock () */
 
 static
-int CC
+int64_t CC
 _WsDptAddCallback ( const BSTNode * N1, const BSTNode * N2 )
 {
     return XFS_StringCompare4BST_ZHR (

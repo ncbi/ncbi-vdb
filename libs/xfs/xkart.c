@@ -551,7 +551,7 @@ XFSKartHas ( struct XFSKart * self, const char * ItemName )
 }   /* XFSKartHas () */
 
 static
-int64 CC
+int64_t CC
 _CartItemCmp ( const void * Item, const BSTNode * Node )
 {
     const char * Str1, * Str2;
