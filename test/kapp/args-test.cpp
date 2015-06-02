@@ -320,7 +320,7 @@ TEST_CASE(KAppCheckEnvironment_requireAmd64)
 {
     rc_t rc = KAppCheckEnvironment ( true, 0 );
 #if _ARCH_BITS != 64    
-    REQUIRE_NOT_EQ ( (int)rc, 0 );
+    REQUIRE_NE ( (int)rc, 0 );
 #else
     REQUIRE_EQ ( (int)rc, 0 );
 #endif
