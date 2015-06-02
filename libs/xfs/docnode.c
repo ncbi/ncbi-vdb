@@ -554,7 +554,7 @@ _DocAttr_permissions_v1 (
             * Permissions = Node -> perm;
         }
         else {
-            * Permissions = XFSPermDefNodeChar ();
+            * Permissions = XFSPermRODefNodeChar ();
         }
     }
 

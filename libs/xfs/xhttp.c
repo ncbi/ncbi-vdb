@@ -739,7 +739,7 @@ _HttpEDAddRef ()
     HttpED = _ED ();
 
     if ( HttpED == NULL ) {
-        RCt = _HttpEDMake ( & HttpED );
+        RCt = _HttpEDMake ( );
         if ( RCt == 0 ) {
         }
     }

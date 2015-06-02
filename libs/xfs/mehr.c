@@ -56,6 +56,8 @@ XFS_EXTERN rc_t CC XFSTarDepotInit ();
 XFS_EXTERN rc_t CC XFSTarDepotDispose ();
 XFS_EXTERN rc_t CC XFSEncDepotInit ();
 XFS_EXTERN rc_t CC XFSEncDepotDispose ();
+XFS_EXTERN rc_t CC XFSEncDirectoryDepotInit ();
+XFS_EXTERN rc_t CC XFSEncDirectoryDepotDispose ();
 
 /*)) Config and all config related
  ((*/
@@ -94,6 +96,10 @@ printf ( "WARNING(MEHR): InitAll [%s]\n", ConfigFile );
         if ( RCt == 0 ) {
             RCt = XFSEncDepotInit ();
         }
+
+        if ( RCt == 0 ) {
+            RCt = XFSEncDirectoryDepotInit ();
+        }
     }
 
     return RCt;
@@ -104,6 +110,8 @@ rc_t CC
 XFS_DisposeAll_MHR ()
 {
 printf ( "WARNING(MEHR): DisposeAll [%s]\n", _sConfigPath_MHR );
+
+    XFSEncDirectoryDepotDispose ();
 
     XFSEncDepotDispose ();
 

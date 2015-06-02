@@ -40,6 +40,8 @@
 #include <kns/http.h>
 #include <kns/stream.h>
 
+#include <krypto/key.h>
+
 #include "schwarzschraube.h"
 #include "zehr.h"
 #include "mehr.h"
@@ -783,6 +785,93 @@ XFS_HttpStreamTimedRead_ZHR (
 
     return self -> last_error;
 }   /* XFS_HttpStreamTimedRead_ZHR */
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+static
+rc_t CC
+XFS_KeyType_ZHR ( const char * EncType, KKeyType * Type )
+{
+    size_t B;
+    const char * C;
+
+    B = 0;
+    C = NULL;
+
+    XFS_CAN ( Type )
+    * Type = kkeyNone;
+
+    if ( EncType == NULL ) {
+        * Type = KKeyTypeDefault;
+        return 0;
+    }
+
+    B = string_size ( EncType );
+
+    C = "AES128";
+    if ( strcase_cmp ( C, string_size ( C ), EncType, B, B ) == 0 ) {
+        * Type = kkeyAES128;
+        return 0;
+    }
+
+    C = "AES192";
+    if ( strcase_cmp ( C, string_size ( C ), EncType, B, B ) == 0 ) {
+        * Type = kkeyAES192;
+        return 0;
+    }
+
+    C = "AES256";
+    if ( strcase_cmp ( C, string_size ( C ), EncType, B, B ) == 0 ) {
+        * Type = kkeyAES256;
+        return 0;
+    }
+
+    return XFS_RC ( rcInvalid );
+}   /* XFS_KeyType_ZHR () */
+
+LIB_EXPORT
+rc_t CC
+XFS_InitKKey_ZHR (
+            const char * EncPass,
+            const char * EncType,
+            struct KKey * Key
+)
+{
+    rc_t RCt;
+    KKeyType Type;
+
+    RCt = 0;
+    Type = kkeyNone;
+
+    XFS_CAN ( EncPass )
+    XFS_CAN ( Key )
+
+    RCt = XFS_KeyType_ZHR ( EncType, & Type );
+    if ( RCt == 0 ) {
+        RCt = KKeyInitRead (
+                            Key,
+                            Type,
+                            EncPass,
+                            string_size ( EncPass )
+                            );
+    }
+
+    return RCt;
+}   /* XFS_InitKey_ZHR () */
+
+LIB_EXPORT
+rc_t CC
+XFS_CopyKKey_ZHR ( const struct KKey * Src, struct KKey * Dst )
+{
+    XFS_CAN ( Src )
+    XFS_CAN ( Dst )
+
+    memcpy ( Dst, Src, sizeof ( struct KKey ) );
+
+    return 0;
+}   /* XFS_CopyKKey_ZHR () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 

@@ -1223,7 +1223,10 @@ rc_t CC KEncFileDestroy (KEncFile *self)
          * of the encrypted file format
          */
         if ((self->enc_size == 0) || (self->seekable && self->changed) ||
+            ((self->enc_size == 0) && (!self->dad.read_enabled) && self->changed && (self->has_header == false)))
+/* SMURF IX
             (self->has_header == false))
+ */
             rc1 = KEncFileHeaderWrite (self);
 
         /* write any dirty block */

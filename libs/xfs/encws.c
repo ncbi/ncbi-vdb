@@ -45,6 +45,7 @@
 #include "ncon.h"
 #include "teleport.h"
 #include "common.h"
+#include "xencws.h"
 
 #include <sysalloc.h>
 
@@ -52,7 +53,7 @@
 
 /*)))
  |||    That file contains 'native' KFile and KDirectory based nodes
- |||    Both nodes are implemented as XFSKfsNode
+ |||    Both nodes are implemented as _EncWsNode
  |||    That kind of node represent real path which exists in system
 (((*/
 
@@ -61,21 +62,21 @@
  +++    FileNode, and other simple containers
  |||
 (((*/
-struct XFSKfsNode {
+struct _EncWsNode {
     struct XFSNode node;
 
-    XFSNType type;       /* possible Dir and File */
-    const char * path;   /* Path for object */
-    const char * perm;   /* Permissions in format "rwxrwxrwx u:g:o" */
+    const struct KDirectory * workspace;
+    const char * path;      /* Path for object */
+    XFSNType type;          /* For optimizing goals only */
 };
 
-struct XFSKfsFileEditor {
+struct _EncWsFileEditor {
     struct XFSFileEditor Papahen;
 
     struct KFile * File;
 };
 
-struct XFSKfsAttrEditor {
+struct _EncWsAttrEditor {
     struct XFSAttrEditor Papahen;
 
     char perm [ 16 ];     /* there we are storing 'const' object */
@@ -84,99 +85,110 @@ struct XFSKfsAttrEditor {
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*                                                               *_*/
-/*_* KfsNode is living here                                        *_*/
+/*_* EncWsNode is living here                                      *_*/
 /*_*                                                               *_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*)))
  |||
- +++    KfsNode virtual table is Living here :lol:
+ +++    EncWsNode virtual table is Living here :lol:
  |||
 (((*/
-static rc_t CC _KfsNodeFlavor_v1 (
+static rc_t CC _EncWsNodeFlavor_v1 (
                                 const struct XFSNode * self
                                 );
-static rc_t CC _KfsNodeDispose_v1 (
+static rc_t CC _EncWsNodeDispose_v1 (
                                 const struct XFSNode * self
                                 );
-static rc_t CC _KfsFileNodeFindNode_v1 (
+static rc_t CC _EncWsFileNodeFindNode_v1 (
                                 const struct XFSNode * self,
                                 const struct XFSPath * Path,
                                 uint32_t PathIndex,
                                 const struct XFSNode ** Node
                                 );
-static rc_t CC _KfsDirNodeFindNode_v1 (
+static rc_t CC _EncWsDirNodeFindNode_v1 (
                                 const struct XFSNode * self,
                                 const struct XFSPath * Path,
                                 uint32_t PathIndex,
                                 const struct XFSNode ** Node
                                 );
-static rc_t CC _KfsNodeDir_v1 (
+static rc_t CC _EncWsNodeDir_v1 (
                                 const struct XFSNode * self,
                                 const struct XFSDirEditor ** Dir
                                 );
-static rc_t CC _KfsNodeFile_v1 (
+static rc_t CC _EncWsNodeFile_v1 (
                                 const struct XFSNode * self,
                                 const struct XFSFileEditor ** File
                                 );
-static rc_t CC _KfsNodeAttr_v1 (
+static rc_t CC _EncWsNodeAttr_v1 (
                                 const struct XFSNode * self,
                                 const struct XFSAttrEditor ** Attr
                                 );
-static rc_t CC _KfsNodeDescribe_v1 (
+static rc_t CC _EncWsNodeDescribe_v1 (
                                 const struct XFSNode * self,
                                 char * Buffer,
                                 size_t BufferSize
                                 );
 
-static const struct XFSNode_vt_v1 _sKfsFileNodeVT_v1 = {
+static const struct XFSNode_vt_v1 _sEncWsFileNodeVT_v1 = {
                                         1, 1,   /* nin naj */
-                                        _KfsNodeFlavor_v1,
-                                        _KfsNodeDispose_v1,
-                                        _KfsFileNodeFindNode_v1,
+                                        _EncWsNodeFlavor_v1,
+                                        _EncWsNodeDispose_v1,
+                                        _EncWsFileNodeFindNode_v1,
                                         NULL,   /* NO DIR */
-                                        _KfsNodeFile_v1,
-                                        _KfsNodeAttr_v1,
-                                        _KfsNodeDescribe_v1
+                                        _EncWsNodeFile_v1,
+                                        _EncWsNodeAttr_v1,
+                                        _EncWsNodeDescribe_v1
                                         };
 
-static const struct XFSNode_vt_v1 _sKfsDirNodeVT_v1 = {
+static const struct XFSNode_vt_v1 _sEncWsDirNodeVT_v1 = {
                                         1, 1,   /* nin naj */
-                                        _KfsNodeFlavor_v1,
-                                        _KfsNodeDispose_v1,
-                                        _KfsDirNodeFindNode_v1,
-                                        _KfsNodeDir_v1,
+                                        _EncWsNodeFlavor_v1,
+                                        _EncWsNodeDispose_v1,
+                                        _EncWsDirNodeFindNode_v1,
+                                        _EncWsNodeDir_v1,
                                         NULL,   /* NO FILE */
-                                        _KfsNodeAttr_v1,
-                                        _KfsNodeDescribe_v1
+                                        _EncWsNodeAttr_v1,
+                                        _EncWsNodeDescribe_v1
                                         };
 
 static
 rc_t CC
-XFSKfsNodeMake (
-            struct XFSKfsNode ** Node,
-            XFSNType Type,
-            const char * Name
+_EncWsNodeMake (
+            struct _EncWsNode ** Node,
+            const struct KDirectory * Workspace,
+            const char * Name,
+            const char * Path
 )
 {
     rc_t RCt;
-    struct XFSKfsNode * TheNode;
+    struct _EncWsNode * TheNode;
+    uint32_t Type;
 
     RCt = 0;
     TheNode = NULL;
+    Type = kptNotFound;
 
-    if ( Node == NULL || Name == NULL ) {
-        return XFS_RC ( rcNull );
+    XFS_CSAN ( Node )
+    XFS_CAN ( Node )
+    XFS_CAN ( Workspace )
+    XFS_CAN ( Name )
+
+        /* First we should check that object exist and has valid type
+         */
+    Type = KDirectoryPathType ( Workspace, Path );
+    switch ( Type ) {
+        case kptFile :
+        case kptDir :
+            break;
+        case kptNotFound :
+            return XFS_RC ( rcNotFound );
+        default :
+            return XFS_RC ( rcInvalid );
     }
 
-    * Node = NULL;
-
-    if ( Type != kxfsFile && Type != kxfsDir ) {
-        return XFS_RC ( rcUnsupported );
-    }
-
-    TheNode = calloc ( 1, sizeof ( struct XFSKfsNode ) );
+    TheNode = calloc ( 1, sizeof ( struct _EncWsNode ) );
     if ( TheNode == NULL ) {
         RCt = XFS_RC ( rcExhausted );
     }
@@ -184,27 +196,36 @@ XFSKfsNodeMake (
         RCt = XFSNodeInitVT (
                 & ( TheNode -> node),
                 Name,
-                ( const union XFSNode_vt * ) ( Type == kxfsDir
-                                        ? ( & _sKfsDirNodeVT_v1 )
-                                        : ( & _sKfsFileNodeVT_v1 )
+                ( const union XFSNode_vt * ) ( Type == kptDir
+                                        ? ( & _sEncWsDirNodeVT_v1 )
+                                        : ( & _sEncWsFileNodeVT_v1 )
                 )
                 );
         if ( RCt == 0 ) {
+            RCt = KDirectoryAddRef ( Workspace );
+            if ( RCt == 0 ) {
+                TheNode -> workspace = Workspace;
 
-            TheNode -> type = Type;
+                TheNode -> type = Type == kptDir ? kxfsDir : kxfsFile;
 
-                /* This is duplicate, but necessary one
-                 */
-            ( & ( TheNode -> node ) ) -> vt = Type == kxfsDir
-                    ? ( ( const union XFSNode_vt * ) & _sKfsDirNodeVT_v1 )
-                    : ( ( const union XFSNode_vt * ) & _sKfsFileNodeVT_v1 )
-                    ;
+                    /* This is duplicate, but necessary one
+                     */
+                ( & ( TheNode -> node ) ) -> vt = Type == kxfsDir
+                        ? ( ( const union XFSNode_vt * ) & _sEncWsDirNodeVT_v1 )
+                        : ( ( const union XFSNode_vt * ) & _sEncWsFileNodeVT_v1 )
+                        ;
 
-            * Node = TheNode;
+                RCt = XFS_StrDup ( Path, & ( TheNode -> path ) );
+                if ( RCt == 0 ) {
+                    * Node = TheNode;
+                }
+            }
         }
     }
 
     if ( RCt != 0 ) {
+        * Node = NULL;
+
         if ( TheNode != NULL ) {
             XFSNodeDispose ( & ( TheNode -> node ) );
             TheNode = NULL;
@@ -212,80 +233,35 @@ XFSKfsNodeMake (
     }
 
 /*
-printf ( "XFSKfsNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) TheNode, Name, Type );
+printf ( "_EncWsNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) TheNode, Name, Type );
 */
 
     return RCt;
-}   /* XFSKfsNodeMake () */
-
-static
-rc_t CC
-XFSKfsNodeMakeEx (
-            struct XFSKfsNode ** Node,
-            XFSNType Type,
-            const char * Name,
-            const char * Path,
-            const char * Perm
-)
-{
-    struct XFSKfsNode * TempNode;
-    rc_t RCt;
-
-    RCt = 0;
-    TempNode = NULL;
-
-    if ( Node == NULL || Name == NULL || Path == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    * Node = NULL;
-
-    RCt = XFSKfsNodeMake ( & TempNode, Type, Name );
-    if ( RCt == 0 ) {
-        RCt = XFS_StrDup ( Path, & ( TempNode -> path ) );
-        if ( RCt == 0 ) {
-            if ( Perm != NULL ) {
-                RCt = XFS_StrDup ( Perm, & ( TempNode -> perm ) );
-            }
-            if ( RCt == 0 ) {
-                * Node = TempNode;
-            }
-        }
-    }
-
-    if ( RCt != 0 ) {
-        if ( TempNode != NULL ) {
-            XFSNodeDispose ( & ( TempNode -> node ) );
-            TempNode = NULL;
-        }
-    }
-
-    return RCt;
-}   /* XFSKfsNodeMakeEx () */
+}   /* _EncWsNodeMake () */
 
 uint32_t CC
-_KfsNodeFlavor_v1 ( const struct XFSNode * self )
+_EncWsNodeFlavor_v1 ( const struct XFSNode * self )
 {
-    return _sFlavorOfKfs;
-}   /* _KfsNodeFlavor_v1 () */
+    return _sFlavorOfWorkspace;
+}   /* _EncWsNodeFlavor_v1 () */
 
 static
 rc_t CC
-XFSKfsNodeDispose ( const struct XFSKfsNode * self )
+_EncWsNodeDispose ( const struct _EncWsNode * self )
 {
-    struct XFSKfsNode * Node = ( struct XFSKfsNode * ) self;
+    struct _EncWsNode * Node = ( struct _EncWsNode * ) self;
 
 /*
-printf ( "XFSKfsNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+printf ( "_EncWsNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
 */
 
     if ( Node == 0 ) {
         return 0;
     }
 
-    if ( Node -> perm != NULL ) {
-        free ( ( char * ) Node -> perm );
-        Node -> perm = NULL;
+    if ( Node -> workspace != NULL ) {
+        KDirectoryRelease ( Node -> workspace );
+        Node -> workspace = NULL;
     }
 
     if ( Node -> path != NULL ) {
@@ -298,13 +274,13 @@ printf ( "XFSKfsNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL 
     free ( Node );
 
     return 0;
-}   /* XFSKfsNodeDispose () */
+}   /* _EncWsNodeDispose () */
 
 rc_t CC
-_KfsNodeDispose_v1 ( const struct XFSNode * self )
+_EncWsNodeDispose_v1 ( const struct XFSNode * self )
 {
-    return XFSKfsNodeDispose ( ( struct XFSKfsNode * ) self );
-}   /* _KfsNodeDispose_v1 () */
+    return _EncWsNodeDispose ( ( struct _EncWsNode * ) self );
+}   /* _EncWsNodeDispose_v1 () */
 
 /*)))
  |||
@@ -315,7 +291,7 @@ _KfsNodeDispose_v1 ( const struct XFSNode * self )
 /*)) KFile version
  ((*/
 rc_t CC
-_KfsFileNodeFindNode_v1 (
+_EncWsFileNodeFindNode_v1 (
             const struct XFSNode * self,
             const struct XFSPath * Path,
             uint32_t PathIndex,
@@ -332,6 +308,7 @@ _KfsFileNodeFindNode_v1 (
     NodeName = NULL;
     IsLast = false;
 
+printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
     RCt = XFSNodeFindNodeCheckInitStandard (
                                             self,
                                             Path,
@@ -341,6 +318,7 @@ _KfsFileNodeFindNode_v1 (
                                             & PathCount,
                                             & IsLast
                                             );
+printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
     if ( RCt == 0 ) {
         if ( IsLast ) {
             RCt = XFSNodeAddRef ( self );
@@ -349,13 +327,15 @@ _KfsFileNodeFindNode_v1 (
         }
     }
 
+printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
+
     return RCt;
-}   /* _KfsFileNodeFindNode () */
+}   /* _EncWsFileNodeFindNode () */
 
 /*)) KDir version
  ((*/
 rc_t CC
-_KfsDirNodeFindNode_v1 (
+_EncWsDirNodeFindNode_v1 (
             const struct XFSNode * self,
             const struct XFSPath * Path,
             uint32_t PathIndex,
@@ -367,20 +347,16 @@ _KfsDirNodeFindNode_v1 (
     const char * NodeName;
     char PathBuf [ XFS_SIZE_4096 ];
     size_t PathBufLen;
-    struct XFSKfsNode * KfsNode;
+    struct _EncWsNode * EncWsNode;
     bool IsLast;
-    KDirectory * NativeDir;
-    XFSNType Type;
 
     RCt = 0;
     PathCount = 0;
     NodeName = NULL;
     * PathBuf = 0;
     PathBufLen = 0;
-    KfsNode = NULL;
+    EncWsNode = NULL;
     IsLast = false;
-    NativeDir = NULL;
-    Type = kxfsNotFound;
 
     RCt = XFSNodeFindNodeCheckInitStandard (
                                             self,
@@ -400,15 +376,19 @@ _KfsDirNodeFindNode_v1 (
             return RCt;
         }
 
-        KfsNode = ( struct XFSKfsNode * ) self;
-        if ( KfsNode -> path == NULL ) {
+        EncWsNode = ( struct _EncWsNode * ) self;
+        if ( EncWsNode -> path == NULL ) {
+            return XFS_RC ( rcInvalid );
+        }
+
+        if ( EncWsNode -> workspace == NULL ) {
             return XFS_RC ( rcInvalid );
         }
 
         PathBufLen = string_copy_measure (
                                         PathBuf,
                                         sizeof ( PathBuf ),
-                                        KfsNode -> path
+                                        EncWsNode -> path
                                         );
         * ( PathBuf + PathBufLen ) = '/';
             /*) Here we are trying to create new node
@@ -420,42 +400,23 @@ _KfsDirNodeFindNode_v1 (
                         sizeof ( PathBuf ) - PathBufLen
                         );
         if ( RCt == 0 ) {
-            RCt = KDirectoryNativeDir ( & NativeDir );
+            RCt = _EncWsNodeMake (
+                                & EncWsNode,
+                                EncWsNode -> workspace,
+                                XFSPathName ( Path ),
+                                PathBuf
+                                );
             if ( RCt == 0 ) {
-                switch ( KDirectoryPathType ( NativeDir, PathBuf ) ) {
-                    case kptFile :
-                            Type = kxfsFile;
-                            break;
-                    case kptDir :
-                            Type = kxfsDir;
-                            break;
-                    default :
-                            RCt = XFS_RC ( rcInvalid );
-                            break;
-                }
+                * Node = & ( EncWsNode -> node );
 
-                if ( RCt == 0 ) {
-                    RCt = XFSKfsNodeMakeEx (
-                                        & KfsNode,
-                                        Type,
-                                        XFSPathName ( Path ),
-                                        PathBuf,
-                                        NULL
-                                        );
-                    if ( RCt == 0 ) {
-                        * Node = & ( KfsNode -> node );
-
-                        return 0;
-                    }
-                }
-
-                KDirectoryRelease ( NativeDir );
+                return 0;
             }
         }
     }
 
+
     return RCt;
-}   /* _KfsDirNodeFindNode () */
+}   /* _EncWsDirNodeFindNode () */
 
 /*)))
  |||
@@ -464,10 +425,10 @@ _KfsDirNodeFindNode_v1 (
 (((*/
 static
 rc_t CC
-_KfsDir_dispose_v1 ( const struct XFSEditor * self )
+_EncWsDir_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_KfsDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    printf ( "_EncWsDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -475,22 +436,20 @@ _KfsDir_dispose_v1 ( const struct XFSEditor * self )
     }
 
     return 0;
-}   /* _KfsDir_dispose_v1 () */
+}   /* _EncWsDir_dispose_v1 () */
 
 static
 rc_t CC
-_KfsDir_list_v1 (
+_EncWsDir_list_v1 (
                 const struct XFSDirEditor * self,
                 const struct KNamelist ** List
 )
 {
-    KDirectory * NativeDir;
-    const struct XFSKfsNode * Node;
+    const struct _EncWsNode * Node;
     struct KNamelist * TempList;
     rc_t RCt;
 
     RCt = 0;
-    NativeDir = NULL;
     Node = NULL;
     TempList = NULL;
 
@@ -499,7 +458,7 @@ _KfsDir_list_v1 (
     }
     * List = NULL;
 
-    Node = ( const struct XFSKfsNode * ) XFSEditorNode (
+    Node = ( const struct _EncWsNode * ) XFSEditorNode (
                                                 & ( self -> Papahen )
                                                 );
     if ( Node == NULL ) {
@@ -510,57 +469,50 @@ _KfsDir_list_v1 (
         return XFS_RC ( rcInvalid );
     }
 
+    if ( Node -> workspace == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
     if ( Node -> type != kxfsDir ) {
         return XFS_RC ( rcInvalid );
     }
 
-    RCt = KDirectoryNativeDir ( & NativeDir );
+    RCt = KDirectoryList (
+                        Node -> workspace,
+                        & TempList,
+                        NULL, /* Filter Func */
+                        NULL, /* Filter Data */
+                        Node -> path
+                        );
     if ( RCt == 0 ) {
-        RCt = KDirectoryList (
-                            NativeDir,
-                            & TempList,
-                            NULL, /* Filter Func */
-                            NULL, /* Filter Data */
-                            Node -> path
-                            );
-        if ( RCt == 0 ) {
-            * List = TempList;
+        * List = TempList;
+    }
+    else {
+        if ( TempList != NULL ) {
+            KNamelistRelease ( TempList );
         }
-        else {
-            if ( TempList != NULL ) {
-                KNamelistRelease ( TempList );
-            }
-        }
-
-        KDirectoryRelease ( NativeDir );
     }
 
     return RCt;
-}   /* _KfsDir_list_v1 () */
+}   /* _EncWsDir_list_v1 () */
 
 static
 rc_t CC
-_KfsDir_find_v1 (
+_EncWsDir_find_v1 (
                 const struct XFSDirEditor * self,
                 const char * Name,
                 const struct XFSNode ** Node
 )
 {
-    KDirectory * NativeDir;
-    const struct XFSKfsNode * KfsNode;
-    struct XFSKfsNode * TempNode;
-    uint32_t FileType;
-    XFSNType Type;
+    const struct _EncWsNode * EncWsNode;
+    struct _EncWsNode * TempNode;
     char FullPath [ XFS_SIZE_4096 ];
     size_t NumWrit;
     rc_t RCt;
 
     RCt = 0;
-    NativeDir = NULL;
-    KfsNode = NULL;
+    EncWsNode = NULL;
     TempNode = NULL;
-    FileType = kptNotFound;
-    Type = kxfsNotFound;
     NumWrit = 0;
     * FullPath = 0;
 
@@ -570,14 +522,18 @@ _KfsDir_find_v1 (
 
     * Node = NULL;
 
-    KfsNode = ( const struct XFSKfsNode * ) XFSEditorNode (
+    EncWsNode = ( const struct _EncWsNode * ) XFSEditorNode (
                                                 & ( self -> Papahen )
                                                 );
-    if ( KfsNode == NULL ) {
+    if ( EncWsNode == NULL ) {
         return XFS_RC ( rcInvalid );
     }
 
-    if ( KfsNode -> path == NULL ) {
+    if ( EncWsNode -> path == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    if ( EncWsNode -> workspace == NULL ) {
         return XFS_RC ( rcInvalid );
     }
 
@@ -586,74 +542,53 @@ _KfsDir_find_v1 (
                         sizeof ( FullPath ),
                         & NumWrit,
                         "%s/%s",
-                        KfsNode -> path,
+                        EncWsNode -> path,
                         Name
                         );
     if ( RCt == 0 ) {
-
-        RCt = KDirectoryNativeDir ( & NativeDir );
+        RCt = _EncWsNodeMake (
+                            & TempNode,
+                            EncWsNode -> workspace,
+                            Name,
+                            FullPath
+                            );
         if ( RCt == 0 ) {
-            FileType = KDirectoryPathType ( NativeDir, FullPath );
-            switch ( FileType ) {
-                case kptFile :
-                    Type = kxfsFile;
-                    break;
-                case kptDir :
-                    Type = kxfsDir;
-                    break;
-                default :
-                    RCt = XFS_RC ( rcUnsupported );
-                    break;
-            }
-            if ( RCt == 0 ) {
-                RCt = XFSKfsNodeMakeEx (
-                                    & TempNode,
-                                    Type,
-                                    Name,
-                                    FullPath,
-                                    KfsNode -> perm
-                                    );
-                if ( RCt == 0 ) {
-                    * Node = ( const struct XFSNode * ) TempNode;
-                }
-            }
-
-            KDirectoryRelease ( NativeDir );
+            * Node = ( const struct XFSNode * ) TempNode;
         }
     }
 
     return RCt;
-}   /* _KfsDir_find_v1 () */
+}   /* _EncWsDir_find_v1 () */
 
 static
 rc_t CC
-_KfsDir_create_file_v1 (
+_EncWsDir_create_file_v1 (
                 const struct XFSDirEditor * self,
                 const char * Name,
                 XFSNMode Mode,
                 const struct XFSHandle ** Handle
 )
 {
-    struct KDirectory * NativeDir;
     struct KFile * File;
     bool Update;
     KCreateMode CreateMode;
     char Path [ XFS_SIZE_4096 ];
-    struct XFSKfsNode * KfsNode, * TempNode;
-    struct XFSKfsFileEditor * FileEditor;
+    struct _EncWsNode * EncWsNode, * TempNode;
+    struct _EncWsFileEditor * FileEditor;
     const struct XFSHandle * TempHandle;
     size_t NumWritten;
+    uint32_t NodeMode;
     rc_t RCt;
 
-    NativeDir = NULL;
     File = NULL;
     Update = false;
     CreateMode = kcmCreate;
     * Path = 0;
-    KfsNode = TempNode = NULL;
+    EncWsNode = TempNode = NULL;
     FileEditor = NULL;
     TempHandle = NULL;
     NumWritten = 0;
+    NodeMode = 0;
     RCt = 0;
 
     if ( self == NULL || Name == NULL || Handle == NULL ) {
@@ -662,10 +597,14 @@ _KfsDir_create_file_v1 (
 
     * Handle = NULL;
 
-    KfsNode = ( struct XFSKfsNode * ) XFSEditorNode (
+    EncWsNode = ( struct _EncWsNode * ) XFSEditorNode (
                                                 & ( self -> Papahen )
                                                 );
-    if ( KfsNode -> path == NULL ) {
+    if ( EncWsNode -> path == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    if ( EncWsNode -> workspace == NULL ) {
         return XFS_RC ( rcInvalid );
     }
 
@@ -674,7 +613,7 @@ _KfsDir_create_file_v1 (
                         sizeof ( Path ),
                         & NumWritten,
                         "%s/%s",
-                        KfsNode -> path,
+                        EncWsNode -> path,
                         Name
                         );
     if ( RCt != 0 ) {
@@ -684,46 +623,45 @@ _KfsDir_create_file_v1 (
     Update = Mode == kxfsReadWrite;
     CreateMode = kcmCreate;
 
+    NodeMode = ( Mode == kxfsReadWrite || Mode == kxfsWrite )
+                                                ? XFSPermRWDefNodeNum ()
+                                                : XFSPermRODefNodeNum ()
+                                                ;
+
         /* Here we are */
-    RCt = KDirectoryNativeDir ( & NativeDir );
+    RCt = KDirectoryCreateFile (
+                            ( struct KDirectory * ) EncWsNode -> workspace,
+                            & File, 
+                            Update,
+                            NodeMode,
+                            CreateMode,
+                            Path
+                            );
     if ( RCt == 0 ) {
-        RCt = KDirectoryCreateFile (
-                                NativeDir,
-                                & File, 
-                                Update,
-                                XFSPermRODefNodeNum (),
-                                CreateMode,
-                                Path
-                                );
+        RCt = _EncWsNodeMake (
+                            & TempNode,
+                            EncWsNode -> workspace,
+                            Name,
+                            Path
+                            );
         if ( RCt == 0 ) {
-            RCt = XFSKfsNodeMakeEx (
-                                & TempNode,
-                                kxfsFile,
-                                Name,
-                                Path,
-                                KfsNode -> perm
+            RCt = XFSNodeFileEditor (
+                                & ( TempNode -> node ),
+                                ( const struct XFSFileEditor ** ) & FileEditor
                                 );
             if ( RCt == 0 ) {
-                RCt = XFSNodeFileEditor (
-                                    & ( TempNode -> node ),
-                                    ( const struct XFSFileEditor ** ) & FileEditor
-                                    );
+                FileEditor -> File = File;
+                RCt = XFSHandleMake (
+                                & ( TempNode -> node ),
+                                & TempHandle
+                                );
                 if ( RCt == 0 ) {
-                    FileEditor -> File = File;
-                    RCt = XFSHandleMake (
-                                    & ( TempNode -> node ),
-                                    & TempHandle
-                                    );
-                    if ( RCt == 0 ) {
-                        XFSHandleSet ( TempHandle, FileEditor );
+                    XFSHandleSet ( TempHandle, FileEditor );
 
-                        * Handle = TempHandle;
-                    }
+                    * Handle = TempHandle;
                 }
             }
         }
-
-        KDirectoryRelease ( NativeDir );
     }
 
     if ( RCt != 0 ) {
@@ -744,24 +682,22 @@ _KfsDir_create_file_v1 (
     }
 
     return RCt;
-}   /* _KfsDir_create_file_v1 () */
+}   /* _EncWsDir_create_file_v1 () */
 
 static
 rc_t CC
-_KfsDir_create_dir_v1 (
+_EncWsDir_create_dir_v1 (
                 const struct XFSDirEditor * self,
                 const char * Name
 )
 {
     rc_t RCt;
-    KDirectory * NativeDir;
-    struct XFSKfsNode * KfsNode;
+    struct _EncWsNode * EncWsNode;
     char Path [ XFS_SIZE_4096 ];
     size_t NumWritten;
 
     RCt = 0;
-    NativeDir = NULL;
-    KfsNode = NULL;
+    EncWsNode = NULL;
     * Path = 0;
     NumWritten = 0;
 
@@ -769,10 +705,14 @@ _KfsDir_create_dir_v1 (
         return XFS_RC ( rcNull );
     }
 
-    KfsNode = ( struct XFSKfsNode * ) XFSEditorNode (
+    EncWsNode = ( struct _EncWsNode * ) XFSEditorNode (
                                                 & ( self -> Papahen )
                                                 );
-    if ( KfsNode -> path == NULL ) {
+    if ( EncWsNode -> path == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    if ( EncWsNode -> workspace == NULL ) {
         return XFS_RC ( rcInvalid );
     }
 
@@ -781,44 +721,35 @@ _KfsDir_create_dir_v1 (
                         sizeof ( Path ),
                         & NumWritten,
                         "%s/%s",
-                        KfsNode -> path,
+                        EncWsNode -> path,
                         Name
                         );
     if ( RCt != 0 ) {
         return RCt;
     }
 
-    RCt = KDirectoryNativeDir ( & NativeDir );
-    if ( RCt == 0 ) {
-        RCt = KDirectoryCreateDir (
-                                NativeDir,
-                                XFSPermRODefContNum (),
-                                kcmCreate,
-                                Path
-                                );
-
-        KDirectoryRelease ( NativeDir );
-    }
-
-    return RCt;
-}   /* _KfsDir_create_dir_v1 () */
+    return KDirectoryCreateDir (
+                        ( struct KDirectory * ) EncWsNode -> workspace,
+                        XFSPermRWDefContNum (),
+                        kcmCreate,
+                        Path
+                        );
+}   /* _EncWsDir_create_dir_v1 () */
 
 static
 rc_t CC
-_KfsDir_delete_v1 (
+_EncWsDir_delete_v1 (
                 const struct XFSDirEditor * self,
                 const char * Name
 )
 {
     rc_t RCt;
-    KDirectory * NativeDir;
-    struct XFSKfsNode * KfsNode;
+    struct _EncWsNode * EncWsNode;
     char Path [ XFS_SIZE_4096 ];
     size_t NumWritten;
 
     RCt = 0;
-    NativeDir = NULL;
-    KfsNode = NULL;
+    EncWsNode = NULL;
     * Path = 0;
     NumWritten = 0;
 
@@ -826,10 +757,14 @@ _KfsDir_delete_v1 (
         return XFS_RC ( rcNull );
     }
 
-    KfsNode = ( struct XFSKfsNode * ) XFSEditorNode (
+    EncWsNode = ( struct _EncWsNode * ) XFSEditorNode (
                                                 & ( self -> Papahen )
                                                 );
-    if ( KfsNode -> path == NULL ) {
+    if ( EncWsNode -> path == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    if ( EncWsNode -> workspace == NULL ) {
         return XFS_RC ( rcInvalid );
     }
 
@@ -838,25 +773,22 @@ _KfsDir_delete_v1 (
                         sizeof ( Path ),
                         & NumWritten,
                         "%s/%s",
-                        KfsNode -> path,
+                        EncWsNode -> path,
                         Name
                         );
     if ( RCt != 0 ) {
         return RCt;
     }
 
-    RCt = KDirectoryNativeDir ( & NativeDir );
-    if ( RCt == 0 ) {
-        RCt = KDirectoryRemove ( NativeDir, true, Path );
-
-        KDirectoryRelease ( NativeDir );
-    }
-
-    return RCt;
-}   /* _KfsDir_delete_v1 () */
+    return KDirectoryRemove (
+                        ( struct KDirectory * ) EncWsNode -> workspace,
+                        true,
+                        Path
+                        );
+}   /* _EncWsDir_delete_v1 () */
 
 rc_t CC
-_KfsDir_move_v1 (
+_EncWsDir_move_v1 (
             const struct XFSDirEditor * self,
             const char * OldName,
             const struct XFSNode * NewDir,
@@ -864,17 +796,15 @@ _KfsDir_move_v1 (
 )
 {
     rc_t RCt;
-    struct XFSKfsNode * KfsNode;
-    struct XFSKfsNode * NewKfsNode;
-    KDirectory * NativeDir;
+    struct _EncWsNode * EncWsNode;
+    struct _EncWsNode * NewEncWsNode;
     char OldPath [ XFS_SIZE_4096 ];
     char NewPath [ XFS_SIZE_4096 ];
     size_t NumWritten;
 
     RCt = 0;
-    KfsNode = NULL;
-    NewKfsNode = NULL;
-    NativeDir = NULL;
+    EncWsNode = NULL;
+    NewEncWsNode = NULL;
     * OldPath = * NewPath = 0;
     NumWritten = 0;
 
@@ -891,15 +821,24 @@ _KfsDir_move_v1 (
         return XFS_RC ( rcInvalid );
     }
 
-    KfsNode = ( struct XFSKfsNode * ) XFSEditorNode (
+    EncWsNode = ( struct _EncWsNode * ) XFSEditorNode (
                                                 & ( self -> Papahen )
                                                 );
-    if ( KfsNode -> path == NULL ) {
+    if ( EncWsNode -> path == NULL ) {
         return XFS_RC ( rcInvalid );
     }
 
-    NewKfsNode = ( struct XFSKfsNode * ) NewDir;
-    if ( NewKfsNode -> path == NULL ) {
+    if ( EncWsNode -> workspace == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    NewEncWsNode = ( struct _EncWsNode * ) NewDir;
+
+    if ( NewEncWsNode -> path == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    if ( NewEncWsNode -> workspace == NULL ) {
         return XFS_RC ( rcInvalid );
     }
 
@@ -908,7 +847,7 @@ _KfsDir_move_v1 (
                         sizeof ( OldPath ),
                         & NumWritten,
                         "%s/%s",
-                        KfsNode -> path,
+                        EncWsNode -> path,
                         OldName
                         );
     if ( RCt != 0 ) {
@@ -920,25 +859,23 @@ _KfsDir_move_v1 (
                         sizeof ( NewPath ),
                         & NumWritten,
                         "%s/%s",
-                        NewKfsNode -> path,
+                        NewEncWsNode -> path,
                         NewName
                         );
     if ( RCt != 0 ) {
         return RCt;
     }
 
-    RCt = KDirectoryNativeDir ( & NativeDir );
-    if ( RCt == 0 ) {
-        RCt = KDirectoryRename ( NativeDir, true, OldPath, NewPath );
-
-        KDirectoryRelease ( NativeDir );
-    }
-
-    return RCt;
-}   /* _KfsDir_move_v1 () */
+    return KDirectoryRename (
+                        ( struct KDirectory * ) EncWsNode -> workspace,
+                        true,
+                        OldPath,
+                        NewPath
+                        );
+}   /* _EncWsDir_move_v1 () */
 
 rc_t CC
-_KfsNodeDir_v1 (
+_EncWsNodeDir_v1 (
             const struct XFSNode * self,
             const struct XFSDirEditor ** Dir
 )
@@ -955,7 +892,7 @@ _KfsNodeDir_v1 (
 
     * Dir = NULL;
 
-    if ( ( ( struct XFSKfsNode * ) self ) -> type != kxfsDir ) {
+    if ( ( ( struct _EncWsNode * ) self ) -> type != kxfsDir ) {
         return XFS_RC ( rcInvalid );
     }
 
@@ -967,16 +904,16 @@ _KfsNodeDir_v1 (
     RCt = XFSEditorInit (
                     & ( Editor -> Papahen ),
                     self,
-                    _KfsDir_dispose_v1
+                    _EncWsDir_dispose_v1
                     );
 
     if ( RCt == 0 ) {
-        Editor -> list = _KfsDir_list_v1;
-        Editor -> find = _KfsDir_find_v1;
-        Editor -> create_file = _KfsDir_create_file_v1;
-        Editor -> create_dir = _KfsDir_create_dir_v1;
-        Editor -> delete = _KfsDir_delete_v1;
-        Editor -> move = _KfsDir_move_v1;
+        Editor -> list = _EncWsDir_list_v1;
+        Editor -> find = _EncWsDir_find_v1;
+        Editor -> create_file = _EncWsDir_create_file_v1;
+        Editor -> create_dir = _EncWsDir_create_dir_v1;
+        Editor -> delete = _EncWsDir_delete_v1;
+        Editor -> move = _EncWsDir_move_v1;
 
         * Dir = Editor;
     }
@@ -985,7 +922,7 @@ _KfsNodeDir_v1 (
     }
 
     return RCt;
-}   /* _KfsNodeDir_v1 () */
+}   /* _EncWsNodeDir_v1 () */
 
 /*)))
  |||
@@ -995,12 +932,12 @@ _KfsNodeDir_v1 (
 
 static
 rc_t CC
-_KfsFile_dispose_v1 ( const struct XFSEditor * self )
+_EncWsFile_dispose_v1 ( const struct XFSEditor * self )
 {
-    struct XFSKfsFileEditor * Editor = ( struct XFSKfsFileEditor * ) self;
+    struct _EncWsFileEditor * Editor = ( struct _EncWsFileEditor * ) self;
 
 /*
-    printf ( "_KfsNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    printf ( "_EncWsNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -1014,30 +951,28 @@ _KfsFile_dispose_v1 ( const struct XFSEditor * self )
     }
 
     return 0;
-}   /* _KfsFile_dispose_v1 () */
+}   /* _EncWsFile_dispose_v1 () */
 
 static
 rc_t CC
-_KfsFile_open_v1 (
+_EncWsFile_open_v1 (
                     const struct XFSFileEditor * self,
                     XFSNMode Mode
 )
 {
     KFile * File;
-    const struct XFSKfsNode * Node;
-    KDirectory * NativeDir;
+    const struct _EncWsNode * Node;
     rc_t RCt;
 
     File = NULL;
     Node = NULL;
-    NativeDir = NULL;
     RCt = 0;
 
     if ( self == NULL ) {
         return XFS_RC ( rcNull );
     }
 
-    Node = ( const struct XFSKfsNode * ) XFSEditorNode (
+    Node = ( const struct _EncWsNode * ) XFSEditorNode (
                                                 & ( self -> Papahen )
                                                 );
     if ( Node == NULL ) {
@@ -1052,38 +987,37 @@ _KfsFile_open_v1 (
         return XFS_RC ( rcInvalid );
     }
 
-    RCt = KDirectoryNativeDir ( & NativeDir );
-    if ( RCt == 0 ) {
-        if ( Mode == kxfsRead ) {
-            RCt = KDirectoryOpenFileRead (
-                                        NativeDir,
-                                        ( const KFile ** ) & File,
-                                        Node -> path
-                                        );
-        }
-        else {
-            RCt = KDirectoryOpenFileWrite (
-                                        NativeDir,
-                                        & File,
-                                        ( Mode & kxfsRead ) == kxfsRead,
-                                        Node -> path
-                                        );
-        }
-        if ( RCt == 0 ) {
-            ( ( struct XFSKfsFileEditor * ) self ) -> File = File;
-        }
+    if ( Node -> workspace == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
 
-        KDirectoryRelease ( NativeDir );
+    if ( Mode == kxfsRead ) {
+        RCt = KDirectoryOpenFileRead (
+                            ( struct KDirectory * ) Node -> workspace,
+                            ( const KFile ** ) & File,
+                            Node -> path
+                            );
+    }
+    else {
+        RCt = KDirectoryOpenFileWrite (
+                            ( struct KDirectory * ) Node -> workspace,
+                            & File,
+                            ( Mode & kxfsRead ) == kxfsRead,
+                            Node -> path
+                            );
+    }
+    if ( RCt == 0 ) {
+        ( ( struct _EncWsFileEditor * ) self ) -> File = File;
     }
 
     return RCt;
-}   /* _KfsFile_open_v1 () */
+}   /* _EncWsFile_open_v1 () */
 
 static
 rc_t CC
-_KfsFile_close_v1 ( const struct XFSFileEditor * self )
+_EncWsFile_close_v1 ( const struct XFSFileEditor * self )
 {
-    struct XFSKfsFileEditor * Editor;
+    struct _EncWsFileEditor * Editor;
     rc_t RCt;
 
     Editor = NULL;
@@ -1094,7 +1028,7 @@ _KfsFile_close_v1 ( const struct XFSFileEditor * self )
     }
 
 
-    Editor = ( struct XFSKfsFileEditor * ) self;
+    Editor = ( struct _EncWsFileEditor * ) self;
 
     if ( Editor -> File != NULL ) {
         RCt = KFileRelease ( Editor -> File );
@@ -1103,11 +1037,11 @@ _KfsFile_close_v1 ( const struct XFSFileEditor * self )
     }
 
     return RCt;
-}   /* _KfsFile_close_v1 () */
+}   /* _EncWsFile_close_v1 () */
 
 static
 rc_t CC
-_KfsFile_read_v1 (
+_EncWsFile_read_v1 (
                     const struct XFSFileEditor * self,
                     uint64_t Offset,
                     void * Buffer,
@@ -1115,7 +1049,7 @@ _KfsFile_read_v1 (
                     size_t * NumReaded
 )
 {
-    struct XFSKfsFileEditor * Editor;
+    struct _EncWsFileEditor * Editor;
     rc_t RCt;
 
     Editor = NULL;
@@ -1125,7 +1059,7 @@ _KfsFile_read_v1 (
         return XFS_RC ( rcNull );
     }
 
-    Editor = ( struct XFSKfsFileEditor * ) self;
+    Editor = ( struct _EncWsFileEditor * ) self;
 
     if ( Editor -> File == NULL ) {
         return XFS_RC ( rcInvalid );
@@ -1142,11 +1076,11 @@ _KfsFile_read_v1 (
 /* here may be debutt */
 
     return RCt;
-}   /* _KfsFile_read_v1 () */
+}   /* _EncWsFile_read_v1 () */
 
 static
 rc_t CC
-_KfsFile_write_v1 (
+_EncWsFile_write_v1 (
                     const struct XFSFileEditor * self,
                     uint64_t Offset,
                     const void * Buffer,
@@ -1154,7 +1088,7 @@ _KfsFile_write_v1 (
                     size_t * NumWritten
 )
 {
-    struct XFSKfsFileEditor * Editor;
+    struct _EncWsFileEditor * Editor;
     rc_t RCt;
 
     Editor = NULL;
@@ -1164,7 +1098,7 @@ _KfsFile_write_v1 (
         return XFS_RC ( rcNull );
     }
 
-    Editor = ( struct XFSKfsFileEditor * ) self;
+    Editor = ( struct _EncWsFileEditor * ) self;
 
     if ( Editor -> File == NULL ) {
         return XFS_RC ( rcInvalid );
@@ -1178,20 +1112,17 @@ _KfsFile_write_v1 (
                     NumWritten
                     );
 
-
-/* here may be debutt */
-
     return RCt;
-}   /* _KfsFile_write_v1 () */
+}   /* _EncWsFile_write_v1 () */
 
 rc_t CC
-_KfsNodeFile_v1 (
+_EncWsNodeFile_v1 (
             const struct XFSNode * self,
             const struct XFSFileEditor ** File
 )
 {
     rc_t RCt;
-    struct XFSKfsFileEditor * FileEditor;
+    struct _EncWsFileEditor * FileEditor;
     struct XFSFileEditor * Editor;
 
     RCt = 0;
@@ -1204,11 +1135,11 @@ _KfsNodeFile_v1 (
 
     * File = NULL;
 
-    if ( ( ( struct XFSKfsNode * ) self ) -> type != kxfsFile ) {
+    if ( ( ( struct _EncWsNode * ) self ) -> type != kxfsFile ) {
         return XFS_RC ( rcInvalid );
     }
 
-    FileEditor = calloc ( 1, sizeof ( struct XFSKfsFileEditor ) );
+    FileEditor = calloc ( 1, sizeof ( struct _EncWsFileEditor ) );
     if ( FileEditor == NULL ) { 
         return XFS_RC ( rcExhausted );
     }
@@ -1218,14 +1149,14 @@ _KfsNodeFile_v1 (
     RCt = XFSEditorInit (
                     & ( Editor -> Papahen ),
                     self,
-                    _KfsFile_dispose_v1
+                    _EncWsFile_dispose_v1
                     );
 
     if ( RCt == 0 ) {
-        Editor -> open = _KfsFile_open_v1;
-        Editor -> close = _KfsFile_close_v1;
-        Editor -> read = _KfsFile_read_v1;
-        Editor -> write = _KfsFile_write_v1;
+        Editor -> open = _EncWsFile_open_v1;
+        Editor -> close = _EncWsFile_close_v1;
+        Editor -> read = _EncWsFile_read_v1;
+        Editor -> write = _EncWsFile_write_v1;
 
         * File = Editor;
     }
@@ -1234,7 +1165,7 @@ _KfsNodeFile_v1 (
     }
 
     return RCt;
-}   /* _KfsNodeFile_v1 () */
+}   /* _EncWsNodeFile_v1 () */
 
 /*)))
  |||
@@ -1244,94 +1175,75 @@ _KfsNodeFile_v1 (
 
 static
 rc_t CC
-_KfsAttr_dispose_v1 ( const struct XFSEditor * self )
+_EncWsAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_KfsAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    printf ( "_EncWsAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != NULL ) {
-        free ( ( struct XFSKfsAttrEditor * ) self );
+        free ( ( struct _EncWsAttrEditor * ) self );
     }
 
     return 0;
-}   /* _KfsAttr_dispose_v1 () */
+}   /* _EncWsAttr_dispose_v1 () */
 
 /*))    Something unusual. Will check-initialize NativeDir and Node
  //     NativeDir and Node could be NULL
 ((*/
 static
 rc_t CC
-_KfsAttr_init_check_v1 (
+_EncWsAttr_init_check_v1 (
                     const struct XFSAttrEditor * self,
-                    const struct XFSKfsNode ** Node,
-                    KDirectory ** NativeDir
+                    const struct _EncWsNode ** Node,
+                    struct KDirectory ** Workspace
 
 )
 {
-    rc_t RCt;
-    const struct XFSKfsNode * RetNode;
-    KDirectory * Dir;
+    const struct _EncWsNode * RetNode = NULL;
 
-    RCt = 0;
-    RetNode = NULL;
-    Dir = NULL;
+    XFS_CSAN ( Node )
+    XFS_CSAN ( Workspace )
+    XFS_CAN ( self )
 
-    if ( Node != NULL ) {
-        * Node = NULL;
-    }
-
-    if ( NativeDir != NULL ) {
-        * NativeDir = NULL;
-    }
-
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    RetNode = ( const struct XFSKfsNode * ) XFSEditorNode (
+    RetNode = ( const struct _EncWsNode * ) XFSEditorNode (
                                                 & ( self -> Papahen )
                                                 );
-
-    if ( RetNode == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
 
     if ( RetNode -> path == NULL ) {
         return XFS_RC ( rcInvalid );
     }
 
-    if ( NativeDir != NULL ) {
-        RCt = KDirectoryNativeDir ( & Dir );
-        if ( RCt == 0 ) {
-            * NativeDir = Dir;
-        }
+    if ( RetNode -> workspace == NULL ) {
+        return XFS_RC ( rcInvalid );
     }
 
-    if ( RCt == 0 ) {
-        if ( Node != NULL ) {
-            * Node = RetNode;
-        }
+    if ( Node != NULL ) {
+        * Node = RetNode;
     }
 
-    return RCt;
-}   /* _KfsAttr_init_check_v1 () */
+    if ( Workspace != NULL ) {
+        * Workspace = ( struct KDirectory * ) RetNode -> workspace;
+    }
+
+    return 0;
+}   /* _EncWsAttr_init_check_v1 () */
 
 static
 rc_t CC
-_KfsAttr_permissions_v1 (
+_EncWsAttr_permissions_v1 (
                         const struct XFSAttrEditor * self,
                         const char ** Permissions
 )
 {
-    const struct XFSKfsNode * Node;
-    KDirectory * NativeDir;
+    const struct _EncWsNode * Node;
+    KDirectory * Workspace;
     uint32_t Access;
     char * BF;
     rc_t RCt;
 
     Node = NULL;
-    NativeDir = NULL;
+    Workspace = NULL;
     BF = NULL;
     RCt = 0;
 
@@ -1340,102 +1252,93 @@ _KfsAttr_permissions_v1 (
     }
     * Permissions = NULL;
 
-    RCt = _KfsAttr_init_check_v1 ( self, & Node, & NativeDir );
+    RCt = _EncWsAttr_init_check_v1 ( self, & Node, & Workspace );
     if ( RCt == 0 ) {
-        if ( Node -> perm != NULL ) {
-            * Permissions = Node -> perm;
-        }
-        else {
-            RCt = KDirectoryAccess ( NativeDir, & Access, Node -> path );
+        RCt = KDirectoryAccess ( Workspace, & Access, Node -> path );
+        if ( RCt == 0 ) {
+            BF = ( ( struct _EncWsAttrEditor * ) self ) -> perm;
+            RCt = XFSPermToChar (
+                                Access,
+                                BF,
+                                sizeof ( ( ( struct _EncWsAttrEditor * ) self ) -> perm )
+                                );
             if ( RCt == 0 ) {
-                BF = ( ( struct XFSKfsAttrEditor * ) self ) -> perm;
-                RCt = XFSPermToChar (
-                                    Access,
-                                    BF,
-                                    sizeof ( ( ( struct XFSKfsAttrEditor * ) self ) -> perm )
-                                    );
-                if ( RCt == 0 ) {
-                    if ( Node -> type == kxfsDir ) {
-                        BF [ 0 ] = 'r';
-                        BF [ 2 ] = 'x';
-                    }
-
-                    * Permissions = ( const char * ) BF;
+                if ( Node -> type == kxfsDir ) {
+                    BF [ 0 ] = 'r';
+                    BF [ 2 ] = 'x';
                 }
+
+                * Permissions = ( const char * ) BF;
             }
         }
-
-        KDirectoryRelease ( NativeDir );
     }
 
     return RCt;
-}   /* _KfsAttr_permissions_v1 () */
+}   /* _EncWsAttr_permissions_v1 () */
 
 static
 rc_t CC
-_KfsAttr_set_permissions_v1 (
+_EncWsAttr_set_permissions_v1 (
                         const struct XFSAttrEditor * self,
                         const char * Permissions
 )
 {
     rc_t RCt;
-    const struct XFSKfsNode * Node;
-    KDirectory * NativeDir;
+    const struct _EncWsNode * Node;
+    struct KDirectory * Workspace;
     uint32_t Access;
 
     RCt = 0;
-    NativeDir = NULL;
+    Workspace = NULL;
     Node = NULL;
+
+    XFS_CAN ( self )
+    XFS_CAN ( Permissions )
 
     if ( Permissions == NULL ) {
         return XFS_RC ( rcNull );
     }
 
-    RCt = _KfsAttr_init_check_v1 ( self, & Node, & NativeDir );
+    RCt = _EncWsAttr_init_check_v1 ( self, & Node, & Workspace );
     if ( RCt == 0 ) {
-        if ( Node -> perm != NULL ) {
-            RCt = XFSPermToNum ( Node -> perm, & Access );
-            if ( RCt == 0 ) {
-                RCt = KDirectorySetAccess (
-                                        NativeDir,
-                                        false,
-                                        Access,
-                                        Access,
-                                        Node -> path
-                                        );
+        RCt = XFSPermToNum ( Permissions, & Access );
+        if ( RCt == 0 ) {
+            RCt = KDirectorySetAccess (
+                                    Workspace,
+                                    false,
+                                    Access,
+                                    Access,
+                                    Node -> path
+                                    );
 
-            }
         }
-
-        KDirectoryRelease ( NativeDir );
     }
 
     return RCt;
-}   /*  _KfsAttr_set_permissions_v1 () */
+}   /*  _EncWsAttr_set_permissions_v1 () */
 
 static
 rc_t CC
-_KfsAttr_size_v1 (
+_EncWsAttr_size_v1 (
                         const struct XFSAttrEditor * self,
                         uint64_t * Size
 )
 {
-    const struct XFSKfsNode * Node;
-    KDirectory * NativeDir;
+    const struct _EncWsNode * Node;
+    struct KDirectory * Workspace;
     uint64_t TempSize;
     rc_t RCt;
 
     Node = NULL;
-    NativeDir = NULL;
+    Workspace = NULL;
     TempSize = 0;
     RCt = 0;
 
-    if ( Size == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * Size = 0;
+    XFS_CSA ( Size, 0 );
+    XFS_CAN ( self )
+    XFS_CAN ( Size )
 
-    RCt = _KfsAttr_init_check_v1 ( self, & Node, & NativeDir );
+    RCt = _EncWsAttr_init_check_v1 ( self, & Node, & Workspace );
     if ( RCt == 0 ) {
             /*) Traditionally directory have size ZERO :lol:
              (*/
@@ -1444,7 +1347,7 @@ _KfsAttr_size_v1 (
         }
         else {
             RCt = KDirectoryFileSize (
-                                NativeDir,
+                                Workspace,
                                 & TempSize,
                                 Node -> path
                                 );
@@ -1453,176 +1356,168 @@ _KfsAttr_size_v1 (
             }
 
         }
-        KDirectoryRelease ( NativeDir );
     }
 
     return RCt;
-}   /* _KfsAttr_size_v1 () */
+}   /* _EncWsAttr_size_v1 () */
 
 static
 rc_t CC
-_KfsAttr_set_size_v1 (
+_EncWsAttr_set_size_v1 (
                 const struct XFSAttrEditor * self,
                 uint64_t Size
 )
 {
     rc_t RCt;
-    const struct XFSKfsNode * Node;
-    KDirectory * NativeDir;
+    const struct _EncWsNode * Node;
+    struct KDirectory * Workspace;
 
     RCt = 0;
     Node = NULL;
-    NativeDir = NULL;
+    Workspace = NULL;
 
-    RCt = _KfsAttr_init_check_v1 ( self, & Node, & NativeDir );
+    XFS_CAN ( self );
+
+    RCt = _EncWsAttr_init_check_v1 ( self, & Node, & Workspace );
     if ( RCt == 0 ) {
         if ( Node -> type != kxfsDir ) {
-            RCt = KDirectorySetFileSize ( NativeDir, Size, Node -> path);
+            RCt = KDirectorySetFileSize ( Workspace, Size, Node -> path);
         }
-
-        KDirectoryRelease ( NativeDir );
     }
 
     return RCt;
-}   /*  _KfsAttr_set_size_v1 () */
+}   /*  _EncWsAttr_set_size_v1 () */
 
 static
 rc_t CC
-_KfsAttr_date_v1 (
+_EncWsAttr_date_v1 (
                         const struct XFSAttrEditor * self,
                         KTime_t * Time
 )
 {
-    const struct XFSKfsNode * Node;
-    KDirectory * NativeDir;
+    const struct _EncWsNode * Node;
+    struct KDirectory * Workspace;
     KTime_t TempTime;
     rc_t RCt;
 
     Node = NULL;
-    NativeDir = NULL;
+    Workspace = NULL;
     TempTime = 0;
     RCt = 0;
 
-    if ( Time == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * Time = 0;
+    XFS_CSA ( Time, 0 )
+    XFS_CAN ( self )
+    XFS_CAN ( Time )
 
-    RCt = _KfsAttr_init_check_v1 ( self, & Node, & NativeDir );
+    RCt = _EncWsAttr_init_check_v1 ( self, & Node, & Workspace );
     if ( RCt == 0 ) {
-        RCt = KDirectoryDate ( NativeDir, & TempTime, Node -> path );
+        RCt = KDirectoryDate ( Workspace, & TempTime, Node -> path );
         if ( RCt == 0 ) {
             * Time = TempTime;
         }
-
-        KDirectoryRelease ( NativeDir );
     }
 
     return RCt;
-}   /* _KfsAttr_date_v1 () */
+}   /* _EncWsAttr_date_v1 () */
 
 static
 rc_t CC
-_KfsAttr_set_date_v1 (
+_EncWsAttr_set_date_v1 (
                 const struct XFSAttrEditor * self,
                 KTime_t Time
 )
 {
     rc_t RCt;
-    const struct XFSKfsNode * Node;
-    KDirectory * NativeDir;
+    const struct _EncWsNode * Node;
+    struct KDirectory * Workspace;
 
     RCt = 0;
-    NativeDir = NULL;
+    Workspace = NULL;
     Node = NULL;
 
-    RCt = _KfsAttr_init_check_v1 ( self, & Node, & NativeDir );
+    XFS_CAN ( self )
+
+    RCt = _EncWsAttr_init_check_v1 ( self, & Node, & Workspace );
     if ( RCt == 0 ) {
-        RCt = KDirectorySetDate ( NativeDir, true, Time, Node -> path );
-        
-        KDirectoryRelease ( NativeDir );
+        RCt = KDirectorySetDate ( Workspace, true, Time, Node -> path );
     }
 
     return RCt;
-}   /*  _KfsAttr_set_date_v1 () */
+}   /*  _EncWsAttr_set_date_v1 () */
 
 static
 rc_t CC
-_KfsAttr_type_v1 (
+_EncWsAttr_type_v1 (
                         const struct XFSAttrEditor * self,
                         XFSNType * Type
 )
 {
-    const struct XFSKfsNode * Node;
+    const struct _EncWsNode * Node;
     rc_t RCt;
 
     Node = NULL;
     RCt = 0;
 
-    if ( Type == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * Type = kxfsFile;
+    XFS_CSA ( Type, kxfsFile )
+    XFS_CAN ( Type )
 
-    RCt = _KfsAttr_init_check_v1 ( self, & Node, NULL );
+    RCt = _EncWsAttr_init_check_v1 ( self, & Node, NULL );
     if ( RCt == 0 ) {
         * Type = Node -> type;
     }
 
     return RCt;
-}   /* _KfsAttr_type_v1 () */
+}   /* _EncWsAttr_type_v1 () */
 
 static
 rc_t CC
-_KfsNodeAttr_v1 (
+_EncWsNodeAttr_v1 (
             const struct XFSNode * self,
             const struct XFSAttrEditor ** Attr
 )
 {
     rc_t RCt;
-    struct XFSKfsAttrEditor * KfsEditor;
+    struct _EncWsAttrEditor * EncWsEditor;
     struct XFSAttrEditor * Editor;
 
     RCt = 0;
-    KfsEditor = NULL;
+    EncWsEditor = NULL;
     Editor = NULL;
 
-    if ( self == NULL || Attr == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Attr )
+    XFS_CAN ( self )
+    XFS_CAN ( Attr )
 
-    * Attr = NULL;
-
-    KfsEditor = calloc ( 1, sizeof ( struct XFSKfsAttrEditor ) );
-    if ( KfsEditor == NULL ) {
+    EncWsEditor = calloc ( 1, sizeof ( struct _EncWsAttrEditor ) );
+    if ( EncWsEditor == NULL ) {
         return XFS_RC ( rcExhausted );
     }
 
-    Editor = & ( KfsEditor -> Papahen );
+    Editor = & ( EncWsEditor -> Papahen );
 
     RCt = XFSEditorInit (
                     & ( Editor -> Papahen ),
                     self,
-                    _KfsAttr_dispose_v1
+                    _EncWsAttr_dispose_v1
                     );
 
     if ( RCt == 0 ) {
-        Editor -> permissions = _KfsAttr_permissions_v1;
-        Editor -> set_permissions = _KfsAttr_set_permissions_v1;
-        Editor -> size = _KfsAttr_size_v1;
-        Editor -> set_size = _KfsAttr_set_size_v1;
-        Editor -> date = _KfsAttr_date_v1;
-        Editor -> set_date = _KfsAttr_set_date_v1;
-        Editor -> type = _KfsAttr_type_v1;
+        Editor -> permissions = _EncWsAttr_permissions_v1;
+        Editor -> set_permissions = _EncWsAttr_set_permissions_v1;
+        Editor -> size = _EncWsAttr_size_v1;
+        Editor -> set_size = _EncWsAttr_set_size_v1;
+        Editor -> date = _EncWsAttr_date_v1;
+        Editor -> set_date = _EncWsAttr_set_date_v1;
+        Editor -> type = _EncWsAttr_type_v1;
 
         * Attr = Editor;
     }
     else {
-        free ( KfsEditor );
+        free ( EncWsEditor );
     }
 
     return RCt;
-}   /* _KfsNodeAttr_v1 () */
+}   /* _EncWsNodeAttr_v1 () */
 
 /*)))
  |||
@@ -1631,7 +1526,7 @@ _KfsNodeAttr_v1 (
 (((*/
 
 rc_t CC
-_KfsNodeDescribe_v1 (
+_EncWsNodeDescribe_v1 (
             const struct XFSNode * self,
             char * Buffer,
             size_t BufferSize
@@ -1649,9 +1544,9 @@ _KfsNodeDescribe_v1 (
         return XFS_RC ( rcNull );
     }
 
-    Abbr = ( ( const struct XFSKfsNode * ) self ) -> type == kxfsDir
-            ? "DIR"
-            : "FILE"
+    Abbr = ( ( const struct _EncWsNode * ) self ) -> type == kxfsDir
+            ? "ENC DIR"
+            : "ENC FILE"
             ;
 
     if ( self == NULL ) {
@@ -1676,11 +1571,11 @@ _KfsNodeDescribe_v1 (
     }
 
     return RCt;
-}   /* _KfsNodeDescribe_v1 () */
+}   /* _EncWsNodeDescribe_v1 () */
 
 /*)))
  |||
- +++    FileNode lives here
+ +++    WorkspaceNode lives here
  |||
 (((*/
 
@@ -1688,54 +1583,68 @@ _KfsNodeDescribe_v1 (
  ((     Node make/dispose
   ))
  ((*/
-
 static
 rc_t CC
-_KfsNodeConstructor (
+_EncWsNodeConstructor (
             const struct XFSModel * Model,
             const struct XFSModelNode * Template,
             const char * Alias,
-            XFSNType Type,
             const struct XFSNode ** Node
 )
 {
     rc_t RCt;
-    struct XFSKfsNode * TheNode;
+    struct _EncWsNode * TheNode;
+    const struct KDirectory * Workspace;
     const char * NodeName;
 
     RCt = 0;
     TheNode = NULL;
+    Workspace = NULL;
     NodeName = NULL;
 
-    if ( Model == NULL || Template == NULL || Node == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( Node )
+    XFS_CAN ( Model )
+    XFS_CAN ( Template )
+    XFS_CAN ( Node )
 
     * Node = NULL;
 
     NodeName = Alias == NULL ? XFSModelNodeName ( Template ) : Alias;
 
-    RCt = XFSKfsNodeMakeEx (
-                    & TheNode,
-                    Type,
-                    NodeName,
-                    XFSModelNodeProperty ( Template, XFS_MODEL_SOURCE ),
-                    XFSModelNodeSecurity ( Template )
-                    );
+        /* First we should find valid Workspace Directory 
+         */
+    RCt = XFSEncDirectoryOpen (
+                & Workspace,
+                true,
+                XFSModelNodeProperty ( Template, XFS_MODEL_PASSWD ),
+                XFSModelNodeProperty ( Template, XFS_MODEL_ENCTYPE ),
+                XFSModelNodeProperty ( Template, XFS_MODEL_SOURCE )
+                );
+
     if ( RCt == 0 ) {
-        * Node = ( struct XFSNode * ) TheNode;
+        RCt = _EncWsNodeMake (
+                    & TheNode,
+                    Workspace,
+                    NodeName,
+                    XFSModelNodeProperty ( Template, XFS_MODEL_SOURCE )
+                    );
+        if ( RCt == 0 ) {
+            * Node = ( struct XFSNode * ) TheNode;
+        }
+
+        KDirectoryRelease ( Workspace );
     }
 
     if ( RCt != 0 ) {
         * Node = NULL;
 
         if ( TheNode != NULL ) {
-            XFSKfsNodeDispose ( TheNode );
+            _EncWsNodeDispose ( TheNode );
         }
     }
 
     return RCt;
-}   /* _KfsNodeConstructor () */
+}   /* _EncWsNodeConstructor () */
 
 /*)))
  |||
@@ -1744,65 +1653,46 @@ _KfsNodeConstructor (
 (((*/
 LIB_EXPORT
 rc_t CC
-XFSFileNodeMake (
-            const char * Path,
+XFSWorkspaceNodeMake (
             const char * Name,
-            const char * Perm,
+            const char * Path,
+            const char * Password,
+            const char * EncType,
             struct XFSNode ** Node
 )
 {
     rc_t RCt;
-    struct XFSKfsNode * TheNode;
+    struct _EncWsNode * TheNode;
+    const struct KDirectory * Workspace;
 
     RCt = 0;
     TheNode = NULL;
+    Workspace = NULL;
 
-    if ( Node != NULL ) {
-        * Node = NULL;
-    }
+    XFS_CSAN ( Node )
+    XFS_CAN ( Name )
+    XFS_CAN ( Path )
+    XFS_CAN ( Password )
+    XFS_CAN ( Node )
 
-    if ( Path == NULL || Name == NULL || Node == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    RCt = XFSKfsNodeMakeEx ( & TheNode, kxfsFile, Name, Path, Perm );
+    RCt = XFSEncDirectoryOpen (
+                            & Workspace,
+                            true,
+                            Password,
+                            EncType,
+                            Path
+                            );
     if ( RCt == 0 ) {
-        * Node = & ( TheNode -> node );
+        RCt = _EncWsNodeMake ( & TheNode, Workspace, Name, Path );
+        if ( RCt == 0 ) {
+            * Node = & ( TheNode -> node );
+        }
+
+        KDirectoryRelease ( Workspace );
     }
 
     return RCt;
-}   /* XFSFileNodeMake () */
-
-LIB_EXPORT
-rc_t CC
-XFSDirNodeMake (
-            const char * Path,
-            const char * Name,
-            const char * Perm,
-            struct XFSNode ** Node
-)
-{
-    rc_t RCt;
-    struct XFSKfsNode * TheNode;
-
-    RCt = 0;
-    TheNode = NULL;
-
-    if ( Node != NULL ) {
-        * Node = NULL;
-    }
-
-    if ( Path == NULL || Name == NULL || Node == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    RCt = XFSKfsNodeMakeEx ( & TheNode, kxfsDir, Name, Path, Perm );
-    if ( RCt == 0 ) {
-        * Node = & ( TheNode -> node );
-    }
-
-    return RCt;
-}   /* XFSDirNodeMake () */
+}   /* XFSWorkspaceNodeMake () */
 
 /*)))
  |||
@@ -1811,33 +1701,27 @@ XFSDirNodeMake (
 (((*/
 static
 rc_t CC
-_FileNodeConstructor (
-            const struct XFSModel * Model,
-            const struct XFSModelNode * Template,
-            const char * Alias,
-            const struct XFSNode ** Node
+_WorkspaceNodeConstructor (
+                        const struct XFSModel * Model,
+                        const struct XFSModelNode * Template,
+                        const char * Alias,
+                        const struct XFSNode ** Node
 )
 {
     rc_t RCt;
 
-    RCt = _KfsNodeConstructor (
-                            Model,
-                            Template,
-                            Alias,
-                            kxfsFile,
-                            Node
-                            );
+    RCt = _EncWsNodeConstructor ( Model, Template, Alias, Node );
 
 /*
-printf ( "_FileNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+printf ( "_WorkspaceNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
-}   /* _FileNodeConstructor () */
+}   /* _WorkspaceNodeConstructor () */
 
 static
 rc_t CC
-_FileNodeValidator (
+_WorkspaceNodeValidator (
             const struct XFSModel * Model,
             const struct XFSModelNode * Template,
             const char * Alias,
@@ -1849,100 +1733,29 @@ _FileNodeValidator (
     RCt = 0;
 
 /*
-printf ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+printf ( "_WorkspaceNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
-}   /* _FileNodeValidator () */
+}   /* _WorkspaceNodeValidator () */
 
-static const struct XFSTeleport _sFileNodeTeleport = {
-                                        _FileNodeConstructor,
-                                        _FileNodeValidator,
-                                        false
-                                        };
-
-
-LIB_EXPORT
-rc_t CC
-XFSFileProvider ( const struct XFSTeleport ** Teleport )
-{
-    if ( Teleport == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    * Teleport = & _sFileNodeTeleport;
-
-    return 0;
-}   /* XFSFileProvider () */
-
-/*)))
- |||
- +++    DirNode has a Teleport, and it is HERE
- |||
-(((*/
-static
-rc_t CC
-_DirNodeConstructor (
-            const struct XFSModel * Model,
-            const struct XFSModelNode * Template,
-            const char * Alias,
-            const struct XFSNode ** Node
-)
-{
-    rc_t RCt;
-
-    RCt = _KfsNodeConstructor (
-                            Model,
-                            Template,
-                            Alias,
-                            kxfsDir,
-                            Node
-                            );
-
-/*
-printf ( "_DirNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
-*/
-
-    return RCt;
-}   /* _DirNodeConstructor () */
-
-static
-rc_t CC
-_DirNodeValidator (
-            const struct XFSModel * Model,
-            const struct XFSModelNode * Template,
-            const char * Alias,
-            uint32_t Flags
-)
-{
-    rc_t RCt;
-
-    RCt = 0;
-
-/*
-printf ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
-*/
-
-    return RCt;
-}   /* _DirNodeValidator () */
-
-static const struct XFSTeleport _sDirNodeTeleport = {
-                                            _DirNodeConstructor,
-                                            _DirNodeValidator,
+static const struct XFSTeleport _sWorkspaceNodeTeleport = {
+                                            _WorkspaceNodeConstructor,
+                                            _WorkspaceNodeValidator,
                                             false
                                             };
 
 
 LIB_EXPORT
 rc_t CC
-XFSDirectoryProvider ( const struct XFSTeleport ** Teleport )
+XFSWorkspaceProvider ( const struct XFSTeleport ** Teleport )
 {
     if ( Teleport == NULL ) {
         return XFS_RC ( rcNull );
     }
 
-    * Teleport = & _sDirNodeTeleport;
+    * Teleport = & _sWorkspaceNodeTeleport;
 
     return 0;
-}   /* XFSDirectoryProvider () */
+}   /* XFSWorkspaceProvider () */
 

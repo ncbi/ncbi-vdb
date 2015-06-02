@@ -544,7 +544,7 @@ _EncAttr_permissions_v1 (
 
     RCt = _EncAttr_init_check_v1 ( self, & Entry );
     if ( RCt == 0 ) {
-        * Permissions = XFSPermDefNodeChar ();
+        * Permissions = XFSPermRODefNodeChar ();
     }
 
     return RCt;
