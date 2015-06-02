@@ -304,8 +304,8 @@ LIB_EXPORT rc_t CC SRATableCommit( SRATable *self ) {
     return rc;
 }
 
-static int CC cmp_index( const void *A, const void *B ) {
-    return *(const uint32_t *)A - ((const SRAColumn *)B)->idx;
+static int64_t CC cmp_index( const void *A, const void *B ) {
+    return (int64_t)(*(const uint32_t *)A) - (int64_t)((const SRAColumn *)B)->idx;
 }
 
 static bool find_by_index(const Vector *vec, uint32_t idx, uint32_t *cndx) {

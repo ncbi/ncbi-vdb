@@ -2050,14 +2050,14 @@ void CC VProductionWhack ( void *item, void *owned )
  *  sort item is a VProduction
  *  n is always a VProduction
  */
-LIB_EXPORT int CC VProductionCmp ( const void *item, const void *n )
+LIB_EXPORT int64_t CC VProductionCmp ( const void *item, const void *n )
 {
     const VCtxId *a = item;
     const VProduction *b = n;
     return VCtxIdCmp ( a, & b -> cid );
 }
 
-LIB_EXPORT int CC VProductionSort ( const void *item, const void *n )
+LIB_EXPORT int64_t CC VProductionSort ( const void *item, const void *n )
 {
     const VProduction *a = item;
     const VProduction *b = n;

@@ -30,6 +30,7 @@
 #include <ktst/unit_test.hpp>
 #include <klib/out.h>
 #include <klib/rc.h>
+#include <kapp/main.h>
 #include <kapp/args.h>
 #include <kapp/loader-file.h>
 #include <kfs/directory.h>
@@ -313,6 +314,16 @@ FIXTURE_TEST_CASE(KLoaderFile_noEolBeforeEof, LoaderFileFixture)
     REQUIRE_RC(KLoaderFile_Readline(lf, (const void**)&buf, &length));
     REQUIRE_NOT_NULL(buf);
     REQUIRE_EQ(input, string(buf, length));
+}
+
+TEST_CASE(KAppCheckEnvironment_requireAmd64)
+{
+    rc_t rc = KAppCheckEnvironment ( true, 0 );
+#if _ARCH_BITS != 64    
+    REQUIRE_NE ( (int)rc, 0 );
+#else
+    REQUIRE_EQ ( (int)rc, 0 );
+#endif
 }
 
 //////////////////////////////////////////// Main

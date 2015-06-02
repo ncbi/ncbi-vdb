@@ -221,6 +221,19 @@ XFS_EXTERN rc_t CC XFS_HttpStreamTimedRead_ZHR (
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+struct KKey;
+XFS_EXTERN rc_t CC XFS_InitKKey_ZHR (
+                                    const char * EncPass,
+                                    const char * EncType,
+                                    struct KKey * Key
+                                    );
+XFS_EXTERN rc_t CC XFS_CopyKKey_ZHR (
+                                    const struct KKey * Src,
+                                    struct KKey * Dst
+                                    );
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 #ifdef __cplusplus 
 }

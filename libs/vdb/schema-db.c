@@ -141,22 +141,22 @@ void CC SDatabaseWhack ( void *item, void *ignore )
 /* Cmp
  * Sort
  */
-int CC SDatabaseCmp ( const void *item, const void *n )
+int64_t CC SDatabaseCmp ( const void *item, const void *n )
 {
     const uint32_t *a = item;
     const SDatabase *b = n;
 
     if ( * a > b -> version )
         return 1;
-    return ( int ) ( * a >> 24 ) - ( int ) ( b -> version >> 24 );
+    return ( int64_t ) ( * a >> 24 ) - ( int64_t ) ( b -> version >> 24 );
 }
 
-int CC SDatabaseSort ( const void *item, const void *n )
+int64_t CC SDatabaseSort ( const void *item, const void *n )
 {
     const SDatabase *a = item;
     const SDatabase *b = n;
 
-    return ( int ) ( a -> version >> 24 ) - ( int ) ( b -> version >> 24 );
+    return ( int64_t ) ( a -> version >> 24 ) - ( int64_t ) ( b -> version >> 24 );
 }
 
 static

@@ -92,23 +92,18 @@ static struct num_gen_node * num_gen_make_node( const int64_t start, const uint6
 
 
 /* helper callback to compare 2 nodes, lets VectorInsert create a sorted vector */
-static int CC num_gen_insert_helper( const void* item1, const void* item2 )
+static int64_t CC num_gen_insert_helper( const void* item1, const void* item2 )
 {
-    int res = 0;
+    int64_t res = 0;
     const num_gen_node * node1 = item1;
     const num_gen_node * node2 = item2;
     if ( node1 != NULL && node2 != NULL )
     {
-        if ( node1 -> start == node2 -> start )
-        {
-            if ( node1 -> count < node2 -> count )
-                res = -1;
-            else if ( node1 -> count > node2 -> count )
-                res = 1;
-        }
-        else if ( node1 -> start < node2 -> start )
+        if ( node1 -> start != node2 -> start )
+            res = node1 -> start - node2 -> start;
+        else if ( node1 -> count < node2 -> count )
             res = -1;
-        else
+        else if ( node1 -> count > node2 -> count )
             res = 1;
     }
     return res;

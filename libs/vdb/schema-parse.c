@@ -172,7 +172,7 @@ bool CC SConstantDefDump ( void *item, void *data )
  *  NULL, then the object was only partially identified.
  */
 static
-int CC SColumnSortByID ( const void **item, const void **n, void *ignore )
+int64_t CC SColumnSortByID ( const void **item, const void **n, void *ignore )
 {
     const SColumn *a = * item;
     const SColumn *b = * n;

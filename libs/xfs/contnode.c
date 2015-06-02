@@ -392,7 +392,7 @@ _ContNodeAttr_permissions_v1 (
     * Permissions = ( ( struct XFSContNode * ) Node ) -> security;
 
 	if ( * Permissions == NULL ) {
-		* Permissions = XFSPermDefContChar ();
+		* Permissions = XFSPermRODefContChar ();
 	}
 
     return 0;

@@ -371,27 +371,27 @@ rc_t CC KFFTablesAddRef (const KFFTables * self)
  * there is a chance the next two functions could have a segmentation fault
  */
 static
-int classcmp (const void * descr, const BSTNode * n)
+int64_t classcmp (const void * descr, const BSTNode * n)
 {
     KFFClass * nn = (KFFClass*)n;
     return strncmp ((const char *)descr, nn->descr, nn->len);
 }
 static
-int typecmp (const void * descr, const BSTNode * n)
+int64_t typecmp (const void * descr, const BSTNode * n)
 {
     KFFType * nn = (KFFType *)n;
 
     return strncmp ((const char *)descr, nn->descr, nn->len);
 }
 static
-int classsort (const BSTNode * i ,const BSTNode * n)
+int64_t classsort (const BSTNode * i ,const BSTNode * n)
 {
     KFFClass * ii = (KFFClass *)i;
     KFFClass * nn = (KFFClass *)n;
     return strncmp (ii->descr, nn->descr, nn->len);
 }
 static
-int typesort (const BSTNode * i, const BSTNode * n)
+int64_t typesort (const BSTNode * i, const BSTNode * n)
 {
     KFFType * ii = (KFFType *)i;
     KFFType * nn = (KFFType *)n;

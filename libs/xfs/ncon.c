@@ -299,7 +299,7 @@ XFSNodeContainerHas (
 }   /* XFSNodeContainerHas () */
 
 static
-int CC
+int64_t CC
 _NodeContainerCompare ( const void * Item, const BSTNode * Node )
 {
     return XFS_StringCompare4BST_ZHR (
@@ -356,7 +356,7 @@ XFSNodeContainerGet (
 }   /* XFSNodeContainerGet () */
 
 static
-int CC
+int64_t CC
 _NodeContainerInsert ( const BSTNode * N1, const BSTNode * N2 )
 {
     return XFS_StringCompare4BST_ZHR (

@@ -32,6 +32,7 @@
     <ClCompile Include="..\..\..\libs\xfs\win\security.c" />
     <ClCompile Include="..\..\..\libs\xfs\model.c" />
     <ClCompile Include="..\..\..\libs\xfs\path.c" />
+    <ClCompile Include="..\..\..\libs\xfs\pfad.c" />
     <ClCompile Include="..\..\..\libs\xfs\tree.c" />
     <ClCompile Include="..\..\..\libs\xfs\node.c" />
     <ClCompile Include="..\..\..\libs\xfs\perm.c" />
@@ -57,7 +58,10 @@
     <ClCompile Include="..\..\..\libs\xfs\tar.c" />
     <ClCompile Include="..\..\..\libs\xfs\xencro.c" />
     <ClCompile Include="..\..\..\libs\xfs\encro.c" />
+    <ClCompile Include="..\..\..\libs\xfs\xencws.c" />
+    <ClCompile Include="..\..\..\libs\xfs\encws.c" />
     <ClCompile Include="..\..\..\libs\xfs\lockdpt.c" />
+    <ClCompile Include="..\..\..\libs\xfs\lreader.c" />
     <ClCompile Include="..\..\..\libs\xfs\schwarzschraube.c" />
     <ClCompile Include="..\..\..\libs\xfs\zehr.c" />
     <ClCompile Include="..\..\..\libs\xfs\mehr.c" />

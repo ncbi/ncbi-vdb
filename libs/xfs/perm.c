@@ -708,49 +708,99 @@ XFSPermToChar ( uint32_t Num, char * Buf, size_t BufSize )
 /*))))))
  //////  Defaults ... sorry, hardcoding those
 ((((((*/
-static const char * _DefPermForContainer = "r-xr-xr-x";
-static const char * _DefPermForNode = "r--r--r--";
-static uint32_t _DefPermForContainerNum = 0;
-static uint32_t _DefPermForNodeNum = 0;
+static const char * _DefROPermForContainer = "r-xr-xr-x";
+static const char * _DefROPermForNode = "r--r--r--";
+static uint32_t _DefROPermForContainerNum = 0;
+static uint32_t _DefROPermForNodeNum = 0;
 
 LIB_EXPORT
 const char * CC
-XFSPermDefContChar ()
+XFSPermRODefContChar ()
 {
-    return _DefPermForContainer;
-}   /* XFSPermDefContChar () */
+    return _DefROPermForContainer;
+}   /* XFSPermRODefContChar () */
 
 LIB_EXPORT
 const char * CC
-XFSPermDefNodeChar ()
+XFSPermRODefNodeChar ()
 {
-    return _DefPermForNode;
-}   /* XFSPermDefNodeChar () */
+    return _DefROPermForNode;
+}   /* XFSPermRODefNodeChar () */
 
 LIB_EXPORT
 uint32_t CC
-XFSPermDefContNum ()
+XFSPermRODefContNum ()
 {
     uint32_t T;
 
-    if ( _DefPermForContainerNum == 0 ) {
-        XFSPermToNum ( XFSPermDefContChar (), & T );
-        _DefPermForContainerNum = T;
+    if ( _DefROPermForContainerNum == 0 ) {
+        XFSPermToNum ( XFSPermRODefContChar (), & T );
+        _DefROPermForContainerNum = T;
     }
 
-    return _DefPermForContainerNum;
-}   /* XFSPermDefContNum () */
+    return _DefROPermForContainerNum;
+}   /* XFSPermRODefContNum () */
 
 LIB_EXPORT
 uint32_t CC
-XFSPermDefNodeNum ()
+XFSPermRODefNodeNum ()
 {
     uint32_t T;
 
-    if ( _DefPermForNodeNum == 0 ) {
-        XFSPermToNum ( XFSPermDefNodeChar (), & T );
-        _DefPermForNodeNum = T;
+    if ( _DefROPermForNodeNum == 0 ) {
+        XFSPermToNum ( XFSPermRODefNodeChar (), & T );
+        _DefROPermForNodeNum = T;
     }
 
-    return _DefPermForNodeNum;
-}   /* XFSPermDefNodeNum () */
+    return _DefROPermForNodeNum;
+}   /* XFSPermRODefNodeNum () */
+
+/*))))))
+ //////  Defaults ... sorry, hardcoding those
+((((((*/
+static const char * _DefRWPermForContainer = "rwxr-xr-x";
+static const char * _DefRWPermForNode = "rw-r--r--";
+static uint32_t _DefRWPermForContainerNum = 0;
+static uint32_t _DefRWPermForNodeNum = 0;
+
+LIB_EXPORT
+const char * CC
+XFSPermRWDefContChar ()
+{
+    return _DefRWPermForContainer;
+}   /* XFSPermRWDefContChar () */
+
+LIB_EXPORT
+const char * CC
+XFSPermRWDefNodeChar ()
+{
+    return _DefRWPermForNode;
+}   /* XFSPermRWDefNodeChar () */
+
+LIB_EXPORT
+uint32_t CC
+XFSPermRWDefContNum ()
+{
+    uint32_t T;
+
+    if ( _DefRWPermForContainerNum == 0 ) {
+        XFSPermToNum ( XFSPermRWDefContChar (), & T );
+        _DefRWPermForContainerNum = T;
+    }
+
+    return _DefRWPermForContainerNum;
+}   /* XFSPermRWDefContNum () */
+
+LIB_EXPORT
+uint32_t CC
+XFSPermRWDefNodeNum ()
+{
+    uint32_t T;
+
+    if ( _DefRWPermForNodeNum == 0 ) {
+        XFSPermToNum ( XFSPermRWDefNodeChar (), & T );
+        _DefRWPermForNodeNum = T;
+    }
+
+    return _DefRWPermForNodeNum;
+}   /* XFSPermRWDefNodeNum () */

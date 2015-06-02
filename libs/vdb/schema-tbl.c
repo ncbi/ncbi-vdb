@@ -78,24 +78,24 @@ void CC SColumnWhack ( void *item, void *ignore )
 /* Cmp
  * Sort
  */
-int CC SColumnCmp ( const void *item, const void *n )
+int64_t CC SColumnCmp ( const void *item, const void *n )
 {
     const VTypedecl *a = item;
     const SColumn *b = n;
 
     if ( a -> type_id != b -> td . type_id )
-        return ( int ) a -> type_id - ( int ) b -> td . type_id;
-    return ( int ) a -> dim - ( int ) b -> td . dim;
+        return ( int64_t ) a -> type_id - ( int64_t ) b -> td . type_id;
+    return ( int64_t ) a -> dim - ( int64_t ) b -> td . dim;
 }
 
-int CC SColumnSort ( const void *item, const void *n )
+int64_t CC SColumnSort ( const void *item, const void *n )
 {
     const SColumn *a = item;
     const SColumn *b = n;
 
     if ( a -> td . type_id != b -> td . type_id )
-        return ( int ) a -> td . type_id - ( int ) b -> td . type_id;
-    return ( int ) a -> td . dim - ( int ) b -> td . dim;
+        return ( int64_t ) a -> td . type_id - ( int64_t ) b -> td . type_id;
+    return ( int64_t ) a -> td . dim - ( int64_t ) b -> td . dim;
 }
 
 /* Mark
@@ -354,25 +354,25 @@ struct STableOverrides
  * Sort
  */
 static
-int CC STableOverridesCmp ( const void *item, const void *n )
+int64_t CC STableOverridesCmp ( const void *item, const void *n )
 {
     const uint32_t *a = item;
     const STableOverrides *b = n;
 
-    return ( int ) * a - ( int ) b -> ctx;
+    return ( int64_t ) * a - ( int64_t ) b -> ctx;
 }
 
 static
-int CC STableOverridesSort ( const void *item, const void *n )
+int64_t CC STableOverridesSort ( const void *item, const void *n )
 {
     const STableOverrides *a = item;
     const STableOverrides *b = n;
 
-    return ( int ) a -> ctx - ( int ) b -> ctx;
+    return ( int64_t ) a -> ctx - ( int64_t ) b -> ctx;
 }
 
 static
-int CC STableOverridesKSort ( const void **item, const void **n, void *ignore )
+int64_t CC STableOverridesKSort ( const void **item, const void **n, void *ignore )
 {
     return STableOverridesSort ( * item, * n );
 }
@@ -475,22 +475,22 @@ void CC STableWhack ( void *item, void *ignore )
 /* Cmp
  * Sort
  */
-int CC STableCmp ( const void *item, const void *n )
+int64_t CC STableCmp ( const void *item, const void *n )
 {
     const uint32_t *a = item;
     const STable *b = n;
 
     if ( * a > b -> version )
         return 1;
-    return ( int ) ( * a >> 24 ) - ( int ) ( b -> version >> 24 );
+    return ( int64_t ) ( * a >> 24 ) - ( int64_t ) ( b -> version >> 24 );
 }
 
-int CC STableSort ( const void *item, const void *n )
+int64_t CC STableSort ( const void *item, const void *n )
 {
     const STable *a = item;
     const STable *b = n;
 
-    return ( int ) ( a -> version >> 24 ) - ( int ) ( b -> version >> 24 );
+    return ( int64_t ) ( a -> version >> 24 ) - ( int64_t ) ( b -> version >> 24 );
 }
 
 
@@ -597,7 +597,7 @@ bool STableTestForTypeCollision ( const SNameOverload *a, const SNameOverload *b
 
     for ( aend += ax, bend += bx; ax < aend && bx < bend; )
     {
-        int diff;
+        int64_t diff;
         const SColumn *acol = ( const void* ) VectorGet ( & a -> items, ax );
         const SColumn *bcol = ( const void* ) VectorGet ( & b -> items, bx );
         assert ( acol != NULL && bcol != NULL );
@@ -1076,9 +1076,9 @@ rc_t STableImplicitColMember ( STable *self,
 /* Compare
  */
 static
-int KSymbolDeepCompare ( const KSymbol *a, const KSymbol *b )
+int64_t KSymbolDeepCompare ( const KSymbol *a, const KSymbol *b )
 {
-    int diff;
+    int64_t diff;
 
     /* the same symbol */
     if ( a == b )
@@ -1117,7 +1117,7 @@ int KSymbolDeepCompare ( const KSymbol *a, const KSymbol *b )
 }
 
 static
-int CC STableNameSort ( const void **a, const void **b, void *ignore )
+int64_t CC STableNameSort ( const void **a, const void **b, void *ignore )
 {
     int diff;
     const STable *tb = * b;
@@ -1129,11 +1129,8 @@ int CC STableNameSort ( const void **a, const void **b, void *ignore )
     diff = KSymbolDeepCompare ( ta -> name, tb -> name );
     if ( diff != 0 )
         return diff;
-    if ( ta -> version < tb -> version )
-        return -1;
-    if ( ta -> version > tb -> version )
-        return 1;
-    return 0;
+
+    return (int64_t) ta -> version - (int64_t) tb -> version;
 }
 
 enum

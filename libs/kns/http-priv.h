@@ -103,8 +103,8 @@ struct KHttpHeader
 };
     
 extern void KHttpHeaderWhack ( BSTNode *n, void *ignore );
-extern int CC KHttpHeaderSort ( const BSTNode *na, const BSTNode *nb );
-extern int CC KHttpHeaderCmp ( const void *item, const BSTNode *n );
+extern int64_t CC KHttpHeaderSort ( const BSTNode *na, const BSTNode *nb );
+extern int64_t CC KHttpHeaderCmp ( const void *item, const BSTNode *n );
 extern rc_t KHttpGetHeaderLine ( struct KClientHttp *self, struct timeout_t *tm, BSTree *hdrs, bool *blank, bool *close_connection );
 extern rc_t KHttpGetStatusLine ( struct KClientHttp *self, struct timeout_t *tm, String *msg, uint32_t *status, ver_t *version );
 

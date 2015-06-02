@@ -167,7 +167,7 @@ static int _s_decompress_zlib ( void* dst, const void* src, int dsize, int ssize
 
 /*
  */
-static int CC _s_cmp_key (const void* keyptr, const void* idxptr, void *data)
+static int64_t CC _s_cmp_key (const void* keyptr, const void* idxptr, void *data)
 {
   SRALookup_t plook = data;
   static uint32_t mask [33] = {0x00000000, 0x80000000, 0xC0000000, 0xE0000000,
@@ -184,10 +184,7 @@ static int CC _s_cmp_key (const void* keyptr, const void* idxptr, void *data)
   uint32_t   keyBits    = *(uint32_t*)keyptr & mask[plook[index].nbits];
   uint32_t   lookupBits = plook[index].bits;
 
-  if (keyBits < lookupBits) return -1;
-  if (keyBits > lookupBits) return  1;
-
-  return 0;
+  return (int64_t)keyBits - (int64_t)lookupBits;
 }
 
 /*

@@ -53,6 +53,7 @@ static const uint32_t _sFlavorOfKartCollection    = 9;
 static const uint32_t _sFlavorOfHttp              = 10;
 static const uint32_t _sFlavorOfTar               = 11;
 static const uint32_t _sFlavorOfEncode            = 12;
+static const uint32_t _sFlavorOfWorkspace         = 13;
 
 /*))    Methods related to all commonly used nodes
  ((*/
@@ -133,6 +134,18 @@ XFS_EXTERN rc_t CC XFSTarArchiveNodeMake (
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 XFS_EXTERN rc_t CC XFSEncryptedFileNodeMake (
+                            const char * Name,
+                            const char * Path,
+                            const char * Passwd,
+                            const char * EncType,   /* could be NULL */
+                            struct XFSNode ** Node
+                            );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/* WorkspaceNode - implemented in encws.c                            */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+XFS_EXTERN rc_t CC XFSWorkspaceNodeMake (
                             const char * Name,
                             const char * Path,
                             const char * Passwd,

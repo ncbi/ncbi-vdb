@@ -945,14 +945,14 @@ LIB_EXPORT BSTNode* CC BSTreeLast ( const BSTree *bt )
  *  "cmp" function returns equivalent of "item" - "n"
  */
 LIB_EXPORT BSTNode* CC BSTreeFind ( const BSTree *bt, const void *item,
-    int ( CC * cmp ) ( const void *item, const BSTNode *n ) )
+    int64_t ( CC * cmp ) ( const void *item, const BSTNode *n ) )
 {
     if ( bt != NULL )
     {
         BSTNode *n = bt -> root;
         while ( n != NULL )
         {
-            int diff = ( * cmp ) ( item, n );
+            int64_t diff = ( * cmp ) ( item, n );
             if ( diff == 0 )
                 return n;
             n = n -> child [ diff > 0 ];
@@ -1151,11 +1151,11 @@ void CC RebalanceAfterInsert ( BSTNode **root, BSTNode *y, BSTNode *x )
 }
 
 LIB_EXPORT rc_t CC BSTreeInsert ( BSTree *bt, BSTNode *n,
-    int ( CC * sort ) ( const BSTNode *n, const BSTNode *p ) )
+    int64_t ( CC * sort ) ( const BSTNode *n, const BSTNode *p ) )
 {
     if ( bt != NULL && n != NULL )
     {
-        int diff;
+        int64_t diff;
 
         BSTNode *p = bt -> root;
         BSTNode *q = NULL;
@@ -1209,11 +1209,11 @@ LIB_EXPORT rc_t CC BSTreeInsert ( BSTree *bt, BSTNode *n,
  *  returns non-NULL "n" upon match or NULL on success
  */
 LIB_EXPORT rc_t CC BSTreeInsertUnique ( BSTree *bt, BSTNode *n, BSTNode **exist,
-    int ( CC * sort ) ( const BSTNode *n, const BSTNode *p ) )
+    int64_t ( CC * sort ) ( const BSTNode *n, const BSTNode *p ) )
 {
     if ( bt != NULL && n != NULL )
     {
-        int diff;
+        int64_t diff;
 
         BSTNode *p = bt -> root;
         BSTNode *q = NULL;
@@ -1283,7 +1283,7 @@ LIB_EXPORT rc_t CC BSTreeInsertUnique ( BSTree *bt, BSTNode *n, BSTNode **exist,
  *  but this should not be relied upon.
  */
 LIB_EXPORT void CC BSTreeResort ( BSTree *bt,
-    int ( CC * resort ) ( const BSTNode *item, const BSTNode *n ) )
+    int64_t ( CC * resort ) ( const BSTNode *item, const BSTNode *n ) )
 {
     if ( bt != NULL )
     {

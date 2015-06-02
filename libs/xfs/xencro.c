@@ -219,7 +219,6 @@ XFSEncDepotInit ()
                 _sEncDpt = EncDpt;
             }
             else {
-                _sEncDpt = NULL;
                 _EncDptDisposeImpl ( EncDpt );
             }
         }
@@ -229,7 +228,7 @@ XFSEncDepotInit ()
 }   /* XFSEncDepotInit () */
 
 static
-int CC
+int64_t CC
 _EncCmpCallback ( const void * Item, const BSTNode * Node )
 {
     const char * Str1, * Str2;
@@ -274,7 +273,7 @@ _EncDptGetNoLock (
 }   /* _EncDptGetNoLock () */
 
 static
-int CC
+int64_t CC
 _EncAddCallback ( const BSTNode * N1, const BSTNode * N2 )
 {
     return XFS_StringCompare4BST_ZHR (
@@ -368,75 +367,6 @@ XFSEncDepotClear ()
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 static
 rc_t CC
-_KeyType ( const char * EncType, KKeyType * Type )
-{
-    size_t B;
-    const char * C;
-
-    B = 0;
-    C = NULL;
-
-    XFS_CAN ( Type )
-    * Type = kkeyNone;
-
-    if ( EncType == NULL ) {
-        * Type = KKeyTypeDefault;
-        return 0;
-    }
-
-    B = string_size ( EncType );
-
-    C = "AES128";
-    if ( strcase_cmp ( C, string_size ( C ), EncType, B, B ) == 0 ) {
-        * Type = kkeyAES128;
-        return 0;
-    }
-
-    C = "AES192";
-    if ( strcase_cmp ( C, string_size ( C ), EncType, B, B ) == 0 ) {
-        * Type = kkeyAES192;
-        return 0;
-    }
-
-    C = "AES256";
-    if ( strcase_cmp ( C, string_size ( C ), EncType, B, B ) == 0 ) {
-        * Type = kkeyAES256;
-        return 0;
-    }
-
-    return XFS_RC ( rcInvalid );
-}   /* _KeyType () */
-
-static
-rc_t CC
-_InitKey (
-        const char * Pass,
-        const char * EncodeType,
-        struct KKey * Key
-)
-{
-    rc_t RCt;
-    KKeyType Type;
-
-    RCt = 0;
-    Type = kkeyNone;
-
-    XFS_CAN ( Pass )
-    XFS_CAN ( Key )
-
-    RCt = _KeyType ( EncodeType, & Type );
-    if ( RCt == 0 ) {
-
-        RCt = KKeyInitRead ( Key, Type, Pass, string_size ( Pass ) );
-        if ( RCt == 0 ) {
-        }
-    }
-
-    return RCt;
-}   /* _InitKey () */
-
-static
-rc_t CC
 _EncEntryMake (
             const char * Path,
             const char * Passwd,
@@ -463,7 +393,11 @@ _EncEntryMake (
 
     TheEntry -> status = kxfsInvalid;
 
-    RCt = _InitKey ( Passwd, EncodeType, & ( TheEntry -> key ) );
+    RCt = XFS_InitKKey_ZHR (
+                        Passwd,
+                        EncodeType,
+                        & ( TheEntry -> key )
+                        );
     if ( RCt == 0 ) {
         RCt = KLockMake ( & ( TheEntry -> mutabor ) );
         if ( RCt == 0 ) {

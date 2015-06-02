@@ -583,18 +583,19 @@ rc_t serialize_encoded(uint8_t *dst, unsigned dsize, unsigned *psize, const stru
     return 0;
 }
 
-static int CC comp_position(const void *A, const void *B, void * ignored) {
+static int64_t CC comp_position(const void *A, const void *B, void * ignored) {
     const stats_t *a = A;
     const stats_t *b = B;
     
-    return a->x - b->x;
+    return (int64_t)a->x - (int64_t)b->x;
 }
 
-static int CC comp_fitness(const void *A, const void *B, void * ignored) {
+static int64_t CC comp_fitness(const void *A, const void *B, void * ignored) {
     const stats_t **a = (const stats_t **)A;
     const stats_t **b = (const stats_t **)B;
     
-    return (**a).fit < (**b).fit ? -1 : (**b).fit < (**a).fit ? 1 : (**a).i - (**b).i;
+    return (**a).fit < (**b).fit ?
+        -1 : (**b).fit < (**a).fit ? 1 : (int64_t)(**a).i - (int64_t)(**b).i;
 }
 
 static void merge(stats_t *dst, const stats_t *L, const stats_t *R) {

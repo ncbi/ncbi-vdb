@@ -252,7 +252,7 @@ int CC baseCompare( const void* a, const void* b )
     return 0;
 }
 // this is used by ksort
-int CC compare( const void* a, const void* b, void *data )
+int64_t CC compare( const void* a, const void* b, void *data )
 {
     // if data is not pointing where we waint it to, do not sort
     const char* pdata=(const char*)data;
@@ -302,7 +302,7 @@ TEST_CASE(KLib_ksort_vs_qsort)
 }
 
 // an example of a bad function (compating pointers not values, in reverse order) that causes an implementaion of ksort to crash.
-int CC badCompare( const void* a, const void* b, void *data )
+int64_t CC badCompare( const void* a, const void* b, void *data )
 {
     const char* pa=(const char*)a;
     const char* pb=(const char*)b;
@@ -346,7 +346,7 @@ TEST_CASE(KSORT_simple)
 }
 
 static
-int CC cmp_int64_t ( const void *a, const void *b, void *data )
+int64_t CC cmp_int64_t ( const void *a, const void *b, void *data )
 {
     const int64_t *ap = (const int64_t *)a;
     const int64_t *bp = (const int64_t *)b;

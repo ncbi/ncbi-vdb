@@ -846,8 +846,8 @@ _TarAttr_permissions_v1 (
     RCt = _TarAttr_init_check_v1 ( self, & Entry );
     if ( RCt == 0 ) {
         * Permissions = XFSTarEntryIsFolder ( Entry )
-                                        ? XFSPermDefContChar ()
-                                        : XFSPermDefNodeChar ()
+                                        ? XFSPermRODefContChar ()
+                                        : XFSPermRODefNodeChar ()
                                         ;
     }
 

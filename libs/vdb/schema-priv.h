@@ -130,8 +130,8 @@ struct VCtxId
  */
 #define VCtxIdCmp( a, b ) \
     ( ( ( a ) -> ctx != ( b ) -> ctx ) ? \
-      ( int ) ( a ) -> ctx - ( int ) ( b ) -> ctx : \
-      ( int ) ( a ) -> id - ( int ) ( b ) -> id )
+      ( int64_t ) ( a ) -> ctx - ( int64_t ) ( b ) -> ctx : \
+      ( int64_t ) ( a ) -> id - ( int64_t ) ( b ) -> id )
 
 
 /*--------------------------------------------------------------------------
@@ -800,8 +800,8 @@ void CC SFunctionWhack ( void *self, void *ignore );
 /* Cmp
  * Sort
  */
-int CC SFunctionCmp ( const void *item, const void *n );
-int CC SFunctionSort ( const void *item, const void *n );
+int64_t CC SFunctionCmp ( const void *item, const void *n );
+int64_t CC SFunctionSort ( const void *item, const void *n );
 
 /* Bind
  *  perform schema and factory param substitution
@@ -876,8 +876,8 @@ void CC SPhysicalWhack ( void *self, void *ignore );
 /* Cmp
  * Sort
  */
-int CC SPhysicalCmp ( const void *item, const void *n );
-int CC SPhysicalSort ( const void *item, const void *n );
+int64_t CC SPhysicalCmp ( const void *item, const void *n );
+int64_t CC SPhysicalSort ( const void *item, const void *n );
 
 /* Bind
  *  perform schema and factory param substitution
@@ -980,8 +980,8 @@ rc_t STableCloneExtend ( const STable *self, STable **clone, VSchema *schema );
 /* Cmp
  * Sort
  */
-int CC STableCmp ( const void *item, const void *n );
-int CC STableSort ( const void *item, const void *n );
+int64_t CC STableCmp ( const void *item, const void *n );
+int64_t CC STableSort ( const void *item, const void *n );
 
 /* Find
  *  generic object find within table scope
@@ -1087,8 +1087,8 @@ void CC SColumnWhack ( void *item, void *ignore );
  * Sort
  *  compare two const SColumn*
  */
-int CC SColumnCmp ( const void *item, const void *n );
-int CC SColumnSort ( const void *item, const void *n );
+int64_t CC SColumnCmp ( const void *item, const void *n );
+int64_t CC SColumnSort ( const void *item, const void *n );
 
 
 /* ImplicitColMember
@@ -1203,8 +1203,8 @@ void CC SDatabaseWhack ( void *self, void *ignore );
 /* Cmp
  * Sort
  */
-int CC SDatabaseCmp ( const void *item, const void *n );
-int CC SDatabaseSort ( const void *item, const void *n );
+int64_t CC SDatabaseCmp ( const void *item, const void *n );
+int64_t CC SDatabaseSort ( const void *item, const void *n );
 
 /* Find
  *  generic object find within database scope
