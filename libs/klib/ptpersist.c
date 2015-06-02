@@ -54,14 +54,14 @@ struct IdxMap
 };
 
 static
-int CC IdxMapSort ( const void *left, const void *right, void *ignore )
+int64_t CC IdxMapSort ( const void *left, const void *right, void *ignore )
 {
 #define a ( ( const IdxMap* ) left )
 #define b ( ( const IdxMap* ) right )
 
     if ( b -> freq != a -> freq )
-        return ( int ) b -> freq - ( int ) a -> freq;
-    return ( int ) a -> idx - ( int ) b -> idx;
+        return ( int64_t ) b -> freq - ( int64_t ) a -> freq;
+    return ( int64_t ) a -> idx - ( int64_t ) b -> idx;
 
 #undef a
 #undef b

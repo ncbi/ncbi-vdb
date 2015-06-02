@@ -319,7 +319,7 @@ rc_t CC OptionAddValue (Option * self, const char * value, size_t size)
 }
 
 static
-int CC OptionCmp (const void * item, const BSTNode * n)
+int64_t CC OptionCmp (const void * item, const BSTNode * n)
 {
     const char * name;
     const Option * option;
@@ -335,7 +335,7 @@ int CC OptionCmp (const void * item, const BSTNode * n)
 }
 
 static
-int CC OptionSort (const BSTNode * item, const BSTNode * n)
+int64_t CC OptionSort (const BSTNode * item, const BSTNode * n)
 {
     const Option * l = (Option*)item;
     const Option * r = (Option*)n;
@@ -418,7 +418,7 @@ Option * CC OptAliasOption (const OptAlias *self)
 }
 
 static
-int CC OptAliasCmp (const void * item, const BSTNode * n)
+int64_t CC OptAliasCmp (const void * item, const BSTNode * n)
 {
     const char * name;
     const OptAlias * option;
@@ -434,7 +434,7 @@ int CC OptAliasCmp (const void * item, const BSTNode * n)
 }
 
 static
-int CC OptAliasSort (const BSTNode * item, const BSTNode * n)
+int64_t CC OptAliasSort (const BSTNode * item, const BSTNode * n)
 {
     const OptAlias * l;
     const OptAlias * r;

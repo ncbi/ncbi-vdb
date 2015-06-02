@@ -790,7 +790,7 @@ rc_t KDylibSever ( const KDylib *self )
 /* Sort
  */
 static
-int KDylibSort ( const void *item, const void *n )
+int64_t KDylibSort ( const void *item, const void *n )
 {
     const KDylib *a = item;
     const KDylib *b = n;

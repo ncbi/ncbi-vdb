@@ -83,9 +83,9 @@ struct WString
     WStringInitCString ( s, L ## val )
 
 static
-int WStringCaseCompare ( const WString *a, const WString *b )
+int64_t WStringCaseCompare ( const WString *a, const WString *b )
 {
-    int diff;
+    int64_t diff;
 
     uint32_t min_len = a -> len;
     if ( a -> len > b -> len )
@@ -93,7 +93,7 @@ int WStringCaseCompare ( const WString *a, const WString *b )
 
     diff = _wcsnicmp ( a -> addr, b -> addr, min_len );
     if ( diff == 0 )
-        diff = ( int ) a -> len - ( int ) b -> len;
+        diff = ( int64_t ) a -> len - ( int64_t ) b -> len;
 
     return diff;
 }
@@ -737,7 +737,7 @@ rc_t KDylibSever ( const KDylib *self )
 /* Sort
  */
 static
-int CC KDylibSort ( const void *item, const void *n )
+int64_t CC KDylibSort ( const void *item, const void *n )
 {
     const KDylib *a = item;
     const KDylib *b = n;

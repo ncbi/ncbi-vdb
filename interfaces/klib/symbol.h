@@ -130,13 +130,13 @@ KLIB_EXTERN void CC KSymbolWhack ( BSTNode *n, void *ignore );
 /* Cmp
  *  compare String* against KSymbol*
  */
-KLIB_EXTERN int CC KSymbolCmp ( const void *item, const BSTNode *n );
+KLIB_EXTERN int64_t CC KSymbolCmp ( const void *item, const BSTNode *n );
 
 
 /* Sort
  *  compare KSymbol* against KSymbol*
  */
-KLIB_EXTERN int CC KSymbolSort ( const BSTNode *item, const BSTNode *n );
+KLIB_EXTERN int64_t CC KSymbolSort ( const BSTNode *item, const BSTNode *n );
 
 
 #ifdef __cplusplus

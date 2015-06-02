@@ -364,15 +364,15 @@ struct STypesetMbr
  * Sort
  */
 static
-int VTypedeclCmp ( const VTypedecl *a, const VTypedecl *b )
+int64_t VTypedeclCmp ( const VTypedecl *a, const VTypedecl *b )
 {
     if ( a -> type_id != b -> type_id )
-        return ( int ) a -> type_id - ( int ) b -> type_id;
-    return ( int ) a -> dim - ( int ) b -> dim;
+        return ( int64_t ) a -> type_id - ( int64_t ) b -> type_id;
+    return ( int64_t ) a -> dim - ( int64_t ) b -> dim;
 }
 
 static
-int CC STypesetMbrSort ( const BSTNode *item, const BSTNode *n )
+int64_t CC STypesetMbrSort ( const BSTNode *item, const BSTNode *n )
 {
     const STypesetMbr *a = ( const STypesetMbr* ) item;
     const STypesetMbr *b = ( const STypesetMbr* ) n;

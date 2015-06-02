@@ -448,7 +448,7 @@ static rc_t CC KArcListingGet (const KArcListing *self, uint32_t idx, const char
  * Elements are typed as const void * to match the signature needed for 
  * a call to qsort() but they should be pointers to namelist elements
  */
-static int CC KArcListingSort (const void *a, const void *b, void * ignored)
+static int64_t CC KArcListingSort (const void *a, const void *b, void * ignored)
 {
     return strcmp (*(const char**)a, *(const char**)b);
 }

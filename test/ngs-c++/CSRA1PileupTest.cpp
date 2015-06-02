@@ -644,7 +644,10 @@ TEST_CASE(CSRA1_PileupIterator_TestAllFunctions)
 
 /////////////////////////////////////////
 // Experimenting with Smith-Waterman
-#if 0
+
+#ifndef min
+#define min(x,y) ((y) < (x) ? (y) : (x))
+#endif
 
 #ifndef max
 #define max(x,y) ((y) >= (x) ? (y) : (x))
@@ -672,20 +675,109 @@ unsigned char const map_char_to_4na [256] =
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-int similarity_func (char a, char b)
+int compare_4na ( char ch2na, char ch4na )
 {
-    return a == b ? 2 : -1;
+    unsigned char bits4na = map_char_to_4na [(int)ch4na];
+    unsigned char bits2na = map_char_to_4na [(int)ch2na];
+
+    //return (bits2na & bits4na) != 0 ? 2 : -1;
+
+    unsigned char popcnt4na;
+    // TODO: optimize, maybe using _popcnt
+    switch ( bits4na )
+    {
+    case 1:
+    case 2:
+    case 4:
+    case 8:
+        popcnt4na = 1;
+        break;
+    case 7:
+    case 11:
+    case 13:
+    case 14:
+        popcnt4na = 3;
+        break;
+    case 15:
+        popcnt4na = 4;
+        break;
+    case 0:
+        popcnt4na = 0;
+        break;
+    //case 3:
+    //case 5:
+    //case 6:
+    //case 9:
+    //case 10:
+    //case 12:
+    //    popcnt4na = 2;
+    //    break;
+    default:
+        popcnt4na = 2;
+        break;
+    }
+
+    return (bits2na & bits4na) != 0 ? 12 / popcnt4na : -6;
+}
+
+#define COMPARE_4NA 0
+
+int similarity_func (char ch2na, char ch4na)
+{
+#if COMPARE_4NA == 1
+    return compare_4na ( ch2na, ch4na );
+#else
+    return ch2na == ch4na ? 2 : -1;
+#endif
 }
 
 int gap_score_func ( size_t idx )
 {
+#if COMPARE_4NA == 1
+    return -6*(int)idx;
+#else
     return -(int)idx;
+#endif
 }
+
 
 #define CACHE_MAX_COLS 1
 #define CACHE_MAX_ROWS 1
 
-void calculate_similarity_matrix (
+
+template <bool t_reverse> class CStringIterator
+{
+    char const* m_arr;
+    size_t m_size;
+public:
+    CStringIterator (char const* arr, size_t size)
+        : m_arr(arr), m_size(size)
+    {
+    }
+
+    char const& operator[] (size_t i) const;
+    size_t get_straight_index (size_t logical_index);
+};
+
+template <> char const& CStringIterator<false>::operator[] (size_t i) const
+{
+    return m_arr [i];
+}
+template <> char const& CStringIterator<true>::operator[] (size_t i) const
+{
+    return m_arr [m_size - i - 1];
+}
+template <> size_t CStringIterator<false>::get_straight_index (size_t logical_index)
+{
+    return logical_index;
+}
+template <> size_t CStringIterator<true>::get_straight_index (size_t logical_index)
+{
+    return m_size - logical_index - 1;
+}
+
+
+template <bool reverse> void calculate_similarity_matrix (
     char const* text, size_t size_text,
     char const* query, size_t size_query,
     int* matrix)
@@ -705,11 +797,14 @@ void calculate_similarity_matrix (
     std::vector<TMaxPos> vec_max_rows(ROWS, TMaxPos(0, 0));
 #endif
 
+    CStringIterator<reverse> text_iterator(text, size_text);
+    CStringIterator<reverse> query_iterator(query, size_query);
+
     for ( size_t i = 1; i < ROWS; ++i )
     {
         for ( size_t j = 1; j < COLUMNS; ++j )
         {
-            int sim = similarity_func ( text[i-1], query[j-1] );
+            int sim = similarity_func ( text_iterator[i-1], query_iterator[j-1] );
 
 #ifdef CACHE_MAX_COLS
             int cur_score_del = vec_max_cols[j].first + gap_score_func(j - vec_max_cols[j].second);
@@ -889,6 +984,47 @@ ngs::String make_query ( ngs::String const& ref_slice,
     return ret;
 }
 
+template <bool reverse> void print_matrix ( int const* matrix,
+                                            char const* ref_slice, size_t ref_slice_size,
+                                            char const* query, size_t query_size)
+{
+    size_t COLUMNS = ref_slice_size + 1;
+    size_t ROWS = query_size + 1;
+
+    int print_width = 2;
+
+    CStringIterator<reverse> ref_slice_iterator(ref_slice, ref_slice_size);
+    CStringIterator<reverse> query_iterator(query, query_size);
+
+    printf ("  %*c ", print_width, '-');
+    for (size_t j = 0; j < COLUMNS; ++j)
+        printf ("%*c ", print_width, ref_slice_iterator[j]);
+    printf ("\n");
+
+    for (size_t i = 0; i < ROWS; ++i)
+    {
+        if ( i == 0 )
+            printf ("%c ", '-');
+        else
+            printf ("%c ", query_iterator[i-1]);
+        
+        for (size_t j = 0; j < COLUMNS; ++j)
+        {
+            printf ("%*d ", print_width, matrix[i*COLUMNS + j]);
+        }
+        printf ("\n");
+    }
+}
+
+void print_indel (char const* name, char const* text, size_t text_size, int indel_start, int indel_end)
+{
+    printf ( "%s: %.*s[%.*s]%.*s\n",
+                name,
+                (indel_start + 1), text,
+                indel_end - (indel_start + 1), text + (indel_start + 1),
+                (int)(text_size - indel_end), text + indel_end
+           );
+}
 
 void analyse_run ( ngs::String const& ref_slice, char const* ins_bases, size_t ins_bases_length )
 {
@@ -905,45 +1041,28 @@ void analyse_run ( ngs::String const& ref_slice, char const* ins_bases, size_t i
     size_t ROWS = query.size() + 1;
     std::vector<int> matrix( ROWS * COLUMNS );
 
-    calculate_similarity_matrix ( query.c_str(), query.size(), ref_slice.c_str(), ref_slice.size(), &matrix[0] );
-
-    int print_width = 2;
-
-    printf ("  %*c ", print_width, '-');
-    for (size_t j = 0; j < COLUMNS; ++j)
-        printf ("%*c ", print_width, ref_slice[j]);
-    printf ("\n");
-
-    for (size_t i = 0; i < ROWS; ++i)
-    {
-        if ( i == 0 )
-            printf ("%c ", '-');
-        else
-            printf ("%c ", query[i-1]);
-        
-        for (size_t j = 0; j < COLUMNS; ++j)
-        {
-            printf ("%*d ", print_width, matrix[i*COLUMNS + j]);
-        }
-        printf ("\n");
-    }
-
+    calculate_similarity_matrix<false> ( query.c_str(), query.size(), ref_slice.c_str(), ref_slice.size(), &matrix[0] );
+    //print_matrix<reverse> (&matrix[0], ref_slice.c_str(), ref_slice.size(), query.c_str(), query.size());
     int row_start, col_start, row_end, col_end;
     sw_find_indel_box ( & matrix[0], ROWS, COLUMNS, &row_start, &row_end, &col_start, &col_end );
 
+
+    calculate_similarity_matrix<true> ( query.c_str(), query.size(), ref_slice.c_str(), ref_slice.size(), &matrix[0] );
+    int row_start_rev, col_start_rev, row_end_rev, col_end_rev;
+    sw_find_indel_box ( & matrix[0], ROWS, COLUMNS, &row_start_rev, &row_end_rev, &col_start_rev, &col_end_rev );
+
+    CStringIterator<false> ref_slice_iterator(ref_slice.c_str(), ref_slice.size());
+    CStringIterator<false> query_iterator(query.c_str(), query.size());
+
+    row_start = min ( (int)query.size() - row_end_rev - 1, row_start );
+    row_end   = max ( (int)query.size() - row_start_rev - 1, row_end );
+    col_start = min ( (int)ref_slice.size() - col_end_rev - 1, col_start );
+    col_end   = max ( (int)ref_slice.size() - col_start_rev - 1, col_end );
+
     printf ("indel box found: (%d, %d) - (%d, %d)\n", row_start, col_start, row_end, col_end );
 
-    printf ( "Possible indel:\n"
-             "reference: %.*s[%.*s]%.*s\n"
-             "query    : %.*s[%.*s]%.*s\n",
-                (col_start + 1), ref_slice.c_str(),
-                col_end - (col_start + 1), ref_slice.c_str() + (col_start + 1),
-                (int)(ref_slice.size() - col_end), ref_slice.c_str() + col_end,
-
-                (row_start + 1), query.c_str(),
-                row_end - (row_start + 1), query.c_str() + (row_start + 1),
-                (int)(query.size() - row_end), query.c_str() + row_end
-           );
+    print_indel ( "reference", ref_slice.c_str(), ref_slice.size(), col_start, col_end );
+    print_indel ( "query    ", query.c_str(), query.size(), row_start, row_end );
 }
 
 void find_ref_in_runs (char const* ref_name, int64_t pos)
@@ -965,7 +1084,7 @@ void find_ref_in_runs (char const* ref_name, int64_t pos)
         "SRR341580",
         "SRR341581",
         "SRR341582",
-        "SRR341578",
+        "SRR341578"
     };
 
     for (size_t i = 0; i < sizeof (db_names)/sizeof (db_names[0]); ++i )
@@ -979,7 +1098,7 @@ void find_ref_in_runs (char const* ref_name, int64_t pos)
             if ( ref_slice_cur ==  ref_slice )
             {
                 std::cout << db_names[i] << " has the same reference" << std::endl;
-                analyse_run ( ref_slice_cur, "CA", 2 );
+                analyse_run( ref_slice_cur, "CA", 2 );
             }
             else
             {
@@ -1011,6 +1130,9 @@ TEST_CASE(CSRA1_Experimenting)
     ngs::String ref_slice = get_ref_slice ( ref, ref_pos_ins, sizeof (insertion_bases) - 1 );
     ngs::String query = make_query ( ref_slice, insertion_bases, sizeof (insertion_bases) - 1 );
 
+    ref_slice = "TTGGACGGTT";
+    query = "TTGGACACGGTT";
+
     std::cout
         << "ref_slice: "
         << ref_slice << std::endl
@@ -1022,51 +1144,46 @@ TEST_CASE(CSRA1_Experimenting)
     size_t ROWS = query.size() + 1;
     std::vector<int> matrix( ROWS * COLUMNS );
 
-    calculate_similarity_matrix ( query.c_str(), query.size(), ref_slice.c_str(), ref_slice.size(), &matrix[0] );
-
-    int print_width = 2;
-
-    printf ("  %*c ", print_width, '-');
-    for (size_t j = 1; j < COLUMNS; ++j)
-        printf ("%*c ", print_width, ref_slice[j - 1]);
-    printf ("\n");
-
-    for (size_t i = 0; i < ROWS; ++i)
     {
-        if ( i == 0 )
-            printf ("%c ", '-');
-        else
-            printf ("%c ", query[i-1]);
-        
-        for (size_t j = 0; j < COLUMNS; ++j)
-        {
-            printf ("%*d ", print_width, matrix[i*COLUMNS + j]);
-        }
-        printf ("\n");
+        calculate_similarity_matrix<false> ( query.c_str(), query.size(), ref_slice.c_str(), ref_slice.size(), &matrix[0] );
+
+        //print_matrix<false> ( & matrix[0], ref_slice.c_str(), ref_slice.size(), query.c_str(), query.size() );
+
+        int row_start, col_start, row_end, col_end;
+        sw_find_indel_box ( & matrix[0], ROWS, COLUMNS, &row_start, &row_end, &col_start, &col_end );
+
+        printf ("indel box found: (%d, %d) - (%d, %d)\n", row_start, col_start, row_end, col_end );
+
+        print_indel ( "reference", ref_slice.c_str(), ref_slice.size(), col_start, col_end );
+        print_indel ( "query    ", query.c_str(), query.size(), row_start, row_end );
     }
+    {
+        std::cout << "and reverse..." << std::endl;
+        calculate_similarity_matrix<true> ( query.c_str(), query.size(), ref_slice.c_str(), ref_slice.size(), &matrix[0] );
 
-    int row_start, col_start, row_end, col_end;
-    sw_find_indel_box ( & matrix[0], ROWS, COLUMNS, &row_start, &row_end, &col_start, &col_end );
+        int row_start, col_start, row_end, col_end;
+        sw_find_indel_box ( & matrix[0], ROWS, COLUMNS, &row_start, &row_end, &col_start, &col_end );
 
-    printf ("indel box found: (%d, %d) - (%d, %d)\n", row_start, col_start, row_end, col_end );
+        CStringIterator<true> query_iterator ( query.c_str(), query.size() );
+        CStringIterator<true> ref_slice_iterator ( ref_slice.c_str(), ref_slice.size() );
 
-    printf ( "Possible indel:\n"
-             "reference: %.*s[%.*s]%.*s\n"
-             "query    : %.*s[%.*s]%.*s\n",
-                (col_start + 1), ref_slice.c_str(),
-                col_end - (col_start + 1), ref_slice.c_str() + (col_start + 1),
-                (int)(ref_slice.size() - col_end), ref_slice.c_str() + col_end,
+        row_start = query_iterator.get_straight_index ( row_start );
+        row_end = query_iterator.get_straight_index ( row_end );
+        col_start = ref_slice_iterator.get_straight_index ( col_start );
+        col_end = ref_slice_iterator.get_straight_index ( col_end );
 
-                (row_start + 1), query.c_str(),
-                row_end - (row_start + 1), query.c_str() + (row_start + 1),
-                (int)(query.size() - row_end), query.c_str() + row_end
-           );
+        std::swap ( row_start, row_end );
+        std::swap ( col_start, col_end );
 
+
+        printf ("indel box found: (%d, %d) - (%d, %d)\n", row_start, col_start, row_end, col_end );
+
+        print_indel ( "reference", ref_slice.c_str(), ref_slice.size(), col_start, col_end );
+        print_indel ( "query    ", query.c_str(), query.size(), row_start, row_end );
+    }
 
     REQUIRE_EQ ( 0, 0 );
 }
-#endif
-
 
 //////////////////////////////////////////// Main
 extern "C"

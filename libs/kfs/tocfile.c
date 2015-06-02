@@ -63,25 +63,21 @@ struct FileCacheNode
 };
 
 static
-int CC FileCacheNodeCmp ( const void *item, const BSTNode *n )
+int64_t CC FileCacheNodeCmp ( const void *item, const BSTNode *n )
 {
     const char *a = item;
     const FileCacheNode *b = ( const FileCacheNode* ) n;
 
-    if ( a < b -> path )
-        return -1;
-    return a > b -> path;
+    return a - b -> path;
 }
 
 static
-int CC FileCacheNodeSort ( const BSTNode *item, const BSTNode *n )
+int64_t CC FileCacheNodeSort ( const BSTNode *item, const BSTNode *n )
 {
     const FileCacheNode *a = ( const FileCacheNode* ) item;
     const FileCacheNode *b = ( const FileCacheNode* ) n;
 
-    if ( a -> path < b -> path )
-        return -1;
-    return a -> path > b -> path;
+    return a -> path - b -> path;
 }
 
 static

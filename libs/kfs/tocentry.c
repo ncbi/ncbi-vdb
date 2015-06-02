@@ -127,12 +127,12 @@ rc_t KTocEntryDelete ( KTocEntry * self )
  *
  * can not inline or make into a macro as it is referenced via a pointer
  */
-int CC KTocEntryCmp2 ( const BSTNode * n, const BSTNode * p )
+int64_t CC KTocEntryCmp2 ( const BSTNode * n, const BSTNode * p )
 {
 
     KTocEntry * nn;
     KTocEntry * pp;
-    int		  ii;
+    int64_t		  ii;
 
     nn = (KTocEntry *)n;
     pp =  (KTocEntry *)p;
@@ -152,7 +152,7 @@ int CC KTocEntryCmp2 ( const BSTNode * n, const BSTNode * p )
  *
  * can not inline or make into a macro as it is referenced via a pointer
  */
-int CC KTocEntryCmpVoid ( const void * item, const BSTNode * node )
+int64_t CC KTocEntryCmpVoid ( const void * item, const BSTNode * node )
 {
     const BSTNode * _item = item;
     return KTocEntryCmp2 (_item, node);
@@ -321,7 +321,7 @@ rc_t KTocEntryNewZombieFile ( KTocEntry ** new_entry,
  * [IN]  uint32_t 		num_chunks	number of chunks in the array above
  */
 static
-int CC chunkcmp (const void * a, const void * b, void * ignored)
+int64_t CC chunkcmp (const void * a, const void * b, void * ignored)
 {
     const KTocChunk *A = a;
     const KTocChunk *B = b;

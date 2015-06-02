@@ -240,7 +240,7 @@ XFSTarDepotInit ()
 }   /* XFSTarDepotInit () */
 
 static
-int CC
+int64_t CC
 _TarCmpCallback ( const void * Item, const BSTNode * Node )
 {
     const char * Str1, * Str2;
@@ -285,7 +285,7 @@ _TarDptGetNoLock (
 }   /* _TarDptGetNoLock () */
 
 static
-int CC
+int64_t CC
 _TarAddCallback ( const BSTNode * N1, const BSTNode * N2 )
 {
     return XFS_StringCompare4BST_ZHR (

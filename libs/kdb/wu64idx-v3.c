@@ -58,7 +58,7 @@ typedef struct KU64Index_Node_struct {
 } KU64Index_Node;
 
 static
-int CC KU64Index_NodeSort( const BSTNode *item, const BSTNode *node )
+int64_t CC KU64Index_NodeSort( const BSTNode *item, const BSTNode *node )
 {
     const KU64Index_Node* i = (const KU64Index_Node*)item;
     const KU64Index_Node* n = (const KU64Index_Node*)node;
@@ -72,7 +72,7 @@ int CC KU64Index_NodeSort( const BSTNode *item, const BSTNode *node )
 }
 
 static
-int CC KU64Index_NodeSortUnique( const BSTNode *item, const BSTNode *node )
+int64_t CC KU64Index_NodeSortUnique( const BSTNode *item, const BSTNode *node )
 {
     const KU64Index_Node* i = (const KU64Index_Node*)item;
     const KU64Index_Node* n = (const KU64Index_Node*)node;
@@ -190,7 +190,7 @@ rc_t KU64IndexInsert_v3(KU64Index_v3* self, bool unique, uint64_t key, uint64_t 
 }
 
 static
-int CC KU64Index_Cmp4Delete( const void *item, const BSTNode *node )
+int64_t CC KU64Index_Cmp4Delete( const void *item, const BSTNode *node )
 {
     const KU64Index_Node* i = (const KU64Index_Node*)item;
     const KU64Index_Node* n = (const KU64Index_Node*)node;

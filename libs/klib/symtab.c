@@ -127,7 +127,7 @@ LIB_EXPORT void CC KSymbolWhack ( BSTNode *n, void *ignore )
 
 /* Cmp
  */
-LIB_EXPORT int CC KSymbolCmp ( const void *item, const BSTNode *n )
+LIB_EXPORT int64_t CC KSymbolCmp ( const void *item, const BSTNode *n )
 {
     const String *a = item;
     const KSymbol *b = ( const KSymbol* ) n;
@@ -137,7 +137,7 @@ LIB_EXPORT int CC KSymbolCmp ( const void *item, const BSTNode *n )
 
 /* Sort
  */
-LIB_EXPORT int CC KSymbolSort ( const BSTNode *item, const BSTNode *n )
+LIB_EXPORT int64_t CC KSymbolSort ( const BSTNode *item, const BSTNode *n )
 {
     const KSymbol *a = ( const KSymbol* ) item;
     const KSymbol *b = ( const KSymbol* ) n;

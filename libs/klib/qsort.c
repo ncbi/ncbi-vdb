@@ -116,7 +116,7 @@ typedef struct
    stack size is needed (actually O(1) in this case)!  */
 
 LIB_EXPORT void CC ksort ( void *pbase, size_t total_elems, size_t size,
-    int ( CC * cmp ) ( const void*, const void*, void *data ), void *data )
+    int64_t ( CC * cmp ) ( const void*, const void*, void *data ), void *data )
 {
     register char *base_ptr = (char *) pbase;
 

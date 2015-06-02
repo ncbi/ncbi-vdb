@@ -293,7 +293,7 @@ _DisplayName (
 }   /* _DisplayName () */
 
 static
-int CC
+int64_t CC
 _AddKartItemCallback ( const BSTNode * N1, const BSTNode * N2 )
 {
     return XFS_StringCompare4BST_ZHR (
@@ -552,7 +552,7 @@ XFSKartHas ( struct XFSKart * self, const char * ItemName )
 }   /* XFSKartHas () */
 
 static
-int CC
+int64 CC
 _CartItemCmp ( const void * Item, const BSTNode * Node )
 {
     const char * Str1, * Str2;

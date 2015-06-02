@@ -52,11 +52,11 @@
 /* Perform a binary search for KEY in BASE which has NMEMB elements
    of SIZE bytes each.  The comparisons are done by (*COMPAR)().  */
 LIB_EXPORT void* CC kbsearch ( const void *key, const void *base, size_t nmemb, size_t size,
-    int ( CC * compar ) ( const void *, const void *, void *data ), void *data )
+    int64_t ( CC * compar ) ( const void *, const void *, void *data ), void *data )
 {
     size_t l, u, idx;
     const void *p;
-    int comparison;
+    int64_t comparison;
 
     l = 0;
     u = nmemb;

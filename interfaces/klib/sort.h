@@ -49,7 +49,7 @@ extern "C" {
  *  qsort with a function data pointer
  */
 KLIB_EXTERN void CC ksort ( void *pbase, size_t total_elems, size_t size,
-    int ( CC * cmp ) ( const void*, const void*, void *data ), void *data );
+    int64_t ( CC * cmp ) ( const void*, const void*, void *data ), void *data );
 
 
 /* various custom ksort operations
@@ -113,7 +113,7 @@ void ksort_int64_t ( int64_t *base, size_t count )
  *  bsearch with a function data pointer
  */
 KLIB_EXTERN void* CC kbsearch ( const void *key, const void *base, size_t nmemb, size_t size,
-    int ( CC * cmp ) ( const void*, const void*, void *data ), void *data );
+    int64_t ( CC * cmp ) ( const void*, const void*, void *data ), void *data );
 
 
 #ifdef __cplusplus

@@ -203,7 +203,7 @@ rc_t KTocEntryStackPop( KTocEntryStack * self, KTocEntry ** pathaddr )
 
 
 static
-int CC KTocEntryIndexCmp2 (const BSTNode * n, const BSTNode * p)
+int64_t CC KTocEntryIndexCmp2 (const BSTNode * n, const BSTNode * p)
 {
     uint64_t nos;
     uint64_t noe;

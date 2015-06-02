@@ -216,7 +216,7 @@ typedef struct key_id_t {
 } key_id_t;
 
 static
-int CC key_id_cmp(const void *arg1, const void *arg2, void *data)
+int64_t CC key_id_cmp(const void *arg1, const void *arg2, void *data)
 {
     key_id_t const *a = arg1;
     key_id_t const *b = arg2;
@@ -405,7 +405,7 @@ rc_t ReferenceMgr_NewReferenceSeq(ReferenceMgr *const self, ReferenceSeq **const
 }
 
 static
-int CC config_cmp(void const *A, void const *B, void *Data)
+int64_t CC config_cmp(void const *A, void const *B, void *Data)
 {
     struct {
         unsigned id;
@@ -1358,10 +1358,6 @@ static uint64_t AlignIdListCount(AlignIdList *l)
 	}
 	return ret;
 }
-static int int64_compare(const void *A, const void *B, void *ignore)
-{
-	return (int)(*(int64_t*)A -  *(int64_t*)B);
-}
 static uint64_t AlignIdListFlatCopy(AlignIdList *l,int64_t *buf,uint64_t num_elem,bool do_sort)
 {
 	uint64_t res=0;
@@ -1397,7 +1393,7 @@ static uint64_t AlignIdListFlatCopy(AlignIdList *l,int64_t *buf,uint64_t num_ele
 		}
 	}
 	if(do_sort && res > 1) 
-		ksort(buf,res,sizeof(*buf),int64_compare,NULL);
+		ksort_int64_t(buf,res);
 	return res;
 }
 

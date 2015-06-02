@@ -220,12 +220,12 @@ rc_t VColumnRefMake ( VColumnRef **cref,
  *  compares by name only
  *  "item" is a const String*
  */
-int CC VColumnRefCmpString ( const void *item, const BSTNode *n );
+int64_t CC VColumnRefCmpString ( const void *item, const BSTNode *n );
 
 /* Sort
  *  compares by (name,type) pair
  */
-int CC VColumnRefSort ( const BSTNode *item, const BSTNode *n );
+int64_t CC VColumnRefSort ( const BSTNode *item, const BSTNode *n );
 
 
 #ifdef __cplusplus

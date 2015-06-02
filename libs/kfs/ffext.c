@@ -274,7 +274,7 @@ rc_t KExtTableMake (KExtTable ** kmmtp)
 }
 
 static
-int KExtNodeCmp (const void* item, const BSTNode * n)
+int64_t KExtNodeCmp (const void* item, const BSTNode * n)
 {
     size_t len;
     KExtNode * mn = (KExtNode *)n;
@@ -347,7 +347,7 @@ rc_t KExtTableFindKFFDescr (KExtTable * self, const char * str, char * kff, size
 }
 #endif
 static
-int KExtNodeSort (const BSTNode* item, const BSTNode * n)
+int64_t KExtNodeSort (const BSTNode* item, const BSTNode * n)
 {
     const char * str1;
     const char * str2;

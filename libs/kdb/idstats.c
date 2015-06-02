@@ -82,7 +82,7 @@ void CC KIdStatsNodeWhack ( BSTNode *n, void *ignore )
  * Sort
  */
 static
-int CC KIdStatsNodeCmp ( const void *item, const BSTNode *n )
+int64_t CC KIdStatsNodeCmp ( const void *item, const BSTNode *n )
 {
     const KIdStatsNode *a = item;
     const KIdStatsNode *b = ( const KIdStatsNode* ) n;
@@ -95,7 +95,7 @@ int CC KIdStatsNodeCmp ( const void *item, const BSTNode *n )
 }
 
 static
-int CC KIdStatsNodeSort ( const BSTNode *item, const BSTNode *n )
+int64_t CC KIdStatsNodeSort ( const BSTNode *item, const BSTNode *n )
 {
     const KIdStatsNode *a = ( const KIdStatsNode* ) item;
     const KIdStatsNode *b = ( const KIdStatsNode* ) n;

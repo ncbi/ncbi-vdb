@@ -188,7 +188,7 @@ void CC NamedParamNodeWhack ( BSTNode *n, void *ignore )
 }
 
 static
-int CC NamedParamComp ( const void *item, const BSTNode *n )
+int64_t CC NamedParamComp ( const void *item, const BSTNode *n )
 {
     const String *name = item;
     const NamedParamNode *node = ( const NamedParamNode* ) n;
@@ -197,7 +197,7 @@ int CC NamedParamComp ( const void *item, const BSTNode *n )
 }
 
 static
-int CC NamedParamNodeComp ( const BSTNode *A, const BSTNode *B )
+int64_t CC NamedParamNodeComp ( const BSTNode *A, const BSTNode *B )
 {
     const NamedParamNode *a = (const NamedParamNode *) A;
     const NamedParamNode *b = (const NamedParamNode *) B;
@@ -225,7 +225,7 @@ void CC LinkedCursorNodeWhack ( BSTNode *n, void *ignore )
 }
 
 static
-int CC LinkedCursorComp ( const void *item, const BSTNode *n )
+int64_t CC LinkedCursorComp ( const void *item, const BSTNode *n )
 {
     const char *tbl = item;
     const LinkedCursorNode *node = ( const LinkedCursorNode* ) n;
@@ -234,7 +234,7 @@ int CC LinkedCursorComp ( const void *item, const BSTNode *n )
 }
 
 static
-int CC LinkedCursorNodeComp ( const BSTNode *A, const BSTNode *B )
+int64_t CC LinkedCursorNodeComp ( const BSTNode *A, const BSTNode *B )
 {
     const LinkedCursorNode *a = (const LinkedCursorNode *) A;
     const LinkedCursorNode *b = (const LinkedCursorNode *) B;

@@ -167,8 +167,8 @@ KLIB_EXTERN int CC StringCaseCompare ( const String *a, const String *b );
  *  the "NoNullCheck" version will crash if either a or b are NULL
  *  but avoids the overhead of checking when both are known to be good
  */
-KLIB_EXTERN int CC StringOrder ( const String *a, const String *b );
-KLIB_EXTERN int CC StringOrderNoNullCheck ( const String *a, const String *b );
+KLIB_EXTERN int64_t CC StringOrder ( const String *a, const String *b );
+KLIB_EXTERN int64_t CC StringOrderNoNullCheck ( const String *a, const String *b );
 
 /* StringMatch
  *  creates a substring of "a" in "match"

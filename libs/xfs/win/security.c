@@ -345,7 +345,7 @@ _ClearSidStorageNoLock ()
 }   /* _ClearSidStorageNoLock () */
 
 static
-int CC
+int64_t CC
 _SidStorageAddCallback ( const BSTNode * Node1, const BSTNode * Node2 )
 {
     return XFS_StringCompare4BST_ZHR (
@@ -389,7 +389,7 @@ _AddSidNoLock ( const char * Name, struct __SidNode ** Ret )
 }   /* _AddSidNoLock () */
 
 static
-int CC
+int64_t CC
 _SidStorageFindCallback ( const void * Item, const BSTNode * Node )
 {
     return XFS_StringCompare4BST_ZHR (

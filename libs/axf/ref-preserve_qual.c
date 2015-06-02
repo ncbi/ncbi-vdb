@@ -59,7 +59,7 @@ struct node {
 typedef struct node Node;
 
 static
-int CC NodeNameCmp( void const *a, BSTNode const *n )
+int64_t CC NodeNameCmp( void const *a, BSTNode const *n )
 {
     String b;
     
@@ -69,7 +69,7 @@ int CC NodeNameCmp( void const *a, BSTNode const *n )
 }
 
 static
-int CC NodeCmp( BSTNode const *A, BSTNode const *B )
+int64_t CC NodeCmp( BSTNode const *A, BSTNode const *B )
 {
     String a;
     String b;

@@ -53,7 +53,7 @@ struct KColumnIdx1Node
 /* KColumnIdx1NodeFind
  */
 static
-int CC KColumnIdx1NodeFind ( const void *item, const BSTNode *n )
+int64_t CC KColumnIdx1NodeFind ( const void *item, const BSTNode *n )
 {
 #define a ( * ( const int64_t* ) item )
 #define b ( ( const KColumnIdx1Node* ) n )
@@ -69,7 +69,7 @@ int CC KColumnIdx1NodeFind ( const void *item, const BSTNode *n )
 /* KColumnIdx1NodeSort
  */
 static
-int CC KColumnIdx1NodeSort ( const BSTNode *item, const BSTNode *n )
+int64_t CC KColumnIdx1NodeSort ( const BSTNode *item, const BSTNode *n )
 {
 #define a ( ( const KColumnIdx1Node* ) item )
 #define b ( ( const KColumnIdx1Node* ) n )
