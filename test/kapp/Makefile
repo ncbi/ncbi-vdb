@@ -31,15 +31,23 @@ MODULE = test/kapp
 
 TEST_TOOLS = \
     args-test
+
+ALL_TOOLS = \
+	env-test-tool
     
 include $(TOP)/build/Makefile.env
 
 $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
-.PHONY: $(ALL_LIBS) $(TEST_TOOLS)
+$(ALL_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+.PHONY: $(ALL_LIBS) $(ALL_TOOLS) $(TEST_TOOLS)
 
 clean: stdclean
+
+std: $(ALL_TOOLS)
 
 #-------------------------------------------------------------------------------
 # args-test
@@ -76,3 +84,22 @@ QFILETEST_LIB = \
 
 $(TEST_BINDIR)/qfiletest: $(QFILETEST_OBJ)
 	$(LD) --exe $(SRCDIR) -o $@ $^ $(QFILETEST_LIB)
+
+#-------------------------------------------------------------------------------
+# env-test-tool
+#
+ENV_TEST_SRC = \
+	env-test-tool
+
+ENV_TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(ENV_TEST_SRC))
+
+ENV_TEST_LIB = \
+	-skapp \
+	-sncbi-vdb \
+	-sload \
+	-lm
+
+$(TEST_BINDIR)/env-test-tool: $(ENV_TEST_OBJ)
+	$(LD) --exe -o $@ $^ $(ENV_TEST_LIB)
+

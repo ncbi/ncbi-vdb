@@ -36,6 +36,7 @@
     <ClCompile Include="..\..\..\libs\kapp\args.c" />
     <ClCompile Include="..\..\..\libs\kapp\main.c" />
     <ClCompile Include="..\..\..\libs\kapp\tokenizer.c" />
+    <ClCompile Include="..\..\..\libs\kapp\win\ram.c" />
     <ClCompile Include="..\..\..\libs\kapp\win\sysmain.c" />
   </ItemGroup>
   

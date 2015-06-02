@@ -24,53 +24,54 @@
 *
 */
 
-#ifndef _h_main_priv_
-#define _h_main_priv_
+#include "../main-priv.h"
+#include <kapp/main.h>
+#include <klib/log.h>
+#include <klib/rc.h>
 
-#ifndef _h_klib_defs_
-#include <klib/defs.h>
-#endif
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
+#include <assert.h>
 
-#ifndef _h_kapp_extern_
- #include <kapp/extern.h>
-#endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-    
-/*--------------------------------------------------------------------------
- * KMane
- *  invoked by platform specific "main" entrypoint
+/* KAppGetTotalRam
+ *  Linux specific function of getting amount of RAM
  */
+rc_t KAppGetTotalRam ( uint64_t * totalRamKb )
+{
+    rc_t rc;
 
-/* KMane
- *  executable entrypoint "main" is implemented by
- *  an OS-specific wrapper that takes care of establishing
- *  signal handlers, logging, etc.
- *
- *  in turn, OS-specific "main" will invoke "KMain" as
- *  platform independent main entrypoint.
- *
- *  "argc" [ IN ] - the number of textual parameters in "argv"
- *  should never be < 0, but has been left as a signed int
- *  for reasons of tradition.
- *
- *  "argv" [ IN ] - array of NUL terminated strings expected
- *  to be in the shell-native character set: ASCII or UTF-8
- *  element 0 is expected to be executable identity or path.
- */
-rc_t KMane ( int argc, char *argv [] );
+    long numPages;
+    long pageSize;
 
-/*KAppGetTotalRam
- * returns total physical RAM installed in the system
- * in bytes
- */
-rc_t KAppGetTotalRam ( uint64_t * totalRam );
+    assert ( totalRamKb != 0 );
 
-#ifdef __cplusplus
+    numPages = sysconf( _SC_PHYS_PAGES );
+    if ( numPages < 0 )
+    {
+        rc = RC ( rcApp, rcNoTarg, rcInitializing, rcMemory, rcFailed );
+        PLOGERR ( klogFatal, ( klogFatal, rc,
+                    "failed to retrieve number of RAM pages: $(msg)"
+                    , "msg='%s'"
+                    , strerror ( errno )
+                        ));
+        return rc;
+    }
+
+    pageSize = sysconf( _SC_PAGESIZE );
+    if ( pageSize < 0 )
+    {
+        rc = RC ( rcApp, rcNoTarg, rcInitializing, rcMemory, rcFailed );
+        PLOGERR ( klogFatal, (klogFatal, rc,
+                    "failed to retrieve RAM page size: $(msg)"
+                    , "msg='%s'"
+                    , strerror ( errno )
+                        ));
+        return rc;
+    }
+
+    *totalRamKb = (uint64_t) pageSize * numPages;
+
+    return 0;
 }
-#endif
-
-#endif /* _h_main_priv_ */

@@ -24,53 +24,38 @@
 *
 */
 
-#ifndef _h_main_priv_
-#define _h_main_priv_
+#define UNICODE 1
+#define _UNICODE 1
 
-#ifndef _h_klib_defs_
-#include <klib/defs.h>
-#endif
+#include "../main-priv.h"
+#include <klib/log.h>
+#include <klib/rc.h>
 
-#ifndef _h_kapp_extern_
- #include <kapp/extern.h>
-#endif
+#include <WINDOWS.H>
+#include <assert.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-    
-/*--------------------------------------------------------------------------
- * KMane
- *  invoked by platform specific "main" entrypoint
+/* KAppGetTotalRam
+ *  Windows specific function of getting amount of RAM
  */
+rc_t KAppGetTotalRam ( uint64_t * totalRamKb )
+{
+    rc_t rc;
+    BOOL ret;
 
-/* KMane
- *  executable entrypoint "main" is implemented by
- *  an OS-specific wrapper that takes care of establishing
- *  signal handlers, logging, etc.
- *
- *  in turn, OS-specific "main" will invoke "KMain" as
- *  platform independent main entrypoint.
- *
- *  "argc" [ IN ] - the number of textual parameters in "argv"
- *  should never be < 0, but has been left as a signed int
- *  for reasons of tradition.
- *
- *  "argv" [ IN ] - array of NUL terminated strings expected
- *  to be in the shell-native character set: ASCII or UTF-8
- *  element 0 is expected to be executable identity or path.
- */
-rc_t KMane ( int argc, char *argv [] );
+    assert ( totalRamKb != 0 );
 
-/*KAppGetTotalRam
- * returns total physical RAM installed in the system
- * in bytes
- */
-rc_t KAppGetTotalRam ( uint64_t * totalRam );
+    ret = GetPhysicallyInstalledSystemMemory ( totalRamKb );
+    if ( ! ret )
+    {
+        rc = RC ( rcApp, rcNoTarg, rcInitializing, rcMemory, rcFailed );
+        PLOGERR ( klogFatal, ( klogFatal, rc,
+                    "failed to retrieve size of RAM. error code: $(ERR_CODE)"
+                    , "ERR_CODE='%u'"
+                    , GetLastError() ));
+        return rc;
+    }
 
-#ifdef __cplusplus
+    *totalRamKb *= 1024;
+
+    return 0;
 }
-#endif
-
-#endif /* _h_main_priv_ */
