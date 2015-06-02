@@ -645,6 +645,8 @@ TEST_CASE(CSRA1_PileupIterator_TestAllFunctions)
 /////////////////////////////////////////
 // Experimenting with Smith-Waterman
 
+#if 0
+
 #ifndef min
 #define min(x,y) ((y) < (x) ? (y) : (x))
 #endif
@@ -1184,7 +1186,7 @@ TEST_CASE(CSRA1_Experimenting)
 
     REQUIRE_EQ ( 0, 0 );
 }
-
+#endif
 //////////////////////////////////////////// Main
 extern "C"
 {
