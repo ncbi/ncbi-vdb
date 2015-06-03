@@ -218,7 +218,6 @@ static const char *sra_trans_hole_status( const uint32_t id )
     return( SRA_PB_HS_9 );
 }
 
-
 const char SRA_PF_0[] = { "SRA_PLATFORM_UNDEFINED" };
 const char SRA_PF_1[] = { "SRA_PLATFORM_454" };
 const char SRA_PF_2[] = { "SRA_PLATFORM_ILLUMINA" };
@@ -227,10 +226,9 @@ const char SRA_PF_4[] = { "SRA_PLATFORM_COMPLETE_GENOMICS" };
 const char SRA_PF_5[] = { "SRA_PLATFORM_HELICOS" };
 const char SRA_PF_6[] = { "SRA_PLATFORM_PACBIO_SMRT" };
 const char SRA_PF_7[] = { "SRA_PLATFORM_ION_TORRENT" };
-#if ! WINDOWS
-#warning "add in CAPILLARY and OXFORD_NANOPORE"
-#endif
-const char SRA_PF_8[] = { "unknown platform" };
+const char SRA_PF_8[] = { "SRA_PLATFORM_CAPILLARY" };
+const char SRA_PF_9[] = { "SRA_PLATFORM_OXFORD_NANOPORE" };
+const char SRA_PF_N[] = { "unknown platform" };
 
 static const char *sra_trans_platform( const uint32_t id )
 {
@@ -244,8 +242,10 @@ static const char *sra_trans_platform( const uint32_t id )
         case 5  : return( SRA_PF_5 ); break;
         case 6  : return( SRA_PF_6 ); break;
         case 7  : return( SRA_PF_7 ); break;
+        case 8  : return( SRA_PF_8 ); break;
+        case 9  : return( SRA_PF_9 ); break;		
     }
-    return( SRA_PF_8 );
+    return( SRA_PF_N );
 }
 
 
