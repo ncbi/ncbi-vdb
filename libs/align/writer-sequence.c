@@ -375,14 +375,14 @@ LIB_EXPORT rc_t CC TableWriterSeq_Whack(const TableWriterSeq* cself, bool commit
                     }
                 }
                 if ((rc = KMetadataOpenNodeUpdate(meta, &node, "unaligned")) == 0) {
-                    KMetadata *sub = NULL;
+                    KMDataNode *sub = NULL;
                     
-                    KMetadataOpenNodeUpdate(node, &sub, "first-unaligned");
-                    KMDataNodeWriteI64(sub, self->firstUnaligned);
+                    KMDataNodeOpenNodeUpdate(node, &sub, "first-unaligned");
+                    KMDataNodeWriteB64(sub, &self->firstUnaligned);
                     KMDataNodeRelease(sub);
                     
-                    KMetadataOpenNodeUpdate(node, &sub, "first-half-aligned");
-                    KMDataNodeWriteI64(sub, self->firstHalfAligned);
+                    KMDataNodeOpenNodeUpdate(node, &sub, "first-half-aligned");
+                    KMDataNodeWriteB64(sub, &self->firstHalfAligned);
                     KMDataNodeRelease(sub);
 
                     KMDataNodeRelease(node);
@@ -497,11 +497,13 @@ LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const Table
             if (naligned == 0) {
                 if (!cself->haveFirstUnaligned) {
                     ((TableWriterSeq *)cself)->firstUnaligned = *rowid;
+                    ((TableWriterSeq *)cself)->haveFirstUnaligned = true;
                 }
             }
             else if (naligned < (unsigned)data->nreads) {
                 if (!cself->haveFirstHalfAligned) {
                     ((TableWriterSeq *)cself)->firstHalfAligned = *rowid;
+                    ((TableWriterSeq *)cself)->haveFirstHalfAligned = true;
                 }
             }
         }
