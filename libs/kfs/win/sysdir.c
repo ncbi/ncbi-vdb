@@ -1881,8 +1881,8 @@ rc_t get_attributes ( const wchar_t * wpath, uint32_t * access, KTime_t * date )
 {
     WIN32_FIND_DATA fd;
     rc_t rc;
-
-    if ( FindFirstFile ( wpath, &fd ))
+    HANDLE h = FindFirstFile ( wpath, &fd );
+    if ( h )
     {
         if ( access != NULL )
         {
@@ -1895,8 +1895,10 @@ rc_t get_attributes ( const wchar_t * wpath, uint32_t * access, KTime_t * date )
         {
             *date = WinTimeToKTime ( &fd.ftLastWriteTime );
         }
+        FindClose ( h );
         return 0;
     }
+
 /* TBD check values in error */
     if ( access != NULL )
         *access = 0;

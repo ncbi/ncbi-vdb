@@ -227,6 +227,9 @@ const char SRA_PF_4[] = { "SRA_PLATFORM_COMPLETE_GENOMICS" };
 const char SRA_PF_5[] = { "SRA_PLATFORM_HELICOS" };
 const char SRA_PF_6[] = { "SRA_PLATFORM_PACBIO_SMRT" };
 const char SRA_PF_7[] = { "SRA_PLATFORM_ION_TORRENT" };
+#if ! WINDOWS
+#warning "add in CAPILLARY and OXFORD_NANOPORE"
+#endif
 const char SRA_PF_8[] = { "unknown platform" };
 
 static const char *sra_trans_platform( const uint32_t id )
