@@ -100,7 +100,8 @@ enum
     SRA_PLATFORM_HELICOS           = 5,
     SRA_PLATFORM_PACBIO_SMRT       = 6,
     SRA_PLATFORM_ION_TORRENT       = 7,
-    SRA_PLATFORM_SANGER            = 8
+    SRA_PLATFORM_SANGER            = 8,
+    SRA_PLATFORM_OXFORD_NANOPORE   = 9
 };
 
 #ifdef __cplusplus
