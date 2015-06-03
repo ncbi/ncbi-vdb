@@ -154,6 +154,16 @@ $(ILIBDIR)/judy-tables: \
 	$(OBJDIR)/JudyLTables.c \
 	$(OBJDIR)/Judy1Tables.c
 
+#    
+# make judy-tables to manually regenerate Judy tables sources, if there is ever such a need.
+#    
+judy-tables:
+	@ $(MAKE_CMD) $(ILIBDIR)/$@
+	cp $(OBJDIR)/Judy1Tables.c $(SRCDIR)/Judy1Tables.$(BITS).c
+	cp $(OBJDIR)/JudyLTables.c $(SRCDIR)/JudyLTables.$(BITS).c
+
+.PHONY: judy-tables
+    
 #-------------------------------------------------------------------------------
 # judy whee!
 #
