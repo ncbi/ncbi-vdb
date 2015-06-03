@@ -51,6 +51,11 @@
 #define CATCH_SIGHUP 0
 #endif
 
+#if _DEBUGGING && ! defined PRODUCE_CORE
+#define PRODUCE_CORE 1
+#endif
+ 
+
 /*--------------------------------------------------------------------------
  * Main
  */
@@ -167,6 +172,17 @@ void SigQuitHandler ( int sig )
     PLOGMSG ( klogInfo, ( klogInfo, "SIGNAL - $(sig)", "sig=%s", msg ));
 }
 
+/* SigCoreHandler
+ */
+#if ! PRODUCE_CORE
+static
+void SigCoreHandler ( int sig )
+{
+    PLOGMSG ( klogFatal, ( klogFatal, "SIGNAL - $(sig)\n", "sig=%d", sig ));
+    exit ( 1 );
+}
+#endif
+
 /* SigSegvHandler
  */
 #if CATCH_SIGSEGV
@@ -175,7 +191,9 @@ void SigSegvHandler ( int sig )
 {
     ( ( void ) sig );
     PLOGMSG ( klogFatal, ( klogFatal, "SIGNAL - $(sig)\n", "sig=Segmentation fault" ));
+#if PRODUCE_CORE
     abort ();
+#endif
     exit ( 1 );
 }
 #endif
@@ -194,17 +212,32 @@ int main ( int argc, char *argv [] )
 #if CATCH_SIGHUP
         { SigHupHandler, SIGHUP },
 #endif
-        { SigQuitHandler, SIGINT },
-        { SigQuitHandler, SIGQUIT },
+        { SigQuitHandler, SIGINT }, 
 #if CATCH_SIGSEGV
         { SigSegvHandler, SIGSEGV },
 #endif
         { SigQuitHandler, SIGTERM }
-    };
+    }
+#if ! PRODUCE_CORE
+    , core_sigs [] = 
+    {
+#if ! CATCH_SIGSEGV
+        { SigCoreHandler, SIGSEGV },
+#endif
+        { SigCoreHandler, SIGQUIT },
+        { SigCoreHandler, SIGILL },
+        { SigCoreHandler, SIGABRT },
+        { SigCoreHandler, SIGFPE }
+    }
+#endif
+    ;
 
     rc_t rc;
     int i, status;
     struct sigaction sig_saves [ sizeof sigs / sizeof sigs [ 0 ] ];
+#if ! PRODUCE_CORE    
+    struct sigaction core_sig_saves [ sizeof core_sigs / sizeof core_sigs [ 0 ] ];
+#endif
 
     /* install signal handlers */
     for ( i = 0; i < sizeof sigs / sizeof sigs [ 0 ]; ++ i )
@@ -227,6 +260,28 @@ int main ( int argc, char *argv [] )
         }
     }
 
+    /* install signal handlers to prevent generating core files */
+#if ! PRODUCE_CORE
+    for ( i = 0; i < sizeof core_sigs / sizeof core_sigs [ 0 ]; ++ i )
+    {
+        struct sigaction act;
+        memset ( & act, 0, sizeof act );
+        act . sa_handler = core_sigs [ i ] . handler;
+
+        status = sigaction ( core_sigs [ i ] . sig, & act, & core_sig_saves [ i ] );
+        if ( status < 0 )
+        {
+            PLOGMSG ( klogFatal, ( klogFatal,
+                     "failed to install handler for signal $(sig) - $(msg)"
+                     , "sig=%d,msg='%s'"
+                     , core_sigs [ i ] . sig
+                     , strerror ( errno )
+                          ));
+            return 4;
+        }
+    }
+#endif
+
     /* run this guy */
     rc = KMane ( argc, argv );
 
@@ -236,3 +291,4 @@ int main ( int argc, char *argv [] )
 
     return ( rc == 0 ) ? 0 : 3;
 }
+
