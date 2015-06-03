@@ -228,7 +228,7 @@ const char SRA_PF_5[] = { "SRA_PLATFORM_HELICOS" };
 const char SRA_PF_6[] = { "SRA_PLATFORM_PACBIO_SMRT" };
 const char SRA_PF_7[] = { "SRA_PLATFORM_ION_TORRENT" };
 #if ! WINDOWS
-#warning "add in SANGER and OXFORD_NANOPORE"
+#warning "add in CAPILLARY and OXFORD_NANOPORE"
 #endif
 const char SRA_PF_8[] = { "unknown platform" };
 

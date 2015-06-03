@@ -893,7 +893,7 @@ INSDC_SRA_platform_id PlatformToId(const char* name)
             if (platform_cmp(name, "COMPLETE GENOMICS") || platform_cmp(name, "COMPLETE_GENOMICS"))
                 return SRA_PLATFORM_COMPLETE_GENOMICS;
             if (platform_cmp(name, "CAPILLARY"))
-                return SRA_PLATFORM_SANGER;
+                return SRA_PLATFORM_CAPILLARY;
             break;
         case 'H':
             if (platform_cmp(name, "HELICOS"))
@@ -925,7 +925,7 @@ INSDC_SRA_platform_id PlatformToId(const char* name)
             if (platform_cmp(name, "SOLID"))
                 return SRA_PLATFORM_ABSOLID;
             if (platform_cmp(name, "SANGER"))
-                return SRA_PLATFORM_SANGER;
+                return SRA_PLATFORM_CAPILLARY;
             break;
         default:
             break;

@@ -374,7 +374,7 @@ const INSDC:SRA:platform_id SRA_PLATFORM_COMPLETE_GENOMICS = 4;
 const INSDC:SRA:platform_id SRA_PLATFORM_HELICOS           = 5;
 const INSDC:SRA:platform_id SRA_PLATFORM_PACBIO_SMRT       = 6;
 const INSDC:SRA:platform_id SRA_PLATFORM_ION_TORRENT       = 7;
-const INSDC:SRA:platform_id SRA_PLATFORM_SANGER            = 8;
+const INSDC:SRA:platform_id SRA_PLATFORM_CAPILLARY         = 8;
 const INSDC:SRA:platform_id SRA_PLATFORM_OXFORD_NANOPORE   = 9;
 
 table INSDC:SRA:tbl:sra #1.0.3 =
