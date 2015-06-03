@@ -869,6 +869,9 @@ static uint32_t Bits(uint64_t n, EReadIdType type) {
                 case SRA_PLATFORM_PACBIO_SMRT:
                 case SRA_PLATFORM_ION_TORRENT:
                 default:
+#if ! WINDOWS
+#warning "add explicit entries for SANGER and OXFORD_NANOPORE"
+#endif
                     rd->varReadLen = true;
                     break;
             }
