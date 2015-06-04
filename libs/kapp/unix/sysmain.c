@@ -133,6 +133,7 @@ rc_t SignalNoHup ( void )
 
 /* SigHupHandler
  */
+#if CATCH_SIGHUP
 static
 void SigHupHandler ( int sig )
 {
@@ -142,6 +143,7 @@ void SigHupHandler ( int sig )
         atomic32_inc ( & quitting );
     PLOGMSG ( klogInfo, (klogInfo, "SIGNAL - $(sig)\n", "sig=HUP" ));
 }
+#endif
 
 /* SigQuitHandler
  */
