@@ -1103,12 +1103,7 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
             
             if (seq->type == rst_unattached) {
                 /* try to find seqId within fasta seqIds */
-                int best = ReferenceMgr_FindBestFasta(self, seq->seqId, seq_len, md5, n);
-
-                /* try to find id within fasta seqIds */
-                if (best < 0)
-                    best = ReferenceMgr_FindBestFasta(self, seq->id, seq_len, md5, n);
-
+                int const best = ReferenceMgr_FindBestFasta(self, seq->seqId, seq_len, md5, n);
                 if (best >= 0) {
                     char *const tmp_id = seq->id;
                     char *const tmp_seqId = seq->seqId;
