@@ -61,6 +61,13 @@
 
 #define GET_TEST_SUITE ncbi::NK::GetTestSuite
 
+#define REQUIRE_THROW(code) \
+    do {   \
+        bool threw = false; \
+        try { code; } catch(...) { threw = true; } \
+        if (!threw) FAIL("expected exception not thrown"); \
+    } while (0)
+
 ////////////////////////////////////////////////////////////////////////////////
 
 #if ALLOW_TESTING_CODE_TO_RELY_UPON_CODE_BEING_TESTED

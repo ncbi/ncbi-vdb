@@ -31,6 +31,7 @@
 #include "release-vers.h"
 
 #include <ctype.h> /* isdigit */
+#include <os-native.h>
 #include <string.h> /* memset */
 #include <assert.h>
 

@@ -698,7 +698,7 @@ LIB_EXPORT rc_t CC aspera_get(
         opt = &dummy;
     }
 
-    if (opt->target_rate[0] == '\0') {
+    if (opt->ascp_options == NULL && opt->target_rate[0] == '\0') {
         KConfig *cfg = NULL;
         rc_t rc = KConfigMake(&cfg, NULL);
         DISP_RC(rc, "cannot KConfigMake");

@@ -151,9 +151,29 @@ typedef struct KTUI_pf
     CONSOLE_SCREEN_BUFFER_INFO  sbinfo;
     CONSOLE_CURSOR_INFO         curinfo;
     DWORD                       bitsConsoleInputMode;
-    DWORD                       bitsPreviousButtonEventMask;
     int                         esc_count;
+
+	int							prev_x, prev_y;
+    KTUI_mouse_button			prev_button;
+	KTUI_mouse_action			prev_action;
 } KTUI_pf;
+
+
+static void store_mouse_event( struct KTUI_pf * pf, int x, int y, KTUI_mouse_button b, KTUI_mouse_action a )
+{
+	pf -> prev_x = x;
+	pf -> prev_y = y;
+	pf -> prev_button = b;
+	pf -> prev_action = a;
+}
+
+static bool different_mouse_event( struct KTUI_pf * pf, int x, int y, KTUI_mouse_button b, KTUI_mouse_action a )
+{
+	return ( pf -> prev_x != x ||
+			 pf -> prev_y != y ||
+			 pf -> prev_button != b ||
+			 pf -> prev_action != a );
+}
 
 
 static KTUI_key g_VirtualCodeTable[ 256 ]; /* if max VK_* constant value is greater than 0xFF, then this code must be revised */
@@ -374,6 +394,7 @@ rc_t CC KTUI_Init_platform( KTUI * self )
 
         self->pf = pf;
         InitVKTable( g_VirtualCodeTable, _countof( g_VirtualCodeTable ) );
+		store_mouse_event( pf, 0, 0, ktui_mouse_button_none, ktui_mouse_action_none );
     }
     return rc;
 }
@@ -448,44 +469,63 @@ static BOOL KeyEventProc( KEY_EVENT_RECORD const* pEvent, struct KTUI * self )
 }
 
 
-static BOOL MouseEventProc( MOUSE_EVENT_RECORD const* pEvent, struct KTUI* self )
+static KTUI_mouse_button get_button( DWORD btn_flags )
 {
-    DWORD dwCurrentButtonEventMask;
-    KTUI_mouse_button button = (KTUI_mouse_button)(-1);
-    BOOL ret = FALSE;
-    /* don't process move events, double-clicks, process single clicks only */
-    /* tui has no double click and should just capture two single clicks*/
-    DWORD bIsDoubleClick = pEvent->dwEventFlags & DOUBLE_CLICK;
-    if (pEvent->dwEventFlags == 0 || bIsDoubleClick)
-    {
-        /*
-            assume that only one button is processed in one event by Windows 
-            so current dwEventFlags and previous dwEventFlags can differ in only 
-            one bit - the last pressed/released button.
-            And we are processing only button down events here
-        */
-        dwCurrentButtonEventMask = self->pf->bitsPreviousButtonEventMask ^ pEvent->dwButtonState;
-        switch (pEvent->dwButtonState & dwCurrentButtonEventMask)
-        {
-            case FROM_LEFT_1ST_BUTTON_PRESSED : button = ktui_mouse_button_left; break;
-            case FROM_LEFT_2ND_BUTTON_PRESSED : button = ktui_mouse_button_middle; break;
-            case RIGHTMOST_BUTTON_PRESSED     : button = ktui_mouse_button_right; break;
-        }
-        self->pf->bitsPreviousButtonEventMask = pEvent->dwButtonState;
-        if (button != (KTUI_mouse_button)(-1))
-        {
-            put_mouse_event( self, pEvent->dwMousePosition.X, pEvent->dwMousePosition.Y, button );
-            ret = TRUE;
-        }
-    }
-    return ret;
+	KTUI_mouse_button res = ktui_mouse_button_none;
+	switch( btn_flags )
+	{
+        case FROM_LEFT_1ST_BUTTON_PRESSED : res = ktui_mouse_button_left; break;
+        case FROM_LEFT_2ND_BUTTON_PRESSED : res = ktui_mouse_button_middle; break;
+        case RIGHTMOST_BUTTON_PRESSED     : res = ktui_mouse_button_right; break;
+		case 0 : res = ktui_mouse_button_up; break;
+	}
+	return res;
+}
+
+static KTUI_mouse_action get_action( DWORD ev_flags, KTUI_mouse_button button )
+{
+	KTUI_mouse_action res = ktui_mouse_action_none;
+
+	if ( ev_flags == 0 || ( ( ev_flags & DOUBLE_CLICK ) == DOUBLE_CLICK ) )
+	{
+		res = ktui_mouse_action_button;
+	}
+	else if ( ( ev_flags & MOUSE_MOVED ) == MOUSE_MOVED )
+	{
+		/* to make the behavior the same as on posix:
+		   if not mouse-buttons is pressed, do not report a move action... */
+		if ( button != ktui_mouse_button_up )
+			res = ktui_mouse_action_move;
+	}
+	else if ( ( ev_flags & MOUSE_WHEELED ) == MOUSE_WHEELED )
+	{
+		res = ktui_mouse_action_scroll;
+	}
+	return res;
+}
+
+static void MouseEventProc( MOUSE_EVENT_RECORD const* pEvent, struct KTUI* self )
+{
+    KTUI_mouse_button button = get_button( pEvent->dwButtonState );
+	KTUI_mouse_action action = get_action( pEvent->dwEventFlags, button );
+
+	if ( button != ktui_mouse_button_none && action != ktui_mouse_action_none )
+	{
+		int x = pEvent->dwMousePosition.X;
+		int y = pEvent->dwMousePosition.Y;
+		if ( different_mouse_event( self->pf, x, y, button, action ) )
+		{
+			put_mouse_event( self, x, y, button, action,
+						    ( uint32_t )( pEvent->dwEventFlags & 0xFFFFFFFF ) );
+			store_mouse_event( self->pf, x, y, button, action );
+		}
+	}
 }
 
 
-static BOOL WindowBufferSizeEventProc( WINDOW_BUFFER_SIZE_RECORD const* pEvent, struct KTUI* self )
+static void WindowBufferSizeEventProc( WINDOW_BUFFER_SIZE_RECORD const* pEvent, struct KTUI* self )
 {
     put_window_event( self, pEvent->dwSize.Y, pEvent->dwSize.X );
-    return TRUE;
 }
 
 
@@ -493,43 +533,24 @@ static BOOL WindowBufferSizeEventProc( WINDOW_BUFFER_SIZE_RECORD const* pEvent, 
 
 static BOOL ReadAndProcessEvents( struct KTUI * self, HANDLE h )
 {
-    DWORD nEventsRead, i;
-    BOOL res, resEventProc = FALSE;
-    PINPUT_RECORD pInputEvents = NULL;
+    DWORD nEventsRead;
     INPUT_RECORD arrInputEvents[ INPUT_EVENT_BUF_SIZE ];
-    pInputEvents = arrInputEvents;
-    /* That's for non-blocking version this function DWORD nEventCount = 0, nBufReserve = 10*/
-
-    /* Don't need to check it, read_from_stdin must be blocking
-    res = GetNumberOfConsoleInputEvents( h, &nEventCount );
-    if ( !res || !nEventCount )
-        return;*/
-
-    /*pInputEvents = (INPUT_RECORD*)malloc((nEventCount + nBufReserve)*sizeof(INPUT_RECORD));*/
-
-    /*res = ReadConsoleInput( h, pInputEvents, nEventCount + nBufReserve, &nEventsRead );*/
-
-    res = ReadConsoleInput( h, pInputEvents, INPUT_EVENT_BUF_SIZE, &nEventsRead );
+    PINPUT_RECORD pInputEvents = arrInputEvents;
+	BOOL res = ReadConsoleInput( h, pInputEvents, INPUT_EVENT_BUF_SIZE, &nEventsRead );
     if ( res )
 	{
+		DWORD i;
 		for ( i = 0; i < nEventsRead; ++i )
 		{
 			switch ( pInputEvents[ i ].EventType )
 			{
-			case KEY_EVENT:
-				resEventProc = KeyEventProc( &pInputEvents[ i ].Event.KeyEvent, self );
-				break;
-			case MOUSE_EVENT:
-				resEventProc = MouseEventProc( &pInputEvents[ i ].Event.MouseEvent, self );
-				break;
-			case WINDOW_BUFFER_SIZE_EVENT:
-				resEventProc = WindowBufferSizeEventProc( &pInputEvents[ i ].Event.WindowBufferSizeEvent, self );
-				break;
+				case KEY_EVENT					: KeyEventProc( &pInputEvents[ i ].Event.KeyEvent, self ); break;
+				case MOUSE_EVENT				: MouseEventProc( &pInputEvents[ i ].Event.MouseEvent, self ); break;
+				case WINDOW_BUFFER_SIZE_EVENT	: WindowBufferSizeEventProc( &pInputEvents[ i ].Event.WindowBufferSizeEvent, self ); break;
 			}
 		}
     }
-    /*free( pInputEvents );*/
-    return resEventProc;
+    return res;
 }
 
 

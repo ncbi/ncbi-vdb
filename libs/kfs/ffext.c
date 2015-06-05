@@ -40,6 +40,7 @@ struct KExtFileFormat;
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <stdio.h>
 
 struct KDirectory;

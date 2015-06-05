@@ -37,7 +37,7 @@ class Tests(unittest.TestCase):
         try:
             run = NGS.openReadCollection("SRRsomejunk")
             self.fail()
-        except ErrorMsg as e:
+        except ErrorMsg:
             pass
 
     def test_ReadCollection_getName(self):

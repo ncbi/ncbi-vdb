@@ -63,6 +63,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <assert.h>
 
 /* to turn off CGI name resolution for
@@ -1513,6 +1514,11 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
             }
         }
         return rc;
+    }
+
+    /* now we know just how to resolve HTTP locations */
+    if ( protocols == eProtocolFasp ) {
+        return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
     }
 
     /* for remote, root can never be NULL */

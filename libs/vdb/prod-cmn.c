@@ -55,9 +55,10 @@
 #include <klib/log.h>
 #include <klib/debug.h>
 #include <klib/rc.h>
-#include <os-native.h>
 #include <sysalloc.h>
 
+#include <ctype.h>
+#include <os-native.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -1363,7 +1364,6 @@ rc_t VFunctionProdCallByteswap ( VFunctionProd *self, VBlob **vblob,
 }
 
 #if _DEBUGGING
-#include <ctype.h>
 
 static
 rc_t VFunctionProdCallCompare1(VFunctionProd *self, VBlob **vblob, int64_t id, uint32_t cnt) {

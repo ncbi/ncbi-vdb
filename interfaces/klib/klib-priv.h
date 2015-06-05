@@ -82,7 +82,9 @@ KLIB_EXTERN void CC ReportInitKFS (
 /* InitConfig
  *  returns appname if available
  */
-KLIB_EXTERN const char* CC ReportInitConfig ( rc_t ( CC * report ) ( const ReportFuncs *f, uint32_t indent ) );
+KLIB_EXTERN const char* CC ReportInitConfig ( rc_t ( CC * report )
+    ( const ReportFuncs *f, uint32_t indent,
+      uint32_t configNodesSkipCount, va_list args ) );
 
 
 /* InitVDB

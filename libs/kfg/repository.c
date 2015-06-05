@@ -46,6 +46,7 @@
 
 #include <assert.h>
 #include <ctype.h> /* isdigit */
+#include <os-native.h>
 #include <stdlib.h>
 #include <string.h>
 

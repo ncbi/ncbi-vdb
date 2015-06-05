@@ -65,6 +65,8 @@ struct AscpOptions
     char target_rate[512];
        /* -l MAX-RATE Set the target transfer rate in Kbps */
 
+    const char *ascp_options; /* any arbitrary options to pass to ascp */
+
 /* progress logging */
     const char *name;
 

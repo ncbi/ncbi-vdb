@@ -40,6 +40,7 @@ typedef struct KHttpFile KHttpFile;
 #include <sysalloc.h>
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 
 #include "mgr-priv.h"
 

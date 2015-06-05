@@ -48,6 +48,7 @@
 
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 

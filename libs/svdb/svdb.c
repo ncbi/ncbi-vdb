@@ -55,12 +55,12 @@
 #include <vfs/resolver.h>
 #include <vfs/path.h>
 
-#include <os-native.h>
 #include <sysalloc.h>
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <string.h>
 #include <bitstr.h>
 

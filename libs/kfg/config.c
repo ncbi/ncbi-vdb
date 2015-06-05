@@ -51,10 +51,10 @@ struct KfgConfigNamelist;
 #include <vfs/path.h>
 #include <strtol.h>
 #include <sysalloc.h>
-#include <os-native.h>
 
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <va_copy.h>
@@ -86,7 +86,6 @@ static const char default_kfg[] = {
 "/repository/user/main/public/apps/refseq/volumes/refseq = \"refseq\"\n"
 "/repository/user/main/public/apps/sra/volumes/sraFlat = \"sra\"\n"
 "/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"
-"/repository/user/main/public/cache-enabled = \"true\"\n"
 "/repository/user/main/public/root = \"$(HOME)/ncbi/public\"\n"
 "/repository/remote/main/CGI/resolver-cgi = "
                       "\"http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
@@ -1626,18 +1625,30 @@ static rc_t KConfigNodePrint(const KConfigNode *self, int indent,
     if (!native) {
         rc = printIndent(indent, pb);
         if (rc == 0) {
+            bool found = false;
             uint32_t i = 0;
+            va_list args_copy;
+            if (skipCount > 0) {
+                va_copy(args_copy, args);
+            }
             for (i = 0; i < skipCount; ++i) {
-                const char *skip = va_arg(args, const char*);
+                const char *skip = va_arg(args_copy, const char*);
                 if (string_cmp(skip, string_measure(skip, NULL), root,
                         string_measure(root, NULL), string_measure(root, NULL))
                     == 0)
                 {
-                    rc = PrintBuffPrint(pb, "<%s><!-- skipped --></%s>", root);
-                    return rc;
+                    rc = PrintBuffPrint
+                        (pb, "<%s><!-- skipped --></%s>\n", root, root);
+                    found = true;
+                    break;
                 }
             }
-
+            if (skipCount > 0) {
+                va_end(args_copy);
+            }
+            if (found) {
+                return rc;
+            }
             rc = PrintBuffPrint(pb, "<%s>", root);
         }
     }
@@ -1694,8 +1705,8 @@ static rc_t KConfigNodePrint(const KConfigNode *self, int indent,
             }
             if (rc == 0) {
                 if (! isdigit(name[0])) {
-                    KConfigNodePrint(node, indent + 1,
-                        name, debug, native, fullpath, pb, 0, NULL);
+                    KConfigNodePrint(node, indent + 1, name,
+                        debug, native, fullpath, pb, skipCount, args);
                 }
                 else {
                     /* XML node names cannot start with a number */
@@ -1707,8 +1718,8 @@ static rc_t KConfigNodePrint(const KConfigNode *self, int indent,
                     }
                     else {
                         string_printf(dname, dsize, NULL, "_%s", name);
-                        KConfigNodePrint(node, indent + 1,
-                            dname, debug, native, fullpath, pb, 0, NULL);
+                        KConfigNodePrint(node, indent + 1, dname,
+                            debug, native, fullpath, pb, skipCount, args);
                         free(dname);
                     }
                 }
@@ -2639,7 +2650,8 @@ rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir, const char *appnam
 }
 
 
-extern rc_t ReportKfg ( const ReportFuncs *f, uint32_t indent );
+extern rc_t ReportKfg ( const ReportFuncs *f, uint32_t indent,
+    uint32_t configNodesSkipCount, va_list args );
 
 /* "cfg" [ OUT ] - return parameter for mgr
    if ("local" == true) do not initialize G_kfg */
@@ -3241,7 +3253,9 @@ LIB_EXPORT rc_t CC KConfigReadString ( const KConfig* self, const char* path, st
 
 #define DISP_RC(rc, msg) (void)((rc == 0) ? 0 : LOGERR(klogInt, rc, msg))
 
-LIB_EXPORT rc_t CC KConfigPrint(const KConfig* self, int indent) {
+LIB_EXPORT rc_t CC KConfigPrintPartial
+    (const KConfig *self, int indent, uint32_t skipCount, va_list args)
+{
     rc_t rc = 0;
 
     PrintBuff pb;
@@ -3251,7 +3265,8 @@ LIB_EXPORT rc_t CC KConfigPrint(const KConfig* self, int indent) {
     }
 
     if (rc == 0) {
-        rc = KConfigPrintImpl(self, indent, NULL, false, false, &pb, 0, NULL);
+        rc = KConfigPrintImpl
+            (self, indent, NULL, false, false, &pb, skipCount, args);
     }
 
     if (rc == 0) {
@@ -3259,6 +3274,10 @@ LIB_EXPORT rc_t CC KConfigPrint(const KConfig* self, int indent) {
     }
 
     return rc;
+}
+
+LIB_EXPORT rc_t CC KConfigPrint(const KConfig* self, int indent) {
+    return KConfigPrintPartial(self, indent, 0, NULL);
 }
 
 LIB_EXPORT rc_t CC KConfigToFile(const KConfig* self, KFile *file) {

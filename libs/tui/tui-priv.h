@@ -64,8 +64,8 @@ typedef struct KTUI
 
 void CC put_window_event( struct KTUI * self, int lines, int cols );
 void CC put_kb_event( struct KTUI * self, int key, KTUI_key code );
-void CC put_mouse_event( struct KTUI * self, unsigned int x, unsigned int y,
-                         KTUI_mouse_button button );
+void CC put_mouse_event( struct KTUI * self, unsigned int x, unsigned int y, 
+                         KTUI_mouse_button button, KTUI_mouse_action action, uint32_t raw_event );
 
 void CC read_from_stdin( struct KTUI * self, uint32_t timeout );
 void CC tui_send_strip( int x, int y, int count, tui_ac * curr, tui_ac * v,

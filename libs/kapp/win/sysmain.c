@@ -52,6 +52,7 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <ctype.h>
+#include <os-native.h>
 
 /*--------------------------------------------------------------------------
  * Main

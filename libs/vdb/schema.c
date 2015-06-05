@@ -49,13 +49,13 @@
 #include <klib/printf.h>
 #include <klib/out.h>
 #include <klib/rc.h>
-#include <os-native.h>      /* because of snprintf on windows */
 #include <sysalloc.h>
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <os-native.h>
 #include <assert.h>
 
 

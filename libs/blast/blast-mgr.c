@@ -50,6 +50,8 @@
 #include <stdio.h> /* fprintf */
 #include <string.h> /* memset */
 
+#define TOOLKIT "sratoolkit2_5_1"
+
 /******************************************************************************/
 
 static const char VDB_BLAST_MGR[] = "VdbBlastMgr";
@@ -110,11 +112,11 @@ VdbBlastMgr* CC VdbBlastInit(uint32_t *status)
 
     *status = eVdbBlastErr;
 
-    if (getenv("sratoolkit2_5_0") != NULL) {
+    if (getenv(TOOLKIT) != NULL) {
 #if _DEBUGGING
-fprintf(stderr, "DEBUGNG with sratoolkit.2.5.0 release\n");
+fprintf(stderr, "DEBUGNG with " TOOLKIT " release\n");
 #else
-fprintf(stderr, "RELEASE with sratoolkit.2.5.0 release\n");
+fprintf(stderr, "RELEASE with " TOOLKIT " release\n");
 #endif
     }
     item = calloc(1, sizeof *item);

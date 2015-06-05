@@ -119,16 +119,27 @@ typedef struct KTUI_kb_data
 typedef uint32_t KTUI_mouse_button;
 enum
 {
-    ktui_mouse_button_left = 1,
+    ktui_mouse_button_none = 1,
+    ktui_mouse_button_left,
     ktui_mouse_button_middle,
-    ktui_mouse_button_right
+    ktui_mouse_button_right,
+	ktui_mouse_button_up
 };
 
+typedef uint32_t KTUI_mouse_action;
+enum
+{
+    ktui_mouse_action_none = 1,
+    ktui_mouse_action_button,
+	ktui_mouse_action_move,
+	ktui_mouse_action_scroll
+};
 
 typedef struct KTUI_mouse_data
 {
-    uint32_t x, y;
+    uint32_t x, y, raw_event;
     KTUI_mouse_button button;
+	KTUI_mouse_action action;
 } KTUI_mouse_data;
 
 

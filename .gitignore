@@ -16,3 +16,5 @@ vgcore.*
 user.status
 /win
 *.opensdf
+
+*.log

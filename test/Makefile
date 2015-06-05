@@ -50,6 +50,7 @@ SUBDIRS =       \
     ngs         \
     ngs-c++     \
     ngs-java    \
+    ngs-python  \
 	search	    \
     vfs         \
     sraxf       \

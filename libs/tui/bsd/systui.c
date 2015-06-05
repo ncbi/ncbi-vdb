@@ -184,7 +184,7 @@ typedef struct KTUI_pf
     struct termios stored_settings;
     struct sigaction sa_saved;
     es_states es;
-    unsigned int mouse_button, mouse_x;
+    unsigned int mouse_event, mouse_x;
 } KTUI_pf;
 
 
@@ -253,7 +253,13 @@ rc_t CC KTUI_Init_platform( KTUI * self )
 
         printf( "\033[2J" );        /* clrscr */
         printf( "\033[?25l" );      /* cursor off */
-        printf( "\033[?9h" );       /* mouse tracking on */
+
+        /* printf( "\033[?9h" );     mouse tracking on ( SET_X10_MOUSE ): mouse-down events, does not work with putty */
+		
+		printf( "\033[?1000h" );     /* mouse tracking on ( SET_VT200_MOUSE ): mouse-up/down events, does work with putty */
+		printf( "\033[?1002h" );     /* mouse tracking on ( SET_BTN_EVENT_MOUSE ): mouse-up/down/move events, does work with putty */
+		/*printf( "\033[?1003h" );     /* mouse tracking on ( SET_ANY_EVENT_MOUSE ): ??? */
+		
         fflush( stdout );
 
         sig_self = self;
@@ -277,7 +283,11 @@ rc_t CC KTUI_Destroy_platform ( struct KTUI_pf * pf )
     printf( "\033[H" );         /* home */
     printf( "\033[2J" );        /* clrscr */
     printf( "\033[?25h" );      /* cursor off */
-    printf( "\033[?9l" );       /* mouse tracking off */
+
+    /*printf( "\033[?9l" );       mouse tracking X10-style off */
+	printf( "\033[?1000l" );       /* mouse tracking off */	
+	printf( "\033[?1002l" );       /* mouse tracking off */		
+	/*printf( "\033[?1003l" );       /* mouse tracking off */	
     fflush( stdout );
 
     return 0;
@@ -321,22 +331,50 @@ static void put_kb_alpha_5( struct KTUI * self, int key1, int key2, int key3, in
 }
 
 
+/* -------------------------------------------------------------------------------------
+
+mouse_event	7 6 5 4 3 2 1 0
+						B B
+						0 0 ... left mouse button
+						0 1 ... middle mouse button
+						1 0 ... right mouse button
+						1 1 ... button up ( don't know which one )
+                      S ....... status of Shift key						0x04
+                    M ......... status of Meta key ( Alt )				0x08
+                  C ........... status of Ctrl key						0x10 (16)
+			  0 0 ............. unknown									0x00
+              0 1 ............. button event ( down, up )				0x20
+              1 0 ............. move event ( + button )					0x40
+              1 1 ............. scroll event ( + button )				0x60
+			  
+------------------------------------------------------------------------------------- */
 static void put_mouse_event_u( struct KTUI * self, unsigned int y )
 {
     if ( self->pf != NULL )
     {
-        unsigned int x = self->pf->mouse_x;
-        switch( self->pf->mouse_button )
-        {
-            case 0x20 : put_mouse_event( self, x, y, ktui_mouse_button_left ); break;
-            case 0x21 : put_mouse_event( self, x, y, ktui_mouse_button_middle ); break;
-            case 0x22 : put_mouse_event( self, x, y, ktui_mouse_button_right ); break;
-            default : put_mouse_event( self, x, y, self->pf->mouse_button ); break;
-        }
+		unsigned int ev = self->pf->mouse_event;
+		KTUI_mouse_button b = ktui_mouse_button_none;
+		KTUI_mouse_action a = ktui_mouse_action_none;
+
+		switch( ev & 0x03 )
+		{
+			case 0x00 : b = ktui_mouse_button_left; break;
+			case 0x01 : b = ktui_mouse_button_middle; break;
+			case 0x02 : b = ktui_mouse_button_right; break;
+			case 0x03 : b = ktui_mouse_button_up; break;
+		}
+		
+		switch ( ev & 0x60 )
+		{
+			case 0x20 : a = ktui_mouse_action_button; break;
+			case 0x40 : a = ktui_mouse_action_move; break;
+			case 0x60 : a = ktui_mouse_action_scroll; break;
+		}
+
+		put_mouse_event( self, self->pf->mouse_x, y, b, a, ev );
         self->pf->es = es_normal;
     }
 }
-
 
 static void statemachine( struct KTUI * self, unsigned int x )
 {
@@ -533,7 +571,7 @@ static void statemachine( struct KTUI * self, unsigned int x )
                             default : put_kb_alpha_3( self, 27, 79, x ); break;
                         } break;
 
-        case es_ESC_91_77_B :   self->pf->mouse_button = x;
+        case es_ESC_91_77_B :   self->pf->mouse_event = x;
                                 self->pf->es = es_ESC_91_77_X;
                                 break;
 
