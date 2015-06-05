@@ -899,6 +899,8 @@ rc_t ReferenceSeq_GetRefSeqInfo(ReferenceSeq *const self)
     return 0;
 }
 
+
+/* Try to attach to a RefSeq or a fasta file */
 static
 rc_t ReferenceSeq_Attach(ReferenceMgr *const self, ReferenceSeq *const rs)
 {
@@ -1054,11 +1056,16 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
             rc = ReferenceMgr_NewReferenceSeq(self, &seq);
             if (rc) return rc;
             rc = ReferenceMgr_TryFasta(self, seq, id, idLen);
-            if (GetRCState(rc) == rcNotFound && GetRCObject(rc) == (enum RCObject)rcPath)
+            if (GetRCState(rc) == rcNotFound && GetRCObject(rc) == (enum RCObject)rcPath) {
                 rc = 0;
-            else if (rc) return rc;
+                seq->id = string_dup(id, idLen); /* needed for call to Attach */
+                if (seq->id == NULL)
+                    return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
+            }
+            else if (rc)
+                return rc;
         }
-        else if (seq->type == rst_unattached) {
+        if (seq->type == rst_unattached) {
             /* expect to get here most of the time
              *
              * ReferenceSeq_Attach tries to get reference:
@@ -1071,6 +1078,7 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
              *   seqId.fasta
              *   seqId.fa
              */
+            
             rc = ReferenceSeq_Attach(self, seq);
             if (rc) return rc;
             
@@ -1108,7 +1116,7 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                     seq->seqId = tmp_seqId;
                     seq->fastaSeqId = NULL;
                     seq->circular = tmp_circ;
-
+                    
                     /* add another reference to the data buffer */
                     rc = KDataBufferSub(&self->refSeq[best].u.local.buf, &seq->u.local.buf, 0, 0);
                     if (rc) return rc;
