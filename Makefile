@@ -63,10 +63,14 @@ $(SUBDIRS_STD):
 #
 
 install: 
-	@ $(MAKE) -s TOP=$(CURDIR) std
-	@ $(MAKE) -s TOP=$(CURDIR) -f build/Makefile.install install
+	@ echo "Checking make status of object libraries..."
+	@ $(MAKE) -s --no-print-directory TOP=$(CURDIR) $(SUBDIRS)
+	@ $(MAKE) -s --no-print-directory TOP=$(CURDIR) -f build/Makefile.install install
 
-.PHONY: install
+uninstall:    
+	@ $(MAKE) -s TOP=$(CURDIR) -f build/Makefile.install uninstall
+
+.PHONY: install uninstall
 
 #-------------------------------------------------------------------------------
 # clean
