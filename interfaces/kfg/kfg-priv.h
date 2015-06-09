@@ -24,8 +24,8 @@
 *
 */
 
-#ifndef _h_kfg_priv_
-#define _h_kfg_priv_
+#ifndef _h_kfg_kfg_priv_
+#define _h_kfg_kfg_priv_
 
 #ifndef _h_kfg_extern_
 #include <kfg/extern.h>
@@ -94,4 +94,4 @@ KFG_EXTERN rc_t CC KConfigPrintPartial
 }
 #endif
 
-#endif /* _h_kfg_priv_ */
+#endif /* _h_kfg_kfg_priv_ */
