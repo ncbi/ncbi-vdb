@@ -256,8 +256,8 @@ FIXTURE_TEST_CASE ( SequenceWriter_Write, LoaderFixture )
                                            false,
                                            false,
                                            false,
-                                           "0",
-                                           /*false,
+                                           "0"/*,
+                                           false,
                                            true*/
                                           ) );
         REQUIRE_RC ( SequenceDoneWriting ( & wr ) );
