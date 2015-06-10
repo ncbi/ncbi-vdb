@@ -257,8 +257,8 @@ FIXTURE_TEST_CASE ( SequenceWriter_Write, LoaderFixture )
                                            false,
                                            false,
                                            "0",
-                                           false,
-                                           true
+                                           /*false,
+                                           true*/
                                           ) );
         REQUIRE_RC ( SequenceDoneWriting ( & wr ) );
         SequenceWhack ( & wr, true );
