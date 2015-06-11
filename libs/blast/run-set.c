@@ -2088,14 +2088,15 @@ VdbBlastStatus CC VdbBlastRunSetAddRun(VdbBlastRunSet *self,
        freed during VdbBlastRun release */
     char *fullpath = NULL;
 
-    VdbBlastDb *obj = calloc(1, sizeof *obj);
-    if (obj == NULL) {
-        return eVdbBlastMemErr;
-    }
-
+    VdbBlastDb *obj = NULL;
     if (self == NULL || self->mgr == NULL || self->beingRead) {
         S
         return eVdbBlastErr;
+    }
+
+    obj = calloc(1, sizeof *obj);
+    if (obj == NULL) {
+        return eVdbBlastMemErr;
     }
 
     rc = _VdbBlastMgrNativeToPosix(self->mgr, native, rundesc, sizeof rundesc);
@@ -2130,6 +2131,7 @@ VdbBlastStatus CC VdbBlastRunSetAddRun(VdbBlastRunSet *self,
 
     if (status == eVdbBlastNoErr && _VTableVarReadNum(obj->seqTbl)) {
         /* VDB-1430: temporarily skip runs with variable read length */
+        _VdbBlastDbWhack(obj);
         S
         status = eVdbBlastNotImplemented;
     }
