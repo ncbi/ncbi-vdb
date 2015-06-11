@@ -422,7 +422,8 @@ LIB_EXPORT rc_t CC VPathReadSysPath ( const VPath * self,
             else
             {
                 * num_read = string_copy ( buffer, buffer_size, self -> path . addr, self -> path . size );
-                if ( self -> scheme_type == vpuri_ncbi_file ||
+                if ( self -> scheme_type == vpuri_none ||
+                    self -> scheme_type == vpuri_ncbi_file ||
                     self -> scheme_type == vpuri_file )
                 {
                     assert ( * num_read >= 2 );
