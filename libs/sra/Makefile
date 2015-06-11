@@ -22,6 +22,10 @@
 #
 # ===========================================================================
 
+#
+# run 'make schema' to regenerate the built-in schema
+# run 'make schema std' to regenerate the built-in schema and rebuild the libraries
+#
 
 default: std
 
@@ -55,10 +59,10 @@ VPATH += $(OBJDIR)
 all std: makedirs compile
 	@ $(MAKE_CMD) $(TARGDIR)/std
 
-$(INT_LIBS): makedirs
+$(INT_LIBS) schema: makedirs
 	@ $(MAKE_CMD) $(ILIBDIR)/$@
 
-.PHONY: all std $(ALL_LIBS)
+.PHONY: all std $(ALL_LIBS) schema
 
 #-------------------------------------------------------------------------------
 # std
@@ -113,9 +117,8 @@ RWORKDIR=$(OBJDIR)
 $(ILIBDIR)/sra-dflt-schema: sra-dflt-schema.$(OBJX)
 	$(LD) --exe -o $@ $^ $(SRA_DFLT_SCHEMA_LIBS) $(SRA_DFLT_SCHEMA_OS_LIBS)
 
-sra-schema.c: $(ILIBDIR)/sra-dflt-schema $(SRCDIR)/built-in.vschema
-	$(ILIBDIR)/sra-dflt-schema -o$@ -I$(TOP)/interfaces -T$(OBJDIR)/$@.d $(SRCDIR)/built-in.vschema
-	cp $@ $(SRCDIR)
+$(ILIBDIR)/schema: $(ILIBDIR)/sra-dflt-schema $(SRCDIR)/built-in.vschema
+	$(ILIBDIR)/sra-dflt-schema -o$(SRCDIR)/sra-schema.c -I$(TOP)/interfaces -T$(OBJDIR)/sra-schema.c.d $(SRCDIR)/built-in.vschema
 
 SRA_SCHEMA_SRC = \
 	sraschema \

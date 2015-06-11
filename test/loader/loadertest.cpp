@@ -126,6 +126,7 @@ TEST_CASE ( SequenceWriter_Write )
 //////////////////////////////////////////// Main
 #include <kapp/args.h>
 #include <klib/out.h>
+#include <kfg/config.h>
 
 extern "C"
 {
@@ -149,6 +150,7 @@ rc_t CC Usage( const Args* args )
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    KConfigDisableUserSettings();
     rc_t rc=LoaderTestSuite(argc, argv);
     return rc;
 }

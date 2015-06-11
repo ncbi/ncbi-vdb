@@ -899,6 +899,8 @@ rc_t ReferenceSeq_GetRefSeqInfo(ReferenceSeq *const self)
     return 0;
 }
 
+
+/* Try to attach to a RefSeq or a fasta file */
 static
 rc_t ReferenceSeq_Attach(ReferenceMgr *const self, ReferenceSeq *const rs)
 {
@@ -960,6 +962,45 @@ rc_t ReferenceSeq_Attach(ReferenceMgr *const self, ReferenceSeq *const rs)
         return rc;
     }
     return 0;
+}
+
+static int ReferenceMgr_FindBestFasta(ReferenceMgr const *const self,
+                                      char const name[],
+                                      unsigned const seq_len,
+                                      uint8_t const md5[16],
+                                      unsigned const exclude)
+{
+    int best = -1;
+
+    if (name != NULL) {
+        unsigned const n = (unsigned)self->refSeqs.elem_count;
+        unsigned const len = (unsigned)string_size(name);
+        unsigned best_wt = 0;
+        unsigned i;
+        
+        for (i = 0; i != n; ++i) {
+            ReferenceSeq const *const rs = &self->refSeq[i];
+
+            if (i == exclude)
+                continue;
+            
+            if (rs->fastaSeqId) {
+                unsigned wt = str_weight(rs->fastaSeqId, name, len);
+                
+                if (wt != no_match) {
+                    if (seq_len && rs->seq_len == seq_len)
+                        wt |= seq_len_match;
+                    if (md5 && memcmp(rs->md5, md5, 16) == 0)
+                        wt |= md5_match;
+                }
+                if (best_wt < wt) {
+                    best_wt = wt;
+                    best = (int)i;
+                }
+            }
+        }
+    }
+    return best;
 }
 
 static
@@ -1025,28 +1066,8 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
         }
         if (seq == NULL) {
             /* try to find id within fasta seqIds */
-            unsigned best_wt = 0;
-            unsigned best = n;
-            
-            for (i = 0; i != n; ++i) {
-                ReferenceSeq const *const rs = &self->refSeq[i];
-                
-                if (rs->fastaSeqId) {
-                    unsigned wt = str_weight(rs->fastaSeqId, id, idLen);
-                    
-                    if (wt != no_match) {
-                        if (seq_len && rs->seq_len == seq_len)
-                            wt |= seq_len_match;
-                        if (md5 && memcmp(rs->md5, md5, 16) == 0)
-                            wt |= md5_match;
-                    }
-                    if (best_wt < wt) {
-                        best_wt = wt;
-                        best = i;
-                    }
-                }
-            }
-            if (best < n)
+            int const best = ReferenceMgr_FindBestFasta(self, id, seq_len, md5, n);
+            if (best >= 0)
                 seq = &self->refSeq[best];
         }
         if (seq == NULL) {
@@ -1054,11 +1075,16 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
             rc = ReferenceMgr_NewReferenceSeq(self, &seq);
             if (rc) return rc;
             rc = ReferenceMgr_TryFasta(self, seq, id, idLen);
-            if (GetRCState(rc) == rcNotFound && GetRCObject(rc) == (enum RCObject)rcPath)
+            if (GetRCState(rc) == rcNotFound && GetRCObject(rc) == (enum RCObject)rcPath) {
                 rc = 0;
-            else if (rc) return rc;
+                seq->id = string_dup(id, idLen); /* needed for call to Attach */
+                if (seq->id == NULL)
+                    return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
+            }
+            else if (rc)
+                return rc;
         }
-        else if (seq->type == rst_unattached) {
+        if (seq->type == rst_unattached) {
             /* expect to get here most of the time
              *
              * ReferenceSeq_Attach tries to get reference:
@@ -1071,44 +1097,28 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
              *   seqId.fasta
              *   seqId.fa
              */
+            
             rc = ReferenceSeq_Attach(self, seq);
             if (rc) return rc;
             
-            if (seq->type == rst_unattached && seq->seqId != NULL) {
-                /* attach didn't work for id; try to find seqId within fasta seqIds */
-                unsigned const seqIdLen = (unsigned)string_size(seq->seqId);
-                unsigned best_wt = 0;
-                unsigned best = n;
-                
-                for (i = 0; i != n; ++i) {
-                    ReferenceSeq const *const rs = &self->refSeq[i];
-                    
-                    if (rs->type == rst_local && rs->fastaSeqId) {
-                        unsigned wt = str_weight(rs->fastaSeqId, seq->seqId, seqIdLen);
-                        
-                        if (wt != no_match) {
-                            if (seq_len && rs->seq_len == seq_len)
-                                wt |= seq_len_match;
-                            if (md5 && memcmp(rs->md5, md5, 16) == 0)
-                                wt |= md5_match;
-                        }
-                        if (best_wt < wt) {
-                            best_wt = wt;
-                            best = i;
-                        }
-                    }
-                }
-                if (best < n) {
+            if (seq->type == rst_unattached) {
+                /* try to find seqId within fasta seqIds */
+                int const best = ReferenceMgr_FindBestFasta(self, seq->seqId, seq_len, md5, n);
+                if (best >= 0) {
                     char *const tmp_id = seq->id;
                     char *const tmp_seqId = seq->seqId;
                     bool const tmp_circ = seq->circular;
+                    
+                    seq->type = rst_dead;
+                    seq->id = NULL;         /* prevent possible double-free */
+                    seq->seqId = NULL;      /* prevent possible double-free */
                     
                     *seq = self->refSeq[best];
                     seq->id = tmp_id;
                     seq->seqId = tmp_seqId;
                     seq->fastaSeqId = NULL;
                     seq->circular = tmp_circ;
-
+                    
                     /* add another reference to the data buffer */
                     rc = KDataBufferSub(&self->refSeq[best].u.local.buf, &seq->u.local.buf, 0, 0);
                     if (rc) return rc;
@@ -1189,31 +1199,8 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                 }
             }
             if (alt == NULL) {
-                unsigned best_wt = 0;
-                unsigned best = n;
-                
-                /* This loop checks to see if there are any references with
-                 * a better fuzzy match
-                 */
-                for (i = 0; i != n; ++i) {
-                    ReferenceSeq const *const rs = &self->refSeq[i];
-                    
-                    if (rs != seq && rs->fastaSeqId && rs != seq) {
-                        unsigned wt = str_weight(rs->fastaSeqId, id, idLen);
-                        
-                        if (wt != no_match) {
-                            if (seq_len && rs->seq_len == seq_len)
-                                wt |= seq_len_match;
-                            if (md5 && memcmp(rs->md5, md5, 16) == 0)
-                                wt |= md5_match;
-                        }
-                        if (best_wt < wt) {
-                            best_wt = wt;
-                            best = i;
-                        }
-                    }
-                }
-                if (best < n)
+                int const best = ReferenceMgr_FindBestFasta(self, id, seq_len, md5, (unsigned)(self->refSeq - seq));
+                if (best >= 0)
                     alt = &self->refSeq[best];
             }
             /* try to knock the alternative out of consideration

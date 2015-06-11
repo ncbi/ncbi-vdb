@@ -49,7 +49,9 @@ checkversion:
         echo "Please re-configure and run 'make install' again." && \
         exit 1 )
 
-copylibs: checkversion $(LIB_TARGET) $(LIBRARIES_WITH_PREFIX)
+copylibs: checkversion $(LIB_TARGET) 
+	@ echo "Installing libraries to $(LIB_TARGET)"
+	@ $(MAKE) -f $(TOP)/build/Makefile.install $(LIBRARIES_WITH_PREFIX)
 
 copyincludes: checkversion
 	@echo "Installing includes to $(INST_INCDIR)"
@@ -114,4 +116,20 @@ else
 	@ echo "      ld -L\$$NCBI_VDB_LIBDIR -lncbi-vdb ..."
 endif
 
-.PHONY: install copylibs copyincludes checkversion
+#-------------------------------------------------------------------------------
+# uninstall
+# 
+
+TO_UNINSTALL = $(LIB_TARGET)/libncbi-vdb.* $(LIB_TARGET)/libncbi-wvdb.* $(LIB_TARGET)/libncbi-ngs-c++.*
+TO_UNINSTALL_AS_ROOT = $(INCLUDE_SYMLINK) $(KONFIG_DIR)/ncbi-vdb.kfg $(PROFILE_FILE).sh $(PROFILE_FILE).csh
+
+uninstall:
+	@ echo "Uninstalling $(TO_UNINSTALL) ..."
+	@ rm -rf $(TO_UNINSTALL)
+ifeq (true, $(LINUX_ROOT))
+	@ echo "Uninstalling $(TO_UNINSTALL_AS_ROOT) ..."
+	@ rm -rf $(TO_UNINSTALL_AS_ROOT)
+endif
+	@ echo "done."
+
+.PHONY: install copylibs copyincludes checkversion uninstall

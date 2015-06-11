@@ -278,6 +278,7 @@ int64_t KExtNodeCmp (const void* item, const BSTNode * n)
 {
     size_t len;
     KExtNode * mn = (KExtNode *)n;
+    String *s = ( String * ) item;
 
     FUNC_ENTRY();
 
@@ -287,17 +288,20 @@ int64_t KExtNodeCmp (const void* item, const BSTNode * n)
      * this in the comparison string
      */
     len = mn->extlen;
-    return strncmp (item, mn->extdescr, len);
+    return strcase_cmp ( s -> addr, s -> len , mn->extdescr, len, len );
 }
 
 static
 rc_t KExtTableFind (KExtTable * self, KExtNode ** node, const char * str)
 {
     rc_t rc = 0;
+    String s;
 
     FUNC_ENTRY();
 
-    *node = (KExtNode*)BSTreeFind (&self->tree, str, KExtNodeCmp);
+    StringInitCString ( &s, str );
+
+    *node = (KExtNode*)BSTreeFind (&self->tree, &s, KExtNodeCmp);
     if (*node == NULL)
     {
 /* 	rc = RC (rcFF, rcTable, rcSearching, rcNode, rcNotFound); */

@@ -25,6 +25,7 @@
  */
 
 #include <kfg/kfg-priv.h>
+#include "kfg-priv.h"
 
 struct KfgConfigNamelist;
 #define KNAMELIST_IMPL struct KfgConfigNamelist
@@ -2287,6 +2288,42 @@ bool load_from_env_variable ( KConfig *self, const KDirectory *dir )
 }
 
 static
+rc_t load_env_variable_rc ( KConfig *self, const KDirectory *dir, bool *loaded )
+{
+    const char * env_list [] =
+    {
+        "NCBI_VDB_CONFIG"
+    };
+    
+    int i;
+    rc_t rc;
+
+    * loaded = false;
+
+    for ( i = 0; ! * loaded && i < sizeof env_list / sizeof env_list [ 0 ]; ++ i )
+    {
+        const char *eval = getenv ( env_list [ i ] );
+        DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: try to load from env. var '%s'\n", env_list[ i ] ) );
+        if ( eval == NULL || eval [ 0 ] == 0 )
+            return 0;
+        
+        DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: try to load from env. var '%s'\n", eval ) );
+        rc = KConfigAppendToLoadPath(self, eval);
+        if ( rc != 0 )
+            return rc;
+        
+        * loaded = load_from_path_list ( self, dir, eval );
+        if ( * loaded )
+            DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: found from env. var '%s'\n", eval ) );
+        else
+            return RC ( rcKFG, rcFile, rcListing, rcEnvironment, rcEmpty );
+
+    }
+
+    return 0;
+}
+
+static
 bool load_from_std_location ( KConfig *self, const KDirectory *dir )
 {
     const char * std_locs [] =
@@ -2419,7 +2456,7 @@ bool load_from_home(KConfig *self, const KDirectory *dir)
 }
 
 static
-void load_config_files ( KConfig *self, const KDirectory *dir )
+rc_t load_config_files ( KConfig *self, const KDirectory *dir )
 {
     rc_t rc;
     bool loaded;
@@ -2438,15 +2475,22 @@ void load_config_files ( KConfig *self, const KDirectory *dir )
             loaded = true;
 
         if ( loaded )
-            return;
+            return 0;
     }
 
     /* open up the native directory */
     rc = KDirectoryNativeDir ( & wd );
     if ( rc != 0 )
-        return;
+        return rc;
 
     /* try to load from environment variable */
+    rc = load_env_variable_rc ( self, wd, & loaded );
+    if ( rc != 0 )
+        return rc;
+    if ( loaded )
+        return 0;
+
+    /* load from the other environment variables */
     loaded = load_from_env_variable ( self, wd );
 
     /* try to load from standard locations */
@@ -2474,6 +2518,8 @@ void load_config_files ( KConfig *self, const KDirectory *dir )
             self->load_path = tmp;
         }
     }
+
+    return 0;
 }
 
 static
@@ -2643,8 +2689,9 @@ rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir, const char *appnam
         KConfigInit ( self, root );
         add_predefined_nodes ( self, appname );
         add_aws_nodes ( self );
-        load_config_files ( self, cfgdir );
-        KConfigCommit ( self ); /* commit changes made to magic file nodes duting parsing (e.g. fixed spelling of dbGaP names) */
+        rc = load_config_files ( self, cfgdir );
+        if ( rc == 0 )
+            KConfigCommit ( self ); /* commit changes made to magic file nodes duting parsing (e.g. fixed spelling of dbGaP names) */
     }
     return rc;
 }
