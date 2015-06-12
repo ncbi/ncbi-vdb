@@ -31,6 +31,8 @@
 #include <kdb/database.h>
 #endif
 
+#include <kdb/column.h>
+
 #ifndef _h_klib_symbol_
 #include <klib/symbol.h>
 #endif
@@ -86,8 +88,9 @@ struct KDatabase
     /* fits into manager symbol table */
     KSymbol sym;
 
-    /* global md5 usage for entire db */
-    bool use_md5;
+    /* create and checksum modes for columns */
+    KCreateMode cmode;
+    KChecksum checksum;
 
     /* true if database was opened read-only */
     bool read_only;

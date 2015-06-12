@@ -100,10 +100,6 @@ struct VDatabase
     /* open references */
     KRefcount refcount;
 
-    /* create and checksum modes for columns */
-    uint8_t cmode;
-    uint8_t checksum;
-
     /* open mode */
     bool read_only;
 

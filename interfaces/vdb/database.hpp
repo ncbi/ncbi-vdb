@@ -123,10 +123,17 @@ struct VDatabase
      *
      *  "cmode" [ IN ] - creation mode
      *
+     *  "cmode_mask" [ IN ] - if a bit of "cmode_mask" is set (1) then
+     *  the corresponding bit of "cmode" is used for the table,
+     *  otherwise (0) the corresponding bit is taken from db and "cmode"'s
+     *  bit is ignored
+     *  the mask for setting mode (kcmOpen, kcmInit, kcmCreate) is at least
+     *  one bit set in the mask kcmValueMask.
+     *
      *  "name" [ IN ] - NUL terminated string in
      *  db-native character set giving actual table name
      */
-    inline rc_t CreateTable ( VTable **tbl, const char *member,
+    /* DEPRECATED */ inline rc_t CreateTable ( VTable **tbl, const char *member,
         KCreateMode cmode, const char *name, ... ) throw ()
     {
         va_list args;
@@ -135,9 +142,30 @@ struct VDatabase
         va_end ( args );
         return rc;
     }
-    inline rc_t CreateTable ( VTable **tbl, const char *member,
+    /* DEPRECATED */ inline rc_t CreateTable ( VTable **tbl, const char *member,
         KCreateMode cmode, const char *name, va_list args ) throw ()
     { return VDatabaseVCreateTable ( this, tbl, member, cmode, name, args ); }
+
+    inline rc_t CreateTable ( VTable **tbl, const char *member, const char *name, ... ) throw ()
+    {
+        va_list args;
+        va_start ( args, name );
+        rc_t rc = VDatabaseVCreateTableDefault ( this, tbl, member, name, args );
+        va_end ( args );
+        return rc;
+    }
+    inline rc_t CreateTable ( VTable **tbl, const char *member,
+        KCreateMode cmode, KCreateMode cmode_mask, const char *name, ... ) throw ()
+    {
+        va_list args;
+        va_start ( args, name );
+        rc_t rc = VDatabaseVCreateTableByMask ( this, tbl, member, cmode, cmode_mask, name, args );
+        va_end ( args );
+        return rc;
+    }
+    inline rc_t CreateTable ( VTable **tbl, const char *member,
+        KCreateMode cmode, KCreateMode cmode_mask, const char *name, va_list args ) throw ()
+    { return VDatabaseVCreateTableByMask ( this, tbl, member, cmode, cmode_mask, name, args ); }
 
 
     /* OpenTableRead

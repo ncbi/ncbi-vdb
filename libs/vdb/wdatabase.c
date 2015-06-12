@@ -557,8 +557,9 @@ LIB_EXPORT rc_t CC VDatabaseColumnCreateParams ( VDatabase *self,
     if ( self == NULL )
         return RC ( rcVDB, rcTable, rcUpdating, rcSelf, rcNull );
 
-    self -> cmode = cmode;
-    self -> checksum = checksum;
+    KDatabaseSetCmode ( self->kdb, cmode );
+    KDatabaseSetChecksum ( self->kdb, checksum );
+
     self -> pgsize = pgsize;
 
     return 0;

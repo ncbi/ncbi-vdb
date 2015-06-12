@@ -201,9 +201,6 @@ rc_t VDatabaseMake ( VDatabase **dbp,
             db -> dad = VDatabaseAttach ( dad );
             KRefcountInit ( & db -> refcount, 1, "VDatabase", "make", "vdb" );
 
-            db -> cmode = ( uint8_t ) kcmOpen;
-            db -> checksum = ( uint8_t ) kcsNone;
-
             * dbp = db;
             return 0;
         }

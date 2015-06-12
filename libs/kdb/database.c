@@ -192,6 +192,11 @@ rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir, const char *path )
     db -> mgr = NULL;
     db -> dad = NULL;
     db -> dir = dir;
+
+    /* for open mode we don't care about creation mode or checksum, setting defaults */
+    db -> cmode = kcmOpen;
+    db -> checksum = kcsNone;
+
     KRefcountInit ( & db -> refcount, 1, "KDatabase", "make", path );
     strcpy ( db -> path, path );
 
