@@ -178,7 +178,7 @@ FIXTURE_TEST_CASE( VFS_Native2Internal_2, PathFixture )
 
 FIXTURE_TEST_CASE(VFS_Native2InternalNetwork, PathFixture) {
     const string n("\\traces04\sra3\SRR\000379\SRR388696");
-    const string p("/traces04/sra3/SRR/000379/SRR388696");
+    const string p("//traces04/sra3/SRR/000379/SRR388696");
 
     {
         REQUIRE_RC(VFSManagerMakeSysPath(vfs, &path, n.c_str()));
