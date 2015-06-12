@@ -28,16 +28,25 @@
 * Unit tests for VPath interface
 */
 
-#include <klib/text.h>
-#include <vfs/manager.h>
-#include <vfs/path.h>
-#include <vfs/path-priv.h>
-#include <ktst/unit_test.hpp>
 
 #include "../../libs/vfs/path-priv.h"
 
-#include <cstdlib>
+#include <klib/text.h>
+
+#include <ktst/unit_test.hpp>
+
+#include <vfs/manager.h>
+#include <vfs/path.h>
+#include <vfs/path-priv.h>
+
 #include <stdexcept>
+
+#include <cstdlib>
+
+#include <climits> /* PATH_MAX */
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 
 #include <sysalloc.h>
 
