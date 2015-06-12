@@ -20,7 +20,7 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
+* ==============================================================================
 *
 */
 
@@ -154,24 +154,61 @@ FIXTURE_TEST_CASE(GetScheme_NcbiObj, PathFixture)
 
 FIXTURE_TEST_CASE( VFS_Native2Internal_1, PathFixture )
 {
-	cout << "VFSManagerMakeSysPath(native) -> VPathMakeString(internal)" << endl;
-    REQUIRE_RC( VFSManagerMakeSysPath ( vfs, &path, "C:\\somepath\\somefile.something" ) );
+    cout << "VFSManagerMakeSysPath(native) -> VPathMakeString(internal)\n";
+    REQUIRE_RC(
+        VFSManagerMakeSysPath( vfs, &path, "C:\\somepath\\somefile.something"));
     
-    const String * uri;
+    const String *uri = NULL;
     REQUIRE_RC( VPathMakeString( path, &uri ) );
     REQUIRE_NOT_NULL( uri );
-    REQUIRE_EQ( string( "/C/somepath/somefile.something" ), string ( uri->addr, uri->size ) );
+    REQUIRE_EQ( string( "/C/somepath/somefile.something" ),
+                string( uri->addr, uri->size ) );
 }
 
 FIXTURE_TEST_CASE( VFS_Native2Internal_2, PathFixture )
 {
     cout << "VFSManagerMakeSysPath(native) -> VPathReadPath(internal)" << endl;
-	REQUIRE_RC( VFSManagerMakeSysPath ( vfs, &path, "C:\\somepath\\somefile.something" ) );
+    REQUIRE_RC( VFSManagerMakeSysPath ( vfs, &path, "C:\\somepath\\somefile.something" ) );
 
     char buffer[ 1024 ];
-	size_t num_writ;
+    size_t num_writ;
     REQUIRE_RC( VPathReadPath( path, buffer, sizeof buffer, &num_writ ) );
     REQUIRE_EQ( string( "/C/somepath/somefile.something" ), string ( buffer, num_writ ) );
+}
+
+FIXTURE_TEST_CASE(VFS_Native2InternalNetwork, PathFixture) {
+    const string n("\\traces04\sra3\SRR\000379\SRR388696");
+    const string p("/traces04/sra3/SRR/000379/SRR388696");
+
+    {
+        REQUIRE_RC(VFSManagerMakeSysPath(vfs, &path, n.c_str()));
+
+        const String *uri = NULL;
+        REQUIRE_RC(VPathMakeString(path, &uri));
+        REQUIRE_NOT_NULL(uri);
+        REQUIRE_EQ(p, string(uri->addr, uri->size));
+
+        char buffer[PATH_MAX] = "";
+        size_t num_writ = 0;
+        REQUIRE_RC(VPathReadPath(path, buffer, sizeof buffer, &num_writ));
+        REQUIRE_EQ(p, string(buffer, num_writ));
+
+        REQUIRE_RC(VPathRelease(path));
+        path = NULL;
+    }
+    {
+        REQUIRE_RC( VFSManagerMakePath(vfs, &path, p.c_str()));
+
+        const String *uri = NULL;
+        REQUIRE_RC(VPathMakeSysPath(path, &uri));
+        REQUIRE_NOT_NULL(uri);
+        REQUIRE_EQ(n, string(uri->addr, uri->size));
+
+        char buffer[PATH_MAX] = "";
+        size_t num_writ = 0;
+        REQUIRE_RC(VPathReadSysPath(path, buffer, sizeof buffer, &num_writ));
+        REQUIRE_EQ(n, string(buffer, num_writ));
+    }
 }
 
 //  VPathMakePath
@@ -181,7 +218,7 @@ FIXTURE_TEST_CASE( VFS_Internal2Native_1, PathFixture )
     cout << "VFSManagerMakePath(internal) -> VPathReadSysPath(native)" << endl;
     REQUIRE_RC( VFSManagerMakePath ( vfs, &path, "/C/somepath/somefile.something" ) );
 
-	const String * uri;
+    const String * uri;
     REQUIRE_RC( VPathMakeSysPath( path, &uri ) );
     REQUIRE_NOT_NULL( uri );
     REQUIRE_EQ( string( "C:\\somepath\\somefile.something" ), string ( uri->addr, uri->size ) );
@@ -193,12 +230,12 @@ FIXTURE_TEST_CASE( VFS_Internal2Native_2, PathFixture )
     REQUIRE_RC( VFSManagerMakePath ( vfs, &path, "/C/somepath/somefile.something" ) );
 
     char buffer[ 1024 ];
-	size_t num_writ;
+    size_t num_writ;
     REQUIRE_RC( VPathReadSysPath( path, buffer, sizeof buffer, &num_writ ) );
     REQUIRE_EQ( string( "C:\\somepath\\somefile.something" ), string ( buffer, num_writ ) );
 }
 
-#endif
+#endif // WINDOWS
 
 //TODO:
 //  VPathGetPath
@@ -662,20 +699,20 @@ const char UsageDefaultName[] = "test-path";
 
 static void clear_recorded_errors( void )
 {
-	rc_t rc;
-	const char * filename;
-	const char * funcname;
-	uint32_t line_nr;
-	while ( GetUnreadRCInfo ( &rc, &filename, &funcname, &line_nr ) )
-	{
-	}
+    rc_t rc;
+    const char * filename;
+    const char * funcname;
+    uint32_t line_nr;
+    while ( GetUnreadRCInfo ( &rc, &filename, &funcname, &line_nr ) )
+    {
+    }
 }
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
     rc_t rc=VPathTestSuite(argc, argv);
-	clear_recorded_errors();
-	return rc;
+    clear_recorded_errors();
+    return rc;
 }
 
 }
