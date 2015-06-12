@@ -95,6 +95,11 @@ FIXTURE_TEST_CASE( ResolveTest_CanonizeDoubleDot, ResolveFixture )
     REQUIRE_RESOLVE( "/a/22/333/../333/", "/a/22/333" );
 }
 
+FIXTURE_TEST_CASE( ResolveTest_CanonizeDoubleSlashDoubleDot, ResolveFixture )
+{
+    REQUIRE_RESOLVE( "/a/22//../333/", "/a/333" );
+}
+
 FIXTURE_TEST_CASE( ResolveTest_TrailingDoubleDot, ResolveFixture )
 {
     REQUIRE_RESOLVE( "/a/22/333/4444/../", "/a/22/333" );
