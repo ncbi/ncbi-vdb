@@ -1440,9 +1440,12 @@ bool CSRA1_PileupIteratorGetNext ( CSRA1_Pileup * self, ctx_t ctx )
         break;
     }
 
-    /* reset the event iterator */
+    /* partially reset the event iterator */
     if ( ! FAILED () )
-        CSRA1_PileupEventIteratorReset ( & self -> dad, ctx );
+    {
+        self -> dad . entry = ( CSRA1_Pileup_Entry * ) DLListHead ( & self -> align . pileup );
+        self -> dad . seen_first = false;
+    }
 
     return pos_valid;
 }

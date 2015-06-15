@@ -863,9 +863,20 @@ bool CSRA1_PileupEventIteratorNext ( CSRA1_PileupEvent * self, ctx_t ctx )
 
 void CSRA1_PileupEventIteratorReset ( CSRA1_PileupEvent * self, ctx_t ctx )
 {
+    CSRA1_Pileup_Entry * entry;
+
     CSRA1_Pileup * pileup = CSRA1_PileupEventGetPileup ( self );
     self -> entry = ( CSRA1_Pileup_Entry * ) DLListHead ( & pileup -> align . pileup );
     self -> seen_first = false;
+
+    for ( entry = self -> entry; entry != NULL; entry = ( CSRA1_Pileup_Entry * ) DLNodeNext ( & entry -> node ) )
+    {
+        entry -> del_cnt = 0;
+        entry -> ref_off_idx = 0;
+        entry -> mismatch_idx = 0;
+        entry -> seq_idx = 0;
+        entry -> zstart_adj = 0;
+    }
 }
 
 void CSRA1_PileupEventInit ( ctx_t ctx, CSRA1_PileupEvent * obj, const NGS_Pileup_vt * vt,

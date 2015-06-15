@@ -293,7 +293,6 @@ struct NGS_Pileup * CSRA1_PileupIteratorMakeSlice ( ctx_t ctx, struct NGS_Refere
 const void * CSRA1_PileupGetEntry ( CSRA1_Pileup * self, ctx_t ctx,
     CSRA1_Pileup_Entry * entry, uint32_t col_idx );
 
-
 /* PileupEntry method declarations */
 void CSRA1_PileupEventWhack ( struct CSRA1_PileupEvent * self, ctx_t ctx );
 int CSRA1_PileupEventGetMappingQuality ( struct CSRA1_PileupEvent const * self, ctx_t ctx );
