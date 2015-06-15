@@ -489,7 +489,7 @@ int64_t AlignmentSort ( const void * p_a, const void * p_b, void *data )
     
     if ( a -> pos < b -> pos )
         return -1;
-    else if ( a -> pos < b -> pos )
+    else if ( a -> pos > b -> pos )
         return 1;
     
     /* cannot use uint64_t - uint64_t because of possible overflow */
