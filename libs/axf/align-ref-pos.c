@@ -89,7 +89,8 @@ int64_t CC row_range_sort( const BSTNode *a, const BSTNode *b )
 {
     const BSTRowRange * item = ( const BSTRowRange* ) a;
     const BSTRowRange * node = ( const BSTRowRange* ) b;
-    return item->rr.start_id - node->rr.start_id;
+    return item->rr.start_id < node->rr.start_id ?
+        -1 : item->rr.start_id > node->rr.start_id;
 }    
 
 

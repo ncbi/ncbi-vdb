@@ -58,9 +58,12 @@ int64_t CC KColumnIdx0NodeMatch ( const void *item, const BSTNode *n )
 #define a ( ( const KColBlobLoc* ) item )
 #define b ( ( const KColumnIdx0Node* ) n )
 
-    if ( a -> start_id != b -> loc . start_id )
-        return a -> start_id - b -> loc . start_id;
-    return (int64_t) a -> id_range - (int64_t) b -> loc . id_range;
+    if ( a -> start_id < b -> loc . start_id )
+        return -1;
+    else if ( a -> start_id > b -> loc . start_id )
+        return 1;
+    else
+        return (int64_t) a -> id_range - (int64_t) b -> loc . id_range;
 
 #undef a
 #undef b

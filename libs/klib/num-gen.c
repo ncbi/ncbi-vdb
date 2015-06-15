@@ -99,8 +99,10 @@ static int64_t CC num_gen_insert_helper( const void* item1, const void* item2 )
     const num_gen_node * node2 = item2;
     if ( node1 != NULL && node2 != NULL )
     {
-        if ( node1 -> start != node2 -> start )
-            res = node1 -> start - node2 -> start;
+        if ( node1 -> start < node2 -> start )
+            res = -1;
+        else if ( node1 -> start > node2 -> start )
+            res = 1;
         else if ( node1 -> count < node2 -> count )
             res = -1;
         else if ( node1 -> count > node2 -> count )

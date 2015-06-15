@@ -1539,7 +1539,7 @@ static int64_t CC PlacementRecordVector_cmp( const void** left, const void** rig
         return (int64_t)l -> len - (int64_t)r -> len;
 
     /* ...id desc */
-    return r -> id - l -> id;
+    return r -> id < l -> id ? -1 : r -> id > l -> id;
 }
 
 
