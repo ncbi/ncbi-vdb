@@ -2908,7 +2908,8 @@ static rc_t KConfigMakeImpl(KConfig **cfg,
             mgr -> initialized = true;
 
 
-#if WINDOWS
+#if 0
+/*if WINDOWS*/
             if ( rc == 0 ) {
                 bool updated = false;
                 rc_t rc = _KConfigFixRepeatedDrives ( mgr, cfgdir, & updated );
