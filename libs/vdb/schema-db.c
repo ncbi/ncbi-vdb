@@ -327,6 +327,11 @@ rc_t CC db_dbmbr ( KSymTable *tbl, KTokenSource *src, KToken *t,
     if ( t -> id != eDatabase )
         return KTokenExpected ( t, klogErr, "database typename" );
     name = t -> sym -> u . obj;
+    if ( name == NULL )
+    {
+        /* the database is declared but not defined: must be recursive */
+        return KTokenExpected ( t, klogErr, "database declared but not defined" );
+    }
 
     /* look for version */
     if ( next_token ( tbl, src, t ) -> id != eHash )
@@ -360,19 +365,20 @@ rc_t CC db_dbmbr ( KSymTable *tbl, KTokenSource *src, KToken *t,
         if ( rc != 0 )
             return KTokenRCExplain ( t, klogInt, rc );
     }
-    else if ( t -> id == eDBMember )
-        return KTokenExpected ( t, klogErr, "undefined database member name" );
-    else if ( t -> id != eForward && t -> id != eVirtual )
-        return KTokenExpected ( t, klogErr, "database member name" );
     else
     {
+        if ( t -> id == eDBMember )
+            return KTokenExpected ( t, klogErr, "undefined database member name" );
+        if ( t -> id != eForward && t -> id != eVirtual )
+            return KTokenExpected ( t, klogErr, "database member name" );
+
         m -> name = t -> sym;
         ( ( KSymbol* ) t -> sym ) -> u . obj = m;
         ( ( KSymbol* ) t -> sym ) -> type = eDBMember;
     }
 
     /* expect we're done */
-    return expect ( tbl, src, t, eSemiColon, ";", true );
+    return expect ( tbl, src, next_token ( tbl, src, t ), eSemiColon, ";", true );
 }
 
 static
