@@ -2821,7 +2821,7 @@ static rc_t _KConfigFixRepeatedDrives(KConfig *self,
                         }
                     }
                     RELEASE(KNamelist, subcategories);
-                    RELEASE(KConfigNode, nCategory);
+                    RELEASE(KConfigNode, category);
                 }
             }
         }
@@ -2908,8 +2908,7 @@ static rc_t KConfigMakeImpl(KConfig **cfg,
             mgr -> initialized = true;
 
 
-#if 0
-/*if WINDOWS*/
+#if WINDOWS /* VDB-1554: fix incorrect posix paths in configuration nodes */
             if ( rc == 0 ) {
                 bool updated = false;
                 rc_t rc = _KConfigFixRepeatedDrives ( mgr, cfgdir, & updated );
