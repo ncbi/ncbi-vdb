@@ -196,7 +196,7 @@ static rc_t CC stats_cb(uint64_t key, uint64_t value, void *user_data)
     return 0;
 }
 
-static int CC stats_cmp_count(const void *A, const void *B, void *ignore)
+static int64_t CC stats_cmp_count(const void *A, const void *B, void *ignore)
 {
     if (((stats_pair_t const *)A)->distance == 0)
         return -1;
@@ -213,7 +213,7 @@ static int CC stats_cmp_count(const void *A, const void *B, void *ignore)
     return 0;
 }
 
-static int CC stats_cmp_distance(const void *A, const void *B, void *ignore)
+static int64_t CC stats_cmp_distance(const void *A, const void *B, void *ignore)
 {
     if (((stats_pair_t const *)A)->distance < ((stats_pair_t const *)B)->distance)
         return -1;
