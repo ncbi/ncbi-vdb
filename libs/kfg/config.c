@@ -1577,11 +1577,28 @@ rc_t CC PrintBuffPrintQuoted ( PrintBuff *self, const String* data )
 static rc_t _printNodeData(const char *name, const char *data, uint32_t dlen,
     bool native, const char *fullpath, bool hide, PrintBuff *pb)
 {
-    const char ticket[] = "download-ticket";
-    size_t l = sizeof ticket - 1;
-    if (hide && !native && string_cmp(name,
-        string_measure(name, NULL), ticket, l, (uint32_t)l) == 0)
+    bool secret = false;
     {
+        const char d1[] = "download-ticket";
+        size_t l1 = sizeof d1 - 1;
+
+        const char d2[] = "aws_access_key_id";
+        size_t l2 = sizeof d2 - 1;
+
+        const char d3[] = "aws_secret_access_key";
+        size_t l3 = sizeof d3 - 1;
+
+        if ((string_cmp(name,
+                string_measure(name, NULL), d1, l1, (uint32_t)l1) == 0) || 
+            (string_cmp(name,
+                string_measure(name, NULL), d2, l2, (uint32_t)l2) == 0) || 
+            (string_cmp(name,
+                string_measure(name, NULL), d3, l3, (uint32_t)l3) == 0))
+        {
+            secret = true;
+        }
+    }
+    if (hide && !native && secret) {
         const char *ellipsis = "";
         const char replace[] =
 "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
