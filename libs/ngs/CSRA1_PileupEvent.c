@@ -701,8 +701,8 @@ bool CSRA1_PileupEventEntryFocus ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry 
                     uint32_t i, ins_cnt = - REF_OFFSET [ entry -> ref_off_idx ];
 
                     /* clip to SEQUENCE length */
-                    if ( ( uint32_t ) ( entry -> ins_cnt + ins_cnt ) > entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
-                        ins_cnt = ( int32_t ) entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] - entry -> ins_cnt;
+                    if ( ( uint32_t ) ( entry -> seq_idx + ins_cnt ) > entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
+                        ins_cnt = ( int32_t ) entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] - entry -> seq_idx;
 
                     /* combine adjacent inserts */
                     entry -> ins_cnt += ins_cnt;
@@ -747,6 +747,9 @@ bool CSRA1_PileupEventEntryFocus ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry 
 
         ++ entry -> zstart_adj;
     }
+
+    if ( entry -> seq_idx >= entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
+        return false;
 
     return true;
 }
