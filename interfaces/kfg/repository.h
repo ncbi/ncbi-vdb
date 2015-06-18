@@ -358,6 +358,10 @@ enum
     INP_UPDATE_ENC_KEY     = ( 1 << 2 ),   /* permission to modify an encryption key   */
     INP_UPDATE_DESC        = ( 1 << 3 ),   /* permission to modify a description       */
     INP_UPDATE_ROOT        = ( 1 << 4 ),   /* permission to modify root path */
+
+    INP_UPDATE_APPS        = ( 1 << 5 ),   /* modify apps :
+         is used as return value only:
+         permission is not required - apps update it will be always performed */
 };
 
 /* ImportNgcObj

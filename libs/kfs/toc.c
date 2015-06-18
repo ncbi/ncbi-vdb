@@ -347,8 +347,8 @@ struct ugliness
     uint64_t     foffset;
 };
 
-static
-int CC KTocEntryIndexCmpOffset (const void * item /* offset */, const BSTNode * n)
+static int64_t CC KTocEntryIndexCmpOffset (const void * item /* offset */,
+    const BSTNode * n)
 {
     struct ugliness * ugly;
     uint64_t nos;
@@ -358,9 +358,10 @@ int CC KTocEntryIndexCmpOffset (const void * item /* offset */, const BSTNode * 
     assert (n != NULL);
     ugly = (struct ugliness*)item;
     {
-	const KTocEntryIndex * ne = (const KTocEntryIndex*)n;
-	nos = ne->entry->u.contiguous_file.archive_offset;
-	noe = add_filler (nos + ne->entry->u.contiguous_file.file_size, ugly->toc->alignment);
+        const KTocEntryIndex * ne = (const KTocEntryIndex*)n;
+        nos = ne->entry->u.contiguous_file.archive_offset;
+        noe = add_filler (nos + ne->entry->u.contiguous_file.file_size,
+                          ugly->toc->alignment);
     }
     po = ugly->offset;
 
@@ -368,14 +369,14 @@ int CC KTocEntryIndexCmpOffset (const void * item /* offset */, const BSTNode * 
 
     ugly->foffset = 0;
     if (po < nos)
-	return -1;
+        return -1;
     else if (po < noe)
     {
         ugly->foffset = po - nos;
-	return 0;
+        return 0;
     }
     else
-	return 1;
+        return 1;
 }
 
 /* -----
@@ -1618,7 +1619,7 @@ rc_t KTocResolvePathFromOffset ( const KToc *self,
     rc = 0;
     offset = _offset - SraHeaderGetFileOffset (self->header);
 
-    TOC_DEBUG(("KTocResolvePathFromOffset _offset %ju offset %ju\n",
+    TOC_DEBUG(("KTocResolvePathFromOffset _offset %lu offset %lu\n",
                _offset, offset));
 
     *path = NULL;

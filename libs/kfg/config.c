@@ -1577,11 +1577,28 @@ rc_t CC PrintBuffPrintQuoted ( PrintBuff *self, const String* data )
 static rc_t _printNodeData(const char *name, const char *data, uint32_t dlen,
     bool native, const char *fullpath, bool hide, PrintBuff *pb)
 {
-    const char ticket[] = "download-ticket";
-    size_t l = sizeof ticket - 1;
-    if (hide && !native && string_cmp(name,
-        string_measure(name, NULL), ticket, l, (uint32_t)l) == 0)
+    bool secret = false;
     {
+        const char d1[] = "download-ticket";
+        size_t l1 = sizeof d1 - 1;
+
+        const char d2[] = "aws_access_key_id";
+        size_t l2 = sizeof d2 - 1;
+
+        const char d3[] = "aws_secret_access_key";
+        size_t l3 = sizeof d3 - 1;
+
+        if ((string_cmp(name,
+                string_measure(name, NULL), d1, l1, (uint32_t)l1) == 0) || 
+            (string_cmp(name,
+                string_measure(name, NULL), d2, l2, (uint32_t)l2) == 0) || 
+            (string_cmp(name,
+                string_measure(name, NULL), d3, l3, (uint32_t)l3) == 0))
+        {
+            secret = true;
+        }
+    }
+    if (hide && !native && secret) {
         const char *ellipsis = "";
         const char replace[] =
 "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
@@ -2674,8 +2691,171 @@ void add_predefined_nodes ( KConfig * self, const char *appname )
     KDirectoryRelease ( cwd );
 }
 
+#if WINDOWS
+
+static isexistingdir(const char *path, const KDirectory *dir) {
+    return (KDirectoryPathType(dir, path) & ~kptAlias) == kptDir;
+}
+
+static bool isletter(char c) {
+    return ((c >= 'A' && c <= 'Z') ||
+            (c >= 'a' && c <= 'z'));
+}
+
+static bool sls(const char *b, size_t sz) {
+    if (b == NULL || sz < 3) {
+        return false;
+    }
+
+    return (b[0] == '/' && isletter(b[1]) && b[2] == '/');
+}
+
+static bool _DetectRepeatedDrives(const char *buffer,
+    size_t bsize, size_t *fixed, const KDirectory *dir)
+{
+    assert(fixed);
+
+    if (!sls(buffer, bsize)) {
+        return false;
+    }
+
+    if (!sls(buffer + 2, bsize - 2)) {
+        return false;
+    }
+
+    if (isexistingdir(buffer, dir)) {
+        return false;
+    }
+
+    *fixed = 2;
+
+    while (bsize > *fixed + 2) {
+        if (isexistingdir(buffer + *fixed, dir)) {
+            break;
+        }
+
+        if (!sls(buffer + *fixed + 2, bsize - *fixed - 2)) {
+            break;
+        }
+
+        *fixed += 2;
+    }
+
+    return true;
+}
+
+static rc_t _KConfigNodeFixRepeatedDrives(KConfigNode *self,
+    bool *updated, const KDirectory *dir)
+{
+    rc_t rc = 0;
+
+    char buffer[PATH_MAX];
+    size_t num_read = 0;
+    size_t remaining = 0;
+
+    assert(updated);
+
+    rc = KConfigNodeRead(self, 0, buffer, sizeof buffer, &num_read, &remaining);
+    if (rc == 0) {
+        size_t fixed = 0;
+        if (num_read < sizeof buffer) {
+            buffer[num_read] = '\0';
+        }
+        if (_DetectRepeatedDrives(buffer, num_read, &fixed, dir)
+            && fixed != 0 && fixed < num_read)
+        {
+            rc = KConfigNodeWrite(self, buffer + fixed, num_read - fixed);
+            if (rc == 0) {
+                *updated = true;
+            }
+        }
+    }
+
+    return rc;
+}
+
+static rc_t _KConfigNodeFixChildRepeatedDrives(KConfigNode *self,
+    const KDirectory *dir, bool *updated, const char *name, ...)
+{
+    rc_t rc = 0;
+    KConfigNode *node = NULL;
+
+    va_list args;
+    va_start(args, name);
+
+    rc = KConfigNodeVOpenNodeUpdate(self, &node, name, args);
+    if (rc == 0) {
+        rc_t rc = _KConfigNodeFixRepeatedDrives(node, updated, dir);
+        KConfigNodeRelease(node);
+    }
+
+    va_end(args);
+
+    return rc;
+}
+
+static rc_t _KConfigFixRepeatedDrives(KConfig *self,
+    const KDirectory *pdir, bool *updated)
+{
+    rc_t rc = 0;
+    const KDirectory *dir = pdir;
+    KConfigNode *user = NULL;
+    if (dir == NULL) {
+        rc = KDirectoryNativeDir(&dir);
+    }
+    rc = KConfigOpenNodeUpdate(self, &user, "/repository/user");
+    if (rc == 0) {
+        _KConfigNodeFixChildRepeatedDrives(user, dir, updated, "default-path");
+    }
+    if (rc == 0) {
+        uint32_t i = 0;
+        uint32_t count = 0;
+        KNamelist *categories = NULL;
+        rc_t rc = KConfigNodeListChildren(user, &categories);
+        if (rc == 0) {     /* main protected ... */
+            rc = KNamelistCount(categories, &count);
+        }
+        for (i = 0; rc == 0 && i < count; ++i) {
+            const char *nCategory = NULL;
+            rc_t rc = KNamelistGet(categories, i, &nCategory);
+            if (rc == 0) { /* main protected ... */
+                KConfigNode *category = NULL;
+                rc_t rc = KConfigNodeOpenNodeUpdate(user, &category, nCategory);
+                if (rc == 0) {
+                    uint32_t i = 0;
+                    uint32_t count = 0;
+                    KNamelist *subcategories = NULL;
+                    rc_t rc = KConfigNodeListChildren(category, &subcategories);
+                    if (rc == 0) {     /* main protected ... */
+                        rc = KNamelistCount(subcategories, &count);
+                    }
+                    for (i = 0; rc == 0 && i < count; ++i) {
+                        const char *name = NULL;
+                        rc_t rc = KNamelistGet(subcategories, i, &name);
+                        if (rc == 0) {
+                            _KConfigNodeFixChildRepeatedDrives(category,
+                                dir, updated, "%s/%s", name, "root");
+                        }
+                    }
+                    RELEASE(KNamelist, subcategories);
+                    RELEASE(KConfigNode, category);
+                }
+            }
+        }
+        RELEASE(KNamelist, categories);
+    }
+    RELEASE(KConfigNode, user);
+    if (pdir == NULL) {
+        RELEASE(KDirectory, dir);
+    }
+    return rc;
+}
+
+#endif
+
 static
-rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir, const char *appname, bool local)
+rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir,
+    const char *appname, bool local)
 {
     KConfigNode * root;
     String empty;
@@ -2690,9 +2870,12 @@ rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir, const char *appnam
         add_predefined_nodes ( self, appname );
         add_aws_nodes ( self );
         rc = load_config_files ( self, cfgdir );
-        if ( rc == 0 )
-            KConfigCommit ( self ); /* commit changes made to magic file nodes duting parsing (e.g. fixed spelling of dbGaP names) */
+        if ( rc == 0 ) {
+            KConfigCommit ( self ); /* commit changes made to magic file nodes
+                          during parsing (e.g. fixed spelling of dbGaP names) */
+        }
     }
+
     return rc;
 }
 
@@ -2730,8 +2913,8 @@ static rc_t KConfigMakeImpl(KConfig **cfg,
             return 0;
         }
 
-        /* TODO consider possible concurrency problems
-        use atomic_test_and_set_ptr from atomic.h */
+        /* TODO consider possible concurrency problems:
+                use atomic_test_and_set_ptr from atomic.h */
         mgr = calloc ( 1, sizeof * mgr );
         if ( mgr == NULL )
             rc = RC ( rcKFG, rcMgr, rcCreating, rcMemory, rcExhausted );
@@ -2740,6 +2923,18 @@ static rc_t KConfigMakeImpl(KConfig **cfg,
             rc = KConfigFill (mgr, cfgdir, appname, local);
 
             mgr -> initialized = true;
+
+
+#if WINDOWS /* VDB-1554: fix incorrect posix paths in configuration nodes */
+            if ( rc == 0 ) {
+                bool updated = false;
+                rc_t rc = _KConfigFixRepeatedDrives ( mgr, cfgdir, & updated );
+                if ( rc == 0 && updated ) {
+                    rc = KConfigCommit ( mgr );
+                }
+            }
+#endif
+
             if ( rc == 0 )
             {
                 if (!local) {

@@ -1413,6 +1413,63 @@ static rc_t make_key_file( KRepositoryMgr * self, const struct KNgcObj * ngc, ch
     return rc;
 }
 
+/******************************************************************************/
+
+#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
+    if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
+
+static rc_t _KRepositoryAppsNodeFix(KConfigNode *self,
+    const char *path, const char *val, size_t len, uint32_t *modifications)
+{
+    rc_t rc = 0;
+
+    KConfigNode *node = NULL;
+
+    assert(self && modifications);
+
+    rc = KConfigNodeOpenNodeUpdate(self, &node, path);
+    if (rc == 0) {
+        bool update = false;
+        char buffer[8] = "";
+        size_t num_read = 0;
+        size_t remaining = 0;
+        rc_t rc = KConfigNodeRead(node, 0,
+            buffer, sizeof buffer, &num_read, &remaining);
+        if ((rc != 0) || (string_cmp(buffer, num_read, val, len, len) != 0)) {
+            update = true;
+        }
+
+        if (update) {
+            rc = KConfigNodeWrite(node, val, len);
+            if (rc == 0) {
+                *modifications = INP_UPDATE_APPS;
+            }
+        }
+    }
+
+    RELEASE(KConfigNode, node);
+
+    return rc;
+}
+
+static rc_t _KRepositoryFixApps(KRepository *self, uint32_t *modifications) {
+    rc_t rf = 0;
+    rc_t rs = 0;
+
+    KConfigNode *self_node = NULL;
+
+    assert(self);
+
+    self_node = (KConfigNode*)self->node;
+
+    rf = _KRepositoryAppsNodeFix(self_node, "apps/file/volumes/flat",
+        "files", 5, modifications);
+
+    rs = _KRepositoryAppsNodeFix(self_node, "apps/sra/volumes/sraFlat",
+        "sra"  , 3, modifications);
+
+    return rf != 0 ? rf : rs;
+}
 
 /* we have not found a repository named repo_name, let us create a new one... */
 static rc_t create_new_protected_repository( KRepositoryMgr * self,
@@ -1655,23 +1712,33 @@ LIB_EXPORT rc_t CC KRepositoryMgrImportNgcObj( KRepositoryMgr * self,
                     rc = RC(rcKFG, rcMgr, rcUpdating, rcConstraint, rcViolated);
                 }
             }
-            else if (rc == 0 && permissions & INP_UPDATE_ROOT) {
-                uint32_t modifications = 0;
-                rc = check_for_root_modification(
-                    repository, location, &modifications);
-                if (rc == 0) {
-                    if (modifications & INP_UPDATE_ROOT) {
-                        uint32_t location_len = string_measure(location, NULL);
-                        rc = KRepositorySetRoot(repository,
-                            location, location_len);
-                        if (rc == 0) {
+            else {
+                if (rc == 0 && permissions & INP_UPDATE_ROOT) {
+                    uint32_t modifications = 0;
+                    rc = check_for_root_modification(
+                        repository, location, &modifications);
+                    if (rc == 0) {
+                        if (modifications & INP_UPDATE_ROOT) {
+                            uint32_t location_len
+                                = string_measure(location, NULL);
+                            rc = KRepositorySetRoot(repository,
+                                location, location_len);
+                            if (rc == 0) {
+                                *result_flags |= INP_UPDATE_ROOT;
+                            }
+                        }
+                        else if (modifications != 0) {
                             *result_flags |= INP_UPDATE_ROOT;
+                            rc = RC(rcKFG, rcMgr, rcCreating,
+                                rcConstraint, rcViolated);
                         }
                     }
-                    else if (modifications != 0) {
-                        *result_flags |= INP_UPDATE_ROOT;
-                        rc = RC(rcKFG, rcMgr, rcCreating,
-                            rcConstraint, rcViolated);
+                }
+                if (rc == 0) {
+                    uint32_t modifications = 0;
+                    rc = _KRepositoryFixApps(repository, &modifications);
+                    if (rc == 0 && modifications != 0) {
+                        *result_flags |= INP_UPDATE_APPS;
                     }
                 }
             }

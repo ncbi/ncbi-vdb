@@ -223,21 +223,13 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self, const KFile **cfp,
     else
         rc = KNSManagerMakeHttpFile ( self -> kns, cfp, NULL, 0x01010000, url );
 
-    if ( rc == 0 )
+    if ( rc == 0 && cache_location != NULL )
     {
-        const KFile *temp_file;
-        rc_t rc2;
-        if ( cache_location == NULL )
-        {
-            /* there is no cache_location! just wrap the remote file in a buffer */
-            rc2 = KBufFileMakeRead ( & temp_file, * cfp, 128 * 1024 * 1024 );
-        }
-        else
-        {
-            /* we do have a cache_location! wrap the remote file in a cacheteefile */
-            rc2 = KDirectoryMakeCacheTee ( self->cwd, &temp_file, *cfp,
-                                           DEFAULT_CACHE_BLOCKSIZE, "%s", cache_location );
-        }
+		const KFile *temp_file;
+		/* we do have a cache_location! wrap the remote file in a cacheteefile */
+		rc_t rc2 = KDirectoryMakeCacheTee ( self->cwd, &temp_file, *cfp,
+											DEFAULT_CACHE_BLOCKSIZE, "%s", cache_location );
+												
         if ( rc2 == 0 )
         {
             KFileRelease ( * cfp );

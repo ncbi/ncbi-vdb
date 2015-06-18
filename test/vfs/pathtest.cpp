@@ -51,7 +51,7 @@
 #include <sysalloc.h>
 
 
-#define IGNORE_FAILURE_VDB_1551
+#define IGNORE_FAILURE_VDB_1551 0
 
 
 TEST_SUITE(VPathTestSuite);
@@ -190,8 +190,8 @@ FIXTURE_TEST_CASE( VFS_Native2Internal_2, PathFixture )
 }
 
 FIXTURE_TEST_CASE(VFS_Native2InternalNetwork, PathFixture) {
-    const string n("\\traces04\sra3\SRR\000379\SRR388696");
-    const string p("//traces04/sra3/SRR/000379/SRR388696");
+    const string n("\\\\abc\\def\\ghi\\000379\\SRR388696");
+    const string p("//abc/def/ghi/000379/SRR388696");
 
     {
         REQUIRE_RC(VFSManagerMakeSysPath(vfs, &path, n.c_str()));
@@ -199,14 +199,14 @@ FIXTURE_TEST_CASE(VFS_Native2InternalNetwork, PathFixture) {
         const String *uri = NULL;
         REQUIRE_RC(VPathMakeString(path, &uri));
         REQUIRE_NOT_NULL(uri);
-#ifndef IGNORE_FAILURE_VDB_1551
+#if IGNORE_FAILURE_VDB_1551
         REQUIRE_EQ(p, string(uri->addr, uri->size));
 #endif
 
         char buffer[PATH_MAX] = "";
         size_t num_writ = 0;
         REQUIRE_RC(VPathReadPath(path, buffer, sizeof buffer, &num_writ));
-#ifndef IGNORE_FAILURE_VDB_1551
+#if IGNORE_FAILURE_VDB_1551
         REQUIRE_EQ(p, string(buffer, num_writ));
 #endif
 
@@ -219,7 +219,7 @@ FIXTURE_TEST_CASE(VFS_Native2InternalNetwork, PathFixture) {
         const String *uri = NULL;
         REQUIRE_RC(VPathMakeSysPath(path, &uri));
         REQUIRE_NOT_NULL(uri);
-#ifndef IGNORE_FAILURE_VDB_1551
+#if IGNORE_FAILURE_VDB_1551
         REQUIRE_EQ(n, string(uri->addr, uri->size));
 
         char buffer[PATH_MAX] = "";
