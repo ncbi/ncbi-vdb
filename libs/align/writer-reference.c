@@ -185,7 +185,7 @@ struct ReferenceSeq {
 };
 
 typedef struct {
-    int length:24, type:8;
+    int length, type;
 } compress_buffer_t;
 
 struct ReferenceMgr {
