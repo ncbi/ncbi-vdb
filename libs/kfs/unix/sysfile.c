@@ -1011,7 +1011,7 @@ LIB_EXPORT rc_t CC KFileMakeStdOut ( KFile_v1 **std_out )
     if ( ! writable )
         return RC ( rcFS, rcFile, rcConstructing, rcFileDesc, rcReadonly );
 
-    return KStdIOFileMake ( std_out, 1, seekable, false, true );
+    return KStdIOFileMake ( std_out, 1, false, false, true );
 }
 
 LIB_EXPORT rc_t CC KFileMakeStdErr ( KFile_v1 **std_err )
@@ -1025,7 +1025,7 @@ LIB_EXPORT rc_t CC KFileMakeStdErr ( KFile_v1 **std_err )
     if ( ! writable )
         return RC ( rcFS, rcFile, rcConstructing, rcFileDesc, rcReadonly );
 
-    return KStdIOFileMake ( std_err, 2, seekable, false, true );
+    return KStdIOFileMake ( std_err, 2, false, false, true );
 }
 
 /* MakeFDFile
