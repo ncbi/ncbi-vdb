@@ -740,7 +740,7 @@ _HttpEDAddRef ()
     HttpED = _ED ();
 
     if ( HttpED == NULL ) {
-        RCt = _HttpEDMake ( & HttpED );
+        RCt = _HttpEDMake ( );
         if ( RCt == 0 ) {
         }
     }
@@ -810,7 +810,7 @@ _HttpEDRelease ()
 }   /* _HttpEDRelease () */
 
 static
-int CC
+int64_t CC
 _HttpEntryCmpCallback ( const void * Item, const BSTNode * Node )
 {
     const char * Str1, * Str2;
@@ -879,7 +879,7 @@ _HttpEDGet ( const char * Url, const struct XFSHttpEntry ** Entry )
 }   /* _HttpEDGet () */
 
 static
-int CC
+int64_t CC
 _HttpEntryAddCallback ( const BSTNode * N1, const BSTNode * N2 )
 {
     return XFS_StringCompare4BST_ZHR (

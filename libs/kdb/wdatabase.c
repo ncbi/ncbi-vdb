@@ -221,7 +221,12 @@ rc_t KDatabaseMake ( KDatabase **dbp, const KDirectory *dir,
     db -> dir = ( KDirectory* ) dir;
     db -> md5 = md5;
     rc = KMD5SumFmtAddRef ( md5 );
-    db -> use_md5 = ( md5 == NULL ) ? false : true;
+    db -> cmode = kcmOpen; /* to be set later by the caller */
+    db -> checksum = kcsNone; /* to be set later in VTableColumnCreateParams */
+
+    if ( md5 != NULL )
+        db -> cmode |= kcmMD5;
+
     KRefcountInit ( & db -> refcount, 1, "KDatabase", "make", path );
     db -> opencount = 1;
     db -> read_only = read_only;
@@ -416,6 +421,12 @@ rc_t KDBManagerVCreateDBInt ( KDBManager *self,
 
             if ( rc == 0 )
                 rc = KDBManagerMakeDBUpdate ( self, db, wd, dbpath, md5 );
+            /* TODO: for now set cmode here, externally to KDatabaseMake
+                maybe it's needed to refactor the whole chain from exported
+                Open/Create DB functions to the KDatabaseMake
+            */
+            if ( rc == 0 )
+                (*db) -> cmode = cmode;
 
             KMD5SumFmtRelease ( md5 );
         }
@@ -1605,4 +1616,26 @@ LIB_EXPORT rc_t CC KDBManagerVPathOpenRemoteDBRead ( struct KDBManager const * s
         }
         return rc;
     }
+}
+
+KCreateMode KDatabaseGetCmode ( const KDatabase *self)
+{
+    return self -> cmode;
+}
+KCreateMode KDatabaseSetCmode ( KDatabase *self, KCreateMode new_val)
+{
+    KCreateMode old_val = self -> cmode;
+    self -> cmode = new_val;
+    return old_val;
+}
+
+KChecksum KDatabaseGetChecksum ( const KDatabase *self)
+{
+    return self -> checksum;
+}
+KChecksum KDatabaseSetChecksum ( KDatabase *self, KChecksum new_val)
+{
+    KCreateMode old_val = self -> checksum;
+    self -> checksum = new_val;
+    return old_val;
 }

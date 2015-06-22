@@ -278,7 +278,7 @@ rc_t KMagicTableMake (KMagicTable ** kmmtp)
 }
 
 static
-int KMagicNodeCmp (const void* item, const BSTNode * n)
+int64_t KMagicNodeCmp (const void* item, const BSTNode * n)
 {
     size_t len;
     KMagicNode * mn = (KMagicNode *)n;
@@ -350,7 +350,7 @@ rc_t KMagicTableFindKFFDescr (KMagicTable * self, const char * str, char * kff, 
 }
 #endif
 static
-int KMagicNodeSort (const BSTNode* item, const BSTNode * n)
+int64_t KMagicNodeSort (const BSTNode* item, const BSTNode * n)
 {
     const char * str1;
     const char * str2;

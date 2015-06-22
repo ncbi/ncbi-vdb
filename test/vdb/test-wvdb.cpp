@@ -133,7 +133,7 @@ TEST_CASE(BlobCorruptOnCommit)
     {
         KDirectory* wd;
         KDirectoryNativeDir ( & wd );
-        KDirectoryRemove ( wd, true, databaseName ); // WINDOWS: this fails, suspect a leaked reference to an object holding the tbl subdirectory
+        REQUIRE_RC ( KDirectoryRemove ( wd, true, databaseName ) ); 
         KDirectoryRelease ( wd );
     }
     

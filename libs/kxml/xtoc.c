@@ -180,7 +180,7 @@ struct XTocEntry
 
 /* function for BSTreeInsert or BSTreeInsertUnique */
 static
-int CC XTocEntrySort (const BSTNode * item, const BSTNode * n)
+int64_t CC XTocEntrySort (const BSTNode * item, const BSTNode * n)
 {
     return StringCompare (&((const XTocEntry*)item)->name,
                           &((const XTocEntry*)n)->name);
@@ -188,7 +188,7 @@ int CC XTocEntrySort (const BSTNode * item, const BSTNode * n)
 
 /* function for BSTreeFind */
 static
-int CC XTocEntryCmpString (const void * item, const BSTNode * n)
+int64_t CC XTocEntryCmpString (const void * item, const BSTNode * n)
 {
     return (int)StringCompare ((const String *)item, 
                                &((const XTocEntry*)n)->name);
@@ -659,7 +659,7 @@ static const char XTocCacheClassname[] = "XTocCache";
  *   A sort comparitor suitable for BSTreeInsert/NSTreInsertUnique
  */
 static
-int CC XTocCacheSort (const BSTNode * item, const BSTNode * n)
+int64_t CC XTocCacheSort (const BSTNode * item, const BSTNode * n)
 {
     return StringCompare (&((const XTocCache*)item)->path,
                           &((const XTocCache*)n)->path);
@@ -671,7 +671,7 @@ int CC XTocCacheSort (const BSTNode * item, const BSTNode * n)
  *   A sort comparitor suitable for BSTreeFind
  */
 static
-int CC XTocCacheCmp (const void * item, const BSTNode * n)
+int64_t CC XTocCacheCmp (const void * item, const BSTNode * n)
 {
     const String * s = item;
     const XTocCache * node = (const XTocCache *)n;

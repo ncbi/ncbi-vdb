@@ -193,6 +193,8 @@ XFSKfsNodeMake (
 
             TheNode -> type = Type;
 
+                /* This is duplicate, but necessary one
+                 */
             ( & ( TheNode -> node ) ) -> vt = Type == kxfsDir
                     ? ( ( const union XFSNode_vt * ) & _sKfsDirNodeVT_v1 )
                     : ( ( const union XFSNode_vt * ) & _sKfsFileNodeVT_v1 )
@@ -689,7 +691,7 @@ _KfsDir_create_file_v1 (
                                 NativeDir,
                                 & File, 
                                 Update,
-                                XFSPermDefNodeNum (),
+                                XFSPermRODefNodeNum (),
                                 CreateMode,
                                 Path
                                 );
@@ -790,7 +792,7 @@ _KfsDir_create_dir_v1 (
     if ( RCt == 0 ) {
         RCt = KDirectoryCreateDir (
                                 NativeDir,
-                                XFSPermDefContNum (),
+                                XFSPermRODefContNum (),
                                 kcmCreate,
                                 Path
                                 );

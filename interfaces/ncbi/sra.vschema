@@ -94,6 +94,21 @@ extern function INSDC:coord:zero
     NCBI:SRA:bio_start #1 ( INSDC:coord:zero read_start, INSDC:SRA:xread_type read_type );
 
 
+/* bio_end
+ *  searcehes through read_type vector
+ *  returns the 0 based ending coording (either inclusive or exclusive) of last
+ *  biological read
+ *
+ *  "read_start" [ DATA ] - vector of read start coordinates
+ *
+ *  "read_type" [ DATA ] - vector of read types
+ *
+ *  "read_len" [ DATA ] - vector of read lengths
+ */
+extern function INSDC:coord:zero
+    NCBI:SRA:bio_end #1 < bool inclusive > ( INSDC:coord:zero read_start, INSDC:SRA:xread_type read_type, INSDC:coord:len read_len );
+
+
 /* fix_read_seg
  */
 extern function INSDC:coord:len [ 2 ]

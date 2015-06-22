@@ -34,6 +34,8 @@
 
 #include <xfs/doc.h>
 
+#include <va_copy.h>
+
 #include <string.h>    /* memcpy() */
 
 #include <sysalloc.h>
@@ -702,6 +704,7 @@ XFSTextDocVAppend ( struct XFSDoc * self, const char * Fmt, va_list args )
     rc_t RCt;
     char TBF [ XFS_SIZE_1024 ];
     size_t nwr;
+    va_list xArgs;
 
     RCt = 0;
     * TBF = 0;
@@ -711,7 +714,9 @@ XFSTextDocVAppend ( struct XFSDoc * self, const char * Fmt, va_list args )
         return XFS_RC ( rcNull );
     }
 
-    RCt = string_vprintf ( TBF, sizeof ( TBF ), & nwr, Fmt, args );
+    va_copy ( xArgs, args );
+    RCt = string_vprintf ( TBF, sizeof ( TBF ), & nwr, Fmt, xArgs );
+    va_end ( xArgs );
     if ( RCt == 0 ) {
         if ( nwr == 0 ) {
             RCt = XFS_RC ( rcInvalid );

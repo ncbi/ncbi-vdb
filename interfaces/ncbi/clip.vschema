@@ -135,6 +135,10 @@ table NCBI:SRA:tbl:clip #1.0.2 = INSDC:SRA:tbl:spotdesc #1.0.2
     INSDC:coord:zero trim_start
         = < INSDC:coord:zero > max ( bio_start, max_zclip_left )
         | bio_start;
+
+    INSDC:coord:zero bio_end
+        = NCBI:SRA:bio_end < false > ( out_read_start, out_read_type, out_read_len );
+
     I32 trim_stop
         = < I32 > max ( min_clip_right, trim_start )
         | spot_right;

@@ -33,6 +33,16 @@
 
 #include <assert.h>
 
+typedef struct self_t {
+    bool inclusive;
+} self_t;
+
+static
+void CC sraxf_bio_start_free_wrapper( void *ptr )
+{
+    free( ptr );
+}
+
 /* INSDC:coord:zero NCBI:SRA:bio_start #1
  *   ( INSDC:coord:zero read_start, INSDC:SRA:xread_type read_type );
  *
@@ -90,6 +100,98 @@ VTRANSFACT_IMPL( NCBI_SRA_bio_start, 1, 0, 0 ) ( const void *self, const VXfactI
     VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
     rslt -> u . rf = sra_bio_start;
+    rslt -> variant = vftRow;
+    return 0;
+}
+
+/* INSDC:coord:zero NCBI:SRA:bio_end #1 < bool inclusive >
+ *    ( INSDC:coord:zero read_start, INSDC:SRA:xread_type read_type, INSDC:coord:len read_len );
+ *
+ *  searcehes through read_type vector
+ *  returns the 0 based ending coording (either inclusive or exclusive) of last
+ *  biological read
+ *
+ *  "read_start" [ DATA ] - vector of read start coordinates
+ *
+ *  "read_type" [ DATA ] - vector of read types
+ *
+ *  "read_len" [ DATA ] - vector of read lengths
+ */
+static
+rc_t CC sra_bio_end ( void *Self, const VXformInfo *info, int64_t row_id,
+                       VRowResult *rslt, uint32_t argc, const VRowData argv [] )
+{
+    const uint8_t *src = argv [ 1 ] . u . data . base;
+    int64_t i;
+    uint64_t count = argv [ 1 ] . u . data . elem_count;
+    const self_t *self = (const self_t *)Self;
+    bool inclusive = self->inclusive;
+    
+    for ( i = count - 1, src += argv [ 1 ] . u . data . first_elem; i >= 0; -- i )
+    {
+        int32_t read_len = ( ( const int32_t* ) argv [ 2 ] . u . data . base )
+            [ argv [ 2 ] . u . data . first_elem + i ];
+        
+        if ( read_len > 0 && ( src [ i ] & SRA_READ_TYPE_BIOLOGICAL ) != 0 )
+        {
+            rc_t rc;
+            int32_t bio_end;
+            KDataBuffer *dst = rslt -> data;
+            
+            assert ( argv [ 0 ] . u . data . elem_count == argv [ 1 ] . u . data . elem_count );
+            assert ( argv [ 0 ] . u . data . elem_count == argv [ 2 ] . u . data . elem_count );
+            assert ( argv [ 0 ] . u . data . elem_bits == sizeof bio_end * 8 );
+            assert ( argv [ 0 ] . u . data . elem_bits == argv [ 2 ] . u . data . elem_bits );
+            
+            bio_end = ( ( const int32_t* ) argv [ 0 ] . u . data . base )
+                [ argv [ 0 ] . u . data . first_elem + i ];
+            bio_end += read_len;
+            
+            if ( dst -> elem_bits != sizeof bio_end * 8 )
+            {
+                rc = KDataBufferCast ( dst, dst, sizeof bio_end * 8, true );
+                if ( rc != 0 )
+                    return rc;
+            }
+            
+            if ( dst -> elem_count != 1 )
+            {
+                rc = KDataBufferResize ( dst, 1 );
+                if ( rc != 0 )
+                    return rc;
+            }
+            
+            * ( int32_t* ) dst -> base = inclusive ? (bio_end - 1) : bio_end;
+            rslt -> elem_count = 1;
+            return 0;
+        }
+    }
+    
+    return RC ( rcSRA, rcFunction, rcSearching, rcData, rcNotFound );
+}
+
+VTRANSFACT_IMPL( NCBI_SRA_bio_end, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
+                                                VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
+{
+    self_t *self;
+    bool inclusive;
+    
+    assert ( cp->argc == 1 );
+    assert ( cp->argv[0].desc.domain == vtdBool );
+    assert ( cp->argv[0].count == 1 );
+    inclusive = cp->argv[0].data.b[0];
+    
+    self = malloc ( sizeof ( *self ));
+    if ( !self )
+    {
+        return RC ( rcXF, rcFunction, rcConstructing, rcMemory, rcExhausted );
+    }
+    
+    self -> inclusive = inclusive;
+    
+    rslt -> self = self;
+    rslt -> whack = sraxf_bio_start_free_wrapper;
+    rslt -> u . rf = sra_bio_end;
     rslt -> variant = vftRow;
     return 0;
 }

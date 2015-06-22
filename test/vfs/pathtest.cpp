@@ -20,7 +20,7 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
+* ==============================================================================
 *
 */
 
@@ -28,18 +28,31 @@
 * Unit tests for VPath interface
 */
 
-#include <klib/text.h>
-#include <vfs/manager.h>
-#include <vfs/path.h>
-#include <vfs/path-priv.h>
-#include <ktst/unit_test.hpp>
 
 #include "../../libs/vfs/path-priv.h"
 
-#include <cstdlib>
+#include <klib/text.h>
+
+#include <ktst/unit_test.hpp>
+
+#include <vfs/manager.h>
+#include <vfs/path.h>
+#include <vfs/path-priv.h>
+
 #include <stdexcept>
 
+#include <cstdlib>
+
+#include <climits> /* PATH_MAX */
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 #include <sysalloc.h>
+
+
+#define IGNORE_FAILURE_VDB_1551 0
+
 
 TEST_SUITE(VPathTestSuite);
 
@@ -149,17 +162,99 @@ FIXTURE_TEST_CASE(GetScheme_NcbiObj, PathFixture)
 }
 
 #if WINDOWS
+
 //  VPathMakeSysPath
-FIXTURE_TEST_CASE(VFSManagerMakeSysPath_Windows_DriveLetter, PathFixture)
+
+FIXTURE_TEST_CASE( VFS_Native2Internal_1, PathFixture )
 {
-    REQUIRE_RC(VFSManagerMakeSysPath ( vfs, &path, "C:\\somepath\\somefile.something"));
+    cout << "VFSManagerMakeSysPath(native) -> VPathMakeString(internal)\n";
+    REQUIRE_RC(
+        VFSManagerMakeSysPath( vfs, &path, "C:\\somepath\\somefile.something"));
     
-    const String* uri;
-    REQUIRE_RC ( VPathMakeString(path, &uri) );
-    REQUIRE_NOT_NULL ( uri );
-    REQUIRE_EQ ( string("/C/somepath/somefile.something"), string ( uri->addr, uri->size ) );
+    const String *uri = NULL;
+    REQUIRE_RC( VPathMakeString( path, &uri ) );
+    REQUIRE_NOT_NULL( uri );
+    REQUIRE_EQ( string( "/C/somepath/somefile.something" ),
+                string( uri->addr, uri->size ) );
 }
+
+FIXTURE_TEST_CASE( VFS_Native2Internal_2, PathFixture )
+{
+    cout << "VFSManagerMakeSysPath(native) -> VPathReadPath(internal)" << endl;
+    REQUIRE_RC( VFSManagerMakeSysPath ( vfs, &path, "C:\\somepath\\somefile.something" ) );
+
+    char buffer[ 1024 ];
+    size_t num_writ;
+    REQUIRE_RC( VPathReadPath( path, buffer, sizeof buffer, &num_writ ) );
+    REQUIRE_EQ( string( "/C/somepath/somefile.something" ), string ( buffer, num_writ ) );
+}
+
+FIXTURE_TEST_CASE(VFS_Native2InternalNetwork, PathFixture) {
+    const string n("\\\\abc\\def\\ghi\\000379\\SRR388696");
+    const string p("//abc/def/ghi/000379/SRR388696");
+
+    {
+        REQUIRE_RC(VFSManagerMakeSysPath(vfs, &path, n.c_str()));
+
+        const String *uri = NULL;
+        REQUIRE_RC(VPathMakeString(path, &uri));
+        REQUIRE_NOT_NULL(uri);
+#if IGNORE_FAILURE_VDB_1551
+        REQUIRE_EQ(p, string(uri->addr, uri->size));
 #endif
+
+        char buffer[PATH_MAX] = "";
+        size_t num_writ = 0;
+        REQUIRE_RC(VPathReadPath(path, buffer, sizeof buffer, &num_writ));
+#if IGNORE_FAILURE_VDB_1551
+        REQUIRE_EQ(p, string(buffer, num_writ));
+#endif
+
+        REQUIRE_RC(VPathRelease(path));
+        path = NULL;
+    }
+    {
+        REQUIRE_RC( VFSManagerMakePath(vfs, &path, p.c_str()));
+
+        const String *uri = NULL;
+        REQUIRE_RC(VPathMakeSysPath(path, &uri));
+        REQUIRE_NOT_NULL(uri);
+#if IGNORE_FAILURE_VDB_1551
+        REQUIRE_EQ(n, string(uri->addr, uri->size));
+
+        char buffer[PATH_MAX] = "";
+        size_t num_writ = 0;
+        REQUIRE_RC(VPathReadSysPath(path, buffer, sizeof buffer, &num_writ));
+        REQUIRE_EQ(n, string(buffer, num_writ));
+#endif
+    }
+}
+
+//  VPathMakePath
+
+FIXTURE_TEST_CASE( VFS_Internal2Native_1, PathFixture )
+{
+    cout << "VFSManagerMakePath(internal) -> VPathReadSysPath(native)" << endl;
+    REQUIRE_RC( VFSManagerMakePath ( vfs, &path, "/C/somepath/somefile.something" ) );
+
+    const String * uri;
+    REQUIRE_RC( VPathMakeSysPath( path, &uri ) );
+    REQUIRE_NOT_NULL( uri );
+    REQUIRE_EQ( string( "C:\\somepath\\somefile.something" ), string ( uri->addr, uri->size ) );
+}
+
+FIXTURE_TEST_CASE( VFS_Internal2Native_2, PathFixture )
+{
+    cout << "VFSManagerMakePath(internal) -> VPathReadSysPath(native)" << endl;
+    REQUIRE_RC( VFSManagerMakePath ( vfs, &path, "/C/somepath/somefile.something" ) );
+
+    char buffer[ 1024 ];
+    size_t num_writ;
+    REQUIRE_RC( VPathReadSysPath( path, buffer, sizeof buffer, &num_writ ) );
+    REQUIRE_EQ( string( "C:\\somepath\\somefile.something" ), string ( buffer, num_writ ) );
+}
+
+#endif // WINDOWS
 
 //TODO:
 //  VPathGetPath
@@ -604,6 +699,7 @@ extern "C"
 {
 
 #include <kapp/args.h>
+#include <klib/rc.h>
 
 ver_t CC KAppVersion ( void )
 {
@@ -620,9 +716,21 @@ rc_t CC Usage ( const Args * args )
 }
 const char UsageDefaultName[] = "test-path";
 
+static void clear_recorded_errors( void )
+{
+    rc_t rc;
+    const char * filename;
+    const char * funcname;
+    uint32_t line_nr;
+    while ( GetUnreadRCInfo ( &rc, &filename, &funcname, &line_nr ) )
+    {
+    }
+}
+
 rc_t CC KMain ( int argc, char *argv [] )
 {
     rc_t rc=VPathTestSuite(argc, argv);
+    clear_recorded_errors();
     return rc;
 }
 

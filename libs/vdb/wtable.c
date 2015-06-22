@@ -312,11 +312,18 @@ LIB_EXPORT rc_t CC VDBManagerCreateTable ( VDBManager *self, VTable **tbl,
  *
  *  "cmode" [ IN ] - creation mode
  *
+ *  "cmode_mask" [ IN ] - if a bit of "cmode_mask" is set (1) then
+ *  the corresponding bit of "cmode" is used for the table,
+ *  otherwise (0) the corresponding bit is taken from db and "cmode"'s
+ *  bit is ignored
+ *  the mask for setting mode (kcmOpen, kcmInit, kcmCreate) is at least
+ *  one bit set in the mask kcmValueMask.
+ *
  *  "name" [ IN ] - NUL terminated string in
  *  db-native character set giving actual table name
  */
-LIB_EXPORT rc_t CC VDatabaseVCreateTable ( VDatabase *self, VTable **tblp,
-    const char *member, KCreateMode cmode, const char *name, va_list args )
+LIB_EXPORT rc_t CC VDatabaseVCreateTableByMask ( VDatabase *self, VTable **tblp,
+    const char *member, KCreateMode cmode, KCreateMode cmode_mask, const char *name, va_list args )
 {
     rc_t rc;
 
@@ -339,15 +346,15 @@ LIB_EXPORT rc_t CC VDatabaseVCreateTable ( VDatabase *self, VTable **tblp,
             {
                 VTable *tbl = * tblp;
 
-                rc = KDatabaseVCreateTable ( self -> kdb, & tbl -> ktbl, cmode, name, args );
+                rc = KDatabaseVCreateTableByMask ( self -> kdb, & tbl -> ktbl, cmode, cmode_mask, name, args );
                 if ( rc == 0 )
                 {
                     rc = VTableOpenUpdate ( tbl, member );
                     if ( rc == 0 )
                     {
                         tbl -> pgsize = self -> pgsize;
-                        tbl -> cmode = self -> cmode;
-                        tbl -> checksum = self -> checksum;
+                        tbl -> cmode = KDatabaseGetCmode ( self->kdb ); /* TODO: do we really want to inherit open mode from db? */
+                        tbl -> checksum = KDatabaseGetChecksum ( self->kdb );
 #if LAZY_OPEN_COL_NODE
                         KMDataNodeRelease ( tbl -> col_node );
                         tbl -> col_node = NULL;
@@ -367,7 +374,7 @@ LIB_EXPORT rc_t CC VDatabaseVCreateTable ( VDatabase *self, VTable **tblp,
     return rc;
 }
 
-LIB_EXPORT rc_t CC VDatabaseCreateTable ( VDatabase *self, VTable **tbl,
+LIB_EXPORT rc_t CC VDatabaseCreateTable ( struct VDatabase *self, VTable **tbl,
     const char *member, KCreateMode cmode, const char *name, ... )
 {
     rc_t rc;
@@ -375,6 +382,39 @@ LIB_EXPORT rc_t CC VDatabaseCreateTable ( VDatabase *self, VTable **tbl,
 
     va_start ( args, name );
     rc = VDatabaseVCreateTable ( self, tbl, member, cmode, name, args );
+    va_end ( args );
+
+    return rc;
+}
+LIB_EXPORT rc_t CC VDatabaseVCreateTable ( struct VDatabase *self, VTable **tbl,
+    const char *member, KCreateMode cmode, const char *name, va_list args )
+{
+    return VDatabaseVCreateTableByMask ( self, tbl, member, cmode, -1, name, args );
+}
+
+
+LIB_EXPORT rc_t CC VDatabaseCreateTableDefault ( VDatabase *self, VTable **tbl,
+    const char *member, const char *name, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, name );
+    rc = VDatabaseVCreateTableByMask ( self, tbl, member, 0, 0, name, args );
+    va_end ( args );
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VDatabaseCreateTableByMask ( VDatabase *self, VTable **tbl,
+    const char *member, KCreateMode cmode, KCreateMode cmode_mask,
+    const char *name, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, name );
+    rc = VDatabaseVCreateTableByMask ( self, tbl, member, cmode, cmode_mask, name, args );
     va_end ( args );
 
     return rc;

@@ -90,7 +90,7 @@ _FooNodeMake ( struct XFSNode ** Foo, const char * NodeName )
             RCt = XFSDocNodeMakeWithFlavor (
                                         Doc,
                                         NodeName,
-                                        XFSPermDefNodeChar (),
+                                        XFSPermRODefNodeChar (),
                                         _sFlavorOfFoo,
                                         & TheFoo
                                         );
@@ -245,13 +245,6 @@ XFSLinkProvider ( const struct XFSTeleport ** Teleport )
 LIB_EXPORT
 rc_t CC
 XFSLocalRepositoryProvider ( const struct XFSTeleport ** Teleport )
-{
-    return XFSFooNodeProvider ( Teleport );
-}
-
-LIB_EXPORT
-rc_t CC
-XFSWorkspaceProvider ( const struct XFSTeleport ** Teleport )
 {
     return XFSFooNodeProvider ( Teleport );
 }

@@ -250,22 +250,22 @@ void CC SFunctionWhack ( void *self, void *ignore )
 /* Cmp
  * Sort
  */
-int CC SFunctionCmp ( const void *item, const void *n )
+int64_t CC SFunctionCmp ( const void *item, const void *n )
 {
     const uint32_t *a = item;
     const SFunction *b = n;
 
     if ( * a > b -> version )
         return 1;
-    return ( int ) ( * a >> 24 ) - ( int ) ( b -> version >> 24 );
+    return ( int64_t ) ( * a >> 24 ) - ( int64_t ) ( b -> version >> 24 );
 }
 
-int CC SFunctionSort ( const void *item, const void *n )
+int64_t CC SFunctionSort ( const void *item, const void *n )
 {
     const SFunction *a = item;
     const SFunction *b = n;
 
-    return ( int ) ( a -> version >> 24 ) - ( int ) ( b -> version >> 24 );
+    return ( int64_t ) ( a -> version >> 24 ) - ( int64_t ) ( b -> version >> 24 );
 }
 
 #if _DEBUGGING && 0

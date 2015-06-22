@@ -35,6 +35,8 @@
 #include <kfs/directory.h>
 #endif
 
+#include <kdb/column.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -51,6 +53,12 @@ struct KDBManager;
  *  opaque connection to a database within file system
  */
 typedef struct KDatabase KDatabase;
+
+KCreateMode KDatabaseGetCmode ( const KDatabase *self);
+KCreateMode KDatabaseSetCmode ( KDatabase *self, KCreateMode new_val);
+
+KChecksum KDatabaseGetChecksum ( const KDatabase *self);
+KChecksum KDatabaseSetChecksum ( KDatabase *self, KChecksum new_val);
 
 
 /* AddRef

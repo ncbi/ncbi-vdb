@@ -796,7 +796,7 @@ LIB_EXPORT rc_t CC KDatabaseVCreateIndex ( KDatabase *self, KIndex **idxp,
         if ( rc == 0 )
         {
             rc = KDBManagerCreateIndexInt ( self -> mgr, idxp, dir,
-                type, cmode | kcmParents, path, self -> use_md5 );
+                type, cmode | kcmParents, path, (self -> cmode & kcmMD5) != 0 );
             if ( rc == 0 )
             {
                 KIndex *idx = * idxp;

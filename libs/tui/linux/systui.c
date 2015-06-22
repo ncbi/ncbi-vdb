@@ -263,7 +263,7 @@ rc_t CC KTUI_Init_platform( KTUI * self )
 		
 		printf( "\033[?1000h" );     /* mouse tracking on ( SET_VT200_MOUSE ): mouse-up/down events, does work with putty */
 		printf( "\033[?1002h" );     /* mouse tracking on ( SET_BTN_EVENT_MOUSE ): mouse-up/down/move events, does work with putty */
-		/*printf( "\033[?1003h" );     /* mouse tracking on ( SET_ANY_EVENT_MOUSE ): ??? */
+		/*printf( "\033[?1003h" );   mouse tracking on ( SET_ANY_EVENT_MOUSE ): ??? */
 		
         fflush( stdout );
 
@@ -292,7 +292,7 @@ rc_t CC KTUI_Destroy_platform ( struct KTUI_pf * pf )
     /*printf( "\033[?9l" );       mouse tracking X10-style off */
 	printf( "\033[?1000l" );       /* mouse tracking off */	
 	printf( "\033[?1002l" );       /* mouse tracking off */		
-	/*printf( "\033[?1003l" );       /* mouse tracking off */	
+	/*printf( "\033[?1003l" );    mouse tracking off */	
     fflush( stdout );
 
     return 0;

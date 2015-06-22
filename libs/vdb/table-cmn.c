@@ -1125,7 +1125,7 @@ rc_t VColumnRefMake ( VColumnRef **rp, const VSchema *schema, const SColumn *sco
  *  compares by name only
  *  "item" is a const String*
  */
-int CC VColumnRefCmpString ( const void *item, const BSTNode *n )
+int64_t CC VColumnRefCmpString ( const void *item, const BSTNode *n )
 {
     const VColumnRef *cref = ( const VColumnRef* ) n;
     return StringCompare ( item, & cref -> name );
@@ -1134,13 +1134,13 @@ int CC VColumnRefCmpString ( const void *item, const BSTNode *n )
 /* Sort
  *  compares by ( name, type ) pair
  */
-int CC VColumnRefSort ( const BSTNode *item, const BSTNode *n )
+int64_t CC VColumnRefSort ( const BSTNode *item, const BSTNode *n )
 {
     const VColumnRef *a = ( const VColumnRef* ) item;
     const VColumnRef *b = ( const VColumnRef* ) n;
 
     /* sorted first by name - case sensitive ASCII alphabetically */
-    int diff = StringCompare ( & a -> name, & b -> name );
+    int64_t diff = StringCompare ( & a -> name, & b -> name );
     if ( diff != 0 )
         return diff;
 

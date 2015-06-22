@@ -77,9 +77,19 @@ ALIGN_EXTERN rc_t CC ReferenceMgr_SetCache(ReferenceMgr const *const self, size_
 typedef struct ReferenceSeq ReferenceSeq;
 
 /* id: chr12 or NC_000001.3 */
-ALIGN_EXTERN rc_t CC ReferenceMgr_GetSeq(const ReferenceMgr* const cself, const ReferenceSeq** const seq, const char* id, bool *shouldUnmap);
+ALIGN_EXTERN rc_t CC ReferenceMgr_GetSeq(ReferenceMgr const *self,
+                                         ReferenceSeq const **seq,
+                                         char const id[],
+                                         bool *shouldUnmap,
+                                         bool allowMultiMapping,
+                                         bool wasRenamed[]);
 
-ALIGN_EXTERN rc_t CC ReferenceMgr_Verify(const ReferenceMgr* cself, const char* id, INSDC_coord_len length, const uint8_t md5[16]);
+ALIGN_EXTERN rc_t CC ReferenceMgr_Verify(ReferenceMgr const *self,
+                                         char const id[],
+                                         INSDC_coord_len length,
+                                         uint8_t const md5[16],
+                                         bool allowMultiMapping,
+                                         bool wasRenamed[]);
 
 ALIGN_EXTERN rc_t CC ReferenceMgr_FastaPath(const ReferenceMgr* cself, const char* fasta_path);
 
@@ -115,6 +125,8 @@ ALIGN_EXTERN rc_t CC ReferenceSeq_Read(const ReferenceSeq* cself, INSDC_coord_ze
                                        uint8_t* buffer, INSDC_coord_len* ref_len);
 
 ALIGN_EXTERN rc_t CC ReferenceSeq_Get1stRow(const ReferenceSeq* cself, int64_t* row_id);
+    
+ALIGN_EXTERN rc_t CC ReferenceSeq_GetID(ReferenceSeq const *self, char const **rslt);
 
 ALIGN_EXTERN rc_t CC ReferenceSeq_Compress(const ReferenceSeq* cself,
                                            uint32_t options,

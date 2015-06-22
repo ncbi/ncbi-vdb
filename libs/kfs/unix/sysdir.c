@@ -219,7 +219,7 @@ static KNamelist_vt_v1 vtKSysDirListing =
 };
 
 static
-int KSysDirListingSort ( const void *a, const void *b, void * ignored )
+int64_t KSysDirListingSort ( const void *a, const void *b, void * ignored )
 {
     return strcmp ( * ( const char** ) a, * ( const char** ) b );
 }

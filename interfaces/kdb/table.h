@@ -71,16 +71,34 @@ KDB_EXTERN rc_t CC KTableRelease ( const KTable *self );
  *
  *  "cmode" [ IN ] - creation mode
  *
+ *  "cmode_mask" [ IN ] - if a bit of "cmode_mask" is set (1) then
+ *  the corresponding bit of "cmode" is used for the table,
+ *  otherwise (0) the corresponding bit is taken from db and "cmode"'s
+ *  bit is ignored
+ *  the mask for setting mode (kcmOpen, kcmInit, kcmCreate) is at least
+ *  one bit set in the mask kcmValueMask.
+ *
  *  "path" [ IN ] - NUL terminated string in
  *  wd-native character set giving path to table
  */
 KDB_EXTERN rc_t CC KDBManagerCreateTable ( struct KDBManager *self,
     KTable **tbl, KCreateMode cmode, const char *path, ... );
+KDB_EXTERN rc_t CC KDatabaseCreateTableByMask ( struct KDatabase *self,
+    KTable **tbl, KCreateMode cmode, KCreateMode cmode_mask, const char *name, ... );
+/* the following function is DEPRECATED, it's left for backward compatibility only */
 KDB_EXTERN rc_t CC KDatabaseCreateTable ( struct KDatabase *self,
     KTable **tbl, KCreateMode cmode, const char *name, ... );
 
+/* Default function is added only to make tools/kqsh build possible since
+   it requires 1 to 1 mapping between K- and V-functions
+*/
+/*KDB_EXTERN rc_t CC KDatabaseCreateTableDefault ( struct KDatabase *self,
+    KTable **tbl, const char *name, ... );*/
 KDB_EXTERN rc_t CC KDBManagerVCreateTable ( struct KDBManager *self,
     KTable **tbl, KCreateMode cmode, const char *path, va_list args );
+KDB_EXTERN rc_t CC KDatabaseVCreateTableByMask ( struct KDatabase *self,
+    KTable **tbl, KCreateMode cmode, KCreateMode cmode_mask, const char *name, va_list args );
+/* the following function is DEPRECATED, it's left for backward compatibility only */
 KDB_EXTERN rc_t CC KDatabaseVCreateTable ( struct KDatabase *self,
     KTable **tbl, KCreateMode cmode, const char *name, va_list args );
 

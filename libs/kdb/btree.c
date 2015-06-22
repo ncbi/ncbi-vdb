@@ -1790,12 +1790,12 @@ rc_t leaf_insert ( KBTree *self, KBTreeEntryData *pb, KBTreeLeafNode *node, uint
 }
 
 static
-int CC KBTreeLeafEntry_sort_desc_by_offset ( const void *a, const void *b, void *data )
+int64_t CC KBTreeLeafEntry_sort_desc_by_offset ( const void *a, const void *b, void *data )
 {
     const KBTreeLeafEntry *ord = ( const void* ) data;
     int left = * ( const uint16_t* ) a;
     int right = * ( const uint16_t* ) b;
-    return ord [ right ] . key - ord [ left ] . key;
+    return (int64_t) ord [ right ] . key - (int64_t) ord [ left ] . key;
 }
 
 static
@@ -2228,12 +2228,12 @@ rc_t branch_insert ( KBTree *self, KBTreeBranchNode *node, const KBTreeSplit *sp
 }
 
 static
-int CC KBTreeBranchEntry_sort_desc_by_offset ( const void *a, const void *b, void *data )
+int64_t CC KBTreeBranchEntry_sort_desc_by_offset ( const void *a, const void *b, void *data )
 {
     const KBTreeBranchEntry *ord = ( const void* ) data;
     int left = * ( const uint16_t* ) a;
     int right = * ( const uint16_t* ) b;
-    return ord [ right ] . key - ord [ left ] . key;
+    return (int64_t) ord [ right ] . key - (int64_t) ord [ left ] . key;
 }
 
 static

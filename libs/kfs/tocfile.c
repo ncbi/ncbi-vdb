@@ -63,7 +63,7 @@ struct FileCacheNode
 };
 
 static
-int CC FileCacheNodeCmp ( const void *item, const BSTNode *n )
+int64_t CC FileCacheNodeCmp ( const void *item, const BSTNode *n )
 {
     const char *a = item;
     const FileCacheNode *b = ( const FileCacheNode* ) n;
@@ -74,7 +74,7 @@ int CC FileCacheNodeCmp ( const void *item, const BSTNode *n )
 }
 
 static
-int CC FileCacheNodeSort ( const BSTNode *item, const BSTNode *n )
+int64_t CC FileCacheNodeSort ( const BSTNode *item, const BSTNode *n )
 {
     const FileCacheNode *a = ( const FileCacheNode* ) item;
     const FileCacheNode *b = ( const FileCacheNode* ) n;
@@ -244,7 +244,7 @@ rc_t CC KTocFileRead ( const KTocFile *self, uint64_t _pos,
     assert (self != NULL);
     assert (_buffer != NULL);
 
-    TOC_DEBUG (("%s: off %ju siz %zu ------\n", __func__, _pos, bsize));
+    TOC_DEBUG (("%s: off %lu siz %zu ------\n", __func__, _pos, bsize));
     TOC_DEBUG (("%s: self->file_size %lu\n", __func__, self->file_size));
     rc = 0;
     pos = _pos;
@@ -329,14 +329,14 @@ rc_t CC KTocFileRead ( const KTocFile *self, uint64_t _pos,
                 TOC_DEBUG (("%s can't resolve offset $(O) %R\n", __func__, pos, rc));
                 return rc;
             }
-            TOC_DEBUG (("%s reading \"%s\" at offset %ju\n", __func__, path, pos));
+            TOC_DEBUG (("%s reading \"%s\" at offset %lu\n", __func__, path, pos));
             rc = KDirectoryFileSize (dir, &fsize, "%s", path);
             if (rc != 0)
             {
                 TOC_DEBUG (("%s can't  determine sub file size  %s %R\n", __func__, path, rc));
                 return rc;
             }
-            TOC_DEBUG (("%s size %ju\n", __func__, fsize));
+            TOC_DEBUG (("%s size %lu\n", __func__, fsize));
 
             if ((fpos + bsize) <= fsize)
             {

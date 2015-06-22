@@ -77,7 +77,8 @@ $(ILIBDIR)/libkapp: $(addprefix $(ILIBDIR)/libkapp.,$(LIBX))
 KAPP_CMN = \
 	args \
 	tokenizer \
-	sysmain
+	sysmain \
+	ram
 
 KAPP_SRC = \
 	main \

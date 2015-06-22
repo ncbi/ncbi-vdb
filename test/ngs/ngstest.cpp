@@ -785,6 +785,23 @@ TEST_CASE(NGS_FailedToOpen)
     REQUIRE_FAILED ();
 }
 
+//////////////////////////////////////////// Open read collection using system path
+
+#ifdef WIN32
+#define SYSPATH_ACCESSION ".\\data\\SysPathTest"
+#else
+#define SYSPATH_ACCESSION "./data/SysPathTest"
+#endif
+TEST_CASE(NGS_OpenBySysPath)
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
+    NGS_ReadCollection * readColl = NGS_ReadCollectionMake( ctx, SYSPATH_ACCESSION );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_NOT_NULL ( readColl );
+    NGS_ReadCollectionRelease ( readColl, ctx );
+    REQUIRE ( ! FAILED () );
+}
+
 //////////////////////////////////////////// Main
 extern "C"
 {

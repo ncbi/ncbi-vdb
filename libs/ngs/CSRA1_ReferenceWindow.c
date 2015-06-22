@@ -481,28 +481,30 @@ bool CSRA1_ReferenceWindowGetMateIsReversedOrientation( CSRA1_ReferenceWindow* s
 /*--------------------------------------------------------------------------
  * Iterator
  */
-int AlignmentSort ( const void * p_a, const void * p_b, void *data )
+static
+int64_t AlignmentSort ( const void * p_a, const void * p_b, void *data )
 {
     const struct AlignmentInfo* a = ( const struct AlignmentInfo * ) p_a;
     const struct AlignmentInfo* b = ( const struct AlignmentInfo * ) p_b;
     
-    if ( a -> pos < b -> pos ) return -1;
-    if ( a -> pos > b -> pos ) return 1;
+    if ( a -> pos < b -> pos )
+        return -1;
+    else if ( a -> pos > b -> pos )
+        return 1;
     
+    /* cannot use uint64_t - uint64_t because of possible overflow */
     if ( a -> len < b -> len ) return 1;
     if ( a -> len > b -> len ) return -1;
     
-    if ( a -> cat < b -> cat ) return -1;
-    if ( a -> cat > b -> cat ) return 1;
+    if ( a -> cat != b -> cat )
+        return (int64_t) a -> cat - (int64_t) b -> cat;
     
-    if ( a -> mapq < b -> mapq ) return 1;
-    if ( a -> mapq > b -> mapq ) return -1;
+    /* sort by mapq in reverse order */
+    if ( a -> mapq != b -> mapq )
+        return (int64_t) b -> mapq - (int64_t) a -> mapq;
 
     /* use row id as the last resort, to make sorting more predictable */
-    if ( a -> id < b -> id ) return -1;
-    if ( a -> id > b -> id ) return 1;
-    
-    return 0;
+    return a -> id < b -> id ? -1 : a -> id > b -> id;
 }
 
 static
@@ -571,7 +573,8 @@ void LoadAlignmentIndex ( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t row_id
     }
 }
 
-int AlignmentSortCircular ( const void * p_a, const void * p_b, void *data )
+static
+int64_t AlignmentSortCircular ( const void * p_a, const void * p_b, void *data )
 {
     const struct AlignmentInfo* a = ( const struct AlignmentInfo * ) p_a;
     const struct AlignmentInfo* b = ( const struct AlignmentInfo * ) p_b;
@@ -588,23 +591,24 @@ int AlignmentSortCircular ( const void * p_a, const void * p_b, void *data )
         b_start -= total;
     }
     
-    if ( a_start < b_start ) return -1;
-    if ( a_start > b_start ) return 1;
+    if ( a_start < b_start )
+        return -1;
+    else if ( a_start > b_start )
+        return 1;
     
+    /* cannot use uint64_t - uint64_t because of possible overflow */
     if ( a -> len < b -> len ) return 1;
     if ( a -> len > b -> len ) return -1;
+
+    if ( a -> cat != b -> cat )
+        return (int64_t) a -> cat - (int64_t) b -> cat;
     
-    if ( a -> cat < b -> cat ) return -1;
-    if ( a -> cat > b -> cat ) return 1;
-    
-    if ( a -> mapq < b -> mapq ) return 1;
-    if ( a -> mapq > b -> mapq ) return -1;
+    /* sort by mapq in reverse order */
+    if ( a -> mapq != b -> mapq )
+        return (int64_t) b -> mapq - (int64_t) a -> mapq;
 
     /* use row id as the last resort, to make sorting more predictable */
-    if ( a -> id < b -> id ) return -1;
-    if ( a -> id > b -> id ) return 1;
-    
-    return 0;
+    return a -> id < b -> id ? -1 : a -> id > b -> id;
 }
 
 static

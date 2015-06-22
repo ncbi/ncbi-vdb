@@ -848,10 +848,18 @@ LIB_EXPORT rc_t CC KColumnBlobRead ( const KColumnBlob *self,
                     KDbgSetColName( self->col->path );
                 }
 #endif
+                *num_read = 0;
+                while (*num_read < to_read) {
+                    size_t nread = 0;
 
-                rc = KColumnDataRead ( & col -> df,
-                    & self -> pmorig, offset, buffer, to_read, num_read );
-
+                    rc = KColumnDataRead ( & col -> df, & self -> pmorig, offset - *num_read, (void *)((char *)buffer + *num_read), to_read - *num_read, &nread );
+                    if (rc) break;
+                    if (nread == 0) {
+                        rc = RC ( rcDB, rcBlob, rcReading, rcFile, rcInsufficient );
+                        break;
+                    }
+                    *num_read += nread;
+                }
 #ifdef _DEBUGGING
                 if ( KDbgTestModConds ( DBG_KFS, DBG_FLAG( DBG_KFS_POS ) ) ||
                      KDbgTestModConds ( DBG_KFS, DBG_FLAG( DBG_KFS_PAGE ) ) )

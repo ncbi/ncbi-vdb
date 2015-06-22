@@ -2143,8 +2143,20 @@ LIB_EXPORT rc_t CC KColumnBlobRead ( const KColumnBlob *self,
                 size_t to_read = size - offset;
                 if ( to_read > bsize )
                     to_read = bsize;
-                rc = KColumnDataRead ( & col -> df,
-                    pm, offset, buffer, to_read, num_read );
+
+                *num_read = 0;
+                while (*num_read < to_read) {
+                    size_t nread = 0;
+
+                    rc = KColumnDataRead ( & col -> df, pm, offset - *num_read, (void *)((char *)buffer + *num_read), to_read - *num_read, &nread );
+                    if (rc) break;
+                    if (nread == 0) {
+                        rc = RC ( rcDB, rcBlob, rcReading, rcFile, rcInsufficient );
+                        break;
+                    }
+                    *num_read += nread;
+                }
+
                 if ( rc == 0 )
                 {
                     * remaining = size - offset - * num_read;

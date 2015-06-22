@@ -512,24 +512,22 @@ _FUSE_stat_for_node ( const struct XFSNode * Node, struct stat * Stat )
     RCt = XFSAttrEditorType ( Editor, & Type );
     if ( RCt == 0 ) {
         Stat -> st_mode = 0;
+        Stat -> st_uid = getuid();
+        Stat -> st_gid = getgid();
 
-        RCt = XFSAttrEditorPermissions ( Editor, & Perm );
-        if ( RCt == 0 ) {
-            RCt = _FUSE_char_to_perm ( Perm, Type, & ( Stat -> st_mode ) );
+        if ( XFSAttrEditorPermissions ( Editor, & Perm ) == 0 ) {
+            _FUSE_char_to_perm ( Perm, Type, & ( Stat -> st_mode ) );
+        }
 
-            if ( RCt == 0 && Stat -> st_mode != 0 ) {
-                if ( XFSAttrEditorDate ( Editor, & Time ) == 0 ) {
-                    if ( XFSAttrEditorSize ( Editor, & Size ) == 0 ) {
-                        Stat -> st_uid = getuid();
-                        Stat -> st_gid = getgid();
-                        Stat -> st_blksize = XFS_SIZE_4096;
-                        Stat -> st_size = Size;
-                        Stat -> st_atime = Time;
-                        Stat -> st_mtime = Time;
-                        Stat -> st_ctime = Time;
-                    }
-                }
-            }
+        if ( XFSAttrEditorDate ( Editor, & Time ) == 0 ) {
+            Stat -> st_atime = Time;
+            Stat -> st_mtime = Time;
+            Stat -> st_ctime = Time;
+        }
+
+        if ( XFSAttrEditorSize ( Editor, & Size ) == 0 ) {
+            Stat -> st_blksize = XFS_SIZE_4096;
+            Stat -> st_size = Size;
         }
     }
 
@@ -1793,6 +1791,7 @@ XFS_FUSE_ftruncate (
         return EINVAL * - 1;
     }
 
+printf ( " [JPP] [%d] [%p]\n", __LINE__, TheFileInfo -> fh );
     RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, NULL );
     if ( RCt == 0 ) {
         RCt = XFSNodeAttrEditor ( Node, & Editor );

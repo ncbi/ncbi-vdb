@@ -55,7 +55,7 @@ LIB_EXPORT void CC ksort_int32_t ( int32_t *pbase, size_t total_elems )
 {
 #define SWAP( a, b, off, size )  TSWAP ( int32_t, a, b )
 #define CMP( a, b )                                             \
-    ( * ( const int32_t* ) ( a ) - * ( const int32_t* ) ( b ) )
+    ( (int64_t) * ( const int32_t* ) ( a ) - (int64_t) * ( const int32_t* ) ( b ) )
 
     KSORT ( pbase, total_elems, sizeof * pbase, 0, sizeof * pbase );
 
@@ -66,7 +66,8 @@ LIB_EXPORT void CC ksort_int32_t ( int32_t *pbase, size_t total_elems )
 LIB_EXPORT void CC ksort_uint32_t ( uint32_t *pbase, size_t total_elems )
 {
 #define SWAP( a, b, off, size )  TSWAP ( uint32_t, a, b )
-#define CMP( a, b ) TCMP ( uint32_t, a, b )
+#define CMP( a, b ) \
+    ( (int64_t) * ( const uint32_t* ) ( a ) - (int64_t) * ( const uint32_t* ) ( b ) )
 
     KSORT ( pbase, total_elems, sizeof * pbase, 0, sizeof * pbase );
 

@@ -75,16 +75,13 @@ void sra_decompress_init (void)
 
 /* local routines
  */
-static int CC _s_cmp_indexes (const void* a1, const void* a2, void *data)
+static int64_t CC _s_cmp_indexes (const void* a1, const void* a2, void *data)
 {
   SRALookup_t plook = data;
   uint32_t bits1    = plook[*(uint16_t*)a1].bits;
   uint32_t bits2    = plook[*(uint16_t*)a2].bits;
 
-  if (bits1 < bits2) return -1;
-  if (bits1 > bits2) return  1;
-
-  return 0;
+  return (int64_t)bits1 - (int64_t)bits2;
 }
 /*
  */

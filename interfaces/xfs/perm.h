@@ -150,10 +150,15 @@ XFS_EXTERN rc_t CC XFSPermToChar (
 /*))
  //     Some usefull defaults ... not sure
 ((*/
-XFS_EXTERN const char * CC XFSPermDefContChar ();
-XFS_EXTERN const char * CC XFSPermDefNodeChar ();
-XFS_EXTERN uint32_t CC XFSPermDefContNum ();
-XFS_EXTERN uint32_t CC XFSPermDefNodeNum ();
+XFS_EXTERN const char * CC XFSPermRODefContChar ();
+XFS_EXTERN const char * CC XFSPermRODefNodeChar ();
+XFS_EXTERN uint32_t CC XFSPermRODefContNum ();
+XFS_EXTERN uint32_t CC XFSPermRODefNodeNum ();
+
+XFS_EXTERN const char * CC XFSPermRWDefContChar ();
+XFS_EXTERN const char * CC XFSPermRWDefNodeChar ();
+XFS_EXTERN uint32_t CC XFSPermRWDefContNum ();
+XFS_EXTERN uint32_t CC XFSPermRWDefNodeNum ();
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 

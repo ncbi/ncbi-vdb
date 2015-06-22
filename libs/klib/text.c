@@ -299,7 +299,7 @@ LIB_EXPORT int CC StringCaseCompare ( const String *a, const String *b )
  *  performs more quickly than StringCompare for cases
  *  where only deterministic ordering is needed ( e.g. symbol table ).
  */
-LIB_EXPORT int CC StringOrder ( const String *a, const String *b )
+LIB_EXPORT int64_t CC StringOrder ( const String *a, const String *b )
 {
     if ( a == b )
         return 0;
@@ -318,7 +318,7 @@ LIB_EXPORT int CC StringOrder ( const String *a, const String *b )
 /* StringOrderNoNullCheck
  *  avoids tests for NULL strings
  */
-LIB_EXPORT int CC StringOrderNoNullCheck ( const String *a, const String *b )
+LIB_EXPORT int64_t CC StringOrderNoNullCheck ( const String *a, const String *b )
 {
     if ( a -> size < b -> size )
         return -1;

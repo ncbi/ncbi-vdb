@@ -868,6 +868,8 @@ static uint32_t Bits(uint64_t n, EReadIdType type) {
                 case SRA_PLATFORM_HELICOS:
                 case SRA_PLATFORM_PACBIO_SMRT:
                 case SRA_PLATFORM_ION_TORRENT:
+				case SRA_PLATFORM_CAPILLARY:
+				case SRA_PLATFORM_OXFORD_NANOPORE:
                 default:
                     rd->varReadLen = true;
                     break;
@@ -2086,14 +2088,15 @@ VdbBlastStatus CC VdbBlastRunSetAddRun(VdbBlastRunSet *self,
        freed during VdbBlastRun release */
     char *fullpath = NULL;
 
-    VdbBlastDb *obj = calloc(1, sizeof *obj);
-    if (obj == NULL) {
-        return eVdbBlastMemErr;
-    }
-
+    VdbBlastDb *obj = NULL;
     if (self == NULL || self->mgr == NULL || self->beingRead) {
         S
         return eVdbBlastErr;
+    }
+
+    obj = calloc(1, sizeof *obj);
+    if (obj == NULL) {
+        return eVdbBlastMemErr;
     }
 
     rc = _VdbBlastMgrNativeToPosix(self->mgr, native, rundesc, sizeof rundesc);
@@ -2128,6 +2131,7 @@ VdbBlastStatus CC VdbBlastRunSetAddRun(VdbBlastRunSet *self,
 
     if (status == eVdbBlastNoErr && _VTableVarReadNum(obj->seqTbl)) {
         /* VDB-1430: temporarily skip runs with variable read length */
+        _VdbBlastDbWhack(obj);
         S
         status = eVdbBlastNotImplemented;
     }

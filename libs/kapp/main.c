@@ -106,6 +106,39 @@ const char * CC NextArg ( const char **argp, int *i, int argc, char *argv [],
 }
 #endif
 
+rc_t CC KAppCheckEnvironment ( bool require64Bits, uint64_t requireRamSize )
+{
+    rc_t rc;
+    uint64_t totalRam;
+#if _ARCH_BITS != 64
+    if ( require64Bits )
+    {
+        rc = RC ( rcApp, rcNoTarg, rcInitializing, rcResources, rcUnsupported );
+        LOGERR ( klogFatal, rc, "can only be run as 64-bit application" );
+        return rc;
+    }
+#endif
+
+    rc = KAppGetTotalRam ( & totalRam );
+    if ( rc != 0 )
+    {
+        return rc;
+    }
+
+    if ( requireRamSize && totalRam < requireRamSize )
+    {
+        rc = RC ( rcApp, rcNoTarg, rcInitializing, rcResources, rcUnsupported );
+        PLOGERR ( klogFatal, ( klogFatal, rc,  "there is not enough RAM in the system." 
+                                           " required size: $(REQUIRED) B, present: $(PRESENT) B"
+                              , "REQUIRED=%lu,PRESENT=%lu"
+                              , requireRamSize
+                              , totalRam ) );
+        return rc;
+    }
+
+    return 0;
+}
+
 /* AsciiToXXX
  *  replacement for atoi
  *  converts NUL terminated string in "arg" to integer

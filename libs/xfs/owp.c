@@ -190,7 +190,7 @@ _OWPStringCmp ( const char * Str1, const char * Str2 )
 }   /* _OWPStringCmp () */
 
 static
-int CC
+int64_t CC
 _OWPEntryCmp ( const void * Item, const BSTNode * Node )
 {
     return _OWPStringCmp (
@@ -268,7 +268,7 @@ _OWPEntryMake ( const char * Key, const char * Property )
 }   /* _OWPEntryMake () */
 
 static
-int CC
+int64_t CC
 _OWPNodeCmp ( const BSTNode * Node1, const BSTNode * Node2 )
 {
     return _OWPStringCmp (

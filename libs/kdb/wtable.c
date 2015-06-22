@@ -369,8 +369,7 @@ rc_t KDBManagerMakeTableUpdate ( KDBManager *self,
  */
 static
 rc_t KDBManagerVCreateTableInt ( KDBManager *self,
-    KTable **tbl, KDirectory *wd, KCreateMode cmode, 
-    const char *path, va_list args )
+    KTable **tbl, KDirectory *wd, KCreateMode cmode, const char *path, va_list args )
 {
     char tblpath [ 4096 ];
     rc_t rc = KDirectoryVResolvePath ( wd, true,
@@ -485,6 +484,23 @@ rc_t KDBManagerVCreateTableInt ( KDBManager *self,
     return rc;
 }
 
+/* Default function is added only to make tools/kqsh build possible since
+   it requires 1 to 1 mapping between K- and V-functions
+*/
+
+LIB_EXPORT rc_t CC KDatabaseCreateTableDefault ( struct KDatabase *self,
+    KTable **tbl, const char *name, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, name );
+    rc = KDatabaseVCreateTableByMask ( self, tbl, 0, 0, name, args );
+    va_end ( args );
+
+    return rc;
+}
+
 LIB_EXPORT rc_t CC KDBManagerCreateTable ( KDBManager *self,
     KTable **tbl, KCreateMode cmode, const char *path, ... )
 {
@@ -524,9 +540,28 @@ LIB_EXPORT rc_t CC KDatabaseCreateTable ( KDatabase *self,
 
     return rc;
 }
-
 LIB_EXPORT rc_t CC KDatabaseVCreateTable ( KDatabase *self,
     KTable **tblp, KCreateMode cmode, const char *name, va_list args )
+{
+    return KDatabaseVCreateTableByMask ( self, tblp, cmode, -1, name, args );
+}
+
+LIB_EXPORT rc_t CC KDatabaseCreateTableByMask ( KDatabase *self,
+    KTable **tbl, KCreateMode cmode, KCreateMode cmode_mask, const char *name, ... )
+{
+    rc_t rc;
+    va_list args;
+
+    va_start ( args, name );
+    rc = KDatabaseVCreateTableByMask ( self, tbl, cmode, cmode_mask, name, args );
+    va_end ( args );
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KDatabaseVCreateTableByMask ( KDatabase *self,
+    KTable **tblp, KCreateMode cmode, KCreateMode cmode_mask,
+    const char *name, va_list args )
 {
     rc_t rc;
     char path [ 256 ];
@@ -551,8 +586,13 @@ LIB_EXPORT rc_t CC KDatabaseVCreateTable ( KDatabase *self,
             0775, kcmOpen, "tbl" );
         if ( rc == 0 )
         {
+            KCreateMode table_cmode;
+            /* fix mask */
+            if ( (cmode_mask & kcmValueMask) != 0 )
+                cmode_mask |= kcmValueMask;
+            table_cmode = (self->cmode & ~cmode_mask) | (cmode & cmode_mask);
             rc = KDBManagerVCreateTableInt ( self -> mgr, tblp,
-                                             self -> dir, cmode, path, NULL );
+                                             self -> dir, table_cmode, path, NULL );
             if ( rc == 0 )
             {
                 KTable *tbl = ( KTable* ) * tblp;

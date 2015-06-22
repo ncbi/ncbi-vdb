@@ -75,7 +75,7 @@ typedef struct {
 
 
 static
-int CC row_range_cmp ( const void *a, const BSTNode *b )
+int64_t CC row_range_cmp ( const void *a, const BSTNode *b )
 {
 	const int64_t  *key=a;
 	const BSTRowRange *node = ( const BSTRowRange* ) b;
@@ -85,17 +85,12 @@ int CC row_range_cmp ( const void *a, const BSTNode *b )
 }
 
 static
-int CC row_range_sort( const BSTNode *a, const BSTNode *b )
+int64_t CC row_range_sort( const BSTNode *a, const BSTNode *b )
 {
     const BSTRowRange * item = ( const BSTRowRange* ) a;
     const BSTRowRange * node = ( const BSTRowRange* ) b;
-    int64_t diff = item->rr.start_id - node->rr.start_id;
-    if ( diff > 0 )
-        return 1;
-    else if ( diff < 0 )
-        return -1;
-    else
-        return 0;
+    return item->rr.start_id < node->rr.start_id ?
+        -1 : item->rr.start_id > node->rr.start_id;
 }    
 
 

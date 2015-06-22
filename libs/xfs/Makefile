@@ -92,6 +92,7 @@ XFS_SRC = \
     security    \
     model    \
     path    \
+    pfad    \
     tree    \
     node    \
     perm    \
@@ -117,7 +118,10 @@ XFS_SRC = \
     tar     \
     xencro     \
     encro     \
+    xencws     \
+    encws     \
     lockdpt \
+    lreader \
     schwarzschraube \
     zehr    \
     mehr

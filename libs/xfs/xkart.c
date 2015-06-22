@@ -293,7 +293,7 @@ _DisplayName (
 }   /* _DisplayName () */
 
 static
-int CC
+int64_t CC
 _AddKartItemCallback ( const BSTNode * N1, const BSTNode * N2 )
 {
     return XFS_StringCompare4BST_ZHR (
@@ -457,7 +457,6 @@ XFSKartReload ( struct XFSKart * self )
     RCt = KDirectoryNativeDir ( & Directory );
     if ( RCt == 0 ) {
         RCt = KartMake ( Directory, self -> path, & TheKart, & IsKart );
-printf ( " __MOOO [%d][%p]\n", __LINE__, TheKart );
         if ( RCt == 0 ) {
             if ( ! IsKart ) {
                 RCt = XFS_RC ( rcInvalid );
@@ -484,7 +483,6 @@ printf ( " __MOOO [%d][%p]\n", __LINE__, TheKart );
             }
 
             if ( TheKart != NULL ) {
-printf ( " __DOOO [%d][%p]\n", __LINE__, TheKart );
                 KartRelease ( TheKart );
             }
         }
@@ -518,6 +516,7 @@ XFSKartList ( struct XFSKart * self, struct KNamelist ** List )
     struct VNamelist * xList;
 
     RCt = 0;
+    xList = NULL;
 
     if ( List != NULL ) {
         * List = NULL;
@@ -552,7 +551,7 @@ XFSKartHas ( struct XFSKart * self, const char * ItemName )
 }   /* XFSKartHas () */
 
 static
-int CC
+int64_t CC
 _CartItemCmp ( const void * Item, const BSTNode * Node )
 {
     const char * Str1, * Str2;

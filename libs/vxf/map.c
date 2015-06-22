@@ -624,7 +624,7 @@ MAKE_8BIT_MAP_T ( uint64_t )
 
 #define MAP_T_CMP( TYPE )                                               \
 static                                                                  \
-int CC map_t_cmp_ ## TYPE ( const void *a, const void *b, void *data )     \
+int64_t CC map_t_cmp_ ## TYPE ( const void *a, const void *b, void *data )     \
 {                                                                       \
     const TYPE *from = ( const TYPE* ) data;                            \
     int left = * ( const uint16_t* ) a;                                 \

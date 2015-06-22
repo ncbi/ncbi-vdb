@@ -235,9 +235,9 @@ struct KTocEntryParam
  * which can safely be called with NULL. 
  */
 void	CC KTocEntryWhack	(BSTNode * n, void * data);
-int	CC KTocEntryCmpVoid (const void * item, const BSTNode * node);
+int64_t	CC KTocEntryCmpVoid (const void * item, const BSTNode * node);
 rc_t	KTocEntryDelete	(KTocEntry * self);
-int	CC KTocEntryCmp2 (const BSTNode * n, const BSTNode * p);
+int64_t	CC KTocEntryCmp2 (const BSTNode * n, const BSTNode * p);
 rc_t	KTocEntryNewDirectory	(KTocEntry ** new_entry,
 					 const char * name,
 					 size_t name_size,

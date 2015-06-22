@@ -88,6 +88,7 @@ extern VTRANSFACT_DECL ( NCBI_SRA__454__dynamic_read_desc );
 extern VTRANSFACT_DECL ( NCBI_SRA__454__process_position );
 extern VTRANSFACT_DECL ( NCBI_SRA__454__tokenize_spot_name );
 extern VTRANSFACT_DECL ( NCBI_SRA_bio_start );
+extern VTRANSFACT_DECL ( NCBI_SRA_bio_end );
 extern VTRANSFACT_DECL ( NCBI_SRA_decode_CLIP );
 extern VTRANSFACT_DECL ( NCBI_SRA_decode_INTENSITY );
 extern VTRANSFACT_DECL ( NCBI_SRA_decode_NOISE );
@@ -473,6 +474,7 @@ rc_t VLinkerInitFactoriesRead ( VLinker *self,  KSymTable *tbl, const SchemaEnv 
         { NCBI_SRA__454__process_position, "NCBI:SRA:_454_:process_position" },
         { NCBI_SRA__454__tokenize_spot_name, "NCBI:SRA:_454_:tokenize_spot_name" },
         { NCBI_SRA_bio_start, "NCBI:SRA:bio_start" },
+        { NCBI_SRA_bio_end, "NCBI:SRA:bio_end" },
         { NCBI_SRA_decode_CLIP, "NCBI:SRA:decode:CLIP" },
         { NCBI_SRA_decode_INTENSITY, "NCBI:SRA:decode:INTENSITY" },
         { NCBI_SRA_decode_NOISE, "NCBI:SRA:decode:NOISE" },
