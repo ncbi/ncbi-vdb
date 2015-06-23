@@ -115,16 +115,33 @@ rc_t VDatabaseOpenUpdate ( VDatabase *self, const char *decl )
             {
                 uint32_t type;
                 const SNameOverload *name;
-                sdb = ( self -> dad != NULL ) ?
-                    SDatabaseFind ( self -> dad -> sdb, self -> schema,
-                        & name, & type, decl, "VDatabaseOpenUpdate" ):
-                    VSchemaFind ( self -> schema,
-                        & name, & type, decl, "VDatabaseOpenUpdate", true );
-                if ( sdb != NULL && type != eDatabase )
+
+                if ( self -> dad != NULL )
                 {
-                    PLOGMSG ( klogWarn, ( klogWarn, "expression '$(expr)' is not a database",
-                               "expr=%s", decl ));
-                    sdb = NULL;
+                    const SDBMember *mbr = SDatabaseFind ( self -> dad -> sdb,
+                        self -> schema, & name, & type, decl, "VDatabaseOpenUpdate" );
+                    if ( mbr == NULL || type != eDBMember )
+                    {
+                        PLOGMSG ( klogWarn, ( klogWarn, "expression '$(expr)' is not a database member",
+                                   "expr=%s", decl ));
+                        sdb = NULL;
+                    }
+                    else
+                    {
+                        sdb = mbr -> db;
+                        assert ( sdb != NULL );
+                    }
+                }
+                else
+                {
+                    sdb = VSchemaFind ( self -> schema,
+                        & name, & type, decl, "VDatabaseOpenUpdate", true );
+                    if ( sdb != NULL && type != eDatabase )
+                    {
+                        PLOGMSG ( klogWarn, ( klogWarn, "expression '$(expr)' is not a database",
+                                   "expr=%s", decl ));
+                        sdb = NULL;
+                    }
                 }
             }
 
@@ -133,15 +150,16 @@ rc_t VDatabaseOpenUpdate ( VDatabase *self, const char *decl )
                 rc = RC ( rcVDB, rcDatabase, rcOpening, rcSchema, rcIncorrect );
             else if ( sdb == NULL && self -> sdb == NULL )
                 rc = RC ( rcVDB, rcDatabase, rcOpening, rcSchema, rcNotFound );
-            else
+            else if ( self -> sdb == NULL )
             {
-                if ( sdb != NULL )
-                    self -> sdb = sdb;
-
                 /* write schema to metadata */
+                self -> sdb = sdb;
                 rc = VDatabaseStoreSchema ( self );
-                if ( rc == 0 )
-                    return 0;
+            }
+            else if ( sdb != NULL )
+            {
+                /* use latest schema but don't overwrite in metadata */
+                self -> sdb = sdb;
             }
         }
     }
@@ -245,7 +263,7 @@ LIB_EXPORT rc_t CC VDatabaseVCreateDB ( VDatabase *self, VDatabase **dbp,
             rc = RC ( rcVDB, rcDatabase, rcCreating, rcDatabase, rcReadonly );
         else
         {
-            rc = VDatabaseMake ( dbp, NULL, self, self -> schema );
+            rc = VDatabaseMake ( dbp, self -> mgr, self, self -> schema );
             if ( rc == 0 )
             {
                 VDatabase *db = * dbp;

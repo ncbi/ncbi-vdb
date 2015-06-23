@@ -1333,12 +1333,27 @@ rc_t VCursorOpenRead ( VCursor *self, const KDlset *libs )
         {
             self -> row_id = self -> start_id = self -> end_id = 1;
             self -> state = vcReady;
-	    if(self->cache_curs){
-		VCursorOpenRead((VCursor*)self->cache_curs, libs);
-	    }
-            return 0;
+            if( self -> cache_curs )
+            {
+                VCursorOpenRead( (VCursor*)self -> cache_curs, libs );
+            }
+            return rc;
         }
-
+        else
+        {
+            /* in case the column is not defined ( rcColumn, rcUndefined )
+                we want to check if the table is empty, and report that instead
+            */
+            if ( GetRCState( rc ) == rcUndefined && 
+                 GetRCObject( rc ) == ( enum RCObject )rcColumn )
+            {
+                bool empty;
+                if ( ( VTableIsEmpty ( self -> tbl, &empty ) == 0 ) && empty )
+                {
+                    rc = RC ( rcVDB, rcCursor, rcOpening, rcTable, rcEmpty );        
+                }
+            }
+        }
         self -> state = vcFailed;
     }
 
