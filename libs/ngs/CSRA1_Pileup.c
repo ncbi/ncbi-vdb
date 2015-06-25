@@ -120,6 +120,8 @@ CSRA1_Pileup_Entry * CSRA1_Pileup_EntryMake ( ctx_t ctx, int64_t row_id,
         obj -> zstart = ref_zstart;
         obj -> xend = ref_zstart + ref_len;
         obj -> secondary = secondary;
+
+        obj -> status = pileup_entry_status_INITIAL;
     }
 
     return obj;
@@ -699,7 +701,7 @@ PRINT ( ">>> flushed %u columns of temporary cell data\n", num_flushed );
             entry -> temporary = false;
         }
 
-        if ( entry -> xend == self -> ref_zpos )
+        if ( entry -> xend == self -> ref_zpos || entry -> status == pileup_entry_status_DONE )
         {
 PRINT ( ">>> dropping alignment at refpos %ld, row-id %ld: %ld-%ld ( zero-based, half-closed )\n",
          self -> ref_zpos, entry -> row_id, entry -> zstart, entry -> xend );
