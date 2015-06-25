@@ -163,6 +163,9 @@ typedef struct {
     uint32_t read; /* 1-based */
 
     uint64_t read_id; /* BioReadId in RunSet */
+
+    bool circular;
+               /* we are going to return a circular reference the second time */
 } ReadDesc;
 
 typedef struct {
