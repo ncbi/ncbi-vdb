@@ -467,26 +467,33 @@ struct VdbBlastRef {
     uint64_t count; /* spots in REFERENCE table */
     bool external;  /* reference */
     bool circular;  /* reference */
+    size_t base_count; /* is set just for circular references */
 };
 typedef struct References {
     const RunSet *rs;     /* table of runs */
 
-    RefSet        *refs;
+    RefSet       *refs;
 
-    size_t        rfdi; /* rfd member being read */
-    size_t        spot; /* next spot to be read in rfd member being read */
+    size_t        rfdi; /* refs member being read */
+    size_t        spot; /* next spot to be read in refs member being read */
+    bool      circular; /* for circular references
+                         - if true than the spot is provided the second time */
 
-    const VCursor *curs; /* to REFERENCE table of current rfd member */
+    const VCursor *curs; /* to REFERENCE table of current refs member ([rfdi])*/
     uint32_t   idxREAD; /* index of READ column in VCursor */
-    uint64_t    read_id;
-    bool          eos;  /* end if set: no more sequences to read */
+    uint64_t   read_id;
+    bool           eos; /* end if set: no more sequences to read */
 } References;
+#define MAX_SEQ_LEN 5000
 static const References* _RunSetMakeReferences
     (RunSet *self, VdbBlastStatus *status)
 {
+    rc_t rc = 0;
     uint32_t i = 0;
     References *r = NULL;
     RefSet *refs = NULL;
+    const VCursor *c = NULL;
+    uint32_t iREAD_LEN = 0;
     assert(self && status);
     refs = &self->refs;
     r = calloc(1, sizeof *r);
@@ -505,11 +512,9 @@ static const References* _RunSetMakeReferences
     r->refs = refs;
     for (i = 0; i < self->krun; ++i) {
         const void *value = NULL;
-        rc_t rc = 0;
-        const VCursor *c = NULL;
         uint32_t iCIRCULAR = 0; 
         uint32_t iCMP_READ = 0;
-        uint32_t iSEQ_ID = 0;
+        uint32_t iSEQ_ID   = 0;
         int64_t first = 0;
         uint64_t count = 0;
         uint64_t cur_row = 0;
@@ -531,7 +536,7 @@ static const References* _RunSetMakeReferences
             continue;
         }
         if (rc == 0) {
-            rc = VCursorAddColumn(c, &iSEQ_ID, "SEQ_ID");
+            rc = VCursorAddColumn(c, &iCIRCULAR, "CIRCULAR");
             if (rc != 0) {
                 S
             }
@@ -543,7 +548,13 @@ static const References* _RunSetMakeReferences
             }
         }
         if (rc == 0) {
-            rc = VCursorAddColumn(c, &iCIRCULAR, "CIRCULAR");
+            rc = VCursorAddColumn(c, &iREAD_LEN, "READ_LEN");
+            if (rc != 0) {
+                S
+            }
+        }
+        if (rc == 0) {
+            rc = VCursorAddColumn(c, &iSEQ_ID, "SEQ_ID");
             if (rc != 0) {
                 S
             }
@@ -659,14 +670,36 @@ static const References* _RunSetMakeReferences
         }
         refs->rfd[refs->rfdk - 1].count
             = cur_row - refs->rfd[refs->rfdk - 1].first;
-        RELEASE(VCursor, c);
     }
+    *status = eVdbBlastNoErr;
     for (i = 0; i < refs->rfdk; ++i) {
-        const VdbBlastRef *rfd = &refs->rfd[i];
+        VdbBlastRef *rfd = &refs->rfd[i];
+        assert(rfd);
+        if (rfd->circular) {
+            uint32_t read_len = 0;
+            uint32_t row_len = 0;
+            rc = VCursorReadDirect(c, rfd->first + rfd->count - 1,
+                iREAD_LEN, 8, &read_len, 4, &row_len);
+            if (rc != 0) {
+                PLOGERR(klogInt, (klogInt, rc,
+                    "Error in VCursorReadDirect(READ_LEN, spot=$(spot))",
+                    "spot=%ld", rfd->first + rfd->count - 1));
+                *status = eVdbBlastErr;
+            }
+            else if (row_len != 4) {
+                PLOGERR(klogInt, (klogInt, rc,
+                    "Bad row_len in VCursorReadDirect(READ_LEN, spot=$(spot))",
+                    "spot=%ld", rfd->first + rfd->count - 1));
+                *status = eVdbBlastErr;
+            }
+            else {
+                rfd->base_count = (rfd->count - 1) * MAX_SEQ_LEN + read_len;
+            }
+        }
         STSMSG(1, ("%i) '%s'[%i-%i(%i)]", i, rfd->SEQ_ID,
             rfd->first, rfd->first + rfd->count - 1, rfd->count));
     }
-    *status = eVdbBlastNoErr;
+    RELEASE(VCursor, c);
     return r;
 }
 
@@ -1582,7 +1615,13 @@ static uint32_t _ReferencesData(References *self,
         if (self->spot < rfd->first + rfd->count) {
             *status = eVdbBlastChunkedSequence;
         }
-        else {
+        else if (rfd->circular && ! self->circular) {
+               /* end of the first repeat of a circular sequence */
+            *status = eVdbBlastCircularSequence;
+            self->circular = true;
+            self->spot = rfd->first;
+        }
+        else { /* end of sequence */
             *status = eVdbBlastNoErr;
             ++self->read_id;
         }
@@ -1822,8 +1861,16 @@ static uint64_t _ReferencesRead2na(References *self,
             }
             ++self->spot;
             if (self->spot >= rfd->first + rfd->count) {
-                ++self->read_id;
-                break; /* end of sequence */
+                if (rfd->circular && ! self->circular) {
+                       /* end of the first repeat of a circular sequence */
+                    *status = eVdbBlastCircularSequence;
+                    self->circular = true;
+                    self->spot = rfd->first;
+                }
+                else { /* end of sequence */
+                    ++self->read_id;
+                }
+                break;
             }
             begin += num_read / 4;
             if ((num_read % 4) != 0) {
@@ -1997,6 +2044,10 @@ static size_t _Core4naReadRef(Core4na *self, const RunSet *runs,
     const VdbBlastRef *rfd = NULL;
     const VdbBlastRun *run = NULL;
     uint64_t spot = 0;
+
+    bool circular = false;
+                 /* true when returning a circular reference the second time */
+
     uint32_t start = 0;
     assert(status);
     if (self == NULL || runs == NULL ||
@@ -2056,11 +2107,20 @@ static size_t _Core4naReadRef(Core4na *self, const RunSet *runs,
         self->desc.spot = 0;
     }
     *status = eVdbBlastNoErr;
-    spot = rfd->first + starting_base / 5000;
+
+    if (rfd->circular) {
+        assert(rfd->base_count);
+        if (starting_base >= rfd->base_count) {
+            starting_base -= rfd->base_count;
+            circular = true;
+        }
+    }
+
+    spot = rfd->first + starting_base / MAX_SEQ_LEN;
     if (spot >= rfd->first + rfd->count) {
         return 0;
     }
-    start = starting_base % 5000;
+    start = starting_base % MAX_SEQ_LEN;
     while (total < buffer_length) {
         rc_t rc = 0;
         uint32_t num_read = 0;
@@ -2091,6 +2151,9 @@ static size_t _Core4naReadRef(Core4na *self, const RunSet *runs,
             if (remaining > 0) {
             }
             else if (++spot >= rfd->first + rfd->count) {
+                if (rfd->circular && ! circular) {
+                    *status = eVdbBlastCircularSequence;
+                }
                 break; /* end of reference */
             }
             else {     /* next spot */
@@ -2391,6 +2454,11 @@ static const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
     }
     if (self->desc.spot < rfd->first + rfd->count) {
         *status = eVdbBlastChunkedSequence;
+    }
+    else if (rfd->circular && ! self->desc.circular) {
+        *status = eVdbBlastCircularSequence;
+        self->desc.circular = true;
+        self->desc.spot = rfd->first;
     }
     else {
         *status = eVdbBlastNoErr;
