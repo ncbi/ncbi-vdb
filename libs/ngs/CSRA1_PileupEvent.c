@@ -48,6 +48,7 @@ typedef struct CSRA1_PileupEvent CSRA1_PileupEvent;
 #include "NGS_Pileup.h"
 
 #include <sysalloc.h>
+#include <string.h> /* memset */
 
 #define CSRA1_PileupEventGetPileup( self ) \
     ( ( CSRA1_Pileup * ) ( self ) )
@@ -146,7 +147,7 @@ int64_t CSRA1_PileupEventGetAlignmentPosition ( const CSRA1_PileupEvent * self, 
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
     TRY ( CHECK_STATE ( self, ctx ) )
     {
-        return self -> entry -> seq_idx;
+        return self -> entry -> state_curr . seq_idx;
     }
 
     return 0;
@@ -200,18 +201,18 @@ int CSRA1_PileupEventGetEventType ( const CSRA1_PileupEvent * self, ctx_t ctx )
           if it ends an alignment, or that onto the event.
         */
 
-        if ( entry -> del_cnt != 0 )
+        if ( entry -> state_curr . del_cnt != 0 )
             event_type = NGS_PileupEventType_deletion;
         else
         {
             const bool * HAS_MISMATCH = entry -> cell_data [ pileup_event_col_HAS_MISMATCH ];
             assert ( HAS_MISMATCH != NULL );
-            assert ( entry -> seq_idx < entry -> cell_len [ pileup_event_col_HAS_MISMATCH ] );
-            event_type = HAS_MISMATCH [ entry -> seq_idx ];
+            assert ( entry -> state_curr . seq_idx < entry -> cell_len [ pileup_event_col_HAS_MISMATCH ] );
+            event_type = HAS_MISMATCH [ entry -> state_curr . seq_idx ];
         }
 
         /* detect prior insertion */
-        if ( entry -> ins_cnt != 0 )
+        if ( entry -> state_curr . ins_cnt != 0 )
             event_type |= NGS_PileupEventType_insertion;
 
         /* detect initial event */
@@ -219,8 +220,11 @@ int CSRA1_PileupEventGetEventType ( const CSRA1_PileupEvent * self, ctx_t ctx )
             event_type |= NGS_PileupEventType_start;
 
         /* detect final event */
-        if ( CSRA1_PileupEventGetPileup ( self ) -> ref_zpos + 1 == entry -> xend )
+        if ( CSRA1_PileupEventGetPileup ( self ) -> ref_zpos + 1 == entry -> xend ||
+            entry -> status == pileup_entry_status_DONE)
+        {
             event_type |= NGS_PileupEventType_stop;
+        }
 
         /* detect minus strand */
         TRY ( REF_ORIENTATION = CSRA1_PileupEventGetEntry ( self, ctx, entry, pileup_event_col_REF_ORIENTATION ) )
@@ -245,25 +249,25 @@ char CSRA1_PileupEventGetAlignmentBase ( const CSRA1_PileupEvent * self, ctx_t c
         CSRA1_Pileup_Entry * entry = self -> entry;
         const bool * HAS_MISMATCH = entry -> cell_data [ pileup_event_col_HAS_MISMATCH ];
 
-        if ( entry -> del_cnt != 0 )
+        if ( entry -> state_curr . del_cnt != 0 )
             return '-';
 
         assert ( HAS_MISMATCH != NULL );
-        assert ( entry -> seq_idx < entry -> cell_len [ pileup_event_col_HAS_MISMATCH ] );
+        assert ( entry -> state_curr . seq_idx < entry -> cell_len [ pileup_event_col_HAS_MISMATCH ] );
 
-        if ( HAS_MISMATCH [ entry -> seq_idx ] )
+        if ( HAS_MISMATCH [ entry -> state_curr . seq_idx ] )
         {
-            if ( entry -> mismatch == 0 )
+            if ( entry -> state_curr . mismatch == 0 )
             {
                 const INSDC_dna_text * MISMATCH;
                 TRY ( MISMATCH = CSRA1_PileupEventGetEntry ( self, ctx, entry, pileup_event_col_MISMATCH ) )
                 {
-                    if ( entry -> mismatch_idx < entry -> cell_len [ pileup_event_col_MISMATCH ] )
-                        entry -> mismatch = MISMATCH [ entry -> mismatch_idx ];
+                    if ( entry -> state_curr . mismatch_idx < entry -> cell_len [ pileup_event_col_MISMATCH ] )
+                        entry -> state_curr . mismatch = MISMATCH [ entry -> state_curr . mismatch_idx ];
                 }
             }
 
-            return entry -> mismatch;
+            return entry -> state_curr . mismatch;
         }
 
         pileup = CSRA1_PileupEventGetPileup ( self );
@@ -302,14 +306,14 @@ char CSRA1_PileupEventGetAlignmentQuality ( const CSRA1_PileupEvent * self, ctx_
 
         CSRA1_Pileup_Entry * entry = self -> entry;
 
-        if ( entry -> del_cnt != 0 )
+        if ( entry -> state_curr . del_cnt != 0 )
             return '!';
         
         TRY ( QUALITY = CSRA1_PileupEventGetEntry ( self, ctx, entry, pileup_event_col_QUALITY ) )
         {
             assert ( QUALITY != NULL );
-            assert ( entry -> seq_idx < entry -> cell_len [ pileup_event_col_QUALITY ] );
-            return ( char ) ( QUALITY [ entry -> seq_idx ] + 33 );
+            assert ( entry -> state_curr . seq_idx < entry -> cell_len [ pileup_event_col_QUALITY ] );
+            return ( char ) ( QUALITY [ entry -> state_curr . seq_idx ] + 33 );
         }
     }
     return 0;
@@ -323,16 +327,16 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
         CSRA1_Pileup_Entry * entry = self -> entry;
 
         /* handle the case where there is no insertion */
-        if ( entry -> ins_cnt == 0 )
+        if ( entry -> state_curr . ins_cnt == 0 )
         {
             return NGS_StringMake ( ctx, "", 0 );
         }
         else
         {
             /* allocate a buffer for the NGS_String */
-            char * buffer = calloc ( 1, entry -> ins_cnt + 1 );
+            char * buffer = calloc ( 1, entry -> state_curr . ins_cnt + 1 );
             if ( buffer == NULL )
-                SYSTEM_ERROR ( xcNoMemory, "allocating %zu bytes", entry -> ins_cnt + 1 );
+                SYSTEM_ERROR ( xcNoMemory, "allocating %zu bytes", entry -> state_curr . ins_cnt + 1 );
             else
             {
                 const INSDC_dna_text * MISMATCH;
@@ -345,9 +349,9 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                    but even so, it should not be a problem to prefetch MISMATCH */
                 TRY ( MISMATCH = CSRA1_PileupEventGetEntry ( self, ctx, entry, pileup_event_col_MISMATCH ) )
                 {
-                    uint32_t ref_first = entry -> seq_idx;
-                    uint32_t mismatch_idx = entry -> mismatch_idx;
-                    uint32_t seq_idx, ins_start = entry -> seq_idx - entry -> ins_cnt;
+                    uint32_t ref_first = entry -> state_curr . seq_idx;
+                    uint32_t mismatch_idx = entry -> state_curr . mismatch_idx;
+                    uint32_t seq_idx, ins_start = entry -> state_curr . seq_idx - entry -> state_curr . ins_cnt;
 
                     assert ( MISMATCH != 0 );
 
@@ -356,10 +360,10 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                        starts with an insertion, otherwise considered a soft-clip,
                        and not an insertion at all.
                      */
-                    assert ( entry -> seq_idx > entry -> ins_cnt );
+                    assert ( entry -> state_curr . seq_idx > entry -> state_curr . ins_cnt );
 
                     /* fill in the buffer with each entry from mismatch */
-                    for ( seq_idx = entry -> seq_idx - 1; seq_idx >= ins_start; -- seq_idx )
+                    for ( seq_idx = entry -> state_curr . seq_idx - 1; seq_idx >= ins_start; -- seq_idx )
                     {
                         /* pull base from MISMATCH */
                         if ( HAS_MISMATCH [ seq_idx ] )
@@ -371,7 +375,7 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                     }
 
                     /* if there are some to be filled from reference */
-                    if ( entry -> mismatch_idx - mismatch_idx != entry -> ins_cnt )
+                    if ( entry -> state_curr . mismatch_idx - mismatch_idx != entry -> state_curr . ins_cnt )
                     {
                         CSRA1_Pileup * pileup = CSRA1_PileupEventGetPileup ( self );
 
@@ -381,10 +385,10 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
                            nor is it guaranteed to be in a single chunk. */
 
                         /* the number of characters in string that could come from reference */
-                        uint32_t str_len = entry -> seq_idx - ref_first;
+                        uint32_t str_len = entry -> state_curr . seq_idx - ref_first;
 
                         /* offset the string buffer to the first base to be filled by reference */
-                        char * rbuffer = & buffer [ entry -> ins_cnt - str_len ];
+                        char * rbuffer = & buffer [ entry -> state_curr . ins_cnt - str_len ];
 
                         /* the current chunk of reference bases or NULL */
                         const INSDC_dna_text * READ = pileup -> ref_chunk_bases;
@@ -502,7 +506,7 @@ struct NGS_String * CSRA1_PileupEventGetInsertionBases ( const CSRA1_PileupEvent
 
                     buffer_complete:
 
-                        TRY ( bases = NGS_StringMakeOwned ( ctx, buffer, entry -> ins_cnt ) )
+                        TRY ( bases = NGS_StringMakeOwned ( ctx, buffer, entry -> state_curr . ins_cnt ) )
                         {
                             return bases;
                         }
@@ -525,32 +529,32 @@ struct NGS_String * CSRA1_PileupEventGetInsertionQualities ( const CSRA1_PileupE
         CSRA1_Pileup_Entry * entry = self -> entry;
 
         /* handle the case where there is no insertion */
-        if ( entry -> ins_cnt == 0 )
+        if ( entry -> state_curr . ins_cnt == 0 )
         {
             return NGS_StringMake ( ctx, "", 0 );
         }
         else
         {
             /* allocate a buffer for the NGS_String */
-            char * buffer = calloc ( 1, entry -> ins_cnt + 1 );
+            char * buffer = calloc ( 1, entry -> state_curr . ins_cnt + 1 );
             if ( buffer == NULL )
-                SYSTEM_ERROR ( xcNoMemory, "allocating %zu bytes", entry -> ins_cnt + 1 );
+                SYSTEM_ERROR ( xcNoMemory, "allocating %zu bytes", entry -> state_curr . ins_cnt + 1 );
             else
             {
                 const INSDC_quality_phred * QUALITY;
                 TRY ( QUALITY = CSRA1_PileupEventGetEntry ( self, ctx, entry, pileup_event_col_QUALITY ) )
                 {
                     NGS_String * bases;
-                    uint32_t i, qstart = entry -> seq_idx - entry -> ins_cnt;
+                    uint32_t i, qstart = entry -> state_curr . seq_idx - entry -> state_curr . ins_cnt;
 
                     assert ( QUALITY != NULL );
-                    assert ( entry -> seq_idx <= entry -> cell_len [ pileup_event_col_QUALITY ] );
-                    assert ( entry -> seq_idx >= entry -> ins_cnt );
+                    assert ( entry -> state_curr . seq_idx <= entry -> cell_len [ pileup_event_col_QUALITY ] );
+                    assert ( entry -> state_curr . seq_idx >= entry -> state_curr . ins_cnt );
 
-                    for ( i = 0; i < entry -> ins_cnt; ++ i )
+                    for ( i = 0; i < entry -> state_curr . ins_cnt; ++ i )
                         buffer [ i ] = ( char ) ( QUALITY [ qstart + i ] + 33 );
 
-                    TRY ( bases = NGS_StringMakeOwned ( ctx, buffer, entry -> ins_cnt ) )
+                    TRY ( bases = NGS_StringMakeOwned ( ctx, buffer, entry -> state_curr . ins_cnt ) )
                     {
                         return bases;
                     }
@@ -575,23 +579,23 @@ unsigned int CSRA1_PileupEventGetRepeatCount ( const CSRA1_PileupEvent * self, c
         const CSRA1_Pileup_Entry * entry = self -> entry;
 
         /* handle the easy part first */
-        if ( entry -> del_cnt != 0 )
-            return entry -> del_cnt;
+        if ( entry -> state_curr . del_cnt != 0 )
+            return entry -> state_curr . del_cnt;
 
         /* now, count the number of repeated matches or mismatches,
            WITHOUT any intervening insertions or deletions */
         HAS_MISMATCH = entry -> cell_data [ pileup_event_col_HAS_MISMATCH ];
         HAS_REF_OFFSET = entry -> cell_data [ pileup_event_col_HAS_REF_OFFSET ];
-        limit = entry -> xend - ( entry -> zstart + entry -> zstart_adj );
+        limit = entry -> xend - ( entry -> zstart + entry -> state_curr . zstart_adj );
 
         /* grab the type of event we have now */
-        event_type = HAS_MISMATCH [ entry -> seq_idx ];
+        event_type = HAS_MISMATCH [ entry -> state_curr . seq_idx ];
         
         for ( repeat = 1; repeat < limit; ++ repeat )
         {
-            if ( HAS_REF_OFFSET [ entry -> seq_idx + repeat ] )
+            if ( HAS_REF_OFFSET [ entry -> state_curr . seq_idx + repeat ] )
                 break;
-            if ( HAS_MISMATCH [ entry -> seq_idx + repeat ] != event_type )
+            if ( HAS_MISMATCH [ entry -> state_curr . seq_idx + repeat ] != event_type )
                 break;
         }
 
@@ -607,7 +611,7 @@ int CSRA1_PileupEventGetIndelType ( const CSRA1_PileupEvent * self, ctx_t ctx )
     {
         CSRA1_Pileup_Entry * entry = self -> entry;
 
-        if ( entry -> del_cnt != 0 || entry -> ins_cnt != 0 )
+        if ( entry -> state_curr . del_cnt != 0 || entry -> state_curr . ins_cnt != 0 )
         {
             CSRA1_Pileup * pileup = CSRA1_PileupEventGetPileup ( self );
             CSRA1_Pileup_AlignCursorData * cd = entry -> secondary ? & pileup -> sa : & pileup -> pa;
@@ -617,9 +621,9 @@ int CSRA1_PileupEventGetIndelType ( const CSRA1_PileupEvent * self, ctx_t ctx )
                 TRY ( REF_OFFSET_TYPE = CSRA1_PileupEventGetEntry ( self, ctx, entry, pileup_event_col_REF_OFFSET_TYPE ) )
                 {
                     assert ( REF_OFFSET_TYPE != NULL );
-                    assert ( entry -> ref_off_idx > 0 );
-                    assert ( entry -> ref_off_idx <= entry -> cell_len [ pileup_event_col_REF_OFFSET_TYPE ] );
-                    switch ( REF_OFFSET_TYPE [ entry -> ref_off_idx - 1 ] )
+                    assert ( entry -> state_curr . ref_off_idx > 0 );
+                    assert ( entry -> state_curr . ref_off_idx <= entry -> cell_len [ pileup_event_col_REF_OFFSET_TYPE ] );
+                    switch ( REF_OFFSET_TYPE [ entry -> state_curr . ref_off_idx - 1 ] )
                     {
                     case NCBI_align_ro_normal:
                     case NCBI_align_ro_soft_clip:
@@ -631,9 +635,9 @@ int CSRA1_PileupEventGetIndelType ( const CSRA1_PileupEvent * self, ctx_t ctx )
                     case NCBI_align_ro_intron_unknown:
                         return NGS_PileupIndelType_intron_unknown;
                     case NCBI_align_ro_complete_genomics:
-                        if ( entry -> ins_cnt != 0 )
+                        if ( entry -> state_curr . ins_cnt != 0 )
                             return NGS_PileupIndelType_read_overlap;
-                        assert ( entry -> del_cnt != 0 );
+                        assert ( entry -> state_curr . del_cnt != 0 );
                         return NGS_PileupIndelType_read_gap;
                     }
                 }
@@ -651,67 +655,89 @@ int CSRA1_PileupEventGetIndelType ( const CSRA1_PileupEvent * self, ctx_t ctx )
 }
 
 static
-bool CSRA1_PileupEventEntryFocus ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry * entry )
+void CSRA1_PileupEventEntryFocus ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry * entry )
 {
     const bool * HAS_MISMATCH = entry -> cell_data [ pileup_event_col_HAS_MISMATCH ];
     const bool * HAS_REF_OFFSET = entry -> cell_data [ pileup_event_col_HAS_REF_OFFSET ];
     const int32_t * REF_OFFSET = entry -> cell_data [ pileup_event_col_REF_OFFSET ];
 
     /* we need the entry to be fast-forwarded */
-    int32_t ref_zpos_adj = CSRA1_PileupEventGetPileup ( self ) -> ref_zpos - entry -> zstart;
+    int32_t ref_zpos_adj, plus_end_pos;
+    uint32_t next_ins_cnt;
+
+advance_to_the_next_position: /* TODO: try to reorganise the function not to have this goto */
+
+    ref_zpos_adj = CSRA1_PileupEventGetPileup ( self ) -> ref_zpos - entry -> zstart;
+    plus_end_pos = entry->status == pileup_entry_status_INITIAL ? 0 : 1;
     assert ( ref_zpos_adj >= 0 );
 
     /* always lose any insertion, forget cached values */
-    entry -> ins_cnt = 0;
-    entry -> mismatch = 0;
+    /*entry -> state_next . ins_cnt = 0;*/
+    entry -> state_next . mismatch = 0;
+    next_ins_cnt = 0; /* this variable is needed not to erase
+                         state_curr.ins_count on the first iteration
+                         of the next while-loop */ /* TODO: advise with Kurt about the case with INITIAL - should it be reset? */
 
     /* must advance in all but initial case */
-    assert ( ref_zpos_adj > entry -> zstart_adj || entry -> zstart_adj == 0 );
+    assert ( ref_zpos_adj + plus_end_pos > entry -> state_next . zstart_adj || entry -> state_next . zstart_adj == 0 );
 
     /* walk forward */
-    while ( ref_zpos_adj > entry -> zstart_adj )
+    while ( ref_zpos_adj + plus_end_pos > entry -> state_next . zstart_adj )
     {
+        entry -> state_curr = entry -> state_next;
+
         /* within a deletion */
-        if ( entry -> del_cnt != 0 )
-            -- entry -> del_cnt;
+        if ( entry -> state_next . del_cnt != 0 )
+            -- entry -> state_next . del_cnt;
 
         else
         {
-            uint32_t prior_seq_idx = entry -> seq_idx ++;
+            uint32_t prior_seq_idx = entry -> state_next . seq_idx ++;
 
             /* adjust mismatch_idx */
             assert ( HAS_MISMATCH != NULL );
             assert ( prior_seq_idx < entry -> cell_len [ pileup_event_col_HAS_MISMATCH ] );
-            entry -> mismatch_idx += HAS_MISMATCH [ prior_seq_idx ];
+            entry -> state_next . mismatch_idx += HAS_MISMATCH [ prior_seq_idx ];
 
             /* if the current sequence address is beyond end, bail */
-            if ( entry -> seq_idx >= entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
-                return false;
+            if ( entry -> state_next . seq_idx >= entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
+            {
+                entry -> status = pileup_entry_status_DONE;
+                entry -> state_next . ins_cnt = next_ins_cnt;
+                return;
+            }
 
             /* retry point for merging events */
         merge_adjacent_indel_events:
 
             /* adjust alignment */
-            if ( HAS_REF_OFFSET [ entry -> seq_idx ] )
+            if ( HAS_REF_OFFSET [ entry -> state_next . seq_idx ] )
             {
                 assert ( REF_OFFSET != NULL );
-                if ( REF_OFFSET [ entry -> ref_off_idx ] < 0 )
+                if ( REF_OFFSET [ entry -> state_next . ref_off_idx ] < 0 )
                 {
                     /* insertion */
-                    uint32_t i, ins_cnt = - REF_OFFSET [ entry -> ref_off_idx ];
+                    uint32_t i, ins_cnt = - REF_OFFSET [ entry -> state_next . ref_off_idx ];
 
                     /* clip to SEQUENCE length */
-                    if ( ( uint32_t ) ( entry -> seq_idx + ins_cnt ) > entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
-                        ins_cnt = ( int32_t ) entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] - entry -> seq_idx;
+                    if ( ( uint32_t ) ( entry -> state_next . seq_idx + ins_cnt ) > entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
+                        ins_cnt = ( int32_t ) entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] - entry -> state_next . seq_idx;
 
                     /* combine adjacent inserts */
-                    entry -> ins_cnt += ins_cnt;
+                    /*entry -> state_next . ins_cnt += ins_cnt;*/
+                    next_ins_cnt += ins_cnt;
 
                     /* scan over insertion to adjust mismatch index */
                     for ( i = 0; i < ins_cnt; ++ i )
-                        entry -> mismatch_idx += HAS_MISMATCH [ entry -> seq_idx + i ];
+                        entry -> state_next . mismatch_idx += HAS_MISMATCH [ entry -> state_next . seq_idx + i ];
 
-                    entry -> seq_idx += ins_cnt;
+                    entry -> state_next . seq_idx += ins_cnt;
+                    if ( entry -> state_next . seq_idx >= entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
+                    {
+                        entry -> status = pileup_entry_status_DONE;
+                        entry -> state_next . ins_cnt = next_ins_cnt;
+                        return;
+                    }
 
                     /* NB - there may be entries in HAS_REF_OFFSET that are set
                        within the insertion. These are used to split the insertion
@@ -724,9 +750,9 @@ bool CSRA1_PileupEventEntryFocus ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry 
                     */
 
                     /* detect the case of an insertion followed by a deletion */
-                    if ( entry -> seq_idx < entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
+                    if ( entry -> state_next . seq_idx < entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
                     {
-                        ++ entry -> ref_off_idx;
+                        ++ entry -> state_next . ref_off_idx;
                         goto merge_adjacent_indel_events;
                     }
                 }
@@ -734,24 +760,27 @@ bool CSRA1_PileupEventEntryFocus ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry 
                 else
                 {
                     /* deletion */
-                    entry -> del_cnt += REF_OFFSET [ entry -> ref_off_idx ];
+                    entry -> state_next . del_cnt += REF_OFFSET [ entry -> state_next . ref_off_idx ];
 
                     /* clip to PROJECTION length */
-                    if ( ( int64_t ) entry -> del_cnt > entry -> xend - ( entry -> zstart + entry -> zstart_adj ) )
-                        entry -> del_cnt = ( int32_t ) ( entry -> xend - ( entry -> zstart + entry -> zstart_adj ) );
+                    if ( ( int64_t ) entry -> state_next . del_cnt > entry -> xend - ( entry -> zstart + entry -> state_next . zstart_adj ) )
+                        entry -> state_next . del_cnt = ( int32_t ) ( entry -> xend - ( entry -> zstart + entry -> state_next . zstart_adj ) );
                 }
 
-                ++ entry -> ref_off_idx;
+                ++ entry -> state_next . ref_off_idx;
             }
         }
 
-        ++ entry -> zstart_adj;
+        ++ entry -> state_next . zstart_adj;
+        entry -> state_next . ins_cnt = next_ins_cnt;
+
     }
 
-    if ( entry -> seq_idx >= entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
-        return false;
-
-    return true;
+    if ( entry->status == pileup_entry_status_INITIAL )
+    {
+        entry->status = pileup_entry_status_VALID;
+        goto advance_to_the_next_position;
+    }
 }
 
 static
@@ -777,24 +806,26 @@ void CSRA1_PileupEventEntryInit ( CSRA1_PileupEvent * self, ctx_t ctx, CSRA1_Pil
                     return;
 
                 /* check for left soft-clip */
-                while ( HAS_REF_OFFSET [ entry -> seq_idx ] && REF_OFFSET [ entry -> ref_off_idx ] < 0 )
+                while ( HAS_REF_OFFSET [ entry -> state_next . seq_idx ] && REF_OFFSET [ entry -> state_next . ref_off_idx ] < 0 )
                 {
-                    uint32_t i, end = entry -> seq_idx - REF_OFFSET [ entry -> ref_off_idx ++ ];
+                    uint32_t i, end = entry -> state_next . seq_idx - REF_OFFSET [ entry -> state_next . ref_off_idx ++ ];
 
                     /* safety check */
                     if ( end > entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
                         end = entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ];
 
                     /* skip over soft-clip */
-                    for ( i = entry -> seq_idx; i < end; ++ i )
-                        entry -> mismatch_idx += HAS_MISMATCH [ i ];
+                    for ( i = entry -> state_next . seq_idx; i < end; ++ i )
+                        entry -> state_next . mismatch_idx += HAS_MISMATCH [ i ];
 
-                    entry -> seq_idx = end;
+                    entry -> state_next . seq_idx = end;
                 }
 
                 /* capture initial deletion - should never occur */
-                if ( HAS_REF_OFFSET [ entry -> seq_idx ] && REF_OFFSET [ entry -> ref_off_idx ] > 0 )
-                    entry -> del_cnt = REF_OFFSET [ entry -> ref_off_idx ];
+                if ( HAS_REF_OFFSET [ entry -> state_next . seq_idx ] && REF_OFFSET [ entry -> state_next . ref_off_idx ] > 0 )
+                    entry -> state_next . del_cnt = REF_OFFSET [ entry -> state_next . ref_off_idx ];
+
+                /* TODO: maybe pileup_entry_status_VALID must be set here */
 
                 return;
             }
@@ -821,6 +852,10 @@ void CSRA1_PileupEventRefreshEntry ( CSRA1_PileupEvent * self, ctx_t ctx, CSRA1_
                 assert ( HAS_MISMATCH != NULL );
                 assert ( HAS_REF_OFFSET != NULL );
                 assert ( REF_OFFSET != NULL );
+
+                (void)HAS_MISMATCH;
+                (void)HAS_REF_OFFSET;
+                (void)REF_OFFSET;
             }
         }
     }
@@ -861,7 +896,9 @@ bool CSRA1_PileupEventIteratorNext ( CSRA1_PileupEvent * self, ctx_t ctx )
     }
 
     /* this is an entry we've seen before */
-    return CSRA1_PileupEventEntryFocus ( self, entry );
+    CSRA1_PileupEventEntryFocus ( self, entry );
+
+    return true;
 }
 
 void CSRA1_PileupEventIteratorReset ( CSRA1_PileupEvent * self, ctx_t ctx )
@@ -874,11 +911,10 @@ void CSRA1_PileupEventIteratorReset ( CSRA1_PileupEvent * self, ctx_t ctx )
 
     for ( entry = self -> entry; entry != NULL; entry = ( CSRA1_Pileup_Entry * ) DLNodeNext ( & entry -> node ) )
     {
-        entry -> del_cnt = 0;
-        entry -> ref_off_idx = 0;
-        entry -> mismatch_idx = 0;
-        entry -> seq_idx = 0;
-        entry -> zstart_adj = 0;
+        memset ( & entry-> state_curr, 0, sizeof (entry-> state_curr) );
+        memset ( & entry-> state_next, 0, sizeof (entry-> state_next) );
+
+        /*entry -> status = pileup_entry_status_INITIAL;*/ /* TODO: remove comment */
     }
 }
 

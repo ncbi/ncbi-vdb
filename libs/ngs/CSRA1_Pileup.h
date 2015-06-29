@@ -84,6 +84,38 @@ enum
     pileup_event_col_count
 };
 
+typedef struct CSRA1_Pileup_Entry_State CSRA1_Pileup_Entry_State;
+struct CSRA1_Pileup_Entry_State
+{
+    /* insertion count */
+    uint32_t ins_cnt;
+
+    /* deletion count */
+    uint32_t del_cnt;
+
+    /* offset into REF_OFFSET */
+    uint32_t ref_off_idx;
+
+    /* offset into MISMATCH */
+    uint32_t mismatch_idx;
+
+    /* offset into aligned sequence */
+    uint32_t seq_idx;
+
+    /* adjustment to "zstart" for current alignment */
+    volatile int32_t zstart_adj; /* TODO: find out why volatile or remove it */
+
+    /* set to a base or NUL if not set */
+    char mismatch;
+};
+
+enum 
+{
+    pileup_entry_status_INITIAL,
+    pileup_entry_status_VALID,
+    pileup_entry_status_DONE
+};
+
 typedef struct CSRA1_Pileup_Entry CSRA1_Pileup_Entry;
 struct CSRA1_Pileup_Entry
 {
@@ -105,26 +137,11 @@ struct CSRA1_Pileup_Entry
     const void * cell_data [ pileup_event_col_count ];
     uint32_t cell_len [ pileup_event_col_count ];
 
-    /* insertion count */
-    uint32_t ins_cnt;
+    /* current state of the event */
+    CSRA1_Pileup_Entry_State state_curr;
 
-    /* deletion count */
-    uint32_t del_cnt;
-
-    /* offset into REF_OFFSET */
-    uint32_t ref_off_idx;
-
-    /* offset into MISMATCH */
-    uint32_t mismatch_idx;
-
-    /* offset into aligned sequence */
-    uint32_t seq_idx;
-
-    /* adjustment to "zstart" for current alignment */
-    volatile int32_t zstart_adj;
-
-    /* set to a base or NUL if not set */
-    char mismatch;
+    /* to properly set the current state we have to look ahead */
+    CSRA1_Pileup_Entry_State state_next;
 
     /* true if alignment comes from secondary table */
     bool secondary;
@@ -134,6 +151,9 @@ struct CSRA1_Pileup_Entry
 
     /* true if event has already been seen */
     bool seen;
+
+    /* the status of the entry: one of pileup_entry_status_* */
+    int status;
 };
 
 
