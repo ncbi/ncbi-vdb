@@ -342,7 +342,7 @@ void CSRA1_Pileup_AlignCursorDataGetNonEmptyCell ( CSRA1_Pileup_AlignCursorData 
     }
 }
 
-static
+/*static
 uint8_t CSRA1_Pileup_AlignCursorDataGetUInt8 ( CSRA1_Pileup_AlignCursorData * self, ctx_t ctx,
     int64_t row_id, uint32_t col_idx )
 {
@@ -355,7 +355,7 @@ uint8_t CSRA1_Pileup_AlignCursorDataGetUInt8 ( CSRA1_Pileup_AlignCursorData * se
     }
 
     return 0;
-}
+}*/
 
 static
 int32_t CSRA1_Pileup_AlignCursorDataGetInt32 ( CSRA1_Pileup_AlignCursorData * self, ctx_t ctx,

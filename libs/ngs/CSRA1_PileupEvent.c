@@ -663,18 +663,20 @@ void CSRA1_PileupEventEntryFocus ( CSRA1_PileupEvent * self, CSRA1_Pileup_Entry 
 
     /* we need the entry to be fast-forwarded */
     int32_t ref_zpos_adj, plus_end_pos;
+    uint32_t next_ins_cnt;
 
-advance_to_the_next_position:
+advance_to_the_next_position: /* TODO: try to reorganise the function not to have this goto */
 
-    entry -> state_curr = entry -> state_next;
-    
     ref_zpos_adj = CSRA1_PileupEventGetPileup ( self ) -> ref_zpos - entry -> zstart;
     plus_end_pos = entry->status == pileup_entry_status_INITIAL ? 0 : 1;
     assert ( ref_zpos_adj >= 0 );
 
     /* always lose any insertion, forget cached values */
-    entry -> state_next . ins_cnt = 0;
+    /*entry -> state_next . ins_cnt = 0;*/
     entry -> state_next . mismatch = 0;
+    next_ins_cnt = 0; /* this variable is needed not to erase
+                         state_curr.ins_count on the first iteration
+                         of the next while-loop */ /* TODO: advise with Kurt about the case with INITIAL - should it be reset? */
 
     /* must advance in all but initial case */
     assert ( ref_zpos_adj + plus_end_pos > entry -> state_next . zstart_adj || entry -> state_next . zstart_adj == 0 );
@@ -682,6 +684,8 @@ advance_to_the_next_position:
     /* walk forward */
     while ( ref_zpos_adj + plus_end_pos > entry -> state_next . zstart_adj )
     {
+        entry -> state_curr = entry -> state_next;
+
         /* within a deletion */
         if ( entry -> state_next . del_cnt != 0 )
             -- entry -> state_next . del_cnt;
@@ -699,6 +703,7 @@ advance_to_the_next_position:
             if ( entry -> state_next . seq_idx >= entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
             {
                 entry -> status = pileup_entry_status_DONE;
+                entry -> state_next . ins_cnt = next_ins_cnt;
                 return;
             }
 
@@ -719,7 +724,8 @@ advance_to_the_next_position:
                         ins_cnt = ( int32_t ) entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] - entry -> state_next . seq_idx;
 
                     /* combine adjacent inserts */
-                    entry -> state_next . ins_cnt += ins_cnt;
+                    /*entry -> state_next . ins_cnt += ins_cnt;*/
+                    next_ins_cnt += ins_cnt;
 
                     /* scan over insertion to adjust mismatch index */
                     for ( i = 0; i < ins_cnt; ++ i )
@@ -729,6 +735,7 @@ advance_to_the_next_position:
                     if ( entry -> state_next . seq_idx >= entry -> cell_len [ pileup_event_col_HAS_REF_OFFSET ] )
                     {
                         entry -> status = pileup_entry_status_DONE;
+                        entry -> state_next . ins_cnt = next_ins_cnt;
                         return;
                     }
 
@@ -765,6 +772,8 @@ advance_to_the_next_position:
         }
 
         ++ entry -> state_next . zstart_adj;
+        entry -> state_next . ins_cnt = next_ins_cnt;
+
     }
 
     if ( entry->status == pileup_entry_status_INITIAL )
@@ -772,8 +781,6 @@ advance_to_the_next_position:
         entry->status = pileup_entry_status_VALID;
         goto advance_to_the_next_position;
     }
-    else
-        entry->status = pileup_entry_status_VALID;
 }
 
 static
@@ -845,6 +852,10 @@ void CSRA1_PileupEventRefreshEntry ( CSRA1_PileupEvent * self, ctx_t ctx, CSRA1_
                 assert ( HAS_MISMATCH != NULL );
                 assert ( HAS_REF_OFFSET != NULL );
                 assert ( REF_OFFSET != NULL );
+
+                (void)HAS_MISMATCH;
+                (void)HAS_REF_OFFSET;
+                (void)REF_OFFSET;
             }
         }
     }
@@ -885,13 +896,7 @@ bool CSRA1_PileupEventIteratorNext ( CSRA1_PileupEvent * self, ctx_t ctx )
     }
 
     /* this is an entry we've seen before */
-    /*if ( entry -> status == pileup_entry_status_INITIAL )
-    {
-        entry -> status = pileup_entry_status_VALID;
-        CSRA1_PileupEventEntryFocus ( self, entry );
-    }
-    if ( entry -> status == pileup_entry_status_VALID )*/
-        CSRA1_PileupEventEntryFocus ( self, entry );
+    CSRA1_PileupEventEntryFocus ( self, entry );
 
     return true;
 }
@@ -909,7 +914,7 @@ void CSRA1_PileupEventIteratorReset ( CSRA1_PileupEvent * self, ctx_t ctx )
         memset ( & entry-> state_curr, 0, sizeof (entry-> state_curr) );
         memset ( & entry-> state_next, 0, sizeof (entry-> state_next) );
 
-        entry -> status = pileup_entry_status_INITIAL;
+        /*entry -> status = pileup_entry_status_INITIAL;*/ /* TODO: remove comment */
     }
 }
 
