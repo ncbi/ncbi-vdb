@@ -578,15 +578,13 @@ TEST_CASE(CSRA1_PileupIterator_Depth)
 
 TEST_CASE(CSRA1_PileupIterator_TrailingInsertion)
 {
-    // this is transition from depth == 0 to depth == 1
-    // initial code had different output for primaryAlignments vs all
+    // Loaders sometimes fail and produce a run with trailing insertions
+    // Like now (2015-06-29) SRR1652532 for SRR1652532.PA.97028
 
     int64_t const pos_start = 42406728-1;
     int64_t const pos_end = 42406732;
     uint64_t const len = (uint64_t)(pos_end - pos_start + 1);
 
-    // when requesting category == all, the output must be the same as with
-    // primaryAlignments
     // reference output: sra-pileup SRR1652532 -r "CM000671.1":42406728-42406732 -s -n
 
     // as of 2015-06-25, this command causes sra-pileup to crash, so
