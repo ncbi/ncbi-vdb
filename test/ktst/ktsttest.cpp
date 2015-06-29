@@ -152,6 +152,7 @@ TEST_CASE(ArgHandlerCalled)
 
 //TODO: test FIXTURE_TEST_CASE, PROCESS_FIXTURE_TEST_CASE
 //TODO: test GET_GLOBAL_FIXTURE
+//TODO: test REQUIRE_THROW, THROW_ON_RC
 
 //////////////////////////////////////////// Main
 extern "C"
