@@ -867,8 +867,10 @@ bool CSRA1_PileupEventIteratorNext ( CSRA1_PileupEvent * self, ctx_t ctx )
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
     CSRA1_Pileup_Entry * entry;
+#if _DEBUGGING
     CSRA1_Pileup * pileup = CSRA1_PileupEventGetPileup ( self );
     assert ( pileup != NULL );
+#endif
 
     /* go to next entry */
     if ( ! self -> seen_first )
