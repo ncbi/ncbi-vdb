@@ -44,6 +44,10 @@ KAPP_EXTERN rc_t CC KLoaderMeta_Write(struct KMDataNode* root,
                                       const char* argv0, const char* argv0_date,
                                       const char* app_name, ver_t app_version);
 
+KAPP_EXTERN rc_t CC KLoaderMeta_WriteWithVersion(struct KMDataNode* root,
+                                                 const char* argv0, const char* argv0_date, ver_t argv0_version,
+                                                 const char* app_name, ver_t app_version);
+
 #ifdef __cplusplus
 }
 #endif

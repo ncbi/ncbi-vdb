@@ -47,11 +47,14 @@ TEST_LOADER_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_LOADER_SRC))
 
 TEST_LOADER_LIB = \
-	-lkapp \
-    -lktst \
-    -lncbi-wvdb \
-    -lloader
+	-skapp \
+    -sktst \
+    -sloader \
+    -sncbi-wvdb \
+    -sload \
 
 $(TEST_BINDIR)/test-loader: $(TEST_LOADER_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LOADER_LIB)
 
+vg_loader: $(TEST_BINDIR)/test-loader
+	valgrind --ncbi $(TEST_BINDIR)/test-loader
