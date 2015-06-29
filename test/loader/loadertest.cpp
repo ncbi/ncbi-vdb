@@ -41,6 +41,7 @@
 #include <vdb/schema.h> /* VSchemaRelease */
 
 #include <stdexcept> 
+#include <fstream>
 
 extern "C" {
 #include <loader/sequence-writer.h>
@@ -86,30 +87,26 @@ public:
         THROW_ON_RC( VDBManagerRelease ( vdb ) );
     }
     
-    void InitDatabase ()
+    void InitDatabase ( const char * schemaFile, const char * schemaSpec )
     {
         RemoveDatabase();
         
-        const char * schemaFile = "./sequencewriter.vschema";
-        const char * schemaSpec = "NCBI:align:db:fastq";
-        {
-            VDBManager* mgr;
-            THROW_ON_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
-            VSchema* schema;
-            THROW_ON_RC ( VDBManagerMakeSchema ( mgr, & schema ) );
-            THROW_ON_RC ( VSchemaParseFile(schema, "%s", schemaFile ) );
-            
-            THROW_ON_RC ( VDBManagerCreateDB ( mgr, 
-                                              & m_db, 
-                                              schema, 
-                                              schemaSpec, 
-                                              kcmInit + kcmMD5, 
-                                              "%s", 
-                                              m_databaseName . c_str() ) );
-                                              
-            THROW_ON_RC ( VSchemaRelease ( schema ) );
-            THROW_ON_RC ( VDBManagerRelease ( mgr ) );
-        }
+        VDBManager* mgr;
+        THROW_ON_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
+        VSchema* schema;
+        THROW_ON_RC ( VDBManagerMakeSchema ( mgr, & schema ) );
+        THROW_ON_RC ( VSchemaParseFile(schema, "%s", schemaFile ) );
+        
+        THROW_ON_RC ( VDBManagerCreateDB ( mgr, 
+                                          & m_db, 
+                                          schema, 
+                                          schemaSpec, 
+                                          kcmInit + kcmMD5, 
+                                          "%s", 
+                                          m_databaseName . c_str() ) );
+                                          
+        THROW_ON_RC ( VSchemaRelease ( schema ) );
+        THROW_ON_RC ( VDBManagerRelease ( mgr ) );
     }
     
     void CloseDatabase()
@@ -183,6 +180,13 @@ public:
         return string ( attr, num_read );
     }
     
+    void CreateFile ( const string& p_name, const string& p_content )
+    {
+        ofstream out( p_name . c_str() );
+        out << p_content;
+    }
+    
+    
     string          m_databaseName;
     VDatabase *     m_db;
     const VCursor * m_cursor;
@@ -206,7 +210,7 @@ template<> std::string LoaderFixture::GetValue ( const char* p_table, const char
 FIXTURE_TEST_CASE ( SequenceWriter_Write, LoaderFixture ) 
 {
     m_databaseName = GetName();
-    InitDatabase();
+    InitDatabase ( "./sequencewriter.vschema", "NCBI:align:db:fastq";);
     
     const string Sequence = "AC";
     const string SpotName = "name1";
@@ -283,7 +287,10 @@ FIXTURE_TEST_CASE ( SequenceWriter_Write, LoaderFixture )
 FIXTURE_TEST_CASE ( LoaderMeta_Write, LoaderFixture ) 
 {
     m_databaseName = GetName();
-    InitDatabase();
+    
+    string schemaFile = string ( GetName() ) + ".vschema";
+    CreateFile ( schemaFile, string ( "table table1 #1.0.0 { column ascii column1; }; database database1 #1 { table table1 #1 TABLE1; } ;" ).c_str() ); 
+    InitDatabase ( schemaFile.c_str(), "database1");
     
     const string FormatterName = "fmt_name";
     const string LoaderName = "test-loader";
@@ -321,7 +328,9 @@ FIXTURE_TEST_CASE ( LoaderMeta_Write, LoaderFixture )
 FIXTURE_TEST_CASE ( LoaderMeta_WriteWithVersion, LoaderFixture ) 
 {
     m_databaseName = GetName();
-    InitDatabase();
+    string schemaFile = string ( GetName() ) + ".vschema";
+    CreateFile ( schemaFile, string ( "table table1 #1.0.0 { column ascii column1; }; database database1 #1 { table table1 #1 TABLE1; } ;" ).c_str() ); 
+    InitDatabase ( schemaFile.c_str(), "database1");
     
     const string FormatterName = "fmt_name";
     const string LoaderName = "test-loader";
