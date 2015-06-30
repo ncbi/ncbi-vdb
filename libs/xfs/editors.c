@@ -78,6 +78,7 @@ XFSEditorInit (
 
         Editor -> Node = Node;
         Editor -> dispose = dispose;
+        Editor -> Data = NULL;
     }
 
     return RCt;
@@ -114,6 +115,24 @@ XFSEditorNode ( const struct XFSEditor * self )
 {
     return self == NULL ? NULL : ( self -> Node );
 }   /* XFSEditorNode () */
+
+LIB_EXPORT
+void * CC
+XFSEditorData ( const struct XFSEditor * self )
+{
+    return self == NULL ? self -> Data : NULL;
+}   /* XFSEditorData () */
+
+LIB_EXPORT
+rc_t CC
+XFSEditorSetData ( const struct XFSEditor * self, void * Data )
+{
+    XFS_CAN ( self )
+
+    ( ( struct XFSEditor * ) self ) -> Data = Data;
+
+    return 0;
+}   /* XFSEditorSetData () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
@@ -342,6 +361,38 @@ XFSFileEditorWrite (
     return XFS_RC ( rcUnsupported );
 }   /* XFSFileEditorWrite () */
 
+LIB_EXPORT
+rc_t CC
+XFSFileEditorSize ( const struct XFSFileEditor * self, uint64_t * Size )
+{
+    if ( self == NULL || Size == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    * Size = 0;
+
+    if ( self -> size != NULL ) {
+        return self -> size ( self, Size );
+    }
+
+    return XFS_RC ( rcUnsupported );
+}   /* XFSFileEditorSize () */
+
+LIB_EXPORT
+rc_t CC
+XFSFileEditorSetSize ( const struct XFSFileEditor * self, uint64_t Size )
+{
+    if ( self == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    if ( self -> set_size != NULL ) {
+        return self -> set_size ( self, Size );
+    }
+
+    return XFS_RC ( rcUnsupported );
+}   /* XFSFileEditorSetSize () */
+
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
@@ -385,38 +436,6 @@ XFSAttrEditorSetPermissions (
 
     return XFS_RC ( rcUnsupported );
 }   /* XFSAttrEditorSetPermissions () */
-
-LIB_EXPORT
-rc_t CC
-XFSAttrEditorSize ( const struct XFSAttrEditor * self, uint64_t * Size )
-{
-    if ( self == NULL || Size == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    * Size = 0;
-
-    if ( self -> size != NULL ) {
-        return self -> size ( self, Size );
-    }
-
-    return XFS_RC ( rcUnsupported );
-}   /* XFSAttrEditorSize () */
-
-LIB_EXPORT
-rc_t CC
-XFSAttrEditorSetSize ( const struct XFSAttrEditor * self, uint64_t Size )
-{
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    if ( self -> set_size != NULL ) {
-        return self -> set_size ( self, Size );
-    }
-
-    return XFS_RC ( rcUnsupported );
-}   /* XFSAttrEditorSetSize () */
 
 LIB_EXPORT
 rc_t CC

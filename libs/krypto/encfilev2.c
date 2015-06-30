@@ -534,7 +534,10 @@ rc_t KEncFileFooterWrite (KEncFile * self)
 
     if (self->sought)
     {
-        self->foot.block_count = foot.block_count = 1 + DecryptedPos_to_BlockId (self->dec_size, NULL);
+/*  Here we should notice that in file with SIZE = SIZE, maximum offset
+    could be "SIZE - 1"
+*/
+        self->foot.block_count = foot.block_count = 1 + DecryptedPos_to_BlockId (self->dec_size - ( self->dec_size == 0 ? 0 : 1 ), NULL);
         foot.crc_checksum = 0;
     }
     else

@@ -126,7 +126,8 @@ rc_t CC
 XFSPathInnerToNative (
                 WCHAR * NativePathBuffer,
                 size_t NativePathBufferSize,
-                const char * InnerPath
+                const char * InnerPath,
+                ...
 )
 {
     rc_t RCt;
@@ -633,11 +634,13 @@ _HandleOpenExistingFileEdit (
     rc_t RCt;
     XFSNMode Mode;
     struct XFSHandle * Handle;
+    int RetVal;
 
     Editor = NULL;
     Mode = 0;
     Handle = NULL;
     RCt= 0;
+    RetVal = 0;
 
     if ( Node == NULL ) {
         return ERROR_INVALID_DATA;
@@ -678,7 +681,19 @@ _HandleOpenExistingFileEdit (
 
     XFSNodeRelease ( Node );
 
-    return RCt == 0 ? 0 : ERROR_ACCESS_DENIED;
+    if ( RCt == 0 ) {
+        RetVal = 0;
+    }
+    else {
+        if ( RCt == XFS_RC ( rcBusy ) ) {
+            RetVal = ERROR_PATH_BUSY;
+        }
+        else {
+            RetVal = ERROR_ACCESS_DENIED;
+        }
+    }
+
+    return RetVal;
 }   /* _HandleOpenExistingFileEdit () */
 
 static
@@ -782,7 +797,7 @@ XFS_DOKAN_CreateFile (
     Read = Write = false;
     Path = NULL;
 
-#ifdef I_AM_NOT_AN_IMBECILE
+#ifdef I_AM_AN_IMBECILE
 {
 if ( wcsstr ( FileName, L"CVS" ) != NULL
     || wcsstr ( FileName, L".svn" ) != NULL
@@ -794,7 +809,7 @@ wprintf ( L" CREATE File [%s][VYHUHOL]\n", FileName );
     return ERROR_PATH_NOT_FOUND * - 1;
 }
 }
-#endif I_AM_NOT_AN_IMBECILE
+#endif /* I_AM_AN_IMBECILE */
 
 wprintf ( L" CREATE File [%s][I=0x%p][H=0x%p]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
 
@@ -873,6 +888,16 @@ wprintf ( L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue,
         /* Reading/Writin existing file
          */
     if ( ( Read || Write ) && Type != kxfsDir &&  Type != kxfsNotFound && Type != kxfsBadPath ) {
+        RetValue = _HandleOpenExistingFileEdit ( Node, TheFileInfo, Write, Read );
+
+        VPathRelease ( Path );
+wprintf ( L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue, ( void * ) ( TheFileInfo -> Context ), TheFileInfo, __LINE__ );
+        return RetValue * - 1;
+    }
+
+        /* Reading/Writin file attributes
+         */
+    if ( ( AccessMode & FILE_GENERIC_READ ) == FILE_WRITE_ATTRIBUTES && CreationDisposition == OPEN_EXISTING ) {
         RetValue = _HandleOpenExistingFileEdit ( Node, TheFileInfo, Write, Read );
 
         VPathRelease ( Path );
@@ -976,7 +1001,7 @@ XFS_DOKAN_OpenDirectory (
         RetVal = ERROR_INVALID_DATA;
     }
 
-//TT wprintf ( L" OPEN directory [%s][I=0x%p][C=0x%p][RC=%d]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, RetVal );
+//TT wprintf ( L" OPEN directory,cont [%s][I=0x%p][C=0x%p][RC=%lu]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, RetVal );
     return RetVal * - 1;
 }   /* OpenDirectory() */
 
@@ -1135,6 +1160,8 @@ XFS_DOKAN_CloseFile (
         RCt = _DOKAN_delete_file_dir ( FileName, TheFileInfo );
     }
 
+//TT wprintf ( L" CLOSE File,cont [%s][I=0x%p][H=0x%p][RC=%d]\n", FileName, TheFileInfo, Handle, RCt );
+
     return ( RCt == 0 ? 0 : ERROR_INVALID_DATA ) * - 1;
 }   /* CloseFile() */
 
@@ -1162,6 +1189,7 @@ XFS_DOKAN_ReadFile (
     const struct XFSNode * Node;
     rc_t RCt;
     int RetVal;
+    size_t n2r, nRd;
 
     Handle = NULL;
     LocallyOpened = false;
@@ -1169,14 +1197,16 @@ XFS_DOKAN_ReadFile (
     Node = NULL;
     RCt = 0;
     RetVal = 0;
+    n2r = nRd = 0;
 
     if ( FileName == NULL || TheFileInfo == NULL ) {
         return 1 * - 1; /* TODO !!! */
     }
 
-//TT wprintf ( L" READ File [%s][I=0x%p][H=0x%p] - [O=%d][N=%d]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, Offset, NumberOfBytesToRead );
+//TT wprintf ( L" READ File [%s][I=0x%p][H=0x%p] - [N=%lu][O=%lu]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, NumberOfBytesToRead, Offset );
 
     Handle = ( struct XFSHandle * ) TheFileInfo -> Context;
+    n2r = ( size_t ) NumberOfBytesToRead;
 
         /*)) That's could happen, and we need to reopen fiel
          ((*/
@@ -1223,9 +1253,10 @@ XFS_DOKAN_ReadFile (
                             Editor,
                             Offset,
                             Buffer,
-                            NumberOfBytesToRead,
-                            NumberOfBytesRead
+                            n2r,
+                            & nRd
                             );
+        * NumberOfBytesRead = nRd;
     }
 
     if ( LocallyOpened ) {
@@ -1247,7 +1278,7 @@ XFS_DOKAN_ReadFile (
 
     RetVal =  RCt == 0 ? 0 : ERROR_INVALID_DATA;
 
-//TT wprintf ( L" READ File [%s][I=0x%p][H=0x%p] - [Read=%d][RC=%d]!\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, * NumberOfBytesRead, RetVal );
+//TT wprintf ( L" READ File,cont [%s][I=0x%p][H=0x%p] - [Read=%lu][RC=%d]!\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, * NumberOfBytesRead, RetVal );
 
     return RetVal * - 1;
 }   /* ReadFile() */
@@ -1276,6 +1307,7 @@ XFS_DOKAN_WriteFile (
     const struct XFSNode * Node;
     rc_t RCt;
     int RetVal;
+    size_t n2w, nWr;
 
     Handle = NULL;
     LocallyOpened = false;
@@ -1283,12 +1315,15 @@ XFS_DOKAN_WriteFile (
     Node = NULL;
     RCt = 0;
     RetVal = 0;
+    n2w = nWr = 0;
 
     if ( FileName == NULL || TheFileInfo == NULL ) {
         return 1 * - 1; /* TODO !!! */
     }
 
 //TT wprintf ( L" WRITE File [%s][I=0x%p][H=0x%p] - [O=%d][N=%d]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, (int)Offset, (int)NumBytesWrite );
+
+    n2w = ( size_t ) NumBytesWrite;
 
     Handle = ( struct XFSHandle * ) TheFileInfo -> Context;
 
@@ -1337,9 +1372,10 @@ XFS_DOKAN_WriteFile (
                             Editor,
                             Offset,
                             Buffer,
-                            NumBytesWrite,
-                            NumBytesWritten
+                            n2w,
+                            & nWr
                             );
+        * NumBytesWritten = nWr;
     }
 
     if ( LocallyOpened ) {
@@ -1361,7 +1397,7 @@ XFS_DOKAN_WriteFile (
 
     RetVal =  RCt == 0 ? 0 : ERROR_INVALID_DATA;
 
-//TT wprintf ( L" WRITE File [%s][I=0x%p][H=0x%p] - [Wrote=%d][RC=%d]!\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, (int)* NumBytesWritten, (int)RetVal );
+//TT wprintf ( L" WRITE File,cont [%s][I=0x%p][H=0x%p] - [Wrote=%d][RC=%d]!\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, (int)* NumBytesWritten, (int)RetVal );
 
     return RetVal * - 1;
 }   /* WriteFile() */
@@ -1407,6 +1443,7 @@ _Read_HANDLE_FILE_INFORMATION (
     int RetVal;
     const struct XFSNode * Node;
     struct XFSAttrEditor * Editor;
+    struct XFSFileEditor * FileEditor;
     struct XFSPerm * Perm;
     const char * PermStr;
     XFSNType Type;
@@ -1497,14 +1534,32 @@ _Read_HANDLE_FILE_INFORMATION (
         HandleFileInfo -> ftLastWriteTime.dwLowDateTime = TimeLow;
         HandleFileInfo -> ftLastWriteTime.dwHighDateTime = TimeHigh;
 
-            /* Sizes */
-        if ( XFSAttrEditorSize ( Editor, & Size ) != 0 ) {
-            RetVal = 1;
-            break;
-        }
-        FileSize.QuadPart = Size;
+            /* Sizes: set default value and try to get some */
+        FileSize.QuadPart = 0;
         HandleFileInfo -> nFileSizeHigh = FileSize.HighPart;
         HandleFileInfo -> nFileSizeLow = FileSize.LowPart;
+
+        FileEditor = ( struct XFSFileEditor * ) XFSHandleGet ( Handle );
+        if ( FileEditor == NULL ) {
+            RCt = XFSNodeFileEditor ( Node, & FileEditor );
+            if ( RCt == 0 ) {
+                if ( FileEditor != NULL ) {
+                    if ( XFSFileEditorSize ( FileEditor, & Size ) == 0 ) {
+                        FileSize.QuadPart = Size;
+                        HandleFileInfo -> nFileSizeHigh = FileSize.HighPart;
+                        HandleFileInfo -> nFileSizeLow = FileSize.LowPart;
+                    }
+
+                    XFSEditorDispose ( & ( FileEditor -> Papahen ) );
+                }
+            }
+        } else {
+            if ( XFSFileEditorSize ( FileEditor, & Size ) == 0 ) {
+                FileSize.QuadPart = Size;
+                HandleFileInfo -> nFileSizeHigh = FileSize.HighPart;
+                HandleFileInfo -> nFileSizeLow = FileSize.LowPart;
+            }
+        }
 
         break;
     }
@@ -1542,7 +1597,7 @@ XFS_DOKAN_GetFileInformation (
 
     RetValue = _Read_HANDLE_FILE_INFORMATION ( Handle, HandleFileInfo );
 
-//TT wprintf ( L" INFO File [%s][0x%p][RV=%d]\n", FileName, FileInfo, RetValue );
+//TT wprintf ( L" INFO File,cont [%s][0x%p][RV=%d]\n", FileName, FileInfo, RetValue );
 
     return RetValue * - 1;
 }   /* GetFileInformation() */
@@ -1563,6 +1618,7 @@ _Read_PWIN32_FIND_DATA (
 {
     rc_t RCt;
     struct XFSAttrEditor * Editor;
+    struct XFSFileEditor * FileEditor;
     struct XFSPerm * Perm;
     const char * PermStr;
     ULONG64 Time;
@@ -1593,6 +1649,8 @@ _Read_PWIN32_FIND_DATA (
     }
 
     if ( XFSAttrEditorType ( Editor, & Type ) != 0 ) {
+        XFSEditorDispose ( & ( Editor -> Papahen ) );
+
         return XFS_RC ( rcInvalid );
     }
 
@@ -1625,10 +1683,12 @@ _Read_PWIN32_FIND_DATA (
     }
 
     if ( RCt != 0 ) {
+        XFSEditorDispose ( & ( Editor -> Papahen ) );
         return RCt;
     }
 
     RCt = XFSAttrEditorDate ( Editor, & TheTime );
+    XFSEditorDispose ( & ( Editor -> Papahen ) );
     if ( RCt != 0 ) {
         return RCt;
     }
@@ -1643,12 +1703,20 @@ _Read_PWIN32_FIND_DATA (
     FindData -> ftLastWriteTime.dwLowDateTime = TimeLow;
     FindData -> ftLastWriteTime.dwHighDateTime = TimeHigh;
 
-    RCt = XFSAttrEditorSize ( Editor, & Size );
-    if ( RCt != 0 ) {
-        return RCt;
+    FileSize.QuadPart = 0;
+    RCt = XFSNodeFileEditor ( Node, & FileEditor );
+    if ( RCt == 0 ) {
+        if ( FileEditor != NULL ) {
+            RCt = XFSFileEditorSize ( FileEditor, & Size );
+            if ( RCt == 0 ) {
+                FileSize.QuadPart = Size;
+            }
+            XFSEditorDispose ( & ( FileEditor -> Papahen ) );
+        }
     }
-    FileSize.QuadPart = Size;
-
+    if ( RCt != 0 ) {
+        RCt = 0;
+    }
     FindData -> nFileSizeHigh = FileSize.HighPart;
     FindData -> nFileSizeLow = FileSize.LowPart;
 
@@ -1898,6 +1966,8 @@ XFS_DOKAN_SetFileTime (
         XFSNodeRelease ( Node );
     }
 
+//TT wprintf ( L" SET file time,cont: [%s][FI=0x%p][RC=%d]\n", FileName, TheFileInfo, RCt );
+
     return ( RCt == 0 ? 0 : ERROR_INVALID_DATA ) * - 1;
 }   /* SetFileTime() */
 
@@ -1922,7 +1992,7 @@ XFS_DOKAN_DeleteFile (
 
     RCt = _DOKAN_delete_file_dir ( FileName, TheFileInfo );
 
-//TT wprintf ( L"   DELETE File [%s][FI=0x%p][H=0x%p][RC=%d]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, RCt );
+//TT wprintf ( L"   DELETE File,cont [%s][FI=0x%p][H=0x%p][RC=%d]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, RCt );
 
     return ( RCt == 0 ? 0 : ERROR_INVALID_DATA ) * - 1;
 }   /* DeleteFile() */
@@ -2040,10 +2110,12 @@ XFS_DOKAN_SetEndOfFile (
 )
 {
     rc_t RCt;
-    struct XFSAttrEditor * Editor;
+    struct XFSHandle * Handle;
+    struct XFSFileEditor * FileEditor;
     const struct XFSNode * Node;
 
     RCt = 0;
+    Handle = NULL;
     Editor = NULL;
     Node = NULL;
 
@@ -2053,21 +2125,33 @@ XFS_DOKAN_SetEndOfFile (
         return ERROR_INVALID_DATA * - 1;
     }
 
-    RCt = _DOKAN_get_path_and_node (
-                                FileName,
-                                TheFileInfo,
-                                NULL,   /* VPath, no need */
-                                & Node,
-                                NULL    /* NodeType */
-                                );
-    if ( RCt == 0 ) {
-        RCt = XFSNodeAttrEditor ( Node, & Editor );
+    Handle = ( struct XFSHandle * ) TheFileInfo -> Context;
 
+    Editor = Handle != NULL
+                ? ( struct XFSFileEditor * ) XFSHandleGet ( Handle )
+                : NULL
+                ;
+    if ( Editor == NULL ) {
+        RCt = _DOKAN_get_path_and_node (
+                                    FileName,
+                                    TheFileInfo,
+                                    NULL,   /* VPath, no need */
+                                    & Node,
+                                    NULL    /* NodeType */
+                                    );
         if ( RCt == 0 ) {
-            RCt = XFSAttrEditorSetSize ( Editor, Length );
-        }
+            RCt = XFSNodeFileEditor ( Node, & Editor );
+            if ( RCt == 0 ) {
+                RCt = XFSFileEditorSetSize ( Editor, Length );
 
-        XFSNodeRelease ( Node );
+                XFSEditorDispose ( & ( Editor -> Papahen ) );
+            }
+
+            XFSNodeRelease ( Node );
+        }
+    }
+    else {
+        RCt = XFSFileEditorSetSize ( Editor, Length );
     }
 
     return ( RCt == 0 ? 0 : ERROR_INVALID_DATA ) * - 1;
@@ -2364,7 +2448,7 @@ printf ( "SECURITY File [%s][0x%p]\n", FU, TheFileInfo );
     }
 
     XFSEditorDispose ( & ( Editor -> Papahen ) );
-//TT wprintf ( L" SECURITY File [%s][0x%p][R=%d]\n", FileName, TheFileInfo, RetVal );
+//TT wprintf ( L" SECURITY File,cont [%s][0x%p][R=%d]\n", FileName, TheFileInfo, RetVal );
 
     return RetVal * - 1;
 }   /* GetFileSecurity() */

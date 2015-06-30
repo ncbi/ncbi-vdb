@@ -519,6 +519,7 @@ _KartNodeConstructorEx (
 
     * Node = NULL;
 
+
     NodeName = Alias == NULL ? XFSModelNodeName ( Template ) : Alias;
 
     RCt = XFSKartNodeMake (

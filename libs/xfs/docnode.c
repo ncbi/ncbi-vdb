@@ -415,6 +415,46 @@ _DocFile_read_v1 (
     return RCt;
 }   /* _DocFile_read_v1 () */
 
+static
+rc_t CC
+_DocFile_size_v1 (
+                        const struct XFSFileEditor * self,
+                        uint64_t * Size
+)
+{
+    const struct XFSDocNode * Node;
+    uint64_t TempSize;
+    rc_t RCt;
+
+    Node = NULL;
+    TempSize = 0;
+    RCt = 0;
+
+    if ( Size == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+    * Size = 0;
+
+    Node = ( const struct XFSDocNode * ) XFSEditorNode (
+                                                & ( self -> Papahen )
+                                                );
+
+    if ( Node == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    if ( Node -> doc == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    RCt = XFSDocSize ( Node -> doc, & TempSize );
+    if ( RCt == 0 ) {
+        * Size = TempSize;
+    }
+
+    return RCt;
+}   /* _DocFile_size_v1 () */
+
 rc_t CC
 _DocNodeFile_v1 (
             const struct XFSNode * self,
@@ -453,6 +493,8 @@ _DocNodeFile_v1 (
         Editor -> close = _DocFile_close_v1;
         Editor -> read = _DocFile_read_v1;
         Editor -> write = NULL;
+        Editor -> size = _DocFile_size_v1;
+        Editor -> set_size = NULL;
 
         * File = Editor;
     }
@@ -563,37 +605,6 @@ _DocAttr_permissions_v1 (
 
 static
 rc_t CC
-_DocAttr_size_v1 (
-                        const struct XFSAttrEditor * self,
-                        uint64_t * Size
-)
-{
-    const struct XFSDocNode * Node;
-    uint64_t TempSize;
-    rc_t RCt;
-
-    Node = NULL;
-    TempSize = 0;
-    RCt = 0;
-
-    if ( Size == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * Size = 0;
-
-    RCt = _DocAttr_init_check_v1 ( self, & Node );
-    if ( RCt == 0 ) {
-        RCt = XFSDocSize ( Node -> doc, & TempSize );
-        if ( RCt == 0 ) {
-            * Size = TempSize;
-        }
-    }
-
-    return RCt;
-}   /* _DocAttr_size_v1 () */
-
-static
-rc_t CC
 _DocAttr_date_v1 (
                         const struct XFSAttrEditor * self,
                         KTime_t * Time
@@ -669,8 +680,6 @@ _DocNodeAttr_v1 (
     if ( RCt == 0 ) {
         Editor -> permissions = _DocAttr_permissions_v1;
         Editor -> set_permissions = NULL;
-        Editor -> size = _DocAttr_size_v1;
-        Editor -> set_size = NULL;
         Editor -> date = _DocAttr_date_v1;
         Editor -> set_date = NULL;
         Editor -> type = _DocAttr_type_v1;

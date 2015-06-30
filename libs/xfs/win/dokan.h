@@ -26,9 +26,9 @@ with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #ifndef _M_X64	
   #ifdef _EXPORTING
-	#define DOKANAPI __declspec(dllimport) __stdcall
-  #else
 	#define DOKANAPI __declspec(dllexport) __stdcall
+  #else
+	#define DOKANAPI __declspec(dllimport) __stdcall
   #endif
 #else
   #define DOKANAPI
@@ -40,8 +40,8 @@ with this program. If not, see <http://www.gnu.org/licenses/>.
 extern "C" {
 #endif
 
-// The current Dokan version (ver 0.6.0). Please set this constant on DokanOptions->Version.
-#define DOKAN_VERSION		600
+// The current Dokan version (ver 0.7.2). Please set this constant on DokanOptions->Version.
+#define DOKAN_VERSION		720
 
 #define DOKAN_OPTION_DEBUG		1 // ouput debug message
 #define DOKAN_OPTION_STDERR		2 // ouput debug message to stderr

@@ -160,6 +160,12 @@ MOO ( "H" );
     memset ( & FuseArgs, 0, sizeof FuseArgs );
     Result = fuse_opt_add_arg ( & FuseArgs, XFSControlGetLabel ( self ) );
     Result = fuse_opt_add_arg ( & FuseArgs, XFSControlGetMountPoint ( self ) );
+#if ! MAC
+/* Options MAC does not know about */
+    Result = fuse_opt_add_arg ( & FuseArgs, "-o" );
+    Result = fuse_opt_add_arg( & FuseArgs, "big_writes" );
+#endif /* MAC */
+
     if ( Result != 0 ) {
         OUTMSG ( ( "Can not mount\n" ) );
         return XFS_RC ( rcFailed ); 
@@ -309,12 +315,7 @@ XFS_FUSE_unmount_v1 ( struct XFSControl * self )
     if ( self -> Control != NULL ) {
 
 #if ! MAC
-/* #ifndef __APPLE__ */
-/*
-OUTMSG ( ( "|o|fuse_exit()\n" ) );
-*/
         fuse_exit ( FuseStruct );
-/* #endif	__APPLE__ */
 #endif /* MAC */
 
 /*

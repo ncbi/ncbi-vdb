@@ -430,6 +430,38 @@ _EncFile_read_v1 (
     return RCt;
 }   /* _EncFile_read_v1 () */
 
+static
+rc_t CC
+_EncFile_size_v1 (
+                        const struct XFSFileEditor * self,
+                        uint64_t * Size
+)
+{
+    rc_t RCt;
+    struct XFSEncNode * Node;
+
+    RCt = 0;
+    Node = NULL;
+
+    XFS_CSA ( Size, 0 )
+    XFS_CAN ( Size )
+    XFS_CAN ( self )
+
+    Node = ( struct XFSEncNode * ) XFSEditorNode (
+                                                & ( self -> Papahen )
+                                                );
+
+    XFS_CAN ( Node )
+    XFS_CAN ( Node -> entry )
+
+    RCt = XFSEncEntrySize ( Node -> entry, Size );
+    if ( RCt != 0 ) {
+        * Size = 0;
+    }
+
+    return RCt;
+}   /* _EncFile_size_v1 () */
+
 rc_t CC
 _EncNodeFile_v1 (
             const struct XFSNode * self,
@@ -468,6 +500,7 @@ _EncNodeFile_v1 (
         Editor -> open = _EncFile_open_v1;
         Editor -> close = _EncFile_close_v1;
         Editor -> read = _EncFile_read_v1;
+        Editor -> size = _EncFile_size_v1;
 
         * File = Editor;
     }
@@ -553,33 +586,6 @@ _EncAttr_permissions_v1 (
 
 static
 rc_t CC
-_EncAttr_size_v1 (
-                        const struct XFSAttrEditor * self,
-                        uint64_t * Size
-)
-{
-    rc_t RCt;
-    const struct XFSEncEntry * Entry;
-
-    RCt = 0;
-    Entry = NULL;
-
-    XFS_CSA ( Size, 0 )
-    XFS_CAN ( Size )
-
-    RCt = _EncAttr_init_check_v1 ( self, & Entry );
-    if ( RCt == 0 ) {
-        RCt = XFSEncEntrySize ( Entry, Size );
-        if ( RCt != 0 ) {
-            * Size = 0;
-        }
-    }
-
-    return RCt;
-}   /* _EncAttr_size_v1 () */
-
-static
-rc_t CC
 _EncAttr_date_v1 (
                         const struct XFSAttrEditor * self,
                         KTime_t * Time
@@ -659,7 +665,6 @@ _EncNodeAttr_v1 (
                     );
     if ( RCt == 0 ) {
         Editor -> permissions = _EncAttr_permissions_v1;
-        Editor -> size = _EncAttr_size_v1;
         Editor -> date = _EncAttr_date_v1;
         Editor -> type = _EncAttr_type_v1;
 

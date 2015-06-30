@@ -1131,7 +1131,7 @@ _KfsFile_read_v1 (
         return XFS_RC ( rcInvalid );
     }
 
-    RCt = KFileRead (
+    RCt = KFileReadAll (
                     Editor -> File,
                     Offset,
                     Buffer,
@@ -1170,7 +1170,7 @@ _KfsFile_write_v1 (
         return XFS_RC ( rcInvalid );
     }
 
-    RCt = KFileWrite (
+    RCt = KFileWriteAll (
                     Editor -> File,
                     Offset,
                     Buffer,
@@ -1183,6 +1183,120 @@ _KfsFile_write_v1 (
 
     return RCt;
 }   /* _KfsFile_write_v1 () */
+
+static
+rc_t CC
+_KfsFile_size_v1 (
+                        const struct XFSFileEditor * self,
+                        uint64_t * Size
+)
+{
+    const struct XFSKfsNode * Node;
+    KDirectory * NativeDir;
+    const struct KFile * File;
+    uint64_t TempSize;
+    rc_t RCt;
+
+    Node = NULL;
+    NativeDir = NULL;
+    File = NULL;
+    TempSize = 0;
+    RCt = 0;
+
+    XFS_CSA ( Size, 0 )
+    XFS_CAN ( self )
+    XFS_CAN ( Size )
+
+    Node = ( const struct XFSKfsNode * ) XFSEditorNode (
+                                                & ( self -> Papahen )
+                                                );
+
+    if ( Node == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    if ( Node -> type != kxfsFile ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    if ( Node -> path == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    File = ( ( struct XFSKfsFileEditor * ) self ) -> File;
+    if ( File == NULL ) {
+        RCt = KDirectoryNativeDir ( & NativeDir );
+        if ( RCt == 0 ) {
+            RCt = KDirectoryFileSize (
+                                NativeDir,
+                                & TempSize,
+                                Node -> path
+                                );
+
+            KDirectoryRelease ( NativeDir );
+        }
+    }
+    else {
+        RCt = KFileSize ( File, & TempSize );
+    }
+    if ( RCt == 0 ) {
+        * Size = TempSize;
+    }
+
+    return RCt;
+}   /* _KfsFile_size_v1 () */
+
+static
+rc_t CC
+_KfsFile_set_size_v1 (
+                const struct XFSFileEditor * self,
+                uint64_t Size
+)
+{
+    rc_t RCt;
+    const struct XFSKfsNode * Node;
+    KDirectory * NativeDir;
+    struct KFile * File;
+
+    RCt = 0;
+    Node = NULL;
+    NativeDir = NULL;
+    File = NULL;
+
+    XFS_CAN ( self )
+
+    Node = ( const struct XFSKfsNode * ) XFSEditorNode (
+                                                & ( self -> Papahen )
+                                                );
+
+    if ( Node == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    if ( Node -> type != kxfsFile ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    if ( Node -> path == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    File = ( ( struct XFSKfsFileEditor * ) self ) -> File;
+    if ( File == NULL ) {
+
+        RCt = KDirectoryNativeDir ( & NativeDir );
+        if ( RCt == 0 ) {
+            RCt = KDirectorySetFileSize ( NativeDir, Size, Node -> path);
+
+            KDirectoryRelease ( NativeDir );
+        }
+    }
+    else {
+        RCt = KFileSetSize ( File, Size );
+    }
+
+    return RCt;
+}   /*  _KfsFile_set_size_v1 () */
 
 rc_t CC
 _KfsNodeFile_v1 (
@@ -1226,6 +1340,8 @@ _KfsNodeFile_v1 (
         Editor -> close = _KfsFile_close_v1;
         Editor -> read = _KfsFile_read_v1;
         Editor -> write = _KfsFile_write_v1;
+        Editor -> size = _KfsFile_size_v1;
+        Editor -> set_size = _KfsFile_set_size_v1;
 
         * File = Editor;
     }
@@ -1395,16 +1511,18 @@ _KfsAttr_set_permissions_v1 (
     if ( RCt == 0 ) {
         if ( Node -> perm != NULL ) {
             RCt = XFSPermToNum ( Node -> perm, & Access );
-            if ( RCt == 0 ) {
-                RCt = KDirectorySetAccess (
-                                        NativeDir,
-                                        false,
-                                        Access,
-                                        Access,
-                                        Node -> path
-                                        );
-
-            }
+        }
+        else {
+            RCt = XFSPermToNum ( Permissions, & Access );
+        }
+        if ( RCt == 0 ) {
+            RCt = KDirectorySetAccess (
+                                    NativeDir,
+                                    false,
+                                    Access,
+                                    Access,
+                                    Node -> path
+                                    );
         }
 
         KDirectoryRelease ( NativeDir );
@@ -1412,79 +1530,6 @@ _KfsAttr_set_permissions_v1 (
 
     return RCt;
 }   /*  _KfsAttr_set_permissions_v1 () */
-
-static
-rc_t CC
-_KfsAttr_size_v1 (
-                        const struct XFSAttrEditor * self,
-                        uint64_t * Size
-)
-{
-    const struct XFSKfsNode * Node;
-    KDirectory * NativeDir;
-    uint64_t TempSize;
-    rc_t RCt;
-
-    Node = NULL;
-    NativeDir = NULL;
-    TempSize = 0;
-    RCt = 0;
-
-    if ( Size == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * Size = 0;
-
-    RCt = _KfsAttr_init_check_v1 ( self, & Node, & NativeDir );
-    if ( RCt == 0 ) {
-            /*) Traditionally directory have size ZERO :lol:
-             (*/
-        if ( Node -> type == kxfsDir ) {
-            * Size = 0;
-        }
-        else {
-            RCt = KDirectoryFileSize (
-                                NativeDir,
-                                & TempSize,
-                                Node -> path
-                                );
-            if ( RCt == 0 ) {
-                * Size = TempSize;
-            }
-
-        }
-        KDirectoryRelease ( NativeDir );
-    }
-
-    return RCt;
-}   /* _KfsAttr_size_v1 () */
-
-static
-rc_t CC
-_KfsAttr_set_size_v1 (
-                const struct XFSAttrEditor * self,
-                uint64_t Size
-)
-{
-    rc_t RCt;
-    const struct XFSKfsNode * Node;
-    KDirectory * NativeDir;
-
-    RCt = 0;
-    Node = NULL;
-    NativeDir = NULL;
-
-    RCt = _KfsAttr_init_check_v1 ( self, & Node, & NativeDir );
-    if ( RCt == 0 ) {
-        if ( Node -> type != kxfsDir ) {
-            RCt = KDirectorySetFileSize ( NativeDir, Size, Node -> path);
-        }
-
-        KDirectoryRelease ( NativeDir );
-    }
-
-    return RCt;
-}   /*  _KfsAttr_set_size_v1 () */
 
 static
 rc_t CC
@@ -1609,8 +1654,6 @@ _KfsNodeAttr_v1 (
     if ( RCt == 0 ) {
         Editor -> permissions = _KfsAttr_permissions_v1;
         Editor -> set_permissions = _KfsAttr_set_permissions_v1;
-        Editor -> size = _KfsAttr_size_v1;
-        Editor -> set_size = _KfsAttr_set_size_v1;
         Editor -> date = _KfsAttr_date_v1;
         Editor -> set_date = _KfsAttr_set_date_v1;
         Editor -> type = _KfsAttr_type_v1;

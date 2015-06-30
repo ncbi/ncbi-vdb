@@ -1065,7 +1065,7 @@ _EncWsFile_read_v1 (
         return XFS_RC ( rcInvalid );
     }
 
-    RCt = KFileRead (
+    RCt = KFileReadAll (
                     Editor -> File,
                     Offset,
                     Buffer,
@@ -1104,7 +1104,7 @@ _EncWsFile_write_v1 (
         return XFS_RC ( rcInvalid );
     }
 
-    RCt = KFileWrite (
+    RCt = KFileWriteAll (
                     Editor -> File,
                     Offset,
                     Buffer,
@@ -1114,6 +1114,105 @@ _EncWsFile_write_v1 (
 
     return RCt;
 }   /* _EncWsFile_write_v1 () */
+
+static
+rc_t CC
+_EncWsFile_size_v1 (
+                        const struct XFSFileEditor * self,
+                        uint64_t * Size
+)
+{
+    const struct _EncWsNode * Node;
+    const struct KFile * File;
+    uint64_t TempSize;
+    rc_t RCt;
+
+    Node = NULL;
+    File = NULL;
+    TempSize = 0;
+    RCt = 0;
+
+    XFS_CSA ( Size, 0 )
+    XFS_CAN ( self )
+    XFS_CAN ( Size )
+
+    Node = ( const struct _EncWsNode * ) XFSEditorNode (
+                                                & ( self -> Papahen )
+                                                );
+
+    XFS_CAN ( Node )
+    XFS_CAN ( Node -> path )
+    XFS_CAN ( Node -> workspace )
+
+    if ( Node -> type == kxfsDir ) {
+            /*) Traditionally directory have size ZERO :lol:
+             (*/
+        * Size = 0;
+    }
+    else {
+        File = ( const struct KFile * )
+                        ( ( struct _EncWsFileEditor * ) self ) -> File;
+        if ( File == NULL ) {
+            RCt = KDirectoryFileSize (
+                                Node -> workspace,
+                                & TempSize,
+                                Node -> path
+                                );
+
+        }
+        else {
+            RCt = KFileSize ( File, & TempSize );
+        }
+
+        if ( RCt == 0 ) {
+            * Size = TempSize;
+        }
+    }
+
+    return RCt;
+}   /* _EncWsFile_size_v1 () */
+
+static
+rc_t CC
+_EncWsFile_set_size_v1 (
+                const struct XFSFileEditor * self,
+                uint64_t Size
+)
+{
+    rc_t RCt;
+    const struct _EncWsNode * Node;
+    struct KFile * File;
+
+    RCt = 0;
+    Node = NULL;
+
+    XFS_CAN ( self );
+
+    Node = ( const struct _EncWsNode * ) XFSEditorNode (
+                                                & ( self -> Papahen )
+                                                );
+
+    XFS_CAN ( Node )
+    XFS_CAN ( Node -> path )
+    XFS_CAN ( Node -> workspace )
+
+    if ( Node -> type != kxfsDir ) {
+        File = ( struct KFile * )
+                        ( ( struct _EncWsFileEditor * ) self ) -> File;
+        if ( File == NULL ) {
+            RCt = KDirectorySetFileSize (
+                            ( struct KDirectory * ) Node -> workspace,
+                            Size,
+                            Node -> path
+                            );
+        }
+        else {
+            RCt = KFileSetSize ( File, Size );
+        }
+    }
+
+    return RCt;
+}   /*  _EncWsFile_set_size_v1 () */
 
 rc_t CC
 _EncWsNodeFile_v1 (
@@ -1157,6 +1256,8 @@ _EncWsNodeFile_v1 (
         Editor -> close = _EncWsFile_close_v1;
         Editor -> read = _EncWsFile_read_v1;
         Editor -> write = _EncWsFile_write_v1;
+        Editor -> size = _EncWsFile_size_v1;
+        Editor -> set_size = _EncWsFile_set_size_v1;
 
         * File = Editor;
     }
@@ -1319,77 +1420,6 @@ _EncWsAttr_set_permissions_v1 (
 
 static
 rc_t CC
-_EncWsAttr_size_v1 (
-                        const struct XFSAttrEditor * self,
-                        uint64_t * Size
-)
-{
-    const struct _EncWsNode * Node;
-    struct KDirectory * Workspace;
-    uint64_t TempSize;
-    rc_t RCt;
-
-    Node = NULL;
-    Workspace = NULL;
-    TempSize = 0;
-    RCt = 0;
-
-    XFS_CSA ( Size, 0 );
-    XFS_CAN ( self )
-    XFS_CAN ( Size )
-
-    RCt = _EncWsAttr_init_check_v1 ( self, & Node, & Workspace );
-    if ( RCt == 0 ) {
-            /*) Traditionally directory have size ZERO :lol:
-             (*/
-        if ( Node -> type == kxfsDir ) {
-            * Size = 0;
-        }
-        else {
-            RCt = KDirectoryFileSize (
-                                Workspace,
-                                & TempSize,
-                                Node -> path
-                                );
-            if ( RCt == 0 ) {
-                * Size = TempSize;
-            }
-
-        }
-    }
-
-    return RCt;
-}   /* _EncWsAttr_size_v1 () */
-
-static
-rc_t CC
-_EncWsAttr_set_size_v1 (
-                const struct XFSAttrEditor * self,
-                uint64_t Size
-)
-{
-    rc_t RCt;
-    const struct _EncWsNode * Node;
-    struct KDirectory * Workspace;
-
-    RCt = 0;
-    Node = NULL;
-    Workspace = NULL;
-
-    XFS_CAN ( self );
-
-    RCt = _EncWsAttr_init_check_v1 ( self, & Node, & Workspace );
-    if ( RCt == 0 ) {
-        if ( Node -> type != kxfsDir ) {
-            RCt = KDirectorySetFileSize ( Workspace, Size, Node -> path);
-        }
-    }
-
-    return RCt;
-}   /*  _EncWsAttr_set_size_v1 () */
-
-static
-rc_t CC
 _EncWsAttr_date_v1 (
                         const struct XFSAttrEditor * self,
                         KTime_t * Time
@@ -1504,8 +1534,6 @@ _EncWsNodeAttr_v1 (
     if ( RCt == 0 ) {
         Editor -> permissions = _EncWsAttr_permissions_v1;
         Editor -> set_permissions = _EncWsAttr_set_permissions_v1;
-        Editor -> size = _EncWsAttr_size_v1;
-        Editor -> set_size = _EncWsAttr_set_size_v1;
         Editor -> date = _EncWsAttr_date_v1;
         Editor -> set_date = _EncWsAttr_set_date_v1;
         Editor -> type = _EncWsAttr_type_v1;

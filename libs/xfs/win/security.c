@@ -1008,7 +1008,7 @@ _AuthToGrantMode ( const struct XFSAuth * Auth )
     Mode = 0;
 
     if ( XFSAuthCanRead ( Auth ) ) Mode |= GENERIC_READ;
-    if ( XFSAuthCanWrite ( Auth ) ) Mode |= GENERIC_WRITE;
+    if ( XFSAuthCanWrite ( Auth ) ) Mode |= GENERIC_WRITE | DELETE;
     if ( XFSAuthCanExecute ( Auth ) ) Mode |= GENERIC_EXECUTE;
 
     Mode |= SYNCHRONIZE | 0x1FF;
@@ -1025,7 +1025,7 @@ _AuthToDenyMode ( const struct XFSAuth * Auth )
     Mode = 0;
 
     if ( ! XFSAuthCanRead ( Auth ) ) Mode |= GENERIC_READ;
-    if ( ! XFSAuthCanWrite ( Auth ) ) Mode |= GENERIC_WRITE;
+    if ( ! XFSAuthCanWrite ( Auth ) ) Mode |= GENERIC_WRITE | DELETE;
     if ( ! XFSAuthCanExecute ( Auth ) ) Mode |= GENERIC_EXECUTE;
 
     return Mode;

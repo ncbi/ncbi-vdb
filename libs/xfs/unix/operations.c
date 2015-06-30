@@ -483,17 +483,23 @@ _FUSE_char_to_perm ( const char * Perm, XFSNType Type, mode_t * Mode )
 
 static
 rc_t
-_FUSE_stat_for_node ( const struct XFSNode * Node, struct stat * Stat )
+_FUSE_stat_for_node (
+                const struct XFSNode * Node,
+                struct stat * Stat,
+                const struct XFSFileEditor * FileEditor
+)
 {
     rc_t RCt;
     XFSNType Type;
     KTime_t Time;
     uint64_t Size;
     const struct XFSAttrEditor * Editor;
+    // const struct XFSFileEditor * FileEditor;
     const char * Perm;
 
     RCt = 0;
     Editor = NULL;
+    // FileEditor = NULL;
     Perm = NULL;
 
     if ( Node == NULL || Stat == NULL ) {
@@ -525,9 +531,24 @@ _FUSE_stat_for_node ( const struct XFSNode * Node, struct stat * Stat )
             Stat -> st_ctime = Time;
         }
 
-        if ( XFSAttrEditorSize ( Editor, & Size ) == 0 ) {
-            Stat -> st_blksize = XFS_SIZE_4096;
-            Stat -> st_size = Size;
+        Stat -> st_blksize = XFS_SIZE_4096 * 8;
+        Stat -> st_size = 0;
+        if ( Type != kxfsDir ) {
+            if ( FileEditor != NULL ) {
+                if ( XFSFileEditorSize ( FileEditor, & Size ) == 0 ) {
+                    Stat -> st_size = Size;
+                }
+            }
+            else {
+                if ( XFSNodeFileEditor ( Node, & FileEditor ) == 0 ) {
+                    if ( Editor != NULL ) {
+                        if ( XFSFileEditorSize ( FileEditor, & Size ) == 0 ) {
+                            Stat -> st_size = Size;
+                        }
+                        XFSEditorDispose ( & ( FileEditor -> Papahen ) );
+                    }
+                }
+            }
         }
     }
 
@@ -659,7 +680,7 @@ XFS_FUSE_getattr ( const char * ThePath, struct stat * TheStat )
             return ENOENT * - 1;
         }
 
-        RCt = _FUSE_stat_for_node ( Node, TheStat );
+        RCt = _FUSE_stat_for_node ( Node, TheStat, NULL );
 
         XFSNodeRelease ( Node );
     }
@@ -947,7 +968,7 @@ int
 XFS_FUSE_truncate ( const char * ThePath, off_t TheSize )
 {
     rc_t RCt;
-    const struct XFSAttrEditor * Editor;
+    const struct XFSFileEditor * Editor;
     const struct XFSNode * Node;
 
     RCt = 0;
@@ -962,9 +983,9 @@ XFS_FUSE_truncate ( const char * ThePath, off_t TheSize )
 
     RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, NULL );
     if ( RCt == 0 ) {
-        RCt = XFSNodeAttrEditor ( Node, & Editor );
+        RCt = XFSNodeFileEditor ( Node, & Editor );
         if ( RCt == 0 ) {
-            RCt = XFSAttrEditorSetSize ( Editor, TheSize );
+            RCt = XFSFileEditorSetSize ( Editor, TheSize );
         }
 
         XFSNodeRelease ( Node );
@@ -1114,7 +1135,6 @@ XFS_FUSE_read (
                         ;
     NumBytesReaded = 0;
 
-
     XFSMSG ( ( "READ(Fuse): [%s][FI=0x%p][FH=0x%p][OF=%d SZ=%d]\n", ThePath, TheFileInfo, Handle, TheOffsetRead, TheSizeRead ) );
 
     if ( ThePath == NULL || TheBuf == NULL || TheFileInfo == NULL ) {
@@ -1137,6 +1157,7 @@ XFS_FUSE_read (
                         TheSizeRead,
                         & NumBytesReaded
                         );
+XFSMSG ( ( "READ(Fuse,cont): [%s][FI=0x%p][FH=0x%p][OF=%d SZ=%d RD=%d] [%d]\n", ThePath, TheFileInfo, Handle, TheOffsetRead, TheSizeRead, NumBytesReaded, RCt ) );
 
     return RCt == 0
                 ? NumBytesReaded
@@ -1195,6 +1216,8 @@ XFS_FUSE_write (
                         TheSizeWrite,
                         & NumBytesWritten
                         );
+
+XFSMSG ( ( "WRITE(Fuse, cont): [%s][FI=0x%p][FH=0x%p][OF=%d SZ=%d WRt=%d] [%d]\n", ThePath, TheFileInfo, Handle, TheOffsetWrite, TheSizeWrite, NumBytesWritten, RCt ) );
 
     return RCt == 0
                 ? NumBytesWritten
@@ -1778,28 +1801,39 @@ XFS_FUSE_ftruncate (
 )
 {
     rc_t RCt;
-    const struct XFSAttrEditor * Editor;
+    const struct XFSHandle * Handle;
+    const struct XFSFileEditor * Editor;
     const struct XFSNode * Node;
 
     RCt = 0;
     Editor = NULL;
+    Handle = TheFileInfo == NULL 
+                        ? NULL
+                        : ( const struct XFSHandle * ) TheFileInfo -> fh
+                        ;
     Node = NULL;
 
-    XFSMSG ( ( "FTRUNCATE(Fuse): [%s][SZ=%d]\n", ThePath, TheSize ) );
+    XFSMSG ( ( "FTRUNCATE(Fuse): [%s][SZ=%d][FI=0x%p][FH=0x%p]\n", ThePath, TheSize, TheFileInfo, Handle ) );
 
     if ( ThePath == NULL ) {
         return EINVAL * - 1;
     }
 
-printf ( " [JPP] [%d] [%p]\n", __LINE__, TheFileInfo -> fh );
-    RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, NULL );
-    if ( RCt == 0 ) {
-        RCt = XFSNodeAttrEditor ( Node, & Editor );
+    if ( Handle != NULL ) {
+        Editor = ( const struct XFSFileEditor * )
+                                            XFSHandleGet ( Handle );
+    }
+    else {
+        RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, NULL );
         if ( RCt == 0 ) {
-            RCt = XFSAttrEditorSetSize ( Editor, TheSize );
-        }
+            RCt = XFSNodeFileEditor ( Node, & Editor );
 
-        XFSNodeRelease ( Node );
+            XFSNodeRelease ( Node );
+        }
+    }
+
+    if ( RCt == 0 && Editor != NULL ) {
+        RCt = XFSFileEditorSetSize ( Editor, TheSize );
     }
 
     return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
@@ -1821,14 +1855,19 @@ XFS_FUSE_fgetattr (
     rc_t RCt;
     const struct XFSHandle * Handle;
     const struct XFSNode * Node;
+    const struct XFSFileEditor * Editor;
 
     RCt = 0;
-    Handle = ( const struct XFSHandle * ) TheFileInfo -> fh;
+    Handle = TheFileInfo == NULL
+                        ? NULL
+                        : ( const struct XFSHandle * ) TheFileInfo -> fh
+                        ;
     Node = NULL;
+    Editor = NULL;
 
-    XFSMSG ( ( "FGETATTR(Fuse): [%s][FI=0x%p][FG=0x%p]\n", ThePath, TheFileInfo, Handle ) );
+    XFSMSG ( ( "FGETATTR(Fuse): [%s][FI=0x%p][FH=0x%p]\n", ThePath, TheFileInfo, Handle ) );
 
-    if ( ThePath == NULL || TheStat == NULL || TheFileInfo == NULL ) {
+    if ( ThePath == NULL || TheStat == NULL || TheFileInfo == NULL || Handle == NULL ) {
         return EINVAL * - 1;
     }
 
@@ -1839,7 +1878,9 @@ XFS_FUSE_fgetattr (
         return EINVAL * - 1;
     }
 
-    RCt = _FUSE_stat_for_node ( Node, TheStat );
+    Editor = ( const struct XFSFileEditor * ) XFSHandleGet ( Handle );
+
+    RCt = _FUSE_stat_for_node ( Node, TheStat, Editor );
 
     return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_fgetattr () */

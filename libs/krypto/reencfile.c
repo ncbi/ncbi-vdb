@@ -209,7 +209,10 @@ rc_t CC KEncryptFileSize (const KReencFile *self, uint64_t *size)
     {
         uint64_t bid;
 
-        bid = DecryptedPos_to_BlockId (z, NULL);
+/*  Here we should notice that in file with SIZE = SIZE, maximum offset
+    could be "SIZE - 1"
+*/
+        bid = DecryptedPos_to_BlockId (z - ( z == 0 ? 0 : 1 ) , NULL);
 
         *size = BlockId_to_EncryptedPos (bid + 1) + sizeof (KEncFileFooter);
     }
@@ -1155,7 +1158,10 @@ LIB_EXPORT rc_t CC KEncryptFileMakeRead (const KFile ** pself,
             /* missing needs to be Made */
             /* next_block stays 0 */
             /* seek_block stays 0 - obsolete */
-            max_block = DecryptedPos_to_BlockId (rawsize, NULL);
+/*  Here we should notice that in file with SIZE = SIZE, maximum offset
+    could be "SIZE - 1"
+*/
+            max_block = DecryptedPos_to_BlockId (rawsize - (rawsize == 0 ? 0 : 1), NULL);
             self->footer_block = max_block + 1;
             size = BlockId_to_EncryptedPos (self->footer_block) + sizeof (KEncFileFooter);
             self->size = size;

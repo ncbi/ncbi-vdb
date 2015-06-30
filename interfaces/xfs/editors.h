@@ -54,6 +54,10 @@ struct XFSEditor {
          */
     const struct XFSNode * Node;
 
+        /* Data - some editor related data
+         */
+    void * Data;
+
         /* Mandatary method to dispose editor
          */
     rc_t ( CC * dispose ) ( const struct XFSEditor * self );
@@ -70,15 +74,16 @@ XFS_EXTERN rc_t CC XFSEditorDispose ( const struct XFSEditor * self );
 XFS_EXTERN const struct XFSNode * CC XFSEditorNode (
                             const struct XFSEditor * self
                             );
+XFS_EXTERN void * CC XFSEditorData ( const struct XFSEditor * self );
+XFS_EXTERN rc_t CC XFSEditorSetData (
+                            const struct XFSEditor * self,
+                            void * Data
+                            );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*))   Editors, which are Dir, File and Attr
  ((*/
-
-/*))   Forwards
- ((*/
-struct XFSFileEditor;
 
 /*)))
  (((    Directory editor, and relative methods
@@ -188,6 +193,15 @@ struct XFSFileEditor {
                     size_t * NumWritten
                     );
 
+    rc_t ( CC * size ) (
+                    const struct XFSFileEditor * self,
+                    uint64_t * Size
+                    );
+    rc_t ( CC * set_size ) (
+                    const struct XFSFileEditor * self,
+                    uint64_t Size
+                    );
+
 };
 
 XFS_EXTERN rc_t CC XFSFileEditorOpen (
@@ -215,6 +229,16 @@ XFS_EXTERN rc_t CC XFSFileEditorWrite (
                                 size_t * NumWritten
                                 );
 
+XFS_EXTERN rc_t CC XFSFileEditorSize (
+                                    const struct XFSFileEditor * self,
+                                    uint64_t * Size
+                                    );
+
+XFS_EXTERN rc_t CC XFSFileEditorSetSize (
+                                    const struct XFSFileEditor * self,
+                                    uint64_t Size
+                                    );
+
 /*)))
  (((    Attribute editor, and relative methods
   )))
@@ -230,15 +254,6 @@ struct XFSAttrEditor {
     rc_t ( CC * set_permissions ) (
                     const struct XFSAttrEditor * self,
                     const char * Permissions
-                    );
-
-    rc_t ( CC * size ) (
-                    const struct XFSAttrEditor * self,
-                    uint64_t * Size
-                    );
-    rc_t ( CC * set_size ) (
-                    const struct XFSAttrEditor * self,
-                    uint64_t Size
                     );
 
     rc_t ( CC * date ) (
@@ -261,11 +276,6 @@ XFS_EXTERN rc_t CC XFSAttrEditorPermissions (
                                     const char ** Permissions
                                     );
 
-XFS_EXTERN rc_t CC XFSAttrEditorSize (
-                                    const struct XFSAttrEditor * self,
-                                    uint64_t * Size
-                                    );
-
 XFS_EXTERN rc_t CC XFSAttrEditorDate (
                                     const struct XFSAttrEditor * self,
                                     KTime_t * Time
@@ -279,11 +289,6 @@ XFS_EXTERN rc_t CC XFSAttrEditorType (
 XFS_EXTERN rc_t CC XFSAttrEditorSetPermissions (
                                     const struct XFSAttrEditor * self,
                                     const char * Permissions
-                                    );
-
-XFS_EXTERN rc_t CC XFSAttrEditorSetSize (
-                                    const struct XFSAttrEditor * self,
-                                    uint64_t Size
                                     );
 
 XFS_EXTERN rc_t CC XFSAttrEditorSetDate (
