@@ -2594,14 +2594,16 @@ LIB_EXPORT rc_t CC ReferenceSeq_Compress(ReferenceSeq const *const cself,
                               &position_adjust);
             offset += position_adjust;
         }
-        if(allele != NULL) {
-            if(allele_offset + allele_ref_end < offset || allele_offset >= offset + rl) {
-                (void)PLOGMSG(klogWarn, (klogWarn,
+        if (allele != NULL) {
+            if (allele_ref_end < offset || offset + rl < allele_offset) {
+                /* allele and alignment don't intersect             */
+                /* TODO: [VDB-1585] try to make this recoverable    */
+                rc = RC(rcAlign, rcFile, rcProcessing, rcData, rcInvalid);
+                (void)PLOGERR(klogWarn, (klogWarn, rc,
                     "allele $(a) offset $(ao) $(ac) is not within referenced region in $(id) at offset $(ro) $(rc)",
                     "a=%.*s,ao=%i,ac=%.*s,id=%s,ro=%i,rc=%.*s",
                     allele_len, allele, allele_offset, (options & ewrefmgr_cmp_Binary) ? 0 : allele_cigar_len, allele_cigar,
                     self->seqId, offset, (options & ewrefmgr_cmp_Binary) ? 0 : cigar_len, cigar));
-                allele = NULL;
             }
         }
         if(rc == 0) {
