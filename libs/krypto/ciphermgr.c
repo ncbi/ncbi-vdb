@@ -126,6 +126,7 @@ LIB_EXPORT rc_t CC KCipherManagerDestroy ( KCipherManager *self )
             reread = atomic_test_and_set_ptr (&singleton, NULL, self);
 
             /* ignore results: just going for guaranteed atomicity though might not need it */
+            ( void ) reread;
         }
 
         /* no return value */
