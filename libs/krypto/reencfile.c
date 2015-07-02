@@ -214,7 +214,7 @@ rc_t CC KEncryptFileSize (const KReencFile *self, uint64_t *size)
 */
         bid = DecryptedPos_to_BlockId (z - ( z == 0 ? 0 : 1 ) , NULL);
 
-        *size = BlockId_to_EncryptedPos (bid + 1) + sizeof (KEncFileFooter);
+        *size = BlockId_to_CiphertextOffset ( bid + 1 ) + sizeof ( KEncFileFooter );
     }
     else
         *size = z;
@@ -399,7 +399,7 @@ rc_t KReencFileReadABlock (KReencFile * self, uint64_t block_id)
      * simple call down to the decryptor to get the plain text data
      * for this block. We will regenerate the framing when we re-encrypt
      */
-    rc = KFileReadAll (self->dec, BlockId_to_DecryptedPos (block_id),
+    rc = KFileReadAll (self->dec, BlockId_to_PlaintextOffset ( block_id ),
                        &self->plain_text, sizeof (self->plain_text),
                        &self->num_read);
     if (rc)
@@ -457,7 +457,7 @@ rc_t KReencFileWriteABlock (KReencFile * self, uint64_t block_id)
      * to that buffer than requested here - that is the framing and also the
      * header if the block is the first one.
      */
-    rc = KFileWriteAll (self->enc, BlockId_to_DecryptedPos (block_id),
+    rc = KFileWriteAll (self->enc, BlockId_to_PlaintextOffset ( block_id ),
                          self->plain_text, self->num_read, &self->num_writ);
 
     if (rc)
@@ -582,7 +582,7 @@ rc_t KReencFileReadHandleFooter (KReencFile *self,
 
     assert (block_id == self->footer_block);
 
-    offset = pos - BlockId_to_EncryptedPos (block_id);
+    offset = pos - BlockId_to_CiphertextOffset ( block_id );
 
     assert (offset < sizeof self->foot);
 
@@ -600,7 +600,7 @@ rc_t KReencFileReadHandleFooter (KReencFile *self,
     {
         uint64_t header_pos;
 
-        header_pos = BlockId_to_EncryptedPos(block_id);
+        header_pos = BlockId_to_CiphertextOffset ( block_id );
 
         assert (header_pos <= pos);
         assert (pos - header_pos <= sizeof self->foot);
@@ -675,7 +675,7 @@ rc_t KReencFileReadHandleBlock (KReencFile *self,
          * if we are here we decrypted and re-encrypted the
          * expected block
          */
-        offset = (uint32_t) ( pos - BlockId_to_EncryptedPos (block_id) );
+        offset = ( uint32_t ) ( pos - BlockId_to_CiphertextOffset ( block_id ) );
         rc = KReencFileReadBlockOut (self, offset, buffer, bsize, num_read);
         if (rc)
             LOGERR (klogErr, rc, "re-enc error copying out from block");
@@ -1163,7 +1163,7 @@ LIB_EXPORT rc_t CC KEncryptFileMakeRead (const KFile ** pself,
 */
             max_block = DecryptedPos_to_BlockId (rawsize - (rawsize == 0 ? 0 : 1), NULL);
             self->footer_block = max_block + 1;
-            size = BlockId_to_EncryptedPos (self->footer_block) + sizeof (KEncFileFooter);
+            size = BlockId_to_CiphertextOffset ( self -> footer_block ) + sizeof ( KEncFileFooter );
             self->size = size;
             self->known_size = true; /* obsolete */
 

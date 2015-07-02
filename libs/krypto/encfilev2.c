@@ -548,24 +548,9 @@ rc_t KEncFileFooterWrite (KEncFile * self)
     if (self->sought)
         foot.crc_checksum = 0;
 
-    pos = BlockId_to_EncryptedPos (self->foot.block_count);
+    pos = BlockId_to_CiphertextOffset ( self -> foot . block_count );
 
     assert ((self->size_known == true) || (self->size_known == false));
-
-/*     if (!(((self->size_known == true) && */
-/*              ((pos + sizeof (foot)) == self->enc_size)) || */
-/*           (pos == self->enc_size))); */
-/*     { */
-/*         KOutMsg ("self->foot.block_count %lu\n",self->foot.block_count); */
-/*         KOutMsg ("self->size_known %u\n",self->size_known); */
-/*         KOutMsg ("pos %lu\n",pos); */
-/*         KOutMsg ("sizeof (foot) %zu\n",sizeof (foot)); */
-/*         KOutMsg ("pos + sizeof (foot) %lu\n", pos + sizeof (foot)); */
-/*         KOutMsg ("self->enc_size %lu\n",self->enc_size); */
-/*     } */
-/*     assert (((self->size_known == true) && */
-/*              ((pos + sizeof (foot)) == self->enc_size)) || */
-/*             (pos == self->enc_size)); */
 
     rc = KEncFileBufferWrite (self, pos, &foot, sizeof (foot),
                               &num_writ);
@@ -884,8 +869,8 @@ rc_t KEncFileBlockRead (KEncFile * self, KEncFileBlock * block,
     assert ((block != NULL) || (validate == true));
 
     /* translate block id into both encrypted and decrypted addresses */
-    epos = BlockId_to_EncryptedPos (block_id);
-    dpos = BlockId_to_DecryptedPos (block_id);
+    epos = BlockId_to_CiphertextOffset ( block_id );
+    dpos = BlockId_to_PlaintextOffset ( block_id );
 
     missing = false;
 
@@ -1173,7 +1158,7 @@ rc_t KEncFileBlockFlush (KEncFile * self, KEncFileBlock * dec_block)
 
             block_id = dec_block->id;
 
-            pos = BlockId_to_EncryptedPos (block_id);
+            pos = BlockId_to_CiphertextOffset ( block_id );
 
             rc = KEncFileBufferWrite (self, pos, &enc_block, sizeof enc_block,
                                       &num_writ);
@@ -1461,7 +1446,7 @@ rc_t KEncFileSetSizeInt (KEncFile *self, uint64_t dec_size)
         else
             ++new_fid;  /* leaves a partial block */
     
-        enc_size = BlockId_to_EncryptedPos (new_fid) + sizeof self->foot;
+        enc_size = BlockId_to_CiphertextOffset ( new_fid ) + sizeof self->foot;
 
         /* are we starting with an empty file? It's easy if we are */
         if (self->dec_size == 0)
@@ -1503,7 +1488,7 @@ rc_t KEncFileSetSizeInt (KEncFile *self, uint64_t dec_size)
                 /* truncating the file? */
                 if (dec_size < self->dec_size)
                 {
-                    trim_size = BlockId_to_EncryptedPos (new_fid);
+                    trim_size = BlockId_to_CiphertextOffset ( new_fid );
 
                     /* do we throw away the block in the object? */
                     if (self->block.id > new_bid)
@@ -1522,7 +1507,7 @@ rc_t KEncFileSetSizeInt (KEncFile *self, uint64_t dec_size)
                 {
                     assert (dec_size > self->dec_size);
 
-                    trim_size = BlockId_to_EncryptedPos (old_fid);
+                    trim_size = BlockId_to_CiphertextOffset ( old_fid );
 
                     /* make old last block a full block if it wasn't already */
                     if (old_doff != 0)
@@ -1646,7 +1631,7 @@ rc_t CC KEncFileRead (const KEncFile *cself,
             rc = RC (rcFS, rcFile, rcReading, rcOffset, rcIncorrect);
             PLOGERR (klogErr, (klogErr, rc, "attempt to seek in encryption write at"
                                " '$(O)' seek to '$(P)'", "O=%lu,P=%lu",
-                               BlockId_to_EncryptedPos(self->block.id), pos));
+                               BlockId_to_CiphertextOffset(self->block.id), pos));
         }
         else
         {
@@ -1665,7 +1650,7 @@ rc_t CC KEncFileRead (const KEncFile *cself,
             {
                 uint64_t read_max;
 
-                read_max = BlockId_to_DecryptedPos(block_id) + self->block.u.valid;
+                read_max = BlockId_to_PlaintextOffset ( block_id ) + self -> block . u . valid;
                 if (self->dec_size < read_max)
                     self->dec_size = read_max;
             }
@@ -1729,7 +1714,7 @@ rc_t CC KEncFileWrite (KEncFile *self, uint64_t pos,
             rc = RC (rcFS, rcFile, rcWriting, rcOffset, rcIncorrect);
             PLOGERR (klogErr, (klogErr, rc, "attempt to seek in encryption write at"
                                " '$(O)' seek to '$(P)'", "O=%lu,P=%lu",
-                               BlockId_to_EncryptedPos(self->block.id), pos));
+                               BlockId_to_CiphertextOffset(self->block.id), pos));
         }
         else
             self->sought = true;
@@ -1745,7 +1730,7 @@ rc_t CC KEncFileWrite (KEncFile *self, uint64_t pos,
         /* Block Id for this write */
         block_id = DecryptedPos_to_BlockId (pos, &offset);
 
-        block_max = BlockId_to_DecryptedPos (block_id+1);
+        block_max = BlockId_to_PlaintextOffset ( block_id + 1 );
 
         new_size = pos + bsize;
         if (new_size > block_max)
@@ -1946,7 +1931,7 @@ rc_t  KEncFileMakeIntValidSize (uint64_t enc_size, bool w)
         {
             block_count = EncryptedPos_to_BlockId (enc_size, NULL, NULL);
 
-            if (enc_size - BlockId_to_EncryptedPos (block_count) == sizeof (KEncFileFooter))
+            if (enc_size - BlockId_to_CiphertextOffset (block_count) == sizeof (KEncFileFooter))
                 return 0;
         }
     }
@@ -2109,7 +2094,7 @@ rc_t KEncFileMakeSize (KEncFile *self)
      */
     fid = EncryptedPos_to_BlockId (self->enc_size, NULL, NULL);
 
-    assert (BlockId_to_EncryptedPos(fid) + sizeof (self->foot) == self->enc_size);
+    assert (BlockId_to_CiphertextOffset(fid) + sizeof (self->foot) == self->enc_size);
 
     if (fid == 0)
         self->dec_size = 0;
@@ -2129,11 +2114,11 @@ rc_t KEncFileMakeSize (KEncFile *self)
         else
         {
             if (BufferAllZero(&b, sizeof b) == true)
-                self->dec_size = BlockId_to_DecryptedPos (bid) + 
+                self->dec_size = BlockId_to_PlaintextOffset (bid) + 
                     sizeof self->block.data;
 
             else
-                self->dec_size = BlockId_to_DecryptedPos (bid) + b.u.valid;
+                self->dec_size = BlockId_to_PlaintextOffset (bid) + b.u.valid;
         }
     }
     self->size_known = true;
@@ -2407,7 +2392,7 @@ LIB_EXPORT rc_t CC KEncFileValidate_v2 (const KFile * encrypted)
         {
             rc_t vrc;
             STSMSG (2, ("reading block '%u' at '%lu'", block_count,
-                        BlockId_to_EncryptedPos(block_count)));
+                        BlockId_to_CiphertextOffset(block_count)));
            
             vrc = KEncFileBlockRead (file, NULL, block_count, true);
             if (vrc != 0)
