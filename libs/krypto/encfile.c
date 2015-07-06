@@ -1148,7 +1148,7 @@ rc_t CC KEncFileV1Read	(const KEncFileV1 *cself,
 
     *num_read = 0;
 
-    block_id = DecryptedPos_to_BlockId (pos, &offset);
+    block_id = PlaintextOffset_to_BlockId (pos, &offset);
 
     /*
      * are we on the wrong block?
@@ -1357,8 +1357,8 @@ rc_t CC KEncFileV1Write (KEncFileV1 *self, uint64_t pos,
      * find our location in the encrypted file by block id
      * and offset
      */
-    block_id = DecryptedPos_to_BlockId (pos, &block_offset);
-    curr_block_id = DecryptedPos_to_BlockId
+    block_id = PlaintextOffset_to_BlockId (pos, &block_offset);
+    curr_block_id = PlaintextOffset_to_BlockId
         ( BlockId_to_PlaintextOffset ( self -> block . id ) + self -> block . u . valid,
          &curr_block_offset);
 
@@ -1398,7 +1398,7 @@ rc_t CC KEncFileV1WriteSwarm (KEncFileV1 *self, uint64_t pos,
     uint32_t block_offset;
     rc_t rc;
 
-    self->block.id = DecryptedPos_to_BlockId (pos, &block_offset);
+    self->block.id = PlaintextOffset_to_BlockId (pos, &block_offset);
     self->block.u.valid = 0;
     if (bsize > sizeof self->block.data - block_offset)
         bsize = sizeof self->block.data - block_offset;

@@ -207,17 +207,13 @@ rc_t CC KEncryptFileSize (const KReencFile *self, uint64_t *size)
 
     if (rc == 0)
     {
-        uint64_t bid;
-
-/*  Here we should notice that in file with SIZE = SIZE, maximum offset
-    could be "SIZE - 1"
-*/
-        bid = DecryptedPos_to_BlockId (z - ( z == 0 ? 0 : 1 ) , NULL);
-
-        *size = BlockId_to_CiphertextOffset ( bid + 1 ) + sizeof ( KEncFileFooter );
+        uint64_t bid = PlaintextSize_to_BlockCount ( z, NULL );
+        *size = BlockId_to_CiphertextOffset ( bid ) + sizeof ( KEncFileFooter );
     }
     else
+    {
         *size = z;
+    }
     return rc;
 }
 
@@ -1098,7 +1094,6 @@ LIB_EXPORT rc_t CC KEncryptFileMakeRead (const KFile ** pself,
     KReencFile * self;
     uint64_t rawsize;
     uint64_t size;
-    uint64_t max_block;
     rc_t rc;
 
     rc = KReencFileMakeParamValidate (pself, encrypted, enckey, enckey);
@@ -1158,11 +1153,8 @@ LIB_EXPORT rc_t CC KEncryptFileMakeRead (const KFile ** pself,
             /* missing needs to be Made */
             /* next_block stays 0 */
             /* seek_block stays 0 - obsolete */
-/*  Here we should notice that in file with SIZE = SIZE, maximum offset
-    could be "SIZE - 1"
-*/
-            max_block = DecryptedPos_to_BlockId (rawsize - (rawsize == 0 ? 0 : 1), NULL);
-            self->footer_block = max_block + 1;
+
+            self->footer_block = PlaintextSize_to_BlockCount ( rawsize, NULL );
             size = BlockId_to_CiphertextOffset ( self -> footer_block ) + sizeof ( KEncFileFooter );
             self->size = size;
             self->known_size = true; /* obsolete */

@@ -52,16 +52,29 @@ uint64_t BlockId_to_PlaintextOffset ( uint64_t block_id )
     return block_id * sizeof ( KEncFileData );
 }
 
-/* DecryptedPos_to_BlockId
+/* PlaintextOffset_to_BlockId
  *  converts from byte offset into plaintext to a zero-based block id
  *  NB - will FAIL ( horribly ) if used with a plaintext SIZE
  */
 static __inline__
-uint64_t DecryptedPos_to_BlockId (uint64_t dec_offset, uint32_t * poffset)
+uint64_t PlaintextOffset_to_BlockId ( uint64_t pt_offset, uint32_t * poffset )
 {
-    if (poffset)
-        *poffset = dec_offset % sizeof (KEncFileData);
-    return dec_offset / sizeof (KEncFileData);
+    uint64_t block_id = pt_offset / sizeof ( KEncFileData );
+
+    if ( poffset != NULL )
+        * poffset = ( uint32_t ) ( pt_offset - block_id * sizeof ( KEncFileData ) );
+
+    return block_id;
+}
+
+static __inline__
+uint64_t PlaintextSize_to_BlockCount ( uint32_t pt_size, uint32_t * padding )
+{
+    uint64_t block_count = ( pt_size + sizeof ( KEncFileData ) - 1 ) / sizeof ( KEncFileData );
+    if ( padding != NULL )
+        * padding = ( uint32_t ) ( block_count * sizeof ( KEncFileData ) - pt_size );
+
+    return block_count;
 }
 
 static __inline__

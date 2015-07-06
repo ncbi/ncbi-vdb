@@ -534,14 +534,14 @@ rc_t KEncFileFooterWrite (KEncFile * self)
 
     if (self->sought)
     {
-/*  Here we should notice that in file with SIZE = SIZE, maximum offset
-    could be "SIZE - 1"
-*/
-        self->foot.block_count = foot.block_count = 1 + DecryptedPos_to_BlockId (self->dec_size - ( self->dec_size == 0 ? 0 : 1 ), NULL);
-        foot.crc_checksum = 0;
+        self -> foot . block_count = foot . block_count =
+            PlaintextSize_to_BlockCount ( self -> dec_size, NULL );
+        foot . crc_checksum = 0;
     }
     else
-        memcpy (&foot, &self->foot, sizeof (foot));
+    {
+        memcpy ( & foot, & self -> foot, sizeof foot );
+    }
 
     KEncFileFooterSwap (self, &foot);
 
@@ -1440,7 +1440,26 @@ rc_t KEncFileSetSizeInt (KEncFile *self, uint64_t dec_size)
          * determine sizes of decrypted virtual file
          * and encrypted 'real' file
          */
-        new_fid = new_bid = DecryptedPos_to_BlockId (dec_size, &new_doff);
+
+        /*
+          NB - the following code utilizes a function for converting
+          an OFFSET to a zero-based block-id. However, it passes in a size.
+          By examining new_doff, it detects the case where "dec_size" is an
+          exact multiple of plaintext block size, and takes the return to
+          be a "block-id" of the footer, and new_bid to be the last block.
+
+          in the case where "new_doff" is zero, "new_bid" will be the effective
+          id of the footer, and "new_bid" will need to be adjusted to the previous
+          full block.
+
+          in the case where "new_doff" is not zero, "new_bid" will be the
+          last data block id, and the footer will be one beyond.
+
+          although the code utilizes incorrect and misleading primitives,
+          it works.
+         */
+
+        new_fid = new_bid = PlaintextOffset_to_BlockId (dec_size, &new_doff);
         if (new_doff == 0)
             --new_bid; /* exactly fills a block */
         else
@@ -1451,6 +1470,9 @@ rc_t KEncFileSetSizeInt (KEncFile *self, uint64_t dec_size)
         /* are we starting with an empty file? It's easy if we are */
         if (self->dec_size == 0)
         {
+            /* TBD - this looks incorrect... what about KEncFileHeader?
+               the code below would use BlockId_to_CiphertextOffset()
+             */
             trim_size = sizeof (KEncFileHeader);
 
             /* if we did clear out the RAM structures to match */
@@ -1465,7 +1487,7 @@ rc_t KEncFileSetSizeInt (KEncFile *self, uint64_t dec_size)
             KEncFileBlockId old_fid;    /* block id of old footer / block count */
             uint32_t        old_doff;   /* bytes into last partial block */
 
-            old_fid = old_bid = DecryptedPos_to_BlockId (self->dec_size, &old_doff);
+            old_fid = old_bid = PlaintextOffset_to_BlockId (self->dec_size, &old_doff);
             if (old_doff == 0)
                 --old_bid; /* exactly fills a block */
             else
@@ -1477,9 +1499,17 @@ rc_t KEncFileSetSizeInt (KEncFile *self, uint64_t dec_size)
                 assert ((self->dad.read_enabled == false) || (self->enc_size == enc_size));
 
                 if (new_doff == 0)
+                {
+                    /* change from partial to full last block */
                     rc = KEncFileSetSizeBlockFull (self, new_bid);
+                }
                 else
+                {
+                    /* resize last block */
                     rc = KEncFileSetSizeBlockPartial (self, new_bid, new_doff);
+                }
+
+                /* no need to resize underlying file */
                 do_size = false;
             }
             else
@@ -1498,7 +1528,7 @@ rc_t KEncFileSetSizeInt (KEncFile *self, uint64_t dec_size)
                     }
 
                     /* we only change the new last block if its now partial */
-                    if (new_doff)
+                    if ( new_doff != 0 )
                         rc = KEncFileSetSizeBlockPartial (self, new_bid, new_doff);
 
                 }
@@ -1510,7 +1540,7 @@ rc_t KEncFileSetSizeInt (KEncFile *self, uint64_t dec_size)
                     trim_size = BlockId_to_CiphertextOffset ( old_fid );
 
                     /* make old last block a full block if it wasn't already */
-                    if (old_doff != 0)
+                    if ( old_doff != 0 )
                         rc = KEncFileSetSizeBlockFull (self, old_bid);
                 }
             }
@@ -1520,11 +1550,13 @@ rc_t KEncFileSetSizeInt (KEncFile *self, uint64_t dec_size)
     {
         if (do_size)
         {
+            /* first trim for some reason... sparse files? */
             rc = KFileSetSize (self->encrypted, trim_size);
             if (rc)
                 LOGERR (klogErr, rc, "failure to trim size of encrpted file");
             else
             {
+                /* now extend to encrypted size */
                 rc = KFileSetSize (self->encrypted, enc_size);
                 if (rc)
                     LOGERR (klogErr, rc, "failure to file size of encrpted file");
@@ -1596,7 +1628,7 @@ rc_t CC KEncFileRead (const KEncFile *cself,
 
     /* do we have a decrypted_size? */
 
-    block_id = DecryptedPos_to_BlockId (pos, &offset);
+    block_id = PlaintextOffset_to_BlockId (pos, &offset);
 
     switch (self->size_known)
     {
@@ -1728,7 +1760,7 @@ rc_t CC KEncFileWrite (KEncFile *self, uint64_t pos,
 
         rc = 0;
         /* Block Id for this write */
-        block_id = DecryptedPos_to_BlockId (pos, &offset);
+        block_id = PlaintextOffset_to_BlockId (pos, &offset);
 
         block_max = BlockId_to_PlaintextOffset ( block_id + 1 );
 
