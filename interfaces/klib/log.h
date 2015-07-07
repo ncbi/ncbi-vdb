@@ -287,7 +287,7 @@ KLIB_EXTERN rc_t CC vLogLibErr ( KLogLevel lvl, rc_t rc, const char *msg, const 
 /*
  * fmt is  two fmt strings plus parameters 
  * usage resembles
- *   PLOGMSG (logWarn, (logWarn, "message with $(PARAM)", "PARAM=%s", "parameter"));
+ *   PLOGMSG (logWarn, (logWarn, "message with $(PARAM1) and $(PARAM2)", "PARAM1=%s,PARAM2=%d", "parameter1", int_var));
  */
 #define PLOGMSG(lvl,msg)        \
     ((((unsigned)lvl) <= KLogLevelGet()) ? pLogLibMsg msg : (rc_t)0)
@@ -295,7 +295,7 @@ KLIB_EXTERN rc_t CC vLogLibErr ( KLogLevel lvl, rc_t rc, const char *msg, const 
 /*
  * fmt is  two fmt strings plus parameters 
  * usage resembles
- *   VLOGMSG (logWarn, (logWarn, "message with $(PARAM)", "PARAM=%s", args));
+ *   VLOGMSG (logWarn, (logWarn, "message with $(PARAM1) and $(PARAM2)", "PARAM1=%s,PARAM2=%d", args));
  */
 #define VLOGMSG(lvl,msg)        \
     ((((unsigned)lvl) <= KLogLevelGet()) ? vLogLibMsg msg : (rc_t)0)
@@ -310,7 +310,7 @@ KLIB_EXTERN rc_t CC vLogLibErr ( KLogLevel lvl, rc_t rc, const char *msg, const 
 /*
  * fmt is  two fmt strings plus parameters 
  * usage resembles
- *   PLOGERR (logWarn, (logWarn, rc, "message with $(PARAM)", "PARAM=%s", "parameter"));
+ *   PLOGERR (logWarn, (logWarn, rc, "message with $(PARAM1) and $(PARAM2)", "PARAM1=%s,PARAM2=%d", "parameter1", int_var));
  */
 #define PLOGERR(lvl,msg)        \
     ((((unsigned)lvl) <= KLogLevelGet()) ? pLogLibErr msg : (rc_t)0)
@@ -318,7 +318,7 @@ KLIB_EXTERN rc_t CC vLogLibErr ( KLogLevel lvl, rc_t rc, const char *msg, const 
 /*
  * fmt is  two fmt strings plus parameters 
  * usage resembles
- *   VLOGERR (logWarn, (logWarn, rc, "message with $(PARAM)", "PARAM=%s", args));
+ *   VLOGERR (logWarn, (logWarn, rc, "message with $(PARAM1) and $(PARAM2)", "PARAM1=%s,PARAM2=%d", args));
  */
 #define VLOGERR(lvl,msg)        \
     ((((unsigned)lvl) <= KLogLevelGet()) ? vLogLibErr msg : (rc_t)0)
@@ -335,7 +335,7 @@ KLIB_EXTERN rc_t CC vLogLibErr ( KLogLevel lvl, rc_t rc, const char *msg, const 
 /*
  * fmt is  two fmt strings plus parameters 
  * usage resembles
- *   PLOGMSG (logWarn, (logWarn, "message with $(PARAM)", "PARAM=%s", "parameter"));
+ *   PLOGMSG (logWarn, (logWarn, "message with $(PARAM1) and $(PARAM2)", "PARAM1=%s,PARAM2=%d", "parameter1", int_var));
  */
 #define PLOGMSG(lvl,msg)        \
     ((((unsigned)lvl) <= KLogLevelGet()) ? pLogMsg msg : (rc_t)0)
@@ -343,7 +343,7 @@ KLIB_EXTERN rc_t CC vLogLibErr ( KLogLevel lvl, rc_t rc, const char *msg, const 
 /*
  * fmt is  two fmt strings plus parameters 
  * usage resembles
- *   VLOGMSG (logWarn, (logWarn, "message with $(PARAM)", "PARAM=%s", args));
+ *   VLOGMSG (logWarn, (logWarn, "message with $(PARAM1) and $(PARAM2)", "PARAM1=%s,PARAM2=%d", args));
  */
 #define VLOGMSG(lvl,msg)        \
     ((((unsigned)lvl) <= KLogLevelGet()) ? vLogMsg msg : (rc_t)0)
@@ -358,7 +358,7 @@ KLIB_EXTERN rc_t CC vLogLibErr ( KLogLevel lvl, rc_t rc, const char *msg, const 
 /*
  * fmt is  two fmt strings plus parameters 
  * usage resembles
- *   PLOGERR (logWarn, (logWarn, rc, "message with $(PARAM)", "PARAM=%s", "parameter"));
+ *   PLOGERR (logWarn, (logWarn, rc, "message with $(PARAM1) and $(PARAM2)", "PARAM1=%s,PARAM2=%d", "parameter1", int_var));
  */
 #define PLOGERR(lvl,msg)        \
     ((((unsigned)lvl) <= KLogLevelGet()) ? pLogErr msg : (rc_t)0)
@@ -366,7 +366,7 @@ KLIB_EXTERN rc_t CC vLogLibErr ( KLogLevel lvl, rc_t rc, const char *msg, const 
 /*
  * fmt is  two fmt strings plus parameters 
  * usage resembles
- *   VLOGERR (logWarn, (logWarn, rc, "message with $(PARAM)", "PARAM=%s", args));
+ *   VLOGERR (logWarn, (logWarn, rc, "message with $(PARAM1) and $(PARAM2)", "PARAM1=%s,PARAM2=%d", args));
  */
 #define VLOGERR(lvl,msg)        \
     ((((unsigned)lvl) <= KLogLevelGet()) ? vLogErr msg : (rc_t)0)
