@@ -47,11 +47,12 @@ rc_t KAppGetTotalRam ( uint64_t * totalRamKb )
     ret = GetPhysicallyInstalledSystemMemory ( totalRamKb );
     if ( ! ret )
     {
+		DWORD error = GetLastError();
         rc = RC ( rcApp, rcNoTarg, rcInitializing, rcMemory, rcFailed );
         PLOGERR ( klogFatal, ( klogFatal, rc,
-                    "failed to retrieve size of RAM. error code: $(ERR_CODE)"
-                    , "ERR_CODE='%u'"
-                    , GetLastError() ));
+                    "failed to retrieve size of RAM. error code: $(ERR_CODE) - $(ERR_MESSAGE)"
+                    , "ERR_CODE=%u,ERR_MESSAGE=%!"
+                    , (uint32_t)error, (uint32_t)error ));
         return rc;
     }
 

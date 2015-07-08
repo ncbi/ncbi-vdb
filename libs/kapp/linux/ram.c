@@ -50,11 +50,12 @@ rc_t KAppGetTotalRam ( uint64_t * totalRamKb )
     numPages = sysconf( _SC_PHYS_PAGES );
     if ( numPages < 0 )
     {
+		int status = errno;
         rc = RC ( rcApp, rcNoTarg, rcInitializing, rcMemory, rcFailed );
         PLOGERR ( klogFatal, ( klogFatal, rc,
-                    "failed to retrieve number of RAM pages: $(msg)"
-                    , "msg='%s'"
-                    , strerror ( errno )
+					"failed to retrieve number of RAM pages. error code: $(status) - $(msg)"
+                    , "status=%d,msg=%!"
+                    , status, status 
                         ));
         return rc;
     }
@@ -62,11 +63,12 @@ rc_t KAppGetTotalRam ( uint64_t * totalRamKb )
     pageSize = sysconf( _SC_PAGESIZE );
     if ( pageSize < 0 )
     {
+		int status = errno;
         rc = RC ( rcApp, rcNoTarg, rcInitializing, rcMemory, rcFailed );
         PLOGERR ( klogFatal, (klogFatal, rc,
-                    "failed to retrieve RAM page size: $(msg)"
-                    , "msg='%s'"
-                    , strerror ( errno )
+                    "failed to retrieve RAM page size. error code: $(status) - $(msg)"
+                    , "status=%d,msg=%!"
+                    , status, status
                         ));
         return rc;
     }
