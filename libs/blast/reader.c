@@ -52,15 +52,12 @@
 
 #include <kproc/lock.h> /* KLock */
 
-/* #include <klib/printf.h> string_printf */
-#include <klib/refcount.h> /* KRefcount */
-#include <klib/log.h> /* PLOGMSG */
 #include <klib/debug.h> /* DBGMSG */
+#include <klib/log.h> /* PLOGMSG */
+#include <klib/rc.h> /* GetRCState */
+#include <klib/refcount.h> /* KRefcount */
 #include <klib/status.h> /* STSMSG */
 #include <klib/text.h> /* String */
-#include <klib/rc.h> /* GetRCState */
-
-/*#include <kfs/directory.h> * KDirectoryNativeDir */
 
 #include <sysalloc.h>
 
@@ -484,6 +481,32 @@ typedef struct References {
     uint64_t   read_id;
     bool           eos; /* end if set: no more sequences to read */
 } References;
+typedef struct {
+    BSTNode n;
+
+    const char *acc;
+} RunNode;
+static int64_t CC RunNodeCmpByAcc(const void *item, const BSTNode *n) {
+    const char *c = item;
+    const RunNode *rn = (const RunNode*)n;
+
+    if (c == NULL || rn == NULL || rn->acc == NULL) {
+        return 1;
+    }
+
+    return strcmp(c, rn->acc);
+}
+static int64_t CC RunBstSortByAcc(const BSTNode *item, const BSTNode *n) {
+    const RunNode *rn = (const RunNode*)item;
+    assert(rn);
+    return RunNodeCmpByAcc(rn->acc, n);
+}
+static void CC RunNodeWhack(BSTNode *n, void *ignore) {
+    RunNode *rn = (RunNode*)n;
+    assert(rn);
+    memset(n, 0, sizeof *n);
+    free(n);
+}
 #define MAX_SEQ_LEN 5000
 static const References* _RunSetMakeReferences
     (RunSet *self, VdbBlastStatus *status)
@@ -508,6 +531,7 @@ static const References* _RunSetMakeReferences
         *status = eVdbBlastMemErr;
         return NULL;
     }
+    BSTreeInit(&refs->runs);
     r->rs = self;
     r->refs = refs;
     for (i = 0; i < self->krun; ++i) {
@@ -521,6 +545,22 @@ static const References* _RunSetMakeReferences
         const VdbBlastRun *run = &self->run[i];
         if (run->obj == NULL || run->obj->db == NULL) {
             continue;
+        }
+        {
+            RunNode *n = NULL;
+            n = (RunNode*)BSTreeFind(&refs->runs, run->acc, RunNodeCmpByAcc);
+            if (n != NULL) {
+                continue; /* ignore repeated runs */
+            }
+            else {
+                n = calloc(1, sizeof *n);
+                if (n == NULL) {
+                    *status = eVdbBlastMemErr;
+                    return NULL;
+                }
+            }
+            n->acc = run->acc;
+            BSTreeInsert(&refs->runs, (BSTNode*)n, RunBstSortByAcc);
         }
         if (run->obj->refTbl == NULL) {
             rc = VDatabaseOpenTableRead(run->obj->db,
@@ -601,7 +641,9 @@ static const References* _RunSetMakeReferences
                     S
                     return NULL;
                 }
-                if (refs->rfdk > 0) {
+                if (refs->rfdk > 0 && /* there are previous references */
+                    cur_row != first) /* not the first reference row in a run */
+                {
                     const VdbBlastRef *rfd1 = &refs->rfd[refs->rfdk - 1];
                     if (string_cmp(rfd1->SEQ_ID, string_size(rfd1->SEQ_ID),
                         SEQ_ID, string_size(SEQ_ID), string_size(SEQ_ID)) == 0)
@@ -723,6 +765,8 @@ void _RefSetFini(RefSet *self) {
     }
 
     free(self->rfd);
+
+    BSTreeWhack(&self->runs, RunNodeWhack, NULL);
 
     memset(self, 0, sizeof *self);
 }
