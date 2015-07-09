@@ -35,6 +35,10 @@
 #include <insdc/sra.h> /* INSDC_SRA_platform_id */
 #endif
 
+#ifndef _h_klib_container_
+#include <klib/container.h> /* BSTree */
+#endif
+
 #ifndef _h_klib_refcount_
 #include <klib/refcount.h> /* KRefcount */
 #endif
@@ -139,6 +143,8 @@ typedef struct {
     VdbBlastRef  *rfd;
     size_t        rfdk; /* number of rfd members */
     size_t        rfdn; /* allocated rfd members */
+
+    BSTree runs; /* rundesc-s */
 } RefSet;
 
 void _RefSetFini(RefSet *self);
