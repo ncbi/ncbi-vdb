@@ -30,13 +30,14 @@
 version 1;
 
 include 'vdb/vdb.vschema';
-include 'ncbi/stats.vschema';
+include 'csra2/stats.vschema';
 
 
 /*--------------------------------------------------------------------------
  * tables
  */
 table NCBI:csra2:tbl:reference #1.0
+    = NCBI:csra2:tbl:read_stats #1
 {
     /* CHUNK_SIZE
      *  describes the maximum number of bases in any cell
@@ -68,14 +69,17 @@ table NCBI:csra2:tbl:reference #1.0
     }
     extern column INSDC:4na:bin LOCAL_SEQUENCE = out_local_4na_bin;
 
-    /* ALIGNMENT_IDS
-     *  an index to rows in the ALIGNMENT table
-     *  having alignments STARTING within this chunk
+    /* PRIMARY_ALIGNMENT_IDS
+     * SECONDARY_ALIGNMENT_IDS
+     *  an index to rows in the PRIMARY_ALIGNMENT and
+     *  SECONDARY_ALIGNMENT tables having alignments 
+     *  STARTING within this chunk
      *
      *  the indicies MUST be sorted in clustered order,
      *  meaning that they are in ascending numeric order
      */
-    extern column < I64 > izip_encoding ALIGNMENT_IDS;
+    extern column < I64 > izip_encoding PRIMARY_ALIGNMENT_IDS;
+    extern column < I64 > izip_encoding SECONDARY_ALIGNMENT_IDS;
 
     /* OVERLAP_REF_POS
      *  min ( REF_POS ) for all alignments intersecting this chunk
@@ -131,6 +135,8 @@ table NCBI:csra2:tbl:reference #1.0
         = < INSDC:4na:bin, INSDC:4na:bin > map < INSDC:4na:map:BINSET, [ 15,0,0,3,0,5,6,7,0,9,10,11,12,13,14,15 ] > ( in_local_4na_bin );
         ;
 
+    INSDC:4na:bin in_stats_seq = in_local_4na_bin;
+
     /* physical columns for sequence */
     physical column INSDC:2na:packed .LOCAL_SEQUENCE
         = ( INSDC:2na:packed ) pack ( in_local_2na_bin )
@@ -153,10 +159,7 @@ table NCBI:csra2:tbl:reference #1.0
         = < INSDC:4na:bin, INSDC:dna:text > map < INSDC:4na:map:BINSET, INSDC:4na:map:CHARSET > ( out_local_4na_bin )
         ;
 
-    /* statistics */
-    trigger meta_stats
-        = NCBI:SRA:stats_trigger ( in_local_2na_bin, in_local_read_len, in_local_read_type )
-        ;
+
     INSDC:coord:len in_local_read_len
         = ( INSDC:coord:len ) row_len ( in_local_2na_bin )
         ;
@@ -201,21 +204,39 @@ table NCBI:csra2:view:reference #1.0
         = out_2na_bin
         ;
     readonly column INSDC:2na:packed SEQUENCE
-        = out_2na_packed
+        = pack ( out_2na_bin )
         ;
 
-    // column aliases
+    /* QUALITY
+     * This is fake column for compatibility
+     */
+    readonly column INSDC:quality:phred QUALITY
+        = out_qual_phred
+        ;
+
+    /* column aliases */
     readonly column INSDC:coord:len MAX_SEQ_LEN = .CHUNK_SIZE;
     readonly column ascii SEQ_ID = cast ( .CANONICAL_NAME );
-    readonly column I64 PRIMARY_ALIGNMENT_IDS = .ALIGNMENT_IDS;
 
     /* sequence productions */
-    INSDC:dna:text out_dna_text
-        = out_local_dna_text
-    //  | sub-select from external table
-        ;
     INSDC:4na:bin out_4na_bin
         = out_local_4na_bin
-    //  | sub-select from external table
+    // TODO:  | sub-select from external table
         ;
+
+    INSDC:dna:text out_dna_text
+        = < INSDC:4na:bin, INSDC:dna:text > map < INSDC:4na:map:BINSET, INSDC:4na:map:CHARSET > ( out_4na_bin )
+        ;
+
+    INSDC:2na:bin out_2na_bin
+        = INSDC:SEQ:rand_4na_2na ( out_4na_bin )
+        ;
+
+    /* quality productions */
+    INSDC:quality:phred out_qual_phred
+        = < INSDC:quality:phred > echo < 30 > ( SEQUENCE )
+        ;
+
+    INSDC:quality:phred in_stats_qual_phred = out_qual_phred;
 }
+

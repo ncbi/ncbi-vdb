@@ -1,0 +1,92 @@
+/*===========================================================================
+*
+*                            PUBLIC DOMAIN NOTICE
+*               National Center for Biotechnology Information
+*
+*  This software/database is a "United States Government Work" under the
+*  terms of the United States Copyright Act.  It was written as part of
+*  the author's official duties as a United States Government employee and
+*  thus cannot be copyrighted.  This software/database is freely available
+*  to the public for use. The National Library of Medicine and the U.S.
+*  Government have not placed any restriction on its use or reproduction.
+*
+*  Although all reasonable efforts have been taken to ensure the accuracy
+*  and reliability of the software and data, the NLM and the U.S.
+*  Government do not and cannot warrant the performance or results that
+*  may be obtained by using this software or data. The NLM and the U.S.
+*  Government disclaim all warranties, express or implied, including
+*  warranties of performance, merchantability or fitness for any particular
+*  purpose.
+*
+*  Please cite the author in any work or product based on this material.
+*
+* ===========================================================================
+*
+*/
+
+/*==========================================================================
+ * NCBI Sequence Read Archive schema
+ */
+version 1;
+
+include 'vdb/vdb.vschema';
+include 'insdc/insdc.vschema';
+include 'insdc/sra.vschema';
+
+
+/*--------------------------------------------------------------------------
+ * functions
+ */
+
+extern function
+U8 NCBI:csra2:stats_trigger #1 ( B8 read_bin * ascii read_group );
+
+extern function
+U8 NCBI:csra2:phred_stats_trigger #1 ( INSDC:quality:phred qual_bin )
+    = NCBI:SRA:phred_stats_trigger;
+
+/*--------------------------------------------------------------------------
+ * table
+ */
+
+table NCBI:csra2:tbl:read_stats #1
+{
+    readonly column I64 MIN_READ_ID = min_read_id;
+    readonly column I64 MAX_READ_ID = max_read_id;
+    readonly column U64 READ_COUNT  = read_count;
+    readonly column U64 BASE_COUNT  = base_count;
+
+    /* introduce compatibility names */
+    readonly column INSDC:SRA:spotid_t MIN_SPOT_ID = cast ( min_read_id );
+    readonly column INSDC:SRA:spotid_t MAX_SPOT_ID = cast ( max_read_id );
+    readonly column U64 SPOT_COUNT  = read_count;
+
+    /* reading rules */
+    I64 min_read_id
+        = < I64 > meta:value < "STATS/TABLE/READ_MIN" > ()
+        | < I64 > meta:value < "STATS/TABLE/SPOT_MIN" > ()
+        | < I64 > echo < 1 > ()
+        ;
+    I64 max_read_id
+        = < I64 > meta:value < "STATS/TABLE/READ_MAX" > ()
+        | < I64 > meta:value < "STATS/TABLE/SPOT_MAX" > ()
+        | cast ( read_count )
+        ;
+    U64 read_count
+        = < U64 > meta:value < "STATS/TABLE/READ_COUNT" > ()
+        | < U64 > meta:value < "STATS/TABLE/SPOT_COUNT" > ()
+        ;
+    U64 base_count
+        = < U64 > meta:value < "STATS/TABLE/BASE_COUNT" > ()
+        ;
+
+    /* triggers */
+    trigger meta_stats
+        = NCBI:csra2:stats_trigger ( in_stats_seq, in_stats_read_group )
+        | NCBI:csra2:stats_trigger ( in_stats_seq )
+        ;
+        
+    trigger qual_stats
+        = NCBI:csra2:phred_stats_trigger #1 ( in_stats_qual_phred )
+        ;
+}

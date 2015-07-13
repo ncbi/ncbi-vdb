@@ -666,6 +666,31 @@ rc_t CC stats_data_cmpf_trigger(void *data, const VXformInfo *info, int64_t row_
     return stats_data_update(data, row_id, *spot_len, bio_spot_len, cmp_spot_len, argc == 5, grp, len);
 }
 
+static
+rc_t CC stats_data_csra2_trigger(void *data, const VXformInfo *info, int64_t row_id,
+                                 VRowResult *rslt, uint32_t argc, const VRowData argv[])
+{
+    uint32_t bio_spot_len;
+    const char* grp = NULL;
+    uint64_t len = 0;
+    
+    uint32_t read_len = argv[0].u.data.elem_count;
+    bio_spot_len = read_len;
+    
+    assert(argc >= 1 && argc <= 2);
+    
+    if( argc == 2 ) {
+        assert(1 == argv[1].u.data.elem_count);
+        
+        /* get group name and length */
+        grp = argv[1].u.data.base;
+        len = argv[1].u.data.elem_count;
+        grp += argv[1].u.data.first_elem;
+    }
+    return stats_data_update(data, row_id, read_len, bio_spot_len, 0, argc == 2, grp, len);
+}
+
+
 VTRANSFACT_IMPL ( NCBI_SRA_stats_trigger, 1, 0, 0 )
     ( const void *self, const VXfactInfo *info, VFuncDesc *rslt,
       const VFactoryParams *cp, const VFunctionParams *dp )
@@ -716,6 +741,24 @@ VTRANSFACT_IMPL ( NCBI_SRA_cmpf_stats_trigger, 1, 0, 0 )
         rslt->whack = stats_data_whack;
         rslt->variant = vftNonDetRow;
         rslt->u.rf = stats_data_cmpf_trigger;
+    }
+    return rc;
+}
+
+VTRANSFACT_IMPL ( NCBI_csra2_stats_trigger, 1, 0, 0 )
+    ( const void * self, const VXfactInfo *info, VFuncDesc *rslt,
+      const VFactoryParams *cp, const VFunctionParams *dp )
+{
+    rc_t rc;
+    stats_data_t *data;
+    
+    assert(dp->argc >= 1 && dp->argc <= 2);
+    
+    if( (rc = stats_data_make(&data, (VTable*)info->tbl, dp->argc > 1, false)) == 0 ) {
+        rslt->self = data;
+        rslt->whack = stats_data_whack;
+        rslt->variant = vftNonDetRow;
+        rslt->u.rf = stats_data_csra2_trigger;
     }
     return rc;
 }
