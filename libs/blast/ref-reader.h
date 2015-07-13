@@ -1,5 +1,5 @@
-#ifndef _h_libs_blast_reader_
-#define _h_libs_blast_reader_
+#ifndef _h_libs_blast_ref_reader_
+#define _h_libs_blast_ref_reader_
 
 /*===========================================================================
  *
@@ -27,27 +27,35 @@
  *
  */
 
-#include <stddef.h> /* size_t */
-#include <stdint.h> /* uint64_t */
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct Core2na;
+struct Core4na;
+struct References;
 struct RunSet;
 
-typedef struct {
-    uint32_t irun;
-    const struct VBlob *blob;
-} Data2na;
+uint64_t _Core2naReadRef(struct Core2na *self, VdbBlastStatus *status,
+    uint64_t *read_id, uint8_t *buffer, size_t buffer_size);
 
-uint64_t _Core2naRead(struct Core2na *self,
-    const struct RunSet *runs, uint32_t *status, uint64_t *read_id,
-    size_t *starting_base, uint8_t *buffer, size_t buffer_size);
+uint32_t _Core2naDataRef(struct Core2na *self,
+    Data2na *data, VdbBlastStatus *status,
+    Packed2naRead *buffer, uint32_t buffer_length);
+
+size_t _Core4naReadRef(struct Core4na *self, const struct RunSet *runs,
+    uint32_t *status, uint64_t read_id, size_t starting_base,
+    uint8_t *buffer, size_t buffer_length);
+
+const uint8_t* _Core4naDataRef(struct Core4na *self, const struct RunSet *runs,
+    uint32_t *status, uint64_t read_id, size_t *length);
+
+void _ReferencesWhack(const struct References *self);
+
+const struct References* _RunSetMakeReferences
+    (struct RunSet *self, VdbBlastStatus *status);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _h_libs_blast_reader_ */
+#endif /* _h_libs_blast_ref_reader_ */

@@ -221,7 +221,7 @@ typedef struct Core2na {
     Reader2na reader;
 } Core2na;
 
-typedef struct {
+typedef struct Core4na {
     uint32_t min_read_length;
     struct KLock *mutex;
     ReadDesc desc;

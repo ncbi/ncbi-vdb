@@ -75,6 +75,7 @@ $(ILIBDIR)/libvdb-blast: $(addprefix $(ILIBDIR)/libvdb-blast.,$(ILIBEXT))
 BLAST_SRC = \
 	blast-mgr \
 	reader \
+	ref-reader \
 	run-set \
 
 BLAST_OBJ = \
