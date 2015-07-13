@@ -195,6 +195,9 @@
     <ClCompile Include="..\..\..\libs\blast\reader.c">
       <Filter>blast</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\blast\ref-reader.c">
+      <Filter>blast</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\blast\run-set.c">
       <Filter>blast</Filter>
     </ClCompile>
