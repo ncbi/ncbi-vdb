@@ -99,7 +99,9 @@ static int64_t CC RunNodeCmpByAcc(const void *item, const BSTNode *n) {
     return strcmp(c, rn->acc);
 }
 
-static int64_t CC RunBstSortByAcc(const BSTNode *item, const BSTNode *n) {
+static
+int64_t CC RunBstSortByAcc(const BSTNode *item, const BSTNode *n)
+{
     const RunNode *rn = (const RunNode*)item;
     assert(rn);
     return RunNodeCmpByAcc(rn->acc, n);
@@ -570,7 +572,9 @@ static uint64_t _ReferencesRead2na(References *self,
     return total;
 }
 
-static uint32_t _ReferencesData(References *self,
+#define COMPARE
+
+static uint32_t _ReferencesData2na(References *self,
     Data2na *data, VdbBlastStatus *status,
     Packed2naRead *buffer, uint32_t buffer_length)
 {
@@ -585,9 +589,12 @@ static uint32_t _ReferencesData(References *self,
         int64_t first = 0;
         uint64_t count = 0;
         uint64_t last = 0;
-        uint64_t i = 0;
         uint32_t elem_bits = 0;
+#ifdef COMPARE
         uint32_t row_len = 0;
+        uint64_t i = 0;
+#endif
+        size_t first_spot = 0;
         *status = eVdbBlastErr;
         assert(buffer);
         RELEASE(VBlob, data->blob);
@@ -686,6 +693,8 @@ static uint32_t _ReferencesData(References *self,
         if (rfd->first + rfd->count < last) {
             last = rfd->first + rfd->count;
         }
+        first_spot = self->spot;
+#ifdef COMPARE
         for (i = 0; self->spot < last; ++i, ++self->spot) {
             if (i == 0) {
                 rc = VBlobCellData(data->blob, self->spot, &elem_bits,
@@ -713,7 +722,67 @@ static uint32_t _ReferencesData(References *self,
                 else {
                     out->length_in_bases += row_len;
                 }
+                {
+                    size_t chunk_len = ((const uint8_t*)base
+                        - (const uint8_t*)out->starting_byte) * 4 + row_len;
+                    assert(out->length_in_bases == chunk_len);
+                }
             }
+        }
+#endif
+        {
+            bool full_scan = false;
+            const void *base = NULL;
+            uint32_t boff = 0;
+            uint32_t len = 0;
+            rc = VBlobCellData
+                (data->blob, first_spot, &elem_bits, &base, &boff, &len);
+            if (rc != 0 || elem_bits != 2) {
+                S /* PLOGERR */
+                return 0;
+            }
+            if (first_spot + 1 == last) {
+                /* the only chunk */
+            }
+            else if (len != MAX_SEQ_LEN) {
+                full_scan = true;
+                assert(0);
+            }
+            else {
+                const void *last_base = NULL;
+                uint32_t boff = 0;
+                uint32_t last_len = 0;
+                rc = VBlobCellData(data->blob, last - 1,
+                    &elem_bits, &last_base, &boff, &last_len);
+                if (rc != 0 || elem_bits != 2) {
+                    S /* PLOGERR */
+                    return 0;
+                }
+                else {
+                    size_t chunk_len = ((const uint8_t*)last_base
+                                         - (const uint8_t*)base) * 4 + last_len;
+                    size_t num_ref_chunks
+                        = (chunk_len + MAX_SEQ_LEN - 1) / MAX_SEQ_LEN;
+                    if (num_ref_chunks != last - first_spot) {
+                        full_scan = true;
+                    }
+                    else {
+                        len = chunk_len;
+                    }
+                }
+            }
+            assert(!full_scan);
+#ifdef COMPARE
+            assert(out->starting_byte == base);
+            assert(out->offset_to_first_bit == boff);
+            assert(out->length_in_bases == len);
+            assert(self->spot == last);
+#else
+            out->starting_byte = (void*)base;
+            out->offset_to_first_bit = boff;
+            out->length_in_bases = len;
+            self->spot = last;
+#endif
         }
         *status = eVdbBlastNoErr;
         out->read_id = _set_read_id_reference_bit(self->read_id, status);
@@ -818,7 +887,7 @@ uint32_t _Core2naDataRef(struct Core2na *self,
         return 0;
     }
 
-    num_read = _ReferencesData(r, data, status, buffer, buffer_length);
+    num_read = _ReferencesData2na(r, data, status, buffer, buffer_length);
     if (num_read == 0 && *status == eVdbBlastNoErr && r->eos) {
         self->eos = true;
     }
