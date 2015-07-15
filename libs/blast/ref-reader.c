@@ -588,13 +588,13 @@ static uint32_t _ReferencesData2na(References *self,
         const VdbBlastRef *rfd = &self->refs->rfd[self->rfdi];
         int64_t first = 0;
         uint64_t count = 0;
-        uint64_t last = 0;
+        uint64_t last_spot = 0;
         uint32_t elem_bits = 0;
 #ifdef COMPARE
         uint32_t row_len = 0;
-        uint64_t i = 0;
 #endif
         size_t first_spot = 0;
+        bool full_scan = false;
         *status = eVdbBlastErr;
         assert(buffer);
         RELEASE(VBlob, data->blob);
@@ -689,14 +689,14 @@ static uint32_t _ReferencesData2na(References *self,
             S /* PLOGERR */
             return 0;
         }
-        last = first + count;
-        if (rfd->first + rfd->count < last) {
-            last = rfd->first + rfd->count;
+        last_spot = first + count;
+        if (rfd->first + rfd->count < last_spot) {
+            last_spot = rfd->first + rfd->count;
         }
         first_spot = self->spot;
 #ifdef COMPARE
-        for (i = 0; self->spot < last; ++i, ++self->spot) {
-            if (i == 0) {
+        for (; self->spot < last_spot; ++self->spot) {
+            if (self->spot == first_spot) {
                 rc = VBlobCellData(data->blob, self->spot, &elem_bits,
                     (const void **)&out->starting_byte,
                     &out->offset_to_first_bit, &row_len);
@@ -708,7 +708,7 @@ static uint32_t _ReferencesData2na(References *self,
                     out->length_in_bases = row_len;
                 }
             }
-            else if (self->spot != last - 1) {
+            else if (self->spot != last_spot - 1) {
                 out->length_in_bases += row_len;
             }
             else {
@@ -722,16 +722,10 @@ static uint32_t _ReferencesData2na(References *self,
                 else {
                     out->length_in_bases += row_len;
                 }
-                {
-                    size_t chunk_len = ((const uint8_t*)base
-                        - (const uint8_t*)out->starting_byte) * 4 + row_len;
-                    assert(out->length_in_bases == chunk_len);
-                }
             }
         }
 #endif
         {
-            bool full_scan = false;
             const void *base = NULL;
             uint32_t boff = 0;
             uint32_t len = 0;
@@ -741,7 +735,7 @@ static uint32_t _ReferencesData2na(References *self,
                 S /* PLOGERR */
                 return 0;
             }
-            if (first_spot + 1 == last) {
+            if (first_spot + 1 == last_spot) {
                 /* the only chunk */
             }
             else if (len != MAX_SEQ_LEN) {
@@ -752,7 +746,7 @@ static uint32_t _ReferencesData2na(References *self,
                 const void *last_base = NULL;
                 uint32_t boff = 0;
                 uint32_t last_len = 0;
-                rc = VBlobCellData(data->blob, last - 1,
+                rc = VBlobCellData(data->blob, last_spot - 1,
                     &elem_bits, &last_base, &boff, &last_len);
                 if (rc != 0 || elem_bits != 2) {
                     S /* PLOGERR */
@@ -763,7 +757,7 @@ static uint32_t _ReferencesData2na(References *self,
                                          - (const uint8_t*)base) * 4 + last_len;
                     size_t num_ref_chunks
                         = (chunk_len + MAX_SEQ_LEN - 1) / MAX_SEQ_LEN;
-                    if (num_ref_chunks != last - first_spot) {
+                    if (num_ref_chunks != last_spot - first_spot) {
                         full_scan = true;
                     }
                     else {
@@ -771,18 +765,66 @@ static uint32_t _ReferencesData2na(References *self,
                     }
                 }
             }
-            assert(!full_scan);
+            if (!full_scan) {
 #ifdef COMPARE
-            assert(out->starting_byte == base);
-            assert(out->offset_to_first_bit == boff);
-            assert(out->length_in_bases == len);
-            assert(self->spot == last);
+                assert(out->starting_byte == base);
+                assert(out->offset_to_first_bit == boff);
+                assert(out->length_in_bases == len);
+                assert(self->spot == last_spot);
 #else
-            out->starting_byte = (void*)base;
-            out->offset_to_first_bit = boff;
-            out->length_in_bases = len;
-            self->spot = last;
+                out->starting_byte = (void*)base;
+                out->offset_to_first_bit = boff;
+                out->length_in_bases = len;
+                self->spot = last_spot;
 #endif
+            }
+        }
+#ifndef COMPARE
+        if (full_scan)
+#endif
+        {
+            const void *starting_byte = NULL;
+            const void *prev_base = NULL;
+            size_t length_in_bases = 0;
+            uint32_t offset_to_first_bit = 0;
+            for (self->spot = first_spot;
+                self->spot < last_spot; ++self->spot)
+            {
+                const void *base = NULL;
+                uint32_t boff = 0;
+                uint32_t len = 0;
+                rc = VBlobCellData(data->blob, self->spot,
+                    &elem_bits, &base, &boff, &len);
+                if (rc != 0 || elem_bits != 2) {
+                    S /* PLOGERR */
+                    return 0;
+                }
+                if (self->spot == first_spot) {
+                    starting_byte = base;
+                    offset_to_first_bit = boff;
+                }
+                else {
+                    if ((const uint8_t*)prev_base + MAX_SEQ_LEN / 4 != base) {
+                        assert(full_scan);
+                        break;
+                    }
+                }
+                prev_base = base;
+                length_in_bases += len;
+            }
+#ifdef COMPARE
+            if (!full_scan) {
+                assert(out->starting_byte == starting_byte);
+                assert(out->offset_to_first_bit == offset_to_first_bit);
+                assert(out->length_in_bases == length_in_bases);
+                assert(self->spot == last_spot);
+            }
+#endif
+            if (full_scan) {
+                out->starting_byte = (void*)starting_byte;
+                out->offset_to_first_bit = offset_to_first_bit;
+                out->length_in_bases = length_in_bases;
+            }
         }
         *status = eVdbBlastNoErr;
         out->read_id = _set_read_id_reference_bit(self->read_id, status);
@@ -1031,12 +1073,13 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
 {
     const void *out = NULL;
     rc_t rc = 0;
-    uint64_t i = 0;
     const VdbBlastRef *rfd = NULL;
     const VdbBlastRun *run = NULL;
     int64_t first = 0;
     uint64_t count = 0;
-    uint64_t last = 0;
+    uint64_t last_spot = 0;
+    size_t first_spot = 0;
+    bool full_scan = false;
     assert(status);
     *status = eVdbBlastErr;
     if (length == NULL || self == NULL || runs == NULL ||
@@ -1130,19 +1173,22 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
         S /* PLOGERR */
         return 0;
     }
-    last = first + count;
-    if (rfd->first + rfd->count < last) {
-        last = rfd->first + rfd->count;
+    last_spot = first + count;
+    if (rfd->first + rfd->count < last_spot) {
+        last_spot = rfd->first + rfd->count;
     }
     {
+        first_spot = self->desc.spot;
         uint32_t row_len = 0;
-        for (i = 0; self->desc.spot < last; ++i, ++self->desc.spot) {
+#ifdef COMPARE
+        for (; self->desc.spot < last_spot; ++self->desc.spot) {
             uint32_t elem_bits = 0;
             uint32_t offset_to_first_bit = 0;
-            if (i == 0) {
+            if (self->desc.spot == first_spot) {
                 rc = VBlobCellData(self->blob, self->desc.spot, &elem_bits,
                     &out, &offset_to_first_bit, &row_len);
-                if (rc != 0 || elem_bits != 8 || offset_to_first_bit != 0) {
+                if (rc != 0 || elem_bits != 8 || offset_to_first_bit != 0)
+                {
                     S /* PLOGERR */
                     return NULL;
                 }
@@ -1150,7 +1196,7 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
                     *length = row_len;
                 }
             }
-            else if (self->desc.spot != last - 1) {
+            else if (self->desc.spot != last_spot - 1) {
                 *length += row_len;
             }
             else {
@@ -1166,6 +1212,104 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
                 }
             }
         }
+#endif
+    }
+    {
+        const void *base = NULL;
+        uint32_t boff = 0;
+        uint32_t len = 0;
+        uint32_t elem_bits = 0;
+        rc = VBlobCellData
+            (self->blob, first_spot, &elem_bits, &base, &boff, &len);
+        if (rc != 0 || elem_bits != 8 || boff != 0) {
+            S /* PLOGERR */
+            return NULL;
+        }
+        if (first_spot + 1 == last_spot) {
+            /* the only chunk */
+        }
+        else if (len != MAX_SEQ_LEN) {
+            full_scan = true;
+            assert(0);
+        }
+        else {
+            const void *last_base = NULL;
+            uint32_t boff = 0;
+            uint32_t last_len = 0;
+            rc = VBlobCellData(self->blob, last_spot - 1,
+                &elem_bits, &last_base, &boff, &last_len);
+            if (rc != 0 || elem_bits != 8 || boff != 0) {
+                S /* PLOGERR */
+                return 0;
+            }
+            else {
+                size_t chunk_len = ((const uint8_t*)last_base
+                                     - (const uint8_t*)base) + last_len;
+                size_t num_ref_chunks
+                    = (chunk_len + MAX_SEQ_LEN - 1) / MAX_SEQ_LEN;
+                if (num_ref_chunks != last_spot - first_spot) {
+                    full_scan = true;
+                }
+                else {
+                    len = chunk_len;
+                }
+            }
+        }
+        if (!full_scan) {
+#ifdef COMPARE
+            assert(out == base);
+            assert(*length == len);
+            assert(self->desc.spot == last_spot);
+#else
+            out = base;
+            *length = len;
+            self->desc.spot = last_spot;
+#endif
+        }
+    }
+#ifndef COMPARE
+    if (full_scan)
+#endif
+    {
+            const void *starting_byte = NULL;
+            const void *prev_base = NULL;
+            size_t length_in_bases = 0;
+            uint32_t elem_bits = 0;
+            for (self->desc.spot = first_spot;
+                self->desc.spot < last_spot; ++self->desc.spot)
+            {
+                const void *base = NULL;
+                uint32_t boff = 0;
+                uint32_t len = 0;
+                rc = VBlobCellData(self->blob, self->desc.spot,
+                    &elem_bits, &base, &boff, &len);
+                if (rc != 0 || elem_bits != 8 || boff != 0) {
+                    S /* PLOGERR */
+                    return 0;
+                }
+                if (self->desc.spot == first_spot) {
+                    starting_byte = base;
+                }
+                else {
+                    if ((const uint8_t*)prev_base + MAX_SEQ_LEN != base) {
+                        assert(full_scan);
+                        break;
+                    }
+                }
+                prev_base = base;
+                length_in_bases += len;
+            }
+#ifdef COMPARE
+            if (!full_scan) {
+                assert(out == starting_byte);
+                assert(*length == length_in_bases);
+                assert(self->desc.spot == last_spot);
+            }
+#endif
+            if (full_scan) {
+                out = starting_byte;
+                *length = length_in_bases;
+            }
     }
     if (self->desc.spot < rfd->first + rfd->count) {
         *status = eVdbBlastChunkedSequence;
