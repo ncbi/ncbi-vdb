@@ -353,14 +353,13 @@ rc_t KExtTableFindKFFDescr (KExtTable * self, const char * str, char * kff, size
 static
 int64_t KExtNodeSort (const BSTNode* item, const BSTNode * n)
 {
-    const char * str1;
-    const char * str2;
+    KExtNode *n1 = ( KExtNode * ) item;
+    KExtNode *n2 = ( KExtNode * ) n;
 
     FUNC_ENTRY();
 
-    str1 = ((KExtNode *)item)->extdescr;
-    str2 = ((KExtNode *)n)->extdescr;
-    return strcmp (str1, str2);
+    return strcase_cmp ( n1 -> extdescr, n1 -> extlen, 
+                         n2 -> extdescr, n2 -> extlen, n2 -> extlen );
 }
 static
 rc_t KExtTableInsert (KExtTable * self, KExtNode *node)
@@ -504,7 +503,7 @@ LIB_EXPORT rc_t CC KExtTableWrite (const KExtTable * self, KFile * file)
 static
 rc_t KExtTableInit (KExtTable * self, const KFFTables * tables, const char * buffer, size_t len)
 {
-    rc_t rc;
+    rc_t rc = 0;
     const char * ext;
     const char * kff;
     const char * tab;
@@ -512,12 +511,27 @@ rc_t KExtTableInit (KExtTable * self, const KFFTables * tables, const char * buf
     const char * line;
     const char * limit;
     KExtNode * node;
-
+    
     FUNC_ENTRY();
+    
+    /* moved this block of code from the bottom of the function
+       to assure that this node is always created */
+	char unknown[] = "Unknown";
+    
+	rc = KExtNodeMake (&node, tables, unknown, sizeof (unknown) - 1, unknown, sizeof (unknown) - 1);
+	if (rc != 0)
+	{
+	    LOGERR (klogFatal, rc, "Failure to make node");
+        return rc;
+	}
 
-
-    rc = 0;
-
+    rc = KExtTableInsert(self, node);
+    if (rc != 0)
+    {
+        LOGERR (klogFatal, rc, "Failure to insert node");
+	    return rc;
+	}
+    
     /* -----
      * we try to go all the way through the buffer line by line
      * which by this coding could actually be all blank
@@ -525,83 +539,65 @@ rc_t KExtTableInit (KExtTable * self, const KFFTables * tables, const char * buf
     limit = buffer + len;
     for (line = buffer; line < limit; line = newline+1)
     {
-	for (ext = line; isspace (*ext); ext++, len--)
-	{
-	    if (len == 0) /* last of the file was all whitespace so quit */
-		break;
-	}
-	newline = memchr (ext, '\n', len);
-	if (newline == NULL)
-	    newline = ext + len;
-	/* -----
-	 * If the first character on the line is #
-	 * we treat it as a comment (matches sh/bash/libext/etc.
-	 */
-	if (*ext == '#')
-	{
-	    /* -----
-	     * skip this line
-	     */
-	    len -= newline+1 - ext;
-	    continue;
-	}
-	
-	tab = memchr (ext, '\t', len);
-	if (tab == NULL)
-	{
-	    rc = RC (rcFF, rcFileFormat, rcConstructing, rcFile, rcInvalid);
-	    LOGERR (klogFatal, rc, "No <TAB> between ext and kff");
-	    break;
-	}
-	kff = tab + 1;
-	for (len -= kff - ext;
-	     isspace (*kff);
-	     len--, kff++)
-	{
-	    if (len == 0)
-	    {
-		rc = RC (rcFF, rcFileFormat, rcConstructing, rcFile, rcInvalid);
-		LOGERR (klogFatal, rc, "No kff after <TAB>");
-		break;
-	    }
-	}
-	if (newline == kff)
-	{
-	    rc = RC (rcFF, rcFileFormat, rcConstructing, rcFile, rcInvalid);
-	    LOGERR (klogFatal, rc, "No kff after whitespace");
-	    break;
-	}
-	len -= newline+1 - kff;
- 	rc = KExtNodeMake (&node, tables, ext, tab-ext, kff, newline-kff);
-	if (rc != 0)
-	{
-	    LOGERR (klogFatal, rc, "Failure to make node");
-	    break;
-	}
-	rc = KExtTableInsert(self, node);
-	if (rc != 0)
-	{
-	    LOGERR (klogFatal, rc, "Failure to insert node");
-	    break;
-	}
-    }
-    if (rc == 0)
-    {
-	char unknown[] = "Unknown";
-
-	rc = KExtNodeMake (&node, tables, unknown, sizeof (unknown) - 1, unknown, sizeof (unknown) - 1);
-	if (rc != 0)
-	{
-	    LOGERR (klogFatal, rc, "Failure to make node");
-	}
-	else
-	{
-	    rc = KExtTableInsert(self, node);
-	    if (rc != 0)
-	    {
-		LOGERR (klogFatal, rc, "Failure to insert node");
-	    }
-	}
+        for (ext = line; isspace (*ext); ext++, len--)
+        {
+            if (len == 0) /* last of the file was all whitespace so quit */
+                break;
+        }
+        newline = memchr (ext, '\n', len);
+        if (newline == NULL)
+            newline = ext + len;
+        /* -----
+         * If the first character on the line is #
+         * we treat it as a comment (matches sh/bash/libext/etc.
+         */
+        if (*ext == '#')
+        {
+            /* -----
+             * skip this line
+             */
+            len -= newline+1 - ext;
+            continue;
+        }
+        
+        tab = memchr (ext, '\t', len);
+        if (tab == NULL)
+        {
+            rc = RC (rcFF, rcFileFormat, rcConstructing, rcFile, rcInvalid);
+            LOGERR (klogFatal, rc, "No <TAB> between ext and kff");
+            break;
+        }
+        kff = tab + 1;
+        for (len -= kff - ext;
+             isspace (*kff);
+             len--, kff++)
+        {
+            if (len == 0)
+            {
+                rc = RC (rcFF, rcFileFormat, rcConstructing, rcFile, rcInvalid);
+                LOGERR (klogFatal, rc, "No kff after <TAB>");
+                break;
+            }
+        }
+        if (newline == kff)
+        {
+            rc = RC (rcFF, rcFileFormat, rcConstructing, rcFile, rcInvalid);
+            LOGERR (klogFatal, rc, "No kff after whitespace");
+            break;
+        }
+        len -= newline+1 - kff;
+        rc = KExtNodeMake (&node, tables, ext, tab-ext, kff, newline-kff);
+        if (rc != 0)
+        {
+            LOGERR (klogFatal, rc, "Failure to make node");
+            break;
+        }
+        rc = KExtTableInsert(self, node);
+        if (rc != 0)
+        {
+            LOGERR (klogFatal, rc, "Failure to insert node");
+            break;
+        }
     }
     return rc;
 }
