@@ -1178,8 +1178,8 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
         last_spot = rfd->first + rfd->count;
     }
     {
-        first_spot = self->desc.spot;
         uint32_t row_len = 0;
+        first_spot = self->desc.spot;
 #ifdef COMPARE
         for (; self->desc.spot < last_spot; ++self->desc.spot) {
             uint32_t elem_bits = 0;
