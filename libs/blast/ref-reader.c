@@ -211,7 +211,7 @@ const References* _RunSetMakeReferences
     r->rs = self;
     r->refs = refs;
     for (i = 0; i < self->krun; ++i) {
-        const void *value = NULL;
+        const void *crntSeqId = NULL;
         uint32_t iCIRCULAR = 0; 
         uint32_t iCMP_READ = 0;
         uint32_t iSEQ_ID   = 0;
@@ -291,7 +291,7 @@ const References* _RunSetMakeReferences
         for (cur_row = first;
             cur_row < first + count && rc == 0; ++cur_row)
         {
-            bool next = false;
+            bool newRef = false;
 
             const void *base = NULL;
             uint32_t elem_bits = 0, boff = 0, row_len = 0;
@@ -303,15 +303,16 @@ const References* _RunSetMakeReferences
                 S
                 break;
             }
-            if (value == NULL) {
-                next = true;
+            if (crntSeqId == NULL) { /* the first reference in a run */
+                newRef = true;
             }
-            else if (value != base) {
-                next = true;
+            else if (crntSeqId != base) { /* pointer to SeqId has changed -
+                                             might be a new reference*/
+                newRef = true;
             }
 
-            if (next) {
-                value = base;
+            if (newRef) {
+                crntSeqId = base;
                 SEQ_ID = string_dup(base, row_len);
                 if (SEQ_ID == NULL) {
                     S
@@ -322,18 +323,19 @@ const References* _RunSetMakeReferences
                 {
                     const VdbBlastRef *rfd1 = &refs->rfd[refs->rfdk - 1];
                     if (string_cmp(rfd1->SEQ_ID, string_size(rfd1->SEQ_ID),
-                        SEQ_ID, string_size(SEQ_ID), string_size(SEQ_ID)) == 0)
+                            SEQ_ID, string_size(SEQ_ID), string_size(SEQ_ID))
+                        == 0)
                     {
                      /* a SEQ_ID with a different pointer but the same value:
                        (e.g. SRR520124/REFERENCE) */
                         free((void*)SEQ_ID);
                         SEQ_ID = NULL;
-                        next = false;
+                        newRef = false;
                     }
                 }
             }
 
-            if (next) {
+            if (newRef) {
                 bool CIRCULAR = false;
                 bool external = false;
                 VdbBlastRef *rfd  = NULL;
@@ -375,19 +377,24 @@ const References* _RunSetMakeReferences
 
                 if (refs->rfdk != 0) {
                     rfd1 = &refs->rfd[refs->rfdk - 1];
-                    rfd1->count = cur_row - rfd1->first;
+                    if (rfd1->count == 0) {
+                        rfd1->count = cur_row - rfd1->first;
+                    }
                 }
                 rfd->iRun     = i;
                 rfd->SEQ_ID   = SEQ_ID;
                 rfd->first    = cur_row;
                 rfd->circular = CIRCULAR;
                 rfd->external = external;
+                rfd->count    = 0;
 
                 ++refs->rfdk;
             }
         }
-        refs->rfd[refs->rfdk - 1].count
-            = cur_row - refs->rfd[refs->rfdk - 1].first;
+        if (refs->rfdk > 0) {
+            refs->rfd[refs->rfdk - 1].count
+                = cur_row - refs->rfd[refs->rfdk - 1].first;
+        }
     }
     *status = eVdbBlastNoErr;
     for (i = 0; i < refs->rfdk; ++i) {

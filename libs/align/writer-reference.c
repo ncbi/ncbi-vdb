@@ -1199,7 +1199,7 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                 }
             }
             if (alt == NULL) {
-                int const best = ReferenceMgr_FindBestFasta(self, id, seq_len, md5, (unsigned)(self->refSeq - seq));
+                int const best = ReferenceMgr_FindBestFasta(self, id, seq_len, md5, (unsigned)(seq - self->refSeq));
                 if (best >= 0)
                     alt = &self->refSeq[best];
             }
