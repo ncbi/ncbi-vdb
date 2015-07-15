@@ -26,7 +26,7 @@ static PY_RES_TYPE NGSErrorHandler(ctx_t ctx, char* pStrError, size_t nStrErrorB
 }
 
 
-PY_RES_TYPE PY_NGS_Engine_ReadCollectionMake(char const* spec, void** ppReadCollection, char* pStrError, size_t nStrErrorBufferSize)
+LIB_EXPORT PY_RES_TYPE PY_NGS_Engine_ReadCollectionMake(char const* spec, void** ppReadCollection, char* pStrError, size_t nStrErrorBufferSize)
 {
     HYBRID_FUNC_ENTRY(rcSRA, rcMgr, rcConstructing);
 

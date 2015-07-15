@@ -1,0 +1,31 @@
+<project>
+
+    <!-- This file is currently for use on Windows; Linux/Mac builds are run via gmake -->
+    <property environment="env"/>
+    <property name="vdb.build"      value="Debug" />
+    <property name="vdb.platform"   value="x64" />
+    
+    <property name="ngs-source.dir" value="..\..\..\ngs" />
+    <property name="build.dir"   value="${env.USERPROFILE}\win\cl\${vdb.platform}\${vdb.build}" />
+    <property name="ngs.dir" value="${env.USERPROFILE}\ncbi-outdir\ngs-java" />
+    
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+    </target>
+
+    <target name="install">
+        <exec executable="python" dir="${ngs-source.dir}\ngs-python" failonerror="true" >
+            <arg value="setup.py" />
+            <arg value="install" />
+        </exec>
+    </target>
+
+    <target name="runtests">
+        <echo message="${build.dir}\bin;${env.PATH}"/>
+        <exec executable="python" failonerror="true" >
+            <arg value="tests.py" />
+        </exec>
+    </target>
+    
+
+</project>
