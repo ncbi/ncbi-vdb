@@ -255,6 +255,28 @@ SEARCH_EXTERN size_t CC FindLongestCommonSubstring(char const* pS1, char const* 
                                 size_t const nLen1, size_t const nLen2,
                                 size_t* pRetStart1, size_t* pRetStart2);
 
+/*
+    FindRefVariationBounds uses Smith-Waterman algorithm
+    to find theoretical bounds of the variation for
+    the given reference slice and the query (properly preapared,
+    i.e. containing sequences of bases at the beginning and
+    the end matching the reference)
+
+    ref_slice, ref_slice_size [IN] - the reference slice on which the
+                                     variation will be looked for
+    query, query_size [IN] - the query that represents the variation placed
+                             inside the reference slice
+    ref_start, ref_len [OUT, NULL OK] - the region of ambiguity on the reference
+    query_start, query_len [OUT, NULL OK] - the region of ambiguity (the
+                                            possible variation) on the query
+
+*/
+SEARCH_EXTERN rc_t CC FindRefVariationBounds (
+    char const* ref_slice, size_t ref_slice_size,
+    char const* query, size_t query_size,
+    size_t* ref_start, size_t* ref_len,
+    size_t* query_start, size_t* query_len
+    );
 
 #ifdef __cplusplus
 }

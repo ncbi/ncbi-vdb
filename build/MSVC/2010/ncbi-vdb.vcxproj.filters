@@ -861,6 +861,9 @@
     <ClCompile Include="..\..\..\libs\search\search.c">
       <Filter>ksrch</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\search\sw-search.c">
+      <Filter>ksrch</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\sraxf\bio-start.c">
       <Filter>sraxf</Filter>
     </ClCompile>
