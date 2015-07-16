@@ -35,18 +35,6 @@ include 'csra2/stats.vschema';
 
 
 /*--------------------------------------------------------------------------
- * types
- */
-
-// read filter bits
-typedef U8 NCBI:csra2:read_filter;
-const NCBI:csra2:read_filter READ_FILTER_PASS     = 0;
-const NCBI:csra2:read_filter READ_FILTER_REJECT   = 1;
-const NCBI:csra2:read_filter READ_FILTER_CRITERIA = 2;
-const NCBI:csra2:read_filter READ_FILTER_REDACTED = 3;
-
-
-/*--------------------------------------------------------------------------
  * tables
  */
 table NCBI:csra2:tbl:read #1.0 = NCBI:csra2:tbl:read_stats #1
@@ -107,7 +95,7 @@ table NCBI:csra2:tbl:read #1.0 = NCBI:csra2:tbl:read_stats #1
     /* RD_FILTER
      *  records filter value if used
      */
-    extern column NCBI:csra2:read_filter RD_FILTER;
+    extern column INSDC:SRA:read_filter RD_FILTER;
 
 
     /* ---------------------------- input rules ---------------------------- */
@@ -260,8 +248,8 @@ table NCBI:csra2:view:read #1.0 =
     /* READ_FILTER
      *  records filter value if used
      */
-    readonly column NCBI:csra2:read_filter READ_FILTER
+    readonly column INSDC:SRA:read_filter READ_FILTER
         = .RD_FILTER
-        | < NCBI:csra2:read_filter > echo < READ_FILTER_PASS > ()
+        | < INSDC:SRA:read_filter > echo < SRA_READ_FILTER_PASS > ()
         ;
 }

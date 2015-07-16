@@ -208,3 +208,25 @@ const INSDC:coord:one INSDC:coord:max:one = 0x3FFFFFFF;
 // zero-based coordinate limits
 const INSDC:coord:zero INSDC:coord:min:zero = 0x80000000;
 const INSDC:coord:zero INSDC:coord:max:zero = 0x3FFFFFFE;
+
+/*-------------------------------------------------------------------------
+ * read filters bits
+ */
+typedef U8 INSDC:SRA:read_filter;
+const INSDC:SRA:read_filter SRA_READ_FILTER_PASS = 0;
+const INSDC:SRA:read_filter SRA_READ_FILTER_REJECT = 1;
+const INSDC:SRA:read_filter SRA_READ_FILTER_CRITERIA = 2;
+const INSDC:SRA:read_filter SRA_READ_FILTER_REDACTED = 3;
+
+/*-------------------------------------------------------------------------
+ * read type bits
+ */
+typedef U8 INSDC:SRA:xread_type;
+const INSDC:SRA:xread_type SRA_READ_TYPE_TECHNICAL  = 0;
+const INSDC:SRA:xread_type SRA_READ_TYPE_BIOLOGICAL = 1;
+const INSDC:SRA:xread_type SRA_READ_TYPE_FORWARD    = 2;
+const INSDC:SRA:xread_type SRA_READ_TYPE_REVERSE    = 4;
+
+// original read-types included only technical and biological
+typedef INSDC:SRA:xread_type INSDC:SRA:read_type;
+
