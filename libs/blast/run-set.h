@@ -144,7 +144,8 @@ typedef struct {
     size_t        rfdk; /* number of rfd members */
     size_t        rfdn; /* allocated rfd members */
 
-    BSTree runs; /* rundesc-s */
+    BSTree tRuns;     /* rundesc-s */
+    BSTree tExtRefs; /* SEQ_ID-s */
 } RefSet;
 
 void _RefSetFini(RefSet *self);

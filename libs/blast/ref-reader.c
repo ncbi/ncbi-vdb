@@ -86,31 +86,34 @@ static uint64_t _set_read_id_reference_bit
 typedef struct {
     BSTNode n;
 
-    const char *acc;
-} RunNode;
-static int64_t CC RunNodeCmpByAcc(const void *item, const BSTNode *n) {
+    const char *str;
+} StringNode;
+static int64_t CC StringNodeCmp(const void *item, const BSTNode *n) {
     const char *c = item;
-    const RunNode *rn = (const RunNode*)n;
+    const StringNode *rn = (const StringNode*)n;
 
-    if (c == NULL || rn == NULL || rn->acc == NULL) {
+    if (c == NULL || rn == NULL || rn->str == NULL) {
         return 1;
     }
 
-    return strcmp(c, rn->acc);
+    return strcmp(c, rn->str);
 }
 
-static
-int64_t CC RunBstSortByAcc(const BSTNode *item, const BSTNode *n)
-{
-    const RunNode *rn = (const RunNode*)item;
+static int64_t CC RunBstSort(const BSTNode *item, const BSTNode *n) {
+    const StringNode *rn = (const StringNode*)item;
+
     assert(rn);
-    return RunNodeCmpByAcc(rn->acc, n);
+
+    return StringNodeCmp(rn->str, n);
 }
 
-static void CC RunNodeWhack(BSTNode *n, void *ignore) {
-    RunNode *rn = (RunNode*)n;
+static void CC StringNodeWhack(BSTNode *n, void *ignore) {
+    StringNode *rn = (StringNode*)n;
+
     assert(rn);
+
     memset(n, 0, sizeof *n);
+
     free(n);
 }
 
@@ -148,7 +151,8 @@ void _RefSetFini(RefSet *self) {
 
     free(self->rfd);
 
-    BSTreeWhack(&self->runs, RunNodeWhack, NULL);
+    BSTreeWhack(&self->tRuns   , StringNodeWhack, NULL);
+    BSTreeWhack(&self->tExtRefs, StringNodeWhack, NULL);
 
     memset(self, 0, sizeof *self);
 }
@@ -207,7 +211,8 @@ const References* _RunSetMakeReferences
         *status = eVdbBlastMemErr;
         return NULL;
     }
-    BSTreeInit(&refs->runs);
+    BSTreeInit(&refs->tRuns);
+    BSTreeInit(&refs->tExtRefs);
     r->rs = self;
     r->refs = refs;
     for (i = 0; i < self->krun; ++i) {
@@ -223,8 +228,8 @@ const References* _RunSetMakeReferences
             continue;
         }
         {
-            RunNode *n = NULL;
-            n = (RunNode*)BSTreeFind(&refs->runs, run->acc, RunNodeCmpByAcc);
+            StringNode *n
+                = (StringNode*)BSTreeFind(&refs->tRuns, run->acc, StringNodeCmp);
             if (n != NULL) {
                 continue; /* ignore repeated runs */
             }
@@ -235,8 +240,8 @@ const References* _RunSetMakeReferences
                     return NULL;
                 }
             }
-            n->acc = run->acc;
-            BSTreeInsert(&refs->runs, (BSTNode*)n, RunBstSortByAcc);
+            n->str = run->acc;
+            BSTreeInsert(&refs->tRuns, (BSTNode*)n, RunBstSort);
         }
         if (run->obj->refTbl == NULL) {
             rc = VDatabaseOpenTableRead(run->obj->db,
@@ -378,20 +383,44 @@ const References* _RunSetMakeReferences
                 if (refs->rfdk != 0) {
                     rfd1 = &refs->rfd[refs->rfdk - 1];
                     if (rfd1->count == 0) {
+                        assert(cur_row != first);
                         rfd1->count = cur_row - rfd1->first;
                     }
                 }
-                rfd->iRun     = i;
-                rfd->SEQ_ID   = SEQ_ID;
-                rfd->first    = cur_row;
-                rfd->circular = CIRCULAR;
-                rfd->external = external;
-                rfd->count    = 0;
 
-                ++refs->rfdk;
+                if (external) {
+                    StringNode *n = (StringNode*)
+                        BSTreeFind(&refs->tExtRefs, SEQ_ID, StringNodeCmp);
+                    if (n != NULL) {  /* we already have this reference */
+                        free(SEQ_ID); /* in one of the previous runs */
+                        SEQ_ID = NULL;
+                    }
+                    else {
+                        n = calloc(1, sizeof *n);
+                        if (n == NULL) {
+                            *status = eVdbBlastMemErr;
+                            return NULL;
+                        }
+                        n->str = SEQ_ID;
+                        BSTreeInsert(&refs->tExtRefs, (BSTNode*)n, RunBstSort);
+                    }
+                }
+
+                if (SEQ_ID != NULL) { /* we already have it in refs->tExtRefs */
+                    rfd->iRun     = i;
+                    rfd->SEQ_ID   = SEQ_ID;
+                    rfd->first    = cur_row;
+                    rfd->circular = CIRCULAR;
+                    rfd->external = external;
+
+                    rfd->count      = 0; /* will initialize later */
+                    rfd->base_count = 0; /* uninitialized */
+
+                    ++refs->rfdk;
+                }
             }
         }
-        if (refs->rfdk > 0) {
+        if (refs->rfdk > 0 && refs->rfd[refs->rfdk - 1].count == 0) {
             refs->rfd[refs->rfdk - 1].count
                 = cur_row - refs->rfd[refs->rfdk - 1].first;
         }
