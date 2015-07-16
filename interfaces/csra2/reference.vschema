@@ -146,8 +146,11 @@ table NCBI:csra2:tbl:reference #1.0
         ;
 
     /* reading rules */
+    INSDC:2na:packed out_local_2na_packed
+        = .LOCAL_SEQUENCE
+        ;
     INSDC:2na:bin out_local_2na_bin
-        = ( INSDC:2na:bin ) unpack ( .LOCAL_SEQUENCE )
+        = ( INSDC:2na:bin ) unpack ( out_local_2na_packed )
         ;
     INSDC:4na:bin out_local_2na_4na_bin
         = < INSDC:2na:bin, INSDC:4na:bin > map < INSDC:2na:map:BINSET, [ 1, 2, 4, 8 ] > ( out_local_2na_bin );
