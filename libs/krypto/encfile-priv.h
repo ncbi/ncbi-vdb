@@ -68,7 +68,7 @@ uint64_t PlaintextOffset_to_BlockId ( uint64_t pt_offset, uint32_t * poffset )
 }
 
 static __inline__
-uint64_t PlaintextSize_to_BlockCount ( uint32_t pt_size, uint32_t * padding )
+uint64_t PlaintextSize_to_BlockCount ( uint64_t pt_size, uint32_t * padding )
 {
     uint64_t block_count = ( pt_size + sizeof ( KEncFileData ) - 1 ) / sizeof ( KEncFileData );
 
