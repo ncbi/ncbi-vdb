@@ -145,14 +145,14 @@ void _RefSetFini(RefSet *self) {
         return;
     }
 
+    BSTreeWhack(&self->tRuns   , StringNodeWhack, NULL);
+    BSTreeWhack(&self->tExtRefs, StringNodeWhack, NULL);
+
     for (i = 0; i < self->rfdk; ++i) {
         _VdbBlastRefWhack(&self->rfd[i]);
     }
 
     free(self->rfd);
-
-    BSTreeWhack(&self->tRuns   , StringNodeWhack, NULL);
-    BSTreeWhack(&self->tExtRefs, StringNodeWhack, NULL);
 
     memset(self, 0, sizeof *self);
 }
@@ -192,7 +192,7 @@ const References* _RunSetMakeReferences
     (RunSet *self, VdbBlastStatus *status)
 {
     rc_t rc = 0;
-    uint32_t i = 0;
+    uint32_t irun = 0;
     References *r = NULL;
     RefSet *refs = NULL;
     const VCursor *c = NULL;
@@ -215,7 +215,9 @@ const References* _RunSetMakeReferences
     BSTreeInit(&refs->tExtRefs);
     r->rs = self;
     r->refs = refs;
-    for (i = 0; i < self->krun; ++i) {
+    for (irun = 0; irun < self->krun; ++irun) {
+        int i = 0;
+        size_t first_ref = refs->rfdk;
         const void *crntSeqId = NULL;
         uint32_t iCIRCULAR = 0; 
         uint32_t iCMP_READ = 0;
@@ -223,13 +225,13 @@ const References* _RunSetMakeReferences
         int64_t first = 0;
         uint64_t count = 0;
         uint64_t cur_row = 0;
-        const VdbBlastRun *run = &self->run[i];
+        const VdbBlastRun *run = &self->run[irun];
         if (run->obj == NULL || run->obj->db == NULL) {
             continue;
         }
         {
-            StringNode *n
-                = (StringNode*)BSTreeFind(&refs->tRuns, run->acc, StringNodeCmp);
+            StringNode *n =
+                (StringNode*)BSTreeFind(&refs->tRuns, run->acc, StringNodeCmp);
             if (n != NULL) {
                 continue; /* ignore repeated runs */
             }
@@ -407,7 +409,7 @@ const References* _RunSetMakeReferences
                 }
 
                 if (SEQ_ID != NULL) { /* we already have it in refs->tExtRefs */
-                    rfd->iRun     = i;
+                    rfd->iRun     = irun;
                     rfd->SEQ_ID   = SEQ_ID;
                     rfd->first    = cur_row;
                     rfd->circular = CIRCULAR;
@@ -424,36 +426,37 @@ const References* _RunSetMakeReferences
             refs->rfd[refs->rfdk - 1].count
                 = cur_row - refs->rfd[refs->rfdk - 1].first;
         }
+
+        for (i = first_ref; i < refs->rfdk; ++i) {
+            VdbBlastRef *rfd = &refs->rfd[i];
+            assert(rfd);
+            if (rfd->circular) {
+                uint32_t read_len = 0;
+                uint32_t row_len = 0;
+                rc = VCursorReadDirect(c, rfd->first + rfd->count - 1,
+                    iREAD_LEN, 8, &read_len, 4, &row_len);
+                if (rc != 0) {
+                    PLOGERR(klogInt, (klogInt, rc,
+                        "Error in VCursorReadDirect(READ_LEN, spot=$(spot))",
+                        "spot=%ld", rfd->first + rfd->count - 1));
+                    *status = eVdbBlastErr;
+                }
+                else if (row_len != 4) {
+                    PLOGERR(klogInt, (klogInt, rc, "Bad row_len "
+                        "in VCursorReadDirect(READ_LEN, spot=$(spot))",
+                        "spot=%ld", rfd->first + rfd->count - 1));
+                    *status = eVdbBlastErr;
+                }
+                else {
+                    rfd->base_count = (rfd->count - 1) * MAX_SEQ_LEN + read_len;
+                }
+            }
+            STSMSG(1, ("%i) '%s'[%i-%i(%i)]", i, rfd->SEQ_ID,
+                rfd->first, rfd->first + rfd->count - 1, rfd->count));
+        }
+        RELEASE(VCursor, c);
     }
     *status = eVdbBlastNoErr;
-    for (i = 0; i < refs->rfdk; ++i) {
-        VdbBlastRef *rfd = &refs->rfd[i];
-        assert(rfd);
-        if (rfd->circular) {
-            uint32_t read_len = 0;
-            uint32_t row_len = 0;
-            rc = VCursorReadDirect(c, rfd->first + rfd->count - 1,
-                iREAD_LEN, 8, &read_len, 4, &row_len);
-            if (rc != 0) {
-                PLOGERR(klogInt, (klogInt, rc,
-                    "Error in VCursorReadDirect(READ_LEN, spot=$(spot))",
-                    "spot=%ld", rfd->first + rfd->count - 1));
-                *status = eVdbBlastErr;
-            }
-            else if (row_len != 4) {
-                PLOGERR(klogInt, (klogInt, rc,
-                    "Bad row_len in VCursorReadDirect(READ_LEN, spot=$(spot))",
-                    "spot=%ld", rfd->first + rfd->count - 1));
-                *status = eVdbBlastErr;
-            }
-            else {
-                rfd->base_count = (rfd->count - 1) * MAX_SEQ_LEN + read_len;
-            }
-        }
-        STSMSG(1, ("%i) '%s'[%i-%i(%i)]", i, rfd->SEQ_ID,
-            rfd->first, rfd->first + rfd->count - 1, rfd->count));
-    }
-    RELEASE(VCursor, c);
     return r;
 }
 
