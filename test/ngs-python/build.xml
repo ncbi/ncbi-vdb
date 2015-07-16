@@ -9,23 +9,19 @@
     <property name="build.dir"   value="${env.USERPROFILE}\win\cl\${vdb.platform}\${vdb.build}" />
     <property name="ngs.dir" value="${env.USERPROFILE}\ncbi-outdir\ngs-java" />
     
-    <target name="clean">
-        <delete dir="${build.dir}"/>
-    </target>
-
     <target name="install">
         <exec executable="python" dir="${ngs-source.dir}\ngs-python" failonerror="true" >
             <arg value="setup.py" />
             <arg value="install" />
+            <arg value="--user" />
         </exec>
     </target>
 
-    <target name="runtests">
-        <echo message="${build.dir}\bin;${env.PATH}"/>
-        <exec executable="python" failonerror="true" >
+    <target name="runtests" depends="install">
+        <exec executable="python" failonerror="true">
+            <env key="PATH" value="${build.dir}\bin;${env.PATH}"/>
             <arg value="tests.py" />
         </exec>
     </target>
     
-
 </project>
