@@ -18,6 +18,7 @@
     </target>
 
     <target name="runtests" depends="install">
+		<echo message="PATH=${env.Path}" />
         <exec executable="python" failonerror="true">
             <env key="PATH" value="${build.dir}\bin;${env.PATH}"/>
             <arg value="tests.py" />
