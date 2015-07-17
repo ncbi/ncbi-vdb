@@ -10,6 +10,7 @@
     <property name="ngs.dir" value="${env.USERPROFILE}\ncbi-outdir\ngs-java" />
     
     <target name="install">
+		<echo message="PATH=${env.Path}" />
         <exec executable="python" dir="${ngs-source.dir}\ngs-python" failonerror="true" >
             <arg value="setup.py" />
             <arg value="install" />
@@ -20,7 +21,7 @@
     <target name="runtests" depends="install">
 		<echo message="PATH=${env.Path}" />
         <exec executable="python" failonerror="true">
-            <env key="PATH" value="${build.dir}\bin;${env.PATH}"/>
+            <env key="PATH" value="${build.dir}\bin;${env.Path}"/>
             <arg value="tests.py" />
         </exec>
     </target>
