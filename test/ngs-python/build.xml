@@ -9,9 +9,11 @@
     <property name="build.dir"   value="${env.USERPROFILE}\win\cl\${vdb.platform}\${vdb.build}" />
     <property name="ngs.dir" value="${env.USERPROFILE}\ncbi-outdir\ngs-java" />
     
+    <!-- Set this to full path to Python if not in PATH already -->
+    <property name="python.exe"     value="python" />
+	
     <target name="install">
-		<echo message="PATH=${env.Path}" />
-        <exec executable="python" dir="${ngs-source.dir}\ngs-python" failonerror="true" >
+        <exec executable="${python.exe}" dir="${ngs-source.dir}\ngs-python" failonerror="true" >
             <arg value="setup.py" />
             <arg value="install" />
             <arg value="--user" />
@@ -19,8 +21,7 @@
     </target>
 
     <target name="runtests" depends="install">
-		<echo message="PATH=${env.Path}" />
-        <exec executable="python" failonerror="true">
+        <exec executable="${python.exe}" failonerror="true">
             <env key="PATH" value="${build.dir}\bin;${env.Path}"/>
             <arg value="tests.py" />
         </exec>
