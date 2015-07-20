@@ -1366,9 +1366,3 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
     }
     return out;
 }
-
-LIB_EXPORT uint64_t CC VdbBlastReferenceSetGetNumSequences
-    (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
-{
-    return 0;
-}

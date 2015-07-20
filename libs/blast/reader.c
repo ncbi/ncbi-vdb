@@ -2146,4 +2146,19 @@ LIB_EXPORT VdbBlast4naReader* CC VdbBlastReferenceSetMake4naReader
     return VdbBlastRunSetMake4naReaderExt(self->rs, status, VDB_READ_REFERENCE);
 }
 
+LIB_EXPORT uint64_t CC VdbBlastReferenceSetGetNumSequences
+    (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
+{
+    VdbBlastStatus dummy = eVdbBlastNoErr;
+    if (status == NULL) {
+        status = &dummy;
+    }
+    if (self == NULL) {
+        *status = eVdbBlastErr;
+        return 0;
+    }
+    _VdbBlastRunSetBeingRead(self->rs);
+    return 0;
+}
+
 /* EOF */
