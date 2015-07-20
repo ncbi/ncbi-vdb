@@ -263,6 +263,10 @@ VDB_EXTERN VdbBlastReferenceSet* CC VdbBlastReferenceSetAddRef
 VDB_EXTERN void CC VdbBlastReferenceSetRelease ( VdbBlastReferenceSet *self );
 
 
+VDB_EXTERN uint64_t CC VdbBlastReferenceSetGetNumSequences
+    ( const VdbBlastReferenceSet *self, VdbBlastStatus *status );
+
+
 /*------------------------------------------------------------------------------
  * VdbBlastReadSet
  */

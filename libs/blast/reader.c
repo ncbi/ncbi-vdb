@@ -2048,4 +2048,102 @@ const uint8_t* CC VdbBlastStdaaReaderData(const VdbBlastStdaaReader *self,
     size_t *length)
 {   return _NotImplementedP(__func__); }
 
+
+/******************************************************************************/
+
+static const char VDB_BLAST_REFERENCE_SET[] = "VdbBlastReferenceSet";
+
+struct VdbBlastReferenceSet {
+    KRefcount refcount;
+    const VdbBlastRunSet *rs;
+};
+
+LIB_EXPORT VdbBlastReferenceSet* CC VdbBlastRunSetMakeReferenceSet
+    (const VdbBlastRunSet *self, VdbBlastStatus *status)
+{
+    VdbBlastReferenceSet *p = calloc(1, sizeof *p);
+
+    VdbBlastStatus dummy = eVdbBlastNoErr;
+    if (status == NULL)
+    {   status = &dummy; }
+
+    if (p == NULL) {
+        *status = eVdbBlastMemErr;
+    }
+    else {
+        KRefcountInit(&p->refcount, 1, VDB_BLAST_REFERENCE_SET,
+            __func__, "referenceSet");
+        *status = eVdbBlastNoErr;
+    }
+
+    p->rs = VdbBlastRunSetAddRef((VdbBlastRunSet*)self);
+
+    return p;
+}
+
+static
+void _VdbBlastReferenceSetWhack(VdbBlastReferenceSet *self)
+{
+    if (self == NULL) {
+        return;
+    }
+
+    STSMSG(1, ("Deleting VdbBlastReferenceSet"));
+
+    VdbBlastRunSetRelease((VdbBlastRunSet*)self->rs);
+
+    memset(self, 0, sizeof *self);
+
+    free(self);
+}
+
+LIB_EXPORT VdbBlastReferenceSet* CC VdbBlastReferenceSetAddRef
+    (VdbBlastReferenceSet *self)
+{
+    if (self == NULL) {
+        STSMSG(1, ("VdbBlastReferenceSetAddRef(NULL)"));
+        return self;
+    }
+
+    if (KRefcountAdd(&self->refcount, VDB_BLAST_REFERENCE_SET)
+        == krefOkay)
+    {
+        STSMSG(1, ("VdbBlastReferenceSetAddRef"));
+        return self;
+    }
+
+    STSMSG(1, ("Error: failed to VdbBlastReferenceSetAddRef"));
+    return NULL;
+}
+
+
+LIB_EXPORT
+void CC VdbBlastReferenceSetRelease(VdbBlastReferenceSet *self)
+{
+    if (self == NULL) {
+        return;
+    }
+
+    STSMSG(1, ("VdbBlastReferenceSetRelease"));
+    if (KRefcountDrop(&self->refcount, VDB_BLAST_REFERENCE_SET) != krefWhack) {
+        return;
+    }
+
+    _VdbBlastReferenceSetWhack(self);
+}
+
+LIB_EXPORT VdbBlast2naReader* CC VdbBlastReferenceSetMake2naReader
+    (const VdbBlastReferenceSet *self,
+     VdbBlastStatus *status, uint64_t initial_read_id)
+{
+    return VdbBlastRunSetMake2naReaderExt(self->rs,
+        status, initial_read_id, VDB_READ_REFERENCE);
+}
+
+LIB_EXPORT VdbBlast4naReader* CC VdbBlastReferenceSetMake4naReader
+    (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
+{
+    return VdbBlastRunSetMake4naReaderExt(self->rs, status, VDB_READ_REFERENCE);
+}
+
 /* EOF */
