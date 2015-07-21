@@ -28,7 +28,7 @@
 
 #include "blast-mgr.h" /* BTableType */
 #include "reader.h" /* Data2na */
-#include "ref-reader.h" /* _ReferencesWhack */
+#include "reference.h" /* _ReferencesWhack */
 #include "run-set.h" /* VdbBlastRunSet */
 
 #include <ncbi/vdb-blast-priv.h>  /* VDB_READ_DIRECT */
@@ -1013,8 +1013,7 @@ uint32_t _Core2naOpen1stRun(Core2na *self,
             else
             {   S }
         }
-        else {
-            assert(!reader->refs);
+        else if (reader->refs == NULL) {
             reader->refs = _RunSetMakeReferences(runs, &status);
             if (reader->refs == NULL) {
                 status = eVdbBlastErr;
@@ -2149,15 +2148,28 @@ LIB_EXPORT VdbBlast4naReader* CC VdbBlastReferenceSetMake4naReader
 LIB_EXPORT uint64_t CC VdbBlastReferenceSetGetNumSequences
     (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
 {
+    VdbBlastRunSet *rs = NULL;
+    Reader2na *reader = NULL;
     VdbBlastStatus dummy = eVdbBlastNoErr;
     if (status == NULL) {
         status = &dummy;
     }
-    if (self == NULL) {
+    if (self == NULL || self->rs == NULL) {
         *status = eVdbBlastErr;
         return 0;
     }
-    _VdbBlastRunSetBeingRead(self->rs);
+    rs = (VdbBlastRunSet*)self->rs;
+    _VdbBlastRunSetBeingRead(rs);
+    reader = &rs->core2naRef.reader;
+    if (reader->refs == NULL) {
+        rc_t rc = KLockAcquire(rs->core2naRef.mutex);
+        if (rc != 0) {
+            *status = eVdbBlastErr;
+            return 0;
+        }
+        reader->refs = _RunSetMakeReferences(&rs->runs, status);
+        KLockUnlock(rs->core2naRef.mutex);
+    }
     return 0;
 }
 
