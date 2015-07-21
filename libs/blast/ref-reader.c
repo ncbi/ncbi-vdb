@@ -188,6 +188,48 @@ void _ReferencesWhack(const References *cself) {
     free(self);
 }
 
+static VdbBlastStatus _VdbBlastRefSetCounts(VdbBlastRef *self, uint64_t cur_row,
+    int64_t first_row, const VCursor *cursor, uint32_t idxREAD_LEN, int64_t idx)
+{
+    assert(self);
+
+    if (self->count != 0) {
+        return eVdbBlastNoErr;
+    }
+
+    assert(cur_row != first_row);
+
+    self->count = cur_row - self->first;
+
+    {
+        uint32_t read_len = 0;
+        uint32_t row_len = 0;
+        rc_t rc = VCursorReadDirect(cursor, self->first + self->count - 1,
+            idxREAD_LEN, 8, &read_len, 4, &row_len);
+        if (rc != 0) {
+            PLOGERR(klogInt, (klogInt, rc,
+                "Error in VCursorReadDirect(READ_LEN, spot=$(spot))",
+                "spot=%ld", self->first + self->count - 1));
+            return eVdbBlastErr;
+        }
+        else if (row_len != 4) {
+            PLOGERR(klogInt, (klogInt, rc,
+                "Bad row_len in VCursorReadDirect(READ_LEN, spot=$(spot))",
+                "spot=%ld", self->first + self->count - 1));
+            return eVdbBlastErr;
+        }
+        else {
+            self->base_count = (self->count - 1) * MAX_SEQ_LEN + read_len;
+        }
+
+    }
+
+    STSMSG(1, ("%i) '%s'[%i-%i(%i)][%lu]", idx, self->SEQ_ID, self->first,
+        self->first + self->count - 1, self->count, self->base_count));
+
+    return eVdbBlastNoErr;
+}
+
 const References* _RunSetMakeReferences
     (RunSet *self, VdbBlastStatus *status)
 {
@@ -216,8 +258,6 @@ const References* _RunSetMakeReferences
     r->rs = self;
     r->refs = refs;
     for (irun = 0; irun < self->krun; ++irun) {
-        int i = 0;
-        size_t first_ref = refs->rfdk;
         const void *crntSeqId = NULL;
         uint32_t iCIRCULAR = 0; 
         uint32_t iCMP_READ = 0;
@@ -346,7 +386,6 @@ const References* _RunSetMakeReferences
                 bool CIRCULAR = false;
                 bool external = false;
                 VdbBlastRef *rfd  = NULL;
-                VdbBlastRef *rfd1 = NULL;
                 rc = VCursorCellDataDirect(c, cur_row, iCIRCULAR,
                     &elem_bits, &base, &boff, &row_len);
                 if (rc != 0 ||
@@ -383,10 +422,10 @@ const References* _RunSetMakeReferences
                 rfd = &refs->rfd[refs->rfdk];
 
                 if (refs->rfdk != 0) {
-                    rfd1 = &refs->rfd[refs->rfdk - 1];
-                    if (rfd1->count == 0) {
-                        assert(cur_row != first);
-                        rfd1->count = cur_row - rfd1->first;
+                    *status = _VdbBlastRefSetCounts(&refs->rfd[refs->rfdk - 1],
+                        cur_row, first, c, iREAD_LEN, refs->rfdk - 1);
+                    if (*status != eVdbBlastNoErr) {
+                        return NULL;
                     }
                 }
 
@@ -423,36 +462,11 @@ const References* _RunSetMakeReferences
             }
         }
         if (refs->rfdk > 0 && refs->rfd[refs->rfdk - 1].count == 0) {
-            refs->rfd[refs->rfdk - 1].count
-                = cur_row - refs->rfd[refs->rfdk - 1].first;
-        }
-
-        for (i = first_ref; i < refs->rfdk; ++i) {
-            VdbBlastRef *rfd = &refs->rfd[i];
-            assert(rfd);
-            if (rfd->circular) {
-                uint32_t read_len = 0;
-                uint32_t row_len = 0;
-                rc = VCursorReadDirect(c, rfd->first + rfd->count - 1,
-                    iREAD_LEN, 8, &read_len, 4, &row_len);
-                if (rc != 0) {
-                    PLOGERR(klogInt, (klogInt, rc,
-                        "Error in VCursorReadDirect(READ_LEN, spot=$(spot))",
-                        "spot=%ld", rfd->first + rfd->count - 1));
-                    *status = eVdbBlastErr;
-                }
-                else if (row_len != 4) {
-                    PLOGERR(klogInt, (klogInt, rc, "Bad row_len "
-                        "in VCursorReadDirect(READ_LEN, spot=$(spot))",
-                        "spot=%ld", rfd->first + rfd->count - 1));
-                    *status = eVdbBlastErr;
-                }
-                else {
-                    rfd->base_count = (rfd->count - 1) * MAX_SEQ_LEN + read_len;
-                }
+            *status = _VdbBlastRefSetCounts(&refs->rfd[refs->rfdk - 1],
+                cur_row, first, c, iREAD_LEN, refs->rfdk - 1);
+            if (*status != eVdbBlastNoErr) {
+                return NULL;
             }
-            STSMSG(1, ("%i) '%s'[%i-%i(%i)]", i, rfd->SEQ_ID,
-                rfd->first, rfd->first + rfd->count - 1, rfd->count));
         }
         RELEASE(VCursor, c);
     }
