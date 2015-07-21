@@ -26,6 +26,7 @@
 
 #include "blast-mgr.h" /* BTableType */
 #include "reader.h" /* Data2na */
+#include "reference.h" /* _ReferencesWhack */
 #include "run-set.h" /* Core4na */
 
 #include <klib/log.h> /* PLOGMSG */
