@@ -587,6 +587,7 @@ static uint64_t _ReferencesRead2na(References *self,
                 break;
             }
             ++self->spot;
+            *starting_base = 0;
             if (self->spot >= rfd->first + rfd->count) {
                 if (rfd->circular && ! self->circular) {
                        /* end of the first repeat of a circular sequence */
@@ -595,6 +596,7 @@ static uint64_t _ReferencesRead2na(References *self,
                     self->spot = rfd->first;
                 }
                 else { /* end of sequence */
+                    self->circular = false;
                     ++self->read_id;
                 }
                 break;
@@ -605,7 +607,6 @@ static uint64_t _ReferencesRead2na(References *self,
                 *status = eVdbBlastErr;
                 break; /* should never happen */
             }
-            *starting_base = 0;
         }
     }
     return total;
@@ -881,6 +882,7 @@ static uint32_t _ReferencesData2na(References *self,
         }
         else { /* end of sequence */
             *status = eVdbBlastNoErr;
+            self->circular = false;
             ++self->read_id;
         }
         ++num_read;
@@ -1360,6 +1362,7 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
     }
     else {
         *status = eVdbBlastNoErr;
+        self->desc.circular = false;
     }
     return out;
 }
