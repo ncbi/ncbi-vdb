@@ -263,7 +263,16 @@ VDB_EXTERN VdbBlastReferenceSet* CC VdbBlastReferenceSetAddRef
 VDB_EXTERN void CC VdbBlastReferenceSetRelease ( VdbBlastReferenceSet *self );
 
 
+/* GetNumSequences
+ *  Returns the total number of biological sequences in reference set.
+ *  Always returns the exact count.
+ *  Never returns "eVdbBlastTooExpensive".
+ */
 VDB_EXTERN uint64_t CC VdbBlastReferenceSetGetNumSequences
+    ( const VdbBlastReferenceSet *self, VdbBlastStatus *status );
+
+
+VDB_EXTERN uint64_t CC VdbBlastReferenceSetGetTotalLength
     ( const VdbBlastReferenceSet *self, VdbBlastStatus *status );
 
 

@@ -127,7 +127,7 @@ struct VdbBlastRef {
     uint64_t count; /* spots in REFERENCE table */
     bool external;  /* reference */
     bool circular;  /* reference */
-    size_t base_count; /* is set just for circular references */
+    size_t base_count; /* number of bases in reference */
 };
 static void _VdbBlastRefWhack(VdbBlastRef *self) {
     assert(self);
@@ -190,9 +190,12 @@ void _ReferencesWhack(const References *cself) {
 }
 
 static VdbBlastStatus _VdbBlastRefSetCounts(VdbBlastRef *self, uint64_t cur_row,
-    int64_t first_row, const VCursor *cursor, uint32_t idxREAD_LEN, int64_t idx)
+    int64_t first_row, const VCursor *cursor, uint32_t idxREAD_LEN, int64_t idx,
+    uint64_t *base_count)
 {
-    assert(self);
+    assert(self && base_count);
+
+    *base_count = 0;
 
     if (self->count != 0) {
         return eVdbBlastNoErr;
@@ -228,6 +231,8 @@ static VdbBlastStatus _VdbBlastRefSetCounts(VdbBlastRef *self, uint64_t cur_row,
     STSMSG(1, ("%i) '%s'[%i-%i(%i)][%lu]", idx, self->SEQ_ID, self->first,
         self->first + self->count - 1, self->count, self->base_count));
 
+    *base_count = self->base_count;
+
     return eVdbBlastNoErr;
 }
 
@@ -235,6 +240,7 @@ const References* _RunSetMakeReferences
     (RunSet *self, VdbBlastStatus *status)
 {
     rc_t rc = 0;
+    uint64_t totalLen = 0;
     uint32_t irun = 0;
     References *r = NULL;
     RefSet *refs = NULL;
@@ -423,11 +429,13 @@ const References* _RunSetMakeReferences
                 rfd = &refs->rfd[refs->rfdk];
 
                 if (refs->rfdk != 0) {
+                    uint64_t bc;
                     *status = _VdbBlastRefSetCounts(&refs->rfd[refs->rfdk - 1],
-                        cur_row, first, c, iREAD_LEN, refs->rfdk - 1);
+                        cur_row, first, c, iREAD_LEN, refs->rfdk - 1, &bc);
                     if (*status != eVdbBlastNoErr) {
                         return NULL;
                     }
+                    totalLen += bc;
                 }
 
                 if (external) {
@@ -463,14 +471,17 @@ const References* _RunSetMakeReferences
             }
         }
         if (refs->rfdk > 0 && refs->rfd[refs->rfdk - 1].count == 0) {
+            uint64_t bc;
             *status = _VdbBlastRefSetCounts(&refs->rfd[refs->rfdk - 1],
-                cur_row, first, c, iREAD_LEN, refs->rfdk - 1);
+                cur_row, first, c, iREAD_LEN, refs->rfdk - 1, &bc);
             if (*status != eVdbBlastNoErr) {
                 return NULL;
             }
+            totalLen += bc;
         }
         RELEASE(VCursor, c);
     }
+    refs->totalLen = totalLen;
     *status = eVdbBlastNoErr;
     return r;
 }
@@ -1380,4 +1391,32 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
         self->desc.circular = false;
     }
     return out;
+}
+
+uint64_t _ReferencesGetNumSequences
+    (const References *self, VdbBlastStatus *status)
+{
+    assert(status);
+
+    if (self == NULL || self->rs == NULL) {
+        *status = eVdbBlastErr;
+        return 0;
+    }
+
+    *status = eVdbBlastNoErr;
+    return self->refs->rfdk;
+}
+
+uint64_t _ReferencesGetTotalLength
+    (const References *self, VdbBlastStatus *status)
+{
+    assert(status);
+
+    if (self == NULL || self->rs == NULL) {
+        *status = eVdbBlastErr;
+        return 0;
+    }
+
+    *status = eVdbBlastNoErr;
+    return self->refs->totalLen;
 }

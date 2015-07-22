@@ -2145,32 +2145,72 @@ LIB_EXPORT VdbBlast4naReader* CC VdbBlastReferenceSetMake4naReader
     return VdbBlastRunSetMake4naReaderExt(self->rs, status, VDB_READ_REFERENCE);
 }
 
+static VdbBlastStatus _VdbBlastReferenceSetInitReferences
+    (const VdbBlastReferenceSet *self)
+{
+    VdbBlastStatus status = eVdbBlastNoErr;
+
+    VdbBlastRunSet *rs = NULL;
+    Reader2na *reader = NULL;
+
+    if (self == NULL || self->rs == NULL) {
+        return eVdbBlastErr;
+    }
+
+    rs = (VdbBlastRunSet*)self->rs;
+
+    _VdbBlastRunSetBeingRead(rs);
+
+    reader = &rs->core2naRef.reader;
+
+    if (reader->refs == NULL) {
+        rc_t rc = KLockAcquire(rs->core2naRef.mutex);
+        if (rc != 0) {
+            return eVdbBlastErr;
+        }
+
+        if (reader->refs == NULL) {
+            reader->refs = _RunSetMakeReferences(&rs->runs, &status);
+        }
+
+        KLockUnlock(rs->core2naRef.mutex);
+    }
+
+    return status;
+}
+
 LIB_EXPORT uint64_t CC VdbBlastReferenceSetGetNumSequences
     (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
 {
-    VdbBlastRunSet *rs = NULL;
-    Reader2na *reader = NULL;
     VdbBlastStatus dummy = eVdbBlastNoErr;
     if (status == NULL) {
         status = &dummy;
     }
-    if (self == NULL || self->rs == NULL) {
-        *status = eVdbBlastErr;
+
+    *status = _VdbBlastReferenceSetInitReferences(self);
+    if (*status != eVdbBlastNoErr) {
         return 0;
     }
-    rs = (VdbBlastRunSet*)self->rs;
-    _VdbBlastRunSetBeingRead(rs);
-    reader = &rs->core2naRef.reader;
-    if (reader->refs == NULL) {
-        rc_t rc = KLockAcquire(rs->core2naRef.mutex);
-        if (rc != 0) {
-            *status = eVdbBlastErr;
-            return 0;
-        }
-        reader->refs = _RunSetMakeReferences(&rs->runs, status);
-        KLockUnlock(rs->core2naRef.mutex);
+
+    assert                           (self->rs->core2naRef.reader.refs);
+    return _ReferencesGetNumSequences(self->rs->core2naRef.reader.refs, status);
+}
+
+LIB_EXPORT uint64_t CC VdbBlastReferenceSetGetTotalLength
+    (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
+{
+    VdbBlastStatus dummy = eVdbBlastNoErr;
+    if (status == NULL) {
+        status = &dummy;
     }
-    return 0;
+
+    *status = _VdbBlastReferenceSetInitReferences(self);
+    if (*status != eVdbBlastNoErr) {
+        return 0;
+    }
+
+    assert                          (self->rs->core2naRef.reader.refs);
+    return _ReferencesGetTotalLength(self->rs->core2naRef.reader.refs, status);
 }
 
 /* EOF */
