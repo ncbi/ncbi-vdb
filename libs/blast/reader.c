@@ -20,7 +20,7 @@
  *
  *  Please cite the author in any work or product based on this material.
  *
- * ===========================================================================
+ * =============================================================================
  *
  */
 
@@ -2145,6 +2145,24 @@ LIB_EXPORT VdbBlast4naReader* CC VdbBlastReferenceSetMake4naReader
     return VdbBlastRunSetMake4naReaderExt(self->rs, status, VDB_READ_REFERENCE);
 }
 
+static const struct References* _VdbBlastReferenceSetCheckReferences
+    (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
+{
+    assert(status);
+
+    if (self == NULL || self->rs == NULL ||
+        self->rs->core2naRef.reader.refs == NULL)
+    {
+        *status = eVdbBlastErr;
+        return NULL;
+    }
+
+    _VdbBlastRunSetBeingRead(self->rs);
+
+    *status = eVdbBlastNoErr;
+    return self->rs->core2naRef.reader.refs;
+}
+
 static const struct References* _VdbBlastReferenceSetInitReferences
     (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
 {
@@ -2223,7 +2241,16 @@ LIB_EXPORT size_t CC VdbBlastReferenceSetGetReadName(
     const VdbBlastReferenceSet *self,
     uint64_t read_id, char *name_buffer, size_t bsize)
 {
-    return 0;
+    VdbBlastStatus status = eVdbBlastErr;
+
+    const struct References *refs
+        = _VdbBlastReferenceSetCheckReferences(self, &status);
+    if (status != eVdbBlastNoErr) {
+        return 0;
+    }
+
+    assert                       (refs);
+    return _ReferencesGetReadName(refs, read_id, name_buffer, bsize);
 }
 
 /* EOF */

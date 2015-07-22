@@ -1393,12 +1393,14 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
     return out;
 }
 
+/******************************************************************************/
+
 uint64_t _ReferencesGetNumSequences
     (const References *self, VdbBlastStatus *status)
 {
     assert(status);
 
-    if (self == NULL || self->rs == NULL) {
+    if (self == NULL || self->refs == NULL) {
         *status = eVdbBlastErr;
         return 0;
     }
@@ -1412,11 +1414,49 @@ uint64_t _ReferencesGetTotalLength
 {
     assert(status);
 
-    if (self == NULL || self->rs == NULL) {
+    if (self == NULL || self->refs == NULL) {
         *status = eVdbBlastErr;
         return 0;
     }
 
     *status = eVdbBlastNoErr;
     return self->refs->totalLen;
+}
+
+size_t CC _ReferencesGetReadName(const struct References *self,
+    uint64_t read_id, char *name_buffer, size_t bsize)
+{
+    const VdbBlastRef *r = NULL;
+    const char *acc = "";
+    const char *SEQ_ID = NULL;
+    rc_t rc = 0;
+    size_t num_writ = 0;
+    bool bad = false;
+    read_id = _clear_read_id_reference_bit(read_id, &bad);
+    if (bad) {
+        return 0;
+    }
+    if (self == NULL || self->refs == NULL || self->refs->rfdk <= read_id) {
+        return 0;
+    }
+    assert(self->refs->rfd);
+    r = &self->refs->rfd[read_id];
+    if (!r->external) {
+        if (self->rs == NULL || self->rs->krun <= r->iRun) {
+            return 0;
+        }
+        acc = self->rs->run[r->iRun].acc;
+    }
+    SEQ_ID = self->refs->rfd[read_id].SEQ_ID;
+    rc = string_printf(name_buffer, bsize, &num_writ, "%s|%s", acc, SEQ_ID);
+    if (rc == 0) {
+        return num_writ;
+    }
+    else if (GetRCState(rc) != rcInsufficient) {
+        return 0;
+    }
+    else {
+        size_t dst_size = string_size(acc) + 1 + string_size(SEQ_ID);
+        return dst_size;
+    }
 }
