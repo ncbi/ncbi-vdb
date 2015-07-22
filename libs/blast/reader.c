@@ -2145,16 +2145,17 @@ LIB_EXPORT VdbBlast4naReader* CC VdbBlastReferenceSetMake4naReader
     return VdbBlastRunSetMake4naReaderExt(self->rs, status, VDB_READ_REFERENCE);
 }
 
-static VdbBlastStatus _VdbBlastReferenceSetInitReferences
-    (const VdbBlastReferenceSet *self)
+static const struct References* _VdbBlastReferenceSetInitReferences
+    (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
 {
-    VdbBlastStatus status = eVdbBlastNoErr;
-
     VdbBlastRunSet *rs = NULL;
     Reader2na *reader = NULL;
 
+    assert(status);
+
     if (self == NULL || self->rs == NULL) {
-        return eVdbBlastErr;
+        *status = eVdbBlastErr;
+        return NULL;
     }
 
     rs = (VdbBlastRunSet*)self->rs;
@@ -2163,54 +2164,66 @@ static VdbBlastStatus _VdbBlastReferenceSetInitReferences
 
     reader = &rs->core2naRef.reader;
 
+    *status = eVdbBlastNoErr;
+
     if (reader->refs == NULL) {
         rc_t rc = KLockAcquire(rs->core2naRef.mutex);
         if (rc != 0) {
-            return eVdbBlastErr;
+            *status = eVdbBlastErr;
+            return NULL;
         }
 
         if (reader->refs == NULL) {
-            reader->refs = _RunSetMakeReferences(&rs->runs, &status);
+            reader->refs = _RunSetMakeReferences(&rs->runs, status);
         }
 
         KLockUnlock(rs->core2naRef.mutex);
     }
 
-    return status;
+    return reader->refs;
 }
 
 LIB_EXPORT uint64_t CC VdbBlastReferenceSetGetNumSequences
     (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
 {
+    const struct References *refs = NULL;
     VdbBlastStatus dummy = eVdbBlastNoErr;
     if (status == NULL) {
         status = &dummy;
     }
 
-    *status = _VdbBlastReferenceSetInitReferences(self);
+    refs = _VdbBlastReferenceSetInitReferences(self, status);
     if (*status != eVdbBlastNoErr) {
         return 0;
     }
 
-    assert                           (self->rs->core2naRef.reader.refs);
-    return _ReferencesGetNumSequences(self->rs->core2naRef.reader.refs, status);
+    assert                           (refs);
+    return _ReferencesGetNumSequences(refs, status);
 }
 
 LIB_EXPORT uint64_t CC VdbBlastReferenceSetGetTotalLength
     (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
 {
+    const struct References *refs = NULL;
     VdbBlastStatus dummy = eVdbBlastNoErr;
     if (status == NULL) {
         status = &dummy;
     }
 
-    *status = _VdbBlastReferenceSetInitReferences(self);
+    refs = _VdbBlastReferenceSetInitReferences(self, status);
     if (*status != eVdbBlastNoErr) {
         return 0;
     }
 
-    assert                          (self->rs->core2naRef.reader.refs);
-    return _ReferencesGetTotalLength(self->rs->core2naRef.reader.refs, status);
+    assert                          (refs);
+    return _ReferencesGetTotalLength(refs, status);
+}
+
+LIB_EXPORT size_t CC VdbBlastReferenceSetGetReadName(
+    const VdbBlastReferenceSet *self,
+    uint64_t read_id, char *name_buffer, size_t bsize)
+{
+    return 0;
 }
 
 /* EOF */
