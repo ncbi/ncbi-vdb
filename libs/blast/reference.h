@@ -1,5 +1,5 @@
-#ifndef _h_libs_blast_ref_reader_
-#define _h_libs_blast_ref_reader_
+#ifndef _h_libs_blast_reference_
+#define _h_libs_blast_reference_
 
 /*===========================================================================
  *
@@ -49,13 +49,16 @@ size_t _Core4naReadRef(struct Core4na *self, const struct RunSet *runs,
 const uint8_t* _Core4naDataRef(struct Core4na *self, const struct RunSet *runs,
     uint32_t *status, uint64_t read_id, size_t *length);
 
-void _ReferencesWhack(const struct References *self);
-
 const struct References* _RunSetMakeReferences
     (struct RunSet *self, VdbBlastStatus *status);
+void _ReferencesWhack(const struct References *self);
+uint64_t _ReferencesGetNumSequences
+    (const struct References *self, VdbBlastStatus *status);
+uint64_t _ReferencesGetTotalLength
+    (const struct References *self, VdbBlastStatus *status);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _h_libs_blast_ref_reader_ */
+#endif /* _h_libs_blast_reference_ */
