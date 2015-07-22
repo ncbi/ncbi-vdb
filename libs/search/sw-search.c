@@ -29,8 +29,10 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include <klib/rc.h>
+#include <insdc/insdc.h>
 
 #ifdef _WIN32
 #include <intrin.h>
@@ -53,6 +55,8 @@
 #define COMPARE_4NA 0
 #define CACHE_MAX_ROWS 1 /* and columns as well */
 
+#if COMPARE_4NA == 1
+
 unsigned char const map_char_to_4na [256] =
 {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -73,25 +77,25 @@ unsigned char const map_char_to_4na [256] =
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-static int compare_4na ( char ch2na, char ch4na )
+static int compare_4na ( INSDC_dna_text ch2na, INSDC_dna_text ch4na )
 {
-    unsigned char bits4na = map_char_to_4na [(int)ch4na];
-    unsigned char bits2na = map_char_to_4na [(int)ch2na];
+    unsigned char bits4na = map_char_to_4na [(unsigned char)ch4na];
+    unsigned char bits2na = map_char_to_4na [(unsigned char)ch2na];
 
     /*return (bits2na & bits4na) != 0 ? 2 : -1;*/
 
-    unsigned char popcnt4na;
-    popcnt4na = (unsigned char) __builtin_popcount ( bits4na );
+    unsigned char popcnt4na = (unsigned char) __builtin_popcount ( bits4na );
 
     return (bits2na & bits4na) != 0 ? 12 / popcnt4na : -6;
 }
+#endif
 
-static int similarity_func (char ch2na, char ch4na)
+static int similarity_func (INSDC_dna_text ch2na, INSDC_dna_text ch4na)
 {
 #if COMPARE_4NA == 1
     return compare_4na ( ch2na, ch4na );
 #else
-    return ch2na == ch4na ? 2 : -1;
+    return tolower(ch2na) == tolower(ch4na) ? 2 : -1;
 #endif
 }
 
@@ -111,7 +115,7 @@ typedef struct ValueIndexPair
 } ValueIndexPair;
 
 
-static char get_char (char const* str, size_t size, size_t pos, int reverse)
+static char get_char (INSDC_dna_text const* str, size_t size, size_t pos, int reverse)
 {
     if ( !reverse )
         return str [pos];
@@ -120,8 +124,8 @@ static char get_char (char const* str, size_t size, size_t pos, int reverse)
 }
 
 static rc_t calculate_similarity_matrix (
-    char const* text, size_t size_text,
-    char const* query, size_t size_query,
+    INSDC_dna_text const* text, size_t size_text,
+    INSDC_dna_text const* query, size_t size_query,
     int* matrix, int reverse)
 {
 
@@ -368,15 +372,11 @@ template <bool reverse> void print_matrix ( int const* matrix,
     query, query_size [IN] - the query that represents the variation placed
                              inside the reference slice
     ref_start, ref_len [OUT, NULL OK] - the region of ambiguity on the reference
-    query_start, query_len [OUT, NULL OK] - the region of ambiguity (the
-                                            possible variation) on the query
-
 */
-LIB_EXPORT rc_t CC FindRefVariationBounds (
-    char const* ref_slice, size_t ref_slice_size,
-    char const* query, size_t query_size,
-    size_t* ref_start, size_t* ref_len,
-    size_t* query_start, size_t* query_len
+static rc_t FindRefVariationBounds (
+    INSDC_dna_text const* ref_slice, size_t ref_slice_size,
+    INSDC_dna_text const* query, size_t query_size,
+    size_t* ref_start, size_t* ref_len
     )
 {
     /* building sw-matrix for chosen reference slice and sequence */
@@ -394,13 +394,13 @@ LIB_EXPORT rc_t CC FindRefVariationBounds (
     /* forward scan */
     rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, 0 );
     if ( rc != 0 )
-        goto exit_search;
+        goto free_resources;
     sw_find_indel_box ( matrix, ROWS, COLUMNS, &row_start, &row_end, &col_start, &col_end );
 
     /* reverse scan */
     rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, 1 );
     if ( rc != 0 )
-        goto exit_search;
+        goto free_resources;
     sw_find_indel_box ( matrix, ROWS, COLUMNS, &row_start_rev, &row_end_rev, &col_start_rev, &col_end_rev );
 
     row_start = min ( (int)query_size - row_end_rev - 1, row_start );
@@ -412,13 +412,313 @@ LIB_EXPORT rc_t CC FindRefVariationBounds (
         *ref_start = col_start + 1;
     if ( ref_len != NULL )
         *ref_len = col_end - col_start - 1;
-    if ( query_start != NULL )
-        *query_start = row_start + 1;
-    if ( query_len != NULL )
-        *query_len = row_end - row_start - 1;
 
-exit_search:
+free_resources:
     free (matrix);
+
+    return rc;
+}
+
+/****************************************************/
+/* yet another string helper */
+typedef struct c_string_const
+{
+    char const* str;
+    size_t size;
+} c_string_const;
+
+static void c_string_const_assign ( c_string_const* self, char const* src, size_t size )
+{
+    self -> str = src;
+    self -> size = size;
+}
+
+typedef struct c_string
+{
+    char* str;
+    size_t size;
+    size_t capacity;
+} c_string;
+
+static int c_string_make ( c_string* self, size_t capacity )
+{
+    assert ( capacity > 0 );
+    self -> str = malloc (capacity + 1);
+    if ( self -> str != NULL )
+    {
+        self -> str [0] = '\0';
+        self -> size = 0;
+        self -> capacity = capacity;
+        return 1;
+    }
+    else
+        return 0;
+}
+
+static void c_string_destruct ( c_string* self )
+{
+    if ( self->str != NULL )
+    {
+        free ( self -> str );
+        self -> str = NULL;
+        self -> size = 0;
+        self -> capacity = 0;
+    }
+}
+
+static int c_string_realloc_no_preserve ( c_string* self, size_t new_capacity )
+{
+    if ( self -> capacity < new_capacity )
+    {
+        c_string_destruct ( self );
+
+        return c_string_make ( self, new_capacity );
+    }
+    else
+    {
+        self -> str [0] = '\0';
+        self -> size = 0;
+    }
+
+    return 1;
+}
+
+#if 0
+static int c_string_assign ( c_string* self, char const* src, size_t src_size )
+{
+    if ( self->capacity < src_size && !c_string_realloc_no_preserve (self, max(self->capacity * 2, src_size)) )
+        return 0;
+
+    memcpy ( self -> str, src, src_size );
+    self -> str [src_size] = '\0';
+    self -> size = src_size;
+
+    return 1;
+}
+#endif
+static int c_string_append ( c_string* self, char const* append, size_t append_size)
+{
+    size_t new_size = self->size + append_size;
+    if ( self->capacity >= new_size )
+    {
+        memcpy ( self->str + self->size, append, append_size );
+        self->size = new_size;
+        self->str [new_size] = '\0';
+    }
+    else
+    {
+        size_t new_capacity = max (new_size + 1, self->capacity * 2);
+        char* new_str = malloc ( new_capacity );
+        if (new_str == NULL)
+            return 0;
+
+        memcpy (new_str, self->str, self->size);
+        memcpy (new_str + self->size, append, append_size );
+        new_str [ new_size ] = '\0';
+
+        c_string_destruct ( self );
+        
+        self->str = new_str;
+        self->size = new_size;
+        self->capacity = new_capacity;
+    }
+
+    return 1;
+}
+
+#if 0
+static int c_string_wrap ( c_string* self,
+    char const* prefix, size_t prefix_size,
+    char const* postfix, size_t postfix_size)
+{
+    assert ( self -> str != NULL );
+    size_t new_size = self->size + prefix_size + postfix_size;
+
+    if ( new_size > self->capacity )
+    {
+        size_t new_capacity = max (new_size + 1, self->capacity * 2);
+        char* new_str = malloc ( new_capacity );
+        if (new_str == NULL)
+            return 0;
+
+        memcpy ( new_str, prefix, prefix_size );
+        memcpy ( new_str + prefix_size, self -> str, self -> size );
+        memcpy ( new_str + prefix_size + self->size, postfix, postfix_size );
+        new_str [ new_size ] = '\0';
+
+        c_string_destruct ( self );
+        
+        self->str = new_str;
+        self->size = new_size;
+        self->capacity = new_capacity;
+    }
+    else
+    {
+        memmove ( self->str + prefix_size, self->str, self->size );
+        memcpy ( self->str, prefix, prefix_size );
+        memcpy (self->str + prefix_size + self->size, postfix, postfix_size );
+        self->str [new_size] = '\0';
+    }
+    return 1;
+}
+#endif
+/************************************************/
+
+
+/*
+   returns 1 if a new ref_slice is selected
+   returns 0 if the new ref_slice is the same as the previous one passed in ref_slice
+*/
+static int get_ref_slice (
+            INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
+            size_t slice_expand_left, size_t slice_expand_right,
+            c_string_const* ref_slice)
+{
+    size_t ref_start, ref_xend;
+    if ( ref_pos_var < slice_expand_left )
+        ref_start = 0;
+    else
+        ref_start = ref_pos_var - slice_expand_left;
+
+    if ( ref_pos_var + slice_expand_right >= ref_size )
+        ref_xend = ref_size;
+    else
+        ref_xend = ref_pos_var + slice_expand_right;
+
+    if ( ref_slice->str == ref + ref_start && ref_slice->size == ref_xend - ref_start)
+        return 0;
+
+    c_string_const_assign ( ref_slice, ref + ref_start, ref_xend - ref_start );
+    return 1;
+}
+
+static int make_query ( c_string_const const* ref_slice,
+        INSDC_dna_text const* variation, size_t variation_size,
+        int64_t var_start_pos_adj, /* ref_pos adjusted to the beginning of ref_slice (in the simplest case - the middle of ref_slice) */
+        c_string* query
+    )
+{
+    if ( !c_string_realloc_no_preserve (query, variation_size + ref_slice->size) )
+        return 0;
+
+    if ( !c_string_append (query, ref_slice->str, var_start_pos_adj) ||
+         !c_string_append (query, variation, variation_size) ||
+         !c_string_append (query, ref_slice->str + var_start_pos_adj, ref_slice->size - var_start_pos_adj) )
+    {
+         return 0;
+    }
+
+    return 1;
+}
+
+
+/*
+    FindRefVariationRegionAscii uses Smith-Waterman algorithm
+    to find theoretical bounds of the variation for
+    the given reference, position on the reference
+    and the raw query, or variation to look for at the given
+    reference position
+
+    ref, ref_size [IN]     - the reference on which the
+                             variation will be looked for
+    ref_pos_var [IN]       - the position on reference to look for the variation
+    variation, variation_size [IN] - the variation to look for at the ref_pos_var
+
+    p_ref_start, p_ref_len [OUT, NULL OK] - the region of ambiguity on the reference
+                                            (return values)
+*/
+
+LIB_EXPORT rc_t CC FindRefVariationRegionAscii (
+        INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
+        INSDC_dna_text const* variation, size_t variation_size,
+        size_t* p_ref_start, size_t* p_ref_len
+    )
+{
+    rc_t rc = 0;
+
+    size_t var_half_len = variation_size / 2 + 1;
+
+    size_t exp_l = var_half_len;
+    size_t exp_r = var_half_len;
+
+    /* previous start and end for reference slice */
+    int64_t slice_start = -1, slice_end = -1;
+
+    c_string_const ref_slice;
+    c_string query;
+
+    size_t ref_start = 0, ref_len = 0;
+
+    ref_slice.str = NULL;
+    ref_slice.size = 0;
+
+    if ( !c_string_make ( & query, ( variation_size + 1 ) * 2 ) )
+        return RC(rcText, rcString, rcSearching, rcMemory, rcExhausted);
+
+    while ( 1 )
+    {
+        int64_t new_slice_start, new_slice_end;
+        int64_t ref_pos_adj;
+        int cont = 0;
+
+        /* get new expanded slice and check if it has not reached the bounds of ref */
+        int slice_expanded = get_ref_slice ( ref, ref_size, ref_pos_var, exp_l, exp_r, & ref_slice );
+        if ( !slice_expanded )
+            break;
+
+        /* get ref_pos relative to ref_slice start and new slice_start and end */
+        ref_pos_adj = (int64_t)ref_pos_var - ( ref_slice.str - ref );
+        new_slice_start = ref_slice.str - ref;
+        new_slice_end = new_slice_start + ref_slice.size;
+
+        /* compose a new query for newly extended ref slice */
+        if ( !make_query ( & ref_slice, variation, variation_size, ref_pos_adj, & query ) )
+        {
+            rc = RC(rcText, rcString, rcSearching, rcMemory, rcExhausted);
+            goto free_resources;
+        }
+
+        rc = FindRefVariationBounds ( ref_slice.str, ref_slice.size,
+                        query.str, query.size, & ref_start, & ref_len );
+
+        if ( rc != 0 )
+            goto free_resources;
+
+        /* if we've found the ambiguity window starting at the very
+           beginning of the ref slice and if we're still able to extend
+           ref slice to the left (haven't bumped into boundary) - extend to the left
+           and repeat the search
+        */
+        if ( ref_start == 0 && (slice_start == -1 || new_slice_start != slice_start ) )
+        {
+            exp_l *= 2;
+            cont = 1;
+        }
+
+        /* if we've found the ambiguity window ending at the very
+           end of the ref slice and if we're still able to extend
+           ref slice to the right (haven't bumped into boundary) - extend to the right
+           and repeat the search
+        */
+        if ( ref_start + ref_len == ref_slice.size && (slice_end == -1 || new_slice_end != slice_end) )
+        {
+            exp_r *= 2;
+            cont = 1;
+        }
+
+        if ( !cont )
+            break;
+
+        slice_start = new_slice_start;
+        slice_end = new_slice_end;
+    }
+    if ( p_ref_start != NULL )
+        *p_ref_start = ref_start + (ref_slice.str - ref);
+    if ( p_ref_len != NULL )
+        *p_ref_len = ref_len;
+
+free_resources:
+    c_string_destruct ( &query );
 
     return rc;
 }
