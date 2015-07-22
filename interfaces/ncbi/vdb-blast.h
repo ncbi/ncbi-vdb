@@ -271,10 +271,19 @@ VDB_EXTERN void CC VdbBlastReferenceSetRelease ( VdbBlastReferenceSet *self );
 VDB_EXTERN uint64_t CC VdbBlastReferenceSetGetNumSequences
     ( const VdbBlastReferenceSet *self, VdbBlastStatus *status );
 
-
+/* GetTotalLength
+ *  Returns the total number of bases in reference set.
+ *  Always returns the exact length.
+ *  Never returns "eVdbBlastTooExpensive".
+ */
 VDB_EXTERN uint64_t CC VdbBlastReferenceSetGetTotalLength
     ( const VdbBlastReferenceSet *self, VdbBlastStatus *status );
 
+/* GetReadName
+ */
+VDB_EXTERN size_t CC VdbBlastReferenceSetGetReadName (
+    const VdbBlastReferenceSet *self,
+    uint64_t read_id, char *name_buffer, size_t bsize );
 
 /*------------------------------------------------------------------------------
  * VdbBlastReadSet
