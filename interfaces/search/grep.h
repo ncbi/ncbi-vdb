@@ -267,6 +267,10 @@ SEARCH_EXTERN size_t CC FindLongestCommonSubstring(char const* pS1, char const* 
                              variation will be looked for
     ref_pos_var [IN]       - the position on reference to look for the variation
     variation, variation_size [IN] - the variation to look for at the ref_pos_var
+    var_len_on_ref [IN]    - the length of the variation on the reference, e.g.:
+                           - mismatch, 2 bases: variation = "XY", var_len_on_ref = 2
+                           - deletion, 3 bases: variation = "", var_len_on_ref = 3
+                           - insertion, 2 bases:  variation = "XY", var_len_on_ref = 0
 
     p_ref_start, p_ref_len [OUT, NULL OK] - the region of ambiguity on the reference
                                             (return values)
@@ -274,7 +278,7 @@ SEARCH_EXTERN size_t CC FindLongestCommonSubstring(char const* pS1, char const* 
 
 LIB_EXPORT rc_t CC FindRefVariationRegionAscii (
         INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
-        INSDC_dna_text const* variation, size_t variation_size,
+        INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
         size_t* p_ref_start, size_t* p_ref_len
     );
 

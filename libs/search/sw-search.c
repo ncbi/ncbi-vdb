@@ -498,29 +498,32 @@ static int c_string_assign ( c_string* self, char const* src, size_t src_size )
 #endif
 static int c_string_append ( c_string* self, char const* append, size_t append_size)
 {
-    size_t new_size = self->size + append_size;
-    if ( self->capacity >= new_size )
+    if ( append_size != 0 )
     {
-        memcpy ( self->str + self->size, append, append_size );
-        self->size = new_size;
-        self->str [new_size] = '\0';
-    }
-    else
-    {
-        size_t new_capacity = max (new_size + 1, self->capacity * 2);
-        char* new_str = malloc ( new_capacity );
-        if (new_str == NULL)
-            return 0;
+        size_t new_size = self->size + append_size;
+        if ( self->capacity >= new_size )
+        {
+            memcpy ( self->str + self->size, append, append_size );
+            self->size = new_size;
+            self->str [new_size] = '\0';
+        }
+        else
+        {
+            size_t new_capacity = max (new_size + 1, self->capacity * 2);
+            char* new_str = malloc ( new_capacity );
+            if (new_str == NULL)
+                return 0;
 
-        memcpy (new_str, self->str, self->size);
-        memcpy (new_str + self->size, append, append_size );
-        new_str [ new_size ] = '\0';
+            memcpy (new_str, self->str, self->size);
+            memcpy (new_str + self->size, append, append_size );
+            new_str [ new_size ] = '\0';
 
-        c_string_destruct ( self );
+            c_string_destruct ( self );
         
-        self->str = new_str;
-        self->size = new_size;
-        self->capacity = new_capacity;
+            self->str = new_str;
+            self->size = new_size;
+            self->capacity = new_capacity;
+        }
     }
 
     return 1;
@@ -571,6 +574,7 @@ static int c_string_wrap ( c_string* self,
 */
 static int get_ref_slice (
             INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
+            size_t var_len_on_ref,
             size_t slice_expand_left, size_t slice_expand_right,
             c_string_const* ref_slice)
 {
@@ -580,10 +584,10 @@ static int get_ref_slice (
     else
         ref_start = ref_pos_var - slice_expand_left;
 
-    if ( ref_pos_var + slice_expand_right >= ref_size )
+    if ( ref_pos_var + slice_expand_right + var_len_on_ref >= ref_size )
         ref_xend = ref_size;
     else
-        ref_xend = ref_pos_var + slice_expand_right;
+        ref_xend = ref_pos_var + slice_expand_right + var_len_on_ref;
 
     if ( ref_slice->str == ref + ref_start && ref_slice->size == ref_xend - ref_start)
         return 0;
@@ -592,25 +596,67 @@ static int get_ref_slice (
     return 1;
 }
 
+#if 1
 static int make_query ( c_string_const const* ref_slice,
-        INSDC_dna_text const* variation, size_t variation_size,
+        INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
         int64_t var_start_pos_adj, /* ref_pos adjusted to the beginning of ref_slice (in the simplest case - the middle of ref_slice) */
         c_string* query
     )
 {
-    if ( !c_string_realloc_no_preserve (query, variation_size + ref_slice->size) )
+    if ( !c_string_realloc_no_preserve (query, variation_size + ref_slice->size - var_len_on_ref) )
         return 0;
 
     if ( !c_string_append (query, ref_slice->str, var_start_pos_adj) ||
          !c_string_append (query, variation, variation_size) ||
-         !c_string_append (query, ref_slice->str + var_start_pos_adj, ref_slice->size - var_start_pos_adj) )
+         !c_string_append (query, ref_slice->str + var_start_pos_adj + var_len_on_ref, ref_slice->size - var_start_pos_adj - var_len_on_ref) )
     {
          return 0;
     }
 
     return 1;
 }
+#endif
 
+#if 0
+static int make_query_ (
+        INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
+        INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
+        size_t slice_expand_left, size_t slice_expand_right,
+        c_string* query
+    )
+{
+    size_t ref_prefix_start, ref_prefix_len, ref_suffix_start, ref_suffix_len;
+    if ( !c_string_realloc_no_preserve (query, variation_size + slice_expand_left + slice_expand_right + var_len_on_ref) )
+        return 0;
+
+    if ( ref_pos_var < slice_expand_left )
+    {
+        ref_prefix_start = 0;
+        ref_prefix_len = slice_expand_left - (ref_pos_var - 1);
+    }
+    else
+    {
+        ref_prefix_start = ref_pos_var - slice_expand_left;
+        ref_prefix_len = slice_expand_left;
+    }
+
+    ref_suffix_start = ref_pos_var + var_len_on_ref;
+
+    if ( ref_suffix_start + slice_expand_right >= ref_size )
+        ref_suffix_len = ref_size - (slice_expand_right + 1);
+    else
+        ref_suffix_len = slice_expand_right;
+
+    if ( !c_string_append (query, ref + ref_prefix_start, ref_prefix_len) ||
+         !c_string_append (query, variation, variation_size) ||
+         !c_string_append (query, ref + ref_suffix_start, ref_suffix_len) )
+    {
+         return 0;
+    }
+
+    return 1;
+}
+#endif
 
 /*
     FindRefVariationRegionAscii uses Smith-Waterman algorithm
@@ -623,6 +669,10 @@ static int make_query ( c_string_const const* ref_slice,
                              variation will be looked for
     ref_pos_var [IN]       - the position on reference to look for the variation
     variation, variation_size [IN] - the variation to look for at the ref_pos_var
+    var_len_on_ref [IN]    - the length of the variation on the reference, e.g.:
+                           - mismatch, 2 bases: variation = "XY", var_len_on_ref = 2
+                           - deletion, 3 bases: variation = "", var_len_on_ref = 3
+                           - insertion, 2 bases:  variation = "XY", var_len_on_ref = 0
 
     p_ref_start, p_ref_len [OUT, NULL OK] - the region of ambiguity on the reference
                                             (return values)
@@ -630,7 +680,7 @@ static int make_query ( c_string_const const* ref_slice,
 
 LIB_EXPORT rc_t CC FindRefVariationRegionAscii (
         INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
-        INSDC_dna_text const* variation, size_t variation_size,
+        INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
         size_t* p_ref_start, size_t* p_ref_len
     )
 {
@@ -662,7 +712,7 @@ LIB_EXPORT rc_t CC FindRefVariationRegionAscii (
         int cont = 0;
 
         /* get new expanded slice and check if it has not reached the bounds of ref */
-        int slice_expanded = get_ref_slice ( ref, ref_size, ref_pos_var, exp_l, exp_r, & ref_slice );
+        int slice_expanded = get_ref_slice ( ref, ref_size, ref_pos_var, var_len_on_ref, exp_l, exp_r, & ref_slice );
         if ( !slice_expanded )
             break;
 
@@ -672,7 +722,8 @@ LIB_EXPORT rc_t CC FindRefVariationRegionAscii (
         new_slice_end = new_slice_start + ref_slice.size;
 
         /* compose a new query for newly extended ref slice */
-        if ( !make_query ( & ref_slice, variation, variation_size, ref_pos_adj, & query ) )
+        /*if ( !make_query_( ref, ref_size, ref_pos_var, variation, variation_size, var_len_on_ref, exp_l, exp_r, & query ) )*/
+        if ( !make_query ( & ref_slice, variation, variation_size, var_len_on_ref, ref_pos_adj, & query ) )
         {
             rc = RC(rcText, rcString, rcSearching, rcMemory, rcExhausted);
             goto free_resources;
