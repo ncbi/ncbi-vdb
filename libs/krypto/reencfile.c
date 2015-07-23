@@ -74,7 +74,7 @@ struct KReencFile
 /* block id's can not max out a 64 bit number as that is a file that is 32K times too big */
 #define NO_CURRENT_BLOCK (~(uint64_t)0)
     uint64_t      block_id;
-    uint64_t      footer_block; /* if zero, still unknown */
+    uint64_t      footer_block; /* if zero, file does not have any content blocks */
 
     uint64_t      size;         /* size as known from the original file [see known_size] */
     bool          known_size;   /* is the size of the original file known? */
@@ -347,17 +347,20 @@ rc_t KReencFileReadHandleHeader (KReencFile *self,
     assert (bsize);
     assert (num_read);
 
-    /* added to support NCBInenc and NCBIsenc variants of KEncFile
-     * read the first block of the source file but don't write any of it
-     *
-     * If the source is stream mode only then the next block to be read is the
-     * first and this will not violate by seeking. It will just have already
-     * read the block it will want to read real soon. Likewith within a
-     * single call to KFileReadAll.
-     */
-    rc = KReencFileReadHandleBlock (self, 0, NULL, 0, NULL);
-    if (rc)
-        return rc;
+    if ( !self->known_size || self->size != sizeof(KEncFileHeader) + sizeof(KEncFileFooter) )
+    {
+        /* added to support NCBInenc and NCBIsenc variants of KEncFile
+         * read the first block of the source file but don't write any of it
+         *
+         * If the source is stream mode only then the next block to be read is the
+         * first and this will not violate by seeking. It will just have already
+         * read the block it will want to read real soon. Likewith within a
+         * single call to KFileReadAll.
+         */
+        rc = KReencFileReadHandleBlock (self, 0, NULL, 0, NULL);
+        if (rc)
+            return rc;
+    }
 
     /* use a private function from KEncFile to generate a header */
     rc = KEncFileWriteHeader (self->enc);
@@ -512,10 +515,8 @@ rc_t KReencFileReencBlock (KReencFile * self, uint64_t block_id, bool new_block)
     assert (self);
 
 /*     KOutMsg ("%s: %lu %lu\n", __func__, block_id, self->footer_block); */
-    assert (block_id < self->footer_block);
+    assert (block_id <= self->footer_block);
     assert ((new_block == true) || (new_block == false));
-
-
 
     rc = KReencFileReadABlock (self, block_id);
     if (rc)
@@ -563,18 +564,13 @@ rc_t KReencFileReadHandleFooter (KReencFile *self,
 /* KOutMsg ("\n\n\n%s: pos '%lu' bsize '%zu'\n",__func__,pos,bsize); */
 
     assert (self);
-    assert (pos >= sizeof (KEncFileHeader) + sizeof self->block);
+    assert (pos >= sizeof (KEncFileHeader));
     assert (buffer);
     assert (bsize);
     assert (num_read);
 
     rc = 0;
     block_id = EncryptedPos_to_BlockId (pos, NULL, NULL);
-
-    /* our library does not allow an empty file to be encrypted
-     * so we call that an error
-     */
-    assert (block_id > 0);
 
     assert (block_id == self->footer_block);
 
@@ -983,9 +979,9 @@ LIB_EXPORT rc_t CC KReencFileMakeRead (const KFile ** pself,
         *pself = encrypted;
         return rc;
     }
-    if (size < sizeof (KEncFileHeader) + sizeof (KEncFileBlock) + sizeof (KEncFileFooter))
+    if (size < sizeof (KEncFileHeader) + sizeof (KEncFileFooter))
     {
-        rc = RC (rcKrypto, rcFile, rcConstructing, rcSize, rcTooShort);
+        rc = RC (rcKrypto, rcFile, rcConstructing, rcSize, rcInvalid);
         LOGERR (klogErr, rc, "encrypted file too short to be valied for re-encryption");
         KFileRelease (encrypted);
         return rc;
@@ -1122,12 +1118,6 @@ LIB_EXPORT rc_t CC KEncryptFileMakeRead (const KFile ** pself,
     if (rc)
     {
         LOGERR (klogErr, rc, "Unable to add reference to unencrypted file for encryptor");
-        return rc;
-    }
-
-    if (rawsize == 0)
-    {
-        *pself = encrypted;
         return rc;
     }
 
