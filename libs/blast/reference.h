@@ -27,33 +27,52 @@
  *
  */
 
+#ifndef _h_ncbi_vdb_blast_
+#include <ncbi/vdb-blast.h> /* VdbBlastStatus */
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+
+struct Core2na;
 struct Core4na;
+struct Data2na;
 struct References;
 struct RunSet;
+
+
+uint32_t _Core2naDataRef(struct Core2na *self,
+    struct Data2na *data, VdbBlastStatus *status,
+    Packed2naRead *buffer, uint32_t buffer_length);
 
 uint64_t _Core2naReadRef(struct Core2na *self, VdbBlastStatus *status,
     uint64_t *read_id, uint8_t *buffer, size_t buffer_size);
 
-uint32_t _Core2naDataRef(struct Core2na *self,
-    Data2na *data, VdbBlastStatus *status,
-    Packed2naRead *buffer, uint32_t buffer_length);
+
+const uint8_t* _Core4naDataRef(struct Core4na *self, const struct RunSet *runs,
+    uint32_t *status, uint64_t read_id, size_t *length);
 
 size_t _Core4naReadRef(struct Core4na *self, const struct RunSet *runs,
     uint32_t *status, uint64_t read_id, size_t starting_base,
     uint8_t *buffer, size_t buffer_length);
 
-const uint8_t* _Core4naDataRef(struct Core4na *self, const struct RunSet *runs,
-    uint32_t *status, uint64_t read_id, size_t *length);
 
 const struct References* _RunSetMakeReferences
     (struct RunSet *self, VdbBlastStatus *status);
+
 void _ReferencesWhack(const struct References *self);
+
 uint64_t _ReferencesGetNumSequences
     (const struct References *self, VdbBlastStatus *status);
+
+VdbBlastStatus _ReferencesGetReadId(const struct References *self,
+    const char *name_buffer, size_t bsize, uint64_t *read_id);
+
+size_t CC _ReferencesGetReadName(const struct References *self,
+    uint64_t read_id, char *name_buffer, size_t bsize);
+
 uint64_t _ReferencesGetTotalLength
     (const struct References *self, VdbBlastStatus *status);
 
