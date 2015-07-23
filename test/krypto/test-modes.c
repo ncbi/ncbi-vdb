@@ -39,6 +39,8 @@
 
 #include <string.h>
 
+static int num_errors = 0;
+
 /*
   http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
 
@@ -961,9 +963,15 @@ rc_t run ()
                             if (rc == 0)
                             {
                                 if (memcmp (AES_ECB_128_test[index], dtemp, sizeof dtemp) != 0)
+                                {
                                     KOutMsg ("Failed AES ECB 128 encrypt #%u\n", index);
+                                    ++num_errors;
+                                }
                                 if (memcmp (AES_ECB_128_cipher[index], etemp, sizeof etemp) != 0)
+                                {
                                     KOutMsg ("Failed AES ECB 128 decrypt test #%u\n", index);
+                                    ++num_errors;
+                                }
                             }
                         }
                     }
@@ -992,9 +1000,15 @@ rc_t run ()
                             if (rc == 0)
                             {
                                 if (memcmp (AES_ECB_192_test[index], dtemp, sizeof dtemp) != 0)
+                                {
                                     KOutMsg ("Failed AES ECB 192 encrypt #%u\n", index);
+                                    ++num_errors;
+                                }
                                 if (memcmp (AES_ECB_192_cipher[index], etemp, sizeof etemp) != 0)
+                                {
                                     KOutMsg ("Failed AES ECB 192 decrypt test #%u\n", index);
+                                    ++num_errors;
+                                }
                             }
                         }
                     }
@@ -1023,9 +1037,15 @@ rc_t run ()
                             if (rc == 0)
                             {
                                 if (memcmp (AES_ECB_256_test[index], dtemp, sizeof dtemp) != 0)
+                                {
                                     KOutMsg ("Failed AES ECB 256 encrypt #%u\n", index);
+                                    ++num_errors;
+                                }
                                 if (memcmp (AES_ECB_256_cipher[index], etemp, sizeof etemp) != 0)
+                                {
                                     KOutMsg ("Failed AES ECB 256 decrypt test #%u\n", index);
+                                    ++num_errors;
+                                }
                             }
                         }
                     }
@@ -1061,9 +1081,15 @@ rc_t run ()
                                     if (rc == 0)
                                     {
                                         if (memcmp (AES_CBC_128_test[index], dtemp, sizeof dtemp) != 0)
+                                        {
                                             KOutMsg ("Failed AES CBC 128 encrypt #%u\n", index);
+                                            ++num_errors;
+                                        }
                                         if (memcmp (AES_CBC_128_cipher[index], etemp, sizeof etemp) != 0)
+                                        {
                                             KOutMsg ("Failed AES CBC 128 decrypt test #%u\n", index);
+                                            ++num_errors;
+                                        }
                                     }
                                 }
                             }
@@ -1100,9 +1126,15 @@ rc_t run ()
                                     if (rc == 0)
                                     {
                                         if (memcmp (AES_CBC_192_test[index], dtemp, sizeof dtemp) != 0)
+                                        {
                                             KOutMsg ("Failed AES CBC 192 encrypt #%u\n", index);
+                                            ++num_errors;
+                                        }
                                         if (memcmp (AES_CBC_192_cipher[index], etemp, sizeof etemp) != 0)
+                                        {
                                             KOutMsg ("Failed AES CBC 192 decrypt test #%u\n", index);
+                                            ++num_errors;
+                                        }
                                     }
                                 }
                             }
@@ -1139,9 +1171,15 @@ rc_t run ()
                                     if (rc == 0)
                                     {
                                         if (memcmp (AES_CBC_256_test[index], dtemp, sizeof dtemp) != 0)
+                                        {
                                             KOutMsg ("Failed AES CBC 256 encrypt #%u\n", index);
+                                            ++num_errors;
+                                        }
                                         if (memcmp (AES_CBC_256_cipher[index], etemp, sizeof etemp) != 0)
+                                        {
                                             KOutMsg ("Failed AES CBC 256 decrypt test #%u\n", index);
+                                            ++num_errors;
+                                        }
                                     }
                                 }
                             }
@@ -1203,18 +1241,19 @@ rc_t CC KMain ( int argc, char *argv [] )
     rc = ArgsMakeAndHandle (&args, argc, argv, 0);
     if (rc == 0)
     {
-
         rc = run();
-        if (rc)
-            LOGERR (klogErr, rc, "Exiting failure");
-        else
-            STSMSG (0, ("Exiting okay\n"));
     }
 
+    if (rc == 0 && num_errors != 0)
+    {
+        rc = RC(rcKrypto, rcBuffer, rcValidating, rcEncryption, rcIncorrect);
+    }
+    
     if (rc)
         LOGERR (klogErr, rc, "Exiting status");
     else
-        STSMSG (0, ("Existing status (%R)\n", rc));
+        STSMSG (0, ("Exiting okay\n"));
+
     return rc;
 }
 

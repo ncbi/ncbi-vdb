@@ -32,18 +32,21 @@ include $(TOP)/build/Makefile.env
 RWORKDIR = $(TOP)/$(MODULE)
 
 INT_TOOLS = \
-	test-modes \
 
 ifeq (linux,$(OS))
 INT_TOOLS += \
-	test-aes-ciphers \
 	test-cipher-speed
 endif
 
-
 TEST_TOOLS = \
+	test-modes \
 	test-encdec \
 	test-reenc \
+
+ifeq (linux,$(OS))
+TEST_TOOLS += \
+	test-aes-ciphers
+endif
 
 SLOW_TEST_TOOLS= \
 	test-krypto-slow \
