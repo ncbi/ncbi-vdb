@@ -173,7 +173,6 @@ XFS_VfsManager ()
  |||    NOTE: Initializing and Destroying code arent thread safe!!!
  |||          will add mutexes if it really need to :)
 (((*/
-
 static struct KNSManager * _sKnsManager = NULL;
 
 LIB_EXPORT
@@ -193,17 +192,7 @@ XFS_KnsManagerInit ()
                 RCt = XFS_RC ( rcNull );
             }
             else {
-                RCt = KNSManagerSetUserAgent (
-                                            Manager,
-                                            "evil smoozzer.%V",
-                                            666
-                                            );
-                if ( RCt == 0 ) {
-                    _sKnsManager = Manager;
-                }
-                else {
-                    KNSManagerRelease ( Manager );
-                }
+                _sKnsManager = Manager;
             }
         }
     }
@@ -236,3 +225,4 @@ XFS_KnsManager ()
 {
     return _sKnsManager;
 }   /* XFS_KnsManager () */
+

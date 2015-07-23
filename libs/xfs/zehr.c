@@ -524,6 +524,7 @@ XFS_HttpStreamMake_ZHR (
 
     RCt = 0;
     Path = NULL;
+    TheStream = NULL;
 
     if ( Stream != NULL ) {
         * Stream = NULL;
