@@ -2241,16 +2241,29 @@ LIB_EXPORT size_t CC VdbBlastReferenceSetGetReadName(
     const VdbBlastReferenceSet *self,
     uint64_t read_id, char *name_buffer, size_t bsize)
 {
-    VdbBlastStatus status = eVdbBlastErr;
-
-    const struct References *refs
-        = _VdbBlastReferenceSetCheckReferences(self, &status);
-    if (status != eVdbBlastNoErr) {
-        return 0;
+    if (bsize > 0 && name_buffer != NULL) {
+        name_buffer[0] = '\0';
     }
 
-    assert                       (refs);
-    return _ReferencesGetReadName(refs, read_id, name_buffer, bsize);
+    {
+        VdbBlastStatus status = eVdbBlastErr;
+
+        const struct References *refs
+            = _VdbBlastReferenceSetCheckReferences(self, &status);
+        if (status != eVdbBlastNoErr) {
+            return 0;
+        }
+
+        assert                       (refs);
+        return _ReferencesGetReadName(refs, read_id, name_buffer, bsize);
+    }
+}
+
+LIB_EXPORT VdbBlastStatus CC VdbBlastReferenceSetGetReadId(
+    const VdbBlastReferenceSet *self,
+    const char *name_buffer, size_t bsize, uint64_t *read_id)
+{
+    return 0;
 }
 
 /* EOF */
