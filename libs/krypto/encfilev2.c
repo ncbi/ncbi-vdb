@@ -1562,13 +1562,13 @@ rc_t KEncFileSetSizeInt (KEncFile *self, uint64_t dec_size)
             /* first trim for some reason... sparse files? */
             rc = KFileSetSize (self->encrypted, trim_size);
             if (rc)
-                LOGERR (klogErr, rc, "failure to trim size of encrpted file");
+                LOGERR (klogErr, rc, "failure to trim size of encrypted file");
             else
             {
                 /* now extend to encrypted size */
                 rc = KFileSetSize (self->encrypted, enc_size);
                 if (rc)
-                    LOGERR (klogErr, rc, "failure to file size of encrpted file");
+                    LOGERR (klogErr, rc, "failure to file size of encrypted file");
             }
         }
         if (rc == 0)
