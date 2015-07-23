@@ -37,7 +37,7 @@ extern "C" {
 struct Core2na;
 struct RunSet;
 
-typedef struct {
+typedef struct Data2na {
     uint32_t irun;
     const struct VBlob *blob;
 } Data2na;

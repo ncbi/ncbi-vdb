@@ -24,9 +24,10 @@
  *
  */
 
+#include "reference.h" /* _ReferencesWhack */
+
 #include "blast-mgr.h" /* BTableType */
 #include "reader.h" /* Data2na */
-#include "reference.h" /* _ReferencesWhack */
 #include "run-set.h" /* Core4na */
 
 #include <klib/log.h> /* PLOGMSG */
@@ -88,10 +89,17 @@ typedef struct {
     BSTNode n;
 
     const char *str;
-} StringNode;
-static int64_t CC StringNodeCmp(const void *item, const BSTNode *n) {
+    uint32_t rfdi;
+} BstNode;
+static void BstNodeInit(BstNode *self, const char *str, uint32_t rfdi) {
+    assert(self && str);
+
+    self->str  = str;
+    self->rfdi = rfdi;
+}
+static int64_t CC BstNodeCmpStr(const void *item, const BSTNode *n) {
     const char *c = item;
-    const StringNode *rn = (const StringNode*)n;
+    const BstNode *rn = (const BstNode*)n;
 
     if (c == NULL || rn == NULL || rn->str == NULL) {
         return 1;
@@ -100,16 +108,28 @@ static int64_t CC StringNodeCmp(const void *item, const BSTNode *n) {
     return strcmp(c, rn->str);
 }
 
+static int64_t CC BstNodeCmpString(const void *item, const BSTNode *n) {
+    const String *c = item;
+    const BstNode *rn = (const BstNode*)n;
+
+    if (c == NULL || rn == NULL || rn->str == NULL) {
+        return 1;
+    }
+
+    return string_cmp(c->addr, c->size, rn->str, string_size(rn->str),
+                                                 string_size(rn->str));
+}
+
 static int64_t CC RunBstSort(const BSTNode *item, const BSTNode *n) {
-    const StringNode *rn = (const StringNode*)item;
+    const BstNode *rn = (const BstNode*)item;
 
     assert(rn);
 
-    return StringNodeCmp(rn->str, n);
+    return BstNodeCmpStr(rn->str, n);
 }
 
-static void CC StringNodeWhack(BSTNode *n, void *ignore) {
-    StringNode *rn = (StringNode*)n;
+static void CC BstNodeWhack(BSTNode *n, void *ignore) {
+    BstNode *rn = (BstNode*)n;
 
     assert(rn);
 
@@ -146,8 +166,8 @@ void _RefSetFini(RefSet *self) {
         return;
     }
 
-    BSTreeWhack(&self->tRuns   , StringNodeWhack, NULL);
-    BSTreeWhack(&self->tExtRefs, StringNodeWhack, NULL);
+    BSTreeWhack(&self->tRuns   , BstNodeWhack, NULL);
+    BSTreeWhack(&self->tExtRefs, BstNodeWhack, NULL);
 
     for (i = 0; i < self->rfdk; ++i) {
         _VdbBlastRefWhack(&self->rfd[i]);
@@ -277,8 +297,8 @@ const References* _RunSetMakeReferences
             continue;
         }
         {
-            StringNode *n =
-                (StringNode*)BSTreeFind(&refs->tRuns, run->acc, StringNodeCmp);
+            BstNode *n
+                = (BstNode*)BSTreeFind(&refs->tRuns, run->acc, BstNodeCmpStr);
             if (n != NULL) {
                 continue; /* ignore repeated runs */
             }
@@ -289,7 +309,7 @@ const References* _RunSetMakeReferences
                     return NULL;
                 }
             }
-            n->str = run->acc;
+            BstNodeInit(n, run->acc, refs->rfdk);
             BSTreeInsert(&refs->tRuns, (BSTNode*)n, RunBstSort);
         }
         if (run->obj->refTbl == NULL) {
@@ -439,8 +459,8 @@ const References* _RunSetMakeReferences
                 }
 
                 if (external) {
-                    StringNode *n = (StringNode*)
-                        BSTreeFind(&refs->tExtRefs, SEQ_ID, StringNodeCmp);
+                    BstNode *n = (BstNode*)
+                        BSTreeFind(&refs->tExtRefs, SEQ_ID, BstNodeCmpStr);
                     if (n != NULL) {  /* we already have this reference */
                         free(SEQ_ID); /* in one of the previous runs */
                         SEQ_ID = NULL;
@@ -451,7 +471,7 @@ const References* _RunSetMakeReferences
                             *status = eVdbBlastMemErr;
                             return NULL;
                         }
-                        n->str = SEQ_ID;
+                        BstNodeInit(n, SEQ_ID, refs->rfdk);
                         BSTreeInsert(&refs->tExtRefs, (BSTNode*)n, RunBstSort);
                     }
                 }
@@ -1428,35 +1448,118 @@ size_t CC _ReferencesGetReadName(const struct References *self,
 {
     const VdbBlastRef *r = NULL;
     const char *acc = "";
-    const char *SEQ_ID = NULL;
-    rc_t rc = 0;
-    size_t num_writ = 0;
+
     bool bad = false;
     read_id = _clear_read_id_reference_bit(read_id, &bad);
     if (bad) {
         return 0;
     }
+
     if (self == NULL || self->refs == NULL || self->refs->rfdk <= read_id) {
         return 0;
     }
+
     assert(self->refs->rfd);
     r = &self->refs->rfd[read_id];
+
     if (!r->external) {
         if (self->rs == NULL || self->rs->krun <= r->iRun) {
             return 0;
         }
+
         acc = self->rs->run[r->iRun].acc;
     }
-    SEQ_ID = self->refs->rfd[read_id].SEQ_ID;
-    rc = string_printf(name_buffer, bsize, &num_writ, "%s|%s", acc, SEQ_ID);
-    if (rc == 0) {
-        return num_writ;
+
+    {
+        const char *SEQ_ID = self->refs->rfd[read_id].SEQ_ID;
+
+        size_t num_writ = 0;
+        rc_t rc =
+            string_printf(name_buffer, bsize, &num_writ, "%s|%s", acc, SEQ_ID);
+        if (rc == 0) {
+            return num_writ;
+        }
+        else if (GetRCState(rc) != rcInsufficient) {
+            return 0;
+        }
+        else {
+            size_t dst_size = string_size(acc) + 1 + string_size(SEQ_ID);
+            return dst_size;
+        }
     }
-    else if (GetRCState(rc) != rcInsufficient) {
-        return 0;
+}
+
+VdbBlastStatus _ReferencesGetReadId(const References *self,
+    const char *name_buffer, size_t bsize, uint64_t *read_id)
+{
+    int32_t rfdi = ~0;
+    const char SP = '|';
+    const char *sp = name_buffer;
+    const RefSet *refs = NULL;
+    String acc, seq;
+    BstNode *n = NULL;
+    if (self == NULL || self->refs == NULL || self->rs == NULL ||
+        name_buffer == NULL || bsize == 0 || read_id == NULL)
+    {
+        return eVdbBlastErr;
+    }
+    refs = self->refs;
+    memset(&acc, 0 , sizeof acc);
+    memset(&seq, 0 , sizeof seq);
+    if (name_buffer[0] != SP) {
+        sp = string_chr(name_buffer, bsize, SP);
+        if (sp == NULL) {
+            return eVdbBlastErr;
+        }
+        StringInit(&acc, name_buffer, sp - name_buffer, sp - name_buffer);
+
+    }/*((char*)name_buffer)[sp - name_buffer] = 0; */
+    if ((sp - name_buffer) >= bsize) {
+        return eVdbBlastErr;
+    }
+    StringInit(&seq, sp + 1, bsize - (sp - name_buffer) - 1,
+                             bsize - (sp - name_buffer) - 1);
+    if (acc.size != 0) {
+        bool found = false;
+        int32_t iRun = ~0;
+        n = (BstNode*)BSTreeFind(&refs->tRuns, &acc, BstNodeCmpString);
+        if (n == NULL) {
+            return eVdbBlastErr;
+        }
+        iRun = refs->rfd[n->rfdi].iRun;
+        assert(iRun < self->rs->krun);
+        assert(!string_cmp(self->rs->run[iRun].acc,
+               string_size(self->rs->run[iRun].acc),
+               acc.addr, acc.size, acc.size));
+        for (rfdi = n->rfdi; rfdi < refs->rfdk; ++rfdi) {
+            const VdbBlastRef *r = &refs->rfd[rfdi];
+            if (r->iRun != iRun) {
+                return eVdbBlastErr;
+            }
+            if (string_cmp(seq.addr, seq.size,
+                r->SEQ_ID, string_size(r->SEQ_ID), string_size(r->SEQ_ID)) == 0)
+            {
+                assert(!r->external);
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            return eVdbBlastErr;
+        }
     }
     else {
-        size_t dst_size = string_size(acc) + 1 + string_size(SEQ_ID);
-        return dst_size;
+        n = (BstNode*)BSTreeFind(&refs->tExtRefs, &seq, BstNodeCmpString);
+        if (n == NULL) {
+            return eVdbBlastErr;
+        }
+        rfdi = n->rfdi;
+        assert(refs->rfd[rfdi].external);
+    }
+    {
+        VdbBlastStatus status = eVdbBlastNoErr;
+        assert(rfdi < refs->rfdk);
+        *read_id = _set_read_id_reference_bit(rfdi, &status);
+        return status;
     }
 }

@@ -2263,7 +2263,16 @@ LIB_EXPORT VdbBlastStatus CC VdbBlastReferenceSetGetReadId(
     const VdbBlastReferenceSet *self,
     const char *name_buffer, size_t bsize, uint64_t *read_id)
 {
-    return 0;
+    VdbBlastStatus status = eVdbBlastErr;
+
+    const struct References *refs
+        = _VdbBlastReferenceSetCheckReferences(self, &status);
+    if (status != eVdbBlastNoErr) {
+        return status;
+    }
+
+    assert                       (refs);
+    return _ReferencesGetReadId(refs, name_buffer, bsize, read_id);
 }
 
 /* EOF */
