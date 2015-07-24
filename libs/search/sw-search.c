@@ -686,7 +686,9 @@ static int make_query_ (
                                             (return values)
 */
 
+#if 0
 #include <stdio.h>
+#endif
 LIB_EXPORT rc_t CC FindRefVariationRegionAscii (
         INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
         INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
@@ -752,9 +754,11 @@ LIB_EXPORT rc_t CC FindRefVariationRegionAscii (
             ref_len = 0;
         }
 
+#if 0
         printf ("ref_slice: %.*s, query: %.*s, ref_start=%lu, ref_len=%lu%s\n",
             (int)ref_slice.size, ref_slice.str, (int)query.size, query.str,
             ref_start, ref_len, has_indel != 0 ? "" : " (no indels)");
+#endif
 
         if ( rc != 0 )
             goto free_resources;
