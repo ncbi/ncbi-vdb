@@ -266,7 +266,7 @@ const References* _RunSetMakeReferences
         return NULL;
     }
     assert(!refs->rfd);
-    refs->rfdn = 2;
+    refs->rfdn = 512; /* initially allocated number of references */
     refs->rfd = calloc(1, refs->rfdn * sizeof *refs->rfd);
     if (refs->rfd == NULL) {
         *status = eVdbBlastMemErr;
@@ -800,8 +800,9 @@ static uint64_t _ReferencesRead2na(References *self,
     return total;
 }
 
+#if _DEBUGGING
 #define COMPARE
-
+#endif
 static uint32_t _ReferencesData2na(References *self,
     Data2na *data, VdbBlastStatus *status,
     Packed2naRead *buffer, uint32_t buffer_length)
@@ -1405,7 +1406,9 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
         last_spot = rfd->first + rfd->count;
     }
     {
+#ifdef COMPARE
         uint32_t row_len = 0;
+#endif
         first_spot = self->desc.spot;
 #ifdef COMPARE
         for (; self->desc.spot < last_spot; ++self->desc.spot) {
