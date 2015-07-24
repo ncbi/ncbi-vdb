@@ -42,6 +42,7 @@ TEST_TOOLS = \
 	test-modes \
 	test-encdec \
 	test-reenc \
+#	test-csprng \ --- not even being compiled in ncbi-vdb, skipping for now
 
 ifeq (linux,$(OS))
 TEST_TOOLS += \
@@ -140,6 +141,23 @@ TEST_CIPHER_SPEED_LIB = \
 
 $(TEST_BINDIR)/test-cipher-speed: $(TEST_CIPHER_SPEED_OBJ)
 	$(LD) --exe -o $@ $^ $(TEST_CIPHER_SPEED_LIB)
+
+#-------------------------------------------------------------------------------
+# test KCSPRng : cryptographically secure pseudo-random number generator
+#
+TEST_CSPRNG_SRC = \
+	test-csprng
+
+TEST_CSPRNG_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_CSPRNG_SRC))
+
+TEST_CSPRNG_LIB = \
+	-skapp \
+	-sncbi-vdb
+
+
+$(TEST_BINDIR)/test-csprng: $(TEST_CSPRNG_OBJ)
+	$(LD) --exe -o $@ $^ $(TEST_CSPRNG_LIB)
 
 #-------------------------------------------------------------------------------
 # test-encdec
