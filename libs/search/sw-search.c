@@ -372,11 +372,13 @@ template <bool reverse> void print_matrix ( int const* matrix,
     query, query_size [IN] - the query that represents the variation placed
                              inside the reference slice
     ref_start, ref_len [OUT, NULL OK] - the region of ambiguity on the reference
+    have_indel [OUT] - pointer to flag indication if there is an insertion or deletion
+                       (1 - there is an indel, 0 - there is match/mismatch only)
 */
 static rc_t FindRefVariationBounds (
     INSDC_dna_text const* ref_slice, size_t ref_slice_size,
     INSDC_dna_text const* query, size_t query_size,
-    size_t* ref_start, size_t* ref_len
+    size_t* ref_start, size_t* ref_len, int* has_indel
     )
 {
     /* building sw-matrix for chosen reference slice and sequence */
@@ -390,12 +392,18 @@ static rc_t FindRefVariationBounds (
     int* matrix = malloc( ROWS * COLUMNS * sizeof (int) );
     if (matrix == NULL)
         return RC(rcText, rcString, rcSearching, rcMemory, rcExhausted);
+    * has_indel = 1;
 
     /* forward scan */
     rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, 0 );
     if ( rc != 0 )
         goto free_resources;
     sw_find_indel_box ( matrix, ROWS, COLUMNS, &row_start, &row_end, &col_start, &col_end );
+    if ( row_start == -1 && row_end == -1 && col_start == -1 && col_end == -1 )
+    {
+        * has_indel = 0;
+        goto free_resources;
+    }
 
     /* reverse scan */
     rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, 1 );
@@ -678,6 +686,7 @@ static int make_query_ (
                                             (return values)
 */
 
+#include <stdio.h>
 LIB_EXPORT rc_t CC FindRefVariationRegionAscii (
         INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
         INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
@@ -710,6 +719,7 @@ LIB_EXPORT rc_t CC FindRefVariationRegionAscii (
         int64_t new_slice_start, new_slice_end;
         int64_t ref_pos_adj;
         int cont = 0;
+        int has_indel;
 
         /* get new expanded slice and check if it has not reached the bounds of ref */
         int slice_expanded = get_ref_slice ( ref, ref_size, ref_pos_var, var_len_on_ref, exp_l, exp_r, & ref_slice );
@@ -730,7 +740,21 @@ LIB_EXPORT rc_t CC FindRefVariationRegionAscii (
         }
 
         rc = FindRefVariationBounds ( ref_slice.str, ref_slice.size,
-                        query.str, query.size, & ref_start, & ref_len );
+                        query.str, query.size, & ref_start, & ref_len, & has_indel );
+
+        /* if there is no indels report that there is no ambiguity
+           for the given ref_pos_var: region starting at ref_pos_var has length = 0
+           ambiguity
+        */
+        if ( !has_indel )
+        {
+            ref_start = ref_pos_adj;
+            ref_len = 0;
+        }
+
+        printf ("ref_slice: %.*s, query: %.*s, ref_start=%lu, ref_len=%lu%s\n",
+            (int)ref_slice.size, ref_slice.str, (int)query.size, query.str,
+            ref_start, ref_len, has_indel != 0 ? "" : " (no indels)");
 
         if ( rc != 0 )
             goto free_resources;
