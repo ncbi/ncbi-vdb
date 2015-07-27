@@ -932,19 +932,14 @@ rc_t CC KMD5FileWhackWrite ( KMD5File *self )
 
     atomic32_set ( & self -> dad . refcount, 1 );
 
-    if ( !self-> u . wr . changed )
-        assert( self -> position == 0 );
-    else
+    /* if destination file has been written farther
+       than our concept of eof, truncate */
+    if ( self-> u . wr . changed && self -> u . wr . max_position > self -> position )
     {
-        /* if destination file has been written farther
-           than our concept of eof, truncate */
-        if ( self -> u . wr . max_position > self -> position )
-        {
-            rc = KFileSetSize ( self -> file, self -> position );
-            if ( rc != 0 )
-                return rc;
-            self -> u . wr . max_position = self -> position;
-        }
+        rc = KFileSetSize ( self -> file, self -> position );
+        if ( rc != 0 )
+            return rc;
+        self -> u . wr . max_position = self -> position;
     }
 
     rc = KFileRelease ( self -> file );
