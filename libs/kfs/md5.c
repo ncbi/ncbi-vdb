@@ -867,6 +867,9 @@ struct KMD5File
 
             /* is transaction open */
             bool topen;
+            
+            /* was file changed */
+            bool changed;
 
             /* path to file for md5 fmt */
             char path [ 1 ];
@@ -929,14 +932,19 @@ rc_t CC KMD5FileWhackWrite ( KMD5File *self )
 
     atomic32_set ( & self -> dad . refcount, 1 );
 
-    /* if destination file has been written farther
-       than our concept of eof, truncate */
-    if ( self -> u . wr . max_position > self -> position )
+    if ( !self-> u . wr . changed )
+        assert( self -> position == 0 );
+    else
     {
-        rc = KFileSetSize ( self -> file, self -> position );
-        if ( rc != 0 )
-            return rc;
-        self -> u . wr . max_position = self -> position;
+        /* if destination file has been written farther
+           than our concept of eof, truncate */
+        if ( self -> u . wr . max_position > self -> position )
+        {
+            rc = KFileSetSize ( self -> file, self -> position );
+            if ( rc != 0 )
+                return rc;
+            self -> u . wr . max_position = self -> position;
+        }
     }
 
     rc = KFileRelease ( self -> file );
@@ -1105,6 +1113,7 @@ rc_t CC KMD5FileSetSizeWrite ( KMD5File *self, uint64_t size )
     rc = KFileSetSize ( self -> file, 0 );
     if ( rc == 0 )
     {
+        self -> u . wr . changed = true;
         /* reset our internal state */
         self -> position = self -> u . wr . max_position = 0;
         MD5StateInit ( & self -> md5 );
@@ -1263,25 +1272,24 @@ rc_t CC KMD5FileRead ( const KMD5File *cself,
             * num_read += total;
             return 0;
         }
-	switch (self->type)
-	{
-	case KMD5FileTypeRead:
-	    /* EOF - get MD5 digest results */
-	    rc = KMD5FileFinish ( self );
-	    break;
-	case KMD5FileTypeWrite:
-	    if ( self -> fmt != NULL)
-	    {
-		uint8_t digest [ 16 ];
+        switch (self->type)
+        {
+        case KMD5FileTypeRead:
+            /* EOF - get MD5 digest results */
+            rc = KMD5FileFinish ( self );
+            break;
+        case KMD5FileTypeWrite:
+            if ( self -> fmt != NULL)
+            {
+            uint8_t digest [ 16 ];
 
-		MD5StateFinish ( & self -> md5, digest );
-		KMD5SumFmtUpdate ( self -> fmt, self -> u . wr . path, digest, true );
-		KMD5SumFmtRelease ( self -> fmt );
-		self -> fmt = NULL;
-	    }
-	    break;
-	}
-
+            MD5StateFinish ( & self -> md5, digest );
+            KMD5SumFmtUpdate ( self -> fmt, self -> u . wr . path, digest, true );
+            KMD5SumFmtRelease ( self -> fmt );
+            self -> fmt = NULL;
+            }
+            break;
+        }
     }
 
     /* always return 0 if some bytes were read */
@@ -1333,6 +1341,7 @@ rc_t CC KMD5FileWrite ( KMD5File *self, uint64_t pos,
     rc = KFileWrite ( self -> file, pos, buffer, size, num_writ );
     if ( rc == 0 && * num_writ != 0 )
     {
+        self -> u . wr . changed = true;
         self -> position += * num_writ;
         if ( self -> position > self -> u . wr . max_position )
             self -> u . wr . max_position = self -> position;
@@ -1435,6 +1444,7 @@ LIB_EXPORT rc_t CC KMD5FileReset ( KMD5File *self )
         return RC ( rcFS, rcFile, rcResetting, rcFile, rcBusy );
 #endif
 
+    self -> u . wr . changed = true;
     self -> position = 0;
     MD5StateInit ( & self -> md5 );
 
@@ -1599,10 +1609,11 @@ LIB_EXPORT rc_t CC KMD5FileMakeWrite ( KMD5File **fp,
                     MD5StateInit ( & f -> md5 );
                     f -> file = out;
                     f -> fmt = md5;
-		    f -> type = KMD5FileTypeWrite;
+                    f -> type = KMD5FileTypeWrite;
 
                     memset ( & f -> u . wr, 0, sizeof f -> u . wr );
                     strcpy ( f -> u . wr . path, path );
+                    f -> u . wr . changed = false;
 
                     rc = KFileSize ( out, & f -> u . wr . max_position );
                     if (rc)
@@ -1708,8 +1719,8 @@ LIB_EXPORT rc_t CC KMD5FileMakeAppend ( KMD5File **fp, KFile *out, KMD5SumFmt *m
                     MD5StateInit ( & f -> md5 );
                     f -> file = out;
                     f -> fmt = md5;
-		    f -> type = KMD5FileTypeWrite;
-
+                    f -> type = KMD5FileTypeWrite;
+                    
                     rc = KMD5SumFmtAddRef ( md5 );
                     if ( rc != 0 )
                     {
@@ -1720,6 +1731,7 @@ LIB_EXPORT rc_t CC KMD5FileMakeAppend ( KMD5File **fp, KFile *out, KMD5SumFmt *m
 
                     memset ( & f -> u . wr, 0, sizeof f -> u . wr );
                     strcpy ( f -> u . wr . path, path );
+                    f -> u . wr . changed = false;
 
                     lvl = klogSys;
                     rc = KFileSize ( out, & f -> position );
@@ -1869,14 +1881,16 @@ LIB_EXPORT rc_t CC KFileMakeNewMD5Read ( const KFile **fp,
                     MD5StateInit ( & f -> md5 );
                     f -> file = (KFile*)in;
                     f -> fmt = md5;
-		    f -> type = KMD5FileTypeWrite;
+                    f -> type = KMD5FileTypeWrite;
+                    
                     memset ( & f -> u . wr, 0, sizeof f -> u . wr );
                     string_copy ( f -> u . wr . path, path_size + 1, path, path_size );
+                    f -> u . wr . changed = false;
 #if 0
 /* KFileSize can't always be used */
                     rc = KFileSize ( in, & f -> u . wr . max_position );
 #else
-		    f->u.wr.max_position = 0;
+                    f->u.wr.max_position = 0;
 #endif
                     if ( rc == 0 )
                         rc = KMD5SumFmtAddRef ( md5 );
