@@ -1340,7 +1340,7 @@ static bool VTablePhysicalEmpty( const struct VTable *self )
         }
         KNamelistRelease( col_names );
     }
-    return rc;
+    return res;
 }
 
 
@@ -1360,7 +1360,9 @@ LIB_EXPORT rc_t CC VTableIsEmpty ( const struct VTable *self, bool * empty )
             rc = RC ( rcVDB, rcTable, rcListing, rcSelf, rcNull );
         else
         {
-            *empty = ( VTableStaticEmpty( self ) && VTablePhysicalEmpty( self ) );
+			bool static_empty = VTableStaticEmpty( self );
+			bool phys_empty = VTablePhysicalEmpty( self );
+            *empty = ( static_empty && phys_empty );
             return 0;
         }
         * empty = false;
