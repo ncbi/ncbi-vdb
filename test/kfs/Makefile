@@ -33,7 +33,8 @@ TEST_TOOLS = \
 	test-kfs \
     test-ramfile \
     test-resolve \
-    test-cachetee
+    test-cachetee \
+	test-kfs-md5
 
 include $(TOP)/build/Makefile.env
 
@@ -67,6 +68,25 @@ $(TEST_BINDIR)/test-kfs: $(TEST_KFS_OBJ)
 
 valgrind_kfs: std
 	valgrind --ncbi $(TEST_BINDIR)/test-kfs
+
+
+#-------------------------------------------------------------------------------
+# test-kfs-md5
+#
+TEST_MD5_SRC = \
+	md5test 
+
+TEST_MD5_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_MD5_SRC))
+
+TEST_MD5_LIB = \
+	-skapp \
+    -sncbi-vdb \
+	-sktst
+
+$(TEST_BINDIR)/test-kfs-md5: $(TEST_MD5_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_MD5_LIB)
+
 
 #-------------------------------------------------------------------------------
 # test-ramfile

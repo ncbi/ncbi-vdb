@@ -40,6 +40,7 @@ SUBDIRS =       \
     ext         \
     judy_test   \
     kfc         \
+	kfs			\
     klib        \
     kfg         \
     kapp        \
