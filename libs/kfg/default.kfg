@@ -50,4 +50,4 @@
 /repository/remote/protected/CGI/resolver-cgi = "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi"
 
 # Aspera configuration
-/tools/ascp/max_rate = "800m"
+/tools/ascp/max_rate = "1000m"
