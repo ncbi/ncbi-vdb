@@ -1282,16 +1282,20 @@ static bool VTableStaticEmpty( const struct VTable *self )
                 if ( rc == 0 )
                 {
                     const KMDataNode * this_col;
-                    rc = KMDataNodeOpenNodeRead ( self->col_node, &this_col, "%s", col_name );
+                    rc = KMDataNodeOpenNodeRead ( self->col_node, &this_col, "%s/row_count", col_name );
                     if ( rc == 0 )
                     {
                         uint64_t this_row_count;
-                        rc = KMDataNodeReadAsU64 ( this_col, &this_row_count );
+                        rc = KMDataNodeReadAsU64( this_col, &this_row_count );
                         if ( rc == 0 )
                         {
                             if ( this_row_count > 0 )
                                 res = false; /* this will terminate the for-loop and leads to return( false ) */
                         }
+						else
+						{
+							rc = 0;
+						}
                         KMDataNodeRelease ( this_col );                    
                     }
                 }
