@@ -21,9 +21,9 @@
     </target>
 
     <target name="runtests" depends="install">
-		<echo message="build.dir=${build.dir}" />
         <exec executable="${python.exe}" failonerror="true">
-            <env key="PATH" value="${build.dir}\bin;${env.Path}"/>
+            <env key="NGS_PY_LIBRARY_PATH" value="${build.dir}\bin"/>
+            <env key="NGS_PY_DOWNLOAD_LIBRARY" value="0"/>
             <arg value="tests.py" />
         </exec>
     </target>
