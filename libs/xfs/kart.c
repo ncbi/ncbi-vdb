@@ -109,6 +109,7 @@ _AddKartItem ( struct XFSKartNode * Node, const char * ItemName )
         return XFS_RC ( rcInvalid );
     }
 
+
     KartItem = XFSKartGet ( Node -> kart, ItemName );
     if ( KartItem == NULL ) {
         return XFS_RC ( rcInvalid );
@@ -172,6 +173,9 @@ _AddKartItem ( struct XFSKartNode * Node, const char * ItemName )
                                     & ( Node -> node . node ),
                                     ItemNode
                                     );
+            if ( GetRCState ( RCt ) == rcExists ) {
+                RCt = 0;
+            }
             /* We do not dispose node here, but on the caller level */
         }
     }
