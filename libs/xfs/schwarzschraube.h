@@ -74,7 +74,7 @@ XFS_EXTERN const struct VFSManager * CC XFS_VfsManager ( );
 /*)))   Sometimes I need KNSManager, and from different places, and
   |||   it is costly too
   (((*/
-struct VFSManager;
+struct KNSManager;
 
 XFS_EXTERN rc_t CC XFS_KnsManagerInit ( );
 XFS_EXTERN rc_t CC XFS_KnsManagerDispose ( );

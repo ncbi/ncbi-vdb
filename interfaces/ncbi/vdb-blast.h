@@ -213,6 +213,7 @@ VDB_EXTERN time_t CC VdbBlastRunSetLastUpdatedDate ( const VdbBlastRunSet *self 
 #endif
 
 /* GetReadName
+ *  returns the total number of bytes needed for name
  */
 VDB_EXTERN size_t CC VdbBlastRunSetGetReadName ( const VdbBlastRunSet *self,
     uint64_t read_id, char *name_buffer, size_t bsize );
@@ -263,9 +264,32 @@ VDB_EXTERN VdbBlastReferenceSet* CC VdbBlastReferenceSetAddRef
 VDB_EXTERN void CC VdbBlastReferenceSetRelease ( VdbBlastReferenceSet *self );
 
 
+/* GetNumSequences
+ *  Returns the total number of biological sequences in reference set.
+ *  Always returns the exact count.
+ *  Never returns "eVdbBlastTooExpensive".
+ */
 VDB_EXTERN uint64_t CC VdbBlastReferenceSetGetNumSequences
     ( const VdbBlastReferenceSet *self, VdbBlastStatus *status );
 
+/* GetTotalLength
+ *  Returns the total number of bases in reference set.
+ *  Always returns the exact length.
+ *  Never returns "eVdbBlastTooExpensive".
+ */
+VDB_EXTERN uint64_t CC VdbBlastReferenceSetGetTotalLength
+    ( const VdbBlastReferenceSet *self, VdbBlastStatus *status );
+
+/* GetReadName
+ *  returns the total number of bytes needed for name
+ */
+VDB_EXTERN size_t CC VdbBlastReferenceSetGetReadName (
+    const VdbBlastReferenceSet *self,
+    uint64_t read_id, char *name_buffer, size_t bsize );
+
+VDB_EXTERN VdbBlastStatus CC VdbBlastReferenceSetGetReadId (
+    const VdbBlastReferenceSet *self,
+    const char *name_buffer, size_t bsize, uint64_t *read_id );
 
 /*------------------------------------------------------------------------------
  * VdbBlastReadSet

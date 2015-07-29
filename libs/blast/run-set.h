@@ -141,11 +141,14 @@ typedef struct {
 typedef struct VdbBlastRef VdbBlastRef;
 typedef struct {
     VdbBlastRef  *rfd;
-    size_t        rfdk; /* number of rfd members */
-    size_t        rfdn; /* allocated rfd members */
+    size_t        rfdk; /* Number of rfd members */
+    size_t        rfdn; /* Allocated rfd members */
 
-    BSTree tRuns;     /* rundesc-s */
-    BSTree tExtRefs; /* SEQ_ID-s */
+    uint64_t  totalLen; /* Total number of bases in reference set.
+                           Base count for circular references is doubled. */
+
+    BSTree tRuns;       /* rundesc-s */
+    BSTree tExtRefs;    /* SEQ_ID-s */
 } RefSet;
 
 void _RefSetFini(RefSet *self);

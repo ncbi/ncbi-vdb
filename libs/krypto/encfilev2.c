@@ -196,10 +196,19 @@ rc_t KEncFileBufferWrite (KEncFile * self, uint64_t offset, const void * buffer,
     assert (num_writ);
 
     rc = KFileWriteAll (self->encrypted, offset, buffer, bsize, num_writ);
-    if (rc)
+    if (rc != 0)
+    {
 /* leave logging to callers? */
         PLOGERR (klogErr, (klogErr, rc, "Error writing to encrypted file "
                            "at '$(P)", "P=%lu", offset));
+        // make sure we don't crash later in destructor
+        if (self->enc_size > offset + *num_writ)
+        {
+            self->enc_size = offset + *num_writ;
+        }
+        return rc;
+    }
+    
     if (bsize != *num_writ)
     {
 /*         KOutMsg ("%s: bsize %zu *num_writ %zu\n",__func__, bsize, *num_writ); */
@@ -1023,7 +1032,7 @@ rc_t KEncFileBlockRead (KEncFile * self, KEncFileBlock * block,
 
                     if (crc != u.b.crc)
                     {
-                        vrc = RC (rcKrypto, rcFile, rcValidating, rcCrc, rcCorrupt);
+                        vrc = RC (rcKrypto, rcFile, rcValidating, rcChecksum, rcCorrupt);
                         PLOGERR (klogErr,
                                  (klogErr,
                                   vrc,
@@ -1035,7 +1044,7 @@ rc_t KEncFileBlockRead (KEncFile * self, KEncFileBlock * block,
                     }
                     if (crc != u.b.crc_copy)
                     {
-                        vrc = RC (rcKrypto, rcFile, rcValidating, rcCrc, rcCorrupt);
+                        vrc = RC (rcKrypto, rcFile, rcValidating, rcChecksum, rcCorrupt);
                         PLOGERR (klogErr,
                                  (klogErr,
                                   vrc,
@@ -1210,8 +1219,8 @@ rc_t CC KEncFileDestroy (KEncFile *self)
          * or if we've written something which will mean a change to v2
          * of the encrypted file format
          */
-        if ((self->enc_size == 0) || (self->seekable && self->changed) ||
-            ((self->enc_size == 0) && (!self->dad.read_enabled) && self->changed && (self->has_header == false)))
+        if ((self->dec_size == 0) || (self->seekable && self->changed) ||
+            ((self->dec_size == 0) && (!self->dad.read_enabled) && self->changed && (self->has_header == false)))
 /* SMURF IX
             (self->has_header == false))
  */
@@ -1553,13 +1562,13 @@ rc_t KEncFileSetSizeInt (KEncFile *self, uint64_t dec_size)
             /* first trim for some reason... sparse files? */
             rc = KFileSetSize (self->encrypted, trim_size);
             if (rc)
-                LOGERR (klogErr, rc, "failure to trim size of encrpted file");
+                LOGERR (klogErr, rc, "failure to trim size of encrypted file");
             else
             {
                 /* now extend to encrypted size */
                 rc = KFileSetSize (self->encrypted, enc_size);
                 if (rc)
-                    LOGERR (klogErr, rc, "failure to file size of encrpted file");
+                    LOGERR (klogErr, rc, "failure to file size of encrypted file");
             }
         }
         if (rc == 0)

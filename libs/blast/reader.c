@@ -20,7 +20,7 @@
  *
  *  Please cite the author in any work or product based on this material.
  *
- * ===========================================================================
+ * =============================================================================
  *
  */
 
@@ -28,7 +28,7 @@
 
 #include "blast-mgr.h" /* BTableType */
 #include "reader.h" /* Data2na */
-#include "ref-reader.h" /* _ReferencesWhack */
+#include "reference.h" /* _ReferencesWhack */
 #include "run-set.h" /* VdbBlastRunSet */
 
 #include <ncbi/vdb-blast-priv.h>  /* VDB_READ_DIRECT */
@@ -1013,8 +1013,7 @@ uint32_t _Core2naOpen1stRun(Core2na *self,
             else
             {   S }
         }
-        else {
-            assert(!reader->refs);
+        else if (reader->refs == NULL) {
             reader->refs = _RunSetMakeReferences(runs, &status);
             if (reader->refs == NULL) {
                 status = eVdbBlastErr;
@@ -2146,19 +2145,134 @@ LIB_EXPORT VdbBlast4naReader* CC VdbBlastReferenceSetMake4naReader
     return VdbBlastRunSetMake4naReaderExt(self->rs, status, VDB_READ_REFERENCE);
 }
 
+static const struct References* _VdbBlastReferenceSetCheckReferences
+    (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
+{
+    assert(status);
+
+    if (self == NULL || self->rs == NULL ||
+        self->rs->core2naRef.reader.refs == NULL)
+    {
+        *status = eVdbBlastErr;
+        return NULL;
+    }
+
+    _VdbBlastRunSetBeingRead(self->rs);
+
+    *status = eVdbBlastNoErr;
+    return self->rs->core2naRef.reader.refs;
+}
+
+static const struct References* _VdbBlastReferenceSetInitReferences
+    (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
+{
+    VdbBlastRunSet *rs = NULL;
+    Reader2na *reader = NULL;
+
+    assert(status);
+
+    if (self == NULL || self->rs == NULL) {
+        *status = eVdbBlastErr;
+        return NULL;
+    }
+
+    rs = (VdbBlastRunSet*)self->rs;
+
+    _VdbBlastRunSetBeingRead(rs);
+
+    reader = &rs->core2naRef.reader;
+
+    *status = eVdbBlastNoErr;
+
+    if (reader->refs == NULL) {
+        rc_t rc = KLockAcquire(rs->core2naRef.mutex);
+        if (rc != 0) {
+            *status = eVdbBlastErr;
+            return NULL;
+        }
+
+        if (reader->refs == NULL) {
+            reader->refs = _RunSetMakeReferences(&rs->runs, status);
+        }
+
+        KLockUnlock(rs->core2naRef.mutex);
+    }
+
+    return reader->refs;
+}
+
 LIB_EXPORT uint64_t CC VdbBlastReferenceSetGetNumSequences
     (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
 {
+    const struct References *refs = NULL;
     VdbBlastStatus dummy = eVdbBlastNoErr;
     if (status == NULL) {
         status = &dummy;
     }
-    if (self == NULL) {
-        *status = eVdbBlastErr;
+
+    refs = _VdbBlastReferenceSetInitReferences(self, status);
+    if (*status != eVdbBlastNoErr) {
         return 0;
     }
-    _VdbBlastRunSetBeingRead(self->rs);
-    return 0;
+
+    assert                           (refs);
+    return _ReferencesGetNumSequences(refs, status);
+}
+
+LIB_EXPORT uint64_t CC VdbBlastReferenceSetGetTotalLength
+    (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
+{
+    const struct References *refs = NULL;
+    VdbBlastStatus dummy = eVdbBlastNoErr;
+    if (status == NULL) {
+        status = &dummy;
+    }
+
+    refs = _VdbBlastReferenceSetInitReferences(self, status);
+    if (*status != eVdbBlastNoErr) {
+        return 0;
+    }
+
+    assert                          (refs);
+    return _ReferencesGetTotalLength(refs, status);
+}
+
+LIB_EXPORT size_t CC VdbBlastReferenceSetGetReadName(
+    const VdbBlastReferenceSet *self,
+    uint64_t read_id, char *name_buffer, size_t bsize)
+{
+    if (bsize > 0 && name_buffer != NULL) {
+        name_buffer[0] = '\0';
+    }
+
+    {
+        VdbBlastStatus status = eVdbBlastErr;
+
+        const struct References *refs
+            = _VdbBlastReferenceSetCheckReferences(self, &status);
+        if (status != eVdbBlastNoErr) {
+            return 0;
+        }
+
+        assert                       (refs);
+        return _ReferencesGetReadName(refs, read_id, name_buffer, bsize);
+    }
+}
+
+LIB_EXPORT VdbBlastStatus CC VdbBlastReferenceSetGetReadId(
+    const VdbBlastReferenceSet *self,
+    const char *name_buffer, size_t bsize, uint64_t *read_id)
+{
+    VdbBlastStatus status = eVdbBlastErr;
+
+    const struct References *refs
+        = _VdbBlastReferenceSetCheckReferences(self, &status);
+    if (status != eVdbBlastNoErr) {
+        return status;
+    }
+
+    assert                       (refs);
+    return _ReferencesGetReadId(refs, name_buffer, bsize, read_id);
 }
 
 /* EOF */

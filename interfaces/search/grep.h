@@ -32,6 +32,7 @@
 #endif
 
 #include <search/extern.h>
+#include <insdc/insdc.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -256,26 +257,29 @@ SEARCH_EXTERN size_t CC FindLongestCommonSubstring(char const* pS1, char const* 
                                 size_t* pRetStart1, size_t* pRetStart2);
 
 /*
-    FindRefVariationBounds uses Smith-Waterman algorithm
+    FindRefVariationRegionAscii uses Smith-Waterman algorithm
     to find theoretical bounds of the variation for
-    the given reference slice and the query (properly preapared,
-    i.e. containing sequences of bases at the beginning and
-    the end matching the reference)
+    the given reference, position on the reference
+    and the raw query, or variation to look for at the given
+    reference position
 
-    ref_slice, ref_slice_size [IN] - the reference slice on which the
-                                     variation will be looked for
-    query, query_size [IN] - the query that represents the variation placed
-                             inside the reference slice
-    ref_start, ref_len [OUT, NULL OK] - the region of ambiguity on the reference
-    query_start, query_len [OUT, NULL OK] - the region of ambiguity (the
-                                            possible variation) on the query
+    ref, ref_size [IN]     - the reference on which the
+                             variation will be looked for
+    ref_pos_var [IN]       - the position on reference to look for the variation
+    variation, variation_size [IN] - the variation to look for at the ref_pos_var
+    var_len_on_ref [IN]    - the length of the variation on the reference, e.g.:
+                           - mismatch, 2 bases: variation = "XY", var_len_on_ref = 2
+                           - deletion, 3 bases: variation = "", var_len_on_ref = 3
+                           - insertion, 2 bases:  variation = "XY", var_len_on_ref = 0
 
+    p_ref_start, p_ref_len [OUT, NULL OK] - the region of ambiguity on the reference
+                                            (return values)
 */
-SEARCH_EXTERN rc_t CC FindRefVariationBounds (
-    char const* ref_slice, size_t ref_slice_size,
-    char const* query, size_t query_size,
-    size_t* ref_start, size_t* ref_len,
-    size_t* query_start, size_t* query_len
+
+LIB_EXPORT rc_t CC FindRefVariationRegionAscii (
+        INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
+        INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
+        size_t* p_ref_start, size_t* p_ref_len
     );
 
 #ifdef __cplusplus
