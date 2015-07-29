@@ -62,6 +62,8 @@ static bool no_hup;
 static atomic32_t hangup;
 static atomic32_t quitting;
 
+static bool convert_args_paths = true;
+
 /* Quitting
  *  is the program supposed to exit
  */
@@ -178,7 +180,7 @@ char *rewrite_arg ( const wchar_t *arg )
             if ( arg [ 2 ] != '\\' && arg [ 2 ] != '/' )
                 rewrite = true;
         }
-        if ( rewrite )
+        if ( rewrite && convert_args_paths )
         {
             /* incomplete path */
             len = GetFullPathNameW ( arg, sizeof rewrit / sizeof rewrit [ 0 ], rewrit, NULL );
@@ -233,7 +235,6 @@ char *rewrite_arg ( const wchar_t *arg )
     return utf8;
 }
 
-
 int __cdecl wmain ( int argc, wchar_t *wargv [], wchar_t *envp [] )
 {
     char **argv;
@@ -272,4 +273,10 @@ int __cdecl wmain ( int argc, wchar_t *wargv [], wchar_t *envp [] )
     CoUninitialize ();
 
     return status;
+}
+
+void  __declspec( dllexport ) __stdcall wmainCRTStartupNoPathConversion()
+{
+	convert_args_paths = false;
+	wmainCRTStartup();
 }

@@ -61,6 +61,10 @@ extern "C" {
  * these are fed in one by one or through arrays to build up the
  * tables used to parse the caommand line argc/argv
  */
+
+typedef void (CC * WhackParamFnP) (void *);
+typedef rc_t (CC * ConvertParamFnP) (const char *, size_t, void **, WhackParamFnP *);
+    
 typedef struct OptDef
 {
     const char *  name;           	/* UTF8/ASCII NUL terminated long name */
@@ -71,6 +75,7 @@ typedef struct OptDef
 #define OPT_UNLIM 0
     bool          needs_value;    	/* does this require an argument value? */
     bool          required;             /* is this a required parameter?  Not supported yet. */
+    ConvertParamFnP convert_fn;   /* function to convert option. can perform binary conversions. may be NULL */
 } OptDef;
 
 extern OptDef StandardOptions [];
@@ -186,7 +191,7 @@ rc_t CC ArgsOptionCount ( const Args * self, const char * option_name, uint32_t 
  *  use OptionCount to know how many were seen.
  */
 rc_t CC ArgsOptionValue ( const Args * self, const char * option_name,
-    uint32_t iteration, const char ** value );
+    uint32_t iteration, const void ** value );
 
 /*
  * ParamCount
@@ -199,7 +204,7 @@ rc_t CC ArgsParamCount (const Args * self, uint32_t * count);
  *  What was the Nth parameter seen?  Use ParamCount to know how many
  *  were seen.
  */
-rc_t CC ArgsParamValue (const Args * self, uint32_t iteration, const char ** value_string);
+rc_t CC ArgsParamValue (const Args * self, uint32_t iteration, const void ** value_string);
 
 
 /*
