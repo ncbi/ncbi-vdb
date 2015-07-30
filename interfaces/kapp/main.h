@@ -113,7 +113,7 @@ rc_t CC Version ( struct Args const * args );
 
 /* Usage - EXTERN
  *  This function is called to check if enviroments meets tool needs
- *  Pass 0 to requireRamSizeKb if you don't need to check for RAM size
+ *  Pass 0 to requireRamSize if you don't need to check for RAM size
  */
 rc_t CC KAppCheckEnvironment ( bool require64Bits, uint64_t requireRamSize );
 
