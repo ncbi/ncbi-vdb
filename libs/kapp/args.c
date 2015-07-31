@@ -90,10 +90,11 @@ bool CC is_valid_name (const char * string)
  */
 typedef char ParamValue [1];
 
-typedef struct ParamContainer {
+typedef struct ParamValueContainer {
+    uint32_t        param_index;
     ParamValue *    param_value;
     WhackParamFnP   whack;
-} ParamContainer;
+} ParamValueContainer;
 
 /*
  * Whack
@@ -110,10 +111,10 @@ void CC ParamValueWhack (void * self)
 static
 void CC ParamValueVectorWhack (void * self, void * ignored)
 {
-    ParamContainer * p_container;
+    ParamValueContainer * p_container;
     assert (self);
     
-    p_container = (ParamContainer *)self;
+    p_container = (ParamValueContainer *)self;
     
     p_container->whack(p_container->param_value);
     
@@ -126,44 +127,46 @@ void CC ParamValueVectorWhack (void * self, void * ignored)
  *   the value passed in must be a NUL termintaed string as well
  */
 static
-rc_t CC ParamValueMake (ParamContainer * pself, const char * value, size_t value_size, ConvertParamFnP convert_fn)
+rc_t CC ParamValueMake (Args * self, ParamValueContainer * p_container, uint32_t arg_index, const char * value, size_t value_size, ConvertParamFnP convert_fn)
 {
     size_t alloc_size;
     
-    assert (pself);
+    assert(self);
+    assert (p_container);
     assert (value);
     assert (value_size);
+    
+    p_container->param_index = arg_index;
+    p_container->whack = ParamValueWhack;
     
     if (convert_fn != NULL)
     {
         WhackParamFnP whack = NULL;
-        rc_t rc = convert_fn(value, value_size, (void **)&pself->param_value, &whack);
+        rc_t rc = convert_fn(self, arg_index, value, value_size, (void **)&p_container->param_value, &whack);
         if (rc != 0)
         {
             return rc;
         }
         
-        if (whack == NULL)
+        if (whack != NULL)
         {
-            whack = ParamValueWhack;
+            p_container->whack = whack;
         }
-        pself->whack = whack;
         
         return 0;
     }
 
     alloc_size = sizeof (ParamValue) + value_size;
-    pself->param_value = malloc (alloc_size);
+    p_container->param_value = malloc (alloc_size);
 
-    if (pself->param_value == NULL)
+    if (p_container->param_value == NULL)
     {
         fprintf (stderr, "Error allocating memory for option parameter %s\n",
                  value);
         return RC (rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
     }
 
-    string_copy (*pself->param_value, alloc_size, value, value_size);
-    pself->whack = ParamValueWhack;
+    string_copy (*p_container->param_value, alloc_size, value, value_size);
     return 0;
 }
 
@@ -282,6 +285,7 @@ uint32_t CC OptionGetCount (const Option *self)
 static
 rc_t CC OptionGetValue (const Option * self, uint32_t number, const void ** value)
 {
+    ParamValueContainer * p_container;
     /* SKH -- not sure why this was here. 
        const char * pc; */
     /* uint32_t count; */
@@ -291,11 +295,13 @@ rc_t CC OptionGetValue (const Option * self, uint32_t number, const void ** valu
 
     /* count = OptionGetCount(self); */
 
-    *value = VectorGet (&self->values, number);
+    p_container = VectorGet (&self->values, number);
     /* SKH -- this was checking pc, which is uninitialized */
-    if (*value == NULL)
+    if (p_container == NULL)
         return RC (rcRuntime, rcArgv, rcAccessing, rcIndex, rcExcessive);
-
+    
+    *value = p_container->param_value;
+    
     return 0;
 }
 
@@ -303,52 +309,53 @@ rc_t CC OptionGetValue (const Option * self, uint32_t number, const void ** valu
  * add a value to this node.  If a value isn't needed this is just incrementing the count
  */
 static
-rc_t CC OptionAddValue (Option * self, const char * value, size_t size)
+rc_t CC OptionAddValue (Args * self, Option * option, uint32_t arg_index, const char * value, size_t size)
 {
-    ParamContainer * p_container;
+    ParamValueContainer * p_container;
     rc_t rc = 0;
 
     assert (self);
+    assert (option);
     
-    p_container = (ParamContainer *)malloc( sizeof *p_container );
+    p_container = (ParamValueContainer *)malloc( sizeof *p_container );
     if (p_container == NULL)
     {
         rc = RC (rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
         return rc;
     }
 
-    ++self->count;
+    ++option->count;
 
 /*     KOutMsg ("%s: name %s count %u max_count %u value %s\n", __func__, self->name, self->count, self->max_count, value); */
-    if (self->max_count && (self->count > self->max_count))
+    if (option->max_count && (option->count > option->max_count))
     {
-        --self->count;
+        --option->count;
         rc = RC (rcRuntime, rcArgv, rcInserting, rcData, rcExcessive);
         PLOGERR (klogErr,
                  (klogErr, rc, "Too many occurrences of option '$(O)'",
-                  "O=--%s", self->name));
+                  "O=--%s", option->name));
     }
-    else if (self->needs_value)
+    else if (option->needs_value)
     {
         assert (value);     /* gotta have a value */
         assert (size);      /* value can't be a NUL string */
 
-        rc = ParamValueMake (p_container, value, size, self->convert_fn);
+        rc = ParamValueMake (self, p_container, arg_index, value, size, option->convert_fn);
         if (rc == 0)
         {
             /* NOTE: effectively going in as a char ** though we will 
              * pull it out as a char* with the same value */
-            rc = VectorAppend (&self->values, NULL, p_container);
+            rc = VectorAppend (&option->values, NULL, p_container);
             if (rc)
             {
                 PLOGERR (klogErr,
                          (klogErr, rc, "error capturing parameter '$(O)'",
-                          "O=--%s", self->name));
+                          "O=--%s", option->name));
                 p_container->whack (p_container->param_value);
             }
             else
             {
-                ARGS_DBG( "added option-value %s", self->name );
+                ARGS_DBG( "added option-value %s", option->name );
             }
         }
     }
@@ -597,14 +604,113 @@ void CC HelpGroupVectorWhack (void * item, void * ignored)
 }
 #endif
 
+typedef struct Parameter
+{
+    uint32_t position;
+    ConvertParamFnP  convert_fn;
+} Parameter;
+
+static
+rc_t CC ParamMake (Parameter ** p_parameter, uint32_t position, ConvertParamFnP convert_fn)
+{
+    Parameter * parameter;
+    
+    parameter = malloc (sizeof(Parameter));
+    if (parameter == NULL)
+    {
+        fprintf (stderr, "Error allocating parameter structure\n");
+        return RC (rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
+
+    }
+    
+    parameter->position = position;
+    parameter->convert_fn = convert_fn;
+    
+    *p_parameter = parameter;
+    return 0;
+}
+
+static
+void ParamWhack (Parameter * param)
+{
+    assert(param);
+    free(param);
+}
+
+static
+void CC ParamVectorWhack (void * item, void * ignored)
+{
+    ParamWhack(item);
+}
+
+static
+rc_t CC ParamGetValue (const Vector * param_values, uint32_t number, const void ** value)
+{
+    ParamValueContainer * p_container;
+    
+    assert (param_values);
+    assert (value);
+    
+    p_container = VectorGet (param_values, number);
+    if (p_container == NULL)
+        return RC (rcRuntime, rcArgv, rcAccessing, rcIndex, rcExcessive);
+    
+    *value = p_container->param_value;
+    
+    return 0;
+}
+
+/*
+ * add a param value to param_values vector.  Calls convert_fn if provided
+ */
+static
+rc_t CC ParamAddValue (Args * self, Vector * param_values, uint32_t arg_index, const char * value, size_t size, ConvertParamFnP convert_fn)
+{
+    ParamValueContainer * p_container;
+    rc_t rc = 0;
+    
+    assert (self);
+    
+    p_container = (ParamValueContainer *)malloc( sizeof *p_container );
+    if (p_container == NULL)
+    {
+        rc = RC (rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
+        return rc;
+    }
+
+    assert (value);     /* gotta have a value */
+    assert (size);      /* value can't be a NUL string */
+    
+    rc = ParamValueMake (self, p_container, arg_index, value, size, convert_fn);
+    if (rc == 0)
+    {
+        rc = VectorAppend (param_values, NULL, p_container);
+        if (rc)
+        {
+            PLOGERR (klogErr,
+                     (klogErr, rc, "error capturing parameter at index: $(O)",
+                      "O=%u", arg_index));
+            p_container->whack (p_container->param_value);
+        }
+        else
+        {
+            ARGS_DBG( "added param-value at index: %u", arg_index );
+        }
+    }
+
+    return rc;
+}
+
+
 /* ==========
  */
 struct Args
 {
     BSTree names;
     BSTree aliases;
-    Vector argv;
     Vector params;
+    Vector argv;
+    Vector param_values;
     Vector help;
 #if NOT_USED_YET
     HelpGroup * def_help;
@@ -633,8 +739,9 @@ rc_t CC ArgsMake (Args ** pself)
 #endif
         BSTreeInit (&self->names);
         BSTreeInit (&self->aliases);
-        VectorInit (&self->argv,0,8);
         VectorInit (&self->params,0,8);
+        VectorInit (&self->argv,0,8);
+        VectorInit (&self->param_values,0,8);
         VectorInit (&self->help,0,16);
 #if HONOR_LEGACY_Q_ALIAS
         self -> qalias_replaced = false;
@@ -664,8 +771,9 @@ rc_t CC ArgsWhack (Args * self)
     {
         BSTreeWhack (&self->names, OptionTreeWhack, NULL);
         BSTreeWhack (&self->aliases, OptAliasTreeWhack, NULL);
+        VectorWhack (&self->params, ParamVectorWhack, NULL);
         VectorWhack (&self->argv, ParamValueVectorWhack, NULL);
-        VectorWhack (&self->params, NULL, NULL);
+        VectorWhack (&self->param_values, ParamValueVectorWhack, NULL);
 #if NOT_USED_YET
         VectorWhack (&self->help, HelpGroupVectorWhack, NULL);
 #endif
@@ -854,19 +962,55 @@ rc_t CC ArgsAddOptionArray (Args * self, const OptDef * option, uint32_t count /
     return rc;
 }
 
+rc_t CC ArgsAddParam(Args * self, const ParamDef * param_def)
+{
+    rc_t rc;
+    Parameter * param;
+    uint32_t params_count;
+    
+    assert(self);
+    assert(param_def);
+    
+    params_count = VectorLength(&self->params);
+    
+    rc = ParamMake (&param, params_count, param_def->convert_fn);
+    if (rc)
+        return rc;
+    
+    rc = VectorAppend(&self->params, NULL, param);
+    if (rc != 0)
+    {
+        ParamWhack(param);
+    }
+    
+    return rc;
+}
+
+rc_t CC ArgsAddParamArray (Args * self, const ParamDef * param, uint32_t count)
+{
+    rc_t rc;
+    
+    for (rc = 0; (rc == 0) && (count > 0); --count, ++param)
+    {
+        rc = ArgsAddParam (self, param);
+    }
+    
+    return 0;
+}
+
 /*
  */
 rc_t CC next_arg (const Args * self, int * pix, int max, const char ** pvalue)
 {
     int ix;
-    ParamContainer * p_container;
+    ParamValueContainer * p_container;
 
     if (*pix >= max)
         return RC (rcApp, rcArgv, rcAccessing, rcString, rcNotFound);
 
     ix = *pix;
     ix++;
-    p_container = (ParamContainer *) VectorGet (&self->argv, ix);
+    p_container = (ParamValueContainer *) VectorGet (&self->argv, ix);
     assert(p_container);
     *pvalue = (const char *) p_container->param_value;
     *pix = ix;
@@ -938,19 +1082,19 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
     for ( ix = 0; ix < argc; ++ix )
     {
         size_t len;
-        ParamContainer * p_container;
+        ParamValueContainer * p_container;
 
         parg = argv[ix];
         len = strlen ( parg );
         
-        p_container = (ParamContainer *)malloc( sizeof *p_container );
+        p_container = (ParamValueContainer *)malloc( sizeof *p_container );
         if (p_container == NULL)
         {
             rc = RC (rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
             break;
         }
 
-        rc = ParamValueMake ( p_container, parg, len, NULL );
+        rc = ParamValueMake ( self, p_container, ix, parg, len, NULL );
         if ( rc == 0 )
             rc = VectorAppend ( &self->argv, NULL, p_container );
         if ( rc )
@@ -978,19 +1122,19 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
 
     for ( ix = ix_from; ix < ix_to; ++ix )
     {
-        ParamContainer * p_container = (ParamContainer *)VectorGet( &self->argv, ix );
+        ParamValueContainer * p_container = (ParamValueContainer *)VectorGet( &self->argv, ix );
         parg = ( const char * )p_container->param_value;
 
         ARGS_DBG( "ArgsParse: parsing '%s' from self->argv", parg );
 
         if ( parg[ 0 ] != '-' )
         {
-            /* we can do this because it is already a (const char *)
-             * and (ParamValue *) after the first loop */
-            rc = VectorAppend ( &self->params, NULL, parg );
+            uint32_t params_count = VectorLength( &self->param_values );
+            Parameter * param = VectorGet( &self->params, params_count );
+            rc = ParamAddValue(self, &self->param_values, ix, parg, string_size( parg ), param ? param->convert_fn : NULL );
             if ( rc )
                 break;
-            ARGS_DBG( "ArgsParse: appending to params '%s'", parg );
+            ARGS_DBG( "ArgsParse: appending to param_values '%s'", parg );
         }
         else
         {
@@ -1042,12 +1186,12 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
 
                             value_len = string_size( value );
 
-                            rc = OptionAddValue( node, value, value_len );
+                            rc = OptionAddValue( self, node, ix, value, value_len );
                         }
                     }
                     else
                     {
-                        rc = OptionAddValue( node, NULL, 0 );
+                        rc = OptionAddValue( self, node, ix, NULL, 0 );
                     }
 
                     if ( rc != 0 )
@@ -1132,19 +1276,19 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
                             }
                             else
                             {
-                                ParamContainer * next_p_container = (ParamContainer *) VectorGet( &self->argv, ++ix );
+                                ParamValueContainer * next_p_container = (ParamValueContainer *) VectorGet( &self->argv, ++ix );
                                 assert(next_p_container);
                                 value = ( const char * ) next_p_container->param_value;
                             }
                             ARGS_DBG( "ArgsParse: the value of '%s' is '%s'", name, value );
 
                             if ( rc == 0 )
-                                rc = OptionAddValue( node, value, string_size( value ) );
+                                rc = OptionAddValue( self, node, ix, value, string_size( value ) );
                             break_loop = true;
                         }
                         else
                         {
-                            rc = OptionAddValue( node, NULL, 0 );
+                            rc = OptionAddValue( self, node, ix, NULL, 0 );
                         }
 
                         if ( rc != 0 )
@@ -1282,7 +1426,6 @@ rc_t CC ArgsOptionValue (const Args * self, const char * option_name, uint32_t i
                                      const void ** value_bin)
 {
     const Option * node;
-    ParamContainer* p_container;
     rc_t rc;
 
     if (self == NULL)
@@ -1297,16 +1440,8 @@ rc_t CC ArgsOptionValue (const Args * self, const char * option_name, uint32_t i
     if (node == NULL)
         return RC (rcRuntime, rcArgv, rcAccessing, rcName, rcNotFound);
     
-    rc = OptionGetValue (node, iteration, (const void **)&p_container);
-    if (rc != 0)
-    {
-        return rc;
-    }
-    
-    assert(p_container);
-    
-    *value_bin = p_container->param_value;
-    return  0;
+    rc = OptionGetValue (node, iteration, value_bin);
+    return rc;
 }
 
 rc_t CC ArgsParamCount (const Args * self, uint32_t * count)
@@ -1316,26 +1451,29 @@ rc_t CC ArgsParamCount (const Args * self, uint32_t * count)
     else if (count == NULL)
         return RC (rcRuntime, rcArgv, rcAccessing, rcParam, rcNull);
 
-    *count = VectorLength (&self->params);
+    *count = VectorLength (&self->param_values);
     return 0;
 }
 
-rc_t CC ArgsParamValue (const Args * self, uint32_t iteration, const void ** value_string)
+rc_t CC ArgsParamValue (const Args * self, uint32_t iteration, const void ** value)
 {
+    rc_t rc;
+    
     if (self == NULL)
         return RC (rcRuntime, rcArgv, rcAccessing, rcSelf, rcNull);
 
-    if (value_string == NULL)
+    if (value == NULL)
         return RC (rcRuntime, rcArgv, rcAccessing, rcParam, rcNull);
 
-    if (iteration >= VectorLength (&self->params))
+    if (iteration >= VectorLength (&self->param_values))
     {
-        *value_string = NULL;
+        *value = NULL;
         return RC (rcRuntime, rcArgv, rcAccessing, rcParam, rcExcessive);
     }
 
-    *value_string = (const char*) VectorGet (&self->params, iteration);
-    return 0;
+    
+    rc = ParamGetValue (&self->param_values, iteration, value);
+    return rc;
 }
 
 rc_t CC ArgsArgvCount (const Args * self, uint32_t * count)
@@ -1359,7 +1497,7 @@ rc_t CC ArgsArgc (const Args * self, uint32_t * count)
 
 rc_t CC ArgsArgvValue (const Args * self, uint32_t iteration, const char ** value_string)
 {
-    ParamContainer * p_container;
+    ParamValueContainer * p_container;
     
     if (self == NULL)
         return RC (rcRuntime, rcArgv, rcAccessing, rcSelf, rcNull);
@@ -1373,10 +1511,10 @@ rc_t CC ArgsArgvValue (const Args * self, uint32_t iteration, const char ** valu
         return RC (rcRuntime, rcArgv, rcAccessing, rcArgv, rcExcessive);
     }
 
-    p_container = (ParamContainer*) VectorGet (&self->argv, iteration);
+    p_container = (ParamValueContainer*) VectorGet (&self->argv, iteration);
     assert(p_container);
     
-    *value_string = p_container->param_value;
+    *value_string = (const char *)p_container->param_value;
     return 0;
 }
 

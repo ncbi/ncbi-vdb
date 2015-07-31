@@ -76,6 +76,8 @@ $(ILIBDIR)/libkapp: $(addprefix $(ILIBDIR)/libkapp.,$(LIBX))
 
 KAPP_CMN = \
 	args \
+	args-conv \
+	args-conv-os \
 	tokenizer \
 	sysmain \
 	ram
