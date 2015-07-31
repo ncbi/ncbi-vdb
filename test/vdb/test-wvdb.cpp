@@ -156,7 +156,7 @@ FIXTURE_TEST_CASE ( BlobCorruptOnCommit, WVDBFixture )
 }
 
 FIXTURE_TEST_CASE ( CreateTableInNestedDatabase, WVDBFixture ) 
-{   // error report: VDatabaseOpenTableRead inside a nested database segfaults
+{   // VDB-1617: VDatabaseOpenTableRead inside a nested database segfaults
     m_databaseName = GetName();
     string schemaText = 
         "table table1 #1.0.0 { column ascii column1; };"
