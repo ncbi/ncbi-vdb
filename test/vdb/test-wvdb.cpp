@@ -40,9 +40,62 @@ using namespace std;
 
 TEST_SUITE( WVdbTestSuite )
 
-// this test case is not very useful but is here as a blueprint for other write-side tests 
-TEST_CASE(BlobCorruptOnCommit) 
+class WVDBFixture
 {
+public:
+    WVDBFixture() 
+    : m_databaseName(0), m_db(0)
+    {
+    }
+    ~WVDBFixture() 
+    {
+        if ( m_db )
+        {
+            VDatabaseRelease ( m_db );
+        }
+        RemoveDatabase();
+    }
+    
+    void RemoveDatabase ()
+    {
+        if ( m_databaseName )
+        {
+            KDirectory* wd;
+            KDirectoryNativeDir ( & wd );
+            KDirectoryRemove ( wd, true, m_databaseName ); 
+            KDirectoryRelease ( wd );
+        }
+    }
+
+    void MakeDatabase ( const string& p_schemaText, const string& p_schemaSpec ) 
+    {
+        RemoveDatabase();
+    
+        VDBManager* mgr;
+        THROW_ON_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
+        VSchema* schema;
+        THROW_ON_RC ( VDBManagerMakeSchema ( mgr, & schema ) );
+        THROW_ON_RC ( VSchemaParseText(schema, NULL, p_schemaText . c_str(), p_schemaText . size () ) );
+        
+        THROW_ON_RC ( VDBManagerCreateDB ( mgr, 
+                                          & m_db, 
+                                          schema, 
+                                          p_schemaSpec . c_str (), 
+                                          kcmInit + kcmMD5, 
+                                          "%s", 
+                                          m_databaseName ) );
+        THROW_ON_RC ( VSchemaRelease ( schema ) );
+        THROW_ON_RC ( VDBManagerRelease ( mgr ) );
+    }
+
+    const char * m_databaseName;
+    VDatabase* m_db;
+};
+
+// this test case is not very useful but is here as a blueprint for other write-side tests 
+FIXTURE_TEST_CASE ( BlobCorruptOnCommit, WVDBFixture ) 
+{
+    m_databaseName = GetName();
     const string schemaText = 
 "function < type T > T echo #1.0 < T val > ( * any row_len ) = vdb:echo;\n"
 "table spotdesc #1\n"
@@ -66,41 +119,14 @@ TEST_CASE(BlobCorruptOnCommit)
 "    table reference #1 REFERENCE;\n"
 "};\n"
 ;
-    const char * schemaSpec = "db";
-    const char * databaseName = GetName();
 
-    {   // remove old database 
-        KDirectory* wd;
-        KDirectoryNativeDir ( & wd );
-        KDirectoryRemove ( wd, true, databaseName );
-        KDirectoryRelease ( wd );
-    }
-
-    // MakeDatabase
-    VDatabase* db;
-    {
-        VDBManager* mgr;
-        REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
-        VSchema* schema;
-        REQUIRE_RC ( VDBManagerMakeSchema ( mgr, & schema ) );
-        REQUIRE_RC ( VSchemaParseText(schema, NULL, schemaText . c_str(), schemaText . size () ) );
-        
-        REQUIRE_RC ( VDBManagerCreateDB ( mgr, 
-                                          & db, 
-                                          schema, 
-                                          schemaSpec, 
-                                          kcmInit + kcmMD5, 
-                                          "%s", 
-                                          databaseName ) );
-        REQUIRE_RC ( VSchemaRelease ( schema ) );
-        REQUIRE_RC ( VDBManagerRelease ( mgr ) );
-    }
+    MakeDatabase ( schemaText, "db" );
     
     // MakeCursor
     VCursor* cursor;
     {
         VTable* table;
-        REQUIRE_RC ( VDatabaseCreateTable ( db, & table, "REFERENCE", kcmCreate | kcmMD5, "%s", "REFERENCE" ) );
+        REQUIRE_RC ( VDatabaseCreateTable ( m_db, & table, "REFERENCE", kcmCreate | kcmMD5, "%s", "REFERENCE" ) );
         REQUIRE_RC ( VTableCreateCursorWrite ( table, & cursor, kcmInsert ) );
         REQUIRE_RC ( VTableRelease ( table ) );
     }
@@ -127,14 +153,52 @@ TEST_CASE(BlobCorruptOnCommit)
     REQUIRE_RC ( VCursorCommit ( cursor ) );    // this returns rcVDB,rcBlob,rcValidating,rcBlob,rcCorrupt if the schema does not support 
                                                 // writing to the LABEL column from the code
     REQUIRE_RC ( VCursorRelease ( cursor ) );
+}
+
+FIXTURE_TEST_CASE ( CreateTableInNestedDatabase, WVDBFixture ) 
+{   // error report: VDatabaseOpenTableRead inside a nested database segfaults
+    m_databaseName = GetName();
+    string schemaText = 
+        "table table1 #1.0.0 { column ascii column1; };"
+        "database database0 #1 { table table1 #1 TABLE1; } ;" 
+        "database db #1 { database database0 #1 SUBDB; } ;" ; 
     
-    REQUIRE_RC ( VDatabaseRelease ( db ) );
+
+    // Create the database and the table
+    MakeDatabase ( schemaText, "db" );
+    {   // make nested database and a table in it
+        VDatabase* subdb;
+        REQUIRE_RC ( VDatabaseCreateDB ( m_db, & subdb, "SUBDB", kcmInit + kcmMD5, "SUBDB" ) );
+                                      
+        VTable *tbl;
+        REQUIRE_RC ( VDatabaseCreateTable ( subdb, & tbl, "TABLE1", kcmInit + kcmMD5, "TABLE1" ) );
+
+        REQUIRE_RC ( VTableRelease ( tbl ) );
+        REQUIRE_RC ( VDatabaseRelease ( subdb ) );
+    }
+    REQUIRE_RC ( VDatabaseRelease ( m_db ) );
     
+    // Re-open the database, try to open the table
     {
-        KDirectory* wd;
-        KDirectoryNativeDir ( & wd );
-        REQUIRE_RC ( KDirectoryRemove ( wd, true, databaseName ) ); 
-        KDirectoryRelease ( wd );
+        VDBManager* mgr;
+        REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
+        REQUIRE_RC ( VDBManagerOpenDBUpdate ( mgr, 
+                                              & m_db, 
+                                              NULL, 
+                                              "%s", 
+                                              m_databaseName ) );
+        REQUIRE_RC ( VDBManagerRelease ( mgr ) );
+    }
+    
+    {   // open the nested database and a table in it
+        VDatabase* subdb;
+        REQUIRE_RC ( VDatabaseOpenDBUpdate ( m_db, & subdb, "SUBDB" ) );
+                                      
+        const VTable *tbl;
+        REQUIRE_RC ( VDatabaseOpenTableRead ( subdb, & tbl, NULL, "TABLE1" ) ); // segfault
+
+        REQUIRE_RC ( VTableRelease ( tbl ) );
+        REQUIRE_RC ( VDatabaseRelease ( subdb ) );
     }
     
 }
