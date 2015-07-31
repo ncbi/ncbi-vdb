@@ -189,7 +189,7 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
         {   return rc; }
         if (pcount) {
             const char* pc = NULL;
-            rc = ArgsOptionValue(args, OPTION_CSE, 0, &pc);
+            rc = ArgsOptionValue(args, OPTION_CSE, 0, (const void **)&pc);
             if (rc)
             {   return rc; }
             if (!strcmp(pc, "n") || !strcmp(pc, "no")) {
@@ -212,7 +212,7 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
         {   return rc; }
         if (pcount) {
             const char* a = NULL;
-            rc = ArgsOptionValue(args, OPTION_LOG, 0, &a);
+            rc = ArgsOptionValue(args, OPTION_LOG, 0, (const void **)&a);
             if (rc)
             {   return rc; }
             if (!strcmp(a, "test_suite"))

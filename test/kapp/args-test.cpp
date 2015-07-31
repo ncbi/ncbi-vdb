@@ -96,7 +96,7 @@ TEST_CASE(KApp_ArgsMake)
         for (ix = 0; ix < param_count; ix++)
         {
             const char * value;
-            REQUIRE_RC(ArgsParamValue (args, ix, &value));
+            REQUIRE_RC(ArgsParamValue (args, ix, reinterpret_cast<const void**>(&value)));
             {
                 /* valgrind whines about the line below.  I can't see
                  * the problem with a uninitialized variable used for

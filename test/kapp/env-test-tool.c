@@ -139,7 +139,7 @@ rc_t CC KMain ( int argc, char *argv [] )
             }
             if ( paramc ) {
                 const char* dummy = NULL;
-                rc = ArgsOptionValue(args, OPTION_RAM, 0, &dummy);
+                rc = ArgsOptionValue(args, OPTION_RAM, 0, (const void **)&dummy);
                 if ( rc ) {
                     LOGERR(klogErr, rc, "Failure to get '" OPTION_RAM "' argument");
                     break;

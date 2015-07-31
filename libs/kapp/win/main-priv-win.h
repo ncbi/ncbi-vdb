@@ -24,25 +24,26 @@
  *
  */
 
-#include <klib/rc.h>
-#include <kapp/args-conv.h>
+#ifndef _h_main_priv_win_
+#define _h_main_priv_win_
 
-#include <os-native.h>
-
-#include "main-priv-win.h"
-
-rc_t ArgsConvFilepath(const Args * args, uint32_t arg_index, const char * arg, size_t arg_len, void ** result, WhackParamFnP * whack)
-{
-    wchar_t arg_wide[MAX_PATH];
-    char * res;
+#ifdef __cplusplus
+extern "C" {
+#endif
     
-    string_cvt_wchar_copy(arg_wide, MAX_PATH, arg, arg_len);
+/*
+ * Windows function to convert arguments from wchar_t string to utf-8 string
+ * Also checks and converts path from Windows to POSIX format
+ *
+ * "arg" windows command line argument
+ *
+ * "known_as_path" indicates whether we need a path conversion path.
+ * If it set to false, then rewrite_arg will only convert argument to utf-8.
+ */
+char * CC rewrite_arg_as_path ( const wchar_t *arg );
     
-    res = rewrite_arg_as_path(arg_wide);
-    if (!res)
-        return RC (rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
-    
-    *result = res;
-    
-    return 0;
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* _h_main_priv_ */

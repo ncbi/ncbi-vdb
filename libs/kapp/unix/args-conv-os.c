@@ -24,7 +24,7 @@
  *
  */
 
-#include <kapp/args.h>
+#include <kapp/args-conv.h>
 
 rc_t ArgsConvFilepath(const Args * args, uint32_t arg_index, const char * arg, size_t arg_len, void ** result, WhackParamFnP * whack)
 {

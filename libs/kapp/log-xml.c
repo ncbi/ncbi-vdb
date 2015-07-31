@@ -276,11 +276,11 @@ LIB_EXPORT rc_t CC XMLLogger_Make(const XMLLogger** cself, KDirectory* dir, cons
 
     if( (rc = ArgsOptionCount(args, XMLLogger_Args[eopt_file].name, &count)) != 0 || count > 1 ) {
         rc = rc ? rc : RC(rcApp, rcArgv, rcParsing, rcParam, rcExcessive);
-    } else if( count > 0 && (rc = ArgsOptionValue(args, XMLLogger_Args[eopt_file].name, 0, &path)) != 0 ) {
+    } else if( count > 0 && (rc = ArgsOptionValue(args, XMLLogger_Args[eopt_file].name, 0, (const void **)&path)) != 0 ) {
 
     } else if( (rc = ArgsOptionCount(args, XMLLogger_Args[eopt_fd].name, &count)) != 0 || count > 1 ) {
         rc = rc ? rc : RC(rcApp, rcArgv, rcParsing, rcParam, rcExcessive);
-    } else if( count > 0 && (rc = ArgsOptionValue(args, XMLLogger_Args[eopt_fd].name, 0, &sfd)) != 0 ) {
+    } else if( count > 0 && (rc = ArgsOptionValue(args, XMLLogger_Args[eopt_fd].name, 0, (const void **)&sfd)) != 0 ) {
 
     } else {
         do {

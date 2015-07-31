@@ -500,7 +500,7 @@ rc_t CC Args_parse_inf_file( Args * args, const char * file_option )
             for ( idx = count2; idx < count && rc == 0; ++idx )
             {
                 const char *filename;
-                rc = ArgsOptionValue( args, file_option, idx, (const char **)&filename );
+                rc = ArgsOptionValue( args, file_option, idx, (const void **)&filename );
                 if ( rc != 0 )
                     LOGERR( klogInt, rc, "ArgsOptionValue() failed" );
                 else if ( filename != NULL )

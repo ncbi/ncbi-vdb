@@ -202,7 +202,7 @@ static const char* get_str_option( const Args *my_args, const char *name )
     rc_t rc = ArgsOptionCount( my_args, name, &count );
     if ( ( rc == 0 )&&( count > 0 ) )
     {
-        ArgsOptionValue( my_args, name, 0, &res );
+        ArgsOptionValue( my_args, name, 0, (const void **)&res );
     }
     return res;
 }
@@ -217,7 +217,7 @@ static void append_str_options( const Args *my_args, const char *name, VNamelist
         for ( idx=0; idx<count; ++idx )
         {
             const char* s;
-            if ( ArgsOptionValue( my_args, name, idx, &s ) == 0 )
+            if ( ArgsOptionValue( my_args, name, idx, (const void **)&s ) == 0 )
                 VNamelistAppend( dst, s );
         }
     }
@@ -233,7 +233,7 @@ static void append_str_arguments( const Args *my_args, VNamelist *dst )
         for ( idx=0; idx<count; ++idx )
         {
             const char* s;
-            if ( ArgsParamValue( my_args, idx, &s ) == 0 )
+            if ( ArgsParamValue( my_args, idx, (const void **)&s ) == 0 )
                 VNamelistAppend( dst, s );
         }
     }
