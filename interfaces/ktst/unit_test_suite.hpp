@@ -35,6 +35,7 @@
 #include <vector>
 #include <cassert>
 #include <iostream>
+#include <stdexcept>
 
 // it's generally a bad idea to make the test suite rely upon code under test
 #define ALLOW_TESTING_CODE_TO_RELY_UPON_CODE_BEING_TESTED 0
@@ -71,7 +72,7 @@
 #define THROW_ON_RC(call) \
     do { \
         if ( ( rc_t ) ( call ) != ( rc_t ) 0 ) \
-            throw logic_error ( string ( __func__ ) + #call + " failed" ); \
+            throw std::logic_error ( string ( __func__ ) + #call + " failed" ); \
     } while (0)
    
 ////////////////////////////////////////////////////////////////////////////////
