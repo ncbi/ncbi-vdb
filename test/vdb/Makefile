@@ -38,9 +38,15 @@ include $(TOP)/build/Makefile.env
 $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
-.PHONY: $(TEST_TOOLS)
+runtests: setup 
+
+setup:
+	@ mkdir -p db
+
+.PHONY: $(TEST_TOOLS) setup
 
 clean: stdclean
+
 
 #-------------------------------------------------------------------------------
 # test-vdb
