@@ -30,7 +30,7 @@ TOP ?= $(abspath ../..)
 MODULE = test/kapp
 
 TEST_TOOLS = \
-    args-test
+    kapp-test
 
 ALL_TOOLS = \
 	env-test-tool \
@@ -51,10 +51,10 @@ clean: stdclean
 std: $(ALL_TOOLS)
 
 #-------------------------------------------------------------------------------
-# args-test
+# kapp-test
 #
 ARGS_TEST_SRC = \
-	args-test
+	kapp-test
 
 ARGS_TEST_OBJ = \
 	$(addsuffix .$(OBJX),$(ARGS_TEST_SRC))
@@ -65,7 +65,7 @@ ARGS_TEST_LIB = \
     -sload \
     -sncbi-wvdb \
 
-$(TEST_BINDIR)/args-test: $(ARGS_TEST_OBJ)
+$(TEST_BINDIR)/kapp-test: $(ARGS_TEST_OBJ)
 	$(LP) --exe -o $@ $^ $(ARGS_TEST_LIB)
 
 #-------------------------------------------------------------------------------
