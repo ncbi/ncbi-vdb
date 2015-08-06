@@ -29,6 +29,7 @@
 #include <ngs/itf/ErrBlock.hpp>
 
 #include <ngs/itf/ReadCollectionItf.h>
+#include <ngs/itf/ReferenceSequenceItf.h>
 #include "NCBI-NGS.h"
 
 namespace ncbi
@@ -51,5 +52,24 @@ namespace ncbi
 
         // create ReadCollection object
         return ReadCollection ( ( ngs :: ReadCollectionRef ) ret );
+    }
+
+    /* open
+     *  create an object representing a named reference
+     *  "spec" may be a path to an object
+     *  or may be an id, accession, or URL
+     */
+    ReferenceSequence NGS :: openReferenceSequence ( const String & spec )
+        throw ( ErrorMsg )
+    {
+        // call directly into ncbi-vdb library
+        ngs :: ErrBlock err;
+        NGS_ReferenceSequence_v1 * ret = NCBI_NGS_OpenReferenceSequence ( spec . c_str (), & err );
+
+        // check for errors
+        err . Check ();
+
+        // create ReferenceSequence object
+        return ReferenceSequence ( ( ngs :: ReferenceSequenceRef ) ret );
     }
 }

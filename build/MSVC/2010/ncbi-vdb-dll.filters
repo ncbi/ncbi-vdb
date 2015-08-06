@@ -819,6 +819,9 @@
     <ClCompile Include="..\..\..\libs\ngs\NGS_Reference.c">
       <Filter>ngs</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceSequence.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\ngs\NGS_Statistics.c">
       <Filter>ngs</Filter>
     </ClCompile>
@@ -832,6 +835,9 @@
       <Filter>ngs</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\ngs\SRA_ReadCollection.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\SRA_ReferenceSequence.c">
       <Filter>ngs</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\ngs\SRA_ReadGroup.c">

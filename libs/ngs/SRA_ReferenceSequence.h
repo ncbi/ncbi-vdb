@@ -24,11 +24,11 @@
 *
 */
 
-#ifndef _h_ngs_NCBI_NGS_
-#define _h_ngs_NCBI_NGS_
+#ifndef _h_sra_referencesequence_
+#define _h_sra_referencesequence_
 
-#ifndef _h_klib_extern_
-#include <klib/extern.h>
+#ifndef _h_kfc_defs_
+#include <kfc/defs.h>
 #endif
 
 #ifdef __cplusplus
@@ -38,21 +38,19 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * forwards
  */
-struct NGS_ErrBlock_v1;
-struct NGS_ReadCollection_v1;
-struct NGS_ReferenceSequence_v1;
-
-/*--------------------------------------------------------------------------
- * NCBI NGS engine
- *  link against ncbi-vdb library
- */
-LIB_EXPORT struct NGS_ReadCollection_v1 * NCBI_NGS_OpenReadCollection ( const char * spec, struct NGS_ErrBlock_v1 * err );
-LIB_EXPORT struct NGS_ReferenceSequence_v1 * NCBI_NGS_OpenReferenceSequence ( const char * spec, struct NGS_ErrBlock_v1 * err );
+struct NGS_Cursor;
+struct NGS_ReferenceSequenceSequence;
+struct VDatabase;
 
 
+struct NGS_ReferenceSequence * NGS_ReferenceSequenceMakeSRA ( ctx_t ctx,
+                                             const char * spec );
+
+int64_t SRA_ReferenceSequence_GetFirstRowId ( const struct NGS_ReferenceSequence * self, ctx_t ctx );
+int64_t SRA_ReferenceSequence_GetLastRowId ( const struct NGS_ReferenceSequence * self, ctx_t ctx );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _h_ngs_NCBI_NGS_ */
+#endif /* _h_sra_referencesequence_ */
