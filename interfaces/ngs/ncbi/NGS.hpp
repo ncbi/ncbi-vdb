@@ -29,6 +29,7 @@
 
 #ifndef _hpp_ngs_read_collection_
 #include <ngs/ReadCollection.hpp>
+#include <ngs/ReferenceSequence.hpp>
 #endif
 
 
@@ -46,6 +47,7 @@ namespace ncbi
     typedef :: ngs :: String String;
     typedef :: ngs :: ErrorMsg ErrorMsg;
     typedef :: ngs :: ReadCollection ReadCollection;
+    typedef :: ngs :: ReferenceSequence ReferenceSequence;
 
 
     /*======================================================================
@@ -63,6 +65,15 @@ namespace ncbi
          */
         static 
         ReadCollection openReadCollection ( const String & spec )
+            throw ( ErrorMsg );
+
+        /* openReferenceSequence
+         *  create an object representing a named reference
+         *  "spec" may be a path to an object
+         *  or may be an id, accession, or URL
+         */
+        static 
+        ReferenceSequence openReferenceSequence ( const String & spec )
             throw ( ErrorMsg );
     };
 
