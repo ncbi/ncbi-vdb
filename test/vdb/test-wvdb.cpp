@@ -212,7 +212,7 @@ FIXTURE_TEST_CASE ( ColumnOpenMetadata, WVDB_Fixture )
         REQUIRE_RC ( VTableRelease ( table ) );
         REQUIRE_RC ( VSchemaRelease ( schema ) );
     }
-    // access the column's metadata without re-opening the database
+    // update the column's metadata without re-opening the database
     { 
         VTable* table;
         REQUIRE_RC ( VDatabaseOpenTableUpdate ( db , & table, TableName ) );   
@@ -224,6 +224,12 @@ FIXTURE_TEST_CASE ( ColumnOpenMetadata, WVDB_Fixture )
         // finally, open the metadata
         KMetadata *meta;
         REQUIRE_RC ( KColumnOpenMetadataUpdate ( col, &meta ) );
+        
+        KMDataNode* node;
+        REQUIRE_RC ( KMetadataOpenNodeUpdate ( meta, & node, "key" ) );
+        const char* MetadataValue = "metavalue";
+        REQUIRE_RC ( KMDataNodeWrite ( node, MetadataValue, string_size ( MetadataValue ) ) );
+        REQUIRE_RC ( KMDataNodeRelease ( node ) );
         
         REQUIRE_RC ( KMetadataRelease ( meta ) );
         REQUIRE_RC ( KColumnRelease ( col ) );
