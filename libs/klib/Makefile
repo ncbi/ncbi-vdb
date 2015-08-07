@@ -89,6 +89,7 @@ KLIB_SRC = \
 	container \
 	vector \
 	namelist \
+	ncbi-vdb-version \
 	vector_namelist \
 	trie \
 	pbstree \
