@@ -29,19 +29,15 @@
 #include "jni_String.h"
 
 #include <kfc/ctx.h>
-#include <kfc/rsrc.h>
 #include <kfc/except.h>
-#include <kfc/xc.h>
-#include <kfc/rc.h>
 
 #include <kfc/rsrc-global.h>
 
-#include <klib/sra-release-version.h> /* SraReleaseVersion */
+#include <klib/ncbi-vdb-version.h> /* GetPackageVersion */
 
 #include "NGS_ReadCollection.h"
 
 #include <assert.h>
-#include <string.h> /* memset */
 
 /*
  * Class:     gov_nih_nlm_ncbi_ngs_Manager
@@ -127,21 +123,5 @@ JNIEXPORT jstring JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_Version
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcMgr, rcAccessing );
 
-    rc_t rc = 0;
-    char v[512] = "";
-
-    SraReleaseVersion version;
-    memset(&version, sizeof version, 0);
-
-    rc = SraReleaseVersionGet(&version);
-    if (rc == 0) {
-        rc = SraReleaseVersionPrint(&version, v, sizeof v, NULL);
-    }
-
-    if (rc == 0) {
-        return JStringMake(ctx, jenv, v);
-    }
-    else {
-        return JStringMake(ctx, jenv, "");
-    }
+    return JStringMake(ctx, jenv, GetPackageVersion());
 }
