@@ -543,6 +543,9 @@
     <ClCompile Include="..\..\..\libs\klib\namelist.c">
       <Filter>klib</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\ncbi-vdb-version.c">
+      <Filter>klib</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\klib\out.c">
       <Filter>klib</Filter>
     </ClCompile>
