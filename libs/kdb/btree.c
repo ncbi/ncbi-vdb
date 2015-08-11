@@ -546,10 +546,6 @@ LIB_EXPORT rc_t CC KBTreeEntry ( KBTree *self, uint64_t *id,
             rc = RC ( rcDB, rcTree, rcUpdating, rcParam, rcEmpty );
         else if ( key == NULL )
             rc = RC ( rcDB, rcTree, rcUpdating, rcParam, rcNull );
-        else if ( key_size < self -> hdr . key_min )
-            rc = RC ( rcDB, rcTree, rcUpdating, rcParam, rcInsufficient );
-        else if ( key_size > self -> hdr . key_max )
-            rc = RC ( rcDB, rcTree, rcUpdating, rcParam, rcExcessive );
         else
         {
             uint32_t id32 = 0;
