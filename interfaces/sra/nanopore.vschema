@@ -47,6 +47,12 @@ table NCBI:SRA:Nanopore:consensus #1
     extern column < U32 > izip_encoding #1 READ_NUMBER;
 
     extern column bool_encoding #1 HIGH_QUALITY;
+    
+    ascii platform_name
+        = < ascii > echo < "OXFORD_NANOPORE" > ();
+        
+    INSDC:SRA:platform_id out_platform = 
+        = < INSDC:SRA:platform_id > echo < SRA_PLATFORM_OXFORD_NANOPORE > ();
 }
 
 
@@ -62,6 +68,12 @@ table NCBI:SRA:Nanopore:sequence #1
     extern column < U32 > izip_encoding #1 CHANNEL;
 
     extern column < U32 > izip_encoding #1 READ_NUMBER;
+
+    ascii platform_name
+        = < ascii > echo < "OXFORD_NANOPORE" > ();
+        
+    INSDC:SRA:platform_id out_platform = 
+        = < INSDC:SRA:platform_id > echo < SRA_PLATFORM_OXFORD_NANOPORE > ();
 }
 
 
