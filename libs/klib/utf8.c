@@ -41,99 +41,113 @@
 /* string_len
  *  length of string in characters
  */
-LIB_EXPORT uint32_t CC string_len ( const char *str, size_t size )
+LIB_EXPORT uint32_t CC string_len ( const char * str, size_t size )
 {
-    const char *end;
     uint32_t len = 0;
 
-    assert ( str != NULL );
-    end = str + size;
-
-    while ( str < end )
+    if ( str != NULL )
     {
-        int c;
-
-        while ( str [ 0 ] > 0 )
+        size_t i = 0;
+        while ( 1 )
         {
-            ++ len;
-            if ( ++ str == end )
-                return len;
-        }
+            int c;
 
-        c = str [ 0 ];
-        if ( str [ 0 ] == 0 )
-            break;
+            /* scan all ASCII characters */
+            for ( ; i < size && str [ i ] > 0; ++ i, ++ len )
+                ( void ) 0;
+            if ( i >= size )
+                break;
+
+            /* handle a single UTF-8 character */
+            c = ~ ( int ) str [ i ];
+            if ( str [ i ] == 0 )
+                break;
+
+            /* str [ i ] was < 0 */
+            assert ( c > 0 && c <= 0x7F );
+
+            /* if original code was 0b10xxxxxx, illegal */
+            if ( c >= 0x40 )
+                break;
 	
-        c = ~ c;
-        if ( c >= 0x40 )
-            break;
-	
-        if ( c >= 0x20 )
-            str += 2;
-        else if ( c >= 0x10 )
-            str += 3;
-        else if ( c >= 0x08 )
-            str += 4;
-        else if ( c >= 0x04 )
-            str += 5;
-        else if ( c >= 0x02 )
-            str += 6;
-        else
-            break;
-	
-        ++ len;
+            /* original code 0b110xxxxx = 2 byte */
+            if ( c >= 0x20 )
+                i += 2;
+            /* original code 0b1110xxxx = 3 byte */
+            else if ( c >= 0x10 )
+                i += 3;
+            /* original code 0b11110xxx = 4 byte */
+            else if ( c >= 0x08 )
+                i += 4;
+            /* original code 0b111110xx = 5 byte */
+            else if ( c >= 0x04 )
+                i += 5;
+            /* original code 0b1111110x = 6 byte */
+            else if ( c >= 0x02 )
+                i += 6;
+            /* illegal code 0b1111111x */
+            else
+                break;
+	    }
     }
+
     return len;
 }
 
 /* string_measure
  *  measures length of string in both characters and bytes
  */
-LIB_EXPORT uint32_t CC string_measure ( const char *str, size_t *size )
+LIB_EXPORT uint32_t CC string_measure ( const char * str, size_t * size )
 {
-    const char *begin;
+    size_t i = 0;
     uint32_t len = 0;
 
-    assert ( str != NULL );
-
-    begin = str;
-
-    while ( 1 )
+    if ( str != NULL )
     {
-        int c;
-
-        while ( str [ 0 ] > 0 )
+        while ( 1 )
         {
-            ++ len;
-            ++ str;
-        }
+            int c;
 
-        c = str [ 0 ];
-        if ( str [ 0 ] == 0 )
-            break;
+            /* scan all ASCII characters */
+            for ( ; str [ i ] > 0; ++ i, ++ len )
+                ( void ) 0;
+
+            /* handle a single UTF-8 character */
+            c = ~ ( int ) str [ i ];
+            if ( str [ i ] == 0 )
+                break;
+
+            /* str [ i ] was < 0 */
+            assert ( c > 0 && c <= 0x7F );
+
+            /* if original code was 0b10xxxxxx, illegal */
+            if ( c >= 0x40 )
+                break;
 	
-        c = ~ c;
-        if ( c >= 0x40 )
-            break;
-	
-        if ( c >= 0x20 )
-            str += 2;
-        else if ( c >= 0x10 )
-            str += 3;
-        else if ( c >= 0x08 )
-            str += 4;
-        else if ( c >= 0x04 )
-            str += 5;
-        else if ( c >= 0x02 )
-            str += 6;
-        else
-            break;
-	
-        ++ len;
+            /* original code 0b110xxxxx = 2 byte */
+            if ( c >= 0x20 )
+                i += 2;
+            /* original code 0b1110xxxx = 3 byte */
+            else if ( c >= 0x10 )
+                i += 3;
+            /* original code 0b11110xxx = 4 byte */
+            else if ( c >= 0x08 )
+                i += 4;
+            /* original code 0b111110xx = 5 byte */
+            else if ( c >= 0x04 )
+                i += 5;
+            /* original code 0b1111110x = 6 byte */
+            else if ( c >= 0x02 )
+                i += 6;
+            /* illegal code 0b1111111x */
+            else
+                break;
+	    }
     }
 
     if ( size != NULL )
-        * size = ( size_t ) ( str - begin );
+        * size = i;
+
     return len;
 }
 
@@ -144,39 +158,52 @@ LIB_EXPORT uint32_t CC string_measure ( const char *str, size_t *size )
  */
 LIB_EXPORT size_t CC string_copy ( char *dst, size_t dst_size, const char *src, size_t src_size )
 {
-    const char *send;
-    char *dend, *begin;
+    size_t i;
+    char * dend;
+    const char * send;
 
-    assert ( dst != NULL && src != NULL );
+    if ( dst == NULL || src == NULL )
+        return 0;
 
     if ( dst_size < src_size )
         src_size = dst_size;
 
-    begin = dst;
     dend = dst + dst_size;
     send = src + src_size;
 
-    while ( src < send )
+    for ( i = 0; i < src_size; )
     {
         uint32_t ch;
+        int len1, len2;
 
-        /* get a complete source character */
-        int len = utf8_utf32 ( & ch, src, send );
-        if ( len <= 0 )
+        /* optimistic copy of ASCII data ( including NUL ) */
+        for ( ; i < src_size && src [ i ] >= 0; ++ i )
+            dst [ i ] = src [ i ];
+        if ( i == src_size )
             break;
-        src += len;
 
-        /* write it to the destination */
-        len = utf32_utf8 ( dst, dend, ch );
-        if ( len <= 0 )
+        /* read a ( hopefully complete ) UNICODE character */
+        len1 = utf8_utf32 ( & ch, & src [ i ], send );
+        if ( len1 <= 0 )
             break;
-        dst += len;
+
+        /* write the UNICODE character in UTF-8 */
+        len2 = utf32_utf8 ( & dst [ i ], dend, ch );
+        if ( len2 <= 0 )
+            break;
+
+        /* should have been identical number of bytes */
+        if ( len1 != len2 )
+            break;
+
+        /* advance over the UTF-8 character */
+        i += len1;
     }
 
-    if ( dst < dend )
-        * dst = 0;
+    if ( i < dst_size )
+        dst [ i ] = 0;
 
-    return ( size_t ) ( dst - begin );
+    return i;
 }
 
 /* string_copy_measure
