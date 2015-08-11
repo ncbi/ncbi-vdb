@@ -44,6 +44,10 @@ extern "C" {
  * defines
  */
 
+#define PGBITS 15
+#define PGSIZE ( 1U << PGBITS )
+    
+
 /* A pager must allocate pages of exactly 32k
  * page id's can not be larger than 31 bits
  * and page id's must be greater than zero
@@ -90,16 +94,16 @@ struct Pager_vt {
     /* it's reasonable for this function to fail, e.g. a pager may
      * limit the number of pages that it's willing to hand out
      */
-    void const *(*alloc)(struct Pager *self, uint32_t *newid);
+    void const *(*alloc)(Pager *self, uint32_t *newid);
     
     /* these functions can't fail in any meaningful sense
      * these functions failing is like an assert or a sudden
      * hardware failure, in other words, not recoverable.
      */
-    void const *(*use   )(struct Pager *self, uint32_t pageid);
-    void const *(*access)(struct Pager *self, void const *page);
-    void       *(*update)(struct Pager *self, void const *page);
-    void        (*unuse )(struct Pager *self, void const *page);
+    void const *(*use   )(Pager *self, uint32_t pageid);
+    void const *(*access)(Pager *self, void const *page);
+    void       *(*update)(Pager *self, void const *page);
+    void        (*unuse )(Pager *self, void const *page);
 };
 
 /* Find
@@ -133,10 +137,8 @@ KLIB_EXTERN rc_t CC BTreeEntry ( uint32_t *root, Pager *pager, Pager_vt const *v
  *  "f" [ IN ] and "data" [ IN, OPAQUE ] - callback function
  */
 
-typedef void (CC *user_callback_t)(void const *key, size_t key_size, uint32_t id, void *data);
-
 KLIB_EXTERN rc_t CC BTreeForEach ( uint32_t root, Pager *pager, Pager_vt const *vt, bool reverse,
-                                 user_callback_t f, void *data );
+                                 void ( CC * f ) ( const void *key, size_t key_size, uint32_t id, void *data ), void *data );
 
 #ifdef __cplusplus
 }
