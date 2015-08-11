@@ -28,16 +28,12 @@
 #include <klib/btree.h>
 #include <klib/ksort-macro.h>
 #include <klib/rc.h>
-// #include <sysalloc.h>
+#include <sysalloc.h>
 
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
-
-/* must be kept in sync with kfs/pagefile.c */
-#define PGBITS 15
-#define PGSIZE ( 1U << PGBITS )
 
 typedef struct SearchWindow {
     uint16_t	lower;
@@ -1329,9 +1325,9 @@ static void foreach_leaf_reverse(uint32_t nodeid, Pager *pager, Pager_vt const *
     
     unsigned i;
     
-    for (i = node->count; i > 0; )
-    invoke_foreach_func(node, &node->ord[--i], f, data);
-    
+    for (i = node->count; i > 0; ) {
+        invoke_foreach_func(node, &node->ord[--i], f, data);
+    }
     vt->unuse(pager, page);
 }
 
@@ -1349,11 +1345,13 @@ static void foreach_branch_reverse(uint32_t nodeid, Pager *pager, Pager_vt const
         uint32_t const child = node->ord[--i].trans;
         
         invoke_foreach_func(node, &node->ord[i], f, data);
-        if (child & 1)
-        foreach_branch_reverse(child >> 1, pager, vt, f, data);
-        else
-        foreach_leaf_reverse(child >> 1, pager, vt, f, data);
-    }    
+        if (child & 1) {
+            foreach_branch_reverse(child >> 1, pager, vt, f, data);
+        }
+        else {
+            foreach_leaf_reverse(child >> 1, pager, vt, f, data);
+        }
+    }
     vt->unuse(pager, page);
 }
 
@@ -1378,9 +1376,9 @@ static void foreach_leaf(uint32_t nodeid, Pager *pager, Pager_vt const *vt,
     
     unsigned i;
     
-    for (i = 0; i < node->count; ++i)
-    invoke_foreach_func(node, &node->ord[i], f, data);
-    
+    for (i = 0; i < node->count; ++i) {
+        invoke_foreach_func(node, &node->ord[i], f, data);
+    }
     vt->unuse(pager, page);
 }
 
@@ -1398,11 +1396,13 @@ static void foreach_branch(uint32_t nodeid, Pager *pager, Pager_vt const *vt,
         uint32_t const child = node->ord[i].trans;
         
         invoke_foreach_func(node, &node->ord[i], f, data);
-        if (child & 1)
-        foreach_branch(child >> 1, pager, vt, f, data);
-        else
-        foreach_leaf(child >> 1, pager, vt, f, data);
-    }    
+        if (child & 1) {
+            foreach_branch(child >> 1, pager, vt, f, data);
+        }
+        else {
+            foreach_leaf(child >> 1, pager, vt, f, data);
+        }
+    }
     vt->unuse(pager, page);
 }
 
