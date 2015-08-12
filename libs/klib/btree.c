@@ -1337,10 +1337,9 @@ static void foreach_leaf_reverse(uint32_t nodeid, Pager *pager, Pager_vt const *
     void const *const page = vt->use(pager, nodeid);
     assert(page != NULL);
     {
+        unsigned i;
     LeafNode const *const node = vt->access(pager, page);
     assert(node != NULL);
-    
-    unsigned i;
     
     for (i = node->count; i > 0; ) {
         invoke_foreach_func(node, &node->ord[--i], f, data);
@@ -1355,10 +1354,9 @@ static void foreach_branch_reverse(uint32_t nodeid, Pager *pager, Pager_vt const
     void const *const page = vt->use(pager, nodeid);
     assert(page != NULL);
     {
+        unsigned i;
     BranchNode const *const node = vt->access(pager, page);
     assert(node != NULL);
-    
-    unsigned i;
     
     for (i = node->count; i > 0; ) {
         uint32_t const child = node->ord[--i].trans;
@@ -1392,10 +1390,9 @@ static void foreach_leaf(uint32_t nodeid, Pager *pager, Pager_vt const *vt,
     void const *const page = vt->use(pager, nodeid);
     assert(page != NULL);
     {
+        unsigned i;
     LeafNode const *const node = vt->access(pager, page);
     assert(node != NULL);
-    
-    unsigned i;
     
     for (i = 0; i < node->count; ++i) {
         invoke_foreach_func(node, &node->ord[i], f, data);
@@ -1410,10 +1407,9 @@ static void foreach_branch(uint32_t nodeid, Pager *pager, Pager_vt const *vt,
     void const *const page = vt->use(pager, nodeid);
     assert(page != NULL);
     {
+        unsigned i;
     BranchNode const *const node = vt->access(pager, page);
     assert(node != NULL);
-    
-    unsigned i;
     
     for (i = 0; i < node->count; ++i) {
         uint32_t const child = node->ord[i].trans;
