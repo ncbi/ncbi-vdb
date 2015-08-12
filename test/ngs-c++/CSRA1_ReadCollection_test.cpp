@@ -32,6 +32,8 @@
 * This file is to be #included into a test suite
 */
 
+#include <klib/text.h>
+
 //TODO: getReads (categories)
 //TODO: getReadCount (categories)
 //TODO: getReadGroups
@@ -46,6 +48,24 @@ FIXTURE_TEST_CASE(CSRA1_ReadCollection_Open, CSRA1_Fixture)
 FIXTURE_TEST_CASE(CSRA1_ReadCollection_Open_Failed, CSRA1_Fixture)
 {
     REQUIRE_THROW ( ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( string(CSRA1_PrimaryOnly) + "_BS" ) );
+}
+
+// Read collection functions
+
+TEST_CASE (CSRA1_ReadCollection_GetName)
+{
+    ngs::String name1, name2;
+    {
+        ngs::ReadCollection run = ncbi::NGS::openReadCollection ("./SRR611340");
+        name1 = run.getName();
+        char const* pNoSlash = string_rchr( name1.c_str(), name1.length(), '/' );
+        REQUIRE ( pNoSlash == NULL );
+    }
+    {
+        ngs::ReadCollection run = ncbi::NGS::openReadCollection ("SRR611340");
+        name2 = run.getName();
+    }
+    REQUIRE_EQ ( name1, name2 );
 }
 
 // READS

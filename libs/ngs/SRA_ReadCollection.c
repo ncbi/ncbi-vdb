@@ -350,7 +350,7 @@ NGS_ReadCollection * NGS_ReadCollectionMakeVTable ( ctx_t ctx, const VTable *tbl
 
             /* TBD - this is a hack */
             name = string_rchr ( spec, spec_size, '/' );
-            if ( name == NULL )
+            if ( name ++ == NULL )
                 name = spec;
 
             dot = string_rchr ( name, end - name, '.' );
