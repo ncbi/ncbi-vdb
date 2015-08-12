@@ -128,7 +128,8 @@ KLIB_SRC = \
 	report-klib \
 	num-gen \
 	progressbar \
-	sra-release-version
+	sra-release-version \
+	btree
 #	path
 
 ifeq (win,$(OS))
