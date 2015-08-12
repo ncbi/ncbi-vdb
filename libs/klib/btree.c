@@ -401,7 +401,9 @@ static void LeafEntry_sort_desc_by_offset(uint16_t ord[], unsigned const count, 
     
 #define CMP(A, B) (node->ord[*(uint16_t *)B].key - node->ord[*(uint16_t *)A].key)
 #define SWAP(A, B, C, D) do { i = *(uint16_t *)A; *(uint16_t *)A = *(uint16_t *)B; *(uint16_t *)B = i; } while(0)
+    {
     KSORT(ord, count, sizeof(ord[0]), 0, 0);
+    }
 #undef SWAP
 #undef CMP
 }
@@ -415,7 +417,9 @@ static void BranchEntry_sort_desc_by_offset(uint16_t ord[], unsigned const count
     
 #define CMP(A, B) (node->ord[*(uint16_t *)B].key - node->ord[*(uint16_t *)A].key)
 #define SWAP(A, B, C, D) do { i = *(uint16_t *)A; *(uint16_t *)A = *(uint16_t *)B; *(uint16_t *)B = i; } while(0)
+    {
     KSORT(ord, count, sizeof(ord[0]), 0, 0);
+    }
 #undef SWAP
 #undef CMP
 }
@@ -1138,11 +1142,11 @@ rc_t branch_entry ( EntryData *pb, void const *page, Split *rsplit)
         /* detect split */
         if ( GetRCState ( rc ) == rcInsufficient && GetRCObject ( rc ) == rcId )
         {
-            rc = 0;
             /* splitting may replace value being inserted in to the branch ***/
             /* access current node */
             BranchNode *node = pb->vt->update(pb->pager, page);
             assert(node != NULL);
+            rc = 0;
             {
                 split . left = nid;
                 
@@ -1212,6 +1216,7 @@ rc_t branch_entry ( EntryData *pb, void const *page, Split *rsplit)
 static rc_t tree_entry(EntryData *pb)
 {
     void const *page;
+    rc_t rc;
     Split split;
     
     if (pb->root == 0) {
@@ -1228,7 +1233,7 @@ static rc_t tree_entry(EntryData *pb)
     }
     SplitInit(&split);
     
-    rc_t rc = (((pb->root & 1) == 0) ? leaf_entry : branch_entry)(pb, page, &split);
+    rc = (((pb->root & 1) == 0) ? leaf_entry : branch_entry)(pb, page, &split);
     /* detect split */
     if ( GetRCState ( rc ) == rcInsufficient && GetRCObject ( rc ) == rcId ) {
         rc = 0;
@@ -1268,7 +1273,7 @@ static rc_t tree_entry(EntryData *pb)
             pb->vt->unuse(pb->pager, new_root);
         }
         else
-        rc = RC ( rcDB, rcTree, rcInserting, rcMemory, rcExhausted );
+            rc = RC ( rcDB, rcTree, rcInserting, rcMemory, rcExhausted );
     }
     SplitWhack(&split);
     pb->vt->unuse(pb->pager, page);
