@@ -1236,10 +1236,11 @@ static rc_t tree_entry(EntryData *pb)
     rc = (((pb->root & 1) == 0) ? leaf_entry : branch_entry)(pb, page, &split);
     /* detect split */
     if ( GetRCState ( rc ) == rcInsufficient && GetRCObject ( rc ) == rcId ) {
+        void const *new_root;
+
         rc = 0;
         split.left = pb->root;
-        
-        void const *new_root = pb->vt->alloc(pb->pager, &pb->root);
+        new_root = pb->vt->alloc(pb->pager, &pb->root);
         if (new_root) {
             BranchNode *node = pb->vt->update(pb->pager, new_root);
             assert(node != NULL);
@@ -1289,21 +1290,24 @@ LIB_EXPORT rc_t CC BTreeEntry ( uint32_t *root, Pager *pager, Pager_vt const *vt
     assert(was_inserted != NULL);
     assert(key != NULL);
     assert(key_size != 0);
-    
-    EntryData pb;
-    pb.pager = pager;
-    pb.vt = vt;
-    pb.root = *root;
-    pb.id = id;
-    pb.key = key;
-    pb.key_size = key_size;
-    pb.was_inserted = false;
-    
-    rc_t const rc = tree_entry(&pb);
-    
-    *root = pb.root;
-    *was_inserted = pb.was_inserted;
-    return rc;
+    {
+        EntryData pb;
+        
+        pb.pager = pager;
+        pb.vt = vt;
+        pb.root = *root;
+        pb.id = id;
+        pb.key = key;
+        pb.key_size = key_size;
+        pb.was_inserted = false;
+        {
+            rc_t const rc = tree_entry(&pb);
+            
+            *root = pb.root;
+            *was_inserted = pb.was_inserted;
+            return rc;
+        }
+    }
 }
 
 
