@@ -677,7 +677,7 @@ LIB_EXPORT rc_t CC KMD5SumFmtDelete ( KMD5SumFmt *self, const char *path )
         }
 
         if ( entry == NULL )
-            rc = RC ( rcFS, rcFile, rcRemoving, rcPath, rcNotFound );
+            rc = SILENT_RC ( rcFS, rcFile, rcRemoving, rcPath, rcNotFound );
         else
         {
             /* pop entry from list */

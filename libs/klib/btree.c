@@ -143,6 +143,7 @@ static rc_t leaf_find(Pager *const pager, Pager_vt const *const vt, void const *
         query_8 += key_prefix_len;
         qsize_8 -= key_prefix_len;
     }
+    {
     /* perform search on branch node */
     unsigned const q = (qsize_8 > 0)?*query_8:0;
     unsigned lower = cnode->win[q].lower;
@@ -166,6 +167,7 @@ static rc_t leaf_find(Pager *const pager, Pager_vt const *const vt, void const *
         else
             lower = slot + 1;
     }
+    }
     return RC(rcDB, rcTree, rcSelecting, rcItem, rcNotFound);
 }
 
@@ -186,6 +188,7 @@ static rc_t branch_find(Pager *const pager, Pager_vt const *const vt, void const
         query_8 += key_prefix_len;
         qsize_8 -= key_prefix_len;
     }
+    {
     /* perform search on branch node */
     unsigned const q = (qsize_8 > 0)?*query_8:0;
     unsigned lower = cnode->win[q].lower;
@@ -216,16 +219,18 @@ static rc_t branch_find(Pager *const pager, Pager_vt const *const vt, void const
      in the LSB. the remaining bits should NOT be zero */
     /* NB - if "upper" is 0 and type is signed,
      this will access entry -1, giving "ltrans" */
+    {
     uint32_t const nid = cnode -> ord [ upper - 1 ] . trans;
     assert ( ( nid >> 1 ) != 0 );
 
     /* access child node */
+        {
     void const *const child = vt->use(pager, nid >> 1);
     assert(child != NULL);
     rc = ( ( ( nid & 1 ) == 0 ) ? leaf_find : branch_find )
         ( pager, vt, child, id, query, qsize );
     vt->unuse(pager, child);
-
+        }}}
     return rc;
 }
 
@@ -237,10 +242,11 @@ LIB_EXPORT rc_t CC BTreeFind ( uint32_t const root, Pager *const pager, Pager_vt
     assert (id != NULL);
     assert (key != NULL);
     assert (key_size != 0);
-
+    {
     void const *const page = vt->use(pager, root >> 1);
     assert(page != NULL);
     return (((root & 1) == 0) ? leaf_find : branch_find)(pager, vt, page, id, key, key_size);
+    }
 }
 
 /* Entry
@@ -639,7 +645,7 @@ rc_t leaf_entry ( EntryData *pb, void const *page, Split *split)
     
     /* should have the last slot tried ( < 0 ) or next slot to try ( > 0 ) */
     assert ( lower == upper );
-    
+    {
     /* going to need to update the node */
     LeafNode *node = pb->vt->update(pb->pager, page);
     assert(node != NULL);
@@ -673,7 +679,7 @@ rc_t leaf_entry ( EntryData *pb, void const *page, Split *split)
         /* simple insert */
         rc = leaf_insert ( pb, node, upper );
     }
-    
+    }
     return rc;
 }
 
@@ -1059,9 +1065,11 @@ rc_t compact_page ( EntryData *pb, uint32_t nid, uint16_t prefix_len)
 {
     void const *pg = pb->vt->use(pb->pager, nid >> 1);
     assert(pg != NULL);
+    {
     rc_t const rc = (((nid & 1) == 0) ? leaf_compact : branch_compact)(pb, pg, prefix_len);
     pb->vt->unuse(pb->pager, pg);
     return rc;
+    }
 }
 
 
@@ -1074,12 +1082,11 @@ rc_t branch_entry ( EntryData *pb, void const *page, Split *rsplit)
     const uint8_t *query = pb -> key;
     size_t qsize = pb -> key_size;
     uint16_t q;
-    
+    rc_t rc = 0;
+
     /* look at node in read-only mode */
     const BranchNode *cnode = pb->vt->access(pb->pager, page);
     assert(cnode != NULL);
-    
-    rc_t rc = 0;
     
     /* perform search on branch node */
     /* start with prefix compare */
@@ -1212,7 +1219,7 @@ static rc_t tree_entry(EntryData *pb)
         
         page = pb->vt->alloc(pb->pager, &new_id);
         if (page == NULL)
-        return RC ( rcDB, rcTree, rcInserting, rcMemory, rcExhausted );
+            return RC ( rcDB, rcTree, rcInserting, rcMemory, rcExhausted );
         pb->root = new_id << 1;
     }
     else {
@@ -1320,6 +1327,7 @@ static void foreach_leaf_reverse(uint32_t nodeid, Pager *pager, Pager_vt const *
 {
     void const *const page = vt->use(pager, nodeid);
     assert(page != NULL);
+    {
     LeafNode const *const node = vt->access(pager, page);
     assert(node != NULL);
     
@@ -1327,6 +1335,7 @@ static void foreach_leaf_reverse(uint32_t nodeid, Pager *pager, Pager_vt const *
     
     for (i = node->count; i > 0; ) {
         invoke_foreach_func(node, &node->ord[--i], f, data);
+    }
     }
     vt->unuse(pager, page);
 }
@@ -1336,6 +1345,7 @@ static void foreach_branch_reverse(uint32_t nodeid, Pager *pager, Pager_vt const
 {
     void const *const page = vt->use(pager, nodeid);
     assert(page != NULL);
+    {
     BranchNode const *const node = vt->access(pager, page);
     assert(node != NULL);
     
@@ -1351,6 +1361,7 @@ static void foreach_branch_reverse(uint32_t nodeid, Pager *pager, Pager_vt const
         else {
             foreach_leaf_reverse(child >> 1, pager, vt, f, data);
         }
+    }
     }
     vt->unuse(pager, page);
 }
@@ -1371,6 +1382,7 @@ static void foreach_leaf(uint32_t nodeid, Pager *pager, Pager_vt const *vt,
 {
     void const *const page = vt->use(pager, nodeid);
     assert(page != NULL);
+    {
     LeafNode const *const node = vt->access(pager, page);
     assert(node != NULL);
     
@@ -1378,6 +1390,7 @@ static void foreach_leaf(uint32_t nodeid, Pager *pager, Pager_vt const *vt,
     
     for (i = 0; i < node->count; ++i) {
         invoke_foreach_func(node, &node->ord[i], f, data);
+    }
     }
     vt->unuse(pager, page);
 }
@@ -1387,6 +1400,7 @@ static void foreach_branch(uint32_t nodeid, Pager *pager, Pager_vt const *vt,
 {
     void const *const page = vt->use(pager, nodeid);
     assert(page != NULL);
+    {
     BranchNode const *const node = vt->access(pager, page);
     assert(node != NULL);
     
@@ -1402,6 +1416,7 @@ static void foreach_branch(uint32_t nodeid, Pager *pager, Pager_vt const *vt,
         else {
             foreach_leaf(child >> 1, pager, vt, f, data);
         }
+    }
     }
     vt->unuse(pager, page);
 }

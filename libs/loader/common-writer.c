@@ -137,7 +137,7 @@ rc_t GetKeyIDOld(const CommonWriterSettings* settings, SpotAssembler* const ctx,
         if (rc) return rc;
         ctx->key2id_count = 1;
     }
-    if (memcmp(key, name, keylen) == 0) {
+    if (keylen == 0 || memcmp(key, name, keylen) == 0) {
         /* qname starts with read group; no append */
         tmpKey = ctx->idCount[0];
         rc = KBTreeEntry(ctx->key2id[0], &tmpKey, wasInserted, name, namelen);

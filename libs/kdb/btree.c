@@ -535,6 +535,7 @@ LIB_EXPORT rc_t CC KBTreeEntry ( KBTree *self, uint64_t *id,
     bool dummy;
     if ( was_inserted == NULL )
         was_inserted = & dummy;
+    * was_inserted = false;
 
     if ( id == NULL )
         rc = RC ( rcDB, rcTree, rcUpdating, rcParam, rcNull );
@@ -548,7 +549,7 @@ LIB_EXPORT rc_t CC KBTreeEntry ( KBTree *self, uint64_t *id,
             rc = RC ( rcDB, rcTree, rcUpdating, rcParam, rcNull );
         else
         {
-            uint32_t id32 = 0;
+            uint32_t id32 = *id;
             rc = BTreeEntry(&self->hdr.root, (Pager *)&self->pgfile, &KPageFile_vt, &id32, was_inserted, key, key_size);
             if (self->pgfile.rc)
                 rc = self->pgfile.rc;
@@ -556,7 +557,6 @@ LIB_EXPORT rc_t CC KBTreeEntry ( KBTree *self, uint64_t *id,
         }
     }
 
-    * was_inserted = false;
     return rc;
 }
 
