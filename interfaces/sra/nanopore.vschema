@@ -51,7 +51,7 @@ table NCBI:SRA:Nanopore:consensus #1
     ascii platform_name
         = < ascii > echo < "OXFORD_NANOPORE" > ();
         
-    INSDC:SRA:platform_id out_platform = 
+    INSDC:SRA:platform_id out_platform
         = < INSDC:SRA:platform_id > echo < SRA_PLATFORM_OXFORD_NANOPORE > ();
 }
 
@@ -72,7 +72,7 @@ table NCBI:SRA:Nanopore:sequence #1
     ascii platform_name
         = < ascii > echo < "OXFORD_NANOPORE" > ();
         
-    INSDC:SRA:platform_id out_platform = 
+    INSDC:SRA:platform_id out_platform
         = < INSDC:SRA:platform_id > echo < SRA_PLATFORM_OXFORD_NANOPORE > ();
 }
 
