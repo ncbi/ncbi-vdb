@@ -1197,10 +1197,10 @@ XFSTarArchiveProvider ( const struct XFSTeleport ** Teleport )
 LIB_EXPORT
 rc_t CC
 XFSTarArchiveNodeMake (
+                struct XFSNode ** Node,
                 const char * Name,
                 const char * Path,
-                const char * Perm,
-                struct XFSNode ** Node
+                const char * Perm
 )
 {
     rc_t RCt;

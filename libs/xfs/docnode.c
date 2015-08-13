@@ -115,29 +115,29 @@ static const struct XFSNode_vt_v1 _sDocNodeVT_v1 = {
 LIB_EXPORT
 rc_t CC
 XFSDocNodeMake (
+            struct XFSNode ** Node,
             const struct XFSDoc * Doc,
             const char * Name,
-            const char * Perm,          /* Could be NULL */
-            struct XFSNode ** Node
+            const char * Perm          /* Could be NULL */
 )
 {
     return XFSDocNodeMakeWithFlavor (
+                                    Node,
                                     Doc,
                                     Name,
                                     Perm,
-                                    _sFlavorLess,
-                                    Node
+                                    _sFlavorLess
                                     );
 }   /* XFSDocNodeMake () */
 
 LIB_EXPORT
 rc_t CC
 XFSDocNodeMakeWithFlavor (
+            struct XFSNode ** Node,
             const struct XFSDoc * Doc,
             const char * Name,
             const char * Perm,          /* Could be NULL */
-            uint32_t Flavor,
-            struct XFSNode ** Node
+            uint32_t Flavor
 )
 {
     rc_t RCt;

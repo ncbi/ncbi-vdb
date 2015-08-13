@@ -43,6 +43,7 @@
 #include "bean.h"
 #include "zehr.h"
 #include "mehr.h"
+#include "common.h"
 
 #include <sysalloc.h>
 
@@ -458,13 +459,6 @@ _DbGapBeanSuite_dispose_v1 ( const struct XFSBeanSuite * self )
 
     return 0;
 }   /* _DbGapBeanSuite_dispose_v1 () */
-
-XFS_EXTERN rc_t CC XFSFileNodeMake (
-                                struct XFSNode ** Node,
-                                const char * Path,
-                                const char * Name,
-                                const char * Perm   /* Could be NULL */
-                                );
 
 rc_t CC
 _DbGapBeanSuite_render_v1 (

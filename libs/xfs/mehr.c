@@ -75,17 +75,15 @@ XFS_InitAll_MHR ( const char * ConfigFile )
     RCt = 0;
     Config = NULL;
 
-    if ( ConfigFile == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-printf ( "WARNING(MEHR): InitAll [%s]\n", ConfigFile );
+printf ( "WARNING(MEHR): InitAll [%s]\n", ConfigFile == NULL ? "NULL" : ConfigFile );
 
         /* First we do inti config :lol: */
     RCt = XFS_LoadConfig_ZHR ( ConfigFile, & Config );
     if ( RCt == 0 ) {
         _sConfig_MHR = Config;
-        _sConfigPath_MHR = string_dup_measure ( ConfigFile, NULL );
+        if ( ConfigFile != NULL ) {
+            _sConfigPath_MHR = string_dup_measure ( ConfigFile, NULL );
+        }
 
         RCt = XFSTeleportInit ();
 

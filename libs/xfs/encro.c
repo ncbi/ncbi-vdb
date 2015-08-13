@@ -175,11 +175,11 @@ XFSEncNodeMake (
 LIB_EXPORT
 rc_t CC
 XFSEncryptedFileNodeMake (
+                    struct XFSNode ** Node,
                     const char * Name,
                     const char * Path,
                     const char * Passwd,
-                    const char * EncType,
-                    struct XFSNode ** Node
+                    const char * EncType
 )
 {
     rc_t RCt;
@@ -782,11 +782,11 @@ _EncryptedFileNodeConstructor (
     NodeName = Alias == NULL ? XFSModelNodeName ( Template ) : Alias;
 
     RCt = XFSEncryptedFileNodeMake (
+                & TheNode,
                 NodeName,
                 XFSModelNodeProperty ( Template, XFS_MODEL_SOURCE ),
                 XFSModelNodeProperty ( Template, XFS_MODEL_PASSWD ),
-                XFSModelNodeProperty ( Template, XFS_MODEL_ENCTYPE ),
-                & TheNode
+                XFSModelNodeProperty ( Template, XFS_MODEL_ENCTYPE )
                 );
     if ( RCt == 0 ) {
         * Node = ( struct XFSNode * ) TheNode;

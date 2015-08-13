@@ -1788,10 +1788,10 @@ _KfsNodeConstructor (
 LIB_EXPORT
 rc_t CC
 XFSFileNodeMake (
+            struct XFSNode ** Node,
             const char * Path,
             const char * Name,
-            const char * Perm,
-            struct XFSNode ** Node
+            const char * Perm
 )
 {
     rc_t RCt;
@@ -1819,10 +1819,10 @@ XFSFileNodeMake (
 LIB_EXPORT
 rc_t CC
 XFSDirNodeMake (
+            struct XFSNode ** Node,
             const char * Path,
             const char * Name,
-            const char * Perm,
-            struct XFSNode ** Node
+            const char * Perm
 )
 {
     rc_t RCt;

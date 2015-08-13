@@ -48,10 +48,30 @@ struct KNamelist;
 
 /*))    Common name defines for model property names
  ((*/
+#define XFS_MODEL_ROOT      "root"       /* the only mandatory node
+                                            to have */
+#define XFS_MODEL_AS        "as"         /* use this node as template
+                                            overridden properties */
+#define XFS_MODEL_TYPE      "type"       /* mandatory, used for tree
+                                            rendering */
+#define XFS_MODEL_LABEL     "label"      /* name which will be used at
+                                            rendered tree, could be
+                                            overriden by alias */
+#define XFS_MODEL_SECURITY  "security"   /* in real life those are
+                                            permissions */
+#define XFS_MODEL_CHILDREN  "children"   /* usually any container, it
+                                            is list of names of children
+                                            with labels */
+
 #define XFS_MODEL_SOURCE    "source"
 #define XFS_MODEL_TEXT      "text"
 #define XFS_MODEL_PASSWD    "password"
 #define XFS_MODEL_ENCTYPE   "enctype"
+#define XFS_MODEL_KARTFILES "kart-files"
+#define XFS_MODEL_MODE      "mode"
+#define XFS_MODEL_MODE_RO   "RO"
+#define XFS_MODEL_MODE_RW   "RW"
+#define XFS_MODEL_PROJECTID "project-id"
 
 /*)))
  ///   Methods
@@ -143,6 +163,67 @@ XFSModelResource ( const struct XFSModel * self );
 XFS_EXTERN
 const char * CC
 XFSModelVersion ( const struct XFSModel * self );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/* Model Editing methods                                             */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+XFS_EXTERN
+rc_t CC
+XFSModelFromScratch (
+            struct XFSModel ** Model,
+            const char * Version
+            );
+
+XFS_EXTERN
+rc_t CC
+XFSModelAddNode (
+            struct XFSModel * self,
+            const char * NodeName,  /* not null */
+            const char * Type       /* not null */
+            );
+
+XFS_EXTERN
+rc_t CC
+XFSModelAddRootNode (
+            struct XFSModel * self,
+            const char * Type       /* not null */
+            );
+
+XFS_EXTERN
+rc_t CC
+XFSModelNodeSetProperty (
+            struct XFSModelNode * self,
+            const char * Key,       /* not null */
+            const char * Value      /* could be null */
+            );
+
+XFS_EXTERN
+rc_t CC
+XFSModelNodeSetLabel (
+            struct XFSModelNode * self,
+            const char * Label      /* could be null */
+            );
+
+XFS_EXTERN
+rc_t CC
+XFSModelNodeSetSecurity (
+            struct XFSModelNode * self,
+            const char * Security   /* could be null */
+            );
+
+XFS_EXTERN
+rc_t CC
+XFSModelNodeSetSource (
+            struct XFSModelNode * self,
+            const char * Source     /* could be null */
+            );
+
+XFS_EXTERN
+rc_t CC
+XFSModelNodeSetChildren (
+            struct XFSModelNode * self,
+            const char * CommaSeparChildrenNames    /* could be null */
+            );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 

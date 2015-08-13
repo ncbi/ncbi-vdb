@@ -89,25 +89,6 @@ struct XFSModelNode {
 };
 
 /*)))
- (((    List of common properties for XFSModelNode, with some
-  )))   explanations
- (((*/
-#define XFS_MODEL_ROOT      "root"       /* the only mandatory node
-                                            to have */
-#define XFS_MODEL_AS        "as"         /* use this node as template
-                                            overridden properties */
-#define XFS_MODEL_TYPE      "type"       /* mandatory, used for tree
-                                            rendering */
-#define XFS_MODEL_LABEL     "label"      /* name which will be used at
-                                            rendered tree, could be
-                                            overriden by alias */
-#define XFS_MODEL_SECURITY  "security"   /* in real life those are 
-                                            permissions */
-#define XFS_MODEL_CHILDREN  "children"   /* usually any container, it
-                                            is list of names of children
-                                            with labels */
-
-/*)))
  ///    ModelNode Make and Destroy
 (((*/
 
@@ -912,6 +893,138 @@ XFSModelVersion ( const struct XFSModel * self )
 {
     return self == NULL ? NULL : ( self -> Version );
 }   /* XFSModelVersion () */
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/* Editing                                                           */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+LIB_EXPORT
+rc_t CC
+XFSModelFromScratch ( struct XFSModel ** Model, const char * Version )
+{
+    XFS_CSAN ( Model )
+    XFS_CAN ( Model )
+
+    return _ErstellenUndInitialisierenModel (
+                                    "scratch",
+                                    Version,
+                                    ( const struct XFSModel ** ) Model
+                                    );
+}   /* XFSModelFromScratch () */
+
+LIB_EXPORT
+rc_t CC
+XFSModelAddNode (
+                struct XFSModel * self,
+                const char * NodeName,  /* not null */
+                const char * Type       /* not null */
+)
+{
+    rc_t RCt;
+    struct XFSModelNode * Mode;
+
+    RCt = 0;
+    Mode = NULL;
+
+    XFS_CAN ( self )
+    XFS_CAN ( NodeName )
+    XFS_CAN ( Type )
+
+    RCt = _XFSModelNodeMake ( NodeName, & Mode );
+    if ( RCt == 0 ) {
+        RCt = XFSModelNodeSetProperty ( Mode, XFS_MODEL_TYPE, Type );
+        if ( RCt == 0 ) {
+            RCt = BSTreeInsert (
+                            & ( self -> tree ),
+                            ( BSTNode * ) Mode,
+                            _LoadNodeCallback
+                            );
+        }
+    }
+
+    if ( RCt != 0 ) {
+        if ( Mode != NULL ) {
+            _XFSModelNodeDispose ( Mode );
+        }
+    }
+
+    return RCt;
+}   /* XFSModelAddNode () */
+
+LIB_EXPORT
+rc_t CC
+XFSModelAddRootNode (
+                struct XFSModel * self,
+                const char * Type       /* not null */
+)
+{
+    return XFSModelAddNode ( self, XFS_MODEL_ROOT, Type );
+}   /* XFSModelNodeAddRootNode () */
+
+LIB_EXPORT
+rc_t CC
+XFSModelNodeSetProperty (
+                        struct XFSModelNode * self,
+                        const char * Key,       /* not null */
+                        const char * Value      /* could be null */
+)
+{
+    rc_t RCt;
+
+    RCt = 0;
+
+    XFS_CAN ( self )
+    XFS_CAN ( self -> Properties )
+    XFS_CAN ( Key )
+
+    if ( strcmp ( Key, XFS_MODEL_CHILDREN ) == 0 ) {
+        if ( Value == NULL ) {
+            XFSOwpClear ( self -> Children );
+        }
+        else {
+            RCt = _ParseAddNodeChildren ( self, Value );
+        }
+    }
+    else {
+        RCt = XFSOwpSet ( self -> Properties, Key, Value );
+    }
+
+    return RCt;
+}   /* XFSModelNodeSetPoperty () */
+
+LIB_EXPORT
+rc_t CC
+XFSModelNodeSetLabel ( struct XFSModelNode * self, const char * Label )
+{
+    return XFSModelNodeSetProperty ( self, XFS_MODEL_LABEL, Label );
+}   /* XFSModelNodeSetLabel () */
+
+LIB_EXPORT
+rc_t CC
+XFSModelNodeSetSecurity ( struct XFSModelNode * self, const char * Sec )
+{
+    return XFSModelNodeSetProperty ( self, XFS_MODEL_SECURITY, Sec );
+}   /* XFSModelNodeSetSecurity () */
+
+LIB_EXPORT
+rc_t CC
+XFSModelNodeSetSource ( struct XFSModelNode * self, const char * Src )
+{
+    return XFSModelNodeSetProperty ( self, XFS_MODEL_SOURCE, Src );
+}   /* XFSModelNodeSetSource () */
+
+LIB_EXPORT
+rc_t CC
+XFSModelNodeSetChildren (
+                        struct XFSModelNode * self,
+                        const char * CommaSeparChildrenNames 
+)
+{
+    return XFSModelNodeSetProperty (
+                                    self,
+                                    XFS_MODEL_CHILDREN,
+                                    CommaSeparChildrenNames
+                                    );
+}   /* XFSModelNodeSetChildren () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 

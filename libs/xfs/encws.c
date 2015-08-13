@@ -1682,11 +1682,11 @@ _EncWsNodeConstructor (
 LIB_EXPORT
 rc_t CC
 XFSWorkspaceNodeMake (
+            struct XFSNode ** Node,
             const char * Name,
             const char * Path,
             const char * Password,
-            const char * EncType,
-            struct XFSNode ** Node
+            const char * EncType
 )
 {
     rc_t RCt;

@@ -221,6 +221,11 @@ XFS_EXTERN rc_t CC XFSTarArchiveProvider (
                                 const struct XFSTeleport ** Teleport
                                 );
 
+#define DBGAP_PROJECT_NAME          "dbgap-project"
+XFS_EXTERN rc_t CC XFSDbGapProjectProvider (
+                                const struct XFSTeleport ** Teleport
+                                );
+
 static
 rc_t CC
 _TeleportInit ()
@@ -319,6 +324,14 @@ _TeleportInit ()
         RCt = _TeleportAdd (
                         TAR_ARCHIVE_NAME,
                         XFSTarArchiveProvider
+                        );
+        if ( RCt != 0 ) { 
+            break;
+        }
+
+        RCt = _TeleportAdd (
+                        DBGAP_PROJECT_NAME,
+                        XFSDbGapProjectProvider
                         );
         if ( RCt != 0 ) { 
             break;

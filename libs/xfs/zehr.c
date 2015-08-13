@@ -71,31 +71,35 @@ XFS_LoadConfig_ZHR (
     TmpConfig = NULL;
     File = NULL;
 
-    if ( Resource == NULL || Config == NULL ) {
-        return XFS_RC ( rcNull );
+        /* Now Resource could be NULL
+         */
+    XFS_CSAN ( Config )
+    XFS_CAN ( Config )
+
+    RCt = KConfigMake ( & TmpConfig, NULL );
+    if ( RCt != 0 ) {
+        return RCt;
     }
 
-    * Config = NULL;
-
-        /* Trying to open resource as file */
-    RCt = XFS_OpenResourceRead_MHR ( Resource, & File );
-    if ( RCt == 0 ) {
-        RCt = KConfigMake (
-                        & TmpConfig,
-                        NULL    /* We need new clear config each time */
-                        );
+    if ( Resource != NULL ) {
+            /* Trying to open resource as file */
+        RCt = XFS_OpenResourceRead_MHR ( Resource, & File );
         if ( RCt == 0 ) {
             RCt = KConfigLoadFile ( TmpConfig, Resource, File );
-            if ( RCt == 0 ) {
-                * Config = TmpConfig;
-            }
-            else {
-                KConfigRelease ( TmpConfig );
-            }
-        }
 
-        KFileRelease ( File );
+            KFileRelease ( File );
+        }
     }
+
+    if ( RCt == 0 ) {
+        * Config = TmpConfig;
+    }
+    else {
+        if ( TmpConfig != NULL ) {
+            KConfigRelease ( TmpConfig );
+        }
+    }
+
     return RCt;
 }   /* XFS_LoadConfig_ZHR () */
 
@@ -251,6 +255,58 @@ XFS_StringCompare4BST_ZHR ( const char * Str1, const char * Str2 )
 
     return strcmp ( Str1, Str2 );
 }   /* XFS_StringCompare4BST_XHR () */
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*))
+ ||     Will return name with/without extension
+ ||     It will return new string, so don't forget to delete it
+((*/
+LIB_EXPORT
+rc_t CC
+XFS_NameFromPath_ZHR (
+                    const char * Path,
+                    const char ** Name,
+                    bool TrimExt
+)
+{
+    rc_t RCt;
+    const char * Start;
+    const char * End;
+    const char * Curr;
+
+    RCt = 0;
+    Start = End = Curr = NULL;
+
+    XFS_CSAN ( Name )
+    XFS_CAN ( Path )
+    XFS_CAN ( Name )
+
+    // Start = 
+
+    return RCt;
+}   /* XFS_NameFromPath_ZHR () */
+
+/*))
+ ||     Will return null if Extension does not exists
+ ||     It will return new strings, so don't forget to delete them
+((*/
+LIB_EXPORT
+rc_t CC
+XFS_NameExtFromPath_ZHR (
+                    const char * Path,
+                    const char ** Name,
+                    const char ** Ext
+)
+{
+    rc_t RCt;
+
+    RCt = 0;
+
+    return RCt;
+}   /* XFS_NameExtFromPath_ZHR () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
