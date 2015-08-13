@@ -19,10 +19,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   
-  <PropertyGroup>
-    <WorkingDirectory>ngs-c++</WorkingDirectory>
-  </PropertyGroup>    
-
   <Import Project=".\test-project.props" />
   
   <ItemDefinitionGroup>
