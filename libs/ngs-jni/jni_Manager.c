@@ -122,6 +122,5 @@ JNIEXPORT jstring JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_Version
   (JNIEnv *jenv, jclass jcls)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcMgr, rcAccessing );
-
     return JStringMake(ctx, jenv, GetPackageVersion());
 }
