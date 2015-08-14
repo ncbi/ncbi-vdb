@@ -88,11 +88,11 @@ _FooNodeMake ( struct XFSNode ** Foo, const char * NodeName )
         RCt = XFSTextDocAppend ( Doc, "FOO FILE: placeholder for not implemented node type\n\n" );
         if ( RCt  == 0 ) {
             RCt = XFSDocNodeMakeWithFlavor (
+                                        & TheFoo,
                                         Doc,
                                         NodeName,
                                         XFSPermRODefNodeChar (),
-                                        _sFlavorOfFoo,
-                                        & TheFoo
+                                        _sFlavorOfFoo
                                         );
             if ( RCt == 0 ) {
                 * Foo = TheFoo;

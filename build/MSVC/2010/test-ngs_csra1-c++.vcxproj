@@ -18,6 +18,10 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+
+  <PropertyGroup>
+    <WorkingDirectory>ngs-c++</WorkingDirectory>
+  </PropertyGroup>    
   
   <Import Project=".\test-project.props" />
   

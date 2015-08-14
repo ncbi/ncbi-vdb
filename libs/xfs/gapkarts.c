@@ -28,6 +28,7 @@
 #include <klib/text.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/namelist.h>
 
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -42,6 +43,7 @@
 #include <xfs/doc.h>
 
 #include "mehr.h"
+#include "zehr.h"
 #include "schwarzschraube.h"
 #include "ncon.h"
 #include "teleport.h"
@@ -64,136 +66,166 @@
  |||
 (((*/
 
-struct XFSKartCollectionNode {
+struct XFSGapKartsNode {
     struct XFSContNode node;
 
-    const char * path;
+    uint32_t project_id;
+
+    const char * perm;
 };
 
 static
 rc_t CC
-_IsPathCart (
-        const struct KDirectory * Directory,
-        const char * Path,
-        const char * Name,
-        char * BF,
-        size_t BFS,
-        bool * IsCart
-)
+_ExtractName ( const char * Path, char * Buffer, size_t BufferSize )
 {
     rc_t RCt;
-    size_t nwr;
-    const struct KFile * File;
-    const char * Sg = "ncbikart";
-    size_t SgLen;
-    char SF [ 64 ];
+    const char * pStart;
+    const char * pEnd;
+    const char * Start;
+    const char * End;
 
     RCt = 0;
-    nwr = 0;
-    File = NULL;
-    SgLen = sizeof ( Sg );
-    * SF = 0;
+    pStart = NULL;
+    pEnd = NULL;
+    Start = NULL;
+    End = NULL;
 
-    * BF = 0;
-    * IsCart = false;
+    XFS_CAN ( Path )
+    XFS_CAN ( Buffer )
+    XFS_CA ( BufferSize, 0 )
 
-    RCt = string_printf ( BF, BFS, & nwr, "%s/%s", Path, Name );
-    if ( RCt == 0 ) {
-        RCt = KDirectoryOpenFileRead ( Directory, & File, BF );
-        if ( RCt == 0 ) {
-            RCt = KFileRead ( File, 0, SF, SgLen, & nwr );
-            if ( RCt == 0 ) {
-                * IsCart = ! string_cmp ( SF, SgLen, Sg, SgLen, SgLen );
-            }
+    pStart = Path;
+    pEnd = pStart + string_size ( Path ) - 1;
 
-            KFileRelease ( File );
+        /* Looking for begin of filename
+         */
+    while ( pStart < pEnd ) {
+        if ( * pEnd == '/' ) {
+            Start = pEnd + 1;
+            break;
         }
+        pEnd --;
     }
 
+    if ( Start == NULL ) {
+        Start = pStart;
+    }
+
+    pEnd = pStart + string_size ( Path ) - 1;
+    End = pEnd;
+
+         /* Looking for end of filename
+          */
+    while ( pStart < pEnd ) {
+        if ( * pEnd == '.' ) {
+            End = pEnd;
+            break;
+        }
+        pEnd --;
+    }
+
+    string_copy ( Buffer, BufferSize, Start, End - Start );
+
     return RCt;
-}   /* _IsPathCart () */
+}   /* _ExtractName () */
 
 static
 rc_t CC
-_LoadKartItem (
-            struct KDirectory * Directory,
-            struct XFSKartCollectionNode * Node,
-            const char * Name
-)
+_LoadKart ( struct XFSGapKartsNode * Node, const char * Path )
 {
     rc_t RCt;
-    char BF [ XFS_SIZE_4096 ];
-    bool IsCart;
     struct XFSNode * KartNode;
+    char Name [ XFS_SIZE_128 ];
 
     RCt = 0;
-    * BF = 0;
-    IsCart = false;
     KartNode = NULL;
+    * Name = 0;
 
-    if ( Directory == NULL || Node == NULL || Name == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( Node )
+    XFS_CAN ( Path )
 
-    if ( Node -> path == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    RCt = _IsPathCart (
-                    Directory,
-                    Node -> path,
-                    Name,
-                    BF,
-                    sizeof ( BF ),
-                    & IsCart
-                    );
+    RCt = _ExtractName ( Path, Name, sizeof ( Name ) );
     if ( RCt == 0 ) {
-        if ( IsCart ) {
-            RCt = XFSKartNodeMake ( & KartNode, Name, BF, NULL );
-            if ( RCt == 0 ) {
-                RCt = XFSContNodeAddChild ( 
-                                        & ( Node -> node . node ),
-                                        KartNode
-                                        );
-            }
-            else {
-                    /*  Some Karts could be damaged 
-                     |  we should think about it later
-                     */
-                KOutMsg ( "Invalid Kart file [%s]\n", BF );
-                RCt = 0;
-            }
+        RCt = XFSKartNodeMake ( & KartNode, Name, Path, NULL );
+        if ( RCt == 0 ) {
+            RCt = XFSContNodeAddChild ( 
+                                    & ( Node -> node . node ),
+                                    KartNode
+                                    );
+        }
+        else {
+                /*  Some Karts could be damaged 
+                 |  we should think about it later
+                 */
+            KOutMsg ( "Invalid Kart file [%s]\n", Path );
+            RCt = 0;
         }
     }
 
     return RCt;
-}   /* _LoadKartItem () */
+}   /* _LoadKart () */
 
 static 
 rc_t CC
-_LoadKartScanPath ( struct XFSKartCollectionNode * Node )
+_LoadKarts (
+            struct XFSGapKartsNode * Node,
+            const char * ComaSeparatedPaths
+)
 {
     rc_t RCt;
+    struct KNamelist * Paths;
+    uint32_t qty, llp;
+    const char * Path;
+
+    RCt = 0;
+    Paths = NULL;
+    qty = llp = 0;
+    Path = NULL;
+
+    XFS_CAN ( Node )
+
+        /* No Karts defined
+         */
+    if ( ComaSeparatedPaths == NULL ) {
+        return 0;
+    }
+
+    RCt = XFS_SimpleTokenize_ZHR ( ComaSeparatedPaths, ',', & Paths );
+    if ( RCt == 0 ) {
+
+        RCt = KNamelistCount ( Paths, & qty );
+        if ( RCt == 0 ) {
+            for ( llp = 0; llp < qty; llp ++ ) {
+                RCt = KNamelistGet ( Paths, llp, & Path );
+                if ( RCt == 0 ) {
+                    RCt = _LoadKart ( Node, Path );
+                }
+
+                RCt = 0;
+            }
+        }
+
+        KNamelistRelease ( Paths );
+    }
+
+    if ( RCt != 0 ) {
+            /*  Sorry, we just were unable to load any Kart
+             */
+        RCt = 0;
+    }
+
+#ifdef JOJOBA
     struct KDirectory * Directory;
     KNamelist * List;
     const char * Name;
     uint32_t Idx;
     uint32_t ListCount;
 
-    RCt = 0;
     Directory = NULL;
     List = NULL;
     Name = NULL;
     Idx = 0;
     ListCount = 0;
-
-    if ( Node == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    if ( Node -> path == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
 
     RCt = KDirectoryNativeDir ( & Directory );
     if ( RCt == 0 ) {
@@ -224,106 +256,48 @@ _LoadKartScanPath ( struct XFSKartCollectionNode * Node )
         KDirectoryRelease ( Directory );
     }
 
-    return RCt;
-}   /* _LoadKartScanPath () */
-
-static 
-rc_t CC
-_LoadKartScanChildren (
-                    const struct XFSModel * Model,
-                    const struct XFSModelNode * Template,
-                    struct XFSKartCollectionNode * Node
-)
-{
-    rc_t RCt;
-    const struct KNamelist * Children;
-    uint32_t ChildrenQty, llp;
-    const char * ChildName, * ChildAlias;
-    const struct XFSNode * TheNode;
-
-    RCt = 0;
-    Children = NULL;
-    ChildrenQty = 0;
-    ChildName = ChildAlias = NULL;
-    TheNode = NULL;
-
-    RCt = XFSModelNodeChildrenNames ( Template, & Children );
-    if ( RCt == 0 ) {
-
-        RCt = KNamelistCount ( Children, & ChildrenQty );
-        if ( RCt == 0 ) {
-
-            for ( llp = 0; llp < ChildrenQty; llp ++ ) {
-                RCt = KNamelistGet ( Children, llp, & ChildName );
-                if ( RCt == 0 ) {
-
-                    ChildAlias = XFSModelNodeChildAlias (
-                                                    Template,
-                                                    ChildName
-                                                    );
-
-                    RCt = XFSNodeMake (
-                                    Model,
-                                    ChildName,
-                                    ChildAlias,
-                                    & TheNode
-                                    );
-                    if ( RCt == 0 ) {
-                        RCt = XFSContNodeAddChild (
-                                            & ( Node -> node . node ),
-                                            TheNode
-                                            );
-                        /* Don't know what to do here */
-                    }
-
-                    if ( RCt != 0 ) {
-                        break;
-                    }
-                }
-            }
-        }
-
-        KNamelistRelease ( Children );
-    }
+#endif /* JOJOBA */
 
     return RCt;
-}   /* _LoadKartScanChildren () */
+}   /* _LoadKarts () */
 
 static
 rc_t CC
-_KartCollectionNodeDispose ( struct XFSContNode * self )
+_GapKartsNodeDispose ( struct XFSContNode * self )
 {
     rc_t RCt;
-    struct XFSKartCollectionNode * Node;
+    struct XFSGapKartsNode * Node;
 
     RCt = 0;
-    Node = ( struct XFSKartCollectionNode * ) self;
+    Node = ( struct XFSGapKartsNode * ) self;
 
     if ( Node == NULL ) {
         return 0;
     }
 
-    if ( Node -> path != NULL ) {
-        free ( ( char * ) Node -> path );
-        Node -> path = NULL;
+    if ( Node -> perm != NULL ) {
+        free ( ( char * ) Node -> perm );
+        Node -> perm = NULL;
     }
+
+    Node -> project_id = 0;
 
     free ( Node );
 
     return RCt;
-}   /* _KartCollectionNodeDispose () */
+}   /* _GapKartsNodeDispose () */
 
 static
 rc_t CC
-_KartCollectionNodeMake (
-            const char * Name,
-            const char * Path,  /* Could be NULL */
-            const char * Perm,
-            struct XFSKartCollectionNode ** Node
+_GapKartsNodeMake (
+                const char * Name,
+                uint32_t ProjectId,
+                const char * Perm,
+                struct XFSGapKartsNode ** Node
 )
 {
     rc_t RCt;
-    struct XFSKartCollectionNode * KartNode;
+    struct XFSGapKartsNode * KartNode;
 
     RCt = 0;
     KartNode = NULL;
@@ -332,11 +306,11 @@ _KartCollectionNodeMake (
         * Node = NULL;
     }
 
-    if ( Node == NULL || Path == NULL || Name == NULL ) {
+    if ( Node == NULL || Name == NULL ) {
         return XFS_RC ( rcNull );
     }
 
-    KartNode = calloc ( 1, sizeof ( struct XFSKartCollectionNode ) );
+    KartNode = calloc ( 1, sizeof ( struct XFSGapKartsNode ) );
     if ( KartNode == NULL ) {
         RCt = XFS_RC ( rcExhausted );
     }
@@ -346,10 +320,12 @@ _KartCollectionNodeMake (
                             Name,
                             Perm,
                             _sFlavorOfKartCollection,
-                            _KartCollectionNodeDispose
+                            _GapKartsNodeDispose
                             );
         if ( RCt == 0 ) {
-            RCt = XFS_StrDup ( Path, & ( KartNode -> path ) );
+            if ( Perm != NULL ) {
+                RCt = XFS_StrDup ( Perm, & ( KartNode -> perm ) );
+            }
             if ( RCt == 0 ) {
                 * Node = KartNode;
             }
@@ -357,19 +333,20 @@ _KartCollectionNodeMake (
     }
 
     return RCt;
-}   /* _KartCollectionNodeMake () */
+}   /* _GapKartsNodeMake () */
 
 LIB_EXPORT
 rc_t CC
-XFSKartCollectionNodeMake (
+XFSDbGapKartsNodeMake (
             struct XFSNode ** Node,
             const char * Name,
-            const char * Path,
+            const char * ComaSeparatedPaths,
+            uint32_t ProjectId,
             const char * Perm
 )
 {
     rc_t RCt;
-    struct XFSKartCollectionNode * KartNode;
+    struct XFSGapKartsNode * KartNode;
 
     RCt = 0;
     KartNode = NULL;
@@ -378,13 +355,18 @@ XFSKartCollectionNodeMake (
         * Node = NULL;
     }
 
-    if ( Node == NULL || Path == NULL || Name == NULL ) {
+    if ( Node == NULL || Name == NULL ) {
         return XFS_RC ( rcNull );
     }
 
-    RCt = _KartCollectionNodeMake ( Name, Path, Perm, & KartNode );
+    RCt = _GapKartsNodeMake (
+                            Name,
+                            ProjectId,
+                            Perm,
+                            & KartNode
+                            );
     if ( RCt == 0 ) {
-        RCt = _LoadKartScanPath ( KartNode );
+        RCt = _LoadKarts ( KartNode, ComaSeparatedPaths );
         if ( RCt == 0 ) {
             * Node = & ( KartNode -> node . node );
         }
@@ -404,11 +386,11 @@ printf ( "XFSKartNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type
 */
 
     return RCt;
-}   /* XFSKartCollectionNodeMake () */
+}   /* XFSDbGapKartsNodeMake () */
 
 static
 rc_t CC
-_KartCollectionNodeMakeFromModel (
+_GapKartsNodeMakeFromModel (
                     const char * Name,
                     const struct XFSModel * Model,
                     const struct XFSModelNode * Template,
@@ -416,10 +398,14 @@ _KartCollectionNodeMakeFromModel (
 )
 {
     rc_t RCt;
-    struct XFSKartCollectionNode * KartNode;
+    struct XFSGapKartsNode * KartNode;
+    const char * TempStr;
+    uint32_t ProjectId;
 
     RCt = 0;
     KartNode = NULL;
+    TempStr = NULL;
+    ProjectId = 0;
 
     if ( Node != NULL ) {
         * Node = NULL;
@@ -429,14 +415,27 @@ _KartCollectionNodeMakeFromModel (
         return XFS_RC ( rcNull );
     }
 
-    RCt = _KartCollectionNodeMake (
-                                Name,
-                                "generic",
-                                XFSModelNodeSecurity ( Template ),
-                                & KartNode
-                                );
+    TempStr = XFSModelNodeProperty ( Template, XFS_MODEL_PROJECTID );
+    if ( TempStr == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    ProjectId = atol ( TempStr );
+    if ( ProjectId == 0 ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    RCt = _GapKartsNodeMake (
+                Name,
+                ProjectId,
+                XFSModelNodeSecurity ( Template ),
+                & KartNode
+                );
     if ( RCt == 0 ) {
-        RCt = _LoadKartScanChildren ( Model, Template, KartNode );
+        RCt = _LoadKarts (
+                KartNode,
+                XFSModelNodeProperty ( Template, XFS_MODEL_KARTFILES )
+                );
         if ( RCt == 0 ) {
             * Node = & ( KartNode -> node . node );
         }
@@ -456,7 +455,7 @@ printf ( "KartNodeMakeFromModel ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name
 */
 
     return RCt;
-}   /* _KartCollectionNodeMakeFromModel () */
+}   /* _GapKartsNodeMakeFromModel () */
 
 /*)))
  |||
@@ -495,7 +494,7 @@ printf ( "KartNodeMakeFromModel ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name
 
 static
 rc_t CC
-_KartCollectionNodeConstructorEx (
+_GapKartsNodeConstructorEx (
                         const struct XFSModel * Model,
                         const struct XFSModelNode * Template,
                         const char * Alias,
@@ -506,12 +505,10 @@ _KartCollectionNodeConstructorEx (
     rc_t RCt;
     struct XFSNode * TheNode;
     const char * NodeName;
-    const char * Path;
 
     RCt = 0;
     TheNode = NULL;
     NodeName = NULL;
-    Path = NULL;
 
     if ( Model == NULL || Template == NULL || Node == NULL ) {
         return XFS_RC ( rcNull );
@@ -521,23 +518,12 @@ _KartCollectionNodeConstructorEx (
 
     NodeName = Alias == NULL ? XFSModelNodeName ( Template ) : Alias;
 
-    Path = XFSModelNodeProperty ( Template, XFS_MODEL_SOURCE );
-    if ( Path != NULL ) {
-        RCt = XFSKartCollectionNodeMake (
-                                    & TheNode,
+    RCt = _GapKartsNodeMakeFromModel (
                                     NodeName,
-                                    Path,
-                                    XFSModelNodeSecurity ( Template )
+                                    Model,
+                                    Template,
+                                    & TheNode
                                     );
-    }
-    else {
-        RCt = _KartCollectionNodeMakeFromModel (
-                                            NodeName,
-                                            Model,
-                                            Template,
-                                            & TheNode
-                                            );
-    }
 
     if ( RCt == 0 ) {
         * Node = TheNode;
@@ -551,7 +537,7 @@ _KartCollectionNodeConstructorEx (
     }
 
     return RCt;
-}   /* _KartCollectionNodeConstructorEx () */
+}   /* _GapKartsNodeConstructorEx () */
 
 /*)))
  |||
@@ -560,7 +546,7 @@ _KartCollectionNodeConstructorEx (
 (((*/
 static
 rc_t CC
-_KartCollectionNodeConstructor (
+_GapKartsNodeConstructor (
                         const struct XFSModel * Model,
                         const struct XFSModelNode * Template,
                         const char * Alias,
@@ -569,7 +555,7 @@ _KartCollectionNodeConstructor (
 {
     rc_t RCt = 0;
 
-    RCt = _KartCollectionNodeConstructorEx (
+    RCt = _GapKartsNodeConstructorEx (
                             Model,
                             Template,
                             Alias,
@@ -578,16 +564,16 @@ _KartCollectionNodeConstructor (
                             );
 
 /*
-printf ( "_KartCollectionNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+printf ( "_GapKartsNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
 
     return RCt;
-}   /* _KartCollectionNodeConstructor () */
+}   /* _GapKartsNodeConstructor () */
 
 static
 rc_t CC
-_KartCollectionNodeValidator (
+_GapKartsNodeValidator (
                         const struct XFSModel * Model,
                         const struct XFSModelNode * Template,
                         const char * Alias,
@@ -599,28 +585,28 @@ _KartCollectionNodeValidator (
     RCt = 0;
 
 /*
-printf ( "_KartCollectionNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+printf ( "_GapKartsNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
-}   /* _KartCollectionNodeValidator () */
+}   /* _GapKartsNodeValidator () */
 
-static const struct XFSTeleport _sKartCollectionNodeTeleport = {
-                                        _KartCollectionNodeConstructor,
-                                        _KartCollectionNodeValidator,
+static const struct XFSTeleport _sGapKartsNodeTeleport = {
+                                        _GapKartsNodeConstructor,
+                                        _GapKartsNodeValidator,
                                         false
                                         };
 
 
 LIB_EXPORT
 rc_t CC
-XFSKartCollectionProvider ( const struct XFSTeleport ** Teleport )
+XFSGapKartsProvider ( const struct XFSTeleport ** Teleport )
 {
     if ( Teleport == NULL ) {
         return XFS_RC ( rcNull );
     }
 
-    * Teleport = & _sKartCollectionNodeTeleport;
+    * Teleport = & _sGapKartsNodeTeleport;
 
     return 0;
-}   /* XFSKartCollectionProvider () */
+}   /* XFSGapKartsProvider () */

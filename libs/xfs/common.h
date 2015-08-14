@@ -54,6 +54,9 @@ static const uint32_t _sFlavorOfHttp              = 10;
 static const uint32_t _sFlavorOfTar               = 11;
 static const uint32_t _sFlavorOfEncode            = 12;
 static const uint32_t _sFlavorOfWorkspace         = 13;
+static const uint32_t _sFlavorOfDbGapProject      = 14;
+static const uint32_t _sFlavorOfDbGapProjectCache = 15;
+static const uint32_t _sFlavorOfDbGapPublicCache  = 16;
 
 /*))    Methods related to all commonly used nodes
  ((*/
@@ -62,17 +65,17 @@ static const uint32_t _sFlavorOfWorkspace         = 13;
 /* FileNode and DirNode - implemented in kfs.c                       */
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 XFS_EXTERN rc_t CC XFSFileNodeMake (
+                            struct XFSNode ** Node,
                             const char * Path,
                             const char * Name,
-                            const char * Perm,  /* Could be NULL */
-                            struct XFSNode ** Node
+                            const char * Perm   /* Could be NULL */
                             );
 
 XFS_EXTERN rc_t CC XFSDirNodeMake (
+                            struct XFSNode ** Node,
                             const char * Path,
                             const char * Name,
-                            const char * Perm,  /* Could be NULL */
-                            struct XFSNode ** Node
+                            const char * Perm   /* Could be NULL */
                             );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
@@ -81,18 +84,18 @@ XFS_EXTERN rc_t CC XFSDirNodeMake (
 struct XFSDoc;
 
 XFS_EXTERN rc_t CC XFSDocNodeMake (
+                            struct XFSNode ** Node,
                             const struct XFSDoc * Doc,
                             const char * Name,
-                            const char * Perm,      /* Could be NULL */
-                            struct XFSNode ** Node
+                            const char * Perm       /* Could be NULL */
                             );
 
 XFS_EXTERN rc_t CC XFSDocNodeMakeWithFlavor (
+                            struct XFSNode ** Node,
                             const struct XFSDoc * Doc,
                             const char * Name,
                             const char * Perm,      /* Could be NULL */
-                            uint32_t Flavor,
-                            struct XFSNode ** Node
+                            uint32_t Flavor 
                             );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
@@ -100,10 +103,10 @@ XFS_EXTERN rc_t CC XFSDocNodeMakeWithFlavor (
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 XFS_EXTERN rc_t CC XFSKartNodeMake (
+                            struct XFSNode ** Node,
                             const char * Name,
                             const char * Path,
-                            const char * Perm,      /* Could be NULL */
-                            struct XFSNode ** Node
+                            const char * Perm       /* Could be NULL */
                             );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
@@ -111,10 +114,10 @@ XFS_EXTERN rc_t CC XFSKartNodeMake (
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 XFS_EXTERN rc_t CC XFSKartCollectionNodeMake (
+                            struct XFSNode ** Node,
                             const char * Name,
                             const char * Path,
-                            const char * Perm,      /* Could be NULL */
-                            struct XFSNode ** Node
+                            const char * Perm       /* Could be NULL */
                             );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
@@ -122,11 +125,11 @@ XFS_EXTERN rc_t CC XFSKartCollectionNodeMake (
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 XFS_EXTERN rc_t CC XFSTarArchiveNodeMake (
+                            struct XFSNode ** Node,
                             const char * Name,
                             const char * Path,
-                            const char * Perm,      /* Could be NULL */
+                            const char * Perm       /* Could be NULL */
                                                     /* Not used nos */
-                            struct XFSNode ** Node
                             );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
@@ -134,11 +137,11 @@ XFS_EXTERN rc_t CC XFSTarArchiveNodeMake (
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 XFS_EXTERN rc_t CC XFSEncryptedFileNodeMake (
+                            struct XFSNode ** Node,
                             const char * Name,
                             const char * Path,
                             const char * Passwd,
-                            const char * EncType,   /* could be NULL */
-                            struct XFSNode ** Node
+                            const char * EncType    /* could be NULL */
                             );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
@@ -146,11 +149,48 @@ XFS_EXTERN rc_t CC XFSEncryptedFileNodeMake (
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 XFS_EXTERN rc_t CC XFSWorkspaceNodeMake (
+                            struct XFSNode ** Node,
                             const char * Name,
                             const char * Path,
                             const char * Passwd,
-                            const char * EncType,   /* could be NULL */
-                            struct XFSNode ** Node
+                            const char * EncType    /* could be NULL */
+                            );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/* DbGapProjectNode - implemented in karts.c                       */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+XFS_EXTERN rc_t CC XFSDbGapProjectNodeMake (
+                            struct XFSNode ** Node,
+                            const char * Name,
+                            uint32_t ProjectId,
+                            bool ReadOnly,          /* RW if not */
+                            const char * KartFilesCommaSeparated,
+                            const char * Perm       /* Could be NULL */
+                            );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/* DbGapCacheNode - implemented in gap_cache.c                       */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+XFS_EXTERN rc_t CC XFSDbGapCacheNodeMake (
+                            struct XFSNode ** Node,
+                            uint32_t ProjectId,     /* public if NULL */
+                            bool ReadOnly,
+                            const char * Name,      /* could be NULL */
+                            const char * Perm       /* could be NULL */
+                            );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/* DbGapKartsNode - implemented in gap_cache.c                       */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+XFS_EXTERN rc_t CC XFSDbGapKartsNodeMake (
+                            struct XFSNode ** Node,
+                            const char * Name,      /* NOT NULL */
+                            const char * ComSepPaths, /* may be NULL */
+                            uint32_t ProjectId,     /* NOT NULL */
+                            const char * Perm       /* could be NULL */
                             );
 
 #ifdef __cplusplus

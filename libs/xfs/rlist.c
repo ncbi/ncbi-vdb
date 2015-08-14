@@ -402,9 +402,6 @@ XFSKartNodeMake (
     * NameR = 0;
     NameS = 0;
 
-
-printf ( " [XFSKartNodeMake] [%d] [%d] [%s] [%s]\n", __LINE__, RCt, Name, Path );
-
     if ( Node != NULL ) { 
         * Node = NULL;
     }

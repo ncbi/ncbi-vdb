@@ -98,6 +98,7 @@ XFS_SRC = \
     perm    \
     editors \
     handle  \
+    mfile   \
     teleport    \
     foo \
     ncon  \
@@ -120,6 +121,12 @@ XFS_SRC = \
     encro     \
     xencws     \
     encws     \
+    xgapprj_tmp \
+    gapprj_tmp    \
+    xcache   \
+    cache    \
+    gapkarts    \
+    bean \
     lockdpt \
     lreader \
     schwarzschraube \
