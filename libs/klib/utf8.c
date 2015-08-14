@@ -47,14 +47,16 @@ LIB_EXPORT uint32_t CC string_len ( const char * str, size_t size )
 
     if ( str != NULL )
     {
-        size_t i = 0;
-        while ( 1 )
+        size_t i;
+        for ( i = 0;; ++ len )
         {
             int c;
+            size_t start;
 
             /* scan all ASCII characters */
-            for ( ; i < size && str [ i ] > 0; ++ i, ++ len )
+            for ( start = i; i < size && str [ i ] > 0; ++ i )
                 ( void ) 0;
+            len += ( uint32_t ) ( i - start );
             if ( i >= size )
                 break;
 
@@ -104,16 +106,22 @@ LIB_EXPORT uint32_t CC string_measure ( const char * str, size_t * size )
 
     if ( str != NULL )
     {
-        while ( 1 )
+        for ( ;; ++ len )
         {
             int c;
+            size_t start;
 
             /* scan all ASCII characters */
-            for ( ; str [ i ] > 0; ++ i, ++ len )
+            for ( start = i; str [ i ] > 0; ++ i )
                 ( void ) 0;
 
-            /* handle a single UTF-8 character */
+            /* the character that stopped scan */
             c = ~ ( int ) str [ i ];
+
+            /* the number of characters */
+            len += ( uint32_t ) ( i - start );
+
+            /* handle a single UTF-8 character */
             if ( str [ i ] == 0 )
                 break;
 
@@ -176,14 +184,102 @@ LIB_EXPORT size_t CC string_copy ( char *dst, size_t dst_size, const char *src, 
         uint32_t ch;
         int len1, len2;
 
-        /* optimistic copy of ASCII data ( including NUL ) */
-        for ( ; i < src_size && src [ i ] >= 0; ++ i )
+        /* optimistic copy of ASCII data */
+        for ( ; i < src_size && src [ i ] > 0; ++ i )
             dst [ i ] = src [ i ];
         if ( i == src_size )
             break;
 
-        /* read a ( hopefully complete ) UNICODE character */
+        /* read a ( hopefully complete ) UNICODE character ( detect NUL ) */
         len1 = utf8_utf32 ( & ch, & src [ i ], send );
+        if ( len1 <= 0 || ch == 0 )
+            break;
+
+        /* write the UNICODE character in UTF-8 */
+        len2 = utf32_utf8 ( & dst [ i ], dend, ch );
+        if ( len2 <= 0 )
+            break;
+
+        /* should have been identical number of bytes */
+        if ( len1 != len2 )
+            break;
+
+        /* advance over the UTF-8 character */
+        i += len1;
+    }
+
+    if ( i < dst_size )
+        dst [ i ] = 0;
+
+    return i;
+}
+
+LIB_EXPORT size_t CC old_string_copy ( char *dst, size_t dst_size, const char *src, size_t src_size )
+{
+    const char *send;
+    char *dend, *begin;
+
+    assert ( dst != NULL && src != NULL );
+
+    if ( dst_size < src_size )
+        src_size = dst_size;
+
+    begin = dst;
+    dend = dst + dst_size;
+    send = src + src_size;
+
+    while ( src < send )
+    {
+        uint32_t ch;
+
+        /* get a complete source character */
+        int len = utf8_utf32 ( & ch, src, send );
+        if ( len <= 0 )
+            break;
+        src += len;
+
+        /* write it to the destination */
+        len = utf32_utf8 ( dst, dend, ch );
+        if ( len <= 0 )
+            break;
+        dst += len;
+    }
+
+    if ( dst < dend )
+        * dst = 0;
+
+    return ( size_t ) ( dst - begin );
+}
+
+
+/* string_copy_measure
+ *  copies whole character text into a buffer
+ *  terminates with null byte if possible
+ *  returns the number of bytes copied
+ */
+LIB_EXPORT size_t CC string_copy_measure ( char *dst, size_t dst_size, const char *src )
+{
+    size_t i;
+    char * dend;
+
+    if ( dst == NULL || src == NULL )
+        return 0;
+
+    dend = dst + dst_size;
+
+    for ( i = 0;; )
+    {
+        uint32_t ch;
+        int len1, len2;
+
+        /* optimistic copy of ASCII data ( NUL terminated ) */
+        for ( ; i < dst_size && src [ i ] > 0; ++ i )
+            dst [ i ] = src [ i ];
+        if ( i == dst_size || src [ i ] == 0 )
+            break;
+
+        /* read a ( hopefully complete ) UNICODE character */
+        len1 = utf8_utf32 ( & ch, & src [ i ], & src [ i + 6 ] );
         if ( len1 <= 0 )
             break;
 
@@ -206,12 +302,7 @@ LIB_EXPORT size_t CC string_copy ( char *dst, size_t dst_size, const char *src, 
     return i;
 }
 
-/* string_copy_measure
- *  copies whole character text into a buffer
- *  terminates with null byte if possible
- *  returns the number of bytes copied
- */
-LIB_EXPORT size_t CC string_copy_measure ( char *dst, size_t dst_size, const char *src )
+LIB_EXPORT size_t CC old_string_copy_measure ( char *dst, size_t dst_size, const char *src )
 {
     char *dend, *begin;
 
@@ -249,6 +340,60 @@ LIB_EXPORT size_t CC string_copy_measure ( char *dst, size_t dst_size, const cha
  *  returns the number of bytes copied
  */
 LIB_EXPORT size_t CC tolower_copy ( char *dst, size_t dst_size, const char *src, size_t src_size )
+{
+    size_t i;
+    char * dend;
+    const char * send;
+
+    if ( dst == NULL || src == NULL )
+        return 0;
+
+    if ( dst_size < src_size )
+        src_size = dst_size;
+
+    dend = dst + dst_size;
+    send = src + src_size;
+
+    for ( i = 0; i < src_size; )
+    {
+        uint32_t ch;
+        int len1, len2;
+
+        /* optimistic copy of ASCII data */
+        for ( ; i < src_size && src [ i ] > 0; ++ i )
+            dst [ i ] = ( char ) tolower ( src [ i ] );
+        if ( i == src_size )
+            break;
+
+        /* read a ( hopefully complete ) UNICODE character ( detect NUL ) */
+        len1 = utf8_utf32 ( & ch, & src [ i ], send );
+        if ( len1 <= 0 || ch == 0 )
+            break;
+
+        /* lower case it */
+        ch = towlower ( ( wint_t ) ch );
+
+        /* write the UNICODE character in UTF-8 */
+        len2 = utf32_utf8 ( & dst [ i ], dend, ch );
+        if ( len2 <= 0 )
+            break;
+
+        /* should have been identical number of bytes */
+        if ( len1 != len2 )
+            break;
+
+        /* advance over the UTF-8 character */
+        i += len1;
+    }
+
+    if ( i < dst_size )
+        dst [ i ] = 0;
+
+    return i;
+}
+
+
+LIB_EXPORT size_t CC old_tolower_copy ( char *dst, size_t dst_size, const char *src, size_t src_size )
 {
     const char *send;
     char *dend, *begin;
@@ -295,6 +440,59 @@ LIB_EXPORT size_t CC tolower_copy ( char *dst, size_t dst_size, const char *src,
  *  returns the number of bytes copied
  */
 LIB_EXPORT size_t CC toupper_copy ( char *dst, size_t dst_size, const char *src, size_t src_size )
+{
+    size_t i;
+    char * dend;
+    const char * send;
+
+    if ( dst == NULL || src == NULL )
+        return 0;
+
+    if ( dst_size < src_size )
+        src_size = dst_size;
+
+    dend = dst + dst_size;
+    send = src + src_size;
+
+    for ( i = 0; i < src_size; )
+    {
+        uint32_t ch;
+        int len1, len2;
+
+        /* optimistic copy of ASCII data */
+        for ( ; i < src_size && src [ i ] > 0; ++ i )
+            dst [ i ] = ( char ) toupper ( src [ i ] );
+        if ( i == src_size )
+            break;
+
+        /* read a ( hopefully complete ) UNICODE character ( detect NUL ) */
+        len1 = utf8_utf32 ( & ch, & src [ i ], send );
+        if ( len1 <= 0 || ch == 0 )
+            break;
+
+        /* upper case it */
+        ch = towupper ( ( wint_t ) ch );
+
+        /* write the UNICODE character in UTF-8 */
+        len2 = utf32_utf8 ( & dst [ i ], dend, ch );
+        if ( len2 <= 0 )
+            break;
+
+        /* should have been identical number of bytes */
+        if ( len1 != len2 )
+            break;
+
+        /* advance over the UTF-8 character */
+        i += len1;
+    }
+
+    if ( i < dst_size )
+        dst [ i ] = 0;
+
+    return i;
+}
+
+LIB_EXPORT size_t CC old_toupper_copy ( char *dst, size_t dst_size, const char *src, size_t src_size )
 {
     const char *send;
     char *dend, *begin;
@@ -347,6 +545,96 @@ LIB_EXPORT size_t CC toupper_copy ( char *dst, size_t dst_size, const char *src,
  *  be a comparison of asize against bsize.
  */
 LIB_EXPORT int CC string_cmp ( const char *a, size_t asize,
+    const char *b, size_t bsize, uint32_t max_chars )
+{
+    size_t i, sz;
+    uint32_t num_chars;
+    const char *aend, *bend;
+
+    if ( max_chars == 0 )
+        return 0;
+
+    if ( b == NULL )
+        return a != NULL;
+    if ( a == NULL )
+        return -1;
+
+    sz = asize;
+    if ( asize > bsize )
+        sz = bsize;
+
+    aend = a + asize;
+    bend = b + bsize;
+    num_chars = 0;
+
+    for ( i = 0; i < sz; )
+    {
+        int len1, len2;
+        uint32_t ach, bch;
+
+        /* loop to process ASCII characters */
+        for ( ; i < sz; ++ i )
+        {
+            /* detect UTF-8 character */
+            if ( a [ i ] < 0 || b [ i ] < 0 )
+                break;
+
+            /* detect different or NUL character */
+            if ( a [ i ] != b [ i ] || a [ i ] == 0 )
+                return a [ i ] - b [ i ];
+
+            /* if char count is sufficient, we're done */
+            if ( ++ num_chars == max_chars )
+                return 0;
+        }
+
+        /* read a character from a */
+        len1 = utf8_utf32 ( & ach, & a [ i ], aend );
+        if ( len1 <= 0 )
+        {
+            asize = i;
+            break;
+        }
+
+        /* read a character from b */
+        len2 = utf8_utf32 ( & bch, & b [ i ], bend );
+        if ( len2 <= 0 )
+        {
+            bsize = i;
+            break;
+        }
+
+        /* compare characters */
+        if ( ach != bch )
+        {
+            if ( ach < bch )
+                return -1;
+            return 1;
+        }
+
+        /* if char count is sufficient, we're done */
+        if ( ++ num_chars == max_chars )
+            return 0;
+
+        /* adjust the pointers */
+        if ( len1 == len2 )
+            i += len1;
+        else
+        {
+            sz -= i;
+            a += i + len1;
+            b += i + len2;
+            i = 0;
+        }
+    }
+
+    /* one or both reached end < max_chars */
+    if ( asize < bsize )
+        return -1;
+    return asize > bsize;
+}
+
+LIB_EXPORT int CC old_string_cmp ( const char *a, size_t asize,
     const char *b, size_t bsize, uint32_t max_chars )
 {
     uint32_t num_chars;
@@ -406,6 +694,108 @@ LIB_EXPORT int CC string_cmp ( const char *a, size_t asize,
  *  like string_cmp except case insensitive
  */
 LIB_EXPORT int CC strcase_cmp ( const char *a, size_t asize,
+    const char *b, size_t bsize, uint32_t max_chars )
+{
+    size_t i, sz;
+    uint32_t num_chars;
+    const char *aend, *bend;
+
+    if ( max_chars == 0 )
+        return 0;
+
+    if ( b == NULL )
+        return a != NULL;
+    if ( a == NULL )
+        return -1;
+
+    sz = asize;
+    if ( asize > bsize )
+        sz = bsize;
+
+    aend = a + asize;
+    bend = b + bsize;
+    num_chars = 0;
+
+    for ( i = 0; i < sz; )
+    {
+        int len1, len2;
+        uint32_t ach, bch;
+
+        /* loop to process ASCII characters */
+        for ( ; i < sz; ++ i )
+        {
+            /* detect UTF-8 character */
+            if ( a [ i ] < 0 || b [ i ] < 0 )
+                break;
+
+            /* detect different or NUL character */
+            if ( a [ i ] != b [ i ] || a [ i ] == 0 )
+            {
+                ach = tolower ( a [ i ] );
+                bch = tolower ( b [ i ] );
+                if ( ach != bch || ach == 0 )
+                    return ach - bch;
+            }
+
+            /* if char count is sufficient, we're done */
+            if ( ++ num_chars == max_chars )
+                return 0;
+        }
+
+        /* read a character from a */
+        len1 = utf8_utf32 ( & ach, & a [ i ], aend );
+        if ( len1 <= 0 )
+        {
+            asize = i;
+            break;
+        }
+
+        /* read a character from b */
+        len2 = utf8_utf32 ( & bch, & b [ i ], bend );
+        if ( len2 <= 0 )
+        {
+            bsize = i;
+            break;
+        }
+
+        /* compare characters */
+        if ( ach != bch )
+        {
+            /* only go lower case if they differ */
+            ach = towlower ( ( wint_t ) ach );
+            bch = towlower ( ( wint_t ) bch );
+
+            if ( ach != bch )
+            {
+                if ( ach < bch )
+                    return -1;
+                return 1;
+            }
+        }
+
+        /* if char count is sufficient, we're done */
+        if ( ++ num_chars == max_chars )
+            return 0;
+
+        /* adjust the pointers */
+        if ( len1 == len2 )
+            i += len1;
+        else
+        {
+            sz -= i;
+            a += i + len1;
+            b += i + len2;
+            i = 0;
+        }
+    }
+
+    /* one or both reached end < max_chars */
+    if ( asize < bsize )
+        return -1;
+    return asize > bsize;
+}
+
+LIB_EXPORT int CC old_strcase_cmp ( const char *a, size_t asize,
     const char *b, size_t bsize, uint32_t max_chars )
 {
     uint32_t num_chars;
@@ -575,6 +965,49 @@ LIB_EXPORT uint32_t CC strcase_match ( const char *a_orig, size_t asize,
  */
 LIB_EXPORT char * CC string_chr ( const char *str, size_t size, uint32_t ch )
 {
+    size_t i;
+
+    if ( str == NULL || size == 0 )
+        return NULL;
+
+    if ( ch < 128 )
+    {
+        /* looking for an ASCII character */
+        for ( i = 0; i < size; ++ i )
+        {
+            /* perform direct ASCII match */
+            if ( str [ i ] == ( char ) ch )
+                return ( char * ) & str [ i ];
+        }
+    }
+    else
+    {
+        int len;
+        uint32_t c;
+        const char *end = str + size;
+
+        for ( i = 0; i < size; )
+        {
+            /* skip over ASCII */
+            for ( ; i < size && str [ i ] > 0; ++ i )
+                ( void ) 0;
+            if ( i == size )
+                break;
+
+            /* read UTF-8 */
+            len = utf8_utf32 ( & c, & str [ i ], end );
+            if ( len <= 0 )
+                break;
+            if ( c == ch )
+                return ( char* ) & str [ i ];
+            i += len;
+        }
+    }
+    return NULL;
+}
+
+LIB_EXPORT char * CC old_string_chr ( const char *str, size_t size, uint32_t ch )
+{
     const char *end;
 
     if ( str == NULL )
@@ -598,6 +1031,54 @@ LIB_EXPORT char * CC string_chr ( const char *str, size_t size, uint32_t ch )
  *  performs a safe strrchr
  */
 LIB_EXPORT char * CC string_rchr ( const char *str, size_t size, uint32_t ch )
+{
+    int64_t i;
+
+    if ( str == NULL || size == 0 )
+        return NULL;
+
+    if ( ch < 128 )
+    {
+        /* looking for an ASCII character */
+        for ( i = ( int64_t ) size - 1; i >= 0; -- i )
+        {
+            /* perform direct ASCII match */
+            if ( str [ i ] == ( char ) ch )
+                return ( char * ) & str [ i ];
+        }
+    }
+    else
+    {
+        int len;
+        uint32_t c;
+        const char *end;
+
+        for ( i = ( int64_t ) size - 1; i >= 0; -- i )
+        {
+            /* skip over ASCII */
+            for ( ; i >= 0 && str [ i ] > 0; -- i )
+                ( void ) 0;
+            if ( i < 0 )
+                break;
+
+            /* back over UTF-8 */
+            for ( end = & str [ i + 1 ]; i >= 0 && ( str [ i ] & 0xC0 ) == 0x80; -- i )
+                ( void ) 0;
+            if ( i < 0 )
+                break;
+
+            /* read UTF-8 */
+            len = utf8_utf32 ( & c, & str [ i ], end );
+            if ( len <= 0 || & str [ i + len ] != end )
+                break;
+            if ( c == ch )
+                return ( char* ) & str [ i ];
+        }
+    }
+    return NULL;
+}
+
+LIB_EXPORT char * CC old_string_rchr ( const char *str, size_t size, uint32_t ch )
 {
     const char *end;
 
