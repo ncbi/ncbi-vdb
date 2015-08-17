@@ -593,6 +593,11 @@ LIB_EXPORT int CC string_cmp ( const char *a, size_t asize,
         if ( len1 <= 0 )
         {
             asize = i;
+
+            len2 = utf8_utf32 ( & bch, & b [ i ], bend );
+            if ( len2 <= 0 )
+                bsize = i;
+
             break;
         }
 
@@ -631,6 +636,7 @@ LIB_EXPORT int CC string_cmp ( const char *a, size_t asize,
     /* one or both reached end < max_chars */
     if ( asize < bsize )
         return -1;
+
     return asize > bsize;
 }
 
@@ -747,6 +753,11 @@ LIB_EXPORT int CC strcase_cmp ( const char *a, size_t asize,
         if ( len1 <= 0 )
         {
             asize = i;
+
+            len2 = utf8_utf32 ( & bch, & b [ i ], bend );
+            if ( len2 <= 0 )
+                bsize = i;
+
             break;
         }
 
