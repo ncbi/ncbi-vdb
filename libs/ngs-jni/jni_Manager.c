@@ -29,15 +29,22 @@
 #include "jni_String.h"
 
 #include <kfc/ctx.h>
+#include <kfc/rsrc.h>
 #include <kfc/except.h>
+#include <kfc/xc.h>
+#include <kfc/rc.h>
 
 #include <kfc/rsrc-global.h>
 
+#include <kns/manager.h>
 #include <klib/ncbi-vdb-version.h> /* GetPackageVersion */
 
 #include "NGS_ReadCollection.h"
+#include "../kns/libkns.vers.h"
 
 #include <assert.h>
+
+static bool have_user_version_string;
 
 /*
  * Class:     gov_nih_nlm_ncbi_ngs_Manager
@@ -70,6 +77,35 @@ JNIEXPORT void JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_Shutdown
     KRsrcGlobalWhack ( ctx );
 }
 
+static
+void set_app_version_string ( const char * app_version )
+{
+    // get a KNSManager
+    KNSManager * kns;
+    rc_t rc = KNSManagerMake ( & kns );
+    if ( rc == 0 )
+    {
+        have_user_version_string = true;
+        KNSManagerSetUserAgent ( kns, "ncbi-ngs.%V %s", LIBKNS_VERS, app_version );
+        KNSManagerRelease ( kns );
+    }
+}
+
+/*
+ * Class:     gov_nih_nlm_ncbi_ngs_Manager
+ * Method:    SetAppVersionString
+ * Signature: (Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_SetAppVersionString
+    ( JNIEnv * jenv, jclass jcls, jstring japp_version )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcMgr, rcUpdating );
+
+    const char * app_version = JStringData ( japp_version, ctx, jenv );
+
+    set_app_version_string ( app_version );
+}
+
 /*
  * Class:     gov_nih_nlm_ncbi_ngs_Manager
  * Method:    OpenReadCollection
@@ -80,9 +116,13 @@ JNIEXPORT jlong JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_OpenReadCollection
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcMgr, rcConstructing );
 
+    NGS_ReadCollection * new_ref = NULL;
     const char * spec = JStringData ( jspec, ctx, jenv );
-    NGS_ReadCollection * new_ref = NGS_ReadCollectionMake ( ctx, spec );
 
+    if ( ! have_user_version_string )
+        set_app_version_string ( "ncbi-ngs: unknown-application" );
+
+    new_ref = NGS_ReadCollectionMake ( ctx, spec );
     if ( FAILED () )
     {
         ErrorMsgThrow ( jenv, ctx, __LINE__, "failed to create ReadCollection from spec '%s'"
