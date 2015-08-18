@@ -164,6 +164,7 @@ FIXTURE_TEST_CASE ( ColumnMetadataWKDB_Fixture, WKDB_Fixture )
         REQUIRE_RC ( KDatabaseRelease ( db ) );
     }
     
+    KDirectoryRemove(m_wd, true, TableName);
     KDirectoryRemove(m_wd, true, GetName());
 }
 
