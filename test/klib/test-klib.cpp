@@ -49,6 +49,171 @@ TEST_SUITE(KlibTestSuite);
 
 ///////////////////////////////////////////////// text
 
+TEST_CASE ( Klib_text_string_len )
+{
+    // this is ASCII with a character count of 37, byte count of 37
+    const char * str = "Tu estas probando este hoy, no manana";
+    size_t size = strlen ( str );
+    uint32_t length = string_len ( str, size );
+    REQUIRE_EQ ( length, ( uint32_t ) size );
+
+    // this is UTF-8 with a character count of 37, byte count of 41
+    str = "T\303\272 est\303\241s probando \303\251ste hoy, no ma\303\261ana";
+    size = strlen ( str );
+    length = string_len ( str, size );
+    REQUIRE_EQ ( length, ( uint32_t ) ( size - 4 ) );
+}
+
+TEST_CASE ( Klib_text_string_measure )
+{
+    // this is ASCII with a character count of 37, byte count of 37
+    const char * str = "Tu estas probando este hoy, no manana";
+    size_t size = strlen ( str );
+    size_t measure;
+    uint32_t length = string_measure ( str, & measure );
+    REQUIRE_EQ ( measure, size );
+    REQUIRE_EQ ( length, ( uint32_t ) size );
+
+    // this is UTF-8 with a character count of 37, byte count of 41
+    str = "T\303\272 est\303\241s probando \303\251ste hoy, no ma\303\261ana";
+    size = strlen ( str );
+    length = string_measure ( str, & measure );
+    REQUIRE_EQ ( measure, size );
+    REQUIRE_EQ ( length, ( uint32_t ) ( size - 4 ) );
+}
+
+TEST_CASE ( Klib_text_string_copy )
+{
+    char buff64 [ 64 ];
+    const char * str = "Tu estas probando este hoy, no manana";
+    size_t size = strlen ( str );
+    size_t copied = string_copy ( buff64, sizeof buff64, str, size );
+    REQUIRE_EQ ( copied, size );
+    REQUIRE_EQ ( ( char ) 0, buff64 [ copied ] );
+
+    char buff32 [ 32 ];
+    copied = string_copy ( buff32, sizeof buff32, str, size );
+    REQUIRE_EQ ( copied, ( size_t ) ( sizeof buff32 ) );
+
+    // this is UTF-8 with a character count of 37, byte count of 41
+    str = "T\303\272 est\303\241s probando \303\251ste hoy, no ma\303\261ana";
+    size = strlen ( str );
+    copied = string_copy ( buff64, sizeof buff64, str, size );
+    REQUIRE_EQ ( copied, size );
+    REQUIRE_EQ ( ( char ) 0, buff64 [ copied ] );
+
+    // this is the same string with a split UTF-8 character
+    str = "T\303\272 est\303\241s probando \303\251ste hoy, no ma\303";
+    size = strlen ( str );
+    copied = string_copy ( buff64, sizeof buff64, str, size );
+    REQUIRE_EQ ( copied, size - 1 );
+    REQUIRE_EQ ( ( char ) 0, buff64 [ copied ] );
+
+    // test a copy with an embedded NUL
+    const char EN [] = "This is the case of an\000embedded NUL byte";
+    size = sizeof EN - 1;
+    REQUIRE_EQ ( size, ( size_t ) 40 );
+    size = strlen ( EN );
+    REQUIRE_EQ ( size, ( size_t ) 22 );
+    copied = string_copy ( buff64, sizeof buff64, EN, sizeof EN - 1 );
+    REQUIRE_EQ ( copied, size );
+    REQUIRE_EQ ( ( char ) 0, buff64 [ copied ] );
+}
+
+TEST_CASE ( Klib_text_string_copy_measure )
+{
+    char buff64 [ 64 ];
+    const char * str = "Tu estas probando este hoy, no manana";
+    size_t size = strlen ( str );
+    size_t copied = string_copy_measure ( buff64, sizeof buff64, str );
+    REQUIRE_EQ ( copied, size );
+    REQUIRE_EQ ( ( char ) 0, buff64 [ copied ] );
+
+    char buff32 [ 32 ];
+    copied = string_copy_measure ( buff32, sizeof buff32, str );
+    REQUIRE_EQ ( copied, ( size_t ) ( sizeof buff32 ) );
+
+    // this is UTF-8 with a character count of 37, byte count of 41
+    str = "T\303\272 est\303\241s probando \303\251ste hoy, no ma\303\261ana";
+    size = strlen ( str );
+    copied = string_copy_measure ( buff64, sizeof buff64, str );
+    REQUIRE_EQ ( copied, size );
+    REQUIRE_EQ ( ( char ) 0, buff64 [ copied ] );
+
+    // this is the same string with a split UTF-8 character
+    str = "T\303\272 est\303\241s probando \303\251ste hoy, no ma\303";
+    size = strlen ( str );
+    copied = string_copy_measure ( buff64, sizeof buff64, str );
+    REQUIRE_EQ ( copied, size - 1 );
+    REQUIRE_EQ ( ( char ) 0, buff64 [ copied ] );
+
+    // test a copy with an embedded NUL
+    const char EN [] = "This is the case of an\000embedded NUL byte";
+    size = sizeof EN - 1;
+    REQUIRE_EQ ( size, ( size_t ) 40 );
+    size = strlen ( EN );
+    REQUIRE_EQ ( size, ( size_t ) 22 );
+    copied = string_copy_measure ( buff64, sizeof buff64, EN );
+    REQUIRE_EQ ( copied, size );
+    REQUIRE_EQ ( ( char ) 0, buff64 [ copied ] );
+}
+
+TEST_CASE ( Klib_text_tolower_copy )
+{
+    char buff64 [ 64 ];
+    const char * str = "Tu Estas Probando Este Hoy, No Manana";
+    size_t size = strlen ( str );
+    size_t copied = tolower_copy ( buff64, sizeof buff64, str, size );
+    REQUIRE_EQ ( copied, size );
+    REQUIRE_EQ ( ( char ) 0, buff64 [ copied ] );
+    int diff = strcmp ( buff64, "tu estas probando este hoy, no manana" );
+    REQUIRE_EQ ( diff, 0 );
+
+    char buff32 [ 32 ];
+    copied = tolower_copy ( buff32, sizeof buff32, str, size );
+    REQUIRE_EQ ( copied, ( size_t ) ( sizeof buff32 ) );
+    diff = memcmp ( buff64, "tu estas probando este hoy, no manana", copied );
+    REQUIRE_EQ ( diff, 0 );
+
+    // this is UTF-8 with a character count of 37, byte count of 41
+    str = "T\303\272 Est\303\241s Probando \303\211ste Hoy, No Ma\303\261ana";
+    size = strlen ( str );
+    copied = tolower_copy ( buff64, sizeof buff64, str, size );
+    REQUIRE_EQ ( copied, size );
+    REQUIRE_EQ ( ( char ) 0, buff64 [ copied ] );
+#if 0
+    std::cout
+        << buff64
+        << '\n'
+        ;
+    diff = strcmp ( buff64, "t\303\272 est\303\241s probando \303\251ste hoy, no ma\303\261ana" );
+    REQUIRE_EQ ( diff, 0 );
+#endif
+
+    // this is the same string with a split UTF-8 character
+    str = "T\303\272 Est\303\241s Probando \303\211ste Hoy, No Ma\303";
+    size = strlen ( str );
+    copied = tolower_copy ( buff64, sizeof buff64, str, size );
+    REQUIRE_EQ ( copied, size - 1 );
+    REQUIRE_EQ ( ( char ) 0, buff64 [ copied ] );
+#if 0
+    diff = memcmp ( buff64, "t\303\272 est\303\241s probando \303\251ste hoy, no ma\303\261ana", copied );
+    REQUIRE_EQ ( diff, 0 );
+#endif
+
+    // test a copy with an embedded NUL
+    const char EN [] = "This Is The Case of an\000embedded NUL byte";
+    size = sizeof EN - 1;
+    REQUIRE_EQ ( size, ( size_t ) 40 );
+    size = strlen ( EN );
+    REQUIRE_EQ ( size, ( size_t ) 22 );
+    copied = tolower_copy ( buff64, sizeof buff64, EN, sizeof EN - 1 );
+    REQUIRE_EQ ( copied, size );
+    REQUIRE_EQ ( ( char ) 0, buff64 [ copied ] );
+    diff = memcmp ( buff64, "this is the case of an\000embedded nul byte", copied );
+    REQUIRE_EQ ( diff, 0 );
+}
+
 TEST_CASE ( KLib_text_StringToI64 )
 {
     rc_t rc;

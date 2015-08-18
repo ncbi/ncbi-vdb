@@ -33,6 +33,14 @@ JNIEXPORT void JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_Shutdown
 
 /*
  * Class:     gov_nih_nlm_ncbi_ngs_Manager
+ * Method:    SetAppVersionString
+ * Signature: (Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_SetAppVersionString
+  (JNIEnv *, jclass, jstring);
+
+/*
+ * Class:     gov_nih_nlm_ncbi_ngs_Manager
  * Method:    OpenReadCollection
  * Signature: (Ljava/lang/String;)J
  */
