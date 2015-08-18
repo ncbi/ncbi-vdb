@@ -109,6 +109,7 @@ static void                     SRA_ReadWhack ( SRA_Read * self, ctx_t ctx );
 static struct NGS_String * SRA_FragmentGetId ( SRA_Read * self, ctx_t ctx );
 static struct NGS_String * SRA_FragmentGetSequence ( SRA_Read * self, ctx_t ctx, uint64_t offset, uint64_t length );
 static struct NGS_String * SRA_FragmentGetQualities ( SRA_Read * self, ctx_t ctx, uint64_t offset, uint64_t length );
+static bool                SRA_FragmentIsAligned ( const SRA_Read * self, ctx_t ctx );
 static bool                SRA_FragmentNext ( SRA_Read * self, ctx_t ctx );
 
 static struct NGS_String *      SRA_ReadGetId ( SRA_Read * self, ctx_t ctx );
@@ -133,6 +134,7 @@ static NGS_Read_vt NGS_Read_vt_inst =
         SRA_FragmentGetId,
         SRA_FragmentGetSequence,
         SRA_FragmentGetQualities,
+        SRA_FragmentIsAligned,
         SRA_FragmentNext
     },
     
@@ -895,6 +897,12 @@ struct NGS_String * SRA_FragmentGetQualities ( SRA_Read * self, ctx_t ctx, uint6
         }
     }
     return ret;
+}
+
+bool SRA_FragmentIsAligned ( const SRA_Read * self, ctx_t ctx )
+{
+    assert ( self != NULL );
+    return false;
 }
 
 bool SRA_FragmentNext ( SRA_Read * self, ctx_t ctx )

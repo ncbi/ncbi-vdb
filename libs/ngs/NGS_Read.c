@@ -373,6 +373,14 @@ struct NGS_String * NullRead_FragmentOffsetLenToString ( NGS_Read * self, ctx_t 
 }
 
 static 
+bool NullRead_ConstFragmentToBool ( const NGS_Read * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing);
+    INTERNAL_ERROR ( xcSelfNull, "NULL Alignment accessed" );
+    return 0;
+}
+
+static 
 bool NullRead_FragmentToBool ( NGS_Read * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing);
@@ -432,6 +440,7 @@ static NGS_Read_vt NullRead_vt_inst =
         NullRead_FragmentToString,
         NullRead_FragmentOffsetLenToString,
         NullRead_FragmentOffsetLenToString,
+        NullRead_ConstFragmentToBool,
         NullRead_FragmentToBool
     },
     

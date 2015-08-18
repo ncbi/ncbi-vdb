@@ -767,6 +767,14 @@ struct NGS_String * NullAlignment_FragmentOffsetLenToString ( NGS_Alignment * se
 }
 
 static 
+bool NullAlignment_ConstFragmentToBool ( const NGS_Alignment * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+    INTERNAL_ERROR ( xcSelfNull, "NULL Alignment accessed" );
+    return 0;
+}
+
+static 
 bool NullAlignment_FragmentToBool ( NGS_Alignment * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -853,6 +861,7 @@ static NGS_Alignment_vt NullAlignment_vt_inst =
         NullAlignment_FragmentToString,
         NullAlignment_FragmentOffsetLenToString,
         NullAlignment_FragmentOffsetLenToString,
+        NullAlignment_ConstFragmentToBool,
         NullAlignment_FragmentToBool
     },
     

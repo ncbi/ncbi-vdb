@@ -666,6 +666,13 @@ struct NGS_String * CSRA1_FragmentGetQualities ( CSRA1_Alignment * self, ctx_t c
     return seq;
 }
 
+static
+bool CSRA1_FragmentIsAligned ( const CSRA1_Alignment * self, ctx_t ctx )
+{
+    assert ( self != NULL );
+    return true;
+}
+
 static 
 bool CSRA1_FragmentNext ( CSRA1_Alignment * self, ctx_t ctx )
 {
@@ -694,7 +701,8 @@ static NGS_Alignment_vt CSRA1_Alignment_vt_inst =
         CSRA1_FragmentGetId,
         CSRA1_FragmentGetSequence,
         CSRA1_FragmentGetQualities,
-        CSRA1_FragmentNext        
+        CSRA1_FragmentIsAligned,
+        CSRA1_FragmentNext
     },
     
     CSRA1_AlignmentGetAlignmentId,

@@ -194,6 +194,13 @@ struct NGS_String * CSRA1_FragmentGetQualities ( CSRA1_ReferenceWindow * self, c
 }
 
 static 
+bool CSRA1_FragmentIsAligned ( const CSRA1_ReferenceWindow * self, ctx_t ctx )
+{
+    assert ( self != NULL );
+    return true;
+}
+
+static 
 bool CSRA1_FragmentNext ( CSRA1_ReferenceWindow * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
@@ -766,7 +773,8 @@ static NGS_Alignment_vt CSRA1_ReferenceWindow_vt_inst =
         CSRA1_FragmentGetId,
         CSRA1_FragmentGetSequence,
         CSRA1_FragmentGetQualities,
-        CSRA1_FragmentNext        
+        CSRA1_FragmentIsAligned,
+        CSRA1_FragmentNext
     }, 
     
     CSRA1_ReferenceWindowGetAlignmentId,
