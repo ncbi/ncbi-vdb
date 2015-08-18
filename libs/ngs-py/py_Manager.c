@@ -10,6 +10,7 @@
 
 #include "NGS_String.h"
 #include "NGS_ReadCollection.h"
+#include "NGS_ReferenceSequence.h"
 #include "NGS_Refcount.h"
 
 #include <assert.h>
@@ -46,6 +47,25 @@ LIB_EXPORT PY_RES_TYPE PY_NGS_Engine_ReadCollectionMake(char const* spec, void**
     return PY_RES_OK;
 }
 
+LIB_EXPORT PY_RES_TYPE PY_NGS_Engine_ReferenceSequenceMake(char const* spec, void** ppReadCollection, char* pStrError, size_t nStrErrorBufferSize)
+{
+    HYBRID_FUNC_ENTRY(rcSRA, rcMgr, rcConstructing);
+
+    void* pRet = (void*)NGS_ReferenceSequenceMake(ctx, spec);
+
+    if (FAILED())
+    {
+        return NGSErrorHandler(ctx, pStrError, nStrErrorBufferSize);
+    }
+
+    assert(pRet != NULL);
+    assert(ppReadCollection != NULL);
+
+    *ppReadCollection = pRet;
+
+    CLEAR();
+    return PY_RES_OK;
+}
 
 #if 0
 PY_RES_TYPE PY_NGS_Engine_RefcountRelease(void* pRefcount, void** ppNGSStrError)
