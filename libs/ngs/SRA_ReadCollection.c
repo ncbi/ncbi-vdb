@@ -256,15 +256,19 @@ NGS_Read * SRA_ReadCollectionGetRead ( SRA_ReadCollection * self, ctx_t ctx, con
 }
 
 static
-uint64_t SRA_ReadCollectionGetReadCount ( SRA_ReadCollection * self, ctx_t ctx )
+uint64_t SRA_ReadCollectionGetReadCount ( SRA_ReadCollection * self, ctx_t ctx, bool wants_full, bool wants_partial, bool wants_unaligned )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
+
+    if ( ! wants_unaligned )
+        return 0;
     
     if ( self -> curs == NULL )
     {
         ON_FAIL ( self -> curs = NGS_CursorMake ( ctx, self -> tbl, sequence_col_specs, seq_NUM_COLS ) )
             return 0;
     }
+
     return NGS_CursorGetRowCount ( self -> curs, ctx );
 }
 
