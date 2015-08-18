@@ -49,6 +49,14 @@ JNIEXPORT jlong JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_OpenReadCollection
 
 /*
  * Class:     gov_nih_nlm_ncbi_ngs_Manager
+ * Method:    OpenReferenceSequence
+ * Signature: (Ljava/lang/String;)J
+ */
+JNIEXPORT jlong JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_OpenReferenceSequence
+  (JNIEnv *, jclass, jstring);
+
+/*
+ * Class:     gov_nih_nlm_ncbi_ngs_Manager
  * Method:    release
  * Signature: (J)V
  */

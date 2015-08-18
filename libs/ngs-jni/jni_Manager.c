@@ -40,6 +40,7 @@
 #include <klib/ncbi-vdb-version.h> /* GetPackageVersion */
 
 #include "NGS_ReadCollection.h"
+#include "NGS_ReferenceSequence.h"
 #include "../kns/libkns.vers.h"
 
 #include <assert.h>
@@ -126,6 +127,38 @@ JNIEXPORT jlong JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_OpenReadCollection
     if ( FAILED () )
     {
         ErrorMsgThrow ( jenv, ctx, __LINE__, "failed to create ReadCollection from spec '%s'"
+                         , spec
+            );
+        JStringReleaseData ( jspec, ctx, jenv, spec );
+        return 0;
+    }
+
+    JStringReleaseData ( jspec, ctx, jenv, spec );
+
+    assert ( new_ref != NULL );
+    return ( jlong ) ( size_t ) new_ref;
+}
+
+/*
+ * Class:     gov_nih_nlm_ncbi_ngs_Manager
+ * Method:    OpenReferenceSequence
+ * Signature: (Ljava/lang/String;)J
+ */
+JNIEXPORT jlong JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_OpenReferenceSequence
+    ( JNIEnv * jenv, jclass jcls, jstring jspec )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcMgr, rcConstructing );
+
+    NGS_ReferenceSequence* new_ref = NULL;
+    const char * spec = JStringData ( jspec, ctx, jenv );
+
+    if ( ! have_user_version_string )
+        set_app_version_string ( "ncbi-ngs: unknown-application" );
+
+    new_ref = NGS_ReferenceSequenceMake ( ctx, spec );
+    if ( FAILED () )
+    {
+        ErrorMsgThrow ( jenv, ctx, __LINE__, "failed to create ReferenceSequence from spec '%s'"
                          , spec
             );
         JStringReleaseData ( jspec, ctx, jenv, spec );
