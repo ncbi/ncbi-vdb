@@ -35,6 +35,7 @@
 #include <krypto/reencfile.h>
 #include <kfs/impl.h>
 #include <klib/rc.h>
+#include <klib/log.h>
 #include <kapp/args.h>
 #include <kfg/config.h>
 
@@ -155,7 +156,9 @@ TEST_CASE(KDecryptZeroRawSize)
     REQUIRE ( file_size == 0 );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key, &enc_file ) == RC( rcKrypto, rcFile, rcConstructing, rcSize, rcIncorrect ) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     
     REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
     
@@ -262,7 +265,9 @@ TEST_CASE(KDectryptOnlyHeader)
     REQUIRE_RC ( KFileSetSize ( pt_file, sizeof(KEncFileHeader) ) );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key, &enc_file ) == RC( rcKrypto, rcFile, rcConstructing, rcSize, rcIncorrect ) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     
     REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
@@ -296,7 +301,9 @@ TEST_CASE(KDectryptWithoutFooter)
     REQUIRE_RC ( KFileSetSize ( pt_file, file_size - sizeof(KEncFileFooter) ) );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key, &enc_file ) == RC( rcKrypto, rcFile, rcConstructing, rcSize, rcIncorrect ) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     
     REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
@@ -334,7 +341,9 @@ TEST_CASE(KDectryptCorruptHeader)
     assert(buffer_size == num_written);
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key, &enc_file ) == RC( rcFS, rcFile, rcConstructing, rcHeader, rcInvalid ) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     
     REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
@@ -376,7 +385,9 @@ TEST_CASE(KDectryptCorruptFooterCrc)
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
     REQUIRE_RC ( TOpenPtFile( current_dir, file_path, TFileOpenMode_Read, &pt_file ) );
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( KEncFileValidate( pt_file ) == RC(rcKrypto, rcFile, rcValidating, rcChecksum, rcCorrupt) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
     REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
@@ -419,7 +430,9 @@ TEST_CASE(KDectryptCorruptFooterBlockCount)
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
     REQUIRE_RC ( TOpenPtFile( current_dir, file_path, TFileOpenMode_Read, &pt_file ) );
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( KEncFileValidate( pt_file ) == RC(rcKrypto, rcFile, rcValidating, rcSize, rcIncorrect) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
     REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
@@ -462,7 +475,9 @@ TEST_CASE(KDectryptCorruptBlockStruct)
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
     REQUIRE_RC ( TOpenPtFile( current_dir, file_path, TFileOpenMode_Read, &pt_file ) );
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( KEncFileValidate( pt_file ) == RC(rcKrypto, rcFile, rcValidating, rcChecksum, rcCorrupt) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
     REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
@@ -505,7 +520,9 @@ TEST_CASE(KDectryptCorruptBlockData)
     REQUIRE_RC ( KFileRelease ( pt_file ) );
 
     REQUIRE_RC ( TOpenPtFile( current_dir, file_path, TFileOpenMode_Read, &pt_file ) );
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( KEncFileValidate( pt_file ) == RC(rcKrypto, rcFile, rcValidating, rcChecksum, rcCorrupt) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
     REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
@@ -536,7 +553,9 @@ TEST_CASE(KDectryptInvalidKey)
     REQUIRE_RC ( KFileRelease ( enc_file ) );
     
     REQUIRE_RC ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key2, &enc_file ) );
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( TCheckFileContent( enc_file, (const uint8_t *)"\0\1", 2 ) == RC( rcKrypto, rcFile, rcValidating, rcEncryption, rcCorrupt ) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     REQUIRE_RC ( KFileRelease ( enc_file ) );
     
     REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
