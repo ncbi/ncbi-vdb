@@ -494,7 +494,55 @@ public class ngs_test_CSRA1 {
     {
         assertFalse( getAlignment ( PrimaryOnly + ".PA.2" ) . getMateIsReversedOrientation () );
     }
+
+
+// ReferenceSequence
+    public ngs . ReferenceSequence getReferenceSequence() throws ngs.ErrorMsg
+    {
+        return NGS . openReferenceSequence ( "NC_011752.1" );
+    }
+
+    @Test
+    public void ReferenceSequence_getCommonName () throws ngs.ErrorMsg
+    {
+        assertEquals ( "gi|218511148|ref|NC_011752.1|", getReferenceSequence () . getCanonicalName () );
+    }
     
+    @Test
+    public void ReferenceSequence_getIsCircular_Yes() throws ngs.ErrorMsg
+    {
+        assertTrue( getReferenceSequence () . getIsCircular () );
+    }
+    
+    @Test
+    public void ReferenceSequence_getLength() throws ngs.ErrorMsg
+    {
+        assertEquals ( 72482, getReferenceSequence () . getLength() );
+    }
+    
+    @Test
+    public void ReferenceSequence_getReferenceBases() throws ngs.ErrorMsg
+    {
+        assertEquals ( "ATAAA", getReferenceSequence () . getReferenceBases ( 72482 - 5 ) );
+    }
+    @Test
+    public void ReferenceSequence_getReferenceBases_Length() throws ngs.ErrorMsg
+    {
+        assertEquals ( "TACA", getReferenceSequence () . getReferenceBases ( 4998, 4 ) );
+    }
+    
+    @Test
+    public void ReferenceSequence_getReferenceChunk() throws ngs.ErrorMsg
+    {
+        assertEquals ( "TAATA", getReferenceSequence () . getReferenceChunk ( 5000 - 5, 5 ) );
+    }
+    @Test
+    public void ReferenceSequence_getReferenceChunk_Length () throws ngs.ErrorMsg
+    {
+        assertEquals ( "TAATA", getReferenceSequence () . getReferenceChunk ( 5000 - 5, 10 ) );
+    }
+
+
 // Reference
     public ngs . Reference getReference() throws ngs.ErrorMsg
     {
