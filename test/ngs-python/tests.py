@@ -2,6 +2,7 @@ import unittest
 from ngs import NGS
 from ngs.ErrorMsg import ErrorMsg
 from ngs.ReadCollection import ReadCollection
+from ngs.ReferenceSequence import ReferenceSequence
 from ngs.Alignment import Alignment
 from ngs.Read import Read
 
@@ -24,6 +25,8 @@ def getSecondaryAlignment(id):
 def getReference():
     return NGS.openReadCollection(PrimaryOnly).getReference("supercont2.1")
 
+def getReferenceSequence():
+    return NGS.openReferenceSequence("NC_011752.1")
     
 class Tests(unittest.TestCase):
     
@@ -277,7 +280,29 @@ class Tests(unittest.TestCase):
 
     def test_Alignment_getMateIsReversedOrientation_No(self):
         self.assertFalse(getAlignment(PrimaryOnly + ".PA.2").getMateIsReversedOrientation())
+
+# ReferenceSequence
+    def test_ReferenceSequence_getCanonicalName(self):
+        self.assertEqual("gi|218511148|ref|NC_011752.1|", getReferenceSequence().getCanonicalName())
     
+    def test_ReferenceSequence_getIsCircular_Yes(self):
+        self.assertTrue(getReferenceSequence().getIsCircular())
+    
+    def test_ReferenceSequence_getLength(self):
+        self.assertEqual(72482, getReferenceSequence().getLength())
+    
+    def test_ReferenceSequence_getReferenceBases(self):
+        self.assertEqual("ATAAA", getReferenceSequence().getReferenceBases(72482 - 5))
+
+    def test_ReferenceSequence_getReferenceBases_Length(self):
+        self.assertEqual("TACA", getReferenceSequence().getReferenceBases(4998, 4))
+    
+    def test_ReferenceSequence_getReferenceChunk(self):
+        self.assertEqual("TAATA", getReferenceSequence().getReferenceChunk(5000 - 5, 5))
+
+    def test_ReferenceSequence_getReferenceChunk_Length (self):
+        self.assertEqual("TAATA", getReferenceSequence().getReferenceChunk(5000 - 5, 10))
+        
 # Reference
     def test_Reference_getCommonName(self):
         self.assertEqual("supercont2.1", getReference().getCommonName())
