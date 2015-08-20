@@ -38,6 +38,6 @@ include $(TOP)/build/Makefile.env
 runtests: pytest
 
 pytest:
-	export NGS_PY_DOWNLOAD_LIBRARY=0; export NGS_PY_LIBRARY_PATH=$(NGS_LIBDIR); python tests.py
+	export NGS_PY_DOWNLOAD_LIBRARY=0; unset NGS_PY_LIBRARY_PATH; export LD_LIBRARY_PATH=$(LIBDIR):$(NGS_LIBDIR):$$(LD_LIBRARY_PATH); python tests.py
 
 .PHONY: pytest
