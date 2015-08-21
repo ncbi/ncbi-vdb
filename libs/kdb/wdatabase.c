@@ -538,7 +538,10 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *cself,
     char dbpath [4096];
     size_t z;
 
-    rc = string_vprintf (dbpath, sizeof dbpath, &z, path, args);
+    rc = KDirectoryVResolvePath ( wd, true,
+        dbpath, sizeof dbpath, path, args );
+	
+/*    rc = string_vprintf (dbpath, sizeof dbpath, &z, path, args); */
     if ( rc == 0 )
     {
         KSymbol *sym;

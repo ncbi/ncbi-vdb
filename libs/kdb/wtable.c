@@ -623,9 +623,9 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *cself,
     char tblpath [ 4096 ];
     size_t z;
 
-/*    rc = KDirectoryVResolvePath ( wd, 1,
-        tblpath, sizeof tblpath, path, args ); */
-    rc = string_vprintf( tblpath, sizeof tblpath, &z, path, args );
+    rc = KDirectoryVResolvePath ( wd, true,
+        tblpath, sizeof tblpath, path, args );
+/*  rc = string_vprintf( tblpath, sizeof tblpath, &z, path, args ); */
     if ( rc == 0 )
     {
         KSymbol *sym;
