@@ -28,6 +28,7 @@
 #define _h_ngs_read_
 
 typedef struct NGS_Read NGS_Read;
+
 #ifndef NGS_READ
 #define NGS_READ NGS_Read
 #endif

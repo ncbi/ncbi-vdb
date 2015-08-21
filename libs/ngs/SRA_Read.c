@@ -55,42 +55,6 @@
  * SRA_Read
  */
 
-struct SRA_Read
-{
-    NGS_Read dad;   
-    
-    NGS_String * run_name;
-    
-    int64_t cur_row;
-    int64_t row_max;
-    uint64_t row_count;
-
-    const INSDC_read_type * READ_TYPE;
-    const INSDC_coord_len * READ_LEN;
-    
-    const NGS_Cursor * curs;
-
-    uint32_t cur_frag;
-    uint32_t bio_frags;
-    uint32_t frag_idx;
-    uint32_t frag_max;
-    uint32_t frag_start;
-    uint32_t frag_len;
-
-    bool has_phred_33;
-
-    bool seen_first;
-    bool seen_first_frag;
-    bool seen_last_frag;
-
-    /* read filtering criteria */
-    bool wants_full;
-    bool wants_partial; 
-    bool wants_unaligned;
-    
-    NGS_String* group_name; /* if not NULL, only return reads from this read group */
-};
-
 const char * sequence_col_specs [] =
 {
     "READ_TYPE",
@@ -103,24 +67,6 @@ const char * sequence_col_specs [] =
     "PRIMARY_ALIGNMENT_ID",
     "(U64)SPOT_COUNT",
 };
-
-static void                     SRA_ReadWhack ( SRA_Read * self, ctx_t ctx );
-
-static struct NGS_String * SRA_FragmentGetId ( SRA_Read * self, ctx_t ctx );
-static struct NGS_String * SRA_FragmentGetSequence ( SRA_Read * self, ctx_t ctx, uint64_t offset, uint64_t length );
-static struct NGS_String * SRA_FragmentGetQualities ( SRA_Read * self, ctx_t ctx, uint64_t offset, uint64_t length );
-static bool                SRA_FragmentIsAligned ( const SRA_Read * self, ctx_t ctx );
-static bool                SRA_FragmentNext ( SRA_Read * self, ctx_t ctx );
-
-static struct NGS_String *      SRA_ReadGetId ( SRA_Read * self, ctx_t ctx );
-static struct NGS_String *      SRA_ReadGetName ( SRA_Read * self, ctx_t ctx );
-static struct NGS_String *      SRA_ReadGetReadGroup ( SRA_Read * self, ctx_t ctx );
-static enum NGS_ReadCategory    SRA_ReadGetCategory ( const SRA_Read * self, ctx_t ctx );
-static struct NGS_String *      SRA_ReadGetSequence ( SRA_Read * self, ctx_t ctx, uint64_t offset, uint64_t length );
-static struct NGS_String *      SRA_ReadGetQualities ( SRA_Read * self, ctx_t ctx, uint64_t offset, uint64_t length );
-static uint32_t                 SRA_ReadNumFragments ( SRA_Read * self, ctx_t ctx );
-static bool                     SRA_ReadIteratorNext ( SRA_Read * self, ctx_t ctx );
-static uint64_t                 SRA_ReadIteratorGetCount ( const SRA_Read * self, ctx_t ctx );    
 
 static NGS_Read_vt NGS_Read_vt_inst =
 {
@@ -205,7 +151,6 @@ void SRA_ReadIteratorInit ( ctx_t ctx,
 
 /* Whack
  */
-static
 void SRA_ReadWhack ( SRA_Read * self, ctx_t ctx )
 {
     NGS_CursorRelease ( self -> curs, ctx );

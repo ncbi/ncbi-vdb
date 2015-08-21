@@ -88,6 +88,7 @@ NGS_SRC =                 \
 	CSRA1_ReferenceWindow \
 	CSRA1_Reference       \
 	CSRA1_ReadCollection  \
+	CSRA1_Read            \
 	SRA_Statistics        \
 	SRA_DB_ReadCollection \
 	SRA_Read              \

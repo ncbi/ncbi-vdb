@@ -39,6 +39,7 @@ typedef struct CSRA1_ReadCollection CSRA1_ReadCollection;
 #include "NGS_String.h"
 #include "NGS_Id.h"
 
+#include "CSRA1_Read.h"
 #include "SRA_Read.h"
 #include "SRA_ReadGroup.h"
 #include "SRA_ReadGroupInfo.h"
@@ -432,7 +433,7 @@ struct NGS_Read * CSRA1_ReadCollectionGetReads ( CSRA1_ReadCollection * self, ct
 
     TRY ( const NGS_Cursor * curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ) )
     {
-        TRY ( NGS_Read * ref = SRA_ReadIteratorMake ( ctx, curs, self -> run_name, wants_full, wants_partial, wants_unaligned ) )
+        TRY ( NGS_Read * ref = CSRA1_ReadIteratorMake ( ctx, curs, self -> run_name, wants_full, wants_partial, wants_unaligned ) )
         {
             NGS_CursorRelease ( curs, ctx );
             return ref;
@@ -474,7 +475,7 @@ struct NGS_Read * CSRA1_ReadCollectionGetRead ( CSRA1_ReadCollection * self, ctx
                     ON_FAIL ( self -> sequence_curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ) )
                         return NULL;
                 }
-                return SRA_ReadMake ( ctx, self -> sequence_curs, id . rowId, self -> run_name );
+                return CSRA1_ReadMake ( ctx, self -> sequence_curs, id . rowId, self -> run_name );
             }
         }
         NGS_StringRelease ( id_str, ctx );
@@ -517,7 +518,7 @@ struct NGS_Read * CSRA1_ReadCollectionGetReadRange ( CSRA1_ReadCollection * self
 
     TRY ( const NGS_Cursor* curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ) )
     {
-        NGS_Read * ret = SRA_ReadIteratorMakeRange ( ctx, curs, self -> run_name, first, count, wants_full, wants_partial, wants_unaligned );
+        NGS_Read * ret = CSRA1_ReadIteratorMakeRange ( ctx, curs, self -> run_name, first, count, wants_full, wants_partial, wants_unaligned );
         NGS_CursorRelease ( curs, ctx );
         return ret;
     }
