@@ -619,21 +619,18 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *cself,
     const KTable **tblp, const KDirectory *wd, bool try_srapath,
     const char *path, va_list args )
 {
-    rc_t rc;
-    char tblpath [ 4096 ];
-    size_t z;
-
-/*	
-    rc = KDirectoryVResolvePath ( wd, true,
-        tblpath, sizeof tblpath, path, args );
-*/
-  rc = string_vprintf( tblpath, sizeof tblpath, &z, path, args );
+    char key_path[ 4096 ];
+    char short_path[ 4096 ];
+	size_t z;
+	rc_t rc = string_vprintf( short_path, sizeof short_path, &z, path, args );
+	if ( rc == 0 )
+		rc = KDirectoryResolvePath ( wd, true, key_path, sizeof key_path, short_path );
     if ( rc == 0 )
     {
         KSymbol *sym;
         
         /* if already open */
-        sym = KDBManagerOpenObjectFind (cself, tblpath);
+        sym = KDBManagerOpenObjectFind( cself, key_path );
         if (sym != NULL)
         {
             const KTable * ctbl;
@@ -675,35 +672,35 @@ rc_t KDBManagerVOpenTableReadInt ( const KDBManager *cself,
         }
         else
         {
-            KTable * tbl;
-            const KDirectory *dir;
-            bool prerelease = false;
+			KTable * tbl;
+			const KDirectory *dir;
+			bool prerelease = false;
 
-            rc = KDBOpenPathTypeRead ( cself, wd, tblpath, &dir, kptTable, NULL, try_srapath );
-            if ( rc != 0 )
-            {
-                prerelease = true;
-                rc = KDBOpenPathTypeRead ( cself, wd, tblpath, &dir, kptPrereleaseTbl, NULL, try_srapath );
-            }        
-            if ( rc == 0 )
-            {
-                rc = KTableMake ( & tbl, dir, tblpath, NULL, true );
-                if ( rc == 0 )
-                {
-                    KDBManager * self = (KDBManager *)cself;
+			rc = KDBOpenPathTypeRead ( cself, wd, short_path, &dir, kptTable, NULL, try_srapath );
+			if ( rc != 0 )
+			{
+				prerelease = true;
+				rc = KDBOpenPathTypeRead ( cself, wd, short_path, &dir, kptPrereleaseTbl, NULL, try_srapath );
+			}        
+			if ( rc == 0 )
+			{
+				rc = KTableMake ( & tbl, dir, key_path, NULL, true );
+				if ( rc == 0 )
+				{
+					KDBManager * self = (KDBManager *)cself;
 
-                    rc = KDBManagerInsertTable (self, tbl );
+					rc = KDBManagerInsertTable( self, tbl );
 
-                    if (rc == 0)
-                    {
-                        tbl -> prerelease = prerelease;
-                        * tblp = tbl;
-                        return 0;
-                    }
-                    free ( tbl );
-                }
-                KDirectoryRelease ( dir );
-            }
+					if (rc == 0)
+					{
+						tbl -> prerelease = prerelease;
+						* tblp = tbl;
+						return 0;
+					}
+					free ( tbl );
+				}
+				KDirectoryRelease ( dir );
+			}
         }
     }
     return rc;
