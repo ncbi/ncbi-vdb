@@ -25,21 +25,22 @@
 */
 
 #include <search/extern.h>
-#include <sysalloc.h>
+
+#include <klib/rc.h>
+#include <insdc/insdc.h>
 
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
-#include <klib/rc.h>
-#include <insdc/insdc.h>
-
-#ifdef _WIN32
+#if WINDOWS
 #include <intrin.h>
 #ifndef __builtin_popcount
 #define __builtin_popcount __popcnt
 #endif
 #endif
+
+#include <sysalloc.h>
 
 
 #ifndef min
@@ -115,7 +116,7 @@ typedef struct ValueIndexPair
 } ValueIndexPair;
 
 
-static char get_char (INSDC_dna_text const* str, size_t size, size_t pos, int reverse)
+static char get_char (INSDC_dna_text const* str, size_t size, size_t pos, bool reverse)
 {
     if ( !reverse )
         return str [pos];
@@ -126,7 +127,7 @@ static char get_char (INSDC_dna_text const* str, size_t size, size_t pos, int re
 static rc_t calculate_similarity_matrix (
     INSDC_dna_text const* text, size_t size_text,
     INSDC_dna_text const* query, size_t size_query,
-    int* matrix, int reverse)
+    int* matrix, bool reverse)
 {
 
     size_t ROWS = size_text + 1;
@@ -134,23 +135,21 @@ static rc_t calculate_similarity_matrix (
     size_t i, j;
 
     /* arrays to store maximums for all previous rows and columns */
-#ifdef CACHE_MAX_ROWS
+#if CACHE_MAX_ROWS
 
     ValueIndexPair* vec_max_cols = NULL;
     ValueIndexPair* vec_max_rows = NULL;
 
-    vec_max_cols = malloc ( COLUMNS * sizeof (ValueIndexPair) );
+    vec_max_cols = calloc ( COLUMNS, sizeof vec_max_cols [ 0 ] );
     if ( vec_max_cols == NULL)
         return RC(rcText, rcString, rcSearching, rcMemory, rcExhausted);
 
-    vec_max_rows = malloc ( ROWS * sizeof (ValueIndexPair) );
+    vec_max_rows = calloc ( ROWS, sizeof vec_max_rows [ 0 ] );
     if ( vec_max_rows == NULL)
     {
         free (vec_max_cols);
         return RC(rcText, rcString, rcSearching, rcMemory, rcExhausted);
     }
-    memset ( vec_max_cols, 0, COLUMNS * sizeof (ValueIndexPair) );
-    memset ( vec_max_rows, 0, ROWS * sizeof (ValueIndexPair) );
 
 #endif
 
@@ -163,15 +162,19 @@ static rc_t calculate_similarity_matrix (
     {
         for ( j = 1; j < COLUMNS; ++j )
         {
+#if CACHE_MAX_ROWS
+            size_t k, l;
+#endif
+            int cur_score_del, cur_score_ins;
             int sim = similarity_func (
                             get_char (text, size_text, i-1, reverse),
                             get_char (query, size_query, j-1, reverse) );
 
-#ifdef CACHE_MAX_ROWS
-            int cur_score_del = vec_max_cols[j].value + gap_score_func(j - vec_max_cols[j].index);
+#if CACHE_MAX_ROWS
+            cur_score_del = vec_max_cols[j].value + gap_score_func(j - vec_max_cols[j].index);
 #else
-            int cur_score_del = -1;
-            for ( size_t k = 1; k < i; ++k )
+            cur_score_del = -1;
+            for ( k = 1; k < i; ++k )
             {
                 int cur = matrix [ (i - k)*COLUMNS + j ] + gap_score_func(k);
                 if ( cur > cur_score_del )
@@ -179,11 +182,12 @@ static rc_t calculate_similarity_matrix (
             }
 #endif
 
-#ifdef CACHE_MAX_ROWS
-            int cur_score_ins = vec_max_rows[i].value + gap_score_func(i - vec_max_rows[i].index);;
+#if CACHE_MAX_ROWS
+            cur_score_ins = vec_max_rows[i].value + gap_score_func(i - vec_max_rows[i].index);;
 #else
-            int cur_score_ins = -1;
-            for ( size_t l = 1; l < j; ++l )
+            
+            cur_score_ins = -1;
+            for ( l = 1; l < j; ++l )
             {
                 int cur = matrix [ i*COLUMNS + (j - l) ] + gap_score_func(l);
                 if ( cur > cur_score_ins )
@@ -197,7 +201,7 @@ static rc_t calculate_similarity_matrix (
                         cur_score_del,
                         cur_score_ins);
 
-#ifdef CACHE_MAX_ROWS
+#if CACHE_MAX_ROWS
             if ( matrix[i*COLUMNS + j] > vec_max_cols[j].value )
             {
                 vec_max_cols[j].value = matrix[i*COLUMNS + j];
@@ -206,7 +210,7 @@ static rc_t calculate_similarity_matrix (
 
             vec_max_cols[j].value += gap_score_func(1);
 #endif
-#ifdef CACHE_MAX_ROWS
+#if CACHE_MAX_ROWS
             if ( matrix[i*COLUMNS + j] > vec_max_rows[i].value )
             {
                 vec_max_rows[i].value = matrix[i*COLUMNS + j];
@@ -218,7 +222,7 @@ static rc_t calculate_similarity_matrix (
         }
     }
 
-#ifdef CACHE_MAX_ROWS
+#if CACHE_MAX_ROWS
     free (vec_max_cols);
     free (vec_max_rows);
 #endif
@@ -378,7 +382,7 @@ template <bool reverse> void print_matrix ( int const* matrix,
 static rc_t FindRefVariationBounds (
     INSDC_dna_text const* ref_slice, size_t ref_slice_size,
     INSDC_dna_text const* query, size_t query_size,
-    size_t* ref_start, size_t* ref_len, int* has_indel
+    size_t* ref_start, size_t* ref_len, bool * has_indel
     )
 {
     /* building sw-matrix for chosen reference slice and sequence */
@@ -392,10 +396,10 @@ static rc_t FindRefVariationBounds (
     int* matrix = malloc( ROWS * COLUMNS * sizeof (int) );
     if (matrix == NULL)
         return RC(rcText, rcString, rcSearching, rcMemory, rcExhausted);
-    * has_indel = 1;
+    * has_indel = true;
 
     /* forward scan */
-    rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, 0 );
+    rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, false );
     if ( rc != 0 )
         goto free_resources;
     sw_find_indel_box ( matrix, ROWS, COLUMNS, &row_start, &row_end, &col_start, &col_end );
@@ -406,7 +410,7 @@ static rc_t FindRefVariationBounds (
     }
 
     /* reverse scan */
-    rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, 1 );
+    rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, true );
     if ( rc != 0 )
         goto free_resources;
     sw_find_indel_box ( matrix, ROWS, COLUMNS, &row_start_rev, &row_end_rev, &col_start_rev, &col_end_rev );
@@ -577,10 +581,10 @@ static int c_string_wrap ( c_string* self,
 
 
 /*
-   returns 1 if a new ref_slice is selected
-   returns 0 if the new ref_slice is the same as the previous one passed in ref_slice
+   returns true if a new ref_slice is selected
+   returns false if the new ref_slice is the same as the previous one passed in ref_slice
 */
-static int get_ref_slice (
+static bool get_ref_slice (
             INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
             size_t var_len_on_ref,
             size_t slice_expand_left, size_t slice_expand_right,
@@ -598,35 +602,35 @@ static int get_ref_slice (
         ref_xend = ref_pos_var + slice_expand_right + var_len_on_ref;
 
     if ( ref_slice->str == ref + ref_start && ref_slice->size == ref_xend - ref_start)
-        return 0;
+        return false;
 
     c_string_const_assign ( ref_slice, ref + ref_start, ref_xend - ref_start );
-    return 1;
+    return true;
 }
 
 #if 1
-static int make_query ( c_string_const const* ref_slice,
+static bool make_query ( c_string_const const* ref_slice,
         INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
         int64_t var_start_pos_adj, /* ref_pos adjusted to the beginning of ref_slice (in the simplest case - the middle of ref_slice) */
         c_string* query
     )
 {
     if ( !c_string_realloc_no_preserve (query, variation_size + ref_slice->size - var_len_on_ref) )
-        return 0;
+        return false;
 
     if ( !c_string_append (query, ref_slice->str, var_start_pos_adj) ||
          !c_string_append (query, variation, variation_size) ||
          !c_string_append (query, ref_slice->str + var_start_pos_adj + var_len_on_ref, ref_slice->size - var_start_pos_adj - var_len_on_ref) )
     {
-         return 0;
+         return false;
     }
 
-    return 1;
+    return true;
 }
 #endif
 
 #if 0
-static int make_query_ (
+static bool make_query_ (
         INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
         INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
         size_t slice_expand_left, size_t slice_expand_right,
@@ -635,7 +639,7 @@ static int make_query_ (
 {
     size_t ref_prefix_start, ref_prefix_len, ref_suffix_start, ref_suffix_len;
     if ( !c_string_realloc_no_preserve (query, variation_size + slice_expand_left + slice_expand_right + var_len_on_ref) )
-        return 0;
+        return false;
 
     if ( ref_pos_var < slice_expand_left )
     {
@@ -659,15 +663,15 @@ static int make_query_ (
          !c_string_append (query, variation, variation_size) ||
          !c_string_append (query, ref + ref_suffix_start, ref_suffix_len) )
     {
-         return 0;
+         return false;
     }
 
-    return 1;
+    return true;
 }
 #endif
 
 /*
-    FindRefVariationRegionAscii uses Smith-Waterman algorithm
+    FindRefVariationRegionIUPAC uses Smith-Waterman algorithm
     to find theoretical bounds of the variation for
     the given reference, position on the reference
     and the raw query, or variation to look for at the given
@@ -689,7 +693,7 @@ static int make_query_ (
 #if 0
 #include <stdio.h>
 #endif
-LIB_EXPORT rc_t CC FindRefVariationRegionAscii (
+LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC (
         INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
         INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
         size_t* p_ref_start, size_t* p_ref_len
@@ -721,10 +725,10 @@ LIB_EXPORT rc_t CC FindRefVariationRegionAscii (
         int64_t new_slice_start, new_slice_end;
         int64_t ref_pos_adj;
         int cont = 0;
-        int has_indel;
+        bool has_indel;
 
         /* get new expanded slice and check if it has not reached the bounds of ref */
-        int slice_expanded = get_ref_slice ( ref, ref_size, ref_pos_var, var_len_on_ref, exp_l, exp_r, & ref_slice );
+        bool slice_expanded = get_ref_slice ( ref, ref_size, ref_pos_var, var_len_on_ref, exp_l, exp_r, & ref_slice );
         if ( !slice_expanded )
             break;
 
@@ -744,7 +748,7 @@ LIB_EXPORT rc_t CC FindRefVariationRegionAscii (
         rc = FindRefVariationBounds ( ref_slice.str, ref_slice.size,
                         query.str, query.size, & ref_start, & ref_len, & has_indel );
 
-        /* if there is no indels report that there is no ambiguity
+        /* if there are no indels report that there is no ambiguity
            for the given ref_pos_var: region starting at ref_pos_var has length = 0
            ambiguity
         */
