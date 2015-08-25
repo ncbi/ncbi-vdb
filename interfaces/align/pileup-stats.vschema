@@ -69,7 +69,7 @@ table NCBI:pileup:tbl:pileup_stats #1
     /* REF_POS_TRANS
      *  records the translation between current row-id
      *  and REF_POS, such that
-     *    row-id () - REF_POS_TRANS == REF_POS
+     *    row-id () + REF_POS_TRANS == REF_POS
      */
     extern column I64 REF_POS_TRANS = out_ref_pos_trans;
     physical < I64 > izip_encoding .REF_POS_TRANS = in_ref_pos_trans;
