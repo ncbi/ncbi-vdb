@@ -28,6 +28,8 @@
 #include "jni_ErrorMsg.h"
 #include "jni_String.h"
 
+#include <kdb/manager.h> /* KDBManager */
+
 #include <kfc/ctx.h>
 #include <kfc/rsrc.h>
 #include <kfc/except.h>
@@ -38,6 +40,9 @@
 
 #include <kns/manager.h>
 #include <klib/ncbi-vdb-version.h> /* GetPackageVersion */
+
+#include <vfs/manager.h> /* VFSManager */
+#include <vfs/path.h> /* VPath */
 
 #include "NGS_ReadCollection.h"
 #include "NGS_ReferenceSequence.h"
@@ -169,6 +174,52 @@ JNIEXPORT jlong JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_OpenReferenceSequence
 
     assert ( new_ref != NULL );
     return ( jlong ) ( size_t ) new_ref;
+}
+
+/*
+ * Class:     gov_nih_nlm_ncbi_ngs_Manager
+ * Method:    IsValid
+ * Signature: (Ljava/lang/String;)Z
+ */
+JNIEXPORT jboolean JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_IsValid
+  ( JNIEnv * jenv, jclass jcls, jstring jspec )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcMgr, rcAccessing );
+
+    jboolean result = false;
+
+    VFSManager * vfs = NULL;
+    rc_t rc = VFSManagerMake ( & vfs );
+
+    if ( rc == 0 ) {
+        const char * spec = JStringData ( jspec, ctx, jenv );
+
+        VPath * path = NULL;
+        rc = VFSManagerMakePath ( vfs, & path, spec );
+
+        if ( rc == 0 ) {
+            const KDBManager * kdb = NULL;
+            rc = KDBManagerMakeRead ( & kdb, NULL );
+
+            if ( rc == 0 ) {
+                KPathType t = KDBManagerPathTypeVP ( kdb, path );
+                if (t == kptDatabase || t == kptTable) {
+                    result = true;
+                }
+
+                KDBManagerRelease ( kdb );
+                kdb = NULL;
+            }
+
+            VPathRelease ( path );
+            path = NULL;
+        }
+
+        VFSManagerRelease ( vfs );
+        vfs = NULL;
+    }
+
+    return result;
 }
 
 /*
