@@ -53,7 +53,6 @@ uint64_t SRA_Accession_ReadCount = 470985;
 class SRA_Fixture : public NGS_C_Fixture { };
 
 // SRA_ReadCollection
-//TODO: SRA_ReadCollectionGetReadCount with categories (not in vtable!!)
 
 FIXTURE_TEST_CASE(SRA_ReadCollection_Open, SRA_Fixture)
 {

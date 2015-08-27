@@ -500,8 +500,59 @@ uint64_t CSRA1_ReadCollectionGetReadCount ( CSRA1_ReadCollection * self, ctx_t c
     if ( wants_full && wants_partial && wants_unaligned )    
         return NGS_CursorGetRowCount ( self -> sequence_curs, ctx );
 
-    /* have a problem here */
-    UNIMPLEMENTED ();
+    { /* scan the SEQUENCE table */
+        int64_t first;
+        uint64_t count;
+        TRY ( NGS_CursorGetRowRange ( self -> sequence_curs, ctx, & first, & count ) )
+        {
+            uint64_t ret = 0;
+            uint64_t count_full = 0;
+            uint64_t count_partial = 0;
+            uint64_t count_unaligned = 0;
+            uint64_t i;
+            for ( i = 0; i < count; ++i )
+            {
+                const void * base;
+                uint32_t elem_bits, boff, row_len;
+                ON_FAIL ( NGS_CursorCellDataDirect ( self -> sequence_curs, ctx, first + i, seq_PRIMARY_ALIGNMENT_ID, & elem_bits, & base, & boff, & row_len ) )
+                {   /* count as unaligned, to mirror the behavior of SRA_ReadGetCategory() (see SRA_Read.c) */
+                    CLEAR();
+                    ++ count_unaligned;
+                }
+                else    
+                {
+                    uint32_t j;
+                    bool seen_aligned = false;
+                    bool seen_unaligned = false;
+                    const int64_t * orig = base;
+                    assert(elem_bits == 64);
+                    for ( j = 0; j < row_len; ++ j )
+                    {
+                        if (orig[j] == 0)
+                            seen_unaligned = true;
+                        else 
+                            seen_aligned = true;
+                    }
+                    if ( seen_aligned )
+                    {
+                        if ( seen_unaligned )
+                            ++ count_partial;
+                        else
+                            ++ count_full;
+                    }
+                    else
+                        ++ count_unaligned;
+                }
+            }
+            if ( wants_full )
+                ret += count_full;
+            if ( wants_partial )
+                ret += count_partial;
+            if ( wants_unaligned )
+                ret += count_unaligned;
+            return ret;
+        }
+    }
 
     return 0;
 }

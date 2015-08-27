@@ -50,7 +50,6 @@ uint64_t SRADB_Accession_ReadCount = 16;
 class SRADB_Fixture : public NGS_C_Fixture {};
 
 // SRADB_ReadCollection
-//TODO: SRADB_ReadCollectionGetReadCount with categories (not in vtable!!)
 FIXTURE_TEST_CASE(SRADB_ReadCollection_Open, SRADB_Fixture)
 {
     ENTRY_ACC(SRADB_Accession);
