@@ -81,6 +81,7 @@ TestEnv::~TestEnv ()
 
 string TestEnv::lastLocation;
 LogLevel::E TestEnv::verbosity = LogLevel::e_error;
+bool TestEnv::verbositySet = false;
 
 void CC TestEnv::TermHandler() 
 {
@@ -264,6 +265,9 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
     char arg_app_args           [] = "-app_args=";
     for (int i = 1; i < argc; ++i)
     {
+        if (verbositySet) {
+            break;
+        }
         if (strncmp(argv[i], arg_log_level, strlen(arg_log_level))
             == 0)
         {
