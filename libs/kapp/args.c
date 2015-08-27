@@ -198,7 +198,7 @@ rc_t CC OptionMake (Option ** pself, const char * name, size_t size, uint32_t ma
         if ((self->needs_value = needs_value) != false)
             VectorInit (&self->values,0,4);
         else
-            memset (&self->values, sizeof(self->values), 0);
+            memset (&self->values, 0, sizeof(self->values) );
 
         self->required = required;
         self->deprecated = self->error = false;
