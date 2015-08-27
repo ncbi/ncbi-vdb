@@ -861,6 +861,13 @@ FIXTURE_TEST_CASE(CSRA1_ReadGroup_GetStatistics, CSRA1_Fixture)
 }
 
 /////TODO: ReadGroupIterator
+FIXTURE_TEST_CASE(CSRA1_ReadGroupIterator_AfterNext, CSRA1_Fixture)
+{   
+    ngs :: ReadGroupIterator rg = ncbi :: NGS :: openReadCollection ( "ERR730927" ) . getReadGroups ();
+    REQUIRE ( rg . nextReadGroup () );
+    REQUIRE_EQ ( string ( "1#72" ),  rg . getName () );
+}
+
 
 //////////////////////////////////////////// Main
 extern "C"
