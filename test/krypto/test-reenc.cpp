@@ -53,8 +53,22 @@ TEST_CASE(KReEncryptEncFile)
     REQUIRE_RC (KKeyInitUpdate (&key_enc, kkeyAES128, pw1, strlen (pw1)));
     REQUIRE_RC (KKeyInitUpdate (&key_reenc, kkeyAES256, pw2, strlen (pw2)));
     
-    const char enc_file_path_fmt [] = "temp/file_enc%llu";
-    const char reenc_file_path_fmt [] = "temp/file_reenc%llu";
+    const char enc_file_path_fmt [] = "temp/"
+#if defined(__APPLE__)
+        "mac"
+#else
+        "linux"
+#endif
+        "/file_enc%llu";
+
+    const char reenc_file_path_fmt [] = "temp/"
+#if defined(__APPLE__)
+        "mac"
+#else
+        "linux"
+#endif
+        "/file_reenc%llu";
+
     KFile * enc_file, * reenc_file, * reenc_pt_file, * enc_pt_file;
     
     uint64_t enc_pt_size, reenc_size;
@@ -63,7 +77,12 @@ TEST_CASE(KReEncryptEncFile)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp" );
+    KDirectoryRemove ( current_dir, true, "temp"
+#if defined(__APPLE__)
+        "mac");
+#else
+        "linux");
+#endif
     
     uint64_t file_sizes_n_32k[] = { 0, 1, 2, 10, 46, 51 };
     int8_t file_size_variants[] = { -2, -1, 0, 1, 2 };
@@ -135,7 +154,13 @@ TEST_CASE(KReEncryptEncFile)
         }
     }
     
-    REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
+    KDirectoryRemove ( current_dir, true, "temp"
+#if defined(__APPLE__)
+        "mac");
+#else
+        "linux");
+#endif
+
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -145,8 +170,22 @@ TEST_CASE(KReEncryptPtFile)
     KKey key_reenc;
     REQUIRE_RC (KKeyInitUpdate (&key_reenc, kkeyAES256, pw2, strlen (pw2)));
     
-    const char file_path_fmt [] = "temp/file%llu";
-    const char reenc_file_path_fmt [] = "temp/file_reenc%llu";
+    const char file_path_fmt [] = "temp/"
+#if defined(__APPLE__)
+        "mac"
+#else
+        "linux"
+#endif
+        "/file%llu";
+
+    const char reenc_file_path_fmt [] = "temp/"
+#if defined(__APPLE__)
+        "mac"
+#else
+        "linux"
+#endif
+        "/file_reenc%llu";
+
     KFile * pt_file, *reenc_file, * reenc_pt_file;
     
     uint64_t pt_size, reenc_size;
@@ -155,7 +194,12 @@ TEST_CASE(KReEncryptPtFile)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp" );
+    KDirectoryRemove ( current_dir, true, "temp"
+#if defined(__APPLE__)
+        "mac");
+#else
+        "linux");
+#endif
     
     uint64_t file_sizes_n_32k[] = { 0, 1, 2, 10, 46, 51 };
     int8_t file_size_variants[] = { -2, -1, 0, 1, 2 };
@@ -224,7 +268,13 @@ TEST_CASE(KReEncryptPtFile)
         }
     }
     
-    REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
+    KDirectoryRemove ( current_dir, true, "temp"
+#if defined(__APPLE__)
+        "mac");
+#else
+        "linux");
+#endif
+
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -236,8 +286,22 @@ TEST_CASE(KReencryptZeroContentSizeEncFile)
     REQUIRE_RC (KKeyInitUpdate (&key_enc, kkeyAES128, pw1, strlen (pw1)));
     REQUIRE_RC (KKeyInitUpdate (&key_reenc, kkeyAES256, pw2, strlen (pw2)));
     
-    const char enc_file_path [] = "temp/zero_content_file_to_reenc";
-    const char reenc_file_path [] = "temp/reenc_zero_content_file";
+    const char enc_file_path [] = "temp/"
+#if defined(__APPLE__)
+        "mac"
+#else
+        "linux"
+#endif
+        "/zero_content_file_to_reenc";
+
+    const char reenc_file_path [] = "temp/"
+#if defined(__APPLE__)
+        "mac"
+#else
+        "linux"
+#endif
+        "/reenc_zero_content_file";
+
     KFile * enc_file, * enc_pt_file, * reenc_file, * reenc_pt_file;
     
     uint64_t enc_pt_size, reenc_size;
@@ -246,7 +310,12 @@ TEST_CASE(KReencryptZeroContentSizeEncFile)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp" );
+    KDirectoryRemove ( current_dir, true, "temp"
+#if defined(__APPLE__)
+        "mac");
+#else
+        "linux");
+#endif
     
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, enc_file_path, TFileOpenMode_Write, &key_enc, &enc_file ) );
@@ -277,7 +346,12 @@ TEST_CASE(KReencryptZeroContentSizeEncFile)
     REQUIRE ( reenc_size == 0 );
     REQUIRE_RC ( KFileRelease ( reenc_file ) );
     
-    REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
+    KDirectoryRemove ( current_dir, true, "temp"
+#if defined(__APPLE__)
+        "mac");
+#else
+        "linux");
+#endif
     
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
@@ -288,8 +362,22 @@ TEST_CASE(KReencryptZeroContentSizePtFile)
     KKey key_reenc;
     REQUIRE_RC (KKeyInitUpdate (&key_reenc, kkeyAES256, pw2, strlen (pw2)));
     
-    const char pt_file_path [] = "temp/zero_content_file_to_reenc_pt";
-    const char reenc_file_path [] = "temp/reenc_zero_content_file_pt";
+    const char pt_file_path [] = "temp/"
+#if defined(__APPLE__)
+        "mac"
+#else
+        "linux"
+#endif
+        "/zero_content_file_to_reenc_pt";
+
+    const char reenc_file_path [] = "temp/"
+#if defined(__APPLE__)
+        "mac"
+#else
+        "linux"
+#endif
+        "/reenc_zero_content_file_pt";
+
     KFile * pt_file, * reenc_file, * reenc_pt_file;
     
     uint64_t pt_size, reenc_size;
@@ -298,7 +386,12 @@ TEST_CASE(KReencryptZeroContentSizePtFile)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp" );
+    KDirectoryRemove ( current_dir, true, "temp"
+#if defined(__APPLE__)
+        "mac");
+#else
+        "linux");
+#endif
     
     // create file
     REQUIRE_RC ( TCreatePtFile( current_dir, pt_file_path, TFileOpenMode_Write, &pt_file ) );
@@ -329,7 +422,12 @@ TEST_CASE(KReencryptZeroContentSizePtFile)
     REQUIRE ( reenc_size == 0 );
     REQUIRE_RC ( KFileRelease ( reenc_file ) );
     
-    REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
+    KDirectoryRemove ( current_dir, true, "temp"
+#if defined(__APPLE__)
+        "mac");
+#else
+        "linux");
+#endif
     
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
