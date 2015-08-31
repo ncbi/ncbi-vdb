@@ -147,7 +147,23 @@ static struct NGS_Alignment_v1 * ITF_Reference_v1_get_alignment ( const NGS_Refe
 static struct NGS_Alignment_v1 * ITF_Reference_v1_get_alignments ( const NGS_Reference_v1 * self, NGS_ErrBlock_v1 * err, bool wants_primary, bool wants_secondary )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
-    ON_FAIL ( struct NGS_Alignment * ret = NGS_ReferenceGetAlignments ( Self ( self ), ctx, wants_primary, wants_secondary ) )
+    ON_FAIL ( struct NGS_Alignment * ret = NGS_ReferenceGetAlignments ( Self ( self ), ctx, wants_primary, wants_secondary, true ) )
+    {
+        NGS_ErrBlockThrow ( err, ctx );
+    }
+
+    CLEAR ();
+    return ( struct NGS_Alignment_v1 * ) ret;
+}
+
+static struct NGS_Alignment_v1 * ITF_Reference_v1_get_alignments_with_flags ( const NGS_Reference_v1 * self, NGS_ErrBlock_v1 * err, enum NGS_ReferenceAlignFlags flags )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+    ON_FAIL ( struct NGS_Alignment * ret = NGS_ReferenceGetAlignments ( Self ( self ), 
+                                                                        ctx, 
+                                                                        flags & NGS_ReferenceAlignFlags_wants_primary, 
+                                                                        flags & NGS_ReferenceAlignFlags_wants_secondary,
+                                                                        flags & NGS_ReferenceAlignFlags_wants_wraparound ) )
     {
         NGS_ErrBlockThrow ( err, ctx );
     }
@@ -292,7 +308,10 @@ NGS_Reference_v1_vt ITF_Reference_vt =
     ITF_Reference_v1_get_filtered_pileup_slice,
 
     /* 1.2 */
-    ITF_Reference_v1_get_align_count
+    ITF_Reference_v1_get_align_count,
+    
+    /* 1.3 */
+    ITF_Reference_v1_get_alignments_with_flags
 };
 
 
@@ -470,7 +489,7 @@ struct NGS_Alignment* NGS_ReferenceGetAlignment ( NGS_Reference * self, ctx_t ct
 
 /* GetAlignments
  */
-struct NGS_Alignment* NGS_ReferenceGetAlignments ( NGS_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary )
+struct NGS_Alignment* NGS_ReferenceGetAlignments ( NGS_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, bool wants_wraparound )
 {
     if ( self == NULL )
     {
@@ -479,7 +498,7 @@ struct NGS_Alignment* NGS_ReferenceGetAlignments ( NGS_Reference * self, ctx_t c
     }
     else
     {
-        return VT ( self, get_alignments ) ( self, ctx, wants_primary, wants_secondary );
+        return VT ( self, get_alignments ) ( self, ctx, wants_primary, wants_secondary, true );
     }
 
     return NULL;
@@ -699,7 +718,7 @@ static struct NGS_Alignment * Null_ReferenceGetAlignment ( NGS_Reference * self,
     return NULL;
 }
 
-static struct NGS_Alignment * Null_ReferenceGetAlignments ( NGS_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary )
+static struct NGS_Alignment * Null_ReferenceGetAlignments ( NGS_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, bool wants_wraparound )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing);
     INTERNAL_ERROR ( xcSelfNull, "NULL Reference accessed" );

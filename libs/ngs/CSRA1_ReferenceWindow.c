@@ -85,9 +85,12 @@ struct CSRA1_ReferenceWindow
     NGS_ReadCollection * coll;
     
     const NGS_Cursor * reference_curs;
+    
     bool circular;
     bool primary;
     bool secondary;
+    bool wraparound; /* if false, exclude alignments that start before slice_offset */
+    
     uint32_t chunk_size;
     uint64_t ref_length; /* total reference length in bases */
     uint64_t id_offset;
@@ -820,6 +823,7 @@ void CSRA1_ReferenceWindowInit ( CSRA1_ReferenceWindow * ref,
                                  uint64_t size, /* 0 - all remaining */
                                  bool primary,
                                  bool secondary,
+                                 bool wraparound,
                                  uint64_t id_offset )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
@@ -832,6 +836,7 @@ void CSRA1_ReferenceWindowInit ( CSRA1_ReferenceWindow * ref,
             ref -> circular             = circular;
             ref -> primary              = primary;
             ref -> secondary            = secondary;
+            ref -> wraparound           = wraparound;
             ref -> chunk_size           = chunk_size;
             ref -> ref_length           = ref_length;
             ref -> id_offset            = id_offset;
@@ -861,6 +866,7 @@ NGS_Alignment * CSRA1_ReferenceWindowMake ( ctx_t ctx,
                                             uint64_t size, /* 0 - all remaining */
                                             bool primary,
                                             bool secondary,
+                                            bool wants_wraparound,
                                             uint64_t id_offset )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
@@ -888,6 +894,7 @@ NGS_Alignment * CSRA1_ReferenceWindowMake ( ctx_t ctx,
                                           size, 
                                           primary, 
                                           secondary,
+                                          wants_wraparound,
                                           id_offset ) ) 
         {
             return ( NGS_Alignment * ) ref;

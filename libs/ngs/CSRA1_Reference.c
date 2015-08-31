@@ -74,7 +74,7 @@ static uint64_t                 CSRA1_ReferenceGetLength ( CSRA1_Reference * sel
 static struct NGS_String *      CSRA1_ReferenceGetBases ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size );
 static struct NGS_String *      CSRA1_ReferenceGetChunk ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size );
 static struct NGS_Alignment*    CSRA1_ReferenceGetAlignment ( CSRA1_Reference * self, ctx_t ctx, const char * alignmentId );
-static struct NGS_Alignment*    CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary );
+static struct NGS_Alignment*    CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, bool wants_wraparound );
 static uint64_t                 CSRA1_ReferenceGetAlignmentCount ( const CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary );
 static struct NGS_Alignment*    CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary );
 static struct NGS_Pileup*       CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
@@ -415,7 +415,7 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignment ( CSRA1_Reference * self, ctx_
     return NULL;
 }
 
-struct NGS_Alignment* CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary )
+struct NGS_Alignment* CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, bool wants_wraparound )
 {   
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
@@ -449,6 +449,7 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx
                                                    0,
                                                    wants_primary, 
                                                    wants_secondary,
+                                                   wants_wraparound,
                                                    self -> align_id_offset );
             }
         }
@@ -638,6 +639,7 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
                                                        size,
                                                        wants_primary, 
                                                        wants_secondary,
+                                                       true, /*VDB-2638*/
                                                        self -> align_id_offset );
                 }
                 else
@@ -666,6 +668,7 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
                                                            size,
                                                            wants_primary, 
                                                            wants_secondary,
+                                                           true, /*VDB-2638*/
                                                            self -> align_id_offset );
                     }
                 }

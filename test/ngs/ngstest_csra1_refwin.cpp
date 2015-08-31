@@ -169,7 +169,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_NoAccessBeforeNext, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_PrimaryOnly, "supercont2.1" );
     
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false, true ); 
 
     REQUIRE_NULL ( NGS_AlignmentGetAlignmentId ( m_align, ctx ) ); 
     REQUIRE_FAILED ();
@@ -229,7 +229,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_AccessAfterNext, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_PrimaryOnly, "supercont2.1" );
     
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false, true ); 
     REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
     REQUIRE ( ! FAILED () );
 
@@ -320,7 +320,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Primary, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
     
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false, true ); 
 
     REQUIRE ( NextId ( string ( CSRA1_WithSecondary ) + ".PA.1") ); 
     REQUIRE ( NextId ( string ( CSRA1_WithSecondary ) + ".PA.2") ); 
@@ -333,7 +333,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Primary_Only, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
     
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false, true ); 
 
     // skip to where a secondary alignment which would show up, between primary alignments 34 and 35
     SkipAlignments( 33 );
@@ -348,7 +348,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Secondary, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
     
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, false, true); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, false, true, true ); 
 
     
     REQUIRE ( NextId ( string ( CSRA1_WithSecondary ) + ".SA.169") ); 
@@ -371,7 +371,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_PrimaryAndSecondary, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
     
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true, true ); 
 
     // skip to where a secondary alignment is expected, between primary alignments 34 and 35
     SkipAlignments( 33 );
@@ -386,7 +386,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Sort, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
     
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true, true ); 
 
     // secondary 170 should go before primary 62
     SkipAlignments( 61 ); /*skip over 60 primary and 1 secondary */
@@ -400,21 +400,21 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Sort, CSRA1_Fixture)
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_FullPrimary_Order, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false, true ); 
     REQUIRE ( VerifyOrder() );
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_FullSecondary_Order, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, false, true); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, false, true, true ); 
     REQUIRE ( VerifyOrder() );
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_FullAll_Order, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true, true ); 
     REQUIRE ( VerifyOrder() );
     EXIT;
 }
@@ -560,7 +560,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Circular, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithCircularReference, "chrM" );
 
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true, true ); 
     REQUIRE ( ! FAILED () );
     
     // chrM is 16569 bases long          // pos, len, mapq
@@ -605,7 +605,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_PrintEmAll_1, CSRA1_Fixture)
 //    ENTRY_GET_REF ( CSRA1_PrimaryOnly, "supercont2.1" );
     ENTRY_GET_REF ( CSRA1_WithCircularReference, "chrM" );
     
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true, true ); 
 
     uint64_t prevPos = 0;
     uint64_t prevLen = 0;
