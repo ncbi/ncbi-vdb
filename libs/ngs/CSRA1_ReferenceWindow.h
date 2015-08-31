@@ -56,7 +56,7 @@ struct NGS_Alignment * CSRA1_ReferenceWindowMake ( ctx_t ctx,
                                                    uint64_t size, /* 0 - all remaining */
                                                    bool wants_primary, 
                                                    bool wants_secondary,
-                                                   bool wants_wraparound,
+                                                   bool wants_within_window,
                                                    uint64_t id_offset );
 
 #ifdef __cplusplus

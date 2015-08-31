@@ -89,7 +89,7 @@ struct CSRA1_ReferenceWindow
     bool circular;
     bool primary;
     bool secondary;
-    bool wraparound; /* if false, exclude alignments that start before slice_offset */
+    bool within_window; /* if true, exclude alignments that start before slice_offset */
     
     uint32_t chunk_size;
     uint64_t ref_length; /* total reference length in bases */
@@ -533,27 +533,31 @@ void LoadAlignmentInfo ( CSRA1_ReferenceWindow* self, ctx_t ctx, size_t* idx, in
         {
             int64_t pos = NGS_AlignmentGetAlignmentPosition ( al, ctx );
             int64_t len = (int64_t) NGS_AlignmentGetAlignmentLength ( al, ctx );
-            bool overlaps = true;
             
-            if ( size > 0 )
-            {   /* a slice*/
-                int64_t end_slice =  offset + (int64_t)size;
-                if ( self -> circular && pos >= end_slice ) 
-                {   /* account for possible carryover on a circular reference */
-                    pos -= self -> ref_length;
-                }
-                overlaps = pos < end_slice && ( pos + len > offset );                
-            }
-            
-            if ( overlaps )
+            if ( ! self -> within_window || pos >= offset )
             {
-    /*printf("%li, %li, %i, %li\n", pos, len, NGS_AlignmentGetMappingQuality ( al, ctx ), id);        */
-                self -> align_info [ *idx ] . id = id;
-                self -> align_info [ *idx ] . pos = pos;
-                self -> align_info [ *idx ] . len = len;
-                self -> align_info [ *idx ] . cat = primary ? Primary : Secondary;
-                self -> align_info [ *idx ] . mapq = NGS_AlignmentGetMappingQuality ( al, ctx );
-                ++ ( * idx );
+                bool overlaps = true;
+                
+                if ( size > 0 )
+                {   /* a slice*/
+                    int64_t end_slice =  offset + (int64_t)size;
+                    if ( self -> circular && pos >= end_slice ) 
+                    {   /* account for possible carryover on a circular reference */
+                        pos -= self -> ref_length;
+                    }
+                    overlaps = pos < end_slice && ( pos + len > offset );                
+                }
+                
+                if ( overlaps )
+                {
+        /*printf("%li, %li, %i, %li\n", pos, len, NGS_AlignmentGetMappingQuality ( al, ctx ), id);        */
+                    self -> align_info [ *idx ] . id = id;
+                    self -> align_info [ *idx ] . pos = pos;
+                    self -> align_info [ *idx ] . len = len;
+                    self -> align_info [ *idx ] . cat = primary ? Primary : Secondary;
+                    self -> align_info [ *idx ] . mapq = NGS_AlignmentGetMappingQuality ( al, ctx );
+                    ++ ( * idx );
+                }
             }
             
             NGS_AlignmentRelease ( al, ctx );
@@ -680,7 +684,7 @@ bool LoadFirstCircular ( CSRA1_ReferenceWindow* self, ctx_t ctx )
 
     /* for windows on circular references, self->ref_begin and and self->ref_end - 1 
         are the rowId's of the first and last chunk of the reference, regardless of slicing */
-    if ( self -> wraparound && self -> ref_begin < last_chunk )
+    if ( ! self -> within_window && self -> ref_begin < last_chunk )
     {   /* load the last chunk of the reference, to cover possible overlaps into the first chunk */
         if ( self -> slice_size == 0 )
         {   /* loading possible overlaps with the first chunk */
@@ -823,7 +827,7 @@ void CSRA1_ReferenceWindowInit ( CSRA1_ReferenceWindow * ref,
                                  uint64_t size, /* 0 - all remaining */
                                  bool primary,
                                  bool secondary,
-                                 bool wraparound,
+                                 bool within_window,
                                  uint64_t id_offset )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
@@ -836,7 +840,7 @@ void CSRA1_ReferenceWindowInit ( CSRA1_ReferenceWindow * ref,
             ref -> circular             = circular;
             ref -> primary              = primary;
             ref -> secondary            = secondary;
-            ref -> wraparound           = wraparound;
+            ref -> within_window        = within_window;
             ref -> chunk_size           = chunk_size;
             ref -> ref_length           = ref_length;
             ref -> id_offset            = id_offset;
@@ -866,7 +870,7 @@ NGS_Alignment * CSRA1_ReferenceWindowMake ( ctx_t ctx,
                                             uint64_t size, /* 0 - all remaining */
                                             bool primary,
                                             bool secondary,
-                                            bool wraparound,
+                                            bool within_window,
                                             uint64_t id_offset )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
@@ -894,7 +898,7 @@ NGS_Alignment * CSRA1_ReferenceWindowMake ( ctx_t ctx,
                                           size, 
                                           primary, 
                                           secondary,
-                                          wraparound,
+                                          within_window,
                                           id_offset ) ) 
         {
             return ( NGS_Alignment * ) ref;
