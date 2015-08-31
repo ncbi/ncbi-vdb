@@ -817,7 +817,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_Circular_Wraparound, CSRA1_Fi
     
     EXIT;
 }
-#if SHOW_UNIMPLEMENTED
+
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_Circular_NoWraparound, CSRA1_Fixture)
 {
     ENTRY_GET_REF( CSRA1_WithCircularReference, "NC_012920.1" );
@@ -828,13 +828,12 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_Circular_NoWraparound, CSRA1_
     REQUIRE ( ! FAILED () );
     
     // with a filter, the first returned alignment starts at/after the start of the circular reference
-    REQUIRE_EQ ( (int64_t)0, NGS_AlignmentGetAlignmentPosition ( m_align, ctx ) );
+    REQUIRE_EQ ( (int64_t)5, NGS_AlignmentGetAlignmentPosition ( m_align, ctx ) );
     
     REQUIRE ( ! FAILED () );
     
     EXIT;
 }
-#endif
 
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetChunk_Empty, CSRA1_Fixture)
 {   // offset beyond the end of reference

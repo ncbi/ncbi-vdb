@@ -147,7 +147,7 @@ static struct NGS_Alignment_v1 * ITF_Reference_v1_get_alignment ( const NGS_Refe
 static struct NGS_Alignment_v1 * ITF_Reference_v1_get_alignments ( const NGS_Reference_v1 * self, NGS_ErrBlock_v1 * err, bool wants_primary, bool wants_secondary )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
-    ON_FAIL ( struct NGS_Alignment * ret = NGS_ReferenceGetAlignments ( Self ( self ), ctx, wants_primary, wants_secondary, true ) )
+    ON_FAIL ( struct NGS_Alignment * ret = NGS_ReferenceGetAlignments ( Self ( self ), ctx, wants_primary, wants_secondary, false ) )
     {
         NGS_ErrBlockThrow ( err, ctx );
     }
@@ -498,7 +498,7 @@ struct NGS_Alignment* NGS_ReferenceGetAlignments ( NGS_Reference * self, ctx_t c
     }
     else
     {
-        return VT ( self, get_alignments ) ( self, ctx, wants_primary, wants_secondary, true );
+        return VT ( self, get_alignments ) ( self, ctx, wants_primary, wants_secondary, wants_wraparound );
     }
 
     return NULL;

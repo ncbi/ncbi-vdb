@@ -680,7 +680,7 @@ bool LoadFirstCircular ( CSRA1_ReferenceWindow* self, ctx_t ctx )
 
     /* for windows on circular references, self->ref_begin and and self->ref_end - 1 
         are the rowId's of the first and last chunk of the reference, regardless of slicing */
-    if ( self -> ref_begin < last_chunk )
+    if ( self -> wraparound && self -> ref_begin < last_chunk )
     {   /* load the last chunk of the reference, to cover possible overlaps into the first chunk */
         if ( self -> slice_size == 0 )
         {   /* loading possible overlaps with the first chunk */
@@ -866,7 +866,7 @@ NGS_Alignment * CSRA1_ReferenceWindowMake ( ctx_t ctx,
                                             uint64_t size, /* 0 - all remaining */
                                             bool primary,
                                             bool secondary,
-                                            bool wants_wraparound,
+                                            bool wraparound,
                                             uint64_t id_offset )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
@@ -894,7 +894,7 @@ NGS_Alignment * CSRA1_ReferenceWindowMake ( ctx_t ctx,
                                           size, 
                                           primary, 
                                           secondary,
-                                          wants_wraparound,
+                                          wraparound,
                                           id_offset ) ) 
         {
             return ( NGS_Alignment * ) ref;
