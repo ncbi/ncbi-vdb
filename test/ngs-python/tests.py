@@ -9,6 +9,7 @@ from ngs.Read import Read
 PrimaryOnly      = "SRR1063272"
 WithSecondary    = "SRR833251"
 WithGroups       = "SRR822962"
+WithCircularRef  = "SRR1769246"
 
 def getRead(id):
     run = NGS.openReadCollection(PrimaryOnly)
@@ -388,7 +389,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(WithSecondary + ".PA.35", it.getAlignmentId())
         self.assertFalse(it.nextAlignment())  
    
-    def test_ReferenceWindow_Slice_Filtered (self):
+    def test_ReferenceWindow_Slice_Filtered_Category (self):
         it = NGS.openReadCollection(WithSecondary).getReference("gi|169794206|ref|NC_010410.1|").getAlignmentSlice(516000, 100000, Alignment.primaryAlignment) 
         self.assertTrue(it.nextAlignment())  
         self.assertEqual(WithSecondary + ".PA.33", it. getAlignmentId())
@@ -396,9 +397,21 @@ class Tests(unittest.TestCase):
         self.assertEqual(WithSecondary + ".PA.34", it. getAlignmentId())
         self.assertTrue(it.nextAlignment())  
         self.assertEqual(WithSecondary + ".PA.35", it. getAlignmentId()) # no secondary
-        self.assertFalse(it.nextAlignment())  
+        self.assertFalse(it.nextAlignment())
     
-    # ReadGroup 
+    def test_ReferenceWindow_Slice_Filtered_Start_Within_Slice (self):
+        ref = NGS.openReadCollection(WithCircularRef).getReference("NC_012920.1")
+        it = ref.getFilteredAlignmentSlice(0, ref.getLength(), Alignment.all, Alignment.startWithinSlice, 0)
+    
+        self.assertTrue(it.nextAlignment())
+        lastAlignmentPosition = it.getAlignmentPosition()
+        while it.nextAlignment():
+            currentPosition = it.getAlignmentPosition()
+            errorMsg = "Sorting violated. Last position (" + str(lastAlignmentPosition) + ") is higher than current one (" + str(currentPosition) + ")"
+            self.assertTrue ( lastAlignmentPosition <= currentPosition, errorMsg )
+            lastAlignmentPosition = currentPosition
+    
+    # ReadGroup
     def test_ReadGroup_getName(self):
         gr = NGS.openReadCollection(PrimaryOnly).getReadGroup("C1ELY.6")
         self.assertEqual("C1ELY.6", gr.getName())

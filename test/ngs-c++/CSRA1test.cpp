@@ -44,6 +44,7 @@ public:
     static const char* CSRA1_WithSecondary;
     static const char* CSRA1_WithGroups;
     static const char* CSRA1_NoReadGroups;
+    static const char* CSRA1_WithCircularRef;
     
 public:
     CSRA1_Fixture()
@@ -78,10 +79,11 @@ public:
         return ncbi :: NGS :: openReadCollection ( CSRA1_WithSecondary ) . getAlignments ( category );
     }
 };
-const char* CSRA1_Fixture::CSRA1_PrimaryOnly    = "SRR1063272";
-const char* CSRA1_Fixture::CSRA1_WithSecondary  = "SRR833251";
-const char* CSRA1_Fixture::CSRA1_WithGroups     = "SRR822962";
-const char* CSRA1_Fixture::CSRA1_NoReadGroups   = "SRR1237962";
+const char* CSRA1_Fixture::CSRA1_PrimaryOnly     = "SRR1063272";
+const char* CSRA1_Fixture::CSRA1_WithSecondary   = "SRR833251";
+const char* CSRA1_Fixture::CSRA1_WithGroups      = "SRR822962";
+const char* CSRA1_Fixture::CSRA1_NoReadGroups    = "SRR1237962";
+const char* CSRA1_Fixture::CSRA1_WithCircularRef = "SRR1769246";
 
 #include "CSRA1_ReadCollection_test.cpp"
 
@@ -813,6 +815,23 @@ FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice, CSRA1_Fixture)
     REQUIRE_EQ ( ngs :: String ( CSRA1_WithSecondary ) + ".PA.35", it. getAlignmentId () . toString () );
     
     REQUIRE ( ! it . nextAlignment () );
+}
+
+FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice_Filtered_Start_Within_Slice, CSRA1_Fixture)
+{
+    ngs :: Reference ref = ncbi :: NGS :: openReadCollection ( CSRA1_WithCircularRef ) . getReference ( "NC_012920.1" );
+    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( 0, ref.getLength(), ngs :: Alignment :: all, ngs :: Alignment :: startWithinSlice, 0 );
+    
+    REQUIRE ( it . nextAlignment () );
+    uint64_t lastAlignmentPosition = it.getAlignmentPosition();
+    while ( it . nextAlignment () )
+    {
+        uint64_t currentPosition = it.getAlignmentPosition();
+        
+        REQUIRE_LE ( lastAlignmentPosition, currentPosition );
+        
+        lastAlignmentPosition = currentPosition;
+    }
 }
 
 /////TODO: Pileup

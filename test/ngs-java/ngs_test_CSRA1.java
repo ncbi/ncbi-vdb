@@ -20,6 +20,7 @@ public class ngs_test_CSRA1 {
     String PrimaryOnly      = "SRR1063272";
     String WithSecondary    = "SRR833251";
     String WithGroups       = "SRR822962";
+    String WithCircularRef  = "SRR1769246";
     
     @Test
     public void open_success() throws ngs.ErrorMsg
@@ -677,7 +678,7 @@ public class ngs_test_CSRA1 {
     }
    
     @Test
-    public void ReferenceWindow_Slice_Filtered () throws ngs.ErrorMsg
+    public void ReferenceWindow_Slice_Filtered_Category () throws ngs.ErrorMsg
     {
         ngs.AlignmentIterator it = NGS . openReadCollection ( WithSecondary ) 
                                         . getReference ( "gi|169794206|ref|NC_010410.1|" )
@@ -691,7 +692,26 @@ public class ngs_test_CSRA1 {
         assertFalse ( it . nextAlignment () );  
     }
     
-    // ReadGroup 
+    @Test
+    public void ReferenceWindow_Slice_Filtered_Start_Within_Slice () throws ngs.ErrorMsg
+    {
+        ngs.Reference ref = NGS . openReadCollection ( WithCircularRef )
+                                 . getReference ( "NC_012920.1" );
+        ngs.AlignmentIterator it = ref . getFilteredAlignmentSlice ( 0, ref.getLength(), Alignment . all, Alignment . startWithinSlice, 0 );
+    
+        assertTrue ( it . nextAlignment () );
+        long lastAlignmentPosition = it.getAlignmentPosition();
+        while ( it . nextAlignment () ) {
+            long currentPosition = it.getAlignmentPosition();
+            
+            String errorMsg = "Sorting violated. Last position (" + lastAlignmentPosition + ") is higher than current one (" + currentPosition + ")";
+            assertTrue ( errorMsg, lastAlignmentPosition <= currentPosition );
+            
+            lastAlignmentPosition = currentPosition;
+        }
+    }
+    
+    // ReadGroup
     @Test
     public void ReadGroup_getName () throws ngs.ErrorMsg
     {
