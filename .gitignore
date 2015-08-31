@@ -22,3 +22,7 @@ user.status
 # mac os x meta-files
 .DS_Store
 ._*
+
+*~
+\#*
+\.#*
