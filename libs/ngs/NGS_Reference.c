@@ -163,7 +163,7 @@ static struct NGS_Alignment_v1 * ITF_Reference_v1_get_alignments_with_flags ( co
                                                                         ctx, 
                                                                         flags & NGS_ReferenceAlignFlags_wants_primary, 
                                                                         flags & NGS_ReferenceAlignFlags_wants_secondary,
-                                                                        flags & NGS_ReferenceAlignFlags_wants_wraparound ) )
+                                                                        (flags & NGS_ReferenceAlignFlags_no_wraparound) == 0 ) )
     {
         NGS_ErrBlockThrow ( err, ctx );
     }
