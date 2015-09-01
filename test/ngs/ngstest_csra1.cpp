@@ -835,6 +835,40 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_Circular_NoWraparound, CSRA1_
     EXIT;
 }
 
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_Wraparound, CSRA1_Fixture )
+{
+    ENTRY_GET_REF( CSRA1_WithCircularReference, "NC_012920.1" );
+    
+    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, 0, 999999, true, true, false ); 
+    REQUIRE ( ! FAILED () && m_align );
+
+    uint64_t count = 0;
+    while ( NGS_AlignmentIteratorNext ( m_align, ctx ) )
+    {
+        ++count;
+    }
+    REQUIRE_EQ ( (uint64_t) 12317, count );
+    
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_NoWraparound, CSRA1_Fixture )
+{
+    ENTRY_GET_REF( CSRA1_WithCircularReference, "NC_012920.1" );
+    
+    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, 0, 999999, true, true, true ); 
+    REQUIRE ( ! FAILED () && m_align );
+
+    uint64_t count = 0;
+    while ( NGS_AlignmentIteratorNext ( m_align, ctx ) )
+    {
+        ++count;
+    }
+    REQUIRE_EQ ( (uint64_t) 12316, count );
+    
+    EXIT;
+}
+
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetChunk_Empty, CSRA1_Fixture)
 {   // offset beyond the end of reference
     ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );

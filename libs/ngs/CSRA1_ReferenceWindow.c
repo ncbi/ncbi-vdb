@@ -541,7 +541,11 @@ void LoadAlignmentInfo ( CSRA1_ReferenceWindow* self, ctx_t ctx, size_t* idx, in
                 if ( size > 0 )
                 {   /* a slice*/
                     int64_t end_slice =  offset + (int64_t)size;
-                    if ( self -> circular && pos >= end_slice ) 
+                    if ( end_slice > self -> ref_length )
+                    {
+                        end_slice = self -> ref_length;
+                    }
+                    if ( self -> circular && pos + len >= self -> ref_length ) 
                     {   /* account for possible carryover on a circular reference */
                         pos -= self -> ref_length;
                     }
@@ -633,7 +637,7 @@ void LoadAlignments ( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t chunk_row_
     const int64_t* secondary_idx = NULL;
     uint32_t secondary_idx_end = 0;
     uint32_t total_added = 0;
-    
+
     if ( self -> primary && self -> ref_primary_begin <= chunk_row_id )
     {   
         ON_FAIL ( LoadAlignmentIndex ( self, ctx, chunk_row_id, reference_PRIMARY_ALIGNMENT_IDS, & primary_idx, & primary_idx_end ) ) 
@@ -693,7 +697,7 @@ bool LoadFirstCircular ( CSRA1_ReferenceWindow* self, ctx_t ctx )
         }
         else if ( self -> slice_offset < self -> chunk_size )
         {   /* loading possible overlaps with a slice inside the first chunk */ 
-            ON_FAIL ( LoadAlignments ( self, ctx, last_chunk, self -> slice_offset, self -> slice_size ) )
+            ON_FAIL ( LoadAlignments ( self, ctx, last_chunk, self -> slice_offset, self -> chunk_size - self -> slice_offset ) )
                 return false;
         }
         /* target slice is not in the first chunk, no need to look for overlaps from the end of the reference */
@@ -719,7 +723,6 @@ bool LoadNextChunk ( CSRA1_ReferenceWindow* self, ctx_t ctx )
     assert ( self );
     
     self -> align_info_total = 0;
-    
     while ( self -> ref_begin < self -> ref_end )
     {
         ON_FAIL ( LoadAlignments ( self, ctx, self -> ref_begin, self -> slice_offset, self -> slice_size ) )
