@@ -820,18 +820,20 @@ FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice, CSRA1_Fixture)
 FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice_Filtered_Start_Within_Slice, CSRA1_Fixture)
 {
     ngs :: Reference ref = ncbi :: NGS :: openReadCollection ( CSRA1_WithCircularRef ) . getReference ( "NC_012920.1" );
-    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( 0, ref.getLength(), ngs :: Alignment :: all, ngs :: Alignment :: startWithinSlice, 0 );
+    int64_t sliceStart = 1000;
+    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( 1000, 200, ngs :: Alignment :: all, ngs :: Alignment :: startWithinSlice, 0 );
     
     REQUIRE ( it . nextAlignment () );
-    uint64_t lastAlignmentPosition = it.getAlignmentPosition();
-    while ( it . nextAlignment () )
-    {
-        uint64_t currentPosition = it.getAlignmentPosition();
-        
-        REQUIRE_LE ( lastAlignmentPosition, currentPosition );
-        
-        lastAlignmentPosition = currentPosition;
-    }
+    REQUIRE_LE ( sliceStart, it.getAlignmentPosition() );
+}
+FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice_Unfiltered_Start_Before_Slice, CSRA1_Fixture)
+{
+    ngs :: Reference ref = ncbi :: NGS :: openReadCollection ( CSRA1_WithCircularRef ) . getReference ( "NC_012920.1" );
+    int64_t sliceStart = 1000;
+    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( 1000, 200, ngs :: Alignment :: all, (ngs::Alignment::AlignmentFilter)0, 0 );
+    
+    REQUIRE ( it . nextAlignment () );
+    REQUIRE_GT ( sliceStart, it.getAlignmentPosition() );
 }
 
 /////TODO: Pileup

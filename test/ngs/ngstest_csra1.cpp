@@ -839,7 +839,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_Wraparound, CSRA1
 {
     ENTRY_GET_REF( CSRA1_WithCircularReference, "NC_012920.1" );
     
-    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, 0, 999999, true, true, false ); 
+    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, 0, NGS_ReferenceGetLength ( m_ref, ctx ), true, true, false ); 
     REQUIRE ( ! FAILED () && m_align );
 
     uint64_t count = 0;
@@ -856,13 +856,17 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_NoWraparound, CSR
 {
     ENTRY_GET_REF( CSRA1_WithCircularReference, "NC_012920.1" );
     
-    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, 0, 999999, true, true, true ); 
+    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, 0, NGS_ReferenceGetLength ( m_ref, ctx ), true, true, true ); 
     REQUIRE ( ! FAILED () && m_align );
 
+    int64_t lastPos = 0;
     uint64_t count = 0;
     while ( NGS_AlignmentIteratorNext ( m_align, ctx ) )
     {
         ++count;
+        int64_t newPos = NGS_AlignmentGetAlignmentPosition ( m_align, ctx );
+        REQUIRE_LE ( lastPos, newPos );
+        lastPos = newPos;
     }
     REQUIRE_EQ ( (uint64_t) 12316, count );
     
