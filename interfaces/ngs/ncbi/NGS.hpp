@@ -29,6 +29,9 @@
 
 #ifndef _hpp_ngs_read_collection_
 #include <ngs/ReadCollection.hpp>
+#endif
+
+#ifndef _hpp_ngs_reference_sequence_
 #include <ngs/ReferenceSequence.hpp>
 #endif
 
@@ -57,6 +60,16 @@ namespace ncbi
     class NGS
     {
     public:
+
+        /* setAppVersionString
+         *  updates User-Agent header in HTTP communications
+         *
+         *  example usage:
+         *    ncbi::NGS::setAppVersionString ( "pileup-stats.1.0.0" );
+         */
+        static
+        void setAppVersionString ( const String & app_version )
+            throw ();
 
         /* openReadCollection
          *  create an object representing a named collection of reads
