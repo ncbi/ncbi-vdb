@@ -700,6 +700,7 @@ public class ngs_test_CSRA1 {
         ngs.AlignmentIterator it = ref . getFilteredAlignmentSlice ( 0, ref.getLength(), Alignment . all, Alignment . startWithinSlice, 0 );
     
         assertTrue ( it . nextAlignment () );
+        long numberOfFilteredAlignments = 0;
         long lastAlignmentPosition = it.getAlignmentPosition();
         while ( it . nextAlignment () ) {
             long currentPosition = it.getAlignmentPosition();
@@ -708,7 +709,17 @@ public class ngs_test_CSRA1 {
             assertTrue ( errorMsg, lastAlignmentPosition <= currentPosition );
             
             lastAlignmentPosition = currentPosition;
+            numberOfFilteredAlignments++;
         }
+        
+        it = ref . getFilteredAlignmentSlice ( 0, ref.getLength(), Alignment . all, 0, 0 );
+        long numberOfUnfilteredAlignments = 0;
+        while ( it . nextAlignment () ) {
+            numberOfUnfilteredAlignments++;
+        }
+        
+        String errorMsg = "Filtered and unfiltered alignments should differ by 1. numberOfUnfilteredAlignments: " + numberOfUnfilteredAlignments + " numberOfFilteredAlignments: " + numberOfFilteredAlignments;
+        assertTrue ( errorMsg, numberOfUnfilteredAlignments - 1 == numberOfFilteredAlignments );
     }
     
     // ReadGroup
