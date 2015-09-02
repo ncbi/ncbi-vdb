@@ -656,7 +656,7 @@ void LoadAlignments ( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t chunk_row_
         self -> align_info = realloc ( self -> align_info, ( self -> align_info_total + total_added ) * sizeof ( * self -> align_info ) );
         if ( self -> align_info == NULL ) 
         {
-            SYSTEM_ERROR ( xcNoMemory, "allocating circular CSRA1_ReferenceWindow chunk" );
+            SYSTEM_ERROR ( xcNoMemory, "allocating CSRA1_ReferenceWindow chunk" );
             return;
         }
         else
