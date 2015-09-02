@@ -74,9 +74,9 @@ static uint64_t                 CSRA1_ReferenceGetLength ( CSRA1_Reference * sel
 static struct NGS_String *      CSRA1_ReferenceGetBases ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size );
 static struct NGS_String *      CSRA1_ReferenceGetChunk ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size );
 static struct NGS_Alignment*    CSRA1_ReferenceGetAlignment ( CSRA1_Reference * self, ctx_t ctx, const char * alignmentId );
-static struct NGS_Alignment*    CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary );
+static struct NGS_Alignment*    CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, bool wants_within_window );
 static uint64_t                 CSRA1_ReferenceGetAlignmentCount ( const CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary );
-static struct NGS_Alignment*    CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary );
+static struct NGS_Alignment*    CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, bool wants_within_window );
 static struct NGS_Pileup*       CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 static struct NGS_Pileup*       CSRA1_ReferenceGetPileupSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 struct NGS_Statistics*          CSRA1_ReferenceGetStatistics ( const CSRA1_Reference * self, ctx_t ctx );
@@ -415,7 +415,7 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignment ( CSRA1_Reference * self, ctx_
     return NULL;
 }
 
-struct NGS_Alignment* CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary )
+struct NGS_Alignment* CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, bool wants_within_window )
 {   
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
@@ -449,6 +449,7 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx
                                                    0,
                                                    wants_primary, 
                                                    wants_secondary,
+                                                   wants_within_window,
                                                    self -> align_id_offset );
             }
         }
@@ -591,7 +592,8 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
                                                          uint64_t offset, 
                                                          uint64_t size, 
                                                          bool wants_primary, 
-                                                         bool wants_secondary )
+                                                         bool wants_secondary,
+                                                         bool wants_within_window )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
@@ -638,6 +640,7 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
                                                        size,
                                                        wants_primary, 
                                                        wants_secondary,
+                                                       wants_within_window,
                                                        self -> align_id_offset );
                 }
                 else
@@ -666,6 +669,7 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
                                                            size,
                                                            wants_primary, 
                                                            wants_secondary,
+                                                           wants_within_window,
                                                            self -> align_id_offset );
                     }
                 }
