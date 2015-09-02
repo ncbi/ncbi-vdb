@@ -56,21 +56,9 @@ TEST_CASE(KReencryptBigSparseFile)
     KKey key_reenc;
     REQUIRE_RC (KKeyInitUpdate (&key_reenc, kkeyAES128, pw2, strlen (pw2)));
     
-    const char file_path [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/big_file";
+    const char file_path [] = TMP_FOLDER "/big_file";
 
-    const char file_path_reenc [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/big_file_reenc";
+    const char file_path_reenc [] = TMP_FOLDER "/big_file_reenc";
 
     KFile * pt_file, *reenc_file, * reenc_pt_file;
     
@@ -81,12 +69,7 @@ TEST_CASE(KReencryptBigSparseFile)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-        KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     
     // create file
     REQUIRE_RC ( TCreatePtFile( current_dir, file_path, TFileOpenMode_Write, &pt_file ) );
@@ -128,14 +111,8 @@ TEST_CASE(KReencryptBigSparseFile)
         REQUIRE_RC ( KFileRelease ( reenc_file ) );
     }
 
-        KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
-
-        REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
+    REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
 TEST_CASE(KReencrypt4GbMarginsSparseFiles)
@@ -147,21 +124,9 @@ TEST_CASE(KReencrypt4GbMarginsSparseFiles)
     KKey key_reenc;
     REQUIRE_RC (KKeyInitUpdate (&key_reenc, kkeyAES128, pw2, strlen (pw2)));
     
-    const char file_path [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/big_4gb_file";
+    const char file_path [] = TMP_FOLDER "/big_4gb_file";
 
-    const char file_path_reenc [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/big_4gb_file_reenc";
+    const char file_path_reenc [] = TMP_FOLDER "/big_4gb_file_reenc";
 
     KFile * pt_file, *reenc_file, * reenc_pt_file;
     
@@ -175,12 +140,7 @@ TEST_CASE(KReencrypt4GbMarginsSparseFiles)
     for (size_t i = 0; i < sizeof size_variants / sizeof size_variants[0]; ++i )
     {
         // just in case if it still there
-        KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
+        KDirectoryRemove ( current_dir, true, TMP_FOLDER );
         
         // create file
         REQUIRE_RC ( TCreatePtFile( current_dir, file_path, TFileOpenMode_Write, &pt_file ) );
@@ -222,13 +182,7 @@ TEST_CASE(KReencrypt4GbMarginsSparseFiles)
             REQUIRE_RC ( KFileRelease ( reenc_file ) );
         }
         
-        KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
-
+        KDirectoryRemove ( current_dir, true, TMP_FOLDER );
         if ( space_exhausted )
         {
             break;
@@ -246,13 +200,7 @@ TEST_CASE(KEncDecBigFile)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/enc_big_file";
+    const char file_path [] = TMP_FOLDER "/enc_big_file";
 
     KFile * enc_file, * pt_file;
     
@@ -262,12 +210,7 @@ TEST_CASE(KEncDecBigFile)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-        KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_ReadWrite, &key, &enc_file ) );
@@ -328,13 +271,7 @@ TEST_CASE(KEncDecBigFile)
         REQUIRE_RC ( KFileRelease ( enc_file ) );
     }
 
-        KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
-    
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -347,13 +284,7 @@ TEST_CASE(KEncDec4GbMarginsFiles)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/enc_4gb_file";
+    const char file_path [] = TMP_FOLDER "/enc_4gb_file";
 
     KFile * enc_file, * pt_file;
     
@@ -366,12 +297,7 @@ TEST_CASE(KEncDec4GbMarginsFiles)
     for (size_t i = 0; i < sizeof size_variants / sizeof size_variants[0]; ++i )
     {
         // just in case if it still there
-        KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
+        KDirectoryRemove ( current_dir, true, TMP_FOLDER );
         
         // create file
         REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_ReadWrite, &key, &enc_file ) );
@@ -432,13 +358,7 @@ TEST_CASE(KEncDec4GbMarginsFiles)
             REQUIRE_RC ( KFileRelease ( enc_file ) );
         }
         
-        KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
-        
+        KDirectoryRemove ( current_dir, true, TMP_FOLDER );
         if ( space_exhausted )
         {
             break;

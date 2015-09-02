@@ -52,13 +52,7 @@ TEST_CASE(KEncryptDecrypt)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char enc_file_path_fmt [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/enc_file%llu";
+    const char enc_file_path_fmt [] = TMP_FOLDER "/enc_file%llu";
 
     KFile * enc_file, * pt_file;
     
@@ -66,12 +60,7 @@ TEST_CASE(KEncryptDecrypt)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     
     uint64_t file_sizes_n_32k[] = { 0, 1, 2, 10, 46, 51 };
     int8_t file_size_variants[] = { -2, -1, 0, 1, 2 };
@@ -140,13 +129,7 @@ TEST_CASE(KEncryptDecrypt)
         }
     }
     
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
-    
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -156,13 +139,7 @@ TEST_CASE(KDecryptZeroRawSize)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/zero_size_file_to_dec";
+    const char file_path [] = TMP_FOLDER "/zero_size_file_to_dec";
 
     KFile * enc_file, * pt_file;
     
@@ -172,13 +149,7 @@ TEST_CASE(KDecryptZeroRawSize)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
-    
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     // create file
     REQUIRE_RC ( TCreatePtFile( current_dir, file_path, TFileOpenMode_ReadWrite, &pt_file ) );
     REQUIRE_RC ( KFileSize ( pt_file, &file_size ) );
@@ -189,13 +160,7 @@ TEST_CASE(KDecryptZeroRawSize)
     REQUIRE ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key, &enc_file ) == RC( rcKrypto, rcFile, rcConstructing, rcSize, rcIncorrect ) );
     LOGMSG ( klogWarn, "No more errors are expected" );
     
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
-    
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -205,13 +170,7 @@ TEST_CASE(KDecryptZeroContentSizeRW)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/zero_content_rw_file_to_dec";
+    const char file_path [] = TMP_FOLDER "/zero_content_rw_file_to_dec";
 
     KFile * enc_file, * pt_file;
     
@@ -221,13 +180,7 @@ TEST_CASE(KDecryptZeroContentSizeRW)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
-    
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_ReadWrite, &key, &enc_file ) );
     REQUIRE_RC ( KFileRelease ( enc_file ) );
@@ -243,13 +196,7 @@ TEST_CASE(KDecryptZeroContentSizeRW)
     REQUIRE_RC ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key, &enc_file ) );
     REQUIRE_RC ( KFileRelease ( enc_file ) );
     
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
-    
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -259,13 +206,7 @@ TEST_CASE(KDecryptZeroContentSizeWOnly)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/zero_content_w_file_to_dec";
+    const char file_path [] = TMP_FOLDER "/zero_content_w_file_to_dec";
 
     KFile * enc_file, * pt_file;
     
@@ -297,13 +238,7 @@ TEST_CASE(KDecryptZeroContentSizeWOnly)
     REQUIRE_RC ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key, &enc_file ) );
     REQUIRE_RC ( KFileRelease ( enc_file ) );
     
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
-    
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -314,13 +249,7 @@ TEST_CASE(KDectryptOnlyHeader)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/file_only_header";
+    const char file_path [] = TMP_FOLDER "/file_only_header";
 
     KFile * enc_file, * pt_file;
     
@@ -328,13 +257,7 @@ TEST_CASE(KDectryptOnlyHeader)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
-    
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key, &enc_file ) );
     REQUIRE_RC ( TFillFile( enc_file, (const uint8_t *)"\0\1", 2, 500 ) );
@@ -349,13 +272,7 @@ TEST_CASE(KDectryptOnlyHeader)
     REQUIRE ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key, &enc_file ) == RC( rcKrypto, rcFile, rcConstructing, rcSize, rcIncorrect ) );
     LOGMSG ( klogWarn, "No more errors are expected" );
     
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
-
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -365,13 +282,7 @@ TEST_CASE(KDectryptWithoutFooter)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/file_no_footer";
+    const char file_path [] = TMP_FOLDER "/file_no_footer";
     KFile * enc_file, * pt_file;
     
     uint64_t file_size;
@@ -380,13 +291,7 @@ TEST_CASE(KDectryptWithoutFooter)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
-    
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key, &enc_file ) );
     REQUIRE_RC ( TFillFile( enc_file, (const uint8_t *)"\0\1", 2, 500 ) );
@@ -402,13 +307,7 @@ TEST_CASE(KDectryptWithoutFooter)
     REQUIRE ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key, &enc_file ) == RC( rcKrypto, rcFile, rcConstructing, rcSize, rcIncorrect ) );
     LOGMSG ( klogWarn, "No more errors are expected" );
     
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
-
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -418,13 +317,7 @@ TEST_CASE(KDectryptCorruptHeader)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/file_corrupt_header";
+    const char file_path [] = TMP_FOLDER "/file_corrupt_header";
 
     KFile * enc_file, * pt_file;
     
@@ -436,12 +329,7 @@ TEST_CASE(KDectryptCorruptHeader)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key, &enc_file ) );
@@ -460,13 +348,7 @@ TEST_CASE(KDectryptCorruptHeader)
     REQUIRE ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key, &enc_file ) == RC( rcFS, rcFile, rcConstructing, rcHeader, rcInvalid ) );
     LOGMSG ( klogWarn, "No more errors are expected" );
     
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
-
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -476,13 +358,7 @@ TEST_CASE(KDectryptCorruptFooterCrc)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/file_corrupt_footer_crc";
+    const char file_path [] = TMP_FOLDER "/file_corrupt_footer_crc";
 
     KFile * enc_file, * pt_file;
 
@@ -495,12 +371,7 @@ TEST_CASE(KDectryptCorruptFooterCrc)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key, &enc_file ) );
@@ -523,12 +394,7 @@ TEST_CASE(KDectryptCorruptFooterCrc)
     LOGMSG ( klogWarn, "No more errors are expected" );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
 
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
@@ -539,13 +405,7 @@ TEST_CASE(KDectryptCorruptFooterBlockCount)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/file_corrupt_footer_block_count";
+    const char file_path [] = TMP_FOLDER "/file_corrupt_footer_block_count";
 
     KFile * enc_file, * pt_file;
     
@@ -558,12 +418,7 @@ TEST_CASE(KDectryptCorruptFooterBlockCount)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key, &enc_file ) );
@@ -586,12 +441,7 @@ TEST_CASE(KDectryptCorruptFooterBlockCount)
     LOGMSG ( klogWarn, "No more errors are expected" );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
 
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
@@ -602,13 +452,7 @@ TEST_CASE(KDectryptCorruptBlockStruct)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/file_corrupt_block_struct";
+    const char file_path [] = TMP_FOLDER "/file_corrupt_block_struct";
 
     KFile * enc_file, * pt_file;
     
@@ -621,12 +465,7 @@ TEST_CASE(KDectryptCorruptBlockStruct)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key, &enc_file ) );
@@ -649,12 +488,7 @@ TEST_CASE(KDectryptCorruptBlockStruct)
     LOGMSG ( klogWarn, "No more errors are expected" );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
 
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
@@ -665,13 +499,7 @@ TEST_CASE(KDectryptCorruptBlockData)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/file_corrupt_block_data";
+    const char file_path [] = TMP_FOLDER "/file_corrupt_block_data";
 
     KFile * enc_file, * pt_file;
     
@@ -684,12 +512,7 @@ TEST_CASE(KDectryptCorruptBlockData)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key, &enc_file ) );
@@ -712,12 +535,7 @@ TEST_CASE(KDectryptCorruptBlockData)
     LOGMSG ( klogWarn, "No more errors are expected" );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
 
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
@@ -731,13 +549,7 @@ TEST_CASE(KDectryptInvalidKey)
     REQUIRE_RC (KKeyInitUpdate (&key1, kkeyAES128, pw1, strlen (pw1)));
     REQUIRE_RC (KKeyInitUpdate (&key2, kkeyAES128, pw2, strlen (pw2)));
     
-    const char file_path [] = "temp/"
-#if defined(__APPLE__)
-        "mac"
-#else
-        "linux"
-#endif
-        "/enc_file_invalid_key";
+    const char file_path [] = TMP_FOLDER "/enc_file_invalid_key";
 
     KFile * enc_file;
     
@@ -745,12 +557,7 @@ TEST_CASE(KDectryptInvalidKey)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key1, &enc_file ) );
@@ -763,12 +570,7 @@ TEST_CASE(KDectryptInvalidKey)
     LOGMSG ( klogWarn, "No more errors are expected" );
     REQUIRE_RC ( KFileRelease ( enc_file ) );
     
-    KDirectoryRemove ( current_dir, true, "temp"
-#if defined(__APPLE__)
-        "mac");
-#else
-        "linux");
-#endif
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
 
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }

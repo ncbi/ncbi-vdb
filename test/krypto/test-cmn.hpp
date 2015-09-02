@@ -34,6 +34,12 @@
 
 #define BLOCK_32K_SIZE (32*1024)
 
+#if defined(__APPLE__)
+#define TMP_FOLDER "temp_mac"
+#else
+#define TMP_FOLDER "temp_linux"
+#endif
+
 enum TFileOpenMode
 {
     TFileOpenMode_Read,
