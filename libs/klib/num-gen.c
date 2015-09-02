@@ -114,7 +114,7 @@ static int64_t CC num_gen_insert_helper( const void* item1, const void* item2 )
 
 
 /* helper callback to create a deep and conditional copy of a node-vector */
-static void CC num_gen_copy_cb( void *item, void *data )
+static void CC num_gen_copy_cb_sorted( void *item, void *data )
 {
     num_gen_node * node = item;
     if ( node != NULL && node -> count > 0 )
@@ -129,12 +129,32 @@ static void CC num_gen_copy_cb( void *item, void *data )
     }
 }
 
+static void CC num_gen_copy_cb_unsorted( void *item, void *data )
+{
+    num_gen_node * node = item;
+    if ( node != NULL && node -> count > 0 )
+    {
+        num_gen_node * new_node = num_gen_make_node( node->start, node->count );
+        if ( new_node != NULL )
+        {
+            Vector * dst = data;
+            if ( dst != NULL )
+                VectorAppend( dst, NULL, new_node );
+        }
+    }
+}
+
 
 /* helper function that creates a deep and conditional copy of a node-vector */
-static void num_gen_copy_vector( const Vector * src, Vector * dst )
+static void num_gen_copy_vector( const Vector * src, Vector * dst, bool sorted )
 {
     if ( src != NULL && dst != NULL )
-        VectorForEach ( src, false, num_gen_copy_cb, dst );    
+	{
+		if ( sorted )
+			VectorForEach ( src, false, num_gen_copy_cb_sorted, dst );
+		else
+			VectorForEach ( src, false, num_gen_copy_cb_unsorted, dst );
+	}
 }
 
 
@@ -567,8 +587,6 @@ LIB_EXPORT rc_t CC num_gen_make_from_str( struct num_gen ** self, const char * s
         if ( rc == 0 )
         {
             rc = num_gen_parse( temp, src );
-            if ( rc == 0 )
-                rc = num_gen_fix_overlaps( temp, NULL );
         }
         if ( rc == 0 )
             *self = temp;
@@ -599,8 +617,6 @@ LIB_EXPORT rc_t CC num_gen_make_from_str_sorted( struct num_gen ** self, const c
         if ( rc == 0 )
         {
             rc = num_gen_parse( temp, src );
-            if ( rc == 0 )
-                rc = num_gen_fix_overlaps( temp, NULL );
         }
         if ( rc == 0 )
             *self = temp;
@@ -905,7 +921,7 @@ LIB_EXPORT rc_t CC num_gen_copy( const struct num_gen * self, struct num_gen ** 
 	rc_t rc = num_gen_make( dest );
 	if ( rc == 0 )
 	{
-		num_gen_copy_vector( &( self -> nodes ), &( ( *dest ) -> nodes ) );
+		num_gen_copy_vector( &( self -> nodes ), &( ( *dest ) -> nodes ), self->sorted );
 	}
 	return rc;
 }
@@ -960,7 +976,7 @@ LIB_EXPORT rc_t CC num_gen_iterator_make( const struct num_gen * self, const str
             else
             {
                 VectorInit( &( temp -> nodes ), 0, count );
-                num_gen_copy_vector( &( self -> nodes ), &( temp -> nodes ) );
+                num_gen_copy_vector( &( self -> nodes ), &( temp -> nodes ), self->sorted );
                 temp -> total = num_gen_total_count( &( temp -> nodes ) );
                 temp -> min_value = min_vector_value( &( temp -> nodes ) );
                 temp -> max_value = max_vector_value( &( temp -> nodes ) );
@@ -1025,7 +1041,7 @@ LIB_EXPORT bool CC num_gen_iterator_next( const struct num_gen_iter * self, int6
                     /* the node is a number range, add the sub-position */
                     *value = node -> start + temp -> curr_node_sub_pos;
                     ( temp -> curr_node_sub_pos )++;
-                    /* if the sub-positions are use up, switch to next node */
+                    /* if the sub-positions are used up, switch to next node */
                     if ( temp -> curr_node_sub_pos >= node -> count )
                     {
                         ( temp -> curr_node )++;
