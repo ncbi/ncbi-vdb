@@ -13,6 +13,14 @@
 #include "NGS_ReferenceSequence.h"
 #include "NGS_Refcount.h"
 
+#include <kdb/manager.h> /* KDBManager */
+#include <kns/manager.h>
+#include <klib/ncbi-vdb-version.h> /* GetPackageVersion */
+#include "../kns/libkns.vers.h"
+
+#include <vfs/manager.h> /* VFSManager */
+#include <vfs/path.h> /* VPath */
+
 #include <assert.h>
 #include <string.h>
 
@@ -27,11 +35,112 @@ static PY_RES_TYPE NGSErrorHandler(ctx_t ctx, char* pStrError, size_t nStrErrorB
 }
 
 
+static bool have_user_version_string;
+
+static void set_app_version_string ( const char * app_version )
+{
+    // get a KNSManager
+    KNSManager * kns;
+    rc_t rc = KNSManagerMake ( & kns );
+    if ( rc == 0 )
+    {
+        have_user_version_string = true;
+        KNSManagerSetUserAgent ( kns, "ncbi-ngs.%V %s", LIBKNS_VERS, app_version );
+        KNSManagerRelease ( kns );
+    }
+}
+
+LIB_EXPORT PY_RES_TYPE PY_NGS_Engine_SetAppVersionString(char const* app_version, char* pStrError, size_t nStrErrorBufferSize)
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcMgr, rcUpdating );
+
+    set_app_version_string ( app_version );
+
+    if (FAILED())
+    {
+        return NGSErrorHandler(ctx, pStrError, nStrErrorBufferSize);
+    }
+
+    CLEAR();
+    return PY_RES_OK;
+}
+
+LIB_EXPORT PY_RES_TYPE PY_NGS_Engine_GetVersion(char const** pRet, char* pStrError, size_t nStrErrorBufferSize)
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcMgr, rcUpdating );
+
+    char const* ret = GetPackageVersion();
+
+    if (FAILED())
+    {
+        return NGSErrorHandler(ctx, pStrError, nStrErrorBufferSize);
+    }
+
+    assert ( pRet != NULL );
+    *pRet = ret;
+
+    CLEAR();
+    return PY_RES_OK;
+}
+
+LIB_EXPORT PY_RES_TYPE PY_NGS_Engine_IsValid(char const* spec, int* pRet, char* pStrError, size_t nStrErrorBufferSize)
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcMgr, rcAccessing );
+
+    int ret = false;
+
+    VFSManager * vfs = NULL;
+    rc_t rc = VFSManagerMake ( & vfs );
+
+    if ( rc == 0 )
+    {
+        VPath * path = NULL;
+        rc = VFSManagerMakePath ( vfs, & path, spec );
+
+        if ( rc == 0 )
+        {
+            const KDBManager * kdb = NULL;
+            rc = KDBManagerMakeRead ( & kdb, NULL );
+
+            if ( rc == 0 )
+            {
+                KPathType t = KDBManagerPathTypeVP ( kdb, path );
+                if (t == kptDatabase || t == kptTable)
+                {
+                    ret = true;
+                }
+
+                KDBManagerRelease ( kdb );
+                kdb = NULL;
+            }
+
+            VPathRelease ( path );
+            path = NULL;
+        }
+
+        VFSManagerRelease ( vfs );
+        vfs = NULL;
+    }
+
+    assert ( pRet != NULL );
+
+    *pRet = ret;
+
+    CLEAR();
+    return PY_RES_OK;
+}
+
+
 LIB_EXPORT PY_RES_TYPE PY_NGS_Engine_ReadCollectionMake(char const* spec, void** ppReadCollection, char* pStrError, size_t nStrErrorBufferSize)
 {
     HYBRID_FUNC_ENTRY(rcSRA, rcMgr, rcConstructing);
 
-    void* pRet = (void*)NGS_ReadCollectionMake(ctx, spec);
+    void* pRet = NULL;
+
+    if ( ! have_user_version_string )
+        set_app_version_string ( "ncbi-ngs: unknown-application" );
+
+    pRet = (void*)NGS_ReadCollectionMake(ctx, spec);
 
     if (FAILED())
     {
@@ -51,7 +160,12 @@ LIB_EXPORT PY_RES_TYPE PY_NGS_Engine_ReferenceSequenceMake(char const* spec, voi
 {
     HYBRID_FUNC_ENTRY(rcSRA, rcMgr, rcConstructing);
 
-    void* pRet = (void*)NGS_ReferenceSequenceMake(ctx, spec);
+    void* pRet = NULL;
+
+    if ( ! have_user_version_string )
+        set_app_version_string ( "ncbi-ngs: unknown-application" );
+
+    pRet = (void*)NGS_ReferenceSequenceMake(ctx, spec);
 
     if (FAILED())
     {
