@@ -53,6 +53,7 @@ typedef struct num_gen_node
 struct num_gen
 {
     Vector nodes;
+	bool sorted;
 };
 
 
@@ -178,7 +179,12 @@ static rc_t num_gen_add_node( struct num_gen * self, const int64_t from, const i
         if ( node == NULL )
             rc = RC( rcVDB, rcNoTarg, rcInserting, rcMemory, rcExhausted );
         else
-            rc = VectorInsert( &( self -> nodes ), node, NULL, num_gen_insert_helper );
+		{
+			if ( self->sorted )
+				rc = VectorInsert( &( self -> nodes ), node, NULL, num_gen_insert_helper );
+			else
+				rc = VectorAppend( &( self -> nodes ), NULL, node );
+		}
     }
     return rc;
 }
@@ -301,7 +307,7 @@ LIB_EXPORT rc_t CC num_gen_parse( struct num_gen * self, const char * src )
             if ( parse_ctx . num_str_idx > 0 )
                 rc = num_gen_convert_and_add_ctx( self, &parse_ctx );
 
-            if ( rc == 0 )
+            if ( rc == 0 && self->sorted )
                 rc = num_gen_fix_overlaps( self, NULL );
         }
     }
@@ -323,7 +329,7 @@ LIB_EXPORT rc_t CC num_gen_add( struct num_gen * self, const int64_t first, cons
     else
     {
         rc = num_gen_add_node( self, first, ( first + count ) - 1 );
-        if ( rc == 0 )
+        if ( rc == 0 && self->sorted )
             rc = num_gen_fix_overlaps( self, NULL );
     }
     return rc;
@@ -514,6 +520,29 @@ LIB_EXPORT rc_t CC num_gen_make( struct num_gen ** self )
         else
         {
             VectorInit( &( ng -> nodes ), 0, 5 );
+			ng->sorted = false;
+            *self = ng;
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC num_gen_make_sorted( struct num_gen ** self, bool sorted )
+{
+    rc_t rc = 0;
+
+    if ( self == NULL )
+        rc = RC( rcVDB, rcNoTarg, rcConstructing, rcSelf, rcNull );
+    else
+    {
+        struct num_gen * ng = calloc( 1, sizeof( * ng ) );
+        if ( ng == NULL )
+            rc = RC( rcVDB, rcNoTarg, rcConstructing, rcMemory, rcExhausted );
+        else
+        {
+            VectorInit( &( ng -> nodes ), 0, 5 );
+			ng->sorted = sorted;
             *self = ng;
         }
     }
@@ -552,6 +581,37 @@ LIB_EXPORT rc_t CC num_gen_make_from_str( struct num_gen ** self, const char * s
     return rc;
 }
 
+
+LIB_EXPORT rc_t CC num_gen_make_from_str_sorted( struct num_gen ** self, const char * src, bool sorted )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC( rcVDB, rcNoTarg, rcConstructing, rcSelf, rcNull );
+    else if ( src == NULL || src[ 0 ] == 0 )
+    {
+        *self = NULL;
+        rc = RC( rcVDB, rcNoTarg, rcConstructing, rcSelf, rcNull );
+    }
+    else
+    {
+        struct num_gen * temp;
+        rc = num_gen_make_sorted( &temp, sorted );
+        if ( rc == 0 )
+        {
+            rc = num_gen_parse( temp, src );
+            if ( rc == 0 )
+                rc = num_gen_fix_overlaps( temp, NULL );
+        }
+        if ( rc == 0 )
+            *self = temp;
+        else
+        {
+            *self = NULL;
+            num_gen_destroy( temp );
+        }
+    }
+    return rc;
+}
 
 LIB_EXPORT rc_t CC num_gen_make_from_range( struct num_gen ** self, int64_t first, uint64_t count )
 {
