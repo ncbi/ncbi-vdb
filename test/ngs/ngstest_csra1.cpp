@@ -793,14 +793,14 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_WithSecondary_Secondary, CSRA
     m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, false, true ); 
     REQUIRE ( ! FAILED () && m_align );
     REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
-    REQUIRE ( ! FAILED () );
     
     REQUIRE_STRING ( string ( CSRA1_WithSecondary ) + ".SA.169", NGS_AlignmentGetAlignmentId ( m_align, ctx ) ); 
-    REQUIRE ( ! FAILED () );
     
     EXIT;
 }
 
+
+// ReferenceGetAlignments on circular references
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_Circular_Wraparound, CSRA1_Fixture)
 {
     ENTRY_GET_REF( CSRA1_WithCircularReference, "NC_012920.1" );
@@ -808,12 +808,9 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_Circular_Wraparound, CSRA1_Fi
     m_align = NGS_ReferenceGetFilteredAlignments ( m_ref, ctx, true, true, false ); 
     REQUIRE ( ! FAILED () && m_align );
     REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
-    REQUIRE ( ! FAILED () );
     
     // by default, the first returned alignment starts before the start of the circular reference
     REQUIRE_EQ ( (int64_t)16477, NGS_AlignmentGetAlignmentPosition ( m_align, ctx ) );
-    
-    REQUIRE ( ! FAILED () );
     
     EXIT;
 }
@@ -825,21 +822,18 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetAlignments_Circular_NoWraparound, CSRA1_
     m_align = NGS_ReferenceGetFilteredAlignments ( m_ref, ctx, true, true, true ); 
     REQUIRE ( ! FAILED () && m_align );
     REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
-    REQUIRE ( ! FAILED () );
     
-    // with a filter, the first returned alignment starts at/after the start of the circular reference
+    // with a no-wraparound filter, the first returned alignment starts at/after the start of the circular reference
     REQUIRE_EQ ( (int64_t)5, NGS_AlignmentGetAlignmentPosition ( m_align, ctx ) );
-    
-    REQUIRE ( ! FAILED () );
     
     EXIT;
 }
 
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_Wraparound, CSRA1_Fixture )
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_FullReference_Wraparound_Count, CSRA1_Fixture )
 {
     ENTRY_GET_REF( CSRA1_WithCircularReference, "NC_012920.1" );
     
-    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, 0, NGS_ReferenceGetLength ( m_ref, ctx ), true, true, false ); 
+    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, 0, NGS_ReferenceGetLength ( m_ref, ctx ), true, true, false, false ); 
     REQUIRE ( ! FAILED () && m_align );
 
     uint64_t count = 0;
@@ -852,11 +846,11 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_Wraparound, CSRA1
     EXIT;
 }
 
-FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_NoWraparound, CSRA1_Fixture )
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_FullReference_NoWraparound_Count, CSRA1_Fixture )
 {
     ENTRY_GET_REF( CSRA1_WithCircularReference, "NC_012920.1" );
     
-    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, 0, NGS_ReferenceGetLength ( m_ref, ctx ), true, true, true ); 
+    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, 0, NGS_ReferenceGetLength ( m_ref, ctx ), true, true, true, false ); 
     REQUIRE ( ! FAILED () && m_align );
 
     int64_t lastPos = 0;
@@ -907,7 +901,6 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetStats, CSRA1_Fixture)
     REQUIRE ( ! NGS_StatisticsNextPath ( stats, ctx, "", &path ) );
     
     NGS_StatisticsRelease ( stats, ctx );
-    REQUIRE ( ! FAILED () );    
     
     EXIT;
 }

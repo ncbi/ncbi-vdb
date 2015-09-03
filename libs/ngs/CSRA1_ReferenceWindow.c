@@ -89,6 +89,7 @@ struct CSRA1_ReferenceWindow
     bool circular;
     bool primary;
     bool secondary;
+    bool no_wraparound; /* if true, exclude alignments that wrap around a circular reference */
     bool within_window; /* if true, exclude alignments that start before slice_offset */
     
     uint32_t chunk_size;
@@ -518,7 +519,7 @@ int64_t AlignmentSort ( const void * p_a, const void * p_b, void *data )
 }
 
 static
-void LoadAlignmentInfo ( CSRA1_ReferenceWindow* self, ctx_t ctx, size_t* idx, int64_t id, bool primary, int64_t offset, uint64_t size, bool handle_wraparound )
+void LoadAlignmentInfo ( CSRA1_ReferenceWindow* self, ctx_t ctx, size_t* idx, int64_t id, bool primary, int64_t offset, uint64_t size )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     
@@ -545,7 +546,7 @@ void LoadAlignmentInfo ( CSRA1_ReferenceWindow* self, ctx_t ctx, size_t* idx, in
                     {
                         end_slice = self -> ref_length;
                     }
-                    if ( handle_wraparound && pos + len >= self -> ref_length ) 
+                    if ( ! self -> within_window && ! self -> no_wraparound && pos + len >= self -> ref_length ) 
                     {   /* account for possible carryover on a circular reference */
                         pos -= self -> ref_length;
                     }
@@ -630,7 +631,7 @@ int64_t AlignmentSortCircular ( const void * p_a, const void * p_b, void *data )
 }
 
 static
-void LoadAlignments ( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t chunk_row_id, int64_t offset, uint64_t size, bool handle_wraparound )
+void LoadAlignments ( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t chunk_row_id, int64_t offset, uint64_t size )
 {   /* append alignments for the specified chunk to self -> align_info */
     const int64_t* primary_idx = NULL;
     uint32_t primary_idx_end = 0;
@@ -664,12 +665,12 @@ void LoadAlignments ( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t chunk_row_
             uint32_t i;
             for ( i = 0; i < primary_idx_end; ++i )
             {
-                ON_FAIL ( LoadAlignmentInfo( self, ctx, & self -> align_info_total, primary_idx [ i ], true, offset, size, handle_wraparound ) ) 
+                ON_FAIL ( LoadAlignmentInfo( self, ctx, & self -> align_info_total, primary_idx [ i ], true, offset, size ) ) 
                     return;
             }
             for ( i = 0; i < secondary_idx_end; ++i )
             {
-                ON_FAIL ( LoadAlignmentInfo( self, ctx, & self -> align_info_total, secondary_idx [ i ] + self -> id_offset, false, offset, size, handle_wraparound ) ) 
+                ON_FAIL ( LoadAlignmentInfo( self, ctx, & self -> align_info_total, secondary_idx [ i ] + self -> id_offset, false, offset, size ) ) 
                     return;
             }
         }
@@ -688,22 +689,22 @@ bool LoadFirstCircular ( CSRA1_ReferenceWindow* self, ctx_t ctx )
 
     /* for windows on circular references, self->ref_begin and and self->ref_end - 1 
         are the rowId's of the first and last chunk of the reference, regardless of slicing */
-    if ( ! self -> within_window && self -> ref_begin < last_chunk )
+    if ( ! self -> no_wraparound && self -> ref_begin < last_chunk )
     {   /* load the last chunk of the reference, to cover possible overlaps into the first chunk */
         if ( self -> slice_size == 0 )
         {   /* loading possible overlaps with the first chunk */
-            ON_FAIL ( LoadAlignments ( self, ctx, last_chunk, 0, self -> chunk_size, true ) )
+            ON_FAIL ( LoadAlignments ( self, ctx, last_chunk, 0, self -> chunk_size ) )
                 return false;
         }
         else if ( self -> slice_offset < self -> chunk_size )
         {   /* loading possible overlaps with a slice inside the first chunk */ 
-            ON_FAIL ( LoadAlignments ( self, ctx, last_chunk, self -> slice_offset, self -> chunk_size - self -> slice_offset, true ) )
+            ON_FAIL ( LoadAlignments ( self, ctx, last_chunk, self -> slice_offset, self -> chunk_size - self -> slice_offset ) )
                 return false;
         }
         /* target slice is not in the first chunk, no need to look for overlaps from the end of the reference */
     }
     
-    ON_FAIL ( LoadAlignments ( self, ctx, self -> ref_begin, self -> slice_offset, self -> slice_size, false ) )
+    ON_FAIL ( LoadAlignments ( self, ctx, self -> ref_begin, self -> slice_offset, self -> slice_size ) )
         return false;
     
     if ( self -> align_info_total > 0 )
@@ -725,7 +726,7 @@ bool LoadNextChunk ( CSRA1_ReferenceWindow* self, ctx_t ctx )
     self -> align_info_total = 0;
     while ( self -> ref_begin < self -> ref_end )
     {
-        ON_FAIL ( LoadAlignments ( self, ctx, self -> ref_begin, self -> slice_offset, self -> slice_size, false ) )
+        ON_FAIL ( LoadAlignments ( self, ctx, self -> ref_begin, self -> slice_offset, self -> slice_size ) )
             return false;
     
         if ( self -> align_info_total > 0 )
@@ -830,6 +831,7 @@ void CSRA1_ReferenceWindowInit ( CSRA1_ReferenceWindow * ref,
                                  uint64_t size, /* 0 - all remaining */
                                  bool primary,
                                  bool secondary,
+                                 bool no_wraparound,
                                  bool within_window,
                                  uint64_t id_offset )
 {
@@ -843,6 +845,7 @@ void CSRA1_ReferenceWindowInit ( CSRA1_ReferenceWindow * ref,
             ref -> circular             = circular;
             ref -> primary              = primary;
             ref -> secondary            = secondary;
+            ref -> no_wraparound        = no_wraparound;
             ref -> within_window        = within_window;
             ref -> chunk_size           = chunk_size;
             ref -> ref_length           = ref_length;
@@ -873,6 +876,7 @@ NGS_Alignment * CSRA1_ReferenceWindowMake ( ctx_t ctx,
                                             uint64_t size, /* 0 - all remaining */
                                             bool primary,
                                             bool secondary,
+                                            bool no_wraparound,
                                             bool within_window,
                                             uint64_t id_offset )
 {
@@ -901,6 +905,7 @@ NGS_Alignment * CSRA1_ReferenceWindowMake ( ctx_t ctx,
                                           size, 
                                           primary, 
                                           secondary,
+                                          no_wraparound,
                                           within_window,
                                           id_offset ) ) 
         {

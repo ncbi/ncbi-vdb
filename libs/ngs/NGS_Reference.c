@@ -165,10 +165,12 @@ static struct NGS_Alignment_v1 * ITF_Reference_v1_get_filtered_alignments ( cons
     
     bool wants_primary = ( flags & NGS_ReferenceAlignFlags_wants_primary ) != 0;
     bool wants_secondary = ( flags & NGS_ReferenceAlignFlags_wants_secondary ) != 0;
+    bool wants_no_wraparound = ( flags & NGS_ReferenceAlignFlags_no_wraparound ) != 0;
     bool wants_within_window = ( flags & NGS_ReferenceAlignFlags_start_within_window ) != 0;
     
+    
     /*TODO: reject unimplemented flags */
-    ON_FAIL ( struct NGS_Alignment * ret = NGS_ReferenceGetFilteredAlignments ( Self ( self ), ctx, wants_primary, wants_secondary, wants_within_window ) )
+    ON_FAIL ( struct NGS_Alignment * ret = NGS_ReferenceGetFilteredAlignments ( Self ( self ), ctx, wants_primary, wants_secondary, wants_no_wraparound || wants_within_window ) )
     {
         NGS_ErrBlockThrow ( err, ctx );
     }
@@ -200,10 +202,11 @@ static struct NGS_Alignment_v1 * ITF_Reference_v1_get_filtered_align_slice ( con
     
     bool wants_primary = ( flags & NGS_ReferenceAlignFlags_wants_primary ) != 0;
     bool wants_secondary = ( flags & NGS_ReferenceAlignFlags_wants_secondary ) != 0;
+    bool wants_no_wraparound = ( flags & NGS_ReferenceAlignFlags_no_wraparound ) != 0;
     bool wants_within_window = ( flags & NGS_ReferenceAlignFlags_start_within_window ) != 0;
     
     /*TODO: reject unimplemented flags */
-    ON_FAIL ( struct NGS_Alignment * ret = NGS_ReferenceGetFilteredAlignmentSlice ( Self ( self ), ctx, start, length, wants_primary, wants_secondary, wants_within_window ) )
+    ON_FAIL ( struct NGS_Alignment * ret = NGS_ReferenceGetFilteredAlignmentSlice ( Self ( self ), ctx, start, length, wants_primary, wants_secondary, wants_no_wraparound, wants_within_window ) )
     {
         NGS_ErrBlockThrow ( err, ctx );
     }
@@ -583,7 +586,7 @@ struct NGS_Alignment* NGS_ReferenceGetAlignmentSlice ( NGS_Reference * self,
     }
     else
     {
-        return VT ( self, get_slice ) ( self, ctx, offset, size, wants_primary, wants_secondary, false );
+        return VT ( self, get_slice ) ( self, ctx, offset, size, wants_primary, wants_secondary, false, false );
     }
 
     return NULL;
@@ -597,6 +600,7 @@ struct NGS_Alignment* NGS_ReferenceGetFilteredAlignmentSlice ( NGS_Reference * s
                                                                uint64_t size,
                                                                bool wants_primary, 
                                                                bool wants_secondary, 
+                                                               bool wants_no_wraparound,
                                                                bool wants_within_window )
 {
     if ( self == NULL )
@@ -606,7 +610,7 @@ struct NGS_Alignment* NGS_ReferenceGetFilteredAlignmentSlice ( NGS_Reference * s
     }
     else
     {
-        return VT ( self, get_slice ) ( self, ctx, offset, size, wants_primary, wants_secondary, wants_within_window );
+        return VT ( self, get_slice ) ( self, ctx, offset, size, wants_primary, wants_secondary, wants_no_wraparound, wants_within_window );
     }
 
     return NULL;

@@ -557,7 +557,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Slice_Filtered, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( "ERR225922", "2" );
 
-    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, 203894961, 100, true, true, true ); // only the ones that start within the window
+    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, 203894961, 100, true, true, true, true ); // only the ones that start within the window
     REQUIRE ( ! FAILED () );
     
     // only the alignments starting inside the slice (203894961)
@@ -618,6 +618,80 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Circular_Slice, CSRA1_Fixture)
    
     EXIT;
 }
+
+// NGS_ReferenceGetFilteredAlignmentSlice
+
+uint64_t SliceOffset = 5;
+uint64_t SliceLength = 100;
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_Wraparound, CSRA1_Fixture )
+{   // wraparound alignments overlapping with a slice
+    ENTRY_GET_REF( CSRA1_WithCircularReference, "chrM" );
+    
+    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, SliceOffset, SliceLength, true, true, false, false ); 
+    REQUIRE ( ! FAILED () && m_align );
+    REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
+    
+    // the first returned alignment starts before the start of the circular reference, overlaps with slice
+    int64_t pos = NGS_AlignmentGetAlignmentPosition ( m_align, ctx );
+    REQUIRE_LT ( ( int64_t ) ( SliceOffset + SliceLength ), pos );
+    
+    // check for overlap with the slice
+    uint64_t refLen = NGS_ReferenceGetLength ( m_ref, ctx );
+    pos -= ( int64_t ) refLen; 
+    REQUIRE_GT ( ( int64_t ) 0, pos );
+    REQUIRE_GE ( pos + NGS_AlignmentGetAlignmentLength( m_align, ctx ), SliceOffset );
+    
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_Wraparound_StartInWindow, CSRA1_Fixture )
+{   // when StartInWindow filter is specified, it removes wraparound alignments as well
+    ENTRY_GET_REF( CSRA1_WithCircularReference, "chrM" );
+    
+    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, SliceOffset, SliceLength, true, true, false, true ); 
+    REQUIRE ( ! FAILED () && m_align );
+    REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
+    
+    // the first returned alignment starts inside the slice
+    int64_t pos = NGS_AlignmentGetAlignmentPosition ( m_align, ctx );
+    REQUIRE_LE ( ( int64_t ) SliceOffset, pos );
+    REQUIRE_LT ( pos, ( int64_t ) ( SliceOffset + SliceLength ) );
+    
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_NoWraparound, CSRA1_Fixture )
+{   // only removes wraparound alignments, not the ones starting before the slice
+    ENTRY_GET_REF( CSRA1_WithCircularReference, "chrM" );
+    
+    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, SliceOffset, SliceLength, true, true, true, false ); 
+    REQUIRE ( ! FAILED () && m_align );
+    REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
+    
+    // the first returned alignment starts outside the slice but does not wrap around
+    REQUIRE_GT ( ( int64_t ) SliceOffset, NGS_AlignmentGetAlignmentPosition ( m_align, ctx ) );
+    
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_NoWraparound_StartInWindow, CSRA1_Fixture )
+{   // when StartInWindow filter is specified, it removes wraparound alignments as well
+    ENTRY_GET_REF( CSRA1_WithCircularReference, "chrM" );
+    
+    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, SliceOffset, SliceLength, true, true, true, true ); 
+    REQUIRE ( ! FAILED () && m_align );
+    REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
+    
+    // the first returned alignment starts inside the slice
+    int64_t pos = NGS_AlignmentGetAlignmentPosition ( m_align, ctx );
+    REQUIRE_LE ( ( int64_t ) SliceOffset, pos );
+    REQUIRE_LT ( pos, ( int64_t ) ( SliceOffset + SliceLength ) );
+    
+    EXIT;
+}
+
+
 
 #if 0
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_PrintEmAll_1, CSRA1_Fixture)
