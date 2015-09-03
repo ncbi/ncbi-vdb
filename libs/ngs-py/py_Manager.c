@@ -65,7 +65,7 @@ LIB_EXPORT PY_RES_TYPE PY_NGS_Engine_SetAppVersionString(char const* app_version
     return PY_RES_OK;
 }
 
-LIB_EXPORT PY_RES_TYPE PY_NGS_Engine_GetVersion(char const** pRet, char* pStrError, size_t nStrErrorBufferSize)
+LIB_EXPORT PY_RES_TYPE PY_NGS_Engine_GetPackageVersion(char const** pRet, char* pStrError, size_t nStrErrorBufferSize)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcMgr, rcUpdating );
 
