@@ -673,6 +673,7 @@ bool CSRA1_FragmentIsPaired ( CSRA1_Alignment * self, ctx_t ctx )
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
     int64_t id;
+    int32_t idx;
     bool ret = false;
 
     if ( ! self -> seen_first ) 
@@ -683,37 +684,41 @@ bool CSRA1_FragmentIsPaired ( CSRA1_Alignment * self, ctx_t ctx )
 
     TRY ( id = NGS_CursorGetInt64 ( GetCursor ( self ), ctx, self -> cur_row, align_MATE_ALIGN_ID ) )
     {
-        int32_t idx;
-
-        /* if MATE_ALIGN_ID != 0, it's paired */
-        if ( id != 0 )
+    }
+    CATCH_ALL ()
+    {
+        /* if we failed, it means that MATE_ALIGN_ID column is empty, so lets assign it to 0 and move forward */
+        CLEAR();
+        id = 0;
+    }
+    
+    /* if MATE_ALIGN_ID != 0, it's paired */
+    if ( id != 0 )
+        return true;
+    
+    TRY ( idx = NGS_CursorGetInt32 ( GetCursor ( self ), ctx, self -> cur_row, align_SEQ_READ_ID ) )
+    {
+        /* if SEQ_READ_ID > 1, it's paired. */
+        if ( idx > 1 )
             return true;
-
-        TRY ( idx = NGS_CursorGetInt32 ( GetCursor ( self ), ctx, self -> cur_row, align_SEQ_READ_ID ) )
+        
+        TRY ( id = NGS_CursorGetInt64 ( GetCursor ( self ), ctx, self -> cur_row, align_SEQ_SPOT_ID ) )
         {
-            /* if SEQ_READ_ID > 1, it's paired. */
-            if ( idx > 1 )
-                return true;
-
-            TRY ( id = NGS_CursorGetInt64 ( GetCursor ( self ), ctx, self -> cur_row, align_SEQ_SPOT_ID ) )
+            NGS_String * readId;
+            
+            /* otherwise, have to get spot id and consult SEQUENCE table */
+            TRY ( readId = NGS_IdMake ( ctx, self -> run_name, NGSObject_Read, id ) )
             {
-                NGS_String * readId;
-
-                /* otherwise, have to get spot id and consult SEQUENCE table */
-                TRY ( readId = NGS_IdMake ( ctx, self -> run_name, NGSObject_Read, id ) )
+                const char * readIdStr = NGS_StringData ( readId, ctx );
+                TRY ( NGS_Read * read = NGS_ReadCollectionGetRead ( ( NGS_ReadCollection * ) self -> coll, ctx, readIdStr ) )
                 {
-                    const char * readIdStr = NGS_StringData ( readId, ctx );
-                    TRY ( NGS_Read * read = NGS_ReadCollectionGetRead ( ( NGS_ReadCollection * ) self -> coll, ctx, readIdStr ) )
-                    {
-                        /* TBD - add call on Read once there */
-                        assert ( idx > 0 );
-                        ret = NGS_ReadFragIsAligned ( read, ctx, idx - 1 );
-
-                        NGS_ReadRelease ( read, ctx );
-                    }
-
-                    NGS_StringRelease ( readId, ctx );
+                    uint32_t numFragments = NGS_ReadNumFragments(read, ctx);
+                    ret = numFragments > 1;
+                    
+                    NGS_ReadRelease ( read, ctx );
                 }
+                
+                NGS_StringRelease ( readId, ctx );
             }
         }
     }

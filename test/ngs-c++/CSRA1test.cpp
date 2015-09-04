@@ -45,6 +45,7 @@ public:
     static const char* CSRA1_WithGroups;
     static const char* CSRA1_NoReadGroups;
     static const char* CSRA1_WithCircularRef;
+    static const char* CSRA1_SingleFragmentPerSpot;
     
 public:
     CSRA1_Fixture()
@@ -79,11 +80,12 @@ public:
         return ncbi :: NGS :: openReadCollection ( CSRA1_WithSecondary ) . getAlignments ( category );
     }
 };
-const char* CSRA1_Fixture::CSRA1_PrimaryOnly     = "SRR1063272";
-const char* CSRA1_Fixture::CSRA1_WithSecondary   = "SRR833251";
-const char* CSRA1_Fixture::CSRA1_WithGroups      = "SRR822962";
-const char* CSRA1_Fixture::CSRA1_NoReadGroups    = "SRR1237962";
-const char* CSRA1_Fixture::CSRA1_WithCircularRef = "SRR1769246";
+const char* CSRA1_Fixture::CSRA1_PrimaryOnly           = "SRR1063272";
+const char* CSRA1_Fixture::CSRA1_WithSecondary         = "SRR833251";
+const char* CSRA1_Fixture::CSRA1_WithGroups            = "SRR822962";
+const char* CSRA1_Fixture::CSRA1_NoReadGroups          = "SRR1237962";
+const char* CSRA1_Fixture::CSRA1_WithCircularRef       = "SRR1769246";
+const char* CSRA1_Fixture::CSRA1_SingleFragmentPerSpot = "SRR2096940";
 
 #include "CSRA1_ReadCollection_test.cpp"
 
@@ -300,6 +302,23 @@ FIXTURE_TEST_CASE(CSRA1_Fragment_getSubFragmentQualities_OffsetLength, CSRA1_Fix
     ngs :: String expected("DDDCDC");
     REQUIRE_EQ( expected, getFragment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".R.1", 2 ) . getFragmentQualities ( 80, 6 ) . toString () );    
 }
+
+FIXTURE_TEST_CASE(CSRA1_Fragment_isPaired_MultiFragmentsPerSpot, CSRA1_Fixture)
+{
+    ngs :: Read read = ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getRead ( ngs :: String ( CSRA1_PrimaryOnly ) + ".R.1" );
+    read.nextFragment();
+    REQUIRE_EQ( true, read.isPaired() );
+    read.nextFragment();
+    REQUIRE_EQ( true, read.isPaired() );
+}
+
+FIXTURE_TEST_CASE(CSRA1_Fragment_isPaired_SingleFragmentPerSpot, CSRA1_Fixture)
+{
+    ngs :: Read read = ncbi :: NGS :: openReadCollection ( CSRA1_SingleFragmentPerSpot ) . getRead ( ngs :: String ( CSRA1_SingleFragmentPerSpot ) + ".R.1" );
+    read.nextFragment();
+    REQUIRE_EQ( false, read.isPaired() );
+}
+
 //TODO: getFragmentQualities on an accession with QUALITY column of type phred_33 (and phred_64, if there can be one)
 
 ///// Reference
@@ -680,6 +699,24 @@ FIXTURE_TEST_CASE(CSRA1_Alignment_getMateIsReversedOrientation_True, CSRA1_Fixtu
 FIXTURE_TEST_CASE(CSRA1_Alignment_getMateIsReversedOrientation_False, CSRA1_Fixture)
 {
     REQUIRE( ! ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.2" ) . getMateIsReversedOrientation () );
+}
+
+
+FIXTURE_TEST_CASE(CSRA1_Alignment_isPaired_MultiFragmentsPerSpot, CSRA1_Fixture)
+{
+    ngs :: ReadCollection readCollection = ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly );
+    ngs :: Alignment alignment = readCollection . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.1" );
+    REQUIRE_EQ( true, alignment.isPaired() );
+
+    alignment = readCollection . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.2" );
+    REQUIRE_EQ( true, alignment.isPaired() );
+}
+
+FIXTURE_TEST_CASE(CSRA1_Alignment_isPaired_SingleFragmentPerSpot, CSRA1_Fixture)
+{
+    ngs :: ReadCollection readCollection = ncbi :: NGS :: openReadCollection ( CSRA1_SingleFragmentPerSpot );
+    ngs :: Alignment alignment = readCollection . getAlignment ( ngs :: String ( CSRA1_SingleFragmentPerSpot ) + ".PA.1" );
+    REQUIRE_EQ( false, alignment.isPaired() );
 }
 
 
