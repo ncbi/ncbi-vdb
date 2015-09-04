@@ -457,7 +457,7 @@ bool CSRA1_ReadFragIsAligned ( CSRA1_Read * cself, ctx_t ctx, uint32_t frag_idx 
         return false;
     }
 
-    if ( frag_idx >= self -> frag_max )
+    if ( frag_idx >= self -> bio_frags )
     {
         USER_ERROR ( xcIntegerOutOfBounds, "bad fragment index" );
         return false;
@@ -468,13 +468,28 @@ bool CSRA1_ReadFragIsAligned ( CSRA1_Read * cself, ctx_t ctx, uint32_t frag_idx 
         uint32_t elem_bits, boff, row_len;
         TRY ( NGS_CursorCellDataDirect ( self -> curs, ctx, self -> cur_row, seq_PRIMARY_ALIGNMENT_ID, & elem_bits, & base, & boff, & row_len ) )
         {
+            uint32_t idx, bidx;
             const int64_t * orig = base;
             assert ( base != NULL );
             assert ( elem_bits == 64 );
             assert ( boff == 0 );
             assert ( row_len == self -> row_max );
-            
-            return orig [ frag_idx ] != 0;
+
+            /* technically, we do not expect technical reads (fragments) within CSRA1,
+               but it is correct to check for this possibility */
+            if ( self -> bio_frags == self -> row_max )
+                return orig [ frag_idx ] != 0;
+
+            for ( idx = bidx = 0; idx < row_len; ++ idx )
+            {
+                if ( ( self -> READ_TYPE [ idx ] & READ_TYPE_BIOLOGICAL ) != 0 )
+                {
+                    if ( bidx == frag_idx )
+                        return orig [ idx ] != 0;
+                    
+                    ++ bidx;
+                }
+            }
         }
     }
     
