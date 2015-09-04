@@ -509,7 +509,42 @@ uint32_t SRA_ReadNumFragments ( SRA_Read * self, ctx_t ctx )
         return 0;
     }    
     
+    if ( self -> cur_row >= self -> row_max )
+    {
+        USER_ERROR ( xcCursorExhausted, "No more rows available" );
+        return false;
+    }
+    
     return self -> bio_frags;
+}
+
+/* FragIsAligned
+ */
+bool SRA_ReadFragIsAligned ( SRA_Read * self, ctx_t ctx, uint32_t frag_idx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+    
+    assert ( self != NULL );
+    
+    if ( ! self -> seen_first ) 
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Read accessed before a call to ReadIteratorNext()" );
+        return 0;
+    }    
+    
+    if ( self -> cur_row >= self -> row_max )
+    {
+        USER_ERROR ( xcCursorExhausted, "No more rows available" );
+        return false;
+    }
+
+    if ( frag_idx >= self -> bio_frags )
+    {
+        USER_ERROR ( xcIntegerOutOfBounds, "bad fragment index" );
+        return false;
+    }
+    
+    return false;
 }
 
 /*--------------------------------------------------------------------------
