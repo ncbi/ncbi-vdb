@@ -32,6 +32,7 @@ typedef struct CSRA1_Alignment CSRA1_Alignment;
 #include "NGS_Alignment.h"
 #include "NGS_ReadCollection.h"
 #include "NGS_Refcount.h"
+#include "NGS_Read.h"
 
 #include "NGS_Id.h"
 #include "NGS_String.h"
@@ -667,7 +668,61 @@ struct NGS_String * CSRA1_FragmentGetQualities ( CSRA1_Alignment * self, ctx_t c
 }
 
 static
-bool CSRA1_FragmentIsAligned ( const CSRA1_Alignment * self, ctx_t ctx )
+bool CSRA1_FragmentIsPaired ( CSRA1_Alignment * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+
+    int64_t id;
+    bool ret = false;
+
+    if ( ! self -> seen_first ) 
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Alignment accessed before a call to AlignmentIteratorNext()" );
+        return false;
+    }
+
+    TRY ( id = NGS_CursorGetInt64 ( GetCursor ( self ), ctx, self -> cur_row, align_MATE_ALIGN_ID ) )
+    {
+        int32_t idx;
+
+        /* if MATE_ALIGN_ID != 0, it's paired */
+        if ( id != 0 )
+            return true;
+
+        TRY ( idx = NGS_CursorGetInt32 ( GetCursor ( self ), ctx, self -> cur_row, align_SEQ_READ_ID ) )
+        {
+            /* if SEQ_READ_ID > 1, it's paired. */
+            if ( idx > 1 )
+                return true;
+
+            TRY ( id = NGS_CursorGetInt64 ( GetCursor ( self ), ctx, self -> cur_row, align_SEQ_SPOT_ID ) )
+            {
+                NGS_String * readId;
+
+                /* otherwise, have to get spot id and consult SEQUENCE table */
+                TRY ( readId = NGS_IdMake ( ctx, self -> run_name, NGSObject_Read, id ) )
+                {
+                    const char * readIdStr = NGS_StringData ( readId, ctx );
+                    TRY ( NGS_Read * read = NGS_ReadCollectionGetRead ( ( NGS_ReadCollection * ) self -> coll, ctx, readIdStr ) )
+                    {
+                        /* TBD - add call on Read once there */
+                        assert ( idx > 0 );
+                        ret = NGS_ReadFragIsAligned ( read, ctx, idx - 1 );
+
+                        NGS_ReadRelease ( read, ctx );
+                    }
+
+                    NGS_StringRelease ( readId, ctx );
+                }
+            }
+        }
+    }
+
+    return ret;
+}
+
+static
+bool CSRA1_FragmentIsAligned ( CSRA1_Alignment * self, ctx_t ctx )
 {
     assert ( self != NULL );
     return true;
@@ -701,6 +756,7 @@ static NGS_Alignment_vt CSRA1_Alignment_vt_inst =
         CSRA1_FragmentGetId,
         CSRA1_FragmentGetSequence,
         CSRA1_FragmentGetQualities,
+        CSRA1_FragmentIsPaired,
         CSRA1_FragmentIsAligned,
         CSRA1_FragmentNext
     },

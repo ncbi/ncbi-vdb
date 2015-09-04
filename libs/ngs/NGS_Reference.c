@@ -810,7 +810,8 @@ static struct NGS_Alignment* Null_ReferenceGetAlignmentSlice ( NGS_Reference * s
                                                                uint64_t offset, 
                                                                uint64_t size, 
                                                                bool wants_primary, 
-                                                               bool wants_secondary, 
+                                                               bool wants_secondary,
+                                                               bool wants_no_wraparound,
                                                                bool wants_within_window )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing);
@@ -866,7 +867,7 @@ static NGS_Reference_vt Null_Reference_vt_inst =
     Null_ReferenceGetStatistics,
     
     /* NGS_ReferenceIterator */
-    Null_ReferenceIteratorNext,
+    Null_ReferenceIteratorNext
 };
  
 struct NGS_Reference * NGS_ReferenceMakeNull ( ctx_t ctx, struct NGS_ReadCollection * coll )

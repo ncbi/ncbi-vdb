@@ -59,7 +59,8 @@ struct CSRA1_Read
     SRA_Read dad;
 };
 
-static bool                CSRA1_FragmentIsAligned ( const CSRA1_Read * self, ctx_t ctx );
+static bool                CSRA1_FragmentIsAligned ( CSRA1_Read * self, ctx_t ctx );
+static bool                CSRA1_ReadFragIsAligned ( CSRA1_Read * self, ctx_t ctx, uint32_t frag_idx );
 
 static NGS_Read_vt CSRA1_Read_vt_inst =
 {
@@ -73,6 +74,7 @@ static NGS_Read_vt CSRA1_Read_vt_inst =
         SRA_FragmentGetId,
         SRA_FragmentGetSequence,
         SRA_FragmentGetQualities,
+        SRA_FragmentIsPaired,
         CSRA1_FragmentIsAligned,
         SRA_FragmentNext
     },
@@ -85,6 +87,7 @@ static NGS_Read_vt CSRA1_Read_vt_inst =
     SRA_ReadGetSequence,
     SRA_ReadGetQualities,
     SRA_ReadNumFragments,
+    CSRA1_ReadFragIsAligned,
     SRA_ReadIteratorNext,
     SRA_ReadIteratorGetCount,
 }; 
@@ -380,7 +383,7 @@ NGS_Read * CSRA1_ReadMake ( ctx_t ctx, const NGS_Cursor * curs, int64_t readId, 
     return NULL;
 }
 
-bool CSRA1_FragmentIsAligned ( const CSRA1_Read * cself, ctx_t ctx )
+bool CSRA1_FragmentIsAligned ( CSRA1_Read * cself, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
     const SRA_Read * self;
@@ -433,3 +436,48 @@ bool CSRA1_FragmentIsAligned ( const CSRA1_Read * cself, ctx_t ctx )
     
 }
 
+bool CSRA1_ReadFragIsAligned ( CSRA1_Read * cself, ctx_t ctx, uint32_t frag_idx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+    const SRA_Read * self;
+    
+    assert ( cself != NULL );
+    
+    self = & cself -> dad;
+    
+    if ( ! self -> seen_first )
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Read accessed before a call to nextRead()" );
+        return false;
+    }
+    
+    if ( self -> cur_row >= self -> row_max )
+    {
+        USER_ERROR ( xcCursorExhausted, "No more rows available" );
+        return false;
+    }
+
+    if ( frag_idx >= self -> frag_max )
+    {
+        USER_ERROR ( xcIntegerOutOfBounds, "bad fragment index" );
+        return false;
+    }
+    
+    {
+        const void * base;
+        uint32_t elem_bits, boff, row_len;
+        TRY ( NGS_CursorCellDataDirect ( self -> curs, ctx, self -> cur_row, seq_PRIMARY_ALIGNMENT_ID, & elem_bits, & base, & boff, & row_len ) )
+        {
+            const int64_t * orig = base;
+            assert ( base != NULL );
+            assert ( elem_bits == 64 );
+            assert ( boff == 0 );
+            assert ( row_len == self -> row_max );
+            
+            return orig [ frag_idx ] != 0;
+        }
+    }
+    
+    CLEAR();
+    return false;
+}

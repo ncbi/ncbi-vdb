@@ -80,6 +80,7 @@ static NGS_Read_vt NGS_Read_vt_inst =
         SRA_FragmentGetId,
         SRA_FragmentGetSequence,
         SRA_FragmentGetQualities,
+        SRA_FragmentIsPaired,
         SRA_FragmentIsAligned,
         SRA_FragmentNext
     },
@@ -92,6 +93,7 @@ static NGS_Read_vt NGS_Read_vt_inst =
     SRA_ReadGetSequence,
     SRA_ReadGetQualities,
     SRA_ReadNumFragments,
+    SRA_ReadFragIsAligned,
     SRA_ReadIteratorNext,
     SRA_ReadIteratorGetCount,
 }; 
@@ -844,7 +846,26 @@ struct NGS_String * SRA_FragmentGetQualities ( SRA_Read * self, ctx_t ctx, uint6
     return ret;
 }
 
-bool SRA_FragmentIsAligned ( const SRA_Read * self, ctx_t ctx )
+bool SRA_FragmentIsPaired ( SRA_Read * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+    
+    assert ( self != NULL );
+    if ( ! self -> seen_first_frag ) 
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Fragment accessed before a call to FragmentIteratorNext()" );
+        return false;
+    }
+    if ( self -> seen_last_frag ) 
+    {
+        USER_ERROR ( xcCursorExhausted, "No more rows available" );
+        return false;
+    }
+
+    return self -> bio_frags > 1;
+}
+
+bool SRA_FragmentIsAligned ( SRA_Read * self, ctx_t ctx )
 {
     assert ( self != NULL );
     return false;

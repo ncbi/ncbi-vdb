@@ -81,6 +81,18 @@ static uint32_t ITF_Read_v1_get_num_frags ( const NGS_Read_v1 * self, NGS_ErrBlo
     return ret;
 }
 
+static bool ITF_Read_v1_frag_is_aligned ( const NGS_Read_v1 * self, NGS_ErrBlock_v1 * err, uint32_t frag_idx )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+    ON_FAIL ( bool ret = NGS_ReadFragIsAligned ( Self ( self ), ctx, frag_idx ) )
+    {
+        NGS_ErrBlockThrow ( err, ctx );
+    }
+
+    CLEAR ();
+    return ret;
+}
+
 static uint32_t ITF_Read_v1_get_category ( const NGS_Read_v1 * self, NGS_ErrBlock_v1 * err )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
@@ -161,7 +173,7 @@ NGS_Read_v1_vt ITF_Read_vt =
     {
         "NGS_Read",
         "NGS_Read_v1",
-        0,
+        1,
         & ITF_Fragment_vt . dad
     },
 
@@ -173,6 +185,9 @@ NGS_Read_v1_vt ITF_Read_vt =
     ITF_Read_v1_get_bases,
     ITF_Read_v1_get_quals,
     ITF_Read_v1_next,
+
+    /* 1.1 */
+    ITF_Read_v1_frag_is_aligned
 };
 
 /*--------------------------------------------------------------------------
@@ -373,14 +388,6 @@ struct NGS_String * NullRead_FragmentOffsetLenToString ( NGS_Read * self, ctx_t 
 }
 
 static 
-bool NullRead_ConstFragmentToBool ( const NGS_Read * self, ctx_t ctx )
-{
-    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing);
-    INTERNAL_ERROR ( xcSelfNull, "NULL Alignment accessed" );
-    return 0;
-}
-
-static 
 bool NullRead_FragmentToBool ( NGS_Read * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing);
@@ -418,6 +425,13 @@ static uint32_t NullRead_ReadToU32 ( NGS_Read * self, ctx_t ctx )
     return 0;
 }
 
+static bool NullRead_FragIsAligned ( NGS_Read * self, ctx_t ctx, uint32_t frag_idx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing);
+    INTERNAL_ERROR ( xcSelfNull, "NULL Alignment accessed" );
+    return false;
+}
+
 static bool NullRead_ReadToBool_NoError ( NGS_Read * self, ctx_t ctx )
 {
     return false;
@@ -440,22 +454,23 @@ static NGS_Read_vt NullRead_vt_inst =
         NullRead_FragmentToString,
         NullRead_FragmentOffsetLenToString,
         NullRead_FragmentOffsetLenToString,
-        NullRead_ConstFragmentToBool,
+        NullRead_FragmentToBool,
         NullRead_FragmentToBool
     },
     
     /* NGS_Read */
-    NullRead_ReadToString,
-    NullRead_ReadToString,
-    NullRead_ReadToString,
-    NullRead_ConstReadToCategory,
-    NullRead_ReadOffsetLenToString,
-    NullRead_ReadOffsetLenToString,
-    NullRead_ReadToU32,
+    NullRead_ReadToString,                     /* get-id          */
+    NullRead_ReadToString,                     /* get-name        */
+    NullRead_ReadToString,                     /* get-read-group  */
+    NullRead_ConstReadToCategory,              /* get-category    */
+    NullRead_ReadOffsetLenToString,            /* get-sequence    */
+    NullRead_ReadOffsetLenToString,            /* get-qualities   */
+    NullRead_ReadToU32,                        /* get-num-frags   */
+    NullRead_FragIsAligned,                    /* frag-is-aligned */
     
     /* NGS_ReadIterator */
-    NullRead_ReadToBool_NoError,
-    NullRead_ConstReadToU64_NoError,
+    NullRead_ReadToBool_NoError,               /* next            */
+    NullRead_ConstReadToU64_NoError,           /* get-count       */
 }; 
 
 struct NGS_Read * NGS_ReadMakeNull ( ctx_t ctx, const NGS_String * run_name )

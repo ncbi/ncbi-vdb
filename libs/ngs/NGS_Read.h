@@ -124,6 +124,11 @@ struct NGS_String * NGS_ReadGetReadQualities ( NGS_Read * self, ctx_t ctx, uint6
 uint32_t NGS_ReadNumFragments ( NGS_Read * self, ctx_t ctx );
 
 
+/* FragIsAligned
+ */
+bool NGS_ReadFragIsAligned ( NGS_Read * self, ctx_t ctx, uint32_t frag_idx );
+
+
 /*--------------------------------------------------------------------------
  * NGS_ReadIterator
  */
@@ -158,6 +163,7 @@ struct NGS_Read_vt
     struct NGS_String *     ( * get_sequence )      ( NGS_READ * self, ctx_t ctx, uint64_t offset, uint64_t length );
     struct NGS_String *     ( * get_qualities )     ( NGS_READ * self, ctx_t ctx, uint64_t offset, uint64_t length );
     uint32_t                ( * get_num_fragments ) ( NGS_READ * self, ctx_t ctx );
+    bool                    ( * frag_is_aligned )   ( NGS_READ * self, ctx_t ctx, uint32_t frag_idx );
 
     /* ReadIterator interface */
     bool ( * next ) ( NGS_READ * self, ctx_t ctx );
