@@ -301,6 +301,21 @@ uint32_t NGS_ReadNumFragments ( NGS_Read * self, ctx_t ctx )
     return 0;
 }
 
+bool NGS_ReadFragIsAligned ( NGS_Read * self, ctx_t ctx, uint32_t frag_idx )
+{
+    if ( self == NULL )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+        INTERNAL_ERROR ( xcSelfNull, "failed to test fragment alignment" );
+    }
+    else
+    {
+        return VT ( self, frag_is_aligned ) ( self, ctx, frag_idx );
+    }
+
+    return 0;
+}
+
 /*--------------------------------------------------------------------------
  * NGS_ReadIterator
  */
