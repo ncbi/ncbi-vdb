@@ -17,10 +17,11 @@ import gov.nih.nlm.ncbi.ngs.NGS;
 public class ngs_test_CSRA1 {
 
 // ReadCollection
-    String PrimaryOnly      = "SRR1063272";
-    String WithSecondary    = "SRR833251";
-    String WithGroups       = "SRR822962";
-    String WithCircularRef  = "SRR1769246";
+    String PrimaryOnly           = "SRR1063272";
+    String WithSecondary         = "SRR833251";
+    String WithGroups            = "SRR822962";
+    String WithCircularRef       = "SRR1769246";
+    String SingleFragmentPerSpot = "SRR2096940";
     
     @Test
     public void open_success() throws ngs.ErrorMsg
@@ -193,6 +194,14 @@ public class ngs_test_CSRA1 {
     public void Read_getNumFragments() throws ngs.ErrorMsg
     {
         assertEquals( 2, getRead( PrimaryOnly + ".R.1" ) . getNumFragments() );
+    }
+    
+    @Test
+    public void Read_fragmentIsAligned_partial() throws ngs.ErrorMsg
+    {
+        ngs . Read read = NGS . openReadCollection ( PrimaryOnly ) . getRead ( PrimaryOnly + ".R.3" );
+        assertEquals( true, read.fragmentIsAligned( 0 ) );
+        assertEquals( false, read.fragmentIsAligned( 1 ) );
     }
 
 // FragmentIterator
@@ -494,6 +503,29 @@ public class ngs_test_CSRA1 {
     public void Alignment_getMateIsReversedOrientation_No() throws ngs.ErrorMsg
     {
         assertFalse( getAlignment ( PrimaryOnly + ".PA.2" ) . getMateIsReversedOrientation () );
+    }
+    
+    @Test
+    public void Alignment_isPaired_MultiFragmentsPerSpot() throws ngs.ErrorMsg
+    {
+        ngs . ReadCollection readCollection = NGS . openReadCollection ( PrimaryOnly );
+        ngs . Alignment alignment = readCollection . getAlignment ( PrimaryOnly + ".PA.1" );
+        assertTrue( alignment.isPaired() );
+        
+        alignment = readCollection . getAlignment ( PrimaryOnly + ".PA.2" );
+        assertTrue( alignment.isPaired() );
+        
+        // has unaligned mate
+        alignment = readCollection . getAlignment ( PrimaryOnly + ".PA.6" );
+        assertTrue( alignment.isPaired() );
+    }
+    
+    @Test
+    public void Alignment_isPaired_SingleFragmentPerSpot() throws ngs.ErrorMsg
+    {
+        ngs . ReadCollection readCollection = NGS . openReadCollection ( SingleFragmentPerSpot );
+        ngs . Alignment alignment = readCollection . getAlignment ( SingleFragmentPerSpot + ".PA.1" );
+        assertFalse( alignment.isPaired() );
     }
 
 

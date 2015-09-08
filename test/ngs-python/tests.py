@@ -6,10 +6,11 @@ from ngs.ReferenceSequence import ReferenceSequence
 from ngs.Alignment import Alignment
 from ngs.Read import Read
 
-PrimaryOnly      = "SRR1063272"
-WithSecondary    = "SRR833251"
-WithGroups       = "SRR822962"
-WithCircularRef  = "SRR1769246"
+PrimaryOnly           = "SRR1063272"
+WithSecondary         = "SRR833251"
+WithGroups            = "SRR822962"
+WithCircularRef       = "SRR1769246"
+SingleFragmentPerSpot = "SRR2096940";
 
 def getRead(id):
     run = NGS.openReadCollection(PrimaryOnly)
@@ -113,6 +114,14 @@ class Tests(unittest.TestCase):
         
     def test_Read_getReadCategory_partial(self):
         self.assertEqual(Read.partiallyAligned, getRead(PrimaryOnly + ".R.3").getReadCategory())
+    
+    def test_Read_getNumFragments(self):
+        self.assertEqual(2, getRead(PrimaryOnly + ".R.1").getNumFragments())
+    
+    def test_Read_fragmentIsAligned_partial(self):
+        read = NGS.openReadCollection(PrimaryOnly).getRead(PrimaryOnly + ".R.3")
+        self.assertEqual(True, read.fragmentIsAligned(0))
+        self.assertEqual(False, read.fragmentIsAligned(1))
     
 # FragmentIterator
     def test_FragmentIterator_ThrowsBeforeNext(self):
@@ -281,6 +290,23 @@ class Tests(unittest.TestCase):
 
     def test_Alignment_getMateIsReversedOrientation_No(self):
         self.assertFalse(getAlignment(PrimaryOnly + ".PA.2").getMateIsReversedOrientation())
+    
+    def test_Alignment_isPaired_MultiFragmentsPerSpot(self):
+        readCollection = NGS.openReadCollection(PrimaryOnly)
+        alignment = readCollection.getAlignment(PrimaryOnly + ".PA.1")
+        self.assertTrue(alignment.isPaired())
+        
+        alignment = readCollection.getAlignment(PrimaryOnly + ".PA.2")
+        self.assertTrue(alignment.isPaired())
+        
+        # has unaligned mate
+        alignment = readCollection.getAlignment (PrimaryOnly + ".PA.6")
+        self.assertTrue(alignment.isPaired())
+    
+    def Alignment_isPaired_SingleFragmentPerSpot(self):
+        readCollection = NGS.openReadCollection(SingleFragmentPerSpot)
+        alignment = readCollection.getAlignment(SingleFragmentPerSpot + ".PA.1")
+        self.assertFalse(alignment.isPaired())
 
 # ReferenceSequence
     def test_ReferenceSequence_getCanonicalName(self):
