@@ -167,6 +167,13 @@ FIXTURE_TEST_CASE(CSRA1_Read_getSubReadQualities_OffsetLength, CSRA1_Fixture)
     REQUIRE_EQ( expected, quals );    
 }
 
+FIXTURE_TEST_CASE(CSRA1_Read_fragmentIsAligned_MultiFragmentsPerPartiallyAlignedSpot, CSRA1_Fixture)
+{
+    ngs :: Read read = ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getRead ( ngs :: String ( CSRA1_PrimaryOnly ) + ".R.3" );
+    REQUIRE_EQ( true, read.fragmentIsAligned( 0 ) );
+    REQUIRE_EQ( false, read.fragmentIsAligned( 1 ) );
+}
+
 ///// ReadIterator
 //TODO: read category selection
 //TODO: range on a collection that represents a slice (read[0].id != 1)
@@ -303,9 +310,18 @@ FIXTURE_TEST_CASE(CSRA1_Fragment_getSubFragmentQualities_OffsetLength, CSRA1_Fix
     REQUIRE_EQ( expected, getFragment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".R.1", 2 ) . getFragmentQualities ( 80, 6 ) . toString () );    
 }
 
-FIXTURE_TEST_CASE(CSRA1_Fragment_isPaired_MultiFragmentsPerSpot, CSRA1_Fixture)
+FIXTURE_TEST_CASE(CSRA1_Fragment_isPaired_MultiFragmentsPerAlignedSpot, CSRA1_Fixture)
 {
     ngs :: Read read = ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getRead ( ngs :: String ( CSRA1_PrimaryOnly ) + ".R.1" );
+    read.nextFragment();
+    REQUIRE_EQ( true, read.isPaired() );
+    read.nextFragment();
+    REQUIRE_EQ( true, read.isPaired() );
+}
+
+FIXTURE_TEST_CASE(CSRA1_Fragment_isPaired_MultiFragmentsPerPartiallyAlignedSpot, CSRA1_Fixture)
+{
+    ngs :: Read read = ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getRead ( ngs :: String ( CSRA1_PrimaryOnly ) + ".R.3" );
     read.nextFragment();
     REQUIRE_EQ( true, read.isPaired() );
     read.nextFragment();
@@ -701,7 +717,6 @@ FIXTURE_TEST_CASE(CSRA1_Alignment_getMateIsReversedOrientation_False, CSRA1_Fixt
     REQUIRE( ! ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.2" ) . getMateIsReversedOrientation () );
 }
 
-
 FIXTURE_TEST_CASE(CSRA1_Alignment_isPaired_MultiFragmentsPerSpot, CSRA1_Fixture)
 {
     ngs :: ReadCollection readCollection = ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly );
@@ -709,6 +724,10 @@ FIXTURE_TEST_CASE(CSRA1_Alignment_isPaired_MultiFragmentsPerSpot, CSRA1_Fixture)
     REQUIRE_EQ( true, alignment.isPaired() );
 
     alignment = readCollection . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.2" );
+    REQUIRE_EQ( true, alignment.isPaired() );
+    
+    // has unaligned mate
+    alignment = readCollection . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.6" );
     REQUIRE_EQ( true, alignment.isPaired() );
 }
 

@@ -473,11 +473,11 @@ bool CSRA1_ReadFragIsAligned ( CSRA1_Read * cself, ctx_t ctx, uint32_t frag_idx 
             assert ( base != NULL );
             assert ( elem_bits == 64 );
             assert ( boff == 0 );
-            assert ( row_len == self -> row_max );
+            assert ( row_len == self -> frag_max );
 
             /* technically, we do not expect technical reads (fragments) within CSRA1,
                but it is correct to check for this possibility */
-            if ( self -> bio_frags == self -> row_max )
+            if ( self -> bio_frags == self -> frag_max )
                 return orig [ frag_idx ] != 0;
 
             for ( idx = bidx = 0; idx < row_len; ++ idx )
