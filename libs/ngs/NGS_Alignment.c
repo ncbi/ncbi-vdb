@@ -853,6 +853,8 @@ static NGS_Alignment_vt NullAlignment_vt_inst =
         NullAlignment_FragmentToString,
         NullAlignment_FragmentOffsetLenToString,
         NullAlignment_FragmentOffsetLenToString,
+        NullAlignment_FragmentToBool,
+        NullAlignment_FragmentToBool,
         NullAlignment_FragmentToBool
     },
     

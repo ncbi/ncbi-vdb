@@ -195,6 +195,9 @@
     <ClCompile Include="..\..\..\libs\blast\reader.c">
       <Filter>blast</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\blast\reference.c">
+      <Filter>blast</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\blast\run-set.c">
       <Filter>blast</Filter>
     </ClCompile>
@@ -534,6 +537,9 @@
     <ClCompile Include="..\..\..\libs\klib\namelist.c">
       <Filter>klib</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\ncbi-vdb-version.c">
+      <Filter>klib</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\klib\out.c">
       <Filter>klib</Filter>
     </ClCompile>
@@ -807,6 +813,9 @@
     <ClCompile Include="..\..\..\libs\ngs\NGS_Reference.c">
       <Filter>ngs</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceSequence.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\ngs\NGS_Statistics.c">
       <Filter>ngs</Filter>
     </ClCompile>
@@ -820,6 +829,9 @@
       <Filter>ngs</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\ngs\SRA_ReadCollection.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\SRA_ReferenceSequence.c">
       <Filter>ngs</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\ngs\SRA_ReadGroup.c">
@@ -856,6 +868,9 @@
       <Filter>ksrch</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\search\search.c">
+      <Filter>ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\search\sw-search.c">
       <Filter>ksrch</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\sraxf\bio-start.c">

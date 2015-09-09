@@ -85,8 +85,8 @@
  ||  Usefull stuff
 ((*/
 
-/* static const char * _sDirectoryWsContent = ".ncbi-ws-content.cnt"; */
-static const char * _sDirectoryWsContent = ".ncbi-ws-gehalt.cnt";
+/* static const char * _sDirectoryWsContent = ".ncbi-ws-content"; */
+static const char * _sDirectoryWsContent = ".ncbi-ws-gehalt";
 static const char * _sFileExt            = ".datei";
 static const char * _sFolderExt          = ".mappe";
 static const char * _sFileTag            = "file";
@@ -138,6 +138,10 @@ struct _DirC {
 
     uint64_t last;
 };
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/**)))  There are too many places, where encrypted file is opened
+  (((**/
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
@@ -760,7 +764,7 @@ _StoreContentDocument (
             RCt = KDirectoryCreateFile (
                                         NatDir,
                                         & File,
-                                        false,
+                                        true,
                                         0664,
                                         kcmCreate,
                                         "%s/%s",
@@ -781,11 +785,12 @@ _StoreContentDocument (
         if ( RCt == 0 ) {
             RCt = KFileSetSize ( File, 0 );
             if ( RCt == 0 ) {
-                RCt = KEncFileMakeWrite (
+                RCt = KEncFileMakeUpdate (
                                     & EncFile,
                                     File,
                                     & ( Content -> key )
                                     );
+                KFileRelease ( File );
                 if ( RCt == 0 ) {
                     RCt = XFSDocSize ( Doc, & TextSize );
                     if ( RCt == 0 ) {
@@ -807,7 +812,6 @@ _StoreContentDocument (
                 }
             }
 
-            KFileRelease ( File );
         }
 
         KDirectoryRelease ( NatDir );
@@ -831,10 +835,13 @@ _SyncronizeDirectoryContentNoLock ( const struct _DirE * self )
 
     XFS_CAN ( self );
 
+printf ( " [SYNC] [%d] [%d]\n", __LINE__, RCt );
     RCt = _MakeContentDocument ( self, & Doc );
+printf ( " [SYNC] [%d] [%d]\n", __LINE__, RCt );
     if  ( RCt == 0 ) {
 
         RCt = _StoreContentDocument ( self, Doc );
+printf ( " [SYNC] [%d] [%d]\n", __LINE__, RCt );
 
         XFSDocRelease ( Doc );
     }
@@ -1993,6 +2000,275 @@ _WsDirMapIt (
 }   /* _WsDirMapIt () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*  Cryptonomifile-ile-wile                                          */
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*)))
+ (((    Here is some lyrics. Current version of KEncFile is not 
+  )))   thread safe, so I had to add mutex here. However, the only
+ (((    way to create KEncFile is call "KEncFileMakeInt ()" which
+  )))   allocates KEncFile, and theree is no any 'Init" methods.
+ (((    So, we can not just do it in normal 'inheritance way' That's
+  )))   why there is that ugle-moogle
+ (((*/
+struct _xEncFile {
+    struct KFile file;
+
+    struct KFile * enc_file;
+
+    struct KLock * mutabor;
+};
+
+static
+rc_t CC
+_EncFileDestroy ( struct KFile * self )
+{
+    struct _xEncFile * File;
+
+    File = ( struct _xEncFile * ) self;
+
+    if ( File != NULL ) {
+
+        if ( File -> mutabor != NULL ) {
+            KLockRelease ( File -> mutabor );
+
+            File -> mutabor = NULL;
+        }
+
+        if ( File -> enc_file != NULL ) {
+            KFileRelease ( File -> enc_file );
+
+            File -> enc_file = NULL;
+        }
+
+        free ( File );
+    }
+
+    return 0;
+}   /* _EncFileDestroy () */
+
+static
+struct KSysFile * CC
+_EncFileGetSysFile ( const struct KFile * self, uint64_t * Offset )
+{
+    struct _xEncFile * File = ( struct _xEncFile * ) self;
+
+    if ( File != NULL ) {
+        if ( File -> enc_file != NULL ) {
+            return KFileGetSysFile ( File -> enc_file, Offset );
+        }
+    }
+
+    return NULL;
+}   /* _EncFileGetSysFile () */
+
+static
+rc_t CC
+_EncFileRandomAccess ( const struct KFile * self )
+{
+    const struct _xEncFile * File = ( const struct _xEncFile * ) self;
+
+    XFS_CAN ( File )
+    XFS_CAN ( File -> enc_file )
+
+    return KFileRandomAccess ( File -> enc_file );
+}   /* _EncFileRandomAccess () */
+
+static
+rc_t CC
+_EncFileSize ( const struct KFile * self, uint64_t * Size )
+{
+    rc_t RCt;
+    const struct _xEncFile * File;
+
+    RCt = 0;
+    File = ( const struct _xEncFile * ) self;
+
+    XFS_CSA ( Size, 0 )
+    XFS_CAN ( File )
+    XFS_CAN ( Size )
+    XFS_CAN ( File -> enc_file )
+    XFS_CAN ( File -> mutabor )
+
+    RCt = KLockAcquire ( File -> mutabor );
+    if ( RCt == 0 ) {
+        RCt = KFileSize ( File -> enc_file, Size );
+
+        KLockUnlock ( File -> mutabor );
+    }
+
+    return RCt;
+}   /* _EncFileSize () */
+
+static
+rc_t CC
+_EncFileSetSize ( struct KFile * self, uint64_t Size )
+{
+    rc_t RCt;
+    const struct _xEncFile * File;
+
+    RCt = 0;
+    File = ( const struct _xEncFile * ) self;
+
+    XFS_CAN ( File )
+    XFS_CAN ( File -> enc_file )
+    XFS_CAN ( File -> mutabor )
+
+    RCt = KLockAcquire ( File -> mutabor );
+    if ( RCt == 0 ) {
+        RCt = KFileSetSize ( File -> enc_file, Size );
+
+        KLockUnlock ( File -> mutabor );
+    }
+
+    return RCt;
+}   /* _EncFileSetSize () */
+
+static
+rc_t CC
+_EncFileRead (
+            const struct KFile * self,
+            uint64_t Pos,
+            void * Bf,
+            size_t BfSz,
+            size_t * NumRead
+)
+{
+    rc_t RCt;
+    const struct _xEncFile * File;
+
+    RCt = 0;
+    File = ( const struct _xEncFile * ) self;
+
+    XFS_CSA ( NumRead, 0 )
+    XFS_CAN ( File )
+    XFS_CAN ( Bf )
+    XFS_CAN ( NumRead )
+    XFS_CAN ( File -> enc_file )
+    XFS_CAN ( File -> mutabor )
+
+    RCt = KLockAcquire ( File -> mutabor );
+    if ( RCt == 0 ) {
+        RCt = KFileRead ( File -> enc_file, Pos, Bf, BfSz, NumRead );
+
+        KLockUnlock ( File -> mutabor );
+    }
+
+    return RCt;
+}   /* _EncFileRead () */
+
+static
+rc_t CC
+_EncFileWrite (
+            struct KFile * self,
+            uint64_t Pos,
+            const void * Bf,
+            size_t BfSz,
+            size_t * NumWrote
+)
+{
+    rc_t RCt;
+    struct _xEncFile * File;
+
+    RCt = 0;
+    File = ( struct _xEncFile * ) self;
+
+    XFS_CSA ( NumWrote, 0 )
+    XFS_CAN ( File )
+    XFS_CAN ( Bf )
+    XFS_CAN ( NumWrote )
+    XFS_CAN ( File -> enc_file )
+    XFS_CAN ( File -> mutabor )
+
+    RCt = KLockAcquire ( File -> mutabor );
+    if ( RCt == 0 ) {
+        RCt = KFileWrite ( File -> enc_file, Pos, Bf, BfSz, NumWrote );
+
+        KLockUnlock ( File -> mutabor );
+    }
+
+    return RCt;
+}   /* _EncFileWrite () */
+
+static
+uint32_t CC
+_EncFileType ( const struct KFile * self )
+{
+    const struct _xEncFile * File = ( const struct _xEncFile * ) self;
+
+    if ( File != NULL ) {
+        if ( File -> enc_file != NULL ) {
+            return KFileType ( File -> enc_file );
+        }
+    }
+
+    return kptFile;
+}   /* _EncFileType () */
+                                
+static struct KFile_vt_v1 _svxEncFile = {
+                                        /* version */
+                                    1, 1,
+                                
+                                        /* 1.0 */
+                                    _EncFileDestroy,
+                                    _EncFileGetSysFile,
+                                    _EncFileRandomAccess,
+                                    _EncFileSize,
+                                    _EncFileSetSize,
+                                    _EncFileRead,
+                                    _EncFileWrite,
+                                
+                                        /* 1.1 */
+                                    _EncFileType
+                                    };
+
+static
+rc_t CC
+_EncFileMake ( struct KFile * EncFile, struct KFile ** RetFile )
+{
+    rc_t RCt;
+    struct _xEncFile * File;
+
+    RCt = 0;
+    File = NULL;
+
+    XFS_CSAN ( RetFile )
+    XFS_CAN ( EncFile )
+    XFS_CAN ( RetFile )
+
+    File = calloc ( 1, sizeof ( struct _xEncFile ) );
+    if ( File == NULL ) {
+        RCt = XFS_RC ( rcExhausted );
+    }
+    else {
+        RCt = KFileInit (
+                        & ( File -> file ),
+                        ( const KFile_vt * ) & _svxEncFile,
+                        "XFSEncFile",
+                        "EncFile",
+                        EncFile -> read_enabled,
+                        EncFile -> write_enabled
+                        );
+        if ( RCt == 0 ) {
+            RCt = KLockMake ( & ( File -> mutabor ) );
+            if ( RCt == 0 ) {
+                File -> enc_file = EncFile;
+
+                * RetFile = & ( File -> file );
+            }
+        }
+    }
+
+    if ( RCt != 0 ) {
+        * RetFile = NULL;
+
+        KFileRelease ( & ( File -> file ) );
+    }
+
+    return RCt;
+}   /* _EncFileMake () */
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*  Cryptonomicom-om-um                                              */
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
@@ -2026,11 +2302,12 @@ _OpenEncryptedFileRead (
         va_end ( Args );
         if ( RCt == 0 ) {
             RCt = KEncFileMakeRead ( & xFile, rFile, Key );
-            if ( RCt == 0 ) {
-                * File = ( struct KFile * ) xFile;
-            }
 
             KFileRelease ( rFile );
+            if ( RCt == 0 ) {
+                RCt = _EncFileMake ( ( struct KFile * ) xFile, ( struct KFile ** ) File );
+            }
+else { RCt = XFS_RC ( rcBusy ); printf ( " RET_BUSY [%d]\n", __LINE__ ); }
         }
 
         KDirectoryRelease ( nDir );
@@ -2087,11 +2364,13 @@ _OpenVEncryptedFileWrite (
                     ? KEncFileMakeUpdate ( & xFile, wFile, Key )
                     : KEncFileMakeWrite ( & xFile, wFile, Key )
                     ;
-            if ( RCt == 0 ) {
-                * File = ( struct KFile * ) xFile;
-            }
-
             KFileRelease ( wFile );
+
+            if ( RCt == 0 ) {
+                RCt = _EncFileMake ( ( struct KFile * ) xFile, File );
+            }
+else { RCt = XFS_RC ( rcBusy ); printf ( " RET_BUSY [%d]\n", __LINE__ ); }
+
         }
 
         KDirectoryRelease ( nDir );
@@ -2180,20 +2459,8 @@ _CreateEncryptedFile (
             KFileRelease ( TheFile );
 
             if ( RCt == 0 ) {
-                KFileRelease ( EncFile );
-
-                va_start ( Args, Format );
-                RCt = _OpenVEncryptedFileWrite (
-                                            &EncFile,
-                                            ( struct KKey * ) Key,
-                                            Update,
-                                            Format,
-                                            Args
-                                            );
-                va_end ( Args );
-                if ( RCt == 0 ) {
-                    * File = EncFile;
-                }
+                RCt = _EncFileMake ( ( struct KFile * ) EncFile, File );
+                // * File = EncFile;
             }
         }
 
@@ -3926,9 +4193,16 @@ printf ( " <<<[XFSWsDirCreateDir] [%p]\n", ( void * ) self );
                                                 Entry -> eff_name
                                                 );
                         if ( RCt == 0 ) {
+printf ( " [CEDIR] [PARENT] [%s/%s]\n", _WsDirPath ( Dir ), XFSPfadGet ( EffPfad ) );
                             RCt = _SyncronizeDirectoryContentNoLock (
                                                                 Parent
                                                                 );
+                            if ( RCt == 0 ) {
+printf ( " [CEDIR] [ENTRY] [%s/%s/%s]\n", _WsDirPath ( Dir ), XFSPfadGet ( EffPfad ), Entry -> eff_name );
+                                RCt = _SyncronizeDirectoryContentNoLock (
+                                                                Entry
+                                                                );
+                            }
                         }
                         else {
                             _DirEDelEntryNoLock ( Parent, Entry );

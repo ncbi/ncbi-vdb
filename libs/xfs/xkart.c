@@ -234,10 +234,6 @@ _DisplayName (
     size_t AlloS;
     size_t nwr;
 
-    const char * Prj_S = "pr_";
-    const char * Id_S = "id_";
-    const char * Sep = ".";
-
     RCt = 0;
     TempStr = NULL;
     AlloS = 0;
@@ -247,36 +243,20 @@ _DisplayName (
         * DisplayName = NULL;
     }
 
-    if ( Prj == NULL || Id == NULL || Nm == NULL || DisplayName == NULL ) {
+/* Looks like Id could be equal NULL */
+    if ( Prj == NULL || Nm == NULL || DisplayName == NULL ) {
         return XFS_RC ( rcNull );
     }
 
         /* Size to allocate */
-    AlloS =
-        string_size ( Prj ) + string_size ( Prj_S ) + string_size ( Sep )
-        + string_size ( Id ) + string_size ( Id_S ) + string_size ( Sep )
-        + string_size ( Nm )
-        + 1
-        ;
+    AlloS = + string_size ( Nm ) + 1;
 
     TempStr = calloc ( AlloS, sizeof ( char ) );
     if ( TempStr == NULL ) {
         return XFS_RC ( rcExhausted );
     }
 
-    RCt = string_printf (
-                        TempStr,
-                        AlloS, 
-                        & nwr,
-                        "%s%s%s%s%s%s%s",
-                        Prj_S,
-                        Prj,
-                        Sep,
-                        Id_S,
-                        Id,
-                        Sep,
-                        Nm
-                        );
+    RCt = string_printf ( TempStr, AlloS, & nwr, "%s", Nm );
     if ( RCt == 0 ) {
         * DisplayName = TempStr;
     }
@@ -408,10 +388,10 @@ _AddKartItem ( struct XFSKart * self, const struct KartItem * Item )
         RCt = _DisplayName (
                         xItem -> project,
                         xItem -> id,
-                        ( xItem -> accession == NULL
+                        xItem -> accession == NULL
                                             ? xItem -> name
                                             : xItem -> accession
-                        ),
+                                            ,
                         & xItem -> displayname
                         );
     }

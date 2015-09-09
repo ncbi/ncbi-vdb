@@ -1,0 +1,255 @@
+/*===========================================================================
+*
+*                            PUBLIC DOMAIN NOTICE
+*               National Center for Biotechnology Information
+*
+*  This software/database is a "United States Government Work" under the
+*  terms of the United States Copyright Act.  It was written as part of
+*  the author's official duties as a United States Government employee and
+*  thus cannot be copyrighted.  This software/database is freely available
+*  to the public for use. The National Library of Medicine and the U.S.
+*  Government have not placed any restriction on its use or reproduction.
+*
+*  Although all reasonable efforts have been taken to ensure the accuracy
+*  and reliability of the software and data, the NLM and the U.S.
+*  Government do not and cannot warrant the performance or results that
+*  may be obtained by using this software or data. The NLM and the U.S.
+*  Government disclaim all warranties, express or implied, including
+*  warranties of performance, merchantability or fitness for any particular
+*  purpose.
+*
+*  Please cite the author in any work or product based on this material.
+*
+* ===========================================================================
+*
+*/
+
+/*==========================================================================
+ * General read table which will be inherited by others
+ */
+version 1;
+
+include 'vdb/vdb.vschema';
+include 'insdc/insdc.vschema';
+include 'csra2/stats.vschema';
+
+
+/*--------------------------------------------------------------------------
+ * tables
+ */
+table NCBI:csra2:tbl:read #1.0 = NCBI:csra2:tbl:read_stats #1
+{
+    /* CHUNK_SZ
+     *  describes the maximum number of bases in any row
+     *
+     *  if present, allows a single sequence to be broken into multiple rows
+     *  where this value gives the limit on the number of bases in any row.
+     *
+     *  the sequence will be split across some number of rows, depending upon
+     *  the value of CHUNK_SZ. if length ( seq ) > CHUNK_SZ, then there will
+     *  be multiple rows, where all but the last will have a length of CHUNK_SZ.
+     *  the last ( or only ) row will have a length of length(seq)%CHUNK_SIZE.
+     */
+    extern column INSDC:coord:len CHUNK_SZ;
+
+
+    /* READ
+     *  base calls
+     */
+
+    // textual representation
+    extern default column INSDC:dna:text READ
+    {
+        read = out_dna_text;
+        validate = < INSDC:dna:text > compare ( in_dna_text, out_dna_text );
+    }
+
+    // 4na representation - unpacked
+    extern column INSDC:4na:bin READ
+        = out_4na_bin
+        ;
+
+
+    /* QUALITY
+     *  phred-score quality values
+     */
+    extern default column INSDC:quality:phred QUALITY
+        = out_qual_phred
+        ;
+    extern column INSDC:quality:text:phred_33 QUALITY
+        = ( INSDC:quality:text:phred_33 ) < B8 > sum < 33 > ( out_qual_phred )
+        ;
+    extern column INSDC:quality:text:phred_64 QUALITY
+        = ( INSDC:quality:text:phred_64 ) < B8 > sum < 64 > ( out_qual_phred )
+        ;
+
+    /* ---------------------------- optional columns ---------------------------- */
+
+    /* RD_ID
+     * RD_GROUP
+     *  reports group and id of current row
+     */
+    extern column I64 RD_ID;
+    extern column ascii RD_GROUP;
+
+    /* RD_FILTER
+     *  records filter value if used
+     */
+    extern column INSDC:SRA:read_filter RD_FILTER;
+
+
+    /* ---------------------------- input rules ---------------------------- */
+
+    // input text
+    INSDC:dna:text in_dna_text
+        = < INSDC:dna:text, INSDC:dna:text > map < '.acmgrsvtwyhkdbn','NACMGRSVTWYHKDBN' > ( READ )
+        ;
+
+    // input 4na bin
+    INSDC:4na:bin in_4na_bin
+        = < INSDC:4na:bin > range_validate < 0, 15 > ( READ )
+        | < INSDC:dna:text, INSDC:4na:bin > map < INSDC:4na:map:CHARSET, INSDC:4na:map:BINSET > ( in_dna_text )
+        ;
+
+    // input 2na bin
+    INSDC:2na:bin in_2na_bin
+        = INSDC:SEQ:rand_4na_2na ( in_4na_bin )
+        ;
+
+    // input 4na alt-read ( ambiguities )
+    INSDC:4na:bin in_alt_4na_bin
+        = < INSDC:4na:bin, INSDC:4na:bin > map < INSDC:4na:map:BINSET, [ 15,0,0,3,0,5,6,7,0,9,10,11,12,13,14,15 ] > ( in_4na_bin )
+        ;
+
+    // feed the statistics
+    INSDC:4na:bin in_stats_seq = in_4na_bin;
+    
+    // quality
+    INSDC:quality:text:phred_33 in_qual_text_phred_33 = QUALITY;
+    INSDC:quality:text:phred_64 in_qual_text_phred_64 = QUALITY;
+
+    INSDC:quality:phred in_qual_phred
+        = QUALITY
+        | ( INSDC:quality:phred ) < B8 > diff < 33 > ( in_qual_text_phred_33 )
+        | ( INSDC:quality:phred ) < B8 > diff < 64 > ( in_qual_text_phred_64 )
+        ;
+
+    // feed the statistics
+    INSDC:quality:phred in_stats_qual_phred = in_qual_phred;
+
+    ascii in_stats_read_group
+        = in_stats_spot_group
+        | RD_GROUP
+        ;
+
+
+    /* ---------------------------- physical columns ---------------------------- */
+
+    physical column INSDC:2na:packed .READ
+        = ( INSDC:2na:packed ) pack ( in_2na_bin )
+        ;
+
+    physical column < INSDC:4na:bin > zip_encoding .ALTREAD
+        = < INSDC:4na:bin > trim < 0, 0 > ( in_alt_4na_bin )
+        ;
+
+    physical column < INSDC:quality:phred > delta_average_zip_encoding .QUALITY
+        = in_qual_phred
+        ;
+
+
+    /* ---------------------------- output rules ---------------------------- */
+
+    // output 2na packed
+    INSDC:2na:packed out_2na_packed
+        = .READ
+        ;
+
+    // output 2na bin
+    INSDC:2na:bin out_2na_bin
+        = ( INSDC:2na:bin ) unpack ( out_2na_packed )
+        ;
+
+    // output 2na->4na bin
+    INSDC:4na:bin out_2na_4na_bin
+        = < INSDC:2na:bin, INSDC:4na:bin > map < INSDC:2na:map:BINSET, [ 1, 2, 4, 8 ] > ( out_2na_bin )
+        ;
+
+    // output 4na bin
+    INSDC:4na:bin out_4na_bin
+        = < INSDC:4na:bin > bit_or < ALIGN_RIGHT > ( out_2na_4na_bin, .ALTREAD )
+        | out_2na_4na_bin
+        ;
+    
+    // output text
+    INSDC:dna:text out_dna_text
+        = < INSDC:4na:bin, INSDC:dna:text > map < INSDC:4na:map:BINSET, INSDC:4na:map:CHARSET > ( out_4na_bin )
+        ;
+    
+    // output quality
+    INSDC:quality:phred out_qual_phred
+        = .QUALITY
+        | < INSDC:quality:phred > echo < 30 > ( out_4na_bin )
+        ;
+}
+
+
+/*--------------------------------------------------------------------------
+ * views
+ */
+table NCBI:csra2:view:read #1.0 =
+    NCBI:csra2:tbl:read #1.0
+{
+    /* CHUNK_SIZE
+     *  describes the maximum number of bases in any row
+     *
+     *  if present, allows a single sequence to be broken into multiple rows
+     *  where this value gives the limit on the number of bases in any row.
+     *
+     *  the sequence will be split across some number of rows, depending upon
+     *  the value of CHUNK_SIZE. if length ( seq ) > CHUNK_SIZE, then there will
+     *  be multiple rows, where all but the last will have a length of CHUNK_SIZE.
+     *  the last ( or only ) row will have a length of length(seq)%CHUNK_SIZE.
+     */
+    readonly column INSDC:coord:len CHUNK_SIZE
+        = .CHUNK_SZ
+        | < INSDC:coord:len > echo < 0xFFFFFFFF > ()
+        ;
+    
+    /* READ
+     *  generate remaining 4 types
+     */
+    readonly column INSDC:4na:packed READ
+        = ( INSDC:4na:packed ) pack ( out_4na_bin )
+        ;
+    readonly column INSDC:x2na:bin READ
+        = < INSDC:4na:bin, INSDC:x2na:bin > map < INSDC:4na:map:BINSET, [ 4,0,1,4,2,4,4,4,3,4,4,4,4,4,4,4 ] > ( out_4na_bin )
+        ;
+    readonly column INSDC:2na:bin READ
+        = out_2na_bin
+        ;
+    readonly column INSDC:2na:packed READ
+        = out_2na_packed
+        ;
+
+    /* READ_ID
+     * READ_GROUP
+     *  reports group and id of current row
+     */
+    readonly column I64 READ_ID
+        = .RD_ID
+        | row_id ()
+        ;
+    readonly column ascii READ_GROUP
+        = .RD_GROUP
+        | < ascii > echo < '' > ()
+        ;
+
+    /* READ_FILTER
+     *  records filter value if used
+     */
+    readonly column INSDC:SRA:read_filter READ_FILTER
+        = .RD_FILTER
+        | < INSDC:SRA:read_filter > echo < SRA_READ_FILTER_PASS > ()
+        ;
+}

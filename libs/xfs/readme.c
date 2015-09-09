@@ -98,11 +98,11 @@ _ReadMeNodeConstructor (
         RCt = XFSTextDocAppend ( ReadMe, "README:\n%s\n", TextOrSource );
         if ( RCt == 0 ) {
             RCt = XFSDocNodeMakeWithFlavor (
+                                & TheNode,
                                 ReadMe,
                                 NodeName,
                                 XFSModelNodeSecurity ( Template ),
-                                _sFlavorOfReadMe,
-                                & TheNode
+                                _sFlavorOfReadMe
                                 );
             if ( RCt == 0 ) {
                 * Node = TheNode;

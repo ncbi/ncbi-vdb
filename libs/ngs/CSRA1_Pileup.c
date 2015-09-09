@@ -120,6 +120,8 @@ CSRA1_Pileup_Entry * CSRA1_Pileup_EntryMake ( ctx_t ctx, int64_t row_id,
         obj -> zstart = ref_zstart;
         obj -> xend = ref_zstart + ref_len;
         obj -> secondary = secondary;
+
+        obj -> status = pileup_entry_status_INITIAL;
     }
 
     return obj;
@@ -340,7 +342,7 @@ void CSRA1_Pileup_AlignCursorDataGetNonEmptyCell ( CSRA1_Pileup_AlignCursorData 
     }
 }
 
-static
+/*static
 uint8_t CSRA1_Pileup_AlignCursorDataGetUInt8 ( CSRA1_Pileup_AlignCursorData * self, ctx_t ctx,
     int64_t row_id, uint32_t col_idx )
 {
@@ -353,7 +355,7 @@ uint8_t CSRA1_Pileup_AlignCursorDataGetUInt8 ( CSRA1_Pileup_AlignCursorData * se
     }
 
     return 0;
-}
+}*/
 
 static
 int32_t CSRA1_Pileup_AlignCursorDataGetInt32 ( CSRA1_Pileup_AlignCursorData * self, ctx_t ctx,
@@ -699,7 +701,7 @@ PRINT ( ">>> flushed %u columns of temporary cell data\n", num_flushed );
             entry -> temporary = false;
         }
 
-        if ( entry -> xend == self -> ref_zpos )
+        if ( entry -> xend == self -> ref_zpos || entry -> status == pileup_entry_status_DONE )
         {
 PRINT ( ">>> dropping alignment at refpos %ld, row-id %ld: %ld-%ld ( zero-based, half-closed )\n",
          self -> ref_zpos, entry -> row_id, entry -> zstart, entry -> xend );

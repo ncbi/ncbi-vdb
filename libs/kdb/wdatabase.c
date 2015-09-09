@@ -534,18 +534,19 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *cself,
     const KDatabase **dbp, KDirectory *wd,
     const char *path, va_list args, bool *cached, bool try_srapath )
 {
-    rc_t rc;
-    char dbpath [4096];
-    size_t z;
-
-    rc = string_vprintf (dbpath, sizeof dbpath, &z, path, args);
+    char key_path[ 4096 ];
+	char short_path[ 4096 ];
+	size_t z;
+	rc_t rc = string_vprintf( short_path, sizeof short_path, &z, path, args );
+	if ( rc == 0 )
+		rc = KDirectoryResolvePath ( wd, true, key_path, sizeof key_path, short_path );
     if ( rc == 0 )
     {
         KSymbol *sym;
 
         /* if already open */
-        sym = KDBManagerOpenObjectFind (cself, dbpath);
-        if (sym != NULL)
+        sym = KDBManagerOpenObjectFind( cself, key_path );
+        if ( sym != NULL )
         {
             const KDatabase *cdb;
             rc_t obj;
@@ -589,32 +590,32 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *cself,
         }
         else
         {
-            const KDirectory *dir;
+			const KDirectory *dir;
 
-            if ( cached != NULL )
-                * cached = false;
+			if ( cached != NULL )
+				* cached = false;
 
-            /* open the directory if its a database */
-            rc = KDBOpenPathTypeRead ( cself, wd, dbpath, &dir, kptDatabase, NULL, try_srapath );
-            if ( rc == 0 )
-            {
-                KDatabase *db;
+			/* open the directory if its a database */
+			rc = KDBOpenPathTypeRead ( cself, wd, short_path, &dir, kptDatabase, NULL, try_srapath );
+			if ( rc == 0 )
+			{
+				KDatabase *db;
 
-                rc = KDatabaseMake ( &db, dir, dbpath, NULL, true );
-                if ( rc == 0 )
-                {
-                    KDBManager *self = ( KDBManager* ) cself;
+				rc = KDatabaseMake ( &db, dir, key_path, NULL, true );
+				if ( rc == 0 )
+				{
+					KDBManager *self = ( KDBManager* ) cself;
 
-                    rc = KDBManagerInsertDatabase ( self, db );
-                    if ( rc == 0 )
-                    {
-                        * dbp = db;
-                        return 0;
-                    }
-                    free (db);
-                }
-                KDirectoryRelease (dir);
-            }
+					rc = KDBManagerInsertDatabase ( self, db );
+					if ( rc == 0 )
+					{
+						* dbp = db;
+						return 0;
+					}
+					free (db);
+				}
+				KDirectoryRelease (dir);
+			}
         }
     }
     return rc;

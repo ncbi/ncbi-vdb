@@ -140,7 +140,7 @@ static uint64_t get_uint64_option( const Args *my_args,
     if ( ( rc == 0 )&&( count > 0 ) )
     {
         const char *s;
-        rc = ArgsOptionValue( my_args, name, 0,  &s );
+        rc = ArgsOptionValue( my_args, name, 0,  (const void **)&s );
         if ( rc == 0 ) res = strtoull( s, NULL, 10 );
     }
     return res;
@@ -155,7 +155,7 @@ static uint32_t get_uint32_option( const Args *my_args,
     if ( ( rc == 0 )&&( count > 0 ) )
     {
         const char *s;
-        rc = ArgsOptionValue( my_args, name, 0,  &s );
+        rc = ArgsOptionValue( my_args, name, 0,  (const void **)&s );
         if ( rc == 0 ) res = strtoul( s, NULL, 10 );
     }
     return res;
@@ -316,7 +316,7 @@ rc_t CC KMain ( int argc, char *argv [] )
                 for ( i = 0; i < arg_count && rc == 0; ++i )
                 {
                     const char * filename;
-                    rc = ArgsParamValue ( args, i, &filename );
+                    rc = ArgsParamValue ( args, i, (const void **)&filename );
                     if ( rc != 0 )
                     {
                         OUTMSG(( "ArgsParamValue( %d ) failed: %R\n", i, rc ));

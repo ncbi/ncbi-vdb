@@ -71,6 +71,7 @@
 #endif
 
 #define ALWAYS_ADD_EXE 1
+#define USE_DYLOAD 1
 
 /* PATH_MAX is not really universal even on Linux/Unix */
 #ifndef PATH_MAX

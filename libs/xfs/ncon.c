@@ -385,7 +385,7 @@ XFSNodeContainerAdd (
     }
 
     if ( XFSNodeContainerHas ( Container, Node -> Name ) ) {
-        return XFS_RC ( rcInvalid );
+        return XFS_RC ( rcExists );
     }
 
     RCt = _NodeContainerNodeMake (

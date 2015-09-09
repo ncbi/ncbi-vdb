@@ -1,0 +1,245 @@
+/*===========================================================================
+*
+*                            PUBLIC DOMAIN NOTICE
+*               National Center for Biotechnology Information
+*
+*  This software/database is a "United States Government Work" under the
+*  terms of the United States Copyright Act.  It was written as part of
+*  the author's official duties as a United States Government employee and
+*  thus cannot be copyrighted.  This software/database is freely available
+*  to the public for use. The National Library of Medicine and the U.S.
+*  Government have not placed any restriction on its use or reproduction.
+*
+*  Although all reasonable efforts have been taken to ensure the accuracy
+*  and reliability of the software and data, the NLM and the U.S.
+*  Government do not and cannot warrant the performance or results that
+*  may be obtained by using this software or data. The NLM and the U.S.
+*  Government disclaim all warranties, express or implied, including
+*  warranties of performance, merchantability or fitness for any particular
+*  purpose.
+*
+*  Please cite the author in any work or product based on this material.
+*
+* ===========================================================================
+*
+*/
+
+/*==========================================================================
+ * VDB Alignment types, functions and tables
+ */
+version 1;
+
+include 'vdb/vdb.vschema';
+include 'csra2/stats.vschema';
+
+
+/*--------------------------------------------------------------------------
+ * tables
+ */
+table NCBI:csra2:tbl:reference #1.0
+    = NCBI:csra2:tbl:read_stats #1
+{
+    /* CHUNK_SIZE
+     *  describes the maximum number of bases in any cell
+     */
+    extern column INSDC:coord:len CHUNK_SIZE;
+
+    /* CIRCULAR
+     *  true if the reference is circular
+     */
+    extern column bool CIRCULAR;
+
+    /* CANONICAL_NAME
+     *  this should be an accessioned proper name
+     */
+    extern column utf8 CANONICAL_NAME;
+
+    /* COMMON_NAME
+     *  this name may be ambiguous or missing entirely
+     */
+    extern column utf8 COMMON_NAME;
+
+    /* LOCAL_SEQUENCE
+     *  supports name overloading by type
+     */
+    extern default column INSDC:dna:text LOCAL_SEQUENCE
+    {
+        read = out_local_dna_text;
+        validate = < INSDC:dna:text > compare ( in_local_dna_text, out_local_dna_text );
+    }
+    extern column INSDC:4na:bin LOCAL_SEQUENCE = out_local_4na_bin;
+
+    /* PRIMARY_ALIGNMENT_IDS
+     * SECONDARY_ALIGNMENT_IDS
+     *  an index to rows in the PRIMARY_ALIGNMENT and
+     *  SECONDARY_ALIGNMENT tables having alignments 
+     *  STARTING within this chunk
+     *
+     *  the indicies MUST be sorted in clustered order,
+     *  meaning that they are in ascending numeric order
+     */
+    extern column < I64 > izip_encoding PRIMARY_ALIGNMENT_IDS;
+    extern column < I64 > izip_encoding SECONDARY_ALIGNMENT_IDS;
+
+    /* OVERLAP_REF_POS
+     *  min ( REF_POS ) for all alignments intersecting this chunk
+     *  but starting in a previous chunk, where the stored position
+     *  is in reference coordinates.
+     *
+     *  a value of 0 indicates that no alignments starting to
+     *  the left of this chunk also intersect with it.
+     */
+    extern column < INSDC:coord:zero > izip_encoding OVERLAP_REF_POS;
+
+    /* OVERLAP_REF_LEN
+     *  max ( REF_POS + REF_LEN - CHUNK_START ) % CHUNK_SIZE
+     *  for all alignments intersecting this chunk but starting
+     *  in a previous chunk.
+     *
+     *  indicates the amount of this chunk that is needed by
+     *  alignments not starting within chunk. so if a slice on
+     *  this reference were to start at 100 bases into this chunk,
+     *  for example, and the OVERLAP_REF_LEN were 100 or less, then
+     *  there are no alignments from prior chunks that need to be
+     *  considered.
+     */
+    extern column < INSDC:coord:len > izip_encoding OVERLAP_REF_LEN;
+
+    /* COVERAGE
+     *  graphing statistics for the chunk
+     */
+
+    // clipped at 255
+    extern column < U8 > izip_encoding CGRAPH_HIGH;
+    extern column < U8 > izip_encoding CGRAPH_LOW;
+
+    // count of the number of mismatches in the chunk
+    extern column < U32 > izip_encoding CGRAPH_MISMATCHES;
+
+    // count of the number of inserts and deletes in the chunk
+    extern column < U32 > izip_encoding CGRAPH_INDELS;
+
+
+    /* writing rules */
+    INSDC:dna:text in_local_dna_text
+        = < INSDC:dna:text, INSDC:dna:text > map < '.acmgrsvtwyhkdbn','NACMGRSVTWYHKDBN' > ( LOCAL_SEQUENCE );
+        ;
+    INSDC:4na:bin in_local_4na_bin
+        = < INSDC:4na:bin > range_validate < 0, 15 > ( LOCAL_SEQUENCE )
+        | < INSDC:dna:text, INSDC:4na:bin > map < INSDC:4na:map:CHARSET, INSDC:4na:map:BINSET > ( in_local_dna_text )
+        ;
+    INSDC:2na:bin in_local_2na_bin
+        = INSDC:SEQ:rand_4na_2na ( in_local_4na_bin )
+        ;
+    INSDC:4na:bin in_ambig_4na_bin
+        = < INSDC:4na:bin, INSDC:4na:bin > map < INSDC:4na:map:BINSET, [ 15,0,0,3,0,5,6,7,0,9,10,11,12,13,14,15 ] > ( in_local_4na_bin );
+        ;
+
+    INSDC:4na:bin in_stats_seq = in_local_4na_bin;
+
+    /* physical columns for sequence */
+    physical column INSDC:2na:packed .LOCAL_SEQUENCE
+        = ( INSDC:2na:packed ) pack ( in_local_2na_bin )
+        ;
+    physical column < INSDC:4na:bin > zip_encoding .LOCAL_AMBIGUITY
+        = < INSDC:4na:bin > trim < 0, 0 > ( in_ambig_4na_bin )
+        ;
+
+    /* reading rules */
+    INSDC:2na:packed out_local_2na_packed
+        = .LOCAL_SEQUENCE
+        ;
+    INSDC:2na:bin out_local_2na_bin
+        = ( INSDC:2na:bin ) unpack ( out_local_2na_packed )
+        ;
+    INSDC:4na:bin out_local_2na_4na_bin
+        = < INSDC:2na:bin, INSDC:4na:bin > map < INSDC:2na:map:BINSET, [ 1, 2, 4, 8 ] > ( out_local_2na_bin );
+        ;
+    INSDC:4na:bin out_local_4na_bin
+        = < INSDC:4na:bin > bit_or < ALIGN_RIGHT > ( out_local_2na_4na_bin, .LOCAL_AMBIGUITY )
+        ;
+    INSDC:dna:text out_local_dna_text
+        = < INSDC:4na:bin, INSDC:dna:text > map < INSDC:4na:map:BINSET, INSDC:4na:map:CHARSET > ( out_local_4na_bin )
+        ;
+
+
+    INSDC:coord:len in_local_read_len
+        = ( INSDC:coord:len ) row_len ( in_local_2na_bin )
+        ;
+    INSDC:SRA:xread_type in_local_read_type
+        = < INSDC:SRA:xread_type > echo < SRA_READ_TYPE_BIOLOGICAL > ()
+        ;
+}
+
+
+/*--------------------------------------------------------------------------
+ * "views"
+ */
+table NCBI:csra2:view:reference #1.0
+    = NCBI:csra2:tbl:reference #1.0
+{
+    /* EXTERNAL
+     *  may need to be a function
+     *  it can test the CANONICAL_NAME as in cSRA.v1,
+     *  but if internal it can also check row_length of bases
+     */
+    readonly column bool EXTERNAL
+        = < bool > exists < false > ( .LOCAL_SEQUENCE )
+        | < bool > echo < true > ()
+        ;
+
+    /* SEQUENCE
+     *  available as text, 4na, x2na, 2na
+     */
+    default readonly column INSDC:dna:text SEQUENCE
+        = out_dna_text
+        ;
+    readonly column INSDC:4na:bin SEQUENCE
+        = out_4na_bin
+        ;
+    readonly column INSDC:4na:packed SEQUENCE
+        = ( INSDC:4na:packed ) pack ( out_4na_bin )
+        ;
+    readonly column INSDC:x2na:bin SEQUENCE
+        = < INSDC:4na:bin, INSDC:x2na:bin > map < INSDC:4na:map:BINSET, [ 4,0,1,4,2,4,4,4,3,4,4,4,4,4,4,4 ] > ( out_4na_bin )
+        ;
+    readonly column INSDC:2na:bin SEQUENCE
+        = out_2na_bin
+        ;
+    readonly column INSDC:2na:packed SEQUENCE
+        = pack ( out_2na_bin )
+        ;
+
+    /* QUALITY
+     * This is fake column for compatibility
+     */
+    readonly column INSDC:quality:phred QUALITY
+        = out_qual_phred
+        ;
+
+    /* column aliases */
+    readonly column INSDC:coord:len MAX_SEQ_LEN = .CHUNK_SIZE;
+    readonly column ascii SEQ_ID = cast ( .CANONICAL_NAME );
+
+    /* sequence productions */
+    INSDC:4na:bin out_4na_bin
+        = out_local_4na_bin
+    // TODO:  | sub-select from external table
+        ;
+
+    INSDC:dna:text out_dna_text
+        = < INSDC:4na:bin, INSDC:dna:text > map < INSDC:4na:map:BINSET, INSDC:4na:map:CHARSET > ( out_4na_bin )
+        ;
+
+    INSDC:2na:bin out_2na_bin
+        = INSDC:SEQ:rand_4na_2na ( out_4na_bin )
+        ;
+
+    /* quality productions */
+    INSDC:quality:phred out_qual_phred
+        = < INSDC:quality:phred > echo < 30 > ( SEQUENCE )
+        ;
+
+    INSDC:quality:phred in_stats_qual_phred = out_qual_phred;
+}
+

@@ -149,7 +149,7 @@ _LoadKartItem (
                     );
     if ( RCt == 0 ) {
         if ( IsCart ) {
-            RCt = XFSKartNodeMake ( Name, BF, NULL, & KartNode );
+            RCt = XFSKartNodeMake ( & KartNode, Name, BF, NULL );
             if ( RCt == 0 ) {
                 RCt = XFSContNodeAddChild ( 
                                         & ( Node -> node . node ),
@@ -362,10 +362,10 @@ _KartCollectionNodeMake (
 LIB_EXPORT
 rc_t CC
 XFSKartCollectionNodeMake (
+            struct XFSNode ** Node,
             const char * Name,
             const char * Path,
-            const char * Perm,
-            struct XFSNode ** Node
+            const char * Perm
 )
 {
     rc_t RCt;
@@ -524,10 +524,10 @@ _KartCollectionNodeConstructorEx (
     Path = XFSModelNodeProperty ( Template, XFS_MODEL_SOURCE );
     if ( Path != NULL ) {
         RCt = XFSKartCollectionNodeMake (
+                                    & TheNode,
                                     NodeName,
                                     Path,
-                                    XFSModelNodeSecurity ( Template ),
-                                    & TheNode
+                                    XFSModelNodeSecurity ( Template )
                                     );
     }
     else {

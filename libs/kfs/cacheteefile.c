@@ -352,60 +352,64 @@ static rc_t try_read_uint64_t( const struct KFile * self, uint64_t pos, uint64_t
 
 static rc_t read_block_size( const struct KFile * self, uint64_t local_size, uint32_t *block_size )
 {
-    uint64_t pos = local_size - ( sizeof *block_size );
-	bool done = false;
-	uint32_t num_try = 3;
-	rc_t rc = 0;
+    if ( local_size >= sizeof *block_size )
+    {
+        uint64_t pos = local_size - ( sizeof *block_size );
+        int num_try = 3;
+        rc_t rc;
 
-	while ( !done )
-	{
-		rc = try_read_uint32_t( self, pos, block_size );
-		if ( rc == 0 )
-		{
-			if ( *block_size == 0 )
-			{
-				done = ( --num_try == 0 );
-				if ( done )
-					rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
-				else
-					KSleep( 1 );
-			}
-			else
-				done = true;
-		}
-	}
-	return rc;
+        while ( true )
+        {
+            rc = try_read_uint32_t( self, pos, block_size );
+            
+            if ( rc == 0 && *block_size != 0 )
+                // we are done
+                return 0;
+            
+            if ( --num_try == 0 )
+                break;
+            
+            KSleep( 1 );
+        }
+        
+        if ( rc != 0 )
+            return rc;
+    }
+    
+    return RC ( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
 }
 
 
 static rc_t read_content_size( const struct KFile * self, uint64_t local_size, uint64_t *content_size )
 {
-	uint64_t pos = ( local_size - 4 ) - sizeof( *content_size );
-	bool done = false;
-	uint32_t num_try = 3;
-	rc_t rc = 0;
+    if ( local_size >= sizeof( *content_size ) + 4 )
+    {
+        uint64_t pos = ( local_size - 4 ) - sizeof( *content_size );
+        int num_try = 3;
+        rc_t rc;
 
-	while ( !done )
-	{
-		rc = try_read_uint64_t( self, pos, content_size );
-		if ( rc == 0 )
-		{
-			if ( *content_size == 0 )
-			{
-				done = ( --num_try == 0 );
-				if ( done )
-					rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
-				else
-					KSleep( 1 );
-			}
-			else
-				done = true;
-		}
-	}
-
-    if ( rc == 0 && *content_size >= local_size )
-        rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
-	return rc;
+        while ( true )
+        {
+            rc = try_read_uint64_t( self, pos, content_size );
+            if ( rc == 0 && *content_size != 0 )
+            {
+                if ( *content_size < local_size )
+                    return 0;
+                else
+                    return RC ( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
+            }
+            
+            if ( --num_try == 0 )
+                break;
+            
+            KSleep( 1 );
+        }
+        
+        if ( rc != 0 )
+            return rc;
+    }
+    
+    return RC ( rcFS, rcFile, rcValidating, rcParam, rcInvalid );
 }
 
 

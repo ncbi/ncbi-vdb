@@ -109,6 +109,7 @@ _AddKartItem ( struct XFSKartNode * Node, const char * ItemName )
         return XFS_RC ( rcInvalid );
     }
 
+
     KartItem = XFSKartGet ( Node -> kart, ItemName );
     if ( KartItem == NULL ) {
         return XFS_RC ( rcInvalid );
@@ -161,17 +162,20 @@ _AddKartItem ( struct XFSKartNode * Node, const char * ItemName )
 
     if ( RCt == 0 ) {
         RCt = XFSDocNodeMakeWithFlavor (
+                                        & ItemNode,
                                         ItemDoc,
                                         ItemName,
                                         NULL,
-                                        _sFlavorOfKartItem,
-                                        & ItemNode
+                                        _sFlavorOfKartItem
                                         );
         if ( RCt == 0 ) {
             RCt = XFSContNodeAddChild (
                                     & ( Node -> node . node ),
                                     ItemNode
                                     );
+            if ( GetRCState ( RCt ) == rcExists ) {
+                RCt = 0;
+            }
             /* We do not dispose node here, but on the caller level */
         }
     }
@@ -250,11 +254,11 @@ _AddReadMe ( struct XFSKartNode * Node, struct KNamelist * List )
 
         if ( RCt == 0 ) {
             RCt = XFSDocNodeMakeWithFlavor (
+                                            & Readme,
                                             Doc,
                                             "README.txt",
                                             NULL,
-                                            _sFlavorOfReadMe,
-                                            & Readme
+                                            _sFlavorOfReadMe
                                             );
             if ( RCt == 0 ) {
                 RCt = XFSContNodeAddChild (
@@ -284,10 +288,10 @@ _AddOriginal ( struct XFSKartNode * Node )
     }
 
     RCt = XFSFileNodeMake (
+                        & FileNode,
                         XFSKartPath ( Node -> kart ),
                         "KART.krt",
-                        NULL,
-                        & FileNode
+                        NULL
                         );
     if ( RCt == 0 ) {
         RCt = XFSContNodeAddChild (
@@ -380,10 +384,10 @@ _KartNodeDispose ( struct XFSContNode * self )
 LIB_EXPORT
 rc_t CC
 XFSKartNodeMake (
+            struct XFSNode ** Node,
             const char * Name,
             const char * Path,
-            const char * Perm,
-            struct XFSNode ** Node
+            const char * Perm
 )
 {
     rc_t RCt;
@@ -397,6 +401,9 @@ XFSKartNodeMake (
     TheKart = NULL;
     * NameR = 0;
     NameS = 0;
+
+
+printf ( " [XFSKartNodeMake] [%d] [%d] [%s] [%s]\n", __LINE__, RCt, Name, Path );
 
     if ( Node != NULL ) { 
         * Node = NULL;
@@ -519,13 +526,14 @@ _KartNodeConstructorEx (
 
     * Node = NULL;
 
+
     NodeName = Alias == NULL ? XFSModelNodeName ( Template ) : Alias;
 
     RCt = XFSKartNodeMake (
+                    & TheNode,
                     NodeName,
                     XFSModelNodeProperty ( Template, XFS_MODEL_SOURCE ),
-                    XFSModelNodeSecurity ( Template ),
-                    & TheNode
+                    XFSModelNodeSecurity ( Template )
                     );
     if ( RCt == 0 ) {
         * Node = TheNode;

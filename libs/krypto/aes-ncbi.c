@@ -2014,10 +2014,7 @@ CipherVec AESBCMEMBER(MiddleRound) (register CipherVec state,
 {
 #if _DEBUGGING
     CipherVec mstate;
-    CipherVec mround_keys;
-
     mstate = state;
-    mround_keys = round_keys;
 
     DEBUG_CIPHER_VECTOR("Start of Round", mstate);
 

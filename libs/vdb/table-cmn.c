@@ -344,17 +344,21 @@ LIB_EXPORT rc_t CC VDatabaseOpenTableRead ( const VDatabase *self,
     va_start ( args, path );
     rc = VDatabaseVOpenTableRead ( self, tbl, path, args );
     va_end ( args );
-    if(rc == 0 && self->cache_db != NULL) {
-	rc_t rc2;
-	const VTable *ctbl;
+    
+    if ( rc == 0 && self->cache_db != NULL )
+    {
+        rc_t rc2;
+        const VTable *ctbl;
 
-	va_start ( args, path );
-	rc2 = VDatabaseVOpenTableRead ( self->cache_db, &ctbl, path, args );
-	va_end ( args );
-	DBGMSG(DBG_VDB, DBG_FLAG(DBG_VDB_VDB), ("VDatabaseOpenTableRead(vdbcache) = %d\n", rc2));
-	if(rc2 == 0){
-		((VTable*) (*tbl)) -> cache_tbl = ctbl;
-	}
+        va_start ( args, path );
+        rc2 = VDatabaseVOpenTableRead ( self->cache_db, &ctbl, path, args );
+        va_end ( args );
+        
+        DBGMSG( DBG_VDB, DBG_FLAG( DBG_VDB_VDB ), ( "VDatabaseOpenTableRead(vdbcache) = %d\n", rc2 ) );
+        if ( rc2 == 0 )
+        {
+            ( ( VTable* ) ( *tbl ) ) -> cache_tbl = ctbl;
+        }
     }
     return rc;
 }
@@ -1257,3 +1261,115 @@ rc_t CC VTableConsistencyCheck(const VTable *self, int level)
     return rc;
 }
 #endif
+
+
+static bool VTableStaticEmpty( const struct VTable *self )
+{
+    bool res = true;
+    KNamelist * col_names;
+    rc_t rc = KMDataNodeListChildren ( self->col_node, &col_names );
+    if ( rc == 0 )
+    {
+        uint32_t count;
+        rc = KNamelistCount ( col_names, &count );
+        if ( rc == 0 && count > 0 )
+        {
+            uint32_t idx;
+            for ( idx = 0; rc == 0 && res && idx < count; ++idx )
+            {
+                const char * col_name;
+                rc = KNamelistGet ( col_names, idx, &col_name );
+                if ( rc == 0 )
+                {
+                    const KMDataNode * this_col;
+                    rc = KMDataNodeOpenNodeRead ( self->col_node, &this_col, "%s/row_count", col_name );
+                    if ( rc == 0 )
+                    {
+                        uint64_t this_row_count;
+                        rc = KMDataNodeReadAsU64( this_col, &this_row_count );
+                        if ( rc == 0 )
+                        {
+                            if ( this_row_count > 0 )
+                                res = false; /* this will terminate the for-loop and leads to return( false ) */
+                        }
+						else
+						{
+							rc = 0;
+						}
+                        KMDataNodeRelease ( this_col );                    
+                    }
+                }
+            }
+        }
+        KNamelistRelease( col_names );
+    }
+    return res;
+}
+
+
+static bool VTablePhysicalEmpty( const struct VTable *self )
+{
+    bool res = true;
+    KNamelist * col_names;
+    rc_t rc = KTableListCol ( self -> ktbl, &col_names );
+    if ( rc == 0 )
+    {
+        uint32_t count;
+        rc = KNamelistCount ( col_names, &count );
+        if ( rc == 0 && count > 0 )
+        {
+            uint32_t idx;
+            for ( idx = 0; rc == 0 && res && idx < count; ++idx )
+            {
+                const char * col_name;
+                rc = KNamelistGet ( col_names, idx, &col_name );
+                if ( rc == 0 )
+                {
+                    const KColumn * col;
+                    rc = KTableOpenColumnRead ( self -> ktbl, &col, "%s", col_name );
+                    if ( rc == 0 )
+                    {
+                        int64_t id_first;
+                        uint64_t id_count;
+                        rc = KColumnIdRange ( col, &id_first, &id_count );
+                        if ( rc == 0 )
+                        {
+                            if ( id_count > 0 )
+                                res = false; /* this will terminate the for-loop and leads to return( false ) */
+                        }
+                        KColumnRelease ( col );
+                    }
+                }
+            }
+        }
+        KNamelistRelease( col_names );
+    }
+    return res;
+}
+
+
+/* IsEmpty
+ * first tries to find out if there are static columns, that are not empty
+ * send it checks if the KTable is empty
+ */
+LIB_EXPORT rc_t CC VTableIsEmpty ( const struct VTable *self, bool * empty )
+{
+    rc_t rc;
+    
+    if ( empty == NULL )
+        rc = RC ( rcVDB, rcTable, rcListing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcVDB, rcTable, rcListing, rcSelf, rcNull );
+        else
+        {
+			bool static_empty = VTableStaticEmpty( self );
+			bool phys_empty = VTablePhysicalEmpty( self );
+            *empty = ( static_empty && phys_empty );
+            return 0;
+        }
+        * empty = false;
+    }
+    return rc;
+}

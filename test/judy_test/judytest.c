@@ -103,7 +103,7 @@ static uint32_t get_int_option( const Args *my_args,
     if ( ( rc == 0 )&&( count > 0 ) )
     {
         const char *s;
-        rc = ArgsOptionValue( my_args, name, 0,  &s );
+        rc = ArgsOptionValue( my_args, name, 0,  (const void **)&s );
         if ( rc == 0 ) res = atoi( s );
     }
     return res;

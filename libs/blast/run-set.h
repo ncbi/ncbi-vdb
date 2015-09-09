@@ -35,6 +35,10 @@
 #include <insdc/sra.h> /* INSDC_SRA_platform_id */
 #endif
 
+#ifndef _h_klib_container_
+#include <klib/container.h> /* BSTree */
+#endif
+
 #ifndef _h_klib_refcount_
 #include <klib/refcount.h> /* KRefcount */
 #endif
@@ -137,8 +141,14 @@ typedef struct {
 typedef struct VdbBlastRef VdbBlastRef;
 typedef struct {
     VdbBlastRef  *rfd;
-    size_t        rfdk; /* number of rfd members */
-    size_t        rfdn; /* allocated rfd members */
+    size_t        rfdk; /* Number of rfd members */
+    size_t        rfdn; /* Allocated rfd members */
+
+    uint64_t  totalLen; /* Total number of bases in reference set.
+                           Base count for circular references is doubled. */
+
+    BSTree tRuns;       /* rundesc-s */
+    BSTree tExtRefs;    /* SEQ_ID-s */
 } RefSet;
 
 void _RefSetFini(RefSet *self);
@@ -163,6 +173,9 @@ typedef struct {
     uint32_t read; /* 1-based */
 
     uint64_t read_id; /* BioReadId in RunSet */
+
+    bool circular;
+               /* we are going to return a circular reference the second time */
 } ReadDesc;
 
 typedef struct {
@@ -212,7 +225,7 @@ typedef struct Core2na {
     Reader2na reader;
 } Core2na;
 
-typedef struct {
+typedef struct Core4na {
     uint32_t min_read_length;
     struct KLock *mutex;
     ReadDesc desc;

@@ -54,6 +54,12 @@ extern "C" {
  * not work.
  */
 
+/*--------------------------------------------------------------------------
+ * Args
+ *  opaque class to build up option lists and parse the command line argc/argv
+ *  not reference counted
+ */
+typedef struct Args Args;
 
 /* ==========
  * Structure to define a command line option
@@ -61,6 +67,10 @@ extern "C" {
  * these are fed in one by one or through arrays to build up the
  * tables used to parse the caommand line argc/argv
  */
+
+typedef void (CC * WhackParamFnP) (void * object);
+typedef rc_t (CC * ConvertParamFnP) (const Args * self, uint32_t arg_index, const char * arg, size_t arg_len, void ** result, WhackParamFnP * whack);
+    
 typedef struct OptDef
 {
     const char *  name;           	/* UTF8/ASCII NUL terminated long name */
@@ -71,7 +81,13 @@ typedef struct OptDef
 #define OPT_UNLIM 0
     bool          needs_value;    	/* does this require an argument value? */
     bool          required;             /* is this a required parameter?  Not supported yet. */
+    ConvertParamFnP convert_fn;   /* function to convert option. can perform binary conversions. may be NULL */
 } OptDef;
+    
+typedef struct ParamDef
+{
+    ConvertParamFnP convert_fn; /* function to convert option. can perform binary conversions. may be NULL */
+} ParamDef;
 
 extern OptDef StandardOptions [];
 
@@ -100,14 +116,6 @@ extern OptDef StandardOptions [];
 #define ALIAS_REPORT    ""
 #define OPTION_REPORT   "ncbi_error_report"
 
-/*--------------------------------------------------------------------------
- * Args
- *  opaque class to build up option lists and parse the command line argc/argv
- *  not reference counted
- */
-typedef struct Args Args;
-
-
 /* Make
  *  create the empty object
  */
@@ -132,6 +140,10 @@ rc_t CC ArgsAddOptionArray ( Args * self, const OptDef * option, uint32_t count
 #endif
     );
 
+/* ArgsAddParamsArray
+ *  adds parameter definitions for arguments parsing
+ */
+rc_t CC ArgsAddParamArray ( Args * self, const ParamDef * param, uint32_t count );
 
 /* AddStandardOptions
  *  helper macro to add the arracy of internally defined
@@ -186,7 +198,7 @@ rc_t CC ArgsOptionCount ( const Args * self, const char * option_name, uint32_t 
  *  use OptionCount to know how many were seen.
  */
 rc_t CC ArgsOptionValue ( const Args * self, const char * option_name,
-    uint32_t iteration, const char ** value );
+    uint32_t iteration, const void ** value );
 
 /*
  * ParamCount
@@ -199,7 +211,7 @@ rc_t CC ArgsParamCount (const Args * self, uint32_t * count);
  *  What was the Nth parameter seen?  Use ParamCount to know how many
  *  were seen.
  */
-rc_t CC ArgsParamValue (const Args * self, uint32_t iteration, const char ** value_string);
+rc_t CC ArgsParamValue (const Args * self, uint32_t iteration, const void ** value);
 
 
 /*

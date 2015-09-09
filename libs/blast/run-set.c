@@ -868,8 +868,8 @@ static uint32_t Bits(uint64_t n, EReadIdType type) {
                 case SRA_PLATFORM_HELICOS:
                 case SRA_PLATFORM_PACBIO_SMRT:
                 case SRA_PLATFORM_ION_TORRENT:
-				case SRA_PLATFORM_CAPILLARY:
-				case SRA_PLATFORM_OXFORD_NANOPORE:
+                case SRA_PLATFORM_CAPILLARY:
+                case SRA_PLATFORM_OXFORD_NANOPORE:
                 default:
                     rd->varReadLen = true;
                     break;
@@ -1342,9 +1342,12 @@ uint64_t _VdbBlastRunGetNumAlignments(VdbBlastRun *self,
     VdbBlastStatus *status)
 {
     assert(status);
+
     *status = eVdbBlastNoErr;
+
     if (self->alignments == ~0) {
         assert(self->obj);
+
         if (self->obj->prAlgnTbl == NULL) {
             self->alignments = 0;
         }
@@ -1358,7 +1361,9 @@ uint64_t _VdbBlastRunGetNumAlignments(VdbBlastRun *self,
             }
         }
     }
+
     assert(self->alignments != ~0);
+
     return self->alignments;
 }
 
@@ -1566,10 +1571,13 @@ static uint64_t _VdbBlastRunGetSequencesAmount(
     VdbBlastRun *self, uint32_t *status)
 {
     uint64_t n = _VdbBlastRunGetNumSequences(self, status);
+
     assert(status);
+
     if (*status == eVdbBlastNoErr) {
         n += _VdbBlastRunGetNumAlignments(self, status);
     }
+
     return n;
 }
 
@@ -1652,41 +1660,54 @@ static uint32_t _RunSetAddObj(RunSet *self, VdbBlastDb *obj,
 {
 
     VdbBlastRun* run = NULL;
+
     uint32_t status = _RunSetAllocTbl(self);
-    if (status) {
+    if (status != eVdbBlastNoErr) {
         return status;
     }
 
     assert(self && self->run);
+
     run = &self->run[self->krun];
+
     status = _VdbBlastRunInit(run,
         obj, rundesc, type, dir, fullpath, min_read_length, self->krun++);
+
     return status;
 }
 
-static
-uint64_t _RunSetGetNumSequences(const RunSet *self, VdbBlastStatus *aStatus)
+static uint64_t _RunSetGetNumSequences
+    (const RunSet *self, VdbBlastStatus *aStatus)
 {
     uint64_t num = 0;
     uint32_t i = 0;
+
     assert(self && aStatus);
+
     *aStatus = eVdbBlastNoErr;
+
     for (i = 0; i < self->krun; ++i) {
         VdbBlastStatus status = eVdbBlastNoErr;
         VdbBlastRun *run = NULL;
+
         assert(self->run);
+
         run = &self->run[i];
+
         num += _VdbBlastRunGetNumSequences(run, &status);
         if (status != eVdbBlastNoErr) {
             assert(run->path);
+
             if (*aStatus == eVdbBlastNoErr) {
                 *aStatus = status; 
             }
+
             if (status != eVdbBlastTooExpensive) {
                 STSMSG(1, (
                     "Error: failed to GetNumSequences(on run %s)", run->path));
                 return 0;
             }
+
             assert(*aStatus == eVdbBlastTooExpensive);
         }
     }
@@ -1702,18 +1723,26 @@ uint64_t _RunSetGetNumSequencesApprox(const RunSet *self,
 {
     uint64_t num = 0;
     uint32_t i = 0;
+
     assert(self && status);
+
     *status = eVdbBlastNoErr;
+
     for (i = 0; i < self->krun; ++i) {
         VdbBlastRun *run = NULL;
+
         assert(self->run);
+
         run = &self->run[i];
+
         num += _VdbBlastRunGetNumSequencesApprox(run, status);
         if (*status != eVdbBlastNoErr) {
             assert(run->path);
+
             STSMSG(1, (
                 "Error: failed to GetNumSequencesApprox(on run %s)",
                 run->path));
+
             return 0;
         }
     }
@@ -2179,8 +2208,10 @@ bool CC VdbBlastRunSetIsProtein(const VdbBlastRunSet *self)
         STSMSG(1, ("VdbBlastRunSetIsProtein(self=NULL)"));
         return false;
     }
+
     STSMSG(1, (
         "VdbBlastRunSetIsProtein = %s", self->protein ? "true" : "false"));
+
     return self->protein;
 }
 
@@ -2319,7 +2350,8 @@ uint64_t CC VdbBlastRunSetGetMinSeqLen(const VdbBlastRunSet *self)
     return self->minSeqLen;
 }
 
-LIB_EXPORT uint64_t CC VdbBlastRunSetGetMaxSeqLen(const VdbBlastRunSet *self)
+LIB_EXPORT
+uint64_t CC VdbBlastRunSetGetMaxSeqLen(const VdbBlastRunSet *self)
 {
     if (self->maxSeqLen == ~0) {
         uint32_t status = eVdbBlastNoErr;
@@ -2719,6 +2751,7 @@ uint64_t _VdbBlastRunSet2naRead(const VdbBlastRunSet *self,
     uint64_t n = 0; 
     rc_t rc = 0;
     assert(self && status);
+
     rc = KLockAcquire(self->core2na.mutex);
     if (rc != 0) {
         LOGERR(klogInt, rc, "Error in KLockAcquire");
@@ -2736,10 +2769,11 @@ uint64_t _VdbBlastRunSet2naRead(const VdbBlastRunSet *self,
             LOGERR(klogInt, rc, "Error in KLockUnlock");
         }
     }
-    if (rc) {
+    if (rc != 0) {
         *status = eVdbBlastErr;
     }
-    if (*status == eVdbBlastNoErr) {
+
+    if (*status == eVdbBlastNoErr || *status == eVdbBlastCircularSequence) {
         if (read_id != NULL && starting_base != NULL) {
             STSMSG(3, (
                 "VdbBlast2naReaderRead(read_id=%ld, starting_base=%ld) = %ld",

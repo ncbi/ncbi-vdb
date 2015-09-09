@@ -720,6 +720,48 @@ _TarFile_read_v1 (
     return RCt;
 }   /* _TarFile_read_v1 () */
 
+static
+rc_t CC
+_TarFile_size_v1 (
+                        const struct XFSFileEditor * self,
+                        uint64_t * Size
+)
+{
+    rc_t RCt;
+    struct XFSTarNode * Node;
+
+    RCt = 0;
+    Node = NULL;
+
+    XFS_CSA ( Size, 0 )
+    XFS_CAN ( self )
+    XFS_CAN ( Size )
+
+    Node = ( struct XFSTarNode * ) XFSEditorNode (
+                                                & ( self -> Papahen )
+                                                );
+
+    if ( Node == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    if ( Node -> entry == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    if ( XFSTarEntryIsFolder ( Node -> entry ) ) {
+        * Size = 0;
+    }
+    else {
+        RCt = XFSTarEntrySize ( Node -> entry, Size );
+        if ( RCt != 0 ) {
+            * Size = 0;
+        }
+    }
+
+    return RCt;
+}   /* _TarFile_size_v1 () */
+
 rc_t CC
 _TarNodeFile_v1 (
             const struct XFSNode * self,
@@ -761,6 +803,7 @@ _TarNodeFile_v1 (
         Editor -> open = _TarFile_open_v1;
         Editor -> close = _TarFile_close_v1;
         Editor -> read = _TarFile_read_v1;
+        Editor -> size = _TarFile_size_v1;
 
         * File = Editor;
     }
@@ -857,40 +900,6 @@ _TarAttr_permissions_v1 (
 
 static
 rc_t CC
-_TarAttr_size_v1 (
-                        const struct XFSAttrEditor * self,
-                        uint64_t * Size
-)
-{
-    rc_t RCt;
-    const struct XFSTarEntry * Entry;
-
-    RCt = 0;
-    Entry = NULL;
-
-    if ( Size == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * Size = 0;
-
-    RCt = _TarAttr_init_check_v1 ( self, & Entry );
-    if ( RCt == 0 ) {
-        if ( XFSTarEntryIsFolder ( Entry ) ) {
-            * Size = 0;
-        }
-        else {
-            RCt = XFSTarEntrySize ( Entry, Size );
-            if ( RCt != 0 ) {
-                * Size = 0;
-            }
-        }
-    }
-
-    return RCt;
-}   /* _TarAttr_size_v1 () */
-
-static
-rc_t CC
 _TarAttr_date_v1 (
                         const struct XFSAttrEditor * self,
                         KTime_t * Time
@@ -975,7 +984,6 @@ _TarNodeAttr_v1 (
                     );
     if ( RCt == 0 ) {
         Editor -> permissions = _TarAttr_permissions_v1;
-        Editor -> size = _TarAttr_size_v1;
         Editor -> date = _TarAttr_date_v1;
         Editor -> type = _TarAttr_type_v1;
 
@@ -1189,10 +1197,10 @@ XFSTarArchiveProvider ( const struct XFSTeleport ** Teleport )
 LIB_EXPORT
 rc_t CC
 XFSTarArchiveNodeMake (
+                struct XFSNode ** Node,
                 const char * Name,
                 const char * Path,
-                const char * Perm,
-                struct XFSNode ** Node
+                const char * Perm
 )
 {
     rc_t RCt;

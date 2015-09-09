@@ -33,9 +33,14 @@
 #include <xfs/extern.h>
 #endif /* _h_xfs_extern_ */
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
+#define XFS_SIZE_8192       8192
 #define XFS_SIZE_4096       4096
 #define XFS_SIZE_2048       2048
 #define XFS_SIZE_1024       1024

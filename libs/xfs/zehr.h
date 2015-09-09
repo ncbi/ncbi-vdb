@@ -91,6 +91,30 @@ XFS_EXTERN int CC XFS_StringCompare4BST_ZHR (
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
+    /*))
+     ||     Will return name with/without extension
+     ||     It will return new string, so don't forget to delete it
+    ((*/
+XFS_EXTERN rc_t CC XFS_NameFromPath_ZHR (
+                                        const char * Paht,
+                                        const char ** Name,
+                                        bool TrimExtension
+                                        );
+
+    /*))
+     ||     Will return null if Extension does not exists
+     ||     It will return new strings, so don't forget to delete them
+    ((*/
+XFS_EXTERN rc_t CC XFS_NameExtFromPath_ZHR (
+                                        const char * Paht,
+                                        const char ** Name,
+                                        const char ** Extension
+                                        );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
 struct VPath;
 
 /*))

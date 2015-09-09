@@ -525,6 +525,7 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
 	uint32_t min_row_count=UINT32_MAX; /* will increase row_count due to larger common repeat count of parameters */
     int64_t  row_id_max=0;
     uint32_t MAX_BLOB_REGROUP; /** max rows in blob for regrouping ***/
+    bool function_failed = false;
     
     if (argc == 0) {
         memset(&scratch, 0, sizeof(scratch));
@@ -661,29 +662,32 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
     
     for (row_id = self->start_id; row_id <= self->stop_id && rc == 0; ) {
         uint32_t row_count = 1;
-	if(self->dad.sub == vftRow || self->dad.sub ==vftRowFast ){
-		row_count = PageMapIteratorRepeatCount(&iter[0]);
-		
-		for (i = 1; i != argc; ++i) {
-		    uint32_t j = PageMapIteratorRepeatCount(&iter[i]);
-		    if (row_count > j)
-			row_count = j;
-		}
-		if (row_id + row_count > self->stop_id + 1)
-		    row_count = (uint32_t)( self->stop_id + 1 - row_id );
-	}
-			
-	for (i = 0; i != argc; ++i) {
-	    argv[i].u.data.elem_count = PageMapIteratorDataLength(&iter[i]);
-	    argv[i].u.data.first_elem = PageMapIteratorDataOffset(&iter[i]);
-	}
+        if(self->dad.sub == vftRow || self->dad.sub ==vftRowFast ){
+            row_count = PageMapIteratorRepeatCount(&iter[0]);
+            
+            for (i = 1; i != argc; ++i) {
+                uint32_t j = PageMapIteratorRepeatCount(&iter[i]);
+                if (row_count > j)
+                row_count = j;
+            }
+            if (row_id + row_count > self->stop_id + 1)
+            row_count = (uint32_t)( self->stop_id + 1 - row_id );
+        }
+        
+        for (i = 0; i != argc; ++i) {
+            argv[i].u.data.elem_count = PageMapIteratorDataLength(&iter[i]);
+            argv[i].u.data.first_elem = PageMapIteratorDataOffset(&iter[i]);
+        }
         
         rslt.elem_count = 0;
         rc = self->u.rf(self->fself, info, row_id, &rslt, argc, argv);
-        if (rc) break;
+        if (rc) {
+            function_failed = true;
+            break;
+        }
         
         assert(rslt.elem_count >> 32 == 0);
-
+        
         if (row_id == self->start_id) {
 #if PAGEMAP_PRE_EXPANDING_SINGLE_ROW_FIX
             if (blob->start_id + row_count > blob->stop_id) {
@@ -696,16 +700,16 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
                 }
             }
             else
-                goto ADD_ROW_TO_BLOB;
+            goto ADD_ROW_TO_BLOB;
 #else
             goto ADD_ROW_TO_BLOB;
 #endif
         }
         else if (last_len != rslt.elem_count ||
-            bitcmp(blob->data.base, last * rslt.elem_bits,
-                   rslt.data->base, 0, rslt.elem_count * rslt.elem_bits) != 0)
+                 bitcmp(blob->data.base, last * rslt.elem_bits,
+                        rslt.data->base, 0, rslt.elem_count * rslt.elem_bits) != 0)
         {
-ADD_ROW_TO_BLOB:
+        ADD_ROW_TO_BLOB:
             last = blob->data.elem_count;
             rc = KDataBufferResize(&blob->data, blob->data.elem_count + rslt.elem_count);
             if (rc == 0) {
@@ -725,7 +729,7 @@ ADD_ROW_TO_BLOB:
         if (rc) break;
         
         last_len = (uint32_t)rslt.elem_count;
-
+        
         for (i = 0; i != argc; ++i)
             PageMapIteratorAdvance(&iter[i], row_count);
         row_id += row_count;
@@ -734,7 +738,7 @@ ADD_ROW_TO_BLOB:
     if (args_oh) free(args_oh);
     if (iter_oh) free(iter_oh);
 
-    if (rc == 0) {
+    if (rc == 0 || (function_failed && row_id > self->start_id)) {
         *prslt = blob;
         return 0;
     }
@@ -1753,7 +1757,7 @@ static rc_t VFunctionProdReadNormal ( VFunctionProd *self, VBlob **vblob, int64_
         default:
             rc = RC ( rcVDB, rcFunction, rcReading, rcProduction, rcCorrupt );
         }
-        if (rc == 0){
+        if (rc == 0) {
             if (vb == NULL) {
                 rc = RC ( rcVDB, rcFunction, rcReading, rcProduction, rcNull );
             }
@@ -1784,6 +1788,12 @@ static rc_t VFunctionProdReadNormal ( VFunctionProd *self, VBlob **vblob, int64_
                 cnt_run = id + cnt - id_run;
 
             }
+        }
+        else if (id < id_run) {
+            /* if there is reblobbing and our result blob already contains some
+             * data, then return that data and not error out */
+            rc = 0;
+            break;
         }
     }
     /* drop input blobs */

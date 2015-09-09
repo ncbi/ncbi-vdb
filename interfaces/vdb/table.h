@@ -409,6 +409,11 @@ VDB_EXTERN rc_t CC VTableSetUserData ( const VTable *self,
     void *data, void ( CC * destroy ) ( void *data ) );
 
 
+/* IsEmpty
+ *  check if the table is empty
+ */
+VDB_EXTERN rc_t CC VTableIsEmpty( const VTable *self, bool * empty );
+
 #ifdef __cplusplus
 }
 #endif

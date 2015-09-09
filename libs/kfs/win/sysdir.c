@@ -440,9 +440,8 @@ rc_t translate_file_error( DWORD error, enum RCContext ctx )
 
 /* helper */
 
-static rc_t print_error_for( const wchar_t * path, const char * function, enum RCContext ctx, KLogLevel level )
+static rc_t print_error_for( DWORD error, const wchar_t * path, const char * function, enum RCContext ctx, KLogLevel level )
 {
-    DWORD error = GetLastError();
     rc_t rc = translate_file_error( error, ctx );
 #if _DEBUGGING
     char buffer[ 4096 ];
@@ -569,7 +568,7 @@ uint32_t KSysDirFullFSPathType ( const wchar_t * path )
             return KSysDirResolvePathAndDetectPathType ( path );
         default:
             DBGMSG ( DBG_KFS, DBG_FLAG_ANY, ( "FindFirstFileW: WARNING - unrecognized return code - %u.\n", status ) );
-            print_error_for( path, "FindFirstFileW", rcResolving, klogErr );
+            print_error_for( status, path, "FindFirstFileW", rcResolving, klogErr );
             return kptBadPath;
         }
     }
@@ -1144,7 +1143,7 @@ rc_t Enumerate_DriveLetters( const KSysDir *self,
 				char drive[ 5 ];
 				drive[ 0 ] = 'A' + i;
 				drive[ 1 ] = 0;
-				rc = f( self, kptDir, ( const char * )drive, data );
+				rc = f( ( KDirectory * ) self, kptDir, ( const char * )drive, data );
 			}
 		}
 	}
@@ -1759,9 +1758,9 @@ rc_t KSysDirRemoveEntry ( wchar_t *path, size_t path_max, bool force )
 {
     if ( !DeleteFileW( path ) )
     {
-        DWORD error = GetLastError();
+        DWORD file_error = GetLastError();
 
-        switch ( error )
+        switch ( file_error )
         {
         case ERROR_PATH_NOT_FOUND :
             return 0;
@@ -1775,7 +1774,7 @@ rc_t KSysDirRemoveEntry ( wchar_t *path, size_t path_max, bool force )
 
         default :
 #if _DEBUGGING && 0
-    OUTMSG (( "DeleteFileW returned '%#X'\n", error ));
+    OUTMSG (( "DeleteFileW returned '%#X'\n", file_error ));
 #endif
             break;
         }
@@ -1785,7 +1784,7 @@ rc_t KSysDirRemoveEntry ( wchar_t *path, size_t path_max, bool force )
         if ( !RemoveDirectoryW( path ) )
         {
             rc_t rc;
-            error = GetLastError();
+            DWORD error = GetLastError();
 
             /* find out if the reason is that it is not empty and force = true --->
                in this case delete all files and directories in it 
@@ -1801,7 +1800,7 @@ rc_t KSysDirRemoveEntry ( wchar_t *path, size_t path_max, bool force )
                         if ( !RemoveDirectoryW( path ) )
                         {
                             rc = RC ( rcFS, rcDirectory, rcRemoving, rcDirectory, rcUnauthorized );
-                            print_error_for( path, "RemoveDirectoryW", rcRemoving, klogErr );
+                            print_error_for( error, path, "RemoveDirectoryW", rcRemoving, klogErr );
                         }
                     }
                     return rc;
@@ -1814,12 +1813,18 @@ rc_t KSysDirRemoveEntry ( wchar_t *path, size_t path_max, bool force )
                 rc = RC ( rcFS, rcDirectory, rcRemoving, rcDirectory, rcUnauthorized );
                 break;
 
+            case ERROR_DIRECTORY: /* not a directory */
+                /* looks like it was a file after all; report the original error */
+                error = file_error;
+                print_error_for( file_error, path, "DeleteFileW", rcRemoving, klogInfo);
+                return RC ( rcFS, rcDirectory, rcRemoving, rcDirectory, rcUnauthorized );
+
             default :
                 rc = RC ( rcFS, rcDirectory, rcCreating, rcNoObj, rcUnknown );
                 break;
             }
 
-            print_error_for( path, "RemoveDirectoryW", rcRemoving, klogInfo);
+            print_error_for( error, path, "RemoveDirectoryW", rcRemoving, klogInfo);
             return rc;
         }
     }
@@ -1905,7 +1910,7 @@ rc_t get_attributes ( const wchar_t * wpath, uint32_t * access, KTime_t * date )
     if ( date != NULL )
         *date = 0;
 
-    rc = print_error_for( wpath, "FindFirstFile", rcAccessing, klogErr );
+    rc = print_error_for( GetLastError(), wpath, "FindFirstFile", rcAccessing, klogErr );
     return rc;
 }
 
@@ -2120,7 +2125,7 @@ rc_t make_dir ( const wchar_t *path, uint32_t access )
         rc = translate_file_error( error, rcCreating );
 /*
         Do not print an error code here, it is valid that this can happen!
-        rc = print_error_for( path, "CreateDirectoryW", rcCreating, klogErr );
+        rc = print_error_for( error, path, "CreateDirectoryW", rcCreating, klogErr );
 */
     }
     return rc;
@@ -2329,7 +2334,7 @@ rc_t CC KSysDirOpenFileRead ( const KSysDir *self,
                                 OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL );
         if ( file_handle == INVALID_HANDLE_VALUE )
         {
-            rc = print_error_for( file_name, "CreateFileW", rcOpening, klogInfo );
+            rc = print_error_for( GetLastError(), file_name, "CreateFileW", rcOpening, klogInfo );
         }
         else
         {
@@ -2368,7 +2373,7 @@ rc_t CC KSysDirOpenFileWrite ( KSysDir *self,
 
         if ( file_handle == INVALID_HANDLE_VALUE )
         {
-            rc = print_error_for( file_name, "CreateFileW", rcAccessing, klogErr );
+            rc = print_error_for( GetLastError(), file_name, "CreateFileW", rcAccessing, klogErr );
 
         }
         else
@@ -2508,7 +2513,7 @@ rc_t CC KSysDirFileSize ( const KSysDir *self,
         }
         else
         {
-            rc = print_error_for( file_name, "GetFileAttributesEx", rcAccessing, klogErr );
+            rc = print_error_for( GetLastError(), file_name, "GetFileAttributesEx", rcAccessing, klogErr );
         }
     }
     return rc;
@@ -2551,7 +2556,7 @@ rc_t CC KSysDirSetFileSize ( KSysDir *self,
         }
         else
         {
-            rc = print_error_for( file_name, "CreateFileW", rcUpdating, klogErr );
+            rc = print_error_for( GetLastError(), file_name, "CreateFileW", rcUpdating, klogErr );
         }
     }
     return rc;
@@ -2746,7 +2751,7 @@ rc_t change_item_date( wchar_t *path, LPFILETIME win_time, bool dir_flag )
                                    OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
     if ( file_handle == INVALID_HANDLE_VALUE )
     {
-        rc = print_error_for( path, "CreateFileW", rcUpdating, klogErr );
+        rc = print_error_for( GetLastError(), path, "CreateFileW", rcUpdating, klogErr );
     }
     else
     {
@@ -2756,7 +2761,7 @@ rc_t change_item_date( wchar_t *path, LPFILETIME win_time, bool dir_flag )
         }
         else
         {
-            rc = print_error_for( path, "SetFileTime", rcUpdating, klogErr );
+            rc = print_error_for( GetLastError(), path, "SetFileTime", rcUpdating, klogErr );
         }
         CloseHandle ( file_handle );
     }

@@ -35,6 +35,7 @@
 #include <vector>
 #include <cassert>
 #include <iostream>
+#include <stdexcept>
 
 // it's generally a bad idea to make the test suite rely upon code under test
 #define ALLOW_TESTING_CODE_TO_RELY_UPON_CODE_BEING_TESTED 0
@@ -68,6 +69,12 @@
         if (!threw) FAIL("expected exception not thrown"); \
     } while (0)
 
+#define THROW_ON_RC(call) \
+    do { \
+        if ( ( rc_t ) ( call ) != ( rc_t ) 0 ) \
+            throw std::logic_error ( string ( __func__ ) + #call + " failed" ); \
+    } while (0)
+   
 ////////////////////////////////////////////////////////////////////////////////
 
 #if ALLOW_TESTING_CODE_TO_RELY_UPON_CODE_BEING_TESTED
@@ -114,6 +121,7 @@ public:
 
     static std::string lastLocation;
     static LogLevel::E verbosity;
+    static bool verbositySet;
     bool catch_system_errors;
 
     static int RunProcessTestCase(TestCase&, void(TestCase::*)(), int);
@@ -140,6 +148,9 @@ public:
     static std::string GetPidString();
     
     static std::string FormatLocation(const std::string& p_file, uint64_t p_line);
+
+    static void SetVerbosity(LogLevel::E v)
+    {   verbosity = v; verbositySet = true; }
 
 private:
     static void TermHandler();

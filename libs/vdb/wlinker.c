@@ -41,6 +41,7 @@ extern VTRANSFACT_DECL ( meta_write );
 extern VTRANSFACT_DECL ( meta_attr_write );
 
 /* newly imported things */
+extern VTRANSFACT_DECL ( NCBI_csra2_stats_trigger );
 extern VTRANSFACT_DECL ( NCBI_SRA_cmp_stats_trigger );
 extern VTRANSFACT_DECL ( NCBI_SRA_cmpf_stats_trigger );
 extern VTRANSFACT_DECL ( NCBI_SRA_extract_name_fmt );
@@ -69,6 +70,7 @@ rc_t VLinkerInitFactories ( VLinker *self, struct KSymTable *tbl, struct SchemaE
         { meta_write, "meta:write" },
         { meta_attr_write, "meta:attr:write" },
 
+        { NCBI_csra2_stats_trigger, "NCBI:csra2:stats_trigger" },
         { NCBI_SRA_cmp_stats_trigger, "NCBI:SRA:cmp_stats_trigger" },
         { NCBI_SRA_cmpf_stats_trigger, "NCBI:SRA:cmpf_stats_trigger" },
         { NCBI_SRA_extract_name_fmt, "NCBI:SRA:extract_name_fmt" },

@@ -49,11 +49,12 @@ rc_t KAppGetTotalRam ( uint64_t * totalRamKb )
     ret = sysctlbyname("hw.memsize", totalRamKb, &len, NULL, 0 );
     if ( ret < 0 )
     {
+		int status = errno;
         rc = RC ( rcApp, rcNoTarg, rcInitializing, rcMemory, rcFailed );
         PLOGERR ( klogFatal, ( klogFatal, rc,
-                    "failed to retrieve number of RAM pages: $(msg)"
-                    , "msg='%s'"
-                    , strerror ( errno )
+                    "failed to retrieve number of RAM pages. error code: $(status) - $(msg)"
+                    , "status=%d,msg=%!"
+                    , status, status
                         ));
         return rc;
     }

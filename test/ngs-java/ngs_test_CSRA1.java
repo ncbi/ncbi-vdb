@@ -17,9 +17,11 @@ import gov.nih.nlm.ncbi.ngs.NGS;
 public class ngs_test_CSRA1 {
 
 // ReadCollection
-    String PrimaryOnly      = "SRR1063272";
-    String WithSecondary    = "SRR833251";
-    String WithGroups       = "SRR822962";
+    String PrimaryOnly           = "SRR1063272";
+    String WithSecondary         = "SRR833251";
+    String WithGroups            = "SRR822962";
+    String WithCircularRef       = "SRR1769246";
+    String SingleFragmentPerSpot = "SRR2096940";
     
     @Test
     public void open_success() throws ngs.ErrorMsg
@@ -192,6 +194,14 @@ public class ngs_test_CSRA1 {
     public void Read_getNumFragments() throws ngs.ErrorMsg
     {
         assertEquals( 2, getRead( PrimaryOnly + ".R.1" ) . getNumFragments() );
+    }
+    
+    @Test
+    public void Read_fragmentIsAligned_partial() throws ngs.ErrorMsg
+    {
+        ngs . Read read = NGS . openReadCollection ( PrimaryOnly ) . getRead ( PrimaryOnly + ".R.3" );
+        assertEquals( true, read.fragmentIsAligned( 0 ) );
+        assertEquals( false, read.fragmentIsAligned( 1 ) );
     }
 
 // FragmentIterator
@@ -495,6 +505,77 @@ public class ngs_test_CSRA1 {
         assertFalse( getAlignment ( PrimaryOnly + ".PA.2" ) . getMateIsReversedOrientation () );
     }
     
+    @Test
+    public void Alignment_isPaired_MultiFragmentsPerSpot() throws ngs.ErrorMsg
+    {
+        ngs . ReadCollection readCollection = NGS . openReadCollection ( PrimaryOnly );
+        ngs . Alignment alignment = readCollection . getAlignment ( PrimaryOnly + ".PA.1" );
+        assertTrue( alignment.isPaired() );
+        
+        alignment = readCollection . getAlignment ( PrimaryOnly + ".PA.2" );
+        assertTrue( alignment.isPaired() );
+        
+        // has unaligned mate
+        alignment = readCollection . getAlignment ( PrimaryOnly + ".PA.6" );
+        assertTrue( alignment.isPaired() );
+    }
+    
+    @Test
+    public void Alignment_isPaired_SingleFragmentPerSpot() throws ngs.ErrorMsg
+    {
+        ngs . ReadCollection readCollection = NGS . openReadCollection ( SingleFragmentPerSpot );
+        ngs . Alignment alignment = readCollection . getAlignment ( SingleFragmentPerSpot + ".PA.1" );
+        assertFalse( alignment.isPaired() );
+    }
+
+
+// ReferenceSequence
+    public ngs . ReferenceSequence getReferenceSequence() throws ngs.ErrorMsg
+    {
+        return NGS . openReferenceSequence ( "NC_011752.1" );
+    }
+
+    @Test
+    public void ReferenceSequence_getCommonName () throws ngs.ErrorMsg
+    {
+        assertEquals ( "gi|218511148|ref|NC_011752.1|", getReferenceSequence () . getCanonicalName () );
+    }
+    
+    @Test
+    public void ReferenceSequence_getIsCircular_Yes() throws ngs.ErrorMsg
+    {
+        assertTrue( getReferenceSequence () . getIsCircular () );
+    }
+    
+    @Test
+    public void ReferenceSequence_getLength() throws ngs.ErrorMsg
+    {
+        assertEquals ( 72482, getReferenceSequence () . getLength() );
+    }
+    
+    @Test
+    public void ReferenceSequence_getReferenceBases() throws ngs.ErrorMsg
+    {
+        assertEquals ( "ATAAA", getReferenceSequence () . getReferenceBases ( 72482 - 5 ) );
+    }
+    @Test
+    public void ReferenceSequence_getReferenceBases_Length() throws ngs.ErrorMsg
+    {
+        assertEquals ( "TACA", getReferenceSequence () . getReferenceBases ( 4998, 4 ) );
+    }
+    
+    @Test
+    public void ReferenceSequence_getReferenceChunk() throws ngs.ErrorMsg
+    {
+        assertEquals ( "TAATA", getReferenceSequence () . getReferenceChunk ( 5000 - 5, 5 ) );
+    }
+    @Test
+    public void ReferenceSequence_getReferenceChunk_Length () throws ngs.ErrorMsg
+    {
+        assertEquals ( "TAATA", getReferenceSequence () . getReferenceChunk ( 5000 - 5, 10 ) );
+    }
+
+
 // Reference
     public ngs . Reference getReference() throws ngs.ErrorMsg
     {
@@ -629,7 +710,7 @@ public class ngs_test_CSRA1 {
     }
    
     @Test
-    public void ReferenceWindow_Slice_Filtered () throws ngs.ErrorMsg
+    public void ReferenceWindow_Slice_Filtered_Category () throws ngs.ErrorMsg
     {
         ngs.AlignmentIterator it = NGS . openReadCollection ( WithSecondary ) 
                                         . getReference ( "gi|169794206|ref|NC_010410.1|" )
@@ -643,7 +724,37 @@ public class ngs_test_CSRA1 {
         assertFalse ( it . nextAlignment () );  
     }
     
-    // ReadGroup 
+    @Test
+    public void ReferenceWindow_Slice_Filtered_Start_Within_Slice () throws ngs.ErrorMsg
+    {
+        ngs.Reference ref = NGS . openReadCollection ( WithCircularRef )
+                                 . getReference ( "NC_012920.1" );
+        ngs.AlignmentIterator it = ref . getFilteredAlignmentSlice ( 0, ref.getLength(), Alignment . all, Alignment . startWithinSlice, 0 );
+    
+        assertTrue ( it . nextAlignment () );
+        long numberOfFilteredAlignments = 1;
+        long lastAlignmentPosition = it.getAlignmentPosition();
+        while ( it . nextAlignment () ) {
+            long currentPosition = it.getAlignmentPosition();
+            
+            String errorMsg = "Sorting violated. Last position (" + lastAlignmentPosition + ") is higher than current one (" + currentPosition + ")";
+            assertTrue ( errorMsg, lastAlignmentPosition <= currentPosition );
+            
+            lastAlignmentPosition = currentPosition;
+            numberOfFilteredAlignments++;
+        }
+        
+        it = ref . getFilteredAlignmentSlice ( 0, ref.getLength(), Alignment . all, 0, 0 );
+        long numberOfUnfilteredAlignments = 0;
+        while ( it . nextAlignment () ) {
+            numberOfUnfilteredAlignments++;
+        }
+        
+        assertEquals ( numberOfUnfilteredAlignments, 12317 );
+        assertEquals ( numberOfFilteredAlignments, 12316 );
+    }
+    
+    // ReadGroup
     @Test
     public void ReadGroup_getName () throws ngs.ErrorMsg
     {

@@ -64,7 +64,10 @@ KRYPTO_EXTERN rc_t CC KReencFileMakeRead (const struct KFile ** pself,
                                           const struct KFile * encrypted,
                                           const struct KKey * deckey,
                                           const struct KKey * enckey);
-
+/* ----------
+ * The same operation as above, but as input it accepts a plain text,
+ * not encrypted file and encrypts it with enckey
+ */
 KRYPTO_EXTERN rc_t CC KEncryptFileMakeRead (const struct KFile ** pself, 
                                             const struct KFile * encrypted,
                                             const struct KKey * enckey);

@@ -88,12 +88,14 @@ NGS_SRC =                 \
 	CSRA1_ReferenceWindow \
 	CSRA1_Reference       \
 	CSRA1_ReadCollection  \
+	CSRA1_Read            \
 	SRA_Statistics        \
 	SRA_DB_ReadCollection \
 	SRA_Read              \
 	SRA_ReadGroup         \
 	SRA_ReadGroupInfo     \
 	SRA_ReadCollection    \
+	SRA_ReferenceSequence \
 	NGS_Statistics        \
 	NGS_ReadCollection    \
 	NGS_PileupEvent       \
@@ -101,6 +103,7 @@ NGS_SRC =                 \
 	NGS_ReadGroup         \
 	NGS_Alignment         \
 	NGS_Reference         \
+	NGS_ReferenceSequence \
 	NGS_Read              \
 	NGS_Fragment          \
 	NGS_Cursor            \

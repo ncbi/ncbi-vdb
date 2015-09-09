@@ -37,6 +37,11 @@ extern "C" {
 struct Core2na;
 struct RunSet;
 
+typedef struct Data2na {
+    uint32_t irun;
+    const struct VBlob *blob;
+} Data2na;
+
 uint64_t _Core2naRead(struct Core2na *self,
     const struct RunSet *runs, uint32_t *status, uint64_t *read_id,
     size_t *starting_base, uint8_t *buffer, size_t buffer_size);

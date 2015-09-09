@@ -26,8 +26,13 @@
 #include <vdb/database.h> 
 #include <vdb/table.h> 
 #include <vdb/cursor.h> 
-#include <sra/sraschema.h> // VDBManagerMakeSRASchema
 #include <vdb/schema.h> /* VSchemaRelease */
+#include <vdb/vdb-priv.h>
+
+#include <sra/sraschema.h> // VDBManagerMakeSRASchema
+
+#include <kdb/meta.h>
+#include <kdb/table.h>
 
 #include <ktst/unit_test.hpp> // TEST_CASE
 
@@ -40,9 +45,42 @@ using namespace std;
 
 TEST_SUITE( WVdbTestSuite )
 
-// this test case is not very useful but is here as a blueprint for other write-side tests 
-TEST_CASE(BlobCorruptOnCommit) 
+const string ScratchDir = "./db/";
+
+class WVDB_Fixture
 {
+public:
+    WVDB_Fixture()
+    {
+        THROW_ON_RC ( KDirectoryNativeDir ( & m_wd ) );
+        THROW_ON_RC ( VDBManagerMakeUpdate ( & m_mgr, m_wd ) );
+    }
+    ~WVDB_Fixture()
+    {
+        VDBManagerRelease ( m_mgr );
+        RemoveDatabase();
+        KDirectoryRelease ( m_wd );
+    }
+    void RemoveDatabase()
+    {   
+        if ( ! m_databaseName . empty () )
+        {
+            KDirectoryRemove ( m_wd, true, m_databaseName . c_str () );
+        }
+    }
+    
+    KDirectory* m_wd;
+    VDBManager* m_mgr;
+    string m_databaseName;
+};
+
+
+// this test case is not very useful but is here as a blueprint for other write-side tests 
+FIXTURE_TEST_CASE ( BlobCorruptOnCommit, WVDB_Fixture) 
+{
+    m_databaseName = ScratchDir + GetName();
+    RemoveDatabase();
+
     const string schemaText = 
 "function < type T > T echo #1.0 < T val > ( * any row_len ) = vdb:echo;\n"
 "table spotdesc #1\n"
@@ -67,14 +105,6 @@ TEST_CASE(BlobCorruptOnCommit)
 "};\n"
 ;
     const char * schemaSpec = "db";
-    const char * databaseName = GetName();
-
-    {   // remove old database 
-        KDirectory* wd;
-        KDirectoryNativeDir ( & wd );
-        KDirectoryRemove ( wd, true, databaseName );
-        KDirectoryRelease ( wd );
-    }
 
     // MakeDatabase
     VDatabase* db;
@@ -91,7 +121,7 @@ TEST_CASE(BlobCorruptOnCommit)
                                           schemaSpec, 
                                           kcmInit + kcmMD5, 
                                           "%s", 
-                                          databaseName ) );
+                                          m_databaseName . c_str () ) );
         REQUIRE_RC ( VSchemaRelease ( schema ) );
         REQUIRE_RC ( VDBManagerRelease ( mgr ) );
     }
@@ -129,15 +159,86 @@ TEST_CASE(BlobCorruptOnCommit)
     REQUIRE_RC ( VCursorRelease ( cursor ) );
     
     REQUIRE_RC ( VDatabaseRelease ( db ) );
-    
-    {
-        KDirectory* wd;
-        KDirectoryNativeDir ( & wd );
-        REQUIRE_RC ( KDirectoryRemove ( wd, true, databaseName ) ); 
-        KDirectoryRelease ( wd );
-    }
-    
 }
+
+FIXTURE_TEST_CASE ( ColumnOpenMetadata, WVDB_Fixture )
+{   // setting column metadata in a freshly created VDatabase
+    m_databaseName = ScratchDir + GetName();
+    RemoveDatabase();
+    
+    string schemaText = "table table1 #1.0.0 { column ascii column1; };"
+                        "database root_database #1 { table table1 #1 TABLE1; } ;";
+
+    const char* TableName = "TABLE1";
+    const char* ColumnName = "column1";
+    
+    VDatabase* db;
+    {
+        VSchema* schema;
+        REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & schema ) );
+        REQUIRE_RC ( VSchemaParseText ( schema, NULL, schemaText . c_str (), schemaText . size () ) );
+    
+        REQUIRE_RC ( VDBManagerCreateDB ( m_mgr, 
+                                          & db, 
+                                          schema, 
+                                          "root_database", 
+                                          kcmInit + kcmMD5, 
+                                          "%s", 
+                                          m_databaseName . c_str () ) );
+        
+        VTable* table;
+        REQUIRE_RC ( VDatabaseCreateTable ( db , & table, TableName, kcmInit + kcmMD5, TableName ) );   
+
+        VCursor* cursor;
+        REQUIRE_RC ( VTableCreateCursorWrite ( table, & cursor, kcmInsert ) );
+        uint32_t column_idx;
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+        
+        // need to insert 2 rows with different values to make the column physical
+        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx, 8, "blah", 0, 4 ) );
+        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
+        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+        
+        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx, 8, "eeee", 0, 4 ) );
+        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
+        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+        
+        REQUIRE_RC ( VCursorCommit ( cursor ) );
+                                            
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+        REQUIRE_RC ( VTableRelease ( table ) );
+        REQUIRE_RC ( VSchemaRelease ( schema ) );
+    }
+    // update the column's metadata without re-opening the database
+    { 
+        VTable* table;
+        REQUIRE_RC ( VDatabaseOpenTableUpdate ( db , & table, TableName ) );   
+        KTable* ktbl;
+        REQUIRE_RC ( VTableOpenKTableUpdate ( table, & ktbl ) );
+        KColumn* col;
+        REQUIRE_RC ( KTableOpenColumnUpdate ( ktbl, & col, ColumnName ) );
+        
+        // finally, open the metadata
+        KMetadata *meta;
+        REQUIRE_RC ( KColumnOpenMetadataUpdate ( col, &meta ) );
+        
+        KMDataNode* node;
+        REQUIRE_RC ( KMetadataOpenNodeUpdate ( meta, & node, "key" ) );
+        const char* MetadataValue = "metavalue";
+        REQUIRE_RC ( KMDataNodeWrite ( node, MetadataValue, string_size ( MetadataValue ) ) );
+        REQUIRE_RC ( KMDataNodeRelease ( node ) );
+        
+        REQUIRE_RC ( KMetadataRelease ( meta ) );
+        REQUIRE_RC ( KColumnRelease ( col ) );
+        REQUIRE_RC ( KTableRelease ( ktbl ) );
+        REQUIRE_RC ( VTableRelease ( table ) );
+        REQUIRE_RC ( VDatabaseRelease ( db ) );
+    }
+}
+
 
 //////////////////////////////////////////// Main
 extern "C"

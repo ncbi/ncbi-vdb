@@ -39,6 +39,7 @@ typedef struct CSRA1_ReadCollection CSRA1_ReadCollection;
 #include "NGS_String.h"
 #include "NGS_Id.h"
 
+#include "CSRA1_Read.h"
 #include "SRA_Read.h"
 #include "SRA_ReadGroup.h"
 #include "SRA_ReadGroupInfo.h"
@@ -432,7 +433,7 @@ struct NGS_Read * CSRA1_ReadCollectionGetReads ( CSRA1_ReadCollection * self, ct
 
     TRY ( const NGS_Cursor * curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ) )
     {
-        TRY ( NGS_Read * ref = SRA_ReadIteratorMake ( ctx, curs, self -> run_name, wants_full, wants_partial, wants_unaligned ) )
+        TRY ( NGS_Read * ref = CSRA1_ReadIteratorMake ( ctx, curs, self -> run_name, wants_full, wants_partial, wants_unaligned ) )
         {
             NGS_CursorRelease ( curs, ctx );
             return ref;
@@ -474,7 +475,7 @@ struct NGS_Read * CSRA1_ReadCollectionGetRead ( CSRA1_ReadCollection * self, ctx
                     ON_FAIL ( self -> sequence_curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ) )
                         return NULL;
                 }
-                return SRA_ReadMake ( ctx, self -> sequence_curs, id . rowId, self -> run_name );
+                return CSRA1_ReadMake ( ctx, self -> sequence_curs, id . rowId, self -> run_name );
             }
         }
         NGS_StringRelease ( id_str, ctx );
@@ -499,8 +500,59 @@ uint64_t CSRA1_ReadCollectionGetReadCount ( CSRA1_ReadCollection * self, ctx_t c
     if ( wants_full && wants_partial && wants_unaligned )    
         return NGS_CursorGetRowCount ( self -> sequence_curs, ctx );
 
-    /* have a problem here */
-    UNIMPLEMENTED ();
+    { /* scan the SEQUENCE table */
+        int64_t first;
+        uint64_t count;
+        TRY ( NGS_CursorGetRowRange ( self -> sequence_curs, ctx, & first, & count ) )
+        {
+            uint64_t ret = 0;
+            uint64_t count_full = 0;
+            uint64_t count_partial = 0;
+            uint64_t count_unaligned = 0;
+            uint64_t i;
+            for ( i = 0; i < count; ++i )
+            {
+                const void * base;
+                uint32_t elem_bits, boff, row_len;
+                ON_FAIL ( NGS_CursorCellDataDirect ( self -> sequence_curs, ctx, first + i, seq_PRIMARY_ALIGNMENT_ID, & elem_bits, & base, & boff, & row_len ) )
+                {   /* count as unaligned, to mirror the behavior of SRA_ReadGetCategory() (see SRA_Read.c) */
+                    CLEAR();
+                    ++ count_unaligned;
+                }
+                else    
+                {
+                    uint32_t j;
+                    bool seen_aligned = false;
+                    bool seen_unaligned = false;
+                    const int64_t * orig = base;
+                    assert(elem_bits == 64);
+                    for ( j = 0; j < row_len; ++ j )
+                    {
+                        if (orig[j] == 0)
+                            seen_unaligned = true;
+                        else 
+                            seen_aligned = true;
+                    }
+                    if ( seen_aligned )
+                    {
+                        if ( seen_unaligned )
+                            ++ count_partial;
+                        else
+                            ++ count_full;
+                    }
+                    else
+                        ++ count_unaligned;
+                }
+            }
+            if ( wants_full )
+                ret += count_full;
+            if ( wants_partial )
+                ret += count_partial;
+            if ( wants_unaligned )
+                ret += count_unaligned;
+            return ret;
+        }
+    }
 
     return 0;
 }
@@ -517,7 +569,7 @@ struct NGS_Read * CSRA1_ReadCollectionGetReadRange ( CSRA1_ReadCollection * self
 
     TRY ( const NGS_Cursor* curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ) )
     {
-        NGS_Read * ret = SRA_ReadIteratorMakeRange ( ctx, curs, self -> run_name, first, count, wants_full, wants_partial, wants_unaligned );
+        NGS_Read * ret = CSRA1_ReadIteratorMakeRange ( ctx, curs, self -> run_name, first, count, wants_full, wants_partial, wants_unaligned );
         NGS_CursorRelease ( curs, ctx );
         return ret;
     }
@@ -613,7 +665,7 @@ NGS_ReadCollection * NGS_ReadCollectionMakeCSRA ( ctx_t ctx, const VDatabase *db
 
             /* TBD - this is a hack */
             name = string_rchr ( spec, spec_size, '/' );
-            if ( name == NULL )
+            if ( name ++ == NULL )
                 name = spec;
 
             dot = string_rchr ( name, end - name, '.' );

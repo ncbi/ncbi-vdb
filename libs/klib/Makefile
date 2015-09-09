@@ -89,6 +89,7 @@ KLIB_SRC = \
 	container \
 	vector \
 	namelist \
+	ncbi-vdb-version \
 	vector_namelist \
 	trie \
 	pbstree \
@@ -127,7 +128,8 @@ KLIB_SRC = \
 	report-klib \
 	num-gen \
 	progressbar \
-	sra-release-version
+	sra-release-version \
+	btree
 #	path
 
 ifeq (win,$(OS))

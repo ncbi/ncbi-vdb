@@ -32,6 +32,8 @@
 
 #include <ngs/Statistics.hpp>
 
+#include <klib/text.h>
+
 using namespace std;
 using namespace ncbi::NK;
 
@@ -74,6 +76,23 @@ const char* SRADBFixture::SRADB_Accession = "SRR600096";
 //TODO: getReadCount (categories)
 //TODO: getReadGroups
 //TODO: error cases
+
+
+TEST_CASE (SRADB_ReadCollection_GetName)
+{
+    ngs::String name1, name2;
+    {
+        ngs::ReadCollection run = ncbi::NGS::openReadCollection ("./SRR600096");
+        name1 = run.getName();
+        char const* pNoSlash = string_rchr( name1.c_str(), name1.length(), '/' );
+        REQUIRE ( pNoSlash == NULL );
+    }
+    {
+        ngs::ReadCollection run = ncbi::NGS::openReadCollection ("SRR600096");
+        name2 = run.getName();
+    }
+    REQUIRE_EQ ( name1, name2 );
+}
 
 FIXTURE_TEST_CASE(SRADB_ReadCollection_Open, SRADBFixture)
 {

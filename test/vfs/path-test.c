@@ -34,6 +34,8 @@
 #include "../libs/vfs/path.c"
 
 #include <klib/out.h>
+#include <klib/status.h> /* STSMSG */
+
 #include <kfg/config.h>
 #include <kapp/args.h>
 #include <kapp/main.h>
@@ -169,8 +171,10 @@ const char *VPathGetHostTypeStr ( const VPath * self )
 static
 void VPathDisplay ( const VPath * self )
 {
-    if ( self == NULL )
-        OUTMSG ( ( "<null>\n\n" ) );
+    if ( self == NULL ) {
+        STSMSG(1, ( "<null>\n" ) );
+        STSMSG(1, ( "\n" ) );
+    }
     else
     {
         size_t num_read;
@@ -179,47 +183,45 @@ void VPathDisplay ( const VPath * self )
         uint32_t size = ( rc == 0 ) ? ( uint32_t ) num_read
             : ( GetRCState ( rc ) == rcInsufficient ) ? sizeof buffer : 0;
 
-        OUTMSG ( ( "data        :  %lu bits, %lu bytes ( including NUL )\n"
-                   "scheme      : '%S' ( size = %zu, len = %u )\n"
-                   "auth        : '%S' ( size = %zu, len = %u )\n"
-                   "host        : '%S' ( size = %zu, len = %u )\n"
-                   "portname    : '%S' ( size = %zu, len = %u )\n"
-                   "path        : '%S' ( size = %zu, len = %u )\n"
-                   "query       : '%S' ( size = %zu, len = %u )\n"
-                   "fragment    : '%S' ( size = %zu, len = %u )\n"
-                   "obj_id      :  %u\n"
-                   "acc_code    :  0x%X%s\n"
-                   "ipv4        :  %u.%u.%u.%u\n"
-                   "ipv6        :  %04X:%04X:%04X:%04X:%04X:%04X:%04X:%04X\n"
-                   "portnum     :  %u\n"
-                   "scheme_type :  %u ( %s )\n"
-                   "path_type   :  %u ( %s )\n"
-                   "host_type   :  %u ( %s )\n"
-                   "from_uri    :  %s\n"
-                   "\n"
-                   "read back   : '%.*s' ( rc = %R, num_read = %zu )\n"
-                   "\n"
-                   , self -> data . elem_bits, self -> data . elem_count
-                   , & self -> scheme, self -> scheme . size, self -> scheme . len
-                   , & self -> auth, self -> auth . size, self -> auth . len
-                   , & self -> host, self -> host . size, self -> host . len
-                   , & self -> portname, self -> portname . size, self -> portname . len
-                   , & self -> path, self -> path . size, self -> path . len
-                   , & self -> query, self -> query . size, self -> query . len
-                   , & self -> fragment, self -> fragment . size, self -> fragment . len
-                   , self -> obj_id
-                   , self -> acc_code, VPathGetAccTypeStr ( self )
-                   , ( self -> ipv4 >> 24 ) & 0xFF, ( self -> ipv4 >> 16 ) & 0xFF,
-                     ( self -> ipv4 >> 8 ) & 0xFF, ( self -> ipv4 >> 0 ) & 0xFF
+        STSMSG(1, ("data        :  %lu bits, %lu bytes ( including NUL )\n"
+            , self -> data . elem_bits, self -> data . elem_count));
+        STSMSG(1, ("scheme      : '%S' ( size = %zu, len = %u )\n"
+            , & self -> scheme, self -> scheme . size, self -> scheme . len));
+        STSMSG(1, ("auth        : '%S' ( size = %zu, len = %u )\n"
+            , & self -> auth, self -> auth . size, self -> auth . len));
+        STSMSG(1, ("host        : '%S' ( size = %zu, len = %u )\n"
+            , & self -> host, self -> host . size, self -> host . len));
+        STSMSG(1, ("portname    : '%S' ( size = %zu, len = %u )\n"
+        , & self -> portname, self -> portname . size, self -> portname . len));
+        STSMSG(1, ("path        : '%S' ( size = %zu, len = %u )\n"
+        , & self -> path, self -> path . size, self -> path . len));
+        STSMSG(1, ("query       : '%S' ( size = %zu, len = %u )\n"
+            , & self -> query, self -> query . size, self -> query . len));
+        STSMSG(1, ("fragment    : '%S' ( size = %zu, len = %u )\n"
+            , & self -> fragment, self -> fragment . size, self -> fragment . len));
+        STSMSG(1, ("obj_id      :  %u\n", self -> obj_id));
+        STSMSG(1, ("acc_code    :  0x%X%s\n"
+            , self -> acc_code, VPathGetAccTypeStr ( self )));
+        STSMSG(1, ("ipv4        :  %u.%u.%u.%u\n"
+            , ( self -> ipv4 >> 24 ) & 0xFF, ( self -> ipv4 >> 16 ) & 0xFF,
+                ( self -> ipv4 >> 8 ) & 0xFF, ( self -> ipv4 >> 0 ) & 0xFF));
+        STSMSG(1, ("ipv6        :  %04X:%04X:%04X:%04X:%04X:%04X:%04X:%04X\n"
                    , self -> ipv6 [ 0 ], self -> ipv6 [ 1 ], self -> ipv6 [ 2 ], self -> ipv6 [ 3 ],
-                     self -> ipv6 [ 4 ], self -> ipv6 [ 5 ], self -> ipv6 [ 6 ], self -> ipv6 [ 7 ]
-                   , self -> portnum
-                   , self -> scheme_type, VPathGetSchemeTypeStr ( self )
-                   , self -> path_type, VPathGetPathTypeStr ( self )
-                   , self -> host_type, VPathGetHostTypeStr ( self )
-                   , self -> from_uri ? "true" : "false"
-                   , size, buffer, rc, num_read
-        ) );
+                     self -> ipv6 [ 4 ], self -> ipv6 [ 5 ], self -> ipv6 [ 6 ], self -> ipv6 [ 7 ]));
+        STSMSG(1, ("portnum     :  %u\n"                   , self -> portnum));
+
+        STSMSG(1, ("scheme_type :  %u ( %s )\n"
+            , self -> scheme_type, VPathGetSchemeTypeStr ( self )));
+        STSMSG(1, ("path_type   :  %u ( %s )\n"
+            , self -> path_type, VPathGetPathTypeStr ( self )));
+        STSMSG(1, ("host_type   :  %u ( %s )\n"
+            , self -> host_type, VPathGetHostTypeStr ( self )));
+        STSMSG(1, ("from_uri    :  %s\n"
+            , self -> from_uri ? "true" : "false"));
+        STSMSG(1, ("\n"));
+        STSMSG(1, ("read back   : '%.*s' ( rc = %R, num_read = %zu )\n"
+            , size, buffer, rc, num_read));
+        STSMSG(1, ("\n"));
     }
 }
 
@@ -357,15 +359,19 @@ rc_t ParseUrlTest ( const VFSManager * vfs )
         rc  = VFSManagerMakePath ( vfs, & vpath, "%S", & url );
         if ( rc == 0 )
         {
-            OUTMSG ( ( "%s - VFSManagerMakePath succeeded -- %zu: %S\n"
+            STSMSG(1,  ( "%s - VFSManagerMakePath succeeded -- %zu: %S\n"
                        , __func__, i, & url ) );
             VPathDisplay ( vpath );
             VPathRelease ( vpath );
         }
         else
         {
-            OUTMSG (( "%s: VFSManagerMakePath failed on iteration: '%zu' url: %S\n"
-                      "with rc=%R\n\n", __func__, i, & url, rc ));
+            STSMSG(1, ( "%s: VFSManagerMakePath failed on iteration: '%zu' url: %S\n", __func__, i, & url));
+            STSMSG(1, ( "with rc=%R\n", rc));
+            STSMSG(1, ( "\n" ));
+            STSMSG(1, ( "%s: VFSManagerMakePath failed on iteration: '%zu' url: %S\n", __func__, i, & url ));
+            STSMSG(1, ( "with rc=%R\n", rc ));
+            STSMSG(1, ( "\n" ));
             return rc;
         }
     }
@@ -381,12 +387,13 @@ rc_t ParseUrlTest ( const VFSManager * vfs )
         rc  = VFSManagerMakePath ( vfs, & vpath, "%S", & url );
         if ( rc != 0 )
         {
-            OUTMSG ( ( "%s - VFSManagerMakePath succeeded in catching error-- %zu: %S\n"
-                      "with rc=%R\n\n", __func__, i, & url, rc ));
+            STSMSG(1,  ( "%s - VFSManagerMakePath succeeded in catching error-- %zu: %S\n", __func__, i, & url));
+            STSMSG(1,  ( "with rc=%R\n", rc ));
+            STSMSG(1, ( "\n" ));
         }
         else
         {
-            OUTMSG (( "%s: VFSManagerMakePath failed catching error on iteration: '%zu' url: %S\n"
+            STSMSG(1, ( "%s: VFSManagerMakePath failed catching error on iteration: '%zu' url: %S\n"
                        , __func__, i, & url ) );
             VPathDisplay ( vpath );
             VPathRelease ( vpath );
@@ -406,23 +413,24 @@ rc_t ParseUrlTest ( const VFSManager * vfs )
         rc  = VFSManagerMakeSysPath ( vfs, & vpath, sys_path [ i ] );
         if ( rc == 0 )
         {
-            OUTMSG ( ( "%s - VFSManagerMakeSysPath succeeded -- %zu: %S\n"
+            STSMSG(1,  ( "%s - VFSManagerMakeSysPath succeeded -- %zu: %S\n"
                        , __func__, i, & sys ) );
             VPathDisplay ( vpath );
             rc = VPathReadSysPath ( vpath, buffer, sizeof buffer, & num_read );
-            OUTMSG ( ( "read sys    : '%.*s' ( rc = %R, num_read = %zu )\n"
-                       "\n"
+            STSMSG(1,  ( "read sys    : '%.*s' ( rc = %R, num_read = %zu )\n"
                        , ( uint32_t ) num_read, buffer
                        , rc
                        , num_read
                  ) );
+            STSMSG(1,  ( "\n" ));
 
             VPathRelease ( vpath );
         }
         else
         {
-            OUTMSG (( "%s: VFSManagerMakeSysPath failed on iteration: '%zu' path: %S\n"
-                      "with rc=%R\n\n", __func__, i, & sys, rc ));
+            STSMSG(1, ( "%s: VFSManagerMakeSysPath failed on iteration: '%zu' path: %S\n", __func__, i, & sys ));
+            STSMSG(1, ( "with rc=%R\n", rc ));
+            STSMSG(1,  ( "\n" ));
             return rc;
         }
     }
@@ -501,15 +509,16 @@ rc_t ModifyPathTest ( const VFSManager * vfs )
                 rc = VFSManagerMakePathWithExtension ( vfs, & vpath, orig, test_ext [ j ] );
                 if ( rc == 0 )
                 {
-                    OUTMSG ( ( "%s - VFSManagerMakePathWithExtension succeeded -- %zu:%zu: '%S' + '%s'\n"
+                    STSMSG(1,  ( "%s - VFSManagerMakePathWithExtension succeeded -- %zu:%zu: '%S' + '%s'\n"
                                , __func__, i, j, & url, test_ext [ j ] ) );
                     VPathDisplay ( vpath );
                     VPathRelease ( vpath );
                 }
                 else
                 {
-                    OUTMSG (( "%s: VFSManagerMakePathWithExtension failed on iteration: '%zu:%zu' url: '%S' + '%s'\n"
-                              "with rc=%R\n\n", __func__, i, j, & url, test_ext [ j ], rc ));
+                    STSMSG(1, ( "%s: VFSManagerMakePathWithExtension failed on iteration: '%zu:%zu' url: '%S' + '%s'\n", __func__, i, j, & url, test_ext [ j ]));
+                    STSMSG(1, ( "with rc=%R\n", rc ));
+                    STSMSG(1, ( "\n" ));
                     return rc;
                 }
             }
@@ -535,13 +544,14 @@ rc_t ModifyPathTest ( const VFSManager * vfs )
                 rc = VFSManagerMakePathWithExtension ( vfs, & vpath, orig, test_ext [ j ] );
                 if ( rc != 0 )
                 {
-                    OUTMSG ( ( "%s - VFSManagerMakePathWithExtension properly caught error -- %zu:%zu: '%S' + '%s'\n"
-                               "with rc=%R\n\n", __func__, i, j, & url, test_ext [ j ], rc ) );
+                    STSMSG(1,  ( "%s - VFSManagerMakePathWithExtension properly caught error -- %zu:%zu: '%S' + '%s'\n", __func__, i, j, & url, test_ext [ j ]));
+                    STSMSG(1,  ( "with rc=%R\n", rc ) );
+                    STSMSG(1,  ( "\n" ) );
                     rc = 0;
                 }
                 else
                 {
-                    OUTMSG (( "%s: VFSManagerMakePathWithExtension failed to catch error on iteration: '%zu:%zu' url: '%S' + '%s'\n"
+                    STSMSG(1, ( "%s: VFSManagerMakePathWithExtension failed to catch error on iteration: '%zu:%zu' url: '%S' + '%s'\n"
                               , __func__, i, j, & url, test_ext [ j ] ));
                     VPathDisplay ( vpath );
                     VPathRelease ( vpath );
@@ -616,15 +626,16 @@ rc_t ExtractAccessionTest ( const VFSManager * vfs )
             rc = VFSManagerExtractAccessionOrOID ( vfs, & vpath, orig );
             if ( rc == 0 )
             {
-                OUTMSG ( ( "%s - VFSManagerExtractAccessionOrOID succeeded -- %zu: '%S'\n"
+                STSMSG(1,  ( "%s - VFSManagerExtractAccessionOrOID succeeded -- %zu: '%S'\n"
                            , __func__, i, & url ) );
                 VPathDisplay ( vpath );
                 VPathRelease ( vpath );
             }
             else
             {
-                OUTMSG (( "%s: VFSManagerExtractAccessionOrOID failed on iteration: '%zu' url: '%S'\n"
-                          "with rc=%R\n\n", __func__, i, & url, rc ));
+                STSMSG(1, ( "%s: VFSManagerExtractAccessionOrOID failed on iteration: '%zu' url: '%S'\n", __func__, i, & url));
+                STSMSG(1, ( "with rc=%R\n", rc ));
+                STSMSG(1, ( "\n" ));
                 return rc;
             }
 
@@ -646,13 +657,14 @@ rc_t ExtractAccessionTest ( const VFSManager * vfs )
             rc = VFSManagerExtractAccessionOrOID ( vfs, & vpath, orig );
             if ( rc != 0 )
             {
-                OUTMSG ( ( "%s - VFSManagerExtractAccessionOrOID properly caught error -- %zu: '%S'\n"
-                           "with rc=%R\n\n", __func__, i, & url, rc ) );
+                STSMSG(1,  ( "%s - VFSManagerExtractAccessionOrOID properly caught error -- %zu: '%S'\n", __func__, i, & url));
+                STSMSG(1,  ( "with rc=%R\n", rc ) );
+                STSMSG(1,  ( "\n" ) );
                 rc = 0;
             }
             else
             {
-                OUTMSG (( "%s: VFSManagerExtractAccessionOrOID failed to catch error on iteration: '%zu' url: '%S'\n"
+                STSMSG(1, ( "%s: VFSManagerExtractAccessionOrOID failed to catch error on iteration: '%zu' url: '%S'\n"
                           , __func__, i, & url ));
                 VPathDisplay ( vpath );
                 VPathRelease ( vpath );

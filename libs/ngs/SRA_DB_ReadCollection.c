@@ -266,9 +266,12 @@ NGS_Read * SRA_DB_ReadCollectionGetRead ( SRA_DB_ReadCollection * self, ctx_t ct
 }
 
 static
-uint64_t SRA_DB_ReadCollectionGetReadCount ( SRA_DB_ReadCollection * self, ctx_t ctx )
+uint64_t SRA_DB_ReadCollectionGetReadCount ( SRA_DB_ReadCollection * self, ctx_t ctx, bool wants_full, bool wants_partial, bool wants_unaligned )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+
+    if ( ! wants_unaligned )
+        return 0;
 
     if ( self -> curs == NULL )
     {
@@ -372,7 +375,7 @@ NGS_ReadCollection * NGS_ReadCollectionMakeVDatabase ( ctx_t ctx, const VDatabas
 
             /* TBD - this is a hack */
             name = string_rchr ( spec, spec_size, '/' );
-            if ( name == NULL )
+            if ( name ++ == NULL )
                 name = spec;
 
             dot = string_rchr ( name, end - name, '.' );

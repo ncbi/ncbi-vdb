@@ -714,6 +714,47 @@ _HttpFile_read_v1 (
     return RCt;
 }   /* _HttpFile_read_v1 () */
 
+static
+rc_t CC
+_HttpFile_size_v1 (
+                        const struct XFSFileEditor * self,
+                        uint64_t * Size
+)
+{
+    rc_t RCt;
+    struct XFSHttpNode * Node;
+
+    RCt = 0;
+    Node = NULL;
+
+    XFS_CSA ( Size, 0 )
+    XFS_CAN ( self )
+    XFS_CAN ( Size )
+
+    Node = ( struct XFSHttpNode * ) XFSEditorNode (
+                                                & ( self -> Papahen )
+                                                );
+    if ( Node == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    if ( Node -> entry == NULL ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+    if ( XFSHttpEntryIsFolder ( Node -> entry ) ) {
+        * Size = 0;
+    }
+    else {
+        RCt = XFSHttpEntrySize ( Node -> entry, Size );
+        if ( RCt != 0 ) {
+            * Size = 0;
+        }
+    }
+
+    return RCt;
+}   /* _HttpFile_size_v1 () */
+
 rc_t CC
 _HttpNodeFile_v1 (
             const struct XFSNode * self,
@@ -755,6 +796,8 @@ _HttpNodeFile_v1 (
         Editor -> open = _HttpFile_open_v1;
         Editor -> close = _HttpFile_close_v1;
         Editor -> read = _HttpFile_read_v1;
+        Editor -> size = _HttpFile_size_v1;
+        Editor -> set_size = NULL;
 
         * File = Editor;
     }
@@ -848,41 +891,6 @@ _HttpAttr_permissions_v1 (
     return RCt;
 }   /* _HttpAttr_permissions_v1 () */
 
-
-static
-rc_t CC
-_HttpAttr_size_v1 (
-                        const struct XFSAttrEditor * self,
-                        uint64_t * Size
-)
-{
-    rc_t RCt;
-    const struct XFSHttpEntry * Entry;
-
-    RCt = 0;
-    Entry = NULL;
-
-    if ( Size == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * Size = 0;
-
-    RCt = _HttpAttr_init_check_v1 ( self, & Entry );
-    if ( RCt == 0 ) {
-        if ( XFSHttpEntryIsFolder ( Entry ) ) {
-            * Size = 0;
-        }
-        else {
-            RCt = XFSHttpEntrySize ( Entry, Size );
-            if ( RCt != 0 ) {
-                * Size = 0;
-            }
-        }
-    }
-
-    return RCt;
-}   /* _HttpAttr_size_v1 () */
-
 static
 rc_t CC
 _HttpAttr_date_v1 (
@@ -969,7 +977,6 @@ _HttpNodeAttr_v1 (
                     );
     if ( RCt == 0 ) {
         Editor -> permissions = _HttpAttr_permissions_v1;
-        Editor -> size = _HttpAttr_size_v1;
         Editor -> date = _HttpAttr_date_v1;
         Editor -> type = _HttpAttr_type_v1;
 

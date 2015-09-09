@@ -400,28 +400,6 @@ _ContNodeAttr_permissions_v1 (
 
 static
 rc_t CC
-_ContNodeAttr_size_v1 (
-                            const struct XFSAttrEditor * self,
-                            uint64_t * Size
-)
-{
-    if ( Size != NULL ) {
-        * Size = 0;
-    }
-
-    if ( self == NULL || Size == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    if ( XFSEditorNode ( & ( self -> Papahen ) ) == NULL ) {
-        return XFS_RC ( rcInvalid );
-    }
-
-    return 0;
-}   /* _ContNodeAttr_size_v1 () */
-
-static
-rc_t CC
 _ContNodeAttr_date_v1 (
                             const struct XFSAttrEditor * self,
                             KTime_t * Time
@@ -497,7 +475,6 @@ _ContNodeAttr_v1 (
                         );
     if ( RCt == 0 ) {
         Editor -> permissions = _ContNodeAttr_permissions_v1;
-        Editor -> size = _ContNodeAttr_size_v1;
         Editor -> date = _ContNodeAttr_date_v1;
         Editor -> type = _ContNodeAttr_type_v1;
 

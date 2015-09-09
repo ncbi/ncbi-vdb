@@ -55,42 +55,6 @@
  * SRA_Read
  */
 
-struct SRA_Read
-{
-    NGS_Read dad;   
-    
-    NGS_String * run_name;
-    
-    int64_t cur_row;
-    int64_t row_max;
-    uint64_t row_count;
-
-    const INSDC_read_type * READ_TYPE;
-    const INSDC_coord_len * READ_LEN;
-    
-    const NGS_Cursor * curs;
-
-    uint32_t cur_frag;
-    uint32_t bio_frags;
-    uint32_t frag_idx;
-    uint32_t frag_max;
-    uint32_t frag_start;
-    uint32_t frag_len;
-
-    bool has_phred_33;
-
-    bool seen_first;
-    bool seen_first_frag;
-    bool seen_last_frag;
-
-    /* read filtering criteria */
-    bool wants_full;
-    bool wants_partial; 
-    bool wants_unaligned;
-    
-    NGS_String* group_name; /* if not NULL, only return reads from this read group */
-};
-
 const char * sequence_col_specs [] =
 {
     "READ_TYPE",
@@ -104,23 +68,6 @@ const char * sequence_col_specs [] =
     "(U64)SPOT_COUNT",
 };
 
-static void                     SRA_ReadWhack ( SRA_Read * self, ctx_t ctx );
-
-static struct NGS_String * SRA_FragmentGetId ( SRA_Read * self, ctx_t ctx );
-static struct NGS_String * SRA_FragmentGetSequence ( SRA_Read * self, ctx_t ctx, uint64_t offset, uint64_t length );
-static struct NGS_String * SRA_FragmentGetQualities ( SRA_Read * self, ctx_t ctx, uint64_t offset, uint64_t length );
-static bool                SRA_FragmentNext ( SRA_Read * self, ctx_t ctx );
-
-static struct NGS_String *      SRA_ReadGetId ( SRA_Read * self, ctx_t ctx );
-static struct NGS_String *      SRA_ReadGetName ( SRA_Read * self, ctx_t ctx );
-static struct NGS_String *      SRA_ReadGetReadGroup ( SRA_Read * self, ctx_t ctx );
-static enum NGS_ReadCategory    SRA_ReadGetCategory ( const SRA_Read * self, ctx_t ctx );
-static struct NGS_String *      SRA_ReadGetSequence ( SRA_Read * self, ctx_t ctx, uint64_t offset, uint64_t length );
-static struct NGS_String *      SRA_ReadGetQualities ( SRA_Read * self, ctx_t ctx, uint64_t offset, uint64_t length );
-static uint32_t                 SRA_ReadNumFragments ( SRA_Read * self, ctx_t ctx );
-static bool                     SRA_ReadIteratorNext ( SRA_Read * self, ctx_t ctx );
-static uint64_t                 SRA_ReadIteratorGetCount ( const SRA_Read * self, ctx_t ctx );    
-
 static NGS_Read_vt NGS_Read_vt_inst =
 {
     {
@@ -133,6 +80,8 @@ static NGS_Read_vt NGS_Read_vt_inst =
         SRA_FragmentGetId,
         SRA_FragmentGetSequence,
         SRA_FragmentGetQualities,
+        SRA_FragmentIsPaired,
+        SRA_FragmentIsAligned,
         SRA_FragmentNext
     },
     
@@ -144,6 +93,7 @@ static NGS_Read_vt NGS_Read_vt_inst =
     SRA_ReadGetSequence,
     SRA_ReadGetQualities,
     SRA_ReadNumFragments,
+    SRA_ReadFragIsAligned,
     SRA_ReadIteratorNext,
     SRA_ReadIteratorGetCount,
 }; 
@@ -203,7 +153,6 @@ void SRA_ReadIteratorInit ( ctx_t ctx,
 
 /* Whack
  */
-static
 void SRA_ReadWhack ( SRA_Read * self, ctx_t ctx )
 {
     NGS_CursorRelease ( self -> curs, ctx );
@@ -560,7 +509,42 @@ uint32_t SRA_ReadNumFragments ( SRA_Read * self, ctx_t ctx )
         return 0;
     }    
     
+    if ( self -> cur_row >= self -> row_max )
+    {
+        USER_ERROR ( xcCursorExhausted, "No more rows available" );
+        return false;
+    }
+    
     return self -> bio_frags;
+}
+
+/* FragIsAligned
+ */
+bool SRA_ReadFragIsAligned ( SRA_Read * self, ctx_t ctx, uint32_t frag_idx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+    
+    assert ( self != NULL );
+    
+    if ( ! self -> seen_first ) 
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Read accessed before a call to ReadIteratorNext()" );
+        return 0;
+    }    
+    
+    if ( self -> cur_row >= self -> row_max )
+    {
+        USER_ERROR ( xcCursorExhausted, "No more rows available" );
+        return false;
+    }
+
+    if ( frag_idx >= self -> bio_frags )
+    {
+        USER_ERROR ( xcIntegerOutOfBounds, "bad fragment index" );
+        return false;
+    }
+    
+    return false;
 }
 
 /*--------------------------------------------------------------------------
@@ -895,6 +879,31 @@ struct NGS_String * SRA_FragmentGetQualities ( SRA_Read * self, ctx_t ctx, uint6
         }
     }
     return ret;
+}
+
+bool SRA_FragmentIsPaired ( SRA_Read * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+    
+    assert ( self != NULL );
+    if ( ! self -> seen_first_frag ) 
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Fragment accessed before a call to FragmentIteratorNext()" );
+        return false;
+    }
+    if ( self -> seen_last_frag ) 
+    {
+        USER_ERROR ( xcCursorExhausted, "No more rows available" );
+        return false;
+    }
+
+    return self -> bio_frags > 1;
+}
+
+bool SRA_FragmentIsAligned ( SRA_Read * self, ctx_t ctx )
+{
+    assert ( self != NULL );
+    return false;
 }
 
 bool SRA_FragmentNext ( SRA_Read * self, ctx_t ctx )

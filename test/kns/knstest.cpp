@@ -57,25 +57,6 @@
 
 TEST_SUITE(KnsTestSuite);
 
-namespace ncbi
-{
-    namespace NK
-    {   // TODO: move to a ktst header
-        static void ThrowOnRc(rc_t rc, const char* expr, const char* file, unsigned int line, const char* func) throw(std::logic_error)
-        {
-            if ( rc != 0 )
-            {
-                char buf[1024];
-                string_printf(buf, sizeof buf, NULL, "Unexpected rc in %s (%s:%u) : %s returned %R", func, file, line, expr, rc);
-                std::cout << buf << std::endl;
-                throw std::logic_error ( buf );
-            }
-        }
-    }
-}
-
-#define THROW_ON_RC(v) ncbi::NK::ThrowOnRc(v, #v, __FILE__, __LINE__, __func__)
-
 using namespace std;
 using namespace ncbi::NK;
 

@@ -470,7 +470,7 @@ rc_t KDataBufferCastInt(const KDataBuffer *self, KDataBuffer *target, uint64_t n
                 rc_t rc = KDataBufferMakeBytes ( & tmp, total_bytes );
                 if ( rc != 0 )
                     return rc;
-                assert ( ( ( size_t ) tmp . base & BASE_PTR_ALIGNMENT - 1 ) == 0 );
+                assert ( ( ( size_t ) tmp . base & ( BASE_PTR_ALIGNMENT - 1 ) ) == 0 );
 
 #if DEBUG_ALIGNMENT
                 fprintf ( stderr, "reallocating and copying buffer\n" );

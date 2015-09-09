@@ -36,62 +36,137 @@
 #include <kdb/database.h>
 #include <kdb/index.h>
 #include <kdb/table.h>
+#include <kdb/column.h>
+#include <kdb/meta.h>
 
 using namespace std;
 
 TEST_SUITE(KdbTestSuite);
 
-#define KDB_MANAGER_MAKE(mgr, wd) KDBManagerMakeUpdate((KDBManager **)mgr, (struct KDirectory *)wd)
+#define KDB_MANAGER_MAKE(m_mgr, m_wd) KDBManagerMakeUpdate((KDBManager **)m_mgr, (struct KDirectory *)m_wd)
 #include "remote_open_test.cpp"
 
-TEST_CASE(MissingRows)
-{   // VDB-177
-    KDirectory* wd;
-    REQUIRE_RC(KDirectoryNativeDir(&wd));
-    KDirectoryRemove(wd, true, GetName());
-    
+class WKDB_Fixture
+{
+public:
+    WKDB_Fixture()
     {
-        KDBManager* mgr;
-        REQUIRE_RC(KDBManagerMakeUpdate(&mgr, wd));
-
-        {
-            KDatabase* db;
-            REQUIRE_RC(KDBManagerCreateDB(mgr, &db, kcmCreate, GetName()));
-         
-            {
-                KIndex *idx;
-                REQUIRE_RC(KDatabaseCreateIndex(db, &idx, kitText, kcmCreate, "index"));
-                
-                REQUIRE_RC(KIndexInsertText(idx, true, "aaaa1", 1));
-                REQUIRE_RC(KIndexInsertText(idx, true, "aaaa3", 3));
-                
-                int64_t start_id;
-                uint64_t id_count;
-                REQUIRE_RC(KIndexFindText (idx, "aaaa1", &start_id, &id_count, NULL, NULL));
-                REQUIRE_EQ(start_id, (int64_t)1);
-                REQUIRE_EQ(id_count, (uint64_t)1);
-                
-                REQUIRE_RC_FAIL(KIndexFindText (idx, "aaaa2", &start_id, &id_count, NULL, NULL));
-                REQUIRE_RC_FAIL(KIndexFindText (idx, "", &start_id, &id_count, NULL, NULL));
-                
-                REQUIRE_RC(KIndexFindText (idx, "aaaa3", &start_id, &id_count, NULL, NULL));
-                REQUIRE_EQ(start_id, (int64_t)3);
-                REQUIRE_EQ(id_count, (uint64_t)1);
-                
-                REQUIRE_RC(KIndexRelease(idx));
-            }
-            
-            REQUIRE_RC(KDatabaseRelease(db));
-        }
-        REQUIRE_RC(KDBManagerRelease(mgr));
+        THROW_ON_RC ( KDirectoryNativeDir ( & m_wd ) );
+        THROW_ON_RC ( KDBManagerMakeUpdate ( & m_mgr, m_wd ) );
+    }
+    ~WKDB_Fixture()
+    {
+        KDBManagerRelease ( m_mgr );
+        KDirectoryRelease ( m_wd );
     }
     
-    KDirectoryRemove(wd, true, GetName());
-    REQUIRE_RC(KDirectoryRelease(wd));
+    std::string GetColumnMetadata ( const KColumn* p_col, const char* p_metadataName )
+    {
+        const KMetadata *meta;
+        THROW_ON_RC ( KColumnOpenMetadataRead( p_col, &meta ) );
+        const KMDataNode* node;
+        THROW_ON_RC ( KMetadataOpenNodeRead ( meta, & node, p_metadataName ) );
+        size_t num_read;
+        char buf[1024];
+        THROW_ON_RC ( KMDataNodeRead ( node, 0, buf, sizeof buf, & num_read, 0 ) );
+        THROW_ON_RC ( KMDataNodeRelease ( node ) );
+        THROW_ON_RC ( KMetadataRelease ( meta ) );
+        return string ( buf, num_read );
+    }
     
+    KDirectory* m_wd;
+    KDBManager* m_mgr;
+};
+
+FIXTURE_TEST_CASE ( MissingRows, WKDB_Fixture )
+{   // VDB-177
+    KDirectoryRemove(m_wd, true, GetName());
+    KDatabase* db;
+    REQUIRE_RC(KDBManagerCreateDB(m_mgr, &db, kcmCreate, GetName()));
+ 
+    KIndex *idx;
+    REQUIRE_RC(KDatabaseCreateIndex(db, &idx, kitText, kcmCreate, "index"));
+    
+    REQUIRE_RC(KIndexInsertText(idx, true, "aaaa1", 1));
+    REQUIRE_RC(KIndexInsertText(idx, true, "aaaa3", 3));
+    
+    int64_t start_id;
+    uint64_t id_count;
+    REQUIRE_RC(KIndexFindText (idx, "aaaa1", &start_id, &id_count, NULL, NULL));
+    REQUIRE_EQ(start_id, (int64_t)1);
+    REQUIRE_EQ(id_count, (uint64_t)1);
+    
+    REQUIRE_RC_FAIL(KIndexFindText (idx, "aaaa2", &start_id, &id_count, NULL, NULL));
+    REQUIRE_RC_FAIL(KIndexFindText (idx, "", &start_id, &id_count, NULL, NULL));
+    
+    REQUIRE_RC(KIndexFindText (idx, "aaaa3", &start_id, &id_count, NULL, NULL));
+    REQUIRE_EQ(start_id, (int64_t)3);
+    REQUIRE_EQ(id_count, (uint64_t)1);
+    
+    REQUIRE_RC(KIndexRelease(idx));
+   
+    REQUIRE_RC(KDatabaseRelease(db));
+    KDirectoryRemove(m_wd, true, GetName());
 }
 
-
+FIXTURE_TEST_CASE ( ColumnMetadataWKDB_Fixture, WKDB_Fixture )
+{
+    KDirectoryRemove(m_wd, true, GetName());
+    
+    const char* TableName = "tbl";
+    const char* ColumnName = "col";
+    const char* MetadataName = "metaname";
+    const char* MetadataValue = "metavalue";
+    
+    {
+        KDatabase* db;
+        REQUIRE_RC(KDBManagerCreateDB(m_mgr, &db, kcmCreate, GetName()));
+     
+        KTable* tbl;
+        REQUIRE_RC ( KDBManagerCreateTable ( m_mgr, & tbl, kcmInit + kcmMD5, TableName ) );
+        
+        KColumn* col;
+        REQUIRE_RC ( KTableCreateColumn ( tbl, & col, kcmInit, kcmMD5, 0, ColumnName ) );
+        
+        KMetadata *meta;
+        REQUIRE_RC ( KColumnOpenMetadataUpdate ( col, &meta ) );
+        
+        KMDataNode* node;
+        REQUIRE_RC ( KMetadataOpenNodeUpdate ( meta, & node, MetadataName ) );
+        
+        REQUIRE_RC ( KMDataNodeWrite ( node, MetadataValue, string_size ( MetadataValue ) ) );
+        
+        REQUIRE_RC ( KMDataNodeRelease ( node ) );
+        
+        REQUIRE_RC ( KMetadataRelease ( meta ) );
+       
+        // can only read after metadata has been released
+        REQUIRE_EQ ( string ( MetadataValue ), GetColumnMetadata ( col, MetadataName ) );
+        
+        REQUIRE_RC ( KColumnRelease ( col ) );
+        REQUIRE_RC ( KTableRelease ( tbl ) );
+        REQUIRE_RC ( KDatabaseRelease ( db ) );
+    }
+    {   // reopen, verify
+        KDatabase* db;
+        REQUIRE_RC ( KDBManagerOpenDBUpdate ( m_mgr, &db, GetName() ) );
+        
+        const KTable* tbl;
+        REQUIRE_RC ( KDBManagerOpenTableRead ( m_mgr, & tbl, TableName ) );
+        
+        const KColumn* col;
+        REQUIRE_RC ( KTableOpenColumnRead ( tbl, & col, ColumnName ) );
+        
+        REQUIRE_EQ ( string ( MetadataValue ), GetColumnMetadata ( col, MetadataName ) );
+        
+        REQUIRE_RC ( KColumnRelease ( col ) );
+        REQUIRE_RC ( KTableRelease ( tbl ) );
+        REQUIRE_RC ( KDatabaseRelease ( db ) );
+    }
+    
+    KDirectoryRemove(m_wd, true, TableName);
+    KDirectoryRemove(m_wd, true, GetName());
+}
 
 //////////////////////////////////////////// Main
 extern "C"

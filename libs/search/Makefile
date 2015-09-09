@@ -79,7 +79,8 @@ SEARCH_SRC = \
 	agrep-wumanber \
 	agrep-myers \
 	agrep-myersunltd \
-	agrep-dp
+	agrep-dp \
+	sw-search
 
 ifeq (linux,$(OS))
 SEARCH_SRC += \

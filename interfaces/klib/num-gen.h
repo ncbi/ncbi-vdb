@@ -63,7 +63,9 @@ struct num_gen_iter;
  *  or creates and presets it with a range
  */
 KLIB_EXTERN rc_t CC num_gen_make( struct num_gen ** self );
+KLIB_EXTERN rc_t CC num_gen_make_sorted( struct num_gen ** self, bool sorted );
 KLIB_EXTERN rc_t CC num_gen_make_from_str( struct num_gen ** self, const char * src );
+KLIB_EXTERN rc_t CC num_gen_make_from_str_sorted( struct num_gen ** self, const char * src, bool sorted );
 KLIB_EXTERN rc_t CC num_gen_make_from_range( struct num_gen ** self, int64_t first, uint64_t count );
 KLIB_EXTERN rc_t CC num_gen_copy( const struct num_gen * self, struct num_gen ** dest );
 

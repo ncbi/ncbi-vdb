@@ -34,10 +34,12 @@
   
   <ItemGroup>
     <ClCompile Include="..\..\..\libs\kapp\args.c" />
+    <ClCompile Include="..\..\..\libs\kapp\args-conv.c" />
     <ClCompile Include="..\..\..\libs\kapp\main.c" />
     <ClCompile Include="..\..\..\libs\kapp\tokenizer.c" />
     <ClCompile Include="..\..\..\libs\kapp\win\ram.c" />
     <ClCompile Include="..\..\..\libs\kapp\win\sysmain.c" />
+    <ClCompile Include="..\..\..\libs\kapp\win\args-conv-os.c" />
   </ItemGroup>
   
   <PropertyGroup Label="Globals">

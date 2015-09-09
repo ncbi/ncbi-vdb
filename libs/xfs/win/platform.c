@@ -150,7 +150,8 @@ static WCHAR wRealMountPoint [ 3000 ];
 XFS_EXTERN rc_t CC XFSPathInnerToNative (
                                 WCHAR * NativePathBuffer,
                                 size_t NativePathBufferSize,
-                                const char * InnerPath
+                                const char * InnerPath,
+                                ...
                                 );
 
 rc_t

@@ -220,6 +220,7 @@ XFSStart ( struct XFSControl * self )
 
         /* TODO */
     RCt = self -> vt -> v1.mount ( self );
+#ifdef WIN
     if ( RCt == 0 ) {
         RCt = KThreadMake ( & self -> Thread, XFSVeryMainLoop, self );
     }
@@ -230,6 +231,9 @@ XFSStart ( struct XFSControl * self )
             self -> Thread = NULL;
         }
     }
+#else /* WIN */
+    XFSVeryMainLoop ( NULL, self );
+#endif /* WIN */
 
     return RCt;
 }   /* XFSStart () */

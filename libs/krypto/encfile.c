@@ -92,98 +92,6 @@ void BufferCalcMD5 (const void * buffer, size_t size, uint8_t digest [16])
     MD5StateFinish (&state, digest);
 }
 
-#if 0
-/* ----------------------------------------------------------------------
- * Offset conversions between encrypted file offset, decrypted file offset
- * and block ID and block offset
- */
-
-/* -----
- * A data block within the encrypted file may not divide nicely by the size of
- * its greatest alignment issue. That is there is currently a uint64_t within 
- * the KEncFileKey forcing 8-byte alignment by default but the whole of the
- * size of KEncFileKey plus the sizze of the KEncFileData plus the size of
- * the KEncFileCRC is not divisible by 8 so it can't be treated as a single 
- * structure for the puroses of using the sizeof() operator.
- *
- * If the size of the header, block or footer are modified in the future
- * care should be take to retain accuracy of the new versions of these
- * functions.
- */
-
-static __inline__ uint64_t BlockId_to_EncryptedPos (uint64_t block_id)
-{
-    /* the whole block structure is not divisible by 8
-     * so this is not a simple multiply by the sizeof KEncFileBlock
-     */
-    return (sizeof (KEncFileHeader) + block_id * sizeof (KEncFileBlock));
-}
-
-
-static __inline__ uint64_t BlockId_to_DecryptedPos (uint64_t block_id)
-{
-    /* the simplest conversion as its a simple multiply */
-    return (block_id * sizeof (KEncFileData));
-}
-
-
-/* -----
- * when converting from file offsets to block ids we effectively have a
- * quotient and a remainder.  The block id is the quotient and the
- * offset within the block is the remainder.  We use lldiv not ldiv as we
- * are required to work on both 32 and 64 bit machines where long might
- * be 32 bits or it might be 64 bits.  If long long is 128 we willingly
- * sacrifice efficiency for accuracy.
- */
-static __inline__
-uint64_t DecryptedPos_to_BlockId (uint64_t dec_offset, uint32_t * poffset)
-{
-    if (poffset)
-        *poffset = dec_offset % sizeof (KEncFileData);
-    return dec_offset / sizeof (KEncFileData);
-}
-
-/* not so easy - fix this if needed... */
-#if 0
-static
-uint64_t EncryptedPos_to_BlockId (uint64_t enc_offset, uint32_t * poffset)
-{
-    uint64_t block_id;
-
-    if (enc_offset < sizeof (KEncFileHeader))
-    {
-        if (poffset)
-            *poffset = 0;
-        block_id = 0;
-    }
-    else
-    {
-        uint64_t offset;
-
-        enc_offset -= sizeof (KEncFileHeader);
-        block_id = enc_offset / sizeof (KEncFileBlock);
-        offset = enc_offset % sizeof (KEncFileBlock);
-
-        if (offset <= sizeof(KEncFileKey))
-            offset = 0;
-        else
-        {
-            offset -= sizeof(KEncFileKey);
-
-            if (offset >= sizeof(KEncFileData))
-            {
-                ++block_id;
-                offset = 0;
-            }
-        }
-
-        if (poffset)
-            *poffset = offset;
-    }
-    return block_id;
-}
-#endif
-#endif
 
 typedef struct KEncFileCiphers KEncFileCiphers;
 struct KEncFileCiphers
@@ -234,7 +142,6 @@ rc_t KEncFileV1BufferRead (const KEncFileV1 * cself, uint64_t pos, void * buffer
                          size_t bsize, size_t * pnum_read)
 {
     KEncFileV1 * self;   /* for mutable fields */
-    uint8_t * bbuffer; /* void pointer made to a byyte pointer */
     rc_t rc;
 
     assert (cself);
@@ -244,7 +151,6 @@ rc_t KEncFileV1BufferRead (const KEncFileV1 * cself, uint64_t pos, void * buffer
     *pnum_read = 0;
 
     self = (KEncFileV1*)cself; /* to hit mutable fields */
-    bbuffer = buffer; /* convert to a pointer of sized target */
 
     /* we want to read a full requested size if possible so keep trying if we
      * haven't read enough yet. 
@@ -529,7 +435,7 @@ rc_t KEncFileV1FooterWrite (KEncFileV1 * self)
         foot.crc_checksum = bswap_64 (foot.crc_checksum);
     }
 
-    offset = BlockId_to_EncryptedPos (self->foot.block_count);
+    offset = BlockId_to_CiphertextOffset ( self -> foot . block_count );
 
 /*     assert ((self->encrypted_max == offset) || */
 /*             (self->encrypted_max + sizeof(self->foot) == offset)); */
@@ -794,7 +700,7 @@ rc_t KEncFileV1BlockRead (const KEncFileV1 * cself, uint64_t block_id,
     assert (block);
 
     self = (KEncFileV1*)cself;
-    pos = BlockId_to_EncryptedPos (block_id);
+    pos = BlockId_to_CiphertextOffset ( block_id );
 
     /* set aside the current maximum position within the encrypted file */
     max = self->encrypted_max;
@@ -918,7 +824,7 @@ rc_t KEncFileV1BlockWrite (KEncFileV1 * self)
         return RC (rcFS, rcFile, rcWriting, rcBuffer, rcCorrupt);
 
     /* where in the file is this block */
-    block_offset = BlockId_to_EncryptedPos(self->block.id);
+    block_offset = BlockId_to_CiphertextOffset ( self -> block . id );
 
     /* if this is an update to a block take out the old crc value */
     if (block_offset < self->encrypted_max)
@@ -1005,7 +911,7 @@ rc_t KEncFileV1BlockSeek (KEncFileV1 * self, uint64_t block_id, bool fill, bool 
 
             for (tid = self->block.id + 1; tid < block_id; ++tid)
             {
-                if (self->encrypted_max > BlockId_to_EncryptedPos(block_id))
+                if ( self -> encrypted_max > BlockId_to_CiphertextOffset ( block_id ) )
                     continue;
 
                 memset (&b, 0, sizeof b);
@@ -1242,7 +1148,7 @@ rc_t CC KEncFileV1Read	(const KEncFileV1 *cself,
 
     *num_read = 0;
 
-    block_id = DecryptedPos_to_BlockId (pos, &offset);
+    block_id = PlaintextOffset_to_BlockId (pos, &offset);
 
     /*
      * are we on the wrong block?
@@ -1405,7 +1311,7 @@ rc_t KEncFileV1WriteInt (KEncFileV1 *self, uint64_t block_id, uint32_t block_off
     {
         KEncFileBlock b;
 
-        if (self->encrypted_max > BlockId_to_EncryptedPos(block_id))
+        if ( self -> encrypted_max > BlockId_to_CiphertextOffset ( block_id ) )
         {
             rc = KEncFileV1BlockRead (self, block_id, &b, false);
             if (rc)
@@ -1451,9 +1357,9 @@ rc_t CC KEncFileV1Write (KEncFileV1 *self, uint64_t pos,
      * find our location in the encrypted file by block id
      * and offset
      */
-    block_id = DecryptedPos_to_BlockId (pos, &block_offset);
-    curr_block_id = DecryptedPos_to_BlockId
-        (BlockId_to_DecryptedPos (self->block.id) + self->block.u.valid,
+    block_id = PlaintextOffset_to_BlockId (pos, &block_offset);
+    curr_block_id = PlaintextOffset_to_BlockId
+        ( BlockId_to_PlaintextOffset ( self -> block . id ) + self -> block . u . valid,
          &curr_block_offset);
 
     /* are we writing to the wrong block/offset? */
@@ -1462,7 +1368,7 @@ rc_t CC KEncFileV1Write (KEncFileV1 *self, uint64_t pos,
         rc = RC (rcFS, rcFile, rcWriting, rcOffset, rcIncorrect);
         PLOGERR (klogErr, (klogErr, rc, "attempt to seek in encryption write at"
                            " '$(O)' seek to '$(P)'", "O=%lu,P=%lu",
-                           BlockId_to_EncryptedPos(self->block.id), pos));
+                           BlockId_to_CiphertextOffset ( self -> block . id ), pos ) );
     }
     else
     {
@@ -1492,7 +1398,7 @@ rc_t CC KEncFileV1WriteSwarm (KEncFileV1 *self, uint64_t pos,
     uint32_t block_offset;
     rc_t rc;
 
-    self->block.id = DecryptedPos_to_BlockId (pos, &block_offset);
+    self->block.id = PlaintextOffset_to_BlockId (pos, &block_offset);
     self->block.u.valid = 0;
     if (bsize > sizeof self->block.data - block_offset)
         bsize = sizeof self->block.data - block_offset;
@@ -1502,15 +1408,6 @@ rc_t CC KEncFileV1WriteSwarm (KEncFileV1 *self, uint64_t pos,
     if (rc == 0)
         rc = KEncFileV1BlockFlush (self);
     return rc;
-}
-
-
-static
-rc_t CC KEncFileV1Update (KEncFileV1 *self, uint64_t pos,
-                        const void *buffer, size_t bsize,
-                        size_t *pnum_writ)
-{
-    return RC (rcKrypto, rcFile, rcConstructing, rcFunction, rcUnsupported);
 }
 
 
@@ -1943,7 +1840,7 @@ LIB_EXPORT rc_t CC KEncFileV1Validate_v1 (const KFile * encrypted)
             KEncFileBlock block;
 
             STSMSG (2, ("reading block '%u' at '%lu'", block_count,
-                        BlockId_to_EncryptedPos(block_count)));
+                        BlockId_to_CiphertextOffset ( block_count ) ) );
            
             rc = KEncFileV1BlockRead (file, block_count, &block, true);
             if (rc)

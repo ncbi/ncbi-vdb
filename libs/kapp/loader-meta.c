@@ -46,6 +46,13 @@ LIB_EXPORT rc_t CC KLoaderMeta_Write(KMDataNode* root,
                                      const char* argv0, const char* argv0_date,
                                      const char* app_name, ver_t app_version)
 {
+    return KLoaderMeta_WriteWithVersion ( root, argv0, argv0_date, KAppVersion(), app_name, app_version );
+}
+
+rc_t CC KLoaderMeta_WriteWithVersion(struct KMDataNode* root,
+                                     const char* argv0, const char* argv0_date, ver_t argv0_version,
+                                     const char* app_name, ver_t app_version)
+{
     rc_t rc = 0;
     KMDataNode *node = NULL;
 
@@ -55,7 +62,7 @@ LIB_EXPORT rc_t CC KLoaderMeta_Write(KMDataNode* root,
         char str_vers[64];
         KMDataNode *subNode = NULL;
         if( (rc = KMDataNodeOpenNodeUpdate(node, &subNode, "loader")) == 0 ) {
-            if( (rc = MakeVersion(KAppVersion(), str_vers, sizeof(str_vers))) == 0 ) {
+            if( (rc = MakeVersion(argv0_version, str_vers, sizeof(str_vers))) == 0 ) {
                 rc = KMDataNodeWriteAttr(subNode, "vers", str_vers);
             }
             if(rc == 0) {

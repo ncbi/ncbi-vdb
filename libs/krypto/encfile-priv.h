@@ -34,49 +34,48 @@ extern "C" {
  * and block ID and block offset
  */
 
-/* -----
- * A data block within the encrypted file may not divide nicely by the size of
- * its greatest alignment issue. That is there is currently a uint64_t within 
- * the KEncFileKey forcing 8-byte alignment by default but the whole of the
- * size of KEncFileKey plus the size of the KEncFileData plus the size of
- * the KEncFileCRC is not divisible by 8 so it can't be treated as a single 
- * structure for the puroses of using the sizeof() operator.
- *
- * If the size of the header, block or footer are modified in the future
- * care should be take to retain accuracy of the new versions of these
- * functions.
- */
-
-static __inline__ uint64_t BlockId_to_EncryptedPos (uint64_t block_id)
-{
-    /* the whole block structure is not divisible by 8
-     * so this is not a simple multiply by the sizeof KEncFileBlock
-     */
-    return (sizeof (KEncFileHeader) + block_id * sizeof (KEncFileBlock));
-}
-
-
-static __inline__ uint64_t BlockId_to_DecryptedPos (uint64_t block_id)
-{
-    /* the simplest conversion as its a simple multiply */
-    return (block_id * sizeof (KEncFileData));
-}
-
-
-/* -----
- * when converting from file offsets to block ids we effectively have a
- * quotient and a remainder.  The block id is the quotient and the
- * offset within the block is the remainder.  We use lldiv not ldiv as we
- * are required to work on both 32 and 64 bit machines where long might
- * be 32 bits or it might be 64 bits.  If long long is 128 we willingly
- * sacrifice efficiency for accuracy.
+/* BlockId_to_CiphertextOffset
+ *  converts zero-based block id to byte offset into ciphertext
  */
 static __inline__
-uint64_t DecryptedPos_to_BlockId (uint64_t dec_offset, uint32_t * poffset)
+uint64_t BlockId_to_CiphertextOffset ( uint64_t block_id )
 {
-    if (poffset)
-        *poffset = dec_offset % sizeof (KEncFileData);
-    return dec_offset / sizeof (KEncFileData);
+    return ( sizeof ( KEncFileHeader ) + block_id * sizeof ( KEncFileBlock ) );
+}
+
+/* BlockId_to_DecryptedPos
+ *  converts zero-based block id to byte offset into plaintext
+ */
+static __inline__
+uint64_t BlockId_to_PlaintextOffset ( uint64_t block_id )
+{
+    return block_id * sizeof ( KEncFileData );
+}
+
+/* PlaintextOffset_to_BlockId
+ *  converts from byte offset into plaintext to a zero-based block id
+ *  NB - will FAIL ( horribly ) if used with a plaintext SIZE
+ */
+static __inline__
+uint64_t PlaintextOffset_to_BlockId ( uint64_t pt_offset, uint32_t * poffset )
+{
+    uint64_t block_id = pt_offset / sizeof ( KEncFileData );
+
+    if ( poffset != NULL )
+        * poffset = ( uint32_t ) ( pt_offset - BlockId_to_PlaintextOffset ( block_id ) );
+
+    return block_id;
+}
+
+static __inline__
+uint64_t PlaintextSize_to_BlockCount ( uint64_t pt_size, uint32_t * padding )
+{
+    uint64_t block_count = ( pt_size + sizeof ( KEncFileData ) - 1 ) / sizeof ( KEncFileData );
+
+    if ( padding != NULL )
+        * padding = ( uint32_t ) ( BlockId_to_PlaintextOffset ( block_count ) - pt_size );
+
+    return block_count;
 }
 
 static __inline__
