@@ -199,7 +199,7 @@ _CacheNodeFindNode_v1 (
         }
 
             /*  Here we aren't last and looking forward; */
-        NodeName = XFSPathGet ( Path, PathIndex + 1 );
+        NodeName = XFSPathPartGet ( Path, PathIndex + 1 );
 
             /*))  Should not happen thou
              ((*/

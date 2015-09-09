@@ -371,6 +371,7 @@ _KfsDirNodeFindNode_v1 (
     bool IsLast;
     KDirectory * NativeDir;
     XFSNType Type;
+    const struct XFSPath * xPath;
 
     RCt = 0;
     PathCount = 0;
@@ -381,6 +382,7 @@ _KfsDirNodeFindNode_v1 (
     IsLast = false;
     NativeDir = NULL;
     Type = kxfsNotFound;
+    xPath = NULL;
 
     RCt = XFSNodeFindNodeCheckInitStandard (
                                             self,
@@ -416,13 +418,12 @@ _KfsDirNodeFindNode_v1 (
         RCt = XFSPathFrom (
                         Path,
                         PathIndex + 1,
-                        PathBuf + PathBufLen + 1,
-                        sizeof ( PathBuf ) - PathBufLen
+                        & xPath
                         );
         if ( RCt == 0 ) {
             RCt = KDirectoryNativeDir ( & NativeDir );
             if ( RCt == 0 ) {
-                switch ( KDirectoryPathType ( NativeDir, PathBuf ) ) {
+                switch ( KDirectoryPathType ( NativeDir, XFSPathGet ( xPath ) ) ) {
                     case kptFile :
                             Type = kxfsFile;
                             break;
@@ -439,7 +440,7 @@ _KfsDirNodeFindNode_v1 (
                                         & KfsNode,
                                         Type,
                                         XFSPathName ( Path ),
-                                        PathBuf,
+                                        XFSPathGet ( xPath ),
                                         NULL
                                         );
                     if ( RCt == 0 ) {
@@ -451,6 +452,8 @@ _KfsDirNodeFindNode_v1 (
 
                 KDirectoryRelease ( NativeDir );
             }
+
+            XFSPathRelease ( xPath );
         }
     }
 

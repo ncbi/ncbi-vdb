@@ -366,7 +366,7 @@ XFSTreeFindNode (
 )
 {
     rc_t RCt;
-    struct XFSPath * XPath;
+    const struct XFSPath * XPath;
 
     RCt = 0;
     XPath = NULL;
@@ -380,7 +380,7 @@ XFSTreeFindNode (
         return XFS_RC ( rcInvalid );
     }
 
-    RCt = XFSPathMake ( Path, ( const struct XFSPath ** ) & XPath );
+    RCt = XFSPathMake ( & XPath, true, Path );
     if ( RCt == 0 ) {
 
         RCt = XFSNodeFindNode ( self -> Root, XPath, 0, Node );
@@ -388,7 +388,7 @@ XFSTreeFindNode (
             RCt = XFSNodeNotFoundMake ( XFSPathName ( XPath ), Node );
         }
 
-        XFSPathDispose ( XPath );
+        XFSPathRelease ( XPath );
     }
 
     return RCt;

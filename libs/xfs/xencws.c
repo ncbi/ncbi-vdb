@@ -47,7 +47,7 @@
 #include "xencws.h"
 #include "zehr.h"
 #include "lreader.h"
-#include "pfad.h"
+#include <xfs/path.h>
 
 #include <sysalloc.h>
 
@@ -483,7 +483,7 @@ rc_t CC
 _OpenEncLineReader (
                 const struct XFSLineReader ** Reader,
                 const struct KKey * Key,
-                const char * Pfad,
+                const char * Path,
                 ...
 )
 {
@@ -500,14 +500,14 @@ _OpenEncLineReader (
 
     XFS_CSAN ( Reader )
     XFS_CAN ( Key )
-    XFS_CAN ( Pfad )
+    XFS_CAN ( Path )
     XFS_CAN ( Reader )
 
     RCt = KDirectoryNativeDir ( & NatDir );
     if ( RCt == 0 ) {
 
-        va_start ( Args, Pfad );
-        RCt = KDirectoryVOpenFileRead ( NatDir, & File, Pfad, Args );
+        va_start ( Args, Path );
+        RCt = KDirectoryVOpenFileRead ( NatDir, & File, Path, Args );
         va_end ( Args );
 
         if ( RCt == 0 ) {
@@ -835,15 +835,14 @@ _SyncronizeDirectoryContentNoLock ( const struct _DirE * self )
 
     XFS_CAN ( self );
 
-printf ( " [SYNC] [%d] [%d]\n", __LINE__, RCt );
-    RCt = _MakeContentDocument ( self, & Doc );
-printf ( " [SYNC] [%d] [%d]\n", __LINE__, RCt );
-    if  ( RCt == 0 ) {
+    if ( self -> content != NULL ) {
+        RCt = _MakeContentDocument ( self, & Doc );
+        if  ( RCt == 0 ) {
 
-        RCt = _StoreContentDocument ( self, Doc );
-printf ( " [SYNC] [%d] [%d]\n", __LINE__, RCt );
+            RCt = _StoreContentDocument ( self, Doc );
 
-        XFSDocRelease ( Doc );
+            XFSDocRelease ( Doc );
+        }
     }
 
     return RCt;
@@ -902,12 +901,12 @@ _DirEVMakeContent (
 {
     rc_t RCt;
     struct _DirC * Cont;
-    const struct XFSPfad * Pfad;
+    const struct XFSPath * Path;
     va_list xArgs;
 
     RCt = 0;
     Cont = NULL;
-    Pfad = NULL;
+    Path = NULL;
 
     XFS_CAN ( self )
     XFS_CAN ( Format )
@@ -922,7 +921,7 @@ _DirEVMakeContent (
     }
 
     va_copy ( xArgs, Args );
-    RCt = XFSPfadVMakeAbsolute ( & Pfad, Format, xArgs );
+    RCt = XFSPathVMakeAbsolute ( & Path, false, Format, xArgs );
     va_end ( xArgs );
     if ( RCt != 0 ) {
         return XFS_RC ( rcInvalid );
@@ -930,14 +929,14 @@ _DirEVMakeContent (
 
     Cont = calloc ( 1, sizeof ( struct _DirC ) );
     if ( Cont == NULL ) {
-        XFSPfadRelease ( Pfad );
+        XFSPathRelease ( Path );
 
         return XFS_RC ( rcExhausted );
     }
 
     ( ( struct _DirE * ) self ) -> content = Cont;
 
-    RCt = XFS_StrDup ( XFSPfadGet ( Pfad ), & ( Cont -> path ) );
+    RCt = XFS_StrDup ( XFSPathGet ( Path ), & ( Cont -> path ) );
     if ( RCt == 0 ) {
         BSTreeInit ( & ( Cont -> tree ) );
 
@@ -946,7 +945,7 @@ _DirEVMakeContent (
         RCt = _DirEReadContent ( self );
     }
 
-    XFSPfadRelease ( Pfad );
+    XFSPathRelease ( Path );
 
     if ( RCt != 0 ) {
         _DirEDisposeContent ( self );
@@ -1250,16 +1249,16 @@ _DirEMoveEntry (
     struct KDirectory * NatDir;
     const struct _DirE * Entry;
     const struct _DirE * TmpEntry;
-    const struct XFSPfad * OldPfad;
-    const struct XFSPfad * NewPfad;
+    const struct XFSPath * OldPath;
+    const struct XFSPath * NewPath;
     char BF [ 32 ];
 
     RCt = 0;
     NatDir = NULL;
     Entry = NULL;
     TmpEntry = NULL;
-    OldPfad = NULL;
-    NewPfad = NULL;
+    OldPath = NULL;
+    NewPath = NULL;
     * BF = 0;
 
     XFS_CAN ( OldParent )
@@ -1311,8 +1310,9 @@ _DirEMoveEntry (
         if ( RCt == 0 ) {
                 /* Here we are moving real file
                  */
-            RCt = XFSPfadMakeAbsolute (
-                                    & OldPfad,
+            RCt = XFSPathMakeAbsolute (
+                                    & OldPath,
+                                    false,
                                     "%s/%s",
                                     OldParent -> content -> path,
                                     Entry -> eff_name
@@ -1325,24 +1325,25 @@ _DirEMoveEntry (
                                 sizeof ( BF )
                                 );
                 if ( RCt == 0 ) {
-                    RCt = XFSPfadMakeAbsolute (
-                                         & NewPfad,
-                                         "%s/%s",
-                                         NewParent -> content -> path,
-                                         BF
-                                         );
+                    RCt = XFSPathMakeAbsolute (
+                                        & NewPath,
+                                        false,
+                                        "%s/%s",
+                                        NewParent -> content -> path,
+                                        BF
+                                        );
                     if ( RCt == 0 ) {
                         RCt = KDirectoryRename (
                                                 NatDir,
                                                 true, /* FORCE */
-                                                XFSPfadGet ( OldPfad ),
-                                                XFSPfadGet ( NewPfad )
+                                                XFSPathGet ( OldPath ),
+                                                XFSPathGet ( NewPath )
                                                 );
-                        XFSPfadRelease ( NewPfad );
+                        XFSPathRelease ( NewPath );
                     }
                 }
 
-                XFSPfadRelease ( OldPfad );
+                XFSPathRelease ( OldPath );
             }
 
             KDirectoryRelease ( NatDir );
@@ -1388,8 +1389,9 @@ _DirEMoveEntry (
                             );
                 if ( RCt == 0 ) {
                     if ( Entry -> is_folder ) {
-                        RCt = XFSPfadMakeAbsolute (
-                                         & NewPfad,
+                        RCt = XFSPathMakeAbsolute (
+                                         & NewPath,
+                                         false,
                                          "%s/%s",
                                          NewParent -> content -> path,
                                          BF
@@ -1398,11 +1400,11 @@ _DirEMoveEntry (
 
                             free ( ( char * ) Entry -> content -> path );
                             XFS_StrDup (
-                                    XFSPfadGet ( NewPfad ),
+                                    XFSPathGet ( NewPath ),
                                     ( const char ** ) & ( Entry -> content -> path )
                                     );
 
-                            XFSPfadRelease ( NewPfad );
+                            XFSPathRelease ( NewPath );
                         }
 
                     }
@@ -1788,16 +1790,16 @@ _WsDirPath ( const struct XFSWsDir * self )
 
 static
 rc_t CC
-_WsDirMapPfad (
+_WsDirMapPath (
             const struct XFSWsDir * self,
-            const struct XFSPfad * Pfad,
+            const struct XFSPath * Path,
             const struct _DirE ** RetEntry,
-            const struct XFSPfad ** EffPfad
+            const struct XFSPath ** EffPath
 )
 {
     rc_t RCt;
     size_t Idx, Qty;
-    const struct XFSPfad * RetVal;
+    const struct XFSPath * RetVal;
     const struct _DirE * Entry, * TmpEntry;
 
     RCt = 0;
@@ -1805,26 +1807,26 @@ _WsDirMapPfad (
     RetVal = NULL;
     Entry = TmpEntry = NULL;
 
-    XFS_CSAN ( EffPfad )
+    XFS_CSAN ( EffPath )
     XFS_CSAN ( RetEntry )
     XFS_CAN ( self )
-    XFS_CAN ( Pfad )
-    XFS_CAN ( EffPfad )
+    XFS_CAN ( Path )
+    XFS_CAN ( EffPath )
     XFS_CAN ( RetEntry )
 
-        /*) First we are creating empty Pfad
+        /*) First we are creating empty Path
          */
 
-    RCt = XFSPfadMake ( & RetVal, "" );
+    RCt = XFSPathMake ( & RetVal, false, "" );
     if ( RCt == 0 ) {
         RCt = _WsDirEntry ( self, & Entry );
         if ( RCt == 0 ) {
 
-            Qty = XFSPfadPartCount ( Pfad );
+            Qty = XFSPathPartCount ( Path );
             for ( Idx = 0; Idx < Qty; Idx ++ ) {
                 RCt = _DirEGetEntry (
                                     Entry,
-                                    XFSPfadPartGet ( Pfad, Idx ),
+                                    XFSPathPartGet ( Path, Idx ),
                                     & TmpEntry
                                     );
 
@@ -1856,7 +1858,7 @@ _WsDirMapPfad (
                     }
                 }
 
-                RCt = XFSPfadAppend ( RetVal, TmpEntry -> eff_name );
+                RCt = XFSPathAppend ( RetVal, TmpEntry -> eff_name );
                 if ( RCt != 0 ) {
                     break;
                 }
@@ -1869,7 +1871,7 @@ _WsDirMapPfad (
 
             if ( RCt == 0 ) {;
                     /* Should we check Entry for NULL ? */
-                * EffPfad = RetVal;
+                * EffPath = RetVal;
 
                 * RetEntry = Entry;
             }
@@ -1877,11 +1879,11 @@ _WsDirMapPfad (
     }
 
     if ( RCt != 0 ) {
-        * EffPfad = NULL;
+        * EffPath = NULL;
         * RetEntry = NULL;
 
         if ( RetVal != NULL ) {
-            XFSPfadRelease ( RetVal );
+            XFSPathRelease ( RetVal );
         }
 
         if ( Entry != NULL ) {
@@ -1890,87 +1892,87 @@ _WsDirMapPfad (
     }
 
     return RCt;
-}   /* _WsDirMapPfad () */
+}   /* _WsDirMapPath () */
 
 static
 rc_t
 _WsDirVMapIt (
             const struct XFSWsDir * self,
             const struct _DirE ** Entry,
-            const struct XFSPfad ** EffPfad,   /* Could be NULL */
+            const struct XFSPath ** EffPath,   /* Could be NULL */
             const char * Format,
             va_list Args
 )
 {
     rc_t RCt;
-    const struct XFSPfad * WsPfad;
-    const struct XFSPfad * DerPfad;
-    const struct XFSPfad * TmpPfad;
-    const struct XFSPfad * ThePfad;
+    const struct XFSPath * WsPath;
+    const struct XFSPath * DerPath;
+    const struct XFSPath * TmpPath;
+    const struct XFSPath * ThePath;
     const struct _DirE * TheEntry;
     va_list xArgs;
 
     RCt = 0;
-    WsPfad = NULL;
-    DerPfad = NULL;
-    TmpPfad = NULL;
-    ThePfad = NULL;
+    WsPath = NULL;
+    DerPath = NULL;
+    TmpPath = NULL;
+    ThePath = NULL;
     TheEntry = NULL;
 
     XFS_CSAN( Entry )
-    XFS_CSAN( EffPfad )
+    XFS_CSAN( EffPath )
     XFS_CAN ( self )
     XFS_CAN ( Format )
 
         /* First we shoud make sure that path is our.
          | I mean, path should be part of Directory path.
          */
-            /*) Orig Pfad
+            /*) Orig Path
              (*/
-    RCt = XFSPfadMakeAbsolute ( & WsPfad, _WsDirPath ( self ) );
+    RCt = XFSPathMakeAbsolute ( & WsPath, false, _WsDirPath ( self ) );
     if ( RCt == 0 ) {
             /*) Absolute Input Path
              (*/
         va_copy ( xArgs, Args );
-        RCt = XFSPfadVMakeAbsolute ( & DerPfad, Format, xArgs );
+        RCt = XFSPathVMakeAbsolute ( & DerPath, false, Format, xArgs );
         va_end ( xArgs );
 
         if ( RCt == 0 ) {
-            if ( XFSPfadIsChild ( WsPfad, DerPfad, & TmpPfad ) ) {
+            if ( XFSPathIsChild ( WsPath, DerPath, & TmpPath ) ) {
                     /*) Here we are mapping effective path
                      (*/
-                RCt = _WsDirMapPfad (
+                RCt = _WsDirMapPath (
                                     self,
-                                    TmpPfad,
+                                    TmpPath,
                                     & TheEntry,
-                                    & ThePfad
+                                    & ThePath
                                     );
                 if ( RCt == 0 ) {
                     * Entry = TheEntry;
 
-                    if ( EffPfad != NULL ) {
-                        XFSPfadAddRef ( ThePfad );
-                        * EffPfad = ThePfad;
+                    if ( EffPath != NULL ) {
+                        XFSPathAddRef ( ThePath );
+                        * EffPath = ThePath;
                     }
 
-                    XFSPfadRelease ( ThePfad );
+                    XFSPathRelease ( ThePath );
                 }
 
-                XFSPfadRelease ( TmpPfad );
+                XFSPathRelease ( TmpPath );
             }
             else {
                 RCt = XFS_RC ( rcOutOfKDirectory );
             }
 
-            XFSPfadRelease ( DerPfad );
+            XFSPathRelease ( DerPath );
         }
 
-        XFSPfadRelease ( WsPfad );
+        XFSPathRelease ( WsPath );
     }
 
     if ( RCt != 0 ) {
-        if ( EffPfad != NULL ) {
-            * EffPfad = NULL;
+        if ( EffPath != NULL ) {
+            * EffPath = NULL;
         }
     }
 
@@ -1982,7 +1984,7 @@ rc_t
 _WsDirMapIt (
             const struct XFSWsDir * self,
             const struct _DirE ** Entry,
-            const struct XFSPfad ** EffPfad,   /* Could be NULL */
+            const struct XFSPath ** EffPath,   /* Could be NULL */
             const char * Format,
             ...
 )
@@ -1993,7 +1995,7 @@ _WsDirMapIt (
     RCt = 0;
 
     va_start ( Args, Format );
-    RCt = _WsDirVMapIt ( self, Entry, EffPfad, Format, Args );
+    RCt = _WsDirVMapIt ( self, Entry, EffPath, Format, Args );
     va_end ( Args );
 
     return RCt;
@@ -2482,7 +2484,7 @@ rc_t CC
 _GetNameAndMapParentEntryNoLock (
                         struct  XFSWsDir * self,
                         const struct _DirE ** ParentEntry,
-                        const struct XFSPfad ** EffPfad,
+                        const struct XFSPath ** EffPath,
                         const char ** EntryName,
                         const char * Format,
                         va_list Args
@@ -2490,37 +2492,37 @@ _GetNameAndMapParentEntryNoLock (
 {
     rc_t RCt;
     const struct _DirE * RetEntry;
-    const struct XFSPfad * RetEffPfad;
-    const struct XFSPfad * ThePfad, * ParPfad;
+    const struct XFSPath * RetEffPath;
+    const struct XFSPath * ThePath, * ParPath;
     va_list xArgs;
 
     RCt = 0;
     RetEntry = NULL;
-    RetEffPfad = NULL;
-    ThePfad = ParPfad = NULL;
+    RetEffPath = NULL;
+    ThePath = ParPath = NULL;
 
     XFS_CSAN ( ParentEntry )
-    XFS_CSAN ( EffPfad )
+    XFS_CSAN ( EffPath )
     XFS_CSAN ( EntryName )
     XFS_CAN ( self )
     XFS_CAN ( ParentEntry )
-    XFS_CAN ( EffPfad )
+    XFS_CAN ( EffPath )
     XFS_CAN ( EntryName )
     XFS_CAN ( Format )
 
         /*) Simple : Map parent directory, create file, add record about
          (*/
     va_copy ( xArgs, Args );
-    RCt = XFSPfadVMakeAbsolute ( & ThePfad, Format, xArgs );
+    RCt = XFSPathVMakeAbsolute ( & ThePath, false, Format, xArgs );
     va_end ( xArgs );
     if ( RCt == 0 ) {
-        RCt = XFSPfadParent ( ThePfad, & ParPfad );
+        RCt = XFSPathParent ( ThePath, & ParPath );
         if ( RCt == 0 ) {
             RCt = _WsDirMapIt (
                             self,
                             & RetEntry,
-                            & RetEffPfad,
-                            XFSPfadGet ( ParPfad )
+                            & RetEffPath,
+                            XFSPathGet ( ParPath )
                             );
             if ( RCt == 0 ) {
                 RCt = _DirECheckLoadContent (
@@ -2528,34 +2530,34 @@ _GetNameAndMapParentEntryNoLock (
                                             _WsDirKey ( self ),
                                             "%s/%s",
                                             _WsDirPath ( self ),
-                                            XFSPfadGet ( RetEffPfad )
+                                            XFSPathGet ( RetEffPath )
                                             );
                 if ( RCt == 0 ) {
                     RCt = XFS_StrDup (
-                                    XFSPfadName ( ThePfad ),
+                                    XFSPathName ( ThePath ),
                                     EntryName
                                     );
                     if ( RCt == 0 ) {
                         * ParentEntry = RetEntry;
-                        * EffPfad = RetEffPfad;
+                        * EffPath = RetEffPath;
                     }
                 }
             }
 
-            XFSPfadRelease ( ParPfad );
+            XFSPathRelease ( ParPath );
         }
 
-        XFSPfadRelease ( ThePfad );
+        XFSPathRelease ( ThePath );
     }
 
     if ( RCt != 0 ) {
         * ParentEntry = NULL;
-        * EffPfad = NULL;
+        * EffPath = NULL;
 
-        if ( RetEffPfad != NULL ) {
-            XFSPfadRelease ( RetEffPfad );
+        if ( RetEffPath != NULL ) {
+            XFSPathRelease ( RetEffPath );
 
-            RetEffPfad = NULL;
+            RetEffPath = NULL;
         }
 
         if ( * EntryName != NULL ) {
@@ -2577,7 +2579,7 @@ rc_t CC
 _GetCNameAndMapParentEntryNoLock (
                         struct  XFSWsDir * self,
                         const struct _DirE ** ParentEntry,
-                        const struct XFSPfad ** EffPfad,
+                        const struct XFSPath ** EffPath,
                         const char ** EntryName,
                         const char * Format,
                         ...
@@ -2591,7 +2593,7 @@ _GetCNameAndMapParentEntryNoLock (
     RCt = _GetNameAndMapParentEntryNoLock (
                                         self,
                                         ParentEntry,
-                                        EffPfad,
+                                        EffPath,
                                         EntryName,
                                         Format,
                                         Args
@@ -2722,7 +2724,7 @@ XFSWsDirList (
     rc_t RCt;
     struct XFSWsDir * Dir;
     const struct _DirE * Entry;
-    const struct XFSPfad * TheEffPfad;
+    const struct XFSPath * TheEffPath;
     struct KNamelist * TheList;
     va_list xArgs;
 
@@ -2733,7 +2735,7 @@ printf ( " <<<[XFSWsDirList] [%p]\n", ( void * ) self );
     RCt = 0;
     Dir = ( struct XFSWsDir * ) self;
     Entry = NULL;
-    TheEffPfad = NULL;
+    TheEffPath = NULL;
     TheList = NULL;
 
     XFS_CSAN ( List )
@@ -2747,7 +2749,7 @@ printf ( " <<<[XFSWsDirList] [%p]\n", ( void * ) self );
     RCt = _WsDirVMapIt (
                     Dir,
                     & Entry,
-                    & TheEffPfad,
+                    & TheEffPath,
                     Path,
                     Args
                     );
@@ -2775,7 +2777,7 @@ printf ( " <<<[XFSWsDirList] [%p]\n", ( void * ) self );
             }
         }
 
-        XFSPfadRelease ( TheEffPfad );
+        XFSPathRelease ( TheEffPath );
         _DirERelease ( Entry );
     }
 
@@ -2816,15 +2818,15 @@ XFSWsDirVisit (
 {
     rc_t RCt;
     const struct XFSWsDir * Dir;
-    const struct XFSPfad * Pfad;
-    const struct XFSPfad * RelPfad;
+    const struct XFSPath * Path;
+    const struct XFSPath * RelPath;
     const struct _DirE * Entry;
     va_list xArgs;
 
     RCt = 0;
     Dir = ( const struct XFSWsDir * ) self;
-    Pfad = NULL;
-    RelPfad = NULL;
+    Path = NULL;
+    RelPath = NULL;
     Entry = NULL;
 
     XFS_CAN ( self )
@@ -2834,13 +2836,13 @@ XFSWsDirVisit (
 // printf ( " <<<[XFSWsDirVisit] [%p]\n", ( void * ) self );
 
     va_copy ( xArgs, Args );
-    RCt = XFSPfadVMakeAbsolute ( & Pfad, Format, xArgs );
+    RCt = XFSPathVMakeAbsolute ( & Path, false, Format, xArgs );
     va_end ( xArgs );
     if ( RCt == 0 ) {
-        if ( XFSPfadSIsChild (
+        if ( XFSPathSIsChild (
                             _WsDirPath ( Dir ),
-                            XFSPfadGet ( Pfad ),
-                            & RelPfad
+                            XFSPathGet ( Path ),
+                            & RelPath
                             ) ) {
                 /* Mapping Node and path
                 */
@@ -2857,7 +2859,7 @@ XFSWsDirVisit (
                                     Recurse,
                                     Func,
                                     Data,
-                                    XFSPfadGet ( RelPfad )
+                                    XFSPathGet ( RelPath )
                                     );
                 }
                 else {
@@ -2867,13 +2869,13 @@ XFSWsDirVisit (
                 _DirERelease ( Entry );
             }
 
-            XFSPfadRelease ( RelPfad );
+            XFSPathRelease ( RelPath );
         }
         else {
             RCt = XFS_RC ( rcOutOfKDirectory );
         }
 
-        XFSPfadRelease ( Pfad );
+        XFSPathRelease ( Path );
     }
 
 
@@ -3087,7 +3089,7 @@ XFSWsDirRename (
     rc_t RCt;
     struct XFSWsDir * Dir;
     const struct _DirE * OldParent, * NewParent;
-    const struct XFSPfad * OldEffPfad, * NewEffPfad;
+    const struct XFSPath * OldEffPath, * NewEffPath;
     const char * OldEntryName, * NewEntryName;
 
     RCt = 0;
@@ -3113,7 +3115,7 @@ printf ( " <<<[XFSWsDirRename] [%p]\n", ( void * ) self );
     RCt = _GetCNameAndMapParentEntryNoLock (
                                             Dir,
                                             & OldParent,
-                                            & OldEffPfad,
+                                            & OldEffPath,
                                             & OldEntryName,
                                             OldName
                                             );
@@ -3121,7 +3123,7 @@ printf ( " <<<[XFSWsDirRename] [%p]\n", ( void * ) self );
         RCt = _GetCNameAndMapParentEntryNoLock (
                                                 Dir,
                                                 & NewParent,
-                                                & NewEffPfad,
+                                                & NewEffPath,
                                                 & NewEntryName,
                                                 NewName
                                                 );
@@ -3160,12 +3162,12 @@ printf ( " <<<[XFSWsDirRename] [%p]\n", ( void * ) self );
             }
 
             free ( ( char * ) NewEntryName );
-            XFSPfadRelease ( NewEffPfad );
+            XFSPathRelease ( NewEffPath );
             _DirERelease ( NewParent );
         }
 
         free ( ( char * ) OldEntryName );
-        XFSPfadRelease ( OldEffPfad );
+        XFSPathRelease ( OldEffPath );
         _DirERelease ( OldParent );
     }
 
@@ -3195,7 +3197,7 @@ XFSWsDirRemove (
     struct XFSWsDir * Dir;
     const struct _DirE * Entry;
     const struct _DirE * Parent;
-    const struct XFSPfad * EffPfad;
+    const struct XFSPath * EffPath;
     const char * EntryName;
     struct KDirectory * NatDir;
     bool HasEntries;
@@ -3204,7 +3206,7 @@ XFSWsDirRemove (
     RCt = 0;
     Entry = NULL;
     Parent = NULL;
-    EffPfad = NULL;
+    EffPath = NULL;
     Dir = ( struct XFSWsDir * ) self;
     EntryName = NULL;
     NatDir = NULL;
@@ -3224,7 +3226,7 @@ printf ( " <<<[XFSWsDirRemove] [%p]\n", ( void * ) self );
         RCt = _GetNameAndMapParentEntryNoLock (
                                         Dir,
                                         & Parent,
-                                        & EffPfad,
+                                        & EffPath,
                                         & EntryName,
                                         Format,
                                         xArgs
@@ -3252,7 +3254,7 @@ printf ( " <<<[XFSWsDirRemove] [%p]\n", ( void * ) self );
                                                 true,
                                                 "%s/%s/%s",
                                                 _WsDirPath ( Dir ),
-                                                XFSPfadGet ( EffPfad ),
+                                                XFSPathGet ( EffPath ),
                                                 Entry -> eff_name
                                                 );
                             }
@@ -3268,7 +3270,7 @@ printf ( " <<<[XFSWsDirRemove] [%p]\n", ( void * ) self );
 // printf ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )Parent -> mutabor );
             KLockUnlock ( Parent -> mutabor );
 
-            XFSPfadRelease ( EffPfad );
+            XFSPathRelease ( EffPath );
 
             _DirERelease ( Parent );
         }
@@ -3321,14 +3323,14 @@ XFSWsDirClearDir (
     struct KNamelist * List;
     uint32_t LQty, Idx;
     const char * SubName;
-    const struct XFSPfad * Pfad;
+    const struct XFSPath * Path;
     va_list xArgs;
 
     RCt = 0;
     List = NULL;
     LQty = Idx = 0;
     SubName = NULL;
-    Pfad = NULL;
+    Path = NULL;
 
     XFS_CAN ( self )
     XFS_CAN ( Format )
@@ -3350,7 +3352,7 @@ printf ( " <<<[XFSWsDirClearDir] [%p]\n", ( void * ) self );
                 /* First we need path
                  */
             va_copy ( xArgs, Args );
-            RCt = XFSPfadVMakeAbsolute ( & Pfad, Format, xArgs );
+            RCt = XFSPathVMakeAbsolute ( & Path, false, Format, xArgs );
             va_end ( xArgs );
             if ( RCt == 0 ) {
                 for ( Idx = 0; Idx < LQty; Idx ++ ) {
@@ -3363,7 +3365,7 @@ printf ( " <<<[XFSWsDirClearDir] [%p]\n", ( void * ) self );
                                             self,
                                             Force,
                                             "%s/%s",
-                                            XFSPfadGet ( Pfad ),
+                                            XFSPathGet ( Path ),
                                             SubName
                                             );
 
@@ -3372,7 +3374,7 @@ printf ( " <<<[XFSWsDirClearDir] [%p]\n", ( void * ) self );
                     }
                 }
 
-                XFSPfadRelease ( Pfad );
+                XFSPathRelease ( Path );
             }
         }
 
@@ -3405,14 +3407,14 @@ XFSWsDirVAccess (
     rc_t RCt;
     struct XFSWsDir * Dir;
     const struct _DirE * Entry;
-    const struct XFSPfad * Pfad;
+    const struct XFSPath * Path;
     struct KDirectory * NatDir;
     va_list xArgs;
 
     RCt = 0;
     Dir = ( struct XFSWsDir * ) self;
     Entry = NULL;
-    Pfad = NULL;
+    Path = NULL;
     NatDir = NULL;
 
     XFS_CSA ( Access, 0 )
@@ -3431,7 +3433,7 @@ printf ( " <<<[XFSWsDirVAccess] [%p]\n", ( void * ) self );
         RCt = _WsDirVMapIt (
                         Dir,
                         & Entry,
-                        & Pfad,
+                        & Path,
                         Format,
                         xArgs
                         );
@@ -3442,10 +3444,10 @@ printf ( " <<<[XFSWsDirVAccess] [%p]\n", ( void * ) self );
                                 Access,
                                 "%s/%s",
                                 _WsDirPath ( Dir ),
-                                XFSPfadGet ( Pfad )
+                                XFSPathGet ( Path )
                                 );
 
-            XFSPfadRelease ( Pfad );
+            XFSPathRelease ( Path );
             _DirERelease ( Entry );
         }
 
@@ -3484,14 +3486,14 @@ XFSWsDirSetAccess (
     rc_t RCt;
     struct XFSWsDir * Dir;
     const struct _DirE * Entry;
-    const struct XFSPfad * Pfad;
+    const struct XFSPath * Path;
     struct KDirectory * NatDir;
     va_list xArgs;
 
     RCt = 0;
     Dir = ( struct XFSWsDir * ) self;
     Entry = NULL;
-    Pfad = NULL;
+    Path = NULL;
     NatDir = NULL;
 
     XFS_CAN ( self )
@@ -3508,7 +3510,7 @@ printf ( " <<<[XFSWsDirSetAccess] [%p]\n", ( void * ) self );
         RCt = _WsDirVMapIt (
                         Dir,
                         & Entry,
-                        & Pfad,
+                        & Path,
                         Format,
                         xArgs
                         );
@@ -3521,10 +3523,10 @@ printf ( " <<<[XFSWsDirSetAccess] [%p]\n", ( void * ) self );
                                 Mask,
                                 "%s/%s",
                                 _WsDirPath ( Dir ),
-                                XFSPfadGet ( Pfad )
+                                XFSPathGet ( Path )
                                 );
 
-            XFSPfadRelease ( Pfad );
+            XFSPathRelease ( Path );
             _DirERelease ( Entry );
         }
 
@@ -3598,12 +3600,12 @@ XFSWsDirOpenFileRead (
     const struct _DirE * Entry;
     const struct _DirE * Parent;
     const char * EntryName;
-    const struct XFSPfad * EffPfad;
+    const struct XFSPath * EffPath;
     va_list xArgs;
 
     RCt = 0;
     Entry = NULL;
-    EffPfad = NULL;
+    EffPath = NULL;
     EntryName = NULL;
     Dir = ( struct XFSWsDir * ) self;
 
@@ -3622,7 +3624,7 @@ printf ( " <<<[XFSWsDirOpenFileRead] [%p]\n", ( void * ) self );
     RCt = _GetNameAndMapParentEntryNoLock (
                                         Dir,
                                         & Parent,
-                                        & EffPfad,
+                                        & EffPath,
                                         & EntryName,
                                         Format,
                                         xArgs
@@ -3638,7 +3640,7 @@ printf ( " <<<[XFSWsDirOpenFileRead] [%p]\n", ( void * ) self );
                                     ( struct KKey * ) _WsDirKey ( Dir ),
                                     "%s/%s/%s",
                                     _WsDirPath ( Dir ),
-                                    XFSPfadGet ( EffPfad ),
+                                    XFSPathGet ( EffPath ),
                                     Entry -> eff_name
                                     );
 
@@ -3649,7 +3651,7 @@ printf ( " <<<[XFSWsDirOpenFileRead] [%p]\n", ( void * ) self );
 
         free ( ( char * ) EntryName );
 
-        XFSPfadRelease ( EffPfad );
+        XFSPathRelease ( EffPath );
 
         _DirERelease ( Parent );
     }
@@ -3685,13 +3687,13 @@ XFSWsDirOpenFileWrite (
     const struct _DirE * Entry;
     const struct _DirE * Parent;
     const char * EntryName;
-    const struct XFSPfad * EffPfad;
+    const struct XFSPath * EffPath;
     va_list xArgs;
 
     RCt = 0;
     Entry = NULL;
     Parent = NULL;
-    EffPfad = NULL;
+    EffPath = NULL;
     EntryName = NULL;
     Dir = ( struct XFSWsDir * ) self;
 
@@ -3710,7 +3712,7 @@ printf ( " <<<[XFSWsDirOpenFileWrite] [%p] u[%d]\n", ( void * ) self, Update );
     RCt = _GetNameAndMapParentEntryNoLock (
                                         Dir,
                                         & Parent,
-                                        & EffPfad,
+                                        & EffPath,
                                         & EntryName,
                                         Format,
                                         xArgs
@@ -3727,7 +3729,7 @@ printf ( " <<<[XFSWsDirOpenFileWrite] [%p] u[%d]\n", ( void * ) self, Update );
                                     Update,
                                     "%s/%s/%s",
                                     _WsDirPath ( Dir ),
-                                    XFSPfadGet ( EffPfad ),
+                                    XFSPathGet ( EffPath ),
                                     Entry -> eff_name
                                     );
 
@@ -3738,7 +3740,7 @@ printf ( " <<<[XFSWsDirOpenFileWrite] [%p] u[%d]\n", ( void * ) self, Update );
 
         free ( ( char * ) EntryName );
 
-        XFSPfadRelease ( EffPfad );
+        XFSPathRelease ( EffPath );
 
         _DirERelease ( Parent );
     }
@@ -3779,13 +3781,13 @@ XFSWsDirCreateFile	(
     const struct _DirE * Entry;
     const struct _DirE * Parent;
     const char * EntryName;
-    const struct XFSPfad * EffPfad;
+    const struct XFSPath * EffPath;
     va_list xArgs;
 
     RCt = 0;
     Entry = NULL;
     Parent = NULL;
-    EffPfad = NULL;
+    EffPath = NULL;
     EntryName = NULL;
     Dir = ( struct XFSWsDir * ) self;
 
@@ -3805,7 +3807,7 @@ printf ( " <<<[XFSWsDirCreateFile] [%p]\n", ( void * ) self );
     RCt = _GetNameAndMapParentEntryNoLock (
                                         Dir,
                                         & Parent,
-                                        & EffPfad,
+                                        & EffPath,
                                         & EntryName,
                                         Format,
                                         xArgs
@@ -3843,7 +3845,7 @@ printf ( " <<<[XFSWsDirCreateFile] [%p]\n", ( void * ) self );
                                             Cmode,
                                             "%s/%s/%s",
                                             _WsDirPath ( Dir ),
-                                            XFSPfadGet ( EffPfad ),
+                                            XFSPathGet ( EffPath ),
                                             Entry -> eff_name
                                             );
                     if ( RCt == 0 ) {
@@ -3866,7 +3868,7 @@ printf ( " <<<[XFSWsDirCreateFile] [%p]\n", ( void * ) self );
 
         free ( ( char * ) EntryName );
 
-        XFSPfadRelease ( EffPfad );
+        XFSPathRelease ( EffPath );
 
         _DirERelease ( Parent );
     }
@@ -3897,7 +3899,7 @@ XFSWsDirFileSize (
     rc_t RCt;
     struct XFSWsDir * Dir;
     const struct _DirE * Entry;
-    const struct XFSPfad * Pfad;
+    const struct XFSPath * Path;
     struct KDirectory * NatDir;
     const struct KFile * File;
     va_list xArgs;
@@ -3905,7 +3907,7 @@ XFSWsDirFileSize (
     RCt = 0;
     Dir = ( struct XFSWsDir * ) self;
     Entry = NULL;
-    Pfad = NULL;
+    Path = NULL;
     NatDir = NULL;
     File = NULL;
 
@@ -3922,7 +3924,7 @@ printf ( " <<<[XFSWsDirFileSize] [%p]\n", ( void * ) self );
     if ( RCt == 0 ) {
 
         va_copy ( xArgs, Args );
-        RCt = _WsDirVMapIt ( Dir, & Entry, & Pfad, Format, xArgs );
+        RCt = _WsDirVMapIt ( Dir, & Entry, & Path, Format, xArgs );
         va_end ( xArgs );
         if ( RCt == 0 ) {
             if ( Entry -> is_folder ) {
@@ -3934,7 +3936,7 @@ printf ( " <<<[XFSWsDirFileSize] [%p]\n", ( void * ) self );
                                             ( struct KKey * ) _WsDirKey ( Dir ),
                                             "%s/%s",
                                             _WsDirPath ( Dir ),
-                                            XFSPfadGet ( Pfad )
+                                            XFSPathGet ( Path )
                                             );
                 if ( RCt == 0 ) {
                     RCt = KFileSize ( File, Size );
@@ -3943,7 +3945,7 @@ printf ( " <<<[XFSWsDirFileSize] [%p]\n", ( void * ) self );
                 }
             }
 
-            XFSPfadRelease ( Pfad );
+            XFSPathRelease ( Path );
             _DirERelease ( Entry );
         }
 
@@ -3974,7 +3976,7 @@ XFSWsDirSetFileSize (
     rc_t RCt;
     struct XFSWsDir * Dir;
     const struct _DirE * Entry;
-    const struct XFSPfad * Pfad;
+    const struct XFSPath * Path;
     struct KDirectory * NatDir;
     struct KFile * File;
     va_list xArgs;
@@ -3982,7 +3984,7 @@ XFSWsDirSetFileSize (
     RCt = 0;
     Dir = ( struct XFSWsDir * ) self;
     Entry = NULL;
-    Pfad = NULL;
+    Path = NULL;
     NatDir = NULL;
     File = NULL;
 
@@ -3997,7 +3999,7 @@ printf ( " <<<[XFSWsDirSetFileSize] [%p]\n", ( void * ) self );
     if ( RCt == 0 ) {
 
         va_copy ( xArgs, Args );
-        RCt = _WsDirVMapIt ( Dir, & Entry, & Pfad, Format, xArgs );
+        RCt = _WsDirVMapIt ( Dir, & Entry, & Path, Format, xArgs );
         va_end ( xArgs );
         if ( RCt == 0 ) {
             if ( Entry -> is_folder ) {
@@ -4010,7 +4012,7 @@ printf ( " <<<[XFSWsDirSetFileSize] [%p]\n", ( void * ) self );
                                             true,
                                             "%s/%s",
                                             _WsDirPath ( Dir ),
-                                            XFSPfadGet ( Pfad )
+                                            XFSPathGet ( Path )
                                             );
                 if ( RCt == 0 ) {
                     RCt = KFileSetSize ( File, Size );
@@ -4019,7 +4021,7 @@ printf ( " <<<[XFSWsDirSetFileSize] [%p]\n", ( void * ) self );
                 }
             }
 
-            XFSPfadRelease ( Pfad );
+            XFSPathRelease ( Path );
             _DirERelease ( Entry );
         }
 
@@ -4127,7 +4129,7 @@ XFSWsDirCreateDir (
     struct XFSWsDir * Dir;
     const struct _DirE * Entry;
     const struct _DirE * Parent;
-    const struct XFSPfad * EffPfad;
+    const struct XFSPath * EffPath;
     const char * EntryName;
     struct KDirectory * NatDir;
     va_list xArgs;
@@ -4135,7 +4137,7 @@ XFSWsDirCreateDir (
     RCt = 0;
     Entry = NULL;
     Parent = NULL;
-    EffPfad = NULL;
+    EffPath = NULL;
     EntryName = NULL;
     Dir = ( struct XFSWsDir * ) self;
     NatDir = NULL;
@@ -4155,7 +4157,7 @@ printf ( " <<<[XFSWsDirCreateDir] [%p]\n", ( void * ) self );
         RCt = _GetNameAndMapParentEntryNoLock (
                                             Dir,
                                             & Parent,
-                                            & EffPfad,
+                                            & EffPath,
                                             & EntryName,
                                             Format,
                                             xArgs
@@ -4189,16 +4191,16 @@ printf ( " <<<[XFSWsDirCreateDir] [%p]\n", ( void * ) self );
                                                 CreationMode,
                                                 "%s/%s/%s",
                                                 _WsDirPath ( Dir ),
-                                                XFSPfadGet ( EffPfad ),
+                                                XFSPathGet ( EffPath ),
                                                 Entry -> eff_name
                                                 );
                         if ( RCt == 0 ) {
-printf ( " [CEDIR] [PARENT] [%s/%s]\n", _WsDirPath ( Dir ), XFSPfadGet ( EffPfad ) );
+printf ( " [CEDIR] [PARENT] [%s/%s]\n", _WsDirPath ( Dir ), XFSPathGet ( EffPath ) );
                             RCt = _SyncronizeDirectoryContentNoLock (
                                                                 Parent
                                                                 );
                             if ( RCt == 0 ) {
-printf ( " [CEDIR] [ENTRY] [%s/%s/%s]\n", _WsDirPath ( Dir ), XFSPfadGet ( EffPfad ), Entry -> eff_name );
+printf ( " [CEDIR] [ENTRY] [%s/%s/%s]\n", _WsDirPath ( Dir ), XFSPathGet ( EffPath ), Entry -> eff_name );
                                 RCt = _SyncronizeDirectoryContentNoLock (
                                                                 Entry
                                                                 );
@@ -4222,7 +4224,7 @@ printf ( " [CEDIR] [ENTRY] [%s/%s/%s]\n", _WsDirPath ( Dir ), XFSPfadGet ( EffPf
 
             free ( ( char * ) EntryName );
 
-            XFSPfadRelease ( EffPfad );
+            XFSPathRelease ( EffPath );
             
             _DirERelease ( Parent );
         }
@@ -4264,14 +4266,14 @@ XFSWsDirDate (
     rc_t RCt;
     struct XFSWsDir * Dir;
     const struct _DirE * Entry;
-    const struct XFSPfad * Pfad;
+    const struct XFSPath * Path;
     struct KDirectory * NatDir;
     va_list xArgs;
 
     RCt = 0;
     Dir = ( struct XFSWsDir * ) self;
     Entry = NULL;
-    Pfad = NULL;
+    Path = NULL;
     NatDir = NULL;
 
     XFS_CSA ( Date, 0 )
@@ -4287,7 +4289,7 @@ printf ( " <<<[XFSWsDirDate] [%p]\n", ( void * ) self );
     if ( RCt == 0 ) {
 
         va_copy ( xArgs, Args );
-        RCt = _WsDirVMapIt ( Dir, & Entry, & Pfad, Format, xArgs );
+        RCt = _WsDirVMapIt ( Dir, & Entry, & Path, Format, xArgs );
         va_end ( xArgs );
         if ( RCt == 0 ) {
             RCt = KDirectoryDate (
@@ -4295,10 +4297,10 @@ printf ( " <<<[XFSWsDirDate] [%p]\n", ( void * ) self );
                                 Date, 
                                 "%s/%s",
                                 _WsDirPath ( Dir ),
-                                XFSPfadGet ( Pfad )
+                                XFSPathGet ( Path )
                                 );
 
-            XFSPfadRelease ( Pfad );
+            XFSPathRelease ( Path );
             _DirERelease ( Entry );
         }
 
@@ -4322,14 +4324,14 @@ XFSWsDirSetDate (
     rc_t RCt;
     struct XFSWsDir * Dir;
     const struct _DirE * Entry;
-    const struct XFSPfad * Pfad;
+    const struct XFSPath * Path;
     struct KDirectory * NatDir;
     va_list xArgs;
 
     RCt = 0;
     Dir = ( struct XFSWsDir * ) self;
     Entry = NULL;
-    Pfad = NULL;
+    Path = NULL;
     NatDir = NULL;
 
     XFS_CAN ( self )
@@ -4343,7 +4345,7 @@ printf ( " <<<[XFSWsDirSetDate] [%p]\n", ( void * ) self );
     if ( RCt == 0 ) {
 
         va_copy ( xArgs, Args );
-        RCt = _WsDirVMapIt ( Dir, & Entry, & Pfad, Format, xArgs );
+        RCt = _WsDirVMapIt ( Dir, & Entry, & Path, Format, xArgs );
         va_end ( xArgs );
         if ( RCt == 0 ) {
             RCt = KDirectorySetDate (
@@ -4352,10 +4354,10 @@ printf ( " <<<[XFSWsDirSetDate] [%p]\n", ( void * ) self );
                                 Date, 
                                 "%s/%s",
                                 _WsDirPath ( Dir ),
-                                XFSPfadGet ( Pfad )
+                                XFSPathGet ( Path )
                                 );
 
-            XFSPfadRelease ( Pfad );
+            XFSPathRelease ( Path );
             _DirERelease ( Entry );
         }
 
@@ -4897,6 +4899,8 @@ _WsDirAlloc (
         }
     }
 
+printf ( " [_WsDirAlloc] [%d] [%d]\n", __LINE__, RCt );
+
     return RCt;
 }   /* _WsDirAlloc () */
 
@@ -4912,13 +4916,13 @@ _WsDirMake (
 )
 {
     rc_t RCt;
-    const struct XFSPfad * aPfad;
+    const struct XFSPath * aPath;
     struct KDirectory * RetVal;
     const char * Name;
     va_list xArgs;
 
     RCt = 0;
-    aPfad = NULL;
+    aPath = NULL;
     RetVal = NULL;
     Name = NULL;
 
@@ -4930,19 +4934,19 @@ _WsDirMake (
         /* Creating valid path
          */
     va_copy ( xArgs, Args );
-    RCt = XFSPfadVMakeAbsolute ( & aPfad, Path, xArgs );
+    RCt = XFSPathVMakeAbsolute ( & aPath, false, Path, xArgs );
     va_end ( xArgs );
     if ( RCt == 0 ) {
-        RCt = _WsDptGet ( XFSPfadGet ( aPfad ), & RetVal );
+        RCt = _WsDptGet ( XFSPathGet ( aPath ), & RetVal );
         if ( RCt != 0 ) {
             RCt = 0;     /* We do not need that really */
 
-            Name = XFSPfadName ( aPfad );
+            Name = XFSPathName ( aPath );
             if ( RCt == 0 ) {
                     /* Creating encoded directory
                      */
                 RCt = _WsDirAlloc (
-                                XFSPfadGet ( aPfad ),
+                                XFSPathGet ( aPath ),
                                 Name,
                                 Password,
                                 EncType,
@@ -4950,12 +4954,12 @@ _WsDirMake (
                                 & RetVal
                                 );
                 if ( RCt == 0 ) {
-                    RCt = _WsDptAdd ( XFSPfadGet ( aPfad ), RetVal );
+                    RCt = _WsDptAdd ( XFSPathGet ( aPath ), RetVal );
                 }
             }
         }
 
-        XFSPfadRelease ( aPfad );
+        XFSPathRelease ( aPath );
     }
 
     if ( RCt == 0 ) {

@@ -347,19 +347,19 @@ _TarNodeFindNode_v1 (
     rc_t RCt;
     uint32_t PathCount;
     const char * NodeName;
-    char PathBuf [ XFS_SIZE_4096 ];
     struct XFSTarRootNode * RootNode;
     struct XFSNode * RetNode;
     const struct XFSTarEntry * Entry;
+    const struct XFSPath * xPath;
     bool IsLast;
 
     RCt = 0;
     PathCount = 0;
     NodeName = NULL;
-    * PathBuf = 0;
     RootNode = NULL;
     RetNode = NULL;
     Entry = NULL;
+    xPath = NULL;
     IsLast = false;
 
     RCt = XFSNodeFindNodeCheckInitStandard (
@@ -385,18 +385,13 @@ _TarNodeFindNode_v1 (
             return XFS_RC ( rcInvalid );
         }
 
-        RCt = XFSPathFrom (
-                        Path,
-                        PathIndex + 1,
-                        PathBuf,
-                        sizeof ( PathBuf )
-                        );
+        RCt = XFSPathFrom ( Path, PathIndex + 1, & xPath );
         if ( RCt == 0 ) {
             RCt = XFSTarGetEntry (
-                                        RootNode -> tar,
-                                        PathBuf,
-                                        & Entry
-                                        );
+                                RootNode -> tar,
+                                XFSPathGet ( xPath ),
+                                & Entry
+                                );
             if ( RCt == 0 ) {
                 RCt = XFSTarNodeMake (
                                     & RetNode,
@@ -409,6 +404,8 @@ _TarNodeFindNode_v1 (
                     return 0;
                 }
             }
+
+            XFSPathRelease ( xPath );
         }
     }
 

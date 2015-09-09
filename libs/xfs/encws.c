@@ -348,6 +348,7 @@ _EncWsDirNodeFindNode_v1 (
     char PathBuf [ XFS_SIZE_4096 ];
     size_t PathBufLen;
     struct _EncWsNode * EncWsNode;
+    const struct XFSPath * xPath;
     bool IsLast;
 
     RCt = 0;
@@ -356,6 +357,7 @@ _EncWsDirNodeFindNode_v1 (
     * PathBuf = 0;
     PathBufLen = 0;
     EncWsNode = NULL;
+    xPath = NULL;
     IsLast = false;
 
     RCt = XFSNodeFindNodeCheckInitStandard (
@@ -393,12 +395,19 @@ _EncWsDirNodeFindNode_v1 (
         * ( PathBuf + PathBufLen ) = '/';
             /*) Here we are trying to create new node
              (*/
-        RCt = XFSPathFrom (
-                        Path,
-                        PathIndex + 1,
+        RCt = XFSPathFrom ( Path, PathIndex + 1, & xPath );
+        if ( RCt == 0 ) {
+            if ( string_copy (
                         PathBuf + PathBufLen + 1,
-                        sizeof ( PathBuf ) - PathBufLen
-                        );
+                        sizeof ( PathBuf ) - PathBufLen,
+                        XFSPathGet ( xPath ),
+                        string_size ( XFSPathGet ( xPath ) )
+                        ) != string_size ( XFSPathGet ( xPath ) ) ) {
+
+                RCt = XFS_RC ( rcInvalid );
+            }
+            XFSPathRelease ( xPath );
+        }
         if ( RCt == 0 ) {
             RCt = _EncWsNodeMake (
                                 & EncWsNode,

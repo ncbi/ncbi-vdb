@@ -1175,51 +1175,6 @@ _HttpMakeUrlFromPath (
     return 0;
 }   /* _HttpMakeUrlFromPath () */
 
-/*))
- //   MISKA2: Will extract name of entry from Path.
-((*/
-static
-rc_t CC
-_HttpExtractNameFromPath ( const char * Path, const char ** Name )
-{
-    size_t PathSize, Pos, RetSize;
-    char * RetName;
-
-    PathSize = Pos = RetSize = 0;
-    RetName = NULL;
-
-    if ( Name != NULL ) {
-        * Name = NULL;
-    }
-
-    if ( Path == NULL || Name == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    PathSize = Pos = string_size ( Path );
-    while ( 0 < Pos ) {
-        if ( Path [ Pos - 1 ] == '/' ) {
-            break;
-        }
-        Pos --;
-    }
-
-    RetSize = PathSize - Pos + 1;
-
-    RetName = calloc ( RetSize, sizeof ( char ) );
-    if ( RetName == NULL ) {
-        return XFS_RC ( rcExhausted );
-    }
-
-    if ( 1 < RetSize ) {
-        string_copy ( RetName, RetSize, Path + Pos,  PathSize - Pos );
-    }
-
-    * Name = RetName;
-
-    return 0;
-}   /* _HttpExtractNameFromPath () */
-
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /* XFSHttpEntry Make/Dispose Methods ...                             */
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
@@ -1267,7 +1222,7 @@ _HttpCreateEntry (
     if ( RCt == 0 ) { 
         RCt = _HttpMakeUrlFromPath ( BaseUrl, Path, & ( RetEntry -> url ) );
         if ( RCt == 0 ) {
-            RCt = _HttpExtractNameFromPath ( Path, & ( RetEntry -> name ) );
+            RCt = XFS_NameFromPath_ZHR ( Path, & ( RetEntry -> name ), false );
             if ( RCt == 0 ) {
                 KRefcountInit (
                             & ( RetEntry -> refcount ),
@@ -1563,9 +1518,9 @@ _MakeValidPath (
         P = BF;
     }
 
-    RCt = XFSPathMake ( P, xPath );
+    RCt = XFSPathMake ( xPath, true, P );
     if ( RCt == 0 ) {
-        * xPathQty = XFSPathCount ( * xPath );
+        * xPathQty = XFSPathPartCount ( * xPath );
     }
 
     return RCt;
@@ -1584,12 +1539,14 @@ _HttpOrCreateEntry (
     char BF [ XFS_SIZE_1024 ];
     uint32_t xQty;
     const struct XFSHttpEntry * Parent;
+    const struct XFSPath * xParent;
 
     RCt = 0;
     xPath = NULL;
     * BF = 0;
     xQty = 0;
     Parent = NULL;
+    xParent = NULL;
 
     if ( Entry != NULL ) {
         * Entry = NULL;
@@ -1608,15 +1565,15 @@ _HttpOrCreateEntry (
         }
         else {
                 /* Path to parent directory */
-            RCt = XFSPathTo ( xPath, xQty - 1, BF, sizeof ( BF ) );
+            RCt = XFSPathParent ( xPath, & xParent );
             if ( RCt == 0 ) {
                     /* Trying to get ready one */
-                Parent = XFSHttpGetEntry ( self, BF );
+                Parent = XFSHttpGetEntry ( self, XFSPathGet ( xParent ) );
                 if ( Parent == NULL ) {
                         /* Creating new one */
                     RCt = _HttpCreateEntry (
                                     self -> base_url,
-                                    BF,
+                                    XFSPathGet ( xParent ),
                                     true,
                                     0,
                                     0,
@@ -1645,10 +1602,12 @@ _HttpOrCreateEntry (
 
                     }
                 }
+
+                XFSPathRelease ( xParent );
             }
         }
 
-        XFSPathDispose ( xPath );
+        XFSPathRelease ( xPath );
     }
 
     return RCt;

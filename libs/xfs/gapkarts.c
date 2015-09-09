@@ -76,75 +76,20 @@ struct XFSGapKartsNode {
 
 static
 rc_t CC
-_ExtractName ( const char * Path, char * Buffer, size_t BufferSize )
-{
-    rc_t RCt;
-    const char * pStart;
-    const char * pEnd;
-    const char * Start;
-    const char * End;
-
-    RCt = 0;
-    pStart = NULL;
-    pEnd = NULL;
-    Start = NULL;
-    End = NULL;
-
-    XFS_CAN ( Path )
-    XFS_CAN ( Buffer )
-    XFS_CA ( BufferSize, 0 )
-
-    pStart = Path;
-    pEnd = pStart + string_size ( Path ) - 1;
-
-        /* Looking for begin of filename
-         */
-    while ( pStart < pEnd ) {
-        if ( * pEnd == '/' ) {
-            Start = pEnd + 1;
-            break;
-        }
-        pEnd --;
-    }
-
-    if ( Start == NULL ) {
-        Start = pStart;
-    }
-
-    pEnd = pStart + string_size ( Path ) - 1;
-    End = pEnd;
-
-         /* Looking for end of filename
-          */
-    while ( pStart < pEnd ) {
-        if ( * pEnd == '.' ) {
-            End = pEnd;
-            break;
-        }
-        pEnd --;
-    }
-
-    string_copy ( Buffer, BufferSize, Start, End - Start );
-
-    return RCt;
-}   /* _ExtractName () */
-
-static
-rc_t CC
 _LoadKart ( struct XFSGapKartsNode * Node, const char * Path )
 {
     rc_t RCt;
     struct XFSNode * KartNode;
-    char Name [ XFS_SIZE_128 ];
+    const char * Name;
 
     RCt = 0;
     KartNode = NULL;
-    * Name = 0;
+    Name = NULL;
 
     XFS_CAN ( Node )
     XFS_CAN ( Path )
 
-    RCt = _ExtractName ( Path, Name, sizeof ( Name ) );
+    RCt = XFS_NameFromPath_ZHR ( Path, & Name, true );
     if ( RCt == 0 ) {
         RCt = XFSKartNodeMake ( & KartNode, Name, Path, NULL );
         if ( RCt == 0 ) {
@@ -160,6 +105,8 @@ _LoadKart ( struct XFSGapKartsNode * Node, const char * Path )
             KOutMsg ( "Invalid Kart file [%s]\n", Path );
             RCt = 0;
         }
+
+        free ( ( char * ) Name );
     }
 
     return RCt;

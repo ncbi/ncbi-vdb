@@ -91,10 +91,9 @@ XFS_SRC = \
     operations  \
     security    \
     model    \
-    path    \
-    pfad    \
     tree    \
     node    \
+    path    \
     perm    \
     editors \
     handle  \
@@ -121,9 +120,8 @@ XFS_SRC = \
     encro     \
     xencws     \
     encws     \
-    xgapprj_tmp \
-    gapprj_tmp    \
-    xcache   \
+    xgap    \
+    xgapf    \
     cache    \
     gapkarts    \
     bean \

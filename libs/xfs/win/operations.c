@@ -336,6 +336,7 @@ _DOKAN_get_parent_node (
     struct XFSNode * xNode;
     struct XFSAttrEditor * xEditor;
     char * xName;
+    const struct XFSPath * xParent;
 
     RCt = 0;
     Depot = NULL;
@@ -345,6 +346,7 @@ _DOKAN_get_parent_node (
     xNode = NULL;
     xEditor = NULL;
     xName = NULL;
+    xParent = NULL;
 
     if ( Node == NULL ) {
         return XFS_RC ( rcNull );
@@ -377,7 +379,7 @@ _DOKAN_get_parent_node (
     if ( RCt == 0 ) {
             /*) Making XFSPath
              (*/
-        RCt = XFSPathMake ( BB, & xPath );
+        RCt = XFSPathMake ( & xPath, true, BB );
         if ( RCt == 0 ) {
             xPathQ = XFSPathCount ( xPath );
             if ( xPathQ < 2 ) {
@@ -386,11 +388,15 @@ _DOKAN_get_parent_node (
             else {
                     /*) Here we are composing parent path
                      (*/
-                RCt = XFSPathTo ( xPath, xPathQ - 1, BB, sizeof ( BB ) );
+                RCt = XFSPathParent ( xPath, & xParent );
                 if ( RCt == 0 ) {
                         /*) Here we are looking for NODE
                          (*/
-                    RCt = XFSTreeDepotFindNode ( Depot, BB, & xNode );
+                    RCt = XFSTreeDepotFindNode (
+                                                Depot,
+                                                XFSPathGet ( xParent ),
+                                                & xNode
+                                                );
                     if ( RCt == 0 ) {
                         if ( Type != NULL ) {
                             RCt = XFSNodeAttrEditor ( xNode, & xEditor );
@@ -417,9 +423,11 @@ _DOKAN_get_parent_node (
                         }
                     }
                 }
+
+                XFSPathRelease ( xParent );
             }
 
-            XFSPathDispose ( xPath );
+            XFSPathRelease ( xPath );
         }
     }
 
