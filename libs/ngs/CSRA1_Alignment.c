@@ -63,6 +63,85 @@ typedef struct CSRA1_Alignment CSRA1_Alignment;
  * CSRA1_Alignment
  */
 
+/* align_col_specs must be kept in sync with enum AlignmentTableColumns */
+static const char * align_col_specs [] =
+{
+    "(I32)MAPQ",
+    "(ascii)CIGAR_LONG",
+    "(ascii)CIGAR_SHORT",
+    "(ascii)CLIPPED_CIGAR_LONG",
+    "(ascii)CLIPPED_CIGAR_SHORT",
+    "(INSDC:quality:phred)CLIPPED_QUALITY",
+    "(INSDC:dna:text)CLIPPED_READ",
+    "(INSDC:coord:len)LEFT_SOFT_CLIP",
+    "(INSDC:coord:len)RIGHT_SOFT_CLIP",
+    "(INSDC:quality:phred)QUALITY",
+    "(INSDC:dna:text)RAW_READ",
+    "(INSDC:dna:text)READ",
+    "(I64)REF_ID",
+    "(INSDC:coord:len)REF_LEN",
+    "(ascii)REF_SEQ_ID",	/* was REF_NAME changed March 23 2015 */
+    "(bool)REF_ORIENTATION",
+    "(INSDC:coord:zero)REF_POS",
+    "(INSDC:dna:text)REF_READ",
+    "(INSDC:quality:text:phred_33)SAM_QUALITY",
+    "(INSDC:coord:one)SEQ_READ_ID",
+    "(I64)SEQ_SPOT_ID",
+    "(ascii)SPOT_GROUP",
+    "(I32)TEMPLATE_LEN",
+    "(ascii)RNA_ORIENTATION",
+    "(I64)MATE_ALIGN_ID",
+    "(ascii)MATE_REF_SEQ_ID",	/* was MATE_REF_NAME changed March 23 2015 */
+    "(bool)MATE_REF_ORIENTATION",
+};
+/* Made changes to align_col_specs? - Make the same in enum AlignmentTableColumns! */
+
+/* enum AlignmentTableColumns must be kept in sync with align_col_specs */
+enum AlignmentTableColumns
+{
+    align_MAPQ,
+    align_CIGAR_LONG,
+    align_CIGAR_SHORT,
+    align_CLIPPED_CIGAR_LONG,
+    align_CLIPPED_CIGAR_SHORT,
+    align_CLIPPED_QUALITY,
+    align_CLIPPED_READ,
+    align_LEFT_SOFT_CLIP,
+    align_RIGHT_SOFT_CLIP,
+    align_QUALITY,
+    align_RAW_READ,
+    align_READ,
+    align_REF_ID,
+    align_REF_LEN,
+    align_REF_NAME,
+    align_REF_ORIENTATION,
+    align_REF_POS,
+    align_REF_READ,
+    align_SAM_QUALITY,
+    align_SEQ_READ_ID,
+    align_SEQ_SPOT_ID,
+    align_SPOT_GROUP,
+    align_TEMPLATE_LEN,
+    align_RNA_ORIENTATION,
+    align_MATE_ALIGN_ID,
+    align_MATE_REF_SEQ_ID,
+    align_MATE_REF_ORIENTATION,
+    /*align_HAS_REF_OFFSET,
+    align_REF_OFFSET,*/
+
+    align_NUM_COLS
+};
+/* Made changes to enum AlignmentTableColumns? - Make the same in align_col_specs! */
+
+
+struct NGS_Cursor const* CSRA1_AlignmentMakeDb ( ctx_t ctx,
+                                                 struct VDatabase const* db,
+                                                 struct NGS_String const* run_name,
+                                                 char const* table_name )
+{
+    return NGS_CursorMakeDb ( ctx, db, run_name, table_name, align_col_specs, align_NUM_COLS );
+}
+
 struct CSRA1_Alignment
 {
     NGS_Refcount dad;   
@@ -565,7 +644,7 @@ struct NGS_String* CSRA1_AlignmentGetMateReferenceSpec( CSRA1_Alignment* self, c
         return NULL;
     }
 
-    return NGS_CursorGetString ( GetCursor ( self ), ctx, self -> cur_row, align_MATE_REF_NAME);
+    return NGS_CursorGetString ( GetCursor ( self ), ctx, self -> cur_row, align_MATE_REF_SEQ_ID);
 }
 
 bool CSRA1_AlignmentGetMateIsReversedOrientation( CSRA1_Alignment* self, ctx_t ctx )
