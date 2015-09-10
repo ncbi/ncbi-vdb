@@ -402,6 +402,26 @@ int64_t CSRA1_AlignmentGetAlignmentPosition( CSRA1_Alignment* self, ctx_t ctx )
     return NGS_CursorGetInt32 ( GetCursor ( self ), ctx, self -> cur_row, align_REF_POS);
 }
 
+uint64_t CSRA1_AlignmentGetReferencePositionProjectionRange( CSRA1_Alignment* self, ctx_t ctx, int64_t ref_pos )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+    uint64_t ret;
+
+    if ( ! self -> seen_first ) 
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Alignment accessed before a call to AlignmentIteratorNext()" );
+        return 0;
+    }
+
+    /* TODO: add an implementation*/
+
+    ret = ref_pos - NGS_CursorGetInt32 ( GetCursor ( self ), ctx, self -> cur_row, align_REF_POS);
+    ret <<= 32;
+    ret |= 1;
+
+    return ret;
+}
+
 uint64_t CSRA1_AlignmentGetAlignmentLength( CSRA1_Alignment* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
@@ -777,6 +797,7 @@ static NGS_Alignment_vt CSRA1_Alignment_vt_inst =
     CSRA1_AlignmentGetAlignedFragmentBases,
     CSRA1_AlignmentIsPrimary,
     CSRA1_AlignmentGetAlignmentPosition,
+    CSRA1_AlignmentGetReferencePositionProjectionRange,
     CSRA1_AlignmentGetAlignmentLength,
     CSRA1_AlignmentGetIsReversedOrientation,
     CSRA1_AlignmentGetSoftClip,

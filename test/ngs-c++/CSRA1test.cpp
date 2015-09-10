@@ -29,6 +29,7 @@
 */
 
 #include "ngsfixture.hpp"
+#include <stdint.h>
 
 #include <sstream>
 
@@ -589,6 +590,12 @@ FIXTURE_TEST_CASE(CSRA1_Alignment_getAlignmentPosition, CSRA1_Fixture)
 {
     REQUIRE_EQ( (int64_t)85, //REF_POS
                 ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.1" ) . getAlignmentPosition () );
+}
+
+FIXTURE_TEST_CASE(CSRA1_Alignment_getReferencePositionProjectionRange, CSRA1_Fixture)
+{
+    uint64_t res = ncbi::NGS::openReadCollection (CSRA1_PrimaryOnly).getAlignment (ngs::String (CSRA1_PrimaryOnly) + ".PA.1").getReferencePositionProjectionRange (85);
+    REQUIRE( res ); // TODO: make a reasonable test
 }
 
 FIXTURE_TEST_CASE(CSRA1_Alignment_getAlignmentLength, CSRA1_Fixture)
