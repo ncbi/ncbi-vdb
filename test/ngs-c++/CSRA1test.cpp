@@ -592,10 +592,26 @@ FIXTURE_TEST_CASE(CSRA1_Alignment_getAlignmentPosition, CSRA1_Fixture)
                 ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.1" ) . getAlignmentPosition () );
 }
 
-FIXTURE_TEST_CASE(CSRA1_Alignment_getReferencePositionProjectionRange, CSRA1_Fixture)
+FIXTURE_TEST_CASE(CSRA1_Alignment_getReferencePositionProjectionRangeM, CSRA1_Fixture)
 {
-    uint64_t res = ncbi::NGS::openReadCollection (CSRA1_PrimaryOnly).getAlignment (ngs::String (CSRA1_PrimaryOnly) + ".PA.1").getReferencePositionProjectionRange (85);
-    REQUIRE( res ); // TODO: make a reasonable test
+    uint64_t res = ncbi::NGS::openReadCollection ("SRR1597772").getAlignment("SRR1597772.PA.6").getReferencePositionProjectionRange(11601);
+    REQUIRE( res == 1 );
+}
+
+FIXTURE_TEST_CASE(CSRA1_Alignment_getReferencePositionProjectionRangeI, CSRA1_Fixture)
+{
+    uint64_t res = ncbi::NGS::openReadCollection ("SRR1597772").getAlignment("SRR1597772.PA.6").getReferencePositionProjectionRange(11692);
+    REQUIRE( res == ((uint64_t)84 << 32 | 5) );
+}
+
+FIXTURE_TEST_CASE(CSRA1_Alignment_getReferencePositionProjectionRangeD, CSRA1_Fixture)
+{
+    uint64_t res = ncbi::NGS::openReadCollection ("SRR1597772").getAlignment("SRR1597772.PA.6").getReferencePositionProjectionRange(11667);
+    REQUIRE( res == ((uint64_t)65 << 32) );
+    res = ncbi::NGS::openReadCollection ("SRR1597772").getAlignment("SRR1597772.PA.6").getReferencePositionProjectionRange(11669);
+    REQUIRE( res == ((uint64_t)65 << 32) );
+    res = ncbi::NGS::openReadCollection ("SRR1597772").getAlignment("SRR1597772.PA.6").getReferencePositionProjectionRange(11672);
+    REQUIRE( res == ((uint64_t)65 << 32) );
 }
 
 FIXTURE_TEST_CASE(CSRA1_Alignment_getAlignmentLength, CSRA1_Fixture)
