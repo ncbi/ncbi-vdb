@@ -96,6 +96,8 @@ bool NGS_AlignmentIsPrimary( NGS_Alignment* self, ctx_t ctx );
 
 int64_t NGS_AlignmentGetAlignmentPosition( NGS_Alignment* self, ctx_t ctx );
 
+uint64_t NGS_AlignmentGetReferencePositionProjectionRange( NGS_Alignment* self, ctx_t ctx, int64_t ref_pos );
+
 uint64_t NGS_AlignmentGetAlignmentLength( NGS_Alignment* self, ctx_t ctx );
 
 bool NGS_AlignmentGetIsReversedOrientation( NGS_Alignment* self, ctx_t ctx );
@@ -151,6 +153,7 @@ struct NGS_Alignment_vt
     struct NGS_String*      ( * getAlignedFragmentBases )       ( NGS_ALIGNMENT* self, ctx_t ctx );
     bool                    ( * isPrimary )                     ( NGS_ALIGNMENT* self, ctx_t ctx );
     int64_t                 ( * getAlignmentPosition )          ( NGS_ALIGNMENT* self, ctx_t ctx );
+    uint64_t                ( * getReferencePositionProjectionRange )( NGS_ALIGNMENT* self, ctx_t ctx, int64_t ref_pos );
     uint64_t                ( * getAlignmentLength )            ( NGS_ALIGNMENT* self, ctx_t ctx );
     bool                    ( * getIsReversedOrientation )      ( NGS_ALIGNMENT* self, ctx_t ctx );
     int                     ( * getSoftClip )                   ( NGS_ALIGNMENT* self, ctx_t ctx, bool left );

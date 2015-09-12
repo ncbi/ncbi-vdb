@@ -356,6 +356,18 @@ int64_t CSRA1_ReferenceWindowGetAlignmentPosition( CSRA1_ReferenceWindow* self, 
 }
 
 static
+uint64_t CSRA1_ReferenceWindowGetReferencePositionProjectionRange( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t ref_pos )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+    
+    TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
+    {
+        return NGS_AlignmentGetReferencePositionProjectionRange ( ref, ctx, ref_pos );
+    }
+    return 0;
+}
+
+static
 uint64_t CSRA1_ReferenceWindowGetAlignmentLength( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
@@ -811,6 +823,7 @@ static NGS_Alignment_vt CSRA1_ReferenceWindow_vt_inst =
     CSRA1_ReferenceWindowGetAlignedFragmentBases,
     CSRA1_ReferenceWindowIsPrimary,
     CSRA1_ReferenceWindowGetAlignmentPosition,
+    CSRA1_ReferenceWindowGetReferencePositionProjectionRange,
     CSRA1_ReferenceWindowGetAlignmentLength,
     CSRA1_ReferenceWindowGetIsReversedOrientation,
     CSRA1_ReferenceWindowGetSoftClip,

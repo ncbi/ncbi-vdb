@@ -184,6 +184,18 @@ static int64_t ITF_Alignment_v1_get_align_pos ( const NGS_Alignment_v1 * self, N
     return ret;
 }
 
+static uint64_t ITF_Alignment_v1_get_ref_pos_projection_range ( const NGS_Alignment_v1 * self, NGS_ErrBlock_v1 * err, int64_t ref_pos )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+    ON_FAIL ( uint64_t ret = NGS_AlignmentGetReferencePositionProjectionRange ( Self ( self ), ctx, ref_pos ) )
+    {
+        NGS_ErrBlockThrow ( err, ctx );
+    }
+
+    CLEAR ();
+    return ret;
+}
+
 static uint64_t ITF_Alignment_v1_get_align_length ( const NGS_Alignment_v1 * self, NGS_ErrBlock_v1 * err )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
@@ -348,7 +360,7 @@ NGS_Alignment_v1_vt ITF_Alignment_vt =
     {
         "NGS_Alignment",
         "NGS_Alignment_v1",
-        1,
+        2,
         & ITF_Fragment_vt . dad
     },
 
@@ -378,7 +390,10 @@ NGS_Alignment_v1_vt ITF_Alignment_vt =
     ITF_Alignment_v1_next,
 
     /* v1.1 */
-    ITF_Alignment_v1_get_rna_orientation
+    ITF_Alignment_v1_get_rna_orientation,
+
+    /* v1.2 */
+    ITF_Alignment_v1_get_ref_pos_projection_range
 };
 
 
@@ -551,6 +566,20 @@ int64_t NGS_AlignmentGetAlignmentPosition( NGS_Alignment* self, ctx_t ctx )
     else
     {
         return VT ( self, getAlignmentPosition ) ( self, ctx );
+    }
+    return 0;
+}
+
+uint64_t NGS_AlignmentGetReferencePositionProjectionRange( NGS_Alignment* self, ctx_t ctx, int64_t ref_pos )
+{
+    if ( self == NULL )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+        INTERNAL_ERROR ( xcSelfNull, "NGS_AlignmentGetReferencePositionProjectionRange failed" );
+    }
+    else
+    {
+        return VT ( self, getReferencePositionProjectionRange ) ( self, ctx, ref_pos );
     }
     return 0;
 }
@@ -840,7 +869,14 @@ static char NullAlignment_RNAOrientation ( NGS_ALIGNMENT * self, ctx_t ctx )
 {
     return '?';
 }
-  
+
+static uint64_t NullAlignment_ReferencePositionProjectionRange ( NGS_ALIGNMENT * self, ctx_t ctx, int64_t ref_pos )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+    INTERNAL_ERROR ( xcSelfNull, "NULL Alignment accessed" );
+    return -1 ^ (uint64_t)0xffffffff;
+}
+
 static NGS_Alignment_vt NullAlignment_vt_inst =
 {
     {
@@ -869,6 +905,7 @@ static NGS_Alignment_vt NullAlignment_vt_inst =
     NullAlignment_toString,        /* getAlignedFragmentBases      */
     NullAlignment_toBool,          /* isPrimary                    */
     NullAlignment_toI64,           /* getAlignmentPosition         */
+    NullAlignment_ReferencePositionProjectionRange, /* getReferencePositionProjectionRange */
     NullAlignment_toU64,           /* getAlignmentLength           */
     NullAlignment_toBool,          /* getIsReversedOrientation     */
     NullAlignment_boolToInt,       /* getSoftClip                  */
