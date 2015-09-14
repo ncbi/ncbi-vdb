@@ -46,7 +46,7 @@ extern "C" {
 rc_t ArgsConvDefault(const Args * args, uint32_t arg_index, const char * arg, size_t arg_len, void ** result, WhackParamFnP * whack);
     
 /*
- * Converts from utf-8 platform dependent (e.g. with back slahes on Windows) to utf-8 POSIX full file path format
+ * Converts from utf-8 platform dependent (e.g. with back-slashes on Windows) to utf-8 POSIX full file path format
  */
 rc_t ArgsConvFilepath(const Args * args, uint32_t arg_index, const char * arg, size_t arg_len, void ** result, WhackParamFnP * whack);
     

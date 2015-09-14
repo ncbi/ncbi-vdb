@@ -147,7 +147,7 @@ rc_t CC ParamValueMake (ParamValueContainer * p_container, uint32_t arg_index, c
     {
         fprintf (stderr, "Error allocating memory for option parameter %s\n",
                  value);
-        return RC (rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
+        return RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
     }
 
     string_copy (p_container->param_value, alloc_size, value, value_size);
@@ -190,7 +190,7 @@ rc_t CC OptionMake (Option ** pself, const char * name, size_t size, uint32_t ma
     self = malloc (sizeof (*self) + size);
     if (self == NULL)
     {
-        rc = RC (rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
+        rc = RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
         PLOGERR (klogErr, (klogErr, rc, "Error adding option '$(O)'","O=--%s",name));
     }
     else 
@@ -282,7 +282,7 @@ rc_t CC OptionGetValue (const Option * self, uint32_t number, const void ** valu
     p_container = VectorGet (&self->values, number);
     /* SKH -- this was checking pc, which is uninitialized */
     if (p_container == NULL)
-        return RC (rcRuntime, rcArgv, rcAccessing, rcIndex, rcExcessive);
+        return RC (rcExe, rcArgv, rcAccessing, rcIndex, rcExcessive);
     
     *value = p_container->param_value;
     
@@ -303,7 +303,7 @@ rc_t CC OptionAddValue (Option * option, uint32_t arg_index, const char * value,
     p_container = (ParamValueContainer *)malloc( sizeof *p_container );
     if (p_container == NULL)
     {
-        rc = RC (rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
+        rc = RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
         return rc;
     }
 
@@ -313,7 +313,7 @@ rc_t CC OptionAddValue (Option * option, uint32_t arg_index, const char * value,
     if (option->max_count && (option->count > option->max_count))
     {
         --option->count;
-        rc = RC (rcRuntime, rcArgv, rcInserting, rcData, rcExcessive);
+        rc = RC (rcExe, rcArgv, rcInserting, rcData, rcExcessive);
         PLOGERR (klogErr,
                  (klogErr, rc, "Too many occurrences of option '$(O)'",
                   "O=--%s", option->name));
@@ -395,7 +395,7 @@ rc_t CC OptAliasMake (OptAlias ** pself, const char * name, size_t size,
     self = malloc (sizeof (*self) + size);
     if (self == NULL)
     {
-        rc_t rc = RC (rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
+        rc_t rc = RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
         PLOGERR (klogErr,
                  (klogErr, rc, "Error creating structure for alias '$(A)' for parameter '$(B)", 
                   "A=%s,B=%s", name, option->name));
@@ -492,7 +492,7 @@ rc_t CC OptDefMakeCopy (OptDef ** pself, OptDef * original)
     {
         rc_t rc;
         /* assuming DebugMsg is stderr equivalent */
-        rc = RC (rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
+        rc = RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
         LOGERR (klogFatal, rc, "error creating help for option");
         return rc;
     }
@@ -546,7 +546,7 @@ rc_t CC HelpGroupMake (HelpGroup ** pself, const char * name)
     if (self == NULL)
     {
         fprintf (stderr, "Error allocating help group structure %s\n", name);
-        return RC (rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
+        return RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
     }
     string_copy (self->name, size+1, name, size);
     VectorInit (&self->optdefs, 0, 16);
@@ -602,7 +602,7 @@ rc_t CC ParamMake (Parameter ** p_parameter, uint32_t position, ConvertParamFnP 
     if (parameter == NULL)
     {
         fprintf (stderr, "Error allocating parameter structure\n");
-        return RC (rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
+        return RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
 
     }
     
@@ -636,7 +636,7 @@ rc_t CC ParamGetValue (const Vector * param_values, uint32_t number, const void 
     
     p_container = VectorGet (param_values, number);
     if (p_container == NULL)
-        return RC (rcRuntime, rcArgv, rcAccessing, rcIndex, rcExcessive);
+        return RC (rcExe, rcArgv, rcAccessing, rcIndex, rcExcessive);
     
     *value = p_container->param_value;
     
@@ -657,7 +657,7 @@ rc_t CC ParamAddValue (Vector * param_values, uint32_t arg_index, const char * v
     p_container = (ParamValueContainer *)malloc( sizeof *p_container );
     if (p_container == NULL)
     {
-        rc = RC (rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
+        rc = RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
         return rc;
     }
 
@@ -713,7 +713,7 @@ rc_t CC ArgsMake (Args ** pself)
     self = malloc (sizeof (*self));
     if (self == NULL)
     {
-        rc = RC (rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
+        rc = RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
     }
     else
     {
@@ -776,20 +776,20 @@ rc_t CC ArgsAddOption (Args * self, const OptDef * option)
 
     if (self == NULL)
     {
-        rc = RC (rcRuntime, rcArgv, rcConstructing, rcSelf, rcNull);
+        rc = RC (rcExe, rcArgv, rcConstructing, rcSelf, rcNull);
         LOGERR (klogInt, rc, "Error adding an opion with no object");
         return rc;
     }
     if (option == NULL)
     {
-        rc = RC (rcRuntime, rcArgv, rcConstructing, rcParam, rcNull);
+        rc = RC (rcExe, rcArgv, rcConstructing, rcParam, rcNull);
         LOGERR (klogInt, rc, "Error adding an option with no option name");
         return rc;
     }
     name = option->name;
     if (! is_valid_name (name))
     {
-        rc = RC (rcRuntime, rcArgv, rcConstructing, rcName, rcInvalid);
+        rc = RC (rcExe, rcArgv, rcConstructing, rcName, rcInvalid);
         PLOGERR (klogInt, (klogInt, rc, "Error using illegal option name '$(O)'", "O=--%s", name));
         return rc;
     }
@@ -805,7 +805,7 @@ rc_t CC ArgsAddOption (Args * self, const OptDef * option)
     {
         if (GetRCState(rc) == rcBusy)
         {
-            rc = RC (rcRuntime, rcArgv, rcConstructing, rcName, rcBusy);
+            rc = RC (rcExe, rcArgv, rcConstructing, rcName, rcBusy);
             PLOGERR (klogInt,
                      (klogInt, rc, "duplicate option name '$(O)'", "O=--%s", name));
         }
@@ -833,7 +833,7 @@ rc_t CC ArgsAddOption (Args * self, const OptDef * option)
             incr = utf8_utf32 (&c, startc, endc);
             if (incr < 0)
             {
-                rc = RC (rcRuntime, rcArgv, rcConstructing, rcName, rcCorrupt);
+                rc = RC (rcExe, rcArgv, rcConstructing, rcName, rcCorrupt);
                 PLOGERR (klogInt,
                          (klogInt, rc, "Error parsing alias string '$(A)' from '$(B)' for '$(C)'",
                           "A=%s,B=%s,C=%s", startc, option->aliases, name));
@@ -841,7 +841,7 @@ rc_t CC ArgsAddOption (Args * self, const OptDef * option)
             }
             if (incr > 4)
             {
-                rc = RC (rcRuntime, rcArgv, rcConstructing, rcName, rcCorrupt);
+                rc = RC (rcExe, rcArgv, rcConstructing, rcName, rcCorrupt);
                 PLOGERR (klogInt,
                          (klogInt, rc,"Error parsing UTF-8 string '$(S)'",
                           "S=%s", startc));
@@ -850,7 +850,7 @@ rc_t CC ArgsAddOption (Args * self, const OptDef * option)
             size = string_copy (alias_name, sizeof (alias_name), startc, incr);
             if (! is_valid_name (alias_name))
             {
-                rc = RC (rcRuntime, rcArgv, rcConstructing, rcName, rcInvalid);
+                rc = RC (rcExe, rcArgv, rcConstructing, rcName, rcInvalid);
                 PLOGERR (klogInt,
                          (klogInt, rc, "Error using invalid alias name '$(S)'",
                           "S=%s", alias_name));
@@ -887,7 +887,7 @@ rc_t CC ArgsAddOption (Args * self, const OptDef * option)
                         }
                     }
 #endif
-                    rc = RC (rcRuntime, rcArgv, rcConstructing, rcName, rcExists);
+                    rc = RC (rcExe, rcArgv, rcConstructing, rcName, rcExists);
                     PLOGERR (klogInt,
                              (klogInt, rc, "duplicate alias name '$(S)'",
                               "S=%s", alias_name));
@@ -1018,7 +1018,7 @@ void CC ArgsCheckRequiredInt (BSTNode * n, void * _data)
     opt = (Option*)n;
     if (opt->required && ! opt->count)
     {
-        rc = RC( rcRuntime, rcArgv, rcParsing, rcParam, rcNotFound );
+        rc = RC( rcExe, rcArgv, rcParsing, rcParam, rcNotFound );
         PLOGERR (klogWarn, (klogWarn, rc, "Error missing required parameter '$(P)'",
                             "P=%s", opt->name));
         if (data->missing_option == NULL)
@@ -1142,7 +1142,7 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
         p_container = (ParamValueContainer *)malloc( sizeof *p_container );
         if (p_container == NULL)
         {
-            rc = RC (rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
+            rc = RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
             break;
         }
 
@@ -1222,7 +1222,7 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
 
                         else if ( ix + 1 >= ix_to )
                         {
-                            rc = RC( rcRuntime, rcArgv, rcParsing, rcParam, rcExhausted );
+                            rc = RC( rcExe, rcArgv, rcParsing, rcParam, rcExhausted );
                             PLOGERR (klogErr,
                                      (klogErr, qrc,"Option '$(O)' is missing a value", "O=--%s", node->name ));
                         }
@@ -1305,7 +1305,7 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
                                     value = parg + jx + name_len;
                                 else
                                 {
-                                    qrc = RC( rcRuntime, rcArgv, rcParsing, rcParam, rcExhausted );
+                                    qrc = RC( rcExe, rcArgv, rcParsing, rcParam, rcExhausted );
                                     LOGERR (klogErr, qrc,
                                             "Value missing with alias followed by =" );
                                     if (orc == 0)
@@ -1319,7 +1319,7 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
                             }
                             else if ( ix + 1 >= ix_to )
                             {
-                                rc = RC( rcRuntime, rcArgv, rcParsing, rcParam, rcExhausted );
+                                rc = RC( rcExe, rcArgv, rcParsing, rcParam, rcExhausted );
                                 PLOGERR (klogErr,
                                          (klogErr, rc,
                                           "Option '$(O)' ( alias for '$(N)' ) is missing a value",
@@ -1420,7 +1420,7 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
         rc = ArgsHandleHelp (self);
         /* if "help" wasn't found we aren't using standard arguments so don't
          * call it an error: if OptionGout changes this might have to as well */
-        if (rc == SILENT_RC (rcRuntime, rcArgv, rcAccessing, rcName, rcNotFound))
+        if (rc == SILENT_RC (rcExe, rcArgv, rcAccessing, rcName, rcNotFound))
             rc = 0;
     }
 #endif
@@ -1428,7 +1428,7 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
     if (rc == 0)
     {
         rc = ArgsHandleVersion (self);
-        if (rc == SILENT_RC (rcRuntime, rcArgv, rcAccessing, rcName, rcNotFound))
+        if (rc == SILENT_RC (rcExe, rcArgv, rcAccessing, rcName, rcNotFound))
             rc = 0;
     }
 #endif
@@ -1457,9 +1457,9 @@ rc_t CC ArgsOptionCount (const Args * self, const char * option_name, uint32_t *
     rc_t rc;
 
     if (self == NULL)
-        return RC (rcRuntime, rcArgv, rcAccessing, rcSelf, rcNull);
+        return RC (rcExe, rcArgv, rcAccessing, rcSelf, rcNull);
     else if (count == NULL)
-        return RC (rcRuntime, rcArgv, rcAccessing, rcParam, rcNull);
+        return RC (rcExe, rcArgv, rcAccessing, rcParam, rcNull);
     else
     {
         const Option * node;
@@ -1467,7 +1467,7 @@ rc_t CC ArgsOptionCount (const Args * self, const char * option_name, uint32_t *
         node = (const Option*)BSTreeFind (&self->names, option_name, OptionCmp);
         if (node == NULL)
         {
-            rc = RC (rcRuntime, rcArgv, rcAccessing, rcName, rcNotFound);
+            rc = RC (rcExe, rcArgv, rcAccessing, rcName, rcNotFound);
 /* this was removed to shut up about "help" not being found during tests
             PLOGERR (klogWarn, (klogWarn, rc, "Option name not found '$(S)'", "S=%s", option_name));
  */
@@ -1486,16 +1486,16 @@ rc_t CC ArgsOptionValue (const Args * self, const char * option_name, uint32_t i
     rc_t rc;
 
     if (self == NULL)
-        return RC (rcRuntime, rcArgv, rcAccessing, rcSelf, rcNull);
+        return RC (rcExe, rcArgv, rcAccessing, rcSelf, rcNull);
 
     if ((option_name == NULL) || (value_bin == NULL))
-        return RC (rcRuntime, rcArgv, rcAccessing, rcParam, rcNull);
+        return RC (rcExe, rcArgv, rcAccessing, rcParam, rcNull);
 
     *value_bin = NULL;
 
     node = (const Option*)BSTreeFind (&self->names, option_name, OptionCmp);
     if (node == NULL)
-        return RC (rcRuntime, rcArgv, rcAccessing, rcName, rcNotFound);
+        return RC (rcExe, rcArgv, rcAccessing, rcName, rcNotFound);
     
     rc = OptionGetValue (node, iteration, value_bin);
     return rc;
@@ -1504,9 +1504,9 @@ rc_t CC ArgsOptionValue (const Args * self, const char * option_name, uint32_t i
 rc_t CC ArgsParamCount (const Args * self, uint32_t * count)
 {
     if (self == NULL)
-        return RC (rcRuntime, rcArgv, rcAccessing, rcSelf, rcNull);
+        return RC (rcExe, rcArgv, rcAccessing, rcSelf, rcNull);
     else if (count == NULL)
-        return RC (rcRuntime, rcArgv, rcAccessing, rcParam, rcNull);
+        return RC (rcExe, rcArgv, rcAccessing, rcParam, rcNull);
 
     *count = VectorLength (&self->param_values);
     return 0;
@@ -1517,15 +1517,15 @@ rc_t CC ArgsParamValue (const Args * self, uint32_t iteration, const void ** val
     rc_t rc;
     
     if (self == NULL)
-        return RC (rcRuntime, rcArgv, rcAccessing, rcSelf, rcNull);
+        return RC (rcExe, rcArgv, rcAccessing, rcSelf, rcNull);
 
     if (value == NULL)
-        return RC (rcRuntime, rcArgv, rcAccessing, rcParam, rcNull);
+        return RC (rcExe, rcArgv, rcAccessing, rcParam, rcNull);
 
     if (iteration >= VectorLength (&self->param_values))
     {
         *value = NULL;
-        return RC (rcRuntime, rcArgv, rcAccessing, rcParam, rcExcessive);
+        return RC (rcExe, rcArgv, rcAccessing, rcParam, rcExcessive);
     }
 
     
@@ -1536,9 +1536,9 @@ rc_t CC ArgsParamValue (const Args * self, uint32_t iteration, const void ** val
 rc_t CC ArgsArgvCount (const Args * self, uint32_t * count)
 {
     if (self == NULL)
-        return RC (rcRuntime, rcArgv, rcAccessing, rcSelf, rcNull);
+        return RC (rcExe, rcArgv, rcAccessing, rcSelf, rcNull);
     else if (count == NULL)
-        return RC (rcRuntime, rcArgv, rcAccessing, rcArgv, rcNull);
+        return RC (rcExe, rcArgv, rcAccessing, rcArgv, rcNull);
 
     *count = VectorLength (&self->argv);
     return 0;
@@ -1557,15 +1557,15 @@ rc_t CC ArgsArgvValue (const Args * self, uint32_t iteration, const char ** valu
     ParamValueContainer * p_container;
     
     if (self == NULL)
-        return RC (rcRuntime, rcArgv, rcAccessing, rcSelf, rcNull);
+        return RC (rcExe, rcArgv, rcAccessing, rcSelf, rcNull);
 
     if (value_string == NULL)
-        return RC (rcRuntime, rcArgv, rcAccessing, rcArgv, rcNull);
+        return RC (rcExe, rcArgv, rcAccessing, rcArgv, rcNull);
 
     if (iteration >= VectorLength (&self->argv))
     {
         *value_string = NULL;
-        return RC (rcRuntime, rcArgv, rcAccessing, rcArgv, rcExcessive);
+        return RC (rcExe, rcArgv, rcAccessing, rcArgv, rcExcessive);
     }
 
     p_container = (ParamValueContainer*) VectorGet (&self->argv, iteration);
@@ -1852,7 +1852,7 @@ rc_t CC ArgsHandleStatusLevel (const Args * self)
             {
                 rc_t irc;
 
-                irc = SILENT_RC (rcRuntime, rcArgv, rcParsing, rcParam, rcIncorrect);
+                irc = SILENT_RC (rcExe, rcArgv, rcParsing, rcParam, rcIncorrect);
                 if (qcount)
                 {
                     PLOGERR (klogErr,
@@ -1958,25 +1958,30 @@ rc_t CC ArgsHandleStandardOptions (Args * self)
     return rc;
 }
 
-rc_t CC ArgsMakeAndHandle (Args ** pself, int argc, char ** argv, uint32_t table_count, ...)
+static
+rc_t ArgsMakeAndHandleInt ( Args ** pself, int argc, char ** argv,
+    const ParamDef *params, uint32_t param_count, uint32_t optdef_count, va_list ap )
 {
     rc_t rc;
     Args * self;
 
     *pself = NULL;
     rc = ArgsMakeStandardOptions (&self);
+    if ( rc == 0 && param_count != 0 )
+    {
+        if ( params == NULL )
+            return RC ( rcExe, rcArgv, rcConstructing, rcParam, rcNull );
+
+        rc = ArgsAddParamArray ( self, params, param_count );
+    }
     if (rc == 0)
     {
         for (;;)
         {
             /* load added OptDef tables */
-            if (table_count)
+            if (optdef_count != 0)
             {
-                va_list ap;
-
-                va_start (ap, table_count);
-
-                while (table_count--)
+                while (optdef_count--)
                 {
                     OptDef * options;
                     uint32_t opt_count;
@@ -1988,8 +1993,6 @@ rc_t CC ArgsMakeAndHandle (Args ** pself, int argc, char ** argv, uint32_t table
                     if (rc)
                         break;
                 }
-
-                va_end (ap);
 
                 if (rc)
                     break;
@@ -2034,7 +2037,26 @@ rc_t CC ArgsMakeAndHandle (Args ** pself, int argc, char ** argv, uint32_t table
     return rc;
 }
 
+rc_t CC ArgsMakeAndHandle (Args ** pself, int argc, char ** argv, uint32_t table_count, ...)
+{
+    rc_t rc;
+    va_list args;
+    va_start ( args, table_count );
+    rc = ArgsMakeAndHandleInt ( pself, argc, argv, NULL, 0, table_count, args );
+    va_end ( args );
+    return rc;
+}
 
+rc_t CC ArgsMakeAndHandle2 ( Args ** pself, int argc, char ** argv,
+    const ParamDef *params, uint32_t param_count, uint32_t optdef_count, ... )
+{
+    rc_t rc;
+    va_list args;
+    va_start ( args, optdef_count );
+    rc = ArgsMakeAndHandleInt ( pself, argc, argv, params, param_count, optdef_count, args );
+    va_end ( args );
+    return rc;
+}
 
 
 /* NOTE:
