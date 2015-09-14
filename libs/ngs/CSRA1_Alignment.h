@@ -40,42 +40,16 @@ extern "C" {
  */
 
 struct VCursor;
+struct VDatabase;
 struct NGS_String;
+struct NGS_Cursor;
 struct NGS_Alignment;
 struct CSRA1_ReadCollection;
 
-enum AlignmentTableColumns
-{
-    align_MAPQ,
-    align_CIGAR_LONG,
-    align_CIGAR_SHORT,
-    align_CLIPPED_CIGAR_LONG,
-    align_CLIPPED_CIGAR_SHORT,
-    align_CLIPPED_QUALITY,
-    align_CLIPPED_READ,
-    align_LEFT_SOFT_CLIP,
-    align_RIGHT_SOFT_CLIP,
-    align_QUALITY,
-    align_RAW_READ,
-    align_READ,
-    align_REF_ID,
-    align_REF_LEN,
-    align_REF_NAME,
-    align_REF_ORIENTATION,
-    align_REF_POS,
-    align_REF_READ,
-    align_SAM_QUALITY,
-    align_SEQ_READ_ID,
-    align_SEQ_SPOT_ID,
-    align_SPOT_GROUP,
-    align_TEMPLATE_LEN,
-    align_RNA_ORIENTATION,
-    align_MATE_ALIGN_ID,
-    align_MATE_REF_NAME,
-    align_MATE_REF_ORIENTATION,
-
-    align_NUM_COLS
-};
+struct NGS_Cursor const* CSRA1_AlignmentMakeDb( ctx_t ctx,
+                                                struct VDatabase const* db,
+                                                struct NGS_String const* run_name,
+                                                char const* table_name );
 
 struct NGS_Alignment * CSRA1_AlignmentMake ( ctx_t ctx, 
                                              struct CSRA1_ReadCollection * coll,

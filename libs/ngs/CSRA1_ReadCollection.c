@@ -129,37 +129,6 @@ void CSRA1_ReadCollectionWhack ( CSRA1_ReadCollection * self, ctx_t ctx )
     VDatabaseRelease ( self -> db );
 }
 
-static const char * align_col_specs [] =
-{
-    "(I32)MAPQ",
-    "(ascii)CIGAR_LONG",
-    "(ascii)CIGAR_SHORT",
-    "(ascii)CLIPPED_CIGAR_LONG",
-    "(ascii)CLIPPED_CIGAR_SHORT",
-    "(INSDC:quality:phred)CLIPPED_QUALITY",
-    "(INSDC:dna:text)CLIPPED_READ",
-    "(INSDC:coord:len)LEFT_SOFT_CLIP",
-    "(INSDC:coord:len)RIGHT_SOFT_CLIP",
-    "(INSDC:quality:phred)QUALITY",
-    "(INSDC:dna:text)RAW_READ",
-    "(INSDC:dna:text)READ",
-    "(I64)REF_ID",
-    "(INSDC:coord:len)REF_LEN",
-    "(ascii)REF_SEQ_ID",	/* was REF_NAME changed March 23 2015 */
-    "(bool)REF_ORIENTATION",
-    "(INSDC:coord:zero)REF_POS",
-    "(INSDC:dna:text)REF_READ",
-    "(INSDC:quality:text:phred_33)SAM_QUALITY",
-    "(INSDC:coord:one)SEQ_READ_ID",
-    "(I64)SEQ_SPOT_ID",
-    "(ascii)SPOT_GROUP",
-    "(I32)TEMPLATE_LEN",
-    "(ascii)RNA_ORIENTATION",
-    "(I64)MATE_ALIGN_ID",
-    "(ascii)MATE_REF_SEQ_ID",	/* was MATE_REF_NAME changed March 23 2015 */
-    "(bool)MATE_REF_ORIENTATION",
-};
-
 static const char * reference_col_specs [] =
 {
     "(bool)CIRCULAR",
@@ -205,13 +174,13 @@ const NGS_Cursor* CSRA1_ReadCollectionMakeAlignmentCursor ( CSRA1_ReadCollection
                 return ret;
             }
         }
-        return NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, primary ? "PRIMARY_ALIGNMENT" : "SECONDARY_ALIGNMENT", align_col_specs, align_NUM_COLS );
+        return CSRA1_AlignmentMakeDb ( ctx, self -> db, self -> run_name, primary ? "PRIMARY_ALIGNMENT" : "SECONDARY_ALIGNMENT" );
     }
     if ( primary )
     {
         if ( self -> primary_al_curs == NULL )
         {
-            self -> primary_al_curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "PRIMARY_ALIGNMENT", align_col_specs, align_NUM_COLS );
+            self -> primary_al_curs = CSRA1_AlignmentMakeDb ( ctx, self -> db, self -> run_name, "PRIMARY_ALIGNMENT" );
         }
         return NGS_CursorDuplicate ( self -> primary_al_curs, ctx );
     }
@@ -219,7 +188,7 @@ const NGS_Cursor* CSRA1_ReadCollectionMakeAlignmentCursor ( CSRA1_ReadCollection
     {
         if ( self -> secondary_al_curs == NULL )
         {
-            self -> secondary_al_curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SECONDARY_ALIGNMENT", align_col_specs, align_NUM_COLS );
+            self -> secondary_al_curs = CSRA1_AlignmentMakeDb ( ctx, self->db, self->run_name, "SECONDARY_ALIGNMENT" );
         }
         return NGS_CursorDuplicate ( self -> secondary_al_curs, ctx );
     }
@@ -400,12 +369,10 @@ uint64_t CSRA1_ReadCollectionGetAlignmentCount ( CSRA1_ReadCollection * self, ct
     {
         if ( self -> secondary_al_curs == NULL )
         {
-            ON_FAIL ( self -> secondary_al_curs = NGS_CursorMakeDb ( ctx, 
+            ON_FAIL ( self -> secondary_al_curs = CSRA1_AlignmentMakeDb ( ctx, 
                                                                      self -> db, 
                                                                      self -> run_name, 
-                                                                     "SECONDARY_ALIGNMENT", 
-                                                                     align_col_specs, 
-                                                                     align_NUM_COLS ) )
+                                                                     "SECONDARY_ALIGNMENT" ) )
                 return 0;
         }
         ret += NGS_CursorGetRowCount ( self -> secondary_al_curs, ctx );
@@ -683,7 +650,7 @@ NGS_ReadCollection * NGS_ReadCollectionMakeCSRA ( ctx_t ctx, const VDatabase *db
             /* initialize "run_name" */
             TRY ( ref -> run_name = NGS_StringMakeCopy ( ctx, name, end - name ) )
             {
-                TRY ( ref -> primary_al_curs = NGS_CursorMakeDb ( ctx, ref -> db, ref -> run_name, "PRIMARY_ALIGNMENT", align_col_specs, align_NUM_COLS ) )
+                TRY ( ref -> primary_al_curs = CSRA1_AlignmentMakeDb ( ctx, ref -> db, ref -> run_name, "PRIMARY_ALIGNMENT" ) )
                 {
                     TRY ( ref -> primaryId_count = NGS_CursorGetRowCount ( ref -> primary_al_curs, ctx ) )
                     {   

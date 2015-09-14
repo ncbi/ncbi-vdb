@@ -63,6 +63,87 @@ typedef struct CSRA1_Alignment CSRA1_Alignment;
  * CSRA1_Alignment
  */
 
+/* align_col_specs must be kept in sync with enum AlignmentTableColumns */
+static const char * align_col_specs [] =
+{
+    "(I32)MAPQ",
+    "(ascii)CIGAR_LONG",
+    "(ascii)CIGAR_SHORT",
+    "(ascii)CLIPPED_CIGAR_LONG",
+    "(ascii)CLIPPED_CIGAR_SHORT",
+    "(INSDC:quality:phred)CLIPPED_QUALITY",
+    "(INSDC:dna:text)CLIPPED_READ",
+    "(INSDC:coord:len)LEFT_SOFT_CLIP",
+    "(INSDC:coord:len)RIGHT_SOFT_CLIP",
+    "(INSDC:quality:phred)QUALITY",
+    "(INSDC:dna:text)RAW_READ",
+    "(INSDC:dna:text)READ",
+    "(I64)REF_ID",
+    "(INSDC:coord:len)REF_LEN",
+    "(ascii)REF_SEQ_ID",	/* was REF_NAME changed March 23 2015 */
+    "(bool)REF_ORIENTATION",
+    "(INSDC:coord:zero)REF_POS",
+    "(INSDC:dna:text)REF_READ",
+    "(INSDC:quality:text:phred_33)SAM_QUALITY",
+    "(INSDC:coord:one)SEQ_READ_ID",
+    "(I64)SEQ_SPOT_ID",
+    "(ascii)SPOT_GROUP",
+    "(I32)TEMPLATE_LEN",
+    "(ascii)RNA_ORIENTATION",
+    "(I64)MATE_ALIGN_ID",
+    "(ascii)MATE_REF_SEQ_ID",	/* was MATE_REF_NAME changed March 23 2015 */
+    "(bool)MATE_REF_ORIENTATION",
+    "(bool)HAS_REF_OFFSET",
+    "(I32)REF_OFFSET"
+};
+/* Made changes to align_col_specs? - Make the same in enum AlignmentTableColumns! */
+
+/* enum AlignmentTableColumns must be kept in sync with align_col_specs */
+enum AlignmentTableColumns
+{
+    align_MAPQ,
+    align_CIGAR_LONG,
+    align_CIGAR_SHORT,
+    align_CLIPPED_CIGAR_LONG,
+    align_CLIPPED_CIGAR_SHORT,
+    align_CLIPPED_QUALITY,
+    align_CLIPPED_READ,
+    align_LEFT_SOFT_CLIP,
+    align_RIGHT_SOFT_CLIP,
+    align_QUALITY,
+    align_RAW_READ,
+    align_READ,
+    align_REF_ID,
+    align_REF_LEN,
+    align_REF_SEQ_ID,
+    align_REF_ORIENTATION,
+    align_REF_POS,
+    align_REF_READ,
+    align_SAM_QUALITY,
+    align_SEQ_READ_ID,
+    align_SEQ_SPOT_ID,
+    align_SPOT_GROUP,
+    align_TEMPLATE_LEN,
+    align_RNA_ORIENTATION,
+    align_MATE_ALIGN_ID,
+    align_MATE_REF_SEQ_ID,
+    align_MATE_REF_ORIENTATION,
+    align_HAS_REF_OFFSET,
+    align_REF_OFFSET,
+
+    align_NUM_COLS
+};
+/* Made changes to enum AlignmentTableColumns? - Make the same in align_col_specs! */
+
+
+struct NGS_Cursor const* CSRA1_AlignmentMakeDb ( ctx_t ctx,
+                                                 struct VDatabase const* db,
+                                                 struct NGS_String const* run_name,
+                                                 char const* table_name )
+{
+    return NGS_CursorMakeDb ( ctx, db, run_name, table_name, align_col_specs, align_NUM_COLS );
+}
+
 struct CSRA1_Alignment
 {
     NGS_Refcount dad;   
@@ -84,7 +165,46 @@ struct CSRA1_Alignment
     /* for use in slices */ 
 	int64_t secondary_start;
 	int64_t secondary_max;
+
+    /* data to be accessed via CellData */
+    void const* cell_data [ align_NUM_COLS ];
+    uint32_t cell_len [ align_NUM_COLS ];
 };
+
+static void const* CSRA1_AlignmentGetCellData ( CSRA1_Alignment * self,
+                                                ctx_t ctx,
+                                                uint32_t col_idx
+                                                )
+{
+    if ( self -> cell_data [ col_idx ] == NULL )
+    {
+        assert ( self -> cell_len [ col_idx ] == 0 );
+
+        if ( ! self -> seen_first ) 
+        {
+            USER_ERROR ( xcIteratorUninitialized, "Alignment accessed before a call to AlignmentIteratorNext()" );
+            return NULL;
+        }
+
+        NGS_CursorCellDataDirect ( self -> in_primary ? self->primary_curs : self->secondary_curs,
+            ctx,
+            self->cur_row,
+            col_idx,
+            NULL,
+            & self -> cell_data [ col_idx ],
+            NULL,
+            & self -> cell_len [ col_idx ]
+        );
+
+        if ( FAILED() )
+        {
+            self -> cell_data [ col_idx ] = NULL;
+            self -> cell_len [ col_idx ] = 0;
+        }
+    }
+
+    return self -> cell_data [ col_idx ];
+}
 
 #define GetCursor( self ) ( self -> in_primary ? self -> primary_curs : self -> secondary_curs )
 
@@ -246,7 +366,7 @@ struct NGS_String* CSRA1_AlignmentGetReferenceSpec( CSRA1_Alignment* self, ctx_t
         return NULL;
     }
     
-    return NGS_CursorGetString ( GetCursor ( self ), ctx, self -> cur_row, align_REF_NAME );
+    return NGS_CursorGetString ( GetCursor ( self ), ctx, self -> cur_row, align_REF_SEQ_ID );
 }
 
 int CSRA1_AlignmentGetMappingQuality( CSRA1_Alignment* self, ctx_t ctx )
@@ -402,6 +522,119 @@ int64_t CSRA1_AlignmentGetAlignmentPosition( CSRA1_Alignment* self, ctx_t ctx )
     return NGS_CursorGetInt32 ( GetCursor ( self ), ctx, self -> cur_row, align_REF_POS);
 }
 
+uint64_t CSRA1_AlignmentGetReferencePositionProjectionRange( CSRA1_Alignment* self, ctx_t ctx, int64_t ref_pos )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+    uint64_t ret;
+    bool const* HAS_REF_OFFSET;
+    int32_t const* REF_OFFSET;
+
+    if ( ! self -> seen_first ) 
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Alignment accessed before a call to AlignmentIteratorNext()" );
+        return (uint64_t)-1 ^ 0xFFFFFFFFu;
+    }
+
+    REF_OFFSET = CSRA1_AlignmentGetCellData ( self, ctx, align_REF_OFFSET );
+    /* Check for error, REF_OFFSET == NULL? if (  ) */
+
+    /* if there is no indels just calculate projection as (ref_pos - REF_POS) with len = 1 */
+    if ( self -> cell_len [ align_REF_OFFSET ] == 0 )
+    {
+        int32_t align_len = NGS_CursorGetInt32 ( GetCursor ( self ), ctx, self -> cur_row, align_REF_LEN);
+        ret = ref_pos - NGS_CursorGetInt32 ( GetCursor ( self ), ctx, self -> cur_row, align_REF_POS);
+
+        if ( FAILED() )
+        {
+            SYSTEM_ERROR ( xcIteratorUninitialized, "Failed to access REF_LEN or REF_POS" );
+            return (uint64_t)-1 ^ 0xFFFFFFFFu;
+        }
+        else if ( ret >= align_len )
+        {
+            /* calculated projection is out of bounds, i.e. ref_pos
+               doesn't project on the alignment
+            */
+            ret = (uint64_t)-1 ^ 0xFFFFFFFFu;
+        }
+
+        /* ref_pos has a projection on the current alignment -
+           pack it and make its length = 1
+        */
+        ret <<= 32;
+        ret |= 1;
+    }
+    else /* we have indels */
+    {
+        int32_t read_len;
+        int32_t idx_ref, idx_HAS_REF_OFFSET = 0, idx_REF_OFFSET = 0;
+        int32_t align_pos;
+        uint32_t proj_len;
+
+        HAS_REF_OFFSET = CSRA1_AlignmentGetCellData ( self, ctx, align_HAS_REF_OFFSET );
+        /* Check for error, HAS_REF_OFFSET == NULL? if (  ) */
+
+        if ( HAS_REF_OFFSET == NULL )
+        {
+            SYSTEM_ERROR ( xcIteratorUninitialized, "Failed to access HAS_REF_OFFSET" );
+            return (uint64_t)-1 ^ 0xFFFFFFFFu;
+        }
+
+        read_len = self -> cell_len [ align_HAS_REF_OFFSET ];
+        idx_ref = NGS_CursorGetInt32 ( GetCursor ( self ), ctx, self -> cur_row, align_REF_POS);
+
+        if ( FAILED () )
+        {
+            SYSTEM_ERROR ( xcIteratorUninitialized, "Failed to access REF_POS" );
+            return (uint64_t)-1 ^ 0xFFFFFFFFu;
+        }
+
+        for ( align_pos = 0, proj_len = 1; idx_ref < ref_pos && align_pos < read_len ; align_pos += proj_len )
+        {
+            bool has_ref_offset = HAS_REF_OFFSET [ idx_HAS_REF_OFFSET++ ];
+            if ( has_ref_offset == 0) /* match/mismatch */
+            {
+                ++idx_ref;
+                proj_len = 1;
+            }
+            else /* indel */
+            {
+                int32_t ref_offset = REF_OFFSET [ idx_REF_OFFSET++ ];
+                
+                if ( ref_offset < 0 )
+                {
+                    /* insertion */
+                    proj_len = (uint32_t)-ref_offset;
+                    ++idx_ref;
+                }
+                else
+                {
+                    /* deletion */
+                    assert ( ref_offset > 0 );
+
+                    idx_ref += ref_offset;
+                    proj_len = 0;
+                }
+            }
+        }
+
+        /* in the case we exited from the loop at the insertion, align_pos points beyond
+           the insertion - it should be restored to point to the beginning of the insertion
+        */
+        if ( proj_len > 1 )
+            align_pos -= proj_len;
+
+        if ( align_pos >= read_len )
+        {
+            align_pos = -1;
+            proj_len = 0;
+        }
+
+        ret = ((uint64_t)align_pos << 32) | proj_len;
+    }
+
+    return ret;
+}
+
 uint64_t CSRA1_AlignmentGetAlignmentLength( CSRA1_Alignment* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
@@ -545,7 +778,7 @@ struct NGS_String* CSRA1_AlignmentGetMateReferenceSpec( CSRA1_Alignment* self, c
         return NULL;
     }
 
-    return NGS_CursorGetString ( GetCursor ( self ), ctx, self -> cur_row, align_MATE_REF_NAME);
+    return NGS_CursorGetString ( GetCursor ( self ), ctx, self -> cur_row, align_MATE_REF_SEQ_ID);
 }
 
 bool CSRA1_AlignmentGetMateIsReversedOrientation( CSRA1_Alignment* self, ctx_t ctx )
@@ -777,6 +1010,7 @@ static NGS_Alignment_vt CSRA1_Alignment_vt_inst =
     CSRA1_AlignmentGetAlignedFragmentBases,
     CSRA1_AlignmentIsPrimary,
     CSRA1_AlignmentGetAlignmentPosition,
+    CSRA1_AlignmentGetReferencePositionProjectionRange,
     CSRA1_AlignmentGetAlignmentLength,
     CSRA1_AlignmentGetIsReversedOrientation,
     CSRA1_AlignmentGetSoftClip,
