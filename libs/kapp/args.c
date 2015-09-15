@@ -1712,7 +1712,7 @@ OptDef StandardOptions[]  =
 #if USE_OPTFILE
     {
         OPTION_OPTFILE         , ALIAS_OPTFILE  , NULL, optfile_usage,
-        OPT_UNLIM, true , false
+        OPT_UNLIM, true , false, ArgsConvFilepath
     },
 #endif
     {
