@@ -99,7 +99,7 @@ static const char default_kfg[] = {
 "/repository/remote/aux/NCBI/root = \"http://ftp-trace.ncbi.nlm.nih.gov/sra\"\n"
 "/repository/remote/protected/CGI/resolver-cgi = "
                       "\"http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
-"/tools/ascp/max_rate = \"1000mm\"\n"
+"/tools/ascp/max_rate = \"1000m\"\n"
 };
 /*----------------------------------------------------------------------------*/
 
