@@ -263,8 +263,6 @@ rc_t CC ArgsHandleDebug (const Args * self);
 rc_t CC ArgsHandleStandardOptions (Args * self);
 
 rc_t CC ArgsMakeAndHandle (Args ** pself, int argc, char ** argv, uint32_t table_count, ...);
-rc_t CC ArgsMakeAndHandle2 (Args ** pself, int argc, char ** argv,
-    const ParamDef *params, uint32_t param_count, uint32_t optdef_count, ... );
 
 rc_t CC ArgsMakeAndHandleStandardOptions (Args ** pself, int argc, char ** argv,
                                        OptDef * options, uint32_t opt_count);

@@ -42,6 +42,7 @@
 #include <kfg/config.h>
 #include <kapp/main.h>
 #include <kapp/args.h>
+#include <kapp/args-conv.h>
 
 #include "args_debug.h"
 
@@ -321,7 +322,7 @@ rc_t CC OptionAddValue (Option * option, uint32_t arg_index, const char * value,
     else if (option->needs_value)
     {
         assert (value);     /* gotta have a value */
-        assert (size);      /* value can't be a NUL string */
+        assert (size);      /* value can't be a NULL string */
 
         rc = ParamValueMake (p_container, arg_index, value, size, option->convert_fn);
         if (rc == 0)
@@ -662,7 +663,7 @@ rc_t CC ParamAddValue (Vector * param_values, uint32_t arg_index, const char * v
     }
 
     assert (value);     /* gotta have a value */
-    assert (size);      /* value can't be a NUL string */
+    assert (size);      /* value can't be a NULL string */
     
     rc = ParamValueMake (p_container, arg_index, value, size, convert_fn);
     if (rc == 0)
@@ -2043,17 +2044,6 @@ rc_t CC ArgsMakeAndHandle (Args ** pself, int argc, char ** argv, uint32_t table
     va_list args;
     va_start ( args, table_count );
     rc = ArgsMakeAndHandleInt ( pself, argc, argv, NULL, 0, table_count, args );
-    va_end ( args );
-    return rc;
-}
-
-rc_t CC ArgsMakeAndHandle2 ( Args ** pself, int argc, char ** argv,
-    const ParamDef *params, uint32_t param_count, uint32_t optdef_count, ... )
-{
-    rc_t rc;
-    va_list args;
-    va_start ( args, optdef_count );
-    rc = ArgsMakeAndHandleInt ( pself, argc, argv, params, param_count, optdef_count, args );
     va_end ( args );
     return rc;
 }
