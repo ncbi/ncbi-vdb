@@ -38,7 +38,7 @@ rc_t ArgsConvFilepath(const Args * args, uint32_t arg_index, const char * arg, s
     
     string_cvt_wchar_copy(arg_wide, MAX_PATH, arg, arg_len);
     
-    res = rewrite_arg_as_path(arg_wide);
+    res = rewrite_arg_as_path(arg_wide, false);
     if (!res)
         return RC (rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
     
