@@ -39,8 +39,10 @@ extern "C" {
  *
  * "known_as_path" indicates whether we need a path conversion path.
  * If it set to false, then rewrite_arg will only convert argument to utf-8.
+ * 
+ * "after_main" indicates whether rewrite happens before or inside calling KMane
  */
-char * CC rewrite_arg_as_path ( const wchar_t *arg );
+char * CC rewrite_arg_as_path ( const wchar_t *arg, bool before_kmane );
     
 #ifdef __cplusplus
 }
