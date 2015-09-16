@@ -533,7 +533,24 @@ NGS_ReadCollection * NGS_ReadCollectionMake ( ctx_t ctx, const char * spec )
             VSchemaRelease ( sra_schema );
 
             if ( rc == 0 )
-                return NGS_ReadCollectionMakeVTable ( ctx, tbl, spec );
+            {   /* VDB-2641: examine the schema name to make sure this is an SRA table */
+                char ts_buff[1024];
+                rc = VTableTypespec ( tbl, ts_buff, sizeof ( ts_buff ) );
+                if ( rc != 0 )
+                {
+                    INTERNAL_ERROR ( xcUnexpected, "VTableTypespec failed: rc = %R", rc );
+                }
+                else
+                {
+                    const char SRA_PREFIX[] = "NCBI:SRA:";
+                    size_t pref_size = sizeof ( SRA_PREFIX ) - 1;
+                    if ( string_match ( SRA_PREFIX, pref_size, ts_buff, string_size ( ts_buff ), pref_size, NULL ) == pref_size )
+                    {
+                        return NGS_ReadCollectionMakeVTable ( ctx, tbl, spec );
+                    }
+                    INTERNAL_ERROR ( xcUnimplemented, "Cannot open accession '%s' as an SRA table.", spec );
+                }
+            }
             else
             {
                 KConfig* kfg;
@@ -551,6 +568,7 @@ NGS_ReadCollection * NGS_ReadCollectionMake ( ctx_t ctx, const char * spec )
                 KRepositoryMgrRelease ( repoMgr );
                 KConfigRelease ( kfg );
             }
+            VTableRelease ( tbl );
         }
     }
 

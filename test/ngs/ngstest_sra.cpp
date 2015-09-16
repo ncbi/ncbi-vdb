@@ -63,6 +63,15 @@ FIXTURE_TEST_CASE(SRA_ReadCollection_Open, SRA_Fixture)
     EXIT;
 }
 
+FIXTURE_TEST_CASE(SRA_ReadCollection_Open_FailsOnReference, SRA_Fixture)
+{
+    ENTRY;
+    const char* SRA_Reference = "NC_000001.10";
+    REQUIRE_NULL ( NGS_ReadCollectionMake ( ctx, SRA_Reference ) );
+    REQUIRE_FAILED ();
+    EXIT;
+}
+
 FIXTURE_TEST_CASE(SRA_ReadCollection_GetReadCount, SRA_Fixture)
 {
     ENTRY_ACC(SRA_Accession);
