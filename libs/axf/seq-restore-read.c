@@ -83,7 +83,7 @@ rc_t RestoreReadMake ( RestoreRead **objp, const VTable *tbl, const VCursor* nat
 
     /* create the object */
     RestoreRead *obj = malloc ( sizeof * obj );
-    memset(obj,0,sizeof * obj);
+    memset( obj,0,sizeof * obj) ;
     if ( obj == NULL )
     {
 		*objp=0;
@@ -91,10 +91,13 @@ rc_t RestoreReadMake ( RestoreRead **objp, const VTable *tbl, const VCursor* nat
     }
     else
 	{
-		rc = VCursorLinkedCursorGet(native_curs,name,&obj->curs);
-		if(rc == 0){
-			VCursorAddRef(obj->curs);
-		} else {
+		rc = VCursorLinkedCursorGet( native_curs, name, &obj->curs );
+		if ( rc == 0 )
+		{
+			VCursorAddRef( obj->curs );
+		}
+		else
+		{
 			/* get at the parent database */
 			const VDatabase *db;
 			rc = VTableOpenParentRead ( tbl, & db );
@@ -168,7 +171,7 @@ rc_t CC seq_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
     const int64_t	*align_id	= argv[ 1 ].u.data.base;
     const INSDC_coord_len *read_len = argv[ 2 ].u.data.base;
     const uint8_t	*read_type	= argv[ 3 ].u.data.base;
-	bool	is_sequential=false;
+	bool is_sequential = false;
     
     assert( argv[ 0 ].u.data.elem_bits == 8 );
     assert( argv[ 1 ].u.data.elem_bits == 64 );
@@ -182,15 +185,18 @@ rc_t CC seq_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
     read_len  += argv [ 2 ] . u . data . first_elem;
     read_type += argv [ 3 ] . u . data . first_elem;
 
-    if(row_id != self->last_row_id  && row_id != self->last_row_id + 1){
+    if ( row_id != self->last_row_id  && row_id != self->last_row_id + 1 )
+	{
 		self->last_sequentual_row_id = row_id;
 		is_sequential = false;
-    } else if(row_id > self->last_sequentual_row_id + 100){
+    }
+	else if ( row_id > self->last_sequentual_row_id + 100 )
+	{
 		is_sequential = true;
 	}
     self->last_row_id = row_id;
-
     
+	/* is_sequential = false; forcing it to false ... Sept. 16th 2015 to analyze prefetching */
     
     for ( i = 0, len = 0; i < (int)num_reads; i++ )
     {
@@ -207,9 +213,19 @@ rc_t CC seq_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
         if ( len == src_len ) /*** shortcut - all data is local ***/
         {
             memcpy( dst, src, len );
-        } else {
-			if( is_sequential && (row_id < self->prefetch_start_id || row_id > self->prefetch_stop_id )){ /* do prefetch */
-				VCursorDataPrefetch(self->curs,align_id,self->read_idx,argv[1].u.data.base_elem_count-argv[1].u.data.first_elem,1,INT64_MAX,true);
+        }
+		else
+		{
+			if ( is_sequential &&
+				 ( row_id < self->prefetch_start_id || row_id > self->prefetch_stop_id ) )
+			{ /* do prefetch */
+				VCursorDataPrefetch( self->curs,
+									 align_id,
+									 self->read_idx,
+									 argv[ 1 ].u.data.base_elem_count-argv[ 1 ].u.data.first_elem,
+									 1,
+									 INT64_MAX,
+									 true );
 				self->prefetch_start_id=row_id;
 				self->prefetch_stop_id =argv[1].blob_stop_id;
 			}
@@ -274,7 +290,11 @@ rc_t CC seq_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
 
 /* 
  * function
- * INSDC:4na:bin ALIGN:seq_restore_read #1 (  INSDC:4na:bin rd , I64 align_id , INSDC:coord:len read_len);
+   INSDC:4na:bin NCBI:align:seq_restore_read #1 ( INSDC:4na:bin cmp_rd,
+												  I64 align_id,
+												  INSDC:coord:len read_len,
+												  INSDC:SRA:xread_type rd_type )
+
  */
 VTRANSFACT_IMPL ( ALIGN_seq_restore_read, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
                                                      VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
