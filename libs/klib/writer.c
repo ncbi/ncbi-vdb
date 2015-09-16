@@ -64,7 +64,7 @@ struct RCCreateLoc
     rc_t rc;
 };
 
-static RCCreateLoc RC_loc_queue [ 4096 ];
+static RCCreateLoc RC_loc_queue [ 1 ];
 static atomic32_t RC_loc_reserve, RC_loc_written, RC_loc_read;
 #define RC_LOC_QUEUE_SIZE ( sizeof RC_loc_queue / sizeof RC_loc_queue [ 0 ] )
 #define RC_LOC_QUEUE_MASK ( RC_LOC_QUEUE_SIZE - 1 )
