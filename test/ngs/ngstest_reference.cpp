@@ -38,7 +38,7 @@ using namespace ncbi::NK;
 
 TEST_SUITE(NgsReferenceTestSuite);
 
-FIXTURE_TEST_CASE(SRA_ReadCollection_Open, NGS_C_Fixture)
+FIXTURE_TEST_CASE(SRA_Reference_Open, NGS_C_Fixture)
 {
     ENTRY;
     const char* SRA_Reference = "NC_000001.10";
@@ -49,7 +49,7 @@ FIXTURE_TEST_CASE(SRA_ReadCollection_Open, NGS_C_Fixture)
     EXIT;
 }
 
-FIXTURE_TEST_CASE(SRA_ReadCollection_Open_FailsOnNonReference, NGS_C_Fixture)
+FIXTURE_TEST_CASE(SRA_Reference_Open_FailsOnNonReference, NGS_C_Fixture)
 {
     ENTRY;
     const char* SRA_Accession = "SRR000001";
