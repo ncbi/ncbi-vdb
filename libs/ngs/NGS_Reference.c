@@ -740,6 +740,7 @@ bool NGS_ReferenceIteratorNext ( NGS_Reference * self, ctx_t ctx )
  */
 static void Null_ReferenceWhack ( NGS_Reference * self, ctx_t ctx )
 {
+    NGS_ReadCollectionRelease ( self -> coll, ctx );
 }
 
 static NGS_String * Null_ReferenceGetCommonName ( NGS_Reference * self, ctx_t ctx )
