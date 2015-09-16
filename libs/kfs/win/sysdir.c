@@ -2581,6 +2581,7 @@ rc_t CC KSysDirOpenDirRead ( const KSysDir *self,
     rc_t rc = KSysDirMakePath ( self, rcOpening, true, dir_name, sizeof dir_name, path, args );
     if ( rc == 0 )
     {
+        int t;
         KSysDir *sub;
 
         size_t dir_size;
@@ -2591,7 +2592,10 @@ rc_t CC KSysDirOpenDirRead ( const KSysDir *self,
         if ( dir_length != length_org )
             dir_length = utf16_string_measure( dir_name, &dir_size );
 
-        if ( ( KSysDirFullPathType ( dir_name ) & ( kptAlias - 1 ) ) != kptDir )
+        t = KSysDirFullPathType ( dir_name ) & ( kptAlias - 1 );
+        if ( t == kptNotFound )
+            return RC ( rcFS, rcDirectory, rcOpening, rcPath, rcNotFound );
+        if ( t != kptDir )
             return RC(rcFS, rcDirectory, rcOpening, rcPath, rcIncorrect );
 
         sub = KSysDirMake ( dir_size );
