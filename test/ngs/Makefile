@@ -157,6 +157,9 @@ TEST_NGS_CSRA1_REFWIN_OBJ = \
 $(TEST_BINDIR)/test-ngs_csra1_refwin: $(TEST_NGS_CSRA1_REFWIN_OBJ) 
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
+refwin: test-ngs_csra1_refwin
+	$(TEST_BINDIR)/$^
+
 valgrind_csra1_refwin: std
 	valgrind --ncbi --suppressions=$(SRCDIR)/valgrind.suppress  --error-exitcode=1 $(TEST_BINDIR)/test-ngs_csra1_refwin     
 

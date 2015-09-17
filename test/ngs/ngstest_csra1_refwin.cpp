@@ -466,6 +466,19 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Slice_Order, CSRA1_Fixture)
     EXIT;
 }
 
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Slice_NoSecondary, CSRA1_Fixture)
+{   // VDB-2658: exception when there is no REFERENCE.SECONDARY_ALIGNMENT_IDS column
+    const char* accesssion = "SRR644545";
+    ENTRY_GET_REF ( accesssion, "NC_000004.11" );
+
+    m_align = NGS_ReferenceGetAlignmentSlice ( m_ref, ctx, 0, 100000, true, true ); 
+    REQUIRE ( ! FAILED () );
+    
+    REQUIRE ( NextId ( string ( accesssion ) + ".PA.1") ); 
+    
+    EXIT;
+}
+
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Slice_Overlap_Primary, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_PrimaryOnly, "supercont2.1" );

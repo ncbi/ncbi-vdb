@@ -671,7 +671,17 @@ void LoadAlignments ( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t chunk_row_
     if ( self -> secondary && self -> ref_secondary_begin <= chunk_row_id )
     {   
         ON_FAIL ( LoadAlignmentIndex ( self, ctx, chunk_row_id, reference_SECONDARY_ALIGNMENT_IDS, & secondary_idx, & secondary_idx_end ) ) 
-            return;
+        {   
+            if ( GetRCObject ( ctx -> rc ) == rcColumn && GetRCState ( ctx -> rc ) == rcNotFound )
+            {   /* SECONDARY_ALIGNMENT_IDS is missing; no problem */
+                self -> secondary = false; /* do not try anymore */
+                CLEAR();
+            }
+            else
+            {
+                return;
+            }
+        }
     }        
 
     total_added = primary_idx_end + secondary_idx_end;
