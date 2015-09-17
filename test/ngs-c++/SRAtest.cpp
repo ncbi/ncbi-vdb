@@ -67,6 +67,26 @@ public:
 };
 const char* SRAFixture::SRA_Accession = "SRR000001";
 
+///// String
+TEST_CASE(SRA_String_StringRefScope)
+{
+    ngs::ReadCollection read_coll = ncbi::NGS::openReadCollection( "SRR618508" );
+    ngs::Reference ref = read_coll.getReference("NC_000002.11");
+
+    ngs::StringRef str_ref = ref.getReferenceChunk(20001);
+    
+    char const* p = str_ref.data();
+    size_t size = str_ref.size();
+
+    // check if all bases are accessible in p, this is the only thing guaranteed
+    for (size_t i = 0; i < size; ++i)
+    {
+        // force the compiler not to optimize this loop
+        if ( p[i] == '!' )
+            std::cout << "SRA_String_StringRefScope works" << std::endl;
+    }
+}
+
 ///// ReadCollection
 //TODO: getReadRange (categories)
 //TODO: getReadCount (categories)
