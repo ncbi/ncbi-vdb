@@ -27,6 +27,7 @@
 #include <search/extern.h>
 
 #include <klib/rc.h>
+#include <klib/refcount.h>
 #include <insdc/insdc.h>
 
 #include <stdlib.h>
@@ -55,6 +56,20 @@
 
 #define COMPARE_4NA 0
 #define CACHE_MAX_ROWS 1 /* and columns as well */
+
+typedef struct VRefVariation
+{
+    KRefcount refcount;
+
+    INSDC_dna_text const* ref_external; /* pointer to external buffer */
+    size_t ref_size;
+
+    INSDC_dna_text* variation;
+    size_t var_start;
+    size_t var_size;
+    size_t var_len_on_ref;
+} VRefVariation;
+
 
 #if COMPARE_4NA == 1
 
@@ -135,7 +150,7 @@ static rc_t calculate_similarity_matrix (
     size_t i, j;
 
     /* arrays to store maximums for all previous rows and columns */
-#if CACHE_MAX_ROWS
+#if CACHE_MAX_ROWS != 0
 
     ValueIndexPair* vec_max_cols = NULL;
     ValueIndexPair* vec_max_rows = NULL;
@@ -162,7 +177,7 @@ static rc_t calculate_similarity_matrix (
     {
         for ( j = 1; j < COLUMNS; ++j )
         {
-#if CACHE_MAX_ROWS
+#if CACHE_MAX_ROWS == 0
             size_t k, l;
 #endif
             int cur_score_del, cur_score_ins;
@@ -170,7 +185,7 @@ static rc_t calculate_similarity_matrix (
                             get_char (text, size_text, i-1, reverse),
                             get_char (query, size_query, j-1, reverse) );
 
-#if CACHE_MAX_ROWS
+#if CACHE_MAX_ROWS != 0
             cur_score_del = vec_max_cols[j].value + gap_score_func(j - vec_max_cols[j].index);
 #else
             cur_score_del = -1;
@@ -182,7 +197,7 @@ static rc_t calculate_similarity_matrix (
             }
 #endif
 
-#if CACHE_MAX_ROWS
+#if CACHE_MAX_ROWS != 0
             cur_score_ins = vec_max_rows[i].value + gap_score_func(i - vec_max_rows[i].index);;
 #else
             
@@ -201,7 +216,7 @@ static rc_t calculate_similarity_matrix (
                         cur_score_del,
                         cur_score_ins);
 
-#if CACHE_MAX_ROWS
+#if CACHE_MAX_ROWS != 0
             if ( matrix[i*COLUMNS + j] > vec_max_cols[j].value )
             {
                 vec_max_cols[j].value = matrix[i*COLUMNS + j];
@@ -210,7 +225,7 @@ static rc_t calculate_similarity_matrix (
 
             vec_max_cols[j].value += gap_score_func(1);
 #endif
-#if CACHE_MAX_ROWS
+#if CACHE_MAX_ROWS != 0
             if ( matrix[i*COLUMNS + j] > vec_max_rows[i].value )
             {
                 vec_max_rows[i].value = matrix[i*COLUMNS + j];
@@ -222,7 +237,7 @@ static rc_t calculate_similarity_matrix (
         }
     }
 
-#if CACHE_MAX_ROWS
+#if CACHE_MAX_ROWS != 0
     free (vec_max_cols);
     free (vec_max_rows);
 #endif
@@ -495,9 +510,9 @@ static int c_string_realloc_no_preserve ( c_string* self, size_t new_capacity )
     return 1;
 }
 
-#if 0
 static int c_string_assign ( c_string* self, char const* src, size_t src_size )
 {
+    assert ( self->capacity >= src_size );
     if ( self->capacity < src_size && !c_string_realloc_no_preserve (self, max(self->capacity * 2, src_size)) )
         return 0;
 
@@ -507,7 +522,7 @@ static int c_string_assign ( c_string* self, char const* src, size_t src_size )
 
     return 1;
 }
-#endif
+
 static int c_string_append ( c_string* self, char const* append, size_t append_size)
 {
     if ( append_size != 0 )
@@ -627,6 +642,57 @@ static bool make_query ( c_string_const const* ref_slice,
 
     return true;
 }
+
+static bool compose_variation ( c_string_const const* ref,
+        size_t ref_start, size_t ref_len,
+        INSDC_dna_text const* query, size_t query_len,
+        int64_t ref_pos_var, size_t var_len_on_ref,
+        c_string* variation )
+{
+    INSDC_dna_text const* query_adj = query;
+    size_t query_len_adj = query_len;
+    bool ret = true;
+
+    /* TODO: not always correct */
+    if ( !c_string_realloc_no_preserve( variation, ref_len + query_len - var_len_on_ref))
+        return false;
+
+    if ( (size_t)ref_pos_var > ref_start )
+    {
+        /* if extended window starts to the left from initial reported variation start
+           then include preceding bases into adjusted variation */
+        ret = ret && c_string_assign ( variation, ref->str + ref_start, (size_t)ref_pos_var - ref_start );
+    }
+    else if ( (size_t)ref_pos_var < ref_start )
+    {
+        /* the real window of ambiguity actually starts to the right from
+           the reported variation start
+           let's not to include the left unambigous part into
+           adjusted variation (?) */
+
+        query_adj += ref_start - ref_pos_var;
+        query_len_adj -= ref_start - ref_pos_var;
+    }
+
+    if ( query_len_adj > 0 )
+    {
+        assert ( variation->capacity >= variation->size + query_len_adj );
+        ret = ret && c_string_append ( variation, query_adj, query_len_adj );
+    }
+
+    if ( (int64_t)(ref_len - ((size_t)ref_pos_var - ref_start) - var_len_on_ref) > 0 )
+    {
+        assert ( variation->capacity >= variation->size + ref_len - ((size_t)ref_pos_var - ref_start) - var_len_on_ref );
+        ret = ret && c_string_append ( variation, ref->str + (size_t)ref_pos_var + var_len_on_ref,
+            ref_len - ((size_t)ref_pos_var - ref_start) - var_len_on_ref );
+    }
+
+    if ( ! ret )
+        c_string_destruct ( variation );
+
+    return ret;
+}
+
 #endif
 
 #if 0
@@ -804,4 +870,141 @@ free_resources:
     c_string_destruct ( &query );
 
     return rc;
+}
+
+LIB_EXPORT rc_t CC VRefVariationIUPACMake (
+        VRefVariation** self,
+        INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
+        INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref
+    )
+{
+    struct VRefVariation* obj;
+    rc_t rc = 0;
+
+    assert ( self != NULL );
+
+    obj = calloc ( 1, sizeof * obj );
+
+    if ( obj == NULL )
+    {
+        rc = RC ( rcVDB, rcExpression, rcConstructing, rcMemory, rcExhausted );
+    }
+    else
+    {
+        size_t ref_start, ref_len;
+        rc = FindRefVariationRegionIUPAC ( ref, ref_size,
+                                           ref_pos_var,
+                                           variation, variation_size, var_len_on_ref,
+                                           & ref_start, & ref_len );
+        if ( rc != 0 )
+        {
+            free ( obj );
+            obj = NULL;
+        }
+        else
+        {
+            c_string_const ref_str;
+            
+            c_string var_str;
+            var_str.capacity = var_str.size = 0;
+            var_str.str = NULL;
+
+            c_string_const_assign ( & ref_str, ref, ref_size );
+
+            if ( ! compose_variation ( & ref_str,
+                                       ref_start, ref_len,
+                                       variation, variation_size,
+                                       ref_pos_var, var_len_on_ref, & var_str ) )
+            {
+                rc = RC(rcText, rcString, rcSearching, rcMemory, rcExhausted);
+                free ( obj );
+                obj = NULL;
+            }
+            else
+            {
+                KRefcountInit ( & obj->refcount, 1, "VRefVariation", "make", "ref-var" );
+                /* moving var_str to the object (so no need to destruct var_str */
+                obj->variation = var_str.str;
+                obj->var_size = var_str.size;
+
+                obj->ref_external = ref;
+                obj->ref_size = ref_size;
+                obj->var_start = ref_start;
+                assert( ref_len == var_str.size + var_len_on_ref );
+                obj->var_len_on_ref = var_len_on_ref;
+            }
+        }
+    }
+
+    * self = obj;
+
+    /* TODO: if Kurt insists, return non-zero rc if var_start == 0 or var_start + var_len == ref_size */
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC VRefVariationIUPACAddRef ( VRefVariation const* self )
+{
+    if ( self != NULL )
+    {
+        switch ( KRefcountAdd ( & self -> refcount, "VRefVariation" ) )
+        {
+        case krefLimit:
+            return RC ( rcVDB, rcExpression, rcAttaching, rcRange, rcExcessive );
+        }
+    }
+    return 0;
+}
+
+LIB_EXPORT rc_t CC VRefVariationIUPACWhack ( VRefVariation* self )
+{
+    KRefcountWhack ( & self -> refcount, "VRefVariation" );
+
+    assert ( self->variation != NULL );
+    free ( self->variation );
+
+    memset ( self, 0, sizeof * self );
+
+    free ( self );
+
+    return 0;
+}
+
+LIB_EXPORT rc_t CC VRefVariationIUPACRelease ( VRefVariation const* self )
+{
+    if ( self != NULL )
+    {
+        switch ( KRefcountDrop ( & self -> refcount, "VRefVariation" ) )
+        {
+        case krefWhack:
+            return VRefVariationIUPACWhack ( ( VRefVariation* ) self );
+        case krefNegative:
+            return RC ( rcVDB, rcExpression, rcReleasing, rcRange, rcExcessive );
+        }
+    }
+    return 0;
+}
+
+LIB_EXPORT INSDC_dna_text const* CC VRefVariationIUPACGetVariation ( VRefVariation const* self )
+{
+    assert ( self != NULL );
+    return self->variation;
+}
+
+LIB_EXPORT size_t CC VRefVariationIUPACGetVarStart ( VRefVariation const* self )
+{
+    assert ( self != NULL );
+    return self->var_start;
+}
+
+LIB_EXPORT size_t CC VRefVariationIUPACGetVarSize ( VRefVariation const* self )
+{
+    assert ( self != NULL );
+    return self->var_size;
+}
+
+LIB_EXPORT size_t CC VRefVariationIUPACGetVarLenOnRef ( VRefVariation const* self )
+{
+    assert ( self != NULL );
+    return self->var_len_on_ref;
 }

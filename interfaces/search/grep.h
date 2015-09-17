@@ -281,11 +281,29 @@ SEARCH_EXTERN size_t CC FindLongestCommonSubstring (
                                             (return values)
 */
 
+typedef struct VRefVariation VRefVariation;
+
 LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC (
         INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
         INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
         size_t* p_ref_start, size_t* p_ref_len
     );
+
+LIB_EXPORT rc_t CC VRefVariationIUPACMake (
+        VRefVariation** self,
+        INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
+        INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref
+    );
+
+LIB_EXPORT rc_t CC VRefVariationIUPACAddRef ( VRefVariation const* self );
+LIB_EXPORT rc_t CC VRefVariationIUPACRelease ( VRefVariation const* self );
+LIB_EXPORT rc_t CC VRefVariationIUPACWhack ( VRefVariation* self );
+
+LIB_EXPORT INSDC_dna_text const* CC VRefVariationIUPACGetVariation ( VRefVariation const* self );
+LIB_EXPORT size_t CC VRefVariationIUPACGetVarStart ( VRefVariation const* self );
+LIB_EXPORT size_t CC VRefVariationIUPACGetVarSize ( VRefVariation const* self );
+LIB_EXPORT size_t CC VRefVariationIUPACGetVarLenOnRef ( VRefVariation const* self );
+
 
 #ifdef __cplusplus
 }

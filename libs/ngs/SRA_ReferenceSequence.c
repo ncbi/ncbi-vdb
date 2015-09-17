@@ -180,57 +180,54 @@ NGS_ReferenceSequence * NGS_ReferenceSequenceMakeSRA ( ctx_t ctx, const char * s
         TRY ( SRA_ReferenceSequenceInit ( ctx, ref, "NGS_ReferenceSequence", spec ) )
         {
             rc_t rc;
-            VTable const* tbl;
 
             const VDBManager * mgr = ctx -> rsrc -> vdb;
             assert ( mgr != NULL );
 
-            rc = VDBManagerOpenTableRead ( mgr, & tbl, NULL, spec );
+            rc = VDBManagerOpenTableRead ( mgr, & ref -> tbl, NULL, spec );
             if ( rc != 0 )
             {
                 INTERNAL_ERROR ( xcUnexpected, "failed to open table '%s': rc = %R", spec, rc );
-                free ( ref );
-                ref = NULL;
             }
             else
-            {
-                ref -> tbl = tbl;
-                ref -> curs = NGS_CursorMake ( ctx, ref -> tbl, g_ReferenceTableColumnNames, reference_NUM_COLS );
-                if ( ref -> curs == NULL )
+            {   /* VDB-2641: examine the schema name to make sure this is an SRA table */
+                char ts_buff[1024];
+                rc = VTableTypespec ( ref -> tbl, ts_buff, sizeof ( ts_buff ) );
+                if ( rc != 0 )
                 {
-                    VTableRelease ( ref -> tbl );
-                    ref -> tbl = NULL;
-                    free ( ref );
-                    ref = NULL;
+                    INTERNAL_ERROR ( xcUnexpected, "VTableTypespec failed: rc = %R", rc );
                 }
                 else
                 {
-                    uint64_t row_count = 0;
-                    TRY ( NGS_CursorGetRowRange ( ref->curs, ctx, & ref -> first_row, & row_count ) )
+                    const char REF_PREFIX[] = "NCBI:refseq:";
+                    size_t pref_size = sizeof ( REF_PREFIX ) - 1;
+                    if ( string_match ( REF_PREFIX, pref_size, ts_buff, string_size ( ts_buff ), pref_size, NULL ) != pref_size )
                     {
-                        ref -> last_row = ref -> first_row + (int64_t) row_count - 1; /* TODO: it might be incorrect in general case */
-                        TRY ( ref -> chunk_size = NGS_CursorGetUInt32 ( ref -> curs, ctx, ref -> first_row, reference_MAX_SEQ_LEN ) )
-                        {
-                        }
-                        else
-                        {
-                            SRA_ReferenceSequenceWhack ( ref , ctx );
-                            free ( ref );
-                            ref = NULL;
-                        }
+                        INTERNAL_ERROR ( xcUnimplemented, "Cannot open accession '%s' as a reference table.", spec );
                     }
                     else
                     {
-                        SRA_ReferenceSequenceWhack ( ref , ctx );
-                        free ( ref );
-                        ref = NULL;
+                        ref -> curs = NGS_CursorMake ( ctx, ref -> tbl, g_ReferenceTableColumnNames, reference_NUM_COLS );
+                        if ( ref -> curs != NULL )
+                        {
+                            uint64_t row_count = 0;
+                            TRY ( NGS_CursorGetRowRange ( ref->curs, ctx, & ref -> first_row, & row_count ) )
+                            {
+                                ref -> last_row = ref -> first_row + (int64_t) row_count - 1; /* TODO: it might be incorrect in general case */
+                                TRY ( ref -> chunk_size = NGS_CursorGetUInt32 ( ref -> curs, ctx, ref -> first_row, reference_MAX_SEQ_LEN ) )
+                                {
+                                    return (NGS_ReferenceSequence*) ref;
+                                }
+                            }
+                        }
                     }
                 }
             }
+            SRA_ReferenceSequenceWhack ( ref , ctx );
         }
+        free ( ref );
     }
-
-    return (NGS_ReferenceSequence*) ref;
+    return NULL;
 }
 
 
