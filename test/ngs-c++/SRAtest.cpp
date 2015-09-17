@@ -73,10 +73,9 @@ TEST_CASE(SRA_String_StringRefScope)
     char const* p;
     size_t size;
 
+    ngs::ReadCollection read_coll = ncbi::NGS::openReadCollection( "SRR618508" );
+    ngs::Reference ref = read_coll.getReference("NC_000002.11");
     {
-        ngs::ReadCollection read_coll = ncbi::NGS::openReadCollection( "SRR618508" );
-        ngs::Reference ref = read_coll.getReference("NC_000002.11");
-
         ngs::StringRef str_ref = ref.getReferenceChunk(20001);
 
         p = str_ref.data();
