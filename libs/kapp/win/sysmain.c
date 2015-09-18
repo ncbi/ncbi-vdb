@@ -146,7 +146,7 @@ static
 char * convert_arg_utf8( const wchar_t *arg )
 {
     size_t src_size, dst_size;
-	char * utf8;
+    char * utf8;
     /* measure the string */
     wchar_cvt_string_measure ( arg, & src_size, & dst_size );
     
@@ -165,7 +165,7 @@ char * convert_arg_utf8( const wchar_t *arg )
     return utf8;
 }
 
-char * CC rewrite_arg_as_path ( const wchar_t *arg )
+char * CC rewrite_arg_as_path ( const wchar_t *arg, bool before_kmane )
 {
     char *utf8;
     bool has_drive = false;
@@ -174,7 +174,13 @@ char * CC rewrite_arg_as_path ( const wchar_t *arg )
 
     /* detect drive or full path */
     wchar_t rewrit [ MAX_PATH ];
-    if ( arg [ 0 ] < 128 )
+    /* 
+       we don't want to rewrite twice, 
+       so if we rewrote first time
+           from wmain (before_kmane = true, convert_args_paths = true),
+       then we skip second rewrite by checking convert_args_paths to be true
+     */
+    if ( arg [ 0 ] < 128 && (before_kmane || !convert_args_paths))
     {
         bool rewrite = false;
 
@@ -222,6 +228,12 @@ char * CC rewrite_arg_as_path ( const wchar_t *arg )
     if ( utf8 != NULL )
     {
         dst_size = string_size(utf8);
+        if (has_drive) 
+        {
+            utf8 [ 1 ] = utf8 [ 0 ];
+            utf8 [ 0 ] = '/';
+        }
+
         /* map all backslashes to fwdslashes */
         for ( i = 0; i < dst_size; ++ i )
         {
@@ -252,7 +264,15 @@ int __cdecl wmain ( int argc, wchar_t *wargv [], wchar_t *envp [] )
            rewriting anything that looks like a path */
         for ( i = 0; i < argc; ++ i )
         {
-            argv [ i ] = (convert_args_paths ? rewrite_arg_as_path : convert_arg_utf8 ) ( wargv [ i ] );
+            if ( convert_args_paths )
+            {
+                argv [ i ] = rewrite_arg_as_path ( wargv [ i ], true );
+            }
+            else
+            {
+                argv [ i ] = convert_arg_utf8 ( wargv [ i ] );
+            }
+            
             if ( argv [ i ] == NULL )
                 break;
         }
@@ -275,6 +295,6 @@ int __cdecl wmain ( int argc, wchar_t *wargv [], wchar_t *envp [] )
 
 void  __declspec( dllexport ) __stdcall wmainCRTStartupNoPathConversion()
 {
-	convert_args_paths = false;
-	wmainCRTStartup();
+    convert_args_paths = false;
+    wmainCRTStartup();
 }
