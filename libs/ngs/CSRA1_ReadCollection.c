@@ -290,14 +290,20 @@ static
 NGS_Reference * CSRA1_ReadCollectionGetReference ( CSRA1_ReadCollection * self, ctx_t ctx, const char * spec )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
-    
+
+    const NGS_Cursor * curs;
+#if 0
     if ( self -> reference_curs == NULL )
     {
-        ON_FAIL ( self -> reference_curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "REFERENCE", reference_col_specs, reference_NUM_COLS ) ) 
+#endif
+        ON_FAIL ( curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "REFERENCE", reference_col_specs, reference_NUM_COLS ) ) 
             return NULL;
+#if 0
+        self -> reference_curs = curs;
     }
+#endif
     
-    return CSRA1_ReferenceMake ( ctx, & self -> dad, self -> db, self -> reference_curs, spec, self -> primaryId_count );
+    return CSRA1_ReferenceMake ( ctx, & self -> dad, self -> db, curs, spec, self -> primaryId_count );
 }
 
 static
