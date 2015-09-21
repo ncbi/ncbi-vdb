@@ -931,7 +931,7 @@ LIB_EXPORT rc_t CC VRefVariationIUPACMake (
                 obj->ref_size = ref_size;
                 obj->var_start = ref_start;
                 assert( ref_len == var_str.size + var_len_on_ref );
-                obj->var_len_on_ref = var_len_on_ref;
+                obj->var_len_on_ref = ref_len;
             }
         }
     }
