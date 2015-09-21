@@ -654,8 +654,17 @@ static bool compose_variation ( c_string_const const* ref,
     bool ret = true;
 
     /* TODO: not always correct */
-    if ( !c_string_realloc_no_preserve( variation, ref_len + query_len - var_len_on_ref))
-        return false;
+    if ( ref_len == 0 && query_len == var_len_on_ref ) /* special case for pure mismatch */
+    {
+        if ( !c_string_realloc_no_preserve( variation, query_len ))
+            return false;
+    }
+    else
+    {
+        if ( !c_string_realloc_no_preserve( variation, ref_len + query_len - var_len_on_ref))
+            return false;
+    }
+
 
     if ( (size_t)ref_pos_var > ref_start )
     {
@@ -930,8 +939,8 @@ LIB_EXPORT rc_t CC VRefVariationIUPACMake (
                 obj->ref_external = ref;
                 obj->ref_size = ref_size;
                 obj->var_start = ref_start;
-                assert( ref_len == var_str.size + var_len_on_ref );
-                obj->var_len_on_ref = ref_len;
+                assert( ref_len == 0 || ref_len == var_str.size + var_len_on_ref );
+                obj->var_len_on_ref = ref_len == 0 ? var_len_on_ref : ref_len;
             }
         }
     }
