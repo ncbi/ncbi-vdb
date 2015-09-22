@@ -205,7 +205,7 @@ bool CSRA1_FragmentIsPaired ( CSRA1_ReferenceWindow * self, ctx_t ctx )
     {
         return NGS_FragmentIsPaired ( (NGS_Fragment*)ref, ctx );
     }
-    return NULL;
+    return false;
 }
 
 static 
@@ -565,11 +565,11 @@ void LoadAlignmentInfo ( CSRA1_ReferenceWindow* self, ctx_t ctx, size_t* idx, in
                 if ( size > 0 )
                 {   /* a slice*/
                     int64_t end_slice =  offset + (int64_t)size;
-                    if ( end_slice > self -> ref_length )
+                    if ( end_slice > (int64_t) self -> ref_length )
                     {
                         end_slice = self -> ref_length;
                     }
-                    if ( ! self -> within_window && ! self -> no_wraparound && pos + len >= self -> ref_length ) 
+                    if ( ! self -> within_window && ! self -> no_wraparound && pos + len >= (int64_t) self -> ref_length ) 
                     {   /* account for possible carryover on a circular reference */
                         pos -= self -> ref_length;
                     }
