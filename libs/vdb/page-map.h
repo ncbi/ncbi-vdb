@@ -94,6 +94,7 @@ typedef struct PageMap {
      * has data_recs elements
      * is sized to reserve_data elements
      * == leng_run + reserve_leng
+     * OPTIONAL
      */
     row_count_t *data_run;
     /** expanded offsets into data - needed for random access ***/

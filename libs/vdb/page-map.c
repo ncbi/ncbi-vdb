@@ -1592,17 +1592,23 @@ rc_t PageMapAddRef (const PageMap *self) {
 uint32_t PageMapGetIdxRowInfo (const PageMap *cself, uint32_t idx, uint32_t *starting_element,uint32_t *repeat_count)
 {
 	rc_t rc=0;
-	uint32_t	len;
-
-	if (idx  < (cself->data_run?cself->data_run[0]:1) || cself->data_recs == 1) {
-		if (starting_element) *starting_element = 0;
-		if (cself->leng_recs == 0) len=0;
-		else  len = cself->length[0];
-		if(repeat_count) *repeat_count = cself->data_run[0];
-		return cself->length[0];
+	elem_count_t len;
+    row_count_t data_run = cself->data_run ? cself->data_run[0] : 1;
+    
+	if (idx  < data_run || cself->data_recs == 1) {
+		if (starting_element)
+            *starting_element = 0;
+		if (cself->leng_recs == 0)
+            len = 0;
+		else
+            len = cself->length[0];
+		if (repeat_count)
+            *repeat_count = data_run;
+		return len;
 	} else {
-		rc = PageMapFindRow(cself,idx,starting_element,&len,repeat_count);
-		if(rc) len=0;
+		rc = PageMapFindRow(cself, idx, starting_element, &len, repeat_count);
+		if (rc)
+            len = 0;
 	}
 	return len;
 }
