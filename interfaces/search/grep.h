@@ -300,6 +300,8 @@ LIB_EXPORT rc_t CC VRefVariationIUPACRelease ( VRefVariation const* self );
 LIB_EXPORT rc_t CC VRefVariationIUPACWhack ( VRefVariation* self );
 
 LIB_EXPORT INSDC_dna_text const* CC VRefVariationIUPACGetVariation ( VRefVariation const* self );
+LIB_EXPORT INSDC_dna_text const* CC VRefVariationIUPACGetRefChunk ( VRefVariation const* self );
+LIB_EXPORT size_t CC VRefVariationIUPACGetRefChunkSize ( VRefVariation const* self );
 LIB_EXPORT size_t CC VRefVariationIUPACGetVarStart ( VRefVariation const* self );
 LIB_EXPORT size_t CC VRefVariationIUPACGetVarSize ( VRefVariation const* self );
 LIB_EXPORT size_t CC VRefVariationIUPACGetVarLenOnRef ( VRefVariation const* self );

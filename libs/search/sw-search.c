@@ -659,6 +659,11 @@ static bool compose_variation ( c_string_const const* ref,
         if ( !c_string_realloc_no_preserve( variation, query_len ))
             return false;
     }
+    else if ( query_len == 0 && ref_len == var_len_on_ref ) /* special case for pure deletion */
+    {
+        /* in this case there is no query - don't allocate anything */
+        return true;
+    }
     else
     {
         if ( !c_string_realloc_no_preserve( variation, ref_len + query_len - var_len_on_ref))
@@ -1016,4 +1021,16 @@ LIB_EXPORT size_t CC VRefVariationIUPACGetVarLenOnRef ( VRefVariation const* sel
 {
     assert ( self != NULL );
     return self->var_len_on_ref;
+}
+
+LIB_EXPORT INSDC_dna_text const* CC VRefVariationIUPACGetRefChunk ( VRefVariation const* self )
+{
+    assert ( self != NULL );
+    return self->ref_external;
+}
+
+LIB_EXPORT size_t CC VRefVariationIUPACGetRefChunkSize ( VRefVariation const* self )
+{
+    assert ( self != NULL );
+    return self->ref_size;
 }
