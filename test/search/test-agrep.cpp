@@ -136,7 +136,7 @@ TEST_CASE ( DumbGrep_Crash )
 {
     Fgrep* fg;
     const char* queries[] = { "RRRRRAH" };
-    REQUIRE_RC ( FgrepMake ( & fg, FGREP_MODE_ASCII | FGREP_ALG_DUMB, queries, 1 ) ); // VDB-: creates uninitialized memory
+    REQUIRE_RC ( FgrepMake ( & fg, FGREP_MODE_ASCII | FGREP_ALG_DUMB, queries, 1 ) ); // VDB-2669: creates uninitialized memory
     
     const std::string str ( 100000, 'A' );
     FgrepMatch matchinfo;
