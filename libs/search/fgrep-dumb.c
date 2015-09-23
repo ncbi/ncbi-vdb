@@ -123,7 +123,7 @@ void trie_enter(struct trie *self, const char *s, int32_t minlen)
 #endif
             newone->depth = i+1;
             newone->hasmatch = 1;
-            memset( newone->next, 0, sizeof( *newone->next ) );
+            memset( newone->next, 0, sizeof( newone->next ) );
             cur->next[c] = newone;
             cur = newone;
         }

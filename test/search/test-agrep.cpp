@@ -132,6 +132,19 @@ TEST_CASE(TestCaseAgrep)
     }*/
 }
 
+TEST_CASE ( DumbGrep_Crash )
+{
+    Fgrep* fg;
+    const char* queries[] = { "RRRRRAH" };
+    REQUIRE_RC ( FgrepMake ( & fg, FGREP_MODE_ASCII | FGREP_ALG_DUMB, queries, 1 ) ); // VDB-: creates uninitialized memory
+    
+    const std::string str ( 100000, 'A' );
+    FgrepMatch matchinfo;
+    REQUIRE_EQ ( (uint32_t)0, FgrepFindFirst ( fg, str . data (), str . size (), & matchinfo ) );
+    
+    FgrepFree ( fg );
+}
+
 //////////////////////////////////////////// Main
 extern "C"
 {
