@@ -111,6 +111,9 @@ TEST_NGS_SRADB_OBJ = \
 $(TEST_BINDIR)/test-ngs_sradb: $(TEST_NGS_SRADB_OBJ) 
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
+sradb: test-ngs_sradb
+	$(TEST_BINDIR)/$^
+
 valgrind_sradb: std
 	valgrind --ncbi --suppressions=$(SRCDIR)/valgrind.suppress  --error-exitcode=1 $(TEST_BINDIR)/test-ngs_sradb 
     

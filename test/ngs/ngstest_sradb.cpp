@@ -783,6 +783,21 @@ FIXTURE_TEST_CASE(SRADB_ReadGroupGetStatistics, SRADB_Fixture)
     EXIT;
 }
 
+FIXTURE_TEST_CASE(PACBIO_ThrowsOnGetReadId, SRADB_Fixture)
+{   // VDB-2668
+    ENTRY_ACC("SRR287782");
+    
+    m_read = NGS_ReadCollectionGetReads ( m_coll, ctx, true, true, true );
+    REQUIRE_NOT_NULL ( m_read );
+    REQUIRE ( NGS_ReadIteratorNext ( m_read, ctx ) );
+    REQUIRE_STRING ( ReadId ( 1 ), NGS_ReadGetReadId ( m_read, ctx ) ); // VDB-2668: throws "no NAME-column found"
+    
+    //REQUIRE_STRING ( ReadId ( 1 ), NGS_ReadGetReadId ( m_read, ctx ) ); // VDB-2668: throws "no NAME-column found"
+    
+    EXIT;
+}
+
+
 //////////////////////////////////////////// Main
 extern "C"
 {
