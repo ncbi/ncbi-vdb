@@ -46,6 +46,7 @@ public:
     static const char* CSRA1_WithGroups;
     static const char* CSRA1_NoReadGroups;
     static const char* CSRA1_WithCircularRef;
+    static const char* CSRA1_WithCircularRef2;
     static const char* CSRA1_SingleFragmentPerSpot;
     
 public:
@@ -86,6 +87,7 @@ const char* CSRA1_Fixture::CSRA1_WithSecondary         = "SRR833251";
 const char* CSRA1_Fixture::CSRA1_WithGroups            = "SRR822962";
 const char* CSRA1_Fixture::CSRA1_NoReadGroups          = "SRR1237962";
 const char* CSRA1_Fixture::CSRA1_WithCircularRef       = "SRR1769246";
+const char* CSRA1_Fixture::CSRA1_WithCircularRef2      = "SRR821492";
 const char* CSRA1_Fixture::CSRA1_SingleFragmentPerSpot = "SRR2096940";
 
 #include "CSRA1_ReadCollection_test.cpp"
@@ -900,7 +902,7 @@ FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice_Filtered_Start_Within_Slice, CSRA1
 {
     ngs :: Reference ref = ncbi :: NGS :: openReadCollection ( CSRA1_WithCircularRef ) . getReference ( "NC_012920.1" );
     int64_t sliceStart = 1000;
-    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( 1000, 200, ngs :: Alignment :: all, ngs :: Alignment :: startWithinSlice, 0 );
+    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( sliceStart, 200, ngs :: Alignment :: all, ngs :: Alignment :: startWithinSlice, 0 );
     
     REQUIRE ( it . nextAlignment () );
     REQUIRE_LE ( sliceStart, it.getAlignmentPosition() );
@@ -909,11 +911,74 @@ FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice_Unfiltered_Start_Before_Slice, CSR
 {
     ngs :: Reference ref = ncbi :: NGS :: openReadCollection ( CSRA1_WithCircularRef ) . getReference ( "NC_012920.1" );
     int64_t sliceStart = 1000;
-    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( 1000, 200, ngs :: Alignment :: all, (ngs::Alignment::AlignmentFilter)0, 0 );
+    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( sliceStart, 200, ngs :: Alignment :: all, (ngs::Alignment::AlignmentFilter)0, 0 );
     
     REQUIRE ( it . nextAlignment () );
     REQUIRE_GT ( sliceStart, it.getAlignmentPosition() );
 }
+
+FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice_Filtered_Wraparound, CSRA1_Fixture)
+{
+    ngs :: Reference ref = ncbi :: NGS :: openReadCollection ( CSRA1_WithCircularRef2 ) . getReference ( "chrM" );
+    int64_t sliceStart = 5;
+    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( sliceStart, 100, ngs :: Alignment :: all, (ngs::Alignment::AlignmentFilter)0, 0 );
+    
+    REQUIRE ( it . nextAlignment () );
+    
+    // the first returned alignment starts before the start of the circular reference, overlaps with slice
+    int64_t pos = it.getAlignmentPosition();
+    REQUIRE_LT ( sliceStart + 100, pos );
+    
+    // check for overlap with the slice
+    uint64_t refLen = ref . getLength();
+    pos -= ( int64_t ) refLen;
+    REQUIRE_GT ( ( int64_t ) 0, pos );
+    REQUIRE_GE ( ( int64_t ) (pos + it . getAlignmentLength()), sliceStart );
+}
+
+FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice_Filtered_Wraparound_StartWithinSlice, CSRA1_Fixture)
+{
+    // when startWithinSlice filter is specified, it removes wraparound alignments as well
+    ngs :: Reference ref = ncbi :: NGS :: openReadCollection ( CSRA1_WithCircularRef2 ) . getReference ( "chrM" );
+    int64_t sliceStart = 5;
+    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( sliceStart, 100, ngs :: Alignment :: all, ngs :: Alignment :: startWithinSlice, 0 );
+    
+    REQUIRE ( it . nextAlignment () );
+    
+    // the first returned alignment starts inside the slice
+    int64_t pos = it.getAlignmentPosition();
+    REQUIRE_LE ( sliceStart, pos );
+    REQUIRE_LT ( pos, sliceStart + 100 );
+}
+
+FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice_Filtered_NoWraparound, CSRA1_Fixture)
+{
+    // when startWithinSlice filter is specified, it removes wraparound alignments as well
+    ngs :: Reference ref = ncbi :: NGS :: openReadCollection ( CSRA1_WithCircularRef2 ) . getReference ( "chrM" );
+    int64_t sliceStart = 5;
+    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( sliceStart, 100, ngs :: Alignment :: all, ngs :: Alignment :: noWraparound, 0 );
+    
+    REQUIRE ( it . nextAlignment () );
+    
+    // the first returned sliceStart starts outside the slice but does not wrap around
+    REQUIRE_GT ( sliceStart, it.getAlignmentPosition() );
+}
+
+FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice_Filtered_NoWraparound_StartWithinSlice, CSRA1_Fixture)
+{
+    // when startWithinSlice filter is specified, it removes wraparound alignments as well
+    ngs :: Reference ref = ncbi :: NGS :: openReadCollection ( CSRA1_WithCircularRef2 ) . getReference ( "chrM" );
+    int64_t sliceStart = 5;
+    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( sliceStart, 100, ngs :: Alignment :: all, (ngs::Alignment::AlignmentFilter) (ngs :: Alignment :: noWraparound | ngs :: Alignment :: startWithinSlice), 0 );
+    
+    REQUIRE ( it . nextAlignment () );
+    
+    // the first returned alignment starts inside the slice
+    int64_t pos = it.getAlignmentPosition();
+    REQUIRE_LE ( sliceStart, pos );
+    REQUIRE_LT ( pos, sliceStart + 100 );
+}
+
 
 /////TODO: Pileup
 //TODO: getReferenceSpec
