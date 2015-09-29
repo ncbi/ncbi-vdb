@@ -40,52 +40,52 @@ extern "C" {
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 struct XFSNode;
-struct XFSDbGapCache;
+struct XFSGapCache;
 struct KNamelist;
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-/* XFSDbGapCache                                                     */
+/* XFSGapCache                                                       */
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*
- *  That method will create DbGapCache object for ProjectId, and, if
+ *  That method will create GapCache object for ProjectId, and, if
  *  ProjectId is zero - it will create object for public cache.
  *  If ReadOnly set into false, that means, user could delete cached
  *  files from cache - the only editing operation allowed.
  */
-XFS_EXTERN rc_t CC XFSDbGapCacheMake (
-                            struct XFSDbGapCache ** Cache,
+XFS_EXTERN rc_t CC XFSGapCacheMake (
+                            struct XFSGapCache ** Cache,
                             uint32_t ProjectId,
                             bool ReadOnly
                             );
 
-XFS_EXTERN rc_t CC XFSDbGapCacheDispose (
-                            struct XFSDbGapCache * self
+XFS_EXTERN rc_t CC XFSGapCacheDispose (
+                            struct XFSGapCache * self
                             );
 
-XFS_EXTERN rc_t CC XFSDbGapCacheList (
-                            const struct XFSDbGapCache * self,
+XFS_EXTERN rc_t CC XFSGapCacheList (
+                            const struct XFSGapCache * self,
                             const struct KNamelist ** Names
                             );
 
-XFS_EXTERN rc_t CC XFSDbGapCacheFind (
-                            const struct XFSDbGapCache * self,
+XFS_EXTERN rc_t CC XFSGapCacheFind (
+                            const struct XFSGapCache * self,
                             const struct XFSNode ** Node,
                             const char * NodeName
                             );
 
-XFS_EXTERN rc_t CC XFSDbGapCacheDeleteNode (
-                            const struct XFSDbGapCache * self,
+XFS_EXTERN rc_t CC XFSGapCacheDeleteNode (
+                            const struct XFSGapCache * self,
                             const char * NodeName
                             );
 
-XFS_EXTERN rc_t CC XFSDbGapCacheProjectId (
-                            const struct XFSDbGapCache * self,
+XFS_EXTERN rc_t CC XFSGapCacheProjectId (
+                            const struct XFSGapCache * self,
                             uint32_t * ProjectId
                             );
 
-XFS_EXTERN rc_t CC XFSDbGapCacheReadOnly (
-                            const struct XFSDbGapCache * self,
+XFS_EXTERN rc_t CC XFSGapCacheReadOnly (
+                            const struct XFSGapCache * self,
                             bool * ReadOnly
                             );
 

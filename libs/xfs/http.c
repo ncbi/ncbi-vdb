@@ -397,8 +397,6 @@ _HttpNodeFindNode_v1 (
                                     );
                 if ( RCt == 0 ) {
                     * Node = RetNode;
-
-                    return 0;
                 }
             }
 

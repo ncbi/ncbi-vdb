@@ -83,6 +83,33 @@ XFS_EXTERN rc_t CC XFSGapFilesOpenObjectId (
                             uint32_t ObjectId
                             );
 
+/*))
+ //     Attributes if possible
+((*/
+XFS_EXTERN rc_t CC XFSGapFilesAccessionSize (
+                            uint64_t * Size,
+                            uint32_t ProjectId,
+                            const char * Accession
+                            );
+
+XFS_EXTERN rc_t CC XFSGapFilesAccessionDate (
+                            KTime_t * Time,
+                            uint32_t ProjectId,
+                            const char * Accession
+                            );
+
+XFS_EXTERN rc_t CC XFSGapFilesObjectIdSize (
+                            uint64_t * Size,
+                            uint32_t ProjectId,
+                            uint32_t ObjectId
+                            );
+
+XFS_EXTERN rc_t CC XFSGapFilesObjectIdDate (
+                            KTime_t * Time,
+                            uint32_t ProjectId,
+                            uint32_t ObjectId
+                            );
+
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/

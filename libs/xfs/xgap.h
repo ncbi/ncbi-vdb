@@ -70,6 +70,8 @@ extern "C" {
  //     Forwards
 ((*/
 struct XFSGapProject;
+struct KKey;
+struct VPath;
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
@@ -200,6 +202,23 @@ XFS_EXTERN rc_t CC XFSGapProjectPassword (
                             const char ** Password,
                             size_t * PasswordSize
                             );
+
+    /* Don't forget to free Workspace, cuz it is part of a system
+     */
+XFS_EXTERN rc_t CC XFSGapProjectWorkspace (
+                            const struct XFSGapProject * self,
+                            char ** Workspace
+                            );
+
+/*)))   Those do not need ProjectId
+ (((*/
+    /* Don't forget to free Kartfiles, cuz it is part of a system
+     */
+XFS_EXTERN rc_t CC XFSGapKartfiles ( char ** Kartfiles );
+
+    /* Don't forget to free Publicfiles, cuz it is part of a system
+     */
+XFS_EXTERN rc_t CC XFSGapPublicfiles ( char ** Kartfiles );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/

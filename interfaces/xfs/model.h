@@ -67,11 +67,12 @@ struct KNamelist;
 #define XFS_MODEL_TEXT      "text"
 #define XFS_MODEL_PASSWD    "password"
 #define XFS_MODEL_ENCTYPE   "enctype"
-#define XFS_MODEL_KARTFILES "kart-files"
 #define XFS_MODEL_MODE      "mode"
 #define XFS_MODEL_MODE_RO   "RO"
 #define XFS_MODEL_MODE_RW   "RW"
 #define XFS_MODEL_PROJECTID "project-id"
+#define XFS_MODEL_OBJECTID  "object-id"
+#define XFS_MODEL_ACCESSION "accession"
 
 /*)))
  ///   Methods

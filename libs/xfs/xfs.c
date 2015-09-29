@@ -199,16 +199,6 @@ XFSStart ( struct XFSControl * self )
 {
     rc_t RCt;
 
-    RCt = XFS_VfsManagerInit ();
-    if ( RCt != 0 ) {
-        return RCt;
-    }
-
-    RCt = XFS_KnsManagerInit ();
-    if ( RCt != 0 ) {
-        return RCt;
-    }
-
     RCt = XFSControlStandardSelfCheck ( self );
     if ( RCt != 0 ) {
         return RCt;
@@ -269,10 +259,6 @@ OUTMSG ( ( "|o|thread done()\n" ) );
                 self -> Thread = NULL;
             }
         }
-
-            /* Not sure if we need to check exit code */
-        XFS_VfsManagerDispose ();
-        XFS_KnsManagerDispose ();
     }
 
     return RCt;

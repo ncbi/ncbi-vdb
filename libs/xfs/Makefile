@@ -109,9 +109,6 @@ XFS_SRC = \
     bogus     \
     owp \
     doc \
-    xkart    \
-    kart    \
-    karts   \
     xhttp    \
     http    \
     xtar     \
@@ -122,8 +119,14 @@ XFS_SRC = \
     encws     \
     xgap    \
     xgapf    \
+    xgapk   \
+    gapk    \
+    gapks   \
+    gapka   \
     cache    \
-    gapkarts    \
+    xcache    \
+    gap     \
+    gapf    \
     bean \
     lockdpt \
     lreader \

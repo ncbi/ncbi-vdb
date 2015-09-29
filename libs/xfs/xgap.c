@@ -33,7 +33,6 @@
 #include <kproc/lock.h>
 #include <vfs/path.h>
 #include <vfs/manager.h>
-#include <vfs/manager-priv.h>
 #include <vfs/resolver.h>
 #include <kns/http.h>
 
@@ -50,6 +49,7 @@
 #include "zehr.h"
 #include "mehr.h"
 #include "xgap.h"
+#include <xfs/path.h>
 
 #include <sysalloc.h>
 
@@ -507,6 +507,105 @@ XFSGapProjectRepositoryRoot (
                                     );
 }   /* XFSGapProjectRepositoryRoot () */
 
+LIB_EXPORT
+rc_t CC
+XFSGapProjectWorkspace (
+                        const struct XFSGapProject * self,
+                        char ** Workspace
+)
+{
+    rc_t RCt;
+    char * Root;
+    char BF [ XFS_SIZE_1024 ];
+    size_t NR;
+
+    RCt = 0;
+    Root = NULL;
+    * BF = 0;
+    NR = 0;
+
+    XFS_CSAN ( Workspace )
+    XFS_CAN ( self )
+    XFS_CAN ( Workspace )
+
+    RCt = XFSGapProjectRepositoryRoot ( self, & Root );
+    if ( RCt == 0 ) {
+        RCt = string_printf (
+                            BF,
+                            sizeof ( BF ) - 1,
+                            & NR,
+                            "%s/workspace",
+                            Root
+                            );
+        if ( RCt == 0 ) {
+            RCt = XFS_StrDup ( BF, ( const char ** ) Workspace );
+        }
+        free ( Root );
+    }
+
+    return RCt;
+}   /* XFSGapProjectWorkspace () */
+
+rc_t CC
+XFSGapPublicfiles ( char ** Publicfiles )
+{
+    rc_t RCt;
+    const struct XFSGapProject * Project;
+
+    RCt = 0;
+    Project = NULL;
+
+    XFS_CSAN ( Publicfiles )
+    XFS_CAN ( Publicfiles )
+
+    RCt = XFSGapFindOrCreate ( XFS_PUBLIC_PROJECT_ID, & Project );
+    if ( RCt == 0 ) {
+        RCt = XFSGapProjectRepositoryRoot ( Project, Publicfiles );
+
+        XFSGapProjectRelease ( Project );
+    }
+
+    return RCt;
+}   /* XFSGapPublicfiles () */
+
+LIB_EXPORT
+rc_t CC
+XFSGapKartfiles ( char ** Kartfiles )
+{
+    rc_t RCt;
+    char * Publicfiles;
+    const struct XFSPath * Path;
+
+    RCt = 0;
+    Publicfiles = NULL;
+    Path = NULL;
+
+    XFS_CSAN ( Kartfiles )
+    XFS_CAN ( Kartfiles )
+
+    RCt = XFSGapPublicfiles ( & Publicfiles );
+    if ( RCt == 0 ) {
+        RCt= XFSPathMake (
+                        & Path,
+                        false,
+                        "%s/../kart-files",
+                        Publicfiles
+                        );
+        if ( RCt == 0 ) {
+            RCt = XFS_StrDup (
+                            XFSPathGet ( Path ),
+                            ( const char ** ) Kartfiles
+                            );
+
+            XFSPathRelease ( Path );
+        }
+
+        free ( Publicfiles );
+    }
+
+    return RCt;
+}   /* XFSGapKartfiles () */
+
 static
 rc_t CC
 _GapProjectLoadEncriptionKey ( const struct XFSGapProject * self )
@@ -531,12 +630,12 @@ _GapProjectLoadEncriptionKey ( const struct XFSGapProject * self )
         return XFS_RC ( rcInvalid );
     }
 
-    RCt = VFSManagerGetKryptoPassword (
-                                    XFS_VfsManager (),
-                                    Pass,
-                                    sizeof ( Pass ),
-                                    & PassSize
-                                    );
+    RCt = KRepositoryEncryptionKey (
+                                Project -> repository,
+                                Pass,
+                                sizeof ( Pass ),
+                                & PassSize
+                                );
     if ( RCt == 0 ) {
         ThePass = string_dup ( Pass, PassSize );
         if ( ThePass == NULL ) {

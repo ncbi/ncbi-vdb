@@ -48,7 +48,7 @@
 
 /*)))
   |||
-  +++    DbGapCacheNode - represent special node which shows content
+  +++    GapCacheNode - represent special node which shows content
   ***    of cached DbGap files by project, or, if project is not set,
   +++    it shows content of public cache.
   |||
@@ -56,13 +56,13 @@
 
 /*)))
  |||
- +++    DbGapCache structure and virtual table are Living here :lol:
+ +++    GapCache structure and virtual table are Living here :lol:
  |||
 (((*/
 struct _CacheNode {
     struct XFSNode node;
 
-    struct XFSDbGapCache * cache;
+    struct XFSGapCache * cache;
 
     const char * perm;
     uint32_t flavor;
@@ -118,7 +118,7 @@ printf ( "_CacheNodeDispose ( 0x%p )\n", ( void * ) Node );
 
     if ( Node != NULL ) {
         if ( Node -> cache != NULL ) {
-            XFSDbGapCacheDispose ( Node -> cache );
+            XFSGapCacheDispose ( Node -> cache );
             Node -> cache = NULL;
         }
 
@@ -208,7 +208,7 @@ _CacheNodeFindNode_v1 (
         }
         else {
 
-            RCt = XFSDbGapCacheFind (
+            RCt = XFSGapCacheFind (
                     ( ( const struct _CacheNode * ) self ) -> cache,
                     & NextNode,
                     NodeName
@@ -269,7 +269,7 @@ _CacheNodeDir_find_v1 (
         return XFS_RC ( rcInvalid );
     }
 
-    return XFSDbGapCacheFind ( Cache -> cache, Node, Name );
+    return XFSGapCacheFind ( Cache -> cache, Node, Name );
 }   /* _CacheNodeDir_find_v1 () */
 
 static
@@ -290,7 +290,7 @@ _CacheNodeDir_list_v1 (
         return XFS_RC ( rcInvalid );
     }
 
-    return XFSDbGapCacheList ( Cache -> cache, List );
+    return XFSGapCacheList ( Cache -> cache, List );
 }   /* _CacheNodeDir_list_v1 () */
 
 static
@@ -314,12 +314,12 @@ _CacheNodeDir_delete_v1 (
         return XFS_RC ( rcInvalid );
     }
 
-    XFSDbGapCacheReadOnly ( Cache -> cache, & ReadOnly );
+    XFSGapCacheReadOnly ( Cache -> cache, & ReadOnly );
     if ( ReadOnly ) {
         return XFS_RC ( rcInvalid );
     }
 
-    return XFSDbGapCacheDeleteNode ( Cache -> cache, NodeName );
+    return XFSGapCacheDeleteNode ( Cache -> cache, NodeName );
 }   /* _CacheNodeDir_delete_v1 () */
 
 rc_t CC
@@ -512,7 +512,7 @@ _CacheNodeDescribe_v1 (
                         Buffer,
                         BufferSize,
                         & NumWrit,
-                        "NODE (DBGAP CACHE)[NULL][NULL]"
+                        "NODE (GAP CACHE)[NULL][NULL]"
                         );
     }
     else {
@@ -520,7 +520,7 @@ _CacheNodeDescribe_v1 (
                         Buffer,
                         BufferSize,
                         & NumWrit,
-                        "NODE (DBGAP CACHE)[%s][0x%p]",
+                        "NODE (GAP CACHE)[%s][0x%p]",
                         self -> Name,
                         self
                         );
@@ -577,13 +577,13 @@ _CacheNodeMake (
                         );
         if ( RCt == 0 ) {
             Cache -> flavor = ProjectId == 0 
-                                    ? _sFlavorOfDbGapProjectCache
-                                    : _sFlavorOfDbGapPublicCache
+                                    ? _sFlavorOfGapProjectCache
+                                    : _sFlavorOfGapPublicCache
                                     ;
 
             RCt = XFS_StrDup ( Perm, & ( Cache -> perm ) );
             if ( RCt == 0 ) {
-                RCt = XFSDbGapCacheMake (
+                RCt = XFSGapCacheMake (
                                     & ( Cache -> cache ),
                                     ProjectId,
                                     ReadOnly
@@ -608,7 +608,7 @@ _CacheNodeMake (
 
 LIB_EXPORT
 rc_t CC
-XFSDbGapCacheNodeMake (
+XFSGapCacheNodeMake (
                     struct XFSNode ** Node,
                     uint32_t ProjectId,
                     bool ReadOnly,
@@ -639,5 +639,5 @@ XFSDbGapCacheNodeMake (
     }
 
     return RCt;
-}   /* XFSDbGapCacheNodeMake () */
+}   /* XFSGapCacheNodeMake () */
 

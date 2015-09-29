@@ -210,7 +210,7 @@ _EncWsNodeMake (
 
                     /* This is duplicate, but necessary one
                      */
-                ( & ( TheNode -> node ) ) -> vt = Type == kxfsDir
+                TheNode -> node . vt = Type == kxfsDir
                         ? ( ( const union XFSNode_vt * ) & _sEncWsDirNodeVT_v1 )
                         : ( ( const union XFSNode_vt * ) & _sEncWsFileNodeVT_v1 )
                         ;
@@ -417,8 +417,6 @@ _EncWsDirNodeFindNode_v1 (
                                 );
             if ( RCt == 0 ) {
                 * Node = & ( EncWsNode -> node );
-
-                return 0;
             }
         }
     }

@@ -352,9 +352,9 @@ _RepositoryScan ( const char * Root, const struct XFSBeanSack * Sack )
 }   /* _RepositoryScan () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-/* struct _DbGapBeanSuite                                            */
+/* struct _GapBeanSuite                                              */
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-struct _DbGapBeanSuite {
+struct _GapBeanSuite {
     struct XFSBeanSuite suite;
 
     uint32_t project_id;    /* ZERO - public */
@@ -364,33 +364,33 @@ struct _DbGapBeanSuite {
 
 /*) Suite virtual tabele
  (*/
-static rc_t CC _DbGapBeanSuite_dispose_v1 (
+static rc_t CC _GapBeanSuite_dispose_v1 (
                                 const struct XFSBeanSuite * self
                                 );
-static rc_t CC _DbGapBeanSuite_render_v1 (
+static rc_t CC _GapBeanSuite_render_v1 (
                                 const struct XFSBeanSuite * self,
                                 const char * Name,
                                 const struct XFSNode ** Node
                                 );
-static rc_t CC _DbGapBeanSuite_refresh_v1 (
+static rc_t CC _GapBeanSuite_refresh_v1 (
                                 const struct XFSBeanSuite * self
                                 );
 
 static const struct XFSBeanSuite_vt_v1 _sBeanSackSuteVT_v1 = {
                                 1, 1,   /* maj min */
-                                _DbGapBeanSuite_dispose_v1,
-                                _DbGapBeanSuite_render_v1,
-                                _DbGapBeanSuite_refresh_v1,
+                                _GapBeanSuite_dispose_v1,
+                                _GapBeanSuite_render_v1,
+                                _GapBeanSuite_refresh_v1,
                                 };
 static
 rc_t CC
-_DbGapBeanSuiteMake (
-            const struct _DbGapBeanSuite ** Suite,
+_GapBeanSuiteMake (
+            const struct _GapBeanSuite ** Suite,
             uint32_t ProjectId
 )
 {
     rc_t RCt;
-    struct _DbGapBeanSuite * TheSuite;
+    struct _GapBeanSuite * TheSuite;
 
     RCt = 0;
     TheSuite = NULL;
@@ -398,7 +398,7 @@ _DbGapBeanSuiteMake (
     XFS_CSAN ( Suite )
     XFS_CAN ( Suite )
 
-    TheSuite = calloc ( 1, sizeof ( struct _DbGapBeanSuite ) );
+    TheSuite = calloc ( 1, sizeof ( struct _GapBeanSuite ) );
     if ( TheSuite == NULL ) {
         RCt = XFS_RC ( rcExhausted );
     }
@@ -435,12 +435,12 @@ _DbGapBeanSuiteMake (
     }
 
     return RCt;
-}   /* _DbGapBeanSuiteMake () */
+}   /* _GapBeanSuiteMake () */
 
 rc_t CC
-_DbGapBeanSuite_dispose_v1 ( const struct XFSBeanSuite * self )
+_GapBeanSuite_dispose_v1 ( const struct XFSBeanSuite * self )
 {
-    struct _DbGapBeanSuite * Suite = ( struct _DbGapBeanSuite * ) self;
+    struct _GapBeanSuite * Suite = ( struct _GapBeanSuite * ) self;
     if ( Suite != NULL ) {
         if ( Suite -> root != NULL ) {
             free ( ( char * ) Suite -> root );
@@ -458,10 +458,10 @@ _DbGapBeanSuite_dispose_v1 ( const struct XFSBeanSuite * self )
     }
 
     return 0;
-}   /* _DbGapBeanSuite_dispose_v1 () */
+}   /* _GapBeanSuite_dispose_v1 () */
 
 rc_t CC
-_DbGapBeanSuite_render_v1 (
+_GapBeanSuite_render_v1 (
                     const struct XFSBeanSuite * self,
                     const char * Name,
                     const struct XFSNode ** Node
@@ -511,18 +511,18 @@ _DbGapBeanSuite_render_v1 (
     }
 
     return RCt;
-}   /* _DbGapBeanSuite_render_v1 () */
+}   /* _GapBeanSuite_render_v1 () */
 
 rc_t CC
-_DbGapBeanSuite_refresh_v1 ( const struct XFSBeanSuite * self )
+_GapBeanSuite_refresh_v1 ( const struct XFSBeanSuite * self )
 {
     rc_t RCt;
     const struct XFSBeanSack * Sack;
-    const struct _DbGapBeanSuite * Suite;
+    const struct _GapBeanSuite * Suite;
 
     RCt = 0;
     Sack = NULL;
-    Suite = ( const struct _DbGapBeanSuite * ) self;
+    Suite = ( const struct _GapBeanSuite * ) self;
 
     XFS_CAN ( self )
 
@@ -539,39 +539,39 @@ _DbGapBeanSuite_refresh_v1 ( const struct XFSBeanSuite * self )
     }
 
     return RCt;
-}   /* _DbGapBeanSuite_refresh_v1 () */
+}   /* _GapBeanSuite_refresh_v1 () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-/* struct XFSDbGapCache                                              */
+/* struct XFSGapCache                                                */
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-struct XFSDbGapCache {
+struct XFSGapCache {
     uint32_t project_id;
     bool read_only;
 
-    const struct _DbGapBeanSuite * suite;
+    const struct _GapBeanSuite * suite;
 };
 
 LIB_EXPORT
 rc_t CC
-XFSDbGapCacheMake (
-                struct XFSDbGapCache ** Cache,
+XFSGapCacheMake (
+                struct XFSGapCache ** Cache,
                 uint32_t ProjectId,
                 bool ReadOnly
 )
 {
     rc_t RCt;
-    struct XFSDbGapCache * TheCache;
-    const struct _DbGapBeanSuite * Suite;
+    struct XFSGapCache * TheCache;
+    const struct _GapBeanSuite * Suite;
 
     RCt = 0;
     TheCache = NULL;
 
-    TheCache = calloc ( 1, sizeof ( struct XFSDbGapCache ) );
+    TheCache = calloc ( 1, sizeof ( struct XFSGapCache ) );
     if ( TheCache == NULL ) {
         RCt = XFS_RC ( rcExhausted );
     }
     else {
-        RCt = _DbGapBeanSuiteMake ( & Suite, ProjectId );
+        RCt = _GapBeanSuiteMake ( & Suite, ProjectId );
         if ( RCt == 0 ) {
 
             TheCache -> project_id = ProjectId;
@@ -586,16 +586,16 @@ XFSDbGapCacheMake (
         * Cache = NULL;
 
         if ( TheCache != NULL ) {
-            XFSDbGapCacheDispose ( TheCache );
+            XFSGapCacheDispose ( TheCache );
         }
     }
 
     return RCt;
-}   /* XFSDbGapCacheMake () */
+}   /* XFSGapCacheMake () */
 
 LIB_EXPORT
 rc_t CC
-XFSDbGapCacheDispose ( struct XFSDbGapCache * self )
+XFSGapCacheDispose ( struct XFSGapCache * self )
 {
     if ( self != NULL ) {
         if ( self -> suite != NULL ) {
@@ -611,12 +611,12 @@ XFSDbGapCacheDispose ( struct XFSDbGapCache * self )
     }
 
     return 0;
-}   /* XFSDbGapCacheDispose () */
+}   /* XFSGapCacheDispose () */
 
 LIB_EXPORT
 rc_t CC
-XFSDbGapCacheList (
-                const struct XFSDbGapCache * self,
+XFSGapCacheList (
+                const struct XFSGapCache * self,
                 const struct KNamelist ** Names
 )
 {
@@ -638,12 +638,12 @@ XFSDbGapCacheList (
     }
 
     return RCt;
-}   /* XFSDbGapCacheList () */
+}   /* XFSGapCacheList () */
 
 LIB_EXPORT
 rc_t CC
-XFSDbGapCacheFind (
-                const struct XFSDbGapCache * self,
+XFSGapCacheFind (
+                const struct XFSGapCache * self,
                 const struct XFSNode ** Node,
                 const char * NodeName
 )
@@ -659,12 +659,12 @@ XFSDbGapCacheFind (
                         NodeName,
                         Node
                         );
-}   /* XFSDbGapCacheFind () */
+}   /* XFSGapCacheFind () */
 
 LIB_EXPORT
 rc_t CC
-XFSDbGapCacheDeleteNode (
-                const struct XFSDbGapCache * self,
+XFSGapCacheDeleteNode (
+                const struct XFSGapCache * self,
                 const char * NodeName
 )
 {
@@ -680,12 +680,12 @@ XFSDbGapCacheDeleteNode (
                             & ( self -> suite -> suite ),
                             NodeName
                             );
-}   /* XFSDbGapCacheDeleteNode () */
+}   /* XFSGapCacheDeleteNode () */
 
 LIB_EXPORT
 rc_t CC
-XFSDbGapCacheProjectId (
-                const struct XFSDbGapCache * self,
+XFSGapCacheProjectId (
+                const struct XFSGapCache * self,
                 uint32_t * ProjectId
 )
 {
@@ -696,12 +696,12 @@ XFSDbGapCacheProjectId (
     * ProjectId = self -> project_id;
 
     return 0;
-}   /* XFSDbGapCacheProjectId () */
+}   /* XFSGapCacheProjectId () */
 
 LIB_EXPORT
 rc_t CC
-XFSDbGapCacheReadOnly (
-                const struct XFSDbGapCache * self,
+XFSGapCacheReadOnly (
+                const struct XFSGapCache * self,
                 bool * ReadOnly
 )
 {
@@ -712,4 +712,4 @@ XFSDbGapCacheReadOnly (
     * ReadOnly = self -> read_only;
 
     return 0;
-}   /* XFSDbGapCacheReadOnly () */
+}   /* XFSGapCacheReadOnly () */

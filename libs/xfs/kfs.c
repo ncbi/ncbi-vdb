@@ -42,7 +42,6 @@
 
 #include "mehr.h"
 #include "schwarzschraube.h"
-#include "ncon.h"
 #include "teleport.h"
 #include "common.h"
 
@@ -195,7 +194,7 @@ XFSKfsNodeMake (
 
                 /* This is duplicate, but necessary one
                  */
-            ( & ( TheNode -> node ) ) -> vt = Type == kxfsDir
+            TheNode -> node . vt = Type == kxfsDir
                     ? ( ( const union XFSNode_vt * ) & _sKfsDirNodeVT_v1 )
                     : ( ( const union XFSNode_vt * ) & _sKfsFileNodeVT_v1 )
                     ;
@@ -365,24 +364,20 @@ _KfsDirNodeFindNode_v1 (
     rc_t RCt;
     uint32_t PathCount;
     const char * NodeName;
-    char PathBuf [ XFS_SIZE_4096 ];
-    size_t PathBufLen;
     struct XFSKfsNode * KfsNode;
     bool IsLast;
     KDirectory * NativeDir;
     XFSNType Type;
-    const struct XFSPath * xPath;
+    const struct XFSPath * xPath, * yPath;
 
     RCt = 0;
     PathCount = 0;
     NodeName = NULL;
-    * PathBuf = 0;
-    PathBufLen = 0;
     KfsNode = NULL;
     IsLast = false;
     NativeDir = NULL;
     Type = kxfsNotFound;
-    xPath = NULL;
+    xPath = yPath = NULL;
 
     RCt = XFSNodeFindNodeCheckInitStandard (
                                             self,
@@ -407,50 +402,48 @@ _KfsDirNodeFindNode_v1 (
             return XFS_RC ( rcInvalid );
         }
 
-        PathBufLen = string_copy_measure (
-                                        PathBuf,
-                                        sizeof ( PathBuf ),
-                                        KfsNode -> path
-                                        );
-        * ( PathBuf + PathBufLen ) = '/';
             /*) Here we are trying to create new node
              (*/
-        RCt = XFSPathFrom (
-                        Path,
-                        PathIndex + 1,
-                        & xPath
-                        );
+        RCt = XFSPathFrom ( Path, PathIndex + 1, & xPath );
         if ( RCt == 0 ) {
-            RCt = KDirectoryNativeDir ( & NativeDir );
+            RCt = XFSPathMake (
+                            & yPath,
+                            true,
+                            "%s/%s",
+                            KfsNode -> path,
+                            XFSPathGet ( xPath )
+                            );
             if ( RCt == 0 ) {
-                switch ( KDirectoryPathType ( NativeDir, XFSPathGet ( xPath ) ) ) {
-                    case kptFile :
-                            Type = kxfsFile;
-                            break;
-                    case kptDir :
-                            Type = kxfsDir;
-                            break;
-                    default :
-                            RCt = XFS_RC ( rcInvalid );
-                            break;
-                }
-
+                RCt = KDirectoryNativeDir ( & NativeDir );
                 if ( RCt == 0 ) {
-                    RCt = XFSKfsNodeMakeEx (
-                                        & KfsNode,
-                                        Type,
-                                        XFSPathName ( Path ),
-                                        XFSPathGet ( xPath ),
-                                        NULL
-                                        );
-                    if ( RCt == 0 ) {
-                        * Node = & ( KfsNode -> node );
-
-                        return 0;
+                    switch ( KDirectoryPathType ( NativeDir, XFSPathGet ( yPath ) ) ) {
+                        case kptFile :
+                                Type = kxfsFile;
+                                break;
+                        case kptDir :
+                                Type = kxfsDir;
+                                break;
+                        default :
+                                RCt = XFS_RC ( rcInvalid );
+                                break;
                     }
+                    if ( RCt == 0 ) {
+                        RCt = XFSKfsNodeMakeEx (
+                                            & KfsNode,
+                                            Type,
+                                            XFSPathName ( yPath ),
+                                            XFSPathGet ( yPath ),
+                                            NULL
+                                            );
+                        if ( RCt == 0 ) {
+                            * Node = & ( KfsNode -> node );
+                        }
+                    }
+
+                    KDirectoryRelease ( NativeDir );
                 }
 
-                KDirectoryRelease ( NativeDir );
+                XFSPathRelease ( yPath );
             }
 
             XFSPathRelease ( xPath );
@@ -1788,6 +1781,58 @@ _KfsNodeConstructor (
  +++    Non-Teleport methods to create nodes
  |||
 (((*/
+LIB_EXPORT
+rc_t CC
+XFSFileNodeMakeHandle (
+                    const struct XFSHandle ** Handle,
+                    struct XFSNode * FileNode,
+                    struct KFile * File
+)
+{
+    rc_t RCt;
+    const struct XFSHandle * TheHandle;
+    struct XFSKfsFileEditor * Editor;
+
+    RCt = 0;
+    TheHandle = NULL;
+    Editor = NULL;
+
+    XFS_CSAN ( Handle )
+    XFS_CAN ( Handle )
+    XFS_CAN ( FileNode )
+    XFS_CAN ( File )
+
+    RCt = XFSNodeFileEditor (
+                        FileNode,
+                        ( const struct XFSFileEditor ** ) & Editor
+                        );
+    if ( RCt == 0 ) {
+        Editor -> File = File;
+
+        RCt = XFSHandleMake ( FileNode,  & TheHandle );
+        if ( RCt == 0 ) {
+            XFSHandleSet ( TheHandle, Editor );
+
+            * Handle = TheHandle;
+        }
+    }
+
+    if ( RCt != 0 ) {
+        * Handle = NULL;
+
+        if ( TheHandle != NULL ) {
+            XFSHandleRelease ( TheHandle );
+        }
+        else {
+            if ( Editor != NULL ) {
+                XFSEditorDispose ( ( const struct XFSEditor * ) Editor );
+            }
+        }
+    }
+
+    return RCt;
+}   /* XFSFileNodeMakeHandle () */
+
 LIB_EXPORT
 rc_t CC
 XFSFileNodeMake (

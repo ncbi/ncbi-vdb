@@ -671,3 +671,16 @@ XFSContNodeDelChild ( struct XFSNode * self, const char * ChildName )
 
     return XFSNodeContainerDel ( Cont -> container, ChildName );
 }   /* XFSContNodeDelChild () */
+
+LIB_EXPORT
+rc_t CC
+XFSContNodeClear ( struct XFSNode * self )
+{
+    struct XFSContNode * Cont = ( struct XFSContNode * ) self;
+
+    if ( Cont == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    return XFSNodeContainerClear ( Cont -> container );
+}   /* XFSContNodeClear () */
