@@ -296,18 +296,10 @@ rc_t CC OptionGetValue (const Option * self, uint32_t number, const void ** valu
 static
 rc_t CC OptionAddValue (Option * option, uint32_t arg_index, const char * value, size_t size)
 {
-    ParamValueContainer * p_container;
     rc_t rc = 0;
 
     assert (option);
     
-    p_container = (ParamValueContainer *)malloc( sizeof *p_container );
-    if (p_container == NULL)
-    {
-        rc = RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
-        return rc;
-    }
-
     ++option->count;
 
 /*     KOutMsg ("%s: name %s count %u max_count %u value %s\n", __func__, option->name, option->count, option->max_count, value); */
@@ -321,8 +313,17 @@ rc_t CC OptionAddValue (Option * option, uint32_t arg_index, const char * value,
     }
     else if (option->needs_value)
     {
+        ParamValueContainer * p_container;
+
         assert (value);     /* gotta have a value */
         assert (size);      /* value can't be a NULL string */
+
+        p_container = (ParamValueContainer *)malloc( sizeof *p_container );
+        if (p_container == NULL)
+        {
+            rc = RC (rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted);
+            return rc;
+        }
 
         rc = ParamValueMake (p_container, arg_index, value, size, option->convert_fn);
         if (rc == 0)
