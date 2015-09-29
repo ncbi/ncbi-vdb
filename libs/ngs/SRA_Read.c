@@ -37,6 +37,7 @@
 #include <klib/text.h>
 #include <klib/printf.h>
 #include <klib/refcount.h>
+#include <klib/rc.h>
 #include <vdb/cursor.h>
 #include <vdb/schema.h>
 #include <vdb/vdb-priv.h>
@@ -113,7 +114,8 @@ void SRA_ReadInit ( ctx_t ctx, SRA_Read * self, const char *clsname, const char 
         {
             TRY ( self -> run_name = NGS_StringDuplicate ( run_name, ctx ) )
             {
-                self -> has_phred_33 = true; /* hope for the best - will reset if ascii qualities fail to read */
+                self -> read_name       = NULL;
+                self -> has_phred_33    = true; /* hope for the best - will reset if ascii qualities fail to read */
                 self -> wants_full      = true;
                 self -> wants_partial   = true; 
                 self -> wants_unaligned = true;            
@@ -159,6 +161,7 @@ void SRA_ReadWhack ( SRA_Read * self, ctx_t ctx )
     
     NGS_StringRelease ( self -> group_name, ctx );
     NGS_StringRelease ( self -> run_name, ctx );
+    NGS_StringRelease ( self -> read_name, ctx );
 }
 
 /* Release
@@ -299,7 +302,35 @@ NGS_String * SRA_ReadGetName ( SRA_Read * self, ctx_t ctx )
         USER_ERROR ( xcIteratorUninitialized, "Read accessed before a call to ReadIteratorNext()" );
         return NULL;
     }
-    return NGS_CursorGetString( self -> curs, ctx, self -> cur_row, seq_NAME );
+
+    if ( self -> read_name == NULL )
+    {
+        ON_FAIL ( self -> read_name = NGS_CursorGetString( self -> curs, ctx, self -> cur_row, seq_NAME ) )
+        {   
+            if ( GetRCObject ( ctx -> rc ) == rcColumn && GetRCState ( ctx -> rc ) == rcNotFound )
+            {   /* no NAME column; synthesize a read name as readCollection.name() + '.' + SEQUENCE.row_id */
+                char buf [ 1024 ];
+                size_t num_writ;
+                rc_t rc;
+                
+                CLEAR ();
+                
+                rc = string_printf ( buf, sizeof ( buf ), & num_writ, 
+                                        "%.*s.%li",  
+                                        NGS_StringSize ( self -> run_name, ctx ), NGS_StringData ( self -> run_name, ctx ), self -> cur_row );
+                if ( rc != 0 )
+                {
+                    INTERNAL_ERROR ( xcColumnReadFailed, "string_printf rc = %R", rc );
+                }
+                else
+                {
+                    self -> read_name = NGS_StringMakeOwned ( ctx, string_dup ( buf, num_writ ), num_writ );
+                }
+            }
+        }
+    }
+    
+    return NGS_StringDuplicate ( self -> read_name, ctx );  /* NGS_StringDuplicate ( NULL, ... ) is OK */
 }
 
 /* GetReadGroup
