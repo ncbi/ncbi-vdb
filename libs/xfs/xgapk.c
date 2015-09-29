@@ -141,7 +141,7 @@ _KartItemMake (
 
     RCt = KartItemProjIdNumber ( Item, & ProjectId );
     if ( RCt == 0 ) {
-        xItem -> project_id = ProjectId;
+        xItem -> project_id = ( uint32_t ) ProjectId;
     }
 
     if ( RCt == 0 ) {
@@ -149,7 +149,7 @@ _KartItemMake (
         if ( RCt == 0 && TheString -> len != 0 ) {
             RCt = KartItemItemIdNumber ( Item, & ObjectId );
             if ( RCt == 0 ) {
-                xItem -> object_id = ObjectId;
+                xItem -> object_id = ( uint32_t ) ObjectId;
             }
         }
         else {
@@ -756,7 +756,7 @@ _GapKartLoad ( struct XFSGapKart * self )
 
     RCt = 0;
     TheKart = NULL;
-    IsKart = NULL;
+    IsKart = false;
     Directory = NULL;
     * BF = 0;
 
@@ -1509,7 +1509,6 @@ _KartDepotMake ( struct _KartDepot ** Dpt )
                                     Depot -> path,
                                     NULL
                                     );
-printf ( " [DPT MKE] [%d] V[%d]\n", __LINE__, Depot -> phoby -> version );
                 if ( RCt == 0 ) {
                     * Dpt = Depot;
                 }
@@ -1761,7 +1760,6 @@ _KartDepotPhobySet ( const struct _Kartophoby * Phoby )
             }
 
             Dpt -> phoby = Phoby;
-printf ( " [SET PHB] [%d] V[%d]\n", __LINE__, Phoby -> version );
         }
 
         KLockUnlock ( Dpt -> mutabor );

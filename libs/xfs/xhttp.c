@@ -2022,7 +2022,7 @@ XFSHttpReaderMake (
         * Reader = RetReader;
     }
     else {
-        free ( Reader );
+        free ( RetReader );
     }
 
     return RCt;
@@ -2268,12 +2268,7 @@ _HttpMakeBuffer ( uint64_t Size, void ** Buffer )
         return XFS_RC ( rcInvalid );
     }
 
-    /*  I do not know, but valgrind think that it is uninitialized 
-        memory, so ... using calloc, cus it is not too large in size.
-
-        BF = malloc ( sizeof ( char ) * Size );
-    */
-    BF = calloc ( Size, sizeof ( char ) );
+    BF = calloc ( ( size_t ) Size, sizeof ( char ) );
     if ( BF == NULL ) {
         return XFS_RC ( rcExhausted );
     }
@@ -2326,7 +2321,7 @@ _xStreamReadAll ( const char * Url, void ** Buffer, size_t * NumRead )
                 RCt = XFS_HttpStreamRead_ZHR (
                                             Stream,
                                             BF + Off,
-                                            SZ - Off,
+                                            ( size_t ) ( SZ - Off ),
                                             & NumR
                                             );
                 if ( RCt != 0 ) {
@@ -2345,7 +2340,7 @@ _xStreamReadAll ( const char * Url, void ** Buffer, size_t * NumRead )
 
             if ( RCt == 0 ) {
                 * Buffer = BF;
-                * NumRead = Off;
+                * NumRead = ( size_t ) Off;
             }
         }
 
@@ -2617,7 +2612,7 @@ _GetNameFrom (
     }
 
     if ( IsDir != NULL ) {
-        * IsDir = NULL;
+        * IsDir = false;
     }
 
     if ( Start == NULL || End == NULL || Name == NULL || Next == NULL || IsDir == NULL ) {

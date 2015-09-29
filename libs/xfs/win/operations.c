@@ -64,6 +64,7 @@
 #include <wchar.h>
 
 #include "operations.h"
+#include "zehr.h"
 #include "schwarzschraube.h"
 
 /****************************************************************
@@ -381,7 +382,7 @@ _DOKAN_get_parent_node (
              (*/
         RCt = XFSPathMake ( & xPath, true, BB );
         if ( RCt == 0 ) {
-            xPathQ = XFSPathCount ( xPath );
+            xPathQ = XFSPathPartCount ( xPath );
             if ( xPathQ < 2 ) {
                 RCt = XFS_RC ( rcInvalid );
             }

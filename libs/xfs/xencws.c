@@ -655,7 +655,7 @@ _DirCNewName (
 
     * Out = 0;
 
-    Series = self -> last + 1;
+    Series = ( int ) ( self -> last + 1 );
 
     RCt = string_printf ( Out, Len, & Var, _fFmtStr (), Series, Ext );
     if ( RCt == 0 ) {
@@ -801,7 +801,7 @@ _StoreContentDocument (
                                                 EncFile,
                                                 0,
                                                 Text,
-                                                TextSize,
+                                                ( size_t ) TextSize,
                                                 & NumWrit
                                                 );
                             }
