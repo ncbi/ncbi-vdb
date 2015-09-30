@@ -148,6 +148,7 @@ typedef enum
     appWGS,
     appNANNOT,
     appNAKMER,
+    appSRAPileup,
     appCount
 } VResolverAppID;
 
@@ -172,6 +173,8 @@ typedef enum
     algNAKMERFlat,
     algNAKMER,
     algFuseNAKMER,
+    
+    algPileup_NCBI,
 
     /* leave as last value */
     algUnknown
@@ -427,6 +430,12 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
             "kmer/%03u/%03u/%S", num / 1000000, ( num / 1000 ) % 1000, & tok -> acc );
         break;
 
+    case algPileup_NCBI:
+        num = ( uint32_t ) strtoul ( tok -> digits . addr, NULL, 10 );
+        rc = string_printf ( expanded, bsize, size,
+             "SRZ/%06u/%S%S/%S", num / 1000, & tok -> alpha, & tok -> digits, & tok -> acc );
+        break;
+        
     default:
         return RC ( rcVFS, rcResolver, rcResolving, rcType, rcUnrecognized );
     }
@@ -1903,12 +1912,20 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
     /* remove digit */
     acc += ++ i;
     size -= i;
-
-    /* scan numeric extension */
-    for ( i = 0; i < size; ++ i )
+    
+    /* check pileup extension */
+    if ( string_cmp( acc, size, "pileup", 6, size + 6 ) == 0 )
     {
-        if ( ! isdigit ( acc [ i ] ) )
-            break;
+        i = 6;
+    }
+    else
+    {
+        /* scan numeric extension */
+        for ( i = 0; i < size; ++ i )
+        {
+            if ( ! isdigit ( acc [ i ] ) )
+                break;
+        }
     }
 
     if ( i == 0 || i >= MAX_ACCESSION_LEN )
@@ -2004,9 +2021,28 @@ VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
 
         /* detect accession with extension */
         if ( ( code & 0xFF ) != 0 )
-            app = appAny;
+        {
+            /* check pileup suffix, e.g. "SRR012345.pileup" */
+            String suffix = tok -> ext1;
+            if ( suffix . size == 6 &&
+                 suffix . addr [ 0 ] == 'p' &&
+                 suffix . addr [ 1 ] == 'i' &&
+                 suffix . addr [ 2 ] == 'l' &&
+                 suffix . addr [ 3 ] == 'e' &&
+                 suffix . addr [ 4 ] == 'u' &&
+                 suffix . addr [ 5 ] == 'p' )
+            {
+                app = appSRAPileup;
+            }
+            else
+            {
+                app = appAny;
+            }
+        }
         else
+        {
             app = appSRA;
+        }
         break;
 
     case 0x106: /* e.g. "NC_000012.10"                      */
@@ -3383,7 +3419,7 @@ rc_t VResolverLoadAlgVolumes ( Vector *algs, const String *root, const String *t
  *        = "flat" | "sraFlat" | "sra1024" | "sra1000" | "fuse1000"
  *        | "refseq" | "wgs" | "wgsFlag" | "fuseWGS"
  *        | "ncbi" | "ddbj" | "ebi"
- *        | "nannot" | "nannotFlat" | "fuseNANNOT" ;
+ *        | "nannot" | "nannotFlat" | "fuseNANNOT" | "pileupNCBI";
  */
 static
 rc_t VResolverLoadVolumes ( Vector *algs, const String *root, const String *ticket,
@@ -3460,6 +3496,10 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root, const String *tick
                         alg_id = algNAKMER;
                     else if ( strcmp ( algname, "fuseNAKMER" ) == 0 )
                         alg_id = algFuseNAKMER;
+                    
+                    /* pileup files */
+                    else if ( strcmp ( algname, "pileupNCBI" ) == 0 )
+                        alg_id = algPileup_NCBI;
 
                     if ( alg_id != algUnknown )
                     {
@@ -3554,7 +3594,7 @@ rc_t VResolverLoadApp ( VResolver *self, Vector *algs, const String *root, const
  *        = <app-name> <app> ;
  *
  *    app-name
- *        = "refseq" | "sra" | "wgs" | "nannot" | "nakmer" ;
+ *        = "refseq" | "sra" | "wgs" | "nannot" | "nakmer" | "sraPileup" ;
  */
 static
 rc_t VResolverLoadApps ( VResolver *self, Vector *algs, const String *root,
@@ -3604,6 +3644,8 @@ rc_t VResolverLoadApps ( VResolver *self, Vector *algs, const String *root,
                         app_id = appSRA;
                     else if ( strcmp ( appname, "wgs" ) == 0 )
                         app_id = appWGS;
+                    else if ( strcmp ( appname, "sraPileup" ) == 0 )
+                        app_id = appSRAPileup;
 
                     rc = VResolverLoadApp ( self, algs, root, ticket, allow_cache, app_id,
                         & self -> num_app_vols [ app_id ], app, resolver_cgi, protected, disabled, caching );
@@ -4247,7 +4289,7 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         char buffer [ 256 ];
         self -> ticket = VResolverGetDownloadTicket ( self, protected, buffer, sizeof buffer );
 
-       allow_cache = KConfigNodeCacheEnabled ( kfg );
+        allow_cache = KConfigNodeCacheEnabled ( kfg );
 
         /* allow user to specify leaf paths in current directory */
         rc = VResolverDetectSRALeafPath ( self );
