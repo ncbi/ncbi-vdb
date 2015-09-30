@@ -292,6 +292,7 @@ NGS_Reference * CSRA1_ReadCollectionGetReference ( CSRA1_ReadCollection * self, 
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
 
     const NGS_Cursor * curs;
+    NGS_Reference * ret;
 #if 0
     if ( self -> reference_curs == NULL )
     {
@@ -303,7 +304,13 @@ NGS_Reference * CSRA1_ReadCollectionGetReference ( CSRA1_ReadCollection * self, 
     }
 #endif
     
-    return CSRA1_ReferenceMake ( ctx, & self -> dad, self -> db, curs, spec, self -> primaryId_count );
+    ret = CSRA1_ReferenceMake ( ctx, & self -> dad, self -> db, curs, spec, self -> primaryId_count );
+#if ! 0
+    // release cursor if we generate new cursor for the reference each time
+    NGS_CursorRelease ( curs, ctx );
+#endif
+    
+    return ret;
 }
 
 static
