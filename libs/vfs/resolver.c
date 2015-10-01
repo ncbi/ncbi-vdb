@@ -646,7 +646,6 @@ rc_t VResolverAlgLocalFile ( const VResolverAlg *self,
     return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
-static
 rc_t VPathCheckFromNamesCGI ( const VPath * path, const String *ticket, const VPath ** mapping )
 {
     size_t i, size;
@@ -4032,7 +4031,18 @@ rc_t VResolverForceRemoteProtected ( VResolver *self )
             {
                 cgi -> ticket = self -> ticket;
 
-                rc = VectorAppend ( & self -> remote, NULL, cgi );
+                /* Remote Protected algorythm should come first: see VDB-2679 */
+                if ( VectorLength ( & self -> remote ) > 0 ) {
+                    void *prior = NULL;
+                    rc = VectorSwap ( &self -> remote, 0, cgi, & prior );
+                    if ( rc == 0 ) {
+                        rc = VectorAppend ( &self -> remote, NULL, prior );
+                    }
+                }
+                else {
+                    rc = VectorAppend ( & self -> remote, NULL, cgi );
+                }
+
                 if ( rc == 0 )
                 {
                     ++ self -> num_app_vols [ appAny ];
