@@ -75,7 +75,8 @@ $(ILIBDIR)/libvfs: $(addprefix $(ILIBDIR)/libvfs.,$(ILIBEXT))
 VFS_SRC_CMN = \
 	syspath \
 	manager  \
-	resolver
+	resolver \
+	resolver-3.0 \
 
 VFS_SRC = \
 	path \
