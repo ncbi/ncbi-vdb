@@ -1216,7 +1216,7 @@ _GapFile_read (
 
     RCt = _GapFileLockPeer ( File );
     if ( RCt == 0 ) {
-        RCt = KFileRead (
+        RCt = KFileReadAll (
                         File -> looney_bin,
                         Offset,
                         Buffer,

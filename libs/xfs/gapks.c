@@ -393,6 +393,8 @@ _GapKartsNodeAttr_date_v1 (
     XFS_CAN ( Time )
     XFS_CAN ( XFSEditorNode ( & ( self -> Papahen ) ) );
 
+    XFSGapKartDepotRefresh ();
+
     return 0;
 }   /* _GapKartsNodeAttr_date_v1 () */
 
@@ -407,6 +409,8 @@ _GapKartsNodeAttr_type_v1 (
     XFS_CAN ( self )
     XFS_CAN ( Type )
     XFS_CAN ( XFSEditorNode ( & ( self -> Papahen ) ) )
+
+    XFSGapKartDepotRefresh ();
 
     * Type = kxfsDir;
 
@@ -644,8 +648,10 @@ _GapKartsNodeMake (
             if ( RCt == 0 ) {
                 KartNode -> project_id = ProjectId;
                 KartNode -> version = 0;
+                if ( _UpdateKarts ( KartNode )  == 0 ) {
 
-                * Node = KartNode;
+                    * Node = KartNode;
+                }
             }
         }
     }
@@ -677,12 +683,7 @@ XFSGapKartsNodeMake (
                             & KartNode
                             );
     if ( RCt == 0 ) {
-/* No Need
- *      RCt = _LoadKarts ( KartNode );
- */
-        if ( RCt == 0 ) {
-            * Node = & ( KartNode -> node );
-        }
+        * Node = & ( KartNode -> node );
     }
 
     if ( RCt != 0 ) {
