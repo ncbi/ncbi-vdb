@@ -39,7 +39,7 @@
 #include <errno.h>
 
 
-#define DATA_READ_FILE_BUFFER 256 * 1024
+#define DATA_READ_FILE_BUFFER 0
 
 
 /*--------------------------------------------------------------------------
