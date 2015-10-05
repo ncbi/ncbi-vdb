@@ -1191,6 +1191,9 @@
     <ClCompile Include="..\..\..\libs\vfs\resolver.c">
       <Filter>vfs</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\resolver-3.0.c">
+      <Filter>vfs</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\win\syspath.c">
       <Filter>vfs</Filter>
     </ClCompile>
