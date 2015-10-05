@@ -136,13 +136,18 @@ extern "C" {
 #define rcResolver   rcTree
 #define rcRepository rcDirectory
 
+struct KDataBuffer;
 struct String;
 
 rc_t VPathCheckFromNamesCGI(const struct VPath *path,
     const struct String *ticket, const struct VPath **mapping);
 
-rc_t VResolverAlgParseResolverCGIResponse_3_0(const char *astart,
-    size_t asize, const struct VPath **path, const struct VPath **mapping,
+rc_t VResolverAlgParseResolverCGIResponse ( const struct KDataBuffer *result,
+    const struct VPath ** path, const struct VPath ** mapping,
+    const struct String *acc, const struct String *ticket );
+
+rc_t VResolverAlgParseResolverCGIResponse_3_0(const char *start,
+    size_t size, const struct VPath **path, const struct VPath **mapping,
     const struct String *acc, const struct String *ticket);
 
 /** get projectId ( valid for protected user repository ) */

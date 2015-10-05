@@ -757,7 +757,8 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path, const String *ticket, const VP
  */
 static
 rc_t VResolverAlgParseResolverCGIResponse_1_0 ( const char *start, size_t size,
-    const VPath ** path, const String *acc, const String *ticket )
+    const VPath ** path, const VPath ** ignore, const String *acc,
+    const String *ticket )
 {
     rc_t rc;
     KLogLevel lvl;
@@ -1214,101 +1215,93 @@ rc_t VResolverAlgParseResolverCGIResponse_2_0 ( const char *start, size_t size,
     return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
+typedef enum {
+    vBad,
+    v1_0,
+    v1_1,
+    v2,
+    v3,
+} TVersion;
 
 /* ParseResolverCGIResponse
  *  the response should be NUL terminated
  *  but should also be close to the size of result
  */
-static
 rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
     const VPath ** path, const VPath ** mapping, const String *acc,
     const String *ticket )
 {
+    const char V1_0[] = "#1.0";
+    const char V1_1[] = "#1.1";
+    const char V2  [] = "#2.0";
+    const char V3  [] = "#3.0";
+    struct {
+        const char *c;
+        size_t s;
+        TVersion v;
+        rc_t (*f)( const char *start, size_t size, const VPath **path,
+            const VPath **mapping, const String *acc, const String *ticket);
+    } version[] = {
+        {V1_0, sizeof V1_0 - 1, v1_0, VResolverAlgParseResolverCGIResponse_1_0},
+        {V1_1, sizeof V1_1 - 1, v1_1, VResolverAlgParseResolverCGIResponse_1_1},
+        { V2 , sizeof V2   - 1, v2  , VResolverAlgParseResolverCGIResponse_2_0},
+        { V3  , sizeof V3   - 1, v3 , VResolverAlgParseResolverCGIResponse_3_0},
+    };
+
+    size_t size = NULL; //  const char cVersion = NULL;
+    int iVersion = sizeof version / sizeof version[0];
+
     /* the textual response */
     size_t i = 0;
-    const char *start = ( const void* ) result -> base;
-    size_t size = KDataBufferBytes ( result );
+    const char *start = NULL;
+
+    assert(result);
+
+    start = ( const void* ) result -> base;
+    size = KDataBufferBytes ( result );
 
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (" Response = %.*s\n", size, start));
 
     /* peel back buffer to significant bytes */
-    while ( size > 0 && start [ size - 1 ] == 0 )
-        -- size;
+    while ( size > 0 && start [ size - 1 ] == 0 ) -- size;
 
     /* skip over blanks */
-    for ( i = 0; i < size; ++ i )
+    for ( i = 0; i < size; ++ i ) { if ( ! isspace ( start [ i ] ) ) break; }
+
+    for (iVersion = 0;
+        iVersion < sizeof version / sizeof *version; ++iVersion)
     {
-        if ( ! isspace ( start [ i ] ) )
+        if (string_cmp(&start[i], size - i,
+            version[iVersion].c, version[iVersion].s, version[iVersion].s) == 0)
+        {
             break;
-    }
-
-    /* at this point, we expect only version 1.0 ... */
-    if ( string_cmp ( & start [ i ], size - i, "#1.0", sizeof "#1.0" - 1, sizeof "#1.0" - 1 ) == 0 )
-    {
-        do
-        {
-            /* accept version line */
-            i += sizeof "#1.0" - 1;
-
-            /* must be followed by eoln */
-            if ( start [ i ] == '\r' && start [ i + 1 ] == '\n' )
-                i += 2;
-            else if ( start [ i ] == '\n' )
-                i += 1;
-            else
-                break;
-
-            /* parse 1.0 response table */
-            return VResolverAlgParseResolverCGIResponse_1_0 ( & start [ i ], size - i, path, acc, ticket );
         }
-        while ( false );
     }
+    switch (iVersion) {
+        default:
+            if (string_cmp(&start[i], size - i, version[iVersion].c,
+                version[iVersion].s, version[iVersion].s) == 0)
+            {
+                /* accept version line */
+                i += version[iVersion].s;
 
-    /* ... and 1.1 */
-    if ( string_cmp ( & start [ i ], size - i, "#1.1", sizeof "#1.1" - 1, sizeof "#1.1" - 1 ) == 0 )
-    {
-        do
-        {
-            /* accept version line */
-            i += sizeof "#1.1" - 1;
+                /* must be followed by eoln */
+                if ( start [ i ] == '\r' && start [ i + 1 ] == '\n' )
+                    i += 2;
+                else if ( start [ i ] == '\n' )
+                    i += 1;
+                else
+                    return
+                        RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
 
-            /* must be followed by eoln */
-            if ( start [ i ] == '\r' && start [ i + 1 ] == '\n' )
-                i += 2;
-            else if ( start [ i ] == '\n' )
-                i += 1;
-            else
-                break;
-
-            /* parse 1.1 response table */
-            return VResolverAlgParseResolverCGIResponse_1_1 ( & start [ i ], size - i, path, mapping, acc, ticket );
-        }
-        while ( false );
+                /* parse response table */
+                return version[iVersion].f
+                    (&start[i], size - i, path, mapping, acc, ticket);
+            }
+            /* no break */
+        case sizeof version / sizeof version[0]:
+            return RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
     }
-
-    /* ... and 2.0 */
-    if ( string_cmp ( & start [ i ], size - i, "#2.0", sizeof "#2.0" - 1, sizeof "#2.0" - 1 ) == 0 )
-    {
-        do
-        {
-            /* accept version line */
-            i += sizeof "#2.0" - 1;
-
-            /* must be followed by eoln */
-            if ( start [ i ] == '\r' && start [ i + 1 ] == '\n' )
-                i += 2;
-            else if ( start [ i ] == '\n' )
-                i += 1;
-            else
-                break;
-
-            /* parse 2.0 response */
-            return VResolverAlgParseResolverCGIResponse_2_0 ( & start [ i ], size - i, path, mapping, acc, ticket );
-        }
-        while ( false );
-    }
-
-    return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
 /* RemoteProtectedResolve
