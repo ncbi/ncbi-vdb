@@ -30,8 +30,14 @@
 
 #include <ktst/unit_test.hpp>
 #include <kapp/main.h> /* KMain */
+
+#include <stdexcept>
+
 #include <stdio.h>
+
 #include "search-vdb.h"
+
+using namespace std;
 
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(TestSuiteSearch, argsHandler);
@@ -132,44 +138,67 @@ TEST_CASE(TestCaseAgrep)
     }*/
 }
 
-TEST_CASE ( DumbGrep_Crash )
-{
+// Fgrep
+
+static void RunFgrep ( FgrepFlags p_alg )
+{   // VDB-2669: creates uninitialized memory
     Fgrep* fg;
     const char* queries[] = { "RRRRRAH" };
-    REQUIRE_RC ( FgrepMake ( & fg, FGREP_MODE_ASCII | FGREP_ALG_DUMB, queries, 1 ) ); // VDB-2669: creates uninitialized memory
+    if ( FgrepMake ( & fg, FGREP_MODE_ASCII | p_alg, queries, 1 ) ) // this used to leave uninitialized memory ...
+        throw logic_error ( "RunFgrep: FgrepMake() failed" );
     
-    const std::string str ( 100000, 'A' );
+    const std::string str ( 1000, 'A' );
     FgrepMatch matchinfo;
-    REQUIRE_EQ ( (uint32_t)0, FgrepFindFirst ( fg, str . data (), str . size (), & matchinfo ) );
+    if ( 0 != FgrepFindFirst ( fg, str . data (), str . size (), & matchinfo ) ) // ... the use of which showed up in valgrind here, and sometimes caused a crash
+        throw logic_error ( "RunFgrep: FgrepFindFirst() found a false match" );
     
     FgrepFree ( fg );
+}
+
+TEST_CASE ( DumbGrep_Crash )
+{
+    RunFgrep ( FGREP_ALG_DUMB );
 }
 
 TEST_CASE ( BoyerMooreGrep_Crash )
 {
-    Fgrep* fg;
-    const char* queries[] = { "RRRRRAH" };
-    REQUIRE_RC ( FgrepMake ( & fg, FGREP_MODE_ASCII | FGREP_ALG_BOYERMOORE, queries, 1 ) ); // VDB-2669: creates uninitialized memory
-    
-    const std::string str ( 100000, 'A' );
-    FgrepMatch matchinfo;
-    REQUIRE_EQ ( (uint32_t)0, FgrepFindFirst ( fg, str . data (), str . size (), & matchinfo ) );
-    
-    FgrepFree ( fg );
+    RunFgrep ( FGREP_ALG_BOYERMOORE );
 }
 
 TEST_CASE ( AhoGrep_Crash )
 {
-    Fgrep* fg;
-    const char* queries[] = { "RRRRRAH" };
-    REQUIRE_RC ( FgrepMake ( & fg, FGREP_MODE_ASCII | FGREP_ALG_AHOCORASICK, queries, 1 ) ); // VDB-2669: creates uninitialized memory
-    
-    const std::string str ( 100000, 'A' );
-    FgrepMatch matchinfo;
-    REQUIRE_EQ ( (uint32_t)0, FgrepFindFirst ( fg, str . data (), str . size (), & matchinfo ) );
-    
-    FgrepFree ( fg );
+    RunFgrep ( FGREP_ALG_AHOCORASICK );
 }
+
+// Smith-Waterman
+TEST_CASE ( SmithWaterman_crash)
+{
+    VRefVariation* self;
+    INSDC_dna_text ref[] = "ACGTACGTACGTACGTACGTACGTACGTACGT";
+    REQUIRE_RC ( VRefVariationIUPACMake ( &self, ref, string_size ( ref ), 0, "", 0, 0 ) ); // VDB-2684: segfault here
+    REQUIRE_RC ( VRefVariationIUPACRelease ( self ) );
+}
+
+#if SHOW_UNIMPLEMENTED
+TEST_CASE ( SmithWaterman_basic )
+{
+    VRefVariation* self;
+    INSDC_dna_text ref[] = "ACGTACGTACGTACGTACGTACGTACGTACGT";
+    INSDC_dna_text var[] = "";
+    
+    REQUIRE_RC ( VRefVariationIUPACMake ( &self, ref, string_size ( ref ), 0, var, string_size ( var ), 0 ) );
+    
+    REQUIRE_EQ ( string ( "ACGTACGT" ), string ( VRefVariationIUPACGetVariation ( self ) ) );
+    /*
+    REQUIRE_EQ ( string ( ref ), string ( VRefVariationIUPACGetRefChunk ( self ) ) );
+    REQUIRE_EQ ( string_size ( ref ), VRefVariationIUPACGetRefChunkSize ( self ) );
+    REQUIRE_EQ ( (size_t)8, VRefVariationIUPACGetVarStart ( self ) );
+    REQUIRE_EQ ( (size_t)8, VRefVariationIUPACGetVarSize ( self ) );
+    REQUIRE_EQ ( (size_t)4, VRefVariationIUPACGetVarLenOnRef ( self ) );
+    */
+    REQUIRE_RC ( VRefVariationIUPACRelease ( self ) );
+}
+#endif
 
 //////////////////////////////////////////// Main
 extern "C"
