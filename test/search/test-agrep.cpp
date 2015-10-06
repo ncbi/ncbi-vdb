@@ -175,8 +175,7 @@ TEST_CASE ( SmithWaterman_crash)
 {
     VRefVariation* self;
     INSDC_dna_text ref[] = "ACGTACGTACGTACGTACGTACGTACGTACGT";
-    REQUIRE_RC ( VRefVariationIUPACMake ( &self, ref, string_size ( ref ), 0, "", 0, 0 ) ); // VDB-2684: segfault here
-    REQUIRE_RC ( VRefVariationIUPACRelease ( self ) );
+    REQUIRE_RC_FAIL ( VRefVariationIUPACMake ( &self, ref, string_size ( ref ), 0, "", 0, 0 ) );
 }
 
 #if SHOW_UNIMPLEMENTED
