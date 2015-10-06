@@ -108,8 +108,8 @@ namespace VDBSearchTest
         rc_t rc = 0;
         m_sTableName = pszTableName;
 
-        //rc = ::VDBManagerMakeRead(const_cast<const VDBManager**>(&m_pVDBManager), NULL);
-        rc = ::VDBManagerMakeUpdate(&m_pVDBManager, NULL);
+        rc = ::VDBManagerMakeRead(const_cast<const VDBManager**>(&m_pVDBManager), NULL);
+        //rc = ::VDBManagerMakeUpdate(&m_pVDBManager, NULL);
         PROCESS_RC_ERROR(rc, "VDBManagerMakeRead");
 
         rc = ::VDBManagerOpenTableRead(m_pVDBManager, const_cast<const VTable**>(&m_pVDBTable), NULL, pszTableName);
