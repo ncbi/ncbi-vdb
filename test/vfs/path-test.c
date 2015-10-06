@@ -70,7 +70,22 @@ const char *VPathGetAccTypeStr ( const VPath * self )
     case 0x037:
     case 0x038:
     case 0x039:
-        return " ( appSRA )";
+        if ( ( (self -> acc_code >> 4) & 0xF ) == 0 )
+            return " ( appSRA )";
+            
+        {
+            const char pileup_ext[] = ".pileup";
+            size_t pileup_ext_size = sizeof( pileup_ext ) / sizeof( pileup_ext[0] ) - 1;
+            size_t path_size = self -> path . size;
+            
+            
+            if ( path_size > pileup_ext_size && memcmp(&self -> path . addr[path_size - pileup_ext_size], pileup_ext, pileup_ext_size) == 0)
+            {
+                return " ( appSRAPileup )";
+            }
+        }
+            
+        return " ( appAny )";
 
     case 0x042:
     case 0x048:
@@ -238,6 +253,10 @@ rc_t ParseUrlTest ( const VFSManager * vfs )
         "SRR1234567",
         "SRR12345678",
         "SRR123456789",
+        "SRR123456.pileup",
+        "SRR1234567.pileup",
+        "SRR12345678.pileup",
+        "SRR123456789.pileup",
         "J01415",
         "J01415.2",
         "CM000071",
@@ -447,6 +466,7 @@ rc_t ModifyPathTest ( const VFSManager * vfs )
     {
         /* simple accessions */
         "SRR123456",
+        "SRR123456.pileup",
         "NZ_AAEW01000001",
         "NA000008777.1",
         "GCA_012345678.1_S",
@@ -574,6 +594,7 @@ rc_t ExtractAccessionTest ( const VFSManager * vfs )
     {
         /* simple accessions */
         "SRR123456",
+        "SRR123456.pileup",
         "NZ_AAEW01000001",
         "NA000008777.1",
         "GCA_012345678.1_S",
@@ -585,6 +606,9 @@ rc_t ExtractAccessionTest ( const VFSManager * vfs )
         "SRR000123.sra",
         "SRR000123.sra.ncbi_enc",
         "SRR000123.vdbcache",
+        "SRR000123.pileup.sra",
+        "SRR000123.pileup.sra.ncbi_enc",
+        "SRR000123.pileup.vdbcache",
 
         /* unc */
         "//this/is/a/really/nice/UNC/path",
