@@ -895,6 +895,11 @@ LIB_EXPORT rc_t CC VRefVariationIUPACMake (
     struct VRefVariation* obj;
     rc_t rc = 0;
 
+    if ( variation_size == 0 && var_len_on_ref == 0 )
+    {
+        return RC (rcText, rcString, rcSearching, rcParam, rcEmpty);
+    }
+
     assert ( self != NULL );
 
     obj = calloc ( 1, sizeof * obj );
