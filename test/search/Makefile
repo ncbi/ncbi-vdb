@@ -51,7 +51,7 @@ TEST_AGREP_OBJ = \
 
 TEST_AGREP_LIB = \
 	-skapp \
-	-sncbi-wvdb \
+	-sncbi-vdb \
 	-sktst
 
 $(TEST_BINDIR)/test-agrep: $(TEST_AGREP_OBJ)
