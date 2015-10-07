@@ -31,6 +31,8 @@
 #include <ktst/unit_test.hpp>
 #include <kapp/main.h> /* KMain */
 
+#include <../libs/search/search-priv.h>
+
 #include <stdexcept>
 
 #include <stdio.h>
@@ -178,26 +180,26 @@ TEST_CASE ( SmithWaterman_crash)
     REQUIRE_RC_FAIL ( VRefVariationIUPACMake ( &self, ref, string_size ( ref ), 0, "", 0, 0 ) );
 }
 
-#if SHOW_UNIMPLEMENTED
-TEST_CASE ( SmithWaterman_basic )
+TEST_CASE ( SmithWaterman_calculate_matrix_for_exact_match )
 {
-    VRefVariation* self;
-    INSDC_dna_text ref[] = "ACGTACGTACGTACGTACGTACGTACGTACGT";
-    INSDC_dna_text var[] = "";
-    
-    REQUIRE_RC ( VRefVariationIUPACMake ( &self, ref, string_size ( ref ), 0, var, string_size ( var ), 0 ) );
-    
-    REQUIRE_EQ ( string ( "ACGTACGT" ), string ( VRefVariationIUPACGetVariation ( self ) ) );
-    /*
-    REQUIRE_EQ ( string ( ref ), string ( VRefVariationIUPACGetRefChunk ( self ) ) );
-    REQUIRE_EQ ( string_size ( ref ), VRefVariationIUPACGetRefChunkSize ( self ) );
-    REQUIRE_EQ ( (size_t)8, VRefVariationIUPACGetVarStart ( self ) );
-    REQUIRE_EQ ( (size_t)8, VRefVariationIUPACGetVarSize ( self ) );
-    REQUIRE_EQ ( (size_t)4, VRefVariationIUPACGetVarLenOnRef ( self ) );
-    */
-    REQUIRE_RC ( VRefVariationIUPACRelease ( self ) );
+    const INSDC_dna_text Ref[] = "ACGTACGTACGTACGTACGTACGTACGTACGT";
+    const INSDC_dna_text Query[] = "ACGTACGTACG";
+    const size_t Rows = sizeof ( Ref ) / sizeof ( INSDC_dna_text );
+    const size_t Cols = sizeof ( Query ) / sizeof ( INSDC_dna_text );
+    int matrix [ Rows * Cols ];
+    int maxScore = -1;
+    REQUIRE_RC ( calculate_similarity_matrix ( Ref, Rows - 1, Query, Cols - 1, matrix, true, & maxScore ) ); 
+/*    for ( size_t i = 0; i < Rows; ++i )
+    {
+        for ( size_t j = 0; j < Cols; ++j )
+        {
+            cout << matrix [ i * Cols + j ] << " ";
+        }
+        cout << endl;
+    }
+*/    
+    REQUIRE_EQ ( int ( Cols - 1 ) * 2, maxScore ); // exact match
 }
-#endif
 
 //////////////////////////////////////////// Main
 extern "C"

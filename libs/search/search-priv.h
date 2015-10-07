@@ -31,6 +31,7 @@
 #include <klib/rc.h>
 #include <os-native.h>
 #include <compiler.h>
+#include <insdc/insdc.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -131,6 +132,15 @@ char *create_substring ( const char *src, uint32_t sz )
     ret [ sz ] = 0;
     return ret;
 }
+
+/*
+* Smith-Waterman similariy matrix
+*/
+rc_t calculate_similarity_matrix (
+    INSDC_dna_text const* text, size_t size_text,
+    INSDC_dna_text const* query, size_t size_query,
+    int* matrix, bool reverse, int* max_score);
+
 
 #ifdef __cplusplus
 }

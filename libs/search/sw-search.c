@@ -139,10 +139,10 @@ static char get_char (INSDC_dna_text const* str, size_t size, size_t pos, bool r
         return str [size - pos - 1];
 }
 
-static rc_t calculate_similarity_matrix (
+rc_t calculate_similarity_matrix (
     INSDC_dna_text const* text, size_t size_text,
     INSDC_dna_text const* query, size_t size_query,
-    int* matrix, bool reverse)
+    int* matrix, bool reverse, int* max_score )
 {
 
     size_t ROWS = size_text + 1;
@@ -168,6 +168,10 @@ static rc_t calculate_similarity_matrix (
 
 #endif
 
+    if ( max_score != NULL )
+    {
+        *max_score = 0;
+    }
     // init 1st row and column with zeros
     memset ( matrix, 0, COLUMNS * sizeof(matrix[0]) );
     for ( i = 1; i < ROWS; ++i )
@@ -209,12 +213,17 @@ static rc_t calculate_similarity_matrix (
                     cur_score_ins = cur;
             }
 #endif
-
-            matrix[i*COLUMNS + j] = max4 (
-                        0,
-                        matrix[(i-1)*COLUMNS + j - 1] + sim,
-                        cur_score_del,
-                        cur_score_ins);
+            {
+                int score = max4 ( 0,
+                                   matrix[(i-1)*COLUMNS + j - 1] + sim,
+                                   cur_score_del,
+                                   cur_score_ins);
+                matrix[i*COLUMNS + j] = score;
+                if ( max_score != NULL && score > *max_score )
+                {
+                    *max_score = score;
+                }
+            }
 
 #if CACHE_MAX_ROWS != 0
             if ( matrix[i*COLUMNS + j] > vec_max_cols[j].value )
@@ -414,7 +423,7 @@ static rc_t FindRefVariationBounds (
     * has_indel = true;
 
     /* forward scan */
-    rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, false );
+    rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, false, NULL );
     if ( rc != 0 )
         goto free_resources;
     sw_find_indel_box ( matrix, ROWS, COLUMNS, &row_start, &row_end, &col_start, &col_end );
@@ -425,7 +434,7 @@ static rc_t FindRefVariationBounds (
     }
 
     /* reverse scan */
-    rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, true );
+    rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, true, NULL );
     if ( rc != 0 )
         goto free_resources;
     sw_find_indel_box ( matrix, ROWS, COLUMNS, &row_start_rev, &row_end_rev, &col_start_rev, &col_end_rev );
