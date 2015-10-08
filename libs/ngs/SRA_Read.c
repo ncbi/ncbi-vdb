@@ -114,7 +114,6 @@ void SRA_ReadInit ( ctx_t ctx, SRA_Read * self, const char *clsname, const char 
         {
             TRY ( self -> run_name = NGS_StringDuplicate ( run_name, ctx ) )
             {
-                self -> read_name       = NULL;
                 self -> has_phred_33    = true; /* hope for the best - will reset if ascii qualities fail to read */
                 self -> wants_full      = true;
                 self -> wants_partial   = true; 
@@ -161,7 +160,6 @@ void SRA_ReadWhack ( SRA_Read * self, ctx_t ctx )
     
     NGS_StringRelease ( self -> group_name, ctx );
     NGS_StringRelease ( self -> run_name, ctx );
-    NGS_StringRelease ( self -> read_name, ctx );
 }
 
 /* Release
@@ -303,19 +301,17 @@ NGS_String * SRA_ReadGetName ( SRA_Read * self, ctx_t ctx )
         return NULL;
     }
 
-    if ( self -> read_name == NULL )
-    {
-        ON_FAIL ( self -> read_name = NGS_CursorGetString( self -> curs, ctx, self -> cur_row, seq_NAME ) )
-        {   
-            if ( GetRCObject ( ctx -> rc ) == rcColumn && GetRCState ( ctx -> rc ) == rcNotFound )
-            {   /* no NAME column; synthesize a read name based on run_name and row_id */
-                CLEAR ();
-                self -> read_name = NGS_IdMake ( ctx, self -> run_name, NGSObject_Read, self -> cur_row );
-            }
+    NGS_String * ret;
+    ON_FAIL ( ret = NGS_CursorGetString( self -> curs, ctx, self -> cur_row, seq_NAME ) )
+    {   
+        if ( GetRCObject ( ctx -> rc ) == rcColumn && GetRCState ( ctx -> rc ) == rcNotFound )
+        {   /* no NAME column; synthesize a read name based on run_name and row_id */
+            CLEAR ();
+            ret = NGS_IdMake ( ctx, self -> run_name, NGSObject_Read, self -> cur_row );
         }
     }
     
-    return NGS_StringDuplicate ( self -> read_name, ctx );  /* NGS_StringDuplicate ( NULL, ... ) is OK */
+    return ret;
 }
 
 /* GetReadGroup
@@ -713,11 +709,6 @@ bool SRA_ReadIteratorNext ( SRA_Read * self, ctx_t ctx )
     
     self -> READ_TYPE = NULL;
     self -> READ_LEN = NULL;
-    if ( self -> read_name != NULL )
-    {
-        NGS_StringRelease ( self -> read_name, ctx );
-        self -> read_name = NULL;
-    }
     
     if ( self -> seen_first )
     {   /* move to next row */
