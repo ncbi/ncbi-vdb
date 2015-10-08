@@ -790,7 +790,10 @@ FIXTURE_TEST_CASE(PACBIO_ThrowsOnGetReadId, SRADB_Fixture)
     m_read = NGS_ReadCollectionGetReads ( m_coll, ctx, true, true, true );
     REQUIRE_NOT_NULL ( m_read );
     REQUIRE ( NGS_ReadIteratorNext ( m_read, ctx ) );
-    REQUIRE_STRING ( "SRR287782.1", NGS_ReadGetReadName ( m_read, ctx ) ); // VDB-2668: throws "no NAME-column found"
+    REQUIRE_STRING ( "SRR287782.R.1", NGS_ReadGetReadName ( m_read, ctx ) ); // VDB-2668: throws "no NAME-column found"
+    
+    REQUIRE ( NGS_ReadIteratorNext ( m_read, ctx ) );
+    REQUIRE_STRING ( "SRR287782.R.2", NGS_ReadGetReadName ( m_read, ctx ) ); // VDB-2668, review: does not update on Next
     
     EXIT;
 }

@@ -40,6 +40,8 @@ TEST_TOOLS = \
 
 include $(TOP)/build/Makefile.env
 
+VALGRIND = export NCBI_VALGRIND=ncbi; valgrind --error-exitcode=1 --suppressions=$(SRCDIR)/valgrind.suppress
+
 $(TEST_TOOLS) $(SLOW_TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
@@ -78,7 +80,7 @@ $(TEST_BINDIR)/test-ngs: $(TEST_NGS_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 valgrind_ngs: std
-	valgrind --ncbi --suppressions=$(SRCDIR)/valgrind.suppress --error-exitcode=1 $(TEST_BINDIR)/test-ngs 
+	$(VALGRIND) $(TEST_BINDIR)/test-ngs 
     
 
 #-------------------------------------------------------------------------------
@@ -97,7 +99,7 @@ sra: test-ngs_sra
 	$(TEST_BINDIR)/$^
 
 valgrind_sra: std
-	valgrind --ncbi --suppressions=$(SRCDIR)/valgrind.suppress --error-exitcode=1 $(TEST_BINDIR)/test-ngs_sra 
+	$(VALGRIND) $(TEST_BINDIR)/test-ngs_sra 
     
 #-------------------------------------------------------------------------------
 # test-ngs_sradb
@@ -115,7 +117,7 @@ sradb: test-ngs_sradb
 	$(TEST_BINDIR)/$^
 
 valgrind_sradb: std
-	valgrind --ncbi --suppressions=$(SRCDIR)/valgrind.suppress  --error-exitcode=1 $(TEST_BINDIR)/test-ngs_sradb 
+	$(VALGRIND) $(TEST_BINDIR)/test-ngs_sradb 
     
 #-------------------------------------------------------------------------------
 # test-ngs_csra1
@@ -130,7 +132,7 @@ $(TEST_BINDIR)/test-ngs_csra1: $(TEST_NGS_CSRA1_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 valgrind_csra1: std
-	valgrind --ncbi --suppressions=$(SRCDIR)/valgrind.suppress  --error-exitcode=1 $(TEST_BINDIR)/test-ngs_csra1 
+	$(VALGRIND) $(TEST_BINDIR)/test-ngs_csra1 
 
 #-------------------------------------------------------------------------------
 # test-ngs_csra1_readcollection
@@ -145,8 +147,7 @@ $(TEST_BINDIR)/test-ngs_csra1_readcollection: $(TEST_NGS_CSRA1_READCOLLECTION_OB
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 valgrind_csra1_readcollection: std
-	valgrind --ncbi --suppressions=$(SRCDIR)/valgrind.suppress  --error-exitcode=1 $(TEST_BINDIR)/test-ngs_csra1_readcollection     
-
+	$(VALGRIND) $(TEST_BINDIR)/test-ngs_csra1_readcollection     
 
 #-------------------------------------------------------------------------------
 # test-ngs_csra1_refwin
@@ -164,7 +165,7 @@ refwin: test-ngs_csra1_refwin
 	$(TEST_BINDIR)/$^
 
 valgrind_csra1_refwin: std
-	valgrind --ncbi --suppressions=$(SRCDIR)/valgrind.suppress  --error-exitcode=1 $(TEST_BINDIR)/test-ngs_csra1_refwin     
+	$(VALGRIND) $(TEST_BINDIR)/test-ngs_csra1_refwin     
 
 #-------------------------------------------------------------------------------
 # test-ngs_csra1_pileup
@@ -179,7 +180,7 @@ $(TEST_BINDIR)/test-ngs_csra1_pileup: $(TEST_NGS_CSRA1_PILEUP_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 valgrind_csra1_pileup: std
-	valgrind --ncbi --suppressions=$(SRCDIR)/valgrind.suppress  --error-exitcode=1 $(TEST_BINDIR)/test-ngs_csra1_pileup     
+	$(VALGRIND) $(TEST_BINDIR)/test-ngs_csra1_pileup     
 
 #-------------------------------------------------------------------------------
 # test-ngs_reference
@@ -197,5 +198,4 @@ reference: test-ngs_reference
 	$(TEST_BINDIR)/$^
 
 valgrind_reference: std
-	valgrind --ncbi --suppressions=$(SRCDIR)/valgrind.suppress  --error-exitcode=1 $(TEST_BINDIR)/test-ngs_reference     
-
+	$(VALGRIND) $(TEST_BINDIR)/test-ngs_reference     

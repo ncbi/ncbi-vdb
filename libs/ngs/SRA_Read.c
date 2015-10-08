@@ -308,24 +308,9 @@ NGS_String * SRA_ReadGetName ( SRA_Read * self, ctx_t ctx )
         ON_FAIL ( self -> read_name = NGS_CursorGetString( self -> curs, ctx, self -> cur_row, seq_NAME ) )
         {   
             if ( GetRCObject ( ctx -> rc ) == rcColumn && GetRCState ( ctx -> rc ) == rcNotFound )
-            {   /* no NAME column; synthesize a read name as readCollection.name() + '.' + SEQUENCE.row_id */
-                char buf [ 1024 ];
-                size_t num_writ;
-                rc_t rc;
-                
+            {   /* no NAME column; synthesize a read name based on run_name and row_id */
                 CLEAR ();
-                
-                rc = string_printf ( buf, sizeof ( buf ), & num_writ, 
-                                        "%.*s.%li",  
-                                        NGS_StringSize ( self -> run_name, ctx ), NGS_StringData ( self -> run_name, ctx ), self -> cur_row );
-                if ( rc != 0 )
-                {
-                    INTERNAL_ERROR ( xcColumnReadFailed, "string_printf rc = %R", rc );
-                }
-                else
-                {
-                    self -> read_name = NGS_StringMakeOwned ( ctx, string_dup ( buf, num_writ ), num_writ );
-                }
+                self -> read_name = NGS_IdMake ( ctx, self -> run_name, NGSObject_Read, self -> cur_row );
             }
         }
     }
@@ -728,7 +713,12 @@ bool SRA_ReadIteratorNext ( SRA_Read * self, ctx_t ctx )
     
     self -> READ_TYPE = NULL;
     self -> READ_LEN = NULL;
-
+    if ( self -> read_name != NULL )
+    {
+        NGS_StringRelease ( self -> read_name, ctx );
+        self -> read_name = NULL;
+    }
+    
     if ( self -> seen_first )
     {   /* move to next row */
         ++ self -> cur_row;
