@@ -32,6 +32,7 @@
 #include <kapp/main.h> /* KMain */
 
 #include <../libs/search/search-priv.h>
+#include <search/nucstrstr.h>
 
 #include <stdexcept>
 
@@ -180,6 +181,20 @@ TEST_CASE ( SmithWaterman_crash)
     REQUIRE_RC_FAIL ( VRefVariationIUPACMake ( &self, ref, string_size ( ref ), 0, "", 0, 0 ) );
 }
 
+static 
+void 
+PrintMatrix ( const int p_matrix[], size_t p_rows, size_t p_cols )
+{
+    for ( size_t i = 0; i < p_rows; ++i )
+    {
+        for ( size_t j = 0; j < p_cols; ++j )
+        {
+            cout << p_matrix [ i * p_cols + j ] << " ";
+        }
+        cout << endl;
+    }
+}
+
 TEST_CASE ( SmithWaterman_calculate_matrix_for_exact_match )
 {
     const INSDC_dna_text Ref[] = "ACGTACGTACGTACGTACGTACGTACGTACGT";
@@ -189,16 +204,26 @@ TEST_CASE ( SmithWaterman_calculate_matrix_for_exact_match )
     int matrix [ Rows * Cols ];
     int maxScore = -1;
     REQUIRE_RC ( calculate_similarity_matrix ( Ref, Rows - 1, Query, Cols - 1, matrix, true, & maxScore ) ); 
-/*    for ( size_t i = 0; i < Rows; ++i )
-    {
-        for ( size_t j = 0; j < Cols; ++j )
-        {
-            cout << matrix [ i * Cols + j ] << " ";
-        }
-        cout << endl;
-    }
-*/    
+    //PrintMatrix ( matrix, Rows, Cols );
     REQUIRE_EQ ( int ( Cols - 1 ) * 2, maxScore ); // exact match
+}
+
+TEST_CASE ( SmithWaterman_calculate_matrix_for_total_mismatch )
+{
+    const INSDC_dna_text Ref[] =    "AAAAAAAAAAAAAAAAAAAAAA";
+    const INSDC_dna_text Query[] =  "GGGGG";
+    const size_t Rows = sizeof ( Ref ) / sizeof ( INSDC_dna_text );
+    const size_t Cols = sizeof ( Query ) / sizeof ( INSDC_dna_text );
+    int matrix [ Rows * Cols ];
+    int maxScore = -1;
+    REQUIRE_RC ( calculate_similarity_matrix ( Ref, Rows - 1, Query, Cols - 1, matrix, true, & maxScore ) ); 
+    //PrintMatrix ( matrix, Rows, Cols );
+    REQUIRE_EQ ( 0, maxScore ); // total mismatch
+}
+
+// Nucstrstr
+TEST_CASE ( Nucstrstr )
+{
 }
 
 //////////////////////////////////////////// Main
