@@ -123,11 +123,9 @@ XFS_SRC = \
     gapk    \
     gapks   \
     gapka   \
-    cache    \
-    xcache    \
+    gapc   \
     gap     \
     gapf    \
-    bean \
     lockdpt \
     lreader \
     schwarzschraube \

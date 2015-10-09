@@ -107,6 +107,17 @@ XFSModelNodeType ( const struct XFSModelNode * self )
 }   /* XFSModelNodeType () */
 
 LIB_EXPORT
+bool CC
+XFSModelNodeReadOnly ( const struct XFSModelNode * self )
+{
+    const char * Mode = XFSModelNodeProperty ( self, XFS_MODEL_MODE );
+    if ( Mode == NULL ) {
+        return false;
+    }
+    return strcmp ( Mode, XFS_MODEL_MODE_RO ) == 0;
+}   /* XFSModelNodeReadOnly () */
+
+LIB_EXPORT
 const char * CC
 XFSModelNodeAs ( const struct XFSModelNode * self )
 {

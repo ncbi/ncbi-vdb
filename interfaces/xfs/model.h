@@ -86,6 +86,10 @@ const char * CC
 XFSModelNodeType ( const struct XFSModelNode * self );
 
 XFS_EXTERN
+bool CC
+XFSModelNodeReadOnly ( const struct XFSModelNode * self );
+
+XFS_EXTERN
 const char * CC
 XFSModelNodeAs ( const struct XFSModelNode * self );
 
