@@ -77,7 +77,6 @@ struct SRA_Read
     
     struct NGS_String * run_name;
     struct NGS_String * group_name; /* if not NULL, only return reads from this read group */
-    struct NGS_String * read_name;
     
     int64_t cur_row;
     int64_t row_max;
