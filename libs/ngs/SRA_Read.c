@@ -300,18 +300,20 @@ NGS_String * SRA_ReadGetName ( SRA_Read * self, ctx_t ctx )
         USER_ERROR ( xcIteratorUninitialized, "Read accessed before a call to ReadIteratorNext()" );
         return NULL;
     }
-
-    NGS_String * ret;
-    ON_FAIL ( ret = NGS_CursorGetString( self -> curs, ctx, self -> cur_row, seq_NAME ) )
-    {   
-        if ( GetRCObject ( ctx -> rc ) == rcColumn && GetRCState ( ctx -> rc ) == rcNotFound )
-        {   /* no NAME column; synthesize a read name based on run_name and row_id */
-            CLEAR ();
-            ret = NGS_IdMake ( ctx, self -> run_name, NGSObject_Read, self -> cur_row );
+    else
+    {
+        NGS_String * ret;
+        ON_FAIL ( ret = NGS_CursorGetString( self -> curs, ctx, self -> cur_row, seq_NAME ) )
+        {   
+            if ( GetRCObject ( ctx -> rc ) == rcColumn && GetRCState ( ctx -> rc ) == rcNotFound )
+            {   /* no NAME column; synthesize a read name based on run_name and row_id */
+                CLEAR ();
+                ret = NGS_IdMake ( ctx, self -> run_name, NGSObject_Read, self -> cur_row );
+            }
         }
+        
+        return ret;
     }
-    
-    return ret;
 }
 
 /* GetReadGroup
