@@ -26,7 +26,6 @@
 
 #include <klib/out.h>
 #include <klib/text.h>
-#include <kproc/thread.h>
 
 #include <xfs/xfs.h>
 #include <xfs/tree.h>
@@ -42,7 +41,7 @@
 
 /*  Some forwards and declarations
  */
-static rc_t XFSVeryMainLoop ( const KThread * self, void * Data );
+static rc_t XFSVeryMainLoop ( void * Data );
 
 /*  The code, which is checking version is quite similar for
  *  destroy/start/stop ... and, possible for other methods,
@@ -160,12 +159,6 @@ XFSControlDispose ( struct XFSControl * self )
         return 0;
     }
 
-    if ( self -> Thread != NULL ) {
-        KThreadRelease ( self -> Thread );
-
-        self -> Thread = NULL;
-    }
-
     if ( self -> TreeDepot != NULL ) {
         XFSTreeDepotDispose ( self -> TreeDepot );
 
@@ -204,26 +197,8 @@ XFSStart ( struct XFSControl * self )
         return RCt;
     }
 
-    if ( self -> Thread != NULL ) {
-        return XFS_RC ( rcExists );
-    }
-
-        /* TODO */
     RCt = self -> vt -> v1.mount ( self );
-#ifdef WIN
-    if ( RCt == 0 ) {
-        RCt = KThreadMake ( & self -> Thread, XFSVeryMainLoop, self );
-    }
-
-    if ( RCt != 0 ) {
-        if ( self -> Thread != NULL ) {
-            KThreadRelease ( self -> Thread );
-            self -> Thread = NULL;
-        }
-    }
-#else /* WIN */
-    XFSVeryMainLoop ( NULL, self );
-#endif /* WIN */
+    XFSVeryMainLoop ( self );
 
     return RCt;
 }   /* XFSStart () */
@@ -240,25 +215,6 @@ XFSStop ( struct XFSControl * self )
     if ( RCt == 0 ) {
 
         RCt = self -> vt -> v1.unmount ( self );
-        if ( RCt == 0 ) {
-
-            if ( self -> Thread != NULL ) {
-/*
-OUTMSG ( ( "|o|waiting thread()\n" ) ); 
-*/
-				KThreadWait ( self -> Thread, 0 );
-
-/*
-OUTMSG ( ( "|o|releasing thread()\n" ) ); 
-*/
-                KThreadRelease ( self -> Thread );
-
-/*
-OUTMSG ( ( "|o|thread done()\n" ) ); 
-*/
-                self -> Thread = NULL;
-            }
-        }
     }
 
     return RCt;
@@ -349,7 +305,7 @@ XFSControlGetLabel ( struct XFSControl * self )
 
 static
 rc_t
-XFSVeryMainLoop ( const KThread * self, void * Data )
+XFSVeryMainLoop ( void * Data )
 {
     struct XFSControl * TheControl;
 
