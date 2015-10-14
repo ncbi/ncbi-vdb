@@ -80,6 +80,8 @@
 
 #define USE_CURL 0
 
+/*#define NAME_SERVICE_MAJ_VERS 3
+#define NAME_SERVICE_MIN_VERS 0*/
 #define NAME_SERVICE_MAJ_VERS 1
 #define NAME_SERVICE_MIN_VERS 1
 #define ONE_DOT_ONE 0x01010000
@@ -138,49 +140,6 @@ void VResolverAccTokenInitFromOID ( VResolverAccToken *t, const String *acc )
  *  represents a set of zero or more volumes
  *  each of which is addressed using a particular expansion algorithm
  */
-typedef enum
-{
-    appUnknown,
-    appAny,
-    appFILE,
-    appREFSEQ,
-    appSRA,
-    appWGS,
-    appNANNOT,
-    appNAKMER,
-    appSRAPileup,
-    appCount
-} VResolverAppID;
-
-typedef enum
-{
-    algCGI,
-    algFlat,
-    algSRAFlat,
-    algSRA1024,
-    algSRA1000,
-    algFUSE1000,
-    algREFSEQ,
-    algWGSFlat,
-    algWGS,
-    algFuseWGS,
-    algSRA_NCBI,
-    algSRA_EBI,
-
-    algNANNOTFlat,
-    algNANNOT,
-    algFuseNANNOT,
-    algNAKMERFlat,
-    algNAKMER,
-    algFuseNAKMER,
-    
-    algPileup_NCBI,
-    algPileup_EBI,
-
-    /* leave as last value */
-    algUnknown
-
-} VResolverAlgID;
 
 typedef enum
 {
@@ -229,7 +188,6 @@ struct VResolverAlg
 
 /* Whack
  */
-static
 void CC VResolverAlgWhack ( void *item, void *ignore )
 {
     VResolverAlg *self = item;
@@ -244,7 +202,6 @@ void CC VResolverAlgWhack ( void *item, void *ignore )
 
 /* Make
  */
-static
 rc_t VResolverAlgMake ( VResolverAlg **algp, const String *root,
      VResolverAppID app_id, VResolverAlgID alg_id, bool protected, bool disabled )
 {
@@ -1258,13 +1215,13 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
         rc_t (*f)( const char *start, size_t size, const VPath **path,
             const VPath **mapping, const String *acc, const String *ticket);
     } version[] = {
-        {V1_0, sizeof V1_0 - 1, v1_0, VResolverAlgParseResolverCGIResponse_1_0},
         {V1_1, sizeof V1_1 - 1, v1_1, VResolverAlgParseResolverCGIResponse_1_1},
+        {V1_0, sizeof V1_0 - 1, v1_0, VResolverAlgParseResolverCGIResponse_1_0},
         { V2 , sizeof V2   - 1, v2  , VResolverAlgParseResolverCGIResponse_2_0},
         { V3  , sizeof V3   - 1, v3 , VResolverAlgParseResolverCGIResponse_3_0},
     };
 
-    size_t size = NULL; //  const char cVersion = NULL;
+    size_t size = 0; //  const char cVersion = NULL;
     int iVersion = sizeof version / sizeof version[0];
 
     /* the textual response */
@@ -1323,7 +1280,6 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
 /* RemoteProtectedResolve
  *  use NCBI CGI to resolve accession into URL
  */
-static
 rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     const KNSManager *kns, VRemoteProtocols protocols, const String *acc,
     const VPath ** path, const VPath ** mapping, bool legacy_wgs_refseq )
@@ -1474,7 +1430,6 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
  *  2. search all volumes for accession
  *  3. return not found or new VPath
  */
-static
 rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
     const KNSManager *kns, VRemoteProtocols protocols, const VResolverAccToken *tok,
     const VPath ** path, const VPath ** mapping, const KFile ** opt_file_rtn, bool legacy_wgs_refseq )
@@ -2353,7 +2308,6 @@ VResolverEnableState CC VResolverCacheEnable ( const VResolver * self, VResolver
  *  3. search all local algorithms of app type for accession
  *  4. return not found or new VPath
  */
-static
 rc_t VResolverRemoteResolve ( const VResolver *self,
     VRemoteProtocols protocols, const String * accession,
     const VPath ** path, const VPath **mapping,
