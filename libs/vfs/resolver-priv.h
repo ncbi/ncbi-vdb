@@ -137,10 +137,63 @@ extern "C" {
 #define rcRepository rcDirectory
 
 struct KDataBuffer;
+struct KNSManager;
 struct String;
+struct VResolverAccToken;
+struct VResolverAlg;
 
 rc_t VPathCheckFromNamesCGI(const struct VPath *path,
     const struct String *ticket, const struct VPath **mapping);
+
+
+/*--------------------------------------------------------------------------
+ * VResolverAlg
+ *  represents a set of zero or more volumes
+ *  each of which is addressed using a particular expansion algorithm
+ */
+typedef enum {
+    appUnknown,
+    appAny,
+    appFILE,
+    appREFSEQ,
+    appSRA,
+    appWGS,
+    appNANNOT,
+    appNAKMER,
+    appSRAPileup,
+    appCount
+} VResolverAppID;
+typedef enum {
+    algCGI,
+    algFlat,
+    algSRAFlat,
+    algSRA1024,
+    algSRA1000,
+    algFUSE1000,
+    algREFSEQ,
+    algWGSFlat,
+    algWGS,
+    algFuseWGS,
+    algSRA_NCBI,
+    algSRA_EBI,
+
+    algNANNOTFlat,
+    algNANNOT,
+    algFuseNANNOT,
+    algNAKMERFlat,
+    algNAKMER,
+    algFuseNAKMER,
+
+    algPileup_NCBI,
+    algPileup_EBI,
+
+    /* leave as last value */
+    algUnknown
+} VResolverAlgID;
+rc_t VResolverAlgMake(struct VResolverAlg **alg, const struct String *root,
+     VResolverAppID app_id, VResolverAlgID alg_id, bool protctd, bool disabled);
+
+void CC VResolverAlgWhack ( void *item, void *ignore );
 
 rc_t VResolverAlgParseResolverCGIResponse ( const struct KDataBuffer *result,
     const struct VPath ** path, const struct VPath ** mapping,
@@ -150,8 +203,45 @@ rc_t VResolverAlgParseResolverCGIResponse_3_0(const char *start,
     size_t size, const struct VPath **path, const struct VPath **mapping,
     const struct String *acc, const struct String *ticket);
 
+/* RemoteProtectedResolve
+ *  use NCBI CGI to resolve accession into URL
+ */
+rc_t VResolverAlgRemoteProtectedResolve( const struct VResolverAlg *self,
+    const struct KNSManager *kns, VRemoteProtocols protocols,
+    const struct String *acc, const struct VPath **path,
+    const struct VPath **mapping, bool legacy_wgs_refseq);
+
+
+/* RemoteResolve
+ *  resolve an accession into a VPath or not found
+ *
+ *  1. expand accession according to algorithm
+ *  2. search all volumes for accession
+ *  3. return not found or new VPath
+ */
+rc_t VResolverAlgRemoteResolve ( const struct VResolverAlg *self,
+    const struct KNSManager *kns, VRemoteProtocols protocols,
+    const struct VResolverAccToken *tok,
+    const struct VPath ** path, const struct VPath ** mapping,
+    const struct KFile ** opt_file_rtn, bool legacy_wgs_refseq );
+
+
 /** get projectId ( valid for protected user repository ) */
 rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId );
+
+/* RemoteResolve
+ *  resolve an accession into a remote VPath or not found
+ *  may optionally open a KFile to the object in the process
+ *  of finding it
+ *
+ *  2. determine the type of accession we have, i.e. its "app"
+ *  3. search all local algorithms of app type for accession
+ *  4. return not found or new VPath
+ */
+rc_t VResolverRemoteResolve ( const VResolver *self,
+    VRemoteProtocols protocols, const struct String * accession,
+    const struct VPath ** path, const struct VPath **mapping,
+    const struct KFile ** opt_file_rtn, bool refseq_ctx, bool is_oid );
 
 #ifdef __cplusplus
 }
