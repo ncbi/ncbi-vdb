@@ -248,6 +248,40 @@ NGS_ReadGroup * CSRA1_ReadCollectionGetReadGroups ( CSRA1_ReadCollection * self,
 }
 
 static
+bool CSRA1_ReadCollectionHasReadGroup ( CSRA1_ReadCollection * self, ctx_t ctx, const char * spec )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
+
+    if ( self -> sequence_curs == NULL )
+    {
+        self -> sequence_curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS );
+    }
+
+    TRY ( GetGroupInfo ( self, ctx ) )
+    {
+        TRY ( NGS_String * name = NGS_StringMakeCopy ( ctx, spec, string_size ( spec ) ) )
+        {
+            /* TBD - HACK ALERT
+               this function needs to access an index (usually within metadata),
+               or else perform a table scan on the SPOT_GROUP column for the name. */
+            TRY ( NGS_ReadGroup * ret = SRA_ReadGroupMake ( ctx, self -> sequence_curs, self -> group_info, self -> run_name, name) )
+            {
+#pragma message "TBD - FIX ME PROPERLY"
+                NGS_ReadGroupRelease ( ret, ctx );
+                /* TBD - END HACK */
+                NGS_StringRelease ( name, ctx );
+                /* TBD - also fix the return */
+                return ret != NULL;
+            }
+
+            NGS_StringRelease ( name, ctx );
+        }
+    }
+    
+    return false;
+}
+
+static
 NGS_ReadGroup * CSRA1_ReadCollectionGetReadGroup ( CSRA1_ReadCollection * self, ctx_t ctx, const char * spec )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
@@ -311,6 +345,20 @@ NGS_Reference * CSRA1_ReadCollectionGetReference ( CSRA1_ReadCollection * self, 
 #endif
     
     return ret;
+}
+
+static
+bool CSRA1_ReadCollectionHasReference ( CSRA1_ReadCollection * self, ctx_t ctx, const char * spec )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+#pragma message "TBD - FIX ME PROPERLY"
+    TRY ( NGS_Reference * ref = CSRA1_ReadCollectionGetReference ( self, ctx, spec ) )
+    {
+        NGS_ReferenceRelease ( ref, ctx );
+        return true;
+    }
+    CLEAR ();
+    return false;
 }
 
 static
@@ -603,8 +651,10 @@ static NGS_ReadCollection_vt CSRA1_ReadCollection_vt =
     /* NGS_ReadCollection */
     CSRA1_ReadCollectionGetName,
     CSRA1_ReadCollectionGetReadGroups,
+    CSRA1_ReadCollectionHasReadGroup,
     CSRA1_ReadCollectionGetReadGroup,
     CSRA1_ReadCollectionGetReferences,
+    CSRA1_ReadCollectionHasReference,
     CSRA1_ReadCollectionGetReference,
     CSRA1_ReadCollectionGetAlignments,
     CSRA1_ReadCollectionGetAlignment,
