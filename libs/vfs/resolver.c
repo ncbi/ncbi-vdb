@@ -140,7 +140,6 @@ void VResolverAccTokenInitFromOID ( VResolverAccToken *t, const String *acc )
  *  represents a set of zero or more volumes
  *  each of which is addressed using a particular expansion algorithm
  */
-
 typedef enum
 {
     cacheDisallow,
@@ -220,6 +219,7 @@ rc_t VResolverAlgMake ( VResolverAlg **algp, const String *root,
         rc = 0;
     }
 
+    assert(algp);
     * algp = alg;
     return rc;
 }
@@ -786,6 +786,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_0 ( const char *start, size_t size,
     StringInit ( & msg, start, sep - start, ( uint32_t ) ( sep - start ) );
 
     /* compare acc to accession */
+    assert(acc);
     if ( ! StringEqual ( & accession, acc ) )
         return RC ( rcVFS, rcResolver, rcResolving, rcMessage, rcCorrupt );
 
@@ -1002,6 +1003,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
     StringInit ( & msg, start, sep - start, ( uint32_t ) ( sep - start ) );
 
     /* compare acc to accession or obj_id */
+    assert(acc);
     if ( ! StringEqual ( & accession, acc ) && ! StringEqual ( & obj_id, acc ) ) {
         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_ERR), (
             "@@@@@@@@2 %%s:%s:%d: %s"
@@ -1216,12 +1218,12 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
             const VPath **mapping, const String *acc, const String *ticket);
     } version[] = {
         {V1_1, sizeof V1_1 - 1, v1_1, VResolverAlgParseResolverCGIResponse_1_1},
+        {V3  , sizeof V3   - 1, v3  , VResolverAlgParseResolverCGIResponse_3_0},
         {V1_0, sizeof V1_0 - 1, v1_0, VResolverAlgParseResolverCGIResponse_1_0},
-        { V2 , sizeof V2   - 1, v2  , VResolverAlgParseResolverCGIResponse_2_0},
-        { V3  , sizeof V3   - 1, v3 , VResolverAlgParseResolverCGIResponse_3_0},
+        {V2  , sizeof V2   - 1, v2  , VResolverAlgParseResolverCGIResponse_2_0},
     };
 
-    size_t size = 0; //  const char cVersion = NULL;
+    size_t size = 0;
     int iVersion = sizeof version / sizeof version[0];
 
     /* the textual response */
@@ -1430,6 +1432,7 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
  *  2. search all volumes for accession
  *  3. return not found or new VPath
  */
+static
 rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
     const KNSManager *kns, VRemoteProtocols protocols, const VResolverAccToken *tok,
     const VPath ** path, const VPath ** mapping, const KFile ** opt_file_rtn, bool legacy_wgs_refseq )
@@ -1443,6 +1446,8 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
     char expanded [ 256 ];
 
     const String *root;
+
+    assert(self);
 
     /* check for download ticket */
     if ( self -> alg_id == algCGI
@@ -1773,8 +1778,13 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
 
     uint32_t code;
 
-    const char *acc = accession -> addr;
-    size_t i, size = accession -> size;
+    const char *acc = NULL;
+    size_t i, size = 0;
+
+    assert(accession);
+
+    acc = accession -> addr;
+    size = accession -> size;
 
     /* capture the whole accession */
     tok -> acc = * accession;
@@ -2331,6 +2341,8 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
         VResolverAccTokenInitFromOID ( & tok, accession );
     }
 
+    assert(self);
+
     /* search all remote volumes by app and accession algorithm expansion */
     count = VectorLength ( & self -> remote );
 
@@ -2527,6 +2539,10 @@ rc_t VResolverCacheResolve ( const VResolver *self,
         for ( i = 0; i < count; ++ i )
         {
             alg = VectorGet ( & self -> local, i );
+#if 0
+            if /*( alg -> cache_capable && DO NOT CONSIDER cache_capable
+                                           WHEN cache_state == vrAlwaysEnable */
+#endif
             if ( alg -> cache_capable && alg -> protected == protected &&
                  ( alg -> app_id == app || alg -> app_id == appAny ) )
             {

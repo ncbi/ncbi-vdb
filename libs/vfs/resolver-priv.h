@@ -134,12 +134,10 @@ extern "C" {
  */
 
 #define rcResolver   rcTree
-#define rcRepository rcDirectory
 
 struct KDataBuffer;
 struct KNSManager;
 struct String;
-struct VResolverAccToken;
 struct VResolverAlg;
 
 rc_t VPathCheckFromNamesCGI(const struct VPath *path,
@@ -210,21 +208,6 @@ rc_t VResolverAlgRemoteProtectedResolve( const struct VResolverAlg *self,
     const struct KNSManager *kns, VRemoteProtocols protocols,
     const struct String *acc, const struct VPath **path,
     const struct VPath **mapping, bool legacy_wgs_refseq);
-
-
-/* RemoteResolve
- *  resolve an accession into a VPath or not found
- *
- *  1. expand accession according to algorithm
- *  2. search all volumes for accession
- *  3. return not found or new VPath
- */
-rc_t VResolverAlgRemoteResolve ( const struct VResolverAlg *self,
-    const struct KNSManager *kns, VRemoteProtocols protocols,
-    const struct VResolverAccToken *tok,
-    const struct VPath ** path, const struct VPath ** mapping,
-    const struct KFile ** opt_file_rtn, bool legacy_wgs_refseq );
-
 
 /** get projectId ( valid for protected user repository ) */
 rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId );
