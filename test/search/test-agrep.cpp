@@ -222,8 +222,81 @@ TEST_CASE ( SmithWaterman_calculate_matrix_for_total_mismatch )
 }
 
 // Nucstrstr
-TEST_CASE ( Nucstrstr )
+static 
+void 
+ConvertAsciiTo2NAPacked ( const string& p_read, unsigned char* pBuf2NA, size_t nBuf2NASize )
 {
+    static unsigned char map [ 1 << ( sizeof ( char ) * 8 ) ];
+    map['A'] = map['a'] = 0;
+    map['C'] = map['c'] = 1;
+    map['G'] = map['g'] = 2;
+    map['T'] = map['t'] = 3;
+    
+    static size_t shiftLeft [ 4 ] = { 6, 4, 2, 0 };
+
+    fill ( pBuf2NA, pBuf2NA + nBuf2NASize, 0 );
+    
+    for ( size_t iChar = 0; iChar < p_read . size (); ++iChar )
+    {
+        size_t iByte = iChar / 4;
+        if ( iByte > nBuf2NASize )
+        {
+            assert ( false );
+            break;
+        }
+
+        pBuf2NA[iByte] |= map [ size_t ( p_read [ iChar ] ) ] << shiftLeft [ iChar % 4 ];
+    }
+}
+
+static
+int
+RunNucStrtr ( const string& p_ref, const string& p_query, bool p_positional )
+{
+    unsigned char buf2na [ 1024 ];
+    ConvertAsciiTo2NAPacked ( p_ref, buf2na, sizeof ( buf2na ) );
+    
+    NucStrstr *nss;
+    if ( NucStrstrMake ( & nss, 0, p_query . c_str (), p_query . size () ) != 0 )
+        throw logic_error ( "RunNucStrtr: NucStrstrMake() failed" );
+    unsigned int selflen = 0u;
+    int ret = NucStrstrSearch ( nss, ( const void * ) buf2na, p_positional ? 1 : 0, p_ref . size () / 4 + 1 + 16, & selflen );
+    if ( ret != 0 )
+    {
+        assert ( p_query . size () == selflen );
+    }
+    NucStrstrWhack ( nss );
+    return ret;
+}
+
+TEST_CASE ( Nucstrstr_NonPositional_NotFound )
+{
+    REQUIRE_EQ ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "ACTA", false ) );
+}
+
+TEST_CASE ( Nucstrstr_NonPositional_Found_AtStart )
+{
+    REQUIRE_NE ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "ACGTACGTACG", false ) );
+}
+
+TEST_CASE ( Nucstrstr_NonPositional_Found_InMiddle )
+{
+    REQUIRE_NE ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "GTACGTACG", false ) );
+}
+
+TEST_CASE ( Nucstrstr_Positional_NoExpr_NotFound )
+{
+    REQUIRE_EQ ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "ACCGT", true ) );
+}
+
+TEST_CASE ( Nucstrstr_Positional_NoExpr_Found_AtStart )
+{
+    REQUIRE_EQ ( 1, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "ACGTACGTACG", true ) );
+}
+
+TEST_CASE ( Nucstrstr_Positional_NoExpr_Found_InMiddle )
+{
+    REQUIRE_EQ ( 4, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "TACGTACG", true ) );
 }
 
 //////////////////////////////////////////// Main
