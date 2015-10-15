@@ -80,14 +80,22 @@
 
 #define USE_CURL 0
 
-/*#define NAME_SERVICE_MAJ_VERS 3
-#define NAME_SERVICE_MIN_VERS 0*/
-#define NAME_SERVICE_MAJ_VERS 1
-#define NAME_SERVICE_MIN_VERS 1
+#define NAME_SERVICE_MAJ_VERS_ 1
+#define NAME_SERVICE_MIN_VERS_ 1
 #define ONE_DOT_ONE 0x01010000
-#define NAME_SERVICE_VERS \
-    ( ( NAME_SERVICE_MAJ_VERS << 24 ) | ( NAME_SERVICE_MIN_VERS << 16 ) )
+static uint32_t NAME_SERVICE_MAJ_VERS = NAME_SERVICE_MAJ_VERS_;
+static uint32_t NAME_SERVICE_MIN_VERS = NAME_SERVICE_MAJ_VERS_;
+static uint32_t NAME_SERVICE_VERS
+    = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MAJ_VERS_ << 16;
 
+static void VFSManagerSetNameResolverVersion(uint32_t maj, uint32_t min) {
+    NAME_SERVICE_MAJ_VERS = maj;
+    NAME_SERVICE_MIN_VERS = min;
+    NAME_SERVICE_VERS
+        = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MAJ_VERS_ << 16;
+}
+void VFSManagerSetNameResolverVersion3_0(void)
+{   VFSManagerSetNameResolverVersion(3, 0); }
 
 /*--------------------------------------------------------------------------
  * String
@@ -1315,36 +1323,36 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("  tic = %S\n", self -> ticket));
             rc = KHttpRequestAddPostParam ( req, "tic=%S", self -> ticket );
         }
-#if NAME_SERVICE_VERS >= ONE_DOT_ONE /* SRA-1690 */
-        if ( rc == 0 )
-        {
-            const char *val;
-            switch ( protocols )
-            {
-            case eProtocolHttp:
-                val = "http";
-                break;
-            case eProtocolFasp:
-                val = "fasp";
-                break;
-            case eProtocolFaspHttp:
-                val = "fasp,http";
-                break;
-            case eProtocolHttpFasp:
-                val = "http,fasp";
-                break;
-            default:
-                val = NULL;
-                rc = RC ( rcVFS, rcResolver, rcResolving, rcParam, rcInvalid );
-            }
 
-            if ( rc == 0 )
-            {
-                DBGMSG(DBG_VFS, DBG_FLAG ( DBG_VFS ), ("  accept-proto = %s\n", val ) );
-                rc = KHttpRequestAddPostParam ( req, "accept-proto=%s", val );
+        if (NAME_SERVICE_VERS >= ONE_DOT_ONE) { /* SRA-1690 */
+            if ( rc == 0 ) {
+                const char *val;
+                switch ( protocols ) {
+                    case eProtocolHttp:
+                        val = "http";
+                        break;
+                    case eProtocolFasp:
+                        val = "fasp";
+                        break;
+                    case eProtocolFaspHttp:
+                        val = "fasp,http";
+                        break;
+                    case eProtocolHttpFasp:
+                        val = "http,fasp";
+                        break;
+                    default:
+                        val = NULL;
+                        rc = RC(
+                            rcVFS, rcResolver, rcResolving, rcParam, rcInvalid);
+                }
+
+                if ( rc == 0 ) {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+                        ("  accept-proto = %s\n", val));
+                    rc = KHttpRequestAddPostParam(req, "accept-proto=%s", val);
+                }
             }
         }
-#endif
 
         if ( rc == 0 )
         {

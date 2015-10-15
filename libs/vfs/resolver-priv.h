@@ -140,6 +140,8 @@ struct KNSManager;
 struct String;
 struct VResolverAlg;
 
+void VFSManagerSetNameResolverVersion3_0(void);
+
 rc_t VPathCheckFromNamesCGI(const struct VPath *path,
     const struct String *ticket, const struct VPath **mapping);
 
