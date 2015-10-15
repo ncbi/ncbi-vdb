@@ -36,10 +36,12 @@ TEST_TOOLS = \
 	test-log \
 	test-out \
     test-klib \
-
+    
 include $(TOP)/build/Makefile.env
 
-$(TEST_TOOLS): makedirs
+std: $(TEST_TOOLS)
+
+test-md5append $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
 .PHONY: $(TEST_TOOLS)
@@ -63,11 +65,6 @@ TEST_ASM_LIB = \
 $(TEST_BINDIR)/test-asm: $(TEST_ASM_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_ASM_LIB)
     
-valgrind_asm:
-	valgrind --ncbi $(TEST_BINDIR)/test-asm
-    
-.PHONY: valgrind_asm
-
 #-------------------------------------------------------------------------------
 # test-md5append
 #
@@ -85,11 +82,6 @@ TEST_MD5APPEND_LIB = \
 $(TEST_BINDIR)/test-md5append: $(TEST_MD5APPEND_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_MD5APPEND_LIB)
     
-valgrind_md5append:
-	valgrind --ncbi $(TEST_BINDIR)/test-md5append
-    
-.PHONY: valgrind_md5append
-
 #-------------------------------------------------------------------------------
 # test-printf
 #
@@ -107,11 +99,6 @@ TEST_PRINTF_LIB = \
 $(TEST_BINDIR)/test-printf: $(TEST_PRINTF_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_PRINTF_LIB)
     
-valgrind_printf:
-	valgrind --ncbi $(TEST_BINDIR)/test-printf
-    
-.PHONY: valgrind_printf
-
 #-------------------------------------------------------------------------------
 # test-log
 #
@@ -129,12 +116,6 @@ TEST_LOG_LIB = \
 $(TEST_BINDIR)/test-log: $(TEST_LOG_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LOG_LIB)
     
-valgrind_log:
-	valgrind --ncbi $(TEST_BINDIR)/test-log
-    
-.PHONY: valgrind_log
-
-
 #-------------------------------------------------------------------------------
 # test-out
 #
@@ -151,11 +132,6 @@ TEST_OUT_LIB = \
 $(TEST_BINDIR)/test-out: $(TEST_OUT_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_OUT_LIB)
     
-valgrind_out:
-	valgrind --ncbi $(TEST_BINDIR)/test-out
-    
-.PHONY: valgrind_out
-
 #-------------------------------------------------------------------------------
 # test-klib
 #
@@ -173,9 +149,3 @@ TEST_KLIB_LIB = \
 $(TEST_BINDIR)/test-klib: $(TEST_KLIB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
     
-valgrind_klib:
-	valgrind --ncbi $(TEST_BINDIR)/test-klib
-    
-.PHONY: valgrind_klib
-
-

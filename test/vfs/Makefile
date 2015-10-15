@@ -30,7 +30,7 @@ MODULE = test/vfs
 
 TEST_TOOLS = \
     test-vfsmanager \
-	path-test \
+	test-path-c \
 	test-path \
 
 
@@ -57,12 +57,9 @@ TEST_LIB = \
 	-skapp \
 	-sncbi-vdb \
 
-$(TEST_BINDIR)/path-test: $(TEST_OBJ)
+$(TEST_BINDIR)/test-path-c: $(TEST_OBJ)
 	$(LD) --exe -o $@ $^ $(TEST_LIB)
 
-valgrind_path_c: std
-	valgrind --ncbi --show-reachable=no --suppressions=$(SRCDIR)/valgrind_suppressions.txt $(TEST_BINDIR)/path-test    
-    
 #----------------------------------------------------------------
 # C++ test on VPath
 #
@@ -80,9 +77,6 @@ PATHTEST_LIB = \
 
 $(TEST_BINDIR)/test-path: $(PATHTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
-
-valgrind_path_c++: std
-	valgrind --ncbi --show-reachable=no --suppressions=$(SRCDIR)/valgrind_suppressions.txt $(TEST_BINDIR)/test-path    
 
 #----------------------------------------------------------------
 # C++ test on VFSManager
@@ -102,6 +96,3 @@ MANAGERTEST_LIB = \
 $(TEST_BINDIR)/test-vfsmanager: $(MANAGERTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(MANAGERTEST_LIB)
 
-valgrind_path_manager: std
-	valgrind --ncbi --show-reachable=no --suppressions=$(SRCDIR)/valgrind_suppressions.txt $(TEST_BINDIR)/test-vfsmanager    
-    

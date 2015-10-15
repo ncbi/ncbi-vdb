@@ -28,9 +28,6 @@ default: runtests
 TOP ?= $(abspath ../..)
 MODULE = test/krypto
 
-include $(TOP)/build/Makefile.env
-RWORKDIR = $(TOP)/$(MODULE)
-
 INT_TOOLS = \
 
 ifeq (linux,$(OS))
@@ -59,6 +56,8 @@ ALL_TOOLS = \
 	$(EXT_TOOLS) \
 	$(TEST_TOOLS) \
 	$(SLOW_TEST_TOOLS) \
+
+include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
 # outer targets

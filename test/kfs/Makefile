@@ -66,10 +66,6 @@ endif
 $(TEST_BINDIR)/test-kfs: $(TEST_KFS_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KFS_LIB)
 
-valgrind_kfs: std
-	valgrind --ncbi $(TEST_BINDIR)/test-kfs
-
-
 #-------------------------------------------------------------------------------
 # test-kfs-md5
 #
@@ -105,9 +101,6 @@ TEST_RAMFILE_LIB = \
 $(TEST_BINDIR)/test-ramfile: $(TEST_RAMFILE_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_RAMFILE_LIB)
 
-valgrind_ramfile: std
-	valgrind --ncbi $(TEST_BINDIR)/test-ramfile
-    
 #-------------------------------------------------------------------------------
 # test-resolve
 #
@@ -125,9 +118,6 @@ TEST_RESOLVE_LIB = \
 $(TEST_BINDIR)/test-resolve: $(TEST_RESOLVE_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_RESOLVE_LIB)
 
-valgrind_resolve: std
-	valgrind --ncbi $(TEST_BINDIR)/test-resolve
-
 #-------------------------------------------------------------------------------
 # test-cachetee
 #
@@ -144,6 +134,3 @@ TEST_CACHETEE_LIB = \
 
 $(TEST_BINDIR)/test-cachetee: $(TEST_CACHETEE_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_CACHETEE_LIB)
-
-valgrind_cachetee: std
-	valgrind --ncbi $(TEST_BINDIR)/test-cachetee

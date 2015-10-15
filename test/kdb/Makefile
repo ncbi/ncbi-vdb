@@ -35,8 +35,6 @@ TEST_TOOLS = \
 
 include $(TOP)/build/Makefile.env
 
-VALGRIND = export NCBI_VALGRIND=ncbi; valgrind --error-exitcode=1
-
 $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
@@ -77,9 +75,6 @@ TEST_KDB_LIB = \
 $(TEST_BINDIR)/test-kdb: $(TEST_KDB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KDB_LIB)
 
-vg_kdb: std
-	$(VALGRIND) $(TEST_BINDIR)/test-kdb
-
 #-------------------------------------------------------------------------------
 # test-wkdb
 #
@@ -99,6 +94,3 @@ $(TEST_BINDIR)/test-wkdb: $(TEST_WKDB_OBJ)
 
 wkdb: test-wkdb
 	$(TEST_BINDIR)/test-wkdb
-
-vg_wkdb: std
-	$(VALGRIND) $(TEST_BINDIR)/test-wkdb

@@ -59,12 +59,6 @@ clean: stdclean
 #
 INCDIRS += -I$(NGS_INCDIR)
 
-valgrind: valgrind_sra-c++ \
-          valgrind_sradb-c++ \
-          valgrind_csra1-c++ 
-
-VALGRIND = valgrind --ncbi --suppressions=$(SRCDIR)/valgrind.suppress --error-exitcode=1
-		  
 TEST_NGS_CPP_LIB = \
 	-sncbi-ngs-c++ \
 	-sncbi-vdb \
@@ -85,9 +79,6 @@ TEST_NGS_SRA_CPP_OBJ = \
 $(TEST_BINDIR)/test-ngs_sra-c++: $(TEST_NGS_SRA_CPP_OBJ) 
 	$(LP) --exe -o $@ $^ $(TEST_NGS_CPP_LIB)
 
-valgrind_sra-c++: std
-	 $(VALGRIND) $(TEST_BINDIR)/test-ngs_sra-c++     
-
 #-------------------------------------------------------------------------------
 # test-ngs_sradb-c++
 #
@@ -100,9 +91,6 @@ TEST_NGS_SRADB_CPP_OBJ = \
 $(TEST_BINDIR)/test-ngs_sradb-c++: $(TEST_NGS_SRADB_CPP_OBJ) 
 	$(LP) --exe -o $@ $^ $(TEST_NGS_CPP_LIB)
 
-valgrind_sradb-c++: std
-	$(VALGRIND) $(TEST_BINDIR)/test-ngs_sradb-c++     
-    
 #-------------------------------------------------------------------------------
 # test-ngs_csra1-c++
 #
@@ -115,9 +103,6 @@ TEST_NGS_CSRA1_CPP_OBJ = \
 $(TEST_BINDIR)/test-ngs_csra1-c++: $(TEST_NGS_CSRA1_CPP_OBJ) 
 	$(LP) --exe -o $@ $^ $(TEST_NGS_CPP_LIB)
 
-valgrind_csra1-c++: std
-	$(VALGRIND) $(TEST_BINDIR)/test-ngs_csra1-c++     
- 
 #-------------------------------------------------------------------------------
 # test-ngs_csra1pileup-c++
 #
@@ -129,9 +114,6 @@ TEST_NGS_CSRA1PILEUP_CPP_OBJ = \
 
 $(TEST_BINDIR)/test-ngs_csra1pileup-c++: $(TEST_NGS_CSRA1PILEUP_CPP_OBJ) 
 	$(LP) --exe -o $@ $^ $(TEST_NGS_CPP_LIB)
-
-valgrind_csra1pileup-c++: std
-	$(VALGRIND) $(TEST_BINDIR)/test-ngs_csra1pileup-c++     
 
 endif
 

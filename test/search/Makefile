@@ -59,6 +59,3 @@ $(TEST_BINDIR)/test-agrep: $(TEST_AGREP_OBJ)
 
 agrep: test-agrep
 	$(TEST_BINDIR)/$^
-
-vg-agrep: test-agrep
-	valgrind --ncbi $(TEST_BINDIR)/$^

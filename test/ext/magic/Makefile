@@ -59,6 +59,3 @@ TEST_MAGIC_LIB = \
 $(TEST_BINDIR)/test-magic: $(TEST_MAGIC_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_MAGIC_LIB)
  
-valgrind_magic: test-magic
-	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-magic # --suppressions=$(SRCDIR)/valgrind_suppressions.txt   
-    
