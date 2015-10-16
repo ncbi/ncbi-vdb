@@ -407,6 +407,11 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
         rc = string_printf ( expanded, bsize, size,
              "ERZ/%06u/%S%S/%S", num / 1000, & tok -> alpha, & tok -> digits, & tok -> acc );
         break;
+    case algPileup_DDBJ:
+        num = ( uint32_t ) strtoul ( tok -> digits . addr, NULL, 10 );
+        rc = string_printf ( expanded, bsize, size,
+             "DRZ/%06u/%S%S/%S", num / 1000, & tok -> alpha, & tok -> digits, & tok -> acc );
+        break;
         
     default:
         return RC ( rcVFS, rcResolver, rcResolving, rcType, rcUnrecognized );
@@ -3404,7 +3409,7 @@ rc_t VResolverLoadAlgVolumes ( Vector *algs, const String *root, const String *t
  *        = "flat" | "sraFlat" | "sra1024" | "sra1000" | "fuse1000"
  *        | "refseq" | "wgs" | "wgsFlag" | "fuseWGS"
  *        | "ncbi" | "ddbj" | "ebi"
- *        | "nannot" | "nannotFlat" | "fuseNANNOT" | "pileupNCBI" | "pileupEBI";
+ *        | "nannot" | "nannotFlat" | "fuseNANNOT" | "pileupNCBI" | "pileupEBI" | "pileupDDBJ" ;
  */
 static
 rc_t VResolverLoadVolumes ( Vector *algs, const String *root, const String *ticket,
@@ -3487,6 +3492,8 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root, const String *tick
                         alg_id = algPileup_NCBI;
                     else if ( strcmp ( algname, "pileupEBI" ) == 0 )
                         alg_id = algPileup_EBI;
+                    else if ( strcmp ( algname, "pileupDDBJ" ) == 0 )
+                        alg_id = algPileup_DDBJ;
 
                     if ( alg_id != algUnknown )
                     {

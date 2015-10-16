@@ -186,6 +186,7 @@ typedef enum {
 
     algPileup_NCBI,
     algPileup_EBI,
+    algPileup_DDBJ,
 
     /* leave as last value */
     algUnknown
