@@ -506,7 +506,7 @@ static rc_t KArcListingInit (KArcListing *self,
     {
         /* -----
          * so we'll build a list iterator
-	 */
+         */
         KArcDirIterator listitr;
 
         if ((rc = KArcDirIteratorInit (& listitr, (const KArcDir*)dir, path)) == 0)
@@ -3397,7 +3397,7 @@ rc_t	KArcDirMake	(KArcDir ** self,
     if (dir == NULL)
     {
         *self = NULL;
-	return RC (rcFS, rcArc, rcCreating, rcMemory, rcExhausted);
+        return RC (rcFS, rcArc, rcCreating, rcMemory, rcExhausted);
     }
 
     dir->toc = NULL;
