@@ -69,6 +69,13 @@ public class ngs_test_CSRA1 {
     {
         ngs.Reference ref = NGS . openReadCollection ( PrimaryOnly ) . getReference ( "supercont2.1" );
     }
+
+    @Test
+    public void ReadCollection_hasReference() throws ngs.ErrorMsg
+    {
+        assert ( NGS . openReadCollection ( PrimaryOnly ) . hasReference ( "supercont2.1" ) );
+        assert ( ! NGS . openReadCollection ( PrimaryOnly ) . hasReference ( "non-existent acc" ) );
+    }
     
     @Test
     public void ReadCollection_getAlignment() throws ngs.ErrorMsg

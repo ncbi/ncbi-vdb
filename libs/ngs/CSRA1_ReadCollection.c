@@ -351,14 +351,19 @@ static
 bool CSRA1_ReadCollectionHasReference ( CSRA1_ReadCollection * self, ctx_t ctx, const char * spec )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
-#pragma message "TBD - FIX ME PROPERLY"
-    TRY ( NGS_Reference * ref = CSRA1_ReadCollectionGetReference ( self, ctx, spec ) )
-    {
-        NGS_ReferenceRelease ( ref, ctx );
-        return true;
-    }
+
+    const NGS_Cursor * curs;
+    bool ret = false;
+
+    ON_FAIL ( curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "REFERENCE", reference_col_specs, reference_NUM_COLS ) ) 
+        return false;
+
+    ret = CSRA1_ReferenceFind ( curs, ctx, spec, NULL, NULL );
+
+    NGS_CursorRelease ( curs, ctx );
     CLEAR ();
-    return false;
+
+    return ret;
 }
 
 static
