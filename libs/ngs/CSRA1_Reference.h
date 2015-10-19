@@ -78,6 +78,17 @@ struct NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx,
 int64_t CSRA1_Reference_GetFirstRowId ( const struct NGS_Reference * self, ctx_t ctx );
 int64_t CSRA1_Reference_GetLastRowId ( const struct NGS_Reference * self, ctx_t ctx );
 
+/*
+CSRA1_ReferenceFind
+    curs - the cursor opened for table REFERENCE
+    spec - the reference name to find
+    firstRow [OUT, NULL OK] - the first row id for the reference found in the case when the function returns non-zero
+    rowCount  [OUT, NULL OK] - the number of row ids for the reference found in the case when the function returns non-zero
+
+    return: 0 (false) if the reference is not found, otherwise (true) - the reference is found
+*/
+bool CSRA1_ReferenceFind ( struct NGS_Cursor const * curs, ctx_t ctx, const char * spec, int64_t* firstRow, uint64_t* rowCount );
+
 #ifdef __cplusplus
 }
 #endif
