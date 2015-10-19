@@ -73,6 +73,10 @@ public:
     {
         return NgsFixture :: getReference ( CSRA1_PrimaryOnly, spec ); 
     }
+    bool hasReference ( const char* spec )
+    {
+        return NgsFixture :: hasReference ( CSRA1_PrimaryOnly, spec ); 
+    }
     ngs :: ReferenceIterator getReferences ()
     {
         return NgsFixture :: getReferences ( CSRA1_PrimaryOnly ); 
