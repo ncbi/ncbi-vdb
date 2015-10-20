@@ -2049,6 +2049,17 @@ rc_t CC ArgsMakeAndHandle (Args ** pself, int argc, char ** argv, uint32_t table
     return rc;
 }
 
+rc_t CC ArgsMakeAndHandle2 (Args ** pself, int argc, char ** argv,
+                            ParamDef * params, uint32_t param_count, uint32_t table_count, ...)
+{
+    rc_t rc;
+    va_list args;
+    va_start ( args, table_count );
+    rc = ArgsMakeAndHandleInt ( pself, argc, argv, params, param_count, table_count, args );
+    va_end ( args );
+    return rc;
+}
+
 
 /* NOTE:
  * This needs to move into a unix/win32 seperated file
