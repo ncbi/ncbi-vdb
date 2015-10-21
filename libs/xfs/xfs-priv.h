@@ -37,7 +37,6 @@ extern "C" {
 /*  Forwards forewer
  */
 struct XFSTreeDepot;
-struct KThread;
 
 union XFSControl_vt;
 struct XFSControlArgs;
@@ -78,11 +77,6 @@ struct XFSControl {
             BTW, prolly I need to use BSTree here, not sure.
          */
     struct XFSOwp * Arguments;
-
-        /*  That is a thread which will start Fuse/Dokan loop
-            and it will be called from XFSStart() method
-         */
-    KThread * Thread;
 };
 
 /*

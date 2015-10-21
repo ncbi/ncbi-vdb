@@ -396,6 +396,7 @@ TEST_CASE( CacheTee_Multiple_Users )
 		rc = KThreadWait ( t[ i ], &rc_thread );
 		REQUIRE_RC( rc );
 		REQUIRE_RC( rc_thread );
+		REQUIRE_RC( KThreadRelease ( t[ i ] ) );
 	}
 }
 
@@ -436,7 +437,8 @@ TEST_CASE( CacheTee_ReadOnly )
 	bool is_complete;
 	REQUIRE_RC( IsCacheFileComplete( cache, &is_complete ) );	
 	REQUIRE( !is_complete );
-	
+
+	REQUIRE_RC( KFileRelease( cache ) );		
 	REQUIRE_RC( KFileRelease( org ) );	
 	REQUIRE_RC( KDirectoryRelease( dir ) );
 }

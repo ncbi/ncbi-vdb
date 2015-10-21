@@ -69,8 +69,6 @@ static struct XFSControl_vt_v1 XFSControl_VT_V1 = {
     XFS_DOKAN_unmount_v1
 };
 
-static DOKAN_OPERATIONS TheDokanOperations;
-
 /*  Control init.
  */
 LIB_EXPORT
@@ -137,7 +135,10 @@ XFS_DOKAN_destroy_v1( struct XFSControl * self )
         OUTMSG ( ( "XFS_DOKAN_destroy(): options are empty\n" ) );
     }
     else {
-        Options -> MountPoint = NULL;
+        if ( Options -> MountPoint != NULL ) {
+            free ( ( char * ) Options -> MountPoint );
+            Options -> MountPoint = NULL;
+        }
 
         free ( Options );
         self -> Control = NULL;
@@ -146,13 +147,95 @@ XFS_DOKAN_destroy_v1( struct XFSControl * self )
     return 0;
 }   /* XFS_DOKAN_destroy() */
 
-static WCHAR wRealMountPoint [ 3000 ];
+static
+rc_t CC
+_InitDOKAN_OPERATIONS ( DOKAN_OPERATIONS ** Operations )
+{
+    rc_t RCt;
+    DOKAN_OPERATIONS * RetOp;
+
+    RCt = 0;
+    RetOp = NULL;
+
+    XFS_CSAN ( Operations )
+    XFS_CAN ( Operations )
+
+    RetOp = calloc ( 1, sizeof ( DOKAN_OPERATIONS ) );
+    if ( RetOp == NULL ) {
+        RCt = XFS_RC ( rcExhausted );
+    }
+    else {
+        RCt = XFS_Private_InitOperations ( RetOp );
+        if ( RCt == 0 ) {
+            * Operations = RetOp;
+        }
+    }
+
+    if ( RCt != 0 ) {
+        * Operations = NULL;
+
+        if ( RetOp != NULL ) {
+            free ( RetOp );
+        }
+    }
+
+    return RCt;
+}   /* _InitDOKAN_OPERATIONS () */
+
 XFS_EXTERN rc_t CC XFSPathInnerToNative (
                                 WCHAR * NativePathBuffer,
                                 size_t NativePathBufferSize,
                                 const char * InnerPath,
                                 ...
                                 );
+
+static
+rc_t CC
+_MakeMountPath ( const char * Inner, const WCHAR ** MountPath )
+{
+    rc_t RCt;
+    WCHAR BF [ XFS_SIZE_64 ];
+    WCHAR * Path;
+    size_t SZ;
+
+    RCt = 0;
+    * BF = 0;
+    Path = NULL;
+    SZ = 0;
+
+    XFS_CSAN ( MountPath )
+    XFS_CAN ( Inner )
+    XFS_CAN ( MountPath )
+
+    RCt = XFSPathInnerToNative ( BF, sizeof ( BF ), Inner );
+    if ( RCt == 0 ) {
+        SZ = wcslen ( BF );
+        if ( BF [ SZ - 1 ] == L'\\' ) {
+            BF [ SZ - 1 ] = 0;
+            SZ --;
+        }
+
+        Path = calloc ( SZ + 1, sizeof ( WCHAR ) );
+        if ( Path == NULL ) {
+            RCt = XFS_RC ( rcExhausted );
+        }
+        else {
+            wcscpy ( Path, BF );
+
+            * MountPath = Path;
+        }
+    }
+
+    if ( RCt != 0 ) {
+        * MountPath = NULL;
+
+        if ( Path != NULL ) {
+            free ( Path );
+        }
+    }
+
+    return RCt;
+}   /* _MakeMountPath () */
 
 rc_t
 XFS_DOKAN_mount_v1( struct XFSControl * self )
@@ -175,46 +258,45 @@ XFS_DOKAN_mount_v1( struct XFSControl * self )
         return RCt;
     }
 
-    RCt = XFS_Private_InitOperations ( & TheDokanOperations );
-    if ( RCt != 0 ) {
-        OUTMSG ( ( "Can not initialize DOKAN operations\n" ) );
-        return XFS_RC ( rcFailed );
-    }
-
         /*) Here we are allocating DOKAN options and it's global context
          (*/
     Options = calloc ( 1, sizeof ( DOKAN_OPTIONS ) );
     if ( Options == NULL ) {
-        return XFS_RC ( rcNull );
+        RCt = XFS_RC ( rcNull );
+    }
+    else {
+
+        Options -> Version = DOKAN_VERSION;
+        Options -> ThreadCount = 0; /* Default Value */
+        Options -> Options = 0L;
+        Options -> Options |= DOKAN_OPTION_KEEP_ALIVE;
+        Options -> Options |= DOKAN_OPTION_DEBUG;
+            /*) using Peer as GlobalContext as for FUSE implementation
+             (*/
+        Options -> GlobalContext = ( ULONG64 )( self -> TreeDepot );
+
+        RCt = _MakeMountPath (
+                            XFSControlGetMountPoint ( self ),
+                            & ( Options -> MountPoint )
+                            );
+        if ( RCt == 0 ) {
+            self -> Control = Options;
+        }
     }
 
-    Options -> Version = DOKAN_VERSION;
-    Options -> ThreadCount = 0; /* Default Value */
-    Options -> Options = 0L;
-    Options -> Options |= DOKAN_OPTION_KEEP_ALIVE | DOKAN_OPTION_DEBUG;
-        /*) using Peer as GlobalContext as for FUSE implementation
-         (*/
-OUTMSG ( ( "Control [0x%p] Peer [0x%p]\n", self, self -> TreeDepot ) );
-    Options -> GlobalContext = ( ULONG64 )( self -> TreeDepot );
+    if ( RCt != 0 ) {
+        self -> Control = NULL;
 
-    XFSPathInnerToNative (
-                        wRealMountPoint,
-                        sizeof ( wRealMountPoint ),
-                        XFSControlGetMountPoint ( self )
-                        );
-    Options -> MountPoint = wRealMountPoint;
+        if ( Options != NULL ) {
+            if ( Options -> MountPoint != NULL ) {\
+                free ( ( char * ) Options -> MountPoint );
+                Options -> MountPoint = NULL;
+            }
+            free ( Options );
+        }
+    }
 
-    self -> Control = Options;
-
-/*  TODO !!!!
-    We will split mount method for mount'n'loop later, so there is 
-    usual routine stuff
-
-    Currently mount and loop are called from DokanMain function from 
-    loop()
-*/
-
-    return 0;
+    return RCt;
 }   /* XFS_DOKAN_mount() */
 
 rc_t
@@ -222,9 +304,11 @@ XFS_DOKAN_loop_v1( struct XFSControl * self )
 {
     rc_t RCt;
     DOKAN_OPTIONS * Options;
+    DOKAN_OPERATIONS * Operations;
     const struct XFSTree * Tree;
 
     RCt = 0;
+    Operations = NULL;
     Options = NULL;
     Tree = NULL;
 
@@ -258,49 +342,58 @@ OUTMSG ( ( "XFS_DOKAN_loop(): Tree [0x%p] Data [0x%p]\n",  self -> TreeDepot, Tr
 /*  We will split mount method for mount'n'loop later, so there is 
     usual routine stuff
 */
-        /*)
-         /  There we are running DokanMain
-        (*/
-    switch ( DokanMain ( Options, & TheDokanOperations ) ) {
-        case DOKAN_SUCCESS :
-            OUTMSG ( ( "DokanMain() : general success\n" ) );
-            break;
-        case DOKAN_ERROR :
-            OUTMSG ( ( "DokanMain() : general error\n" ) );
-            return RC ( rcFS, rcNoTarg, rcExecuting, rcNoObj, rcError );
-        case DOKAN_DRIVE_LETTER_ERROR :
-            OUTMSG ( ( "DokanMain() : bad drive letter\n" ) );
-            return RC ( rcFS, rcNoTarg, rcExecuting, rcNoObj, rcError );
-        case DOKAN_DRIVER_INSTALL_ERROR :
-            OUTMSG ( ( "DokanMain() : can't install driver\n" ) );
-            return RC ( rcFS, rcNoTarg, rcExecuting, rcNoObj, rcError );
-        case DOKAN_START_ERROR :
-            OUTMSG ( ( "DokanMain() : can't start, something wrong\n" ) );
-            return RC ( rcFS, rcNoTarg, rcExecuting, rcNoObj, rcError );
-        case DOKAN_MOUNT_ERROR :
-            OUTMSG ( ( "DokanMain() : can't assigh a drive letter or mount point\n" ) );
-            return RC ( rcFS, rcNoTarg, rcExecuting, rcNoObj, rcError );
-        case DOKAN_MOUNT_POINT_ERROR :
-            OUTMSG ( ( "DokanMain() : mount point is invalid\n" ) );
-            return RC ( rcFS, rcNoTarg, rcExecuting, rcNoObj, rcError );
-        default :
-            OUTMSG ( ( "DokanMain() : something wrong happens\n" ) );
-            return RC ( rcFS, rcNoTarg, rcExecuting, rcNoObj, rcError );
+
+    RCt = _InitDOKAN_OPERATIONS ( & Operations );
+    if ( RCt == 0 ) {
+            /*)
+             /  There we are running DokanMain
+            (*/
+        switch ( DokanMain ( Options, Operations ) ) {
+            case DOKAN_SUCCESS :
+                OUTMSG ( ( "DokanMain() : general success\n" ) );
+                break;
+            case DOKAN_ERROR :
+                OUTMSG ( ( "DokanMain() : general error\n" ) );
+                RCt = XFS_RC ( rcError );
+                break;
+            case DOKAN_DRIVE_LETTER_ERROR :
+                OUTMSG ( ( "DokanMain() : bad drive letter\n" ) );
+                RCt = XFS_RC ( rcError );
+                break;
+            case DOKAN_DRIVER_INSTALL_ERROR :
+                OUTMSG ( ( "DokanMain() : can't install driver\n" ) );
+                RCt = XFS_RC ( rcError );
+                break;
+            case DOKAN_START_ERROR :
+                OUTMSG ( ( "DokanMain() : can't start, something wrong\n" ) );
+                RCt = XFS_RC ( rcError );
+                break;
+            case DOKAN_MOUNT_ERROR :
+                OUTMSG ( ( "DokanMain() : can't assigh a drive letter or mount point\n" ) );
+                RCt = XFS_RC ( rcError );
+                break;
+            case DOKAN_MOUNT_POINT_ERROR :
+                OUTMSG ( ( "DokanMain() : mount point is invalid\n" ) );
+                RCt = XFS_RC ( rcError );
+                break;
+            default :
+                OUTMSG ( ( "DokanMain() : something wrong happens\n" ) );
+                RCt = XFS_RC ( rcError );
+                break;
+        }
+
+        free ( Operations );
     }
 
-OUTMSG ( ( "XFS_DOKAN_loop(): NOO Tree [0x%p]\n",  self -> TreeDepot ) );
+OUTMSG ( ( "XFS_DOKAN_loop(): Exited Tree [0x%p]\n",  self -> TreeDepot ) );
 
-    return 0;
+    return RCt;
 }   /* XFS_DOKAN_loop() */
 
 rc_t
 XFS_DOKAN_unmount_v1( struct XFSControl * self )
 {
-    rc_t RCt;
-    DOKAN_OPTIONS * Options;
-
-    RCt = 0;
-    Options = NULL;
+    rc_t RCt = 0;
 
     if ( self == NULL ) {
         OUTMSG ( ( "ZERO self passed\n" ) );
@@ -316,12 +409,6 @@ XFS_DOKAN_unmount_v1( struct XFSControl * self )
         return XFS_RC ( rcNull );
         */
         return 0;
-    }
-
-    Options = ( DOKAN_OPTIONS * ) self -> Control;
-    if ( ! DokanRemoveMountPoint ( Options -> MountPoint ) ) {
-        OUTMSG ( ( "Can not unmount [%s]\n", Options -> MountPoint ) );
-        return XFS_RC ( rcError );
     }
 
     XFSSecurityDeinit ();

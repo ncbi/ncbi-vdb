@@ -109,6 +109,43 @@ NGS_ReadGroup * SRA_ReadCollectionGetReadGroups ( SRA_ReadCollection * self, ctx
 }
 
 static
+bool SRA_ReadCollectionHasReadGroup ( SRA_ReadCollection * self, ctx_t ctx, const char * spec )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
+
+    if ( self -> curs == NULL )
+    {
+        ON_FAIL ( self -> curs = NGS_CursorMake ( ctx, self -> tbl, sequence_col_specs, seq_NUM_COLS ) )
+            return 0;
+    }
+    if ( self -> group_info == NULL )
+    {
+        ON_FAIL ( self -> group_info = SRA_ReadGroupInfoMake ( ctx, self -> tbl ) )
+            return NULL;
+    }
+    {
+        TRY ( NGS_String * name = NGS_StringMakeCopy ( ctx, spec, string_size ( spec ) ) )
+        {
+            /* TBD - HACK ALERT
+               this function needs to access an index (usually within metadata),
+               or else perform a table scan on the SPOT_GROUP column for the name. */
+            TRY ( NGS_ReadGroup * ret = SRA_ReadGroupMake ( ctx, self -> curs, self -> group_info, self -> run_name, name) )
+            {
+#pragma message "TBD - FIX ME PROPERLY"
+                NGS_ReadGroupRelease ( ret, ctx );
+                /* TBD - END HACK */
+                NGS_StringRelease ( name, ctx );
+                /* TBD - also fix the return */
+                return ret != NULL;
+            }
+
+            NGS_StringRelease ( name, ctx );
+        }
+    }
+    return false;
+}
+
+static
 NGS_ReadGroup * SRA_ReadCollectionGetReadGroup ( SRA_ReadCollection * self, ctx_t ctx, const char * spec )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
@@ -144,6 +181,12 @@ NGS_Reference * SRA_ReadCollectionGetReferences ( SRA_ReadCollection * self, ctx
 
     // create empty reference iterator
     return NGS_ReferenceMakeNull ( ctx, & self -> dad );
+}
+
+static
+bool SRA_ReadCollectionHasReference ( SRA_ReadCollection * self, ctx_t ctx, const char * spec )
+{
+    return false;
 }
 
 static
@@ -312,8 +355,10 @@ static NGS_ReadCollection_vt SRA_ReadCollection_vt =
     /* NGS_Read_Collection */
     SRA_ReadCollectionGetName,
     SRA_ReadCollectionGetReadGroups,
+    SRA_ReadCollectionHasReadGroup,
     SRA_ReadCollectionGetReadGroup,
     SRA_ReadCollectionGetReferences,
+    SRA_ReadCollectionHasReference,
     SRA_ReadCollectionGetReference,
     SRA_ReadCollectionGetAlignments,
     SRA_ReadCollectionGetAlignment,

@@ -229,7 +229,7 @@ bool CSRA1_ReferenceGetIsCircular ( const CSRA1_Reference * self, ctx_t ctx )
 }
 
 static
-uint64_t CountRows ( CSRA1_Reference * self, ctx_t ctx, uint32_t colIdx, const void* value, int64_t firstRow, uint64_t end_row)
+uint64_t CountRows ( NGS_Cursor const * curs, ctx_t ctx, uint32_t colIdx, const void* value, int64_t firstRow, uint64_t end_row)
 {   /* count consecutive rows having the same value in column # colIdx as in firstRow, starting from and including firstRow */
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     
@@ -238,7 +238,7 @@ uint64_t CountRows ( CSRA1_Reference * self, ctx_t ctx, uint32_t colIdx, const v
     {
         const void * base;
         uint32_t elem_bits, boff, row_len;
-        ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, cur_row, colIdx, & elem_bits, & base, & boff, & row_len ) )
+        ON_FAIL ( NGS_CursorCellDataDirect ( curs, ctx, cur_row, colIdx, & elem_bits, & base, & boff, & row_len ) )
             return 0;
 
         if (base != value)
@@ -748,17 +748,24 @@ struct NGS_Statistics* CSRA1_ReferenceGetStatistics ( const CSRA1_Reference * se
     return SRA_StatisticsMake ( ctx );
 }
 
-static 
-bool CSRA1_ReferenceFind ( CSRA1_Reference * self, ctx_t ctx, const char * spec, int64_t* firstRow, uint64_t* rowCount )
+bool CSRA1_ReferenceFind ( NGS_Cursor const * curs, ctx_t ctx, const char * spec, int64_t* firstRow, uint64_t* rowCount )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
 
-    assert ( self );
-    assert ( self -> curs );
-    assert ( spec );
+    int64_t firstRow_local;
+    uint64_t rowCount_local;
+
+    if ( firstRow == NULL )
+        firstRow = & firstRow_local;
+
+    if ( rowCount == NULL )
+        rowCount = & rowCount_local;
+
+    assert ( curs != NULL );
+    assert ( spec != NULL );
 
     {   /* use index on reference name if available */
-        TRY ( const VTable* table = NGS_CursorGetTable ( self -> curs, ctx ) )
+        TRY ( const VTable* table = NGS_CursorGetTable ( curs, ctx ) )
         {
             const KIndex *index;
             rc_t rc = VTableOpenIndexRead( table, & index, "i_name" );
@@ -780,7 +787,7 @@ bool CSRA1_ReferenceFind ( CSRA1_Reference * self, ctx_t ctx, const char * spec,
 
         size_t spec_size = string_size ( spec );
         
-        TRY ( NGS_CursorGetRowRange ( self -> curs, ctx, & cur_row, & total_row_count ) )
+        TRY ( NGS_CursorGetRowRange ( curs, ctx, & cur_row, & total_row_count ) )
         {
             const void * prev_NAME_base = NULL;
             const void * prev_SEQ_ID_base = NULL;
@@ -791,7 +798,7 @@ bool CSRA1_ReferenceFind ( CSRA1_Reference * self, ctx_t ctx, const char * spec,
                 uint32_t elem_bits, boff, row_len;
 
                 /* try NAME */
-                ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, cur_row, reference_NAME, & elem_bits, & base, & boff, & row_len ) )
+                ON_FAIL ( NGS_CursorCellDataDirect ( curs, ctx, cur_row, reference_NAME, & elem_bits, & base, & boff, & row_len ) )
                     return false;
 
                 /* if the value has not changed, the base ptr will not be updated */ 
@@ -805,7 +812,7 @@ bool CSRA1_ReferenceFind ( CSRA1_Reference * self, ctx_t ctx, const char * spec,
                         if ( memcmp ( spec, base, row_len ) == 0 )
                         {
                             *firstRow = cur_row;
-                            *rowCount = CountRows( self, ctx, reference_NAME, base, * firstRow, end_row );
+                            *rowCount = CountRows( curs, ctx, reference_NAME, base, * firstRow, end_row );
                             return true;
                         }
                     }
@@ -814,7 +821,7 @@ bool CSRA1_ReferenceFind ( CSRA1_Reference * self, ctx_t ctx, const char * spec,
                 }
 
                 /* try SEQ_ID */
-                ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, cur_row, reference_SEQ_ID, & elem_bits, & base, & boff, & row_len ) )
+                ON_FAIL ( NGS_CursorCellDataDirect ( curs, ctx, cur_row, reference_SEQ_ID, & elem_bits, & base, & boff, & row_len ) )
                     return false;
 
                 /* if the value has not changed, the base ptr will not be updated */ 
@@ -828,7 +835,7 @@ bool CSRA1_ReferenceFind ( CSRA1_Reference * self, ctx_t ctx, const char * spec,
                         if ( memcmp ( spec, base, row_len ) == 0 )
                         {
                             *firstRow = cur_row;
-                            *rowCount = CountRows( self, ctx, reference_SEQ_ID, base, * firstRow, end_row );
+                            *rowCount = CountRows( curs, ctx, reference_SEQ_ID, base, * firstRow, end_row );
                             return true;
                         }
                     }
@@ -889,7 +896,7 @@ NGS_Reference * CSRA1_ReferenceMake ( ctx_t ctx,
 
                     
                     /* find requested name */
-                    if ( CSRA1_ReferenceFind ( ref, ctx, spec, & ref -> first_row, & rowCount ) )
+                    if ( CSRA1_ReferenceFind ( ref -> curs, ctx, spec, & ref -> first_row, & rowCount ) )
                     {
                         TRY ( ref -> chunk_size = NGS_CursorGetUInt32 ( ref -> curs, ctx, ref -> first_row, reference_MAX_SEQ_LEN ) )
                         {
@@ -1046,7 +1053,7 @@ bool CSRA1_ReferenceIteratorNext ( CSRA1_Reference * self, ctx_t ctx )
             
             if ( rc != 0 )
             {   /* index is not available, do a table scan */
-                rowCount = CountRows ( self, ctx, reference_NAME, refNameBase, self -> first_row, self -> iteration_row_last );
+                rowCount = CountRows ( self -> curs, ctx, reference_NAME, refNameBase, self -> first_row, self -> iteration_row_last );
             }
             
             self -> last_row = self -> first_row + rowCount - 1;

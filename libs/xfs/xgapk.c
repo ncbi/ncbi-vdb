@@ -135,7 +135,7 @@ _KartItemMake (
                 & ( xItem -> refcount ),
                 1,
                 _sXFSGapKartItem_classname,
-                "_AddKartItem",
+                "_KartItemMake",
                 "KartItem"
                 );
 

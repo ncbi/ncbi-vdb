@@ -265,7 +265,9 @@ _GapKartsNodeDir_find_v1 (
     XFS_CAN ( Name )
     XFS_CAN ( Node )
 
-    Cont = ( struct XFSGapKartsNode * ) ( self -> Papahen ) . Node;
+    Cont = ( struct XFSGapKartsNode * ) XFSEditorNode (
+                                                & ( self -> Papahen )
+                                                );
     if ( Cont == NULL ) {
         return XFS_RC ( rcInvalid );
     }
@@ -291,7 +293,9 @@ _GapKartsNodeDir_list_v1 (
     XFS_CAN ( self )
     XFS_CAN ( List )
 
-    Cont = ( struct XFSGapKartsNode * ) ( self -> Papahen ) . Node;
+    Cont = ( struct XFSGapKartsNode * ) XFSEditorNode (
+                                                & ( self -> Papahen )
+                                                );
     if ( Cont == NULL ) {
         return XFS_RC ( rcInvalid );
     }
@@ -427,6 +431,7 @@ _GapKartsNodeAttr_v1 (
     struct XFSAttrEditor * Editor;
 
     RCt = 0;
+    Editor = NULL;
 
     XFS_CSAN ( Attr )
     XFS_CAN ( self )
@@ -772,7 +777,6 @@ _GapKartsNodeConstructorEx (
                         const struct XFSModel * Model,
                         const struct XFSModelNode * Template,
                         const char * Alias,
-                        XFSNType Type,
                         const struct XFSNode ** Node
 )
 {
@@ -830,7 +834,6 @@ _GapKartsNodeConstructor (
                                             Model,
                                             Template,
                                             Alias,
-                                            kxfsFile,
                                             Node
                                             );
 

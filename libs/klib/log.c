@@ -102,7 +102,8 @@ static const char * logLevelParamStrings [] =
     "int",
     "err",
     "warn",
-    "info"
+    "info",
+    "debug"
 };
 
 LIB_EXPORT const char ** CC KLogGetParamStrings ( void )
@@ -131,7 +132,8 @@ LIB_EXPORT rc_t CC KLogLevelExplain ( KLogLevel lvl, char *buffer, size_t bsize,
     assert ((klogInt + 1) == klogErr);
     assert ((klogErr + 1) == klogWarn);
     assert ((klogWarn + 1) == klogInfo);
-    assert ((klogInfo) == klogLevelMax);
+    assert ((klogInfo + 1) == klogDebug);
+    assert ((klogDebug) == klogLevelMax);
 
     if ((lvl < klogLevelMin) || (lvl > klogLevelMax)) {
         t = undefined;

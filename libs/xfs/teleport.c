@@ -150,7 +150,7 @@ _TeleportAdd ( const char * Name, XFSTeleportProvider_t Provider )
 }   /* _TeleportAdd () */
 
 #define CACHE_NAME                  "cache"
-XFS_EXTERN rc_t CC XFSCacheProvider (
+XFS_EXTERN rc_t CC XFSGapCacheProvider (
                                 const struct XFSTeleport ** Teleport
                                 );
 
@@ -253,7 +253,7 @@ _TeleportInit ()
 
         /* Here we are adding Teleports */
     do {
-        RCt = _TeleportAdd ( CACHE_NAME, XFSCacheProvider );
+        RCt = _TeleportAdd ( CACHE_NAME, XFSGapCacheProvider );
         if ( RCt != 0 ) { 
             break;
         }

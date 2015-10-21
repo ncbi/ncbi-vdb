@@ -77,6 +77,10 @@ public:
     {
         return ncbi :: NGS :: openReadCollection ( acc ) . getReference ( spec ); 
     }
+    bool hasReference ( const char* acc, const char* spec )
+    {
+        return ncbi :: NGS :: openReadCollection ( acc ) . hasReference ( spec ); 
+    }
     ngs :: ReferenceIterator getReferences ( const char* acc )
     {
         return ncbi :: NGS :: openReadCollection ( acc ) . getReferences (); 

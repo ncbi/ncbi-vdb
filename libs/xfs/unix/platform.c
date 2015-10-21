@@ -329,17 +329,6 @@ OUTMSG ( ( "|o|fuse_unmount()\n" ) );
                     );
 
 /*
-OUTMSG ( ( "|o|waiting thread()\n" ) );
-*/
-		KThreadWait ( self -> Thread, 0 );
-
-/*
-OUTMSG ( ( "|o|releasing thread()\n" ) );
-*/
-		KThreadRelease ( self -> Thread );
-		self -> Thread = NULL;
-
-/*
 OUTMSG ( ( "|o|fuse_remove_signal_handlers()\n" ) );
 */
         fuse_remove_signal_handlers ( fuse_get_session ( FuseStruct ) );
