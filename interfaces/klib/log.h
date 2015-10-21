@@ -73,7 +73,8 @@ enum
     klogErr,
     klogWarn,
     klogInfo,
-    klogLevelMax = klogInfo
+    klogDebug,
+    klogLevelMax = klogDebug
 };
 
 /* Get

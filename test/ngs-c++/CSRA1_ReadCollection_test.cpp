@@ -112,6 +112,11 @@ FIXTURE_TEST_CASE(CSRA1_ReadCollection_GetReference, CSRA1_Fixture)
 {
     ngs :: Reference ref = getReference ( "supercont2.1" ); 
 }
+FIXTURE_TEST_CASE(CSRA1_ReadCollection_HasReference, CSRA1_Fixture)
+{
+    REQUIRE ( hasReference ( "supercont2.1" ) ); 
+    REQUIRE ( ! hasReference ( "non-existent acc" ) ); 
+}
 FIXTURE_TEST_CASE(CSRA1_ReadCollection_GetReference_Failed, CSRA1_Fixture)
 {
     REQUIRE_THROW ( ngs :: Reference ref = getReference ( "supercnut2.1" ) ); 

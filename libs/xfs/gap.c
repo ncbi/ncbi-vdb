@@ -133,14 +133,6 @@ _GapProjectNodeMake (
                             _GapProjectNodeDispose
                             );
         if ( RCt == 0 ) {
-/* TODO JOJOBA
-            if ( KartFiles != NULL ) {
-                RCt = XFS_StrDup (
-                                KartFiles,
-                                & ( GapNode -> kart_files )
-                                );
-            }
-*/
             if ( RCt == 0 ) {
                 GapNode -> project_id = ProjectId;
                 GapNode -> read_only = ReadOnly;
@@ -293,8 +285,7 @@ _GapProjectNodeAddChildren ( struct _GapProjectNode * self )
     RCt = XFSGapCacheNodeMake (
                         & TheNode,
                         self -> project_id,     /* projectId */
-                        true,                   /* ReadOnly */
-                        NULL,                   /* name is automatic */
+                        self -> read_only,      /* ReadOnly */
                         NULL                    /* perm is automatic */
                         );
     if ( RCt == 0 ) {
@@ -313,7 +304,6 @@ _GapProjectNodeAddChildren ( struct _GapProjectNode * self )
                         & TheNode,
                         0,                      /* projectId */
                         false,                  /* Non ReadOnly */
-                        NULL,                   /* name is automatic */
                         NULL                    /* perm is automatic */
                         );
     if ( RCt == 0 ) {
@@ -455,14 +445,12 @@ _GapProjectNodeConstructorEx (
     const char * NodeName;
     const char * TempStr;
     uint32_t ProjectId;
-    bool ReadOnly;
 
     RCt = 0;
     TheNode = NULL;
     NodeName = NULL;
     TempStr = NULL;
     ProjectId = 0;
-    ReadOnly = true;
 
     XFS_CSAN ( Node )
     XFS_CAN ( Model )
@@ -481,16 +469,11 @@ _GapProjectNodeConstructorEx (
         return XFS_RC ( rcInvalid );
     }
 
-    TempStr = XFSModelNodeProperty ( Template, XFS_MODEL_MODE );
-    if ( TempStr != NULL ) {
-        ReadOnly = strcmp ( TempStr, XFS_MODEL_MODE_RW ) == 0;
-    }
-
     RCt = _GapProjectNodeMake (
                                 & TheNode,
                                 NodeName,
                                 ProjectId,
-                                ReadOnly,
+                                XFSModelNodeReadOnly ( Template ),
                                 XFSModelNodeSecurity ( Template )
                                 );
     if ( RCt == 0 ) {

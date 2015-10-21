@@ -207,7 +207,6 @@ XFS_EXTERN rc_t CC XFSGapCacheNodeMake (
                             struct XFSNode ** Node,
                             uint32_t ProjectId,     /* public if NULL */
                             bool ReadOnly,
-                            const char * Name,      /* could be NULL */
                             const char * Perm       /* could be NULL */
                             );
 

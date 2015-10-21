@@ -1146,6 +1146,20 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReadGroupNext_BeyondEnd, CSRA1_Fixture)
     EXIT;
 }
 
+TEST_CASE(CSRA1_NGS_ReadCollectionHasReference)
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
+
+    NGS_ReadCollection* read_coll = NGS_ReadCollectionMake ( ctx, CSRA1_PrimaryOnly );
+
+    REQUIRE ( read_coll != NULL );
+    REQUIRE ( NGS_ReadCollectionHasReference ( read_coll, ctx, "supercont2.2" ) );
+    REQUIRE ( ! NGS_ReadCollectionHasReference ( read_coll, ctx, "non-existent acc" ) );
+    
+    NGS_ReadCollectionRelease ( read_coll, ctx );
+}
+
+
 //////////////////////////////////////////// Main
 extern "C"
 {

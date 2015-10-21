@@ -6,7 +6,8 @@
     <property name="vdb.platform"   value="x64" />
     
     <property name="ngs-source.dir" value="..\..\..\ngs" />
-    <property name="build.dir"   value="${env.USERPROFILE}\win\cl\${vdb.platform}\${vdb.build}" />
+    <property name="output.dir" value="..\..\..\ngs\ngs-sdk\..\..\OUTDIR\" />
+    <property name="build.dir"   value="${output.dir}\win\cl\${vdb.platform}\${vdb.build}" />
     <property name="ngs.dir" value="${env.USERPROFILE}\ncbi-outdir\ngs-java" />
     
     <!-- Set this to full path to Python if not in PATH already -->

@@ -82,14 +82,14 @@ rc_t KTocEntryStackNew( KTocEntryStack ** self )
 {
 #define ARBITRARY_STACK_SIZE	(16)
     if (self == NULL)
-	return RC (rcFS, rcToc, rcConstructing, rcParam, rcNull);
+        return RC (rcFS, rcToc, rcConstructing, rcParam, rcNull);
 
     *self = malloc (sizeof (KTocEntryStack));
     (*self)->count = 0;
     (*self)->allocated = ARBITRARY_STACK_SIZE;
     (*self)->stack = malloc ((*self)->allocated * sizeof (KTocEntry*));
     if ((*self)->stack == NULL)
-	return RC (rcFS, rcToc, rcAllocating, rcMemory, rcInsufficient);
+        return RC (rcFS, rcToc, rcAllocating, rcMemory, rcInsufficient);
     return 0;
 }
 
@@ -108,10 +108,10 @@ rc_t KTocEntryStackDel( KTocEntryStack * self )
 
     /* empty stack there so just return ok for now */
     if (self == NULL)
-	return 0;
+        return 0;
 
     if (self->stack != NULL)
-	free (self->stack);
+        free (self->stack);
 
     free (self);
     return 0;
@@ -149,19 +149,19 @@ rc_t KTocEntryStackPush( KTocEntryStack * self, KTocEntry * pathaddr )
 #define ARBITRARY_INCREMENT_SIZE	(8)
 
     if (self == NULL)
-	return RC (rcFS, rcToc, rcInserting, rcSelf, rcNull);
+        return RC (rcFS, rcToc, rcInserting, rcSelf, rcNull);
 
     if (self->count >= self->allocated)
     {
-	KTocEntry **	stack;
-	int	new_allocated = self->allocated + ARBITRARY_INCREMENT_SIZE;
-	stack = realloc (self->stack, self->allocated * sizeof (KTocEntry*));
-	if (stack == NULL)
-	{
-	    return RC (rcFS, rcToc, rcAllocating, rcMemory, rcInsufficient);
-	}
-	self->allocated = new_allocated;
-	self->stack = stack;
+        KTocEntry **	stack;
+        int	new_allocated = self->allocated + ARBITRARY_INCREMENT_SIZE;
+        stack = realloc (self->stack, self->allocated * sizeof (KTocEntry*));
+        if (stack == NULL)
+        {
+            return RC (rcFS, rcToc, rcAllocating, rcMemory, rcInsufficient);
+        }
+        self->allocated = new_allocated;
+        self->stack = stack;
     }
     self->stack[self->count++] = pathaddr;
     return 0;
@@ -181,22 +181,22 @@ rc_t KTocEntryStackPush( KTocEntryStack * self, KTocEntry * pathaddr )
 rc_t KTocEntryStackPop( KTocEntryStack * self, KTocEntry ** pathaddr )
 {
     if (self == NULL)
-	return RC (rcFS, rcToc, rcReading, rcSelf, rcNull);
+        return RC (rcFS, rcToc, rcReading, rcSelf, rcNull);
 
     if (pathaddr == NULL)
-	return RC (rcFS, rcToc, rcReading, rcParam, rcNull);
+        return RC (rcFS, rcToc, rcReading, rcParam, rcNull);
 
     if (self->count == 0)
     {
-	/* -----
-	 * this means empty stack and is not considered an error
-	 * though it should be looked for by the caller
-	 */
-	*pathaddr = NULL;
+        /* -----
+         * this means empty stack and is not considered an error
+         * though it should be looked for by the caller
+         */
+        *pathaddr = NULL;
     }
     else
     {
-	*pathaddr = self->stack[--(self->count)];
+        *pathaddr = self->stack[--(self->count)];
     }
     return 0;
 }
@@ -213,19 +213,19 @@ int64_t CC KTocEntryIndexCmp2 (const BSTNode * n, const BSTNode * p)
     assert (n != NULL);
     assert (p != NULL);
     {
-	const KTocEntryIndex * ne = (const KTocEntryIndex*)n;
-	nos = ne->entry->u.contiguous_file.archive_offset;
-	noe = nos + ne->entry->u.contiguous_file.file_size;
+        const KTocEntryIndex * ne = (const KTocEntryIndex*)n;
+        nos = ne->entry->u.contiguous_file.archive_offset;
+        noe = nos + ne->entry->u.contiguous_file.file_size;
     }
     {
-	const KTocEntryIndex * pe = (const KTocEntryIndex*)p;
-	pos = pe->entry->u.contiguous_file.archive_offset;
-	poe = pos + pe->entry->u.contiguous_file.file_size;
+        const KTocEntryIndex * pe = (const KTocEntryIndex*)p;
+        pos = pe->entry->u.contiguous_file.archive_offset;
+        poe = pos + pe->entry->u.contiguous_file.file_size;
     }
     if ((nos == pos)&&(noe == poe))
-	return 0;
+        return 0;
     if (noe <= pos)
-	return -1;
+        return -1;
     return 1;
 }
 
@@ -247,9 +247,9 @@ rc_t KTocCreateEntryIndex (KToc * self, const char * path, uint64_t * file_offse
     size_t len;
     union idx
     {
-	void * v;
-	KTocEntryIndex * i;
-	char * b;
+        void * v;
+        KTocEntryIndex * i;
+        char * b;
     } idx;
     KTocEntryType type;
 /*     const KTocEntry * entry; */
@@ -266,70 +266,70 @@ rc_t KTocCreateEntryIndex (KToc * self, const char * path, uint64_t * file_offse
     idx.v = malloc (sizeof (*idx.i) + len + 1);
     if (idx.v == NULL)
     {
-	rc = RC (rcFS, rcToc, rcReindexing, rcMemory, rcExhausted);
-	LOGERR( klogErr, rc, "Out of memory creating new path");
+        rc = RC (rcFS, rcToc, rcReindexing, rcMemory, rcExhausted);
+        LOGERR( klogErr, rc, "Out of memory creating new path");
     }
     else
     {
-	char * tmp;
+        char * tmp;
 
         type = ktocentrytype_unknown;
-	tmp = idx.b + sizeof (*idx.i);
-	strcpy (tmp, path);
-	StringInitCString (&idx.i->fullpath, tmp);
-	rc = KTocResolvePathTocEntry (self, (const KTocEntry**)&idx.i->entry, path, len, &type, &left);
-	if (rc != 0)
-	    LOGERR( klogErr, rc, "Unable to resolve path");
-	else
-	{
-/* 	    if (left != 0) */
-/* 		rc = RC (rcFS, rcToc, rcAccessing, rcPath, rcNotFound); */
-/* 	    else */
-	    {
+        tmp = idx.b + sizeof (*idx.i);
+        strcpy (tmp, path);
+        StringInitCString (&idx.i->fullpath, tmp);
+        rc = KTocResolvePathTocEntry (self, (const KTocEntry**)&idx.i->entry, path, len, &type, &left);
+        if (rc != 0)
+            LOGERR( klogErr, rc, "Unable to resolve path");
+        else
+        {
+    /* 	    if (left != 0) */
+    /* 		rc = RC (rcFS, rcToc, rcAccessing, rcPath, rcNotFound); */
+    /* 	    else */
+            {
                 uint64_t offset;
                 uint64_t new_offset;
-		switch (type)
-		{
-		case ktocentrytype_dir:
-		case ktocentrytype_softlink:
-		case ktocentrytype_hardlink:
-		case ktocentrytype_emptyfile:
-		    goto no_entry;
-		case ktocentrytype_file:
-                    offset = add_filler (*file_offset, self->alignment);
-                    idx.i->entry->u.contiguous_file.archive_offset = offset;
-                    new_offset = offset + idx.i->entry->u.contiguous_file.file_size;
-		    break;
-		case ktocentrytype_chunked:
-                    offset = add_filler (*file_offset, self->alignment);
-		    idx.i->entry->u.chunked_file.archive_offset = offset;
-		    new_offset = offset + idx.i->entry->u.chunked_file.file_size;
-		    break;
-		case ktocentrytype_unknown:
-		    rc = RC (rcFS, rcToc, rcReindexing, rcTocEntry, rcUnknown);
-		    break;
-		case ktocentrytype_notfound:
-		    rc = RC (rcFS, rcToc, rcReindexing, rcTocEntry, rcNotFound);
-		    break;
-		default:
-		    rc = RC (rcFS, rcToc, rcReindexing, rcTocEntry, rcInvalid);
-		    break;
-		}
-		if (rc != 0)
-		    LOGERR( klogErr, rc, "Unable to handle path");
-		else
-		{
-		    rc = BSTreeInsert (&self->offset_index, &idx.i->node, KTocEntryIndexCmp2);
-		    if (rc == 0)
-		    {
-			*file_offset = new_offset;
-			return 0;
-		    }
-		}
-	    }
-	}
-    no_entry:
-	free (idx.v);
+                switch (type)
+                {
+                case ktocentrytype_dir:
+                case ktocentrytype_softlink:
+                case ktocentrytype_hardlink:
+                case ktocentrytype_emptyfile:
+                    goto no_entry;
+                case ktocentrytype_file:
+                            offset = add_filler (*file_offset, self->alignment);
+                            idx.i->entry->u.contiguous_file.archive_offset = offset;
+                            new_offset = offset + idx.i->entry->u.contiguous_file.file_size;
+                    break;
+                case ktocentrytype_chunked:
+                            offset = add_filler (*file_offset, self->alignment);
+                    idx.i->entry->u.chunked_file.archive_offset = offset;
+                    new_offset = offset + idx.i->entry->u.chunked_file.file_size;
+                    break;
+                case ktocentrytype_unknown:
+                    rc = RC (rcFS, rcToc, rcReindexing, rcTocEntry, rcUnknown);
+                    break;
+                case ktocentrytype_notfound:
+                    rc = RC (rcFS, rcToc, rcReindexing, rcTocEntry, rcNotFound);
+                    break;
+                default:
+                    rc = RC (rcFS, rcToc, rcReindexing, rcTocEntry, rcInvalid);
+                    break;
+                }
+                if (rc != 0)
+                    LOGERR( klogErr, rc, "Unable to handle path");
+                else
+                {
+                    rc = BSTreeInsert (&self->offset_index, &idx.i->node, KTocEntryIndexCmp2);
+                    if (rc == 0)
+                    {
+                        *file_offset = new_offset;
+                        return 0;
+                    }
+                }
+            }
+        }
+        no_entry:
+        free (idx.v);
     }
     return rc;
 }
@@ -435,11 +435,11 @@ rc_t KTocInit ( KToc ** self,
      */
     if (self == NULL)
     {
-	return RC (rcFS, rcToc, rcConstructing, rcSelf, rcNull);
+        return RC (rcFS, rcToc, rcConstructing, rcSelf, rcNull);
     }
     if ((path == NULL)||(archive == NULL))
     {
-	return RC (rcFS, rcToc, rcConstructing, rcParam, rcNull);
+        return RC (rcFS, rcToc, rcConstructing, rcParam, rcNull);
     }
 
     /* -----
@@ -452,7 +452,7 @@ rc_t KTocInit ( KToc ** self,
      */
     if (*self == NULL)
     {
-	return RC (rcFS, rcToc, rcAllocating, rcMemory, rcInsufficient);
+        return RC (rcFS, rcToc, rcAllocating, rcMemory, rcInsufficient);
     }
 
     /* -----
@@ -467,17 +467,17 @@ rc_t KTocInit ( KToc ** self,
     switch ((*self)->arctype = arctype)
     {
     default:
-	free (self);
-	return RC (rcFS, rcToc, rcConstructing, rcParam, rcInvalid);
+        free (self);
+        return RC (rcFS, rcToc, rcConstructing, rcParam, rcInvalid);
     case tocKFile:
-	KFileAddRef ((*self)->archive.v = archive);
-	break;
+        KFileAddRef ((*self)->archive.v = archive);
+        break;
     case tocKDirectory:
-	KDirectoryAddRef ((*self)->archive.v = archive);
-	break;
+        KDirectoryAddRef ((*self)->archive.v = archive);
+        break;
     }
 
-/* need to set back pointer karchive */
+    /* need to set back pointer karchive */
 
     /* -----
      * We added here by default
@@ -495,16 +495,16 @@ rc_t KTocInit ( KToc ** self,
      * Build the "root directory" structure for the TOC initialized to empty
      */
     {
-	KTocEntry * pentry = &(*self)->entry;
-	const char *  pchar = strrchr ((*self)->path.addr, '/') + 1;
-	size_t	      size = (*self)->path.size - (pchar - (*self)->path.addr);
+        KTocEntry * pentry = &(*self)->entry;
+        const char *  pchar = strrchr ((*self)->path.addr, '/') + 1;
+        size_t	      size = (*self)->path.size - (pchar - (*self)->path.addr);
 
-	if (pchar == NULL)
-	    pchar = (*self)->path.addr;
+        if (pchar == NULL)
+            pchar = (*self)->path.addr;
 
-	StringInit ( &pentry->name, pchar, size, (uint32_t)size );
-	pentry->type = ktocentrytype_dir;
-	BSTreeInit(&pentry->u.dir.tree);
+        StringInit ( &pentry->name, pchar, size, (uint32_t)size );
+        pentry->type = ktocentrytype_dir;
+        BSTreeInit(&pentry->u.dir.tree);
         BSTreeInit(&(*self)->offset_index);
         (*self)->header = NULL;
     }
@@ -520,7 +520,7 @@ rc_t KTocAddRef ( const KToc *self )
     KToc *	mutable_self = (KToc*)self; /* strip const protection for mutable field */
 
     if (mutable_self != NULL)
-	atomic32_inc (&mutable_self->refcount);
+        atomic32_inc (&mutable_self->refcount);
 
     return 0;
 }
@@ -536,7 +536,7 @@ rc_t KTocRelease ( const KToc *self )
 
     if (mutable_self == NULL)
     {
-	return RC (rcFS, rcToc, rcReleasing, rcSelf, rcNull);
+        return RC (rcFS, rcToc, rcReleasing, rcSelf, rcNull);
     }
 
     if (atomic32_dec_and_test (&mutable_self->refcount))
@@ -555,9 +555,9 @@ rc_t KTocRelease ( const KToc *self )
             KDirectoryRelease (self->archive.d);
             break;
         }
-	BSTreeWhack (&mutable_self->entry.u.dir.tree, KTocEntryWhack, &rc);
-	BSTreeWhack (&mutable_self->offset_index, KTocEntryIndexWhack, &rc);
-	free (mutable_self);
+        BSTreeWhack (&mutable_self->entry.u.dir.tree, KTocEntryWhack, &rc);
+        BSTreeWhack (&mutable_self->offset_index, KTocEntryIndexWhack, &rc);
+        free (mutable_self);
     }
 /*     else */
 /*     { */
@@ -586,7 +586,7 @@ static
 rc_t	KTocCreateSubdirs (KToc *    self,	   /* TOC self reference: object oriented in C */
 			   const char * _path,   /* start of directory path */
 			   const char * end, 	   /* end of directory path */
-			  KTime_t mtime,
+			   KTime_t mtime,
 			   uint32_t access,
 			   KCreateMode  mode,    /* whether or not to document the existing? */
 			   KTocEntryStack * pathstack)
@@ -606,11 +606,11 @@ rc_t	KTocCreateSubdirs (KToc *    self,	   /* TOC self reference: object oriente
      */
     while (*path == '/')
     {
-	PLOGMSG (klogWarn, (klogWarn,
+        PLOGMSG (klogWarn, (klogWarn,
                             "skipping initial '/' in $(path)",
                             PLOG_S(path),
                             path));
-	++path;
+        ++path;
     }
 
     /* -----
@@ -618,141 +618,141 @@ rc_t	KTocCreateSubdirs (KToc *    self,	   /* TOC self reference: object oriente
      */
     for (;path < end; path = slash+1)
     {
-	KTocEntry * newentry;			/* new entry for the new name entry: might be a duplicate */
-	bool	      do_insert = false;	/* do we insert a new entry? short cut for later */
+        KTocEntry * newentry;			/* new entry for the new name entry: might be a duplicate */
+        bool	      do_insert = false;	/* do we insert a new entry? short cut for later */
 
-	/* -----
-	 * find the next (first) '/' in the remaining path
-	 */
-	slash = strchr (path, '/');
+        /* -----
+         * find the next (first) '/' in the remaining path
+         */
+        slash = strchr (path, '/');
 
-	/* -----
-	 * we've got the last directory in the path if there are no
-	 * more '/' characters or if the next '/' is the last character in the
-	 * path (we don't do white space checks!)
-	 */
-	if (slash == NULL)
-	{
-	    slash = end;
-	}
+        /* -----
+         * we've got the last directory in the path if there are no
+         * more '/' characters or if the next '/' is the last character in the
+         * path (we don't do white space checks!)
+         */
+        if (slash == NULL)
+        {
+            slash = end;
+        }
 
-	/* -----
-	 * first we'll compare our new path against the special '.' and '..'
-	 * special directory pointers
-	 */
-	if ((path[0] == '.')&&(path+1 == slash))	/* . */
-	{
-	    /* -----
-	     * just ignore "here" directory references
-	     */
-	    continue;
-	}
-	else if ((path[0] == '.')&&(path[1] == '.')&&(path+2 == slash))	/* .. */
-	{
-	    /* -----
-	     * for up to parent directory references we try to change to that directory
-	     */
-	    int depth;
+        /* -----
+         * first we'll compare our new path against the special '.' and '..'
+         * special directory pointers
+         */
+        if ((path[0] == '.')&&(path+1 == slash))	/* . */
+        {
+            /* -----
+             * just ignore "here" directory references
+             */
+            continue;
+        }
+        else if ((path[0] == '.')&&(path[1] == '.')&&(path+2 == slash))	/* .. */
+        {
+            /* -----
+             * for up to parent directory references we try to change to that directory
+             */
+            int depth;
 
-	    rc = KTocEntryStackDepth (pathstack, &depth);
-	    if (depth <= 0)
-	    {
-		/* FAILURE */
-		rc = RC (rcFS, rcToc, rcConstructing, rcLink, rcViolated);
-		success = false;
-		break;
-	    }
-	    else
-	    {
-		rc = KTocEntryStackPop (pathstack, &newentry);
-	    }
-	}
-	else
-	{
-	    /* -----
-	     * Create a new directory entry
-	     *
-	     * access isn't really implemented yet so make a directory
-	     * default to read + execute for anyone
-	     *
-	     * we might only be using this directory entry for comparisons <shrug>
-	     */
-	    rc = KTocEntryNewDirectory (&newentry, path, slash - path, mtime, access);
+            rc = KTocEntryStackDepth (pathstack, &depth);
+            if (depth <= 0)
+            {
+                /* FAILURE */
+                rc = RC (rcFS, rcToc, rcConstructing, rcLink, rcViolated);
+                success = false;
+                break;
+            }
+            else
+            {
+                rc = KTocEntryStackPop (pathstack, &newentry);
+            }
+        }
+        else
+        {
+            /* -----
+             * Create a new directory entry
+             *
+             * access isn't really implemented yet so make a directory
+             * default to read + execute for anyone
+             *
+             * we might only be using this directory entry for comparisons <shrug>
+             */
+            rc = KTocEntryNewDirectory (&newentry, path, slash - path, mtime, access);
 
-	    /* -----
-	     * pass along failures - no need to change any parts at this point
-	     * but that time may come
-	     */
-	    if (rc != 0)
-	    {
-		LOGMSG (klogErr, "failed to construct a directory entry: memory allocation");
-		return rc;
-	    }
+            /* -----
+             * pass along failures - no need to change any parts at this point
+             * but that time may come
+             */
+            if (rc != 0)
+            {
+                LOGMSG (klogErr, "failed to construct a directory entry: memory allocation");
+                return rc;
+            }
 
-	    exists = BSTreeFind (tree, newentry, KTocEntryCmpVoid);
+            exists = BSTreeFind (tree, newentry, KTocEntryCmpVoid);
 
-	    /* -----
-	     * the expected is to insert the entry if it wasn't there but will check
-	     * special circumstances
-	     *
-	     * so plan to insert or not based on whether it is there and expect
-	     * all to be well.
-	     *
-	     * never insert if it already exists
-	     */
-	    do_insert = (bool)((exists == NULL) ?  true : false);
-	    rc = 0;
+            /* -----
+             * the expected is to insert the entry if it wasn't there but will check
+             * special circumstances
+             *
+             * so plan to insert or not based on whether it is there and expect
+             * all to be well.
+             *
+             * never insert if it already exists
+             */
+            do_insert = (bool)((exists == NULL) ?  true : false);
+            rc = 0;
 
-	    /* -----
-	     * Open/init/create with no make parents:
-	     */
-	    if ((exists == NULL)&& !(mode & kcmParents))
-	    {
-		/* parent did not exist so we will fail */
-		rc = RC (rcFS, rcToc, rcCreating, rcSelf, rcInconsistent);
-		do_insert = false;
-		success = false;
-	    }
+            /* -----
+             * Open/init/create with no make parents:
+             */
+            if ((exists == NULL)&& !(mode & kcmParents))
+            {
+                /* parent did not exist so we will fail */
+                rc = RC (rcFS, rcToc, rcCreating, rcSelf, rcInconsistent);
+                do_insert = false;
+                success = false;
+            }
 
-	    /* -----
-	     * if rc is set, we had a problem and will fail
-	     */
-	    if (rc != 0)
-	    {
-		LOGERR	(klogErr, rc,
-                                   "directory parse/creation failed");
-		(void)KTocEntryDelete(newentry);
-		break;
-	    }
+            /* -----
+             * if rc is set, we had a problem and will fail
+             */
+            if (rc != 0)
+            {
+                LOGERR	(klogErr, rc,
+                         "directory parse/creation failed");
+                (void)KTocEntryDelete(newentry);
+                break;
+            }
 
-	    if (do_insert)
-	    {
-		rc = BSTreeInsert (tree, &newentry->node, KTocEntryCmp2);
-		if (rc)
-		{
-		    LOGMSG (klogErr, "directory parse/creation failed 2");
-		    (void)KTocEntryDelete(newentry);
-		    break;
-		}
+            if (do_insert)
+            {
+                rc = BSTreeInsert (tree, &newentry->node, KTocEntryCmp2);
+                if (rc)
+                {
+                    LOGMSG (klogErr, "directory parse/creation failed 2");
+                    (void)KTocEntryDelete(newentry);
+                    break;
+                }
                 TOC_DEBUG (("%s: inserted new directory into TOC %S\n", __func__, newentry->name));
-	    }
-	    else
-	    {
-		(void)KTocEntryDelete(newentry);
-		newentry = (KTocEntry*)exists;
-	    }
+            }
+            else
+            {
+                (void)KTocEntryDelete(newentry);
+                newentry = (KTocEntry*)exists;
+            }
 
-	    /* -----
-	     * move into the subdirectory for the next directory in the path
-	     */
-	    if ((rc = KTocEntryStackPush (pathstack, newentry)) != 0)
-	    {
-		success = false;
-		break;
-	    }
+            /* -----
+             * move into the subdirectory for the next directory in the path
+             */
+            if ((rc = KTocEntryStackPush (pathstack, newentry)) != 0)
+            {
+                success = false;
+                break;
+            }
 
-	    tree = &newentry->u.dir.tree;
-	}
+            tree = &newentry->u.dir.tree;
+        }
     }
     return success ? 0 : rc;
 }
@@ -795,7 +795,7 @@ static rc_t KTocCreate (KToc *self,
 
     if ((rc = KTocEntryStackNew (&pdirstack)) != 0)
     {
-	return rc;
+        return rc;
     }
     /* -----
      * look for a '/' that isn't the last character in the path
@@ -804,75 +804,75 @@ static rc_t KTocCreate (KToc *self,
     if (pend != NULL)
     {
 
-	rc = KTocCreateSubdirs (self, ppath, pend, pparams->mtime,
-				pparams->access, mode, pdirstack);
+        rc = KTocCreateSubdirs (self, ppath, pend, pparams->mtime,
+                                pparams->access, mode, pdirstack);
 
-	rc = KTocEntryStackPop (pdirstack, &pwd);
-	if (pwd)
-	{
-	    ptree = &(pwd->u.dir.tree);
-	}
+        rc = KTocEntryStackPop (pdirstack, &pwd);
+        if (pwd)
+        {
+            ptree = &(pwd->u.dir.tree);
+        }
 
-	ppath = pend+1;
+        ppath = pend+1;
     }
 
     name_size = strlen(ppath);
     switch (pparams->type)
     {
     default:
-	break;
+        break;
     case ktocentrytype_dir:
-	rc = KTocEntryNewDirectory (&pnewentry,
-				    ppath,
-				    name_size,
-				    pparams->mtime,
-				    pparams->access);
-	break;
+        rc = KTocEntryNewDirectory (&pnewentry,
+                                    ppath,
+                                    name_size,
+                                    pparams->mtime,
+                                    pparams->access);
+        break;
     case ktocentrytype_file:
-	rc = KTocEntryNewFile (&pnewentry,
-			       ppath,
-			       name_size,
-			       pparams->mtime,
-			       pparams->access,
-			       pparams->u.file.source_position,
-			       pparams->u.file.size);
-	break;
+        rc = KTocEntryNewFile (&pnewentry,
+                               ppath,
+                               name_size,
+                               pparams->mtime,
+                               pparams->access,
+                               pparams->u.file.source_position,
+                               pparams->u.file.size);
+        break;
     case ktocentrytype_zombiefile:
-	rc = KTocEntryNewZombieFile (&pnewentry,
+        rc = KTocEntryNewZombieFile (&pnewentry,
                                      ppath,
                                      name_size,
                                      pparams->mtime,
                                      pparams->access,
                                      pparams->u.file.source_position,
                                      pparams->u.file.size);
-	break;
+        break;
     case ktocentrytype_chunked:
-	rc = KTocEntryNewChunked (&pnewentry, 
-				  ppath,
-				  name_size,
-				  pparams->mtime,
-				  pparams->access,
-				  pparams->u.chunked.size,
-				  pparams->u.chunked.chunks,
-				  pparams->u.chunked.num_chunks);
-	break;
+        rc = KTocEntryNewChunked (&pnewentry,
+                                  ppath,
+                                  name_size,
+                                  pparams->mtime,
+                                  pparams->access,
+                                  pparams->u.chunked.size,
+                                  pparams->u.chunked.chunks,
+                                  pparams->u.chunked.num_chunks);
+        break;
     case ktocentrytype_softlink:
-	rc = KTocEntryNewSoft (&pnewentry, 
-			       ppath,
-			       name_size,
-			       pparams->mtime,
-			       pparams->access,
-			       pparams->u.softlink.targ,
-			       strlen (pparams->u.softlink.targ));
-	break;
+        rc = KTocEntryNewSoft (&pnewentry,
+                               ppath,
+                               name_size,
+                               pparams->mtime,
+                               pparams->access,
+                               pparams->u.softlink.targ,
+                               strlen (pparams->u.softlink.targ));
+        break;
     case ktocentrytype_hardlink:
-	rc = KTocEntryNewHard (&pnewentry, 
-			       ppath,
-			       name_size,
-			       pparams->mtime,
-			       pparams->access,
+        rc = KTocEntryNewHard (&pnewentry,
+                               ppath,
+                               name_size,
+                               pparams->mtime,
+                               pparams->access,
                                pparams->u.hardlink.ref);
-	break;
+        break;
     }
 /*     if (rc != 0) */
 /* 	; */
@@ -881,48 +881,48 @@ static rc_t KTocCreate (KToc *self,
 
     if (pexistingentry != NULL)
     {
-	switch (mode & kcmValueMask)
-	{
-	default:
+        switch (mode & kcmValueMask)
+        {
+        default:
             LOGMSG (klogInt, "invalis create mode flag for Toc Entry");
         case kcmOpen:	/* use existing entry if it exists */
-	    KTocEntryDelete (pnewentry);
-	    break;
+            KTocEntryDelete (pnewentry);
+            break;
 
-	case kcmInit:
-	    BSTreeUnlink (ptree, &pexistingentry->node); /*?*/
-	    KTocEntryDelete (pexistingentry);
+        case kcmInit:
+            BSTreeUnlink (ptree, &pexistingentry->node); /*?*/
+            KTocEntryDelete (pexistingentry);
             goto insert;
-	    break;
+            break;
 
-	case kcmCreate:
-	    KTocEntryDelete (pnewentry);
-	    rc = RC (rcFS, rcToc, rcInserting, rcDirEntry, rcDuplicate);
-	    break;
-	}
+        case kcmCreate:
+            KTocEntryDelete (pnewentry);
+            rc = RC (rcFS, rcToc, rcInserting, rcDirEntry, rcDuplicate);
+            break;
+        }
     }
     else
     {
     insert:
-	rc = BSTreeInsert (ptree, &pnewentry->node, KTocEntryCmp2);
+        rc = BSTreeInsert (ptree, &pnewentry->node, KTocEntryCmp2);
         TOC_DEBUG (("%s: inserted new %s into TOC %s\n", __func__,
-		  KTocEntryTypeGetString(pparams->type),
-		  pnewentry->name.addr));
+                    KTocEntryTypeGetString(pparams->type),
+                    pnewentry->name.addr));
     }
 #if 0
     if (pparams->type == ktocentrytype_hardlink)
     {
 
-	/* -----
-	 * Now the ugly specific part of a hard link - resolve the link
-	 */
-	rc = KTocResolveHardLink (self, pparams->u.hardlink.targ, pdirstack, pwd, &(pnewentry->u.hard_link.ref));
-	if (rc  != 0)
-	{
-	    /* kill off node */
-	    BSTreeUnlink (ptree, &pnewentry->node);
-	    rc = RC (rcFS, rcToc, rcAliasing, rcArcHardLink, rcNotFound);
-	}
+        /* -----
+         * Now the ugly specific part of a hard link - resolve the link
+         */
+        rc = KTocResolveHardLink (self, pparams->u.hardlink.targ, pdirstack, pwd, &(pnewentry->u.hard_link.ref));
+        if (rc  != 0)
+        {
+            /* kill off node */
+            BSTreeUnlink (ptree, &pnewentry->node);
+            rc = RC (rcFS, rcToc, rcAliasing, rcArcHardLink, rcNotFound);
+        }
     }
 #endif
     KTocEntryStackDel (pdirstack);
@@ -950,30 +950,30 @@ rc_t createPath (char ** newpath, const char * path, va_list args)
     /* not trusting C99 version of vsnprintf is in place rather than SUSv2 */
     for (;;)
     {
-	pp = realloc (p,l);
-	if (pp == NULL)
-	{
-	    rc = RC (rcFS, rcToc, rcConstructing, rcMemory, rcExhausted);
-	    return rc;
-	}
-	if (args == NULL)
-	{
-	    i = (int)strlen ( path );
-	    if ( i < (int)l )
-		strcpy ( pp, path );
-	}
-	else
-	    i = vsnprintf (pp, l, path, args);
-	if (i < 0)
-	{
-	    rc = RC (rcFS, rcToc, rcConstructing, rcFormat, rcInvalid);
-	    free (pp);
-	    return rc;
-	}
-	p = pp;
-	if ( i < (int)l )
-	    break;
-	l = i + 1;
+        pp = realloc (p,l);
+        if (pp == NULL)
+        {
+            rc = RC (rcFS, rcToc, rcConstructing, rcMemory, rcExhausted);
+            return rc;
+        }
+        if (args == NULL)
+        {
+            i = (int)strlen ( path );
+            if ( i < (int)l )
+            strcpy ( pp, path );
+        }
+        else
+            i = vsnprintf (pp, l, path, args);
+        if (i < 0)
+        {
+            rc = RC (rcFS, rcToc, rcConstructing, rcFormat, rcInvalid);
+            free (pp);
+            return rc;
+        }
+        p = pp;
+        if ( i < (int)l )
+            break;
+        l = i + 1;
     } 
 
     *newpath = pp;
@@ -1016,7 +1016,7 @@ rc_t KTocVCreateDir ( KToc *self,KTime_t mtime, uint32_t access,
 
     rc = createPath (&npath, path, args);
     if (rc)
-	return rc;
+        return rc;
 
     params.type = ktocentrytype_dir;
     params.mtime = mtime;
@@ -1069,7 +1069,7 @@ rc_t KTocVCreateFile ( KToc *self,
 
     rc = createPath (&npath, path, args);
     if (rc)
-	return rc;
+        return rc;
 
     params.type = ktocentrytype_file;
     params.mtime = mtime;
@@ -1112,7 +1112,7 @@ rc_t KTocVCreateZombieFile ( KToc *self,
 
     rc = createPath (&npath, path, args);
     if (rc)
-	return rc;
+        return rc;
 
     params.type = ktocentrytype_zombiefile;
     params.mtime = mtime;
@@ -1167,7 +1167,7 @@ rc_t KTocVCreateChunkedFile ( KToc *self, uint64_t size,KTime_t mtime,
 
     rc = createPath (&npath, path, args);
     if (rc)
-	return rc;
+        return rc;
 
     params.type = ktocentrytype_chunked;
     params.u.chunked.size = size;
@@ -1334,7 +1334,7 @@ rc_t KTocVCreateSoftLink ( KToc *self,KTime_t mtime, uint32_t access,
 
     rc = createPath (&npath, alias, args);
     if (rc)
-	return rc;
+        return rc;
 
     params.type = ktocentrytype_softlink;
     params.mtime = mtime;
@@ -1352,7 +1352,7 @@ rc_t KTocVCreateSoftLink ( KToc *self,KTime_t mtime, uint32_t access,
 const KTocEntry * KTocGetRoot	(const KToc * self)
 {
     if (self == NULL)
-	return NULL;
+        return NULL;
 
     return &self->entry;
 }
@@ -1405,8 +1405,8 @@ rc_t KTocResolvePathTocEntry ( const KToc *self,
     KTocEntry * 	tentry;		/* points to a Temporary ENTRY built for comparisons */
     union
     {
-	const BSTNode     * b;		/* access to the BSTree Node starting the KToc entry */
-	const KTocEntry * k;		/* access to the whole of the entry */
+        const BSTNode     * b;		/* access to the BSTree Node starting the KToc entry */
+        const KTocEntry * k;		/* access to the whole of the entry */
     }		  	fentry;		/* Found ENTRY: two ways to access to skip casts */
     rc_t	  	rc;		/* temporary storage for the return from many calls */
     size_t	  	facet_size;	/* length of a single facet (part of a path dir or file) */
@@ -1431,10 +1431,10 @@ rc_t KTocResolvePathTocEntry ( const KToc *self,
      */
     if ((path_len == 0) || ((path_len == 1) && (path[0] == '.')))
     {
-	*pentry = dentry;
-	*ptype = ktocentrytype_dir;
-	*unusedpath = end;
-	return 0;
+        *pentry = dentry;
+        *ptype = ktocentrytype_dir;
+        *unusedpath = end;
+        return 0;
     }
 
 
@@ -1445,157 +1445,157 @@ rc_t KTocResolvePathTocEntry ( const KToc *self,
     {
         TOC_DEBUG (("%s: stepping through subs (%d) (%s)\n", __func__, outer_loopcount, next_facet));
 
-	/* -----
-	 * look for the end of the next facet in the path
-	 */
-	slash = strchr (next_facet, '/');
+        /* -----
+         * look for the end of the next facet in the path
+         */
+        slash = strchr (next_facet, '/');
 
-	/* -----
-	 * if there was no '/' found then point to the end as that is the end of the facet
-	 * but also mark that we know this is the last one (be it a directory, link or file)
-	 */
-	if (slash == NULL)			
-	{
-	    slash = end;
-	    is_last_facet = true;
-	}
-	/* -----
-	 * handle the special case of a path ending in / which also makes the last facet
-	 * known to be a directory
-	 */
-	else if (slash + 1 == end)
-	{
-	    slash = end;
-	    is_last_facet = true;
-	    is_facet_dir = true;
-	}
-	facet_size = slash - next_facet;	/* how many characters in this facet */
+        /* -----
+         * if there was no '/' found then point to the end as that is the end of the facet
+         * but also mark that we know this is the last one (be it a directory, link or file)
+         */
+        if (slash == NULL)			
+        {
+            slash = end;
+            is_last_facet = true;
+        }
+        /* -----
+         * handle the special case of a path ending in / which also makes the last facet
+         * known to be a directory
+         */
+        else if (slash + 1 == end)
+        {
+            slash = end;
+            is_last_facet = true;
+            is_facet_dir = true;
+        }
+        facet_size = slash - next_facet;	/* how many characters in this facet */
 
-	/* -----
-	 * build a temporary entry for comparisons
-	 */
-	rc = KTocEntryNewDirectory (&tentry, next_facet, facet_size, 0, 0555);
-	if (rc != 0)
-	{
-	    *pentry = NULL;		/* if we couldn't make then fail */
-	    return rc;
-	}
-	fentry.b = BSTreeFind (&dentry->u.dir.tree, tentry, KTocEntryCmpVoid);
-	KTocEntryDelete(tentry);	/* clean up the temporary entry */
+        /* -----
+         * build a temporary entry for comparisons
+         */
+        rc = KTocEntryNewDirectory (&tentry, next_facet, facet_size, 0, 0555);
+        if (rc != 0)
+        {
+            *pentry = NULL;		/* if we couldn't make then fail */
+            return rc;
+        }
+        fentry.b = BSTreeFind (&dentry->u.dir.tree, tentry, KTocEntryCmpVoid);
+        KTocEntryDelete(tentry);	/* clean up the temporary entry */
 
-	if (fentry.b == NULL)
-	{
-	    /* -----
-	     * we failed to find this facet.
-	     */
-	    *pentry = NULL;		/* if we couldn't make it fail */
-	    *unusedpath = next_facet;	/* the name we couldn't find */
-	    *ptype = ktocentrytype_notfound;
+        if (fentry.b == NULL)
+        {
+            /* -----
+             * we failed to find this facet.
+             */
+            *pentry = NULL;		/* if we couldn't make it fail */
+            *unusedpath = next_facet;	/* the name we couldn't find */
+            *ptype = ktocentrytype_notfound;
 
             TOC_DEBUG (("%s: couldn't find (%s)\n", __func__, next_facet));
 
-	    return RC (rcFS, rcArc, rcResolving, rcParam, rcNotFound);
-	}
+            return RC (rcFS, rcArc, rcResolving, rcParam, rcNotFound);
+        }
 
-	/* loopcount = 0; */
+        /* loopcount = 0; */
 
-	/* check the type to see if we're okay with it */
-	if ((rc = KTocEntryGetType (fentry.k, &type)) != 0)
-	{
-	    if (type == ktocentrytype_notfound)
-	    {
-		*ptype = type;
-	    }
-	    else
-	    {
-		*ptype = ktocentrytype_unknown;
-	    }
-	    *pentry = NULL;		/* if we couldn't then fail */
-	    *unusedpath = next_facet;	/* the name we couldn't find */
-	    return rc;
-	}
-	*ptype = type;
-	switch (type)
-	{
-	    /* -----
-	     * resolve a hardlink immediately 
-	     * re-resolve until we've gone too many hops or the
-	     * resolution is to something that isn't another hardlink
-	     *
-	     * re-enter this switch with the type of the resolved entry
-	     */
-	case ktocentrytype_hardlink:
-	    if (is_last_facet)
-	    {
-		*pentry = fentry.k->u.hard_link.ref;
-		*unusedpath = end;
-		/* successful arrival at the end at a directory */
-		return 0;
-	    }
-	    else
-	    {
-		/* -----
-		 * this is the only path that continues through the loop
-		 */
-		next_facet = slash + 1;	 /* point past the slash */
-		dentry = fentry.k->u.hard_link.ref; /* make the found entry our current entry */
-	    }
-	    continue;	/* back to for(;;) */
+        /* check the type to see if we're okay with it */
+        if ((rc = KTocEntryGetType (fentry.k, &type)) != 0)
+        {
+            if (type == ktocentrytype_notfound)
+            {
+                *ptype = type;
+            }
+            else
+            {
+                *ptype = ktocentrytype_unknown;
+            }
+            *pentry = NULL;		/* if we couldn't then fail */
+            *unusedpath = next_facet;	/* the name we couldn't find */
+            return rc;
+        }
+        *ptype = type;
+        switch (type)
+        {
+            /* -----
+             * resolve a hardlink immediately 
+             * re-resolve until we've gone too many hops or the
+             * resolution is to something that isn't another hardlink
+             *
+             * re-enter this switch with the type of the resolved entry
+             */
+        case ktocentrytype_hardlink:
+            if (is_last_facet)
+            {
+                *pentry = fentry.k->u.hard_link.ref;
+                *unusedpath = end;
+                /* successful arrival at the end at a directory */
+                return 0;
+            }
+            else
+            {
+                /* -----
+                 * this is the only path that continues through the loop
+                 */
+                next_facet = slash + 1;	 /* point past the slash */
+                dentry = fentry.k->u.hard_link.ref; /* make the found entry our current entry */
+            }
+            continue;	/* back to for(;;) */
 
-	case ktocentrytype_dir:
-	    if (is_last_facet)
-	    {
-		*pentry = fentry.k;
-		*unusedpath = end;
-		/* successful arrival at the end at a directory */
-		return 0;
-	    }
-	    else
-	    {
-		/* -----
-		 * this is the only path that continues through the loop
-		 */
-		next_facet = slash + 1;	/* point past the slash */
-		dentry = fentry.k;	/* make the found entry our current entry */
-	    }
-	    continue;	/* back to for(;;) */
+        case ktocentrytype_dir:
+            if (is_last_facet)
+            {
+                *pentry = fentry.k;
+                *unusedpath = end;
+                /* successful arrival at the end at a directory */
+                return 0;
+            }
+            else
+            {
+                /* -----
+                 * this is the only path that continues through the loop
+                 */
+                next_facet = slash + 1;	/* point past the slash */
+                dentry = fentry.k;	/* make the found entry our current entry */
+            }
+            continue;	/* back to for(;;) */
 
-	default:
-	    *pentry = fentry.k;
-	    *ptype = ktocentrytype_unknown;
-	    *unusedpath = next_facet;
-	    /* failure return */
-	    return RC (rcFS, rcToc, rcResolving, rcParam, rcInvalid);
+        default:
+            *pentry = fentry.k;
+            *ptype = ktocentrytype_unknown;
+            *unusedpath = next_facet;
+            /* failure return */
+            return RC (rcFS, rcToc, rcResolving, rcParam, rcInvalid);
 
-	case ktocentrytype_emptyfile:
-	case ktocentrytype_file:
-	case ktocentrytype_chunked:
+        case ktocentrytype_emptyfile:
+        case ktocentrytype_file:
+        case ktocentrytype_chunked:
         case ktocentrytype_zombiefile:
-	    *pentry = fentry.k;
+            *pentry = fentry.k;
 
-	    /* -----
-	     * success if we are on the last facet that wasn't supposed to be a directory
-	     * failure if we are not
-	     */
-	    if (is_last_facet && (! is_facet_dir))
-	    {
-		*unusedpath = end;
-		return 0;
-	    }
-	    else
-	    {
-		*unusedpath = next_facet;
-		return RC (rcFS, rcToc, rcResolving, rcParam, rcInvalid);
-	    }
+            /* -----
+             * success if we are on the last facet that wasn't supposed to be a directory
+             * failure if we are not
+             */
+            if (is_last_facet && (! is_facet_dir))
+            {
+                *unusedpath = end;
+                return 0;
+            }
+            else
+            {
+                *unusedpath = next_facet;
+                return RC (rcFS, rcToc, rcResolving, rcParam, rcInvalid);
+            }
 
-	case ktocentrytype_softlink:
-	    /* -----
-	     * We got a softlink entry in the path.
-	     */
-	    *pentry = fentry.k;
-	    *unusedpath = slash;
-	    return 0;	/* This is a bit clunky but is a valid incomplete return */
-	}
+        case ktocentrytype_softlink:
+            /* -----
+             * We got a softlink entry in the path.
+             */
+            *pentry = fentry.k;
+            *unusedpath = slash;
+            return 0;	/* This is a bit clunky but is a valid incomplete return */
+        }
     }
     /* should never get here */
     return RC (rcFS, rcToc, rcResolving, rcParam, rcUnexpected);
@@ -1610,8 +1610,8 @@ rc_t KTocResolvePathFromOffset ( const KToc *self,
     rc_t rc;
     union u
     {
-	const BSTNode * n;
-	const KTocEntryIndex * i;
+        const BSTNode * n;
+        const KTocEntryIndex * i;
     } u;
     uint64_t offset;
     struct ugliness thisIsReallyUgly;
@@ -1630,8 +1630,8 @@ rc_t KTocResolvePathFromOffset ( const KToc *self,
     u.n =  BSTreeFind (&self->offset_index, &thisIsReallyUgly, KTocEntryIndexCmpOffset);
     if (u.n != NULL)
     {
-	*path = u.i->fullpath.addr;
-	*ppos = thisIsReallyUgly.foffset;
+        *path = u.i->fullpath.addr;
+        *ppos = thisIsReallyUgly.foffset;
     }
     return rc;
 }
@@ -1639,7 +1639,7 @@ rc_t KTocResolvePathFromOffset ( const KToc *self,
 const void * KTocGetArchive( const KToc * self )
 {
     if (self == NULL)
-	return NULL;
+        return NULL;
     return self->archive.v;
 }
 				
@@ -1667,7 +1667,7 @@ LIB_EXPORT void CC PersistFilesIndex ( void * vitem, void * vdata )
     if (data->rc != 0)
     {
         TOC_DEBUG(("PersistFilesIndex leave early %R\n", data->rc));
-	return;
+        return;
     }
     path = (char*)vitem;
 
@@ -1699,63 +1699,63 @@ rc_t KTocPersist ( const KToc * self,
     rc = KTocEntryPersistNodeDir (NULL, &self->entry, &treesize, NULL, NULL);
     if (rc != 0)
     {
-	LOGMSG (klogErr, "Failure to Persist Toc Root Entry");
+        LOGMSG (klogErr, "Failure to Persist Toc Root Entry");
     }
     else
     {
-	rc = SraHeaderMake (&header, treesize, self->alignment);
-	if (header == NULL)
-	{
-	    rc = RC (rcFS, rcToc, rcPersisting, rcMemory, rcExhausted);
-	    LOGERR (klogErr, rc, "Failure to allocate buffer for header");
-	}
-	else
-	{
-            TOC_DEBUG (("KTocPersist: treesize %ju\n", treesize));
+        rc = SraHeaderMake (&header, treesize, self->alignment);
+        if (header == NULL)
+        {
+            rc = RC (rcFS, rcToc, rcPersisting, rcMemory, rcExhausted);
+            LOGERR (klogErr, rc, "Failure to allocate buffer for header");
+        }
+        else
+        {
+                TOC_DEBUG (("KTocPersist: treesize %ju\n", treesize));
 
-	    bbuffer = realloc ( header, (size_t)SraHeaderGetFileOffset( header ) );
-	    if (bbuffer == NULL)
-	    {
-		free (header);
-		rc = RC (rcFS, rcToc, rcPersisting, rcMemory, rcExhausted);
-		LOGERR (klogErr, rc, "Failure to allocate buffer for persisted header");
-	    }
-	    else
-	    {
-		PersistFilesIndexData data; 
+            bbuffer = realloc ( header, (size_t)SraHeaderGetFileOffset( header ) );
+            if (bbuffer == NULL)
+            {
+                free (header);
+                rc = RC (rcFS, rcToc, rcPersisting, rcMemory, rcExhausted);
+                LOGERR (klogErr, rc, "Failure to allocate buffer for persisted header");
+            }
+            else
+            {
+                PersistFilesIndexData data;
 
-		header = (KSraHeader*)bbuffer;
-		data.offset = 0;
-		data.toc = self;
-		data.rc = 0;
+                header = (KSraHeader*)bbuffer;
+                data.offset = 0;
+                data.toc = self;
+                data.rc = 0;
 
-		VectorForEach (files, false, PersistFilesIndex, &data);
-		filesize = SraHeaderGetFileOffset(header) + data.offset;
-		rc = data.rc;
-		if (rc == 0)
-		{
-                    KTocEntryPersistWriteFuncData wdata;
-                    wdata.buffptr = bbuffer + SraHeaderSize(NULL);
-                    wdata.limit = bbuffer + SraHeaderGetFileOffset(header);
-                    rc = KTocEntryPersistNodeDir (NULL, &self->entry, &treesize,
-                                                  KTocEntryPersistWriteFunc, 
-                                                  &wdata);
-		}
-	    }
-	}
+                VectorForEach (files, false, PersistFilesIndex, &data);
+                filesize = SraHeaderGetFileOffset(header) + data.offset;
+                rc = data.rc;
+                if (rc == 0)
+                {
+                            KTocEntryPersistWriteFuncData wdata;
+                            wdata.buffptr = bbuffer + SraHeaderSize(NULL);
+                            wdata.limit = bbuffer + SraHeaderGetFileOffset(header);
+                            rc = KTocEntryPersistNodeDir (NULL, &self->entry, &treesize,
+                                                          KTocEntryPersistWriteFunc, 
+                                                          &wdata);
+                }
+            }
+        }
     }
     if (rc == 0)
     {
-	((KToc*)self)->header = (KSraHeader *)bbuffer;
-	*buffer = bbuffer;
-	*buffer_size = treesize + SraHeaderSize(NULL);
-	*virtual_file_size = filesize;
-	return 0;
+        ((KToc*)self)->header = (KSraHeader *)bbuffer;
+        *buffer = bbuffer;
+        *buffer_size = treesize + SraHeaderSize(NULL);
+        *virtual_file_size = filesize;
+        return 0;
     }
     else if (bbuffer != NULL)
     {
         TOC_DEBUG (("Free called in KTocPersist\n"));
-	free (bbuffer);
+        free (bbuffer);
     }
     return rc;
 }

@@ -60,6 +60,10 @@ class Tests(unittest.TestCase):
     def test_ReadCollection_getReference(self):
         ref = NGS.openReadCollection(PrimaryOnly).getReference("supercont2.1")
 
+    def test_ReadCollection_hasReference(self):
+        assert ( NGS.openReadCollection(PrimaryOnly).hasReference("supercont2.1") )
+        assert ( not NGS.openReadCollection(PrimaryOnly).hasReference("non-existent acc") )
+
     def test_ReadCollection_getAlignment(self):
         al = NGS.openReadCollection(PrimaryOnly).getAlignment(PrimaryOnly + ".PA.1")
     

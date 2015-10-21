@@ -56,6 +56,7 @@
 
 #define COMPARE_4NA 0
 #define CACHE_MAX_ROWS 1 /* and columns as well */
+#define GAP_SCORE_LINEAR 1
 
 typedef struct VRefVariation
 {
@@ -120,7 +121,13 @@ static int gap_score_func ( size_t idx )
 #if COMPARE_4NA == 1
     return -6*(int)idx;
 #else
+
+#if GAP_SCORE_LINEAR != 0
     return -(int)idx;
+#else /* constant*/
+    return -1;
+#endif
+
 #endif
 }
 
@@ -231,8 +238,10 @@ rc_t calculate_similarity_matrix (
                 vec_max_cols[j].value = matrix[i*COLUMNS + j];
                 vec_max_cols[j].index = j;
             }
-
+#if GAP_SCORE_LINEAR != 0
             vec_max_cols[j].value += gap_score_func(1);
+#endif
+
 #endif
 #if CACHE_MAX_ROWS != 0
             if ( matrix[i*COLUMNS + j] > vec_max_rows[i].value )
@@ -240,8 +249,10 @@ rc_t calculate_similarity_matrix (
                 vec_max_rows[i].value = matrix[i*COLUMNS + j];
                 vec_max_rows[i].index = i;
             }
-
+#if GAP_SCORE_LINEAR != 0
             vec_max_rows[i].value += gap_score_func(1);
+#endif
+
 #endif
         }
     }
@@ -385,8 +396,40 @@ template <bool reverse> void print_matrix ( int const* matrix,
         printf ("\n");
     }
 }
-#endif
 
+#include <stdio.h>
+void print_matrix ( int const* matrix,
+                    char const* ref_slice, size_t ref_slice_size,
+                    char const* query, size_t query_size,
+                    bool reverse )
+{
+    size_t COLUMNS = ref_slice_size + 1;
+    size_t ROWS = query_size + 1;
+
+    int print_width = 2;
+    size_t i, j;
+
+    printf ("  %*c ", print_width, '-');
+    for (j = 1; j < COLUMNS; ++j)
+        printf ("%*c ", print_width, get_char ( ref_slice, ref_slice_size, j-1, reverse ));
+    printf ("\n");
+
+    for (i = 0; i < ROWS; ++i)
+    {
+        if ( i == 0 )
+            printf ("%c ", '-');
+        else
+            printf ("%c ", get_char (query, query_size, i-1, reverse ));
+    
+        for (j = 0; j < COLUMNS; ++j)
+        {
+            printf ("%*d ", print_width, matrix[i*COLUMNS + j]);
+        }
+        printf ("\n");
+    }
+}
+
+#endif
 
 /*
     FindRefVariationBounds uses Smith-Waterman algorithm
@@ -426,6 +469,7 @@ static rc_t FindRefVariationBounds (
     rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, false, NULL );
     if ( rc != 0 )
         goto free_resources;
+
     sw_find_indel_box ( matrix, ROWS, COLUMNS, &row_start, &row_end, &col_start, &col_end );
     if ( row_start == -1 && row_end == -1 && col_start == -1 && col_end == -1 )
     {
@@ -437,12 +481,15 @@ static rc_t FindRefVariationBounds (
     rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, true, NULL );
     if ( rc != 0 )
         goto free_resources;
-    sw_find_indel_box ( matrix, ROWS, COLUMNS, &row_start_rev, &row_end_rev, &col_start_rev, &col_end_rev );
 
-    row_start = min ( (int)query_size - row_end_rev - 1, row_start );
-    row_end   = max ( (int)query_size - row_start_rev - 1, row_end );
-    col_start = min ( (int)ref_slice_size - col_end_rev - 1, col_start );
-    col_end   = max ( (int)ref_slice_size - col_start_rev - 1, col_end );
+    sw_find_indel_box ( matrix, ROWS, COLUMNS, &row_start_rev, &row_end_rev, &col_start_rev, &col_end_rev );
+    if ( row_start_rev != -1 || row_end_rev != -1 || col_start_rev != -1 || col_end_rev != -1 )
+    {
+        row_start = min ( (int)query_size - row_end_rev - 1, row_start );
+        row_end   = max ( (int)query_size - row_start_rev - 1, row_end );
+        col_start = min ( (int)ref_slice_size - col_end_rev - 1, col_start );
+        col_end   = max ( (int)ref_slice_size - col_start_rev - 1, col_end );
+    }
 
     if ( ref_start != NULL )
         *ref_start = col_start + 1;
@@ -904,7 +951,8 @@ LIB_EXPORT rc_t CC VRefVariationIUPACMake (
     struct VRefVariation* obj;
     rc_t rc = 0;
 
-    if ( variation_size == 0 && var_len_on_ref == 0 )
+    if ( ( variation_size == 0 && var_len_on_ref == 0 )
+        || ref_size == 0 )
     {
         return RC (rcText, rcString, rcSearching, rcParam, rcEmpty);
     }
@@ -960,7 +1008,8 @@ LIB_EXPORT rc_t CC VRefVariationIUPACMake (
                 obj->var_start = ref_start;
                 assert( ref_len == 0                               /* pure match/mismatch */
                     || ref_len == var_str.size + var_len_on_ref    /* deletion ? */
-                    || var_str.size == ref_len + variation_size ); /* insertion ? */
+                    || var_str.size == ref_len + variation_size    /* insertion ? */
+                    || 1 );                                        /* TODO: add condition for insert */
                 obj->var_len_on_ref = ref_len == 0 ? var_len_on_ref : ref_len;
             }
         }

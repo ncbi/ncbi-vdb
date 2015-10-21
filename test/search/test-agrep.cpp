@@ -95,6 +95,81 @@ TEST_CASE(TempCRC)
 }
 #endif
 
+TEST_CASE(AgrepDPTest)
+{
+    char const pattern[] = "MATCH";
+    size_t pattern_len = sizeof (pattern) - 1;
+
+    ::AgrepParams* agrep_params;
+    rc_t rc = ::AgrepMake ( & agrep_params, AGREP_MODE_ASCII | AGREP_ALG_DP, pattern );
+    REQUIRE ( rc == 0 );
+
+    ::AgrepMatch match_info;
+
+    // Complete match
+    {
+        char const text[] = "MATCH";
+        uint32_t found = ::AgrepFindFirst ( agrep_params, 0, text, sizeof(text)-1, & match_info );
+        REQUIRE ( found != 0 );
+        REQUIRE ( (size_t)match_info.length == pattern_len );
+        REQUIRE ( match_info.position == 0 );
+        REQUIRE ( match_info.score == 0 );
+    }
+
+    // Complete substring match
+    {
+        // TODO: if threshold == 2, the result differs from AGREP_ALG_MYERS
+        char const text[] = "xxMATCHvv";
+        uint32_t found = ::AgrepFindFirst ( agrep_params, 0, text, sizeof(text)-1, & match_info );
+        REQUIRE ( found != 0 );
+        REQUIRE ( (size_t)match_info.length == pattern_len );
+        REQUIRE ( match_info.position == 2 );
+        REQUIRE ( match_info.score == 0 );
+    }
+
+    // 1 Deletion
+    {
+        char const text[] = "xxxMACHvv";
+        uint32_t found = ::AgrepFindFirst ( agrep_params, 1, text, sizeof(text)-1, & match_info );
+        REQUIRE ( found != 0 );
+        REQUIRE ( (size_t)match_info.length == pattern_len - 1 );
+        REQUIRE ( match_info.position == 3 );
+        REQUIRE ( match_info.score == 1 );
+    }
+
+    // 2 Insertions
+    {
+        // TODO: AGREP_ALG_MYERS gives match_info.length == 5, not 7 here!
+        char const text[] = "xxxMAdTCaHvv";
+        uint32_t found = ::AgrepFindFirst ( agrep_params, 2, text, sizeof(text)-1, & match_info );
+        REQUIRE ( found != 0 );
+        REQUIRE ( (size_t)match_info.length == pattern_len + 2 );
+        REQUIRE ( match_info.position == 3 );
+        REQUIRE ( match_info.score == 2 );
+    }
+
+    // 3 Mismatches
+    {
+        // TODO: AGREP_ALG_MYERS gives match_info.length == 5, not 7 here!
+        char const text[] = "xATxx";
+        uint32_t found = ::AgrepFindFirst ( agrep_params, 5, text, sizeof(text)-1, & match_info );
+        REQUIRE ( found != 0 );
+        REQUIRE ( (size_t)match_info.length == pattern_len );
+        REQUIRE ( match_info.position == 0 );
+        REQUIRE ( match_info.score == 3 );
+    }
+
+    // Not found
+    {
+        char const text[] = "xyzvuwpiu";
+        uint32_t found = ::AgrepFindFirst ( agrep_params, 4, text, sizeof(text)-1, & match_info );
+        REQUIRE ( found == 0 );
+    }
+
+    ::AgrepWhack ( agrep_params );
+}
+
+
 TEST_CASE(SearchCompare)
 {
     //std::cout << "This is search algorithm time comparison test" << std::endl << std::endl;
