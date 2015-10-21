@@ -257,14 +257,12 @@ RunNucStrtr ( const string& p_ref, const string& p_query, bool p_positional )
     ConvertAsciiTo2NAPacked ( p_ref, buf2na, sizeof ( buf2na ) );
     
     NucStrstr *nss;
-    if ( NucStrstrMake ( & nss, 0, p_query . c_str (), p_query . size () ) != 0 )
+    if ( NucStrstrMake ( & nss, p_positional ? 1 : 0, p_query . c_str (), p_query . size () ) != 0 )
         throw logic_error ( "RunNucStrtr: NucStrstrMake() failed" );
     unsigned int selflen = 0u;
-    int ret = NucStrstrSearch ( nss, ( const void * ) buf2na, p_positional ? 1 : 0, p_ref . size () / 4 + 1 + 16, & selflen );
-    if ( ret != 0 )
-    {
-        assert ( p_query . size () == selflen );
-    }
+    // NB: for now, all searches start are from the beginning ( nucstrstr.h says "may be >= 4"; not sure what that means )
+    const unsigned int pos = 0;
+    int ret = NucStrstrSearch ( nss, ( const void * ) buf2na, pos, p_ref . size () - pos, & selflen );
     NucStrstrWhack ( nss );
     return ret;
 }
@@ -297,6 +295,59 @@ TEST_CASE ( Nucstrstr_Positional_NoExpr_Found_AtStart )
 TEST_CASE ( Nucstrstr_Positional_NoExpr_Found_InMiddle )
 {
     REQUIRE_EQ ( 4, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "TACGTACG", true ) );
+}
+
+TEST_CASE ( Nucstrstr_Positional_Not_False )
+{
+    REQUIRE_EQ ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "!TACGTACG", true ) );
+}
+TEST_CASE ( Nucstrstr_Positional_Not_True )
+{   // "!" returns only 0 or 1, not the position
+    REQUIRE_EQ ( 1, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "!AG", true ) );
+}
+
+TEST_CASE ( Nucstrstr_Positional_Caret_Found )
+{   
+    REQUIRE_EQ ( 1, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "^AC", true ) );
+}
+TEST_CASE ( Nucstrstr_Positional_Caret_NotFound )
+{   
+    REQUIRE_EQ ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGT", "^C", true ) );
+}
+
+TEST_CASE ( Nucstrstr_Positional_Dollar_Found )
+{   
+    REQUIRE_EQ ( 33, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGTTGCA", "TGCA$", true ) );
+}
+TEST_CASE ( Nucstrstr_Positional_Dollar_NotFound )
+{   
+    REQUIRE_EQ ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGTTGCAA", "TGCA$", true ) );
+}
+
+TEST_CASE ( Nucstrstr_Positional_OR_Found_1 )
+{   
+    REQUIRE_EQ ( 4, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGTTGCA", "TGAA|TACG", true ) );
+}
+TEST_CASE ( Nucstrstr_Positional_OR_Found_2 )
+{   
+    REQUIRE_EQ ( 4, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGTTGCA", "TGAA||TACG", true ) );
+}
+TEST_CASE ( Nucstrstr_Positional_OR_Found_FirstMatchPositionReported )
+{   
+    REQUIRE_EQ ( 2, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGTTGCA", "TGAA|CGT|TACG", true ) );
+}
+TEST_CASE ( Nucstrstr_Positional_OR_NotFound )
+{   
+    REQUIRE_EQ ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGTTGCA", "TGAA|TACA", true ) );
+}
+
+TEST_CASE ( Nucstrstr_Positional_AND_Found_LastMatchPositionReported )
+{   
+    REQUIRE_EQ ( 4, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGTTGCA", "CGTA&TACG", true ) );
+}
+TEST_CASE ( Nucstrstr_Positional_AND_NotFound )
+{   
+    REQUIRE_EQ ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGTTGCA", "TACG&TACA", true ) );
 }
 
 //////////////////////////////////////////// Main

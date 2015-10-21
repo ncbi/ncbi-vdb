@@ -5304,8 +5304,11 @@ LIB_EXPORT int CC NucStrstrSearch ( const NucStrstr *self,
                 fasta_len = self -> sub . expr -> fasta . size;
                 if ( fasta_len > len )
                     return 0;
-                return NucStrstrSearch ( self -> sub . expr, ncbi2na,
+                found = NucStrstrSearch ( self -> sub . expr, ncbi2na,
                     pos + len - fasta_len, fasta_len, selflen );
+                if ( found != 0 )
+                    found += pos + len - fasta_len;
+                return found;
             }
             break;
         }
