@@ -68,12 +68,6 @@ clean: stdclean
 # made in both static and shared versions
 $(LIBDIR)/libncbi-vdb: $(addprefix $(LIBDIR)/libncbi-vdb.,$(LIBX) $(SHLX))
 
-ifeq (linux,$(OS))
-  LIBKFF = kff magic
-else
-  LIBKFF =
-endif
-
 ifeq (64,$(BITS))
   LIBVDB_BLAST = vdb-blast
 else

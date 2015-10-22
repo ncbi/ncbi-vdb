@@ -59,8 +59,9 @@ TEST_KFS_LIB = \
     -sncbi-vdb \
 	-lktst
 
-ifeq (linux,$(OS))
+ifeq (1,$(HAVE_MAGIC))
 	TEST_KFS_LIB += -skff -lmagic
+	CPPFLAGS += -DHAVE_KFF
 endif
 
 $(TEST_BINDIR)/test-kfs: $(TEST_KFS_OBJ)
