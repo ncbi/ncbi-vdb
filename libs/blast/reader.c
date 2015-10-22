@@ -428,7 +428,7 @@ bool _ReadDescNextRead(ReadDesc *self)
         }
     }
 
-    if (read) {
+    if (read > 0) {
         S
         self->read = read;
         ++self->read_id;
