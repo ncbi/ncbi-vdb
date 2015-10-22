@@ -433,21 +433,22 @@ NGS_String * GetReadQualities ( SRA_Read * self, ctx_t ctx )
             assert ( elem_bits == 8 );
             assert ( boff == 0 );
 
-            /* convert to ascii-33 */
-            char * copy = malloc ( row_len + 1 );
-            if ( copy == NULL )
-                SYSTEM_ERROR ( xcNoMemory, "allocating %u bytes for QUALITY row %ld", row_len + 1, self -> cur_row );
-            else
-            {
-                uint32_t i;
-                const uint8_t * orig = base;
-                for ( i = 0; i < row_len; ++ i )
-                    copy [ i ] = ( char ) ( orig [ i ] + 33 );
-                copy [ i ] = 0;
+            {   /* convert to ascii-33 */
+                char * copy = malloc ( row_len + 1 );
+                if ( copy == NULL )
+                    SYSTEM_ERROR ( xcNoMemory, "allocating %u bytes for QUALITY row %ld", row_len + 1, self -> cur_row );
+                else
+                {
+                    uint32_t i;
+                    const uint8_t * orig = base;
+                    for ( i = 0; i < row_len; ++ i )
+                        copy [ i ] = ( char ) ( orig [ i ] + 33 );
+                    copy [ i ] = 0;
 
-                new_data = NGS_StringMakeOwned ( ctx, copy, row_len );
-                if ( FAILED () )
-                    free ( copy );
+                    new_data = NGS_StringMakeOwned ( ctx, copy, row_len );
+                    if ( FAILED () )
+                        free ( copy );
+                }
             }
             
             if ( ! FAILED () )
