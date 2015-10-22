@@ -902,24 +902,25 @@ struct NGS_String * CSRA1_FragmentGetQualities ( CSRA1_Alignment * self, ctx_t c
                 length = row_len - offset;
             }
             
-            /* convert to ascii-33 */
-            char * copy = malloc ( length + 1 );
-            if ( copy == NULL )
-                SYSTEM_ERROR ( xcNoMemory, "allocating %u bytes for QUALITY row %ld", row_len + 1, self -> cur_row );
-            else
-            {
-                uint32_t i;
-                const uint8_t * orig = base;
-                for ( i = 0; i < length; ++ i )
+            {   /* convert to ascii-33 */
+                char * copy = malloc ( length + 1 );
+                if ( copy == NULL )
+                    SYSTEM_ERROR ( xcNoMemory, "allocating %u bytes for QUALITY row %ld", row_len + 1, self -> cur_row );
+                else
                 {
-                    copy [ i ] = ( char ) ( orig [ offset + i ] + 33 );
-                }
-                copy [ length ] = 0;
+                    uint32_t i;
+                    const uint8_t * orig = base;
+                    for ( i = 0; i < length; ++ i )
+                    {
+                        copy [ i ] = ( char ) ( orig [ offset + i ] + 33 );
+                    }
+                    copy [ length ] = 0;
 
-                ret = NGS_StringMakeOwned ( ctx, copy, length );
-                if ( FAILED () )
-                {
-                    free ( copy );
+                    ret = NGS_StringMakeOwned ( ctx, copy, length );
+                    if ( FAILED () )
+                    {
+                        free ( copy );
+                    }
                 }
             }
         }
