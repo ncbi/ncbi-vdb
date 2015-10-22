@@ -4,3 +4,9 @@
     ...
    fun:find_home_directory
 }
+{
+   static_cached_KDirectory_in_KConfig_find_home_directory
+   Memcheck:Leak
+    ...
+   fun:KRsrcGlobalInit
+}

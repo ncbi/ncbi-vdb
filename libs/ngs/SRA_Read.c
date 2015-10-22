@@ -60,8 +60,7 @@ const char * sequence_col_specs [] =
 {
     "READ_TYPE",
     "(INSDC:dna:text)READ",
-    "(INSDC:quality:text:phred_33)QUALITY",
-    "(INSDC:quality:phred)QUALITY", /* this column will be used if access to the one above fails, with added conversion to ascii */
+    "(INSDC:quality:phred)QUALITY",
     "(INSDC:coord:len)READ_LEN",
     "NAME",
     "SPOT_GROUP",
@@ -114,7 +113,6 @@ void SRA_ReadInit ( ctx_t ctx, SRA_Read * self, const char *clsname, const char 
         {
             TRY ( self -> run_name = NGS_StringDuplicate ( run_name, ctx ) )
             {
-                self -> has_phred_33    = true; /* hope for the best - will reset if ascii qualities fail to read */
                 self -> wants_full      = true;
                 self -> wants_partial   = true; 
                 self -> wants_unaligned = true;            
@@ -143,7 +141,6 @@ void SRA_ReadIteratorInit ( ctx_t ctx,
         {
             TRY ( self -> run_name = NGS_StringDuplicate ( run_name, ctx ) )
             {
-                self -> has_phred_33 = true; /* hope for the best - will reset if ascii qualities fail to read */
                 self -> wants_full      = wants_full;
                 self -> wants_partial   = wants_partial; 
                 self -> wants_unaligned = wants_unaligned;            
@@ -429,48 +426,28 @@ NGS_String * GetReadQualities ( SRA_Read * self, ctx_t ctx )
     {
         const void * base;
         uint32_t elem_bits, boff, row_len;
-        if ( self -> has_phred_33 )
-        {
-            ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, self -> cur_row, seq_QUALITY_ASCII, & elem_bits, & base, & boff, & row_len ) )
-            {   /* apparently no ascii qualities present, switch to raw */
-                self -> has_phred_33 = false;
-            }
-        }
-        if ( !self -> has_phred_33 )
-        {
-            ON_FAIL ( NGS_CursorCellDataDirect ( self -> curs, ctx, self -> cur_row, seq_QUALITY, & elem_bits, & base, & boff, & row_len ) )
-                return NULL;
-        }
-            
+        TRY ( NGS_CursorCellDataDirect ( self -> curs, ctx, self -> cur_row, seq_QUALITY, & elem_bits, & base, & boff, & row_len ) )
         {
             NGS_String * new_data = NULL;
 
             assert ( elem_bits == 8 );
             assert ( boff == 0 );
 
-            /* convert to ascii-33 if needed */
-            if ( ! self -> has_phred_33 )
-            {
-                char * copy = malloc ( row_len + 1 );
-                if ( copy == NULL )
-                    SYSTEM_ERROR ( xcNoMemory, "allocating %u bytes for QUALITY row %ld", row_len + 1, self -> cur_row );
-                else
-                {
-                    uint32_t i;
-                    const uint8_t * orig = base;
-                    for ( i = 0; i < row_len; ++ i )
-                        copy [ i ] = ( char ) ( orig [ i ] + 33 );
-                    copy [ i ] = 0;
-
-                    new_data = NGS_StringMakeOwned ( ctx, copy, row_len );
-                    if ( FAILED () )
-                        free ( copy );
-                }
-            }
+            /* convert to ascii-33 */
+            char * copy = malloc ( row_len + 1 );
+            if ( copy == NULL )
+                SYSTEM_ERROR ( xcNoMemory, "allocating %u bytes for QUALITY row %ld", row_len + 1, self -> cur_row );
             else
             {
-                /* create new string */
-                new_data = NGS_StringMake ( ctx, base, row_len );
+                uint32_t i;
+                const uint8_t * orig = base;
+                for ( i = 0; i < row_len; ++ i )
+                    copy [ i ] = ( char ) ( orig [ i ] + 33 );
+                copy [ i ] = 0;
+
+                new_data = NGS_StringMakeOwned ( ctx, copy, row_len );
+                if ( FAILED () )
+                    free ( copy );
             }
             
             if ( ! FAILED () )

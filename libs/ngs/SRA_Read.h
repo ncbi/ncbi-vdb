@@ -55,7 +55,6 @@ enum SequenceTableColumn
 {
     seq_READ_TYPE,
     seq_READ,
-    seq_QUALITY_ASCII,
     seq_QUALITY,
     seq_READ_LEN,
     seq_NAME,

@@ -783,6 +783,7 @@ TEST_CASE(NGS_FailedToOpen)
                  string ( WHAT () ) );
     }
     REQUIRE_FAILED ();
+    REQUIRE_RC ( KRepositoryMgrRelease ( repoMgr ) );
 }
 
 //////////////////////////////////////////// Open read collection using system path
