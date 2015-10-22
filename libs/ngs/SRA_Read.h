@@ -93,8 +93,6 @@ struct SRA_Read
     uint32_t frag_start;
     uint32_t frag_len;
 
-    bool has_phred_33;
-
     bool seen_first;
     bool seen_first_frag;
     bool seen_last_frag;
