@@ -360,14 +360,35 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                             /* otherwise, ask resolver to find a local path,
                                or get a remote path and optional place to cache data */
                             rc = VResolverQuery ( resolver, eProtocolHttp, orig, & plocal, & premote, & pcache );
+                            if ( rc != 0 && GetRCState ( rc ) == rcNotFound )
+                            {
+                                rc_t rc2 = VPathAddRef ( orig );
+                                if ( rc2 == 0 )
+                                {
+                                    plocal = orig;
+                                    rc = 0;
+                                }
+
+                            }
                         }
                         if ( rc == 0 )
                         {
                             /* now open the principal database */
                             if ( plocal != NULL )
                                 rc = VDBManagerVPathOpenLocalDBRead ( self, dbp, schema, plocal );
-                            else
+                            else if ( premote != NULL )
                                 rc = VDBManagerVPathOpenRemoteDBRead ( self, dbp, schema, premote, pcache );
+                            else
+                            {
+                                /* resolver was unable to resolve this, so perhaps it was
+                                   not an accession or OID, but a simple file name */
+                                rc = VPathAddRef ( orig );
+                                if ( rc == 0 )
+                                {
+                                    plocal = orig;
+                                    rc = VDBManagerVPathOpenLocalDBRead ( self, dbp, schema, plocal );
+                                }
+                            }
                             if ( rc == 0 )
                             {
                                 rc_t rc2;
