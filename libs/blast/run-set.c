@@ -783,7 +783,7 @@ static rc_t _VdbBlastDbFindFirstRead(const VdbBlastDb *self, ReadDesc *rd) {
             uint32_t elem_off = 0;
             rc = VCursorCellDataDirect(curs, spot, self->col_READ_TYPE,
                 &elem_bits, &base, &elem_off, &elem_cnt);
-
+{
             INSDC_read_type *aRt = (INSDC_read_type*)base;
 
             if (rc != 0) {
@@ -800,6 +800,7 @@ static rc_t _VdbBlastDbFindFirstRead(const VdbBlastDb *self, ReadDesc *rd) {
                     return rc;
                 }
             }
+}
         }
     }
 
