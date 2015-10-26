@@ -27,6 +27,8 @@
  *
  */
 
+/*#include "blast-mgr.h" */
+
 #ifndef _h_insdc_insdc_
 #include <insdc/insdc.h> /* INSDC_coord_len */
 #endif
@@ -68,7 +70,7 @@ typedef enum {
 } EReadIdType;
 
 typedef struct {
-    EReadIdType type;
+    EReadIdType idType;
     uint32_t runBits;
     bool varReadN;
 } ReadIdDesc;
@@ -110,6 +112,14 @@ typedef struct {
     /* WGS */
     const struct VCursor *cursACCESSION;
     uint32_t col_ACCESSION;
+
+    /* SRA_PLATFORM_PACBIO_SMRT : variable read number */
+    const struct VCursor *cursSeq;
+    uint32_t col_READ_FILTER;
+    uint32_t col_READ_LEN;
+    uint32_t col_READ_TYPE;
+    uint32_t col_TRIM_LEN;
+    uint32_t col_TRIM_START;
 } VdbBlastDb;
 
 typedef struct {
@@ -282,6 +292,8 @@ uint64_t _VdbBlastRunSet2naRead(const VdbBlastRunSet *self,
     uint8_t *buffer, size_t buffer_size, KVdbBlastReadMode mode);
 
 void _VdbBlastRunSetBeingRead(const VdbBlastRunSet *self);
+
+void _VdbBlastRunSetFindFirstRead(const VdbBlastRunSet *self);
 
 #ifdef __cplusplus
 }
