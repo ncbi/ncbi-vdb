@@ -769,6 +769,12 @@ public class ngs_test_CSRA1 {
         assertEquals( "C1ELY.6", gr . getName () );
     }
     @Test
+    public void ReadGroup_has () throws ngs.ErrorMsg
+    {
+        assert ( NGS.openReadCollection( PrimaryOnly ).hasReadGroup ( "C1ELY.6" ) );
+        assert ( ! NGS.openReadCollection( PrimaryOnly ).hasReadGroup ( "non-existent read-group" ) );
+    }
+    @Test
     public void ReadGroup_getStatistics() throws ngs.ErrorMsg
     {
         ngs.ReadGroup gr = NGS . openReadCollection ( WithGroups ) . getReadGroup ( "GS57510-FS3-L03" );

@@ -132,6 +132,10 @@ bool SRA_ReadCollectionHasReadGroup ( SRA_ReadCollection * self, ctx_t ctx, cons
             {
                 ret = true;
             }
+            CATCH_ALL()
+            {
+                CLEAR();
+            }
 
             NGS_StringRelease ( name, ctx );
         }

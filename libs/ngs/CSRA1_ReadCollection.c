@@ -267,6 +267,10 @@ bool CSRA1_ReadCollectionHasReadGroup ( CSRA1_ReadCollection * self, ctx_t ctx, 
             {
                 ret = true;
             }
+            CATCH_ALL()
+            {
+                CLEAR();
+            }
 
             NGS_StringRelease ( name, ctx );
         }

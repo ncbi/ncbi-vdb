@@ -1017,6 +1017,12 @@ FIXTURE_TEST_CASE(CSRA1_ReadGroup_GetName, CSRA1_Fixture)
     REQUIRE_EQ ( ngs :: String("C1ELY.6"), rg . getName () );
 }
 
+FIXTURE_TEST_CASE(CSRA1_ReadGroup_HasReadGroup, CSRA1_Fixture)
+{
+    REQUIRE ( ncbi::NGS::openReadCollection( CSRA1_PrimaryOnly ).hasReadGroup( "C1ELY.6" ) );
+    REQUIRE ( ! ncbi::NGS::openReadCollection( CSRA1_PrimaryOnly ).hasReadGroup( "non-existent read group" ) );
+}
+
 FIXTURE_TEST_CASE(CSRA1_ReadGroup_GetStatistics, CSRA1_Fixture)
 {
     ngs :: ReadGroup rg = ncbi :: NGS :: openReadCollection ( CSRA1_WithGroups ) . getReadGroup ( "GS57510-FS3-L03" );

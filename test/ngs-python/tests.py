@@ -446,6 +446,10 @@ class Tests(unittest.TestCase):
         gr = NGS.openReadCollection(PrimaryOnly).getReadGroup("C1ELY.6")
         self.assertEqual("C1ELY.6", gr.getName())
 
+    def test_ReadGroup_has(self):
+        assert ( NGS.openReadCollection(PrimaryOnly).hasReadGroup("C1ELY.6") )
+        assert ( not NGS.openReadCollection(PrimaryOnly).hasReadGroup("non-existent read group") )
+
     # def test_ReadGroup_getRead(self):
         # gr = NGS.openReadCollection(PrimaryOnly).getReadGroup("C1ELY.6")
         # r = gr.getRead(PrimaryOnly + ".R.1")
