@@ -132,32 +132,26 @@ bool SRA_DB_ReadCollectionHasReadGroup ( SRA_DB_ReadCollection * self, ctx_t ctx
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
 
+    bool ret = false;
+
     if ( self -> curs == NULL )
     {
         ON_FAIL ( self -> curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ) )
-            return false;
+            return ret;
     }
     TRY ( GetReadGroupInfo( self, ctx ) )
     {
         TRY ( NGS_String * name = NGS_StringMakeCopy ( ctx, spec, string_size ( spec ) ) )
         {
-            /* TBD - HACK ALERT
-               this function needs to access an index (usually within metadata),
-               or else perform a table scan on the SPOT_GROUP column for the name. */
-            TRY ( NGS_ReadGroup * ret = SRA_ReadGroupMake ( ctx, self -> curs, self -> group_info, self -> run_name, name) )
+            TRY ( SRA_ReadGroupInfoFind ( self -> group_info, ctx, name ) )
             {
-#pragma message "TBD - FIX ME PROPERLY"
-                NGS_ReadGroupRelease ( ret, ctx );
-                /* TBD - END HACK */
-                NGS_StringRelease ( name, ctx );
-                /* TBD - also fix the return */
-                return ret != NULL;
+                ret = true;
             }
 
             NGS_StringRelease ( name, ctx );
         }
     }
-    return false;
+    return ret;
 }
 
 static
