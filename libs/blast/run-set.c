@@ -1716,10 +1716,10 @@ VdbBlastStatus _VdbBlastRunFillReadDesc(VdbBlastRun *self,
             read_id /= rd->readIdDesc.runBits;
         }
         if (rd->spotBits > 0) {
+            rc_t rc = 0;
             desc->read = read_id / rd->spotBits;
             desc->spot = read_id % rd->spotBits;
-            rc_t rc
-                = _VdbBlastDbGetNReads(self->obj, desc->spot, &desc->nReads);
+            rc = _VdbBlastDbGetNReads(self->obj, desc->spot, &desc->nReads);
             if (rc == 0 && desc->read > 0 && desc->spot > 0) {
                 desc->tableId = VDB_READ_UNALIGNED;
                 S
