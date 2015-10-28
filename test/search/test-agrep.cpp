@@ -418,11 +418,33 @@ TEST_CASE ( Nucstrstr_Positional_OR_NotFound )
 
 TEST_CASE ( Nucstrstr_Positional_AND_Found_LastMatchPositionReported )
 {   
-    REQUIRE_EQ ( 4, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGTTGCA", "CGTA&TACG", true ) );
+    REQUIRE_EQ ( 4, RunNucStrtr ( "ACGTACGT", "CGTA&TACG", true ) );
 }
 TEST_CASE ( Nucstrstr_Positional_AND_NotFound )
 {   
-    REQUIRE_EQ ( 0, RunNucStrtr ( "ACGTACGTACGTACGTACGTACGTACGTACGTTGCA", "TACG&TACA", true ) );
+    REQUIRE_EQ ( 0, RunNucStrtr ( "ACGTACGT", "TACG&TACA", true ) );
+}
+
+TEST_CASE ( Nucstrstr_Positional_AND_OR_Found_1 )
+{   
+    REQUIRE_EQ ( 3, RunNucStrtr ( "ACGTACGT", "CGTA&TACC|GTAC", true ) );
+}
+TEST_CASE ( Nucstrstr_Positional_AND_OR_Found_2 )
+{   
+    REQUIRE_EQ ( 3, RunNucStrtr ( "ACGTACGT", "CGTA&(TACC|GTAC)", true ) );
+}
+TEST_CASE ( Nucstrstr_Positional_AND_OR_Found_3 )
+{   
+    REQUIRE_EQ ( 2, RunNucStrtr ( "ACGTACGT", "(TACC|GTAC)&&CGTA", true ) );
+}
+
+TEST_CASE ( Nucstrstr_Positional_AND_OR_NOT_NotFound )
+{   
+    REQUIRE_EQ ( 0, RunNucStrtr ( "ACGTACGT", "(TACC|GTAC)&&!CGTA", true ) );
+}
+TEST_CASE ( Nucstrstr_Positional_AND_OR_NOT_Found )
+{   
+    REQUIRE_EQ ( 1, RunNucStrtr ( "ACGTACGT", "(TACC|GTAC)&&!CATA", true ) );
 }
 
 //////////////////////////////////////////// Main
