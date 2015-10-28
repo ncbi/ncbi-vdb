@@ -300,9 +300,7 @@ static NGS_Alignment *BAM_ReferenceGetAlignmentSlice(NGS_Reference *const object
 
     if (!wants_primary && !wants_secondary)
 EMPTY_ITERATOR: {
-        NGS_String *const name = NGS_StringMake(ctx, self->parent->path + self->parent->namestart, self->parent->namelen);
-        
-        return NGS_AlignmentMakeNull(ctx, name);
+        return NGS_AlignmentMakeNull(ctx, self->parent->path + self->parent->namestart, self->parent->namelen);
     }
     else {
         HeaderRefInfo const *const ref = &self->parent->references->ref[self->cur];
@@ -471,9 +469,7 @@ static NGS_Alignment * BAM_ReadCollectionAlignments(NGS_ReadCollection *const vp
     BAM_ReadCollection *const self = (BAM_ReadCollection *)vp;
     
     if (!wants_primary && !wants_secondary) {
-        NGS_String *const name = NGS_StringMake(ctx, self->path + self->namestart, self->namelen);
-        
-        return NGS_AlignmentMakeNull(ctx, name);
+        return NGS_AlignmentMakeNull(ctx, self->path + self->namestart, self->namelen);
     }
     else {
         NGS_Alignment *const rslt = BAM_AlignmentMake(ctx, wants_primary, wants_secondary, BAM_GetRecord, NGS_RefcountDuplicate(&self->dad.dad, ctx), self->path + self->namestart);

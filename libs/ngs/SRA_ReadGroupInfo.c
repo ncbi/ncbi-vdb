@@ -305,7 +305,7 @@ const SRA_ReadGroupInfo* SRA_ReadGroupInfoMake ( ctx_t ctx, const struct VTable*
     return NULL;
 }
 
-uint32_t SRA_ReadGroupInfoFind ( const SRA_ReadGroupInfo* self, ctx_t ctx, const struct NGS_String * name )
+uint32_t SRA_ReadGroupInfoFind ( const SRA_ReadGroupInfo* self, ctx_t ctx, char const* name, size_t name_size )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
     
@@ -313,21 +313,19 @@ uint32_t SRA_ReadGroupInfoFind ( const SRA_ReadGroupInfo* self, ctx_t ctx, const
     assert ( name != NULL );
 
     {
-        size_t name_size = NGS_StringSize ( name, ctx );
-        const char* name_data = NGS_StringData ( name, ctx );
         uint32_t i;
         for ( i = 0; i < self -> count; ++i )
         {
             if ( string_cmp ( NGS_StringData ( self -> groups [ i ] . name, ctx ), 
                               NGS_StringSize ( self -> groups [ i ] . name, ctx ), 
-                              name_data, 
+                              name, 
                               name_size, 
                               ( uint32_t ) name_size ) == 0 )
             {
                 return i;
             }
         }
-        INTERNAL_ERROR ( xcStringNotFound, "Read Group '%.*s' is not found", name_size, name_data );
+        INTERNAL_ERROR ( xcStringNotFound, "Read Group '%.*s' is not found", name_size, name );
     }
     return 0;
 }

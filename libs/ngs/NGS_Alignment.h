@@ -178,7 +178,7 @@ void NGS_AlignmentInit ( ctx_t ctx, NGS_ALIGNMENT * ref, const NGS_Alignment_vt 
 /* NullAlignment
  * will error out on any call; can be used as an empty alignment iterator
  */
-struct NGS_Alignment * NGS_AlignmentMakeNull ( ctx_t ctx, const struct NGS_String * run_name );
+struct NGS_Alignment * NGS_AlignmentMakeNull ( ctx_t ctx, char const * run_name, size_t run_name_size );
 
 #ifdef __cplusplus
 }
