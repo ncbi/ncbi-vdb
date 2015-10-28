@@ -613,12 +613,8 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
     
     if ( size == 0 )
     {
-        TRY ( NGS_String * str = NGS_StringMake ( ctx, "", 0) )
-        {
-            NGS_Alignment* ret = NGS_AlignmentMakeNull ( ctx, str );
-            NGS_StringRelease ( str, ctx );
-            return ret;
-        }
+        NGS_Alignment* ret = NGS_AlignmentMakeNull ( ctx, "", 0 );
+        return ret;
     }
 
     {

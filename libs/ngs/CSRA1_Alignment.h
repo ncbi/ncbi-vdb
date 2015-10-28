@@ -54,7 +54,7 @@ struct NGS_Cursor const* CSRA1_AlignmentMakeDb( ctx_t ctx,
 struct NGS_Alignment * CSRA1_AlignmentMake ( ctx_t ctx, 
                                              struct CSRA1_ReadCollection * coll,
                                              int64_t alignId, 
-                                             const struct NGS_String * run_name, 
+                                             char const* run_name, size_t run_name_size,
                                              bool primary, 
                                              uint64_t id_offset );
 

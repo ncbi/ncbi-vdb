@@ -182,7 +182,7 @@ FIXTURE_TEST_CASE ( ReadGroupInfo_Find_Found, ReadGroupInfo_Fixture )
     MakeSRA ( SRA_Accession_WithReadGroups );
 
     NGS_String * s = NGS_StringMake ( ctx, "S104_V2", strlen ( "S104_V2" ) );
-    REQUIRE_EQ ( (uint32_t)2, SRA_ReadGroupInfoFind ( m_rgi, ctx, s ) );
+    REQUIRE_EQ ( (uint32_t)2, SRA_ReadGroupInfoFind ( m_rgi, ctx, NGS_StringData(s, ctx), NGS_StringSize(s, ctx) ) );
     REQUIRE ( ! FAILED () );
     NGS_StringRelease ( s, ctx );
     
@@ -312,7 +312,7 @@ FIXTURE_TEST_CASE(NGS_Id_Parse_Read, Id_Fixture)
     ENTRY;
     
     MakeId ( NGSObject_Read, 12345678 ); 
-    struct NGS_Id parsed = NGS_IdParse ( id, ctx );
+    struct NGS_Id parsed = NGS_IdParse ( NGS_StringData(id, ctx), NGS_StringSize(id, ctx), ctx );
     REQUIRE_EQ ( string ( "run" ), string ( parsed . run . addr, parsed . run . len ) );
     REQUIRE_EQ ( (int32_t)NGSObject_Read, parsed . object );
     REQUIRE_EQ ( (int64_t)12345678, parsed . rowId );
@@ -326,7 +326,7 @@ FIXTURE_TEST_CASE(NGS_Id_Parse_Primary, Id_Fixture)
     ENTRY;
     
     MakeId ( NGSObject_PrimaryAlignment, 12345678 ); 
-    struct NGS_Id parsed = NGS_IdParse ( id, ctx );
+    struct NGS_Id parsed = NGS_IdParse ( NGS_StringData(id, ctx), NGS_StringSize(id, ctx), ctx );
     REQUIRE_EQ ( string ( "run" ), string ( parsed . run . addr, parsed . run . len ) );
     REQUIRE_EQ ( (int32_t)NGSObject_PrimaryAlignment, parsed . object );
     REQUIRE_EQ ( (int64_t)12345678, parsed . rowId );
@@ -340,7 +340,7 @@ FIXTURE_TEST_CASE(NGS_Id_Parse_Secondary, Id_Fixture)
     ENTRY;
     
     MakeId ( NGSObject_SecondaryAlignment, 12345678 ); 
-    struct NGS_Id parsed = NGS_IdParse ( id, ctx );
+    struct NGS_Id parsed = NGS_IdParse ( NGS_StringData(id, ctx), NGS_StringSize(id, ctx), ctx );
     REQUIRE_EQ ( string ( "run" ), string ( parsed . run . addr, parsed . run . len ) );
     REQUIRE_EQ ( (int32_t)NGSObject_SecondaryAlignment, parsed . object );
     REQUIRE_EQ ( (int64_t)12345678, parsed . rowId );
@@ -354,7 +354,7 @@ FIXTURE_TEST_CASE(NGS_Id_Parse_ReadFragment, Id_Fixture)
     ENTRY;
     
     MakeFragmentId ( false, 12345678, 1 ); 
-    struct NGS_Id parsed = NGS_IdParse ( id, ctx );
+    struct NGS_Id parsed = NGS_IdParse ( NGS_StringData(id, ctx), NGS_StringSize(id, ctx), ctx );
     REQUIRE_EQ ( string ( "run" ), string ( parsed . run . addr, parsed . run . len ) );
     REQUIRE_EQ ( (int32_t)NGSObject_ReadFragment, parsed . object );
     REQUIRE_EQ ( (int64_t)12345678, parsed . rowId );
@@ -368,7 +368,7 @@ FIXTURE_TEST_CASE(NGS_Id_Parse_AlignmentFragment, Id_Fixture)
     ENTRY;
     
     MakeFragmentId ( true, 12345678, 2 ); 
-    struct NGS_Id parsed = NGS_IdParse ( id, ctx );
+    struct NGS_Id parsed = NGS_IdParse ( NGS_StringData(id, ctx), NGS_StringSize(id, ctx), ctx );
     REQUIRE_EQ ( string ( "run" ), string ( parsed . run . addr, parsed . run . len ) );
     REQUIRE_EQ ( (int32_t)NGSObject_AlignmentFragment, parsed . object );
     REQUIRE_EQ ( (int64_t)12345678, parsed . rowId );
