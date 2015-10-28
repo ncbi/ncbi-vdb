@@ -315,6 +315,8 @@ static uint32_t _VCursorReadReaderCols(const VCursor *self,
 
     row_id = desc->spot;
     nReads = desc->run->rd.nReads;
+    assert(desc->nReads);
+    nReads = desc->nReads;
 
     if (cols->nReadsAllocated != 0 && cols->nReadsAllocated < nReads) {
         /* LOG */
@@ -396,6 +398,23 @@ bool _ReadDescNextRead(ReadDesc *self)
 
     rd = &self->run->rd;
 
+    if (_VdbBlastRunVarReadNum(self->run)) {
+        bool found = false;
+        if (_ReadDescFindNextRead(self, &found)) {
+            S
+            return false;
+        }
+        else if (found) {
+            ReadDescFixReadId(self);
+            S
+            return true;
+        }
+        else {
+            S
+            return false;
+        }
+    }
+
     if (rd->nBioReads == 0) {
         S
         return false;
@@ -467,7 +486,7 @@ static uint64_t _Reader2naReset(Reader2na *self,
     assert(self && alive);
 
     mode = self->mode;
-    run = self->desc.run;
+    run = (VdbBlastRun*)self->desc.run;
     read_id = self->desc.read_id;
     table_id = self->desc.tableId;
 
@@ -579,7 +598,9 @@ uint32_t _Reader2naCalcReadReaderColsParams(const ReadDesc *desc,
 
     assert(cols->read_len && cols->read_filter);
     for (i = 1; i < desc->read; ++i) {
-        assert(i <= desc->run->rd.nReads);
+        if (!_VdbBlastRunVarReadNum(desc->run)) {
+            assert(i <= desc->run->rd.nReads);
+        }
 
         /* do not count CMP_READ-s where primary_alignment_id != 0
            as are not stored in CMP_READ) */
@@ -690,7 +711,9 @@ bool _Reader2naNextData(Reader2na *self,
     }
 
     assert(self->cols.read_len && self->cols.read_filter);
-    assert(desc->read <= desc->run->rd.nReads);
+    if (!_VdbBlastRunVarReadNum(desc->run)) {
+        assert(desc->read <= desc->run->rd.nReads);
+    }
 
     to_read = _Reader2naCalcReadReaderColsParams(&self->desc, &self->cols,
         &start, min_read_length);
@@ -858,7 +881,7 @@ uint64_t _Reader2naRead(Reader2na *self,
     assert(desc->run->path);
 
     *status = eVdbBlastNoErr;
-    if (desc->run->rd.nBioReads == 0) {
+    if (!_VdbBlastRunVarReadNum(desc->run) && desc->run->rd.nBioReads == 0) {
         S
         return 0;
     }
