@@ -63,11 +63,9 @@
     <ClCompile Include="..\..\..\libs\xfs\gapk.c" />
     <ClCompile Include="..\..\..\libs\xfs\gapks.c" />
     <ClCompile Include="..\..\..\libs\xfs\gapka.c" />
-    <ClCompile Include="..\..\..\libs\xfs\cache.c" />
-    <ClCompile Include="..\..\..\libs\xfs\xcache.c" />
+    <ClCompile Include="..\..\..\libs\xfs\gapc.c" />
     <ClCompile Include="..\..\..\libs\xfs\gap.c" />
     <ClCompile Include="..\..\..\libs\xfs\gapf.c" />
-    <ClCompile Include="..\..\..\libs\xfs\bean.c" />
     <ClCompile Include="..\..\..\libs\xfs\lockdpt.c" />
     <ClCompile Include="..\..\..\libs\xfs\lreader.c" />
     <ClCompile Include="..\..\..\libs\xfs\schwarzschraube.c" />

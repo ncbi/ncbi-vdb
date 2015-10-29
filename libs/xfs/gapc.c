@@ -68,7 +68,6 @@ struct _CacheDirNode {
     struct XFSNode node;
 
     uint32_t project_id; /* GaP project Id */
-    bool read_only;      /* Read Only mode */
     const char * path;   /* Path for object */
     const char * perm;   /* Permissions in format "rwxrwxrwx u:g:o" */
 };
@@ -266,8 +265,7 @@ _CacheDirNodeForPath (
                     const struct XFSNode ** Node,
                     const char * Path,
                     const char * Name,
-                    uint32_t ProjectId,
-                    bool ReadOnly
+                    uint32_t ProjectId
 )
 {
     rc_t RCt;
@@ -312,7 +310,6 @@ _CacheDirNodeForPath (
                                 NULL
                                 );
                         ( ( struct _CacheDirNode * ) TheNode ) -> project_id = ProjectId;
-                        ( ( struct _CacheDirNode * ) TheNode ) -> read_only = ReadOnly;
                         break;
                 default :
                         RCt = XFS_RC ( rcInvalid );
@@ -384,8 +381,7 @@ _CacheDirNodeFindNode_v1 (
                                         Node,
                                         CacheNode -> path,
                                         XFSPathGet ( xPath ),
-                                        CacheNode -> project_id,
-                                        CacheNode -> read_only
+                                        CacheNode -> project_id
                                         );
             XFSPathRelease ( xPath );
         }
@@ -520,8 +516,7 @@ _CacheDir_find_v1 (
                                 Node,
                                 CacheNode -> path,
                                 Name,
-                                CacheNode -> project_id,
-                                CacheNode -> read_only
+                                CacheNode -> project_id
                                 );
 
     return RCt;
@@ -542,39 +537,27 @@ _CacheDir_delete_v1 (
     NativeDir = NULL;
     CacheNode = NULL;
 
-printf ( " [JOO] [%d] [%d]\n", __LINE__, RCt );
     XFS_CAN ( self )
     XFS_CAN ( Name )
 
     CacheNode = ( struct _CacheDirNode * ) XFSEditorNode (
                                                 & ( self -> Papahen )
                                                 );
-printf ( " [JOO] [%d] [%d]\n", __LINE__, RCt );
     XFS_CAN ( CacheNode )
     XFS_CAN ( CacheNode -> path )
 
-    if ( CacheNode -> read_only ) {
-printf ( " [JOO] [%d] [%d]\n", __LINE__, RCt );
-        RCt = XFS_RC ( rcUnauthorized );
-    }
-    else {
-printf ( " [JOO] [%d] [%d]\n", __LINE__, RCt );
-        RCt = KDirectoryNativeDir ( & NativeDir );
-printf ( " [JOO] [%d] [%d]\n", __LINE__, RCt );
-        if ( RCt == 0 ) {
-            RCt = KDirectoryRemove (
-                                    NativeDir,
-                                    true,
-                                    "%s/%s",
-                                    CacheNode -> path,
-                                    Name
-                                    );
-printf ( " [JOO] [%d] [%d] [%s/%s]\n", __LINE__, RCt, CacheNode -> path, Name );
+    RCt = KDirectoryNativeDir ( & NativeDir );
+    if ( RCt == 0 ) {
+        RCt = KDirectoryRemove (
+                                NativeDir,
+                                true,
+                                "%s/%s",
+                                CacheNode -> path,
+                                Name
+                                );
 
-            KDirectoryRelease ( NativeDir );
-        }
+        KDirectoryRelease ( NativeDir );
     }
-printf ( " [JOO] [%d] [%d]\n", __LINE__, RCt );
 
     return RCt;
 }   /* _CacheDir_delete_v1 () */
@@ -664,15 +647,10 @@ _CacheAttr_permissions_v1 (
     XFS_CAN ( Node )
     XFS_CAN ( Node -> path )
 
-    if ( Node -> read_only ) {
-        * Permissions = XFSPermRODefContChar ();
-    }
-    else {
-        * Permissions = Node -> perm == NULL
-                                        ? XFSPermRWDefContChar ()
-                                        : Node -> perm
-                                        ;
-    }
+    * Permissions = Node -> perm == NULL
+                                    ? XFSPermRWDefContChar ()
+                                    : Node -> perm
+                                    ;
 
     return RCt;
 }   /* _CacheAttr_permissions_v1 () */
@@ -878,8 +856,7 @@ _CacheDirNodeConstructor (
     RCt = XFSGapCacheNodeMake (
                      & TheNode,
                      ProjectId,
-                     XFSModelNodeReadOnly ( Template ),
-                     XFSModelNodeProperty ( Template, XFS_MODEL_MODE )
+                     XFSModelNodeSecurity ( Template )
                      );
     if ( RCt == 0 ) {
         * Node = TheNode;
@@ -907,7 +884,6 @@ rc_t CC
 XFSGapCacheNodeMake (
             struct XFSNode ** Node,
             uint32_t ProjectId,
-            bool ReadOnly,
             const char * Perm
 )
 {
@@ -933,7 +909,6 @@ XFSGapCacheNodeMake (
         RCt = _CacheDirNodeMake ( & TheNode, Path, Name, Perm );
         if ( RCt == 0 ) {
             TheNode -> project_id = ProjectId;
-            TheNode -> read_only = ReadOnly;
 
             * Node = & ( TheNode -> node );
         }

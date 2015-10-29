@@ -1733,6 +1733,7 @@ struct XFSWsDir {
 
     const char * passwd;
     const char * enc_type;
+    bool update;
 
     const struct _DirE * entry;
 };
@@ -2682,6 +2683,8 @@ printf ( " <<<[XFSWsDirDestroy] [%p]\n", ( void * ) self );
         Dir -> enc_type = NULL;
     }
 
+    Dir -> update = false;
+
     free ( Dir );
 
     return 0;
@@ -3099,6 +3102,10 @@ XFSWsDirRename (
     XFS_CAN ( OldName )
     XFS_CAN ( NewName )
 
+    if ( ! Dir -> update ) {
+        return XFS_RC ( rcUnauthorized );
+    }
+
 #ifdef JOJOBA
 printf ( " <<<[XFSWsDirRename] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
@@ -3215,6 +3222,10 @@ XFSWsDirRemove (
     XFS_CAN ( self )
     XFS_CAN ( Format )
 
+    if ( ! Dir -> update ) {
+        return XFS_RC ( rcUnauthorized );
+    }
+
 #ifdef JOJOBA
 printf ( " <<<[XFSWsDirRemove] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
@@ -3320,6 +3331,7 @@ XFSWsDirClearDir (
 )
 {
     rc_t RCt;
+    struct XFSWsDir * Dir;
     struct KNamelist * List;
     uint32_t LQty, Idx;
     const char * SubName;
@@ -3327,6 +3339,7 @@ XFSWsDirClearDir (
     va_list xArgs;
 
     RCt = 0;
+    Dir = ( struct XFSWsDir * ) self;
     List = NULL;
     LQty = Idx = 0;
     SubName = NULL;
@@ -3334,6 +3347,10 @@ XFSWsDirClearDir (
 
     XFS_CAN ( self )
     XFS_CAN ( Format )
+
+    if ( ! Dir -> update ) {
+        return XFS_RC ( rcUnauthorized );
+    }
 
 #ifdef JOJOBA
 printf ( " <<<[XFSWsDirClearDir] [%p]\n", ( void * ) self );
@@ -3498,6 +3515,10 @@ XFSWsDirSetAccess (
 
     XFS_CAN ( self )
     XFS_CAN ( Format )
+
+    if ( ! Dir -> update ) {
+        return XFS_RC ( rcUnauthorized );
+    }
 
 #ifdef JOJOBA
 printf ( " <<<[XFSWsDirSetAccess] [%p]\n", ( void * ) self );
@@ -3702,6 +3723,10 @@ XFSWsDirOpenFileWrite (
     XFS_CAN ( File )
     XFS_CAN ( Format )
 
+    if ( ! Dir -> update ) {
+        return XFS_RC ( rcUnauthorized );
+    }
+
 // #ifdef JOJOBA
 printf ( " <<<[XFSWsDirOpenFileWrite] [%p] u[%d]\n", ( void * ) self, Update );
 // #endif /* JOJOBA */
@@ -3795,6 +3820,10 @@ XFSWsDirCreateFile	(
     XFS_CAN ( self )
     XFS_CAN ( File )
     XFS_CAN ( Format )
+
+    if ( ! Dir -> update ) {
+        return XFS_RC ( rcUnauthorized );
+    }
 
 
 #ifdef JOJOBA
@@ -3991,6 +4020,10 @@ XFSWsDirSetFileSize (
     XFS_CAN ( self )
     XFS_CAN ( Format )
 
+    if ( ! Dir -> update ) {
+        return XFS_RC ( rcUnauthorized );
+    }
+
 #ifdef JOJOBA
 printf ( " <<<[XFSWsDirSetFileSize] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
@@ -4145,6 +4178,10 @@ XFSWsDirCreateDir (
     XFS_CAN ( self )
     XFS_CAN ( Format )
 
+    if ( ! Dir -> update ) {
+        return XFS_RC ( rcUnauthorized );
+    }
+
 #ifdef JOJOBA
 printf ( " <<<[XFSWsDirCreateDir] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
@@ -4195,12 +4232,10 @@ printf ( " <<<[XFSWsDirCreateDir] [%p]\n", ( void * ) self );
                                                 Entry -> eff_name
                                                 );
                         if ( RCt == 0 ) {
-printf ( " [CEDIR] [PARENT] [%s/%s]\n", _WsDirPath ( Dir ), XFSPathGet ( EffPath ) );
                             RCt = _SyncronizeDirectoryContentNoLock (
                                                                 Parent
                                                                 );
                             if ( RCt == 0 ) {
-printf ( " [CEDIR] [ENTRY] [%s/%s/%s]\n", _WsDirPath ( Dir ), XFSPathGet ( EffPath ), Entry -> eff_name );
                                 RCt = _SyncronizeDirectoryContentNoLock (
                                                                 Entry
                                                                 );
@@ -4336,6 +4371,10 @@ XFSWsDirSetDate (
 
     XFS_CAN ( self )
     XFS_CAN ( Format )
+
+    if ( ! Dir -> update ) {
+        return XFS_RC ( rcUnauthorized );
+    }
 
 #ifdef JOJOBA
 printf ( " <<<[XFSWsDirSetDate] [%p]\n", ( void * ) self );
@@ -4840,6 +4879,8 @@ _WsDirAlloc (
     if ( RetDir == NULL ) {
         return XFS_RC ( rcExhausted );
     }
+
+    RetDir -> update = rcUnauthorized;
 
             /* First - init directory
              */

@@ -141,7 +141,8 @@ XFS_EXTERN rc_t CC XFSWorkspaceNodeMake (
                             const char * Name,
                             const char * Path,
                             const char * Passwd,
-                            const char * EncType    /* could be NULL */
+                            const char * EncType,   /* could be NULL */
+                            bool ReadOnly
                             );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
@@ -206,7 +207,6 @@ XFS_EXTERN rc_t CC XFSGapKartFilesNodeMake (
 XFS_EXTERN rc_t CC XFSGapCacheNodeMake (
                             struct XFSNode ** Node,
                             uint32_t ProjectId,     /* public if NULL */
-                            bool ReadOnly,
                             const char * Perm       /* could be NULL */
                             );
 

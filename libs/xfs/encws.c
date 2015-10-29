@@ -308,7 +308,6 @@ _EncWsFileNodeFindNode_v1 (
     NodeName = NULL;
     IsLast = false;
 
-printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
     RCt = XFSNodeFindNodeCheckInitStandard (
                                             self,
                                             Path,
@@ -318,7 +317,6 @@ printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
                                             & PathCount,
                                             & IsLast
                                             );
-printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
     if ( RCt == 0 ) {
         if ( IsLast ) {
             RCt = XFSNodeAddRef ( self );
@@ -327,7 +325,6 @@ printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
         }
     }
 
-printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
 
     return RCt;
 }   /* _EncWsFileNodeFindNode () */
@@ -1650,7 +1647,7 @@ _EncWsNodeConstructor (
          */
     RCt = XFSEncDirectoryOpen (
                 & Workspace,
-                true,
+                ! XFSModelNodeReadOnly ( Template ),
                 XFSModelNodeProperty ( Template, XFS_MODEL_PASSWD ),
                 XFSModelNodeProperty ( Template, XFS_MODEL_ENCTYPE ),
                 XFSModelNodeProperty ( Template, XFS_MODEL_SOURCE )
@@ -1693,7 +1690,8 @@ XFSWorkspaceNodeMake (
             const char * Name,
             const char * Path,
             const char * Password,
-            const char * EncType
+            const char * EncType,
+            bool ReadOnly
 )
 {
     rc_t RCt;
@@ -1712,7 +1710,7 @@ XFSWorkspaceNodeMake (
 
     RCt = XFSEncDirectoryOpen (
                             & Workspace,
-                            true,
+                            ! ReadOnly,
                             Password,
                             EncType,
                             Path
