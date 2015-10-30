@@ -447,6 +447,11 @@ TEST_CASE ( Nucstrstr_Positional_AND_OR_NOT_Found )
     REQUIRE_EQ ( 1, RunNucStrtr ( "ACGTACGT", "(TACC|GTAC)&&!CATA", true ) );
 }
 
+TEST_CASE ( Nucstrstr_Positional_Error )
+{   
+    REQUIRE_THROW ( RunNucStrtr ( "ACGTACGT", "(TACC", true ) );
+}
+
 //////////////////////////////////////////// Main
 extern "C"
 {
