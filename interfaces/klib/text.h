@@ -36,6 +36,7 @@
 #endif
 
 #include <stdarg.h>
+#include <string.h> /* memcmp */
 
 #ifdef __cplusplus
 extern "C" {
