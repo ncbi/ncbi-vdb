@@ -470,7 +470,7 @@ LIB_EXPORT uint32_t VdbBlastMgrKConfigPrint(const VdbBlastMgr *self) {
     }
 
     if (rc != 0) {
-        S
+        LOGERR(klogInt, rc, "An error occured when printing Configiration");
         return eVdbBlastErr;
     }
 
@@ -483,7 +483,7 @@ LIB_EXPORT uint32_t CC VdbBlastMgrKDbgSetString(const VdbBlastMgr *self,
     rc_t rc = KDbgSetString(string);
 
     if (rc != 0) {
-        S
+        LOGERR(klogInt, rc, "An error occured when setting KDbgString");
         return eVdbBlastErr;
     }
 
@@ -496,7 +496,7 @@ LIB_EXPORT uint32_t CC VdbBlastMgrKLogHandlerSet(const VdbBlastMgr *self,
     rc_t rc = KLogHandlerSet(writer, data);
 
     if (rc != 0) {
-        S
+        LOGERR(klogInt, rc, "An error occured when setting KLogHandler");
         return eVdbBlastErr;
     }
 
@@ -509,7 +509,8 @@ LIB_EXPORT uint32_t CC VdbBlastMgrKLogHandlerSetStdErr(
     rc_t rc = KLogHandlerSetStdErr();
 
     if (rc != 0) {
-        S
+        LOGERR(
+            klogInt, rc, "An error occured when setting KLogHandler to StdErr");
         return eVdbBlastErr;
     }
 
@@ -522,7 +523,8 @@ LIB_EXPORT uint32_t CC VdbBlastMgrKLogHandlerSetStdOut(
     rc_t rc = KLogHandlerSetStdOut();
 
     if (rc != 0) {
-        S
+        LOGERR(
+            klogInt, rc, "An error occured when setting KLogHandler to StdOut");
         return eVdbBlastErr;
     }
 
@@ -535,7 +537,7 @@ LIB_EXPORT uint32_t CC VdbBlastMgrKLogLibHandlerSet(const VdbBlastMgr *self,
     rc_t rc = KLogLibHandlerSet(writer, data);
 
     if (rc != 0) {
-        S
+        LOGERR(klogInt, rc, "An error occured when setting KLogLibHandler");
         return eVdbBlastErr;
     }
 
@@ -548,7 +550,8 @@ uint32_t CC VdbBlastMgrKLogLibHandlerSetStdErr(const VdbBlastMgr *self)
     rc_t rc = KLogLibHandlerSetStdErr();
 
     if (rc != 0) {
-        S
+        LOGERR(klogInt, rc,
+            "An error occured when setting KLogLibHandler to StdErr");
         return eVdbBlastErr;
     }
 
@@ -561,7 +564,8 @@ uint32_t CC VdbBlastMgrKLogLibHandlerSetStdOut(const VdbBlastMgr *self)
     rc_t rc = KLogLibHandlerSetStdOut();
 
     if (rc != 0) {
-        S
+        LOGERR(klogInt, rc,
+            "An error occured when setting KLogLibHandler to StdOut");
         return eVdbBlastErr;
     }
 
@@ -574,7 +578,7 @@ LIB_EXPORT uint32_t CC VdbBlastMgrKOutHandlerSet(const VdbBlastMgr *self,
     rc_t rc = KOutHandlerSet(writer, data);
 
     if (rc != 0) {
-        S
+        LOGERR(klogInt, rc, "An error occured when setting KOutHandler");
         return eVdbBlastErr;
     }
 
@@ -587,7 +591,8 @@ uint32_t CC VdbBlastMgrKOutHandlerSetStdErr(const VdbBlastMgr *self)
     rc_t rc = KOutHandlerSetStdErr();
 
     if (rc != 0) {
-        S
+        LOGERR(
+            klogInt, rc, "An error occured when setting KOutHandler to StdErr");
         return eVdbBlastErr;
     }
 
@@ -600,7 +605,8 @@ uint32_t CC VdbBlastMgrKOutHandlerSetStdOut(const VdbBlastMgr *self)
     rc_t rc = KOutHandlerSetStdOut();
 
     if (rc != 0) {
-        S
+        LOGERR(
+            klogInt, rc, "An error occured when setting KOutHandler to StdOut");
         return eVdbBlastErr;
     }
 
@@ -613,7 +619,8 @@ uint32_t CC VdbBlastMgrKStsHandlerSetStdErr(const VdbBlastMgr *self)
     rc_t rc = KStsHandlerSetStdErr();
 
     if (rc != 0) {
-        S
+        LOGERR(
+            klogInt, rc, "An error occured when setting KStsHandler to StdErr");
         return eVdbBlastErr;
     }
 
@@ -626,7 +633,8 @@ uint32_t CC VdbBlastMgrKStsHandlerSetStdOut(const VdbBlastMgr *self)
     rc_t rc = KStsHandlerSetStdOut();
 
     if (rc != 0) {
-        S
+        LOGERR(
+            klogInt, rc, "An error occured when setting KStsHandler to StdOut");
         return eVdbBlastErr;
     }
 
@@ -639,7 +647,7 @@ LIB_EXPORT uint32_t CC VdbBlastMgrKLogLevelSet(const VdbBlastMgr *self,
     rc_t rc = KLogLevelSet(lvl);
 
     if (rc != 0) {
-        S
+        LOGERR(klogInt, rc, "An error occured when setting KLogLevel");
         return eVdbBlastErr;
     }
 
