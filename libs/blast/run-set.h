@@ -300,6 +300,9 @@ void _VdbBlastRunSetBeingRead(const VdbBlastRunSet *self);
 VdbBlastStatus _VdbBlastRunSetFindFirstRead
     (const VdbBlastRunSet *self, uint64_t *read_id, bool useGetFirstRead);
 
+EReadIdType _VdbBlastRunSetGetReadIdType(const VdbBlastRunSet *self);
+
+
 #ifdef __cplusplus
 }
 #endif

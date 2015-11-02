@@ -58,8 +58,6 @@
 #define PATH_MAX 4096
 #endif
 
-#include "read-id-type.h" /* READ_ID_TYPE */
-
 void _Core2naFini(Core2na *self);
 void _Core4naFini(Core4na *self);
 
@@ -1828,6 +1826,11 @@ VdbBlastStatus _VdbBlastRunSetFindFirstRead(const VdbBlastRunSet *self,
     return status;
 }
 
+EReadIdType _VdbBlastRunSetGetReadIdType(const VdbBlastRunSet *self) {
+    assert(self);
+    return self->readIdDesc.idType;
+}
+
 static uint32_t _VdbBlastRunGetReadId(VdbBlastRun *self, const char *acc,
     uint64_t spot, /* 1-based */
     uint32_t read, /* 1-based */
@@ -2556,18 +2559,11 @@ VdbBlastStatus CC VdbBlastRunSetAddRun(VdbBlastRunSet *self,
         }
     }
 
-    if (status == eVdbBlastNoErr && _VTableVarReadNum(obj->seqTbl) &&
-        READ_ID_TYPE == eFixedReadN)
-    {
-        /* VDB-1430: temporarily skip runs with variable read length */
-        _VdbBlastDbWhack(obj);
-        S
-        status = eVdbBlastNotImplemented;
-    }
-
     if (status == eVdbBlastNoErr) {
-/*      self->readIdDesc.idType = eFactor10; */
-        self->readIdDesc.idType = READ_ID_TYPE;
+        if (_VTableVarReadNum(obj->seqTbl)) {
+            self->readIdDesc.varReadN = true;
+            self->readIdDesc.idType   = eFactor10;
+        }
 
         status = _RunSetAddObj(&self->runs, obj, rundesc, type,
             NULL, fullpath, self->core2na.min_read_length);
