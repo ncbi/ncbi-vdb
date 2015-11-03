@@ -868,7 +868,7 @@ LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC (
         int64_t new_slice_start, new_slice_end;
         int64_t ref_pos_adj;
         int cont = 0;
-        bool has_indel;
+        bool has_indel = false;
 
         /* get new expanded slice and check if it has not reached the bounds of ref */
         bool slice_expanded = get_ref_slice ( ref, ref_size, ref_pos_var, var_len_on_ref, exp_l, exp_r, & ref_slice );
