@@ -106,10 +106,23 @@ class Tests(unittest.TestCase):
         self.assertTrue(alIt.nextAlignment())
         self.assertEqual(WithSecondary + ".PA.166", alIt.getAlignmentId())
     
-    #TODO: getRead
-    #TODO: getReads
-    #TODO: getReadCount
-    #TODO: getReadRange
+    def test_ReadCollection_getRead(self):
+        read = NGS.openReadCollection(PrimaryOnly).getRead(PrimaryOnly + ".R.1")
+        self.assertEquals(PrimaryOnly + ".R.1", read.getReadId())
+
+    def test_ReadCollection_getReads(self):
+        readIt = NGS.openReadCollection(PrimaryOnly).getReads(Read.all)
+        self.assertTrue(readIt.nextRead())
+        self.assertEquals(PrimaryOnly + ".R.1", readIt.getReadId())
+
+    def test_ReadCollection_getReadCount(self):
+        self.assertEquals(2280633, NGS.openReadCollection(PrimaryOnly).getReadCount())
+
+    def test_ReadCollection_getReadRange(self):
+        readIt = NGS.openReadCollection(PrimaryOnly).getReadRange(2, 3)
+        self.assertTrue(readIt.nextRead())
+        self.assertEquals(PrimaryOnly + ".R.2", readIt.getReadId())
+
 
 # Read 
 
@@ -141,17 +154,22 @@ class Tests(unittest.TestCase):
         read.getReadCategory() # does not throw
 
 # Fragment
-    def test_Fragment_getFragmentId(self):
+    def test_Read_getFragmentId(self):
         read = getRead(PrimaryOnly + ".R.1")
         self.assertTrue(read.nextFragment())
         self.assertEqual(PrimaryOnly + ".FR0.1", read.getFragmentId())
 
-#TODO: getFragmentBases ()
-#TODO: getFragmentBases(long offset)
-#TODO: getFragmentBases(long offset, long length)
-#TODO: getFragmentQualities ()
-#TODO: getFragmentQualities(long offset)
-#TODO: getFragmentQualities(long offset, long length)
+    def test_getFragmentBases(self):
+        read = getRead(PrimaryOnly + ".R.1")
+        self.assertTrue(read.nextFragment())
+        self.assertTrue(read.nextFragment())
+        self.assertEquals("GGTA", read.getFragmentBases(2, 4));
+
+    def test_getFragmentQualities(self):
+        read = getRead(PrimaryOnly + ".R.1")
+        self.assertTrue(read.nextFragment())
+        self.assertTrue(read.nextFragment())
+        self.assertEquals("@DDA", read.getFragmentQualities(2, 4))
 
     
 # Alignment
@@ -307,7 +325,7 @@ class Tests(unittest.TestCase):
         alignment = readCollection.getAlignment (PrimaryOnly + ".PA.6")
         self.assertTrue(alignment.isPaired())
     
-    def Alignment_isPaired_SingleFragmentPerSpot(self):
+    def test_Alignment_isPaired_SingleFragmentPerSpot(self):
         readCollection = NGS.openReadCollection(SingleFragmentPerSpot)
         alignment = readCollection.getAlignment(SingleFragmentPerSpot + ".PA.1")
         self.assertFalse(alignment.isPaired())
@@ -450,6 +468,17 @@ class Tests(unittest.TestCase):
         assert ( NGS.openReadCollection(PrimaryOnly).hasReadGroup("C1ELY.6") )
         assert ( not NGS.openReadCollection(PrimaryOnly).hasReadGroup("non-existent read group") )
 
+    def test_ReadGroup_getStatistics(self):
+        gr = NGS.openReadCollection(WithGroups).getReadGroup("GS57510-FS3-L03")
+
+        stats = gr.getStatistics()
+    
+        self.assertEquals(34164461870L, stats.getAsU64("BASE_COUNT"))
+        self.assertEquals(34164461870L, stats.getAsU64("BIO_BASE_COUNT"))
+        self.assertEquals(488063741L,   stats.getAsU64("SPOT_COUNT"))
+        self.assertEquals(5368875807L,  stats.getAsU64("SPOT_MAX"))
+        self.assertEquals(4880812067L,  stats.getAsU64("SPOT_MIN"))
+
     # def test_ReadGroup_getRead(self):
         # gr = NGS.openReadCollection(PrimaryOnly).getReadGroup("C1ELY.6")
         # r = gr.getRead(PrimaryOnly + ".R.1")
@@ -460,20 +489,18 @@ class Tests(unittest.TestCase):
         # r = gr.getReads(Read.partiallyAligned)
     
     # ReadGroupIterator
-    # def test_ReadGroupIterator_ThrowBeforeNext(self):
-        # it = NGS.openReadCollection(PrimaryOnly).getReadGroups()
-        # try:
-            # it.getReads(Read.all)
-            # self.fail()
-        # except ErrorMsg:
-            # pass
+    def test_ReadGroupIterator_ThrowBeforeNext(self):
+        it = NGS.openReadCollection(PrimaryOnly).getReadGroups()
+        try:
+            it.getName()
+            self.fail()
+        except ErrorMsg:
+            pass
     
-    # def test_ReadGroupIterator_Next(self):
-        # it = NGS.openReadCollection(PrimaryOnly).getReadGroups()
-        # self.assertTrue(it.nextReadGroup())
-        # r = it.getReads(Read.all)
-        # self.assertTrue(r.nextRead())
-        # self.assertEqual(it.getName(), r.getReadGroup())
+    def test_ReadGroupIterator_Next(self):
+        it = NGS.openReadCollection(PrimaryOnly).getReadGroups();
+        self.assertTrue(it.nextReadGroup());
+        name = it.getName();
 
 if __name__ == "__main__":
     unittest.main()

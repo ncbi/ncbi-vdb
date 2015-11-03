@@ -543,7 +543,7 @@ public class ngs_test_CSRA1 {
     }
 
     @Test
-    public void ReferenceSequence_getCommonName () throws ngs.ErrorMsg
+    public void ReferenceSequence_getCanonicalName () throws ngs.ErrorMsg
     {
         assertEquals ( "gi|218511148|ref|NC_011752.1|", getReferenceSequence () . getCanonicalName () );
     }
