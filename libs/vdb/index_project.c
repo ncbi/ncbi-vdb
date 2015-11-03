@@ -77,17 +77,21 @@ rc_t CC index_project_impl(
     char key_buf[1024];
     char *key = key_buf;
     size_t sz = sizeof(key_buf) - 1;
+    
+    /* first try to load value from the column. if returned blob is empty, go to index */
+    if (argc > 0 && argv[0] != NULL) {
+        /*** this types of blobs may have holes in them ***/
+        rc = VBlobSubblob(argv[0],rslt,row_id );
+        if (rc != 0 || (*rslt)->data.elem_count > 0) {
+            return rc;
+        }
+    }
 
     for ( ; ; ) {
         rc = KIndexProjectText(self->ndx, row_id, &start_id, &id_count, key, sz + 1, &sz);
         if ((GetRCState(rc) == rcNotFound && GetRCObject(rc) == rcId) || sz==0 ){
 /*          fprintf(stderr, "row %u not in index\n", (unsigned)row_id); */
-            if (argc > 0 && argv[0] != NULL) { 
-                /*** this types of blobs may have holes in them ***/
-                rc = VBlobSubblob(argv[0],rslt,row_id );
-            }
-            else
-                rc = RC(rcVDB, rcFunction, rcExecuting, rcRow, rcNotFound);
+            rc = RC(rcVDB, rcFunction, rcExecuting, rcRow, rcNotFound);
             break;
         }
         if ( GetRCState( rc ) == rcInsufficient && GetRCObject( rc ) == (enum RCObject)rcBuffer && key == key_buf )
@@ -132,7 +136,7 @@ rc_t CC index_project_impl(
     return rc;
 }
 
-VTRANSFACT_BUILTIN_IMPL(idx_text_project, 1, 0, 0) (
+VTRANSFACT_BUILTIN_IMPL(idx_text_project, 1, 0, 1) (
                                            const void *Self,
                                            const VXfactInfo *info,
                                            VFuncDesc *rslt,

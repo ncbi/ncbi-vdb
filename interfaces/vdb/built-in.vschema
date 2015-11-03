@@ -383,8 +383,10 @@ text8_set environment:read #1.0 < ascii name > ();
  *  "substitute" [ DATA, OPTIONAL ] - source
  *  of values to substitute for values not
  *  found in the index.
+ *
+ *  Version 1.0.1: look into "substitute" (if available) first and then to the index
  */
-function text8_set idx:text:project #1.0 < ascii index_name > ( * text8_set substitute );
+function text8_set idx:text:project #1.0.1 < ascii index_name > ( * text8_set substitute );
 
 
 /* idx:text:insert
