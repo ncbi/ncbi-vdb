@@ -95,22 +95,48 @@ TEST_CASE(TempCRC)
 }
 #endif
 
-TEST_CASE(AgrepDPTest)
+class AgrepFixture
 {
-    char const pattern[] = "MATCH";
-    size_t pattern_len = sizeof (pattern) - 1;
+public:
+	AgrepFixture()
+	: agrep_params ( 0 )
+	{
+	}
+	~AgrepFixture()
+	{
+		::AgrepWhack ( agrep_params );
+	}
+	
+	rc_t Setup ( const char* pattern, AgrepFlags flags )
+	{
+		pattern_len = strlen ( pattern );
+		return ::AgrepMake ( & agrep_params, AGREP_MODE_ASCII | flags, pattern );
+	}
+	
+	bool FindFirst ( const string& text, int32_t threshold )
+	{
+		return ::AgrepFindFirst ( agrep_params, threshold, text . c_str (), text . size (), & match_info ) != 0;	
+	}
 
-    ::AgrepParams* agrep_params;
-    rc_t rc = ::AgrepMake ( & agrep_params, AGREP_MODE_ASCII | AGREP_ALG_DP, pattern );
-    REQUIRE ( rc == 0 );
+	bool FindBest ( const string& text, int32_t threshold )
+	{
+		return ::AgrepFindBest ( agrep_params, threshold, text . c_str (), text . size (), & match_info ) != 0;	
+	}
 
+
+public:	
+	size_t pattern_len;
+	::AgrepParams* agrep_params;
     ::AgrepMatch match_info;
+};
+
+FIXTURE_TEST_CASE ( AgrepDPTest, AgrepFixture )
+{
+    REQUIRE_RC ( Setup ( "MATCH", AGREP_ALG_DP ) );
 
     // Complete match
     {
-        char const text[] = "MATCH";
-        uint32_t found = ::AgrepFindFirst ( agrep_params, 0, text, sizeof(text)-1, & match_info );
-        REQUIRE ( found != 0 );
+        REQUIRE ( FindFirst ( "MATCH", 0 ) );
         REQUIRE ( (size_t)match_info.length == pattern_len );
         REQUIRE ( match_info.position == 0 );
         REQUIRE ( match_info.score == 0 );
@@ -118,20 +144,14 @@ TEST_CASE(AgrepDPTest)
 
     // Complete substring match
     {
-        // TODO: if threshold == 2, the result differs from AGREP_ALG_MYERS
-        char const text[] = "xxMATCHvv";
-        uint32_t found = ::AgrepFindFirst ( agrep_params, 0, text, sizeof(text)-1, & match_info );
-        REQUIRE ( found != 0 );
+        REQUIRE ( FindFirst ( "xxMATCHvv", 0 ) );
         REQUIRE ( (size_t)match_info.length == pattern_len );
         REQUIRE ( match_info.position == 2 );
         REQUIRE ( match_info.score == 0 );
     }
-
     // 1 Deletion
     {
-        char const text[] = "xxxMACHvv";
-        uint32_t found = ::AgrepFindFirst ( agrep_params, 1, text, sizeof(text)-1, & match_info );
-        REQUIRE ( found != 0 );
+        REQUIRE ( FindFirst ( "xxxMACHvv", 1 ) );
         REQUIRE ( (size_t)match_info.length == pattern_len - 1 );
         REQUIRE ( match_info.position == 3 );
         REQUIRE ( match_info.score == 1 );
@@ -139,10 +159,7 @@ TEST_CASE(AgrepDPTest)
 
     // 2 Insertions
     {
-        // TODO: AGREP_ALG_MYERS gives match_info.length == 5, not 7 here!
-        char const text[] = "xxxMAdTCaHvv";
-        uint32_t found = ::AgrepFindFirst ( agrep_params, 2, text, sizeof(text)-1, & match_info );
-        REQUIRE ( found != 0 );
+        REQUIRE ( FindFirst ( "xxxMAdTCaHvv", 2 ) );
         REQUIRE ( (size_t)match_info.length == pattern_len + 2 );
         REQUIRE ( match_info.position == 3 );
         REQUIRE ( match_info.score == 2 );
@@ -150,23 +167,195 @@ TEST_CASE(AgrepDPTest)
 
     // 3 Mismatches
     {
-        // TODO: AGREP_ALG_MYERS gives match_info.length == 5, not 7 here!
-        char const text[] = "xATxx";
-        uint32_t found = ::AgrepFindFirst ( agrep_params, 5, text, sizeof(text)-1, & match_info );
-        REQUIRE ( found != 0 );
+        REQUIRE ( FindFirst ( "xATxx", 5 ) );
         REQUIRE ( (size_t)match_info.length == pattern_len );
         REQUIRE ( match_info.position == 0 );
         REQUIRE ( match_info.score == 3 );
     }
+    
+    // Best match
+    {
+        REQUIRE ( FindBest ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len );
+        REQUIRE ( match_info.position == 18 );
+        REQUIRE ( match_info.score == 0 );
+    }
+    // First match
+    {
+        REQUIRE ( FindFirst ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len - 1 );
+        REQUIRE ( match_info.position == 0 );
+        REQUIRE ( match_info.score == 1 );
+    }
+
+    // Match anything
+    {
+        // threshold >= pattern_len seems to specify that a complete mismatch is acceptable
+        // by implementation, the algorithm reports the result to be "found" at the tail portion of the reference string
+        // for this degenerate case, the expected behavior is not clear, so I'll just document the reality here:
+        const string text = "xyzvuwpiuuuu";
+        REQUIRE ( FindFirst ( "xyzvuwpiuuuu", pattern_len ) );
+        REQUIRE_EQ ( (size_t)match_info.length, pattern_len + 1 );
+        REQUIRE_EQ ( (size_t)match_info.position, text . size () - ( pattern_len + 1 ) );
+        REQUIRE_EQ ( (size_t)match_info.score, pattern_len );
+    }
 
     // Not found
     {
-        char const text[] = "xyzvuwpiu";
-        uint32_t found = ::AgrepFindFirst ( agrep_params, 4, text, sizeof(text)-1, & match_info );
-        REQUIRE ( found == 0 );
+        REQUIRE ( ! FindFirst ( "xyzvuwpiu", 4 ) );
+    }
+}
+
+FIXTURE_TEST_CASE ( AgrepWumanberTest, AgrepFixture )
+{
+    REQUIRE_RC ( Setup ( "MATCH", AGREP_ALG_WUMANBER ) );
+	
+    // Complete match
+    {
+        REQUIRE ( FindFirst ( "MATCH", 0 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len );
+        REQUIRE ( match_info.position == 0 );
+        REQUIRE ( match_info.score == 0 );
     }
 
-    ::AgrepWhack ( agrep_params );
+    // Complete substring match
+    {
+        REQUIRE ( FindFirst ( "xxMATCHvv", 0 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len );
+        REQUIRE ( match_info.position == 2 );
+        REQUIRE ( match_info.score == 0 );
+    }
+    // 1 Deletion
+    {
+        REQUIRE ( FindFirst ( "xxxMACHvv", 1 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len - 1 );
+        REQUIRE ( match_info.position == 3 );
+        REQUIRE ( match_info.score == 1 );
+    }
+
+    // 2 Insertions
+    {
+        REQUIRE ( FindFirst ( "xxxMAdTCaHvv", 2 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len + 2 );
+        REQUIRE ( match_info.position == 3 );
+        REQUIRE ( match_info.score == 2 );
+    }
+
+    // 3 Mismatches
+    {
+        REQUIRE ( FindFirst ( "xATxx", 5 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len );
+        REQUIRE ( match_info.position == 0 );
+        REQUIRE ( match_info.score == 3 );
+    }
+    
+    // Best match
+    {
+        REQUIRE ( FindBest ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len );
+        REQUIRE ( match_info.position == 18 );
+        REQUIRE ( match_info.score == 0 );
+    }
+    // First match
+    {
+        REQUIRE ( FindFirst ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len - 1 );
+        REQUIRE ( match_info.position == 0 );
+        REQUIRE ( match_info.score == 1 );
+    }
+
+    // Match anything
+    {
+        // threshold >= pattern_len seems to specify that a complete mismatch is acceptable
+        // by implementation, the algorithm reports the result to be "found" at the tail portion of the reference string
+        // for this degenerate case, the expected behavior is not clear, so I'll just document the reality here:
+        const string text = "xyzvuwpiuuuu";
+        REQUIRE ( FindFirst ( text, pattern_len ) );
+        REQUIRE_EQ ( (size_t)match_info.length, text . size () ); // note the difference with AGREP_ALG_DP
+        REQUIRE_EQ ( match_info.position, (int32_t)0 );
+        REQUIRE_EQ ( (size_t)match_info.score, pattern_len );
+    }
+
+    // Not found
+    {
+        REQUIRE ( ! FindFirst ( "xyzvuwpiu", 4 ) );
+    }
+}
+
+FIXTURE_TEST_CASE ( AgrepMyersTest, AgrepFixture )
+{
+    REQUIRE_RC ( Setup ( "MATCH", AGREP_ALG_MYERS ) );
+	
+    // Complete match
+    {
+        REQUIRE ( FindFirst ( "MATCH", 0 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len );
+        REQUIRE ( match_info.position == 0 );
+        REQUIRE ( match_info.score == 0 );
+    }
+
+    // Complete substring match
+    {
+        REQUIRE ( FindFirst ( "xxMATCHvv", 0 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len );
+        REQUIRE ( match_info.position == 2 );
+        REQUIRE ( match_info.score == 0 );
+    }
+    // 1 Deletion
+    {
+        REQUIRE ( FindFirst ( "xxxMACHvv", 1 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len - 1 );
+        REQUIRE ( match_info.position == 3 );
+        REQUIRE ( match_info.score == 1 );
+    }
+
+    // 2 Insertions
+    {
+        REQUIRE ( FindFirst ( "xxxMAdTCaHvv", 2 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len /* + 2 */ ); // note the difference with other algorithms
+        REQUIRE ( match_info.position == 3 );
+        REQUIRE ( match_info.score == 2 );
+    }
+
+    // 3 Mismatches
+    {
+        REQUIRE ( FindFirst ( "xATxx", 5 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len );
+        REQUIRE ( match_info.position == 0 );
+        REQUIRE ( match_info.score == 3 );
+    }
+    
+    // Best match
+    {
+        REQUIRE ( FindBest ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len );
+        REQUIRE ( match_info.position == 18 );
+        REQUIRE ( match_info.score == 0 );
+    }
+    // First match
+    {
+        REQUIRE ( FindFirst ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len - 1 );
+        REQUIRE ( match_info.position == 0 );
+        REQUIRE ( match_info.score == 1 );
+    }
+
+    // Match anything
+    {
+        // threshold >= pattern_len seems to specify that a complete mismatch is acceptable
+        // by implementation, the algorithm reports the result to be "found" at the tail portion of the reference string
+        // for this degenerate case, the expected behavior is not clear, so I'll just document the reality here:
+        const string text = "xyzvuwpiuuuu";
+        REQUIRE ( FindFirst ( text, pattern_len ) );
+        REQUIRE_EQ ( (size_t)match_info.length, text . size () ); // note the difference with AGREP_ALG_DP
+        REQUIRE_EQ ( (size_t)match_info.position, text . size () - ( pattern_len + 1 ) );
+        REQUIRE_EQ ( (size_t)match_info.score, pattern_len );
+    }
+
+    // Not found
+    {
+        REQUIRE ( ! FindFirst ( "xyzvuwpiu", 4 ) );
+    }
 }
 
 
