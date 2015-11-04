@@ -272,7 +272,7 @@ rc_t _VTableMakeCursor(const struct VTable *self,
      const struct VCursor **curs, uint32_t *col_idx, const char *col_name);
 
 rc_t _ReadDescFindNextRead(ReadDesc *self, bool *found);
-void ReadDescFixReadId(ReadDesc *self);
+VdbBlastStatus _ReadDescFixReadId(ReadDesc *self);
 
 uint64_t _VdbBlastRunAdjustSequencesAmountForAlignments(VdbBlastRun *self,
     VdbBlastStatus *status);
@@ -299,6 +299,8 @@ void _VdbBlastRunSetBeingRead(const VdbBlastRunSet *self);
 
 VdbBlastStatus _VdbBlastRunSetFindFirstRead
     (const VdbBlastRunSet *self, uint64_t *read_id, bool useGetFirstRead);
+
+uint64_t _VdbBlastRunSetGetAllReads(const VdbBlastRunSet *self, uint32_t run);
 
 EReadIdType _VdbBlastRunSetGetReadIdType(const VdbBlastRunSet *self);
 

@@ -387,14 +387,14 @@ static uint32_t _VCursorReadReaderCols(const VCursor *self,
 /******************************************************************************/
 
 static
-bool _ReadDescNextRead(ReadDesc *self)
+bool _ReadDescNextRead(ReadDesc *self, VdbBlastStatus *status)
 {
     uint32_t read = 0;
     int i = 0;
     const RunDesc *rd = NULL;
     uint8_t nReads = 1;
 
-    assert(self && self->run);
+    assert(self && self->run && status);
 
     rd = &self->run->rd;
 
@@ -405,7 +405,7 @@ bool _ReadDescNextRead(ReadDesc *self)
             return false;
         }
         else if (found) {
-            ReadDescFixReadId(self);
+            *status = _ReadDescFixReadId(self);
             S
             return true;
         }
@@ -451,7 +451,7 @@ bool _ReadDescNextRead(ReadDesc *self)
         S
         self->read = read;
         ++self->read_id;
-        ReadDescFixReadId(self);
+        *status = _ReadDescFixReadId(self);
     }
     else
     {   S }
@@ -820,7 +820,10 @@ uint32_t _Reader2naData(Reader2na *self,
         }
         if (p->length_in_bases > 0)
         {   ++n; }
-        if (!_ReadDescNextRead(desc)) {
+        if (!_ReadDescNextRead(desc, status)) {
+            if (*status != eVdbBlastNoErr) {
+                return 0;
+            }
             S
             self->eor = true;
             break;
@@ -930,7 +933,7 @@ uint64_t _Reader2naRead(Reader2na *self,
     if (num_read >= to_read) {
         self->starting_base = 0;
         num_read = to_read;
-        if (!_ReadDescNextRead(desc))
+        if (!_ReadDescNextRead(desc, status))
         {   self->eor = true; }
         S
     }
@@ -1097,11 +1100,17 @@ static VdbBlastStatus _Core2naOpenNextRunOrTbl
         }
 
         desc->read_id = read_id;
-        ReadDescFixReadId(desc);
+        status = _ReadDescFixReadId(desc);
+        if (status != eVdbBlastNoErr) {
+            return status;
+        }
         status = _Reader2naOpenCursor(reader);
-        if (status == eVdbBlastNoErr)
-        {      S }
-        else { S }
+        if (status == eVdbBlastNoErr) {
+            S
+        }
+        else {
+            S
+        }
 
         return status;
     }
