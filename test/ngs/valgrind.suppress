@@ -4,3 +4,13 @@
     ...
    fun:find_home_directory
 }
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   ...
+   fun:KConfigMake
+   fun:rsrc_init
+   fun:KRsrcGlobalInit
+   fun:get_tls_ctx
+   fun:ctx_recover
+}
