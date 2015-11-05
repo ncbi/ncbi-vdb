@@ -57,6 +57,7 @@ typedef struct tag_self_t {
     uint32_t    query_key_len;
     const struct VCursorParams * parms;
     uint32_t    elem_bits;
+    bool        case_insensitive;
 } self_t;
 
 static void CC self_whack( void *Self )
@@ -103,7 +104,11 @@ rc_t CC index_lookup_impl(
                 return RC(rcVDB, rcIndex, rcReading, rcMemory, rcExhausted);
             query = hquery;
         }
-        memcpy(query, query_buf->base, query_buf->elem_count);
+        if (self->case_insensitive) {
+            tolower_copy(query, sizeof squery / sizeof squery[0], query_buf->base, query_buf->elem_count);
+        } else {
+            memcpy(query, query_buf->base, query_buf->elem_count);
+        }
         query[query_buf->elem_count] = '\0';
         rc = KIndexFindText(self->ndx, query, &start_id, &id_count,NULL,NULL);
         if (hquery)
@@ -125,9 +130,9 @@ rc_t CC index_lookup_impl(
 }
 
 /*
- * function vdb:row_id_range  idx:text:lookup #1 < ascii index_name , ascii query_by_name > ();
+ * function vdb:row_id_range  idx:text:lookup #1.1 < ascii index_name , ascii query_by_name, * bool case_insensitive > ();
  */
-VTRANSFACT_BUILTIN_IMPL(idx_text_lookup, 1, 0, 0) (
+VTRANSFACT_BUILTIN_IMPL(idx_text_lookup, 1, 1, 0) (
                                            const void *Self,
                                            const VXfactInfo *info,
                                            VFuncDesc *rslt,
@@ -159,6 +164,7 @@ VTRANSFACT_BUILTIN_IMPL(idx_text_lookup, 1, 0, 0) (
                 self->query_key_len = cp->argv[1].count;
                 self->query_key[self->query_key_len] = '\0';
                 self->parms = info->parms;
+                self->case_insensitive = cp->argc >= 3 ? *cp->argv[2].data.b : false;
                 
                 rslt->self = self;
                 rslt->whack = self_whack;

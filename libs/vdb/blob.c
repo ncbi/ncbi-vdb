@@ -1132,8 +1132,7 @@ rc_t VBlobSubblob( const struct VBlob *self,struct VBlob **sub, int64_t start_id
             if(rc == 0){
                 int64_t	stop_id;
 
-                if(length > 0) stop_id = start_id + numrep - 1;
-                else           stop_id = start_id; /*** HACK - 0 sized data may be a sign that real data is somewhere else ***/
+                stop_id = start_id + numrep - 1;
 
                 rc = VBlobCreateFromSingleRow(sub, start_id, stop_id, &kd, self->byte_order);
                 KDataBufferWhack(&kd);

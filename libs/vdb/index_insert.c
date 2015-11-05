@@ -44,10 +44,11 @@ struct self_t {
     KIndex *ndx;
     char *key_buf;
     size_t key_buf_size;
+    bool case_insensitive;
 };
 
 /*
- function utf8 idx:text:insert #1.0 < ascii index_name > ( utf8 key );
+ function utf8 idx:text:insert #1.1 < ascii index_name, * bool case_insensitive > ( utf8 key );
  */
 
 static
@@ -60,6 +61,7 @@ rc_t CC index_insert( void *Self, const VXformInfo *info, int64_t row_id,
     char skey[4096];
     char *key = skey;
     uint32_t key_len;
+    bool return_key = false;
 
     rslt -> elem_count = 0;
 
@@ -77,18 +79,23 @@ rc_t CC index_insert( void *Self, const VXformInfo *info, int64_t row_id,
         }
         key = self->key_buf;
     }
-    memcpy(key, x, key_len);
+    if (self->case_insensitive) {
+        tolower_copy(key, sizeof skey / sizeof skey[0], x, key_len);
+        return_key = string_cmp(key, key_len, x, key_len, key_len) != 0;
+    } else {
+        memcpy(key, x, key_len);
+    }
     key[key_len] = 0;
 
     /* attempt to insert into index */
     rc = KIndexInsertText ( self->ndx, false, key, row_id );
-    if ( rc != 0 )
+    if ( rc != 0 || return_key )
     {
         /* insert failed for whatever reason - return key */
         rc = KDataBufferResize ( rslt -> data, key_len );
         if ( rc != 0 )
             return rc;
-        memcpy ( rslt -> data -> base, key, key_len );
+        memcpy ( rslt -> data -> base, x, key_len );
         
         rslt -> elem_count = key_len;
     }
@@ -104,7 +111,7 @@ static void CC self_whack(void *Self) {
     free(Self);
 }
 
-VTRANSFACT_IMPL ( idx_text_insert, 1, 0, 0 ) ( const void *Self,
+VTRANSFACT_IMPL ( idx_text_insert, 1, 1, 0 ) ( const void *Self,
     const VXfactInfo *info, VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
     struct self_t *self;
@@ -122,6 +129,7 @@ VTRANSFACT_IMPL ( idx_text_insert, 1, 0, 0 ) ( const void *Self,
             rslt->u.ndf = index_insert;
             self->key_buf = NULL;
             self->key_buf_size = 0;
+            self->case_insensitive = cp->argc >= 2 ? *cp->argv[1].data.b : false;
             return 0;
         }
         free(self);

@@ -49,6 +49,7 @@
 typedef struct tag_self_t {
     const KIndex *ndx;
     uint32_t elem_bits;
+    bool case_insensitive;
 } self_t;
 
 static void CC self_whack( void *Self )
@@ -74,6 +75,7 @@ rc_t CC index_project_impl(
     KDataBuffer temp;
     uint64_t id_count;
     int64_t start_id;
+    int64_t empty_row_id_count = -1;
     char key_buf[1024];
     char *key = key_buf;
     size_t sz = sizeof(key_buf) - 1;
@@ -85,6 +87,9 @@ rc_t CC index_project_impl(
         if (rc != 0 || (*rslt)->data.elem_count > 0) {
             return rc;
         }
+        empty_row_id_count = (*rslt)->stop_id - (*rslt)->start_id + 1;
+        TRACK_BLOB( VBlobRelease, *rslt );
+        (void)VBlobRelease( *rslt );
     }
 
     for ( ; ; ) {
@@ -109,6 +114,14 @@ rc_t CC index_project_impl(
             while (sz > 0 && key[sz - 1] == '\0')
                 --sz;
 
+            /* When in case_insensitive mode, index does not accurately represent actual values,
+             * as we still store key in a column when it differs from what we inserted into index */
+            if (self->case_insensitive) {
+                if (start_id != row_id || (empty_row_id_count != -1 && id_count > empty_row_id_count)) {
+                    start_id = row_id;
+                    id_count = empty_row_id_count;
+                }
+            }
             rc = VBlobNew(&y, start_id, start_id + id_count - 1, "vdb:index:project");
             if (rc == 0) {
                 rc = PageMapNewSingle( &y->pm, (uint32_t)id_count, (uint32_t)sz );
@@ -136,7 +149,7 @@ rc_t CC index_project_impl(
     return rc;
 }
 
-VTRANSFACT_BUILTIN_IMPL(idx_text_project, 1, 0, 1) (
+VTRANSFACT_BUILTIN_IMPL(idx_text_project, 1, 1, 0) (
                                            const void *Self,
                                            const VXfactInfo *info,
                                            VFuncDesc *rslt,
@@ -164,6 +177,7 @@ VTRANSFACT_BUILTIN_IMPL(idx_text_project, 1, 0, 1) (
             if (self) {
                 self->ndx = ndx;
                 self->elem_bits = VTypedescSizeof(&info->fdesc.desc);
+                self->case_insensitive = cp->argc >= 2 ? *cp->argv[1].data.b : false;
                 rslt->self = self;
                 rslt->whack = self_whack;
                 rslt->variant = vftBlobN;
