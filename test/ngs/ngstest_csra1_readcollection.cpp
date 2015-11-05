@@ -283,6 +283,27 @@ FIXTURE_TEST_CASE(CSRA1_ReadCollectionGetReadGroup_WithGroups_Found, CSRA1_Fixtu
     EXIT;
 }
 
+FIXTURE_TEST_CASE(CSRA1_ReadCollectionHasReadGroup_NotFound, CSRA1_Fixture)
+{   
+    ENTRY_ACC(CSRA1_PrimaryOnly);
+    REQUIRE ( ! NGS_ReadCollectionHasReadGroup ( m_coll, ctx, "wontfindme" ) );
+    EXIT;
+}
+    
+FIXTURE_TEST_CASE(CSRA1_ReadCollectionHasReadGroup_WithGroups_DefaultNotFound, CSRA1_Fixture)
+{   
+    ENTRY_ACC(CSRA1_PrimaryOnly);
+    REQUIRE ( ! NGS_ReadCollectionHasReadGroup ( m_coll, ctx, "" ) );
+    EXIT;
+}
+    
+FIXTURE_TEST_CASE(CSRA1_ReadCollectionHasReadGroup_WithGroups_Found, CSRA1_Fixture)
+{   
+    ENTRY_ACC(CSRA1_PrimaryOnly);
+    REQUIRE ( NGS_ReadCollectionHasReadGroup ( m_coll, ctx, "C1ELY.6") );
+    EXIT;
+}
+
 FIXTURE_TEST_CASE(CSRA1_ReadCollectionGetAlignments_All, CSRA1_Fixture)
 {   
     ENTRY_ACC(CSRA1_WithSecondary);

@@ -262,7 +262,8 @@ _GapProjectNodeAddChildren ( struct _GapProjectNode * self )
                                 "workspace",
                                 Workspace,
                                 Password,
-                                NULL
+                                NULL,
+                                self -> read_only
                                 );
         if ( RCt == 0 ) {
             RCt = XFSContNodeAddChild (
@@ -285,7 +286,6 @@ _GapProjectNodeAddChildren ( struct _GapProjectNode * self )
     RCt = XFSGapCacheNodeMake (
                         & TheNode,
                         self -> project_id,     /* projectId */
-                        self -> read_only,      /* ReadOnly */
                         NULL                    /* perm is automatic */
                         );
     if ( RCt == 0 ) {
@@ -303,7 +303,6 @@ _GapProjectNodeAddChildren ( struct _GapProjectNode * self )
     RCt = XFSGapCacheNodeMake (
                         & TheNode,
                         0,                      /* projectId */
-                        false,                  /* Non ReadOnly */
                         NULL                    /* perm is automatic */
                         );
     if ( RCt == 0 ) {

@@ -1036,7 +1036,7 @@ void CSRA1_AlignmentInit ( NGS_ALIGNMENT* ref,
                            struct CSRA1_ReadCollection * coll,
                            const char *clsname, 
                            const char *instname, 
-                           const NGS_String * run_name,
+                           const char * run_name, size_t run_name_size,
                            bool exclusive,
                            bool primary, 
                            bool secondary,
@@ -1073,7 +1073,7 @@ void CSRA1_AlignmentInit ( NGS_ALIGNMENT* ref,
             
             ON_FAIL ( ref -> coll = CSRA1_ReadCollectionDuplicate ( coll, ctx ) )
                 return;
-            ON_FAIL ( ref -> run_name = NGS_StringDuplicate ( run_name, ctx ) )
+            ON_FAIL ( ref -> run_name = NGS_StringMakeCopy ( ctx, run_name, run_name_size ) )
                 return;
         }
     }
@@ -1132,7 +1132,7 @@ void SetRowId ( CSRA1_Alignment* self, ctx_t ctx, int64_t rowId, bool primary )
 NGS_Alignment * CSRA1_AlignmentMake ( ctx_t ctx, 
                                         struct CSRA1_ReadCollection * coll,
                                         int64_t alignId, 
-                                        const NGS_String * run_name, 
+                                        char const* run_name, size_t run_name_size,
                                         bool primary,
                                         uint64_t id_offset )
 {
@@ -1145,8 +1145,8 @@ NGS_Alignment * CSRA1_AlignmentMake ( ctx_t ctx,
         SYSTEM_ERROR ( xcNoMemory, 
                        "allocating CSRA1_Alignment(%lu) on '%.*s'", 
                        alignId, 
-                       NGS_StringSize ( run_name, ctx ), 
-                       NGS_StringData ( run_name, ctx ) );
+                       run_name_size, 
+                       run_name );
     else
     {
 #if _DEBUGGING
@@ -1155,14 +1155,14 @@ NGS_Alignment * CSRA1_AlignmentMake ( ctx_t ctx,
                         sizeof instname, 
                         NULL, 
                         "%.*s(%lu)", 
-                        NGS_StringSize ( run_name, ctx ), 
-                        NGS_StringData ( run_name, ctx ), 
+                        run_name_size, 
+                        run_name, 
                         alignId );
         instname [ sizeof instname - 1 ] = 0;
 #else
         const char *instname = "";
 #endif
-        TRY ( CSRA1_AlignmentInit ( ref, ctx, coll, "CSRA1_Alignment", instname, run_name, false, primary, ! primary, id_offset ) )
+        TRY ( CSRA1_AlignmentInit ( ref, ctx, coll, "CSRA1_Alignment", instname, run_name, run_name_size, false, primary, ! primary, id_offset ) )
         {
             TRY ( SetRowId( ref, ctx, alignId, primary ) )
             {
@@ -1236,7 +1236,7 @@ NGS_Alignment * CSRA1_AlignmentIteratorMake ( ctx_t ctx,
 #else
         const char *instname = "";
 #endif
-        TRY ( CSRA1_AlignmentInit ( ref, ctx, coll, "NGS_AlignmentIterator", instname, run_name, true, primary, secondary, id_offset ) )
+        TRY ( CSRA1_AlignmentInit ( ref, ctx, coll, "NGS_AlignmentIterator", instname, NGS_StringData (run_name, ctx), NGS_StringSize (run_name, ctx), true, primary, secondary, id_offset ) )
         {
             TRY ( CSRA1_AlignmentInitRegion ( ref, ctx, ref -> primary_curs, ref -> secondary_curs, 0, ULLONG_MAX ) )
             {
@@ -1284,7 +1284,7 @@ NGS_Alignment * CSRA1_AlignmentRangeMake ( ctx_t ctx,
 #else
         const char *instname = "";
 #endif
-        TRY ( CSRA1_AlignmentInit ( ref, ctx, coll, "NGS_AlignmentRange", instname, run_name, true, primary, secondary, id_offset ) )
+        TRY ( CSRA1_AlignmentInit ( ref, ctx, coll, "NGS_AlignmentRange", instname, NGS_StringData( run_name, ctx ), NGS_StringSize( run_name, ctx ), true, primary, secondary, id_offset ) )
         {
             TRY ( CSRA1_AlignmentInitRegion ( ref, ctx, ref -> primary_curs, ref -> secondary_curs, first, count ) )
             {

@@ -271,22 +271,38 @@ static void sw_find_indel_box ( int* matrix, size_t ROWS, size_t COLUMNS,
 {
     /* find maximum score in the matrix */
     size_t max_row = 0, max_col = 0;
-    size_t max_i = 0;
+    size_t max_i = ROWS*COLUMNS - 1;
 
-    size_t i = ROWS*COLUMNS - 1, j;
+    size_t i = max_i, j;
     int prev_indel = 0;
-    /*do
+    while ( i-- > 0 )
     {
-        if ( matrix[i] > matrix[max_i] )
-            max_i = i;
-        --i;
+        if ( matrix[i] >= matrix[max_i] )
+        {
+            /* the matrix is bad - no reliable indel box can be found,
+            need to expand the window */
+            *ret_row_start = *ret_col_start = -1;
+            *ret_row_end = ROWS - 1;
+            *ret_col_end = COLUMNS - 1;
+            return;
+        }
     }
-    while (i > 0);*/
 
     /* TODO: prove the lemma: for all i: matrix[i] <= matrix[ROWS*COLUMNS - 1]
-    (i.e. matrix[ROWS*COLUMNS - 1] is always the maximum element in the valid SW-matrix)*/
+    (i.e. matrix[ROWS*COLUMNS - 1] is always the maximum element in the valid SW-matrix)
 
-    max_i = ROWS*COLUMNS - 1;
+    UPDATE: It's OK that sometimes the maximum is not  at the bottom right corner
+    
+    counter-example:
+    text  = "ABCy"
+    query = "A"
+
+    matrix:
+       -  A  B  C  y
+    -  0  0  0  0  0
+    A  0  2  1  0  0
+
+    */
 
     max_row = max_i / COLUMNS;
     max_col = max_i % COLUMNS;
@@ -861,7 +877,7 @@ LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC (
         int64_t new_slice_start, new_slice_end;
         int64_t ref_pos_adj;
         int cont = 0;
-        bool has_indel;
+        bool has_indel = false;
 
         /* get new expanded slice and check if it has not reached the bounds of ref */
         bool slice_expanded = get_ref_slice ( ref, ref_size, ref_pos_var, var_len_on_ref, exp_l, exp_r, & ref_slice );
@@ -955,6 +971,11 @@ LIB_EXPORT rc_t CC VRefVariationIUPACMake (
         || ref_size == 0 )
     {
         return RC (rcText, rcString, rcSearching, rcParam, rcEmpty);
+    }
+
+    if ( (ref_pos_var + var_len_on_ref) > ref_size )
+    {
+        return RC (rcText, rcString, rcSearching, rcParam, rcOutofrange);
     }
 
     assert ( self != NULL );

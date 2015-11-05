@@ -1058,6 +1058,15 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReadGroupGetName, CSRA1_Fixture)
     EXIT;
 }
 
+FIXTURE_TEST_CASE(CSRA1_NGS_HasReadGroup, CSRA1_Fixture)
+{   
+    ENTRY_ACC(CSRA1_PrimaryOnly);
+    const char * name = "C1ELY.6";
+    REQUIRE ( NGS_ReadCollectionHasReadGroup ( m_coll, ctx, name ) && ! FAILED() );
+    REQUIRE ( ! NGS_ReadCollectionHasReadGroup ( m_coll, ctx, "non-existent read group" ) );
+    EXIT;
+}
+
 FIXTURE_TEST_CASE(CSRA1_NGS_ReadGroupGetStats, CSRA1_Fixture)
 {   
     ENTRY_ACC(CSRA1_WithGroups);

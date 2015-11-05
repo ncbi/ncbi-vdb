@@ -240,6 +240,19 @@ FIXTURE_TEST_CASE(SRADB_ReadCollectionGetReadGroup_Found, SRADB_Fixture)
     EXIT;
 }
   
+FIXTURE_TEST_CASE(SRADB_ReadCollectionHasReadGroup_NotFound, SRADB_Fixture)
+{   
+    ENTRY_ACC(SRADB_Accession);
+    REQUIRE ( ! NGS_ReadCollectionHasReadGroup ( m_coll, ctx, "wontfindme" ) );
+    EXIT;
+}
+    
+FIXTURE_TEST_CASE(SRADB_ReadCollectionHasReadGroup_Found, SRADB_Fixture)
+{   
+    ENTRY_ACC(SRADB_Accession);
+    REQUIRE ( NGS_ReadCollectionHasReadGroup ( m_coll, ctx, "A1DLC.1" ) );
+    EXIT;
+}
 
 // NGS_Read
 

@@ -423,6 +423,11 @@ FIXTURE_TEST_CASE(SRADB_ReadGroup_GetName, SRADBFixture)
     ngs :: ReadGroup rg = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
     REQUIRE_EQ ( ngs :: String("A1DLC.1"), rg . getName () );
 }
+FIXTURE_TEST_CASE(SRADB_HasReadGroup, SRADBFixture)
+{
+    REQUIRE ( ncbi::NGS::openReadCollection( SRADB_Accession ).hasReadGroup ( "A1DLC.1" ) );
+    REQUIRE ( ! ncbi::NGS::openReadCollection( SRADB_Accession ).hasReadGroup ( "non-existent read group" ) );
+}
 FIXTURE_TEST_CASE(SRADB_ReadGroup_GetStatistics, SRADBFixture)
 {
     ngs :: ReadGroup rg = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );

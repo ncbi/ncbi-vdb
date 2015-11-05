@@ -546,51 +546,47 @@ void LoadAlignmentInfo ( CSRA1_ReferenceWindow* self, ctx_t ctx, size_t* idx, in
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     
-    TRY ( NGS_String * spec = NGS_StringMake ( ctx, "", 0 ) )
+    TRY ( NGS_Alignment* al = CSRA1_AlignmentMake ( ctx, 
+                                                    ( struct CSRA1_ReadCollection * ) self -> coll, 
+                                                    id, 
+                                                    "", 0, 
+                                                    primary, 
+                                                    self -> id_offset ) )
     {
-        TRY ( NGS_Alignment* al = CSRA1_AlignmentMake ( ctx, 
-                                                        ( struct CSRA1_ReadCollection * ) self -> coll, 
-                                                        id, 
-                                                        spec, 
-                                                        primary, 
-                                                        self -> id_offset ) )
+        int64_t pos = NGS_AlignmentGetAlignmentPosition ( al, ctx );
+        int64_t len = (int64_t) NGS_AlignmentGetAlignmentLength ( al, ctx );
+        
+        if ( ! self -> within_window || pos >= offset )
         {
-            int64_t pos = NGS_AlignmentGetAlignmentPosition ( al, ctx );
-            int64_t len = (int64_t) NGS_AlignmentGetAlignmentLength ( al, ctx );
+            bool overlaps = true;
             
-            if ( ! self -> within_window || pos >= offset )
-            {
-                bool overlaps = true;
-                
-                if ( size > 0 )
-                {   /* a slice*/
-                    int64_t end_slice =  offset + (int64_t)size;
-                    if ( end_slice > (int64_t) self -> ref_length )
-                    {
-                        end_slice = self -> ref_length;
-                    }
-                    if ( ! self -> within_window && ! self -> no_wraparound && pos + len >= (int64_t) self -> ref_length ) 
-                    {   /* account for possible carryover on a circular reference */
-                        pos -= self -> ref_length;
-                    }
-                    overlaps = pos < end_slice && ( pos + len > offset );                
-                }
-                
-                if ( overlaps )
+            if ( size > 0 )
+            {   /* a slice*/
+                int64_t end_slice =  offset + (int64_t)size;
+                if ( end_slice > (int64_t) self -> ref_length )
                 {
-        /*printf("%li, %li, %i, %li\n", pos, len, NGS_AlignmentGetMappingQuality ( al, ctx ), id);        */
-                    self -> align_info [ *idx ] . id = id;
-                    self -> align_info [ *idx ] . pos = pos;
-                    self -> align_info [ *idx ] . len = len;
-                    self -> align_info [ *idx ] . cat = primary ? Primary : Secondary;
-                    self -> align_info [ *idx ] . mapq = NGS_AlignmentGetMappingQuality ( al, ctx );
-                    ++ ( * idx );
+                    end_slice = self -> ref_length;
                 }
+                if ( ! self -> within_window && ! self -> no_wraparound && pos + len >= (int64_t) self -> ref_length ) 
+                {   /* account for possible carryover on a circular reference */
+                    pos -= self -> ref_length;
+                }
+                overlaps = pos < end_slice && ( pos + len > offset );                
             }
             
-            NGS_AlignmentRelease ( al, ctx );
+            if ( overlaps )
+            {
+    /*printf("%li, %li, %i, %li\n", pos, len, NGS_AlignmentGetMappingQuality ( al, ctx ), id);        */
+                self -> align_info [ *idx ] . id = id;
+                self -> align_info [ *idx ] . pos = pos;
+                self -> align_info [ *idx ] . len = len;
+                self -> align_info [ *idx ] . cat = primary ? Primary : Secondary;
+                self -> align_info [ *idx ] . mapq = NGS_AlignmentGetMappingQuality ( al, ctx );
+                ++ ( * idx );
+            }
         }
-        NGS_StringRelease ( spec, ctx );
+        
+        NGS_AlignmentRelease ( al, ctx );
     }
 }
 

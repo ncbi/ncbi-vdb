@@ -25,23 +25,31 @@
  */
 
 #include <vdb/extern.h>
+
 #include "reader.h" /* _RunSetFindReadDesc */
 #include "blast-mgr.h" /* BTableType */
 #include "run-set.h" /* VdbBlastRunSet */
+
 #include <kdb/kdb-priv.h> /* KTableGetPath */
 #include <kdb/table.h> /* KTable */
+
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/log.h> /* LOGERR */
 #include <klib/rc.h> /* RC */
 #include <klib/refcount.h> /* KRefcount */
 #include <klib/status.h> /* STSMSG */
+
 #include <kproc/lock.h> /* KLockMake */
+
 #include <ncbi/vdb-blast.h> /* VdbBlastRunSet */
+
 #include <vdb/cursor.h> /* VCursor */
 #include <vdb/database.h> /* VDatabase */
 #include <vdb/table.h> /* VTable */
 #include <vdb/vdb-priv.h> /* VTableOpenKTableRead */
+
 #include <sysalloc.h>
+
 #include <string.h> /* memset */
 #include <time.h> /* time_t */
 
@@ -367,15 +375,20 @@ rc_t _VTableMakeCursor(const VTable *self,
 
 /*static*/
 uint32_t _VTableReadFirstRowImpl(const VTable *self, const char *name,
-    void *buffer, uint32_t blen, EColType *is_static, bool canBeMissed)
+    void *buffer, uint32_t blen, EColType *is_static, bool canBeMissed,
+    uint32_t *row_len)
 {
-    uint32_t status = eVdbBlastNoErr;
+    VdbBlastStatus status = eVdbBlastNoErr;
 
     rc_t rc = 0;
 
     const VCursor *curs = NULL;
     uint32_t idx = 0;
-    uint32_t row_len = 0;
+
+    uint32_t dummy = 0;
+    if (row_len == NULL) {
+        row_len = &dummy;
+    }
 
     assert(self && name);
 
@@ -414,7 +427,7 @@ uint32_t _VTableReadFirstRowImpl(const VTable *self, const char *name,
     }
 
     if (status == eVdbBlastNoErr && rc == 0 && buffer != NULL && blen > 0) {
-        rc = VCursorRead(curs, idx, 8, buffer, blen, &row_len);
+        rc = VCursorRead(curs, idx, 8, buffer, blen, row_len);
         if (rc != 0) {
             PLOGERR(klogInt, (klogInt, rc,
                 "Error in VCursorRead($(name))", "name=%s", name));
@@ -422,7 +435,7 @@ uint32_t _VTableReadFirstRowImpl(const VTable *self, const char *name,
     }
 
 /* TODO: needs to be verified what row_len is expected
-    if (row_len != 1) return eVdbBlastErr; */
+    if (*row_len != 1) return eVdbBlastErr; */
 
     STSMSG(2, ("Read the first row of '%s'", name));
 
@@ -455,7 +468,8 @@ uint32_t _VTableReadFirstRowImpl(const VTable *self, const char *name,
 static VdbBlastStatus _VTableReadFirstRow(const VTable *self,
     const char *name, void *buffer, uint32_t blen, EColType *is_static)
 {
-    return _VTableReadFirstRowImpl(self, name, buffer, blen, is_static, false);
+    return _VTableReadFirstRowImpl
+        (self, name, buffer, blen, is_static, false, NULL);
 }
 
 static INSDC_SRA_platform_id _VTableReadPLATFORM(const VTable *self) {
@@ -510,7 +524,7 @@ static rc_t _VTableBioBaseCntApprox(const VTable *self,
         }
     }
     if (rc == 0) {
-        uint32_t status = eVdbBlastNoErr;
+        VdbBlastStatus status = eVdbBlastNoErr;
         if (nspots < BIG) {
             *bio_base_count = ac.bioBasesCnt;
         }
@@ -548,7 +562,7 @@ static
 uint32_t _VTableGetNReads(const VTable *self, uint32_t *nreads)
 {
     rc_t rc = 0;
-    uint32_t status = eVdbBlastNoErr;
+    VdbBlastStatus status = eVdbBlastNoErr;
     const VCursor *curs = NULL;
     uint32_t idx = 0;
 
@@ -642,33 +656,51 @@ static void _RunDescFini(RunDesc *self) {
 }
 
 static
-uint64_t _RunDescMakeReadId(const RunDesc *self,
-    uint64_t spot, uint8_t read, uint64_t read_id)
+uint64_t _RunDescMakeReadId(const RunDesc *self, uint64_t spot, uint8_t read,
+    uint64_t read_id, VdbBlastStatus *status)
 {
-    assert(self);
+    bool overflow = false;
 
-    if (self->readIdDesc.type == eFixedReadN) {
+    assert(self && status);
+
+    *status = eVdbBlastNoErr;
+
+    if (self->readIdDesc.idType == eFixedReadN) {
         return read_id;
     }
-    assert(self->readIdDesc.type == eFactor10);
+
+    assert(self->readIdDesc.idType == eFactor10);
 
     read_id = read * self->spotBits + spot;
+    if (read_id < self->spotBits) {
+        overflow = true;
+    }
+
     if (self->readIdDesc.runBits > 0) {
+        uint64_t prev = read_id;
         read_id *= self->readIdDesc.runBits;
         read_id += self->index;
+        if (read_id < prev) {
+            overflow = true;
+        }
+    }
+
+    if (overflow) {
+        *status = eVdbBlastErr;
     }
 
     return read_id;
 }
 
 /******************************************************************************/
-
+/* VdbBlastDb */
 static void _VdbBlastDbWhack(VdbBlastDb *self) {
     if (self == NULL) {
         return;
     }
 
     VCursorRelease(self->cursACCESSION);
+    VCursorRelease(self->cursSeq);
 
     VTableRelease(self->prAlgnTbl);
     VTableRelease(self->refTbl);
@@ -679,6 +711,220 @@ static void _VdbBlastDbWhack(VdbBlastDb *self) {
     memset(self, 0, sizeof *self);
 
     free(self);
+}
+
+static rc_t _VdbBlastDbOpenSeqCurs(VdbBlastDb *self) {
+    rc_t rc = 0;
+    const VCursor *curs = NULL;
+    assert(self);
+    if (self->cursSeq != NULL) {
+        return 0;
+    }
+    rc = VTableCreateCursorRead(self->seqTbl, &self->cursSeq);
+    if (rc != 0) {
+        LOGERR(klogInt, rc, "Error during VTableCreateCursorRead");
+    }
+    else {
+        curs = self->cursSeq;
+    }
+    if (rc == 0) {
+        const char name[] = "READ_FILTER";
+        rc = VCursorAddColumn(curs, &self->col_READ_FILTER, name);
+        if (rc != 0) {
+            PLOGERR(klogInt, (klogInt, rc,
+                "Error during VCursorAddColumn($(name))", "name=%s", name));
+        }
+    }
+    if (rc == 0) {
+        const char name[] = "READ_LEN";
+        rc = VCursorAddColumn(curs, &self->col_READ_LEN, name);
+        if (rc != 0) {
+            PLOGERR(klogInt, (klogInt, rc,
+                "Error during VCursorAddColumn($(name))", "name=%s", name));
+        }
+    }
+    if (rc == 0) {
+        const char name[] = "READ_TYPE";
+        rc = VCursorAddColumn(curs, &self->col_READ_TYPE, name);
+        if (rc != 0) {
+            PLOGERR(klogInt, (klogInt, rc,
+                "Error during VCursorAddColumn($(name))", "name=%s", name));
+        }
+    }
+    if (rc == 0) {
+        const char name[] = "TRIM_LEN";
+        rc = VCursorAddColumn(curs, &self->col_TRIM_LEN, name);
+        if (rc != 0) {
+            PLOGERR(klogInt, (klogInt, rc,
+                "Error during VCursorAddColumn($(name))", "name=%s", name));
+        }
+    }
+    if (rc == 0) {
+        const char name[] = "TRIM_START";
+        rc = VCursorAddColumn(curs, &self->col_TRIM_START, name);
+        if (rc != 0) {
+            PLOGERR(klogInt, (klogInt, rc,
+                "Error during VCursorAddColumn($(name))", "name=%s", name));
+        }
+    }
+    if (rc == 0) {
+        rc = VCursorOpen(curs);
+        if (rc != 0) {
+            LOGERR(klogInt, rc, "Error during VCursorOpen");
+        }
+    }
+    return rc;
+}
+
+typedef enum {
+    eFirstRead,
+    eNextRead,
+    eAllReads,
+} TReadType;
+static rc_t _VdbBlastDbFindRead
+    (const VdbBlastDb *self, ReadDesc *rd, TReadType type, bool *found)
+{
+    rc_t rc = 0;
+
+    int64_t first = 0;
+    uint64_t count = 0;
+
+    const VCursor *curs = NULL;
+
+    assert(self && rd && found);
+
+    *found = false;
+
+    if (type == eAllReads) {
+        memset(rd, 0, sizeof *rd);
+    }
+
+    curs = self->cursSeq;
+
+    rc = VCursorIdRange(curs, self->col_READ_LEN, &first, &count);
+
+    if (rc == 0) {
+        int64_t i = 0;
+        uint32_t c = 0;
+        if (type == eNextRead) {
+            if (rd->spot < first) {
+                return -1;
+            }
+            i = rd->spot - first;
+            c = rd->read;
+            if (c + 1 >= rd->nReads) {
+                c = 0;
+                ++i;
+            }
+        }
+        for (; i < count; ++i) {
+            int64_t spot = first + i;
+
+            const void *base = NULL;
+            uint32_t elem_bits = 0;
+            uint32_t elem_cnt = 0;
+            uint32_t elem_off = 0;
+            rc = VCursorCellDataDirect(curs, spot, self->col_READ_TYPE,
+                &elem_bits, &base, &elem_off, &elem_cnt);
+            if (rc != 0) {
+                break;
+            }
+            else {
+                INSDC_read_type *aRt = (INSDC_read_type*)base;
+                for (; c < elem_cnt; ++c) {
+                    INSDC_read_type *rt = aRt + c;
+                    assert(rt);
+
+                    if (*rt & SRA_READ_TYPE_BIOLOGICAL) {
+                        *found = true;
+                        if (type == eAllReads) {
+                            ++rd->spot;
+                        }
+                        else {
+                            rd->spot = spot;
+                            rd->read = c + 1;
+                            rd->nReads = elem_cnt;
+                            return rc;
+                        }
+                    }
+                }
+                c = 0;
+            }
+        }
+    }
+
+    return rc;
+}
+
+static rc_t _VdbBlastDbFindFirstRead
+    (const VdbBlastDb *self, ReadDesc *rd, bool *found)
+{   return _VdbBlastDbFindRead(self, rd, eFirstRead, found); }
+static rc_t _VdbBlastDbFindNextRead
+    (const VdbBlastDb *self, ReadDesc *rd, bool *found)
+{   return _VdbBlastDbFindRead(self, rd, eNextRead , found); }
+
+rc_t _ReadDescFindNextRead(ReadDesc *self, bool *found) {
+    assert(self && self->run && self->run);
+    return _VdbBlastDbFindNextRead(self->run->obj, self, found);
+}
+
+static rc_t _VdbBlastDbOpenCursAndGetFirstRead
+    (VdbBlastDb *self, ReadDesc *desc, bool *found)
+{
+    rc_t rc = _VdbBlastDbOpenSeqCurs(self);
+    if (rc == 0) {
+        rc = _VdbBlastDbFindFirstRead(self, desc, found);
+    }
+    return rc;
+}
+
+static rc_t _VdbBlastDbOpenCursAndGetAllReads
+    (VdbBlastDb *self, ReadDesc *desc)
+{
+    rc_t rc = _VdbBlastDbOpenSeqCurs(self);
+    if (rc == 0) {
+        bool found = false;
+        rc = _VdbBlastDbFindRead(self, desc, eAllReads, &found);
+    }
+    return rc;
+}
+
+uint64_t _VdbBlastRunSetGetAllReads
+    (const VdbBlastRunSet *self, uint32_t run)
+{
+    ReadDesc desc;
+
+    assert(self);
+
+    if (run >= self->runs.krun) {
+        return 0;
+    }
+
+    if (_VdbBlastDbOpenCursAndGetAllReads(self->runs.run[run].obj, &desc)) {
+        return 0;
+    }
+
+    return desc.spot;
+}
+
+static rc_t _VdbBlastDbGetNReads
+    (VdbBlastDb *self, uint64_t spot, uint32_t *nReads)
+{
+    rc_t rc = _VdbBlastDbOpenSeqCurs(self);
+    assert(self && nReads);
+    *nReads = 0;
+    if (rc == 0) {
+        const void *base = NULL;
+        uint32_t elem_bits = 0;
+        uint32_t elem_cnt = 0;
+        uint32_t elem_off = 0;
+        rc = VCursorCellDataDirect(self->cursSeq, spot, self->col_READ_TYPE,
+            &elem_bits, &base, &elem_off, &elem_cnt);
+        if (rc == 0) {
+            *nReads = elem_cnt;
+        }
+    }
+    return rc;
 }
 
 /******************************************************************************/
@@ -770,14 +1016,14 @@ static VdbBlastStatus _VdbBlastRunInit(VdbBlastRun *self, VdbBlastDb *obj,
     return eVdbBlastNoErr;
 }
 
-static uint32_t Bits(uint64_t n, EReadIdType type) {
+static uint32_t Bits(uint64_t n, EReadIdType idType) {
     uint32_t bits = 1;
 
-    if (type == eFixedReadN) {
+    if (idType == eFixedReadN) {
         return 0;
     }
 
-    assert(type == eFactor10);
+    assert(idType == eFactor10);
 
     if (n == 0) {
         return 0;
@@ -791,8 +1037,8 @@ static uint32_t Bits(uint64_t n, EReadIdType type) {
     return bits;
 }
 
-/*static*/ uint32_t _VdbBlastRunFillRunDesc(VdbBlastRun *self) {
-    uint32_t status = eVdbBlastNoErr;
+/*static*/ VdbBlastStatus _VdbBlastRunFillRunDesc(VdbBlastRun *self) {
+    VdbBlastStatus status = eVdbBlastNoErr;
     RunDesc *rd = NULL;
 
     int i = 0;
@@ -828,7 +1074,7 @@ static uint32_t Bits(uint64_t n, EReadIdType type) {
         return status;
     }
 
-    rd->spotBits = Bits(rd->spotCount, rd->readIdDesc.type);
+    rd->spotBits = Bits(rd->spotCount, rd->readIdDesc.idType);
 
     if (self->type == btpWGS) {
         S
@@ -938,8 +1184,8 @@ static uint32_t Bits(uint64_t n, EReadIdType type) {
 
     col = "BIO_BASE_COUNT";
     status = _VTableReadFirstRowImpl(self->obj->seqTbl, col,
-        &rd->bioBaseCount, sizeof rd->bioBaseCount, NULL,
-        true);/*Do not generate error message when BIO_BASE_COUNT is not found*/
+        &rd->bioBaseCount, sizeof rd->bioBaseCount, NULL, true,
+        NULL);/*Do not generate error message when BIO_BASE_COUNT is not found*/
 
     if (status != eVdbBlastNoErr) {
         if (status == eVdbBlastTooExpensive) {
@@ -993,13 +1239,24 @@ static uint32_t Bits(uint64_t n, EReadIdType type) {
     return status;
 }
 
+bool _VdbBlastRunVarReadNum(const VdbBlastRun *self) {
+    VdbBlastStatus status = _VdbBlastRunFillRunDesc((VdbBlastRun*)self);
+    if (status != eVdbBlastNoErr) {
+        LOGERR(klogInt, 1, "Cannot fill run descriptor");
+    }
+
+    assert(self);
+
+    return self->rd.platform == SRA_PLATFORM_PACBIO_SMRT;
+}
+
 /* _VdbBlastRunGetNumSequences
     returns (number of spots) * (number of biological reads in spot).
     If read_filter is not static: some reads could be filtered,
     so status is set to eVdbBlastTooExpensive */
 /*static*/
 uint64_t _VdbBlastRunGetNumSequences(VdbBlastRun *self,
-    uint32_t *status)
+    VdbBlastStatus *status)
 {
     assert(self && status);
 
@@ -1011,6 +1268,18 @@ uint64_t _VdbBlastRunGetNumSequences(VdbBlastRun *self,
         if (self->type == btpREFSEQ) {
             S
             self->bioReads = 1;
+        }
+        else if (_VdbBlastRunVarReadNum(self)) {
+            rc_t rc = 0;
+            ReadDesc desc;
+            memset(&desc, 0, sizeof desc);
+            rc = _VdbBlastDbOpenCursAndGetAllReads(self->obj, &desc);
+            if (rc != 0) {
+                *status = eVdbBlastErr;
+            }
+            else {
+                self->bioReads = desc.spot;
+            }
         }
         else {
             *status = _VdbBlastRunFillRunDesc(self);
@@ -1029,8 +1298,14 @@ uint64_t _VdbBlastRunGetNumSequences(VdbBlastRun *self,
                 self->bioReadsTooExpensive = true;
             }
 
-            self->bioReads = rd->spotCount * rd->nBioReads;
-            S
+            if (_VdbBlastRunVarReadNum(self)) {
+                self->bioReads = 0;
+                S
+            }
+            else {
+                self->bioReads = rd->spotCount * rd->nBioReads;
+                S
+            }
         }
     }
     else {
@@ -1044,7 +1319,7 @@ uint64_t _VdbBlastRunGetNumSequences(VdbBlastRun *self,
 }
 
 static uint64_t _VdbBlastRunCountBioBaseCount(VdbBlastRun *self,
-    uint32_t *status)
+    VdbBlastStatus *status)
 {
     uint64_t bio_base_count = 0;
 
@@ -1059,50 +1334,56 @@ static uint64_t _VdbBlastRunCountBioBaseCount(VdbBlastRun *self,
 }
 
 static uint64_t _VdbBlastSraRunGetLengthApprox(VdbBlastRun *self,
-    uint32_t *status)
+    VdbBlastStatus *status)
 {
     assert(self && status);
 
     *status = eVdbBlastNoErr;
 
     if (self->bioBasesApprox == ~0) {
-        RunDesc *rd = NULL;
-        *status = _VdbBlastRunFillRunDesc(self);
-        if (*status != eVdbBlastNoErr) {
-            S
-            return 0;
-        }
-
-        rd = &self->rd;
-        if (rd->nReads == 0) {
-            S
-            self->bioBasesApprox = 0;
-        }
-        else if (rd->varReadLen) {
-            S
-            self->bioBasesApprox = _VdbBlastRunCountBioBaseCount(self, status);
+        if (! self->bioBasesTooExpensive && self->bioBases != ~0) {
+            self->bioBasesApprox = self->bioBases;
         }
         else {
-            if (self->type == btpREFSEQ) {
-                if (rd->bioBaseCount == ~0) {
-                    S
-                    *status = eVdbBlastErr;
-                }
-                else {
-                    self->bioBasesApprox = rd->bioBaseCount;
-                }
+            RunDesc *rd = NULL;
+            *status = _VdbBlastRunFillRunDesc(self);
+            if (*status != eVdbBlastNoErr) {
+                S
+                return 0;
+            }
+
+            rd = &self->rd;
+            if (rd->nReads == 0) {
+                S
+                self->bioBasesApprox = 0;
+            }
+            else if (rd->varReadLen) {
+                S
+                self->bioBasesApprox
+                    = _VdbBlastRunCountBioBaseCount(self, status);
             }
             else {
-                uint8_t read = 0;
-                S
-                for (read = 0, self->bioBasesApprox = 0;
-                    read < rd->nReads; ++read)
-                {
-                    if (rd->readType[read] & SRA_READ_TYPE_BIOLOGICAL) {
-                        self->bioBasesApprox += rd->readLen[read];
+                if (self->type == btpREFSEQ) {
+                    if (rd->bioBaseCount == ~0) {
+                        S
+                        *status = eVdbBlastErr;
+                    }
+                    else {
+                        self->bioBasesApprox = rd->bioBaseCount;
                     }
                 }
-                self->bioBasesApprox *= rd->spotCount;
+                else {
+                    uint8_t read = 0;
+                    S
+                    for (read = 0, self->bioBasesApprox = 0;
+                        read < rd->nReads; ++read)
+                    {
+                        if (rd->readType[read] & SRA_READ_TYPE_BIOLOGICAL) {
+                            self->bioBasesApprox += rd->readLen[read];
+                        }
+                    }
+                    self->bioBasesApprox *= rd->spotCount;
+                }
             }
         }
     }
@@ -1110,9 +1391,8 @@ static uint64_t _VdbBlastSraRunGetLengthApprox(VdbBlastRun *self,
     return self->bioBasesApprox;
 }
 
-static
-uint64_t _VdbBlastRunGetNumSequencesApprox(VdbBlastRun *self,
-    uint32_t *status)
+static uint64_t _VdbBlastRunGetNumSequencesApprox(VdbBlastRun *self,
+    VdbBlastStatus *status)
 {
 
     assert(self && status);
@@ -1122,7 +1402,7 @@ uint64_t _VdbBlastRunGetNumSequencesApprox(VdbBlastRun *self,
     if (self->bioReadsApprox == ~0) {
         RunDesc *rd = NULL;
 
-        if (self->bioReads != ~0 && ! self->bioReadsTooExpensive) {
+        if (! self->bioReadsTooExpensive && self->bioReads != ~0) {
             self->bioReadsApprox = self->bioReads;
         }
         else if (self->type == btpREFSEQ) {
@@ -1153,6 +1433,9 @@ uint64_t _VdbBlastRunGetNumSequencesApprox(VdbBlastRun *self,
             r /= n;
             self->bioReadsApprox = r;
         }
+        else if (_VdbBlastRunVarReadNum(self)) {
+            self->bioReads = _VdbBlastRunGetNumSequences(self, status);
+        }
         else {
             *status = _VdbBlastRunFillRunDesc(self);
             if (*status != eVdbBlastNoErr) {
@@ -1166,16 +1449,14 @@ uint64_t _VdbBlastRunGetNumSequencesApprox(VdbBlastRun *self,
             S
         }
     }
-    else
-    {   S }
 
     return self->bioReadsApprox;
 }
 
-static
-uint64_t _VdbBlastRunGetLength(VdbBlastRun *self, uint32_t *status)
+static uint64_t _VdbBlastRunGetLength
+    (VdbBlastRun *self, VdbBlastStatus *status)
 {
-    uint32_t dummy = eVdbBlastNoErr;
+    VdbBlastStatus dummy = eVdbBlastNoErr;
     if (status == NULL)
     {   status = &dummy; }
 
@@ -1195,10 +1476,10 @@ uint64_t _VdbBlastRunGetLength(VdbBlastRun *self, uint32_t *status)
             self->bioBases = self->rd.cmpBaseCount;
         }
         else {
-//    if BIO_BASE_COUNT is not found then status is set to eVdbBlastTooExpensive
+/* if BIO_BASE_COUNT is not found then status is set to eVdbBlastTooExpensive */
             *status = _VTableReadFirstRowImpl(self->obj->seqTbl,
                 "BIO_BASE_COUNT", &self->bioBases,
-                sizeof self->bioBases, NULL, true);
+                sizeof self->bioBases, NULL, true, NULL);
             if (*status == eVdbBlastTooExpensive) {
                 self->bioBasesTooExpensive = true;
             }
@@ -1216,7 +1497,7 @@ uint64_t _VdbBlastRunGetLength(VdbBlastRun *self, uint32_t *status)
 }
 
 static uint64_t _VdbBlastRunGetLengthApprox(VdbBlastRun *self,
-    uint32_t *status)
+    VdbBlastStatus *status)
 {
     if (self->cSra) {
         return _VdbBlastRunGetLength(self, status);
@@ -1229,7 +1510,7 @@ static uint64_t _VdbBlastRunGetLengthApprox(VdbBlastRun *self,
 static uint64_t _VdbBlastRunScan(const VdbBlastRun *self,
     uint64_t (*cmp)
         (uint64_t cand, uint64_t champ, int64_t minRead, bool *done),
-    uint64_t minRead, uint64_t start, uint32_t *status)
+    uint64_t minRead, uint64_t start, VdbBlastStatus *status)
 {
     uint64_t res = start;
     uint64_t bad = start;
@@ -1237,13 +1518,20 @@ static uint64_t _VdbBlastRunScan(const VdbBlastRun *self,
     bool done = false;
     rc_t rc = 0;
     const VCursor *curs = NULL;
-    uint32_t idx = 0;
+    uint32_t idxREAD_LEN = 0;
+    uint32_t idxREAD_TYPE = 0;
     assert(self && status &&
         (self->rd.spotCount || self->rd.readType ||
          self->rd.nReads    || self->rd.nBioReads));
-    rc = _VTableMakeCursor(self->obj->seqTbl, &curs, &idx, "READ_LEN");
+    rc = _VTableMakeCursor(self->obj->seqTbl, &curs, &idxREAD_LEN, "READ_LEN");
     if (rc != 0) {
         return bad;
+    }
+    if (_VdbBlastRunVarReadNum(self)) {
+        rc = VCursorAddColumn(curs, &idxREAD_TYPE, "READ_TYPE");
+        if (rc != 0) {
+            return bad;
+        }
     }
     for (spot = 1;
         spot <= self->rd.spotCount && *status == eVdbBlastNoErr && !done;
@@ -1251,33 +1539,85 @@ static uint64_t _VdbBlastRunScan(const VdbBlastRun *self,
     {
         uint32_t elem_bits, elem_off, elem_cnt;
         const void *base = NULL;
-        rc = VCursorCellDataDirect(curs, spot, idx,
-            &elem_bits, &base, &elem_off, &elem_cnt);
-        if (rc != 0) {
-            *status = eVdbBlastErr;
-            PLOGMSG(klogInfo, (klogInfo,
-                "$(f): Cannot '$(name)' CellDataDirect",
-                "f=%s,name=%s", __func__, "READ_LEN"));
-            res = bad;
-            break;
-        }
-        else if (elem_off != 0 || elem_bits != 32) {
-            *status = eVdbBlastErr;
-            PLOGERR(klogInt, (klogInt, rc,
-                "Bad VCursorCellDataDirect(READ_LEN) result: "
-                "boff=$(elem_off), elem_bits=$(elem_bits)",
-                "elem_off=%u,elem_bits=%u", elem_off, elem_bits));
-            res = bad;
-            break;
+        if (_VdbBlastRunVarReadNum(self)) {
+            rc = VCursorCellDataDirect(curs, spot, idxREAD_TYPE,
+                &elem_bits, &base, &elem_off, &elem_cnt);
+            if (rc != 0) {
+                *status = eVdbBlastErr;
+                PLOGMSG(klogInfo, (klogInfo,
+                    "$(f): Cannot '$(name)' CellDataDirect",
+                    "f=%s,name=%s", __func__, "READ_TYPE"));
+                res = bad;
+                break;
+            }
+            else {
+                INSDC_read_type *aRt = (INSDC_read_type*)base;
+                uint32_t c = 0;
+                for (c = 0; c < elem_cnt; ++c) {
+                    INSDC_read_type *rt = aRt + c;
+                    assert(rt);
+
+                    if (*rt & SRA_READ_TYPE_BIOLOGICAL) {
+                        uint32_t elem_bits, elem_off, elem_cnt;
+                        const void *base = NULL;
+                        rc = VCursorCellDataDirect(curs, spot, idxREAD_LEN,
+                            &elem_bits, &base, &elem_off, &elem_cnt);
+                        if (rc != 0) {
+                            *status = eVdbBlastErr;
+                            PLOGMSG(klogInfo, (klogInfo,
+                                "$(f): Cannot '$(name)' CellDataDirect",
+                                "f=%s,name=%s", __func__, "READ_LEN"));
+                            res = bad;
+                            break;
+                        }
+                        else if (elem_off != 0 || elem_bits != 32) {
+                            *status = eVdbBlastErr;
+                            PLOGERR(klogInt, (klogInt, rc,
+                                "Bad VCursorCellDataDirect(READ_LEN) result: "
+                                "boff=$(elem_off), elem_bits=$(elem_bits)",
+                                "elem_off=%u,elem_bits=%u",
+                                elem_off, elem_bits));
+                            res = bad;
+                            break;
+                        }
+                        else {
+                            uint8_t read = c;
+                            const uint32_t *readLen = base;
+                            res = cmp(readLen[read], res, minRead, &done);
+                        }
+                    }
+                }
+            }
         }
         else {
-            uint8_t read = 0;
-            const uint32_t *readLen = base;
-            assert(self->rd.readType && self->rd.readLen);
-            assert(self->rd.nReads == elem_cnt);
-            for (read = 0; read < self->rd.nReads; ++read) {
-                if (self->rd.readType[read] & SRA_READ_TYPE_BIOLOGICAL) {
-                   res = cmp(readLen[read], res, minRead, &done);
+            rc = VCursorCellDataDirect(curs, spot, idxREAD_LEN,
+                &elem_bits, &base, &elem_off, &elem_cnt);
+            if (rc != 0) {
+                *status = eVdbBlastErr;
+                PLOGMSG(klogInfo, (klogInfo,
+                    "$(f): Cannot '$(name)' CellDataDirect",
+                    "f=%s,name=%s", __func__, "READ_LEN"));
+                res = bad;
+                break;
+            }
+            else if (elem_off != 0 || elem_bits != 32) {
+                *status = eVdbBlastErr;
+                PLOGERR(klogInt, (klogInt, rc,
+                    "Bad VCursorCellDataDirect(READ_LEN) result: "
+                    "boff=$(elem_off), elem_bits=$(elem_bits)",
+                    "elem_off=%u,elem_bits=%u", elem_off, elem_bits));
+                res = bad;
+                break;
+            }
+            else {
+                uint8_t read = 0;
+                const uint32_t *readLen = base;
+                assert(self->rd.readType && self->rd.readLen);
+                assert(self->rd.nReads == elem_cnt);
+                for (read = 0; read < self->rd.nReads; ++read) {
+                    if (self->rd.readType[read] & SRA_READ_TYPE_BIOLOGICAL) {
+                       res = cmp(readLen[read], res, minRead, &done);
+                    }
                 }
             }
         }
@@ -1286,7 +1626,8 @@ static uint64_t _VdbBlastRunScan(const VdbBlastRun *self,
     return res;
 }
 
-static uint32_t _VdbBlastRunGetWgsAccession(VdbBlastRun *self, int64_t spot,
+static
+VdbBlastStatus _VdbBlastRunGetWgsAccession(VdbBlastRun *self, int64_t spot,
     char *name_buffer, size_t bsize, size_t *num_required)
 {
     rc_t rc = 0;
@@ -1370,9 +1711,11 @@ uint64_t _VdbBlastRunGetNumAlignments(VdbBlastRun *self,
 #ifdef TEST_VdbBlastRunFillReadDesc
 LIB_EXPORT
 #endif
-uint32_t _VdbBlastRunFillReadDesc(VdbBlastRun *self,
+VdbBlastStatus _VdbBlastRunFillReadDesc(VdbBlastRun *self,
     uint64_t read_id, ReadDesc *desc)
 {
+    VdbBlastStatus status = eVdbBlastNoErr;
+
     const VdbBlastRun *prev = NULL;
     const RunDesc *rd = NULL;
     
@@ -1391,61 +1734,73 @@ uint32_t _VdbBlastRunFillReadDesc(VdbBlastRun *self,
     rd = &self->rd;
 
     if (rd->nReads == 0 || rd->readType == NULL) {
-        uint32_t status = _VdbBlastRunFillRunDesc(self);
+        status = _VdbBlastRunFillRunDesc(self);
         if (status != eVdbBlastNoErr)
         {   return status; }
         assert(rd->nReads && rd->readType);
     }
 
-    if (rd->readIdDesc.type == eFixedReadN || read_id == 0) {
-        desc->spot = read_id / rd->nBioReads + 1;
-        if (desc->spot <= rd->spotCount) {
-            int idInSpot
-                = read_id - (desc->spot - 1) * rd->nBioReads; /* 0-based */
+    if (rd->readIdDesc.idType == eFixedReadN || read_id == 0) {
+        if (!_VdbBlastRunVarReadNum(self)) {
+            desc->nReads = rd->nReads;
+            desc->spot = read_id / rd->nBioReads + 1;
+            if (desc->spot <= rd->spotCount) {
+                int idInSpot
+                    = read_id - (desc->spot - 1) * rd->nBioReads; /* 0-based */
 
-            int i = 0;
-            for (i = 0; i < rd->nReads; ++i) {
-                if (rd->readType[i] & SRA_READ_TYPE_BIOLOGICAL) {
-                    if (bioIdx++ == idInSpot) {
-                        S
-                        desc->tableId = VDB_READ_UNALIGNED;
-                        desc->read = i + 1;
-                        desc->read_id = _RunDescMakeReadId(rd,
-                            desc->spot, desc->read, read_id);
-                        return eVdbBlastNoErr;
+                int i = 0;
+                for (i = 0; i < rd->nReads; ++i) {
+                    if (rd->readType[i] & SRA_READ_TYPE_BIOLOGICAL) {
+                        if (bioIdx++ == idInSpot) {
+                            S
+                            desc->tableId = VDB_READ_UNALIGNED;
+                            desc->read = i + 1;
+                            desc->read_id = _RunDescMakeReadId(rd,
+                                desc->spot, desc->read, read_id, &status);
+                            return status;
+                        }
                     }
                 }
+                S
             }
-            S
+            else {
+                uint64_t alignments = 0;
+                S
+                desc->spot -= rd->spotCount;
+                alignments = _VdbBlastRunGetNumAlignments(self, &status);
+                if (status != eVdbBlastNoErr) {
+                    return status;
+                }
+                if (desc->spot <= alignments) {
+                    desc->tableId = VDB_READ_ALIGNED;
+                    desc->read = 1;
+                    return eVdbBlastNoErr;
+                }
+                S
+            }
         }
         else {
-            VdbBlastStatus status = eVdbBlastNoErr;
-            uint64_t alignments = 0;
-            S
-            desc->spot -= rd->spotCount;
-            alignments = _VdbBlastRunGetNumAlignments(self, &status);
-            if (status != eVdbBlastNoErr) {
-                return status;
-            }
-            if (desc->spot <= alignments) {
-                desc->tableId = VDB_READ_ALIGNED;
-                desc->read = 1;
+            bool found = false;
+            if (_VdbBlastDbOpenCursAndGetFirstRead(self->obj, desc, &found)
+                == 0)
+            {
                 return eVdbBlastNoErr;
             }
-            S
         }
     }
-    else if (rd->readIdDesc.type == eFactor10) {
+    else if (rd->readIdDesc.idType == eFactor10) {
         if (rd->readIdDesc.runBits > 0) {
             read_id /= rd->readIdDesc.runBits;
         }
         if (rd->spotBits > 0) {
+            rc_t rc = 0;
             desc->read = read_id / rd->spotBits;
             desc->spot = read_id % rd->spotBits;
-            if (desc->read > 0 && desc->spot > 0) {
+            rc = _VdbBlastDbGetNReads(self->obj, desc->spot, &desc->nReads);
+            if (rc == 0 && desc->read > 0 && desc->spot > 0) {
                 desc->tableId = VDB_READ_UNALIGNED;
                 S
-               return eVdbBlastNoErr;
+                return eVdbBlastNoErr;
             }
             else {
                 S
@@ -1460,13 +1815,68 @@ uint32_t _VdbBlastRunFillReadDesc(VdbBlastRun *self,
     return eVdbBlastErr;
 }
 
-static uint32_t _VdbBlastRunGetReadId(VdbBlastRun *self, const char *acc,
+VdbBlastStatus _VdbBlastRunSetFindFirstRead(const VdbBlastRunSet *self,
+    uint64_t *read_id, bool useGetFirstRead)
+{
+    VdbBlastStatus status = eVdbBlastErr;
+    const RunSet *rs = NULL;
+    ReadDesc desc;
+    assert(self);
+    memset(&desc, 0, sizeof desc);
+    rs = &self->runs;
+    _VdbBlastRunSetBeingRead(self);
+    if (useGetFirstRead) {
+        bool found = false;
+        uint32_t i = 0;
+        for (i = 0; i < rs->krun; ++i) {
+            VdbBlastRun *run = &rs->run[i];
+            rc_t rc = _VdbBlastDbOpenCursAndGetFirstRead
+                (rs->run[i].obj, &desc, &found);
+            if (rc != 0) {
+                break;
+            }
+            else if (!found) {
+                continue;
+            }
+
+            if (desc.spot == 0) {
+                if (rs->krun > 1) {
+                    desc.prev = run;
+                }
+            }
+            else {
+                desc.run = run;
+                status = _ReadDescFixReadId(&desc);
+                break;
+            }
+        }
+    }
+    else {
+        status = _RunSetFindReadDesc(rs, 0, &desc);
+        if (status == eVdbBlastNoErr) {
+            status = _ReadDescFixReadId(&desc);
+        }
+    }
+    if (status == eVdbBlastNoErr) {
+        assert(read_id);
+        *read_id = desc.read_id;
+    }
+    return status;
+}
+
+EReadIdType _VdbBlastRunSetGetReadIdType(const VdbBlastRunSet *self) {
+    assert(self);
+
+    return self->readIdDesc.idType;
+}
+
+static VdbBlastStatus _VdbBlastRunGetReadId(VdbBlastRun *self, const char *acc,
     uint64_t spot, /* 1-based */
     uint32_t read, /* 1-based */
     uint64_t *read_id)
 {
     uint64_t id = ~0;
-    uint32_t status = eVdbBlastErr;
+    VdbBlastStatus status = eVdbBlastErr;
     size_t size;
 
     assert(self && acc && read_id && self->acc);
@@ -1482,7 +1892,7 @@ static uint32_t _VdbBlastRunGetReadId(VdbBlastRun *self, const char *acc,
             return eVdbBlastErr;
         }
 
-        if (self->rd.readIdDesc.type == eFixedReadN) {
+        if (self->rd.readIdDesc.idType == eFixedReadN) {
             for (id = (spot - 1) * self->rd.nBioReads; ; ++id) {
                 ReadDesc desc;
                 status = _VdbBlastRunFillReadDesc(self, id, &desc);
@@ -1504,14 +1914,39 @@ static uint32_t _VdbBlastRunGetReadId(VdbBlastRun *self, const char *acc,
             S
             return eVdbBlastErr;
         }
-        else if (self->rd.readIdDesc.type == eFactor10) {
-            id = read * self->rd.spotBits + spot;
-            if (self->rd.readIdDesc.runBits > 0) {
-                id *= self->rd.readIdDesc.runBits;
-                id += self->rd.index;
+        else if (self->rd.readIdDesc.idType == eFactor10) {
+            if (spot <= self->rd.spotCount) {
+                if (self->rd.readIdDesc.varReadN) {
+                    /* TODO How to make sure this read exists in this spot?*/
+                }
+                else {
+                    if (read > self->rd.nReads) {
+                        S
+                        return eVdbBlastErr;
+                    }
+                    else {
+                        /* TODO how to check it when READ_TYPE is variable
+                                withing a run (is it possible?) */
+                        if (read == 0) {
+                            S
+                            return eVdbBlastErr;
+                        }
+                        if (! (self->rd.readType[read - 1]
+                                & SRA_READ_TYPE_BIOLOGICAL))
+                        {
+                            S
+                            return eVdbBlastErr;
+                        }
+                    }
+                }
+                id = _RunDescMakeReadId(&self->rd, spot, read, ~0, &status);
+                *read_id = id;
+                return status;
             }
-            *read_id = id;
-            return eVdbBlastNoErr;
+            else {
+                S
+                return eVdbBlastErr;
+            }
         }
         else {
             assert(0);
@@ -1544,21 +1979,16 @@ static uint32_t _VdbBlastRunGetReadId(VdbBlastRun *self, const char *acc,
                     return eVdbBlastErr;
                 }
 #undef SZ
-               status = _VdbBlastRunGetWgsAccession(
+                status = _VdbBlastRunGetWgsAccession(
                     self, i + 1, name_buffer, sizeof name_buffer, &need);
                 if (need > sizeof name_buffer) {
                     S
                     return eVdbBlastErr;
                 }
                 if (strcmp(name_buffer, acc) == 0) {
-                    if (self->rd.readIdDesc.type == eFactor10 &&
-                        self->rd.readIdDesc.runBits > 0)
-                    {
-                        i *= self->rd.readIdDesc.runBits;
-                        i += self->rd.index;
-                    }
+                    i = _RunDescMakeReadId(&self->rd, i + 1, 1, i, &status);
                     *read_id = i;
-                    return eVdbBlastNoErr;
+                    return status;
                 }
             }
         }
@@ -1568,7 +1998,7 @@ static uint32_t _VdbBlastRunGetReadId(VdbBlastRun *self, const char *acc,
 }
 
 static uint64_t _VdbBlastRunGetSequencesAmount(
-    VdbBlastRun *self, uint32_t *status)
+    VdbBlastRun *self, VdbBlastStatus *status)
 {
     uint64_t n = _VdbBlastRunGetNumSequences(self, status);
 
@@ -1583,25 +2013,15 @@ static uint64_t _VdbBlastRunGetSequencesAmount(
 
 /******************************************************************************/
 
-void ReadDescFixReadId(ReadDesc *self) {
-    uint64_t read_id = 0;
+VdbBlastStatus _ReadDescFixReadId(ReadDesc *self) {
+    VdbBlastStatus status = eVdbBlastNoErr;
 
     assert(self && self->run);
 
-    if (self->run->rd.readIdDesc.type == eFixedReadN) {
-        return;
-    }
+    self->read_id = _RunDescMakeReadId
+        (&self->run->rd, self->spot, self->read, self->read_id, &status);
 
-    assert(self->run->rd.readIdDesc.type == eFactor10);
-
-    read_id = self->read * self->run->rd.spotBits + self->spot;
-
-    if (self->run->rd.readIdDesc.runBits > 0) {
-        read_id *= self->run->rd.readIdDesc.runBits;
-        read_id += self->run->rd.index;
-    }
-
-    self->read_id = read_id;    
+    return status;
 }
 
 /******************************************************************************/
@@ -1624,7 +2044,7 @@ static  void _RunSetFini(RunSet *self) {
     memset(self, 0, sizeof *self);
 }
 
-static uint32_t _RunSetAllocTbl(RunSet *self) {
+static VdbBlastStatus _RunSetAllocTbl(RunSet *self) {
     size_t nmemb = 16;
 
     if (self == NULL)
@@ -1654,14 +2074,14 @@ static uint32_t _RunSetAllocTbl(RunSet *self) {
     return eVdbBlastNoErr;
 }
 
-static uint32_t _RunSetAddObj(RunSet *self, VdbBlastDb *obj,
+static VdbBlastStatus _RunSetAddObj(RunSet *self, VdbBlastDb *obj,
     const char *rundesc, BTableType type, const KDirectory *dir,
     char *fullpath, uint32_t min_read_length)
 {
 
     VdbBlastRun* run = NULL;
 
-    uint32_t status = _RunSetAllocTbl(self);
+    VdbBlastStatus status = _RunSetAllocTbl(self);
     if (status != eVdbBlastNoErr) {
         return status;
     }
@@ -1719,7 +2139,7 @@ static uint64_t _RunSetGetNumSequences
 
 static
 uint64_t _RunSetGetNumSequencesApprox(const RunSet *self,
-    uint32_t *status)
+    VdbBlastStatus *status)
 {
     uint64_t num = 0;
     uint32_t i = 0;
@@ -1754,7 +2174,7 @@ uint64_t _RunSetGetNumSequencesApprox(const RunSet *self,
 
 static
 uint64_t _RunSetGetTotalLength(const RunSet *self,
-    uint32_t *status)
+    VdbBlastStatus *status)
 {
     uint64_t num = 0;
     uint32_t i = 0;
@@ -1781,17 +2201,21 @@ uint64_t _RunSetGetTotalLength(const RunSet *self,
 }
 
 static uint64_t _RunSetGetTotalLengthApprox(const RunSet *self,
-    uint32_t *status)
+    VdbBlastStatus *status)
 {
     uint64_t num = 0;
+
     uint32_t i = 0;
 
     assert(self && status);
 
     for (num = 0, i = 0; i < self->krun; ++i) {
         VdbBlastRun *run = NULL;
+
         assert(self->run);
+
         run = &self->run[i];
+
         num += _VdbBlastRunGetLengthApprox(run, status);
         if (*status != eVdbBlastNoErr) {
             STSMSG(1, ("Error: failed "
@@ -1801,11 +2225,12 @@ static uint64_t _RunSetGetTotalLengthApprox(const RunSet *self,
     }
 
     STSMSG(1, ("VdbBlastRunSetGetTotalLengthApprox = %ld", num));
+
     return num;
 }
 
 static size_t _RunSetGetName(const RunSet *self,
-    uint32_t *status, char *name_buffer, size_t bsize)
+    VdbBlastStatus *status, char *name_buffer, size_t bsize)
 {
     size_t need = 0, idx = 0;
     int i = 0;
@@ -1858,17 +2283,7 @@ static size_t _RunSetGetName(const RunSet *self,
 typedef struct {
     uint64_t read_id;
 } ReadId;
-/*static void _ReadIdMake(ReadId *self, uint64_t read_id) {
-    assert(self);
-    memset(self, 0, sizeof *self);
-    self->read_id = read_id;
-}
-static uint64_t _ReadIdGetReadId(const ReadId *self) {
-    assert(self);
-    return self->read_id;
-}*/
-
-static uint32_t _RunSetFindReadDescContinuous(
+static VdbBlastStatus _RunSetFindReadDescContinuous(
     const RunSet *self, uint64_t read_id, ReadDesc *desc)
 {
     uint64_t i = 0;
@@ -1878,7 +2293,7 @@ static uint32_t _RunSetFindReadDescContinuous(
     assert(self && desc);
 
     for (i = 0, prev = 0; i < self->krun; ++i) {
-        uint32_t status = eVdbBlastNoErr;
+        VdbBlastStatus status = eVdbBlastNoErr;
         VdbBlastRun *run = NULL;
         uint64_t l = 0;
 
@@ -1928,20 +2343,26 @@ static VdbBlastStatus _RunSetFindReadDescFactor10(
     const RunSet *self, uint64_t read_id, ReadDesc *desc)
 {
     VdbBlastStatus status = eVdbBlastErr;
+
     VdbBlastRun *run = NULL;
     uint64_t i = 0;
+
     assert(self && desc && self->run);
+
     if (self->run[0].rd.readIdDesc.runBits > 0) {
         i = read_id % self->run[0].rd.readIdDesc.runBits;
     }
     else {
         i = 0;
     }
+
     if (i >= self->krun) {
         S
         return eVdbBlastErr;
     }
+
     run = &self->run[i];
+
     status = _VdbBlastRunFillReadDesc(run, read_id, desc);
     if (status == eVdbBlastNoErr) {
         S
@@ -1949,6 +2370,7 @@ static VdbBlastStatus _RunSetFindReadDescFactor10(
     }
     else
     {   S }
+
     return status;
 }
 
@@ -1960,7 +2382,7 @@ VdbBlastStatus _RunSetFindReadDesc(const RunSet *self,
         return eVdbBlastErr;
     }
 
-    switch (self->run[0].rd.readIdDesc.type) {
+    switch (self->run[0].rd.readIdDesc.idType) {
         case eFixedReadN:
             return _RunSetFindReadDescContinuous(self, read_id, desc);
         case eFactor10:
@@ -1995,7 +2417,7 @@ static void _VdbBlastRunSetWhack(VdbBlastRunSet *self) {
 
 LIB_EXPORT
 VdbBlastRunSet *VdbBlastMgrMakeRunSet(const VdbBlastMgr *cself,
-    uint32_t *status,
+    VdbBlastStatus *status,
     uint32_t min_read_length,
     bool protein)
 {
@@ -2003,7 +2425,7 @@ VdbBlastRunSet *VdbBlastMgrMakeRunSet(const VdbBlastMgr *cself,
     VdbBlastRunSet *item = NULL;
     VdbBlastMgr *self = (VdbBlastMgr*)cself;
 
-    uint32_t dummy = eVdbBlastNoErr;
+    VdbBlastStatus dummy = eVdbBlastNoErr;
     if (status == NULL)
     {   status = &dummy; }
 
@@ -2158,16 +2580,11 @@ VdbBlastStatus CC VdbBlastRunSetAddRun(VdbBlastRunSet *self,
         }
     }
 
-    if (status == eVdbBlastNoErr && _VTableVarReadNum(obj->seqTbl)) {
-        /* VDB-1430: temporarily skip runs with variable read length */
-        _VdbBlastDbWhack(obj);
-        S
-        status = eVdbBlastNotImplemented;
-    }
-
     if (status == eVdbBlastNoErr) {
-        self->readIdDesc.type = eFactor10;
-        self->readIdDesc.type = eFixedReadN;
+        if (_VTableVarReadNum(obj->seqTbl)) {
+            self->readIdDesc.varReadN = true;
+            self->readIdDesc.idType   = eFactor10;
+        }
 
         status = _RunSetAddObj(&self->runs, obj, rundesc, type,
             NULL, fullpath, self->core2na.min_read_length);
@@ -2181,21 +2598,21 @@ void _VdbBlastRunSetBeingRead(const VdbBlastRunSet *cself) {
     uint32_t i = 0;
     uint32_t runBits = 0;
     VdbBlastRunSet *self = (VdbBlastRunSet*)cself;
-    EReadIdType type = eFixedReadN;
-/*  type = eFactor10; */
+    EReadIdType idType = eFixedReadN;
 
     if (self == NULL || self->beingRead) {
         return;
     }
 
-    type = self->readIdDesc.type;
-    runBits = Bits(self->runs.krun - 1, type);
+    idType = self->readIdDesc.idType;
+    runBits = Bits(self->runs.krun - 1, idType);
 
     for (i = 0; i < self->runs.krun; ++i) {
         VdbBlastRun *r = &self->runs.run[i];
         assert(r);
-        r->rd.readIdDesc.type = type;
+        r->rd.readIdDesc.idType = idType;
         r->rd.readIdDesc.runBits = runBits;
+        r->rd.readIdDesc.varReadN = _VdbBlastRunVarReadNum(r);
     }
 
     self->beingRead = true;
@@ -2217,9 +2634,9 @@ bool CC VdbBlastRunSetIsProtein(const VdbBlastRunSet *self)
 
 LIB_EXPORT
 uint64_t CC VdbBlastRunSetGetNumSequences(const VdbBlastRunSet *self,
-    uint32_t *status)
+    VdbBlastStatus *status)
 {
-    uint32_t dummy = eVdbBlastNoErr;
+    VdbBlastStatus dummy = eVdbBlastNoErr;
     if (status == NULL)
     {   status = &dummy; }
 
@@ -2237,7 +2654,7 @@ LIB_EXPORT uint64_t CC VdbBlastRunSetGetNumSequencesApprox(
     const VdbBlastRunSet *self)
 {
     uint64_t num = 0;
-    uint32_t status = eVdbBlastNoErr;
+    VdbBlastStatus status = eVdbBlastNoErr;
 
     _VdbBlastRunSetBeingRead(self);
 
@@ -2250,9 +2667,9 @@ LIB_EXPORT uint64_t CC VdbBlastRunSetGetNumSequencesApprox(
 
 LIB_EXPORT
 uint64_t CC VdbBlastRunSetGetTotalLength(const VdbBlastRunSet *self,
-    uint32_t *status)
+    VdbBlastStatus *status)
 {
-    uint32_t dummy = eVdbBlastNoErr;
+    VdbBlastStatus dummy = eVdbBlastNoErr;
     if (status == NULL)
     {   status = &dummy; }
 
@@ -2270,7 +2687,7 @@ LIB_EXPORT
 uint64_t CC VdbBlastRunSetGetTotalLengthApprox(
     const VdbBlastRunSet *self)
 {
-    uint32_t status = eVdbBlastNoErr;
+    VdbBlastStatus status = eVdbBlastNoErr;
 
     if (self == NULL) {
         STSMSG(1, ("VdbBlastRunSetGetTotalLengthApprox(self=NULL)"));
@@ -2287,7 +2704,7 @@ uint64_t CC VdbBlastRunSetGetMinSeqLen(const VdbBlastRunSet *self)
 {
     if (self->minSeqLen == ~0) {
         bool empty = true;
-        uint32_t status = eVdbBlastNoErr;
+        VdbBlastStatus status = eVdbBlastNoErr;
         uint64_t res = ~0;
         uint32_t i = 0;
         _VdbBlastRunSetBeingRead(self);
@@ -2354,7 +2771,7 @@ LIB_EXPORT
 uint64_t CC VdbBlastRunSetGetMaxSeqLen(const VdbBlastRunSet *self)
 {
     if (self->maxSeqLen == ~0) {
-        uint32_t status = eVdbBlastNoErr;
+        VdbBlastStatus status = eVdbBlastNoErr;
         uint64_t res = 0;
         uint32_t i = 0;
         _VdbBlastRunSetBeingRead(self);
@@ -2432,11 +2849,11 @@ uint64_t CC VdbBlastRunSetGetAvgSeqLen(const VdbBlastRunSet *self)
 }
 
 LIB_EXPORT size_t CC VdbBlastRunSetGetName(const VdbBlastRunSet *self,
-    uint32_t *status, char *name_buffer, size_t bsize)
+    VdbBlastStatus *status, char *name_buffer, size_t bsize)
 {
     size_t sz = 0;
 
-    uint32_t dummy = eVdbBlastNoErr;
+    VdbBlastStatus dummy = eVdbBlastNoErr;
     if (status == NULL)
     {   status = &dummy; }
 
@@ -2468,7 +2885,7 @@ size_t CC VdbBlastRunSetGetReadName(const VdbBlastRunSet *self,
     size_t bsize)
 {
     rc_t rc = 0;
-    uint32_t status = eVdbBlastNoErr;
+    VdbBlastStatus status = eVdbBlastNoErr;
     size_t need = 0;
     size_t num_writ = 0;
 
@@ -2563,7 +2980,7 @@ size_t CC VdbBlastRunSetGetReadName(const VdbBlastRunSet *self,
 LIB_EXPORT uint32_t CC VdbBlastRunSetGetReadId(const VdbBlastRunSet *self,
     const char *name_buffer, size_t bsize, uint64_t *read_id)
 {
-    uint32_t status = eVdbBlastNoErr;
+    VdbBlastStatus status = eVdbBlastNoErr;
     bool found = false;
 
     uint64_t result = 0;
@@ -2630,6 +3047,8 @@ LIB_EXPORT uint32_t CC VdbBlastRunSetGetReadId(const VdbBlastRunSet *self,
         }
     }
 
+    _VdbBlastRunSetBeingRead(self);
+
     for (i = 0; i < self->runs.krun && status == eVdbBlastNoErr; ++i) {
         uint64_t id = ~0;
         VdbBlastRun *run = self->runs.run + i;
@@ -2641,7 +3060,7 @@ LIB_EXPORT uint32_t CC VdbBlastRunSetGetReadId(const VdbBlastRunSet *self,
             if (strcmp(run->acc, acc) == 0) {
                 status = _VdbBlastRunGetReadId(run, acc, spot, read, &id);
                 if (status == eVdbBlastNoErr) {
-                    if (run->rd.readIdDesc.type == eFixedReadN) {
+                    if (run->rd.readIdDesc.idType == eFixedReadN) {
                         id += result;
                     }
                     *read_id = id;
@@ -2657,8 +3076,11 @@ LIB_EXPORT uint32_t CC VdbBlastRunSetGetReadId(const VdbBlastRunSet *self,
         {
             status = _VdbBlastRunGetReadId(run, acc, spot, read, &id);
             if (status == eVdbBlastNoErr) {
-                if (run->rd.readIdDesc.type == eFixedReadN) {
+                if (run->rd.readIdDesc.idType == eFixedReadN) {
                     result += id;
+                }
+                else {
+                    result = id;
                 }
                 *read_id = result;
                 found = true;
@@ -2699,7 +3121,7 @@ uint64_t CC VdbBlastRunSetGetReadLength(const VdbBlastRunSet *self,
     char buffer[84] = "";
     uint32_t row_len = 0;
     ReadDesc desc;
-    uint32_t status = eVdbBlastErr;
+    VdbBlastStatus status = eVdbBlastErr;
 
     if (self == NULL) {
         STSMSG(1, ("VdbBlastRunSetGetReadLength(self=NULL)"));
@@ -2745,7 +3167,7 @@ uint64_t CC VdbBlastRunSetGetReadLength(const VdbBlastRunSet *self,
 }
 
 uint64_t _VdbBlastRunSet2naRead(const VdbBlastRunSet *self,
-    uint32_t *status, uint64_t *read_id, size_t *starting_base,
+    VdbBlastStatus *status, uint64_t *read_id, size_t *starting_base,
     uint8_t *buffer, size_t buffer_size, KVdbBlastReadMode mode)
 {
     uint64_t n = 0; 

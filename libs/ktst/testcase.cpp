@@ -33,10 +33,7 @@
 
 using namespace ncbi::NK;
 
-TestCase::TestCase(const char* name) 
-: _name(name), _ec(0) 
-{
-}
+void TestCase::Init(const char* name)  { _name = name; _ec = 0; } 
 
 void TestCase::report_error(const char* msg, const char* file, int line, bool is_msg, bool isCritical)
 {

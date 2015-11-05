@@ -37,14 +37,14 @@
 /* KAppGetTotalRam
  *  Windows specific function of getting amount of RAM
  */
-rc_t KAppGetTotalRam ( uint64_t * totalRamKb )
+rc_t KAppGetTotalRam ( uint64_t * totalRam )
 {
     rc_t rc;
     BOOL ret;
 
-    assert ( totalRamKb != 0 );
+    assert ( totalRam != 0 );
 
-    ret = GetPhysicallyInstalledSystemMemory ( totalRamKb );
+    ret = GetPhysicallyInstalledSystemMemory ( totalRam );
     if ( ! ret )
     {
 		DWORD error = GetLastError();
@@ -56,7 +56,7 @@ rc_t KAppGetTotalRam ( uint64_t * totalRamKb )
         return rc;
     }
 
-    *totalRamKb *= 1024;
+    *totalRam *= 1024;
 
     return 0;
 }

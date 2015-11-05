@@ -276,6 +276,34 @@ FIXTURE_TEST_CASE(SRA_ReadCollectionGetReadGroup_WithGroups_Found, SRA_Fixture)
     EXIT;
 }
     
+FIXTURE_TEST_CASE(SRA_ReadCollectionHasReadGroup_NotFound, SRA_Fixture)
+{   
+    ENTRY_ACC(SRA_Accession);
+    REQUIRE ( ! NGS_ReadCollectionHasReadGroup ( m_coll, ctx, "wontfindme" ) );
+    EXIT;
+}
+    
+FIXTURE_TEST_CASE(SRA_ReadCollectionHasReadGroup_NoGroups_DefaultFound_ByEmptyString, SRA_Fixture)
+{   
+    ENTRY_ACC(SRA_Accession);
+    REQUIRE ( NGS_ReadCollectionHasReadGroup ( m_coll, ctx, "" ) );
+    EXIT;
+}
+    
+FIXTURE_TEST_CASE(SRA_ReadCollectionHasReadGroup_WithGroups_DefaultFound, SRA_Fixture)
+{   
+    ENTRY_ACC(SRA_Accession_WithReadGroups);
+    REQUIRE ( NGS_ReadCollectionHasReadGroup ( m_coll, ctx, "" ) );
+    EXIT;
+}
+    
+FIXTURE_TEST_CASE(SRA_ReadCollectionHasReadGroup_WithGroups_Found, SRA_Fixture)
+{   
+    ENTRY_ACC(SRA_Accession_WithReadGroups);
+    REQUIRE ( NGS_ReadCollectionHasReadGroup ( m_coll, ctx, "S77_V2") );
+    EXIT;
+}
+    
 // NGS_Read
 
 FIXTURE_TEST_CASE(SRA_NGS_ReadGetReadName, SRA_Fixture)

@@ -102,7 +102,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     do {
         uint32_t paramc;
         bool requireAmd64 = false;
-        uint64_t requireRamKb = 0;
+        uint64_t requireRam = 0;
 
         rc = ArgsMakeAndHandle ( & args, argc, argv, 1, 
                Options, sizeof Options / sizeof (OptDef) );
@@ -145,7 +145,7 @@ rc_t CC KMain ( int argc, char *argv [] )
                     break;
                 }
 
-                rc = sscanf(dummy, "%llu", &requireRamKb);
+                rc = sscanf(dummy, "%llu", &requireRam);
                 if ( rc != 1) 
                 {
                     LOGMSG(klogErr, "Failure to parse '" OPTION_RAM "' argument value");
@@ -156,7 +156,7 @@ rc_t CC KMain ( int argc, char *argv [] )
         }
        
         {
-            rc = KAppCheckEnvironment(requireAmd64, requireRamKb);
+            rc = KAppCheckEnvironment(requireAmd64, requireRam);
             if (rc != 0 )
                 printf("Invalid environment\n");
             else

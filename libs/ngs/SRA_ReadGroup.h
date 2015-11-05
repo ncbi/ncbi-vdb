@@ -56,7 +56,7 @@ struct NGS_ReadGroup * SRA_ReadGroupMake ( ctx_t ctx,
                                                  const struct NGS_Cursor * curs, 
                                                  const struct SRA_ReadGroupInfo* group_info, 
                                                  const struct NGS_String * run_name,
-                                                 const struct NGS_String * group_name ); 
+                                                 const char * group_name, size_t group_name_size ); 
 
 /* IteratorMake
     run_name : will be used for unnamed group

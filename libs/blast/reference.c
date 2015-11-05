@@ -381,7 +381,7 @@ const References* _RunSetMakeReferences
                 crntSeqId = base;
                 SEQ_ID = string_dup(base, row_len);
                 if (SEQ_ID == NULL) {
-                    S
+                    *status = eVdbBlastMemErr;
                     return NULL;
                 }
                 if (refs->rfdk > 0 && /* there are previous references */

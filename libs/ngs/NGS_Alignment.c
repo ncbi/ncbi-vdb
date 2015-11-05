@@ -923,7 +923,7 @@ static NGS_Alignment_vt NullAlignment_vt_inst =
     NullAlignment_noNext           /* next                         */
 };
 
-struct NGS_Alignment * NGS_AlignmentMakeNull ( ctx_t ctx, const struct NGS_String * run_name )
+struct NGS_Alignment * NGS_AlignmentMakeNull ( ctx_t ctx, char const * run_name, size_t run_name_size )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
 
@@ -933,12 +933,12 @@ struct NGS_Alignment * NGS_AlignmentMakeNull ( ctx_t ctx, const struct NGS_Strin
 
     ref = calloc ( 1, sizeof * ref );
     if ( ref == NULL )
-        SYSTEM_ERROR ( xcNoMemory, "allocating NullAlignment on '%.*s'", NGS_StringSize ( run_name, ctx ), NGS_StringData ( run_name, ctx ) );
+        SYSTEM_ERROR ( xcNoMemory, "allocating NullAlignment on '%.*s'", run_name_size, run_name );
     else
     {
 #if _DEBUGGING
         char instname [ 256 ];
-        string_printf ( instname, sizeof instname, NULL, "%.*s(NULL)", NGS_StringSize ( run_name, ctx ), NGS_StringData ( run_name, ctx ) );
+        string_printf ( instname, sizeof instname, NULL, "%.*s(NULL)", run_name_size, run_name );
         instname [ sizeof instname - 1 ] = 0;
 #else
         const char *instname = "";
