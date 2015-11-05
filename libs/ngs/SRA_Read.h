@@ -55,7 +55,6 @@ enum SequenceTableColumn
 {
     seq_READ_TYPE,
     seq_READ,
-    seq_QUALITY_ASCII,
     seq_QUALITY,
     seq_READ_LEN,
     seq_NAME,
@@ -93,8 +92,6 @@ struct SRA_Read
     uint32_t frag_max;
     uint32_t frag_start;
     uint32_t frag_len;
-
-    bool has_phred_33;
 
     bool seen_first;
     bool seen_first_frag;

@@ -118,8 +118,12 @@ VDB_EXTERN rc_t CC VDBManagerVCreateTable ( struct VDBManager *self, VTable **tb
  *  "name" [ IN ] - NUL terminated string in
  *  db-native character set giving actual table name
  */
-/*VDB_EXTERN rc_t CC VDatabaseCreateTableDefault ( struct VDatabase *self, VTable **tbl,
-    const char *member, const char *name, ... );*/
+/*
+VDB_EXTERN rc_t CC VDatabaseCreateTableDefault ( struct VDatabase *self, VTable **tbl,
+    const char *member, const char *name, ... );
+VDB_EXTERN rc_t CC VDatabaseVCreateTableDefault ( VDatabase *self, VTable **tbl,
+    const char *member, const char *name, va_list args )    
+*/
 VDB_EXTERN rc_t CC VDatabaseCreateTableByMask ( struct VDatabase *self, VTable **tbl,
     const char *member, KCreateMode cmode, KCreateMode cmode_mask, const char *name, ... );
 VDB_EXTERN rc_t CC VDatabaseVCreateTableByMask ( struct VDatabase *self, VTable **tbl,

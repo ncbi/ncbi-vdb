@@ -5,7 +5,7 @@
    fun:find_home_directory
 }
 {
-   <insert_a_suppression_name_here>
+   first_time_ctx_recover
    Memcheck:Leak
    ...
    fun:KConfigMake
