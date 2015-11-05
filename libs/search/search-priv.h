@@ -134,7 +134,7 @@ char *create_substring ( const char *src, uint32_t sz )
 }
 
 /*
-* Smith-Waterman similariy matrix
+* Smith-Waterman similarity matrix
 */
 rc_t calculate_similarity_matrix (
     INSDC_dna_text const* text, size_t size_text,

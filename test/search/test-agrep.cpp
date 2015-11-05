@@ -271,7 +271,7 @@ FIXTURE_TEST_CASE ( AgrepWumanberTest, AgrepFixture )
         // for this degenerate case, the expected behavior is not clear, so I'll just document the reality here:
         const string text = "xyzvuwpiuuuu";
         REQUIRE ( FindFirst ( text, pattern_len ) );
-        REQUIRE_EQ ( (size_t)match_info.length, text . size () ); // note the difference with AGREP_ALG_DP
+        REQUIRE_EQ ( (size_t)match_info.length, text . size () ); //FIXME: different from other algorithms
         REQUIRE_EQ ( match_info.position, (int32_t)0 );
         REQUIRE_EQ ( (size_t)match_info.score, pattern_len );
     }
@@ -312,9 +312,85 @@ FIXTURE_TEST_CASE ( AgrepMyersTest, AgrepFixture )
     // 2 Insertions
     {
         REQUIRE ( FindFirst ( "xxxMAdTCaHvv", 2 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len /* + 2 */ ); // note the difference with other algorithms
+        REQUIRE ( (size_t)match_info.length == pattern_len /* + 2 */ ); //FIXME: different from other algorithms
         REQUIRE ( match_info.position == 3 );
         REQUIRE ( match_info.score == 2 );
+    }
+
+    // 3 Mismatches
+    {
+        REQUIRE ( FindFirst ( "xATxx", 5 ) );
+        REQUIRE_EQ ( 2 /*pattern_len*/, (size_t)match_info.length  ); //FIXME: different from other algorithms
+        REQUIRE_EQ ( (int32_t)0, match_info.position );
+        REQUIRE_EQ ( (int32_t)3, match_info.score );
+    }
+    
+    // Best match
+    {
+        REQUIRE ( FindBest ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len );
+        REQUIRE ( match_info.position == 18 );
+        REQUIRE ( match_info.score == 0 );
+    }
+    // First match
+    {
+        REQUIRE ( FindFirst ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len - 1 );
+        REQUIRE ( match_info.position == 0 );
+        REQUIRE ( match_info.score == 1 );
+    }
+
+    // Match anything
+    {
+        // threshold >= pattern_len seems to specify that a complete mismatch is acceptable
+        // by implementation, the algorithm reports the result to be "found" at the tail portion of the reference string
+        // for this degenerate case, the expected behavior is not clear, so I'll just document the reality here:
+        const string text = "xyzvuwpiuuuu";
+        REQUIRE ( FindFirst ( text, pattern_len ) );
+        REQUIRE_EQ ( (size_t)match_info.length, text . size () ); //FIXME: different from other algorithms
+        REQUIRE_EQ ( (size_t)match_info.position, text . size () - ( pattern_len + 1 ) );
+        REQUIRE_EQ ( (size_t)match_info.score, pattern_len );
+    }
+
+    // Not found
+    {
+        REQUIRE ( ! FindFirst ( "xyzvuwpiu", 4 ) );
+    }
+}
+
+FIXTURE_TEST_CASE ( AgrepMyersUnltdTest, AgrepFixture )
+{
+    REQUIRE_RC ( Setup ( "MATCH", AGREP_ALG_MYERS_UNLTD ) );
+	
+    // Complete match
+    {
+        REQUIRE ( FindFirst ( "MATCH", 0 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len );
+        REQUIRE ( match_info.position == 0 );
+        REQUIRE ( match_info.score == 0 );
+    }
+
+    // Complete substring match
+    {
+        REQUIRE ( FindFirst ( "xxMATCHvv", 0 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len );
+        REQUIRE ( match_info.position == 2 );
+        REQUIRE ( match_info.score == 0 );
+    }
+    // 1 Deletion
+    {
+        REQUIRE ( FindFirst ( "xxxMACHvv", 1 ) );
+        REQUIRE ( (size_t)match_info.length == pattern_len - 1 );
+        REQUIRE ( match_info.position == 3 );
+        REQUIRE ( match_info.score == 1 );
+    }
+
+    // 2 Insertions
+    {
+        REQUIRE ( FindFirst ( "xxxMAdTCaHvv", 2 ) );
+        REQUIRE_EQ ( (size_t)pattern_len + 1 /* 2 */, (size_t)match_info.length ); //FIXME: different from other algorithms
+        REQUIRE_EQ ( (int32_t)3, match_info.position );
+        REQUIRE_EQ ( (int32_t)2, match_info.score );
     }
 
     // 3 Mismatches
@@ -347,7 +423,7 @@ FIXTURE_TEST_CASE ( AgrepMyersTest, AgrepFixture )
         // for this degenerate case, the expected behavior is not clear, so I'll just document the reality here:
         const string text = "xyzvuwpiuuuu";
         REQUIRE ( FindFirst ( text, pattern_len ) );
-        REQUIRE_EQ ( (size_t)match_info.length, text . size () ); // note the difference with AGREP_ALG_DP
+        REQUIRE_EQ ( (size_t)match_info.length, text . size () ); //FIXME: different from other algorithms
         REQUIRE_EQ ( (size_t)match_info.position, text . size () - ( pattern_len + 1 ) );
         REQUIRE_EQ ( (size_t)match_info.score, pattern_len );
     }
