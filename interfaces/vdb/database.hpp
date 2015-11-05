@@ -154,6 +154,9 @@ struct VDatabase
         va_end ( args );
         return rc;
     }
+    inline rc_t CreateTable ( VTable **tbl, const char *member, const char *name, va_list args ) throw ()
+    { return VDatabaseVCreateTableDefault ( this, tbl, member, name, args ); }
+
     inline rc_t CreateTable ( VTable **tbl, const char *member,
         KCreateMode cmode, KCreateMode cmode_mask, const char *name, ... ) throw ()
     {
