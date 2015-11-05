@@ -188,14 +188,6 @@ $(ILIBDIR)/libkff: $(addprefix $(ILIBDIR)/libkff.,$(ILIBEXT))
 
 OBJFILES += $(KFF_OBJ)
 
-else
-
-$(ILIBDIR)/libkff:
-	@ echo "NOTE - internal library $(@F) cannot be built:"         \
-	       "It requires 'libmagic' and its development headers."
-
-endif
-
 KFF_SRC = \
 	fileformat \
 	ffext \
@@ -215,6 +207,14 @@ endif
 
 $(ILIBDIR)/libkff.$(LIBX): $(KFF_OBJ)
 	$(LD) --slib -o $@ $^ $(KFF_LIB)
+
+else
+
+$(ILIBDIR)/libkff:
+	@ echo "NOTE - internal library $(@F) cannot be built:"         \
+	       "It requires 'libmagic' and its development headers."
+
+endif
 
 compile: stdcompile
 
