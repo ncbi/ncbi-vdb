@@ -553,15 +553,18 @@ uint64_t CSRA1_AlignmentGetReferencePositionProjectionRange( CSRA1_Alignment* se
         {
             /* calculated projection is out of bounds, i.e. ref_pos
                doesn't project on the alignment
+               (it also catches ref_pos < align_REF_POS case)
             */
             ret = (uint64_t)-1 ^ 0xFFFFFFFFu;
         }
-
-        /* ref_pos has a projection on the current alignment -
-           pack it and make its length = 1
-        */
-        ret <<= 32;
-        ret |= 1;
+        else
+        {
+            /* ref_pos has a projection on the current alignment -
+               pack it and make its length = 1
+            */
+            ret <<= 32;
+            ret |= 1;
+        }
     }
     else /* we have indels */
     {

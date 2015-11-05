@@ -598,10 +598,13 @@ FIXTURE_TEST_CASE(CSRA1_Alignment_getAlignmentPosition, CSRA1_Fixture)
                 ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.1" ) . getAlignmentPosition () );
 }
 
-FIXTURE_TEST_CASE(CSRA1_Alignment_getReferencePositionProjectionRangeM, CSRA1_Fixture)
+FIXTURE_TEST_CASE(CSRA1_Alignment_getReferencePositionProjectionRange, CSRA1_Fixture)
 {
     uint64_t res = ncbi::NGS::openReadCollection ("SRR1597772").getAlignment("SRR1597772.PA.6").getReferencePositionProjectionRange(11601);
     REQUIRE( res == 1 );
+
+    res = ncbi::NGS::openReadCollection("SRR1597895").getAlignment("SRR1597895.PA.26088399").getReferencePositionProjectionRange(234668879);
+    REQUIRE( res == ((uint64_t)-1 ^ 0xFFFFFFFFu) ); // out of bounds
 }
 
 FIXTURE_TEST_CASE(CSRA1_Alignment_getReferencePositionProjectionRangeI, CSRA1_Fixture)
