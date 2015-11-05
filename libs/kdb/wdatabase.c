@@ -426,7 +426,7 @@ rc_t KDBManagerVCreateDBInt ( KDBManager *self,
                 Open/Create DB functions to the KDatabaseMake
             */
             if ( rc == 0 )
-                (*db) -> cmode = cmode;
+                KDatabaseSetCmode ( *db, cmode );
 
             KMD5SumFmtRelease ( md5 );
         }

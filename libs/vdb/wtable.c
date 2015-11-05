@@ -406,6 +406,13 @@ LIB_EXPORT rc_t CC VDatabaseCreateTableDefault ( VDatabase *self, VTable **tbl,
     return rc;
 }
 
+
+LIB_EXPORT rc_t CC VDatabaseVCreateTableDefault ( VDatabase *self, VTable **tbl,
+    const char *member, const char *name, va_list args )
+{
+    return VDatabaseVCreateTableByMask ( self, tbl, member, 0, 0, name, args );
+}
+
 LIB_EXPORT rc_t CC VDatabaseCreateTableByMask ( VDatabase *self, VTable **tbl,
     const char *member, KCreateMode cmode, KCreateMode cmode_mask,
     const char *name, ... )
