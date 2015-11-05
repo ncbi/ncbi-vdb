@@ -84,7 +84,6 @@ static const char * align_col_specs [] =
     "(bool)REF_ORIENTATION",
     "(INSDC:coord:zero)REF_POS",
     "(INSDC:dna:text)REF_READ",
-    "(INSDC:quality:text:phred_33)SAM_QUALITY",
     "(INSDC:coord:one)SEQ_READ_ID",
     "(I64)SEQ_SPOT_ID",
     "(ascii)SPOT_GROUP",
@@ -119,7 +118,6 @@ enum AlignmentTableColumns
     align_REF_ORIENTATION,
     align_REF_POS,
     align_REF_READ,
-    align_SAM_QUALITY,
     align_SEQ_READ_ID,
     align_SEQ_SPOT_ID,
     align_SPOT_GROUP,
@@ -880,24 +878,55 @@ static
 struct NGS_String * CSRA1_FragmentGetQualities ( CSRA1_Alignment * self, ctx_t ctx, uint64_t offset, uint64_t length )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    NGS_String * seq;
+    NGS_String * ret = NULL;
     
     if ( ! self -> seen_first ) 
     {
         USER_ERROR ( xcIteratorUninitialized, "Alignment accessed before a call to AlignmentIteratorNext()" );
-        return NULL;
     }
-
-    TRY ( seq = NGS_CursorGetString ( GetCursor ( self ), ctx, self -> cur_row, align_SAM_QUALITY ) )
+    else
     {
-        TRY ( NGS_String * sub = NGS_StringSubstrOffsetSize ( seq, ctx, offset, length ) )
+        const void * base;
+        uint32_t elem_bits, boff, row_len;
+        TRY ( NGS_CursorCellDataDirect ( GetCursor ( self ), ctx, self -> cur_row, align_QUALITY, & elem_bits, & base, & boff, & row_len ) )
         {
-            NGS_StringRelease ( seq, ctx );
-            seq = sub;
+            assert ( elem_bits == 8 );
+            assert ( boff == 0 );
+            
+            if ( offset > row_len )
+            {
+                length = 0;
+            }
+            else if ( offset + length > row_len )
+            {
+                length = row_len - offset;
+            }
+            
+            {   /* convert to ascii-33 */
+                char * copy = malloc ( length + 1 );
+                if ( copy == NULL )
+                    SYSTEM_ERROR ( xcNoMemory, "allocating %u bytes for QUALITY row %ld", row_len + 1, self -> cur_row );
+                else
+                {
+                    uint32_t i;
+                    const uint8_t * orig = base;
+                    for ( i = 0; i < length; ++ i )
+                    {
+                        copy [ i ] = ( char ) ( orig [ offset + i ] + 33 );
+                    }
+                    copy [ length ] = 0;
+
+                    ret = NGS_StringMakeOwned ( ctx, copy, length );
+                    if ( FAILED () )
+                    {
+                        free ( copy );
+                    }
+                }
+            }
         }
     }
     
-    return seq;
+    return ret;
 }
 
 static

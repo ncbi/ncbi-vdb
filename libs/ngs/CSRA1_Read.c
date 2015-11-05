@@ -107,7 +107,6 @@ void CSRA1_ReadInit ( ctx_t ctx, SRA_Read * self, const char *clsname, const cha
         {
             TRY ( self -> run_name = NGS_StringDuplicate ( run_name, ctx ) )
             {
-                self -> has_phred_33 = true; /* hope for the best - will reset if ascii qualities fail to read */
                 self -> wants_full      = true;
                 self -> wants_partial   = true; 
                 self -> wants_unaligned = true;            
@@ -187,7 +186,6 @@ void CSRA1_ReadIteratorInit ( ctx_t ctx,
         {
             TRY ( self -> run_name = NGS_StringDuplicate ( run_name, ctx ) )
             {
-                self -> has_phred_33 = true; /* hope for the best - will reset if ascii qualities fail to read */
                 self -> wants_full      = wants_full;
                 self -> wants_partial   = wants_partial;
                 self -> wants_unaligned = wants_unaligned;
