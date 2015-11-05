@@ -84,7 +84,7 @@ TEST_CASE(KMMapMakeRead_and_KMMapRelease)
     REQUIRE_RC(KDirectoryRelease ( wd ));
 }
 
-#ifdef LINUX
+#ifdef HAVE_KFF
 
 TEST_CASE(ExtFileFormat)
 {
