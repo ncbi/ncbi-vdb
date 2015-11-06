@@ -308,49 +308,66 @@ const References* _RunSetMakeReferences
             rc = VDatabaseOpenTableRead(run->obj->db,
                 &run->obj->refTbl, "REFERENCE");
             if (rc != 0) {
-                S
+          /* Do not log error : this DB does not have any reference - it happens
+                PLOGERR(klogInt, (klogInt, rc,
+                    "Cannot open REFERENCE table for $(acc))",
+                    "acc=%s", run->acc));*/
                 continue;
             }
         }
         rc = VTableCreateCursorRead(run->obj->refTbl, &c);
         if (rc != 0) {
-            S
+            PLOGERR(klogInt, (klogInt, rc,
+                "Cannot create REFERENCE Cursor for $(acc))",
+                "acc=%s", run->acc));
             continue;
         }
         if (rc == 0) {
             rc = VCursorAddColumn(c, &iCIRCULAR, "CIRCULAR");
             if (rc != 0) {
-                S
+                PLOGERR(klogInt, (klogInt, rc,
+                    "Cannot add REFERENCE/CIRCULAR Column for $(acc))",
+                    "acc=%s", run->acc));
             }
         }
         if (rc == 0) {
             rc = VCursorAddColumn(c, &iCMP_READ, "CMP_READ");
             if (rc != 0) {
-                S
+                PLOGERR(klogInt, (klogInt, rc,
+                    "Cannot add REFERENCE/CMP_READ Column for $(acc))",
+                    "acc=%s", run->acc));
             }
         }
         if (rc == 0) {
             rc = VCursorAddColumn(c, &iREAD_LEN, "READ_LEN");
             if (rc != 0) {
-                S
+                PLOGERR(klogInt, (klogInt, rc,
+                    "Cannot add REFERENCE/READ_LEN Column for $(acc))",
+                    "acc=%s", run->acc));
             }
         }
         if (rc == 0) {
             rc = VCursorAddColumn(c, &iSEQ_ID, "SEQ_ID");
             if (rc != 0) {
-                S
+                PLOGERR(klogInt, (klogInt, rc,
+                    "Cannot add REFERENCE/SEQ_ID Column for $(acc))",
+                    "acc=%s", run->acc));
             }
         }
         if (rc == 0) {
             rc = VCursorOpen(c);
             if (rc != 0) {
-                S
+                PLOGERR(klogInt, (klogInt, rc,
+                    "Cannot open REFERENCE Cursor for $(acc))",
+                    "acc=%s", run->acc));
             }
         }
         if (rc == 0) {
             rc = VCursorIdRange(c, iSEQ_ID, &first, &count);
             if (rc != 0) {
-                S
+                PLOGERR(klogInt, (klogInt, rc,
+                    "Cannot get REFERENCE/CursorIdRange for $(acc))",
+                    "acc=%s", run->acc));
             }
         }
 
@@ -365,8 +382,13 @@ const References* _RunSetMakeReferences
 
             rc = VCursorCellDataDirect(c, cur_row, iSEQ_ID,
                 &elem_bits, &base, &boff, &row_len);
-            if (rc != 0 || elem_bits != 8 || boff != 0) {
-                S
+            if (rc == 0 && (elem_bits != 8 || boff != 0)) {
+                rc = RC(rcSRA, rcCursor, rcReading, rcData, rcUnexpected);
+            }
+            if (rc != 0) {
+                PLOGERR(klogInt, (klogInt, rc, "Cannot get "
+                    "CellDataDirect for $(acc)/REFERENCE/SEQ_ID/$(row)",
+                    "acc=%s,row=%lu", run->acc, cur_row));
                 break;
             }
             if (crntSeqId == NULL) { /* the first reference in a run */
@@ -407,10 +429,15 @@ const References* _RunSetMakeReferences
                 VdbBlastRef *rfd  = NULL;
                 rc = VCursorCellDataDirect(c, cur_row, iCIRCULAR,
                     &elem_bits, &base, &boff, &row_len);
-                if (rc != 0 ||
-                    base == NULL || elem_bits != 8 || boff != 0)
+                if (rc == 0 &&
+                    (base == NULL || elem_bits != 8 || boff != 0))
                 {
-                    S
+                    rc = RC(rcSRA, rcCursor, rcReading, rcData, rcUnexpected);
+                }
+                if (rc != 0) {
+                    PLOGERR(klogInt, (klogInt, rc, "Error during "
+                        "CellDataDirect for $(acc)/REFERENCE/CIRCULAR/$(row)",
+                        "acc=%s,row=%lu", run->acc, cur_row));
                     break;
                 }
                 CIRCULAR = *(bool*)base;
@@ -418,7 +445,9 @@ const References* _RunSetMakeReferences
                 rc = VCursorCellDataDirect(c, cur_row, iCMP_READ,
                     &elem_bits, &base, &boff, &row_len);
                 if (rc != 0) {
-                    S
+                    PLOGERR(klogInt, (klogInt, rc, "Cannot get "
+                        "CellDataDirect for $(acc)/REFERENCE/CMP_READ/$(row)",
+                        "acc=%s,row=%lu", run->acc, cur_row));
                     break;
                 }
                 else if (base == NULL
@@ -527,6 +556,8 @@ uint64_t _ReferencesGetTotalLength
     return self->refs->totalLen;
 }
 
+#define REF_SEPARATOR '/'
+
 size_t CC _ReferencesGetReadName(const struct References *self,
     uint64_t read_id, char *name_buffer, size_t bsize)
 {
@@ -539,7 +570,9 @@ size_t CC _ReferencesGetReadName(const struct References *self,
         return 0;
     }
 
-    if (self == NULL || self->refs == NULL || self->refs->rfdk <= read_id) {
+    if (self == NULL || self->refs == NULL ||
+        self->refs->rfdk <= read_id)
+    {
         return 0;
     }
 
@@ -559,7 +592,8 @@ size_t CC _ReferencesGetReadName(const struct References *self,
 
         size_t num_writ = 0;
         rc_t rc =
-            string_printf(name_buffer, bsize, &num_writ, "%s|%s", acc, SEQ_ID);
+            string_printf(name_buffer, bsize, &num_writ,
+            "%s%c%s", acc, REF_SEPARATOR, SEQ_ID);
         if (rc == 0) {
             return num_writ;
         }
@@ -578,7 +612,6 @@ VdbBlastStatus _ReferencesGetReadId(const References *self,
     const char *name_buffer, size_t bsize, uint64_t *read_id)
 {
     int32_t rfdi = ~0;
-    const char SP = '|';
     const char *sp = name_buffer;
     const RefSet *refs = NULL;
     String acc, seq;
@@ -591,8 +624,8 @@ VdbBlastStatus _ReferencesGetReadId(const References *self,
     refs = self->refs;
     memset(&acc, 0 , sizeof acc);
     memset(&seq, 0 , sizeof seq);
-    if (name_buffer[0] != SP) {
-        sp = string_chr(name_buffer, bsize, SP);
+    if (name_buffer[0] != REF_SEPARATOR) {
+        sp = string_chr(name_buffer, bsize, REF_SEPARATOR);
         if (sp == NULL) {
             return eVdbBlastErr;
         }
@@ -703,22 +736,29 @@ static uint64_t _ReferencesRead2na(References *self,
                 return 0;
             }
             if (self->rfdi == 0 || rfd1->iRun != rfd->iRun) {
+                const char *acc = self->rs->run[rfd->iRun].acc;
                 t = self->rs->run[rfd->iRun].obj->refTbl;
                 RELEASE(VCursor, self->curs);
                 rc = VTableCreateCursorRead(t, &self->curs);
                 if (rc != 0) {
-                    S
+                    PLOGERR(klogInt, (klogInt, rc,
+                        "Cannot create REFERENCE Cursor for $(acc)) /Read2na",
+                        "acc=%s", acc));
                     return 0;
                 }
                 rc = VCursorAddColumn(self->curs,
                     &self->idxREAD, "(INSDC:2na:packed)READ");
                 if (rc != 0) {
-                    S
+                    PLOGERR(klogInt, (klogInt, rc, "Cannot add "
+                        "REFERENCE/READ Column for $(acc)) /Read2na",
+                        "acc=%s", acc));
                     return 0;
                 }
                 rc = VCursorOpen(self->curs);
                 if (rc != 0) {
-                    S
+                    PLOGERR(klogInt, (klogInt, rc,
+                        "Cannot open REFERENCE Cursor for $(acc)) /Read2na",
+                        "acc=%s", acc));
                     return 0;
                 }
             }
@@ -760,10 +800,10 @@ static uint64_t _ReferencesRead2na(References *self,
                 break;
             }
             else {
-                PLOGERR(klogInt, (klogInt, rc,
-                  "Error in VCursorReadBitsDirect($(path), READ, spot=$(spot))",
-                  "path=%s,spot=%ld",
-                  self->rs->run[rfd->iRun].path, self->spot));
+                PLOGERR(klogInt, (klogInt, rc, "Error in VCursorReadBitsDirect"
+                    "($(path), READ, spot=$(spot)) /Read2na",
+                    "path=%s,spot=%ld",
+                    self->rs->run[rfd->iRun].path, self->spot));
                 *status = eVdbBlastErr;
                 return 0;
             }
@@ -815,6 +855,7 @@ static uint32_t _ReferencesData2na(References *self,
         Packed2naRead *out = NULL;
         rc_t rc = 0;
         const VdbBlastRef *rfd = &self->refs->rfd[self->rfdi];
+        const char *acc = self->rs->run[rfd->iRun].acc;
         int64_t first = 0;
         uint64_t count = 0;
         uint64_t last_spot = 0;
@@ -862,22 +903,29 @@ static uint32_t _ReferencesData2na(References *self,
                 return 0;
             }
             if (self->rfdi == 0 || rfd1->iRun != rfd->iRun) {
+                const char *acc = self->rs->run[rfd->iRun].acc;
                 t = self->rs->run[rfd->iRun].obj->refTbl;
                 RELEASE(VCursor, self->curs);
                 rc = VTableCreateCursorRead(t, &self->curs);
                 if (rc != 0) {
-                    S
+                    PLOGERR(klogInt, (klogInt, rc,
+                        "Cannot create REFERENCE Cursor for $(acc)) /Data2na",
+                        "acc=%s", acc));
                     return 0;
                 }
                 rc = VCursorAddColumn(self->curs,
                     &self->idxREAD, "(INSDC:2na:packed)READ");
                 if (rc != 0) {
-                    S
+                    PLOGERR(klogInt, (klogInt, rc,
+                        "Cannot add REFERENCE/READ Column for $(acc)) /Data2na",
+                        "acc=%s", acc));
                     return 0;
                 }
                 rc = VCursorOpen(self->curs);
                 if (rc != 0) {
-                    S
+                    PLOGERR(klogInt, (klogInt, rc,
+                        "Cannot open REFERENCE Cursor for $(acc) /Data2na)",
+                        "acc=%s", acc));
                     return 0;
                 }
             }
@@ -896,7 +944,9 @@ static uint32_t _ReferencesData2na(References *self,
         rc = VCursorGetBlobDirect(self->curs,
             &data->blob, self->spot, self->idxREAD);
         if (rc != 0) {
-            S /* PLOGERR */
+            PLOGERR(klogInt, (klogInt, rc,
+                "Cannot GetBlob REFERENCE/READ for $(acc)/$(spot) /2na)",
+                "acc=%s,spot=%zu", acc, self->spot));
             return 0;
         }
         if (data->blob == NULL) {
@@ -905,7 +955,9 @@ static uint32_t _ReferencesData2na(References *self,
         }
         rc = VBlobIdRange(data->blob, &first, &count);
         if (rc != 0) {
-            S /* PLOGERR */
+            PLOGERR(klogInt, (klogInt, rc,
+                "Cannot BlobIdRange REFERENCE/READ for $(acc)/$(spot) /2na",
+                "acc=%s,spot=%zu", acc, self->spot));
             return 0;
         }
         if (self->spot < first || self->spot >= first + count) {
@@ -929,8 +981,13 @@ static uint32_t _ReferencesData2na(References *self,
                 rc = VBlobCellData(data->blob, self->spot, &elem_bits,
                     (const void **)&out->starting_byte,
                     &out->offset_to_first_bit, &row_len);
-                if (rc != 0 || elem_bits != 2) {
-                    S /* PLOGERR */
+                if (rc == 0 && elem_bits != 2) {
+                    rc = RC(rcSRA, rcCursor, rcReading, rcData, rcUnexpected);
+                }
+                if (rc != 0) {
+                    PLOGERR(klogInt, (klogInt, rc, "Error during CellData "
+                        "for $(acc)/REFERENCE/READ/$(spot)) /2na",
+                        "acc=%s,spot=%zu", acc, self->spot));
                     return 0;
                 }
                 else {
@@ -944,8 +1001,13 @@ static uint32_t _ReferencesData2na(References *self,
                 const void *base = NULL;
                 rc = VBlobCellData(data->blob, self->spot,
                     &elem_bits, &base, NULL, &row_len);
-                if (rc != 0 || elem_bits != 2) {
-                    S /* PLOGERR */
+                if (rc == 0 && elem_bits != 2) {
+                    rc = RC(rcSRA, rcCursor, rcReading, rcData, rcUnexpected);
+                }
+                if (rc != 0) {
+                    PLOGERR(klogInt, (klogInt, rc, "Error during CellData "
+                        "for $(acc)/REFERENCE/READ/$(spot)) /2na",
+                        "acc=%s,spot=%zu", acc, self->spot));
                     return 0;
                 }
                 else {
@@ -960,8 +1022,13 @@ static uint32_t _ReferencesData2na(References *self,
             uint32_t len = 0;
             rc = VBlobCellData
                 (data->blob, first_spot, &elem_bits, &base, &boff, &len);
-            if (rc != 0 || elem_bits != 2) {
-                S /* PLOGERR */
+            if (rc == 0 && elem_bits != 2) {
+                rc = RC(rcSRA, rcCursor, rcReading, rcData, rcUnexpected);
+            }
+            if (rc != 0) {
+                PLOGERR(klogInt, (klogInt, rc, "Error during CellData "
+                    "for $(acc)/REFERENCE/READ/$(spot)) /2na",
+                    "acc=%s,spot=%zu", acc, first_spot));
                 return 0;
             }
             if (first_spot + 1 == last_spot) {
@@ -977,8 +1044,13 @@ static uint32_t _ReferencesData2na(References *self,
                 uint32_t last_len = 0;
                 rc = VBlobCellData(data->blob, last_spot - 1,
                     &elem_bits, &last_base, &boff, &last_len);
-                if (rc != 0 || elem_bits != 2) {
-                    S /* PLOGERR */
+                if (rc == 0 && elem_bits != 2) {
+                    rc = RC(rcSRA, rcCursor, rcReading, rcData, rcUnexpected);
+                }
+                if (rc != 0) {
+                    PLOGERR(klogInt, (klogInt, rc, "Error during CellData "
+                        "for $(acc)/REFERENCE/READ/$(spot)) /2na",
+                        "acc=%s,spot=%zu", acc, last_spot - 1));
                     return 0;
                 }
                 else {
@@ -1024,8 +1096,13 @@ static uint32_t _ReferencesData2na(References *self,
                 uint32_t len = 0;
                 rc = VBlobCellData(data->blob, self->spot,
                     &elem_bits, &base, &boff, &len);
-                if (rc != 0 || elem_bits != 2) {
-                    S /* PLOGERR */
+                if (rc == 0 && elem_bits != 2) {
+                    rc = RC(rcSRA, rcCursor, rcReading, rcData, rcUnexpected);
+                }
+                if (rc != 0) {
+                    PLOGERR(klogInt, (klogInt, rc, "Error during CellData "
+                        "for $(acc)/REFERENCE/READ/$(spot)) /2na",
+                        "acc=%s,spot=%zu", acc, self->spot));
                     return 0;
                 }
                 if (self->spot == first_spot) {
@@ -1222,7 +1299,9 @@ size_t _Core4naReadRef(Core4na *self, const RunSet *runs,
         }
         rc = VTableCreateCursorRead(run->obj->refTbl, &self->curs);
         if (rc != 0) {
-            S
+            PLOGERR(klogInt, (klogInt, rc,
+                "Cannot create REFERENCE Cursor for $(acc))",
+                "acc=%s", run->acc));
             return 0;
         }
         rc = VCursorAddColumn(self->curs,
@@ -1232,7 +1311,9 @@ size_t _Core4naReadRef(Core4na *self, const RunSet *runs,
         }
         if (rc != 0) {
             RELEASE(VCursor, self->curs);
-            S
+            PLOGERR(klogInt, (klogInt, rc,
+                "Cannot make REFERENCE/READ Cursor for $(acc)) /Read4na",
+                "acc=%s", run->acc));
             return 0;
         }
         self->desc.tableId = read_id;
@@ -1348,7 +1429,9 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
         }
         rc = VTableCreateCursorRead(run->obj->refTbl, &self->curs);
         if (rc != 0) {
-            S
+            PLOGERR(klogInt, (klogInt, rc,
+                "Cannot create REFERENCE Cursor for $(acc))",
+                "acc=%s", run->acc));
             return NULL;
         }
         rc = VCursorAddColumn(self->curs,
@@ -1358,7 +1441,9 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
         }
         if (rc != 0) {
             RELEASE(VCursor, self->curs);
-            S
+            PLOGERR(klogInt, (klogInt, rc,
+                "Cannot make REFERENCE/READ Cursor for $(acc)) /Data4na",
+                "acc=%s", run->acc));
             return NULL;
         }
         self->desc.tableId = read_id;
@@ -1379,7 +1464,9 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
     rc = VCursorGetBlobDirect(self->curs,
         &self->blob, self->desc.spot, self->col_READ);
     if (rc != 0) {
-        S /* PLOGERR */
+        PLOGERR(klogInt, (klogInt, rc,
+            "Cannot GetBlob REFERENCE/READ for $(acc)/$(spot) /4na)",
+            "acc=%s,spot=%zu", run->acc, self->desc.spot));
         return 0;
     }
     if (self->blob == NULL) {
@@ -1388,7 +1475,9 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
     }
     rc = VBlobIdRange(self->blob, &first, &count);
     if (rc != 0) {
-        S /* PLOGERR */
+        PLOGERR(klogInt, (klogInt, rc,
+            "Cannot BlobIdRange REFERENCE/READ for $(acc)/$(spot) /4na",
+            "acc=%s,spot=%zu", run->acc, self->desc.spot));
         return 0;
     }
     if (self->desc.spot < first || self->desc.spot >= first + count) {
@@ -1417,9 +1506,15 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
             if (self->desc.spot == first_spot) {
                 rc = VBlobCellData(self->blob, self->desc.spot, &elem_bits,
                     &out, &offset_to_first_bit, &row_len);
-                if (rc != 0 || elem_bits != 8 || offset_to_first_bit != 0)
+                if (rc == 0 &&
+                    (elem_bits != 8 || offset_to_first_bit != 0))
                 {
-                    S /* PLOGERR */
+                    rc = RC(rcSRA, rcCursor, rcReading, rcData, rcUnexpected);
+                }
+                if (rc != 0) {
+                    PLOGERR(klogInt, (klogInt, rc, "Error during CellData "
+                        "for $(acc)/REFERENCE/READ/$(spot)) /4na",
+                        "acc=%s,spot=%zu", run->acc, self->desc.spot));
                     return NULL;
                 }
                 else {
@@ -1433,8 +1528,13 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
                 const void *base = NULL;
                 rc = VBlobCellData(self->blob, self->desc.spot,
                     &elem_bits, &base, NULL, &row_len);
-                if (rc != 0 || elem_bits != 8 || offset_to_first_bit != 0) {
-                    S /* PLOGERR */
+                if (rc == 0 && elem_bits != 8) {
+                    rc = RC(rcSRA, rcCursor, rcReading, rcData, rcUnexpected);
+                }
+                if (rc != 0) {
+                    PLOGERR(klogInt, (klogInt, rc, "Error during CellData "
+                        "for $(acc)/REFERENCE/READ/$(spot)) /4na",
+                        "acc=%s,spot=%zu", run->acc, self->desc.spot));
                     return NULL;
                 }
                 else {
@@ -1451,8 +1551,13 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
         uint32_t elem_bits = 0;
         rc = VBlobCellData
             (self->blob, first_spot, &elem_bits, &base, &boff, &len);
-        if (rc != 0 || elem_bits != 8 || boff != 0) {
-            S /* PLOGERR */
+        if (rc == 0 && (elem_bits != 8 || boff != 0)) {
+            rc = RC(rcSRA, rcCursor, rcReading, rcData, rcUnexpected);
+        }
+        if (rc != 0) {
+            PLOGERR(klogInt, (klogInt, rc, "Error during CellData "
+                "for $(acc)/REFERENCE/READ/$(spot)) /4na",
+                "acc=%s,spot=%zu", run->acc, first_spot));
             return NULL;
         }
         if (first_spot + 1 == last_spot) {
@@ -1468,8 +1573,13 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
             uint32_t last_len = 0;
             rc = VBlobCellData(self->blob, last_spot - 1,
                 &elem_bits, &last_base, &boff, &last_len);
-            if (rc != 0 || elem_bits != 8 || boff != 0) {
-                S /* PLOGERR */
+            if (rc == 0 && (elem_bits != 8 || boff != 0)) {
+                rc = RC(rcSRA, rcCursor, rcReading, rcData, rcUnexpected);
+            }
+            if (rc != 0) {
+                PLOGERR(klogInt, (klogInt, rc, "Error during CellData "
+                    "for $(acc)/REFERENCE/READ/$(spot)) /4na",
+                    "acc=%s,spot=%zu", run->acc, last_spot - 1));
                 return 0;
             }
             else {
@@ -1513,8 +1623,13 @@ const uint8_t* _Core4naDataRef(Core4na *self, const RunSet *runs,
                 uint32_t len = 0;
                 rc = VBlobCellData(self->blob, self->desc.spot,
                     &elem_bits, &base, &boff, &len);
-                if (rc != 0 || elem_bits != 8 || boff != 0) {
-                    S /* PLOGERR */
+                if (rc == 0 && (elem_bits != 8 || boff != 0)) {
+                    rc = RC(rcSRA, rcCursor, rcReading, rcData, rcUnexpected);
+                }
+                if (rc != 0) {
+                    PLOGERR(klogInt, (klogInt, rc, "Error during CellData "
+                        "for $(acc)/REFERENCE/READ/$(spot)) /4na",
+                        "acc=%s,spot=%zu", run->acc, self->desc.spot));
                     return 0;
                 }
                 if (self->desc.spot == first_spot) {

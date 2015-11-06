@@ -734,7 +734,9 @@ bool _Reader2naNextData(Reader2na *self,
             (const void **)&out->starting_byte, &out->offset_to_first_bit,
             &out->length_in_bases);
         if (rc != 0) {
-            S
+            PLOGERR(klogInt, (klogInt, rc, "Error during CellData "
+                "for $(acc)/READ/$(spot)) /2na",
+                "acc=%s,spot=%zu", self->desc.run->acc, self->desc.spot));
             DBGMSG(DBG_BLAST, DBG_FLAG(DBG_BLAST_BLAST),
                ("%s: %s:%d:%d(%d): READ_LEN=%d: "
                 "ERROR WHILE READING: SKIPPED FOR NOW\n", __func__,
@@ -969,7 +971,7 @@ static VdbBlastStatus _VdbBlastRunMakeReaderColsCursor(
                                  : "(INSDC:4na:bin)CMP_READ";
     }
 
-    rc = _VTableMakeCursor(tbl, curs, read_col_idx, read_col_name);
+    rc = _VTableMakeCursor(tbl, curs, read_col_idx, read_col_name, self->acc);
 
     if (rc == 0) {
         assert(*curs);
