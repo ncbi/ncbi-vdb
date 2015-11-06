@@ -1051,8 +1051,9 @@ LIB_EXPORT rc_t CC VRefVariationIUPACWhack ( VRefVariation* self )
 {
     KRefcountWhack ( & self -> refcount, "VRefVariation" );
 
-    assert ( self->variation != NULL );
-    free ( self->variation );
+    assert ( self->variation != NULL || self->var_size == 0 );
+    if ( self->variation != NULL )
+        free ( self->variation );
 
     memset ( self, 0, sizeof * self );
 
