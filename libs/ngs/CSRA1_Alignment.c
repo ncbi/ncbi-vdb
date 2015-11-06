@@ -530,7 +530,7 @@ uint64_t CSRA1_AlignmentGetReferencePositionProjectionRange( CSRA1_Alignment* se
     if ( ! self -> seen_first ) 
     {
         USER_ERROR ( xcIteratorUninitialized, "Alignment accessed before a call to AlignmentIteratorNext()" );
-        return (uint64_t)-1 ^ 0xFFFFFFFFu;
+        return (uint64_t)-1;
     }
 
     REF_OFFSET = CSRA1_AlignmentGetCellData ( self, ctx, align_REF_OFFSET );
@@ -545,7 +545,7 @@ uint64_t CSRA1_AlignmentGetReferencePositionProjectionRange( CSRA1_Alignment* se
         if ( FAILED() )
         {
             SYSTEM_ERROR ( xcIteratorUninitialized, "Failed to access REF_LEN or REF_POS" );
-            return (uint64_t)-1 ^ 0xFFFFFFFFu;
+            return (uint64_t)-1;
         }
         else if ( ret >= align_len )
         {
@@ -553,7 +553,7 @@ uint64_t CSRA1_AlignmentGetReferencePositionProjectionRange( CSRA1_Alignment* se
                doesn't project on the alignment
                (it also catches ref_pos < align_REF_POS case)
             */
-            ret = (uint64_t)-1 ^ 0xFFFFFFFFu;
+            ret = (uint64_t)-1;
         }
         else
         {
@@ -577,7 +577,7 @@ uint64_t CSRA1_AlignmentGetReferencePositionProjectionRange( CSRA1_Alignment* se
         if ( HAS_REF_OFFSET == NULL )
         {
             SYSTEM_ERROR ( xcIteratorUninitialized, "Failed to access HAS_REF_OFFSET" );
-            return (uint64_t)-1 ^ 0xFFFFFFFFu;
+            return (uint64_t)-1;
         }
 
         read_len = self -> cell_len [ align_HAS_REF_OFFSET ];
@@ -586,7 +586,7 @@ uint64_t CSRA1_AlignmentGetReferencePositionProjectionRange( CSRA1_Alignment* se
         if ( FAILED () )
         {
             SYSTEM_ERROR ( xcIteratorUninitialized, "Failed to access REF_POS" );
-            return (uint64_t)-1 ^ 0xFFFFFFFFu;
+            return (uint64_t)-1;
         }
 
         for ( align_pos = 0, proj_len = 1; idx_ref < ref_pos && align_pos < read_len ; align_pos += proj_len )

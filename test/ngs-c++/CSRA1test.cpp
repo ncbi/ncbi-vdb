@@ -604,7 +604,7 @@ FIXTURE_TEST_CASE(CSRA1_Alignment_getReferencePositionProjectionRange, CSRA1_Fix
     REQUIRE( res == 1 );
 
     res = ncbi::NGS::openReadCollection("SRR1597895").getAlignment("SRR1597895.PA.26088399").getReferencePositionProjectionRange(234668879);
-    REQUIRE( res == ((uint64_t)-1 ^ 0xFFFFFFFFu) ); // out of bounds
+    REQUIRE( res == (uint64_t)-1 ); // out of bounds
 }
 
 FIXTURE_TEST_CASE(CSRA1_Alignment_getReferencePositionProjectionRangeI, CSRA1_Fixture)
