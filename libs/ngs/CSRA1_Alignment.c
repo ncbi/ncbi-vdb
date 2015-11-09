@@ -589,48 +589,58 @@ uint64_t CSRA1_AlignmentGetReferencePositionProjectionRange( CSRA1_Alignment* se
             return (uint64_t)-1;
         }
 
-        for ( align_pos = 0, proj_len = 1; idx_ref < ref_pos && align_pos < read_len ; align_pos += proj_len )
+        if ( idx_ref > ref_pos )
         {
-            bool has_ref_offset = HAS_REF_OFFSET [ idx_HAS_REF_OFFSET++ ];
-            if ( has_ref_offset == 0) /* match/mismatch */
+            /* the alignment starts beyond given ref_pos
+                out of bounds
+            */
+            ret = (uint64_t)-1;
+        }
+        else
+        {
+            for ( align_pos = 0, proj_len = 1; idx_ref < ref_pos && align_pos < read_len ; align_pos += proj_len )
             {
-                ++idx_ref;
-                proj_len = 1;
-            }
-            else /* indel */
-            {
-                int32_t ref_offset = REF_OFFSET [ idx_REF_OFFSET++ ];
-                
-                if ( ref_offset < 0 )
+                bool has_ref_offset = HAS_REF_OFFSET [ idx_HAS_REF_OFFSET++ ];
+                if ( has_ref_offset == 0) /* match/mismatch */
                 {
-                    /* insertion */
-                    proj_len = (uint32_t)-ref_offset;
                     ++idx_ref;
+                    proj_len = 1;
                 }
-                else
+                else /* indel */
                 {
-                    /* deletion */
-                    assert ( ref_offset > 0 );
+                    int32_t ref_offset = REF_OFFSET [ idx_REF_OFFSET++ ];
+                
+                    if ( ref_offset < 0 )
+                    {
+                        /* insertion */
+                        proj_len = (uint32_t)-ref_offset;
+                        ++idx_ref;
+                    }
+                    else
+                    {
+                        /* deletion */
+                        assert ( ref_offset > 0 );
 
-                    idx_ref += ref_offset;
-                    proj_len = 0;
+                        idx_ref += ref_offset;
+                        proj_len = 0;
+                    }
                 }
             }
+
+            /* in the case we exited from the loop at the insertion, align_pos points beyond
+               the insertion - it should be restored to point to the beginning of the insertion
+            */
+            if ( proj_len > 1 )
+                align_pos -= proj_len;
+
+            if ( align_pos >= read_len )
+            {
+                align_pos = -1;
+                proj_len = 0;
+            }
+
+            ret = ((uint64_t)align_pos << 32) | proj_len;
         }
-
-        /* in the case we exited from the loop at the insertion, align_pos points beyond
-           the insertion - it should be restored to point to the beginning of the insertion
-        */
-        if ( proj_len > 1 )
-            align_pos -= proj_len;
-
-        if ( align_pos >= read_len )
-        {
-            align_pos = -1;
-            proj_len = 0;
-        }
-
-        ret = ((uint64_t)align_pos << 32) | proj_len;
     }
 
     return ret;
