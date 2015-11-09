@@ -34,6 +34,7 @@
 
 #include <vdb/xform.h>
 #include <vdb/table.h>
+#include <vdb/vdb.h>
 #include <kdb/index.h>
 #include <klib/rc.h>
 #include <klib/log.h>
@@ -49,6 +50,7 @@
 typedef struct tag_self_t {
     const KIndex *ndx;
     uint32_t elem_bits;
+    uint8_t case_sensitivity;
 } self_t;
 
 static void CC self_whack( void *Self )
@@ -74,20 +76,40 @@ rc_t CC index_project_impl(
     KDataBuffer temp;
     uint64_t id_count;
     int64_t start_id;
+    int64_t empty_row_id_count = -1;
     char key_buf[1024];
     char *key = key_buf;
     size_t sz = sizeof(key_buf) - 1;
+    
+    /* first try to load value from the column. if returned blob is empty or row is not found, go to index */
+    if (argc > 0 && argv[0] != NULL) {
+        /*** this types of blobs may have holes in them ***/
+        rc = VBlobSubblob(argv[0],rslt,row_id );
+        if (rc != 0) {
+            if (GetRCState(rc) == rcEmpty && GetRCObject(rc) == rcRow) {
+                empty_row_id_count = 1;
+            }
+            else {
+                return rc;
+            }
+        }
+        else if ((*rslt)->data.elem_count > 0) {
+            return rc;
+        }
+        else {
+            empty_row_id_count = (*rslt)->stop_id - (*rslt)->start_id + 1;
+            assert(empty_row_id_count >= 1);
+            
+            TRACK_BLOB( VBlobRelease, *rslt );
+            (void)VBlobRelease( *rslt );
+        }
+    }
 
     for ( ; ; ) {
         rc = KIndexProjectText(self->ndx, row_id, &start_id, &id_count, key, sz + 1, &sz);
         if ((GetRCState(rc) == rcNotFound && GetRCObject(rc) == rcId) || sz==0 ){
 /*          fprintf(stderr, "row %u not in index\n", (unsigned)row_id); */
-            if (argc > 0 && argv[0] != NULL) { 
-                /*** this types of blobs may have holes in them ***/
-                rc = VBlobSubblob(argv[0],rslt,row_id );
-            }
-            else
-                rc = RC(rcVDB, rcFunction, rcExecuting, rcRow, rcNotFound);
+            rc = RC(rcVDB, rcFunction, rcExecuting, rcRow, rcNotFound);
             break;
         }
         if ( GetRCState( rc ) == rcInsufficient && GetRCObject( rc ) == (enum RCObject)rcBuffer && key == key_buf )
@@ -105,6 +127,14 @@ rc_t CC index_project_impl(
             while (sz > 0 && key[sz - 1] == '\0')
                 --sz;
 
+            /* When in case_sensitivity mode is case insensitive, index does not accurately represent actual values,
+             * as we still store key in a column when it differs from what we inserted into index */
+            if (self->case_sensitivity != CASE_SENSITIVE && empty_row_id_count != -1) {
+                if (start_id != row_id || id_count > empty_row_id_count) {
+                    start_id = row_id;
+                    id_count = empty_row_id_count;
+                }
+            }
             rc = VBlobNew(&y, start_id, start_id + id_count - 1, "vdb:index:project");
             if (rc == 0) {
                 rc = PageMapNewSingle( &y->pm, (uint32_t)id_count, (uint32_t)sz );
@@ -132,7 +162,7 @@ rc_t CC index_project_impl(
     return rc;
 }
 
-VTRANSFACT_BUILTIN_IMPL(idx_text_project, 1, 0, 0) (
+VTRANSFACT_BUILTIN_IMPL(idx_text_project, 1, 1, 0) (
                                            const void *Self,
                                            const VXfactInfo *info,
                                            VFuncDesc *rslt,
@@ -160,6 +190,7 @@ VTRANSFACT_BUILTIN_IMPL(idx_text_project, 1, 0, 0) (
             if (self) {
                 self->ndx = ndx;
                 self->elem_bits = VTypedescSizeof(&info->fdesc.desc);
+                self->case_sensitivity = cp->argc >= 2 ? *cp->argv[1].data.u8 : CASE_SENSITIVE;
                 rslt->self = self;
                 rslt->whack = self_whack;
                 rslt->variant = vftBlobN;
