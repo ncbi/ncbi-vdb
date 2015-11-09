@@ -85,11 +85,11 @@ rc_t CC index_insert( void *Self, const VXformInfo *info, int64_t row_id,
             memcpy(key, x, key_len);
             break;
         case CASE_INSENSITIVE_LOWER:
-            tolower_copy(key, sizeof skey / sizeof skey[0], x, key_len);
+            tolower_copy(key, sizeof skey, x, key_len);
             return_key = string_cmp(key, key_len, x, key_len, key_len) != 0;
             break;
         case CASE_INSENSITIVE_UPPER:
-            toupper_copy(key, sizeof skey / sizeof skey[0], x, key_len);
+            toupper_copy(key, sizeof skey, x, key_len);
             return_key = string_cmp(key, key_len, x, key_len, key_len) != 0;
             break;
         default:

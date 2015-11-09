@@ -110,10 +110,10 @@ rc_t CC index_lookup_impl(
                 memcpy(query, query_buf->base, query_buf->elem_count);
                 break;
             case CASE_INSENSITIVE_LOWER:
-                tolower_copy(query, sizeof squery / sizeof squery[0], query_buf->base, query_buf->elem_count);
+                tolower_copy(query, sizeof squery, query_buf->base, query_buf->elem_count);
                 break;
             case CASE_INSENSITIVE_UPPER:
-                toupper_copy(query, sizeof squery / sizeof squery[0], query_buf->base, query_buf->elem_count);
+                toupper_copy(query, sizeof squery, query_buf->base, query_buf->elem_count);
                 break;
             default:
                 assert(false);
