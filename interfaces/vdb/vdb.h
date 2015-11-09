@@ -24,8 +24,8 @@
 *
 */
 
-#ifndef _h_vdb_
-#define _h_vdb_
+#ifndef _h_vdb_vdb_
+#define _h_vdb_vdb_
 
 #ifndef _h_klib_defs_
 #include <klib/defs.h>
@@ -59,4 +59,4 @@ enum
 }
 #endif
 
-#endif /*  _h_vdb_ */
+#endif /*  _h_vdb_vdb_ */

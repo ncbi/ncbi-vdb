@@ -80,11 +80,20 @@ rc_t CC index_insert( void *Self, const VXformInfo *info, int64_t row_id,
         }
         key = self->key_buf;
     }
-    if (self->case_sensitivity != CASE_SENSITIVE) {
-        (self->case_sensitivity == CASE_INSENSITIVE_LOWER ? tolower_copy : toupper_copy) (key, sizeof skey / sizeof skey[0], x, key_len);
-        return_key = string_cmp(key, key_len, x, key_len, key_len) != 0;
-    } else {
-        memcpy(key, x, key_len);
+    switch (self->case_sensitivity) {
+        case CASE_SENSITIVE:
+            memcpy(key, x, key_len);
+            break;
+        case CASE_INSENSITIVE_LOWER:
+            tolower_copy(key, sizeof skey / sizeof skey[0], x, key_len);
+            return_key = string_cmp(key, key_len, x, key_len, key_len) != 0;
+            break;
+        case CASE_INSENSITIVE_UPPER:
+            toupper_copy(key, sizeof skey / sizeof skey[0], x, key_len);
+            return_key = string_cmp(key, key_len, x, key_len, key_len) != 0;
+            break;
+        default:
+            assert(false);
     }
     key[key_len] = 0;
 

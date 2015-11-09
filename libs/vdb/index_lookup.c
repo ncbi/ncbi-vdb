@@ -105,10 +105,18 @@ rc_t CC index_lookup_impl(
                 return RC(rcVDB, rcIndex, rcReading, rcMemory, rcExhausted);
             query = hquery;
         }
-        if (self->case_sensitivity != CASE_SENSITIVE) {
-            (self->case_sensitivity == CASE_INSENSITIVE_LOWER ? tolower_copy : toupper_copy) (query, sizeof squery / sizeof squery[0], query_buf->base, query_buf->elem_count);
-        } else {
-            memcpy(query, query_buf->base, query_buf->elem_count);
+        switch (self->case_sensitivity) {
+            case CASE_SENSITIVE:
+                memcpy(query, query_buf->base, query_buf->elem_count);
+                break;
+            case CASE_INSENSITIVE_LOWER:
+                tolower_copy(query, sizeof squery / sizeof squery[0], query_buf->base, query_buf->elem_count);
+                break;
+            case CASE_INSENSITIVE_UPPER:
+                toupper_copy(query, sizeof squery / sizeof squery[0], query_buf->base, query_buf->elem_count);
+                break;
+            default:
+                assert(false);
         }
         query[query_buf->elem_count] = '\0';
         rc = KIndexFindText(self->ndx, query, &start_id, &id_count,NULL,NULL);
