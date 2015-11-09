@@ -35,6 +35,7 @@
 #include <vdb/xform.h>
 #include <vdb/table.h>
 #include <vdb/vdb-priv.h>
+#include <vdb/vdb.h>
 #include <kdb/index.h>
 #include <klib/rc.h>
 #include <klib/text.h>
@@ -57,7 +58,7 @@ typedef struct tag_self_t {
     uint32_t    query_key_len;
     const struct VCursorParams * parms;
     uint32_t    elem_bits;
-    bool        case_insensitive;
+    uint8_t     case_sensitivity;
 } self_t;
 
 static void CC self_whack( void *Self )
@@ -104,8 +105,8 @@ rc_t CC index_lookup_impl(
                 return RC(rcVDB, rcIndex, rcReading, rcMemory, rcExhausted);
             query = hquery;
         }
-        if (self->case_insensitive) {
-            tolower_copy(query, sizeof squery / sizeof squery[0], query_buf->base, query_buf->elem_count);
+        if (self->case_sensitivity != CASE_SENSITIVE) {
+            (self->case_sensitivity == CASE_INSENSITIVE_LOWER ? tolower_copy : toupper_copy) (query, sizeof squery / sizeof squery[0], query_buf->base, query_buf->elem_count);
         } else {
             memcpy(query, query_buf->base, query_buf->elem_count);
         }
@@ -130,7 +131,7 @@ rc_t CC index_lookup_impl(
 }
 
 /*
- * function vdb:row_id_range  idx:text:lookup #1.1 < ascii index_name , ascii query_by_name, * bool case_insensitive > ();
+ * function vdb:row_id_range  idx:text:lookup #1.1 < ascii index_name , ascii query_by_name, * U8 case_sensitivity > ();
  */
 VTRANSFACT_BUILTIN_IMPL(idx_text_lookup, 1, 1, 0) (
                                            const void *Self,
@@ -164,7 +165,7 @@ VTRANSFACT_BUILTIN_IMPL(idx_text_lookup, 1, 1, 0) (
                 self->query_key_len = cp->argv[1].count;
                 self->query_key[self->query_key_len] = '\0';
                 self->parms = info->parms;
-                self->case_insensitive = cp->argc >= 3 ? *cp->argv[2].data.b : false;
+                self->case_sensitivity = cp->argc >= 3 ? *cp->argv[2].data.u8 : CASE_SENSITIVE;
                 
                 rslt->self = self;
                 rslt->whack = self_whack;

@@ -373,6 +373,10 @@ text8_set parameter:read #1.0 < ascii name, * bool deterministic > ();
 function
 text8_set environment:read #1.0 < ascii name > ();
 
+// case sensivity mode
+const U8 CASE_SENSITIVE         =  0;
+const U8 CASE_INSENSITIVE_LOWER =  1;
+const U8 CASE_INSENSITIVE_UPPER =  2;
 
 /* idx:text:project
  *  perform a reverse lookup in an index
@@ -385,24 +389,24 @@ text8_set environment:read #1.0 < ascii name > ();
  *  found in the index.
  *
  *  Version 1.1: look into "substitute" (if available) first and then to the index,
- *  added parameter "case_insensitive"
+ *  added parameter "case_sensitivity"
  */
-function text8_set idx:text:project #1.1 < ascii index_name, * bool case_insensitive > ( * text8_set substitute );
+function text8_set idx:text:project #1.1 < ascii index_name, * U8 case_sensitivity > ( * text8_set substitute );
 
 
 /* idx:text:insert
  *  inserts "key" into index. returns key if insertion into index failed or
  *  when "case_insensitive" is true
  *
- *  Version 1.1: added parameter "case_insensitive"
+ *  Version 1.1: added parameter "case_sensitivity"
  */
-function text8_set idx:text:insert #1.1 < ascii index_name, * bool case_insensitive > ( text8_set key );
+function text8_set idx:text:insert #1.1 < ascii index_name, * U8 case_sensitivity > ( text8_set key );
 
 
 /* idx:text:lookup
  *  perform a lookup in an index
  *  returns vdb:row_id_range associated with the
  *
- *  Version 1.1: added parameter "case_insensitive"
+ *  Version 1.1: added parameter "case_sensitivity"
  */
-function vdb:row_id_range  idx:text:lookup #1.1 < ascii index_name , ascii query_by_name, * bool case_insensitive > ();
+function vdb:row_id_range  idx:text:lookup #1.1 < ascii index_name , ascii query_by_name, * U8 case_sensitivity > ();

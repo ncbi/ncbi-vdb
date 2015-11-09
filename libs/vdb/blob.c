@@ -1127,6 +1127,9 @@ rc_t VBlobSubblob( const struct VBlob *self,struct VBlob **sub, int64_t start_id
                     (unsigned)offset, (unsigned)length,
                     self->name);
 #endif
+            if (numrep == 0){
+                return RC(rcVDB, rcBlob, rcConverting, rcRow, rcEmpty);
+            }
             
             rc = KDataBufferSub(&self->data, &kd, offset, length);
             if(rc == 0){

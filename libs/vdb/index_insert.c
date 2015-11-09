@@ -28,6 +28,7 @@
 #include <sra/sradb.h>
 #include <vdb/xform.h>
 #include <vdb/table.h>
+#include <vdb/vdb.h>
 #include <kdb/index.h>
 #include <klib/data-buffer.h>
 #include <klib/text.h>
@@ -44,11 +45,11 @@ struct self_t {
     KIndex *ndx;
     char *key_buf;
     size_t key_buf_size;
-    bool case_insensitive;
+    uint8_t case_sensitivity;
 };
 
 /*
- function utf8 idx:text:insert #1.1 < ascii index_name, * bool case_insensitive > ( utf8 key );
+ function utf8 idx:text:insert #1.1 < ascii index_name, * U8 case_sensitivity > ( utf8 key );
  */
 
 static
@@ -79,8 +80,8 @@ rc_t CC index_insert( void *Self, const VXformInfo *info, int64_t row_id,
         }
         key = self->key_buf;
     }
-    if (self->case_insensitive) {
-        tolower_copy(key, sizeof skey / sizeof skey[0], x, key_len);
+    if (self->case_sensitivity != CASE_SENSITIVE) {
+        (self->case_sensitivity == CASE_INSENSITIVE_LOWER ? tolower_copy : toupper_copy) (key, sizeof skey / sizeof skey[0], x, key_len);
         return_key = string_cmp(key, key_len, x, key_len, key_len) != 0;
     } else {
         memcpy(key, x, key_len);
@@ -129,7 +130,7 @@ VTRANSFACT_IMPL ( idx_text_insert, 1, 1, 0 ) ( const void *Self,
             rslt->u.ndf = index_insert;
             self->key_buf = NULL;
             self->key_buf_size = 0;
-            self->case_insensitive = cp->argc >= 2 ? *cp->argv[1].data.b : false;
+            self->case_sensitivity = cp->argc >= 2 ? *cp->argv[1].data.u8 : CASE_SENSITIVE;
             return 0;
         }
         free(self);
