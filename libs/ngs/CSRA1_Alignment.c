@@ -67,6 +67,7 @@ typedef struct CSRA1_Alignment CSRA1_Alignment;
 static const char * align_col_specs [] =
 {
     "(I32)MAPQ",
+    "(INSDC:SRA:read_filter)READ_FILTER",
     "(ascii)CIGAR_LONG",
     "(ascii)CIGAR_SHORT",
     "(ascii)CLIPPED_CIGAR_LONG",
@@ -101,6 +102,7 @@ static const char * align_col_specs [] =
 enum AlignmentTableColumns
 {
     align_MAPQ,
+    align_READ_FILTER,
     align_CIGAR_LONG,
     align_CIGAR_SHORT,
     align_CLIPPED_CIGAR_LONG,
@@ -376,6 +378,18 @@ int CSRA1_AlignmentGetMappingQuality( CSRA1_Alignment* self, ctx_t ctx )
         return 0;
     }
     return NGS_CursorGetInt32 ( GetCursor ( self ), ctx, self -> cur_row, align_MAPQ );
+}
+
+INSDC_read_filter CSRA1_AlignmentGetReadFilter( CSRA1_Alignment* self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+    if ( ! self -> seen_first ) 
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Alignment accessed before a call to AlignmentIteratorNext()" );
+        return 0;
+    }
+    assert ( sizeof ( INSDC_read_filter ) == sizeof ( char ) );
+    return ( uint8_t ) NGS_CursorGetChar ( GetCursor ( self ), ctx, self -> cur_row, align_READ_FILTER );
 }
 
 struct NGS_String* CSRA1_AlignmentGetReferenceBases( CSRA1_Alignment* self, ctx_t ctx )
@@ -1044,6 +1058,7 @@ static NGS_Alignment_vt CSRA1_Alignment_vt_inst =
     CSRA1_AlignmentGetAlignmentId,
     CSRA1_AlignmentGetReferenceSpec,
     CSRA1_AlignmentGetMappingQuality,
+    CSRA1_AlignmentGetReadFilter,
     CSRA1_AlignmentGetReferenceBases,
     CSRA1_AlignmentGetReadGroup,
     CSRA1_AlignmentGetReadId,

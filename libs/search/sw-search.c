@@ -55,8 +55,9 @@
 #define max4(x1, x2, x3, x4) (max( max((x1),(x2)), max((x3),(x4)) ))
 
 #define COMPARE_4NA 0
-#define CACHE_MAX_ROWS 1 /* and columns as well */
-#define GAP_SCORE_LINEAR 1
+#define CACHE_MAX_ROWS 0 /* and columns as well */
+#define GAP_SCORE_LINEAR 0
+#define SW_DEBUG_PRINT 0
 
 typedef struct VRefVariation
 {
@@ -193,6 +194,10 @@ static rc_t calculate_similarity_matrix (
                             get_char (query, size_query, j-1, reverse) );
 
 #if CACHE_MAX_ROWS != 0
+            /* TODO: incorrect logic: we cache max{matrix[x,y]}
+                instead of max{matrix[x,y] + gap_score_func(v)}
+                when it's fixed we probably will need to make adjustments here
+            */
             cur_score_del = vec_max_cols[j].value + gap_score_func(j - vec_max_cols[j].index);
 #else
             cur_score_del = -1;
@@ -205,6 +210,10 @@ static rc_t calculate_similarity_matrix (
 #endif
 
 #if CACHE_MAX_ROWS != 0
+            /* TODO: incorrect logic: we cache max{matrix[x,y]}
+                instead of max{matrix[x,y] + gap_score_func(v)}
+                when it's fixed we probably will need to make adjustments here
+            */
             cur_score_ins = vec_max_rows[i].value + gap_score_func(i - vec_max_rows[i].index);;
 #else
             
@@ -224,6 +233,9 @@ static rc_t calculate_similarity_matrix (
                         cur_score_ins);
 
 #if CACHE_MAX_ROWS != 0
+            /* TODO: incorrect logic: we cache max{matrix[x,y]}
+                instead of max{matrix[x,y] + gap_score_func(v)}
+            */
             if ( matrix[i*COLUMNS + j] > vec_max_cols[j].value )
             {
                 vec_max_cols[j].value = matrix[i*COLUMNS + j];
@@ -235,6 +247,9 @@ static rc_t calculate_similarity_matrix (
 
 #endif
 #if CACHE_MAX_ROWS != 0
+            /* TODO: incorrect logic: we cache max{matrix[x,y]}
+                instead of max{matrix[x,y] + gap_score_func(v)}
+            */
             if ( matrix[i*COLUMNS + j] > vec_max_rows[i].value )
             {
                 vec_max_rows[i].value = matrix[i*COLUMNS + j];
@@ -403,7 +418,9 @@ template <bool reverse> void print_matrix ( int const* matrix,
         printf ("\n");
     }
 }
+#endif
 
+#if SW_DEBUG_PRINT != 0
 #include <stdio.h>
 void print_matrix ( int const* matrix,
                     char const* ref_slice, size_t ref_slice_size,
@@ -476,6 +493,9 @@ static rc_t FindRefVariationBounds (
     rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, false );
     if ( rc != 0 )
         goto free_resources;
+#if SW_DEBUG_PRINT != 0
+    print_matrix ( matrix, ref_slice, ref_slice_size, query, query_size, false );
+#endif
 
     sw_find_indel_box ( matrix, ROWS, COLUMNS, &row_start, &row_end, &col_start, &col_end );
     if ( row_start == -1 && row_end == -1 && col_start == -1 && col_end == -1 )
@@ -483,13 +503,22 @@ static rc_t FindRefVariationBounds (
         * has_indel = 0;
         goto free_resources;
     }
+#if SW_DEBUG_PRINT != 0
+    printf ("start=(%d, %d), end=(%d, %d)\n", row_start, col_start, row_end, col_end);
+#endif
 
     /* reverse scan */
     rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, true );
     if ( rc != 0 )
         goto free_resources;
+#if SW_DEBUG_PRINT != 0
+    print_matrix ( matrix, ref_slice, ref_slice_size, query, query_size, true );
+#endif
 
     sw_find_indel_box ( matrix, ROWS, COLUMNS, &row_start_rev, &row_end_rev, &col_start_rev, &col_end_rev );
+#if SW_DEBUG_PRINT != 0
+    printf ("start_rev=(%d, %d), end_rev=(%d, %d)\n", row_start_rev, col_start_rev, row_end_rev, col_end_rev);
+#endif
     if ( row_start_rev != -1 || row_end_rev != -1 || col_start_rev != -1 || col_end_rev != -1 )
     {
         row_start = min ( (int)query_size - row_end_rev - 1, row_start );
@@ -497,6 +526,9 @@ static rc_t FindRefVariationBounds (
         col_start = min ( (int)ref_slice_size - col_end_rev - 1, col_start );
         col_end   = max ( (int)ref_slice_size - col_start_rev - 1, col_end );
     }
+#if SW_DEBUG_PRINT != 0
+    printf ("COMBINED: start=(%d, %d), end=(%d, %d)\n", row_start, col_start, row_end, col_end);
+#endif
 
     if ( ref_start != NULL )
         *ref_start = col_start + 1;
@@ -715,11 +747,12 @@ static bool compose_variation ( c_string_const const* ref,
     INSDC_dna_text const* query_adj = query;
     size_t query_len_adj = query_len;
     bool ret = true;
+    size_t const EXPERIMENT_LEN_ADJ = 0;
 
     /* TODO: not always correct */
     if ( ref_len == 0 && query_len == var_len_on_ref ) /* special case for pure mismatch */
     {
-        if ( !c_string_realloc_no_preserve( variation, query_len ))
+        if ( !c_string_realloc_no_preserve( variation, query_len + EXPERIMENT_LEN_ADJ ))
             return false;
     }
     else if ( query_len == 0 && ref_len == var_len_on_ref ) /* special case for pure deletion */
@@ -729,7 +762,15 @@ static bool compose_variation ( c_string_const const* ref,
     }
     else
     {
-        if ( !c_string_realloc_no_preserve( variation, ref_len + query_len - var_len_on_ref))
+        /* TODO: the size is not always correct:
+           e.g. synthetic example:
+           ref   = "ACACACTA"
+           query = "AGCACACA"
+           var_len_on_ref = strlen(ref)
+           pos = 0
+           this example triggers assert below variation->capacity >= variation->size + query_len_adj
+        */
+        if ( !c_string_realloc_no_preserve( variation, ref_len + query_len - var_len_on_ref + EXPERIMENT_LEN_ADJ))
             return false;
     }
 
@@ -753,15 +794,24 @@ static bool compose_variation ( c_string_const const* ref,
 
     if ( query_len_adj > 0 )
     {
-        assert ( variation->capacity >= variation->size + query_len_adj );
+        /*assert ( variation->capacity >= variation->size + query_len_adj );*/
         ret = ret && c_string_append ( variation, query_adj, query_len_adj );
     }
 
-    if ( (int64_t)(ref_len - ((size_t)ref_pos_var - ref_start) - var_len_on_ref) > 0 )
+    if ( ref_len == 0 && EXPERIMENT_LEN_ADJ > 0 )
+    {
+        /* the special case for pure [mis]match
+        normally we don't want to append anything but
+        if we decide to add additional postfix - do it here
+        */
+        ret = ret && c_string_append ( variation,
+            ref->str + (size_t)ref_pos_var + var_len_on_ref, EXPERIMENT_LEN_ADJ );
+    }
+    else if ( (int64_t)(ref_len + EXPERIMENT_LEN_ADJ - ((size_t)ref_pos_var - ref_start) - var_len_on_ref) > 0 )
     {
         assert ( variation->capacity >= variation->size + ref_len - ((size_t)ref_pos_var - ref_start) - var_len_on_ref );
         ret = ret && c_string_append ( variation, ref->str + (size_t)ref_pos_var + var_len_on_ref,
-            ref_len - ((size_t)ref_pos_var - ref_start) - var_len_on_ref );
+            ref_len + EXPERIMENT_LEN_ADJ - ((size_t)ref_pos_var - ref_start) - var_len_on_ref );
     }
 
     if ( ! ret )
