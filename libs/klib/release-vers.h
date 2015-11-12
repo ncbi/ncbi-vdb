@@ -38,4 +38,4 @@
  *  'c' - release candidate
  *  'r' - final
  */
-#define RELEASE_TYPE 'a'
+#define RELEASE_TYPE 'r'
