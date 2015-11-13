@@ -845,8 +845,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_FullReference_Wra
     
     const bool wants_primary = true;
     const bool wants_secondary = true;
-#pragma message "filtering did not work prior to today's changes. I have set filter bits to allow this test to pass. the test should be fixed so that filters are set to 0."
-    const uint32_t no_filters = NGS_AlignmentFilterBits_pass_bad | NGS_AlignmentFilterBits_pass_dups;
+    const uint32_t no_filters = 0;
     const int32_t no_map_qual = 0;
 
     m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, 0, NGS_ReferenceGetLength ( m_ref, ctx ), wants_primary, wants_secondary, no_filters, no_map_qual ); 
@@ -868,9 +867,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_FullReference_NoW
     
     const bool wants_primary = true;
     const bool wants_secondary = true;
-#pragma message "filtering did not work prior to today's changes. I have set filter bits to allow this test to pass. the test should be fixed so that filters are set to no-wraparound."
-    const uint32_t filters = NGS_AlignmentFilterBits_pass_bad | NGS_AlignmentFilterBits_pass_dups |
-        NGS_AlignmentFilterBits_no_wraparound;
+    const uint32_t filters = NGS_AlignmentFilterBits_no_wraparound;
     const int32_t no_map_qual = 0;
 
     m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, 0, NGS_ReferenceGetLength ( m_ref, ctx ), wants_primary, wants_secondary, filters, no_map_qual ); 

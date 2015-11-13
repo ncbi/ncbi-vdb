@@ -89,13 +89,8 @@ struct CSRA1_ReferenceWindow
     bool circular;
     bool primary;
     bool secondary;
-#if 1
     uint32_t filters;  /* uses NGS_AlignmentFilterBits from NGS_Alignment.h */
     int32_t map_qual;
-#else
-    bool no_wraparound; /* if true, exclude alignments that wrap around a circular reference */
-    bool within_window; /* if true, exclude alignments that start before slice_offset */
-#endif
     
     uint32_t chunk_size;
     uint64_t ref_length; /* total reference length in bases */
@@ -975,14 +970,9 @@ void CSRA1_ReferenceWindowInit ( CSRA1_ReferenceWindow * ref,
             ref -> circular             = circular;
             ref -> primary              = primary;
             ref -> secondary            = secondary;
-#if 1
             /* see comment above about inverting polarity of the "pass" bits to create "drop" bits */
             ref -> filters              = filters ^ ( NGS_AlignmentFilterBits_pass_bad | NGS_AlignmentFilterBits_pass_dups );
             ref -> map_qual             = map_qual;
-#else
-            ref -> no_wraparound        = ( filters & NGS_AlignmentFilterBits_no_wraparound ) != 0;
-            ref -> within_window        = ( filters & NGS_AlignmentFilterBits_start_within_window ) != 0;
-#endif
             ref -> chunk_size           = chunk_size;
             ref -> ref_length           = ref_length;
             ref -> id_offset            = id_offset;
