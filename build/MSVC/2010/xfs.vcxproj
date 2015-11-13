@@ -57,6 +57,7 @@
     <ClCompile Include="..\..\..\libs\xfs\encro.c" />
     <ClCompile Include="..\..\..\libs\xfs\xencws.c" />
     <ClCompile Include="..\..\..\libs\xfs\encws.c" />
+    <ClCompile Include="..\..\..\libs\xfs\spen.c" />
     <ClCompile Include="..\..\..\libs\xfs\xgap.c" />
     <ClCompile Include="..\..\..\libs\xfs\xgapf.c" />
     <ClCompile Include="..\..\..\libs\xfs\xgapk.c" />

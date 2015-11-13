@@ -747,12 +747,11 @@ static bool compose_variation ( c_string_const const* ref,
     INSDC_dna_text const* query_adj = query;
     size_t query_len_adj = query_len;
     bool ret = true;
-    size_t const EXPERIMENT_LEN_ADJ = 0;
 
     /* TODO: not always correct */
     if ( ref_len == 0 && query_len == var_len_on_ref ) /* special case for pure mismatch */
     {
-        if ( !c_string_realloc_no_preserve( variation, query_len + EXPERIMENT_LEN_ADJ ))
+        if ( !c_string_realloc_no_preserve( variation, query_len ))
             return false;
     }
     else if ( query_len == 0 && ref_len == var_len_on_ref ) /* special case for pure deletion */
@@ -770,7 +769,7 @@ static bool compose_variation ( c_string_const const* ref,
            pos = 0
            this example triggers assert below variation->capacity >= variation->size + query_len_adj
         */
-        if ( !c_string_realloc_no_preserve( variation, ref_len + query_len - var_len_on_ref + EXPERIMENT_LEN_ADJ))
+        if ( !c_string_realloc_no_preserve( variation, ref_len + query_len - var_len_on_ref ))
             return false;
     }
 
@@ -798,20 +797,11 @@ static bool compose_variation ( c_string_const const* ref,
         ret = ret && c_string_append ( variation, query_adj, query_len_adj );
     }
 
-    if ( ref_len == 0 && EXPERIMENT_LEN_ADJ > 0 )
-    {
-        /* the special case for pure [mis]match
-        normally we don't want to append anything but
-        if we decide to add additional postfix - do it here
-        */
-        ret = ret && c_string_append ( variation,
-            ref->str + (size_t)ref_pos_var + var_len_on_ref, EXPERIMENT_LEN_ADJ );
-    }
-    else if ( (int64_t)(ref_len + EXPERIMENT_LEN_ADJ - ((size_t)ref_pos_var - ref_start) - var_len_on_ref) > 0 )
+    if ( (int64_t)(ref_len - ((size_t)ref_pos_var - ref_start) - var_len_on_ref) > 0 )
     {
         assert ( variation->capacity >= variation->size + ref_len - ((size_t)ref_pos_var - ref_start) - var_len_on_ref );
         ret = ret && c_string_append ( variation, ref->str + (size_t)ref_pos_var + var_len_on_ref,
-            ref_len + EXPERIMENT_LEN_ADJ - ((size_t)ref_pos_var - ref_start) - var_len_on_ref );
+            ref_len - ((size_t)ref_pos_var - ref_start) - var_len_on_ref );
     }
 
     if ( ! ret )
