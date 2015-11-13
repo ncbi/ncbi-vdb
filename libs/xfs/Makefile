@@ -117,6 +117,7 @@ XFS_SRC = \
     encro     \
     xencws     \
     encws     \
+    spen    \
     xgap    \
     xgapf    \
     xgapk   \

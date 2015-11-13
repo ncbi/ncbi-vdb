@@ -169,7 +169,6 @@ _CacheDirNodeMake (
     XFS_CAN ( Name )
     XFS_CAN ( Path )
 
-printf ( " [CDN] [%d][%d] [%s][%s]\n", __LINE__, RCt, Path, Name );
     TheNode = calloc ( 1, sizeof ( struct _CacheDirNode ) );
     if ( TheNode == NULL ) {
         RCt = XFS_RC ( rcExhausted );

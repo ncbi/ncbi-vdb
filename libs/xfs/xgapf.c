@@ -51,6 +51,7 @@
 #include "schwarzschraube.h"
 #include "xgap.h"
 #include "xgapf.h"
+#include "spen.h"
 #include "zehr.h"
 
 #include <sysalloc.h>
@@ -66,6 +67,8 @@ struct _GapFiles {
     BSTree tree;
 
     KLock * mutabor;
+
+    const struct XFSPen * pen;
 };
 
 typedef enum _EncType {
@@ -150,6 +153,11 @@ _GapFilesDispose ( struct _GapFiles * self )
                     NULL
                     );
 
+        if ( self -> pen != NULL ) {
+            XFSPenDispose ( self -> pen );
+            self -> pen = NULL;
+        }
+
         if ( self -> mutabor != NULL ) {
             KLockRelease ( self -> mutabor );
             self -> mutabor = NULL;
@@ -179,11 +187,14 @@ _GapFilesMake ( struct _GapFiles ** Files )
         RCt = XFS_RC ( rcExhausted );
     }
     else {
-        RCt = KLockMake ( & ( TheFiles -> mutabor ) );
+        RCt = XFSPenMake ( & ( TheFiles -> pen ), 65 );
         if ( RCt == 0 ) {
-            BSTreeInit ( & ( TheFiles -> tree ) );
+            RCt = KLockMake ( & ( TheFiles -> mutabor ) );
+            if ( RCt == 0 ) {
+                BSTreeInit ( & ( TheFiles -> tree ) );
 
-            * Files = TheFiles;
+                * Files = TheFiles;
+            }
         }
     }
 
@@ -1370,6 +1381,40 @@ _CheckMakeParentDir ( struct KDirectory * Directory, const char * Path )
 
 static
 rc_t CC
+_Take_Burro_From_Pen (
+                    const struct KFile ** File,
+                    const char * Url,
+                    bool Cached
+)
+{
+    rc_t RCt;
+    struct _GapFiles * Files;
+    const struct XFSBurro * Burro;
+
+    RCt = 0;
+    Files = _FilesGet ();
+    Burro = NULL;
+
+    RCt = XFSPenGet ( Files -> pen, & Burro, Url );
+    if ( RCt == 0 ) {
+        if ( ! XFSBurroGood ( Burro ) ) {
+            RCt = XFS_RC ( rcInvalid );
+        }
+        else {
+            RCt = Cached
+                        ? XFSBurroCachedFile ( Burro, File )
+                        : XFSBurroRecachedFile ( Burro, File )
+                        ;
+        }
+
+        XFSBurroRelease ( Burro );
+    }
+
+    return RCt;
+}   /* _Take_Burro_From_Pen_ () */
+
+static
+rc_t CC
 _Open_File_1 ( struct _GapFilePeer * self, const struct KFile ** File )
 {
     rc_t RCt;
@@ -1409,6 +1454,14 @@ _Open_File_1 ( struct _GapFilePeer * self, const struct KFile ** File )
                 if ( RCt == 0 ) {
                     /*  KNS File first
                      */
+#define _USE_CACHED_CONN_
+#ifdef _USE_CACHED_CONN_
+                    RCt = _Take_Burro_From_Pen (
+                                                & File_1,
+                                                self -> remote_url,
+                                                true
+                                                );
+#else /* _USE_CACHED_CONN_ */
                     RCt = KNSManagerMakeHttpFile (
                                                 XFS_KnsManager (),
                                                 & File_1,
@@ -1416,6 +1469,8 @@ _Open_File_1 ( struct _GapFilePeer * self, const struct KFile ** File )
                                                 0x01010000,
                                                 self -> remote_url
                                                 );
+#endif /* _USE_CACHED_CONN_ */
+
                     if ( RCt == 0 ) {
                         RCt = KDirectoryMakeCacheTee (
                                             NatDir,
