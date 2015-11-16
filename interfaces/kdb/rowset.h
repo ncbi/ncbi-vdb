@@ -60,7 +60,8 @@ KDB_EXTERN rc_t CC KRowSetInsertRow ( KRowSet * self, int64_t row_id );
 
 KDB_EXTERN rc_t CC KRowSetGetNumRows ( const KRowSet * self, size_t * num_rows );
 
-KDB_EXTERN rc_t CC KRowSetPrintRows ( const KRowSet * self );
+KDB_EXTERN rc_t CC KRowSetPrintRowsByTraverse ( const KRowSet * self );
+KDB_EXTERN rc_t CC KRowSetPrintRowsByList ( const KRowSet * self );
 
     
 #ifdef __cplusplus

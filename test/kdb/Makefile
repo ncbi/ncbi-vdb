@@ -70,17 +70,21 @@ $(BINDIR)/test-btree: $(TEST_BTREE_OBJ)
 # test rowset
 #
 TEST_ROWSET_SRC = \
-	test-rowset
+	rowsettest
 
 TEST_ROWSET_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_ROWSET_SRC))
 
 TEST_ROWSET_LIB = \
 	-skapp \
+	-sktst \
 	-sncbi-vdb
 
 $(TEST_BINDIR)/test-rowset: $(TEST_ROWSET_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_ROWSET_LIB)
+	
+vg_rowset: std
+	$(VALGRIND) $(TEST_BINDIR)/test-rowset
 
 #-------------------------------------------------------------------------------
 # test-kdb

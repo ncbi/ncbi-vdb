@@ -24,18 +24,26 @@
  *
  */
 
-#include <kapp/main.h>
-#include <kapp/args.h>
+#include <ktst/unit_test.hpp>
+
 #include <klib/log.h>
 #include <klib/out.h>
 #include <klib/rc.h>
 #include <kdb/rowset.h>
 
-rc_t run_tests()
+#include <stdlib.h>
+#include <time.h>
+
+TEST_SUITE(KRowSetTestSuite);
+
+TEST_CASE(KRowSet)
 {
 	rc_t rc;
 	KRowSet * rowset;
 	size_t num_rows;
+	int i;
+
+	srand ( time(NULL) );
 
 	rc = KCreateRowSet ( &rowset );
 	if ( rc != 0 )
@@ -46,15 +54,16 @@ rc_t run_tests()
 	rc = KRowSetInsertRow ( rowset, (row_id) ); \
 	if ( rc != 0 )  LOGERR ( klogInt, rc, "KRowSetInsertRow failed" );
 
-		insert(555LL);
-		insert(9999999LL);
-		insert(9223372036854775807LL);
-		insert(1LL);
-		insert(555LL);
+		for ( i = 0; i < 100; ++i )
+		{
+			int64_t row_id = ((int64_t)rand() << 32) | rand();
+			insert ( row_id );
+		}
 
 #undef insert
 
-		KRowSetPrintRows ( rowset );
+		KRowSetPrintRowsByTraverse ( rowset );
+		KRowSetPrintRowsByList ( rowset );
 
 		KRowSetGetNumRows ( rowset, &num_rows );
 
@@ -63,8 +72,14 @@ rc_t run_tests()
 		KRowSetRelease( rowset );
 	}
 
-	return rc;
 }
+
+//////////////////////////////////////////// Main
+extern "C"
+{
+
+#include <kapp/main.h>
+#include <kapp/args.h>
 
 ver_t CC KAppVersion ( void )
 {
@@ -111,14 +126,9 @@ rc_t CC Usage ( const Args *args )
 }
 rc_t CC KMain ( int argc, char *argv [] )
 {
-    Args *args;
-    rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0 );
-    if ( rc != 0 )
-        LogErr ( klogErr, rc, "failed to parse arguments" );
-    else
-    {
-    	rc = run_tests();
-    	ArgsWhack ( args );
-    }
+	rc_t rc = KRowSetTestSuite(argc, argv);
     return rc;
 }
+
+}
+
