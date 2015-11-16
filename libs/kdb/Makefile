@@ -78,6 +78,7 @@ $(ILIBDIR)/libkdb: $(addprefix $(ILIBDIR)/libkdb.,$(ILIBEXT))
 
 KDB_CMN = \
 	btree \
+	rowset \
 	dbmgr-cmn \
 #	database-cmn
 
