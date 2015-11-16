@@ -320,7 +320,7 @@ FIXTURE_TEST_CASE ( AgrepMyersTest, AgrepFixture )
     // 3 Mismatches
     {
         REQUIRE ( FindFirst ( "xATxx", 5 ) );
-        REQUIRE_EQ ( 2 /*pattern_len*/, (size_t)match_info.length  ); //FIXME: different from other algorithms
+        REQUIRE_EQ ( (size_t)2 /*pattern_len*/, (size_t)match_info.length  ); //FIXME: different from other algorithms
         REQUIRE_EQ ( (int32_t)0, match_info.position );
         REQUIRE_EQ ( (int32_t)3, match_info.score );
     }
