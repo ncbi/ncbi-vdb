@@ -281,16 +281,18 @@ static void sw_find_indel_box ( int* matrix, size_t ROWS, size_t COLUMNS,
 
     size_t i = max_i, j;
     int prev_indel = 0;
+    bool find_end = true;
     while ( i-- > 0 )
     {
-        if ( matrix[i] >= matrix[max_i] )
+        if ( matrix[i] > matrix[max_i] )
         {
-            /* the matrix is bad - no reliable indel box can be found,
-            need to expand the window */
-            *ret_row_start = *ret_col_start = -1;
-            *ret_row_end = ROWS - 1;
-            *ret_col_end = COLUMNS - 1;
-            return;
+            /* the matrix is not very good,
+            but at least the left bound can be found reliably
+            so we continue search but ignore the end,
+            since the search is starting not from the bottom
+            right element */
+            max_i = i;
+            find_end = false;
         }
     }
 
@@ -385,6 +387,27 @@ static void sw_find_indel_box ( int* matrix, size_t ROWS, size_t COLUMNS,
         {
             break;
         }
+    }
+
+    /* if the matrix is unreliable for searching the end
+        BUT there was no indel box found then it's
+        just a combination of matches and mismatches - 
+        leave ret_row_end and ret_col_end = -1 so
+        the caller would know that there was no indels.
+        this works for matrices like:
+
+         0 0 0 0
+         0 2 2 2
+         0 2 4 2
+         0 2 2 3
+    */
+    if ( !find_end )
+    {
+        if ( *ret_row_end != -1 )
+            *ret_row_end = (int)ROWS - 1;
+
+        if ( *ret_col_end != -1 )
+            *ret_col_end = (int)COLUMNS - 1;
     }
 }
 
@@ -883,7 +906,7 @@ LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC (
 {
     rc_t rc = 0;
 
-    size_t var_half_len = variation_size / 2 + 1;
+    size_t var_half_len = 1;/*variation_size / 2 + 1;*/
 
     size_t exp_l = var_half_len;
     size_t exp_r = var_half_len;
@@ -950,7 +973,7 @@ LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC (
         */
         if ( ref_start == 0 && (slice_start == -1 || new_slice_start != slice_start ) )
         {
-            exp_l *= 2;
+            exp_l += 1;/**= 2;*/
             cont = 1;
         }
 
@@ -961,7 +984,7 @@ LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC (
         */
         if ( ref_start + ref_len == ref_slice.size && (slice_end == -1 || new_slice_end != slice_end) )
         {
-            exp_r *= 2;
+            exp_r += 1;/**= 2;*/
             cont = 1;
         }
 
