@@ -274,6 +274,12 @@ _GapProjectNodeAddChildren ( struct _GapProjectNode * self )
 
         free ( Workspace );
     }
+    else {
+/* TODO - use approved output method
+*/
+printf ( "ERROR: Can not find definition of Project %d in config file\n", self -> project_id );
+    }
+
     if ( RCt != 0 ) {
         if ( TheNode != NULL ) {
             XFSNodeDispose ( TheNode );
@@ -291,6 +297,11 @@ _GapProjectNodeAddChildren ( struct _GapProjectNode * self )
     if ( RCt == 0 ) {
         RCt = XFSContNodeAddChild ( & ( self -> node ) . node, TheNode );
     }
+    else {
+/* TODO - use approved output method
+*/
+printf ( "ERROR: Can not find definition of Project %d in config file\n", self -> project_id );
+    }
     if ( RCt != 0 ) {
         if ( TheNode != NULL ) {
             XFSNodeDispose ( TheNode );
@@ -302,12 +313,19 @@ _GapProjectNodeAddChildren ( struct _GapProjectNode * self )
          */
     RCt = XFSGapCacheNodeMake (
                         & TheNode,
-                        0,                      /* projectId */
+                        XFS_PUBLIC_PROJECT_ID,  /* projectId */
                         NULL                    /* perm is automatic */
                         );
     if ( RCt == 0 ) {
         RCt = XFSContNodeAddChild ( & ( self -> node ) . node, TheNode );
     }
+    else {
+        RCt = 0;
+/* TODO - use approved output method
+*/
+printf ( "WARNING: Can not find definition for 'public' area in config file\n" );
+    }
+
     if ( RCt != 0 ) {
         if ( TheNode != NULL ) {
             XFSNodeDispose ( TheNode );

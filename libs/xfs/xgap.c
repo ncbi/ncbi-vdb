@@ -175,6 +175,10 @@ _GetRepository (
         KRepositoryMgrRelease ( RepositoryMgr );
     }
 
+    if ( * Repository == NULL ) {
+        RCt = XFS_RC ( rcNotFound );
+    }
+
     return RCt;
 }   /*  _GetRepository () */
 
