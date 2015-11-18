@@ -823,15 +823,10 @@ void ReferenceSeq_Dump(ReferenceSeq const *const rs, unsigned const i, key_id_t 
     ALIGN_CF_DBGF(("seq-len: %u, ", rs->seq_len));
     ALIGN_CF_DBGF(("circular: %s, ", rs->circular ? "true" : "false"));
     
-    if (rs->md5) {
-        ALIGN_CF_DBGF(("md5: '"));
-        for (j = 0; j != 16; ++j)
-            ALIGN_CF_DBGF(("%02X", rs->md5[j]));
-        ALIGN_CF_DBGF(("', "));
-    }
-    else
-        ALIGN_CF_DBGF(("md5: null, "));
-    
+    ALIGN_CF_DBGF(("md5: '"));
+    for (j = 0; j != 16; ++j)
+        ALIGN_CF_DBGF(("%02X", rs->md5[j]));
+    ALIGN_CF_DBGF(("', "));
     
     ALIGN_CF_DBGF(("keys: [ "));
     for (j = 0; j != m; ++j) {
