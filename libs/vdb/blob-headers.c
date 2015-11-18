@@ -199,7 +199,7 @@ uint32_t BlobHeadersGetMaxBufferSize ( const BlobHeaders *self )
     const uint32_t per_header = 25;
     
     while (x) {
-        y += per_header + x->data ? (x->data->op_count + x->data->arg_count * 10) : 0;
+        y += per_header + ( x->data ? (x->data->op_count + x->data->arg_count * 10) : 0 );
         x = x->link;
     }
     return y;
