@@ -54,7 +54,6 @@ typedef struct RowSetNode RowSetNode;
 struct RowSetNode
 {
 	void* children[256];
-	uint8_t depth;
 #if CHECK_NODE_MARKS
 	uint8_t node_mark;
 #endif
@@ -135,7 +134,7 @@ void KRowSetNodeWhack ( KRowSet * self, RowSetNode * node, int depth, bool free_
 	int i;
 
 	assert ( self != NULL );
-	assert ( depth == node->depth );
+	assert ( depth < LEAF_DEPTH );
 
 #if CHECK_NODE_MARKS
 	assert ( node->node_mark == NODE_MARK );
@@ -349,8 +348,6 @@ rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, R
 #if CHECK_NODE_MARKS
 		root->node_mark = NODE_MARK;
 #endif
-		root->depth = 0;
-
 		self->root_node = root;
 	}
 
@@ -377,8 +374,6 @@ rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, R
 #if CHECK_NODE_MARKS
 			new_node->node_mark = NODE_MARK;
 #endif
-			new_node->depth = depth;
-
 			/* let's remember where we insert a subtree.
 			   later if we fail, we will be able to cleanup */
 			if ( inserting_subtree == NULL )
