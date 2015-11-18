@@ -86,7 +86,7 @@ KDB_EXTERN rc_t CC KCreateRowSet ( KRowSet ** self )
     KRowSet * rowset;
     
     if ( self == NULL )
-        rc = RC ( rcDB, rcRowSet, rcConstructing, rcParam, rcNull );
+        rc = RC ( rcDB, rcRowSet, rcConstructing, rcSelf, rcNull );
     else
     {
         rowset = calloc( 1, sizeof *rowset );
@@ -330,17 +330,19 @@ rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, R
 	int inserting_subtree_at_depth;
 
 	if ( self == NULL )
-		return RC ( rcDB, rcRowSet, rcInserting, rcParam, rcNull );
+		return RC ( rcDB, rcRowSet, rcSelecting, rcSelf, rcNull );
 
 	if ( leaf_found == NULL )
-		return RC ( rcDB, rcRowSet, rcInserting, rcParam, rcNull );
-
-
+		return RC ( rcDB, rcRowSet, rcSelecting, rcParam, rcNull );
 
 	/* empty tree */
 	if ( self->root_node == NULL )
 	{
-		RowSetNode* root = calloc ( 1, sizeof ( RowSetNode ) );
+		RowSetNode* root;
+		if ( !insert_when_needed )
+			return RC ( rcDB, rcRowSet, rcSelecting, rcItem, rcNotFound );
+
+		root = calloc ( 1, sizeof ( RowSetNode ) );
 		if (root == NULL)
 			return RC ( rcDB, rcRowSet, rcInserting, rcMemory, rcExhausted );
 
@@ -361,7 +363,11 @@ rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, R
 		bt = (row_id >> i * 8) & 0xFF;
 		if ( node->children[bt] == NULL )
 		{
-			RowSetNode* new_node = calloc ( 1, sizeof ( RowSetNode ) );
+			RowSetNode* new_node;
+			if ( !insert_when_needed )
+				return RC ( rcDB, rcRowSet, rcSelecting, rcItem, rcNotFound );
+
+			new_node = calloc ( 1, sizeof ( RowSetNode ) );
 			if (new_node == NULL)
 			{
 				rc = RC ( rcDB, rcRowSet, rcInserting, rcMemory, rcExhausted );
@@ -399,7 +405,12 @@ rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, R
 			{
 				RowSetLeaf * nearest_leaf;
 				bool nearest_leaf_left;
-				RowSetLeaf * new_leaf = calloc ( 1, sizeof ( RowSetLeaf ) );
+				RowSetLeaf * new_leaf;
+
+				if ( !insert_when_needed )
+					return RC ( rcDB, rcRowSet, rcSelecting, rcItem, rcNotFound );
+
+				new_leaf = calloc ( 1, sizeof ( RowSetLeaf ) );
 				if (new_leaf == NULL)
 				{
 					rc = RC ( rcDB, rcRowSet, rcInserting, rcMemory, rcExhausted );
@@ -461,7 +472,7 @@ KDB_EXTERN rc_t CC KRowSetInsertRow ( KRowSet * self, int64_t row_id )
 KDB_EXTERN rc_t CC KRowSetGetNumRows ( const KRowSet * self, size_t * num_rows )
 {
 	if ( self == NULL )
-		return RC ( rcDB, rcRowSet, rcAccessing, rcParam, rcNull );
+		return RC ( rcDB, rcRowSet, rcAccessing, rcSelf, rcNull );
 
 	if ( num_rows == NULL )
 			return RC ( rcDB, rcRowSet, rcAccessing, rcParam, rcNull );
@@ -542,7 +553,7 @@ KDB_EXTERN rc_t CC KRowSetWalkRows ( const KRowSet * self, bool reverse,
 	KRowSetWalkRowParams walk_params;
 
 	if ( self == NULL )
-		return RC ( rcDB, rcRowSet, rcAccessing, rcParam, rcNull );
+		return RC ( rcDB, rcRowSet, rcAccessing, rcSelf, rcNull );
 
 	walk_params.reverse = reverse;
 	walk_params.cb = cb;
