@@ -34,44 +34,83 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include <vector>
+#include <set>
+
 TEST_SUITE(KRowSetTestSuite);
 
-TEST_CASE(KRowSet)
+void vector_inserter ( int64_t row_id, void *data )
 {
-	rc_t rc;
+	std::vector<int64_t> * rows = (std::vector<int64_t> *) data;
+	rows->push_back ( row_id );
+}
+
+TEST_CASE(KRowSetWalk)
+{
 	KRowSet * rowset;
 	size_t num_rows;
-	int i;
+	std::set<int64_t> inserted_rows_set;
+	std::vector<int64_t> inserted_rows;
+	std::vector<int64_t> returned_rows;
 
 	srand ( time(NULL) );
 
-	rc = KCreateRowSet ( &rowset );
-	if ( rc != 0 )
-		LOGERR ( klogInt, rc, "KCreateRowSet failed" );
-	else
+	REQUIRE_RC ( KCreateRowSet ( &rowset ) );
+	for ( int i = 0; i < 10000; ++i )
 	{
-#define insert(row_id) \
-	rc = KRowSetInsertRow ( rowset, (row_id) ); \
-	if ( rc != 0 )  LOGERR ( klogInt, rc, "KRowSetInsertRow failed" );
-
-		for ( i = 0; i < 100; ++i )
+		int64_t row_id = ((int64_t)rand() << 32) | rand();
+		if ( inserted_rows_set.find( row_id ) ==  inserted_rows_set.end() )
 		{
-			int64_t row_id = ((int64_t)rand() << 32) | rand();
-			insert ( row_id );
+			REQUIRE_RC ( KRowSetInsertRow ( rowset, row_id ) );
+			inserted_rows_set.insert( row_id );
 		}
-
-#undef insert
-
-		KRowSetPrintRowsByTraverse ( rowset );
-		KRowSetPrintRowsByList ( rowset );
-
-		KRowSetGetNumRows ( rowset, &num_rows );
-
-		KOutMsg ( "Number of rows: %d\n", num_rows );
-
-		KRowSetRelease( rowset );
 	}
 
+	std::copy(inserted_rows_set.begin(), inserted_rows_set.end(), std::back_inserter(inserted_rows));
+
+	REQUIRE_RC ( KRowSetWalkRows( rowset, false, vector_inserter, (void *)&returned_rows ) );
+
+	REQUIRE_RC ( KRowSetGetNumRows ( rowset, &num_rows ) );
+
+	REQUIRE_EQ ( inserted_rows.size(), returned_rows.size() );
+	REQUIRE_EQ ( num_rows, returned_rows.size() );
+	REQUIRE ( inserted_rows == returned_rows );
+
+	REQUIRE_RC ( KRowSetRelease( rowset ) );
+}
+
+TEST_CASE(KRowSetWalkReverse)
+{
+	KRowSet * rowset;
+	size_t num_rows;
+	std::set<int64_t> inserted_rows_set;
+	std::vector<int64_t> inserted_rows;
+	std::vector<int64_t> returned_rows;
+
+	srand ( time(NULL) );
+
+	REQUIRE_RC ( KCreateRowSet ( &rowset ) );
+	for ( int i = 0; i < 10000; ++i )
+	{
+		int64_t row_id = ((int64_t)rand() << 32) | rand();
+		if ( inserted_rows_set.find( row_id ) ==  inserted_rows_set.end() )
+		{
+			REQUIRE_RC ( KRowSetInsertRow ( rowset, row_id ) );
+			inserted_rows_set.insert( row_id );
+		}
+	}
+
+	std::copy(inserted_rows_set.rbegin(), inserted_rows_set.rend(), std::back_inserter(inserted_rows));
+
+	KRowSetWalkRows( rowset, true, vector_inserter, (void *)&returned_rows );
+
+	KRowSetGetNumRows ( rowset, &num_rows );
+
+	REQUIRE_EQ ( inserted_rows.size(), returned_rows.size() );
+	REQUIRE_EQ ( num_rows, returned_rows.size() );
+	REQUIRE ( inserted_rows == returned_rows );
+
+	REQUIRE_RC ( KRowSetRelease( rowset ) );
 }
 
 //////////////////////////////////////////// Main

@@ -470,100 +470,84 @@ KDB_EXTERN rc_t CC KRowSetGetNumRows ( const KRowSet * self, size_t * num_rows )
 	return 0;
 }
 
+typedef struct {
+	bool reverse;
+	void ( CC * cb ) ( int64_t row_id, void * data );
+	void * data;
+} KRowSetWalkRowParams;
+
 static
-void KRowSetBrowseRowsLeafs ( RowSetLeaf * leaf, int depth, uint64_t row_id )
+void KRowSetWalkLeafRows ( DLNode *n, void *data )
 {
+	RowSetLeaf * leaf = (RowSetLeaf *) n;
+	KRowSetWalkRowParams * walk_params = data;
+
 	int i;
 	int j;
+	int64_t row_id = leaf->leaf_id;
 
 #if CHECK_NODE_MARKS
 	assert ( leaf->leaf_mark == LEAF_MARK );
 #endif
-	assert ( leaf->leaf_id == row_id );
-	assert ( depth == LEAF_DEPTH );
+	assert ( walk_params != NULL );
+
+	if ( walk_params == NULL || walk_params->cb == NULL )
+		return;
 
 	row_id <<= 16;
 
-	for ( i = 0; i < LEAF_DATA_SZ_BT; ++i )
+	if (!walk_params->reverse)
 	{
-		if ( leaf->data[i] )
+
+		for ( i = 0; i < LEAF_DATA_SZ_BT; ++i )
 		{
-			uint64_t new_row_id = row_id | i << 3;
-			for (j = 0; j < 8; ++j)
+			if ( leaf->data[i] )
 			{
-				if ( leaf->data[i] & (1 << j) )
+				uint64_t new_row_id = row_id | i << 3;
+				for (j = 0; j < 8; ++j)
 				{
-					KOutMsg("%ld, ", (int64_t)(new_row_id | j));
+					if ( leaf->data[i] & (1 << j) )
+					{
+						walk_params->cb ( (int64_t)(new_row_id | j), walk_params->data );
+					}
 				}
 			}
 		}
+
 	}
-}
-
-static
-void KRowSetBrowseRowsNodes ( RowSetNode * node, int depth, uint64_t row_id )
-{
-	int i;
-
-#if CHECK_NODE_MARKS
-	assert ( node->node_mark == NODE_MARK );
-#endif
-	assert ( node->depth == depth );
-	assert ( depth < LEAF_DEPTH );
-
-	row_id <<= 8;
-
-	for ( i = 0; i < 256; ++i )
+	else
 	{
-		assert ( (i & 0xFF) == i );
 
-		if ( node->children[i] )
+		for ( i = LEAF_DATA_SZ_BT - 1; i >= 0 ; --i )
 		{
-			if ( depth + 1 < LEAF_DEPTH )
-				KRowSetBrowseRowsNodes ( node->children[i], depth + 1, row_id | i );
-			else
-				KRowSetBrowseRowsLeafs ( node->children[i], depth + 1, row_id | i );
+			if ( leaf->data[i] )
+			{
+				uint64_t new_row_id = row_id | i << 3;
+				for (j = 7; j >= 0; --j)
+				{
+					if ( leaf->data[i] & (1 << j) )
+					{
+						walk_params->cb ( (int64_t)(new_row_id | j), walk_params->data );
+					}
+				}
+			}
 		}
+
 	}
 }
 
-KDB_EXTERN rc_t CC KRowSetPrintRowsByTraverse ( const KRowSet * self )
+KDB_EXTERN rc_t CC KRowSetWalkRows ( const KRowSet * self, bool reverse,
+		void ( CC * cb ) ( int64_t row_id, void * data ), void * data )
 {
+	KRowSetWalkRowParams walk_params;
+
 	if ( self == NULL )
 		return RC ( rcDB, rcRowSet, rcAccessing, rcParam, rcNull );
 
-	KOutMsg("Searching RowSet rows by traverse:\n");
-	if ( self->root_node == NULL )
-	{
-		KOutMsg("Empty RowSet\n");
-		return 0;
-	}
+	walk_params.reverse = reverse;
+	walk_params.cb = cb;
+	walk_params.data = data;
+	DLListForEach ( &self->leaf_nodes, reverse, KRowSetWalkLeafRows, &walk_params );
 
-	KRowSetBrowseRowsNodes ( self->root_node, 0, 0 );
-	KOutMsg("\n");
-	return 0;
-}
-
-static
-void KRowSetBrowseRowsInLeaf ( DLNode *n, void *data )
-{
-	RowSetLeaf * leaf = (RowSetLeaf *) n;
-	KRowSetBrowseRowsLeafs ( leaf, LEAF_DEPTH, leaf->leaf_id );
-}
-
-KDB_EXTERN rc_t CC KRowSetPrintRowsByList ( const KRowSet * self )
-{
-	if ( self == NULL )
-		return RC ( rcDB, rcRowSet, rcAccessing, rcParam, rcNull );
-
-	KOutMsg("Searching RowSet rows by list:\n");
-	if ( self->root_node == NULL )
-	{
-		KOutMsg("Empty RowSet\n");
-		return 0;
-	}
-
-	DLListForEach ( &self->leaf_nodes, false, KRowSetBrowseRowsInLeaf, NULL );
-	KOutMsg("\n");
 	return 0;
 }
