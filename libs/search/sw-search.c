@@ -281,40 +281,9 @@ static void sw_find_indel_box ( int* matrix, size_t ROWS, size_t COLUMNS,
 
     size_t i = max_i, j;
     int prev_indel = 0;
-    bool find_end = true;
-    while ( i-- > 0 )
-    {
-        if ( matrix[i] > matrix[max_i] )
-        {
-            /* the matrix is not very good,
-            but at least the left bound can be found reliably
-            so we continue search but ignore the end,
-            since the search is starting not from the bottom
-            right element */
-            max_i = i;
-            find_end = false;
-        }
-    }
-
-    /* TODO: prove the lemma: for all i: matrix[i] <= matrix[ROWS*COLUMNS - 1]
-    (i.e. matrix[ROWS*COLUMNS - 1] is always the maximum element in the valid SW-matrix)
-
-    UPDATE: It's OK that sometimes the maximum is not  at the bottom right corner
-    
-    counter-example:
-    text  = "ABCy"
-    query = "A"
-
-    matrix:
-       -  A  B  C  y
-    -  0  0  0  0  0
-    A  0  2  1  0  0
-
-    */
 
     max_row = max_i / COLUMNS;
     max_col = max_i % COLUMNS;
-
 
     // traceback to (0,0)-th element of the matrix
     *ret_row_start = *ret_row_end = *ret_col_start = *ret_col_end = -1;
@@ -387,27 +356,6 @@ static void sw_find_indel_box ( int* matrix, size_t ROWS, size_t COLUMNS,
         {
             break;
         }
-    }
-
-    /* if the matrix is unreliable for searching the end
-        BUT there was no indel box found then it's
-        just a combination of matches and mismatches - 
-        leave ret_row_end and ret_col_end = -1 so
-        the caller would know that there was no indels.
-        this works for matrices like:
-
-         0 0 0 0
-         0 2 2 2
-         0 2 4 2
-         0 2 2 3
-    */
-    if ( !find_end )
-    {
-        if ( *ret_row_end != -1 )
-            *ret_row_end = (int)ROWS - 1;
-
-        if ( *ret_col_end != -1 )
-            *ret_col_end = (int)COLUMNS - 1;
     }
 }
 
