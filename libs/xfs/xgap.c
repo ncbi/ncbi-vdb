@@ -668,6 +668,7 @@ XFSGapUserConfigDir ( char ** UserConfigDir )
                             XFSPathGet ( Path ) ,
                             ( const char ** ) UserConfigDir
                             );
+            XFSPathRelease ( Path );
         }
     }
 

@@ -826,8 +826,6 @@ XFSPenDispose ( const struct XFSPen * self )
     struct XFSPen * Pen = ( struct XFSPen * ) self;
 
     if ( Pen != NULL ) {
-        BSTreeWhack ( & ( Pen -> tree ), _PenTreeWhackCallback, NULL );
-
         if ( Pen -> mutabor != NULL ) {
             KLockRelease ( Pen -> mutabor );
             Pen -> mutabor = NULL;
@@ -837,6 +835,8 @@ XFSPenDispose ( const struct XFSPen * self )
             _sPDispose ( Pen -> pen );
             Pen -> pen = NULL;
         }
+
+        BSTreeWhack ( & ( Pen -> tree ), _PenTreeWhackCallback, NULL );
 
         free ( Pen );
     }

@@ -629,6 +629,11 @@ XFSGapKartDispose ( const struct XFSGapKart * self )
             Kart -> lain = NULL;
         }
 
+        if ( Kart -> name != NULL ) {
+            free ( ( char * ) Kart -> name );
+            Kart -> name = NULL;
+        }
+
         if ( Kart -> path != NULL ) {
             free ( ( char * ) Kart -> path );
             Kart -> path = NULL;

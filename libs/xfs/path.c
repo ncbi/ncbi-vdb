@@ -595,7 +595,8 @@ _PathParse (
     }
 
     if ( RCt == 0 ) {
-        Bg = Cr = Path;
+        Bg = Path;
+        Cr = Path;
         while ( * Cr != 0 ) {
             if ( * Cr == '/' ) {
                 if ( 0 < Cr - Bg ) {
