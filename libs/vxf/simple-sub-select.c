@@ -171,7 +171,7 @@ rc_t open_sub_cursor ( SubSelect **fself, const VXfactInfo *info, const VFactory
                 /* share cursor size with native cursor **/
                 cache_size = native_cursor_cache_size/4;
                 native_cursor_cache_size -= cache_size;
-                VCursorSetCacheCapacity(native_curs,native_cursor_cache_size);
+                VCursorSetCacheCapacity((VCursor*)native_curs,native_cursor_cache_size);
             }
             rc = VTableCreateCachedCursorRead ( tbl, (const VCursor**)& curs, cache_size ); /*** some random io is expected ***/
             if(rc != 0) return rc;
