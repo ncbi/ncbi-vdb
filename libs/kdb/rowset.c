@@ -216,6 +216,12 @@ KDB_EXTERN rc_t CC KRowSetRelease ( const KRowSet *self )
 }
 
 static
+inline uint8_t KRowSetGetLeafIdByte ( int64_t leaf_id, int depth )
+{
+	return leaf_id >> (LEAF_DEPTH - depth - 1) * 8 & 0xFF;
+}
+
+static
 void KRowSetFindNearestLeaf ( KRowSet * self, RowSetNode * nodes_stack[], int nodes_depth[], RowSetLeaf * leaf, RowSetLeaf ** result, bool * result_left )
 {
 	assert ( self != NULL );
@@ -257,7 +263,7 @@ void KRowSetFindNearestLeaf ( KRowSet * self, RowSetNode * nodes_stack[], int no
 				continue;
 
 			depth = nodes_depth[i];
-			bt = (leaf_id >> 8 * (LEAF_DEPTH - depth - 1)) & 0xFF;
+			bt = KRowSetGetLeafIdByte ( leaf_id, depth );
 
 			assert ( current_node->children[bt] != NULL );
 
@@ -338,7 +344,7 @@ void KRowSetFindNearestLeaf ( KRowSet * self, RowSetNode * nodes_stack[], int no
 }
 
 static
-inline bool KRowSetNodeIsTransitionMatches ( int64_t leaf_id, int node_depth, const RowSetNodeTransition * tr, int * size_matched )
+bool KRowSetNodeIsTransitionMatches ( int64_t leaf_id, int node_depth, const RowSetNodeTransition * tr, int * size_matched )
 {
 	int matched;
 
@@ -346,7 +352,7 @@ inline bool KRowSetNodeIsTransitionMatches ( int64_t leaf_id, int node_depth, co
 
 	for ( matched = 0; matched < tr->size; ++matched )
 	{
-		if ( (leaf_id >> (LEAF_DEPTH - matched - node_depth - 2) * 8 & 0xFF) != tr->data[matched] )
+		if ( KRowSetGetLeafIdByte ( leaf_id, matched + node_depth + 1 ) != tr->data[matched] )
 			break;
 	}
 
@@ -359,7 +365,7 @@ inline bool KRowSetNodeIsTransitionMatches ( int64_t leaf_id, int node_depth, co
 static
 void KRowSetNodeSetChild ( RowSetNode * node, void * child, int64_t leaf_id, int node_depth, int child_depth )
 {
-	uint8_t bt = (leaf_id >> (LEAF_DEPTH - 1 - node_depth) * 8) & 0xFF;
+	uint8_t bt = KRowSetGetLeafIdByte ( leaf_id, node_depth );
 	int i;
 
 	node->children[bt] = child;
@@ -367,22 +373,92 @@ void KRowSetNodeSetChild ( RowSetNode * node, void * child, int64_t leaf_id, int
 
 	for ( i = node_depth; i < child_depth - 1; ++i )
 	{
-		node->transitions[bt].data[i - node_depth] = leaf_id >> (LEAF_DEPTH - i - 2) * 8 & 0xFF;
+		node->transitions[bt].data[i - node_depth] = KRowSetGetLeafIdByte ( leaf_id, i + 1 );
 	}
 }
 
+/**
+ * To ease error handling and deallocation of resources in case of errors,
+ * "allocated_interm_node" has to be allocated before calling this function.
+ */
+static
+void KRowSetSplitNode ( RowSetNode * node, int node_depth, RowSetNode * allocated_interm_node, int interm_node_depth, int64_t leaf_id )
+{
+	uint8_t bt = KRowSetGetLeafIdByte ( leaf_id, node_depth );
+	uint8_t interm_bt;
+	void * child = node->children[bt];
+	int first_tr_size = interm_node_depth - node_depth - 1;
+
+#if CHECK_NODE_MARKS
+	allocated_interm_node->node_mark = NODE_MARK;
+#endif
+
+	assert ( allocated_interm_node != NULL );
+	assert ( node->children[bt] != NULL );
+
+	interm_bt = node->transitions[bt].data[first_tr_size];
+	allocated_interm_node->transitions[interm_bt].size = node->transitions[bt].size - first_tr_size - 1;
+	for ( int i = 0; i < allocated_interm_node->transitions[interm_bt].size; ++i )
+	{
+		allocated_interm_node->transitions[interm_bt].data[i] = node->transitions[bt].data[first_tr_size + i + 1];
+	}
+	allocated_interm_node->children[interm_bt] = child;
+
+	KRowSetNodeSetChild ( node, allocated_interm_node, leaf_id, node_depth, interm_node_depth );
+}
+
+/**
+ * To ease error handling and deallocation of resources in case of errors,
+ * "allocated_leaf" has to be allocated before calling this function.
+ */
+static
+void KRowSetInsertLeaf ( KRowSet * self, int64_t leaf_id, RowSetNode * node, int node_depth, RowSetNode * nodes_stack[], int nodes_depth[], RowSetLeaf * allocated_leaf )
+{
+	RowSetLeaf * nearest_leaf;
+	bool nearest_leaf_left;
+	uint8_t bt;
+	bt = KRowSetGetLeafIdByte ( leaf_id, node_depth );
+
+	assert ( allocated_leaf != NULL );
+	assert ( node->children[bt] == NULL );
+
+#if CHECK_NODE_MARKS
+	allocated_leaf->leaf_mark = LEAF_MARK;
+#endif
+	allocated_leaf->leaf_id = leaf_id;
+
+	KRowSetNodeSetChild ( node, allocated_leaf, leaf_id, node_depth, LEAF_DEPTH );
+	node->children[bt] = allocated_leaf;
+
+	KRowSetFindNearestLeaf ( self, nodes_stack, nodes_depth, allocated_leaf, &nearest_leaf, &nearest_leaf_left );
+	if ( nearest_leaf == NULL )
+		DLListPushTail ( &self->leaf_nodes, &allocated_leaf->dad );
+	else if (nearest_leaf_left)
+		DLListInsertNodeAfter ( &self->leaf_nodes, &nearest_leaf->dad, &allocated_leaf->dad );
+	else
+		DLListInsertNodeBefore ( &self->leaf_nodes, &nearest_leaf->dad, &allocated_leaf->dad );
+
+	++self->number_leaves;
+	assert ( KRowSetNodeIsTransitionMatches ( leaf_id, node_depth, &node->transitions[bt], NULL ) );
+}
+
+/**
+ * This function preallocates all required resources
+ * and only after that changes the RowSet data structure.
+ *
+ * Using this approach we can simply return from the function,
+ * since all the resources are being allocated once.
+ */
 static
 rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, RowSetLeaf ** leaf_found )
 {
-	rc_t rc = 0;
-	int depth;
-	RowSetNode * node;
-	RowSetLeaf * leaf;
-	RowSetLeaf * new_leaf = NULL;
 	int64_t leaf_id = row_id >> 16;
+	RowSetNode * node;
+	RowSetLeaf * new_leaf;
 	uint8_t bt;
+	int depth = 0;
 	int nodes_stack_size = 0;
-	RowSetNode * nodes_stack[LEAF_DEPTH];
+	RowSetNode * nodes_stack[LEAF_DEPTH] = { NULL }; // initialize array with NULLs
 	int nodes_depth[LEAF_DEPTH];
 
 	if ( self == NULL )
@@ -390,9 +466,6 @@ rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, R
 
 	if ( leaf_found == NULL )
 		return RC ( rcDB, rcRowSet, rcSelecting, rcParam, rcNull );
-
-	depth = 0;
-	memset ( nodes_stack, 0, sizeof nodes_stack );
 
 	// empty tree
 	if ( self->root_node == NULL )
@@ -418,6 +491,14 @@ rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, R
 #endif
 
 		self->root_node = root;
+
+		node = self->root_node;
+		nodes_stack[nodes_stack_size] = node;
+		nodes_depth[nodes_stack_size++] = depth;
+
+		KRowSetInsertLeaf ( self, leaf_id, node, depth, nodes_stack, nodes_depth, new_leaf );
+		*leaf_found = new_leaf;
+		return 0;
 	}
 
 	node = self->root_node;
@@ -430,43 +511,28 @@ rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, R
 	for ( ; depth < LEAF_DEPTH; )
 	{
 		int tr_size_matched;
-		bt = (leaf_id >> (LEAF_DEPTH - depth - 1) * 8) & 0xFF;
+		bt = KRowSetGetLeafIdByte ( leaf_id, depth );
+		// no child at a given transition, let's insert leaf here
 		if ( node->children[bt] == NULL )
 		{
 			if ( !insert_when_needed )
 				return RC ( rcDB, rcRowSet, rcSelecting, rcItem, rcNotFound );
 
-			// pre-allocate leaf here if it wasn't allocated before and exit "for" loop
-			if ( new_leaf == NULL )
-				new_leaf = calloc ( 1, sizeof ( RowSetLeaf ) );
+			// pre-allocate leaf here
+			new_leaf = calloc ( 1, sizeof ( RowSetLeaf ) );
 			if (new_leaf == NULL)
 				return RC ( rcDB, rcRowSet, rcInserting, rcMemory, rcExhausted );
-			break;
+
+			KRowSetInsertLeaf ( self, leaf_id, node, depth, nodes_stack, nodes_depth, new_leaf );
+			*leaf_found = new_leaf;
+			return 0;
 		}
 
-		if ( KRowSetNodeIsTransitionMatches ( leaf_id, depth, &node->transitions[bt], &tr_size_matched ) )
-		{
-			depth += 1 + tr_size_matched;
-			if ( depth == LEAF_DEPTH )
-			{
-				*leaf_found = node->children[bt];
-				return 0;
-			}
-
-			node = node->children[bt];
-#if CHECK_NODE_MARKS
-			assert ( node->node_mark == NODE_MARK );
-#endif
-			assert ( depth < sizeof nodes_stack / sizeof nodes_stack[0] );
-			nodes_stack[nodes_stack_size] = node;
-			nodes_depth[nodes_stack_size++] = depth;
-		}
-		else
+		// transition does not match, split the node
+		if ( !KRowSetNodeIsTransitionMatches ( leaf_id, depth, &node->transitions[bt], &tr_size_matched ) )
 		{
 			RowSetNode * interm_node;
-			RowSetNode * old_node;
-			int old_depth;
-			uint8_t old_bt;
+			int interm_node_depth = depth + 1 + tr_size_matched;
 
 			if ( !insert_when_needed )
 				return RC ( rcDB, rcRowSet, rcSelecting, rcItem, rcNotFound );
@@ -480,27 +546,10 @@ rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, R
 				return RC ( rcDB, rcRowSet, rcInserting, rcMemory, rcExhausted );
 			}
 
-#if CHECK_NODE_MARKS
-			interm_node->node_mark = NODE_MARK;
-#endif
-
-			old_node = node->children[bt];
-			old_depth = depth + 1 + node->transitions[bt].size;
-
-			// TODO: move this to a separate function
-			old_bt = node->transitions[bt].data[tr_size_matched];
-			interm_node->transitions[old_bt].size = node->transitions[bt].size - tr_size_matched - 1;
-			for ( int i = 0; i < interm_node->transitions[old_bt].size; ++i )
-			{
-				interm_node->transitions[old_bt].data[i] = node->transitions[bt].data[tr_size_matched + i + 1];
-			}
-			interm_node->children[old_bt] = old_node;
-
-			KRowSetNodeSetChild ( node, interm_node, leaf_id, depth, depth + 1 + tr_size_matched );
-
+			KRowSetSplitNode ( node, depth, interm_node, interm_node_depth, leaf_id );
 
 			node = interm_node;
-			depth = depth + 1 + tr_size_matched;
+			depth = interm_node_depth;
 #if CHECK_NODE_MARKS
 			assert ( node->node_mark == NODE_MARK );
 #endif
@@ -508,45 +557,32 @@ rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, R
 			nodes_stack[nodes_stack_size] = node;
 			nodes_depth[nodes_stack_size++] = depth;
 
-			break;
+			KRowSetInsertLeaf ( self, leaf_id, node, depth, nodes_stack, nodes_depth, new_leaf );
+			*leaf_found = new_leaf;
+			return 0;
+
 		}
-	}
 
-	if ( rc != 0 )
-		return rc;
+		// follow the transition, check if transition leads to a leaf
+		depth += 1 + tr_size_matched;
+		if ( depth == LEAF_DEPTH )
+		{
+			*leaf_found = node->children[bt];
+			return 0;
+		}
 
-	bt = (leaf_id >> (LEAF_DEPTH - depth - 1) * 8) & 0xFF;
-
-	assert ( new_leaf != NULL );
-	assert ( node->children[bt] == NULL );
-
-	{
-		RowSetLeaf * nearest_leaf;
-		bool nearest_leaf_left;
-
+		node = node->children[bt];
 #if CHECK_NODE_MARKS
-		new_leaf->leaf_mark = LEAF_MARK;
+		assert ( node->node_mark == NODE_MARK );
 #endif
-		new_leaf->leaf_id = leaf_id;
-
-		KRowSetNodeSetChild ( node, new_leaf, leaf_id, depth, LEAF_DEPTH );
-		node->children[bt] = new_leaf;
-
-		KRowSetFindNearestLeaf ( self, nodes_stack, nodes_depth, new_leaf, &nearest_leaf, &nearest_leaf_left );
-		if ( nearest_leaf == NULL )
-			DLListPushTail ( &self->leaf_nodes, &new_leaf->dad );
-		else if (nearest_leaf_left)
-			DLListInsertNodeAfter ( &self->leaf_nodes, &nearest_leaf->dad, &new_leaf->dad );
-		else
-			DLListInsertNodeBefore ( &self->leaf_nodes, &nearest_leaf->dad, &new_leaf->dad );
-
-		++self->number_leaves;
+		assert ( depth < sizeof nodes_stack / sizeof nodes_stack[0] );
+		nodes_stack[nodes_stack_size] = node;
+		nodes_depth[nodes_stack_size++] = depth;
 	}
-	assert ( KRowSetNodeIsTransitionMatches ( leaf_id, depth, &node->transitions[bt], NULL ) );
-	leaf = node->children[bt];
 
-	*leaf_found = leaf;
-
+	// "for" loop iterates up to a maximum possible depth,
+	// so it must come to a leaf
+	assert ( false );
 	return 0;
 }
 
@@ -589,7 +625,7 @@ typedef struct {
 } KRowSetWalkRowParams;
 
 static
-void KRowSetWalkLeafRows ( DLNode *n, void *data )
+void KRowSetWalkLeafRows ( DLNode * n, void * data )
 {
 	RowSetLeaf * leaf = (RowSetLeaf *) n;
 	KRowSetWalkRowParams * walk_params = data;
