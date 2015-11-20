@@ -24,7 +24,14 @@
   <PropertyGroup>
     <TargetName>lib$(ProjectName)</TargetName>
   </PropertyGroup>
-  
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(NGS_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>c:\Program Files (x86)\Dokan\DokanLibrary;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+
   <ItemGroup>
     <ClCompile Include="..\..\..\libs\xfs\xfs.c" />
     <ClCompile Include="..\..\..\libs\xfs\win\platform.c" />
