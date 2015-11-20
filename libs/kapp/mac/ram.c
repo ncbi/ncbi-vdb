@@ -37,16 +37,16 @@
 /* KAppGetTotalRam
  *  Mac specific function of getting amount of RAM
  */
-rc_t KAppGetTotalRam ( uint64_t * totalRamKb )
+rc_t KAppGetTotalRam ( uint64_t * totalRam )
 {
     rc_t rc;
 
-    size_t len = sizeof *totalRamKb;
+    size_t len = sizeof *totalRam;
     int ret;
 
-    assert ( totalRamKb != 0 );
+    assert ( totalRam != 0 );
 
-    ret = sysctlbyname("hw.memsize", totalRamKb, &len, NULL, 0 );
+    ret = sysctlbyname("hw.memsize", totalRam, &len, NULL, 0 );
     if ( ret < 0 )
     {
 		int status = errno;

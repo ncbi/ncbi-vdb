@@ -80,12 +80,22 @@
 
 #define USE_CURL 0
 
-#define NAME_SERVICE_MAJ_VERS 1
-#define NAME_SERVICE_MIN_VERS 1
+#define NAME_SERVICE_MAJ_VERS_ 1
+#define NAME_SERVICE_MIN_VERS_ 1
 #define ONE_DOT_ONE 0x01010000
-#define NAME_SERVICE_VERS \
-    ( ( NAME_SERVICE_MAJ_VERS << 24 ) | ( NAME_SERVICE_MIN_VERS << 16 ) )
+static uint32_t NAME_SERVICE_MAJ_VERS = NAME_SERVICE_MAJ_VERS_;
+static uint32_t NAME_SERVICE_MIN_VERS = NAME_SERVICE_MAJ_VERS_;
+static uint32_t NAME_SERVICE_VERS
+    = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MAJ_VERS_ << 16;
 
+static void VFSManagerSetNameResolverVersion(uint32_t maj, uint32_t min) {
+    NAME_SERVICE_MAJ_VERS = maj;
+    NAME_SERVICE_MIN_VERS = min;
+    NAME_SERVICE_VERS
+        = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MAJ_VERS_ << 16;
+}
+void VFSManagerSetNameResolverVersion3_0(void)
+{   VFSManagerSetNameResolverVersion(3, 0); }
 
 /*--------------------------------------------------------------------------
  * String
@@ -140,46 +150,6 @@ void VResolverAccTokenInitFromOID ( VResolverAccToken *t, const String *acc )
  */
 typedef enum
 {
-    appUnknown,
-    appAny,
-    appFILE,
-    appREFSEQ,
-    appSRA,
-    appWGS,
-    appNANNOT,
-    appNAKMER,
-    appCount
-} VResolverAppID;
-
-typedef enum
-{
-    algCGI,
-    algFlat,
-    algSRAFlat,
-    algSRA1024,
-    algSRA1000,
-    algFUSE1000,
-    algREFSEQ,
-    algWGSFlat,
-    algWGS,
-    algFuseWGS,
-    algSRA_NCBI,
-    algSRA_EBI,
-
-    algNANNOTFlat,
-    algNANNOT,
-    algFuseNANNOT,
-    algNAKMERFlat,
-    algNAKMER,
-    algFuseNAKMER,
-
-    /* leave as last value */
-    algUnknown
-
-} VResolverAlgID;
-
-typedef enum
-{
     cacheDisallow,
     cacheAllow
 } VResolverCacheAllow;
@@ -225,7 +195,6 @@ struct VResolverAlg
 
 /* Whack
  */
-static
 void CC VResolverAlgWhack ( void *item, void *ignore )
 {
     VResolverAlg *self = item;
@@ -240,7 +209,6 @@ void CC VResolverAlgWhack ( void *item, void *ignore )
 
 /* Make
  */
-static
 rc_t VResolverAlgMake ( VResolverAlg **algp, const String *root,
      VResolverAppID app_id, VResolverAlgID alg_id, bool protected, bool disabled )
 {
@@ -259,6 +227,7 @@ rc_t VResolverAlgMake ( VResolverAlg **algp, const String *root,
         rc = 0;
     }
 
+    assert(algp);
     * algp = alg;
     return rc;
 }
@@ -427,6 +396,23 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
             "kmer/%03u/%03u/%S", num / 1000000, ( num / 1000 ) % 1000, & tok -> acc );
         break;
 
+    case algPileup_NCBI:
+        num = ( uint32_t ) strtoul ( tok -> digits . addr, NULL, 10 );
+        rc = string_printf ( expanded, bsize, size,
+             "SRZ/%06u/%S%S/%S", num / 1000, & tok -> alpha, & tok -> digits, & tok -> acc );
+        break;
+            
+    case algPileup_EBI:
+        num = ( uint32_t ) strtoul ( tok -> digits . addr, NULL, 10 );
+        rc = string_printf ( expanded, bsize, size,
+             "ERZ/%06u/%S%S/%S", num / 1000, & tok -> alpha, & tok -> digits, & tok -> acc );
+        break;
+    case algPileup_DDBJ:
+        num = ( uint32_t ) strtoul ( tok -> digits . addr, NULL, 10 );
+        rc = string_printf ( expanded, bsize, size,
+             "DRZ/%06u/%S%S/%S", num / 1000, & tok -> alpha, & tok -> digits, & tok -> acc );
+        break;
+        
     default:
         return RC ( rcVFS, rcResolver, rcResolving, rcType, rcUnrecognized );
     }
@@ -646,7 +632,6 @@ rc_t VResolverAlgLocalFile ( const VResolverAlg *self,
     return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
-static
 rc_t VPathCheckFromNamesCGI ( const VPath * path, const String *ticket, const VPath ** mapping )
 {
     size_t i, size;
@@ -758,7 +743,8 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path, const String *ticket, const VP
  */
 static
 rc_t VResolverAlgParseResolverCGIResponse_1_0 ( const char *start, size_t size,
-    const VPath ** path, const String *acc, const String *ticket )
+    const VPath ** path, const VPath ** ignore, const String *acc,
+    const String *ticket )
 {
     rc_t rc;
     KLogLevel lvl;
@@ -813,6 +799,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_0 ( const char *start, size_t size,
     StringInit ( & msg, start, sep - start, ( uint32_t ) ( sep - start ) );
 
     /* compare acc to accession */
+    assert(acc);
     if ( ! StringEqual ( & accession, acc ) )
         return RC ( rcVFS, rcResolver, rcResolving, rcMessage, rcCorrupt );
 
@@ -1029,6 +1016,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
     StringInit ( & msg, start, sep - start, ( uint32_t ) ( sep - start ) );
 
     /* compare acc to accession or obj_id */
+    assert(acc);
     if ( ! StringEqual ( & accession, acc ) && ! StringEqual ( & obj_id, acc ) ) {
         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_ERR), (
             "@@@@@@@@2 %%s:%s:%d: %s"
@@ -1215,107 +1203,98 @@ rc_t VResolverAlgParseResolverCGIResponse_2_0 ( const char *start, size_t size,
     return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
+typedef enum {
+    vBad,
+    v1_0,
+    v1_1,
+    v2,
+    v3,
+} TVersion;
 
 /* ParseResolverCGIResponse
  *  the response should be NUL terminated
  *  but should also be close to the size of result
  */
-static
 rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
     const VPath ** path, const VPath ** mapping, const String *acc,
     const String *ticket )
 {
+    const char V1_0[] = "#1.0";
+    const char V1_1[] = "#1.1";
+    const char V2  [] = "#2.0";
+    const char V3  [] = "#3.0";
+    struct {
+        const char *c;
+        size_t s;
+        TVersion v;
+        rc_t (*f)( const char *start, size_t size, const VPath **path,
+            const VPath **mapping, const String *acc, const String *ticket);
+    } version[] = {
+        {V1_1, sizeof V1_1 - 1, v1_1, VResolverAlgParseResolverCGIResponse_1_1},
+        {V3  , sizeof V3   - 1, v3  , VResolverAlgParseResolverCGIResponse_3_0},
+        {V1_0, sizeof V1_0 - 1, v1_0, VResolverAlgParseResolverCGIResponse_1_0},
+        {V2  , sizeof V2   - 1, v2  , VResolverAlgParseResolverCGIResponse_2_0},
+    };
+
+    size_t size = 0;
+    int iVersion = sizeof version / sizeof version[0];
+
     /* the textual response */
     size_t i = 0;
-    const char *start = ( const void* ) result -> base;
-    size_t size = KDataBufferBytes ( result );
+    const char *start = NULL;
+
+    assert(result);
+
+    start = ( const void* ) result -> base;
+    size = KDataBufferBytes ( result );
 
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (" Response = %.*s\n", size, start));
 
     /* peel back buffer to significant bytes */
-    while ( size > 0 && start [ size - 1 ] == 0 )
-        -- size;
+    while ( size > 0 && start [ size - 1 ] == 0 ) -- size;
 
     /* skip over blanks */
-    for ( i = 0; i < size; ++ i )
+    for ( i = 0; i < size; ++ i ) { if ( ! isspace ( start [ i ] ) ) break; }
+
+    for (iVersion = 0;
+        iVersion < sizeof version / sizeof *version; ++iVersion)
     {
-        if ( ! isspace ( start [ i ] ) )
+        if (string_cmp(&start[i], size - i,
+            version[iVersion].c, version[iVersion].s, version[iVersion].s) == 0)
+        {
             break;
-    }
-
-    /* at this point, we expect only version 1.0 ... */
-    if ( string_cmp ( & start [ i ], size - i, "#1.0", sizeof "#1.0" - 1, sizeof "#1.0" - 1 ) == 0 )
-    {
-        do
-        {
-            /* accept version line */
-            i += sizeof "#1.0" - 1;
-
-            /* must be followed by eoln */
-            if ( start [ i ] == '\r' && start [ i + 1 ] == '\n' )
-                i += 2;
-            else if ( start [ i ] == '\n' )
-                i += 1;
-            else
-                break;
-
-            /* parse 1.0 response table */
-            return VResolverAlgParseResolverCGIResponse_1_0 ( & start [ i ], size - i, path, acc, ticket );
         }
-        while ( false );
     }
+    switch (iVersion) {
+        default:
+            if (string_cmp(&start[i], size - i, version[iVersion].c,
+                version[iVersion].s, version[iVersion].s) == 0)
+            {
+                /* accept version line */
+                i += version[iVersion].s;
 
-    /* ... and 1.1 */
-    if ( string_cmp ( & start [ i ], size - i, "#1.1", sizeof "#1.1" - 1, sizeof "#1.1" - 1 ) == 0 )
-    {
-        do
-        {
-            /* accept version line */
-            i += sizeof "#1.1" - 1;
+                /* must be followed by eoln */
+                if ( start [ i ] == '\r' && start [ i + 1 ] == '\n' )
+                    i += 2;
+                else if ( start [ i ] == '\n' )
+                    i += 1;
+                else
+                    return
+                        RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
 
-            /* must be followed by eoln */
-            if ( start [ i ] == '\r' && start [ i + 1 ] == '\n' )
-                i += 2;
-            else if ( start [ i ] == '\n' )
-                i += 1;
-            else
-                break;
-
-            /* parse 1.1 response table */
-            return VResolverAlgParseResolverCGIResponse_1_1 ( & start [ i ], size - i, path, mapping, acc, ticket );
-        }
-        while ( false );
+                /* parse response table */
+                return version[iVersion].f
+                    (&start[i], size - i, path, mapping, acc, ticket);
+            }
+            /* no break */
+        case sizeof version / sizeof version[0]:
+            return RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
     }
-
-    /* ... and 2.0 */
-    if ( string_cmp ( & start [ i ], size - i, "#2.0", sizeof "#2.0" - 1, sizeof "#2.0" - 1 ) == 0 )
-    {
-        do
-        {
-            /* accept version line */
-            i += sizeof "#2.0" - 1;
-
-            /* must be followed by eoln */
-            if ( start [ i ] == '\r' && start [ i + 1 ] == '\n' )
-                i += 2;
-            else if ( start [ i ] == '\n' )
-                i += 1;
-            else
-                break;
-
-            /* parse 2.0 response */
-            return VResolverAlgParseResolverCGIResponse_2_0 ( & start [ i ], size - i, path, mapping, acc, ticket );
-        }
-        while ( false );
-    }
-
-    return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
 /* RemoteProtectedResolve
  *  use NCBI CGI to resolve accession into URL
  */
-static
 rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     const KNSManager *kns, VRemoteProtocols protocols, const String *acc,
     const VPath ** path, const VPath ** mapping, bool legacy_wgs_refseq )
@@ -1349,36 +1328,36 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("  tic = %S\n", self -> ticket));
             rc = KHttpRequestAddPostParam ( req, "tic=%S", self -> ticket );
         }
-#if NAME_SERVICE_VERS >= ONE_DOT_ONE /* SRA-1690 */
-        if ( rc == 0 )
-        {
-            const char *val;
-            switch ( protocols )
-            {
-            case eProtocolHttp:
-                val = "http";
-                break;
-            case eProtocolFasp:
-                val = "fasp";
-                break;
-            case eProtocolFaspHttp:
-                val = "fasp,http";
-                break;
-            case eProtocolHttpFasp:
-                val = "http,fasp";
-                break;
-            default:
-                val = NULL;
-                rc = RC ( rcVFS, rcResolver, rcResolving, rcParam, rcInvalid );
-            }
 
-            if ( rc == 0 )
-            {
-                DBGMSG(DBG_VFS, DBG_FLAG ( DBG_VFS ), ("  accept-proto = %s\n", val ) );
-                rc = KHttpRequestAddPostParam ( req, "accept-proto=%s", val );
+        if (NAME_SERVICE_VERS >= ONE_DOT_ONE) { /* SRA-1690 */
+            if ( rc == 0 ) {
+                const char *val;
+                switch ( protocols ) {
+                    case eProtocolHttp:
+                        val = "http";
+                        break;
+                    case eProtocolFasp:
+                        val = "fasp";
+                        break;
+                    case eProtocolFaspHttp:
+                        val = "fasp,http";
+                        break;
+                    case eProtocolHttpFasp:
+                        val = "http,fasp";
+                        break;
+                    default:
+                        val = NULL;
+                        rc = RC(
+                            rcVFS, rcResolver, rcResolving, rcParam, rcInvalid);
+                }
+
+                if ( rc == 0 ) {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+                        ("  accept-proto = %s\n", val));
+                    rc = KHttpRequestAddPostParam(req, "accept-proto=%s", val);
+                }
             }
         }
-#endif
 
         if ( rc == 0 )
         {
@@ -1480,6 +1459,8 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
     char expanded [ 256 ];
 
     const String *root;
+
+    assert(self);
 
     /* check for download ticket */
     if ( self -> alg_id == algCGI
@@ -1810,8 +1791,13 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
 
     uint32_t code;
 
-    const char *acc = accession -> addr;
-    size_t i, size = accession -> size;
+    const char *acc = NULL;
+    size_t i, size = 0;
+
+    assert(accession);
+
+    acc = accession -> addr;
+    size = accession -> size;
 
     /* capture the whole accession */
     tok -> acc = * accession;
@@ -1911,12 +1897,20 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
     /* remove digit */
     acc += ++ i;
     size -= i;
-
-    /* scan numeric extension */
-    for ( i = 0; i < size; ++ i )
+    
+    /* check pileup extension */
+    if ( string_cmp( acc, size, "pileup", 6, size + 6 ) == 0 )
     {
-        if ( ! isdigit ( acc [ i ] ) )
-            break;
+        i = 6;
+    }
+    else
+    {
+        /* scan numeric extension */
+        for ( i = 0; i < size; ++ i )
+        {
+            if ( ! isdigit ( acc [ i ] ) )
+                break;
+        }
     }
 
     if ( i == 0 || i >= MAX_ACCESSION_LEN )
@@ -2012,9 +2006,28 @@ VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
 
         /* detect accession with extension */
         if ( ( code & 0xFF ) != 0 )
-            app = appAny;
+        {
+            /* check pileup suffix, e.g. "SRR012345.pileup" */
+            String suffix = tok -> ext1;
+            if ( suffix . size == 6 &&
+                 suffix . addr [ 0 ] == 'p' &&
+                 suffix . addr [ 1 ] == 'i' &&
+                 suffix . addr [ 2 ] == 'l' &&
+                 suffix . addr [ 3 ] == 'e' &&
+                 suffix . addr [ 4 ] == 'u' &&
+                 suffix . addr [ 5 ] == 'p' )
+            {
+                app = appSRAPileup;
+            }
+            else
+            {
+                app = appAny;
+            }
+        }
         else
+        {
             app = appSRA;
+        }
         break;
 
     case 0x106: /* e.g. "NC_000012.10"                      */
@@ -2318,7 +2331,6 @@ VResolverEnableState CC VResolverCacheEnable ( const VResolver * self, VResolver
  *  3. search all local algorithms of app type for accession
  *  4. return not found or new VPath
  */
-static
 rc_t VResolverRemoteResolve ( const VResolver *self,
     VRemoteProtocols protocols, const String * accession,
     const VPath ** path, const VPath **mapping,
@@ -2341,6 +2353,8 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
         app = appAny;
         VResolverAccTokenInitFromOID ( & tok, accession );
     }
+
+    assert(self);
 
     /* search all remote volumes by app and accession algorithm expansion */
     count = VectorLength ( & self -> remote );
@@ -2538,6 +2552,10 @@ rc_t VResolverCacheResolve ( const VResolver *self,
         for ( i = 0; i < count; ++ i )
         {
             alg = VectorGet ( & self -> local, i );
+#if 0
+            if /*( alg -> cache_capable && DO NOT CONSIDER cache_capable
+                                           WHEN cache_state == vrAlwaysEnable */
+#endif
             if ( alg -> cache_capable && alg -> protected == protected &&
                  ( alg -> app_id == app || alg -> app_id == appAny ) )
             {
@@ -3391,7 +3409,7 @@ rc_t VResolverLoadAlgVolumes ( Vector *algs, const String *root, const String *t
  *        = "flat" | "sraFlat" | "sra1024" | "sra1000" | "fuse1000"
  *        | "refseq" | "wgs" | "wgsFlag" | "fuseWGS"
  *        | "ncbi" | "ddbj" | "ebi"
- *        | "nannot" | "nannotFlat" | "fuseNANNOT" ;
+ *        | "nannot" | "nannotFlat" | "fuseNANNOT" | "pileupNCBI" | "pileupEBI" | "pileupDDBJ" ;
  */
 static
 rc_t VResolverLoadVolumes ( Vector *algs, const String *root, const String *ticket,
@@ -3468,6 +3486,14 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root, const String *tick
                         alg_id = algNAKMER;
                     else if ( strcmp ( algname, "fuseNAKMER" ) == 0 )
                         alg_id = algFuseNAKMER;
+                    
+                    /* pileup files */
+                    else if ( strcmp ( algname, "pileupNCBI" ) == 0 )
+                        alg_id = algPileup_NCBI;
+                    else if ( strcmp ( algname, "pileupEBI" ) == 0 )
+                        alg_id = algPileup_EBI;
+                    else if ( strcmp ( algname, "pileupDDBJ" ) == 0 )
+                        alg_id = algPileup_DDBJ;
 
                     if ( alg_id != algUnknown )
                     {
@@ -3562,7 +3588,7 @@ rc_t VResolverLoadApp ( VResolver *self, Vector *algs, const String *root, const
  *        = <app-name> <app> ;
  *
  *    app-name
- *        = "refseq" | "sra" | "wgs" | "nannot" | "nakmer" ;
+ *        = "refseq" | "sra" | "wgs" | "nannot" | "nakmer" | "sraPileup" ;
  */
 static
 rc_t VResolverLoadApps ( VResolver *self, Vector *algs, const String *root,
@@ -3612,6 +3638,8 @@ rc_t VResolverLoadApps ( VResolver *self, Vector *algs, const String *root,
                         app_id = appSRA;
                     else if ( strcmp ( appname, "wgs" ) == 0 )
                         app_id = appWGS;
+                    else if ( strcmp ( appname, "sraPileup" ) == 0 )
+                        app_id = appSRAPileup;
 
                     rc = VResolverLoadApp ( self, algs, root, ticket, allow_cache, app_id,
                         & self -> num_app_vols [ app_id ], app, resolver_cgi, protected, disabled, caching );
@@ -4032,7 +4060,18 @@ rc_t VResolverForceRemoteProtected ( VResolver *self )
             {
                 cgi -> ticket = self -> ticket;
 
-                rc = VectorAppend ( & self -> remote, NULL, cgi );
+                /* Remote Protected algorythm should come first: see VDB-2679 */
+                if ( VectorLength ( & self -> remote ) > 0 ) {
+                    void *prior = NULL;
+                    rc = VectorSwap ( &self -> remote, 0, cgi, & prior );
+                    if ( rc == 0 ) {
+                        rc = VectorAppend ( &self -> remote, NULL, prior );
+                    }
+                }
+                else {
+                    rc = VectorAppend ( & self -> remote, NULL, cgi );
+                }
+
                 if ( rc == 0 )
                 {
                     ++ self -> num_app_vols [ appAny ];
@@ -4244,7 +4283,7 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         char buffer [ 256 ];
         self -> ticket = VResolverGetDownloadTicket ( self, protected, buffer, sizeof buffer );
 
-       allow_cache = KConfigNodeCacheEnabled ( kfg );
+        allow_cache = KConfigNodeCacheEnabled ( kfg );
 
         /* allow user to specify leaf paths in current directory */
         rc = VResolverDetectSRALeafPath ( self );

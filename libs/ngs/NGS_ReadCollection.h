@@ -98,12 +98,14 @@ struct NGS_String * NGS_ReadCollectionGetName ( NGS_ReadCollection * self, ctx_t
 /* READ GROUPS
  */
 struct NGS_ReadGroup * NGS_ReadCollectionGetReadGroups ( NGS_ReadCollection * self, ctx_t ctx );
+bool NGS_ReadCollectionHasReadGroup ( NGS_ReadCollection * self, ctx_t ctx, const char * spec );
 struct NGS_ReadGroup * NGS_ReadCollectionGetReadGroup ( NGS_ReadCollection * self, ctx_t ctx, const char * spec );
 
 
 /* REFERENCES
  */
 struct NGS_Reference * NGS_ReadCollectionGetReferences ( NGS_ReadCollection * self, ctx_t ctx );
+bool NGS_ReadCollectionHasReference ( NGS_ReadCollection * self, ctx_t ctx, const char * spec );
 struct NGS_Reference * NGS_ReadCollectionGetReference ( NGS_ReadCollection * self, ctx_t ctx, const char * spec );
 
 
@@ -155,8 +157,10 @@ struct NGS_ReadCollection_vt
 
     struct NGS_String*      ( * get_name )              ( NGS_READCOLLECTION * self, ctx_t ctx );
     struct NGS_ReadGroup*   ( * get_read_groups )       ( NGS_READCOLLECTION * self, ctx_t ctx );
+           bool             ( * has_read_group )        ( NGS_READCOLLECTION * self, ctx_t ctx, const char * spec );
     struct NGS_ReadGroup*   ( * get_read_group )        ( NGS_READCOLLECTION * self, ctx_t ctx, const char * spec );
     struct NGS_Reference*   ( * get_references )        ( NGS_READCOLLECTION * self, ctx_t ctx );
+           bool             ( * has_reference )         ( NGS_READCOLLECTION * self, ctx_t ctx, const char * spec );
     struct NGS_Reference*   ( * get_reference )         ( NGS_READCOLLECTION * self, ctx_t ctx, const char * spec );
     struct NGS_Alignment*   ( * get_alignments )        ( NGS_READCOLLECTION * self, ctx_t ctx, bool wants_primary, bool wants_secondary );
     struct NGS_Alignment*   ( * get_alignment )         ( NGS_READCOLLECTION * self, ctx_t ctx, const char * alignmentId );

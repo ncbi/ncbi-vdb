@@ -210,7 +210,7 @@ _EncWsNodeMake (
 
                     /* This is duplicate, but necessary one
                      */
-                ( & ( TheNode -> node ) ) -> vt = Type == kxfsDir
+                TheNode -> node . vt = Type == kxfsDir
                         ? ( ( const union XFSNode_vt * ) & _sEncWsDirNodeVT_v1 )
                         : ( ( const union XFSNode_vt * ) & _sEncWsFileNodeVT_v1 )
                         ;
@@ -308,7 +308,6 @@ _EncWsFileNodeFindNode_v1 (
     NodeName = NULL;
     IsLast = false;
 
-printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
     RCt = XFSNodeFindNodeCheckInitStandard (
                                             self,
                                             Path,
@@ -318,7 +317,6 @@ printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
                                             & PathCount,
                                             & IsLast
                                             );
-printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
     if ( RCt == 0 ) {
         if ( IsLast ) {
             RCt = XFSNodeAddRef ( self );
@@ -327,7 +325,6 @@ printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
         }
     }
 
-printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
 
     return RCt;
 }   /* _EncWsFileNodeFindNode () */
@@ -348,6 +345,7 @@ _EncWsDirNodeFindNode_v1 (
     char PathBuf [ XFS_SIZE_4096 ];
     size_t PathBufLen;
     struct _EncWsNode * EncWsNode;
+    const struct XFSPath * xPath;
     bool IsLast;
 
     RCt = 0;
@@ -356,6 +354,7 @@ _EncWsDirNodeFindNode_v1 (
     * PathBuf = 0;
     PathBufLen = 0;
     EncWsNode = NULL;
+    xPath = NULL;
     IsLast = false;
 
     RCt = XFSNodeFindNodeCheckInitStandard (
@@ -393,12 +392,19 @@ _EncWsDirNodeFindNode_v1 (
         * ( PathBuf + PathBufLen ) = '/';
             /*) Here we are trying to create new node
              (*/
-        RCt = XFSPathFrom (
-                        Path,
-                        PathIndex + 1,
+        RCt = XFSPathFrom ( Path, PathIndex + 1, & xPath );
+        if ( RCt == 0 ) {
+            if ( string_copy (
                         PathBuf + PathBufLen + 1,
-                        sizeof ( PathBuf ) - PathBufLen
-                        );
+                        sizeof ( PathBuf ) - PathBufLen,
+                        XFSPathGet ( xPath ),
+                        string_size ( XFSPathGet ( xPath ) )
+                        ) != string_size ( XFSPathGet ( xPath ) ) ) {
+
+                RCt = XFS_RC ( rcInvalid );
+            }
+            XFSPathRelease ( xPath );
+        }
         if ( RCt == 0 ) {
             RCt = _EncWsNodeMake (
                                 & EncWsNode,
@@ -408,8 +414,6 @@ _EncWsDirNodeFindNode_v1 (
                                 );
             if ( RCt == 0 ) {
                 * Node = & ( EncWsNode -> node );
-
-                return 0;
             }
         }
     }
@@ -1643,7 +1647,7 @@ _EncWsNodeConstructor (
          */
     RCt = XFSEncDirectoryOpen (
                 & Workspace,
-                true,
+                ! XFSModelNodeReadOnly ( Template ),
                 XFSModelNodeProperty ( Template, XFS_MODEL_PASSWD ),
                 XFSModelNodeProperty ( Template, XFS_MODEL_ENCTYPE ),
                 XFSModelNodeProperty ( Template, XFS_MODEL_SOURCE )
@@ -1686,7 +1690,8 @@ XFSWorkspaceNodeMake (
             const char * Name,
             const char * Path,
             const char * Password,
-            const char * EncType
+            const char * EncType,
+            bool ReadOnly
 )
 {
     rc_t RCt;
@@ -1705,7 +1710,7 @@ XFSWorkspaceNodeMake (
 
     RCt = XFSEncDirectoryOpen (
                             & Workspace,
-                            true,
+                            ! ReadOnly,
                             Password,
                             EncType,
                             Path

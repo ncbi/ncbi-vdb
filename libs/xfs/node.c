@@ -408,7 +408,7 @@ XFSNodeFindNodeCheckInitStandard (
     * PathCount = 0;
     * IsLast = false;
 
-    XPathCount = XFSPathCount ( Path );
+    XPathCount = XFSPathPartCount ( Path );
 
     if ( XPathCount <= PathIndex ) {
         return XFS_RC ( rcInvalid );
@@ -416,7 +416,7 @@ XFSNodeFindNodeCheckInitStandard (
 
     XIsLast = PathIndex == ( XPathCount - 1 );
 
-    XNodeName = XFSPathGet ( Path, PathIndex );
+    XNodeName = XFSPathPartGet ( Path, PathIndex );
 
     /*))  Should not happen thou
      ((*/

@@ -84,7 +84,7 @@ struct NGS_Id
 struct NGS_String* NGS_IdMake ( ctx_t ctx, const struct NGS_String * run, enum NGS_Object object, int64_t rowId );
 struct NGS_String* NGS_IdMakeFragment ( ctx_t ctx, const struct NGS_String * run, bool alignment, int64_t rowId, uint32_t frag_num );
 
-struct NGS_Id NGS_IdParse ( const struct NGS_String * self, ctx_t ctx );
+struct NGS_Id NGS_IdParse ( char const * self, size_t self_size, ctx_t ctx );
 
 #ifdef __cplusplus
 }

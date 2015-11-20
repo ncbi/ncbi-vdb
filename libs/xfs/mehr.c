@@ -58,6 +58,14 @@ XFS_EXTERN rc_t CC XFSEncDepotInit ();
 XFS_EXTERN rc_t CC XFSEncDepotDispose ();
 XFS_EXTERN rc_t CC XFSEncDirectoryDepotInit ();
 XFS_EXTERN rc_t CC XFSEncDirectoryDepotDispose ();
+XFS_EXTERN rc_t CC XFSGapFilesInit ();
+XFS_EXTERN rc_t CC XFSGapFilesDispose ();
+XFS_EXTERN rc_t CC XFS_VfsManagerInit ();
+XFS_EXTERN rc_t CC XFS_VfsManagerDispose ();
+XFS_EXTERN rc_t CC XFS_KnsManagerInit ();
+XFS_EXTERN rc_t CC XFS_KnsManagerDispose ();
+XFS_EXTERN rc_t CC XFSGapKartDepotInit ();
+XFS_EXTERN rc_t CC XFSGapKartDepotDispose ();
 
 /*)) Config and all config related
  ((*/
@@ -85,7 +93,15 @@ printf ( "WARNING(MEHR): InitAll [%s]\n", ConfigFile == NULL ? "NULL" : ConfigFi
             _sConfigPath_MHR = string_dup_measure ( ConfigFile, NULL );
         }
 
-        RCt = XFSTeleportInit ();
+        RCt = XFS_VfsManagerInit ();
+
+        if ( RCt == 0 ) {
+            XFS_KnsManagerInit ();
+        }
+
+        if ( RCt == 0 ) {
+            RCt = XFSTeleportInit ();
+        }
 
         if ( RCt == 0 ) {
             RCt = XFSTarDepotInit ();
@@ -98,6 +114,14 @@ printf ( "WARNING(MEHR): InitAll [%s]\n", ConfigFile == NULL ? "NULL" : ConfigFi
         if ( RCt == 0 ) {
             RCt = XFSEncDirectoryDepotInit ();
         }
+
+        if ( RCt == 0 ) {
+            XFSGapFilesInit ();
+        }
+
+        if ( RCt == 0 ) {
+            XFSGapKartDepotInit ();
+        }
     }
 
     return RCt;
@@ -109,6 +133,10 @@ XFS_DisposeAll_MHR ()
 {
 printf ( "WARNING(MEHR): DisposeAll [%s]\n", _sConfigPath_MHR );
 
+    XFSGapKartDepotDispose ();
+
+    XFSGapFilesDispose ();
+
     XFSEncDirectoryDepotDispose ();
 
     XFSEncDepotDispose ();
@@ -116,6 +144,10 @@ printf ( "WARNING(MEHR): DisposeAll [%s]\n", _sConfigPath_MHR );
     XFSTarDepotDispose ();
 
     XFSTeleportDispose ();
+
+    XFS_VfsManagerDispose ();
+
+    XFS_KnsManagerDispose ();
 
     if ( _sConfig_MHR != NULL ) {
         KConfigRelease ( _sConfig_MHR );

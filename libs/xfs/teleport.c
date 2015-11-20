@@ -150,7 +150,7 @@ _TeleportAdd ( const char * Name, XFSTeleportProvider_t Provider )
 }   /* _TeleportAdd () */
 
 #define CACHE_NAME                  "cache"
-XFS_EXTERN rc_t CC XFSCacheProvider (
+XFS_EXTERN rc_t CC XFSGapCacheProvider (
                                 const struct XFSTeleport ** Teleport
                                 );
 
@@ -174,13 +174,18 @@ XFS_EXTERN rc_t CC XFSReadMeProvider (
                                 const struct XFSTeleport ** Teleport
                                 );
 
-#define KART_COLLECTION_NAME        "kart-collection"
-XFS_EXTERN rc_t CC XFSKartCollectionProvider (
+#define KART_KARTS_NAME            "karts"
+XFS_EXTERN rc_t CC XFSGapKartsProvider (
                                 const struct XFSTeleport ** Teleport
                                 );
 
 #define KART_NAME                   "kart"
-XFS_EXTERN rc_t CC XFSKartProvider (
+XFS_EXTERN rc_t CC XFSGapKartProvider (
+                                const struct XFSTeleport ** Teleport
+                                );
+
+#define KART_FILES_NAME                   "kart-files"
+XFS_EXTERN rc_t CC XFSGapKartFilesProvider (
                                 const struct XFSTeleport ** Teleport
                                 );
 
@@ -221,8 +226,13 @@ XFS_EXTERN rc_t CC XFSTarArchiveProvider (
                                 const struct XFSTeleport ** Teleport
                                 );
 
-#define DBGAP_PROJECT_NAME          "dbgap-project"
-XFS_EXTERN rc_t CC XFSDbGapProjectProvider (
+#define GAP_PROJECT_NAME            "gap-project"
+XFS_EXTERN rc_t CC XFSGapProjectProvider (
+                                const struct XFSTeleport ** Teleport
+                                );
+
+#define GAP_FILE_NAME               "gap-file"
+XFS_EXTERN rc_t CC XFSGapFileProvider (
                                 const struct XFSTeleport ** Teleport
                                 );
 
@@ -243,7 +253,7 @@ _TeleportInit ()
 
         /* Here we are adding Teleports */
     do {
-        RCt = _TeleportAdd ( CACHE_NAME, XFSCacheProvider );
+        RCt = _TeleportAdd ( CACHE_NAME, XFSGapCacheProvider );
         if ( RCt != 0 ) { 
             break;
         }
@@ -271,18 +281,17 @@ _TeleportInit ()
             break;
         }
 
-        RCt = _TeleportAdd (
-                        KART_COLLECTION_NAME,
-                        XFSKartCollectionProvider
-                        );
+        RCt = _TeleportAdd ( KART_KARTS_NAME, XFSGapKartsProvider );
         if ( RCt != 0 ) { 
             break;
         }
 
-        RCt = _TeleportAdd (
-                        KART_NAME,
-                        XFSKartProvider
-                        );
+        RCt = _TeleportAdd ( KART_NAME, XFSGapKartProvider );
+        if ( RCt != 0 ) { 
+            break;
+        }
+
+        RCt = _TeleportAdd ( KART_FILES_NAME, XFSGapKartFilesProvider );
         if ( RCt != 0 ) { 
             break;
         }
@@ -330,8 +339,16 @@ _TeleportInit ()
         }
 
         RCt = _TeleportAdd (
-                        DBGAP_PROJECT_NAME,
-                        XFSDbGapProjectProvider
+                        GAP_PROJECT_NAME,
+                        XFSGapProjectProvider
+                        );
+        if ( RCt != 0 ) { 
+            break;
+        }
+
+        RCt = _TeleportAdd (
+                        GAP_FILE_NAME,
+                        XFSGapFileProvider
                         );
         if ( RCt != 0 ) { 
             break;

@@ -80,7 +80,7 @@ const SRA_ReadGroupInfo* SRA_ReadGroupInfoDuplicate ( const SRA_ReadGroupInfo* s
 
 void SRA_ReadGroupInfoRelease ( const SRA_ReadGroupInfo* self, ctx_t ctx );
 
-uint32_t SRA_ReadGroupInfoFind ( const SRA_ReadGroupInfo* self, ctx_t ctx, const struct NGS_String * name );
+uint32_t SRA_ReadGroupInfoFind ( const SRA_ReadGroupInfo* self, ctx_t ctx, char const* name, size_t name_size );
 
 #ifdef __cplusplus
 }

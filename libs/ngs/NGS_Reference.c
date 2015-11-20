@@ -33,6 +33,7 @@
 
 #include "NGS_String.h"
 #include "NGS_ReadCollection.h"
+#include "NGS_Alignment.h"
 #include "NGS_Pileup.h"
 
 #include <sysalloc.h>
@@ -156,6 +157,28 @@ static struct NGS_Alignment_v1 * ITF_Reference_v1_get_alignments ( const NGS_Ref
     return ( struct NGS_Alignment_v1 * ) ret;
 }
 
+#if _DEBUGGING
+static
+uint32_t align_flags_to_filters ( uint32_t flags )
+{
+    static bool tested_bits;
+    if ( ! tested_bits )
+    {
+        assert ( NGS_ReferenceAlignFlags_pass_bad >> 2 == NGS_AlignmentFilterBits_pass_bad );
+        assert ( NGS_ReferenceAlignFlags_pass_dups >> 2 == NGS_AlignmentFilterBits_pass_dups );
+        assert ( NGS_ReferenceAlignFlags_min_map_qual >> 2 == NGS_AlignmentFilterBits_min_map_qual );
+        assert ( NGS_ReferenceAlignFlags_max_map_qual >> 2 == NGS_AlignmentFilterBits_max_map_qual);
+        assert ( NGS_ReferenceAlignFlags_no_wraparound >> 2 == NGS_AlignmentFilterBits_no_wraparound);
+        assert ( NGS_ReferenceAlignFlags_start_within_window >> 2 == NGS_AlignmentFilterBits_start_within_window);
+        tested_bits = true;
+    }
+    return flags >> 2;
+}
+#else
+#define align_flags_to_filters( flags ) \
+    ( ( flags ) >> 2 )
+#endif
+
 static struct NGS_Alignment_v1 * ITF_Reference_v1_get_filtered_alignments ( const NGS_Reference_v1 * self, 
                                                                             NGS_ErrBlock_v1 * err, 
                                                                             enum NGS_ReferenceAlignFlags flags, 
@@ -165,12 +188,11 @@ static struct NGS_Alignment_v1 * ITF_Reference_v1_get_filtered_alignments ( cons
     
     bool wants_primary = ( flags & NGS_ReferenceAlignFlags_wants_primary ) != 0;
     bool wants_secondary = ( flags & NGS_ReferenceAlignFlags_wants_secondary ) != 0;
-    bool wants_no_wraparound = ( flags & NGS_ReferenceAlignFlags_no_wraparound ) != 0;
-    bool wants_within_window = ( flags & NGS_ReferenceAlignFlags_start_within_window ) != 0;
-    
+    uint32_t filters = align_flags_to_filters ( flags );
     
     /*TODO: reject unimplemented flags */
-    ON_FAIL ( struct NGS_Alignment * ret = NGS_ReferenceGetFilteredAlignments ( Self ( self ), ctx, wants_primary, wants_secondary, wants_no_wraparound || wants_within_window ) )
+    ON_FAIL ( struct NGS_Alignment * ret = NGS_ReferenceGetFilteredAlignments ( Self ( self ), ctx,
+        wants_primary, wants_secondary, filters, map_qual ) )
     {
         NGS_ErrBlockThrow ( err, ctx );
     }
@@ -202,11 +224,10 @@ static struct NGS_Alignment_v1 * ITF_Reference_v1_get_filtered_align_slice ( con
     
     bool wants_primary = ( flags & NGS_ReferenceAlignFlags_wants_primary ) != 0;
     bool wants_secondary = ( flags & NGS_ReferenceAlignFlags_wants_secondary ) != 0;
-    bool wants_no_wraparound = ( flags & NGS_ReferenceAlignFlags_no_wraparound ) != 0;
-    bool wants_within_window = ( flags & NGS_ReferenceAlignFlags_start_within_window ) != 0;
+    uint32_t filters = align_flags_to_filters ( flags );
     
     /*TODO: reject unimplemented flags */
-    ON_FAIL ( struct NGS_Alignment * ret = NGS_ReferenceGetFilteredAlignmentSlice ( Self ( self ), ctx, start, length, wants_primary, wants_secondary, wants_no_wraparound, wants_within_window ) )
+    ON_FAIL ( struct NGS_Alignment * ret = NGS_ReferenceGetFilteredAlignmentSlice ( Self ( self ), ctx, start, length, wants_primary, wants_secondary, filters, map_qual ) )
     {
         NGS_ErrBlockThrow ( err, ctx );
     }
@@ -262,6 +283,8 @@ uint32_t pileup_flags_to_filters ( uint32_t flags )
         assert ( NGS_ReferenceAlignFlags_pass_dups >> 2 == NGS_PileupFilterBits_pass_dups );
         assert ( NGS_ReferenceAlignFlags_min_map_qual >> 2 == NGS_PileupFilterBits_min_map_qual );
         assert ( NGS_ReferenceAlignFlags_max_map_qual >> 2 == NGS_PileupFilterBits_max_map_qual);
+        assert ( NGS_ReferenceAlignFlags_no_wraparound >> 2 == NGS_PileupFilterBits_no_wraparound);
+        assert ( NGS_ReferenceAlignFlags_start_within_window >> 2 == NGS_PileupFilterBits_start_within_window);
         tested_bits = true;
     }
     return flags >> 2;
@@ -530,7 +553,9 @@ struct NGS_Alignment* NGS_ReferenceGetAlignments ( NGS_Reference * self, ctx_t c
     }
     else
     {
-        return VT ( self, get_alignments ) ( self, ctx, wants_primary, wants_secondary, false );
+        // alignment iterator does not filter out bad reads and duplicates by default
+        const uint32_t filters = NGS_AlignmentFilterBits_pass_bad | NGS_AlignmentFilterBits_pass_dups;
+        return VT ( self, get_alignments ) ( self, ctx, wants_primary, wants_secondary, filters, 0 );
     }
 
     return NULL;
@@ -538,7 +563,8 @@ struct NGS_Alignment* NGS_ReferenceGetAlignments ( NGS_Reference * self, ctx_t c
 
 /* GetFilteredAlignments
  */
-struct NGS_Alignment* NGS_ReferenceGetFilteredAlignments ( NGS_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, bool wants_within_window )
+struct NGS_Alignment* NGS_ReferenceGetFilteredAlignments ( NGS_Reference * self, ctx_t ctx,
+    bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual )
 {
     if ( self == NULL )
     {
@@ -547,7 +573,7 @@ struct NGS_Alignment* NGS_ReferenceGetFilteredAlignments ( NGS_Reference * self,
     }
     else
     {
-        return VT ( self, get_alignments ) ( self, ctx, wants_primary, wants_secondary, wants_within_window );
+        return VT ( self, get_alignments ) ( self, ctx, wants_primary, wants_secondary, filters, map_qual );
     }
 
     return NULL;
@@ -586,7 +612,9 @@ struct NGS_Alignment* NGS_ReferenceGetAlignmentSlice ( NGS_Reference * self,
     }
     else
     {
-        return VT ( self, get_slice ) ( self, ctx, offset, size, wants_primary, wants_secondary, false, false );
+        // alignment iterator does not filter out bad reads and duplicates by default
+        const uint32_t filters = NGS_AlignmentFilterBits_pass_bad | NGS_AlignmentFilterBits_pass_dups;
+        return VT ( self, get_slice ) ( self, ctx, offset, size, wants_primary, wants_secondary, filters, 0 );
     }
 
     return NULL;
@@ -595,13 +623,7 @@ struct NGS_Alignment* NGS_ReferenceGetAlignmentSlice ( NGS_Reference * self,
 /* GetFilteredAlignmentSlice
  */
 struct NGS_Alignment* NGS_ReferenceGetFilteredAlignmentSlice ( NGS_Reference * self, 
-                                                               ctx_t ctx, 
-                                                               uint64_t offset, 
-                                                               uint64_t size,
-                                                               bool wants_primary, 
-                                                               bool wants_secondary, 
-                                                               bool wants_no_wraparound,
-                                                               bool wants_within_window )
+    ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual )
 {
     if ( self == NULL )
     {
@@ -610,7 +632,7 @@ struct NGS_Alignment* NGS_ReferenceGetFilteredAlignmentSlice ( NGS_Reference * s
     }
     else
     {
-        return VT ( self, get_slice ) ( self, ctx, offset, size, wants_primary, wants_secondary, wants_no_wraparound, wants_within_window );
+        return VT ( self, get_slice ) ( self, ctx, offset, size, wants_primary, wants_secondary, filters, map_qual );
     }
 
     return NULL;
@@ -627,6 +649,7 @@ struct NGS_Pileup* NGS_ReferenceGetPileups ( NGS_Reference * self, ctx_t ctx, bo
     }
     else
     {
+        // pileup filters out bad reads and duplicates by default
         return VT ( self, get_pileups ) ( self, ctx, wants_primary, wants_secondary, 0, 0 );
     }
 
@@ -740,6 +763,7 @@ bool NGS_ReferenceIteratorNext ( NGS_Reference * self, ctx_t ctx )
  */
 static void Null_ReferenceWhack ( NGS_Reference * self, ctx_t ctx )
 {
+    NGS_ReadCollectionRelease ( self -> coll, ctx );
 }
 
 static NGS_String * Null_ReferenceGetCommonName ( NGS_Reference * self, ctx_t ctx )
@@ -791,7 +815,8 @@ static struct NGS_Alignment * Null_ReferenceGetAlignment ( NGS_Reference * self,
     return NULL;
 }
 
-static struct NGS_Alignment * Null_ReferenceGetAlignments ( NGS_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, bool wants_within_window )
+static struct NGS_Alignment * Null_ReferenceGetAlignments ( NGS_Reference * self, ctx_t ctx,
+    bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing);
     INTERNAL_ERROR ( xcSelfNull, "NULL Reference accessed" );
@@ -811,8 +836,8 @@ static struct NGS_Alignment* Null_ReferenceGetAlignmentSlice ( NGS_Reference * s
                                                                uint64_t size, 
                                                                bool wants_primary, 
                                                                bool wants_secondary,
-                                                               bool wants_no_wraparound,
-                                                               bool wants_within_window )
+                                                               uint32_t filters,
+                                                               int32_t map_qual)
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing);
     INTERNAL_ERROR ( xcSelfNull, "NULL Reference accessed" );

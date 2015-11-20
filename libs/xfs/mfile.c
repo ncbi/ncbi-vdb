@@ -266,7 +266,7 @@ _MFilePodSetDataSize ( const struct XFSMFilePod * self, uint64_t Size )
 
     if ( NewCapacity != Pod -> capacity ) {
         if ( NewCapacity != 0 ) {
-            Data = calloc ( NewCapacity, sizeof ( char ) );
+            Data = calloc ( ( size_t ) NewCapacity, sizeof ( char ) );
             if ( Data == NULL ) {
                 return XFS_RC ( rcExhausted );
             }
@@ -277,7 +277,7 @@ _MFilePodSetDataSize ( const struct XFSMFilePod * self, uint64_t Size )
                 memcpy (
                         Data,
                         Pod -> data,
-                        sizeof ( char ) * Pod -> size
+                        sizeof ( char ) * ( size_t ) Pod -> size
                         );
             }
 
@@ -320,7 +320,7 @@ _MFilePodDataRead (
 
     Size2Read = BufferSize;
     if ( self -> size < ( Offset + Size2Read ) ) {
-        Size2Read = self -> size - Offset;
+        Size2Read = ( size_t ) ( self -> size - Offset );
     }
 
     * NumRead = Size2Read;

@@ -91,10 +91,9 @@ XFS_SRC = \
     operations  \
     security    \
     model    \
-    path    \
-    pfad    \
     tree    \
     node    \
+    path    \
     perm    \
     editors \
     handle  \
@@ -110,9 +109,6 @@ XFS_SRC = \
     bogus     \
     owp \
     doc \
-    xkart    \
-    kart    \
-    karts   \
     xhttp    \
     http    \
     xtar     \
@@ -121,12 +117,15 @@ XFS_SRC = \
     encro     \
     xencws     \
     encws     \
-    xgapprj_tmp \
-    gapprj_tmp    \
-    xcache   \
-    cache    \
-    gapkarts    \
-    bean \
+    xgap    \
+    xgapf    \
+    xgapk   \
+    gapk    \
+    gapks   \
+    gapka   \
+    gapc   \
+    gap     \
+    gapf    \
     lockdpt \
     lreader \
     schwarzschraube \

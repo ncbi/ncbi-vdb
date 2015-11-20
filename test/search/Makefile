@@ -51,8 +51,14 @@ TEST_AGREP_OBJ = \
 
 TEST_AGREP_LIB = \
 	-skapp \
-	-sncbi-wvdb \
+	-sncbi-vdb \
 	-sktst
 
 $(TEST_BINDIR)/test-agrep: $(TEST_AGREP_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_AGREP_LIB)
+
+agrep: test-agrep
+	$(TEST_BINDIR)/$^
+
+vg-agrep: test-agrep
+	valgrind --ncbi $(TEST_BINDIR)/$^

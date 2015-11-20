@@ -2142,19 +2142,18 @@ rc_t KSysDirOpenDirRead_v1 ( const KSysDir_v1 * self,
     rc = KSysDirMakePath_v1 ( self, rcOpening, true, full, sizeof full, path, args );
     if ( rc == 0 )
     {
+        int t;
         KSysDir_v1 *sub;
 
         size_t path_size = strlen ( full );
         while ( path_size > 1 && full [ path_size - 1 ] == '/' )
             full [ -- path_size ] = 0;
             
-        {
-            int t = KSysDirFullPathType_v1 ( full ) & ( kptAlias - 1 );
-            if ( t == kptNotFound )
-                return RC ( rcFS, rcDirectory, rcOpening, rcPath, rcNotFound );
-            if ( t != kptDir )
-                return RC ( rcFS, rcDirectory, rcOpening, rcPath, rcIncorrect );
-        }
+        t = KSysDirFullPathType_v1 ( full ) & ( kptAlias - 1 );
+        if ( t == kptNotFound )
+            return RC ( rcFS, rcDirectory, rcOpening, rcPath, rcNotFound );
+        if ( t != kptDir )
+            return RC ( rcFS, rcDirectory, rcOpening, rcPath, rcIncorrect );
         
         sub = KSysDirMake_v1 ( path_size );
         if ( sub == NULL )

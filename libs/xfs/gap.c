@@ -47,6 +47,7 @@
 #include "teleport.h"
 #include "common.h"
 #include "contnode.h"
+#include "xgap.h"
 
 #include <sysalloc.h>
 
@@ -54,22 +55,21 @@
 #include <string.h>     /* memset */
 
 /*)))
- |||    That is first draft approach for dbGaP project node
+ |||    That is second approach for dbGaP project node
  |||    That node contains 3 statically linked nodes :
  |||        Cached ( SRA and FILES )
  |||        Karts
  |||        WorkSpace
- |||    Each node exists in corresponded file
  |||
 (((*/
 
 /*)))
  |||
- +++    DbGapProjectNode
+ +++    _GapProjectNode
  |||
 (((*/
 
-struct XFSDbGapProjectNode {
+struct _GapProjectNode {
     struct XFSContNode node;
 
     uint32_t project_id;
@@ -80,10 +80,10 @@ struct XFSDbGapProjectNode {
 
 static
 rc_t CC
-_DbGapProjectNodeDispose ( struct XFSContNode * self )
+_GapProjectNodeDispose ( struct XFSContNode * self )
 {
-    struct XFSDbGapProjectNode * Node =
-                                ( struct XFSDbGapProjectNode * ) self;
+    struct _GapProjectNode * Node =
+                                ( struct _GapProjectNode * ) self;
 
     if ( Node != NULL ) {
         if ( Node -> kart_files != NULL ) {
@@ -98,111 +98,150 @@ _DbGapProjectNodeDispose ( struct XFSContNode * self )
     }
 
     return 0;
-}   /* _DbGapProjectNodeDispose () */
+}   /* _GapProjectNodeDispose () */
 
 static
 rc_t CC
-_DbGapProjectNodeMake (
-            struct XFSDbGapProjectNode ** Node,
+_GapProjectNodeMake (
+            struct _GapProjectNode ** Node,
             const char * Name,
             uint32_t ProjectId,
             bool ReadOnly,
-            const char * KartFiles,  /* Could be NULL */
             const char * Perm
 )
 {
     rc_t RCt;
-    struct XFSDbGapProjectNode * DbGapNode;
+    struct _GapProjectNode * GapNode;
 
     RCt = 0;
-    DbGapNode = NULL;
+    GapNode = NULL;
 
     XFS_CSAN ( Node )
     XFS_CAN ( Node )
     XFS_CAN ( Name )
 
-    DbGapNode = calloc ( 1, sizeof ( struct XFSDbGapProjectNode ) );
-    if ( DbGapNode == NULL ) {
+    GapNode = calloc ( 1, sizeof ( struct _GapProjectNode ) );
+    if ( GapNode == NULL ) {
         RCt = XFS_RC ( rcExhausted );
     }
     else {
         RCt = XFSContNodeInit (
-                            & ( DbGapNode -> node . node ),
+                            & ( GapNode -> node . node ),
                             Name,
                             Perm,
-                            _sFlavorOfDbGapProject,
-                            _DbGapProjectNodeDispose
+                            _sFlavorOfGapProject,
+                            _GapProjectNodeDispose
                             );
         if ( RCt == 0 ) {
-            if ( KartFiles != NULL ) {
-                RCt = XFS_StrDup (
-                                KartFiles,
-                                & ( DbGapNode -> kart_files )
-                                );
-            }
             if ( RCt == 0 ) {
-                DbGapNode -> project_id = ProjectId;
-                DbGapNode -> read_only = ReadOnly;
+                GapNode -> project_id = ProjectId;
+                GapNode -> read_only = ReadOnly;
 
-                * Node = DbGapNode;
+                * Node = GapNode;
             }
         }
     }
 
     return RCt;
-}   /* _DbGapProjectNodeMake () */
+}   /* _GapProjectNodeMake () */
 
-/* TODO : DELETE THAT CODE!!!
- */
 static
 rc_t CC
-_HackWorkspace ( char * Buf, size_t BufSize )
+_PrepareWorkspace (
+                uint32_t ProjectId,
+                char ** Workspace,
+                const char ** Password
+)
 {
     rc_t RCt;
+    const struct XFSGapProject * Project;
+    char * WorkspaceDir;
+    const char * ThePass;
+    size_t ThePassSize;
     struct KDirectory * NatDir;
+    uint32_t PathType;
 
     RCt = 0;
+    Project = NULL;
+    WorkspaceDir = NULL;
+    ThePass = NULL;
+    ThePassSize = 0;
     NatDir = NULL;
+    PathType = kptNotFound;
 
-    RCt = KDirectoryNativeDir ( & NatDir );
+    RCt = XFSGapFindOrCreate ( ProjectId, & Project );
     if ( RCt == 0 ) {
-        RCt = KDirectoryResolvePath (
-                                    NatDir,
-                                    true,
-                                    Buf,
-                                    BufSize,
-                                    "Enc"
-                                    );
+
+        RCt = XFSGapProjectWorkspace ( Project, & WorkspaceDir );
         if ( RCt == 0 ) {
-            if ( KDirectoryPathType ( NatDir, Buf ) == kptNotFound ) {
-                RCt = KDirectoryCreateDir (
-                                        NatDir,
-                                        0777,
-                                        kcmCreate,
-                                        Buf
+            RCt = XFSGapProjectPassword (
+                                        Project,
+                                        & ThePass,
+                                        & ThePassSize
                                         );
+
+            if ( RCt == 0 ) {
+                RCt = KDirectoryNativeDir ( & NatDir );
+                if ( RCt == 0 ) {
+                    PathType = KDirectoryPathType ( NatDir, WorkspaceDir );
+
+                    switch ( PathType ) {
+                        case kptNotFound :
+                            RCt = KDirectoryCreateDir (
+                                                    NatDir,
+                                                    0777,
+                                                    kcmCreate,
+                                                    WorkspaceDir
+                                                    );
+                            if ( RCt == 0 ) {
+                                * Workspace = WorkspaceDir;
+                                * Password = ThePass;
+                            }
+                            break;
+                        case kptDir :
+                            * Workspace = WorkspaceDir;
+                            * Password = ThePass;
+                            break;
+                        default :
+                            RCt = XFS_RC ( rcInvalid );
+                            break;
+                    }
+
+                    KDirectoryRelease ( NatDir );
+                }
             }
         }
 
-        KDirectoryRelease ( NatDir );
+        XFSGapProjectRelease ( Project );
+    }
+
+    if ( RCt != 0 ) {
+        * Workspace = NULL;
+        * Password = NULL;
+
+        if ( WorkspaceDir != NULL ) {
+            free ( WorkspaceDir );
+        }
     }
 
     return RCt;
-}   /* _HackWorkspace () */
+}   /* _PrepareWorkspace () */
 
 static
 rc_t CC
-_DbGapProjectNodeAddChildren ( struct XFSDbGapProjectNode * Node )
+_GapProjectNodeAddChildren ( struct _GapProjectNode * self )
 {
     rc_t RCt;
     struct XFSNode * TheNode;
-    char Bf [ XFS_SIZE_4096 ];
+    char * Workspace;
+    const char * Password;
 
     RCt = 0;
     TheNode = NULL;
-    * Bf = 0;
+    Workspace = NULL;
+    Password = NULL;
 
-    XFS_CAN ( Node );
+    XFS_CAN ( self );
 
         /* There are three children: Cache, Karts and WS ...
            and may be Bublic cache too.
@@ -211,137 +250,153 @@ _DbGapProjectNodeAddChildren ( struct XFSDbGapProjectNode * Node )
         /* Workspace is here
          * TODO: password, location, etc ...
          */
-    RCt = _HackWorkspace ( Bf, sizeof ( Bf ) );
-    if ( RCt != 0 ) {
-        return RCt;
-    }
-
-    RCt = XFSWorkspaceNodeMake (
-                        & TheNode,
-                        "workspace",
-                        Bf,
-                        "aaa",
-                        NULL
-                        );
+    RCt = _PrepareWorkspace (
+                            self -> project_id,
+                            & Workspace,
+                            & Password
+                            );
     if ( RCt == 0 ) {
-        RCt = XFSContNodeAddChild ( & ( Node -> node ) . node, TheNode );
-        if ( RCt != 0 ) {
-            XFSNodeDispose ( TheNode );
 
-            return RCt;
+        RCt = XFSWorkspaceNodeMake (
+                                & TheNode,
+                                "workspace",
+                                Workspace,
+                                Password,
+                                NULL,
+                                self -> read_only
+                                );
+        if ( RCt == 0 ) {
+            RCt = XFSContNodeAddChild (
+                                    & ( self -> node ) . node,
+                                    TheNode
+                                    );
         }
+
+        free ( Workspace );
+    }
+    if ( RCt != 0 ) {
+        if ( TheNode != NULL ) {
+            XFSNodeDispose ( TheNode );
+        }
+        return RCt;
     }
 
         /* Here is cache related to project
          */
-    RCt = XFSDbGapCacheNodeMake (
+    RCt = XFSGapCacheNodeMake (
                         & TheNode,
-                        Node -> project_id,     /* projectId */
-                        true,                   /* ReadOnly */
-                        NULL,                   /* name is automatic */
+                        self -> project_id,     /* projectId */
                         NULL                    /* perm is automatic */
                         );
     if ( RCt == 0 ) {
-        RCt = XFSContNodeAddChild ( & ( Node -> node ) . node, TheNode );
-        if ( RCt != 0 ) {
+        RCt = XFSContNodeAddChild ( & ( self -> node ) . node, TheNode );
+    }
+    if ( RCt != 0 ) {
+        if ( TheNode != NULL ) {
             XFSNodeDispose ( TheNode );
-
-            return RCt;
         }
+        return RCt;
     }
 
         /* Here is public cache 
          */
-    RCt = XFSDbGapCacheNodeMake (
+    RCt = XFSGapCacheNodeMake (
                         & TheNode,
                         0,                      /* projectId */
-                        false,                  /* Non ReadOnly */
-                        NULL,                   /* name is automatic */
                         NULL                    /* perm is automatic */
                         );
     if ( RCt == 0 ) {
-        RCt = XFSContNodeAddChild ( & ( Node -> node ) . node, TheNode );
-        if ( RCt != 0 ) {
+        RCt = XFSContNodeAddChild ( & ( self -> node ) . node, TheNode );
+    }
+    if ( RCt != 0 ) {
+        if ( TheNode != NULL ) {
             XFSNodeDispose ( TheNode );
-
-            return RCt;
         }
+        return RCt;
     }
 
-    RCt = XFSDbGapKartsNodeMake (
-                        & TheNode,
-                        "carts",
-                        Node -> kart_files,
-                        Node -> project_id,
-                        NULL
-                        );
+    RCt = XFSGapKartFilesNodeMake ( & TheNode, NULL );
     if ( RCt == 0 ) {
-        RCt = XFSContNodeAddChild ( & ( Node -> node ) . node, TheNode );
-        if ( RCt != 0 ) {
+        RCt = XFSContNodeAddChild ( & ( self -> node ) . node, TheNode );
+    }
+    if ( RCt != 0 ) {
+        if ( TheNode != NULL ) {
             XFSNodeDispose ( TheNode );
-
-            return RCt;
         }
+        return RCt;
+    }
+
+    RCt = XFSGapKartsNodeMake (
+                            & TheNode,
+                            self -> project_id,
+                            NULL
+                            );
+    if ( RCt == 0 ) {
+        RCt = XFSContNodeAddChild ( & ( self -> node ) . node, TheNode );
+    }
+    if ( RCt != 0 ) {
+        if ( TheNode != NULL ) {
+            XFSNodeDispose ( TheNode );
+        }
+        return RCt;
     }
 
     return RCt;
-}   /* _DbGapProjectNodeAddChildren () */
+}   /* _GapProjectNodeAddChildren () */
 
 
 LIB_EXPORT
 rc_t CC
-XFSDbGapProjectNodeMake (
+XFSGapProjectNodeMake (
             struct XFSNode ** Node,
             const char * Name,
             uint32_t ProjectId,
             bool ReadOnly,
-            const char * KartFiles,
             const char * Perm
 )
 {
     rc_t RCt;
-    struct XFSDbGapProjectNode * DbGapNode;
+    struct _GapProjectNode * GapNode;
 
     RCt = 0;
-    DbGapNode = NULL;
+    GapNode = NULL;
 
     XFS_CSAN ( Node )
     XFS_CAN ( Node )
     XFS_CAN ( Name )
 
-    RCt = _DbGapProjectNodeMake (
-                                & DbGapNode,
+    RCt = _GapProjectNodeMake (
+                                & GapNode,
                                 Name,
                                 ProjectId,
                                 ReadOnly,
-                                KartFiles,
                                 Perm
                                 );
     if ( RCt == 0 ) {
-        RCt = _DbGapProjectNodeAddChildren ( DbGapNode );
+        RCt = _GapProjectNodeAddChildren ( GapNode );
         if ( RCt == 0 ) {
-            * Node = & ( DbGapNode -> node . node );
+            * Node = & ( GapNode -> node . node );
         }
     }
 
     if ( RCt != 0 ) {
         * Node = NULL;
 
-        if ( DbGapNode != NULL ) {
-            XFSNodeDispose ( & ( DbGapNode -> node . node ) );
-            DbGapNode = NULL;
+        if ( GapNode != NULL ) {
+            XFSNodeDispose ( & ( GapNode -> node . node ) );
+            GapNode = NULL;
         }
     }
 
 /*
-printf ( "XFSDbGapNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type );
+printf ( "_GapNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type );
 */
     return RCt;
-}   /* XFSDbGapProjectNodeMake () */
+}   /* XFSGapProjectNodeMake () */
 
 /*)))
  |||
- +++  There DbGapNode Find
+ +++  There GapNode Find
  |||
 (((*/
 
@@ -376,7 +431,7 @@ printf ( "XFSDbGapNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Typ
 
 static
 rc_t CC
-_DbGapProjectNodeConstructorEx (
+_GapProjectNodeConstructorEx (
                         const struct XFSModel * Model,
                         const struct XFSModelNode * Template,
                         const char * Alias,
@@ -385,20 +440,16 @@ _DbGapProjectNodeConstructorEx (
 )
 {
     rc_t RCt;
-    struct XFSDbGapProjectNode * TheNode;
+    struct _GapProjectNode * TheNode;
     const char * NodeName;
-    const char * KartFiles;
     const char * TempStr;
     uint32_t ProjectId;
-    bool ReadOnly;
 
     RCt = 0;
     TheNode = NULL;
     NodeName = NULL;
-    KartFiles = NULL;
     TempStr = NULL;
     ProjectId = 0;
-    ReadOnly = true;
 
     XFS_CSAN ( Node )
     XFS_CAN ( Model )
@@ -407,7 +458,6 @@ _DbGapProjectNodeConstructorEx (
 
     NodeName = Alias == NULL ? XFSModelNodeName ( Template ) : Alias;
 
-    KartFiles = XFSModelNodeProperty ( Template, XFS_MODEL_KARTFILES );
     TempStr = XFSModelNodeProperty ( Template, XFS_MODEL_PROJECTID );
     if ( TempStr == NULL ) {
         return XFS_RC ( rcInvalid );
@@ -418,21 +468,15 @@ _DbGapProjectNodeConstructorEx (
         return XFS_RC ( rcInvalid );
     }
 
-    TempStr = XFSModelNodeProperty ( Template, XFS_MODEL_MODE );
-    if ( TempStr != NULL ) {
-        ReadOnly = strcmp ( TempStr, XFS_MODEL_MODE_RW ) == 0;
-    }
-
-    RCt = _DbGapProjectNodeMake (
+    RCt = _GapProjectNodeMake (
                                 & TheNode,
                                 NodeName,
                                 ProjectId,
-                                ReadOnly,
-                                KartFiles,
+                                XFSModelNodeReadOnly ( Template ),
                                 XFSModelNodeSecurity ( Template )
                                 );
     if ( RCt == 0 ) {
-        RCt = _DbGapProjectNodeAddChildren ( TheNode );
+        RCt = _GapProjectNodeAddChildren ( TheNode );
         if ( RCt == 0 ) {
             * Node = & ( TheNode -> node . node );
         }
@@ -449,7 +493,7 @@ _DbGapProjectNodeConstructorEx (
     }
 
     return RCt;
-}   /* _DbGapProjectNodeConstructorEx () */
+}   /* _GapProjectNodeConstructorEx () */
 
 /*)))
  |||
@@ -458,7 +502,7 @@ _DbGapProjectNodeConstructorEx (
 (((*/
 static
 rc_t CC
-_DbGapProjectNodeConstructor (
+_GapProjectNodeConstructor (
                         const struct XFSModel * Model,
                         const struct XFSModelNode * Template,
                         const char * Alias,
@@ -467,7 +511,7 @@ _DbGapProjectNodeConstructor (
 {
     rc_t RCt = 0;
 
-    RCt = _DbGapProjectNodeConstructorEx (
+    RCt = _GapProjectNodeConstructorEx (
                                         Model,
                                         Template,
                                         Alias,
@@ -475,16 +519,16 @@ _DbGapProjectNodeConstructor (
                                         Node
                                         );
 /*
-printf ( "_DbGapProjectNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+printf ( "_GapProjectNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
 
     return RCt;
-}   /* _DbGapProjectNodeConstructor () */
+}   /* _GapProjectNodeConstructor () */
 
 static
 rc_t CC
-_DbGapProjectNodeValidator (
+_GapProjectNodeValidator (
                         const struct XFSModel * Model,
                         const struct XFSModelNode * Template,
                         const char * Alias,
@@ -496,28 +540,28 @@ _DbGapProjectNodeValidator (
     RCt = 0;
 
 /*
-printf ( "_DbGapProjectNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+printf ( "_GapProjectNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
-}   /* _DbGapProjectNodeValidator () */
+}   /* _GapProjectNodeValidator () */
 
-static const struct XFSTeleport _sDbGapProjectNodeTeleport = {
-                                        _DbGapProjectNodeConstructor,
-                                        _DbGapProjectNodeValidator,
+static const struct XFSTeleport _sGapProjectNodeTeleport = {
+                                        _GapProjectNodeConstructor,
+                                        _GapProjectNodeValidator,
                                         false
                                         };
 
 
 LIB_EXPORT
 rc_t CC
-XFSDbGapProjectProvider ( const struct XFSTeleport ** Teleport )
+XFSGapProjectProvider ( const struct XFSTeleport ** Teleport )
 {
     if ( Teleport == NULL ) {
         return XFS_RC ( rcNull );
     }
 
-    * Teleport = & _sDbGapProjectNodeTeleport;
+    * Teleport = & _sGapProjectNodeTeleport;
 
     return 0;
-}   /* XFSDbGapProjectProvider () */
+}   /* XFSGapProjectProvider () */

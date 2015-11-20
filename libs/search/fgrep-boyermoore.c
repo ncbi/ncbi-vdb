@@ -157,7 +157,7 @@ void trie_enter(struct trie *self, int32_t whichpattern, char *s, int32_t minlen
             newone->hasmatch = 1;
             newone->minskip_matched = minlen;
             newone->minskip_unmatched = minlen;
-            memset( newone->next, 0, sizeof( *newone->next ) );
+            memset( newone->next, 0, sizeof( newone->next ) );
             cur->next[c] = newone;
             cur = newone;
         }
@@ -195,7 +195,7 @@ void trie_enter_suffixes(struct trie *self, char *s, int32_t minlen)
                 newone->hasmatch = 0;
                 newone->minskip_matched = suf;
                 newone->minskip_unmatched = minlen;
-                memset( newone->next, 0, sizeof( *newone->next ) );
+                memset( newone->next, 0, sizeof( newone->next ) );
                 cur->next[c] = newone;
                 cur = newone;
             }
@@ -320,6 +320,10 @@ void buildreversetrie(struct trie **self, const char *strings[], int32_t numstri
     }
     (*self)->minskip_matched = 1;
     (*self)->minskip_unmatched = minlen;
+    
+    for (i=0; i<numstrings; i++) {
+        free ( reversestrings [ i ] );
+    }
 }
 
 

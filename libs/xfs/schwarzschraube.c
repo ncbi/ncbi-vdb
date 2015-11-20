@@ -103,6 +103,32 @@ XFS_SStrDup ( const struct String * Src,  const char ** Dst )
     return 0;
 }   /* XFS_SStrDup () */
 
+LIB_EXPORT
+rc_t CC
+XFS_StrEndsWith ( const char * Str, const char * End )
+{
+    uint32_t StrLen, EndLen;
+
+    if ( Str == NULL || End == NULL ) {
+        return false;
+    }
+
+    StrLen = string_len ( Str, string_size ( Str ) );
+    EndLen = string_len ( End, string_size ( End ) );
+
+    if ( StrLen >= EndLen && EndLen > 0 ) {
+        return string_cmp (
+                        Str + ( StrLen - EndLen ),
+                        EndLen,
+                        End,
+                        EndLen,
+                        EndLen
+                        ) == 0;
+    }
+
+    return false;
+}   /* XFS_StrEndsWith () */
+
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/

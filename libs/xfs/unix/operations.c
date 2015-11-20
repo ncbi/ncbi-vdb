@@ -300,21 +300,21 @@ _FUSE_get_parent_node (
 {
     rc_t RCt;
     const struct XFSTreeDepot * Depot;
-    char BB [ XFS_SIZE_4096 ];
     const struct XFSPath * xPath;
     uint32_t xPathQ;
     const struct XFSNode * xNode;
     const struct XFSAttrEditor * xEditor;
     char * xName;
+    const struct XFSPath * xParent;
 
     RCt = 0;
     Depot = NULL;
-    * BB = 0;
     xPath = NULL;
     xPathQ = 0;
     xNode = NULL;
     xEditor = NULL;
     xName = NULL;
+    xParent = NULL;
 
     if ( Parent == NULL ) {
         return XFS_RC ( rcNull );
@@ -341,18 +341,22 @@ _FUSE_get_parent_node (
     }
 
         /* Path to parent node is ... */
-    RCt = XFSPathMake ( Path, & xPath );
+    RCt = XFSPathMake ( & xPath, true, Path );
     if ( RCt == 0 ) {
-        xPathQ = XFSPathCount ( xPath );
+        xPathQ = XFSPathPartCount ( xPath );
         if ( xPathQ < 2 ) {
             RCt = XFS_RC ( rcInvalid );
         }
         else {
                 /* So, there is a path to parent */
-            RCt = XFSPathTo ( xPath, xPathQ - 1, BB, sizeof ( BB ) );
+            RCt = XFSPathParent ( xPath, & xParent );
             if ( RCt == 0 ) {
                     /* Looking for node */
-                RCt = XFSTreeDepotFindNode ( Depot, BB, & xNode );
+                RCt = XFSTreeDepotFindNode (
+                                            Depot,
+                                            XFSPathGet ( xParent ),
+                                            & xNode
+                                            );
                 if ( RCt == 0 ) {
                     if ( ParentType != NULL ) {
                         RCt = XFSNodeAttrEditor ( xNode, & xEditor );
@@ -378,10 +382,12 @@ _FUSE_get_parent_node (
                         * Parent = xNode;
                     }
                 }
+
+                XFSPathRelease ( xParent );
             }
         }
 
-        XFSPathDispose ( xPath );
+        XFSPathRelease ( xPath );
     }
 
     if ( RCt != 0 ) {

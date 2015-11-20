@@ -194,7 +194,7 @@ _ContNodeFindNode_v1 (
         }
 
             /*  Here we aren't last and looking forward; */
-        NodeName = XFSPathGet ( Path, PathIndex + 1 );
+        NodeName = XFSPathPartGet ( Path, PathIndex + 1 );
 
             /*))  Should not happen thou
              ((*/
@@ -671,3 +671,16 @@ XFSContNodeDelChild ( struct XFSNode * self, const char * ChildName )
 
     return XFSNodeContainerDel ( Cont -> container, ChildName );
 }   /* XFSContNodeDelChild () */
+
+LIB_EXPORT
+rc_t CC
+XFSContNodeClear ( struct XFSNode * self )
+{
+    struct XFSContNode * Cont = ( struct XFSContNode * ) self;
+
+    if ( Cont == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    return XFSNodeContainerClear ( Cont -> container );
+}   /* XFSContNodeClear () */

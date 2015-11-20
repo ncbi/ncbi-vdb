@@ -35,7 +35,8 @@ TEST_TOOLS = \
 	test-printf \
 	test-log \
 	test-out \
-    test-klib \
+	test-SraReleaseVersion \
+	test-klib \
 
 include $(TOP)/build/Makefile.env
 
@@ -133,6 +134,29 @@ valgrind_log:
 	valgrind --ncbi $(TEST_BINDIR)/test-log
     
 .PHONY: valgrind_log
+
+#-------------------------------------------------------------------------------
+# test-SraReleaseVersion
+#
+TEST_SRA_RELEASE_VERSION_SRC = \
+	test-SraReleaseVersion
+
+TEST_SRA_RELEASE_VERSION_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_SRA_RELEASE_VERSION_SRC))
+    
+TEST_SRA_RELEASE_VERSION_LIB = \
+	-skapp \
+    -sncbi-vdb \
+	-sktst \
+
+
+$(TEST_BINDIR)/test-SraReleaseVersion: $(TEST_SRA_RELEASE_VERSION_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_SRA_RELEASE_VERSION_LIB)
+    
+valgrind_sra_release_version:
+	valgrind --ncbi $(TEST_BINDIR)/test-SraReleaseVersion
+    
+.PHONY: valgrind_SraReleaseVersion
 
 
 #-------------------------------------------------------------------------------

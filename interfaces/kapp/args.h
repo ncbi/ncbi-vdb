@@ -264,8 +264,9 @@ rc_t CC ArgsHandleStandardOptions (Args * self);
 
 rc_t CC ArgsMakeAndHandle (Args ** pself, int argc, char ** argv, uint32_t table_count, ...);
 
-rc_t CC ArgsMakeAndHandleStandardOptions (Args ** pself, int argc, char ** argv,
-                                       OptDef * options, uint32_t opt_count);
+/* the same as ArgsMakeAndHandle but also accepts params definitions */
+rc_t CC ArgsMakeAndHandle2 (Args ** pself, int argc, char ** argv,
+                            ParamDef * params, uint32_t param_count, uint32_t table_count, ...);
 
 rc_t CC ArgsOptionSingleString (const Args * self, const char * option, const char ** value);
 

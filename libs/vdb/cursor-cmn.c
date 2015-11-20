@@ -1623,42 +1623,49 @@ rc_t VCursorReadColumnDirect ( const VCursor *self, int64_t row_id, uint32_t col
 
     switch ( self -> state )
     {
-    case vcConstruct:
-        return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcNotOpen );
-    case vcReady:
-    case vcRowOpen:
-        break;
-    default:
-        return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcInvalid );
+		case vcConstruct : return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcNotOpen );
+		case vcReady :
+		case vcRowOpen :  break;
+		default : return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcInvalid );
     }
+	
     cache_col_active_save = self->cache_col_active;
-    ((VCursor*)self)->cache_col_active=false;
-    if(self->cache_curs){
-	const VCursor *curs=VectorGet(&self->v_cache_curs,col_idx);
-	if(curs){
-	   ((VCursor*)self)->cache_col_active=true;
-           if(self->cache_empty_start == 0 ||  row_id < self->cache_empty_start || row_id > self->cache_empty_end){
-		uint32_t repeat_count;
-		uint32_t cidx =  (uint32_t)(uint64_t)VectorGet(&self->v_cache_cidx,col_idx);
-		rc_t rc2 = VCursorReadColumnDirectInt(curs,row_id, cidx, elem_bits, base, boff, row_len, &repeat_count,NULL );
-		if(rc2==0){
-			if(*row_len > 0){
-			    ((VCursor*)self)->cache_col_active=cache_col_active_save;
-			    return 0;
-			} else {
-                                /*** save window where cache is useless */
-				((VCursor*)self)->cache_empty_start = row_id;
-				((VCursor*)self)->cache_empty_end = row_id + repeat_count -1;
-                        }
+    ( ( VCursor* ) self )->cache_col_active = false;
+    if ( self->cache_curs != NULL )
+	{
+		const VCursor *curs = VectorGet( &self->v_cache_curs, col_idx );
+		if ( curs != NULL )
+		{
+			( ( VCursor* ) self )->cache_col_active = true;
+			if ( self->cache_empty_start == 0 ||
+			     row_id < self->cache_empty_start ||
+				 row_id > self->cache_empty_end )
+			{
+				uint32_t repeat_count;
+				uint32_t cidx = ( uint32_t )( uint64_t )VectorGet( &self->v_cache_cidx, col_idx );
+				rc_t rc2 = VCursorReadColumnDirectInt( curs, row_id, cidx, elem_bits, base, boff, row_len, &repeat_count, NULL );
+				if ( rc2 == 0 )
+				{
+					if ( *row_len > 0 )
+					{
+						( ( VCursor* )self )->cache_col_active = cache_col_active_save;
+						return 0;
+					}
+					else
+					{
+						/*** save window where cache is useless */
+						( ( VCursor* )self )->cache_empty_start = row_id;
+						( ( VCursor* )self )->cache_empty_end = row_id + repeat_count - 1;
+					}
+				}
+			}	
 		}
-	    }
 	}
 	
-    }
     {
-	rc_t rc=VCursorReadColumnDirectInt ( self, row_id, col_idx, elem_bits, base, boff, row_len, NULL, NULL );
-	((VCursor*)self)->cache_col_active=cache_col_active_save;
-	return rc;
+		rc_t rc = VCursorReadColumnDirectInt( self, row_id, col_idx, elem_bits, base, boff, row_len, NULL, NULL );
+		( ( VCursor* )self )->cache_col_active = cache_col_active_save;
+		return rc;
     }
 }
 
@@ -2091,67 +2098,95 @@ LIB_EXPORT rc_t CC VCursorCellDataDirect ( const VCursor *self, int64_t row_id, 
     return rc;
 }
 
-LIB_EXPORT rc_t CC VCursorDataPrefetch ( const VCursor *cself, const int64_t *row_ids, uint32_t col_idx, uint32_t num_rows,int64_t min_valid_row_id, int64_t max_valid_row_id, bool continue_on_error)
+LIB_EXPORT rc_t CC VCursorDataPrefetch( const VCursor *cself,
+										const int64_t *row_ids,
+										uint32_t col_idx,
+										uint32_t num_rows,
+										int64_t min_valid_row_id,
+										int64_t max_valid_row_id,
+										bool continue_on_error )
 {
 	rc_t rc=0;
 	const VColumn *col = ( const void* ) VectorGet ( & cself -> row, col_idx );
 	if ( col == NULL )
+	{
 		return RC ( rcVDB, rcCursor, rcReading, rcColumn, rcInvalid );
-
-	if(cself->blob_mru_cache && num_rows > 0){
-		int64_t *row_ids_sorted = malloc(num_rows*sizeof(*row_ids_sorted));
-		if(row_ids_sorted){
-			uint32_t i,num_rows_sorted;
-			for(i=0,num_rows_sorted=0;i < num_rows; i++){
-				int64_t row_id=row_ids[i];
-				if(row_id >= min_valid_row_id && row_id <= max_valid_row_id){
-					row_ids_sorted[num_rows_sorted++]=row_id;
+	}
+	
+	if ( cself->blob_mru_cache && num_rows > 0 )
+	{
+		int64_t *row_ids_sorted = malloc( num_rows * sizeof( *row_ids_sorted ) );
+		if ( row_ids_sorted != NULL )
+		{
+			uint32_t i, num_rows_sorted;
+			for( i = 0, num_rows_sorted = 0; i < num_rows; i++ )
+			{
+				int64_t row_id = row_ids[ i ];
+				if ( row_id >= min_valid_row_id && row_id <= max_valid_row_id )
+				{
+					row_ids_sorted[ num_rows_sorted++ ] = row_id;
 				}
 			}
-			if(num_rows_sorted > 0){
-				int64_t last_cached_row_id=INT64_MIN;
-				bool	first_time=true;
-				ksort_int64_t(row_ids_sorted,num_rows_sorted);
-				for(i=0;rc==0 && i<num_rows_sorted;i++){
-					int64_t row_id=row_ids_sorted[i];
-					VBlob *blob;
-					if(last_cached_row_id < row_id){
-						blob=(VBlob*)VBlobMRUCacheFind(cself->blob_mru_cache,col_idx,row_id);
-						if(blob){
+			if ( num_rows_sorted > 0 )
+			{
+				int64_t last_cached_row_id = INT64_MIN;
+				bool first_time = true;
+				ksort_int64_t( row_ids_sorted, num_rows_sorted );
+				for	( i = 0; rc==0 && i < num_rows_sorted; i++ )
+				{
+					int64_t row_id = row_ids_sorted[ i ];
+					if ( last_cached_row_id < row_id )
+					{
+						VBlob * blob = ( VBlob* )VBlobMRUCacheFind( cself->blob_mru_cache, col_idx, row_id );
+						if ( blob != NULL )
+						{
 							last_cached_row_id = blob->stop_id;
-						} else { /* prefetch it **/
+						}
+						else
+						{ 
+							/* prefetch it **/
 							/** ask production for the blob **/
 							VBlobMRUCacheCursorContext cctx;
 
-							cctx.cache=cself -> blob_mru_cache;
+							cctx.cache = cself -> blob_mru_cache;
 							cctx.col_idx = col_idx;
 							rc = VProductionReadBlob ( col->in, & blob, row_id, 1, &cctx );
-							if(rc == 0){
+							if ( rc == 0 )
+							{
 								rc_t rc_cache;
 								/** always cache prefetch requests **/
-								if(first_time){ 
-									VBlobMRUCacheResumeFlush(cself->blob_mru_cache); /** next call will clean cache if too big **/
-									rc_cache=VBlobMRUCacheSave(cself->blob_mru_cache, col_idx, blob);
-									VBlobMRUCacheSuspendFlush(cself->blob_mru_cache); /** suspending for the rest **/
-									first_time=false;
-								} else {
-									rc_cache=VBlobMRUCacheSave(cself->blob_mru_cache, col_idx, blob);
+								if ( first_time )
+								{ 
+									VBlobMRUCacheResumeFlush( cself->blob_mru_cache ); /** next call will clean cache if too big **/
+									rc_cache = VBlobMRUCacheSave( cself->blob_mru_cache, col_idx, blob );
+									VBlobMRUCacheSuspendFlush( cself->blob_mru_cache ); /** suspending for the rest **/
+									first_time = false;
 								}
-								if(rc_cache == 0){
-									VBlobRelease(blob);
+								else
+								{
+									rc_cache = VBlobMRUCacheSave( cself->blob_mru_cache, col_idx, blob );
+								}
+								
+								if ( rc_cache == 0 )
+								{
+									VBlobRelease( blob );
 									last_cached_row_id = blob->stop_id;
 								}
-							} else if(continue_on_error){
-								rc=0; /** reset failed row ***/
+							}
+							else if ( continue_on_error )
+							{
+								rc = 0; /** reset failed row ***/
 								last_cached_row_id = row_id; /*** and skip it **/
 							}
 						}
 					}
 				}
 			}
-			free(row_ids_sorted);
-		} else {
-			rc= RC(rcVDB, rcCursor, rcReading, rcMemory, rcExhausted);
+			free( row_ids_sorted );
+		}
+		else
+		{
+			rc= RC( rcVDB, rcCursor, rcReading, rcMemory, rcExhausted );
 		}
 	}
 	return rc;

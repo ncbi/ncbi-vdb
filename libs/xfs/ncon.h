@@ -85,6 +85,10 @@ XFS_EXTERN rc_t CC XFSNodeContainerList (
                             const struct KNamelist ** List
                             );
 
+XFS_EXTERN rc_t CC XFSNodeContainerClear (
+                            const struct XFSNodeContainer * self
+                            );
+
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 #ifdef __cplusplus 

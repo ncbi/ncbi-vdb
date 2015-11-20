@@ -55,6 +55,12 @@ XFS_EXTERN rc_t CC XFS_SStrDup (
                                 const char ** Dst
                                 );
 
+/*)))   Checking if string ends with string
+ (((*/
+XFS_EXTERN rc_t CC XFS_StrEndsWith (
+                                const char * Str, const char * End
+                                );
+
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/

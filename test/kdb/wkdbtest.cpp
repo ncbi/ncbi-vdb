@@ -168,6 +168,66 @@ FIXTURE_TEST_CASE ( ColumnMetadataWKDB_Fixture, WKDB_Fixture )
     KDirectoryRemove(m_wd, true, GetName());
 }
 
+// KColumnBlob
+// see same tests on the read side, kdbtest.cpp
+
+class ColumnBlobReadFixture
+{
+public:
+    ColumnBlobReadFixture()
+    :   m_num_read ( 0 ),
+        m_remaining ( 0 )
+    {
+        KDBManager* mgr;
+        THROW_ON_RC ( KDBManagerMakeUpdate( & mgr, NULL ) );
+        
+        const KTable* tbl;
+        THROW_ON_RC ( KDBManagerOpenTableRead ( mgr, & tbl, "SRR000123" ) );
+        
+        const KColumn* col;
+        THROW_ON_RC ( KTableOpenColumnRead ( tbl, & col, "X" ) );
+        
+        THROW_ON_RC ( KColumnOpenBlobRead ( col, & m_blob, 1 ) );
+        
+        THROW_ON_RC ( KColumnRelease ( col ) );
+        THROW_ON_RC ( KTableRelease ( tbl ) );
+        THROW_ON_RC ( KDBManagerRelease ( mgr ) );
+    }
+    ~ColumnBlobReadFixture()
+    {
+        KColumnBlobRelease ( m_blob );
+    }
+
+    const KColumnBlob*  m_blob;
+    size_t m_num_read;
+    size_t m_remaining;
+};
+
+FIXTURE_TEST_CASE ( ColumnBlobRead_basic, ColumnBlobReadFixture )
+{   
+    const size_t BlobSize = 1882; 
+    const size_t BufSize = 2024; 
+    char buffer [ BufSize ];
+    REQUIRE_RC ( KColumnBlobRead ( m_blob, 0, buffer, BufSize, & m_num_read, & m_remaining ) );
+    REQUIRE_EQ ( BlobSize, m_num_read );
+    REQUIRE_EQ ( (size_t)0, m_remaining );
+}
+
+FIXTURE_TEST_CASE ( ColumnBlobRead_insufficient_buffer, ColumnBlobReadFixture )
+{   
+    const size_t BlobSize = 1882; 
+    const size_t BufSize = 1024; 
+    char buffer [ BufSize ];
+    // first read incomplete
+    REQUIRE_RC ( KColumnBlobRead ( m_blob, 0, buffer, BufSize, & m_num_read, & m_remaining ) );
+    REQUIRE_EQ ( BufSize, m_num_read );
+    REQUIRE_EQ ( BlobSize - BufSize, m_remaining );
+    // the rest comes in on the second read
+    REQUIRE_RC ( KColumnBlobRead ( m_blob, BufSize, buffer, BufSize, & m_num_read, & m_remaining ) );
+    REQUIRE_EQ ( BlobSize - BufSize, m_num_read );
+    REQUIRE_EQ ( (size_t)0, m_remaining );
+}
+
 //////////////////////////////////////////// Main
 extern "C"
 {

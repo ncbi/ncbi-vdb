@@ -129,37 +129,6 @@ void CSRA1_ReadCollectionWhack ( CSRA1_ReadCollection * self, ctx_t ctx )
     VDatabaseRelease ( self -> db );
 }
 
-static const char * align_col_specs [] =
-{
-    "(I32)MAPQ",
-    "(ascii)CIGAR_LONG",
-    "(ascii)CIGAR_SHORT",
-    "(ascii)CLIPPED_CIGAR_LONG",
-    "(ascii)CLIPPED_CIGAR_SHORT",
-    "(INSDC:quality:phred)CLIPPED_QUALITY",
-    "(INSDC:dna:text)CLIPPED_READ",
-    "(INSDC:coord:len)LEFT_SOFT_CLIP",
-    "(INSDC:coord:len)RIGHT_SOFT_CLIP",
-    "(INSDC:quality:phred)QUALITY",
-    "(INSDC:dna:text)RAW_READ",
-    "(INSDC:dna:text)READ",
-    "(I64)REF_ID",
-    "(INSDC:coord:len)REF_LEN",
-    "(ascii)REF_SEQ_ID",	/* was REF_NAME changed March 23 2015 */
-    "(bool)REF_ORIENTATION",
-    "(INSDC:coord:zero)REF_POS",
-    "(INSDC:dna:text)REF_READ",
-    "(INSDC:quality:text:phred_33)SAM_QUALITY",
-    "(INSDC:coord:one)SEQ_READ_ID",
-    "(I64)SEQ_SPOT_ID",
-    "(ascii)SPOT_GROUP",
-    "(I32)TEMPLATE_LEN",
-    "(ascii)RNA_ORIENTATION",
-    "(I64)MATE_ALIGN_ID",
-    "(ascii)MATE_REF_SEQ_ID",	/* was MATE_REF_NAME changed March 23 2015 */
-    "(bool)MATE_REF_ORIENTATION",
-};
-
 static const char * reference_col_specs [] =
 {
     "(bool)CIRCULAR",
@@ -205,13 +174,13 @@ const NGS_Cursor* CSRA1_ReadCollectionMakeAlignmentCursor ( CSRA1_ReadCollection
                 return ret;
             }
         }
-        return NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, primary ? "PRIMARY_ALIGNMENT" : "SECONDARY_ALIGNMENT", align_col_specs, align_NUM_COLS );
+        return CSRA1_AlignmentMakeDb ( ctx, self -> db, self -> run_name, primary ? "PRIMARY_ALIGNMENT" : "SECONDARY_ALIGNMENT" );
     }
     if ( primary )
     {
         if ( self -> primary_al_curs == NULL )
         {
-            self -> primary_al_curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "PRIMARY_ALIGNMENT", align_col_specs, align_NUM_COLS );
+            self -> primary_al_curs = CSRA1_AlignmentMakeDb ( ctx, self -> db, self -> run_name, "PRIMARY_ALIGNMENT" );
         }
         return NGS_CursorDuplicate ( self -> primary_al_curs, ctx );
     }
@@ -219,7 +188,7 @@ const NGS_Cursor* CSRA1_ReadCollectionMakeAlignmentCursor ( CSRA1_ReadCollection
     {
         if ( self -> secondary_al_curs == NULL )
         {
-            self -> secondary_al_curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SECONDARY_ALIGNMENT", align_col_specs, align_NUM_COLS );
+            self -> secondary_al_curs = CSRA1_AlignmentMakeDb ( ctx, self->db, self->run_name, "SECONDARY_ALIGNMENT" );
         }
         return NGS_CursorDuplicate ( self -> secondary_al_curs, ctx );
     }
@@ -279,6 +248,34 @@ NGS_ReadGroup * CSRA1_ReadCollectionGetReadGroups ( CSRA1_ReadCollection * self,
 }
 
 static
+bool CSRA1_ReadCollectionHasReadGroup ( CSRA1_ReadCollection * self, ctx_t ctx, const char * spec )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
+
+    bool ret = false;
+
+    if ( self -> sequence_curs == NULL )
+    {
+        self -> sequence_curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS );
+    }
+
+    TRY ( GetGroupInfo ( self, ctx ) )
+    {
+        TRY ( SRA_ReadGroupInfoFind ( self -> group_info, ctx, spec, string_size ( spec ) ) )
+        {
+            ret = true;
+        }
+        CATCH_ALL()
+        {
+            CLEAR();
+        }
+
+    }
+    
+    return ret;
+}
+
+static
 NGS_ReadGroup * CSRA1_ReadCollectionGetReadGroup ( CSRA1_ReadCollection * self, ctx_t ctx, const char * spec )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
@@ -290,12 +287,8 @@ NGS_ReadGroup * CSRA1_ReadCollectionGetReadGroup ( CSRA1_ReadCollection * self, 
 
     TRY ( GetGroupInfo ( self, ctx ) )
     {
-        TRY ( NGS_String * name = NGS_StringMakeCopy ( ctx, spec, string_size ( spec ) ) )
-        {
-            NGS_ReadGroup * ret = SRA_ReadGroupMake ( ctx, self -> sequence_curs, self -> group_info, self -> run_name, name);
-            NGS_StringRelease ( name, ctx );
-            return ret;
-        }
+        NGS_ReadGroup * ret = SRA_ReadGroupMake ( ctx, self -> sequence_curs, self -> group_info, self -> run_name, spec, string_size( spec ));
+        return ret;
     }
     
     return NULL;
@@ -321,14 +314,46 @@ static
 NGS_Reference * CSRA1_ReadCollectionGetReference ( CSRA1_ReadCollection * self, ctx_t ctx, const char * spec )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
-    
+
+    const NGS_Cursor * curs;
+    NGS_Reference * ret;
+#if 0
     if ( self -> reference_curs == NULL )
     {
-        ON_FAIL ( self -> reference_curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "REFERENCE", reference_col_specs, reference_NUM_COLS ) ) 
+#endif
+        ON_FAIL ( curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "REFERENCE", reference_col_specs, reference_NUM_COLS ) ) 
             return NULL;
+#if 0
+        self -> reference_curs = curs;
     }
+#endif
     
-    return CSRA1_ReferenceMake ( ctx, & self -> dad, self -> db, self -> reference_curs, spec, self -> primaryId_count );
+    ret = CSRA1_ReferenceMake ( ctx, & self -> dad, self -> db, curs, spec, self -> primaryId_count );
+#if ! 0
+    // release cursor if we generate new cursor for the reference each time
+    NGS_CursorRelease ( curs, ctx );
+#endif
+    
+    return ret;
+}
+
+static
+bool CSRA1_ReadCollectionHasReference ( CSRA1_ReadCollection * self, ctx_t ctx, const char * spec )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+
+    const NGS_Cursor * curs;
+    bool ret = false;
+
+    ON_FAIL ( curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "REFERENCE", reference_col_specs, reference_NUM_COLS ) ) 
+        return false;
+
+    ret = CSRA1_ReferenceFind ( curs, ctx, spec, NULL, NULL );
+
+    NGS_CursorRelease ( curs, ctx );
+    CLEAR ();
+
+    return ret;
 }
 
 static
@@ -345,43 +370,37 @@ NGS_Alignment * CSRA1_ReadCollectionGetAlignment ( CSRA1_ReadCollection * self, 
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
 
-    TRY ( const NGS_String* id_str = NGS_StringMakeCopy ( ctx, alignmentIdStr, string_size ( alignmentIdStr ) ) )
+    TRY ( struct NGS_Id id = NGS_IdParse ( alignmentIdStr, string_size ( alignmentIdStr ), ctx ) )
     {
-        TRY ( struct NGS_Id id = NGS_IdParse ( id_str, ctx ) )
+        if ( string_cmp ( NGS_StringData ( self -> run_name, ctx ), 
+            NGS_StringSize ( self -> run_name, ctx ),
+            id . run . addr, 
+            id . run . size, 
+            id . run . len ) != 0 ) 
         {
-            if ( string_cmp ( NGS_StringData ( self -> run_name, ctx ), 
-                              NGS_StringSize ( self -> run_name, ctx ),
-                              id . run . addr, 
-                              id . run . size, 
-                              id . run . len ) != 0 ) 
-            {
-                INTERNAL_ERROR ( xcArcIncorrect, 
-                                 " expected '%.*s', actual '%.*s'", 
-                                 NGS_StringSize ( self -> run_name, ctx ),
-                                 NGS_StringData ( self -> run_name, ctx ), 
-                                 id . run . size, 
-                                 id . run . addr );
-            }
-            else if ( id . object == NGSObject_PrimaryAlignment )
-            {
-                NGS_StringRelease ( id_str, ctx );
-                return CSRA1_AlignmentMake ( ctx, self, id . rowId, self -> run_name, true, 0 );
-            }
-            else if ( id . object == NGSObject_SecondaryAlignment )
-            {
-                NGS_StringRelease ( id_str, ctx );
-                return CSRA1_AlignmentMake ( ctx, self, id . rowId, self -> run_name, false, self -> primaryId_count );
-            }
-            else
-            {
-                INTERNAL_ERROR ( xcTypeIncorrect, 
-                                 " expected alignment (%i or %i), actual %i", 
-                                 NGSObject_PrimaryAlignment, 
-                                 NGSObject_SecondaryAlignment,
-                                 id . object );
-            }
+            INTERNAL_ERROR ( xcArcIncorrect, 
+                " expected '%.*s', actual '%.*s'", 
+                NGS_StringSize ( self -> run_name, ctx ),
+                NGS_StringData ( self -> run_name, ctx ), 
+                id . run . size, 
+                id . run . addr );
         }
-        NGS_StringRelease ( id_str, ctx );
+        else if ( id . object == NGSObject_PrimaryAlignment )
+        {
+            return CSRA1_AlignmentMake ( ctx, self, id . rowId, NGS_StringData( self -> run_name, ctx ), NGS_StringSize( self->run_name, ctx ), true, 0 );
+        }
+        else if ( id . object == NGSObject_SecondaryAlignment )
+        {
+            return CSRA1_AlignmentMake ( ctx, self, id . rowId, NGS_StringData( self -> run_name, ctx ), NGS_StringSize( self -> run_name, ctx ), false, self -> primaryId_count );
+        }
+        else
+        {
+            INTERNAL_ERROR ( xcTypeIncorrect, 
+                " expected alignment (%i or %i), actual %i", 
+                NGSObject_PrimaryAlignment, 
+                NGSObject_SecondaryAlignment,
+                id . object );
+        }
     }
     return NULL;
 }
@@ -400,12 +419,10 @@ uint64_t CSRA1_ReadCollectionGetAlignmentCount ( CSRA1_ReadCollection * self, ct
     {
         if ( self -> secondary_al_curs == NULL )
         {
-            ON_FAIL ( self -> secondary_al_curs = NGS_CursorMakeDb ( ctx, 
+            ON_FAIL ( self -> secondary_al_curs = CSRA1_AlignmentMakeDb ( ctx, 
                                                                      self -> db, 
                                                                      self -> run_name, 
-                                                                     "SECONDARY_ALIGNMENT", 
-                                                                     align_col_specs, 
-                                                                     align_NUM_COLS ) )
+                                                                     "SECONDARY_ALIGNMENT" ) )
                 return 0;
         }
         ret += NGS_CursorGetRowCount ( self -> secondary_al_curs, ctx );
@@ -449,36 +466,31 @@ struct NGS_Read * CSRA1_ReadCollectionGetRead ( CSRA1_ReadCollection * self, ctx
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
 
-    TRY ( const NGS_String* id_str = NGS_StringMakeCopy ( ctx, readIdStr, string_size ( readIdStr ) ) )
+    TRY ( struct NGS_Id id = NGS_IdParse ( readIdStr, string_size ( readIdStr ), ctx ) )
     {
-        TRY ( struct NGS_Id id = NGS_IdParse ( id_str, ctx ) )
+        if ( string_cmp ( NGS_StringData ( self -> run_name, ctx ), 
+            NGS_StringSize ( self -> run_name, ctx ),
+            id . run . addr, 
+            id . run . size, 
+            id . run . len ) != 0 ) 
         {
-            if ( string_cmp ( NGS_StringData ( self -> run_name, ctx ), 
-                              NGS_StringSize ( self -> run_name, ctx ),
-                              id . run . addr, 
-                              id . run . size, 
-                              id . run . len ) != 0 ) 
+            INTERNAL_ERROR ( xcArcIncorrect, 
+                " expected '%.*s', actual '%.*s'", 
+                NGS_StringSize ( self -> run_name, ctx ),
+                NGS_StringData ( self -> run_name, ctx ), 
+                id . run . size, 
+                id . run . addr );
+        }    
+        else
+        {   
+            /* individual reads share one iterator attached to ReadCollection */
+            if ( self -> sequence_curs == NULL )
             {
-                INTERNAL_ERROR ( xcArcIncorrect, 
-                                 " expected '%.*s', actual '%.*s'", 
-                                 NGS_StringSize ( self -> run_name, ctx ),
-                                 NGS_StringData ( self -> run_name, ctx ), 
-                                 id . run . size, 
-                                 id . run . addr );
-            }    
-            else
-            {   
-                NGS_StringRelease ( id_str, ctx );
-                /* individual reads share one iterator attached to ReadCollection */
-                if ( self -> sequence_curs == NULL )
-                {
-                    ON_FAIL ( self -> sequence_curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ) )
-                        return NULL;
-                }
-                return CSRA1_ReadMake ( ctx, self -> sequence_curs, id . rowId, self -> run_name );
+                ON_FAIL ( self -> sequence_curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ) )
+                    return NULL;
             }
+            return CSRA1_ReadMake ( ctx, self -> sequence_curs, id . rowId, self -> run_name );
         }
-        NGS_StringRelease ( id_str, ctx );
     }
     return NULL;
 }
@@ -623,8 +635,10 @@ static NGS_ReadCollection_vt CSRA1_ReadCollection_vt =
     /* NGS_ReadCollection */
     CSRA1_ReadCollectionGetName,
     CSRA1_ReadCollectionGetReadGroups,
+    CSRA1_ReadCollectionHasReadGroup,
     CSRA1_ReadCollectionGetReadGroup,
     CSRA1_ReadCollectionGetReferences,
+    CSRA1_ReadCollectionHasReference,
     CSRA1_ReadCollectionGetReference,
     CSRA1_ReadCollectionGetAlignments,
     CSRA1_ReadCollectionGetAlignment,
@@ -683,7 +697,7 @@ NGS_ReadCollection * NGS_ReadCollectionMakeCSRA ( ctx_t ctx, const VDatabase *db
             /* initialize "run_name" */
             TRY ( ref -> run_name = NGS_StringMakeCopy ( ctx, name, end - name ) )
             {
-                TRY ( ref -> primary_al_curs = NGS_CursorMakeDb ( ctx, ref -> db, ref -> run_name, "PRIMARY_ALIGNMENT", align_col_specs, align_NUM_COLS ) )
+                TRY ( ref -> primary_al_curs = CSRA1_AlignmentMakeDb ( ctx, ref -> db, ref -> run_name, "PRIMARY_ALIGNMENT" ) )
                 {
                     TRY ( ref -> primaryId_count = NGS_CursorGetRowCount ( ref -> primary_al_curs, ctx ) )
                     {   

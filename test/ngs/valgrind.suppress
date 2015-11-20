@@ -4,3 +4,13 @@
     ...
    fun:find_home_directory
 }
+{
+   first_time_ctx_recover
+   Memcheck:Leak
+   ...
+   fun:KConfigMake
+   fun:rsrc_init
+   fun:KRsrcGlobalInit
+   fun:get_tls_ctx
+   fun:ctx_recover
+}

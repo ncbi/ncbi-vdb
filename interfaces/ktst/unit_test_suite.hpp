@@ -168,11 +168,14 @@ private:
 };
 
 class TestCase {
+    void Init(const char* name);
+
 public:
     typedef void ( TestCase ::* TestMethod ) ();
 
 protected:
-    TestCase(const char* name);
+    TestCase(const std::string &name) { Init(name.c_str()); }
+    TestCase(const char* name)        { Init(name); }
 
 public:    
     // explicit destruction, to be used before calling exit() in out-of-process test runner
