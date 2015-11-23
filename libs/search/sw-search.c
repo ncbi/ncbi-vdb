@@ -717,68 +717,86 @@ static bool compose_variation ( c_string_const const* ref,
         int64_t ref_pos_var, size_t var_len_on_ref,
         c_string* variation )
 {
-    INSDC_dna_text const* query_adj = query;
-    size_t query_len_adj = query_len;
     bool ret = true;
 
-    /* TODO: not always correct */
-    if ( ref_len == 0 && query_len == var_len_on_ref ) /* special case for pure mismatch */
+    size_t ref_end_orig = (size_t)ref_pos_var + var_len_on_ref;
+    size_t ref_end_new = ref_start + ref_len;
+
+    size_t prefix_start = ref_start, prefix_len, query_trim_l;
+    size_t postfix_start = ref_end_orig, postfix_len, query_trim_r;
+
+    size_t query_len_new, var_len;
+
+    if ((int64_t)ref_start <= ref_pos_var) /* left bound is expanded */
     {
-        if ( !c_string_realloc_no_preserve( variation, query_len ))
-            return false;
+        prefix_len = (size_t)ref_pos_var - ref_start;
+        query_trim_l = 0;
+
+        assert ((int64_t)prefix_len >= 0);
     }
-    else if ( query_len == 0 && ref_len == var_len_on_ref ) /* special case for pure deletion */
+    else /* left bound is shrinked */
     {
-        /* in this case there is no query - don't allocate anything */
-        return true;
+        prefix_len = 0;
+        query_trim_l = ref_start - (size_t)ref_pos_var;
+
+        assert ((int64_t)query_trim_l >= 0);
+    }
+
+    if (ref_end_new >= ref_end_orig) /* right bound is expanded */
+    {
+        postfix_start = ref_end_orig;
+        postfix_len = ref_end_new - ref_end_orig;
+        query_trim_r = 0;
+    }
+    else /* right bound is shrinked */
+    {
+        /*postfix_start = ref_end_new; in this case the value doesn't matter, setting ref_end_new to for mathematical consistency */
+        postfix_len = 0;
+        query_trim_r = ref_end_orig - ref_end_new;
+    }
+
+    /*
+    special case: pure match/mismatch
+    algorithm gives ref_len = 0, but in this case
+    we want to have variation = input query
+    */
+    if ( ref_len == 0 && query_len == var_len_on_ref )
+    {
+        assert ( prefix_len == 0 );
+        assert ( postfix_len == 0 );
+        assert ( query_trim_l == 0 );
+        assert ( query_trim_r > 0 );
+
+        query_trim_r = 0;
+    }
+
+    query_len_new = query_len - query_trim_l - query_trim_r;
+    assert ((int64_t)query_len_new >= 0);
+    var_len = prefix_len + query_len_new + postfix_len;
+
+    if ( var_len > 0 )
+    {
+        /* non-empty variation */
+        if ( !c_string_realloc_no_preserve( variation, var_len ) )
+            ret = false;
+
+        if ( prefix_len > 0 )
+            ret = ret && c_string_assign (variation, ref->str + prefix_start, prefix_len);
+        
+        if ( query_len_new > 0 )
+            ret = ret && c_string_append (variation, query + query_trim_l, query_len_new);
+
+        if ( postfix_len > 0 )
+            ret = ret && c_string_append (variation, ref->str + postfix_start, postfix_len);
+
+        if ( ! ret )
+            c_string_destruct ( variation );
     }
     else
     {
-        /* TODO: the size is not always correct:
-           e.g. synthetic example:
-           ref   = "ACACACTA"
-           query = "AGCACACA"
-           var_len_on_ref = strlen(ref)
-           pos = 0
-           this example triggers assert below variation->capacity >= variation->size + query_len_adj
-        */
-        if ( !c_string_realloc_no_preserve( variation, ref_len + query_len - var_len_on_ref ))
-            return false;
+        /* in this case there is no query - don't allocate anything */
+        ret = true;
     }
-
-
-    if ( (size_t)ref_pos_var > ref_start )
-    {
-        /* if extended window starts to the left from initial reported variation start
-           then include preceding bases into adjusted variation */
-        ret = ret && c_string_assign ( variation, ref->str + ref_start, (size_t)ref_pos_var - ref_start );
-    }
-    else if ( (size_t)ref_pos_var < ref_start )
-    {
-        /* the real window of ambiguity actually starts to the right from
-           the reported variation start
-           let's not to include the left unambigous part into
-           adjusted variation (?) */
-
-        query_adj += ref_start - ref_pos_var;
-        query_len_adj -= ref_start - ref_pos_var;
-    }
-
-    if ( query_len_adj > 0 )
-    {
-        /*assert ( variation->capacity >= variation->size + query_len_adj );*/
-        ret = ret && c_string_append ( variation, query_adj, query_len_adj );
-    }
-
-    if ( (int64_t)(ref_len - ((size_t)ref_pos_var - ref_start) - var_len_on_ref) > 0 )
-    {
-        assert ( variation->capacity >= variation->size + ref_len - ((size_t)ref_pos_var - ref_start) - var_len_on_ref );
-        ret = ret && c_string_append ( variation, ref->str + (size_t)ref_pos_var + var_len_on_ref,
-            ref_len - ((size_t)ref_pos_var - ref_start) - var_len_on_ref );
-    }
-
-    if ( ! ret )
-        c_string_destruct ( variation );
 
     return ret;
 }
@@ -1016,6 +1034,7 @@ LIB_EXPORT rc_t CC VRefVariationIUPACMake (
             {
                 KRefcountInit ( & obj->refcount, 1, "VRefVariation", "make", "ref-var" );
                 /* moving var_str to the object (so no need to destruct var_str */
+
                 obj->variation = var_str.str;
                 obj->var_size = var_str.size;
 
@@ -1026,7 +1045,8 @@ LIB_EXPORT rc_t CC VRefVariationIUPACMake (
                     || ref_len == var_str.size + var_len_on_ref    /* deletion ? */
                     || var_str.size == ref_len + variation_size    /* insertion ? */
                     || 1 );                                        /* TODO: add condition for insert */
-                obj->var_len_on_ref = ref_len == 0 ? var_len_on_ref : ref_len;
+                obj->var_len_on_ref = ref_len == 0 && variation_size == var_len_on_ref
+                    ? var_len_on_ref : ref_len;
             }
         }
     }
