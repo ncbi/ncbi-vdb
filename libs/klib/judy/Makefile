@@ -94,7 +94,13 @@ endif
 #DEBUG := -DDEBUG
 #endif
 
-CFLAGS = $(DEBUG) $(NO_ARRAY_BOUNDS_WARNING) $(DBG) $(CARCH) $(PROF) $(JUDY_WIN) -I$(SRCDIR) -I$(SRCDIR)/..
+CFLAGS = $(DEBUG)               \
+	$(NO_ARRAY_BOUNDS_WARNING)  \
+	$(DBG) $(CARCH) $(PROF)     \
+	$(JUDY_WIN) $(PED)          \
+	$(DEFINES) $(ARCHDEFS)      \
+	$(MIN_DEPLOY_OS_OPT)        \
+	-I$(SRCDIR) -I$(SRCDIR)/..
 
 VPATH += $(OBJDIR)
 
