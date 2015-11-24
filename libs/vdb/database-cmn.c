@@ -362,11 +362,10 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                             rc = VResolverQuery ( resolver, eProtocolHttp, orig, & plocal, & premote, & pcache );
                             if ( rc != 0 && GetRCState ( rc ) == rcNotFound )
                             {
-                                rc_t rc2 = VPathAddRef ( orig );
-                                if ( rc2 == 0 )
+                                rc = VPathAddRef ( orig );
+                                if ( rc == 0 )
                                 {
                                     plocal = orig;
-                                    rc = 0;
                                 }
 
                             }
