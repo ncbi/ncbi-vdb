@@ -48,42 +48,61 @@
 /*--------------------------------------------------------------------------
  * KRowSet
  */
-typedef struct RowSetLeaf RowSetLeaf;
-typedef struct RowSetNode RowSetNode;
-typedef struct RowSetNodeTransition RowSetNodeTransition;
+typedef enum KRowSetTreeLeafType
+{
+    LeafType_Bitmap,
+    LeafType_ArrayRanges
+} KRowSetTreeLeafType;
 
 // Holds bites of row_id followed by current byte (radix trie compression)
-struct RowSetNodeTransition
+typedef struct KRowSetTreeNodeTransition
 {
     int8_t size;
     uint8_t data[5];
-};
+} KRowSetTreeNodeTransition;
 
-struct RowSetNode
+typedef struct KRowSetTreeNode
 {
     void* children[256];
-    RowSetNodeTransition transitions[256];
+    KRowSetTreeNodeTransition transitions[256];
 
 #if CHECK_NODE_MARKS
     uint8_t node_mark;
 #endif
-};
+} KRowSetTreeNode;
 
-struct RowSetLeaf
+typedef struct KRowSetTreeLeafHeader
 {
     DLNode dad;
     int64_t leaf_id; // this is basically a row_id >> 16
-    uint8_t data[LEAF_DATA_SZ_BT];
+    uint8_t type; // types are defined in KRowSetTreeLeafType
 
 #if CHECK_NODE_MARKS
     uint8_t leaf_mark;
 #endif
-};
+} KRowSetTreeLeafHeader;
+
+
+typedef struct KRowSetTreeLeaf
+{
+    KRowSetTreeLeafHeader header;
+    union u
+    {
+        uint8_t bitmap[LEAF_DATA_SZ_BT];
+        struct {
+            struct {
+                uint16_t start;
+                uint16_t count;
+            } ranges[8];
+            uint8_t len;
+        } array_ranges;
+    } data;
+} KRowSetTreeLeaf;
 
 struct KRowSet
 {
     KRefcount refcount;
-    RowSetNode * root_node;
+    KRowSetTreeNode * root_node;
     DLList leaf_nodes;
 
     size_t number_rows;
@@ -99,7 +118,7 @@ KDB_EXTERN rc_t CC KCreateRowSet ( KRowSet ** self )
         rc = RC ( rcDB, rcRowSet, rcConstructing, rcSelf, rcNull );
     else
     {
-        rowset = calloc( 1, sizeof *rowset );
+        rowset = calloc ( 1, sizeof *rowset );
         if ( rowset == NULL )
             rc = RC ( rcDB, rcRowSet, rcConstructing, rcMemory, rcExhausted );
         else
@@ -115,6 +134,43 @@ KDB_EXTERN rc_t CC KCreateRowSet ( KRowSet ** self )
     return rc;
 }
 
+/**
+ * Allocates and initializes single leaf
+ */
+static
+rc_t KRowSetAllocateLeaf ( KRowSetTreeLeafType type, int64_t leaf_id, KRowSetTreeLeaf ** leaf )
+{
+    KRowSetTreeLeaf * allocated_leaf;
+    size_t size = sizeof allocated_leaf->header;
+
+    assert ( leaf != NULL );
+
+    switch ( type )
+    {
+    case LeafType_Bitmap:
+        size += sizeof allocated_leaf->data.bitmap;
+        break;
+    case LeafType_ArrayRanges:
+        size += sizeof allocated_leaf->data.array_ranges;
+        break;
+    default:
+        assert ( false );
+    }
+
+    allocated_leaf = calloc ( 1, size );
+    if ( allocated_leaf == NULL )
+        return RC ( rcDB, rcRowSet, rcInserting, rcMemory, rcExhausted );
+
+#if CHECK_NODE_MARKS
+    allocated_leaf->header.leaf_mark = LEAF_MARK;
+#endif
+    allocated_leaf->header.type = type;
+    allocated_leaf->header.leaf_id = leaf_id;
+
+    *leaf = allocated_leaf;
+    return 0;
+}
+
 /* Whack
  */
 
@@ -125,9 +181,9 @@ KDB_EXTERN rc_t CC KCreateRowSet ( KRowSet ** self )
 static
 void KRowSetLeafWhack ( DLNode * node, void * data )
 {
-    RowSetLeaf * leaf = (RowSetLeaf *) node;
+    KRowSetTreeLeaf * leaf = (KRowSetTreeLeaf *) node;
 #if CHECK_NODE_MARKS
-    assert ( leaf->leaf_mark == LEAF_MARK );
+    assert ( leaf->header.leaf_mark == LEAF_MARK );
 #endif
 
     if ( data != NULL )
@@ -144,7 +200,7 @@ void KRowSetLeafWhack ( DLNode * node, void * data )
  *  Otherwise only deallocates nodes.
  */
 static
-void KRowSetNodeWhack ( KRowSet * self, RowSetNode * node, int depth, bool free_leaves )
+void KRowSetNodeWhack ( KRowSet * self, KRowSetTreeNode * node, int depth, bool free_leaves )
 {
     int i;
 
@@ -168,7 +224,7 @@ void KRowSetNodeWhack ( KRowSet * self, RowSetNode * node, int depth, bool free_
             if ( new_depth < LEAF_DEPTH )
                 KRowSetNodeWhack ( self, node->children[i], new_depth, free_leaves );
             else if ( free_leaves )
-                KRowSetLeafWhack ( &((RowSetLeaf*) node->children[i])->dad, &self->leaf_nodes );
+                KRowSetLeafWhack ( &((KRowSetTreeLeaf*) node->children[i])->header.dad, &self->leaf_nodes );
         }
     }
 
@@ -240,7 +296,7 @@ inline uint8_t KRowSetGetLeafIdByte ( int64_t leaf_id, int depth )
  * Is used to inserter newly created "leaf" to a linked list.
  */
 static
-void KRowSetFindNearestLeaf ( KRowSet * self, RowSetNode * nodes_stack[], int nodes_depth[], RowSetLeaf * leaf, RowSetLeaf ** result, bool * result_left )
+void KRowSetFindNearestLeaf ( KRowSet * self, KRowSetTreeNode * nodes_stack[], int nodes_depth[], KRowSetTreeLeaf * leaf, KRowSetTreeLeaf ** result, bool * result_left )
 {
     assert ( self != NULL );
     assert ( nodes_stack != NULL );
@@ -255,15 +311,15 @@ void KRowSetFindNearestLeaf ( KRowSet * self, RowSetNode * nodes_stack[], int no
 
     if ( self->number_leaves == 1 )
     {
-        *result = (RowSetLeaf *) DLListHead ( &self->leaf_nodes );
-        *result_left = (*result)->leaf_id < leaf->leaf_id;
+        *result = (KRowSetTreeLeaf *) DLListHead ( &self->leaf_nodes );
+        *result_left = (*result)->header.leaf_id < leaf->header.leaf_id;
         return;
     }
 
     {
         int i;
-        int64_t leaf_id = leaf->leaf_id;
-        RowSetLeaf * nearest_leaf = NULL;
+        int64_t leaf_id = leaf->header.leaf_id;
+        KRowSetTreeLeaf * nearest_leaf = NULL;
         bool nearest_leaf_left;
         for ( i = LEAF_DEPTH - 1; i >= 0; --i )
         {
@@ -271,7 +327,7 @@ void KRowSetFindNearestLeaf ( KRowSet * self, RowSetNode * nodes_stack[], int no
             int j;
             int j_max;
             uint8_t bt;
-            RowSetNode * current_node = nodes_stack[i];
+            KRowSetTreeNode * current_node = nodes_stack[i];
             void * nearest_subtree = NULL;
             bool nearest_subtre_left;
             int nearest_subtree_depth;
@@ -318,18 +374,18 @@ void KRowSetFindNearestLeaf ( KRowSet * self, RowSetNode * nodes_stack[], int no
                     int search_stop = nearest_subtre_left ? 0 : 255;
                     int search_step = nearest_subtre_left ? -1 : 1;
                     void * nearest_subtree_next = NULL;
-                    RowSetNodeTransition * nearest_subtree_next_tr;
+                    KRowSetTreeNodeTransition * nearest_subtree_next_tr;
 
 #if CHECK_NODE_MARKS
-                    assert ( ((RowSetNode *) nearest_subtree)->node_mark == NODE_MARK );
+                    assert ( ((KRowSetTreeNode *) nearest_subtree)->node_mark == NODE_MARK );
 #endif
 
                     for ( search_i = search_start; search_step > 0 ? search_i <= search_stop : search_i >= search_stop; search_i += search_step )
                     {
-                        if ( ((RowSetNode *) nearest_subtree)->children[search_i] != NULL )
+                        if ( ((KRowSetTreeNode *) nearest_subtree)->children[search_i] != NULL )
                         {
-                            nearest_subtree_next = ((RowSetNode *) nearest_subtree)->children[search_i];
-                            nearest_subtree_next_tr = &((RowSetNode *) nearest_subtree)->transitions[search_i];
+                            nearest_subtree_next = ((KRowSetTreeNode *) nearest_subtree)->children[search_i];
+                            nearest_subtree_next_tr = &((KRowSetTreeNode *) nearest_subtree)->transitions[search_i];
                             break;
                         }
                     }
@@ -352,7 +408,7 @@ void KRowSetFindNearestLeaf ( KRowSet * self, RowSetNode * nodes_stack[], int no
         assert ( nearest_leaf != NULL );
 
 #if CHECK_NODE_MARKS
-        assert ( ((RowSetLeaf *) nearest_leaf)->leaf_mark == LEAF_MARK );
+        assert ( ((KRowSetTreeLeaf *) nearest_leaf)->header.leaf_mark == LEAF_MARK );
 #endif
         *result = nearest_leaf;
         *result_left = nearest_leaf_left;
@@ -367,7 +423,7 @@ void KRowSetFindNearestLeaf ( KRowSet * self, RowSetNode * nodes_stack[], int no
  *  In such case, we have to make sure that those bytes match.
  */
 static
-bool KRowSetNodeIsTransitionMatches ( int64_t leaf_id, int node_depth, const RowSetNodeTransition * tr, int * size_matched )
+bool KRowSetNodeIsTransitionMatches ( int64_t leaf_id, int node_depth, const KRowSetTreeNodeTransition * tr, int * size_matched )
 {
     int matched;
 
@@ -391,7 +447,7 @@ bool KRowSetNodeIsTransitionMatches ( int64_t leaf_id, int node_depth, const Row
  *  (because of radix trie compression)
  */
 static
-void KRowSetNodeSetChild ( RowSetNode * node, void * child, int64_t leaf_id, int node_depth, int child_depth )
+void KRowSetNodeSetChild ( KRowSetTreeNode * node, void * child, int64_t leaf_id, int node_depth, int child_depth )
 {
     uint8_t bt = KRowSetGetLeafIdByte ( leaf_id, node_depth );
     int i;
@@ -413,7 +469,7 @@ void KRowSetNodeSetChild ( RowSetNode * node, void * child, int64_t leaf_id, int
  *       "allocated_interm_node" has to be allocated before calling this function.
  */
 static
-void KRowSetSplitNode ( RowSetNode * node, int node_depth, RowSetNode * allocated_interm_node, int interm_node_depth, int64_t leaf_id )
+void KRowSetSplitNode ( KRowSetTreeNode * node, int node_depth, KRowSetTreeNode * allocated_interm_node, int interm_node_depth, int64_t leaf_id )
 {
     uint8_t bt = KRowSetGetLeafIdByte ( leaf_id, node_depth );
     uint8_t interm_bt;
@@ -446,9 +502,9 @@ void KRowSetSplitNode ( RowSetNode * node, int node_depth, RowSetNode * allocate
  *       "allocated_leaf" has to be allocated before calling this function.
  */
 static
-void KRowSetInsertLeaf ( KRowSet * self, int64_t leaf_id, RowSetNode * node, int node_depth, RowSetNode * nodes_stack[], int nodes_depth[], RowSetLeaf * allocated_leaf )
+void KRowSetInsertLeaf ( KRowSet * self, int64_t leaf_id, KRowSetTreeNode * node, int node_depth, KRowSetTreeNode * nodes_stack[], int nodes_depth[], KRowSetTreeLeaf * allocated_leaf )
 {
-    RowSetLeaf * nearest_leaf;
+    KRowSetTreeLeaf * nearest_leaf;
     bool nearest_leaf_left;
     uint8_t bt;
     bt = KRowSetGetLeafIdByte ( leaf_id, node_depth );
@@ -456,21 +512,16 @@ void KRowSetInsertLeaf ( KRowSet * self, int64_t leaf_id, RowSetNode * node, int
     assert ( allocated_leaf != NULL );
     assert ( node->children[bt] == NULL );
 
-#if CHECK_NODE_MARKS
-    allocated_leaf->leaf_mark = LEAF_MARK;
-#endif
-    allocated_leaf->leaf_id = leaf_id;
-
     KRowSetNodeSetChild ( node, allocated_leaf, leaf_id, node_depth, LEAF_DEPTH );
     node->children[bt] = allocated_leaf;
 
     KRowSetFindNearestLeaf ( self, nodes_stack, nodes_depth, allocated_leaf, &nearest_leaf, &nearest_leaf_left );
     if ( nearest_leaf == NULL )
-        DLListPushTail ( &self->leaf_nodes, &allocated_leaf->dad );
+        DLListPushTail ( &self->leaf_nodes, &allocated_leaf->header.dad );
     else if (nearest_leaf_left)
-        DLListInsertNodeAfter ( &self->leaf_nodes, &nearest_leaf->dad, &allocated_leaf->dad );
+        DLListInsertNodeAfter ( &self->leaf_nodes, &nearest_leaf->header.dad, &allocated_leaf->header.dad );
     else
-        DLListInsertNodeBefore ( &self->leaf_nodes, &nearest_leaf->dad, &allocated_leaf->dad );
+        DLListInsertNodeBefore ( &self->leaf_nodes, &nearest_leaf->header.dad, &allocated_leaf->header.dad );
 
     ++self->number_leaves;
     assert ( KRowSetNodeIsTransitionMatches ( leaf_id, node_depth, &node->transitions[bt], NULL ) );
@@ -488,15 +539,16 @@ void KRowSetInsertLeaf ( KRowSet * self, int64_t leaf_id, RowSetNode * node, int
  * 	     since all the resources are being allocated once.
  */
 static
-rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, RowSetLeaf ** leaf_found )
+rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, KRowSetTreeLeaf ** leaf_found, KRowSetTreeNode ** leaf_parent, int * leaf_parent_depth )
 {
+    rc_t rc;
     int64_t leaf_id = row_id >> 16;
-    RowSetNode * node;
-    RowSetLeaf * new_leaf;
+    KRowSetTreeNode * node;
+    KRowSetTreeLeaf * new_leaf;
     uint8_t bt;
     int depth = 0;
     int nodes_stack_size = 0;
-    RowSetNode * nodes_stack[LEAF_DEPTH] = { NULL }; // initialize array with NULLs
+    KRowSetTreeNode * nodes_stack[LEAF_DEPTH] = { NULL }; // initialize array with NULLs
     int nodes_depth[LEAF_DEPTH];
 
     if ( self == NULL )
@@ -505,23 +557,26 @@ rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, R
     if ( leaf_found == NULL )
         return RC ( rcDB, rcRowSet, rcSelecting, rcParam, rcNull );
 
+    if ( leaf_parent != NULL && leaf_parent_depth == NULL )
+        return RC ( rcDB, rcRowSet, rcSelecting, rcParam, rcNull );
+
     // empty tree
     if ( self->root_node == NULL )
     {
-        RowSetNode * root;
+        KRowSetTreeNode * root;
         if ( !insert_when_needed )
             return RC ( rcDB, rcRowSet, rcSelecting, rcItem, rcNotFound );
 
-        root = calloc ( 1, sizeof ( RowSetNode ) );
+        root = calloc ( 1, sizeof ( KRowSetTreeNode ) );
         if (root == NULL)
             return RC ( rcDB, rcRowSet, rcInserting, rcMemory, rcExhausted );
 
         // pre-allocate leaf here
-        new_leaf = calloc ( 1, sizeof ( RowSetLeaf ) );
-        if (new_leaf == NULL)
+        rc = KRowSetAllocateLeaf ( LeafType_ArrayRanges, leaf_id, &new_leaf );
+        if ( rc != 0 )
         {
             free ( root );
-            return RC ( rcDB, rcRowSet, rcInserting, rcMemory, rcExhausted );
+            return rc;
         }
 
 #if CHECK_NODE_MARKS
@@ -536,6 +591,11 @@ rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, R
 
         KRowSetInsertLeaf ( self, leaf_id, node, depth, nodes_stack, nodes_depth, new_leaf );
         *leaf_found = new_leaf;
+        if ( leaf_parent != NULL )
+        {
+            *leaf_parent = node;
+            *leaf_parent_depth = nodes_depth[nodes_stack_size - 1];
+        }
         return 0;
     }
 
@@ -557,31 +617,39 @@ rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, R
                 return RC ( rcDB, rcRowSet, rcSelecting, rcItem, rcNotFound );
 
             // pre-allocate leaf here
-            new_leaf = calloc ( 1, sizeof ( RowSetLeaf ) );
-            if (new_leaf == NULL)
-                return RC ( rcDB, rcRowSet, rcInserting, rcMemory, rcExhausted );
+            rc = KRowSetAllocateLeaf ( LeafType_ArrayRanges, leaf_id, &new_leaf );
+            if ( rc != 0 )
+                return rc;
 
             KRowSetInsertLeaf ( self, leaf_id, node, depth, nodes_stack, nodes_depth, new_leaf );
             *leaf_found = new_leaf;
+            if ( leaf_parent != NULL )
+            {
+                *leaf_parent = node;
+                *leaf_parent_depth = nodes_depth[nodes_stack_size - 1];
+            }
             return 0;
         }
 
         // transition does not match, split the node
         if ( !KRowSetNodeIsTransitionMatches ( leaf_id, depth, &node->transitions[bt], &tr_size_matched ) )
         {
-            RowSetNode * interm_node;
+            KRowSetTreeNode * interm_node;
             int interm_node_depth = depth + 1 + tr_size_matched;
 
             if ( !insert_when_needed )
                 return RC ( rcDB, rcRowSet, rcSelecting, rcItem, rcNotFound );
 
             // pre-allocate node and leaf here
-            interm_node = calloc ( 1, sizeof ( RowSetNode ) );
-            new_leaf = calloc ( 1, sizeof ( RowSetLeaf ) );
-            if (interm_node == NULL || new_leaf == NULL)
+            interm_node = calloc ( 1, sizeof ( KRowSetTreeNode ) );
+            if ( interm_node == NULL )
+                return RC ( rcDB, rcRowSet, rcInserting, rcMemory, rcExhausted );
+
+            rc = KRowSetAllocateLeaf ( LeafType_ArrayRanges, leaf_id, &new_leaf );
+            if ( rc != 0 )
             {
                 free ( interm_node );
-                return RC ( rcDB, rcRowSet, rcInserting, rcMemory, rcExhausted );
+                return rc;
             }
 
             KRowSetSplitNode ( node, depth, interm_node, interm_node_depth, leaf_id );
@@ -597,19 +665,29 @@ rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, R
 
             KRowSetInsertLeaf ( self, leaf_id, node, depth, nodes_stack, nodes_depth, new_leaf );
             *leaf_found = new_leaf;
+            if ( leaf_parent != NULL )
+            {
+                *leaf_parent = node;
+                *leaf_parent_depth = nodes_depth[nodes_stack_size - 1];
+            }
             return 0;
 
         }
 
-        // follow the transition, check if transition leads to a leaf
-        depth += 1 + tr_size_matched;
-        if ( depth == LEAF_DEPTH )
+        // check if transition leads to a leaf or follow the transition
+        if ( depth + 1 + tr_size_matched == LEAF_DEPTH )
         {
             *leaf_found = node->children[bt];
+            if ( leaf_parent != NULL )
+            {
+                *leaf_parent = node;
+                *leaf_parent_depth = nodes_depth[nodes_stack_size - 1];
+            }
             return 0;
         }
 
         node = node->children[bt];
+        depth += 1 + tr_size_matched;
 #if CHECK_NODE_MARKS
         assert ( node->node_mark == NODE_MARK );
 #endif
@@ -624,21 +702,154 @@ rc_t KRowSetGetLeaf ( KRowSet * self, int64_t row_id, bool insert_when_needed, R
     return 0;
 }
 
-KDB_EXTERN rc_t CC KRowSetInsertRow ( KRowSet * self, int64_t row_id )
+/**
+ * Transforms leaf from LeafType_ArrayRanges to LeafType_Bitmap
+ */
+static
+rc_t KRowSetTreeLeafTransform ( KRowSet * self, KRowSetTreeLeaf ** p_leaf, KRowSetTreeNode * parent_node, int parent_depth )
 {
     rc_t rc;
-    RowSetLeaf * leaf;
-    uint16_t bt;
+    int i;
+    int j;
+    int len;
+    uint8_t parent_bt;
+    uint16_t leaf_bt;
+    KRowSetTreeLeaf * leaf;
+    KRowSetTreeLeaf * new_leaf;
 
-    rc = KRowSetGetLeaf ( self, row_id, true, &leaf );
+    assert ( p_leaf != NULL );
+    leaf = *p_leaf;
+    assert ( leaf != NULL );
+
+    parent_bt = KRowSetGetLeafIdByte ( leaf->header.leaf_id, parent_depth );
+    assert ( KRowSetNodeIsTransitionMatches ( leaf->header.leaf_id, parent_depth, &parent_node->transitions[parent_bt], NULL ) );
+
+    rc = KRowSetAllocateLeaf( LeafType_Bitmap, leaf->header.leaf_id, &new_leaf );
     if ( rc != 0 )
         return rc;
 
-    bt = row_id & 0xFFFF;
-    if ( ( leaf->data[bt >> 3] & (1 << (bt & 7)) ) != 0 )
-        return RC ( rcDB, rcRowSet, rcInserting, rcId, rcDuplicate );
+    // copy rows to a new leaf
+    len = leaf->data.array_ranges.len;
+    for ( i = 0; i < len; ++i )
+    {
+        uint16_t start = leaf->data.array_ranges.ranges[i].start;
+        uint16_t count = leaf->data.array_ranges.ranges[i].count;
+        for ( j = 0; j < count; ++j )
+        {
+            leaf_bt = j + start;
+            new_leaf->data.bitmap[leaf_bt >> 3] |= 1 << (leaf_bt & 7);
+        }
+    }
 
-    leaf->data[bt >> 3] |= 1 << (bt & 7);
+    DLListInsertNodeBefore ( &self->leaf_nodes, &leaf->header.dad, &new_leaf->header.dad );
+    KRowSetLeafWhack ( &leaf->header.dad, &self->leaf_nodes );
+    leaf = new_leaf;
+    parent_node->children[parent_bt] = leaf;
+    *p_leaf = leaf;
+
+    return 0;
+}
+
+/**
+ * NB- it may reallocate leaf in case when leaf is transformed,
+ *     so leaf pointer may change as a result of this function
+ */
+static
+rc_t KRowSetTreeLeafInsertRow ( KRowSet * self, KRowSetTreeLeaf ** p_leaf, uint16_t leaf_bt, KRowSetTreeNode * parent_node, int parent_depth )
+{
+    KRowSetTreeLeaf * leaf = *p_leaf;
+
+    switch ( leaf->header.type )
+    {
+    case LeafType_Bitmap:
+        if ( ( leaf->data.bitmap[leaf_bt >> 3] & (1 << (leaf_bt & 7)) ) != 0 )
+            return RC ( rcDB, rcRowSet, rcInserting, rcId, rcDuplicate );
+
+        leaf->data.bitmap[leaf_bt >> 3] |= 1 << (leaf_bt & 7);
+        break;
+    case LeafType_ArrayRanges:
+    {
+        int i;
+        int insert_i;
+        int len = leaf->data.array_ranges.len;
+        int max_len = 8;
+        for ( i = 0; i < len; ++i )
+        {
+            uint16_t * start = &leaf->data.array_ranges.ranges[i].start;
+            uint16_t * count = &leaf->data.array_ranges.ranges[i].count;
+
+            // we can just increment range to the left
+            if ( *start > 0 && leaf_bt == (int)*start - 1 )
+            {
+                --(*start);
+                ++(*count);
+                return 0;
+            }
+            if ( leaf_bt > 0 && leaf_bt == (int)*start + *count )
+            {
+                ++(*count);
+            }
+
+            // not found - insert new range
+            if ( leaf_bt < *start )
+            {
+                break;
+            }
+
+            // duplicate, already in range
+            if ( leaf_bt < *start + *count )
+                return RC ( rcDB, rcRowSet, rcInserting, rcId, rcDuplicate );
+
+        }
+
+        // came here because we need to insert a new range
+        insert_i = i;
+
+        if ( len == max_len )
+        {
+            rc_t rc;
+            rc = KRowSetTreeLeafTransform ( self, p_leaf, parent_node, parent_depth );
+            if ( rc != 0 )
+                return rc;
+
+            return KRowSetTreeLeafInsertRow ( self, p_leaf, leaf_bt, parent_node, parent_depth );
+        }
+
+        ++len;
+        ++leaf->data.array_ranges.len;
+        for ( i = len - 1; i > insert_i; --i )
+        {
+            leaf->data.array_ranges.ranges[i] = leaf->data.array_ranges.ranges[i - 1];
+        }
+
+        leaf->data.array_ranges.ranges[insert_i].start = leaf_bt;
+        leaf->data.array_ranges.ranges[insert_i].count = 1;
+
+        break;
+    }
+    default:
+        assert ( false );
+    }
+
+    return 0;
+}
+
+KDB_EXTERN rc_t CC KRowSetInsertRow ( KRowSet * self, int64_t row_id )
+{
+    rc_t rc;
+    KRowSetTreeLeaf * leaf;
+    KRowSetTreeNode * leaf_parent;
+    int leaf_parent_depth;
+    uint16_t bt = row_id & 0xFFFF;
+
+    rc = KRowSetGetLeaf ( self, row_id, true, &leaf, &leaf_parent, &leaf_parent_depth );
+    if ( rc != 0 )
+        return rc;
+
+    rc = KRowSetTreeLeafInsertRow ( self, &leaf, bt, leaf_parent, leaf_parent_depth );
+    if ( rc != 0 )
+        return rc;
+
     ++self->number_rows;
 
     return 0;
@@ -650,7 +861,7 @@ KDB_EXTERN rc_t CC KRowSetGetNumRows ( const KRowSet * self, size_t * num_rows )
         return RC ( rcDB, rcRowSet, rcAccessing, rcSelf, rcNull );
 
     if ( num_rows == NULL )
-            return RC ( rcDB, rcRowSet, rcAccessing, rcParam, rcNull );
+        return RC ( rcDB, rcRowSet, rcAccessing, rcParam, rcNull );
 
     *num_rows = self->number_rows;
     return 0;
@@ -668,15 +879,15 @@ typedef struct {
 static
 void KRowSetWalkLeafRows ( DLNode * n, void * data )
 {
-    RowSetLeaf * leaf = (RowSetLeaf *) n;
+    KRowSetTreeLeaf * leaf = (KRowSetTreeLeaf *) n;
     KRowSetWalkRowParams * walk_params = data;
 
     int i;
     int j;
-    int64_t row_id = leaf->leaf_id;
+    int64_t row_id = leaf->header.leaf_id;
 
 #if CHECK_NODE_MARKS
-    assert ( leaf->leaf_mark == LEAF_MARK );
+    assert ( leaf->header.leaf_mark == LEAF_MARK );
 #endif
     assert ( walk_params != NULL );
 
@@ -685,43 +896,78 @@ void KRowSetWalkLeafRows ( DLNode * n, void * data )
 
     row_id <<= 16;
 
-    if (!walk_params->reverse)
+    switch ( leaf->header.type )
     {
-
-        for ( i = 0; i < LEAF_DATA_SZ_BT; ++i )
+    case LeafType_Bitmap:
+        if (!walk_params->reverse)
         {
-            if ( leaf->data[i] )
+            for ( i = 0; i < LEAF_DATA_SZ_BT; ++i )
             {
-                uint64_t new_row_id = row_id | i << 3;
-                for (j = 0; j < 8; ++j)
+                if ( leaf->data.bitmap[i] )
                 {
-                    if ( leaf->data[i] & (1 << j) )
+                    uint64_t new_row_id = row_id | i << 3;
+                    for (j = 0; j < 8; ++j)
                     {
-                        walk_params->cb ( (int64_t)(new_row_id | j), walk_params->data );
+                        if ( leaf->data.bitmap[i] & (1 << j) )
+                        {
+                            walk_params->cb ( (int64_t)(new_row_id | j), walk_params->data );
+                        }
                     }
                 }
             }
         }
+        else
+        {
+            for ( i = LEAF_DATA_SZ_BT - 1; i >= 0 ; --i )
+            {
+                if ( leaf->data.bitmap[i] )
+                {
+                    uint64_t new_row_id = row_id | i << 3;
+                    for (j = 7; j >= 0; --j)
+                    {
+                        if ( leaf->data.bitmap[i] & (1 << j) )
+                        {
+                            walk_params->cb ( (int64_t)(new_row_id | j), walk_params->data );
+                        }
+                    }
+                }
+            }
+        }
+        break;
+    case LeafType_ArrayRanges:
+    {
+        int len = leaf->data.array_ranges.len;
+        if (!walk_params->reverse)
+        {
+            for ( i = 0; i < len; ++i )
+            {
+                uint16_t start = leaf->data.array_ranges.ranges[i].start;
+                uint16_t count = leaf->data.array_ranges.ranges[i].count;
+                for ( j = 0; j < count; ++j )
+                {
+                    assert ( j + start == ((j + start) & 0xFFFF) );
+                    walk_params->cb ( row_id | (j + start), walk_params->data );
+                }
+            }
+        }
+        else
+        {
+            for ( i = len - 1; i >= 0; --i )
+            {
+                uint16_t start = leaf->data.array_ranges.ranges[i].start;
+                uint16_t count = leaf->data.array_ranges.ranges[i].count;
+                for ( j = count - 1; j >= 0; --j )
+                {
+                    assert ( j + start == ((j + start) & 0xFFFF) );
+                    walk_params->cb ( row_id | (j + start), walk_params->data );
+                }
+            }
+        }
 
+        break;
     }
-    else
-    {
-
-        for ( i = LEAF_DATA_SZ_BT - 1; i >= 0 ; --i )
-        {
-            if ( leaf->data[i] )
-            {
-                uint64_t new_row_id = row_id | i << 3;
-                for (j = 7; j >= 0; --j)
-                {
-                    if ( leaf->data[i] & (1 << j) )
-                    {
-                        walk_params->cb ( (int64_t)(new_row_id | j), walk_params->data );
-                    }
-                }
-            }
-        }
-
+    default:
+        assert ( false );
     }
 }
 
