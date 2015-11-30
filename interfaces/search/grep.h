@@ -299,13 +299,18 @@ LIB_EXPORT rc_t CC VRefVariationIUPACAddRef ( VRefVariation const* self );
 LIB_EXPORT rc_t CC VRefVariationIUPACRelease ( VRefVariation const* self );
 LIB_EXPORT rc_t CC VRefVariationIUPACWhack ( VRefVariation* self );
 
-LIB_EXPORT INSDC_dna_text const* CC VRefVariationIUPACGetVariation ( VRefVariation const* self );
+LIB_EXPORT INSDC_dna_text const* CC VRefVariationIUPACGetSearchQuery ( VRefVariation const* self );
+LIB_EXPORT size_t CC VRefVariationIUPACGetSearchQueryStart ( VRefVariation const* self );
+LIB_EXPORT size_t CC VRefVariationIUPACGetSearchQuerySize ( VRefVariation const* self );
+LIB_EXPORT size_t CC VRefVariationIUPACGetSearchQueryLenOnRef ( VRefVariation const* self );
+
+LIB_EXPORT INSDC_dna_text const* CC VRefVariationIUPACGetAllele ( VRefVariation const* self, size_t* p_allele_size ); /* NO zero-termination guarantee */
+LIB_EXPORT size_t CC VRefVariationIUPACGetAlleleStart ( VRefVariation const* self );
+LIB_EXPORT size_t CC VRefVariationIUPACGetAlleleSize ( VRefVariation const* self );
+LIB_EXPORT size_t CC VRefVariationIUPACGetAlleleLenOnRef ( VRefVariation const* self );
+
 LIB_EXPORT INSDC_dna_text const* CC VRefVariationIUPACGetRefChunk ( VRefVariation const* self );
 LIB_EXPORT size_t CC VRefVariationIUPACGetRefChunkSize ( VRefVariation const* self );
-LIB_EXPORT size_t CC VRefVariationIUPACGetVarStart ( VRefVariation const* self );
-LIB_EXPORT size_t CC VRefVariationIUPACGetVarSize ( VRefVariation const* self );
-LIB_EXPORT size_t CC VRefVariationIUPACGetVarLenOnRef ( VRefVariation const* self );
-
 
 #ifdef __cplusplus
 }
