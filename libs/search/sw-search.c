@@ -1047,8 +1047,8 @@ LIB_EXPORT rc_t CC VRefVariationIUPACMake (
         }
         else
         {
-            size_t allele_size;
-            char const* allele;
+            size_t allele_size = 0;
+            char const* allele = NULL;
 
             c_string_const ref_str;
             
