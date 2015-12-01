@@ -24,6 +24,9 @@
  *
  */
 
+// allow g++ to find INT64_MAX in stdint.h
+#define __STDC_LIMIT_MACROS
+
 #include <ktst/unit_test.hpp>
 
 #include <klib/log.h>
@@ -157,9 +160,9 @@ TEST_CASE(KRowSetDenseRowsWalk)
 			--i;
 	}
 
-	std::copy(inserted_rows_set.rbegin(), inserted_rows_set.rend(), std::back_inserter(inserted_rows));
+	std::copy(inserted_rows_set.begin(), inserted_rows_set.end(), std::back_inserter(inserted_rows));
 
-	KRowSetWalkRows( rowset, true, vector_inserter, (void *)&returned_rows );
+	KRowSetWalkRows( rowset, false, vector_inserter, (void *)&returned_rows );
 
 	KRowSetGetNumRows ( rowset, &num_rows );
 
@@ -168,6 +171,42 @@ TEST_CASE(KRowSetDenseRowsWalk)
 	REQUIRE ( inserted_rows == returned_rows );
 
 	REQUIRE_RC ( KRowSetRelease( rowset ) );
+}
+
+TEST_CASE(KRowSetDenseRowsWalkReverse)
+{
+    KRowSet * rowset;
+    size_t num_rows;
+    std::set<int64_t> inserted_rows_set;
+    std::vector<int64_t> inserted_rows;
+    std::vector<int64_t> returned_rows;
+
+    srand ( time(NULL) );
+
+    REQUIRE_RC ( KCreateRowSet ( &rowset ) );
+    for ( int i = 0; i < 10000; ++i )
+    {
+        int64_t row_id = generate_id ( 0, 131072 ); // row ids will only go to first two leaves
+        if ( inserted_rows_set.find( row_id ) ==  inserted_rows_set.end() )
+        {
+            REQUIRE_RC ( KRowSetInsertRow ( rowset, row_id ) );
+            inserted_rows_set.insert( row_id );
+        }
+        else
+            --i;
+    }
+
+    std::copy(inserted_rows_set.rbegin(), inserted_rows_set.rend(), std::back_inserter(inserted_rows));
+
+    KRowSetWalkRows( rowset, true, vector_inserter, (void *)&returned_rows );
+
+    KRowSetGetNumRows ( rowset, &num_rows );
+
+    REQUIRE_EQ ( inserted_rows.size(), returned_rows.size() );
+    REQUIRE_EQ ( num_rows, returned_rows.size() );
+    REQUIRE ( inserted_rows == returned_rows );
+
+    REQUIRE_RC ( KRowSetRelease( rowset ) );
 }
 
 //////////////////////////////////////////// Main
