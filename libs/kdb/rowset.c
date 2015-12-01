@@ -25,79 +25,18 @@
  */
 
 #include <kdb/rowset.h>
+#include "rowset-priv.h"
 #include <klib/refcount.h>
 #include <klib/rc.h>
 #include <klib/out.h>
-#include <klib/container.h>
 
 #include <string.h>
 #include <assert.h>
 
-#if _DEBUGGING
-#define CHECK_NODE_MARKS 1
-#endif
-
-#if CHECK_NODE_MARKS
-#define NODE_MARK 55
-#define LEAF_MARK 99
-#endif
-
-#define LEAF_DEPTH 6 // at which depth leaves are located
-#define LEAF_DATA_SZ_BT 8192
 
 /*--------------------------------------------------------------------------
  * KRowSet
  */
-typedef enum KRowSetTreeLeafType
-{
-    LeafType_Bitmap,
-    LeafType_ArrayRanges
-} KRowSetTreeLeafType;
-
-// Holds bites of row_id followed by current byte (radix trie compression)
-typedef struct KRowSetTreeNodeTransition
-{
-    int8_t size;
-    uint8_t data[5];
-} KRowSetTreeNodeTransition;
-
-typedef struct KRowSetTreeNode
-{
-    void* children[256];
-    KRowSetTreeNodeTransition transitions[256];
-
-#if CHECK_NODE_MARKS
-    uint8_t node_mark;
-#endif
-} KRowSetTreeNode;
-
-typedef struct KRowSetTreeLeafHeader
-{
-    DLNode dad;
-    int64_t leaf_id; // this is basically a row_id >> 16
-    uint8_t type; // types are defined in KRowSetTreeLeafType
-
-#if CHECK_NODE_MARKS
-    uint8_t leaf_mark;
-#endif
-} KRowSetTreeLeafHeader;
-
-
-typedef struct KRowSetTreeLeaf
-{
-    KRowSetTreeLeafHeader header;
-    union u
-    {
-        uint8_t bitmap[LEAF_DATA_SZ_BT];
-        struct {
-            struct {
-                uint16_t start;
-                uint16_t count;
-            } ranges[8];
-            uint8_t len;
-        } array_ranges;
-    } data;
-} KRowSetTreeLeaf;
 
 struct KRowSet
 {
@@ -867,122 +806,38 @@ KDB_EXTERN rc_t CC KRowSetGetNumRows ( const KRowSet * self, size_t * num_rows )
     return 0;
 }
 
-typedef struct {
-    bool reverse;
-    void ( CC * cb ) ( int64_t row_id, void * data );
-    void * data;
-} KRowSetWalkRowParams;
-
-/**
- * Walks through each leaf's rows and calls "cb" for each found row
- */
-static
-void KRowSetWalkLeafRows ( DLNode * n, void * data )
-{
-    KRowSetTreeLeaf * leaf = (KRowSetTreeLeaf *) n;
-    KRowSetWalkRowParams * walk_params = data;
-
-    int i;
-    int j;
-    int64_t row_id = leaf->header.leaf_id;
-
-#if CHECK_NODE_MARKS
-    assert ( leaf->header.leaf_mark == LEAF_MARK );
-#endif
-    assert ( walk_params != NULL );
-
-    if ( walk_params == NULL || walk_params->cb == NULL )
-        return;
-
-    row_id <<= 16;
-
-    switch ( leaf->header.type )
-    {
-    case LeafType_Bitmap:
-        if (!walk_params->reverse)
-        {
-            for ( i = 0; i < LEAF_DATA_SZ_BT; ++i )
-            {
-                if ( leaf->data.bitmap[i] )
-                {
-                    uint64_t new_row_id = row_id | i << 3;
-                    for (j = 0; j < 8; ++j)
-                    {
-                        if ( leaf->data.bitmap[i] & (1 << j) )
-                        {
-                            walk_params->cb ( (int64_t)(new_row_id | j), walk_params->data );
-                        }
-                    }
-                }
-            }
-        }
-        else
-        {
-            for ( i = LEAF_DATA_SZ_BT - 1; i >= 0 ; --i )
-            {
-                if ( leaf->data.bitmap[i] )
-                {
-                    uint64_t new_row_id = row_id | i << 3;
-                    for (j = 7; j >= 0; --j)
-                    {
-                        if ( leaf->data.bitmap[i] & (1 << j) )
-                        {
-                            walk_params->cb ( (int64_t)(new_row_id | j), walk_params->data );
-                        }
-                    }
-                }
-            }
-        }
-        break;
-    case LeafType_ArrayRanges:
-    {
-        int len = leaf->data.array_ranges.len;
-        if (!walk_params->reverse)
-        {
-            for ( i = 0; i < len; ++i )
-            {
-                uint16_t start = leaf->data.array_ranges.ranges[i].start;
-                uint16_t count = leaf->data.array_ranges.ranges[i].count;
-                for ( j = 0; j < count; ++j )
-                {
-                    assert ( j + start == ((j + start) & 0xFFFF) );
-                    walk_params->cb ( row_id | (j + start), walk_params->data );
-                }
-            }
-        }
-        else
-        {
-            for ( i = len - 1; i >= 0; --i )
-            {
-                uint16_t start = leaf->data.array_ranges.ranges[i].start;
-                uint16_t count = leaf->data.array_ranges.ranges[i].count;
-                for ( j = count - 1; j >= 0; --j )
-                {
-                    assert ( j + start == ((j + start) & 0xFFFF) );
-                    walk_params->cb ( row_id | (j + start), walk_params->data );
-                }
-            }
-        }
-
-        break;
-    }
-    default:
-        assert ( false );
-    }
-}
-
 KDB_EXTERN rc_t CC KRowSetWalkRows ( const KRowSet * self, bool reverse,
         void ( CC * cb ) ( int64_t row_id, void * data ), void * data )
 {
-    KRowSetWalkRowParams walk_params;
+    rc_t rc;
 
     if ( self == NULL )
         return RC ( rcDB, rcRowSet, rcAccessing, rcSelf, rcNull );
 
-    walk_params.reverse = reverse;
-    walk_params.cb = cb;
-    walk_params.data = data;
-    DLListForEach ( &self->leaf_nodes, reverse, KRowSetWalkLeafRows, &walk_params );
+    KRowSetIterator * it;
+    rc = KRowSetCreateIterator ( self, reverse, &it );
+    if ( rc != 0 )
+        return rc;
+
+    while ( KRowSetIteratorNext ( it ) )
+    {
+        int64_t row_id = KRowSetIteratorRowId ( it );
+        cb ( row_id, data );
+    }
+
+    KRowSetIteratorRelease ( it );
 
     return 0;
+}
+
+const KRowSetTreeLeaf * KRowSetTreeGetFirstLeaf ( const KRowSet * self )
+{
+    assert ( self != NULL );
+    return (const KRowSetTreeLeaf * )DLListHead ( &self->leaf_nodes );
+}
+
+const KRowSetTreeLeaf * KRowSetTreeGetLastLeaf ( const KRowSet * self )
+{
+    assert ( self != NULL );
+    return (const KRowSetTreeLeaf * )DLListTail ( &self->leaf_nodes );
 }
