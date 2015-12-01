@@ -82,7 +82,7 @@ struct TableWriterSeq {
     const TableWriter* base;
     uint8_t cursor_id;
     TableWriterColumn cols[sizeof(TableWriterSeq_cols)/sizeof(TableWriterSeq_cols[0])];
-    bool init; /* default written indicator */
+    int init; /* default written indicator */
     int64_t qual_buf_sz;
     uint8_t* qual_buf;
     uint8_t discrete_qual[256];
@@ -278,12 +278,63 @@ static rc_t TableWriterSeq_CollectStatistics(TableWriterSeq *self, const TableWr
     return rc;
 }
 
+static rc_t MakeSequenceTable(TableWriterSeq *self, VDatabase* db,
+                              char const qual_quantization[])
+{
+    char const *tblName = (self->options & ewseq_co_ColorSpace) ? "CS_SEQUENCE" : "SEQUENCE";
+
+    if (qual_quantization && strcmp(qual_quantization, "0") == 0) {
+        self->options |= ewseq_co_FullQuality;
+    }
+    if( !(self->options & ewseq_co_FullQuality) ) {
+        char const *quant_string = qual_quantization;
+        
+        if (quant_string == NULL || strcmp(quant_string, "1") == 0) {
+            quant_string = "1:10,10:20,20:30,30:-";
+        } else if (strcmp(quant_string, "2") == 0) {
+            quant_string = "1:30,30:-";
+        }
+        if (!TableWriterSeq_InitQuantMatrix(self->discrete_qual, quant_string)) {
+            return RC(rcAlign, rcFormatter, rcConstructing, rcParam, rcInvalid);
+        }
+    }
+    memcpy(self->cols, TableWriterSeq_cols, sizeof(TableWriterSeq_cols));
+    if (self->options & ewseq_co_KeepKey) {
+        self->cols[ewseq_cn_TMP_KEY_ID].flags &= ~ewcol_Temporary;
+    }
+    if( self->options & ewseq_co_AlignData ) {
+        self->cols[ewseq_cn_TMP_KEY_ID].flags |= ewcol_Ignore;
+    } else {
+        self->cols[ewseq_cn_PRIMARY_ALIGNMENT_ID].flags |= ewcol_Ignore;
+        self->cols[ewseq_cn_ALIGNMENT_COUNT].flags |= ewcol_Ignore;
+    }
+    if(self->options & ewseq_co_NoLabelData) {
+        self->cols[ewseq_cn_LABEL].flags |= ewcol_Ignore;
+        self->cols[ewseq_cn_LABEL_LEN].flags |= ewcol_Ignore;
+        self->cols[ewseq_cn_LABEL_START].flags |= ewcol_Ignore;
+    }
+    if(self->options & ewseq_co_ColorSpace) {
+        self->cols[ewseq_cn_READ].flags |= ewcol_Ignore;
+        self->cols[ewseq_cn_CSREAD].flags &= ~ewcol_Ignore;
+        self->cols[ewseq_cn_CSKEY].flags &= ~ewcol_Ignore;
+    }
+    if( self->options & ewseq_co_SpotGroup) {
+        self->cols[ewseq_cn_SPOT_GROUP].flags &= ~ewcol_Ignore;
+    }
+    if( self->options & ewseq_co_TI) {
+        self->cols[ewseq_cn_TI].flags &= ~ewcol_Ignore;
+    }
+    if( self->options & ewseq_co_SpotName) {
+        self->cols[ewseq_cn_NAME].flags &= ~ewcol_Ignore;
+    }
+    return TableWriter_Make(&self->base, db, tblName, "SEQUENCE");
+}
+
 LIB_EXPORT rc_t CC TableWriterSeq_Make(const TableWriterSeq** cself, VDatabase* db,
                                        uint32_t options, char const qual_quantization[])
 {
     rc_t rc = 0;
     TableWriterSeq* self = NULL;
-    char const *tblName = (options & ewseq_co_ColorSpace) ? "CS_SEQUENCE" : "SEQUENCE";
 
     options |= ewseq_co_SaveQual; /* TODO: remove when ready */
     if( cself == NULL || db == NULL ) {
@@ -293,53 +344,8 @@ LIB_EXPORT rc_t CC TableWriterSeq_Make(const TableWriterSeq** cself, VDatabase* 
         if( self == NULL ) {
             rc = RC(rcAlign, rcFormatter, rcConstructing, rcMemory, rcExhausted);
         } else {
-            memcpy(self->cols, TableWriterSeq_cols, sizeof(TableWriterSeq_cols));
-            if( options & ewseq_co_AlignData ) {
-                self->cols[ewseq_cn_TMP_KEY_ID].flags |= ewcol_Ignore;
-            } else {
-                self->cols[ewseq_cn_PRIMARY_ALIGNMENT_ID].flags |= ewcol_Ignore;
-                self->cols[ewseq_cn_ALIGNMENT_COUNT].flags |= ewcol_Ignore;
-            }
-            if(options & ewseq_co_NoLabelData) {
-                self->cols[ewseq_cn_LABEL].flags |= ewcol_Ignore;
-                self->cols[ewseq_cn_LABEL_LEN].flags |= ewcol_Ignore;
-                self->cols[ewseq_cn_LABEL_START].flags |= ewcol_Ignore;
-            }
-            if(options & ewseq_co_ColorSpace) {
-                self->cols[ewseq_cn_READ].flags |= ewcol_Ignore;
-                self->cols[ewseq_cn_CSREAD].flags &= ~ewcol_Ignore;
-                self->cols[ewseq_cn_CSKEY].flags &= ~ewcol_Ignore;
-            }
-            if( options & ewseq_co_SpotGroup) {
-                self->cols[ewseq_cn_SPOT_GROUP].flags &= ~ewcol_Ignore;
-            }
-            if( options & ewseq_co_TI) {
-                self->cols[ewseq_cn_TI].flags &= ~ewcol_Ignore;
-            }
-            if( options & ewseq_co_SpotName) {
-                self->cols[ewseq_cn_NAME].flags &= ~ewcol_Ignore;
-            }
-            if( (rc = TableWriter_Make(&self->base, db, tblName, "SEQUENCE")) == 0 ) {
-                rc = TableWriter_AddCursor(self->base, self->cols, sizeof(self->cols)/sizeof(self->cols[0]), &self->cursor_id);
-            }
-        }
-        if( rc == 0 ) {
             self->options = options;
-            if (qual_quantization && strcmp(qual_quantization, "0") == 0) {
-                self->options |= ewseq_co_FullQuality;
-            }
-            if( !(self->options & ewseq_co_FullQuality) ) {
-                char const *quant_string = qual_quantization;
-                
-                if (quant_string == NULL || strcmp(quant_string, "1") == 0) {
-                    quant_string = "1:10,10:20,20:30,30:-";
-                } else if (strcmp(quant_string, "2") == 0) {
-                    quant_string = "1:30,30:-";
-                }
-                if (!TableWriterSeq_InitQuantMatrix(self->discrete_qual, quant_string)) {
-                    rc = RC(rcAlign, rcFormatter, rcConstructing, rcParam, rcInvalid);
-                }
-            }
+            rc = MakeSequenceTable(self, db, qual_quantization);
         }
     }
     if( rc == 0 ) {
@@ -405,7 +411,8 @@ rc_t TableWriteSeq_WriteDefaults(const TableWriterSeq* cself)
     rc_t rc = 0;
     if( cself != NULL ) {
         TableWriterSeq* self = (TableWriterSeq*)cself;
-        self->init = true;
+        self->init = 1;
+        rc = TableWriter_AddCursor(self->base, self->cols, sizeof(self->cols)/sizeof(self->cols[0]), &self->cursor_id);
         if( (self->options & ewseq_co_AlignData) ) {
             static TableWriterData const d = { "", 0 };
             TW_COL_WRITE_DEF(self->base, cself->cursor_id, self->cols[ewseq_cn_PRIMARY_ALIGNMENT_ID], d);
@@ -441,8 +448,9 @@ LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const Table
     if( cself == NULL || data == NULL ) {
         rc = RC( rcAlign, rcType, rcWriting, rcParam, rcNull);
         ALIGN_DBGERR(rc);
+        return rc;
     }
-    else if( !cself->init && (rc = TableWriteSeq_WriteDefaults(cself)) != 0 ) {
+    if( !cself->init && (rc = TableWriteSeq_WriteDefaults(cself)) != 0 ) {
         ALIGN_DBGERR(rc);
     }
     else if( data->quality.buffer == NULL || data->sequence.elements != data->quality.elements ) {
@@ -620,6 +628,7 @@ LIB_EXPORT rc_t CC TableWriterSeq_TmpKeyStart(const TableWriterSeq* cself)
             rc = TableWriter_AddCursor(self->base, self->cols_alignd,
                                        sizeof(self->cols_alignd) / sizeof(self->cols_alignd[0]),
                                        &self->alignd_cursor_id);
+            self->init = 2;
         }
     }
     return rc;
@@ -665,17 +674,20 @@ LIB_EXPORT rc_t CC TableWriterSeq_WriteAlignmentData(const TableWriterSeq* cself
     else if( primary_alignment_id == NULL || alignment_count == NULL ) {
         rc = RC( rcAlign, rcType, rcWriting, rcParam, rcNull);
         ALIGN_DBGERR(rc);
-    } else if( (rc = TableReader_ReadRow(cself->tmpkey_reader, rowid)) != 0 ||
-        cself->cols_read_tmpkey[1].len != primary_alignment_id->elements ) {
-        rc = rc ? rc : RC(rcAlign, rcType, rcWriting, rcData, rcInconsistent);
-        ALIGN_DBGERRP("nreads and primary_alignment_id length %u <> %lu",
-            rc, cself->cols_read_tmpkey[1].len, primary_alignment_id->elements);
     } else if( primary_alignment_id->elements != alignment_count->elements ) {
         rc = RC(rcAlign, rcType, rcWriting, rcData, rcInconsistent);
         ALIGN_DBGERRP("primary_alignment_id and alignment_count length %u <> %lu",
             rc, primary_alignment_id->elements, alignment_count->elements);
     }
     else {
+        if (cself->init != 2) {
+            TableWriterSeq *self = ((TableWriterSeq*)cself);
+            memcpy(self->cols_alignd, &TableWriterSeq_cols[ewseq_cn_PRIMARY_ALIGNMENT_ID], sizeof(self->cols_alignd));
+            rc = TableWriter_AddCursor(self->base, self->cols_alignd,
+                                       sizeof(self->cols_alignd) / sizeof(self->cols_alignd[0]),
+                                       &self->alignd_cursor_id);
+            self->init = 2;
+        }
         if (cself->flush) {
             rc = TableWriter_Flush(cself->base, cself->alignd_cursor_id);
             ((TableWriterSeq*)cself)->flush = false;
@@ -687,7 +699,7 @@ LIB_EXPORT rc_t CC TableWriterSeq_WriteAlignmentData(const TableWriterSeq* cself
             if( rc == 0 ) {
                 rc = TableWriter_CloseRow(cself->base);
             }
-            if (rc == 0/* && (cself->options & ewseq_co_WantMateStats)*/) {
+            if (rc == 0) {
                 rc = TableWriterSeq_CollectStatistics((TableWriterSeq *)cself, primary_alignment_id);
             }
         }
