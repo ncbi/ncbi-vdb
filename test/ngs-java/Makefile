@@ -106,9 +106,13 @@ JAVABITS=-d$(BITS)
 
 # make sure runs are not cached in the user repository during test run
 ifeq ($(wildcard ../../../asm-trace),)
-	KFG = $(shell pwd)/../only-remote-repository.kfg
+	ifeq (,$(VDB_CONFIG))
+		KFG = $(shell pwd)/../only-remote-repository.kfg
+	else
+		KFG = $(VDB_CONFIG)
+	endif
 else
-	KFG =
+	KFG = $(VDB_CONFIG)
 endif
 
 test: $(NGS_CLS)
