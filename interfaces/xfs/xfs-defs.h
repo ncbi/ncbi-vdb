@@ -51,17 +51,6 @@ extern "C" {
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
-/*  That is a part of conspiracy, if You do not like too verbose
- *  programms, comment that part
- */
-#define XFS_EXTENDED_LOGGING
-
-#ifdef XFS_EXTENDED_LOGGING
-    #define XFSMSG(msg) OUTMSG(msg)
-#else   /* XFS_EXTENDED_LOGGING */
-    #define XFSMSG(msg)
-#endif  /* XFS_EXTENDED_LOGGING */
-
 /*  Another great masterpiece lol
  */
 #define XFS_RC(State)   RC(rcFS, rcNoTarg, rcProcessing, rcNoObj, State)

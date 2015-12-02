@@ -27,6 +27,8 @@
 #include <klib/rc.h>
 #include <klib/out.h>
 #include <klib/text.h>
+#include <klib/log.h>
+#include <klib/printf.h>
 
 #include <vfs/manager.h>
 #include <kns/manager.h>

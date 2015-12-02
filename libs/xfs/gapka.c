@@ -45,10 +45,9 @@
 #include "teleport.h"
 #include "common.h"
 #include "xgapk.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
 
 /*)))
  |||    That file contains _GapKartFilesNode, which is really Kfs
@@ -169,7 +168,7 @@ _KartFilesNodeMake (
     }
 
 /*
-printf ( "_KartFilesNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) TheNode, Name, Type );
+XFSLogDbg ( "_KartFilesNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) TheNode, Name, Type );
 */
 
     return RCt;
@@ -230,7 +229,7 @@ _KartFilesNodeDispose ( const struct _KartFilesNode * self )
     struct _KartFilesNode * Node = ( struct _KartFilesNode * ) self;
 
 /*
-printf ( "_KartFilesNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+XFSLogDbg ( "_KartFilesNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
 */
 
     if ( Node != 0 ) {
@@ -377,7 +376,7 @@ rc_t CC
 _KartFilesDir_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_KartFilesDir_dispose_v1 ( %p )\n", ( void * ) self );
+    XFSLogDbg ( "_KartFilesDir_dispose_v1 ( %p )\n", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -683,7 +682,7 @@ rc_t CC
 _KartFilesAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_KartFilesAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_KartFilesAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -958,7 +957,7 @@ _KartFilesNodeConstructor (
     }
 
 /*
-printf ( "_KartFilesNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_KartFilesNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -978,7 +977,7 @@ _KartFilesNodeValidator (
     RCt = 0;
 
 /*
-printf ( "_KartFilesNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_KartFilesNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

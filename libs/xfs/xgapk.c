@@ -45,8 +45,6 @@
 
 #include <sysalloc.h>
 
-#include <string.h>
-
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*)) XFSGapKart and XFSGapKartItem structs are living here

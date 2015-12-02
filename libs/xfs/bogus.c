@@ -39,10 +39,9 @@
 #include "ncon.h"
 #include "teleport.h"
 #include "common.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
 
 /*)))
  |||
@@ -134,7 +133,7 @@ _BogusNodeAttr_dispose_v1 ( const struct XFSEditor * self )
     Editor = ( struct XFSAttrEditor * ) self;
 
 /*
-    printf ( " _BogusNodeAttr_dispose_ ( 0x%p )\n", ( void * ) Editor );
+XFSLogDbg ( " _BogusNodeAttr_dispose_ ( 0x%p )\n", ( void * ) Editor );
 */
 
     if ( Editor == 0 ) {
@@ -218,7 +217,7 @@ _BogusNodeAttr_v1 (
         free ( Editor );
     }
 /*
-printf ( " _BogusNodeAttr_ ( 0x%p )\n", Editor );
+XFSLogDbg ( " _BogusNodeAttr_ ( 0x%p )\n", Editor );
 */
 
     return RCt;
@@ -285,7 +284,7 @@ _BogusNodeDispose ( const struct XFSBogusNode * self )
     struct XFSBogusNode * Node = ( struct XFSBogusNode * ) self;
 
 /*
-printf ( "_BogusNodeDispose ( 0x%p )\n", ( void * ) Node );
+XFSLogDbg ( "_BogusNodeDispose ( 0x%p )\n", ( void * ) Node );
 */
     if ( Node == NULL ) {
         return 0;
@@ -335,7 +334,7 @@ _BogusNodeMake (
         }
     }
 /*
-printf ( "_BogusNodeMake ( %s, 0x%p )\n", NodeName, ( void * ) TheNode );
+XFSLogDbg ( "_BogusNodeMake ( %s, 0x%p )\n", NodeName, ( void * ) TheNode );
 */
 
     return RCt;

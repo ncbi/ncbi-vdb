@@ -43,10 +43,9 @@
 #include "teleport.h"
 #include "common.h"
 #include "contnode.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
 
 /*)))
   |||
@@ -104,7 +103,7 @@ _ContNodeDispose ( const struct XFSContNode * self )
                                 ( struct XFSContNode * ) self;
 
 /*
-printf ( "_ContNodeDispose ( 0x%p )\n", ( void * ) Container );
+XFSLogDbg ( "_ContNodeDispose ( 0x%p )\n", ( void * ) Container );
 */
     if ( Container == 0 ) {
         return 0;
@@ -237,7 +236,7 @@ _ContNodeDir_dispose_v1 ( const struct XFSEditor * self )
 
     Editor = ( struct XFSDirEditor * ) self;
 /*
-printf ( "_ContNodeDir_dispose_ ( 0x%p )\n", ( void * ) Editor );
+XFSLogDbg ( "_ContNodeDir_dispose_ ( 0x%p )\n", ( void * ) Editor );
 */
 
     if ( Editor == 0 ) {
@@ -355,7 +354,7 @@ _ContNodeAttr_dispose_v1 ( const struct XFSEditor * self )
 
     Editor = ( struct XFSAttrEditor * ) self;
 /*
-printf ( "_ContNodeAttr_dispose_ ( 0x%p )\n", ( void * ) Editor );
+XFSLogDbg ( "_ContNodeAttr_dispose_ ( 0x%p )\n", ( void * ) Editor );
 */
 
     if ( Editor == 0 ) {
@@ -637,7 +636,7 @@ XFSContNodeMakeWithFlavor (
         * Node = NULL;
     }
 /*
-printf ( "_ContNodeMake ND[0x%p] NM[%s]\n", ( void * ) Cont, Name );
+XFSLogDbg ( "_ContNodeMake ND[0x%p] NM[%s]\n", ( void * ) Cont, Name );
 */
 
     return RCt;
