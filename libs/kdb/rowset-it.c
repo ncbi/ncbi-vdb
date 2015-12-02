@@ -160,7 +160,6 @@ KDB_EXTERN bool CC KRowSetIteratorNext ( KRowSetIterator * iter )
         leaf_id = leaf->header.leaf_id;
         row_id = leaf_id << 16;
 
-        // TODO: implement reverse mode
         switch ( leaf->header.type )
         {
         case LeafType_Bitmap:
@@ -228,12 +227,12 @@ KDB_EXTERN bool CC KRowSetIteratorNext ( KRowSetIterator * iter )
                 assert ( iter->range_array.current_range_index != -1 );
 
                 from_i = iter->range_array.current_range_index;
-                from_j = last_leaf_bt - leaf->data.array_ranges.ranges[from_i].start + step;
+                from_j = last_leaf_bt + step;
             }
             else
             {
                 from_i = !iter->reverse ? 0 : len - 1;
-                from_j = !iter->reverse ? 0 : leaf->data.array_ranges.ranges[from_i].count - 1;
+                from_j = !iter->reverse ? leaf->data.array_ranges.ranges[from_i].start : leaf->data.array_ranges.ranges[from_i].end;
             }
 
             if ( !iter->reverse )
@@ -247,18 +246,17 @@ KDB_EXTERN bool CC KRowSetIteratorNext ( KRowSetIterator * iter )
 
             for ( i = from_i; i != to_i; i += step )
             {
-                uint16_t start = leaf->data.array_ranges.ranges[i].start;
-                uint16_t count = leaf->data.array_ranges.ranges[i].count;
-                to_j = !iter->reverse ? count : -1;
+                const struct KRowSetTreeLeafArrayRange * range = &leaf->data.array_ranges.ranges[i];
+                to_j = (!iter->reverse ? range->end : range->start) + step;
                 // single loop iteration just to check conditions
                 for ( j = from_j; j != to_j; j += step )
                 {
-                    assert ( j + start == ((j + start) & 0xFFFF) );
-                    iter->current_row_id = row_id | (j + start);
+                    assert ( j == (j & 0xFFFF) );
+                    iter->current_row_id = row_id | j;
                     iter->range_array.current_range_index = i;
                     return true;
                 }
-                from_j = !iter->reverse ? 0 : leaf->data.array_ranges.ranges[from_i + step].count - 1;
+                from_j = !iter->reverse ? (range + step)->start : (range + step)->end;
             }
             break;
         }

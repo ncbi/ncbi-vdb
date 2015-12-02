@@ -68,7 +68,7 @@ int64_t generate_id ( int64_t range_start, int64_t range_count )
 TEST_CASE(KRowSetWalk)
 {
 	KRowSet * rowset;
-	size_t num_rows;
+	uint64_t num_rows;
 	std::set<int64_t> inserted_rows_set;
 	std::vector<int64_t> inserted_rows;
 	std::vector<int64_t> returned_rows;
@@ -95,7 +95,7 @@ TEST_CASE(KRowSetWalk)
 	REQUIRE_RC ( KRowSetGetNumRows ( rowset, &num_rows ) );
 
 	REQUIRE_EQ ( inserted_rows.size(), returned_rows.size() );
-	REQUIRE_EQ ( num_rows, returned_rows.size() );
+	REQUIRE_EQ ( num_rows, (uint64_t)returned_rows.size() );
 	REQUIRE ( inserted_rows == returned_rows );
 
 	REQUIRE_RC ( KRowSetRelease( rowset ) );
@@ -104,7 +104,7 @@ TEST_CASE(KRowSetWalk)
 TEST_CASE(KRowSetWalkReverse)
 {
 	KRowSet * rowset;
-	size_t num_rows;
+	uint64_t num_rows;
 	std::set<int64_t> inserted_rows_set;
 	std::vector<int64_t> inserted_rows;
 	std::vector<int64_t> returned_rows;
@@ -131,7 +131,7 @@ TEST_CASE(KRowSetWalkReverse)
 	KRowSetGetNumRows ( rowset, &num_rows );
 
 	REQUIRE_EQ ( inserted_rows.size(), returned_rows.size() );
-	REQUIRE_EQ ( num_rows, returned_rows.size() );
+	REQUIRE_EQ ( num_rows, (uint64_t)returned_rows.size() );
 	REQUIRE ( inserted_rows == returned_rows );
 
 	REQUIRE_RC ( KRowSetRelease( rowset ) );
@@ -140,7 +140,7 @@ TEST_CASE(KRowSetWalkReverse)
 TEST_CASE(KRowSetDenseRowsWalk)
 {
 	KRowSet * rowset;
-	size_t num_rows;
+	uint64_t num_rows;
 	std::set<int64_t> inserted_rows_set;
 	std::vector<int64_t> inserted_rows;
 	std::vector<int64_t> returned_rows;
@@ -167,7 +167,7 @@ TEST_CASE(KRowSetDenseRowsWalk)
 	KRowSetGetNumRows ( rowset, &num_rows );
 
 	REQUIRE_EQ ( inserted_rows.size(), returned_rows.size() );
-	REQUIRE_EQ ( num_rows, returned_rows.size() );
+	REQUIRE_EQ ( num_rows, (uint64_t)returned_rows.size() );
 	REQUIRE ( inserted_rows == returned_rows );
 
 	REQUIRE_RC ( KRowSetRelease( rowset ) );
@@ -176,7 +176,7 @@ TEST_CASE(KRowSetDenseRowsWalk)
 TEST_CASE(KRowSetDenseRowsWalkReverse)
 {
     KRowSet * rowset;
-    size_t num_rows;
+    uint64_t num_rows;
     std::set<int64_t> inserted_rows_set;
     std::vector<int64_t> inserted_rows;
     std::vector<int64_t> returned_rows;
@@ -203,7 +203,7 @@ TEST_CASE(KRowSetDenseRowsWalkReverse)
     KRowSetGetNumRows ( rowset, &num_rows );
 
     REQUIRE_EQ ( inserted_rows.size(), returned_rows.size() );
-    REQUIRE_EQ ( num_rows, returned_rows.size() );
+    REQUIRE_EQ ( num_rows, (uint64_t)returned_rows.size() );
     REQUIRE ( inserted_rows == returned_rows );
 
     REQUIRE_RC ( KRowSetRelease( rowset ) );

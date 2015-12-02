@@ -56,9 +56,11 @@ KDB_EXTERN rc_t CC KCreateRowSet ( KRowSet ** self );
 KDB_EXTERN rc_t CC KRowSetAddRef ( const KRowSet * self );
 KDB_EXTERN rc_t CC KRowSetRelease ( const KRowSet * self );
     
-KDB_EXTERN rc_t CC KRowSetInsertRow ( KRowSet * self, int64_t row_id );
+KDB_EXTERN rc_t CC KRowSetInsertRowRange ( KRowSet * self, int64_t row_id, uint64_t count );
 
-KDB_EXTERN rc_t CC KRowSetGetNumRows ( const KRowSet * self, size_t * num_rows );
+#define KRowSetInsertRow( SELF, ROW_ID ) KRowSetInsertRowRange ( (SELF), (ROW_ID), 1 )
+
+KDB_EXTERN rc_t CC KRowSetGetNumRows ( const KRowSet * self, uint64_t * num_rows );
 
 KDB_EXTERN rc_t CC KRowSetWalkRows ( const KRowSet * self, bool reverse,
 		void ( CC * f ) ( int64_t row_id, void * data ), void * data );
@@ -77,7 +79,6 @@ KDB_EXTERN rc_t CC KRowSetIteratorRelease ( const KRowSetIterator * iter );
 KDB_EXTERN bool CC KRowSetIteratorNext ( KRowSetIterator * iter );
 
 KDB_EXTERN int64_t CC KRowSetIteratorRowId ( const KRowSetIterator * iter );
-
     
 #ifdef __cplusplus
 }

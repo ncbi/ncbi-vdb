@@ -45,6 +45,9 @@ extern "C" {
 #define LEAF_DEPTH 6 // at which depth leaves are located
 #define LEAF_DATA_SZ_BT 8192
 
+// the maximum value that leaf can represent
+//  (leaf data only stores lowest bytes of row_id)
+#define ROW_LEAF_MAX 0xFFFFLL
 
 /*--------------------------------------------------------------------------
  * KRowSet
@@ -91,9 +94,9 @@ typedef struct KRowSetTreeLeaf
     {
         uint8_t bitmap[LEAF_DATA_SZ_BT];
         struct {
-            struct {
+            struct KRowSetTreeLeafArrayRange {
                 uint16_t start;
-                uint16_t count;
+                uint16_t end;
             } ranges[8];
             uint8_t len;
         } array_ranges;
