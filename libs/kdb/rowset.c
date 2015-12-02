@@ -833,8 +833,11 @@ KDB_EXTERN rc_t CC KRowSetInsertRowRange ( KRowSet * self, int64_t row_id_start,
             rc = KRowSetTreeLeafInsertRow ( self, &leaf, leaf_row_start, leaf_row_end, leaf_parent, leaf_parent_depth );
         }
 
-        current_range_start += leaf_row_count;
-        row_id_remaining -= leaf_row_count;
+        if ( rc == 0 )
+        {
+            current_range_start += leaf_row_count;
+            row_id_remaining -= leaf_row_count;
+        }
     }
 
     self->number_rows += row_id_count - row_id_remaining;
