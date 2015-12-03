@@ -43,6 +43,9 @@
 
 #include <sysalloc.h>
 
+#include <search/grep.h>
+
+
 #ifndef min
 #define min(x,y) ((y) < (x) ? (y) : (x))
 #endif
