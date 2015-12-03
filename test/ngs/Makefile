@@ -40,6 +40,15 @@ TEST_TOOLS = \
 
 include $(TOP)/build/Makefile.env
 
+
+# make sure runs are not cached in the user repository when running tests
+ifeq ($(wildcard ../../../asm-trace),)
+	ifeq (,$(VDB_CONFIG))
+		VDB_CONFIG = $(shell pwd)/../only-remote-repository.kfg
+	endif
+endif
+
+
 VALGRIND = export NCBI_VALGRIND=ncbi; valgrind --error-exitcode=1 --suppressions=$(SRCDIR)/valgrind.suppress
 
 $(TEST_TOOLS) $(SLOW_TEST_TOOLS): makedirs
