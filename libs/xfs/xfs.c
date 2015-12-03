@@ -299,6 +299,38 @@ XFSControlGetMountPoint ( struct XFSControl * self )
 
 LIB_EXPORT
 rc_t CC
+XFSControlSetLogFile ( struct XFSControl * self, const char * Path )
+{
+    rc_t RCt;
+    char BF [ XFS_SIZE_1024 ];
+
+    RCt = 0;
+    * BF = 0;
+
+    XFS_CAN ( self )
+
+    RCt = XFS_ResolvePath (
+                        true,
+                        BF,
+                        sizeof ( BF ),
+                        ( Path == NULL ? "./demo.log" : Path )
+                        );
+    if ( RCt == 0 ) {
+        RCt = XFSControlSetArg ( self, XFS_CONTROL_LOGFILE, BF );
+    }
+
+    return RCt;
+}   /* XFSControlSetLogFile () */
+
+LIB_EXPORT
+const char * CC
+XFSControlGetLogFile ( struct XFSControl * self )
+{
+    return XFSControlGetArg ( self, XFS_CONTROL_LOGFILE );
+}   /* XFSControlGetLogFile () */
+
+LIB_EXPORT
+rc_t CC
 XFSControlSetLabel ( struct XFSControl * self, const char * Label )
 {
     return Label == NULL

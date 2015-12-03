@@ -112,6 +112,17 @@ XFS_EXTERN const char * CC XFSControlGetMountPoint(
                     struct XFSControl * self
                     );
 
+/*  If You will call that method with LogFile = NULL, it will
+    redirect log to some undisclosured standard place.
+ */
+XFS_EXTERN rc_t CC XFSControlSetLogFile (
+                    struct XFSControl * self,
+                    const char * LogFile
+                    );
+XFS_EXTERN const char * CC XFSControlGetLogFile (
+                    struct XFSControl * self
+                    );
+
 /*  That method setup a label which will be shown in /etc/mtab entry
     You may use NULL, and in that case label will be "XFS"
  */

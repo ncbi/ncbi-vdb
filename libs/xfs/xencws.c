@@ -3006,30 +3006,17 @@ XFSWsDirResolvePath (
 )
 {
     rc_t RCt;
-    struct KDirectory * NatDir;
     va_list xArgs;
 
     RCt = 0;
-    NatDir = NULL;
 
 #ifdef JOJOBA
 XFSLogDbg ( " <<<[XFSWsDirResolvePath] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
-    RCt = KDirectoryNativeDir ( & NatDir );
-    if ( RCt == 0 ) {
-        va_copy ( xArgs, Args );
-        RCt = KDirectoryVResolvePath (
-                                    NatDir,
-                                    Absolute,
-                                    Resolved,
-                                    Rsize,
-                                    Path,
-                                    xArgs
-                                    );
-        va_end ( xArgs );
-        KDirectoryRelease ( NatDir );
-    }
+    va_copy ( xArgs, Args );
+    RCt = XFS_VResolvePath ( Absolute, Resolved, Rsize, Path, xArgs );
+    va_end ( xArgs );
 
     return RCt;
 }   /* XFSWsDirResolvePath () */
