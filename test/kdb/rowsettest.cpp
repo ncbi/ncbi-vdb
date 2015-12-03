@@ -279,8 +279,8 @@ TEST_CASE(KRowSetRowRangesWalk)
     std::vector<int64_t> inserted_rows;
     std::vector<int64_t> returned_rows;
 
-    int row_ids[] = { 5, 0, 6, 20, 10 };
-    int counts[] = { 1, 5, 4, 10, 10 };
+    int row_ids[] = { 0, 5, 1, 6, 20, 10, 55, 60, 65, 70, 75, 80, 85, 999,  2001 };
+    int counts[]  = { 1, 1, 4, 4, 10, 10, 1,  1,  1,  1,  1,  1,  1,  1000, 1000 };
 
     srand ( time(NULL) );
 
@@ -290,7 +290,7 @@ TEST_CASE(KRowSetRowRangesWalk)
         int64_t row_id = row_ids[i];
         int count = counts[i];
 
-        REQUIRE_RC ( KRowSetInsertRowRange ( rowset, row_id, count ) );
+        REQUIRE_RC ( KRowSetInsertRowRange ( rowset, row_id, count, NULL ) );
         for ( int j = 0; j < count; ++j )
             inserted_rows_set.insert( row_id + j );
     }
@@ -317,10 +317,10 @@ TEST_CASE(KRowSetRowRangesOverlapDuplicatesWalk)
     std::vector<int64_t> returned_rows;
 
     int row_ids[] = { 5, 10 };
-    int counts[] = { 1, 5 };
+    int counts[]  = { 1, 5    };
 
     int overlap_row_ids[] = { 0, 5, 5, 2, 9, 9, 14 };
-    int overlap_counts[] = { 6, 1, 2, 6, 2, 10, 2 };
+    int overlap_counts[]  = { 6, 1, 2, 6, 2, 10, 2 };
 
     srand ( time(NULL) );
 
@@ -330,7 +330,7 @@ TEST_CASE(KRowSetRowRangesOverlapDuplicatesWalk)
         int64_t row_id = row_ids[i];
         int count = counts[i];
 
-        REQUIRE_RC ( KRowSetInsertRowRange ( rowset, row_id, count ) );
+        REQUIRE_RC ( KRowSetInsertRowRange ( rowset, row_id, count, NULL ) );
         for ( int j = 0; j < count; ++j )
             inserted_rows_set.insert( row_id + j );
     }
@@ -339,8 +339,62 @@ TEST_CASE(KRowSetRowRangesOverlapDuplicatesWalk)
     {
         int64_t row_id = overlap_row_ids[i];
         int count = overlap_counts[i];
+        uint64_t inserted;
 
-        REQUIRE_RC_FAIL ( KRowSetInsertRowRange ( rowset, row_id, count ) );
+        REQUIRE_RC_FAIL ( KRowSetInsertRowRange ( rowset, row_id, count, &inserted ) );
+        for ( int j = 0; j < inserted; ++j )
+            inserted_rows_set.insert( row_id + j );
+    }
+
+    std::copy(inserted_rows_set.begin(), inserted_rows_set.end(), std::back_inserter(inserted_rows));
+
+    KRowSetWalkRows( rowset, false, vector_inserter, (void *)&returned_rows );
+
+    KRowSetGetNumRows ( rowset, &num_rows );
+
+    REQUIRE_EQ ( inserted_rows.size(), returned_rows.size() );
+    REQUIRE_EQ ( num_rows, (uint64_t)returned_rows.size() );
+    REQUIRE ( inserted_rows == returned_rows );
+
+    REQUIRE_RC ( KRowSetRelease( rowset ) );
+}
+
+TEST_CASE(KRowSetRowRangesDenseOverlapDuplicatesWalk)
+{
+    KRowSet * rowset;
+    uint64_t num_rows;
+    std::set<int64_t> inserted_rows_set;
+    std::vector<int64_t> inserted_rows;
+    std::vector<int64_t> returned_rows;
+
+    int row_ids[] = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 1000 };
+    int counts[]  = { 1, 1, 1,  1,  1,  1,  1,  1,  1,  1    };
+
+    int overlap_row_ids[] = { 500 };
+    int overlap_counts[]  = { 1000 };
+
+    srand ( time(NULL) );
+
+    REQUIRE_RC ( KCreateRowSet ( &rowset ) );
+    for ( int i = 0; i < sizeof row_ids / sizeof row_ids[0]; ++i )
+    {
+        int64_t row_id = row_ids[i];
+        int count = counts[i];
+
+        REQUIRE_RC ( KRowSetInsertRowRange ( rowset, row_id, count, NULL ) );
+        for ( int j = 0; j < count; ++j )
+            inserted_rows_set.insert( row_id + j );
+    }
+
+    for ( int i = 0; i < sizeof overlap_row_ids / sizeof overlap_row_ids[0]; ++i )
+    {
+        int64_t row_id = overlap_row_ids[i];
+        int count = overlap_counts[i];
+        uint64_t inserted;
+
+        REQUIRE_RC_FAIL ( KRowSetInsertRowRange ( rowset, row_id, count, &inserted ) );
+        for ( int j = 0; j < inserted; ++j )
+            inserted_rows_set.insert( row_id + j );
     }
 
     std::copy(inserted_rows_set.begin(), inserted_rows_set.end(), std::back_inserter(inserted_rows));

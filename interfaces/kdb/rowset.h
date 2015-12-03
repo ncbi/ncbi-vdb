@@ -56,9 +56,9 @@ KDB_EXTERN rc_t CC KCreateRowSet ( KRowSet ** self );
 KDB_EXTERN rc_t CC KRowSetAddRef ( const KRowSet * self );
 KDB_EXTERN rc_t CC KRowSetRelease ( const KRowSet * self );
     
-KDB_EXTERN rc_t CC KRowSetInsertRowRange ( KRowSet * self, int64_t row_id, uint64_t count );
+KDB_EXTERN rc_t CC KRowSetInsertRowRange ( KRowSet * self, int64_t row_id, uint64_t count, uint64_t * inserted );
 
-#define KRowSetInsertRow( SELF, ROW_ID ) KRowSetInsertRowRange ( (SELF), (ROW_ID), 1 )
+#define KRowSetInsertRow( SELF, ROW_ID ) KRowSetInsertRowRange ( (SELF), (ROW_ID), 1, NULL )
 
 KDB_EXTERN rc_t CC KRowSetGetNumRows ( const KRowSet * self, uint64_t * num_rows );
 

@@ -692,27 +692,76 @@ rc_t KRowSetTreeLeafTransform ( KRowSet * self, KRowSetTreeLeaf ** p_leaf, KRowS
  *     so leaf pointer may change as a result of this function
  */
 static
-rc_t KRowSetTreeLeafInsertRow ( KRowSet * self, KRowSetTreeLeaf ** p_leaf, uint16_t leaf_row_start, uint16_t leaf_row_end, KRowSetTreeNode * parent_node, int parent_depth )
+rc_t KRowSetTreeLeafInsertRow ( KRowSet * self, KRowSetTreeLeaf ** p_leaf, uint16_t leaf_row_start, uint16_t leaf_row_end, KRowSetTreeNode * parent_node, int parent_depth, int * rows_inserted )
 {
     KRowSetTreeLeaf * leaf = *p_leaf;
     int i;
     uint16_t leaf_row;
 
+    assert ( rows_inserted != NULL );
     assert ( leaf_row_end >= leaf_row_start );
+
+    *rows_inserted = 0;
 
     switch ( leaf->header.type )
     {
     case LeafType_Bitmap:
-        // TODO: optimize by assigning several bytes at a time when possible
-        for ( i = leaf_row_start; i <= leaf_row_end; ++i )
+    {
+        uint8_t* mem_ptr;
+        size_t mem_size;
+
+        // try to align to the nearest 8 rows from left
+        if ( (leaf_row_start | 7) <  leaf_row_end )
         {
-            leaf_row = i;
-            if ( ( leaf->data.bitmap[leaf_row >> 3] & (1 << (leaf_row & 7)) ) != 0 )
+            for ( i = leaf_row_start; i <= (leaf_row_start | 7); ++i )
+            {
+                leaf_row = i;
+                if ( ( leaf->data.bitmap[leaf_row >> 3] & (1 << (leaf_row & 7)) ) != 0 )
+                    return RC ( rcDB, rcRowSet, rcInserting, rcId, rcDuplicate );
+
+                leaf->data.bitmap[leaf_row >> 3] |= 1 << (leaf_row & 7);
+                ++(*rows_inserted);
+            }
+
+            leaf_row_start = (leaf_row_start | 7) + 1;
+        }
+
+        // if we are left aligned and still have more than 8 rows,
+        // then use memset to set multiple rows at once
+        if ( (leaf_row_start & 7) == 0 && leaf_row_end + 1 - leaf_row_start >= 8 )
+        {
+            mem_ptr = &leaf->data.bitmap[leaf_row_start >> 3];
+            mem_size = (leaf_row_end + 1 - leaf_row_start) / 8;
+
+            assert ( mem_size > 0 );
+
+            if ( *mem_ptr != 0 )
                 return RC ( rcDB, rcRowSet, rcInserting, rcId, rcDuplicate );
 
-            leaf->data.bitmap[leaf_row >> 3] |= 1 << (leaf_row & 7);
+            if ( mem_size > 1 && memcmp ( mem_ptr, mem_ptr + 1, mem_size - 1 ) != 0 )
+                return RC ( rcDB, rcRowSet, rcInserting, rcId, rcDuplicate );
+
+            memset ( mem_ptr, 0xFF, mem_size );
+            leaf_row_start += mem_size * 8;
+            *rows_inserted += mem_size * 8;
         }
+
+        // insert all remaining rows
+        {
+            for ( i = leaf_row_start; i <= leaf_row_end; ++i )
+            {
+                leaf_row = i;
+                if ( ( leaf->data.bitmap[leaf_row >> 3] & (1 << (leaf_row & 7)) ) != 0 )
+                    return RC ( rcDB, rcRowSet, rcInserting, rcId, rcDuplicate );
+
+                leaf->data.bitmap[leaf_row >> 3] |= 1 << (leaf_row & 7);
+                ++(*rows_inserted);
+            }
+            return 0;
+        }
+
         break;
+    }
     case LeafType_ArrayRanges:
     {
         int j;
@@ -730,8 +779,11 @@ rc_t KRowSetTreeLeafInsertRow ( KRowSet * self, KRowSetTreeLeaf ** p_leaf, uint1
             if ( range->start > 0 && leaf_row_end == range->start - 1 )
             {
                 range->start = leaf_row_start;
+                *rows_inserted += leaf_row_end - leaf_row_start + 1;
                 return 0;
             }
+            // or to the right
+            // but lets first check next range, maybe we can just merge them both
             if ( leaf_row_start > 0 && leaf_row_start - 1 == range->end )
             {
                 if ( i + 1 < len)
@@ -749,12 +801,15 @@ rc_t KRowSetTreeLeafInsertRow ( KRowSet * self, KRowSetTreeLeaf ** p_leaf, uint1
                         {
                             leaf->data.array_ranges.ranges[i] = leaf->data.array_ranges.ranges[i + 1];
                         }
+                        *rows_inserted += leaf_row_end - leaf_row_start + 1;
 
                         return 0;
                     }
                 }
 
                 range->end = leaf_row_end;
+                *rows_inserted += leaf_row_end - leaf_row_start + 1;
+
                 return 0;
             }
 
@@ -776,7 +831,7 @@ rc_t KRowSetTreeLeafInsertRow ( KRowSet * self, KRowSetTreeLeaf ** p_leaf, uint1
             if ( rc != 0 )
                 return rc;
 
-            return KRowSetTreeLeafInsertRow ( self, p_leaf, leaf_row_start, leaf_row_end, parent_node, parent_depth );
+            return KRowSetTreeLeafInsertRow ( self, p_leaf, leaf_row_start, leaf_row_end, parent_node, parent_depth, rows_inserted );
         }
 
         ++len;
@@ -788,6 +843,7 @@ rc_t KRowSetTreeLeafInsertRow ( KRowSet * self, KRowSetTreeLeaf ** p_leaf, uint1
 
         leaf->data.array_ranges.ranges[insert_i].start = leaf_row_start;
         leaf->data.array_ranges.ranges[insert_i].end = leaf_row_end;
+        *rows_inserted += leaf_row_end - leaf_row_start + 1;
 
         break;
     }
@@ -798,7 +854,7 @@ rc_t KRowSetTreeLeafInsertRow ( KRowSet * self, KRowSetTreeLeaf ** p_leaf, uint1
     return 0;
 }
 
-KDB_EXTERN rc_t CC KRowSetInsertRowRange ( KRowSet * self, int64_t row_id_start, uint64_t row_id_count )
+KDB_EXTERN rc_t CC KRowSetInsertRowRange ( KRowSet * self, int64_t row_id_start, uint64_t row_id_count, uint64_t * row_id_inserted )
 {
     rc_t rc = 0;
     KRowSetTreeLeaf * leaf;
@@ -809,6 +865,7 @@ KDB_EXTERN rc_t CC KRowSetInsertRowRange ( KRowSet * self, int64_t row_id_start,
     uint16_t leaf_row_start;
     uint16_t leaf_row_end;
     int leaf_row_count;
+    int leaf_rows_inserted;
 
     if ( row_id_start < 0 || row_id_count <= 0 )
         return RC ( rcDB, rcRowSet, rcInserting, rcParam, rcInvalid );
@@ -816,6 +873,8 @@ KDB_EXTERN rc_t CC KRowSetInsertRowRange ( KRowSet * self, int64_t row_id_start,
     if ( row_id_start + row_id_count < row_id_start )
         return RC ( rcDB, rcRowSet, rcInserting, rcParam, rcOutofrange );
 
+    if ( row_id_inserted != NULL )
+        *row_id_inserted = 0;
 
     while ( rc == 0 && row_id_remaining > 0 )
     {
@@ -830,17 +889,21 @@ KDB_EXTERN rc_t CC KRowSetInsertRowRange ( KRowSet * self, int64_t row_id_start,
         rc = KRowSetGetLeaf ( self, current_range_start, true, &leaf, &leaf_parent, &leaf_parent_depth );
         if ( rc == 0 )
         {
-            rc = KRowSetTreeLeafInsertRow ( self, &leaf, leaf_row_start, leaf_row_end, leaf_parent, leaf_parent_depth );
+            rc = KRowSetTreeLeafInsertRow ( self, &leaf, leaf_row_start, leaf_row_end, leaf_parent, leaf_parent_depth, &leaf_rows_inserted );
         }
 
         if ( rc == 0 )
-        {
-            current_range_start += leaf_row_count;
-            row_id_remaining -= leaf_row_count;
-        }
+            assert ( leaf_row_count == leaf_rows_inserted );
+        else
+            assert ( leaf_row_count > leaf_rows_inserted );
+
+        current_range_start += leaf_rows_inserted;
+        row_id_remaining -= leaf_rows_inserted;
     }
 
     self->number_rows += row_id_count - row_id_remaining;
+    if ( row_id_inserted != NULL )
+        *row_id_inserted += row_id_count - row_id_remaining;
 
     return rc;
 }
