@@ -927,10 +927,31 @@ FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
     REQUIRE_RC(KDirectoryRemove(wd, true, "repos"));
 }
 
+class Cleaner {
+    KDirectory *dir;
+    const char *home;
+    const bool ncbi;
+    const bool dbGaP;
+public:
+    Cleaner(KDirectory *d)
+        : dir(d), home(getenv("HOME"))
+        , ncbi(KDirectoryPathType(dir, "%s/ncbi"         , home) != kptNotFound)
+        , dbGaP
+            (KDirectoryPathType(dir, "%s/ncbi/dbGaP-2956", home) != kptNotFound)
+    {}
+    ~Cleaner() {
+        if (!dbGaP)
+            KDirectoryRemove(dir, false, "%s/ncbi/dbGaP-2956", home);
+        if (!ncbi)
+            KDirectoryRemove(dir, false, "%s/ncbi"           , home);
+    }
+};
+
 FIXTURE_TEST_CASE(KConfigImportNgc_NullLocation, KfgFixture)
 {
     CreateAndLoad(GetName(), "\n");
     const char* newRepo;
+    Cleaner cleaner(wd);
     REQUIRE_RC(KConfigImportNgc(kfg, "./prj_2956.ngc", NULL, &newRepo));
     string encDirName = "/ncbi/dbGaP-2956";
     REQUIRE_EQ(string(newRepo).rfind(encDirName), string(newRepo).size() - encDirName.size()); // string(buf) ends with encDirName
@@ -938,6 +959,7 @@ FIXTURE_TEST_CASE(KConfigImportNgc_NullLocation, KfgFixture)
 FIXTURE_TEST_CASE(KConfigImportNgc_NullLocation_NullNewRepo, KfgFixture)
 {
     CreateAndLoad(GetName(), "\n");
+    Cleaner cleaner(wd);
     REQUIRE_RC(KConfigImportNgc(kfg, "./prj_2956.ngc", NULL, NULL));
 }
 
