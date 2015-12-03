@@ -18,6 +18,9 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{CDC1CE05-E8A4-0555-1A8A-0ECFE835DCA9}</ProjectGuid>
+  </PropertyGroup>
   <Import Project=".\lib-project.props" />
   <ItemDefinitionGroup>
     <ClCompile>
