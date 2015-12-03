@@ -45,10 +45,10 @@
 #include "schwarzschraube.h"
 #include "teleport.h"
 #include "common.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
 
-#include <stdio.h>
 #include <string.h>     /* memset */
 
 /*)))
@@ -274,7 +274,7 @@ XFSTarNodeDispose ( const struct XFSTarNode * self )
     struct XFSTarNode * Node = ( struct XFSTarNode * ) self;
 
 /*
-printf ( "XFSTarNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+XFSLogDbg ( "XFSTarNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
 */
 
     if ( Node == 0 ) {
@@ -299,7 +299,7 @@ XFSTarRootNodeDispose ( const struct XFSTarRootNode * self )
     struct XFSTarRootNode * Node = ( struct XFSTarRootNode * ) self;
 
 /*
-printf ( "XFSTarRootNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+XFSLogDbg ( "XFSTarRootNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
 */
 
     if ( Node == 0 ) {
@@ -421,7 +421,7 @@ _TarDir_dispose_v1 ( const struct XFSEditor * self )
 {
     struct XFSDirEditor * Editor = ( struct XFSDirEditor * ) self;
 /*
-    printf ( "_TarDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_TarDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -589,7 +589,7 @@ _TarFile_dispose_v1 ( const struct XFSEditor * self )
 {
     struct XFSTarFileEditor * Editor = ( struct XFSTarFileEditor * ) self;
 /*
-    printf ( "_TarNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_TarNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -820,7 +820,7 @@ rc_t CC
 _TarAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_TarAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_TarAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -1143,7 +1143,7 @@ _TarArchiveConstructor (
                                         );
 
 /*
-printf ( "_TarArchiveConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_TarArchiveConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1163,7 +1163,7 @@ _TarArchiveValidator (
     RCt = 0;
 
 /*
-printf ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

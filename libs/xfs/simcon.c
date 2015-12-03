@@ -35,10 +35,9 @@
 #include "teleport.h"
 #include "common.h"
 #include "contnode.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
 
 /*)))
  |||
@@ -89,7 +88,7 @@ _SimpleContainerCreateChildren (
                                                     );
 
 /*
-printf ( " ||== Creating child [%s] alias [%s]\n", ChildName, ( ChildAlias == NULL ? "NULL" : ChildAlias ) );
+XFSLogDbg ( " ||== Creating child [%s] alias [%s]\n", ChildName, ( ChildAlias == NULL ? "NULL" : ChildAlias ) );
 */
 
                     RCt = XFSNodeMake (
@@ -166,7 +165,7 @@ _SimpleContainerConstructor (
     }
 
 /*
-printf ( "_SimpleContainerConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_SimpleContainerConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -186,7 +185,7 @@ _SimpleContainerValidator (
     RCt = 0;
 
 /*
-printf ( "_SimpleContainerValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_SimpleContainerValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

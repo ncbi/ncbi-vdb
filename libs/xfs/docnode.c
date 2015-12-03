@@ -36,6 +36,7 @@
 
 #include "schwarzschraube.h"
 #include "common.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
 
@@ -190,7 +191,7 @@ XFSDocNodeMakeWithFlavor (
     }
 
 /*
-printf ( "XFSDocNodeMake ND[0x%p] NM[%s] Doc[0x%p]\n", ( void * ) TheNode, Name, Doc );
+XFSLogDbg ( "XFSDocNodeMake ND[0x%p] NM[%s] Doc[0x%p]\n", ( void * ) TheNode, Name, Doc );
 */
 
     return RCt;
@@ -215,7 +216,7 @@ XFSDocNodeDispose ( const struct XFSDocNode * self )
     struct XFSDocNode * Node = ( struct XFSDocNode * ) self;
 
 /*
-printf ( "XFSDocNodeDispose ( 0x%p ) [%p]\n", ( void * ) Node, ( void * ) Node -> doc );
+XFSLogDbg ( "XFSDocNodeDispose ( 0x%p ) [%p]\n", ( void * ) Node, ( void * ) Node -> doc );
 */
 
     if ( Node == 0 ) {
@@ -298,7 +299,7 @@ rc_t CC
 _DocFile_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_DocNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_DocNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -516,7 +517,7 @@ rc_t CC
 _DocAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_DocAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_DocAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != NULL ) {

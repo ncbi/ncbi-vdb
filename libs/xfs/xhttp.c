@@ -44,14 +44,14 @@
 #include "xhttp.h"
 #include "zehr.h"
 #include "lockdpt.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
 
-#include <string.h>
 #include <ctype.h>
 #include <os-native.h>
-#include <stdio.h>
 #include <time.h>
+#include <stdio.h> /* sscanf */
 
 /*||*\
   || Lyrics:
@@ -1657,7 +1657,7 @@ rc_t CC
 _HttpEntryDispose ( struct XFSHttpEntry * self )
 {
     if ( self != NULL ) {
-printf ( " [_HttpEntryDispose] %p [%s]\n", ( void * ) self, self -> name );
+XFSLogDbg ( " [_HttpEntryDispose] %p [%s]\n", ( void * ) self, self -> name );
         self -> status = kxfsInvalid;
 
         KRefcountWhack (

@@ -24,8 +24,8 @@
  *
  */
 
-#ifndef _schwarzschraube_
-#define _schwarzschraube_
+#ifndef _xlog_h_
+#define _xlog_h_
 
 #include <xfs/xfs-defs.h>
 
@@ -36,61 +36,34 @@ extern "C" {
 /*) Fowards, and others
  (*/
 
-/*))))
-  ||||   Unsorted methods which usage was approved by usage
-  ((((*/
-
-/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-
-struct String;
-
-/*)))   Dupping string, and if NULL is Src, it will be passed to Dst
- (((*/
-XFS_EXTERN rc_t CC XFS_StrDup ( const char * Src,  const char ** Dst );
-
-/*)))   Dupping String, and if NULL is Src, it will be passed to Dst
- (((*/
-XFS_EXTERN rc_t CC XFS_SStrDup (
-                                const struct String * Src,
-                                const char ** Dst
-                                );
-
-/*)))   Checking if string ends with string
- (((*/
-XFS_EXTERN rc_t CC XFS_StrEndsWith (
-                                const char * Str, const char * End
-                                );
-
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
-/*)))   Sometimes I need VFSManager, and from different places, and
-  |||   it is very costly to make on Windows platform
+/*)))
+ |||    Log init/dispose
+(((*/
+
+XFS_EXTERN rc_t CC XFSLogInit ( const char * LogFile );
+XFS_EXTERN rc_t CC XFSLogDestroy ( );
+
+/*)))   Simple log functions. Just because I want use substitute 
+  |||   instead of deep editing. Each method will use some fixed
+  |||   log level and standard 'printf' style format ...
+  |||   So, there are 4 methods :
+  |||     XFSLogDbg = klogDebug
+  |||     XFSLogMsg = klogInfo
+  |||     XFSLogErr = klogError
+  |||     XFSLogPzd = klogFatal
   (((*/
-struct VFSManager;
 
-XFS_EXTERN rc_t CC XFS_VfsManagerInit ( );
-XFS_EXTERN rc_t CC XFS_VfsManagerDispose ( );
-
-XFS_EXTERN const struct VFSManager * CC XFS_VfsManager ( );
-
-/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-
-/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-
-/*)))   Sometimes I need KNSManager, and from different places, and
-  |||   it is costly too
-  (((*/
-struct KNSManager;
-
-XFS_EXTERN rc_t CC XFS_KnsManagerInit ( );
-XFS_EXTERN rc_t CC XFS_KnsManagerDispose ( );
-
-XFS_EXTERN const struct KNSManager * CC XFS_KnsManager ( );
+XFS_EXTERN rc_t CC XFSLogDbg ( const char * Fmt, ... );
+XFS_EXTERN rc_t CC XFSLogMsg ( const char * Fmt, ... );
+XFS_EXTERN rc_t CC XFSLogErr ( rc_t RC, const char * Fmt, ... );
+XFS_EXTERN rc_t CC XFSLogPzd ( const char * Fmt, ... );
 
 #ifdef __cplusplus 
 }
 #endif /* __cplusplus */
 
-#endif /* _schwarzschraube_ */
+#endif /* _xlog_h_ */

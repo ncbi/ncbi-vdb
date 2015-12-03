@@ -48,10 +48,10 @@
 #include "common.h"
 #include "contnode.h"
 #include "xgap.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
 
-#include <stdio.h>
 #include <string.h>     /* memset */
 
 /*)))
@@ -277,7 +277,7 @@ _GapProjectNodeAddChildren ( struct _GapProjectNode * self )
     else {
 /* TODO - use approved output method
 */
-printf ( "ERROR: Can not find definition of Project %d in config file\n", self -> project_id );
+XFSLogDbg ( "ERROR: Can not find definition of Project %d in config file\n", self -> project_id );
     }
 
     if ( RCt != 0 ) {
@@ -300,7 +300,7 @@ printf ( "ERROR: Can not find definition of Project %d in config file\n", self -
     else {
 /* TODO - use approved output method
 */
-printf ( "ERROR: Can not find definition of Project %d in config file\n", self -> project_id );
+XFSLogDbg ( "ERROR: Can not find definition of Project %d in config file\n", self -> project_id );
     }
     if ( RCt != 0 ) {
         if ( TheNode != NULL ) {
@@ -323,7 +323,7 @@ printf ( "ERROR: Can not find definition of Project %d in config file\n", self -
         RCt = 0;
 /* TODO - use approved output method
 */
-printf ( "WARNING: Can not find definition for 'public' area in config file\n" );
+XFSLogDbg ( "WARNING: Can not find definition for 'public' area in config file\n" );
     }
 
     if ( RCt != 0 ) {
@@ -407,7 +407,7 @@ XFSGapProjectNodeMake (
     }
 
 /*
-printf ( "_GapNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type );
+XFSLogDbg ( "_GapNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type );
 */
     return RCt;
 }   /* XFSGapProjectNodeMake () */
@@ -537,7 +537,7 @@ _GapProjectNodeConstructor (
                                         Node
                                         );
 /*
-printf ( "_GapProjectNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_GapProjectNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
 
@@ -558,7 +558,7 @@ _GapProjectNodeValidator (
     RCt = 0;
 
 /*
-printf ( "_GapProjectNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_GapProjectNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

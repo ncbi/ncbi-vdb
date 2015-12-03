@@ -104,10 +104,20 @@ runtests: $(JARS) test
 
 JAVABITS=-d$(BITS)
 
+# make sure runs are not cached in the user repository when running tests
+ifeq ($(wildcard ../../../asm-trace),)
+	ifeq (,$(VDB_CONFIG))
+		VDB_CONFIG = $(shell pwd)/../only-remote-repository.kfg
+	endif
+endif
+
 test: $(NGS_CLS)
 	@ echo Run $(CLASSDIR)/$(NGS_SRC)
 	@ echo java $(JAVABITS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore $(NGS_SRC)
-	java $(JAVABITS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore $(NGS_SRC)  
+	export VDB_CONFIG=$(VDB_CONFIG) ; java $(JAVABITS) \
+		-cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 \
+		-Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) \
+		org.junit.runner.JUnitCore $(NGS_SRC)  
 
 endif    
 endif

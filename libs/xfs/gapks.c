@@ -43,10 +43,9 @@
 #include "teleport.h"
 #include "common.h"
 #include "xgapk.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
 
 /*)))
   |||
@@ -116,7 +115,7 @@ _GapKartsNodeDispose ( const struct XFSGapKartsNode * self )
     struct XFSGapKartsNode * Node = ( struct XFSGapKartsNode * ) self;
 
 /*
-printf ( "_GapKartsNodeDispose ( 0x%p )\n", ( void * ) Container );
+XFSLogDbg ( "_GapKartsNodeDispose ( 0x%p )\n", ( void * ) Container );
 */
 
     if ( Node != 0 ) {
@@ -240,7 +239,7 @@ rc_t CC
 _GapKartsNodeDir_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-printf ( "_GapKartsNodeDir_dispose_ ( 0x%p )\n", ( void * ) self );
+XFSLogDbg ( "_GapKartsNodeDir_dispose_ ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != 0 ) {
@@ -357,7 +356,7 @@ rc_t CC
 _GapKartsNodeAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-printf ( "_GapKartsNodeAttr_dispose_ ( 0x%p )\n", ( void * ) self );
+XFSLogDbg ( "_GapKartsNodeAttr_dispose_ ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != 0 ) {
@@ -701,7 +700,7 @@ XFSGapKartsNodeMake (
     }
 
 /*
-printf ( "XFSKartNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type );
+XFSLogDbg ( "XFSKartNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type );
 */
 
     return RCt;
@@ -765,7 +764,7 @@ _GapKartsNodeMakeFromModel (
     }
 
 /*
-printf ( "KartNodeMakeFromModel ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type );
+XFSLogDbg ( "KartNodeMakeFromModel ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type );
 */
 
     return RCt;
@@ -838,7 +837,7 @@ _GapKartsNodeConstructor (
                                             );
 
 /*
-printf ( "_GapKartsNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_GapKartsNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
 
@@ -857,7 +856,7 @@ _GapKartsNodeValidator (
     rc_t RCt = 0;
 
 /*
-printf ( "_GapKartsNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_GapKartsNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

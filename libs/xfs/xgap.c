@@ -53,8 +53,6 @@
 
 #include <sysalloc.h>
 
-#include <string.h>
-
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*))    XFSGapProject and XFSGapDepot

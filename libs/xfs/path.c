@@ -37,11 +37,9 @@
 
 #include <xfs/path.h>
 #include "schwarzschraube.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
-
-#include <string.h>
-#include <stdio.h>
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
@@ -1490,17 +1488,17 @@ XFSPathDump ( const struct XFSPath * self )
     size_t Idx = 0;
 
     if ( self == NULL ) {
-        printf ( " [Path] NULL\n" );
+        XFSLogDbg ( " [Path] NULL\n" );
         return;
     }
 
-    printf ( " [Path] [%s]\n", self -> orig );
-    printf ( "   [abs] [%s]\n", self -> is_absolute ? "yes" : "no" );
-    printf ( "  [path] [%s]\n", self -> path );
+    XFSLogDbg ( " [Path] [%s]\n", self -> orig );
+    XFSLogDbg ( "   [abs] [%s]\n", self -> is_absolute ? "yes" : "no" );
+    XFSLogDbg ( "  [path] [%s]\n", self -> path );
 
-    printf ( "   [qty] [%ld]\n", self -> tokens -> q );
+    XFSLogDbg ( "   [qty] [%ld]\n", self -> tokens -> q );
     for ( Idx = 0; Idx < self -> tokens ->q; Idx ++ ) {
-        printf ( "        [%ld] [%s]\n", Idx, self -> tokens -> e [ Idx ] );
+        XFSLogDbg ( "        [%ld] [%s]\n", Idx, self -> tokens -> e [ Idx ] );
     }
 
 }   /* XFSPathDump () */
