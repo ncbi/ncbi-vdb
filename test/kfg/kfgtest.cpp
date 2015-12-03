@@ -929,21 +929,27 @@ FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
 
 class Cleaner {
     KDirectory *dir;
+
     const char *home;
+
     const bool ncbi;
     const bool dbGaP;
+
+    static const char* Ncbi (void) { return "ncbi"           ; }
+    static const char* DbGaP(void) { return "ncbi/dbGaP-2956"; }
+
 public:
     Cleaner(KDirectory *d)
         : dir(d), home(getenv("HOME"))
-        , ncbi(KDirectoryPathType(dir, "%s/ncbi"         , home) != kptNotFound)
-        , dbGaP
-            (KDirectoryPathType(dir, "%s/ncbi/dbGaP-2956", home) != kptNotFound)
+        , ncbi (KDirectoryPathType(dir, "%s/%s", home, Ncbi ()) != kptNotFound)
+        , dbGaP(KDirectoryPathType(dir, "%s/%s", home, DbGaP()) != kptNotFound)
     {}
+
     ~Cleaner() {
         if (!dbGaP)
-            KDirectoryRemove(dir, false, "%s/ncbi/dbGaP-2956", home);
+            KDirectoryRemove(dir, false, "%s/%s", home, DbGaP());
         if (!ncbi)
-            KDirectoryRemove(dir, false, "%s/ncbi"           , home);
+            KDirectoryRemove(dir, false, "%s/%s", home, Ncbi ());
     }
 };
 
