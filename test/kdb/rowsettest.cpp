@@ -44,180 +44,110 @@ TEST_SUITE(KRowSetTestSuite);
 
 void vector_inserter ( int64_t row_id, void *data )
 {
-	std::vector<int64_t> * rows = (std::vector<int64_t> *) data;
-	rows->push_back ( row_id );
+    std::vector<int64_t> * rows = (std::vector<int64_t> *) data;
+    rows->push_back ( row_id );
 }
 
-int64_t generate_id ( int64_t range_start, int64_t range_count )
+class RowSetFixture
 {
-	if ( range_start == -1 )
-		range_start = 0;
-
-	if ( range_count == -1 || range_start + range_count < 0 )
-		range_count = INT64_MAX - range_start;
-
-	int64_t generated_id = ((int64_t)rand() << 32) | rand();
-	generated_id &= INT64_MAX; // make sure it is positive
-
-	generated_id = generated_id % range_count;
-	generated_id += range_start;
-
-	return generated_id;
-}
-
-TEST_CASE(KRowSetWalk)
-{
-	KRowSet * rowset;
-	uint64_t num_rows;
-	std::set<int64_t> inserted_rows_set;
-	std::vector<int64_t> inserted_rows;
-	std::vector<int64_t> returned_rows;
-
-	srand ( time(NULL) );
-
-	REQUIRE_RC ( KCreateRowSet ( &rowset ) );
-	for ( int i = 0; i < 10000; ++i )
-	{
-		int64_t row_id = generate_id ( -1, -1 );
-		if ( inserted_rows_set.find( row_id ) ==  inserted_rows_set.end() )
-		{
-			REQUIRE_RC ( KRowSetInsertRow ( rowset, row_id ) );
-			inserted_rows_set.insert( row_id );
-		}
-		else
-			--i;
-	}
-
-	std::copy(inserted_rows_set.begin(), inserted_rows_set.end(), std::back_inserter(inserted_rows));
-
-	REQUIRE_RC ( KRowSetWalkRows( rowset, false, vector_inserter, (void *)&returned_rows ) );
-
-	REQUIRE_RC ( KRowSetGetNumRows ( rowset, &num_rows ) );
-
-	REQUIRE_EQ ( inserted_rows.size(), returned_rows.size() );
-	REQUIRE_EQ ( num_rows, (uint64_t)returned_rows.size() );
-	REQUIRE ( inserted_rows == returned_rows );
-
-	REQUIRE_RC ( KRowSetRelease( rowset ) );
-}
-
-TEST_CASE(KRowSetWalkReverse)
-{
-	KRowSet * rowset;
-	uint64_t num_rows;
-	std::set<int64_t> inserted_rows_set;
-	std::vector<int64_t> inserted_rows;
-	std::vector<int64_t> returned_rows;
-
-	srand ( time(NULL) );
-
-	REQUIRE_RC ( KCreateRowSet ( &rowset ) );
-	for ( int i = 0; i < 10000; ++i )
-	{
-		int64_t row_id = generate_id ( -1, -1 );
-		if ( inserted_rows_set.find( row_id ) ==  inserted_rows_set.end() )
-		{
-			REQUIRE_RC ( KRowSetInsertRow ( rowset, row_id ) );
-			inserted_rows_set.insert( row_id );
-		}
-		else
-			--i;
-	}
-
-	std::copy(inserted_rows_set.rbegin(), inserted_rows_set.rend(), std::back_inserter(inserted_rows));
-
-	KRowSetWalkRows( rowset, true, vector_inserter, (void *)&returned_rows );
-
-	KRowSetGetNumRows ( rowset, &num_rows );
-
-	REQUIRE_EQ ( inserted_rows.size(), returned_rows.size() );
-	REQUIRE_EQ ( num_rows, (uint64_t)returned_rows.size() );
-	REQUIRE ( inserted_rows == returned_rows );
-
-	REQUIRE_RC ( KRowSetRelease( rowset ) );
-}
-
-TEST_CASE(KRowSetDenseRowsWalk)
-{
-	KRowSet * rowset;
-	uint64_t num_rows;
-	std::set<int64_t> inserted_rows_set;
-	std::vector<int64_t> inserted_rows;
-	std::vector<int64_t> returned_rows;
-
-	srand ( time(NULL) );
-
-	REQUIRE_RC ( KCreateRowSet ( &rowset ) );
-	for ( int i = 0; i < 10000; ++i )
-	{
-		int64_t row_id = generate_id ( 0, 131072 ); // row ids will only go to first two leaves
-		if ( inserted_rows_set.find( row_id ) ==  inserted_rows_set.end() )
-		{
-			REQUIRE_RC ( KRowSetInsertRow ( rowset, row_id ) );
-			inserted_rows_set.insert( row_id );
-		}
-		else
-			--i;
-	}
-
-	std::copy(inserted_rows_set.begin(), inserted_rows_set.end(), std::back_inserter(inserted_rows));
-
-	KRowSetWalkRows( rowset, false, vector_inserter, (void *)&returned_rows );
-
-	KRowSetGetNumRows ( rowset, &num_rows );
-
-	REQUIRE_EQ ( inserted_rows.size(), returned_rows.size() );
-	REQUIRE_EQ ( num_rows, (uint64_t)returned_rows.size() );
-	REQUIRE ( inserted_rows == returned_rows );
-
-	REQUIRE_RC ( KRowSetRelease( rowset ) );
-}
-
-TEST_CASE(KRowSetDenseRowsWalkReverse)
-{
-    KRowSet * rowset;
-    uint64_t num_rows;
-    std::set<int64_t> inserted_rows_set;
-    std::vector<int64_t> inserted_rows;
-    std::vector<int64_t> returned_rows;
-
-    srand ( time(NULL) );
-
-    REQUIRE_RC ( KCreateRowSet ( &rowset ) );
-    for ( int i = 0; i < 10000; ++i )
+public:
+    int64_t GenerateId ( int64_t range_start, int64_t range_count )
     {
-        int64_t row_id = generate_id ( 0, 131072 ); // row ids will only go to first two leaves
-        if ( inserted_rows_set.find( row_id ) ==  inserted_rows_set.end() )
-        {
-            REQUIRE_RC ( KRowSetInsertRow ( rowset, row_id ) );
-            inserted_rows_set.insert( row_id );
-        }
-        else
-            --i;
+        if ( range_start == -1 )
+            range_start = 0;
+
+        if ( range_count == -1 || range_start + range_count < 0 )
+            range_count = INT64_MAX - range_start;
+
+        int64_t generated_id = ((int64_t)rand() << 32) | rand();
+        generated_id &= INT64_MAX; // make sure it is positive
+
+        generated_id = generated_id % range_count;
+        generated_id += range_start;
+
+        return generated_id;
     }
 
-    std::copy(inserted_rows_set.rbegin(), inserted_rows_set.rend(), std::back_inserter(inserted_rows));
+    void RunChecks ( const KRowSet * rowset, std::set<int64_t> & inserted_rows_set )
+    {
+        RunChecksInt ( rowset, inserted_rows_set, false );
+        RunChecksInt ( rowset, inserted_rows_set, true );
+    }
+private:
+    void RunChecksInt ( const KRowSet * rowset, std::set<int64_t> & inserted_rows_set, bool reverse_walk )
+    {
+        std::vector<int64_t> inserted_rows;
+        std::vector<int64_t> returned_rows;
+        uint64_t num_rows;
 
-    KRowSetWalkRows( rowset, true, vector_inserter, (void *)&returned_rows );
+        if ( !reverse_walk )
+            std::copy(inserted_rows_set.begin(), inserted_rows_set.end(), std::back_inserter(inserted_rows));
+        else
+            std::copy(inserted_rows_set.rbegin(), inserted_rows_set.rend(), std::back_inserter(inserted_rows));
 
-    KRowSetGetNumRows ( rowset, &num_rows );
+        THROW_ON_RC ( KRowSetWalkRows( rowset, reverse_walk, vector_inserter, (void *)&returned_rows ) );
 
-    REQUIRE_EQ ( inserted_rows.size(), returned_rows.size() );
-    REQUIRE_EQ ( num_rows, (uint64_t)returned_rows.size() );
-    REQUIRE ( inserted_rows == returned_rows );
+        THROW_ON_RC ( KRowSetGetNumRows ( rowset, &num_rows ) );
 
-    REQUIRE_RC ( KRowSetRelease( rowset ) );
+        if ( inserted_rows.size() != returned_rows.size() )
+            FAIL("inserted_rows.size() != returned_rows.size()");
+        if ( num_rows != returned_rows.size() )
+            FAIL("num_rows != returned_rows.size()");
+        if ( inserted_rows != returned_rows )
+            FAIL("inserted_rows != returned_rows");
+    }
+};
+
+
+
+FIXTURE_TEST_CASE ( KRowSetScatteredRows, RowSetFixture )
+{
+	KRowSet * rowset;
+	std::set<int64_t> inserted_rows_set;
+
+	REQUIRE_RC ( KCreateRowSet ( &rowset ) );
+	for ( int i = 0; i < 10000; ++i )
+	{
+		int64_t row_id = GenerateId ( -1, -1 );
+		if ( inserted_rows_set.find( row_id ) ==  inserted_rows_set.end() )
+		{
+			REQUIRE_RC ( KRowSetInsertRow ( rowset, row_id ) );
+			inserted_rows_set.insert( row_id );
+		}
+		else
+			--i;
+	}
+
+	RunChecks ( rowset, inserted_rows_set );
+	REQUIRE_RC ( KRowSetRelease( rowset ) );
 }
 
-TEST_CASE(KRowSetSerialRowsWalk)
+FIXTURE_TEST_CASE ( KRowSetDenseRows, RowSetFixture )
+{
+	KRowSet * rowset;
+	std::set<int64_t> inserted_rows_set;
+
+	REQUIRE_RC ( KCreateRowSet ( &rowset ) );
+	for ( int i = 0; i < 10000; ++i )
+	{
+		int64_t row_id = GenerateId ( 0, 131072 ); // row ids will only go to first two leaves
+		if ( inserted_rows_set.find( row_id ) ==  inserted_rows_set.end() )
+		{
+			REQUIRE_RC ( KRowSetInsertRow ( rowset, row_id ) );
+			inserted_rows_set.insert( row_id );
+		}
+		else
+			--i;
+	}
+
+	RunChecks ( rowset, inserted_rows_set );
+	REQUIRE_RC ( KRowSetRelease( rowset ) );
+}
+
+FIXTURE_TEST_CASE ( KRowSetSerialRows, RowSetFixture )
 {
     KRowSet * rowset;
-    uint64_t num_rows;
     std::set<int64_t> inserted_rows_set;
-    std::vector<int64_t> inserted_rows;
-    std::vector<int64_t> returned_rows;
-
-    srand ( time(NULL) );
 
     REQUIRE_RC ( KCreateRowSet ( &rowset ) );
     for ( int i = 0; i < 100000; ++i )
@@ -227,62 +157,17 @@ TEST_CASE(KRowSetSerialRowsWalk)
         inserted_rows_set.insert( row_id );
     }
 
-    std::copy(inserted_rows_set.begin(), inserted_rows_set.end(), std::back_inserter(inserted_rows));
-
-    KRowSetWalkRows( rowset, false, vector_inserter, (void *)&returned_rows );
-
-    KRowSetGetNumRows ( rowset, &num_rows );
-
-    REQUIRE_EQ ( inserted_rows.size(), returned_rows.size() );
-    REQUIRE_EQ ( num_rows, (uint64_t)returned_rows.size() );
-    REQUIRE ( inserted_rows == returned_rows );
-
+    RunChecks ( rowset, inserted_rows_set );
     REQUIRE_RC ( KRowSetRelease( rowset ) );
 }
 
-TEST_CASE(KRowSetSerialRowsWalkReverse)
+FIXTURE_TEST_CASE ( KRowSetRowRanges, RowSetFixture )
 {
     KRowSet * rowset;
-    uint64_t num_rows;
     std::set<int64_t> inserted_rows_set;
-    std::vector<int64_t> inserted_rows;
-    std::vector<int64_t> returned_rows;
-
-    srand ( time(NULL) );
-
-    REQUIRE_RC ( KCreateRowSet ( &rowset ) );
-    for ( int i = 10000; i > 0; --i )
-    {
-        int64_t row_id = i; // row ids will only go to first two leaves
-        REQUIRE_RC ( KRowSetInsertRow ( rowset, row_id ) );
-        inserted_rows_set.insert( row_id );
-    }
-
-    std::copy(inserted_rows_set.rbegin(), inserted_rows_set.rend(), std::back_inserter(inserted_rows));
-
-    KRowSetWalkRows( rowset, true, vector_inserter, (void *)&returned_rows );
-
-    KRowSetGetNumRows ( rowset, &num_rows );
-
-    REQUIRE_EQ ( inserted_rows.size(), returned_rows.size() );
-    REQUIRE_EQ ( num_rows, (uint64_t)returned_rows.size() );
-    REQUIRE ( inserted_rows == returned_rows );
-
-    REQUIRE_RC ( KRowSetRelease( rowset ) );
-}
-
-TEST_CASE(KRowSetRowRangesWalk)
-{
-    KRowSet * rowset;
-    uint64_t num_rows;
-    std::set<int64_t> inserted_rows_set;
-    std::vector<int64_t> inserted_rows;
-    std::vector<int64_t> returned_rows;
 
     int row_ids[] = { 0, 5, 1, 6, 20, 10, 55, 60, 65, 70, 75, 80, 85, 999,  2001 };
     int counts[]  = { 1, 1, 4, 4, 10, 10, 1,  1,  1,  1,  1,  1,  1,  1000, 1000 };
-
-    srand ( time(NULL) );
 
     REQUIRE_RC ( KCreateRowSet ( &rowset ) );
     for ( int i = 0; i < sizeof row_ids / sizeof row_ids[0]; ++i )
@@ -295,26 +180,14 @@ TEST_CASE(KRowSetRowRangesWalk)
             inserted_rows_set.insert( row_id + j );
     }
 
-    std::copy(inserted_rows_set.begin(), inserted_rows_set.end(), std::back_inserter(inserted_rows));
-
-    KRowSetWalkRows( rowset, false, vector_inserter, (void *)&returned_rows );
-
-    KRowSetGetNumRows ( rowset, &num_rows );
-
-    REQUIRE_EQ ( inserted_rows.size(), returned_rows.size() );
-    REQUIRE_EQ ( num_rows, (uint64_t)returned_rows.size() );
-    REQUIRE ( inserted_rows == returned_rows );
-
+    RunChecks ( rowset, inserted_rows_set );
     REQUIRE_RC ( KRowSetRelease( rowset ) );
 }
 
-TEST_CASE(KRowSetRowRangesOverlapDuplicatesWalk)
+FIXTURE_TEST_CASE ( KRowSetRowRangesOverlapDuplicates, RowSetFixture )
 {
     KRowSet * rowset;
-    uint64_t num_rows;
     std::set<int64_t> inserted_rows_set;
-    std::vector<int64_t> inserted_rows;
-    std::vector<int64_t> returned_rows;
 
     int row_ids[] = { 5, 10 };
     int counts[]  = { 1, 5    };
@@ -322,8 +195,6 @@ TEST_CASE(KRowSetRowRangesOverlapDuplicatesWalk)
     int overlap_row_ids[] = { 0, 5, 5, 2, 9, 9, 14 };
     int overlap_counts[]  = { 6, 1, 2, 6, 2, 10, 2 };
 
-    srand ( time(NULL) );
-
     REQUIRE_RC ( KCreateRowSet ( &rowset ) );
     for ( int i = 0; i < sizeof row_ids / sizeof row_ids[0]; ++i )
     {
@@ -346,26 +217,14 @@ TEST_CASE(KRowSetRowRangesOverlapDuplicatesWalk)
             inserted_rows_set.insert( row_id + j );
     }
 
-    std::copy(inserted_rows_set.begin(), inserted_rows_set.end(), std::back_inserter(inserted_rows));
-
-    KRowSetWalkRows( rowset, false, vector_inserter, (void *)&returned_rows );
-
-    KRowSetGetNumRows ( rowset, &num_rows );
-
-    REQUIRE_EQ ( inserted_rows.size(), returned_rows.size() );
-    REQUIRE_EQ ( num_rows, (uint64_t)returned_rows.size() );
-    REQUIRE ( inserted_rows == returned_rows );
-
+    RunChecks ( rowset, inserted_rows_set );
     REQUIRE_RC ( KRowSetRelease( rowset ) );
 }
 
-TEST_CASE(KRowSetRowRangesDenseOverlapDuplicatesWalk)
+FIXTURE_TEST_CASE ( KRowSetRowRangesDenseOverlapDuplicates, RowSetFixture )
 {
     KRowSet * rowset;
-    uint64_t num_rows;
     std::set<int64_t> inserted_rows_set;
-    std::vector<int64_t> inserted_rows;
-    std::vector<int64_t> returned_rows;
 
     int row_ids[] = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 1000 };
     int counts[]  = { 1, 1, 1,  1,  1,  1,  1,  1,  1,  1    };
@@ -373,8 +232,6 @@ TEST_CASE(KRowSetRowRangesDenseOverlapDuplicatesWalk)
     int overlap_row_ids[] = { 500 };
     int overlap_counts[]  = { 1000 };
 
-    srand ( time(NULL) );
-
     REQUIRE_RC ( KCreateRowSet ( &rowset ) );
     for ( int i = 0; i < sizeof row_ids / sizeof row_ids[0]; ++i )
     {
@@ -397,16 +254,7 @@ TEST_CASE(KRowSetRowRangesDenseOverlapDuplicatesWalk)
             inserted_rows_set.insert( row_id + j );
     }
 
-    std::copy(inserted_rows_set.begin(), inserted_rows_set.end(), std::back_inserter(inserted_rows));
-
-    KRowSetWalkRows( rowset, false, vector_inserter, (void *)&returned_rows );
-
-    KRowSetGetNumRows ( rowset, &num_rows );
-
-    REQUIRE_EQ ( inserted_rows.size(), returned_rows.size() );
-    REQUIRE_EQ ( num_rows, (uint64_t)returned_rows.size() );
-    REQUIRE ( inserted_rows == returned_rows );
-
+    RunChecks ( rowset, inserted_rows_set );
     REQUIRE_RC ( KRowSetRelease( rowset ) );
 }
 
@@ -462,8 +310,8 @@ rc_t CC Usage ( const Args *args )
 }
 rc_t CC KMain ( int argc, char *argv [] )
 {
-	rc_t rc = KRowSetTestSuite(argc, argv);
-    return rc;
+    srand ( time(NULL) );
+	return KRowSetTestSuite(argc, argv);
 }
 
 }
