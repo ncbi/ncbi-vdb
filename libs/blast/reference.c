@@ -562,7 +562,7 @@ size_t CC _ReferencesGetReadName(const struct References *self,
     uint64_t read_id, char *name_buffer, size_t bsize)
 {
     const VdbBlastRef *r = NULL;
-    const char *acc = "";
+    const char *acc = NULL;
 
     bool bad = false;
     read_id = _clear_read_id_reference_bit(read_id, &bad);
@@ -591,19 +591,14 @@ size_t CC _ReferencesGetReadName(const struct References *self,
         const char *SEQ_ID = self->refs->rfd[read_id].SEQ_ID;
 
         size_t num_writ = 0;
-        rc_t rc =
-            string_printf(name_buffer, bsize, &num_writ,
-            "%s%c%s", acc, REF_SEPARATOR, SEQ_ID);
-        if (rc == 0) {
-            return num_writ;
-        }
-        else if (GetRCState(rc) != rcInsufficient) {
-            return 0;
+        if (acc == NULL) {
+            string_printf(name_buffer, bsize, &num_writ, "%s", SEQ_ID);
         }
         else {
-            size_t dst_size = string_size(acc) + 1 + string_size(SEQ_ID);
-            return dst_size;
+            string_printf(name_buffer, bsize, &num_writ,
+                "%s%c%s", acc, REF_SEPARATOR, SEQ_ID);
         }
+        return num_writ;
     }
 }
 
@@ -624,19 +619,22 @@ VdbBlastStatus _ReferencesGetReadId(const References *self,
     refs = self->refs;
     memset(&acc, 0 , sizeof acc);
     memset(&seq, 0 , sizeof seq);
-    if (name_buffer[0] != REF_SEPARATOR) {
-        sp = string_chr(name_buffer, bsize, REF_SEPARATOR);
-        if (sp == NULL) {
+
+    sp = string_chr(name_buffer, bsize, REF_SEPARATOR);
+    if (sp != NULL) {
+        StringInit(&acc, name_buffer, sp - name_buffer, sp - name_buffer);
+        if ((sp - name_buffer) >= bsize) {
             return eVdbBlastErr;
         }
-        StringInit(&acc, name_buffer, sp - name_buffer, sp - name_buffer);
-
-    }/*((char*)name_buffer)[sp - name_buffer] = 0; */
-    if ((sp - name_buffer) >= bsize) {
-        return eVdbBlastErr;
     }
-    StringInit(&seq, sp + 1, bsize - (sp - name_buffer) - 1,
-                             bsize - (sp - name_buffer) - 1);
+
+    if (sp != NULL) {
+        StringInit(&seq, sp + 1, bsize - (sp - name_buffer) - 1,
+                                 bsize - (sp - name_buffer) - 1);
+    }
+    else {
+        StringInit(&seq, name_buffer, bsize, bsize);
+    }
     if (acc.size != 0) {
         bool found = false;
         int32_t iRun = ~0;
