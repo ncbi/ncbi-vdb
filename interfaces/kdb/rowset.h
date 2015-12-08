@@ -42,12 +42,23 @@ extern "C" {
 #endif
 
 /*--------------------------------------------------------------------------
+ * forwards
+ */
+struct KTable;
+
+
+/*--------------------------------------------------------------------------
  * KRowSet
  *  a subset of matching rows
  */
 typedef struct KRowSet KRowSet;
-    
-KDB_EXTERN rc_t CC KCreateRowSet ( KRowSet ** self );
+
+
+/* MakeRowSet
+ *  may add others...
+ */
+KDB_EXTERN rc_t CC KTableMakeRowSet ( struct KTable const * self, KRowSet ** rowset );
+
 
 /* AddRef
  * Release
@@ -55,15 +66,39 @@ KDB_EXTERN rc_t CC KCreateRowSet ( KRowSet ** self );
  */
 KDB_EXTERN rc_t CC KRowSetAddRef ( const KRowSet * self );
 KDB_EXTERN rc_t CC KRowSetRelease ( const KRowSet * self );
-    
-KDB_EXTERN rc_t CC KRowSetInsertRowRange ( KRowSet * self, int64_t row_id, uint64_t count, uint64_t * inserted );
 
-#define KRowSetInsertRow( SELF, ROW_ID ) KRowSetInsertRowRange ( (SELF), (ROW_ID), 1, NULL )
 
-KDB_EXTERN rc_t CC KRowSetGetNumRows ( const KRowSet * self, uint64_t * num_rows );
+/* AddRowId
+ *  add a single row to set
+ */
+KDB_EXTERN rc_t CC KRowSetAddRowId ( KRowSet * self, int64_t row_id );
 
-KDB_EXTERN rc_t CC KRowSetWalkRows ( const KRowSet * self, bool reverse,
+
+/* AddRowIdRange
+ *  adds row-ids within specified range
+ *
+ *  "row_id" [ IN ] and "count" [ IN ] - range of row-ids to be inserted
+ *
+ *  "optional_inserted" [ OUT, NULL OKAY ] - returns the number of ids
+ *  actually added. this can be from 0.."count" depending upon whether the
+ *  row-id(s) already exist.
+ */
+KDB_EXTERN rc_t CC KRowSetAddRowIdRange ( KRowSet * self, int64_t row_id,
+    uint64_t count, uint64_t * optional_inserted );
+
+
+/* GetNumRowIds
+ *  return the number of elements in set
+ */
+KDB_EXTERN rc_t CC KRowSetGetNumRowIds ( const KRowSet * self, uint64_t * num_rows );
+
+
+/* Visit
+ *  execute a function on each row-id in set
+ */
+KDB_EXTERN rc_t CC KRowSetVisit ( const KRowSet * self, bool reverse,
 		void ( CC * f ) ( int64_t row_id, void * data ), void * data );
+
 
 /*--------------------------------------------------------------------------
  * KRowSetIterator
@@ -71,15 +106,56 @@ KDB_EXTERN rc_t CC KRowSetWalkRows ( const KRowSet * self, bool reverse,
  */
 typedef struct KRowSetIterator KRowSetIterator;
 
-KDB_EXTERN rc_t CC KRowSetCreateIterator ( const KRowSet * self, bool reverse, KRowSetIterator ** iter );
 
-KDB_EXTERN rc_t CC KRowSetIteratorAddRef ( const KRowSetIterator * iter );
-KDB_EXTERN rc_t CC KRowSetIteratorRelease ( const KRowSetIterator * iter );
+/* MakeIterator
+ *  create an iterator on set
+ *  initially set to first row-id in set
+ */
+KDB_EXTERN rc_t CC KRowSetMakeIterator ( const KRowSet * self, KRowSetIterator ** iter );
 
-KDB_EXTERN bool CC KRowSetIteratorNext ( KRowSetIterator * iter );
 
-KDB_EXTERN int64_t CC KRowSetIteratorRowId ( const KRowSetIterator * iter );
-    
+/* AddRef
+ * Release
+ *  ignores NULL references
+ */
+KDB_EXTERN rc_t CC KRowSetIteratorAddRef ( const KRowSetIterator * self );
+KDB_EXTERN rc_t CC KRowSetIteratorRelease ( const KRowSetIterator * self );
+
+
+/* First
+ * Last
+ *  rewind iterator to first or last item in set
+ */
+KDB_EXTERN rc_t CC KRowSetIteratorFirst ( KRowSetIterator * self );
+KDB_EXTERN rc_t CC KRowSetIteratorLast ( KRowSetIterator * self );
+
+
+/* Next
+ *  advance iterator to next row-id
+
+ *  advance to first row-id on initial invocation
+ *  advance to next row-id subsequently
+ *  returns rcDone if no more row-ids are available.
+ */
+KDB_EXTERN rc_t CC KRowSetIteratorNext ( KRowSetIterator * self );
+
+
+/* Prev
+ *  advance iterator to previous row-id
+
+ *  advance to last row-id on initial invocation
+ *  advance to prev row-id subsequently
+ *  returns rcDone if no more row-ids are available.
+ */
+KDB_EXTERN rc_t CC KRowSetIteratorPrev ( KRowSetIterator * self );
+
+
+/* RowId
+ *  report current row id
+ */
+KDB_EXTERN rc_t CC KRowSetIteratorRowId ( const KRowSetIterator * self, int64_t * row_id );
+
+
 #ifdef __cplusplus
 }
 #endif
