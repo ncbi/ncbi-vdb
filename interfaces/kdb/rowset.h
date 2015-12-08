@@ -53,7 +53,6 @@ struct KTable;
  */
 typedef struct KRowSet KRowSet;
 
-
 /* MakeRowSet
  *  may add others...
  */
@@ -105,6 +104,11 @@ KDB_EXTERN rc_t CC KRowSetGetNumRowIds ( const KRowSet * self, uint64_t * num_ro
 KDB_EXTERN rc_t CC KRowSetVisit ( const KRowSet * self, bool reverse,
     void ( CC * f ) ( int64_t row_id, void * data ), void * data );
 
+/**
+ * OpAnd
+ *  performs an intersection with other rowset and updates a current one
+ */
+KDB_EXTERN rc_t CC KRowSetOpAnd ( KRowSet * self, const KRowSet * other );
 
 /*--------------------------------------------------------------------------
  * KRowSetIterator

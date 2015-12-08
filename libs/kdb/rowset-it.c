@@ -195,7 +195,7 @@ bool CC KRowSetIteratorMove ( KRowSetIterator * iter, bool backward )
 
             for ( i = from_i; i != to_i; i += step )
             {
-                const struct KRowSetTreeLeafArrayRange * range = &leaf->data.array_ranges.ranges[i];
+                const struct KRowSetTreeLeafRowRange * range = &leaf->data.array_ranges.ranges[i];
                 to_j = (!backward ? range->end : range->start) + step;
                 // single loop iteration just to check conditions
                 for ( j = from_j; j != to_j; j += step )
@@ -214,9 +214,9 @@ bool CC KRowSetIteratorMove ( KRowSetIterator * iter, bool backward )
         }
 
         if ( !backward )
-            iter->leaf = (KRowSetTreeLeaf * ) DLNodeNext ( &leaf->header.dad );
+            iter->leaf = KRowSetTreeLeafGetNext ( leaf );
         else
-            iter->leaf = (KRowSetTreeLeaf * ) DLNodePrev( &leaf->header.dad );
+            iter->leaf = KRowSetTreeLeafGetPrev ( leaf );
 
         if ( iter->leaf == NULL )
         {
@@ -244,7 +244,7 @@ KDB_EXTERN rc_t CC KRowSetMakeIterator ( const KRowSet * self, KRowSetIterator *
         return rc;
 
     if ( num_rows == 0 )
-        return RC ( rcDB, rcIterator, rcConstructing, rcId, rcNotFound );
+        return RC ( rcDB, rcIterator, rcConstructing, rcItem, rcNotFound );
 
     it = calloc ( 1, sizeof *it );
     if ( it == NULL )

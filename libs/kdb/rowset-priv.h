@@ -79,6 +79,7 @@ typedef struct KRowSetTreeLeafHeader
 {
     DLNode dad;
     int64_t leaf_id; // this is basically a row_id >> 16
+    uint64_t leaf_rows; // number of rows set in this leaf
     uint8_t type; // types are defined in KRowSetTreeLeafType
 
 #if CHECK_NODE_MARKS
@@ -93,8 +94,8 @@ typedef struct KRowSetTreeLeaf
     union u
     {
         uint8_t bitmap[LEAF_DATA_SZ_BT];
-        struct {
-            struct KRowSetTreeLeafArrayRange {
+        struct KRowSetTreeLeafArrayRanges {
+            struct KRowSetTreeLeafRowRange {
                 uint16_t start;
                 uint16_t end;
             } ranges[8];
@@ -105,6 +106,8 @@ typedef struct KRowSetTreeLeaf
 
 const KRowSetTreeLeaf * KRowSetTreeGetFirstLeaf ( const KRowSet * self );
 const KRowSetTreeLeaf * KRowSetTreeGetLastLeaf ( const KRowSet * self );
+const KRowSetTreeLeaf * KRowSetTreeLeafGetNext ( const KRowSetTreeLeaf * leaf );
+const KRowSetTreeLeaf * KRowSetTreeLeafGetPrev ( const KRowSetTreeLeaf * leaf );
 
 #ifdef __cplusplus
 }

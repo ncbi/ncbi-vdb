@@ -89,6 +89,21 @@ private:
 
         THROW_ON_RC ( KRowSetGetNumRowIds ( rowset, &num_rows ) );
 
+/*
+        // useful in debugging
+        KOutMsg("inserted:\n");
+        for ( int i = 0; i < inserted_rows.size(); ++i )
+        {
+            KOutMsg ( "%d, ", inserted_rows[i] );
+        }
+        KOutMsg("\n");
+        KOutMsg("returned:\n");
+        for ( int i = 0; i < returned_rows.size(); ++i )
+        {
+            KOutMsg ( "%d, ", returned_rows[i] );
+        }
+        KOutMsg("\n");
+*/
         if ( inserted_rows.size() != returned_rows.size() )
             FAIL("inserted_rows.size() != returned_rows.size()");
         if ( num_rows != returned_rows.size() )
@@ -416,6 +431,45 @@ FIXTURE_TEST_CASE ( KRowSetIteratorOverEmptySet, RowSetFixture )
     REQUIRE_RC_FAIL ( KRowSetMakeIterator ( rowset, &it ) );
 
     REQUIRE_RC ( KRowSetRelease( rowset ) );
+}
+
+FIXTURE_TEST_CASE ( KRowSetOpAndTest, RowSetFixture )
+{
+    KRowSet * rowset1;
+    KRowSet * rowset2;
+    std::set<int64_t> inserted_rows_set1;
+    std::set<int64_t> inserted_rows_set2;
+
+    REQUIRE_RC ( KTableMakeRowSet ( NULL, &rowset1 ) );
+    REQUIRE_RC ( KTableMakeRowSet ( NULL, &rowset2 ) );
+
+    for ( int i = 0; i < 10000; ++i )
+    {
+        int64_t row_id = GenerateId ( -1, -1 );
+        if ( inserted_rows_set1.find( row_id ) ==  inserted_rows_set1.end() )
+        {
+            bool inserted;
+            REQUIRE_RC ( KRowSetAddRowId ( rowset1, row_id, &inserted ) );
+            REQUIRE ( inserted );
+            inserted_rows_set1.insert( row_id );
+            // just don't insert a single row to a second rowset, but otherwise keep them equal
+            if ( i != 0 )
+            {
+                REQUIRE_RC ( KRowSetAddRowId ( rowset2, row_id, &inserted ) );
+                REQUIRE ( inserted );
+                inserted_rows_set2.insert( row_id );
+            }
+        }
+        else
+            --i;
+    }
+
+    REQUIRE_RC ( KRowSetOpAnd ( rowset1, rowset2 ) );
+
+    RunChecks ( rowset2, inserted_rows_set2 );
+    RunChecks ( rowset1, inserted_rows_set2 );
+    REQUIRE_RC ( KRowSetRelease( rowset1 ) );
+    REQUIRE_RC ( KRowSetRelease( rowset2 ) );
 }
 
 //////////////////////////////////////////// Main
