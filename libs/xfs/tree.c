@@ -39,10 +39,9 @@
 #include "mehr.h"
 #include "zehr.h"
 #include "schwarzschraube.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
 
 /*)))
  |||
@@ -108,7 +107,7 @@ _VerifyTreeModelNode (
         Name = XFSModelNodeName ( Node );
         if ( Name == NULL ) {
 /*
-printf ( "Node name missed\n" );
+XFSLogDbg ( "Node name missed\n" );
 */
             return XFS_RC ( rcInvalid );
         }
@@ -118,7 +117,7 @@ printf ( "Node name missed\n" );
         if ( Prop != NULL ) {
             if ( XFSModelLookupNode ( Model, Prop ) == NULL ) {
 /*
-printf ( "Node [%s] can not stat node with 'AS' name [%s]\n", Name, Prop );
+XFSLogDbg ( "Node [%s] can not stat node with 'AS' name [%s]\n", Name, Prop );
 */
                 return XFS_RC ( rcInvalid );
             }
@@ -132,7 +131,7 @@ printf ( "Node [%s] can not stat node with 'AS' name [%s]\n", Name, Prop );
              */ 
             if ( XFSModelLookupNode ( Model, Prop ) != NULL ) {
 /*
-printf ( "Node [%s] with 'LABEL' [%s] already exists\n", Name, Prop );
+XFSLogDbg ( "Node [%s] with 'LABEL' [%s] already exists\n", Name, Prop );
 */
                 return XFS_RC ( rcInvalid );
             }
@@ -190,7 +189,7 @@ XFSTreeMake ( const struct XFSModel * Model, struct XFSTree ** Tree )
         /* Creating a tree */
     tTree = calloc ( 1, sizeof ( struct XFSTree ) );
 /*
-printf ( " |<- ThreeMake ( 0x%p )\n", ( void * ) tTree );
+XFSLogDbg ( " |<- ThreeMake ( 0x%p )\n", ( void * ) tTree );
 */
     if ( tTree == NULL ) {
         return XFS_RC ( rcExhausted );
@@ -244,7 +243,7 @@ printf ( " |<- ThreeMake ( 0x%p )\n", ( void * ) tTree );
     }
 
 /*
-printf ( " ->| ThreeMake ( 0x%p )\n", ( void * ) * Tree );
+XFSLogDbg ( " ->| ThreeMake ( 0x%p )\n", ( void * ) * Tree );
 */
 
     return RCt;
@@ -259,7 +258,7 @@ XFSTreeDispose ( struct XFSTree * self )
     RCt = 0;
 
 /*
-printf ( " |<- ThreeDispose ( 0x%p )\n", ( void * ) self );
+XFSLogDbg ( " |<- ThreeDispose ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self == NULL ) {
@@ -481,7 +480,7 @@ XFSTreeDepotDispose ( const struct XFSTreeDepot * self )
     mutabor = NULL;
 
 /*
-printf ( " |<- DepotDispose ( 0x%p )\n", ( void * ) self );
+XFSLogDbg ( " |<- DepotDispose ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self == 0 ) {

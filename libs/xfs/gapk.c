@@ -49,10 +49,10 @@
 #include "contnode.h"
 #include "xgap.h"
 #include "xgapk.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
 
-#include <stdio.h>
 #include <string.h>     /* memset */
 
 /*)))
@@ -255,7 +255,7 @@ XFSGapKartNodeMake (
     }
 
 /*
-printf ( "XFSGapKartNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type );
+XFSLogDbg ( "XFSGapKartNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type );
 */
 
     return RCt;
@@ -341,7 +341,7 @@ _KartNodeConstructor (
                             );
 
 /*
-printf ( "_KartNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_KartNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -361,7 +361,7 @@ _KartNodeValidator (
     RCt = 0;
 
 /*
-printf ( "_KartNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_KartNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

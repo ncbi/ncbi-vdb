@@ -181,23 +181,22 @@ LIB_EXPORT PY_RES_TYPE PY_NGS_Engine_ReferenceSequenceMake(char const* spec, voi
     return PY_RES_OK;
 }
 
-#if 0
-PY_RES_TYPE PY_NGS_Engine_RefcountRelease(void* pRefcount, void** ppNGSStrError)
+PY_RES_TYPE PY_NGS_Engine_RefcountRelease(void* pRefcount, char* pStrError, size_t nStrErrorBufferSize)
 {
     HYBRID_FUNC_ENTRY(rcSRA, rcRefcount, rcReleasing);
 
     NGS_RefcountRelease((NGS_Refcount*)pRefcount, ctx);
 
-    /* TODO: use TRY-CATCH or ON_FAIL macros*/
-    if (FAILED() /*ctx->rc*/)
+    if (FAILED())
     {
-        return NGSErrorHandler(ctx, ppNGSStrError);
+        return NGSErrorHandler(ctx, pStrError, nStrErrorBufferSize);
     }
 
     CLEAR();
     return PY_RES_OK;
 }
 
+#if 0
 PY_RES_TYPE PY_NGS_Engine_StringData(void const* pNGSString, char const** pRetBufPtr/* TODO: add new error return? */)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcString, rcAccessing );

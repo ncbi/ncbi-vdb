@@ -44,10 +44,9 @@
 #include "schwarzschraube.h"
 #include "teleport.h"
 #include "common.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
 
 /*)))
  |||    That file contains 'native' KFile and KDirectory based nodes
@@ -211,7 +210,7 @@ XFSKfsNodeMake (
     }
 
 /*
-printf ( "XFSKfsNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) TheNode, Name, Type );
+XFSLogDbg ( "XFSKfsNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) TheNode, Name, Type );
 */
 
     return RCt;
@@ -275,7 +274,7 @@ XFSKfsNodeDispose ( const struct XFSKfsNode * self )
     struct XFSKfsNode * Node = ( struct XFSKfsNode * ) self;
 
 /*
-printf ( "XFSKfsNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+XFSLogDbg ( "XFSKfsNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
 */
 
     if ( Node == 0 ) {
@@ -463,7 +462,7 @@ rc_t CC
 _KfsDir_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_KfsDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_KfsDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -996,7 +995,7 @@ _KfsFile_dispose_v1 ( const struct XFSEditor * self )
     struct XFSKfsFileEditor * Editor = ( struct XFSKfsFileEditor * ) self;
 
 /*
-    printf ( "_KfsNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_KfsNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -1359,7 +1358,7 @@ rc_t CC
 _KfsAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_KfsAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_KfsAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -1920,7 +1919,7 @@ _FileNodeConstructor (
                             );
 
 /*
-printf ( "_FileNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_FileNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1940,7 +1939,7 @@ _FileNodeValidator (
     RCt = 0;
 
 /*
-printf ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1991,7 +1990,7 @@ _DirNodeConstructor (
                             );
 
 /*
-printf ( "_DirNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_DirNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -2011,7 +2010,7 @@ _DirNodeValidator (
     RCt = 0;
 
 /*
-printf ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

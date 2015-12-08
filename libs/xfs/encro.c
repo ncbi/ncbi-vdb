@@ -45,10 +45,10 @@
 #include "schwarzschraube.h"
 #include "teleport.h"
 #include "common.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
 
-#include <stdio.h>
 #include <string.h>     /* memset */
 
 /*)))
@@ -234,7 +234,7 @@ XFSEncNodeDispose ( const struct XFSEncNode * self )
     struct XFSEncNode * Node = ( struct XFSEncNode * ) self;
 
 /*
-printf ( "XFSEncNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+XFSLogDbg ( "XFSEncNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
 */
 
     if ( Node == 0 ) {
@@ -319,7 +319,7 @@ _EncFile_dispose_v1 ( const struct XFSEditor * self )
 {
     struct XFSEncFileEditor * Editor = ( struct XFSEncFileEditor * ) self;
 /*
-    printf ( "_EncNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_EncNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -522,7 +522,7 @@ rc_t CC
 _EncAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_EncAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_EncAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -827,7 +827,7 @@ _EncryptedFileConstructor (
                                         );
 
 /*
-printf ( "_EncryptedFileConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_EncryptedFileConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -847,7 +847,7 @@ _EncryptedFileValidator (
     RCt = 0;
 
 /*
-printf ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

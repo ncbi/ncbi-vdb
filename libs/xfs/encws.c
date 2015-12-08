@@ -46,10 +46,9 @@
 #include "teleport.h"
 #include "common.h"
 #include "xencws.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
 
 /*)))
  |||    That file contains 'native' KFile and KDirectory based nodes
@@ -233,7 +232,7 @@ _EncWsNodeMake (
     }
 
 /*
-printf ( "_EncWsNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) TheNode, Name, Type );
+XFSLogDbg ( "_EncWsNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) TheNode, Name, Type );
 */
 
     return RCt;
@@ -252,7 +251,7 @@ _EncWsNodeDispose ( const struct _EncWsNode * self )
     struct _EncWsNode * Node = ( struct _EncWsNode * ) self;
 
 /*
-printf ( "_EncWsNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+XFSLogDbg ( "_EncWsNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
 */
 
     if ( Node == 0 ) {
@@ -432,7 +431,7 @@ rc_t CC
 _EncWsDir_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_EncWsDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_EncWsDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -941,7 +940,7 @@ _EncWsFile_dispose_v1 ( const struct XFSEditor * self )
     struct _EncWsFileEditor * Editor = ( struct _EncWsFileEditor * ) self;
 
 /*
-    printf ( "_EncWsNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_EncWsNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -1283,7 +1282,7 @@ rc_t CC
 _EncWsAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_EncWsAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_EncWsAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -1746,7 +1745,7 @@ _WorkspaceNodeConstructor (
     RCt = _EncWsNodeConstructor ( Model, Template, Alias, Node );
 
 /*
-printf ( "_WorkspaceNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_WorkspaceNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1766,7 +1765,7 @@ _WorkspaceNodeValidator (
     RCt = 0;
 
 /*
-printf ( "_WorkspaceNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_WorkspaceNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

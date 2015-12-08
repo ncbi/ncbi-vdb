@@ -35,6 +35,15 @@ TEST_TOOLS = \
 
 include $(TOP)/build/Makefile.env
 
+
+# make sure runs are not cached in the user repository when running tests
+ifeq ($(wildcard ../../../asm-trace),)
+	ifeq (,$(VDB_CONFIG))
+		VDB_CONFIG = $(shell pwd)/../only-remote-repository.kfg
+	endif
+endif
+
+
 $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
@@ -67,7 +76,7 @@ $(TEST_BINDIR)/test-vdb: $(TEST_VDB_OBJ)
 
 valgrind_vdb: std
 	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-vdb    
-    
+
 #-------------------------------------------------------------------------------
 # test-dependencies
 #
@@ -84,10 +93,10 @@ TEST_DEPS_LIB = \
 
 $(TEST_BINDIR)/test-dependencies: $(TEST_DEPS_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_DEPS_LIB)
-   
+
 valgrind_deps: std
 	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-dependencies    
-   
+
 #-------------------------------------------------------------------------------
 # test-wvdb
 #
@@ -107,8 +116,24 @@ $(TEST_BINDIR)/test-wvdb: $(TEST_WVDB_OBJ)
 
 wvdb: test-wvdb
 	$(TEST_BINDIR)/test-wvdb    
-    
+
 valgrind_wvdb: std
 	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-wvdb    
-    
-   
+
+#-------------------------------------------------------------------------------
+# SYS-224064
+#
+SYS_224064_SRC = \
+	SYS-224064
+
+SYS_224064_OBJ = \
+	$(addsuffix .$(OBJX),$(SYS_224064_SRC))
+
+SYS_224064_LIB = \
+	-sncbi-vdb \
+
+$(TEST_BINDIR)/SYS-224064: $(SYS_224064_OBJ)
+	$(LP) --exe -o $@ $^ $(SYS_224064_LIB)
+
+SYS-224064: makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@

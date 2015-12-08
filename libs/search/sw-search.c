@@ -43,6 +43,8 @@
 
 #include <sysalloc.h>
 
+#include <search/grep.h>
+
 
 #ifndef min
 #define min(x,y) ((y) < (x) ? (y) : (x))
@@ -66,10 +68,14 @@ typedef struct VRefVariation
     INSDC_dna_text const* ref_external; /* pointer to external buffer */
     size_t ref_size;
 
-    INSDC_dna_text* variation;
-    size_t var_start;
-    size_t var_size;
-    size_t var_len_on_ref;
+    INSDC_dna_text* var_buffer; /* in the case of deletion
+        it contains <ref_base_before><allele><ref_base_after>
+        otherwise it contains allele only */
+    INSDC_dna_text const* allele; /* points to allele in the var_buffer */
+    size_t allele_start;
+    size_t var_buffer_size;
+    size_t allele_size;
+    size_t allele_len_on_ref;
 } VRefVariation;
 
 
@@ -715,7 +721,7 @@ static bool compose_variation ( c_string_const const* ref,
         size_t ref_start, size_t ref_len,
         INSDC_dna_text const* query, size_t query_len,
         int64_t ref_pos_var, size_t var_len_on_ref,
-        c_string* variation )
+        c_string* variation, char const** pallele, size_t* pallele_size )
 {
     bool ret = true;
 
@@ -726,6 +732,8 @@ static bool compose_variation ( c_string_const const* ref,
     size_t postfix_start = ref_end_orig, postfix_len, query_trim_r;
 
     size_t query_len_new, var_len;
+
+    size_t allele_expanded_l = 0, allele_expanded_r = 0;
 
     if ((int64_t)ref_start <= ref_pos_var) /* left bound is expanded */
     {
@@ -750,7 +758,7 @@ static bool compose_variation ( c_string_const const* ref,
     }
     else /* right bound is shrinked */
     {
-        /*postfix_start = ref_end_new; in this case the value doesn't matter, setting ref_end_new to for mathematical consistency */
+        postfix_start = ref_end_new;
         postfix_len = 0;
         query_trim_r = ref_end_orig - ref_end_new;
     }
@@ -768,6 +776,27 @@ static bool compose_variation ( c_string_const const* ref,
         assert ( query_trim_r > 0 );
 
         query_trim_r = 0;
+    }
+    /*
+    special case: deletion
+    we have to create a query whis is the allele
+    expanded one base to the left and to the right
+    on the reference if possible
+    */
+    else if ( var_len_on_ref > query_len )
+    {
+        if ( prefix_start > 0 )
+        {
+            allele_expanded_l = 1;
+            prefix_start -= 1;
+            ++prefix_len;
+        }
+
+        if ( postfix_start + postfix_len + 1 < ref->size)
+        {
+            allele_expanded_r = 1;
+            ++postfix_len;
+        }
     }
 
     query_len_new = query_len - query_trim_l - query_trim_r;
@@ -791,11 +820,18 @@ static bool compose_variation ( c_string_const const* ref,
 
         if ( ! ret )
             c_string_destruct ( variation );
+
+        *pallele = variation->str + allele_expanded_l;
+        *pallele_size = variation->size - allele_expanded_l - allele_expanded_r;
     }
     else
     {
         /* in this case there is no query - don't allocate anything */
         ret = true;
+        assert ( 0 ); /* since we expand deletions,
+                      this code shall not be reached.
+                      theoretically it can be reached if 
+                      reference has length == 0 only */
     }
 
     return ret;
@@ -845,7 +881,7 @@ static bool make_query_ (
 #endif
 
 /*
-    FindRefVariationRegionIUPAC uses Smith-Waterman algorithm
+    FindRefVariationRegionIUPAC_SW uses Smith-Waterman algorithm
     to find theoretical bounds of the variation for
     the given reference, position on the reference
     and the raw query, or variation to look for at the given
@@ -864,7 +900,7 @@ static bool make_query_ (
                                             (return values)
 */
 
-LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC (
+LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC_SW (
         INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
         INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
         size_t* p_ref_start, size_t* p_ref_len
@@ -971,8 +1007,156 @@ free_resources:
     return rc;
 }
 
+/*
+    FindRefVariationRegionIUPAC_RA uses Rolling-bulldozer algorithm
+    to find theoretical bounds of the variation for
+    the given reference, position on the reference
+    and the raw query, or variation to look for at the given
+    reference position
+
+    ref, ref_size [IN]     - the reference on which the
+                             variation will be looked for
+    ref_pos_var [IN]       - the position on reference to look for the variation
+    variation, variation_size [IN] - the variation to look for at the ref_pos_var
+    var_len_on_ref [IN]    - the length of the variation on the reference, e.g.:
+                           - mismatch, 2 bases: variation = "XY", var_len_on_ref = 2
+                           - deletion, 3 bases: variation = "", var_len_on_ref = 3
+                           - insertion, 2 bases:  variation = "XY", var_len_on_ref = 0
+
+    p_ref_start, p_ref_len [OUT, NULL OK] - the region of ambiguity on the reference
+                                            (return values)
+*/
+
+LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC_RA (
+        INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
+        INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
+        size_t* p_ref_start, size_t* p_ref_len
+    )
+{
+    rc_t rc = 0;
+    size_t del_pos_start, del_pos_xend;
+    size_t ins_pos_start, ins_pos_xend;
+
+    /* Stage 1: trying to expand deletion */
+
+    /* expanding to the left */
+    if (var_len_on_ref > 0)
+    {
+        for (del_pos_start = ref_pos_var;
+            del_pos_start != 0 && ref[del_pos_start-1] == ref[del_pos_start-1 + var_len_on_ref];
+            --del_pos_start);
+
+        /* expanding to the right */
+        for (del_pos_xend = ref_pos_var + var_len_on_ref;
+            del_pos_xend < ref_size && ref[del_pos_xend] == ref[del_pos_xend - var_len_on_ref];
+            ++del_pos_xend);
+    }
+    else
+    {
+        del_pos_start = ref_pos_var;
+        del_pos_xend = ref_pos_var;
+    }
+
+    /* Stage 2: trying to expand insertion */
+
+    /* expanding to the left */
+    /* roll first repetition to the left (avoiding % operation) */
+    if (variation_size > 0)
+    {
+        if (del_pos_start > 0)
+        {
+            for (ins_pos_start = ref_pos_var; ins_pos_start != 0; --ins_pos_start)
+            {
+                size_t pos_in_var = ins_pos_start-1 - ref_pos_var + variation_size;
+                size_t pos_in_ref = ins_pos_start-1;
+                if ( (int64_t)pos_in_var == -1l || ref[pos_in_ref] != variation[pos_in_var] )
+                    break;
+            }
+            /* roll beyond first repetition (still avoiding %) - now can compare with reference rather than with variation */
+            for (; ins_pos_start != 0 && ref[ins_pos_start-1] == ref[ins_pos_start-1 + variation_size];
+                --ins_pos_start);
+        }
+        else
+            ins_pos_start = 0;
+
+        /* roll first repetition to the right (avoiding % operation) */
+        if (del_pos_xend < ref_size)
+        {
+            for (ins_pos_xend = ref_pos_var + var_len_on_ref; ins_pos_xend < ref_size; ++ins_pos_xend)
+            {
+                size_t pos_in_var = ins_pos_xend - ref_pos_var - var_len_on_ref;
+                if (pos_in_var == variation_size || ref[ins_pos_xend] != variation[pos_in_var])
+                    break;
+            }
+            /* roll beyond first repetition (still avoiding %) - now can compare with reference rather than with variation */
+            if (ins_pos_xend - ref_pos_var - var_len_on_ref == variation_size)
+            {
+                for (; ins_pos_xend < ref_size && ref[ins_pos_xend] == ref[ins_pos_xend - variation_size];
+                    ++ins_pos_xend);
+            }
+        }
+        else
+            ins_pos_xend = ref_size;
+    }
+    else
+    {
+        ins_pos_start = ref_pos_var;
+        ins_pos_xend = ref_pos_var;
+    }
+
+
+    if (del_pos_start > ins_pos_start)
+        del_pos_start = ins_pos_start;
+    if (del_pos_xend < ins_pos_xend)
+        del_pos_xend = ins_pos_xend;
+
+    if ( p_ref_start != NULL )
+        *p_ref_start = del_pos_start;
+    if ( p_ref_len != NULL )
+        *p_ref_len = del_pos_xend - del_pos_start;
+
+    return rc;
+}
+
+/*
+    FindRefVariationRegionIUPAC
+    to find theoretical bounds of the variation for
+    the given reference, position on the reference
+    and the raw query, or variation to look for at the given
+    reference position
+
+    alg                    - algorithm to use for the search (one of RefVarAlg enum)
+    ref, ref_size [IN]     - the reference on which the
+                             variation will be looked for
+    ref_pos_var [IN]       - the position on reference to look for the variation
+    variation, variation_size [IN] - the variation to look for at the ref_pos_var
+    var_len_on_ref [IN]    - the length of the variation on the reference, e.g.:
+                           - mismatch, 2 bases: variation = "XY", var_len_on_ref = 2
+                           - deletion, 3 bases: variation = "", var_len_on_ref = 3
+                           - insertion, 2 bases:  variation = "XY", var_len_on_ref = 0
+
+    p_ref_start, p_ref_len [OUT, NULL OK] - the region of ambiguity on the reference
+                                            (return values)
+*/
+
+LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC (
+        RefVarAlg alg, INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
+        INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
+        size_t* p_ref_start, size_t* p_ref_len
+    )
+{
+    switch (alg)
+    {
+    case refvarAlgSW:
+        return FindRefVariationRegionIUPAC_SW ( ref, ref_size, ref_pos_var, variation, variation_size, var_len_on_ref, p_ref_start, p_ref_len );
+    case refvarAlgRA:
+        return FindRefVariationRegionIUPAC_RA ( ref, ref_size, ref_pos_var, variation, variation_size, var_len_on_ref, p_ref_start, p_ref_len );
+    }
+    return RC ( rcVDB, rcExpression, rcConstructing, rcParam, rcUnrecognized );
+}
+
 LIB_EXPORT rc_t CC VRefVariationIUPACMake (
-        VRefVariation** self,
+        VRefVariation** self, RefVarAlg alg,
         INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
         INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref
     )
@@ -1002,7 +1186,7 @@ LIB_EXPORT rc_t CC VRefVariationIUPACMake (
     else
     {
         size_t ref_start, ref_len;
-        rc = FindRefVariationRegionIUPAC ( ref, ref_size,
+        rc = FindRefVariationRegionIUPAC ( alg, ref, ref_size,
                                            ref_pos_var,
                                            variation, variation_size, var_len_on_ref,
                                            & ref_start, & ref_len );
@@ -1013,6 +1197,9 @@ LIB_EXPORT rc_t CC VRefVariationIUPACMake (
         }
         else
         {
+            size_t allele_size = 0;
+            char const* allele = NULL;
+
             c_string_const ref_str;
             
             c_string var_str;
@@ -1024,7 +1211,8 @@ LIB_EXPORT rc_t CC VRefVariationIUPACMake (
             if ( ! compose_variation ( & ref_str,
                                        ref_start, ref_len,
                                        variation, variation_size,
-                                       ref_pos_var, var_len_on_ref, & var_str ) )
+                                       ref_pos_var, var_len_on_ref, & var_str,
+                                       & allele, & allele_size ) )
             {
                 rc = RC(rcText, rcString, rcSearching, rcMemory, rcExhausted);
                 free ( obj );
@@ -1035,17 +1223,16 @@ LIB_EXPORT rc_t CC VRefVariationIUPACMake (
                 KRefcountInit ( & obj->refcount, 1, "VRefVariation", "make", "ref-var" );
                 /* moving var_str to the object (so no need to destruct var_str */
 
-                obj->variation = var_str.str;
-                obj->var_size = var_str.size;
+                obj->var_buffer = var_str.str;
+                obj->var_buffer_size = var_str.size;
+
+                obj->allele = allele;
+                obj->allele_size = allele_size;
 
                 obj->ref_external = ref;
                 obj->ref_size = ref_size;
-                obj->var_start = ref_start;
-                assert( ref_len == 0                               /* pure match/mismatch */
-                    || ref_len == var_str.size + var_len_on_ref    /* deletion ? */
-                    || var_str.size == ref_len + variation_size    /* insertion ? */
-                    || 1 );                                        /* TODO: add condition for insert */
-                obj->var_len_on_ref = ref_len == 0 && variation_size == var_len_on_ref
+                obj->allele_start = ref_start;
+                obj->allele_len_on_ref = ref_len == 0 && variation_size == var_len_on_ref
                     ? var_len_on_ref : ref_len;
             }
         }
@@ -1075,9 +1262,9 @@ LIB_EXPORT rc_t CC VRefVariationIUPACWhack ( VRefVariation* self )
 {
     KRefcountWhack ( & self -> refcount, "VRefVariation" );
 
-    assert ( self->variation != NULL || self->var_size == 0 );
-    if ( self->variation != NULL )
-        free ( self->variation );
+    assert ( self->var_buffer != NULL || self->var_buffer_size == 0 );
+    if ( self->var_buffer != NULL )
+        free ( self->var_buffer );
 
     memset ( self, 0, sizeof * self );
 
@@ -1101,28 +1288,34 @@ LIB_EXPORT rc_t CC VRefVariationIUPACRelease ( VRefVariation const* self )
     return 0;
 }
 
-LIB_EXPORT INSDC_dna_text const* CC VRefVariationIUPACGetVariation ( VRefVariation const* self )
+LIB_EXPORT INSDC_dna_text const* CC VRefVariationIUPACGetSearchQuery ( VRefVariation const* self )
 {
     assert ( self != NULL );
-    return self->variation;
+    return self->var_buffer;
 }
 
-LIB_EXPORT size_t CC VRefVariationIUPACGetVarStart ( VRefVariation const* self )
+LIB_EXPORT size_t CC VRefVariationIUPACGetSearchQueryStart ( VRefVariation const* self )
 {
     assert ( self != NULL );
-    return self->var_start;
+    return self->allele_start - (self->allele - self->var_buffer);
 }
 
-LIB_EXPORT size_t CC VRefVariationIUPACGetVarSize ( VRefVariation const* self )
+LIB_EXPORT size_t CC VRefVariationIUPACGetSearchQuerySize ( VRefVariation const* self )
 {
     assert ( self != NULL );
-    return self->var_size;
+    return self->var_buffer_size;
 }
 
-LIB_EXPORT size_t CC VRefVariationIUPACGetVarLenOnRef ( VRefVariation const* self )
+LIB_EXPORT size_t CC VRefVariationIUPACGetAlleleLenOnRef ( VRefVariation const* self )
 {
     assert ( self != NULL );
-    return self->var_len_on_ref;
+    return self->allele_len_on_ref;
+}
+
+LIB_EXPORT size_t CC VRefVariationIUPACGetSearchQueryLenOnRef ( VRefVariation const* self )
+{
+    assert ( self != NULL );
+    return self->allele_len_on_ref + self->var_buffer_size - self->allele_size;
 }
 
 LIB_EXPORT INSDC_dna_text const* CC VRefVariationIUPACGetRefChunk ( VRefVariation const* self )
@@ -1136,3 +1329,26 @@ LIB_EXPORT size_t CC VRefVariationIUPACGetRefChunkSize ( VRefVariation const* se
     assert ( self != NULL );
     return self->ref_size;
 }
+
+LIB_EXPORT INSDC_dna_text const* CC VRefVariationIUPACGetAllele ( VRefVariation const* self, size_t* p_allele_size )
+{
+    assert ( self != NULL );
+    assert ( p_allele_size != NULL );
+
+    *p_allele_size = self->allele_size;
+
+    return self->allele;
+}
+
+LIB_EXPORT size_t CC VRefVariationIUPACGetAlleleStart ( VRefVariation const* self )
+{
+    assert ( self != NULL );
+    return self->allele_start;
+}
+LIB_EXPORT size_t CC VRefVariationIUPACGetAlleleSize ( VRefVariation const* self )
+{
+    assert ( self != NULL );
+    return self->allele_size;
+}
+
+

@@ -45,10 +45,10 @@
 #include "schwarzschraube.h"
 #include "teleport.h"
 #include "common.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
 
-#include <stdio.h>
 #include <string.h>     /* memset */
 
 /*)))
@@ -200,7 +200,7 @@ XFSGapNodeDispose ( const struct _GapNode * self )
     struct _GapNode * Node = ( struct _GapNode * ) self;
 
 /*
-printf ( "XFSGapNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+XFSLogDbg ( "XFSGapNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
 */
 
     if ( Node == 0 ) {
@@ -288,7 +288,7 @@ _GapFile_dispose_v1 ( const struct XFSEditor * self )
 {
     struct _GapFileEditor * Editor = ( struct _GapFileEditor * ) self;
 /*
-    printf ( "_GapFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_GapFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -516,7 +516,7 @@ rc_t CC
 _GapAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_GapAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_GapAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -832,7 +832,7 @@ _GapFileConstructor (
                                         );
 
 /*
-printf ( "_GapFileConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_GapFileConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -852,7 +852,7 @@ _GapFileValidator (
     RCt = 0;
 
 /*
-printf ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

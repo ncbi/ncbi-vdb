@@ -45,10 +45,10 @@
 #include "schwarzschraube.h"
 #include "teleport.h"
 #include "common.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
 
-#include <stdio.h>
 #include <string.h>     /* memset */
 
 /*)))
@@ -272,7 +272,7 @@ XFSHttpNodeDispose ( const struct XFSHttpNode * self )
     struct XFSHttpNode * Node = ( struct XFSHttpNode * ) self;
 
 /*
-printf ( "XFSHttpNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+XFSLogDbg ( "XFSHttpNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
 */
 
     if ( Node == 0 ) {
@@ -296,7 +296,7 @@ XFSHttpRootNodeDispose ( const struct XFSHttpRootNode * self )
     struct XFSHttpRootNode * Node = ( struct XFSHttpRootNode * ) self;
 
 /*
-printf ( "XFSHttpRootNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+XFSLogDbg ( "XFSHttpRootNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
 */
 
     if ( Node == 0 ) {
@@ -418,7 +418,7 @@ _HttpDir_dispose_v1 ( const struct XFSEditor * self )
 {
     struct XFSDirEditor * Editor = ( struct XFSDirEditor * ) self;
 /*
-    printf ( "_HttpDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_HttpDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -586,7 +586,7 @@ _HttpFile_dispose_v1 ( const struct XFSEditor * self )
 {
     struct XFSHttpFileEditor * Editor = ( struct XFSHttpFileEditor * ) self;
 /*
-    printf ( "_HttpNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_HttpNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -814,7 +814,7 @@ rc_t CC
 _HttpAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_HttpAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_HttpAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -1126,7 +1126,7 @@ _RemoteRepositoryConstructor (
                                         );
 
 /*
-printf ( "_RemoteRepositoryConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_RemoteRepositoryConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1146,7 +1146,7 @@ _RemoteRepositoryValidator (
     RCt = 0;
 
 /*
-printf ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1253,7 +1253,7 @@ _RemoteFileConstructor (
                                         );
 
 /*
-printf ( "_RemoteFileConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_RemoteFileConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1273,7 +1273,7 @@ _RemoteFileValidator (
     RCt = 0;
 
 /*
-printf ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
