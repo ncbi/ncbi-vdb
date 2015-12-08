@@ -59,6 +59,8 @@
 #define COMPARE_4NA 0
 #define CACHE_MAX_ROWS 0 /* and columns as well */
 #define GAP_SCORE_LINEAR 0
+#define SIMILARITY_MATCH 2
+#define SIMILARITY_MISMATCH -1
 #define SW_DEBUG_PRINT 0
 
 typedef struct VRefVariation
@@ -119,7 +121,7 @@ static int similarity_func (INSDC_dna_text ch2na, INSDC_dna_text ch4na)
 #if COMPARE_4NA == 1
     return compare_4na ( ch2na, ch4na );
 #else
-    return tolower(ch2na) == tolower(ch4na) ? 2 : -1;
+    return tolower(ch2na) == tolower(ch4na) ? SIMILARITY_MATCH : SIMILARITY_MISMATCH;
 #endif
 }
 
@@ -673,28 +675,49 @@ static int c_string_wrap ( c_string* self,
    returns true if a new ref_slice is selected
    returns false if the new ref_slice is the same as the previous one passed in ref_slice
 */
-static bool get_ref_slice (
+
+typedef uint32_t RefSliceExpandRes;
+enum
+{
+    REF_SLICE_EXPANDED              = 1
+    ,REF_SLICE_NOT_EXPANDED         = 2
+    ,REF_SLICE_CANNOT_EXPAND_LEFT   = 4
+    ,REF_SLICE_CANNOT_EXPAND_RIGHT  = 8
+};
+
+static RefSliceExpandRes get_ref_slice (
             INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
             size_t var_len_on_ref,
             size_t slice_expand_left, size_t slice_expand_right,
             c_string_const* ref_slice)
 {
     size_t ref_start, ref_xend;
+    RefSliceExpandRes ret = 0;
     if ( ref_pos_var < slice_expand_left )
+    {
+        ret |= REF_SLICE_CANNOT_EXPAND_LEFT;
         ref_start = 0;
+    }
     else
         ref_start = ref_pos_var - slice_expand_left;
 
     if ( ref_pos_var + slice_expand_right + var_len_on_ref >= ref_size )
+    {
+        ret |= REF_SLICE_CANNOT_EXPAND_RIGHT;
         ref_xend = ref_size;
+    }
     else
         ref_xend = ref_pos_var + slice_expand_right + var_len_on_ref;
 
     if ( ref_slice->str == ref + ref_start && ref_slice->size == ref_xend - ref_start)
-        return false;
+        ret |= REF_SLICE_NOT_EXPANDED;
+    else
+    {
+        c_string_const_assign ( ref_slice, ref + ref_start, ref_xend - ref_start );
+        ret |= REF_SLICE_EXPANDED;
+    }
 
-    c_string_const_assign ( ref_slice, ref + ref_start, ref_xend - ref_start );
-    return true;
+    return ret;
 }
 
 #if 1
@@ -935,9 +958,19 @@ LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC_SW (
         bool has_indel = false;
 
         /* get new expanded slice and check if it has not reached the bounds of ref */
-        bool slice_expanded = get_ref_slice ( ref, ref_size, ref_pos_var, var_len_on_ref, exp_l, exp_r, & ref_slice );
-        if ( !slice_expanded )
+        RefSliceExpandRes slice_expanded = get_ref_slice ( ref, ref_size, ref_pos_var, var_len_on_ref, exp_l, exp_r, & ref_slice );
+        assert ( (slice_expanded & (REF_SLICE_NOT_EXPANDED | REF_SLICE_EXPANDED)) != (REF_SLICE_NOT_EXPANDED | REF_SLICE_EXPANDED) );
+        if ( slice_expanded & REF_SLICE_NOT_EXPANDED )
             break;
+
+        if ( slice_expanded & (REF_SLICE_CANNOT_EXPAND_LEFT | REF_SLICE_CANNOT_EXPAND_RIGHT) )
+        {
+            if (slice_expanded & REF_SLICE_CANNOT_EXPAND_LEFT)
+                ref_start = 0;
+            if (slice_expanded & REF_SLICE_CANNOT_EXPAND_RIGHT)
+                ref_len = ref_size - ref_start;
+            break;
+        }
 
         /* get ref_pos relative to ref_slice start and new slice_start and end */
         ref_pos_adj = (int64_t)ref_pos_var - ( ref_slice.str - ref );
