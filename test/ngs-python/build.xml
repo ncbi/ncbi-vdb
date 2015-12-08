@@ -2,13 +2,14 @@
 
     <!-- This file is currently for use on Windows; Linux/Mac builds are run via gmake -->
     <property environment="env"/>
-    <property name="vdb.build"      value="Debug" />
-    <property name="vdb.platform"   value="x64" />
+    <property name="Platform"       value="x64" />
+    <property name="Configuration"  value="Debug" />
+    <property name="Output"         value="${basedir}\..\..\..\OUTDIR" />
     
-    <property name="ngs-source.dir" value="..\..\..\ngs" />
-    <property name="output.dir" value="..\..\..\ngs\ngs-sdk\..\..\OUTDIR\" />
-    <property name="build.dir"   value="${output.dir}\win\cl\${vdb.platform}\${vdb.build}" />
-    <property name="ngs.dir" value="${env.USERPROFILE}\ncbi-outdir\ngs-java" />
+    <property name="ngs-source.dir" value="${basedir}\..\..\..\ngs" />
+    
+    <property name="vdb.dir"        value="${Output}\ncbi-vdb\win\cl\${Platform}\${Configuration}\bin" />
+    <property name="ngs.dir"        value="${Output}\ngs-sdk\win\cl\${Platform}\${Configuration}\bin" />
     
     <!-- Set this to full path to Python if not in PATH already -->
     <property name="python.exe"     value="python" />
@@ -23,7 +24,7 @@
 
     <target name="runtests" depends="install">
         <exec executable="${python.exe}" failonerror="true">
-            <env key="NGS_PY_LIBRARY_PATH" value="${build.dir}\bin"/>
+            <env key="PATH" value="${vdb.dir};${ngs.dir};${env.PATH}"/>            
             <env key="NGS_PY_DOWNLOAD_LIBRARY" value="0"/>
             <arg value="tests.py" />
         </exec>
