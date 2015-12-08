@@ -966,7 +966,10 @@ LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC_SW (
         if ( slice_expanded & (REF_SLICE_CANNOT_EXPAND_LEFT | REF_SLICE_CANNOT_EXPAND_RIGHT) )
         {
             if (slice_expanded & REF_SLICE_CANNOT_EXPAND_LEFT)
+            {
+                ref_len += ref_start;
                 ref_start = 0;
+            }
             if (slice_expanded & REF_SLICE_CANNOT_EXPAND_RIGHT)
                 ref_len = ref_size - ref_start;
             break;
