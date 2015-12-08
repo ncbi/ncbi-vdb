@@ -61,7 +61,7 @@
 
 #define READ_RESTORER_VERSION 2
 
-#ifdef READ_RESTORER_VERSION
+#if READ_RESTORER_VERSION == 2
 
 /* --------------------------- rr_store --------------------------- */
 
@@ -185,14 +185,14 @@ struct Read_Restorer
     uint32_t read_idx;
 	
     int64_t  last_row_id;
-    int64_t  last_sequentual_row_id;
+    int64_t  first_sequential_row_id;
 	int64_t  prefetch_start_id;
 	int64_t  prefetch_stop_id;
 
 	int64_t  last_max_align_id;	
 	uint64_t hits, miss;
 
-#ifdef READ_RESTORER_VERSION
+#if READ_RESTORER_VERSION == 2
 	uint32_t last_align_id_count;
 	rr_store * read_store;
 #endif
@@ -205,7 +205,7 @@ void CC Read_Restorer_Whack ( void *obj )
     if ( self != NULL )
     {
         VCursorRelease ( self -> curs );
-#ifdef READ_RESTORER_VERSION
+#if READ_RESTORER_VERSION == 2
 		rr_store_release ( self -> read_store );
 #endif
         free ( self );
@@ -275,7 +275,7 @@ rc_t Read_Restorer_Make( Read_Restorer **objp, const VTable *tbl, const VCursor*
 		rc = open_RR_cursor( obj, tbl, native_curs, "PRIMARY_ALIGNMENT" );
 		if ( rc == 0 )
 		{
-#ifdef READ_RESTORER_VERSION		
+#if READ_RESTORER_VERSION == 2
 			rc = rr_store_make ( & obj -> read_store );
 #endif
 			if ( rc == 0 )
@@ -310,7 +310,7 @@ static INSDC_4na_bin  map[]={
 /*15  1111 - 1111*/ 15
 };
 
-#ifdef READ_RESTORER_VERSION
+#if READ_RESTORER_VERSION == 2
 
 typedef struct id_list
 {
@@ -404,6 +404,7 @@ static rc_t CC seq_restore_read_impl2 ( void *data, const VXformInfo *info, int6
     const uint32_t 	num_reads	= (uint32_t)argv[ 1 ].u.data.elem_count;
     const INSDC_coord_len *read_len = argv[ 2 ].u.data.base;
     const uint8_t *read_type = argv[ 3 ].u.data.base;
+	bool is_sequential = false;
 
     align_ids.list  = ( int64_t * )argv[ 1 ].u.data.base;
 	align_ids.count = ( uint32_t )( argv[ 1 ].u.data.base_elem_count - argv[ 1 ].u.data.first_elem );
@@ -418,6 +419,30 @@ static rc_t CC seq_restore_read_impl2 ( void *data, const VXformInfo *info, int6
     align_ids.list += argv [ 1 ] . u . data . first_elem;
     read_len  += argv [ 2 ] . u . data . first_elem;
     read_type += argv [ 3 ] . u . data . first_elem;
+
+    /* test that row_id is either:
+       a. a repeat of the last row, or
+       b. exactly 1 greater than last row.
+    */
+    if ( row_id != self -> last_row_id && row_id != self -> last_row_id + 1 )
+    {
+        /* not precisely sequential */
+        is_sequential = false;
+
+        /* but it may be the start of a new sequence */
+        self -> first_sequential_row_id = row_id;
+    }
+
+    /* row_id is sequential.
+       detect sequence of more than 100 */
+    else if ( row_id > self -> first_sequential_row_id + 100 )
+    {
+        /* the pattern appears to be sequential reads */
+        is_sequential = true;
+    }
+
+    /* record the last row_id seen */
+    self -> last_row_id = row_id;
 
     for ( i = 0, len = 0; i < num_reads; i++ )
         len += read_len[ i ];
@@ -437,10 +462,13 @@ static rc_t CC seq_restore_read_impl2 ( void *data, const VXformInfo *info, int6
 			rr_entry *ep;
 			const INSDC_4na_bin * rd;
 			uint32_t rd_len;
-			
-			if ( align_ids.count > self->last_align_id_count )
-				rc = prefetch_alignments( self, row_id, &align_ids );
-			self->last_align_id_count = align_ids.count;
+
+			if ( is_sequential )
+            {
+                if ( align_ids.count > self->last_align_id_count )
+                    rc = prefetch_alignments( self, row_id, &align_ids );
+                self->last_align_id_count = align_ids.count;
+            }
 			
 			for ( i = 0; i < num_reads && rc == 0; i++ ) /*** checking read by read ***/
 			{
@@ -548,10 +576,10 @@ rc_t CC seq_restore_read_impl1 ( void *data, const VXformInfo *info, int64_t row
 
     if ( row_id != self->last_row_id  && row_id != self->last_row_id + 1 )
 	{
-		self->last_sequentual_row_id = row_id;
+		self->first_sequential_row_id = row_id;
 		is_sequential = false;
     }
-	else if ( row_id > self->last_sequentual_row_id + 100 )
+	else if ( row_id > self->first_sequential_row_id + 100 )
 	{
 		is_sequential = true;
 	}
@@ -681,7 +709,7 @@ VTRANSFACT_IMPL ( ALIGN_seq_restore_read, 1, 0, 0 ) ( const void *Self, const VX
     if ( rc == 0 )
     {
         rslt -> self = fself;
-#ifdef READ_RESTORER_VERSION		
+#if READ_RESTORER_VERSION == 2
         rslt -> u.ndf = seq_restore_read_impl2;
 #else
         rslt -> u.ndf = seq_restore_read_impl1;
