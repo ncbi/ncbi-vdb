@@ -100,10 +100,6 @@ rc_t AlignRefTableCursor( const VTable* table, const VCursor *native_curs,
             return rc;
 
 	}
-    else
-    {
-		VCursorAddRef( curs );
-	}
 	*ref_cursor = curs;
 
 	return 0;

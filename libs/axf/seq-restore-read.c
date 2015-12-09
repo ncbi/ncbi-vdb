@@ -45,6 +45,8 @@
 #include <klib/data-buffer.h>
 #include <klib/sort.h>
 
+#include <vdb/vdb-priv.h>
+
 #include <bitstr.h>
 #include <sysalloc.h>
 #include <stdint.h>
@@ -217,11 +219,7 @@ static
 rc_t open_RR_cursor( Read_Restorer * obj, const VTable *tbl, const VCursor* native_curs, const char * tablename )
 {
 	rc_t rc = VCursorLinkedCursorGet( native_curs, tablename, &obj->curs );
-	if ( rc == 0 )
-	{
-		rc = VCursorAddRef( obj->curs );
-	}
-	else
+	if ( rc != 0 )
 	{
 		/* get at the parent database */
 		const VDatabase *db;
@@ -248,7 +246,9 @@ rc_t open_RR_cursor( Read_Restorer * obj, const VTable *tbl, const VCursor* nati
 						if ( rc == 0 )
 							rc = VCursorLinkedCursorSet( native_curs, tablename, obj->curs );
 					}
+
 					VCursorRelease ( obj -> curs );
+                    obj -> curs = NULL;
 				}
 			}
 		}

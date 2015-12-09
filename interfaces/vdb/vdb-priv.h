@@ -273,6 +273,9 @@ VDB_EXTERN rc_t CC VCursorIsStaticColumn ( struct VCursor const *self,
 VDB_EXTERN rc_t CC VCursorLinkedCursorGet(const struct VCursor *cself,const char *tbl, struct VCursor const **curs);
 VDB_EXTERN rc_t CC VCursorLinkedCursorSet(const struct VCursor *cself,const char *tbl, struct VCursor const *curs);
 
+VDB_EXTERN uint64_t CC VCursorSetCacheCapacity(struct VCursor *self,uint64_t capacity);
+VDB_EXTERN uint64_t CC VCursorGetCacheCapacity(const struct VCursor *self);
+
 
 /*--------------------------------------------------------------------------
  * VCursorParams
