@@ -407,7 +407,7 @@ const char * CC
 _StrCGet ( struct _StrC * self, size_t Idx )
 {
     if ( self != NULL ) {
-        if ( 0 <= Idx && Idx < self -> q ) {
+        if ( Idx < self -> q ) {
             return * ( self -> e + Idx );
         }
     }
