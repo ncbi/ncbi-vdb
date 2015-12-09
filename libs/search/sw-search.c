@@ -307,14 +307,24 @@ static void sw_find_indel_box ( int* matrix, size_t ROWS, size_t COLUMNS,
             if ( matrix [(i - 1)*COLUMNS + (j - 1)] >= matrix [i*COLUMNS + (j - 1)] &&
                 matrix [(i - 1)*COLUMNS + (j - 1)] >= matrix [(i - 1)*COLUMNS + j])
             {
+                int diag_diff = matrix [i*COLUMNS + j] - matrix [(i - 1)*COLUMNS + (j - 1)];
+                int mismatch = diag_diff == SIMILARITY_MATCH ? 0 : 1;
+
+                if (mismatch && *ret_row_end == -1 )
+                {
+                    *ret_row_end = (int)i;
+                    *ret_col_end = (int)j;
+                }
+
                 --i;
                 --j;
 
-                if (prev_indel)
+                if (prev_indel || mismatch)
                 {
                     *ret_row_start = (int)i;
                     *ret_col_start = (int)j;
                 }
+
                 prev_indel = 0;
             }
             else if ( matrix [(i - 1)*COLUMNS + (j - 1)] < matrix [i*COLUMNS + (j - 1)] )
@@ -676,48 +686,28 @@ static int c_string_wrap ( c_string* self,
    returns false if the new ref_slice is the same as the previous one passed in ref_slice
 */
 
-typedef uint32_t RefSliceExpandRes;
-enum
-{
-    REF_SLICE_EXPANDED              = 1
-    ,REF_SLICE_NOT_EXPANDED         = 2
-    ,REF_SLICE_CANNOT_EXPAND_LEFT   = 4
-    ,REF_SLICE_CANNOT_EXPAND_RIGHT  = 8
-};
-
-static RefSliceExpandRes get_ref_slice (
+static bool get_ref_slice (
             INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
             size_t var_len_on_ref,
             size_t slice_expand_left, size_t slice_expand_right,
             c_string_const* ref_slice)
 {
     size_t ref_start, ref_xend;
-    RefSliceExpandRes ret = 0;
     if ( ref_pos_var < slice_expand_left )
-    {
-        ret |= REF_SLICE_CANNOT_EXPAND_LEFT;
         ref_start = 0;
-    }
     else
         ref_start = ref_pos_var - slice_expand_left;
 
     if ( ref_pos_var + slice_expand_right + var_len_on_ref >= ref_size )
-    {
-        ret |= REF_SLICE_CANNOT_EXPAND_RIGHT;
         ref_xend = ref_size;
-    }
     else
         ref_xend = ref_pos_var + slice_expand_right + var_len_on_ref;
 
     if ( ref_slice->str == ref + ref_start && ref_slice->size == ref_xend - ref_start)
-        ret |= REF_SLICE_NOT_EXPANDED;
-    else
-    {
-        c_string_const_assign ( ref_slice, ref + ref_start, ref_xend - ref_start );
-        ret |= REF_SLICE_EXPANDED;
-    }
+        return false;
 
-    return ret;
+    c_string_const_assign ( ref_slice, ref + ref_start, ref_xend - ref_start );
+    return true;
 }
 
 #if 1
@@ -958,22 +948,9 @@ LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC_SW (
         bool has_indel = false;
 
         /* get new expanded slice and check if it has not reached the bounds of ref */
-        RefSliceExpandRes slice_expanded = get_ref_slice ( ref, ref_size, ref_pos_var, var_len_on_ref, exp_l, exp_r, & ref_slice );
-        assert ( (slice_expanded & (REF_SLICE_NOT_EXPANDED | REF_SLICE_EXPANDED)) != (REF_SLICE_NOT_EXPANDED | REF_SLICE_EXPANDED) );
-        if ( slice_expanded & REF_SLICE_NOT_EXPANDED )
+        bool slice_expanded = get_ref_slice ( ref, ref_size, ref_pos_var, var_len_on_ref, exp_l, exp_r, & ref_slice );
+        if ( !slice_expanded )
             break;
-
-        if ( slice_expanded & (REF_SLICE_CANNOT_EXPAND_LEFT | REF_SLICE_CANNOT_EXPAND_RIGHT) )
-        {
-            if (slice_expanded & REF_SLICE_CANNOT_EXPAND_LEFT)
-            {
-                ref_len += ref_start;
-                ref_start = 0;
-            }
-            if (slice_expanded & REF_SLICE_CANNOT_EXPAND_RIGHT)
-                ref_len = ref_size - ref_start;
-            break;
-        }
 
         /* get ref_pos relative to ref_slice start and new slice_start and end */
         ref_pos_adj = (int64_t)ref_pos_var - ( ref_slice.str - ref );
