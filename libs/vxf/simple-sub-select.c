@@ -150,16 +150,22 @@ rc_t open_sub_cursor ( SubSelect **fself, const VXfactInfo *info, const VFactory
     {
         sprintf(name,"%.*s",(int)cp->argv[0].count,cp->argv[0].data.ascii);
         rc = VCursorLinkedCursorGet(native_curs,name,&curs);
-        if(rc == 0){
+        if(rc == 0)
+        {
+            /* curs is an owned reference */
             rc = VCursorOpenParentRead(curs,&ftbl);
             if(rc != 0)
+            {
+                VCursorRelease ( curs );
                 return rc;
-            VCursorAddRef(curs);
+            }
             tbl = ftbl;
-        } else {
+        }
+        else
+        {
             const VDatabase *db;
-	    uint64_t cache_size = 32*1024*1024;
-	    uint64_t native_cursor_cache_size = VCursorGetCacheCapacity(native_curs);
+            uint64_t cache_size = 32*1024*1024;
+            uint64_t native_cursor_cache_size = VCursorGetCacheCapacity(native_curs);
 
             rc = VTableOpenParentRead ( info -> tbl, & db );
             if(rc != 0) return rc;
@@ -167,7 +173,7 @@ rc_t open_sub_cursor ( SubSelect **fself, const VXfactInfo *info, const VFactory
             if(rc != 0) return rc;
             VDatabaseRelease ( db );
             tbl = ftbl;
-	    if(native_cursor_cache_size/4 > cache_size){
+            if(native_cursor_cache_size/4 > cache_size){
                 /* share cursor size with native cursor **/
                 cache_size = native_cursor_cache_size/4;
                 native_cursor_cache_size -= cache_size;

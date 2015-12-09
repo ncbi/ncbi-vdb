@@ -94,8 +94,8 @@ rc_t RestoreReadMake ( RestoreRead **objp, const VXfactInfo *info, const VFactor
         {
             const VDatabase * db;
             const VTable * tbl;
-	    uint64_t cache_size = 32*1024*1024;
-	    uint64_t native_cursor_cache_size = VCursorGetCacheCapacity(native_curs);
+            uint64_t cache_size = 32*1024*1024;
+            uint64_t native_cursor_cache_size = VCursorGetCacheCapacity(native_curs);
 
             /* get at the parent database */
             rc = VTableOpenParentRead ( info -> tbl, & db );
@@ -108,12 +108,12 @@ rc_t RestoreReadMake ( RestoreRead **objp, const VXfactInfo *info, const VFactor
             if ( rc != 0 )
                 return rc;
 
-	    if(native_cursor_cache_size/4 > cache_size){
-		/* share cursor size with native cursor **/
-		cache_size = native_cursor_cache_size/4;
-		native_cursor_cache_size -= cache_size;
-		VCursorSetCacheCapacity((VCursor*)native_curs,native_cursor_cache_size);
-	    }
+            if(native_cursor_cache_size/4 > cache_size){
+                /* share cursor size with native cursor **/
+                cache_size = native_cursor_cache_size/4;
+                native_cursor_cache_size -= cache_size;
+                VCursorSetCacheCapacity((VCursor*)native_curs,native_cursor_cache_size);
+            }
             /* create a cursor */
             rc = VTableCreateCachedCursorRead( tbl, &obj->curs, cache_size );
             VTableRelease( tbl );
@@ -129,10 +129,6 @@ rc_t RestoreReadMake ( RestoreRead **objp, const VXfactInfo *info, const VFactor
             rc = VCursorLinkedCursorSet( native_curs, "SEQUENCE", obj->curs );
             if ( rc != 0 )
                 return rc;
-        }
-        else
-        {
-            VCursorAddRef( obj->curs );
         }
 
         if ( rc == 0 )
