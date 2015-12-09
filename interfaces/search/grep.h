@@ -268,6 +268,7 @@ SEARCH_EXTERN size_t CC FindLongestCommonSubstring (
     and the raw query, or variation to look for at the given
     reference position
 
+    alg                    - algorithm to use for the search (one of RefVarAlg enum)
     ref, ref_size [IN]     - the reference on which the
                              variation will be looked for
     ref_offset_var [IN]    - the offset to location on the reference of the variation
@@ -282,15 +283,21 @@ SEARCH_EXTERN size_t CC FindLongestCommonSubstring (
 */
 
 typedef struct VRefVariation VRefVariation;
+typedef uint32_t RefVarAlg;
+enum
+{
+     refvarAlgSW = 1
+    ,refvarAlgRA = 2
+};
 
 LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC (
-        INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
+        RefVarAlg alg, INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
         INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
         size_t* p_ref_start, size_t* p_ref_len
     );
 
 LIB_EXPORT rc_t CC VRefVariationIUPACMake (
-        VRefVariation** self,
+        VRefVariation** self, RefVarAlg alg,
         INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
         INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref
     );
