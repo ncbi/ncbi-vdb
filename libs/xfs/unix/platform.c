@@ -165,7 +165,7 @@ XFS_FUSE_mount_v1 ( struct XFSControl * self )
     LogPath = XFSControlGetLogFile ( self );
 
         /* Foreground */
-    if ( XFSControlGetArg ( self, "-f" ) != NULL ) {
+    if ( ! XFSControlIsDaemonize ( self ) ) {
         Result = fuse_opt_add_arg ( & FuseArgs, "-f" );
     }
 
@@ -350,3 +350,14 @@ XFSLogDbg ( "|o|exiting fuse()\n" );
 
     return 0;
 }   /* XFS_FUSE_unmount_v1 () */
+
+LIB_EXPORT
+rc_t CC
+XFSUnmountAndDestroy ( const char * MountPoint )
+{
+        /*  Unfortunately, that method is standard, but returns nothing
+         *  So no error could be detected
+         */
+    fuse_unmount_compat22 ( MountPoint );
+    return 0;
+}   /* XFSUnmountAndDestroy () */

@@ -275,6 +275,42 @@ XFSControlHasArg ( struct XFSControl * self, const char * ArgName )
 
 LIB_EXPORT
 rc_t CC
+XFSControlSetAppName ( struct XFSControl * self, const char * AppName )
+{
+    return XFSControlSetArg (
+                        self,
+                        XFS_CONTROL_APPNAME,
+                        ( AppName == NULL ? "mount-tool" : AppName )
+                        );
+}   /* XFSControlSetAppName () */
+
+LIB_EXPORT
+const char * CC
+XFSControlGetAppName ( struct XFSControl * self )
+{
+    return XFSControlGetArg ( self, XFS_CONTROL_APPNAME );
+}   /* XFSControlGetAppName () */
+
+LIB_EXPORT
+rc_t CC
+XFSControlDaemonize ( struct XFSControl * self )
+{
+    return XFSControlSetArg (
+                        self,
+                        XFS_CONTROL_DAEMONIZE,
+                        XFS_CONTROL_DAEMONIZE
+                        );
+}   /* XFSControlDaemonize () */
+
+LIB_EXPORT
+bool CC
+XFSControlIsDaemonize ( struct XFSControl * self )
+{
+    return XFSControlHasArg ( self, XFS_CONTROL_DAEMONIZE );
+}   /* XFSControlIsDaemonize () */
+
+LIB_EXPORT
+rc_t CC
 XFSControlSetMountPoint (
                     struct XFSControl * self,
                     const char * MountPoint
