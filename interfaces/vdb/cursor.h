@@ -452,14 +452,6 @@ VDB_EXTERN rc_t CC VCursorSetUserData ( const VCursor *self,
     void *data, void ( CC * destroy ) ( void *data ) );
 
 
-VDB_EXTERN rc_t CC VCursorLinkedCursorGet(const VCursor *cself,const char *tbl,VCursor const **curs);
-VDB_EXTERN rc_t CC VCursorLinkedCursorSet(const VCursor *cself,const char *tbl,VCursor const *curs);
-
-VDB_EXTERN uint64_t CC VCursorSetCacheCapacity(VCursor *self,uint64_t capacity);
-VDB_EXTERN uint64_t CC VCursorGetCacheCapacity(const VCursor *self);
-
-
-
 #ifdef __cplusplus
 }
 #endif
