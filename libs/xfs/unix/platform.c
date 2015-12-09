@@ -123,31 +123,6 @@ XFS_FUSE_destroy_v1 ( struct XFSControl * self )
     return 0;
 }   /* XFS_FUSE_destroy_v1 () */
 
-static
-rc_t CC
-_FUSE_set_logfile ( struct XFSControl * self )
-{
-    rc_t RCt;
-    const char * LogFile;
-
-    RCt = 0;
-    LogFile = NULL;
-
-    XFS_CAN ( self )
-
-    if ( XFSControlHasArg ( self, XFS_CONTROL_LOGFILE ) ) {
-        LogFile = XFSControlGetArg ( self, XFS_CONTROL_LOGFILE );
-        if ( LogFile == NULL ) {
-            /* Here we are generating standard file
-             */
-        }
-
-        RCt = XFSLogInit ( LogFile );
-    }
-
-    return RCt;
-}   /* _Fuse_set_logfile () */
-
 rc_t
 XFS_FUSE_mount_v1 ( struct XFSControl * self )
 {
@@ -157,6 +132,7 @@ XFS_FUSE_mount_v1 ( struct XFSControl * self )
     struct fuse_chan * FuseChannel;
     struct fuse * FuseStruct;
     char * MountPoint;
+    const char * LogPath;
     int Foreground;
     int Multithreaded;
     int Result;
@@ -165,6 +141,7 @@ XFS_FUSE_mount_v1 ( struct XFSControl * self )
     FuseChannel = NULL;
     FuseStruct = NULL;
     MountPoint = NULL;
+    LogPath = NULL;
     Foreground = true;
     Multithreaded = true;
     Result = 0;
@@ -185,8 +162,10 @@ XFS_FUSE_mount_v1 ( struct XFSControl * self )
     memset ( & FuseArgs, 0, sizeof FuseArgs );
     Result = fuse_opt_add_arg ( & FuseArgs, XFSControlGetLabel ( self ) );
     Result = fuse_opt_add_arg ( & FuseArgs, XFSControlGetMountPoint ( self ) );
+    LogPath = XFSControlGetLogFile ( self );
+
         /* Foreground */
-    if ( XFSControlGetArg ( self, "-f" ) != NULL ) {
+    if ( ! XFSControlIsDaemonize ( self ) ) {
         Result = fuse_opt_add_arg ( & FuseArgs, "-f" );
     }
 
@@ -257,14 +236,16 @@ XFSLogDbg ( "Mnt = %s\nMlt = %d\nFrg = %d\n", MountPoint, Multithreaded, Foregro
 
         /*  Here we are setting the log file
          */
-    RCt = _FUSE_set_logfile ( self );
-    if ( RCt != 0 ) {
-        fuse_unmount ( MountPoint, FuseChannel );
+    if ( LogPath != NULL ) {
+        RCt = XFSLogInit ( LogPath );
+        if ( RCt != 0 ) {
+            fuse_unmount ( MountPoint, FuseChannel );
 
-        fuse_opt_free_args ( & FuseArgs );
+            fuse_opt_free_args ( & FuseArgs );
 
-        XFSLogErr ( XFS_RC ( rcFailed ), "Can not set log file\n" );
-        return RCt;
+            XFSLogErr ( XFS_RC ( rcFailed ), "Can not set log file\n" );
+            return RCt;
+        }
     }
 
     Result = fuse_set_signal_handlers ( fuse_get_session ( FuseStruct ) );
@@ -369,3 +350,14 @@ XFSLogDbg ( "|o|exiting fuse()\n" );
 
     return 0;
 }   /* XFS_FUSE_unmount_v1 () */
+
+LIB_EXPORT
+rc_t CC
+XFSUnmountAndDestroy ( const char * MountPoint )
+{
+        /*  Unfortunately, that method is standard, but returns nothing
+         *  So no error could be detected
+         */
+    fuse_unmount_compat22 ( MountPoint );
+    return 0;
+}   /* XFSUnmountAndDestroy () */

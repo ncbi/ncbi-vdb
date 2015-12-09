@@ -105,9 +105,11 @@ union XFSControl_vt {
 
 /*))    Some usefull defines, used in Arguments
  ((*/
+#define XFS_CONTROL_APPNAME     "appname"
 #define XFS_CONTROL_MOUNTPOINT  "mountpoint"
 #define XFS_CONTROL_LABEL       "label"
 #define XFS_CONTROL_LOGFILE     "logfile"
+#define XFS_CONTROL_DAEMONIZE   "daemonize"
 
 #ifdef __cplusplus
 }

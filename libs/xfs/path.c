@@ -796,35 +796,27 @@ XFSPathVMakeAbsolute (
 )
 {
     rc_t RCt;
-    const struct KDirectory * NatDir;
     char BF [ XFS_SIZE_1024 ];
     va_list xArgs;
 
     RCt = 0;
-    NatDir = NULL;
     * BF = 0;
 
     XFS_CSAN ( Out )
     XFS_CAN ( Out )
     XFS_CAN ( Format )
 
-    RCt = KDirectoryNativeDir ( ( struct KDirectory ** ) & NatDir );
+    va_copy ( xArgs, Args );
+    RCt = XFS_VResolvePath (
+                            true,   /* Absolute */
+                            BF,
+                            sizeof ( BF ),
+                            Format,
+                            xArgs
+                            );
+    va_end ( xArgs );
     if ( RCt == 0 ) {
-        va_copy ( xArgs, Args );
-        RCt = KDirectoryVResolvePath (
-                                    NatDir, /* Directory */
-                                    true,   /* Absolute */
-                                    BF,
-                                    sizeof ( BF ),
-                                    Format,
-                                    xArgs
-                                    );
-        va_end ( xArgs );
-        if ( RCt == 0 ) {
-            RCt = XFSPathMake ( Out, AddPrecedingSlash, BF );
-        }
-
-        KDirectoryRelease ( NatDir );
+        RCt = XFSPathMake ( Out, AddPrecedingSlash, BF );
     }
 
     return RCt;

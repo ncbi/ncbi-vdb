@@ -87,6 +87,11 @@ XFS_EXTERN rc_t CC XFSControlGetTree (
                                     const struct XFSTree ** Tree
                                     );
 
+/*  Very special platform specific metnod which allows to unmount
+ *  Fuse/Dokan without calling external program
+ */
+XFS_EXTERN rc_t CC XFSUnmountAndDestroy ( const char * MountPoint );
+
 /*  Control argumenting, not sure it will be left in the same way
     These methods will not take affect after XFSStart
  */
@@ -104,11 +109,40 @@ XFS_EXTERN bool CC XFSControlHasArg (
                     const char * Arg
                     );
 
+XFS_EXTERN rc_t CC XFSControlSetAppName(
+                    struct XFSControl * self,
+                    const char * AppName
+                    );
+XFS_EXTERN const char * CC XFSControlGetAppName(
+                    struct XFSControl * self
+                    );
+
 XFS_EXTERN rc_t CC XFSControlSetMountPoint(
                     struct XFSControl * self,
                     const char * MountPoint
                     );
 XFS_EXTERN const char * CC XFSControlGetMountPoint(
+                    struct XFSControl * self
+                    );
+
+/*  If You will call that method with LogFile = NULL, it will
+    redirect log to some undisclosured standard place.
+ */
+XFS_EXTERN rc_t CC XFSControlSetLogFile (
+                    struct XFSControl * self,
+                    const char * LogFile
+                    );
+XFS_EXTERN const char * CC XFSControlGetLogFile (
+                    struct XFSControl * self
+                    );
+
+/*  By default it always run in foreground, but could be set once
+ *  as a daemon at the begining of application ... and no way back.
+ */
+XFS_EXTERN rc_t CC XFSControlDaemonize (
+                    struct XFSControl * self
+                    );
+XFS_EXTERN bool CC XFSControlIsDaemonize (
                     struct XFSControl * self
                     );
 
