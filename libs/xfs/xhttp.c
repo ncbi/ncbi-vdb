@@ -949,6 +949,7 @@ _HttpEDAdd ( const struct XFSHttpEntry * Entry )
     return RCt;
 }   /* _HttpEDAdd () */
 
+#ifdef NOT_NEED_YET
 static
 rc_t CC
 _HttpEDDelNoLock ( struct _HttpED * self, const char * Url )
@@ -1005,6 +1006,7 @@ _HttpEDDel ( const char * Url )
 
     return RCt;
 }   /* _HttpEDGet () */
+#endif /* NOT_NEED_YET */
 
 static
 rc_t CC

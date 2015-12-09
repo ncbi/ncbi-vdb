@@ -351,6 +351,10 @@ XFSLogDbg ( "|o|exiting fuse()\n" );
     return 0;
 }   /* XFS_FUSE_unmount_v1 () */
 
+/*))    Special platform dependent method
+ ((*/
+void fuse_unmount_compat22(const char *mountpoint);
+
 LIB_EXPORT
 rc_t CC
 XFSUnmountAndDestroy ( const char * MountPoint )
