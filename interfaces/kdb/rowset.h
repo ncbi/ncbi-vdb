@@ -70,14 +70,20 @@ KDB_EXTERN rc_t CC KRowSetRelease ( const KRowSet * self );
 
 /* AddRowId
  *  add a single row to set
+ *
+ *  "row_id" [ IN ] - row-id to be added
+ *
+ *  "optional_inserted" [ OUT, NULL OKAY ] - returns true if row-id
+ *  was actually added, false otherwise.
  */
-KDB_EXTERN rc_t CC KRowSetAddRowId ( KRowSet * self, int64_t row_id );
+KDB_EXTERN rc_t CC KRowSetAddRowId ( KRowSet * self, int64_t row_id,
+    bool * optional_inserted );
 
 
 /* AddRowIdRange
  *  adds row-ids within specified range
  *
- *  "row_id" [ IN ] and "count" [ IN ] - range of row-ids to be inserted
+ *  "row_id" [ IN ] and "count" [ IN ] - range of row-ids to be added
  *
  *  "optional_inserted" [ OUT, NULL OKAY ] - returns the number of ids
  *  actually added. this can be from 0.."count" depending upon whether the
@@ -97,7 +103,7 @@ KDB_EXTERN rc_t CC KRowSetGetNumRowIds ( const KRowSet * self, uint64_t * num_ro
  *  execute a function on each row-id in set
  */
 KDB_EXTERN rc_t CC KRowSetVisit ( const KRowSet * self, bool reverse,
-		void ( CC * f ) ( int64_t row_id, void * data ), void * data );
+    void ( CC * f ) ( int64_t row_id, void * data ), void * data );
 
 
 /*--------------------------------------------------------------------------
@@ -149,6 +155,13 @@ KDB_EXTERN rc_t CC KRowSetIteratorNext ( KRowSetIterator * self );
  */
 KDB_EXTERN rc_t CC KRowSetIteratorPrev ( KRowSetIterator * self );
 
+
+/*IsValid
+ * check if iterator points to a valid row
+ *
+ * returns false when iterator points somewhere outside of a row set
+ */
+KDB_EXTERN bool CC KRowSetIteratorIsValid ( const KRowSetIterator * self );
 
 /* RowId
  *  report current row id

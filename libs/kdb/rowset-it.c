@@ -43,8 +43,7 @@ struct KRowSetIterator
     const KRowSet * rowset;
     const KRowSetTreeLeaf * leaf; // will be NULL in empty iterator
     int64_t current_row_id;
-    bool reverse;
-    bool eol; // end of "list"; will be true when there are no more rows
+    ptrdiff_t eol; // end of "list"; will be non-zero when there are no more rows and we moved after valid row-id sequence dimensions
 
     // only for leaf type RangeArray
     struct {
@@ -52,16 +51,200 @@ struct KRowSetIterator
     } range_array;
 };
 
-KDB_EXTERN rc_t CC KRowSetCreateIterator ( const KRowSet * self, bool reverse, KRowSetIterator ** iter )
+static
+void KRowSetIteratorStart ( KRowSetIterator * self )
+{
+    assert ( self != NULL );
+    self->current_row_id = -1;
+    self->leaf = KRowSetTreeGetFirstLeaf ( self->rowset );
+    self->eol = self->leaf == NULL ? -1 : 0;
+}
+
+static
+void KRowSetIteratorEnd ( KRowSetIterator * self )
+{
+    assert ( self != NULL );
+    self->current_row_id = -1;
+    self->leaf = KRowSetTreeGetLastLeaf ( self->rowset );
+    self->eol = self->leaf == NULL ? 1 : 0;
+}
+
+static
+bool CC KRowSetIteratorMove ( KRowSetIterator * iter, bool backward )
+{
+    int step = !backward ? 1 : -1;
+
+    assert ( iter->rowset != NULL );
+
+    if ( iter->eol != 0 )
+    {
+        iter->eol += step;
+        if ( iter->eol == 0 )
+        {
+            if ( !backward )
+                KRowSetIteratorStart ( iter );
+            else
+                KRowSetIteratorEnd ( iter );
+        }
+    }
+
+    if ( iter->eol != 0 )
+        return false;
+
+    assert ( iter->leaf != NULL );
+
+    while ( iter->eol == 0 )
+    {
+        int i;
+        int j;
+        int64_t last_row_id;
+        int last_leaf_bt = -1;
+        int64_t leaf_id;
+        int64_t row_id;
+        const KRowSetTreeLeaf * leaf = iter->leaf;
+
+        last_row_id = iter->current_row_id;
+        if ( last_row_id != -1 )
+            last_leaf_bt = last_row_id & 0xFFFF;
+
+        leaf_id = leaf->header.leaf_id;
+        row_id = leaf_id << 16;
+
+        switch ( leaf->header.type )
+        {
+        case LeafType_Bitmap:
+        {
+            int from_i;
+            int from_j;
+            int to_i;
+            int to_j;
+
+
+            if ( last_row_id != -1 && (last_row_id >> 16) == leaf_id )
+            {
+                assert ( last_leaf_bt != -1 );
+                from_i = last_leaf_bt >> 3;
+                from_j = (last_leaf_bt & 7) + step;
+            }
+            else
+            {
+                from_i = !backward ? 0 : LEAF_DATA_SZ_BT - 1;
+                from_j = !backward ? 0 : 8 - 1;
+            }
+
+            if ( !backward )
+            {
+                to_i = LEAF_DATA_SZ_BT;
+                to_j = 8;
+            }
+            else
+            {
+                to_i = -1;
+                to_j = -1;
+            }
+
+            for ( i = from_i; i != to_i; i += step )
+            {
+                if ( leaf->data.bitmap[i] )
+                {
+                    int64_t new_row_id = row_id | i << 3;
+                    for ( j = from_j; j != to_j; j += step )
+                    {
+                        if ( leaf->data.bitmap[i] & (1 << j) )
+                        {
+                            iter->current_row_id = (int64_t)( new_row_id | j );
+                            return true;
+                        }
+                    }
+                }
+                from_j = !backward ? 0 : 8 - 1;
+            }
+
+            break;
+        }
+        case LeafType_ArrayRanges:
+        {
+            int from_i; // range index
+            int from_j;
+            int to_i;
+            int to_j;
+            int len = leaf->data.array_ranges.len;
+
+            if ( last_row_id != -1 && (last_row_id >> 16) == leaf_id )
+            {
+                assert ( last_leaf_bt != -1 );
+                assert ( iter->range_array.current_range_index != -1 );
+
+                from_i = iter->range_array.current_range_index;
+                from_j = last_leaf_bt + step;
+            }
+            else
+            {
+                from_i = !backward ? 0 : len - 1;
+                from_j = !backward ? leaf->data.array_ranges.ranges[from_i].start : leaf->data.array_ranges.ranges[from_i].end;
+            }
+
+            if ( !backward )
+            {
+                to_i = len;
+            }
+            else
+            {
+                to_i = -1;
+            }
+
+            for ( i = from_i; i != to_i; i += step )
+            {
+                const struct KRowSetTreeLeafArrayRange * range = &leaf->data.array_ranges.ranges[i];
+                to_j = (!backward ? range->end : range->start) + step;
+                // single loop iteration just to check conditions
+                for ( j = from_j; j != to_j; j += step )
+                {
+                    assert ( j == (j & 0xFFFF) );
+                    iter->current_row_id = row_id | j;
+                    iter->range_array.current_range_index = i;
+                    return true;
+                }
+                from_j = !backward ? (range + step)->start : (range + step)->end;
+            }
+            break;
+        }
+        default:
+            assert ( false );
+        }
+
+        if ( !backward )
+            iter->leaf = (KRowSetTreeLeaf * ) DLNodeNext ( &leaf->header.dad );
+        else
+            iter->leaf = (KRowSetTreeLeaf * ) DLNodePrev( &leaf->header.dad );
+
+        if ( iter->leaf == NULL )
+        {
+            iter->eol = step;
+        }
+    }
+
+    return false;
+}
+
+KDB_EXTERN rc_t CC KRowSetMakeIterator ( const KRowSet * self, KRowSetIterator ** iter )
 {
     rc_t rc;
     KRowSetIterator * it;
+    uint64_t num_rows;
 
     if ( self == NULL )
         return RC ( rcDB, rcIterator, rcConstructing, rcSelf, rcNull );
 
     if ( iter == NULL )
         return RC ( rcDB, rcIterator, rcConstructing, rcParam, rcNull );
+
+    rc = KRowSetGetNumRowIds ( self, &num_rows );
+    if ( rc != 0 )
+        return rc;
+
+    if ( num_rows == 0 )
+        return RC ( rcDB, rcIterator, rcConstructing, rcId, rcNotFound );
 
     it = calloc ( 1, sizeof *it );
     if ( it == NULL )
@@ -74,13 +257,8 @@ KDB_EXTERN rc_t CC KRowSetCreateIterator ( const KRowSet * self, bool reverse, K
         if ( rc == 0 )
         {
             it->rowset = self;
-            it->current_row_id = -1;
-            it->reverse = reverse;
-            if ( !reverse )
-                it->leaf = KRowSetTreeGetFirstLeaf ( self );
-            else
-                it->leaf = KRowSetTreeGetLastLeaf ( self );
-            it->eol = it->leaf == NULL;
+            KRowSetIteratorFirst ( it );
+            assert ( KRowSetIteratorIsValid ( it ) );
 
             *iter = it;
             return 0;
@@ -132,155 +310,75 @@ KDB_EXTERN rc_t CC KRowSetIteratorRelease ( const KRowSetIterator * iter )
     return 0;
 }
 
-KDB_EXTERN bool CC KRowSetIteratorNext ( KRowSetIterator * iter )
+KDB_EXTERN rc_t CC KRowSetIteratorFirst ( KRowSetIterator * self )
 {
-    assert ( iter->rowset != NULL );
+    if ( self == NULL )
+        return RC ( rcDB, rcIterator, rcPositioning, rcSelf, rcNull );
 
-    if ( iter->eol )
-    {
-        return false;
-    }
+    KRowSetIteratorStart ( self );
+    KRowSetIteratorNext ( self );
 
-    assert ( iter->leaf != NULL );
-
-    while ( !iter->eol )
-    {
-        int i;
-        int j;
-        int64_t last_row_id;
-        int last_leaf_bt = -1;
-        int64_t leaf_id;
-        int64_t row_id;
-        const KRowSetTreeLeaf * leaf = iter->leaf;
-
-        last_row_id = iter->current_row_id;
-        if ( last_row_id != -1 )
-            last_leaf_bt = last_row_id & 0xFFFF;
-
-        leaf_id = leaf->header.leaf_id;
-        row_id = leaf_id << 16;
-
-        switch ( leaf->header.type )
-        {
-        case LeafType_Bitmap:
-        {
-            int from_i;
-            int from_j;
-            int to_i;
-            int to_j;
-            int step = !iter->reverse ? 1 : -1;
-
-            if ( last_row_id != -1 && (last_row_id >> 16) == leaf_id )
-            {
-                assert ( last_leaf_bt != -1 );
-                from_i = last_leaf_bt >> 3;
-                from_j = (last_leaf_bt & 7) + step;
-            }
-            else
-            {
-                from_i = !iter->reverse ? 0 : LEAF_DATA_SZ_BT - 1;
-                from_j = !iter->reverse ? 0 : 8 - 1;
-            }
-
-            if ( !iter->reverse )
-            {
-                to_i = LEAF_DATA_SZ_BT;
-                to_j = 8;
-            }
-            else
-            {
-                to_i = -1;
-                to_j = -1;
-            }
-
-            for ( i = from_i; i != to_i; i += step )
-            {
-                if ( leaf->data.bitmap[i] )
-                {
-                    int64_t new_row_id = row_id | i << 3;
-                    for ( j = from_j; j != to_j; j += step )
-                    {
-                        if ( leaf->data.bitmap[i] & (1 << j) )
-                        {
-                            iter->current_row_id = (int64_t)( new_row_id | j );
-                            return true;
-                        }
-                    }
-                }
-                from_j = !iter->reverse ? 0 : 8 - 1;
-            }
-
-            break;
-        }
-        case LeafType_ArrayRanges:
-        {
-            int from_i; // range index
-            int from_j;
-            int to_i;
-            int to_j;
-            int step = !iter->reverse ? 1 : -1;
-            int len = leaf->data.array_ranges.len;
-
-            if ( last_row_id != -1 && (last_row_id >> 16) == leaf_id )
-            {
-                assert ( last_leaf_bt != -1 );
-                assert ( iter->range_array.current_range_index != -1 );
-
-                from_i = iter->range_array.current_range_index;
-                from_j = last_leaf_bt + step;
-            }
-            else
-            {
-                from_i = !iter->reverse ? 0 : len - 1;
-                from_j = !iter->reverse ? leaf->data.array_ranges.ranges[from_i].start : leaf->data.array_ranges.ranges[from_i].end;
-            }
-
-            if ( !iter->reverse )
-            {
-                to_i = len;
-            }
-            else
-            {
-                to_i = -1;
-            }
-
-            for ( i = from_i; i != to_i; i += step )
-            {
-                const struct KRowSetTreeLeafArrayRange * range = &leaf->data.array_ranges.ranges[i];
-                to_j = (!iter->reverse ? range->end : range->start) + step;
-                // single loop iteration just to check conditions
-                for ( j = from_j; j != to_j; j += step )
-                {
-                    assert ( j == (j & 0xFFFF) );
-                    iter->current_row_id = row_id | j;
-                    iter->range_array.current_range_index = i;
-                    return true;
-                }
-                from_j = !iter->reverse ? (range + step)->start : (range + step)->end;
-            }
-            break;
-        }
-        default:
-            assert ( false );
-        }
-
-        if ( !iter->reverse )
-            iter->leaf = (KRowSetTreeLeaf * ) DLNodeNext ( &leaf->header.dad );
-        else
-            iter->leaf = (KRowSetTreeLeaf * ) DLNodePrev( &leaf->header.dad );
-
-        iter->eol = iter->leaf == NULL;
-    }
-
-    return false;
+    return 0;
 }
 
-KDB_EXTERN int64_t CC KRowSetIteratorRowId ( const KRowSetIterator * iter )
+KDB_EXTERN rc_t CC KRowSetIteratorLast ( KRowSetIterator * self )
 {
-    assert ( iter != NULL );
+    if ( self == NULL )
+        return RC ( rcDB, rcIterator, rcPositioning, rcSelf, rcNull );
 
-    // TODO: do we need that?
-    //assert ( iter->current_row_id != -1 );
+    KRowSetIteratorEnd ( self );
+    KRowSetIteratorPrev ( self );
 
-    return iter->current_row_id;
+    return 0;
+}
+
+KDB_EXTERN rc_t CC KRowSetIteratorNext ( KRowSetIterator * self )
+{
+    bool moved;
+    if ( self == NULL )
+        return RC ( rcDB, rcIterator, rcPositioning, rcSelf, rcNull );
+
+    moved = KRowSetIteratorMove ( self, false );
+
+    if ( !moved )
+        return RC ( rcDB, rcIterator, rcPositioning, rcItem, rcDone );
+
+    return 0;
+}
+
+KDB_EXTERN rc_t CC KRowSetIteratorPrev ( KRowSetIterator * self )
+{
+    bool moved;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcIterator, rcPositioning, rcSelf, rcNull );
+
+    moved = KRowSetIteratorMove ( self, true );
+
+    if ( !moved )
+        return RC ( rcDB, rcIterator, rcPositioning, rcItem, rcDone );
+
+    return 0;
+}
+
+KDB_EXTERN bool CC KRowSetIteratorIsValid ( const KRowSetIterator * self )
+{
+    return self != NULL && !self->eol;
+}
+
+KDB_EXTERN rc_t CC KRowSetIteratorRowId ( const KRowSetIterator * self, int64_t * row_id )
+{
+    if ( self == NULL )
+        return RC ( rcDB, rcIterator, rcAccessing, rcSelf, rcNull );
+
+    if ( row_id == NULL )
+        return RC ( rcDB, rcIterator, rcAccessing, rcParam, rcNull );
+
+    if ( !KRowSetIteratorIsValid ( self ) )
+        return RC ( rcDB, rcIterator, rcAccessing, rcSelf, rcInvalid );
+
+    assert ( self->current_row_id != -1 );
+
+    *row_id = self->current_row_id;
+    return 0;
 }
