@@ -376,7 +376,7 @@ static rc_t CompressREAD(TableWriterSeq *self)
     int64_t row = 0;
     
     memcpy(&self->cols_read, &TableSeqReadREAD_cols, sizeof(self->cols_read));
-    rc = TableWriter_GetVTable(cself->base, &vtbl);
+    rc = TableWriter_GetVTable(self->base, &vtbl);
     assert(rc == 0);
     rc = TableReader_Make(&self->reader, vtbl, self->cols_read, 50 * 1024 * 1024);
     assert(rc == 0);
@@ -394,7 +394,7 @@ static rc_t CompressREAD(TableWriterSeq *self)
             }
             return rc;
         }
-        rc = TableWriter_OpenRowId(self->base, row, &cursor_id);
+        rc = TableWriter_OpenRowId(self->base, row, cursor_id);
         assert(rc == 0);
         {
             char const *const seq = self->cols_read[0].base.str;
