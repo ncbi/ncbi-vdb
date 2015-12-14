@@ -25,9 +25,11 @@
 */
 
 #include <search/extern.h>
+#include <search/ref-variation.h>
 
 #include <klib/rc.h>
 #include <klib/refcount.h>
+#include <klib/data-buffer.h>
 #include <insdc/insdc.h>
 
 #include <stdlib.h>
@@ -42,9 +44,6 @@
 #endif
 
 #include <sysalloc.h>
-
-#include <search/grep.h>
-
 
 #ifndef min
 #define min(x,y) ((y) < (x) ? (y) : (x))
@@ -63,21 +62,22 @@
 #define SIMILARITY_MISMATCH -1
 #define SW_DEBUG_PRINT 0
 
-struct VRefVariation
+struct RefVariation
 {
-    KRefcount refcount;
-
-    INSDC_dna_text const* ref_external; /* pointer to external buffer */
-    size_t ref_size;
+    /* for memory management */
+    KDataBuffer buffer;
 
     INSDC_dna_text* var_buffer; /* in the case of deletion
         it contains <ref_base_before><allele><ref_base_after>
         otherwise it contains allele only */
+    size_t var_buffer_size;
+
     INSDC_dna_text const* allele; /* points to allele in the var_buffer */
     size_t allele_start;
-    size_t var_buffer_size;
     size_t allele_size;
     size_t allele_len_on_ref;
+
+    KRefcount _refcount;
 };
 
 
@@ -110,9 +110,9 @@ static int compare_4na ( INSDC_dna_text ch2na, INSDC_dna_text ch4na )
 
     /*return (bits2na & bits4na) != 0 ? 2 : -1;*/
 
-    unsigned char popcnt4na = (unsigned char) __builtin_popcount ( bits4na );
+    int popcnt4na = __builtin_popcount ( bits4na );
 
-    return (bits2na & bits4na) != 0 ? 12 / popcnt4na : -6;
+    return ( (bits2na & bits4na) != 0 ) ? ( 12 / popcnt4na ) : -6;
 }
 #endif
 
@@ -376,40 +376,6 @@ static void sw_find_indel_box ( int* matrix, size_t ROWS, size_t COLUMNS,
         }
     }
 }
-
-#if 0 /* leaving it here for debug*/
-template <bool reverse> void print_matrix ( int const* matrix,
-                                            char const* ref_slice, size_t ref_slice_size,
-                                            char const* query, size_t query_size)
-{
-    size_t COLUMNS = ref_slice_size + 1;
-    size_t ROWS = query_size + 1;
-
-    int print_width = 2;
-
-    CStringIterator<reverse> ref_slice_iterator(ref_slice, ref_slice_size);
-    CStringIterator<reverse> query_iterator(query, query_size);
-
-    printf ("  %*c ", print_width, '-');
-    for (size_t j = 1; j < COLUMNS; ++j)
-        printf ("%*c ", print_width, ref_slice_iterator[j-1]);
-    printf ("\n");
-
-    for (size_t i = 0; i < ROWS; ++i)
-    {
-        if ( i == 0 )
-            printf ("%c ", '-');
-        else
-            printf ("%c ", query_iterator[i-1]);
-    
-        for (size_t j = 0; j < COLUMNS; ++j)
-        {
-            printf ("%*d ", print_width, matrix[i*COLUMNS + j]);
-        }
-        printf ("\n");
-    }
-}
-#endif
 
 #if SW_DEBUG_PRINT != 0
 #include <stdio.h>
