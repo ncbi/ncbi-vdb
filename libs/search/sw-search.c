@@ -988,7 +988,7 @@ LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC_SW (
         */
         if ( ref_start == 0 && (slice_start == -1 || new_slice_start != slice_start ) )
         {
-            exp_l += 1;/**= 2;*/
+            exp_l *= 2;
             cont = 1;
         }
 
@@ -999,7 +999,7 @@ LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC_SW (
         */
         if ( ref_start + ref_len == ref_slice.size && (slice_end == -1 || new_slice_end != slice_end) )
         {
-            exp_r += 1;/**= 2;*/
+            exp_r *= 2;
             cont = 1;
         }
 
