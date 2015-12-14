@@ -67,7 +67,8 @@ enum ETableWriterSeq_ColOptions {
     ewseq_co_SpotGroup = 0x20,   /* SPOT_GROUP will be written */
     ewseq_co_TI = 0x40,          /* TI will be written */
     ewseq_co_SaveQual = 0x80,    /* write quality even when there are alignments */
-    ewseq_co_SpotName = 0x100    /* NAME will be written */
+    ewseq_co_SpotName = 0x100,   /* NAME will be written */
+    ewseq_co_KeepKey = 0x200     /* TMP_KEY_ID won't be removed */
 };
 
 typedef struct TableWriterSeqData_struct {
