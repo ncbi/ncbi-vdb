@@ -31,6 +31,7 @@
 #include <xfs/xfs.h>
 
 #include "xfs-priv.h"
+#include "xlog.h"
 #include "platform.h"
 
 #include <sysalloc.h>
@@ -134,7 +135,7 @@ XFS_DOKAN_destroy_v1( struct XFSControl * self )
     }
     else {
         if ( Options -> MountPoint != NULL ) {
-            free ( char * ) Options -> MountPoint );
+            free ( ( char * ) Options -> MountPoint );
             Options -> MountPoint = NULL;
         }
 
@@ -334,7 +335,7 @@ XFS_DOKAN_loop_v1( struct XFSControl * self )
         return XFS_RC ( rcNull );
     }
 
-XFSLogDbg ( "XFS_DOKAN_loop(): Tree [0x%p] Data [0x%p]\n",  self -> TreeDepot, Tree ) );
+XFSLogDbg ( "XFS_DOKAN_loop(): Tree [0x%p] Data [0x%p]\n",  self -> TreeDepot, Tree );
 
 
 /*  We will split mount method for mount'n'loop later, so there is 
@@ -383,7 +384,7 @@ XFSLogDbg ( "XFS_DOKAN_loop(): Tree [0x%p] Data [0x%p]\n",  self -> TreeDepot, T
         free ( Operations );
     }
 
-XFSLogDbg ( "XFS_DOKAN_loop(): Exited Tree [0x%p]\n",  self -> TreeDepot ) );
+XFSLogDbg ( "XFS_DOKAN_loop(): Exited Tree [0x%p]\n",  self -> TreeDepot );
 
     return RCt;
 }   /* XFS_DOKAN_loop() */

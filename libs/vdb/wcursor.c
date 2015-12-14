@@ -68,17 +68,24 @@
 #include <string.h>
 #include <assert.h>
 
+static bool s_disable_flush_thread = false;
 
 /*--------------------------------------------------------------------------
  * VCursor
  *  a row cursor onto a VTable
  */
 
+LIB_EXPORT rc_t CC VDBManagerDisableFlushThread(VDBManager *self)
+{
+    s_disable_flush_thread = true;
+    return 0;
+}
+
 /* forward
  *  to avoid reordering whole page
  */
 static
-rc_t VCursorFlushPageInt ( VCursor *self );
+rc_t VCursorFlushPageInt ( VCursor *self, bool sync );
 
 
 /* Whack
@@ -189,7 +196,7 @@ rc_t VTableCreateCursorWriteInt ( VTable *self, VCursor **cursp, KCreateMode mod
 
 LIB_EXPORT rc_t CC VTableCreateCursorWrite ( VTable *self, VCursor **cursp, KCreateMode mode )
 {
-    return VTableCreateCursorWriteInt ( self, cursp, mode, true );
+    return VTableCreateCursorWriteInt ( self, cursp, mode, !s_disable_flush_thread );
 }
 
 
@@ -717,7 +724,7 @@ LIB_EXPORT rc_t CC VCursorCloseRow ( const VCursor *cself )
             /* close off the page if so requested */
             if ( self -> state == vcPageCommit )
             {
-                rc = VCursorFlushPageInt ( self );
+                rc = VCursorFlushPageInt(self, false);
                 if ( rc )
                 {
                     self -> state = vcFailed;
@@ -958,152 +965,125 @@ rc_t CC run_flush_thread ( const KThread *t, void *data )
 #endif
 
 static
-rc_t VCursorFlushPageInt ( VCursor *self )
+rc_t VCursorFlushPageNoThread ( VCursor *self )
 {
-    rc_t rc;
+    int64_t end_id = self->end_id;
 
-    if ( self == NULL )
-        rc = RC ( rcVDB, rcCursor, rcFlushing, rcSelf, rcNull );
-    else if ( self -> read_only )
-        rc = RC ( rcVDB, rcCursor, rcFlushing, rcCursor, rcReadonly );
+    /* first, tell all columns to bundle up their pages into buffers */
+    if ( VectorDoUntil ( & self -> row, false, WColumnBufferPage, & end_id ) )
+    {
+        VectorForEach ( & self -> row, false, WColumnDropPage, NULL );
+        return RC ( rcVDB, rcCursor, rcFlushing, rcMemory, rcExhausted );
+    }
     else
     {
-        int64_t end_id;
-#if ! VCURSOR_FLUSH_THREAD
         run_trigger_prod_data pb;
-#endif
-        switch ( self -> state )
+
+        /* supposed to be constant */
+        assert ( end_id == self -> end_id );
+        /* run all validation and trigger productions */
+        pb . id = self -> start_id;
+        pb . cnt = self -> end_id - self -> start_id;
+        pb . rc = 0;
+        if ( ! VectorDoUntil ( & self -> trig, false, run_trigger_prods, & pb ) )
         {
-        case vcConstruct:
-            rc = RC ( rcVDB, rcCursor, rcFlushing, rcCursor, rcNotOpen );
-            break;
-        case vcFailed:
-            rc = RC ( rcVDB, rcCursor, rcFlushing, rcCursor, rcInvalid );
-            break;
-        case vcRowOpen:
-            rc = RC ( rcVDB, rcCursor, rcFlushing, rcCursor, rcBusy );
-            break;
-        default:
+            self -> start_id = self -> end_id;
+            self -> end_id = self -> row_id + 1;
+            self -> state = vcReady;
+        }
 
-            /* ignore request if there is no page to commit */
-            if ( self -> start_id == self -> end_id )
-            {
-                /* the cursor should be in unwritten state,
-                   where the row_id can be reset but drags
-                   along the other markers. */
-                assert ( self -> end_id == self -> row_id );
-                return 0;
-            }
+        /* drop page buffers */
+        VectorForEach ( & self -> row, false, WColumnDropPage, NULL );
+
+        return pb . rc;
+    }
+}
+
+static
+rc_t VCursorFlushPageThread ( VCursor *self, bool sync )
+{
+    rc_t rc = 0;
+    int64_t end_id = self->end_id;
 
 #if VCURSOR_FLUSH_THREAD
-            MTCURSOR_DBG (( "VCursorFlushPageInt: going to acquire lock\n" ));
-            /* get lock */
-            rc = KLockAcquire ( self -> flush_lock );
-            if ( rc != 0 )
-                return rc;
+    MTCURSOR_DBG (( "VCursorFlushPageInt: going to acquire lock\n" ));
+    /* get lock */
+    rc = KLockAcquire ( self -> flush_lock );
+    if ( rc != 0 )
+        return rc;
 
-            MTCURSOR_DBG (( "VCursorFlushPageInt: have lock\n" ));
+    MTCURSOR_DBG (( "VCursorFlushPageInt: have lock\n" ));
 
-            /* make sure that background thread is ready */
-            while ( self -> flush_state == vfBusy )
-            {
-                MTCURSOR_DBG (( "VCursorFlushPageInt: waiting for background thread\n" ));
-                rc = KConditionWait ( self -> flush_cond, self -> flush_lock );
-                if ( rc != 0 )
-                {
-                    LOGERR ( klogSys, rc, "VCursorFlushPageInt: wait failed - exiting" );
-                    KLockUnlock ( self -> flush_lock );
-                    return rc;
-                }
-            }
-
-            if ( self -> flush_state != vfReady )
-            {
-                if ( self -> flush_state != vfBgErr )
-                    rc = RC ( rcVDB, rcCursor, rcFlushing, rcCursor, rcInconsistent );
-                else
-                {
-                    rc_t rc2;
-                    MTCURSOR_DBG (( "VCursorFlushPageInt: waiting on thread to exit\n" ));
-                    rc = KThreadWait ( self -> flush_thread, & rc2 );
-                    if ( rc == 0 )
-                    {
-                        rc = rc2;
-                        MTCURSOR_DBG (( "VCursorFlushPageInt: releasing thread\n" ));
-                        KThreadRelease ( self -> flush_thread );
-                        self -> flush_thread = NULL;
-                    }
-                }
-
-                PLOGERR ( klogInt, (klogInt, rc, "VCursorFlushPageInt: not in ready state[$(state)] - exiting","state=%hu",self -> flush_state ));
-                KLockUnlock ( self -> flush_lock );
-                return rc;
-            }
-
-            MTCURSOR_DBG (( "VCursorFlushPageInt: running buffer page\n" ));
-#endif
-
-            /* first, tell all columns to bundle up their pages into buffers */
-            end_id = self -> end_id;
-            rc = RC ( rcVDB, rcCursor, rcFlushing, rcMemory, rcExhausted );
-            if ( VectorDoUntil ( & self -> row, false, WColumnBufferPage, & end_id ) )
-            {
-                VectorForEach ( & self -> row, false, WColumnDropPage, NULL );
-                self -> flush_state = vfFgErr;
-            }
-            else
-            {
-                /* supposed to be constant */
-                assert ( end_id == self -> end_id );
-#if VCURSOR_FLUSH_THREAD
-                MTCURSOR_DBG (( "VCursorFlushPageInt: pages buffered - capturing id and count\n" ));
-                self -> flush_id = self -> start_id;
-                self -> flush_cnt = self -> end_id - self -> start_id;
-
-                self -> start_id = self -> end_id;
-                self -> end_id = self -> row_id + 1;
-                self -> state = vcReady;
-
-                MTCURSOR_DBG (( "VCursorFlushPageInt: state set to busy - signaling bg thread\n" ));
-                self -> flush_state = vfBusy;
-                rc = KConditionSignal ( self -> flush_cond );
-                if ( rc != 0 )
-                    LOGERR ( klogSys, rc, "VCursorFlushPageInt: condition returned error on signal" );
-#else
-                /* run all validation and trigger productions */
-                pb . id = self -> start_id;
-                pb . cnt = self -> end_id - self -> start_id;
-                pb . rc = 0;
-                if ( ! VectorDoUntil ( & self -> trig, false, run_trigger_prods, & pb ) )
-                {
-                    self -> start_id = self -> end_id;
-                    self -> end_id = self -> row_id + 1;
-                    self -> state = vcReady;
-                }
-
-                rc = pb . rc;
-
-                /* drop page buffers */
-                VectorForEach ( & self -> row, false, WColumnDropPage, NULL );
-#endif
-            }
-
-#if VCURSOR_FLUSH_THREAD
-            MTCURSOR_DBG (( "VCursorFlushPageInt: unlocking\n" ));
+    /* make sure that background thread is ready */
+    while ( self -> flush_state == vfBusy )
+    {
+        MTCURSOR_DBG (( "VCursorFlushPageInt: waiting for background thread\n" ));
+        rc = KConditionWait ( self -> flush_cond, self -> flush_lock );
+        if ( rc != 0 )
+        {
+            LOGERR ( klogSys, rc, "VCursorFlushPageInt: wait failed - exiting" );
             KLockUnlock ( self -> flush_lock );
-#endif
+            return rc;
         }
     }
 
-    return rc;
-}
-
-LIB_EXPORT rc_t CC VCursorFlushPage ( VCursor *self )
-{
-    rc_t rc = VCursorFlushPageInt ( self );
-    if ( rc == 0 )
+    if ( self -> flush_state != vfReady )
     {
-#if VCURSOR_FLUSH_THREAD
+        if ( self -> flush_state != vfBgErr )
+            rc = RC ( rcVDB, rcCursor, rcFlushing, rcCursor, rcInconsistent );
+        else
+        {
+            rc_t rc2;
+            MTCURSOR_DBG (( "VCursorFlushPageInt: waiting on thread to exit\n" ));
+            rc = KThreadWait ( self -> flush_thread, & rc2 );
+            if ( rc == 0 )
+            {
+                rc = rc2;
+                MTCURSOR_DBG (( "VCursorFlushPageInt: releasing thread\n" ));
+                KThreadRelease ( self -> flush_thread );
+                self -> flush_thread = NULL;
+            }
+        }
+
+        PLOGERR ( klogInt, (klogInt, rc, "VCursorFlushPageInt: not in ready state[$(state)] - exiting","state=%hu",self -> flush_state ));
+        KLockUnlock ( self -> flush_lock );
+        return rc;
+    }
+
+    MTCURSOR_DBG (( "VCursorFlushPageInt: running buffer page\n" ));
+
+    /* first, tell all columns to bundle up their pages into buffers */
+    if ( VectorDoUntil ( & self -> row, false, WColumnBufferPage, & end_id ) )
+    {
+        VectorForEach ( & self -> row, false, WColumnDropPage, NULL );
+        self -> flush_state = vfFgErr;
+        rc = RC ( rcVDB, rcCursor, rcFlushing, rcMemory, rcExhausted );
+    }
+    else
+    {
+        /* supposed to be constant */
+        assert ( end_id == self -> end_id );
+
+        MTCURSOR_DBG (( "VCursorFlushPageInt: pages buffered - capturing id and count\n" ));
+        self -> flush_id = self -> start_id;
+        self -> flush_cnt = self -> end_id - self -> start_id;
+
+        self -> start_id = self -> end_id;
+        self -> end_id = self -> row_id + 1;
+        self -> state = vcReady;
+
+        MTCURSOR_DBG (( "VCursorFlushPageInt: state set to busy - signaling bg thread\n" ));
+        self -> flush_state = vfBusy;
+        rc = KConditionSignal ( self -> flush_cond );
+        if ( rc != 0 )
+            LOGERR ( klogSys, rc, "VCursorFlushPageInt: condition returned error on signal" );
+    }
+
+    MTCURSOR_DBG (( "VCursorFlushPageInt: unlocking\n" ));
+    KLockUnlock ( self -> flush_lock );
+
+    if (sync && rc == 0) {
+        /* wait for flush to finish before returning */
         MTCURSOR_DBG (( "VCursorFlushPage: going to acquire lock\n" ));
         /* get lock */
         rc = KLockAcquire ( self -> flush_lock );
@@ -1151,7 +1131,52 @@ LIB_EXPORT rc_t CC VCursorFlushPage ( VCursor *self )
             return rc;
         }
         KLockUnlock ( self -> flush_lock );
+    }
 #endif
+    return rc;
+}
+
+static
+rc_t VCursorFlushPageInt ( VCursor *self, bool sync )
+{
+    switch ( self -> state )
+    {
+        case vcConstruct:
+            return RC ( rcVDB, rcCursor, rcFlushing, rcCursor, rcNotOpen );
+        case vcFailed:
+            return RC ( rcVDB, rcCursor, rcFlushing, rcCursor, rcInvalid );
+        case vcRowOpen:
+            return RC ( rcVDB, rcCursor, rcFlushing, rcCursor, rcBusy );
+        default:
+            break;
+    }
+    if ( self -> start_id == self -> end_id )
+    {
+        /* the cursor should be in unwritten state,
+           where the row_id can be reset but drags
+           along the other markers. */
+        assert ( self -> end_id == self -> row_id );
+        return 0;
+    }
+    if (self->flush_thread)
+        return VCursorFlushPageThread(self, sync);
+    else
+        return VCursorFlushPageNoThread(self);
+}
+
+LIB_EXPORT rc_t CC VCursorFlushPage ( VCursor *self )
+{
+    rc_t rc;
+
+    if ( self == NULL )
+        rc = RC ( rcVDB, rcCursor, rcFlushing, rcSelf, rcNull );
+    else if ( self -> read_only )
+        rc = RC ( rcVDB, rcCursor, rcFlushing, rcCursor, rcReadonly );
+    else
+        rc = VCursorFlushPageInt ( self, true );
+
+    if ( rc == 0 )
+    {
         assert ( self -> row_id == self -> start_id );
         self -> end_id = self -> row_id;
     }
