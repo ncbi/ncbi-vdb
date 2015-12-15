@@ -206,7 +206,7 @@ void vrefvar_bounds (::RefVarAlg alg, char const* ref,
 
     ::RefVariation* obj;
 
-    rc_t rc = ::RefVariationIUPACMake ( & obj, ref, ref_len, pos, query_len, query, len_on_ref, alg );
+    rc_t rc = ::RefVariationIUPACMake ( & obj, ref, ref_len, pos, len_on_ref, query, query_len, alg );
 
     print_refvar_obj ( obj );
 
