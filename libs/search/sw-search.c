@@ -1163,11 +1163,11 @@ rc_t CC RefVariationIUPACMake (RefVariation ** obj,
     }
     else
     {
-        size_t ref_start, ref_len;
+        size_t ref_window_start = 0, ref_window_len = 0;
         rc = FindRefVariationRegionIUPAC ( alg, ref, ref_len,
                                            deletion_pos,
                                            insertion, insertion_len, deletion_len,
-                                           & ref_start, & ref_len );
+                                           & ref_window_start, & ref_window_len );
         if ( rc != 0 )
         {
             free ( new_obj );
@@ -1187,7 +1187,7 @@ rc_t CC RefVariationIUPACMake (RefVariation ** obj,
             c_string_const_assign ( & ref_str, ref, ref_len );
 
             if ( ! compose_variation ( & ref_str,
-                                       ref_start, ref_len,
+                                       ref_window_start, ref_window_len,
                                        insertion, insertion_len,
                                        deletion_pos, deletion_len, & var_str,
                                        & allele, & allele_size ) )
@@ -1207,9 +1207,9 @@ rc_t CC RefVariationIUPACMake (RefVariation ** obj,
                 new_obj->allele = allele;
                 new_obj->allele_size = allele_size;
 
-                new_obj->allele_start = ref_start;
-                new_obj->allele_len_on_ref = ref_len == 0 && insertion_len == deletion_len
-                    ? deletion_len : ref_len;
+                new_obj->allele_start = ref_window_start;
+                new_obj->allele_len_on_ref = ref_window_len == 0 && insertion_len == deletion_len
+                    ? deletion_len : ref_window_len;
             }
         }
     }
