@@ -33,12 +33,12 @@
 #include <kfg/config.h>
 
 #include <xfs/model.h>
+#include <xfs/xlog.h>
 
 #include "owp.h"
 #include "mehr.h"
 #include "zehr.h"
 #include "schwarzschraube.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 

@@ -47,8 +47,8 @@
 #include "xencws.h"
 #include "zehr.h"
 #include "lreader.h"
-#include "xlog.h"
 #include <xfs/path.h>
+#include <xfs/xlog.h>
 
 #include <sysalloc.h>
 

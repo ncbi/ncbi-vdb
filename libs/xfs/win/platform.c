@@ -1,4 +1,5 @@
 /*===========================================================================
+
  *
  *                            PUBLIC DOMAIN NOTICE
  *               National Center for Biotechnology Information
@@ -29,9 +30,9 @@
 #include <klib/text.h>
 #include <kproc/thread.h>
 #include <xfs/xfs.h>
+#include <xfs/xlog.h>
 
 #include "xfs-priv.h"
-#include "xlog.h"
 #include "platform.h"
 
 #include <sysalloc.h>
@@ -415,3 +416,13 @@ XFS_DOKAN_unmount_v1( struct XFSControl * self )
     return 0;
 }   /* XFS_DOKAN_unmount() */
 
+/*))    Special platform dependent method
+ ((*/
+LIB_EXPORT
+rc_t CC
+XFSUnmountAndDestroy ( const char * MountPoint )
+{
+    /*  TODO
+     */
+    return 0;
+}   /* XFSUnmountAndDestroy () */

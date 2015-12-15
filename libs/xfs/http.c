@@ -39,13 +39,13 @@
 #include <xfs/editors.h>
 #include <xfs/handle.h>
 #include <xfs/perm.h>
+#include <xfs/xlog.h>
 
 #include "xhttp.h"
 #include "mehr.h"
 #include "schwarzschraube.h"
 #include "teleport.h"
 #include "common.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 

@@ -39,12 +39,12 @@
 #include <kns/stream.h>
 
 #include <xfs/path.h>
+#include <xfs/xlog.h>
 
 #include "schwarzschraube.h"
 #include "xhttp.h"
 #include "zehr.h"
 #include "lockdpt.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 

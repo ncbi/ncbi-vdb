@@ -33,13 +33,13 @@
 #include <xfs/tree.h>
 #include <xfs/node.h>
 #include <xfs/editors.h>
+#include <xfs/xlog.h>
 
 #include "mehr.h"
 #include "zehr.h"
 #include "ncon.h"
 #include "teleport.h"
 #include "common.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 

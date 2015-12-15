@@ -38,11 +38,12 @@
 #include <kns/manager.h>
 #include <kns/http.h>
 
+#include <xfs/xlog.h>
+
 #include "teleport.h"
 #include "mehr.h"
 #include "schwarzschraube.h"
 #include "zehr.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 

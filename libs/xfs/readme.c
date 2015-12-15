@@ -30,11 +30,11 @@
 #include <xfs/model.h>
 #include <xfs/node.h>
 #include <xfs/doc.h>
+#include <xfs/xlog.h>
 
 
 #include "teleport.h"
 #include "common.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 

@@ -54,9 +54,9 @@
 #include <xfs/editors.h>
 #include <xfs/perm.h>
 #include <xfs/path.h>
+#include <xfs/xlog.h>
 
 #include "schwarzschraube.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 #include <string.h> /* we are using memset() */

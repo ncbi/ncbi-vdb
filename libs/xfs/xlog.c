@@ -35,7 +35,7 @@
 #include <kfs/file.h>
 #include <kfs/directory.h>
 
-#include "xlog.h"
+#include <xfs/xlog.h>
 #include "schwarzschraube.h"
 
  /*))))

@@ -34,12 +34,12 @@
 #include <xfs/tree.h>
 #include <xfs/node.h>
 #include <xfs/path.h>
+#include <xfs/xlog.h>
 
 #include "mehr.h"
 #include "schwarzschraube.h"
 #include "teleport.h"
 #include "common.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 
