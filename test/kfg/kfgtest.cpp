@@ -934,15 +934,18 @@ class Cleaner {
 
     const bool ncbi;
     const bool dbGaP;
+    const bool enKey;
 
-    static const char* Ncbi (void) { return "ncbi"           ; }
-    static const char* DbGaP(void) { return "ncbi/dbGaP-2956"; }
+    static const char* Ncbi (void) { return  "ncbi"                   ; }
+    static const char* DbGaP(void) { return  "ncbi/dbGaP-2956"        ; }
+    static const char* EnKey(void) { return ".ncbi/dbGaP-2956.enc_key"; }
 
 public:
     Cleaner(KDirectory *d)
         : dir(d), home(getenv("HOME"))
         , ncbi (KDirectoryPathType(dir, "%s/%s", home, Ncbi ()) != kptNotFound)
         , dbGaP(KDirectoryPathType(dir, "%s/%s", home, DbGaP()) != kptNotFound)
+        , enKey(KDirectoryPathType(dir, "%s/%s", home, EnKey()) != kptNotFound)
     {}
 
     ~Cleaner() {
@@ -950,6 +953,8 @@ public:
             KDirectoryRemove(dir, false, "%s/%s", home, DbGaP());
         if (!ncbi)
             KDirectoryRemove(dir, false, "%s/%s", home, Ncbi ());
+        if (!enKey)
+            KDirectoryRemove(dir, false, "%s/%s", home, EnKey());
     }
 };
 
