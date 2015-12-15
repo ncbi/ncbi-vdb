@@ -55,8 +55,8 @@ extern "C" {
 typedef uint32_t RefVarAlg;
 enum
 {
-    refvarSW = 1,
-    refvarRA
+    refvarAlgSW = 1,
+    refvarAlgRA
 };
 
 #endif
@@ -92,7 +92,7 @@ SEARCH_EXTERN rc_t CC RefVariationIUPACMake ( RefVariation ** obj,
         size_t deletion_pos, size_t deletion_len,
         INSDC_dna_text const* insertion, size_t insertion_len
 #if REF_VAR_ALG
-        , RefVarAlg type
+        , RefVarAlg alg
 #endif
     );
 

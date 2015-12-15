@@ -24,12 +24,12 @@
 *
 */
 
-#include <search/extern.h>
 #include <search/ref-variation.h>
+
+#include <search/extern.h>
 
 #include <klib/rc.h>
 #include <klib/refcount.h>
-#include <klib/data-buffer.h>
 #include <insdc/insdc.h>
 
 #include <stdlib.h>
@@ -64,20 +64,16 @@
 
 struct RefVariation
 {
-    /* for memory management */
-    KDataBuffer buffer;
+    KRefcount refcount;
 
     INSDC_dna_text* var_buffer; /* in the case of deletion
         it contains <ref_base_before><allele><ref_base_after>
         otherwise it contains allele only */
-    size_t var_buffer_size;
-
     INSDC_dna_text const* allele; /* points to allele in the var_buffer */
     size_t allele_start;
+    size_t var_buffer_size;
     size_t allele_size;
     size_t allele_len_on_ref;
-
-    KRefcount _refcount;
 };
 
 
@@ -110,9 +106,9 @@ static int compare_4na ( INSDC_dna_text ch2na, INSDC_dna_text ch4na )
 
     /*return (bits2na & bits4na) != 0 ? 2 : -1;*/
 
-    int popcnt4na = __builtin_popcount ( bits4na );
+    unsigned char popcnt4na = (unsigned char) __builtin_popcount ( bits4na );
 
-    return ( (bits2na & bits4na) != 0 ) ? ( 12 / popcnt4na ) : -6;
+    return (bits2na & bits4na) != 0 ? 12 / popcnt4na : -6;
 }
 #endif
 
@@ -879,7 +875,7 @@ static bool make_query_ (
                                             (return values)
 */
 
-LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC_SW (
+static rc_t CC FindRefVariationRegionIUPAC_SW (
         INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
         INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
         size_t* p_ref_start, size_t* p_ref_len
@@ -954,7 +950,7 @@ LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC_SW (
         */
         if ( ref_start == 0 && (slice_start == -1 || new_slice_start != slice_start ) )
         {
-            exp_l += 1;/**= 2;*/
+            exp_l *= 2;
             cont = 1;
         }
 
@@ -965,7 +961,7 @@ LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC_SW (
         */
         if ( ref_start + ref_len == ref_slice.size && (slice_end == -1 || new_slice_end != slice_end) )
         {
-            exp_r += 1;/**= 2;*/
+            exp_r *= 2;
             cont = 1;
         }
 
@@ -1006,7 +1002,7 @@ free_resources:
                                             (return values)
 */
 
-LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC_RA (
+static rc_t CC FindRefVariationRegionIUPAC_RA (
         INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
         INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
         size_t* p_ref_start, size_t* p_ref_len
@@ -1118,7 +1114,7 @@ LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC_RA (
                                             (return values)
 */
 
-LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC (
+static rc_t CC FindRefVariationRegionIUPAC (
         RefVarAlg alg, INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
         INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref,
         size_t* p_ref_start, size_t* p_ref_len
@@ -1134,45 +1130,48 @@ LIB_EXPORT rc_t CC FindRefVariationRegionIUPAC (
     return RC ( rcVDB, rcExpression, rcConstructing, rcParam, rcUnrecognized );
 }
 
-LIB_EXPORT rc_t CC VRefVariationIUPACMake (
-        VRefVariation** self, RefVarAlg alg,
-        INSDC_dna_text const* ref, size_t ref_size, size_t ref_pos_var,
-        INSDC_dna_text const* variation, size_t variation_size, size_t var_len_on_ref
+rc_t CC RefVariationIUPACMake (RefVariation ** obj,
+        INSDC_dna_text const* ref, size_t ref_len,
+        size_t deletion_pos, size_t deletion_len,
+        INSDC_dna_text const* insertion, size_t insertion_len
+#if REF_VAR_ALG
+        , RefVarAlg alg
+#endif
     )
 {
-    struct VRefVariation* obj;
+    struct RefVariation* new_obj;
     rc_t rc = 0;
 
-    if ( ( variation_size == 0 && var_len_on_ref == 0 )
-        || ref_size == 0 )
+    if ( ( insertion_len == 0 && deletion_len == 0 )
+        || ref_len == 0 )
     {
         return RC (rcText, rcString, rcSearching, rcParam, rcEmpty);
     }
 
-    if ( (ref_pos_var + var_len_on_ref) > ref_size )
+    if ( (deletion_pos + deletion_len) > ref_len )
     {
         return RC (rcText, rcString, rcSearching, rcParam, rcOutofrange);
     }
 
-    assert ( self != NULL );
+    assert ( obj != NULL );
 
-    obj = calloc ( 1, sizeof * obj );
+    new_obj = calloc ( 1, sizeof * new_obj );
 
-    if ( obj == NULL )
+    if ( new_obj == NULL )
     {
         rc = RC ( rcVDB, rcExpression, rcConstructing, rcMemory, rcExhausted );
     }
     else
     {
         size_t ref_start, ref_len;
-        rc = FindRefVariationRegionIUPAC ( alg, ref, ref_size,
-                                           ref_pos_var,
-                                           variation, variation_size, var_len_on_ref,
+        rc = FindRefVariationRegionIUPAC ( alg, ref, ref_len,
+                                           deletion_pos,
+                                           insertion, insertion_len, deletion_len,
                                            & ref_start, & ref_len );
         if ( rc != 0 )
         {
-            free ( obj );
-            obj = NULL;
+            free ( new_obj );
+            new_obj = NULL;
         }
         else
         {
@@ -1185,50 +1184,48 @@ LIB_EXPORT rc_t CC VRefVariationIUPACMake (
             var_str.capacity = var_str.size = 0;
             var_str.str = NULL;
 
-            c_string_const_assign ( & ref_str, ref, ref_size );
+            c_string_const_assign ( & ref_str, ref, ref_len );
 
             if ( ! compose_variation ( & ref_str,
                                        ref_start, ref_len,
-                                       variation, variation_size,
-                                       ref_pos_var, var_len_on_ref, & var_str,
+                                       insertion, insertion_len,
+                                       deletion_pos, deletion_len, & var_str,
                                        & allele, & allele_size ) )
             {
                 rc = RC(rcText, rcString, rcSearching, rcMemory, rcExhausted);
-                free ( obj );
-                obj = NULL;
+                free ( new_obj );
+                new_obj = NULL;
             }
             else
             {
-                KRefcountInit ( & obj->refcount, 1, "VRefVariation", "make", "ref-var" );
+                KRefcountInit ( & new_obj->refcount, 1, "RefVariation", "make", "ref-var" );
                 /* moving var_str to the object (so no need to destruct var_str */
 
-                obj->var_buffer = var_str.str;
-                obj->var_buffer_size = var_str.size;
+                new_obj->var_buffer = var_str.str;
+                new_obj->var_buffer_size = var_str.size;
 
-                obj->allele = allele;
-                obj->allele_size = allele_size;
+                new_obj->allele = allele;
+                new_obj->allele_size = allele_size;
 
-                obj->ref_external = ref;
-                obj->ref_size = ref_size;
-                obj->allele_start = ref_start;
-                obj->allele_len_on_ref = ref_len == 0 && variation_size == var_len_on_ref
-                    ? var_len_on_ref : ref_len;
+                new_obj->allele_start = ref_start;
+                new_obj->allele_len_on_ref = ref_len == 0 && insertion_len == deletion_len
+                    ? deletion_len : ref_len;
             }
         }
     }
 
-    * self = obj;
+    * obj = new_obj;
 
     /* TODO: if Kurt insists, return non-zero rc if var_start == 0 or var_start + var_len == ref_size */
     return rc;
 }
 
 
-LIB_EXPORT rc_t CC VRefVariationIUPACAddRef ( VRefVariation const* self )
+rc_t CC RefVariationAddRef ( RefVariation const* self )
 {
     if ( self != NULL )
     {
-        switch ( KRefcountAdd ( & self -> refcount, "VRefVariation" ) )
+        switch ( KRefcountAdd ( & self -> refcount, "RefVariation" ) )
         {
         case krefLimit:
             return RC ( rcVDB, rcExpression, rcAttaching, rcRange, rcExcessive );
@@ -1237,9 +1234,9 @@ LIB_EXPORT rc_t CC VRefVariationIUPACAddRef ( VRefVariation const* self )
     return 0;
 }
 
-LIB_EXPORT rc_t CC VRefVariationIUPACWhack ( VRefVariation* self )
+static rc_t CC RefVariationIUPACWhack ( RefVariation* self )
 {
-    KRefcountWhack ( & self -> refcount, "VRefVariation" );
+    KRefcountWhack ( & self -> refcount, "RefVariation" );
 
     assert ( self->var_buffer != NULL || self->var_buffer_size == 0 );
     if ( self->var_buffer != NULL )
@@ -1252,14 +1249,14 @@ LIB_EXPORT rc_t CC VRefVariationIUPACWhack ( VRefVariation* self )
     return 0;
 }
 
-LIB_EXPORT rc_t CC VRefVariationIUPACRelease ( VRefVariation const* self )
+rc_t CC RefVariationRelease ( RefVariation const* self )
 {
     if ( self != NULL )
     {
-        switch ( KRefcountDrop ( & self -> refcount, "VRefVariation" ) )
+        switch ( KRefcountDrop ( & self -> refcount, "RefVariation" ) )
         {
         case krefWhack:
-            return VRefVariationIUPACWhack ( ( VRefVariation* ) self );
+            return RefVariationIUPACWhack ( ( RefVariation* ) self );
         case krefNegative:
             return RC ( rcVDB, rcExpression, rcReleasing, rcRange, rcExcessive );
         }
@@ -1267,67 +1264,56 @@ LIB_EXPORT rc_t CC VRefVariationIUPACRelease ( VRefVariation const* self )
     return 0;
 }
 
-LIB_EXPORT INSDC_dna_text const* CC VRefVariationIUPACGetSearchQuery ( VRefVariation const* self )
+rc_t CC RefVariationGetIUPACSearchQuery ( RefVariation const* self,
+    INSDC_dna_text const ** query, size_t * query_len, size_t * query_start )
 {
-    assert ( self != NULL );
-    return self->var_buffer;
+    if ( self == NULL )
+        return RC ( rcVDB, rcExpression, rcAccessing, rcParam, rcNull );
+
+    if ( query != NULL )
+        * query = self->var_buffer;
+    if ( query_len != NULL )
+        * query_len = self->var_buffer_size;
+    if ( query_start != NULL )
+        * query_start = self->allele_start - (self->allele - self->var_buffer);
+
+    return 0;
 }
 
-LIB_EXPORT size_t CC VRefVariationIUPACGetSearchQueryStart ( VRefVariation const* self )
+rc_t CC RefVariationGetSearchQueryLenOnRef ( RefVariation const* self, size_t * query_len_on_ref )
 {
-    assert ( self != NULL );
-    return self->allele_start - (self->allele - self->var_buffer);
+    if ( self == NULL )
+        return RC ( rcVDB, rcExpression, rcAccessing, rcParam, rcNull );
+
+    if ( query_len_on_ref != NULL )
+        * query_len_on_ref = self->allele_len_on_ref + self->var_buffer_size - self->allele_size;
+
+    return 0;
 }
 
-LIB_EXPORT size_t CC VRefVariationIUPACGetSearchQuerySize ( VRefVariation const* self )
+rc_t CC RefVariationGetAllele ( RefVariation const* self,
+    INSDC_dna_text const ** allele, size_t * allele_len, size_t * allele_start )
 {
-    assert ( self != NULL );
-    return self->var_buffer_size;
+    if ( self == NULL )
+        return RC ( rcVDB, rcExpression, rcAccessing, rcParam, rcNull );
+
+    if ( allele != NULL )
+        * allele = self->allele;
+    if ( allele_len != NULL )
+        * allele_len = self->allele_size;
+    if ( allele_start != NULL )
+        * allele_start = self->allele_start;
+
+    return 0;
 }
 
-LIB_EXPORT size_t CC VRefVariationIUPACGetAlleleLenOnRef ( VRefVariation const* self )
+rc_t CC RefVariationGetAlleleLenOnRef ( RefVariation const* self, size_t * allele_len_on_ref )
 {
-    assert ( self != NULL );
-    return self->allele_len_on_ref;
+    if ( self == NULL )
+        return RC ( rcVDB, rcExpression, rcAccessing, rcParam, rcNull );
+
+    if ( allele_len_on_ref != NULL )
+        * allele_len_on_ref = self->allele_len_on_ref;
+
+    return 0;
 }
-
-LIB_EXPORT size_t CC VRefVariationIUPACGetSearchQueryLenOnRef ( VRefVariation const* self )
-{
-    assert ( self != NULL );
-    return self->allele_len_on_ref + self->var_buffer_size - self->allele_size;
-}
-
-LIB_EXPORT INSDC_dna_text const* CC VRefVariationIUPACGetRefChunk ( VRefVariation const* self )
-{
-    assert ( self != NULL );
-    return self->ref_external;
-}
-
-LIB_EXPORT size_t CC VRefVariationIUPACGetRefChunkSize ( VRefVariation const* self )
-{
-    assert ( self != NULL );
-    return self->ref_size;
-}
-
-LIB_EXPORT INSDC_dna_text const* CC VRefVariationIUPACGetAllele ( VRefVariation const* self, size_t* p_allele_size )
-{
-    assert ( self != NULL );
-    assert ( p_allele_size != NULL );
-
-    *p_allele_size = self->allele_size;
-
-    return self->allele;
-}
-
-LIB_EXPORT size_t CC VRefVariationIUPACGetAlleleStart ( VRefVariation const* self )
-{
-    assert ( self != NULL );
-    return self->allele_start;
-}
-LIB_EXPORT size_t CC VRefVariationIUPACGetAlleleSize ( VRefVariation const* self )
-{
-    assert ( self != NULL );
-    return self->allele_size;
-}
-
-
