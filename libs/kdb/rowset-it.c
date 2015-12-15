@@ -196,6 +196,7 @@ bool CC KRowSetIteratorMove ( KRowSetIterator * iter, bool backward )
             for ( i = from_i; i != to_i; i += step )
             {
                 const struct KRowSetTreeLeafRowRange * range = &leaf->data.array_ranges.ranges[i];
+                assert ( range->start <= range->end );
                 to_j = (!backward ? range->end : range->start) + step;
                 // single loop iteration just to check conditions
                 for ( j = from_j; j != to_j; j += step )

@@ -68,10 +68,77 @@ public:
         return generated_id;
     }
 
+    /*
+     * "density" - can is a number between -1 and 8.
+     *   -1 means that most probably each row will go to a separate leaf
+     *   0 means that rows might go to same leaves, but those leaves should still not be dense (and store data in array of ranges, not in bitmap)
+     *   from 1 to 8 change density level:
+     *   - 1 means that every (up to) 8k rows go to a each leaf
+     *   - 8 means that every (up to) 65k rows (maximum rows per leaf) will go to each leaf
+     */
+    std::set<int64_t> InsertRandomRows ( KRowSet * rowset, int num_rows, int density )
+    {
+        int64_t range_start = 0;
+        int64_t range_count;
+        std::set<int64_t> inserted_rows_set;
+
+        assert ( num_rows > 0 );
+        assert ( density >= -1 );
+        assert ( density <= 8 );
+
+        if ( density == -1 )
+            range_count = -1;
+        else if ( density == 0 )
+            range_count = ((num_rows - 1) / 5 + 1) * 65536;
+        else
+        {
+            assert ( num_rows > 8 );
+            range_count = ((num_rows - 1) / (8192 * density) + 1) * 65536;
+        }
+
+        for ( int i = 0; i < num_rows; ++i )
+        {
+            int64_t row_id = GenerateId ( range_start, range_count );
+            if ( inserted_rows_set.find( row_id ) ==  inserted_rows_set.end() )
+            {
+                bool inserted;
+                THROW_ON_RC ( KRowSetAddRowId ( rowset, row_id, &inserted ) );
+                if ( !inserted )
+                    FAIL("Failed to insert a row");
+                inserted_rows_set.insert( row_id );
+            }
+            else
+                --i;
+        }
+
+        return inserted_rows_set;
+    }
+
     void RunChecks ( const KRowSet * rowset, std::set<int64_t> & inserted_rows_set )
     {
         RunChecksInt ( rowset, inserted_rows_set, false );
         RunChecksInt ( rowset, inserted_rows_set, true );
+    }
+
+    std::set<int64_t> SetIntersection ( const std::set<int64_t>& set1, const std::set<int64_t>& set2 )
+    {
+        std::set<int64_t>::iterator first1 = set1.begin(),
+                                    first2 = set2.begin(),
+                                    last1 = set1.end(),
+                                    last2 = set2.end();
+        std::set<int64_t> result;
+
+        while (first1 != last1 && first2 != last2) {
+            if (*first1 < *first2) {
+                ++first1;
+            } else  {
+                if (!(*first2 < *first1)) {
+                    result.insert( *first1++ );
+                }
+                ++first2;
+            }
+        }
+        return result;
     }
 private:
     void RunChecksInt ( const KRowSet * rowset, std::set<int64_t> & inserted_rows_set, bool reverse_walk )
@@ -120,19 +187,8 @@ FIXTURE_TEST_CASE ( KRowSetScatteredRows, RowSetFixture )
     std::set<int64_t> inserted_rows_set;
 
     REQUIRE_RC ( KTableMakeRowSet ( NULL, &rowset ) );
-    for ( int i = 0; i < 10000; ++i )
-    {
-        int64_t row_id = GenerateId ( -1, -1 );
-        if ( inserted_rows_set.find( row_id ) ==  inserted_rows_set.end() )
-        {
-            bool inserted;
-            REQUIRE_RC ( KRowSetAddRowId ( rowset, row_id, &inserted ) );
-            REQUIRE ( inserted );
-            inserted_rows_set.insert( row_id );
-        }
-        else
-            --i;
-    }
+
+    inserted_rows_set = InsertRandomRows ( rowset, 10000, -1 );
 
     RunChecks ( rowset, inserted_rows_set );
     REQUIRE_RC ( KRowSetRelease( rowset ) );
@@ -144,19 +200,8 @@ FIXTURE_TEST_CASE ( KRowSetDenseRows, RowSetFixture )
     std::set<int64_t> inserted_rows_set;
 
     REQUIRE_RC ( KTableMakeRowSet ( NULL, &rowset ) );
-    for ( int i = 0; i < 10000; ++i )
-    {
-        int64_t row_id = GenerateId ( 0, 131072 ); // row ids will only go to first two leaves
-        if ( inserted_rows_set.find( row_id ) ==  inserted_rows_set.end() )
-        {
-            bool inserted;
-            REQUIRE_RC ( KRowSetAddRowId ( rowset, row_id, &inserted ) );
-            REQUIRE ( inserted );
-            inserted_rows_set.insert( row_id );
-        }
-        else
-            --i;
-    }
+
+    inserted_rows_set = InsertRandomRows ( rowset, 10000, 1 );
 
     RunChecks ( rowset, inserted_rows_set );
     REQUIRE_RC ( KRowSetRelease( rowset ) );
@@ -372,7 +417,7 @@ FIXTURE_TEST_CASE ( KRowSetIteratorMoveForwardAndBackward, RowSetFixture )
 {
     KRowSet * rowset;
 
-    int64_t row_ids[] = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 1000 };
+    int64_t row_ids[] = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 1000, 100000 };
 
     REQUIRE_RC ( KTableMakeRowSet ( NULL, &rowset ) );
     for ( int i = 0; i < sizeof row_ids / sizeof row_ids[0]; ++i )
@@ -433,7 +478,7 @@ FIXTURE_TEST_CASE ( KRowSetIteratorOverEmptySet, RowSetFixture )
     REQUIRE_RC ( KRowSetRelease( rowset ) );
 }
 
-FIXTURE_TEST_CASE ( KRowSetOpAndTest, RowSetFixture )
+FIXTURE_TEST_CASE ( KRowSetOpAndSimpleTest, RowSetFixture )
 {
     KRowSet * rowset1;
     KRowSet * rowset2;
@@ -470,6 +515,42 @@ FIXTURE_TEST_CASE ( KRowSetOpAndTest, RowSetFixture )
     RunChecks ( rowset1, inserted_rows_set2 );
     REQUIRE_RC ( KRowSetRelease( rowset1 ) );
     REQUIRE_RC ( KRowSetRelease( rowset2 ) );
+}
+
+FIXTURE_TEST_CASE ( KRowSetOpAndNormalTest, RowSetFixture )
+{
+    KRowSet * rowset1;
+    KRowSet * rowset2;
+    std::set<int64_t> inserted_rows_set1;
+    std::set<int64_t> inserted_rows_set2;
+    std::set<int64_t> intersection_set;
+
+    // check all 4 combinations of dense/scattered leaves
+    for ( int i = 0; i < 4; ++i )
+    {
+        REQUIRE_RC ( KTableMakeRowSet ( NULL, &rowset1 ) );
+        REQUIRE_RC ( KTableMakeRowSet ( NULL, &rowset2 ) );
+
+        inserted_rows_set1 = InsertRandomRows ( rowset1, 100000, (i & 1) ? 8 : 0 );
+        inserted_rows_set2 = InsertRandomRows ( rowset2, 100000, (i & 2) ? 8 : 0 );
+
+        RunChecks ( rowset1, inserted_rows_set1 );
+        RunChecks ( rowset2, inserted_rows_set2 );
+
+        REQUIRE_RC ( KRowSetOpAnd ( rowset1, rowset2 ) );
+
+        intersection_set = SetIntersection ( inserted_rows_set1, inserted_rows_set2 );
+
+        RunChecks ( rowset1, intersection_set );
+        RunChecks ( rowset2, inserted_rows_set2 );
+
+        REQUIRE_RC ( KRowSetOpAnd ( rowset2, rowset1 ) );
+        RunChecks ( rowset1, intersection_set );
+        RunChecks ( rowset2, intersection_set );
+
+        REQUIRE_RC ( KRowSetRelease( rowset1 ) );
+        REQUIRE_RC ( KRowSetRelease( rowset2 ) );
+    }
 }
 
 //////////////////////////////////////////// Main

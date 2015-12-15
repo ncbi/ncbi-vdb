@@ -1020,6 +1020,10 @@ KDB_EXTERN rc_t CC KRowSetVisit ( const KRowSet * self, bool reverse,
     return rc;
 }
 
+/**
+ * Tries to intersect array-range leaf (self) with bitmap leaf (other).
+ * Returns true if succeeds to produce array-range result and stores it in target_ranges/target_rows
+ */
 static
 bool KRowSetIntersectRowRangeAndBitmapLeaves ( KRowSet * self, const KRowSetTreeLeaf * self_leaf, const KRowSetTreeLeaf * other_leaf, struct KRowSetTreeLeafArrayRanges * target_ranges, int * target_rows )
 {
@@ -1040,6 +1044,9 @@ bool KRowSetIntersectRowRangeAndBitmapLeaves ( KRowSet * self, const KRowSetTree
     assert ( other_leaf->header.leaf_mark == LEAF_MARK );
 #endif
 
+    assert ( self_leaf->header.type == LeafType_ArrayRanges );
+    assert ( other_leaf->header.type == LeafType_Bitmap );
+
     self_range = &self_leaf->data.array_ranges.ranges[0];
     self_end_range = &self_leaf->data.array_ranges.ranges[self_leaf->data.array_ranges.len];
 
@@ -1047,6 +1054,7 @@ bool KRowSetIntersectRowRangeAndBitmapLeaves ( KRowSet * self, const KRowSetTree
     target_first_range = &target_ranges->ranges[0];
     target_end_range = &target_ranges->ranges[8];
 
+    target_ranges->len = 0;
     *target_rows = 0;
 
     int i;
@@ -1102,6 +1110,10 @@ bool KRowSetIntersectRowRangeAndBitmapLeaves ( KRowSet * self, const KRowSetTree
     return true;
 }
 
+/**
+ * Tries to intersect array-range leaf (self) with array-range leaf (other).
+ * Returns true if succeeds to produce array-range result and stores it in target_ranges/target_rows
+ */
 static
 bool KRowSetIntersectRowRangeLeaves ( KRowSet * self, const KRowSetTreeLeaf * self_leaf, const KRowSetTreeLeaf * other_leaf, struct KRowSetTreeLeafArrayRanges * target_ranges, int * target_rows )
 {
@@ -1122,6 +1134,9 @@ bool KRowSetIntersectRowRangeLeaves ( KRowSet * self, const KRowSetTreeLeaf * se
     assert ( self_leaf->header.leaf_mark == LEAF_MARK );
     assert ( other_leaf->header.leaf_mark == LEAF_MARK );
 #endif
+
+    assert ( self_leaf->header.type == LeafType_ArrayRanges );
+    assert ( other_leaf->header.type == LeafType_ArrayRanges );
 
     self_range = &self_leaf->data.array_ranges.ranges[0];
     self_end_range = &self_leaf->data.array_ranges.ranges[self_leaf->data.array_ranges.len];
@@ -1171,6 +1186,12 @@ bool KRowSetIntersectRowRangeLeaves ( KRowSet * self, const KRowSetTreeLeaf * se
     return true;
 }
 
+/**
+ * Performs mutable intersection of self_leaf with other_leaf.
+ *  Result of intersection is saved to self_leaf.
+ *
+ * NB - it checks types of self and other leaves and performs intersection depending on types.
+ */
 static
 rc_t KRowSetOpAndIntersectLeaf ( KRowSet * self, KRowSetTreeLeaf ** self_leaf_p, const KRowSetTreeLeaf * other_leaf )
 {
@@ -1284,7 +1305,13 @@ rc_t KRowSetOpAndIntersectLeaf ( KRowSet * self, KRowSetTreeLeaf ** self_leaf_p,
 
         if ( can_produce_ranges )
         {
-            self_leaf->data.array_ranges = result_ranges;
+            int i;
+            self_leaf->data.array_ranges.len = result_ranges.len;
+            for ( i = 0; i < result_ranges.len; ++i )
+            {
+                assert ( result_ranges.ranges[i].start <= result_ranges.ranges[i].end );
+                self_leaf->data.array_ranges.ranges[i] = result_ranges.ranges[i];
+            }
             self->number_rows += result_rows - self_leaf->header.leaf_rows;
             self_leaf->header.leaf_rows = result_rows;
             return 0;
