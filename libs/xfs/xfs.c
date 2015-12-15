@@ -34,6 +34,7 @@
 #include "schwarzschraube.h"
 #include "owp.h"
 #include "xfs-priv.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
 #include <stdlib.h> /* we are using calloc */
@@ -177,7 +178,7 @@ XFSControlDispose ( struct XFSControl * self )
         self -> vt = NULL;
     }
 
-OUTMSG ( ( "........... LAST CHA\n" ) );
+XFSLogDbg ( ( "........... LAST CHA\n" ) );
 
     free ( self );
 
@@ -260,6 +261,16 @@ XFSControlGetArg ( struct XFSControl * self, const char * ArgName )
                 : XFSOwpGet ( self -> Arguments, ArgName )
                 ;
 }   /* XFSControlGetArg () */
+
+LIB_EXPORT
+bool CC
+XFSControlHasArg ( struct XFSControl * self, const char * ArgName )
+{
+    if ( self != NULL && ArgName != NULL ) {
+        return XFSOwpHas ( self -> Arguments, ArgName );
+    }
+    return false;
+}   /* XFSControlHasArg () */
 
 
 LIB_EXPORT

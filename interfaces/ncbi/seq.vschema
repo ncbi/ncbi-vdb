@@ -621,11 +621,11 @@ table NCBI:tbl:protein #1 = INSDC:tbl:protein
 {
     /* upper-case letters */
     INSDC:protein:text in_protein_text = < INSDC:protein:text, INSDC:protein:text >
-        map < 'abcdefghiklmnpqrstvwxyzu','ABCDEFGHIKLMNPQRSTVWXYZU' > ( PROTEIN );
+        map < 'abcdefghijklmnopqrstvwxyzu','ABCDEFGHIJKLMNOPQRSTVWXYZU' > ( PROTEIN );
 
     /* std aa */
     INSDC:aa:bin in_aa_bin
-        = < INSDC:aa:bin > range_validate < 1, 25 > ( PROTEIN )
+        = < INSDC:aa:bin > range_validate < 1, 27 > ( PROTEIN )
         | < INSDC:protein:text, INSDC:aa:bin > map < INSDC:aa:map:CHARSET, INSDC:aa:map:BINSET > ( in_protein_text );
 
     /* physical column */

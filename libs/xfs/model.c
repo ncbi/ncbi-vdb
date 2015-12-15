@@ -38,11 +38,9 @@
 #include "mehr.h"
 #include "zehr.h"
 #include "schwarzschraube.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
-#include <string.h>
 
 /*)))
  |||
@@ -229,7 +227,7 @@ rc_t CC
 _XFSModelNodeDispose ( struct XFSModelNode * Node )
 {
 
-printf ( "_XFSModelNodeDispose ( 0x%p, \"%s\" )\n", ( void * ) Node, ( Node -> Name == NULL ? "NULL" : ( Node -> Name ) ) );
+XFSLogDbg ( "_XFSModelNodeDispose ( 0x%p, \"%s\" )\n", ( void * ) Node, ( Node -> Name == NULL ? "NULL" : ( Node -> Name ) ) );
     if ( Node == NULL ) {
             /* It is already disposed */
         return 0;
@@ -296,7 +294,7 @@ _XFSModelNodeMake ( const char * Name, struct XFSModelNode ** Node )
         Knoten = NULL;
     }
 
-printf ( "_XFSModelNodeMake ( 0x%p, \"%s\" )\n", ( void * ) * Node, Name );
+XFSLogDbg ( "_XFSModelNodeMake ( 0x%p, \"%s\" )\n", ( void * ) * Node, Name );
 
     return RCt;
 }   /* _XFSModeNodeMake () */
@@ -746,7 +744,7 @@ XFSModelMake (
         ModelResource = NULL;
     }
 
-printf ( "_XFSModelMake ( 0x%p )\n", ( void * ) * Model );
+XFSLogDbg ( "_XFSModelMake ( 0x%p )\n", ( void * ) * Model );
 
     return RCt;
 }   /* XFSModelMake () */
@@ -764,7 +762,7 @@ LIB_EXPORT
 rc_t CC
 XFSModelDispose ( struct XFSModel * self )
 {
-printf ( "_XFSModelDispose ( 0x%p )\n", ( void * ) self );
+XFSLogDbg ( "_XFSModelDispose ( 0x%p )\n", ( void * ) self );
 
     if ( self == NULL ) {
             /* Nothing to dispose */
@@ -1053,24 +1051,24 @@ XFSModelNodeDDump ( const struct XFSModelNode * self )
     Key = Prop = NULL;
 
     if ( self == NULL ) {
-        printf ( "   NODE [null]\n" );
+        XFSLogDbg ( "   NODE [null]\n" );
         return;
     }
 
-    printf ( "  NODE [%s]\n", self -> Name );
+    XFSLogDbg ( "  NODE [%s]\n", self -> Name );
 
     if ( XFSModelNodePropertyNames ( self, & List ) == 0 ) {
         if ( List != NULL ) {
             if ( KNamelistCount ( List, & Count ) == 0 ) {
                 if ( Count == 0 ) {
-                    printf ( "    PROPERTIES [NONE]\n" );
+                    XFSLogDbg ( "    PROPERTIES [NONE]\n" );
                 }
                 else {
-                    printf ( "    PROPERTIES [#%d]\n", Count );
+                    XFSLogDbg ( "    PROPERTIES [#%d]\n", Count );
                     for ( llp = 0; llp < Count; llp ++ ) {
                         if ( KNamelistGet ( List, llp, & Key ) == 0 ) {
                             Prop = XFSModelNodeProperty ( self, Key );
-                            printf ( "      [%s][%s]\n"
+                            XFSLogDbg ( "      [%s][%s]\n"
                                             , Key
                                             , Prop == NULL ? "null" : Prop
                                             ); 
@@ -1079,7 +1077,7 @@ XFSModelNodeDDump ( const struct XFSModelNode * self )
                 }
             }
             else {
-                printf ( "    PROPERTIES [NONE]\n" );
+                XFSLogDbg ( "    PROPERTIES [NONE]\n" );
             }
 
             KNamelistRelease ( List );
@@ -1092,25 +1090,25 @@ XFSModelNodeDDump ( const struct XFSModelNode * self )
         if ( List != NULL ) {
             if ( KNamelistCount ( List, & Count ) == 0 ) {
                 if ( Count == 0 ) {
-                    printf ( "    CHILDREN [NONE]\n" );
+                    XFSLogDbg ( "    CHILDREN [NONE]\n" );
                 }
                 else {
-                    printf ( "    CHILDREN [#%d]\n", Count );
+                    XFSLogDbg ( "    CHILDREN [#%d]\n", Count );
                     for ( llp = 0; llp < Count; llp ++ ) {
                         if ( KNamelistGet ( List, llp, & Key ) == 0 ) {
                             Prop = XFSModelNodeChildAlias ( self, Key );
                             if ( Prop == NULL ) {
-                                printf ( "      [%s]\n" , Key ); 
+                                XFSLogDbg ( "      [%s]\n" , Key ); 
                             }
                             else {
-                                printf ( "      [%s][%s]\n" , Key , Prop ); 
+                                XFSLogDbg ( "      [%s][%s]\n" , Key , Prop ); 
                             }
                         }
                     }
                 }
             }
             else {
-                printf ( "    CHILDREN [NONE]\n" );
+                XFSLogDbg ( "    CHILDREN [NONE]\n" );
             }
 
             KNamelistRelease ( List );
@@ -1132,10 +1130,10 @@ void CC
 XFSModelDDump ( const struct XFSModel * self )
 {
     if ( self == NULL ) {
-        printf ( "MODEL [null]\n" );
+        XFSLogDbg ( "MODEL [null]\n" );
         return;
     }
-    printf ( "MODEL Resource[%s] Version[%s]\n",
+    XFSLogDbg ( "MODEL Resource[%s] Version[%s]\n",
                      self -> Resource,
                      self -> Version == NULL ? "null": self -> Version
                      );

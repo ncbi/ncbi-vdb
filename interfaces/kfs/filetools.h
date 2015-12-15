@@ -58,6 +58,12 @@ KFS_EXTERN rc_t CC LoadKFileToNameList( struct KFile const * self, struct VNamel
 KFS_EXTERN rc_t CC LoadFileByNameToNameList( struct VNamelist * namelist, const char * filename );
 
 
+/* Walks a file by calling the on_line for each line
+  */
+
+KFS_EXTERN rc_t CC ProcessFileLineByLine( struct KFile const * self,
+    rc_t ( CC * on_line )( const String * line, void * data ), void * data );
+
 /* WriteNameListToKFile
  * Writes the lines of namelist into the given KFile.
  * Uses the string given in delim as line-ending

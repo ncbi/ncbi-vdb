@@ -39,7 +39,6 @@
 
 #include <sysalloc.h>
 
-#include <stdio.h>
 #include <string.h> /* memset () */
 
 /*)))

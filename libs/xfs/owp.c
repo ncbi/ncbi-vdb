@@ -38,7 +38,6 @@
 
 #include <sysalloc.h>
 
-#include <string.h>
 #include <ctype.h>
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/

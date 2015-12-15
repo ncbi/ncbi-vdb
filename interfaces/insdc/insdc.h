@@ -206,11 +206,11 @@ typedef char INSDC_protein_text;
 typedef	uint8_t INSDC_aa_bin;
 
 #define INSDC_aa_map_BINSET \
-    { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25 }
+    { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27 }
 #define INSDC_aa_map_CHARSET \
-    "ABCDEFGHIKLMNPQRSTVWXYZU*"
+    "ABCDEFGHIKLMNPQRSTVWXYZU*OJ"
 #define INSDC_aa_accept_CHARSET \
-    "ABCDEFGHIKLMNPQRSTVWXYZU*abcdefghiklmnpqrstvwxyzu"
+    "ABCDEFGHIJKLMNOPQRSTVWXYZU*abcdefghijklmnopqrstvwxyzu"
 
 
 /*--------------------------------------------------------------------------

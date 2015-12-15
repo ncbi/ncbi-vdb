@@ -99,6 +99,10 @@ XFS_EXTERN const char * CC XFSControlGetArg (
                     struct XFSControl * self,
                     const char * Arg
                     );
+XFS_EXTERN bool CC XFSControlHasArg (
+                    struct XFSControl * self,
+                    const char * Arg
+                    );
 
 XFS_EXTERN rc_t CC XFSControlSetMountPoint(
                     struct XFSControl * self,

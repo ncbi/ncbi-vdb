@@ -53,8 +53,6 @@
 
 #include <sysalloc.h>
 
-#include <string.h>
-
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*))    XFSGapProject and XFSGapDepot
@@ -173,6 +171,10 @@ _GetRepository (
         }
 
         KRepositoryMgrRelease ( RepositoryMgr );
+    }
+
+    if ( * Repository == NULL ) {
+        RCt = XFS_RC ( rcNotFound );
     }
 
     return RCt;
@@ -668,6 +670,7 @@ XFSGapUserConfigDir ( char ** UserConfigDir )
                             XFSPathGet ( Path ) ,
                             ( const char ** ) UserConfigDir
                             );
+            XFSPathRelease ( Path );
         }
     }
 

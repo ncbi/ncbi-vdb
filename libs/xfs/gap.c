@@ -48,10 +48,10 @@
 #include "common.h"
 #include "contnode.h"
 #include "xgap.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
 
-#include <stdio.h>
 #include <string.h>     /* memset */
 
 /*)))
@@ -274,6 +274,12 @@ _GapProjectNodeAddChildren ( struct _GapProjectNode * self )
 
         free ( Workspace );
     }
+    else {
+/* TODO - use approved output method
+*/
+XFSLogDbg ( "ERROR: Can not find definition of Project %d in config file\n", self -> project_id );
+    }
+
     if ( RCt != 0 ) {
         if ( TheNode != NULL ) {
             XFSNodeDispose ( TheNode );
@@ -291,6 +297,11 @@ _GapProjectNodeAddChildren ( struct _GapProjectNode * self )
     if ( RCt == 0 ) {
         RCt = XFSContNodeAddChild ( & ( self -> node ) . node, TheNode );
     }
+    else {
+/* TODO - use approved output method
+*/
+XFSLogDbg ( "ERROR: Can not find definition of Project %d in config file\n", self -> project_id );
+    }
     if ( RCt != 0 ) {
         if ( TheNode != NULL ) {
             XFSNodeDispose ( TheNode );
@@ -302,12 +313,19 @@ _GapProjectNodeAddChildren ( struct _GapProjectNode * self )
          */
     RCt = XFSGapCacheNodeMake (
                         & TheNode,
-                        0,                      /* projectId */
+                        XFS_PUBLIC_PROJECT_ID,  /* projectId */
                         NULL                    /* perm is automatic */
                         );
     if ( RCt == 0 ) {
         RCt = XFSContNodeAddChild ( & ( self -> node ) . node, TheNode );
     }
+    else {
+        RCt = 0;
+/* TODO - use approved output method
+*/
+XFSLogDbg ( "WARNING: Can not find definition for 'public' area in config file\n" );
+    }
+
     if ( RCt != 0 ) {
         if ( TheNode != NULL ) {
             XFSNodeDispose ( TheNode );
@@ -389,7 +407,7 @@ XFSGapProjectNodeMake (
     }
 
 /*
-printf ( "_GapNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type );
+XFSLogDbg ( "_GapNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type );
 */
     return RCt;
 }   /* XFSGapProjectNodeMake () */
@@ -519,7 +537,7 @@ _GapProjectNodeConstructor (
                                         Node
                                         );
 /*
-printf ( "_GapProjectNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_GapProjectNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
 
@@ -540,7 +558,7 @@ _GapProjectNodeValidator (
     RCt = 0;
 
 /*
-printf ( "_GapProjectNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_GapProjectNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

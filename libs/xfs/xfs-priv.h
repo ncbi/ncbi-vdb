@@ -107,6 +107,7 @@ union XFSControl_vt {
  ((*/
 #define XFS_CONTROL_MOUNTPOINT  "mountpoint"
 #define XFS_CONTROL_LABEL       "label"
+#define XFS_CONTROL_LOGFILE     "logfile"
 
 #ifdef __cplusplus
 }

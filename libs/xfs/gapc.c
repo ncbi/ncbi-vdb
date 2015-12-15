@@ -45,11 +45,9 @@
 #include "teleport.h"
 #include "common.h"
 #include "xgap.h"
+#include "xlog.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
-#include <string.h>
 
 /*)))
  |||    That file contains third approach to project GAP cached
@@ -169,7 +167,6 @@ _CacheDirNodeMake (
     XFS_CAN ( Name )
     XFS_CAN ( Path )
 
-printf ( " [CDN] [%d][%d] [%s][%s]\n", __LINE__, RCt, Path, Name );
     TheNode = calloc ( 1, sizeof ( struct _CacheDirNode ) );
     if ( TheNode == NULL ) {
         RCt = XFS_RC ( rcExhausted );
@@ -225,7 +222,7 @@ _CacheDirNodeDispose ( const struct _CacheDirNode * self )
     struct _CacheDirNode * Node = ( struct _CacheDirNode * ) self;
 
 /*
-printf ( "_CacheDirNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+XFSLogDbg ( "_CacheDirNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
 */
 
     if ( Node != 0 ) {
@@ -400,7 +397,7 @@ rc_t CC
 _CacheDir_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_CacheDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_CacheDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -614,7 +611,7 @@ rc_t CC
 _CacheAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_CacheAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    XFSLogDbg ( "_CacheAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -924,7 +921,7 @@ XFSGapCacheNodeMake (
     }
 
 /*
-printf ( "XFSKfsNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) TheNode, Name, Type );
+XFSLogDbg ( "XFSKfsNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) TheNode, Name, Type );
 */
 
     return RCt;
@@ -949,7 +946,7 @@ _GapCacheNodeConstructor (
     RCt = _CacheDirNodeConstructor ( Model, Template, Alias, Node );
 
 /*
-printf ( "_GapCacheNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_GapCacheNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -969,7 +966,7 @@ _GapCacheNodeValidator (
     RCt = 0;
 
 /*
-printf ( "_GapCacheNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_GapCacheNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
