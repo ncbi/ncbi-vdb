@@ -29,12 +29,12 @@
 
 #include <xfs/xfs.h>
 #include <xfs/tree.h>
+#include <xfs/xlog.h>
 
 #include "platform.h"
 #include "schwarzschraube.h"
 #include "owp.h"
 #include "xfs-priv.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 #include <stdlib.h> /* we are using calloc */

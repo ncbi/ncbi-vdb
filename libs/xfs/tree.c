@@ -35,11 +35,11 @@
 #include <xfs/tree.h>
 #include <xfs/node.h>
 #include <xfs/path.h>
+#include <xfs/xlog.h>
 
 #include "mehr.h"
 #include "zehr.h"
 #include "schwarzschraube.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 

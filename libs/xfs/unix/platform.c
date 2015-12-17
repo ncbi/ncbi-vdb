@@ -27,14 +27,13 @@
 #include <klib/rc.h>
 #include <klib/out.h>
 #include <klib/text.h>
-#include <klib/log.h>
 #include <kproc/thread.h>
 
 #include <xfs/xfs.h>
 #include <xfs/tree.h>
+#include <xfs/xlog.h>
 #include "xfs-priv.h"
 #include "schwarzschraube.h"
-#include "xlog.h"
 
 #include <stdlib.h>     /* using malloc() */
 #include <string.h>     /* using memset() */

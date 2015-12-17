@@ -36,6 +36,7 @@
 #include <stdio.h>
 
 #include "search-vdb.h"
+#include <search/ref-variation.h>
 
 using namespace std;
 
@@ -173,9 +174,94 @@ TEST_CASE ( AhoGrep_Crash )
 // Smith-Waterman
 TEST_CASE ( SmithWaterman_crash)
 {
-    VRefVariation* self;
+    RefVariation* self;
     INSDC_dna_text ref[] = "ACGTACGTACGTACGTACGTACGTACGTACGT";
-    REQUIRE_RC_FAIL ( VRefVariationIUPACMake ( &self, ::refvarAlgSW, ref, string_size ( ref ), 0, "", 0, 0 ) );
+    REQUIRE_RC_FAIL ( RefVariationIUPACMake ( &self, ref, string_size ( ref ), 0, 0, "", 0, ::refvarAlgSW ) );
+}
+
+#ifdef _WIN32
+#define PRSIZET "I"
+#else
+#define PRSIZET "z"
+#endif
+
+void print_refvar_obj (::RefVariation const* obj)
+{
+    size_t allele_len = 0, allele_start = 0, allele_len_on_ref = 0;
+    char const* allele = NULL;
+    ::RefVariationGetAllele( obj, & allele, & allele_len, & allele_start );
+    ::RefVariationGetAlleleLenOnRef ( obj, & allele_len_on_ref );
+
+    printf ("<no ref name>:%"PRSIZET"u:%"PRSIZET"u:%.*s\n",
+        allele_start, allele_len_on_ref, (int)allele_len, allele);
+}
+
+#undef PRSIZET
+
+
+void vrefvar_bounds (::RefVarAlg alg, char const* ref,
+    size_t ref_len, size_t pos, size_t len_on_ref,
+    char const* query, size_t query_len)
+{
+
+    ::RefVariation* obj;
+
+    rc_t rc = ::RefVariationIUPACMake ( & obj, ref, ref_len, pos, len_on_ref, query, query_len, alg );
+
+    print_refvar_obj ( obj );
+
+    if ( rc == 0 )
+        ::RefVariationRelease( obj );
+}
+
+void vrefvar_bounds_n(::RefVarAlg alg)
+{
+    //                  01234567890123456789
+    char const ref[] = "NNNNNNNNNNTAACCCTAAC";
+    //                       CCCCTTAGG-
+
+    size_t pos = 5, len_on_ref = 10;
+    char const query[] = "CCCCTTAGG";
+
+    vrefvar_bounds ( alg, ref, strlen(ref), pos, len_on_ref, query, strlen(query) );
+}
+
+void vrefvar_bounds_0(::RefVarAlg alg)
+{
+    //                  01234567890123456789
+    char const ref[] = "TAACCCTAAC";
+    //                  TTAGG-
+
+    size_t pos = 0, len_on_ref = 5;
+    char const query[] = "TAGG";
+
+    vrefvar_bounds ( alg, ref, strlen(ref), pos, len_on_ref, query, strlen(query) );
+}
+
+void vrefvar_bounds_N0(::RefVarAlg alg)
+{
+    //                  01234567890123456789
+    char const ref[] = "NNNNNTAACCCTAAC";
+    //                  CCCCTTTAGG-
+
+    size_t pos = 0, len_on_ref = 10;
+    char const query[] = "CCCCTTAGG";
+
+    vrefvar_bounds ( alg, ref, strlen(ref), pos, len_on_ref, query, strlen(query) );
+}
+
+TEST_CASE ( SmithWaterman_bounds_N )
+{
+    printf ("TODO: this test is derived from the real example which hangs up now (2015-12-14):\n");
+    printf ("echo \"67068302 NC_000001.10:9995:10:CCCCTTAGG\" | var-expand --algorithm=sw\n");
+    vrefvar_bounds_n ( ::refvarAlgSW );
+    vrefvar_bounds_n ( ::refvarAlgRA );
+
+    vrefvar_bounds_0 ( ::refvarAlgSW );
+    vrefvar_bounds_0 ( ::refvarAlgRA );
+
+    vrefvar_bounds_N0 ( ::refvarAlgSW );
+    vrefvar_bounds_N0 ( ::refvarAlgRA );
 }
 
 #if SHOW_UNIMPLEMENTED

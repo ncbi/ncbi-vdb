@@ -36,8 +36,8 @@
 #include <va_copy.h>
 
 #include <xfs/path.h>
+#include <xfs/xlog.h>
 #include "schwarzschraube.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 
