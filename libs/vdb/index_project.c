@@ -113,9 +113,11 @@ rc_t CC index_project_impl(
         return rc;
 
     for ( ; ; ) {
-        rc = KIndexProjectText(self->ndx, row_id, &start_id, &id_count, temp_buff.base, sz + 1, &sz);
+        rc = KIndexProjectText(self->ndx, row_id, &start_id, &id_count, temp_buff.base, temp_buff.elem_count, &sz);
         if ((GetRCState(rc) == rcNotFound && GetRCObject(rc) == rcId) || sz==0 ){
-            if ( attached_to_col )
+            if ( !attached_to_col )
+                rc = RC(rcVDB, rcFunction, rcExecuting, rcRow, rcNotFound);
+            else
             {
                 // return an empty row, but we don't know how many empty rows
                 // are there, since even row_id+1 may have a key stored in index
@@ -124,8 +126,6 @@ rc_t CC index_project_impl(
                 start_id = row_id;
                 id_count = 1;
             }
-            else
-                rc = RC(rcVDB, rcFunction, rcExecuting, rcRow, rcNotFound);
 
             break;
         }
