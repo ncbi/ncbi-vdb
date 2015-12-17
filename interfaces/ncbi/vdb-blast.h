@@ -291,6 +291,18 @@ VDB_EXTERN VdbBlastStatus CC VdbBlastReferenceSetGetReadId (
     const VdbBlastReferenceSet *self,
     const char *name_buffer, size_t bsize, uint64_t *read_id );
 
+/* GetReadLength
+ *  returns the number of bases in reference sequence
+ *
+ * Upon success
+ * the status is set to eVdbBlastNoErr when the reference is not circular
+ * otherwise - to eVdbBlastCircularSequence 
+ */
+VDB_EXTERN uint64_t CC VdbBlastReferenceSetGetReadLength (
+    const VdbBlastReferenceSet *self,
+    uint64_t read_id, VdbBlastStatus *status );
+
+
 /*------------------------------------------------------------------------------
  * VdbBlastReadSet
  */
