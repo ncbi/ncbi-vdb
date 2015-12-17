@@ -181,6 +181,12 @@ rc_t VPhysicalReadBlob ( VPhysical *self,
  */
 rc_t VPhysicalIsStatic ( const VPhysical *self, bool *is_static );
 
+/* GetKColumn
+ *  try to get a KColumn,
+ *  and if that fails, indicate whether the column is static
+ */
+rc_t VPhysicalGetKColumn ( const VPhysical * self, struct KColumn ** kcol, bool * is_static );
+
 #ifdef __cplusplus
 }
 #endif
