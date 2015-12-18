@@ -28,6 +28,7 @@
 #include <klib/rc.h>
 #include <klib/out.h>
 #include <klib/text.h>
+#include <klib/log.h>
 #include <kproc/thread.h>
 #include <xfs/xfs.h>
 #include <xfs/xlog.h>
@@ -37,6 +38,9 @@
 
 #include <sysalloc.h>
 #include <stdlib.h>
+#include <stdio.h>
+
+#include <Shlwapi.h>
 
 /*  Some platform dependent headers
  */
@@ -49,6 +53,7 @@
 
 XFS_EXTERN rc_t CC XFSSecurityInit ();
 XFS_EXTERN rc_t CC XFSSecurityDeinit ();
+XFS_EXTERN rc_t CC wLogMsg ( KLogLevel Level, LPCWSTR Format, ... );
 
 /*
  *  Virtuhai table and it's methods
@@ -280,7 +285,13 @@ XFS_DOKAN_mount_v1( struct XFSControl * self )
                             & ( Options -> MountPoint )
                             );
         if ( RCt == 0 ) {
-            self -> Control = Options;
+            if ( PathFileExistsW ( Options -> MountPoint ) == TRUE ) {
+                wLogMsg ( klogFatal, L"Mount point in use [%s]\n", Options -> MountPoint );
+                RCt = XFS_RC ( rcInvalid );
+            }
+            else {
+                self -> Control = Options;
+            }
         }
     }
 
@@ -416,13 +427,115 @@ XFS_DOKAN_unmount_v1( struct XFSControl * self )
     return 0;
 }   /* XFS_DOKAN_unmount() */
 
+/********************
+ * Something extra
+ *************/
+static
+rc_t CC
+_GetProgPath ( WCHAR * Path, DWORD PathSize)
+{
+    const WCHAR * cP = L"\\Dokan\\DokanLibrary\\dokanctl.exe";
+
+        /* First we are trying %ProgramFiles(x86)%
+         */
+    if ( GetEnvironmentVariableW ( L"%ProgramFiles(x86)%", Path, PathSize ) == 0 ) {
+        wcscat ( Path, cP );
+        if ( PathFileExistsW ( Path ) == TRUE ) {
+            return 0;
+        }
+    }
+
+        /* First we are trying %ProgramFiles%
+         */
+    if ( GetEnvironmentVariableW ( L"%ProgramFiles%", Path, PathSize ) == 0 ) {
+        wcscat ( Path, cP );
+        if ( PathFileExistsW ( Path ) == TRUE ) {
+            return 0;
+        }
+    }
+
+    wcscpy_s (
+        Path,
+        PathSize,
+        L"C:\\Program Files (x86)\\Dokan\\DokanLibrary\\dokanctl.exe"
+        );
+    return PathFileExistsW ( Path ) == TRUE ? 0 : XFS_RC ( rcNotFound );
+}   /* _GetProgPath () */
+
 /*))    Special platform dependent method
- ((*/
+  ||    very specific method. It is looking for
+  ||        %ProgramFiles(x86)%\Dokan\DokanLibrary\dokanctl.exe
+  ||    or
+  ||        %ProgramFiles%\Dokan\DokanLibrary\dokanctl.exe
+  ||    or
+  ||        C:\Program Files (x86)\Dokan\DokanLibrary\dokanctl.exe
+  ((*/
 LIB_EXPORT
 rc_t CC
 XFSUnmountAndDestroy ( const char * MountPoint )
 {
-    /*  TODO
-     */
-    return 0;
+    rc_t RCt;
+    WCHAR Path [ XFS_SIZE_4096 ];
+    WCHAR Comm [ XFS_SIZE_4096 ];
+    WCHAR * MPath;
+    BOOL Ret;
+    STARTUPINFO StartInfo;
+    PROCESS_INFORMATION Process;
+    int Err;
+
+    RCt = 0;
+    * Path = 0;
+    * Comm = 0;
+    MPath = NULL;
+    Ret = FALSE;
+    ZeroMemory ( & StartInfo, sizeof( StartInfo ) );
+    ZeroMemory ( & Process, sizeof( Process ) );
+    Err = 0;
+
+    RCt = _MakeMountPath ( MountPoint, & MPath );
+    if ( RCt == 0 ) {
+        if ( PathFileExistsW ( MPath ) == TRUE ) {
+            wLogMsg ( klogInfo, L"Unmounting volume [%s]\n", MPath );
+
+            RCt = _GetProgPath ( Path, sizeof ( Path ) / sizeof ( WCHAR ) );
+            if ( RCt == 0 ) {
+                swprintf (
+                        Comm,
+                        sizeof ( Comm ) / sizeof ( WCHAR ),
+                        L"\"%s\" /u %s",
+                        Path,
+                        MPath
+                        );
+                wLogMsg ( klogInfo, L"Executing [%s]\n", Comm );
+                Ret = CreateProcessW (
+                                    NULL,
+                                    Comm,
+                                    NULL,
+                                    NULL,
+                                    FALSE,
+                                    DETACHED_PROCESS,
+                                    NULL,
+                                    NULL,
+                                    & StartInfo,
+                                    & Process
+                                    );
+                if ( Ret == 0 ) {
+                    wLogMsg ( klogErr, L"Failed [%s] ErrNo [%d]\n", Comm, GetLastError () );
+                }
+            }
+            else {
+                wLogMsg ( klogErr, L"CRITICAL: Can not find 'dokanctl.exe' utility.\n" );
+                wLogMsg ( klogErr, L"          Please ask administrator about it location. \n" );
+                wLogMsg ( klogErr, L"          Please use command 'dokanctl.exe /u %s'. \n", MPath );
+            }
+        }
+        else {
+            wLogMsg ( klogErr, L"Can not find volume [%s]\n", MPath );
+        }
+
+        free ( MPath );
+    }
+
+
+    return RCt;
 }   /* XFSUnmountAndDestroy () */

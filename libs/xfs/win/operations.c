@@ -110,7 +110,7 @@
 
 /*))    KLog does not work with WCHAR :D
  ((*/
-static rc_t CC wLogMsg ( KLogLevel Level, LPCWSTR Format, ... );
+XFS_EXTERN rc_t CC wLogMsg ( KLogLevel Level, LPCWSTR Format, ... );
 
 /*\
 |*| importante protopute
@@ -2627,7 +2627,7 @@ XFS_Private_InitOperations ( DOKAN_OPERATIONS * Operations )
 /****************************************************************
  * LogMsg as pLogMsg does not work with WCHAR ... so ... julep
  ****************************************************************/
-static
+LIB_EXPORT
 rc_t CC
 wLogMsg ( KLogLevel Level, LPCWSTR Format, ... )
 {
@@ -2663,4 +2663,3 @@ wLogMsg ( KLogLevel Level, LPCWSTR Format, ... )
 
     return RCt;
 }   /* wLogMsg () */
-

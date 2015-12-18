@@ -221,10 +221,12 @@ _LWrOpen ( struct _LWr * self )
                         self -> pos = 0;
                         break;
                     case kptFile :
-                        RCt = KDirectoryOpenFileWrite (
+                        RCt = KDirectoryCreateFile (
                                                     NatDir,
                                                     & ( self -> file ),
                                                     false,
+                                                    0664,
+                                                    kcmOpen,
                                                     self -> path
                                                     );
                         if ( RCt == 0 ) {
@@ -377,6 +379,12 @@ XFSLogInit ( const char * LogFile )
         if ( Writer != NULL ) {
             _LWrDispose ( Writer );
         }
+        KOutHandlerSet( _LWrWriter, NULL );
+        KDbgHandlerSet( _LWrWriter, NULL );
+        KLogHandlerSet( _LWrWriter, NULL );
+        KLogLibHandlerSet( _LWrWriter, NULL );
+        KStsHandlerSet( _LWrWriter, NULL );
+        KStsLibHandlerSet( _LWrWriter, NULL );
     }
 
     return RCt;
