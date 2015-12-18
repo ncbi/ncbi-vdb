@@ -2289,7 +2289,8 @@ XFS_DOKAN_GetVolumeInformation (
     wcscpy_s(
             VolumeNameBuffer,
             VolumeNameSize / sizeof(WCHAR),
-            L"NCBI&CO"
+            // L"NCBI&CO"
+            L"dbGaP"
             );
 
     * VolumeSerialNumber = 0x19450509;

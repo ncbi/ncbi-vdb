@@ -482,8 +482,11 @@ _PathCompile ( struct XFSPath * self, const char ** Str )
 {
     size_t Qty, Idx, StrSize;
     char * Path;
+    const char * Token;
 
     Qty = Idx = StrSize = 0;
+    Path = NULL;
+    Token = NULL;
 
     XFS_CSAN ( Str )
     XFS_CAN ( self )
@@ -516,10 +519,13 @@ _PathCompile ( struct XFSPath * self, const char ** Str )
     }
 
     for ( Idx = 0; Idx < Qty; Idx ++ ) {
-        if ( Idx != 0 ) {
-            strcat ( Path, "/" );
+        Token = XFSPathPartGet ( self, Idx );
+        if ( strcmp ( Token, "/" ) != 0 ) {
+            if ( Idx != 0 ) {
+                strcat ( Path, "/" );
+            }
+            strcat ( Path, Token );
         }
-        strcat ( Path, XFSPathPartGet ( self, Idx ) );
     }
 
     * Str = Path;
