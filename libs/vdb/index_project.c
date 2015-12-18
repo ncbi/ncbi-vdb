@@ -73,20 +73,21 @@ rc_t CC index_project_impl(
 ) {
     rc_t rc;
     const self_t *self = Self;
-    KDataBuffer temp;
+    KDataBuffer temp_buff;
     uint64_t id_count;
     int64_t start_id;
+    int64_t empty_row_id_start = -1;
     int64_t empty_row_id_count = -1;
-    char key_buf[1024];
-    char *key = key_buf;
-    size_t sz = sizeof(key_buf) - 1;
+    size_t sz = 1023;
+    bool attached_to_col = argc > 0 && argv[0] != NULL;
     
     /* first try to load value from the column. if returned blob is empty or row is not found, go to index */
-    if (argc > 0 && argv[0] != NULL) {
+    if ( attached_to_col ) {
         /*** this types of blobs may have holes in them ***/
         rc = VBlobSubblob(argv[0],rslt,row_id );
         if (rc != 0) {
             if (GetRCState(rc) == rcEmpty && GetRCObject(rc) == rcRow) {
+                empty_row_id_start = row_id;
                 empty_row_id_count = 1;
             }
             else {
@@ -97,72 +98,85 @@ rc_t CC index_project_impl(
             return rc;
         }
         else {
+            empty_row_id_start = (*rslt)->start_id;
             empty_row_id_count = (*rslt)->stop_id - (*rslt)->start_id + 1;
-            assert(empty_row_id_count >= 1);
             
             TRACK_BLOB( VBlobRelease, *rslt );
             (void)VBlobRelease( *rslt );
         }
+
+        assert(empty_row_id_count >= 1);
     }
 
+    rc = KDataBufferMakeBytes( &temp_buff, sz + 1 );
+    if ( rc != 0 )
+        return rc;
+
     for ( ; ; ) {
-        rc = KIndexProjectText(self->ndx, row_id, &start_id, &id_count, key, sz + 1, &sz);
+        rc = KIndexProjectText(self->ndx, row_id, &start_id, &id_count, temp_buff.base, temp_buff.elem_count, &sz);
         if ((GetRCState(rc) == rcNotFound && GetRCObject(rc) == rcId) || sz==0 ){
-/*          fprintf(stderr, "row %u not in index\n", (unsigned)row_id); */
-            rc = RC(rcVDB, rcFunction, rcExecuting, rcRow, rcNotFound);
+            if ( !attached_to_col )
+                rc = RC(rcVDB, rcFunction, rcExecuting, rcRow, rcNotFound);
+            else
+            {
+                // return an empty row, but we don't know how many empty rows
+                // are there, since even row_id+1 may have a key stored in index
+                rc = 0;
+                sz = 0;
+                start_id = row_id;
+                id_count = 1;
+            }
+
             break;
         }
-        if ( GetRCState( rc ) == rcInsufficient && GetRCObject( rc ) == (enum RCObject)rcBuffer && key == key_buf )
+        if ( GetRCState( rc ) == rcInsufficient && GetRCObject( rc ) == (enum RCObject)rcBuffer )
         {
-            rc = KDataBufferMakeBytes( &temp, (uint32_t)( sz + 1 ) );
-            if (rc) {
-                key = temp.base;
+            rc = KDataBufferResize ( &temp_buff, (uint32_t)( sz + 1 ) );
+            if (rc == 0) {
                 continue;
             }
         }
-        if (rc == 0) {
-            VBlob *y;
         
-            /* it seems old index returns length including \0 so we have to adjust */
-            while (sz > 0 && key[sz - 1] == '\0')
-                --sz;
-
-            /* When in case_sensitivity mode is case insensitive, index does not accurately represent actual values,
-             * as we still store key in a column when it differs from what we inserted into index */
-            if (self->case_sensitivity != CASE_SENSITIVE && empty_row_id_count != -1) {
-                if (start_id != row_id || id_count > empty_row_id_count) {
-                    start_id = row_id;
-                    id_count = empty_row_id_count;
-                }
+        // When in case_sensitivity mode is case insensitive, index does not accurately represent actual values,
+        // as we still store key in a column when it differs from what we inserted into index
+        if (self->case_sensitivity != CASE_SENSITIVE && attached_to_col)
+        {
+            if ( start_id < empty_row_id_start )
+            {
+                id_count -= empty_row_id_start - start_id;
+                start_id = empty_row_id_start;
             }
-            rc = VBlobNew(&y, start_id, start_id + id_count - 1, "vdb:index:project");
-            if (rc == 0) {
-                rc = PageMapNewSingle( &y->pm, (uint32_t)id_count, (uint32_t)sz );
-                if (rc == 0) {
-                    if (key == key_buf) {
-                        rc = KDataBufferMakeBytes( &y->data, (uint32_t)sz );
-                        if (rc == 0)
-                            memcpy(y->data.base, key, sz);
-                    }
-                    else
-                        KDataBufferSub( &temp, &y->data, 0, (uint32_t)sz );
-                }
-                if (rc == 0) 
-                    *rslt = y;
-                else {
-                    TRACK_BLOB( VBlobRelease, ((VBlob*)y) );
-                    (void)VBlobRelease(y);
-                }
+
+            if ( start_id + id_count > empty_row_id_start + empty_row_id_count )
+            {
+                id_count = empty_row_id_start + empty_row_id_count - start_id;
             }
         }
         break;
     }
-    if (key != key_buf)
-        KDataBufferWhack(&temp);
+
+    if ( rc == 0 )
+    {
+        /* it seems old index returns length including \0 so we have to adjust */
+        while (sz > 0 && ((char *)temp_buff.base)[sz - 1] == '\0')
+            --sz;
+
+        // now we know real size of the data, lets set in data buffer too
+        assert ( temp_buff.elem_count >= sz );
+        if ( temp_buff.elem_count != sz )
+            rc = KDataBufferResize ( &temp_buff, (uint32_t)( sz ) );
+    }
+
+    if (rc == 0)
+    {
+        rc = VBlobCreateFromSingleRow ( rslt, start_id, start_id + id_count - 1, &temp_buff, vboNative );
+    }
+
+    KDataBufferWhack(&temp_buff);
     return rc;
 }
 
-VTRANSFACT_BUILTIN_IMPL(idx_text_project, 1, 1, 0) (
+VTRANSFACT_BUILTIN_IMPL(idx_text_project, 1, 1, 1) (
                                            const void *Self,
                                            const VXfactInfo *info,
                                            VFuncDesc *rslt,
