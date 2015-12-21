@@ -61,7 +61,7 @@
 #define GAP_SCORE_LINEAR 0
 #define SW_DEBUG_PRINT 0
 
-typedef struct VRefVariation
+struct VRefVariation
 {
     KRefcount refcount;
 
@@ -76,7 +76,7 @@ typedef struct VRefVariation
     size_t var_buffer_size;
     size_t allele_size;
     size_t allele_len_on_ref;
-} VRefVariation;
+};
 
 
 #if COMPARE_4NA == 1

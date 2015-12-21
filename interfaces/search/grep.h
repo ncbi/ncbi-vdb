@@ -282,6 +282,7 @@ SEARCH_EXTERN size_t CC FindLongestCommonSubstring (
                                             (return values)
 */
 
+struct VRefVariation;
 typedef struct VRefVariation VRefVariation;
 typedef uint32_t RefVarAlg;
 enum
