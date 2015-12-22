@@ -102,7 +102,11 @@ enum
     kcmOpen,
     kcmInit,
     kcmCreate,
-    kcmValueMask = 7,
+    kcmSharedOppend,        /* special mode which works only on
+                             * WIN, and needed for proper logging
+                             * similar to kcmOpen unter Unix
+                             */
+    kcmValueMask = 15,
 
     /* modifier bits 3..7 */
     kcmMD5     = ( 1 << 6 ),

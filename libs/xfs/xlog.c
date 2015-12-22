@@ -193,11 +193,9 @@ _LWrOpen ( struct _LWr * self )
 {
     rc_t RCt;
     struct KDirectory * NatDir;
-    uint32_t PathType;
 
     RCt = 0;
     NatDir = NULL;
-    PathType = kptNotFound;
 
     XFS_CAN ( self )
 
@@ -206,41 +204,20 @@ _LWrOpen ( struct _LWr * self )
         if ( self -> file == NULL ) {
             RCt = KDirectoryNativeDir ( & NatDir );
             if ( RCt == 0 ) {
-                PathType = KDirectoryPathType ( NatDir, self -> path );
-
-                switch ( PathType ) {
-                    case kptNotFound :
-                        RCt = KDirectoryCreateFile (
-                                                    NatDir,
-                                                    & ( self -> file ),
-                                                    false,
-                                                    0664,
-                                                    kcmInit,
-                                                    self -> path
-                                                    );
-                        self -> pos = 0;
-                        break;
-                    case kptFile :
-                        RCt = KDirectoryCreateFile (
-                                                    NatDir,
-                                                    & ( self -> file ),
-                                                    false,
-                                                    0664,
-                                                    kcmOpen,
-                                                    self -> path
-                                                    );
-                        if ( RCt == 0 ) {
-                            RCt = KFileSize (
-                                            self -> file,
-                                            & ( self -> pos )
+                RCt = KDirectoryCreateFile (
+                                            NatDir,
+                                            & ( self -> file ),
+                                            false,
+                                            0664,
+                                            kcmSharedOppend,
+                                            self -> path
                                             );
-                        }
-                        break;
-                    default :
-                        RCt = XFS_RC ( rcInvalid );
-                        break;
+                if ( RCt == 0 ) {
+                    RCt = KFileSize (
+                                    self -> file,
+                                    & ( self -> pos )
+                                    );
                 }
-
                 KDirectoryRelease ( NatDir );
             }
 
