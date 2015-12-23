@@ -755,6 +755,7 @@ char CSRA1_AlignmentGetRNAOrientation( CSRA1_Alignment* self, ctx_t ctx )
 
 bool CSRA1_AlignmentHasMate( CSRA1_Alignment* self, ctx_t ctx )
 {
+    int64_t mate_id;
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     if ( ! self -> seen_first ) 
     {
@@ -762,14 +763,22 @@ bool CSRA1_AlignmentHasMate( CSRA1_Alignment* self, ctx_t ctx )
         return false;
     }
 
-    TRY ( NGS_CursorGetInt64 ( GetCursor ( self ), ctx, self -> cur_row, align_MATE_ALIGN_ID ) )
+    TRY ( mate_id = NGS_CursorGetInt64 ( GetCursor ( self ), ctx, self -> cur_row, align_MATE_ALIGN_ID ) )
     {
-        return true;
+        int64_t mate_seq_spot_id;
+
+        if ( self -> in_primary )
+            return true;
+
+        TRY ( mate_seq_spot_id = NGS_CursorGetInt64 ( self -> secondary_curs, ctx, self -> cur_row, align_SEQ_SPOT_ID ) )
+        {
+            if ( mate_seq_spot_id > 0 )
+                return true;
+        }
     }
-    CATCH_ALL ()
-    {
-        CLEAR();
-    }
+
+    CLEAR();
+
     return false;
 }
 
@@ -786,10 +795,28 @@ NGS_String * CSRA1_AlignmentGetMateAlignmentId( CSRA1_Alignment* self, ctx_t ctx
 
     TRY ( mateId = NGS_CursorGetInt64 ( GetCursor ( self ), ctx, self -> cur_row, align_MATE_ALIGN_ID ) )
     {
-        return NGS_IdMake ( ctx, 
-                            self -> run_name, 
-                            self -> in_primary ? NGSObject_PrimaryAlignment : NGSObject_SecondaryAlignment, 
-                            mateId /* + self -> id_offset ? */);
+        if ( ! self -> in_primary )
+        {
+            TRY ( int64_t mate_seq_spot_id = NGS_CursorGetInt64 ( self -> secondary_curs, ctx, mateId, align_SEQ_SPOT_ID ) )
+            {
+                if ( mate_seq_spot_id <= 0 )
+                {
+                    INTERNAL_ERROR ( xcSecondaryAlignmentMissingPrimary, 
+                                     "secondary mate alignment id ( %li ) missing primary within %.*s",
+                                     mateId + self -> id_offset,
+                                     NGS_StringSize ( self -> run_name, ctx ),
+                                     NGS_StringData ( self -> run_name, ctx ) );
+                }
+            }
+        }
+
+        if ( ! FAILED () )
+        {
+            return NGS_IdMake ( ctx, 
+                                self -> run_name, 
+                                self -> in_primary ? NGSObject_PrimaryAlignment : NGSObject_SecondaryAlignment, 
+                                mateId + self -> id_offset );
+        }
     }
     return NULL;
 }
@@ -835,9 +862,20 @@ bool CSRA1_AlignmentIteratorNext ( CSRA1_Alignment* self, ctx_t ctx )
         ++ self -> cur_row;
     }
     
-    if ( self -> cur_row < self -> row_max )
+    for ( ; self -> cur_row < self -> row_max; ++ self -> cur_row )
     {
-        return true;
+        int64_t seq_spot_id;
+
+        if ( self -> in_primary )
+            return true;
+
+        TRY ( seq_spot_id = NGS_CursorGetInt64 ( self -> secondary_curs, ctx, self -> cur_row, align_SEQ_SPOT_ID ) )
+        {
+            if ( seq_spot_id > 0 )
+                return true;
+        }
+
+        CLEAR ();
     }
 
     /* see if we need to switch over to the next cursor */ 
@@ -1174,11 +1212,29 @@ void SetRowId ( CSRA1_Alignment* self, ctx_t ctx, int64_t rowId, bool primary )
                              rowId, 
                              NGS_StringSize ( self -> run_name, ctx ), 
                              NGS_StringData ( self -> run_name, ctx ) );
-        }                
+        }
         else
         {
-            self -> cur_row = id;
-            self -> row_max = id + 1;
+            if ( ! primary && self -> secondary_curs != NULL )
+            {
+                TRY ( int64_t spot_id = NGS_CursorGetInt64 ( self -> secondary_curs, ctx, id, align_SEQ_SPOT_ID ) )
+                {
+                    if ( spot_id <= 0 )
+                    {
+                        INTERNAL_ERROR ( xcSecondaryAlignmentMissingPrimary, 
+                                         "secondary alignment id ( %li ) missing primary within %.*s",
+                                         rowId,
+                                         NGS_StringSize ( self -> run_name, ctx ),
+                                         NGS_StringData ( self -> run_name, ctx ) );
+                    }
+                }
+            }
+
+            if ( ! FAILED () )
+            {
+                self -> cur_row = id;
+                self -> row_max = id + 1;
+            }
         }
     }
 }

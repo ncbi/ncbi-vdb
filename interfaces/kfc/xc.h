@@ -71,6 +71,7 @@ XOBJ ( xoFunction, "function", rcFunction );
 XOBJ ( xoBuffer, "buffer", rcBuffer );
 XOBJ ( xoFileDescriptor, "file descriptor", rcFileDesc );
 XOBJ ( xoStorage, "storage", rcStorage );
+XOBJ ( xoAlignment, "alignment", rcData );
 
 /*--------------------------------------------------------------------------
  * XSTATE
@@ -104,6 +105,7 @@ XSTATE ( xsExcessive, "excessive", rcExcessive );
 XSTATE ( xsUnknown, "unknown", rcUnknown );
 XSTATE ( xsInconsistent, "inconsistent", rcInconsistent );
 XSTATE ( xsUnsupported, "unsupported", rcUnsupported );
+XSTATE ( xsNoPrimary, "missing primary", rcInvalid );
 
 /*--------------------------------------------------------------------------
  * XC
@@ -166,6 +168,7 @@ XC ( xcFunctionUnsupported, xoFunction, xsUnsupported );
 XC ( xcInterfaceIncorrect, xoInterface, xsIncorrect );
 XC ( xcInterfaceInvalid, xoInterface, xsInvalid );
 XC ( xcColumnEmpty, xoColumn, xsEmpty );
+XC ( xcSecondaryAlignmentMissingPrimary, xoAlignment, xsNoPrimary );
 
 #ifdef __cplusplus
 }
