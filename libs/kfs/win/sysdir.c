@@ -2430,7 +2430,7 @@ rc_t CC KSysDirCreateFile ( KSysDir *self, KFile **f, bool update,
         case kcmCreate : /* create and open only if does not already exist */
             dwCreationDisposition = CREATE_NEW;
             break;
-        case kcmSharedOppend :
+        case kcmSharedAppend :
             dwCreationDisposition = OPEN_ALWAYS;
             dwDesiredAccess = FILE_APPEND_DATA;
             dwFlagsAndAttributes |= FILE_FLAG_WRITE_THROUGH;

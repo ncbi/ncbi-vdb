@@ -209,7 +209,7 @@ _LWrOpen ( struct _LWr * self )
                                             & ( self -> file ),
                                             false,
                                             0664,
-                                            kcmSharedOppend,
+                                            kcmSharedAppend,
                                             self -> path
                                             );
                 if ( RCt == 0 ) {

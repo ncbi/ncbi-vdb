@@ -102,9 +102,8 @@ enum
     kcmOpen,
     kcmInit,
     kcmCreate,
-    kcmSharedOppend,        /* special mode which works only on
-                             * WIN, and needed for proper logging
-                             * similar to kcmOpen unter Unix
+    kcmSharedAppend,        /* special mode which works only on
+                             * needed for proper logging
                              */
     kcmValueMask = 15,
 
