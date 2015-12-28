@@ -309,17 +309,29 @@ _LWrWriter ( void * self, const char * Bf, size_t BfS, size_t * NWr )
     Writer = ( struct _LWr * ) self;
 
     XFS_CSA ( NWr, 0 )
-    XFS_CAN ( self )
     XFS_CAN ( Bf )
     XFS_CAN ( NWr )
 
-    RCt = KFileWriteAll ( Writer -> file, Writer -> pos, Bf, BfS, NWr );
-    if ( RCt == 0 ) {
-        Writer -> pos += * NWr;
+    if ( self != NULL && Writer -> file != NULL ) {
+        RCt = KFileWriteAll ( Writer -> file, Writer -> pos, Bf, BfS, NWr );
+        if ( RCt == 0 ) {
+            Writer -> pos += * NWr;
+        }
     }
 
     return RCt;
 }   /* _LWrWriter () */
+
+static
+rc_t CC
+_LWrWriterDummy ( void * s, const char * b, size_t bs, size_t * w )
+{
+    if ( w != NULL ) {
+        * w = bs;
+    }
+
+    return 0;
+}   /* _LWrWriterDummy () */
 
 LIB_EXPORT
 rc_t CC
@@ -331,37 +343,37 @@ XFSLogInit ( const char * LogFile )
     RCt = 0;
     Writer = NULL;
 
-    XFS_CAN ( LogFile )
-
-    if ( _sLWr == NULL ) {
-        RCt = _LWrMake ( & Writer, LogFile );
-        if ( RCt == 0 ) {
-            RCt = _LWrOpen ( Writer );
+    if ( LogFile != NULL ) {
+        if ( _sLWr == NULL ) {
+            RCt = _LWrMake ( & Writer, LogFile );
             if ( RCt == 0 ) {
-                KOutHandlerSet( _LWrWriter, Writer );
-                KDbgHandlerSet( _LWrWriter, Writer );
-                KLogHandlerSet( _LWrWriter, Writer );
-                KLogLibHandlerSet( _LWrWriter, Writer );
-                KStsHandlerSet( _LWrWriter, Writer );
-                KStsLibHandlerSet( _LWrWriter, Writer );
+                RCt = _LWrOpen ( Writer );
+                if ( RCt == 0 ) {
+                    _sLWr = Writer;
 
-                _sLWr = Writer;
+                    KOutHandlerSet( _LWrWriter, Writer );
+                    KDbgHandlerSet( _LWrWriter, Writer );
+                    KLogHandlerSet( _LWrWriter, Writer );
+                    KLogLibHandlerSet( _LWrWriter, Writer );
+                    KStsHandlerSet( _LWrWriter, Writer );
+                    KStsLibHandlerSet( _LWrWriter, Writer );
+                }
             }
         }
     }
 
-    if ( RCt != 0 ) {
+    if ( RCt != 0 || LogFile == NULL ) {
         _sLWr = NULL;
 
         if ( Writer != NULL ) {
             _LWrDispose ( Writer );
         }
-        KOutHandlerSet( _LWrWriter, NULL );
-        KDbgHandlerSet( _LWrWriter, NULL );
-        KLogHandlerSet( _LWrWriter, NULL );
-        KLogLibHandlerSet( _LWrWriter, NULL );
-        KStsHandlerSet( _LWrWriter, NULL );
-        KStsLibHandlerSet( _LWrWriter, NULL );
+        KOutHandlerSet( _LWrWriterDummy, NULL );
+        KDbgHandlerSet( _LWrWriterDummy, NULL );
+        KLogHandlerSet( _LWrWriterDummy, NULL );
+        KLogLibHandlerSet( _LWrWriterDummy, NULL );
+        KStsHandlerSet( _LWrWriterDummy, NULL );
+        KStsLibHandlerSet( _LWrWriterDummy, NULL );
     }
 
     return RCt;
