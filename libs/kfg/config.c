@@ -2686,15 +2686,23 @@ void add_predefined_nodes ( KConfig * self, const char *appname )
     KDirectoryRelease ( cwd );
 
    /* Update NCBI_HOME and NCBI_SETTINGS when they are set in the environment */
-    value = getenv("NCBI_HOME");
-    if (value != NULL)
     {
-        update_node(self, "NCBI_HOME", value, false);
-    }
-    value = getenv("NCBI_SETTINGS");
-    if (value != NULL)
-    {
-        update_node(self, "NCBI_SETTINGS", value, false);
+        const char *NCBI_SETTINGS = getenv("NCBI_SETTINGS");
+        if (NCBI_SETTINGS != NULL) {
+            update_node(self, "NCBI_SETTINGS", NCBI_SETTINGS, false);
+        }
+
+        value = getenv("NCBI_HOME");
+        if (value != NULL) {
+            update_node(self, "NCBI_HOME", value, false);
+            if (NCBI_SETTINGS == NULL) {
+                size_t bytes2 = 0;
+                char buf2[4096] = "";
+                string_printf(buf2, sizeof buf2, &bytes2,
+                    "%s/%s", value, MAGIC_LEAF_NAME);
+                update_node(self, "NCBI_SETTINGS", buf2, false);
+            }
+        }
     }
 }
 
