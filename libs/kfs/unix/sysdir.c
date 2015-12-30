@@ -1950,7 +1950,7 @@ rc_t KSysDirCreateFile_v1 ( KSysDir_v1 * self, KFile_v1 **f, bool update,
             mode |= O_EXCL;
             break;
         case kcmSharedAppend:
-            mode = O_APPEND | O_CREAT;
+            mode = O_WRONLY | O_APPEND | O_CREAT;
             break;
         }
 

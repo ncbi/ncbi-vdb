@@ -308,7 +308,7 @@ _LWrWriter ( void * self, const char * Bf, size_t BfS, size_t * NWr )
     RCt = 0;
     Writer = ( struct _LWr * ) self;
 
-    XFS_CSA ( NWr, 0 )
+    XFS_CSA ( NWr, BfS )
     XFS_CAN ( Bf )
     XFS_CAN ( NWr )
 
@@ -343,6 +343,8 @@ XFSLogInit ( const char * LogFile )
     RCt = 0;
     Writer = NULL;
 
+printf ( " [FOO] [%d] [%s]\n", __LINE__, LogFile );
+
     if ( LogFile != NULL ) {
         if ( _sLWr == NULL ) {
             RCt = _LWrMake ( & Writer, LogFile );
@@ -376,6 +378,7 @@ XFSLogInit ( const char * LogFile )
         KStsLibHandlerSet( _LWrWriterDummy, NULL );
     }
 
+    return 0;
     return RCt;
 }   /* XFSLogInit () */
 

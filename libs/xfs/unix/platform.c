@@ -228,6 +228,7 @@ XFSLogDbg ( "Mnt = %s\nMlt = %d\nFrg = %d\n", MountPoint, Multithreaded, Foregro
         fuse_unmount ( MountPoint, FuseChannel );
 
         fuse_opt_free_args ( & FuseArgs );
+printf ( " [MOO] [%d] [%s]\n", __LINE__, LogPath );
 
         XFSLogErr ( XFS_RC ( rcFailed ), "Can not daemonize\n" );
         return XFS_RC ( rcFailed ); 
@@ -271,9 +272,11 @@ XFSLogDbg ( "Mnt = %s\nMlt = %d\nFrg = %d\n", MountPoint, Multithreaded, Foregro
     fuse_remove_signal_handlers ( fuse_get_session ( FuseStruct ) );
 */
 
+
     fuse_opt_free_args ( & FuseArgs );
 
     XFSLogDbg ( " [XFS_FUSE_mount_v1] [%d] [%d]\n", __LINE__, Result );
+
 
     return Result == 0 ? 0 : XFS_RC ( rcInvalid );
 }   /* XFS_FUSE_mount_v1 () */
