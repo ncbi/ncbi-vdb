@@ -211,6 +211,13 @@ VDB_EXTERN rc_t CC VCursorOpen ( const VCursor *self );
 VDB_EXTERN rc_t CC VCursorRowId ( const VCursor *self, int64_t *row_id );
 VDB_EXTERN rc_t CC VCursorSetRowId ( const VCursor *self, int64_t row_id );
 
+/* FindNextRowId
+ *  returns next non-empty row (can be more than current_row + 1 in non-contiguous columns)
+ * FindNextRowIdDirect
+ *  the same as FindNextRowId, expect you need to provide start_id which should be last known non-empty row_id
+ */
+VDB_EXTERN rc_t CC VCursorFindNextRowId ( const VCursor *self, uint32_t idx, int64_t *next );
+VDB_EXTERN rc_t CC VCursorFindNextRowIdDirect ( const VCursor *self, uint32_t idx, int64_t start_id, int64_t *next );
 
 /* OpenRow
  *  open currently closed row indicated by row id
