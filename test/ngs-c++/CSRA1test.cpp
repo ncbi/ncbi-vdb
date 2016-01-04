@@ -795,6 +795,15 @@ FIXTURE_TEST_CASE(CSRA1_AlignmentIterator_Next, CSRA1_Fixture)
     REQUIRE_EQ( ngs :: String ( CSRA1_WithSecondary ) + ".PA.2", it . getAlignmentId () . toString () ); 
 }
 
+FIXTURE_TEST_CASE(CSRA1_AlignmentIterator_Next_Switch_To_Secondary, CSRA1_Fixture)
+{
+    ngs :: AlignmentIterator it = ncbi :: NGS :: openReadCollection ( CSRA1_WithSecondary ) . getAlignmentRange ( 168, 2, ngs :: Alignment :: all );
+    REQUIRE( it . nextAlignment () );
+    REQUIRE_EQ( ngs :: String ( CSRA1_WithSecondary ) + ".PA.168", it . getAlignmentId () . toString () );
+    REQUIRE( it . nextAlignment () );
+    REQUIRE_EQ( ngs :: String ( CSRA1_WithSecondary ) + ".SA.169", it . getAlignmentId () . toString () );
+}
+
 FIXTURE_TEST_CASE(CSRA1_AlignmentIterator_BeyondEnd, CSRA1_Fixture)
 {
     ngs :: AlignmentIterator it = getAlignments (); 
@@ -986,6 +995,24 @@ FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice_Filtered_NoWraparound_StartWithinS
     REQUIRE_LT ( pos, sliceStart + 100 );
 }
 
+FIXTURE_TEST_CASE(CSRA1_Filter_SEQ_SPOT_ID_0, CSRA1_Fixture)
+{
+    // we should filter out secondary alignments with SEQ_SPOT_ID == 0
+    ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( "seq_spot_id_0.sra" );
+    ngs :: Reference reference = run . getReference ( "NC_016088.2" );
+
+    ngs :: AlignmentIterator alignmentIterator = run.getAlignmentRange ( 145, 2, ngs :: Alignment :: all );
+
+    REQUIRE ( alignmentIterator.nextAlignment() );
+    REQUIRE_EQ ( ngs :: String ( "seq_spot_id_0.PA.145" ), alignmentIterator . getAlignmentId() . toString () );
+    REQUIRE ( !alignmentIterator.nextAlignment() );
+
+    alignmentIterator = reference . getFilteredAlignmentSlice ( 29446335, 10, ngs :: Alignment :: all, ngs :: Alignment :: startWithinSlice, 0 );
+    REQUIRE ( !alignmentIterator.nextAlignment() );
+
+    REQUIRE_THROW ( run . getAlignment ( "seq_spot_id_0.SA.146" ) );
+    REQUIRE_THROW ( reference . getAlignment ( "seq_spot_id_0.SA.146" ) );
+}
 
 /////TODO: Pileup
 //TODO: getReferenceSpec

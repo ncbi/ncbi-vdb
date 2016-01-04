@@ -815,7 +815,7 @@ NGS_String * CSRA1_AlignmentGetMateAlignmentId( CSRA1_Alignment* self, ctx_t ctx
             return NGS_IdMake ( ctx, 
                                 self -> run_name, 
                                 self -> in_primary ? NGSObject_PrimaryAlignment : NGSObject_SecondaryAlignment, 
-                                mateId + self -> id_offset );
+                                self -> in_primary ? mateId : mateId + self -> id_offset );
         }
     }
     return NULL;
@@ -885,8 +885,10 @@ bool CSRA1_AlignmentIteratorNext ( CSRA1_Alignment* self, ctx_t ctx )
 
         self -> cur_row = self -> secondary_start;
         self -> row_max = self -> secondary_max;
-        
-        return self -> cur_row < self -> row_max;
+
+        // let's re-run "next" again to check SEQ_SPOT_ID
+        self -> seen_first = false;
+        return CSRA1_AlignmentIteratorNext ( self, ctx );
     }
     
     return false;
