@@ -228,7 +228,6 @@ XFSLogDbg ( "Mnt = %s\nMlt = %d\nFrg = %d\n", MountPoint, Multithreaded, Foregro
         fuse_unmount ( MountPoint, FuseChannel );
 
         fuse_opt_free_args ( & FuseArgs );
-printf ( " [MOO] [%d] [%s]\n", __LINE__, LogPath );
 
         XFSLogErr ( XFS_RC ( rcFailed ), "Can not daemonize\n" );
         return XFS_RC ( rcFailed ); 

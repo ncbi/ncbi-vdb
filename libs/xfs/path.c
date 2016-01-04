@@ -584,7 +584,8 @@ _PathParse (
     bool Abs;
 
     RCt = 0;
-    Bg = Cr = NULL;
+    Bg = NULL;
+    Cr = NULL;
     Abs = false;
 
     XFS_CAN ( self )
