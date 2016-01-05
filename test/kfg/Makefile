@@ -30,10 +30,11 @@ TOP ?= $(abspath ../..)
 MODULE = test/kfg
 
 TEST_TOOLS = \
+	ncbi-home-from-env \
 	wb-test-kfg \
 	test-kfg \
-    test-repository \
-    test-keystore
+	test-repository \
+	test-keystore
 
 include $(TOP)/build/Makefile.env
 
@@ -43,6 +44,18 @@ $(TEST_TOOLS): makedirs
 .PHONY: $(TEST_TOOLS)
 
 clean: stdclean
+
+#-------------------------------------------------------------------------------
+# ncbi-home-from-env
+
+ENV_SRC = \
+	ncbi-home-from-env
+
+ENV_OBJ = \
+	$(addsuffix .$(OBJX),$(ENV_SRC))
+
+$(TEST_BINDIR)/ncbi-home-from-env: $(ENV_OBJ)
+	$(LP) --exe -o $@ $^ $(ENV_LIB) 
 
 #-------------------------------------------------------------------------------
 # white-box test
