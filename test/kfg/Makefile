@@ -30,7 +30,6 @@ TOP ?= $(abspath ../..)
 MODULE = test/kfg
 
 TEST_TOOLS = \
-	ncbi-home-from-env \
 	wb-test-kfg \
 	test-kfg \
 	test-repository \
