@@ -2651,8 +2651,8 @@ bool load_from_home ( KConfig * self, const KDirectory * dir,
         return false;
     }
     else {
-        size_t num_read = 0;
-        bool loaded = load_from_path ( self, dir, ncbi_home, num_read );
+        bool loaded =
+            load_from_path ( self, dir, ncbi_home, string_size ( ncbi_home ) );
 
         if ( loaded )
         {
