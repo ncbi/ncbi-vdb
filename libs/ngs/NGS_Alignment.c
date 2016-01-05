@@ -458,6 +458,20 @@ int NGS_AlignmentGetMappingQuality( NGS_Alignment* self, ctx_t ctx )
     return 0;
 }
 
+INSDC_read_filter NGS_AlignmentGetReadFilter( NGS_Alignment* self, ctx_t ctx )
+{
+    if ( self == NULL )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+        INTERNAL_ERROR ( xcSelfNull, "NGS_AlignmentGetReadFilter failed" );
+    }
+    else
+    {
+        return VT ( self, getReadFilter ) ( self, ctx );
+    }
+    return 0;
+}
+
 struct NGS_String* NGS_AlignmentGetReferenceBases( NGS_Alignment* self, ctx_t ctx )
 {
     if ( self == NULL )
@@ -839,6 +853,13 @@ static bool NullAlignment_toBool ( NGS_ALIGNMENT* self, ctx_t ctx )
     return false;
 }
 
+static uint8_t NullAlignment_toU8 ( NGS_ALIGNMENT* self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+    INTERNAL_ERROR ( xcSelfNull, "NULL Alignment accessed" );
+    return 0;
+}
+
 static uint64_t NullAlignment_toU64 ( NGS_ALIGNMENT* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -897,6 +918,7 @@ static NGS_Alignment_vt NullAlignment_vt_inst =
     NullAlignment_toString,        /* getId                        */
     NullAlignment_toString,        /* getReferenceSpec             */
     NullAlignment_toInt,           /* getMappingQuality            */
+    NullAlignment_toU8,            /* getReadFilter                */
     NullAlignment_toString,        /* getReferenceBases            */
     NullAlignment_toString,        /* getReadGroup                 */
     NullAlignment_toString,        /* getReadId                    */

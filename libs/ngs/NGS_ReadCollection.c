@@ -608,8 +608,8 @@ NGS_ReadCollection * NGS_ReadCollectionMake ( ctx_t ctx, const char * spec )
             }
             else
             {
-                KConfig* kfg;
-                const KRepositoryMgr* repoMgr;
+                KConfig* kfg = NULL;
+                const KRepositoryMgr* repoMgr = NULL;
                 if ( KConfigMakeLocal ( & kfg, NULL ) != 0 || 
                      KConfigMakeRepositoryMgrRead ( kfg, & repoMgr ) != 0 ||
                      KRepositoryMgrHasRemoteAccess ( repoMgr ) )

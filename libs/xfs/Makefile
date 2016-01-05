@@ -87,6 +87,7 @@ $(ILIBDIR)/libxfs: $(addprefix $(ILIBDIR)/libxfs.,$(ILIBEXT))
 
 XFS_SRC = \
     xfs \
+    xlog    \
     platform \
     operations  \
     security    \
@@ -97,7 +98,6 @@ XFS_SRC = \
     perm    \
     editors \
     handle  \
-    mfile   \
     teleport    \
     foo \
     ncon  \
@@ -117,6 +117,7 @@ XFS_SRC = \
     encro     \
     xencws     \
     encws     \
+    spen    \
     xgap    \
     xgapf    \
     xgapk   \

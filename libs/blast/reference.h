@@ -76,6 +76,9 @@ size_t CC _ReferencesGetReadName(const struct References *self,
 uint64_t _ReferencesGetTotalLength
     (const struct References *self, VdbBlastStatus *status);
 
+uint64_t _ReferencesGetReadLength
+    (const struct References *self, uint64_t read_id, VdbBlastStatus *status);
+
 #ifdef __cplusplus
 }
 #endif

@@ -77,19 +77,27 @@ static const TableReaderColumn TableSeqReadTmpKey_cols[] = {
     {0, NULL, {NULL}, 0, 0}
 };
 
+static const TableReaderColumn TableSeqReadREAD_cols[] = {
+    {0, "(INSDC:dna:text)READ", {NULL}, 0, 0},
+    {0, "READ_START", {NULL}, 0, 0},
+    {0, "READ_LEN", {NULL}, 0, 0},
+    {0, "ALIGNMENT_COUNT", {NULL}, 0, 0},
+    {0, NULL, {NULL}, 0, 0}
+};
+
 struct TableWriterSeq {
     uint32_t options;
     const TableWriter* base;
     uint8_t cursor_id;
     TableWriterColumn cols[sizeof(TableWriterSeq_cols)/sizeof(TableWriterSeq_cols[0])];
-    bool init; /* default written indicator */
+    int init; /* default written indicator */
     int64_t qual_buf_sz;
     uint8_t* qual_buf;
     uint8_t discrete_qual[256];
     uint8_t alignd_cursor_id;
     TableWriterColumn cols_alignd[2];
-    const TableReader* tmpkey_reader;
-    TableReaderColumn cols_read_tmpkey[sizeof(TableSeqReadTmpKey_cols) / sizeof(TableSeqReadTmpKey_cols[0])];
+    const TableReader* reader;
+    TableReaderColumn cols_read[5];
     KVector *stats;
     unsigned statsCount;
     int64_t tmpKeyIdFirst;
@@ -278,12 +286,65 @@ static rc_t TableWriterSeq_CollectStatistics(TableWriterSeq *self, const TableWr
     return rc;
 }
 
+static rc_t MakeSequenceTable(TableWriterSeq *self, VDatabase* db,
+                              char const qual_quantization[])
+{
+    char const *tblName = (self->options & ewseq_co_ColorSpace) ? "CS_SEQUENCE" : "SEQUENCE";
+
+    if (qual_quantization && strcmp(qual_quantization, "0") == 0) {
+        self->options |= ewseq_co_FullQuality;
+    }
+    if( !(self->options & ewseq_co_FullQuality) ) {
+        char const *quant_string = qual_quantization;
+        
+        if (quant_string == NULL || strcmp(quant_string, "1") == 0) {
+            quant_string = "1:10,10:20,20:30,30:-";
+        } else if (strcmp(quant_string, "2") == 0) {
+            quant_string = "1:30,30:-";
+        }
+        if (!TableWriterSeq_InitQuantMatrix(self->discrete_qual, quant_string)) {
+            return RC(rcAlign, rcFormatter, rcConstructing, rcParam, rcInvalid);
+        }
+    }
+    memcpy(self->cols, TableWriterSeq_cols, sizeof(TableWriterSeq_cols));
+    if (self->options & ewseq_co_KeepKey) {
+        self->cols[ewseq_cn_TMP_KEY_ID].flags &= ~ewcol_Temporary;
+        if (self->options & ewseq_co_SaveRead)
+            self->cols[ewseq_cn_READ].name = "(INSDC:dna:text)READ";
+    }
+    if( self->options & ewseq_co_AlignData ) {
+        self->cols[ewseq_cn_TMP_KEY_ID].flags |= ewcol_Ignore;
+    } else {
+        self->cols[ewseq_cn_PRIMARY_ALIGNMENT_ID].flags |= ewcol_Ignore;
+        self->cols[ewseq_cn_ALIGNMENT_COUNT].flags |= ewcol_Ignore;
+    }
+    if(self->options & ewseq_co_NoLabelData) {
+        self->cols[ewseq_cn_LABEL].flags |= ewcol_Ignore;
+        self->cols[ewseq_cn_LABEL_LEN].flags |= ewcol_Ignore;
+        self->cols[ewseq_cn_LABEL_START].flags |= ewcol_Ignore;
+    }
+    if(self->options & ewseq_co_ColorSpace) {
+        self->cols[ewseq_cn_READ].flags |= ewcol_Ignore;
+        self->cols[ewseq_cn_CSREAD].flags &= ~ewcol_Ignore;
+        self->cols[ewseq_cn_CSKEY].flags &= ~ewcol_Ignore;
+    }
+    if( self->options & ewseq_co_SpotGroup) {
+        self->cols[ewseq_cn_SPOT_GROUP].flags &= ~ewcol_Ignore;
+    }
+    if( self->options & ewseq_co_TI) {
+        self->cols[ewseq_cn_TI].flags &= ~ewcol_Ignore;
+    }
+    if( self->options & ewseq_co_SpotName) {
+        self->cols[ewseq_cn_NAME].flags &= ~ewcol_Ignore;
+    }
+    return TableWriter_Make(&self->base, db, tblName, "SEQUENCE");
+}
+
 LIB_EXPORT rc_t CC TableWriterSeq_Make(const TableWriterSeq** cself, VDatabase* db,
                                        uint32_t options, char const qual_quantization[])
 {
     rc_t rc = 0;
     TableWriterSeq* self = NULL;
-    char const *tblName = (options & ewseq_co_ColorSpace) ? "CS_SEQUENCE" : "SEQUENCE";
 
     options |= ewseq_co_SaveQual; /* TODO: remove when ready */
     if( cself == NULL || db == NULL ) {
@@ -293,53 +354,8 @@ LIB_EXPORT rc_t CC TableWriterSeq_Make(const TableWriterSeq** cself, VDatabase* 
         if( self == NULL ) {
             rc = RC(rcAlign, rcFormatter, rcConstructing, rcMemory, rcExhausted);
         } else {
-            memcpy(self->cols, TableWriterSeq_cols, sizeof(TableWriterSeq_cols));
-            if( options & ewseq_co_AlignData ) {
-                self->cols[ewseq_cn_TMP_KEY_ID].flags |= ewcol_Ignore;
-            } else {
-                self->cols[ewseq_cn_PRIMARY_ALIGNMENT_ID].flags |= ewcol_Ignore;
-                self->cols[ewseq_cn_ALIGNMENT_COUNT].flags |= ewcol_Ignore;
-            }
-            if(options & ewseq_co_NoLabelData) {
-                self->cols[ewseq_cn_LABEL].flags |= ewcol_Ignore;
-                self->cols[ewseq_cn_LABEL_LEN].flags |= ewcol_Ignore;
-                self->cols[ewseq_cn_LABEL_START].flags |= ewcol_Ignore;
-            }
-            if(options & ewseq_co_ColorSpace) {
-                self->cols[ewseq_cn_READ].flags |= ewcol_Ignore;
-                self->cols[ewseq_cn_CSREAD].flags &= ~ewcol_Ignore;
-                self->cols[ewseq_cn_CSKEY].flags &= ~ewcol_Ignore;
-            }
-            if( options & ewseq_co_SpotGroup) {
-                self->cols[ewseq_cn_SPOT_GROUP].flags &= ~ewcol_Ignore;
-            }
-            if( options & ewseq_co_TI) {
-                self->cols[ewseq_cn_TI].flags &= ~ewcol_Ignore;
-            }
-            if( options & ewseq_co_SpotName) {
-                self->cols[ewseq_cn_NAME].flags &= ~ewcol_Ignore;
-            }
-            if( (rc = TableWriter_Make(&self->base, db, tblName, "SEQUENCE")) == 0 ) {
-                rc = TableWriter_AddCursor(self->base, self->cols, sizeof(self->cols)/sizeof(self->cols[0]), &self->cursor_id);
-            }
-        }
-        if( rc == 0 ) {
             self->options = options;
-            if (qual_quantization && strcmp(qual_quantization, "0") == 0) {
-                self->options |= ewseq_co_FullQuality;
-            }
-            if( !(self->options & ewseq_co_FullQuality) ) {
-                char const *quant_string = qual_quantization;
-                
-                if (quant_string == NULL || strcmp(quant_string, "1") == 0) {
-                    quant_string = "1:10,10:20,20:30,30:-";
-                } else if (strcmp(quant_string, "2") == 0) {
-                    quant_string = "1:30,30:-";
-                }
-                if (!TableWriterSeq_InitQuantMatrix(self->discrete_qual, quant_string)) {
-                    rc = RC(rcAlign, rcFormatter, rcConstructing, rcParam, rcInvalid);
-                }
-            }
+            rc = MakeSequenceTable(self, db, qual_quantization);
         }
     }
     if( rc == 0 ) {
@@ -352,6 +368,58 @@ LIB_EXPORT rc_t CC TableWriterSeq_Make(const TableWriterSeq** cself, VDatabase* 
     return rc;
 }
 
+static rc_t CompressREAD(TableWriterSeq *self)
+{
+    rc_t rc = 0;
+    VTable *vtbl = NULL;
+    uint8_t cursor_id = 0;
+    int64_t row = 0;
+    
+    memcpy(&self->cols_read, &TableSeqReadREAD_cols, sizeof(self->cols_read));
+    rc = TableWriter_GetVTable(self->base, &vtbl);
+    assert(rc == 0);
+    rc = TableReader_Make(&self->reader, vtbl, self->cols_read, 50 * 1024 * 1024);
+    assert(rc == 0);
+    
+    self->cols[0] = TableWriterSeq_cols[0];
+    rc = TableWriter_AddCursor(self->base, self->cols, 1, &cursor_id);
+    assert(rc == 0);
+    
+    for (row = 1; ; ++row) {
+        rc = TableReader_ReadRow(self->reader, row);
+        if (rc) {
+            if (GetRCState(rc) == rcNotFound) {
+                rc = 0;
+                break;
+            }
+            return rc;
+        }
+        rc = TableWriter_OpenRowId(self->base, row, cursor_id);
+        assert(rc == 0);
+        {
+            char const *const seq = self->cols_read[0].base.str;
+            INSDC_coord_zero const *const start = self->cols_read[1].base.coord0;
+            INSDC_coord_len const *const length = self->cols_read[2].base.coord_len;
+            uint8_t const *const cnt = self->cols_read[3].base.u8;
+            int const nreads = (int)self->cols_read[1].len;
+            int i;
+            
+            TW_COL_WRITE_BUF(self->base, self->cols[0], NULL, 0);
+            for (i = 0; i < nreads; ++i) {
+                if (cnt[i] == 0) {
+                    TW_COL_WRITE_BUF(self->base, self->cols[0], &seq[start[i]], length[i]);
+                }
+            }
+        }
+        rc = TableWriter_CloseRow(self->base);
+        assert(rc == 0);
+    }
+    rc = TableWriter_CloseCursor(self->base, cursor_id, NULL);
+    assert(rc == 0);
+    TableReader_Whack(self->reader);
+    return 0;
+}
+
 LIB_EXPORT rc_t CC TableWriterSeq_Whack(const TableWriterSeq* cself, bool commit, uint64_t* rows)
 {
     rc_t rc = 0;
@@ -360,34 +428,40 @@ LIB_EXPORT rc_t CC TableWriterSeq_Whack(const TableWriterSeq* cself, bool commit
         TableWriterSeq* self = (TableWriterSeq*)cself;
         VTable *vtbl;
         
-        TableReader_Whack(cself->tmpkey_reader);
+        TableReader_Whack(cself->reader);
+        if (commit) {
+            rc = TableWriter_CloseCursor(cself->base, 1, NULL);
+            assert(rc == 0);
+            if ((cself->options & (ewseq_co_KeepKey | ewseq_co_SaveRead)) == (ewseq_co_KeepKey | ewseq_co_SaveRead))
+                CompressREAD(self);
 
-        if (commit && (rc = TableWriter_GetVTable(cself->base, &vtbl)) == 0 ) {
-            KMetadata* meta;
-            
-            if ((rc = VTableOpenMetadataUpdate(vtbl, &meta)) == 0) {
-                KMDataNode* node = NULL;
+            if ((rc = TableWriter_GetVTable(cself->base, &vtbl)) == 0 ) {
+                KMetadata* meta;
                 
-                if (cself->stats) {
-                    if ((rc = KMetadataOpenNodeUpdate(meta, &node, "MATE_STATISTICS")) == 0) {
-                        rc = TableWriterSeq_WriteStatistics(cself, node);
+                if ((rc = VTableOpenMetadataUpdate(vtbl, &meta)) == 0) {
+                    KMDataNode* node = NULL;
+                    
+                    if (cself->stats) {
+                        if ((rc = KMetadataOpenNodeUpdate(meta, &node, "MATE_STATISTICS")) == 0) {
+                            rc = TableWriterSeq_WriteStatistics(cself, node);
+                            KMDataNodeRelease(node);
+                        }
+                    }
+                    if ((rc = KMetadataOpenNodeUpdate(meta, &node, "unaligned")) == 0) {
+                        KMDataNode *sub = NULL;
+                        
+                        KMDataNodeOpenNodeUpdate(node, &sub, "first-unaligned");
+                        KMDataNodeWriteB64(sub, &self->firstUnaligned);
+                        KMDataNodeRelease(sub);
+                        
+                        KMDataNodeOpenNodeUpdate(node, &sub, "first-half-aligned");
+                        KMDataNodeWriteB64(sub, &self->firstHalfAligned);
+                        KMDataNodeRelease(sub);
+
                         KMDataNodeRelease(node);
                     }
+                    KMetadataRelease(meta);
                 }
-                if ((rc = KMetadataOpenNodeUpdate(meta, &node, "unaligned")) == 0) {
-                    KMDataNode *sub = NULL;
-                    
-                    KMDataNodeOpenNodeUpdate(node, &sub, "first-unaligned");
-                    KMDataNodeWriteB64(sub, &self->firstUnaligned);
-                    KMDataNodeRelease(sub);
-                    
-                    KMDataNodeOpenNodeUpdate(node, &sub, "first-half-aligned");
-                    KMDataNodeWriteB64(sub, &self->firstHalfAligned);
-                    KMDataNodeRelease(sub);
-
-                    KMDataNodeRelease(node);
-                }
-                KMetadataRelease(meta);
             }
         }
 
@@ -405,7 +479,8 @@ rc_t TableWriteSeq_WriteDefaults(const TableWriterSeq* cself)
     rc_t rc = 0;
     if( cself != NULL ) {
         TableWriterSeq* self = (TableWriterSeq*)cself;
-        self->init = true;
+        self->init = 1;
+        rc = TableWriter_AddCursor(self->base, self->cols, sizeof(self->cols)/sizeof(self->cols[0]), &self->cursor_id);
         if( (self->options & ewseq_co_AlignData) ) {
             static TableWriterData const d = { "", 0 };
             TW_COL_WRITE_DEF(self->base, cself->cursor_id, self->cols[ewseq_cn_PRIMARY_ALIGNMENT_ID], d);
@@ -433,16 +508,45 @@ LIB_EXPORT rc_t CC TableWriterSeq_GetNextRowId(const TableWriterSeq* cself, int6
     return TableWriter_GetNextRowId(cself->base, rowid, cself->cursor_id);
 }
 
+static void UpdateAlignmentRowStats(TableWriterSeq *const self, int64_t rowid, TableWriterData const *const alignment_count)
+{
+    uint8_t const *const ac = alignment_count->buffer;
+    if (ac) {
+        unsigned const nreads = (unsigned)alignment_count->elements;
+        unsigned naligned = 0;
+        unsigned i;
+
+        for (i = 0; i < nreads; ++i) {
+            if (ac[i] != 0) {
+                ++naligned;
+            }
+        }
+        if (naligned == 0) {
+            if (!self->haveFirstUnaligned) {
+                self->firstUnaligned = rowid;
+                self->haveFirstUnaligned = true;
+            }
+        }
+        else if (naligned < nreads) {
+            if (!self->haveFirstHalfAligned) {
+                self->firstHalfAligned = rowid;
+                self->haveFirstHalfAligned = true;
+            }
+        }
+    }
+}
+
 LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const TableWriterSeqData* data, int64_t* rowid)
 {
     rc_t rc = 0;
     int lbl;
-    
+
     if( cself == NULL || data == NULL ) {
         rc = RC( rcAlign, rcType, rcWriting, rcParam, rcNull);
         ALIGN_DBGERR(rc);
+        return rc;
     }
-    else if( !cself->init && (rc = TableWriteSeq_WriteDefaults(cself)) != 0 ) {
+    if( !cself->init && (rc = TableWriteSeq_WriteDefaults(cself)) != 0 ) {
         ALIGN_DBGERR(rc);
     }
     else if( data->quality.buffer == NULL || data->sequence.elements != data->quality.elements ) {
@@ -478,33 +582,11 @@ LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const Table
     }
     else if( (rc = TableWriter_OpenRow(cself->base, rowid, cself->cursor_id)) == 0 ) {
         if( cself->options & ewseq_co_AlignData ) {
+            UpdateAlignmentRowStats((TableWriterSeq *)cself, *rowid, &data->alignment_count);
             TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_PRIMARY_ALIGNMENT_ID], data->primary_alignment_id);
             TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_ALIGNMENT_COUNT], data->alignment_count);
             if (rc == 0) {
                 rc = TableWriterSeq_CollectStatistics((TableWriterSeq *)cself, &data->primary_alignment_id);
-            }
-        }
-        {
-            unsigned naligned = 0;
-            unsigned i;
-            const uint8_t* ac = data->alignment_count.buffer;
-
-            for (i = 0; i < (unsigned)data->nreads; ++i) {
-                if (ac[i] != 0) {
-                    ++naligned;
-                }
-            }
-            if (naligned == 0) {
-                if (!cself->haveFirstUnaligned) {
-                    ((TableWriterSeq *)cself)->firstUnaligned = *rowid;
-                    ((TableWriterSeq *)cself)->haveFirstUnaligned = true;
-                }
-            }
-            else if (naligned < (unsigned)data->nreads) {
-                if (!cself->haveFirstHalfAligned) {
-                    ((TableWriterSeq *)cself)->firstHalfAligned = *rowid;
-                    ((TableWriterSeq *)cself)->haveFirstHalfAligned = true;
-                }
             }
         }
         if( cself->options & ewseq_co_SaveRead ) {
@@ -613,13 +695,14 @@ LIB_EXPORT rc_t CC TableWriterSeq_TmpKeyStart(const TableWriterSeq* cself)
         
         self->tmpKeyIdFirst = INT64_MAX;
         self->tmpKeyIdLast = INT64_MIN;
-        memcpy(&self->cols_read_tmpkey, &TableSeqReadTmpKey_cols, sizeof(TableSeqReadTmpKey_cols));
+        memcpy(&self->cols_read, &TableSeqReadTmpKey_cols, sizeof(self->cols_read));
         if( (rc = TableWriter_GetVTable(cself->base, &vtbl)) == 0 &&
-            (rc = TableReader_Make(&self->tmpkey_reader, vtbl, self->cols_read_tmpkey, 50 * 1024 * 1024)) == 0 ) {
+            (rc = TableReader_Make(&self->reader, vtbl, self->cols_read, 50 * 1024 * 1024)) == 0 ) {
             memcpy(self->cols_alignd, &TableWriterSeq_cols[ewseq_cn_PRIMARY_ALIGNMENT_ID], sizeof(self->cols_alignd));
             rc = TableWriter_AddCursor(self->base, self->cols_alignd,
                                        sizeof(self->cols_alignd) / sizeof(self->cols_alignd[0]),
                                        &self->alignd_cursor_id);
+            self->init = 2;
         }
     }
     return rc;
@@ -632,13 +715,13 @@ LIB_EXPORT rc_t CC TableWriterSeq_TmpKey(const TableWriterSeq* cself, int64_t ro
     if( cself == NULL || rowid == 0 || key_id == NULL ) {
         rc = RC( rcAlign, rcType, rcReading, rcParam, rcNull);
         ALIGN_DBGERR(rc);
-    } else if( cself->tmpkey_reader == NULL ) {
+    } else if( cself->reader == NULL ) {
         rc = RC( rcAlign, rcType, rcReading, rcMode, rcNotOpen);
         ALIGN_DBGERR(rc);
-    } else if( (rc = TableReader_ReadRow(cself->tmpkey_reader, rowid)) == 0 ) {
-        memcpy(key_id, cself->cols_read_tmpkey[0].base.var, sizeof(*key_id));
+    } else if( (rc = TableReader_ReadRow(cself->reader, rowid)) == 0 ) {
+        memcpy(key_id, cself->cols_read[0].base.var, sizeof(*key_id));
         if (cself->tmpKeyIdLast < rowid || rowid < cself->tmpKeyIdFirst) {
-            rc = TableReader_PageIdRange(cself->tmpkey_reader, rowid,
+            rc = TableReader_PageIdRange(cself->reader, rowid,
                                         &((TableWriterSeq*)cself)->tmpKeyIdFirst,
                                         &((TableWriterSeq*)cself)->tmpKeyIdLast);
             ((TableWriterSeq*)cself)->flush = rc == 0;
@@ -665,11 +748,6 @@ LIB_EXPORT rc_t CC TableWriterSeq_WriteAlignmentData(const TableWriterSeq* cself
     else if( primary_alignment_id == NULL || alignment_count == NULL ) {
         rc = RC( rcAlign, rcType, rcWriting, rcParam, rcNull);
         ALIGN_DBGERR(rc);
-    } else if( (rc = TableReader_ReadRow(cself->tmpkey_reader, rowid)) != 0 ||
-        cself->cols_read_tmpkey[1].len != primary_alignment_id->elements ) {
-        rc = rc ? rc : RC(rcAlign, rcType, rcWriting, rcData, rcInconsistent);
-        ALIGN_DBGERRP("nreads and primary_alignment_id length %u <> %lu",
-            rc, cself->cols_read_tmpkey[1].len, primary_alignment_id->elements);
     } else if( primary_alignment_id->elements != alignment_count->elements ) {
         rc = RC(rcAlign, rcType, rcWriting, rcData, rcInconsistent);
         ALIGN_DBGERRP("primary_alignment_id and alignment_count length %u <> %lu",
@@ -681,13 +759,15 @@ LIB_EXPORT rc_t CC TableWriterSeq_WriteAlignmentData(const TableWriterSeq* cself
             ((TableWriterSeq*)cself)->flush = false;
         }
         if( rc == 0 &&
-           (rc = TableWriter_OpenRowId(cself->base, rowid, cself->alignd_cursor_id)) == 0 ) {
+           (rc = TableWriter_OpenRowId(cself->base, rowid, cself->alignd_cursor_id)) == 0 )
+        {
+            UpdateAlignmentRowStats((TableWriterSeq *)cself, rowid, alignment_count);
             TW_COL_WRITE(cself->base, cself->cols_alignd[0], *primary_alignment_id);
             TW_COL_WRITE(cself->base, cself->cols_alignd[1], *alignment_count);
             if( rc == 0 ) {
                 rc = TableWriter_CloseRow(cself->base);
             }
-            if (rc == 0/* && (cself->options & ewseq_co_WantMateStats)*/) {
+            if (rc == 0) {
                 rc = TableWriterSeq_CollectStatistics((TableWriterSeq *)cself, primary_alignment_id);
             }
         }

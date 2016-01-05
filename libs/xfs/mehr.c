@@ -38,15 +38,14 @@
 #include <kns/manager.h>
 #include <kns/http.h>
 
+#include <xfs/xlog.h>
+
 #include "teleport.h"
 #include "mehr.h"
 #include "schwarzschraube.h"
 #include "zehr.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
-#include <string.h>
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
@@ -83,7 +82,7 @@ XFS_InitAll_MHR ( const char * ConfigFile )
     RCt = 0;
     Config = NULL;
 
-printf ( "WARNING(MEHR): InitAll [%s]\n", ConfigFile == NULL ? "NULL" : ConfigFile );
+XFSLogMsg ( "InitAll [%s]\n", ConfigFile == NULL ? "NULL" : ConfigFile );
 
         /* First we do inti config :lol: */
     RCt = XFS_LoadConfig_ZHR ( ConfigFile, & Config );
@@ -131,7 +130,7 @@ LIB_EXPORT
 rc_t CC
 XFS_DisposeAll_MHR ()
 {
-printf ( "WARNING(MEHR): DisposeAll [%s]\n", _sConfigPath_MHR );
+XFSLogMsg ( "DisposeAll [%s]\n", _sConfigPath_MHR );
 
     XFSGapKartDepotDispose ();
 

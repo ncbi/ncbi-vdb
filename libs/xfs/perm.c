@@ -33,7 +33,6 @@
 
 #include <sysalloc.h>
 
-#include <string.h>
 #include <ctype.h>  /* isspace () */
 #include <os-native.h>
 

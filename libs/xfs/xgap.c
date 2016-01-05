@@ -53,8 +53,6 @@
 
 #include <sysalloc.h>
 
-#include <string.h>
-
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*))    XFSGapProject and XFSGapDepot
@@ -173,6 +171,10 @@ _GetRepository (
         }
 
         KRepositoryMgrRelease ( RepositoryMgr );
+    }
+
+    if ( * Repository == NULL ) {
+        RCt = XFS_RC ( rcNotFound );
     }
 
     return RCt;
@@ -668,6 +670,7 @@ XFSGapUserConfigDir ( char ** UserConfigDir )
                             XFSPathGet ( Path ) ,
                             ( const char ** ) UserConfigDir
                             );
+            XFSPathRelease ( Path );
         }
     }
 
@@ -865,7 +868,7 @@ XFSGapProjectLocateObject (
     RCt = VFSManagerMakePath (
                             XFS_VfsManager (),
                             & Query,
-                            "ncbi-obj:%s",
+                            "ncbi-obj:%d",
                             ObjectId
                             );
     if ( RCt == 0 ) {
@@ -1072,14 +1075,22 @@ XFSGapProjectObjectUrlAndPath (
         }
 
         if ( RCt == 0 ) {
-            * RemoteUrl = rChar;
-            * CachePath = cChar;
+            if ( RemoteUrl != NULL ) {
+                * RemoteUrl = rChar;
+            }
+            if ( CachePath != NULL ) {
+                * CachePath = cChar;
+            }
         }
     }
 
     if ( RCt != 0 ) {
-        * RemoteUrl = NULL;
-        * CachePath = NULL;
+        if ( RemoteUrl != NULL ) {
+            * RemoteUrl = NULL;
+        }
+        if ( CachePath != NULL ) {
+            * CachePath = NULL;
+        }
 
         if ( rChar != NULL ) {
             free ( ( char * ) rChar );

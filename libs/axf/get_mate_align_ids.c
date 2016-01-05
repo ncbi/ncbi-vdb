@@ -275,10 +275,7 @@ static rc_t open_sub_cursor( ID_cache_t *self, const VXfactInfo *info, const VCu
         if ( rc != 0 )
             return rc;
     }
-    else
-    {
-	    VCursorAddRef( self->curs );
-    }
+
     rc = VCursorAddColumn( self->curs, &self->idx, "(I64)PRIMARY_ALIGNMENT_ID" );
     if ( rc == 0 )
     {

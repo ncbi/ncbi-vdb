@@ -64,10 +64,12 @@ struct NGS_Reference;
 
 enum NGS_PileupFilterBits
 {
-    NGS_PileupFilterBits_pass_bad = 1,
-    NGS_PileupFilterBits_pass_dups = 2,
-    NGS_PileupFilterBits_min_map_qual = 4,
-    NGS_PileupFilterBits_max_map_qual = 8,
+    NGS_PileupFilterBits_pass_bad            = 0x01,
+    NGS_PileupFilterBits_pass_dups           = 0x02,
+    NGS_PileupFilterBits_min_map_qual        = 0x04,
+    NGS_PileupFilterBits_max_map_qual        = 0x08,
+    NGS_PileupFilterBits_no_wraparound       = 0x10,
+    NGS_PileupFilterBits_start_within_window = 0x20,
 
     NGS_PileupFilterBits_map_qual = NGS_PileupFilterBits_min_map_qual | NGS_PileupFilterBits_max_map_qual
 };

@@ -45,9 +45,7 @@
 
 #include <sysalloc.h>
 
-#include <string.h>
 #include <ctype.h>
-#include <stdio.h>
 #include <time.h>
 
 /*||*\
@@ -982,7 +980,7 @@ XFSTarEntryList (
         return XFS_RC ( rcNull );
     }
 
-    if ( ! self -> is_folder || ! self -> status == kxfsGood ) {
+    if ( ! self -> is_folder || ! ( self -> status == kxfsGood ) ) {
         return XFS_RC ( rcInvalid );
     }
 

@@ -30,6 +30,7 @@
 #include <xfs/model.h>
 #include <xfs/node.h>
 #include <xfs/doc.h>
+#include <xfs/xlog.h>
 
 
 #include "teleport.h"
@@ -144,7 +145,7 @@ _ReadMeConstructor (
                             );
 
 /*
-printf ( "_ReadMeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_ReadMeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -164,7 +165,7 @@ _ReadMeValidator (
     RCt = 0;
 
 /*
-printf ( "_ReadMeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_ReadMeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

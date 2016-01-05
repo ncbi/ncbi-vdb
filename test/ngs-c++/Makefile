@@ -47,6 +47,15 @@ runtests:
 
 else
 
+
+# make sure runs are not cached in the user repository when running tests
+ifeq ($(wildcard ../../../asm-trace),)
+	ifeq (,$(VDB_CONFIG))
+		VDB_CONFIG = $(shell pwd)/../only-remote-repository.kfg
+	endif
+endif
+
+
 $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
@@ -134,4 +143,3 @@ valgrind_csra1pileup-c++: std
 	$(VALGRIND) $(TEST_BINDIR)/test-ngs_csra1pileup-c++     
 
 endif
-

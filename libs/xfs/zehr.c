@@ -48,7 +48,6 @@
 
 #include <sysalloc.h>
 
-#include <string.h>
 #include <ctype.h>
 #include <os-native.h>
 

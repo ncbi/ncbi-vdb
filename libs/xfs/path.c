@@ -36,12 +36,10 @@
 #include <va_copy.h>
 
 #include <xfs/path.h>
+#include <xfs/xlog.h>
 #include "schwarzschraube.h"
 
 #include <sysalloc.h>
-
-#include <string.h>
-#include <stdio.h>
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
@@ -409,7 +407,7 @@ const char * CC
 _StrCGet ( struct _StrC * self, size_t Idx )
 {
     if ( self != NULL ) {
-        if ( 0 <= Idx && Idx < self -> q ) {
+        if ( Idx < self -> q ) {
             return * ( self -> e + Idx );
         }
     }
@@ -484,8 +482,11 @@ _PathCompile ( struct XFSPath * self, const char ** Str )
 {
     size_t Qty, Idx, StrSize;
     char * Path;
+    const char * Token;
 
     Qty = Idx = StrSize = 0;
+    Path = NULL;
+    Token = NULL;
 
     XFS_CSAN ( Str )
     XFS_CAN ( self )
@@ -518,10 +519,13 @@ _PathCompile ( struct XFSPath * self, const char ** Str )
     }
 
     for ( Idx = 0; Idx < Qty; Idx ++ ) {
-        if ( Idx != 0 ) {
-            strcat ( Path, "/" );
+        Token = XFSPathPartGet ( self, Idx );
+        if ( strcmp ( Token, "/" ) != 0 ) {
+            if ( Idx != 0 ) {
+                strcat ( Path, "/" );
+            }
+            strcat ( Path, Token );
         }
-        strcat ( Path, XFSPathPartGet ( self, Idx ) );
     }
 
     * Str = Path;
@@ -595,7 +599,8 @@ _PathParse (
     }
 
     if ( RCt == 0 ) {
-        Bg = Cr = Path;
+        Bg = Path;
+        Cr = Path;
         while ( * Cr != 0 ) {
             if ( * Cr == '/' ) {
                 if ( 0 < Cr - Bg ) {
@@ -797,35 +802,27 @@ XFSPathVMakeAbsolute (
 )
 {
     rc_t RCt;
-    const struct KDirectory * NatDir;
     char BF [ XFS_SIZE_1024 ];
     va_list xArgs;
 
     RCt = 0;
-    NatDir = NULL;
     * BF = 0;
 
     XFS_CSAN ( Out )
     XFS_CAN ( Out )
     XFS_CAN ( Format )
 
-    RCt = KDirectoryNativeDir ( ( struct KDirectory ** ) & NatDir );
+    va_copy ( xArgs, Args );
+    RCt = XFS_VResolvePath (
+                            true,   /* Absolute */
+                            BF,
+                            sizeof ( BF ),
+                            Format,
+                            xArgs
+                            );
+    va_end ( xArgs );
     if ( RCt == 0 ) {
-        va_copy ( xArgs, Args );
-        RCt = KDirectoryVResolvePath (
-                                    NatDir, /* Directory */
-                                    true,   /* Absolute */
-                                    BF,
-                                    sizeof ( BF ),
-                                    Format,
-                                    xArgs
-                                    );
-        va_end ( xArgs );
-        if ( RCt == 0 ) {
-            RCt = XFSPathMake ( Out, AddPrecedingSlash, BF );
-        }
-
-        KDirectoryRelease ( NatDir );
+        RCt = XFSPathMake ( Out, AddPrecedingSlash, BF );
     }
 
     return RCt;
@@ -1489,17 +1486,17 @@ XFSPathDump ( const struct XFSPath * self )
     size_t Idx = 0;
 
     if ( self == NULL ) {
-        printf ( " [Path] NULL\n" );
+        XFSLogDbg ( " [Path] NULL\n" );
         return;
     }
 
-    printf ( " [Path] [%s]\n", self -> orig );
-    printf ( "   [abs] [%s]\n", self -> is_absolute ? "yes" : "no" );
-    printf ( "  [path] [%s]\n", self -> path );
+    XFSLogDbg ( " [Path] [%s]\n", self -> orig );
+    XFSLogDbg ( "   [abs] [%s]\n", self -> is_absolute ? "yes" : "no" );
+    XFSLogDbg ( "  [path] [%s]\n", self -> path );
 
-    printf ( "   [qty] [%ld]\n", self -> tokens -> q );
+    XFSLogDbg ( "   [qty] [%ld]\n", self -> tokens -> q );
     for ( Idx = 0; Idx < self -> tokens ->q; Idx ++ ) {
-        printf ( "        [%ld] [%s]\n", Idx, self -> tokens -> e [ Idx ] );
+        XFSLogDbg ( "        [%ld] [%s]\n", Idx, self -> tokens -> e [ Idx ] );
     }
 
 }   /* XFSPathDump () */

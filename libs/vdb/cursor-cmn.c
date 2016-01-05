@@ -2358,47 +2358,79 @@ LIB_EXPORT rc_t CC VCursorSetUserData ( const VCursor *cself,
 
 LIB_EXPORT rc_t CC VCursorLinkedCursorGet(const VCursor *cself,const char *tbl,VCursor const **curs)
 {
-    LinkedCursorNode *node;
-    VCursor *self = (VCursor *)cself;
-
-    if(cself == NULL)
-        return RC(rcVDB, rcCursor, rcAccessing, rcSelf, rcNull);
-    if(tbl == NULL)
-        return RC(rcVDB, rcCursor, rcAccessing, rcName, rcNull);
-    if(tbl[0] == '\0')
-        return RC(rcVDB, rcCursor, rcAccessing, rcName, rcEmpty);
-    node = (LinkedCursorNode *)BSTreeFind(&self->linked_cursors, tbl, LinkedCursorComp);
-    if (node == NULL)
-        return RC(rcVDB, rcCursor, rcAccessing, rcName, rcNotFound);
-
-    *curs = node->curs;
-    return 0;
-}
-LIB_EXPORT rc_t CC VCursorLinkedCursorSet(const VCursor *cself,const char *tbl,VCursor const *curs)
-{
-    LinkedCursorNode *node;
-    VCursor *self = (VCursor *)cself;
     rc_t rc;
 
-    if(cself == NULL)
-        return RC(rcVDB, rcCursor, rcAccessing, rcSelf, rcNull);
-    if(tbl == NULL)
-        return RC(rcVDB, rcCursor, rcAccessing, rcName, rcNull);
-    if(tbl[0] == '\0')
-        return RC(rcVDB, rcCursor, rcAccessing, rcName, rcEmpty);
+    if ( curs == NULL )
+        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( cself == NULL )
+            rc = RC(rcVDB, rcCursor, rcAccessing, rcSelf, rcNull);
+        else if ( tbl == NULL )
+            rc = RC(rcVDB, rcCursor, rcAccessing, rcName, rcNull);
+        else if ( tbl [ 0 ] == 0 )
+            rc = RC(rcVDB, rcCursor, rcAccessing, rcName, rcEmpty);
+        else
+        {
+            LinkedCursorNode *node = (LinkedCursorNode *)
+                BSTreeFind(&cself->linked_cursors, tbl, LinkedCursorComp);
 
-    node = malloc(sizeof(*node));
-    if (node == NULL)
-            return RC(rcVDB, rcCursor, rcAccessing, rcMemory, rcExhausted);
-    strncpy(node->tbl,tbl,sizeof(node->tbl));
-    node->curs=(VCursor*)curs;
-    rc = BSTreeInsertUnique(&self->linked_cursors, (BSTNode *)node, NULL, LinkedCursorNodeComp);
-    if (rc){
-       free(node); 
-    } else {
-	VCursorAddRef(curs);
-	((VCursor*)curs)->is_sub_cursor = true;
+            if (node == NULL)
+                rc = RC(rcVDB, rcCursor, rcAccessing, rcName, rcNotFound);
+            else
+            {
+                rc = VCursorAddRef ( node -> curs );
+                if ( rc == 0 )
+                {
+                    * curs = node -> curs;
+                    return 0;
+                }
+            }
+        }
+
+        * curs = NULL;
     }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VCursorLinkedCursorSet(const VCursor *cself,const char *tbl,VCursor const *curs)
+{
+    rc_t rc;
+    VCursor *self = (VCursor *)cself;
+
+    if(cself == NULL)
+        rc = RC(rcVDB, rcCursor, rcAccessing, rcSelf, rcNull);
+    else if(tbl == NULL)
+        rc = RC(rcVDB, rcCursor, rcAccessing, rcName, rcNull);
+    else if(tbl[0] == '\0')
+        rc = RC(rcVDB, rcCursor, rcAccessing, rcName, rcEmpty);
+    else
+    {
+        rc = VCursorAddRef ( curs );
+        if ( rc == 0 )
+        {
+            LinkedCursorNode *node = malloc ( sizeof * node );
+            if (node == NULL)
+                rc = RC(rcVDB, rcCursor, rcAccessing, rcMemory, rcExhausted);
+            else
+            {
+                strncpy ( node->tbl, tbl, sizeof node->tbl );
+                node->curs = (VCursor*) curs;
+                rc = BSTreeInsertUnique(&self->linked_cursors, (BSTNode *)node, NULL, LinkedCursorNodeComp);
+                if ( rc == 0 )
+                {
+                    ((VCursor*)curs)->is_sub_cursor = true;
+                    return 0;
+                }
+
+                free ( node );
+            }
+
+            VCursorRelease ( curs );
+        }
+    }
+
     return rc;
 }
 

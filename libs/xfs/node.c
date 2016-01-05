@@ -34,6 +34,7 @@
 #include <xfs/tree.h>
 #include <xfs/node.h>
 #include <xfs/path.h>
+#include <xfs/xlog.h>
 
 #include "mehr.h"
 #include "schwarzschraube.h"
@@ -42,7 +43,6 @@
 
 #include <sysalloc.h>
 
-#include <stdio.h>
 #include <string.h> /* strcmp () */
 
 /*)))
@@ -114,7 +114,7 @@ XFSNodeInitVT (
 
     RCt = _NodeSetName ( self, NodeName );
 /*
-printf ( " [XFSNodeInit] [%p] [%s]\n", ( void * ) Node, Node -> Name );
+XFSLogDbg ( " [XFSNodeInit] [%p] [%s]\n", ( void * ) Node, Node -> Name );
 */
     if ( RCt == 0 ) {
         KRefcountInit (
@@ -213,7 +213,7 @@ XFSNodeMake (
     }
 
 /*
-printf ( "XFSNodeMake ( \"%s\" ) As [%s] ( 0x%p ) [%d]\n", NodeName, ( NameAlias == NULL ? "NULL" : NameAlias ), ( void * ) NewNode, RCt );
+XFSLogDbg ( "XFSNodeMake ( \"%s\" ) As [%s] ( 0x%p ) [%d]\n", NodeName, ( NameAlias == NULL ? "NULL" : NameAlias ), ( void * ) NewNode, RCt );
 */
 
     return RCt;
@@ -230,7 +230,7 @@ XFSNodeDispose ( const struct XFSNode * self )
     Node = ( struct XFSNode * ) self;
 
 /*
-printf ( "XFSNodeDispose ( 0x%p )\n", ( void * ) self );
+XFSLogDbg ( "XFSNodeDispose ( 0x%p )\n", ( void * ) self );
 */
 
     if ( Node == NULL ) {
@@ -241,7 +241,7 @@ printf ( "XFSNodeDispose ( 0x%p )\n", ( void * ) self );
 
     if ( Node -> Name != NULL ) {
 /*
-printf ( " [XFSNodeDispose] [%p] [%s]\n", ( void * ) Node, Node -> Name );
+XFSLogDbg ( " [XFSNodeDispose] [%p] [%s]\n", ( void * ) Node, Node -> Name );
 */
         free ( Node -> Name );
         Node -> Name = NULL;
@@ -273,7 +273,7 @@ XFSNodeAddRef ( const struct XFSNode * self )
 
     if ( self != NULL ) {
 /*
-printf ( "XFSNodeAddRef ( 0x%p )[%s]\n", ( void * ) self, self -> Name );
+XFSLogDbg ( "XFSNodeAddRef ( 0x%p )[%s]\n", ( void * ) self, self -> Name );
 */
 
         RefC = KRefcountAdd (
@@ -309,7 +309,7 @@ XFSNodeRelease ( const struct XFSNode * self )
 
     if ( self != NULL ) {
 /*
-printf ( "XFSNodeRelease ( 0x%p )[%s]\n", ( void * ) self, self -> Name );
+XFSLogDbg ( "XFSNodeRelease ( 0x%p )[%s]\n", ( void * ) self, self -> Name );
 */
         RefC = KRefcountDrop (
                             & ( self -> refcount ),
@@ -360,7 +360,7 @@ XFSNodeFindNode (
             }
             else {
 /*
-printf ( "XFSNodeAttrEditor (0x%p): unimplemented method 'findnode'\n", ( void * ) self );
+XFSLogDbg ( "XFSNodeAttrEditor (0x%p): unimplemented method 'findnode'\n", ( void * ) self );
 */
                 RCt = XFS_RC ( rcUnsupported );
             }
@@ -584,7 +584,7 @@ XFSNodeDump ( const struct XFSNode * self )
     RCt = XFSNodeDescribe ( self, Buffer, sizeof ( Buffer ) );
 
     if ( RCt == 0 ) {
-        printf ( "|||>>> %s\n", Buffer );
+        XFSLogDbg ( "|||>>> %s\n", Buffer );
     }
 
     return RCt;

@@ -107,7 +107,8 @@ struct NGS_Alignment* NGS_ReferenceGetAlignments ( NGS_Reference * self, ctx_t c
 
 /* GetFilteredAlignments
  */
-struct NGS_Alignment* NGS_ReferenceGetFilteredAlignments ( NGS_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, bool wants_no_wraparound );
+struct NGS_Alignment* NGS_ReferenceGetFilteredAlignments ( NGS_Reference * self, ctx_t ctx,
+    bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 
 /* GetAlignmentCount
  */
@@ -119,7 +120,8 @@ struct NGS_Alignment* NGS_ReferenceGetAlignmentSlice ( NGS_Reference * self, ctx
 
 /* GetFilteredAlignmentSlice
  */
-struct NGS_Alignment* NGS_ReferenceGetFilteredAlignmentSlice ( NGS_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, bool wants_no_wraparound , bool wants_within_window );
+struct NGS_Alignment* NGS_ReferenceGetFilteredAlignmentSlice ( NGS_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size,
+    bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 
 /* GetPileups
  */
@@ -127,15 +129,18 @@ struct NGS_Pileup* NGS_ReferenceGetPileups ( NGS_Reference * self, ctx_t ctx, bo
 
 /* GetFilteredPileups
  */
-struct NGS_Pileup* NGS_ReferenceGetFilteredPileups ( NGS_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
+struct NGS_Pileup* NGS_ReferenceGetFilteredPileups ( NGS_Reference * self, ctx_t ctx,
+    bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 
 /* GetPileupSlice
  */
-struct NGS_Pileup* NGS_ReferenceGetPileupSlice ( NGS_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary );
+struct NGS_Pileup* NGS_ReferenceGetPileupSlice ( NGS_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size,
+    bool wants_primary, bool wants_secondary );
 
 /* GetFilteredPileupSlice
  */
-struct NGS_Pileup* NGS_ReferenceGetFilteredPileupSlice ( NGS_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
+struct NGS_Pileup* NGS_ReferenceGetFilteredPileupSlice ( NGS_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size,
+    bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 
 /* GetStatistics
  */
@@ -172,11 +177,14 @@ struct NGS_Reference_vt
     struct NGS_String *     ( * get_bases          ) ( NGS_REFERENCE * self, ctx_t ctx, uint64_t offset, uint64_t size );
     struct NGS_String *     ( * get_chunk          ) ( NGS_REFERENCE * self, ctx_t ctx, uint64_t offset, uint64_t size );
     struct NGS_Alignment*   ( * get_alignment      ) ( NGS_REFERENCE * self, ctx_t ctx, const char * alignmentId );
-    struct NGS_Alignment*   ( * get_alignments     ) ( NGS_REFERENCE * self, ctx_t ctx, bool wants_primary, bool wants_secondary, bool wants_no_wraparound );
+    struct NGS_Alignment*   ( * get_alignments     ) ( NGS_REFERENCE * self, ctx_t ctx,
+        bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
     uint64_t                ( * get_count          ) ( const NGS_REFERENCE * self, ctx_t ctx, bool wants_primary, bool wants_secondary );
-    struct NGS_Alignment*   ( * get_slice          ) ( NGS_REFERENCE * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, bool wants_no_wraparound, bool wants_within_window );
+    struct NGS_Alignment*   ( * get_slice          ) ( NGS_REFERENCE * self, ctx_t ctx, uint64_t offset, uint64_t size,
+        bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
     struct NGS_Pileup*      ( * get_pileups        ) ( NGS_REFERENCE * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
-    struct NGS_Pileup*      ( * get_pileup_slice   ) ( NGS_REFERENCE * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
+    struct NGS_Pileup*      ( * get_pileup_slice   ) ( NGS_REFERENCE * self, ctx_t ctx, uint64_t offset, uint64_t size,
+        bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
     struct NGS_Statistics*  ( * get_statistics     ) ( const NGS_REFERENCE * self, ctx_t ctx );
     bool                    ( * next               ) ( NGS_REFERENCE * self, ctx_t ctx );
 };

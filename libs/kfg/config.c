@@ -2434,42 +2434,37 @@ bool load_user_settings(KConfig *self, const KDirectory *dir, const char* dir_pa
 static
 bool load_from_home(KConfig *self, const KDirectory *dir)
 {
-    const char *home = getenv("HOME");
-    DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: checking HOME\n" ) );
+    String *ncbi_home = NULL;
+    rc_t rc = 0;
 
-    if (home == NULL) {
-        home = getenv("USERPROFILE");
+    DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: checking NCBI_HOME\n" ) );
+
+    rc = KConfigReadString(self, "NCBI_HOME", &ncbi_home);
+    if (rc != 0) {
+        DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG),
+            ("KFG: cannot read NCBI_HOME from configuration\n"));
+        return false;
     }
-
-    if (home != NULL)
+    else
     {
         bool loaded;
-        size_t num_writ;
-        char path[PATH_MAX];
-        rc_t rc = string_printf(path, sizeof path, &num_writ, "%s/.ncbi", home);
-        if (rc != 0)
-            return false;
 
-        assert(num_writ < sizeof path);
-        
-        loaded = load_from_path ( self, dir, path, num_writ );
+        assert(ncbi_home);
+
+        loaded = load_from_path ( self, dir, ncbi_home->addr, ncbi_home->size );
         if ( loaded )
         {
             DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG),
-                ( "KFG: found from '%s'\n", path ) );
+                ( "KFG: found from '%S'\n", ncbi_home ) );
         }
 
-        if ( load_user_settings ( self, dir, path ) )
+        if ( load_user_settings ( self, dir, ncbi_home->addr ) )
             loaded = true;
-            
+
+        free(ncbi_home);
+
         return loaded;
     }
-    else {
-        DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG),
-            ( "KFG: none of env{HOME}, env{USERPROFILE} is defined\n" ) );
-    }
-
-    return false;
 }
 
 static
@@ -2689,6 +2684,26 @@ void add_predefined_nodes ( KConfig * self, const char *appname )
 #undef DEFINE_ENV
 
     KDirectoryRelease ( cwd );
+
+   /* Update NCBI_HOME and NCBI_SETTINGS when they are set in the environment */
+    {
+        const char *NCBI_SETTINGS = getenv("NCBI_SETTINGS");
+        if (NCBI_SETTINGS != NULL) {
+            update_node(self, "NCBI_SETTINGS", NCBI_SETTINGS, false);
+        }
+
+        value = getenv("NCBI_HOME");
+        if (value != NULL) {
+            update_node(self, "NCBI_HOME", value, false);
+            if (NCBI_SETTINGS == NULL) {
+                size_t bytes2 = 0;
+                char buf2[4096] = "";
+                string_printf(buf2, sizeof buf2, &bytes2,
+                    "%s/%s", value, MAGIC_LEAF_NAME);
+                update_node(self, "NCBI_SETTINGS", buf2, false);
+            }
+        }
+    }
 }
 
 #if WINDOWS

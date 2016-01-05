@@ -24,9 +24,17 @@
   <PropertyGroup>
     <TargetName>lib$(ProjectName)</TargetName>
   </PropertyGroup>
-  
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(NGS_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%ProgramFiles(x86)%\Dokan\DokanLibrary;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+
   <ItemGroup>
     <ClCompile Include="..\..\..\libs\xfs\xfs.c" />
+    <ClCompile Include="..\..\..\libs\xfs\xlog.c" />
     <ClCompile Include="..\..\..\libs\xfs\win\platform.c" />
     <ClCompile Include="..\..\..\libs\xfs\win\operations.c" />
     <ClCompile Include="..\..\..\libs\xfs\win\security.c" />
@@ -37,7 +45,6 @@
     <ClCompile Include="..\..\..\libs\xfs\perm.c" />
     <ClCompile Include="..\..\..\libs\xfs\editors.c" />
     <ClCompile Include="..\..\..\libs\xfs\handle.c" />
-    <ClCompile Include="..\..\..\libs\xfs\mfile.c" />
     <ClCompile Include="..\..\..\libs\xfs\teleport.c" />
     <ClCompile Include="..\..\..\libs\xfs\foo.c" />
     <ClCompile Include="..\..\..\libs\xfs\ncon.c" />
@@ -57,6 +64,7 @@
     <ClCompile Include="..\..\..\libs\xfs\encro.c" />
     <ClCompile Include="..\..\..\libs\xfs\xencws.c" />
     <ClCompile Include="..\..\..\libs\xfs\encws.c" />
+    <ClCompile Include="..\..\..\libs\xfs\spen.c" />
     <ClCompile Include="..\..\..\libs\xfs\xgap.c" />
     <ClCompile Include="..\..\..\libs\xfs\xgapf.c" />
     <ClCompile Include="..\..\..\libs\xfs\xgapk.c" />

@@ -34,14 +34,13 @@
 #include <xfs/model.h>
 #include <xfs/tree.h>
 #include <xfs/node.h>
+#include <xfs/xlog.h>
 
 #include "mehr.h"
 #include "zehr.h"
 #include "ncon.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
 
 /*)))
  |||
@@ -81,7 +80,7 @@ _NodeContainerNodeDispose ( const struct XFSNodeContainerNode * self )
                                 ( struct XFSNodeContainerNode * ) self;
 
 /*
-printf ( "_NodeContainerNodeDispose ( 0x%p )\n", ( void * ) self );
+XFSLogDbg ( "_NodeContainerNodeDispose ( 0x%p )\n", ( void * ) self );
 */
 
     if ( Node != NULL ) {
@@ -127,7 +126,7 @@ _NodeContainerNodeMake (
         * RetNode = NULL;   /* for any case :lol: */
     }
 /*
-printf ( "_NodeContainerNodeMake ( 0x%p )\n", ( void * ) * RetNode );
+XFSLogDbg ( "_NodeContainerNodeMake ( 0x%p )\n", ( void * ) * RetNode );
 */
 
     return RCt;
@@ -181,7 +180,7 @@ XFSNodeContainerMake (
     }
 
 /*
-printf ( "XFSNodeContainerMake ( 0x%p )\n", ( void * ) * Container );
+XFSLogDbg ( "XFSNodeContainerMake ( 0x%p )\n", ( void * ) * Container );
 */
 
     return RCt;
@@ -203,7 +202,7 @@ rc_t CC
 XFSNodeContainerDispose ( const struct XFSNodeContainer * self )
 {
 /*
-printf ( "XFSNodeContainerDispose ( 0x%p )\n", ( void * ) self );
+XFSLogDbg ( "XFSNodeContainerDispose ( 0x%p )\n", ( void * ) self );
 */
 
     if ( self != NULL ) {

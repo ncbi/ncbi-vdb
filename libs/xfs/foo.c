@@ -35,6 +35,7 @@
 #include <xfs/editors.h>
 #include <xfs/perm.h>
 #include <xfs/doc.h>
+#include <xfs/xlog.h>
 
 #include "mehr.h"
 #include "zehr.h"
@@ -43,9 +44,6 @@
 #include "common.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
-
 
 /*)))
  |||
@@ -108,7 +106,7 @@ _FooNodeMake ( struct XFSNode ** Foo, const char * NodeName )
     }
 
 /*
-printf ( "_FooNodeMake ND[0x%p] NM[%s]\n", ( void * ) TheFoo, NodeName );
+XFSLogDbg ( "_FooNodeMake ND[0x%p] NM[%s]\n", ( void * ) TheFoo, NodeName );
 */
 
     return RCt;
@@ -121,7 +119,7 @@ _FooNodeDispose ( const struct XFSNode * self )
     struct XFSNode * Foo = ( struct XFSNode * ) self;
 
 /*
-printf ( "_FooNodeDispose ( 0x%p )\n", ( void * ) Foo );
+XFSLogDbg ( "_FooNodeDispose ( 0x%p )\n", ( void * ) Foo );
 */
 
     if ( Foo == NULL ) {
@@ -176,7 +174,7 @@ _FooNodeConstructor (
     }
 
 /*
-printf ( "_FooNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_FooNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -196,7 +194,7 @@ _FooNodeValidator (
     RCt = 0;
 
 /*
-printf ( "_FooNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+XFSLogDbg ( "_FooNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

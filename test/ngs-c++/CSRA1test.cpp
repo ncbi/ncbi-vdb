@@ -376,6 +376,14 @@ FIXTURE_TEST_CASE(CSRA1_Reference_GetLength, CSRA1_Fixture)
     REQUIRE_EQ( CSRA1_ReferenceLength, getReference ( "supercont2.1" ). getLength () );
 }
 
+
+static uint64_t CSRA1_ReferenceLength_VDB_2832 = (uint64_t)49711204;
+FIXTURE_TEST_CASE(CSRA1_Reference_GetLength_VDB_2832, CSRA1_Fixture)
+{
+    REQUIRE_EQ( CSRA1_ReferenceLength_VDB_2832, ncbi :: NGS :: openReadCollection ( "SRR2073063" ) . getReference ( "NC_016101.1" ). getLength () );
+    REQUIRE_EQ( CSRA1_ReferenceLength_VDB_2832, ncbi :: NGS :: openReadCollection ( "SRR2073063" ) . getReference ( "Gm14" ). getLength () );
+}
+
 FIXTURE_TEST_CASE(CSRA1_Reference_GetReferenceBases_All, CSRA1_Fixture)
 {
     ngs :: String str = getReference ( "supercont2.1" ). getReferenceBases ( 0 );    
@@ -604,7 +612,7 @@ FIXTURE_TEST_CASE(CSRA1_Alignment_getReferencePositionProjectionRange, CSRA1_Fix
     REQUIRE( res == 1 );
 
     res = ncbi::NGS::openReadCollection("SRR1597895").getAlignment("SRR1597895.PA.26088399").getReferencePositionProjectionRange(234668879);
-    REQUIRE( res == ((uint64_t)-1 ^ 0xFFFFFFFFu) ); // out of bounds
+    REQUIRE( res == (uint64_t)-1 ); // out of bounds
 }
 
 FIXTURE_TEST_CASE(CSRA1_Alignment_getReferencePositionProjectionRangeI, CSRA1_Fixture)

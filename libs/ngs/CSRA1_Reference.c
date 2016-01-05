@@ -74,9 +74,10 @@ static uint64_t                 CSRA1_ReferenceGetLength ( CSRA1_Reference * sel
 static struct NGS_String *      CSRA1_ReferenceGetBases ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size );
 static struct NGS_String *      CSRA1_ReferenceGetChunk ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size );
 static struct NGS_Alignment*    CSRA1_ReferenceGetAlignment ( CSRA1_Reference * self, ctx_t ctx, const char * alignmentId );
-static struct NGS_Alignment*    CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, bool wants_no_wraparound );
+static struct NGS_Alignment*    CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 static uint64_t                 CSRA1_ReferenceGetAlignmentCount ( const CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary );
-static struct NGS_Alignment*    CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, bool wants_no_wraparound, bool wants_within_window );
+static struct NGS_Alignment*    CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size,
+    bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 static struct NGS_Pileup*       CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 static struct NGS_Pileup*       CSRA1_ReferenceGetPileupSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 struct NGS_Statistics*          CSRA1_ReferenceGetStatistics ( const CSRA1_Reference * self, ctx_t ctx );
@@ -229,10 +230,11 @@ bool CSRA1_ReferenceGetIsCircular ( const CSRA1_Reference * self, ctx_t ctx )
 }
 
 static
-uint64_t CountRows ( NGS_Cursor const * curs, ctx_t ctx, uint32_t colIdx, const void* value, int64_t firstRow, uint64_t end_row)
+uint64_t CountRows ( NGS_Cursor const * curs, ctx_t ctx, uint32_t colIdx, const void* value, uint32_t value_size, int64_t firstRow, uint64_t end_row)
 {   /* count consecutive rows having the same value in column # colIdx as in firstRow, starting from and including firstRow */
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     
+    const void* last_value = value;
     uint64_t cur_row = (uint64_t)firstRow + 1;
     while (cur_row < end_row)
     {
@@ -241,9 +243,12 @@ uint64_t CountRows ( NGS_Cursor const * curs, ctx_t ctx, uint32_t colIdx, const 
         ON_FAIL ( NGS_CursorCellDataDirect ( curs, ctx, cur_row, colIdx, & elem_bits, & base, & boff, & row_len ) )
             return 0;
 
-        if (base != value)
+        if (base != last_value)
         {
-            break;
+            if ( value_size != row_len || memcmp ( base, last_value, row_len ) != 0 )
+                break;
+
+            last_value = base;
         }
         
         ++ cur_row;
@@ -415,7 +420,7 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignment ( CSRA1_Reference * self, ctx_
     return NULL;
 }
 
-struct NGS_Alignment* CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, bool wants_no_wraparound )
+struct NGS_Alignment* CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual )
 {   
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
@@ -436,6 +441,9 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx
         {
             TRY ( uint64_t ref_len = CSRA1_ReferenceGetLength ( self, ctx ) )
             {
+                /* wants_with_window does not matter, this is not a slice */
+                filters &= ~ NGS_AlignmentFilterBits_start_within_window;
+
                 return CSRA1_ReferenceWindowMake ( ctx, 
                                                    self -> dad . coll, 
                                                    self -> curs,
@@ -449,8 +457,8 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignments ( CSRA1_Reference * self, ctx
                                                    0,
                                                    wants_primary, 
                                                    wants_secondary,
-                                                   wants_no_wraparound,
-                                                   false, /* wants_with_window does not matter, this is not a slice */
+                                                   filters, 
+                                                   map_qual,
                                                    self -> align_id_offset );
             }
         }
@@ -594,8 +602,8 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
                                                          uint64_t size, 
                                                          bool wants_primary, 
                                                          bool wants_secondary,
-                                                         bool wants_no_wraparound,
-                                                         bool wants_within_window )
+                                                         uint32_t filters,
+                                                         int32_t map_qual )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading ); 
 
@@ -638,8 +646,8 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
                                                        size,
                                                        wants_primary, 
                                                        wants_secondary,
-                                                       wants_no_wraparound,
-                                                       wants_within_window,
+                                                       filters,
+                                                       map_qual,
                                                        self -> align_id_offset );
                 }
                 else
@@ -668,8 +676,8 @@ struct NGS_Alignment* CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Reference * self,
                                                            size,
                                                            wants_primary, 
                                                            wants_secondary,
-                                                           wants_no_wraparound,
-                                                           wants_within_window,
+                                                           filters,
+                                                           map_qual,
                                                            self -> align_id_offset );
                     }
                 }
@@ -808,7 +816,7 @@ bool CSRA1_ReferenceFind ( NGS_Cursor const * curs, ctx_t ctx, const char * spec
                         if ( memcmp ( spec, base, row_len ) == 0 )
                         {
                             *firstRow = cur_row;
-                            *rowCount = CountRows( curs, ctx, reference_NAME, base, * firstRow, end_row );
+                            *rowCount = CountRows( curs, ctx, reference_NAME, base, row_len, * firstRow, end_row );
                             return true;
                         }
                     }
@@ -831,7 +839,7 @@ bool CSRA1_ReferenceFind ( NGS_Cursor const * curs, ctx_t ctx, const char * spec
                         if ( memcmp ( spec, base, row_len ) == 0 )
                         {
                             *firstRow = cur_row;
-                            *rowCount = CountRows( curs, ctx, reference_SEQ_ID, base, * firstRow, end_row );
+                            *rowCount = CountRows( curs, ctx, reference_SEQ_ID, base, row_len, * firstRow, end_row );
                             return true;
                         }
                     }
@@ -1049,7 +1057,7 @@ bool CSRA1_ReferenceIteratorNext ( CSRA1_Reference * self, ctx_t ctx )
             
             if ( rc != 0 )
             {   /* index is not available, do a table scan */
-                rowCount = CountRows ( self -> curs, ctx, reference_NAME, refNameBase, self -> first_row, self -> iteration_row_last );
+                rowCount = CountRows ( self -> curs, ctx, reference_NAME, refNameBase, nameLength, self -> first_row, self -> iteration_row_last );
             }
             
             self -> last_row = self -> first_row + rowCount - 1;

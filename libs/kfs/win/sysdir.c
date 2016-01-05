@@ -2414,6 +2414,8 @@ rc_t CC KSysDirCreateFile ( KSysDir *self, KFile **f, bool update,
         HANDLE file_handle;
         DWORD dwDesiredAccess = update ? GENERIC_READ | GENERIC_WRITE : GENERIC_WRITE;
         DWORD dwCreationDisposition = CREATE_ALWAYS;
+        DWORD dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
+        DWORD dwShareMode = FILE_SHARE_READ;
 
         switch ( cmode & kcmValueMask )
         {
@@ -2428,10 +2430,16 @@ rc_t CC KSysDirCreateFile ( KSysDir *self, KFile **f, bool update,
         case kcmCreate : /* create and open only if does not already exist */
             dwCreationDisposition = CREATE_NEW;
             break;
+        case kcmSharedAppend :
+            dwCreationDisposition = OPEN_ALWAYS;
+            dwDesiredAccess = FILE_APPEND_DATA;
+            dwFlagsAndAttributes |= FILE_FLAG_WRITE_THROUGH;
+            dwShareMode |= FILE_SHARE_WRITE;
+            break;
         }
 
-        file_handle = CreateFileW ( file_name, dwDesiredAccess, FILE_SHARE_READ,
-            NULL, dwCreationDisposition, FILE_ATTRIBUTE_NORMAL, NULL );
+        file_handle = CreateFileW ( file_name, dwDesiredAccess, dwShareMode,
+            NULL, dwCreationDisposition, dwFlagsAndAttributes, NULL );
         while ( file_handle == INVALID_HANDLE_VALUE )
         {
             DWORD error;
@@ -2444,8 +2452,8 @@ rc_t CC KSysDirCreateFile ( KSysDir *self, KFile **f, bool update,
                 KSysDirCreateParents ( self, file_name, dir_access, true );
 
                 /* try creating the file again */
-                file_handle = CreateFileW ( file_name, dwDesiredAccess, FILE_SHARE_READ,
-                    NULL, dwCreationDisposition, FILE_ATTRIBUTE_NORMAL, NULL );
+                file_handle = CreateFileW ( file_name, dwDesiredAccess, dwShareMode,
+                    NULL, dwCreationDisposition, dwFlagsAndAttributes, NULL );
                 if ( file_handle != INVALID_HANDLE_VALUE )
                     break;
             }

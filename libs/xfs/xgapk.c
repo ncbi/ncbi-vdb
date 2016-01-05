@@ -45,8 +45,6 @@
 
 #include <sysalloc.h>
 
-#include <string.h>
-
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*)) XFSGapKart and XFSGapKartItem structs are living here
@@ -627,6 +625,11 @@ XFSGapKartDispose ( const struct XFSGapKart * self )
         if ( Kart -> lain != NULL ) {
             _LaInDispose ( Kart -> lain );
             Kart -> lain = NULL;
+        }
+
+        if ( Kart -> name != NULL ) {
+            free ( ( char * ) Kart -> name );
+            Kart -> name = NULL;
         }
 
         if ( Kart -> path != NULL ) {

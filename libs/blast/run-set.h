@@ -268,8 +268,8 @@ struct VdbBlastRunSet {
     uint64_t maxSeqLen;
 };
 
-rc_t _VTableMakeCursor(const struct VTable *self,
-     const struct VCursor **curs, uint32_t *col_idx, const char *col_name);
+rc_t _VTableMakeCursor(const struct VTable *self, const struct VCursor **curs,
+    uint32_t *col_idx, const char *col_name, const char *acc);
 
 rc_t _ReadDescFindNextRead(ReadDesc *self, bool *found);
 VdbBlastStatus _ReadDescFixReadId(ReadDesc *self);

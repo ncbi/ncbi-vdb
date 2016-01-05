@@ -39,6 +39,7 @@
 #include <kns/stream.h>
 
 #include <xfs/path.h>
+#include <xfs/xlog.h>
 
 #include "schwarzschraube.h"
 #include "xhttp.h"
@@ -47,11 +48,10 @@
 
 #include <sysalloc.h>
 
-#include <string.h>
 #include <ctype.h>
 #include <os-native.h>
-#include <stdio.h>
 #include <time.h>
+#include <stdio.h> /* sscanf */
 
 /*||*\
   || Lyrics:
@@ -949,6 +949,7 @@ _HttpEDAdd ( const struct XFSHttpEntry * Entry )
     return RCt;
 }   /* _HttpEDAdd () */
 
+#ifdef NOT_NEED_YET
 static
 rc_t CC
 _HttpEDDelNoLock ( struct _HttpED * self, const char * Url )
@@ -1005,6 +1006,7 @@ _HttpEDDel ( const char * Url )
 
     return RCt;
 }   /* _HttpEDGet () */
+#endif /* NOT_NEED_YET */
 
 static
 rc_t CC
@@ -1657,7 +1659,7 @@ rc_t CC
 _HttpEntryDispose ( struct XFSHttpEntry * self )
 {
     if ( self != NULL ) {
-printf ( " [_HttpEntryDispose] %p [%s]\n", ( void * ) self, self -> name );
+XFSLogDbg ( " [_HttpEntryDispose] %p [%s]\n", ( void * ) self, self -> name );
         self -> status = kxfsInvalid;
 
         KRefcountWhack (

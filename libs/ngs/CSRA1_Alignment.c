@@ -67,6 +67,7 @@ typedef struct CSRA1_Alignment CSRA1_Alignment;
 static const char * align_col_specs [] =
 {
     "(I32)MAPQ",
+    "(INSDC:SRA:read_filter)READ_FILTER",
     "(ascii)CIGAR_LONG",
     "(ascii)CIGAR_SHORT",
     "(ascii)CLIPPED_CIGAR_LONG",
@@ -101,6 +102,7 @@ static const char * align_col_specs [] =
 enum AlignmentTableColumns
 {
     align_MAPQ,
+    align_READ_FILTER,
     align_CIGAR_LONG,
     align_CIGAR_SHORT,
     align_CLIPPED_CIGAR_LONG,
@@ -378,6 +380,18 @@ int CSRA1_AlignmentGetMappingQuality( CSRA1_Alignment* self, ctx_t ctx )
     return NGS_CursorGetInt32 ( GetCursor ( self ), ctx, self -> cur_row, align_MAPQ );
 }
 
+INSDC_read_filter CSRA1_AlignmentGetReadFilter( CSRA1_Alignment* self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+    if ( ! self -> seen_first ) 
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Alignment accessed before a call to AlignmentIteratorNext()" );
+        return 0;
+    }
+    assert ( sizeof ( INSDC_read_filter ) == sizeof ( char ) );
+    return ( uint8_t ) NGS_CursorGetChar ( GetCursor ( self ), ctx, self -> cur_row, align_READ_FILTER );
+}
+
 struct NGS_String* CSRA1_AlignmentGetReferenceBases( CSRA1_Alignment* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
@@ -530,7 +544,7 @@ uint64_t CSRA1_AlignmentGetReferencePositionProjectionRange( CSRA1_Alignment* se
     if ( ! self -> seen_first ) 
     {
         USER_ERROR ( xcIteratorUninitialized, "Alignment accessed before a call to AlignmentIteratorNext()" );
-        return (uint64_t)-1 ^ 0xFFFFFFFFu;
+        return (uint64_t)-1;
     }
 
     REF_OFFSET = CSRA1_AlignmentGetCellData ( self, ctx, align_REF_OFFSET );
@@ -545,7 +559,7 @@ uint64_t CSRA1_AlignmentGetReferencePositionProjectionRange( CSRA1_Alignment* se
         if ( FAILED() )
         {
             SYSTEM_ERROR ( xcIteratorUninitialized, "Failed to access REF_LEN or REF_POS" );
-            return (uint64_t)-1 ^ 0xFFFFFFFFu;
+            return (uint64_t)-1;
         }
         else if ( ret >= align_len )
         {
@@ -553,7 +567,7 @@ uint64_t CSRA1_AlignmentGetReferencePositionProjectionRange( CSRA1_Alignment* se
                doesn't project on the alignment
                (it also catches ref_pos < align_REF_POS case)
             */
-            ret = (uint64_t)-1 ^ 0xFFFFFFFFu;
+            ret = (uint64_t)-1;
         }
         else
         {
@@ -577,7 +591,7 @@ uint64_t CSRA1_AlignmentGetReferencePositionProjectionRange( CSRA1_Alignment* se
         if ( HAS_REF_OFFSET == NULL )
         {
             SYSTEM_ERROR ( xcIteratorUninitialized, "Failed to access HAS_REF_OFFSET" );
-            return (uint64_t)-1 ^ 0xFFFFFFFFu;
+            return (uint64_t)-1;
         }
 
         read_len = self -> cell_len [ align_HAS_REF_OFFSET ];
@@ -586,51 +600,61 @@ uint64_t CSRA1_AlignmentGetReferencePositionProjectionRange( CSRA1_Alignment* se
         if ( FAILED () )
         {
             SYSTEM_ERROR ( xcIteratorUninitialized, "Failed to access REF_POS" );
-            return (uint64_t)-1 ^ 0xFFFFFFFFu;
+            return (uint64_t)-1;
         }
 
-        for ( align_pos = 0, proj_len = 1; idx_ref < ref_pos && align_pos < read_len ; align_pos += proj_len )
+        if ( idx_ref > ref_pos )
         {
-            bool has_ref_offset = HAS_REF_OFFSET [ idx_HAS_REF_OFFSET++ ];
-            if ( has_ref_offset == 0) /* match/mismatch */
+            /* the alignment starts beyond given ref_pos
+                out of bounds
+            */
+            ret = (uint64_t)-1;
+        }
+        else
+        {
+            for ( align_pos = 0, proj_len = 1; idx_ref < ref_pos && align_pos < read_len ; align_pos += proj_len )
             {
-                ++idx_ref;
-                proj_len = 1;
-            }
-            else /* indel */
-            {
-                int32_t ref_offset = REF_OFFSET [ idx_REF_OFFSET++ ];
-                
-                if ( ref_offset < 0 )
+                bool has_ref_offset = HAS_REF_OFFSET [ idx_HAS_REF_OFFSET++ ];
+                if ( has_ref_offset == 0) /* match/mismatch */
                 {
-                    /* insertion */
-                    proj_len = (uint32_t)-ref_offset;
                     ++idx_ref;
+                    proj_len = 1;
                 }
-                else
+                else /* indel */
                 {
-                    /* deletion */
-                    assert ( ref_offset > 0 );
+                    int32_t ref_offset = REF_OFFSET [ idx_REF_OFFSET++ ];
+                
+                    if ( ref_offset < 0 )
+                    {
+                        /* insertion */
+                        proj_len = (uint32_t)-ref_offset;
+                        ++idx_ref;
+                    }
+                    else
+                    {
+                        /* deletion */
+                        assert ( ref_offset > 0 );
 
-                    idx_ref += ref_offset;
-                    proj_len = 0;
+                        idx_ref += ref_offset;
+                        proj_len = 0;
+                    }
                 }
             }
+
+            /* in the case we exited from the loop at the insertion, align_pos points beyond
+               the insertion - it should be restored to point to the beginning of the insertion
+            */
+            if ( proj_len > 1 )
+                align_pos -= proj_len;
+
+            if ( align_pos >= read_len )
+            {
+                align_pos = -1;
+                proj_len = 0;
+            }
+
+            ret = ((uint64_t)align_pos << 32) | proj_len;
         }
-
-        /* in the case we exited from the loop at the insertion, align_pos points beyond
-           the insertion - it should be restored to point to the beginning of the insertion
-        */
-        if ( proj_len > 1 )
-            align_pos -= proj_len;
-
-        if ( align_pos >= read_len )
-        {
-            align_pos = -1;
-            proj_len = 0;
-        }
-
-        ret = ((uint64_t)align_pos << 32) | proj_len;
     }
 
     return ret;
@@ -1034,6 +1058,7 @@ static NGS_Alignment_vt CSRA1_Alignment_vt_inst =
     CSRA1_AlignmentGetAlignmentId,
     CSRA1_AlignmentGetReferenceSpec,
     CSRA1_AlignmentGetMappingQuality,
+    CSRA1_AlignmentGetReadFilter,
     CSRA1_AlignmentGetReferenceBases,
     CSRA1_AlignmentGetReadGroup,
     CSRA1_AlignmentGetReadId,

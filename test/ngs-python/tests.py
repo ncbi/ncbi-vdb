@@ -108,20 +108,20 @@ class Tests(unittest.TestCase):
     
     def test_ReadCollection_getRead(self):
         read = NGS.openReadCollection(PrimaryOnly).getRead(PrimaryOnly + ".R.1")
-        self.assertEquals(PrimaryOnly + ".R.1", read.getReadId())
+        self.assertEqual(PrimaryOnly + ".R.1", read.getReadId())
 
     def test_ReadCollection_getReads(self):
         readIt = NGS.openReadCollection(PrimaryOnly).getReads(Read.all)
         self.assertTrue(readIt.nextRead())
-        self.assertEquals(PrimaryOnly + ".R.1", readIt.getReadId())
+        self.assertEqual(PrimaryOnly + ".R.1", readIt.getReadId())
 
     def test_ReadCollection_getReadCount(self):
-        self.assertEquals(2280633, NGS.openReadCollection(PrimaryOnly).getReadCount())
+        self.assertEqual(2280633, NGS.openReadCollection(PrimaryOnly).getReadCount())
 
     def test_ReadCollection_getReadRange(self):
         readIt = NGS.openReadCollection(PrimaryOnly).getReadRange(2, 3)
         self.assertTrue(readIt.nextRead())
-        self.assertEquals(PrimaryOnly + ".R.2", readIt.getReadId())
+        self.assertEqual(PrimaryOnly + ".R.2", readIt.getReadId())
 
 
 # Read 
@@ -163,13 +163,13 @@ class Tests(unittest.TestCase):
         read = getRead(PrimaryOnly + ".R.1")
         self.assertTrue(read.nextFragment())
         self.assertTrue(read.nextFragment())
-        self.assertEquals("GGTA", read.getFragmentBases(2, 4));
+        self.assertEqual("GGTA", read.getFragmentBases(2, 4));
 
     def test_getFragmentQualities(self):
         read = getRead(PrimaryOnly + ".R.1")
         self.assertTrue(read.nextFragment())
         self.assertTrue(read.nextFragment())
-        self.assertEquals("@DDA", read.getFragmentQualities(2, 4))
+        self.assertEqual("@DDA", read.getFragmentQualities(2, 4))
 
     
 # Alignment
@@ -366,10 +366,10 @@ class Tests(unittest.TestCase):
         self.assertTrue(NGS.openReadCollection("SRR821492").getReference("chrM").getIsCircular())
     
     def test_Reference_getLength(self):
-        self.assertEqual(2291499l, getReference().getLength())
+        self.assertEqual(2291499, getReference().getLength())
     
     def test_Reference_getReferenceBases(self):
-        self.assertEqual("ATCTG", getReference().getReferenceBases(2291499l - 5))
+        self.assertEqual("ATCTG", getReference().getReferenceBases(2291499 - 5))
 
     def test_Reference_getReferenceBases_Length(self):
         self.assertEqual("GCGCTATGAC", getReference().getReferenceBases(9000, 10))
@@ -473,11 +473,11 @@ class Tests(unittest.TestCase):
 
         stats = gr.getStatistics()
     
-        self.assertEquals(34164461870L, stats.getAsU64("BASE_COUNT"))
-        self.assertEquals(34164461870L, stats.getAsU64("BIO_BASE_COUNT"))
-        self.assertEquals(488063741L,   stats.getAsU64("SPOT_COUNT"))
-        self.assertEquals(5368875807L,  stats.getAsU64("SPOT_MAX"))
-        self.assertEquals(4880812067L,  stats.getAsU64("SPOT_MIN"))
+        self.assertEqual(34164461870, stats.getAsU64("BASE_COUNT"))
+        self.assertEqual(34164461870, stats.getAsU64("BIO_BASE_COUNT"))
+        self.assertEqual(488063741,   stats.getAsU64("SPOT_COUNT"))
+        self.assertEqual(5368875807,  stats.getAsU64("SPOT_MAX"))
+        self.assertEqual(4880812067,  stats.getAsU64("SPOT_MIN"))
 
     # def test_ReadGroup_getRead(self):
         # gr = NGS.openReadCollection(PrimaryOnly).getReadGroup("C1ELY.6")

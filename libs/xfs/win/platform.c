@@ -1,4 +1,5 @@
 /*===========================================================================
+
  *
  *                            PUBLIC DOMAIN NOTICE
  *               National Center for Biotechnology Information
@@ -27,14 +28,19 @@
 #include <klib/rc.h>
 #include <klib/out.h>
 #include <klib/text.h>
+#include <klib/log.h>
 #include <kproc/thread.h>
 #include <xfs/xfs.h>
+#include <xfs/xlog.h>
 
 #include "xfs-priv.h"
 #include "platform.h"
 
 #include <sysalloc.h>
 #include <stdlib.h>
+#include <stdio.h>
+
+#include <Shlwapi.h>
 
 /*  Some platform dependent headers
  */
@@ -44,11 +50,10 @@
 
 /*  Some useless pranks
  */
-#define MOO(Moo)    \
-    OUTMSG( ( "%s: %d\n", Moo, __LINE__ ) )
 
 XFS_EXTERN rc_t CC XFSSecurityInit ();
 XFS_EXTERN rc_t CC XFSSecurityDeinit ();
+XFS_EXTERN rc_t CC wLogMsg ( KLogLevel Level, LPCWSTR Format, ... );
 
 /*
  *  Virtuhai table and it's methods
@@ -93,17 +98,17 @@ XFS_DOKAN_init_v1( struct XFSControl * self )
 
     RCt = 0;
 
-    OUTMSG ( ( "XFS_DOKAN_init()\n" ) );
+    XFSLogDbg ( "XFS_DOKAN_init()\n" );
 
         /*) Standard checks
          (*/
     if ( self -> Control != NULL ) {
-        OUTMSG ( ( "XFS_DOKAN_init(): control is not empty\n" ) );
+        XFSLogDbg ( "XFS_DOKAN_init(): control is not empty\n" );
         return XFS_RC ( rcUnexpected );
     }
 
     if ( self -> Arguments == NULL ) {
-        OUTMSG ( ( "XFS_DOKAN_init(): arguments are empty\n" ) );
+        XFSLogDbg ( "XFS_DOKAN_init(): arguments are empty\n" );
         return XFS_RC ( rcUnexpected );
     }
 
@@ -121,10 +126,10 @@ XFS_DOKAN_destroy_v1( struct XFSControl * self )
 
     Options = NULL;
 
-    OUTMSG ( ( "XFS_DOKAN_destroy()\n" ) );
+    XFSLogDbg ( "XFS_DOKAN_destroy()\n" );
 
     if ( self == NULL ) { 
-        OUTMSG ( ( "XFS_DOKAN_destroy(): NULL self passed" ) );
+        XFSLogDbg ( "XFS_DOKAN_destroy(): NULL self passed" );
 
         return XFS_RC ( rcNull );
     }
@@ -132,7 +137,7 @@ XFS_DOKAN_destroy_v1( struct XFSControl * self )
     Options = ( PDOKAN_OPTIONS ) self -> Control;
 
     if ( Options == NULL ) {
-        OUTMSG ( ( "XFS_DOKAN_destroy(): options are empty\n" ) );
+        XFSLogDbg ( "XFS_DOKAN_destroy(): options are empty\n" );
     }
     else {
         if ( Options -> MountPoint != NULL ) {
@@ -246,15 +251,15 @@ XFS_DOKAN_mount_v1( struct XFSControl * self )
     RCt = 0;
     Options = NULL;
 
-    OUTMSG ( ( "XFS_DOKAN_mount()\n" ) );
+    XFSLogDbg ( "XFS_DOKAN_mount()\n" );
 
     if ( self == NULL ) {
-        OUTMSG ( ( "ZERO self passed\n" ) );
+        XFSLogDbg ( "ZERO self passed\n" );
         return XFS_RC ( rcNull );
     }
 
     if ( ( RCt = XFSSecurityInit () ) != 0 ) {
-        OUTMSG ( ( "Can not initialize DOKAN security\n" ) );
+        XFSLogDbg ( "Can not initialize DOKAN security\n" );
         return RCt;
     }
 
@@ -280,7 +285,13 @@ XFS_DOKAN_mount_v1( struct XFSControl * self )
                             & ( Options -> MountPoint )
                             );
         if ( RCt == 0 ) {
-            self -> Control = Options;
+            if ( PathFileExistsW ( Options -> MountPoint ) == TRUE ) {
+                wLogMsg ( klogFatal, L"Mount point in use [%s]\n", Options -> MountPoint );
+                RCt = XFS_RC ( rcInvalid );
+            }
+            else {
+                self -> Control = Options;
+            }
         }
     }
 
@@ -312,31 +323,31 @@ XFS_DOKAN_loop_v1( struct XFSControl * self )
     Options = NULL;
     Tree = NULL;
 
-    OUTMSG ( ( "XFS_DOKAN_loop()\n" ) );
+    XFSLogDbg ( "XFS_DOKAN_loop()\n" );
 
     if ( self == NULL ) {
-        OUTMSG ( ( "XFSControl: ZERO self passed\n" ) );
+        XFSLogDbg ( "XFSControl: ZERO self passed\n" );
         return XFS_RC ( rcNull );
     }
 
     if ( self -> TreeDepot == NULL ) {
-        OUTMSG ( ( "XFSControl: ZERO passed\n" ) );
+        XFSLogDbg ( "XFSControl: ZERO passed\n" );
         return XFS_RC ( rcNull );
     }
 
     RCt = XFSControlGetTree ( self, & Tree );
     if ( RCt != 0 || Tree == NULL ) {
-        OUTMSG ( ( "XFSControl: ZERO Tree DATA passed\n" ) );
+        XFSLogDbg ( "XFSControl: ZERO Tree DATA passed\n" );
         return XFS_RC ( rcNull );
     }
 
     Options = ( DOKAN_OPTIONS * ) self -> Control;
     if ( Options == NULL ) {
-        OUTMSG ( ( "XFSControl: ZERO options passed\n" ) );
+        XFSLogDbg ( "XFSControl: ZERO options passed\n" );
         return XFS_RC ( rcNull );
     }
 
-OUTMSG ( ( "XFS_DOKAN_loop(): Tree [0x%p] Data [0x%p]\n",  self -> TreeDepot, Tree ) );
+XFSLogDbg ( "XFS_DOKAN_loop(): Tree [0x%p] Data [0x%p]\n",  self -> TreeDepot, Tree );
 
 
 /*  We will split mount method for mount'n'loop later, so there is 
@@ -350,34 +361,34 @@ OUTMSG ( ( "XFS_DOKAN_loop(): Tree [0x%p] Data [0x%p]\n",  self -> TreeDepot, Tr
             (*/
         switch ( DokanMain ( Options, Operations ) ) {
             case DOKAN_SUCCESS :
-                OUTMSG ( ( "DokanMain() : general success\n" ) );
+                XFSLogDbg ( "DokanMain() : general success\n" );
                 break;
             case DOKAN_ERROR :
-                OUTMSG ( ( "DokanMain() : general error\n" ) );
+                XFSLogDbg ( "DokanMain() : general error\n" );
                 RCt = XFS_RC ( rcError );
                 break;
             case DOKAN_DRIVE_LETTER_ERROR :
-                OUTMSG ( ( "DokanMain() : bad drive letter\n" ) );
+                XFSLogDbg ( "DokanMain() : bad drive letter\n" );
                 RCt = XFS_RC ( rcError );
                 break;
             case DOKAN_DRIVER_INSTALL_ERROR :
-                OUTMSG ( ( "DokanMain() : can't install driver\n" ) );
+                XFSLogDbg ( "DokanMain() : can't install driver\n" );
                 RCt = XFS_RC ( rcError );
                 break;
             case DOKAN_START_ERROR :
-                OUTMSG ( ( "DokanMain() : can't start, something wrong\n" ) );
+                XFSLogDbg ( "DokanMain() : can't start, something wrong\n" );
                 RCt = XFS_RC ( rcError );
                 break;
             case DOKAN_MOUNT_ERROR :
-                OUTMSG ( ( "DokanMain() : can't assigh a drive letter or mount point\n" ) );
+                XFSLogDbg ( "DokanMain() : can't assigh a drive letter or mount point\n" );
                 RCt = XFS_RC ( rcError );
                 break;
             case DOKAN_MOUNT_POINT_ERROR :
-                OUTMSG ( ( "DokanMain() : mount point is invalid\n" ) );
+                XFSLogDbg ( "DokanMain() : mount point is invalid\n" );
                 RCt = XFS_RC ( rcError );
                 break;
             default :
-                OUTMSG ( ( "DokanMain() : something wrong happens\n" ) );
+                XFSLogDbg ( "DokanMain() : something wrong happens\n" );
                 RCt = XFS_RC ( rcError );
                 break;
         }
@@ -385,7 +396,7 @@ OUTMSG ( ( "XFS_DOKAN_loop(): Tree [0x%p] Data [0x%p]\n",  self -> TreeDepot, Tr
         free ( Operations );
     }
 
-OUTMSG ( ( "XFS_DOKAN_loop(): Exited Tree [0x%p]\n",  self -> TreeDepot ) );
+XFSLogDbg ( "XFS_DOKAN_loop(): Exited Tree [0x%p]\n",  self -> TreeDepot );
 
     return RCt;
 }   /* XFS_DOKAN_loop() */
@@ -396,7 +407,7 @@ XFS_DOKAN_unmount_v1( struct XFSControl * self )
     rc_t RCt = 0;
 
     if ( self == NULL ) {
-        OUTMSG ( ( "ZERO self passed\n" ) );
+        XFSLogDbg ( "ZERO self passed\n" );
         /*
         return XFS_RC ( rcNull );
         */
@@ -404,7 +415,7 @@ XFS_DOKAN_unmount_v1( struct XFSControl * self )
     }
 
     if ( self -> Control == NULL ) {
-        OUTMSG ( ( "ZERO self passed\n" ) );
+        XFSLogDbg ( "ZERO self passed\n" );
         /*
         return XFS_RC ( rcNull );
         */
@@ -416,3 +427,115 @@ XFS_DOKAN_unmount_v1( struct XFSControl * self )
     return 0;
 }   /* XFS_DOKAN_unmount() */
 
+/********************
+ * Something extra
+ *************/
+static
+rc_t CC
+_GetProgPath ( WCHAR * Path, DWORD PathSize)
+{
+    const WCHAR * cP = L"\\Dokan\\DokanLibrary\\dokanctl.exe";
+
+        /* First we are trying %ProgramFiles(x86)%
+         */
+    if ( GetEnvironmentVariableW ( L"%ProgramFiles(x86)%", Path, PathSize ) == 0 ) {
+        wcscat ( Path, cP );
+        if ( PathFileExistsW ( Path ) == TRUE ) {
+            return 0;
+        }
+    }
+
+        /* First we are trying %ProgramFiles%
+         */
+    if ( GetEnvironmentVariableW ( L"%ProgramFiles%", Path, PathSize ) == 0 ) {
+        wcscat ( Path, cP );
+        if ( PathFileExistsW ( Path ) == TRUE ) {
+            return 0;
+        }
+    }
+
+    wcscpy_s (
+        Path,
+        PathSize,
+        L"C:\\Program Files (x86)\\Dokan\\DokanLibrary\\dokanctl.exe"
+        );
+    return PathFileExistsW ( Path ) == TRUE ? 0 : XFS_RC ( rcNotFound );
+}   /* _GetProgPath () */
+
+/*))    Special platform dependent method
+  ||    very specific method. It is looking for
+  ||        %ProgramFiles(x86)%\Dokan\DokanLibrary\dokanctl.exe
+  ||    or
+  ||        %ProgramFiles%\Dokan\DokanLibrary\dokanctl.exe
+  ||    or
+  ||        C:\Program Files (x86)\Dokan\DokanLibrary\dokanctl.exe
+  ((*/
+LIB_EXPORT
+rc_t CC
+XFSUnmountAndDestroy ( const char * MountPoint )
+{
+    rc_t RCt;
+    WCHAR Path [ XFS_SIZE_4096 ];
+    WCHAR Comm [ XFS_SIZE_4096 ];
+    WCHAR * MPath;
+    BOOL Ret;
+    STARTUPINFO StartInfo;
+    PROCESS_INFORMATION Process;
+    int Err;
+
+    RCt = 0;
+    * Path = 0;
+    * Comm = 0;
+    MPath = NULL;
+    Ret = FALSE;
+    ZeroMemory ( & StartInfo, sizeof( StartInfo ) );
+    ZeroMemory ( & Process, sizeof( Process ) );
+    Err = 0;
+
+    RCt = _MakeMountPath ( MountPoint, & MPath );
+    if ( RCt == 0 ) {
+        if ( PathFileExistsW ( MPath ) == TRUE ) {
+            wLogMsg ( klogInfo, L"Unmounting volume [%s]\n", MPath );
+
+            RCt = _GetProgPath ( Path, sizeof ( Path ) / sizeof ( WCHAR ) );
+            if ( RCt == 0 ) {
+                swprintf (
+                        Comm,
+                        sizeof ( Comm ) / sizeof ( WCHAR ),
+                        L"\"%s\" /u %s",
+                        Path,
+                        MPath
+                        );
+                wLogMsg ( klogInfo, L"Executing [%s]\n", Comm );
+                Ret = CreateProcessW (
+                                    NULL,
+                                    Comm,
+                                    NULL,
+                                    NULL,
+                                    FALSE,
+                                    DETACHED_PROCESS,
+                                    NULL,
+                                    NULL,
+                                    & StartInfo,
+                                    & Process
+                                    );
+                if ( Ret == 0 ) {
+                    wLogMsg ( klogErr, L"Failed [%s] ErrNo [%d]\n", Comm, GetLastError () );
+                }
+            }
+            else {
+                wLogMsg ( klogErr, L"CRITICAL: Can not find 'dokanctl.exe' utility.\n" );
+                wLogMsg ( klogErr, L"          Please ask administrator about it location. \n" );
+                wLogMsg ( klogErr, L"          Please use command 'dokanctl.exe /u %s'. \n", MPath );
+            }
+        }
+        else {
+            wLogMsg ( klogErr, L"Can not find volume [%s]\n", MPath );
+        }
+
+        free ( MPath );
+    }
+
+
+    return RCt;
+}   /* XFSUnmountAndDestroy () */

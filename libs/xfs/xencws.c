@@ -48,12 +48,11 @@
 #include "zehr.h"
 #include "lreader.h"
 #include <xfs/path.h>
+#include <xfs/xlog.h>
 
 #include <sysalloc.h>
 
-#include <string.h>
 #include <ctype.h>
-#include <stdio.h>
 #include <time.h>
 
 /*||*\
@@ -158,7 +157,7 @@ _DirEDispose ( const struct _DirE * self )
     if ( Entry != NULL ) {
 
 #ifdef JOJOBA
-printf ( " [-DSP] [%d] [%p] [%s]\n", __LINE__, Entry, Entry -> name );
+XFSLogDbg ( " [-DSP] [%d] [%p] [%s]\n", __LINE__, Entry, Entry -> name );
 #endif /* JOJOBA */
 
         if ( Entry -> mutabor != NULL ) {
@@ -246,7 +245,7 @@ _DirEMake (
                             RetVal -> is_folder = IsFolder;
                             * Entry = RetVal;
 #ifdef JOJOBA
-printf ( " [+ALC] [%d] [%p] [%s]\n", __LINE__, RetVal, RetVal -> name );
+XFSLogDbg ( " [+ALC] [%d] [%p] [%s]\n", __LINE__, RetVal, RetVal -> name );
 #endif /* JOJOBA */
                         }
                     }
@@ -294,7 +293,7 @@ _DirEAddRef ( const struct _DirE * self )
     XFS_CAN ( Entry )
 
 #ifdef JOJOBA
-printf ( " [>ARE] [%d] [%p] [%s]\n", __LINE__, self, self -> name );
+XFSLogDbg ( " [>ARE] [%d] [%p] [%s]\n", __LINE__, self, self -> name );
 #endif /* JOJOBA */
 
     Refc = KRefcountAdd (
@@ -333,7 +332,7 @@ _DirERelease ( const struct _DirE * self )
     XFS_CAN ( Entry )
 
 #ifdef JOJOBA
-printf ( " [<ERE] [%d] [%p] [%s]\n", __LINE__, self, self -> name );
+XFSLogDbg ( " [<ERE] [%d] [%p] [%s]\n", __LINE__, self, self -> name );
 #endif /* JOJOBA */
 
     Refc = KRefcountDrop (
@@ -579,7 +578,7 @@ _DirEReadContent ( const struct _DirE * self )
 
                 if ( RCt != 0 ) {
                     XFSLineReaderLineNo ( Reader, & LineNo );
-printf ( " __DirE : invalid line no %d\n", ( int ) LineNo );
+XFSLogDbg ( " __DirE : invalid line no %d\n", ( int ) LineNo );
                     RCt = 0;
                 }
             } while ( XFSLineReaderNext ( Reader ) );
@@ -595,7 +594,7 @@ printf ( " __DirE : invalid line no %d\n", ( int ) LineNo );
     }
     else {
         if ( GetRCState ( RCt ) == rcNotFound ) {
-            printf ( " Mahindra: Syncronicytyty\n" );
+            XFSLogDbg ( " Mahindra: Syncronicytyty\n" );
             RCt = _SyncronizeDirectoryContentNoLock ( self );
         }
     }
@@ -1065,12 +1064,12 @@ _DirEGetEntry (
         return XFS_RC ( rcInvalid );
     }
 
-// printf ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * )self -> mutabor );
+// XFSLogDbg ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * )self -> mutabor );
     RCt = KLockAcquire ( self -> mutabor );
     if ( RCt == 0 ) {
         RCt = _DirEGetEntryNoLock ( self, Name, Entry );
 
-// printf ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )self -> mutabor );
+// XFSLogDbg ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )self -> mutabor );
         KLockUnlock ( self -> mutabor );
     }
     return RCt;
@@ -1268,21 +1267,21 @@ _DirEMoveEntry (
 
         /* Locking first and accessing Entry to move
          */
-// printf ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * ) OldParent -> mutabor );
+// XFSLogDbg ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * ) OldParent -> mutabor );
     RCt = KLockAcquire ( OldParent -> mutabor );
     if ( RCt == 0 ) {
             /* First we are getting the entry to move 
              */
         RCt = _DirEGetEntryNoLock ( OldParent , OldName, & Entry );
 
-// printf ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * ) OldParent -> mutabor );
+// XFSLogDbg ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * ) OldParent -> mutabor );
         KLockUnlock ( OldParent -> mutabor );
     }
 
     if ( RCt == 0 ) {
             /* Locking and creating space for Entry to move
              */
-// printf ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * ) NewParent -> mutabor );
+// XFSLogDbg ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * ) NewParent -> mutabor );
         RCt = KLockAcquire ( NewParent -> mutabor );
         if ( RCt == 0 ) {
             RCt = _DirEGetEntryNoLock (
@@ -1299,7 +1298,7 @@ _DirEMoveEntry (
                 RCt = 0;
             }
 
-// printf ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * ) NewParent -> mutabor );
+// XFSLogDbg ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * ) NewParent -> mutabor );
             KLockUnlock ( NewParent -> mutabor );
         }
     }
@@ -1353,14 +1352,14 @@ _DirEMoveEntry (
         /* Here we are deleteing old entry and synchronizing
          */
     if ( RCt == 0 ) {
-// printf ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * ) OldParent -> mutabor );
+// XFSLogDbg ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * ) OldParent -> mutabor );
         RCt = KLockAcquire ( OldParent -> mutabor );
         if ( RCt == 0 ) {
             RCt = _DirEDelEntryNoLock ( OldParent, Entry );
             if ( RCt == 0 ) {
                 RCt = _SyncronizeDirectoryContentNoLock ( OldParent );
             }
-// printf ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * ) OldParent -> mutabor );
+// XFSLogDbg ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * ) OldParent -> mutabor );
             KLockUnlock ( OldParent -> mutabor );
         }
     }
@@ -1368,7 +1367,7 @@ _DirEMoveEntry (
         /* Here we are adding new 'old' entry and synchronizing
          */
     if ( RCt == 0 ) {
-// printf ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * ) NewParent -> mutabor );
+// XFSLogDbg ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * ) NewParent -> mutabor );
         RCt = KLockAcquire ( NewParent -> mutabor );
         if ( RCt == 0 ) {
                 /*  First, we should setup new : Name, EffName and Path,
@@ -1421,7 +1420,7 @@ _DirEMoveEntry (
             }
         }
 
-// printf ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * ) NewParent -> mutabor );
+// XFSLogDbg ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * ) NewParent -> mutabor );
         KLockUnlock ( NewParent -> mutabor );
     }
 
@@ -1700,7 +1699,7 @@ _DirECheckLoadContent (
         return XFS_RC ( rcInvalid );
     }
 
-// printf ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * )self -> mutabor );
+// XFSLogDbg ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * )self -> mutabor );
     RCt = KLockAcquire ( self -> mutabor );
     if ( RCt == 0 ) {
             /*)) Check if Content already loaded ((*/
@@ -1716,7 +1715,7 @@ _DirECheckLoadContent (
             RCt = XFS_RC ( rcInvalid );
         }
 
-// printf ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )self -> mutabor );
+// XFSLogDbg ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )self -> mutabor );
         KLockUnlock ( self -> mutabor );
 
     }
@@ -2310,7 +2309,7 @@ _OpenEncryptedFileRead (
             if ( RCt == 0 ) {
                 RCt = _EncFileMake ( ( struct KFile * ) xFile, ( struct KFile ** ) File );
             }
-else { RCt = XFS_RC ( rcBusy ); printf ( " RET_BUSY [%d]\n", __LINE__ ); }
+else { RCt = XFS_RC ( rcBusy ); XFSLogDbg ( " RET_BUSY [%d]\n", __LINE__ ); }
         }
 
         KDirectoryRelease ( nDir );
@@ -2372,7 +2371,7 @@ _OpenVEncryptedFileWrite (
             if ( RCt == 0 ) {
                 RCt = _EncFileMake ( ( struct KFile * ) xFile, File );
             }
-else { RCt = XFS_RC ( rcBusy ); printf ( " RET_BUSY [%d]\n", __LINE__ ); }
+else { RCt = XFS_RC ( rcBusy ); XFSLogDbg ( " RET_BUSY [%d]\n", __LINE__ ); }
 
         }
 
@@ -2625,7 +2624,7 @@ _GetContentEntryAndLock (
 
         /*) Locking
          (*/
-// printf ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * ) Parent -> mutabor );
+// XFSLogDbg ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * ) Parent -> mutabor );
     RCt = KLockAcquire ( Parent -> mutabor );
     if ( RCt == 0 ) {
             /*) Getting content entry for file
@@ -2635,7 +2634,7 @@ _GetContentEntryAndLock (
             * Entry = RetEntry;
         }
         else {
-// printf ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )Parent -> mutabor );
+// XFSLogDbg ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )Parent -> mutabor );
             KLockUnlock ( Parent -> mutabor );
         }
     }
@@ -2661,7 +2660,7 @@ XFSWsDirDestroy ( struct KDirectory * self )
     struct XFSWsDir * Dir = ( struct XFSWsDir * ) self;
 
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirDestroy] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirDestroy] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
     if ( Dir == NULL ) {
@@ -2732,7 +2731,7 @@ XFSWsDirList (
     va_list xArgs;
 
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirList] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirList] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
     RCt = 0;
@@ -2766,7 +2765,7 @@ printf ( " <<<[XFSWsDirList] [%p]\n", ( void * ) self );
  || IMPORTANT: For now Filtering function is not used
  || TODO!!!!!!
  (*/
-// printf ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * ) Entry -> mutabor );
+// XFSLogDbg ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * ) Entry -> mutabor );
             RCt = KLockAcquire ( Entry -> mutabor );
             if ( RCt == 0 ) {
 
@@ -2775,7 +2774,7 @@ printf ( " <<<[XFSWsDirList] [%p]\n", ( void * ) self );
                     * List = TheList;
                 }
 
-// printf ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * ) Entry -> mutabor );
+// XFSLogDbg ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * ) Entry -> mutabor );
                 KLockUnlock ( Entry -> mutabor );
             }
         }
@@ -2836,7 +2835,7 @@ XFSWsDirVisit (
     XFS_CAN ( Func )
     XFS_CAN ( Format )
 
-// printf ( " <<<[XFSWsDirVisit] [%p]\n", ( void * ) self );
+// XFSLogDbg ( " <<<[XFSWsDirVisit] [%p]\n", ( void * ) self );
 
     va_copy ( xArgs, Args );
     RCt = XFSPathVMakeAbsolute ( & Path, false, Format, xArgs );
@@ -2907,7 +2906,7 @@ XFSWsDirVisitUpdate (
 /*)
  || JOJOBA
  (*/
-printf ( " <<<[XFSWsDirVisitUpdate] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirVisitUpdate] [%p]\n", ( void * ) self );
     return RC (rcFS, rcDirectory, rcUpdating, rcFunction, rcUnsupported);
 }   /* XFSWsDirVisitUpdate () */
 
@@ -2939,7 +2938,7 @@ XFSWsDirPathType (
     va_list xArgs;
 
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirPathType] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirPathType] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
     RCt = 0;
@@ -3007,30 +3006,17 @@ XFSWsDirResolvePath (
 )
 {
     rc_t RCt;
-    struct KDirectory * NatDir;
     va_list xArgs;
 
     RCt = 0;
-    NatDir = NULL;
 
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirResolvePath] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirResolvePath] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
-    RCt = KDirectoryNativeDir ( & NatDir );
-    if ( RCt == 0 ) {
-        va_copy ( xArgs, Args );
-        RCt = KDirectoryVResolvePath (
-                                    NatDir,
-                                    Absolute,
-                                    Resolved,
-                                    Rsize,
-                                    Path,
-                                    xArgs
-                                    );
-        va_end ( xArgs );
-        KDirectoryRelease ( NatDir );
-    }
+    va_copy ( xArgs, Args );
+    RCt = XFS_VResolvePath ( Absolute, Resolved, Rsize, Path, xArgs );
+    va_end ( xArgs );
 
     return RCt;
 }   /* XFSWsDirResolvePath () */
@@ -3064,7 +3050,7 @@ XFSWsDirResolveAlias (
  || JOJOBA
  (*/
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirResolveAlias] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirResolveAlias] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
     return RC (rcFS, rcDirectory, rcAccessing, rcFunction, rcUnsupported);
 }   /* XFSWsDirResolveAlias () */
@@ -3107,7 +3093,7 @@ XFSWsDirRename (
     }
 
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirRename] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirRename] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
         /*||   There are two steps : move factual file if it
@@ -3141,7 +3127,7 @@ printf ( " <<<[XFSWsDirRename] [%p]\n", ( void * ) self );
                  */
             if ( OldParent == NewParent ) {
                 /* No need to move */
-// printf ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * ) OldParent -> mutabor );
+// XFSLogDbg ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * ) OldParent -> mutabor );
                 RCt = KLockAcquire ( OldParent -> mutabor );
                 if ( RCt == 0 ) {
                     RCt = _DirERenameEntryNoLock (
@@ -3154,7 +3140,7 @@ printf ( " <<<[XFSWsDirRename] [%p]\n", ( void * ) self );
                                                             OldParent
                                                             );
                     }
-// printf ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )OldParent -> mutabor );
+// XFSLogDbg ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )OldParent -> mutabor );
                     KLockUnlock ( OldParent -> mutabor );
                 }
             }
@@ -3227,7 +3213,7 @@ XFSWsDirRemove (
     }
 
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirRemove] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirRemove] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
         /*|| Simple: map it's parent and remove entry ||*/
@@ -3278,7 +3264,7 @@ printf ( " <<<[XFSWsDirRemove] [%p]\n", ( void * ) self );
 
             free ( ( char * ) EntryName );
 
-// printf ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )Parent -> mutabor );
+// XFSLogDbg ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )Parent -> mutabor );
             KLockUnlock ( Parent -> mutabor );
 
             XFSPathRelease ( EffPath );
@@ -3353,7 +3339,7 @@ XFSWsDirClearDir (
     }
 
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirClearDir] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirClearDir] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
         /* Second we should list directory entries
@@ -3440,7 +3426,7 @@ XFSWsDirVAccess (
     XFS_CAN ( Format )
 
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirVAccess] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirVAccess] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
     RCt = KDirectoryNativeDir ( & NatDir );
@@ -3521,7 +3507,7 @@ XFSWsDirSetAccess (
     }
 
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirSetAccess] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirSetAccess] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
     RCt = KDirectoryNativeDir ( & NatDir );
@@ -3588,7 +3574,7 @@ XFSWsDirCreateAlias (
     assert (targ != NULL);
     assert (alias != NULL);
 
-printf ( " <<<[XFSWsDirCreateAlias] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirCreateAlias] [%p]\n", ( void * ) self );
 
 /*)
  || JOJOBA
@@ -3636,7 +3622,7 @@ XFSWsDirOpenFileRead (
     XFS_CAN ( Format )
 
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirOpenFileRead] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirOpenFileRead] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
         /*) Mapping parent directory 
@@ -3665,7 +3651,7 @@ printf ( " <<<[XFSWsDirOpenFileRead] [%p]\n", ( void * ) self );
                                     Entry -> eff_name
                                     );
 
-// printf ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )Parent -> mutabor );
+// XFSLogDbg ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )Parent -> mutabor );
             KLockUnlock ( Parent -> mutabor );
             _DirERelease ( Entry );
         }
@@ -3728,7 +3714,7 @@ XFSWsDirOpenFileWrite (
     }
 
 // #ifdef JOJOBA
-printf ( " <<<[XFSWsDirOpenFileWrite] [%p] u[%d]\n", ( void * ) self, Update );
+XFSLogDbg ( " <<<[XFSWsDirOpenFileWrite] [%p] u[%d]\n", ( void * ) self, Update );
 // #endif /* JOJOBA */
 
         /*) Mapping parent directory 
@@ -3758,7 +3744,7 @@ printf ( " <<<[XFSWsDirOpenFileWrite] [%p] u[%d]\n", ( void * ) self, Update );
                                     Entry -> eff_name
                                     );
 
-// printf ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )Parent -> mutabor );
+// XFSLogDbg ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )Parent -> mutabor );
             KLockUnlock ( Parent -> mutabor );
             _DirERelease ( Entry );
         }
@@ -3827,7 +3813,7 @@ XFSWsDirCreateFile	(
 
 
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirCreateFile] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirCreateFile] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
         /*) Mapping parent directory
@@ -3843,7 +3829,7 @@ printf ( " <<<[XFSWsDirCreateFile] [%p]\n", ( void * ) self );
                                         );
     va_end ( xArgs );
     if ( RCt == 0 ) {
-// printf ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * )Parent -> mutabor );
+// XFSLogDbg ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * )Parent -> mutabor );
         RCt = KLockAcquire ( Parent -> mutabor );
         if ( RCt == 0 ) {
             RCt = _DirEGetEntryNoLock (
@@ -3891,7 +3877,7 @@ printf ( " <<<[XFSWsDirCreateFile] [%p]\n", ( void * ) self );
                 }
             }
 
-// printf ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )Parent -> mutabor );
+// XFSLogDbg ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )Parent -> mutabor );
             KLockUnlock ( Parent -> mutabor );
         }
 
@@ -3946,7 +3932,7 @@ XFSWsDirFileSize (
     XFS_CAN ( Format )
 
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirFileSize] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirFileSize] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
     RCt = KDirectoryNativeDir ( & NatDir );
@@ -4025,7 +4011,7 @@ XFSWsDirSetFileSize (
     }
 
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirSetFileSize] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirSetFileSize] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
     RCt = KDirectoryNativeDir ( & NatDir );
@@ -4096,7 +4082,7 @@ XFSWsDirOpenDirRead (
  *            and will do it if it is necessary
  */
 
-printf ( " <<<[XFSWsDirOpenDirRead] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirOpenDirRead] [%p]\n", ( void * ) self );
 
     return RC (rcFS, rcDirectory, rcOpening, rcSelf, rcUnsupported);
 }   /* XFSWsDirOpenDirRead () */
@@ -4132,7 +4118,7 @@ XFSWsDirOpenDirUpdate (
  *            and will do it if it is necessary
  */
 
-printf ( " <<<[XFSWsDirOpenDirUpdate] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirOpenDirUpdate] [%p]\n", ( void * ) self );
 
     return RC (rcFS, rcDirectory, rcUpdating, rcSelf, rcUnsupported);
 }   /* XFSWsDirOpenDirUpdate () */
@@ -4183,7 +4169,7 @@ XFSWsDirCreateDir (
     }
 
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirCreateDir] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirCreateDir] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
     RCt = KDirectoryNativeDir ( & NatDir );
@@ -4201,7 +4187,7 @@ printf ( " <<<[XFSWsDirCreateDir] [%p]\n", ( void * ) self );
                                             );
         va_end ( xArgs );
         if ( RCt == 0 ) {
-// printf ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * )Parent -> mutabor );
+// XFSLogDbg ( " [KLockAcquire] [%d] [%p]\n", __LINE__, ( void * )Parent -> mutabor );
             RCt = KLockAcquire ( Parent -> mutabor );
             if ( RCt == 0 ) {
                 RCt = _DirEGetEntryNoLock ( Parent, EntryName, & Entry );
@@ -4253,7 +4239,7 @@ printf ( " <<<[XFSWsDirCreateDir] [%p]\n", ( void * ) self );
                     }
                 }
 
-// printf ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )Parent -> mutabor );
+// XFSLogDbg ( " [KLockUnlock] [%d] [%p]\n", __LINE__, ( void * )Parent -> mutabor );
                 KLockUnlock ( Parent -> mutabor );
             }
 
@@ -4284,7 +4270,7 @@ XFSWsDirDestroyFile ( struct KDirectory * self, struct KFile * File )
 /* We don't really need that method
  */
 
-printf ( " <<<[XFSWsDirDestroyFile] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirDestroyFile] [%p]\n", ( void * ) self );
 
     return RC (rcFS, rcDirectory, rcDestroying, rcSelf, rcUnsupported);
 }   /* XFSWsDirDestroyFile () */
@@ -4317,7 +4303,7 @@ XFSWsDirDate (
     XFS_CAN ( Format )
 
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirDate] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirDate] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
     RCt = KDirectoryNativeDir ( & NatDir );
@@ -4377,7 +4363,7 @@ XFSWsDirSetDate (
     }
 
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirSetDate] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirSetDate] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
     RCt = KDirectoryNativeDir ( & NatDir );
@@ -4413,7 +4399,7 @@ XFSWsDirGetSysDir ( const struct KDirectory * self )
 {
 
 #ifdef JOJOBA
-printf ( " <<<[XFSWsDirGetSysDir] [%p]\n", ( void * ) self );
+XFSLogDbg ( " <<<[XFSWsDirGetSysDir] [%p]\n", ( void * ) self );
 #endif /* JOJOBA */
 
     return NULL;
@@ -4940,7 +4926,7 @@ _WsDirAlloc (
         }
     }
 
-// printf ( " [_WsDirAlloc] [%d] [%d]\n", __LINE__, RCt );
+// XFSLogDbg ( " [_WsDirAlloc] [%d] [%d]\n", __LINE__, RCt );
 
     return RCt;
 }   /* _WsDirAlloc () */
