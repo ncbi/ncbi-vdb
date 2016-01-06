@@ -1499,7 +1499,7 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
             if ( high_reliability )
             {
                 PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(U)'",
-                                     "U=%S", uri ) );
+                                     "U=%s", uri->addr ) );
             }
         }
         else
