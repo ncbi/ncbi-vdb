@@ -2657,7 +2657,7 @@ bool load_from_home ( KConfig * self, const KDirectory * dir,
         if ( loaded )
         {
             DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG),
-                ( "KFG: found from '%S'\n", ncbi_home ) );
+                ( "KFG: found from '%s'\n", ncbi_home ) );
         }
 
         _KConfigGetNcbiSettings
