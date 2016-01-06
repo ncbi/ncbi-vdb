@@ -1500,7 +1500,7 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
             if ( high_reliability )
             {
                 PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(U)'",
-                                     "U=%S:%S", & path -> scheme, & path -> path ) );
+                                     "U=%S", uri ) );
             }
         }
         else
