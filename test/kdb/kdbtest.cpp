@@ -165,6 +165,7 @@ const char UsageDefaultName[] = "test-kdb";
 rc_t CC KMain ( int argc, char *argv [] )
 {
     assert(!KDbgSetString("KFG"));
+    assert(!KDbgSetString("VFS"));
     KConfigDisableUserSettings();
     rc_t rc=KdbTestSuite(argc, argv);
     return rc;
