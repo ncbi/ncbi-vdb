@@ -184,6 +184,23 @@ KDB_EXTERN rc_t CC KColumnByteOrder ( const KColumn *self, bool *reversed );
 KDB_EXTERN rc_t CC KColumnIdRange ( const KColumn *self, int64_t *first, uint64_t *count );
 
 
+/* FindFirstRowId
+ *  locates the first valid row-id starting from a given id.
+ *  this will be either the start id provided, or
+ *  the first row from the next blob, if available.
+ *
+ *  "found" [ OUT ] - will contain the value of "start" if this is contained within a blob,
+ *  or the first row-id of the next blob after "start", if any.
+ *
+ *  "start" [ IN ] - starting row-id in search, inclusive. if this id is valid,
+ *  it will be returned in "found"
+ *
+ *  returns 0 if id is found, rcNotFound if no more data were available.
+ *  may return other codes upon error.
+ */
+KDB_EXTERN rc_t CC KColumnFindFirstRowId ( const KColumn * self, int64_t * found, int64_t start );
+
+
 /* Reindex
  *  optimize indices
  */
