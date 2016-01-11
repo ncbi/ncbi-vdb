@@ -38,6 +38,8 @@
 #include <xfs/xlog.h>
 #include "schwarzschraube.h"
 
+#include <sysalloc.h>
+
  /*))))
    |||| That file contains unsoted methods
    ((((*/
