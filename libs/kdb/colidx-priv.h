@@ -103,6 +103,11 @@ rc_t KColumnIdxByteOrder ( const KColumnIdx *self, bool *reversed );
 rc_t KColumnIdxIdRange ( const KColumnIdx *self,
     int64_t *first, int64_t *last );
 
+/* FindFirstRowId
+ */
+rc_t KColumnIdxFindFirstRowId ( const KColumnIdx * self,
+    int64_t * found, int64_t start );
+
 /* LocateBlob
  *  locate an existing blob
  */

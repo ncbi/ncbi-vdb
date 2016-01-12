@@ -116,6 +116,11 @@ rc_t KColumnIdx1ByteOrder ( const KColumnIdx1 *self, bool *reversed );
 bool KColumnIdx1IdRange ( const KColumnIdx1 *self,
     int64_t *first, int64_t *upper );
 
+/* LocateFirstRowIdBlob
+ */
+rc_t KColumnIdx1LocateFirstRowIdBlob ( const KColumnIdx1 * self,
+    KColBlockLoc * bloc, int64_t start );
+
 /* LocateBlock
  *  locates an idx2 block by range
  */

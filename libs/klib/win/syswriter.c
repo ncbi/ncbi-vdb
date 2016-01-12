@@ -91,6 +91,10 @@ rc_t CC KWrt_DefaultWriter( void * self, const char * buffer, size_t bufsize, si
     HANDLE handle;
     rc_t rc;
 
+    if ( self == NULL ) {
+        return RC ( rcApp, rcLog, rcWriting, rcSelf, rcNull );
+    }
+
     handle = *(HANDLE *)self;
     pbyte = buffer;
     rc = 0;
