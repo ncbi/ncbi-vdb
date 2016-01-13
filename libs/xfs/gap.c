@@ -277,7 +277,7 @@ _GapProjectNodeAddChildren ( struct _GapProjectNode * self )
     else {
 /* TODO - use approved output method
 */
-XFSLogDbg ( "ERROR: Can not find definition of Project %d in config file\n", self -> project_id );
+XFSLogErr ( RCt, "ERROR: Can not find definition of Project %d in config file\n", self -> project_id );
     }
 
     if ( RCt != 0 ) {
@@ -300,7 +300,7 @@ XFSLogDbg ( "ERROR: Can not find definition of Project %d in config file\n", sel
     else {
 /* TODO - use approved output method
 */
-XFSLogDbg ( "ERROR: Can not find definition of Project %d in config file\n", self -> project_id );
+XFSLogErr ( RCt, "ERROR: Can not find definition of Project %d in config file\n", self -> project_id );
     }
     if ( RCt != 0 ) {
         if ( TheNode != NULL ) {
