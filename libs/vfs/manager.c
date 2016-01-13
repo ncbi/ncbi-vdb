@@ -1494,13 +1494,12 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
 
         const KFile * file = NULL;
         rc = VFSManagerMakeHTTPFile( self, &file, uri->addr, cache == NULL ? NULL : cache->path.addr, high_reliability );
-        free( ( void * )uri );
         if ( rc != 0 )
         {
             if ( high_reliability )
             {
                 PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(U)'",
-                                     "U=%S:%S", & path -> scheme, & path -> path ) );
+                                     "U=%s", uri->addr ) );
             }
         }
         else
@@ -1551,6 +1550,7 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
             }
             KFileRelease (file);
         }
+        free( ( void * )uri );
     }
     return rc;
 }

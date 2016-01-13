@@ -38,6 +38,8 @@
 #include <xfs/xlog.h>
 #include "schwarzschraube.h"
 
+#include <sysalloc.h>
+
  /*))))
    |||| That file contains unsoted methods
    ((((*/
@@ -308,7 +310,7 @@ _LWrWriter ( void * self, const char * Bf, size_t BfS, size_t * NWr )
     RCt = 0;
     Writer = ( struct _LWr * ) self;
 
-    XFS_CSA ( NWr, BfS )
+    XFS_CSA ( NWr, 0 )
     XFS_CAN ( Bf )
     XFS_CAN ( NWr )
 
@@ -342,8 +344,6 @@ XFSLogInit ( const char * LogFile )
 
     RCt = 0;
     Writer = NULL;
-
-printf ( " [FOO] [%d] [%s]\n", __LINE__, LogFile );
 
     if ( LogFile != NULL ) {
         if ( _sLWr == NULL ) {

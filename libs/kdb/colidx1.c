@@ -143,9 +143,9 @@ void KColumnIdx1Swap ( KColBlockLoc *buffer, uint32_t count )
 static
 rc_t KColumnIdx1Init ( KColumnIdx1 *self, uint32_t off, uint32_t count )
 {
-    rc_t rc=0;
-    self -> data = malloc ( count * sizeof  * self -> data );
-    if ( self -> data == NULL )
+    rc_t rc = 0;
+    KColBlockLoc * data = malloc ( count * sizeof  * data );
+    if ( data == NULL )
         rc = RC ( rcDB, rcColumn, rcConstructing, rcMemory, rcExhausted );
     else
     {
@@ -155,26 +155,28 @@ rc_t KColumnIdx1Init ( KColumnIdx1 *self, uint32_t off, uint32_t count )
         {
             cnt = count - i;
             rc = KFileReadAll ( self -> f, off,
-                & self -> data [ i ], cnt * sizeof * self->data, & num_read );
+                & data [ i ], cnt * sizeof * data, & num_read );
             if ( rc != 0 )
                 break;
             if ( num_read == 0 )
                 break;
-            if ( ( num_read % sizeof * self->data ) != 0 )
+            if ( ( num_read % sizeof * data ) != 0 )
             {
                 rc = RC ( rcDB, rcColumn, rcConstructing, rcIndex, rcCorrupt );
                 break;
             }
             
             if ( self -> bswap )
-                KColumnIdx1Swap ( & self->data [ i ], cnt );
+                KColumnIdx1Swap ( & data [ i ], cnt );
         }
 
-        if ( rc == 0 ) {
+        if ( rc != 0 )
+            free ( data );
+        else
+        {
+            self -> data = data;
             self -> count = count;
             self -> loaded = true;
-        } else {
-            free ( self->data ); 
         }
     }
 
@@ -410,6 +412,7 @@ rc_t KColumnIdx1LazyLoad ( const KColumnIdx1 * cself )
     uint32_t off, count;
     KColumnIdx1 * self = ( KColumnIdx1* ) cself;
 
+    assert ( self != NULL );
     if ( self -> loaded )
         return self -> load_rc;
 
@@ -447,7 +450,7 @@ rc_t KColumnIdx1Whack ( KColumnIdx1 *self )
             BSTreeWhack ( & self -> bst, KColumnIdx1NodeWhack, NULL );
             BSTreeInit ( & self -> bst );
 #else
-            free ( self -> data );
+            free ( ( void * ) self -> data );
             self -> data = NULL;
 #endif
         }
@@ -502,6 +505,165 @@ bool KColumnIdx1IdRange ( const KColumnIdx1 *self,
     assert ( * first < * upper );
 
     return true;
+}
+
+/* LocateFirstRowIdBlob
+ */
+#if USE_BSTREE_IN_COLUMN_IDX1
+typedef struct FindFirstRowIdData FindFirstRowIdData;
+struct FindFirstRowIdData
+{
+    int64_t start;
+    const KColumnIdx1Node * next;
+};
+
+static
+int64_t CC KColumnIdx1NodeFindFirstRowId ( const void * item, const BSTNode * n )
+{
+    FindFirstRowIdData * pb = ( FindFirstRowIdData * ) item;
+
+#define a ( pb -> start )
+#define b ( ( const KColumnIdx1Node * ) n )
+
+    if ( a < b -> loc . start_id )
+    {
+        if ( pb -> next == NULL )
+            pb -> next = b;
+        else if ( b -> loc . start_id < pb -> next -> loc . start_id )
+            pb -> next = b;
+        return -1;
+    }
+
+    return a >= ( b -> loc . start_id + b -> loc . id_range );
+
+#undef a
+#undef b
+}
+#endif /* USE_BSTREE_IN_COLUMN_IDX1 */
+
+rc_t KColumnIdx1LocateFirstRowIdBlob ( const KColumnIdx1 * self,
+    KColBlockLoc * bloc, int64_t start )
+{
+    rc_t rc = KColumnIdx1LazyLoad ( self );
+    if ( rc != 0 )
+        return rc;
+
+    assert ( self != NULL );
+    assert ( bloc != NULL );
+
+#if USE_BSTREE_IN_COLUMN_IDX1
+    {
+        FindFirstRowIdData pb;
+        const KColumnIdx1Node * n;
+
+        pb . start = start;
+        pb . next = NULL;
+
+        n = ( const KColumnIdx1Node* )
+            BSTreeFind ( & self -> bst, & pb, KColumnIdx1NodeFindFirstRowId );
+
+        if ( n != NULL )
+        {
+            assert ( start >= n -> loc . start_id && start < n -> loc . start_id + n -> loc . id_range );
+            * bloc = n -> loc;
+            return 0;
+        }
+
+        if ( pb . next != NULL )
+        {
+            assert ( start < pb . next -> loc . start_id );
+            * bloc = pb . next -> loc;
+            return 0;
+        }
+        
+    }
+#else /* USE_BSTREE_IN_COLUMN_IDX1 */
+    if ( self -> count != 0 )
+    {
+        const KColBlockLoc * data = self -> data;
+        if ( data [ 0 ] . start_id <= start )
+        {
+            uint64_t high = self -> count - 1;
+            if ( data [ high ] . start_id + data [ high ] . id_range > start )
+            {
+                uint64_t low, last_found = self -> last_found;
+                assert ( last_found <= high );
+                if ( data [ last_found ] . start_id <= start )
+                {
+                    if ( data [ last_found ] . start_id + data [ last_found ] . id_range > start )
+                    {
+                        * bloc = data [ last_found ];
+                        return 0;
+                    }
+
+                    if ( last_found < high && data [ last_found + 1 ] . start_id > start )
+                    {
+                        * bloc = data [ last_found + 1 ];
+                        return 0;
+                    }
+
+                    low = last_found;
+                }
+                else
+                {
+                    low = 0;
+                    high = last_found;
+                }
+
+                while ( low < high )
+                {
+                    last_found = ( low + high ) / 2;
+                    if ( data [ last_found ] . start_id > start )
+                        high = last_found;
+                    else if ( data [ last_found + 1 ] . start_id > start )
+                        break;
+                    else
+                        low = last_found + 1;
+
+                    if ( low == high )
+                    {
+                        last_found = high;
+                        break;
+                    }
+                    else
+                    {
+                        int64_t left_diff = start - data [ low ] . start_id;
+                        int64_t right_diff = data [ high ] . start_id - start;
+
+                        if ( left_diff < 0 || right_diff < 0 )
+                            return SILENT_RC ( rcDB, rcColumn, rcSelecting, rcBlob, rcNotFound );
+
+                        assert ( data [ high ] . start_id - data [ low ] . start_id != 0 );
+                        last_found = ( high * left_diff + low * right_diff )
+                            / ( data [ high ] . start_id - data [ low ] . start_id );
+
+                        assert ( last_found <= high );
+                        assert ( last_found >= low );
+                    }
+                }
+
+                /* check what we have at last_found */
+                if ( start >= data [ last_found ] . start_id )
+                {
+                    if ( start < data [ last_found ] . start_id + data [ last_found ] . id_range )
+                    {
+                        * bloc = data [ last_found ];
+                        return 0;
+                    }
+
+                    assert ( last_found < self -> count );
+                    if ( start < data [ last_found + 1 ] . start_id )
+                    {
+                        * bloc = data [ last_found + 1 ];
+                        return 0;
+                    }
+                }
+            }
+        }
+    }
+#endif /* USE_BSTREE_IN_COLUMN_IDX1 */
+
+    return SILENT_RC ( rcDB, rcColumn, rcSelecting, rcBlob, rcNotFound );
 }
 
 /* LocateBlock
