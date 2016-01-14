@@ -39,7 +39,6 @@
 #include <kns/stream.h>
 
 #include <xfs/path.h>
-#include <xfs/xlog.h>
 
 #include "schwarzschraube.h"
 #include "xhttp.h"
@@ -1659,7 +1658,6 @@ rc_t CC
 _HttpEntryDispose ( struct XFSHttpEntry * self )
 {
     if ( self != NULL ) {
-XFSLogDbg ( " [_HttpEntryDispose] %p [%s]\n", ( void * ) self, self -> name );
         self -> status = kxfsInvalid;
 
         KRefcountWhack (

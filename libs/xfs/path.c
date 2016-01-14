@@ -30,13 +30,13 @@
 #include <klib/refcount.h>
 #include <klib/printf.h>
 #include <klib/text.h>
+#include <klib/log.h>
 
 #include <kfs/directory.h>
 
 #include <va_copy.h>
 
 #include <xfs/path.h>
-#include <xfs/xlog.h>
 #include "schwarzschraube.h"
 
 #include <sysalloc.h>
@@ -1487,17 +1487,17 @@ XFSPathDump ( const struct XFSPath * self )
     size_t Idx = 0;
 
     if ( self == NULL ) {
-        XFSLogDbg ( " [Path] NULL\n" );
+        LogMsg ( klogDebug, "  [Path] NULL" );
         return;
     }
 
-    XFSLogDbg ( " [Path] [%s]\n", self -> orig );
-    XFSLogDbg ( "   [abs] [%s]\n", self -> is_absolute ? "yes" : "no" );
-    XFSLogDbg ( "  [path] [%s]\n", self -> path );
+    pLogMsg ( klogDebug, "  [Path] [$(orig)]", "orig=%s", self -> orig );
+    pLogMsg ( klogDebug, "   [abs] [$(abs)]", "abs=%s", self -> is_absolute ? "yes" : "no" );
+    pLogMsg ( klogDebug, "  [path] [$(path)]", "path=%s", self -> path );
 
-    XFSLogDbg ( "   [qty] [%ld]\n", self -> tokens -> q );
+    pLogMsg ( klogDebug, "   [qty] [$(qty)]", "qty=%ld", self -> tokens -> q );
     for ( Idx = 0; Idx < self -> tokens ->q; Idx ++ ) {
-        XFSLogDbg ( "        [%ld] [%s]\n", Idx, self -> tokens -> e [ Idx ] );
+        pLogMsg ( klogDebug, "        [$(idx)] [$(token)]", "idx=%ld,token=%s", Idx, self -> tokens -> e [ Idx ] );
     }
 
 }   /* XFSPathDump () */

@@ -47,6 +47,7 @@ extern "C" {
 XFS_EXTERN rc_t CC XFSLogInit ( const char * LogFile );
 XFS_EXTERN rc_t CC XFSLogDestroy ( );
 
+#ifdef JOJOBA
 /*)))   Simple log functions. Just because I want use substitute 
   |||   instead of deep editing. Each method will use some fixed
   |||   log level and standard 'printf' style format ...
@@ -61,6 +62,7 @@ XFS_EXTERN rc_t CC XFSLogDbg ( const char * Fmt, ... );
 XFS_EXTERN rc_t CC XFSLogMsg ( const char * Fmt, ... );
 XFS_EXTERN rc_t CC XFSLogErr ( rc_t RC, const char * Fmt, ... );
 XFS_EXTERN rc_t CC XFSLogPzd ( const char * Fmt, ... );
+#endif /* JOJOBA */
 
 #ifdef __cplusplus 
 }

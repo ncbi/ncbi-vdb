@@ -28,6 +28,7 @@
 #include <klib/text.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -40,7 +41,6 @@
 #include <xfs/editors.h>
 #include <xfs/perm.h>
 #include <xfs/doc.h>
-#include <xfs/xlog.h>
 
 #include "mehr.h"
 #include "schwarzschraube.h"
@@ -255,7 +255,7 @@ XFSGapKartNodeMake (
     }
 
 /*
-XFSLogDbg ( "XFSGapKartNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type );
+pLogMsg ( klogDebug, "XFSGapKartNodeMake ND[$(node)] NM[$(name)] TP[$(project_id)]", "node=%p,name=%s,project_id=%d", ( void * ) Node, Name, ProjectId );
 */
 
     return RCt;
@@ -341,7 +341,7 @@ _KartNodeConstructor (
                             );
 
 /*
-XFSLogDbg ( "_KartNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_KartNodeConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -361,7 +361,7 @@ _KartNodeValidator (
     RCt = 0;
 
 /*
-XFSLogDbg ( "_KartNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_KartNodeValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

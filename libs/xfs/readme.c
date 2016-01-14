@@ -26,11 +26,11 @@
 #include <klib/rc.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <xfs/model.h>
 #include <xfs/node.h>
 #include <xfs/doc.h>
-#include <xfs/xlog.h>
 
 
 #include "teleport.h"
@@ -145,7 +145,7 @@ _ReadMeConstructor (
                             );
 
 /*
-XFSLogDbg ( "_ReadMeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_ReadMeConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,templat=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -165,7 +165,7 @@ _ReadMeValidator (
     RCt = 0;
 
 /*
-XFSLogDbg ( "_ReadMeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_ReadMeValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,templat=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
