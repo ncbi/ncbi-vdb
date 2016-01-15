@@ -323,7 +323,6 @@ static __inline__ row_count_t PageMapIteratorRepeatCount(const PageMapIterator *
 	PageMapIterator *self = (PageMapIterator*) cself;
 	if(self->rgns==NULL){ /** must be simple random access **/
 		uint64_t i;
-/*        assert( self->cur_row+1 < self->last_row || (self->exp_base != NULL && *self->exp_base != NULL) ); */
         assert( ( ( self->exp_base == NULL ) || ( *self->exp_base == NULL ) ) ? self->cur_row+1 >= self->last_row : true );
 		for(i=self->cur_row+1,self->repeat_count=1;
                     i< self->last_row && (*self->exp_base)[i]==(*self->exp_base)[self->cur_row];
