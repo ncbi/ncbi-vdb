@@ -1033,8 +1033,8 @@ const char UsageDefaultName[] = "test-ngs_sra";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
-    assert(!KDbgSetString("KFG"));
-    assert(!KDbgSetString("VFS"));
+    //assert(!KDbgSetString("KFG"));
+    //assert(!KDbgSetString("VFS"));
     rc_t m_coll=NgsSraTestSuite(argc, argv);
     return m_coll;
 }
