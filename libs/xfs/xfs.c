@@ -29,7 +29,6 @@
 
 #include <xfs/xfs.h>
 #include <xfs/tree.h>
-#include <xfs/xlog.h>
 
 #include "platform.h"
 #include "schwarzschraube.h"
@@ -177,8 +176,6 @@ XFSControlDispose ( struct XFSControl * self )
 
         self -> vt = NULL;
     }
-
-XFSLogDbg ( ( "........... LAST CHA\n" ) );
 
     free ( self );
 
@@ -349,7 +346,7 @@ XFSControlSetLogFile ( struct XFSControl * self, const char * Path )
                         true,
                         BF,
                         sizeof ( BF ),
-                        ( Path == NULL ? "./demo.log" : Path )
+                        ( Path == NULL ? "./mount-tool.log" : Path )
                         );
     if ( RCt == 0 ) {
         RCt = XFSControlSetArg ( self, XFS_CONTROL_LOGFILE, BF );

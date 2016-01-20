@@ -28,10 +28,10 @@
 #include <klib/namelist.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <xfs/model.h>
 #include <xfs/node.h>
-#include <xfs/xlog.h>
 
 #include "teleport.h"
 #include "common.h"
@@ -88,7 +88,7 @@ _SimpleContainerCreateChildren (
                                                     );
 
 /*
-XFSLogDbg ( " ||== Creating child [%s] alias [%s]\n", ChildName, ( ChildAlias == NULL ? "NULL" : ChildAlias ) );
+pLogMsg ( klogDebug, " ||== Creating child [$(name)] alias [$(alias)]", "name=%s,alias=%s", ChildName, ( ChildAlias == NULL ? "NULL" : ChildAlias ) );
 */
 
                     RCt = XFSNodeMake (
@@ -165,7 +165,7 @@ _SimpleContainerConstructor (
     }
 
 /*
-XFSLogDbg ( "_SimpleContainerConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_SimpleContainerConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -185,7 +185,7 @@ _SimpleContainerValidator (
     RCt = 0;
 
 /*
-XFSLogDbg ( "_SimpleContainerValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_SimpleContainerValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

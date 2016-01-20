@@ -98,17 +98,17 @@ XFS_DOKAN_init_v1( struct XFSControl * self )
 
     RCt = 0;
 
-    XFSLogDbg ( "XFS_DOKAN_init()\n" );
+    LogMsg ( klogDebug, "XFS_DOKAN_init()" );
 
         /*) Standard checks
          (*/
     if ( self -> Control != NULL ) {
-        XFSLogDbg ( "XFS_DOKAN_init(): control is not empty\n" );
+        LogMsg ( klogDebug, "XFS_DOKAN_init(): control is not empty" );
         return XFS_RC ( rcUnexpected );
     }
 
     if ( self -> Arguments == NULL ) {
-        XFSLogDbg ( "XFS_DOKAN_init(): arguments are empty\n" );
+        LogMsg ( klogDebug, "XFS_DOKAN_init(): arguments are empty" );
         return XFS_RC ( rcUnexpected );
     }
 
@@ -126,10 +126,10 @@ XFS_DOKAN_destroy_v1( struct XFSControl * self )
 
     Options = NULL;
 
-    XFSLogDbg ( "XFS_DOKAN_destroy()\n" );
+    LogMsg ( klogDebug, "XFS_DOKAN_destroy()" );
 
     if ( self == NULL ) { 
-        XFSLogDbg ( "XFS_DOKAN_destroy(): NULL self passed" );
+        LogMsg ( klogDebug, "XFS_DOKAN_destroy(): NULL self passed" );
 
         return XFS_RC ( rcNull );
     }
@@ -137,7 +137,7 @@ XFS_DOKAN_destroy_v1( struct XFSControl * self )
     Options = ( PDOKAN_OPTIONS ) self -> Control;
 
     if ( Options == NULL ) {
-        XFSLogDbg ( "XFS_DOKAN_destroy(): options are empty\n" );
+        LogMsg ( klogDebug, "XFS_DOKAN_destroy(): options are empty" );
     }
     else {
         if ( Options -> MountPoint != NULL ) {
@@ -251,15 +251,15 @@ XFS_DOKAN_mount_v1( struct XFSControl * self )
     RCt = 0;
     Options = NULL;
 
-    XFSLogDbg ( "XFS_DOKAN_mount()\n" );
+    LogMsg ( klogDebug, "XFS_DOKAN_mount()" );
 
     if ( self == NULL ) {
-        XFSLogDbg ( "ZERO self passed\n" );
+        LogMsg ( klogDebug, "ZERO self passed" );
         return XFS_RC ( rcNull );
     }
 
     if ( ( RCt = XFSSecurityInit () ) != 0 ) {
-        XFSLogDbg ( "Can not initialize DOKAN security\n" );
+        LogMsg ( klogDebug, "Can not initialize DOKAN security" );
         return RCt;
     }
 
@@ -323,31 +323,31 @@ XFS_DOKAN_loop_v1( struct XFSControl * self )
     Options = NULL;
     Tree = NULL;
 
-    XFSLogDbg ( "XFS_DOKAN_loop()\n" );
+    LogMsg ( klogDebug, "XFS_DOKAN_loop()" );
 
     if ( self == NULL ) {
-        XFSLogDbg ( "XFSControl: ZERO self passed\n" );
+        LogMsg ( klogDebug, "XFSControl: ZERO self passed" );
         return XFS_RC ( rcNull );
     }
 
     if ( self -> TreeDepot == NULL ) {
-        XFSLogDbg ( "XFSControl: ZERO passed\n" );
+        LogMsg ( klogDebug, "XFSControl: ZERO passed" );
         return XFS_RC ( rcNull );
     }
 
     RCt = XFSControlGetTree ( self, & Tree );
     if ( RCt != 0 || Tree == NULL ) {
-        XFSLogDbg ( "XFSControl: ZERO Tree DATA passed\n" );
+        LogMsg ( klogDebug, "XFSControl: ZERO Tree DATA passed" );
         return XFS_RC ( rcNull );
     }
 
     Options = ( DOKAN_OPTIONS * ) self -> Control;
     if ( Options == NULL ) {
-        XFSLogDbg ( "XFSControl: ZERO options passed\n" );
+        LogMsg ( klogDebug, "XFSControl: ZERO options passed" );
         return XFS_RC ( rcNull );
     }
 
-XFSLogDbg ( "XFS_DOKAN_loop(): Tree [0x%p] Data [0x%p]\n",  self -> TreeDepot, Tree );
+pLogMsg ( klogDebug, "XFS_DOKAN_loop(): Tree [$(tree)] Data [$(data)]\n",  "tree=%p,data=%p", self -> TreeDepot, Tree );
 
 
 /*  We will split mount method for mount'n'loop later, so there is 
@@ -361,42 +361,42 @@ XFSLogDbg ( "XFS_DOKAN_loop(): Tree [0x%p] Data [0x%p]\n",  self -> TreeDepot, T
             (*/
         switch ( DokanMain ( Options, Operations ) ) {
             case DOKAN_SUCCESS :
-                XFSLogDbg ( "DokanMain() : general success\n" );
+                LogMsg ( klogDebug, "DokanMain() : general success" );
                 break;
             case DOKAN_ERROR :
-                XFSLogDbg ( "DokanMain() : general error\n" );
                 RCt = XFS_RC ( rcError );
+                LogErr ( klogDebug, RCt, "DokanMain() : general error" );
                 break;
             case DOKAN_DRIVE_LETTER_ERROR :
-                XFSLogDbg ( "DokanMain() : bad drive letter\n" );
                 RCt = XFS_RC ( rcError );
+                LogErr ( klogDebug, RCt, "DokanMain() : bad drive letter" );
                 break;
             case DOKAN_DRIVER_INSTALL_ERROR :
-                XFSLogDbg ( "DokanMain() : can't install driver\n" );
                 RCt = XFS_RC ( rcError );
+                LogErr ( klogDebug, RCt, "DokanMain() : can't install driver" );
                 break;
             case DOKAN_START_ERROR :
-                XFSLogDbg ( "DokanMain() : can't start, something wrong\n" );
                 RCt = XFS_RC ( rcError );
+                LogErr ( klogDebug, RCt, "DokanMain() : can't start, something wrong" );
                 break;
             case DOKAN_MOUNT_ERROR :
-                XFSLogDbg ( "DokanMain() : can't assigh a drive letter or mount point\n" );
                 RCt = XFS_RC ( rcError );
+                LogErr ( klogDebug, RCt, "DokanMain() : can't assigh a drive letter or mount point" );
                 break;
             case DOKAN_MOUNT_POINT_ERROR :
-                XFSLogDbg ( "DokanMain() : mount point is invalid\n" );
                 RCt = XFS_RC ( rcError );
+                LogErr ( klogDebug, RCt, "DokanMain() : mount point is invalid" );
                 break;
             default :
-                XFSLogDbg ( "DokanMain() : something wrong happens\n" );
                 RCt = XFS_RC ( rcError );
+                LogErr ( klogDebug, RCt, "DokanMain() : something wrong happens" );
                 break;
         }
 
         free ( Operations );
     }
 
-XFSLogDbg ( "XFS_DOKAN_loop(): Exited Tree [0x%p]\n",  self -> TreeDepot );
+pLogMsg ( klogDebug, "XFS_DOKAN_loop(): Exited Tree [$(tree)]", "tree=%p", self -> TreeDepot );
 
     return RCt;
 }   /* XFS_DOKAN_loop() */
@@ -407,7 +407,7 @@ XFS_DOKAN_unmount_v1( struct XFSControl * self )
     rc_t RCt = 0;
 
     if ( self == NULL ) {
-        XFSLogDbg ( "ZERO self passed\n" );
+        LogMsg ( klogDebug, "ZERO self passed" );
         /*
         return XFS_RC ( rcNull );
         */
@@ -415,7 +415,7 @@ XFS_DOKAN_unmount_v1( struct XFSControl * self )
     }
 
     if ( self -> Control == NULL ) {
-        XFSLogDbg ( "ZERO self passed\n" );
+        LogMsg ( klogDebug, "ZERO self passed" );
         /*
         return XFS_RC ( rcNull );
         */
