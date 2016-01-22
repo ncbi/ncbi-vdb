@@ -27,6 +27,7 @@
 #include <vdb/table.h> 
 #include <vdb/cursor.h> 
 #include <vdb/vdb-priv.h>
+#include <vdb/blob.h>
 //#include <sra/sradb-priv.h>
 #include <sra/sraschema.h> // VDBManagerMakeSRASchema
 #include <vdb/schema.h> /* VSchemaRelease */
@@ -314,6 +315,43 @@ FIXTURE_TEST_CASE(TestCursorIsStatic_DB_VariableREAD_LEN_MultipleRows, VdbFixtur
     REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
     REQUIRE ( ! is_static );
 }
+
+FIXTURE_TEST_CASE(VCursor_GetBlob_SequentialAccess, VdbFixture) 
+{   // VDB-2858: sequential access to blobs broken
+    // single fragment per row, multiple rows per blob
+    REQUIRE_RC ( Setup ( "ALAI01" ) );
+    REQUIRE_RC ( VCursorOpen (curs ) );
+    
+    int64_t first;
+    uint64_t count;
+    
+    REQUIRE_RC ( VCursorIdRange (curs, 0, &first, &count ) );
+//cout << first << ", " << count << endl;             
+
+    int64_t rowId = 1;
+    while (true) 
+    {
+        REQUIRE_RC ( VCursorSetRowId (curs, rowId ) );
+        REQUIRE_RC ( VCursorOpenRow (curs ) );
+        
+        struct VBlob const *blob;
+        if ( VCursorGetBlob ( curs, &blob, col_idx ) != 0 )
+        {
+            break;
+        }
+        
+        REQUIRE_RC ( VBlobIdRange ( blob, &first, &count ) );
+//cout << first << ", " << count << endl;             
+        REQUIRE_EQ ( rowId, first );
+        
+        REQUIRE_RC ( VCursorCloseRow (curs ) );
+        REQUIRE_RC ( VBlobRelease ( (struct VBlob *) blob ) );
+        
+        rowId += count;
+    }
+}
+
+
 
 //////////////////////////////////////////// Main
 extern "C"
