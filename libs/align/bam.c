@@ -4180,25 +4180,16 @@ rc_t LoadIndex(BAMFile *self, const uint8_t buf[], size_t blen)
 }
 
 static
-rc_t BAMFileOpenIndexInternal(const BAMFile *self, const char *path)
+rc_t BAMFileOpenIndexKFile(const BAMFile *self, KFile const *kf)
 {
-    const KFile *kf;
     rc_t rc;
     size_t fsize;
     uint8_t *buf;
-    KDirectory *dir;
-    
-    rc = KDirectoryNativeDir(&dir);
-    if (rc) return rc;
-    rc = KDirectoryOpenFileRead(dir, &kf, "%s", path);
-    KDirectoryRelease(dir);
-    if (rc) return rc;
     {
         uint64_t u64;
 
         rc = KFileSize(kf, &u64);
         if (sizeof(size_t) < sizeof(u64) && (size_t)u64 != u64) {
-            KFileRelease(kf);
             return RC(rcAlign, rcIndex, rcReading, rcData, rcExcessive);
         }
         fsize = u64;
@@ -4208,8 +4199,7 @@ rc_t BAMFileOpenIndexInternal(const BAMFile *self, const char *path)
         if (buf != NULL) {
             size_t nread;
             
-            rc = KFileRead(kf, 0, buf, fsize, &nread);
-            KFileRelease(kf);
+            rc = KFileReadAll(kf, 0, buf, fsize, &nread);
             if (rc == 0) {
                 if (nread == fsize) {
                     rc = LoadIndex((BAMFile *)self, buf, nread);
@@ -4228,19 +4218,35 @@ rc_t BAMFileOpenIndexInternal(const BAMFile *self, const char *path)
 
 LIB_EXPORT rc_t CC BAMFileOpenIndex(const BAMFile *self, const char *path)
 {
-    return BAMFileOpenIndexInternal(self, path);
+    const KFile *kf;
+    rc_t rc;
+    KDirectory *dir;
+    
+    rc = KDirectoryNativeDir(&dir);
+    if (rc) return rc;
+    rc = KDirectoryOpenFileRead(dir, &kf, "%s", path);
+    KDirectoryRelease(dir);
+    if (rc) return rc;
+    rc = BAMFileOpenIndexKFile(self, kf);
+    KFileRelease(kf);
+    return rc;
 }
 
-LIB_EXPORT rc_t CC BAMFileOpenIndexWithVPath(const BAMFile *self, const VPath *kpath)
+LIB_EXPORT rc_t CC BAMFileOpenIndexWithVPath(const BAMFile *self, const VPath *path)
 {
-    char path[4096];
-    size_t nread;
-    rc_t rc = VPathReadPath(kpath, path, sizeof(path), &nread);
+    VFSManager *vfs = NULL;
+    KFile const *fp = NULL;
+    rc_t rc = 0;
 
-    if (rc == 0) {
-        path[nread] = '\0';
-        rc = BAMFileOpenIndexInternal(self, path);
-    }
+    rc = VFSManagerMake(&vfs);
+    if (rc) return rc;
+
+    rc = VFSManagerOpenFileRead(vfs, &fp, path);
+    VFSManagerRelease(vfs);
+    if (rc) return rc;
+
+    rc = BAMFileOpenIndexKFile(self, fp);
+    KFileRelease(fp);
     return rc;
 }
 
