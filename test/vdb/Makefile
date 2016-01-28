@@ -76,6 +76,9 @@ TEST_VDB_LIB = \
 $(TEST_BINDIR)/test-vdb: $(TEST_VDB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_VDB_LIB)
 
+vdb: test-vdb
+	$(TEST_BINDIR)/test-vdb    
+
 valgrind_vdb: std
 	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-vdb    
 

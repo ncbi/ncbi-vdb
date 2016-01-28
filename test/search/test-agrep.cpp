@@ -31,10 +31,12 @@
 #include <ktst/unit_test.hpp>
 #include <kapp/main.h> /* KMain */
 
-#include <../libs/search/search-priv.h>
+//#include <../libs/search/search-priv.h>
 #include <search/nucstrstr.h>
+#include <search/smith-waterman.h>
 
 #include <stdexcept>
+#include <limits>
 
 #include <stdio.h>
 
@@ -138,55 +140,55 @@ FIXTURE_TEST_CASE ( AgrepDPTest, AgrepFixture )
     // Complete match
     {
         REQUIRE ( FindFirst ( "MATCH", 0 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len );
-        REQUIRE ( match_info.position == 0 );
-        REQUIRE ( match_info.score == 0 );
+        REQUIRE_EQ ( pattern_len, (size_t)match_info.length );
+        REQUIRE_EQ ( 0, match_info.position );
+        REQUIRE_EQ ( 0, match_info.score );
     }
 
     // Complete substring match
     {
         REQUIRE ( FindFirst ( "xxMATCHvv", 0 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len );
-        REQUIRE ( match_info.position == 2 );
-        REQUIRE ( match_info.score == 0 );
+        REQUIRE_EQ ( pattern_len, (size_t)match_info.length );
+        REQUIRE_EQ ( 2, match_info.position );
+        REQUIRE_EQ ( 0, match_info.score );
     }
     // 1 Deletion
     {
         REQUIRE ( FindFirst ( "xxxMACHvv", 1 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len - 1 );
-        REQUIRE ( match_info.position == 3 );
-        REQUIRE ( match_info.score == 1 );
+        REQUIRE_EQ ( pattern_len - 1, (size_t)match_info.length );
+        REQUIRE_EQ ( 3, match_info.position );
+        REQUIRE_EQ ( 1, match_info.score );
     }
 
     // 2 Insertions
     {
         REQUIRE ( FindFirst ( "xxxMAdTCaHvv", 2 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len + 2 );
-        REQUIRE ( match_info.position == 3 );
-        REQUIRE ( match_info.score == 2 );
+        REQUIRE_EQ ( pattern_len + 2, (size_t)match_info.length );
+        REQUIRE_EQ ( 3, match_info.position );
+        REQUIRE_EQ ( 2, match_info.score );
     }
 
     // 3 Mismatches
     {
         REQUIRE ( FindFirst ( "xATxx", 5 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len );
-        REQUIRE ( match_info.position == 0 );
-        REQUIRE ( match_info.score == 3 );
+        REQUIRE_EQ ( pattern_len /*2*/, (size_t)match_info.length ); // FIXME: 2 looks correct here
+        REQUIRE_EQ ( 0, match_info.position );                       // 1
+        REQUIRE_EQ ( 3, match_info.score );                          // 2
     }
     
     // Best match
     {
         REQUIRE ( FindBest ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len );
-        REQUIRE ( match_info.position == 18 );
-        REQUIRE ( match_info.score == 0 );
+        REQUIRE_EQ ( pattern_len, (size_t)match_info.length );
+        REQUIRE_EQ ( 18, match_info.position );
+        REQUIRE_EQ ( 0, match_info.score );
     }
     // First match
     {
         REQUIRE ( FindFirst ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len - 1 );
-        REQUIRE ( match_info.position == 0 );
-        REQUIRE ( match_info.score == 1 );
+        REQUIRE_EQ ( pattern_len - 1, (size_t)match_info.length );
+        REQUIRE_EQ ( 0, match_info.position );
+        REQUIRE_EQ ( 1, match_info.score );
     }
 
     // Match anything
@@ -196,9 +198,9 @@ FIXTURE_TEST_CASE ( AgrepDPTest, AgrepFixture )
         // for this degenerate case, the expected behavior is not clear, so I'll just document the reality here:
         const string text = "xyzvuwpiuuuu";
         REQUIRE ( FindFirst ( "xyzvuwpiuuuu", pattern_len ) );
-        REQUIRE_EQ ( (size_t)match_info.length, pattern_len + 1 );
-        REQUIRE_EQ ( (size_t)match_info.position, text . size () - ( pattern_len + 1 ) );
-        REQUIRE_EQ ( (size_t)match_info.score, pattern_len );
+        REQUIRE_EQ ( pattern_len + 1, (size_t)match_info.length );
+        REQUIRE_EQ ( text . size () - ( pattern_len + 1 ), (size_t)match_info.position );
+        REQUIRE_EQ ( pattern_len, (size_t)match_info.score );
     }
 
     // Not found
@@ -214,67 +216,64 @@ FIXTURE_TEST_CASE ( AgrepWumanberTest, AgrepFixture )
     // Complete match
     {
         REQUIRE ( FindFirst ( "MATCH", 0 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len );
-        REQUIRE ( match_info.position == 0 );
-        REQUIRE ( match_info.score == 0 );
+        REQUIRE_EQ ( pattern_len, (size_t)match_info.length );
+        REQUIRE_EQ ( 0, match_info.position );
+        REQUIRE_EQ ( 0, match_info.score );
     }
 
     // Complete substring match
     {
         REQUIRE ( FindFirst ( "xxMATCHvv", 0 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len );
-        REQUIRE ( match_info.position == 2 );
-        REQUIRE ( match_info.score == 0 );
+        REQUIRE_EQ ( pattern_len, (size_t)match_info.length );
+        REQUIRE_EQ ( 2, match_info.position );
+        REQUIRE_EQ ( 0, match_info.score );
     }
     // 1 Deletion
     {
         REQUIRE ( FindFirst ( "xxxMACHvv", 1 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len - 1 );
-        REQUIRE ( match_info.position == 3 );
-        REQUIRE ( match_info.score == 1 );
+        REQUIRE_EQ ( pattern_len - 1, (size_t)match_info.length );
+        REQUIRE_EQ ( 3, match_info.position );
+        REQUIRE_EQ ( 1, match_info.score );
     }
 
     // 2 Insertions
     {
         REQUIRE ( FindFirst ( "xxxMAdTCaHvv", 2 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len + 2 );
-        REQUIRE ( match_info.position == 3 );
-        REQUIRE ( match_info.score == 2 );
+        REQUIRE_EQ ( pattern_len + 2, (size_t)match_info.length );
+        REQUIRE_EQ ( 3, match_info.position );
+        REQUIRE_EQ ( 2, match_info.score );
     }
 
     // 3 Mismatches
     {
         REQUIRE ( FindFirst ( "xATxx", 5 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len );
-        REQUIRE ( match_info.position == 0 );
-        REQUIRE ( match_info.score == 3 );
+        REQUIRE_EQ ( pattern_len /*2*/, (size_t)match_info.length ); // FIXME: 2 looks correct here
+        REQUIRE_EQ ( 0, match_info.position );                       // 1   
+        REQUIRE_EQ ( 3, match_info.score );                          // 2
     }
     
     // Best match
     {
         REQUIRE ( FindBest ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len );
-        REQUIRE ( match_info.position == 18 );
-        REQUIRE ( match_info.score == 0 );
+        REQUIRE_EQ ( pattern_len, (size_t)match_info.length );
+        REQUIRE_EQ ( 18, match_info.position );
+        REQUIRE_EQ ( 0, match_info.score );
     }
     // First match
     {
         REQUIRE ( FindFirst ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len - 1 );
-        REQUIRE ( match_info.position == 0 );
-        REQUIRE ( match_info.score == 1 );
+        REQUIRE_EQ ( pattern_len - 1, (size_t)match_info.length );
+        REQUIRE_EQ ( 0, match_info.position );
+        REQUIRE_EQ ( 1, match_info.score );
     }
 
     // Match anything
-    {
-        // threshold >= pattern_len seems to specify that a complete mismatch is acceptable
-        // by implementation, the algorithm reports the result to be "found" at the tail portion of the reference string
-        // for this degenerate case, the expected behavior is not clear, so I'll just document the reality here:
+    {   // threshold >= pattern_len seems to specify that a complete mismatch is acceptable
         const string text = "xyzvuwpiuuuu";
         REQUIRE ( FindFirst ( text, pattern_len ) );
-        REQUIRE_EQ ( (size_t)match_info.length, text . size () ); //FIXME: different from other algorithms
-        REQUIRE_EQ ( match_info.position, (int32_t)0 );
-        REQUIRE_EQ ( (size_t)match_info.score, pattern_len );
+        REQUIRE_EQ ( text . size (), (size_t)match_info.length ); 
+        REQUIRE_EQ ( 0, match_info.position );
+        REQUIRE_EQ ( pattern_len, (size_t)match_info.score );
     }
 
     // Not found
@@ -290,67 +289,66 @@ FIXTURE_TEST_CASE ( AgrepMyersTest, AgrepFixture )
     // Complete match
     {
         REQUIRE ( FindFirst ( "MATCH", 0 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len );
-        REQUIRE ( match_info.position == 0 );
-        REQUIRE ( match_info.score == 0 );
+        REQUIRE_EQ ( pattern_len, (size_t)match_info.length );
+        REQUIRE_EQ ( 0, match_info.position );
+        REQUIRE_EQ ( 0, match_info.score );
     }
 
     // Complete substring match
     {
         REQUIRE ( FindFirst ( "xxMATCHvv", 0 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len );
-        REQUIRE ( match_info.position == 2 );
-        REQUIRE ( match_info.score == 0 );
+        REQUIRE_EQ ( pattern_len, (size_t)match_info.length );
+        REQUIRE_EQ ( 2, match_info.position );
+        REQUIRE_EQ ( 0, match_info.score );
     }
     // 1 Deletion
     {
         REQUIRE ( FindFirst ( "xxxMACHvv", 1 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len - 1 );
-        REQUIRE ( match_info.position == 3 );
-        REQUIRE ( match_info.score == 1 );
+        REQUIRE_EQ ( pattern_len - 1, (size_t)match_info.length );
+        REQUIRE_EQ ( 3, match_info.position );
+        REQUIRE_EQ ( 1, match_info.score );
     }
 
     // 2 Insertions
     {
         REQUIRE ( FindFirst ( "xxxMAdTCaHvv", 2 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len /* + 2 */ ); //FIXME: different from other algorithms
-        REQUIRE ( match_info.position == 3 );
-        REQUIRE ( match_info.score == 2 );
+//        REQUIRE_EQ ( pattern_len + 2, (size_t)match_info.length );
+        REQUIRE_EQ ( pattern_len, (size_t)match_info.length ); //FIXME: different from other algorithms
+        REQUIRE_EQ ( 3, match_info.position );
+        REQUIRE_EQ ( 2, match_info.score );
     }
 
     // 3 Mismatches
     {
         REQUIRE ( FindFirst ( "xATxx", 5 ) );
-        REQUIRE_EQ ( (size_t)2 /*pattern_len*/, (size_t)match_info.length  ); //FIXME: different from other algorithms
-        REQUIRE_EQ ( (int32_t)0, match_info.position );
-        REQUIRE_EQ ( (int32_t)3, match_info.score );
+        REQUIRE_EQ ( 2, match_info.length  ); 
+        REQUIRE_EQ ( 1, match_info.position ); 
+        REQUIRE_EQ ( 3, match_info.score );
     }
     
     // Best match
     {
         REQUIRE ( FindBest ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len );
-        REQUIRE ( match_info.position == 18 );
-        REQUIRE ( match_info.score == 0 );
+        REQUIRE_EQ ( pattern_len, (size_t)match_info.length );
+        REQUIRE_EQ ( 18, match_info.position );
+        REQUIRE_EQ ( 0, match_info.score );
     }
     // First match
     {
         REQUIRE ( FindFirst ( "MTCH__MITCH_MTACH_MATCH_MATCH", 1 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len - 1 );
-        REQUIRE ( match_info.position == 0 );
-        REQUIRE ( match_info.score == 1 );
+        REQUIRE_EQ ( pattern_len - 1, (size_t)match_info.length );
+        REQUIRE_EQ ( 0, match_info.position );
+        REQUIRE_EQ ( 1, match_info.score );
     }
 
     // Match anything
-    {
-        // threshold >= pattern_len seems to specify that a complete mismatch is acceptable
-        // by implementation, the algorithm reports the result to be "found" at the tail portion of the reference string
-        // for this degenerate case, the expected behavior is not clear, so I'll just document the reality here:
+    {   // threshold >= pattern_len seems to specify that a complete mismatch is acceptable
         const string text = "xyzvuwpiuuuu";
         REQUIRE ( FindFirst ( text, pattern_len ) );
-        REQUIRE_EQ ( (size_t)match_info.length, text . size () ); //FIXME: different from other algorithms
-        REQUIRE_EQ ( (size_t)match_info.position, text . size () - ( pattern_len + 1 ) );
-        REQUIRE_EQ ( (size_t)match_info.score, pattern_len );
+//        REQUIRE_EQ ( text . size (), (size_t)match_info.length ); 
+        REQUIRE_EQ ( 1, match_info.length ); //FIXME: different from other algorithms
+        REQUIRE_EQ ( 0, match_info.position );
+        REQUIRE_EQ ( pattern_len, (size_t)match_info.score );
     }
 
     // Not found
@@ -366,30 +364,31 @@ FIXTURE_TEST_CASE ( AgrepMyersUnltdTest, AgrepFixture )
     // Complete match
     {
         REQUIRE ( FindFirst ( "MATCH", 0 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len );
-        REQUIRE ( match_info.position == 0 );
-        REQUIRE ( match_info.score == 0 );
+        REQUIRE_EQ ( pattern_len, (size_t)match_info.length );
+        REQUIRE_EQ ( 0, match_info.position );
+        REQUIRE_EQ ( 0, match_info.score );
     }
 
     // Complete substring match
     {
         REQUIRE ( FindFirst ( "xxMATCHvv", 0 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len );
-        REQUIRE ( match_info.position == 2 );
-        REQUIRE ( match_info.score == 0 );
+        REQUIRE_EQ ( pattern_len, (size_t)match_info.length );
+        REQUIRE_EQ ( 2, match_info.position );
+        REQUIRE_EQ ( 0, match_info.score );
     }
     // 1 Deletion
     {
         REQUIRE ( FindFirst ( "xxxMACHvv", 1 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len - 1 );
-        REQUIRE ( match_info.position == 3 );
-        REQUIRE ( match_info.score == 1 );
+        REQUIRE_EQ ( pattern_len - 1, (size_t)match_info.length );
+        REQUIRE_EQ ( 3, match_info.position );
+        REQUIRE_EQ ( 1, match_info.score );
     }
 
     // 2 Insertions
     {
         REQUIRE ( FindFirst ( "xxxMAdTCaHvv", 2 ) );
-        REQUIRE_EQ ( (size_t)pattern_len + 1 /* 2 */, (size_t)match_info.length ); //FIXME: different from other algorithms
+//        REQUIRE_EQ ( pattern_len + 2, (size_t)match_info.length );
+        REQUIRE_EQ ( (size_t)pattern_len - 1, (size_t)match_info.length ); //FIXME: different from other algorithms
         REQUIRE_EQ ( (int32_t)3, match_info.position );
         REQUIRE_EQ ( (int32_t)2, match_info.score );
     }
@@ -397,9 +396,9 @@ FIXTURE_TEST_CASE ( AgrepMyersUnltdTest, AgrepFixture )
     // 3 Mismatches
     {
         REQUIRE ( FindFirst ( "xATxx", 5 ) );
-        REQUIRE ( (size_t)match_info.length == pattern_len );
-        REQUIRE ( match_info.position == 0 );
-        REQUIRE ( match_info.score == 3 );
+        REQUIRE_EQ ( 2, match_info.length ); 
+        REQUIRE_EQ ( 1, match_info.position ); 
+        REQUIRE_EQ ( 3, match_info.score );
     }
     
     // Best match
@@ -418,15 +417,13 @@ FIXTURE_TEST_CASE ( AgrepMyersUnltdTest, AgrepFixture )
     }
 
     // Match anything
-    {
-        // threshold >= pattern_len seems to specify that a complete mismatch is acceptable
-        // by implementation, the algorithm reports the result to be "found" at the tail portion of the reference string
-        // for this degenerate case, the expected behavior is not clear, so I'll just document the reality here:
+    {   // threshold >= pattern_len seems to specify that a complete mismatch is acceptable
         const string text = "xyzvuwpiuuuu";
         REQUIRE ( FindFirst ( text, pattern_len ) );
-        REQUIRE_EQ ( (size_t)match_info.length, text . size () ); //FIXME: different from other algorithms
-        REQUIRE_EQ ( (size_t)match_info.position, text . size () - ( pattern_len + 1 ) );
-        REQUIRE_EQ ( (size_t)match_info.score, pattern_len );
+//        REQUIRE_EQ ( text . size (), (size_t)match_info.length ); 
+        REQUIRE_EQ ( 1, match_info.length ); //FIXME: different from other algorithms
+        REQUIRE_EQ ( 0, match_info.position );
+        REQUIRE_EQ ( pattern_len, (size_t)match_info.score );
     }
 
     // Not found
@@ -515,7 +512,130 @@ TEST_CASE ( AhoGrep_Crash )
 }
 
 // Smith-Waterman
-TEST_CASE ( SmithWaterman_crash)
+
+class SmithWatermanFixture
+{
+public:
+	SmithWatermanFixture()
+	:  m_self ( 0 ),
+       m_pattern_len ( 0 )
+	{
+	}
+	~SmithWatermanFixture()
+	{
+		::SmithWatermanWhack ( m_self );
+	}
+	
+	rc_t Setup ( const string& p_query )
+	{
+        m_pattern_len = p_query . size (); 
+		return ::SmithWatermanMake ( & m_self, p_query . data() );
+	}
+	
+	bool FindFirst ( const string& p_text, uint32_t p_threshold = numeric_limits<uint32_t>::max() )
+	{
+		return ::SmithWatermanFindFirst ( m_self,  p_threshold, p_text . c_str (), p_text . size (), & m_match_info ) == 0;	
+	}
+
+public:	
+	::SmithWaterman*       m_self;
+	size_t                 m_pattern_len;
+    ::SmithWatermanMatch   m_match_info;
+};
+
+FIXTURE_TEST_CASE ( SmithWatermanTest, SmithWatermanFixture )
+{
+    REQUIRE_RC ( Setup ( "MATCH" ) );
+    
+	// threshold in FirstMatch varies from 0 (a complete mismatch is acceptable) to 2*m_pattern_len (perfect match)
+    
+    // Complete match
+    {
+        REQUIRE ( FindFirst ( "MATCH" ) );
+        REQUIRE_EQ ( m_pattern_len,  ( size_t ) m_match_info.length );
+        REQUIRE_EQ ( 0, m_match_info.position );
+        REQUIRE_EQ ( 2 * m_pattern_len, ( size_t ) m_match_info.score );
+    }
+    // Complete substring match
+    {
+        REQUIRE ( FindFirst ( "xxMATCHvv", 0 ) );
+        REQUIRE_EQ ( m_pattern_len, (size_t)m_match_info.length );
+        REQUIRE_EQ ( 2, m_match_info.position );
+        REQUIRE_EQ ( 2 * m_pattern_len, ( size_t ) m_match_info.score );
+    }
+    // 1 Deletion
+    {
+        REQUIRE ( FindFirst ( "xxxMACHvv", 7 ) );
+        REQUIRE_EQ ( m_pattern_len - 1, (size_t)m_match_info.length );
+        REQUIRE_EQ ( 3, m_match_info.position );
+        REQUIRE_EQ ( 7, m_match_info.score );
+    }
+
+    // 2 Insertions
+    {
+        REQUIRE ( FindFirst ( "xxxMAdTCaHvv", 8 ) );
+        REQUIRE_EQ ( m_pattern_len + 2, (size_t)m_match_info.length );
+        REQUIRE_EQ ( 3, m_match_info.position );
+        REQUIRE_EQ ( 8, m_match_info.score );
+    }
+
+    // 3 Mismatches
+    {
+        REQUIRE ( FindFirst ( "xATxx", 4 ) );
+        REQUIRE_EQ ( 2, m_match_info.length );
+        REQUIRE_EQ ( 1, m_match_info.position );
+        REQUIRE_EQ ( 4, m_match_info.score );
+    }
+    
+    // First match
+    {
+        REQUIRE ( FindFirst ( "MTCH__MITCH_MTACH_MATCH_MATCH" ) );
+        REQUIRE_EQ ( m_pattern_len, (size_t)m_match_info.length );
+        REQUIRE_EQ ( 18, m_match_info.position );
+        REQUIRE_EQ ( 2 * m_pattern_len,  (size_t)m_match_info.score );
+    }
+
+    // Match anything
+    {   // threshold is from 0 (a complete mismatch is acceptable) to 2*m_pattern_len (perfect match)
+        const string text = "xyzvuwpiuuuu";
+        REQUIRE ( FindFirst ( text, 0 ) );
+        REQUIRE_EQ ( 0, m_match_info.length ); 
+        REQUIRE_EQ ( 0, m_match_info.position );
+        REQUIRE_EQ ( 0, m_match_info.score );
+    }
+
+    // Not found
+    {
+        REQUIRE ( ! FindFirst ( "xyzvuwpiu", 1 ) );
+    }
+}
+
+// Ref-Variation
+#if 0
+static 
+void 
+PrintMatrix ( const INSDC_dna_text* p_ref, const INSDC_dna_text* p_query, const int p_matrix[], size_t p_rows, size_t p_cols )
+{
+    cout << "    ";
+    while ( *p_query )
+    {
+        cout << " " << *p_query;
+        ++p_query;
+    }
+    cout << endl;
+    for ( size_t i = 0; i < p_rows - 1; ++i ) // skip row 0 ( all 0s )
+    {
+        cout << i << " " << p_ref[i] << ": ";
+        for ( size_t j = 0; j < p_cols - 1; ++j ) // skip the 0 at the start
+        {
+            cout << p_matrix [ ( i + 1 ) * p_cols + j + 1 ] << " ";
+        }
+        cout << endl;
+    }
+}
+#endif
+
+TEST_CASE ( RefVariation_crash)
 {
     RefVariation* self;
     INSDC_dna_text ref[] = "ACGTACGTACGTACGTACGTACGTACGTACGT";
@@ -528,21 +648,22 @@ TEST_CASE ( SmithWaterman_crash)
 #define PRSIZET "z"
 #endif
 
-void print_refvar_obj (::RefVariation const* obj)
+string print_refvar_obj (::RefVariation const* obj)
 {
     size_t allele_len = 0, allele_start = 0, allele_len_on_ref = 0;
     char const* allele = NULL;
     ::RefVariationGetAllele( obj, & allele, & allele_len, & allele_start );
     ::RefVariationGetAlleleLenOnRef ( obj, & allele_len_on_ref );
 
-    printf ("<no ref name>:%"PRSIZET"u:%"PRSIZET"u:%.*s\n",
-        allele_start, allele_len_on_ref, (int)allele_len, allele);
+    //printf ("<no ref name>:%"PRSIZET"u:%"PRSIZET"u:%.*s\n", allele_start, allele_len_on_ref, (int)allele_len, allele);
+        
+    return string ( allele, allele_len );
 }
 
 #undef PRSIZET
 
 
-void vrefvar_bounds (::RefVarAlg alg, char const* ref,
+string vrefvar_bounds (::RefVarAlg alg, char const* ref,
     size_t ref_len, size_t pos, size_t len_on_ref,
     char const* query, size_t query_len)
 {
@@ -551,13 +672,15 @@ void vrefvar_bounds (::RefVarAlg alg, char const* ref,
 
     rc_t rc = ::RefVariationIUPACMake ( & obj, ref, ref_len, pos, len_on_ref, query, query_len, alg );
 
-    print_refvar_obj ( obj );
+    string ret = print_refvar_obj ( obj );
 
     if ( rc == 0 )
         ::RefVariationRelease( obj );
+        
+    return ret;
 }
 
-void vrefvar_bounds_n(::RefVarAlg alg)
+string vrefvar_bounds_n(::RefVarAlg alg)
 {
     //                  01234567890123456789
     char const ref[] = "NNNNNNNNNNTAACCCTAAC";
@@ -566,10 +689,10 @@ void vrefvar_bounds_n(::RefVarAlg alg)
     size_t pos = 5, len_on_ref = 10;
     char const query[] = "CCCCTTAGG";
 
-    vrefvar_bounds ( alg, ref, strlen(ref), pos, len_on_ref, query, strlen(query) );
+    return vrefvar_bounds ( alg, ref, strlen(ref), pos, len_on_ref, query, strlen(query) );
 }
 
-void vrefvar_bounds_0(::RefVarAlg alg)
+string vrefvar_bounds_0(::RefVarAlg alg)
 {
     //                  01234567890123456789
     char const ref[] = "TAACCCTAAC";
@@ -578,10 +701,10 @@ void vrefvar_bounds_0(::RefVarAlg alg)
     size_t pos = 0, len_on_ref = 5;
     char const query[] = "TAGG";
 
-    vrefvar_bounds ( alg, ref, strlen(ref), pos, len_on_ref, query, strlen(query) );
+    return vrefvar_bounds ( alg, ref, strlen(ref), pos, len_on_ref, query, strlen(query) );
 }
 
-void vrefvar_bounds_N0(::RefVarAlg alg)
+string vrefvar_bounds_N0(::RefVarAlg alg)
 {
     //                  01234567890123456789
     char const ref[] = "NNNNNTAACCCTAAC";
@@ -590,61 +713,22 @@ void vrefvar_bounds_N0(::RefVarAlg alg)
     size_t pos = 0, len_on_ref = 10;
     char const query[] = "CCCCTTAGG";
 
-    vrefvar_bounds ( alg, ref, strlen(ref), pos, len_on_ref, query, strlen(query) );
+    return vrefvar_bounds ( alg, ref, strlen(ref), pos, len_on_ref, query, strlen(query) );
 }
 
-TEST_CASE ( SmithWaterman_bounds_N )
+TEST_CASE ( RefVariation_bounds_N )
 {
-    printf ("TODO: this test is derived from the real example which hangs up now (2015-12-14):\n");
-    printf ("echo \"67068302 NC_000001.10:9995:10:CCCCTTAGG\" | var-expand --algorithm=sw\n");
-    vrefvar_bounds_n ( ::refvarAlgSW );
-    vrefvar_bounds_n ( ::refvarAlgRA );
+    //printf ("TODO: this test is derived from the real example which hangs up now (2015-12-14):\n");
+    //printf ("echo \"67068302 NC_000001.10:9995:10:CCCCTTAGG\" | var-expand --algorithm=sw\n");
+    
+    REQUIRE_EQ ( string ( "NNNNNCCCCTTAGGCTAA" ), vrefvar_bounds_n ( ::refvarAlgSW ) );
+    REQUIRE_EQ ( string ( "CCCCTTAGGC" ), vrefvar_bounds_n ( ::refvarAlgRA ) );
 
-    vrefvar_bounds_0 ( ::refvarAlgSW );
-    vrefvar_bounds_0 ( ::refvarAlgRA );
+    REQUIRE_EQ ( string ( "AGGC" ), vrefvar_bounds_0 ( ::refvarAlgSW ) );
+    REQUIRE_EQ ( string ( "TAGG" ), vrefvar_bounds_0 ( ::refvarAlgRA ) );
 
-    vrefvar_bounds_N0 ( ::refvarAlgSW );
-    vrefvar_bounds_N0 ( ::refvarAlgRA );
-}
-
-static 
-void 
-PrintMatrix ( const int p_matrix[], size_t p_rows, size_t p_cols )
-{
-    for ( size_t i = 0; i < p_rows; ++i )
-    {
-        for ( size_t j = 0; j < p_cols; ++j )
-        {
-            cout << p_matrix [ i * p_cols + j ] << " ";
-        }
-        cout << endl;
-    }
-}
-
-TEST_CASE ( SmithWaterman_calculate_matrix_for_exact_match )
-{
-    const INSDC_dna_text Ref[] = "ACGTACGTACGTACGTACGTACGTACGTACGT";
-    const INSDC_dna_text Query[] = "ACGTACGTACG";
-    const size_t Rows = sizeof ( Ref ) / sizeof ( INSDC_dna_text );
-    const size_t Cols = sizeof ( Query ) / sizeof ( INSDC_dna_text );
-    int matrix [ Rows * Cols ];
-    int maxScore = -1;
-    REQUIRE_RC ( calculate_similarity_matrix ( Ref, Rows - 1, Query, Cols - 1, matrix, true, & maxScore ) ); 
-    //PrintMatrix ( matrix, Rows, Cols );
-    REQUIRE_EQ ( int ( Cols - 1 ) * 2, maxScore ); // exact match
-}
-
-TEST_CASE ( SmithWaterman_calculate_matrix_for_total_mismatch )
-{
-    const INSDC_dna_text Ref[] =    "AAAAAAAAAAAAAAAAAAAAAA";
-    const INSDC_dna_text Query[] =  "GGGGG";
-    const size_t Rows = sizeof ( Ref ) / sizeof ( INSDC_dna_text );
-    const size_t Cols = sizeof ( Query ) / sizeof ( INSDC_dna_text );
-    int matrix [ Rows * Cols ];
-    int maxScore = -1;
-    REQUIRE_RC ( calculate_similarity_matrix ( Ref, Rows - 1, Query, Cols - 1, matrix, true, & maxScore ) ); 
-    //PrintMatrix ( matrix, Rows, Cols );
-    REQUIRE_EQ ( 0, maxScore ); // total mismatch
+    REQUIRE_EQ ( string ( "CCCCTTAGGCTAA" ), vrefvar_bounds_N0 ( ::refvarAlgSW ) );
+    REQUIRE_EQ ( string ( "CCCCTTAGGC" ), vrefvar_bounds_N0 ( ::refvarAlgRA ) );
 }
 
 // Nucstrstr
