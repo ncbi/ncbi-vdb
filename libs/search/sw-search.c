@@ -279,7 +279,6 @@ static void sw_find_indel_box ( int* matrix, size_t ROWS, size_t COLUMNS,
     int* ret_row_start, int* ret_row_end,
     int* ret_col_start, int* ret_col_end )
 {
-    /* find maximum score in the matrix */
     size_t max_row = 0, max_col = 0;
     size_t max_i = ROWS*COLUMNS - 1;
 
@@ -289,11 +288,12 @@ static void sw_find_indel_box ( int* matrix, size_t ROWS, size_t COLUMNS,
     max_row = max_i / COLUMNS;
     max_col = max_i % COLUMNS;
 
-    // traceback to (0,0)-th element of the matrix
     *ret_row_start = *ret_row_end = *ret_col_start = *ret_col_end = -1;
 
     i = max_row;
     j = max_col;
+
+    /* traceback to (0,0)-th element of the matrix */
     while (1)
     {
         if (i > 0 && j > 0)
