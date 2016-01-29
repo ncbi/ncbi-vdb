@@ -1116,8 +1116,17 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
             /* find cache - vresolver call */
             rc = VResolverCache ( self->resolver, path, &local_cache, 0 );
             if ( rc == 0 )
+            {
                 /* we did find a place for local cache --> use it! */
                 rc = VFSManagerMakeHTTPFile( self, f, uri->addr, local_cache->path.addr, high_reliability );
+                {
+                    rc_t rc2 = VPathRelease ( local_cache );
+                    if ( rc == 0 )
+                    {
+                        rc = rc2;
+                    }
+                }
+            }
             else
                 /* we did NOT find a place for local cache --> we are not caching! */
                 rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL, high_reliability );
