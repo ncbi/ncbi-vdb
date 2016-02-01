@@ -65,8 +65,9 @@ class TestStream;
 #   define DBG_KNS_OFF() 
 #endif
 
-static const string Response_HEAD_OK = "HTTP/1.1 200 OK\nContent-Length: 7\n";
+static const string Response_HEAD_OK = "HTTP/1.1 200 OK\nAccept-Ranges: bytes\nContent-Length: 7\n";
 static const string Response_GET_Content = "HTTP/1.1 206 Partial Content\n"
+                                            "Accept-Ranges: bytes\n"
                                             "Transfer-Encoding: chunked\n"
                                             "Content-Range: bytes 0-6/7\n" 
                                             "\n"
