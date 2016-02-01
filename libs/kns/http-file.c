@@ -82,13 +82,12 @@ typedef struct KHttpFile KHttpFile;
 struct KHttpFile
 {
     KFile dad;
-    const KNSManager * kns;
     
     uint64_t file_size;
 
+    const KNSManager * kns;
     KClientHttp *http;
 
-    char * url;
     KDataBuffer url_buffer;
 
     bool no_cache;
@@ -99,7 +98,6 @@ rc_t CC KHttpFileDestroy ( KHttpFile *self )
 {
     KNSManagerRelease ( self -> kns );
     KClientHttpRelease ( self -> http );
-    free ( self -> url );
     KDataBufferWhack ( & self -> url_buffer );
     free ( self );
 
@@ -109,15 +107,14 @@ rc_t CC KHttpFileDestroy ( KHttpFile *self )
 static
 struct KSysFile* CC KHttpFileGetSysFile ( const KHttpFile *self, uint64_t *offset )
 {
-    *offset = 0;
+    * offset = 0;
     return NULL;
 }
 
 static
 rc_t CC KHttpFileRandomAccess ( const KHttpFile *self )
 {
-    /* TBD - not all HTTP servers will support this
-       detect if the server does not, and alter the vTable */
+    /* we ensure during construction that the server accepts partial range requests */
     return 0;
 }
 
@@ -126,7 +123,7 @@ rc_t CC KHttpFileRandomAccess ( const KHttpFile *self )
 static
 rc_t CC KHttpFileSize ( const KHttpFile *self, uint64_t *size )
 {
-    *size = self -> file_size;
+    * size = self -> file_size;
     return 0;
 }
 
@@ -302,7 +299,7 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
     size_t *num_read, struct timeout_t *tm )
 {
     KHttpRetrier retrier;
-    rc_t rc = KHttpRetrierInit ( & retrier, self -> url, self -> kns );
+    rc_t rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> kns );
     
     if ( rc == 0 )
     {
@@ -448,51 +445,69 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                 if ( rc == 0 )
                                 {
                                     KClientHttpResult *rslt;
-                                    rc = KClientHttpRequestHEAD(req, &rslt);
+                                    rc = KClientHttpRequestHEAD ( req, & rslt );
                                     KClientHttpRequestRelease ( req );
-                                    
+
                                     if ( rc == 0 )
                                     {
                                         uint64_t size;
-                                        bool have_size = KClientHttpResultSize ( rslt, &size );
-                                        uint32_t status = 0;
-                                        KClientHttpResultStatus ( rslt,
-                                            &status, NULL, 0, NULL );
+                                        uint32_t status;
+
+                                        size_t num_read;
+                                        char buffer [ 64 ];
+
+                                        /* get the file size from HEAD query */
+                                        bool have_size = KClientHttpResultSize ( rslt, & size );
+
+                                        /* see if the server accepts partial content range requests */
+                                        bool accept_ranges = false;
+                                        rc = KClientHttpResultGetHeader ( self, "Accept-Ranges", buffer, sizeof buffer, & num_read );
+                                        if ( rc == 0 && num_read == sizeof "bytes" - 1 &&
+                                             strcase_cmp ( buffer, num_read, "bytes", sizeof "bytes" - 1, -1 ) == 0 )
+                                        {
+                                            accept_ranges = true;
+                                        }
+
+                                        /* check the result status */
+                                        rc = KClientHttpResultStatus ( rslt, & status, NULL, 0, NULL );
+
+                                        /* done with result */
                                         KClientHttpResultRelease ( rslt );
 
-                                        if ( ! have_size )
+                                        /* check for error status */
+                                        if ( rc == 0 )
                                         {
-                                            switch ( status ) {
-                                              case 403:
-                                                rc = RC ( rcNS, rcFile,
-                                                    rcOpening,
-                                                    rcFile, rcUnauthorized );
+                                            switch ( status )
+                                            {
+                                            case 200:
+                                                if ( ! have_size )
+                                                    rc = RC ( rcNS, rcFile, rcOpening, rcSize, rcUnknown );
+                                                else if ( ! accept_ranges )
+                                                    rc = RC ( rcNS, rcFile, rcOpening, rcFunction, rcUnsupported );
                                                 break;
-                                              case 404:
-                                                rc = RC ( rcNS, rcFile,
-                                                    rcOpening,
-                                                    rcFile, rcNotFound );
+                                            case 403:
+                                                rc = RC ( rcNS, rcFile, rcOpening, rcFile, rcUnauthorized );
                                                 break;
-                                              default:
-                                                rc = RC ( rcNS, rcFile,
-                                                    rcValidating,
-                                                    rcNoObj, rcEmpty );
+                                            case 404:
+                                                rc = RC ( rcNS, rcFile, rcOpening, rcFile, rcNotFound );
                                                 break;
+                                            default:
+                                                rc = RC ( rcNS, rcFile, rcValidating, rcNoObj, rcEmpty );
                                             }
-                                        }
-                                        else
-                                        {
-                                            rc = KNSManagerAddRef ( self );
+
                                             if ( rc == 0 )
                                             {
-                                                f -> kns = self;
-                                                f -> file_size = size;
-                                                f -> http = http;
-                                                f -> url = string_dup ( url, string_size ( url ) );
-                                                f -> no_cache = size >= NO_CACHE_LIMIT;
-
-                                                * file = & f -> dad;
-                                                return 0;
+                                                rc = KNSManagerAddRef ( self );
+                                                if ( rc == 0 )
+                                                {
+                                                    f -> kns = self;
+                                                    f -> file_size = size;
+                                                    f -> http = http;
+                                                    f -> no_cache = size >= NO_CACHE_LIMIT;
+                                                    
+                                                    * file = & f -> dad;
+                                                    return 0;
+                                                }
                                             }
                                         }
                                     }
