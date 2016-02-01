@@ -72,6 +72,15 @@ typedef struct KHttpFile KHttpFile;
 #include <ctype.h>
 #include <assert.h>
 
+#if _DEBUGGING && 0
+#include <stdio.h>
+#define TRACE( x, ... ) \
+    fprintf ( stderr, "@@ %s:%d: %s: " x, __FILE__, __LINE__, __func__, __VA_ARGS__ )
+#else
+#define TRACE( x, ... ) \
+    ( ( void ) 0 )
+#endif
+
 #define USE_CACHE_CONTROL 0
 #define NO_CACHE_LIMIT ( ( uint64_t ) ( 16 * 1024 * 1024 ) )
 
@@ -139,7 +148,7 @@ rc_t KHttpFileTimedReadInt ( const KHttpFile *cself,
     size_t *num_read, struct timeout_t *tm, uint32_t * http_status )
 {
     uint64_t pos = aPos;
-    rc_t rc;
+    rc_t rc = 0;
     KHttpFile *self = ( KHttpFile * ) cself;
     KClientHttp *http = self -> http;
     
@@ -167,23 +176,27 @@ rc_t KHttpFileTimedReadInt ( const KHttpFile *cself,
   several times on the same socket,
   the server returns HTTP headers twice and no content: See VDB-1256, SYS-185053
 */
-#define MIN_SZ 256
-        char buf[MIN_SZ] = "";
+        char buf [ 256 ] = "";
         void *bPtr = aBuf;
         size_t bsize = aBsize;
+        uint32_t proxy_retries;
 
         /* extend buffer size to MIN_SZ */
-        if (bsize < MIN_SZ) {
+        if ( bsize < sizeof buf )
+        {
             bPtr = buf;
-            bsize = MIN_SZ;
+            bsize = sizeof buf;
         }
 
         /* limit request to file size */
-        if ( pos + bsize > self -> file_size ) {
+        if ( pos + bsize > self -> file_size )
+        {
             bsize = self -> file_size - pos;
-            if (bsize < MIN_SZ) {
-                size_t d = MIN_SZ - bsize;
-                if (pos >= d) {
+            if (bsize < sizeof buf)
+            {
+                size_t d = sizeof buf - bsize;
+                if (pos >= d)
+                {
                     bsize += d;
                     pos -= d;
                 }
@@ -196,100 +209,145 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
             }
         }
 
-        assert(bsize >= MIN_SZ || (pos == 0 && bsize == self -> file_size));
+        assert(bsize >= sizeof buf || (pos == 0 && bsize == self -> file_size));
 
-        rc = KClientHttpMakeRequest ( http, &req, self -> url_buffer . base );
+        for ( proxy_retries = 5; rc == 0 && proxy_retries != 0; )
+        {
+            rc = KClientHttpMakeRequest ( http, &req, self -> url_buffer . base );
+            if ( rc != 0 )
+            {
+                TRACE ( "KClientHttpMakeRequest ( http, & req, url=\"%s\" ); failed: rc=%u\n", ( const char* ) self -> url_buffer . base, rc );
+                break;
+            }
 
 #if USE_CACHE_CONTROL
-        /* tell proxies not to cache if file is above limit */
-        if ( rc == 0 && self -> no_cache )
-            rc = KClientHttpRequestSetNoCache ( req );
+            /* tell proxies not to cache if file is above limit */
+            if ( rc == 0 && self -> no_cache )
+                rc = KClientHttpRequestSetNoCache ( req );
 #warning "using cache control"
 #endif
-        if ( rc == 0 )
-        {
-            /* request min ( bsize, file_size ) bytes */
-            rc = KClientHttpRequestByteRange ( req, pos, bsize );
             if ( rc == 0 )
             {
-                KClientHttpResult *rslt;
-                
-                rc = KClientHttpRequestGET ( req, &rslt );
-                if ( rc == 0 )
+                /* request min ( bsize, file_size ) bytes */
+                rc = KClientHttpRequestByteRange ( req, pos, bsize );
+                if ( rc != 0 )
+                    TRACE ( "KClientHttpRequestByteRange ( req, pos=%lu, bsize=%lu ); failed: rc=%u\n", pos, bsize, rc );
+                else
                 {
-                    /* dont need to know what the response message was */
-                    rc = KClientHttpResultStatus ( rslt, http_status, NULL, 0, NULL );
-                    if ( rc == 0 )
+                    KClientHttpResult *rslt;
+                
+                    rc = KClientHttpRequestGET ( req, &rslt );
+                    if ( rc != 0 )
+                        TRACE ( "KClientHttpRequestGET ( req, & rslt ); failed: rc=%u\n", rc );
+                    else
                     {
-                        switch ( * http_status )
+                        /* dont need to know what the response message was */
+                        rc = KClientHttpResultStatus ( rslt, http_status, NULL, 0, NULL );
+                        if ( rc != 0 )
+                            TRACE ( "KClientHttpResultStatus ( rslt, & http_status, NULL, 0, NULL ); failed: rc=%u\n", rc );
+                        else
                         {
-                        case 206:
-                        {
-                            uint64_t start_pos;
-                            size_t result_size;
-
-                            /* extract actual amount being returned by server */
-                            rc = KClientHttpResultRange ( rslt, &start_pos, &result_size );
-                            if ( rc == 0 && 
-                                 start_pos == pos &&
-                                 result_size == bsize )
+                            switch ( * http_status )
                             {
-                                KStream *response;
-                                
-                                rc = KClientHttpResultGetInputStream ( rslt, &response );
-                                if ( rc == 0 )
+                            case 206:
+                            {
+                                uint64_t start_pos;
+                                size_t result_size;
+
+                                /* don't need retries now */
+                                proxy_retries = 0;
+
+                                /* extract actual amount being returned by server */
+                                rc = KClientHttpResultRange ( rslt, &start_pos, &result_size );
+                                if ( rc != 0 || start_pos != pos || result_size != bsize )
                                 {
-                                    size_t skip = 0;
-
-                                    rc = KStreamTimedReadExactly(
-                                         response, bPtr, result_size, tm);
                                     if ( rc != 0 )
+                                        TRACE ( "KClientHttpResultRange ( rslt, & start_pos, & result_size ); failed: rc=%u\n", rc );
+                                    else
                                     {
-                                        KStreamRelease ( response );
-                                        KClientHttpResultRelease ( rslt );
-                                        KClientHttpRequestRelease ( req );
-                                        KClientHttpClose ( http );
-                                        return ResetRCContext ( rc, rcNS, rcFile, rcReading );
+                                        if ( start_pos != pos )
+                                            TRACE ( "KClientHttpResultRange ( rslt, & start_pos, & result_size ); failed: start_pos=%lu != pos=%lu\n", start_pos, pos );
+                                        if ( result_size != bsize )
+                                            TRACE ( "KClientHttpResultRange ( rslt, & start_pos, & result_size ); failed: result_size=%lu != bsize=%lu\n", result_size, bsize );
                                     }
-
-                                    if (pos != aPos) {
-                                        assert(pos < aPos);
-                                        skip = aPos - pos;
-                                        assert(result_size >= skip);
-                                        result_size -= skip;
-                                    }
-
-                                    if (result_size > aBsize) {
-                                        result_size = aBsize;
-                                    }
-
-                                    if (bPtr == buf) {
-                                        memcpy(aBuf, buf + skip, result_size);
-                                    }
-                                    else if (skip > 0) {
-                                        const void *src
-                                            = (const char *)aBuf + skip;
-                                        memmove(aBuf, src, result_size);
-                                    }
-
-                                    * num_read = result_size;
-
-                                    KStreamRelease ( response );
                                 }
+                                else
+                                {
+                                    KStream *response;
+                                
+                                    rc = KClientHttpResultGetInputStream ( rslt, &response );
+                                    if ( rc == 0 )
+                                    {
+                                        size_t skip = 0;
+
+                                        rc = KStreamTimedReadExactly( response, bPtr, result_size, tm );
+                                        if ( rc != 0 )
+                                        {
+                                            KStreamRelease ( response );
+                                            KClientHttpResultRelease ( rslt );
+                                            KClientHttpRequestRelease ( req );
+                                            KClientHttpClose ( http );
+                                            return ResetRCContext ( rc, rcNS, rcFile, rcReading );
+                                        }
+
+                                        if (pos != aPos)
+                                        {
+                                            assert(pos < aPos);
+                                            skip = aPos - pos;
+                                            assert(result_size >= skip);
+                                            result_size -= skip;
+                                        }
+
+                                        if (result_size > aBsize)
+                                            result_size = aBsize;
+
+                                        if (bPtr == buf)
+                                            memcpy(aBuf, buf + skip, result_size);
+                                        else if (skip > 0)
+                                        {
+                                            const void *src = ( const char * ) aBuf + skip;
+                                            memmove(aBuf, src, result_size);
+                                        }
+
+                                        * num_read = result_size;
+
+                                        KStreamRelease ( response );
+                                    }
+                                }
+                                break;
                             }
-                            break;
+
+                            case 403:
+                            case 404:
+                                if ( -- proxy_retries != 0 )
+                                {
+                                    TRACE ( "KClientHttpResultStatus ( rslt, & http_status, NULL, 0, NULL ); unexpected status=%d - sleeping and retrying\n", * http_status );
+                                    KSleep ( 1 );
+                                    rc = 0;
+                                    break;
+                                }
+
+                                /* NO BREAK */
+
+                            default:
+                                rc = RC ( rcNS, rcFile, rcReading, rcData, rcUnexpected );
+                                TRACE ( "KClientHttpResultStatus ( rslt, & http_status, NULL, 0, NULL ); unexpected status=%d\n", * http_status );
+                                break;
+                            }
                         }
-                        case 416:
-                        default:
-                            break;
-                        }
+
+                        KClientHttpResultRelease ( rslt );
                     }
-                    KClientHttpResultRelease ( rslt );
                 }
+
+                KClientHttpRequestRelease ( req );
             }
-            KClientHttpRequestRelease ( req );
         }
     }
+
+    if ( rc != 0 || * num_read == 0 )
+        KClientHttpClose ( http );
+    
     return rc;
 }
 
@@ -461,7 +519,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
 
                                         /* see if the server accepts partial content range requests */
                                         bool accept_ranges = false;
-                                        rc = KClientHttpResultGetHeader ( self, "Accept-Ranges", buffer, sizeof buffer, & num_read );
+                                        rc = KClientHttpResultGetHeader ( rslt, "Accept-Ranges", buffer, sizeof buffer, & num_read );
                                         if ( rc == 0 && num_read == sizeof "bytes" - 1 &&
                                              strcase_cmp ( buffer, num_read, "bytes", sizeof "bytes" - 1, -1 ) == 0 )
                                         {
