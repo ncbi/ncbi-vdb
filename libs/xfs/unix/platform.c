@@ -106,10 +106,6 @@ XFS_FUSE_init_v1 ( struct XFSControl * self )
         return XFS_RC ( rcUnexpected );
     }
 
-    if ( XFSControlGetLabel ( self ) == NULL ) {
-        RCt = XFSControlSetLabel ( self, "FUSE" );
-    }
-
     return RCt;
 }   /* XFS_FUSE_init_v1 () */
 
@@ -133,6 +129,7 @@ XFS_FUSE_mount_v1 ( struct XFSControl * self )
     struct fuse * FuseStruct;
     char * MountPoint;
     const char * LogPath;
+    const char * Label;
     int Foreground;
     int Multithreaded;
     int Result;
@@ -142,6 +139,7 @@ XFS_FUSE_mount_v1 ( struct XFSControl * self )
     FuseStruct = NULL;
     MountPoint = NULL;
     LogPath = NULL;
+    Label = NULL;
     Foreground = true;
     Multithreaded = true;
     Result = 0;
@@ -157,7 +155,8 @@ XFS_FUSE_mount_v1 ( struct XFSControl * self )
     }
 
     memset ( & FuseArgs, 0, sizeof FuseArgs );
-    Result = fuse_opt_add_arg ( & FuseArgs, XFSControlGetLabel ( self ) );
+    Label = XFSControlGetLabel ( self );
+    Result = fuse_opt_add_arg ( & FuseArgs, Label == NULL ? "FUSE" : Label );
     Result = fuse_opt_add_arg ( & FuseArgs, XFSControlGetMountPoint ( self ) );
     LogPath = XFSControlGetLogFile ( self );
 
