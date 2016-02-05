@@ -89,6 +89,7 @@ NGS_SRC =                 \
 	CSRA1_Reference       \
 	CSRA1_ReadCollection  \
 	CSRA1_Read            \
+	EBI_ReferenceSequence \
 	SRA_Statistics        \
 	SRA_DB_ReadCollection \
 	SRA_Read              \
