@@ -83,8 +83,6 @@ FIXTURE_TEST_CASE(SRA_Reference_Open_EBI_MD5, NGS_C_Fixture)
     EXIT;
 }
 
-#include <stdio.h>
-
 FIXTURE_TEST_CASE(SRA_Reference_Open_EBI_ACC, NGS_C_Fixture)
 {
     ENTRY;
