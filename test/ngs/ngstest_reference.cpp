@@ -32,6 +32,9 @@
 #include <ktst/unit_test.hpp>
 #include "NGS_ReadCollection.h"
 #include "NGS_ReferenceSequence.h"
+#include "NGS_String.h"
+
+#include <string.h>
 
 using namespace std;
 using namespace ncbi::NK;
@@ -57,6 +60,49 @@ FIXTURE_TEST_CASE(SRA_Reference_Open_FailsOnNonReference, NGS_C_Fixture)
     REQUIRE_FAILED ();
     EXIT;
 }
+
+FIXTURE_TEST_CASE(SRA_Reference_Open_EBI_MD5, NGS_C_Fixture)
+{
+    ENTRY;
+    const char* SRA_Accession = "ffd6aeffb54ade3d28ec7644afada2e9";
+    NGS_ReferenceSequence * ref = NGS_ReferenceSequenceMake ( ctx, SRA_Accession );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_NOT_NULL ( ref );
+
+    NGS_String* bases = NGS_ReferenceSequenceGetBases ( ref, ctx, 4, 16 );
+    
+    REQUIRE ( strcmp (NGS_StringData ( bases, ctx ), "CTTTCTGACCGAAATT") == 0 );
+
+    REQUIRE_EQ ( NGS_ReferenceSequenceGetLength(ref, ctx), (uint64_t)784333 );
+
+    // to suppress the warning of unused function - call toString
+    toString ( bases, ctx );
+
+    NGS_StringRelease ( bases, ctx );
+    NGS_ReferenceSequenceRelease ( ref, ctx );
+    EXIT;
+}
+
+#include <stdio.h>
+
+FIXTURE_TEST_CASE(SRA_Reference_Open_EBI_ACC, NGS_C_Fixture)
+{
+    ENTRY;
+    const char* SRA_Accession = "U12345.1";
+    NGS_ReferenceSequence * ref = NGS_ReferenceSequenceMake ( ctx, SRA_Accession );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_NOT_NULL ( ref );
+
+    NGS_String* bases = NGS_ReferenceSequenceGetBases ( ref, ctx, 4, 16 );
+    REQUIRE ( strcmp (NGS_StringData ( bases, ctx ), "CCGCTATCAATATACT") == 0 );
+
+    REQUIRE_EQ ( NGS_ReferenceSequenceGetLength(ref, ctx), (uint64_t)426 );
+
+    NGS_StringRelease ( bases, ctx );
+    NGS_ReferenceSequenceRelease ( ref, ctx );
+    EXIT;
+}
+
 
 //////////////////////////////////////////// Main
 extern "C"
