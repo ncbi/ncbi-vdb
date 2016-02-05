@@ -268,6 +268,8 @@ static rc_t NGS_ReferenceSequenceEBIInitReference (
 }
 
 
+#define URL_SIZE 512
+
 static rc_t NGS_ReferenceSequenceOpenEBI ( ctx_t ctx, const char * spec, SRA_ReferenceSequence * ref )
 {
     rc_t rc = 0;
@@ -277,8 +279,8 @@ static rc_t NGS_ReferenceSequenceOpenEBI ( ctx_t ctx, const char * spec, SRA_Ref
     bool ismd5 = is_md5 ( spec );
     KNSManager * mgr;
 
-    size_t const url_size = 512;
-    char url_request [ url_size ];
+    size_t const url_size = URL_SIZE;
+    char url_request [ URL_SIZE ];
 
     rc = KNSManagerMake ( & mgr );
     if ( rc != 0 )
@@ -416,7 +418,7 @@ NGS_ReferenceSequence * NGS_ReferenceSequenceMakeSRA ( ctx_t ctx, const char * s
                 {
                     const char REF_PREFIX[] = "NCBI:refseq:";
                     size_t pref_size = sizeof ( REF_PREFIX ) - 1;
-                    if ( string_match ( REF_PREFIX, pref_size, ts_buff, string_size ( ts_buff ), pref_size, NULL ) != pref_size )
+                    if ( string_match ( REF_PREFIX, pref_size, ts_buff, string_size ( ts_buff ), (uint32_t)pref_size, NULL ) != pref_size )
                     {
                         INTERNAL_ERROR ( xcUnimplemented, "Cannot open accession '%s' as a reference table.", spec );
                     }
