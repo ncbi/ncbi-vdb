@@ -29,6 +29,7 @@
 #include <klib/container.h>
 #include <klib/refcount.h>
 #include <klib/namelist.h>
+#include <klib/log.h>
 
 #include <xfs/model.h>
 #include <xfs/tree.h>
@@ -39,7 +40,6 @@
 #include "schwarzschraube.h"
 #include "teleport.h"
 #include "common.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 
@@ -114,7 +114,7 @@ XFSNodeInitVT (
 
     RCt = _NodeSetName ( self, NodeName );
 /*
-XFSLogDbg ( " [XFSNodeInit] [%p] [%s]\n", ( void * ) Node, Node -> Name );
+pLogMsg ( klogDebug, " [XFSNodeInit] [$(node)] [$(name)]", "node=%p,name=%s", ( void * ) Node, Node -> Name );
 */
     if ( RCt == 0 ) {
         KRefcountInit (
@@ -213,7 +213,7 @@ XFSNodeMake (
     }
 
 /*
-XFSLogDbg ( "XFSNodeMake ( \"%s\" ) As [%s] ( 0x%p ) [%d]\n", NodeName, ( NameAlias == NULL ? "NULL" : NameAlias ), ( void * ) NewNode, RCt );
+pLogMsg ( klogDebug, "XFSNodeMake ( \"$(name)\" ) As [$(alias)] ( $(node) ) [$(rc)]", "name=%s,alias=%s,node=%p,rc=%d", NodeName, ( NameAlias == NULL ? "NULL" : NameAlias ), ( void * ) NewNode, RCt );
 */
 
     return RCt;
@@ -230,7 +230,7 @@ XFSNodeDispose ( const struct XFSNode * self )
     Node = ( struct XFSNode * ) self;
 
 /*
-XFSLogDbg ( "XFSNodeDispose ( 0x%p )\n", ( void * ) self );
+pLogMsg ( klogDebug, "XFSNodeDispose ( $(node) )", "node=%p", ( void * ) self );
 */
 
     if ( Node == NULL ) {
@@ -241,7 +241,7 @@ XFSLogDbg ( "XFSNodeDispose ( 0x%p )\n", ( void * ) self );
 
     if ( Node -> Name != NULL ) {
 /*
-XFSLogDbg ( " [XFSNodeDispose] [%p] [%s]\n", ( void * ) Node, Node -> Name );
+pLogMsg ( klogDebug, " [XFSNodeDispose] [$(node)] [$(name)]", "node=%p,name=%s", ( void * ) Node, Node -> Name );
 */
         free ( Node -> Name );
         Node -> Name = NULL;
@@ -273,7 +273,7 @@ XFSNodeAddRef ( const struct XFSNode * self )
 
     if ( self != NULL ) {
 /*
-XFSLogDbg ( "XFSNodeAddRef ( 0x%p )[%s]\n", ( void * ) self, self -> Name );
+pLogMsg ( klogDebug, "XFSNodeAddRef ( $(node) )[$(name)]", "node=%p,name=%s", ( void * ) self, self -> Name );
 */
 
         RefC = KRefcountAdd (
@@ -309,7 +309,7 @@ XFSNodeRelease ( const struct XFSNode * self )
 
     if ( self != NULL ) {
 /*
-XFSLogDbg ( "XFSNodeRelease ( 0x%p )[%s]\n", ( void * ) self, self -> Name );
+pLogMsg ( klogDebug, "XFSNodeRelease ( $(node) )[$(name)]", "node=%p,name=%s", ( void * ) self, self -> Name );
 */
         RefC = KRefcountDrop (
                             & ( self -> refcount ),
@@ -360,7 +360,7 @@ XFSNodeFindNode (
             }
             else {
 /*
-XFSLogDbg ( "XFSNodeAttrEditor (0x%p): unimplemented method 'findnode'\n", ( void * ) self );
+pLogMsg ( klogDebug, "XFSNodeAttrEditor ( $(node) ): unimplemented method 'findnode'", "node=%p", ( void * ) self );
 */
                 RCt = XFS_RC ( rcUnsupported );
             }
@@ -584,7 +584,7 @@ XFSNodeDump ( const struct XFSNode * self )
     RCt = XFSNodeDescribe ( self, Buffer, sizeof ( Buffer ) );
 
     if ( RCt == 0 ) {
-        XFSLogDbg ( "|||>>> %s\n", Buffer );
+        pLogMsg ( klogDebug, "|||>>> $(buf)\n", "buf=%s", Buffer );
     }
 
     return RCt;

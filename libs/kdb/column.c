@@ -437,6 +437,44 @@ LIB_EXPORT rc_t CC KColumnIdRange ( const KColumn *self, int64_t *first, uint64_
 }
 
 
+/* FindFirstRowId
+ *  locates the first valid row-id starting from a given id.
+ *  this will be either the start id provided, or
+ *  the first row from the next blob, if available.
+ *
+ *  "found" [ OUT ] - will contain the value of "start" if this is contained within a blob,
+ *  or the first row-id of the next blob after "start", if any.
+ *
+ *  "start" [ IN ] - starting row-id in search, inclusive. if this id is valid,
+ *  it will be returned in "found"
+ *
+ *  returns 0 if id is found, rcNotFound if no more data were available.
+ *  may return other codes upon error.
+ */
+LIB_EXPORT rc_t CC KColumnFindFirstRowId ( const KColumn * self, int64_t * found, int64_t start )
+{
+    rc_t rc;
+
+    if ( found == NULL )
+        rc = RC ( rcDB, rcColumn, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcDB, rcColumn, rcAccessing, rcSelf, rcNull );
+        else
+        {
+            rc = KColumnIdxFindFirstRowId ( & self -> idx, found, start );
+            if ( rc == 0 )
+                return 0;
+        }
+
+        * found = 0;
+    }
+
+    return rc;
+}
+
+
 /* OpenManager
  *  duplicate reference to manager
  *  NB - returned reference must be released

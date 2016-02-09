@@ -258,7 +258,8 @@ enum BAMFlags
     BAMFlags_bit_IsNotPrimary,   /* a read having split hits may have multiple primary alignments */
     BAMFlags_bit_IsLowQuality,   /* fails platform/vendor quality checks */
     BAMFlags_bit_IsDuplicate,    /* PCR or optical dup */
-    
+    BAMFlags_bit_IsSupplemental,
+
     BAMFlags_WasPaired      = (1 << BAMFlags_bit_WasPaired),
     BAMFlags_IsMappedAsPair	= (1 << BAMFlags_bit_IsMappedAsPair),
     BAMFlags_SelfIsUnmapped	= (1 << BAMFlags_bit_SelfIsUnmapped),
@@ -269,7 +270,8 @@ enum BAMFlags
     BAMFlags_IsSecond       = (1 << BAMFlags_bit_IsSecond),
     BAMFlags_IsNotPrimary	= (1 << BAMFlags_bit_IsNotPrimary),
     BAMFlags_IsLowQuality	= (1 << BAMFlags_bit_IsLowQuality),
-    BAMFlags_IsDuplicate	= (1 << BAMFlags_bit_IsDuplicate)
+    BAMFlags_IsDuplicate	= (1 << BAMFlags_bit_IsDuplicate),
+    BAMFlags_IsSupplemental  = (1 << BAMFlags_bit_IsSupplemental)
 };
 
 ALIGN_EXTERN rc_t CC BAMAlignmentGetFlags ( const BAMAlignment *self, uint16_t *flags );

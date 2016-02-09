@@ -586,12 +586,6 @@ rc_t KSysFileMakeVT ( KSysFile_v1 **fp, int fd, const KFile_vt *vt,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KSysFileMake ( KSysFile_v1 **fp, int fd, const char *path, bool read_enabled, bool write_enabled )
-{
-    return KSysFileMakeVT ( fp, fd, ( const KFile_vt * ) & vtKSysFile,
-        path, read_enabled, write_enabled );
-}
-
 /*--------------------------------------------------------------------------
  * KFile
  *  Unix-specific standard i/o interfaces
@@ -1063,4 +1057,23 @@ LIB_EXPORT rc_t CC KFileMakeFDFileWrite ( KFile_v1 **f, bool update, int fd )
         return RC ( rcFS, rcFile, rcConstructing, rcFileDesc, rcReadonly );
 
     return KStdIOFileMake ( f, fd, seekable, update, true );
+}
+
+LIB_EXPORT rc_t CC KSysFileMake ( KSysFile_v1 **fp, int fd, const char *path, bool read_enabled, bool write_enabled )
+{
+    bool seekable;
+    bool readable;
+    bool writable;
+    rc_t rc = KStdIOFileTest ( ( KFile** )fp, fd, & seekable, & readable, & writable );
+    if ( rc != 0 )
+        return rc;
+    if ( read_enabled && ! readable )
+        return RC ( rcFS, rcFile, rcConstructing, rcFileDesc, rcWriteonly );
+    if ( write_enabled && ! writable )
+        return RC ( rcFS, rcFile, rcConstructing, rcFileDesc, rcReadonly );
+    if (!seekable)
+        return KStdIOFileMake ( ( KFile** )fp, fd, false, read_enabled, write_enabled );
+    else
+        return KSysFileMakeVT ( fp, fd, ( const KFile_vt * ) & vtKSysFile,
+            path, read_enabled, write_enabled );
 }

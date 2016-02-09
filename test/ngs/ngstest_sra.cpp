@@ -28,6 +28,8 @@
 * Unit tests for NGS C interface, SRA archives
 */
 
+#include <klib/debug.h> // KDbgSetString
+
 #include "ngs_c_fixture.hpp"
 #include <ktst/unit_test.hpp>
 #include "NGS_ReadCollection.h"
@@ -1031,6 +1033,8 @@ const char UsageDefaultName[] = "test-ngs_sra";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    //assert(!KDbgSetString("KFG"));
+    //assert(!KDbgSetString("VFS"));
     rc_t m_coll=NgsSraTestSuite(argc, argv);
     return m_coll;
 }

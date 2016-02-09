@@ -556,6 +556,44 @@ uint64_t _ReferencesGetTotalLength
     return self->refs->totalLen;
 }
 
+
+uint64_t _ReferencesGetReadLength(const struct References *self,
+    uint64_t read_id,
+    VdbBlastStatus *status)
+{
+    bool bad = false;
+    read_id = _clear_read_id_reference_bit(read_id, &bad);
+
+    assert(status);
+
+    if (bad) {
+        *status = eVdbBlastInvalidId;
+        return 0;
+    }
+
+    if (self == NULL || self->refs == NULL ||
+        self->refs->rfdk <= read_id)
+    {
+        return 0;
+    }
+
+    {
+        const VdbBlastRef *r = NULL;
+        assert(self->refs->rfd);
+        r = &self->refs->rfd[read_id];
+
+        if (r->circular) {
+            *status = eVdbBlastCircularSequence;
+        }
+        else {
+            *status = eVdbBlastNoErr;
+        }
+
+        return r->base_count;
+    }
+}
+
+
 #define REF_SEPARATOR '/'
 
 size_t CC _ReferencesGetReadName(const struct References *self,

@@ -51,6 +51,7 @@
 #include <vdb/table.h>
 #include <vdb/vdb-priv.h>
 #include <kdb/table.h>
+#include <kdb/column.h>
 #include <kdb/meta.h>
 #include <kdb/namelist.h>
 #include <kfs/dyload.h>
@@ -1674,6 +1675,7 @@ static
 rc_t VCursorReadColumn ( const VCursor *self, uint32_t col_idx,
     uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len )
 {
+    rc_t rc = 0;
     int64_t row_id = self->row_id;
     bool cache_col_active_save;
     if ( ! self -> read_only )
@@ -1692,32 +1694,38 @@ rc_t VCursorReadColumn ( const VCursor *self, uint32_t col_idx,
     }
     cache_col_active_save = self->cache_col_active;
     ((VCursor*)self)->cache_col_active=false;
-    if(self->cache_curs){
-	const VCursor *curs=VectorGet(&self->v_cache_curs,col_idx);
-	if(curs){
-	   ((VCursor*)self)->cache_col_active=true;
-           if(self->cache_empty_start == 0 ||  row_id < self->cache_empty_start || row_id > self->cache_empty_end){
-		uint32_t repeat_count;
-		uint32_t cidx =  (uint32_t)(uint64_t)VectorGet(&self->v_cache_cidx,col_idx);
-		rc_t rc2 = VCursorReadColumnDirectInt(curs,row_id, cidx, elem_bits, base, boff, row_len, &repeat_count,NULL );
-		if(rc2==0){
-			if(*row_len > 0){
-			    ((VCursor*)self)->cache_col_active=cache_col_active_save;
-			    return 0;
-			} else {
-                                /*** save window where cache is useless */
-				((VCursor*)self)->cache_empty_start = row_id;
-				((VCursor*)self)->cache_empty_end = row_id + repeat_count -1;
-                        }
-		}
-	    }
-	}
-    }
+    if(self->cache_curs)
     {
-	rc_t rc=VCursorReadColumnDirectInt ( self, row_id, col_idx, elem_bits, base, boff, row_len, NULL, NULL );
-	((VCursor*)self)->cache_col_active=cache_col_active_save;
-	return rc;
+        const VCursor *curs=VectorGet(&self->v_cache_curs,col_idx);
+        if(curs)
+        {
+            ((VCursor*)self)->cache_col_active=true;
+            if(self->cache_empty_start == 0 ||  row_id < self->cache_empty_start || row_id > self->cache_empty_end)
+            {
+                uint32_t repeat_count;
+                uint32_t cidx =  (uint32_t)(uint64_t)VectorGet(&self->v_cache_cidx,col_idx);
+                rc_t rc2 = VCursorReadColumnDirectInt(curs,row_id, cidx, elem_bits, base, boff, row_len, &repeat_count,NULL );
+                if(rc2==0)
+                {
+                    if(*row_len > 0)
+                    {
+                        ((VCursor*)self)->cache_col_active=cache_col_active_save;
+                        return 0;
+                    }
+                    else
+                    {
+                        /*** save window where cache is useless */
+                        ((VCursor*)self)->cache_empty_start = row_id;
+                        ((VCursor*)self)->cache_empty_end = row_id + repeat_count -1;
+                    }
+                }
+            }
+        }
     }
+
+    rc=VCursorReadColumnDirectInt ( self, row_id, col_idx, elem_bits, base, boff, row_len, NULL, NULL );
+    ((VCursor*)self)->cache_col_active=cache_col_active_save;
+    return rc;
 }
 
 static __inline__
@@ -2725,7 +2733,7 @@ LIB_EXPORT rc_t CC VCursorIsStaticColumn ( const VCursor *self, uint32_t col_idx
         {
             uint32_t start = VectorStart ( & self -> row );
             uint32_t end = start + VectorLength ( & self -> row );
-            if ( col_idx < start || col_idx > end )
+            if ( col_idx < start || col_idx >= end )
                 rc = RC ( rcVDB, rcCursor, rcSelecting, rcId, rcInvalid );
             else
             {
@@ -2749,4 +2757,154 @@ LIB_EXPORT uint64_t CC VCursorGetCacheCapacity(const VCursor *self)
 {
 	if(self) return VBlobMRUCacheGetCapacity(self->blob_mru_cache);
 	return 0;
+}
+
+
+/* FindNextRowId
+ *  finds the id of the next row having valid ( non-null ) cell data
+ *  "*next" may contain any row id > "VCursorRowId()".
+ *  returns rcNotFound if none can be located.
+ *
+ *  "idx" [ IN, DEFAULT ZERO ] - single column index or
+ *  zero to indicate the range for all columns in cursor.
+ *  in the latter case ( idx == 0 ), we find the first row having
+ *  ANY valid cell data.
+ *
+ *  "next" [ OUT ] - return parameter for next valid row id
+ *
+ * FindNextRowIdDirect
+ *  "start_id" [ IN ] - starting id for search, such that "*next"
+ *  could contain any id >= start_id upon successful return
+ */
+static
+rc_t VCursorFindNextRowIdInt ( const VCursor * self, uint32_t idx, int64_t start_id, int64_t * next )
+{
+    uint32_t i;
+    int64_t best = INT64_MAX;
+    rc_t rc = SILENT_RC ( rcVDB, rcCursor, rcSelecting, rcCursor, rcEmpty );
+
+    uint32_t start, end;
+
+    /* for walking across the open columns */
+    assert ( self != NULL );
+    start = VectorStart ( & self -> row );
+    end = start + VectorLength ( & self -> row );
+
+    /* if using a specific column, ensure the index is proper */
+    if ( idx != 0 )
+    {
+        if ( idx < start || idx >= end )
+            return RC ( rcVDB, rcCursor, rcSelecting, rcId, rcInvalid );
+
+        /* set the range to be just this column */
+        start = idx;
+        end = idx + 1;
+    }
+
+    /* walk across all columns */
+    for ( i = start; i < end; ++ i )
+    {
+        /* retrieve the column */
+        const VColumn * vcol = ( const VColumn * ) VectorGet ( & self -> row, i );
+
+        /* could assert that vcol != NULL, because it should never be so.
+           but the purpose of this function is not so much to insist on
+           this property but to discover the next row id */
+        if ( vcol != NULL )
+        {
+            /* assume the column is physical */
+            bool is_static = false;
+            KColumn * kcol = NULL;
+            rc = VColumnGetKColumn ( vcol, & kcol, & is_static );
+            if ( rc == 0 )
+            {
+                /* we have a physical column - ask kdb what the next id is */
+                assert ( kcol != NULL );
+                rc = KColumnFindFirstRowId ( kcol, next, start_id );
+                KColumnRelease ( kcol );
+                if ( rc == 0 )
+                {
+                    /* there can be no better than the supplied id */
+                    if ( * next == start_id )
+                        break;
+
+                    /* record the best of all columns */
+                    if ( * next < best )
+                        best = * next;
+                }
+
+                /* if this column has no more ids, try next column */
+                else if ( GetRCState ( rc ) != rcNotFound )
+                    break;
+            }
+            else if ( is_static )
+            {
+                /* we have a static column, meaning a contiguous range of row ids */
+                int64_t sfirst, slast;
+                rc = VColumnIdRange ( vcol, & sfirst, & slast );
+                if ( rc != 0 )
+                    break;
+                if ( sfirst >= slast || start_id > slast )
+                {
+                    rc = RC ( rcVDB, rcCursor, rcSelecting, rcRow, rcNotFound );
+                    break;
+                }
+                if ( start_id >= sfirst )
+                {
+                    * next = start_id;
+                    rc = 0;
+                    break;
+                }
+                if ( sfirst < best )
+                    best = sfirst;
+
+            }
+
+            * next = best;
+        }
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VCursorFindNextRowId ( const VCursor *self, uint32_t idx, int64_t *next )
+{
+    rc_t rc = 0;
+
+    if ( next == NULL )
+        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcVDB, rcCursor, rcAccessing, rcSelf, rcNull );
+        else
+        {
+            return VCursorFindNextRowIdInt ( self, idx, self -> row_id + 1, next );
+        }
+
+        * next = 0;
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VCursorFindNextRowIdDirect ( const VCursor *self, uint32_t idx, int64_t start_id, int64_t *next )
+{
+    rc_t rc = 0;
+
+    if ( next == NULL )
+        rc = RC ( rcVDB, rcCursor, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcVDB, rcCursor, rcAccessing, rcSelf, rcNull );
+        else
+        {
+            return VCursorFindNextRowIdInt ( self, idx, start_id, next );
+        }
+
+        * next = 0;
+    }
+
+    return rc;
 }

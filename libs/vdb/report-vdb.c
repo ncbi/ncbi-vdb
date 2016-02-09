@@ -148,7 +148,7 @@ rc_t ReportBuild(const ReportFuncs *f, uint32_t indent, const VDBManager* mgr)
 {
     rc_t rc = 0;
     KNamelist* list = NULL;
-    reportOpen(indent, "Build", 1, "static", 's', "false");
+    reportOpen(indent, "Build", 1, "static", 's', "true");
     if (mgr) {
         rc_t rc2 = VDBManagerListExternalSchemaModules(mgr, &list);
         if (rc2 != 0) {

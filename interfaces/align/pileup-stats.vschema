@@ -48,9 +48,9 @@ table NCBI:pileup:tbl:pileup_stats #1
      */
     extern column ascii REFERENCE_SPEC = out_reference_spec;
     physical < ascii > zip_encoding .REFERENCE_SPEC
-        = idx:text:insert < 'ref_spec' > ( REFERENCE_SPEC );
+        = idx:text:insert #1.0 < 'ref_spec' > ( REFERENCE_SPEC );
     ascii out_reference_spec
-        = idx:text:project < 'ref_spec' > ( .REFERENCE_SPEC );
+        = idx:text:project #1.0 < 'ref_spec' > ( .REFERENCE_SPEC );
 
     /* REF_POS
      *  we dedicate a row to every position on the reference

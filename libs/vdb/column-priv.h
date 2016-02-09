@@ -58,6 +58,7 @@ extern "C" {
  * forwards
  */
 struct Vector;
+struct KColumn;
 struct VDBManager;
 struct VSchema;
 struct SColumn;
@@ -130,6 +131,8 @@ rc_t VColumnReadCachedBlob ( const VColumn *self, struct VBlob const *blob, int6
    uint32_t *elem_bits, const void **base, uint32_t *boff, uint32_t *row_len, uint32_t *repeat_count );
 
 rc_t VColumnIsStatic ( const VColumn *self, bool *is_static );
+
+rc_t VColumnGetKColumn ( const VColumn * self, struct KColumn ** kcol, bool * is_static );
 
 /*--------------------------------------------------------------------------
  * WColumn

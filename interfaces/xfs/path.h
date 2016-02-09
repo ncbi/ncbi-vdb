@@ -25,7 +25,7 @@
  */
 
 #ifndef _path_h_
-#define _paath_h_
+#define _path_h_
 
 #include <xfs/xfs-defs.h>
 

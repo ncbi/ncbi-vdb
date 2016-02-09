@@ -29,6 +29,7 @@
 #include <klib/container.h>
 #include <klib/refcount.h>
 #include <klib/namelist.h>
+#include <klib/log.h>
 #include <kproc/lock.h>
 
 #include <xfs/model.h>
@@ -38,7 +39,6 @@
 #include "mehr.h"
 #include "zehr.h"
 #include "ncon.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 
@@ -80,7 +80,7 @@ _NodeContainerNodeDispose ( const struct XFSNodeContainerNode * self )
                                 ( struct XFSNodeContainerNode * ) self;
 
 /*
-XFSLogDbg ( "_NodeContainerNodeDispose ( 0x%p )\n", ( void * ) self );
+pLogMsg ( klogDebug, "_NodeContainerNodeDispose ( $(node) )\n", "node=%p", ( void * ) self );
 */
 
     if ( Node != NULL ) {
@@ -126,7 +126,7 @@ _NodeContainerNodeMake (
         * RetNode = NULL;   /* for any case :lol: */
     }
 /*
-XFSLogDbg ( "_NodeContainerNodeMake ( 0x%p )\n", ( void * ) * RetNode );
+pLogMsg ( klogDebug, "_NodeContainerNodeMake ( $(node) )\n", "node=%p", ( void * ) RetNode );
 */
 
     return RCt;
@@ -180,7 +180,7 @@ XFSNodeContainerMake (
     }
 
 /*
-XFSLogDbg ( "XFSNodeContainerMake ( 0x%p )\n", ( void * ) * Container );
+pLogMsg ( klogDebug, "XFSNodeContainerMake ( $(node) )\n", "node=%p", ( void * ) * Container );
 */
 
     return RCt;
@@ -202,7 +202,7 @@ rc_t CC
 XFSNodeContainerDispose ( const struct XFSNodeContainer * self )
 {
 /*
-XFSLogDbg ( "XFSNodeContainerDispose ( 0x%p )\n", ( void * ) self );
+pLogMsg ( klogDebug, "XFSNodeContainerDispose ( $(node) )\n", "node=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {

@@ -189,48 +189,50 @@ static rc_t branch_find(Pager *const pager, Pager_vt const *const vt, void const
         qsize_8 -= key_prefix_len;
     }
     {
-    /* perform search on branch node */
-    unsigned const q = (qsize_8 > 0)?*query_8:0;
-    unsigned lower = cnode->win[q].lower;
-    unsigned upper = cnode->win[q].upper;
+        /* perform search on branch node */
+        unsigned const q = (qsize_8 > 0)?*query_8:0;
+        unsigned lower = cnode->win[q].lower;
+        unsigned upper = cnode->win[q].upper;
 
-    while (lower < upper)
-    {
-        /* determine the slot to examine */
-        unsigned const slot = ( lower + upper ) >> 1;
-
-        /* perform comparison */
-        const uint8_t *key = & ( ( const uint8_t* ) cnode ) [ cnode -> ord [ slot ] . key ];
-        int const diff = compare_keys ( qsize_8, query_8, cnode -> ord [ slot ] . ksize, key );
-        if ( diff == 0 )
+        while (lower < upper)
         {
-            memcpy(id, key + cnode->ord[slot].ksize, 4);
-            return 0;
+            /* determine the slot to examine */
+            unsigned const slot = ( lower + upper ) >> 1;
+
+            /* perform comparison */
+            const uint8_t *key = & ( ( const uint8_t* ) cnode ) [ cnode -> ord [ slot ] . key ];
+            int const diff = compare_keys ( qsize_8, query_8, cnode -> ord [ slot ] . ksize, key );
+            if ( diff == 0 )
+            {
+                memcpy(id, key + cnode->ord[slot].ksize, 4);
+                return 0;
+            }
+            if ( diff < 0 )
+                upper = slot;
+            else
+                lower = slot + 1;
         }
-        if ( diff < 0 )
-            upper = slot;
-        else
-            lower = slot + 1;
-    }
-    /* should have the last slot tried ( < 0 ) or next slot to try ( > 0 ) */
-    assert ( lower == upper );
+        /* should have the last slot tried ( < 0 ) or next slot to try ( > 0 ) */
+        assert ( lower == upper );
 
-    /* the node id is left-shifted by 1 and has the "branch-bit" indicator
-     in the LSB. the remaining bits should NOT be zero */
-    /* NB - if "upper" is 0 and type is signed,
-     this will access entry -1, giving "ltrans" */
-    {
-    uint32_t const nid = cnode -> ord [ upper - 1 ] . trans;
-    assert ( ( nid >> 1 ) != 0 );
-
-    /* access child node */
+        /* the node id is left-shifted by 1 and has the "branch-bit" indicator
+           in the LSB. the remaining bits should NOT be zero */
+        /* NB - if "upper" is 0 and type is signed,
+           this will access entry -1, giving "ltrans" */
         {
-    void const *const child = vt->use(pager, nid >> 1);
-    assert(child != NULL);
-    rc = ( ( ( nid & 1 ) == 0 ) ? leaf_find : branch_find )
-        ( pager, vt, child, id, query, qsize );
-    vt->unuse(pager, child);
-        }}}
+            uint32_t const nid = (upper == 0) ? cnode->ltrans : cnode -> ord [ upper - 1 ] . trans;
+            assert ( ( nid >> 1 ) != 0 );
+
+            /* access child node */
+            {
+                void const *const child = vt->use(pager, nid >> 1);
+                assert(child != NULL);
+                rc = ( ( ( nid & 1 ) == 0 ) ? leaf_find : branch_find )
+                    ( pager, vt, child, id, query, qsize );
+                vt->unuse(pager, child);
+            }
+        }
+    }
     return rc;
 }
 
