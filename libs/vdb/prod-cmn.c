@@ -2352,9 +2352,6 @@ rc_t VProductionIsStatic ( const VProduction *self, bool *is_static )
 {
     rc_t rc;
 
-    assert ( is_static != NULL );
-    * is_static = false;
-
     if ( self == NULL )
         rc = RC ( rcVDB, rcColumn, rcAccessing, rcSelf, rcNull );
     else
@@ -2386,6 +2383,57 @@ rc_t VProductionIsStatic ( const VProduction *self, bool *is_static )
             }
             case prodPhysical:
                 return VPhysicalIsStatic ( ( ( const VPhysicalProd* ) self ) -> phys, is_static );
+            case prodColumn:
+                self = NULL;
+                break;
+            default:
+                return RC ( rcVDB, rcProduction, rcReading, rcType, rcUnknown );
+            }
+        }
+    }
+
+    return rc;
+}
+
+/* GetKColumn
+ *  drills down to physical production to get a KColumn,
+ *  and if that fails, indicate whether the column is static
+ */
+rc_t VProductionGetKColumn ( const VProduction * self, struct KColumn ** kcol, bool * is_static )
+{
+    rc_t rc;
+
+    if ( self == NULL )
+        rc = RC ( rcVDB, rcColumn, rcAccessing, rcSelf, rcNull );
+    else
+    {
+        for ( rc = 0; self != NULL; )
+        {
+            switch ( self -> var )
+            {
+            case prodSimple:
+                self = ( ( const VSimpleProd*) self ) -> in;
+                break;
+            case prodFunc:
+            case prodScript:
+            {
+                const VFunctionProd *fp = ( const VFunctionProd* ) self;
+                uint32_t start = VectorStart ( & fp -> parms );
+                uint32_t end = VectorLength ( & fp -> parms );
+                for ( end += start; start < end; ++ start )
+                {
+                    self = ( const VProduction* ) VectorGet ( & fp -> parms, start );
+                    if ( self != NULL )
+                    {
+                        rc = VProductionGetKColumn ( self, kcol, is_static );
+                        if ( rc != 0 || * kcol != NULL || * is_static )
+                            break;
+                    }
+                }
+                return rc;
+            }
+            case prodPhysical:
+                return VPhysicalGetKColumn ( ( ( const VPhysicalProd* ) self ) -> phys, kcol, is_static );
             case prodColumn:
                 self = NULL;
                 break;

@@ -138,47 +138,45 @@ static rc_t VPhysicalLazySetRange(VPhysical *self)
 
 rc_t VPhysicalFinishKColumn ( VPhysical *self, VSchema *schema, const SPhysMember *smbr )
 {
-    /* determine its range of row ids */
-    uint64_t count;
-    rc_t rc=0;
+    rc_t rc = 0;
+
     /* lazy settings .. to be set when needed */
     self -> kstart_id = 1;
     self -> kstop_id  = 0;
-    {
-        if ( self -> meta == NULL )
-        {
-            /* bring over "no_hdr" from SPhysical */
-            self -> no_hdr = ( ( const SPhysEncExpr* ) smbr -> type ) -> phys -> no_hdr;
-        }
-        else
-        {
-            /* read in metadata */
-            VTypedecl td;
-            rc = VPhysicalLoadMetadata ( self, & td, schema );
-            /*VSchemaDump ( schema, sdmPrint, NULL, pstdout, NULL );*/
-            if ( rc == 0 )
-            {
-                /* if member type is unknown, reset to actual type */
-                if ( smbr -> td . type_id == 0 )
-                {
-                    /* this member was introduced into cursor schema
-                       by the function VCursorSupplementPhysical with
-                       an unknown type - i.e. the schema compiler will
-                       not recognize "any" as a member type. essentially
-                       the member type setting was delayed until now */
-                    ( ( SPhysMember* ) smbr ) -> td = td;
-                }
 
-                /* validate that the physical column matches
-                   the schema member declaration type */
-                else if ( ! VTypedeclCommonAncestor ( & td, schema, & smbr -> td, NULL, NULL ) )
-                {
-                    rc = RC ( rcVDB, rcColumn, rcLoading, rcType, rcInconsistent );
-                    PLOGERR ( klogInt, ( klogInt, rc, "inconsistent schema and actual types for column '$(name)'"
-                               , "name=%.*s"
-                               , ( int ) smbr -> name -> name . size
-                               , smbr -> name -> name . addr ));
-                }
+    if ( self -> meta == NULL )
+    {
+        /* bring over "no_hdr" from SPhysical */
+        self -> no_hdr = ( ( const SPhysEncExpr* ) smbr -> type ) -> phys -> no_hdr;
+    }
+    else
+    {
+        /* read in metadata */
+        VTypedecl td;
+        rc = VPhysicalLoadMetadata ( self, & td, schema );
+        /*VSchemaDump ( schema, sdmPrint, NULL, pstdout, NULL );*/
+        if ( rc == 0 )
+        {
+            /* if member type is unknown, reset to actual type */
+            if ( smbr -> td . type_id == 0 )
+            {
+                /* this member was introduced into cursor schema
+                   by the function VCursorSupplementPhysical with
+                   an unknown type - i.e. the schema compiler will
+                   not recognize "any" as a member type. essentially
+                   the member type setting was delayed until now */
+                ( ( SPhysMember* ) smbr ) -> td = td;
+            }
+
+            /* validate that the physical column matches
+               the schema member declaration type */
+            else if ( ! VTypedeclCommonAncestor ( & td, schema, & smbr -> td, NULL, NULL ) )
+            {
+                rc = RC ( rcVDB, rcColumn, rcLoading, rcType, rcInconsistent );
+                PLOGERR ( klogInt, ( klogInt, rc, "inconsistent schema and actual types for column '$(name)'"
+                                     , "name=%.*s"
+                                     , ( int ) smbr -> name -> name . size
+                                     , smbr -> name -> name . addr ));
             }
         }
     }
@@ -195,6 +193,7 @@ rc_t VPhysicalFinishStatic ( VPhysical *self, const VSchema *schema, const SPhys
     rc_t rc = KMDataNodeOpenNodeRead ( self -> knode, & node, "row" );
     if ( rc  != 0 )
         return rc;
+
     KMDataNodeRelease ( node );
 
     /* determine id range */
@@ -657,22 +656,29 @@ rc_t VPhysicalProdColumnIdRange ( const VPhysicalProd *Self,
     
     if ( Self == NULL )
         return RC ( rcVDB, rcProduction, rcReading, rcSelf, rcNull );
+
     self = Self->phys;
     if ( self == NULL )
         return RC ( rcVDB, rcColumn, rcReading, rcSelf, rcNull );
     
-    if (self->knode) {
+    if ( self -> knode != NULL )
+    {
         *first = self->sstart_id;
         *last  = self->sstop_id;
         return 0;
     }
-    if (self->kcol) {
-	rc_t rc=VPhysicalLazySetRange((VPhysical *)self);
-	if(rc) return rc;
-        *first = self->kstart_id;
-        *last  = self->kstop_id;
-        return 0;
+
+    if ( self -> kcol != NULL )
+    {
+        rc_t rc = VPhysicalLazySetRange ( ( VPhysical * ) self );
+        if ( rc == 0 )
+        {
+            *first = self->kstart_id;
+            *last  = self->kstop_id;
+        }
+        return rc;
     }
+
     return RC ( rcVDB, rcColumn, rcReading, rcRange, rcEmpty );
 }
 
@@ -692,4 +698,37 @@ rc_t VPhysicalIsStatic ( const VPhysical *self, bool *is_static )
 
     * is_static = self -> knode != NULL;
     return 0;
+}
+
+/* GetKColumn
+ *  try to get a KColumn,
+ *  and if that fails, indicate whether the column is static
+ */
+rc_t VPhysicalGetKColumn ( const VPhysical * self, struct KColumn ** kcol, bool * is_static )
+{
+    assert ( kcol != NULL );
+    assert ( is_static != NULL );
+
+    if ( self == NULL )
+    {
+        * kcol = NULL;
+        * is_static = false;
+        return RC ( rcVDB, rcColumn, rcAccessing, rcSelf, rcNull );
+    }
+
+    if ( self -> kcol != NULL )
+    {
+        rc_t rc = KColumnAddRef ( self -> kcol );
+        if ( rc == 0 )
+            * kcol = ( KColumn * ) self -> kcol;
+        return rc;
+    }
+
+    if ( self -> knode != NULL )
+    {
+        * is_static = true;
+        return SILENT_RC ( rcVDB, rcColumn, rcAccessing, rcType, rcIncorrect );
+    }
+
+    return RC ( rcVDB, rcColumn, rcAccessing, rcColumn, rcNotOpen );
 }

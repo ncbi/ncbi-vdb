@@ -74,6 +74,11 @@ void KColumnIdx0Whack ( KColumnIdx0 *self );
 bool KColumnIdx0IdRange ( const KColumnIdx0 *self,
     int64_t *first, int64_t *upper );
 
+/* FindFirstRowId
+ */
+rc_t KColumnIdx0FindFirstRowId ( const KColumnIdx0 * self,
+    int64_t * found, int64_t start );
+
 /* LocateBlob
  *  locate an existing blob
  */

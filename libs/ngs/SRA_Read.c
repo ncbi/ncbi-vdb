@@ -58,8 +58,8 @@
 
 const char * sequence_col_specs [] =
 {
-    "READ_TYPE",
     "(INSDC:dna:text)READ",
+    "READ_TYPE",
     "(INSDC:quality:phred)QUALITY",
     "(INSDC:coord:len)READ_LEN",
     "NAME",

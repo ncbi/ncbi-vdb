@@ -29,6 +29,7 @@
 #include <klib/namelist.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <xfs/model.h>
 #include <xfs/tree.h>
@@ -43,7 +44,6 @@
 #include "teleport.h"
 #include "common.h"
 #include "xgapk.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 
@@ -115,7 +115,7 @@ _GapKartsNodeDispose ( const struct XFSGapKartsNode * self )
     struct XFSGapKartsNode * Node = ( struct XFSGapKartsNode * ) self;
 
 /*
-XFSLogDbg ( "_GapKartsNodeDispose ( 0x%p )\n", ( void * ) Container );
+pLogMsg ( klogDebug, "_GapKartsNodeDispose ( $(node) )", "node=%p", ( void * ) Node );
 */
 
     if ( Node != 0 ) {
@@ -239,7 +239,7 @@ rc_t CC
 _GapKartsNodeDir_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-XFSLogDbg ( "_GapKartsNodeDir_dispose_ ( 0x%p )\n", ( void * ) self );
+pLogMsg ( klogDebug, "_GapKartsNodeDir_dispose_ ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( self != 0 ) {
@@ -356,7 +356,7 @@ rc_t CC
 _GapKartsNodeAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-XFSLogDbg ( "_GapKartsNodeAttr_dispose_ ( 0x%p )\n", ( void * ) self );
+pLogMsg ( klogDebug, "_GapKartsNodeAttr_dispose_ ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( self != 0 ) {
@@ -532,7 +532,7 @@ _LoadKart ( struct XFSGapKartsNode * Node, const char * KartName )
             /*  Some Karts could be damaged 
              |  we should think about it later
              */
-        KOutMsg ( "Invalid Kart file [%s]\n", KartName );
+        pLogMsg ( klogWarn, "Invalid Kart file [$(name)]", "name=%s", KartName );
         RCt = 0;
     }
 
@@ -700,7 +700,7 @@ XFSGapKartsNodeMake (
     }
 
 /*
-XFSLogDbg ( "XFSKartNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type );
+pLogMsg ( klogDebug, "XFSKartNodeMake ND[$(node)] NM[$(name)] PJ[$(project_id)]", "node=%p,name=%s,project_id=%d", ( void * ) Node, XFS_GAP_KART_NAME, ProjectId );
 */
 
     return RCt;
@@ -764,7 +764,7 @@ _GapKartsNodeMakeFromModel (
     }
 
 /*
-XFSLogDbg ( "KartNodeMakeFromModel ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type );
+pLogMsg ( klogDebug, "KartNodeMakeFromModel ND[$(node)] NM[$(name)] TP[$(project_id)]", "node=%p,name=%s,project_id=%d", ( void * ) Node, Name, ProjectId );
 */
 
     return RCt;
@@ -837,7 +837,7 @@ _GapKartsNodeConstructor (
                                             );
 
 /*
-XFSLogDbg ( "_GapKartsNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_GapKartsNodeConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
 
@@ -856,7 +856,7 @@ _GapKartsNodeValidator (
     rc_t RCt = 0;
 
 /*
-XFSLogDbg ( "_GapKartsNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_GapKartsNodeValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

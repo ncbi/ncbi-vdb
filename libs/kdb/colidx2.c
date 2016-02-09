@@ -149,32 +149,6 @@ rc_t KColumnIdx2Whack ( KColumnIdx2 *self )
 /* LocateBlob
  *  locate an existing blob
  */
-static
-rc_t KColIdxBlockLocateBlob ( const KColIdxBlock *iblk,
-    KColBlobLoc *loc, const KColBlockLoc *bloc, uint32_t count,
-    int64_t first, int64_t upper )
-{
-    uint32_t span;
-    int64_t start_id;
-    int slot = KColIdxBlockFind ( iblk,
-        bloc, count, first, & start_id, & span );
-    if ( slot < 0 )
-        return RC ( rcDB, rcColumn, rcSelecting, rcBlob, rcNotFound );
-    if ( upper > ( start_id + span ) )
-        return RC ( rcDB, rcColumn, rcSelecting, rcRange, rcInvalid );
-
-    loc -> start_id = start_id;
-    loc -> id_range = span;
-
-    KColIdxBlockGet ( iblk, bloc, count, slot, & loc -> pg, & span );
-    loc -> u . blob . size = span;
-
-    return 0;
-}
-
-/* LocateBlob
- *  locate an existing blob
- */
 rc_t KColumnIdx2LocateBlob ( const KColumnIdx2 *self,
     KColBlobLoc *loc, const KColBlockLoc *bloc,
     int64_t first, int64_t upper, bool bswap )

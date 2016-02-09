@@ -301,11 +301,56 @@ rc_t VColumnRead ( const VColumn *cself, int64_t row_id,
  */
 rc_t VColumnIsStatic ( const VColumn *self, bool *is_static )
 {
-    if ( self != NULL )
-        return VProductionIsStatic ( self -> in, is_static );
-    
-    assert ( is_static != NULL );
-    * is_static = false;
+    rc_t rc;
 
-    return RC ( rcVDB, rcColumn, rcAccessing, rcSelf, rcNull );
+    if ( is_static == NULL )
+        rc = RC ( rcVDB, rcColumn, rcAccessing, rcParam, rcNull );
+    else
+    {
+        * is_static = false;
+
+        if ( self == NULL )
+            rc = RC ( rcVDB, rcColumn, rcAccessing, rcSelf, rcNull );
+        else if ( self -> in == NULL )
+            rc = RC ( rcVDB, rcColumn, rcAccessing, rcColumn, rcNotOpen );
+        else
+        {
+            return VProductionIsStatic ( self -> in, is_static );
+        }
+    }
+
+    return rc;
+}
+
+/* GetKColumn
+ *  drills down to physical production to get a KColumn,
+ *  and if that fails, indicate whether the column is static
+ */
+rc_t VColumnGetKColumn ( const VColumn * self, struct KColumn ** kcol, bool * is_static )
+{
+    rc_t rc;
+
+    bool dummy = false;
+
+    if ( is_static == NULL )
+        is_static = & dummy;
+
+    if ( kcol == NULL )
+        rc = RC ( rcVDB, rcColumn, rcAccessing, rcParam, rcNull );
+    else
+    {
+        * kcol = NULL;
+        * is_static = false;
+
+        if ( self == NULL )
+            rc = RC ( rcVDB, rcColumn, rcAccessing, rcSelf, rcNull );
+        else if ( self -> in == NULL )
+            rc = RC ( rcVDB, rcColumn, rcAccessing, rcColumn, rcNotOpen );
+        else
+        {
+            return VProductionGetKColumn ( self -> in, kcol, is_static );
+        }
+    }
+
+    return rc;
 }

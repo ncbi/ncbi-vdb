@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kapp/args.h> /* Args */
+
 #include <kfg/config.h>
 #include <kfg/extern.h>
 #include <kfg/repository.h> /* KConfigImportNgc */
@@ -60,7 +62,10 @@
 
 using namespace std;
 
-TEST_SUITE(KfgTestSuite);
+#define ALL
+
+static rc_t argsHandler(int argc, char* argv[]);
+TEST_SUITE_WITH_ARGS_HANDLER(KfgTestSuite, argsHandler);
 
 // test fixture for creation and lookup of kfg files
 class KfgFixture
@@ -71,7 +76,7 @@ public:
         if ( KDirectoryNativeDir ( & wd ) != 0 )
             throw logic_error("KfgFixture: KDirectoryNativeDir failed");
             
-        if (KConfigMake ( & kfg, wd ) != 0)
+        if (KConfigMake ( & kfg, NULL ) != 0)
             throw logic_error("KfgFixture: KConfigMake failed");
             
         if (apppath.length() == 0) // first call
@@ -249,6 +254,7 @@ string KfgFixture::apppath;
 
 ///////////////////////////////////////////////// KFG parser test cases
 
+#ifdef ALL
 FIXTURE_TEST_CASE(KConfigLoadFile_should_report_null_inputs, KfgFixture)
 {
     KFile file;
@@ -516,7 +522,9 @@ FIXTURE_TEST_CASE(predef_PWD, KfgFixture)
     REQUIRE(ValueMatches("var", DirPath(dir).c_str()));
     KDirectoryRelease(dir);
 }
+#endif
 
+#ifdef ALL
 FIXTURE_TEST_CASE(predef_ENV, KfgFixture)
 {
     const char* contents=
@@ -537,6 +545,9 @@ FIXTURE_TEST_CASE(predef_ENV, KfgFixture)
     REQUIRE(ValueMatches("ncbi_home",       (GetHomeDirectory()+"/.ncbi").c_str(), true));
     REQUIRE(ValueMatches("ncbi_settings",   (GetHomeDirectory()+"/.ncbi/user-settings.mkfg").c_str(), true));
 }
+#endif
+
+#ifdef ALL
 FIXTURE_TEST_CASE(predef_ENV_direct, KfgFixture)
 {   // can also refer to predefs by their unadorned name
     REQUIRE(ValueMatches("HOST",            getenv("HOST"), true));
@@ -562,9 +573,11 @@ FIXTURE_TEST_CASE(include_files, KfgFixture)
     REQUIRE_RC(KDirectoryRemove(wd, true, includeName)); 
 }
 #endif
+#endif
 
 ///////////////////////////////////////////////// modification and commit
 
+#ifdef ALL
 FIXTURE_TEST_CASE(ChangeCommit, KfgFixture)
 {
     const char* contents=
@@ -834,6 +847,7 @@ FIXTURE_TEST_CASE(ConfigNodeAccessString, KfgFixture)
     REQUIRE_EQ(string(str->addr), string(STRING));
     StringWhack(str);
 }
+#endif
 
 //////////////////////////////////////////// Importing external objects
 
@@ -876,6 +890,7 @@ public:
     }
 };
 
+#ifdef ALL
 FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
 {
     string s(GetName());
@@ -958,6 +973,7 @@ FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
     
     REQUIRE_RC(KDirectoryRemove(wd, true, "repos"));
 }
+#endif
 
 FIXTURE_TEST_CASE(KConfigImportNgc_NullLocation, KfgFixture)
 {
@@ -976,6 +992,13 @@ FIXTURE_TEST_CASE(KConfigImportNgc_NullLocation_NullNewRepo, KfgFixture)
 }
 
 //////////////////////////////////////////// Main
+static rc_t argsHandler(int argc, char* argv[]) {
+    Args* args = NULL;
+    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
+    ArgsWhack(args);
+    return rc;
+}
+
 extern "C"
 {
 

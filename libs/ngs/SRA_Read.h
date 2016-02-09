@@ -52,9 +52,9 @@ struct NGS_Cursor;
 struct NGS_String;
 
 enum SequenceTableColumn
-{
-    seq_READ_TYPE,
+{   // keep in sync with sequence_col_specs in SRA_Read.c 
     seq_READ,
+    seq_READ_TYPE,
     seq_QUALITY,
     seq_READ_LEN,
     seq_NAME,
@@ -63,7 +63,7 @@ enum SequenceTableColumn
     seq_SPOT_COUNT,
 
     seq_NUM_COLS
-};
+};  // keep in sync with sequence_col_specs in SRA_Read.c 
 
 extern const char * sequence_col_specs [];
 

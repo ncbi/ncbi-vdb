@@ -82,6 +82,7 @@ extern "C" {
  * forwards
  */
 struct VBlob;
+struct KColumn;
 struct VColumn;
 struct VPhysical;
 struct VProdResolve;
@@ -236,6 +237,12 @@ rc_t VProductionReadBlob ( const VProduction *self, struct VBlob **vblob, int64_
  *  trace all the way to a physical production
  */
 rc_t VProductionIsStatic ( const VProduction *self, bool *is_static );
+
+/* GetKColumn
+ *  drills down to physical production to get a KColumn,
+ *  and if that fails, indicate whether the column is static
+ */
+rc_t VProductionGetKColumn ( const VProduction * self, struct KColumn ** kcol, bool * is_static );
 
 
 /*--------------------------------------------------------------------------

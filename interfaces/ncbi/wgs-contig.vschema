@@ -271,17 +271,17 @@ table NCBI:WGS:tbl:nucleotide #1.1
      *  principal name
      */
     extern column utf8 CONTIG_NAME
-        = idx:text:project < 'contig_name' > ( .CONTIG_NAME );
+        = idx:text:project #1.0 < 'contig_name' > ( .CONTIG_NAME );
 
     physical column < utf8 > zip_encoding .CONTIG_NAME
-        = idx:text:insert < 'contig_name' > ( CONTIG_NAME );
+        = idx:text:insert #1.0 < 'contig_name' > ( CONTIG_NAME );
 
     ascii out_contig_name = cast ( CONTIG_NAME );
 
     // NB - this is only useful if CONTIG_NAME is unique
     // or if clustered by CONTIG_NAME
     readonly column vdb:row_id_range CONTIG_NAME_ROW_RANGE
-        = idx:text:lookup < 'contig_name', 'NAME_QUERY' > ();
+        = idx:text:lookup #1.0 < 'contig_name', 'NAME_QUERY' > ();
 
     /* EXTRA_SEQIDS
      *  pipe-separated list of additional names
@@ -496,9 +496,9 @@ table NCBI:WGS:tbl:scaffold #1
         = out_scaffold_name;
     extern column ascii SCAFFOLD_NAME = cast (out_scaffold_name);
     utf8 out_scaffold_name
-        = idx:text:project < 'scaffold_name' > ( .SCAFFOLD_NAME );
+        = idx:text:project #1.0 < 'scaffold_name' > ( .SCAFFOLD_NAME );
     physical column < utf8 > zip_encoding .SCAFFOLD_NAME
-        = idx:text:insert < 'scaffold_name' > ( SCAFFOLD_NAME );
+        = idx:text:insert #1.0 < 'scaffold_name' > ( SCAFFOLD_NAME );
 
     /* COMPONENT_START
      *  starting position within the component sequence

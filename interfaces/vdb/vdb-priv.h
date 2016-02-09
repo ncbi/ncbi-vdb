@@ -97,6 +97,11 @@ VDB_EXTERN rc_t CC VDBManagerListExternalSchemaModules ( struct VDBManager const
  */
 VDB_EXTERN rc_t CC VDBManagerDisablePagemapThread ( struct VDBManager const *self );
 
+/* DisableFlushThread
+ *  Disable the background cursor flush thread, may be useful when debugging
+ */
+VDB_EXTERN rc_t CC VDBManagerDisableFlushThread ( struct VDBManager *self );
+
 
 /* Make with custom VFSManager */
 VDB_EXTERN rc_t CC VDBManagerMakeReadWithVFSManager (

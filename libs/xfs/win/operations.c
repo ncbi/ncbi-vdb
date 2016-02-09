@@ -43,6 +43,7 @@
 #include <windows.h>
 
 #include <klib/out.h>
+#include <klib/log.h>
 #include <klib/namelist.h>
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -106,6 +107,10 @@
 || is different way to access for XFSPeer for both libraries
  \\
   (*/
+
+/*))    KLog does not work with WCHAR :D
+ ((*/
+XFS_EXTERN rc_t CC wLogMsg ( KLogLevel Level, LPCWSTR Format, ... );
 
 /*\
 |*| importante protopute
@@ -173,6 +178,9 @@ _DOKAN_make_v_path ( LPCWSTR File, VPath ** Path )
     size_t Size;
 
     RCt = 0;
+    Size = 0;
+    pChar = NULL;
+    * Buffer = 0;
 
     if ( File == NULL || Path == NULL ) {
         return XFS_RC ( rcNull );
@@ -239,7 +247,7 @@ _DOKAN_get_node (
     }
 
 /*
-//TT wprintf ( L"_DOKAB_get_node () TreeDepot [0x%p] Node [0x%p] Opts [0x%p]\n", TreeDepot, Node, FileInfo -> DokanOptions );
+//TT wLogMsg ( klogDebug, L"_DOKAB_get_node () TreeDepot [0x%p] Node [0x%p] Opts [0x%p]\n", TreeDepot, Node, FileInfo -> DokanOptions );
 */
 
     return RCt;
@@ -543,18 +551,26 @@ static
 void
 __PrintDisposition__ ( LPCWSTR FileName, DWORD CreationDisposition )
 {
-    wprintf ( L"Disposition [%08x][%s]:", CreationDisposition, FileName );
+    WCHAR BF [ XFS_SIZE_4096 ];
+
+    swprintf (
+            BF,
+            sizeof ( BF ) / sizeof ( WCHAR ),
+            L"Disposition [%08x][%s]:",
+            CreationDisposition ,
+            FileName
+            );
 
     switch ( CreationDisposition ) {
-        case CREATE_NEW :        wprintf ( L" CREATE_NEW" ); break;
-        case OPEN_ALWAYS :       wprintf ( L" OPEN_ALWAYS" ); break;
-        case CREATE_ALWAYS :     wprintf ( L" CREATE_ALWAYS" ); break;
-        case OPEN_EXISTING :     wprintf ( L" OPEN_EXISTING" ); break;
-        case TRUNCATE_EXISTING : wprintf ( L" TRUNCATE_EXISTING" ); break;
-        default:                 wprintf ( L" UNKNOWN" ); break;
+        case CREATE_NEW :        wcscat ( BF, L" CREATE_NEW" ); break;
+        case OPEN_ALWAYS :       wcscat ( BF, L" OPEN_ALWAYS" ); break;
+        case CREATE_ALWAYS :     wcscat ( BF, L" CREATE_ALWAYS" ); break;
+        case OPEN_EXISTING :     wcscat ( BF, L" OPEN_EXISTING" ); break;
+        case TRUNCATE_EXISTING : wcscat ( BF, L" TRUNCATE_EXISTING" ); break;
+        default:                 wcscat ( BF, L" UNKNOWN" ); break;
     }
 
-    wprintf ( L" (%d)\n", CreationDisposition );
+    wLogMsg ( klogDebug, L"%s (%d)\n", BF, CreationDisposition );
 }   /* __PrintDisposition__ () */
 
 static
@@ -562,38 +578,40 @@ void
 __PrintAccessMode__ ( LPCWSTR FileName, DWORD AccessMode )
 {
     int llp, klf;
-    wprintf ( L"AccessMode [%08x][%s]:", AccessMode, FileName );
+    WCHAR BF [ XFS_SIZE_4096 ];
+
+    swprintf ( BF, sizeof ( BF ) / sizeof ( WCHAR ), L"AccessMode [%08x][%s]:", AccessMode, FileName );
 
     for ( llp = 31; 0 <= llp; llp -- ) {
         klf = 1 << llp;
         if ( llp % 8 == 0 ) {
-            wprintf ( L" " );
+            wcscat ( BF, L" " );
         }
 
         if ( ( AccessMode & klf ) == klf ) {
-            wprintf ( L"1" );
+            wcscat ( BF, L"1" );
         }
         else {
-            wprintf ( L"0" );
+            wcscat ( BF, L"0" );
         }
     }
-    wprintf ( L"\n" );
+    wLogMsg ( klogDebug, L"%s\n", BF );
 
-    wprintf ( L"AccessMode [%08xl][%s]:", AccessMode, FileName );
-    if ( ( AccessMode & FILE_READ_DATA ) == FILE_READ_DATA ) wprintf ( L" FILE_READ_DATA" );
-    if ( ( AccessMode & FILE_WRITE_DATA ) == FILE_WRITE_DATA ) wprintf ( L" FILE_WRITE_DATA" );
-    if ( ( AccessMode & FILE_APPEND_DATA ) == FILE_APPEND_DATA ) wprintf ( L" FILE_APPEND_DATA" );
-    if ( ( AccessMode & FILE_READ_EA ) == FILE_READ_EA ) wprintf ( L" FILE_READ_EA" );
-    if ( ( AccessMode & FILE_WRITE_EA ) == FILE_WRITE_EA ) wprintf ( L" FILE_WRITE_EA" );
-    if ( ( AccessMode & FILE_EXECUTE ) == FILE_EXECUTE ) wprintf ( L" FILE_EXECUTE" );
-    if ( ( AccessMode & FILE_DELETE_CHILD ) == FILE_DELETE_CHILD ) wprintf ( L" FILE_DELETE_CHILD" );
-    if ( ( AccessMode & FILE_READ_ATTRIBUTES ) == FILE_READ_ATTRIBUTES ) wprintf ( L" FILE_READ_ATTRIBUTES" );
-    if ( ( AccessMode & FILE_WRITE_ATTRIBUTES ) == FILE_WRITE_ATTRIBUTES ) wprintf ( L" FILE_WRITE_ATTRIBUTES" );
-    if ( ( AccessMode & FILE_ALL_ACCESS ) == FILE_ALL_ACCESS ) wprintf ( L" FILE_ALL_ACCESS" );
-    if ( ( AccessMode & READ_CONTROL ) == READ_CONTROL ) wprintf ( L" READ_CONTROL" );
-    if ( ( AccessMode & DELETE ) == DELETE ) wprintf ( L" DELETE" );
-    wprintf ( L"\n" );
+    swprintf ( BF, sizeof ( BF ) / sizeof ( WCHAR ), L"AccessMode [%08xl][%s]:", AccessMode, FileName );
+    if ( ( AccessMode & FILE_READ_DATA ) == FILE_READ_DATA ) wcscat ( BF, L" FILE_READ_DATA" );
+    if ( ( AccessMode & FILE_WRITE_DATA ) == FILE_WRITE_DATA ) wcscat ( BF, L" FILE_WRITE_DATA" );
+    if ( ( AccessMode & FILE_APPEND_DATA ) == FILE_APPEND_DATA ) wcscat ( BF, L" FILE_APPEND_DATA" );
+    if ( ( AccessMode & FILE_READ_EA ) == FILE_READ_EA ) wcscat ( BF, L" FILE_READ_EA" );
+    if ( ( AccessMode & FILE_WRITE_EA ) == FILE_WRITE_EA ) wcscat ( BF, L" FILE_WRITE_EA" );
+    if ( ( AccessMode & FILE_EXECUTE ) == FILE_EXECUTE ) wcscat ( BF, L" FILE_EXECUTE" );
+    if ( ( AccessMode & FILE_DELETE_CHILD ) == FILE_DELETE_CHILD ) wcscat ( BF, L" FILE_DELETE_CHILD" );
+    if ( ( AccessMode & FILE_READ_ATTRIBUTES ) == FILE_READ_ATTRIBUTES ) wcscat ( BF, L" FILE_READ_ATTRIBUTES" );
+    if ( ( AccessMode & FILE_WRITE_ATTRIBUTES ) == FILE_WRITE_ATTRIBUTES ) wcscat ( BF, L" FILE_WRITE_ATTRIBUTES" );
+    if ( ( AccessMode & FILE_ALL_ACCESS ) == FILE_ALL_ACCESS ) wcscat ( BF, L" FILE_ALL_ACCESS" );
+    if ( ( AccessMode & READ_CONTROL ) == READ_CONTROL ) wcscat ( BF, L" READ_CONTROL" );
+    if ( ( AccessMode & DELETE ) == DELETE ) wcscat ( BF, L" DELETE" );
 
+    wLogMsg ( klogDebug, L"%s\n", BF );
 }   /* __PrintAccessMode__ () */
 
 static
@@ -808,19 +826,19 @@ XFS_DOKAN_CreateFile (
 
 #ifdef I_AM_AN_IMBECILE
 {
-if ( wcsstr ( FileName, L"CVS" ) != NULL
-    || wcsstr ( FileName, L".svn" ) != NULL
-    || wcsstr ( FileName, L"desktop.ini" ) != NULL
-    || wcsstr ( FileName, L".gs" ) != NULL
-    || wcsstr ( FileName, L"Authorun.inf" ) != NULL
+if ( wcsstr ( FileName, klogDebug, L"CVS" ) != NULL
+    || wcsstr ( FileName, klogDebug, L".svn" ) != NULL
+    || wcsstr ( FileName, klogDebug, L"desktop.ini" ) != NULL
+    || wcsstr ( FileName, klogDebug, L".gs" ) != NULL
+    || wcsstr ( FileName, klogDebug, L"Authorun.inf" ) != NULL
     ) {
-wprintf ( L" CREATE File [%s][VYHUHOL]\n", FileName );
+wLogMsg ( klogDebug, L" CREATE File [%s][VYHUHOL]\n", FileName );
     return ERROR_PATH_NOT_FOUND * - 1;
 }
 }
 #endif /* I_AM_AN_IMBECILE */
 
-wprintf ( L" CREATE File [%s][I=0x%p][H=0x%p]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
+wLogMsg ( klogDebug, L" CREATE File [%s][I=0x%p][H=0x%p]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
 
     if ( FileName == NULL || TheFileInfo == NULL ) {
         return 1 * - 1; /* TODO !!! */
@@ -864,7 +882,7 @@ __PrintDisposition__ ( FileName, CreationDisposition );
 
         RetValue = ERROR_FILE_NOT_FOUND;
 
-wprintf ( L"     RETURNS [%s][RC=%d][H=NULL][I=0x%p][%d]\n", FileName, RetValue, TheFileInfo, __LINE__ );
+wLogMsg ( klogDebug, L"     RETURNS [%s][RC=%d][H=NULL][I=0x%p][%d]\n", FileName, RetValue, TheFileInfo, __LINE__ );
         return RetValue * - 1;
     }
 
@@ -876,7 +894,7 @@ wprintf ( L"     RETURNS [%s][RC=%d][H=NULL][I=0x%p][%d]\n", FileName, RetValue,
         RetValue = _HandleCreateNewFileEdit ( Path, TheFileInfo, Write, Read );
 
         VPathRelease ( Path );
-wprintf ( L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue, ( void * ) ( TheFileInfo -> Context ), TheFileInfo, __LINE__ );
+wLogMsg ( klogDebug, L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue, ( void * ) ( TheFileInfo -> Context ), TheFileInfo, __LINE__ );
         return RetValue * - 1;
     }
 
@@ -889,7 +907,7 @@ wprintf ( L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue,
             RetValue = _HandleForNode ( Node, TheFileInfo );
 
             VPathRelease ( Path );
-wprintf ( L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue, ( void * ) ( TheFileInfo -> Context ), TheFileInfo, __LINE__ );
+wLogMsg ( klogDebug, L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue, ( void * ) ( TheFileInfo -> Context ), TheFileInfo, __LINE__ );
             return RetValue * - 1;
         }
     }
@@ -900,7 +918,7 @@ wprintf ( L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue,
         RetValue = _HandleOpenExistingFileEdit ( Node, TheFileInfo, Write, Read );
 
         VPathRelease ( Path );
-wprintf ( L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue, ( void * ) ( TheFileInfo -> Context ), TheFileInfo, __LINE__ );
+wLogMsg ( klogDebug, L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue, ( void * ) ( TheFileInfo -> Context ), TheFileInfo, __LINE__ );
         return RetValue * - 1;
     }
 
@@ -910,7 +928,7 @@ wprintf ( L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue,
         RetValue = _HandleOpenExistingFileEdit ( Node, TheFileInfo, Write, Read );
 
         VPathRelease ( Path );
-wprintf ( L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue, ( void * ) ( TheFileInfo -> Context ), TheFileInfo, __LINE__ );
+wLogMsg ( klogDebug, L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue, ( void * ) ( TheFileInfo -> Context ), TheFileInfo, __LINE__ );
         return RetValue * - 1;
     }
 
@@ -923,7 +941,7 @@ wprintf ( L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue,
         RetValue = _HandleForNode ( Node, TheFileInfo );
 
         VPathRelease ( Path );
-wprintf ( L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue, ( void * ) ( TheFileInfo -> Context ), TheFileInfo, __LINE__ );
+wLogMsg ( klogDebug, L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue, ( void * ) ( TheFileInfo -> Context ), TheFileInfo, __LINE__ );
         return RetValue * - 1;
     }
 
@@ -933,7 +951,7 @@ wprintf ( L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue,
         RetValue = _HandleForNode ( Node, TheFileInfo );
 
         VPathRelease ( Path );
-wprintf ( L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue, ( void * ) ( TheFileInfo -> Context ), TheFileInfo, __LINE__ );
+wLogMsg ( klogDebug, L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue, ( void * ) ( TheFileInfo -> Context ), TheFileInfo, __LINE__ );
         return RetValue * - 1;
     }
 
@@ -943,7 +961,7 @@ wprintf ( L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue,
         RetValue = _HandleForNode ( Node, TheFileInfo );
 
         VPathRelease ( Path );
-wprintf ( L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue, ( void * ) ( TheFileInfo -> Context ), TheFileInfo, __LINE__ );
+wLogMsg ( klogDebug, L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue, ( void * ) ( TheFileInfo -> Context ), TheFileInfo, __LINE__ );
         return RetValue * - 1;
     }
 
@@ -953,7 +971,7 @@ wprintf ( L"     RETURNS [%s][RC=%d][H=0x%p][I=0x%p][%d]\n", FileName, RetValue,
     XFSNodeRelease ( Node );
     VPathRelease ( Path );
 
-wprintf ( L"     RETURNS [%s][RC=%d][I=0x%p][%d]\n", FileName, RetValue, TheFileInfo, __LINE__ );
+wLogMsg ( klogDebug, L"     RETURNS [%s][RC=%d][I=0x%p][%d]\n", FileName, RetValue, TheFileInfo, __LINE__ );
 
     return RetValue * - 1;
 }   /* CreateFile() */
@@ -982,7 +1000,7 @@ XFS_DOKAN_OpenDirectory (
     Type = kxfsNotFound;
     RetVal = 0;
 
-//TT wprintf ( L" OPEN directory [%s][I=0x%p][C=0x%p]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
+//TT wLogMsg ( klogDebug, L" OPEN directory [%s][I=0x%p][C=0x%p]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
 
     if ( FileName == NULL || TheFileInfo == NULL ) {
         return 1 * - 1;
@@ -1010,7 +1028,7 @@ XFS_DOKAN_OpenDirectory (
         RetVal = ERROR_INVALID_DATA;
     }
 
-//TT wprintf ( L" OPEN directory,cont [%s][I=0x%p][C=0x%p][RC=%lu]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, RetVal );
+//TT wLogMsg ( klogDebug, L" OPEN directory,cont [%s][I=0x%p][C=0x%p][RC=%lu]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, RetVal );
     return RetVal * - 1;
 }   /* OpenDirectory() */
 
@@ -1038,7 +1056,7 @@ XFS_DOKAN_CreateDirectory (
     Name = NULL;
     Editor = NULL;
 
-//TT wprintf ( L"CREATE Directory [%s][FI=0x%p][H=0x%p]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
+//TT wLogMsg ( klogDebug, L"CREATE Directory [%s][FI=0x%p][H=0x%p]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
 
     RCt = _DOKAN_get_parent_node_from_char (
                                         FileName,
@@ -1059,7 +1077,7 @@ XFS_DOKAN_CreateDirectory (
         free ( Name );
     }
 
-//TT wprintf ( L"   CREATE Directory [%s][FI=0x%p][H=0x%p][RC=%d]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, RCt );
+//TT wLogMsg ( klogDebug, L"   CREATE Directory [%s][FI=0x%p][H=0x%p][RC=%d]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, RCt );
 
     return RCt == 0 ? 0 : - 1;
 }   /* CreateDirectory() */
@@ -1094,7 +1112,7 @@ XFS_DOKAN_Cleanup (
         return ERROR_INVALID_HANDLE * - 1;
     }
 
-//TT wprintf ( L" CLEANUP File [%s][I=0x%p][H=0x%p][Del=%d]\n", FileName, TheFileInfo, Handle, TheFileInfo -> DeleteOnClose );
+//TT wLogMsg ( klogDebug, L" CLEANUP File [%s][I=0x%p][H=0x%p][Del=%d]\n", FileName, TheFileInfo, Handle, TheFileInfo -> DeleteOnClose );
 
     TheFileInfo -> Context = 0L;
 
@@ -1110,7 +1128,7 @@ XFS_DOKAN_Cleanup (
     XFSHandleRelease ( Handle );
 
     if ( TheFileInfo -> DeleteOnClose ) {
-//TT wprintf ( L"     CLEANUP File : DELETE ON CLOSE [%s][I=0x%p][H=0x%p]\n", FileName, TheFileInfo, Handle );
+//TT wLogMsg ( klogDebug, L"     CLEANUP File : DELETE ON CLOSE [%s][I=0x%p][H=0x%p]\n", FileName, TheFileInfo, Handle );
         _DOKAN_delete_file_dir ( FileName, TheFileInfo );
 
     }
@@ -1145,14 +1163,14 @@ XFS_DOKAN_CloseFile (
 
     Handle = ( struct XFSHandle * ) TheFileInfo -> Context;
 
-//TT wprintf ( L" CLOSE File [%s][I=0x%p][H=0x%p]\n", FileName, TheFileInfo, Handle );
+//TT wLogMsg ( klogDebug, L" CLOSE File [%s][I=0x%p][H=0x%p]\n", FileName, TheFileInfo, Handle );
 
     if ( Handle == NULL )  {
         /* That's is OK */
         return 0;
     }
 
-//TT wprintf ( L" CLOSE File: Cleanup method wasn't called [%s][E=0x%p]\n", FileName, Handle );
+//TT wLogMsg ( klogDebug, L" CLOSE File: Cleanup method wasn't called [%s][E=0x%p]\n", FileName, Handle );
 
     TheFileInfo -> Context = 0L;
 
@@ -1169,7 +1187,7 @@ XFS_DOKAN_CloseFile (
         RCt = _DOKAN_delete_file_dir ( FileName, TheFileInfo );
     }
 
-//TT wprintf ( L" CLOSE File,cont [%s][I=0x%p][H=0x%p][RC=%d]\n", FileName, TheFileInfo, Handle, RCt );
+//TT wLogMsg ( klogDebug, L" CLOSE File,cont [%s][I=0x%p][H=0x%p][RC=%d]\n", FileName, TheFileInfo, Handle, RCt );
 
     return ( RCt == 0 ? 0 : ERROR_INVALID_DATA ) * - 1;
 }   /* CloseFile() */
@@ -1212,7 +1230,7 @@ XFS_DOKAN_ReadFile (
         return 1 * - 1; /* TODO !!! */
     }
 
-//TT wprintf ( L" READ File [%s][I=0x%p][H=0x%p] - [N=%lu][O=%lu]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, NumberOfBytesToRead, Offset );
+//TT wLogMsg ( klogDebug, L" READ File [%s][I=0x%p][H=0x%p] - [N=%lu][O=%lu]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, NumberOfBytesToRead, Offset );
 
     Handle = ( struct XFSHandle * ) TheFileInfo -> Context;
     n2r = ( size_t ) NumberOfBytesToRead;
@@ -1220,7 +1238,7 @@ XFS_DOKAN_ReadFile (
         /*)) That's could happen, and we need to reopen fiel
          ((*/
     if ( Handle == NULL ) {
-//TT wprintf ( L" READ File [%s][I=0x%p][H=0x%p] - REOPENING!\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
+//TT wLogMsg ( klogDebug, L" READ File [%s][I=0x%p][H=0x%p] - REOPENING!\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
 
             /*)) First we are looking for a node
              ((*/
@@ -1269,7 +1287,7 @@ XFS_DOKAN_ReadFile (
     }
 
     if ( LocallyOpened ) {
-//TT wprintf ( L" READ File [%s][I=0x%p][H=0x%p] - RECLOSING!\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
+//TT wLogMsg ( klogDebug, L" READ File [%s][I=0x%p][H=0x%p] - RECLOSING!\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
         if ( Editor != NULL ) {
             XFSFileEditorClose ( Editor );
 
@@ -1287,7 +1305,7 @@ XFS_DOKAN_ReadFile (
 
     RetVal =  RCt == 0 ? 0 : ERROR_INVALID_DATA;
 
-//TT wprintf ( L" READ File,cont [%s][I=0x%p][H=0x%p] - [Read=%lu][RC=%d]!\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, * NumberOfBytesRead, RetVal );
+//TT wLogMsg ( klogDebug, L" READ File,cont [%s][I=0x%p][H=0x%p] - [Read=%lu][RC=%d]!\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, * NumberOfBytesRead, RetVal );
 
     return RetVal * - 1;
 }   /* ReadFile() */
@@ -1330,7 +1348,7 @@ XFS_DOKAN_WriteFile (
         return 1 * - 1; /* TODO !!! */
     }
 
-//TT wprintf ( L" WRITE File [%s][I=0x%p][H=0x%p] - [O=%d][N=%d]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, (int)Offset, (int)NumBytesWrite );
+//TT wLogMsg ( klogDebug, L" WRITE File [%s][I=0x%p][H=0x%p] - [O=%d][N=%d]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, (int)Offset, (int)NumBytesWrite );
 
     n2w = ( size_t ) NumBytesWrite;
 
@@ -1339,7 +1357,7 @@ XFS_DOKAN_WriteFile (
         /*)) That's could happen, and we need to reopen fiel
          ((*/
     if ( Handle == NULL ) {
-//TT wprintf ( L" WRITE File [%s][I=0x%p][H=0x%p] - REOPENING!\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
+//TT wLogMsg ( klogDebug, L" WRITE File [%s][I=0x%p][H=0x%p] - REOPENING!\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
 
             /*)) First we are looking for a node
              ((*/
@@ -1388,7 +1406,7 @@ XFS_DOKAN_WriteFile (
     }
 
     if ( LocallyOpened ) {
-//TT wprintf ( L" WRITE File [%s][I=0x%p][H=0x%p] - RECLOSING!\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
+//TT wLogMsg ( klogDebug, L" WRITE File [%s][I=0x%p][H=0x%p] - RECLOSING!\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
         if ( Editor != NULL ) {
             XFSFileEditorClose ( Editor );
 
@@ -1406,7 +1424,7 @@ XFS_DOKAN_WriteFile (
 
     RetVal =  RCt == 0 ? 0 : ERROR_INVALID_DATA;
 
-//TT wprintf ( L" WRITE File,cont [%s][I=0x%p][H=0x%p] - [Wrote=%d][RC=%d]!\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, (int)* NumBytesWritten, (int)RetVal );
+//TT wLogMsg ( klogDebug, L" WRITE File,cont [%s][I=0x%p][H=0x%p] - [Wrote=%d][RC=%d]!\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, (int)* NumBytesWritten, (int)RetVal );
 
     return RetVal * - 1;
 }   /* WriteFile() */
@@ -1426,7 +1444,7 @@ XFS_DOKAN_FlushFileBuffers (
             PDOKAN_FILE_INFO TheFileInfo
 )
 {
-//TT wprintf ( L"FLUSHFILEBUFFERS(DOKAN): [%s][FI=0x%p]\n", FileName, TheFileInfo );
+//TT wLogMsg ( klogDebug, L"FLUSHFILEBUFFERS(DOKAN): [%s][FI=0x%p]\n", FileName, TheFileInfo );
     return - 0;
 }   /* FlushFileBuffers() */
 
@@ -1592,7 +1610,7 @@ XFS_DOKAN_GetFileInformation (
     RetValue = 0;
     Handle = NULL;
 
-//TT wprintf ( L" INFO file [%s][I=0x%p][H=0x%p]\n", FileName, FileInfo, (void * ) FileInfo -> Context );
+//TT wLogMsg ( klogDebug, L" INFO file [%s][I=0x%p][H=0x%p]\n", FileName, FileInfo, (void * ) FileInfo -> Context );
 
     if ( FileName == NULL || HandleFileInfo == NULL || FileInfo == NULL ) {
         return ERROR_INVALID_DATA * - 1;
@@ -1606,7 +1624,7 @@ XFS_DOKAN_GetFileInformation (
 
     RetValue = _Read_HANDLE_FILE_INFORMATION ( Handle, HandleFileInfo );
 
-//TT wprintf ( L" INFO File,cont [%s][0x%p][RV=%d]\n", FileName, FileInfo, RetValue );
+//TT wLogMsg ( klogDebug, L" INFO File,cont [%s][0x%p][RV=%d]\n", FileName, FileInfo, RetValue );
 
     return RetValue * - 1;
 }   /* GetFileInformation() */
@@ -1817,7 +1835,7 @@ XFS_DOKAN_FindFiles (
         return ERROR_INVALID_DATA * - 1;
     }
 
-//TT wprintf ( L" FIND Files [%s][0x%p]\n", PathName, TheFileInfo );
+//TT wLogMsg ( klogDebug, L" FIND Files [%s][0x%p]\n", PathName, TheFileInfo );
 
     Handle = ( struct XFSHandle * ) TheFileInfo -> Context;
     if ( Handle == NULL ) {
@@ -1869,7 +1887,7 @@ XFS_DOKAN_FindFiles (
 
     XFSEditorDispose ( & ( Editor -> Papahen ) );
 
-//TT wprintf ( L" FIND Files [%s][0x%p][H=0x%p][V=%d]\n", PathName, TheFileInfo, Handle, RetVal );
+//TT wLogMsg ( klogDebug, L" FIND Files [%s][0x%p][H=0x%p][V=%d]\n", PathName, TheFileInfo, Handle, RetVal );
 
     return RetVal * - 1;
 }   /* FindFiles() */
@@ -1891,7 +1909,7 @@ XFS_DOKAN_FindFilesWithPattern (
             PDOKAN_FILE_INFO TheFileInfo
 )
 {
-//TT wprintf ( L"FINDFILESWITHPATTERN(DOKAN): [%s][FI=0x%p]\n", FileName, TheFileInfo );
+//TT wLogMsg ( klogDebug, L"FINDFILESWITHPATTERN(DOKAN): [%s][FI=0x%p]\n", FileName, TheFileInfo );
     return - 0;
 }   /* FindFilesWithPattern() */
 
@@ -1911,7 +1929,7 @@ XFS_DOKAN_SetFileAttributes (
             PDOKAN_FILE_INFO TheFileInfo
 )
 {
-//TT wprintf ( L"SETFILEATTRIBUTES(DOKAN): [%s][FI=0x%p]\n", FileName, TheFileInfo );
+//TT wLogMsg ( klogDebug, L"SETFILEATTRIBUTES(DOKAN): [%s][FI=0x%p]\n", FileName, TheFileInfo );
     return - 0;
 }   /* SetFileAttributes() */
 
@@ -1945,7 +1963,7 @@ XFS_DOKAN_SetFileTime (
     Time = 0;
     xTime = 0;
 
-//TT wprintf ( L" SET file time: [%s][FI=0x%p]\n", FileName, TheFileInfo );
+//TT wLogMsg ( klogDebug, L" SET file time: [%s][FI=0x%p]\n", FileName, TheFileInfo );
 
     if ( FileName == NULL || TheFileInfo == NULL ) {
         return ERROR_INVALID_DATA * - 1;
@@ -1975,7 +1993,7 @@ XFS_DOKAN_SetFileTime (
         XFSNodeRelease ( Node );
     }
 
-//TT wprintf ( L" SET file time,cont: [%s][FI=0x%p][RC=%d]\n", FileName, TheFileInfo, RCt );
+//TT wLogMsg ( klogDebug, L" SET file time,cont: [%s][FI=0x%p][RC=%d]\n", FileName, TheFileInfo, RCt );
 
     return ( RCt == 0 ? 0 : ERROR_INVALID_DATA ) * - 1;
 }   /* SetFileTime() */
@@ -1997,11 +2015,11 @@ XFS_DOKAN_DeleteFile (
 
     RCt = 0;
 
-//TT wprintf ( L"DELETE File [%s][FI=0x%p][H=0x%p]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
+//TT wLogMsg ( klogDebug, L"DELETE File [%s][FI=0x%p][H=0x%p]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
 
     RCt = _DOKAN_delete_file_dir ( FileName, TheFileInfo );
 
-//TT wprintf ( L"   DELETE File,cont [%s][FI=0x%p][H=0x%p][RC=%d]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, RCt );
+//TT wLogMsg ( klogDebug, L"   DELETE File,cont [%s][FI=0x%p][H=0x%p][RC=%d]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, RCt );
 
     return ( RCt == 0 ? 0 : ERROR_INVALID_DATA ) * - 1;
 }   /* DeleteFile() */
@@ -2024,11 +2042,11 @@ XFS_DOKAN_DeleteDirectory (
 
     RCt = 0;
 
-//TT wprintf ( L"DELETE Directory [%s][FI=0x%p][H=0x%p]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
+//TT wLogMsg ( klogDebug, L"DELETE Directory [%s][FI=0x%p][H=0x%p]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context );
 
     RCt = _DOKAN_delete_file_dir ( FileName, TheFileInfo );
 
-//TT wprintf ( L"   DELETE Directory [%s][FI=0x%p][H=0x%p][RC=%d]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, RCt );
+//TT wLogMsg ( klogDebug, L"   DELETE Directory [%s][FI=0x%p][H=0x%p][RC=%d]\n", FileName, TheFileInfo, (void * ) TheFileInfo -> Context, RCt );
 
     return ( RCt == 0 ? 0 : ERROR_INVALID_DATA ) * - 1;
 }   /* DeleteDirectory() */
@@ -2060,7 +2078,7 @@ XFS_DOKAN_MoveFile (
     OldName = NewName = NULL;
     Editor = NULL;
 
-//TT wprintf ( L"MOVE File FR[%s]TO[%s][FI=0x%p][H=0x%p]\n", OldFile, NewFile, TheFileInfo, (void * ) TheFileInfo -> Context );
+//TT wLogMsg ( klogDebug, L"MOVE File FR[%s]TO[%s][FI=0x%p][H=0x%p]\n", OldFile, NewFile, TheFileInfo, (void * ) TheFileInfo -> Context );
 
     RCt = _DOKAN_get_parent_node_from_char (
                                         OldFile,
@@ -2097,7 +2115,7 @@ XFS_DOKAN_MoveFile (
         free ( OldName );
     }
 
-//TT wprintf ( L"   MOVE File FR[%s]TO[%s][FI=0x%p][H=0x%p][RC=%d]\n", OldFile, NewFile, TheFileInfo, (void * ) TheFileInfo -> Context, RCt );
+//TT wLogMsg ( klogDebug, L"   MOVE File FR[%s]TO[%s][FI=0x%p][H=0x%p][RC=%d]\n", OldFile, NewFile, TheFileInfo, (void * ) TheFileInfo -> Context, RCt );
 
     return ( RCt == 0 ? 0 : ERROR_INVALID_DATA ) * - 1;
 }   /* MoveFile() */
@@ -2128,7 +2146,7 @@ XFS_DOKAN_SetEndOfFile (
     Editor = NULL;
     Node = NULL;
 
-//TT wprintf ( L" SET end of file: [%s][FI=0x%p]\n", FileName, TheFileInfo );
+//TT wLogMsg ( klogDebug, L" SET end of file: [%s][FI=0x%p]\n", FileName, TheFileInfo );
 
     if ( FileName == NULL || TheFileInfo == NULL ) {
         return ERROR_INVALID_DATA * - 1;
@@ -2182,7 +2200,7 @@ XFS_DOKAN_SetAllocationSize (
             PDOKAN_FILE_INFO TheFileInfo
 )
 {
-//TT wprintf ( L"SETALLOCATIONSIZE(DOKAN): [%s][FI=0x%p]\n", FileName, TheFileInfo );
+//TT wLogMsg ( klogDebug, L"SETALLOCATIONSIZE(DOKAN): [%s][FI=0x%p]\n", FileName, TheFileInfo );
     return - 0;
 }   /* SetAllocationSize() */
 
@@ -2202,7 +2220,7 @@ XFS_DOKAN_LockFile (
             PDOKAN_FILE_INFO TheFileInfo
 )
 {
-//TT wprintf ( L"LOCKFILE(DOKAN): [%s][FI=0x%p]\n", FileName, TheFileInfo );
+//TT wLogMsg ( klogDebug, L"LOCKFILE(DOKAN): [%s][FI=0x%p]\n", FileName, TheFileInfo );
     return - 0;
 }   /* LockFile() */
 
@@ -2222,7 +2240,7 @@ XFS_DOKAN_UnlockFile (
             PDOKAN_FILE_INFO TheFileInfo
 )
 {
-//TT wprintf ( L"UNLOCKFILE(DOKAN): [%s][FI=0x%p]\n", FileName, TheFileInfo );
+//TT wLogMsg ( klogDebug, L"UNLOCKFILE(DOKAN): [%s][FI=0x%p]\n", FileName, TheFileInfo );
     return - 0;
 }   /* UnlockFile() */
 
@@ -2242,7 +2260,7 @@ XFS_DOKAN_GetDiskFreeSpace (
             PDOKAN_FILE_INFO TheFileInfo
 )
 {
-//TT wprintf ( L"GETDISKFREESPACE(DOKAN): [%s][FI=0x%p]\n", FileName, TheFileInfo );
+//TT wLogMsg ( klogDebug, L"GETDISKFREESPACE(DOKAN): [%s][FI=0x%p]\n", FileName, TheFileInfo );
     return - 0;
 }   /* GetDiskFreeSpace() */
 
@@ -2266,12 +2284,13 @@ XFS_DOKAN_GetVolumeInformation (
             PDOKAN_FILE_INFO TheFileInfo
 )
 {
-//TT wprintf ( L"GETVOLUMEINFORMATION(DOKAN): [FI=0x%p]\n", TheFileInfo );
+//TT wLogMsg ( klogDebug, L"GETVOLUMEINFORMATION(DOKAN): [FI=0x%p]\n", TheFileInfo );
 
     wcscpy_s(
             VolumeNameBuffer,
             VolumeNameSize / sizeof(WCHAR),
-            L"NCBI&CO"
+            // L"NCBI&CO"
+            L"dbGaP"
             );
 
     * VolumeSerialNumber = 0x19450509;
@@ -2309,7 +2328,7 @@ XFS_DOKAN_Unmount (
             PDOKAN_FILE_INFO TheFileInfo
 )
 {
-wprintf ( L"UNMOUNT(DOKAN): [FI=0x%p]\n", TheFileInfo );
+wLogMsg ( klogDebug, L"UNMOUNT(DOKAN): [FI=0x%p]\n", TheFileInfo );
     return - 0;
 }   /* Unmount() */
 
@@ -2401,7 +2420,7 @@ XFS_DOKAN_GetFileSecurity (
         return ERROR_INVALID_HANDLE * - 1;
     }
 
-//TT wprintf ( L" SECURITY File [%s][0x%p][E=0x%p]\n", FileName, TheFileInfo, Editor );
+//TT wLogMsg ( klogDebug, L" SECURITY File [%s][0x%p][E=0x%p]\n", FileName, TheFileInfo, Editor );
 /*
 {
 char FU [ 64 ];
@@ -2430,7 +2449,7 @@ printf ( "SECURITY File [%s][0x%p]\n", FU, TheFileInfo );
                                             );
                 if ( RCt == 0 && 0 < * SecDscLenNeeded ) {
                     if ( SecDscLen == 0 || SecDscLen < * SecDscLenNeeded ) {
-//TT wprintf ( L" SECURITY File ( SIZE Requested ) [%s][NS=%d][BS=%d]\n", FileName, * SecDscLenNeeded, SecDscLen );
+//TT wLogMsg ( klogDebug, L" SECURITY File ( SIZE Requested ) [%s][NS=%d][BS=%d]\n", FileName, * SecDscLenNeeded, SecDscLen );
                         RetVal = ERROR_INSUFFICIENT_BUFFER;
                     }
                     else {
@@ -2457,7 +2476,7 @@ printf ( "SECURITY File [%s][0x%p]\n", FU, TheFileInfo );
     }
 
     XFSEditorDispose ( & ( Editor -> Papahen ) );
-//TT wprintf ( L" SECURITY File,cont [%s][0x%p][R=%d]\n", FileName, TheFileInfo, RetVal );
+//TT wLogMsg ( klogDebug, L" SECURITY File,cont [%s][0x%p][R=%d]\n", FileName, TheFileInfo, RetVal );
 
     return RetVal * - 1;
 }   /* GetFileSecurity() */
@@ -2479,7 +2498,7 @@ XFS_DOKAN_SetFileSecurity (
             PDOKAN_FILE_INFO TheFileInfo
 )
 {
-//TT wprintf ( L"SETFILESECURITY(DOKAN): [%s][FI=0x%p]\n", FileName, TheFileInfo );
+//TT wLogMsg ( klogDebug, L"SETFILESECURITY(DOKAN): [%s][FI=0x%p]\n", FileName, TheFileInfo );
     return - 0;
 }   /* SetFileSecurity() */
 
@@ -2605,3 +2624,43 @@ XFS_Private_InitOperations ( DOKAN_OPERATIONS * Operations )
     return 0;
 }   /* XFS_Private_InitOperations() */
 
+
+/****************************************************************
+ * LogMsg as pLogMsg does not work with WCHAR ... so ... julep
+ ****************************************************************/
+LIB_EXPORT
+rc_t CC
+wLogMsg ( KLogLevel Level, LPCWSTR Format, ... )
+{
+    rc_t RCt;
+    WCHAR BF [ XFS_SIZE_4096 ];
+    char BFF [ XFS_SIZE_4096 ];
+    va_list Args;
+    size_t Size;
+
+    RCt = 0;
+    * BF = 0;
+    * BFF = 0;
+    Size = 0;
+
+    if ( Level <= KLogLevelGet () ) {
+        va_start ( Args, Format );
+
+        if ( vswprintf ( BF, sizeof ( BF ) / sizeof ( WCHAR ), Format, Args ) == - 1 ) {
+            RCt = XFS_RC ( rcInvalid );
+        }
+
+        va_end ( Args );
+
+        if ( RCt == 0 ) {
+            if ( wcstombs_s ( & Size, BFF, sizeof ( BFF ), BF, wcslen ( BF ) ) == 0 ) {
+                RCt = LogMsg ( Level, BFF );
+            }
+            else {
+                RCt = XFS_RC ( rcInvalid );
+            }
+        }
+    }
+
+    return RCt;
+}   /* wLogMsg () */

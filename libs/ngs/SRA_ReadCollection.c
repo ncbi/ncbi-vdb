@@ -90,7 +90,6 @@ NGS_ReadGroup * SRA_ReadCollectionGetReadGroups ( SRA_ReadCollection * self, ctx
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
 
-    // make an iterator over single read-group: this run
     if ( self -> group_info == NULL )
     {
         ON_FAIL ( self -> group_info = SRA_ReadGroupInfoMake ( ctx, self -> tbl ) )

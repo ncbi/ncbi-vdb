@@ -285,6 +285,14 @@ TEST_CASE(KLog_KLogLibHandlerSetStdErr)
     REQUIRE_RC(KLogLibHandlerSetStdErr());
 }
 
+TEST_CASE(UninitailizedCrachTest) {
+    REQUIRE_RC_FAIL(LOGMSG
+        (klogErr, "BANG! YOU SHOULD NOT SEE IT: Logger was not initialized"));
+    REQUIRE_RC(KWrtInit("app", 0x01020003));
+    REQUIRE_RC(
+        PLOGMSG(klogWarn, (klogWarn, "Now you see $(a)", "a=%s", "a warning")));
+}
+
 //TODO:
 // KLogFmtFlagsSet    
 // KLogLibFmtFlagsSet 

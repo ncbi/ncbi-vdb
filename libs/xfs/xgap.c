@@ -868,7 +868,7 @@ XFSGapProjectLocateObject (
     RCt = VFSManagerMakePath (
                             XFS_VfsManager (),
                             & Query,
-                            "ncbi-obj:%s",
+                            "ncbi-obj:%d",
                             ObjectId
                             );
     if ( RCt == 0 ) {
@@ -1075,14 +1075,22 @@ XFSGapProjectObjectUrlAndPath (
         }
 
         if ( RCt == 0 ) {
-            * RemoteUrl = rChar;
-            * CachePath = cChar;
+            if ( RemoteUrl != NULL ) {
+                * RemoteUrl = rChar;
+            }
+            if ( CachePath != NULL ) {
+                * CachePath = cChar;
+            }
         }
     }
 
     if ( RCt != 0 ) {
-        * RemoteUrl = NULL;
-        * CachePath = NULL;
+        if ( RemoteUrl != NULL ) {
+            * RemoteUrl = NULL;
+        }
+        if ( CachePath != NULL ) {
+            * CachePath = NULL;
+        }
 
         if ( rChar != NULL ) {
             free ( ( char * ) rChar );
