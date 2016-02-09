@@ -30,7 +30,6 @@
 
 #include "ngs_c_fixture.hpp"
 #include <ktst/unit_test.hpp>
-#include "NGS_ReadCollection.h"
 #include "NGS_ReferenceSequence.h"
 #include "NGS_String.h"
 
@@ -61,11 +60,11 @@ FIXTURE_TEST_CASE(SRA_Reference_Open_FailsOnNonReference, NGS_C_Fixture)
     EXIT;
 }
 
-FIXTURE_TEST_CASE(SRA_Reference_Open_EBI_MD5, NGS_C_Fixture)
+FIXTURE_TEST_CASE(EBI_Reference_Open_EBI_MD5, NGS_C_Fixture)
 {
     ENTRY;
-    const char* SRA_Accession = "ffd6aeffb54ade3d28ec7644afada2e9";
-    NGS_ReferenceSequence * ref = NGS_ReferenceSequenceMake ( ctx, SRA_Accession );
+    const char* EBI_Accession = "ffd6aeffb54ade3d28ec7644afada2e9";
+    NGS_ReferenceSequence * ref = NGS_ReferenceSequenceMake ( ctx, EBI_Accession );
     REQUIRE ( ! FAILED () );
     REQUIRE_NOT_NULL ( ref );
 
@@ -83,11 +82,11 @@ FIXTURE_TEST_CASE(SRA_Reference_Open_EBI_MD5, NGS_C_Fixture)
     EXIT;
 }
 
-FIXTURE_TEST_CASE(SRA_Reference_Open_EBI_ACC, NGS_C_Fixture)
+FIXTURE_TEST_CASE(EBI_Reference_Open_EBI_ACC, NGS_C_Fixture)
 {
     ENTRY;
-    const char* SRA_Accession = "U12345.1";
-    NGS_ReferenceSequence * ref = NGS_ReferenceSequenceMake ( ctx, SRA_Accession );
+    const char* EBI_Accession = "U12345.1";
+    NGS_ReferenceSequence * ref = NGS_ReferenceSequenceMake ( ctx, EBI_Accession );
     REQUIRE ( ! FAILED () );
     REQUIRE_NOT_NULL ( ref );
 
