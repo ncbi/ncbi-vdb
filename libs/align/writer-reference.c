@@ -168,6 +168,10 @@ struct ReferenceSeq {
     char *id;
     char *seqId;
     char *fastaSeqId;
+
+    char **used;
+    unsigned num_used;
+    
     /* ref table position */
     int64_t start_rowid;
     /* total reference length */
@@ -183,6 +187,15 @@ struct ReferenceSeq {
         RefSeq const *refseq;
     } u;
 };
+
+#define BUCKET_BITS (12U)
+#define BUCKETS (1U << BUCKET_BITS)
+#define BUCKET_MASK (BUCKETS - 1U)
+
+typedef struct {
+    unsigned count;
+    unsigned *index;
+} Bucket;
 
 typedef struct {
     int length, type;
@@ -207,26 +220,81 @@ struct ReferenceMgr {
     KDataBuffer compress;       /* [compress_buffer_t]  */
     KDataBuffer seq;            /* [byte](max_seq_len)  */
     KDataBuffer refSeqs;        /* [ReferenceSeq]       */
-    KDataBuffer refSeqsById;    /* [key_id_t]           */
+
+    Bucket used[BUCKETS];
+    Bucket ht[BUCKETS];
 };
 
-typedef struct key_id_t {
-    char const *key;
-    int64_t id;
-} key_id_t;
-
-static
-int64_t CC key_id_cmp(const void *arg1, const void *arg2, void *data)
+static unsigned hash(unsigned const length, char const key[])
 {
-    key_id_t const *a = arg1;
-    key_id_t const *b = arg2;
+    /* FNV-1a hash with folding */
+    uint64_t h = 0xcbf29ce484222325ull;
+    unsigned i;
     
-    return strcmp(a->key, b->key);
+    for (i = 0; i < length; ++i) {
+        int const ch = key[i];
+        uint64_t const octet = (uint8_t)toupper(ch);
+
+        h = (h ^ octet) * 0x100000001b3ull;
+    }
+    return (unsigned)(((h ^ (h >> 32))) & ((uint64_t)BUCKET_MASK));
+}
+
+static unsigned hash0(char const key[])
+{
+    /* FNV-1a hash with folding */
+    uint64_t h = 0xcbf29ce484222325ull;
+    unsigned i;
+    
+    for (i = 0; ; ++i) {
+        int const ch = key[i];
+        if (ch != '\0') {
+            uint64_t const octet = (uint8_t)toupper(ch);
+            h = (h ^ octet) * 0x100000001b3ull;
+            continue;
+        }
+        break;
+    }
+    return (unsigned)(((h ^ (h >> 32))) & ((uint64_t)BUCKET_MASK));
+}
+
+static void addToHashBucket(Bucket *const bucket, unsigned const index)
+{
+    unsigned i;
+    
+    for (i = 0; i < bucket->count; ++i) {
+        if (bucket->index[i] == index)
+            return;
+    }
+    
+    void *const tmp = realloc(bucket->index, (1 + bucket->count) * sizeof(bucket->index[0]));
+    
+    assert(tmp != NULL);
+    if (tmp == NULL)
+        abort();
+
+    bucket->index = tmp;
+    bucket->index[bucket->count++] = index;
+}
+
+static void addToHashTable(ReferenceMgr *const self, ReferenceSeq const *const rs)
+{
+    unsigned const index = rs - self->refSeq;
+    
+    if (rs->id)
+        addToHashBucket(&self->ht[hash0(rs->id)], index);
+    if (rs->seqId)
+        addToHashBucket(&self->ht[hash0(rs->seqId)], index);
 }
 
 static
 void CC ReferenceSeq_Whack(ReferenceSeq *self)
 {
+    unsigned i;
+    
+    for (i = 0; i < self->num_used; ++i)
+        free(self->used[i]);
+
     if (self->type == rst_local) {
         KDataBufferWhack(&self->u.local.buf);
     }
@@ -236,6 +304,7 @@ void CC ReferenceSeq_Whack(ReferenceSeq *self)
     free(self->id);
     free(self->seqId);
     free(self->fastaSeqId);
+    free(self->used);
 }
 
 struct OpenConfigFile_ctx {
@@ -294,8 +363,11 @@ enum comparison_weights {
     substring_match = (1u << 0),
     expected_prefix = (1u << 1),
     exact_match     = (1u << 2),
-    seq_len_match   = (1u << 3),
-    md5_match       = (1u << 4)
+    seqId_match     = (1u << 3),
+    id_match        = (1u << 4),
+    seq_len_match   = (1u << 5),
+    md5_match       = (1u << 6),
+    attached        = (1u << 7)
 };
 
 static
@@ -324,7 +396,7 @@ unsigned str_weight(char const str[], char const qry[], unsigned const qry_len)
                 
                 if (   memcmp(ns, "ref|", 4) == 0
                     || memcmp(ns, "emb|", 4) == 0
-                    || memcmp(ns, "dbg|", 4) == 0
+                    || memcmp(ns, "dbj|", 4) == 0
                     || memcmp(ns, "tpg|", 4) == 0
                     || memcmp(ns, "tpe|", 4) == 0
                     || memcmp(ns, "tpd|", 4) == 0
@@ -340,68 +412,59 @@ unsigned str_weight(char const str[], char const qry[], unsigned const qry_len)
     return wt;
 }
 
-static key_id_t key_id_make(char const key[], size_t const id)
+static void addToIndex(ReferenceMgr *const self, char const ID[],
+                       ReferenceSeq *const rs)
 {
-    key_id_t kid;
-    
-    kid.id = id;
-    kid.key = string_dup(key, string_size(key));
+    unsigned const n = rs->num_used;
+    unsigned const length = (unsigned)string_size(ID);
+    char *id = string_dup(ID, length);
+    void *tmp = realloc(rs->used, (n + 1) * sizeof(rs->used[0]));
 
-    return kid;
+    assert(tmp != NULL && id != NULL);
+    if (tmp == NULL || id == NULL) abort();
+
+    ++rs->num_used;
+    rs->used = tmp;
+    rs->used[n] = id;
+    addToHashBucket(&self->used[hash(length, id)], rs - self->refSeq);
 }
 
-static
-rc_t ReferenceMgr_AddId(ReferenceMgr *const self, char const ID[],
-                        ReferenceSeq const *const obj)
+static int findId(ReferenceMgr const *const self, char const id[])
 {
-    key_id_t const k_id = key_id_make(ID, obj - self->refSeq);
+    unsigned const hv = hash0(id);
+    Bucket const *const bucket = &self->used[hv];
+    unsigned const n = bucket->count;
+    unsigned i;
     
-    if (k_id.key) {
-        unsigned const last_id = (unsigned)self->refSeqsById.elem_count;
-        rc_t rc = KDataBufferResize(&self->refSeqsById, last_id + 1);
+    for (i = 0; i < n; ++i) {
+        unsigned const index = bucket->index[i];
+        ReferenceSeq const *rs = &self->refSeq[index];
+        unsigned const m = rs->num_used;
+        unsigned j;
         
-        if (rc == 0) {
-            key_id_t *const k_ids = (key_id_t *)self->refSeqsById.base;
-            
-            k_ids[last_id] = k_id;
-            
-            ksort(k_ids, self->refSeqsById.elem_count, sizeof(key_id_t), key_id_cmp, NULL);
+        for (j = 0; j < m; ++j) {
+            if (strcmp(id, rs->used[j]) == 0)
+                return i;
         }
-        else
-            free((void *)k_id.key);
-        
-        return rc;
     }
-    return RC(rcAlign, rcIndex, rcInserting, rcMemory, rcExhausted);
+    return -1;
 }
 
-static
-key_id_t *ReferenceMgr_FindId(ReferenceMgr const *const self, char const id[])
-{
-    key_id_t qry;
-    
-    qry.key = id;
-    qry.id = 0;
-    
-    return kbsearch(&qry, self->refSeqsById.base,
-                    self->refSeqsById.elem_count,
-                    sizeof(qry), key_id_cmp, NULL);
-}
-
-static
-rc_t ReferenceMgr_NewReferenceSeq(ReferenceMgr *const self, ReferenceSeq **const rslt)
+static ReferenceSeq *newReferenceSeq(ReferenceMgr *const self)
 {
     unsigned const last_rs = (unsigned)self->refSeqs.elem_count;
-    rc_t rc = KDataBufferResize(&self->refSeqs, last_rs + 1);
-    
-    if (rc) return rc;
-    self->refSeq = self->refSeqs.base;
-    
-    *rslt = &self->refSeq[last_rs];
-    memset(&self->refSeq[last_rs], 0, sizeof(self->refSeq[0]));
-    self->refSeq[last_rs].mgr = self;
+    rc_t const rc = KDataBufferResize(&self->refSeqs, last_rs + 1);
 
-    return 0;
+    assert(rc == 0);
+    if (rc) abort();
+
+    self->refSeq = self->refSeqs.base;
+    {
+        ReferenceSeq *const rslt = &self->refSeq[last_rs];
+        memset(rslt, 0, sizeof(*rslt));
+        self->refSeq[last_rs].mgr = self;
+        return rslt;
+    }
 }
 
 static
@@ -524,9 +587,8 @@ rc_t ReferenceMgr_ProcessConf(ReferenceMgr *const self, char Data[], unsigned co
             circular = circ && (circ == extra || isspace(circ[-1])) &&
                        (circ[8] == '\0' || isspace(circ[8]));
         }
-        rc = ReferenceMgr_NewReferenceSeq(self, &rs);
-        if (rc) return rc;
-        
+        rs = newReferenceSeq(self);
+
         rs->id = string_dup(id, string_size(id));
         if (rs->id == NULL)
             return RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
@@ -540,6 +602,8 @@ rc_t ReferenceMgr_ProcessConf(ReferenceMgr *const self, char Data[], unsigned co
                 return RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
         }
         rs->circular = circular;
+        
+        addToHashTable(self, rs);
     }
     KDataBufferWhack(&buf);
     return 0;
@@ -583,7 +647,7 @@ rc_t ReferenceMgr_Conf(ReferenceMgr *const self, char const conf[])
 }
 
 static
-rc_t ReferenceMgr_FastaFile_GetSeqIds(KDataBuffer *const buf, char const data[], uint64_t const len)
+rc_t FastaFile_GetSeqIds(KDataBuffer *const buf, char const data[], uint64_t const len)
 {
     uint64_t pos;
     int st = 0;
@@ -609,7 +673,7 @@ rc_t ReferenceMgr_FastaFile_GetSeqIds(KDataBuffer *const buf, char const data[],
 }
 
 static
-rc_t ReferenceMgr_ImportFasta(ReferenceMgr *const self, ReferenceSeq *obj, KDataBuffer *const buf)
+rc_t ImportFasta(ReferenceMgr *const self, ReferenceSeq *const obj, KDataBuffer const *const buf)
 {
     unsigned seqId;
     unsigned seqIdLen;
@@ -618,12 +682,10 @@ rc_t ReferenceMgr_ImportFasta(ReferenceMgr *const self, ReferenceSeq *obj, KData
     unsigned dst;
     unsigned start=0;
     char *const data = buf->base;
-    unsigned const len = (unsigned)buf->elem_count;
+    unsigned const len = buf->elem_count;
+    char *fastaSeqId = NULL;
     rc_t rc;
     MD5State mds;
-    
-    memset(obj, 0, sizeof(*obj));
-    obj->mgr = self;
     
     if (len == 0)
         return 0;
@@ -652,8 +714,8 @@ rc_t ReferenceMgr_ImportFasta(ReferenceMgr *const self, ReferenceSeq *obj, KData
     if (seqIdLen == 0)
         return RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
     
-    obj->fastaSeqId = string_dup(&data[ seqId ], string_size(&data[ seqId ]));
-    if (obj->fastaSeqId == NULL)
+    fastaSeqId = string_dup(&data[seqId], string_size(&data[seqId]));
+    if (fastaSeqId == NULL)
         return RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
     
     MD5StateInit(&mds);
@@ -673,6 +735,7 @@ rc_t ReferenceMgr_ImportFasta(ReferenceMgr *const self, ReferenceSeq *obj, KData
     MD5StateFinish(&mds, obj->md5);
     rc = KDataBufferSub(buf, &obj->u.local.buf, start, dst - start);
     if (rc == 0) {
+        obj->fastaSeqId = fastaSeqId;
         obj->type = rst_local;
         obj->seq_len = dst - start;
     }
@@ -681,31 +744,255 @@ rc_t ReferenceMgr_ImportFasta(ReferenceMgr *const self, ReferenceSeq *obj, KData
     return rc;
 }
 
+static KDataBuffer subBuffer(KDataBuffer const *const buf, uint64_t const offset, unsigned const length)
+{
+    KDataBuffer sub;
+    memset(&sub, 0, sizeof(sub));
+    KDataBufferSub(buf, &sub, offset, length);
+    return sub;
+}
+
+static int compareSeqIdFields(unsigned const alen, char const a[], unsigned const blen, char const b[])
+{
+    unsigned i;
+
+    for (i = 0; i < alen && i < blen; ++i) {
+        int const cha = a[i];
+        int const chb = b[i];
+        int const diff = toupper(cha) - toupper(chb);
+
+        if (diff < 0)
+            return -1;
+
+        if (diff > 0)
+            return 1;
+
+        if (cha == '\0')
+            return 0;
+    }
+    return alen < blen ? -1 : alen == blen ? 0 : 1;
+}
+
+typedef struct {
+    unsigned length;
+    uint64_t offset;
+} seqIdField_t;
+
+static int64_t cmpSeqIdField(void const *A, void const *B, void *Ctx)
+{
+    char const *const data = Ctx;
+    seqIdField_t const *a = A;
+    seqIdField_t const *b = B;
+    char const *avalue = &data[a->offset];
+    unsigned const alen = a->length;
+    char const *bvalue = &data[b->offset];
+    unsigned const blen = b->length;
+    int const diff = compareSeqIdFields(alen, avalue, blen, bvalue);
+
+    return diff != 0 ? diff : a->offset < b->offset ? -1 : 1;
+}
+
+static bool isInKnownSet(unsigned const len, char const id[])
+{
+    if (len == 2 || len == 3) {;
+        int const id1 = id[0];
+        int const id2 = id[1];
+
+        if (len == 3) {
+            int const id3 = id[2];
+
+            if (id1 == 'd' && id2 == 'b' && id3 == 'j') return true;
+            if (id1 == 'e' && id2 == 'm' && id3 == 'b') return true;
+            if (id1 == 'g' && id2 == 'p' && id3 == 'p') return true;
+            if (id1 == 'r' && id2 == 'e' && id3 == 'f') return true;
+            if (id1 == 't' && id2 == 'p') {
+                if (id3 == 'd' || id3 == 'e' || id3 == 'g') return true;
+            }
+            return false;
+        }
+        if (id1 == 'g' && id2 == 'b') return true;
+    }
+    return false;
+}
+
+static rc_t ImportFastaFileMany(ReferenceMgr *const self,
+                                unsigned const seqIds, uint64_t const seqIdOffset[],
+                                KDataBuffer const *const buf)
+{
+    unsigned const datalen = buf->elem_count;
+    char *const data = buf->base;
+    seqIdField_t *found = NULL;
+    seqIdField_t *ignore = NULL;
+    unsigned found_entries = 0;
+    unsigned found_entries_max = seqIds;
+    unsigned ignore_entries = 0;
+    unsigned ignore_entries_max = 0;
+    unsigned i;
+    rc_t rc = 0;
+
+    found = malloc(found_entries_max * sizeof(found[0]));
+    assert(found);
+    if (found == NULL)
+        abort();
+
+    for (i = 0; i < seqIds; ++i) {
+        uint64_t const ofs = seqIdOffset[i];
+        uint64_t const nxt = (i < seqIds - 1) ? seqIdOffset[i + 1] : datalen;
+        unsigned const len = (unsigned)(nxt - ofs);
+        unsigned j = 1;
+        unsigned k;
+
+        for (k = j; k < len; ++k) {
+            int const ch = data[ofs + k];
+
+            if (ch == '|' || isspace(ch)) {
+                if (isspace(ch) || !isInKnownSet(k - j, &data[ofs + j])) {
+                    if (found_entries == found_entries_max) {
+                        unsigned const new_max = found_entries_max * 2;
+                        void *const tmp = realloc(found, new_max * sizeof(found[0]));
+
+                        assert(tmp);
+                        if (tmp == NULL)
+                            abort();
+
+                        found = tmp;
+                        found_entries_max = new_max;
+                    }
+                    found[found_entries].length = k - j;
+                    found[found_entries].offset = ofs + j;
+                    ++found_entries;
+                }
+                j = k + 1;
+            }
+            if (isspace(ch))
+                break;
+        }
+    }
+    ksort(found, found_entries, sizeof(found[0]), cmpSeqIdField, (void *)data);
+
+    for (i = 1; i < found_entries; ++i) {
+        unsigned const llen = ignore_entries_max > 0 ? ignore[ignore_entries - 1].length : 0;
+        char const *const last = ignore_entries_max > 0 ? data + ignore[ignore_entries - 1].offset : 0;
+
+        unsigned const plen = found[i - 1].length;
+        char const *const prv = data + found[i - 1].offset;
+
+        unsigned const qlen = found[i].length;
+        char const *const qry = data + found[i].offset;
+
+        bool const issame = compareSeqIdFields(plen, prv, qlen, qry) == 0;
+        bool const islast = llen > 0 ? compareSeqIdFields(llen, last, qlen, qry) == 0 : false;
+
+        if (issame && !islast) {
+            if (ignore_entries == ignore_entries_max) {
+                unsigned const new_max = ignore_entries_max == 0 ? (4096 / sizeof(ignore[0])) : (ignore_entries_max * 2);
+                void *const tmp = realloc(ignore, new_max * sizeof(ignore[0]));
+
+                assert(tmp);
+                if (tmp == NULL)
+                    abort();
+
+                ignore = tmp;
+                ignore_entries_max = new_max;
+            }
+            ignore[ignore_entries] = found[i - 1];
+            ++ignore_entries;
+        }
+    }
+    free(found);
+
+    for (i = 0; i < seqIds; ++i) {
+        unsigned token_length = 0;
+        uint64_t token_offset = 0;
+        uint64_t const ofs = seqIdOffset[i];
+        uint64_t const nxt = (i < seqIds - 1) ? seqIdOffset[i + 1] : datalen;
+        unsigned const len = (unsigned)(nxt - ofs);
+        unsigned j = 1;
+        unsigned k;
+
+        for (k = j; k < len; ++k) {
+            int const ch = data[ofs + k];
+
+            if (ch == '|' || isspace(ch)) {
+                unsigned const length = k - j;
+                uint64_t const offset = ofs + j;
+                char const *const value = &data[offset];
+
+                if (!isspace(ch) && isInKnownSet(length, value))
+                    goto IGNORED;
+                {
+                    unsigned f = 0;
+                    unsigned e = ignore_entries;
+
+                    while (f < e) {
+                        unsigned const m = f + (e - f) / 2;
+                        unsigned const flen = ignore[m].length;
+                        char const *const fnd = data + ignore[m].offset;
+                        int const diff = compareSeqIdFields(length, value, flen, fnd);
+
+                        if (diff == 0)
+                            goto IGNORED;
+                        if (diff < 0)
+                            e = m;
+                        else
+                            f = m + 1;
+                    }
+                }
+                token_offset = offset;
+                token_length = length;
+            IGNORED:
+                j = k + 1;
+                if (isspace(ch))
+                    break;
+            }
+        }
+        if (token_length > 0) {
+            ReferenceSeq *const new_seq = newReferenceSeq(self);
+            KDataBuffer sub = subBuffer(buf, ofs, len);
+
+            rc = ImportFasta(self, new_seq, &sub);
+            KDataBufferWhack(&sub);
+            if (rc) break;
+
+            addToHashBucket(&self->ht[hash(token_length, data + token_offset)], new_seq - self->refSeq);
+        }
+        else {
+            rc = RC(rcAlign, rcFile, rcReading, rcId, rcNotFound);
+            PLOGERR(klogErr, (klogErr, rc, "The defline '$(defline)' contains no unique identifiers", "defline=%*s", k, &data[ofs]));
+            break;
+        }
+    }
+
+    free(ignore);
+    return rc;
+}
+
 #define READ_CHUNK_SIZE (1024 * 1024)
 
 static
-rc_t ReferenceMgr_ImportFastaFile(ReferenceMgr *const self, KFile const *kf,
-                                  ReferenceSeq *rslt)
+rc_t ImportFastaFile(ReferenceMgr *const self, KFile const *kf,
+                     ReferenceSeq *rslt)
 {
     uint64_t file_size;
     rc_t rc = KFileSize(kf, &file_size);
     
     if (rc == 0) {
         KDataBuffer fbuf;
-        
-        rc = KDataBufferMake(&fbuf, 8, file_size);
+
+        rc = KDataBufferMakeBytes(&fbuf, file_size);
         if (rc == 0) {
-            fbuf.elem_count = 0;
-            do {
-                size_t const readable = file_size - fbuf.elem_count;
-                size_t const to_read = readable > READ_CHUNK_SIZE ? READ_CHUNK_SIZE : readable;
+            char *const data = fbuf.base;
+            uint64_t inbuf = 0;
+
+            while (inbuf < file_size) {
+                uint64_t const remain = file_size - inbuf;
                 size_t nread = 0;
                 
-                rc = KFileRead(kf, fbuf.elem_count, &((uint8_t *)fbuf.base)[fbuf.elem_count], to_read, &nread);
+                rc = KFileRead(kf, inbuf, &data[inbuf], remain > READ_CHUNK_SIZE ? READ_CHUNK_SIZE : remain, &nread);
                 if (rc != 0 || nread == 0)
                     break;
-                fbuf.elem_count += nread;
-            } while (fbuf.elem_count < file_size);
+                inbuf += nread;
+            }
             if (rc == 0) {
                 char const *const base = fbuf.base;
                 KDataBuffer seqIdBuf;
@@ -713,41 +1000,25 @@ rc_t ReferenceMgr_ImportFastaFile(ReferenceMgr *const self, KFile const *kf,
                 memset(&seqIdBuf, 0, sizeof(seqIdBuf));
                 seqIdBuf.elem_bits = sizeof(file_size) * 8;
                 
-                rc = ReferenceMgr_FastaFile_GetSeqIds(&seqIdBuf, base, file_size);
+                rc = FastaFile_GetSeqIds(&seqIdBuf, base, file_size);
                 if (rc == 0) {
                     uint64_t const *const seqIdOffset = seqIdBuf.base;
                     unsigned const seqIds = (unsigned)seqIdBuf.elem_count;
-                    unsigned i;
-                    KDataBuffer sub;
-                    
+
                     if (rslt) {
+                        KDataBuffer sub = subBuffer(&fbuf, seqIdOffset[0], (unsigned)(file_size - seqIdOffset[0]));
+
                         if (seqIds > 1)
                             rc = RC(rcAlign, rcFile, rcReading, rcItem, rcUnexpected);
                         
-                        memset(&sub, 0, sizeof(sub));
-                        KDataBufferSub(&fbuf, &sub, seqIdOffset[0], file_size - seqIdOffset[0]);
-                        rc = ReferenceMgr_ImportFasta(self, rslt, &sub);
+                        rc = ImportFasta(self, rslt, &sub);
                         KDataBufferWhack(&sub);
+                        if (rc == 0)
+                            addToHashTable(self, rslt);
                     }
-                    else
-                        for (i = 0; i != seqIds; ++i) {
-                            uint64_t const ofs = seqIdOffset[i];
-                            uint64_t const nxt = (i < seqIds - 1) ? seqIdOffset[i + 1] : file_size;
-                            uint64_t const len = nxt - ofs;
-                            ReferenceSeq tmp;
-                            ReferenceSeq *new_seq;
-                            
-                            memset(&sub, 0, sizeof(sub));
-                            KDataBufferSub(&fbuf, &sub, ofs, len);
-                            rc = ReferenceMgr_ImportFasta(self, &tmp, &sub);
-                            KDataBufferWhack(&sub);
-                            if (rc) break;
-                            
-                            rc = ReferenceMgr_NewReferenceSeq(self, &new_seq);
-                            if (rc) break;
-                            
-                            *new_seq = tmp;
-                        }
+                    else {
+                        ImportFastaFileMany(self, seqIds, seqIdOffset, &fbuf);
+                    }
                 }
                 KDataBufferWhack(&seqIdBuf);
             }
@@ -778,10 +1049,12 @@ rc_t OpenFastaFile(KFile const **const kf,
     memcpy(fname, base, len);
     memcpy(fname + len, ".fasta", 7);
     
+    ALIGN_CF_DBGF(("trying to open fasta file: %.s\n", fname));
     rc = KDirectoryOpenFileRead(dir, kf, "%s", fname);
     if (rc) {
         fname[len + 3] = '\0'; /* base.fasta -> base.fa */
         
+        ALIGN_CF_DBGF(("trying to open fasta file: %.s\n", fname));
         rc = KDirectoryOpenFileRead(dir, kf, "%s", fname);
     }
     free(fname_h);
@@ -789,7 +1062,7 @@ rc_t OpenFastaFile(KFile const **const kf,
 }
 
 #if 1
-void ReferenceSeq_Dump(ReferenceSeq const *const rs, unsigned const i, key_id_t const *const key_id_array, unsigned const m)
+void ReferenceSeq_Dump(ReferenceSeq const *const rs)
 {
     static char const *types[] = {
         "'unattached'",
@@ -829,11 +1102,10 @@ void ReferenceSeq_Dump(ReferenceSeq const *const rs, unsigned const i, key_id_t 
     ALIGN_CF_DBGF(("', "));
     
     ALIGN_CF_DBGF(("keys: [ "));
-    for (j = 0; j != m; ++j) {
-        key_id_t const *const kid = &key_id_array[j];
+    for (j = 0; j != rs->num_used; ++j) {
+        char const *key = rs->used[j];
         
-        if (kid->id == i)
-            ALIGN_CF_DBGF(("'%s', ", kid->key));
+        ALIGN_CF_DBGF(("'%s', ", key));
     }
     ALIGN_CF_DBGF(("] }"));
 }
@@ -841,14 +1113,12 @@ void ReferenceSeq_Dump(ReferenceSeq const *const rs, unsigned const i, key_id_t 
 LIB_EXPORT void ReferenceMgr_DumpConfig(ReferenceMgr const *const self)
 {
     unsigned const n = (unsigned)self->refSeqs.elem_count;
-    unsigned const m = (unsigned)self->refSeqsById.elem_count;
-    key_id_t const *const key_id_array = self->refSeqsById.base;
     unsigned i;
     
     ALIGN_CF_DBGF(("config: [\n"));
     for (i = 0; i != n; ++i) {
         ALIGN_CF_DBGF(("\t"));
-        ReferenceSeq_Dump(&self->refSeq[i], i, key_id_array, m);
+        ReferenceSeq_Dump(&self->refSeq[i]);
         ALIGN_CF_DBGF((",\n"));
     }
     ALIGN_CF_DBGF(("]\n"));
@@ -865,7 +1135,7 @@ rc_t ReferenceMgr_TryFasta(ReferenceMgr *const self, ReferenceSeq *const seq,
     rc = OpenFastaFile(&kf, self->dir, id, idLen);
     
     if (rc == 0) {
-        rc = ReferenceMgr_ImportFastaFile(self, kf, seq);
+        rc = ImportFastaFile(self, kf, seq);
         KFileRelease(kf);
     }
     return rc;
@@ -942,18 +1212,13 @@ rc_t ReferenceSeq_Attach(ReferenceMgr *const self, ReferenceSeq *const rs)
         rc = OpenFastaFile(&kf, self->dir, rs->seqId, seqid_len);
     }
     if (kf) {
-        ReferenceSeq tmp;
+        ReferenceSeq tmp = *rs;
         
         ALIGN_CF_DBGF(("importing fasta"));
-        rc = ReferenceMgr_ImportFastaFile(self, kf, &tmp);
+        rc = ImportFastaFile(self, kf, rs);
         KFileRelease(kf);
-        if (rc == 0) {
-            tmp.id = rs->id;
-            tmp.seqId = rs->seqId;
-            tmp.circular = rs->circular;
-            
+        if (rc != 0)
             *rs = tmp;
-        }
         return rc;
     }
     return 0;
@@ -998,6 +1263,25 @@ static int ReferenceMgr_FindBestFasta(ReferenceMgr const *const self,
     return best;
 }
 
+struct Candidate {
+    int weight;
+    unsigned index;
+};
+
+static int64_t CC cmpCandidate(void const *A, void const *B, void *Ctx)
+{
+    struct Candidate const *const a = A;
+    struct Candidate const *const b = B;
+
+    return (int64_t)(a->weight - b->weight);
+}
+
+static void sortCandidateList(unsigned const len, struct Candidate *list)
+{
+    if (len > 1)
+        ksort(list, len, sizeof(list[0]), cmpCandidate, NULL);
+}
+
 static
 rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                           ReferenceSeq **const rslt,
@@ -1007,13 +1291,12 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                           bool const allowMultiMapping,
                           bool wasRenamed[])
 {
-    unsigned const idLen = (unsigned)string_size(id);
-    key_id_t const *const fnd = ReferenceMgr_FindId(self, id);
+    int const fnd = findId(self, id);
     
     assert(rslt != NULL);
     *rslt = NULL;
-    if (fnd) {
-        ReferenceSeq *const obj = &self->refSeq[fnd->id];
+    if (fnd > 0) {
+        ReferenceSeq *const obj = &self->refSeq[fnd];
         
         if (obj->type == rst_dead)
             return RC(rcAlign, rcIndex, rcSearching, rcItem, rcInvalid);
@@ -1028,21 +1311,131 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
         return 0;
     }
     else {
+        unsigned const idLen = (unsigned)string_size(id);
+        unsigned const hv = hash(idLen, id);
+        Bucket const bucket = self->ht[hv];
+        unsigned num_possible = 0;
+        struct Candidate *possible = malloc(sizeof(possible[0]) * bucket.count);
+        rc_t rc = 0;
+        unsigned i;
+
+        for (i = 0; i < bucket.count; ++i) {
+            unsigned const index = bucket.index[i];
+            ReferenceSeq *const rs = &self->refSeq[index];
+
+            if (rs->type != rst_dead) {
+                bool const sameId = rs->id != NULL && strcmp(rs->id, id) == 0;
+                bool const sameSeqId = rs->seqId != NULL && strcasecmp(rs->seqId, id) == 0;
+                int const sameFastaSeqId = rs->fastaSeqId != NULL ? str_weight(rs->fastaSeqId, id, idLen) : 0;
+                struct Candidate nv;
+
+                nv.weight = (sameId ? id_match : 0) | (sameSeqId ? seqId_match : 0) | sameFastaSeqId;
+                nv.index = index;
+
+                if (nv.weight > 0)
+                    possible[num_possible++] = nv;
+            }
+        }
+        if (num_possible == 0) {
+            /* nothing was found; try a fasta file */
+            KFile const *kf = NULL;
+
+            free(possible);
+            if (OpenFastaFile(&kf, self->dir, id, idLen) == 0) {
+                /* found a fasta file; load it and try again */
+                rc_t rc = ImportFastaFile(self, kf, NULL);
+                if (rc == 0)
+                    return ReferenceMgr_OpenSeq(self, rslt, id, seq_len, md5, allowMultiMapping, wasRenamed);
+                else
+                    return rc;
+            }
+            /* didn't find a fasta file; try RefSeq */
+            ALIGN_CF_DBGF(("trying to open refseq: %s\n", id));
+            if (RefSeqMgr_Exists(self->rmgr, id, idLen, NULL) == 0) {
+                ReferenceSeq *const seq = newReferenceSeq(self);
+
+                rc = RefSeqMgr_GetSeq(self->rmgr, &seq->u.refseq, id, idLen);
+                if (rc == 0) {
+                    seq->id = string_dup(id, idLen);
+                    seq->type = rst_refSeqById;
+
+                    addToHashBucket(&self->ht[hv], seq - self->refSeq);
+                    addToIndex(self, id, seq);
+
+                    ReferenceSeq_GetRefSeqInfo(seq);
+                    *rslt = seq;
+                }
+                return rc;
+            }
+            /* nothing found and out of options */
+            return RC(rcAlign, rcFile, rcConstructing, rcId, rcNotFound);
+        }
+        for (i = 0; i < num_possible; ++i) {
+            unsigned const index = possible[i].index;
+            ReferenceSeq *const rs = &self->refSeq[index];
+
+            if (seq_len != 0 && seq_len == rs->seq_len)
+                possible[i].weight |= seq_len_match;
+            if (md5 != NULL && memcmp(md5, rs->md5, 16) == 0)
+                possible[i].weight |= md5_match;
+        }
+        sortCandidateList(num_possible, possible);
+
+        for (i = 0; i < num_possible; ++i) {
+            unsigned const index = possible[i].index;
+            ReferenceSeq *const rs = &self->refSeq[index];
+
+            if (rs->type != rst_unattached)
+                possible[i].weight |= attached;
+        }
+        sortCandidateList(num_possible - 1, possible);
+
+        if (num_possible == 1 || (possible[num_possible - 1].weight & ~attached) > (possible[num_possible - 2].weight & ~attached)) {
+            unsigned const index = possible[num_possible - 1].index;
+            ReferenceSeq *const seq = &self->refSeq[index];
+
+            if (seq->seqId != NULL && !allowMultiMapping) {
+                unsigned const hv = hash0(seq->seqId);
+                Bucket const bucket = self->ht[hv];
+
+                for (i = 0; i < bucket.count; ++i) {
+                    ReferenceSeq *qry = &self->refSeq[bucket.index[i]];
+                    if (qry == seq || qry->type == rst_dead || qry->type == rst_unattached || qry->seqId == NULL)
+                        continue;
+                    if (strcasecmp(seq->seqId, qry->seqId) == 0) {
+                        *rslt = qry;
+                        wasRenamed[0] = true;
+                        return 0;
+                    }
+                }
+            }
+            addToIndex(self, id, seq);
+            *rslt = seq;
+        }
+        else {
+            /* unresolvable ambiguity */
+            rc = RC(rcAlign, rcFile, rcConstructing, rcId, rcAmbiguous);
+        }
+        free(possible);
+        return rc;
+#if 0
         unsigned const n = (unsigned)self->refSeqs.elem_count;
         unsigned i;
-        ReferenceSeq *seq = NULL;
+        ReferenceSeq *seq = findHashTable(self, id);
         rc_t rc = 0;
         
-        /* try to find by id; this should work most of the time */
-        for (i = 0; i != n; ++i) {
-            ReferenceSeq *const rs = &self->refSeq[i];
+        if (seq == NULL) {
+            /* try to find by id; this should work most of the time */
+            for (i = 0; i != n; ++i) {
+                ReferenceSeq *const rs = &self->refSeq[i];
 
-            if (rs->type == rst_dead)
-                continue;
-            
-            if (rs->id && strcmp(rs->id, id) == 0) {
-                seq = rs;
-                break;
+                if (rs->type == rst_dead)
+                    continue;
+                
+                if (rs->id && strcmp(rs->id, id) == 0) {
+                    seq = rs;
+                    break;
+                }
             }
         }
         if (seq == NULL) {
@@ -1129,7 +1522,7 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
         else {
             ReferenceSeq *alt = NULL;
 
-            if (!allowMultiMapping) {
+            if (!allowMultiMapping && seq->seqId != NULL) {
                 /* The old behavior was to allow multiple name to SEQID mappings
                  * but this causes some troubles with other tools.
                  * This loop is to re-use any open reference with the same
@@ -1142,7 +1535,7 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                         && rs->type != rst_unattached
                         && rs != seq
                         && rs->seqId != NULL
-                        && strcasecmp(id, rs->seqId) == 0)
+                        && strcasecmp(seq->seqId, rs->seqId) == 0)
                     {
                         *rslt = rs;
                         wasRenamed[0] = true;
@@ -1226,6 +1619,7 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
         if (rc == 0)
             *rslt = seq;
         return rc;
+#endif
     }
 }
 
@@ -1275,7 +1669,6 @@ LIB_EXPORT rc_t CC ReferenceMgr_Make(ReferenceMgr const **cself, VDatabase *db,
         if (rc == 0) {
             self->compress.elem_bits = sizeof(compress_buffer_t) * 8;
             self->refSeqs.elem_bits = sizeof(ReferenceSeq) * 8;
-            self->refSeqsById.elem_bits = sizeof(key_id_t) * 8;
             
             self->options = options;
             self->cache = cache;
@@ -1763,16 +2156,12 @@ LIB_EXPORT rc_t CC ReferenceMgr_Release(const ReferenceMgr *cself,
         if (Rows) *Rows = rows;
         KDirectoryRelease(self->dir);
 
-        for (i = 0; i != self->refSeqsById.elem_count; ++i)
-            free((void *)((key_id_t *)self->refSeqsById.base)[i].key);
-
         for (i = 0; i != self->refSeqs.elem_count; ++i)
             ReferenceSeq_Whack(&self->refSeq[i]);
 
         KDataBufferWhack(&self->compress);
         KDataBufferWhack(&self->seq);
         KDataBufferWhack(&self->refSeqs);
-        KDataBufferWhack(&self->refSeqsById);
 
         if (rc == 0 && build_coverage && commit && rows > 0)
             rc = ReferenceMgr_ReCover(cself, rows, quitting);
@@ -2002,7 +2391,7 @@ LIB_EXPORT rc_t CC ReferenceMgr_FastaFile(const ReferenceMgr* cself, const KFile
     if(cself == NULL || file == NULL) {
         return RC(rcAlign, rcFile, rcConstructing, rcParam, rcNull);
     }
-    return ReferenceMgr_ImportFastaFile((ReferenceMgr *)cself, file, NULL);
+    return ImportFastaFile((ReferenceMgr *)cself, file, NULL);
 }
 
 typedef struct {
