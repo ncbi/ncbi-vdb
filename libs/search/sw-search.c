@@ -25,11 +25,12 @@
 */
 
 #include <search/ref-variation.h>
-
-#include <search/extern.h>
+#include <search/smith-waterman.h>
 
 #include <klib/rc.h>
 #include <klib/refcount.h>
+#include <klib/text.h>
+
 #include <insdc/insdc.h>
 
 #include <stdlib.h>
@@ -121,20 +122,27 @@ static int similarity_func (INSDC_dna_text ch2na, INSDC_dna_text ch4na)
 #endif
 }
 
-static int gap_score_func ( size_t idx )
+static int gap_score_const ( size_t idx )
+{
+    return -1;
+}
+
+static int gap_score_linear ( size_t idx )
 {
 #if COMPARE_4NA == 1
     return -6*(int)idx;
 #else
-
-#if GAP_SCORE_LINEAR != 0
     return -(int)idx;
-#else /* constant*/
-    return -1;
-#endif
-
 #endif
 }
+
+static int (*gap_score_func) (size_t ) =
+#if GAP_SCORE_LINEAR != 0
+    gap_score_linear
+#else
+    gap_score_const
+#endif
+; 
 
 typedef struct ValueIndexPair
 {
@@ -151,10 +159,12 @@ static char get_char (INSDC_dna_text const* str, size_t size, size_t pos, bool r
         return str [size - pos - 1];
 }
 
-static rc_t calculate_similarity_matrix (
+rc_t calculate_similarity_matrix (
     INSDC_dna_text const* text, size_t size_text,
     INSDC_dna_text const* query, size_t size_query,
-    int* matrix, bool reverse)
+    bool gap_score_constant,
+    int* matrix, bool reverse, 
+    int* max_score, size_t* max_row, size_t* max_col )
 {
 
     size_t ROWS = size_text + 1;
@@ -179,7 +189,20 @@ static rc_t calculate_similarity_matrix (
     }
 
 #endif
+    gap_score_func = gap_score_constant ? gap_score_const : gap_score_linear;
 
+    if ( max_score != NULL )
+    {
+        *max_score = 0;
+    }
+    if ( max_row != NULL )
+    {
+        *max_row = 0;
+    }
+    if ( max_col != NULL )
+    {
+        *max_col = 0;
+    }
     // init 1st row and column with zeros
     memset ( matrix, 0, COLUMNS * sizeof(matrix[0]) );
     for ( i = 1; i < ROWS; ++i )
@@ -229,12 +252,25 @@ static rc_t calculate_similarity_matrix (
                     cur_score_ins = cur;
             }
 #endif
-
-            matrix[i*COLUMNS + j] = max4 (
-                        0,
-                        matrix[(i-1)*COLUMNS + j - 1] + sim,
-                        cur_score_del,
-                        cur_score_ins);
+            {
+                int score = max4 ( 0,
+                                   matrix[(i-1)*COLUMNS + j - 1] + sim,
+                                   cur_score_del,
+                                   cur_score_ins);
+                matrix[i*COLUMNS + j] = score;
+                if ( max_score != NULL && score > *max_score )
+                {
+                    *max_score = score;
+                    if ( max_row != NULL )
+                    {
+                        *max_row = i;
+                    }
+                    if ( max_col != NULL )
+                    {
+                        *max_col = j;
+                    }
+                }
+            }
 
 #if CACHE_MAX_ROWS != 0
             /* TODO: incorrect logic: we cache max{matrix[x,y]}
@@ -275,7 +311,8 @@ static rc_t calculate_similarity_matrix (
     return 0;
 }
 
-static void sw_find_indel_box ( int* matrix, size_t ROWS, size_t COLUMNS,
+void 
+sw_find_indel_box ( int* matrix, size_t ROWS, size_t COLUMNS,
     int* ret_row_start, int* ret_row_end,
     int* ret_col_start, int* ret_col_end )
 {
@@ -284,7 +321,7 @@ static void sw_find_indel_box ( int* matrix, size_t ROWS, size_t COLUMNS,
 
     size_t i = max_i, j;
     int prev_indel = 0;
-
+    
     max_row = max_i / COLUMNS;
     max_col = max_i % COLUMNS;
 
@@ -423,7 +460,8 @@ void print_matrix ( int const* matrix,
     have_indel [OUT] - pointer to flag indication if there is an insertion or deletion
                        (1 - there is an indel, 0 - there is match/mismatch only)
 */
-static rc_t FindRefVariationBounds (
+static
+rc_t FindRefVariationBounds (
     INSDC_dna_text const* ref_slice, size_t ref_slice_size,
     INSDC_dna_text const* query, size_t query_size,
     size_t* ref_start, size_t* ref_len, bool * has_indel
@@ -434,6 +472,8 @@ static rc_t FindRefVariationBounds (
     size_t COLUMNS = ref_slice_size + 1;
     size_t ROWS = query_size + 1;
     rc_t rc = 0;
+    
+    bool gap_score_constant = ( GAP_SCORE_LINEAR == 0 );
 
     int row_start, col_start, row_end, col_end;
     int row_start_rev, col_start_rev, row_end_rev, col_end_rev;
@@ -441,9 +481,10 @@ static rc_t FindRefVariationBounds (
     if (matrix == NULL)
         return RC(rcText, rcString, rcSearching, rcMemory, rcExhausted);
     * has_indel = true;
-
+    
+    
     /* forward scan */
-    rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, false );
+    rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, gap_score_constant, matrix, false, NULL, NULL, NULL );
     if ( rc != 0 )
         goto free_resources;
 #if SW_DEBUG_PRINT != 0
@@ -461,7 +502,7 @@ static rc_t FindRefVariationBounds (
 #endif
 
     /* reverse scan */
-    rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, matrix, true );
+    rc = calculate_similarity_matrix ( query, query_size, ref_slice, ref_slice_size, gap_score_constant, matrix, true, NULL, NULL, NULL );
     if ( rc != 0 )
         goto free_resources;
 #if SW_DEBUG_PRINT != 0
@@ -1317,3 +1358,132 @@ rc_t CC RefVariationGetAlleleLenOnRef ( RefVariation const* self, size_t * allel
 
     return 0;
 }
+
+//////////////// Search-oriented SmithWaterman+
+
+struct SmithWaterman
+{
+    char*   query;
+    size_t  query_size;
+    size_t  max_rows;  
+    int*    matrix; // originally NULL, grows as needed to hold enough memory for query_size * max_rows
+};
+
+LIB_EXPORT rc_t CC SmithWatermanMake( SmithWaterman** p_self, const char* p_query )
+{
+    rc_t rc = 0;
+
+    if( p_self != NULL && p_query != NULL ) 
+    {
+        SmithWaterman* ret = malloc ( sizeof ( SmithWaterman ) );
+        if ( ret != NULL )
+        {
+            ret -> query = string_dup_measure ( p_query, & ret -> query_size );
+            if ( ret -> query != NULL )
+            {
+                ret -> max_rows = 0;
+                ret -> matrix = NULL;
+                *p_self = ret;
+                return 0;
+            }
+            else
+            {
+                rc = RC(rcText, rcString, rcSearching, rcMemory, rcExhausted);
+            }
+            free ( ret );
+        }
+        else
+        {
+            rc = RC(rcText, rcString, rcSearching, rcMemory, rcExhausted);
+        }
+    }
+    else
+    {
+        rc = RC(rcText, rcString, rcSearching, rcParam, rcNull);
+    } 
+
+    return rc;
+}
+
+LIB_EXPORT void CC 
+SmithWatermanWhack( SmithWaterman* self )
+{
+    free ( self -> matrix  );
+    free ( self -> query );
+    free ( self );
+}
+
+LIB_EXPORT rc_t CC 
+SmithWatermanFindFirst( SmithWaterman* p_self, uint32_t p_threshold, const char* p_buf, size_t p_buf_size, SmithWatermanMatch* p_match )
+{
+    rc_t rc = 0;
+    int score;
+    size_t max_row;
+    size_t max_col;
+    
+    if ( p_buf_size > p_self -> max_rows )
+    {
+        /* calculate_similarity_matrix adds a row and a column, adjust matrix dimensions accordingly */
+        int* new_matrix = realloc ( p_self -> matrix, (p_self->query_size + 1) * (p_buf_size + 1) * sizeof(*p_self->matrix) ); 
+        if ( new_matrix == NULL )
+        {   /* p_self -> matrix is unchanged and can be reused */
+            return RC ( rcText, rcString, rcSearching, rcMemory, rcExhausted );
+        }
+        p_self -> max_rows = p_buf_size; 
+        p_self -> matrix = new_matrix;
+    }
+    /*TODO: pass threshold into calculate_similarity_matrix, have it stop as soon as the score is sufficient */
+    rc = calculate_similarity_matrix ( p_buf, p_buf_size, p_self -> query, p_self -> query_size, false, p_self -> matrix, false, &score, &max_row, &max_col );
+    if ( rc == 0 )
+    {
+        if ( p_threshold > p_self->query_size * 2 )
+        {
+            p_threshold = p_self->query_size * 2;
+        }
+        if ( score >= p_threshold )
+        {
+            if ( p_match != NULL )
+            {
+                /* walk back from the max score row */
+                const size_t Columns = p_self->query_size + 1;
+                int row = max_row;
+                int col = max_col;
+                while ( row > 0 && col > 0 )
+                {
+                    int curr = p_self -> matrix [ row*Columns + col ];
+                    if ( curr == 0 )
+                    {
+                        break;
+                    } 
+                    int left = p_self -> matrix [ row * Columns + (col - 1) ];
+                    int up   = p_self -> matrix [ (row - 1)*Columns + col ];
+                    int diag = p_self -> matrix [ (row - 1)*Columns + (col - 1) ]; 
+                    if ( diag >= left && diag >= up )
+                    {
+                        --row;
+                        --col;
+                    }
+                    else if ( diag < left )
+                    {
+                        --col;
+                    }
+                    else
+                    {
+                        --row;
+                    }
+                    
+                }
+                
+                p_match -> position = row;
+                p_match -> length = max_row - row;
+                p_match -> score = score;
+            }    
+            return 0;
+        }
+        rc = SILENT_RC ( rcText, rcString, rcSearching, rcQuery, rcNotFound );
+    }
+    
+    return rc;
+}
+
+

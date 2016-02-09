@@ -35,6 +35,8 @@
 
 #include <SRA_ReadGroupInfo.h>
 #include <SRA_Statistics.h>
+#include <NGS_Cursor.h>
+#include <SRA_Read.h>
 
 #include <NGS_Id.h>
 
@@ -802,6 +804,34 @@ TEST_CASE(NGS_OpenBySysPath)
     NGS_ReadCollectionRelease ( readColl, ctx );
     REQUIRE ( ! FAILED () );
 }
+
+
+//////////////////////////////////////////// NGS_Cursor
+
+TEST_CASE ( NGS_Cursor_GetColumnIndex_adds_column)
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
+    
+    const VDBManager * mgr = ctx -> rsrc -> vdb;
+    REQUIRE_NOT_NULL ( mgr );
+    
+    const VDatabase *db;
+    REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, & db, NULL, "%s", SRADB_Accession_WithBamHeader ) );
+    
+    VTable* tbl;
+    REQUIRE_RC ( VDatabaseOpenTableRead ( db, (const VTable**)&tbl, "SEQUENCE" ) );
+    
+    const NGS_Cursor* curs = NGS_CursorMake ( ctx, tbl, sequence_col_specs, seq_NUM_COLS ); // this will add the first column (READ) to the cursor
+    REQUIRE ( ! FAILED () );
+    
+    REQUIRE_NE ( (uint32_t)0, NGS_CursorGetColumnIndex ( curs, ctx, seq_READ_LEN ) ); // this should add the column we are requesting to the cursor
+    
+    NGS_CursorRelease ( curs, ctx );
+    REQUIRE ( ! FAILED () );
+
+    REQUIRE_RC ( VTableRelease ( tbl ) );    
+}
+
 
 //////////////////////////////////////////// Main
 extern "C"
