@@ -267,14 +267,16 @@ static void addToHashBucket(Bucket *const bucket, unsigned const index)
             return;
     }
     
-    void *const tmp = realloc(bucket->index, (1 + bucket->count) * sizeof(bucket->index[0]));
+	{
+		void *const tmp = realloc(bucket->index, (1 + bucket->count) * sizeof(bucket->index[0]));
     
-    assert(tmp != NULL);
-    if (tmp == NULL)
-        abort();
+		assert(tmp != NULL);
+		if (tmp == NULL)
+			abort();
 
-    bucket->index = tmp;
-    bucket->index[bucket->count++] = index;
+		bucket->index = tmp;
+		bucket->index[bucket->count++] = index;
+	}
 }
 
 static void addToHashTable(ReferenceMgr *const self, ReferenceSeq const *const rs)
@@ -794,7 +796,7 @@ static int64_t cmpSeqIdField(void const *A, void const *B, void *Ctx)
 
 static bool isInKnownSet(unsigned const len, char const id[])
 {
-    if (len == 2 || len == 3) {;
+    if (len == 2 || len == 3) {
         int const id1 = id[0];
         int const id2 = id[1];
 
