@@ -261,22 +261,20 @@ static unsigned hash0(char const key[])
 static void addToHashBucket(Bucket *const bucket, unsigned const index)
 {
     unsigned i;
+    void *tmp = NULL;
     
     for (i = 0; i < bucket->count; ++i) {
         if (bucket->index[i] == index)
             return;
     }
     
-	{
-		void *const tmp = realloc(bucket->index, (1 + bucket->count) * sizeof(bucket->index[0]));
-    
-		assert(tmp != NULL);
-		if (tmp == NULL)
-			abort();
+    tmp = realloc(bucket->index, (1 + bucket->count) * sizeof(bucket->index[0]));
+    assert(tmp != NULL);
+	if (tmp == NULL)
+        abort();
 
-		bucket->index = tmp;
-		bucket->index[bucket->count++] = index;
-	}
+    bucket->index = tmp;
+    bucket->index[bucket->count++] = index;
 }
 
 static void addToHashTable(ReferenceMgr *const self, ReferenceSeq const *const rs)
@@ -446,7 +444,7 @@ static int findId(ReferenceMgr const *const self, char const id[])
         
         for (j = 0; j < m; ++j) {
             if (strcmp(id, rs->used[j]) == 0)
-                return i;
+                return index;
         }
     }
     return -1;
@@ -1394,7 +1392,7 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
 
         if (num_possible == 1 || (possible[num_possible - 1].weight & ~attached) > (possible[num_possible - 2].weight & ~attached)) {
             unsigned const index = possible[num_possible - 1].index;
-            ReferenceSeq *const seq = &self->refSeq[index];
+            ReferenceSeq *seq = &self->refSeq[index];
 
             if (seq->seqId != NULL && !allowMultiMapping) {
                 unsigned const hv = hash0(seq->seqId);
@@ -1405,18 +1403,40 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                     if (qry == seq || qry->type == rst_dead || qry->type == rst_unattached || qry->seqId == NULL)
                         continue;
                     if (strcasecmp(seq->seqId, qry->seqId) == 0) {
-                        *rslt = qry;
+                        seq->type = rst_dead;
+                        seq = qry;
                         wasRenamed[0] = true;
-                        return 0;
                     }
                 }
             }
             if (seq->type == rst_unattached) {
                 rc = ReferenceSeq_Attach(self, seq);
-                if (rc) return rc;
+                if (rc == 0 && seq->type == rst_unattached) {
+                    /* still not attached; try seqId fasta */
+                    if (seq->seqId) {
+                        unsigned const hv = hash0(seq->seqId);
+                        Bucket const bucket = self->ht[hv];
+                        
+                        for (i = 0; i < bucket.count; ++i) {
+                            ReferenceSeq *qry = &self->refSeq[bucket.index[i]];
+                            if (qry == seq || qry->fastaSeqId == NULL)
+                                continue;
+                            if (strcasecmp(seq->seqId, qry->fastaSeqId) == 0) {
+                                seq->type = rst_dead;
+                                seq = qry;
+                            }
+                        }
+                    }
+                    else {
+                        seq->type = rst_dead;
+                        rc = RC(rcAlign, rcFile, rcConstructing, rcId, rcNotFound);
+                    }
+                }
             }
-            addToIndex(self, id, seq);
-            *rslt = seq;
+            if (rc == 0) {
+                addToIndex(self, id, seq);
+                *rslt = seq;
+            }
         }
         else {
             /* unresolvable ambiguity */
