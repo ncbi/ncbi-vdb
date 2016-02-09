@@ -852,6 +852,9 @@
     <ClCompile Include="..\..\..\libs\ngs\SRA_Statistics.c">
       <Filter>ngs</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\EBI_ReferenceSequence.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\search\agrep-dp.c">
       <Filter>ksrch</Filter>
     </ClCompile>
