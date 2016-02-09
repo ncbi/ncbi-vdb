@@ -533,14 +533,16 @@ char NGS_CursorGetChar ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint
 const VTable* NGS_CursorGetTable ( const NGS_Cursor * self, ctx_t ctx )
 {
     assert ( self );
-    const VTable* tbl;
-    rc_t rc = VCursorOpenParentRead( self -> curs, &tbl );
-    if ( rc == 0 )
-    {
-        return tbl;
-    }
-    INTERNAL_ERROR ( xcCursorAccessFailed, "VCursorOpenParentRead rc = %R", rc );
-    return NULL;
+	{
+		const VTable* tbl;
+		rc_t rc = VCursorOpenParentRead( self -> curs, &tbl );
+		if ( rc == 0 )
+		{
+			return tbl;
+		}
+		INTERNAL_ERROR ( xcCursorAccessFailed, "VCursorOpenParentRead rc = %R", rc );
+		return NULL;
+	}
 }
 
 /* GetVCursor

@@ -1455,23 +1455,25 @@ SmithWatermanFindFirst( SmithWaterman* p_self, uint32_t p_threshold, const char*
                     {
                         break;
                     } 
-                    int left = p_self -> matrix [ row * Columns + (col - 1) ];
-                    int up   = p_self -> matrix [ (row - 1)*Columns + col ];
-                    int diag = p_self -> matrix [ (row - 1)*Columns + (col - 1) ]; 
-                    if ( diag >= left && diag >= up )
-                    {
-                        --row;
-                        --col;
-                    }
-                    else if ( diag < left )
-                    {
-                        --col;
-                    }
-                    else
-                    {
-                        --row;
-                    }
-                    
+					else
+					{
+						int left = p_self -> matrix [ row * Columns + (col - 1) ];
+						int up   = p_self -> matrix [ (row - 1)*Columns + col ];
+						int diag = p_self -> matrix [ (row - 1)*Columns + (col - 1) ]; 
+						if ( diag >= left && diag >= up )
+						{
+							--row;
+							--col;
+						}
+						else if ( diag < left )
+						{
+							--col;
+						}
+						else
+						{
+							--row;
+						}
+					}
                 }
                 
                 p_match -> position = row;
