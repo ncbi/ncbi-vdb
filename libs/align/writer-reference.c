@@ -1409,6 +1409,10 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                     }
                 }
             }
+            if (seq->type == rst_unattached) {
+                rc = ReferenceSeq_Attach(self, seq);
+                if (rc) return rc;
+            }
             addToIndex(self, id, seq);
             *rslt = seq;
         }
