@@ -462,6 +462,7 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_WGS, VdbFixture)
     }        
 }
 
+#if VDB_2858
 FIXTURE_TEST_CASE(VCursor_GetBlob_BlobIdRange_WGS, VdbFixture) 
 {   // single fragment per row, multiple rows per blob
     REQUIRE_RC ( Setup ( "ALAI01", "READ" ) );
@@ -495,6 +496,7 @@ cout << first << ", " << count << endl;
         rowId += count;
     }
 }
+#endif
 
 FIXTURE_TEST_CASE(PageMapIterator_WGS, VdbFixture) 
 {   // single fragment per row, multiple rows per blob
