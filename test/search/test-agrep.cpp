@@ -43,6 +43,8 @@
 #include "search-vdb.h"
 #include <search/ref-variation.h>
 
+#undef max
+
 using namespace std;
 
 static rc_t argsHandler(int argc, char* argv[]);
