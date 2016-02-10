@@ -799,6 +799,8 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs, 
             char * buffer = self -> line_buffer . base;
             char * end = buffer + self -> line_valid;
 
+            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("HTTP receive '%s'\n", buffer));
+
             /* find the separation between name: value */
             sep = string_chr ( buffer, end - buffer, ':' );
             if ( sep == NULL )
@@ -903,6 +905,8 @@ rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, u
         char * sep;
         char * buffer = self -> line_buffer . base;
         char * end = buffer + self -> line_valid;
+
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("HTTP receive '%s'\n", buffer));
 
         /* Detect protocol
            expect HTTP/1.[01]<sp><digit>+<sp><msg>\r\n */
@@ -1350,6 +1354,8 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     if ( KNSManagerIsVerbose ( self -> mgr ) )
         KOutMsg ( "KClientHttpSendReceiveMsg: '%.*s'\n", len, buffer );
 #endif
+    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS),
+        ("HTTP send '%S' '%.*s'\n\n", &self->hostname, len, buffer));
 
     /* reopen connection if NULL */
     if ( self -> sock == NULL )

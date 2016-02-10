@@ -29,6 +29,7 @@
 #include <klib/container.h>
 #include <klib/refcount.h>
 #include <klib/namelist.h>
+#include <klib/log.h>
 #include <kproc/lock.h>
 
 #include <xfs/model.h>
@@ -39,7 +40,6 @@
 #include "mehr.h"
 #include "zehr.h"
 #include "schwarzschraube.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 
@@ -107,7 +107,7 @@ _VerifyTreeModelNode (
         Name = XFSModelNodeName ( Node );
         if ( Name == NULL ) {
 /*
-XFSLogDbg ( "Node name missed\n" );
+LogMsg ( klogDebug, "Node name missed" );
 */
             return XFS_RC ( rcInvalid );
         }
@@ -117,7 +117,7 @@ XFSLogDbg ( "Node name missed\n" );
         if ( Prop != NULL ) {
             if ( XFSModelLookupNode ( Model, Prop ) == NULL ) {
 /*
-XFSLogDbg ( "Node [%s] can not stat node with 'AS' name [%s]\n", Name, Prop );
+pLogMsg ( klogDebug, "Node [$(name)] can not stat node with 'AS' name [$(name)]", "name=%s,as=%s", Name, Prop );
 */
                 return XFS_RC ( rcInvalid );
             }
@@ -131,7 +131,7 @@ XFSLogDbg ( "Node [%s] can not stat node with 'AS' name [%s]\n", Name, Prop );
              */ 
             if ( XFSModelLookupNode ( Model, Prop ) != NULL ) {
 /*
-XFSLogDbg ( "Node [%s] with 'LABEL' [%s] already exists\n", Name, Prop );
+pLogMsg ( klogDebug, "Node [$(name)] with 'LABEL' [$(label)] already exists", "name=%s,label=%s", Name, Prop );
 */
                 return XFS_RC ( rcInvalid );
             }
@@ -189,7 +189,7 @@ XFSTreeMake ( const struct XFSModel * Model, struct XFSTree ** Tree )
         /* Creating a tree */
     tTree = calloc ( 1, sizeof ( struct XFSTree ) );
 /*
-XFSLogDbg ( " |<- ThreeMake ( 0x%p )\n", ( void * ) tTree );
+pLogMsg ( klogDebug, " |<- TreeMake ( $(tree) )", "tree=%p", ( void * ) tTree );
 */
     if ( tTree == NULL ) {
         return XFS_RC ( rcExhausted );
@@ -243,7 +243,7 @@ XFSLogDbg ( " |<- ThreeMake ( 0x%p )\n", ( void * ) tTree );
     }
 
 /*
-XFSLogDbg ( " ->| ThreeMake ( 0x%p )\n", ( void * ) * Tree );
+pLogMsg ( klogDebug, " ->| TreeMake ( $(tree) )", "tree=%p", ( void * ) * Tree );
 */
 
     return RCt;
@@ -258,7 +258,7 @@ XFSTreeDispose ( struct XFSTree * self )
     RCt = 0;
 
 /*
-XFSLogDbg ( " |<- ThreeDispose ( 0x%p )\n", ( void * ) self );
+pLogMsg ( klogDebug, " |<- TreeDispose ( $(tree) )", "tree=%p", ( void * ) self );
 */
 
     if ( self == NULL ) {
@@ -464,6 +464,10 @@ XFSTreeDepotMake ( const struct XFSTreeDepot ** Depot )
         * Depot = NULL;
     }
 
+/*
+pLogMsg ( klogDebug, " |<- TreeDepotMake ( $(tree) )", "tree=%p", ( void * ) * Depot );
+*/
+
     return RCt;
 }   /* XFSTreeDepotMake () */
 
@@ -480,7 +484,7 @@ XFSTreeDepotDispose ( const struct XFSTreeDepot * self )
     mutabor = NULL;
 
 /*
-XFSLogDbg ( " |<- DepotDispose ( 0x%p )\n", ( void * ) self );
+pLogMsg ( klogDebug, " |<- TreeDepotDispose ( $(tree) )", "tree=%p", ( void * ) self );
 */
 
     if ( self == 0 ) {

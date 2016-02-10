@@ -32,10 +32,11 @@
 /* The Revision of Version of current SRA Toolkit Release */
 #define RELEASE_REVISION 0
 
+
 /* The Type of Version of current SRA Toolkit Release is one of:
  *  'a' - alpha
  *  'b' - beta
  *  'c' - release candidate
  *  'r' - final
  */
-#define RELEASE_TYPE 'r'
+#define RELEASE_TYPE 'b'

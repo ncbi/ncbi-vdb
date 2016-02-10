@@ -28,12 +28,13 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(NGS_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories>c:\Program Files (x86)\Dokan\DokanLibrary;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%ProgramFiles(x86)%\Dokan\DokanLibrary;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
 
   <ItemGroup>
     <ClCompile Include="..\..\..\libs\xfs\xfs.c" />
+    <ClCompile Include="..\..\..\libs\xfs\xlog.c" />
     <ClCompile Include="..\..\..\libs\xfs\win\platform.c" />
     <ClCompile Include="..\..\..\libs\xfs\win\operations.c" />
     <ClCompile Include="..\..\..\libs\xfs\win\security.c" />
@@ -44,7 +45,6 @@
     <ClCompile Include="..\..\..\libs\xfs\perm.c" />
     <ClCompile Include="..\..\..\libs\xfs\editors.c" />
     <ClCompile Include="..\..\..\libs\xfs\handle.c" />
-    <ClCompile Include="..\..\..\libs\xfs\mfile.c" />
     <ClCompile Include="..\..\..\libs\xfs\teleport.c" />
     <ClCompile Include="..\..\..\libs\xfs\foo.c" />
     <ClCompile Include="..\..\..\libs\xfs\ncon.c" />

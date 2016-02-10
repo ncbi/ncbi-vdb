@@ -35,8 +35,10 @@
 #include <kfs/file.h>
 #include <kfs/directory.h>
 
-#include "xlog.h"
+#include <xfs/xlog.h>
 #include "schwarzschraube.h"
+
+#include <sysalloc.h>
 
  /*))))
    |||| That file contains unsoted methods
@@ -47,109 +49,6 @@
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-
-/*)))   Log related fuuu
- |||   
-(((*/
-
-static
-rc_t CC
-_LMsgLog ( KLogLevel Level, rc_t Rct, const char * Fmt, va_list Args )
-{
-    rc_t RCt;
-    char Bf [ 1024 ];
-    size_t NumWr;
-
-    RCt = 0;
-    * Bf = 0;
-    NumWr = 0;
-
-    if ( Fmt == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    RCt = string_vprintf ( Bf, sizeof ( Bf ), & NumWr, Fmt, Args );
-    if ( RCt == 0 ) {
-        RCt = Level == klogErr
-                            ? LogErr ( Level, Rct, Bf )
-                            : LogMsg ( Level, Bf )
-                            ;
-    }
-
-    return RCt;
-}   /* _LMsgLog () */
-
-LIB_EXPORT
-rc_t CC
-XFSLogDbg ( const char * Fmt, ... )
-{
-    rc_t RCt;
-    va_list Args;
-
-    RCt = 0;
-
-    va_start ( Args, Fmt );
-
-    RCt = _LMsgLog ( klogDebug, 0, Fmt, Args );
-
-    va_end ( Args );
-
-    return RCt;
-}   /* XFSLogDbg () */
-
-LIB_EXPORT
-rc_t CC
-XFSLogMsg ( const char * Fmt, ... )
-{
-    rc_t RCt;
-    va_list Args;
-
-    RCt = 0;
-
-    va_start ( Args, Fmt );
-
-    RCt = _LMsgLog ( klogInfo, 0, Fmt, Args );
-
-    va_end ( Args );
-
-    return RCt;
-}   /* XFSLogMsg () */
-
-LIB_EXPORT
-rc_t CC
-XFSLogErr ( rc_t Rct, const char * Fmt, ... )
-{
-    rc_t RCt;
-    va_list Args;
-
-    RCt = 0;
-
-    va_start ( Args, Fmt );
-
-    RCt = _LMsgLog ( klogErr, Rct, Fmt, Args );
-
-    va_end ( Args );
-
-    return RCt;
-}   /* XFSLogErr () */
-
-LIB_EXPORT
-rc_t CC
-XFSLogPzd ( const char * Fmt, ... )
-{
-    rc_t RCt;
-    va_list Args;
-
-    RCt = 0;
-
-    va_start ( Args, Fmt );
-
-    RCt = _LMsgLog ( klogFatal, 0, Fmt, Args );
-
-    va_end ( Args );
-
-    return RCt;
-}   /* XFSLogPzd () */
 
 /*))
  || Setting log file is tricky and platform dependent
@@ -193,11 +92,9 @@ _LWrOpen ( struct _LWr * self )
 {
     rc_t RCt;
     struct KDirectory * NatDir;
-    uint32_t PathType;
 
     RCt = 0;
     NatDir = NULL;
-    PathType = kptNotFound;
 
     XFS_CAN ( self )
 
@@ -206,39 +103,20 @@ _LWrOpen ( struct _LWr * self )
         if ( self -> file == NULL ) {
             RCt = KDirectoryNativeDir ( & NatDir );
             if ( RCt == 0 ) {
-                PathType = KDirectoryPathType ( NatDir, self -> path );
-
-                switch ( PathType ) {
-                    case kptNotFound :
-                        RCt = KDirectoryCreateFile (
-                                                    NatDir,
-                                                    & ( self -> file ),
-                                                    false,
-                                                    0664,
-                                                    kcmInit,
-                                                    self -> path
-                                                    );
-                        self -> pos = 0;
-                        break;
-                    case kptFile :
-                        RCt = KDirectoryOpenFileWrite (
-                                                    NatDir,
-                                                    & ( self -> file ),
-                                                    false,
-                                                    self -> path
-                                                    );
-                        if ( RCt == 0 ) {
-                            RCt = KFileSize (
-                                            self -> file,
-                                            & ( self -> pos )
+                RCt = KDirectoryCreateFile (
+                                            NatDir,
+                                            & ( self -> file ),
+                                            false,
+                                            0664,
+                                            kcmSharedAppend,
+                                            self -> path
                                             );
-                        }
-                        break;
-                    default :
-                        RCt = XFS_RC ( rcInvalid );
-                        break;
+                if ( RCt == 0 ) {
+                    RCt = KFileSize (
+                                    self -> file,
+                                    & ( self -> pos )
+                                    );
                 }
-
                 KDirectoryRelease ( NatDir );
             }
 
@@ -330,17 +208,29 @@ _LWrWriter ( void * self, const char * Bf, size_t BfS, size_t * NWr )
     Writer = ( struct _LWr * ) self;
 
     XFS_CSA ( NWr, 0 )
-    XFS_CAN ( self )
     XFS_CAN ( Bf )
     XFS_CAN ( NWr )
 
-    RCt = KFileWriteAll ( Writer -> file, Writer -> pos, Bf, BfS, NWr );
-    if ( RCt == 0 ) {
-        Writer -> pos += * NWr;
+    if ( self != NULL && Writer -> file != NULL ) {
+        RCt = KFileWriteAll ( Writer -> file, Writer -> pos, Bf, BfS, NWr );
+        if ( RCt == 0 ) {
+            Writer -> pos += * NWr;
+        }
     }
 
     return RCt;
 }   /* _LWrWriter () */
+
+static
+rc_t CC
+_LWrWriterDummy ( void * s, const char * b, size_t bs, size_t * w )
+{
+    if ( w != NULL ) {
+        * w = bs;
+    }
+
+    return 0;
+}   /* _LWrWriterDummy () */
 
 LIB_EXPORT
 rc_t CC
@@ -352,33 +242,40 @@ XFSLogInit ( const char * LogFile )
     RCt = 0;
     Writer = NULL;
 
-    XFS_CAN ( LogFile )
-
-    if ( _sLWr == NULL ) {
-        RCt = _LWrMake ( & Writer, LogFile );
-        if ( RCt == 0 ) {
-            RCt = _LWrOpen ( Writer );
+    if ( LogFile != NULL ) {
+        if ( _sLWr == NULL ) {
+            RCt = _LWrMake ( & Writer, LogFile );
             if ( RCt == 0 ) {
-                KOutHandlerSet( _LWrWriter, Writer );
-                KDbgHandlerSet( _LWrWriter, Writer );
-                KLogHandlerSet( _LWrWriter, Writer );
-                KLogLibHandlerSet( _LWrWriter, Writer );
-                KStsHandlerSet( _LWrWriter, Writer );
-                KStsLibHandlerSet( _LWrWriter, Writer );
+                RCt = _LWrOpen ( Writer );
+                if ( RCt == 0 ) {
+                    _sLWr = Writer;
 
-                _sLWr = Writer;
+                    KOutHandlerSet( _LWrWriter, Writer );
+                    KDbgHandlerSet( _LWrWriter, Writer );
+                    KLogHandlerSet( _LWrWriter, Writer );
+                    KLogLibHandlerSet( _LWrWriter, Writer );
+                    KStsHandlerSet( _LWrWriter, Writer );
+                    KStsLibHandlerSet( _LWrWriter, Writer );
+                }
             }
         }
     }
 
-    if ( RCt != 0 ) {
+    if ( RCt != 0 || LogFile == NULL ) {
         _sLWr = NULL;
 
         if ( Writer != NULL ) {
             _LWrDispose ( Writer );
         }
+        KOutHandlerSet( _LWrWriterDummy, NULL );
+        KDbgHandlerSet( _LWrWriterDummy, NULL );
+        KLogHandlerSet( _LWrWriterDummy, NULL );
+        KLogLibHandlerSet( _LWrWriterDummy, NULL );
+        KStsHandlerSet( _LWrWriterDummy, NULL );
+        KStsLibHandlerSet( _LWrWriterDummy, NULL );
     }
 
+    return 0;
     return RCt;
 }   /* XFSLogInit () */
 

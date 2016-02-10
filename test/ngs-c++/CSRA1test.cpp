@@ -376,6 +376,14 @@ FIXTURE_TEST_CASE(CSRA1_Reference_GetLength, CSRA1_Fixture)
     REQUIRE_EQ( CSRA1_ReferenceLength, getReference ( "supercont2.1" ). getLength () );
 }
 
+
+static uint64_t CSRA1_ReferenceLength_VDB_2832 = (uint64_t)49711204;
+FIXTURE_TEST_CASE(CSRA1_Reference_GetLength_VDB_2832, CSRA1_Fixture)
+{
+    REQUIRE_EQ( CSRA1_ReferenceLength_VDB_2832, ncbi :: NGS :: openReadCollection ( "SRR2073063" ) . getReference ( "NC_016101.1" ). getLength () );
+    REQUIRE_EQ( CSRA1_ReferenceLength_VDB_2832, ncbi :: NGS :: openReadCollection ( "SRR2073063" ) . getReference ( "Gm14" ). getLength () );
+}
+
 FIXTURE_TEST_CASE(CSRA1_Reference_GetReferenceBases_All, CSRA1_Fixture)
 {
     ngs :: String str = getReference ( "supercont2.1" ). getReferenceBases ( 0 );    

@@ -32,6 +32,8 @@ TEST_TOOLS = \
 	test-vdb \
 	test-wvdb \
 	test-dependencies \
+	test-sparse-col-rw \
+	test-sparse-col-rd
 
 include $(TOP)/build/Makefile.env
 
@@ -73,6 +75,9 @@ TEST_VDB_LIB = \
 
 $(TEST_BINDIR)/test-vdb: $(TEST_VDB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_VDB_LIB)
+
+vdb: test-vdb
+	$(TEST_BINDIR)/test-vdb    
 
 valgrind_vdb: std
 	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-vdb    
@@ -119,6 +124,44 @@ wvdb: test-wvdb
 
 valgrind_wvdb: std
 	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-wvdb    
+
+#-------------------------------------------------------------------------------
+# test-sparse-col
+#  We will compile the same test file first in read/write mode, create DB and
+#  run tests using libncbi-wvdb library; then compile the same test with -DREAD_ONLY 
+#  and link it against read-only lincbi-vdb library
+TEST_SPARSE_COL_SRC = \
+	test-sparse-col
+
+TEST_SPARSE_COL_OBJ_RW = \
+	$(addsuffix .$(OBJX),$(TEST_SPARSE_COL_SRC)-rw)
+	
+TEST_SPARSE_COL_OBJ_RD = \
+	$(addsuffix .$(OBJX),$(TEST_SPARSE_COL_SRC)-rd)
+
+TEST_SPARSE_COL_LIB = \
+    -skapp \
+	-sktst \
+
+$(TEST_SPARSE_COL_OBJ_RW): $(TEST_SPARSE_COL_SRC).cpp
+	$(CP) -o $@ $(OPT) $< $(LOC_INFO) -D__file_ext__=cpp
+
+$(TEST_SPARSE_COL_OBJ_RD): $(TEST_SPARSE_COL_SRC).cpp
+	$(CP) -o $@ $(OPT) $< $(LOC_INFO) -D__file_ext__=cpp -DREAD_ONLY	
+
+$(TEST_BINDIR)/test-sparse-col-rw: $(TEST_SPARSE_COL_OBJ_RW)
+	$(LP) --exe -o $@ $^ $(TEST_SPARSE_COL_LIB) -sncbi-wvdb
+
+$(TEST_BINDIR)/test-sparse-col-rd: $(TEST_SPARSE_COL_OBJ_RD)
+	$(LP) --exe -o $@ $^ $(TEST_SPARSE_COL_LIB) -sncbi-vdb
+
+sparse-col: test-sparse-col-rw test-sparse-col-rd
+	$(TEST_BINDIR)/test-sparse-col-rw
+	$(TEST_BINDIR)/test-sparse-col-rd
+
+valgrind_sparse-col: std
+	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-sparse-col-rw
+	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-sparse-col-rd   
 
 #-------------------------------------------------------------------------------
 # SYS-224064

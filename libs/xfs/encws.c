@@ -28,6 +28,7 @@
 #include <klib/text.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -46,7 +47,6 @@
 #include "teleport.h"
 #include "common.h"
 #include "xencws.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 
@@ -232,7 +232,7 @@ _EncWsNodeMake (
     }
 
 /*
-XFSLogDbg ( "_EncWsNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) TheNode, Name, Type );
+pLogMsg ( klogDebug, "_EncWsNodeMake ND[$(node)] NM[$(name)] TP[$(type)]", "node=%p,name=%s,type=%d", ( void * ) TheNode, Name, Type );
 */
 
     return RCt;
@@ -251,7 +251,7 @@ _EncWsNodeDispose ( const struct _EncWsNode * self )
     struct _EncWsNode * Node = ( struct _EncWsNode * ) self;
 
 /*
-XFSLogDbg ( "_EncWsNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+pLogMsg ( klogDebug, "_EncWsNodeDispose ND[$(node)] TP[$(type)]", "node=%p,type=%d", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
 */
 
     if ( Node == 0 ) {
@@ -431,7 +431,7 @@ rc_t CC
 _EncWsDir_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    XFSLogDbg ( "_EncWsDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_EncWsDir_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -940,7 +940,7 @@ _EncWsFile_dispose_v1 ( const struct XFSEditor * self )
     struct _EncWsFileEditor * Editor = ( struct _EncWsFileEditor * ) self;
 
 /*
-    XFSLogDbg ( "_EncWsNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_EncWsFile_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -1282,7 +1282,7 @@ rc_t CC
 _EncWsAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    XFSLogDbg ( "_EncWsAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_EncWsAttr_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -1745,7 +1745,7 @@ _WorkspaceNodeConstructor (
     RCt = _EncWsNodeConstructor ( Model, Template, Alias, Node );
 
 /*
-XFSLogDbg ( "_WorkspaceNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_WorkspaceNodeConstructor ( $(model), $(template) (\"name\"), \"alias\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1765,7 +1765,7 @@ _WorkspaceNodeValidator (
     RCt = 0;
 
 /*
-XFSLogDbg ( "_WorkspaceNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_WorkspaceNodeValidator ( $(model), $(template) (\"name\"), \"alias\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

@@ -246,6 +246,21 @@ const NGS_Cursor * NGS_CursorDuplicate ( const NGS_Cursor * self, ctx_t ctx )
     return ( NGS_Cursor* ) self;
 }
 
+static
+void
+AddColumn ( const NGS_Cursor *self, ctx_t ctx, uint32_t colIdx )
+{   /* lazy add */
+    if ( self -> col_idx [ colIdx ] == 0 ) 
+    {
+        const char * col_spec = self -> col_specs [ colIdx ];
+        rc_t rc = VCursorAddColumn ( self -> curs, & self -> col_idx [ colIdx ], "%s", col_spec );
+        if ( rc != 0 && GetRCState ( rc ) != rcExists )
+        {
+            INTERNAL_ERROR ( xcColumnNotFound, "VCursorAddColumn failed: '%s' rc = %R", col_spec, rc );
+        }
+    }    
+}
+
 void NGS_CursorCellDataDirect ( const NGS_Cursor *self, 
                                 ctx_t ctx,
                                 int64_t rowId,
@@ -261,22 +276,13 @@ void NGS_CursorCellDataDirect ( const NGS_Cursor *self,
     
     assert ( self != NULL );
     
-    /* lazy add */
-    if ( self -> col_idx [ colIdx ] == 0 ) 
+    TRY ( AddColumn ( self, ctx, colIdx ) )
     {
-        const char * col_spec = self -> col_specs [ colIdx ];
-        rc = VCursorAddColumn ( self -> curs, & self -> col_idx [ colIdx ], "%s", col_spec );
-        if ( rc != 0 && GetRCState ( rc ) != rcExists )
+        rc = VCursorCellDataDirect ( self -> curs, rowId, self -> col_idx [ colIdx ], elem_bits, base, boff, row_len );
+        if ( rc != 0 )
         {
-            INTERNAL_ERROR ( xcColumnNotFound, "VCursorAddColumn failed: '%s' rc = %R", col_spec, rc );
-            return;
+            INTERNAL_ERROR ( xcColumnNotFound, "VCursorCellDataDirect failed: '%s' [%ld] rc = %R", self -> col_specs [ colIdx ], rowId, rc );
         }
-    }    
-    
-    rc = VCursorCellDataDirect ( self -> curs, rowId, self -> col_idx [ colIdx ], elem_bits, base, boff, row_len );
-    if ( rc != 0 )
-    {
-        INTERNAL_ERROR ( xcColumnNotFound, "VCursorCellDataDirect failed: '%s' [%ld] rc = %R", self -> col_specs [ colIdx ], rowId, rc );
     }
 }
                                 
@@ -526,25 +532,36 @@ char NGS_CursorGetChar ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint
  */
 const VTable* NGS_CursorGetTable ( const NGS_Cursor * self, ctx_t ctx )
 {
-    const VTable* tbl;
-    rc_t rc = VCursorOpenParentRead( self -> curs, &tbl );
-    if ( rc == 0 )
-    {
-        return tbl;
-    }
-    INTERNAL_ERROR ( xcCursorAccessFailed, "VCursorOpenParentRead rc = %R", rc );
-    return NULL;
+    assert ( self );
+	{
+		const VTable* tbl;
+		rc_t rc = VCursorOpenParentRead( self -> curs, &tbl );
+		if ( rc == 0 )
+		{
+			return tbl;
+		}
+		INTERNAL_ERROR ( xcCursorAccessFailed, "VCursorOpenParentRead rc = %R", rc );
+		return NULL;
+	}
 }
 
 /* GetVCursor
  */
 const VCursor* NGS_CursorGetVCursor ( const NGS_Cursor * self )
 {
+    assert ( self );
     return self -> curs;
 }
 
-uint32_t NGS_CursorGetColumnIndex ( const NGS_Cursor * self, uint32_t column_id )
+uint32_t NGS_CursorGetColumnIndex ( const NGS_Cursor * self, ctx_t ctx, uint32_t column_id )
 {
-    return self -> col_idx [column_id];
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+    
+    assert ( self );
+    ON_FAIL ( AddColumn ( self, ctx, column_id ) )
+    {
+        return 0;
+    }
+    return self -> col_idx [ column_id ];
 }
 

@@ -28,6 +28,7 @@
 #include <klib/text.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -45,7 +46,6 @@
 #include "teleport.h"
 #include "common.h"
 #include "xgap.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 
@@ -222,7 +222,7 @@ _CacheDirNodeDispose ( const struct _CacheDirNode * self )
     struct _CacheDirNode * Node = ( struct _CacheDirNode * ) self;
 
 /*
-XFSLogDbg ( "_CacheDirNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+pLogMsg ( klogDebug, "_CacheDirNodeDispose ( $(node) ) [T=$(project_id)]", "node=%p,project_id=%d", ( void * ) Node, ( Node == NULL ? 0 : Node -> project_id ) );
 */
 
     if ( Node != 0 ) {
@@ -397,7 +397,7 @@ rc_t CC
 _CacheDir_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    XFSLogDbg ( "_CacheDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_CacheDir_dispose_v1 ( $(editor) )\n", "editor=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -611,7 +611,7 @@ rc_t CC
 _CacheAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    XFSLogDbg ( "_CacheAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_CacheAttr_dispose_v1 ( $(editor) )\n", "editor=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -921,7 +921,7 @@ XFSGapCacheNodeMake (
     }
 
 /*
-XFSLogDbg ( "XFSKfsNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) TheNode, Name, Type );
+pLogMsg ( klogDebug, "XFSKfsNodeMake ND[$(node)] NM[$(name)] TP[$(project_id)]", "nnode=%p,name=%s,project_id=%d", ( void * ) TheNode, Name, ProjectId );
 */
 
     return RCt;
@@ -946,7 +946,7 @@ _GapCacheNodeConstructor (
     RCt = _CacheDirNodeConstructor ( Model, Template, Alias, Node );
 
 /*
-XFSLogDbg ( "_GapCacheNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_GapCacheNodeConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )\n", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -966,7 +966,7 @@ _GapCacheNodeValidator (
     RCt = 0;
 
 /*
-XFSLogDbg ( "_GapCacheNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_GapCacheNodeValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )\n", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

@@ -1468,9 +1468,9 @@ table NCBI:align:tbl:reference #2 =
     INSDC:coord:len  out_read_len = .SEQ_LEN;
 
     extern column utf8  NAME = out_spot_name_utf8;
-    physical utf8 .NAME = idx:text:insert  < 'i_name' > ( NAME );
+    physical utf8 .NAME = idx:text:insert #1.0  < 'i_name' > ( NAME );
 
-    utf8 out_spot_name_utf8 = idx:text:project < 'i_name' > (.NAME );
+    utf8 out_spot_name_utf8 = idx:text:project #1.0 < 'i_name' > (.NAME );
 
     ascii out_spot_name = cast ( out_spot_name_utf8 );
 
@@ -1523,7 +1523,7 @@ table NCBI:align:tbl:reference #2 =
 
     // Mechanism to seach for NAME
     readonly column vdb:row_id_range NAME_RANGE
-        = idx:text:lookup < 'i_name', 'QUERY_SEQ_NAME' > ();
+        = idx:text:lookup #1.0 < 'i_name', 'QUERY_SEQ_NAME' > ();
 
     // Fully instantiates READ
     INSDC:4na:bin out_dcmp_4na_bin

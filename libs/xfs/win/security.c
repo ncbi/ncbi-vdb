@@ -41,6 +41,7 @@
 
 #include <sysalloc.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "zehr.h"
 

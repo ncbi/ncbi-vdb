@@ -67,18 +67,18 @@ table NCBI:SeqGraph:tbl:seqgraph #1.0
      * Indexed.
      */
     extern column NCBI:SeqGraph:sid SID
-        = ( NCBI:SeqGraph:sid ) idx:text:project < 'sid' > ( .SID );
+        = ( NCBI:SeqGraph:sid ) idx:text:project #1.0 < 'sid' > ( .SID );
     physical column < NCBI:SeqGraph:sid > zip_encoding .SID
-        = ( NCBI:SeqGraph:sid ) idx:text:insert < 'sid' > ( SID );
+        = ( NCBI:SeqGraph:sid ) idx:text:insert #1.0 < 'sid' > ( SID );
 
     /* NAME
      * Sequence name (which resolves into SID using assembly information)
      * Indexed.
      */
     extern column NCBI:SeqGraph:name NAME
-        = ( NCBI:SeqGraph:name ) idx:text:project < 'name' > ( .NAME );
+        = ( NCBI:SeqGraph:name ) idx:text:project #1.0 < 'name' > ( .NAME );
     physical column < NCBI:SeqGraph:name > zip_encoding .NAME
-        = ( NCBI:SeqGraph:name ) idx:text:insert < 'name' > ( NAME );
+        = ( NCBI:SeqGraph:name ) idx:text:insert #1.0 < 'name' > ( NAME );
 
     /* START
      * Sequence offset for the segment saved in this row. 

@@ -181,6 +181,7 @@ LIB_EXPORT PY_RES_TYPE PY_NGS_Engine_ReferenceSequenceMake(char const* spec, voi
     return PY_RES_OK;
 }
 
+#if 0
 PY_RES_TYPE PY_NGS_Engine_RefcountRelease(void* pRefcount, char* pStrError, size_t nStrErrorBufferSize)
 {
     HYBRID_FUNC_ENTRY(rcSRA, rcRefcount, rcReleasing);
@@ -196,7 +197,6 @@ PY_RES_TYPE PY_NGS_Engine_RefcountRelease(void* pRefcount, char* pStrError, size
     return PY_RES_OK;
 }
 
-#if 0
 PY_RES_TYPE PY_NGS_Engine_StringData(void const* pNGSString, char const** pRetBufPtr/* TODO: add new error return? */)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcString, rcAccessing );

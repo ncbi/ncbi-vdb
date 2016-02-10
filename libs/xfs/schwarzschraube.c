@@ -32,6 +32,7 @@
 
 #include <vfs/manager.h>
 #include <kns/manager.h>
+#include <kfs/directory.h>
 
 #include "schwarzschraube.h"
 
@@ -254,3 +255,80 @@ XFS_KnsManager ()
     return _sKnsManager;
 }   /* XFS_KnsManager () */
 
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*)))   Simple resolving path Absolute/Relative
+ |||    Sometimes it necessary
+(((*/
+
+LIB_EXPORT
+rc_t CC
+XFS_ResolvePath (
+                bool Absolute,
+                char * Resolved,
+                size_t ResolvedSize,
+                const char * Format,
+                ...
+)
+{
+    rc_t RCt;
+    va_list Args;
+
+    RCt = 0;
+
+    XFS_CAN ( Format )
+
+    va_start ( Args, Format );
+
+    RCt = XFS_VResolvePath (
+                            Absolute,
+                            Resolved,
+                            ResolvedSize,
+                            Format,
+                            Args
+                            );
+
+    va_end ( Args );
+
+    return RCt;
+}   /* XFS_ResolvePath () */
+
+LIB_EXPORT
+rc_t CC
+XFS_VResolvePath (
+                bool Absolute,
+                char * Resolved,
+                size_t ResolvedSize,
+                const char * Format,
+                va_list Args
+)
+{
+    rc_t RCt;
+    struct KDirectory * NatDir;
+
+    RCt = 0;
+    NatDir = NULL;
+
+    XFS_CAN ( Resolved )
+    XFS_CAN ( Format )
+    XFS_CA ( ResolvedSize, 0 )
+
+    RCt = KDirectoryNativeDir ( & NatDir );
+    if ( RCt == 0 ) {
+        RCt = KDirectoryVResolvePath (
+                                    NatDir,
+                                    Absolute,
+                                    Resolved,
+                                    ResolvedSize,
+                                    Format,
+                                    Args
+                                    );
+        KDirectoryRelease ( NatDir );
+    }
+
+    if ( RCt != 0 ) {
+        * Resolved = 0;
+    }
+
+    return 0;
+}   /* XFS_VResolvePath () */

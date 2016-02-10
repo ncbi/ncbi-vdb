@@ -47,21 +47,6 @@ extern "C" {
 XFS_EXTERN rc_t CC XFSLogInit ( const char * LogFile );
 XFS_EXTERN rc_t CC XFSLogDestroy ( );
 
-/*)))   Simple log functions. Just because I want use substitute 
-  |||   instead of deep editing. Each method will use some fixed
-  |||   log level and standard 'printf' style format ...
-  |||   So, there are 4 methods :
-  |||     XFSLogDbg = klogDebug
-  |||     XFSLogMsg = klogInfo
-  |||     XFSLogErr = klogError
-  |||     XFSLogPzd = klogFatal
-  (((*/
-
-XFS_EXTERN rc_t CC XFSLogDbg ( const char * Fmt, ... );
-XFS_EXTERN rc_t CC XFSLogMsg ( const char * Fmt, ... );
-XFS_EXTERN rc_t CC XFSLogErr ( rc_t RC, const char * Fmt, ... );
-XFS_EXTERN rc_t CC XFSLogPzd ( const char * Fmt, ... );
-
 #ifdef __cplusplus 
 }
 #endif /* __cplusplus */

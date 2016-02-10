@@ -776,7 +776,7 @@ bool _Reader2naNextData(Reader2na *self,
 static
 uint32_t _Reader2naData(Reader2na *self,
     Data2na *data,
-    uint32_t *status,
+    VdbBlastStatus *status,
     Packed2naRead *buffer,
     uint32_t buffer_length,
     uint32_t min_read_length)
@@ -785,7 +785,7 @@ uint32_t _Reader2naData(Reader2na *self,
     uint32_t n = 0;
     int64_t first = 0;
     uint64_t count = 0;
-    uint32_t dummy = eVdbBlastNoErr;
+    VdbBlastStatus dummy = eVdbBlastNoErr;
     if (status == NULL)
     {   status = &dummy; }
     *status = eVdbBlastErr;
@@ -2091,8 +2091,10 @@ struct VdbBlastReferenceSet {
     const VdbBlastRunSet *rs;
 };
 
-LIB_EXPORT VdbBlastReferenceSet* CC VdbBlastRunSetMakeReferenceSet
-    (const VdbBlastRunSet *self, VdbBlastStatus *status)
+
+LIB_EXPORT VdbBlastReferenceSet* CC VdbBlastRunSetMakeReferenceSet(
+    const VdbBlastRunSet *self,
+    VdbBlastStatus *status)
 {
     VdbBlastReferenceSet *p = calloc(1, sizeof *p);
 
@@ -2114,6 +2116,7 @@ LIB_EXPORT VdbBlastReferenceSet* CC VdbBlastRunSetMakeReferenceSet
     return p;
 }
 
+
 static
 void _VdbBlastReferenceSetWhack(VdbBlastReferenceSet *self)
 {
@@ -2129,6 +2132,7 @@ void _VdbBlastReferenceSetWhack(VdbBlastReferenceSet *self)
 
     free(self);
 }
+
 
 LIB_EXPORT VdbBlastReferenceSet* CC VdbBlastReferenceSetAddRef
     (VdbBlastReferenceSet *self)
@@ -2165,22 +2169,28 @@ void CC VdbBlastReferenceSetRelease(VdbBlastReferenceSet *self)
     _VdbBlastReferenceSetWhack(self);
 }
 
-LIB_EXPORT VdbBlast2naReader* CC VdbBlastReferenceSetMake2naReader
-    (const VdbBlastReferenceSet *self,
-     VdbBlastStatus *status, uint64_t initial_read_id)
+
+LIB_EXPORT VdbBlast2naReader* CC VdbBlastReferenceSetMake2naReader(
+    const VdbBlastReferenceSet *self,
+    VdbBlastStatus *status,
+    uint64_t initial_read_id)
 {
-    return VdbBlastRunSetMake2naReaderExt(self->rs,
-        status, initial_read_id, VDB_READ_REFERENCE);
+    return VdbBlastRunSetMake2naReaderExt
+        (self->rs, status, initial_read_id, VDB_READ_REFERENCE);
 }
 
-LIB_EXPORT VdbBlast4naReader* CC VdbBlastReferenceSetMake4naReader
-    (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
+
+LIB_EXPORT VdbBlast4naReader* CC VdbBlastReferenceSetMake4naReader(
+    const VdbBlastReferenceSet *self,
+    VdbBlastStatus *status)
 {
     return VdbBlastRunSetMake4naReaderExt(self->rs, status, VDB_READ_REFERENCE);
 }
 
-static const struct References* _VdbBlastReferenceSetCheckReferences
-    (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
+
+static const struct References* _VdbBlastReferenceSetCheckReferences(
+
+    const VdbBlastReferenceSet *self, VdbBlastStatus *status)
 {
     assert(status);
 
@@ -2197,8 +2207,10 @@ static const struct References* _VdbBlastReferenceSetCheckReferences
     return self->rs->core2naRef.reader.refs;
 }
 
-static const struct References* _VdbBlastReferenceSetInitReferences
-    (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
+
+static const struct References* _VdbBlastReferenceSetInitReferences(
+    const VdbBlastReferenceSet *self,
+    VdbBlastStatus *status)
 {
     VdbBlastRunSet *rs = NULL;
     Reader2na *reader = NULL;
@@ -2235,10 +2247,13 @@ static const struct References* _VdbBlastReferenceSetInitReferences
     return reader->refs;
 }
 
-LIB_EXPORT uint64_t CC VdbBlastReferenceSetGetNumSequences
-    (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
+
+LIB_EXPORT uint64_t CC VdbBlastReferenceSetGetNumSequences(
+    const VdbBlastReferenceSet *self,
+    VdbBlastStatus *status)
 {
     const struct References *refs = NULL;
+
     VdbBlastStatus dummy = eVdbBlastNoErr;
     if (status == NULL) {
         status = &dummy;
@@ -2253,10 +2268,13 @@ LIB_EXPORT uint64_t CC VdbBlastReferenceSetGetNumSequences
     return _ReferencesGetNumSequences(refs, status);
 }
 
-LIB_EXPORT uint64_t CC VdbBlastReferenceSetGetTotalLength
-    (const VdbBlastReferenceSet *self, VdbBlastStatus *status)
+
+LIB_EXPORT uint64_t CC VdbBlastReferenceSetGetTotalLength(
+    const VdbBlastReferenceSet *self,
+    VdbBlastStatus *status)
 {
     const struct References *refs = NULL;
+
     VdbBlastStatus dummy = eVdbBlastNoErr;
     if (status == NULL) {
         status = &dummy;
@@ -2271,9 +2289,12 @@ LIB_EXPORT uint64_t CC VdbBlastReferenceSetGetTotalLength
     return _ReferencesGetTotalLength(refs, status);
 }
 
+
 LIB_EXPORT size_t CC VdbBlastReferenceSetGetReadName(
     const VdbBlastReferenceSet *self,
-    uint64_t read_id, char *name_buffer, size_t bsize)
+    uint64_t read_id,
+    char *name_buffer,
+    size_t bsize)
 {
     if (bsize > 0 && name_buffer != NULL) {
         name_buffer[0] = '\0';
@@ -2293,9 +2314,12 @@ LIB_EXPORT size_t CC VdbBlastReferenceSetGetReadName(
     }
 }
 
+
 LIB_EXPORT VdbBlastStatus CC VdbBlastReferenceSetGetReadId(
     const VdbBlastReferenceSet *self,
-    const char *name_buffer, size_t bsize, uint64_t *read_id)
+    const char *name_buffer,
+    size_t bsize,
+    uint64_t *read_id)
 {
     VdbBlastStatus status = eVdbBlastErr;
 
@@ -2305,8 +2329,33 @@ LIB_EXPORT VdbBlastStatus CC VdbBlastReferenceSetGetReadId(
         return status;
     }
 
-    assert                       (refs);
+    assert                     (refs);
     return _ReferencesGetReadId(refs, name_buffer, bsize, read_id);
 }
+
+
+LIB_EXPORT uint64_t CC VdbBlastReferenceSetGetReadLength(
+    const VdbBlastReferenceSet *self,
+    uint64_t read_id,
+    VdbBlastStatus *status)
+{
+    VdbBlastStatus dummy = eVdbBlastNoErr;
+    if (status == NULL)
+    {   status = &dummy; }
+
+    *status = eVdbBlastErr;
+
+    {
+        const struct References *refs
+            = _VdbBlastReferenceSetCheckReferences(self, status);
+        if (*status != eVdbBlastNoErr) {
+            return 0;
+        }
+
+        assert                         (refs);
+        return _ReferencesGetReadLength(refs, read_id, status);
+    }
+}
+
 
 /* EOF */

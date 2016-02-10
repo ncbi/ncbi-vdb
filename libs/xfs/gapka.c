@@ -28,6 +28,7 @@
 #include <klib/text.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -45,7 +46,6 @@
 #include "teleport.h"
 #include "common.h"
 #include "xgapk.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 
@@ -168,7 +168,7 @@ _KartFilesNodeMake (
     }
 
 /*
-XFSLogDbg ( "_KartFilesNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) TheNode, Name, Type );
+pLogMsg ( klogDebug, "_KartFilesNodeMake ND[$(node)] NM[$(name)]", "node=%p,name=%s", ( void * ) TheNode, Name );
 */
 
     return RCt;
@@ -229,7 +229,7 @@ _KartFilesNodeDispose ( const struct _KartFilesNode * self )
     struct _KartFilesNode * Node = ( struct _KartFilesNode * ) self;
 
 /*
-XFSLogDbg ( "_KartFilesNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+pLogMsg ( klogDebug, "_KartFilesNodeDispose ND[$(node)] NM[$(path)]", "node=%p,path=%s", ( void * ) Node, ( Node == NULL ? "" : Node -> path ) );
 */
 
     if ( Node != 0 ) {
@@ -376,7 +376,7 @@ rc_t CC
 _KartFilesDir_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    XFSLogDbg ( "_KartFilesDir_dispose_v1 ( %p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_KartFilesDir_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -682,7 +682,7 @@ rc_t CC
 _KartFilesAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    XFSLogDbg ( "_KartFilesAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_KartFilesAttr_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -957,7 +957,7 @@ _KartFilesNodeConstructor (
     }
 
 /*
-XFSLogDbg ( "_KartFilesNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_KartFilesNodeConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -977,7 +977,7 @@ _KartFilesNodeValidator (
     RCt = 0;
 
 /*
-XFSLogDbg ( "_KartFilesNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_KartFilesNodeValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

@@ -1254,7 +1254,7 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
                 goto LOOP_END;
             }
             else if (squal == NULL)
-                memset(qual, 0, readlen);
+                memset(qual, 30, readlen); /* SRA-2932: 30 is the preferred quality value for fasta */
             else 
             {  
                 if (G->useQUAL)

@@ -111,10 +111,12 @@ static rc_t CC _CloseBurro_callback (
                                 struct _sP * self,
                                 struct _sPB * Burro
                                 );
+#ifdef NOT_NEED_YET
 static rc_t CC _CloseBurroAndDelete_callback (
                                 struct _sP * self,
                                 struct _sPB * Burro
                                 );
+#endif /* NOT_NEED_YET */
 static rc_t CC _sPTrimToSize_NoLock (
                                 struct _sP * self,
                                 size_t Size,
@@ -394,6 +396,7 @@ _CloseBurro_callback ( struct _sP * self, struct _sPB * Burro )
     return RCt;
 }   /* _CloseBurro_callback () */
 
+#ifdef NOT_NEED_YET
 rc_t CC
 _CloseBurroAndDelete_callback ( struct _sP * self, struct _sPB * Burro )
 {
@@ -408,6 +411,7 @@ _CloseBurroAndDelete_callback ( struct _sP * self, struct _sPB * Burro )
 
     return RCt;
 }   /* _CloseBurroAndDelete_callback () */
+#endif /* NOT_NEED_YET */
 
 static
 rc_t CC

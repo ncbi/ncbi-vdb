@@ -29,6 +29,7 @@
 #include <klib/namelist.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <kfs/directory.h>
 #include <kfs/file.h>
@@ -38,11 +39,11 @@
 #include <kns/manager.h>
 #include <kns/http.h>
 
+
 #include "teleport.h"
 #include "mehr.h"
 #include "schwarzschraube.h"
 #include "zehr.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 
@@ -81,7 +82,7 @@ XFS_InitAll_MHR ( const char * ConfigFile )
     RCt = 0;
     Config = NULL;
 
-XFSLogMsg ( "InitAll [%s]\n", ConfigFile == NULL ? "NULL" : ConfigFile );
+pLogMsg ( klogInfo, "InitAll [$(path)]", "path=%s", ( ConfigFile == NULL ? "NULL" : ConfigFile ) );
 
         /* First we do inti config :lol: */
     RCt = XFS_LoadConfig_ZHR ( ConfigFile, & Config );
@@ -129,7 +130,7 @@ LIB_EXPORT
 rc_t CC
 XFS_DisposeAll_MHR ()
 {
-XFSLogMsg ( "DisposeAll [%s]\n", _sConfigPath_MHR );
+pLogMsg ( klogInfo, "DisposeAll [$(path)]", "path=%s", _sConfigPath_MHR );
 
     XFSGapKartDepotDispose ();
 

@@ -1116,8 +1116,17 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
             /* find cache - vresolver call */
             rc = VResolverCache ( self->resolver, path, &local_cache, 0 );
             if ( rc == 0 )
+            {
                 /* we did find a place for local cache --> use it! */
                 rc = VFSManagerMakeHTTPFile( self, f, uri->addr, local_cache->path.addr, high_reliability );
+                {
+                    rc_t rc2 = VPathRelease ( local_cache );
+                    if ( rc == 0 )
+                    {
+                        rc = rc2;
+                    }
+                }
+            }
             else
                 /* we did NOT find a place for local cache --> we are not caching! */
                 rc = VFSManagerMakeHTTPFile( self, f, uri->addr, NULL, high_reliability );
@@ -1494,13 +1503,12 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
 
         const KFile * file = NULL;
         rc = VFSManagerMakeHTTPFile( self, &file, uri->addr, cache == NULL ? NULL : cache->path.addr, high_reliability );
-        free( ( void * )uri );
         if ( rc != 0 )
         {
             if ( high_reliability )
             {
                 PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(U)'",
-                                     "U=%S:%S", & path -> scheme, & path -> path ) );
+                                     "U=%s", uri->addr ) );
             }
         }
         else
@@ -1551,6 +1559,7 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
             }
             KFileRelease (file);
         }
+        free( ( void * )uri );
     }
     return rc;
 }

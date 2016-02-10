@@ -234,6 +234,7 @@ extern "C"
 
 #include <kapp/args.h>
 #include <kfg/config.h>
+#include <klib/debug.h> // KDbgSetString
 
 ver_t CC KAppVersion ( void )
 {
@@ -253,6 +254,8 @@ const char UsageDefaultName[] = "test-wkdb";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    //assert(!KDbgSetString("KFG"));
+    //assert(!KDbgSetString("VFS"));
     KConfigDisableUserSettings();
     rc_t rc=KdbTestSuite(argc, argv);
     return rc;
