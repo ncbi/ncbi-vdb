@@ -266,7 +266,9 @@ const void *resolve_object ( const KSymTable *tbl,
     /* we recognize a column name or
        a fully-qualified name optionally followed by
        a version to fully-qualify obj */
-    if ( rc == 0 )
+    if ( rc == 0 && t.sym == NULL )
+        rc = SILENT_RC ( rcVDB, rcSchema, rcParsing, rcToken, rcUnexpected );
+    else if ( rc == 0 )
         rc = next_fqn ( tbl, & src, & t, & env );
     if ( rc == 0 )
     {

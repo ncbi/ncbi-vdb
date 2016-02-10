@@ -1839,7 +1839,7 @@ rc_t KSysDirOpenFileRead_v1 ( const KSysDir_v1 * self,
         if ( fd < 0 ) switch ( errno )
         {
         case ENOENT:
-            return RC ( rcFS, rcDirectory, rcOpening, rcPath, rcNotFound );
+            return SILENT_RC ( rcFS, rcDirectory, rcOpening, rcPath, rcNotFound );
         case EACCES:
             return RC ( rcFS, rcDirectory, rcOpening, rcDirectory, rcUnauthorized );
         case EISDIR:

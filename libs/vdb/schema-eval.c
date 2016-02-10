@@ -434,7 +434,7 @@ LIB_EXPORT rc_t CC eval_numeric_expr ( const VSchema *self, const VTypedecl *td,
             return RC ( rcVDB, rcExpression, rcEvaluating, rcType, rcIncorrect );
         break;
     default:
-        return RC ( rcVDB, rcExpression, rcEvaluating, rcType, rcUnexpected );
+        return SILENT_RC ( rcVDB, rcExpression, rcEvaluating, rcType, rcUnexpected );
     }
 
     /* reset dimensions to account for explicit values */

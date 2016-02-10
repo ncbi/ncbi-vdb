@@ -378,8 +378,9 @@ static rc_t encode_header_v2(
 static
 rc_t PageMapProcessRequestLock(PageMapProcessRequest *self)
 {
-	rc_t rc=RC(rcVDB,rcPagemap, rcConstructing, rcSelf, rcNull);
-	if(self){
+	rc_t rc = 0;
+	if(self)
+    {
 		/*** no plans to wait here the thread should be released by now ****/
 		rc = KLockAcquire(self->lock);
 		if(rc == 0){
@@ -390,6 +391,9 @@ rc_t PageMapProcessRequestLock(PageMapProcessRequest *self)
 			}
 		}
 	}
+    else
+        rc = RC(rcVDB,rcPagemap, rcConstructing, rcSelf, rcNull);
+
 	return rc;
 }
 
@@ -484,7 +488,7 @@ rc_t VBlobCreateFromData_v2(
             rc = BlobHeadersCreateFromData(&y->headers, src+offset , hsize);
         if (rc == 0) {
             if (msize > 0) {
-                if(PageMapProcessRequestLock(pmpr)==0) {
+                if(pmpr != NULL && PageMapProcessRequestLock(pmpr)==0) {
                     KDataBufferSub(data, &pmpr->data, pagemap_offset, msize);
                     pmpr->row_count = BlobRowCount(y);
                     pmpr->state = ePMPR_STATE_DESERIALIZE_REQUESTED;
