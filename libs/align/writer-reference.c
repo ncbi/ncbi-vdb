@@ -1434,6 +1434,10 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                 }
             }
             if (rc == 0) {
+                if (seq->id == NULL)
+                    seq->id = string_dup(id, idLen);
+                if (seq->seqId == NULL && seq->fastaSeqId != NULL)
+                    seq->seqId = string_dup(seq->fastaSeqId, string_size(seq->fastaSeqId));
                 addToIndex(self, id, seq);
                 *rslt = seq;
             }
