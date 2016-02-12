@@ -160,6 +160,7 @@ enum ReferenceSeqType {
     rst_refSeqById,
     rst_refSeqBySeqId,
     rst_unmapped,
+    rst_renamed,
     rst_dead
 };
 
@@ -416,17 +417,26 @@ static void addToIndex(ReferenceMgr *const self, char const ID[],
                        ReferenceSeq *const rs)
 {
     unsigned const n = rs->num_used;
-    unsigned const length = (unsigned)string_size(ID);
-    char *id = string_dup(ID, length);
-    void *tmp = realloc(rs->used, (n + 1) * sizeof(rs->used[0]));
+    unsigned i;
 
-    assert(tmp != NULL && id != NULL);
-    if (tmp == NULL || id == NULL) abort();
+    for (i = 0; i < n; ++i) {
+        if (strcmp(ID, rs->used[i]) == 0)
+            goto SKIP_INSERT_ID;
+    }
+    {
+        unsigned const length = (unsigned)string_size(ID);
+        char *id = string_dup(ID, length);
+        void *tmp = realloc(rs->used, (n + 1) * sizeof(rs->used[0]));
 
-    ++rs->num_used;
-    rs->used = tmp;
-    rs->used[n] = id;
-    addToHashBucket(&self->used[hash(length, id)], rs - self->refSeq);
+        assert(tmp != NULL && id != NULL);
+        if (tmp == NULL || id == NULL) abort();
+
+        ++rs->num_used;
+        rs->used = tmp;
+        rs->used[n] = id;
+    }
+SKIP_INSERT_ID:
+    addToHashBucket(&self->used[hash0(ID)], rs - self->refSeq);
 }
 
 static int findId(ReferenceMgr const *const self, char const id[])
@@ -442,6 +452,8 @@ static int findId(ReferenceMgr const *const self, char const id[])
         unsigned const m = rs->num_used;
         unsigned j;
         
+        if (rs->type == rst_dead)
+            continue;
         for (j = 0; j < m; ++j) {
             if (strcmp(id, rs->used[j]) == 0)
                 return index;
@@ -450,7 +462,7 @@ static int findId(ReferenceMgr const *const self, char const id[])
     return -1;
 }
 
-static ReferenceSeq *newReferenceSeq(ReferenceMgr *const self)
+static ReferenceSeq *newReferenceSeq(ReferenceMgr *const self, ReferenceSeq const *const template)
 {
     unsigned const last_rs = (unsigned)self->refSeqs.elem_count;
     rc_t const rc = KDataBufferResize(&self->refSeqs, last_rs + 1);
@@ -461,8 +473,11 @@ static ReferenceSeq *newReferenceSeq(ReferenceMgr *const self)
     self->refSeq = self->refSeqs.base;
     {
         ReferenceSeq *const rslt = &self->refSeq[last_rs];
-        memset(rslt, 0, sizeof(*rslt));
-        self->refSeq[last_rs].mgr = self;
+        if (template)
+            *rslt = *template;
+        else
+            memset(rslt, 0, sizeof(*rslt));
+        rslt->mgr = self;
         return rslt;
     }
 }
@@ -587,7 +602,7 @@ rc_t ReferenceMgr_ProcessConf(ReferenceMgr *const self, char Data[], unsigned co
             circular = circ && (circ == extra || isspace(circ[-1])) &&
                        (circ[8] == '\0' || isspace(circ[8]));
         }
-        rs = newReferenceSeq(self);
+        rs = newReferenceSeq(self, NULL);
 
         rs->id = string_dup(id, string_size(id));
         if (rs->id == NULL)
@@ -673,7 +688,7 @@ rc_t FastaFile_GetSeqIds(KDataBuffer *const buf, char const data[], uint64_t con
 }
 
 static
-rc_t ImportFasta(ReferenceMgr *const self, ReferenceSeq *const obj, KDataBuffer const *const buf)
+rc_t ImportFasta(ReferenceSeq *const obj, KDataBuffer const *const buf)
 {
     unsigned seqId;
     unsigned seqIdLen;
@@ -810,7 +825,10 @@ static bool isInKnownSet(unsigned const len, char const id[])
             }
             return false;
         }
-        if (id1 == 'g' && id2 == 'b') return true;
+        if (id1 == 'g') {
+            if (id2 == 'b' || id2 == 'i')
+                return true;
+        }
     }
     return false;
 }
@@ -846,7 +864,10 @@ static rc_t ImportFastaFileMany(ReferenceMgr *const self,
             int const ch = data[ofs + k];
 
             if (ch == '|' || isspace(ch)) {
-                if (isspace(ch) || !isInKnownSet(k - j, &data[ofs + j])) {
+                char const *const str = &data[ofs + j];
+                unsigned const len = k - j;
+
+                if (len > 0 && (isspace(ch) || !isInKnownSet(len, str))) {
                     if (found_entries == found_entries_max) {
                         unsigned const new_max = found_entries_max * 2;
                         void *const tmp = realloc(found, new_max * sizeof(found[0]));
@@ -858,7 +879,7 @@ static rc_t ImportFastaFileMany(ReferenceMgr *const self,
                         found = tmp;
                         found_entries_max = new_max;
                     }
-                    found[found_entries].length = k - j;
+                    found[found_entries].length = len;
                     found[found_entries].offset = ofs + j;
                     ++found_entries;
                 }
@@ -902,23 +923,39 @@ static rc_t ImportFastaFileMany(ReferenceMgr *const self,
     free(found);
 
     for (i = 0; i < seqIds; ++i) {
-        unsigned token_length = 0;
-        uint64_t token_offset = 0;
+        unsigned index = 0;
         uint64_t const ofs = seqIdOffset[i];
         uint64_t const nxt = (i < seqIds - 1) ? seqIdOffset[i + 1] : datalen;
         unsigned const len = (unsigned)(nxt - ofs);
         unsigned j = 1;
         unsigned k;
+        char const *const seqId = &data[ofs + 1];
+        {
+            ReferenceSeq new_seq;
+            KDataBuffer sub = subBuffer(buf, ofs, len);
 
+            memset(&new_seq, 0, sizeof(new_seq));
+            rc = ImportFasta(&new_seq, &sub);
+            KDataBufferWhack(&sub);
+            if (rc) {
+                PLOGERR(klogInfo, (klogInfo, rc, "Error reading '$(defline)'; ignored", "defline=%s", seqId));
+                continue;
+            }
+            else {
+                ReferenceSeq *p = newReferenceSeq(self, &new_seq);
+                index = p - self->refSeq;
+                addToHashBucket(&self->ht[hash0(seqId)], index);
+            }
+        }
         for (k = j; k < len; ++k) {
             int const ch = data[ofs + k];
 
-            if (ch == '|' || isspace(ch)) {
+            if (ch == '\0' || ch == '|' || isspace(ch)) {
                 unsigned const length = k - j;
                 uint64_t const offset = ofs + j;
                 char const *const value = &data[offset];
 
-                if (!isspace(ch) && isInKnownSet(length, value))
+                if (length == 0 || (!isspace(ch) && isInKnownSet(length, value)))
                     goto IGNORED;
                 {
                     unsigned f = 0;
@@ -938,28 +975,12 @@ static rc_t ImportFastaFileMany(ReferenceMgr *const self,
                             f = m + 1;
                     }
                 }
-                token_offset = offset;
-                token_length = length;
+                addToHashBucket(&self->ht[hash(length, value)], index);
             IGNORED:
                 j = k + 1;
-                if (isspace(ch))
+                if (ch == '\0' || isspace(ch))
                     break;
             }
-        }
-        if (token_length > 0) {
-            ReferenceSeq *const new_seq = newReferenceSeq(self);
-            KDataBuffer sub = subBuffer(buf, ofs, len);
-
-            rc = ImportFasta(self, new_seq, &sub);
-            KDataBufferWhack(&sub);
-            if (rc) break;
-
-            addToHashBucket(&self->ht[hash(token_length, data + token_offset)], new_seq - self->refSeq);
-        }
-        else {
-            rc = RC(rcAlign, rcFile, rcReading, rcId, rcNotFound);
-            PLOGERR(klogErr, (klogErr, rc, "The defline '$(defline)' contains no unique identifiers", "defline=%*s", k, &data[ofs]));
-            break;
         }
     }
 
@@ -1011,7 +1032,7 @@ rc_t ImportFastaFile(ReferenceMgr *const self, KFile const *kf,
                         if (seqIds > 1)
                             rc = RC(rcAlign, rcFile, rcReading, rcItem, rcUnexpected);
                         
-                        rc = ImportFasta(self, rslt, &sub);
+                        rc = ImportFasta(rslt, &sub);
                         KDataBufferWhack(&sub);
                         if (rc == 0)
                             addToHashTable(self, rslt);
@@ -1295,11 +1316,17 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
     
     assert(rslt != NULL);
     *rslt = NULL;
-    if (fnd > 0) {
+    if (fnd >= 0) {
         ReferenceSeq *const obj = &self->refSeq[fnd];
         
         if (obj->type == rst_dead)
             return RC(rcAlign, rcIndex, rcSearching, rcItem, rcInvalid);
+        if (obj->type == rst_renamed) {
+            bool dummy = false;
+
+            *wasRenamed = true;
+            return ReferenceMgr_OpenSeq(self, rslt, obj->id, seq_len, md5, allowMultiMapping, &dummy);
+        }
         if (obj->type == rst_refSeqBySeqId) {
             RefSeq const *dummy;
             rc_t const rc = RefSeqMgr_GetSeq(self->rmgr, &dummy, obj->seqId, (unsigned)string_size(obj->seqId));
@@ -1352,7 +1379,7 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
             /* didn't find a fasta file; try RefSeq */
             ALIGN_CF_DBGF(("trying to open refseq: %s\n", id));
             if (RefSeqMgr_Exists(self->rmgr, id, idLen, NULL) == 0) {
-                ReferenceSeq *const seq = newReferenceSeq(self);
+                ReferenceSeq *const seq = newReferenceSeq(self, NULL);
 
                 rc = RefSeqMgr_GetSeq(self->rmgr, &seq->u.refseq, id, idLen);
                 if (rc == 0) {
@@ -1394,18 +1421,24 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
             unsigned const index = possible[num_possible - 1].index;
             ReferenceSeq *seq = &self->refSeq[index];
 
+            addToIndex(self, id, seq);
             if (seq->seqId != NULL && !allowMultiMapping) {
                 unsigned const hv = hash0(seq->seqId);
                 Bucket const bucket = self->ht[hv];
 
                 for (i = 0; i < bucket.count; ++i) {
                     ReferenceSeq *qry = &self->refSeq[bucket.index[i]];
-                    if (qry == seq || qry->type == rst_dead || qry->type == rst_unattached || qry->seqId == NULL)
+                    if (qry == seq || qry->type == rst_dead || qry->type == rst_unattached || qry->type == rst_renamed || qry->seqId == NULL)
                         continue;
                     if (strcasecmp(seq->seqId, qry->seqId) == 0) {
-                        seq->type = rst_dead;
+                        void *const oldId = seq->id;
+
+                        seq->type = rst_renamed;
+                        seq->id = string_dup(qry->id, string_size(qry->id));
                         seq = qry;
                         wasRenamed[0] = true;
+                        free(oldId);
+                        break;
                     }
                 }
             }
@@ -1413,18 +1446,49 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                 rc = ReferenceSeq_Attach(self, seq);
                 if (rc == 0 && seq->type == rst_unattached) {
                     /* still not attached; try seqId fasta */
-                    if (seq->seqId) {
-                        unsigned const hv = hash0(seq->seqId);
+                    char const *seqId = seq->seqId;
+                    if (seqId) {
+                        unsigned const hv = hash0(seqId);
                         Bucket const bucket = self->ht[hv];
-                        
+                        unsigned best = bucket.count;
+                        unsigned best_score = 0;
+
                         for (i = 0; i < bucket.count; ++i) {
-                            ReferenceSeq *qry = &self->refSeq[bucket.index[i]];
+                            unsigned score = 0;
+                            char *substr;
+                            ReferenceSeq *const qry = &self->refSeq[bucket.index[i]];
+
                             if (qry == seq || qry->fastaSeqId == NULL)
                                 continue;
-                            if (strcasecmp(seq->seqId, qry->fastaSeqId) == 0) {
-                                seq->type = rst_dead;
-                                seq = qry;
+
+                            if (strcasecmp(seqId, qry->fastaSeqId) == 0)
+                                score |= exact_match;
+                            else if ((substr = strcasestr(qry->fastaSeqId, seqId)) != NULL) {
+                                if (substr == qry->fastaSeqId) {
+                                    unsigned const length = (unsigned)string_size(seqId);
+                                    if (qry->fastaSeqId[length] == '|')
+                                        score |= substring_match;
+                                }
+                                else if (substr[-1] == '|')
+                                    score |= substring_match;
                             }
+                            if (score != 0) {
+                                if (seq_len != 0 && qry->seq_len == seq_len)
+                                    score |= seq_len_match;
+                                if (md5 != NULL && memcmp(md5, qry->md5, 16) == 0)
+                                    score |= md5_match;
+                            }
+                            if (score > best_score) {
+                                best = i;
+                                best_score = score;
+                            }
+                        }
+                        seq->type = rst_dead;
+                        if (best != bucket.count) {
+                            seq = &self->refSeq[bucket.index[best]];
+                        }
+                        else {
+                            rc = RC(rcAlign, rcFile, rcConstructing, rcId, rcNotFound);
                         }
                     }
                     else {
@@ -1438,7 +1502,6 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                     seq->id = string_dup(id, idLen);
                 if (seq->seqId == NULL && seq->fastaSeqId != NULL)
                     seq->seqId = string_dup(seq->fastaSeqId, string_size(seq->fastaSeqId));
-                addToIndex(self, id, seq);
                 *rslt = seq;
             }
         }
