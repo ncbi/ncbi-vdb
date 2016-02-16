@@ -397,7 +397,7 @@ rc_t STableOverridesMake ( Vector *parents, const STable *dad, const Vector *ove
 
     /* first question is whether parent exists */
     if ( VectorFind ( parents, & dad -> id, NULL, STableOverridesCmp ) != NULL )
-        return RC ( rcVDB, rcSchema, rcParsing, rcTable, rcExists );
+        return SILENT_RC ( rcVDB, rcSchema, rcParsing, rcTable, rcExists );
 
     /* create a new override object */
     to = malloc ( sizeof * to );

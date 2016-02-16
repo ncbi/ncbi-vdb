@@ -735,7 +735,7 @@ rc_t KConfigNodeVOpenNodeReadInt ( const KConfigNode *self, const KConfig *mgr,
                     }
                     if ( ( self = * node ) == NULL )
                     {
-                        rc = RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound );
+                        rc = SILENT_RC ( rcKFG, rcNode, rcOpening, rcPath, rcNotFound );
                         /* don't complain about this
                            PLOGERR (klogErr, (klogErr, rc, "can't find symbol $(p)", "p=%s", path));
                         */
