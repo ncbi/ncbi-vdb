@@ -35,6 +35,9 @@
 #include <klib/rc.h>
 #endif
 
+#ifndef _h_klib_text_
+#include <klib/text.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
