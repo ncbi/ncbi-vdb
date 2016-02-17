@@ -132,9 +132,8 @@ KLIB_EXTERN bool CC num_gen_empty( const struct num_gen * self );
 /*--------------------------------------------------------------------------
  * num_gen_as_string
  *
- *  allocates a string that contains the generator as text
+ *  prints the content of the num_gen into the buffer
  *  *s = "1-5,20,24-25"
- *  caller has to free the string
  */
 KLIB_EXTERN rc_t CC num_gen_as_string( const struct num_gen * self, char * buffer, size_t buffsize,
                                         size_t * written, bool full_info );
