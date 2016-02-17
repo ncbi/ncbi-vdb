@@ -1602,7 +1602,7 @@ LIB_EXPORT rc_t CC Has_Cache_Zero_Blocks( const struct KFile * self, uint64_t * 
  */
 LIB_EXPORT rc_t CC IsCacheTeeComplete( const struct KFile * self, bool * complete )
 {
-    rc_t rc;
+    rc_t rc = 0;
     if ( self == NULL || complete == NULL )
         rc = RC ( rcFS, rcFile, rcValidating, rcParam, rcNull );
     else
