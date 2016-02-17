@@ -93,7 +93,7 @@ KLIB_EXTERN rc_t CC num_gen_clear( struct num_gen * self );
  *  eventual overlaps with the previous content are consolidated
  */
 KLIB_EXTERN rc_t CC num_gen_parse( struct num_gen * self, const char * src );
-
+KLIB_EXTERN rc_t CC num_gen_parse_S( struct num_gen * self, const String * src );
 
 /*--------------------------------------------------------------------------
  * num_gen_add
