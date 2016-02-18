@@ -30,7 +30,7 @@
 #define RELEASE_VERS 0x02050008
 
 /* The Revision of Version of current SRA Toolkit Release */
-#define RELEASE_REVISION 0
+#define RELEASE_REVISION 1
 
 
 /* The Type of Version of current SRA Toolkit Release is one of:
@@ -39,4 +39,4 @@
  *  'c' - release candidate
  *  'r' - final
  */
-#define RELEASE_TYPE 'b'
+#define RELEASE_TYPE 'r'
