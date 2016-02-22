@@ -94,9 +94,28 @@ KFG_EXTERN rc_t CC KConfigLoadFile ( KConfig * self,
 
 
 /* Commit
- *  commits changes to user's private configuration file
+ *  Commits changes to user's private configuration file
+ *
+ *  Respects DisabledUserSettings(do not update default user settings)
  */
 KFG_EXTERN rc_t CC KConfigCommit ( KConfig *self );
+
+/* Read
+ *  read a node value
+ *
+ *  "offset" [ IN ] - initial offset into configuration
+ *
+ *  "buffer" [ OUT ] and "bsize" [ IN ] - return buffer for read
+ *
+ *  "num_read" [ OUT ] - number of bytes actually read
+ *
+ *  "remaining" [ OUT, NULL OKAY ] - optional return parameter for
+ *  the number of bytes remaining to be read.
+ *  specifically, "offset" + "num_read" + "remaining" == sizeof node data
+ */
+KFG_EXTERN rc_t CC KConfigRead ( const KConfig *self, const char *path,
+    size_t offset, char *buffer, size_t bsize,
+    size_t *num_read, size_t *remaining );
 
 /* ReadBool
  *  read a boolean node value

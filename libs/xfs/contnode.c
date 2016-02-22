@@ -29,6 +29,7 @@
 #include <klib/namelist.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <xfs/model.h>
 #include <xfs/tree.h>
@@ -43,7 +44,6 @@
 #include "teleport.h"
 #include "common.h"
 #include "contnode.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 
@@ -103,7 +103,7 @@ _ContNodeDispose ( const struct XFSContNode * self )
                                 ( struct XFSContNode * ) self;
 
 /*
-XFSLogDbg ( "_ContNodeDispose ( 0x%p )\n", ( void * ) Container );
+pLogMsg ( klogDebug, "_ContNodeDispose ( $(container) )", "container=0x%p", ( void * ) Container );
 */
     if ( Container == 0 ) {
         return 0;
@@ -236,7 +236,7 @@ _ContNodeDir_dispose_v1 ( const struct XFSEditor * self )
 
     Editor = ( struct XFSDirEditor * ) self;
 /*
-XFSLogDbg ( "_ContNodeDir_dispose_ ( 0x%p )\n", ( void * ) Editor );
+pLogMsg ( klogDebug, "_ContNodeDir_dispose_ ( $(editor) )", "editor=0x%p", ( void * ) Editor );
 */
 
     if ( Editor == 0 ) {
@@ -354,7 +354,7 @@ _ContNodeAttr_dispose_v1 ( const struct XFSEditor * self )
 
     Editor = ( struct XFSAttrEditor * ) self;
 /*
-XFSLogDbg ( "_ContNodeAttr_dispose_ ( 0x%p )\n", ( void * ) Editor );
+pLogMsg ( klogDebug, "_ContNodeAttr_dispose_ ( $(editor) )", "editor=0x%p", ( void * ) Editor );
 */
 
     if ( Editor == 0 ) {
@@ -636,7 +636,7 @@ XFSContNodeMakeWithFlavor (
         * Node = NULL;
     }
 /*
-XFSLogDbg ( "_ContNodeMake ND[0x%p] NM[%s]\n", ( void * ) Cont, Name );
+pLogMsg ( klogDebug, "_ContNodeMake ND[$(container)] NM[$(name)]", "container=0x%p,name=%s", ( void * ) Cont, Name );
 */
 
     return RCt;

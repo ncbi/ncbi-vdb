@@ -28,6 +28,7 @@
 #include <klib/text.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -44,7 +45,6 @@
 #include "schwarzschraube.h"
 #include "teleport.h"
 #include "common.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 
@@ -210,7 +210,7 @@ XFSKfsNodeMake (
     }
 
 /*
-XFSLogDbg ( "XFSKfsNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) TheNode, Name, Type );
+pLogMsg ( klogDebug, "XFSKfsNodeMake ND[$(node)] NM[$(name)] TP[$(type)]", "node=%p,name=%s,type=%d", ( void * ) TheNode, Name, Type );
 */
 
     return RCt;
@@ -274,7 +274,7 @@ XFSKfsNodeDispose ( const struct XFSKfsNode * self )
     struct XFSKfsNode * Node = ( struct XFSKfsNode * ) self;
 
 /*
-XFSLogDbg ( "XFSKfsNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+pLogMsg ( klogDebug, "XFSKfsNodeDispose ( $(node) ) TP[$(type)]", "node=%p,type=%d", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
 */
 
     if ( Node == 0 ) {
@@ -462,7 +462,7 @@ rc_t CC
 _KfsDir_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    XFSLogDbg ( "_KfsDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_KfsDir_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -995,7 +995,7 @@ _KfsFile_dispose_v1 ( const struct XFSEditor * self )
     struct XFSKfsFileEditor * Editor = ( struct XFSKfsFileEditor * ) self;
 
 /*
-    XFSLogDbg ( "_KfsNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_KfsFile_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -1358,7 +1358,7 @@ rc_t CC
 _KfsAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    XFSLogDbg ( "_KfsAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_KfsAttr_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -1919,7 +1919,7 @@ _FileNodeConstructor (
                             );
 
 /*
-XFSLogDbg ( "_FileNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_FileNodeConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,templat=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1939,7 +1939,7 @@ _FileNodeValidator (
     RCt = 0;
 
 /*
-XFSLogDbg ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_FileNodeValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,templat=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1990,7 +1990,7 @@ _DirNodeConstructor (
                             );
 
 /*
-XFSLogDbg ( "_DirNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_DirNodeConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,templat=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -2010,7 +2010,7 @@ _DirNodeValidator (
     RCt = 0;
 
 /*
-XFSLogDbg ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_DirNodeValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,templat=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

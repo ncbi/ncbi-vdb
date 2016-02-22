@@ -45,6 +45,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ngs_csra1-c++", "test-
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ngs_csra1pileup-c++", "test-ngs_csra1pileup-c++.vcxproj", "{B7D5FF8B-9A50-FFD8-BFD3-188BA4E43421}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-ngs_referencesequence", "test-ngs_referencesequence.vcxproj", "{8D4A5048-6290-B2A2-0C6C-7DF7FCA175DF}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wb-test-kfg", "wb-test-kfg.vcxproj", "{480983D4-4BE2-1571-A0EC-6D5B823C7D2A}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-kfg", "test-kfg.vcxproj", "{7C0FF344-E779-3FF2-4DBD-C44CD7B9DB13}"
@@ -283,6 +285,14 @@ Global
 		{B7D5FF8B-9A50-FFD8-BFD3-188BA4E43421}.Release|Win32.Build.0 = Release|Win32
 		{B7D5FF8B-9A50-FFD8-BFD3-188BA4E43421}.Release|x64.ActiveCfg = Release|x64
 		{B7D5FF8B-9A50-FFD8-BFD3-188BA4E43421}.Release|x64.Build.0 = Release|x64
+		{8D4A5048-6290-B2A2-0C6C-7DF7FCA175DF}.Debug|Win32.ActiveCfg = Debug|Win32
+		{8D4A5048-6290-B2A2-0C6C-7DF7FCA175DF}.Debug|Win32.Build.0 = Debug|Win32
+		{8D4A5048-6290-B2A2-0C6C-7DF7FCA175DF}.Debug|x64.ActiveCfg = Debug|x64
+		{8D4A5048-6290-B2A2-0C6C-7DF7FCA175DF}.Debug|x64.Build.0 = Debug|x64
+		{8D4A5048-6290-B2A2-0C6C-7DF7FCA175DF}.Release|Win32.ActiveCfg = Release|Win32
+		{8D4A5048-6290-B2A2-0C6C-7DF7FCA175DF}.Release|Win32.Build.0 = Release|Win32
+		{8D4A5048-6290-B2A2-0C6C-7DF7FCA175DF}.Release|x64.ActiveCfg = Release|x64
+		{8D4A5048-6290-B2A2-0C6C-7DF7FCA175DF}.Release|x64.Build.0 = Release|x64
 		{480983D4-4BE2-1571-A0EC-6D5B823C7D2A}.Debug|Win32.ActiveCfg = Debug|Win32
 		{480983D4-4BE2-1571-A0EC-6D5B823C7D2A}.Debug|Win32.Build.0 = Debug|Win32
 		{480983D4-4BE2-1571-A0EC-6D5B823C7D2A}.Debug|x64.ActiveCfg = Debug|x64

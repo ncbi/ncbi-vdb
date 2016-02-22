@@ -347,6 +347,13 @@ FIXTURE_TEST_CASE(SRADB_Fragment_Id, SRADBFixture)
     REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".FR0.1",  read . getFragmentId() . toString () );
 }
 
+FIXTURE_TEST_CASE(SRADB_WGS_Fragment_Id, SRADBFixture)
+{
+    ngs :: Read read = NgsFixture :: getRead ( "ALWZ01", ngs :: String ( "ALWZ01" ) + ".R.1" );
+    REQUIRE ( read . nextFragment() );
+    REQUIRE_EQ( ngs :: String ( "ALWZ01" ) + ".FR0.1",  read . getFragmentId() . toString () );
+}
+
 FIXTURE_TEST_CASE(SRADB_Fragment_getFragmentBases, SRADBFixture)
 {
     ngs :: String expected(

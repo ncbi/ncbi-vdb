@@ -1494,7 +1494,7 @@ rc_t KTocResolvePathTocEntry ( const KToc *self,
 
             TOC_DEBUG (("%s: couldn't find (%s)\n", __func__, next_facet));
 
-            return RC (rcFS, rcArc, rcResolving, rcParam, rcNotFound);
+            return SILENT_RC (rcFS, rcArc, rcResolving, rcParam, rcNotFound);
         }
 
         /* loopcount = 0; */

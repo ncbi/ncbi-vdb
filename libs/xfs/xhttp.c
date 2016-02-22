@@ -44,7 +44,6 @@
 #include "xhttp.h"
 #include "zehr.h"
 #include "lockdpt.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 
@@ -949,6 +948,7 @@ _HttpEDAdd ( const struct XFSHttpEntry * Entry )
     return RCt;
 }   /* _HttpEDAdd () */
 
+#ifdef NOT_NEED_YET
 static
 rc_t CC
 _HttpEDDelNoLock ( struct _HttpED * self, const char * Url )
@@ -1005,6 +1005,7 @@ _HttpEDDel ( const char * Url )
 
     return RCt;
 }   /* _HttpEDGet () */
+#endif /* NOT_NEED_YET */
 
 static
 rc_t CC
@@ -1657,7 +1658,6 @@ rc_t CC
 _HttpEntryDispose ( struct XFSHttpEntry * self )
 {
     if ( self != NULL ) {
-XFSLogDbg ( " [_HttpEntryDispose] %p [%s]\n", ( void * ) self, self -> name );
         self -> status = kxfsInvalid;
 
         KRefcountWhack (

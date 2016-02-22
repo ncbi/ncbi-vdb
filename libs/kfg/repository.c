@@ -751,7 +751,7 @@ LIB_EXPORT rc_t CC KRepositoryProjectId
     if ( projectId == NULL )
         rc = RC ( rcKFG, rcMgr, rcAccessing, rcParam, rcNull );
     else if ( self == NULL )
-        rc = RC ( rcKFG, rcMgr, rcAccessing, rcSelf, rcNull );
+        rc = SILENT_RC ( rcKFG, rcMgr, rcAccessing, rcSelf, rcNull );
     else if ( self -> category != krepUserCategory
            || self -> subcategory != krepProtectedSubCategory )
         rc = RC ( rcKFG, rcMgr, rcAccessing, rcSelf, rcWrongType );
@@ -1265,7 +1265,7 @@ LIB_EXPORT rc_t CC KRepositoryMgrCurrentProtectedRepository ( const KRepositoryM
             }
 
             if ( rc == 0 && * protected == NULL )
-                return RC ( rcKFG, rcMgr, rcAccessing, rcNode, rcNotFound );
+                return SILENT_RC ( rcKFG, rcMgr, rcAccessing, rcNode, rcNotFound );
         }
     }
 

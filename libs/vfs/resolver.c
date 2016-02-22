@@ -514,7 +514,7 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
         }
     }
     
-    return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
+    return SILENT_RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
 /* LocalFile
@@ -2086,6 +2086,53 @@ VResolverAppID get_accession_app ( const String * accession, bool refseq_ctx,
     return app;
 }
 
+/* Temporary patch for FUSE mounted accessions
+ *  1. determined if accession is mounter locally
+ *  2. return not found or new VPath
+ */
+static
+rc_t VResolverFuseMountedResolve ( const VResolver * self,
+    const String * accession, const VPath ** path )
+{
+    rc_t rc;
+    struct KDirectory * NativeDir;
+    uint32_t PathType;
+
+    rc = 0;
+    NativeDir = NULL;
+    PathType = kptNotFound;
+
+    rc = KDirectoryNativeDir ( & NativeDir );
+    if ( rc == 0 ) {
+        PathType = KDirectoryPathType ( NativeDir, ".#dbgap-mount-tool#" );
+        if ( PathType == kptFile ) {
+            PathType = KDirectoryPathType (
+                                        NativeDir,
+                                        "%.*s",
+                                        accession -> size,
+                                        accession -> addr
+                                        );
+            if ( PathType == kptFile ) {
+                rc = VPathMakeFmt (
+                                ( VPath ** ) path,
+                                "%.*s",
+                                accession -> size,
+                                accession -> addr
+                                );
+            }
+            else {
+                rc = RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
+            }
+        }
+        else {
+            rc = SILENT_RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
+        }
+
+        KDirectoryRelease ( NativeDir );
+    }
+
+    return rc;
+}
 
 /* LocalResolve
  *  resolve an accession into a VPath or not found
@@ -2102,9 +2149,18 @@ rc_t VResolverLocalResolve ( const VResolver *self,
 
     VResolverAccToken tok;
     bool legacy_wgs_refseq = false;
-    VResolverAppID app = get_accession_app ( accession, refseq_ctx, & tok, & legacy_wgs_refseq );
+    VResolverAppID app;
+
+
+    if ( VResolverFuseMountedResolve ( self, accession, path ) == 0 ) {
+        return 0;
+    }
+
+    app = get_accession_app ( accession, refseq_ctx, & tok, & legacy_wgs_refseq );
 
     /* search all local volumes by app and accession algorithm expansion */
+
+
     count = VectorLength ( & self -> local );
     for ( i = 0; i < count; ++ i )
     {

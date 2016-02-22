@@ -35,6 +35,9 @@
 #include <klib/rc.h>
 #endif
 
+#ifndef _h_klib_text_
+#include <klib/text.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -93,7 +96,7 @@ KLIB_EXTERN rc_t CC num_gen_clear( struct num_gen * self );
  *  eventual overlaps with the previous content are consolidated
  */
 KLIB_EXTERN rc_t CC num_gen_parse( struct num_gen * self, const char * src );
-
+KLIB_EXTERN rc_t CC num_gen_parse_S( struct num_gen * self, const String * src );
 
 /*--------------------------------------------------------------------------
  * num_gen_add
@@ -129,9 +132,8 @@ KLIB_EXTERN bool CC num_gen_empty( const struct num_gen * self );
 /*--------------------------------------------------------------------------
  * num_gen_as_string
  *
- *  allocates a string that contains the generator as text
+ *  prints the content of the num_gen into the buffer
  *  *s = "1-5,20,24-25"
- *  caller has to free the string
  */
 KLIB_EXTERN rc_t CC num_gen_as_string( const struct num_gen * self, char * buffer, size_t buffsize,
                                         size_t * written, bool full_info );

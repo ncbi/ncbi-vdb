@@ -48,6 +48,7 @@
 #include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/namelist.h>
+#include <klib/log.h>
 #include <sysalloc.h>
 
 #include <stdlib.h>
@@ -422,11 +423,20 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                                                 /* was not found locally - try to get one remotely */
                                                 if ( rc2 == 0 )
                                                 {
+                                                        /* We need suppress error message in the 
+                                                         * case if here any error happened
+                                                         */
+                                                    KLogLevel lvl = KLogLevelGet ();
+                                                    KLogLevelSet ( klogFatal );
                                                     assert ( premote == NULL );
                                                     assert ( pcache == NULL );
                                                     rc2 = VResolverQuery ( resolver, eProtocolHttp, orig, NULL, & premote, & pcache );
                                                     assert ( ( rc2 == 0 ) ||
                                                         ( rc2 != 0 && premote == NULL ) );
+
+                                                        /* Here we are restoring log level
+                                                         */
+                                                    KLogLevelSet ( lvl );
                                                 }
                                             }
                                         }

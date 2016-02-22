@@ -230,10 +230,11 @@ bool CSRA1_ReferenceGetIsCircular ( const CSRA1_Reference * self, ctx_t ctx )
 }
 
 static
-uint64_t CountRows ( NGS_Cursor const * curs, ctx_t ctx, uint32_t colIdx, const void* value, int64_t firstRow, uint64_t end_row)
+uint64_t CountRows ( NGS_Cursor const * curs, ctx_t ctx, uint32_t colIdx, const void* value, uint32_t value_size, int64_t firstRow, uint64_t end_row)
 {   /* count consecutive rows having the same value in column # colIdx as in firstRow, starting from and including firstRow */
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     
+    const void* last_value = value;
     uint64_t cur_row = (uint64_t)firstRow + 1;
     while (cur_row < end_row)
     {
@@ -242,9 +243,12 @@ uint64_t CountRows ( NGS_Cursor const * curs, ctx_t ctx, uint32_t colIdx, const 
         ON_FAIL ( NGS_CursorCellDataDirect ( curs, ctx, cur_row, colIdx, & elem_bits, & base, & boff, & row_len ) )
             return 0;
 
-        if (base != value)
+        if (base != last_value)
         {
-            break;
+            if ( value_size != row_len || memcmp ( base, last_value, row_len ) != 0 )
+                break;
+
+            last_value = base;
         }
         
         ++ cur_row;
@@ -812,7 +816,7 @@ bool CSRA1_ReferenceFind ( NGS_Cursor const * curs, ctx_t ctx, const char * spec
                         if ( memcmp ( spec, base, row_len ) == 0 )
                         {
                             *firstRow = cur_row;
-                            *rowCount = CountRows( curs, ctx, reference_NAME, base, * firstRow, end_row );
+                            *rowCount = CountRows( curs, ctx, reference_NAME, base, row_len, * firstRow, end_row );
                             return true;
                         }
                     }
@@ -835,7 +839,7 @@ bool CSRA1_ReferenceFind ( NGS_Cursor const * curs, ctx_t ctx, const char * spec
                         if ( memcmp ( spec, base, row_len ) == 0 )
                         {
                             *firstRow = cur_row;
-                            *rowCount = CountRows( curs, ctx, reference_SEQ_ID, base, * firstRow, end_row );
+                            *rowCount = CountRows( curs, ctx, reference_SEQ_ID, base, row_len, * firstRow, end_row );
                             return true;
                         }
                     }
@@ -1053,7 +1057,7 @@ bool CSRA1_ReferenceIteratorNext ( CSRA1_Reference * self, ctx_t ctx )
             
             if ( rc != 0 )
             {   /* index is not available, do a table scan */
-                rowCount = CountRows ( self -> curs, ctx, reference_NAME, refNameBase, self -> first_row, self -> iteration_row_last );
+                rowCount = CountRows ( self -> curs, ctx, reference_NAME, refNameBase, nameLength, self -> first_row, self -> iteration_row_last );
             }
             
             self -> last_row = self -> first_row + rowCount - 1;

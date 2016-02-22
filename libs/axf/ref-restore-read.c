@@ -91,7 +91,7 @@ rc_t RestoreReadMake ( RestoreRead **objp, const VDBManager *mgr )
     {
         SUB_DEBUG( ( "SUB.Make in 'ref_restore_read.c'\n" ) );
 
-        rc = RefSeqMgr_Make( &obj->rmgr, mgr, errefseq_4NA, 8 * 1024 * 1024, 30 );
+        rc = RefSeqMgr_Make( &obj->rmgr, mgr, errefseq_4NA, 8 * 1024 * 1024, 5 );
         if ( rc == 0 )
         {
 		    *objp = obj;

@@ -28,6 +28,7 @@
 #include <klib/text.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -48,7 +49,6 @@
 #include "common.h"
 #include "contnode.h"
 #include "xgap.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 
@@ -277,7 +277,7 @@ _GapProjectNodeAddChildren ( struct _GapProjectNode * self )
     else {
 /* TODO - use approved output method
 */
-XFSLogDbg ( "ERROR: Can not find definition of Project %d in config file\n", self -> project_id );
+pLogErr ( klogErr, RCt, "ERROR: Can not find definition of Project $(project_id) in config file", "project_id=%d", self -> project_id );
     }
 
     if ( RCt != 0 ) {
@@ -300,7 +300,7 @@ XFSLogDbg ( "ERROR: Can not find definition of Project %d in config file\n", sel
     else {
 /* TODO - use approved output method
 */
-XFSLogDbg ( "ERROR: Can not find definition of Project %d in config file\n", self -> project_id );
+pLogErr ( klogErr, RCt, "ERROR: Can not find definition of Project $(project_id) in config file", "project_id=%d", self -> project_id );
     }
     if ( RCt != 0 ) {
         if ( TheNode != NULL ) {
@@ -323,7 +323,7 @@ XFSLogDbg ( "ERROR: Can not find definition of Project %d in config file\n", sel
         RCt = 0;
 /* TODO - use approved output method
 */
-XFSLogDbg ( "WARNING: Can not find definition for 'public' area in config file\n" );
+LogMsg ( klogWarn, "Can not find definition for 'public' area in config file" );
     }
 
     if ( RCt != 0 ) {
@@ -407,7 +407,7 @@ XFSGapProjectNodeMake (
     }
 
 /*
-XFSLogDbg ( "_GapNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type );
+pLogMsg ( klogDebug, "_GapNodeMake ND[$(node)] NM[$(name)] PJ[$(project_id)]", "node=%p,name=%s,project_id=%d", ( void * ) Node, Name, ( GapNode == NULL ? 0 : GapNode -> project_id ) );
 */
     return RCt;
 }   /* XFSGapProjectNodeMake () */
@@ -537,7 +537,7 @@ _GapProjectNodeConstructor (
                                         Node
                                         );
 /*
-XFSLogDbg ( "_GapProjectNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_GapProjectNodeConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
 
@@ -558,7 +558,7 @@ _GapProjectNodeValidator (
     RCt = 0;
 
 /*
-XFSLogDbg ( "_GapProjectNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_GapProjectNodeValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

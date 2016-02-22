@@ -26,6 +26,7 @@
 #include <klib/rc.h>
 #include <klib/out.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <kfs/file.h>
 
@@ -36,7 +37,6 @@
 
 #include "schwarzschraube.h"
 #include "common.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 
@@ -191,7 +191,7 @@ XFSDocNodeMakeWithFlavor (
     }
 
 /*
-XFSLogDbg ( "XFSDocNodeMake ND[0x%p] NM[%s] Doc[0x%p]\n", ( void * ) TheNode, Name, Doc );
+pLogMsg ( klogDebug, "XFSDocNodeMake ND[$(node)] NM[$(name)] Doc[$(doc)]", "node=%p,name=%s,doc=%s", ( void * ) TheNode, Name, Doc );
 */
 
     return RCt;
@@ -216,7 +216,7 @@ XFSDocNodeDispose ( const struct XFSDocNode * self )
     struct XFSDocNode * Node = ( struct XFSDocNode * ) self;
 
 /*
-XFSLogDbg ( "XFSDocNodeDispose ( 0x%p ) [%p]\n", ( void * ) Node, ( void * ) Node -> doc );
+pLogMsg ( klogDebug, "XFSDocNodeDispose ( $(node) ) [$(doc)]", "node=%p,doc=%p", ( void * ) Node, ( void * ) Node -> doc );
 */
 
     if ( Node == 0 ) {
@@ -299,7 +299,7 @@ rc_t CC
 _DocFile_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    XFSLogDbg ( "_DocNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_DocNodeFile_dispose_v1 ( $(node) )", "node=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -517,7 +517,7 @@ rc_t CC
 _DocAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    XFSLogDbg ( "_DocAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_DocAttr_dispose_v1 ( node )", "node=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {

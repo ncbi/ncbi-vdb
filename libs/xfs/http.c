@@ -28,6 +28,7 @@
 #include <klib/text.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -45,7 +46,6 @@
 #include "schwarzschraube.h"
 #include "teleport.h"
 #include "common.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 
@@ -272,7 +272,7 @@ XFSHttpNodeDispose ( const struct XFSHttpNode * self )
     struct XFSHttpNode * Node = ( struct XFSHttpNode * ) self;
 
 /*
-XFSLogDbg ( "XFSHttpNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+pLogMsg ( klogDebug, "XFSHttpNodeDispose ( $(node) )]", "node=%p", ( void * ) Node );
 */
 
     if ( Node == 0 ) {
@@ -296,7 +296,7 @@ XFSHttpRootNodeDispose ( const struct XFSHttpRootNode * self )
     struct XFSHttpRootNode * Node = ( struct XFSHttpRootNode * ) self;
 
 /*
-XFSLogDbg ( "XFSHttpRootNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+pLogMsg ( klogDebug, "XFSHttpRootNodeDispose ( $(node) )]", "node=%p", ( void * ) Node );
 */
 
     if ( Node == 0 ) {
@@ -418,7 +418,7 @@ _HttpDir_dispose_v1 ( const struct XFSEditor * self )
 {
     struct XFSDirEditor * Editor = ( struct XFSDirEditor * ) self;
 /*
-    XFSLogDbg ( "_HttpDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_HttpDir_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -586,7 +586,7 @@ _HttpFile_dispose_v1 ( const struct XFSEditor * self )
 {
     struct XFSHttpFileEditor * Editor = ( struct XFSHttpFileEditor * ) self;
 /*
-    XFSLogDbg ( "_HttpNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_HttpFile_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -814,7 +814,7 @@ rc_t CC
 _HttpAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    XFSLogDbg ( "_HttpAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_HttpAttr_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -1126,7 +1126,7 @@ _RemoteRepositoryConstructor (
                                         );
 
 /*
-XFSLogDbg ( "_RemoteRepositoryConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_RemoteRepositoryConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1146,7 +1146,7 @@ _RemoteRepositoryValidator (
     RCt = 0;
 
 /*
-XFSLogDbg ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_RemoteRepositoryValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1253,7 +1253,7 @@ _RemoteFileConstructor (
                                         );
 
 /*
-XFSLogDbg ( "_RemoteFileConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_RemoteFileConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1273,7 +1273,7 @@ _RemoteFileValidator (
     RCt = 0;
 
 /*
-XFSLogDbg ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_RemoteFileValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

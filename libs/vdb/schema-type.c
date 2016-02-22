@@ -1870,7 +1870,7 @@ rc_t enter_namespace ( KSymTable *tbl, KTokenSource *src, KToken *t,
             /* no break */
         default:
             if ( t -> id == id )
-                rc = RC ( rcVDB, rcSchema, rcParsing, rcToken, rcExists );
+                rc = SILENT_RC ( rcVDB, rcSchema, rcParsing, rcToken, rcExists );
             else
                 rc = RC ( rcVDB, rcSchema, rcParsing, rcToken, rcUnexpected );
         }
@@ -1891,7 +1891,7 @@ rc_t create_fqn ( KSymTable *tbl, KTokenSource *src, KToken *t,
         return create_fqn_sym ( tbl, src, t, env, id, obj );
     default:
         if ( t -> id == id )
-            return RC ( rcVDB, rcSchema, rcParsing, rcToken, rcExists );
+            return SILENT_RC ( rcVDB, rcSchema, rcParsing, rcToken, rcExists );
     }
 
     return RC ( rcVDB, rcSchema, rcParsing, rcToken, rcUnexpected );

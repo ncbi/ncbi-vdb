@@ -570,7 +570,7 @@ rc_t KMDataNodeFind ( const KMDataNode *self, const KMDataNode **np, char **path
                 end [ -1 ] = '/';
             * path = name;
             * np = self;
-            return RC ( rcDB, rcMetadata, rcSelecting, rcPath, rcNotFound );
+            return SILENT_RC ( rcDB, rcMetadata, rcSelecting, rcPath, rcNotFound );
         }
     }
 
@@ -1193,7 +1193,7 @@ LIB_EXPORT rc_t CC KMDataNodeReadAttr ( const KMDataNode *self, const char *name
                 * size = 0;
                 if ( bsize != 0 )
                     buffer [ 0 ] = 0;
-                rc = RC ( rcDB, rcMetadata, rcReading, rcAttr, rcNotFound );
+                rc = SILENT_RC ( rcDB, rcMetadata, rcReading, rcAttr, rcNotFound );
             }
             else
             {

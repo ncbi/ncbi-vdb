@@ -28,6 +28,7 @@
 #include <klib/text.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -49,7 +50,6 @@
 #include "contnode.h"
 #include "xgap.h"
 #include "xgapk.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 
@@ -134,6 +134,55 @@ _AddKartItem (
     return RCt;
 }   /* _AddKartItem () */
 
+static
+rc_t CC
+_AddSignatureFile ( struct XFSKartNode * Node )
+{
+    rc_t RCt;
+    struct XFSDoc * Doc;
+    struct XFSNode * Sign;
+
+    RCt = 0;
+    Doc = NULL;
+    Sign = NULL;
+
+    XFS_CAN ( Node )
+
+    RCt = XFSTextDocMake ( & Doc );
+    if ( RCt == 0 ) {
+        RCt = XFSTextDocAppend ( Doc,
+                                "%d\n",
+                                Node -> project_id
+                                );
+        if ( RCt == 0 ) {
+            RCt = XFSDocNodeMakeWithFlavor (
+                                        & Sign,
+                                        Doc,
+                                        ".#dbgap-mount-tool#",
+                                        XFSPermRODefNodeChar (),
+                                        _sFlavorOfFoo
+                                        );
+            if ( RCt == 0 ) {
+                RCt = XFSContNodeAddChild (
+                                        & ( Node -> node . node ),
+                                        Sign
+                                        );
+            }
+        }
+
+        XFSDocRelease ( Doc );
+    }
+
+    if ( RCt != 0 ) {
+        if ( Sign != NULL ) { 
+            XFSNodeDispose ( Sign );
+            Sign = NULL;
+        }
+    }
+
+    return RCt;
+}   /* _AddSignatureFile () */
+
 static 
 rc_t CC
 _LoadKart ( struct XFSKartNode * Node )
@@ -152,32 +201,35 @@ _LoadKart ( struct XFSKartNode * Node )
 
     XFS_CAN ( Node )
 
-    RCt = XFSGapKartDepotGet (
+    RCt = _AddSignatureFile ( Node );
+    if ( RCt == 0 ) {
+        RCt = XFSGapKartDepotGet (
                             & Kart,
                             XFSNodeName ( & ( Node -> node . node ) )
                             );
-    if ( RCt == 0 ) {
-
-        RCt = XFSGapKartList ( Kart, & List, Node -> project_id );
         if ( RCt == 0 ) {
-            RCt = KNamelistCount ( List, & ListQ );
+
+            RCt = XFSGapKartList ( Kart, & List, Node -> project_id );
             if ( RCt == 0 ) {
-                for ( ListI = 0; ListI < ListQ; ListI ++ ) {
-                    RCt = KNamelistGet ( List, ListI, & ListN );
-                    if ( RCt != 0 ) {
-                        break;
-                    }
-                    RCt = _AddKartItem ( Node, Kart, ListN );
-                    if ( RCt != 0 ) {
-                        break;
+                RCt = KNamelistCount ( List, & ListQ );
+                if ( RCt == 0 ) {
+                    for ( ListI = 0; ListI < ListQ; ListI ++ ) {
+                        RCt = KNamelistGet ( List, ListI, & ListN );
+                        if ( RCt != 0 ) {
+                            break;
+                        }
+                        RCt = _AddKartItem ( Node, Kart, ListN );
+                        if ( RCt != 0 ) {
+                            break;
+                        }
                     }
                 }
+
+                KNamelistRelease ( List );
             }
 
-            KNamelistRelease ( List );
+            XFSGapKartRelease ( Kart );
         }
-
-        XFSGapKartRelease ( Kart );
     }
 
     return RCt;
@@ -255,7 +307,7 @@ XFSGapKartNodeMake (
     }
 
 /*
-XFSLogDbg ( "XFSGapKartNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) Node, Name, Type );
+pLogMsg ( klogDebug, "XFSGapKartNodeMake ND[$(node)] NM[$(name)] TP[$(project_id)]", "node=%p,name=%s,project_id=%d", ( void * ) Node, Name, ProjectId );
 */
 
     return RCt;
@@ -341,7 +393,7 @@ _KartNodeConstructor (
                             );
 
 /*
-XFSLogDbg ( "_KartNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_KartNodeConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -361,7 +413,7 @@ _KartNodeValidator (
     RCt = 0;
 
 /*
-XFSLogDbg ( "_KartNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_KartNodeValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

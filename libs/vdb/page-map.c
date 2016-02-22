@@ -518,7 +518,7 @@ rc_t PageMapFindRow(const PageMap *cself,uint64_t row,uint32_t * data_offset,uin
 	return 0;
 }
 
-rc_t PageMapNewIterator(const PageMap *self, PageMapIterator *lhs, uint64_t first_row, uint64_t num_rows)
+LIB_EXPORT rc_t PageMapNewIterator(const PageMap *self, PageMapIterator *lhs, uint64_t first_row, uint64_t num_rows)
 {
     rc_t rc;
 

@@ -262,7 +262,7 @@ table NCBI:SRA:tbl:spotcoord #1 = INSDC:SRA:tbl:spotcoord #1
 table NCBI:SRA:tbl:skeyname #1.0.1 = INSDC:SRA:tbl:spotname #1.0.1
 {
     // read the skey entry
-    ascii out_skey = ( ascii ) idx:text:project #1 < 'skey' > ();
+    ascii out_skey = ( ascii ) idx:text:project #1.0 < 'skey' > ();
 
     // spot_name
     ascii out_spot_name
@@ -291,7 +291,7 @@ table NCBI:SRA:tbl:skeyname_nocol #2.0.1 = INSDC:SRA:tbl:spotname #1.0.1
 {
     // name_fmt
     //  perform reverse lookup through index to get key
-    ascii out_name_fmt = ( ascii ) idx:text:project #1 < 'skey' > ();
+    ascii out_name_fmt = ( ascii ) idx:text:project #1.0 < 'skey' > ();
 
     // search skey entry
     INSDC:SRA:spot_ids_found spot_ids_found
@@ -334,7 +334,7 @@ table NCBI:SRA:tbl:skeyname #3.0.1 = INSDC:SRA:tbl:spotname #1.0.1, NCBI:SRA:tbl
 
     // name_fmt
     //  retrieve from hard column or reverse lookup through index
-    ascii out_name_fmt = ( ascii ) idx:text:project #1 < 'skey' > ( .NAME_FMT );
+    ascii out_name_fmt = ( ascii ) idx:text:project #1.0 < 'skey' > ( .NAME_FMT );
 
     INSDC:SRA:spot_ids_found  spot_ids_found
         = ( INSDC:SRA:spot_ids_found ) NCBI:SRA:lookup #1 < 'skey' , 'QUERY_BY_NAME', 2 > ();

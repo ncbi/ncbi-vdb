@@ -1192,7 +1192,8 @@ LIB_EXPORT rc_t CC KDirectoryVOpenDirUpdate ( KDirectory_v1 *self,
         return RC ( rcFS, rcDirectory, rcOpening, rcSelf, rcNull );
 
     if ( self -> read_only )
-        return RC ( rcFS, rcDirectory, rcOpening, rcDirectory, rcReadonly );
+        /* TODO: Maybe for writing wncbi-vdb we need to return RC */
+        return SILENT_RC ( rcFS, rcDirectory, rcOpening, rcDirectory, rcReadonly );
 
     if ( path == NULL || path [ 0 ] == 0 )
         path = ".";

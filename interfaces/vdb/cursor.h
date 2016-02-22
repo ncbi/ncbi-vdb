@@ -212,6 +212,37 @@ VDB_EXTERN rc_t CC VCursorRowId ( const VCursor *self, int64_t *row_id );
 VDB_EXTERN rc_t CC VCursorSetRowId ( const VCursor *self, int64_t row_id );
 
 
+/* FindNextRowId
+ * FindNextRowIdDirect
+ *  returns next non-empty row given either the cursor's current row-id + 1,
+ *  or a direct "start_id" provided as a parameter.
+ *
+ *  if the starting row-id has a non-null cell, that row-id will be returned.
+ *  otherwise, the first row-id following the starting id that has a non-null cell
+ *  will be returned. in the event that no non-null cells can be found, the returned
+ *  rc_t will have RCState of rcNotFound.
+ *
+ *  "idx" [ IN, ZERO OKAY ] - when non-zero, represents the one-based index of a
+ *  particular column. when zero, represents all columns simultaneously.
+ *
+ *  "start_id" [ IN ] - when specified directly, gives a starting row id to
+ *  use when starting the search for non-null cells. if the row "start_id"
+ *  contains non-null cells, it will be returned immediately.
+ *
+ *  when "start_id" is not used ( VCursorFindNextRowId ), the cursor's current
+ *  row-id + 1 will be substituted. the meaning is that if the last accessed
+ *  row was valid, this will find the next valid row. if the last accessed row
+ *  was not valid ( null cell ), then it is known to be invalid and the search
+ *  starts with the following row.
+ *
+ *  "next" [ OUT ] - return parameter for found row-id. when the "rc_t" is 0
+ */
+VDB_EXTERN rc_t CC VCursorFindNextRowId ( const VCursor *self,
+    uint32_t idx, int64_t * next );
+VDB_EXTERN rc_t CC VCursorFindNextRowIdDirect ( const VCursor *self,
+    uint32_t idx, int64_t start_id, int64_t * next );
+
+
 /* OpenRow
  *  open currently closed row indicated by row id
  */
@@ -450,14 +481,6 @@ VDB_EXTERN rc_t CC VCursorOpenParentUpdate ( VCursor *self, struct VTable **tbl 
 VDB_EXTERN rc_t CC VCursorGetUserData ( const VCursor *self, void **data );
 VDB_EXTERN rc_t CC VCursorSetUserData ( const VCursor *self,
     void *data, void ( CC * destroy ) ( void *data ) );
-
-
-VDB_EXTERN rc_t CC VCursorLinkedCursorGet(const VCursor *cself,const char *tbl,VCursor const **curs);
-VDB_EXTERN rc_t CC VCursorLinkedCursorSet(const VCursor *cself,const char *tbl,VCursor const *curs);
-
-VDB_EXTERN uint64_t CC VCursorSetCacheCapacity(VCursor *self,uint64_t capacity);
-VDB_EXTERN uint64_t CC VCursorGetCacheCapacity(const VCursor *self);
-
 
 
 #ifdef __cplusplus

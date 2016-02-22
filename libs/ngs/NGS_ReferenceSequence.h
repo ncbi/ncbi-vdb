@@ -120,6 +120,7 @@ NGS_ReferenceSequence * NGS_ReferenceSequenceMake ( ctx_t ctx, const char * spec
  *  any error returns NULL as a result and sets error in ctx
  */
 NGS_ReferenceSequence * NGS_ReferenceSequenceMakeSRA ( ctx_t ctx, const char * spec );
+NGS_ReferenceSequence * NGS_ReferenceSequenceMakeEBI ( ctx_t ctx, const char * spec );
 
 /* Init
 */

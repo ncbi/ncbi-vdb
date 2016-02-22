@@ -34,7 +34,6 @@
 #include "schwarzschraube.h"
 #include "owp.h"
 #include "xfs-priv.h"
-#include "xlog.h"
 
 #include <sysalloc.h>
 #include <stdlib.h> /* we are using calloc */
@@ -178,8 +177,6 @@ XFSControlDispose ( struct XFSControl * self )
         self -> vt = NULL;
     }
 
-XFSLogDbg ( ( "........... LAST CHA\n" ) );
-
     free ( self );
 
     return RCt;
@@ -275,6 +272,42 @@ XFSControlHasArg ( struct XFSControl * self, const char * ArgName )
 
 LIB_EXPORT
 rc_t CC
+XFSControlSetAppName ( struct XFSControl * self, const char * AppName )
+{
+    return XFSControlSetArg (
+                        self,
+                        XFS_CONTROL_APPNAME,
+                        ( AppName == NULL ? "mount-tool" : AppName )
+                        );
+}   /* XFSControlSetAppName () */
+
+LIB_EXPORT
+const char * CC
+XFSControlGetAppName ( struct XFSControl * self )
+{
+    return XFSControlGetArg ( self, XFS_CONTROL_APPNAME );
+}   /* XFSControlGetAppName () */
+
+LIB_EXPORT
+rc_t CC
+XFSControlDaemonize ( struct XFSControl * self )
+{
+    return XFSControlSetArg (
+                        self,
+                        XFS_CONTROL_DAEMONIZE,
+                        XFS_CONTROL_DAEMONIZE
+                        );
+}   /* XFSControlDaemonize () */
+
+LIB_EXPORT
+bool CC
+XFSControlIsDaemonize ( struct XFSControl * self )
+{
+    return XFSControlHasArg ( self, XFS_CONTROL_DAEMONIZE );
+}   /* XFSControlIsDaemonize () */
+
+LIB_EXPORT
+rc_t CC
 XFSControlSetMountPoint (
                     struct XFSControl * self,
                     const char * MountPoint
@@ -296,6 +329,38 @@ XFSControlGetMountPoint ( struct XFSControl * self )
 {
     return XFSControlGetArg ( self, XFS_CONTROL_MOUNTPOINT );
 }   /* XFSControlGetMountPoint () */
+
+LIB_EXPORT
+rc_t CC
+XFSControlSetLogFile ( struct XFSControl * self, const char * Path )
+{
+    rc_t RCt;
+    char BF [ XFS_SIZE_1024 ];
+
+    RCt = 0;
+    * BF = 0;
+
+    XFS_CAN ( self )
+
+    RCt = XFS_ResolvePath (
+                        true,
+                        BF,
+                        sizeof ( BF ),
+                        ( Path == NULL ? "./mount-tool.log" : Path )
+                        );
+    if ( RCt == 0 ) {
+        RCt = XFSControlSetArg ( self, XFS_CONTROL_LOGFILE, BF );
+    }
+
+    return RCt;
+}   /* XFSControlSetLogFile () */
+
+LIB_EXPORT
+const char * CC
+XFSControlGetLogFile ( struct XFSControl * self )
+{
+    return XFSControlGetArg ( self, XFS_CONTROL_LOGFILE );
+}   /* XFSControlGetLogFile () */
 
 LIB_EXPORT
 rc_t CC

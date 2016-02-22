@@ -233,18 +233,18 @@ KStream HttpFixture::m_stream;
 // Regular HTTP 
 FIXTURE_TEST_CASE(Http_Make, HttpFixture)
 {
-    TestStream::AddResponse("HTTP/1.1 200 OK\nContent-Length: 7\n");
+    TestStream::AddResponse("HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\nContent-Length: 7\r\n");
     REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
     REQUIRE_NOT_NULL ( m_file ) ;
 }
 
-#if 0 
+#if 1
 /*FIXME: 100 used to be retried regardless of whether URL is reliable, now it is not, so the test fails */
 FIXTURE_TEST_CASE(Http_Make_Continue_100_Retry, HttpFixture)
 {
-    TestStream::AddResponse("HTTP/1.1 100 continue\n");
-    TestStream::AddResponse("HTTP/1.1 100 continue\n");
-    TestStream::AddResponse("HTTP/1.1 200 OK\nContent-Length: 7\n");
+    TestStream::AddResponse("HTTP/1.1 100 continue\r\n");
+    TestStream::AddResponse("HTTP/1.1 100 continue\r\n");
+    TestStream::AddResponse("HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\nContent-Length: 7\r\n");
     REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
     REQUIRE_NOT_NULL ( m_file ) ;
 }
@@ -252,24 +252,25 @@ FIXTURE_TEST_CASE(Http_Make_Continue_100_Retry, HttpFixture)
 
 FIXTURE_TEST_CASE(Http_Make_500_Fail, HttpFixture)
 {   // a regular Http client does not retry
-    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\n");
+    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n");
     REQUIRE_RC_FAIL ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
 }
 
 FIXTURE_TEST_CASE(Http_Read, HttpFixture)
 {
-    TestStream::AddResponse("HTTP/1.1 200 OK\nContent-Length: 7\n"); // response to HEAD
+    TestStream::AddResponse("HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\nContent-Length: 7\r\n"); // response to HEAD
     REQUIRE_RC ( KNSManagerMakeHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str() ) ); 
     char buf[1024];
     size_t num_read;
     TestStream::AddResponse(    // response to GET
-        "HTTP/1.1 206 Partial Content\n"
-        "Transfer-Encoding: chunked\n"
-        /*"Content-Length: 7\n" */ /* bug fix in KClientHttpResultHandleContentRange: used to break if Content-Length was not there */
-        "Content-Range: bytes 0-6/7\n" 
-        "\n"
-        "7\n"
-        "content\n"
+        "HTTP/1.1 206 Partial Content\r\n"
+        "Accept-Ranges: bytes\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        /*"Content-Length: 7\r\n" */ /* bug fix in KClientHttpResultHandleContentRange: used to break if Content-Length was not there */
+        "Content-Range: bytes 0-6/7\r\n" 
+        "\r\n"
+        "7\r\n"
+        "content\r\n"
     ); 
     REQUIRE_RC( KFileTimedRead ( m_file, 0, buf, sizeof buf, &num_read, NULL ) );
     REQUIRE_EQ( string ( "content" ), string ( buf, num_read ) );
@@ -281,7 +282,7 @@ FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpFixture)
     KNSManagerMakeClientRequest ( m_mgr, &req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
     
     KClientHttpResult *rslt;
-    TestStream::AddResponse("HTTP/1.1 200 OK\n");
+    TestStream::AddResponse("HTTP/1.1 200 OK\r\n");
     REQUIRE_RC ( KClientHttpRequestPOST ( req, & rslt ) );
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
     
@@ -536,7 +537,7 @@ FIXTURE_TEST_CASE(HttpRetrier_Retry_OpenEnded_MaxRetries, RetrierFixture)
 
 FIXTURE_TEST_CASE(HttpReliable_Make, HttpFixture)
 {
-    TestStream::AddResponse("HTTP/1.1 200 OK\nContent-Length: 7\n");
+    TestStream::AddResponse("HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\nContent-Length: 7\r\n");
     REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str()  ) ); 
     REQUIRE_NOT_NULL ( m_file ) ;
 }
@@ -544,9 +545,9 @@ FIXTURE_TEST_CASE(HttpReliable_Make, HttpFixture)
 /* 100 used to be retried regardless, now it is not, so the test fails */
 FIXTURE_TEST_CASE(HttpReliable_Make_Continue_100_Retry, HttpFixture)
 {
-    TestStream::AddResponse("HTTP/1.1 100 continue\n");
-    TestStream::AddResponse("HTTP/1.1 100 continue\n");
-    TestStream::AddResponse("HTTP/1.1 200 OK\nContent-Length: 7\n");
+    TestStream::AddResponse("HTTP/1.1 100 continue\r\n");
+    TestStream::AddResponse("HTTP/1.1 100 continue\r\n");
+    TestStream::AddResponse("HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\nContent-Length: 7\r\n");
     REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str()  ) ); 
     REQUIRE_NOT_NULL ( m_file ) ;
 }
@@ -554,8 +555,8 @@ FIXTURE_TEST_CASE(HttpReliable_Make_Continue_100_Retry, HttpFixture)
 
 FIXTURE_TEST_CASE(HttpReliable_Make_5xx_retry, HttpFixture)
 {   // use default configuration for 5xx to be retried
-    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\n");
-    TestStream::AddResponse("HTTP/1.1 200 OK\nContent-Length: 7\n");
+    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n");
+    TestStream::AddResponse("HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\nContent-Length: 7\r\n");
     REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str()  ) ); 
     REQUIRE_NOT_NULL ( m_file ) ;
 }
@@ -563,15 +564,15 @@ FIXTURE_TEST_CASE(HttpReliable_Make_5xx_retry, HttpFixture)
 FIXTURE_TEST_CASE(HttpReliable_Make_500_Fail, RetrierFixture)
 {   
     Configure ( GetName(), "http/reliable/500=\"\"\n"); // do not retry 500
-    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\n");
+    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n");
     REQUIRE_RC_FAIL ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str()  ) ); 
 }
 
 FIXTURE_TEST_CASE(HttpReliable_Make_500_Retry, RetrierFixture)
 {   
     Configure ( GetName(), "http/reliable/500=\"0+\"\n" "http/reliable/5xx=\"\"\n"); // do not retry 5xx, retry 500
-    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\n");
-    TestStream::AddResponse("HTTP/1.1 200 OK\nContent-Length: 7\n");
+    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n");
+    TestStream::AddResponse("HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\nContent-Length: 7\r\n");
     REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str()  ) ); 
     REQUIRE_NOT_NULL ( m_file ) ;
 }
@@ -579,8 +580,8 @@ FIXTURE_TEST_CASE(HttpReliable_Make_500_Retry, RetrierFixture)
 FIXTURE_TEST_CASE(HttpReliable_Make_500_TooManyRetries, RetrierFixture)
 {   
     Configure ( GetName(), "http/reliable/500=\"0\"\n" "http/reliable/5xx=\"\"\n"); // do not retry 5xx, retry 500 once
-    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\n");
-    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\n");
+    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n");
+    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n");
     REQUIRE_RC_FAIL ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str()  ) ); 
 }
 
@@ -589,19 +590,20 @@ FIXTURE_TEST_CASE(HttpReliable_Read_Retry, HttpFixture)
 {
     SetClientHttpReopenCallback ( Reconnect ); // this hook is only available in DEBUG mode
 
-    TestStream::AddResponse("HTTP/1.1 200 OK\nContent-Length: 7\n"); // response to HEAD
+    TestStream::AddResponse("HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\nContent-Length: 7\r\n"); // response to HEAD
     REQUIRE_RC ( KNSManagerMakeReliableHttpFile( m_mgr, ( const KFile** ) &  m_file, & m_stream, 0x01010000, MakeURL(GetName()).c_str()  ) ); 
     char buf[1024];
     size_t num_read;
-    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\n"); // response to GET
+    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\r\n"); // response to GET
     TestStream::AddResponse(    
-        "HTTP/1.1 206 Partial Content\n"
-        "Transfer-Encoding: chunked\n"
-        "Content-Length: 7\n" 
-        "Content-Range: bytes 0-6/7\n" 
-        "\n"
-        "7\n"
-        "content\n"
+        "HTTP/1.1 206 Partial Content\r\n"
+        "Accept-Ranges: bytes\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "Content-Length: 7\r\n" 
+        "Content-Range: bytes 0-6/7\r\n" 
+        "\r\n"
+        "7\r\n"
+        "content\r\n"
     ); 
     REQUIRE_RC( KFileTimedRead ( m_file, 0, buf, sizeof buf, &num_read, NULL ) );
     REQUIRE_EQ( string ( "content" ), string ( buf, num_read ) );
@@ -623,8 +625,8 @@ FIXTURE_TEST_CASE(HttpReliableRequest_POST_5xx_retry, HttpFixture)
     KClientHttpRequest *req;
     KNSManagerMakeReliableClientRequest ( m_mgr, &req, 0x01010000, & m_stream, MakeURL(GetName()).c_str()  );
     
-    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\n"); // response to GET
-    TestStream::AddResponse("HTTP/1.1 200 OK\n");
+    TestStream::AddResponse("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n"); // response to GET
+    TestStream::AddResponse("HTTP/1.1 200 OK\r\n");
     
     KClientHttpResult *rslt;
     REQUIRE_RC ( KClientHttpRequestPOST ( req, & rslt ) );
