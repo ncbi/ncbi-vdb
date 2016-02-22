@@ -61,7 +61,7 @@ struct num_gen_iter
 {
     Vector nodes;
     uint32_t curr_node;
-    uint32_t curr_node_sub_pos;
+    uint64_t curr_node_sub_pos;
     uint64_t total;
     uint64_t progress;
     int64_t min_value;
