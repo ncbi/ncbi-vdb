@@ -1303,6 +1303,480 @@ static void sortCandidateList(unsigned const len, struct Candidate *list)
         ksort(list, len, sizeof(list[0]), cmpCandidate, NULL);
 }
 
+static void candidates(ReferenceMgr *const self,
+                       unsigned *const count,
+                       struct Candidate **const rslt,
+                       unsigned const idLen,
+                       char const id[],
+                       unsigned const seq_len,
+                       uint8_t const md5[16])
+{
+    unsigned const hv = hash(idLen, id);
+    Bucket const bucket = self->ht[hv];
+    unsigned num_possible = 0;
+    struct Candidate *possible = malloc(sizeof(possible[0]) * bucket.count);
+    unsigned i;
+
+    assert(possible != NULL);
+    if (possible == NULL)
+        abort();
+    for (i = 0; i < bucket.count; ++i) {
+        unsigned const index = bucket.index[i];
+        ReferenceSeq *const rs = &self->refSeq[index];
+
+        if (rs->type != rst_dead) {
+            bool const sameId = rs->id != NULL && strcmp(rs->id, id) == 0;
+            bool const sameSeqId = rs->seqId != NULL && strcasecmp(rs->seqId, id) == 0;
+            int const sameFastaSeqId = rs->fastaSeqId != NULL ? str_weight(rs->fastaSeqId, id, idLen) : 0;
+            struct Candidate nv;
+
+            nv.weight = (sameId ? id_match : 0) | (sameSeqId ? seqId_match : 0) | sameFastaSeqId;
+            nv.index = index;
+
+            if (nv.weight > 0)
+                possible[num_possible++] = nv;
+        }
+    }
+    if (num_possible == 0) {
+        free(possible);
+        possible = NULL;
+    }
+    *count = num_possible;
+    *rslt = possible;
+}
+
+static rc_t tryFastaOrRefSeq(ReferenceMgr *const self,
+                     ReferenceSeq **const rslt,
+                     unsigned const idLen,
+                     char const id[],
+                     bool *tryAgain)
+{
+    KFile const *kf = NULL;
+    rc_t rc = 0;
+
+    if (OpenFastaFile(&kf, self->dir, id, idLen) == 0) {
+        /* found a fasta file; load it and try again */
+        rc = ImportFastaFile(self, kf, NULL);
+        if (rc == 0) {
+            *tryAgain = true;
+            return 0;
+        }
+    }
+    /* didn't find a fasta file; try RefSeq */
+    ALIGN_CF_DBGF(("trying to open refseq: %s\n", id));
+    if (RefSeqMgr_Exists(self->rmgr, id, idLen, NULL) == 0) {
+        ReferenceSeq *const seq = newReferenceSeq(self, NULL);
+
+        rc = RefSeqMgr_GetSeq(self->rmgr, &seq->u.refseq, id, idLen);
+        if (rc == 0) {
+            unsigned const hv = hash(idLen, id);
+            seq->id = string_dup(id, idLen);
+            seq->type = rst_refSeqById;
+
+            addToHashBucket(&self->ht[hv], seq - self->refSeq);
+
+            ReferenceSeq_GetRefSeqInfo(seq);
+            *rslt = seq;
+        }
+    }
+    else {
+        /* nothing found and out of options */
+        rc = RC(rcAlign, rcFile, rcConstructing, rcId, rcNotFound);
+    }
+    return rc;
+}
+
+static void setSeqLenBit(ReferenceMgr *const self, unsigned const N, struct Candidate *const C, unsigned const seq_len)
+{
+    unsigned i;
+    for (i = 0; i < N; ++i) {
+        unsigned const index = C[i].index;
+        ReferenceSeq const *const rs = &self->refSeq[index];
+
+        if (seq_len == rs->seq_len)
+            C[i].weight |= seq_len_match;
+    }
+}
+
+static void setMD5Bit(ReferenceMgr *const self, unsigned const N, struct Candidate *const C, uint8_t const md5[])
+{
+    unsigned i;
+    for (i = 0; i < N; ++i) {
+        unsigned const index = C[i].index;
+        ReferenceSeq const *const rs = &self->refSeq[index];
+
+        if (memcmp(md5, rs->md5, 16) == 0)
+            C[i].weight |= md5_match;
+    }
+}
+
+static void setAttachedBit(ReferenceMgr *const self, unsigned const N, struct Candidate *const C)
+{
+    unsigned i;
+    for (i = 0; i < N; ++i) {
+        unsigned const index = C[i].index;
+        ReferenceSeq const *const rs = &self->refSeq[index];
+
+        if (rs->type != rst_unattached)
+            C[i].weight |= attached;
+    }
+}
+
+static ReferenceSeq *checkForMultiMapping(ReferenceMgr *const self, ReferenceSeq *const chosen, bool *const wasRenamed)
+{
+    unsigned const hv = hash0(chosen->seqId);
+    Bucket const bucket = self->ht[hv];
+    unsigned i;
+
+    for (i = 0; i < bucket.count; ++i) {
+        ReferenceSeq *qry = &self->refSeq[bucket.index[i]];
+        if (qry == chosen || qry->type == rst_dead || qry->type == rst_unattached || qry->type == rst_renamed || qry->seqId == NULL)
+            continue;
+        if (strcasecmp(chosen->seqId, qry->seqId) == 0) {
+            void *const oldId = chosen->id;
+
+            chosen->type = rst_renamed;
+            chosen->id = string_dup(qry->id, string_size(qry->id));
+            *wasRenamed = true;
+            free(oldId);
+            return qry;
+        }
+    }
+    return chosen;
+}
+
+static rc_t tryFasta(ReferenceMgr *const self,
+                     ReferenceSeq **const rslt,
+                     char const seqId[],
+                     unsigned const seq_len,
+                     uint8_t const md5[16])
+{
+    ReferenceSeq *const seq = *rslt;
+    unsigned const hv = hash0(seqId);
+    Bucket const bucket = self->ht[hv];
+    unsigned best = bucket.count;
+    unsigned best_score = 0;
+    unsigned i;
+
+    for (i = 0; i < bucket.count; ++i) {
+        unsigned score = 0;
+        ReferenceSeq *const qry = &self->refSeq[bucket.index[i]];
+
+        if (qry != seq && qry->fastaSeqId != NULL) {
+            char const *const substr = strcasestr(qry->fastaSeqId, seqId);
+            if (substr != NULL) {
+                unsigned const at = substr - qry->fastaSeqId;
+                unsigned const slen = (unsigned)string_size(seqId);
+                unsigned const qlen = (unsigned)string_size(qry->fastaSeqId);
+                if (at == 0 && slen == qlen)
+                    score |= exact_match;
+                else {
+                    bool const leftEdge = at == 0 || qry->fastaSeqId[at - 1] == '|';
+                    bool const rightEdge = (at + slen) == qlen || qry->fastaSeqId[at + slen] == '|';
+
+                    if (leftEdge && rightEdge)
+                        score |= substring_match;
+                }
+            }
+        }
+        if (score == 0)
+            continue;
+
+        if (seq_len != 0 && qry->seq_len == seq_len)
+            score |= seq_len_match;
+        if (md5 != NULL && memcmp(md5, qry->md5, 16) == 0)
+            score |= md5_match;
+        if (score > best_score) {
+            best = i;
+            best_score = score;
+        }
+    }
+    if (best != bucket.count) {
+        *rslt = &self->refSeq[bucket.index[best]];
+        return 0;
+    }
+    else {
+        return RC(rcAlign, rcFile, rcConstructing, rcId, rcNotFound);
+    }
+}
+
+static rc_t findSeq(ReferenceMgr *const self,
+                    ReferenceSeq **const rslt,
+                    char const id[],
+                    unsigned const seq_len,
+                    uint8_t const md5[16],
+                    bool const allowMultiMapping,
+                    bool wasRenamed[])
+{
+    unsigned const idLen = (unsigned)string_size(id);
+    unsigned num_possible = 0;
+    struct Candidate *possible = NULL;
+    ReferenceSeq *chosen = NULL;
+    rc_t rc = 0;
+
+    candidates(self, &num_possible, &possible, idLen, id, seq_len, md5);
+    if (num_possible == 0) {
+        /* nothing was found; try a fasta file */
+        bool tryAgain = false;
+        rc_t const rc = tryFastaOrRefSeq(self, rslt, idLen, id, &tryAgain);
+
+        if (rc != 0 || !tryAgain)
+            return rc;
+
+        return findSeq(self, rslt, id, seq_len, md5, allowMultiMapping, wasRenamed);
+    }
+    if (num_possible > 1) {
+        if (seq_len != 0)
+            setSeqLenBit(self, num_possible, possible, seq_len);
+        if (md5 != NULL)
+            setMD5Bit(self, num_possible, possible, md5);
+        sortCandidateList(num_possible, possible);
+        setAttachedBit(self, num_possible, possible);
+        sortCandidateList(num_possible - 1, possible);
+    }
+    /* if there is no second best OR the best is better than the second best
+     * then we have a clear choice
+     */
+    if (num_possible == 1 || (possible[num_possible - 1].weight & ~attached) > (possible[num_possible - 2].weight & ~attached)) {
+        unsigned const index = possible[num_possible - 1].index;
+        chosen = &self->refSeq[index];
+    }
+    free(possible);
+    if (chosen == NULL) {
+        /* there was no clear choice */
+        return RC(rcAlign, rcFile, rcConstructing, rcId, rcAmbiguous);
+    }
+    if (chosen->seqId != NULL && !allowMultiMapping) {
+        chosen = checkForMultiMapping(self, chosen, wasRenamed);
+    }
+    if (chosen->type == rst_unattached) {
+        rc = ReferenceSeq_Attach(self, chosen);
+        if (rc == 0 && chosen->type == rst_unattached) {
+            /* still not attached; try seqId fasta */
+            char const *const seqId = chosen->seqId;
+
+            chosen->type = rst_dead;
+            if (seqId)
+                rc = tryFasta(self, &chosen, seqId, seq_len, md5);
+            else
+                rc = RC(rcAlign, rcFile, rcConstructing, rcId, rcNotFound);
+        }
+    }
+    if (rc == 0) {
+        if (chosen->id == NULL)
+            chosen->id = string_dup(id, idLen);
+        if (chosen->seqId == NULL && chosen->fastaSeqId != NULL)
+            chosen->seqId = string_dup(chosen->fastaSeqId, string_size(chosen->fastaSeqId));
+        *rslt = chosen;
+    }
+    if (rc)
+        chosen->type = rst_dead;
+    addToIndex(self, id, chosen);
+    return rc;
+#if 0
+    unsigned const n = (unsigned)self->refSeqs.elem_count;
+    unsigned i;
+    ReferenceSeq *seq = findHashTable(self, id);
+    rc_t rc = 0;
+    
+    if (seq == NULL) {
+        /* try to find by id; this should work most of the time */
+        for (i = 0; i != n; ++i) {
+            ReferenceSeq *const rs = &self->refSeq[i];
+
+            if (rs->type == rst_dead)
+                continue;
+            
+            if (rs->id && strcmp(rs->id, id) == 0) {
+                seq = rs;
+                break;
+            }
+        }
+    }
+    if (seq == NULL) {
+        /* try to find by seqId */
+        for (i = 0; i != n; ++i) {
+            ReferenceSeq *const rs = &self->refSeq[i];
+            
+            if (rs->type == rst_dead)
+                continue;
+            
+            if (rs->seqId && strcasecmp(rs->seqId, id) == 0) {
+                seq = rs;
+                break;
+            }
+        }
+    }
+    if (seq == NULL) {
+        /* try to find id within fasta seqIds */
+        int const best = ReferenceMgr_FindBestFasta(self, id, seq_len, md5, n);
+        if (best >= 0)
+            seq = &self->refSeq[best];
+    }
+    if (seq == NULL) {
+        /* try id.fasta or id.fa */
+        rc = ReferenceMgr_NewReferenceSeq(self, &seq);
+        if (rc) return rc;
+        rc = ReferenceMgr_TryFasta(self, seq, id, idLen);
+        if (GetRCState(rc) == rcNotFound && GetRCObject(rc) == (enum RCObject)rcPath) {
+            rc = 0;
+            seq->id = string_dup(id, idLen); /* needed for call to Attach */
+            if (seq->id == NULL)
+                return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
+        }
+        else if (rc)
+            return rc;
+    }
+    if (seq->type == rst_unattached) {
+        /* expect to get here most of the time
+         *
+         * ReferenceSeq_Attach tries to get reference:
+         *  from RefSeqMgr:
+         *   by seqId
+         *   by id
+         *  from self->dir (data directory)
+         *   id.fasta
+         *   id.fa
+         *   seqId.fasta
+         *   seqId.fa
+         */
+        
+        rc = ReferenceSeq_Attach(self, seq);
+        if (rc) return rc;
+        
+        if (seq->type == rst_unattached) {
+            /* try to find seqId within fasta seqIds */
+            int const best = ReferenceMgr_FindBestFasta(self, seq->seqId, seq_len, md5, n);
+            if (best >= 0) {
+                char *const tmp_id = seq->id;
+                char *const tmp_seqId = seq->seqId;
+                bool const tmp_circ = seq->circular;
+                
+                seq->type = rst_dead;
+                seq->id = NULL;         /* prevent possible double-free */
+                seq->seqId = NULL;      /* prevent possible double-free */
+                
+                *seq = self->refSeq[best];
+                seq->id = tmp_id;
+                seq->seqId = tmp_seqId;
+                seq->fastaSeqId = NULL;
+                seq->circular = tmp_circ;
+                
+                /* add another reference to the data buffer */
+                rc = KDataBufferSub(&self->refSeq[best].u.local.buf, &seq->u.local.buf, 0, 0);
+                if (rc) return rc;
+            }
+        }
+    }
+    assert(seq != NULL);
+    if (seq->type == rst_unattached) {
+        /* nothing has worked and nothing left to try */
+        seq->type = rst_dead;
+        rc = RC(rcAlign, rcFile, rcConstructing, rcId, rcNotFound);
+    }
+    else {
+        ReferenceSeq *alt = NULL;
+
+        if (!allowMultiMapping && seq->seqId != NULL) {
+            /* The old behavior was to allow multiple name to SEQID mappings
+             * but this causes some troubles with other tools.
+             * This loop is to re-use any open reference with the same
+             * SEQID.
+             */
+            for (i = 0; i != n; ++i) {
+                ReferenceSeq *const rs = &self->refSeq[i];
+                
+                if (   rs->type != rst_dead
+                    && rs->type != rst_unattached
+                    && rs != seq
+                    && rs->seqId != NULL
+                    && strcasecmp(seq->seqId, rs->seqId) == 0)
+                {
+                    *rslt = rs;
+                    wasRenamed[0] = true;
+                    return 0;
+                }
+            }
+        }
+        /* perform ambiguity check
+         *
+         * This search follows the same pattern as the main search but has
+         * more stringent conditions.  One hopes that it fails to find
+         * anything.
+         */
+        
+        /* This loop checks to see if there are any open references with
+         * the same ID and sequence length
+         */
+        for (i = 0; i != n; ++i) {
+            ReferenceSeq *const rs = &self->refSeq[i];
+            
+            if (   rs->type != rst_dead
+                && rs->type != rst_unattached
+                && rs != seq
+                && rs->id != NULL
+                && strcmp(id, rs->id) == 0
+                && (seq_len == 0 || seq_len == rs->seq_len))
+            {
+                alt = rs;
+                break;
+            }
+        }
+        if (alt == NULL) {
+            /* This loop checks to see if there are any open references with
+             * the same SEQID and sequence length
+             */
+            for (i = 0; i != n; ++i) {
+                ReferenceSeq *const rs = &self->refSeq[i];
+                
+                if (   rs->type != rst_dead
+                    && rs->type != rst_unattached
+                    && rs != seq
+                    && rs->seqId != NULL
+                    && strcasecmp(id, rs->seqId) == 0
+                    && (seq_len == 0 || seq_len == rs->seq_len))
+                {
+                    alt = rs;
+                    break;
+                }
+            }
+        }
+        if (alt == NULL) {
+            int const best = ReferenceMgr_FindBestFasta(self, id, seq_len, md5, (unsigned)(seq - self->refSeq));
+            if (best >= 0)
+                alt = &self->refSeq[best];
+        }
+        /* try to knock the alternative out of consideration
+         * if it survives length and md5 tests, it is *really* likely to be
+         * a duplicate.
+         */
+        if (alt != NULL && seq_len != 0 && seq_len != alt->seq_len)
+            alt = NULL;
+        if (alt != NULL && md5 != NULL && memcmp(md5, alt->md5, 16) != 0)
+            alt = NULL;
+        if (alt != NULL) {
+            seq->type = rst_dead;
+            rc = RC(rcAlign, rcFile, rcConstructing, rcId, rcAmbiguous);
+        }
+    }
+    if (seq->id == NULL)
+    {
+        seq->id = string_dup(id, string_size(id));
+        if (seq->id == NULL)
+            return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
+    }
+    /* finally, associate the id with the object and put it in the index */
+    {{
+        rc_t rc2 = ReferenceMgr_AddId(self, id, seq);
+        if (rc == 0)
+            rc = rc2;
+    }}
+    if (rc == 0)
+        *rslt = seq;
+    return rc;
+#endif
+}
+
 static
 rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
                           ReferenceSeq **const rslt,
@@ -1337,383 +1811,7 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
         *rslt = obj;
         return 0;
     }
-    else {
-        unsigned const idLen = (unsigned)string_size(id);
-        unsigned const hv = hash(idLen, id);
-        Bucket const bucket = self->ht[hv];
-        unsigned num_possible = 0;
-        struct Candidate *possible = malloc(sizeof(possible[0]) * bucket.count);
-        rc_t rc = 0;
-        unsigned i;
-
-        for (i = 0; i < bucket.count; ++i) {
-            unsigned const index = bucket.index[i];
-            ReferenceSeq *const rs = &self->refSeq[index];
-
-            if (rs->type != rst_dead) {
-                bool const sameId = rs->id != NULL && strcmp(rs->id, id) == 0;
-                bool const sameSeqId = rs->seqId != NULL && strcasecmp(rs->seqId, id) == 0;
-                int const sameFastaSeqId = rs->fastaSeqId != NULL ? str_weight(rs->fastaSeqId, id, idLen) : 0;
-                struct Candidate nv;
-
-                nv.weight = (sameId ? id_match : 0) | (sameSeqId ? seqId_match : 0) | sameFastaSeqId;
-                nv.index = index;
-
-                if (nv.weight > 0)
-                    possible[num_possible++] = nv;
-            }
-        }
-        if (num_possible == 0) {
-            /* nothing was found; try a fasta file */
-            KFile const *kf = NULL;
-
-            free(possible);
-            if (OpenFastaFile(&kf, self->dir, id, idLen) == 0) {
-                /* found a fasta file; load it and try again */
-                rc_t rc = ImportFastaFile(self, kf, NULL);
-                if (rc == 0)
-                    return ReferenceMgr_OpenSeq(self, rslt, id, seq_len, md5, allowMultiMapping, wasRenamed);
-                else
-                    return rc;
-            }
-            /* didn't find a fasta file; try RefSeq */
-            ALIGN_CF_DBGF(("trying to open refseq: %s\n", id));
-            if (RefSeqMgr_Exists(self->rmgr, id, idLen, NULL) == 0) {
-                ReferenceSeq *const seq = newReferenceSeq(self, NULL);
-
-                rc = RefSeqMgr_GetSeq(self->rmgr, &seq->u.refseq, id, idLen);
-                if (rc == 0) {
-                    seq->id = string_dup(id, idLen);
-                    seq->type = rst_refSeqById;
-
-                    addToHashBucket(&self->ht[hv], seq - self->refSeq);
-                    addToIndex(self, id, seq);
-
-                    ReferenceSeq_GetRefSeqInfo(seq);
-                    *rslt = seq;
-                }
-                return rc;
-            }
-            /* nothing found and out of options */
-            return RC(rcAlign, rcFile, rcConstructing, rcId, rcNotFound);
-        }
-        for (i = 0; i < num_possible; ++i) {
-            unsigned const index = possible[i].index;
-            ReferenceSeq *const rs = &self->refSeq[index];
-
-            if (seq_len != 0 && seq_len == rs->seq_len)
-                possible[i].weight |= seq_len_match;
-            if (md5 != NULL && memcmp(md5, rs->md5, 16) == 0)
-                possible[i].weight |= md5_match;
-        }
-        sortCandidateList(num_possible, possible);
-
-        for (i = 0; i < num_possible; ++i) {
-            unsigned const index = possible[i].index;
-            ReferenceSeq *const rs = &self->refSeq[index];
-
-            if (rs->type != rst_unattached)
-                possible[i].weight |= attached;
-        }
-        sortCandidateList(num_possible - 1, possible);
-
-        if (num_possible == 1 || (possible[num_possible - 1].weight & ~attached) > (possible[num_possible - 2].weight & ~attached)) {
-            unsigned const index = possible[num_possible - 1].index;
-            ReferenceSeq *seq = &self->refSeq[index];
-
-            addToIndex(self, id, seq);
-            if (seq->seqId != NULL && !allowMultiMapping) {
-                unsigned const hv = hash0(seq->seqId);
-                Bucket const bucket = self->ht[hv];
-
-                for (i = 0; i < bucket.count; ++i) {
-                    ReferenceSeq *qry = &self->refSeq[bucket.index[i]];
-                    if (qry == seq || qry->type == rst_dead || qry->type == rst_unattached || qry->type == rst_renamed || qry->seqId == NULL)
-                        continue;
-                    if (strcasecmp(seq->seqId, qry->seqId) == 0) {
-                        void *const oldId = seq->id;
-
-                        seq->type = rst_renamed;
-                        seq->id = string_dup(qry->id, string_size(qry->id));
-                        seq = qry;
-                        wasRenamed[0] = true;
-                        free(oldId);
-                        break;
-                    }
-                }
-            }
-            if (seq->type == rst_unattached) {
-                rc = ReferenceSeq_Attach(self, seq);
-                if (rc == 0 && seq->type == rst_unattached) {
-                    /* still not attached; try seqId fasta */
-                    char const *seqId = seq->seqId;
-                    if (seqId) {
-                        unsigned const hv = hash0(seqId);
-                        Bucket const bucket = self->ht[hv];
-                        unsigned best = bucket.count;
-                        unsigned best_score = 0;
-
-                        for (i = 0; i < bucket.count; ++i) {
-                            unsigned score = 0;
-                            char *substr;
-                            ReferenceSeq *const qry = &self->refSeq[bucket.index[i]];
-
-                            if (qry == seq || qry->fastaSeqId == NULL)
-                                continue;
-
-                            if (strcasecmp(seqId, qry->fastaSeqId) == 0)
-                                score |= exact_match;
-                            else if ((substr = strcasestr(qry->fastaSeqId, seqId)) != NULL) {
-                                if (substr == qry->fastaSeqId) {
-                                    unsigned const length = (unsigned)string_size(seqId);
-                                    if (qry->fastaSeqId[length] == '|')
-                                        score |= substring_match;
-                                }
-                                else if (substr[-1] == '|')
-                                    score |= substring_match;
-                            }
-                            if (score != 0) {
-                                if (seq_len != 0 && qry->seq_len == seq_len)
-                                    score |= seq_len_match;
-                                if (md5 != NULL && memcmp(md5, qry->md5, 16) == 0)
-                                    score |= md5_match;
-                            }
-                            if (score > best_score) {
-                                best = i;
-                                best_score = score;
-                            }
-                        }
-                        seq->type = rst_dead;
-                        if (best != bucket.count) {
-                            seq = &self->refSeq[bucket.index[best]];
-                        }
-                        else {
-                            rc = RC(rcAlign, rcFile, rcConstructing, rcId, rcNotFound);
-                        }
-                    }
-                    else {
-                        seq->type = rst_dead;
-                        rc = RC(rcAlign, rcFile, rcConstructing, rcId, rcNotFound);
-                    }
-                }
-            }
-            if (rc == 0) {
-                if (seq->id == NULL)
-                    seq->id = string_dup(id, idLen);
-                if (seq->seqId == NULL && seq->fastaSeqId != NULL)
-                    seq->seqId = string_dup(seq->fastaSeqId, string_size(seq->fastaSeqId));
-                *rslt = seq;
-            }
-        }
-        else {
-            /* unresolvable ambiguity */
-            rc = RC(rcAlign, rcFile, rcConstructing, rcId, rcAmbiguous);
-        }
-        free(possible);
-        return rc;
-#if 0
-        unsigned const n = (unsigned)self->refSeqs.elem_count;
-        unsigned i;
-        ReferenceSeq *seq = findHashTable(self, id);
-        rc_t rc = 0;
-        
-        if (seq == NULL) {
-            /* try to find by id; this should work most of the time */
-            for (i = 0; i != n; ++i) {
-                ReferenceSeq *const rs = &self->refSeq[i];
-
-                if (rs->type == rst_dead)
-                    continue;
-                
-                if (rs->id && strcmp(rs->id, id) == 0) {
-                    seq = rs;
-                    break;
-                }
-            }
-        }
-        if (seq == NULL) {
-            /* try to find by seqId */
-            for (i = 0; i != n; ++i) {
-                ReferenceSeq *const rs = &self->refSeq[i];
-                
-                if (rs->type == rst_dead)
-                    continue;
-                
-                if (rs->seqId && strcasecmp(rs->seqId, id) == 0) {
-                    seq = rs;
-                    break;
-                }
-            }
-        }
-        if (seq == NULL) {
-            /* try to find id within fasta seqIds */
-            int const best = ReferenceMgr_FindBestFasta(self, id, seq_len, md5, n);
-            if (best >= 0)
-                seq = &self->refSeq[best];
-        }
-        if (seq == NULL) {
-            /* try id.fasta or id.fa */
-            rc = ReferenceMgr_NewReferenceSeq(self, &seq);
-            if (rc) return rc;
-            rc = ReferenceMgr_TryFasta(self, seq, id, idLen);
-            if (GetRCState(rc) == rcNotFound && GetRCObject(rc) == (enum RCObject)rcPath) {
-                rc = 0;
-                seq->id = string_dup(id, idLen); /* needed for call to Attach */
-                if (seq->id == NULL)
-                    return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
-            }
-            else if (rc)
-                return rc;
-        }
-        if (seq->type == rst_unattached) {
-            /* expect to get here most of the time
-             *
-             * ReferenceSeq_Attach tries to get reference:
-             *  from RefSeqMgr:
-             *   by seqId
-             *   by id
-             *  from self->dir (data directory)
-             *   id.fasta
-             *   id.fa
-             *   seqId.fasta
-             *   seqId.fa
-             */
-            
-            rc = ReferenceSeq_Attach(self, seq);
-            if (rc) return rc;
-            
-            if (seq->type == rst_unattached) {
-                /* try to find seqId within fasta seqIds */
-                int const best = ReferenceMgr_FindBestFasta(self, seq->seqId, seq_len, md5, n);
-                if (best >= 0) {
-                    char *const tmp_id = seq->id;
-                    char *const tmp_seqId = seq->seqId;
-                    bool const tmp_circ = seq->circular;
-                    
-                    seq->type = rst_dead;
-                    seq->id = NULL;         /* prevent possible double-free */
-                    seq->seqId = NULL;      /* prevent possible double-free */
-                    
-                    *seq = self->refSeq[best];
-                    seq->id = tmp_id;
-                    seq->seqId = tmp_seqId;
-                    seq->fastaSeqId = NULL;
-                    seq->circular = tmp_circ;
-                    
-                    /* add another reference to the data buffer */
-                    rc = KDataBufferSub(&self->refSeq[best].u.local.buf, &seq->u.local.buf, 0, 0);
-                    if (rc) return rc;
-                }
-            }
-        }
-        assert(seq != NULL);
-        if (seq->type == rst_unattached) {
-            /* nothing has worked and nothing left to try */
-            seq->type = rst_dead;
-            rc = RC(rcAlign, rcFile, rcConstructing, rcId, rcNotFound);
-        }
-        else {
-            ReferenceSeq *alt = NULL;
-
-            if (!allowMultiMapping && seq->seqId != NULL) {
-                /* The old behavior was to allow multiple name to SEQID mappings
-                 * but this causes some troubles with other tools.
-                 * This loop is to re-use any open reference with the same
-                 * SEQID.
-                 */
-                for (i = 0; i != n; ++i) {
-                    ReferenceSeq *const rs = &self->refSeq[i];
-                    
-                    if (   rs->type != rst_dead
-                        && rs->type != rst_unattached
-                        && rs != seq
-                        && rs->seqId != NULL
-                        && strcasecmp(seq->seqId, rs->seqId) == 0)
-                    {
-                        *rslt = rs;
-                        wasRenamed[0] = true;
-                        return 0;
-                    }
-                }
-            }
-            /* perform ambiguity check
-             *
-             * This search follows the same pattern as the main search but has
-             * more stringent conditions.  One hopes that it fails to find
-             * anything.
-             */
-            
-            /* This loop checks to see if there are any open references with
-             * the same ID and sequence length
-             */
-            for (i = 0; i != n; ++i) {
-                ReferenceSeq *const rs = &self->refSeq[i];
-                
-                if (   rs->type != rst_dead
-                    && rs->type != rst_unattached
-                    && rs != seq
-                    && rs->id != NULL
-                    && strcmp(id, rs->id) == 0
-                    && (seq_len == 0 || seq_len == rs->seq_len))
-                {
-                    alt = rs;
-                    break;
-                }
-            }
-            if (alt == NULL) {
-                /* This loop checks to see if there are any open references with
-                 * the same SEQID and sequence length
-                 */
-                for (i = 0; i != n; ++i) {
-                    ReferenceSeq *const rs = &self->refSeq[i];
-                    
-                    if (   rs->type != rst_dead
-                        && rs->type != rst_unattached
-                        && rs != seq
-                        && rs->seqId != NULL
-                        && strcasecmp(id, rs->seqId) == 0
-                        && (seq_len == 0 || seq_len == rs->seq_len))
-                    {
-                        alt = rs;
-                        break;
-                    }
-                }
-            }
-            if (alt == NULL) {
-                int const best = ReferenceMgr_FindBestFasta(self, id, seq_len, md5, (unsigned)(seq - self->refSeq));
-                if (best >= 0)
-                    alt = &self->refSeq[best];
-            }
-            /* try to knock the alternative out of consideration
-             * if it survives length and md5 tests, it is *really* likely to be
-             * a duplicate.
-             */
-            if (alt != NULL && seq_len != 0 && seq_len != alt->seq_len)
-                alt = NULL;
-            if (alt != NULL && md5 != NULL && memcmp(md5, alt->md5, 16) != 0)
-                alt = NULL;
-            if (alt != NULL) {
-                seq->type = rst_dead;
-                rc = RC(rcAlign, rcFile, rcConstructing, rcId, rcAmbiguous);
-            }
-        }
-        if (seq->id == NULL)
-        {
-            seq->id = string_dup(id, string_size(id));
-            if (seq->id == NULL)
-                return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
-        }
-        /* finally, associate the id with the object and put it in the index */
-        {{
-            rc_t rc2 = ReferenceMgr_AddId(self, id, seq);
-            if (rc == 0)
-                rc = rc2;
-        }}
-        if (rc == 0)
-            *rslt = seq;
-        return rc;
-#endif
-    }
+    return findSeq(self, rslt, id, seq_len, md5, allowMultiMapping, wasRenamed);
 }
 
 LIB_EXPORT rc_t CC ReferenceMgr_SetCache(ReferenceMgr const *const self, size_t cache, uint32_t num_open)
