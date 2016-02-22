@@ -902,7 +902,7 @@ rc_t KClientHttpFindHeader ( const BSTree *hdrs, const char *_name, char *buffer
     node = ( KHttpHeader * ) BSTreeFind ( hdrs, &name, KHttpHeaderCmp );
     if ( node == NULL )
     {
-        rc = RC ( rcNS, rcTree, rcSearching, rcName, rcNotFound );
+        rc = SILENT_RC ( rcNS, rcTree, rcSearching, rcName, rcNotFound );
     }
     else
     {
