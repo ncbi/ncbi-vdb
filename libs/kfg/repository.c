@@ -1261,7 +1261,7 @@ LIB_EXPORT rc_t CC KRepositoryMgrCurrentProtectedRepository ( const KRepositoryM
             else if (rc ==
                 SILENT_RC(rcKFG, rcNode, rcOpening, rcPath, rcNotFound))
             {
-                return RC ( rcKFG, rcMgr, rcAccessing, rcNode, rcNotFound );
+                return SILENT_RC ( rcKFG, rcMgr, rcAccessing, rcNode, rcNotFound );
             }
 
             if ( rc == 0 && * protected == NULL )
