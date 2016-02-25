@@ -1242,6 +1242,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     if (rc == 0)
     {
         rc = run();
+        ArgsRelease (args);
     }
 
     if (rc == 0 && num_errors != 0)
