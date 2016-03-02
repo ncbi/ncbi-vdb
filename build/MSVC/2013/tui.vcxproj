@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <Import Project=".\lib-project.props" />
+  <ItemGroup>
+    <ClCompile Include="..\..\..\libs\tui\dir_dlg.c" />
+    <ClCompile Include="..\..\..\libs\tui\eventring.c" />
+    <ClCompile Include="..\..\..\libs\tui\file_dlg.c" />
+    <ClCompile Include="..\..\..\libs\tui\line_policy.c" />
+    <ClCompile Include="..\..\..\libs\tui\screen.c" />
+    <ClCompile Include="..\..\..\libs\tui\string_cache.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_dlg.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_menu.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_palette.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_std_dlg.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_button.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_checkbox.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_grid.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_inputline.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_label.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_progress.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_radiobox.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_spin_edit.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_string_list.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_dlg_helper.c" />
+    <ClCompile Include="..\..\..\libs\tui\win\systui.c" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{202B0FB3-688B-43FE-9660-8182F4B09C86}</ProjectGuid>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+</Project>
