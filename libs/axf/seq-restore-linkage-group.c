@@ -93,8 +93,8 @@ rc_t CC seqRestoreLinkageGroup(void *const Self,
     int64_t foreignKey = 0;
     unsigned i;
 
-    assert(argv[0].u.data.elem_bits = 8 * sizeof(LinkageGroup[0]));
-    assert(argv[1].u.data.elem_bits = 8 * sizeof(alignId[0]));
+    assert(argv[0].u.data.elem_bits == 8 * sizeof(linkageGroup[0]));
+    assert(argv[1].u.data.elem_bits == 8 * sizeof(alignId[0]));
 
     rslt->data->elem_bits = 8;
     for (i = 0; i < n && foreignKey == 0; ++i) {
@@ -117,7 +117,7 @@ rc_t CC seqRestoreLinkageGroup(void *const Self,
         if (rc == 0) {
             rc_t const rc = KDataBufferResize(rslt->data, linkageGroupLen);
             assert(elem_size == rslt->data->elem_bits);
-            assert(offset = 0);
+            assert(offset == 0);
             rslt->elem_count = linkageGroupLen;
             if (rc == 0)
                 memcpy(rslt->data->base, linkageGroup, linkageGroupLen);
@@ -157,11 +157,15 @@ VTRANSFACT_IMPL ( ALIGN_seq_restore_linkage_group, 1, 0, 0 ) ( const void *Self,
             rc = VTableCreateCachedCursorRead(tbl, &myCurs, 32UL * 1024UL * 1024UL);
             VTableRelease(tbl);
         }
+        if (rc == 0)
+            rc = VCursorLinkedCursorSet(nativeCurs, "PRIMARY_ALIGNMENT", myCurs);
     }
     if (rc == 0) {
         rc = VCursorAddColumn(myCurs, &colId, "LINKAGE_GROUP");
         if (GetRCState(rc) == rcExists)
             rc = 0;
+        if (rc == 0)
+            rc = VCursorOpen(myCurs);
     }
     if (rc == 0)
     {
