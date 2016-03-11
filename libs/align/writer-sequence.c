@@ -69,6 +69,7 @@ static const TableWriterColumn TableWriterSeq_cols[ewseq_cn_Last + 1] =
     {0, "READ_FILTER", sizeof(uint8_t) * 8, ewcol_IsArray},
     {0, "TI", sizeof(uint64_t) * 8, ewcol_IsArray | ewcol_Ignore},
     {0, "NAME", sizeof(char) * 8, ewcol_IsArray | ewcol_Ignore},
+    {0, "CMP_LINKAGE_GROUP", sizeof(char) * 8, ewcol_IsArray},
 };
 
 static const TableReaderColumn TableSeqReadTmpKey_cols[] = {
@@ -474,19 +475,18 @@ LIB_EXPORT rc_t CC TableWriterSeq_Whack(const TableWriterSeq* cself, bool commit
 }
 
 static
-rc_t TableWriteSeq_WriteDefaults(const TableWriterSeq* cself)
+rc_t TableWriteSeq_WriteDefaults(TableWriterSeq *const self)
 {
+    static TableWriterData const d = { "", 0 };
     rc_t rc = 0;
-    if( cself != NULL ) {
-        TableWriterSeq* self = (TableWriterSeq*)cself;
-        self->init = 1;
-        rc = TableWriter_AddCursor(self->base, self->cols, sizeof(self->cols)/sizeof(self->cols[0]), &self->cursor_id);
-        if( (self->options & ewseq_co_AlignData) ) {
-            static TableWriterData const d = { "", 0 };
-            TW_COL_WRITE_DEF(self->base, cself->cursor_id, self->cols[ewseq_cn_PRIMARY_ALIGNMENT_ID], d);
-            TW_COL_WRITE_DEF(self->base, cself->cursor_id, self->cols[ewseq_cn_ALIGNMENT_COUNT], d);
-        }
+
+    self->init = 1;
+    rc = TableWriter_AddCursor(self->base, self->cols, sizeof(self->cols)/sizeof(self->cols[0]), &self->cursor_id);
+    if( (self->options & ewseq_co_AlignData) ) {
+        TW_COL_WRITE_DEF(self->base, self->cursor_id, self->cols[ewseq_cn_PRIMARY_ALIGNMENT_ID], d);
+        TW_COL_WRITE_DEF(self->base, self->cursor_id, self->cols[ewseq_cn_ALIGNMENT_COUNT], d);
     }
+    TW_COL_WRITE_DEF(self->base, self->cursor_id, self->cols[ewseq_cn_LINKAGE_GROUP], d);
     return rc;
 }
 
@@ -495,7 +495,7 @@ LIB_EXPORT rc_t CC TableWriteSeq_WriteDefault(const TableWriterSeq* cself,
 {
     rc_t rc = 0;
     if( !cself->init ) {
-        rc = TableWriteSeq_WriteDefaults(cself);
+        rc = TableWriteSeq_WriteDefaults((TableWriterSeq *)cself);
     }
     if( rc == 0 ) {
         rc = TableWriter_ColumnDefault(cself->base, cself->cursor_id, &cself->cols[col], data);
@@ -546,7 +546,7 @@ LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const Table
         ALIGN_DBGERR(rc);
         return rc;
     }
-    if( !cself->init && (rc = TableWriteSeq_WriteDefaults(cself)) != 0 ) {
+    if( !cself->init && (rc = TableWriteSeq_WriteDefaults((TableWriterSeq *)cself)) != 0 ) {
         ALIGN_DBGERR(rc);
     }
     else if( data->quality.buffer == NULL || data->sequence.elements != data->quality.elements ) {
@@ -672,6 +672,8 @@ LIB_EXPORT rc_t CC TableWriterSeq_Write(const TableWriterSeq* cself, const Table
         TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_PLATFORM], data->platform);
         TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_TI], data->ti);
         TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_NAME], data->spot_name);
+        if (data->linkageGroup.elements > 0)
+            TW_COL_WRITE(cself->base, cself->cols[ewseq_cn_LINKAGE_GROUP], data->linkageGroup);
         if( rc == 0 ) {
             rc = TableWriter_CloseRow(cself->base);
         }
