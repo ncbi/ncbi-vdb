@@ -223,6 +223,19 @@ INSDC:4na:bin NCBI:align:seq_restore_read #1 ( INSDC:4na:bin cmp_rd, I64 align_i
     = ALIGN:seq_restore_read;
 
 
+/* seq_restore_linkage_group
+ *  projects LINKAGE_GROUP from PRIMARY_ALIGNMENT table to SEQUENCE
+ *
+ *  "cmp_linkage_group" [ DATA ]
+ *
+ *  "align_id" [ DATA ]
+ */
+extern function
+ascii NCBI:align:seq_restore_linkage_group #1 ( ascii cmp_linkage_group,
+                                                I64 align_id )
+    = ALIGN:seq_restore_linkage_group;
+
+
 /* generate_has_mismatch
  *  generates has mismatch by doing actual compare of reference and subject,
  *  *ref_offsets move comparisons reference-wise
@@ -578,6 +591,8 @@ table NCBI:align:tbl:align_cmn #2.1
     bool is_secondary = out_is_secondary;
 // temporary key
     extern column < U32 > izip_encoding TMP_KEY_ID;
+
+    extern column <ascii> zip_encoding LINKAGE_GROUP;
 
 
 /* Raw Sequence Block */
@@ -1120,7 +1135,7 @@ I64 NCBI:align:sorted:alignment_id_encoding #1.0
 }
 
 
-table NCBI:align:tbl:seq #1.0.0 =
+table NCBI:align:tbl:seq #1.1 =
     NCBI:tbl:base_space #2.0.3,
     NCBI:tbl:phred_quality #2.0.4,
     NCBI:align:tbl:cmp_base_space #1,
@@ -1151,6 +1166,11 @@ table NCBI:align:tbl:seq #1.0.0 =
         = NCBI:align:seq_restore_read (out_cmp_4na_bin, .PRIMARY_ALIGNMENT_ID, .READ_LEN, .READ_TYPE);
 
     extern column < U64 > izip_encoding TI;
+
+    extern column <ascii> zip_encoding CMP_LINKAGE_GROUP;
+
+    // restored LINKAGE_GROUP
+    readonly column ascii LINKAGE_GROUP = NCBI:align:seq_restore_linkage_group(.CMP_LINKAGE_GROUP, .PRIMARY_ALIGNMENT_ID);
 };
 
 
@@ -1536,7 +1556,7 @@ database NCBI:align:db:alignment_sorted #1.3
     table NCBI:align:tbl:reference #2 REFERENCE;
     table NCBI:align:tbl:align_sorted #1.2 PRIMARY_ALIGNMENT;
     table NCBI:align:tbl:align_mate_sorted #1.1 SECONDARY_ALIGNMENT;
-    table NCBI:align:tbl:seq #1.0 SEQUENCE;
+    table NCBI:align:tbl:seq #1.1 SEQUENCE;
     table NCBI:align:view:cs_seq #1.1 CS_SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };
@@ -1546,7 +1566,7 @@ database NCBI:align:db:alignment_unsorted #1.3
     table NCBI:align:tbl:reference #2 REFERENCE;
     table NCBI:align:tbl:align_unsorted #1.2 PRIMARY_ALIGNMENT;
     table NCBI:align:tbl:align_mate_unsorted #1.1 SECONDARY_ALIGNMENT;
-    table NCBI:align:tbl:seq #1.0 SEQUENCE;
+    table NCBI:align:tbl:seq #1.1 SEQUENCE;
     table NCBI:align:view:cs_seq #1.1 CS_SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };
@@ -1558,7 +1578,7 @@ database NCBI:align:db:alignment_evidence #1.3
     table NCBI:align:tbl:align_mate_unsorted #1.1 SECONDARY_ALIGNMENT;
     table NCBI:align:tbl:align_allele #1.2 EVIDENCE_INTERVAL;
     table NCBI:align:tbl:align_mate_unsorted #1.1 EVIDENCE_ALIGNMENT;
-    table NCBI:align:tbl:seq #1.0 SEQUENCE;
+    table NCBI:align:tbl:seq #1.1 SEQUENCE;
     table NCBI:align:view:cs_seq #1.1 CS_SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };
@@ -1570,14 +1590,14 @@ database NCBI:align:db:alignment_evidence_sorted #1.2
     table NCBI:align:tbl:align_mate_sorted #1.1 SECONDARY_ALIGNMENT;
     table NCBI:align:tbl:align_allele #1.2 EVIDENCE_INTERVAL;
     table NCBI:align:tbl:align_mate_unsorted #1.1 EVIDENCE_ALIGNMENT;
-    table NCBI:align:tbl:seq #1.0 SEQUENCE;
+    table NCBI:align:tbl:seq #1.1 SEQUENCE;
     table NCBI:align:view:cs_seq #1.1 CS_SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };
 
 database NCBI:align:db:unaligned #1
 {
-    table NCBI:align:tbl:seq #1.0 SEQUENCE;
+    table NCBI:align:tbl:seq #1.1 SEQUENCE;
     table NCBI:SRA:ABI:tbl:v2 #1.0.4 CS_SEQUENCE;
     table NCBI:align:tbl:qstat #1.0 QUAL_STAT;
 };
