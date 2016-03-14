@@ -45,6 +45,7 @@
 #include <vfs/manager.h>
 #include <vfs/path.h>
 
+#include <atomic.h>
 #include <sysalloc.h>
 
 #include <assert.h>
@@ -65,25 +66,46 @@
 
 static char kns_manager_user_agent [ 128 ] = "ncbi-vdb";
 
+#define USE_SINGLETON 1
+
+#if USE_SINGLETON
+static atomic_ptr_t kns_singleton;
+#endif
+
 static
 rc_t KNSManagerWhack ( KNSManager * self )
 {
     rc_t rc;
+
+#if USE_SINGLETON
+    KNSManager * our_mgr = atomic_test_and_set_ptr ( & kns_singleton, NULL, NULL );
+    if ( self == our_mgr )
+        return 0;
+#endif
+
     KConfigRelease ( self -> kfg );
+
     if ( self -> http_proxy != NULL )
         StringWhack ( self -> http_proxy );
+
     if ( self -> aws_access_key_id != NULL )
         StringWhack ( self -> aws_access_key_id );
+
     if ( self -> aws_secret_access_key != NULL )
         StringWhack ( self -> aws_secret_access_key );
+
     if ( self -> aws_region != NULL )
         StringWhack ( self -> aws_region );
+
     if ( self -> aws_output != NULL )
         StringWhack ( self -> aws_output );
     
     rc = HttpRetrySpecsDestroy ( & self -> retry_specs );
+
     free ( self );
+
     KNSManagerCleanup ();
+
     return rc;
 }
 
@@ -281,6 +303,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
                     rc = HttpRetrySpecsInit ( & mgr -> retry_specs, mgr -> kfg );
                     if ( rc == 0 )
                     {
+                        KNSManagerLoadAWS ( mgr );
                         KNSManagerHttpProxyInit ( mgr );
                         * mgrp = mgr;
                         return 0;
@@ -298,23 +321,64 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KNSManagerMake ( KNSManager **mgrp )
+LIB_EXPORT rc_t CC KNSManagerMake ( KNSManager ** mgrp )
 {
-    KConfig* kfg;
-    rc_t rc = KConfigMake(&kfg, NULL);
-    if ( rc == 0 )
-    {
-        rc_t rc2;
-        rc = KNSManagerMakeConfig ( mgrp, kfg );
-        if ( rc == 0 )
-            KNSManagerLoadAWS ( *mgrp );
+    rc_t rc;
 
-        rc2 = KConfigRelease ( kfg );
+    if ( mgrp == NULL )
+        rc = RC ( rcNS, rcMgr, rcAllocating, rcParam, rcNull );
+    else
+    {
+        KConfig * kfg;
+        KNSManager * our_mgr;
+
+        * mgrp = NULL;
+
+#if USE_SINGLETON
+        /* grab single-shot singleton */
+        our_mgr = atomic_test_and_set_ptr ( & kns_singleton, NULL, NULL );
+        if ( our_mgr != NULL )
+        {
+            /* add a new reference and return */
+            rc = KNSManagerAddRef ( our_mgr );
+            if ( rc == 0 )
+                * mgrp = our_mgr;
+            return rc;
+        }
+#endif
+
+        /* singleton was NULL. make from scratch. */
+        rc = KConfigMake ( & kfg, NULL );
         if ( rc == 0 )
-        {   
-            rc = rc2;
+        {
+            rc = KNSManagerMakeConfig ( & our_mgr, kfg );
+            KConfigRelease ( kfg );
+
+            if ( rc == 0 )
+            {
+#if USE_SINGLETON
+                /* try to set single-shot ( set once, never reset ) */
+                KNSManager * new_mgr = atomic_test_and_set_ptr ( & kns_singleton, our_mgr, NULL );
+                if ( new_mgr != NULL )
+                {
+                    /* somebody else got here first - drop our version */
+                    assert ( our_mgr != new_mgr );
+                    KNSManagerRelease ( our_mgr );
+
+                    /* use the new manager, just add a reference and return */
+                    rc = KNSManagerAddRef ( new_mgr );
+                    if ( rc == 0 )
+                        * mgrp = new_mgr;
+                    return rc;
+                }
+#endif
+
+                /* return parameter */
+                * mgrp = our_mgr;
+            }
         }
     }
+
     return rc;
 }
 
