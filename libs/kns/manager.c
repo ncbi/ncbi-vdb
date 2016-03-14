@@ -83,8 +83,6 @@ rc_t KNSManagerWhack ( KNSManager * self )
         return 0;
 #endif
 
-    KConfigRelease ( self -> kfg );
-
     if ( self -> http_proxy != NULL )
         StringWhack ( self -> http_proxy );
 
@@ -141,10 +139,10 @@ LIB_EXPORT rc_t CC KNSManagerRelease ( const KNSManager *self )
 }
 
 static
-void KNSManagerHttpProxyInit ( KNSManager * self )
+void KNSManagerHttpProxyInit ( KNSManager * self, KConfig * kfg )
 {
     const KConfigNode * proxy;
-    rc_t rc = KConfigOpenNodeRead ( self -> kfg, & proxy, "http/proxy" );
+    rc_t rc = KConfigOpenNodeRead ( kfg, & proxy, "http/proxy" );
     if ( rc == 0 )
     {
         const KConfigNode * proxy_path;
@@ -189,12 +187,11 @@ void KNSManagerHttpProxyInit ( KNSManager * self )
 
 
 static
-void KNSManagerLoadAWS ( struct KNSManager *self )
+void KNSManagerLoadAWS ( struct KNSManager *self, const KConfig * kfg )
 {
     rc_t rc;
 
     const KConfigNode *aws_node;
-    const KConfig *kfg = self -> kfg;
 
     if ( self == NULL )
         return;
@@ -296,19 +293,13 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
                     KNSManagerSetUserAgent ( mgr, PKGNAMESTR " ncbi-vdb.%V", version );
                 }
 
-                rc = KConfigAddRef ( kfg );
+                rc = HttpRetrySpecsInit ( & mgr -> retry_specs, kfg );
                 if ( rc == 0 )
                 {
-                    mgr -> kfg = kfg;
-                    rc = HttpRetrySpecsInit ( & mgr -> retry_specs, mgr -> kfg );
-                    if ( rc == 0 )
-                    {
-                        KNSManagerLoadAWS ( mgr );
-                        KNSManagerHttpProxyInit ( mgr );
-                        * mgrp = mgr;
-                        return 0;
-                    }
-                    KConfigRelease ( kfg );
+                    KNSManagerLoadAWS ( mgr, kfg );
+                    KNSManagerHttpProxyInit ( mgr, kfg );
+                    * mgrp = mgr;
+                    return 0;
                 }
             }
 
