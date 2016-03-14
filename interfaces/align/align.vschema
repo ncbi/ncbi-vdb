@@ -1175,7 +1175,7 @@ table NCBI:align:tbl:seq #1.1 =
 };
 
 
-table NCBI:align:tbl:cs_seq #1.1
+table NCBI:align:tbl:cs_seq #1.2
 {
     /* writable columns */
     extern column INSDC:color:text CMP_CSREAD
@@ -1278,9 +1278,15 @@ table NCBI:align:tbl:cs_seq #1.1
     trigger qual_stats
         = NCBI:SRA:phred_stats_trigger #1 ( in_qual_phred )
         ;
+
+    extern column <ascii> zip_encoding CMP_LINKAGE_GROUP;
+
+    // restored LINKAGE_GROUP
+    readonly column ascii LINKAGE_GROUP = NCBI:align:seq_restore_linkage_group(.CMP_LINKAGE_GROUP, .PRIMARY_ALIGNMENT_ID)
+                                        | .CMP_LINKAGE_GROUP;
 };
 
-table NCBI:align:view:cs_seq #1.1 = NCBI:align:tbl:cs_seq #1.1
+table NCBI:align:view:cs_seq #1.1 = NCBI:align:tbl:cs_seq #1.2
 {
     // various READ columns
     default readonly column INSDC:dna:text READ
