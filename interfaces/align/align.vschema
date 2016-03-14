@@ -1170,7 +1170,8 @@ table NCBI:align:tbl:seq #1.1 =
     extern column <ascii> zip_encoding CMP_LINKAGE_GROUP;
 
     // restored LINKAGE_GROUP
-    readonly column ascii LINKAGE_GROUP = NCBI:align:seq_restore_linkage_group(.CMP_LINKAGE_GROUP, .PRIMARY_ALIGNMENT_ID);
+    readonly column ascii LINKAGE_GROUP = NCBI:align:seq_restore_linkage_group(.CMP_LINKAGE_GROUP, .PRIMARY_ALIGNMENT_ID)
+                                        | .CMP_LINKAGE_GROUP;
 };
 
 
