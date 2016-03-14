@@ -51,7 +51,6 @@ struct KNSManager
 {
     KRefcount refcount;
     
-    struct KConfig * kfg;
     struct String const * http_proxy;
 
     struct String const *aws_access_key_id;
