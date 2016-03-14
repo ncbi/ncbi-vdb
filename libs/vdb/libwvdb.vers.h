@@ -24,4 +24,4 @@
 *
 */
 
-#define LIBWVDB_VERS 0x02070010
+#define LIBWVDB_VERS 0x02070011
