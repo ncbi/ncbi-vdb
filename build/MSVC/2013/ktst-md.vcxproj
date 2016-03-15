@@ -21,18 +21,6 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{87DB2B3E-916A-478C-AA47-A9907ABBBD54}</ProjectGuid>
   </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <PlatformToolset>v120</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <PlatformToolset>v120</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <PlatformToolset>v120</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <PlatformToolset>v120</PlatformToolset>
-  </PropertyGroup>
   <Import Project=".\lib-project.props" />
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>

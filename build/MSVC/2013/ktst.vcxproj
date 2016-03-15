@@ -21,18 +21,6 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{BA319C68-17BF-461E-B018-5736BCDBBE5C}</ProjectGuid>
   </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <PlatformToolset>v120</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <PlatformToolset>v120</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <PlatformToolset>v120</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <PlatformToolset>v120</PlatformToolset>
-  </PropertyGroup>
   <Import Project=".\lib-project.props" />
   <ItemGroup>
     <ClCompile Include="..\..\..\libs\ktst\testcase.cpp" />

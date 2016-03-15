@@ -36,18 +36,6 @@
     <ProjectGuid>{BBE4AF30-9D5E-41C7-8C25-344D0CA4ECA7}</ProjectGuid>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
   </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <PlatformToolset>v120</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <PlatformToolset>v120</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <PlatformToolset>v120</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <PlatformToolset>v120</PlatformToolset>
-  </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\libs\ext\bzip2\blocksort.c" />
     <ClCompile Include="..\..\..\libs\ext\bzip2\bzlib.c" />
