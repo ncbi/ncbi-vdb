@@ -56,5 +56,3 @@ TEST_LOADER_LIB = \
 $(TEST_BINDIR)/test-loader: $(TEST_LOADER_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LOADER_LIB)
 
-vg_loader: $(TEST_BINDIR)/test-loader
-	valgrind --ncbi $(TEST_BINDIR)/test-loader

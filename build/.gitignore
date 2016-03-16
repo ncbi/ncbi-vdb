@@ -2,4 +2,8 @@
 RHOST* ARCH* BUILD* COMP* OUTDIR*
 STATIC
 LNKG.*
+*.sdf
+*.suo
+*.user
+
 

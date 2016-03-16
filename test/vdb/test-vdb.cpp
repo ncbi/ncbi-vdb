@@ -345,7 +345,7 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_SRA, VdbFixture)
         //TODO: use row map to convert an offset into a rowId
         REQUIRE_NOT_NULL ( blob->pm ); 
         REQUIRE ( ! blob->pm->random_access );
-        REQUIRE_EQ ( PageMap::eBlobPageMapOptimizedNone, blob->pm->optimized );
+        REQUIRE_EQ ( (int)PageMap::eBlobPageMapOptimizedNone, (int)blob->pm->optimized );
         
         REQUIRE_EQ ( (pm_size_t)4, blob->pm->leng_recs ); // not expanded ?
         REQUIRE_NOT_NULL ( blob->pm->length );   // array of lengths, size blob->pm->leng_recs
@@ -415,7 +415,7 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_WGS, VdbFixture)
         //TODO: use row map to convert an offset into a rowId
         REQUIRE_NOT_NULL ( blob->pm ); 
         REQUIRE ( ! blob->pm->random_access );
-        REQUIRE_EQ ( PageMap::eBlobPageMapOptimizedNone, blob->pm->optimized );
+        REQUIRE_EQ ( (int)PageMap::eBlobPageMapOptimizedNone, (int)blob->pm->optimized );
         
         REQUIRE_EQ ( (pm_size_t)4, blob->pm->leng_recs ); // not expanded ?
         REQUIRE_NOT_NULL ( blob->pm->length );   // array of lengths, size blob->pm->leng_recs

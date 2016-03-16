@@ -7,7 +7,8 @@
     <property environment="env"/>
     <property name="Configuration"  value="Debug" />
     <property name="Platform"       value="x64" />
-    <property name="Output"         value="${basedir}\..\..\..\OUTDIR" />
+    <property name="Output"         value="${basedir}\..\..\..\OUTDIR\ncbi-vdb\" />
+    <property name="MSVS"           value="2013" />
 	
     <target name="help">
   		<echo message="">
@@ -31,12 +32,13 @@ Options:
     -DConfiguration=Debug or -DConfiguration=Release (default)  
     -DPlatform=Win32 or -DPlatform=x64 (default)  
     -DOutput=path   folder to create output in (default: ../../../OUTDIR)
+    -DMSVS=version  MSVS toolset, 2010 or 2013 (default: 2013)
   		</echo>
     </target>
 
     <target name="clean">
         <exec executable="msbuild.exe" failonerror="true">
-            <arg value="ncbi-vdb.sln"/>
+            <arg value="${MSVS}\ncbi-vdb.sln"/>
             <arg value="/t:clean"/>
             <arg value="/m"/>
             <arg value="/p:Platform=${Platform}"/>
@@ -47,7 +49,7 @@ Options:
 
     <target name="build">
         <exec executable="msbuild.exe" failonerror="true">
-            <arg value="ncbi-vdb.sln"/>
+            <arg value="${MSVS}\ncbi-vdb.sln"/>
             <arg value="/m"/>
             <arg value="/p:Platform=${Platform}"/>
             <arg value="/p:Configuration=${Configuration}"/>
@@ -58,7 +60,7 @@ Options:
     <target name="runtests" depends="build">
         <sequential>
             <exec executable="msbuild.exe" failonerror="true">
-                <arg value="test-ncbi-vdb.sln"/>
+                <arg value="${MSVS}\test-ncbi-vdb.sln"/>
                 <arg value="/p:Platform=${Platform}"/>
                 <arg value="/p:Configuration=${Configuration}"/>
                 <arg value="/p:NGS_OUTDIR=${Output}"/>

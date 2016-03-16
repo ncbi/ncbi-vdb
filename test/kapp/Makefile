@@ -30,7 +30,8 @@ TOP ?= $(abspath ../..)
 MODULE = test/kapp
 
 TEST_TOOLS = \
-    kapp-test
+    test-qfile \
+    test-kapp
 
 ALL_TOOLS = \
 	env-test-tool \
@@ -65,11 +66,11 @@ ARGS_TEST_LIB = \
     -sload \
     -sncbi-wvdb \
 
-$(TEST_BINDIR)/kapp-test: $(ARGS_TEST_OBJ)
+$(TEST_BINDIR)/test-kapp: $(ARGS_TEST_OBJ)
 	$(LP) --exe -o $@ $^ $(ARGS_TEST_LIB)
 
 #-------------------------------------------------------------------------------
-# qfiletest
+# test-qfile
 #
 QFILETEST_SRC = \
 	qfiletest
@@ -83,7 +84,7 @@ QFILETEST_LIB = \
     -sncbi-wvdb \
 
 
-$(TEST_BINDIR)/qfiletest: $(QFILETEST_OBJ)
+$(TEST_BINDIR)/test-qfile: $(QFILETEST_OBJ)
 	$(LD) --exe $(SRCDIR) -o $@ $^ $(QFILETEST_LIB)
 
 #-------------------------------------------------------------------------------

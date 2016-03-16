@@ -60,8 +60,3 @@ TEST_LIBS = \
 $(TEST_BINDIR)/wb-test-vxf: $(TEST_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIBS)
 
-#-------------------------------------------------------------------------------
-# valgrind
-valgrind: wb-test-vxf
-	valgrind --ncbi $(TEST_BINDIR)/wb-test-vxf
-
