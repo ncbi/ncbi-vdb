@@ -129,6 +129,10 @@ void aws_parse_file ( const KFile *self, KConfigNode *aws_node,
         if ( StringLength ( & trim ) != 0 && trim . addr [ 0 ] == '#' )
             continue;
 
+        /* check for [default] line */
+        if ( StringLength ( & trim ) != 0 && trim . addr [ 0 ] == '[' )
+            continue;
+
         /* check for key/value pairs and skip if none found */
         rc = aws_extract_key_value_pair ( &trim, &key, &value );
         if ( rc != 0 )
