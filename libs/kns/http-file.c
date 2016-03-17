@@ -33,6 +33,7 @@ typedef struct KHttpFile KHttpFile;
 #include "mgr-priv.h"
 #include "stream-priv.h"
 
+#include <kproc/lock.h>
 #include <kns/adapt.h>
 #include <kns/endpoint.h>
 #include <kns/http.h>
@@ -95,6 +96,8 @@ struct KHttpFile
     uint64_t file_size;
 
     const KNSManager * kns;
+
+    KLock * lock;
     KClientHttp *http;
 
     KDataBuffer url_buffer;
@@ -105,6 +108,7 @@ struct KHttpFile
 static
 rc_t CC KHttpFileDestroy ( KHttpFile *self )
 {
+    KLockRelease ( self -> lock );
     KNSManagerRelease ( self -> kns );
     KClientHttpRelease ( self -> http );
     KDataBufferWhack ( & self -> url_buffer );
@@ -352,6 +356,20 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
 }
 
 static
+rc_t KHttpFileTimedReadLocked ( const KHttpFile *cself,
+    uint64_t aPos, void *aBuf, size_t aBsize,
+    size_t * num_read, struct timeout_t * tm, uint32_t * http_status )
+{
+    rc_t rc = KLockAcquire ( cself -> lock );
+    if ( rc == 0 )
+    {
+        rc = KHttpFileTimedReadInt ( cself, aPos, aBuf, aBsize, num_read, tm, http_status );
+        KLockUnlock ( cself -> lock );
+    }
+    return rc;
+}
+
+static
 rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
     uint64_t pos, void *buffer, size_t bsize,
     size_t *num_read, struct timeout_t *tm )
@@ -367,14 +385,14 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
         while ( rc == 0 ) 
         {
             uint32_t http_status;
-            rc = KHttpFileTimedReadInt ( self, pos, buffer, bsize, num_read, tm, & http_status );
+            rc = KHttpFileTimedReadLocked ( self, pos, buffer, bsize, num_read, tm, & http_status );
             if ( rc != 0 ) 
             {   
                 rc_t rc2=KClientHttpReopen ( self -> http );
-                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead: KHttpFileTimedReadInt failed, reopening\n" ) );
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead: KHttpFileTimedReadLocked failed, reopening\n" ) );
                 if ( rc2 == 0 )
                 {
-                    rc2 = KHttpFileTimedReadInt ( self, pos, buffer, bsize, num_read, tm, & http_status );
+                    rc2 = KHttpFileTimedReadLocked ( self, pos, buffer, bsize, num_read, tm, & http_status );
                     if ( rc2 == 0 ) 
                     {
                         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead: reopened successfully\n" ) );
@@ -482,100 +500,106 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                 rc = KFileInit ( &f -> dad, ( const KFile_vt * ) &vtKHttpFile, "KHttpFile", url, true, false );
                 if ( rc == 0 )
                 {
-                    KDataBuffer *buf = & f -> url_buffer;
-                    buf -> elem_bits = 8;
-                    rc = KDataBufferVPrintf ( buf, url, args );
+                    rc = KLockMake ( & f -> lock );
                     if ( rc == 0 )
                     {
-                        URLBlock block;
-                        rc = ParseUrl ( &block, buf -> base, buf -> elem_count - 1 );
-                        if ( rc == 0 ) 
+                        KDataBuffer *buf = & f -> url_buffer;
+                        buf -> elem_bits = 8;
+                        rc = KDataBufferVPrintf ( buf, url, args );
+                        if ( rc == 0 )
                         {
-                            KClientHttp *http;
-                          
-                            rc = KNSManagerMakeClientHttpInt ( self, & http, buf, conn, vers,
-                                self -> http_read_timeout, self -> http_write_timeout, &block . host, block . port, reliable );
-                            if ( rc == 0 )
+                            URLBlock block;
+                            rc = ParseUrl ( &block, buf -> base, buf -> elem_count - 1 );
+                            if ( rc == 0 ) 
                             {
-                                KClientHttpRequest *req;
-
-                                rc = KClientHttpMakeRequestInt ( http, &req, &block, buf );
+                                KClientHttp *http;
+                          
+                                rc = KNSManagerMakeClientHttpInt ( self, & http, buf, conn, vers,
+                                    self -> http_read_timeout, self -> http_write_timeout, &block . host, block . port, reliable );
                                 if ( rc == 0 )
                                 {
-                                    KClientHttpResult *rslt;
-                                    rc = KClientHttpRequestHEAD ( req, & rslt );
-                                    KClientHttpRequestRelease ( req );
+                                    KClientHttpRequest *req;
 
+                                    rc = KClientHttpMakeRequestInt ( http, &req, &block, buf );
                                     if ( rc == 0 )
                                     {
-                                        uint64_t size;
-                                        uint32_t status;
+                                        KClientHttpResult *rslt;
+                                        rc = KClientHttpRequestHEAD ( req, & rslt );
+                                        KClientHttpRequestRelease ( req );
 
-                                        size_t num_read;
-                                        char buffer [ 64 ];
-
-                                        /* get the file size from HEAD query */
-                                        bool have_size = KClientHttpResultSize ( rslt, & size );
-
-                                        /* see if the server accepts partial content range requests */
-                                        bool accept_ranges = false;
-                                        rc = KClientHttpResultGetHeader ( rslt, "Accept-Ranges", buffer, sizeof buffer, & num_read );
-                                        if ( rc == 0 && num_read == sizeof "bytes" - 1 &&
-                                             strcase_cmp ( buffer, num_read, "bytes", sizeof "bytes" - 1, -1 ) == 0 )
-                                        {
-                                            accept_ranges = true;
-                                        }
-
-                                        /* check the result status */
-                                        rc = KClientHttpResultStatus ( rslt, & status, NULL, 0, NULL );
-
-                                        /* done with result */
-                                        KClientHttpResultRelease ( rslt );
-
-                                        /* check for error status */
                                         if ( rc == 0 )
                                         {
-                                            switch ( status )
+                                            uint64_t size;
+                                            uint32_t status;
+
+                                            size_t num_read;
+                                            char buffer [ 64 ];
+
+                                            /* get the file size from HEAD query */
+                                            bool have_size = KClientHttpResultSize ( rslt, & size );
+
+                                            /* see if the server accepts partial content range requests */
+                                            bool accept_ranges = false;
+                                            rc = KClientHttpResultGetHeader ( rslt, "Accept-Ranges", buffer, sizeof buffer, & num_read );
+                                            if ( rc == 0 && num_read == sizeof "bytes" - 1 &&
+                                                 strcase_cmp ( buffer, num_read, "bytes", sizeof "bytes" - 1, -1 ) == 0 )
                                             {
-                                            case 200:
-                                                if ( ! have_size )
-                                                    rc = RC ( rcNS, rcFile, rcOpening, rcSize, rcUnknown );
-                                                else if ( ! accept_ranges )
-                                                    rc = RC ( rcNS, rcFile, rcOpening, rcFunction, rcUnsupported );
-                                                break;
-                                            case 403:
-                                                rc = RC ( rcNS, rcFile, rcOpening, rcFile, rcUnauthorized );
-                                                break;
-                                            case 404:
-                                                rc = RC ( rcNS, rcFile, rcOpening, rcFile, rcNotFound );
-                                                break;
-                                            default:
-                                                rc = RC ( rcNS, rcFile, rcValidating, rcNoObj, rcEmpty );
+                                                accept_ranges = true;
                                             }
 
+                                            /* check the result status */
+                                            rc = KClientHttpResultStatus ( rslt, & status, NULL, 0, NULL );
+
+                                            /* done with result */
+                                            KClientHttpResultRelease ( rslt );
+
+                                            /* check for error status */
                                             if ( rc == 0 )
                                             {
-                                                rc = KNSManagerAddRef ( self );
+                                                switch ( status )
+                                                {
+                                                case 200:
+                                                    if ( ! have_size )
+                                                        rc = RC ( rcNS, rcFile, rcOpening, rcSize, rcUnknown );
+                                                    else if ( ! accept_ranges )
+                                                        rc = RC ( rcNS, rcFile, rcOpening, rcFunction, rcUnsupported );
+                                                    break;
+                                                case 403:
+                                                    rc = RC ( rcNS, rcFile, rcOpening, rcFile, rcUnauthorized );
+                                                    break;
+                                                case 404:
+                                                    rc = RC ( rcNS, rcFile, rcOpening, rcFile, rcNotFound );
+                                                    break;
+                                                default:
+                                                    rc = RC ( rcNS, rcFile, rcValidating, rcNoObj, rcEmpty );
+                                                }
+
                                                 if ( rc == 0 )
                                                 {
-                                                    f -> kns = self;
-                                                    f -> file_size = size;
-                                                    f -> http = http;
-                                                    f -> no_cache = size >= NO_CACHE_LIMIT;
-                                                    
-                                                    * file = & f -> dad;
-                                                    return 0;
+                                                    rc = KNSManagerAddRef ( self );
+                                                    if ( rc == 0 )
+                                                    {
+                                                        f -> kns = self;
+                                                        f -> file_size = size;
+                                                        f -> http = http;
+                                                        f -> no_cache = size >= NO_CACHE_LIMIT;
+                                                        
+                                                        * file = & f -> dad;
+                                                        return 0;
+                                                    }
                                                 }
                                             }
                                         }
                                     }
-                                }
 
-                                KClientHttpRelease ( http );
+                                    KClientHttpRelease ( http );
+                                }
                             }
                         }
+
+                        KDataBufferWhack ( buf );
+                        KLockRelease ( f -> lock );
                     }
-                    KDataBufferWhack ( buf );
                 }
                 free ( f );
             }
