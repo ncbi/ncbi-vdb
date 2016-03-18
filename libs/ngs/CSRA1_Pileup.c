@@ -1536,6 +1536,22 @@ void CSRA1_PileupPopulateAlignCurs ( ctx_t ctx, const VCursor * curs, uint32_t *
     rc_t rc;
     size_t i;
 
+    for ( i = 0; i < sizeof cols / sizeof cols [ 0 ]; ++ i )
+    {
+        assert ( i == cols [ i ] . idx );
+
+        if ( ! cols [ i ] . opt )
+        {
+            rc = VCursorAddColumn ( curs, & col_idx [ i ], "%s", cols [ i ] . spec );
+            if ( rc != 0 )
+            {
+                INTERNAL_ERROR ( xcColumnNotFound, "VCursorAddColumn '%s' rc = %R", cols [ i ] . spec, rc );
+                return;
+            }
+            assert ( col_idx [ i ] != 0 );
+        }
+    }
+
     rc = VCursorPermitPostOpenAdd ( curs );
     if ( rc != 0 )
     {
@@ -1558,12 +1574,8 @@ void CSRA1_PileupPopulateAlignCurs ( ctx_t ctx, const VCursor * curs, uint32_t *
     {
         assert ( i == cols [ i ] . idx );
 
-        rc = VCursorAddColumn ( curs, & col_idx [ i ], "%s", cols [ i ] . spec );
-        if ( rc != 0 && ! cols [ i ] . opt )
-        {
-            INTERNAL_ERROR ( xcColumnNotFound, "VCursorAddColumn '%s' rc = %R", cols [ i ] . spec, rc );
-            return;
-        }
+        if ( cols [ i ] . opt && col_idx [ i ] == 0 )
+            VCursorAddColumn ( curs, & col_idx [ i ], "%s", cols [ i ] . spec );
     }
 }
 
