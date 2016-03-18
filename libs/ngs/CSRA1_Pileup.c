@@ -1574,7 +1574,7 @@ void CSRA1_PileupPopulateAlignCurs ( ctx_t ctx, const VCursor * curs, uint32_t *
     {
         assert ( i == cols [ i ] . idx );
 
-        if ( cols [ i ] . opt && col_idx [ i ] == 0 )
+        if ( cols [ i ] . opt )
             VCursorAddColumn ( curs, & col_idx [ i ], "%s", cols [ i ] . spec );
     }
 }
