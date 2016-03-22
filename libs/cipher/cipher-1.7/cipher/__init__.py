@@ -93,11 +93,9 @@ KFileSetSize.errcheck = errcheck
 
 _kkeyAES128 = 1
 
-
 class _KFile(object):
     def __init__(self):
         self._kfile = None
-        self.pos = 0
 
     def __dealloc__(self):
         if self._kfile:
@@ -109,7 +107,12 @@ class _KFile(object):
     def __exit__(self, t, value, traceback):
         self.close()
 
-    def write2(self, buf, offset):
+    def close(self):
+        if self._kfile:
+            KFileRelease(self._kfile)
+            self._kfile = None
+
+    def write_all(self, buf, offset):
         """
         Write `buf` bytes into file at given `offset`
         :param buf: Byte-string to write.
@@ -121,7 +124,7 @@ class _KFile(object):
         KFileWriteAll(self._kfile, offset, buf, len(buf), byref(written))
         return written.value
 
-    def read2(self, size, offset):
+    def read_all(self, size, offset):
         """
         Read `size` bytes from `offset`, might return less than `size` bytes if EOF is reached before.
 
@@ -137,6 +140,22 @@ class _KFile(object):
         # return buf.value[0:read.value]
         return buf[0:read.value]
 
+    @property
+    def size(self):
+        """ Size of the file in bytes
+        """
+        if not self._kfile:
+            raise ValueError("I/O operation on closed file")
+        sz = c_uint64()
+        KFileSize(self._kfile, byref(sz))
+        return sz.value
+
+
+class _KFileStream(_KFile):
+    def __init__(self):
+        super(_KFileStream, self).__init__()
+        self.pos = 0
+
     def write(self, buf):
         """ Write `buf` into current position of the file.
 
@@ -145,7 +164,7 @@ class _KFile(object):
         left = len(buf)
         total_written = 0
         while left:
-            written = self.write2(buf[total_written:], self.pos)
+            written = self.write_all(buf[total_written:], self.pos)
             self.pos += written
             total_written += written
             left -= written
@@ -164,31 +183,16 @@ class _KFile(object):
         if size == -1:
             strings = []
             while 1:
-                s = self.read2(16 * 1024, self.pos)
+                s = self.read_all(16 * 1024, self.pos)
                 self.pos += len(s)
                 if not s:
                     break
                 strings.append(s)
             return b''.join(strings)
         else:
-            res = self.read2(size, self.pos)
+            res = self.read_all(size, self.pos)
             self.pos += len(res)
             return res
-
-    def close(self):
-        if self._kfile:
-            KFileRelease(self._kfile)
-            self._kfile = None
-
-    @property
-    def size(self):
-        """ Size of the file in bytes
-        """
-        if not self._kfile:
-            raise ValueError("I/O operation on closed file")
-        sz = c_uint64()
-        KFileSize(self._kfile, byref(sz))
-        return sz.value
 
     def truncate(self, size=None):
         """
@@ -199,7 +203,7 @@ class _KFile(object):
         KFileSetSize(self._kfile, size)
 
 
-class Decryptor(_KFile):
+class Decryptor(_KFileStream):
     """
     Create a read-only file-like object that will decrypt `src_file` using `password`.
 
@@ -239,7 +243,7 @@ class Decryptor(_KFile):
             self.src_file = None
 
 
-class Encryptor(_KFile):
+class Encryptor(_KFileStream):
     """
     Create a file-like object that will encrypt input data and write it into `out_file` file descriptor.
 
@@ -287,7 +291,7 @@ class Encryptor(_KFile):
         pass
 
 
-class Reencryptor(_KFile):
+class Reencryptor(_KFileStream):
     """
     Create a read-only file-like object that will decrypt `src_file` using `dec_password` and then
     encrypt it with `enc_password`.  This objects acts like a decryptor attached to encryptor.
@@ -330,7 +334,7 @@ class Reencryptor(_KFile):
             self.src_file = None
 
 
-class FDFileReader(_KFile):
+class FDFileReader(_KFileStream):
     """
     Deprecated, do not use.  Will be removed in 1.6
     Create a read-only file-like object that will read `f` file-object
@@ -353,7 +357,7 @@ class FDFileReader(_KFile):
             self._f.close()
 
 
-class EncryptingReader(_KFile):
+class EncryptingReader(_KFileStream):
     """
     Create a read-only file-like object that will read and encrypt `src_file` using `password`
 
