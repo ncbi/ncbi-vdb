@@ -41,6 +41,15 @@ extern "C" {
 
 typedef uint32_t KStsLevel;
 
+enum
+{
+    STAT_USR = 1,       /* normal user verbosity  */
+    STAT_PWR,           /* power-user verbosity   */
+    STAT_QA,            /* qa-level description   */
+    STAT_PRG,           /* programmer description */
+    STAT_GEEK           /* absurdly verbose       */
+};
+
 KLIB_EXTERN KStsLevel CC KStsLevelGet( void );
 KLIB_EXTERN void CC KStsLevelSet( KStsLevel level );
 KLIB_EXTERN void CC KStsLevelAdjust( int32_t adjust );
@@ -118,11 +127,16 @@ KLIB_EXTERN rc_t CC KStsLibFmtHandlerSetDefault(void);
 
 #define STSMSG(lvl,msg) \
     (void)((((unsigned)lvl) <= KStsLevelGet()) ? KStsLibMsg msg : 0)
+#define STATUS( lvl, ... ) \
+    ( void ) ( ( ( lvl ) <= KStsLevelGet () ) ? KStsLibMsg ( __VA_ARGS__ ) : 0 )
 
 #else
 
 #define STSMSG(lvl,msg) \
     (void)((((unsigned)lvl) <= KStsLevelGet()) ? KStsMsg msg : 0)
+
+#define STATUS( lvl, ... ) \
+    ( void ) ( ( ( lvl ) <= KStsLevelGet () ) ? KStsMsg ( __VA_ARGS__ ) : 0 )
 
 #endif
 
