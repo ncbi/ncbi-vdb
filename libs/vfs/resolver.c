@@ -148,12 +148,6 @@ void VResolverAccTokenInitFromOID ( VResolverAccToken *t, const String *acc )
  *  represents a set of zero or more volumes
  *  each of which is addressed using a particular expansion algorithm
  */
-typedef enum
-{
-    cacheDisallow,
-    cacheAllow
-} VResolverCacheAllow;
-
 typedef struct VResolverAlg VResolverAlg;
 struct VResolverAlg
 {
@@ -2592,7 +2586,7 @@ rc_t VResolverCacheResolve ( const VResolver *self,
     /* going to walk the local volumes, and remember
        which one was best. actually, we have no algorithm
        for determining it, so it's just the comment for TBD */
-    const VResolverAlg *alg, *best = NULL;
+    const VResolverAlg *alg, *better = NULL, *best = NULL;
 
     /* search the volumes for a cache-enabled place */
     uint32_t i, count = VectorLength ( & self -> local );
@@ -2608,10 +2602,6 @@ rc_t VResolverCacheResolve ( const VResolver *self,
         for ( i = 0; i < count; ++ i )
         {
             alg = VectorGet ( & self -> local, i );
-#if 0
-            if /*( alg -> cache_capable && DO NOT CONSIDER cache_capable
-                                           WHEN cache_state == vrAlwaysEnable */
-#endif
             if ( alg -> cache_capable && alg -> protected == protected &&
                  ( alg -> app_id == app || alg -> app_id == appAny ) )
             {
@@ -2623,8 +2613,14 @@ rc_t VResolverCacheResolve ( const VResolver *self,
                     return 0;
 
                 /* just remember the first as best for now */
-                if ( best == NULL )
-                    best = alg;
+                if ( alg -> app_id == app ) {
+                    if ( best == NULL )
+                        best = alg;
+                } else {
+                    assert ( alg -> app_id == appAny );
+                    if ( better == NULL )
+                        better = alg;
+                }
             }
         }
     }
@@ -2653,10 +2649,13 @@ rc_t VResolverCacheResolve ( const VResolver *self,
     /* no existing cache file was found,
        so create a new one using the best
        TBD - this should remember a volume path */
-    if ( best == NULL )
+    if ( best == NULL && better == NULL )
         rc = RC ( rcVFS, rcResolver, rcResolving, rcPath, rcNotFound );
-    else
-        rc = VResolverAlgMakeCachePath ( best, & tok, cache, legacy_wgs_refseq );
+    else {
+        alg = best == NULL ? better : best;
+        assert ( alg );
+        rc = VResolverAlgMakeCachePath ( alg, & tok, cache, legacy_wgs_refseq );
+    }
 
     return rc;
 }
@@ -3428,7 +3427,7 @@ rc_t VResolverAlgLoadVolumes ( VResolverAlg *self, uint32_t *num_vols, const Str
  */
 static
 rc_t VResolverLoadAlgVolumes ( Vector *algs, const String *root, const String *ticket,
-    VResolverCacheAllow allow_cache, VResolverAppID app_id, VResolverAlgID alg_id,
+     bool cache_capable, VResolverAppID app_id, VResolverAlgID alg_id,
      uint32_t *num_vols, const String *vol_list, bool protected, bool disabled, bool caching )
 {
     VResolverAlg *alg;
@@ -3436,7 +3435,7 @@ rc_t VResolverLoadAlgVolumes ( Vector *algs, const String *root, const String *t
     if ( rc == 0 )
     {
         alg -> ticket = ticket;
-        alg -> cache_capable = allow_cache == cacheAllow;
+        alg -> cache_capable = cache_capable;
         alg -> cache_enabled = caching;
 
         if ( ticket != NULL )
@@ -3469,7 +3468,7 @@ rc_t VResolverLoadAlgVolumes ( Vector *algs, const String *root, const String *t
  */
 static
 rc_t VResolverLoadVolumes ( Vector *algs, const String *root, const String *ticket,
-    VResolverCacheAllow allow_cache, VResolverAppID app_id, uint32_t *num_vols,
+    bool cache_capable, VResolverAppID app_id, uint32_t *num_vols,
     const KConfigNode *vols, bool resolver_cgi, bool protected, bool disabled, bool caching )
 {
     KNamelist *algnames;
@@ -3559,8 +3558,10 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root, const String *tick
                         {
                             if ( StringLength ( vol_list ) != 0 )
                             {
-                                rc = VResolverLoadAlgVolumes ( algs, root, ticket, allow_cache,
-                                    app_id, alg_id, num_vols, vol_list, protected, disabled, caching );
+                                rc = VResolverLoadAlgVolumes ( algs,
+                                    root, ticket, cache_capable,
+                                    app_id, alg_id, num_vols, vol_list,
+                                    protected, disabled, caching );
                             }
                             StringWhack ( vol_list );
                         }
@@ -3592,7 +3593,7 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root, const String *tick
  */
 static
 rc_t VResolverLoadApp ( VResolver *self, Vector *algs, const String *root, const String *ticket,
-    VResolverCacheAllow allow_cache, VResolverAppID app_id, uint32_t *num_vols,
+    bool cache_capable, VResolverAppID app_id, uint32_t *num_vols,
     const KConfigNode *app, bool resolver_cgi, bool protected, bool disabled, bool caching )
 {
     const KConfigNode *node;
@@ -3610,7 +3611,7 @@ rc_t VResolverLoadApp ( VResolver *self, Vector *algs, const String *root, const
     }
 
     /* test again for cache enabled */
-    if ( allow_cache == cacheAllow )
+    if ( cache_capable )
     {
         rc = KConfigNodeOpenNodeRead ( app, & node, "cache-enabled" );
         if ( rc == 0 )
@@ -3630,7 +3631,7 @@ rc_t VResolverLoadApp ( VResolver *self, Vector *algs, const String *root, const
         rc = 0;
     else if ( rc == 0 )
     {
-        rc = VResolverLoadVolumes ( algs, root, ticket, allow_cache,
+        rc = VResolverLoadVolumes ( algs, root, ticket, cache_capable,
             app_id, num_vols, node, resolver_cgi, protected, disabled, caching );
         KConfigNodeRelease ( node );
     }
@@ -3648,7 +3649,7 @@ rc_t VResolverLoadApp ( VResolver *self, Vector *algs, const String *root, const
  */
 static
 rc_t VResolverLoadApps ( VResolver *self, Vector *algs, const String *root,
-    const String *ticket, VResolverCacheAllow allow_cache, const KConfigNode *apps,
+    const String *ticket, bool cache_capable, const KConfigNode *apps,
     bool resolver_cgi, bool protected, bool disabled, bool caching )
 {
     KNamelist *appnames;
@@ -3697,8 +3698,10 @@ rc_t VResolverLoadApps ( VResolver *self, Vector *algs, const String *root,
                     else if ( strcmp ( appname, "sraPileup" ) == 0 )
                         app_id = appSRAPileup;
 
-                    rc = VResolverLoadApp ( self, algs, root, ticket, allow_cache, app_id,
-                        & self -> num_app_vols [ app_id ], app, resolver_cgi, protected, disabled, caching );
+                    rc = VResolverLoadApp ( self, algs, root, ticket,
+                        cache_capable, app_id,
+                        & self -> num_app_vols [ app_id ], app, resolver_cgi,
+                        protected, disabled, caching );
 
                     KConfigNodeRelease ( app );
                 }
@@ -3735,7 +3738,7 @@ enum {
  */
 static
 rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
-    const String *ticket, VResolverCacheAllow allow_cache, bool protected,
+    const String *ticket, bool cache_capable, bool protected,
     EDisabled isDisabled )
 {
     rc_t rc = 0;
@@ -3766,8 +3769,8 @@ rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
         return 0;
 
     /* check for caching */
-    caching = allow_cache != cacheDisallow;
-    if ( allow_cache != cacheDisallow )
+    caching = cache_capable;
+    if ( cache_capable )
     {
         rc = KConfigNodeOpenNodeRead ( repo, & node, "cache-enabled" );
         if ( rc == 0 )
@@ -3781,9 +3784,9 @@ rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
 
     /* cache-capable repositories cannot be remote resolvers
        we do not check "caching" because it reflects external
-       configuration. "allow_cache" reflects internal logic. */
+       configuration. */
     resolver_cgi = false;
-    if ( allow_cache != cacheDisallow )
+    if ( cache_capable )
         rc = KConfigNodeOpenNodeRead ( repo, & node, "root" );
     else
     {
@@ -3829,7 +3832,8 @@ rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
                 if ( rc == 0 )
                 {
                     rc = VResolverLoadApps ( self, algs, root, ticket,
-                        allow_cache, node, resolver_cgi, protected, disabled, caching );
+                        cache_capable, node, resolver_cgi,
+                        protected, disabled, caching );
                     KConfigNodeRelease ( node );
                 }
                 else if ( GetRCState ( rc ) == rcNotFound )
@@ -3869,7 +3873,7 @@ rc_t VResolverLoadRepo ( VResolver *self, Vector *algs, const KConfigNode *repo,
 static
 rc_t VResolverLoadNamedRepo ( VResolver *self, Vector *algs,
     const KConfigNode *sub, const String *ticket, const char *name,
-    VResolverCacheAllow allow_cache, bool protected, EDisabled disabled )
+    bool cache_capable, bool protected, EDisabled disabled )
 {
     const KConfigNode *repo;
     rc_t rc = KConfigNodeOpenNodeRead ( sub, & repo, "%s", name );
@@ -3878,7 +3882,7 @@ rc_t VResolverLoadNamedRepo ( VResolver *self, Vector *algs,
     else if ( rc == 0 )
     {
         rc = VResolverLoadRepo ( self, algs, repo,
-            ticket, allow_cache, protected, disabled );
+            ticket, cache_capable, protected, disabled );
         KConfigNodeRelease ( repo );
     }
     return rc;
@@ -3898,7 +3902,7 @@ rc_t VResolverLoadNamedRepo ( VResolver *self, Vector *algs,
 static
 rc_t VResolverLoadSubCategory ( VResolver *self, Vector *algs,
     const KConfigNode *kfg, const String *ticket, const char *sub_path,
-    VResolverCacheAllow allow_cache, bool protected, EDisabled disabled )
+    bool cache_capable, bool protected, EDisabled disabled )
 {
     const KConfigNode *sub;
     rc_t rc = KConfigNodeOpenNodeRead ( kfg, & sub, "%s", sub_path );
@@ -3918,7 +3922,7 @@ rc_t VResolverLoadSubCategory ( VResolver *self, Vector *algs,
                 rc = KNamelistGet ( children, i, & name );
                 if ( rc == 0 )
                     rc = VResolverLoadNamedRepo ( self, algs, sub,
-                        ticket, name, allow_cache, protected, disabled );
+                        ticket, name, cache_capable, protected, disabled );
             }
 
             KNamelistRelease ( children );
@@ -3933,7 +3937,7 @@ rc_t VResolverLoadSubCategory ( VResolver *self, Vector *algs,
  */
 static
 rc_t VResolverLoadProtected ( VResolver *self, const KConfigNode *kfg,
-    const char *rep_name, VResolverCacheAllow allow_cache, EDisabled disabled )
+    const char *rep_name, bool cache_capable, EDisabled disabled )
 {
     const KConfigNode *repo;
     rc_t rc = KConfigNodeOpenNodeRead ( kfg, & repo, "user/protected/%s", rep_name );
@@ -3942,7 +3946,7 @@ rc_t VResolverLoadProtected ( VResolver *self, const KConfigNode *kfg,
     else if ( rc == 0 )
     {
         rc = VResolverLoadRepo ( self, & self -> local,
-            repo, NULL, allow_cache, true, disabled );
+            repo, NULL, cache_capable, true, disabled );
         KConfigNodeRelease ( repo );
     }
     return rc;
@@ -3962,7 +3966,8 @@ rc_t VResolverLoadProtected ( VResolver *self, const KConfigNode *kfg,
  *        ;
  */
 static
-rc_t VResolverLoadLegacyRefseq ( VResolver *self, const KConfig *cfg, VResolverCacheAllow allow_cache )
+rc_t VResolverLoadLegacyRefseq
+    ( VResolver *self, const KConfig *cfg, bool cache_capable )
 {
     const KConfigNode *vols;
     rc_t rc = KConfigOpenNodeRead ( cfg, & vols, "/refseq/paths" );
@@ -3977,7 +3982,8 @@ rc_t VResolverLoadLegacyRefseq ( VResolver *self, const KConfig *cfg, VResolverC
             const bool protected = false;
             const bool disabled = false;
             const bool caching = true;
-            rc = VResolverLoadAlgVolumes ( & self -> local, NULL, NULL, allow_cache,
+            rc = VResolverLoadAlgVolumes ( & self -> local, NULL, NULL,
+                cache_capable,
                 appREFSEQ, algREFSEQ,  & self -> num_app_vols [ appREFSEQ ],
                 vol_list, protected, disabled, caching );
             StringWhack ( vol_list );
@@ -4048,7 +4054,7 @@ rc_t VResolverForceRemoteRefseq ( VResolver *self )
             const bool disabled = false;
             const bool caching = false;
             StringInitCString ( & vol_list, "refseq" );
-            rc = VResolverLoadAlgVolumes ( & self -> remote, root, NULL, cacheDisallow,
+            rc = VResolverLoadAlgVolumes ( & self -> remote, root, NULL, false,
                 appREFSEQ, algREFSEQ, & self -> num_app_vols [ appREFSEQ ],
                 & vol_list, protected, disabled, caching );
         }
@@ -4301,29 +4307,10 @@ static EDisabled _KConfigNodeRepoDisabled(
     return isDisabled;
 }
 
-static
-VResolverCacheAllow KConfigNodeCacheEnabled ( const KConfigNode * self )
-{
-    const KConfigNode * node;
-    rc_t rc = KConfigNodeOpenNodeRead ( self, & node, "user/cache-disabled" );
-    if ( rc == 0 )
-    {
-        bool disabled;
-        rc = KConfigNodeReadBool ( node, & disabled );
-        KConfigNodeRelease ( node );
-
-        if ( rc == 0 && disabled )
-            return cacheDisallow;
-    }
-
-    return cacheAllow;
-}
-
 static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
     const KConfig *cfg, const KNSManager *kns)
 {
     bool have_remote_protected = false;
-    VResolverCacheAllow allow_cache = cacheAllow;
 
     const KConfigNode *kfg;
     rc_t rc = KConfigOpenNodeRead ( cfg, & kfg, "repository" );
@@ -4339,15 +4326,14 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         char buffer [ 256 ];
         self -> ticket = VResolverGetDownloadTicket ( self, protected, buffer, sizeof buffer );
 
-        allow_cache = KConfigNodeCacheEnabled ( kfg );
-
         /* allow user to specify leaf paths in current directory */
         rc = VResolverDetectSRALeafPath ( self );
 
         /* if the user is inside of a protected workspace, load it now */
         if ( rc == 0 && self -> ticket != NULL )
         {
-            rc = VResolverLoadProtected ( self, kfg, buffer, allow_cache, userDisabled );
+            rc = VResolverLoadProtected
+                ( self, kfg, buffer, true, userDisabled );
             if ( rc == 0 && self -> num_app_vols [ appFILE ] == 0 )
                 rc = VResolverForceUserFiles ( self );
         }
@@ -4355,18 +4341,18 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         /* now load user public repositories */
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> local, kfg,
-                NULL, "user/main", allow_cache, false, userDisabled );
+                NULL, "user/main", true, false, userDisabled );
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> local, kfg,
-                NULL, "user/aux", allow_cache, false, userDisabled );
+                NULL, "user/aux", true, false, userDisabled );
 
         /* load any site repositories */
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> local, kfg,
-                NULL, "site/main", cacheDisallow, false, siteDisabled );
+                NULL, "site/main", false, false, siteDisabled );
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> local, kfg,
-                NULL, "site/aux", cacheDisallow, false, siteDisabled );
+                NULL, "site/aux", false, false, siteDisabled );
 
         /* if within a protected workspace, load protected remote repositories */
         if ( rc == 0 && self -> ticket != NULL )
@@ -4384,7 +4370,7 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
             {
                 uint32_t entry_vols = VectorLength ( & self -> remote );
                 rc = VResolverLoadSubCategory ( self, & self -> remote, kfg,
-                    self -> ticket, "remote/protected", cacheDisallow, true,
+                    self -> ticket, "remote/protected", false, true,
                     remoteDisabled );
                 have_remote_protected = VectorLength ( & self -> remote ) > entry_vols;
             }
@@ -4393,10 +4379,10 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         /* load any remote repositories */
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> remote, kfg,
-                NULL, "remote/main", cacheDisallow, false, remoteDisabled );
+                NULL, "remote/main", false, false, remoteDisabled );
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> remote, kfg,
-                NULL, "remote/aux", cacheDisallow, false, remoteDisabled );
+                NULL, "remote/aux", false, false, remoteDisabled );
 
         KConfigNodeRelease ( kfg );
 
@@ -4428,7 +4414,7 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         if ( self -> num_app_vols [ appREFSEQ ] == 0 )
         {
             has_current_refseq = false;
-            rc = VResolverLoadLegacyRefseq ( self, cfg, allow_cache );
+            rc = VResolverLoadLegacyRefseq ( self, cfg, true );
         }
 
         /* now, one more special case - for external users
