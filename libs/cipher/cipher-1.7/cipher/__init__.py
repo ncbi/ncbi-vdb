@@ -11,7 +11,7 @@ def check_rc(rc):
     return 1
 
 
-_krypto = _kfs = cdll.LoadLibrary(os.path.join(os.path.dirname(__file__), 'vdb', 'libncbi-vdb.so'))
+_krypto = _kfs = cdll.LoadLibrary('libncbi-vdb.so')
 
 
 class _KKey(Structure):
