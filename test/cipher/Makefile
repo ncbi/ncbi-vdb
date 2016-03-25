@@ -22,49 +22,31 @@
 #
 # ===========================================================================
 
-by_default: runtests
+default: runtests
 
-TOP ?= $(abspath ..)
-MODULE = test
+TOP ?= $(abspath ../..)
 
-include $(TOP)/build/Makefile.shell
+MODULE = test/cipher
 
-include $(TOP)/build/Makefile.config
+ALL_TARGS = \
+
+include $(TOP)/build/Makefile.env
+
+
+# make sure runs are not cached in the user repository when running tests
+ifeq ($(wildcard ../../../asm-trace),)
+	ifeq (,$(VDB_CONFIG))
+		VDB_CONFIG = $(shell pwd)/../only-remote-repository.kfg
+	endif
+endif
+
 
 #-------------------------------------------------------------------------------
-# default
+# runtests
 #
-SUBDIRS =       \
-    ktst        \
-    cc          \
-    ext         \
-    judy_test   \
-    kfc         \
-    kfs         \
-    klib        \
-    kfg         \
-    kapp        \
-    kns         \
-    kdb         \
-    kproc       \
-    vdb         \
-    ngs         \
-    ngs-c++     \
-    ngs-java    \
-    ngs-python  \
-    search      \
-    vfs         \
-    sraxf       \
-    vxf         \
-    loader      \
-    krypto      \
-    cipher      \
+runtests: cipher
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+cipher:
+	./test.sh $(TOP)
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
-
-.PHONY: default $(SUBDIRS)
-
+.PHONY: cipher
