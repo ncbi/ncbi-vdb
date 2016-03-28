@@ -40,6 +40,7 @@ struct KCacheTeeFile;
 
 #include <kfs/cacheteefile.h>
 #include <kfs/defs.h>
+#include <kproc/queue.h>
 #include <atomic32.h>
 
 #include <sysalloc.h>
@@ -50,11 +51,11 @@ struct KCacheTeeFile;
 
 #include <stdio.h>
 
-#define NO_SCRATCH_BUFFER 0
-#define USE_BUFFER_POOL NO_SCRATCH_BUFFER && 0
+#define NO_SCRATCH_BUFFER 1
+#define USE_BUFFER_POOL NO_SCRATCH_BUFFER && 1
 
 /* byte-order is an issue for treating these as words */
-#define USE_32BIT_BITMAP_WORDS 0
+#define USE_32BIT_BITMAP_WORDS 1
 
 
 /*--------------------------------------------------------------------------
@@ -74,7 +75,6 @@ struct KCacheTeeFile;
  */
 
 #define CACHE_TEE_DEFAULT_BLOCKSIZE ( 32 * 1024 * 4 )
-#define CACHE_TEE_LOCKING 0
 
 #define CACHE_STAT 0
 
@@ -192,6 +192,9 @@ typedef struct KCacheTeeFile
 #endif
     uint64_t bitmap_bytes;                    /* how many bytes do we need to store the bitmap */
 
+#if USE_BUFFER_POOL
+    KQueue * buffer_pool;
+#endif
 #if ! NO_SCRATCH_BUFFER
     uint8_t * scratch_buffer;
     uint64_t first_block_in_scratch;        /* what is the block-id of the first block in the scratch-buffer */
@@ -212,49 +215,36 @@ typedef struct KCacheTeeFile
 
 #if USE_32BIT_BITMAP_WORDS
 
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define SWAP_FN(val) (val)
+#else
+#define SWAP_FN(val) \
+    (((val)>>24)&0xff) | /* move byte 3 to byte 0 */ \
+    (((val)<<8)&0xff0000) | /* move byte 1 to byte 2 */ \
+    (((val)>>8)&0xff00) | /* move byte 2 to byte 1 */ \
+    (((val)<<24)&0xff000000) /* byte 0 to byte 3 */
+#endif
+#define GEN_BIT_NR_MASK_ROW(i) SWAP_FN( 1 << ( (i) * 4 ) ), SWAP_FN( 1 << ( (i) * 4 + 1 ) ), SWAP_FN( 1 << ( (i) * 4 + 2 ) ), SWAP_FN( 1 << ( (i) * 4 + 3 ) )
+
 const uint32_t BitNr2Mask[ 32 ] =
 {
-    ( 1 <<  0 ),
-    ( 1 <<  1 ),
-    ( 1 <<  2 ),
-    ( 1 <<  3 ),
-    ( 1 <<  4 ),
-    ( 1 <<  5 ),
-    ( 1 <<  6 ),
-    ( 1 <<  7 ),
-    ( 1 <<  8 ),
-    ( 1 <<  9 ),
-    ( 1 << 10 ),
-    ( 1 << 11 ),
-    ( 1 << 12 ),
-    ( 1 << 13 ),
-    ( 1 << 14 ),
-    ( 1 << 15 ),
-    ( 1 << 16 ),
-    ( 1 << 17 ),
-    ( 1 << 18 ),
-    ( 1 << 19 ),
-    ( 1 << 20 ),
-    ( 1 << 21 ),
-    ( 1 << 22 ),
-    ( 1 << 23 ),
-    ( 1 << 24 ),
-    ( 1 << 25 ),
-    ( 1 << 26 ),
-    ( 1 << 27 ),
-    ( 1 << 28 ),
-    ( 1 << 29 ),
-    ( 1 << 30 ),
-    ( 1 << 31 )
+    GEN_BIT_NR_MASK_ROW(0),
+    GEN_BIT_NR_MASK_ROW(1),
+    GEN_BIT_NR_MASK_ROW(2),
+    GEN_BIT_NR_MASK_ROW(3),
+    GEN_BIT_NR_MASK_ROW(4),
+    GEN_BIT_NR_MASK_ROW(5),
+    GEN_BIT_NR_MASK_ROW(6),
+    GEN_BIT_NR_MASK_ROW(7)
 };
+#undef SWAP_FN
+#undef GEN_BIT_NR_MASK_ROW
 
 #define IS_CACHE_BIT( CacheFile, Block_Nr ) \
     ( ( atomic32_read ( & ( CacheFile )->bitmap[ (Block_Nr) >> 5 ] ) & BitNr2Mask[ (Block_Nr) & 31 ] ) > 0 )
 
 #define IS_BITMAP_BIT( BitMap, Block_Nr ) \
     ( ( atomic32_read ( & ( BitMap )[ (Block_Nr) >> 5 ] ) & BitNr2Mask[ (Block_Nr) & 31 ] ) > 0 )
-
-#define BITS_2_BYTES( BitCount ) ( ( ( ( BitCount ) + 31 ) >> 5 ) << 2 )
 
 #else
 
@@ -266,10 +256,11 @@ const uint8_t BitNr2Mask[ 8 ] =
 
 #define IS_CACHE_BIT( CacheFile, Block_Nr ) ( ( CacheFile->bitmap[ (Block_Nr) >> 3 ] & BitNr2Mask[ (Block_Nr) & 7 ] ) > 0 )
 #define IS_BITMAP_BIT( BitMap, Block_Nr ) ( ( BitMap[ (Block_Nr) >> 3 ] & BitNr2Mask[ (Block_Nr) & 7 ] ) > 0 )
-#define BITS_2_BYTES( BitCount ) ( ( ( BitCount ) + 7 ) >> 3 )
+
 
 #endif
 
+#define BITS_2_BYTES( BitCount ) ( ( ( BitCount ) + 7 ) >> 3 )
 #define SIZE_2_BLOCK_COUNT( Number_Of_Bytes, Block_Size ) ( ( ( Number_Of_Bytes ) + ( Block_Size ) - 1 ) / ( Block_Size ) )
 
 static rc_t calculate_local_size_from_remote_size( KCacheTeeFile *self )
@@ -334,10 +325,10 @@ static rc_t create_bitmap( KCacheTeeFile *self )
 static bool is_bitmap_full( const atomic32_t * bitmap, uint64_t bitmap_bytes, uint64_t block_count )
 {
     uint64_t bitmap_word;
-    const uint64_t bitmap_words_minus_one = ( ( bitmap_bytes + 3 ) >> 2 ) - 1;
+    const uint64_t bitmap_words_minus_one = ( ( bitmap_bytes + sizeof * bitmap - 1 ) >> 2 ) - 1;
     for( bitmap_word = 0; bitmap_word < bitmap_words_minus_one; ++ bitmap_word )
     {
-        if ( atomic32_read ( & bitmap [ bitmap_word ] ) + 1 != 0 )
+        if ( ~ atomic32_read ( & bitmap [ bitmap_word ] ) != 0 )
             return false;
     }
 
@@ -386,9 +377,6 @@ static rc_t init_new_local_file( KCacheTeeFile * cf )
         size_t written;
         uint64_t pos = cf -> remote_size;
 
-#if USE_32BIT_BITMAP_WORDS && __BYTE_ORDER != __LITTLE_ENDIAN
-#error "must convert bitmap to little-endian before writing to disk"
-#endif
         /* write the bitmap ( zero'd out ) into the local file */
         rc = KFileWriteAll ( cf -> local, pos, 
             ( const void * ) cf -> bitmap, cf -> bitmap_bytes, &written );
@@ -549,12 +537,6 @@ static rc_t read_bitmap( KCacheTeeFile * cf )
         PLOGERR( klogErr, ( klogErr, rc, "cannot read $(ls) bitmap-bytes from local file, read $(rs) instead", 
                        "ls=%lu,rs=%lu", cf -> bitmap_bytes, num_read ));
     }
-#if USE_32BIT_BITMAP_WORDS && __BYTE_ORDER != __LITTLE_ENDIAN
-    else
-    {
-#error "must convert bitmap to little-endian after reading from disk"
-    }
-#endif
     return rc;
 }
 
@@ -782,6 +764,10 @@ static rc_t promote_cache( KCacheTeeFile * self )
  */
 static rc_t CC KCacheTeeFileDestroy( KCacheTeeFile * self )
 {
+#if USE_BUFFER_POOL
+    rc_t rc;
+    void * pool_page;
+#endif
     bool already_promoted_by_other_instance = file_exist( self -> dir, self -> local_path );
     
 #if( CACHE_STAT > 0 )
@@ -803,6 +789,14 @@ static rc_t CC KCacheTeeFileDestroy( KCacheTeeFile * self )
 #if ! NO_SCRATCH_BUFFER
     if ( self->scratch_buffer != NULL )
         free( self->scratch_buffer );
+#endif
+
+#if USE_BUFFER_POOL
+    while ( (rc = KQueuePop( self -> buffer_pool, &pool_page, NULL )) == 0 )
+    {
+        free( pool_page );
+    }
+    KQueueRelease( self -> buffer_pool );
 #endif
 
     KFileRelease ( self -> remote );
@@ -847,32 +841,33 @@ static void set_bitmap( const KCacheTeeFile *cself, uint64_t start_block, uint64
 }
 
 
-static rc_t write_bitmap( const KCacheTeeFile *cself, uint64_t start_block, uint64_t block_count )
+static rc_t write_bitmap( const KCacheTeeFile *cself, uint64_t block )
 {
     rc_t rc;
     size_t written;
+    uint64_t pos;
+    size_t to_write;
 #if USE_32BIT_BITMAP_WORDS
-    uint32_t start_block_word = ( uint32_t ) ( start_block >> 5 );
-    uint32_t end_block_word = ( uint32_t ) ( ( start_block + block_count - 1 ) >> 5 );
-    uint64_t pos = cself->remote_size + ( start_block_word << 2 );
-    size_t to_write = ( ( end_block_word - start_block_word ) + 1 ) << 2;
+    uint32_t block_word = ( uint32_t ) ( block >> 5 );
+    uint64_t bitmap_pos = ( block_word << 2 );
+    pos = cself->remote_size + bitmap_pos;
+    to_write = 4;
 
-#if __BYTE_ORDER != __LITTLE_ENDIAN
-#error "must convert bitmap to little-endian before writing to disk"
-#endif
+    // last word may go outside bitmap ranges in the file, since bitmap has 1-byte alignment in the file, but 4-byte alignment in memory
+    if (bitmap_pos + to_write > cself->bitmap_bytes)
+        to_write = cself->bitmap_bytes - bitmap_pos;
 
-    rc = KFileWriteAll( cself->local, pos, ( const void * ) &cself->bitmap[ start_block_word ], to_write, &written );
+    rc = KFileWriteAll( cself->local, pos, ( const void * ) &cself->bitmap[ block_word ], to_write, &written );
 #else
-    uint32_t start_block_byte = ( uint32_t ) ( start_block >> 3 );
-    uint32_t end_block_byte = ( uint32_t ) ( ( start_block + block_count - 1 ) >> 3 );
-    uint64_t pos = cself->remote_size + start_block_byte;
-    size_t to_write = ( end_block_byte - start_block_byte ) + 1;
-    rc = KFileWriteAll( cself->local, pos, ( const void * ) &cself->bitmap[ start_block_byte ], to_write, &written );
+    uint32_t block_byte = ( uint32_t ) ( block >> 3 );
+    pos = cself->remote_size + block_byte;
+    to_write = 1;
+    rc = KFileWriteAll( cself->local, pos, ( const void * ) &cself->bitmap[ block_byte ], to_write, &written );
 #endif
     if ( rc != 0 )
     {
-        PLOGERR( klogErr, ( klogErr, rc, "cannot write local-file-bitmap block $(sb).$(cn)", 
-                           "sb=%lu,cn=%lu", start_block, block_count ) );
+        PLOGERR( klogErr, ( klogErr, rc, "cannot write local-file-bitmap block $(block) at $(pos) $(to_write) bytes",
+                           "block=%lu,pos=%lu,to_write=%zu", block, pos, to_write ) );
     }
     return rc;
 }
@@ -965,7 +960,13 @@ static rc_t KCacheTeeFileRead_simple2( const KCacheTeeFile *cself, uint64_t pos,
     rc_t rc = 0;
     uint64_t first_block_in_scratch = -1;
     uint64_t valid_scratch_bytes = 0;
-    uint8_t * scratch_buffer = malloc ( cself -> block_size );
+    uint8_t * scratch_buffer;
+#if USE_BUFFER_POOL
+    if ( KQueuePop( cself -> buffer_pool, (void **)&scratch_buffer, NULL ) != 0 )
+        scratch_buffer = malloc ( cself -> block_size );
+#else
+    scratch_buffer = malloc ( cself -> block_size );
+#endif
     if ( scratch_buffer == NULL )
         return RC ( rcFS, rcFile, rcReading, rcMemory, rcExhausted );
 #else
@@ -1058,7 +1059,7 @@ static rc_t KCacheTeeFileRead_simple2( const KCacheTeeFile *cself, uint64_t pos,
                 if ( !cself->local_read_only )
                 {
                     set_bitmap( cself, block, 1 );
-                    rc = write_bitmap( cself, block, 1 );
+                    rc = write_bitmap( cself, block );
                 }
             }
         }
@@ -1066,7 +1067,12 @@ static rc_t KCacheTeeFileRead_simple2( const KCacheTeeFile *cself, uint64_t pos,
     }
 
 #if NO_SCRATCH_BUFFER
+#if USE_BUFFER_POOL
+    if ( KQueuePush( cself -> buffer_pool, scratch_buffer, NULL ) != 0 )
+        free ( scratch_buffer );
+#else
     free ( scratch_buffer );
+#endif
 #else
     ( ( KCacheTeeFile * )cself ) -> first_block_in_scratch = first_block_in_scratch;
     ( ( KCacheTeeFile * )cself ) -> valid_scratch_bytes = valid_scratch_bytes;
@@ -1116,7 +1122,7 @@ static rc_t KCacheTeeFileRead_3( const KCacheTeeFile *cself, uint64_t pos,
                     /* we have to read from remote because this segment is zero!
                        this is a fix for broken cache-files */
                     cself->bitmap[ block >> 3 ] &= ~( BitNr2Mask[ block & 0x07 ] );
-                    rc = write_bitmap( cself, block, 1 );
+                    rc = write_bitmap( cself, block );
                     /* do not advance the buffer, because in the loop this will be read remotely now */
                 }
                 else
@@ -1159,7 +1165,7 @@ static rc_t KCacheTeeFileRead_3( const KCacheTeeFile *cself, uint64_t pos,
                             {
                                 /* write the bitmap */
                                 set_bitmap( cself, block, 1 );
-                                rc = write_bitmap( cself, block, 1 );
+                                rc = write_bitmap( cself, block );
                                 if ( rc == 0 )
                                 {
                                     i_buffer += bytes_read;
@@ -1205,7 +1211,7 @@ static rc_t KCacheTeeFileRead_3( const KCacheTeeFile *cself, uint64_t pos,
                                 {
                                     /* write the bitmap */
                                     set_bitmap( cself, block, 1 );
-                                    rc = write_bitmap( cself, block, 1 );
+                                    rc = write_bitmap( cself, block );
                                     if ( rc == 0 )
                                     {
                                         /* here comes the difference: copy the bytes from the offset */
@@ -1405,6 +1411,9 @@ static rc_t make_cache_tee( struct KDirectory *self, struct KFile const **tee,
                     rc = KFileAddRef( cf -> remote );
                     if ( rc == 0 )
                     {
+#if USE_BUFFER_POOL
+                        rc = KQueueMake( &cf -> buffer_pool, 32 );
+#endif
                         if ( rc == 0 )
                         {
                             rc = KFileInit( &cf -> dad, (const union KFile_vt *)&vtKCacheTeeFile, "KCacheTeeFile", path, true, false );
@@ -1417,6 +1426,10 @@ static rc_t make_cache_tee( struct KDirectory *self, struct KFile const **tee,
                             else
                             {
                                 LOGERR( klogErr, rc, "cannot initialize KFile-structure" );
+#if USE_BUFFER_POOL
+                                KQueueRelease( cf -> buffer_pool );
+#endif
+                                /* TODO: check if we actually need to release cf->local here, since we never attached to it */
                                 KFileRelease( cf -> local );
                                 KFileRelease( cf -> remote );
                                 KDirectoryRelease ( cf -> dir );

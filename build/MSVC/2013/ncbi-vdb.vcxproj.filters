@@ -696,6 +696,9 @@
     <ClCompile Include="..\..\..\libs\kproc\task.c">
       <Filter>kproc</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\kproc\queue.c">
+      <Filter>kproc</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\kproc\win\syscond.c">
       <Filter>kproc</Filter>
     </ClCompile>
