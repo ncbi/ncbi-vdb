@@ -51,7 +51,7 @@ using namespace std;
 #define CACHEFILE "cache.dat"
 #define CACHEFILE1 "cache.dat.cache"
 #define DATAFILESIZE ( ( 1024 * 1024 ) + 300 )
-#define BLOCKSIZE 8
+#define BLOCKSIZE 128
 
 TEST_SUITE( CacheTeeTests );
 
@@ -343,7 +343,7 @@ static rc_t cache_access( int tid, int num_threads, const KFile * origfile, cons
 {
     rc_t rc;
     int i;
-    const int num_chunks = 1024;
+    const int num_chunks = 256;
     int chunk_pos[num_chunks];
     int data_size = DATAFILESIZE / num_threads;
     int data_offset = data_size * (tid - 1);
