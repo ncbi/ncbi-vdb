@@ -1,6 +1,7 @@
 from ctypes import (c_int, c_char_p, cdll, Structure, c_uint32, ARRAY,
                     c_char, POINTER, c_size_t, c_void_p, c_uint64, byref,
                     create_string_buffer, c_uint)
+import platform
 
 import os
 
@@ -10,8 +11,16 @@ def check_rc(rc):
         raise RuntimeError("bad rc, %d", rc)
     return 1
 
+def get_lib_name():
+    if platform.system() == "Windows":
+        return "ncbi-vdb.dll"
+    elif platform.system() == "Darwin":
+        return "libncbi-vdb.dylib"
+    else:
+        return "libncbi-vdb.so"
 
-_krypto = _kfs = cdll.LoadLibrary('libncbi-vdb.so')
+
+_krypto = _kfs = cdll.LoadLibrary( get_lib_name() )
 
 
 class _KKey(Structure):
