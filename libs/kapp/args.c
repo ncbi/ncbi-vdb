@@ -135,8 +135,10 @@ rc_t CC ParamValueMake (ParamValueContainer * p_container, uint32_t arg_index, c
     
     assert (p_container);
     assert (value);
-    assert (value_size);
     
+    if (value_size == 0)
+        return RC ( rcExe, rcArgv, rcConstructing, rcParam, rcEmpty );
+
     p_container->param_index = arg_index;
     p_container->whack = ParamValueNotConvWhack;
     p_container->convert_fn = convert_fn;
@@ -316,7 +318,12 @@ rc_t CC OptionAddValue (Option * option, uint32_t arg_index, const char * value,
         ParamValueContainer * p_container;
 
         assert (value);     /* gotta have a value */
-        assert (size);      /* value can't be a NULL string */
+        /* value can't be a NULL string */
+        if (size == 0)
+        {
+            rc = RC (rcExe, rcArgv, rcConstructing, rcParam, rcEmpty );
+            return rc;
+        }
 
         p_container = (ParamValueContainer *)malloc( sizeof *p_container );
         if (p_container == NULL)
@@ -392,7 +399,15 @@ rc_t CC OptAliasMake (OptAlias ** pself, const char * name, size_t size,
 
     assert (pself);
     assert (name);
-    assert (size);
+    if (size == 0)
+    {
+        rc_t rc = RC (rcExe, rcArgv, rcConstructing, rcName, rcEmpty);
+        PLOGERR (klogErr,
+                 (klogErr, rc, "Alias name is empty for parameter '$(B)",
+                  "B=%s", option->name));
+        *pself = NULL;
+        return rc;
+    }
 
     self = malloc (sizeof (*self) + size);
     if (self == NULL)
@@ -664,7 +679,12 @@ rc_t CC ParamAddValue (Vector * param_values, uint32_t arg_index, const char * v
     }
 
     assert (value);     /* gotta have a value */
-    assert (size);      /* value can't be a NULL string */
+    /* value can't be a NULL string */
+    if (size == 0)
+    {
+        rc = RC (rcExe, rcArgv, rcConstructing, rcParam, rcEmpty);
+        return rc;
+    }
     
     rc = ParamValueMake (p_container, arg_index, value, size, convert_fn);
     if (rc == 0)
@@ -1153,7 +1173,8 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
             rc = VectorAppend ( &self->argv, NULL, p_container );
         if ( rc )
         {
-            p_container->whack(p_container->param_value);
+            if (p_container->whack != NULL)
+                p_container->whack(p_container->param_value);
             break;
         }
         else

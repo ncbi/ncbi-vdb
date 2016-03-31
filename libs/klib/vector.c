@@ -406,7 +406,7 @@ LIB_EXPORT rc_t CC VectorInsertUnique ( Vector *self, const void *item, uint32_t
                     -- self -> len;
                     if ( idx != NULL )
                         * idx = i + self -> start;
-                    return RC ( rcCont, rcVector, rcInserting, rcNode, rcExists );
+                    return SILENT_RC ( rcCont, rcVector, rcInserting, rcNode, rcExists );
                 }
                 if ( diff < 0 )
                     right = mid;

@@ -29,6 +29,7 @@ TOP ?= $(abspath ../..)
 MODULE = test/kns
 
 TEST_TOOLS = \
+	KNSManagerSingletonTest \
 	test-kns \
 	test-http \
 	test-http-dropconn \
@@ -65,6 +66,16 @@ KNSTEST_LIB = \
     -sktst \
 
 #----------------------------------------------------------------
+# KNSManagerSingletonTest
+#
+SINGLETON_SRC = \
+	KNSManagerSingletonTest
+SINGLETON_OBJ = \
+	$(addsuffix .$(OBJX),$(SINGLETON_SRC))
+$(TEST_BINDIR)/KNSManagerSingletonTest: $(SINGLETON_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+#----------------------------------------------------------------
 # test-kns
 #
 KNSTEST_SRC = \
@@ -79,9 +90,6 @@ $(TEST_BINDIR)/test-kns: $(KNSTEST_OBJ)
 kns: test-kns 
 	$(TEST_BINDIR)/test-kns  #-l=all
     
-vg_kns: test-kns
-	valgrind --ncbi --show-reachable=no --suppressions=$(SRCDIR)/valgrind_suppressions.txt $(TEST_BINDIR)/test-kns
-
 #----------------------------------------------------------------
 # test-http
 #
@@ -97,9 +105,6 @@ $(TEST_BINDIR)/test-http: $(HTTPTEST_OBJ)
 http: test-http  
 	$(TEST_BINDIR)/test-http  # -l=all
     
-vg_http: test-http 
-	valgrind --ncbi --show-reachable=no --suppressions=$(SRCDIR)/valgrind_suppressions.txt $(TEST_BINDIR)/test-http
-    
 #----------------------------------------------------------------
 # test-http-dropconn
 #
@@ -114,7 +119,4 @@ $(TEST_BINDIR)/test-http-dropconn: $(HTTP_DROPCONN_TEST_OBJ)
 
 dropconn: test-http-dropconn  
 	$(TEST_BINDIR)/test-http-dropconn  # -l=all
-    
-vg_dropconn: test-http-dropconn
-	valgrind --ncbi --show-reachable=no --suppressions=$(SRCDIR)/valgrind_suppressions.txt $(TEST_BINDIR)/test-http-dropconn
     

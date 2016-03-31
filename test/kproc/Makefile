@@ -53,8 +53,3 @@ TEST_KPROC_LIB = \
 
 $(TEST_BINDIR)/test-kproc: $(TEST_KPROC_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KPROC_LIB)
-
-#-------------------------------------------------------------------------------
-# valgrind
-valgrind: test-kproc
-	valgrind --ncbi $(TEST_BINDIR)/test-kproc

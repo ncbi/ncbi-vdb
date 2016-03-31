@@ -201,7 +201,7 @@ NGS_ReferenceSequence * NGS_ReferenceSequenceMakeSRA ( ctx_t ctx, const char * s
                 {
                     const char REF_PREFIX[] = "NCBI:refseq:";
                     size_t pref_size = sizeof ( REF_PREFIX ) - 1;
-                    if ( string_match ( REF_PREFIX, pref_size, ts_buff, string_size ( ts_buff ), pref_size, NULL ) != pref_size )
+                    if ( string_match ( REF_PREFIX, pref_size, ts_buff, string_size ( ts_buff ), (uint32_t)pref_size, NULL ) != pref_size )
                     {
                         INTERNAL_ERROR ( xcUnimplemented, "Cannot open accession '%s' as a reference table.", spec );
                     }
@@ -263,7 +263,7 @@ bool SRA_ReferenceSequenceGetIsCircular ( const SRA_ReferenceSequence * self, ct
         USER_ERROR ( xcCursorExhausted, "No more rows available" );
         return false;
     }
-    
+
     /* if current row is valid, read data */
     if ( self -> first_row <= self -> last_row )
     {
@@ -333,10 +333,10 @@ struct NGS_String * SRA_ReferenceSequenceGetBases ( SRA_ReferenceSequence * self
                 while ( cur_offset < basesToReturn )
                 {
                     /* we will potentially ask for more than available in the current chunk; 
-                        SRA_ReferenceSequenceGetChunkSize will return only as much as is available in the chunk */
+                    SRA_ReferenceSequenceGetChunkSize will return only as much as is available in the chunk */
                     NGS_String* chunk = SRA_ReferenceSequenceGetChunk ( self, ctx, offset + cur_offset, basesToReturn - cur_offset );
                     cur_offset += string_copy(data + cur_offset, basesToReturn - cur_offset, 
-                                              NGS_StringData ( chunk, ctx ), NGS_StringSize ( chunk, ctx ) );
+                        NGS_StringData ( chunk, ctx ), NGS_StringSize ( chunk, ctx ) );
                     NGS_StringRelease ( chunk, ctx );
                 }
                 return NGS_StringMakeOwned ( ctx, data, basesToReturn );
@@ -355,7 +355,7 @@ struct NGS_String * SRA_ReferenceSequenceGetChunk ( SRA_ReferenceSequence * self
         USER_ERROR ( xcCursorExhausted, "No more rows available" );
         return NULL;
     }
-    
+
     if ( offset >= SRA_ReferenceSequenceGetLength ( self, ctx ) )
     {
         return NGS_StringMake ( ctx, "", 0 );

@@ -514,7 +514,7 @@ rc_t VResolverAlgLocalResolve ( const VResolverAlg *self,
         }
     }
     
-    return RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
+    return SILENT_RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
 }
 
 /* LocalFile
@@ -2125,7 +2125,7 @@ rc_t VResolverFuseMountedResolve ( const VResolver * self,
             }
         }
         else {
-            rc = RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
+            rc = SILENT_RC ( rcVFS, rcResolver, rcResolving, rcName, rcNotFound );
         }
 
         KDirectoryRelease ( NativeDir );

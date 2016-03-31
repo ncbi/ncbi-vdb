@@ -134,6 +134,55 @@ _AddKartItem (
     return RCt;
 }   /* _AddKartItem () */
 
+static
+rc_t CC
+_AddSignatureFile ( struct XFSKartNode * Node )
+{
+    rc_t RCt;
+    struct XFSDoc * Doc;
+    struct XFSNode * Sign;
+
+    RCt = 0;
+    Doc = NULL;
+    Sign = NULL;
+
+    XFS_CAN ( Node )
+
+    RCt = XFSTextDocMake ( & Doc );
+    if ( RCt == 0 ) {
+        RCt = XFSTextDocAppend ( Doc,
+                                "%d\n",
+                                Node -> project_id
+                                );
+        if ( RCt == 0 ) {
+            RCt = XFSDocNodeMakeWithFlavor (
+                                        & Sign,
+                                        Doc,
+                                        ".#dbgap-mount-tool#",
+                                        XFSPermRODefNodeChar (),
+                                        _sFlavorOfFoo
+                                        );
+            if ( RCt == 0 ) {
+                RCt = XFSContNodeAddChild (
+                                        & ( Node -> node . node ),
+                                        Sign
+                                        );
+            }
+        }
+
+        XFSDocRelease ( Doc );
+    }
+
+    if ( RCt != 0 ) {
+        if ( Sign != NULL ) { 
+            XFSNodeDispose ( Sign );
+            Sign = NULL;
+        }
+    }
+
+    return RCt;
+}   /* _AddSignatureFile () */
+
 static 
 rc_t CC
 _LoadKart ( struct XFSKartNode * Node )
@@ -152,32 +201,35 @@ _LoadKart ( struct XFSKartNode * Node )
 
     XFS_CAN ( Node )
 
-    RCt = XFSGapKartDepotGet (
+    RCt = _AddSignatureFile ( Node );
+    if ( RCt == 0 ) {
+        RCt = XFSGapKartDepotGet (
                             & Kart,
                             XFSNodeName ( & ( Node -> node . node ) )
                             );
-    if ( RCt == 0 ) {
-
-        RCt = XFSGapKartList ( Kart, & List, Node -> project_id );
         if ( RCt == 0 ) {
-            RCt = KNamelistCount ( List, & ListQ );
+
+            RCt = XFSGapKartList ( Kart, & List, Node -> project_id );
             if ( RCt == 0 ) {
-                for ( ListI = 0; ListI < ListQ; ListI ++ ) {
-                    RCt = KNamelistGet ( List, ListI, & ListN );
-                    if ( RCt != 0 ) {
-                        break;
-                    }
-                    RCt = _AddKartItem ( Node, Kart, ListN );
-                    if ( RCt != 0 ) {
-                        break;
+                RCt = KNamelistCount ( List, & ListQ );
+                if ( RCt == 0 ) {
+                    for ( ListI = 0; ListI < ListQ; ListI ++ ) {
+                        RCt = KNamelistGet ( List, ListI, & ListN );
+                        if ( RCt != 0 ) {
+                            break;
+                        }
+                        RCt = _AddKartItem ( Node, Kart, ListN );
+                        if ( RCt != 0 ) {
+                            break;
+                        }
                     }
                 }
+
+                KNamelistRelease ( List );
             }
 
-            KNamelistRelease ( List );
+            XFSGapKartRelease ( Kart );
         }
-
-        XFSGapKartRelease ( Kart );
     }
 
     return RCt;

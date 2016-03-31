@@ -419,7 +419,7 @@ rc_t KColumnIdx0LocateBlob ( const KColumnIdx0 *self,
         BSTreeFind ( & self -> bst, & first, KColumnIdx0NodeFind );
 
     if ( n == NULL )
-        return RC ( rcDB, rcColumn, rcSelecting, rcBlob, rcNotFound );
+        return SILENT_RC ( rcDB, rcColumn, rcSelecting, rcBlob, rcNotFound );
 
     assert ( first >= n -> loc . start_id );
     assert ( first < ( n -> loc . start_id + n -> loc . id_range ) );
