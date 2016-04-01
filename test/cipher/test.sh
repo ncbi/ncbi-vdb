@@ -1,6 +1,6 @@
 TOP=$1
 
-if [$(uname) == "Darwin"]; then
+if [ $(uname) = "Darwin" ]; then
     echo "cipher test is turned off on Mac"
     exit 0
 fi
