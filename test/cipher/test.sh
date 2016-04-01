@@ -20,7 +20,6 @@ $tmp_py_env/bin/python setup.py install
 cd $tmp_cur_dir
 unset tmp_cur_dir
 
-
 echo "Running python cipher test..."
 
 #running cipher test in py virtual env
