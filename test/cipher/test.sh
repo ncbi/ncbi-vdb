@@ -2,7 +2,7 @@ TOP=$1
 
 #installing cipher module into newly created virtual env
 tmp_py_env=$(mktemp -d)
-virtualenv $tmp_py_env
+virtualenv -p $(which python2) $tmp_py_env
 . $tmp_py_env/bin/activate
 tmp_cur_dir=$(pwd)
 cd $TOP/libs/cipher/cipher-1.7/

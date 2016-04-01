@@ -47,6 +47,6 @@ endif
 runtests: cipher
 
 cipher:
-	# @ export LD_LIBRARY_PATH=$(LIBDIR) ; ./test.sh $(TOP)
+	@ export LD_LIBRARY_PATH=$(LIBDIR) ; ./test.sh $(TOP)
 
 .PHONY: cipher
