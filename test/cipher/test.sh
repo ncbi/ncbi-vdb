@@ -11,6 +11,8 @@ cd $tmp_cur_dir
 unset tmp_cur_dir
 
 
+echo "Running python cipher test..."
+
 #running cipher test in py virtual env
 rm -f test.in test.enc test.out
 
@@ -25,6 +27,8 @@ python $TOP/libs/cipher/cipher-1.7/decrypt.py --password=password123 test.enc te
 diff test.in test.out
 exit_code=$?
 rm test.in test.enc test.out
+
+echo "pyhon cipher test is complete."
 
 # cleanup
 deactivate
