@@ -30,6 +30,7 @@
 #include <kproc/lock.h>
 #include <kproc/sem.h>
 #include <klib/out.h>
+#include <klib/status.h>
 #include <klib/rc.h>
 #include <atomic32.h>
 #include <os-native.h>
@@ -38,7 +39,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#if _DEBUGGING && 0
+#if _DEBUGGING && 1
 #define QMSG( msg, ... ) \
     KOutMsg ( msg, __VA_ARGS__ )
 #else
@@ -329,17 +330,22 @@ LIB_EXPORT rc_t CC KQueuePop ( KQueue *self, void **item, timeout_t *tm )
                         KLockUnlock ( self -> wl );
                     }
                 }
-                else if ( self -> sealed && GetRCObject ( rc ) == (enum RCObject)rcTimeout )
-                {
-                    QMSG ( "%s: unlocking read lock. ( %p )\n", __func__, self -> rl );
-                    KLockUnlock ( self -> rl );
-                    rc = RC ( rcCont, rcQueue, rcRemoving, rcData, rcDone );
-                    QMSG ( "%s: resetting rc to %R\n", __func__, rc );
-                }
                 else
                 {
                     QMSG ( "%s: unlocking read lock. ( %p )\n", __func__, self -> rl );
                     KLockUnlock ( self -> rl );
+
+                    if ( self -> sealed )
+                    {
+                        switch ( ( int ) GetRCObject ( rc ) )
+                        {
+                        case ( int ) rcTimeout:
+                        case ( int ) rcSemaphore:
+                            rc = RC ( rcCont, rcQueue, rcRemoving, rcData, rcDone );
+                            QMSG ( "%s: resetting rc to %R\n", __func__, rc );
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -381,7 +387,7 @@ LIB_EXPORT rc_t CC KQueueSeal ( KQueue *self )
 
     self -> sealed = true;
 
-#if 0
+#if 1
     QMSG ( "%s: acquiring write lock ( %p )\n", __func__, self -> wl );
     rc = KLockAcquire ( self -> wl );
     if ( rc == 0 )
