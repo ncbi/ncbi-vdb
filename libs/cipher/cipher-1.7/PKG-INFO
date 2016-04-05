@@ -1,0 +1,13 @@
+Metadata-Version: 1.0
+Name: cipher
+Version: 1.7
+Summary: UNKNOWN
+Home-page: UNKNOWN
+Author: sra-toolkit
+Author-email: sra-toolkit@ncbi.nlm.nih.gov
+License: UNKNOWN
+Description: NCBI encryption wrapper for SRA encryption library
+        ==================================================
+        
+        [Documentation](https://dsubmit.ncbi.nlm.nih.gov/docs/cipher/)
+Platform: UNKNOWN

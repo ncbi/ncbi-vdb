@@ -26,10 +26,15 @@
 #include <vdb/database.h> 
 #include <vdb/table.h> 
 #include <vdb/cursor.h> 
+#include <vdb/blob.h> 
 #include <vdb/vdb-priv.h>
-//#include <sra/sradb-priv.h>
 #include <sra/sraschema.h> // VDBManagerMakeSRASchema
 #include <vdb/schema.h> /* VSchemaRelease */
+
+extern "C" {
+    #include <../libs/vdb/blob-priv.h>
+    #include <../libs/vdb/page-map.h>
+}
 
 #include <ktst/unit_test.hpp> // TEST_CASE
 #include <kfg/config.h> 
@@ -155,8 +160,8 @@ TEST_CASE( VdbMgr ) {
     mgr = NULL;
 
 }
-
-#if _ARCH_BITS != 32
+#if 0
+//#if _ARCH_BITS != 32
 TEST_CASE(SimultaneousCursors)
 {   // SRA-1669 WGS ALWZ01 cannot open multiple cursors with SEQUENCE.CONTIG_NAME column simultaneously (Win32)
 
@@ -206,7 +211,7 @@ public:
             throw logic_error ( "~VdbFixture: VCursorRelease failed" );
     }
     
-    rc_t Setup( const char * acc )
+    rc_t Setup( const char * acc, const char* p_colName )
     {
         const VDatabase *db = NULL;
         rc_t rc = VDBManagerOpenDBRead ( mgr, &db, NULL, acc );
@@ -243,7 +248,7 @@ public:
             if ( rc == 0 )
             {
                 col_idx = ~0;
-                rc = VCursorAddColumn ( curs, &col_idx, "READ_LEN" );
+                rc = VCursorAddColumn ( curs, &col_idx, p_colName );
                 if ( rc == 0 )
                 {
                     rc = VCursorOpen(curs);
@@ -272,14 +277,14 @@ public:
 
 FIXTURE_TEST_CASE(TestCursorIsStatic_SingleRowRun1, VdbFixture) 
 {
-    REQUIRE_RC ( Setup ( "SRR002749" ) );
+    REQUIRE_RC ( Setup ( "SRR002749", "READ_LEN" ) );
     bool is_static = false;
     REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
     REQUIRE ( is_static );
 }
 FIXTURE_TEST_CASE(TestCursorIsStatic_VariableREAD_LEN, VdbFixture) 
 {
-    REQUIRE_RC ( Setup ( "SRR050566" ) );
+    REQUIRE_RC ( Setup ( "SRR050566", "READ_LEN" ) );
     bool is_static = true;
     REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
     REQUIRE ( ! is_static );
@@ -287,7 +292,7 @@ FIXTURE_TEST_CASE(TestCursorIsStatic_VariableREAD_LEN, VdbFixture)
 #if 0
 FIXTURE_TEST_CASE(TestCursorIsStatic_SingleRowRun2, VdbFixture) 
 {
-    REQUIRE_RC ( Setup ( "SRR053325" ) );
+    REQUIRE_RC ( Setup ( "SRR053325", "READ_LEN" ) );
     bool is_static = false;
     REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
     REQUIRE ( is_static );
@@ -295,25 +300,244 @@ FIXTURE_TEST_CASE(TestCursorIsStatic_SingleRowRun2, VdbFixture)
 #endif
 FIXTURE_TEST_CASE(TestCursorIsStatic_FixedREAD_LEN_MultipleRows, VdbFixture) 
 {
-    REQUIRE_RC ( Setup ( "SRR125365" ) );
+    REQUIRE_RC ( Setup ( "SRR125365", "READ_LEN" ) );
     bool is_static = false;
     REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
     REQUIRE ( is_static );
 }
 FIXTURE_TEST_CASE(TestCursorIsStatic_DB_FixedREAD_LEN_MultipleRows, VdbFixture) 
 {
-    REQUIRE_RC ( Setup ( "SRR600096" ) );
+    REQUIRE_RC ( Setup ( "SRR600096", "READ_LEN" ) );
     bool is_static = false;
     REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
     REQUIRE ( is_static );
 }
 FIXTURE_TEST_CASE(TestCursorIsStatic_DB_VariableREAD_LEN_MultipleRows, VdbFixture) 
 {
-    REQUIRE_RC ( Setup ( "SRR619505" ) );
+    REQUIRE_RC ( Setup ( "SRR619505", "READ_LEN" ) );
     bool is_static = true;
     REQUIRE_RC ( VCursorIsStaticColumn ( curs, col_idx, &is_static) );
     REQUIRE ( ! is_static );
 }
+
+/////////////////// VBlob
+
+FIXTURE_TEST_CASE(VCursor_GetBlob_SRA, VdbFixture) 
+{   // multiple fragments per row (some are technical), multiple rows per blob
+    REQUIRE_RC ( Setup ( "SRR000123", "READ" ) );
+    REQUIRE_RC ( VCursorOpen (curs ) );
+    
+    {
+        REQUIRE_RC ( VCursorSetRowId (curs, 1 ) );
+        REQUIRE_RC ( VCursorOpenRow (curs ) );
+        
+        struct VBlob const *blob;
+        REQUIRE_RC ( VCursorGetBlob ( curs, &blob, col_idx ) );
+        
+        int64_t first;
+        uint64_t count;
+        REQUIRE_RC ( VBlobIdRange ( blob, &first, &count ) );
+        REQUIRE_EQ ( (int64_t)1, first );    
+        REQUIRE_EQ ( (uint64_t)4, count );
+        
+        REQUIRE_EQ ( (size_t)858, BlobBufferBytes ( blob ) );
+        
+        //TODO: use row map to convert an offset into a rowId
+        REQUIRE_NOT_NULL ( blob->pm ); 
+        REQUIRE ( ! blob->pm->random_access );
+        REQUIRE_EQ ( (int)PageMap::eBlobPageMapOptimizedNone, (int)blob->pm->optimized );
+        
+        REQUIRE_EQ ( (pm_size_t)4, blob->pm->leng_recs ); // not expanded ?
+        REQUIRE_NOT_NULL ( blob->pm->length );   // array of lengths, size blob->pm->leng_recs
+        REQUIRE_EQ ( (elem_count_t)157, blob->pm->length[0] ); 
+        REQUIRE_EQ ( (elem_count_t)280, blob->pm->length[1] ); 
+        REQUIRE_EQ ( (elem_count_t)168, blob->pm->length[2] ); 
+        REQUIRE_EQ ( (elem_count_t)253, blob->pm->length[3] ); 
+        
+        REQUIRE_NOT_NULL ( blob->pm->leng_run ); // array of run lengths, size blob->pm->leng_recs
+        REQUIRE_EQ ( (row_count_t)1, blob->pm->leng_run[0] ); 
+        REQUIRE_EQ ( (row_count_t)1, blob->pm->leng_run[1] ); 
+        REQUIRE_EQ ( (row_count_t)1, blob->pm->leng_run[2] ); 
+        REQUIRE_EQ ( (row_count_t)1, blob->pm->leng_run[3] ); 
+        //NOTE: very unlikely to happen for READ column, but if leng_run > 1, the corresponding fragments should all appear in the search results
+
+        REQUIRE_EQ ( (pm_size_t)4, blob->pm->data_recs ); 
+        
+        REQUIRE_EQ ( (row_count_t)4,  blob->pm->row_count );
+        REQUIRE_EQ ( (row_count_t)0,  blob->pm->pre_exp_row_count );
+        
+        REQUIRE_RC ( VCursorCloseRow (curs ) );
+        REQUIRE_RC ( VBlobRelease ( (struct VBlob *) blob ) );
+    }
+
+    {
+        REQUIRE_RC ( VCursorSetRowId (curs, 5 ) );
+        REQUIRE_RC ( VCursorOpenRow (curs ) );
+
+        struct VBlob const *blob;
+
+        int64_t first;
+        uint64_t count;
+        REQUIRE_RC ( VCursorGetBlob ( curs, &blob, col_idx ) );
+        REQUIRE_RC ( VBlobIdRange ( blob, &first, &count ) );
+        REQUIRE_EQ ( (int64_t)5, first );    
+        REQUIRE_EQ ( (uint64_t)4, count );
+        
+        REQUIRE_EQ ( (size_t)1221, BlobBufferBytes ( blob ) );
+        
+        //TODO: use row map to convert an offset into a rowId
+
+        REQUIRE_RC ( VCursorCloseRow (curs ) );
+        REQUIRE_RC ( VBlobRelease ( (struct VBlob *) blob ) );
+    }        
+}
+
+FIXTURE_TEST_CASE(VCursor_GetBlob_WGS, VdbFixture) 
+{   // single fragment per row, multiple rows per blob
+    REQUIRE_RC ( Setup ( "ALWZ01", "READ" ) );
+    REQUIRE_RC ( VCursorOpen (curs ) );
+    
+    {
+        REQUIRE_RC ( VCursorSetRowId (curs, 1 ) );
+        REQUIRE_RC ( VCursorOpenRow (curs ) );
+        
+        struct VBlob const *blob;
+        REQUIRE_RC ( VCursorGetBlob ( curs, &blob, col_idx ) );
+        
+        int64_t first;
+        uint64_t count;
+        REQUIRE_RC ( VBlobIdRange ( blob, &first, &count ) );
+        REQUIRE_EQ ( (int64_t)1, first );    
+        REQUIRE_EQ ( (uint64_t)4, count );
+        
+        REQUIRE_EQ ( (size_t)948, BlobBufferBytes ( blob ) );
+        
+        //TODO: use row map to convert an offset into a rowId
+        REQUIRE_NOT_NULL ( blob->pm ); 
+        REQUIRE ( ! blob->pm->random_access );
+        REQUIRE_EQ ( (int)PageMap::eBlobPageMapOptimizedNone, (int)blob->pm->optimized );
+        
+        REQUIRE_EQ ( (pm_size_t)4, blob->pm->leng_recs ); // not expanded ?
+        REQUIRE_NOT_NULL ( blob->pm->length );   // array of lengths, size blob->pm->leng_recs
+        REQUIRE_EQ ( (elem_count_t)227, blob->pm->length[0] ); 
+        REQUIRE_EQ ( (elem_count_t)245, blob->pm->length[1] ); 
+        REQUIRE_EQ ( (elem_count_t)211, blob->pm->length[2] ); 
+        REQUIRE_EQ ( (elem_count_t)265, blob->pm->length[3] ); 
+        
+        REQUIRE_NOT_NULL ( blob->pm->leng_run ); // array of run lengths, size blob->pm->leng_recs
+        REQUIRE_EQ ( (row_count_t)1, blob->pm->leng_run[0] ); 
+        REQUIRE_EQ ( (row_count_t)1, blob->pm->leng_run[1] ); 
+        REQUIRE_EQ ( (row_count_t)1, blob->pm->leng_run[2] ); 
+        REQUIRE_EQ ( (row_count_t)1, blob->pm->leng_run[3] ); 
+        //NOTE: very unlikely to happen for READ column, but if leng_run > 1, the corresponding fragments should all appear in the search results
+
+        REQUIRE_EQ ( (pm_size_t)4, blob->pm->data_recs ); 
+        
+        REQUIRE_EQ ( (row_count_t)4,  blob->pm->row_count );
+        REQUIRE_EQ ( (row_count_t)0,  blob->pm->pre_exp_row_count );
+        
+        REQUIRE_RC ( VCursorCloseRow (curs ) );
+        REQUIRE_RC ( VBlobRelease ( (struct VBlob *) blob ) );
+    }
+
+    {
+        REQUIRE_RC ( VCursorSetRowId (curs, 5 ) );
+        REQUIRE_RC ( VCursorOpenRow (curs ) );
+
+        struct VBlob const *blob;
+
+        int64_t first;
+        uint64_t count;
+        REQUIRE_RC ( VCursorGetBlob ( curs, &blob, col_idx ) );
+        REQUIRE_RC ( VBlobIdRange ( blob, &first, &count ) );
+        REQUIRE_EQ ( (int64_t)5, first );    
+        REQUIRE_EQ ( (uint64_t)4, count );
+        
+        REQUIRE_EQ ( (size_t)1184, BlobBufferBytes ( blob ) );
+        
+        //TODO: use row map to convert an offset into a rowId
+
+        REQUIRE_RC ( VCursorCloseRow (curs ) );
+        REQUIRE_RC ( VBlobRelease ( (struct VBlob *) blob ) );
+    }        
+}
+
+#if VDB_2858
+FIXTURE_TEST_CASE(VCursor_GetBlob_BlobIdRange_WGS, VdbFixture) 
+{   // single fragment per row, multiple rows per blob
+    REQUIRE_RC ( Setup ( "ALAI01", "READ" ) );
+    REQUIRE_RC ( VCursorOpen (curs ) );
+    
+    int64_t first;
+    uint64_t count;
+    
+    REQUIRE_RC ( VCursorIdRange (curs, 0, &first, &count ) );
+cout << first << ", " << count << endl;             
+
+    int64_t rowId = 1;
+    while (true) 
+    {
+        REQUIRE_RC ( VCursorSetRowId (curs, rowId ) );
+        REQUIRE_RC ( VCursorOpenRow (curs ) );
+        
+        struct VBlob const *blob;
+        if ( VCursorGetBlob ( curs, &blob, col_idx ) != 0 )
+        {
+            break;
+        }
+        
+        REQUIRE_RC ( VBlobIdRange ( blob, &first, &count ) );
+cout << first << ", " << count << endl;             
+        REQUIRE_EQ ( rowId, first );
+        
+        REQUIRE_RC ( VCursorCloseRow (curs ) );
+        REQUIRE_RC ( VBlobRelease ( (struct VBlob *) blob ) );
+        
+        rowId += count;
+    }
+}
+#endif
+
+FIXTURE_TEST_CASE(PageMapIterator_WGS, VdbFixture) 
+{   // single fragment per row, multiple rows per blob
+    REQUIRE_RC ( Setup ( "ALWZ01", "READ" ) );
+    REQUIRE_RC ( VCursorOpen (curs ) );
+    
+    {
+        REQUIRE_RC ( VCursorSetRowId (curs, 1 ) );
+        REQUIRE_RC ( VCursorOpenRow (curs ) );
+        
+        struct VBlob const *blob;
+        REQUIRE_RC ( VCursorGetBlob ( curs, &blob, col_idx ) );
+        
+        PageMapIterator pmIt;
+        REQUIRE_RC ( PageMapNewIterator ( (const PageMap*)blob->pm, &pmIt, 0, 4 ) ); 
+        REQUIRE_EQ ( (elem_count_t)227, PageMapIteratorDataLength ( &pmIt ) );     
+        REQUIRE_EQ ( (elem_count_t)0, PageMapIteratorDataOffset ( &pmIt ) );   
+        REQUIRE_EQ ( (row_count_t)1, PageMapIteratorRepeatCount ( &pmIt ) );   
+         
+        REQUIRE ( PageMapIteratorNext ( &pmIt ) );
+        REQUIRE_EQ ( (elem_count_t)245, PageMapIteratorDataLength ( &pmIt ) );     
+        REQUIRE_EQ ( (elem_count_t)227, PageMapIteratorDataOffset ( &pmIt ) );   
+        REQUIRE_EQ ( (row_count_t)1, PageMapIteratorRepeatCount ( &pmIt ) );   
+        
+        REQUIRE ( PageMapIteratorNext ( &pmIt ) );
+        REQUIRE_EQ ( (elem_count_t)211, PageMapIteratorDataLength ( &pmIt ) );     
+        REQUIRE_EQ ( (elem_count_t)227+245, PageMapIteratorDataOffset ( &pmIt ) );   
+        REQUIRE_EQ ( (row_count_t)1, PageMapIteratorRepeatCount ( &pmIt ) );   
+        
+        REQUIRE ( PageMapIteratorNext ( &pmIt ) );
+        REQUIRE_EQ ( (elem_count_t)265, PageMapIteratorDataLength ( &pmIt ) );     
+        REQUIRE_EQ ( (elem_count_t)227+245+211, PageMapIteratorDataOffset ( &pmIt ) );   
+        REQUIRE_EQ ( (row_count_t)1, PageMapIteratorRepeatCount ( &pmIt ) );   
+        
+        REQUIRE ( ! PageMapIteratorNext ( &pmIt ) );
+        
+        REQUIRE_RC ( VCursorCloseRow (curs ) );
+        REQUIRE_RC ( VBlobRelease ( (struct VBlob *) blob ) );
+    }
+}
+
 
 //////////////////////////////////////////// Main
 extern "C"

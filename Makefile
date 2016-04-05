@@ -97,6 +97,14 @@ slowtests_test:
 	@ $(MAKE) -s -C test slowtests
 
 #-------------------------------------------------------------------------------
+# valgrind
+#
+valgrind: valgrind_test
+
+valgrind_test:
+	@ $(MAKE) -s -C test valgrind
+
+#-------------------------------------------------------------------------------
 # pass-through targets
 #
 COMPILERS = GCC ICC VC++ CLANG

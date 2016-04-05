@@ -745,7 +745,7 @@ rc_t VCursorAddColspec ( VCursor *self, uint32_t *idx, const char *colspec )
     const SColumn *scol = STableFind ( self -> tbl -> stbl, self -> schema,
         & cast, & name, & type, colspec, "VCursorAddColspec", true );
     if ( scol == NULL || type != eColumn )
-        rc = RC ( rcVDB, rcCursor, rcUpdating, rcColumn, rcNotFound );
+        rc = SILENT_RC ( rcVDB, rcCursor, rcUpdating, rcColumn, rcNotFound );
     else
     {
         Vector cx_bind;
@@ -1107,7 +1107,7 @@ LIB_EXPORT rc_t CC VCursorIdRange ( const VCursor *self, uint32_t idx,
 
             pb . first = INT64_MAX;
             pb . last = INT64_MIN;
-            pb . rc = RC ( rcVDB, rcCursor, rcAccessing, rcRange, rcEmpty );
+            pb . rc = SILENT_RC ( rcVDB, rcCursor, rcAccessing, rcRange, rcEmpty );
 
             if ( ! VectorDoUntil ( & self -> row, false, column_id_range, & pb ) )
             {

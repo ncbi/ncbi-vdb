@@ -57,6 +57,13 @@
 #include <sysalloc.h>
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+/*))    Useful defines
+ ((*/
+
+    /* Do not comment that line unless You know what it does */
+#define _USE_CACHED_CONN_
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*))    XFSGapFiles are living here
  ((*/
@@ -1452,7 +1459,6 @@ _Open_File_1 ( struct _GapFilePeer * self, const struct KFile ** File )
                 if ( RCt == 0 ) {
                     /*  KNS File first
                      */
-#define _USE_CACHED_CONN_
 #ifdef _USE_CACHED_CONN_
                     RCt = _Take_Burro_From_Pen (
                                                 & File_1,

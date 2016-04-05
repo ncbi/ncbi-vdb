@@ -221,7 +221,7 @@ KRYPTO_EXTERN rc_t CC KFileIsWGAEnc (const void * buffer, size_t buffer_size)
         lim = buffer_size;
     for (; (ix < lim) && (ix < buffer_size); ++ix)
         if ((ph[ix] ^ pt[ix]) != pb[ix])
-            return RC (rcFS, rcFile, rcIdentifying, rcFile, rcWrongType); 
+            return SILENT_RC (rcFS, rcFile, rcIdentifying, rcFile, rcWrongType); 
 
     if (buffer_size < offsetof (struct KWGAEncFileHeader, fer_enc))
         return 0;

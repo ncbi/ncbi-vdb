@@ -85,7 +85,7 @@ rc_t AgrepDPMake( DPParams **self, AgrepFlags mode, const char *pattern )
         (*self)->pattern = strdup(pattern);
         (*self)->plen = strlen(pattern);
         (*self)->rpattern = malloc((*self)->plen + 1);
-        if( (*self)->pattern == NULL || (*self)->pattern == NULL ) {
+        if( (*self)->pattern == NULL || (*self)->rpattern == NULL ) {
             rc = RC(rcText, rcString, rcSearching, rcMemory, rcExhausted);
         } else if( mode & AGREP_MODE_ASCII ) {
             if( mode & AGREP_IGNORE_CASE ) {
@@ -105,9 +105,12 @@ rc_t AgrepDPMake( DPParams **self, AgrepFlags mode, const char *pattern )
 
 void AgrepDPFree( DPParams *self )
 {
-    if( self != NULL ) {
-        free(self->pattern);
-        free(self->rpattern);
+    if ( self != NULL )
+    {
+        if (self->pattern != NULL)
+            free(self->pattern);
+        if (self->rpattern != NULL)
+            free(self->rpattern);
         free(self);
     }
 }
@@ -136,19 +139,25 @@ void init_col(const char *p, int32_t plen, int32_t *col)
 
 bool na4_match(unsigned char p, unsigned char c)
 {
-    if( p == c ) {
+    if( p == c )
+    {
         return true;
-    } else {
+    }
+    else
+    {
         const unsigned char* ps = IUPAC_decode[p];
         const unsigned char* cs = IUPAC_decode[c];
-        if( ps != NULL && cs != NULL ) {
-            while( *ps != '\0' ) {
-                while( *cs != '\0' ) {
-                    if( *ps == *cs++ ) {
+
+        if ( ps != NULL && cs != NULL )
+        {
+            size_t i_ps, i_cs;
+            for (i_ps = 0; ps[i_ps] != '\0'; ++i_ps)
+            {
+                for (i_cs = 0; cs[i_cs] != '\0'; ++i_cs)
+                {
+                    if (ps[i_ps] == cs[i_cs])
                         return true;
-                    }
                 }
-                ps++;
             }
         }
     }
@@ -169,38 +178,28 @@ void compute_dp_next_col(const char *p, int32_t plen, AgrepFlags mode, int32_t s
     if( (mode & AGREP_TEXT_EXPANDED_2NA) && t < 5 ) {
         t = "ACGTN"[(unsigned char)t];
     }
-    for(i = 1; i <= plen; i++) {
-        if( p[i - 1] == t ) {
+    for(i = 1; i <= plen; i++)
+    {
+        if( p[i - 1] == t )
+        {
             matchscore = 0;
-        } else if( mode & AGREP_MODE_ASCII ) {
-            if( mode & AGREP_IGNORE_CASE ) {
+        }
+        else if( mode & AGREP_MODE_ASCII )
+        {
+            if( mode & AGREP_IGNORE_CASE )
                 t = tolower(t);
-            }
-            if( p[i - 1] == t ) {
-                matchscore = 0;
-            }
-        } else if( (mode & AGREP_PATTERN_4NA) && na4_match(p[i - 1], t) ) {
+
+            matchscore = p[i - 1] == t ? 0 : 1;
+        }
+        else if( (mode & AGREP_PATTERN_4NA) && na4_match(p[i - 1], t) )
+        {
             matchscore = 0;
-        } else {
+        }
+        else
+        {
             matchscore = 1;
         }
-        /*
-        a = prev[i-1] + matchscore;
-        b = nxt[i-1] + 1;
-        c = prev[i] + 1;
-        if (a < b) {
-            if (a < c) {
-                nxt[i] = a;
-            } else {
-                nxt[i] = c;
-            }
-        } else {
-            if (c < b) {
-                nxt[i] = c;
-            } else {
-                nxt[i] = b;
-            }
-            }*/
+
         nxt[i] = min(min(prev[i-1] + matchscore,
                          nxt[i-1] + 1),
                      prev[i] + 1);

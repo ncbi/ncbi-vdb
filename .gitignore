@@ -16,7 +16,8 @@ vgcore.*
 user.status
 /win
 *.opensdf
-
+*.sdf
+*.suo
 *.log
 
 # mac os x meta-files

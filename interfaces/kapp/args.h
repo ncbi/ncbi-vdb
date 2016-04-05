@@ -84,10 +84,11 @@ typedef struct OptDef
     ConvertParamFnP convert_fn;   /* function to convert option. can perform binary conversions. may be NULL */
 } OptDef;
     
-typedef struct ParamDef
+typedef struct ParamDef ParamDef;
+struct ParamDef
 {
     ConvertParamFnP convert_fn; /* function to convert option. can perform binary conversions. may be NULL */
-} ParamDef;
+};
 
 extern OptDef StandardOptions [];
 
@@ -131,6 +132,35 @@ rc_t CC ArgsWhack ( Args * self );
 #define ArgsRelease(self) ArgsWhack(self)
 #endif
 
+
+/* AddOption
+ *  takes the OptDef structure to add an option
+ * AddLongOption
+ *  splits the OptDef into simple parameters
+ *
+ *  "opt_short_names" [ IN, NULL OKAY ] - an optional list of single-characters used as
+ *  aliases for the option.
+ *
+ *  "long_name" [ IN ] - a required long option name
+ *
+ *  "opt_param_names [ IN, NULL OKAY ] - an optional list of option parameter names
+ *  currently limited to a single name. when not NULL/empty, implies that the option
+ *  must have a parameter.
+ *
+ *  "help_text" [ IN ] - text for generating help info.
+ *
+ *  "max_count" [ IN, ZERO => INFINITE ] - sets an upper limit on the number of times
+ *  the option can be specified on cmdline. the special value "0" is taken to mean
+ *  as many times as the system will support.
+ *
+ *  "required" [ IN ] - when true, the option must be specified at least once.
+ *  when false, the option is truly optional.
+ */
+rc_t CC ArgsAddOption ( Args * self, const OptDef * option );
+rc_t CC ArgsAddLongOption ( Args * self, const char * opt_short_names, const char * long_name,
+    const char * opt_param_names, const char * help_text, uint32_t max_count, bool required );
+
+
 /* AddOptionArray
  *  helper function to call the ArgsAddOption() multiple times
  */
@@ -140,13 +170,27 @@ rc_t CC ArgsAddOptionArray ( Args * self, const OptDef * option, uint32_t count
 #endif
     );
 
+/* AddParam
+ *  adds a slot for a known parameter
+ * AddLongParam
+ *  adds a slot for a cmdline parameter along with some params of its own
+ *
+ *  "param_name" [ IN ] - for help display.
+ *
+ *  "help_text" [ IN ] - for help display.
+ *
+ *  "opt_cvt" [ IN, NULL OKAY ] - optional parameter conversion function
+ */
+rc_t CC ArgsAddParam ( Args * self, const ParamDef * param_def );
+rc_t CC ArgsAddLongParam ( Args * self, const char * param_name, const char * help_text, ConvertParamFnP opt_cvt );
+
 /* ArgsAddParamsArray
  *  adds parameter definitions for arguments parsing
  */
 rc_t CC ArgsAddParamArray ( Args * self, const ParamDef * param, uint32_t count );
 
 /* AddStandardOptions
- *  helper macro to add the arracy of internally defined
+ *  helper macro to add the array of internally defined
  *  "standard" options that we want all programs to support
  */
 rc_t CC ArgsAddStandardOptions ( Args * self );

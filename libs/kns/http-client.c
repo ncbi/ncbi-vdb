@@ -69,6 +69,15 @@ typedef struct KClientHttpStream KClientHttpStream;
 
 #include "http-priv.h"
 
+#if _DEBUGGING && 0
+#include <stdio.h>
+#define TRACE( x, ... ) \
+    fprintf ( stderr, "@@ %s:%d: %s: " x, __FILE__, __LINE__, __func__, __VA_ARGS__ )
+#else
+#define TRACE( x, ... ) \
+    ( ( void ) 0 )
+#endif
+
 static 
 void  KDataBufferClear ( KDataBuffer *buf )
 {
@@ -137,6 +146,12 @@ void KClientHttpClose ( KClientHttp *self )
 {
     KStreamRelease ( self -> sock );
     self -> sock = NULL;
+
+    KClientHttpBlockBufferReset ( self );
+    KClientHttpLineBufferReset ( self );
+#if 0
+    TRACE ( "closed connection%c", '\n' );
+#endif
 }
 
 
@@ -146,9 +161,6 @@ static
 rc_t KClientHttpClear ( KClientHttp *self )
 {
     KClientHttpClose ( self );
-
-    KClientHttpBlockBufferReset ( self );
-    KClientHttpLineBufferReset ( self );
 
     KDataBufferWhack ( & self -> hostname_buffer );
 
@@ -784,7 +796,9 @@ rc_t KClientHttpAddHeader ( BSTree *hdrs, const char *name, const char *val, ...
 }
 
 /* Capture each header line to add to BSTree */
-rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs, bool *blank, bool *close_connection )
+static
+rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
+    bool * blank, bool * len_zero, bool * close_connection )
 {
     /* Starting from the second line of the response */
     rc_t rc = KClientHttpGetLine ( self, tm );
@@ -804,7 +818,10 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs, 
             /* find the separation between name: value */
             sep = string_chr ( buffer, end - buffer, ':' );
             if ( sep == NULL )
+            {
                 rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
+                TRACE ( "badly formed header: '%.*s'\n", ( int ) ( end - buffer ), buffer );
+            }
             else
             {
                 String name, value;
@@ -831,20 +848,36 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs, 
 
                 /* assign the value data into the value string */
                 StringInit ( & value, buffer, last - buffer, ( uint32_t ) ( last - buffer ) );
-                
-                /* check for Connection: close header */
-                if ( name . size == sizeof "Connection" -1 && value . size == sizeof "close" - 1 )
+
+                switch ( name . size )
                 {
-                    if ( tolower ( name . addr [ 0 ] ) == 'c' && tolower ( value . addr [ 0 ] ) == 'c' )
+                case sizeof "Connection" - 1:
+                    if ( value . size == sizeof "close" - 1 )
                     {
-                        if ( strcase_cmp ( name . addr, name . size, "Connection", name . size, ( uint32_t ) name . size ) == 0 &&
-                             strcase_cmp ( value . addr, value . size, "close", value . size, ( uint32_t ) value . size ) == 0 )
+                        if ( tolower ( name . addr [ 0 ] ) == 'c' && tolower ( value . addr [ 0 ] ) == 'c' )
                         {
-                            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
-                                ("*** seen connection close ***\n"));
-                            * close_connection = true;
+                            if ( strcase_cmp ( name . addr, name . size, "Connection", name . size, ( uint32_t ) name . size ) == 0 &&
+                                 strcase_cmp ( value . addr, value . size, "close", value . size, ( uint32_t ) value . size ) == 0 )
+                            {
+                                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+                                       ("*** seen connection close ***\n"));
+                                * close_connection = true;
+                            }
                         }
                     }
+                    break;
+                case sizeof "Content-Length" - 1:
+                    if ( value . size == sizeof "0" - 1 )
+                    {
+                        if ( tolower ( name . addr [ 0 ] ) == 'c' && value . addr [ 0 ] == '0' )
+                        {
+                            if ( strcase_cmp ( name . addr, name . size, "Content-Length", name . size, ( uint32_t ) name . size ) == 0 )
+                            {
+                                * len_zero = true;
+                            }
+                        }
+                    }
+                    break;
                 }
                 
                 rc = KClientHttpAddHeaderString ( hdrs, & name, & value );
@@ -869,7 +902,7 @@ rc_t KClientHttpFindHeader ( const BSTree *hdrs, const char *_name, char *buffer
     node = ( KHttpHeader * ) BSTreeFind ( hdrs, &name, KHttpHeaderCmp );
     if ( node == NULL )
     {
-        rc = RC ( rcNS, rcNoTarg, rcSearching, rcName, rcNull );
+        rc = SILENT_RC ( rcNS, rcTree, rcSearching, rcName, rcNotFound );
     }
     else
     {
@@ -914,6 +947,7 @@ rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, u
         if ( sep == NULL )
         {
             rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
+            TRACE ( "badly formed status line: '%.*s'\n", ( int ) ( end - buffer ), buffer );
         }
         else
         {
@@ -928,7 +962,10 @@ rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, u
                 /* find end of version */
                 sep = string_chr ( buffer, end - buffer, ' ' );
                 if ( sep == NULL )
+                {
                     rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
+                    TRACE ( "badly formed HTTP version: '%.*s'\n", ( int ) ( end - buffer ), buffer );
+                }
                 else
                 {
                     /* must be 1.0 or 1.1 */
@@ -949,7 +986,10 @@ rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, u
 
                         /* if at the end of buffer or sep didnt land on a space - error */
                         if ( sep == buffer || * sep != ' ' )
+                        {
                             rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
+                            TRACE ( "badly formed HTTP version: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
+                        }
                         else
                         {
                             /* move up to status msg */
@@ -1320,6 +1360,7 @@ struct KClientHttpResult
     ver_t version;
 
     KRefcount refcount;
+    bool len_zero;
     bool close_connection;
 };
 
@@ -1348,6 +1389,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     rc_t rc = 0;
     size_t sent;
     timeout_t tm;
+    uint32_t status;
 
     /* TBD - may want to assert that there is an empty line in "buffer" */
 #if _DEBUGGING
@@ -1396,11 +1438,11 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
             KClientHttpClose ( self );
         }
     }
-    if ( rc == 0 )
+
+    for ( status = 100; rc == 0 && status == 100; )
     {
         String msg;
         ver_t version;
-        uint32_t status;
 
         /* reinitialize the timeout for reading */
         TimeoutInit ( & tm, self -> read_timeout );
@@ -1409,7 +1451,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
            start reading the header lines */
         rc = KClientHttpGetStatusLine ( self, & tm, & msg, & status, & version );
         if ( rc == 0 )
-        {         
+        {
             /* create a result object with enough space for msg string + nul */
             KClientHttpResult *result = malloc ( sizeof * result + msg . size + 1 );
             if ( result == NULL )
@@ -1446,9 +1488,12 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
                     /* receive and parse all header lines 
                        blank = end of headers */
                     for ( blank = false; ! blank && rc == 0; )
-                        rc = KClientHttpGetHeaderLine ( self, & tm, & result -> hdrs, & blank, & result -> close_connection );
+                    {
+                        rc = KClientHttpGetHeaderLine ( self, & tm, & result -> hdrs,
+                            & blank, & result -> len_zero, & result -> close_connection );
+                    }
 
-                    if ( rc == 0 )
+                    if ( rc == 0 && status != 100 )
                     {
                         /* assign to OUT result obj */
                         * rslt = result;
@@ -1464,11 +1509,13 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
             free ( result );
         }
     }
+
     return rc;
 }
 
 /* test */
-void KClientHttpForceSocketClose(const KClientHttp *self) {
+void KClientHttpForceSocketClose(const KClientHttp *self)
+{
     KStreamForceSocketClose(self->sock);
 }
 
@@ -1648,7 +1695,10 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
         /* look for separation of 'bytes' and first position */
         sep = string_chr ( buf, end - buf, ' ' );
         if ( sep == NULL )
+        {
             rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
+            TRACE ( "badly formed Content-Range header: '%.*s': lacks a space separator\n", ( int ) ( end - buffer ), buffer );
+        }
         else
         {
             uint64_t start_pos;
@@ -1662,7 +1712,10 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
 
             /* check if we didnt read anything or sep didnt land on '-' */
             if ( sep == buf || * sep != '-' )
+            {
                 rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
+                TRACE ( "badly formed Content-Range header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
+            }
             else
             {
                 uint64_t end_pos;
@@ -1670,7 +1723,10 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                 buf = sep + 1;
                 end_pos = strtou64 ( buf, & sep, 10 );
                 if ( sep == buf || * sep != '/' )
-                    rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );                 
+                {
+                    rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
+                    TRACE ( "badly formed Content-Range header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
+                }
                 else
                 {
                     uint64_t total;
@@ -1678,7 +1734,10 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                     buf = sep +1;
                     total = strtou64 ( buf, &sep, 10 );
                     if ( sep == buf || * sep != 0 )
-                        rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );                 
+                    {
+                        rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
+                        TRACE ( "badly formed Content-Range header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
+                    }
                     else
                     {
                         /* check variables */
@@ -1688,6 +1747,15 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                              end_pos > total )
                         {
                             rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
+                            TRACE ( "badly formed Content-Range header: total=%lu, start_pos=%lu, end_pos=%lu\n", total, start_pos, end_pos );
+                            if ( total == 0 )
+                                TRACE ( "badly formed Content-Range header: total==0 : ERROR%c", '\n' );
+                            if ( start_pos > total )
+                                TRACE ( "badly formed Content-Range header: start_pos=%lu > total=%lu : ERROR\n", start_pos, total );
+                            if ( end_pos < start_pos )
+                                TRACE ( "badly formed Content-Range header: end_pos=%lu < start_pos=%lu : ERROR\n", end_pos, start_pos );
+                            if ( end_pos > total )
+                                TRACE ( "badly formed Content-Range header: end_pos=%lu > total=%lu : ERROR\n", end_pos, total );
                         }
                         else
                         {
@@ -1712,13 +1780,25 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                             /* capture the length */
                             length  = strtou64 ( buf, & sep, 10 );
                             if ( sep == buf || * sep != 0 )
+                            {
                                 rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
+                                TRACE ( "badly formed Content-Length header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
+                            }                                
                             else 
                             {
                                 /* finally check all the acquired information */
                                 if ( ( length != ( ( end_pos - start_pos ) + 1 ) ) ||
                                      ( length > total ) )
+                                {
                                     rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
+                                    TRACE ( "badly formed Content-Length header: length=%lu, range_len=%lu, total=%lu\n", length, ( end_pos - start_pos ) + 1, total );
+                                    if ( length != ( end_pos - start_pos ) + 1 )
+                                        TRACE ( "badly formed Content-Length header: length=%lu != 0 : ERROR\n", length );
+                                    if ( start_pos > total )
+                                        TRACE ( "badly formed Content-Length header: start_pos=%lu > range_len=%lu : ERROR\n", length, ( end_pos - start_pos ) + 1 );
+                                    if ( length > total )
+                                        TRACE ( "badly formed Content-Length header: length=%lu > total=%lu : ERROR\n", length, total );
+                                }
                                 else
                                 {
                                     /* assign to OUT params */
@@ -1801,7 +1881,10 @@ LIB_EXPORT bool CC KClientHttpResultSize ( const KClientHttpResult *self, uint64
             /* capture length as uint64 */
             uint64_t length = strtou64 ( buffer, & sep, 10 );
             if ( sep == buffer || * sep != 0 )
+            {
                 rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
+                TRACE ( "badly formed Content-Length header: '%.*s': numeral ends on '%c'\n", ( int ) num_read, buffer, ( sep == buffer ) ? 0 : * sep );
+            }
             else
             {
                 /* assign to OUT param */
@@ -1970,6 +2053,7 @@ struct KClientHttpRequest
     BSTree hdrs;
 
     KRefcount refcount;
+    bool accept_not_modified;
 };
 
 static
@@ -2348,7 +2432,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestByteRange ( KClientHttpRequest *self, uint6
  *  allow addition of an arbitrary HTTP header to message
  */
 LIB_EXPORT rc_t CC KClientHttpRequestAddHeader ( KClientHttpRequest *self,
-                                           const char *name, const char *val, ... )
+    const char *name, const char *val, ... )
 {
     rc_t rc;
 
@@ -2369,6 +2453,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddHeader ( KClientHttpRequest *self,
         else
         {
             size_t name_size;
+            bool accept_not_modified;
 
             va_list args;
             va_start ( args, val );
@@ -2376,12 +2461,43 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddHeader ( KClientHttpRequest *self,
             /* disallow setting of "Host" and other headers */
             name_size = string_size ( name );
 
-            if ( strcase_cmp ( name, name_size, "Host", sizeof "Host", sizeof "Host" - 1 ) == 0 )
-                rc = RC ( rcNS, rcNoTarg, rcComparing, rcParam, rcUnsupported );
-            if ( strcase_cmp ( name, name_size, "Content-Length", sizeof "Content-Length", sizeof "Content-Length" - 1 ) == 0 )
-                rc = RC ( rcNS, rcNoTarg, rcComparing, rcParam, rcUnsupported );
-            else
+#define CSTRLEN( str ) \
+            sizeof ( str ) - 1
+#define NAMEIS( str ) \
+            strcase_cmp ( name, name_size, str, sizeof str, CSTRLEN ( str ) ) == 0
+
+            rc = 0;
+            accept_not_modified = false;
+            
+            switch ( name_size )
+            {
+            case CSTRLEN ( "Host" ):
+                if ( NAMEIS ( "Host" ) )
+                    rc = RC ( rcNS, rcNoTarg, rcComparing, rcParam, rcUnsupported );
+                break;
+            case CSTRLEN ( "Content-Length" ):
+                if ( NAMEIS ( "Content-Length" ) )
+                    rc = RC ( rcNS, rcNoTarg, rcComparing, rcParam, rcUnsupported );
+                break;
+            case CSTRLEN ( "If-None-Match" ):
+                if ( NAMEIS ( "If-None-Match" ) )
+                    accept_not_modified = true;
+                break;
+            case CSTRLEN ( "If-Modified-Since" ):
+                if ( NAMEIS ( "If-Modified-Since" ) )
+                    accept_not_modified = true;
+                break;
+            }
+
+#undef CSTRLEN
+#undef NAMEIS
+
+            if ( rc == 0 )
+            {
                 rc = KClientHttpVAddHeader ( & self -> hdrs, name, val, args );
+                if ( rc == 0 && accept_not_modified )
+                    self -> accept_not_modified = true;
+            }
 
             va_end ( args );
         }
@@ -2657,23 +2773,26 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         rslt = * _rslt;
         switch ( rslt -> status )
         {
-        case 100:
-            /* Continue
-               The client SHOULD continue with its request. This interim response is used
-               to inform the client that the initial part of the request has been received
-               and has not yet been rejected by the server. The client SHOULD continue by
-               sending the remainder of the request or, if the request has already been completed,
-               ignore this response. The server MUST send a final response after the request
-               has been completed. See section 8.2.3 for detailed discussion of the use and
-               handling of this status code. */
-
-            /* TBD - should not see this, but needs to be handled */
+        case 200:
+        case 206:
             return 0;
-            
+        case 304:
+            /* check for "If-Modified-Since" or "If-None-Match" header in request and allow if present */
+            if ( self -> accept_not_modified )
+                return 0;
+            break;
+        }
+
+        TRACE ( "unusual status code: %d\n", ( int ) rslt -> status );
+        
+        switch ( rslt -> status )
+        {
             /* TBD - need to include RFC rule for handling codes for HEAD and GET */
         case 301: /* "moved permanently" */
         case 302: /* "found" - okay to reissue for HEAD and GET, but not for POST */
+        case 303: /* "see other" - the response to the request can be found under another URI using a GET method */
         case 307: /* "moved temporarily" */
+        case 308: /* "permanent redirect" */
             break;
 
         case 505: /* HTTP Version Not Supported */
@@ -2689,6 +2808,12 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 
         default:
 
+            if ( ! rslt -> len_zero || rslt -> close_connection )
+            {
+                /* the connection is no good */
+                KClientHttpClose ( self -> http );
+            }
+            
             /* rslt -> status may be looked at by the caller to determine actual success */
             return 0;
         }
@@ -2698,6 +2823,10 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         if ( rc != 0 )
             break;
     }
+
+    if ( rc != 0 )
+        KClientHttpClose ( self -> http );
+    
     return rc;
 }
 
@@ -2785,7 +2914,10 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         }
 
         if ( rc != 0 )
+        {
+            KClientHttpClose ( self -> http );
             return rc;
+        }
     }
 
     for ( i = 0; i < max_redirect; ++ i )
@@ -2822,22 +2954,24 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         rslt = * _rslt;
         switch ( rslt -> status )
         {
-        case 100:
-            /* Continue
-               The client SHOULD continue with its request. This interim response is used
-               to inform the client that the initial part of the request has been received
-               and has not yet been rejected by the server. The client SHOULD continue by
-               sending the remainder of the request or, if the request has already been completed,
-               ignore this response. The server MUST send a final response after the request
-               has been completed. See section 8.2.3 for detailed discussion of the use and
-               handling of this status code. */
-
-            /* TBD - should not see this, but needs to be handled */
+        case 200:
+        case 206:
             return 0;
+        case 304:
+            /* check for "If-Modified-Since" or "If-None-Match" header in request and allow if present */
+            if ( self -> accept_not_modified )
+                return 0;
+            break;
+        }
 
+        TRACE ( "unusual status code: %d\n", ( int ) rslt -> status );
+        
+        switch ( rslt -> status )
+        {
             /* TBD - Add RFC rules about POST */
         case 301: /* "moved permanently" */
         case 307: /* "moved temporarily" */
+        case 308: /* "permanent redirect" */
             break;
 
         case 505: /* HTTP Version Not Supported */
@@ -2853,7 +2987,13 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
 
         default:
 
-            /* TBD - should all status codes be interpreted as rc ? */
+            if ( ! rslt -> len_zero || rslt -> close_connection )
+            {
+                /* the connection is no good */
+                KClientHttpClose ( self -> http );
+            }
+
+            /* rslt -> status may be looked at by the caller to determine actual success */
             return 0;
         }
 
@@ -2862,6 +3002,10 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         if ( rc != 0 )
             break;
     }
+
+    if ( rc != 0 )
+        KClientHttpClose ( self -> http );
+
     return rc;
 }
 

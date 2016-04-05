@@ -38,6 +38,7 @@
 #include <kfc/ctx.h>
 #include <kfc/except.h>
 #include <kfc/xc.h>
+#include <klib/rc.h>
 
 #include <vdb/table.h>
 #include <vdb/cursor.h>
@@ -151,7 +152,17 @@ NGS_ReferenceSequence * NGS_ReferenceSequenceMake ( ctx_t ctx, const char * spec
         USER_ERROR ( xcStringEmpty, "empty reference sequence specification string" );
     else
     {
-        return NGS_ReferenceSequenceMakeSRA ( ctx, spec );
+        NGS_ReferenceSequence* ref = NGS_ReferenceSequenceMakeSRA ( ctx, spec );
+
+        if ( FAILED() &&
+            (GetRCState ( ctx->rc ) == rcNotFound || GetRCState ( ctx->rc ) == rcUnexpected) )
+        {
+            CLEAR();
+            assert ( ref == NULL );
+            ref = NGS_ReferenceSequenceMakeEBI ( ctx, spec );
+        }
+
+        return ref;
     }
 
     return NULL;

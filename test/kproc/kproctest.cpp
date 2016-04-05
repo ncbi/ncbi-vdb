@@ -39,8 +39,10 @@
 #include <kproc/lock.h>
 #include <kproc/thread.h>
 #include <kproc/timeout.h>
+#include <kproc/queue.h>
 
 #include <stdexcept>
+#include <sstream>
 
 using namespace std;
 using namespace ncbi::NK;
@@ -516,10 +518,206 @@ TEST_CASE( KCondition_MakeRelease )
     REQUIRE_RC(KConditionRelease(cond));
 }
 
+///////////////////////// KQueue
+TEST_CASE( KQueue_NULL )
+{
+    REQUIRE_RC_FAIL(KQueueMake(NULL, 1));
+}
+
+class KQueueFixture
+{
+public:
+    KQueueFixture()
+    :   threadRcs(NULL),
+        threads(NULL),
+        nThreads(32),
+        nStartedThreads(0),
+        sealed(false)
+    {
+        threads = (KThread**)malloc(sizeof(*threads) * nThreads);
+        if (threads == NULL)
+            throw logic_error("KQueueFixture: threads malloc failed");
+        threadRcs = (rc_t*)calloc(nThreads, sizeof(*threadRcs));
+        if (threadRcs == NULL)
+            throw logic_error("KQueueFixture: threadRcs calloc failed");
+        if (KQueueMake(&queue, nThreads) != 0)
+            throw logic_error("KQueueFixture: KQueueMake failed");
+    }
+    ~KQueueFixture()
+    {
+        if (threads != NULL)
+        {
+            for (unsigned i = 0; i < nStartedThreads; ++i)
+            {
+                if (threads[i] != 0 && KThreadRelease(threads[i]) != 0)
+                    throw logic_error("~KQueueFixture: KThreadRelease failed");
+            }
+        }
+        free(threads);
+        free(threadRcs);
+
+        if (KQueueRelease((const KQueue*)queue) != 0)
+            throw logic_error("~KQueueFixture: KQueueRelease failed");
+    }
+
+protected:
+    struct ThreadData {
+        KQueue * queue;
+        int tid;
+        size_t max_tid;
+        bool is_reader;
+    };
+
+    class Thread {
+    public:
+        // danger - this should be an extern "C" function
+        // with CC calling convention on Windows
+        static rc_t KQueue_ThreadFn ( const KThread *thread, void *data )
+        {
+            ThreadData* td = (ThreadData*)data;
+            rc_t rc = 0;
+            int numOps = 131072;
+
+            for (int i = 0; i < numOps; ++i)
+            {
+                void * item;
+                if (td->is_reader)
+                {
+                    rc = KQueuePop(td->queue, &item, NULL);
+                    if (rc == 0 && (item == NULL || (uint64_t)item > td->max_tid))
+                    {
+                        std::stringstream ss;
+                        ss << "KQueue_ThreadFn: KQueuePop returned invalid item: " << (uint64_t)item << "\n";
+                        LOG(LogLevel::e_fatal_error, ss.str().c_str());
+                        rc = RC(rcExe, rcQueue, rcValidating, rcItem, rcOutofrange);
+                        break;
+                    }
+                }
+                else
+                {
+                    item = (void *)td->tid;
+                    rc = KQueuePush(td->queue, item, NULL);
+                }
+
+                if (rc != 0)
+                {
+                    if (GetRCObject ( rc ) == (enum RCObject)rcTimeout)
+                        rc = 0;
+                    else
+                    {
+                        LOG(LogLevel::e_fatal_error, "KQueue_ThreadFn: failed to push/pop to/from queue\n");
+                        break;
+                    }
+                }
+
+            }
+
+            free(data);
+
+            return rc;
+        }
+    };
+
+    void StartThread(bool is_reader)
+    {
+        if (nStartedThreads >= nThreads)
+            throw logic_error("StartThread: too many threads requested");
+        if (sealed)
+            throw logic_error("StartThread: cannot start new thread, fixture is already sealed");
+
+        int i = nStartedThreads++;
+        ThreadData* td;
+
+        td = (ThreadData*)malloc(sizeof(*td));
+        if (td == NULL)
+            throw logic_error("StartThread: ThreadData malloc failed");
+        td->tid = i;
+        td->max_tid = nThreads - 1;
+        td->is_reader = is_reader;
+        td->queue = queue;
+        rc_t rc = KThreadMake(&threads[i], Thread::KQueue_ThreadFn, td);
+        if (rc != 0)
+            throw logic_error("StartThread: KThreadMake failed");
+    }
+
+    void StartThreads(int numReaders, int numWriters)
+    {
+        if (numReaders + numWriters + nStartedThreads > nThreads)
+            throw logic_error("RunThreads: too many threads requested");
+        if (numReaders <= 0)
+            throw logic_error("RunThreads: please specify at least one reader");
+        if (numWriters <= 0)
+            throw logic_error("RunThreads: please specify at least one writer");
+
+        for (int i = 0; i < numReaders; ++i)
+        {
+            StartThread(true);
+        }
+        for (int i = 0; i < numWriters; ++i)
+        {
+            StartThread(false);
+        }
+    }
+
+    void WaitThreads()
+    {
+        rc_t rc = 0;
+        sealed = true;
+        for (unsigned i = 0; i < nStartedThreads; ++i)
+        {
+            rc_t rc2 = KThreadWait(threads[i], &threadRcs[i]);
+            if (rc2 != 0)
+            {
+                LOG(LogLevel::e_fatal_error, "KThreadWait: KThreadWait failed\n");
+                if (rc == 0)
+                    rc = rc2;
+            }
+        }
+        if (rc != 0)
+            throw logic_error("WaitThreads: KThreadWait failed");
+        for (unsigned i = 0; i < nStartedThreads; ++i)
+        {
+            if (threadRcs[i] != 0)
+                throw logic_error("WaitThreads: thread returned non-zero exit code");
+        }
+    }
+
+public:
+    rc_t* threadRcs;
+    KThread** threads;
+    size_t nThreads;
+    size_t nStartedThreads;
+    KQueue* queue;
+    bool sealed;
+};
+
+FIXTURE_TEST_CASE(KQueue_Single_Reader_Single_Writer, KQueueFixture)
+{
+    StartThreads(1, 1);
+    WaitThreads();
+}
+
+FIXTURE_TEST_CASE(KQueue_Multi_Reader_Single_Writer, KQueueFixture)
+{
+    StartThreads(31, 1);
+    WaitThreads();
+}
+
+FIXTURE_TEST_CASE(KQueue_Single_Reader_Multi_Writer, KQueueFixture)
+{
+    StartThreads(1, 31);
+    WaitThreads();
+}
+
+FIXTURE_TEST_CASE(KQueue_Multi_Reader_Multi_Writer, KQueueFixture)
+{
+    StartThreads(16, 16);
+    WaitThreads();
+}
+
 //TODO: KConditionWait, KConditionTimedWait, KConditionSignal, KConditionBroadcast
 
 //TODO: KSemaphore
-//TODO: KQueue
 //TODO: Timeout
 //TODO: KBarrier (is it used anywhere? is there a Windows implementation?)
 
