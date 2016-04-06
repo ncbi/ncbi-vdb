@@ -33,8 +33,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\ngs\ngstest_csra1.cpp" />
-  </ItemGroup>
+  <Import Project="..\test-ngs_csra1.files" />  
+
   
 </Project>

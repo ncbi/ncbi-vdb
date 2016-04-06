@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\..\libs\xfs\xfs.c" />
+    <ClCompile Include="..\..\..\libs\xfs\xlog.c" />
+    <ClCompile Include="..\..\..\libs\xfs\win\platform.c" />
+    <ClCompile Include="..\..\..\libs\xfs\win\operations.c" />
+    <ClCompile Include="..\..\..\libs\xfs\win\security.c" />
+    <ClCompile Include="..\..\..\libs\xfs\model.c" />
+    <ClCompile Include="..\..\..\libs\xfs\tree.c" />
+    <ClCompile Include="..\..\..\libs\xfs\node.c" />
+    <ClCompile Include="..\..\..\libs\xfs\path.c" />
+    <ClCompile Include="..\..\..\libs\xfs\perm.c" />
+    <ClCompile Include="..\..\..\libs\xfs\editors.c" />
+    <ClCompile Include="..\..\..\libs\xfs\handle.c" />
+    <ClCompile Include="..\..\..\libs\xfs\teleport.c" />
+    <ClCompile Include="..\..\..\libs\xfs\foo.c" />
+    <ClCompile Include="..\..\..\libs\xfs\ncon.c" />
+    <ClCompile Include="..\..\..\libs\xfs\contnode.c" />
+    <ClCompile Include="..\..\..\libs\xfs\docnode.c" />
+    <ClCompile Include="..\..\..\libs\xfs\simcon.c" />
+    <ClCompile Include="..\..\..\libs\xfs\kfs.c" />
+    <ClCompile Include="..\..\..\libs\xfs\readme.c" />
+    <ClCompile Include="..\..\..\libs\xfs\bogus.c" />
+    <ClCompile Include="..\..\..\libs\xfs\owp.c" />
+    <ClCompile Include="..\..\..\libs\xfs\doc.c" />
+    <ClCompile Include="..\..\..\libs\xfs\xhttp.c" />
+    <ClCompile Include="..\..\..\libs\xfs\http.c" />
+    <ClCompile Include="..\..\..\libs\xfs\xtar.c" />
+    <ClCompile Include="..\..\..\libs\xfs\tar.c" />
+    <ClCompile Include="..\..\..\libs\xfs\xencro.c" />
+    <ClCompile Include="..\..\..\libs\xfs\encro.c" />
+    <ClCompile Include="..\..\..\libs\xfs\xencws.c" />
+    <ClCompile Include="..\..\..\libs\xfs\encws.c" />
+    <ClCompile Include="..\..\..\libs\xfs\spen.c" />
+    <ClCompile Include="..\..\..\libs\xfs\xgap.c" />
+    <ClCompile Include="..\..\..\libs\xfs\xgapf.c" />
+    <ClCompile Include="..\..\..\libs\xfs\xgapk.c" />
+    <ClCompile Include="..\..\..\libs\xfs\gapk.c" />
+    <ClCompile Include="..\..\..\libs\xfs\gapks.c" />
+    <ClCompile Include="..\..\..\libs\xfs\gapka.c" />
+    <ClCompile Include="..\..\..\libs\xfs\gapc.c" />
+    <ClCompile Include="..\..\..\libs\xfs\gap.c" />
+    <ClCompile Include="..\..\..\libs\xfs\gapf.c" />
+    <ClCompile Include="..\..\..\libs\xfs\lockdpt.c" />
+    <ClCompile Include="..\..\..\libs\xfs\lreader.c" />
+    <ClCompile Include="..\..\..\libs\xfs\schwarzschraube.c" />
+    <ClCompile Include="..\..\..\libs\xfs\zehr.c" />
+    <ClCompile Include="..\..\..\libs\xfs\mehr.c" />
+  </ItemGroup>
+</Project>

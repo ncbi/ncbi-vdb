@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\..\libs\kapp\loader-file.c" />
+    <ClCompile Include="..\..\..\libs\kapp\loader-meta.c" />
+    <ClCompile Include="..\..\..\libs\kapp\log-xml.c" />
+    <ClCompile Include="..\..\..\libs\kapp\progressbar.c" />
+  </ItemGroup>
+</Project>

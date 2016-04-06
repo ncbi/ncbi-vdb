@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\..\libs\loader\alignment-writer.c" />
+    <ClCompile Include="..\..\..\libs\loader\common-reader.c" />
+    <ClCompile Include="..\..\..\libs\loader\common-writer.c" />
+    <ClCompile Include="..\..\..\libs\loader\mmarray.c" />
+    <ClCompile Include="..\..\..\libs\loader\reference-writer.c" />
+    <ClCompile Include="..\..\..\libs\loader\sequence-writer.c" />
+  </ItemGroup>
+</Project>

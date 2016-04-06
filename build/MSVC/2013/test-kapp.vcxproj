@@ -28,8 +28,6 @@
     </Link>
   </ItemDefinitionGroup>
   
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\kapp\args-test.cpp" />
-  </ItemGroup>
+  <Import Project="..\test-kapp.files" />
   
 </Project>

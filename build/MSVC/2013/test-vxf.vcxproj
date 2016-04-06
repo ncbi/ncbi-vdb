@@ -27,8 +27,5 @@
       <AdditionalDependencies>$(VDB_TARGET)lib\ncbi-vdb.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\vxf\wb-test-vxf.cpp" />
-    <ClCompile Include="..\..\..\test\vxf\wb-irzip-impl.c" />
-  </ItemGroup>
+  <Import Project="..\test-vxf.files" />
 </Project>

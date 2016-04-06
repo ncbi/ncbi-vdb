@@ -22,7 +22,5 @@
     <ProjectGuid>{0F1C37D0-DBF8-3071-3599-66A6D77E2F61}</ProjectGuid>
   </PropertyGroup>
   <Import Project=".\lib-project.props" />
-  <ItemGroup>
-    <ClCompile Include="..\..\..\libs\tui\tui_cpp.cpp" />
-  </ItemGroup>
+  <Import Project="..\tui_cpp.files" />
 </Project>

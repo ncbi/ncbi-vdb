@@ -27,8 +27,7 @@
     </Link>
   </ItemDefinitionGroup>
   
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\kfg\wb-test-kfg.cpp" />
-  </ItemGroup>
+  <Import Project="..\wb-test-kfg.files" />  
+
   
 </Project>

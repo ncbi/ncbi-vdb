@@ -33,7 +33,5 @@
       <AdditionalDependencies>$(NGS_TARGET)lib\libngs-disp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\ngs-c++\CSRA1test.cpp" />
-  </ItemGroup>
+  <Import Project="..\test-ngs_csra1-c++.files" />
 </Project>

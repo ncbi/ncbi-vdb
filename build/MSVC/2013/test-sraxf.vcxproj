@@ -27,8 +27,6 @@
     </Link>
   </ItemDefinitionGroup>
   
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\sraxf\fix_read_seg-test.cpp" />
-  </ItemGroup>
+  <Import Project="..\test-sraxf.files" />
   
 </Project>

@@ -28,7 +28,5 @@
       <UndefinePreprocessorDefinitions>_LIBRARY</UndefinePreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\..\libs\ngs-c++\NCBI-NGS.cpp" />
-  </ItemGroup>
+  <Import Project="..\ngs-c++.files" />
 </Project>

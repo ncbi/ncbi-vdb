@@ -19,12 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <Import Project=".\lib-project.props" />
-  <ItemGroup>
-    <ClCompile Include="..\..\..\libs\kapp\loader-file.c" />
-    <ClCompile Include="..\..\..\libs\kapp\loader-meta.c" />
-    <ClCompile Include="..\..\..\libs\kapp\log-xml.c" />
-    <ClCompile Include="..\..\..\libs\kapp\progressbar.c" />
-  </ItemGroup>
+  <Import Project="..\load.files" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>{957B608A-40CB-4A68-98CB-B634F08FA141}</ProjectGuid>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>

@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\..\libs\ext\bzip2\blocksort.c" />
+    <ClCompile Include="..\..\..\libs\ext\bzip2\bzlib.c" />
+    <ClCompile Include="..\..\..\libs\ext\bzip2\compress.c" />
+    <ClCompile Include="..\..\..\libs\ext\bzip2\crctable.c" />
+    <ClCompile Include="..\..\..\libs\ext\bzip2\decompress.c" />
+    <ClCompile Include="..\..\..\libs\ext\bzip2\huffman.c" />
+    <ClCompile Include="..\..\..\libs\ext\bzip2\randtable.c" />
+  </ItemGroup>
+</Project>

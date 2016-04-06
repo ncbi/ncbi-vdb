@@ -22,10 +22,5 @@
     <ProjectGuid>{BA319C68-17BF-461E-B018-5736BCDBBE5C}</ProjectGuid>
   </PropertyGroup>
   <Import Project=".\lib-project.props" />
-  <ItemGroup>
-    <ClCompile Include="..\..\..\libs\ktst\testcase.cpp" />
-    <ClCompile Include="..\..\..\libs\ktst\testenv.cpp" />
-    <ClCompile Include="..\..\..\libs\ktst\testrunner.cpp" />
-    <ClCompile Include="..\..\..\libs\ktst\win\systestenv.cpp" />
-  </ItemGroup>
+  <Import Project="..\ktst.files" />  
 </Project>

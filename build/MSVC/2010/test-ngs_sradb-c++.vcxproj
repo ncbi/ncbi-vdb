@@ -33,9 +33,7 @@
       <AdditionalDependencies>$(NGS_TARGET)lib\libngs-disp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\ngs-c++\SRADBtest.cpp" />
-  </ItemGroup>
+  <Import Project="..\test-ngs_sradb-c++.files" />  
+
   
 </Project>

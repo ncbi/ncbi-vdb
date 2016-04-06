@@ -19,15 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <Import Project=".\lib-project.props" />
-  <ItemGroup>
-    <ClCompile Include="..\..\..\libs\ext\bzip2\blocksort.c" />
-    <ClCompile Include="..\..\..\libs\ext\bzip2\bzlib.c" />
-    <ClCompile Include="..\..\..\libs\ext\bzip2\compress.c" />
-    <ClCompile Include="..\..\..\libs\ext\bzip2\crctable.c" />
-    <ClCompile Include="..\..\..\libs\ext\bzip2\decompress.c" />
-    <ClCompile Include="..\..\..\libs\ext\bzip2\huffman.c" />
-    <ClCompile Include="..\..\..\libs\ext\bzip2\randtable.c" />
-  </ItemGroup>
+  <Import Project="..\bz2.files" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>{364EAD74-2052-4D9B-BC8B-43A968A599B0}</ProjectGuid>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
