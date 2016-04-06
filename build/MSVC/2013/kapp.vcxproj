@@ -27,6 +27,7 @@
     <ClCompile Include="..\..\..\libs\kapp\win\sysmain.c" />
     <ClCompile Include="..\..\..\libs\kapp\win\ram.c" />
     <ClCompile Include="..\..\..\libs\kapp\win\args-conv-os.c" />
+    <ClCompile Include="..\..\..\libs\kapp\log-xml.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{FAA69740-AFC2-463C-AAA5-36F768E393C9}</ProjectGuid>
