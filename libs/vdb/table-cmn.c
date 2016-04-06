@@ -261,6 +261,7 @@ LIB_EXPORT rc_t CC VDBManagerVOpenTableRead ( const VDBManager *self,
                 rc = KDBManagerVOpenTableRead ( self -> kmgr, & tbl -> ktbl, path, args );
                 if ( rc == 0 )
                 {
+                    tbl -> blob_validation = KTableHasRemoteData ( tbl -> ktbl );
                     rc = VTableOpenRead ( tbl );
                     if ( rc == 0 )
                     {
@@ -317,6 +318,7 @@ LIB_EXPORT rc_t CC VDatabaseVOpenTableRead ( const VDatabase *self,
                 rc = KDatabaseVOpenTableRead ( self -> kdb, & tbl -> ktbl, path, args );
                 if ( rc == 0 )
                 {
+                    tbl -> blob_validation = KTableHasRemoteData ( tbl -> ktbl );
                     rc = VTableOpenRead ( tbl );
                     if ( rc == 0 )
                     {

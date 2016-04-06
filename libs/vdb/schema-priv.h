@@ -362,7 +362,7 @@ const void *VSchemaFind ( const VSchema *self,
  *  value atomically in "cache" before returning.
  */
 uint32_t VSchemaCacheIntrinsicTypeId ( const VSchema *self,
-    atomic32_t *cache, const char *typename );
+    atomic32_t *cache, const char *type_name );
 
 
 /* Marking
