@@ -22,7 +22,7 @@
 
         <VDB_TARGET_NAME Condition="'$(VDB_TARGET_NAME)' == ''">$(ProjectName)</VDB_TARGET_NAME>
 
-        </PropertyGroup>
+    </PropertyGroup>
   
     <PropertyGroup Label="Configuration">
         <CharacterSet>Unicode</CharacterSet>
