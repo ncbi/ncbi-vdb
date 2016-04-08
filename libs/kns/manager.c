@@ -599,7 +599,7 @@ LIB_EXPORT rc_t CC KNSManagerVSetHTTPProxyPath ( KNSManager * self, const char *
 
 
 /* GetHTTPProxyEnabled
- *  returns true iff a non-NULL proxy path exists and user wants to use it
+ *  returns true if a non-NULL proxy path exists and user wants to use it
  *  users indicate desire to use proxy through configuration or SetHTTPProxyEnabled
  */
 LIB_EXPORT bool CC KNSManagerGetHTTPProxyEnabled ( const KNSManager * self )
