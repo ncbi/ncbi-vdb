@@ -999,19 +999,30 @@ LIB_EXPORT rc_t CC VTableOpenKTableUpdate ( VTable *self, KTable **ktbl )
     return rc;
 }
 
-LIB_EXPORT rc_t CC VTableVDropColumn(VTable *self, const char fmt[], va_list args)
-{
-    return KTableVDropColumn(self->ktbl, fmt, args);
-}
-
 LIB_EXPORT rc_t CC VTableDropColumn(VTable *self, const char fmt[], ...)
 {
     va_list va;
     rc_t rc;
-    
+
     va_start(va, fmt);
     rc = VTableVDropColumn(self, fmt, va);
     va_end(va);
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VTableVDropColumn(VTable *self, const char fmt[], va_list args)
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcVDB, rcTable, rcAccessing, rcSelf, rcNull );
+    else
+    {
+        if ( VTableVHasStaticColumn ( self, fmt, args ) )
+            rc = KMDataNodeVDropChild ( self->col_node, fmt, args );
+        else
+            rc = KTableVDropColumn(self->ktbl, fmt, args);
+    }
+
     return rc;
 }
 

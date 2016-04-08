@@ -193,6 +193,7 @@ VDB_EXTERN rc_t CC VTableListSeededWritableColumns ( struct VTable *self,
  *  avail: 2.5
  */
 VDB_EXTERN bool CC VTableHasStaticColumn ( struct VTable const *self, const char *name );
+VDB_EXTERN bool CC VTableVHasStaticColumn ( struct VTable const *self, const char *name, va_list args );
 
 
 /* VUntypedTableTest
