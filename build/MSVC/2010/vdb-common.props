@@ -2,6 +2,10 @@
     
     <Import Condition="Exists('$(ProjectDir)..\..\Makefile.config.win')" Project="$(ProjectDir)..\..\Makefile.config.win" />
 
+    <PropertyGroup Label="Configuration">
+        <PlatformToolset>v100</PlatformToolset>
+    </PropertyGroup>
+    
     <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 
     <PropertyGroup Label="Globals">
@@ -10,11 +14,11 @@
     
         <NGS_ROOT Condition="'$(NGS_ROOT)' == ''">$(ProjectDir)..\..\..\..\ngs\ngs-sdk\</NGS_ROOT>
         <NGS_OUTDIR Condition="'$(NGS_OUTDIR)' == ''">$(NGS_ROOT)..\..\OUTDIR\</NGS_OUTDIR>
-        <NGS_TARGET Condition="'$(NGS_TARGET)' == ''">$(NGS_OUTDIR)win\cl\$(Platform)\$(Configuration)\</NGS_TARGET>
+        <NGS_TARGET Condition="'$(NGS_TARGET)' == ''">$(NGS_OUTDIR)win\$(PlatformToolset)\$(Platform)\$(Configuration)\</NGS_TARGET>
     
         <VDB_OUTDIR Condition="'$(VDB_OUTDIR)' == ''">$(NGS_OUTDIR)\</VDB_OUTDIR>
         <VDB_ROOT Condition="'$(VDB_ROOT)' == ''">$(ProjectDir)..\..\..\</VDB_ROOT>
-        <VDB_TARGET Condition="'$(VDB_TARGET)' == ''">$(VDB_OUTDIR)win\cl\$(Platform)\$(Configuration)\</VDB_TARGET>
+        <VDB_TARGET Condition="'$(VDB_TARGET)' == ''">$(VDB_OUTDIR)win\$(PlatformToolset)\$(Platform)\$(Configuration)\</VDB_TARGET>
 
         <VDB_TARGET_NAME Condition="'$(VDB_TARGET_NAME)' == ''">$(ProjectName)</VDB_TARGET_NAME>
 

@@ -29,6 +29,7 @@ TOP ?= $(abspath ../..)
 MODULE = test/kns
 
 TEST_TOOLS = \
+	KNSManagerSingletonTest \
 	test-kns \
 	test-http \
 	test-http-dropconn \
@@ -63,6 +64,16 @@ KNSTEST_LIB = \
 	-skapp \
     -sncbi-vdb \
     -sktst \
+
+#----------------------------------------------------------------
+# KNSManagerSingletonTest
+#
+SINGLETON_SRC = \
+	KNSManagerSingletonTest
+SINGLETON_OBJ = \
+	$(addsuffix .$(OBJX),$(SINGLETON_SRC))
+$(TEST_BINDIR)/KNSManagerSingletonTest: $(SINGLETON_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
 #----------------------------------------------------------------
 # test-kns

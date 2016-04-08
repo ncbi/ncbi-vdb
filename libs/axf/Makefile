@@ -79,6 +79,7 @@ AXF_SRC = \
 	raw-restore-read \
 	raw-restore-qual \
 	seq-restore-read \
+	seq-restore-linkage-group \
 	seq-construct-read \
 	cigar \
 	project_read_from_sequence \

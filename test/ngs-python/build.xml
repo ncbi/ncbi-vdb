@@ -3,11 +3,12 @@
     <!-- This file is currently for use on Windows; Linux/Mac builds are run via gmake -->
     <property environment="env"/>
     <property name="vdb.build"      value="Debug" />
+    <property name="vdb.platformtoolset"  value="v100" />
     <property name="vdb.platform"   value="x64" />
     
     <property name="ngs-source.dir" value="..\..\..\ngs" />
     <property name="output.dir" value="..\..\..\ngs\ngs-sdk\..\..\OUTDIR\" />
-    <property name="build.dir"   value="${output.dir}\win\cl\${vdb.platform}\${vdb.build}" />
+    <property name="build.dir"   value="${output.dir}\win\${vdb.platformtoolset}\${vdb.platform}\${vdb.build}" />
     <property name="ngs.dir" value="${env.USERPROFILE}\ncbi-outdir\ngs-java" />
     
     <!-- Set this to full path to Python if not in PATH already -->

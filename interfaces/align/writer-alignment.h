@@ -62,6 +62,7 @@ enum ETableWriterAlgn_ColNames {
     ewalgn_cn_REF_OFFSET_TYPE,
     ewalgn_cn_EVIDENCE_ALIGNMENT_IDS,
     ewalgn_cn_ALIGN_GROUP,
+    ewalgn_cn_LINKAGE_GROUP,
     ewalgn_cn_MISMATCH_QUALITY,
     ewalgn_cn_MATE_GLOBAL_REF_START,
     ewalgn_cn_MATE_REF_START,
@@ -117,6 +118,7 @@ typedef struct TableWriterAlgnData_struct {
     TableWriterData ref_ploidy;
     TableWriterData mapq;
     TableWriterData align_group; /* set length to 0 if not used */
+    TableWriterData linkageGroup; /* set length to 0 if not used */
 
     /* used only only in secondary */
     TableWriterData mate_ref_orientation;

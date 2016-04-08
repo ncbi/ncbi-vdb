@@ -787,7 +787,7 @@ rc_t CC ArgsWhack (Args * self)
     return 0;
 }
 
-static
+
 rc_t CC ArgsAddOption (Args * self, const OptDef * option)
 {
     rc_t rc = 0;
@@ -929,9 +929,32 @@ rc_t CC ArgsAddOption (Args * self, const OptDef * option)
     return rc;
 }
 
-rc_t CC ArgsAddOptionArray (Args * self, const OptDef * option, uint32_t count /*, 
-                                                                                             rc_t (*header_fmt)(Args * args, const char * header),
-                                                                                             const char * header */)
+rc_t CC ArgsAddLongOption ( Args * self, const char * opt_short_names, const char * long_name,
+    const char * opt_param_names, const char * help_text, uint32_t max_count, bool required )
+{
+    OptDef opt;
+    const char * help [ 2 ];
+
+    if ( max_count > 0xFFFF )
+        return RC ( rcExe, rcArgv, rcConstructing, rcParam, rcExcessive );
+
+    memset ( & opt, 0, sizeof opt );
+    memset ( help, 0, sizeof help );
+
+    help [ 0 ] = help_text;
+
+    opt . name = long_name;
+    opt . aliases = opt_short_names;
+    opt . help = help;
+    opt . max_count = ( uint16_t ) max_count;
+    opt . needs_value = ( bool ) ( opt_param_names != NULL && opt_param_names [ 0 ] != 0 );
+    opt . required = required;
+
+    return ArgsAddOption ( self, & opt );
+}
+
+rc_t CC ArgsAddOptionArray (Args * self, const OptDef * option, uint32_t count
+    /*, rc_t (*header_fmt)(Args * args, const char * header), const char * header */ )
 {
     rc_t rc;
 #if NOT_USED_YET
@@ -967,7 +990,7 @@ rc_t CC ArgsAddOptionArray (Args * self, const OptDef * option, uint32_t count /
     return rc;
 }
 
-rc_t CC ArgsAddParam(Args * self, const ParamDef * param_def)
+rc_t CC ArgsAddParam ( Args * self, const ParamDef * param_def )
 {
     rc_t rc;
     Parameter * param;
@@ -989,6 +1012,17 @@ rc_t CC ArgsAddParam(Args * self, const ParamDef * param_def)
     }
     
     return rc;
+}
+
+rc_t CC ArgsAddLongParam ( Args * self, const char * param_name, const char * help_text, ConvertParamFnP opt_cvt )
+{
+    ParamDef param;
+
+    memset ( & param, 0, sizeof param );
+
+    param . convert_fn = opt_cvt;
+
+    return ArgsAddParam ( self, & param );
 }
 
 rc_t CC ArgsAddParamArray (Args * self, const ParamDef * param, uint32_t count)

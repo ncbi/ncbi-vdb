@@ -70,6 +70,7 @@ static const TableWriterColumn TableWriterAlgn_cols[ewalgn_cn_Last] =
     {0, "REF_OFFSET_TYPE", sizeof(uint8_t) * 8, ewcol_IsArray},
     {0, "EVIDENCE_ALIGNMENT_IDS", sizeof(int64_t) * 8, ewcol_IsArray | ewcol_Ignore},
     {0, "ALIGN_GROUP", sizeof(char) * 8, ewcol_IsArray | ewcol_Ignore },
+    {0, "LINKAGE_GROUP", sizeof(char) * 8, ewcol_IsArray | ewcol_Ignore },
     {0, "MISMATCH_QUALITY", sizeof(uint8_t) * 8, ewcol_IsArray | ewcol_Ignore},
     {0, "MATE_GLOBAL_REF_START", sizeof(uint64_t) * 8, ewcol_Ignore},
     {0, "MATE_REF_START", sizeof(INSDC_coord_zero) * 8, ewcol_Ignore}
@@ -115,6 +116,7 @@ LIB_EXPORT rc_t CC TableWriterAlgn_Make(const TableWriterAlgn** cself, VDatabase
             case ewalgn_tabletype_PrimaryAlignment:
                 tbl_nm = "PRIMARY_ALIGNMENT";
                 self->cols[ewalgn_cn_ALIGN_GROUP].flags &= ~ewcol_Ignore;
+                self->cols[ewalgn_cn_LINKAGE_GROUP].flags &= ~ewcol_Ignore;
                 if (options & ewalgn_co_MISMATCH_QUALITY)
                     self->cols[ewalgn_cn_MISMATCH_QUALITY].flags &= ~ewcol_Ignore;
                 break;
@@ -132,6 +134,8 @@ LIB_EXPORT rc_t CC TableWriterAlgn_Make(const TableWriterAlgn** cself, VDatabase
                 self->cols[ewalgn_cn_MATE_REF_POS].flags &= ~ewcol_Ignore;
                 self->cols[ewalgn_cn_MATE_ALIGN_ID].flags &= ~ewcol_Ignore;
                 self->cols[ewalgn_cn_TEMPLATE_LEN].flags &= ~ewcol_Ignore;
+                /* self->cols[ewalgn_cn_ALIGN_GROUP].flags &= ~ewcol_Ignore; why? */
+                self->cols[ewalgn_cn_LINKAGE_GROUP].flags &= ~ewcol_Ignore;
                 break;
             case ewalgn_tabletype_EvidenceInterval:
                 tbl_nm = "EVIDENCE_INTERVAL";
@@ -186,7 +190,10 @@ LIB_EXPORT rc_t CC TableWriterAlgn_Make(const TableWriterAlgn** cself, VDatabase
                 self->cols[ewalgn_cn_TEMPLATE_LEN].flags |= ewcol_Ignore;
             }
             if( (rc = TableWriter_Make(&self->base, db, tbl_nm, NULL)) == 0 ) {
+                static TableWriterData const d = { "", 0 };
+
                 rc = TableWriter_AddCursor(self->base, self->cols, sizeof(self->cols)/sizeof(self->cols[0]), &self->cursor_id);
+                TW_COL_WRITE_DEF(self->base, self->cursor_id, self->cols[ewalgn_cn_LINKAGE_GROUP], d);
                 self->options = options;
             }
         }
@@ -277,6 +284,7 @@ LIB_EXPORT rc_t CC TableWriterAlgn_Write(const TableWriterAlgn* cself, const Tab
         TW_COL_WRITE(cself->base, cself->cols[ewalgn_cn_TEMPLATE_LEN], data->template_len);
         TW_COL_WRITE(cself->base, cself->cols[ewalgn_cn_EVIDENCE_ALIGNMENT_IDS], data->alingment_ids);
         TW_COL_WRITE(cself->base, cself->cols[ewalgn_cn_ALIGN_GROUP], data->align_group);
+        TW_COL_WRITE(cself->base, cself->cols[ewalgn_cn_LINKAGE_GROUP], data->linkageGroup);
 
         if( rc == 0 ) {
             rc = TableWriter_CloseRow(cself->base);

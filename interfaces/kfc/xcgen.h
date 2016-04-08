@@ -54,7 +54,7 @@ extern "C" {
 #define XSTATE( name, desc, rc )                        \
     const XCState name = { # name, desc, NULL, rc }
 #define XSTATE_EXT( name, supr, desc, rc )              \
-    const XCState name = { # name, desc, & super, rc }
+    const XCState name = { # name, desc, & supr, rc }
 
 #define XC( name, obj, state )                          \
     const XCErr name = { # name, NULL, & obj, & state }
