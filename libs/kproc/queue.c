@@ -39,7 +39,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#if _DEBUGGING && 1
+#if _DEBUGGING && 0
 #define QMSG( msg, ... ) \
     KOutMsg ( msg, __VA_ARGS__ )
 #else

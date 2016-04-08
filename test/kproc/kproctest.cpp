@@ -530,6 +530,7 @@ public:
     KQueueFixture()
     :   threadRcs(NULL),
         threads(NULL),
+        threadsData(NULL),
         nThreads(32),
         nStartedThreads(0),
         sealed(false)
@@ -537,6 +538,9 @@ public:
         threads = (KThread**)malloc(sizeof(*threads) * nThreads);
         if (threads == NULL)
             throw logic_error("KQueueFixture: threads malloc failed");
+        threadsData = (ThreadData*)calloc(nThreads, sizeof(*threadsData));
+        if (threadsData == NULL)
+            throw logic_error("KQueueFixture: threadsData malloc failed");
         threadRcs = (rc_t*)calloc(nThreads, sizeof(*threadRcs));
         if (threadRcs == NULL)
             throw logic_error("KQueueFixture: threadRcs calloc failed");
@@ -554,6 +558,7 @@ public:
             }
         }
         free(threads);
+        free(threadsData);
         free(threadRcs);
 
         if (KQueueRelease((const KQueue*)queue) != 0)
@@ -566,6 +571,7 @@ protected:
         int tid;
         size_t max_tid;
         bool is_reader;
+        bool finish; // will stop generating events and seal the queue
     };
 
     class Thread {
@@ -581,7 +587,14 @@ protected:
             for (int i = 0; i < numOps; ++i)
             {
                 void * item;
-                if (td->is_reader)
+                if (td->finish)
+                {
+                    rc = KQueueSeal(td->queue);
+                    if (rc != 0)
+                        LOG(LogLevel::e_fatal_error, "KQueue_ThreadFn: failed to push/pop to/from queue\n");
+                    break;
+                }
+                else if (td->is_reader)
                 {
                     rc = KQueuePop(td->queue, &item, NULL);
                     if (rc == 0 && (item == NULL || (uint64_t)item > td->max_tid))
@@ -603,6 +616,10 @@ protected:
                 {
                     if (GetRCObject ( rc ) == (enum RCObject)rcTimeout)
                         rc = 0;
+                    else if (GetRCObject ( rc ) == (enum RCObject)rcData && GetRCState ( rc ) == rcDone)
+                        break;
+                    else if (GetRCObject ( rc ) == (enum RCObject)rcQueue && GetRCState ( rc ) == rcReadonly)
+                        break;
                     else
                     {
                         LOG(LogLevel::e_fatal_error, "KQueue_ThreadFn: failed to push/pop to/from queue\n");
@@ -611,8 +628,6 @@ protected:
                 }
 
             }
-
-            free(data);
 
             return rc;
         }
@@ -625,17 +640,15 @@ protected:
         if (sealed)
             throw logic_error("StartThread: cannot start new thread, fixture is already sealed");
 
-        int i = nStartedThreads++;
+        int tid = nStartedThreads++;
         ThreadData* td;
 
-        td = (ThreadData*)malloc(sizeof(*td));
-        if (td == NULL)
-            throw logic_error("StartThread: ThreadData malloc failed");
-        td->tid = i;
+        td = &threadsData[tid];
+        td->tid = tid;
         td->max_tid = nThreads - 1;
         td->is_reader = is_reader;
         td->queue = queue;
-        rc_t rc = KThreadMake(&threads[i], Thread::KQueue_ThreadFn, td);
+        rc_t rc = KThreadMake(&threads[tid], Thread::KQueue_ThreadFn, td);
         if (rc != 0)
             throw logic_error("StartThread: KThreadMake failed");
     }
@@ -659,7 +672,7 @@ protected:
         }
     }
 
-    void WaitThreads()
+    void WaitThreads(bool checkRcs = true)
     {
         rc_t rc = 0;
         sealed = true;
@@ -675,16 +688,23 @@ protected:
         }
         if (rc != 0)
             throw logic_error("WaitThreads: KThreadWait failed");
+        if (checkRcs)
+            CheckThreadsRc();
+
+    }
+    void CheckThreadsRc()
+    {
         for (unsigned i = 0; i < nStartedThreads; ++i)
         {
             if (threadRcs[i] != 0)
-                throw logic_error("WaitThreads: thread returned non-zero exit code");
+                throw logic_error("CheckThreadsRc: thread returned unexpected exit code");
         }
     }
 
 public:
     rc_t* threadRcs;
     KThread** threads;
+    ThreadData* threadsData;
     size_t nThreads;
     size_t nStartedThreads;
     KQueue* queue;
@@ -713,6 +733,32 @@ FIXTURE_TEST_CASE(KQueue_Multi_Reader_Multi_Writer, KQueueFixture)
 {
     StartThreads(16, 16);
     WaitThreads();
+}
+
+FIXTURE_TEST_CASE(KQueue_Multi_Reader_Single_Writer_Seal, KQueueFixture)
+{
+    StartThreads(31, 1);
+    threadsData[31].finish = true;
+    WaitThreads(false);
+    for (unsigned i = 0; i < nStartedThreads; ++i)
+    {
+        rc_t expectedRc = (i == 31) ? 0 : SILENT_RC ( rcCont, rcQueue, rcRemoving, rcData, rcDone );
+        if (threadRcs[i] != expectedRc)
+            throw logic_error("thread returned unexpected exit code");
+    }
+}
+
+FIXTURE_TEST_CASE(KQueue_Single_Reader_Multi_Writer_Seal, KQueueFixture)
+{
+    StartThreads(1, 31);
+    threadsData[0].finish = true;
+    WaitThreads(false);
+    for (unsigned i = 0; i < nStartedThreads; ++i)
+    {
+        rc_t expectedRc = (i == 0) ? 0 : SILENT_RC ( rcCont, rcQueue, rcInserting, rcQueue, rcReadonly );
+        if (threadRcs[i] != expectedRc)
+            throw logic_error("thread returned unexpected exit code");
+    }
 }
 
 //TODO: KConditionWait, KConditionTimedWait, KConditionSignal, KConditionBroadcast

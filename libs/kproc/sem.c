@@ -36,7 +36,7 @@
 
 #include <stdlib.h>
 
-#if _DEBUGGING && 1
+#if _DEBUGGING && 0
 #define SMSG( msg, ... ) \
     KOutMsg ( msg, __VA_ARGS__ )
 #else
@@ -162,7 +162,11 @@ LIB_EXPORT rc_t CC KSemaphoreWait ( KSemaphore *self, struct KLock *lock )
             rc_t rc;
 
             if ( self -> canceled )
+            {
+                SMSG ( "%s[%p]: wait was canceled - decrementing wait count\n", __func__, self );
+                -- self -> waiting;
                 return RC ( rcPS, rcSemaphore, rcWaiting, rcSemaphore, rcCanceled );
+            }
 
             rc = KConditionWait ( self -> cond, lock );
             if ( rc != 0 )
@@ -280,6 +284,9 @@ LIB_EXPORT rc_t CC KSemaphoreSignal ( KSemaphore *self )
     if ( self == NULL )
         return RC ( rcPS, rcSemaphore, rcSignaling, rcSelf, rcNull );
 
+    if ( self -> canceled )
+        return RC ( rcPS, rcSemaphore, rcSignaling, rcSemaphore, rcCanceled );
+
     ++ self -> avail;
     if ( self -> waiting != 0 && self -> avail >= self -> min_requested )
     {
@@ -326,7 +333,15 @@ LIB_EXPORT rc_t CC KSemaphoreAlloc ( KSemaphore *self,
 
         do
         {
-            rc_t rc = KConditionWait ( self -> cond, lock );
+            rc_t rc;
+
+            if ( self -> canceled )
+            {
+                -- self -> waiting;
+                return RC ( rcPS, rcSemaphore, rcWaiting, rcSemaphore, rcCanceled );
+            }
+
+            rc = KConditionWait ( self -> cond, lock );
             if ( rc != 0 )
             {
                 -- self -> waiting;
@@ -378,7 +393,15 @@ LIB_EXPORT rc_t CC KSemaphoreTimedAlloc ( KSemaphore *self,
 
         do
         {
-            rc_t rc = KConditionTimedWait ( self -> cond, lock, tm );
+            rc_t rc;
+
+            if ( self -> canceled )
+            {
+                -- self -> waiting;
+                return RC ( rcPS, rcSemaphore, rcWaiting, rcSemaphore, rcCanceled );
+            }
+
+            rc = KConditionTimedWait ( self -> cond, lock, tm );
             if ( rc != 0 )
             {
                 -- self -> waiting;
@@ -402,6 +425,9 @@ LIB_EXPORT rc_t CC KSemaphoreFree ( KSemaphore *self, uint64_t count )
 {
     if ( self == NULL )
         return RC ( rcPS, rcSemaphore, rcSignaling, rcSelf, rcNull );
+
+    if ( self -> canceled )
+        return RC ( rcPS, rcSemaphore, rcSignaling, rcSemaphore, rcCanceled );
 
     self -> avail += count;
     if ( self -> waiting != 0 && self -> avail >= self -> min_requested )
