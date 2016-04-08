@@ -50,6 +50,8 @@
 #include <klib/rc.h>
 #include <sysalloc.h>
 
+#include <va_copy.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
