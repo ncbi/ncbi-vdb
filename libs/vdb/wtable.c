@@ -1017,7 +1017,13 @@ LIB_EXPORT rc_t CC VTableVDropColumn(VTable *self, const char fmt[], va_list arg
         rc = RC ( rcVDB, rcTable, rcAccessing, rcSelf, rcNull );
     else
     {
-        if ( VTableVHasStaticColumn ( self, fmt, args ) )
+        va_list args_copy;
+        bool is_static;
+        va_copy(args_copy, args);
+        is_static = VTableVHasStaticColumn ( self, fmt, args_copy );
+        va_end(args_copy);
+
+        if ( is_static )
             rc = KMDataNodeVDropChild ( self->col_node, fmt, args );
         else
             rc = KTableVDropColumn(self->ktbl, fmt, args);
