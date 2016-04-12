@@ -526,6 +526,7 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
     int64_t  row_id_max=0;
     uint32_t MAX_BLOB_REGROUP; /** max rows in blob for regrouping ***/
     bool function_failed = false;
+    bool window_resized = false;
     
     if (argc == 0) {
         memset(&scratch, 0, sizeof(scratch));
@@ -566,35 +567,109 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
 		MAX_BLOB_REGROUP=1024;
     }
 
-	if(self->dad.sub == vftRowFast){
+	if(self->dad.sub == vftRowFast)
+    {
 		window = MAX_BLOB_REGROUP;
-	} else {
-		window=self->stop_id-self->start_id+1;/*** from previous fetch **/
-		if(row_id == self->stop_id+1){ /** sequentual io ***/
-			if( window < MAX_BLOB_REGROUP && (row_id%(4*window))==1){
+	}
+    else
+    {
+        /*** from previous fetch **/
+		window= self->stop_id - self->start_id + 1;
+
+        /** detect sequentual io ***/
+		if(row_id == self->stop_id+1)
+        {
+            /* since window is only modified by multiples of 4,
+               the check for "window < X" means "window <= X/4"
+               or "4 * window <= X"... */
+
+            /* perhaps the test for "row_id%(4*window))==1" should be an assert... */
+			if( window < MAX_BLOB_REGROUP && (row_id%(4*window))==1)
+            {
+                /* window can be resized without exceeding MAX_BLOB_REGROUP */
+                assert ( 4 * window <= MAX_BLOB_REGROUP );
+
+                /* we know that row_id lands on the first row of the new window */
 				window *=4;
+                window_resized = true;
+
+                /* window was resized without exceeding MAX_BLOB_REGROUP */
+                assert ( window <= MAX_BLOB_REGROUP );
 			}
-		} else {
+            else
+            {
+                /* either the window is at maximum,
+                   or the row_id wouldn't be at the beginning of window. */
+                assert ( window >= MAX_BLOB_REGROUP ||
+                         row_id & ( 4 * window ) != 1 );
+
+                /* leave the window as is */
+            }
+		}
+        else
+        {
+            /* random access - use tiny blob window */
 			window = 1;
 		}
 	} 
 
-    if(window == 1){
+    if(window == 1)
+    {
+        /* random access or initial blob - create blob with initial row-count */
 		self->start_id=self->stop_id=row_id;
-		if(row_count > 0) self->stop_id += row_count-1;
-    } else { 
-      self->start_id=param_start_id;
-      self->stop_id =param_stop_id;
-      assert(row_id >= self->start_id && row_id  + row_count -1 <= self->stop_id);
-      if(self->start_id==-INT64_MAX - 1 || self->stop_id==INT64_MAX){
-        self->start_id=self->stop_id=row_id;
-        if(row_count > 0) self->stop_id += row_count-1;
-      } else if (    row_count ==1 /*we are re-blobing */
-                  && self->stop_id - self->start_id > 2*window){
-		int64_t	n=(row_id-1)/window;
-		if(self->start_id <= n*window)      self->start_id=n*window+1;
-		if(self->stop_id > (n+1) * window) self->stop_id = (n+1)*window;
-      }
+		if(row_count > 0)
+            self->stop_id += row_count-1;
+    }
+    else
+    {
+        /* start out with supplied row range */
+        self->start_id=param_start_id;
+        self->stop_id =param_stop_id;
+        assert(row_id >= self->start_id && row_id  + row_count -1 <= self->stop_id);
+
+        /* special code to detect an old-style static column with infinite range */
+        if(self->start_id==-INT64_MAX - 1 || self->stop_id==INT64_MAX)
+        {
+            /* same logic as above */
+            self->start_id=self->stop_id=row_id;
+            if(row_count > 0)
+                self->stop_id += row_count-1;
+
+        }
+
+        /* this code only executes if requested row-count is 1 */
+        else if ( row_count == 1 )
+        {
+            /* the blob itself has to be at least twice the window size.
+              this may be a problem because once "window" becomes large enough,
+              it could cause us to switch from "reblobbing" back to whole blob. */
+            if ( self->stop_id - self->start_id > 2*window)
+            {
+                /* determine which "window" ( relative to start of TABLE ) contains row_id */
+                int64_t	n=(row_id-1)/window;
+
+                /* look at blob left edge, move up to window left edge if possible */
+                if(self->start_id <= n*window)
+                    self->start_id=n*window+1;
+
+                /* look at blob right edge, move down to window right edge if possible */
+                if(self->stop_id > (n+1) * window)
+                    self->stop_id = (n+1)*window;
+
+                /* eventual window from self->start_id..self->stop_id must be <= "window" size */
+                assert ( self -> start_id <= self -> start_id );
+                assert ( self -> stop_id - self -> start_id + 1 <= window );
+            }
+            else if ( window_resized )
+            {
+                self -> start_id = row_id;
+            }
+            else
+            {
+                /* handle case when the window has grown large enough
+                   to disable reblobbing after blobbing was once in place */
+            }
+        }
     }
 
     /* create and populate array of input parameters */
