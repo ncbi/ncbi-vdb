@@ -563,45 +563,51 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
         /*** since cache_cursor exist, trying to avoid prefetching data which is in cache cursor ***/
 		row_id_max = self->curs->cache_empty_end;
 		MAX_BLOB_REGROUP=256;
+assert(false);
     } else {
 		MAX_BLOB_REGROUP=1024;
     }
-
+/*printf("\n");
+printf("self=%p,row_id=%li\n", (void*)self, row_id);
+printf("self->start_id=%li\n", self->start_id);
+printf("self->stop_id =%li\n", self->stop_id);
+printf("MAX_BLOB_REGROUP=%u\n", MAX_BLOB_REGROUP);*/
 	if(self->dad.sub == vftRowFast)
     {
 		window = MAX_BLOB_REGROUP;
+/*printf("1\n");
+printf("window:=%u\n", window);*/
 	}
     else
     {
         /*** from previous fetch **/
-		window= self->stop_id - self->start_id + 1;
+		window = self->stop_id - self->start_id + 1;
+/*printf("2\n");
+printf("window:=%u\n", window);*/
 
         /** detect sequentual io ***/
-		if(row_id == self->stop_id+1)
+		if ( row_id == self->stop_id + 1 )
         {
-            /* since window is only modified by multiples of 4,
-               the check for "window < X" means "window <= X/4"
-               or "4 * window <= X"... */
-
-            /* perhaps the test for "row_id%(4*window))==1" should be an assert... */
-			if( window < MAX_BLOB_REGROUP && (row_id%(4*window))==1)
+			if( row_id % ( 4 * window ) == 1 ) 
             {
-                /* window can be resized without exceeding MAX_BLOB_REGROUP */
-                assert ( 4 * window <= MAX_BLOB_REGROUP );
-
+                if ( window < MAX_BLOB_REGROUP )
+                {
+                    if ( 4 * window <= MAX_BLOB_REGROUP )
+                        window *= 4;
+                    else
+                        window = MAX_BLOB_REGROUP;
+                    window_resized = true;
+                }
                 /* we know that row_id lands on the first row of the new window */
-				window *=4;
-                window_resized = true;
-
-                /* window was resized without exceeding MAX_BLOB_REGROUP */
-                assert ( window <= MAX_BLOB_REGROUP );
+/*printf("3\n");
+printf("window:=%u\n", window);*/
 			}
             else
             {
                 /* either the window is at maximum,
                    or the row_id wouldn't be at the beginning of window. */
                 assert ( window >= MAX_BLOB_REGROUP ||
-                         row_id & ( 4 * window ) != 1 );
+                         ( row_id & ( 4 * window ) ) != 1 );
 
                 /* leave the window as is */
             }
@@ -610,6 +616,8 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
         {
             /* random access - use tiny blob window */
 			window = 1;
+/*printf("4\n");
+printf("window:=%u\n", window);*/
 		}
 	} 
 
@@ -634,7 +642,6 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
             self->start_id=self->stop_id=row_id;
             if(row_count > 0)
                 self->stop_id += row_count-1;
-
         }
 
         /* this code only executes if requested row-count is 1 */
@@ -671,6 +678,8 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
             }
         }
     }
+/*printf("self->start_id:=%li\n", self->start_id);
+printf("self->stop_id :=%li\n", self->stop_id);*/
 
     /* create and populate array of input parameters */
     VECTOR_ALLOC_ARRAY(argc, argv, args_os, args_oh);

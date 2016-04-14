@@ -80,15 +80,8 @@ SEARCH_SRC = \
 	agrep-myers \
 	agrep-myersunltd \
 	agrep-dp \
-	sw-search
-
-ifeq (linux,$(OS))
-SEARCH_SRC += \
-	nucstrstr-icc-$(ARCH)-$(BUILDTYPE)
-else
-SEARCH_SRC += \
+	sw-search \
 	nucstrstr
-endif
 
 SEARCH_OBJ = \
 	$(addsuffix .$(LOBX),$(SEARCH_SRC))

@@ -2534,7 +2534,7 @@ LIB_EXPORT rc_t CC KFileIsEnc_v2 (const char * buffer, size_t buffer_size)
 
     if ((memcmp (buffer, &const_header.file_sig, sizeof const_header.file_sig ) != 0) &&
         (memcmp (buffer, &const_header_sra.file_sig, sizeof const_header_sra.file_sig ) != 0))
-        return RC (rcFS, rcFile, rcIdentifying, rcFile, rcWrongType); 
+        return SILENT_RC (rcFS, rcFile, rcIdentifying, rcFile, rcWrongType); 
 
     /* can we also check the byte order? It's okay if we can't */
     if (buffer_size < sizeof header.file_sig + sizeof header.byte_order)

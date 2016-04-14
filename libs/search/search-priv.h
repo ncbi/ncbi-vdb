@@ -31,6 +31,7 @@
 #include <klib/rc.h>
 #include <os-native.h>
 #include <compiler.h>
+#include <insdc/insdc.h>
 
 #include <stdlib.h>
 #include <string.h>

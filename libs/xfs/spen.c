@@ -572,7 +572,6 @@ _BurroMake (
     return RCt;
 }   /* _BurroMake () */
 
-LIB_EXPORT
 rc_t CC
 XFSBurroAddRef ( const struct XFSBurro * self )
 {
@@ -602,7 +601,6 @@ XFSBurroAddRef ( const struct XFSBurro * self )
     return RCt;
 }   /* XFSBurroAddRef () */
 
-LIB_EXPORT
 rc_t CC
 XFSBurroRelease ( const struct XFSBurro * self )
 {
@@ -634,7 +632,6 @@ XFSBurroRelease ( const struct XFSBurro * self )
     return RCt;
 }   /* XFSBurroRelease () */
 
-LIB_EXPORT
 bool CC
 XFSBurroGood ( const struct XFSBurro * self )
 {
@@ -749,7 +746,6 @@ _BurroGetFile (
     return RCt;
 }   /* _BurroGetFile () */
 
-LIB_EXPORT
 rc_t CC
 XFSBurroCachedFile (
                 const struct XFSBurro * self,
@@ -759,7 +755,6 @@ XFSBurroCachedFile (
     return _BurroGetFile ( self, File, false );
 }   /* XFSBurroCachedFile () */
 
-LIB_EXPORT
 rc_t CC
 XFSBurroRecachedFile (
                 const struct XFSBurro * self,
@@ -773,7 +768,6 @@ XFSBurroRecachedFile (
 /* XFSPen                                                            */
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
-LIB_EXPORT
 rc_t CC
 XFSPenMake ( const struct XFSPen ** Pen, size_t Capacity )
 {
@@ -821,7 +815,6 @@ _PenTreeWhackCallback ( BSTNode * Node, void * unused )
     }
 }   /* _PenTreeWhackCallback () */
 
-LIB_EXPORT
 rc_t CC
 XFSPenDispose ( const struct XFSPen * self )
 {
@@ -921,7 +914,6 @@ _PenAdd_NoLock (
                         );
 }   /* _PenAdd_NoLock () */
 
-LIB_EXPORT
 rc_t CC
 XFSPenGet ( 
             const struct XFSPen * self,

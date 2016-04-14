@@ -63,14 +63,6 @@ clean: stdclean
 #
 INCDIRS +=  -I$(TOP)/libs/ngs
 
-valgrind: valgrind_ngs \
-          valgrind_sra \
-          valgrind_sradb \
-          valgrind_csra1 \
-          valgrind_csra1_readcollection \
-          valgrind_csra1_refwin \
-          valgrind_csra1_pileup \
-
 TEST_NGS_LIB = \
 	-sncbi-vdb \
 	-skapp \
@@ -88,10 +80,6 @@ TEST_NGS_OBJ = \
 $(TEST_BINDIR)/test-ngs: $(TEST_NGS_OBJ) 
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
-valgrind_ngs: std
-	$(VALGRIND) $(TEST_BINDIR)/test-ngs 
-    
-
 #-------------------------------------------------------------------------------
 # test-ngs_sra
 #
@@ -107,9 +95,6 @@ $(TEST_BINDIR)/test-ngs_sra: $(TEST_NGS_SRA_OBJ)
 sra: test-ngs_sra
 	$(TEST_BINDIR)/$^
 
-valgrind_sra: std
-	$(VALGRIND) $(TEST_BINDIR)/test-ngs_sra 
-    
 #-------------------------------------------------------------------------------
 # test-ngs_sradb
 #
@@ -125,9 +110,6 @@ $(TEST_BINDIR)/test-ngs_sradb: $(TEST_NGS_SRADB_OBJ)
 sradb: test-ngs_sradb
 	$(TEST_BINDIR)/$^
 
-valgrind_sradb: std
-	$(VALGRIND) $(TEST_BINDIR)/test-ngs_sradb 
-    
 #-------------------------------------------------------------------------------
 # test-ngs_csra1
 #
@@ -140,9 +122,6 @@ TEST_NGS_CSRA1_OBJ = \
 $(TEST_BINDIR)/test-ngs_csra1: $(TEST_NGS_CSRA1_OBJ) 
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
-valgrind_csra1: std
-	$(VALGRIND) $(TEST_BINDIR)/test-ngs_csra1 
-
 #-------------------------------------------------------------------------------
 # test-ngs_csra1_readcollection
 #
@@ -154,9 +133,6 @@ TEST_NGS_CSRA1_READCOLLECTION_OBJ = \
 
 $(TEST_BINDIR)/test-ngs_csra1_readcollection: $(TEST_NGS_CSRA1_READCOLLECTION_OBJ) 
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
-
-valgrind_csra1_readcollection: std
-	$(VALGRIND) $(TEST_BINDIR)/test-ngs_csra1_readcollection     
 
 #-------------------------------------------------------------------------------
 # test-ngs_csra1_refwin
@@ -173,9 +149,6 @@ $(TEST_BINDIR)/test-ngs_csra1_refwin: $(TEST_NGS_CSRA1_REFWIN_OBJ)
 refwin: test-ngs_csra1_refwin
 	$(TEST_BINDIR)/$^
 
-valgrind_csra1_refwin: std
-	$(VALGRIND) $(TEST_BINDIR)/test-ngs_csra1_refwin     
-
 #-------------------------------------------------------------------------------
 # test-ngs_csra1_pileup
 #
@@ -187,9 +160,6 @@ TEST_NGS_CSRA1_PILEUP_OBJ = \
 
 $(TEST_BINDIR)/test-ngs_csra1_pileup: $(TEST_NGS_CSRA1_PILEUP_OBJ) 
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
-
-valgrind_csra1_pileup: std
-	$(VALGRIND) $(TEST_BINDIR)/test-ngs_csra1_pileup     
 
 #-------------------------------------------------------------------------------
 # test-ngs_reference
@@ -205,6 +175,3 @@ $(TEST_BINDIR)/test-ngs_reference: $(TEST_NGS_REFERENCE_OBJ)
 
 reference: test-ngs_reference
 	$(TEST_BINDIR)/$^
-
-valgrind_reference: std
-	$(VALGRIND) $(TEST_BINDIR)/test-ngs_reference     

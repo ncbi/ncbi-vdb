@@ -39,7 +39,8 @@ extern "C" {
  * That file contains pool of KHttpFiles, for accessing dbGaP data
  * Due to extremly sophisticated inner world of mine, I am introducing
  * Pen primitive ( not Pool ), and Pen is 'pen'. There is also small
- * donkey inside.
+ * donkey inside. Burro ( donkey ) it is structure which contains 
+ * pointer to cached/non_cached HTTP file.
  *
  * So, call "XFSPenMake ()" function and be ready for ride.
  *
@@ -63,13 +64,16 @@ struct XFSBurro;
 /*))
  //     XFSPen Make/Dispose methods
 ((*/
-XFS_EXTERN rc_t CC XFSPenMake (
+rc_t CC XFSPenMake (
                             const struct XFSPen ** Pen,
                             size_t Capacity
                             );
-XFS_EXTERN rc_t CC XFSPenDispose ( const struct XFSPen * self );
+rc_t CC XFSPenDispose ( const struct XFSPen * self );
 
-XFS_EXTERN rc_t CC XFSPenGet (
+/*))
+ //     Returns object associated with URL
+((*/
+rc_t CC XFSPenGet (
                             const struct XFSPen * self,
                             const struct XFSBurro ** Burro,
                             const char * Url
@@ -83,17 +87,23 @@ XFS_EXTERN rc_t CC XFSPenGet (
  //     XFSBurro methods
 ((*/
 
-XFS_EXTERN rc_t CC XFSBurroAddRef ( const struct XFSBurro * self );
-XFS_EXTERN rc_t CC XFSBurroRelease ( const struct XFSBurro * self );
+rc_t CC XFSBurroAddRef ( const struct XFSBurro * self );
+rc_t CC XFSBurroRelease ( const struct XFSBurro * self );
 
-XFS_EXTERN bool CC XFSBurroGood ( const struct XFSBurro * self );
+bool CC XFSBurroGood ( const struct XFSBurro * self );
 
-XFS_EXTERN rc_t CC XFSBurroCachedFile (
+/*))
+ //     Returns 'CACHED' KFile associated with URL
+((*/
+rc_t CC XFSBurroCachedFile (
                                 const struct XFSBurro * self,
                                 const struct KFile ** File
                                 );
 
-XFS_EXTERN rc_t CC XFSBurroRecachedFile (
+/*))
+ //     Drops old 'CACHED' KFile associated with URL, and returns new
+((*/
+rc_t CC XFSBurroRecachedFile (
                                 const struct XFSBurro * self,
                                 const struct KFile ** File
                                 );

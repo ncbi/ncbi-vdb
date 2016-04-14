@@ -2907,7 +2907,7 @@ rc_t VPathFindParam ( const VPath * self, const char * param, String * val_str )
             ++ start;
         }
 
-        rc = RC ( rcVFS, rcPath, rcReading, rcParam, rcNotFound );
+        rc = SILENT_RC ( rcVFS, rcPath, rcReading, rcParam, rcNotFound );
     }
 
     return rc;

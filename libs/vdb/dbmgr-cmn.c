@@ -258,13 +258,15 @@ rc_t VDBManagerGetKfgPath ( const KConfig *kfg, const char *path, char *value, s
     if ( rc == 0 )
     {
         size_t remaining;
-        rc = KConfigNodeRead ( node, 0, value, value_size, num_read, & remaining );
+        rc = KConfigNodeRead ( node, 0, value, value_size - 1, num_read, & remaining );
         if ( rc == 0 )
         {
             if ( remaining != 0 )
                 rc = RC ( rcVDB, rcMgr, rcConstructing, rcPath, rcExcessive );
             else if ( string_chr ( value, * num_read, '%' ) != NULL )
                 rc = RC ( rcVDB, rcMgr, rcConstructing, rcPath, rcInvalid );
+            else
+                value[*num_read] = '\0';
         }
 
         KConfigNodeRelease ( node );

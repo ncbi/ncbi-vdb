@@ -1,0 +1,21 @@
+{
+   static_cached_KDirectory_in_KConfig_find_home_directory
+   Memcheck:Leak
+    ...
+   fun:find_home_directory
+}
+{
+   vt_cache
+   Memcheck:Leak
+   fun:calloc
+   fun:_ZN3ngs7Resolve*
+}
+{
+   ktst_exception_in_child_process
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:malloc
+   fun:__cxa_allocate_exception
+   ...
+   fun:_ZN16ChildProcessFail8Instance11test_methodEv
+}

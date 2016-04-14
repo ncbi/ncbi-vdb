@@ -33,6 +33,12 @@
 #include <stdlib.h>
 #endif
 
+#if _M_IX86_FP == 1
+	#define __SSE__ 1
+#else if _M_IX86_FP == 2
+	#define __SSE2__ 1
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

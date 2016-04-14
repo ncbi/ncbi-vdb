@@ -29,7 +29,7 @@ TOP ?= $(abspath ../..)
 MODULE = test/judy_test
 
 TEST_TOOLS = \
-	judytest
+	test-judy
 
 include $(TOP)/build/Makefile.env
 
@@ -41,7 +41,7 @@ $(TEST_TOOLS): makedirs
 clean: stdclean
 
 #-------------------------------------------------------------------------------
-# my-app
+# test-judy
 #
 JUDYTEST_SRC = \
 	judytest
@@ -53,6 +53,6 @@ JUDYTEST_LIB = \
 	-skapp \
 	-sncbi-vdb 
 
-$(TEST_BINDIR)/judytest: $(JUDYTEST_OBJ)
+$(TEST_BINDIR)/test-judy: $(JUDYTEST_OBJ)
 	$(LD) --exe $(SRCDIR) -o $@ $^ $(JUDYTEST_LIB)
 
