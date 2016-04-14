@@ -563,27 +563,17 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
         /*** since cache_cursor exist, trying to avoid prefetching data which is in cache cursor ***/
 		row_id_max = self->curs->cache_empty_end;
 		MAX_BLOB_REGROUP=256;
-assert(false);
     } else {
 		MAX_BLOB_REGROUP=1024;
     }
-/*printf("\n");
-printf("self=%p,row_id=%li\n", (void*)self, row_id);
-printf("self->start_id=%li\n", self->start_id);
-printf("self->stop_id =%li\n", self->stop_id);
-printf("MAX_BLOB_REGROUP=%u\n", MAX_BLOB_REGROUP);*/
 	if(self->dad.sub == vftRowFast)
     {
 		window = MAX_BLOB_REGROUP;
-/*printf("1\n");
-printf("window:=%u\n", window);*/
 	}
     else
     {
         /*** from previous fetch **/
 		window = self->stop_id - self->start_id + 1;
-/*printf("2\n");
-printf("window:=%u\n", window);*/
 
         /** detect sequentual io ***/
 		if ( row_id == self->stop_id + 1 )
@@ -599,25 +589,12 @@ printf("window:=%u\n", window);*/
                     window_resized = true;
                 }
                 /* we know that row_id lands on the first row of the new window */
-/*printf("3\n");
-printf("window:=%u\n", window);*/
 			}
-            else
-            {
-                /* either the window is at maximum,
-                   or the row_id wouldn't be at the beginning of window. */
-                assert ( window >= MAX_BLOB_REGROUP ||
-                         ( row_id & ( 4 * window ) ) != 1 );
-
-                /* leave the window as is */
-            }
 		}
         else
         {
             /* random access - use tiny blob window */
 			window = 1;
-/*printf("4\n");
-printf("window:=%u\n", window);*/
 		}
 	} 
 
@@ -678,8 +655,6 @@ printf("window:=%u\n", window);*/
             }
         }
     }
-/*printf("self->start_id:=%li\n", self->start_id);
-printf("self->stop_id :=%li\n", self->stop_id);*/
 
     /* create and populate array of input parameters */
     VECTOR_ALLOC_ARRAY(argc, argv, args_os, args_oh);
