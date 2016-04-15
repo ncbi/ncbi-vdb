@@ -823,9 +823,7 @@ LIB_EXPORT rc_t CC KMagicFileFormatMake (KFileFormat ** pft, const char * magic_
                     }
                     else
                     {
-                        KDirectory * pwd;
                         KConfig * kfg;
-                        static const char unix_magic_path[] = "/usr/share/file/magic";
                         static const char kfg_magic_path[] = "kfs/kff/magic";
                         char * magic_path_cursor;
                         char kfg_magic_path_buff [1024];
@@ -909,9 +907,13 @@ LIB_EXPORT rc_t CC KMagicFileFormatMake (KFileFormat ** pft, const char * magic_
         
                         if (rc == 0)
                         {
+/*VDB-2911: remove use of system magic file; do not want to break when magic file format changes */
+#if 0                            
+                            KDirectory * pwd;
                             rc = KDirectoryNativeDir (&pwd);
                             if (rc == 0)
                             {
+                                static const char unix_magic_path[] = "/usr/share/file/magic";
                                 KPathType kpt = KDirectoryPathType (pwd, unix_magic_path);
                                 rc = KDirectoryRelease(pwd);
                                 DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_KFF),
@@ -930,14 +932,14 @@ LIB_EXPORT rc_t CC KMagicFileFormatMake (KFileFormat ** pft, const char * magic_
                             }
                             else
                                 LOGERR (klogErr, rc, "Failed to open NativeDir for Magic");
-
+#endif
                             DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_KFF),
                                     ("%s: loading path %s\n", __func__, magic_path_buff));
 
                             load_code = magic_load (self->cookie, magic_path_buff);
                             if (load_code != 0) /* defined as 0 success and -1 as fail */
                             {
-                                KFF_DEBUG (("%s: magic_load() failed with load code %d\n", __func__, load_code));
+                                KFF_DEBUG (("%s: magic_load() failed with load code %d(%s)\n", __func__, load_code, magic_error (self->cookie) ));
                                 rc = RC (rcFF, rcFileFormat, rcLoading, rcLibrary, rcUnexpected);
                             }
                             else
