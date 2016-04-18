@@ -46,6 +46,8 @@
 #include <stdexcept>
 #include <sstream>
 
+#include <cstring> // mamset
+
 using namespace std;
 using namespace ncbi::NK;
 
@@ -526,6 +528,61 @@ TEST_CASE( KQueue_NULL )
     REQUIRE_RC_FAIL(KQueueMake(NULL, 1));
 }
 
+TEST_CASE(KQueueSimpleTest) {
+    KQueue * queue = NULL;
+    REQUIRE_RC(KQueueMake(&queue, 2));
+
+    timeout_t tm;
+    memset(&tm, 0, sizeof tm);
+    REQUIRE_RC(TimeoutInit(&tm, 2000));
+
+    void *item = NULL;
+    {   // pushed 2 - popped 2 = ok
+        for (uint64_t i = 1; i < 3; ++i) {
+            item = (void*)i;
+            REQUIRE_RC(KQueuePush(queue, item, &tm));
+        }
+        for (uint64_t i = 1; i < 3; ++i) {
+            uint64_t j = 0;
+            REQUIRE_RC(KQueuePop(queue, &item, &tm));
+  	    j = (uint64_t)item;
+  	    REQUIRE_EQ(i, j);
+        }
+    }
+
+    {   // pushed 3 > capacity (failure) - popped 2 (ok)
+        for (uint64_t i = 1; i < 3; ++i) {
+            void *item = (void*)i;
+            REQUIRE_RC(KQueuePush(queue, item, &tm));
+        }
+        REQUIRE_RC_FAIL(KQueuePush(queue, item, &tm));
+        for (uint64_t i = 1; i < 3; ++i) {
+            uint64_t j = 0;
+            void *item = 0;
+            REQUIRE_RC(KQueuePop(queue, &item, &tm));
+  	    j = (uint64_t)item;
+  	    REQUIRE_EQ(i, j);
+        }
+    }
+
+    {   // pushed 2 = capacity (ok) - popped 3 >capacity (failure)
+        for (uint64_t i = 1; i < 3; ++i) {
+            void *item = (void*)i;
+            REQUIRE_RC(KQueuePush(queue, item, &tm));
+        }
+        for (uint64_t i = 1; i < 3; ++i) {
+            uint64_t j = 0;
+            void *item = 0;
+            REQUIRE_RC(KQueuePop(queue, &item, &tm));
+  	    j = (uint64_t)item;
+  	    REQUIRE_EQ(i, j);
+        }
+        REQUIRE_RC_FAIL(KQueuePop(queue, &item, &tm));
+    }
+
+    REQUIRE_RC(KQueueRelease(queue));
+}
+
 class KQueueFixture
 {
 public:
@@ -612,7 +669,7 @@ protected:
                 }
                 else
                 {
-                    item = (void *)td->tid;
+                    item = reinterpret_cast<void*>(td->tid);
                     rc = KQueuePush(td->queue, item, &td->tm);
                 }
 
