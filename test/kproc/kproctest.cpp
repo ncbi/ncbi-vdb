@@ -51,7 +51,8 @@
 using namespace std;
 using namespace ncbi::NK;
 
-TEST_SUITE( KProcTestSuite );
+extern "C" { static rc_t argsHandler(int argc, char* argv[]); }
+TEST_SUITE_WITH_ARGS_HANDLER(KProcTestSuite, argsHandler);
 
 //TODO: KThread
 
@@ -864,6 +865,13 @@ rc_t CC Usage ( const Args * args )
 
 
 const char UsageDefaultName[] = "test-kproc";
+
+static rc_t argsHandler(int argc, char* argv[]) {
+    Args* args = NULL;
+    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
+    ArgsWhack(args);
+    return rc;
+}
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
