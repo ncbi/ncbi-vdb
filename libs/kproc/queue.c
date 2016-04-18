@@ -259,6 +259,18 @@ LIB_EXPORT rc_t CC KQueuePush ( KQueue *self, const void *item, timeout_t *tm )
         {
             QMSG ( "%s: unlocking write lock ( %p ).\n", __func__, self -> wl );
             KLockUnlock ( self -> wl );
+
+            if ( self -> sealed )
+            {
+                switch ( ( int ) GetRCObject ( rc ) )
+                {
+                case ( int ) rcTimeout:
+                case ( int ) rcSemaphore:
+                    rc = RC ( rcCont, rcQueue, rcInserting, rcQueue, rcReadonly );
+                    QMSG ( "%s: resetting rc to %R\n", __func__, rc );
+                    break;
+                }
+            }
         }
     }
 
