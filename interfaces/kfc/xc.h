@@ -73,6 +73,7 @@ XOBJ ( xoFileDescriptor, "file descriptor", rcFileDesc );
 XOBJ ( xoStorage, "storage", rcStorage );
 XOBJ ( xoArgv, "argument vector", rcArgv );
 XOBJ ( xoZlib, "zlib stream", rcBlob );
+XOBJ ( xoAlignment, "alignment", rcData );
 
 /*--------------------------------------------------------------------------
  * XSTATE
@@ -107,6 +108,7 @@ XSTATE ( xsUnknown, "unknown", rcUnknown );
 XSTATE ( xsInconsistent, "inconsistent", rcInconsistent );
 XSTATE ( xsUnsupported, "unsupported", rcUnsupported );
 XSTATE_EXT ( xsInitFailed, xsFailed, "init failed", rcFailed );
+XSTATE ( xsNoPrimary, "missing primary", rcInvalid );
 
 /*--------------------------------------------------------------------------
  * XC
@@ -175,6 +177,7 @@ XC ( xcDirectoryNotFound, xoDirectory, xsNotFound );
 XC ( xcFileAccessFailed, xoFile, xsAccessFailed );
 XC ( xcZlibInitFailed, xoZlib, xsInitFailed );
 XC ( xcZlibDataInvalid, xoZlib, xsInvalid );
+XC ( xcSecondaryAlignmentMissingPrimary, xoAlignment, xsNoPrimary );
 
 #ifdef __cplusplus
 }

@@ -681,6 +681,10 @@ void LoadAlignmentInfo ( CSRA1_ReferenceWindow* self, ctx_t ctx, size_t* idx, in
         
         NGS_AlignmentRelease ( al, ctx );
     }
+    CATCH ( xcSecondaryAlignmentMissingPrimary )
+    {
+        CLEAR ();
+    }
 }
 
 static
