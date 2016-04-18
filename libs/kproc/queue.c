@@ -205,7 +205,7 @@ LIB_EXPORT rc_t CC KQueuePush ( KQueue *self, const void *item, timeout_t *tm )
         return RC ( rcCont, rcQueue, rcInserting, rcQueue, rcReadonly );
     }
     if ( item == NULL )
-        return RC ( rcCont, rcQueue, rcInserting, rcTimeout, rcNull );
+        return RC ( rcCont, rcQueue, rcInserting, rcParam, rcNull );
 
     QMSG ( "%s: acquiring write lock ( %p )...\n", __func__, self -> wl );
     rc = KLockAcquire ( self -> wl );
