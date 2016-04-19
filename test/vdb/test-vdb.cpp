@@ -28,6 +28,7 @@
 #include <vdb/cursor.h> 
 #include <vdb/blob.h> 
 #include <vdb/vdb-priv.h>
+#include <vdb/blob.h>
 #include <sra/sraschema.h> // VDBManagerMakeSRASchema
 #include <vdb/schema.h> /* VSchemaRelease */
 
@@ -211,7 +212,7 @@ public:
             throw logic_error ( "~VdbFixture: VCursorRelease failed" );
     }
     
-    rc_t Setup( const char * acc, const char* p_colName )
+    rc_t Setup( const char * acc, const char* column = "READ_LEN" )
     {
         const VDatabase *db = NULL;
         rc_t rc = VDBManagerOpenDBRead ( mgr, &db, NULL, acc );
@@ -248,7 +249,7 @@ public:
             if ( rc == 0 )
             {
                 col_idx = ~0;
-                rc = VCursorAddColumn ( curs, &col_idx, p_colName );
+                rc = VCursorAddColumn ( curs, &col_idx, column );
                 if ( rc == 0 )
                 {
                     rc = VCursorOpen(curs);
@@ -269,6 +270,36 @@ public:
             
         return rc;
     }
+
+    bool CheckBlobRange ( int64_t p_rowId, int64_t p_first, uint64_t p_count )
+    {
+        THROW_ON_RC ( VCursorSetRowId ( curs, p_rowId ) );
+        THROW_ON_RC ( VCursorOpenRow ( curs ) );
+        
+        struct VBlob const *blob;
+        THROW_ON_RC ( VCursorGetBlob ( curs, &blob, col_idx ) );
+
+        bool ret = true;
+        
+        int64_t first;
+        uint64_t count;
+        THROW_ON_RC ( VBlobIdRange ( blob, &first, &count ) );
+        if ( p_first != first )
+        {
+            cout << "CheckBlobRange(" << p_rowId << " ) : expected first = " << p_first << ", actual = " << first << endl;             
+            ret = false;
+        }
+        if ( p_count != count )
+        {
+            cout << "CheckBlobRange(" << p_rowId << " ) : expected count = " << p_count << ", actual = " << count << endl;             
+            ret = false;
+        }
+        
+        THROW_ON_RC ( VCursorCloseRow (curs ) );
+        THROW_ON_RC ( VBlobRelease ( (struct VBlob *) blob ) );
+        return ret;
+    }
+    
     
     const VDBManager * mgr;
     const VCursor * curs;
@@ -462,9 +493,8 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_WGS, VdbFixture)
     }        
 }
 
-#if VDB_2858
-FIXTURE_TEST_CASE(VCursor_GetBlob_BlobIdRange_WGS, VdbFixture) 
-{   // single fragment per row, multiple rows per blob
+FIXTURE_TEST_CASE(VCursor_GetBlob_SequentialAccess, VdbFixture) 
+{   // VDB-2858: sequential access to blobs broken
     REQUIRE_RC ( Setup ( "ALAI01", "READ" ) );
     REQUIRE_RC ( VCursorOpen (curs ) );
     
@@ -472,13 +502,12 @@ FIXTURE_TEST_CASE(VCursor_GetBlob_BlobIdRange_WGS, VdbFixture)
     uint64_t count;
     
     REQUIRE_RC ( VCursorIdRange (curs, 0, &first, &count ) );
-cout << first << ", " << count << endl;             
 
     int64_t rowId = 1;
     while (true) 
     {
-        REQUIRE_RC ( VCursorSetRowId (curs, rowId ) );
-        REQUIRE_RC ( VCursorOpenRow (curs ) );
+        REQUIRE_RC ( VCursorSetRowId ( curs, rowId ) );
+        REQUIRE_RC ( VCursorOpenRow ( curs ) );
         
         struct VBlob const *blob;
         if ( VCursorGetBlob ( curs, &blob, col_idx ) != 0 )
@@ -487,7 +516,6 @@ cout << first << ", " << count << endl;
         }
         
         REQUIRE_RC ( VBlobIdRange ( blob, &first, &count ) );
-cout << first << ", " << count << endl;             
         REQUIRE_EQ ( rowId, first );
         
         REQUIRE_RC ( VCursorCloseRow (curs ) );
@@ -496,7 +524,23 @@ cout << first << ", " << count << endl;
         rowId += count;
     }
 }
-#endif
+
+FIXTURE_TEST_CASE(VCursor_GetBlob_RandomAccess, VdbFixture) 
+{   
+    REQUIRE_RC ( Setup ( "SRR000001", "READ" ) );
+    REQUIRE_RC ( VCursorOpen (curs ) );
+    
+    // when accessing randomly, blob sizes stay very small
+    REQUIRE ( CheckBlobRange ( 1, 1, 4 ) );
+    REQUIRE ( CheckBlobRange ( 1000, 1000, 1 ) );
+    REQUIRE ( CheckBlobRange ( 14, 14, 1 ) );
+    REQUIRE ( CheckBlobRange ( 1200, 1200, 1 ) );
+    REQUIRE ( CheckBlobRange ( 14000, 14000, 1 ) );
+    REQUIRE ( CheckBlobRange ( 14001, 14001, 4 ) ); // sequential access starts growing the blob
+    REQUIRE ( CheckBlobRange ( 1400, 1400, 1 ) ); // back to random
+    REQUIRE ( CheckBlobRange ( 140000, 140000, 1 ) ); 
+    REQUIRE ( CheckBlobRange ( 14001, 14001, 1 ) ); 
+}
 
 FIXTURE_TEST_CASE(PageMapIterator_WGS, VdbFixture) 
 {   // single fragment per row, multiple rows per blob
@@ -537,7 +581,6 @@ FIXTURE_TEST_CASE(PageMapIterator_WGS, VdbFixture)
         REQUIRE_RC ( VBlobRelease ( (struct VBlob *) blob ) );
     }
 }
-
 
 //////////////////////////////////////////// Main
 extern "C"
