@@ -87,7 +87,7 @@ struct KSraHeader
 {
     /* the first two fields are byte endian agnostic - they are low to high as shown */
     uint8_t	ncbi[4];                /* 'N', 'C', 'B', 'I' */
-    uint8_t	sra[4];                 /* '.', 'S', 'R', 'A' */
+    uint8_t	sra[4];                 /* '.', 's', 'r', 'a' */
     /* this field lets you determine the byte order of the file */
     SraEndian_t	byte_order;
     /* not a ver_t - this is a 4 byte integer with no subfields */
