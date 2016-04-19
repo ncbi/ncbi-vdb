@@ -32,6 +32,7 @@ TEST_TOOLS = \
     test-vfsmanager \
 	test-path-c \
 	test-path \
+	test-resolver
 
 
 include $(TOP)/build/Makefile.env
@@ -96,3 +97,21 @@ MANAGERTEST_LIB = \
 $(TEST_BINDIR)/test-vfsmanager: $(MANAGERTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(MANAGERTEST_LIB)
 
+
+#----------------------------------------------------------------
+# C++ test on VResolver
+#
+
+RESOLVERTEST_SRC = \
+	resolvertest 
+
+RESOLVERTEST_OBJ = \
+	$(addsuffix .$(OBJX),$(RESOLVERTEST_SRC))
+
+RESOLVERTEST_LIB = \
+	-skapp \
+	-sktst \
+	-sncbi-vdb \
+
+$(TEST_BINDIR)/test-resolver: $(RESOLVERTEST_OBJ)
+	$(LP) --exe -o $@ $^ $(RESOLVERTEST_LIB)

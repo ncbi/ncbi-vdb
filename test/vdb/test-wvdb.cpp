@@ -22,6 +22,8 @@
 //
 // ===========================================================================
 
+#include <klib/log.h>
+
 #include <vdb/manager.h> // VDBManager
 #include <vdb/database.h> 
 #include <vdb/table.h> 
@@ -239,6 +241,175 @@ FIXTURE_TEST_CASE ( ColumnOpenMetadata, WVDB_Fixture )
     }
 }
 
+FIXTURE_TEST_CASE ( VTableDropColumn_PhysicalColumn, WVDB_Fixture )
+{
+    m_databaseName = ScratchDir + GetName();
+    RemoveDatabase();
+
+    string schemaText = "table table1 #1.0.0 { column ascii column1; column ascii column2; };"
+                        "database root_database #1 { table table1 #1 TABLE1; } ;";
+
+    const char* TableName = "TABLE1";
+    const char* ColumnName1 = "column1";
+    const char* ColumnName2 = "column2";
+
+    VDatabase* db;
+    {
+        VSchema* schema;
+        REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & schema ) );
+        REQUIRE_RC ( VSchemaParseText ( schema, NULL, schemaText . c_str (), schemaText . size () ) );
+
+        REQUIRE_RC ( VDBManagerCreateDB ( m_mgr,
+                                          & db,
+                                          schema,
+                                          "root_database",
+                                          kcmInit + kcmMD5,
+                                          "%s",
+                                          m_databaseName . c_str () ) );
+
+        VTable* table;
+        REQUIRE_RC ( VDatabaseCreateTable ( db , & table, TableName, kcmInit + kcmMD5, TableName ) );
+
+        VCursor* cursor;
+        REQUIRE_RC ( VTableCreateCursorWrite ( table, & cursor, kcmInsert ) );
+        uint32_t column_idx1;
+        uint32_t column_idx2;
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx1, ColumnName1 ) );
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx2, ColumnName2 ) );
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+
+        // need to insert 2 rows with different values to make the column physical
+        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, "blah", 0, 4 ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx2, 8, "blah", 0, 4 ) );
+        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
+        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+
+        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, "eeee", 0, 4 ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx2, 8, "eeee", 0, 4 ) );
+        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
+        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+
+        REQUIRE_RC ( VCursorCommit ( cursor ) );
+
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+        REQUIRE_RC ( VTableRelease ( table ) );
+        REQUIRE_RC ( VSchemaRelease ( schema ) );
+    }
+    // drop column1
+    {
+        VTable* table;
+        REQUIRE_RC ( VDatabaseOpenTableUpdate ( db , & table, TableName ) );
+        REQUIRE_RC ( VTableDropColumn ( table, ColumnName1 ) );
+        REQUIRE_RC ( VTableRelease ( table ) );
+    }
+    // finally, check resulted db
+    {
+        VTable* table;
+        REQUIRE_RC ( VDatabaseOpenTableUpdate ( db , & table, TableName ) );
+        const VCursor* cursor;
+        REQUIRE_RC ( VTableCreateCursorRead ( (const VTable*) table, & cursor ) );
+        uint32_t column_idx1;
+        uint32_t column_idx2;
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+
+        KLogLevel logLevel = KLogLevelGet();
+        REQUIRE_RC ( KLogLevelSet ( klogFatal ) );
+        REQUIRE_RC_FAIL ( VCursorAddColumn ( cursor, & column_idx1, ColumnName1 ) );
+        REQUIRE_RC ( KLogLevelSet ( logLevel ) );
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx2, ColumnName2 ) );
+
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+        REQUIRE_RC ( VTableRelease ( table ) );
+    }
+    REQUIRE_RC ( VDatabaseRelease ( db ) );
+}
+
+FIXTURE_TEST_CASE ( VTableDropColumn_MetadataColumn_VDB_2735, WVDB_Fixture )
+{
+    m_databaseName = ScratchDir + GetName();
+    RemoveDatabase();
+
+    string schemaText = "table table1 #1.0.0 { column ascii column1; column ascii column2; };"
+                        "database root_database #1 { table table1 #1 TABLE1; } ;";
+
+    const char* TableName = "TABLE1";
+    const char* ColumnName1 = "column1";
+    const char* ColumnName2 = "column2";
+
+    VDatabase* db;
+    {
+        VSchema* schema;
+        REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & schema ) );
+        REQUIRE_RC ( VSchemaParseText ( schema, NULL, schemaText . c_str (), schemaText . size () ) );
+
+        REQUIRE_RC ( VDBManagerCreateDB ( m_mgr,
+                                          & db,
+                                          schema,
+                                          "root_database",
+                                          kcmInit + kcmMD5,
+                                          "%s",
+                                          m_databaseName . c_str () ) );
+
+        VTable* table;
+        REQUIRE_RC ( VDatabaseCreateTable ( db , & table, TableName, kcmInit + kcmMD5, TableName ) );
+
+        VCursor* cursor;
+        REQUIRE_RC ( VTableCreateCursorWrite ( table, & cursor, kcmInsert ) );
+        uint32_t column_idx1;
+        uint32_t column_idx2;
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx1, ColumnName1 ) );
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx2, ColumnName2 ) );
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+
+        // need to insert 2 rows with same values to keep the column in metadata
+        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, "blah", 0, 4 ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx2, 8, "blah", 0, 4 ) );
+        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
+        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+
+        REQUIRE_RC ( VCursorOpenRow ( cursor ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, "blah", 0, 4 ) );
+        REQUIRE_RC ( VCursorWrite ( cursor, column_idx2, 8, "blah", 0, 4 ) );
+        REQUIRE_RC ( VCursorCommitRow ( cursor ) );
+        REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+
+        REQUIRE_RC ( VCursorCommit ( cursor ) );
+
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+        REQUIRE_RC ( VTableRelease ( table ) );
+        REQUIRE_RC ( VSchemaRelease ( schema ) );
+    }
+    // drop column1
+    {
+        VTable* table;
+        REQUIRE_RC ( VDatabaseOpenTableUpdate ( db , & table, TableName ) );
+        REQUIRE_RC ( VTableDropColumn ( table, ColumnName1 ) );
+        REQUIRE_RC ( VTableRelease ( table ) );
+    }
+    // finally, check resulted db
+    {
+        VTable* table;
+        REQUIRE_RC ( VDatabaseOpenTableUpdate ( db , & table, TableName ) );
+        const VCursor* cursor;
+        REQUIRE_RC ( VTableCreateCursorRead ( (const VTable*) table, & cursor ) );
+        uint32_t column_idx1;
+        uint32_t column_idx2;
+        REQUIRE_RC ( VCursorOpen ( cursor ) );
+
+        KLogLevel logLevel = KLogLevelGet();
+        REQUIRE_RC ( KLogLevelSet ( klogFatal ) );
+        REQUIRE_RC_FAIL ( VCursorAddColumn ( cursor, & column_idx1, ColumnName1 ) );
+        REQUIRE_RC ( KLogLevelSet ( logLevel ) );
+        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx2, ColumnName2 ) );
+
+        REQUIRE_RC ( VCursorRelease ( cursor ) );
+        REQUIRE_RC ( VTableRelease ( table ) );
+    }
+    REQUIRE_RC ( VDatabaseRelease ( db ) );
+}
 
 //////////////////////////////////////////// Main
 extern "C"

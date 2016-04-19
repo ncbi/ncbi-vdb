@@ -31,6 +31,8 @@
 #include <ktst/unit_test.hpp>
 
 #include <klib/rc.h>
+#include <klib/time.h>
+#include <klib/log.h>
 
 #include <atomic32.h>
 #include <os-native.h>
@@ -44,10 +46,13 @@
 #include <stdexcept>
 #include <sstream>
 
+#include <cstring> // mamset
+
 using namespace std;
 using namespace ncbi::NK;
 
-TEST_SUITE( KProcTestSuite );
+extern "C" { static rc_t argsHandler(int argc, char* argv[]); }
+TEST_SUITE_WITH_ARGS_HANDLER(KProcTestSuite, argsHandler);
 
 //TODO: KThread
 
@@ -524,12 +529,64 @@ TEST_CASE( KQueue_NULL )
     REQUIRE_RC_FAIL(KQueueMake(NULL, 1));
 }
 
+TEST_CASE(KQueueSimpleTest) {
+    KQueue * queue = NULL;
+    REQUIRE_RC(KQueueMake(&queue, 2));
+
+    void *item = NULL;
+    {   // pushed 2 - popped 2 = ok
+        for (uint64_t i = 1; i < 3; ++i) {
+            item = (void*)i;
+            REQUIRE_RC(KQueuePush(queue, item, NULL));
+        }
+        for (uint64_t i = 1; i < 3; ++i) {
+            uint64_t j = 0;
+            REQUIRE_RC(KQueuePop(queue, &item, NULL));
+            j = (uint64_t)item;
+            REQUIRE_EQ(i, j);
+        }
+    }
+
+    {   // pushed 3 > capacity (failure) - popped 2 (ok)
+        for (uint64_t i = 1; i < 3; ++i) {
+            void *item = (void*)i;
+            REQUIRE_RC(KQueuePush(queue, item, NULL));
+        }
+        REQUIRE_RC_FAIL(KQueuePush(queue, item, NULL));
+        for (uint64_t i = 1; i < 3; ++i) {
+            uint64_t j = 0;
+            void *item = 0;
+            REQUIRE_RC(KQueuePop(queue, &item, NULL));
+            j = (uint64_t)item;
+            REQUIRE_EQ(i, j);
+        }
+    }
+
+    {   // pushed 2 = capacity (ok) - popped 3 >capacity (failure)
+        for (uint64_t i = 1; i < 3; ++i) {
+            void *item = (void*)i;
+            REQUIRE_RC(KQueuePush(queue, item, NULL));
+        }
+        for (uint64_t i = 1; i < 3; ++i) {
+            uint64_t j = 0;
+            void *item = 0;
+            REQUIRE_RC(KQueuePop(queue, &item, NULL));
+            j = (uint64_t)item;
+            REQUIRE_EQ(i, j);
+        }
+        REQUIRE_RC_FAIL(KQueuePop(queue, &item, NULL));
+    }
+
+    REQUIRE_RC(KQueueRelease(queue));
+}
+
 class KQueueFixture
 {
 public:
     KQueueFixture()
     :   threadRcs(NULL),
         threads(NULL),
+        threadsData(NULL),
         nThreads(32),
         nStartedThreads(0),
         sealed(false)
@@ -537,6 +594,9 @@ public:
         threads = (KThread**)malloc(sizeof(*threads) * nThreads);
         if (threads == NULL)
             throw logic_error("KQueueFixture: threads malloc failed");
+        threadsData = (ThreadData*)calloc(nThreads, sizeof(*threadsData));
+        if (threadsData == NULL)
+            throw logic_error("KQueueFixture: threadsData malloc failed");
         threadRcs = (rc_t*)calloc(nThreads, sizeof(*threadRcs));
         if (threadRcs == NULL)
             throw logic_error("KQueueFixture: threadRcs calloc failed");
@@ -554,6 +614,7 @@ public:
             }
         }
         free(threads);
+        free(threadsData);
         free(threadRcs);
 
         if (KQueueRelease((const KQueue*)queue) != 0)
@@ -565,7 +626,10 @@ protected:
         KQueue * queue;
         int tid;
         size_t max_tid;
+        uint32_t timeout_ms;
         bool is_reader;
+        bool finish; // will stop generating events and seal the queue once detected
+        bool allow_timeout; // if set, we won't treat timeout as an error
     };
 
     class Thread {
@@ -576,14 +640,30 @@ protected:
         {
             ThreadData* td = (ThreadData*)data;
             rc_t rc = 0;
-            int numOps = 131072;
+            int numOps = 8192;
 
             for (int i = 0; i < numOps; ++i)
             {
+                timeout_t tm;
+                timeout_t* tm_p = td->timeout_ms == 0 ? NULL : &tm;
                 void * item;
-                if (td->is_reader)
+                if (tm_p != NULL)
+                rc = TimeoutInit(tm_p, td->timeout_ms);
+                if (rc != 0)
                 {
-                    rc = KQueuePop(td->queue, &item, NULL);
+                    LOG(LogLevel::e_fatal_error, "KQueue_ThreadFn: TimeoutInit failed\n");
+                    break;
+                }
+                if (td->finish)
+                {
+                    rc = KQueueSeal(td->queue);
+                    if (rc != 0)
+                        LOG(LogLevel::e_fatal_error, "KQueue_ThreadFn: failed to seal queue\n");
+                    break;
+                }
+                else if (td->is_reader)
+                {
+                    rc = KQueuePop(td->queue, &item, tm_p);
                     if (rc == 0 && (item == NULL || (uint64_t)item > td->max_tid))
                     {
                         std::stringstream ss;
@@ -595,52 +675,55 @@ protected:
                 }
                 else
                 {
-                    item = (void *)td->tid;
-                    rc = KQueuePush(td->queue, item, NULL);
+                    item = reinterpret_cast<void*>(td->tid);
+                    rc = KQueuePush(td->queue, item, tm_p);
                 }
 
                 if (rc != 0)
                 {
-                    if (GetRCObject ( rc ) == (enum RCObject)rcTimeout)
+                    if (td->allow_timeout && GetRCObject ( rc ) == (enum RCObject)rcTimeout)
                         rc = 0;
+                    else if (GetRCObject ( rc ) == (enum RCObject)rcData && GetRCState ( rc ) == rcDone)
+                        break;
+                    else if (GetRCObject ( rc ) == (enum RCObject)rcQueue && GetRCState ( rc ) == rcReadonly)
+                        break;
                     else
                     {
-                        LOG(LogLevel::e_fatal_error, "KQueue_ThreadFn: failed to push/pop to/from queue\n");
+                        LOGERR ( klogFatal, rc, "KQueue_ThreadFn: failed to push/pop to/from queue" );
                         break;
                     }
                 }
 
             }
 
-            free(data);
-
             return rc;
         }
     };
 
-    void StartThread(bool is_reader)
+    void StartThread(bool is_reader, bool allow_timeout, uint32_t timeout_ms)
     {
         if (nStartedThreads >= nThreads)
             throw logic_error("StartThread: too many threads requested");
         if (sealed)
             throw logic_error("StartThread: cannot start new thread, fixture is already sealed");
 
-        int i = nStartedThreads++;
+        rc_t rc;
+        int tid = nStartedThreads++;
         ThreadData* td;
 
-        td = (ThreadData*)malloc(sizeof(*td));
-        if (td == NULL)
-            throw logic_error("StartThread: ThreadData malloc failed");
-        td->tid = i;
+        td = &threadsData[tid];
+        td->tid = tid;
         td->max_tid = nThreads - 1;
         td->is_reader = is_reader;
+        td->allow_timeout = allow_timeout;
         td->queue = queue;
-        rc_t rc = KThreadMake(&threads[i], Thread::KQueue_ThreadFn, td);
+        td->timeout_ms = timeout_ms;
+        rc = KThreadMake(&threads[tid], Thread::KQueue_ThreadFn, td);
         if (rc != 0)
             throw logic_error("StartThread: KThreadMake failed");
     }
 
-    void StartThreads(int numReaders, int numWriters)
+    void StartThreads(int numReaders, int numWriters, bool allow_timeout = true, uint32_t timeout_ms = 0)
     {
         if (numReaders + numWriters + nStartedThreads > nThreads)
             throw logic_error("RunThreads: too many threads requested");
@@ -651,15 +734,15 @@ protected:
 
         for (int i = 0; i < numReaders; ++i)
         {
-            StartThread(true);
+            StartThread(true, allow_timeout, timeout_ms);
         }
         for (int i = 0; i < numWriters; ++i)
         {
-            StartThread(false);
+            StartThread(false, allow_timeout, timeout_ms);
         }
     }
 
-    void WaitThreads()
+    void WaitThreads(bool checkRcs = true)
     {
         rc_t rc = 0;
         sealed = true;
@@ -675,16 +758,23 @@ protected:
         }
         if (rc != 0)
             throw logic_error("WaitThreads: KThreadWait failed");
+        if (checkRcs)
+            CheckThreadsRc();
+
+    }
+    void CheckThreadsRc()
+    {
         for (unsigned i = 0; i < nStartedThreads; ++i)
         {
             if (threadRcs[i] != 0)
-                throw logic_error("WaitThreads: thread returned non-zero exit code");
+                throw logic_error("CheckThreadsRc: thread returned unexpected exit code");
         }
     }
 
 public:
     rc_t* threadRcs;
     KThread** threads;
+    ThreadData* threadsData;
     size_t nThreads;
     size_t nStartedThreads;
     KQueue* queue;
@@ -711,8 +801,42 @@ FIXTURE_TEST_CASE(KQueue_Single_Reader_Multi_Writer, KQueueFixture)
 
 FIXTURE_TEST_CASE(KQueue_Multi_Reader_Multi_Writer, KQueueFixture)
 {
-    StartThreads(16, 16);
+    StartThreads(16, 16, false, 5000);
     WaitThreads();
+}
+
+FIXTURE_TEST_CASE(KQueue_Multi_Reader_Single_Writer_Seal, KQueueFixture)
+{
+    KTimeMs_t timeBefore = KTimeMsStamp();
+    const int numReaders = 31;
+    const int timeoutMs = 5000;
+    StartThreads(numReaders, 1, false, timeoutMs);
+    threadsData[numReaders].finish = true;
+    WaitThreads(false);
+    KTimeMs_t timeAfter = KTimeMsStamp();
+    for (unsigned i = 0; i < nStartedThreads; ++i)
+    {
+        rc_t expectedRc = (i == numReaders) ? 0 : SILENT_RC ( rcCont, rcQueue, rcRemoving, rcData, rcDone );
+        REQUIRE_EQ ( threadRcs[i], expectedRc );
+    }
+    REQUIRE_LT ( (int)(timeAfter - timeBefore), timeoutMs );
+}
+
+FIXTURE_TEST_CASE(KQueue_Single_Reader_Multi_Writer_Seal, KQueueFixture)
+{
+    KTimeMs_t timeBefore = KTimeMsStamp();
+    const int numWriters = 31;
+    const int timeoutMs = 5000;
+    StartThreads(1, numWriters, false, timeoutMs);
+    threadsData[0].finish = true;
+    WaitThreads(false);
+    KTimeMs_t timeAfter = KTimeMsStamp();
+    for (unsigned i = 0; i < nStartedThreads; ++i)
+    {
+        rc_t expectedRc = (i == 0) ? 0 : SILENT_RC ( rcCont, rcQueue, rcInserting, rcQueue, rcReadonly );
+        REQUIRE_EQ ( threadRcs[i], expectedRc );
+    }
+    REQUIRE_LT ( (int)(timeAfter - timeBefore), timeoutMs );
 }
 
 //TODO: KConditionWait, KConditionTimedWait, KConditionSignal, KConditionBroadcast
@@ -744,6 +868,13 @@ rc_t CC Usage ( const Args * args )
 
 
 const char UsageDefaultName[] = "test-kproc";
+
+static rc_t argsHandler(int argc, char* argv[]) {
+    Args* args = NULL;
+    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
+    ArgsWhack(args);
+    return rc;
+}
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
