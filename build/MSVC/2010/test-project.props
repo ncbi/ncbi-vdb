@@ -18,7 +18,7 @@
     </PropertyGroup>  
   
     <Target Name="AfterBuild" Condition="'$(Autorun)'=='true'">
-        <Exec Command="$(OutDir)$(TargetName)$(TargetExt) -l=all" WorkingDirectory="$(WorkingDirectory)\"/>
+        <Exec Command="$(OutDir)$(TargetName)$(TargetExt)" WorkingDirectory="$(WorkingDirectory)\"/>
     </Target>
     
 </Project>
