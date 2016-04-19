@@ -33,7 +33,8 @@ TEST_TOOLS = \
 	test-wvdb \
 	test-dependencies \
 	test-sparse-col-rw \
-	test-sparse-col-rd
+	test-sparse-col-rd \
+	test-blob-val
 
 include $(TOP)/build/Makefile.env
 
@@ -162,6 +163,26 @@ sparse-col: test-sparse-col-rw test-sparse-col-rd
 valgrind_sparse-col: std
 	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-sparse-col-rw
 	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-sparse-col-rd   
+	
+#-------------------------------------------------------------------------------
+# test-blob-val
+#
+TEST_BLOB_VAL_SRC = \
+	test-blob-val
+
+TEST_BLOB_VAL_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_BLOB_VAL_SRC))
+	
+TEST_BLOB_VAL_LIB = \
+    -skapp \
+	-sktst \
+	-sncbi-vdb \
+
+$(TEST_BINDIR)/test-blob-val: $(TEST_BLOB_VAL_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_BLOB_VAL_LIB)
+
+blob-val: test-blob-val
+	$(TEST_BINDIR)/test-blob-val
 
 #-------------------------------------------------------------------------------
 # SYS-224064
