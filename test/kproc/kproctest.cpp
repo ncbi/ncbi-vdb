@@ -533,52 +533,48 @@ TEST_CASE(KQueueSimpleTest) {
     KQueue * queue = NULL;
     REQUIRE_RC(KQueueMake(&queue, 2));
 
-    timeout_t tm;
-    memset(&tm, 0, sizeof tm);
-    REQUIRE_RC(TimeoutInit(&tm, 2000));
-
     void *item = NULL;
     {   // pushed 2 - popped 2 = ok
         for (uint64_t i = 1; i < 3; ++i) {
             item = (void*)i;
-            REQUIRE_RC(KQueuePush(queue, item, &tm));
+            REQUIRE_RC(KQueuePush(queue, item, NULL));
         }
         for (uint64_t i = 1; i < 3; ++i) {
             uint64_t j = 0;
-            REQUIRE_RC(KQueuePop(queue, &item, &tm));
-  	    j = (uint64_t)item;
-  	    REQUIRE_EQ(i, j);
+            REQUIRE_RC(KQueuePop(queue, &item, NULL));
+            j = (uint64_t)item;
+            REQUIRE_EQ(i, j);
         }
     }
 
     {   // pushed 3 > capacity (failure) - popped 2 (ok)
         for (uint64_t i = 1; i < 3; ++i) {
             void *item = (void*)i;
-            REQUIRE_RC(KQueuePush(queue, item, &tm));
+            REQUIRE_RC(KQueuePush(queue, item, NULL));
         }
-        REQUIRE_RC_FAIL(KQueuePush(queue, item, &tm));
+        REQUIRE_RC_FAIL(KQueuePush(queue, item, NULL));
         for (uint64_t i = 1; i < 3; ++i) {
             uint64_t j = 0;
             void *item = 0;
-            REQUIRE_RC(KQueuePop(queue, &item, &tm));
-  	    j = (uint64_t)item;
-  	    REQUIRE_EQ(i, j);
+            REQUIRE_RC(KQueuePop(queue, &item, NULL));
+            j = (uint64_t)item;
+            REQUIRE_EQ(i, j);
         }
     }
 
     {   // pushed 2 = capacity (ok) - popped 3 >capacity (failure)
         for (uint64_t i = 1; i < 3; ++i) {
             void *item = (void*)i;
-            REQUIRE_RC(KQueuePush(queue, item, &tm));
+            REQUIRE_RC(KQueuePush(queue, item, NULL));
         }
         for (uint64_t i = 1; i < 3; ++i) {
             uint64_t j = 0;
             void *item = 0;
-            REQUIRE_RC(KQueuePop(queue, &item, &tm));
-  	    j = (uint64_t)item;
-  	    REQUIRE_EQ(i, j);
+            REQUIRE_RC(KQueuePop(queue, &item, NULL));
+            j = (uint64_t)item;
+            REQUIRE_EQ(i, j);
         }
-        REQUIRE_RC_FAIL(KQueuePop(queue, &item, &tm));
+        REQUIRE_RC_FAIL(KQueuePop(queue, &item, NULL));
     }
 
     REQUIRE_RC(KQueueRelease(queue));
@@ -630,7 +626,7 @@ protected:
         KQueue * queue;
         int tid;
         size_t max_tid;
-        timeout_t tm;
+        uint32_t timeout_ms;
         bool is_reader;
         bool finish; // will stop generating events and seal the queue once detected
         bool allow_timeout; // if set, we won't treat timeout as an error
@@ -648,7 +644,16 @@ protected:
 
             for (int i = 0; i < numOps; ++i)
             {
+                timeout_t tm;
+                timeout_t* tm_p = td->timeout_ms == 0 ? NULL : &tm;
                 void * item;
+                if (tm_p != NULL)
+                rc = TimeoutInit(tm_p, td->timeout_ms);
+                if (rc != 0)
+                {
+                    LOG(LogLevel::e_fatal_error, "KQueue_ThreadFn: TimeoutInit failed\n");
+                    break;
+                }
                 if (td->finish)
                 {
                     rc = KQueueSeal(td->queue);
@@ -658,7 +663,7 @@ protected:
                 }
                 else if (td->is_reader)
                 {
-                    rc = KQueuePop(td->queue, &item, &td->tm);
+                    rc = KQueuePop(td->queue, &item, tm_p);
                     if (rc == 0 && (item == NULL || (uint64_t)item > td->max_tid))
                     {
                         std::stringstream ss;
@@ -671,7 +676,7 @@ protected:
                 else
                 {
                     item = reinterpret_cast<void*>(td->tid);
-                    rc = KQueuePush(td->queue, item, &td->tm);
+                    rc = KQueuePush(td->queue, item, tm_p);
                 }
 
                 if (rc != 0)
@@ -712,9 +717,7 @@ protected:
         td->is_reader = is_reader;
         td->allow_timeout = allow_timeout;
         td->queue = queue;
-        rc = TimeoutInit(&td->tm, timeout_ms);
-        if (rc != 0)
-            throw logic_error("StartThread: TimeoutInit failed");
+        td->timeout_ms = timeout_ms;
         rc = KThreadMake(&threads[tid], Thread::KQueue_ThreadFn, td);
         if (rc != 0)
             throw logic_error("StartThread: KThreadMake failed");
