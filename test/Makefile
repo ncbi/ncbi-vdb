@@ -40,7 +40,7 @@ SUBDIRS =       \
     ext         \
     judy_test   \
     kfc         \
-	kfs			\
+    kfs         \
     klib        \
     kfg         \
     kapp        \
@@ -52,12 +52,13 @@ SUBDIRS =       \
     ngs-c++     \
     ngs-java    \
     ngs-python  \
-	search	    \
+    search      \
     vfs         \
     sraxf       \
     vxf         \
     loader      \
     krypto      \
+    cipher      \
 
 # common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
 include $(TOP)/build/Makefile.targets

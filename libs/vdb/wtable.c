@@ -50,6 +50,8 @@
 #include <klib/rc.h>
 #include <sysalloc.h>
 
+#include <va_copy.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -999,19 +1001,36 @@ LIB_EXPORT rc_t CC VTableOpenKTableUpdate ( VTable *self, KTable **ktbl )
     return rc;
 }
 
-LIB_EXPORT rc_t CC VTableVDropColumn(VTable *self, const char fmt[], va_list args)
-{
-    return KTableVDropColumn(self->ktbl, fmt, args);
-}
-
 LIB_EXPORT rc_t CC VTableDropColumn(VTable *self, const char fmt[], ...)
 {
     va_list va;
     rc_t rc;
-    
+
     va_start(va, fmt);
     rc = VTableVDropColumn(self, fmt, va);
     va_end(va);
+    return rc;
+}
+
+LIB_EXPORT rc_t CC VTableVDropColumn(VTable *self, const char fmt[], va_list args)
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcVDB, rcTable, rcAccessing, rcSelf, rcNull );
+    else
+    {
+        va_list args_copy;
+        bool is_static;
+        va_copy(args_copy, args);
+        is_static = VTableVHasStaticColumn ( self, fmt, args_copy );
+        va_end(args_copy);
+
+        if ( is_static )
+            rc = KMDataNodeVDropChild ( self->col_node, fmt, args );
+        else
+            rc = KTableVDropColumn(self->ktbl, fmt, args);
+    }
+
     return rc;
 }
 

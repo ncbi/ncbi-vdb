@@ -45,6 +45,7 @@ struct CSRA1_Pileup;
 #include <vdb/database.h>
 #include <vdb/table.h>
 #include <vdb/cursor.h>
+#include <vdb/vdb-priv.h>
 #include <insdc/insdc.h>
 
 #include <klib/rc.h>
@@ -1539,12 +1540,25 @@ void CSRA1_PileupPopulateAlignCurs ( ctx_t ctx, const VCursor * curs, uint32_t *
     {
         assert ( i == cols [ i ] . idx );
 
-        rc = VCursorAddColumn ( curs, & col_idx [ i ], "%s", cols [ i ] . spec );
-        if ( rc != 0 && ! cols [ i ] . opt )
+        if ( ! cols [ i ] . opt )
         {
-            INTERNAL_ERROR ( xcColumnNotFound, "VCursorAddColumn '%s' rc = %R", cols [ i ] . spec, rc );
-            return;
+            rc = VCursorAddColumn ( curs, & col_idx [ i ], "%s", cols [ i ] . spec );
+            if ( rc != 0 )
+            {
+                INTERNAL_ERROR ( xcColumnNotFound, "VCursorAddColumn '%s' rc = %R", cols [ i ] . spec, rc );
+                return;
+            }
+            assert ( col_idx [ i ] != 0 );
         }
+    }
+
+    rc = VCursorPermitPostOpenAdd ( curs );
+    if ( rc != 0 )
+    {
+        INTERNAL_ERROR ( xcCursorOpenFailed,
+                         "ERROR: VCursorPermitPostOpenAdd(%s) failed with error: 0x%08x (%u) [%R]",
+                         tblname, rc, rc, rc );
+        return;
     }
 
     rc = VCursorOpen ( curs );
@@ -1560,7 +1574,7 @@ void CSRA1_PileupPopulateAlignCurs ( ctx_t ctx, const VCursor * curs, uint32_t *
     {
         assert ( i == cols [ i ] . idx );
 
-        if ( cols [ i ] . opt && col_idx [ i ] == 0 )
+        if ( cols [ i ] . opt )
             VCursorAddColumn ( curs, & col_idx [ i ], "%s", cols [ i ] . spec );
     }
 }
