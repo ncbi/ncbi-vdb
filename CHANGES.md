@@ -1,5 +1,6 @@
 # NCBI External Developer Release:
 ## NCBI VDB 2.6.2
+**April 20, 2016**
 
   **kdb**: Fixed VTableDropColumn, so that it can drop static columns  
   **kfs, kns**: Fixed thread safety issues for both cache and http files  
