@@ -47,9 +47,8 @@
         </Link>
     </ItemDefinitionGroup>
   
-    <ItemGroup>
-        <ClCompile Include="..\..\..\test\vdb\test-wvdb.cpp" />
-    </ItemGroup>
+  <Import Project="..\test-wvdb.files" />  
+
   
     <Target Name="AfterBuild" Condition="'$(Autorun)'=='true'">
         <MakeDir Directories="$(WorkingDirectory)\db"/>       

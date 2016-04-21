@@ -19,31 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <Import Project=".\lib-project.props" />
-  <ItemGroup>
-    <ClCompile Include="..\..\..\libs\tui\dir_dlg.c" />
-    <ClCompile Include="..\..\..\libs\tui\eventring.c" />
-    <ClCompile Include="..\..\..\libs\tui\file_dlg.c" />
-    <ClCompile Include="..\..\..\libs\tui\line_policy.c" />
-    <ClCompile Include="..\..\..\libs\tui\screen.c" />
-    <ClCompile Include="..\..\..\libs\tui\string_cache.c" />
-    <ClCompile Include="..\..\..\libs\tui\tui.c" />
-    <ClCompile Include="..\..\..\libs\tui\tui_dlg.c" />
-    <ClCompile Include="..\..\..\libs\tui\tui_menu.c" />
-    <ClCompile Include="..\..\..\libs\tui\tui_palette.c" />
-    <ClCompile Include="..\..\..\libs\tui\tui_std_dlg.c" />
-    <ClCompile Include="..\..\..\libs\tui\tui_widget.c" />
-    <ClCompile Include="..\..\..\libs\tui\tui_widget_button.c" />
-    <ClCompile Include="..\..\..\libs\tui\tui_widget_checkbox.c" />
-    <ClCompile Include="..\..\..\libs\tui\tui_widget_grid.c" />
-    <ClCompile Include="..\..\..\libs\tui\tui_widget_inputline.c" />
-    <ClCompile Include="..\..\..\libs\tui\tui_widget_label.c" />
-    <ClCompile Include="..\..\..\libs\tui\tui_widget_progress.c" />
-    <ClCompile Include="..\..\..\libs\tui\tui_widget_radiobox.c" />
-    <ClCompile Include="..\..\..\libs\tui\tui_widget_spin_edit.c" />
-    <ClCompile Include="..\..\..\libs\tui\tui_widget_string_list.c" />
-    <ClCompile Include="..\..\..\libs\tui\tui_dlg_helper.c" />
-    <ClCompile Include="..\..\..\libs\tui\win\systui.c" />
-  </ItemGroup>
+  <Import Project="..\tui.files" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>{202B0FB3-688B-43FE-9660-8182F4B09C86}</ProjectGuid>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>

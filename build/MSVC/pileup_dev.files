@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\..\test\pileup_dev\main.c" />
+    <ClCompile Include="..\..\..\test\pileup_dev\my_utils.c" />
+    <ClCompile Include="..\..\..\test\pileup_dev\ngs_test.cpp" />
+    <ClInclude Include="..\..\..\test\pileup_dev\my_utils.h" />
+  </ItemGroup>
+  
+</Project>

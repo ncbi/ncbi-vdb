@@ -42,7 +42,5 @@
       <AdditionalDependencies>$(VDB_TARGET)bin\ncbi-vdb-md.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\vdb\test-vdb.cpp" />
-  </ItemGroup>
+  <Import Project="..\test-vdb.files" />
 </Project>

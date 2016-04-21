@@ -27,11 +27,7 @@
     </Link>
   </ItemDefinitionGroup>
   
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\search\test-agrep.cpp" />
-    <ClCompile Include="..\..\..\test\search\agrep-main.c" />
-    <ClCompile Include="..\..\..\test\search\search-vdb.cpp" />
-    <ClInclude Include="..\..\..\test\search\search-vdb.h" />
-  </ItemGroup>
+  <Import Project="..\test-agrep.files" />  
+
   
 </Project>

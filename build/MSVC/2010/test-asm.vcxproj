@@ -27,8 +27,7 @@
     </Link>
   </ItemDefinitionGroup>
   
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\klib\asm-test.c" />
-  </ItemGroup>
+  <Import Project="..\test-asm.files" />  
+
   
 </Project>

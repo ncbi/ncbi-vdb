@@ -27,8 +27,6 @@
     </Link>
   </ItemDefinitionGroup>
   
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\kfs\resolvetest.cpp" />
-  </ItemGroup>
+  <Import Project="..\test-resolve.files" />
   
 </Project>

@@ -31,8 +31,7 @@
     </Link>
   </ItemDefinitionGroup>
   
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\kfs\kfstest.cpp" />
-  </ItemGroup>
+  <Import Project="..\test-kfs_kfs.files" />  
+
   
 </Project>

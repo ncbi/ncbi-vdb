@@ -35,7 +35,5 @@
       <AdditionalIncludeDirectories>$(VDB_ROOT)libs/ngs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\ngs\ngstest.cpp" />
-  </ItemGroup>
+  <Import Project="..\test-ngs.files" />
 </Project>

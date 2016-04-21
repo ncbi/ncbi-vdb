@@ -27,11 +27,6 @@
     </Link>
   </ItemDefinitionGroup>
   
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\pileup_dev\main.c" />
-    <ClCompile Include="..\..\..\test\pileup_dev\my_utils.c" />
-    <ClCompile Include="..\..\..\test\pileup_dev\ngs_test.cpp" />
-    <ClInclude Include="..\..\..\test\pileup_dev\my_utils.h" />
-  </ItemGroup>
+  <Import Project="..\pileup-dev.files" />  
   
 </Project>

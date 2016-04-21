@@ -31,8 +31,7 @@
     </Link>
   </ItemDefinitionGroup>
   
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\kfs\cacheteetest.cpp" />
-  </ItemGroup>
+  <Import Project="..\test-kfs_cache.files" />  
+
   
 </Project>
