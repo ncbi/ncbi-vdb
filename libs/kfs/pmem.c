@@ -325,6 +325,7 @@ static rc_t freeBlock(KMemBank *const self, BlockID const id)
         }
         free(inuse.storage);
         memset(pfree, 0, sizeof(*pfree));
+        pfree->size = (int64_t)(-1);
         pfree->id = id;
         pfree->next = self->nextFree;
         self->nextFree = entry - self->hot;
