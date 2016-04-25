@@ -412,13 +412,12 @@ static rc_t OpenMMapFile(const CommonWriterSettings* settings, SpotAssembler *co
     return rc;
 }
 
-static rc_t OpenMBankFile(const CommonWriterSettings* settings, SpotAssembler *const ctx, KDirectory *const dir, int which, size_t climit)
+static rc_t OpenMBankFile(const CommonWriterSettings* settings, SpotAssembler *const ctx, KDirectory *const dir)
 {
     KFile *file = NULL;
     char fname[4096];
-    char const *const suffix = which == 1 ? "One" : "Both";
-    KMemBank **const mbank = which == 1 ? &ctx->fragsOne : &ctx->fragsBoth;
-    rc_t rc = string_printf(fname, sizeof(fname), NULL, "%s/frag_data%s.%u", settings->tmpfs, suffix, settings->pid);
+    KMemBank **const mbank = &ctx->fragsBoth;
+    rc_t rc = string_printf(fname, sizeof(fname), NULL, "%s/fragments.%u", settings->tmpfs, settings->pid);
     
     if (rc)
         return rc;
@@ -426,14 +425,8 @@ static rc_t OpenMBankFile(const CommonWriterSettings* settings, SpotAssembler *c
     rc = KDirectoryCreateFile(dir, &file, true, 0600, kcmInit, "%s", fname);
     KDirectoryRemove(dir, 0, "%s", fname);
     if (rc == 0) {
-        KPageFile *backing;
-        
-        rc = KPageFileMakeUpdate(&backing, file, climit, false);
+        rc = KMemBankMake(mbank, 0, 0, file);
         KFileRelease(file);
-        if (rc == 0) {
-            rc = KMemBankMake(mbank, FRAG_CHUNK_SIZE, 0, backing);
-            KPageFileRelease(backing);
-        }
     }
     return rc;
 }
@@ -448,14 +441,9 @@ rc_t SetupContext(const CommonWriterSettings* settings, SpotAssembler *ctx)
     
     if (settings->mode == mode_Archive) {
         KDirectory *dir;
-        size_t fragSizeBoth; /*** temporary hold for first side of mate pair with both sides aligned**/
-        size_t fragSizeOne; /*** temporary hold for first side of mate pair with one side aligned**/
 
         STSMSG(1, ("Cache size: %uM\n", settings->cache_size / 1024 / 1024));
         
-        fragSizeBoth    =   (settings->cache_size / 8);
-        fragSizeOne     =   (settings->cache_size / 2);
-
         rc = KLoadProgressbar_Make(&ctx->progress[0], 0); if (rc) return rc;
         rc = KLoadProgressbar_Make(&ctx->progress[1], 0); if (rc) return rc;
         rc = KLoadProgressbar_Make(&ctx->progress[2], 0); if (rc) return rc;
@@ -467,9 +455,7 @@ rc_t SetupContext(const CommonWriterSettings* settings, SpotAssembler *ctx)
         if (rc == 0)
             rc = OpenMMapFile(settings, ctx, dir);
         if (rc == 0)
-            rc = OpenMBankFile(settings, ctx, dir, 0, fragSizeBoth);
-        if (rc == 0)
-            rc = OpenMBankFile(settings, ctx, dir, 1, fragSizeOne);
+            rc = OpenMBankFile(settings, ctx, dir);
         KDirectoryRelease(dir);
     }
     return rc;
@@ -477,8 +463,6 @@ rc_t SetupContext(const CommonWriterSettings* settings, SpotAssembler *ctx)
 
 void ContextReleaseMemBank(SpotAssembler *ctx)
 {
-    KMemBankRelease(ctx->fragsOne);
-    ctx->fragsOne = NULL;
     KMemBankRelease(ctx->fragsBoth);
     ctx->fragsBoth = NULL;
 }
@@ -497,8 +481,6 @@ rc_t WriteSoloFragments(const CommonWriterSettings* settings, SpotAssembler* ctx
 {
     uint32_t i;
     unsigned j;
-    uint32_t fcountOne  = 0;
-    uint32_t fcountBoth = 0;
     uint64_t idCount = 0;
     rc_t rc;
     KDataBuffer fragBuf;
@@ -528,23 +510,16 @@ rc_t WriteSoloFragments(const CommonWriterSettings* settings, SpotAssembler* ctx
             unsigned read = 0;
             FragmentInfo const *fip;
             uint8_t const *src;
-            KMemBank *frags;
+            KMemBank *frags = ctx->fragsBoth;
             
             rc = MMArrayGet(ctx->id2value, (void **)&value, keyId);
             if (rc)
                 break;
             KLoadProgressbar_Process(ctx->progress[ctx->pass - 1], 1, false);
-            if (value->fragmentId == 0)
+
+            id = value->fragmentId;
+            if (id == 0)
                 continue;
-            if (value->fragmentId & 1) {
-                frags = ctx->fragsOne;
-                fcountOne++;
-            }
-            else {
-                frags = ctx->fragsBoth; 
-                fcountBoth++;
-            }
-            id = value->fragmentId >> 1;
             
             rc = KMemBankSize(frags, id, &sz);
             if (rc) {
@@ -993,8 +968,6 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
     size_t namelen;
     unsigned progress = 0;
     unsigned warned = 0;
-    long     fcountBoth=0;
-    long     fcountOne=0;
     int skipRefSeqId = -1;
     int unmapRefSeqId = -1;
     uint64_t recordsProcessed = 0;
@@ -1634,7 +1607,7 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
                     unsigned sz;
                     uint64_t    fragmentId;
                     FragmentInfo fi;
-                    KMemBank *frags;
+                    KMemBank *frags = ctx->fragsBoth;
                     int32_t mate_refSeqId = -1;
                     int64_t pnext = 0;
                     
@@ -1654,22 +1627,12 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
                         AlignmentGetMateRefSeqId(alignment, &mate_refSeqId);
                         AlignmentGetMatePosition(alignment, &pnext);
                     }
-                    if(align && aligned && mate_refSeqId == refSeqId && pnext > 0 && pnext!=rpos /*** weird case in some bams**/){ 
-                        frags = ctx->fragsBoth;
-                        rc = KMemBankAlloc(frags, &fragmentId, sz, 0);
-                        value->fragmentId = fragmentId*2;
-                        fcountBoth++;
-                    } else {
-                        frags = ctx->fragsOne;
-                        rc = KMemBankAlloc(frags, &fragmentId, sz, 0);
-                        value->fragmentId = fragmentId*2+1;
-                        fcountOne++;
-                    }
+                    rc = KMemBankAlloc(frags, &fragmentId, sz, 0);
+                    value->fragmentId = fragmentId;
                     if (rc) {
                         (void)LOGERR(klogErr, rc, "KMemBankAlloc failed");
                         goto LOOP_END;
                     }
-                    /*printf("IN:%10d\tcnt2=%ld\tcnt1=%ld\n",value->fragmentId,fcountBoth,fcountOne);*/
                     
                     rc = KDataBufferResize(&fragBuf, sz);
                     if (rc) {
@@ -1697,24 +1660,21 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
                     /* might be second fragment */
                     uint64_t sz;
                     FragmentInfo *fip;
-                    KMemBank *frags;
+                    KMemBank *frags = ctx->fragsBoth;
                     
-                    if(value->fragmentId & 1) frags = ctx->fragsOne;
-                    else               frags = ctx->fragsBoth; 
-                    
-                    rc=KMemBankSize(frags, value->fragmentId>>1, &sz);
+                    rc = KMemBankSize(frags, value->fragmentId, &sz);
                     if (rc) {
-                        (void)PLOGERR(klogErr, (klogErr, rc, "KMemBankSize failed on fragment $(id)", "id=%u", value->fragmentId>>1));
+                        (void)PLOGERR(klogErr, (klogErr, rc, "KMemBankSize failed on fragment $(id)", "id=%u", value->fragmentId));
                         goto LOOP_END;
                     }
-                    rc=KDataBufferResize(&fragBuf, (size_t)sz);
+                    rc = KDataBufferResize(&fragBuf, (size_t)sz);
                     if (rc) {
                         (void)PLOGERR(klogErr, (klogErr, rc, "Failed to resize fragment buffer", ""));
                         goto LOOP_END;
                     }
-                    rc=KMemBankRead(frags, value->fragmentId>>1, 0, fragBuf.base, sz, &rsize);
+                    rc = KMemBankRead(frags, value->fragmentId, 0, fragBuf.base, sz, &rsize);
                     if (rc) {
-                        (void)PLOGERR(klogErr, (klogErr, rc, "KMemBankRead failed on fragment $(id)", "id=%u", value->fragmentId>>1));
+                        (void)PLOGERR(klogErr, (klogErr, rc, "KMemBankRead failed on fragment $(id)", "id=%u", value->fragmentId));
                         goto LOOP_END;
                     }
                     
@@ -1770,9 +1730,10 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
                         srec.spotGroupLen = strlen(spotGroup);
                         if (value->pcr_dup && (srec.is_bad[0] || srec.is_bad[1])) {
                             filterFlagConflictRecords++;
-                            if(filterFlagConflictRecords < MAX_WARNINGS_FLAG_CONFLICT){
+                            if (filterFlagConflictRecords < MAX_WARNINGS_FLAG_CONFLICT) {
                                 (void)PLOGMSG(klogWarn, (klogWarn, "Spot '$(name)': both 'duplicate' and 'lowQuality' flag bits set, only 'duplicate' will be saved", "name=%s", name));
-                            } else if(filterFlagConflictRecords == MAX_WARNINGS_FLAG_CONFLICT){
+                            }
+                            else if(filterFlagConflictRecords == MAX_WARNINGS_FLAG_CONFLICT) {
                                 (void)PLOGMSG(klogWarn, (klogWarn, "Last reported warning: Spot '$(name)': both 'duplicate' and 'lowQuality' flag bits set, only 'duplicate' will be saved", "name=%s", name));
                             }
                         }
@@ -1783,15 +1744,9 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
                             goto LOOP_END;
                         }
                         CTX_VALUE_SET_S_ID(*value, ++ctx->spotId);
-                        if(value->fragmentId & 1){
-                            fcountOne--;
-                        } else {
-                            fcountBoth--;
-                        }
-                        /*  printf("OUT:%9d\tcnt2=%ld\tcnt1=%ld\n",value->fragmentId,fcountBoth,fcountOne);*/
-                        rc = KMemBankFree(frags, value->fragmentId>>1);
+                        rc = KMemBankFree(frags, value->fragmentId);
                         if (rc) {
-                            (void)PLOGERR(klogErr, (klogErr, rc, "KMemBankFree failed on fragment $(id)", "id=%u", value->fragmentId>>1));
+                            (void)PLOGERR(klogErr, (klogErr, rc, "KMemBankFree failed on fragment $(id)", "id=%u", value->fragmentId));
                             goto LOOP_END;
                         }
                         value->fragmentId = 0;
