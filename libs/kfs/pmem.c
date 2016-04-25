@@ -44,13 +44,13 @@ typedef uint64_t Offset;
 typedef int64_t Size;
 
 struct HotEntryInUse {
-    ssize_t size;  /* > 0 */
+    int64_t size;  /* > 0 */
     BlockID id;
     void *storage;
 };
 
 struct HotEntryFree {
-    ssize_t size; /* == 0 */
+    int64_t size; /* == 0 */
     BlockID id;
     unsigned next;
 };
@@ -107,7 +107,7 @@ static KMemBank *newMemBank(void)
         unsigned i;
 
         for (i = 0; i < NUM_HOT_ENTRIES; ++i) {
-            self->hot[i].free.size = (ssize_t)(-1);
+            self->hot[i].free.size = (int64_t)(-1);
             self->hot[i].free.id = i + 1;
             self->hot[i].free.next = i + 1;
         }
