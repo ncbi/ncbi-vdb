@@ -28,7 +28,6 @@ TOP ?= $(abspath ../..)
 MODULE = libs/loader
 
 INT_LIBS = \
-	libloader
 
 ALL_LIBS = \
 	$(INT_LIBS)
