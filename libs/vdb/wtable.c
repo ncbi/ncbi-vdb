@@ -462,6 +462,7 @@ LIB_EXPORT rc_t CC VDBManagerVOpenTableUpdate ( VDBManager *self, VTable **tblp,
                 rc = KDBManagerVOpenTableUpdate ( self -> kmgr, & tbl -> ktbl, path, args );
                 if ( rc == 0 )
                 {
+                    tbl -> blob_validation = KTableHasRemoteData ( tbl -> ktbl );
                     rc = VTableOpenUpdate ( tbl, NULL );
                     if ( rc == 0 )
                     {
@@ -514,6 +515,7 @@ LIB_EXPORT rc_t CC VDatabaseVOpenTableUpdate ( VDatabase *self,
                 rc = KDatabaseVOpenTableUpdate ( self -> kdb, & tbl -> ktbl, name, args );
                 if ( rc == 0 )
                 {
+                    tbl -> blob_validation = KTableHasRemoteData ( tbl -> ktbl );
                     rc = VTableOpenUpdate ( tbl, NULL );
                     if ( rc == 0 )
                     {

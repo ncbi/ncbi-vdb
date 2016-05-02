@@ -1627,3 +1627,12 @@ LIB_EXPORT rc_t CC KTableListIdx ( const KTable *self, KNamelist **names )
     
     return RC ( rcDB, rcTable, rcListing, rcSelf, rcNull );
 }
+
+/* HasRemoteData
+ *  indicates whether some/all table data comes from network resource
+ *  such as HttpFile or CacheteeFile
+ */
+KDB_EXTERN bool CC KTableHasRemoteData ( const KTable *self )
+{
+    return true;
+}

@@ -1826,3 +1826,8 @@ LIB_EXPORT rc_t CC IsCacheTeeComplete( const struct KFile * self, bool * complet
     }
     return rc;
 }
+
+LIB_EXPORT bool CC KFileIsKCacheTeeFile( const struct KFile * self )
+{
+    return self != NULL && &self->vt->v1 == &vtKCacheTeeFile;
+}

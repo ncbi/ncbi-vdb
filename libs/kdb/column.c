@@ -32,6 +32,7 @@
 #include "kdb-priv.h"
 #include <kdb/kdb-priv.h>
 #include <klib/checksum.h>
+#include <klib/data-buffer.h>
 #include <klib/rc.h>
 #include <klib/printf.h>
 #include <klib/debug.h>
@@ -728,7 +729,7 @@ rc_t KColumnBlobValidateCRC32 ( const KColumnBlob *self )
     rc_t rc;
     const KColumn *col = self -> col;
 
-    uint8_t buffer [ 1024 ];
+    uint8_t buffer [ 8 * 1024 ];
     size_t to_read, num_read, total, size;
 
     uint32_t cs, crc32 = 0;
@@ -773,7 +774,7 @@ rc_t KColumnBlobValidateMD5 ( const KColumnBlob *self )
     rc_t rc;
     const KColumn *col = self -> col;
 
-    uint8_t buffer [ 1024 ];
+    uint8_t buffer [ 8 * 1024 ];
     size_t to_read, num_read, total, size;
 
     MD5State md5;
@@ -831,6 +832,75 @@ LIB_EXPORT rc_t CC KColumnBlobValidate ( const KColumnBlob *self )
     return 0;
 }
 
+/* ValidateBuffer
+ *  run checksum validation on buffer data
+ *
+ *  "buffer" [ IN ] - returned blob buffer from ReadAll
+ *
+ *  "cs_data" [ IN ] and "cs_data_size" [ IN ] - returned checksum data from ReadAll
+ */
+static
+rc_t KColumnBlobValidateBufferCRC32 ( const void * buffer, size_t size, uint32_t cs )
+{
+    uint32_t crc32 = CRC32 ( 0, buffer, size );
+
+    if ( cs != crc32 )
+        return RC ( rcDB, rcBlob, rcValidating, rcBlob, rcCorrupt );
+
+    return 0;
+}
+
+static
+rc_t KColumnBlobValidateBufferMD5 ( const void * buffer, size_t size, const uint8_t cs [ 16 ] )
+{
+    MD5State md5;
+    uint8_t digest [ 16 ];
+
+    MD5StateInit ( & md5 );
+
+    /* calculate checksum */
+    MD5StateAppend ( & md5, buffer, size );
+
+    /* finish MD5 digest */
+    MD5StateFinish ( & md5, digest );
+
+    if ( memcmp ( cs, digest, sizeof digest ) != 0 )
+        return RC ( rcDB, rcBlob, rcValidating, rcBlob, rcCorrupt );
+
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KColumnBlobValidateBuffer ( const KColumnBlob * self,
+    const KDataBuffer * buffer, const KColumnBlobCSData * cs_data, size_t cs_data_size )
+{
+    size_t bsize;
+
+    if ( self == NULL )
+        return RC ( rcDB, rcBlob, rcValidating, rcSelf, rcNull );
+    if ( buffer == NULL || cs_data == NULL )
+        return RC ( rcDB, rcBlob, rcValidating, rcParam, rcNull );
+
+    bsize = KDataBufferBytes ( buffer );
+    if ( bsize < self -> loc . u . blob . size )
+        return RC ( rcDB, rcBlob, rcValidating, rcData, rcInsufficient );
+    if ( bsize > self -> loc . u . blob . size )
+        return RC ( rcDB, rcBlob, rcValidating, rcData, rcExcessive );
+
+    if ( bsize != 0 ) switch ( self -> col -> checksum )
+    {
+    case kcsNone:
+        break;
+    case kcsCRC32:
+        return KColumnBlobValidateBufferCRC32 ( buffer -> base, bsize,
+            self -> bswap ? bswap_32 ( cs_data -> crc32 ) : cs_data -> crc32 );
+    case kcsMD5:
+        return KColumnBlobValidateBufferMD5 ( buffer -> base, bsize, cs_data -> md5_digest );
+    }
+
+    return 0;
+}
+
+
 /* KColumnBlobRead
  *  read data from blob
  *
@@ -887,15 +957,20 @@ LIB_EXPORT rc_t CC KColumnBlobRead ( const KColumnBlob *self,
                 }
 #endif
                 *num_read = 0;
-                while (*num_read < to_read) {
+                while ( * num_read < to_read )
+                {
                     size_t nread = 0;
 
-                    rc = KColumnDataRead ( & col -> df, & self -> pmorig, offset - *num_read, (void *)((char *)buffer + *num_read), to_read - *num_read, &nread );
-                    if (rc) break;
-                    if (nread == 0) {
+                    rc = KColumnDataRead ( & col -> df, & self -> pmorig, offset - *num_read,
+                        & ( ( char * ) buffer ) [ * num_read ], to_read - * num_read, & nread );
+                    if ( rc != 0 )
+                        break;
+                    if (nread == 0)
+                    {
                         rc = RC ( rcDB, rcBlob, rcReading, rcFile, rcInsufficient );
                         break;
                     }
+
                     *num_read += nread;
                 }
 #ifdef _DEBUGGING
@@ -924,6 +999,113 @@ LIB_EXPORT rc_t CC KColumnBlobRead ( const KColumnBlob *self,
     * remaining = 0;
     return rc;
 }
+
+/* ReadAll
+ *  read entire blob, plus any auxiliary checksum data
+ *
+ *  "buffer" [ OUT ] - pointer to a KDataBuffer structure that will be initialized
+ *  and resized to contain the entire blob. upon success, will contain the number of bytes
+ *  in buffer->elem_count and buffer->elem_bits == 8.
+ *
+ *  "opt_cs_data [ OUT, NULL OKAY ] - optional output parameter for checksum data
+ *  associated with the blob in "buffer", if any exist.
+ *
+ *  "cs_data_size" [ IN ] - sizeof of * opt_cs_data if not NULL, 0 otherwise
+ */
+LIB_EXPORT rc_t CC KColumnBlobReadAll ( const KColumnBlob * self, KDataBuffer * buffer,
+    KColumnBlobCSData * opt_cs_data, size_t cs_data_size )
+{
+    rc_t rc = 0;
+
+    if ( opt_cs_data != NULL )
+        memset ( opt_cs_data, 0, cs_data_size );
+
+    if ( buffer == NULL )
+        rc = RC ( rcDB, rcBlob, rcReading, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcDB, rcBlob, rcReading, rcSelf, rcNull );
+        else
+        {
+            /* determine blob size */
+            size_t bsize = self -> loc . u . blob . size;
+
+            /* ignore blobs of size 0 */
+            if ( bsize == 0 )
+                rc = 0;
+            else
+            {
+                /* initialize the buffer */
+                rc = KDataBufferMakeBytes ( buffer, bsize );
+                if ( rc == 0 )
+                {
+                    /* read the blob */
+                    size_t num_read, remaining;
+                    rc = KColumnBlobRead ( self, 0, buffer -> base, bsize, & num_read, & remaining );
+                    if ( rc == 0 )
+                    {
+                        /* test that num_read is everything and we have no remaining */
+                        if ( num_read != bsize || remaining != 0 )
+                            rc = RC ( rcDB, rcBlob, rcReading, rcTransfer, rcIncomplete );
+
+                        else
+                        {
+                            /* set for MD5 - just due to switch ordering */
+                            size_t cs_bytes = 16;
+
+                            /* if not reading checksum data, then we're done */
+                            if ( opt_cs_data == NULL )
+                                return 0;
+
+                            /* see what checksumming is in use */
+                            switch ( self -> col -> checksum )
+                            {
+                            case kcsNone:
+                                return 0;
+
+                            case kcsCRC32:
+                                /* reset for CRC32 */
+                                cs_bytes = 4;
+
+                                /* no break */
+
+                            case kcsMD5:
+                                if ( cs_data_size < cs_bytes )
+                                {
+                                    rc = RC ( rcDB, rcBlob, rcReading, rcParam, rcTooShort );
+                                    break;
+                                }
+
+                                /* read checksum information */
+                                rc = KColumnDataRead ( & self -> col -> df,
+                                    & self -> pmorig, bsize, opt_cs_data, cs_bytes, & num_read );
+                                if ( rc == 0 )
+                                {
+                                    if ( num_read != cs_bytes )
+                                        rc = RC ( rcDB, rcBlob, rcReading, rcTransfer, rcIncomplete );
+                                    else
+                                    {
+                                        /* success - read the blob AND the checksum data */
+                                        return 0;
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+
+                    KDataBufferWhack ( buffer );
+                }
+            }
+        }
+
+        memset ( buffer, 0, sizeof * buffer );
+    }
+
+    return rc;
+}
+
 
 /* GetDirectory
  */
