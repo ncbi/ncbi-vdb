@@ -74,6 +74,10 @@ clean: stdclean
 # tests for ncbi-ngs
 #
 NGS_SRC =                      \
+	ngs_test_lib_load \
+	ngs_test_CSRA1
+
+NGS_CLS_NAME = gov.nih.nlm.ncbi.ngs.ngs_test_lib_load \
 	ngs_test_CSRA1
     
 NGS_CLS = \
@@ -113,11 +117,11 @@ endif
 
 test: $(NGS_CLS)
 	@ echo Run $(CLASSDIR)/$(NGS_SRC)
-	@ echo java $(JAVABITS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore $(NGS_SRC)
+	@ echo java $(JAVABITS) -cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 -Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) org.junit.runner.JUnitCore $(NGS_CLS_NAME)
 	export VDB_CONFIG=$(VDB_CONFIG) ; java $(JAVABITS) \
 		-cp $(CLASSDIR):$(CLASSPATH) -Dvdb.System.loadLibrary=1 \
 		-Djava.library.path=$(NGS_LIBDIR):$(LIBDIR) \
-		org.junit.runner.JUnitCore $(NGS_SRC)  
+		org.junit.runner.JUnitCore $(NGS_CLS_NAME)  
 
 endif    
 endif
