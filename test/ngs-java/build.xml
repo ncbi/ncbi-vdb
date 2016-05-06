@@ -21,7 +21,7 @@
 
     <target name="compile">
         <mkdir dir="${classes.dir}"/>
-        <javac includeantruntime="false" srcdir="${basedir}" includes="ngs_test_CSRA1.java" destdir="${classes.dir}" > 
+        <javac includeantruntime="false" srcdir="${basedir}" includes="ngs_test_lib_load.java ngs_test_CSRA1.java" destdir="${classes.dir}" > 
             <classpath>
                 <pathelement location="${Output}\ngs-java\jar\ngs-java.jar" />
                 <pathelement location="${basedir}\..\junit-4.11.jar" />
@@ -44,7 +44,8 @@
             <sysproperty key="vdb.System.loadLibrary" value="1" />
             <sysproperty key="vdb.log" value="FINEST" />
             <jvmarg value="-d${JVMbits}" />
-            <arg value="ngs_test_CSRA1" />
+        	<arg value="gov.nih.nlm.ncbi.ngs.ngs_test_lib_load" />
+        	<arg value="ngs_test_CSRA1" />
         </java>
     </target>
     
