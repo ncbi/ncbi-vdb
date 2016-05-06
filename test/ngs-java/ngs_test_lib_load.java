@@ -43,6 +43,8 @@ import gov.nih.nlm.ncbi.ngs.error.cause.ConnectionProblemCause;
 import gov.nih.nlm.ncbi.ngs.error.cause.DownloadDisabledCause;
 import gov.nih.nlm.ncbi.ngs.error.cause.InvalidLibraryCause;
 import gov.nih.nlm.ncbi.ngs.error.cause.JvmErrorCause;
+import gov.nih.nlm.ncbi.ngs.error.cause.OutdatedJarCause;
+import gov.nih.nlm.ncbi.ngs.error.cause.PrereleaseReqLibCause;
 import gov.nih.nlm.ncbi.ngs.error.cause.UnsupportedArchCause;
 import org.junit.Test;
 import org.junit.Before;
@@ -209,9 +211,9 @@ public class ngs_test_lib_load {
     }
 
     @Test
-    public void LibManagerMock_IncompatibleVers_DownloadIncompatibleVers()
+    public void LibManagerMock_IncompatibleVers_DownloadPrereleaseVers()
     {
-        String incompVersions[] = new String[] { "0.0.1", "1.0.0", "2.0.0" };
+        String incompVersions[] = new String[] { "0.0.1", "1.0.0" };
         for (String version : incompVersions) {
             createLibManager();
             libManager.mockDownloadStatus = DownloadManager.DownloadResult.SUCCESS;
@@ -222,7 +224,23 @@ public class ngs_test_lib_load {
             assertNotNull(e);
             assertEquals(LibraryIncompatibleVersionError.class, e.getClass());
             assertNotNull(e.getCause());
-            assertEquals(ConnectionProblemCause.class, e.getCause().getClass());
+            assertEquals(PrereleaseReqLibCause.class, e.getCause().getClass());
         }
+    }
+
+    @Test
+    public void LibManagerMock_IncompatibleVers_Download_OutdatedJar()
+    {
+        String version = "2.0.0";
+        createLibManager();
+        libManager.mockDownloadStatus = DownloadManager.DownloadResult.SUCCESS;
+        libManager.mockLocationVersions.put(LibManager.Location.DOWNLOAD, new Version(version));
+        libManager.mockLoadedLibraryVersion = version;
+
+        Throwable e = loadAndCatch(test_lib);
+        assertNotNull(e);
+        assertEquals(LibraryIncompatibleVersionError.class, e.getClass());
+        assertNotNull(e.getCause());
+        assertEquals(OutdatedJarCause.class, e.getCause().getClass());
     }
 }
