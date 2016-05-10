@@ -548,7 +548,12 @@ public:
 FIXTURE_TEST_CASE ( SmithWatermanTest, SmithWatermanFixture )
 {
     REQUIRE_RC ( Setup ( "MATCH" ) );
-    
+
+    // VDB-3034: crash on query of length 0, when called right after initialization of the search object
+    {
+        REQUIRE(!FindFirst(""));
+    }
+
 	// threshold in FirstMatch varies from 0 (a complete mismatch is acceptable) to 2*m_pattern_len (perfect match)
     
     // Complete match
@@ -610,6 +615,7 @@ FIXTURE_TEST_CASE ( SmithWatermanTest, SmithWatermanFixture )
     {
         REQUIRE ( ! FindFirst ( "xyzvuwpiu", 1 ) );
     }
+
 }
 
 // Ref-Variation
