@@ -61,7 +61,14 @@
 #define SUB_DEBUG(msg)
 #endif
 
-#define READ_RESTORER_VERSION 2
+/**********************************
+VERSION     effect
+
+1           in case of random-joins restricted memory usage, but long runtime   ( original strategy from Eugene )
+2           in case of random-joins huge memroy usage, but shorter runtime      ( modified by Wolfgang )
+
+**********************************/
+#define READ_RESTORER_VERSION 1
 
 #if READ_RESTORER_VERSION == 2
 
