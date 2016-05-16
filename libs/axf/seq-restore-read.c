@@ -66,11 +66,9 @@ VERSION     effect
 
 1           in case of random-joins oscillation memory usage
             prefetch of align-id's in the cursor-cache
-            original strategy from Eugene
                                                                 
 2           in case of random-joins steady memroy usage
             prefetch of align-id's in dedicated cache
-            modified by Wolfgang
 
 **********************************/
 #define READ_RESTORER_VERSION 2
