@@ -151,7 +151,8 @@ rc_t VPathCheckFromNamesCGI(const struct VPath *path,
  *  represents a set of zero or more volumes
  *  each of which is addressed using a particular expansion algorithm
  */
-typedef enum {
+typedef enum
+{
     appUnknown,
     appAny,
     appFILE,
@@ -163,7 +164,9 @@ typedef enum {
     appSRAPileup,
     appCount
 } VResolverAppID;
-typedef enum {
+
+typedef enum
+{
     algCGI,
     algFlat,
     algSRAFlat,
@@ -171,8 +174,9 @@ typedef enum {
     algSRA1000,
     algFUSE1000,
     algREFSEQ,
-    algWGSFlat,
+    algWGS2,                /* ordered to be of higher precedence than algWGS */
     algWGS,
+    algWGSFlat,
     algFuseWGS,
     algSRA_NCBI,
     algSRA_EBI,
@@ -191,6 +195,7 @@ typedef enum {
     /* leave as last value */
     algUnknown
 } VResolverAlgID;
+
 rc_t VResolverAlgMake(struct VResolverAlg **alg, const struct String *root,
      VResolverAppID app_id, VResolverAlgID alg_id, bool protctd, bool disabled);
 

@@ -221,9 +221,19 @@ rc_t VResolverAlgMake ( VResolverAlg **algp, const String *root,
         rc = 0;
     }
 
-    assert(algp);
+    assert ( algp != NULL );
     * algp = alg;
     return rc;
+}
+
+static
+int64_t CC VResolverAlgSort ( const void ** a, const void ** b, void * ignore )
+{
+    const VResolverAlg * aa = * a;
+    const VResolverAlg * ab = * b;
+
+    /* second key is algorithm id */
+    return ( int64_t ) aa -> alg_id - ( int64_t ) ab -> alg_id;
 }
 
 /* MakeLocalWGSRefseqURI
@@ -239,7 +249,7 @@ rc_t VResolverAlgMakeLocalWGSRefseqURI ( const VResolverAlg *self,
     return VPathMakeFmt ( ( VPath** ) path, NCBI_FILE_SCHEME ":%S/%S/%S#tbl/%S", self -> root, vol, exp, acc );
 }
 
-/* MakeeRemoteWGSRefseqURI
+/* MakeRemoteWGSRefseqURI
  *  create a special URI that tells KDB how to open this
  *  obscured table, hidden away within a KAR file
  */
@@ -337,6 +347,7 @@ rc_t expand_algorithm ( const VResolverAlg *self, const VResolverAccToken *tok,
         rc = string_printf ( expanded, bsize, size,
             "%.*S", num, & tok -> acc );
         break;
+    case algWGS2:
     case algWGS:
         num = ( uint32_t ) ( tok -> alpha . size + 2 );
         if ( tok -> prefix . size != 0 )
@@ -3524,6 +3535,8 @@ rc_t VResolverLoadVolumes ( Vector *algs, const String *root, const String *tick
                     /* stored in a multi-level directory with no extension */
                     else if ( strcmp ( algname, "wgs" ) == 0 )
                         alg_id = algWGS;
+                    else if ( strcmp ( algname, "wgs2" ) == 0 )
+                        alg_id = algWGS2;
                     else if ( strcmp ( algname, "fuseWGS" ) == 0 )
                         alg_id = algFuseWGS;
                     /* stored in a three-level directory with 1K banks and no extension */
@@ -4442,6 +4455,12 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
 
     if ( rc == 0 && self -> ticket != NULL && ! have_remote_protected )
         rc = VResolverForceRemoteProtected ( self );
+
+    if ( rc == 0 )
+    {
+        VectorReorder ( & self -> local, VResolverAlgSort, NULL );
+        VectorReorder ( & self -> remote, VResolverAlgSort, NULL );
+    }
 
     self -> protocols = eProtocolHttp;
 
