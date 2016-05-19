@@ -71,7 +71,7 @@ LEX = @ true
 COMPILERS = GCC # ICC
 
 # valgrind
-VALGRIND = export NCBI_VALGRIND=ncbi; valgrind --error-exitcode=1 --suppressions=$(TOP)/build/valgrind.suppress --show-reachable=no --quiet
+VALGRIND = export NCBI_VALGRIND=ncbi; valgrind --error-exitcode=1 --suppressions=$(TOP)/build/valgrind.suppress --show-reachable=no --quiet --leak-check=full
 
 VALGRIND_TARGETS = $(addprefix vg-,$(TEST_TOOLS))
 
