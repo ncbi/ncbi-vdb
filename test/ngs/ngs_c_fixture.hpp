@@ -60,12 +60,12 @@
 #define ENTRY \
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing ); \
     m_ctx = ctx; \
-    
+
 #define ENTRY_ACC(acc) \
     ENTRY; \
     m_acc = acc; \
     m_coll = NGS_ReadCollectionMake ( ctx, acc );
-    
+
 #define ENTRY_GET_READ(acc, readNo) \
     ENTRY_ACC(acc); \
     GetRead(readNo);
@@ -73,7 +73,7 @@
 #define ENTRY_GET_REF(acc,ref) \
     ENTRY_ACC(acc); \
     GetReference ( ref );
-    
+
 #define EXIT \
     REQUIRE ( ! FAILED () ); \
     Release()
@@ -92,8 +92,9 @@
 
 //////
 
-static std :: string toString ( const NGS_String* str, ctx_t ctx, bool release_source = false ) 
-{   
+std :: string
+toString ( const NGS_String* str, ctx_t ctx, bool release_source = false )
+{
     if ( str == 0 )
     {
         throw std :: logic_error ( "toString ( NULL ) called" );
@@ -116,7 +117,7 @@ public:
     ~NGS_C_Fixture()
     {
     }
-    
+
     virtual void Release()
     {
         if (m_ctx != 0)
@@ -124,7 +125,7 @@ public:
             if (m_coll != 0)
             {
                 NGS_RefcountRelease ( ( NGS_Refcount* ) m_coll, m_ctx );
-            }   
+            }
             if (m_read != 0)
             {
                 NGS_ReadRelease ( m_read, m_ctx );
@@ -140,13 +141,13 @@ public:
             m_ctx = 0; // a pointer into the caller's local memory
         }
     }
-    
+
     std::string ReadId(int64_t id) const
     {
         std::ostringstream s;
         s << m_acc << ".R." << id;
         return s . str ();
-    }    
+    }
     void GetRead(const std::string & id)
     {
         m_read = NGS_ReadCollectionGetRead ( m_coll, m_ctx, id.c_str() );
@@ -159,14 +160,14 @@ public:
     {
         GetRead ( ReadId ( id ) );
     }
-    
+
     void GetReference(const char* name)
     {
         m_ref = NGS_ReadCollectionGetReference ( m_coll, m_ctx, name );
         if ( m_ctx -> rc != 0 || m_ref == 0 )
             throw std :: logic_error ( "GetReference() failed" );
     }
-    
+
     const KCtx*         m_ctx;  // points into the test case's local memory
     std::string         m_acc;
     NGS_ReadCollection* m_coll;
