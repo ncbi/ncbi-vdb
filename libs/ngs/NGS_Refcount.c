@@ -79,7 +79,7 @@ void NGS_RefcountRelease ( const NGS_Refcount * self, ctx_t ctx )
         {
             FUNC_ENTRY ( ctx, rcSRA, rcRefcount, rcReleasing );
             INTERNAL_ERROR ( xcSelfZombie, "NGS object at %#p", self );
-            atomic32_set ( & ( ( NGS_Refcount* ) self ) -> refcount, 0 );
+            KRefcountInit ( & ( ( NGS_Refcount* ) self ) -> refcount, 0, "NGS_Refcount", "release", "" );
             break;
         }}
     }
@@ -102,7 +102,7 @@ void * NGS_RefcountDuplicate ( const NGS_Refcount * self, ctx_t ctx )
         {
             FUNC_ENTRY ( ctx, rcSRA, rcRefcount, rcAttaching );
             INTERNAL_ERROR ( xcRefcountOutOfBounds, "NGS object at %#p", self );
-            atomic32_set ( & ( ( NGS_Refcount* ) self ) -> refcount, 0 );
+            KRefcountInit ( & ( ( NGS_Refcount* ) self ) -> refcount, 0, "NGS_Refcount", "duplicate", "" );
             break;
         }}
     }

@@ -466,7 +466,7 @@ LIB_EXPORT rc_t CC KPageAddRef ( const KPage *self )
     rc_t rc = 0;
     if ( self != NULL )
     {
-        int prior = atomic32_read ( & self -> refcount );
+        int prior = atomic32_read ( TO_ATOMIC32 ( & self -> refcount ) );
         int status = KRefcountAdd ( & self -> refcount, "KPage" );
         switch ( status )
         {
@@ -986,7 +986,7 @@ LIB_EXPORT rc_t CC KPageFileAddRef ( const KPageFile *self )
     rc_t rc = 0;
     if ( self != NULL )
     {
-        int prior = atomic32_read ( & self -> refcount );
+        int prior = atomic32_read ( TO_ATOMIC32 ( & self -> refcount ) );
         int status = KRefcountAdd ( & self -> refcount, "KPageFile" );
         switch ( status )
         {

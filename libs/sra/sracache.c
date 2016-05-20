@@ -480,7 +480,7 @@ LIB_EXPORT rc_t CC SRACacheGetTable(SRACache* self, const char* acc, const SRATa
                 rc = KVectorGetPtr ( index->body, key, (void**)&elem );   
                 if (rc == 0 && elem != NULL) 
                 {   
-                    if (atomic32_read(&elem->object->refcount) == 1)    /* owned by cache, not used elsewhere */
+                    if (atomic32_read( TO_ATOMIC32 ( &elem->object->refcount ) ) == 1)    /* owned by cache, not used elsewhere */
                     {
                         ++ self->hits;
                         

@@ -39,8 +39,16 @@
 #include <atomic32.h>
 #endif
 
-/* normally turned on */
-#ifndef INLINE_REFCOUNT
+/* for detecting uninitialized refcounts */
+#ifndef CHECK_REFCOUNT_INIT
+#define CHECK_REFCOUNT_INIT 1
+#endif
+
+/* normally turned off */
+#if CHECK_REFCOUNT_INIT
+#undef INLINE_REFCOUNT
+#define INLINE_REFCOUNT 0
+#elif ! defined INLINE_REFCOUNT
 #define INLINE_REFCOUNT 0
 #endif
 
@@ -80,8 +88,28 @@ KFC_EXTERN void CC KRefcountRelease_v1 ( KRefcount_v1 * self, ctx_t ctx );
  * KDualRef
  *  dual signed/unsigned 16-bit reference counter
  */
+#if CHECK_REFCOUNT_INIT
+typedef struct KRefcount KRefcount;
+struct KRefcount
+{
+    atomic32_t counter;
+    uint32_t initialized;  /* set to 'init' when viewed little-endian */
+};
+typedef struct KDualRef KDualRef;
+struct KDualRef
+{
+    atomic32_t counter;
+    uint32_t initialized;  /* set to 'init' when viewed little-endian */
+};
+#define TO_ATOMIC32( self ) \
+    ( & ( self ) -> counter )
+#define KRCSIZE 8
+#else
 typedef atomic32_t KRefcount;
 typedef atomic32_t KDualRef;
+#define TO_ATOMIC32( self ) \
+    ( self )
+#endif
 
 
 /* Actions
@@ -208,25 +236,25 @@ KFC_EXTERN int CC KDualRefDropDep ( const KDualRef *self, const char *clsname );
 
 #define KRefcountInit( refcount, value, clsname, op, name ) \
     ( REFNEW_COMMA ( clsname, op, name, refcount, value ) \
-      atomic32_set ( refcount, value ) )
+      atomic32_set ( TO_ATOMIC32 ( refcount ), value ) )
 #define KRefcountWhack( self, clsname ) \
     REFMSG ( clsname, "whack", self )
 #define KRefcountAdd( self, clsname ) \
     ( REFMSG_COMMA ( clsname, "addref", self ) \
-      ( atomic32_read ( self ) < 0 ) ? krefNegative : \
-      ( atomic32_inc ( ( KRefcount* ) ( self ) ), krefOkay ) )
+      ( atomic32_read ( TO_ATOMIC32 ( self ) ) < 0 ) ? krefNegative :   \
+      ( atomic32_inc ( TO_ATOMIC32 ( ( KRefcount* ) ( self ) ) ), krefOkay ) )
 #define KRefcountDrop( self, clsname ) \
     ( REFMSG_COMMA ( clsname, "release", self ) \
-      ( atomic32_read ( self ) <= 0 ) ? krefNegative : \
-      ( atomic32_dec_and_test ( ( KRefcount* ) ( self ) ) ? krefWhack : krefOkay ) )
+      ( atomic32_read ( TO_ATOMIC32 ( self ) ) <= 0 ) ? krefNegative :  \
+      ( atomic32_dec_and_test ( TO_ATOMIC32 ( ( KRefcount* ) ( self ) ) ) ? krefWhack : krefOkay ) )
 #define KRefcountAddDep( self, clsname ) \
     ( REFMSG_COMMA ( clsname, "attach", self ) \
-      ( atomic32_read ( self ) < 0 ) ? krefNegative : \
-      ( atomic32_inc ( ( KRefcount* ) ( self ) ), krefOkay ) )
+      ( atomic32_read ( TO_ATOMIC32 ( self ) ) < 0 ) ? krefNegative :   \
+      ( atomic32_inc ( TO_ATOMIC32 ( ( KRefcount* ) ( self ) ) ), krefOkay ) )
 #define KRefcountDropDep( self, clsname ) \
     ( REFMSG_COMMA ( clsname, "sever", self ) \
-      ( atomic32_read ( self ) <= 0 ) ? krefNegative : \
-      ( atomic32_dec_and_test ( ( KRefcount* ) ( self ) ) ? krefWhack : krefOkay ) )
+      ( atomic32_read ( TO_ATOMIC32 ( self ) ) <= 0 ) ? krefNegative :  \
+      ( atomic32_dec_and_test ( TO_ATOMIC32 ( ( KRefcount* ) ( self ) ) ) ? krefWhack : krefOkay ) )
 
 #endif
 

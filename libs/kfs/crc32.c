@@ -817,10 +817,10 @@ rc_t CC KCRC32FileWhackRead ( KCRC32File *self )
 {
     rc_t rc;
 
-    atomic32_set ( & self -> dad . refcount, 1 );
-
     rc = KFileRelease ( self -> file );
-    if ( rc == 0 )
+    if ( rc != 0 )
+        KRefcountInit ( & self -> dad . refcount, 1, "KCRC32File", "whack-read", "" );
+    else
         free ( self );
 
     return rc;
@@ -831,7 +831,7 @@ rc_t CC KCRC32FileWhackWrite ( KCRC32File *self )
 {
     rc_t rc;
 
-    atomic32_set ( & self -> dad . refcount, 1 );
+    KRefcountInit ( & self -> dad . refcount, 1, "KCRC32File", "whack-write", "" );
 
     /* if destination file has been written farther
        than our concept of eof, truncate */
@@ -916,7 +916,7 @@ rc_t CC KCRC32FileWhackAppend ( KCRC32File *self )
     }
 
     /* bail on errors */
-    atomic32_set ( & self -> dad . refcount, 1 );
+    KRefcountInit ( & self -> dad . refcount, 1, "KCRC32File", "whack-append", "" );
     return rc;
 }
 
