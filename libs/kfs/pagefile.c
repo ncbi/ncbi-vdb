@@ -478,7 +478,7 @@ LIB_EXPORT rc_t CC KPageAddRef ( const KPage *self )
                       , ( klogFatal
                           , rc
                           , "$(func): KRefcountAdd ( self [ prior = $(prior) ) returned $(status)"
-                          , "func=%s,prior=%,d,status=%d"
+                          , "func=%s,prior=%d,status=%d"
                           , __func__
                           , prior
                           , status
