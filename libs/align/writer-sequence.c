@@ -30,6 +30,7 @@
 #include <klib/sort.h>
 #include <klib/data-buffer.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 #include <insdc/insdc.h>
 #include <vdb/database.h>
 #include <vdb/cursor.h>
@@ -308,10 +309,10 @@ static rc_t MakeSequenceTable(TableWriterSeq *self, VDatabase* db,
         }
     }
     memcpy(self->cols, TableWriterSeq_cols, sizeof(TableWriterSeq_cols));
-    if (self->options & ewseq_co_KeepKey) {
+    if (self->options & ewseq_co_KeepKey)
         self->cols[ewseq_cn_TMP_KEY_ID].flags &= ~ewcol_Temporary;
-        if (self->options & ewseq_co_SaveRead)
-            self->cols[ewseq_cn_READ].name = "(INSDC:dna:text)READ";
+    if (self->options & ewseq_co_SaveRead) {
+        self->cols[ewseq_cn_READ].name = "(INSDC:dna:text)READ";
     }
     if( self->options & ewseq_co_AlignData ) {
         self->cols[ewseq_cn_TMP_KEY_ID].flags |= ewcol_Ignore;
@@ -375,7 +376,7 @@ static rc_t CompressREAD(TableWriterSeq *self)
     VTable *vtbl = NULL;
     uint8_t cursor_id = 0;
     int64_t row = 0;
-    
+
     memcpy(&self->cols_read, &TableSeqReadREAD_cols, sizeof(self->cols_read));
     rc = TableWriter_GetVTable(self->base, &vtbl);
     assert(rc == 0);
@@ -433,7 +434,7 @@ LIB_EXPORT rc_t CC TableWriterSeq_Whack(const TableWriterSeq* cself, bool commit
         if (commit) {
             rc = TableWriter_CloseCursor(cself->base, 1, NULL);
             assert(rc == 0);
-            if ((cself->options & (ewseq_co_KeepKey | ewseq_co_SaveRead)) == (ewseq_co_KeepKey | ewseq_co_SaveRead))
+            if (cself->options & ewseq_co_SaveRead)
                 CompressREAD(self);
 
             if ((rc = TableWriter_GetVTable(cself->base, &vtbl)) == 0 ) {
