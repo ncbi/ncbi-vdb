@@ -351,23 +351,32 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_Next, BlobIteratorFixture )
     EXIT;
 }
 
+FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_HasMore, BlobIteratorFixture )
+{
+    ENTRY;
+    MakeIterator ( SRA_Accession );
+
+    REQUIRE ( NGS_FragmentBlobIteratorHasMore ( m_blobIt, m_ctx ) );
+    REQUIRE ( ! FAILED () );
+
+    EXIT;
+}
+
 FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_FullScan, BlobIteratorFixture )
 {
     ENTRY;
     MakeIterator ( SRA_Accession );
 
     uint32_t count = 0;
-    while ( true )
+    while ( NGS_FragmentBlobIteratorHasMore ( m_blobIt, m_ctx ) )
     {
         struct NGS_FragmentBlob* blob = NGS_FragmentBlobIteratorNext ( m_blobIt, m_ctx );
-        if ( blob == 0 )
-        {
-            break;
-        }
+        REQUIRE_NOT_NULL ( blob );
         NGS_FragmentBlobRelease ( blob, ctx );
         ++count;
     }
     REQUIRE_EQ ( (uint32_t)243, count);
+    REQUIRE_NULL ( NGS_FragmentBlobIteratorNext ( m_blobIt, m_ctx ) );
 
     EXIT;
 }
