@@ -74,7 +74,9 @@ public:
         m_curs = NGS_CursorMake ( m_ctx, m_tbl, sequence_col_specs, seq_NUM_COLS );
         if ( m_curs == 0 )
             throw logic_error ("FragmentBlobFixture::MakeCursor NGS_CursorMake failed");
-        m_blob = NGS_FragmentBlobMake ( m_ctx, m_curs, rowId );
+        NGS_String* run = NGS_StringMake ( m_ctx, acc, string_size ( acc ) );
+        m_blob = NGS_FragmentBlobMake ( m_ctx, run, m_curs, rowId );
+        NGS_StringRelease ( run, m_ctx );
         if ( m_blob == 0 )
             throw logic_error ("FragmentBlobFixture::MakeCursor NGS_FragmentBlobMake failed");
     }
@@ -107,9 +109,15 @@ TEST_CASE ( NGS_FragmentBlobMake_BadCursor)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
 
-    struct NGS_FragmentBlob * blob = NGS_FragmentBlobMake ( ctx, NULL, 1 );
+    NGS_String* run = NGS_StringMake ( ctx, "", 0 );
+    REQUIRE ( ! FAILED () );
+
+    struct NGS_FragmentBlob * blob = NGS_FragmentBlobMake ( ctx, run, NULL, 1 );
     REQUIRE_FAILED ();
     REQUIRE_NULL ( blob );
+
+    NGS_StringRelease ( run, ctx );
+    REQUIRE ( ! FAILED () );
 }
 
 FIXTURE_TEST_CASE ( NGS_FragmentBlob_RowRange, FragmentBlobFixture )
@@ -202,7 +210,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_InfoByOffset_BadSelf, FragmentBlobFixtu
     uint64_t fragStart;
     uint64_t baseCount;
     int32_t bioNumber;
-    NGS_VDB_FragmentBlobInfoByOffset ( NULL, ctx, 0, & rowId, & fragStart, & baseCount, & bioNumber );
+    NGS_FragmentBlobInfoByOffset ( NULL, ctx, 0, & rowId, & fragStart, & baseCount, & bioNumber );
     REQUIRE_FAILED ();
 
     EXIT;
@@ -223,7 +231,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_InfoByOffset_Biological, FragmentBlobFi
     // biological #0, start 288, len 115 <== expect to see this for offset 300
     // technical, start 403, len 44
     // biological #1, start 447, len 99
-    NGS_VDB_FragmentBlobInfoByOffset ( m_blob, ctx, 300, & rowId, & fragStart, & baseCount, & bioNumber );
+    NGS_FragmentBlobInfoByOffset ( m_blob, ctx, 300, & rowId, & fragStart, & baseCount, & bioNumber );
     REQUIRE_EQ ( (int64_t)2, rowId );
     REQUIRE_EQ ( (uint64_t)288, fragStart );
     REQUIRE_EQ ( (uint64_t)115, baseCount );
@@ -246,11 +254,23 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_InfoByOffset_Technical, FragmentBlobFix
     // biological #0, start 288, len 115
     // technical, start 403, len 44  <== expect to see this for offset 410
     // biological #1, start 447, len 99
-    NGS_VDB_FragmentBlobInfoByOffset ( m_blob, ctx, 410, & rowId, & fragStart, & baseCount, & bioNumber );
+    NGS_FragmentBlobInfoByOffset ( m_blob, ctx, 410, & rowId, & fragStart, & baseCount, & bioNumber );
     REQUIRE_EQ ( (int64_t)2, rowId );
     REQUIRE_EQ ( (uint64_t)403, fragStart );
     REQUIRE_EQ ( (uint64_t)44, baseCount );
     REQUIRE_EQ ( (int32_t)-1, bioNumber );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE ( NGS_FragmentBlob_MakeFragmentId, FragmentBlobFixture )
+{
+    ENTRY;
+    MakeBlob ( SRA_Accession, 1 );
+
+    NGS_String* id = NGS_FragmentBlobMakeFragmentId ( m_blob, ctx, 2, 1 );
+    REQUIRE_EQ ( string ( SRA_Accession ) + ".FR1.2", string ( NGS_StringData ( id, ctx ), NGS_StringSize ( id, ctx ) ) );
+    NGS_StringRelease ( id, ctx );
 
     EXIT;
 }
@@ -276,7 +296,9 @@ public:
     void MakeIterator( const char* acc )
     {
         MakeSRA ( acc );
-        m_blobIt = NGS_FragmentBlobIteratorMake ( m_ctx, m_tbl );
+        NGS_String* run = NGS_StringMake ( m_ctx, acc, string_size ( acc ) );
+        m_blobIt = NGS_FragmentBlobIteratorMake ( m_ctx, run, m_tbl );
+        NGS_StringRelease ( run, m_ctx );
     }
     virtual void Release()
     {
@@ -302,9 +324,13 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_BadMake, BlobIteratorFixture )
 {
     ENTRY;
 
-    struct NGS_FragmentBlobIterator* blobIt = NGS_FragmentBlobIteratorMake ( ctx, NULL );
+    NGS_String* run = NGS_StringMake ( m_ctx, "", 0 );
+    REQUIRE ( ! FAILED () );
+
+    struct NGS_FragmentBlobIterator* blobIt = NGS_FragmentBlobIteratorMake ( ctx, run, NULL );
     REQUIRE_FAILED ();
     REQUIRE_NULL ( blobIt );
+    NGS_StringRelease ( run, ctx );
 
     EXIT;
 }
@@ -312,10 +338,13 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_BadMake, BlobIteratorFixture )
 FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_CreateRelease, BlobIteratorFixture )
 {
     ENTRY;
-    MakeIterator ( SRA_Accession );
+    MakeSRA ( SRA_Accession );
 
-    // Make
-    struct NGS_FragmentBlobIterator* blobIt = NGS_FragmentBlobIteratorMake ( m_ctx, m_tbl );
+    NGS_String* run = NGS_StringMake ( m_ctx, SRA_Accession, string_size ( SRA_Accession ) );
+    REQUIRE ( ! FAILED () );
+    struct NGS_FragmentBlobIterator* blobIt = NGS_FragmentBlobIteratorMake ( m_ctx, run, m_tbl );
+    REQUIRE ( ! FAILED () );
+    NGS_StringRelease ( run, m_ctx );
     REQUIRE_NOT_NULL ( blobIt );
     REQUIRE ( ! FAILED () );
     // Release
