@@ -49,6 +49,7 @@ struct NGS_String;
 
 /* Make
  *  create a blob containing the given rowId
+ *  run - accession name
  */
 struct NGS_FragmentBlob * NGS_FragmentBlobMake ( ctx_t ctx, const struct NGS_String * run, const struct NGS_Cursor* curs, int64_t rowId );
 

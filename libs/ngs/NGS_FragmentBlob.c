@@ -75,12 +75,17 @@ NGS_FragmentBlob *
 NGS_FragmentBlobMake ( ctx_t ctx, const NGS_String* run, const struct NGS_Cursor* curs, int64_t rowId )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcConstructing );
-    if ( curs == NULL )
+    if ( run == NULL )
+    {
+        INTERNAL_ERROR ( xcParamNull, "NULL run name" );
+    }
+    else if ( curs == NULL )
     {
         INTERNAL_ERROR ( xcParamNull, "NULL cursor object" );
     }
     else
     {
+
         NGS_FragmentBlob * ret = malloc ( sizeof * ret );
         if ( ret == NULL )
         {
@@ -101,8 +106,7 @@ NGS_FragmentBlobMake ( ctx_t ctx, const NGS_String* run, const struct NGS_Cursor
                             if ( rc == 0 )
                             {
                                 rc = VCursorGetBlob ( vcurs, & ret -> blob, NGS_CursorGetColumnIndex ( curs, ctx, seq_READ ) );
-                                if ( rc == 0 ||
-                                    ( GetRCObject ( rc ) == rcRow && GetRCState( rc ) == rcNotFound ) )
+                                if ( rc == 0  )
                                 {
                                     rc = VCursorCloseRow ( vcurs );
                                     if ( rc == 0 )
