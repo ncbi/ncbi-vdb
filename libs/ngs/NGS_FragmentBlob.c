@@ -39,6 +39,8 @@
 #include <../libs/vdb/blob-priv.h>
 #include <../libs/vdb/page-map.h>
 
+#include "NGS_String.h"
+#include "NGS_Id.h"
 #include "NGS_Cursor.h"
 #include "SRA_Read.h"
 
@@ -46,6 +48,7 @@ struct NGS_FragmentBlob
 {
     NGS_Refcount dad;
 
+    const NGS_String* run;
     const NGS_Cursor* curs;
     const VBlob* blob;
 };
@@ -59,6 +62,7 @@ NGS_FragmentBlobWhack ( NGS_FragmentBlob * self, ctx_t ctx )
     {
         VBlobRelease ( (VBlob*) self -> blob );
         NGS_CursorRelease ( self -> curs, ctx );
+        NGS_StringRelease ( self -> run, ctx );
     }
 }
 
@@ -68,7 +72,7 @@ static NGS_Refcount_vt NGS_FragmentBlob_vt =
 };
 
 NGS_FragmentBlob *
-NGS_FragmentBlobMake ( ctx_t ctx, const struct NGS_Cursor* curs, int64_t rowId )
+NGS_FragmentBlobMake ( ctx_t ctx, const NGS_String* run, const struct NGS_Cursor* curs, int64_t rowId )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcConstructing );
     if ( curs == NULL )
@@ -86,40 +90,44 @@ NGS_FragmentBlobMake ( ctx_t ctx, const struct NGS_Cursor* curs, int64_t rowId )
         {
             TRY ( NGS_RefcountInit ( ctx, & ret -> dad, & ITF_Refcount_vt . dad, & NGS_FragmentBlob_vt, "NGS_FragmentBlob", "" ) )
             {
-                TRY ( const struct VCursor* vcurs = NGS_CursorGetVCursor ( curs ) )
+                TRY ( ret -> run = NGS_StringDuplicate ( run, ctx ) )
                 {
-                    rc_t rc = VCursorSetRowId ( vcurs, rowId );
-                    if ( rc == 0 )
+                    TRY ( const struct VCursor* vcurs = NGS_CursorGetVCursor ( curs ) )
                     {
-                        rc = VCursorOpenRow ( vcurs );
+                        rc_t rc = VCursorSetRowId ( vcurs, rowId );
                         if ( rc == 0 )
                         {
-                            rc = VCursorGetBlob ( vcurs, & ret -> blob, NGS_CursorGetColumnIndex ( curs, ctx, seq_READ ) );
-                            if ( rc == 0 ||
-                                ( GetRCObject ( rc ) == rcRow && GetRCState( rc ) == rcNotFound ) )
+                            rc = VCursorOpenRow ( vcurs );
+                            if ( rc == 0 )
                             {
-                                rc = VCursorCloseRow ( vcurs );
-                                if ( rc == 0 )
+                                rc = VCursorGetBlob ( vcurs, & ret -> blob, NGS_CursorGetColumnIndex ( curs, ctx, seq_READ ) );
+                                if ( rc == 0 ||
+                                    ( GetRCObject ( rc ) == rcRow && GetRCState( rc ) == rcNotFound ) )
                                 {
-                                    ret -> curs = NGS_CursorDuplicate ( curs, ctx );
-                                    return ret;
+                                    rc = VCursorCloseRow ( vcurs );
+                                    if ( rc == 0 )
+                                    {
+                                        ret -> curs = NGS_CursorDuplicate ( curs, ctx );
+                                        return ret;
+                                    }
                                 }
+                                else
+                                {
+                                    VCursorCloseRow ( vcurs );
+                                }
+                                INTERNAL_ERROR ( xcUnexpected, "VCursorGetBlob() rc = %R", rc );
                             }
                             else
                             {
-                                VCursorCloseRow ( vcurs );
+                                INTERNAL_ERROR ( xcUnexpected, "VCursorOpenRow() rc = %R", rc );
                             }
-                            INTERNAL_ERROR ( xcUnexpected, "VCursorGetBlob() rc = %R", rc );
                         }
                         else
                         {
-                            INTERNAL_ERROR ( xcUnexpected, "VCursorOpenRow() rc = %R", rc );
+                            INTERNAL_ERROR ( xcUnexpected, "VCursorSetRowId() rc = %R", rc );
                         }
                     }
-                    else
-                    {
-                        INTERNAL_ERROR ( xcUnexpected, "VCursorSetRowId() rc = %R", rc );
-                    }
+                    NGS_StringRelease ( ret -> run, ctx );
                 }
             }
             free ( ret );
@@ -309,7 +317,7 @@ GetFragInfo ( ctx_t ctx, const NGS_Cursor * curs, int64_t p_rowId, uint64_t p_of
 }
 
 void
-NGS_VDB_FragmentBlobInfoByOffset ( const struct NGS_FragmentBlob * self, ctx_t ctx,  uint64_t offsetInBases, int64_t* rowId, uint64_t* fragStart, uint64_t* baseCount, int32_t* bioNumber )
+NGS_FragmentBlobInfoByOffset ( const struct NGS_FragmentBlob * self, ctx_t ctx,  uint64_t offsetInBases, int64_t* rowId, uint64_t* fragStart, uint64_t* baseCount, int32_t* bioNumber )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcAccessing );
 
@@ -364,3 +372,18 @@ NGS_VDB_FragmentBlobInfoByOffset ( const struct NGS_FragmentBlob * self, ctx_t c
     }
 }
 
+NGS_String*
+NGS_FragmentBlobMakeFragmentId ( const struct NGS_FragmentBlob * self, ctx_t ctx, int64_t rowId, uint32_t fragNumber )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcAccessing );
+
+    if ( self == NULL )
+    {
+        INTERNAL_ERROR ( xcParamNull, "bad object reference" );
+    }
+    else
+    {
+        return NGS_IdMakeFragment ( ctx, self -> run, false, rowId, fragNumber );
+    }
+    return NULL;
+}

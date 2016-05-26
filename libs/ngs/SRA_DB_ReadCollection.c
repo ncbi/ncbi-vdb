@@ -361,7 +361,7 @@ static struct NGS_FragmentBlobIterator* SRADB_ReadCollectionGetFragmentBlobs ( S
     }
     else
     {
-        TRY ( NGS_FragmentBlobIterator* ret = NGS_FragmentBlobIteratorMake ( ctx, table ) )
+        TRY ( NGS_FragmentBlobIterator* ret = NGS_FragmentBlobIteratorMake ( ctx, self -> run_name, table ) )
         {
             VTableRelease ( table );
             return ret;

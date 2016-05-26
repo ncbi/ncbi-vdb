@@ -39,6 +39,7 @@ extern "C" {
 
 struct NGS_FragmentBlob;
 struct NGS_Cursor;
+struct NGS_String;
 
 /*--------------------------------------------------------------------------
  * NGS_FragmentBlob
@@ -49,7 +50,7 @@ struct NGS_Cursor;
 /* Make
  *  create a blob containing the given rowId
  */
-struct NGS_FragmentBlob * NGS_FragmentBlobMake ( ctx_t ctx, const struct NGS_Cursor* curs, int64_t rowId );
+struct NGS_FragmentBlob * NGS_FragmentBlobMake ( ctx_t ctx, const struct NGS_String * run, const struct NGS_Cursor* curs, int64_t rowId );
 
 /* Release
  *  release reference
@@ -83,7 +84,7 @@ uint64_t NGS_FragmentBlobSize ( const struct NGS_FragmentBlob * self, ctx_t ctx 
  *  baseCount [OUT, NULL OK]- number of bases in the row
  *  bioNumber [OUT, NULL OK]- for a biological frament, 0-based biological fragment number inside the read; for a technical number, -1
  */
-void NGS_VDB_FragmentBlobInfoByOffset ( const struct NGS_FragmentBlob * self, ctx_t ctx,  uint64_t offsetInBases, int64_t* rowId, uint64_t* fragStart, uint64_t* baseCount, int32_t* bioNumber );
+void NGS_FragmentBlobInfoByOffset ( const struct NGS_FragmentBlob * self, ctx_t ctx,  uint64_t offsetInBases, int64_t* rowId, uint64_t* fragStart, uint64_t* baseCount, int32_t* bioNumber );
 
 
 /* ReadFragmentCount
@@ -93,19 +94,28 @@ void NGS_VDB_FragmentBlobInfoByOffset ( const struct NGS_FragmentBlob * self, ct
  *
  *  NOTE: implementation TBD
  */
-uint32_t NGS_VDB_FragmentBlobReadFragmentCount ( const struct NGS_FragmentBlob * self, ctx_t ctx, int64_t rowId );
+uint32_t NGS_FragmentBlobReadFragmentCount ( const struct NGS_FragmentBlob * self, ctx_t ctx, int64_t rowId );
 
 /* InfoByRowId
  *  retrieve fragment info by rowId and fragment number
  *  rowId - rowId of the read (must be inside the blob)
- *  fragmentNumber  - 0-based fragment nunber insude the read
+ *  fragmentNumber  - 0-based fragment number inside the read
  *  fragStart [OUT, NULL OK] - offset to the first base of the row
  *  baseCount [OUT, NULL OK]- number of bases in the row
  *  biological [OUT, NULL OK]- true if the fragment is biological, false if technical
  *
  *  NOTE: implementation TBD
  */
-void NGS_VDB_FragmentBlobInfoByRowId ( const struct NGS_FragmentBlob * self, ctx_t ctx,  int64_t rowId, uint32_t fragNumber, uint64_t* fragStart, uint64_t* baseCount, bool* biological );
+void NGS_FragmentBlobInfoByRowId ( const struct NGS_FragmentBlob * self, ctx_t ctx,  int64_t rowId, uint32_t fragNumber, uint64_t* fragStart, uint64_t* baseCount, bool* biological );
+
+/* MakeFragmentId
+ *  retrieve (biological) fragment Id  by rowId and fragment number
+ *  rowId - rowId of the read (must be inside the blob)
+ *  fragmentNumber  - 0-based biological fragment number inside the read
+ *
+ *  returns the ID string of the specified fragment
+ */
+struct NGS_String* NGS_FragmentBlobMakeFragmentId ( const struct NGS_FragmentBlob * self, ctx_t ctx,  int64_t rowId, uint32_t fragNumber );
 
 #ifdef __cplusplus
 }

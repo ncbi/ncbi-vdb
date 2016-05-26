@@ -332,7 +332,7 @@ static struct NGS_FragmentBlobIterator* SRA_ReadCollectionGetFragmentBlobs ( SRA
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
-    TRY ( NGS_FragmentBlobIterator* ret = NGS_FragmentBlobIteratorMake ( ctx, self -> tbl ) )
+    TRY ( NGS_FragmentBlobIterator* ret = NGS_FragmentBlobIteratorMake ( ctx, self -> run_name, self -> tbl ) )
     {
         return ret;
     }

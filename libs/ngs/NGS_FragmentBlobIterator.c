@@ -32,14 +32,16 @@
 
 #include <ngs/itf/Refcount.h>
 
-#include "NGS_FragmentBlob.h"
+#include "NGS_String.h"
 #include "NGS_Cursor.h"
 #include "SRA_Read.h"
+#include "NGS_FragmentBlob.h"
 
 struct NGS_FragmentBlobIterator
 {
     NGS_Refcount dad;
 
+    const NGS_String* run;
     const NGS_Cursor* curs;
     int64_t last_row;
     int64_t next_row;
@@ -52,6 +54,7 @@ NGS_FragmentBlobIteratorWhack ( NGS_FragmentBlobIterator * self, ctx_t ctx )
     if ( self != NULL )
     {
         NGS_CursorRelease ( self->curs, ctx );
+        NGS_StringRelease ( self->run, ctx );
     }
 }
 
@@ -61,7 +64,7 @@ static NGS_Refcount_vt NGS_FragmentBlobIterator_vt =
 };
 
 NGS_FragmentBlobIterator*
-NGS_FragmentBlobIteratorMake ( ctx_t ctx, const struct VTable* tbl )
+NGS_FragmentBlobIteratorMake ( ctx_t ctx, const NGS_String* run, const struct VTable* tbl )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcConstructing );
     if ( tbl == NULL )
@@ -81,9 +84,13 @@ NGS_FragmentBlobIteratorMake ( ctx_t ctx, const struct VTable* tbl )
             {
                 TRY ( ret -> curs = NGS_CursorMake ( ctx, tbl, sequence_col_specs, seq_NUM_COLS ) )
                 {
-                    ret -> last_row = NGS_CursorGetRowCount ( ret->curs, ctx );
-                    ret -> next_row = 1;
-                    return ret;
+                    TRY ( ret -> run = NGS_StringDuplicate ( run, ctx ) )
+                    {
+                        ret -> last_row = NGS_CursorGetRowCount ( ret->curs, ctx );
+                        ret -> next_row = 1;
+                        return ret;
+                    }
+                    NGS_CursorRelease ( ret -> curs, ctx );
                 }
             }
             free ( ret );
@@ -119,6 +126,21 @@ NGS_FragmentBlobIteratorDuplicate ( NGS_FragmentBlobIterator * self, ctx_t ctx )
     return ( NGS_FragmentBlobIterator* ) self;
 }
 
+/* HasMore
+ *  return true if there are more blobs to iterate on
+ */
+bool
+NGS_FragmentBlobIteratorHasMore ( NGS_FragmentBlobIterator * self, ctx_t ctx )
+{
+    if ( self == NULL )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcRow, rcSelecting );
+        INTERNAL_ERROR ( xcSelfNull, "NULL FragmentBlobIterator accessed" );
+        return false;
+    }
+    return self != NULL && self -> next_row <= self -> last_row;
+}
+
 /* Next
  *  return the next blob, to be Release()d by the caller.
  *  NULL if there are no more blobs
@@ -128,9 +150,14 @@ NGS_FragmentBlobIteratorNext ( NGS_FragmentBlobIterator * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcAccessing );
 
-    if ( self != NULL && self -> next_row <= self -> last_row )
+    if ( self == NULL )
     {
-        TRY ( NGS_FragmentBlob* ret = NGS_FragmentBlobMake ( ctx, self -> curs, self -> next_row ) )
+        FUNC_ENTRY ( ctx, rcSRA, rcRow, rcSelecting );
+        INTERNAL_ERROR ( xcSelfNull, "NULL FragmentBlobIterator accessed" );
+    }
+    else if ( self -> next_row <= self -> last_row )
+    {
+        TRY ( NGS_FragmentBlob* ret = NGS_FragmentBlobMake ( ctx, self -> run, self -> curs, self -> next_row ) )
         {
             int64_t first;
             uint64_t count;

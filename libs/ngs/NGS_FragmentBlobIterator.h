@@ -37,8 +37,9 @@ typedef struct NGS_FragmentBlobIterator NGS_FragmentBlobIterator;
 extern "C" {
 #endif
 
-struct NGS_FragmentBlob;
 struct VTable;
+struct NGS_String;
+struct NGS_FragmentBlob;
 
 /*--------------------------------------------------------------------------
  * NGS_FragmentBlobIterator
@@ -48,7 +49,7 @@ struct VTable;
 
 /* Make
  */
-NGS_FragmentBlobIterator* NGS_FragmentBlobIteratorMake ( ctx_t ctx, const struct VTable* sequence );
+NGS_FragmentBlobIterator* NGS_FragmentBlobIteratorMake ( ctx_t ctx, const struct NGS_String* run, const struct VTable* sequence );
 
 /* Release
  *  release reference
@@ -59,6 +60,11 @@ void NGS_FragmentBlobIteratorRelease ( NGS_FragmentBlobIterator * self, ctx_t ct
  *  duplicate reference
  */
 NGS_FragmentBlobIterator * NGS_FragmentBlobIteratorDuplicate ( NGS_FragmentBlobIterator * self, ctx_t ctx );
+
+/* HasMore
+ *  return true if there are more blobs to iterate on
+ */
+bool NGS_FragmentBlobIteratorHasMore ( NGS_FragmentBlobIterator * self, ctx_t ctx );
 
 /* Next
  *  return the next blob, to be Release()d by the caller.
