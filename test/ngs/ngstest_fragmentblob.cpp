@@ -120,6 +120,36 @@ TEST_CASE ( NGS_FragmentBlobMake_BadCursor)
     REQUIRE ( ! FAILED () );
 }
 
+FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_NullRunName, FragmentBlobFixture )
+{
+    ENTRY;
+
+    REQUIRE_RC ( VDBManagerOpenTableRead ( m_ctx -> rsrc -> vdb, & m_tbl, NULL, SRA_Accession ) );
+    m_curs = NGS_CursorMake ( m_ctx, m_tbl, sequence_col_specs, seq_NUM_COLS );
+    REQUIRE_NOT_NULL ( m_curs );
+
+    struct NGS_FragmentBlob * blob = NGS_FragmentBlobMake ( ctx, NULL, m_curs, 1 );
+    REQUIRE_FAILED ();
+    REQUIRE_NULL ( blob );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_BadRowId, FragmentBlobFixture )
+{
+    ENTRY;
+    REQUIRE_RC ( VDBManagerOpenTableRead ( m_ctx -> rsrc -> vdb, & m_tbl, NULL, SRA_Accession ) );
+    m_curs = NGS_CursorMake ( m_ctx, m_tbl, sequence_col_specs, seq_NUM_COLS );
+    REQUIRE_NOT_NULL ( m_curs );
+    NGS_String* run = NGS_StringMake ( m_ctx, SRA_Accession, string_size ( SRA_Accession ) );
+
+    m_blob = NGS_FragmentBlobMake ( m_ctx, run, m_curs, -1 ); // bad row Id
+    REQUIRE_FAILED ();
+
+    NGS_StringRelease ( run, m_ctx );
+    EXIT;
+}
+
 FIXTURE_TEST_CASE ( NGS_FragmentBlob_RowRange, FragmentBlobFixture )
 {
     ENTRY;
@@ -130,20 +160,6 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlob_RowRange, FragmentBlobFixture )
     NGS_FragmentBlobRowRange ( m_blob, m_ctx, & first, & count );
     REQUIRE_EQ ( (int64_t)1, first );
     REQUIRE_EQ ( (uint64_t)4, count );
-
-    EXIT;
-}
-
-FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_BadRowId, FragmentBlobFixture )
-{
-    ENTRY;
-    // BadRowId. The object gets created but NGS_FragmentBlobRowRange will fail
-    MakeBlob ( SRA_Accession, -1 );
-
-    int64_t first = 0;
-    uint64_t count = 0;
-    NGS_FragmentBlobRowRange ( m_blob, ctx, & first, & count );
-    REQUIRE_FAILED ();
 
     EXIT;
 }
