@@ -1,4 +1,10 @@
 # NCBI External Developer Release:
+
+## NCBI VDB 2.6.3
+**May 25, 2016**
+
+  **vdb**: Fixed a bound on memory cache that would never flush under certain access modes
+
 ## NCBI VDB 2.6.2
 **April 20, 2016**
 
