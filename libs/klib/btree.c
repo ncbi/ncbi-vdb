@@ -247,7 +247,9 @@ LIB_EXPORT rc_t CC BTreeFind ( uint32_t const root, Pager *const pager, Pager_vt
     {
     void const *const page = vt->use(pager, root >> 1);
     assert(page != NULL);
-    return (((root & 1) == 0) ? leaf_find : branch_find)(pager, vt, page, id, key, key_size);
+    rc_t rc =  (((root & 1) == 0) ? leaf_find : branch_find)(pager, vt, page, id, key, key_size);
+    vt->unuse(pager, page);
+    return rc;
     }
 }
 
