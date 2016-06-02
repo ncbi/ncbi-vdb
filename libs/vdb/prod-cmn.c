@@ -524,7 +524,7 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
     uint32_t window;
 	uint32_t min_row_count=UINT32_MAX; /* will increase row_count due to larger common repeat count of parameters */
     int64_t  row_id_max=0;
-    uint32_t MAX_BLOB_REGROUP; /** max rows in blob for regrouping ***/
+    uint32_t max_blob_regroup; /** max rows in blob for regrouping ***/
     bool function_failed = false;
     bool window_resized = false;
     
@@ -562,13 +562,13 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
     if(self->curs->cache_curs && self->curs->cache_col_active){
         /*** since cache_cursor exist, trying to avoid prefetching data which is in cache cursor ***/
 		row_id_max = self->curs->cache_empty_end;
-		MAX_BLOB_REGROUP=256;
+		max_blob_regroup=256;
     } else {
-		MAX_BLOB_REGROUP=1024;
+		max_blob_regroup=1024;
     }
 	if(self->dad.sub == vftRowFast)
     {
-		window = MAX_BLOB_REGROUP;
+		window = max_blob_regroup;
 	}
     else
     {
@@ -578,14 +578,20 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
         /** detect sequentual io ***/
 		if ( row_id == self->stop_id + 1 )
         {
-			if( row_id % ( 4 * window ) == 1 ) 
+            if ( window > max_blob_regroup )
             {
-                if ( window < MAX_BLOB_REGROUP )
+                window = max_blob_regroup;
+                window_resized = true;
+            }
+
+			else if( row_id % ( 4 * window ) == 1 ) 
+            {
+                if ( window < max_blob_regroup )
                 {
-                    if ( 4 * window <= MAX_BLOB_REGROUP )
+                    if ( 4 * window <= max_blob_regroup )
                         window *= 4;
                     else
-                        window = MAX_BLOB_REGROUP;
+                        window = max_blob_regroup;
                     window_resized = true;
                 }
                 /* we know that row_id lands on the first row of the new window */
@@ -595,8 +601,11 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
         {
             /* random access - use tiny blob window */
 			window = 1;
+            window_resized = true;
 		}
-	} 
+	}
+
+    assert ( 0 < window && window <= max_blob_regroup );
 
     if(window == 1)
     {
