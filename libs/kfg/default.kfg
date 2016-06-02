@@ -42,7 +42,7 @@
 /repository/remote/aux/NCBI/apps/nakmer/volumes/fuseNAKMER = "sadb"
 /repository/remote/aux/NCBI/apps/nannot/volumes/fuseNANNOT = "sadb"
 /repository/remote/aux/NCBI/apps/refseq/volumes/refseq = "refseq"
-/repository/remote/aux/NCBI/apps/sra/volumes/sraFlat = "srapub"
+/repository/remote/aux/NCBI/apps/sra/volumes/flat = "srapub"
 /repository/remote/aux/NCBI/apps/wgs/volumes/fuseWGS = "wgs"
 /repository/remote/aux/NCBI/root = "http://sra-download.ncbi.nlm.nih.gov"
 
