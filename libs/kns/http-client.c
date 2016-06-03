@@ -671,10 +671,15 @@ rc_t KClientHttpGetLine ( KClientHttp *self, struct timeout_t *tm )
  *  performs task of entering a header into BSTree
  *  or updating an existing node
  *
+ * If header exists:
+ *  if (add) then add "value" to "header value"
+ *  else     replace "header value" with "value"
+ *
  *  Headers are always made up of a name: value pair
  */
 static
-rc_t KClientHttpAddHeaderString ( BSTree *hdrs, const String *name, const String *value )
+rc_t KClientHttpAddHeaderString
+( BSTree *hdrs, bool add, const String *name, const String *value )
 {
     rc_t rc = 0;
 
@@ -726,8 +731,9 @@ rc_t KClientHttpAddHeaderString ( BSTree *hdrs, const String *name, const String
            check that value param has data */
         else if ( value -> size != 0 )
         {
-            /* find the current size of the data in the node */
-            size_t cursize = node -> name . size + node -> value . size;
+          /* find the current size of the data in the node */
+          size_t cursize = node -> name . size + node -> value . size;
+          if ( add ) { /* add value to node -> value */
             /* resize databuffer to hold the additional value data + comma + nul */
             rc = KDataBufferResize ( & node -> value_storage, cursize + value -> size + 1 + 1 );
             if ( rc == 0 )
@@ -750,6 +756,31 @@ rc_t KClientHttpAddHeaderString ( BSTree *hdrs, const String *name, const String
                    restore values to what they were */
                 KDataBufferResize ( & node -> value_storage, cursize + 1 );
             }
+          } else { /* replace value with node -> value */
+            if ( ! StringEqual ( & node -> value, value ) )
+            /* values are not equal - need to replace */
+            {
+                /* size of the KDataBuffer to store string data */
+                size_t bsize = name -> size + value ->  size + 1;
+                if ( value -> size > node -> value . size
+                  || value -> len > node -> value . len )
+                {   /* new value is longer */
+                    KDataBufferResize ( & node -> value_storage, bsize );
+                }
+                /* copy the string data into storage */
+                rc = string_printf ( node -> value_storage . base, bsize,
+                    NULL, "%S%S", name, value );
+                if ( rc == 0 )
+                {
+                    /* initialize the Strings to point into KHttpHeader node */
+                    StringInit ( & node -> name,  node -> value_storage . base,
+                        name -> size, name -> len );
+                    StringInit ( & node -> value,
+                        node -> name . addr + name -> size,
+                        value -> size, value -> len );
+                }
+            }
+          }
         }
     }
 
@@ -757,7 +788,8 @@ rc_t KClientHttpAddHeaderString ( BSTree *hdrs, const String *name, const String
 }
 
 static
-rc_t KClientHttpVAddHeader ( BSTree *hdrs, const char *_name, const char *_val, va_list args )
+rc_t KClientHttpVAddHeader ( BSTree *hdrs, bool add,
+    const char *_name, const char *_val, va_list args )
 {
     rc_t rc;
 
@@ -778,19 +810,32 @@ rc_t KClientHttpVAddHeader ( BSTree *hdrs, const char *_name, const char *_val, 
         /* init value */
         StringInit ( & value, buf, bsize, ( uint32_t ) blen );
 
-        rc = KClientHttpAddHeaderString ( hdrs, & name, & value );
+        rc = KClientHttpAddHeaderString ( hdrs, add, & name, & value );
     }
 
     return rc;
 }
 
 static
-rc_t KClientHttpAddHeader ( BSTree *hdrs, const char *name, const char *val, ... )
+rc_t KClientHttpAddHeader
+( BSTree *hdrs, const char *name, const char *val, ... )
 {
     rc_t rc;
     va_list args;
     va_start ( args, val );
-    rc = KClientHttpVAddHeader ( hdrs, name, val, args );
+    rc = KClientHttpVAddHeader ( hdrs, true, name, val, args );
+    va_end ( args );
+    return rc;
+}
+
+static
+rc_t KClientHttpReplaceHeader
+( BSTree *hdrs, const char *name, const char *val, ... )
+{
+    rc_t rc;
+    va_list args;
+    va_start ( args, val );
+    rc = KClientHttpVAddHeader ( hdrs, false, name, val, args );
     va_end ( args );
     return rc;
 }
@@ -880,7 +925,8 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
                     break;
                 }
                 
-                rc = KClientHttpAddHeaderString ( hdrs, & name, & value );
+                rc = KClientHttpAddHeaderString
+                    ( hdrs, true, & name, & value );
             }
         }
     }
@@ -1923,7 +1969,7 @@ LIB_EXPORT rc_t CC KClientHttpResultAddHeader ( KClientHttpResult *self,
         va_list args;
         va_start ( args, val );
         
-        rc = KClientHttpVAddHeader ( & self -> hdrs, name, val, args );
+        rc = KClientHttpVAddHeader ( & self -> hdrs, false, name, val, args );
         
         va_end ( args );
     }
@@ -2494,7 +2540,8 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddHeader ( KClientHttpRequest *self,
 
             if ( rc == 0 )
             {
-                rc = KClientHttpVAddHeader ( & self -> hdrs, name, val, args );
+                rc = KClientHttpVAddHeader
+                    ( & self -> hdrs, false, name, val, args );
                 if ( rc == 0 && accept_not_modified )
                     self -> accept_not_modified = true;
             }
@@ -2896,7 +2943,8 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
     if ( self -> body . elem_count > 1 )
     {
         /* "body" contains data plus NUL byte */
-        rc = KClientHttpAddHeader ( & self -> hdrs, "Content-Length", "%lu", self -> body . elem_count - 1 );
+        rc = KClientHttpReplaceHeader ( & self -> hdrs,
+            "Content-Length", "%lu", self -> body . elem_count - 1 );
         if ( rc == 0 )
         {
             String Content_Type;
