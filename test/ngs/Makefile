@@ -125,6 +125,9 @@ TEST_NGS_CSRA1_OBJ = \
 $(TEST_BINDIR)/test-ngs_csra1: $(TEST_NGS_CSRA1_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
+csra1: test-ngs_csra1
+	$(TEST_BINDIR)/$^
+
 #-------------------------------------------------------------------------------
 # test-ngs_csra1_readcollection
 #
