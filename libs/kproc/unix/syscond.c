@@ -243,7 +243,7 @@ LIB_EXPORT rc_t CC KConditionTimedWait ( KCondition *self, struct KLock *lock, t
     case 0:
         break;
     case ETIMEDOUT:
-        return RC ( rcPS, rcCondition, rcWaiting, rcTimeout, rcExhausted );
+        return SILENT_RC ( rcPS, rcCondition, rcWaiting, rcTimeout, rcExhausted );
 /*
   The pthread_cond_timedwait() function shall fail if:
 

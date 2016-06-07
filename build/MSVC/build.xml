@@ -67,7 +67,7 @@ Options:
                 </exec>
 </-->            
             <!-->Java/Python tests are run directly, not through msbuild</-->
-<!-->
+
             <subant target="runtests">
                 <fileset dir="${basedir}\..\..\test\ngs-java" includes="build.xml"/>
                 <property name="Platform" value="${Platform}"/>
@@ -75,7 +75,7 @@ Options:
                 <property name="Output" value="${Output}"/>
                 <property name="MSVS" value="${MSVS}"/>
             </subant>
-</-->            
+            
             <subant target="runtests">
                 <fileset dir="${basedir}\..\..\test\ngs-python" includes="build.xml"/>
                 <property name="Platform" value="${Platform}"/>

@@ -61,11 +61,55 @@
 #define SUB_DEBUG(msg)
 #endif
 
+/**********************************
+VERSION     effect
+
+1           in case of random-joins oscillation memory usage
+            prefetch of align-id's in the cursor-cache
+                                                                
+2           in case of random-joins steady memroy usage
+            prefetch of align-id's in dedicated cache
+
+**********************************/
 #define READ_RESTORER_VERSION 2
+#define ROW_ID_INC_COUNT 100
 
 #if READ_RESTORER_VERSION == 2
 
-/* --------------------------- rr_store --------------------------- */
+/* --------------------------- id_list --------------------------- */
+
+
+typedef struct id_list
+{
+    int64_t * list;
+    uint32_t count;
+} id_list;
+
+
+static bool sort_align_ids( const id_list * src, id_list * dst )
+{
+    bool res;
+    dst -> count = 0;
+    dst -> list = malloc( src -> count * sizeof( dst -> list[ 0 ] ) );
+    res = ( dst -> list != NULL );
+    if ( res )
+    {
+        uint32_t i;
+        /* filter out the zero id's */
+        for( i = 0; i < src -> count; i++ )
+        {
+            if ( src -> list[ i ] > 0 )
+                dst -> list[ dst -> count ++ ] = src -> list[ i ];
+        }
+        /* now we can sort */
+        if ( dst -> count > 0 )
+            ksort_int64_t( dst -> list, dst -> count );
+    }
+    return res;
+}
+
+
+/* --------------------------- rr_entry --------------------------- */
 
 typedef struct rr_entry
 {
@@ -99,9 +143,13 @@ static bool rr_entry_make ( rr_entry ** entry, const INSDC_4na_bin * read, uint3
 }
 
 
+/* --------------------------- rr_store --------------------------- */
+
 typedef struct rr_store
 {
     KVector * v;
+    int64_t first_seq_row_id;
+    int64_t last_seq_row_id;
 } rr_store;
 
 
@@ -144,10 +192,13 @@ static rc_t rr_store_make ( rr_store ** rr )
 }
 
 
-static bool rr_store_read ( rr_store * rr, int64_t align_id, const INSDC_4na_bin * read, uint32_t read_len )
+static bool rr_store_alignment( rr_store * rr, int64_t align_id, const VCursor * curs, uint32_t read_idx )
 {
-    bool res = ( rr != NULL && read != NULL );
-    if ( res )
+    bool res = false;
+    const INSDC_4na_bin * read = NULL;
+    uint32_t read_len;
+    rc_t rc = VCursorCellDataDirect( curs, align_id, read_idx, NULL, ( const void** ) &read, NULL, &read_len );
+    if ( rc == 0 )
     {
         rr_entry * entry;
         res = rr_entry_make ( &entry, read, read_len );
@@ -163,22 +214,42 @@ static bool rr_store_read ( rr_store * rr, int64_t align_id, const INSDC_4na_bin
 }
 
 
-static bool rr_get_read ( rr_store * rr, int64_t align_id, rr_entry ** entry )
+static bool rr_fill_cache( rr_store ** rr, const id_list * ids, const VCursor * curs, uint32_t read_idx,
+    int64_t row_id, int64_t last_row_id )
 {
-    bool res = ( rr != NULL && entry != NULL );
+    bool res = ( rr_store_make ( rr ) == 0 );
     if ( res )
     {
-        uint64_t key = ( uint64_t ) align_id;
-        res = ( KVectorGetPtr ( rr -> v, key, ( void ** )entry ) == 0 );
+        id_list sorted;
+        res = sort_align_ids( ids, &sorted );
         if ( res )
-            res = ( KVectorUnset ( rr -> v, key ) == 0 );
+        {
+            uint32_t i;
+            
+            rr_store * r = * rr;
+            for( i = 0; i < sorted . count; i++ )
+                rr_store_alignment( r, sorted . list[ i ], curs, read_idx );
+            free( ( void * ) sorted . list );
+            
+            r -> first_seq_row_id = row_id;
+            r -> last_seq_row_id = last_row_id;
+        }
     }
     return res;
 }
+
+
+static bool rr_get_read ( rr_store * rr, int64_t align_id, rr_entry ** entry )
+{
+    uint64_t key = ( uint64_t ) align_id;
+    bool res = ( KVectorGetPtr ( rr -> v, key, ( void ** )entry ) == 0 );
+    if ( res && ( *entry == NULL ) ) res = false;
+    return res;
+}
+
 #endif
 
 /* ---------------------------------------------------------------- */
-
 
 typedef struct Read_Restorer Read_Restorer;
 struct Read_Restorer
@@ -191,12 +262,9 @@ struct Read_Restorer
     int64_t  prefetch_start_id;
     int64_t  prefetch_stop_id;
 
-    int64_t  last_max_align_id; 
-    uint64_t hits, miss;
-
 #if READ_RESTORER_VERSION == 2
-    uint32_t last_align_id_count;
-    rr_store * read_store;
+    uint32_t row_id_increments;     /* count how often we have an increment of the row_id */
+    rr_store * read_store;          /* if NULL we are not caching... */
 #endif
 };
 
@@ -273,7 +341,8 @@ rc_t Read_Restorer_Make( Read_Restorer **objp, const VTable *tbl, const VCursor*
         if ( rc == 0 )
         {
 #if READ_RESTORER_VERSION == 2
-            rc = rr_store_make ( & obj -> read_store );
+            /* - we have no cache to begin with ( obj->read_store is NULL because of memset above )
+               - we make one if sequential access is detected */
 #endif
             if ( rc == 0 )
             {
@@ -309,84 +378,77 @@ static INSDC_4na_bin  map[]={
 
 #if READ_RESTORER_VERSION == 2
 
-typedef struct id_list
-{
-    int64_t * list;
-    uint32_t count;
-} id_list;
 
-
-/*
-static id_list sort_align_ids( id_list *align_ids )
+/* caching strategy for READ_RESTORER_VERSION_2 */
+static void handle_caching( Read_Restorer * self, id_list * ids, int64_t row_id, int64_t last_row_id )
 {
-    id_list res;
-    res.count = 0;
-    res.list = malloc( align_ids->count * sizeof( * res.list ) );
-    if ( res.list != NULL )
+    bool is_sequential = ( self -> read_store != NULL );
+    if ( is_sequential )
     {
-        uint32_t i;
-        for( i = 0, res.count = 0; i < align_ids->count; i++ )
+        /* we are in sequential mode, because we have a cache,
+           check if we still are in sequential mode, decrement the age of the cache */
+        bool is_in_cache = ( ( row_id >= self -> read_store -> first_seq_row_id ) &&
+                             ( row_id <= self -> read_store -> last_seq_row_id ) );
+        if ( !is_in_cache )
         {
-            if ( align_ids->list[ i ] > 0 )
-                res.list[ res.count++ ] = align_ids->list[ i ];
-        }
-        if ( res.count > 0 )
-            ksort_int64_t( res.list, res.count );
-    }
-    return res;
-}
-*/
-
-static int64_t find_max_id( id_list *ids )
-{
-    int64_t res = 0;
-    if ( ids != NULL && ids->list != NULL )
-    {
-        uint32_t i;
-        for( i = 0; i < ids->count; i++ )
-        {
-            if ( ids->list[ i ] > res )
-                res = ids->list[ i ];
+            is_sequential = ( row_id == self -> read_store -> last_seq_row_id + 1 );
+            
+            /* blow away the cache no matter if we are sequential or not */
+            rr_store_release ( self -> read_store );
+            self -> read_store = NULL;
+            self -> row_id_increments = 0;
+            
+            if ( is_sequential )
+            {
+                /* fill it again */
+                if ( !rr_fill_cache( & self -> read_store, ids, self -> curs, self -> read_idx, row_id, last_row_id ) )
+                    self -> read_store = NULL;
+            }
         }
     }
-    return res;
-}
-
-static rc_t prefetch_alignments( Read_Restorer * self, int64_t seq_row_id, id_list *align_ids )
-{
-    rc_t rc = 0;
-    int64_t max_id = find_max_id( align_ids );
-    if ( max_id > self->last_max_align_id )
+    else
     {
-        int64_t min_id = self->last_max_align_id == 0 ? 1 : self->last_max_align_id + 1;
-        int64_t spread = ( max_id - min_id + 1 );
-        
-        uint32_t stored = 0;
-        int64_t align_id;
-
-        if ( spread > ( 4 * align_ids->count ) )
-            max_id = min_id + ( 4 * align_ids->count );
-        
-        for ( align_id = min_id; align_id <= max_id && rc == 0; ++align_id )
+        /* we are not in sequential mode, because we do not have a cache
+           count how often we incremented the row-id by 1 to enter sequential mode */
+        if ( row_id == ( self -> last_row_id + 1 ) )
         {
-            const INSDC_4na_bin * read = NULL;
-            uint32_t read_len;
-            rc = VCursorCellDataDirect( self -> curs, align_id, self -> read_idx,
-                                        NULL, ( const void** ) &read, NULL, &read_len );
-            if ( rc == 0 && rr_store_read ( self->read_store, align_id, read, read_len ) )
-                stored++;
+            self -> row_id_increments ++;
+            is_sequential = ( self -> row_id_increments > ROW_ID_INC_COUNT );
+            if ( is_sequential )
+            {
+                if ( !rr_fill_cache( & self -> read_store, ids, self -> curs, self -> read_idx, row_id, last_row_id ) )
+                    self -> row_id_increments = 0;
+            }
         }
-        self->last_max_align_id = max_id;
-
-        /*
-        fprintf( stderr, "seq-row:%lu done: aligs:%d, min=%ld, max=%ld, stored=%d, hits=%lu, miss=%lu\n",
-                seq_row_id, align_ids->count, min_id, max_id, stored, self->hits, self->miss );
-        */
+        else
+            self -> row_id_increments = 0;
     }
-    return rc;
+
+    self -> last_row_id = row_id;
 }
 
+/* --------------------------------------------------------------------------------------
+    Strategy for impl2:
 
+    ( 1 ) - keep track of are we in sequential mode, is row_id continoulsy increasing?
+          - if not trow away the cache
+          
+    ( 2 ) - when entering sequential mode, create the cache, fill it with k/v-pairs
+            key ... alignment-id
+            value.. READ
+            
+    ( 3 ) - if in sequential mode, keep track of the row_id beeing in the cache-window
+            if end of window reached: throw away the cache
+
+-------------------------------------------------------------------------------------- */
+
+
+/* --------------------------------------------------------------------------------------
+    argv[ 0 ]   ... CMP_READ
+    argv[ 1 ]   ... PRIM_ALIG_ID
+    argv[ 2 ]   ... READ_LEN
+    argv[ 3 ]   ... READ_TYPE
+-------------------------------------------------------------------------------------- */
 static rc_t CC seq_restore_read_impl2 ( void *data, const VXformInfo *info, int64_t row_id,
                                  VRowResult *rslt, uint32_t argc, const VRowData argv [] )
 {
@@ -396,13 +458,13 @@ static rc_t CC seq_restore_read_impl2 ( void *data, const VXformInfo *info, int6
     INSDC_coord_len len;
     id_list align_ids;
     uint32_t i; 
-    uint32_t src_len            = (uint32_t)argv[ 0 ].u.data.elem_count;
-    const INSDC_4na_bin *src    = argv[ 0 ].u.data.base;
-    const uint32_t  num_reads   = (uint32_t)argv[ 1 ].u.data.elem_count;
-    const INSDC_coord_len *read_len = argv[ 2 ].u.data.base;
-    const uint8_t *read_type = argv[ 3 ].u.data.base;
-    bool is_sequential = false;
-
+    uint32_t src_len                 = (uint32_t)argv[ 0 ] . u . data . elem_count;
+    const INSDC_4na_bin * src        = argv[ 0 ] . u . data.base;
+    const uint32_t num_reads         = (uint32_t)argv[ 1 ]. u . data . elem_count;
+    const INSDC_coord_len * read_len = argv[ 2 ] . u . data.base;
+    const uint8_t *read_type         = argv[ 3 ] . u . data.base;
+    int64_t last_row_id              = argv[ 1 ] . blob_stop_id;
+    
     align_ids.list  = ( int64_t * )argv[ 1 ].u.data.base;
     align_ids.count = ( uint32_t )( argv[ 1 ].u.data.base_elem_count - argv[ 1 ].u.data.first_elem );
     
@@ -417,29 +479,7 @@ static rc_t CC seq_restore_read_impl2 ( void *data, const VXformInfo *info, int6
     read_len  += argv [ 2 ] . u . data . first_elem;
     read_type += argv [ 3 ] . u . data . first_elem;
 
-    /* test that row_id is either:
-       a. a repeat of the last row, or
-       b. exactly 1 greater than last row.
-    */
-    if ( row_id != self -> last_row_id && row_id != self -> last_row_id + 1 )
-    {
-        /* not precisely sequential */
-        is_sequential = false;
-
-        /* but it may be the start of a new sequence */
-        self -> first_sequential_row_id = row_id;
-    }
-
-    /* row_id is sequential.
-       detect sequence of more than 100 */
-    else if ( row_id > self -> first_sequential_row_id + 100 )
-    {
-        /* the pattern appears to be sequential reads */
-        is_sequential = true;
-    }
-
-    /* record the last row_id seen */
-    self -> last_row_id = row_id;
+    handle_caching( self, &align_ids, row_id, last_row_id );
 
     for ( i = 0, len = 0; i < num_reads; i++ )
         len += read_len[ i ];
@@ -456,36 +496,30 @@ static rc_t CC seq_restore_read_impl2 ( void *data, const VXformInfo *info, int6
             memcpy( dst, src, len );
         else
         {
-            rr_entry *ep;
+            rr_entry * ep;
             const INSDC_4na_bin * rd;
             uint32_t rd_len;
-
-            if ( is_sequential )
-            {
-                if ( align_ids.count > self->last_align_id_count )
-                    rc = prefetch_alignments( self, row_id, &align_ids );
-                self->last_align_id_count = align_ids.count;
-            }
+            bool found_in_cache;
             
             for ( i = 0; i < num_reads && rc == 0; i++ ) /*** checking read by read ***/
             {
                 int64_t align_id = align_ids.list[ i ];
                 if ( align_id > 0 )
                 {
-                    bool found_in_cache = rr_get_read ( self->read_store, align_id, &ep );
-                    if ( found_in_cache && ep == NULL )
-                        found_in_cache = false;
+                    found_in_cache = false;
+                    if ( self -> read_store != NULL )
+                        found_in_cache = rr_get_read ( self -> read_store, align_id, &ep );
                     if ( found_in_cache )
                     {
+                        /* we found it in the cache... */
                         rd = &( ep->read[ 0 ] );
                         rd_len = ep->read_len;
-                        self->hits++;
                     }
                     else
                     {
+                        /* we did not find it in the cache, get it from the alignment-table... */
                         rc = VCursorCellDataDirect( self -> curs, align_id, self -> read_idx,
                                                     NULL, ( const void** ) &rd, NULL, &rd_len );
-                        self->miss++;
                     }
                     
                     if ( rc == 0 )
@@ -515,9 +549,6 @@ static rc_t CC seq_restore_read_impl2 ( void *data, const VXformInfo *info, int6
                         }
                     }
 
-                    if ( found_in_cache )
-                        free( ( void * ) ep );
-                    
                 }
                 else /*** data is in READ column **/
                 {

@@ -27,7 +27,7 @@
 /* THIS FILE IS NOT GENERATED AUTOMATICALLY! */
 
 /* The Version of current SRA Toolkit Release */
-#define RELEASE_VERS 0x02060002
+#define RELEASE_VERS 0x02060003
 
 /* The Revision of Version of current SRA Toolkit Release */
 #define RELEASE_REVISION 0
@@ -39,4 +39,4 @@
  *  'c' - release candidate
  *  'r' - final
  */
-#define RELEASE_TYPE 'a'
+#define RELEASE_TYPE 'r'

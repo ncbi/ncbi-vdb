@@ -1420,6 +1420,11 @@ SmithWatermanFindFirst( SmithWaterman* p_self, uint32_t p_threshold, const char*
     int score;
     size_t max_row;
     size_t max_col;
+
+    if (p_buf_size == 0)
+    {
+        return SILENT_RC(rcText, rcString, rcSearching, rcQuery, rcNotFound);
+    }
     
     if ( p_buf_size > p_self -> max_rows )
     {

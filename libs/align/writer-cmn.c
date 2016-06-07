@@ -380,11 +380,15 @@ rc_t CC TableWriter_CloseCursor(const TableWriter* cself, uint8_t cursor_id, uin
 {
     rc_t rc = 0;
 
-    if( cself == NULL || cursor_id >= TW_MAX_CURSORS || cself->cursors[cursor_id].cursor == NULL ) {
-        rc = RC(rcAlign, rcType, rcOpening, rcParam, rcInvalid);
-        ALIGN_DBGERR(rc);
-    } else {
-        rc_t rc2;
+    assert(cself != NULL);
+    assert(cursor_id < TW_MAX_CURSORS);
+    if (cself == NULL) abort();
+    if (cursor_id >= TW_MAX_CURSORS) abort();
+
+    if (cself->cursors[cursor_id].cursor == NULL)
+        return 0;
+    else {
+        rc_t rc2 = 0;
         TableWriter* self = (TableWriter*)cself;
         uint64_t r = 0;
 
