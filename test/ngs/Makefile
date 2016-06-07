@@ -77,8 +77,11 @@ TEST_NGS_SRC = \
 TEST_NGS_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_SRC))
 
-$(TEST_BINDIR)/test-ngs: $(TEST_NGS_OBJ) 
+$(TEST_BINDIR)/test-ngs: $(TEST_NGS_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
+
+ngs: test-ngs
+	$(TEST_BINDIR)/$^
 
 #-------------------------------------------------------------------------------
 # test-ngs_sra
@@ -89,7 +92,7 @@ TEST_NGS_SRA_SRC = \
 TEST_NGS_SRA_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_SRA_SRC))
 
-$(TEST_BINDIR)/test-ngs_sra: $(TEST_NGS_SRA_OBJ) 
+$(TEST_BINDIR)/test-ngs_sra: $(TEST_NGS_SRA_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 sra: test-ngs_sra
@@ -104,7 +107,7 @@ TEST_NGS_SRADB_SRC = \
 TEST_NGS_SRADB_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_SRADB_SRC))
 
-$(TEST_BINDIR)/test-ngs_sradb: $(TEST_NGS_SRADB_OBJ) 
+$(TEST_BINDIR)/test-ngs_sradb: $(TEST_NGS_SRADB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 sradb: test-ngs_sradb
@@ -119,7 +122,7 @@ TEST_NGS_CSRA1_SRC = \
 TEST_NGS_CSRA1_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_CSRA1_SRC))
 
-$(TEST_BINDIR)/test-ngs_csra1: $(TEST_NGS_CSRA1_OBJ) 
+$(TEST_BINDIR)/test-ngs_csra1: $(TEST_NGS_CSRA1_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 #-------------------------------------------------------------------------------
@@ -131,7 +134,7 @@ TEST_NGS_CSRA1_READCOLLECTION_SRC = \
 TEST_NGS_CSRA1_READCOLLECTION_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_CSRA1_READCOLLECTION_SRC))
 
-$(TEST_BINDIR)/test-ngs_csra1_readcollection: $(TEST_NGS_CSRA1_READCOLLECTION_OBJ) 
+$(TEST_BINDIR)/test-ngs_csra1_readcollection: $(TEST_NGS_CSRA1_READCOLLECTION_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 #-------------------------------------------------------------------------------
@@ -143,7 +146,7 @@ TEST_NGS_CSRA1_REFWIN_SRC = \
 TEST_NGS_CSRA1_REFWIN_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_CSRA1_REFWIN_SRC))
 
-$(TEST_BINDIR)/test-ngs_csra1_refwin: $(TEST_NGS_CSRA1_REFWIN_OBJ) 
+$(TEST_BINDIR)/test-ngs_csra1_refwin: $(TEST_NGS_CSRA1_REFWIN_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 refwin: test-ngs_csra1_refwin
@@ -158,7 +161,7 @@ TEST_NGS_CSRA1_PILEUP_SRC = \
 TEST_NGS_CSRA1_PILEUP_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_CSRA1_PILEUP_SRC))
 
-$(TEST_BINDIR)/test-ngs_csra1_pileup: $(TEST_NGS_CSRA1_PILEUP_OBJ) 
+$(TEST_BINDIR)/test-ngs_csra1_pileup: $(TEST_NGS_CSRA1_PILEUP_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 #-------------------------------------------------------------------------------
@@ -170,7 +173,7 @@ TEST_NGS_REFERENCE_SRC = \
 TEST_NGS_REFERENCE_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_REFERENCE_SRC))
 
-$(TEST_BINDIR)/test-ngs_reference: $(TEST_NGS_REFERENCE_OBJ) 
+$(TEST_BINDIR)/test-ngs_reference: $(TEST_NGS_REFERENCE_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 reference: test-ngs_reference
