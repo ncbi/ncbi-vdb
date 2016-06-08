@@ -832,14 +832,17 @@ struct NGS_String* CSRA1_AlignmentGetMateReferenceSpec( CSRA1_Alignment* self, c
         return NULL;
     }
 
-    TRY ( NGS_String* ret = NGS_CursorGetString ( GetCursor ( self ), ctx, self -> cur_row, align_MATE_REF_SEQ_ID) )
     {
-        return ret;
-    }
-    if ( (int)GetRCObject ( ctx -> rc ) == rcColumn && GetRCState ( ctx -> rc ) == rcNotFound )
-    {
-        CLEAR ();
-        return NGS_CursorGetString ( GetCursor ( self ), ctx, self -> cur_row, align_MATE_REF_NAME );
+        NGS_String* ret;
+        TRY ( ret = NGS_CursorGetString ( GetCursor ( self ), ctx, self -> cur_row, align_MATE_REF_SEQ_ID) )
+        {
+            return ret;
+        }
+        if ( (int)GetRCObject ( ctx -> rc ) == rcColumn && GetRCState ( ctx -> rc ) == rcNotFound )
+        {
+            CLEAR ();
+            return NGS_CursorGetString ( GetCursor ( self ), ctx, self -> cur_row, align_MATE_REF_NAME );
+        }
     }
     return NULL;
 }
