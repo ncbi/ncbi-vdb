@@ -24,29 +24,37 @@
 # ===========================================================================
 
 TOOL_PATH="$1"
-RUN_PATH="$2" # a link will be created at that path and the tool will be executed via link
+CREATE_PATH="$2" # a link will be created at that path and the tool will be executed via link
 EXPECTED_TOOL_NAME="$3"
+RUN_PATH="$4" # the tool will be executed via this path. when path is empty, CREATE_PATH is used instead
 
-RUN_DIR=$(dirname "$RUN_PATH")
-RUN_FILE=$(basename "$RUN_PATH")
+if [ "$RUN_PATH" = "" ]; then
+	RUN_PATH=$CREATE_PATH
+fi
 
-mkdir -p "$RUN_DIR"
+CREATE_DIR=$(dirname "$CREATE_PATH")
+
+mkdir -p "$CREATE_DIR"
 if [ "$?" != "0" ] ; then
-    echo "cannot create $RUN_DIR"
+    echo "cannot create $CREATE_DIR"
     exit 1
 fi
 
-CMD="ln -Fs $TOOL_PATH $RUN_PATH"
+CMD="ln -Fs $TOOL_PATH $CREATE_PATH"
 eval $CMD
+if [ "$?" != "0" ] ; then
+    echo "link creation failed"
+    exit 2
+fi
 
 USER_AGENT=$("$RUN_PATH")
 if [ "$?" != "0" ] ; then
     echo "tool execution failed"
-    exit 2
+    exit 3
 fi
 ACTUAL_TOOL_NAME=$(eval "echo $USER_AGENT | awk '{print \$3}'")
 
 if [ "$EXPECTED_TOOL_NAME" != "$ACTUAL_TOOL_NAME" ] ; then
     echo "Agent tool name '$ACTUAL_TOOL_NAME' does not match expected '$EXPECTED_TOOL_NAME'"
-    exit 3
+    exit 4
 fi
