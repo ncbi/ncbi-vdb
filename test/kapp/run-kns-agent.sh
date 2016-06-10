@@ -40,7 +40,7 @@ if [ "$?" != "0" ] ; then
     exit 1
 fi
 
-CMD="ln -Fs $TOOL_PATH $CREATE_PATH"
+CMD="ln -fs $TOOL_PATH $CREATE_PATH"
 eval $CMD
 if [ "$?" != "0" ] ; then
     echo "link creation failed"
