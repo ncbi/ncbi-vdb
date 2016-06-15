@@ -3207,3 +3207,59 @@ LIB_EXPORT rc_t CC VFSManagerGetObjectId(const struct VFSManager* self, const st
     return rc;
 }
 
+
+LIB_EXPORT rc_t CC VFSManagerGetCacheRoot ( const VFSManager * self,
+    struct VPath const ** path )
+{
+    rc_t rc;
+    if ( path == NULL )
+        rc = RC ( rcVFS, rcMgr, rcListing, rcParam, rcNull );
+    else
+    {
+        * path = NULL;
+        if ( self == NULL )
+            rc = RC ( rcVFS, rcMgr, rcListing, rcSelf, rcNull );
+        else if ( self -> cfg == NULL )
+            rc = RC ( rcVFS, rcMgr, rcListing, rcItem, rcNull );
+        else
+        {
+            struct String * spath;
+            rc = KConfigReadString ( self -> cfg, "/repository/user/default-path", &spath );
+            if ( rc == 0 )
+            {
+                struct VPath * vp;
+                rc = VFSManagerMakePath ( self, &vp, "%S", spath );
+                if ( rc == 0 )
+                    *path = vp;
+                StringWhack( spath );
+            }
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC VFSManagerSetCacheRoot ( const VFSManager * self,
+    struct VPath const * path )
+{
+    rc_t rc;
+    if ( path == NULL )
+        rc = RC ( rcVFS, rcMgr, rcSelecting, rcParam, rcNull );
+    else if ( self == NULL )
+        rc = RC ( rcVFS, rcMgr, rcSelecting, rcSelf, rcNull );
+    else if ( self -> cfg == NULL )
+        rc = RC ( rcVFS, rcMgr, rcSelecting, rcItem, rcNull );
+    else
+    {
+        String const * spath = NULL;
+        rc = VPathMakeString ( path, &spath );
+        if ( rc == 0 )
+        {
+            rc = KConfigWriteSString( self -> cfg, "/repository/user/default-path", spath );
+            StringWhack( spath );
+            if ( rc == 0 )
+                rc = KConfigCommit ( self -> cfg );
+        }
+    }
+    return rc;
+}
