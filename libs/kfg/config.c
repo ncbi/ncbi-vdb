@@ -4345,3 +4345,16 @@ LIB_EXPORT rc_t CC KConfigWriteString( KConfig *self, const char * path, const c
     }
     return rc;
 }
+
+
+LIB_EXPORT rc_t CC KConfigWriteSString( KConfig *self, const char * path, struct String const * value )
+{
+    KConfigNode * node;
+    rc_t rc = KConfigOpenNodeUpdate ( self, &node, "%s", path );
+    if ( rc == 0 )
+    {
+        rc = KConfigNodeWrite ( node, value->addr, value->size );
+        KConfigNodeRelease ( node );
+    }
+    return rc;
+}

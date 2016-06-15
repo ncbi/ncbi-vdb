@@ -855,3 +855,63 @@ LIB_EXPORT rc_t CC VDBManagerSetResolver
 
     return rc;
 }
+
+
+LIB_EXPORT rc_t CC VDBManagerGetCacheRoot ( const struct VDBManager * self,
+    struct VPath const ** path )
+{
+    rc_t rc;
+    if ( path == NULL )
+        rc = RC ( rcVDB, rcMgr, rcListing, rcParam, rcNull );
+    else
+    {
+        * path = NULL;
+        if ( self == NULL )
+            rc = RC ( rcVDB, rcMgr, rcListing, rcSelf, rcNull );
+        else
+        {
+            const KDBManager * kbd = NULL;
+            rc = VDBManagerGetKDBManagerRead ( self, & kbd );
+            if ( rc == 0 )
+            {
+                VFSManager * vfs = NULL;
+                rc = KDBManagerGetVFSManager ( kbd, & vfs );
+                if ( rc == 0 )
+                {
+                    rc = VFSManagerGetCacheRoot ( vfs, path );
+                    VFSManagerRelease ( vfs );
+                }
+                KDBManagerRelease ( kbd );
+            }
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC VDBManagerSetCacheRoot ( const struct VDBManager * self,
+    struct VPath const * path )
+{
+    rc_t rc;
+    if ( path == NULL )
+        rc = RC ( rcVDB, rcMgr, rcSelecting, rcParam, rcNull );
+    else if ( self == NULL )
+        rc = RC ( rcVDB, rcMgr, rcSelecting, rcSelf, rcNull );
+    else
+    {
+        const KDBManager * kbd = NULL;
+        rc = VDBManagerGetKDBManagerRead ( self, & kbd );
+        if ( rc == 0 )
+        {
+            VFSManager * vfs = NULL;
+            rc = KDBManagerGetVFSManager ( kbd, & vfs );
+            if ( rc == 0 )
+            {
+                rc = VFSManagerSetCacheRoot ( vfs, path );
+                VFSManagerRelease ( vfs );
+            }
+            KDBManagerRelease ( kbd );
+        }
+    }
+    return rc;
+}

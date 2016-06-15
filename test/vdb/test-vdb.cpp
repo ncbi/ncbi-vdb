@@ -154,7 +154,6 @@ TEST_CASE( VdbMgr ) {
         FAIL( "failed VDBManagerSetUserData(free)" );
 
     //
-
     rc = VDBManagerRelease(mgr);
     if (rc != 0)
         FAIL( "failed to release VDB manager" );
