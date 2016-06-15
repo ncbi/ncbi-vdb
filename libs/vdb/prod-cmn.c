@@ -508,7 +508,49 @@ rc_t VFunctionProdCallNDRowFunc(
 /* TODO: enable in next release */
 #define PAGEMAP_PRE_EXPANDING_SINGLE_ROW_FIX 0
 static
-rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_id, 
+rc_t VFunctionProdCallNullaryRowFunc(VFunctionProd *self,
+                                     VBlob **prslt,
+                                     int64_t row_id,
+                                     uint32_t row_count,
+                                     const VXformInfo *info)
+{
+    KDataBuffer scratch;
+    VRowData argv[1];
+    VRowResult rslt;
+
+    memset(&scratch, 0, sizeof(scratch));
+    memset(&args[0], 0, sizeof(args[0]));
+
+    rslt.data = &scratch;
+    rslt.elem_count = 0;
+    rslt.elem_bits = scratch.elem_bits = VTypedescSizeof(&self->dad.desc);
+
+    rc = self->u.rf(self->fself, info, row_id, &rslt, 0, args);
+    if (rc == 0) {
+#if PROD_NAME
+        rc = VBlobNew ( &blob, -INT64_MAX - 1, INT64_MAX, self->dad.name );
+#else
+        rc = VBlobNew ( &blob, -INT64_MAX - 1, INT64_MAX, "VFunctionProdCallDetRowFunc" );
+#endif
+        if (rc == 0) {
+            blob->byte_order = vboNative;
+            assert(rslt.elem_count <= UINT32_MAX);
+            KDataBufferSub(rslt.data, &blob->data, 0, rslt.elem_count);
+            if ( rslt.data != & scratch )
+                KDataBufferWhack(rslt.data);
+            rc = PageMapNewSingle(&blob->pm, UINT32_MAX, (uint32_t)rslt.elem_count);
+            if (rc == 0)
+                *prslt = blob;
+            else
+                vblob_release(blob, NULL);
+        }
+    }
+    KDataBufferWhack(&scratch);
+    return rc;
+}
+
+static
+rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_id,
     uint32_t row_count, const VXformInfo *info, Vector *args,int64_t param_start_id,int64_t param_stop_id)
 {
     rc_t rc;
@@ -529,34 +571,7 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
     bool window_resized = false;
     
     if (argc == 0) {
-        memset(&scratch, 0, sizeof(scratch));
-        memset(&args_os[0], 0, sizeof(args_os[0]));
-        rslt.data = &scratch;
-        rslt.elem_count = 0;
-        rslt.elem_bits = scratch.elem_bits = VTypedescSizeof(&self->dad.desc);
-        
-        rc = self->u.rf(self->fself, info, row_id, &rslt, 0, args_os);
-        if (rc == 0) {
-#if PROD_NAME
-            rc = VBlobNew ( &blob, -INT64_MAX - 1, INT64_MAX, self->dad.name );
-#else
-            rc = VBlobNew ( &blob, -INT64_MAX - 1, INT64_MAX, "VFunctionProdCallDetRowFunc" );
-#endif
-            if (rc == 0) {
-		        blob->byte_order = vboNative;
-                assert(rslt.elem_count <= UINT32_MAX);
-                KDataBufferSub(rslt.data, &blob->data, 0, rslt.elem_count);
-		if ( rslt.data != & scratch )
-		  KDataBufferWhack(rslt.data);
-                rc = PageMapNewSingle(&blob->pm, UINT32_MAX, (uint32_t)rslt.elem_count);
-                if (rc == 0)
-                    *prslt = blob;
-                else
-				  vblob_release(blob, NULL);
-            }
-        }
-        KDataBufferWhack(&scratch);
-        return rc;
+        return VFunctionProdCallNullaryRowFunc(self, prslt, row_id, row_count, info);
     }
 
     if(self->curs->cache_curs && self->curs->cache_col_active){
