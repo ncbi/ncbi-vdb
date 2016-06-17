@@ -59,70 +59,64 @@ struct KCleanupTaskQueue
  */
 struct KProcMgr
 {
-    KLock *cleanup_lock;
     KCleanupTaskQueue *cleanup;
     KRefcount refcount;
 };
 
-static KProcMgr * s_proc_mgr;
+static KProcMgr * s_proc_mgr = NULL;
+static KLock *cleanup_lock = NULL;
 
-/* CleanUp (formerly Whack)
+
+/* Whack
  *  tear down proc mgr
  *  runs any outstanding cleanup tasks
  *  deletes the singleton object
  *  intended to be called from an "atexit()" or similar task
  */
-static
-rc_t CC KProcMgrCleanUp ( KProcMgr *self )
-{
-    rc_t rc = 0;
-
-    rc = KLockAcquire ( self -> cleanup_lock );
-    if ( rc == 0 )
-    {
-        uint64_t i;
-
-        KCleanupTaskQueue *cleanup = self -> cleanup;
-        self -> cleanup = NULL;
-        KLockUnlock ( self -> cleanup_lock );
-
-        if ( cleanup != NULL )
-        {
-            for ( i = 0; i < cleanup -> count; ++ i )
-            {
-                KTask *task = cleanup -> q [ i ];
-                if ( task != NULL )
-                {
-                    rc_t task_rc = KTaskExecute ( task );
-                    if ( rc == 0 )
-                        rc = task_rc;
-
-                    cleanup -> q [ i ] = NULL;
-                    KTaskRelease ( task );
-                }
-            }
-
-            free ( cleanup );
-        }
-    }
-
-    KLockRelease ( self -> cleanup_lock );
-    free ( self );
-
-    return rc;
-}
-
 LIB_EXPORT rc_t CC KProcMgrWhack ( void )
 {
     rc_t rc = 0;
+
     KProcMgr *self = s_proc_mgr;
     if ( s_proc_mgr != NULL )
     {
         s_proc_mgr = NULL;
-        rc = KProcMgrRelease ( self ); /* if any threads are still outstanding, the last of them to go will clean up */
+
+        rc = KLockAcquire ( cleanup_lock );
+        if ( rc == 0 )
+        {
+            uint64_t i;
+
+            KCleanupTaskQueue *cleanup = self -> cleanup;
+            self -> cleanup = NULL;
+            KLockUnlock ( cleanup_lock );
+
+            if ( cleanup != NULL )
+            {
+                for ( i = 0; i < cleanup -> count; ++ i )
+                {
+                    KTask *task = cleanup -> q [ i ];
+                    if ( task != NULL )
+                    {
+                        rc_t task_rc = KTaskExecute ( task );
+                        if ( rc == 0 )
+                            rc = task_rc;
+
+                        cleanup -> q [ i ] = NULL;
+                        KTaskRelease ( task );
+                    }
+                }
+
+                free ( cleanup );
+            }
+        }
+
+        free ( self );
     }
+
     return rc;
 }
+
 
 /* Init
  *  initialize the proc mgr
@@ -139,7 +133,7 @@ LIB_EXPORT rc_t CC KProcMgrInit ( void )
             rc = RC ( rcPS, rcMgr, rcInitializing, rcMemory, rcExhausted );
         else
         {
-            rc = KLockMake ( & mgr -> cleanup_lock );
+            rc = KLockMake ( & cleanup_lock );
             if ( rc == 0 )
             {
                 mgr -> cleanup = NULL;
@@ -201,17 +195,30 @@ LIB_EXPORT rc_t CC KProcMgrRelease ( const KProcMgr *self )
 {
     if ( self != NULL )
     {
-        switch ( KRefcountDrop ( & self -> refcount, "KProcMgr" ) )
+        if ( KLockAcquire ( cleanup_lock ) == 0 ) /* once created, cleanup_lock does not go away */
         {
-        case krefWhack:
-            return KProcMgrCleanUp ( (KProcMgr *)self );
-        case krefNegative:
-            return RC ( rcPS, rcMgr, rcReleasing, rcRange, rcExcessive );
+            if ( s_proc_mgr != NULL )
+            {
+                rc_t rc = KRefcountDrop ( & self -> refcount, "KProcMgr" );
+                KLockUnlock ( cleanup_lock );
+                switch ( rc )
+                {
+                case krefWhack:
+                    return 0;
+                case krefNegative:
+                    return RC ( rcPS, rcMgr, rcReleasing, rcRange, rcExcessive );
+                }
+                return rc;
+            }
+            else
+            {   /* VDB-3067: the singleton may have been destroyed by the main thread exiting; */
+                /* if so, this pointer is dead but we are on a thread that is terminating anyway, do nothing */
+                KLockUnlock ( cleanup_lock );
+            }
         }
     }
     return 0;
 }
-
 
 /* AddCleanupTask
  *  add a task to be performed at process exit time
@@ -243,7 +250,7 @@ LIB_EXPORT rc_t CC KProcMgrAddCleanupTask ( KProcMgr *self, KTaskTicket *ticket,
             rc = KTaskAddRef ( task );
             if ( rc == 0 )
             {
-                rc = KLockAcquire ( self -> cleanup_lock );
+                rc = KLockAcquire ( cleanup_lock );
                 if ( rc == 0 )
                 {
                     const uint64_t extend = 1024;
@@ -349,7 +356,7 @@ LIB_EXPORT rc_t CC KProcMgrAddCleanupTask ( KProcMgr *self, KTaskTicket *ticket,
                         ++ cleanup -> count;
                     }
 
-                    KLockUnlock ( self -> cleanup_lock );
+                    KLockUnlock ( cleanup_lock );
                 }
 
                 if ( rc != 0 )
@@ -385,7 +392,7 @@ LIB_EXPORT rc_t CC KProcMgrRemoveCleanupTask ( KProcMgr *self, const KTaskTicket
         idx ^= ( size_t ) self;
 
         /* go into queue */
-        rc = KLockAcquire ( self -> cleanup_lock );
+        rc = KLockAcquire ( cleanup_lock );
         if ( rc == 0 )
         {
             KCleanupTaskQueue *cleanup = self -> cleanup;
@@ -406,7 +413,7 @@ LIB_EXPORT rc_t CC KProcMgrRemoveCleanupTask ( KProcMgr *self, const KTaskTicket
                 }
             }
 
-            KLockUnlock ( self -> cleanup_lock );
+            KLockUnlock ( cleanup_lock );
         }
 
         if ( rc == 0 )
