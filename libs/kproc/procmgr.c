@@ -66,58 +66,63 @@ struct KProcMgr
 
 static KProcMgr * s_proc_mgr;
 
-
-/* Whack
+/* CleanUp (formerly Whack)
  *  tear down proc mgr
  *  runs any outstanding cleanup tasks
  *  deletes the singleton object
  *  intended to be called from an "atexit()" or similar task
  */
-LIB_EXPORT rc_t CC KProcMgrWhack ( void )
+static
+rc_t CC KProcMgrCleanUp ( KProcMgr *self )
 {
     rc_t rc = 0;
 
-    KProcMgr *self = s_proc_mgr;
-    if ( s_proc_mgr != NULL )
+    rc = KLockAcquire ( self -> cleanup_lock );
+    if ( rc == 0 )
     {
-        s_proc_mgr = NULL;
+        uint64_t i;
 
-        rc = KLockAcquire ( self -> cleanup_lock );
-        if ( rc == 0 )
+        KCleanupTaskQueue *cleanup = self -> cleanup;
+        self -> cleanup = NULL;
+        KLockUnlock ( self -> cleanup_lock );
+
+        if ( cleanup != NULL )
         {
-            uint64_t i;
-
-            KCleanupTaskQueue *cleanup = self -> cleanup;
-            self -> cleanup = NULL;
-            KLockUnlock ( self -> cleanup_lock );
-
-            if ( cleanup != NULL )
+            for ( i = 0; i < cleanup -> count; ++ i )
             {
-                for ( i = 0; i < cleanup -> count; ++ i )
+                KTask *task = cleanup -> q [ i ];
+                if ( task != NULL )
                 {
-                    KTask *task = cleanup -> q [ i ];
-                    if ( task != NULL )
-                    {
-                        rc_t task_rc = KTaskExecute ( task );
-                        if ( rc == 0 )
-                            rc = task_rc;
+                    rc_t task_rc = KTaskExecute ( task );
+                    if ( rc == 0 )
+                        rc = task_rc;
 
-                        cleanup -> q [ i ] = NULL;
-                        KTaskRelease ( task );
-                    }
+                    cleanup -> q [ i ] = NULL;
+                    KTaskRelease ( task );
                 }
-
-                free ( cleanup );
             }
-        }
 
-        KLockRelease ( self -> cleanup_lock );
-        free ( self );
+            free ( cleanup );
+        }
     }
+
+    KLockRelease ( self -> cleanup_lock );
+    free ( self );
 
     return rc;
 }
 
+LIB_EXPORT rc_t CC KProcMgrWhack ( void )
+{
+    rc_t rc = 0;
+    KProcMgr *self = s_proc_mgr;
+    if ( s_proc_mgr != NULL )
+    {
+        s_proc_mgr = NULL;
+        rc = KProcMgrRelease ( self ); /* if any threads are still outstanding, the last of them to go will clean up */
+    }
+    return rc;
+}
 
 /* Init
  *  initialize the proc mgr
@@ -199,7 +204,7 @@ LIB_EXPORT rc_t CC KProcMgrRelease ( const KProcMgr *self )
         switch ( KRefcountDrop ( & self -> refcount, "KProcMgr" ) )
         {
         case krefWhack:
-            return 0;
+            return KProcMgrCleanUp ( (KProcMgr *)self );
         case krefNegative:
             return RC ( rcPS, rcMgr, rcReleasing, rcRange, rcExcessive );
         }
