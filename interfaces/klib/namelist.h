@@ -211,6 +211,14 @@ KLIB_EXTERN rc_t CC VNamelistFromStr ( VNamelist ** list,
  */
 KLIB_EXTERN rc_t CC VNamelistJoin( const VNamelist * list,
         const uint32_t delim, const String ** rslt );
+
+/* VNamelistContainsString, VNamelistContainsStr
+ *  loop through the list to and report if and where it contains the item
+ */
+KLIB_EXTERN rc_t CC VNamelistContainsString( const VNamelist * list,
+        const String * item, int32_t * idx );
+KLIB_EXTERN rc_t CC VNamelistContainsStr( const VNamelist * list,
+        const char * item, int32_t * idx );
         
 #ifdef __cplusplus
 }

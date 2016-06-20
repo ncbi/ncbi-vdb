@@ -562,3 +562,62 @@ LIB_EXPORT rc_t CC VNamelistJoin( const VNamelist * list, const uint32_t delim, 
     }
     return rc;
 }
+
+
+LIB_EXPORT rc_t CC VNamelistContainsString( const VNamelist * list,
+    const String * item, int32_t * idx )
+{
+    rc_t rc = 0;
+    if ( idx == NULL )
+        rc = RC ( rcCont, rcNamelist, rcRetrieving, rcParam, rcNull );
+    else
+    {
+        *idx = -1;
+        if ( item == NULL )
+            rc = RC ( rcCont, rcNamelist, rcRetrieving, rcParam, rcNull );
+        else if ( list == NULL )
+            rc = RC ( rcCont, rcNamelist, rcRetrieving, rcSelf, rcNull );
+        else
+        {
+            uint32_t count, i;
+            rc = VNameListCount ( list, &count );
+            for ( i = 0; rc == 0 && *idx < 0 && i < count; ++i )
+            {
+                const char * s;
+                rc = VNameListGet ( list, i, &s );
+                if ( rc == 0 )
+                {
+                    String S;
+                    StringInitCString( &S, s );
+                    if ( StringEqual( item, &S ) )
+                        *idx = i;
+                }
+            }
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC VNamelistContainsStr( const VNamelist * list,
+        const char * item, int32_t * idx )
+{
+    rc_t rc = 0;
+    if ( idx == NULL )
+        rc = RC ( rcCont, rcNamelist, rcRetrieving, rcParam, rcNull );
+    else
+    {
+        *idx = -1;
+        if ( item == NULL )
+            rc = RC ( rcCont, rcNamelist, rcRetrieving, rcParam, rcNull );
+        else if ( list == NULL )
+            rc = RC ( rcCont, rcNamelist, rcRetrieving, rcSelf, rcNull );
+        else
+        {
+            String S;
+            StringInitCString( &S, item );
+            return VNamelistContainsString( list, &S, idx );
+        }
+    }
+    return rc;
+}
