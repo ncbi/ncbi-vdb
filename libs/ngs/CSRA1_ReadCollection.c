@@ -157,7 +157,7 @@ const NGS_Cursor* CSRA1_ReadCollectionMakeAlignmentCursor ( CSRA1_ReadCollection
         if ( primary )
         {
             NGS_Refcount * refc = ( NGS_Refcount * ) ( self -> primary_al_curs ) ;
-            if ( self -> primary_al_curs && atomic32_read ( & refc -> refcount ) == 1 ) 
+            if ( self -> primary_al_curs && atomic32_read ( TO_ATOMIC32 ( & refc -> refcount ) ) == 1 ) 
             {
                 const NGS_Cursor* ret = self -> primary_al_curs;
                 self -> primary_al_curs = NULL;
@@ -167,7 +167,7 @@ const NGS_Cursor* CSRA1_ReadCollectionMakeAlignmentCursor ( CSRA1_ReadCollection
         else
         {
             NGS_Refcount * refc = ( NGS_Refcount * ) ( self -> secondary_al_curs ) ;
-            if ( self -> secondary_al_curs && atomic32_read ( & refc -> refcount ) == 1 ) 
+            if ( self -> secondary_al_curs && atomic32_read ( TO_ATOMIC32 ( & refc -> refcount ) ) == 1 ) 
             {
                 const NGS_Cursor* ret = self -> secondary_al_curs;
                 self -> secondary_al_curs = NULL;

@@ -30,6 +30,7 @@
 #include <klib/container.h>
 #include <klib/rc.h>
 #include <klib/debug.h>
+#include <klib/log.h>
 #include <atomic.h>
 #include <sysalloc.h>
 
@@ -462,15 +463,31 @@ rc_t KPageMake ( KPage **ppage, KPageBacking *backing, uint32_t page_id )
  */
 LIB_EXPORT rc_t CC KPageAddRef ( const KPage *self )
 {
-    if ( self != NULL ) switch ( KRefcountAdd ( & self -> refcount, "KPage" ) )
+    rc_t rc = 0;
+    if ( self != NULL )
     {
-    case krefOkay:
-        break;
-    default:
-        return RC ( rcFS, rcBlob, rcAttaching, rcConstraint, rcViolated );
+        int prior = atomic32_read ( TO_ATOMIC32 ( & self -> refcount ) );
+        int status = KRefcountAdd ( & self -> refcount, "KPage" );
+        switch ( status )
+        {
+        case krefOkay:
+            break;
+        default:
+            rc = RC ( rcFS, rcBlob, rcAttaching, rcConstraint, rcViolated );
+            PLOGERR ( klogFatal
+                      , ( klogFatal
+                          , rc
+                          , "$(func): KRefcountAdd ( self [ prior = $(prior) ) returned $(status)"
+                          , "func=%s,prior=%d,status=%d"
+                          , __func__
+                          , prior
+                          , status
+                      )
+                );
+        }
     }
 
-    return 0;
+    return rc;
 }
 
 LIB_EXPORT rc_t CC KPageRelease ( const KPage *self )
@@ -966,15 +983,31 @@ LIB_EXPORT rc_t CC KPageFileMakeUpdate ( KPageFile **pf, KFile * backing, size_t
  */
 LIB_EXPORT rc_t CC KPageFileAddRef ( const KPageFile *self )
 {
-    if ( self != NULL ) switch ( KRefcountAdd ( & self -> refcount, "KPageFile" ) )
+    rc_t rc = 0;
+    if ( self != NULL )
     {
-    case krefOkay:
-        break;
-    default:
-        return RC ( rcFS, rcFile, rcAttaching, rcConstraint, rcViolated );
+        int prior = atomic32_read ( TO_ATOMIC32 ( & self -> refcount ) );
+        int status = KRefcountAdd ( & self -> refcount, "KPageFile" );
+        switch ( status )
+        {
+        case krefOkay:
+            break;
+        default:
+            rc = RC ( rcFS, rcFile, rcAttaching, rcConstraint, rcViolated );
+            PLOGERR ( klogFatal
+                      , ( klogFatal
+                          , rc
+                          , "$(func): KRefcountAdd ( self [ prior = $(prior) ) returned $(status)"
+                          , "func=%s,prior=%,d,status=%d"
+                          , __func__
+                          , prior
+                          , status
+                      )
+                );
+        }
     }
 
-    return 0;
+    return rc;
 }
 
 LIB_EXPORT rc_t CC KPageFileRelease ( const KPageFile *self )
