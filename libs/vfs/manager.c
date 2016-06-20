@@ -71,6 +71,7 @@
 #include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/refcount.h>
+#include <klib/namelist.h>
 
 #include <strtol.h>
 
@@ -3208,6 +3209,8 @@ LIB_EXPORT rc_t CC VFSManagerGetObjectId(const struct VFSManager* self, const st
 }
 
 
+static const char * default_path_key = "/repository/user/default-path";
+
 LIB_EXPORT rc_t CC VFSManagerGetCacheRoot ( const VFSManager * self,
     struct VPath const ** path )
 {
@@ -3224,7 +3227,7 @@ LIB_EXPORT rc_t CC VFSManagerGetCacheRoot ( const VFSManager * self,
         else
         {
             struct String * spath;
-            rc = KConfigReadString ( self -> cfg, "/repository/user/default-path", &spath );
+            rc = KConfigReadString ( self -> cfg, default_path_key, &spath );
             if ( rc == 0 )
             {
                 struct VPath * vp;
@@ -3239,6 +3242,75 @@ LIB_EXPORT rc_t CC VFSManagerGetCacheRoot ( const VFSManager * self,
 }
 
 
+static const char * frozen_list_key = "/repository/user/frozen";
+
+static rc_t add_to_frozen_list( const VFSManager * self, const String * path )
+{
+    struct String * slist;
+    rc_t rc = KConfigReadString ( self -> cfg, frozen_list_key, &slist );
+    if ( rc == 0 )
+    {
+        VNamelist * lst;
+        rc = VNamelistFromString ( &lst, slist, ':' );
+        if ( rc == 0 )
+        {
+            int32_t idx;
+            rc = VNamelistContainsString( lst, path, &idx );
+            if ( rc == 0 && idx < 0 )
+            {
+                rc = VNamelistAppendString ( lst, path );
+                if ( rc == 0 )
+                {
+                    const String * new_value;
+                    rc = VNamelistJoin( lst, ':', &new_value );
+                    if ( rc == 0 )
+                    {
+                        rc = KConfigWriteSString( self -> cfg, frozen_list_key, new_value );
+                        StringWhack( new_value );
+                    }
+                }
+            }
+            VNamelistRelease ( lst );
+        }
+        StringWhack( slist );
+    }
+    return rc;
+}
+
+
+/*
+    repo-path for instance '/repository/user/main/public'
+    read $(repo-path)/root, put it into frozen-list ( if is not already there )
+    write $(repository/user/default-path)/public as value into it ( just in case )
+*/
+static const char * indirect_root = "$(repository/user/default-path)/public";
+static rc_t update_repo_root( const VFSManager * self, const char * repo_path )
+{
+    size_t num_writ;
+    char root_key[ 4096 ];
+    rc_t rc = string_printf ( root_key, sizeof root_key, &num_writ, "%s/root", repo_path );
+    if ( rc == 0 )
+    {
+        struct String * root_value;
+        rc_t rc1 = KConfigReadString ( self -> cfg, root_key, &root_value );
+        if ( rc1 == 0 )
+        {
+            rc = add_to_frozen_list( self, root_value );
+            if ( rc == 0 )
+            {
+                String S;
+                StringInitCString( &S, indirect_root );
+                rc = KConfigWriteSString( self -> cfg, root_key, &S );
+            }
+            StringWhack( root_value );
+        }
+    }
+    return rc;
+}
+
+static const char * usr_main_pub_repo = "/repository/user/main/public";
+static const char * usr_aux_pub_repo = "/repository/user/aux/public";
+
 LIB_EXPORT rc_t CC VFSManagerSetCacheRoot ( const VFSManager * self,
     struct VPath const * path )
 {
@@ -3251,14 +3323,21 @@ LIB_EXPORT rc_t CC VFSManagerSetCacheRoot ( const VFSManager * self,
         rc = RC ( rcVFS, rcMgr, rcSelecting, rcItem, rcNull );
     else
     {
-        String const * spath = NULL;
-        rc = VPathMakeString ( path, &spath );
+        rc = update_repo_root( self, usr_main_pub_repo );
+        if ( rc == 0 )
+            rc = update_repo_root( self, usr_aux_pub_repo );
+            
         if ( rc == 0 )
         {
-            rc = KConfigWriteSString( self -> cfg, "/repository/user/default-path", spath );
-            StringWhack( spath );
+            String const * spath = NULL;
+            rc = VPathMakeString ( path, &spath );
             if ( rc == 0 )
-                rc = KConfigCommit ( self -> cfg );
+            {
+                rc = KConfigWriteSString( self -> cfg, default_path_key, spath );
+                StringWhack( spath );
+                if ( rc == 0 )
+                    rc = KConfigCommit ( self -> cfg );
+            }
         }
     }
     return rc;
