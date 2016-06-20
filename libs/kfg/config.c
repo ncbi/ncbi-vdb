@@ -3664,13 +3664,17 @@ LIB_EXPORT rc_t CC KConfigNodeReadString ( const KConfigNode *self, String** res
                     rc = RC( rcKFG, rcNode, rcReading, rcMemory, rcExhausted );
                 else
                 {
-                    /* TBD - this is broken for non-ascii strings
-                       much better to be WITHIN the config.c implementation
-                       and reach into the node value directly! */
-                    StringInit ( value, (char*)( value + 1 ), to_read, (uint32_t)to_read + 1 );
+                    /* initialize in absence of data - assume ASCII */
+                    StringInit ( value, (char*)( value + 1 ), to_read, (uint32_t)to_read );
+
+                    /* read the actual data */
                     rc = ReadNodeValueFixed(self, (char*)value->addr, to_read + 1);
                     if ( rc == 0 )
+                    {
+                        /* measure length of data to handle non-ASCII */
+                        value -> len = string_len ( value -> addr, value -> size );
                         *result = value;
+                    }
                     else
                     {
                         rc = RC(rcKFG, rcNode, rcReading, rcFormat, rcIncorrect);
