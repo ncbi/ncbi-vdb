@@ -885,10 +885,10 @@ rc_t CC KMD5FileWhackRead ( KMD5File *self )
 {
     rc_t rc;
 
+    atomic32_set ( & self -> dad . refcount, 1 );
+
     rc = KFileRelease ( self -> file );
-    if ( rc != 0 )
-        KRefcountInit ( & self -> dad . refcount, 1, "KMD5File", "whack-read", "" );
-    else
+    if ( rc == 0 )
         free ( self );
 
     return rc;
@@ -896,30 +896,30 @@ rc_t CC KMD5FileWhackRead ( KMD5File *self )
 static
 rc_t CC KMD5FileWhackCreate ( KMD5File *self )
 {
-    rc_t rc;
-    uint64_t position;
+    uint64_t	position;
+    size_t	num_read;
+    rc_t	rc;
+    uint8_t	ignored [64 * 1024];
 
-    KRefcountInit ( & self -> dad . refcount, 1, "KMD5File", "whack-create", "" );
+    atomic32_set ( & self -> dad . refcount, 1 );
 
     position = self->position;
     for (;;)
     {
-        size_t num_read;
-        uint8_t	ignored [64 * 1024];
-        rc = KFileRead (&self->dad, position, ignored, sizeof ignored, &num_read);
-        if ( rc != 0 )
-            break;
+	rc = KFileRead (&self->dad, position, ignored, sizeof ignored, &num_read);
+	if (rc != 0)
+	    break;
 
-        if (num_read == 0)
-            break;
+	if (num_read == 0)
+	    break;
 
-        position += num_read;
+	position += num_read;
     }
     if (rc == 0)
     {
-        rc = KFileRelease ( self -> file );
-        if ( rc == 0 )
-            free ( self );
+	rc = KFileRelease ( self -> file );
+	if ( rc == 0 )
+	    free ( self );
     }
     return rc;
 }
@@ -930,7 +930,7 @@ rc_t CC KMD5FileWhackWrite ( KMD5File *self )
     rc_t rc;
     uint8_t digest [ 16 ];
 
-    KRefcountInit ( & self -> dad . refcount, 1, "KMD5File", "whack-write", "" );
+    atomic32_set ( & self -> dad . refcount, 1 );
 
     /* if destination file has been written farther
        than our concept of eof, truncate */
@@ -1016,7 +1016,7 @@ rc_t CC KMD5FileWhackAppend ( KMD5File *self )
     }
 
     /* bail on errors */
-    KRefcountInit ( & self -> dad . refcount, 1, "KMD5File", "whack-append", "" );
+    atomic32_set ( & self -> dad . refcount, 1 );
     return rc;
 }
 

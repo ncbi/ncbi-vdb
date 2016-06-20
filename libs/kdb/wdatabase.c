@@ -511,7 +511,7 @@ LIB_EXPORT rc_t CC KDatabaseVCreateDB ( KDatabase *self,
             {
                 KDatabase *db = ( KDatabase* ) * dbp;
                 db -> dad = self;
-                KRefcountAddDep ( & self -> refcount, "KDatabase" );
+                atomic32_inc ( & self -> refcount );
             }
         }
     }
@@ -872,7 +872,7 @@ LIB_EXPORT rc_t CC KDatabaseVOpenDBUpdate ( KDatabase *self,
         {
             KDatabase *db = ( KDatabase* ) * dbp;
             db -> dad = self;
-            KRefcountAddDep ( & self -> refcount, "KDatabase" );
+            atomic32_inc ( & self -> refcount );
         }
     }
 

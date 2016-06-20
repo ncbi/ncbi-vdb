@@ -758,7 +758,7 @@ rc_t KConfigNodeVOpenNodeReadInt ( const KConfigNode *self, const KConfig *mgr,
                 }
 
                 /* check to see if already open */
-                if ( atomic32_read ( TO_ATOMIC32 ( & self -> refcount ) ) == 0 )
+                if ( atomic32_read ( & self -> refcount ) == 0 )
                 {
                     ( ( KConfigNode* ) self ) -> mgr = KConfigAttach ( mgr );
                     ( ( KConfigNode* ) self ) -> read_only = true;
@@ -917,7 +917,7 @@ rc_t KConfigNodeVOpenNodeUpdateInt ( KConfigNode *self, KConfig *mgr,
                 else
                 {
                     /* check to see if open */
-                    if ( atomic32_read ( TO_ATOMIC32 ( & self -> refcount ) ) == 0 )
+                    if ( atomic32_read ( & self -> refcount ) == 0 )
                     {
                         self -> mgr = KConfigAttach ( mgr );
                         assert ( ! self -> read_only );

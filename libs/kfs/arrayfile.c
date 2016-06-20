@@ -60,17 +60,7 @@ LIB_EXPORT rc_t CC KArrayFileDestroy ( KArrayFile *self )
 LIB_EXPORT rc_t CC KArrayFileAddRef ( const KArrayFile *self )
 {
     if ( self != NULL )
-    {
-        switch ( KRefcountAdd ( & self -> refcount, "KArrayFile" ) )
-        {
-        case krefLimit:
-            return RC ( rcFS, rcFile, rcAttaching, rcRange, rcExcessive );
-        case krefNegative:
-            return RC ( rcFS, rcFile, rcAttaching, rcSelf, rcInvalid );
-        default:
-            break;
-        }
-    }
+        atomic32_inc ( & ( ( KArrayFile* ) self ) -> refcount );
     return 0;
 }
 
@@ -78,18 +68,17 @@ LIB_EXPORT rc_t CC KArrayFileAddRef ( const KArrayFile *self )
  *  discard reference to file
  *  ignores NULL references
  */
-LIB_EXPORT rc_t CC KArrayFileRelease ( const KArrayFile *self )
+LIB_EXPORT rc_t CC KArrayFileRelease ( const KArrayFile *cself )
 {
-    if ( self != NULL )
+    KArrayFile *self = ( KArrayFile* ) cself;
+    if ( cself != NULL )
     {
-        switch ( KRefcountDrop ( & self -> refcount, "KArrayFile" ) )
+        if ( atomic32_dec_and_test ( & self -> refcount ) )
         {
-        case krefWhack:
-            return KArrayFileDestroy ( ( KArrayFile * ) self );
-        case krefNegative:
-            return RC ( rcFS, rcFile, rcReleasing, rcRange, rcExcessive );
-        default:
-            break;
+            rc_t rc = KArrayFileDestroy ( self );
+            if ( rc != 0 )
+                atomic32_set ( & self -> refcount, 1 );
+            return rc;
         }
     }
     return 0;

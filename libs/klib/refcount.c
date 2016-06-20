@@ -61,23 +61,6 @@
 #define DETECT_MAX_REFCOUNT_VIOLATION 1
 #endif
 
-#if CHECK_REFCOUNT_INIT
-#define KREFCOUNT_INIT_MAGIC 0x74696e69
-#define SET_INITIALIZED( self ) \
-    ( ( void ) ( ( self ) -> initialized = KREFCOUNT_INIT_MAGIC ) )
-#define UNSET_INITIALIZED( self ) \
-    ( ( void ) ( ( self ) -> initialized = ~ KREFCOUNT_INIT_MAGIC ) )
-#define TEST_INITIALIZED( self ) \
-    assert ( ( self ) -> initialized == KREFCOUNT_INIT_MAGIC )
-#else
-#define SET_INITIALIZED( self ) \
-    ( ( void ) 0 )
-#define UNSET_INITIALIZED( self ) \
-    ( ( void ) 0 )
-#define TEST_INITIALIZED( self ) \
-    ( ( void ) 0 )
-#endif
-
 
 #define DUAL_OWN_BITS 16
 #define DUAL_DEP_BITS ( 32 - DUAL_OWN_BITS )
@@ -120,8 +103,7 @@ void CC KRefcountInit ( KRefcount *refcount, int value,
     const char *clsname, const char *op, const char *name )
 {
     REFNEW ( clsname, op, name, refcount, value );
-    atomic32_set ( TO_ATOMIC32 ( refcount ), value );
-    SET_INITIALIZED ( refcount );
+    atomic32_set ( refcount, value );
 }
 #endif
 
@@ -134,7 +116,6 @@ int CC KDualRefInit ( KDualRef *refcount, int owned, int dep,
     if ( owned < 0 || owned > DUAL_OWN_MAX ||
          dep < 0 || dep > DUAL_DEP_MAX )
     {
-        UNSET_INITIALIZED ( refcount );
         DBGMSG ( DBG_REF, DBG_REF_PLACEHOLDER,
                  ( "FAILED TO CREATE %s, operation %s, name '%s', instance $0x%p: initial refcounts 0x%x, 0x%x",
                    clsname, op, name, refcount, owned, dep ) );
@@ -143,8 +124,7 @@ int CC KDualRefInit ( KDualRef *refcount, int owned, int dep,
 #endif
 
     REFNEW ( clsname, op, name, refcount, value );
-    atomic32_set ( TO_ATOMIC32 ( refcount ), value );
-    SET_INITIALIZED ( refcount );
+    atomic32_set ( refcount, value );
     return krefOkay;
 }
 
@@ -156,14 +136,12 @@ int CC KDualRefInit ( KDualRef *refcount, int owned, int dep,
 void CC KRefcountWhack ( KRefcount *self, const char *clsname )
 {
     REFMSG ( clsname, "whack", self );
-    UNSET_INITIALIZED ( self );
 }
 #endif
 
 void CC KDualRefWhack ( KDualRef *self, const char *clsname )
 {
     REFMSG ( clsname, "whack", self );
-    UNSET_INITIALIZED ( self );
 }
 
 
@@ -184,15 +162,7 @@ void CC KDualRefWhack ( KDualRef *self, const char *clsname )
 int CC KRefcountAdd ( const KRefcount *self, const char *clsname )
 {
 #if DETECT_ZERO_STATE
-    int prior;
-#elif DETECT_LIMIT_VIOLATION
-    unsigned int prior;
-#endif
-
-    TEST_INITIALIZED ( self );
-
-#if DETECT_ZERO_STATE
-    prior = atomic32_read_and_add_ge ( TO_ATOMIC32 ( ( KRefcount* ) self ), 1, 0 );
+    int prior = atomic32_read_and_add_ge ( ( KRefcount* ) self, 1, 0 );
     if ( prior < 0 )
     {
         DBGMSG ( DBG_REF, DBG_REF_PLACEHOLDER,
@@ -202,7 +172,7 @@ int CC KRefcountAdd ( const KRefcount *self, const char *clsname )
     }
     if ( prior == 0 )
     {
-#if 0 /* commented out because some code purposely initializes refcount to 0 */
+#if 0 /*** disabling this warning since code is noe initializing refcount to zero in several places ***/
         DBGMSG ( DBG_REF, DBG_REF_PLACEHOLDER,
                  ( "about to addref %s instance 0x%p: prior refcount = 0x%x",
                    clsname, self, prior ) );
@@ -213,7 +183,7 @@ int CC KRefcountAdd ( const KRefcount *self, const char *clsname )
 #if DETECT_LIMIT_VIOLATION
     if ( prior == INT_MAX )
     {
-        atomic32_dec ( TO_ATOMIC32 ( ( KRefcount* ) self ) );
+        atomic32_dec ( ( KRefcount* ) self );
         DBGMSG ( DBG_REF, DBG_REF_PLACEHOLDER,
                  ( "FAILED to addref %s instance 0x%p: prior refcount = 0x%x",
                    clsname, self, prior ) );
@@ -224,7 +194,7 @@ int CC KRefcountAdd ( const KRefcount *self, const char *clsname )
     CNTMSG ( clsname, "addref", self, prior );
 
 #elif DETECT_LIMIT_VIOLATION
-    prior = atomic32_read_and_add_lt ( TO_ATOMIC32 ( ( KRefcount* ) self ), 1, INT_MAX );
+    unsigned int prior = atomic32_read_and_add_lt ( ( KRefcount* ) self, 1, INT_MAX );
     if ( prior >= INT_MAX )
     {
         DBGMSG ( DBG_REF, DBG_REF_PLACEHOLDER,
@@ -235,7 +205,7 @@ int CC KRefcountAdd ( const KRefcount *self, const char *clsname )
     CNTMSG ( clsname, "addref", self, prior );
 #else
     REFMSG ( clsname, "addref", self );
-    atomic32_inc ( TO_ATOMIC32 ( ( KRefcount* ) self ) );
+    atomic32_inc ( ( KRefcount* ) ( self ) );
 #endif
 
     return krefOkay;
@@ -245,20 +215,9 @@ int CC KRefcountAdd ( const KRefcount *self, const char *clsname )
 int CC KDualRefAdd ( const KDualRef *self, const char *clsname )
 {
 #if DETECT_LIMIT_VIOLATION
-    unsigned int prior;
+    unsigned int prior = atomic32_read_and_add_lt ( ( KDualRef* ) self, DUAL_OWN_VAL, DUAL_OWN_LIM );
 #if DETECT_ZERO_STATE
-    unsigned int owned;
-#endif
-#elif DETECT_ZERO_STATE
-    unsigned int prior, owned;
-#endif
-
-    TEST_INITIALIZED ( self );
-
-#if DETECT_LIMIT_VIOLATION
-    prior = atomic32_read_and_add_lt ( TO_ATOMIC32 ( ( KDualRef* ) self ), DUAL_OWN_VAL, DUAL_OWN_LIM );
-#if DETECT_ZERO_STATE
-    owned = prior >> DUAL_DEP_BITS;
+    unsigned int owned = prior >> DUAL_DEP_BITS;
     if ( owned > DUAL_OWN_MAX )
     {
         DBGMSG ( DBG_REF, DBG_REF_PLACEHOLDER, 
@@ -283,8 +242,8 @@ int CC KDualRefAdd ( const KDualRef *self, const char *clsname )
     }
     CNTMSG ( clsname, "addref", self, prior );
 #elif DETECT_ZERO_STATE
-    prior = atomic32_read_and_add ( TO_ATOMIC32 ( ( KDualRef* ) self ), DUAL_OWN_VAL );
-    owned = prior >> DUAL_DEP_BITS;
+    unsigned int prior = atomic32_read_and_add ( ( KDualRef* ) self, DUAL_OWN_VAL );
+    unsigned int owned = prior >> DUAL_DEP_BITS;
     if ( owned > DUAL_OWN_MAX )
     {
         DBGMSG ( DBG_REF, DBG_REF_PLACEHOLDER,
@@ -302,7 +261,7 @@ int CC KDualRefAdd ( const KDualRef *self, const char *clsname )
     CNTMSG ( clsname, "addref", self, prior );
 #else
     REFMSG ( clsname, "addref", self );
-    atomic32_add ( TO_ATOMIC32 ( ( KDualRef* ) self ), DUAL_OWN_VAL );
+    atomic32_add ( ( KDualRef* ) ( self ), DUAL_OWN_VAL );
 #endif
     return krefOkay;
 }
@@ -327,13 +286,7 @@ int CC KDualRefAdd ( const KDualRef *self, const char *clsname )
 int CC KRefcountDrop ( const KRefcount *self, const char *clsname )
 {
 #if DETECT_ZERO_STATE
-    int prior;
-#endif
-
-    TEST_INITIALIZED ( self );
-
-#if DETECT_ZERO_STATE
-    prior = atomic32_read_and_add ( TO_ATOMIC32 ( ( KRefcount* ) self ), -1 );
+    int prior = atomic32_read_and_add ( ( KRefcount* ) self, -1 );
     if ( prior <= 0 )
     {
         DBGMSG ( DBG_REF, DBG_REF_PLACEHOLDER,
@@ -346,7 +299,7 @@ int CC KRefcountDrop ( const KRefcount *self, const char *clsname )
         return krefWhack;
 #else
     REFMSG ( clsname, "release", self );
-    if ( atomic32_dec_and_test ( TO_ATOMIC32 ( ( KRefcount* ) self ) ) )
+    if ( atomic32_dec_and_test ( ( KRefcount* ) ( self ) ) )
         return krefWhack;
 #endif
     return krefOkay;
@@ -355,11 +308,7 @@ int CC KRefcountDrop ( const KRefcount *self, const char *clsname )
 
 int CC KDualRefDrop ( const KDualRef *self, const char *clsname )
 {
-    int prior;
-
-    TEST_INITIALIZED ( self );
-
-    prior = atomic32_read_and_add_ge ( TO_ATOMIC32 ( ( KDualRef* ) self ), - DUAL_OWN_VAL, DUAL_OWN_VAL );
+    int prior = atomic32_read_and_add_ge ( ( KDualRef* ) self, - DUAL_OWN_VAL, DUAL_OWN_VAL );
 #if DETECT_ZERO_STATE
     if ( prior < DUAL_OWN_VAL )
     {
@@ -394,15 +343,7 @@ int CC KDualRefDrop ( const KDualRef *self, const char *clsname )
 int CC KRefcountAddDep ( const KRefcount *self, const char *clsname )
 {
 #if DETECT_ZERO_STATE
-    int prior;
-#elif DETECT_LIMIT_VIOLATION
-    unsigned int prior;
-#endif
-
-    TEST_INITIALIZED ( self );
-
-#if DETECT_ZERO_STATE
-    prior = atomic32_read_and_add ( TO_ATOMIC32 ( ( KRefcount* ) self ), 1 );
+    int prior = atomic32_read_and_add ( ( KRefcount* ) self, 1 );
     if ( prior < 0 )
     {
         DBGMSG ( DBG_REF, DBG_REF_PLACEHOLDER,
@@ -420,7 +361,7 @@ int CC KRefcountAddDep ( const KRefcount *self, const char *clsname )
 #if DETECT_LIMIT_VIOLATION
     if ( prior == INT_MAX )
     {
-        atomic32_dec ( TO_ATOMIC32 ( ( KRefcount* ) self ) );
+        atomic32_dec ( ( KRefcount* ) self );
         DBGMSG ( DBG_REF, DBG_REF_PLACEHOLDER,
                  ( "FAILED to attach %s instance 0x%p: prior refcount = 0x%x",
                    clsname, self, prior ) );
@@ -429,7 +370,7 @@ int CC KRefcountAddDep ( const KRefcount *self, const char *clsname )
 #endif
     CNTMSG ( clsname, "attach", self, prior );
 #elif DETECT_LIMIT_VIOLATION
-    prior = atomic32_read_and_add_lt ( TO_ATOMIC32 ( ( KRefcount* ) self ), 1, INT_MAX );
+    unsigned int prior = atomic32_read_and_add_lt ( ( KRefcount* ) self, 1, INT_MAX );
     if ( prior >= INT_MAX )
     {
         DBGMSG ( DBG_REF, DBG_REF_PLACEHOLDER,
@@ -440,7 +381,7 @@ int CC KRefcountAddDep ( const KRefcount *self, const char *clsname )
     CNTMSG ( clsname, "attach", self, prior );
 #else
     REFMSG ( clsname, "attach", self );
-    atomic32_inc ( TO_ATOMIC32 ( ( KRefcount* ) self ) );
+    atomic32_inc ( ( KRefcount* ) ( self ) );
 #endif
     return krefOkay;
 }
@@ -449,20 +390,12 @@ int CC KRefcountAddDep ( const KRefcount *self, const char *clsname )
 int CC KDualRefAddDep ( const KDualRef *self, const char *clsname )
 {
 #if DETECT_ZERO_STATE
-    int prior, dep;
-#elif DETECT_LIMIT_VIOLATION
-    int prior;
-#endif
-
-    TEST_INITIALIZED ( self );
-
-#if DETECT_ZERO_STATE
-    prior = atomic32_read_and_add_ge ( TO_ATOMIC32 ( ( KDualRef* ) self ), 1, 0 );
-    dep = prior & DUAL_DEP_MASK;
+    int prior = atomic32_read_and_add_ge ( ( KDualRef* ) self, 1, 0 );
+    int dep = prior & DUAL_DEP_MASK;
     if ( prior < 0 || dep > DUAL_DEP_MAX )
     {
         if ( prior >= 0 )
-            atomic32_dec ( TO_ATOMIC32 ( ( KDualRef* ) self ) );
+            atomic32_dec ( ( KDualRef* ) self );
         DBGMSG ( DBG_REF, DBG_REF_PLACEHOLDER,
                  ( "FAILED to attach %s instance 0x%p: prior refcount = 0x%x",
                    clsname, self, prior ) );
@@ -478,7 +411,7 @@ int CC KDualRefAddDep ( const KDualRef *self, const char *clsname )
 #if DETECT_LIMIT_VIOLATION
     if ( dep == DUAL_DEP_MAX )
     {
-        atomic32_dec ( TO_ATOMIC32 ( ( KDualRef* ) self ) );
+        atomic32_dec ( ( KDualRef* ) self );
         DBGMSG ( DBG_REF, DBG_REF_PLACEHOLDER,
                  ( "FAILED to attach %s instance 0x%p: prior refcount = 0x%x",
                    clsname, self, prior ) );
@@ -487,10 +420,10 @@ int CC KDualRefAddDep ( const KDualRef *self, const char *clsname )
 #endif
     CNTMSG ( clsname, "attach", self, prior );
 #elif DETECT_LIMIT_VIOLATION
-    prior = atomic32_read_and_inc ( TO_ATOMIC32 ( ( KDualRef* ) self ) );
+    int prior = atomic32_read_and_inc ( ( KDualRef* ) self );
     if ( ( prior & DUAL_DEP_MASK ) >= DUAL_DEP_MAX )
     {
-        atomic32_dec ( TO_ATOMIC32 ( ( KDualRef* ) self ) );
+        atomic32_dec ( ( KDualRef* ) self );
         DBGMSG ( DBG_REF, DBG_REF_PLACEHOLDER,
                  ( "FAILED to attach %s instance 0x%p: prior refcount = 0x%x",
                    clsname, self, prior ) );
@@ -499,7 +432,7 @@ int CC KDualRefAddDep ( const KDualRef *self, const char *clsname )
     CNTMSG ( clsname, "attach", self, prior );
 #else
     REFMSG ( clsname, "attach", self );
-    atomic32_inc ( TO_ATOMIC32 ( ( KDualRef* ) self ) );
+    atomic32_inc ( ( KDualRef* ) ( self ) );
 #endif
     return krefOkay;
 }
@@ -524,13 +457,7 @@ int CC KDualRefAddDep ( const KDualRef *self, const char *clsname )
 int CC KRefcountDropDep ( const KRefcount *self, const char *clsname )
 {
 #if DETECT_ZERO_STATE
-    int prior;
-#endif
-
-    TEST_INITIALIZED ( self );
-
-#if DETECT_ZERO_STATE
-    prior = atomic32_read_and_add ( TO_ATOMIC32 ( ( KRefcount* ) self ), -1 );
+    int prior = atomic32_read_and_add ( ( KRefcount* ) self, -1 );
     if ( prior <= 0 )
     {
         DBGMSG ( DBG_REF, DBG_REF_PLACEHOLDER,
@@ -543,7 +470,7 @@ int CC KRefcountDropDep ( const KRefcount *self, const char *clsname )
         return krefWhack;
 #else
     REFMSG ( clsname, "sever", self );
-    if ( atomic32_dec_and_test ( TO_ATOMIC32 ( ( KRefcount* ) self ) ) )
+    if ( atomic32_dec_and_test ( ( KRefcount* ) ( self ) ) )
         return krefWhack;
 #endif
     return krefOkay;
@@ -552,15 +479,11 @@ int CC KRefcountDropDep ( const KRefcount *self, const char *clsname )
 
 int CC KDualRefDropDep ( const KDualRef *self, const char *clsname )
 {
-    int prior;
-
-    TEST_INITIALIZED ( self );
-
-    prior = atomic32_read_and_add ( TO_ATOMIC32 ( ( KDualRef* ) self ), -1 );
+    int prior = atomic32_read_and_add ( ( KDualRef* ) self, -1 );
 #if DETECT_ZERO_STATE
     if ( prior <= 0 )
     {
-        atomic32_inc ( TO_ATOMIC32 ( ( KDualRef* ) self ) );
+        atomic32_inc ( ( KDualRef* ) self );
         DBGMSG ( DBG_REF, DBG_REF_PLACEHOLDER,
                  ( "FAILED to sever %s instance 0x%p: prior refcount = 0x%x",
                    clsname, self, prior ) );

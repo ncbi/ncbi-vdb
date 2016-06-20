@@ -287,11 +287,8 @@ void CC KMDataNodeWhack ( BSTNode *n, void *data )
 
     REFMSG ( "KMDataNode", "flush", & self -> refcount );
 
-    /* delete the connection to metadata */
     self -> meta = NULL;
-
-    /* retry the release */
-    KRefcountAdd ( & self -> refcount, "KMDataNode" );
+    atomic32_inc ( & self -> refcount );
     KMDataNodeRelease ( self );
 }
 
@@ -827,7 +824,7 @@ LIB_EXPORT rc_t CC KMDataNodeVOpenNodeRead ( const KMDataNode *self,
     if ( rc == 0 )
     {
         /* check if the node is not open */
-        if ( atomic32_read ( TO_ATOMIC32 ( & found -> refcount ) ) == 0 )
+        if ( atomic32_read ( & found -> refcount ) == 0 )
         {
             /* mark as read-only, since we're the first to open */
             found -> read_only = 1;
@@ -955,7 +952,7 @@ LIB_EXPORT rc_t CC KMDataNodeVOpenNodeUpdate ( KMDataNode *self,
     rc = KMDataNodeFind ( self, & found, & p );
     if ( rc == 0 )
     {
-        if ( atomic32_read ( TO_ATOMIC32 ( & found -> refcount ) ) != 0 )
+        if ( atomic32_read ( & found -> refcount ) != 0 )
             return RC ( rcDB, rcNode, rcOpening, rcNode, rcBusy );
     }
     else if ( GetRCState ( rc ) == rcNotFound )
@@ -2122,7 +2119,7 @@ LIB_EXPORT rc_t CC KMDataNodeRenameChild ( KMDataNode *self, const char *from, c
     {
         KMDataNode *renamed;
 
-        if ( atomic32_read ( TO_ATOMIC32 ( & found -> refcount ) ) != 0 )
+        if ( atomic32_read ( & found -> refcount ) != 0 )
             return RC ( rcDB, rcNode, rcRenaming, rcNode, rcBusy );
 
         len = snprintf ( p = full, sizeof full, "%s", to );
@@ -2432,7 +2429,7 @@ rc_t KMetadataWhack ( KMetadata *self )
             {
                 /* complete */
                 KDirectoryRelease ( self -> dir );
-                KRefcountWhack ( & self -> refcount, "KMetadata" );
+                atomic32_set ( & self -> refcount, 0 );
                 KMDataNodeWhack ( & self -> root -> n, NULL );
                 free ( self );
                 return 0;

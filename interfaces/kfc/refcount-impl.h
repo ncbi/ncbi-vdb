@@ -54,7 +54,7 @@ struct KRefcount_v1
     const KVTable * vt;
     KRefcount refcount;
 
-#if _ARCH_BITS > 32 && KRCSIZE < 8
+#if _ARCH_BITS > 32
     uint8_t align [ sizeof ( void* ) - sizeof ( KRefcount ) ];
 #endif
 

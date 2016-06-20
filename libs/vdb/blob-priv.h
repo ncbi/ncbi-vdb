@@ -134,9 +134,9 @@ rc_t VBlobNew( VBlob **lhs, int64_t start_id, int64_t stop_id, const char *name 
 #if 1
 #define VBlobAddRef( self ) \
     ( ( ( self ) == NULL ) ? \
-      0 : ( atomic32_inc ( TO_ATOMIC32 ( & ( self ) -> refcount ) ), 0 ) )
+      0 : ( atomic32_inc ( & ( self ) -> refcount ), 0 ) )
 #define VBlobRelease( self ) \
-    ( ( ( self ) == NULL || atomic32_read_and_add_gt ( TO_ATOMIC32 ( & ( self ) -> refcount ), -1, 1 ) > 1 ) ? \
+    ( ( ( self ) == NULL || atomic32_read_and_add_gt ( & ( self ) -> refcount, -1, 1 ) > 1 ) ? \
       0 : VBlobRelease ( self ) )
 #endif
 

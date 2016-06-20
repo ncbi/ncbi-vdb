@@ -715,7 +715,7 @@ LIB_EXPORT rc_t CC KMMapReposition ( const KMMap *cself, uint64_t pos, size_t *s
         }
 
         /* detect multiple owners */
-        if ( atomic32_read ( TO_ATOMIC32 ( & self -> refcount ) ) > 1 )
+        if ( atomic32_read ( & self -> refcount ) > 1 )
             return RC ( rcFS, rcMemMap, rcPositioning, rcMemMap, rcBusy );
 
         pg_mask = self -> pg_size - 1;

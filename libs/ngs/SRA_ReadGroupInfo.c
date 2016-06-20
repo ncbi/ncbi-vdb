@@ -57,7 +57,7 @@ const SRA_ReadGroupInfo* SRA_ReadGroupInfoDuplicate ( const SRA_ReadGroupInfo* s
             {
                 FUNC_ENTRY ( ctx, rcSRA, rcRefcount, rcAttaching );
                 INTERNAL_ERROR ( xcRefcountOutOfBounds, "SRA_ReadGroupInfo at %#p", self );
-                KRefcountInit ( & ( ( SRA_ReadGroupInfo * ) self ) -> refcount, 0, "SRA_ReadGroupInfo", "duplicate", "" );
+                atomic32_set ( & ( ( SRA_ReadGroupInfo * ) self ) -> refcount, 0 );
                 break;
             }
         }
@@ -212,7 +212,7 @@ void SRA_ReadGroupInfoRelease ( const SRA_ReadGroupInfo* self, ctx_t ctx )
             {
                 FUNC_ENTRY ( ctx, rcSRA, rcRefcount, rcReleasing );
                 INTERNAL_ERROR ( xcSelfZombie, "SRA_ReadGroupInfo at %#p", self );
-                KRefcountInit ( & ( ( SRA_ReadGroupInfo * ) self ) -> refcount, 0, "SRA_ReadGroupInfo", "release", "" );
+                atomic32_set ( & ( ( SRA_ReadGroupInfo * ) self ) -> refcount, 0 );
                 break;
             }
         }
