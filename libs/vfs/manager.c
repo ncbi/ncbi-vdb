@@ -3248,7 +3248,12 @@ static rc_t add_to_frozen_list( const VFSManager * self, const String * path )
 {
     struct String * slist;
     rc_t rc = KConfigReadString ( self -> cfg, frozen_list_key, &slist );
-    if ( rc == 0 )
+    if ( rc != 0 )
+    {
+        if ( GetRCState( rc ) == rcNotFound && GetRCObject( rc ) == ( enum RCObject ) rcPath )
+            rc = KConfigWriteSString( self -> cfg, frozen_list_key, path );
+    }
+    else
     {
         VNamelist * lst;
         rc = VNamelistFromString ( &lst, slist, ':' );
