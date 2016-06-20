@@ -587,9 +587,11 @@ LIB_EXPORT rc_t CC VNamelistContainsString( const VNamelist * list,
                 rc = VNameListGet ( list, i, &s );
                 if ( rc == 0 )
                 {
+                    int cmp;
                     String S;
                     StringInitCString( &S, s );
-                    if ( StringEqual( item, &S ) )
+                    cmp = StringCompare( item, &S );
+                    if ( cmp == 0 )
                         *idx = i;
                 }
             }
