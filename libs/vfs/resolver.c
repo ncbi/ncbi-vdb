@@ -4344,7 +4344,7 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         rc = 0;
     else if ( rc == 0 )
     {
-        bool cacheEnabled = true;
+        bool userCacheEnabled = true;
 
         EDisabled remoteDisabled = _KConfigNodeRepoDisabled(kfg, "remote");
         EDisabled siteDisabled = _KConfigNodeRepoDisabled(kfg, "site");
@@ -4364,7 +4364,7 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
                 KConfigNodeRelease ( node );
  
                 if ( rc == 0 && disabled ) {
-                    cacheEnabled = false;
+                    userCacheEnabled = false;
                 }
             }
         }
@@ -4376,26 +4376,26 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         if ( rc == 0 && self -> ticket != NULL )
         {
             rc = VResolverLoadProtected
-                ( self, kfg, buffer, true, userDisabled, cacheEnabled );
+                ( self, kfg, buffer, true, userDisabled, userCacheEnabled );
             if ( rc == 0 && self -> num_app_vols [ appFILE ] == 0 )
                 rc = VResolverForceUserFiles ( self );
         }
 
         /* now load user public repositories */
         if ( rc == 0 )
-            rc = VResolverLoadSubCategory ( self, & self -> local, kfg,
-                NULL, "user/main", true, false, userDisabled, cacheEnabled );
+            rc = VResolverLoadSubCategory ( self, & self -> local, kfg, NULL,
+                "user/main", true, false, userDisabled, userCacheEnabled );
         if ( rc == 0 )
-            rc = VResolverLoadSubCategory ( self, & self -> local, kfg,
-                NULL, "user/aux", true, false, userDisabled, cacheEnabled );
+            rc = VResolverLoadSubCategory ( self, & self -> local, kfg, NULL,
+                "user/aux", true, false, userDisabled, userCacheEnabled );
 
         /* load any site repositories */
         if ( rc == 0 )
-            rc = VResolverLoadSubCategory ( self, & self -> local, kfg,
-                NULL, "site/main", false, false, siteDisabled, false );
+            rc = VResolverLoadSubCategory ( self, & self -> local, kfg, NULL,
+                "site/main", false, false, siteDisabled, false );
         if ( rc == 0 )
-            rc = VResolverLoadSubCategory ( self, & self -> local, kfg,
-                NULL, "site/aux", false, false, siteDisabled, false );
+            rc = VResolverLoadSubCategory ( self, & self -> local, kfg, NULL,
+                "site/aux", false, false, siteDisabled, false );
 
         /* if within a protected workspace, load protected remote repositories */
         if ( rc == 0 && self -> ticket != NULL )
@@ -4421,11 +4421,11 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
 
         /* load any remote repositories */
         if ( rc == 0 )
-            rc = VResolverLoadSubCategory ( self, & self -> remote, kfg,
-                NULL, "remote/main", false, false, remoteDisabled, false );
+            rc = VResolverLoadSubCategory ( self, & self -> remote, kfg, NULL,
+                "remote/main", false, false, remoteDisabled, false );
         if ( rc == 0 )
-            rc = VResolverLoadSubCategory ( self, & self -> remote, kfg,
-                NULL, "remote/aux", false, false, remoteDisabled, false );
+            rc = VResolverLoadSubCategory ( self, & self -> remote, kfg, NULL,
+                "remote/aux", false, false, remoteDisabled, false );
 
         KConfigNodeRelease ( kfg );
 
