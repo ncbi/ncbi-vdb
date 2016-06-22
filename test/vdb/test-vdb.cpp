@@ -590,7 +590,7 @@ FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, VdbFixture )
     REQUIRE_RC ( VCursorFindNextRowIdDirect ( curs, col_idx, 1, & next ) );
     REQUIRE_EQ ( (int64_t)1, next ) ;
     REQUIRE_RC ( VCursorFindNextRowIdDirect ( curs, col_idx, 2, & next ) );
-    REQUIRE_EQ ( (int64_t)2, next ) ;
+    REQUIRE_EQ ( (int64_t)2, next ) ; // VDB-3075: next == 1
 }
 
 //////////////////////////////////////////// Main
