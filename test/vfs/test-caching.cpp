@@ -78,31 +78,24 @@ typedef enum {
 
 /* GETTERS */
     eUserCacheDisabled = eUserCacheDisabledSetFalse,
-//  eUserCacheDisabledFalse          =      0,  //                 0
     eUserCacheDisabledTrue           =   0x10,  //                 1
 
     eUserPublicCacheEnabled = eUserPublicCacheEnabledSetFalse,
-//  eUserPublicCacheEnabledFalse     =      0,  //               000b
     eUserPublicCacheEnabledTrue      =   0x40,  //               100b
 
     eUserPublicDisabled = eUserPublicDisabledSetFalse,
-//  eUserPublicDisabledFalse         =      0,  //               000b
     eUserPublicDisabledTrue          =  0x100,  //             1 000b
 
     eAppRefseqDisabled = eAppRefseqDisabledSetFalse,
-//  eAppRefseqDisabledFalse          =      0,  //               000b
     eAppRefseqDisabledTrue           =  0x400,  //           100 000b
 
     eAppSraDisabled = eAppSraDisabledSetFalse,
-//  eAppSraDisabledFalse             =      0,  //               000b
     eAppSraDisabledTrue              = 0x1000,  //      01 0000 0000b
 
     eAppRefseqCacheEnabled = eAppRefseqCacheEnabledSetFalse,
-//  eAppRefseqCacheEnabledFalse      =      0,  //               000b
     eAppRefseqCacheEnabledTrue       = 0x4000,  //     100 0000 0000b
 
     eAppSraCacheEnabled = eAppSraCacheEnabledSetFalse,
-//  eAppSraCacheEnabledFalse         =      0,  //               000b
     eAppSraCacheEnabledTrue          =0x10000,  //  1 0000 0000 0000b
 } E;
 
@@ -173,7 +166,10 @@ public:
         }
         else if ( e & eResolverAlwaysDisable ) {
             return enbl ( self, vrAlwaysDisable );
-        } else { return 0; }
+        }
+        else {
+            return 0;
+        }
     }
 
     static rc_t resetSingleton ( const VFSManager * self ) {
@@ -199,55 +195,65 @@ typedef enum {
 } EType;
 
 class Test : protected ncbi::NK::TestCase {
-  TestCase * _dad;
+    TestCase * _dad;
 
 public:
-  Test ( TestCase * dad, bool caching, int v, EType type )
-      : TestCase ( dad -> GetName () ), _dad ( dad )
-  {
+    Test ( TestCase * dad, bool caching, int v, EType type )
+        : TestCase ( dad -> GetName () ), _dad ( dad )
+    {
 #define WGS "AFVF01"
-    const char * acc = type == eRefseq ? "KC702199.1" :
-                       type == eSra ? "SRR053325" : WGS ".1"; 
-    rc_t rc = 0;
-    KDirectory * native  = NULL;
-    REQUIRE_RC ( KDirectoryNativeDir ( & native ) );
-    const KDirectory * dir = NULL;
-    REQUIRE_RC ( KDirectoryOpenDirRead ( native, &dir, false, "caching-kfg" ) );
-    KConfig * cfg = NULL;
-    REQUIRE_RC ( KConfigMake ( & cfg, dir ) );
-    REQUIRE_RC ( SET :: set ( cfg, v ) );
+        const char * acc = type == eRefseq ? "KC702199.1" :
+                           type == eSra    ? "SRR053325" : WGS ".1"; 
+        rc_t rc = 0;
+        KDirectory * native  = NULL;
+        REQUIRE_RC ( KDirectoryNativeDir ( & native ) );
+        const KDirectory * dir = NULL;
+        REQUIRE_RC
+            ( KDirectoryOpenDirRead ( native, &dir, false, "caching-kfg" ) );
+        KConfig * cfg = NULL;
+        REQUIRE_RC ( KConfigMake ( & cfg, dir ) );
+        REQUIRE_RC ( SET :: set ( cfg, v ) );
 //KConfigPrint(cfg, 0);
-    String * test_root = NULL;
-    REQUIRE_RC ( KConfigReadString ( cfg, "/TEST_ROOT", & test_root ) );
-    String * user_root = NULL;
-    REQUIRE_RC ( KConfigReadString
-        ( cfg, "/repository/user/main/public/root", & user_root ) );
-    REQUIRE ( user_root ); // KConfigReadString creates NULL-terminated strings
-    REQUIRE_RC ( KDirectoryRemove ( native, true, user_root -> addr ) );
-    VFSManager * vfs = NULL;
+        String * test_root = NULL;
+        REQUIRE_RC ( KConfigReadString ( cfg, "/TEST_ROOT", & test_root ) );
+        String * user_root = NULL;
+        REQUIRE_RC ( KConfigReadString
+            ( cfg, "/repository/user/main/public/root", & user_root ) );
 
-    REQUIRE_RC ( VFSManagerMakeFromKfg ( & vfs, cfg ) );
-    REQUIRE_RC ( SET :: resetSingleton ( vfs ) );
+        // KConfigReadString creates NULL-terminated strings
+        REQUIRE ( user_root );
+        REQUIRE_RC ( KDirectoryRemove ( native, true, user_root -> addr ) );
 
-    REQUIRE_RC ( SET :: set ( vfs, v ) );
-    const VDBManager * mgr = NULL;
-    REQUIRE_RC ( VDBManagerMakeReadWithVFSManager ( & mgr, NULL, vfs ) );
-    VSchema * schema = NULL;
-    REQUIRE_RC ( VDBManagerMakeSRASchema ( mgr, & schema ) );
-    REQUIRE ( user_root ); // KConfigReadString creates NULL-terminated strings
-    REQUIRE_EQ ( KDirectoryPathType ( native, user_root -> addr ),
-                 ( KPathType ) kptNotFound );
-    const VDatabase * db = NULL;
-    const VTable * tbl = NULL;
-    if ( type == eWgs )
-    {   REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, & db, NULL, acc ) ); }
-    else
-    {   REQUIRE_RC ( VDBManagerOpenTableRead ( mgr, & tbl, schema, acc ) ); }
-    REQUIRE ( user_root ); // KConfigReadString creates NULL-terminated strings
-    if ( caching ) {
+        VFSManager * vfs = NULL;
+
+        REQUIRE_RC ( VFSManagerMakeFromKfg ( & vfs, cfg ) );
+        REQUIRE_RC ( SET :: resetSingleton ( vfs ) );
+
+        REQUIRE_RC ( SET :: set ( vfs, v ) );
+        const VDBManager * mgr = NULL;
+        REQUIRE_RC ( VDBManagerMakeReadWithVFSManager ( & mgr, NULL, vfs ) );
+        VSchema * schema = NULL;
+        REQUIRE_RC ( VDBManagerMakeSRASchema ( mgr, & schema ) );
+
+        // KConfigReadString creates NULL-terminated strings
+        REQUIRE ( user_root ); 
         REQUIRE_EQ ( KDirectoryPathType ( native, user_root -> addr ),
-                     ( KPathType ) kptDir );
-        switch ( type ) {
+                     ( KPathType ) kptNotFound );
+        const VDatabase * db = NULL;
+        const VTable * tbl = NULL;
+        if ( type == eWgs ) {
+            REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, & db, NULL, acc ) );
+        }
+        else {
+            REQUIRE_RC ( VDBManagerOpenTableRead ( mgr, & tbl, schema, acc ) );
+        }
+
+        // KConfigReadString creates NULL-terminated strings
+        REQUIRE ( user_root ); 
+        if ( caching ) {
+            REQUIRE_EQ ( KDirectoryPathType ( native, user_root -> addr ),
+                         ( KPathType ) kptDir );
+            switch ( type ) {
             case eRefseq:
                 REQUIRE_EQ ( KDirectoryPathType ( native, "%s/refseq/%s.cache",
                              user_root -> addr, acc ), ( KPathType ) kptFile );
@@ -260,111 +266,148 @@ public:
                 REQUIRE_EQ ( KDirectoryPathType ( native, "%s/wgs/%s.cache",
                              user_root -> addr, WGS ), ( KPathType ) kptFile );
                 break;
-            default: assert ( 0 ) ; break;
+            default:
+                assert ( 0 ) ;
+                break;
+            }
         }
-    } else {
+        else {
+            REQUIRE_EQ ( KDirectoryPathType ( native, user_root -> addr ),
+                         ( KPathType ) kptNotFound );
+        }
+        RELEASE ( VDatabase, db );
+        RELEASE ( VSchema, schema );
+        RELEASE ( VTable, tbl );
+
+        REQUIRE_RC ( SET :: resetSingleton ( vfs ) );
+        RELEASE ( VFSManager, vfs );
+
+        RELEASE ( VDBManager, mgr );
+        RELEASE ( KDirectory, dir );
+
+        // KConfigReadString creates NULL-terminated strings
+        REQUIRE ( user_root ); 
+        REQUIRE_RC ( KDirectoryRemove ( native, true, user_root -> addr ) );
         REQUIRE_EQ ( KDirectoryPathType ( native, user_root -> addr ),
                      ( KPathType ) kptNotFound );
+
+        RELEASE ( String, user_root );
+        REQUIRE_RC ( KConfigReadString ( cfg, "/TEST_SUBROOT", & user_root ) );
+
+        // KConfigReadString creates NULL-terminated strings
+        REQUIRE ( user_root );
+        REQUIRE_RC ( KDirectoryRemove ( native, false, user_root -> addr ) );
+        RELEASE ( String, user_root );
+
+        // KConfigReadString creates NULL-terminated strings
+        REQUIRE ( test_root ); 
+        KDirectoryRemove ( native, false, test_root -> addr );
+        // might fail when there is another test build running parallelly
+
+        RELEASE ( String, test_root );
+        RELEASE ( KConfig, cfg );
+        RELEASE ( KDirectory, native );
+        REQUIRE_RC ( rc );
+}
+
+  ~Test ( void ) {
+      assert( _dad );
+      _dad->ErrorCounterAdd(GetErrorCounter());
     }
-    RELEASE ( VDatabase, db );
-    RELEASE ( VSchema, schema );
-    RELEASE ( VTable, tbl );
-
-    REQUIRE_RC ( SET :: resetSingleton ( vfs ) );
-    RELEASE ( VFSManager, vfs );
-
-    RELEASE ( VDBManager, mgr );
-    RELEASE ( KDirectory, dir );
-    REQUIRE ( user_root ); // KConfigReadString creates NULL-terminated strings
-    REQUIRE_RC ( KDirectoryRemove ( native, true, user_root -> addr ) );
-    REQUIRE_EQ ( KDirectoryPathType ( native, user_root -> addr ),
-                 ( KPathType ) kptNotFound );
-    RELEASE ( String, user_root );
-    REQUIRE_RC ( KConfigReadString ( cfg, "/TEST_SUBROOT", & user_root ) );
-    REQUIRE ( user_root ); // KConfigReadString creates NULL-terminated strings
-    REQUIRE_RC ( KDirectoryRemove ( native, false, user_root -> addr ) );
-    RELEASE ( String, user_root );
-    REQUIRE ( test_root ); // KConfigReadString creates NULL-terminated strings
-
-    KDirectoryRemove ( native, false, test_root -> addr );
-    // might fail when there is another test build running parallelly
-
-    RELEASE ( String, test_root );
-    RELEASE ( KConfig, cfg );
-    RELEASE ( KDirectory, native );
-    REQUIRE_RC ( rc );
-  }
-
-  ~Test ( void ) { assert( _dad ); _dad->ErrorCounterAdd(GetErrorCounter()); }
 };
 
 class NonCaching : private Test {
 public:
     NonCaching ( TestCase * dad, int v = eNone, EType type = eSra )
-        : Test ( dad, false, v, type ) {}
+        : Test ( dad, false, v, type )
+    {}
 };
 
 class Caching : private Test {
 public:
     Caching (TestCase * dad, int v, EType type = eSra )
-        : Test ( dad, true, v, type ) {}
+        : Test ( dad, true, v, type )
+    {}
 };
 
-TEST_CASE ( SRR_INCOMPLETE_USER_REPO )
-{   NonCaching ( this ); }
-TEST_CASE ( REFSEQ_INCOMPLETE_USER_REPO )
-{   NonCaching ( this, eNone, eRefseq ); }
-TEST_CASE ( WGS_INCOMPLETE_USER_REPO ) { NonCaching ( this, eNone, eWgs ); }
+TEST_CASE ( SRR_INCOMPLETE_USER_REPO ) {
+    NonCaching ( this );
+}
+TEST_CASE ( REFSEQ_INCOMPLETE_USER_REPO ) {
+    NonCaching ( this, eNone, eRefseq );
+}
+TEST_CASE ( WGS_INCOMPLETE_USER_REPO ) {
+    NonCaching ( this, eNone, eWgs );
+}
 
-TEST_CASE ( REFSEQ_BAD_APP_IN_USER_REPO )
-{   NonCaching ( this, eAppsSra , eRefseq ); }
-TEST_CASE ( WGS_BAD_APP_IN_USER_REPO ) { NonCaching ( this, eAppsSra , eWgs ); }
+TEST_CASE ( REFSEQ_BAD_APP_IN_USER_REPO ) {
+    NonCaching ( this, eAppsSra , eRefseq );
+}
+TEST_CASE ( WGS_BAD_APP_IN_USER_REPO ) {
+    NonCaching ( this, eAppsSra , eWgs );
+}
 
-TEST_CASE ( SRR_COMPLETE_USER_REPO ) { Caching ( this, eAppsSra ); }
-TEST_CASE ( REFSEQ_COMPLETE_USER_REPO )
-{   Caching ( this, eAppsRefseq, eRefseq ); }
-TEST_CASE ( WGS_COMPLETE_USER_REPO ) { Caching ( this, eAppsWgs, eWgs ); }
+TEST_CASE ( SRR_COMPLETE_USER_REPO ) {
+    Caching ( this, eAppsSra );
+}
+TEST_CASE ( REFSEQ_COMPLETE_USER_REPO ) {
+    Caching ( this, eAppsRefseq, eRefseq );
+}
+TEST_CASE ( WGS_COMPLETE_USER_REPO ) {
+    Caching ( this, eAppsWgs, eWgs );
+}
 
-TEST_CASE ( SRR_CASHING_DISABLED_BY_VDB_CONFIG_GRF )
-{   NonCaching ( this, eAppsSra | eUserCacheDisabledSetTrue ); }
-TEST_CASE ( REFSEQ_CASHING_DISABLED_BY_VDB_CONFIG_GRF )
-{   NonCaching ( this, eAppsRefseq | eUserCacheDisabledSetTrue, eRefseq ); }
-TEST_CASE ( WGS_DISABLED_BY_VDB_CONFIG_GRF )
-{   NonCaching ( this, eAppsWgs | eUserCacheDisabledSetTrue, eWgs ); }
+TEST_CASE ( SRR_CASHING_DISABLED_BY_VDB_CONFIG_GRF ) {
+    NonCaching ( this, eAppsSra | eUserCacheDisabledSetTrue );
+}
+TEST_CASE ( REFSEQ_CASHING_DISABLED_BY_VDB_CONFIG_GRF ) {
+    NonCaching ( this, eAppsRefseq | eUserCacheDisabledSetTrue, eRefseq );
+}
+TEST_CASE ( WGS_DISABLED_BY_VDB_CONFIG_GRF ) {
+    NonCaching ( this, eAppsWgs | eUserCacheDisabledSetTrue, eWgs );
+}
 
-TEST_CASE ( SRR_CASHING_ENABLED_BY_VDB_CONFIG_GRF )
-{   Caching ( this, eAppsSra | eUserCacheDisabledSetFalse ); }
-TEST_CASE ( REFSEQ_CASHING_ENABLED_BY_VDB_CONFIG_GRF )
-{   Caching ( this, eAppsRefseq | eUserCacheDisabledSetFalse, eRefseq ); }
-TEST_CASE ( WGS_CASHING_ENABLED_BY_VDB_CONFIG_GRF )
-{   Caching ( this, eAppsWgs | eUserCacheDisabledSetFalse, eWgs ); }
+TEST_CASE ( SRR_CASHING_ENABLED_BY_VDB_CONFIG_GRF ) {
+    Caching ( this, eAppsSra | eUserCacheDisabledSetFalse );
+}
+TEST_CASE ( REFSEQ_CASHING_ENABLED_BY_VDB_CONFIG_GRF ) {
+    Caching ( this, eAppsRefseq | eUserCacheDisabledSetFalse, eRefseq );
+}
+TEST_CASE ( WGS_CASHING_ENABLED_BY_VDB_CONFIG_GRF ) {
+    Caching ( this, eAppsWgs | eUserCacheDisabledSetFalse, eWgs );
+}
 
-TEST_CASE ( SRR_CASHING_ENABLED_BY_VDB_CONFIG_TXT )
-{   Caching ( this, eAppsSra | eUserPublicCacheEnabledSetTrue ); }
-TEST_CASE ( REFSEQ_CASHING_ENABLED_BY_VDB_CONFIG_TXT )
-{   Caching ( this, eAppsRefseq | eUserPublicCacheEnabledSetTrue, eRefseq ); }
-TEST_CASE ( WGS_CASHING_ENABLED_BY_VDB_CONFIG_TXT )
-{   Caching ( this, eAppsWgs | eUserPublicCacheEnabledSetTrue, eWgs ); }
+TEST_CASE ( SRR_CASHING_ENABLED_BY_VDB_CONFIG_TXT ) {
+    Caching ( this, eAppsSra | eUserPublicCacheEnabledSetTrue );
+}
+TEST_CASE ( REFSEQ_CASHING_ENABLED_BY_VDB_CONFIG_TXT ) {
+    Caching ( this, eAppsRefseq | eUserPublicCacheEnabledSetTrue, eRefseq );
+}
+TEST_CASE ( WGS_CASHING_ENABLED_BY_VDB_CONFIG_TXT ) {
+    Caching ( this, eAppsWgs | eUserPublicCacheEnabledSetTrue, eWgs );
+}
 
-TEST_CASE ( SRR_CASHING_DISABLED_BY_VDB_CONFIG_TXT )
-{   NonCaching ( this, eAppsSra | eUserPublicCacheEnabledSetFalse ); }
+TEST_CASE ( SRR_CASHING_DISABLED_BY_VDB_CONFIG_TXT ) {
+    NonCaching ( this, eAppsSra | eUserPublicCacheEnabledSetFalse );
+}
 TEST_CASE ( REFSEQ_CASHING_DISABLED_BY_VDB_CONFIG_TXT ) {
     NonCaching ( this, eAppsRefseq | eUserPublicCacheEnabledSetFalse, eRefseq );
 }
-TEST_CASE ( WGS_CASHING_DISABLED_BY_VDB_CONFIG_TXT )
-{   NonCaching ( this, eAppsWgs | eUserPublicCacheEnabledSetFalse, eWgs ); }
+TEST_CASE ( WGS_CASHING_DISABLED_BY_VDB_CONFIG_TXT ) {
+    NonCaching ( this, eAppsWgs | eUserPublicCacheEnabledSetFalse, eWgs );
+}
 
 TEST_CASE ( SRR_CASHING_ENABLED_BY_VDB_CONFIG_TXT_AND_GRF ) {
     Caching ( this, eAppsSra | eUserCacheDisabledSetFalse |
-        eUserPublicCacheEnabledSetTrue );
+                               eUserPublicCacheEnabledSetTrue );
 }
 TEST_CASE ( REFSEQ_CASHING_ENABLED_BY_VDB_CONFIG_TXT_AND_GRF ) {
     Caching ( this, eAppsRefseq | eUserCacheDisabledSetFalse |
-        eUserPublicCacheEnabledSetTrue, eRefseq );
+                                  eUserPublicCacheEnabledSetTrue, eRefseq );
 }
 TEST_CASE ( WGS_CASHING_ENABLED_BY_VDB_CONFIG_TXT_AND_GRF ) {
     Caching ( this, eAppsWgs | eUserCacheDisabledSetFalse |
-        eUserPublicCacheEnabledSetTrue, eWgs );
+                               eUserPublicCacheEnabledSetTrue, eWgs );
 }
 
 TEST_CASE ( SRR_USER_REPO_DISABLED ) {
@@ -442,42 +485,42 @@ TEST_CASE ( WGS_CASHING_AND_REPO_ENABLED_DISABLE_SRA_APP_CACHE ) {
 }
 
 TEST_CASE ( SRR_CASHING_ENABLED_BY_VDB_CONFIG_GRF_DISABLED_BY_TXT ) {
-    NonCaching ( this, eAppsSra | eUserCacheDisabledSetFalse
-                  | eUserPublicCacheEnabledSetFalse );
+    NonCaching ( this, eAppsSra | eUserCacheDisabledSetFalse |
+                                  eUserPublicCacheEnabledSetFalse );
 }
 TEST_CASE ( REFSEQ_CASHING_ENABLED_BY_VDB_CONFIG_GRF_DISABLED_BY_TXT ) {
-    NonCaching ( this, eAppsRefseq | eUserCacheDisabledSetFalse
-                  | eUserPublicCacheEnabledSetFalse, eRefseq );
+    NonCaching ( this, eAppsRefseq | eUserCacheDisabledSetFalse |
+                                     eUserPublicCacheEnabledSetFalse, eRefseq );
 }
 TEST_CASE ( WGS_CASHING_ENABLED_BY_VDB_CONFIG_GRF_DISABLED_BY_TXT ) {
-    NonCaching ( this, eAppsWgs | eUserCacheDisabledSetFalse
-                  | eUserPublicCacheEnabledSetFalse, eWgs );
+    NonCaching ( this, eAppsWgs | eUserCacheDisabledSetFalse |
+                                  eUserPublicCacheEnabledSetFalse, eWgs );
 }
 
 TEST_CASE ( SRR_CASHING_DISABLED_BY_VDB_CONFIG_TXT_AND_GRF ) {
-     NonCaching ( this, eAppsSra | eUserCacheDisabledSetTrue
-                  | eUserPublicCacheEnabledSetFalse );
+     NonCaching ( this, eAppsSra | eUserCacheDisabledSetTrue |
+                                   eUserPublicCacheEnabledSetFalse );
 }
 TEST_CASE ( REFSEQ_CASHING_DISABLED_BY_VDB_CONFIG_TXT_AND_GRF ) {
-    NonCaching ( this, eAppsRefseq | eUserCacheDisabledSetTrue
-                  | eUserPublicCacheEnabledSetFalse, eRefseq );
+    NonCaching ( this, eAppsRefseq | eUserCacheDisabledSetTrue |
+                                     eUserPublicCacheEnabledSetFalse, eRefseq );
 }
 TEST_CASE ( WGS_CASHING_DISABLED_BY_VDB_CONFIG_TXT_AND_GRF ) {
-    NonCaching ( this, eAppsWgs | eUserCacheDisabledSetTrue
-                  | eUserPublicCacheEnabledSetFalse, eWgs );
+    NonCaching ( this, eAppsWgs | eUserCacheDisabledSetTrue |
+                                  eUserPublicCacheEnabledSetFalse, eWgs );
 }
 
 TEST_CASE ( SRR_CASHING_DISABLED_BY_VDB_CONFIG_GRF_ENABLED_BY_TXT ) {
-     NonCaching ( this, eAppsSra | eUserCacheDisabledSetTrue
-                  | eUserPublicCacheEnabledSetTrue );
+     NonCaching ( this, eAppsSra | eUserCacheDisabledSetTrue |
+                                   eUserPublicCacheEnabledSetTrue );
 }
 TEST_CASE ( REFSEQ_CASHING_DISABLED_BY_VDB_CONFIG_GRF_ENABLED_BY_TXT ) {
-    NonCaching ( this, eAppsRefseq | eUserCacheDisabledSetTrue
-                  | eUserPublicCacheEnabledSetTrue, eRefseq );
+    NonCaching ( this, eAppsRefseq | eUserCacheDisabledSetTrue |
+                                     eUserPublicCacheEnabledSetTrue, eRefseq );
 }
 TEST_CASE ( WGS_CASHING_DISABLED_BY_VDB_CONFIG_GRF_ENABLED_BY_TXT ) {
-    NonCaching ( this, eAppsWgs | eUserCacheDisabledSetTrue
-                  | eUserPublicCacheEnabledSetTrue, eWgs );
+    NonCaching ( this, eAppsWgs | eUserCacheDisabledSetTrue |
+                                  eUserPublicCacheEnabledSetTrue, eWgs );
 }
 
 TEST_CASE ( SRR_APP_DISABLED ) {
@@ -561,8 +604,12 @@ TEST_CASE ( REFSEQ_APP_CACHE_DISABLE ) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
 extern "C" {
-    ver_t CC KAppVersion ( void ) { return 0; }
-    rc_t CC KMain ( int argc, char * argv [] )
-    {   return CachingSuite ( argc, argv ); }
+    ver_t CC KAppVersion ( void ) {
+        return 0;
+    }
+    rc_t CC KMain ( int argc, char * argv [] ) {
+        return CachingSuite ( argc, argv );
+    }
 }
