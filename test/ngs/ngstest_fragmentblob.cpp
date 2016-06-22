@@ -407,6 +407,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_HasMore, BlobIteratorFixture )
     EXIT;
 }
 
+#if VDB_3075_has_been_fixed
 FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_FullScan, BlobIteratorFixture )
 {
     ENTRY;
@@ -425,7 +426,42 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_FullScan, BlobIteratorFixture )
 
     EXIT;
 }
+#endif
 
+FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_SparseTable, BlobIteratorFixture )
+{
+    ENTRY;
+    MakeIterator ( "./data/SparseFragmentBlobs" );
+    // only row 1 and 10 are present
+
+    REQUIRE ( NGS_FragmentBlobIteratorHasMore ( m_blobIt, m_ctx ) );
+    {
+        struct NGS_FragmentBlob* blob = NGS_FragmentBlobIteratorNext ( m_blobIt, m_ctx );
+        REQUIRE_NOT_NULL ( blob );
+        int64_t first = 0;
+        uint64_t count = 0;
+        NGS_FragmentBlobRowRange ( blob, m_ctx, & first, & count );
+        REQUIRE_EQ ( (int64_t)1, first );
+        REQUIRE_EQ ( (uint64_t)1, count );
+        NGS_FragmentBlobRelease ( blob, ctx );
+    }
+
+    REQUIRE ( NGS_FragmentBlobIteratorHasMore ( m_blobIt, m_ctx ) );
+    {
+        struct NGS_FragmentBlob* blob = NGS_FragmentBlobIteratorNext ( m_blobIt, m_ctx );
+        REQUIRE_NOT_NULL ( blob );
+        int64_t first = 0;
+        uint64_t count = 0;
+        NGS_FragmentBlobRowRange ( blob, m_ctx, & first, & count );
+        REQUIRE_EQ ( (int64_t)10, first );
+        REQUIRE_EQ ( (uint64_t)1, count );
+        NGS_FragmentBlobRelease ( blob, ctx );
+    }
+
+    REQUIRE ( ! NGS_FragmentBlobIteratorHasMore ( m_blobIt, m_ctx ) );
+
+    EXIT;
+}
 
 //////////////////////////////////////////// Main
 
