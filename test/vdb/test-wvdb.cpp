@@ -411,7 +411,7 @@ FIXTURE_TEST_CASE ( VTableDropColumn_MetadataColumn_VDB_2735, WVDB_Fixture )
     REQUIRE_RC ( VDatabaseRelease ( db ) );
 }
 
-FIXTURE_TEST_CASE ( VCursorCommit_without_VCoursorCloseRow, WVDB_Fixture )
+FIXTURE_TEST_CASE ( VCursorCommit_without_VCursorCloseRow, WVDB_Fixture )
 {
     m_databaseName = ScratchDir + GetName();
     RemoveDatabase();
