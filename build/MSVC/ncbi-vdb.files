@@ -2586,6 +2586,12 @@
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)sraxf-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)sraxf-%(Filename).obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\tokenize-spot_name-generic-fastq.c">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)sraxf-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)sraxf-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)sraxf-%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)sraxf-%(Filename).obj</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\sraxf\tokenize-spot_name-helicos.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)sraxf-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)sraxf-%(Filename).obj</ObjectFileName>

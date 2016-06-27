@@ -29,10 +29,11 @@ TOP ?= $(abspath ../..)
 MODULE = test/vfs
 
 TEST_TOOLS = \
+    test-caching \
     test-vfsmanager \
-	test-path-c \
-	test-path \
-	test-resolver
+    test-path-c \
+    test-path \
+    test-resolver
 
 
 include $(TOP)/build/Makefile.env
@@ -77,6 +78,18 @@ PATHTEST_LIB = \
 	-sncbi-vdb \
 
 $(TEST_BINDIR)/test-path: $(PATHTEST_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
+# test-caching
+
+CACHING_SRC = \
+	test-caching
+
+CACHING_OBJ = \
+	$(addsuffix .$(OBJX),$(CACHING_SRC))
+
+$(TEST_BINDIR)/test-caching: $(CACHING_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------
