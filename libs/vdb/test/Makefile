@@ -1,75 +1,88 @@
-SYS=mac
-CC=clang
-ARCH=x86_64
-BUILD=dbg
-NCBI-VDB-DIR=$(HOME)/ncbi-outdir/ncbi-vdb/$(SYS)/$(CC)/$(ARCH)/$(BUILD)
+# ===========================================================================
+#
+#                            PUBLIC DOMAIN NOTICE
+#               National Center for Biotechnology Information
+#
+#  This software/database is a "United States Government Work" under the
+#  terms of the United States Copyright Act.  It was written as part of
+#  the author's official duties as a United States Government employee and
+#  thus cannot be copyrighted.  This software/database is freely available
+#  to the public for use. The National Library of Medicine and the U.S.
+#  Government have not placed any restriction on its use or reproduction.
+#
+#  Although all reasonable efforts have been taken to ensure the accuracy
+#  and reliability of the software and data, the NLM and the U.S.
+#  Government do not and cannot warrant the performance or results that
+#  may be obtained by using this software or data. The NLM and the U.S.
+#  Government disclaim all warranties, express or implied, including
+#  warranties of performance, merchantability or fitness for any particular
+#  purpose.
+#
+#  Please cite the author in any work or product based on this material.
+#
+# ===========================================================================
 
-INCLUDE=\
-	-I ../../../interfaces/ \
-	-I ../../../interfaces/cc/gcc \
-	-I ../../../interfaces/cc/gcc/$(ARCH) \
-	-I ../../../interfaces/os \
-	-I ../../../interfaces/os/$(SYS) \
-	-I ../../../interfaces/os/unix
 
-LIBS=\
-	-lkdb \
-	-lklib \
-	-lkfg \
-	-lkfs \
-	-lkns \
-	-lkrypto \
-	-lvfs \
-	-lkproc \
-    -lz \
-    -lm
+default: runtests
 
-vdb=\
-	../page-map.c \
-	../blob-headers.c \
-	../blob.c \
-	../column-cmn.c \
-	../column.c \
-	../schema.c \
-	../schema-db.c \
-	../schema-dump.c \
-	../schema-eval.c \
-	../schema-expr.c \
-	../schema-func.c \
-	../schema-parse.c \
-	../schema-prod.c \
-	../schema-tbl.c \
-	../schema-tok.c \
-	../schema-type.c \
-	../schema-int.c \
-	../cursor.c \
-	../cursor-cmn.c \
-	../table-cmn.c \
-	../table-load.c \
-	../database-cmn.c \
-	../database-load.c \
-	../database.c \
-	../dbmgr.c \
-	../dbmgr-cmn.c \
-	../phys-cmn.c \
-	../phys-load.c \
-	../phys.c \
-	../prod-func.c \
-	../prod-expr.c \
-	../prod.c \
-	../linker-cmn.c
+TOP ?= $(abspath ../../..)
+MODULE = libs/vdb/test
 
-SYS_DEFINES=-DUNIX -D_REENTRANT -D_FILE_OFFSET_BITS=64 -D_ARCH_BITS=__SIZEOF_POINTER__*__CHAR_BIT__ -DMAC -DBSD -mmacosx-version-min=10.10
-LIB_DEFINES=$(SYS_DEFINES) -DLIBPREFIX=lib -D_LIBRARY -D__mod_name__=bogus -D__file_name__=bogus -D__file_ext__=c -DSHLIBEXT=dylib
+TEST_TOOLS=\
+	test-prod-cmn
 
-.PHONY: clean
+include $(TOP)/build/Makefile.env
 
-all: test-prod-cmn
+$(TEST_TOOLS): makedirs
+	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
-test-prod-cmn: $(vdb) test-prod-cmn.c
-	$(CC) $(CFLAGS) $(INCLUDE) -L$(NCBI-VDB-DIR)/ilib $(LIBS) $^ -o $@
+clean: stdclean
 
-clean:
-	@rm -f test-prod-cmn
-	@rm -f test-prod-cmn.dSYM
+LIB=\
+	-skapp \
+	-sncbi-vdb
+
+VDB_DIR=../
+
+VDB_SRC=\
+	page-map \
+	blob-headers \
+	blob \
+	column-cmn \
+	column \
+	schema \
+	schema-db \
+	schema-dump \
+	schema-eval \
+	schema-expr \
+	schema-func \
+	schema-parse \
+	schema-prod \
+	schema-tbl \
+	schema-tok \
+	schema-type \
+	schema-int \
+	cursor \
+	cursor-cmn \
+	table-cmn \
+	table-load \
+	database-cmn \
+	database-load \
+	database \
+	dbmgr \
+	dbmgr-cmn \
+	phys-cmn \
+	phys-load \
+	phys \
+	prod-func \
+	prod-expr \
+	prod \
+	linker-cmn
+
+VDB_OBJ=$(addsuffix .$(OBJX),$(addprefix $(VDB_DIR),$(VDB_SRC)))
+
+OBJ=$(addsuffix .$(OBJX),test-prod-cmn)
+
+$(TEST_BINDIR)/test-prod-cmn: $(OBJ) $(addprefix $(VDB_DIR),prod-cmn.c)
+	$(LD) --exe -o $@ $(OBJ) $(LIB)
 
