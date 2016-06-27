@@ -72,6 +72,7 @@
 #include <klib/rc.h>
 #include <klib/refcount.h>
 #include <klib/namelist.h>
+#include <klib/vector.h>
 
 #include <strtol.h>
 
@@ -3243,15 +3244,14 @@ LIB_EXPORT rc_t CC VFSManagerGetCacheRoot ( const VFSManager * self,
 
 
 static const char * frozen_list_key = "/repository/user/frozen";
-
-static rc_t add_to_frozen_list( const VFSManager * self, const String * path )
+static rc_t add_to_frozen_list( KConfig *cfg, const char * path )
 {
     struct String * slist;
-    rc_t rc = KConfigReadString ( self -> cfg, frozen_list_key, &slist );
+    rc_t rc = KConfigReadString ( cfg, frozen_list_key, &slist );
     if ( rc != 0 )
     {
         if ( GetRCState( rc ) == rcNotFound && GetRCObject( rc ) == ( enum RCObject ) rcPath )
-            rc = KConfigWriteSString( self -> cfg, frozen_list_key, path );
+            rc = KConfigWriteString( cfg, frozen_list_key, path );
     }
     else
     {
@@ -3260,17 +3260,17 @@ static rc_t add_to_frozen_list( const VFSManager * self, const String * path )
         if ( rc == 0 )
         {
             int32_t idx;
-            rc = VNamelistContainsString( lst, path, &idx );
+            rc = VNamelistContainsStr ( lst, path, &idx );
             if ( rc == 0 && idx < 0 )
             {
-                rc = VNamelistAppendString ( lst, path );
+                rc = VNamelistAppend ( lst, path );
                 if ( rc == 0 )
                 {
                     const String * new_value;
                     rc = VNamelistJoin( lst, ':', &new_value );
                     if ( rc == 0 )
                     {
-                        rc = KConfigWriteSString( self -> cfg, frozen_list_key, new_value );
+                        rc = KConfigWriteSString( cfg, frozen_list_key, new_value );
                         StringWhack( new_value );
                     }
                 }
@@ -3289,33 +3289,6 @@ static rc_t add_to_frozen_list( const VFSManager * self, const String * path )
     write $(repository/user/default-path)/public as value into it ( just in case )
 */
 static const char * indirect_root = "$(repository/user/default-path)/public";
-static rc_t update_repo_root( const VFSManager * self, const char * repo_path )
-{
-    size_t num_writ;
-    char root_key[ 4096 ];
-    rc_t rc = string_printf ( root_key, sizeof root_key, &num_writ, "%s/root", repo_path );
-    if ( rc == 0 )
-    {
-        struct String * root_value;
-        rc_t rc1 = KConfigReadString ( self -> cfg, root_key, &root_value );
-        if ( rc1 == 0 )
-        {
-            rc = add_to_frozen_list( self, root_value );
-            if ( rc == 0 )
-            {
-                String S;
-                StringInitCString( &S, indirect_root );
-                rc = KConfigWriteSString( self -> cfg, root_key, &S );
-            }
-            StringWhack( root_value );
-        }
-    }
-    return rc;
-}
-
-static const char * usr_main_pub_repo = "/repository/user/main/public";
-static const char * usr_aux_pub_repo = "/repository/user/aux/public";
-
 LIB_EXPORT rc_t CC VFSManagerSetCacheRoot ( const VFSManager * self,
     struct VPath const * path )
 {
@@ -3328,10 +3301,40 @@ LIB_EXPORT rc_t CC VFSManagerSetCacheRoot ( const VFSManager * self,
         rc = RC ( rcVFS, rcMgr, rcSelecting, rcItem, rcNull );
     else
     {
-        rc = update_repo_root( self, usr_main_pub_repo );
+        /* loop through the user-repositories to set the root property to the indirect path */
+        KRepositoryMgr * repo_mgr;
+        rc = KConfigMakeRepositoryMgrUpdate ( self -> cfg, &repo_mgr );
         if ( rc == 0 )
-            rc = update_repo_root( self, usr_aux_pub_repo );
-            
+        {
+            KRepositoryVector user_repos;
+            rc = KRepositoryMgrUserRepositories ( repo_mgr, &user_repos );
+            if ( rc == 0 )
+            {
+                uint32_t start = VectorStart( &user_repos );
+                uint32_t count = VectorLength( &user_repos );
+                uint32_t idx;
+                for ( idx = 0; rc == 0 && idx < count; ++idx )
+                {
+                    KRepository * repo = VectorGet ( &user_repos, idx + start );
+                    if ( repo != NULL )
+                    {
+                        size_t root_size;
+                        char root[ 4096 ];
+                        rc = KRepositoryRoot ( repo, root, sizeof root, &root_size );
+                        if ( rc == 0 )
+                        {
+                            rc = add_to_frozen_list( self -> cfg, root );
+                            if ( rc == 0 )
+                                rc = KRepositorySetRoot( repo, indirect_root, string_size( indirect_root ) );
+                        }
+                    }
+                }
+                KRepositoryVectorWhack ( &user_repos );
+            }
+            KRepositoryMgrRelease ( repo_mgr );
+        }
+
+        /* write the new indirect path */
         if ( rc == 0 )
         {
             String const * spath = NULL;

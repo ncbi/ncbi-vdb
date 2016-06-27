@@ -66,6 +66,11 @@ class VdbFixture
 };
 
 
+/*
+    test VDBManagerGetCacheRoot() with invalid and valid parameters
+    print the currently stored value
+    store this value in the global: original_value
+*/
 FIXTURE_TEST_CASE( GetCacheRoot_1, VdbFixture )
 {
     VPath const * vpath = NULL;
@@ -97,6 +102,10 @@ FIXTURE_TEST_CASE( GetCacheRoot_1, VdbFixture )
 }
 
 
+/*
+    test VDBManagerSetCacheRoot() with invalid and valid parameters
+    set the value to "/home/raetzw/somepath"
+*/
 FIXTURE_TEST_CASE( SetCacheRoot_1, VdbFixture )
 {
     rc = VDBManagerSetCacheRoot( vdb_mgr, NULL );
@@ -121,6 +130,10 @@ FIXTURE_TEST_CASE( SetCacheRoot_1, VdbFixture )
 }
 
 
+/*
+    call VDBManagerGetCacheRoot() to verify that the new value
+    is indeed the value we did set in the test-case above
+*/
 FIXTURE_TEST_CASE( GetCacheRoot_2, VdbFixture )
 {
     VPath const * vpath = NULL;
@@ -135,8 +148,16 @@ FIXTURE_TEST_CASE( GetCacheRoot_2, VdbFixture )
     if ( rc != 0 )
         FAIL( "FAIL: VPathMakeString( vpath, &spatch ) failed" );
     
-    std::string s = std::string( spath->addr, spath->size );
-    std::cout << "after setting different value: " << s << std::endl;
+    std::string s1 = std::string( spath->addr, spath->size );
+    std::string s2 = std::string( "/home/raetzw/somepath" );
+    std::cout << "after setting different value: " << s1;
+    if ( s1 == s2 )
+        std::cout << " - as expected" << std::endl;
+    else
+    {
+        std::cout << " - we did not expected this!" << std::endl;
+        FAIL( "FAIL: unexpected value after setting a new cache-root" );
+    }
     
     if ( spath != NULL )
         StringWhack( spath );
@@ -146,6 +167,9 @@ FIXTURE_TEST_CASE( GetCacheRoot_2, VdbFixture )
 }
 
 
+/*
+    put the value stored in the global 'original_value' back in place
+*/
 FIXTURE_TEST_CASE( SetCacheRoot_2, VdbFixture )
 {
     VPath * vpath;
@@ -162,6 +186,9 @@ FIXTURE_TEST_CASE( SetCacheRoot_2, VdbFixture )
 }
 
 
+/*
+    check if the original value is back in place
+*/
 FIXTURE_TEST_CASE( GetCacheRoot_3, VdbFixture )
 {
     VPath const * vpath = NULL;
@@ -177,8 +204,8 @@ FIXTURE_TEST_CASE( GetCacheRoot_3, VdbFixture )
         FAIL( "FAIL: VPathMakeString( vpath, &spatch ) failed" );
     
     std::string s = std::string( spath->addr, spath->size );
-    std::cout << "reverted to original value of: " << s << std::endl;
-    
+    std::cout << "reverted to original value of: " << s;
+
     if ( s != original_value )
         FAIL( "FAIL: did not restore original value" );
         
