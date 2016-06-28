@@ -3243,46 +3243,6 @@ LIB_EXPORT rc_t CC VFSManagerGetCacheRoot ( const VFSManager * self,
 }
 
 
-static const char * frozen_list_key = "/repository/user/frozen";
-static rc_t add_to_frozen_list( KConfig *cfg, const char * path )
-{
-    struct String * slist;
-    rc_t rc = KConfigReadString ( cfg, frozen_list_key, &slist );
-    if ( rc != 0 )
-    {
-        if ( GetRCState( rc ) == rcNotFound && GetRCObject( rc ) == ( enum RCObject ) rcPath )
-            rc = KConfigWriteString( cfg, frozen_list_key, path );
-    }
-    else
-    {
-        VNamelist * lst;
-        rc = VNamelistFromString ( &lst, slist, ':' );
-        if ( rc == 0 )
-        {
-            int32_t idx;
-            rc = VNamelistContainsStr ( lst, path, &idx );
-            if ( rc == 0 && idx < 0 )
-            {
-                rc = VNamelistAppend ( lst, path );
-                if ( rc == 0 )
-                {
-                    const String * new_value;
-                    rc = VNamelistJoin( lst, ':', &new_value );
-                    if ( rc == 0 )
-                    {
-                        rc = KConfigWriteSString( cfg, frozen_list_key, new_value );
-                        StringWhack( new_value );
-                    }
-                }
-            }
-            VNamelistRelease ( lst );
-        }
-        StringWhack( slist );
-    }
-    return rc;
-}
-
-
 /*
     repo-path for instance '/repository/user/main/public'
     read $(repo-path)/root, put it into frozen-list ( if is not already there )
@@ -3318,15 +3278,10 @@ LIB_EXPORT rc_t CC VFSManagerSetCacheRoot ( const VFSManager * self,
                     KRepository * repo = VectorGet ( &user_repos, idx + start );
                     if ( repo != NULL )
                     {
-                        size_t root_size;
-                        char root[ 4096 ];
-                        rc = KRepositoryRoot ( repo, root, sizeof root, &root_size );
+                        /* ask the repository to add it's current root to the root-history */
+                        rc = KRepositoryAppendToRootHistory( repo, NULL );
                         if ( rc == 0 )
-                        {
-                            rc = add_to_frozen_list( self -> cfg, root );
-                            if ( rc == 0 )
-                                rc = KRepositorySetRoot( repo, indirect_root, string_size( indirect_root ) );
-                        }
+                            rc = KRepositorySetRoot( repo, indirect_root, string_size( indirect_root ) );
                     }
                 }
                 KRepositoryVectorWhack ( &user_repos );
