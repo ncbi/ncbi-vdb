@@ -92,7 +92,7 @@ static const char * align_col_specs [] =
     "(ascii)RNA_ORIENTATION",
     "(I64)MATE_ALIGN_ID",
     "(ascii)MATE_REF_SEQ_ID",
-    "(ascii)MATE_REF_NAME", // to be used if MATE_REF_SEQ_ID is absent
+    "(ascii)MATE_REF_NAME", /* to be used if MATE_REF_SEQ_ID is absent */
     "(bool)MATE_REF_ORIENTATION",
     "(bool)HAS_REF_OFFSET",
     "(I32)REF_OFFSET"
