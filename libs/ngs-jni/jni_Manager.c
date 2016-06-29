@@ -46,7 +46,7 @@
 
 #include "NGS_ReadCollection.h"
 #include "NGS_ReferenceSequence.h"
-#include "../kns/libkns.vers.h"
+#include "../klib/release-vers.h"
 
 #include <assert.h>
 
@@ -92,7 +92,7 @@ void set_app_version_string ( const char * app_version )
     if ( rc == 0 )
     {
         have_user_version_string = true;
-        KNSManagerSetUserAgent ( kns, "ncbi-ngs.%V %s", LIBKNS_VERS, app_version );
+        KNSManagerSetUserAgent ( kns, "ncbi-ngs.%V %s", RELEASE_VERS, app_version );
         KNSManagerRelease ( kns );
     }
 }

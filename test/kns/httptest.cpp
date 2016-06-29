@@ -28,6 +28,8 @@
 * Unit tests for HTTP interfaces
 */
 
+#include <kapp/args.h> // Args
+
 #include <ktst/unit_test.hpp>
 
 #include <klib/log.h>
@@ -53,7 +55,8 @@
 #include <list>
 #include <sstream>
 
-TEST_SUITE(HttpTestSuite);
+static rc_t argsHandler ( int argc, char * argv [] );
+TEST_SUITE_WITH_ARGS_HANDLER ( HttpTestSuite, argsHandler );
 
 using namespace std;
 using namespace ncbi::NK;
@@ -61,6 +64,11 @@ using namespace ncbi::NK;
 class TestStream;
 #define KSTREAM_IMPL TestStream
 #include <kns/impl.h>
+
+#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
+    if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
+
+#define ALL
 
 class TestStream
 {
@@ -234,6 +242,7 @@ public:
 
 KStream HttpFixture::m_stream;
 
+#ifdef ALL
 //////////////////////////
 // Regular HTTP 
 FIXTURE_TEST_CASE(Http_Make, HttpFixture)
@@ -769,7 +778,61 @@ FIXTURE_TEST_CASE(HttpReliableRequest_POST_5xx_retry, HttpFixture)
     REQUIRE_RC ( KClientHttpRequestRelease ( req ) );
 }
 
+#endif
+
+/* VDB-3059: KHttpRequestPOST generates incorrect Content-Length after retry :
+ it makes web server to return 400 Bad Request */
+TEST_CASE(ContentLength) {
+    rc_t rc = 0;
+    KNSManager * kns = NULL;
+    REQUIRE_RC ( KNSManagerMake ( & kns ) );
+
+    uint32_t code = 0;
+    KHttpRequest * req = NULL;
+    KHttpResult * rslt = NULL;
+    KStream * response = NULL;
+
+    /* calling good cgi returns 200 and resolved path */
+    REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
+        NULL, "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" ) ); 
+    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
+    REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
+    REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, NULL, 0, NULL ) );
+    REQUIRE_EQ ( code, 200u );
+    REQUIRE_RC ( KHttpResultGetInputStream ( rslt, & response ) );
+    char buffer [ 512 ] = "";
+    size_t num_read = 0;
+    REQUIRE_RC (KStreamRead( response, buffer, sizeof buffer - 1,  &num_read ));
+    REQUIRE_LT ( num_read, sizeof buffer );
+    buffer [ num_read ] = '\0';
+    REQUIRE_EQ ( string ( buffer + num_read - 7 ), string ( "200|ok\n" ) );
+    RELEASE ( KStream, response );
+    RELEASE ( KHttpResult, rslt );
+    RELEASE ( KHttpRequest, req );
+
+    /* calling non-existing cgi returns 404 */
+    REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
+        NULL, "http://www.ncbi.nlm.nih.gov/Traces/names/bad.cgi" ) ); 
+    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
+    REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
+    REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, NULL, 0, NULL ) );
+    REQUIRE_EQ ( code, 404u );
+    RELEASE ( KHttpResult, rslt );
+    RELEASE ( KHttpRequest, req );
+
+    RELEASE ( KNSManager, kns );
+    REQUIRE_RC ( rc );
+}
+
 //////////////////////////////////////////// Main
+
+static rc_t argsHandler ( int argc, char * argv [] ) {
+    Args * args = NULL;
+    rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0, NULL, 0 );
+    ArgsWhack ( args );
+    return rc;
+}
+
 extern "C"
 {
 

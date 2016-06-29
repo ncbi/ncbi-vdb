@@ -1434,6 +1434,13 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
 
                         KStreamRelease ( response );
                     }
+                } else if ( code == 404 ) { /* HTTP/1.1 400 Bad Request -
+                                       resolver CGI was not found */
+                    rc = RC ( rcVFS, rcResolver, rcResolving, rcConnection,
+                        rcNotFound );
+                } else { /* Something completely unexpected */
+                    rc = RC ( rcVFS, rcResolver, rcResolving, rcConnection,
+                        rcUnexpected );
                 }
                 KHttpResultRelease ( rslt );
             }

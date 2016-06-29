@@ -27,7 +27,7 @@
 #define TRACK_REFERENCES 0
 
 #include <kdb/extern.h>
-#include "libwkdb.vers.h"
+#include "libkdb.vers.h"
 #include "dbmgr-priv.h"
 #include "wkdb-priv.h"
 #include <kfs/impl.h>
