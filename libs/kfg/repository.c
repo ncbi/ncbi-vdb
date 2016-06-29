@@ -511,7 +511,10 @@ LIB_EXPORT rc_t CC KRepositoryAppendToRootHistory( KRepository *self, const char
             {
                 rc = KRepositoryRoot( self, root, curr_root_size, NULL );
                 if ( rc == 0 )
+                {
+                    root[ curr_root_size ] = 0;
                     rc = append_to_root_history( self, root );
+                }
                 free( root );
             }
         }

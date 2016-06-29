@@ -30,6 +30,9 @@
 #include <vfs/manager.h>
 #include <klib/text.h> 
 #include <klib/out.h> 
+#include <klib/printf.h> 
+#include <kfs/directory.h> 
+#include <kfg/config.h> 
 
 #include <sysalloc.h>
 #include <cstdlib>
@@ -101,6 +104,7 @@ FIXTURE_TEST_CASE( GetCacheRoot_1, VdbFixture )
         VPathRelease( vpath );
 }
 
+const char other_path[] = "/some/other/path";
 
 /*
     test VDBManagerSetCacheRoot() with invalid and valid parameters
@@ -113,7 +117,7 @@ FIXTURE_TEST_CASE( SetCacheRoot_1, VdbFixture )
         FAIL( "FAIL: VDBManagerSetCacheRoot( mgr, NULL ) succeed" );
 
     VPath * vpath;
-    rc = VFSManagerMakePath ( vfs_mgr, &vpath, "/home/raetzw/somepath" );
+    rc = VFSManagerMakePath ( vfs_mgr, &vpath, other_path );
     if ( rc != 0 )
         FAIL( "FAIL: VFSManagerMakePath() failed" );
         
@@ -149,7 +153,7 @@ FIXTURE_TEST_CASE( GetCacheRoot_2, VdbFixture )
         FAIL( "FAIL: VPathMakeString( vpath, &spatch ) failed" );
     
     std::string s1 = std::string( spath->addr, spath->size );
-    std::string s2 = std::string( "/home/raetzw/somepath" );
+    std::string s2 = std::string( other_path );
     std::cout << "after setting different value: " << s1;
     if ( s1 == s2 )
         std::cout << " - as expected" << std::endl;
@@ -216,6 +220,83 @@ FIXTURE_TEST_CASE( GetCacheRoot_3, VdbFixture )
         VPathRelease( vpath );
 }
 
+char * org_home;
+const char HomeSub[] = "test_root_history";
+char new_home[ 1024 ];
+char new_home_buffer[ 1024 ]; /* buffer for putenv has to stay alive! */
+
+
+rc_t write_root( KConfig *cfg, const char * base, const char * cat, const char * sub_cat )
+{
+    char key[ 256 ];
+    size_t num_writ;
+    rc_t rc = string_printf ( key, sizeof key, &num_writ, "/repository/user/%s/%s/root", cat, sub_cat );
+    if ( rc == 0 )
+    {
+        char value[ 256 ];
+        rc = string_printf ( value, sizeof value, &num_writ, "%s/ncbi/%s", base, sub_cat );
+        if ( rc == 0 )
+            rc = KConfigWriteString( cfg, key, value );
+    }
+    return rc;
+}
+
+
+rc_t write_dflt_path( KConfig *cfg, const char * base )
+{
+    char value[ 256 ];
+    size_t num_writ;
+    rc_t rc = string_printf ( value, sizeof value, &num_writ, "%s/ncbi", base );
+    if ( rc == 0 )
+        rc = KConfigWriteString( cfg, "/repository/user/default-path", value );
+    return rc;
+}
+
+rc_t create_test_config( const char * base )
+{
+    KConfig *cfg;
+    rc_t rc = KConfigMake ( &cfg, NULL );
+    if ( rc == 0 )
+    {
+        rc = write_root( cfg, base, "main", "public" );
+        if ( rc == 0 )
+            rc = write_root( cfg, base, "protected", "dbGaP-2956" );
+        if ( rc == 0 )
+            rc = write_root( cfg, base, "protected", "dbGaP-4831" );
+        if ( rc == 0 )
+            rc = write_dflt_path( cfg, base );
+        if ( rc == 0 )
+            rc = KConfigCommit ( cfg );
+        KConfigRelease ( cfg );
+    }
+    return rc;
+}
+
+rc_t prepare_test( const char * sub )
+{
+    org_home = getenv( "HOME" );
+    size_t num_writ;
+    rc_t rc = string_printf ( new_home, sizeof new_home, &num_writ, "%s/%s", org_home, sub );
+    if ( rc == 0 )
+        rc = string_printf ( new_home_buffer, sizeof new_home_buffer, &num_writ, "HOME=%s", new_home );
+    if ( rc == 0 )
+        rc = putenv( new_home_buffer );
+    if ( rc == 0 )
+        rc = create_test_config( org_home );
+    return rc;
+}
+
+void finish_test()
+{
+    /* clear the temp. home-directory */
+    KDirectory * dir;
+    rc_t rc = KDirectoryNativeDir( &dir );
+    if ( rc == 0 )
+    {
+        rc = KDirectoryRemove( dir, true, "%s/%s", org_home, HomeSub );
+        KDirectoryRelease( dir );
+    }
+}
 
 //////////////////////////////////////////// Main
 extern "C"
@@ -230,7 +311,10 @@ const char UsageDefaultName[] = "test-VDB-3060";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
-    rc_t rc = VDB_3060( argc, argv );
+    rc_t rc = prepare_test( HomeSub );
+    if ( rc == 0 )
+        rc = VDB_3060( argc, argv );
+    finish_test();
     return rc;
 }
 

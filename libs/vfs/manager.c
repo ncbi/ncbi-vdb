@@ -3248,7 +3248,8 @@ LIB_EXPORT rc_t CC VFSManagerGetCacheRoot ( const VFSManager * self,
     read $(repo-path)/root, put it into frozen-list ( if is not already there )
     write $(repository/user/default-path)/public as value into it ( just in case )
 */
-static const char * indirect_root = "$(repository/user/default-path)/public";
+static const char * indirect_root = "$(repository/user/default-path)/%s";
+
 LIB_EXPORT rc_t CC VFSManagerSetCacheRoot ( const VFSManager * self,
     struct VPath const * path )
 {
@@ -3281,7 +3282,20 @@ LIB_EXPORT rc_t CC VFSManagerSetCacheRoot ( const VFSManager * self,
                         /* ask the repository to add it's current root to the root-history */
                         rc = KRepositoryAppendToRootHistory( repo, NULL );
                         if ( rc == 0 )
-                            rc = KRepositorySetRoot( repo, indirect_root, string_size( indirect_root ) );
+                        {
+                            char repo_name[ 512 ];
+                            size_t repo_name_len;
+                            rc = KRepositoryName( repo, repo_name, sizeof repo_name, &repo_name_len );
+                            if ( rc == 0 )
+                            {
+                                char new_root[ 1024 ];
+                                size_t num_writ;
+                                repo_name[ repo_name_len ] = 0;
+                                rc = string_printf( new_root, sizeof new_root, &num_writ, indirect_root, repo_name );
+                                if ( rc == 0 )
+                                    rc = KRepositorySetRoot( repo, new_root, string_size( new_root ) );
+                            }
+                        }
                     }
                 }
                 KRepositoryVectorWhack ( &user_repos );
