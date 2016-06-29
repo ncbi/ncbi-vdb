@@ -180,7 +180,7 @@ rc_t KColumnIdxFindFirstRowId ( const KColumnIdx * self,
     {
         return rc0;
     }
-    if ( start < bloc . start_id + bloc . id_range )
+    if ( start >= bloc . start_id )
     {   /* found inside a blob */
         best1 = start;
     }
