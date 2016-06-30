@@ -448,8 +448,8 @@ FIXTURE_TEST_CASE ( VCursorCommit_without_VCursorCloseRow, WVDB_Fixture )
         REQUIRE_RC ( VCursorOpenRow ( cursor ) );
         REQUIRE_RC ( VCursorWrite ( cursor, column_idx1, 8, "blah", 0, 4 ) );
         REQUIRE_RC ( VCursorCommitRow ( cursor ) );
-        //REQUIRE_RC ( VCursorCloseRow ( cursor ) ); skip this and see the call to VCursorCommit() assert:
-        REQUIRE_RC ( VCursorCommit ( cursor ) );
+        //REQUIRE_RC ( VCursorCloseRow ( cursor ) ); //VDB-3077: skip this and see the call to VCursorCommit() assert:
+        REQUIRE_RC_FAIL ( VCursorCommit ( cursor ) );
 
         REQUIRE_RC ( VCursorRelease ( cursor ) );
         REQUIRE_RC ( VTableRelease ( table ) );
