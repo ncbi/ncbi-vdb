@@ -2878,11 +2878,15 @@ void add_predefined_nodes ( KConfig * self, const char * appname )
 
     DEFINE_ENV("HOST");
     DEFINE_ENV("USER");
-    value = getenv("HOME");
-    if (value == NULL) 
-    {   /* apparently on Windows, use USERPROFILE */
-        value = getenv("USERPROFILE");
+
+    value = NULL;
+#if WINDOWS
+    value = getenv ( "USERPROFILE" );
+#endif
+    if ( value == NULL ) {
+        value = getenv ( "HOME" );
     }
+
     if (value == NULL)
     {
         update_node(self, "HOME", "", true );
