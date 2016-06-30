@@ -1520,7 +1520,7 @@ static rc_t findSeq(ReferenceMgr *const self,
         bool tryAgain = false;
         rc_t const rc = tryFastaOrRefSeq(self, rslt, idLen, id, &tryAgain);
 
-        if (rc != 0 || !tryAgain)
+        if (rc != 0 && !tryAgain)
             return rc;
 
         return findSeq(self, rslt, id, seq_len, md5, allowMultiMapping, wasRenamed);
@@ -1599,9 +1599,10 @@ rc_t ReferenceMgr_OpenSeq(ReferenceMgr *const self,
             *wasRenamed = true;
             return ReferenceMgr_OpenSeq(self, rslt, obj->id, seq_len, md5, allowMultiMapping, &dummy);
         }
-        if (obj->type == rst_refSeqBySeqId) {
-            RefSeq const *dummy;
-            rc_t const rc = RefSeqMgr_GetSeq(self->rmgr, &dummy, obj->seqId, (unsigned)string_size(obj->seqId));
+        if (obj->type == rst_refSeqBySeqId || obj->type == rst_refSeqById) {
+            RefSeq const *dummy = NULL;
+            char const *const key = (obj->type == rst_refSeqById) ? obj->id : obj->seqId;
+            rc_t const rc = RefSeqMgr_GetSeq(self->rmgr, &dummy, key, (unsigned)string_size(key));
             
             assert(rc == 0);
             assert(dummy == obj->u.refseq);
