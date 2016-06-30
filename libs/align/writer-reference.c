@@ -1147,22 +1147,6 @@ LIB_EXPORT void ReferenceMgr_DumpConfig(ReferenceMgr const *const self)
 #endif
 
 static
-rc_t ReferenceMgr_TryFasta(ReferenceMgr *const self, ReferenceSeq *const seq,
-                           char const id[], unsigned const idLen)
-{
-    KFile const *kf = NULL;
-    rc_t rc;
-    
-    rc = OpenFastaFile(&kf, self->dir, id, idLen);
-    
-    if (rc == 0) {
-        rc = ImportFastaFile(self, kf, seq);
-        KFileRelease(kf);
-    }
-    return rc;
-}
-
-static
 rc_t ReferenceSeq_GetRefSeqInfo(ReferenceSeq *const self)
 {
     rc_t rc;
@@ -1243,45 +1227,6 @@ rc_t ReferenceSeq_Attach(ReferenceMgr *const self, ReferenceSeq *const rs)
         return rc;
     }
     return 0;
-}
-
-static int ReferenceMgr_FindBestFasta(ReferenceMgr const *const self,
-                                      char const name[],
-                                      unsigned const seq_len,
-                                      uint8_t const md5[16],
-                                      unsigned const exclude)
-{
-    int best = -1;
-
-    if (name != NULL) {
-        unsigned const n = (unsigned)self->refSeqs.elem_count;
-        unsigned const len = (unsigned)string_size(name);
-        unsigned best_wt = 0;
-        unsigned i;
-        
-        for (i = 0; i != n; ++i) {
-            ReferenceSeq const *const rs = &self->refSeq[i];
-
-            if (i == exclude)
-                continue;
-            
-            if (rs->fastaSeqId) {
-                unsigned wt = str_weight(rs->fastaSeqId, name, len);
-                
-                if (wt != no_match) {
-                    if (seq_len && rs->seq_len == seq_len)
-                        wt |= seq_len_match;
-                    if (md5 && memcmp(rs->md5, md5, 16) == 0)
-                        wt |= md5_match;
-                }
-                if (best_wt < wt) {
-                    best_wt = wt;
-                    best = (int)i;
-                }
-            }
-        }
-    }
-    return best;
 }
 
 struct Candidate {
