@@ -358,6 +358,9 @@ LIB_EXPORT rc_t CC KRepositorySetRoot(KRepository *self,
     return rc;
 }
 
+
+const char root_history_key[] = "root/history";
+
 /* RootHistory
  *  read the root-history as a semicolon separated list of POSIX paths
  *
@@ -382,7 +385,7 @@ LIB_EXPORT rc_t CC KRepositoryRootHistory ( const KRepository *self,
         if ( roothistory_size != NULL )
             * roothistory_size = 0;
 
-        rc = KConfigNodeOpenNodeRead ( self -> node, & node, "roothistory" );
+        rc = KConfigNodeOpenNodeRead ( self -> node, & node, root_history_key );
         if ( rc == 0 )
         {
             size_t num_read, remaining;
@@ -425,7 +428,7 @@ LIB_EXPORT rc_t CC KRepositorySetRootHistory( KRepository *self,
         KConfigNode *self_node = ( KConfigNode* )self->node;
         KConfigNode *node = NULL;
 
-        rc = KConfigNodeOpenNodeUpdate( self_node, &node, "roothistory" );
+        rc = KConfigNodeOpenNodeUpdate( self_node, &node, root_history_key );
         if ( rc == 0 )
         {
             rc = KConfigNodeWrite( node, roothistory, roothistory_size );

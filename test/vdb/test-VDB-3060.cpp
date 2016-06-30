@@ -293,7 +293,7 @@ void finish_test()
     rc_t rc = KDirectoryNativeDir( &dir );
     if ( rc == 0 )
     {
-        rc = KDirectoryRemove( dir, true, "%s/%s", org_home, HomeSub );
+        //rc = KDirectoryRemove( dir, true, "%s/%s", org_home, HomeSub );
         KDirectoryRelease( dir );
     }
 }
