@@ -35,6 +35,10 @@
 #include <klib/defs.h>
 #endif
 
+#ifndef _h_os_native_
+#include <os-native.h> /* struct timeout_t */
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
