@@ -101,46 +101,58 @@ NGS_FragmentBlobMake ( ctx_t ctx, const NGS_String* run, const struct NGS_Cursor
             {
                 TRY ( ret -> run = NGS_StringDuplicate ( run, ctx ) )
                 {
-                    TRY ( const struct VCursor* vcurs = NGS_CursorGetVCursor ( curs ) )
+                    const struct VCursor* vcurs = NGS_CursorGetVCursor ( curs );
+                    rc_t rc = VCursorSetRowId ( vcurs, rowId );
+                    if ( rc != 0 )
                     {
-                        rc_t rc = VCursorSetRowId ( vcurs, rowId );
-                        if ( rc == 0 )
+                        INTERNAL_ERROR ( xcUnexpected, "VCursorSetRowId() rc = %R", rc );
+                    }
+                    else
+                    {
+                        rc = VCursorOpenRow ( vcurs );
+                        if ( rc != 0 )
                         {
-                            rc = VCursorOpenRow ( vcurs );
-                            if ( rc == 0 )
-                            {
-                                rc = VCursorGetBlob ( vcurs, & ret -> blob_READ, NGS_CursorGetColumnIndex ( curs, ctx, seq_READ ) );
-                                if ( rc == 0  )
-                                {
-                                    rc = VCursorGetBlob ( vcurs, & ret -> blob_READ_LEN, NGS_CursorGetColumnIndex ( curs, ctx, seq_READ_LEN ) );
-                                    if ( rc == 0  )
-                                    {
-                                        rc = VCursorGetBlob ( vcurs, & ret -> blob_READ_TYPE, NGS_CursorGetColumnIndex ( curs, ctx, seq_READ_TYPE ) );
-                                        if ( rc == 0  )
-                                        {
-                                            rc = VCursorCloseRow ( vcurs );
-                                            if ( rc == 0 )
-                                            {
-                                                ret -> curs = NGS_CursorDuplicate ( curs, ctx );
-                                                return ret;
-                                            }
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    VCursorCloseRow ( vcurs );
-                                }
-                                INTERNAL_ERROR ( xcUnexpected, "VCursorGetBlob() rc = %R", rc );
-                            }
-                            else
-                            {
-                                INTERNAL_ERROR ( xcUnexpected, "VCursorOpenRow() rc = %R", rc );
-                            }
+                            INTERNAL_ERROR ( xcUnexpected, "VCursorOpenRow() rc = %R", rc );
                         }
                         else
                         {
-                            INTERNAL_ERROR ( xcUnexpected, "VCursorSetRowId() rc = %R", rc );
+                            rc = VCursorGetBlob ( vcurs, & ret -> blob_READ, NGS_CursorGetColumnIndex ( curs, ctx, seq_READ ) );
+                            if ( rc != 0  )
+                            {
+                                VCursorCloseRow ( vcurs );
+                                INTERNAL_ERROR ( xcUnexpected, "VCursorGetBlob(READ) rc = %R", rc );
+                            }
+                            else
+                            {
+                                rc = VCursorGetBlob ( vcurs, & ret -> blob_READ_LEN, NGS_CursorGetColumnIndex ( curs, ctx, seq_READ_LEN ) );
+                                if ( rc != 0  )
+                                {
+                                    VCursorCloseRow ( vcurs );
+                                    INTERNAL_ERROR ( xcUnexpected, "VCursorGetBlob(READ_LEN) rc = %R", rc );
+                                }
+                                else
+                                {
+                                    rc = VCursorGetBlob ( vcurs, & ret -> blob_READ_TYPE, NGS_CursorGetColumnIndex ( curs, ctx, seq_READ_TYPE ) );
+                                    if ( rc != 0  )
+                                    {
+                                        VCursorCloseRow ( vcurs );
+                                        INTERNAL_ERROR ( xcUnexpected, "VCursorGetBlob(READ_TYPE) rc = %R", rc );
+                                    }
+                                    else
+                                    {
+                                        rc = VCursorCloseRow ( vcurs );
+                                        if ( rc != 0 )
+                                        {
+                                            INTERNAL_ERROR ( xcUnexpected, "VCursorCloseRow() rc = %R", rc );
+                                        }
+                                        else
+                                        {
+                                            ret -> curs = NGS_CursorDuplicate ( curs, ctx );
+                                            return ret;
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -240,7 +252,11 @@ GetFragInfo ( const NGS_FragmentBlob * self, ctx_t ctx, int64_t p_rowId, uint64_
                               & base,
                               & boff,
                               & row_len );
-    if ( rc == 0 )
+    if ( rc != 0 )
+    {
+        INTERNAL_ERROR ( xcUnexpected, "VBlobCellData() rc = %R", rc );
+    }
+    else
     {
         uint32_t i = 0 ;
         uint64_t offset = 0;
@@ -292,7 +308,11 @@ GetFragInfo ( const NGS_FragmentBlob * self, ctx_t ctx, int64_t p_rowId, uint64_
                                      & frag_type_base,
                                      & frag_type_boff,
                                      & frag_type_row_len );
-                if ( rc == 0 )
+                if ( rc != 0 )
+                {
+                    INTERNAL_ERROR ( xcUnexpected, "VBlobCellData() rc = %R", rc );
+                }
+                else
                 {
                     const uint8_t* frag_types = (const uint8_t*)frag_type_base;
                     bool isBiological;
@@ -323,20 +343,12 @@ GetFragInfo ( const NGS_FragmentBlob * self, ctx_t ctx, int64_t p_rowId, uint64_
                         ++ bioFragNum;
                     }
                 }
-                else
-                {
-                    INTERNAL_ERROR ( xcUnexpected, "VBlobCellData() rc = %R", rc );
-                }
             }
             offset += frag_length;
             ++i;
         }
         /* out of fragments */
         INTERNAL_ERROR ( xcUnexpected, "fragment not found in blob" );
-    }
-    else
-    {
-        INTERNAL_ERROR ( xcUnexpected, "VBlobCellData() rc = %R", rc );
     }
 }
 
@@ -354,11 +366,19 @@ NGS_FragmentBlobInfoByOffset ( const struct NGS_FragmentBlob * self, ctx_t ctx, 
         int64_t first;
         uint64_t count;
         rc_t rc = VBlobIdRange ( self -> blob_READ, &first, &count );
-        if ( rc == 0  )
+        if ( rc != 0  )
+        {
+            INTERNAL_ERROR ( xcUnexpected, "VBlobIdRange() rc = %R", rc );
+        }
+        else
         {
             PageMapIterator pmIt;
             rc = PageMapNewIterator ( (const PageMap*)self->blob_READ->pm, &pmIt, 0, count );
-            if ( rc == 0 )
+            if ( rc != 0 )
+            {
+                INTERNAL_ERROR ( xcUnexpected, "PageMapNewIterator() rc = %R", rc );
+            }
+            else
             {
                 row_count_t rowInBlob = 0;
                 do
@@ -384,14 +404,6 @@ NGS_FragmentBlobInfoByOffset ( const struct NGS_FragmentBlob * self, ctx_t ctx, 
                 }
                 while ( PageMapIteratorNext ( &pmIt ) );
             }
-            else
-            {
-                INTERNAL_ERROR ( xcUnexpected, "PageMapNewIterator() rc = %R", rc );
-            }
-        }
-        else
-        {
-            INTERNAL_ERROR ( xcUnexpected, "VBlobIdRange() rc = %R", rc );
         }
     }
 }
