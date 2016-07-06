@@ -308,7 +308,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_InfoByOffset_WithRepeat, FragmentBlobFi
     m_curs = NGS_CursorMake ( m_ctx, m_tbl, sequence_col_specs, seq_NUM_COLS );
     REQUIRE_NOT_NULL ( m_curs );
 
-    // The blob-making code in vdb is very smart and decides on the size of the blob
+    // The blob-making code in vdb is very-very smart and decides on the size of the blob
     // to create based on the access patterns.
     // If we specify our rowId directly, we will get a one-row blob. We want
     // more than one row so that repeat count is > 1. So, we walk from 1 up to our RepeatedRowId

@@ -409,7 +409,7 @@ NGS_FragmentBlobInfoByOffset ( const struct NGS_FragmentBlob * self, ctx_t ctx, 
                         }
                         break;
                     }
-                    rowInBlob += repeat;
+                    ++rowInBlob;
                 }
                 while ( PageMapIteratorNext ( &pmIt ) );
             }
