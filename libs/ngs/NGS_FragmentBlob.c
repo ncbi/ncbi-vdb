@@ -320,6 +320,7 @@ GetFragInfo ( const NGS_FragmentBlob * self, ctx_t ctx, int64_t p_rowId, uint64_
                     assert ( frag_type_base != NULL );
                     assert ( frag_type_elem_bits == 8 );
                     assert ( frag_type_boff == 0 );
+
                     isBiological = frag_types [ i ] & READ_TYPE_BIOLOGICAL;
                     if ( p_offsetInRow < offset + frag_length )
                     {
@@ -348,7 +349,7 @@ GetFragInfo ( const NGS_FragmentBlob * self, ctx_t ctx, int64_t p_rowId, uint64_
             ++i;
         }
         /* out of fragments */
-        INTERNAL_ERROR ( xcUnexpected, "fragment not found in blob" );
+        INTERNAL_ERROR ( xcUnexpected, "fragment not found in blob: rowId=%li offset=%lu", p_rowId, p_offsetInRow );
     }
 }
 
@@ -356,7 +357,6 @@ void
 NGS_FragmentBlobInfoByOffset ( const struct NGS_FragmentBlob * self, ctx_t ctx,  uint64_t offsetInBases, int64_t* rowId, uint64_t* fragStart, uint64_t* baseCount, int32_t* bioNumber )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcAccessing );
-
     if ( self == NULL )
     {
         INTERNAL_ERROR ( xcParamNull, "bad object reference" );
@@ -389,6 +389,15 @@ NGS_FragmentBlobInfoByOffset ( const struct NGS_FragmentBlob * self, ctx_t ctx, 
 
                     if ( offsetInBases < offset + length * repeat )
                     {
+                        while ( repeat > 1 )
+                        {
+                            if ( offsetInBases < offset + length )
+                            {
+                                break;
+                            }
+                            offset += length;
+                            ++rowInBlob;
+                        }
                         if ( rowId != NULL )
                         {
                             * rowId = first + rowInBlob + ( offsetInBases - offset ) / length;
@@ -400,7 +409,7 @@ NGS_FragmentBlobInfoByOffset ( const struct NGS_FragmentBlob * self, ctx_t ctx, 
                         }
                         break;
                     }
-                    ++rowInBlob;
+                    rowInBlob += repeat;
                 }
                 while ( PageMapIteratorNext ( &pmIt ) );
             }
