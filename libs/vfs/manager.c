@@ -3312,8 +3312,13 @@ LIB_EXPORT rc_t CC VFSManagerSetCacheRoot ( const VFSManager * self,
             {
                 rc = KConfigWriteSString( self -> cfg, default_path_key, spath );
                 StringWhack( spath );
+                /*
+                    we do not commit, because ticket VDB-3060: 
+                    GBench wants to change the cache-root, but to automatically revert to previous value
+                    when GBench exits, this is achieved by not commiting here.
                 if ( rc == 0 )
                     rc = KConfigCommit ( self -> cfg );
+                */
             }
         }
     }

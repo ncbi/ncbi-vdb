@@ -44,29 +44,28 @@ TEST_SUITE( VDB_3060 )
 
 std::string original_value = std::string( "" );
 
-class VdbFixture
+const VDBManager * vdb_mgr = NULL;
+VFSManager * vfs_mgr = NULL;
+
+static rc_t make_global_managers( void )
 {
-    public:
-        VdbFixture() : vdb_mgr( NULL ), vfs_mgr( NULL )
-        {
-            if ( VDBManagerMakeRead( &vdb_mgr, NULL ) != 0 )
-                throw logic_error ( "VDB-3060.VdbFixture: VDBManagerMakeRead() failed" );
-            if ( VFSManagerMake ( &vfs_mgr ) != 0 )
-                throw logic_error ( "VdbFixture: VFSManagerMake() failed" );
-        }
-    
-        ~VdbFixture()
-        {
-            if ( vdb_mgr && VDBManagerRelease ( vdb_mgr ) != 0 )
-                throw logic_error ( "~VDB-3060.VdbFixture: VDBManagerRelease() failed" );
-            if ( vfs_mgr && VFSManagerRelease ( vfs_mgr ) != 0 )
-                throw logic_error ( "~VDB-3060.VdbFixture: VFSManagerRelease() failed" );
-        }
-    
-    const VDBManager * vdb_mgr;
-    VFSManager * vfs_mgr;
-    rc_t rc;
-};
+    rc_t rc = VDBManagerMakeRead( &vdb_mgr, NULL );
+    if ( rc != 0 )
+        std::cout << "VDB-3060.VdbFixture: VDBManagerMakeRead() failed" << std::endl;
+    else
+    {
+        rc = VFSManagerMake ( &vfs_mgr );
+        if ( rc != 0 )
+            std::cout << "VdbFixture: VFSManagerMake() failed" << std::endl;
+    }
+    return rc;
+}
+
+static rc_t release_global_managers( void )
+{
+    VFSManagerRelease ( vfs_mgr );
+    VDBManagerRelease ( vdb_mgr );
+}
 
 
 /*
@@ -74,10 +73,10 @@ class VdbFixture
     print the currently stored value
     store this value in the global: original_value
 */
-FIXTURE_TEST_CASE( GetCacheRoot_1, VdbFixture )
+TEST_CASE( GetCacheRoot_1 )
 {
     VPath const * vpath = NULL;
-    rc = VDBManagerGetCacheRoot( NULL, &vpath );
+    rc_t rc = VDBManagerGetCacheRoot( NULL, &vpath );
     if ( rc == 0 )
         FAIL( "FAIL: VDBManagerGetCacheRoot( NULL, &vpath ) succeed" );
     rc = VDBManagerGetCacheRoot( vdb_mgr, NULL );
@@ -110,9 +109,9 @@ const char other_path[] = "/some/other/path";
     test VDBManagerSetCacheRoot() with invalid and valid parameters
     set the value to "/home/raetzw/somepath"
 */
-FIXTURE_TEST_CASE( SetCacheRoot_1, VdbFixture )
+TEST_CASE( SetCacheRoot_1 )
 {
-    rc = VDBManagerSetCacheRoot( vdb_mgr, NULL );
+    rc_t rc = VDBManagerSetCacheRoot( vdb_mgr, NULL );
     if ( rc == 0 )
         FAIL( "FAIL: VDBManagerSetCacheRoot( mgr, NULL ) succeed" );
 
@@ -138,10 +137,10 @@ FIXTURE_TEST_CASE( SetCacheRoot_1, VdbFixture )
     call VDBManagerGetCacheRoot() to verify that the new value
     is indeed the value we did set in the test-case above
 */
-FIXTURE_TEST_CASE( GetCacheRoot_2, VdbFixture )
+TEST_CASE( GetCacheRoot_2 )
 {
     VPath const * vpath = NULL;
-    rc = VDBManagerGetCacheRoot( vdb_mgr, &vpath );
+    rc_t rc = VDBManagerGetCacheRoot( vdb_mgr, &vpath );
     if ( rc != 0 )
         FAIL( "FAIL: VDBManagerGetCacheRoot( mgr, &vpath ) failed" );
     if ( vpath == NULL )
@@ -174,10 +173,10 @@ FIXTURE_TEST_CASE( GetCacheRoot_2, VdbFixture )
 /*
     put the value stored in the global 'original_value' back in place
 */
-FIXTURE_TEST_CASE( SetCacheRoot_2, VdbFixture )
+TEST_CASE( SetCacheRoot_2 )
 {
     VPath * vpath;
-    rc = VFSManagerMakePath ( vfs_mgr, &vpath, original_value.c_str() );
+    rc_t rc = VFSManagerMakePath ( vfs_mgr, &vpath, original_value.c_str() );
     if ( rc != 0 )
         FAIL( "FAIL: VFSManagerMakePath() failed" );
         
@@ -193,10 +192,10 @@ FIXTURE_TEST_CASE( SetCacheRoot_2, VdbFixture )
 /*
     check if the original value is back in place
 */
-FIXTURE_TEST_CASE( GetCacheRoot_3, VdbFixture )
+TEST_CASE( GetCacheRoot_3 )
 {
     VPath const * vpath = NULL;
-    rc = VDBManagerGetCacheRoot( vdb_mgr, &vpath );
+    rc_t rc = VDBManagerGetCacheRoot( vdb_mgr, &vpath );
     if ( rc != 0 )
         FAIL( "FAIL: VDBManagerGetCacheRoot( mgr, &vpath ) failed" );
     if ( vpath == NULL )
@@ -313,7 +312,14 @@ rc_t CC KMain ( int argc, char *argv [] )
 {
     rc_t rc = prepare_test( HomeSub );
     if ( rc == 0 )
-        rc = VDB_3060( argc, argv );
+    {
+        rc = make_global_managers();
+        if ( rc == 0 )
+        {
+            rc = VDB_3060( argc, argv );
+            release_global_managers();
+        }
+    }
     finish_test();
     return rc;
 }
