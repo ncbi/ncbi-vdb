@@ -857,6 +857,7 @@ TEST_CASE ( NGS_Cursor_Leak_when_Make_fails )
 }
 
 //////////////////////////////////////////// Main
+
 extern "C"
 {
 
