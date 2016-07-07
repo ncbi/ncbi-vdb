@@ -153,29 +153,31 @@ NGS_FragmentBlobMake ( ctx_t ctx, const NGS_String* run, const struct NGS_Cursor
                                         {
                                             ret -> rowId = rowId;
                                             ret -> curs = NGS_CursorDuplicate ( curs, ctx );
-                                            /* calculate data/size of the blob (sub-VBlob) starting at rowId */
-                                            uint32_t frag_type_elem_bits;
-                                            const void *frag_type_base;
-                                            uint32_t frag_type_boff;
-                                            uint32_t frag_type_row_len;
-                                            rc_t rc = VBlobCellData ( ret -> blob_READ,
-                                                                      ret -> rowId,
-                                                                      & frag_type_elem_bits,
-                                                                      & frag_type_base,
-                                                                      & frag_type_boff,
-                                                                      & frag_type_row_len );
-                                            if ( rc != 0 )
                                             {
-                                                INTERNAL_ERROR ( xcUnexpected, "VBlobCellData() rc = %R", rc );
-                                            }
-                                            else
-                                            {
-                                                assert( frag_type_elem_bits == 8 );
-                                                assert( frag_type_boff == 0 );
-                                                ret -> data = frag_type_base;
-                                                ret -> size = BlobBufferBytes ( ret -> blob_READ ) -
-                                                            ( (const uint8_t*)( ret -> data ) - (const uint8_t*)( ret -> blob_READ -> data . base ) );
-                                                return ret;
+                                                /* calculate data/size of the blob (sub-VBlob) starting at rowId */
+                                                uint32_t frag_type_elem_bits;
+                                                const void *frag_type_base;
+                                                uint32_t frag_type_boff;
+                                                uint32_t frag_type_row_len;
+                                                rc_t rc = VBlobCellData ( ret -> blob_READ,
+                                                                        ret -> rowId,
+                                                                        & frag_type_elem_bits,
+                                                                        & frag_type_base,
+                                                                        & frag_type_boff,
+                                                                        & frag_type_row_len );
+                                                if ( rc != 0 )
+                                                {
+                                                    INTERNAL_ERROR ( xcUnexpected, "VBlobCellData() rc = %R", rc );
+                                                }
+                                                else
+                                                {
+                                                    assert( frag_type_elem_bits == 8 );
+                                                    assert( frag_type_boff == 0 );
+                                                    ret -> data = frag_type_base;
+                                                    ret -> size = BlobBufferBytes ( ret -> blob_READ ) -
+                                                                ( (const uint8_t*)( ret -> data ) - (const uint8_t*)( ret -> blob_READ -> data . base ) );
+                                                    return ret;
+                                                }
                                             }
                                         }
                                     }
