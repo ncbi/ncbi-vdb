@@ -468,19 +468,20 @@ LIB_EXPORT rc_t CC VNamelistFromStr ( VNamelist ** list, const char * str, const
 }
 
 
-static size_t join_size( const VNamelist * list, uint32_t count )
+static rc_t join_size( const VNamelist * list, uint32_t count, size_t * size )
 {
     rc_t rc = 0;
-    size_t res = 0;
     uint32_t idx;
+    *size = 0;
     for ( idx = 0; rc == 0 && idx < count; ++idx )
     {
         const char * item;
         rc = VNameListGet ( list, idx, &item );
         if ( rc == 0 )
-            res += string_measure ( item, NULL );
+            *size += string_size ( item );
     }
-    return res + ( count - 1 );
+    *size += ( count - 1 );
+    return rc;
 }
 
 
@@ -497,6 +498,8 @@ LIB_EXPORT rc_t CC VNamelistJoin( const VNamelist * list, const uint32_t delim, 
         else
         {
             uint32_t count;
+            char empty[ 1 ];
+            
             rc = VNameListCount ( list, &count );
             if ( rc == 0 )
             {
@@ -504,8 +507,6 @@ LIB_EXPORT rc_t CC VNamelistJoin( const VNamelist * list, const uint32_t delim, 
                 char * buffer = NULL;
                 if ( count < 1 )
                 {
-                    char empty[ 1 ];
-                    
                     j.addr = empty;
                     empty[ 0 ] = 0;
                     j.len = 0;
@@ -520,36 +521,43 @@ LIB_EXPORT rc_t CC VNamelistJoin( const VNamelist * list, const uint32_t delim, 
                 }
                 else
                 {
-                    size_t js = join_size( list, count );
-                    buffer = malloc( js + 1 );
-                    if ( buffer == NULL )
-                        rc = RC ( rcCont, rcNamelist, rcRetrieving, rcMemory, rcExhausted );
-                    else
+                    size_t js;
+                    rc = join_size( list, count, &js );
+                    if ( rc == 0 )
                     {
-                        uint32_t idx, dst = 0;
-                        size_t dst_size = js;
-                        for ( idx = 0; rc == 0 && idx < count; ++ idx )
+                        buffer = malloc( js + 1 );
+                        if ( buffer == NULL )
+                            rc = RC ( rcCont, rcNamelist, rcRetrieving, rcMemory, rcExhausted );
+                        else
                         {
-                            const char * item;
-                            rc = VNameListGet ( list, idx, &item );
-                            if ( rc == 0 )
+                            uint32_t idx, dst = 0;
+                            size_t dst_size = js;
+                            for ( idx = 0; rc == 0 && idx < count; ++ idx )
                             {
-                                size_t item_size = string_size ( item );
-                                string_copy ( &buffer[ dst ], dst_size, item, item_size );
-                                dst += item_size;
-                                if ( idx < ( count - 1 ) )
+                                const char * item;
+                                rc = VNameListGet ( list, idx, &item );
+                                if ( rc == 0 )
                                 {
-                                    buffer[ dst++ ] = delim;
-                                    dst_size -= ( item_size + 1 );
+                                    size_t item_size = string_size ( item );
+                                    string_copy ( &buffer[ dst ], dst_size, item, item_size );
+                                    dst += item_size;
+                                    if ( idx < ( count - 1 ) )
+                                    {
+                                        buffer[ dst++ ] = delim;
+                                        dst_size -= ( item_size + 1 );
+                                    }
                                 }
                             }
-                        }
-                        if ( rc == 0 )
-                        {
-                            buffer[ dst ] = 0;
-                            j.addr = buffer;
-                            j.len  = ( uint32_t )( dst & 0xFFFFFFFF );
-                            j.size = dst;
+                            if ( rc == 0 )
+                            {
+                                buffer[ dst ] = 0;
+                                StringInitCString( &j, buffer );
+                                /*
+                                j.addr = buffer;
+                                j.len  = ( uint32_t )( dst & 0xFFFFFFFF );
+                                j.size = dst;
+                                */
+                            }
                         }
                     }
                 }

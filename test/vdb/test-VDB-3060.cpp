@@ -61,7 +61,7 @@ static rc_t make_global_managers( void )
     return rc;
 }
 
-static rc_t release_global_managers( void )
+static void release_global_managers( void )
 {
     VFSManagerRelease ( vfs_mgr );
     VDBManagerRelease ( vdb_mgr );
