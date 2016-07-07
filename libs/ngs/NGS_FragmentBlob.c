@@ -48,6 +48,10 @@ struct NGS_FragmentBlob
 {
     NGS_Refcount dad;
 
+    int64_t rowId;      /* rowId of the first row in the blob (can differ from the first row of VBlob) */
+    const void* data;   /* start of the first row */
+    uint64_t size;      /* from the start of the first row until the end of the blob */
+
     const NGS_String* run;
     const NGS_Cursor* curs;
     const VBlob* blob_READ;
@@ -147,8 +151,32 @@ NGS_FragmentBlobMake ( ctx_t ctx, const NGS_String* run, const struct NGS_Cursor
                                         }
                                         else
                                         {
+                                            ret -> rowId = rowId;
                                             ret -> curs = NGS_CursorDuplicate ( curs, ctx );
-                                            return ret;
+                                            /* calculate data/size of the blob (sub-VBlob) starting at rowId */
+                                            uint32_t frag_type_elem_bits;
+                                            const void *frag_type_base;
+                                            uint32_t frag_type_boff;
+                                            uint32_t frag_type_row_len;
+                                            rc_t rc = VBlobCellData ( ret -> blob_READ,
+                                                                      ret -> rowId,
+                                                                      & frag_type_elem_bits,
+                                                                      & frag_type_base,
+                                                                      & frag_type_boff,
+                                                                      & frag_type_row_len );
+                                            if ( rc != 0 )
+                                            {
+                                                INTERNAL_ERROR ( xcUnexpected, "VBlobCellData() rc = %R", rc );
+                                            }
+                                            else
+                                            {
+                                                assert( frag_type_elem_bits == 8 );
+                                                assert( frag_type_boff == 0 );
+                                                ret -> data = frag_type_base;
+                                                ret -> size = BlobBufferBytes ( ret -> blob_READ ) -
+                                                            ( (const uint8_t*)( ret -> data ) - (const uint8_t*)( ret -> blob_READ -> data . base ) );
+                                                return ret;
+                                            }
                                         }
                                     }
                                 }
@@ -187,7 +215,7 @@ NGS_FragmentBlobDuplicate (  struct NGS_FragmentBlob * self, ctx_t ctx )
 }
 
 void
-NGS_FragmentBlobRowRange ( const struct NGS_FragmentBlob * self, ctx_t ctx,  int64_t* first, uint64_t* count )
+NGS_FragmentBlobRowRange ( const struct NGS_FragmentBlob * self, ctx_t ctx,  int64_t* p_first, uint64_t* p_count )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcAccessing );
 
@@ -197,10 +225,22 @@ NGS_FragmentBlobRowRange ( const struct NGS_FragmentBlob * self, ctx_t ctx,  int
     }
     else
     {
-        rc_t rc = VBlobIdRange ( self -> blob_READ, first, count );
+        int64_t first;
+        uint64_t count;
+        rc_t rc = VBlobIdRange ( self -> blob_READ, & first, & count );
         if ( rc != 0  )
         {
             INTERNAL_ERROR ( xcUnexpected, "VBlobIdRange() rc = %R", rc );
+        }
+        /* 1st row of VBlob may differ from our first row */
+        assert ( first <= self -> rowId );
+        if ( p_first != NULL )
+        {
+            *p_first = self -> rowId;
+        }
+        if ( p_count != NULL )
+        {
+            *p_count = count - ( self -> rowId - first );
         }
     }
 }
@@ -216,9 +256,9 @@ NGS_FragmentBlobData ( const struct NGS_FragmentBlob * self, ctx_t ctx )
     }
     else
     {
-        return self -> blob_READ -> data . base;
+        return self -> data;
     }
-    return NULL;
+    return 0;
 }
 
 uint64_t
@@ -232,7 +272,7 @@ NGS_FragmentBlobSize ( const struct NGS_FragmentBlob * self, ctx_t ctx )
     }
     else
     {
-        return BlobBufferBytes ( self -> blob_READ );
+        return self -> size;
     }
     return 0;
 }

@@ -532,6 +532,38 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_SparseTable, BlobIteratorFixture )
     EXIT;
 }
 
+FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_IteratorRetreats, BlobIteratorFixture )
+{   // VDB-2809: NGS_FragmentBlobIterator returns overlapping blobs on CSRA1 accessions
+    ENTRY;
+    const char* acc = "SRR833251";
+    const VDatabase *db;
+    REQUIRE_RC ( VDBManagerOpenDBRead ( m_ctx -> rsrc -> vdb, & db, NULL, acc ) );
+    REQUIRE_RC ( VDatabaseOpenTableRead ( db, & m_tbl, "SEQUENCE" ) );
+    REQUIRE_RC ( VDatabaseRelease ( db ) );
+
+    NGS_String* run = NGS_StringMake ( m_ctx, acc, string_size ( acc ) );
+    m_blobIt = NGS_FragmentBlobIteratorMake ( m_ctx, run, m_tbl );
+    NGS_StringRelease ( run, m_ctx );
+
+    int64_t rowId = 1;
+    while (true)
+    {
+        struct NGS_FragmentBlob* blob = NGS_FragmentBlobIteratorNext ( m_blobIt, m_ctx );
+        if ( blob == 0 )
+        {
+            break;
+        }
+        int64_t first = 0;
+        uint64_t count = 0;
+        NGS_FragmentBlobRowRange ( blob, m_ctx, & first, & count );
+        REQUIRE_EQ ( rowId, first );
+        NGS_FragmentBlobRelease ( blob, ctx );
+        rowId = first + count;
+    }
+
+    EXIT;
+}
+
 //////////////////////////////////////////// Main
 
 extern "C"
