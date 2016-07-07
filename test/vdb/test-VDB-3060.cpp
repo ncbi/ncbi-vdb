@@ -204,10 +204,10 @@ TEST_CASE( GetCacheRoot_3 )
     String const * spath = NULL;
     rc = VPathMakeString ( vpath, &spath );
     if ( rc != 0 )
-        FAIL( "FAIL: VPathMakeString( vpath, &spatch ) failed" );
+        FAIL( "FAIL: VPathMakeString( vpath, &spath ) failed" );
     
     std::string s = std::string( spath->addr, spath->size );
-    std::cout << "reverted to original value of: " << s;
+    std::cout << "reverted to original value of: " << s << std::endl;
 
     if ( s != original_value )
         FAIL( "FAIL: did not restore original value" );
@@ -217,6 +217,59 @@ TEST_CASE( GetCacheRoot_3 )
 
     if ( vpath != NULL )
         VPathRelease( vpath );
+}
+
+TEST_CASE( tow_managers )
+{
+    const VDBManager * vdb_mgr2 = NULL;
+    VPath const * vpath1 = NULL;
+    VPath const * vpath2 = NULL;
+    VPath * vpath_new = NULL;
+    String const * spath1 = NULL;
+    String const * spath2 = NULL;
+    rc_t rc;
+    
+    rc = VFSManagerMakePath ( vfs_mgr, &vpath_new, "something_different" );
+    if ( rc != 0 )
+        FAIL( "FAIL: VFSManagerMakePath( vpath_new ) failed" );
+
+    rc = VDBManagerMakeRead( &vdb_mgr2, NULL );
+    if ( rc != 0 )
+        FAIL( "FAIL: VDBManagerMakeRead( &vdb_mgr2 ) failed" );
+
+    rc = VDBManagerSetCacheRoot( vdb_mgr2, vpath_new );
+    if ( rc != 0 )
+        FAIL( "FAIL: VDBManagerSetCacheRoot( vdb_mgr, vpath_new ) failed" );
+
+    rc = VDBManagerGetCacheRoot( vdb_mgr, &vpath1 );
+    if ( rc != 0 )
+        FAIL( "FAIL: VDBManagerGetCacheRoot( vdb_mgr, &vpath1 ) failed" );
+
+    rc = VDBManagerGetCacheRoot( vdb_mgr2, &vpath2 );
+    if ( rc != 0 )
+        FAIL( "FAIL: VDBManagerGetCacheRoot( vdb_mgr1, &vpath2 ) failed" );
+
+    rc = VPathMakeString ( vpath1, &spath1 );
+    if ( rc != 0 )
+        FAIL( "FAIL: VPathMakeString( vpath1, &spath1 ) failed" );
+
+    rc = VPathMakeString ( vpath2, &spath2 );
+    if ( rc != 0 )
+        FAIL( "FAIL: VPathMakeString( vpath2, &spath2 ) failed" );
+
+    std::string s1 = std::string( spath1->addr, spath1->size );
+    std::string s2 = std::string( spath2->addr, spath2->size );
+    if ( s1 != s2 )
+        FAIL( "FAIL: cache-root values do not match" );
+    else
+        std::cout << "cache-root values are the same" << std::endl;
+        
+    if ( spath1 != NULL ) StringWhack( spath1 );
+    if ( spath2 != NULL ) StringWhack( spath2 );
+    if ( vpath_new != NULL ) VPathRelease( vpath_new );    
+    if ( vpath1 != NULL ) VPathRelease( vpath1 );
+    if ( vpath2 != NULL ) VPathRelease( vpath2 );
+    if ( vdb_mgr2 != NULL ) VDBManagerRelease ( vdb_mgr2 );
 }
 
 char * org_home;
