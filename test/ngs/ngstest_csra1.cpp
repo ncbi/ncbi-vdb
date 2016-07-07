@@ -30,17 +30,19 @@
 
 #include "ngs_c_fixture.hpp"
 
-#include "CSRA1_Reference.h"
-#include "NGS_Pileup.h"
+#include <limits.h>
+
+#include <klib/printf.h>
 
 #include <kdb/manager.h>
 
 #include <vdb/manager.h>
 #include <vdb/vdb-priv.h>
 
-#include <klib/printf.h>
-
-#include <limits.h>
+#include "CSRA1_Reference.h"
+#include "NGS_Pileup.h"
+#include "NGS_FragmentBlobIterator.h"
+#include "NGS_FragmentBlob.h"
 
 using namespace std;
 using namespace ncbi::NK;
@@ -1196,6 +1198,25 @@ TEST_CASE(CSRA1_NGS_ReadCollectionHasReference)
     NGS_ReadCollectionRelease ( read_coll, ctx );
 }
 
+// Fragment Blobs
+
+FIXTURE_TEST_CASE(CSRA1_GetFragmentBlobs, CSRA1_Fixture)
+{
+    ENTRY_ACC(CSRA1_PrimaryOnly);
+
+    NGS_FragmentBlobIterator* blobIt = NGS_ReadCollectionGetFragmentBlobs ( m_coll, ctx );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_NOT_NULL ( blobIt );
+
+    NGS_FragmentBlob* blob = NGS_FragmentBlobIteratorNext ( blobIt, ctx );
+
+    REQUIRE_EQ ( (uint64_t)808, NGS_FragmentBlobSize ( blob, ctx ) );
+
+    NGS_FragmentBlobRelease ( blob, ctx );
+    NGS_FragmentBlobIteratorRelease ( blobIt, ctx );
+
+    EXIT;
+}
 
 //////////////////////////////////////////// Main
 extern "C"

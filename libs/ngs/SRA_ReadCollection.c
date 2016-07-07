@@ -30,6 +30,7 @@ typedef struct SRA_ReadCollection SRA_ReadCollection;
 #include "NGS_ReadCollection.h"
 #include "NGS_Reference.h"
 #include "NGS_Alignment.h"
+#include "NGS_FragmentBlobIterator.h"
 
 #include "NGS_String.h"
 #include "NGS_Cursor.h"
@@ -53,7 +54,7 @@ typedef struct SRA_ReadCollection SRA_ReadCollection;
 #include <assert.h>
 
 #include <sysalloc.h>
- 
+
 
 /*--------------------------------------------------------------------------
  * SRA_ReadCollection
@@ -64,7 +65,7 @@ struct SRA_ReadCollection
     NGS_ReadCollection dad;
     const VTable * tbl;
     const NGS_String * run_name;
-    
+
     const NGS_Cursor* curs; /* used for individual reads */
     const struct SRA_ReadGroupInfo* group_info;
 };
@@ -95,7 +96,7 @@ NGS_ReadGroup * SRA_ReadCollectionGetReadGroups ( SRA_ReadCollection * self, ctx
         ON_FAIL ( self -> group_info = SRA_ReadGroupInfoMake ( ctx, self -> tbl ) )
             return NULL;
     }
-  
+
     {
         TRY ( const NGS_Cursor * curs = NGS_CursorMake ( ctx, self -> tbl, sequence_col_specs, seq_NUM_COLS ) )
         {
@@ -251,21 +252,21 @@ NGS_Read * SRA_ReadCollectionGetRead ( SRA_ReadCollection * self, ctx_t ctx, con
 
     TRY ( struct NGS_Id id = NGS_IdParse ( readIdStr, string_size ( readIdStr ), ctx ) )
     {
-        if ( string_cmp ( NGS_StringData ( self -> run_name, ctx ), 
+        if ( string_cmp ( NGS_StringData ( self -> run_name, ctx ),
             NGS_StringSize ( self -> run_name, ctx ),
-            id . run . addr, 
-            id . run . size, 
-            id . run . len ) != 0 ) 
+            id . run . addr,
+            id . run . size,
+            id . run . len ) != 0 )
         {
-            INTERNAL_ERROR ( xcArcIncorrect, 
-                " expected '%.*s', actual '%.*s'", 
+            INTERNAL_ERROR ( xcArcIncorrect,
+                " expected '%.*s', actual '%.*s'",
                 NGS_StringSize ( self -> run_name, ctx ),
-                NGS_StringData ( self -> run_name, ctx ), 
-                id . run . size, 
+                NGS_StringData ( self -> run_name, ctx ),
+                id . run . size,
                 id . run . addr );
-        }    
+        }
         else
-        {   
+        {
             /* individual reads share one iterator attached to ReadCollection */
             if ( self -> curs == NULL )
             {
@@ -285,7 +286,7 @@ uint64_t SRA_ReadCollectionGetReadCount ( SRA_ReadCollection * self, ctx_t ctx, 
 
     if ( ! wants_unaligned )
         return 0;
-    
+
     if ( self -> curs == NULL )
     {
         ON_FAIL ( self -> curs = NGS_CursorMake ( ctx, self -> tbl, sequence_col_specs, seq_NUM_COLS ) )
@@ -307,14 +308,14 @@ NGS_Read * SRA_ReadCollectionGetReadRange ( SRA_ReadCollection * self, ctx_t ctx
         NGS_CursorRelease ( curs, ctx );
         return ret;
     }
-    
+
     return NULL;
 }
 
 static struct NGS_Statistics* SRA_ReadCollectionGetStatistics ( SRA_ReadCollection * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
-    
+
     TRY ( NGS_Statistics * ret = SRA_StatisticsMake ( ctx ) )
     {
         TRY ( SRA_StatisticsLoadTableStats ( ret, ctx, self -> tbl, "SEQUENCE" ) )
@@ -323,7 +324,19 @@ static struct NGS_Statistics* SRA_ReadCollectionGetStatistics ( SRA_ReadCollecti
         }
         NGS_StatisticsRelease ( ret, ctx );
     }
-    
+
+    return NULL;
+}
+
+static struct NGS_FragmentBlobIterator* SRA_ReadCollectionGetFragmentBlobs ( SRA_ReadCollection * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    TRY ( NGS_FragmentBlobIterator* ret = NGS_FragmentBlobIteratorMake ( ctx, self -> run_name, self -> tbl ) )
+    {
+        return ret;
+    }
+
     return NULL;
 }
 
@@ -348,7 +361,8 @@ static NGS_ReadCollection_vt SRA_ReadCollection_vt =
     SRA_ReadCollectionGetRead,
     SRA_ReadCollectionGetReadCount,
     SRA_ReadCollectionGetReadRange,
-    SRA_ReadCollectionGetStatistics
+    SRA_ReadCollectionGetStatistics,
+    SRA_ReadCollectionGetFragmentBlobs
 };
 
 NGS_ReadCollection * NGS_ReadCollectionMakeVTable ( ctx_t ctx, const VTable *tbl, const char * spec )
@@ -372,7 +386,7 @@ NGS_ReadCollection * NGS_ReadCollectionMakeVTable ( ctx_t ctx, const VTable *tbl
         TRY ( NGS_ReadCollectionInit ( ctx, & ref -> dad, & SRA_ReadCollection_vt, "SRA_ReadCollection", spec ) )
         {
             const char * name, * dot, * end;
-            
+
             ref -> tbl = tbl;
 
             end = & spec [ spec_size ];
