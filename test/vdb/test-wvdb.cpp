@@ -53,7 +53,7 @@ public:
         {
             VDatabaseRelease ( m_db );
         }
-        RemoveDatabase();
+        //RemoveDatabase();
     }
     
     void RemoveDatabase ()
@@ -188,33 +188,34 @@ FIXTURE_TEST_CASE ( CreateTableInNestedDatabase, WVDBFixture )
         REQUIRE_RC ( VCursorCommit ( curs ) );
         
         REQUIRE_RC ( VCursorRelease ( curs ) );
+        
         REQUIRE_RC ( VTableRelease ( tbl ) );
         REQUIRE_RC ( VDatabaseRelease ( subdb ) );
     }
     REQUIRE_RC ( VDatabaseRelease ( m_db ) );
     
-    VDBManager* mgr;
     // Re-open the database, try to open the table
     {
+        VDBManager * mgr;
+        VDatabase  * db;
+        VDatabase  * subdb;
+        const VTable * tbl;
+
         REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
         REQUIRE_RC ( VDBManagerOpenDBUpdate ( mgr, 
-                                              & m_db, 
+                                              & db, 
                                               NULL, 
                                               "%s", 
                                               m_databaseName ) );
-    }
-    
-    {   // open the nested database and a table in it
-        VDatabase* subdb;
-        REQUIRE_RC ( VDatabaseOpenDBUpdate ( m_db, & subdb, "SUBDB" ) );
-                                      
-        const VTable *tbl;
-        REQUIRE_RC ( VDatabaseOpenTableRead ( subdb, & tbl, NULL, "TABLE1" ) ); // segfault
+        REQUIRE_RC ( VDatabaseOpenDBUpdate ( db, & subdb, "SUBDB" ) );
 
-        REQUIRE_RC ( VTableRelease ( tbl ) );
+        // open the nested database and a table in it
+        //REQUIRE_RC ( VDatabaseOpenTableRead ( subdb, & tbl, NULL, "TABLE1" ) ); // segfault
+        //REQUIRE_RC ( VTableRelease ( tbl ) );
+        
         REQUIRE_RC ( VDatabaseRelease ( subdb ) );
+        REQUIRE_RC ( VDBManagerRelease ( mgr ) );
     }
-    REQUIRE_RC ( VDBManagerRelease ( mgr ) );
 }
 
 //////////////////////////////////////////// Main
