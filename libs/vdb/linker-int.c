@@ -85,6 +85,7 @@ extern VTRANSFACT_DECL ( NCBI_SRA_ABI_tokenize_spot_name );
 extern VTRANSFACT_DECL ( NCBI_SRA_Helicos_tokenize_spot_name );
 extern VTRANSFACT_DECL ( NCBI_SRA_Illumina_tokenize_spot_name );
 extern VTRANSFACT_DECL ( NCBI_SRA_IonTorrent_tokenize_spot_name );
+extern VTRANSFACT_DECL ( NCBI_SRA_GenericFastq_tokenize_spot_name );
 extern VTRANSFACT_DECL ( NCBI_SRA__454__dynamic_read_desc );
 extern VTRANSFACT_DECL ( NCBI_SRA__454__process_position );
 extern VTRANSFACT_DECL ( NCBI_SRA__454__tokenize_spot_name );
@@ -472,6 +473,7 @@ rc_t VLinkerInitFactoriesRead ( VLinker *self,  KSymTable *tbl, const SchemaEnv 
         { NCBI_SRA_Helicos_tokenize_spot_name, "NCBI:SRA:Helicos:tokenize_spot_name" },
         { NCBI_SRA_Illumina_tokenize_spot_name, "NCBI:SRA:Illumina:tokenize_spot_name" },
         { NCBI_SRA_IonTorrent_tokenize_spot_name, "NCBI:SRA:IonTorrent:tokenize_spot_name" },
+        { NCBI_SRA_GenericFastq_tokenize_spot_name, "NCBI:SRA:GenericFastq:tokenize_spot_name" },
         { NCBI_SRA__454__dynamic_read_desc, "NCBI:SRA:_454_:dynamic_read_desc" },
         { NCBI_SRA__454__process_position, "NCBI:SRA:_454_:process_position" },
         { NCBI_SRA__454__tokenize_spot_name, "NCBI:SRA:_454_:tokenize_spot_name" },

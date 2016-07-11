@@ -182,6 +182,7 @@ KFG_EXTERN rc_t CC KConfigReadVPath ( const KConfig* self, const char* path, str
  */
 KFG_EXTERN rc_t CC KConfigReadString ( const KConfig* self, const char* path, struct String** result );
 KFG_EXTERN rc_t CC KConfigWriteString( KConfig *self, const char * path, const char * value );
+KFG_EXTERN rc_t CC KConfigWriteSString( KConfig *self, const char * path, struct String const * value );
 
 /* Print
  *  print configuration to output handler (using OUTMSG)

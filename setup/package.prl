@@ -1,6 +1,5 @@
 ################################################################################
 sub PACKAGE      { 'ncbi-vdb' }
-sub VERSION      { '2.6.3' }
 sub PACKAGE_TYPE { 'L' }
 sub PACKAGE_NAME { 'NCBI-VDB' }
 sub PACKAGE_NAMW { 'VDB' }

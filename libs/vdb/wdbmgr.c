@@ -29,7 +29,7 @@
 #define TRACK_REFERENCES 0
 /* should match dbmgr-cmn.c */
 
-#include "libwvdb.vers.h"
+#include "libvdb.vers.h"
 
 #include "dbmgr-priv.h"
 #include "schema-priv.h"
@@ -135,7 +135,7 @@ LIB_EXPORT rc_t CC VDBManagerVersion ( const VDBManager *self, uint32_t *version
     if ( self == NULL )
         return RC ( rcVDB, rcMgr, rcAccessing, rcSelf, rcNull );
 
-    * version = LIBWVDB_VERS;
+    * version = LIBVDB_VERS;
     return 0;
 }
 

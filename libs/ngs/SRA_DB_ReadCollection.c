@@ -31,6 +31,7 @@ typedef struct SRA_DB_ReadCollection SRA_DB_ReadCollection;
 #include "NGS_Reference.h"
 #include "NGS_Alignment.h"
 #include "NGS_Read.h"
+#include "NGS_FragmentBlobIterator.h"
 
 #include "NGS_Cursor.h"
 #include "NGS_String.h"
@@ -68,9 +69,9 @@ struct SRA_DB_ReadCollection
 {
     NGS_ReadCollection dad;
     const NGS_String * run_name;
-    
+
     const VDatabase * db;
-    
+
     const NGS_Cursor* curs; /* used for individual reads */
     const struct SRA_ReadGroupInfo* group_info;
 };
@@ -91,13 +92,13 @@ NGS_String * SRA_DB_ReadCollectionGetName ( SRA_DB_ReadCollection * self, ctx_t 
     return NGS_StringDuplicate ( self -> run_name, ctx );
 }
 
-static 
+static
 void GetReadGroupInfo( SRA_DB_ReadCollection * self, ctx_t ctx )
 {
     if ( self -> group_info == NULL )
     {
         const VTable * table;
-        rc_t rc = VDatabaseOpenTableRead ( self -> db, & table, "SEQUENCE" ); 
+        rc_t rc = VDatabaseOpenTableRead ( self -> db, & table, "SEQUENCE" );
         if ( rc != 0 )
         {
             INTERNAL_ERROR ( xcUnexpected, "VDatabaseOpenTableRead(SEQUENCE) rc = %R", rc );
@@ -247,7 +248,7 @@ NGS_Read * SRA_DB_ReadCollectionGetReads ( SRA_DB_ReadCollection * self, ctx_t c
         TRY ( const NGS_Cursor * curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ) )
         {
             NGS_Read * ret =  SRA_ReadIteratorMake ( ctx, curs, self -> run_name, wants_full, wants_partial, wants_unaligned );
-            NGS_CursorRelease ( curs, ctx );    
+            NGS_CursorRelease ( curs, ctx );
             return ret;
         }
     }
@@ -261,21 +262,21 @@ NGS_Read * SRA_DB_ReadCollectionGetRead ( SRA_DB_ReadCollection * self, ctx_t ct
 
     TRY ( struct NGS_Id id = NGS_IdParse ( readIdStr, string_size ( readIdStr ), ctx ) )
     {
-        if ( string_cmp ( NGS_StringData ( self -> run_name, ctx ), 
+        if ( string_cmp ( NGS_StringData ( self -> run_name, ctx ),
             NGS_StringSize ( self -> run_name, ctx ),
-            id . run . addr, 
-            id . run . size, 
-            id . run . len ) != 0 ) 
+            id . run . addr,
+            id . run . size,
+            id . run . len ) != 0 )
         {
-            INTERNAL_ERROR ( xcArcIncorrect, 
-                " expected '%.*s', actual '%.*s'", 
+            INTERNAL_ERROR ( xcArcIncorrect,
+                " expected '%.*s', actual '%.*s'",
                 NGS_StringSize ( self -> run_name, ctx ),
-                NGS_StringData ( self -> run_name, ctx ), 
-                id . run . size, 
+                NGS_StringData ( self -> run_name, ctx ),
+                id . run . size,
                 id . run . addr );
-        }    
+        }
         else
-        {   
+        {
             /* individual reads share one iterator attached to ReadCollection */
             if ( self -> curs == NULL )
             {
@@ -300,8 +301,8 @@ uint64_t SRA_DB_ReadCollectionGetReadCount ( SRA_DB_ReadCollection * self, ctx_t
     {
         ON_FAIL ( self -> curs = NGS_CursorMakeDb ( ctx, self -> db, self -> run_name, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ) )
             return 0;
-    }    
-    
+    }
+
     return NGS_CursorGetRowCount ( self -> curs, ctx );
 }
 
@@ -325,7 +326,7 @@ static struct NGS_Statistics* SRADB_ReadCollectionGetStatistics ( SRA_DB_ReadCol
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
     const VTable * table;
-    rc_t rc = VDatabaseOpenTableRead ( self -> db, & table, "SEQUENCE" ); 
+    rc_t rc = VDatabaseOpenTableRead ( self -> db, & table, "SEQUENCE" );
     if ( rc != 0 )
     {
         INTERNAL_ERROR ( xcUnexpected, "VDatabaseOpenTableRead(SEQUENCE) rc = %R", rc );
@@ -345,7 +346,30 @@ static struct NGS_Statistics* SRADB_ReadCollectionGetStatistics ( SRA_DB_ReadCol
         }
         VTableRelease ( table );
     }
-    return NULL;        
+    return NULL;
+}
+
+static struct NGS_FragmentBlobIterator* SRADB_ReadCollectionGetFragmentBlobs ( SRA_DB_ReadCollection * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+
+    const VTable * table;
+    rc_t rc = VDatabaseOpenTableRead ( self -> db, & table, "SEQUENCE" );
+    if ( rc != 0 )
+    {
+        INTERNAL_ERROR ( xcUnexpected, "VDatabaseOpenTableRead(SEQUENCE) rc = %R", rc );
+    }
+    else
+    {
+        TRY ( NGS_FragmentBlobIterator* ret = NGS_FragmentBlobIteratorMake ( ctx, self -> run_name, table ) )
+        {
+            VTableRelease ( table );
+            return ret;
+        }
+        VTableRelease ( table );
+    }
+
+    return NULL;
 }
 
 static NGS_ReadCollection_vt SRA_DB_ReadCollection_vt =
@@ -369,7 +393,8 @@ static NGS_ReadCollection_vt SRA_DB_ReadCollection_vt =
     SRA_DB_ReadCollectionGetRead,
     SRA_DB_ReadCollectionGetReadCount,
     SRA_DB_ReadCollectionGetReadRange,
-    SRADB_ReadCollectionGetStatistics
+    SRADB_ReadCollectionGetStatistics,
+    SRADB_ReadCollectionGetFragmentBlobs
 };
 
 NGS_ReadCollection * NGS_ReadCollectionMakeVDatabase ( ctx_t ctx, const VDatabase *db, const char * spec )
@@ -393,7 +418,7 @@ NGS_ReadCollection * NGS_ReadCollectionMakeVDatabase ( ctx_t ctx, const VDatabas
         TRY ( NGS_ReadCollectionInit ( ctx, & ref -> dad, & SRA_DB_ReadCollection_vt, "SRA_DB_ReadCollection", spec ) )
         {
             const char * name, * dot, * end;
-            
+
             ref -> db = db;
 
             end = & spec [ spec_size ];

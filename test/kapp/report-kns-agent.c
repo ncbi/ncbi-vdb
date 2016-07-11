@@ -24,4 +24,35 @@
 *
 */
 
-#define LIBWKDB_VERS 0x0102000D
+#include <kapp/main.h>
+#include <kns/manager.h>
+
+#include <stdio.h>
+
+ver_t CC KAppVersion ( void )
+{
+    return 0x01020003;
+}
+
+rc_t CC UsageSummary ( const char *progname )
+{
+    return 0;
+}
+
+rc_t CC Usage ( const Args *args )
+{
+    return 0;
+}
+
+
+rc_t CC KMain ( int argc, char *argv [] )
+{
+    rc_t rc;
+    const char * user_agent;
+
+    rc = KNSManagerGetUserAgent ( &user_agent );
+    if ( rc == 0 )
+        printf("%s\n", user_agent);
+
+    return rc;
+}

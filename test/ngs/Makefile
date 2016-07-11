@@ -37,6 +37,7 @@ TEST_TOOLS = \
     test-ngs_csra1_refwin \
     test-ngs_csra1_pileup \
     test-ngs_reference \
+    test-ngs_fragmentblob \
 
 include $(TOP)/build/Makefile.env
 
@@ -47,9 +48,6 @@ ifeq ($(wildcard ../../../asm-trace),)
 		VDB_CONFIG = $(shell pwd)/../only-remote-repository.kfg
 	endif
 endif
-
-
-VALGRIND = export NCBI_VALGRIND=ncbi; valgrind --error-exitcode=1 --suppressions=$(SRCDIR)/valgrind.suppress
 
 $(TEST_TOOLS) $(SLOW_TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
@@ -69,6 +67,26 @@ TEST_NGS_LIB = \
     -sktst
 
 #-------------------------------------------------------------------------------
+# ngs-makedb
+# Create test databases for use in other suites
+NGS_MAKEDB_SRC = \
+	ngstest_makedb
+
+NGS_MAKEDB_OBJ = \
+	$(addsuffix .$(OBJX),$(NGS_MAKEDB_SRC))
+
+NGS_MAKEDB_LIB = \
+    -skapp \
+	-sktst \
+    -sncbi-wvdb
+
+$(TEST_BINDIR)/ngs-makedb: $(NGS_MAKEDB_OBJ)
+	$(LP) --exe -o $@ $^ $(NGS_MAKEDB_LIB)
+
+makedb: $(TEST_BINDIR)/ngs-makedb
+	cd $(SRCDIR)/data; $(TEST_BINDIR)/ngs-makedb
+
+#-------------------------------------------------------------------------------
 # test-ngs
 #
 TEST_NGS_SRC = \
@@ -77,8 +95,11 @@ TEST_NGS_SRC = \
 TEST_NGS_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_SRC))
 
-$(TEST_BINDIR)/test-ngs: $(TEST_NGS_OBJ) 
+$(TEST_BINDIR)/test-ngs: $(TEST_NGS_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
+
+ngs: test-ngs
+	$(TEST_BINDIR)/$^
 
 #-------------------------------------------------------------------------------
 # test-ngs_sra
@@ -89,7 +110,7 @@ TEST_NGS_SRA_SRC = \
 TEST_NGS_SRA_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_SRA_SRC))
 
-$(TEST_BINDIR)/test-ngs_sra: $(TEST_NGS_SRA_OBJ) 
+$(TEST_BINDIR)/test-ngs_sra: $(TEST_NGS_SRA_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 sra: test-ngs_sra
@@ -104,7 +125,7 @@ TEST_NGS_SRADB_SRC = \
 TEST_NGS_SRADB_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_SRADB_SRC))
 
-$(TEST_BINDIR)/test-ngs_sradb: $(TEST_NGS_SRADB_OBJ) 
+$(TEST_BINDIR)/test-ngs_sradb: $(TEST_NGS_SRADB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 sradb: test-ngs_sradb
@@ -119,8 +140,11 @@ TEST_NGS_CSRA1_SRC = \
 TEST_NGS_CSRA1_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_CSRA1_SRC))
 
-$(TEST_BINDIR)/test-ngs_csra1: $(TEST_NGS_CSRA1_OBJ) 
+$(TEST_BINDIR)/test-ngs_csra1: $(TEST_NGS_CSRA1_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
+
+csra1: test-ngs_csra1
+	$(TEST_BINDIR)/$^
 
 #-------------------------------------------------------------------------------
 # test-ngs_csra1_readcollection
@@ -131,7 +155,7 @@ TEST_NGS_CSRA1_READCOLLECTION_SRC = \
 TEST_NGS_CSRA1_READCOLLECTION_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_CSRA1_READCOLLECTION_SRC))
 
-$(TEST_BINDIR)/test-ngs_csra1_readcollection: $(TEST_NGS_CSRA1_READCOLLECTION_OBJ) 
+$(TEST_BINDIR)/test-ngs_csra1_readcollection: $(TEST_NGS_CSRA1_READCOLLECTION_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 #-------------------------------------------------------------------------------
@@ -143,7 +167,7 @@ TEST_NGS_CSRA1_REFWIN_SRC = \
 TEST_NGS_CSRA1_REFWIN_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_CSRA1_REFWIN_SRC))
 
-$(TEST_BINDIR)/test-ngs_csra1_refwin: $(TEST_NGS_CSRA1_REFWIN_OBJ) 
+$(TEST_BINDIR)/test-ngs_csra1_refwin: $(TEST_NGS_CSRA1_REFWIN_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 refwin: test-ngs_csra1_refwin
@@ -158,7 +182,7 @@ TEST_NGS_CSRA1_PILEUP_SRC = \
 TEST_NGS_CSRA1_PILEUP_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_CSRA1_PILEUP_SRC))
 
-$(TEST_BINDIR)/test-ngs_csra1_pileup: $(TEST_NGS_CSRA1_PILEUP_OBJ) 
+$(TEST_BINDIR)/test-ngs_csra1_pileup: $(TEST_NGS_CSRA1_PILEUP_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 #-------------------------------------------------------------------------------
@@ -170,8 +194,23 @@ TEST_NGS_REFERENCE_SRC = \
 TEST_NGS_REFERENCE_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_REFERENCE_SRC))
 
-$(TEST_BINDIR)/test-ngs_reference: $(TEST_NGS_REFERENCE_OBJ) 
+$(TEST_BINDIR)/test-ngs_reference: $(TEST_NGS_REFERENCE_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 reference: test-ngs_reference
 	$(TEST_BINDIR)/$^
+
+#-------------------------------------------------------------------------------
+# test-ngs_fragmentblob
+#
+TEST_NGS_SRC = \
+	ngstest_fragmentblob
+
+TEST_NGS_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_NGS_SRC))
+
+$(TEST_BINDIR)/test-ngs_fragmentblob: $(TEST_NGS_OBJ) makedb
+	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
+
+fragmentblob: test-ngs_fragmentblob
+	cd $(SRCDIR); $(TEST_BINDIR)/$^

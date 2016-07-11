@@ -29,6 +29,7 @@
 #include <kapp/args.h> /* OPTION_REPORT */
 
 #include <kfs/directory.h> /* KDirectoryNativeDir */
+#include <kfg/kfg-priv.h> /* ENV_KRYPTO_PWFILE */
 
 #include <klib/klib-priv.h>
 #include <klib/log.h> /* LOGERR */
@@ -515,7 +516,7 @@ static rc_t ReportEnv(int indent) {
         "KLIB_CONFIG",
         "VDBCONFIG",
         "VDB_CONFIG",
-        "VDB_PWFILE",
+        ENV_KRYPTO_PWFILE
     };
 
     int i = 0;
