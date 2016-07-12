@@ -1,5 +1,25 @@
 # NCBI External Developer Release:
 
+## NCBI VDB 2.7.0
+**July 12, 2016**
+
+  **align, bam-load**: Insert-only alignments no longer cause incorrect binning  
+  **blast, kfg, ncbi-vdb, sra-tools, vfs**: restored possibility to disable local caching  
+  **build, sra-tools**: Running make and make install in sra-tools repository prepares all configuration files required to access NCBI repository  
+  **doc, ncbi-vdb**: created a Wiki page illustrating how to use the API to set up logging  
+  **kdb, kfs, kns**: Added blob validation for data being fetched remotely  
+  **kfg**: When loading configuration files on Windows USERPROFILE environmnet variable is used before HOME  
+  **kfg**: modified auxiliary remote access configuration to use load-balanced servers  
+  **kns**: Fixed a bug when KHttpRequestPOST generated an incorrect Content-Length after retry  
+  **ngs, search, sra-search**: sra-search was modified to support multiple threads.  
+  **ngs-engine**: Added support for blob-by-blob access to SEQUENCE table  
+  **ngs-engine**: removed a potential memory leak in NGS_CursorMake()  
+  **search**: now supports multi-threaded search  
+  **vdb**: fixed a bug in VCursorFindNextRowIdDirect where it returned a wrong rowId  
+  **vdb**: fixed a bug in the code used to iterate over blobs where rowmap expansion cache would reset iteration to initial row instead of respecting sequence  
+  **vfs**: environment variable VDB_PWFILE is no longer used  
+
+
 ## NCBI VDB 2.6.3
 **May 25, 2016**
 
