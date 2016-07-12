@@ -163,8 +163,6 @@ FIXTURE_TEST_CASE ( CreateTableInNestedDatabase, WVDBFixture )
         "database database0 #1 { table table1 #1 TABLE1; } ;" 
         "database db #1 { database database0 #1 SUBDB; } ;" ; 
     
-    const char * hallo = "hallo";
-
     // Create the database and the table
     MakeDatabase ( schemaText, "db" );
     {   // make nested database and a table in it
@@ -174,21 +172,6 @@ FIXTURE_TEST_CASE ( CreateTableInNestedDatabase, WVDBFixture )
         VTable *tbl;
         REQUIRE_RC ( VDatabaseCreateTable ( subdb, & tbl, "TABLE1", kcmInit + kcmMD5, "TABLE1" ) );
 
-        VCursor *curs;
-        REQUIRE_RC ( VTableCreateCursorWrite ( tbl, & curs, kcmInsert ) );
-        
-        uint32_t col_idx;
-        REQUIRE_RC ( VCursorAddColumn ( curs, & col_idx, "column1" ) );
-        REQUIRE_RC ( VCursorOpen ( curs ) );
-        REQUIRE_RC ( VCursorOpenRow ( curs ) );
-        REQUIRE_RC ( VCursorWrite ( curs, col_idx, 8, hallo, 0, 5 ) );
-
-        REQUIRE_RC ( VCursorCommitRow ( curs ) );
-        REQUIRE_RC ( VCursorCloseRow ( curs ) );
-        REQUIRE_RC ( VCursorCommit ( curs ) );
-        
-        REQUIRE_RC ( VCursorRelease ( curs ) );
-        
         REQUIRE_RC ( VTableRelease ( tbl ) );
         REQUIRE_RC ( VDatabaseRelease ( subdb ) );
     }
@@ -197,21 +180,20 @@ FIXTURE_TEST_CASE ( CreateTableInNestedDatabase, WVDBFixture )
     // Re-open the database, try to open the table
     {
         VDBManager * mgr;
-        VDatabase  * db;
         VDatabase  * subdb;
         const VTable * tbl;
 
         REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
         REQUIRE_RC ( VDBManagerOpenDBUpdate ( mgr, 
-                                              & db, 
+                                              & m_db, 
                                               NULL, 
                                               "%s", 
                                               m_databaseName ) );
-        REQUIRE_RC ( VDatabaseOpenDBUpdate ( db, & subdb, "SUBDB" ) );
+        REQUIRE_RC ( VDatabaseOpenDBUpdate ( m_db, & subdb, "SUBDB" ) );
 
         // open the nested database and a table in it
-        //REQUIRE_RC ( VDatabaseOpenTableRead ( subdb, & tbl, NULL, "TABLE1" ) ); // segfault
-        //REQUIRE_RC ( VTableRelease ( tbl ) );
+        REQUIRE_RC ( VDatabaseOpenTableRead ( subdb, & tbl, "%s", "TABLE1" ) ); // segfault no more...
+        REQUIRE_RC ( VTableRelease ( tbl ) );
         
         REQUIRE_RC ( VDatabaseRelease ( subdb ) );
         REQUIRE_RC ( VDBManagerRelease ( mgr ) );
