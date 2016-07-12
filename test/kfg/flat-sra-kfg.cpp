@@ -150,8 +150,8 @@ TEST_CASE(test_sra) {
     VPath * queryLong = NULL;
     REQUIRE_RC ( VFSManagerMakeAccPath ( mgr, & queryLong, "SRR1000254" ) );
 
-    const char rootPath [] = "/repository/remote/aux/NCBI/root";
-    const char newRoot[]  = "http://sra-download.ncbi.nlm.nih.gov";
+//  const char rootPath [] = "/repository/remote/aux/NCBI/root";
+//  const char newRoot[]  = "http://sra-download.ncbi.nlm.nih.gov";
 
     // fail using incomplete configuration
     Test(this, mgr, cfg, queryShort, queryLong, "incomplete-old");
@@ -164,10 +164,12 @@ TEST_CASE(test_sra) {
     REQUIRE_RC ( KConfigWriteString ( cfg, cgiPath, badCgi ) );
     Test(this, mgr, cfg, queryShort, queryLong, "bad cgi-old");
 
+/* aux repositories are ignored : VDB-3090 
     // old aux configuration cannot resolve long accession
     const char oldRoot  []  = "http://ftp-trace.ncbi.nlm.nih.gov/sra";
     REQUIRE_RC ( KConfigWriteString ( cfg, rootPath, oldRoot ) );
     Test(this, mgr, cfg, queryShort, queryLong, "aux-old", oldShort);
+*/
 
     // LOAD NEW CONFIGURATION
     RELEASE ( VFSManager, mgr );
@@ -189,9 +191,11 @@ TEST_CASE(test_sra) {
     REQUIRE_RC ( KConfigWriteString ( cfg, cgiPath, badCgi ) );
     Test(this, mgr, cfg, queryShort, queryLong, "bad cgi-new");
 
+/* aux repositories are ignored : VDB-3090 
     // resolve using new aux configuration
     REQUIRE_RC ( KConfigWriteString ( cfg, rootPath, newRoot ) );
     Test(this, mgr, cfg, queryShort, queryLong, "aux-new", newShort, newLong);
+*/
 
     RELEASE ( VFSManager, mgr );
     RELEASE ( KConfig, cfg );
@@ -340,12 +344,12 @@ cerr << "\nTO FIX !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! :\n "
         _dad->ErrorCounterAdd(GetErrorCounter());
     }
 };
+/* aux repositories are ignored : VDB-3090 
 #ifdef ALL
 TEST_CASE(test_nakmer) {
     Fixture fixture(this, "nakmer", "GCA_000391885.1_R",
         "/repository/remote/aux/NCBI/apps/nakmer/volumes/fuseNAKMER", "sadb");
 }
-
 TEST_CASE(test_nannot) {
     Fixture fixture(this, "nannot", "NA000000007.1",
         "/repository/remote/aux/NCBI/apps/nannot/volumes/fuseNANNOT", "sadb");
@@ -370,10 +374,10 @@ TEST_CASE(test_AAAB01000001) {
         "/repository/remote/aux/NCBI/apps/refseq/volumes/refseq", "refseq" );
 }
 #endif
-/*TEST_CASE(test_AAAB01_2) {
+/ * TEST_CASE(test_AAAB01_2) {
     Fixture fixture(this, "refseq AAAB01.2", "AAAB01.2",
         "/repository/remote/aux/NCBI/apps/refseq/volumes/refseq", "refseq" );
-}*/
+} * /
 #ifdef ALL
 TEST_CASE(test_KC702199) {
     Fixture fixture(this, "refseq KC702199.1", "KC702199.1",
@@ -396,7 +400,7 @@ TEST_CASE(test_WGS_AAAB01_1) {
 TEST_CASE(test_WGS_AAAB01_9) {
     Fixture fixture(this, "WGS AAAB01_2", "AAAB01.9",
         "/repository/remote/aux/NCBI/apps/wgs/volumes/fuseWGS", "wgs", NULL );
-}
+}*/
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char *argv [] ) {
