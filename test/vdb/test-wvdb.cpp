@@ -53,7 +53,7 @@ class WVDB_Fixture
 {
 public:
     WVDB_Fixture()
-    : m_databaseName(0), m_db(0)
+    : m_db ( 0 )
     {
     }
     ~WVDB_Fixture()
