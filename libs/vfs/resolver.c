@@ -78,7 +78,8 @@
    unless we are expecting them for refseq */
 #define DISALLOW_FRAGMENT NO_LEGACY_WGS_REFSEQ_CGI
 
-#define USE_CURL 0
+/* the fail-over mechanism of allowing "aux" repositories */
+#define ALLOW_AUX_REPOSITORIES 0
 
 #define NAME_SERVICE_MAJ_VERS_ 1
 #define NAME_SERVICE_MIN_VERS_ 1
@@ -4392,17 +4393,21 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> local, kfg, NULL,
                 "user/main", true, false, userDisabled, userCacheEnabled );
+#if ALLOW_AUX_REPOSITORIES
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> local, kfg, NULL,
                 "user/aux", true, false, userDisabled, userCacheEnabled );
+#endif
 
         /* load any site repositories */
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> local, kfg, NULL,
                 "site/main", false, false, siteDisabled, false );
+#if ALLOW_AUX_REPOSITORIES
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> local, kfg, NULL,
                 "site/aux", false, false, siteDisabled, false );
+#endif
 
         /* if within a protected workspace, load protected remote repositories */
         if ( rc == 0 && self -> ticket != NULL )
@@ -4430,18 +4435,16 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> remote, kfg, NULL,
                 "remote/main", false, false, remoteDisabled, false );
+#if ALLOW_AUX_REPOSITORIES
         if ( rc == 0 )
             rc = VResolverLoadSubCategory ( self, & self -> remote, kfg, NULL,
                 "remote/aux", false, false, remoteDisabled, false );
+#endif
 
         KConfigNodeRelease ( kfg );
 
         /* recover from public remote repositories using resolver CGI */
-        if ( self -> kns == NULL
-#if USE_CURL
-             && self -> num_app_vols [ appAny ] != 0
-#endif
-            )
+        if ( self -> kns == NULL )
         {
             if (kns == NULL) {
                 rc = KNSManagerMake ( ( KNSManager** ) & self -> kns );
