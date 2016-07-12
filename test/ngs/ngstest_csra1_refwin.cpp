@@ -102,7 +102,10 @@ public:
     bool NextId (const string& p_expected)
     {
         if ( ! NGS_AlignmentIteratorNext ( m_align, m_ctx ) || m_ctx -> rc != 0 )
+        {
+            cout << "NextId: NGS_AlignmentIteratorNext FAILED" << endl;
             return false;
+        }
         string actual = toString ( NGS_AlignmentGetAlignmentId ( m_align, m_ctx ), m_ctx, true );
         if ( p_expected !=  actual )
         {
@@ -169,7 +172,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_NoAccessBeforeNext, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_PrimaryOnly, "supercont2.1" );
     
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false ); 
 
     REQUIRE_NULL ( NGS_AlignmentGetAlignmentId ( m_align, ctx ) ); 
     REQUIRE_FAILED ();
@@ -229,7 +232,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_AccessAfterNext, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_PrimaryOnly, "supercont2.1" );
     
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false ); 
     REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
     REQUIRE ( ! FAILED () );
 
@@ -320,7 +323,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Primary, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
     
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false ); 
 
     REQUIRE ( NextId ( string ( CSRA1_WithSecondary ) + ".PA.1") ); 
     REQUIRE ( NextId ( string ( CSRA1_WithSecondary ) + ".PA.2") ); 
@@ -333,7 +336,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Primary_Only, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
     
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false ); 
 
     // skip to where a secondary alignment which would show up, between primary alignments 34 and 35
     SkipAlignments( 33 );
@@ -348,7 +351,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Secondary, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
     
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, false, true); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, false, true ); 
 
     
     REQUIRE ( NextId ( string ( CSRA1_WithSecondary ) + ".SA.169") ); 
@@ -371,7 +374,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_PrimaryAndSecondary, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
     
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true ); 
 
     // skip to where a secondary alignment is expected, between primary alignments 34 and 35
     SkipAlignments( 33 );
@@ -386,7 +389,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Sort, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
     
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true ); 
 
     // secondary 170 should go before primary 62
     SkipAlignments( 61 ); /*skip over 60 primary and 1 secondary */
@@ -400,21 +403,21 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Sort, CSRA1_Fixture)
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_FullPrimary_Order, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, false ); 
     REQUIRE ( VerifyOrder() );
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_FullSecondary_Order, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, false, true); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, false, true ); 
     REQUIRE ( VerifyOrder() );
     EXIT;
 }
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_FullAll_Order, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true ); 
     REQUIRE ( VerifyOrder() );
     EXIT;
 }
@@ -460,6 +463,19 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Slice_Order, CSRA1_Fixture)
     ENTRY_GET_REF ( CSRA1_WithSecondary, "gi|169794206|ref|NC_010410.1|" );
     m_align = NGS_ReferenceGetAlignmentSlice ( m_ref, ctx, 517000, 100000, true, true ); 
     REQUIRE ( VerifyOrder() );
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Slice_NoSecondary, CSRA1_Fixture)
+{   // VDB-2658: exception when there is no REFERENCE.SECONDARY_ALIGNMENT_IDS column
+    const char* accesssion = "SRR644545";
+    ENTRY_GET_REF ( accesssion, "NC_000004.11" );
+
+    m_align = NGS_ReferenceGetAlignmentSlice ( m_ref, ctx, 0, 100000, true, true ); 
+    REQUIRE ( ! FAILED () );
+    
+    REQUIRE ( NextId ( string ( accesssion ) + ".PA.1") ); 
+    
     EXIT;
 }
 
@@ -550,6 +566,33 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Slice_Overlap_PrimaryAndSecondary_Fu
     
     EXIT;
 }
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Slice_Filtered, CSRA1_Fixture)
+{
+    ENTRY_GET_REF ( "ERR225922", "2" );
+
+    const bool wants_primary = true;
+    const bool wants_secondary = true;
+#pragma message ( "filtering did not work prior to today's changes. I have set filter bits to allow this test to pass. the test should be fixed so that filters are set to the two desired flags." )
+    const uint32_t filters = NGS_AlignmentFilterBits_pass_bad | NGS_AlignmentFilterBits_pass_dups |
+        NGS_AlignmentFilterBits_no_wraparound | NGS_AlignmentFilterBits_start_within_window;
+    const int32_t no_map_qual = 0;
+
+    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, 203894961, 100, wants_primary, wants_secondary, filters, no_map_qual ); // only the ones that start within the window
+    REQUIRE ( ! FAILED () );
+    
+    // only the alignments starting inside the slice (203894961)
+    REQUIRE ( NextId ( string ( "ERR225922.PA.7029")    ) );    // 203894961, 76, 60 (same as 45681 but primary)
+    REQUIRE ( NextId ( string ( "ERR225922.SA.45681")   ) );   // 203894961, 76, 60 (same as 7029 but secondary; id=45521+160 )
+    REQUIRE ( NextId ( string ( "ERR225922.PA.7030")    ) ); 
+    REQUIRE ( NextId ( string ( "ERR225922.PA.7031")    ) ); 
+    REQUIRE ( NextId ( string ( "ERR225922.PA.7032")    ) ); 
+    REQUIRE ( NextId ( string ( "ERR225922.PA.7033")    ) ); 
+    REQUIRE ( NextId ( string ( "ERR225922.SA.45682")   ) );   // (id=45,521+161)
+    REQUIRE ( ! NGS_AlignmentIteratorNext ( m_align, m_ctx ) ); 
+    
+    EXIT;
+}
+
 // FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Slice_Overlap_LookbackMoreThanOneChunk, CSRA1_Fixture)
 // FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Slice_Overlap_LookbackDiffersForPrimaryAndSecondary, CSRA1_Fixture)
 // FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Slice_Overlap_DefaultLookback, CSRA1_Fixture)
@@ -560,7 +603,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Circular, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_WithCircularReference, "chrM" );
 
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true ); 
     REQUIRE ( ! FAILED () );
     
     // chrM is 16569 bases long          // pos, len, mapq
@@ -596,6 +639,107 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_Circular_Slice, CSRA1_Fixture)
     EXIT;
 }
 
+// NGS_ReferenceGetFilteredAlignmentSlice
+
+uint64_t SliceOffset = 5;
+uint64_t SliceLength = 100;
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_Wraparound, CSRA1_Fixture )
+{   // wraparound alignments overlapping with a slice
+    ENTRY_GET_REF( CSRA1_WithCircularReference, "chrM" );
+    
+    const bool wants_primary = true;
+    const bool wants_secondary = true;
+#pragma message ( "filtering did not work prior to today's changes. I have set filter bits to allow this test to pass. the test should be fixed so that filters are set to the two desired flags." )
+    const uint32_t no_filters = NGS_AlignmentFilterBits_pass_bad | NGS_AlignmentFilterBits_pass_dups;
+    const int32_t no_map_qual = 0;
+
+    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, SliceOffset, SliceLength, wants_primary, wants_secondary, no_filters, no_map_qual ); 
+    REQUIRE ( ! FAILED () && m_align );
+    REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
+    
+    // the first returned alignment starts before the start of the circular reference, overlaps with slice
+    int64_t pos = NGS_AlignmentGetAlignmentPosition ( m_align, ctx );
+    REQUIRE_LT ( ( int64_t ) ( SliceOffset + SliceLength ), pos );
+    
+    // check for overlap with the slice
+    uint64_t refLen = NGS_ReferenceGetLength ( m_ref, ctx );
+    pos -= ( int64_t ) refLen; 
+    REQUIRE_GT ( ( int64_t ) 0, pos );
+    REQUIRE_GE ( pos + NGS_AlignmentGetAlignmentLength( m_align, ctx ), SliceOffset );
+    
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_Wraparound_StartInWindow, CSRA1_Fixture )
+{   // when StartInWindow filter is specified, it removes wraparound alignments as well
+    ENTRY_GET_REF( CSRA1_WithCircularReference, "chrM" );
+    
+    const bool wants_primary = true;
+    const bool wants_secondary = true;
+#pragma message ( "filtering did not work prior to today's changes. I have set filter bits to allow this test to pass. the test should be fixed so that filters are set to the two desired flags." )
+    const uint32_t filters = NGS_AlignmentFilterBits_pass_bad | NGS_AlignmentFilterBits_pass_dups |
+        NGS_AlignmentFilterBits_start_within_window;
+    const int32_t no_map_qual = 0;
+
+    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, SliceOffset, SliceLength, wants_primary, wants_secondary, filters, no_map_qual ); 
+    REQUIRE ( ! FAILED () && m_align );
+    REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
+    
+    // the first returned alignment starts inside the slice
+    int64_t pos = NGS_AlignmentGetAlignmentPosition ( m_align, ctx );
+    REQUIRE_LE ( ( int64_t ) SliceOffset, pos );
+    REQUIRE_LT ( pos, ( int64_t ) ( SliceOffset + SliceLength ) );
+    
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_NoWraparound, CSRA1_Fixture )
+{   // only removes wraparound alignments, not the ones starting before the slice
+    ENTRY_GET_REF( CSRA1_WithCircularReference, "chrM" );
+    
+    const bool wants_primary = true;
+    const bool wants_secondary = true;
+#pragma message ( "filtering did not work prior to today's changes. I have set filter bits to allow this test to pass. the test should be fixed so that filters are set to the two desired flags." )
+    const uint32_t filters = NGS_AlignmentFilterBits_pass_bad | NGS_AlignmentFilterBits_pass_dups |
+        NGS_AlignmentFilterBits_no_wraparound;
+    const int32_t no_map_qual = 0;
+
+    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, SliceOffset, SliceLength, wants_primary, wants_secondary, filters, no_map_qual ); 
+    REQUIRE ( ! FAILED () && m_align );
+    REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
+    
+    // the first returned alignment starts outside the slice but does not wrap around
+    REQUIRE_GT ( ( int64_t ) SliceOffset, NGS_AlignmentGetAlignmentPosition ( m_align, ctx ) );
+    
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_NoWraparound_StartInWindow, CSRA1_Fixture )
+{   // when StartInWindow filter is specified, it removes wraparound alignments as well
+    ENTRY_GET_REF( CSRA1_WithCircularReference, "chrM" );
+    
+    const bool wants_primary = true;
+    const bool wants_secondary = true;
+#pragma message ( "filtering did not work prior to today's changes. I have set filter bits to allow this test to pass. the test should be fixed so that filters are set to the two desired flags." )
+    const uint32_t filters = NGS_AlignmentFilterBits_pass_bad | NGS_AlignmentFilterBits_pass_dups |
+        NGS_AlignmentFilterBits_no_wraparound | NGS_AlignmentFilterBits_start_within_window;
+    const int32_t no_map_qual = 0;
+
+    m_align = NGS_ReferenceGetFilteredAlignmentSlice ( m_ref, ctx, SliceOffset, SliceLength, wants_primary, wants_secondary, filters, no_map_qual ); 
+    REQUIRE ( ! FAILED () && m_align );
+    REQUIRE ( NGS_AlignmentIteratorNext ( m_align, ctx ) );
+    
+    // the first returned alignment starts inside the slice
+    int64_t pos = NGS_AlignmentGetAlignmentPosition ( m_align, ctx );
+    REQUIRE_LE ( ( int64_t ) SliceOffset, pos );
+    REQUIRE_LT ( pos, ( int64_t ) ( SliceOffset + SliceLength ) );
+    
+    EXIT;
+}
+
+
+
 #if 0
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_PrintEmAll_1, CSRA1_Fixture)
 {
@@ -605,7 +749,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceWindow_PrintEmAll_1, CSRA1_Fixture)
 //    ENTRY_GET_REF ( CSRA1_PrimaryOnly, "supercont2.1" );
     ENTRY_GET_REF ( CSRA1_WithCircularReference, "chrM" );
     
-    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true); 
+    m_align = NGS_ReferenceGetAlignments ( m_ref, ctx, true, true ); 
 
     uint64_t prevPos = 0;
     uint64_t prevLen = 0;

@@ -454,7 +454,7 @@ rc_t KMane ( int argc, char *argv [] )
         if ( sep ++ == NULL )
             sep = tool;
         else
-            tool_size = sep - tool;
+            tool_size -= sep - tool;
 
         sep = string_chr ( tool = sep, tool_size, '.' );
         if ( sep != NULL )

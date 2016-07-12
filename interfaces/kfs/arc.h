@@ -109,7 +109,8 @@ KFS_EXTERN rc_t CC KDirectoryOpenArcDirRead_silent_preopened(const struct KDirec
         bool (CC* filter )(const KDirectory*, const char *, void *), void * filterparam);
 
 
-
+KFS_EXTERN bool CC KDirectoryIsKArcDir ( const KDirectory * self );
+KFS_EXTERN bool CC KArcDirIsFromRemote ( const KArcDir * self );
 
 
 #if 0

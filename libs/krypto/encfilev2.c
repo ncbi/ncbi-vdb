@@ -1639,9 +1639,9 @@ rc_t CC KEncFileRead (const KEncFile *cself,
 
     block_id = PlaintextOffset_to_BlockId (pos, &offset);
 
-    switch (self->size_known)
+    switch ( ( uint32_t ) self->size_known)
     {
-    case false:
+    case 0:
 
         max_bid = EncryptedPos_to_BlockId (self->enc_size, NULL, NULL);
 
@@ -1650,14 +1650,14 @@ rc_t CC KEncFileRead (const KEncFile *cself,
             return 0;
         break;
 
-    case true:
+    case 1:
         /* if past end of file quick out */
         if (pos > self->dec_size)
             return 0;
         break;
 
     default:
-        assert (self->size_known);
+        assert (0 && self->size_known);
         break;
     }
 
@@ -2534,7 +2534,7 @@ LIB_EXPORT rc_t CC KFileIsEnc_v2 (const char * buffer, size_t buffer_size)
 
     if ((memcmp (buffer, &const_header.file_sig, sizeof const_header.file_sig ) != 0) &&
         (memcmp (buffer, &const_header_sra.file_sig, sizeof const_header_sra.file_sig ) != 0))
-        return RC (rcFS, rcFile, rcIdentifying, rcFile, rcWrongType); 
+        return SILENT_RC (rcFS, rcFile, rcIdentifying, rcFile, rcWrongType); 
 
     /* can we also check the byte order? It's okay if we can't */
     if (buffer_size < sizeof header.file_sig + sizeof header.byte_order)

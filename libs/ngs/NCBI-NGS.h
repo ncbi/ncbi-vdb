@@ -40,12 +40,14 @@ extern "C" {
  */
 struct NGS_ErrBlock_v1;
 struct NGS_ReadCollection_v1;
+struct NGS_ReferenceSequence_v1;
 
 /*--------------------------------------------------------------------------
  * NCBI NGS engine
  *  link against ncbi-vdb library
  */
 LIB_EXPORT struct NGS_ReadCollection_v1 * NCBI_NGS_OpenReadCollection ( const char * spec, struct NGS_ErrBlock_v1 * err );
+LIB_EXPORT struct NGS_ReferenceSequence_v1 * NCBI_NGS_OpenReferenceSequence ( const char * spec, struct NGS_ErrBlock_v1 * err );
 
 
 

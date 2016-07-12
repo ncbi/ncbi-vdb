@@ -385,7 +385,7 @@ XFSDocFile_read_v1 (
             return XFS_RC ( rcInvalid );
         }
 
-        Siz2R = DocS - pos;
+        Siz2R = ( size_t ) ( DocS - pos );
         if ( bsize < Siz2R ) {
             Siz2R = bsize;
         }

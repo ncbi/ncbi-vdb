@@ -68,12 +68,6 @@ clean: stdclean
 # made in both static and shared versions
 $(LIBDIR)/libncbi-vdb: $(addprefix $(LIBDIR)/libncbi-vdb.,$(LIBX) $(SHLX))
 
-ifeq (linux,$(OS))
-  LIBKFF = kff magic
-else
-  LIBKFF =
-endif
-
 ifeq (64,$(BITS))
   LIBVDB_BLAST = vdb-blast
 else
@@ -131,10 +125,11 @@ VDB_LIB = \
 	$(addprefix -s,$(VDB_LIB_RD))
 
 $(LIBDIR)/libncbi-vdb.$(SHLX): $(VDB_OBJ)
-	$(LD) --dlib --vers $(SRCDIR) -o $@ $(VDB_LIB)
+	echo $(SRCDIR)
+	$(LD) --dlib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(VDB_LIB)
 
 $(LIBDIR)/libncbi-vdb.$(LIBX): $(VDB_OBJ)
-	$(LD) --slib --vers $(SRCDIR) -o $@ $(VDB_LIB)
+	$(LD) --slib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(VDB_LIB)
 
 #-------------------------------------------------------------------------------
 # update version
@@ -156,7 +151,7 @@ WVDB_LIB = \
 	$(addprefix -s,$(VDB_LIB_RDWR))
 
 $(LIBDIR)/libncbi-wvdb.$(SHLX): $(WVDB_OBJ)
-	$(LD) --dlib --vers $(SRCDIR) -o $@ $(WVDB_LIB)
+	$(LD) --dlib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(WVDB_LIB)
 
 $(LIBDIR)/libncbi-wvdb.$(LIBX): $(WVDB_OBJ)
-	$(LD) --slib --vers $(SRCDIR) -o $@ $(WVDB_LIB)
+	$(LD) --slib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(WVDB_LIB)

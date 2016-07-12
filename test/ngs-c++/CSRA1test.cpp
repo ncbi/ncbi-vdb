@@ -29,6 +29,7 @@
 */
 
 #include "ngsfixture.hpp"
+#include <stdint.h>
 
 #include <sstream>
 
@@ -44,6 +45,9 @@ public:
     static const char* CSRA1_WithSecondary;
     static const char* CSRA1_WithGroups;
     static const char* CSRA1_NoReadGroups;
+    static const char* CSRA1_WithCircularRef;
+    static const char* CSRA1_WithCircularRef2;
+    static const char* CSRA1_SingleFragmentPerSpot;
     
 public:
     CSRA1_Fixture()
@@ -69,6 +73,10 @@ public:
     {
         return NgsFixture :: getReference ( CSRA1_PrimaryOnly, spec ); 
     }
+    bool hasReference ( const char* spec )
+    {
+        return NgsFixture :: hasReference ( CSRA1_PrimaryOnly, spec ); 
+    }
     ngs :: ReferenceIterator getReferences ()
     {
         return NgsFixture :: getReferences ( CSRA1_PrimaryOnly ); 
@@ -78,10 +86,13 @@ public:
         return ncbi :: NGS :: openReadCollection ( CSRA1_WithSecondary ) . getAlignments ( category );
     }
 };
-const char* CSRA1_Fixture::CSRA1_PrimaryOnly    = "SRR1063272";
-const char* CSRA1_Fixture::CSRA1_WithSecondary  = "SRR833251";
-const char* CSRA1_Fixture::CSRA1_WithGroups     = "SRR822962";
-const char* CSRA1_Fixture::CSRA1_NoReadGroups   = "SRR1237962";
+const char* CSRA1_Fixture::CSRA1_PrimaryOnly           = "SRR1063272";
+const char* CSRA1_Fixture::CSRA1_WithSecondary         = "SRR833251";
+const char* CSRA1_Fixture::CSRA1_WithGroups            = "SRR822962";
+const char* CSRA1_Fixture::CSRA1_NoReadGroups          = "SRR1237962";
+const char* CSRA1_Fixture::CSRA1_WithCircularRef       = "SRR1769246";
+const char* CSRA1_Fixture::CSRA1_WithCircularRef2      = "SRR821492";
+const char* CSRA1_Fixture::CSRA1_SingleFragmentPerSpot = "SRR2096940";
 
 #include "CSRA1_ReadCollection_test.cpp"
 
@@ -161,6 +172,13 @@ FIXTURE_TEST_CASE(CSRA1_Read_getSubReadQualities_OffsetLength, CSRA1_Fixture)
     ngs :: String quals = getRead ( string ( CSRA1_PrimaryOnly ) + ".R.1" ) . getReadQualities( 160, 10 ) . toString (); 
     ngs :: String expected("<ABBD;ACDD");
     REQUIRE_EQ( expected, quals );    
+}
+
+FIXTURE_TEST_CASE(CSRA1_Read_fragmentIsAligned_MultiFragmentsPerPartiallyAlignedSpot, CSRA1_Fixture)
+{
+    ngs :: Read read = ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getRead ( ngs :: String ( CSRA1_PrimaryOnly ) + ".R.3" );
+    REQUIRE_EQ( true, read.fragmentIsAligned( 0 ) );
+    REQUIRE_EQ( false, read.fragmentIsAligned( 1 ) );
 }
 
 ///// ReadIterator
@@ -298,6 +316,32 @@ FIXTURE_TEST_CASE(CSRA1_Fragment_getSubFragmentQualities_OffsetLength, CSRA1_Fix
     ngs :: String expected("DDDCDC");
     REQUIRE_EQ( expected, getFragment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".R.1", 2 ) . getFragmentQualities ( 80, 6 ) . toString () );    
 }
+
+FIXTURE_TEST_CASE(CSRA1_Fragment_isPaired_MultiFragmentsPerAlignedSpot, CSRA1_Fixture)
+{
+    ngs :: Read read = ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getRead ( ngs :: String ( CSRA1_PrimaryOnly ) + ".R.1" );
+    read.nextFragment();
+    REQUIRE_EQ( true, read.isPaired() );
+    read.nextFragment();
+    REQUIRE_EQ( true, read.isPaired() );
+}
+
+FIXTURE_TEST_CASE(CSRA1_Fragment_isPaired_MultiFragmentsPerPartiallyAlignedSpot, CSRA1_Fixture)
+{
+    ngs :: Read read = ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getRead ( ngs :: String ( CSRA1_PrimaryOnly ) + ".R.3" );
+    read.nextFragment();
+    REQUIRE_EQ( true, read.isPaired() );
+    read.nextFragment();
+    REQUIRE_EQ( true, read.isPaired() );
+}
+
+FIXTURE_TEST_CASE(CSRA1_Fragment_isPaired_SingleFragmentPerSpot, CSRA1_Fixture)
+{
+    ngs :: Read read = ncbi :: NGS :: openReadCollection ( CSRA1_SingleFragmentPerSpot ) . getRead ( ngs :: String ( CSRA1_SingleFragmentPerSpot ) + ".R.1" );
+    read.nextFragment();
+    REQUIRE_EQ( false, read.isPaired() );
+}
+
 //TODO: getFragmentQualities on an accession with QUALITY column of type phred_33 (and phred_64, if there can be one)
 
 ///// Reference
@@ -330,6 +374,14 @@ static uint64_t CSRA1_ReferenceLength = (uint64_t)2291499l;
 FIXTURE_TEST_CASE(CSRA1_Reference_GetLength, CSRA1_Fixture)
 {
     REQUIRE_EQ( CSRA1_ReferenceLength, getReference ( "supercont2.1" ). getLength () );
+}
+
+
+static uint64_t CSRA1_ReferenceLength_VDB_2832 = (uint64_t)49711204;
+FIXTURE_TEST_CASE(CSRA1_Reference_GetLength_VDB_2832, CSRA1_Fixture)
+{
+    REQUIRE_EQ( CSRA1_ReferenceLength_VDB_2832, ncbi :: NGS :: openReadCollection ( "SRR2073063" ) . getReference ( "NC_016101.1" ). getLength () );
+    REQUIRE_EQ( CSRA1_ReferenceLength_VDB_2832, ncbi :: NGS :: openReadCollection ( "SRR2073063" ) . getReference ( "Gm14" ). getLength () );
 }
 
 FIXTURE_TEST_CASE(CSRA1_Reference_GetReferenceBases_All, CSRA1_Fixture)
@@ -554,6 +606,31 @@ FIXTURE_TEST_CASE(CSRA1_Alignment_getAlignmentPosition, CSRA1_Fixture)
                 ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.1" ) . getAlignmentPosition () );
 }
 
+FIXTURE_TEST_CASE(CSRA1_Alignment_getReferencePositionProjectionRange, CSRA1_Fixture)
+{
+    uint64_t res = ncbi::NGS::openReadCollection ("SRR1597772").getAlignment("SRR1597772.PA.6").getReferencePositionProjectionRange(11601);
+    REQUIRE( res == 1 );
+
+    res = ncbi::NGS::openReadCollection("SRR1597895").getAlignment("SRR1597895.PA.26088399").getReferencePositionProjectionRange(234668879);
+    REQUIRE( res == (uint64_t)-1 ); // out of bounds
+}
+
+FIXTURE_TEST_CASE(CSRA1_Alignment_getReferencePositionProjectionRangeI, CSRA1_Fixture)
+{
+    uint64_t res = ncbi::NGS::openReadCollection ("SRR1597772").getAlignment("SRR1597772.PA.6").getReferencePositionProjectionRange(11692);
+    REQUIRE( res == ((uint64_t)84 << 32 | 5) );
+}
+
+FIXTURE_TEST_CASE(CSRA1_Alignment_getReferencePositionProjectionRangeD, CSRA1_Fixture)
+{
+    uint64_t res = ncbi::NGS::openReadCollection ("SRR1597772").getAlignment("SRR1597772.PA.6").getReferencePositionProjectionRange(11667);
+    REQUIRE( res == ((uint64_t)65 << 32) );
+    res = ncbi::NGS::openReadCollection ("SRR1597772").getAlignment("SRR1597772.PA.6").getReferencePositionProjectionRange(11669);
+    REQUIRE( res == ((uint64_t)65 << 32) );
+    res = ncbi::NGS::openReadCollection ("SRR1597772").getAlignment("SRR1597772.PA.6").getReferencePositionProjectionRange(11672);
+    REQUIRE( res == ((uint64_t)65 << 32) );
+}
+
 FIXTURE_TEST_CASE(CSRA1_Alignment_getAlignmentLength, CSRA1_Fixture)
 {
     REQUIRE_EQ( (uint64_t)101, //REF_LEN or length(RAW_READ) 
@@ -680,6 +757,27 @@ FIXTURE_TEST_CASE(CSRA1_Alignment_getMateIsReversedOrientation_False, CSRA1_Fixt
     REQUIRE( ! ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly ) . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.2" ) . getMateIsReversedOrientation () );
 }
 
+FIXTURE_TEST_CASE(CSRA1_Alignment_isPaired_MultiFragmentsPerSpot, CSRA1_Fixture)
+{
+    ngs :: ReadCollection readCollection = ncbi :: NGS :: openReadCollection ( CSRA1_PrimaryOnly );
+    ngs :: Alignment alignment = readCollection . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.1" );
+    REQUIRE_EQ( true, alignment.isPaired() );
+
+    alignment = readCollection . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.2" );
+    REQUIRE_EQ( true, alignment.isPaired() );
+    
+    // has unaligned mate
+    alignment = readCollection . getAlignment ( ngs :: String ( CSRA1_PrimaryOnly ) + ".PA.6" );
+    REQUIRE_EQ( true, alignment.isPaired() );
+}
+
+FIXTURE_TEST_CASE(CSRA1_Alignment_isPaired_SingleFragmentPerSpot, CSRA1_Fixture)
+{
+    ngs :: ReadCollection readCollection = ncbi :: NGS :: openReadCollection ( CSRA1_SingleFragmentPerSpot );
+    ngs :: Alignment alignment = readCollection . getAlignment ( ngs :: String ( CSRA1_SingleFragmentPerSpot ) + ".PA.1" );
+    REQUIRE_EQ( false, alignment.isPaired() );
+}
+
 
 ///// AlignmentIterator from ReadCollection
 //TODO: CG's EVIDENCE?
@@ -703,6 +801,15 @@ FIXTURE_TEST_CASE(CSRA1_AlignmentIterator_Next, CSRA1_Fixture)
     REQUIRE( it . nextAlignment () );
     REQUIRE( it . nextAlignment () );
     REQUIRE_EQ( ngs :: String ( CSRA1_WithSecondary ) + ".PA.2", it . getAlignmentId () . toString () ); 
+}
+
+FIXTURE_TEST_CASE(CSRA1_AlignmentIterator_Next_Switch_To_Secondary, CSRA1_Fixture)
+{
+    ngs :: AlignmentIterator it = ncbi :: NGS :: openReadCollection ( CSRA1_WithSecondary ) . getAlignmentRange ( 168, 2, ngs :: Alignment :: all );
+    REQUIRE( it . nextAlignment () );
+    REQUIRE_EQ( ngs :: String ( CSRA1_WithSecondary ) + ".PA.168", it . getAlignmentId () . toString () );
+    REQUIRE( it . nextAlignment () );
+    REQUIRE_EQ( ngs :: String ( CSRA1_WithSecondary ) + ".SA.169", it . getAlignmentId () . toString () );
 }
 
 FIXTURE_TEST_CASE(CSRA1_AlignmentIterator_BeyondEnd, CSRA1_Fixture)
@@ -815,6 +922,106 @@ FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice, CSRA1_Fixture)
     REQUIRE ( ! it . nextAlignment () );
 }
 
+FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice_Filtered_Start_Within_Slice, CSRA1_Fixture)
+{
+    ngs :: Reference ref = ncbi :: NGS :: openReadCollection ( CSRA1_WithCircularRef ) . getReference ( "NC_012920.1" );
+    int64_t sliceStart = 1000;
+    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( sliceStart, 200, ngs :: Alignment :: all, ngs :: Alignment :: startWithinSlice, 0 );
+    
+    REQUIRE ( it . nextAlignment () );
+    REQUIRE_LE ( sliceStart, it.getAlignmentPosition() );
+}
+FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice_Unfiltered_Start_Before_Slice, CSRA1_Fixture)
+{
+    ngs :: Reference ref = ncbi :: NGS :: openReadCollection ( CSRA1_WithCircularRef ) . getReference ( "NC_012920.1" );
+    int64_t sliceStart = 1000;
+    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( sliceStart, 200, ngs :: Alignment :: all, (ngs::Alignment::AlignmentFilter)0, 0 );
+    
+    REQUIRE ( it . nextAlignment () );
+    REQUIRE_GT ( sliceStart, it.getAlignmentPosition() );
+}
+
+FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice_Filtered_Wraparound, CSRA1_Fixture)
+{
+    ngs :: Reference ref = ncbi :: NGS :: openReadCollection ( CSRA1_WithCircularRef2 ) . getReference ( "chrM" );
+    int64_t sliceStart = 5;
+    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( sliceStart, 100, ngs :: Alignment :: all, (ngs::Alignment::AlignmentFilter)0, 0 );
+    
+    REQUIRE ( it . nextAlignment () );
+    
+    // the first returned alignment starts before the start of the circular reference, overlaps with slice
+    int64_t pos = it.getAlignmentPosition();
+    REQUIRE_LT ( sliceStart + 100, pos );
+    
+    // check for overlap with the slice
+    uint64_t refLen = ref . getLength();
+    pos -= ( int64_t ) refLen;
+    REQUIRE_GT ( ( int64_t ) 0, pos );
+    REQUIRE_GE ( ( int64_t ) (pos + it . getAlignmentLength()), sliceStart );
+}
+
+FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice_Filtered_Wraparound_StartWithinSlice, CSRA1_Fixture)
+{
+    // when startWithinSlice filter is specified, it removes wraparound alignments as well
+    ngs :: Reference ref = ncbi :: NGS :: openReadCollection ( CSRA1_WithCircularRef2 ) . getReference ( "chrM" );
+    int64_t sliceStart = 5;
+    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( sliceStart, 100, ngs :: Alignment :: all, ngs :: Alignment :: startWithinSlice, 0 );
+    
+    REQUIRE ( it . nextAlignment () );
+    
+    // the first returned alignment starts inside the slice
+    int64_t pos = it.getAlignmentPosition();
+    REQUIRE_LE ( sliceStart, pos );
+    REQUIRE_LT ( pos, sliceStart + 100 );
+}
+
+FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice_Filtered_NoWraparound, CSRA1_Fixture)
+{
+    // when startWithinSlice filter is specified, it removes wraparound alignments as well
+    ngs :: Reference ref = ncbi :: NGS :: openReadCollection ( CSRA1_WithCircularRef2 ) . getReference ( "chrM" );
+    int64_t sliceStart = 5;
+    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( sliceStart, 100, ngs :: Alignment :: all, ngs :: Alignment :: noWraparound, 0 );
+    
+    REQUIRE ( it . nextAlignment () );
+    
+    // the first returned sliceStart starts outside the slice but does not wrap around
+    REQUIRE_GT ( sliceStart, it.getAlignmentPosition() );
+}
+
+FIXTURE_TEST_CASE(CSRA1_ReferenceWindow_Slice_Filtered_NoWraparound_StartWithinSlice, CSRA1_Fixture)
+{
+    // when startWithinSlice filter is specified, it removes wraparound alignments as well
+    ngs :: Reference ref = ncbi :: NGS :: openReadCollection ( CSRA1_WithCircularRef2 ) . getReference ( "chrM" );
+    int64_t sliceStart = 5;
+    ngs :: AlignmentIterator it = ref . getFilteredAlignmentSlice ( sliceStart, 100, ngs :: Alignment :: all, (ngs::Alignment::AlignmentFilter) (ngs :: Alignment :: noWraparound | ngs :: Alignment :: startWithinSlice), 0 );
+    
+    REQUIRE ( it . nextAlignment () );
+    
+    // the first returned alignment starts inside the slice
+    int64_t pos = it.getAlignmentPosition();
+    REQUIRE_LE ( sliceStart, pos );
+    REQUIRE_LT ( pos, sliceStart + 100 );
+}
+
+FIXTURE_TEST_CASE(CSRA1_Filter_SEQ_SPOT_ID_0, CSRA1_Fixture)
+{
+    // we should filter out secondary alignments with SEQ_SPOT_ID == 0
+    ngs :: ReadCollection run = ncbi :: NGS :: openReadCollection ( "seq_spot_id_0.sra" );
+    ngs :: Reference reference = run . getReference ( "NC_016088.2" );
+
+    ngs :: AlignmentIterator alignmentIterator = run.getAlignmentRange ( 145, 2, ngs :: Alignment :: all );
+
+    REQUIRE ( alignmentIterator.nextAlignment() );
+    REQUIRE_EQ ( ngs :: String ( "seq_spot_id_0.PA.145" ), alignmentIterator . getAlignmentId() . toString () );
+    REQUIRE ( !alignmentIterator.nextAlignment() );
+
+    alignmentIterator = reference . getFilteredAlignmentSlice ( 29446335, 10, ngs :: Alignment :: all, ngs :: Alignment :: startWithinSlice, 0 );
+    REQUIRE ( !alignmentIterator.nextAlignment() );
+
+    REQUIRE_THROW ( run . getAlignment ( "seq_spot_id_0.SA.146" ) );
+    REQUIRE_THROW ( reference . getAlignment ( "seq_spot_id_0.SA.146" ) );
+}
+
 /////TODO: Pileup
 //TODO: getReferenceSpec
 //TODO: getReferencePosition
@@ -848,6 +1055,12 @@ FIXTURE_TEST_CASE(CSRA1_ReadGroup_GetName, CSRA1_Fixture)
     REQUIRE_EQ ( ngs :: String("C1ELY.6"), rg . getName () );
 }
 
+FIXTURE_TEST_CASE(CSRA1_ReadGroup_HasReadGroup, CSRA1_Fixture)
+{
+    REQUIRE ( ncbi::NGS::openReadCollection( CSRA1_PrimaryOnly ).hasReadGroup( "C1ELY.6" ) );
+    REQUIRE ( ! ncbi::NGS::openReadCollection( CSRA1_PrimaryOnly ).hasReadGroup( "non-existent read group" ) );
+}
+
 FIXTURE_TEST_CASE(CSRA1_ReadGroup_GetStatistics, CSRA1_Fixture)
 {
     ngs :: ReadGroup rg = ncbi :: NGS :: openReadCollection ( CSRA1_WithGroups ) . getReadGroup ( "GS57510-FS3-L03" );
@@ -861,6 +1074,13 @@ FIXTURE_TEST_CASE(CSRA1_ReadGroup_GetStatistics, CSRA1_Fixture)
 }
 
 /////TODO: ReadGroupIterator
+FIXTURE_TEST_CASE(CSRA1_ReadGroupIterator_AfterNext, CSRA1_Fixture)
+{   
+    ngs :: ReadGroupIterator rg = ncbi :: NGS :: openReadCollection ( "ERR730927" ) . getReadGroups ();
+    REQUIRE ( rg . nextReadGroup () );
+    REQUIRE_EQ ( string ( "1#72" ),  rg . getName () );
+}
+
 
 //////////////////////////////////////////// Main
 extern "C"

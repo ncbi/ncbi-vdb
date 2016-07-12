@@ -26,6 +26,7 @@
 #include <klib/rc.h>
 #include <klib/out.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <kfs/file.h>
 
@@ -115,29 +116,29 @@ static const struct XFSNode_vt_v1 _sDocNodeVT_v1 = {
 LIB_EXPORT
 rc_t CC
 XFSDocNodeMake (
+            struct XFSNode ** Node,
             const struct XFSDoc * Doc,
             const char * Name,
-            const char * Perm,          /* Could be NULL */
-            struct XFSNode ** Node
+            const char * Perm          /* Could be NULL */
 )
 {
     return XFSDocNodeMakeWithFlavor (
+                                    Node,
                                     Doc,
                                     Name,
                                     Perm,
-                                    _sFlavorLess,
-                                    Node
+                                    _sFlavorLess
                                     );
 }   /* XFSDocNodeMake () */
 
 LIB_EXPORT
 rc_t CC
 XFSDocNodeMakeWithFlavor (
+            struct XFSNode ** Node,
             const struct XFSDoc * Doc,
             const char * Name,
             const char * Perm,          /* Could be NULL */
-            uint32_t Flavor,
-            struct XFSNode ** Node
+            uint32_t Flavor
 )
 {
     rc_t RCt;
@@ -190,7 +191,7 @@ XFSDocNodeMakeWithFlavor (
     }
 
 /*
-printf ( "XFSDocNodeMake ND[0x%p] NM[%s] Doc[0x%p]\n", ( void * ) TheNode, Name, Doc );
+pLogMsg ( klogDebug, "XFSDocNodeMake ND[$(node)] NM[$(name)] Doc[$(doc)]", "node=%p,name=%s,doc=%s", ( void * ) TheNode, Name, Doc );
 */
 
     return RCt;
@@ -215,7 +216,7 @@ XFSDocNodeDispose ( const struct XFSDocNode * self )
     struct XFSDocNode * Node = ( struct XFSDocNode * ) self;
 
 /*
-printf ( "XFSDocNodeDispose ( 0x%p ) [%p]\n", ( void * ) Node, ( void * ) Node -> doc );
+pLogMsg ( klogDebug, "XFSDocNodeDispose ( $(node) ) [$(doc)]", "node=%p,doc=%p", ( void * ) Node, ( void * ) Node -> doc );
 */
 
     if ( Node == 0 ) {
@@ -298,7 +299,7 @@ rc_t CC
 _DocFile_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_DocNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_DocNodeFile_dispose_v1 ( $(node) )", "node=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -516,7 +517,7 @@ rc_t CC
 _DocAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_DocAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_DocAttr_dispose_v1 ( node )", "node=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {

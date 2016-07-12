@@ -105,6 +105,16 @@ struct NGS_String * NGS_FragmentGetSequence ( NGS_Fragment * self, ctx_t ctx, ui
 struct NGS_String * NGS_FragmentGetQualities ( NGS_Fragment * self, ctx_t ctx, uint64_t offset, uint64_t length );
 
 
+/* IsPaired
+ */
+bool NGS_FragmentIsPaired ( NGS_Fragment * self, ctx_t ctx );
+
+
+/* IsAligned
+ */
+bool NGS_FragmentIsAligned ( NGS_Fragment * self, ctx_t ctx );
+
+
 /* Make [ OBSOLETE ]
  *  make a stand-alone Fragment from Read
  */
@@ -141,6 +151,8 @@ struct NGS_Fragment_vt
     struct NGS_String * ( * get_id ) ( NGS_FRAGMENT * self, ctx_t ctx );
     struct NGS_String * ( * get_sequence ) ( NGS_FRAGMENT * self, ctx_t ctx, uint64_t offset, uint64_t length );
     struct NGS_String * ( * get_qualities ) ( NGS_FRAGMENT * self, ctx_t ctx, uint64_t offset, uint64_t length );
+    bool ( * is_paired ) ( NGS_FRAGMENT * self, ctx_t ctx );
+    bool ( * is_aligned ) ( NGS_FRAGMENT * self, ctx_t ctx );
 
     /* FragmentIterator interface */
     bool ( * next ) ( NGS_FRAGMENT * self, ctx_t ctx );

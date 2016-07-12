@@ -35,6 +35,9 @@
 #include <klib/rc.h>
 #endif
 
+#ifndef _h_klib_text_
+#include <klib/text.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,7 +66,9 @@ struct num_gen_iter;
  *  or creates and presets it with a range
  */
 KLIB_EXTERN rc_t CC num_gen_make( struct num_gen ** self );
+KLIB_EXTERN rc_t CC num_gen_make_sorted( struct num_gen ** self, bool sorted );
 KLIB_EXTERN rc_t CC num_gen_make_from_str( struct num_gen ** self, const char * src );
+KLIB_EXTERN rc_t CC num_gen_make_from_str_sorted( struct num_gen ** self, const char * src, bool sorted );
 KLIB_EXTERN rc_t CC num_gen_make_from_range( struct num_gen ** self, int64_t first, uint64_t count );
 KLIB_EXTERN rc_t CC num_gen_copy( const struct num_gen * self, struct num_gen ** dest );
 
@@ -91,7 +96,7 @@ KLIB_EXTERN rc_t CC num_gen_clear( struct num_gen * self );
  *  eventual overlaps with the previous content are consolidated
  */
 KLIB_EXTERN rc_t CC num_gen_parse( struct num_gen * self, const char * src );
-
+KLIB_EXTERN rc_t CC num_gen_parse_S( struct num_gen * self, const String * src );
 
 /*--------------------------------------------------------------------------
  * num_gen_add
@@ -127,9 +132,8 @@ KLIB_EXTERN bool CC num_gen_empty( const struct num_gen * self );
 /*--------------------------------------------------------------------------
  * num_gen_as_string
  *
- *  allocates a string that contains the generator as text
+ *  prints the content of the num_gen into the buffer
  *  *s = "1-5,20,24-25"
- *  caller has to free the string
  */
 KLIB_EXTERN rc_t CC num_gen_as_string( const struct num_gen * self, char * buffer, size_t buffsize,
                                         size_t * written, bool full_info );

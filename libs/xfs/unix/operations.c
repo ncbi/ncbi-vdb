@@ -44,6 +44,7 @@
 #include <klib/namelist.h>
 #include <klib/refcount.h>
 #include <klib/defs.h>
+#include <klib/log.h>
 #include <vfs/path.h>
 #include <vfs/manager.h>
 
@@ -59,9 +60,8 @@
 
 #include <sysalloc.h>
 #include <string.h> /* we are using memset() */
-#include <stdio.h>  /* trash, need to be removed, after adding VFM */
-#include <dirent.h> /* trash, need to be removed, after adding VFM */
-#include <unistd.h> /* trash, need to be removed, after adding VFM */
+#include <dirent.h>
+#include <unistd.h>
 
 #include <errno.h>
 #include <sys/types.h>
@@ -129,24 +129,23 @@ static
 rc_t
 _FUSE_tree_depot ( const struct XFSTreeDepot ** Depot )
 {
-    struct fuse_context * TheContext;
+    struct fuse_context * TheContext = NULL;
 
-    if ( Depot == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    * Depot = NULL;
+    XFS_CSAN ( Depot )
+    XFS_CAN ( Depot )
 
     TheContext = fuse_get_context();
     if ( TheContext == NULL ) {
-        OUTMSG ( ( "ERROR: improper usage of 'fuse_get_context()'\n" ) );
+        LogErr (
+                klogErr,
+                XFS_RC ( rcNull ),
+                "ERROR: improper usage of 'fuse_get_context()'"
+                );
         return XFS_RC ( rcNull );
     }
 
     * Depot = ( const struct XFSTreeDepot * ) TheContext -> private_data;
-    if ( * Depot == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( * Depot )
 
     return 0;
 }   /* _FUSE_tree_depot () */
@@ -164,16 +163,14 @@ _FUSE_make_v_path (
     RCt = 0;
     Pth = NULL;
 
-    if ( ThePath == NULL || DasPath == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * DasPath = NULL;
+    XFS_CSAN ( DasPath )
+    XFS_CAN ( ThePath )
+    XFS_CAN ( DasPath )
 
     RCt = VFSManagerMakePath ( XFS_VfsManager (), & Pth, ThePath );
     if ( RCt == 0 ) {
         * DasPath = Pth;
     }
-
 
     return RCt;
 }   /* _FUSE_make_v_path () */
@@ -190,11 +187,12 @@ _FUSE_get_node (
     const struct XFSNode * TheNode;
 
     RCt = 0;
+    Depot = NULL;
+    TheNode = NULL;
 
-    if ( Path == NULL || Node == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * Node = NULL;
+    XFS_CSAN ( Node )
+    XFS_CAN ( Path )
+    XFS_CAN ( Node )
 
     RCt = _FUSE_tree_depot ( & Depot );
     if ( RCt == 0 ) {
@@ -237,9 +235,9 @@ _FUSE_get_path_and_node (
     Type = kxfsNotFound;
     Editor = NULL;
 
-    if ( ThePath == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CSAN ( DasPath )
+    XFS_CSAN ( Node )
+    XFS_CAN ( ThePath )
 
     RCt = _FUSE_make_v_path ( ThePath, & RPath );
     if ( RCt == 0 ) {
@@ -300,39 +298,27 @@ _FUSE_get_parent_node (
 {
     rc_t RCt;
     const struct XFSTreeDepot * Depot;
-    char BB [ XFS_SIZE_4096 ];
     const struct XFSPath * xPath;
     uint32_t xPathQ;
     const struct XFSNode * xNode;
     const struct XFSAttrEditor * xEditor;
     char * xName;
+    const struct XFSPath * xParent;
 
     RCt = 0;
     Depot = NULL;
-    * BB = 0;
     xPath = NULL;
     xPathQ = 0;
     xNode = NULL;
     xEditor = NULL;
     xName = NULL;
+    xParent = NULL;
 
-    if ( Parent == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    * Parent = NULL;
-
-    if ( Path == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    if ( ParentType != NULL ) {
-        * ParentType = kxfsNotFound;
-    }
-
-    if ( ChildName != NULL ) {
-        * ChildName = NULL;
-    }
+    XFS_CSAN ( Parent )
+    XFS_CSA ( ParentType, kxfsNotFound )
+    XFS_CSAN ( ChildName )
+    XFS_CAN ( Path )
+    XFS_CAN ( Parent )
 
         /* TreeDepot is a key */
     RCt = _FUSE_tree_depot ( & Depot );
@@ -341,18 +327,22 @@ _FUSE_get_parent_node (
     }
 
         /* Path to parent node is ... */
-    RCt = XFSPathMake ( Path, & xPath );
+    RCt = XFSPathMake ( & xPath, true, Path );
     if ( RCt == 0 ) {
-        xPathQ = XFSPathCount ( xPath );
+        xPathQ = XFSPathPartCount ( xPath );
         if ( xPathQ < 2 ) {
             RCt = XFS_RC ( rcInvalid );
         }
         else {
                 /* So, there is a path to parent */
-            RCt = XFSPathTo ( xPath, xPathQ - 1, BB, sizeof ( BB ) );
+            RCt = XFSPathParent ( xPath, & xParent );
             if ( RCt == 0 ) {
                     /* Looking for node */
-                RCt = XFSTreeDepotFindNode ( Depot, BB, & xNode );
+                RCt = XFSTreeDepotFindNode (
+                                            Depot,
+                                            XFSPathGet ( xParent ),
+                                            & xNode
+                                            );
                 if ( RCt == 0 ) {
                     if ( ParentType != NULL ) {
                         RCt = XFSNodeAttrEditor ( xNode, & xEditor );
@@ -378,10 +368,12 @@ _FUSE_get_parent_node (
                         * Parent = xNode;
                     }
                 }
+
+                XFSPathRelease ( xParent );
             }
         }
 
-        XFSPathDispose ( xPath );
+        XFSPathRelease ( xPath );
     }
 
     if ( RCt != 0 ) {
@@ -413,10 +405,11 @@ _FUSE_delete_file_dir ( const char * Path )
     const struct XFSDirEditor * Editor;
 
     RCt = 0;
+    Parent = NULL;
+    Child = NULL;
+    Editor = NULL;
 
-    if ( Path == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( Path )
 
     RCt = _FUSE_get_parent_node ( Path, & Parent, NULL, & Child );
     if ( RCt == 0 ) {
@@ -450,10 +443,8 @@ _FUSE_char_to_perm ( const char * Perm, XFSNType Type, mode_t * Mode )
     RCt = 0;
     Temp = 0;
 
-    if ( Mode == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-    * Mode = 0;
+    XFS_CSA ( Mode, 0 )
+    XFS_CAN ( Mode )
 
     if ( Perm == NULL ) {
         Temp = Type == kxfsFile ? 0644 : 0744;
@@ -493,21 +484,21 @@ _FUSE_stat_for_node (
     XFSNType Type;
     KTime_t Time;
     uint64_t Size;
-    const struct XFSAttrEditor * Editor;
-    // const struct XFSFileEditor * FileEditor;
+    const struct XFSAttrEditor * AttrEditor;
     const char * Perm;
 
     RCt = 0;
-    Editor = NULL;
-    // FileEditor = NULL;
+    Type = kxfsNotFound;
+    Time = 0;
+    Size = 0;
+    AttrEditor = NULL;
     Perm = NULL;
 
-    if ( Node == NULL || Stat == NULL ) {
-        return XFS_RC ( rcNull ) ;
-    }
+    XFS_CAN ( Node )
+    XFS_CAN ( Stat )
 
-    RCt = XFSNodeAttrEditor ( Node, & Editor );
-    if ( RCt != 0 || Editor == NULL ) {
+    RCt = XFSNodeAttrEditor ( Node, & AttrEditor );
+    if ( RCt != 0 || AttrEditor == NULL ) {
         return XFS_RC ( rcInvalid );
     }
 
@@ -515,17 +506,17 @@ _FUSE_stat_for_node (
      /  TODO Stat -> st_mode = SomeAccess
     (*/
 
-    RCt = XFSAttrEditorType ( Editor, & Type );
+    RCt = XFSAttrEditorType ( AttrEditor, & Type );
     if ( RCt == 0 ) {
         Stat -> st_mode = 0;
         Stat -> st_uid = getuid();
         Stat -> st_gid = getgid();
 
-        if ( XFSAttrEditorPermissions ( Editor, & Perm ) == 0 ) {
+        if ( XFSAttrEditorPermissions ( AttrEditor, & Perm ) == 0 ) {
             _FUSE_char_to_perm ( Perm, Type, & ( Stat -> st_mode ) );
         }
 
-        if ( XFSAttrEditorDate ( Editor, & Time ) == 0 ) {
+        if ( XFSAttrEditorDate ( AttrEditor, & Time ) == 0 ) {
             Stat -> st_atime = Time;
             Stat -> st_mtime = Time;
             Stat -> st_ctime = Time;
@@ -541,7 +532,7 @@ _FUSE_stat_for_node (
             }
             else {
                 if ( XFSNodeFileEditor ( Node, & FileEditor ) == 0 ) {
-                    if ( Editor != NULL ) {
+                    if ( FileEditor != NULL ) {
                         if ( XFSFileEditorSize ( FileEditor, & Size ) == 0 ) {
                             Stat -> st_size = Size;
                         }
@@ -552,7 +543,7 @@ _FUSE_stat_for_node (
         }
     }
 
-    XFSEditorDispose ( & ( Editor -> Papahen ) );
+    XFSEditorDispose ( & ( AttrEditor -> Papahen ) );
 
     return RCt;
 }   /* _FUSE_stat_for_node () */
@@ -567,6 +558,8 @@ int
 XFS_FUSE_rc_to_errno ( rc_t RCt )
 {
     uint32_t Target, Object, State;
+
+    Target = Object = State = 0;
 
     State = GetRCState ( RCt );
     if ( State == rcNoErr ) {
@@ -665,7 +658,8 @@ XFS_FUSE_getattr ( const char * ThePath, struct stat * TheStat )
     Node = NULL;
     Type = kxfsNotFound;
 
-    XFSMSG ( ( "GETATTR(Fuse): [%s]\n", ThePath ) );
+    pLogMsg ( klogDebug, "POLL(!): [$(path)]", "path=%s", ThePath );
+    pLogMsg ( klogDebug, "GETATTR(Fuse): [$(path)]", "path=%s", ThePath );
 
     if ( ThePath == NULL || TheStat == NULL ) {
         return EINVAL * - 1;
@@ -701,7 +695,7 @@ XFS_FUSE_readlink (
             size_t RetBufSize
 )
 {
-    OUTMSG ( ( "READLINK(!): ThePath %s\n", ThePath ) );
+    pLogMsg ( klogDebug, "READLINK(!): [$(path)]", "path=%s", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_readlink() */
@@ -719,7 +713,7 @@ XFS_FUSE_getdir (
             fuse_dirfil_t TheFDF
 )
 {
-    OUTMSG ( ( "GETDIR(!): ThePath %s\n", ThePath ) );
+    pLogMsg ( klogDebug, "GETDIR(!): [$(path)]", "path=%s", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_getdir() */
@@ -733,7 +727,7 @@ static
 int
 XFS_FUSE_mknod ( const char * ThePath, mode_t TheMode, dev_t TheDev )
 {
-    OUTMSG ( ( "MKNOD(!): ThePath %s\n", ThePath ) );
+    pLogMsg ( klogDebug, "MKNOD(!): [$(path)]", "path=%s", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_mknod() */
@@ -757,7 +751,7 @@ XFS_FUSE_mkdir ( const char * ThePath, mode_t TheMode )
     Child = NULL;
     Editor = NULL;
 
-    XFSMSG ( ( "MKDIR(Fuse): [%s][mode=%d]\n", ThePath, TheMode ) );
+    pLogMsg ( klogDebug, "MKDIR(Fuse): [$(path)] MD[$(mode)]", "path=%s,mode=%d", ThePath, TheMode );
 
     if ( ThePath == NULL ) {
         return EINVAL * - 1;
@@ -792,7 +786,7 @@ XFS_FUSE_unlink ( const char * ThePath )
 
     RCt = 0;
 
-    XFSMSG ( ( "UNLINK(Fuse): [%s]\n", ThePath ) );
+    pLogMsg ( klogDebug, "UNLINK(Fuse): [$(path)]", "path=%s", ThePath );
 
     if ( ThePath == NULL ) {
         return EINVAL * - 1;
@@ -816,7 +810,7 @@ XFS_FUSE_rmdir ( const char * ThePath )
 
     RCt = 0;
 
-    XFSMSG ( ( "RMDIR(Fuse): [%s]\n", ThePath ) );
+    pLogMsg ( klogDebug, "RMDIR(Fuse): [$(path)]", "path=%s", ThePath );
 
     if ( ThePath == NULL ) {
         return EINVAL * - 1;
@@ -836,7 +830,7 @@ static
 int
 XFS_FUSE_symlink ( const char * OldPath, const char * NewPath )
 {
-    OUTMSG ( ( "SYMLINK(!): OldPath %s\n", OldPath ) );
+    pLogMsg ( klogDebug, "SYMLINK(!): [$(path)]", "path=%s", OldPath );
 
     return -EPERM;
 }   /* XFS_FUSE_symlink() */
@@ -861,7 +855,7 @@ XFS_FUSE_rename ( const char * OldPath, const char * NewPath )
     Editor = NULL;
 
 
-    XFSMSG ( ( "RENAME(Fuse): from [%s] to [%s]\n", OldPath, NewPath ) );
+    pLogMsg ( klogDebug, "RENAME(Fuse): FR[$(from)] TO[$(to)]", "from=%s,to=%s", OldPath, NewPath );
 
     if ( OldPath == NULL || NewPath == NULL ) {
         return EINVAL * - 1;
@@ -898,7 +892,7 @@ static
 int
 XFS_FUSE_link ( const char * OldPath, const char * NewPath )
 {
-    OUTMSG ( ( "LINK(!): OldPath %s\n", OldPath ) );
+    pLogMsg ( klogDebug, "LINK(!): FR[$(from)] TO[$(to)]", "from=%s,to=%s", OldPath, NewPath );
 
     return -EPERM;
 }   /* XFS_FUSE_link() */
@@ -922,7 +916,7 @@ XFS_FUSE_chmod ( const char * ThePath, mode_t TheMode )
     Node = NULL;
     * Buf = 0;
 
-    XFSMSG ( ( "CHMOD(Fuse): [%s][mode=%d]\n", ThePath, TheMode ) );
+    pLogMsg ( klogDebug, "CHMOD(Fuse): [$(path)] MD[$(mode)]", "path=%s,mode=%d", ThePath, TheMode );
 
     if ( ThePath == NULL ) {
         return EINVAL * - 1;
@@ -953,7 +947,7 @@ static
 int
 XFS_FUSE_chown ( const char * ThePath, uid_t TheUid, gid_t TheDid )
 {
-    OUTMSG ( ( "CHOWN(!): ThePath %s\n", ThePath ) );
+    pLogMsg ( klogDebug, "CHOWN(!): [$(path)]", "path=%s", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_chown() */
@@ -975,7 +969,7 @@ XFS_FUSE_truncate ( const char * ThePath, off_t TheSize )
     Editor = NULL;
     Node = NULL;
 
-    XFSMSG ( ( "TRUNCATE(Fuse): [%s][SZ=%d] \n", ThePath, TheSize ) );
+    pLogMsg ( klogDebug, "TRUNCATE(Fuse): [$(path)] SZ[$(size)]", "path=%s,size=%d", ThePath, TheSize );
 
     if ( ThePath == NULL ) {
         return EINVAL * - 1;
@@ -1011,7 +1005,7 @@ XFS_FUSE_utime ( const char * ThePath, struct utimbuf * TheBuf )
     Editor = NULL;
     Node = NULL;
 
-    XFSMSG ( ( "UTIME(Fuse): [%s][AT=%d][MT=%d] \n", ThePath, TheBuf -> actime, TheBuf -> modtime ) );
+    pLogMsg ( klogDebug, "TRUNCATE(Fuse): [$(path)] AT[$(actime)] MT[$(modtime)]", "path=%s,actime=%d,modtime=%d", ThePath, TheBuf -> actime, TheBuf -> modtime );
 
     if ( ThePath == NULL ) {
         return EINVAL * - 1;
@@ -1055,7 +1049,7 @@ XFS_FUSE_open ( const char * ThePath, struct fuse_file_info * TheInfo )
     Mode = kxfsNone;
     Handle = NULL;
 
-    XFSMSG ( ( "OPEN(Fuse): [%s][FI=0x%p][flags=%d] \n", ThePath, TheInfo, Flags ) );
+    pLogMsg ( klogDebug, "OPEN(Fuse): [$(path)] FI[$(info)] FL[$(flags)]", "path=%s,info=%p,flags=%d", ThePath, TheInfo, Flags );
 
     if ( ThePath == NULL || TheInfo == NULL ) {
         return EINVAL * - 1;
@@ -1102,7 +1096,7 @@ XFS_FUSE_open ( const char * ThePath, struct fuse_file_info * TheInfo )
         }
     }
 
-    XFSMSG ( ( "OPEN(Fuse cont): [%s][RC=%d][FI=0x%p][FH=%p] \n", ThePath, RCt, TheInfo, Handle ) );
+    pLogMsg ( klogDebug, "OPEN(Fuse,cont): [$(path)] RC[$(rc)] FI[$(info)] FH[$(handle)]", "path=%s,rc=%d,info=%p,handle=%p", ThePath, RCt, TheInfo, Handle );
 
     return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_open() */
@@ -1135,7 +1129,7 @@ XFS_FUSE_read (
                         ;
     NumBytesReaded = 0;
 
-    XFSMSG ( ( "READ(Fuse): [%s][FI=0x%p][FH=0x%p][OF=%d SZ=%d]\n", ThePath, TheFileInfo, Handle, TheOffsetRead, TheSizeRead ) );
+    pLogMsg ( klogDebug, "READ(Fuse): [$(path)] FI[$(info)] FH[$(handle)] OF[$(off)] SZ[$(size)]", "path=%s,info=%p,handle=%p,off=%d,size=%d", ThePath, TheFileInfo, Handle, TheOffsetRead, TheSizeRead );
 
     if ( ThePath == NULL || TheBuf == NULL || TheFileInfo == NULL ) {
         return EINVAL * - 1;
@@ -1157,7 +1151,7 @@ XFS_FUSE_read (
                         TheSizeRead,
                         & NumBytesReaded
                         );
-XFSMSG ( ( "READ(Fuse,cont): [%s][FI=0x%p][FH=0x%p][OF=%d SZ=%d RD=%d] [%d]\n", ThePath, TheFileInfo, Handle, TheOffsetRead, TheSizeRead, NumBytesReaded, RCt ) );
+    pLogMsg ( klogDebug, "READ(Fuse,cont): [$(path)] FI[$(info)] FH[$(handle)] OF[$(off)] SZ[$(size)] RD[$(read)] RC[$(rc)]", "path=%s,info=%p,handle=%p,off=%d,size=%d,read=%d,rc=%d", ThePath, TheFileInfo, Handle, TheOffsetRead, TheSizeRead, NumBytesReaded, RCt );
 
     return RCt == 0
                 ? NumBytesReaded
@@ -1194,7 +1188,7 @@ XFS_FUSE_write (
                         ;
     NumBytesWritten = 0;
 
-    XFSMSG ( ( "WRITE(Fuse): [%s][FI=0x%p][FH=0x%p][OF=%d SZ=%d]\n", ThePath, TheFileInfo, Handle, TheOffsetWrite, TheSizeWrite ) );
+    pLogMsg ( klogDebug, "WRITE(Fuse): [$(path)] FI[$(info)] FH[$(handle)] OF[$(off)] SZ[$(size)]", "path=%s,info=%p,handle=%p,off=%d,size=%d", ThePath, TheFileInfo, Handle, TheOffsetWrite, TheSizeWrite );
 
     if ( ThePath == NULL || TheBuf == NULL || TheFileInfo == NULL ) {
         return EINVAL * - 1;
@@ -1217,7 +1211,7 @@ XFS_FUSE_write (
                         & NumBytesWritten
                         );
 
-XFSMSG ( ( "WRITE(Fuse, cont): [%s][FI=0x%p][FH=0x%p][OF=%d SZ=%d WRt=%d] [%d]\n", ThePath, TheFileInfo, Handle, TheOffsetWrite, TheSizeWrite, NumBytesWritten, RCt ) );
+    pLogMsg ( klogDebug, "WRITE(Fuse,cont): [$(path)] FI[$(info)] FH[$(handle)] OF[$(off)] SZ[$(size)] WR[$(wrote)] RC[$(rc)]", "path=%s,info=%p,handle=%p,off=%d,size=%d,wrote=%d,rc=%d", ThePath, TheFileInfo, Handle, TheOffsetWrite, TheSizeWrite, NumBytesWritten, RCt );
 
     return RCt == 0
                 ? NumBytesWritten
@@ -1237,7 +1231,7 @@ XFS_FUSE_statfs (
             struct statvfs * TheFSStat
 )
 {
-    OUTMSG ( ( "STATFS(!): ThePath %s\n", ThePath ) );
+    pLogMsg ( klogDebug, "STATFS(!): [$(path)]", "path=%d", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_statfs() */
@@ -1254,10 +1248,7 @@ XFS_FUSE_flush (
             struct fuse_file_info * TheFileInfo
 )
 {
-    char JJJ [ 2000 ];
-    sprintf ( JJJ, "/home/iskhakov/HLAM%s", ThePath );
-
-    OUTMSG ( ( "FLUSH(DUMMY): ThePath %s (%s)[FI=0x%p] \n", ThePath, JJJ, TheFileInfo ) );
+    pLogMsg ( klogDebug, "FLUSH(DUMMY): [$(path)] FI[$(info)]", "path=%d,info=%p", ThePath, TheFileInfo );
 
     return 0;
 }   /* XFS_FUSE_flush() */
@@ -1285,7 +1276,7 @@ XFS_FUSE_release (
                         : ( const struct XFSHandle * ) TheFileInfo -> fh
                         ;
 
-    XFSMSG ( ( "RELEASE(Fuse): [%s][FI=0x%p][FH=0x%p]\n", ThePath, TheFileInfo, Handle ) );
+    pLogMsg ( klogDebug, "RELEASE(Fuse): [$(path)] FI[$(info)] FH[$(handle)]", "path=%d,info=%p,handle=%p", ThePath, TheFileInfo, Handle );
 
     if ( ThePath == NULL || TheFileInfo == NULL ) {
         return EINVAL * - 1;
@@ -1319,7 +1310,7 @@ XFS_FUSE_fsync (
             struct fuse_file_info * TheFileInfo
 )
 {
-    OUTMSG ( ( "FSYNC: ThePath %s [FI=0x%p][DT=%d]\n", ThePath, TheFileInfo, DataSync ) );
+    pLogMsg ( klogDebug, "FSYNC(DUMMY): [$(path)] FI[$(info)] DT[$(data)]", "path=%d,info=%p,data=%p", ThePath, TheFileInfo, DataSync );
 	return 0;
 }   /* XFS_FUSE_fsync() */
 
@@ -1338,7 +1329,7 @@ XFS_FUSE_setxattr (
             int TheFlags
 )
 {
-    OUTMSG ( ( "SETXATTR(!): ThePath %s\n", ThePath ) );
+    pLogMsg ( klogDebug, "SETXATTR(!): [$(path)]", "path=%d", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_setxattr() */
@@ -1357,7 +1348,7 @@ XFS_FUSE_getxattr (
             size_t TheValueSize
 )
 {
-    OUTMSG ( ( "GETXATTR(!): ThePath %s\n", ThePath ) );
+    pLogMsg ( klogDebug, "GETXATTR(!): [$(path)]", "path=%d", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_getxattr() */
@@ -1375,6 +1366,8 @@ XFS_FUSE_listxattr (
             size_t TheListSize
 )
 {
+    pLogMsg ( klogDebug, "LISTXATTR(!): [$(path)]", "path=%d", ThePath );
+
     return -EPERM;
 }   /* XFS_FUSE_listxattr() */
 
@@ -1387,7 +1380,7 @@ static
 int
 XFS_FUSE_removexattr ( const char * ThePath, const char * TheName)
 {
-    OUTMSG ( ( "REMOVEXATTR(!): ThePath %s\n", ThePath ) );
+    pLogMsg ( klogDebug, "REMOVEXATTR(!): [$(path)]", "path=%d", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_removexattr() */
@@ -1418,7 +1411,7 @@ XFS_FUSE_opendir (
         return EINVAL * - 1;
     }
 
-    XFSMSG ( ( "OPENDIR(Fuse): [%s][FI=0x%p][flags=%d]\n", ThePath, TheFileInfo, TheFileInfo -> flags ) );
+    pLogMsg ( klogDebug, "OPENDIR(Fuse): [$(path)] FI[$(info)] FL[$(flags)]", "path=%d,info=%p,flags=%d", ThePath, TheFileInfo, TheFileInfo -> flags );
 
     RCt = _FUSE_get_path_and_node ( ThePath, NULL, & Node, & Type );
     if ( RCt == 0 ) {
@@ -1488,7 +1481,7 @@ XFS_FUSE_readdir (
 
     Handle = ( const struct XFSHandle * ) TheFileInfo -> fh;
 
-    XFSMSG ( ( "READDIR(Fuse): [%s][FI=0x%p][FH=0x%p] \n", ThePath, TheFileInfo, ( void * ) Handle ) );
+    pLogMsg ( klogDebug, "READDIR(Fuse): [$(path)] FI[$(info)] FH[$(handle)]", "path=%d,info=%p,handle=%p", ThePath, TheFileInfo, ( void * ) Handle );
 
     if ( Handle != NULL ) {
         Node = XFSHandleNode ( Handle );
@@ -1568,7 +1561,7 @@ XFS_FUSE_releasedir (
 
     Handle = ( const struct XFSHandle * ) TheFileInfo -> fh;
 
-    XFSMSG ( ( "RELEASEDIR(Fuse): [%s][FI=0x%p][FH=0x%p] \n", ThePath, TheFileInfo, ( void * ) Handle ) );
+    pLogMsg ( klogDebug, "RELEASEDIR(Fuse): [$(path)] FI[$(info)] FH[$(handle)]", "path=%d,info=%p,handle=%p", ThePath, TheFileInfo, ( void * ) Handle );
 
     if ( Handle != NULL ) {
         RCt = XFSHandleRelease ( Handle );
@@ -1593,7 +1586,7 @@ XFS_FUSE_fsyncdir (
             struct fuse_file_info * TheFileInfo
 )
 {
-    OUTMSG ( ( "FSYNCDIR(!): ThePath %s\n", ThePath ) );
+    pLogMsg ( klogDebug, "FSYNCDIR(!): [$(path)]", "path=%d", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_fsyncdir() */
@@ -1610,9 +1603,12 @@ XFS_FUSE_init ( struct fuse_conn_info * TheConnInfo )
     rc_t RCt;
     const struct XFSTreeDepot * Depot;
 
+    RCt = 0;
+    Depot = NULL;
+
     RCt = _FUSE_tree_depot ( & Depot );
 
-    OUTMSG ( ( "INIT(): TheConnInfo 0x%p TreeDepot %p\n", TheConnInfo, Depot ) );
+    pLogMsg ( klogDebug, "INIT(): TheConnInfo [$(conn)] TreeDepot [$(depot)]\n", "conn=%p,depot=%p", TheConnInfo, Depot );
 
     return RCt != 0 ? NULL : ( void * ) Depot;
 }   /* XFS_FUSE_init() */
@@ -1626,7 +1622,7 @@ static
 void
 XFS_FUSE_destroy ( void * OnoSamoe )
 {
-    OUTMSG ( ( "DESTROY(Dummy): OnoSamoe 0x%p\n", OnoSamoe ) );
+    pLogMsg ( klogDebug, "DESTROY(Dummy): OnoSamoe [$(samoe)]", "samoe=%p", OnoSamoe );
 
 }   /* XFS_FUSE_destroy() */
 
@@ -1661,7 +1657,7 @@ XFS_FUSE_access ( const char * ThePath, int Access )
     rOK = ( Access & R_OK ) == R_OK; /* Can Read */
     fOK = ( Access & F_OK ) == F_OK; /* File Exists */
 
-    XFSMSG ( ( "ACCESS(Fuse): [%s][mode=%d][x=%d][w=%d][r=%d][f=%d]\n", ThePath, Access, xOK, wOK, rOK, fOK ) );
+    pLogMsg ( klogDebug, "ACCESS(Fuse): [$(path)] MD[$(mode)] X[$(x)] W[$(w)] R[$(r)] F[$(f)]", "path=%s,mode=%d,x=%d,w=%d,r=%d,f=%d", ThePath, Access, xOK, wOK, rOK, fOK );
 
     if ( ThePath == NULL ) {
         return - 1;
@@ -1746,7 +1742,7 @@ XFS_FUSE_create (
 
     Flags = TheFileInfo -> flags;
 
-XFSMSG ( ( "CREATE(Fuse): [%s][FI=0x%p][flags=%d][mode=%d]\n", ThePath, TheFileInfo, Flags, TheMode ) );
+    pLogMsg ( klogDebug, "CREATE(Fuse): [$(path)] FI[$(info)] FL[$(flags)] MD[$(mode)]", "path=%s,info=%p,flags=%d,mode=%d", ThePath, TheFileInfo, Flags, TheMode );
 
     if ( ThePath == NULL ) {
         return EINVAL * - 1;
@@ -1782,7 +1778,7 @@ XFSMSG ( ( "CREATE(Fuse): [%s][FI=0x%p][flags=%d][mode=%d]\n", ThePath, TheFileI
         free ( Child );
     }
 
-XFSMSG ( ( "CREATE(Fuse, cont): [%s][FI=0x%p][FH=0x%p][mode=%d]\n", ThePath, TheFileInfo, Handle, Mode ) );
+    pLogMsg ( klogDebug, "CREATE(Fuse,cont): [$(path)] FI[$(info)] FH[$(handle)] MD[$(mode)]", "path=%s,info=%p,handle=%p,mode=%d", ThePath, TheFileInfo, Handle, Mode );
 
     return XFS_FUSE_rc_to_errno ( RCt ) * - 1;
 }   /* XFS_FUSE_create() */
@@ -1813,7 +1809,7 @@ XFS_FUSE_ftruncate (
                         ;
     Node = NULL;
 
-    XFSMSG ( ( "FTRUNCATE(Fuse): [%s][SZ=%d][FI=0x%p][FH=0x%p]\n", ThePath, TheSize, TheFileInfo, Handle ) );
+    pLogMsg ( klogDebug, "FTRUNCATE(Fuse): [$(path)] FI[$(info)] FH[$(hadle)] SZ[$(size)]", "path=%s,info=%p,handle=%p,size=%d", ThePath, TheFileInfo, Handle, TheSize );
 
     if ( ThePath == NULL ) {
         return EINVAL * - 1;
@@ -1865,7 +1861,7 @@ XFS_FUSE_fgetattr (
     Node = NULL;
     Editor = NULL;
 
-    XFSMSG ( ( "FGETATTR(Fuse): [%s][FI=0x%p][FH=0x%p]\n", ThePath, TheFileInfo, Handle ) );
+    pLogMsg ( klogDebug, "FGETATTR(Fuse): [$(path)] FI[$(info)] FH[$(hadle)]", "path=%s,info=%p,handle=%p", ThePath, TheFileInfo, Handle );
 
     if ( ThePath == NULL || TheStat == NULL || TheFileInfo == NULL || Handle == NULL ) {
         return EINVAL * - 1;
@@ -1899,7 +1895,7 @@ XFS_FUSE_lock (
 		    struct flock * TheFLock
 )
 {
-    OUTMSG ( ( "LOCK(!): ThePath %s\n", ThePath ) );
+    pLogMsg ( klogDebug, "LOCK(!): [$(path)]", "path=%s", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_lock() */
@@ -1916,7 +1912,7 @@ XFS_FUSE_utimens (
             const struct timespec TheTimespec[2]
 )
 {
-    OUTMSG ( ( "UTIMENS(!): ThePath %s\n", ThePath ) );
+    pLogMsg ( klogDebug, "UTIMENS(!): [$(path)]", "path=%s", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_utimens() */
@@ -1934,7 +1930,7 @@ XFS_FUSE_bmap (
             uint64_t *TheIdx
 )
 {
-    OUTMSG ( ( "BMAP(!): ThePath %s\n", ThePath ) );
+    pLogMsg ( klogDebug, "BMAP(!): [$(path)]", "path=%s", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_bmap() */
@@ -1955,7 +1951,7 @@ XFS_FUSE_ioctl (
             void * TheData
 )
 {
-    OUTMSG ( ( "IOCTL(!): ThePath %s\n", ThePath ) );
+    pLogMsg ( klogDebug, "IOCTL(!): [$(path)]", "path=%s", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_ioctl() */
@@ -1974,7 +1970,7 @@ XFS_FUSE_poll (
             unsigned * TheReventsp
 )
 {
-    OUTMSG ( ( "POLL(!): ThePath %s\n", ThePath ) );
+    pLogMsg ( klogDebug, "POLL(!): [$(path)]", "path=%s", ThePath );
 
     return -EPERM;
 }   /* XFS_FUSE_poll() */
@@ -1986,9 +1982,7 @@ XFS_FUSE_poll (
 rc_t
 XFS_Private_InitOperations ( struct fuse_operations * Operations )
 {
-    if ( Operations == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( Operations )
 
     memset ( Operations, 0, sizeof( struct fuse_operations ) );
 

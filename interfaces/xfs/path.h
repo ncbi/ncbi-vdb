@@ -24,93 +24,204 @@
  *
  */
 
-#ifndef _xfs_path_h_
-#define _xfs_path_h_
+#ifndef _path_h_
+#define _path_h_
 
 #include <xfs/xfs-defs.h>
 
-#ifdef __cplusplus
+#ifdef __cplusplus 
 extern "C" {
 #endif /* __cplusplus */
 
-/*))
- ||   Lyrics.
- ++   That file contains lame method for path handling
- ||
-((*/
+/*))))
+ ((((   another and hope more successifull attempt to create
+  ))))  good usable interface to a Path
+ ((((*/
 
-/*)))
- ///   forwards
-(((*/
-struct KNamelist;
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*))  Universal method which should load config from resource
+ ((*/
+
 struct XFSPath;
 
+XFS_EXTERN rc_t CC XFSPathMake (
+                                const struct XFSPath ** Out,
+                                bool AddPrecedingSlash,
+                                const char * Format,
+                                ...
+                                );
+
+XFS_EXTERN rc_t CC XFSPathVMake (
+                                const struct XFSPath ** Out,
+                                bool AddPrecedingSlash,
+                                const char * Format,
+                                va_list Args
+                                );
+
+    /*)) These two methods are requireing KDirectory,
+     //  and I am not sure if those should be here ... later
+    ((*/
+XFS_EXTERN rc_t CC XFSPathMakeAbsolute (
+                                const struct XFSPath ** Out,
+                                bool AddPrecedingSlash,
+                                const char * Format,
+                                ...
+                                );
+
+XFS_EXTERN rc_t CC XFSPathVMakeAbsolute (
+                                const struct XFSPath ** Out,
+                                bool AddPrecedingSlash,
+                                const char * Format,
+                                va_list Args
+                                );
+
+XFS_EXTERN rc_t CC XFSPathDup (
+                                const struct XFSPath * In,
+                                const struct XFSPath ** Out
+                                );
+
+XFS_EXTERN rc_t CC XFSPathAddRef ( const struct XFSPath * self );
+XFS_EXTERN rc_t CC XFSPathRelease ( const struct XFSPath * self );
+
+
+XFS_EXTERN rc_t CC XFSPathSet (
+                                const struct XFSPath * self,
+                                bool AddPrecedingSlash,
+                                const char * Format,
+                                ...
+                                );
+XFS_EXTERN rc_t CC XFSPathSetPath (
+                                const struct XFSPath * self,
+                                const struct XFSPath * Path
+                                );
+XFS_EXTERN rc_t CC XFSPathAppend (
+                                const struct XFSPath * self,
+                                const char * Format,
+                                ...
+                                );
+XFS_EXTERN rc_t CC XFSPathAppendPath (
+                                const struct XFSPath * self,
+                                const struct XFSPath * Path
+                                );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+XFS_EXTERN bool CC XFSPathIsAbsolute (
+                                const struct XFSPath * self
+                                );
+
+XFS_EXTERN uint32_t CC XFSPathPartCount (
+                                const struct XFSPath * self
+                                );
+
+XFS_EXTERN const char * CC XFSPathPartGet (
+                                const struct XFSPath * self,
+                                uint32_t Index
+                                );
+
+XFS_EXTERN const char * CC XFSPathGet (
+                                const struct XFSPath * self
+                                );
+
+XFS_EXTERN const char * CC XFSPathOrig (
+                                const struct XFSPath * self
+                                );
+
+XFS_EXTERN rc_t CC XFSPathParent (
+                                const struct XFSPath * self,
+                                const struct XFSPath ** Parent
+                            );
+
+    /*) Don'd frorget to free Name after calling */
+XFS_EXTERN const char *  CC XFSPathName (
+                                const struct XFSPath * self
+                                );
+
+
+XFS_EXTERN bool CC XFSPathEqual (
+                                const struct XFSPath * Path1,
+                                const struct XFSPath * Path2
+                                );
+
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
-/*)))
- (((    Apparently we do suppose that we are working with path 
-  )))   composed from VPath ... so only '/' as separator
- (((*/
-XFS_EXTERN
-rc_t CC
-XFSPathMake ( const char * InPath, const struct XFSPath ** OutPath );
+    /*) These methods will allow to compose part of the path.
+      | NOTE: there are two positions : From - inclusive, and To -
+      |       exclusive
+      | NOTE: these methods will allocate string, and caller should
+      |       free it.
+      (*/
+XFS_EXTERN rc_t CC XFSPathSub (
+                            const struct XFSPath * self,
+                            size_t From,
+                            size_t To,
+                            const struct XFSPath ** Path
+                            );
 
-XFS_EXTERN
-rc_t CC
-XFSPathDispose ( const struct XFSPath * self );
+XFS_EXTERN rc_t CC XFSPathFrom (
+                            const struct XFSPath * self,
+                            size_t From,
+                            const struct XFSPath ** Path
+                            );
 
-XFS_EXTERN
-uint32_t CC
-XFSPathCount ( const struct XFSPath * self );
-
-XFS_EXTERN
-const char * CC
-XFSPathGet ( const struct XFSPath * self, uint32_t Index );
-
-XFS_EXTERN
-const char * CC
-XFSPathName ( const struct XFSPath * self );
-
-XFS_EXTERN
-const char * CC
-XFSPathGetOrigin ( const struct XFSPath * self );
-
-    /*)     This one is last exclusive
-     (*/
-XFS_EXTERN
-rc_t CC
-XFSPathTo (
-        const struct XFSPath * self,
-        uint32_t Index,
-        char * Buffer,
-        size_t BufferSize
-        );
-
-    /*)     This one is first inclusive
-     (*/
-XFS_EXTERN
-rc_t CC
-XFSPathFrom (
-        const struct XFSPath * self,
-        uint32_t Index,
-        char * Buffer,
-        size_t BufferSize
-        );
-
-    /*)     Debug only
-     (*/
-XFS_EXTERN
-rc_t CC
-XFSPatthDump ( const struct XFSPath * self );
+XFS_EXTERN rc_t CC XFSPathTo (
+                            const struct XFSPath * self,
+                            size_t To,
+                            const struct XFSPath ** Path
+                            );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
-#ifdef __cplusplus
+    /*) That method will check if Path is base path for 'self'. i.e.
+      | self could be composed as concatenation of Path and RelPath
+      | RelPath could be zero, in that case it will be not returned
+      (*/
+XFS_EXTERN bool CC XFSPathIsBase (
+                                const struct XFSPath * self,
+                                const struct XFSPath * Path,
+                                const struct XFSPath ** RelPath
+                                );
+XFS_EXTERN bool CC XFSPathSIsBase (
+                                const char * self,
+                                const char * Path,
+                                const struct XFSPath ** RelPath
+                                );
+
+    /*) That method will check if Path is child ( sub ) path for 'self'.
+      | i.e. Path could be composed as concatenation of self and RelPath
+      | RelPath could be zero, in that case it will be not returned
+      (*/
+XFS_EXTERN bool CC XFSPathIsChild (
+                                const struct XFSPath * self,
+                                const struct XFSPath * Path,
+                                const struct XFSPath ** RelPath
+                                );
+XFS_EXTERN bool CC XFSPathSIsChild (
+                                const char * self,
+                                const char * Path,
+                                const struct XFSPath ** RelPath
+                                );
+
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+XFS_EXTERN void CC XFSPathDump ( const struct XFSPath * self );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+#ifdef __cplusplus 
 }
 #endif /* __cplusplus */
 
-#endif /* _xfs_path_h_ */
+#endif /* _path_h_ */

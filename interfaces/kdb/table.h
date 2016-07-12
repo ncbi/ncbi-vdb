@@ -285,6 +285,12 @@ KDB_EXTERN rc_t CC KTableOpenParentRead ( const KTable *self, struct KDatabase c
 KDB_EXTERN rc_t CC KTableOpenParentUpdate ( KTable *self, struct KDatabase **db );
 
 
+/* HasRemoteData
+ *  indicates whether some/all table data comes from network resource
+ *  such as HttpFile or CacheteeFile
+ */
+KDB_EXTERN bool CC KTableHasRemoteData ( const KTable *self );
+
 #ifdef __cplusplus
 }
 #endif

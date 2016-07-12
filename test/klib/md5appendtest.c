@@ -251,7 +251,7 @@ rc_t CC KMain ( int argc, char *argv [] )
                 break;
             }
 
-            rc = ArgsParamValue (args, 0, &filename);
+            rc = ArgsParamValue (args, 0, (const void **)&filename);
             if (rc)
                 break;
 

@@ -513,7 +513,7 @@ void VPathCaptureFragment ( VPath * self, const char * uri, size_t start, size_t
     do { anchor = ( i ); count = 0; } while ( 0 )
 
 static
-rc_t VPathParseInt ( VPath * self, const char * uri, size_t uri_size,
+rc_t VPathParseInt ( VPath * self, char * uri, size_t uri_size,
                     bool uri_is_utf )
 {
     rc_t rc;
@@ -538,6 +538,18 @@ rc_t VPathParseInt ( VPath * self, const char * uri, size_t uri_size,
     /* for accumulating oid */
     uint64_t oid;
     uint32_t oid_anchor;
+    
+    bool pileup_ext_present = false;
+    const char pileup_ext[] = ".pileup";
+    size_t pileup_ext_size = sizeof( pileup_ext ) / sizeof( pileup_ext[0] ) - 1;
+    
+    /* remove pileup extension before parsing, so that it won't change parsing results */
+    if ( uri_size > pileup_ext_size && memcmp(&uri[uri_size - pileup_ext_size], pileup_ext, pileup_ext_size) == 0)
+    {
+        uri_size -= pileup_ext_size;
+        uri[uri_size] = '\0';
+        pileup_ext_present = true;
+    }
 
     for ( i = anchor = 0, total = count = 0; i < uri_size; ++ total, ++ count, i += bytes )
     {
@@ -1920,6 +1932,18 @@ rc_t VPathParseInt ( VPath * self, const char * uri, size_t uri_size,
         }
     }
 
+    /* return pileup extension back */
+    if ( pileup_ext_present )
+    {
+        uri[uri_size] = '.';
+        if ( i == uri_size )
+            i += pileup_ext_size;
+        uri_size += pileup_ext_size;
+        
+        if ( acc_alpha && acc_digit )
+            ++acc_ext;
+    }
+    
     switch ( state )
     {
     case vppStart:
@@ -2004,7 +2028,7 @@ rc_t VPathParseInt ( VPath * self, const char * uri, size_t uri_size,
 }
 
 static
-rc_t VPathParse ( VPath * self, const char * uri, size_t uri_size )
+rc_t VPathParse ( VPath * self, char * uri, size_t uri_size )
 {
     /* Parse uri as UTF-8 */
     rc_t rc = VPathParseInt ( self, uri, uri_size, true );
@@ -2883,7 +2907,7 @@ rc_t VPathFindParam ( const VPath * self, const char * param, String * val_str )
             ++ start;
         }
 
-        rc = RC ( rcVFS, rcPath, rcReading, rcParam, rcNotFound );
+        rc = SILENT_RC ( rcVFS, rcPath, rcReading, rcParam, rcNotFound );
     }
 
     return rc;

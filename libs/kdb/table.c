@@ -38,6 +38,7 @@
 #include <klib/log.h>
 #include <klib/rc.h>
 #include <klib/printf.h>
+#include <kfs/arc.h>
 #include <os-native.h>
 #include <sysalloc.h>
 
@@ -706,4 +707,15 @@ LIB_EXPORT rc_t CC KTableListIdx ( const KTable *self, KNamelist **names )
         * names = NULL;
 
     return RC ( rcDB, rcTable, rcListing, rcSelf, rcNull );
+}
+
+/* HasRemoteData
+ *  indicates whether some/all table data comes from network resource
+ *  such as HttpFile or CacheteeFile
+ */
+KDB_EXTERN bool CC KTableHasRemoteData ( const KTable *self )
+{
+    bool result = self != NULL && KDirectoryIsKArcDir ( self -> dir ) &&
+            KArcDirIsFromRemote ( (const KArcDir * ) self -> dir );
+    return result;
 }

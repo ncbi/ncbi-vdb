@@ -35,11 +35,15 @@ TEST_TOOLS = \
 	test-printf \
 	test-log \
 	test-out \
-    test-klib \
-
+	test-SraReleaseVersion \
+	test-klib \
+	test-vnamelist
+    
 include $(TOP)/build/Makefile.env
 
-$(TEST_TOOLS): makedirs
+std: $(TEST_TOOLS)
+
+test-md5append $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
 .PHONY: $(TEST_TOOLS)
@@ -57,17 +61,12 @@ TEST_ASM_OBJ = \
     
 TEST_ASM_LIB = \
 	-skapp \
-    -sncbi-vdb \
+	-sncbi-vdb \
 	-sktst \
 
 $(TEST_BINDIR)/test-asm: $(TEST_ASM_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_ASM_LIB)
     
-valgrind_asm:
-	valgrind --ncbi $(TEST_BINDIR)/test-asm
-    
-.PHONY: valgrind_asm
-
 #-------------------------------------------------------------------------------
 # test-md5append
 #
@@ -79,17 +78,12 @@ TEST_MD5APPEND_OBJ = \
     
 TEST_MD5APPEND_LIB = \
 	-skapp \
-    -sncbi-vdb \
+	-sncbi-vdb \
 	-sktst \
 
 $(TEST_BINDIR)/test-md5append: $(TEST_MD5APPEND_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_MD5APPEND_LIB)
     
-valgrind_md5append:
-	valgrind --ncbi $(TEST_BINDIR)/test-md5append
-    
-.PHONY: valgrind_md5append
-
 #-------------------------------------------------------------------------------
 # test-printf
 #
@@ -101,17 +95,12 @@ TEST_PRINTF_OBJ = \
     
 TEST_PRINTF_LIB = \
 	-skapp \
-    -sncbi-vdb \
+	-sncbi-vdb \
 	-sktst \
 
 $(TEST_BINDIR)/test-printf: $(TEST_PRINTF_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_PRINTF_LIB)
     
-valgrind_printf:
-	valgrind --ncbi $(TEST_BINDIR)/test-printf
-    
-.PHONY: valgrind_printf
-
 #-------------------------------------------------------------------------------
 # test-log
 #
@@ -123,16 +112,34 @@ TEST_LOG_OBJ = \
     
 TEST_LOG_LIB = \
 	-skapp \
-    -sncbi-vdb \
+	-sncbi-vdb \
 	-sktst \
 
 $(TEST_BINDIR)/test-log: $(TEST_LOG_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LOG_LIB)
     
-valgrind_log:
-	valgrind --ncbi $(TEST_BINDIR)/test-log
+#-------------------------------------------------------------------------------
+# test-SraReleaseVersion
+#
+TEST_SRA_RELEASE_VERSION_SRC = \
+	test-SraReleaseVersion
+
+TEST_SRA_RELEASE_VERSION_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_SRA_RELEASE_VERSION_SRC))
     
-.PHONY: valgrind_log
+TEST_SRA_RELEASE_VERSION_LIB = \
+	-skapp \
+	-sncbi-vdb \
+	-sktst \
+
+
+$(TEST_BINDIR)/test-SraReleaseVersion: $(TEST_SRA_RELEASE_VERSION_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_SRA_RELEASE_VERSION_LIB)
+    
+valgrind_sra_release_version:
+	valgrind --ncbi $(TEST_BINDIR)/test-SraReleaseVersion
+    
+.PHONY: valgrind_SraReleaseVersion
 
 
 #-------------------------------------------------------------------------------
@@ -143,19 +150,14 @@ TEST_OUT_SRC = \
 
 TEST_OUT_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_OUT_SRC))
-    
+
 TEST_OUT_LIB = \
-    -sncbi-vdb \
+	-sncbi-vdb \
 	-sktst \
 
 $(TEST_BINDIR)/test-out: $(TEST_OUT_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_OUT_LIB)
     
-valgrind_out:
-	valgrind --ncbi $(TEST_BINDIR)/test-out
-    
-.PHONY: valgrind_out
-
 #-------------------------------------------------------------------------------
 # test-klib
 #
@@ -167,15 +169,30 @@ TEST_KLIB_OBJ = \
 
 TEST_KLIB_LIB = \
 	-skapp \
-    -sncbi-vdb \
+	-sncbi-vdb \
 	-sktst \
 
 $(TEST_BINDIR)/test-klib: $(TEST_KLIB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
     
-valgrind_klib:
-	valgrind --ncbi $(TEST_BINDIR)/test-klib
-    
-.PHONY: valgrind_klib
 
+#-------------------------------------------------------------------------------
+# test-vnamelist
+#
+TEST_VNAMELIST_SRC = \
+	test-vnamelist
+
+TEST_VNAMELIST_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_VNAMELIST_SRC))
+
+TEST_VNAMELIST_LIB = \
+	-skapp \
+	-sncbi-vdb \
+	-sktst \
+
+$(TEST_BINDIR)/test-vnamelist: $(TEST_VNAMELIST_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_VNAMELIST_LIB)
+
+VNAMELIST: test-vnamelist
+	$(TEST_BINDIR)/test-vnamelist
 

@@ -58,6 +58,7 @@
 #include <sysalloc.h>
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <assert.h>
 
@@ -261,6 +262,7 @@ LIB_EXPORT rc_t CC VDBManagerVOpenTableRead ( const VDBManager *self,
                 rc = KDBManagerVOpenTableRead ( self -> kmgr, & tbl -> ktbl, path, args );
                 if ( rc == 0 )
                 {
+                    tbl -> blob_validation = KTableHasRemoteData ( tbl -> ktbl );
                     rc = VTableOpenRead ( tbl );
                     if ( rc == 0 )
                     {
@@ -317,6 +319,7 @@ LIB_EXPORT rc_t CC VDatabaseVOpenTableRead ( const VDatabase *self,
                 rc = KDatabaseVOpenTableRead ( self -> kdb, & tbl -> ktbl, path, args );
                 if ( rc == 0 )
                 {
+                    tbl -> blob_validation = KTableHasRemoteData ( tbl -> ktbl );
                     rc = VTableOpenRead ( tbl );
                     if ( rc == 0 )
                     {
@@ -1078,6 +1081,29 @@ LIB_EXPORT bool CC VTableHasStaticColumn ( const VTable *self, const char *name 
     }
 
     return false;
+}
+LIB_EXPORT bool CC VTableVHasStaticColumn ( const VTable *self, const char *name, va_list args )
+{
+    char full[4096];
+    if ( name == NULL )
+        full [ 0 ] = 0;
+    else
+    {
+        int len;
+
+        /* generate full name */
+        if ( args == NULL )
+            len = snprintf ( full, sizeof full, "%s", name );
+        else
+            len = vsnprintf ( full, sizeof full, name, args );
+        if ( len < 0 || len >= sizeof full )
+        {
+            rc_t rc = RC ( rcVDB, rcColumn, rcOpening, rcName, rcExcessive );
+            LOGERR ( klogInt, rc, "failed to format column name" );
+            return false;
+        }
+    }
+    return VTableHasStaticColumn( self, full );
 }
 
 

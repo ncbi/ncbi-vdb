@@ -35,6 +35,7 @@
 #include <krypto/reencfile.h>
 #include <kfs/impl.h>
 #include <klib/rc.h>
+#include <klib/log.h>
 #include <kapp/args.h>
 #include <kfg/config.h>
 
@@ -51,14 +52,15 @@ TEST_CASE(KEncryptDecrypt)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char enc_file_path_fmt [] = "temp/enc_file%llu";
+    const char enc_file_path_fmt [] = TMP_FOLDER "/enc_file%llu";
+
     KFile * enc_file, * pt_file;
     
     struct KDirectory * current_dir;
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp" );
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     
     uint64_t file_sizes_n_32k[] = { 0, 1, 2, 10, 46, 51 };
     int8_t file_size_variants[] = { -2, -1, 0, 1, 2 };
@@ -127,8 +129,7 @@ TEST_CASE(KEncryptDecrypt)
         }
     }
     
-    REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
-    
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -138,7 +139,8 @@ TEST_CASE(KDecryptZeroRawSize)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/zero_size_file_to_dec";
+    const char file_path [] = TMP_FOLDER "/zero_size_file_to_dec";
+
     KFile * enc_file, * pt_file;
     
     uint64_t file_size;
@@ -147,18 +149,18 @@ TEST_CASE(KDecryptZeroRawSize)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp" );
-    
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     // create file
     REQUIRE_RC ( TCreatePtFile( current_dir, file_path, TFileOpenMode_ReadWrite, &pt_file ) );
     REQUIRE_RC ( KFileSize ( pt_file, &file_size ) );
     REQUIRE ( file_size == 0 );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key, &enc_file ) == RC( rcKrypto, rcFile, rcConstructing, rcSize, rcIncorrect ) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     
-    REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
-    
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -168,7 +170,8 @@ TEST_CASE(KDecryptZeroContentSizeRW)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/zero_content_rw_file_to_dec";
+    const char file_path [] = TMP_FOLDER "/zero_content_rw_file_to_dec";
+
     KFile * enc_file, * pt_file;
     
     uint64_t file_size;
@@ -177,8 +180,7 @@ TEST_CASE(KDecryptZeroContentSizeRW)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp" );
-    
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_ReadWrite, &key, &enc_file ) );
     REQUIRE_RC ( KFileRelease ( enc_file ) );
@@ -194,8 +196,7 @@ TEST_CASE(KDecryptZeroContentSizeRW)
     REQUIRE_RC ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key, &enc_file ) );
     REQUIRE_RC ( KFileRelease ( enc_file ) );
     
-    REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
-    
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -205,7 +206,8 @@ TEST_CASE(KDecryptZeroContentSizeWOnly)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/zero_content_w_file_to_dec";
+    const char file_path [] = TMP_FOLDER "/zero_content_w_file_to_dec";
+
     KFile * enc_file, * pt_file;
     
     uint64_t file_size;
@@ -214,7 +216,12 @@ TEST_CASE(KDecryptZeroContentSizeWOnly)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp" );
+    KDirectoryRemove ( current_dir, true, "temp"
+#if defined(__APPLE__)
+        "mac");
+#else
+        "linux");
+#endif
     
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key, &enc_file ) );
@@ -231,8 +238,7 @@ TEST_CASE(KDecryptZeroContentSizeWOnly)
     REQUIRE_RC ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key, &enc_file ) );
     REQUIRE_RC ( KFileRelease ( enc_file ) );
     
-    REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
-    
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -243,15 +249,15 @@ TEST_CASE(KDectryptOnlyHeader)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/file_only_header";
+    const char file_path [] = TMP_FOLDER "/file_only_header";
+
     KFile * enc_file, * pt_file;
     
     struct KDirectory * current_dir;
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp" );
-    
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key, &enc_file ) );
     REQUIRE_RC ( TFillFile( enc_file, (const uint8_t *)"\0\1", 2, 500 ) );
@@ -262,9 +268,11 @@ TEST_CASE(KDectryptOnlyHeader)
     REQUIRE_RC ( KFileSetSize ( pt_file, sizeof(KEncFileHeader) ) );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key, &enc_file ) == RC( rcKrypto, rcFile, rcConstructing, rcSize, rcIncorrect ) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     
-    REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -274,7 +282,7 @@ TEST_CASE(KDectryptWithoutFooter)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/file_no_footer";
+    const char file_path [] = TMP_FOLDER "/file_no_footer";
     KFile * enc_file, * pt_file;
     
     uint64_t file_size;
@@ -283,8 +291,7 @@ TEST_CASE(KDectryptWithoutFooter)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp" );
-    
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key, &enc_file ) );
     REQUIRE_RC ( TFillFile( enc_file, (const uint8_t *)"\0\1", 2, 500 ) );
@@ -296,9 +303,11 @@ TEST_CASE(KDectryptWithoutFooter)
     REQUIRE_RC ( KFileSetSize ( pt_file, file_size - sizeof(KEncFileFooter) ) );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key, &enc_file ) == RC( rcKrypto, rcFile, rcConstructing, rcSize, rcIncorrect ) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     
-    REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -308,7 +317,8 @@ TEST_CASE(KDectryptCorruptHeader)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/file_corrupt_header";
+    const char file_path [] = TMP_FOLDER "/file_corrupt_header";
+
     KFile * enc_file, * pt_file;
     
     const size_t buffer_size = sizeof(KEncFileHeader);
@@ -319,7 +329,7 @@ TEST_CASE(KDectryptCorruptHeader)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp" );
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key, &enc_file ) );
@@ -334,9 +344,11 @@ TEST_CASE(KDectryptCorruptHeader)
     assert(buffer_size == num_written);
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key, &enc_file ) == RC( rcFS, rcFile, rcConstructing, rcHeader, rcInvalid ) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     
-    REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -346,7 +358,8 @@ TEST_CASE(KDectryptCorruptFooterCrc)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/file_corrupt_footer_crc";
+    const char file_path [] = TMP_FOLDER "/file_corrupt_footer_crc";
+
     KFile * enc_file, * pt_file;
 
     uint64_t file_size;
@@ -358,7 +371,7 @@ TEST_CASE(KDectryptCorruptFooterCrc)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp" );
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key, &enc_file ) );
@@ -376,10 +389,13 @@ TEST_CASE(KDectryptCorruptFooterCrc)
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
     REQUIRE_RC ( TOpenPtFile( current_dir, file_path, TFileOpenMode_Read, &pt_file ) );
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( KEncFileValidate( pt_file ) == RC(rcKrypto, rcFile, rcValidating, rcChecksum, rcCorrupt) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
-    REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
+
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -389,7 +405,8 @@ TEST_CASE(KDectryptCorruptFooterBlockCount)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/file_corrupt_footer_block_count";
+    const char file_path [] = TMP_FOLDER "/file_corrupt_footer_block_count";
+
     KFile * enc_file, * pt_file;
     
     uint64_t file_size;
@@ -401,7 +418,7 @@ TEST_CASE(KDectryptCorruptFooterBlockCount)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp" );
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key, &enc_file ) );
@@ -419,10 +436,13 @@ TEST_CASE(KDectryptCorruptFooterBlockCount)
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
     REQUIRE_RC ( TOpenPtFile( current_dir, file_path, TFileOpenMode_Read, &pt_file ) );
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( KEncFileValidate( pt_file ) == RC(rcKrypto, rcFile, rcValidating, rcSize, rcIncorrect) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
-    REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
+
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -432,7 +452,8 @@ TEST_CASE(KDectryptCorruptBlockStruct)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/file_corrupt_block_struct";
+    const char file_path [] = TMP_FOLDER "/file_corrupt_block_struct";
+
     KFile * enc_file, * pt_file;
     
     uint64_t file_size;
@@ -444,7 +465,7 @@ TEST_CASE(KDectryptCorruptBlockStruct)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp" );
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key, &enc_file ) );
@@ -462,10 +483,13 @@ TEST_CASE(KDectryptCorruptBlockStruct)
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
     REQUIRE_RC ( TOpenPtFile( current_dir, file_path, TFileOpenMode_Read, &pt_file ) );
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( KEncFileValidate( pt_file ) == RC(rcKrypto, rcFile, rcValidating, rcChecksum, rcCorrupt) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
-    REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
+
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -475,7 +499,8 @@ TEST_CASE(KDectryptCorruptBlockData)
     KKey key;
     REQUIRE_RC (KKeyInitUpdate (&key, kkeyAES128, pw, strlen (pw)));
     
-    const char file_path [] = "temp/file_corrupt_block_data";
+    const char file_path [] = TMP_FOLDER "/file_corrupt_block_data";
+
     KFile * enc_file, * pt_file;
     
     uint64_t file_size;
@@ -487,7 +512,7 @@ TEST_CASE(KDectryptCorruptBlockData)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp" );
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key, &enc_file ) );
@@ -505,10 +530,13 @@ TEST_CASE(KDectryptCorruptBlockData)
     REQUIRE_RC ( KFileRelease ( pt_file ) );
 
     REQUIRE_RC ( TOpenPtFile( current_dir, file_path, TFileOpenMode_Read, &pt_file ) );
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( KEncFileValidate( pt_file ) == RC(rcKrypto, rcFile, rcValidating, rcChecksum, rcCorrupt) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     REQUIRE_RC ( KFileRelease ( pt_file ) );
     
-    REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
+
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 
@@ -521,14 +549,15 @@ TEST_CASE(KDectryptInvalidKey)
     REQUIRE_RC (KKeyInitUpdate (&key1, kkeyAES128, pw1, strlen (pw1)));
     REQUIRE_RC (KKeyInitUpdate (&key2, kkeyAES128, pw2, strlen (pw2)));
     
-    const char file_path [] = "temp/enc_file_invalid_key";
+    const char file_path [] = TMP_FOLDER "/enc_file_invalid_key";
+
     KFile * enc_file;
     
     struct KDirectory * current_dir;
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
     
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, "temp" );
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
     
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, file_path, TFileOpenMode_Write, &key1, &enc_file ) );
@@ -536,10 +565,13 @@ TEST_CASE(KDectryptInvalidKey)
     REQUIRE_RC ( KFileRelease ( enc_file ) );
     
     REQUIRE_RC ( TOpenEncFile( current_dir, file_path, TFileOpenMode_Read, &key2, &enc_file ) );
+    LOGMSG ( klogWarn, "Expect errors after this line:" );
     REQUIRE ( TCheckFileContent( enc_file, (const uint8_t *)"\0\1", 2 ) == RC( rcKrypto, rcFile, rcValidating, rcEncryption, rcCorrupt ) );
+    LOGMSG ( klogWarn, "No more errors are expected" );
     REQUIRE_RC ( KFileRelease ( enc_file ) );
     
-    REQUIRE_RC ( KDirectoryRemove ( current_dir, true, "temp" ) );
+    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
+
     REQUIRE_RC ( KDirectoryRelease ( current_dir ) );
 }
 

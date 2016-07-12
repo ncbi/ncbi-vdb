@@ -29,6 +29,7 @@
 #include <klib/namelist.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <kfs/directory.h>
 #include <kfs/file.h>
@@ -38,15 +39,13 @@
 #include <kns/manager.h>
 #include <kns/http.h>
 
+
 #include "teleport.h"
 #include "mehr.h"
 #include "schwarzschraube.h"
 #include "zehr.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
-#include <string.h>
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
@@ -58,6 +57,14 @@ XFS_EXTERN rc_t CC XFSEncDepotInit ();
 XFS_EXTERN rc_t CC XFSEncDepotDispose ();
 XFS_EXTERN rc_t CC XFSEncDirectoryDepotInit ();
 XFS_EXTERN rc_t CC XFSEncDirectoryDepotDispose ();
+XFS_EXTERN rc_t CC XFSGapFilesInit ();
+XFS_EXTERN rc_t CC XFSGapFilesDispose ();
+XFS_EXTERN rc_t CC XFS_VfsManagerInit ();
+XFS_EXTERN rc_t CC XFS_VfsManagerDispose ();
+XFS_EXTERN rc_t CC XFS_KnsManagerInit ();
+XFS_EXTERN rc_t CC XFS_KnsManagerDispose ();
+XFS_EXTERN rc_t CC XFSGapKartDepotInit ();
+XFS_EXTERN rc_t CC XFSGapKartDepotDispose ();
 
 /*)) Config and all config related
  ((*/
@@ -75,19 +82,25 @@ XFS_InitAll_MHR ( const char * ConfigFile )
     RCt = 0;
     Config = NULL;
 
-    if ( ConfigFile == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-printf ( "WARNING(MEHR): InitAll [%s]\n", ConfigFile );
+pLogMsg ( klogInfo, "InitAll [$(path)]", "path=%s", ( ConfigFile == NULL ? "NULL" : ConfigFile ) );
 
         /* First we do inti config :lol: */
     RCt = XFS_LoadConfig_ZHR ( ConfigFile, & Config );
     if ( RCt == 0 ) {
         _sConfig_MHR = Config;
-        _sConfigPath_MHR = string_dup_measure ( ConfigFile, NULL );
+        if ( ConfigFile != NULL ) {
+            _sConfigPath_MHR = string_dup_measure ( ConfigFile, NULL );
+        }
 
-        RCt = XFSTeleportInit ();
+        RCt = XFS_VfsManagerInit ();
+
+        if ( RCt == 0 ) {
+            XFS_KnsManagerInit ();
+        }
+
+        if ( RCt == 0 ) {
+            RCt = XFSTeleportInit ();
+        }
 
         if ( RCt == 0 ) {
             RCt = XFSTarDepotInit ();
@@ -100,6 +113,14 @@ printf ( "WARNING(MEHR): InitAll [%s]\n", ConfigFile );
         if ( RCt == 0 ) {
             RCt = XFSEncDirectoryDepotInit ();
         }
+
+        if ( RCt == 0 ) {
+            XFSGapFilesInit ();
+        }
+
+        if ( RCt == 0 ) {
+            XFSGapKartDepotInit ();
+        }
     }
 
     return RCt;
@@ -109,7 +130,11 @@ LIB_EXPORT
 rc_t CC
 XFS_DisposeAll_MHR ()
 {
-printf ( "WARNING(MEHR): DisposeAll [%s]\n", _sConfigPath_MHR );
+pLogMsg ( klogInfo, "DisposeAll [$(path)]", "path=%s", _sConfigPath_MHR );
+
+    XFSGapKartDepotDispose ();
+
+    XFSGapFilesDispose ();
 
     XFSEncDirectoryDepotDispose ();
 
@@ -118,6 +143,10 @@ printf ( "WARNING(MEHR): DisposeAll [%s]\n", _sConfigPath_MHR );
     XFSTarDepotDispose ();
 
     XFSTeleportDispose ();
+
+    XFS_VfsManagerDispose ();
+
+    XFS_KnsManagerDispose ();
 
     if ( _sConfig_MHR != NULL ) {
         KConfigRelease ( _sConfig_MHR );

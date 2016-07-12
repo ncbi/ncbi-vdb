@@ -892,7 +892,7 @@ rc_t CC KMain ( int argc, char *argv [] )
                 {
                     const char * pc;
 
-                    rc = ArgsOptionValue (args, OPTION_TIMER, 0, &pc);
+                    rc = ArgsOptionValue (args, OPTION_TIMER, 0, (const void **)&pc);
                     if (rc == 0)
                     {
                         timer = (clock_t)AsciiToU64 (pc, NULL, NULL);

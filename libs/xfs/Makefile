@@ -87,14 +87,14 @@ $(ILIBDIR)/libxfs: $(addprefix $(ILIBDIR)/libxfs.,$(ILIBEXT))
 
 XFS_SRC = \
     xfs \
+    xlog    \
     platform \
     operations  \
     security    \
     model    \
-    path    \
-    pfad    \
     tree    \
     node    \
+    path    \
     perm    \
     editors \
     handle  \
@@ -109,9 +109,6 @@ XFS_SRC = \
     bogus     \
     owp \
     doc \
-    xkart    \
-    kart    \
-    karts   \
     xhttp    \
     http    \
     xtar     \
@@ -120,6 +117,16 @@ XFS_SRC = \
     encro     \
     xencws     \
     encws     \
+    spen    \
+    xgap    \
+    xgapf    \
+    xgapk   \
+    gapk    \
+    gapks   \
+    gapka   \
+    gapc   \
+    gap     \
+    gapf    \
     lockdpt \
     lreader \
     schwarzschraube \

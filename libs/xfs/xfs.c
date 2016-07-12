@@ -26,7 +26,6 @@
 
 #include <klib/out.h>
 #include <klib/text.h>
-#include <kproc/thread.h>
 
 #include <xfs/xfs.h>
 #include <xfs/tree.h>
@@ -42,7 +41,7 @@
 
 /*  Some forwards and declarations
  */
-static rc_t XFSVeryMainLoop ( const KThread * self, void * Data );
+static rc_t XFSVeryMainLoop ( void * Data );
 
 /*  The code, which is checking version is quite similar for
  *  destroy/start/stop ... and, possible for other methods,
@@ -160,12 +159,6 @@ XFSControlDispose ( struct XFSControl * self )
         return 0;
     }
 
-    if ( self -> Thread != NULL ) {
-        KThreadRelease ( self -> Thread );
-
-        self -> Thread = NULL;
-    }
-
     if ( self -> TreeDepot != NULL ) {
         XFSTreeDepotDispose ( self -> TreeDepot );
 
@@ -184,8 +177,6 @@ XFSControlDispose ( struct XFSControl * self )
         self -> vt = NULL;
     }
 
-OUTMSG ( ( "........... LAST CHA\n" ) );
-
     free ( self );
 
     return RCt;
@@ -199,41 +190,13 @@ XFSStart ( struct XFSControl * self )
 {
     rc_t RCt;
 
-    RCt = XFS_VfsManagerInit ();
-    if ( RCt != 0 ) {
-        return RCt;
-    }
-
-    RCt = XFS_KnsManagerInit ();
-    if ( RCt != 0 ) {
-        return RCt;
-    }
-
     RCt = XFSControlStandardSelfCheck ( self );
     if ( RCt != 0 ) {
         return RCt;
     }
 
-    if ( self -> Thread != NULL ) {
-        return XFS_RC ( rcExists );
-    }
-
-        /* TODO */
     RCt = self -> vt -> v1.mount ( self );
-#ifdef WIN
-    if ( RCt == 0 ) {
-        RCt = KThreadMake ( & self -> Thread, XFSVeryMainLoop, self );
-    }
-
-    if ( RCt != 0 ) {
-        if ( self -> Thread != NULL ) {
-            KThreadRelease ( self -> Thread );
-            self -> Thread = NULL;
-        }
-    }
-#else /* WIN */
-    XFSVeryMainLoop ( NULL, self );
-#endif /* WIN */
+    XFSVeryMainLoop ( self );
 
     return RCt;
 }   /* XFSStart () */
@@ -250,29 +213,6 @@ XFSStop ( struct XFSControl * self )
     if ( RCt == 0 ) {
 
         RCt = self -> vt -> v1.unmount ( self );
-        if ( RCt == 0 ) {
-
-            if ( self -> Thread != NULL ) {
-/*
-OUTMSG ( ( "|o|waiting thread()\n" ) ); 
-*/
-				KThreadWait ( self -> Thread, 0 );
-
-/*
-OUTMSG ( ( "|o|releasing thread()\n" ) ); 
-*/
-                KThreadRelease ( self -> Thread );
-
-/*
-OUTMSG ( ( "|o|thread done()\n" ) ); 
-*/
-                self -> Thread = NULL;
-            }
-        }
-
-            /* Not sure if we need to check exit code */
-        XFS_VfsManagerDispose ();
-        XFS_KnsManagerDispose ();
     }
 
     return RCt;
@@ -319,6 +259,52 @@ XFSControlGetArg ( struct XFSControl * self, const char * ArgName )
                 ;
 }   /* XFSControlGetArg () */
 
+LIB_EXPORT
+bool CC
+XFSControlHasArg ( struct XFSControl * self, const char * ArgName )
+{
+    if ( self != NULL && ArgName != NULL ) {
+        return XFSOwpHas ( self -> Arguments, ArgName );
+    }
+    return false;
+}   /* XFSControlHasArg () */
+
+
+LIB_EXPORT
+rc_t CC
+XFSControlSetAppName ( struct XFSControl * self, const char * AppName )
+{
+    return XFSControlSetArg (
+                        self,
+                        XFS_CONTROL_APPNAME,
+                        ( AppName == NULL ? "mount-tool" : AppName )
+                        );
+}   /* XFSControlSetAppName () */
+
+LIB_EXPORT
+const char * CC
+XFSControlGetAppName ( struct XFSControl * self )
+{
+    return XFSControlGetArg ( self, XFS_CONTROL_APPNAME );
+}   /* XFSControlGetAppName () */
+
+LIB_EXPORT
+rc_t CC
+XFSControlDaemonize ( struct XFSControl * self )
+{
+    return XFSControlSetArg (
+                        self,
+                        XFS_CONTROL_DAEMONIZE,
+                        XFS_CONTROL_DAEMONIZE
+                        );
+}   /* XFSControlDaemonize () */
+
+LIB_EXPORT
+bool CC
+XFSControlIsDaemonize ( struct XFSControl * self )
+{
+    return XFSControlHasArg ( self, XFS_CONTROL_DAEMONIZE );
+}   /* XFSControlIsDaemonize () */
 
 LIB_EXPORT
 rc_t CC
@@ -346,6 +332,38 @@ XFSControlGetMountPoint ( struct XFSControl * self )
 
 LIB_EXPORT
 rc_t CC
+XFSControlSetLogFile ( struct XFSControl * self, const char * Path )
+{
+    rc_t RCt;
+    char BF [ XFS_SIZE_1024 ];
+
+    RCt = 0;
+    * BF = 0;
+
+    XFS_CAN ( self )
+
+    RCt = XFS_ResolvePath (
+                        true,
+                        BF,
+                        sizeof ( BF ),
+                        ( Path == NULL ? "./mount-tool.log" : Path )
+                        );
+    if ( RCt == 0 ) {
+        RCt = XFSControlSetArg ( self, XFS_CONTROL_LOGFILE, BF );
+    }
+
+    return RCt;
+}   /* XFSControlSetLogFile () */
+
+LIB_EXPORT
+const char * CC
+XFSControlGetLogFile ( struct XFSControl * self )
+{
+    return XFSControlGetArg ( self, XFS_CONTROL_LOGFILE );
+}   /* XFSControlGetLogFile () */
+
+LIB_EXPORT
+rc_t CC
 XFSControlSetLabel ( struct XFSControl * self, const char * Label )
 {
     return Label == NULL
@@ -363,7 +381,7 @@ XFSControlGetLabel ( struct XFSControl * self )
 
 static
 rc_t
-XFSVeryMainLoop ( const KThread * self, void * Data )
+XFSVeryMainLoop ( void * Data )
 {
     struct XFSControl * TheControl;
 

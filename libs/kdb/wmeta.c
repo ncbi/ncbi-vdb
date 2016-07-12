@@ -636,7 +636,7 @@ rc_t KMDataNodeFind ( const KMDataNode *cself, KMDataNode **np, char **path )
                 end [ -1 ] = '/';
             * path = name;
             * np = self;
-            return RC ( rcDB, rcMetadata, rcSelecting, rcPath, rcNotFound );
+            return SILENT_RC ( rcDB, rcMetadata, rcSelecting, rcPath, rcNotFound );
         }
     }
 

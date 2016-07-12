@@ -27,24 +27,29 @@
 #include <klib/rc.h>
 #include <klib/out.h>
 #include <klib/text.h>
+#include <klib/log.h>
 #include <kproc/thread.h>
 
 #include <xfs/xfs.h>
 #include <xfs/tree.h>
+#include <xfs/xlog.h>
 #include "xfs-priv.h"
+#include "schwarzschraube.h"
 
 #include <stdlib.h>     /* using malloc() */
 #include <string.h>     /* using memset() */
+#include <unistd.h>     /* using STDOUT_FILENO, STDERR_FILENO */
 
 /*  Some platform dependent headers
  */
 
 #include "operations.h"
 
-/*  Some useless pranks
- */
-#define MOO(Moo)    \
-    OUTMSG( ( "%s: %d\n", Moo, __LINE__ ) )
+#ifndef STDIN_FILENO
+#define STDIN_FILENO    0   /* Standard input.  */
+#define STDOUT_FILENO   1   /* Standard output.  */
+#define STDERR_FILENO   2   /* Standard error output.  */
+#endif /* STDIN_FILENO */
 
 /*
  *  Virtuhai table and it's methods
@@ -73,9 +78,7 @@ LIB_EXPORT
 rc_t CC
 XFSControlPlatformInit ( struct XFSControl * self )
 {
-    if ( self == NULL ) {
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
 
     self -> vt = ( union XFSControl_vt * ) & XFSControl_VT_V1;
 
@@ -87,26 +90,20 @@ XFSControlPlatformInit ( struct XFSControl * self )
 rc_t
 XFS_FUSE_init_v1 ( struct XFSControl * self )
 {
-    rc_t RCt;
+    rc_t RCt = 0;
 
-    RCt = 0;
+    XFS_CAN ( self )
 
-    OUTMSG ( ( "XFS_FUSE_init()\n" ) );
+    LogMsg ( klogDebug, "XFS_FUSE_init()\n" );
 
     if ( self -> Control != NULL ) {
-        OUTMSG ( ( "XFS_FUSE_init(): control is not empty\n" ) );
 
         return XFS_RC ( rcUnexpected );
     }
 
     if ( self -> Arguments == NULL ) {
-        OUTMSG ( ( "XFS_FUSE_init(): arguments are empty\n" ) );
-
+        LogErr ( klogErr, XFS_RC ( rcUnexpected ), "XFS_FUSE_init(): arguments are empty" );
         return XFS_RC ( rcUnexpected );
-    }
-
-    if ( XFSControlGetLabel ( self ) == NULL ) {
-        RCt = XFSControlSetLabel ( self, "FUSE" );
     }
 
     return RCt;
@@ -115,13 +112,9 @@ XFS_FUSE_init_v1 ( struct XFSControl * self )
 rc_t
 XFS_FUSE_destroy_v1 ( struct XFSControl * self )
 {
-    OUTMSG ( ( "XFS_FUSE_destroy()\n" ) );
+    LogMsg ( klogDebug, "XFS_FUSE_destroy()\n" );
 
-    if ( self == NULL ) {
-        OUTMSG ( ( "XFS_FUSE_destroy_v1(): NULL self passed" ) );
-
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
 
     return 0;
 }   /* XFS_FUSE_destroy_v1 () */
@@ -135,33 +128,40 @@ XFS_FUSE_mount_v1 ( struct XFSControl * self )
     struct fuse_chan * FuseChannel;
     struct fuse * FuseStruct;
     char * MountPoint;
+    const char * LogPath;
+    const char * Label;
     int Foreground;
     int Multithreaded;
     int Result;
 
     RCt = 0;
+    FuseChannel = NULL;
+    FuseStruct = NULL;
+    MountPoint = NULL;
+    LogPath = NULL;
+    Label = NULL;
+    Foreground = true;
+    Multithreaded = true;
+    Result = 0;
 
-    OUTMSG ( ( "XFS_FUSE_mount()\n" ) );
+    LogMsg ( klogDebug, "XFS_FUSE_mount()\n" );
 
-    if ( self == NULL ) {
-        OUTMSG ( ( "ZERO self passed\n" ) );
-        return XFS_RC ( rcNull );
-    }
+    XFS_CAN ( self )
 
     RCt = XFS_Private_InitOperations ( & TheFuseOperations );
     if ( RCt != 0 ) {
-        OUTMSG ( ( "Can not initialize operations\n" ) );
+        LogErr ( klogErr, XFS_RC ( rcFailed ), "Can not initialize operations" );
         return XFS_RC ( rcFailed ); 
     }
 
-
-MOO ( "H" );
-
     memset ( & FuseArgs, 0, sizeof FuseArgs );
-    Result = fuse_opt_add_arg ( & FuseArgs, XFSControlGetLabel ( self ) );
+    Label = XFSControlGetLabel ( self );
+    Result = fuse_opt_add_arg ( & FuseArgs, Label == NULL ? "FUSE" : Label );
     Result = fuse_opt_add_arg ( & FuseArgs, XFSControlGetMountPoint ( self ) );
+    LogPath = XFSControlGetLogFile ( self );
+
         /* Foreground */
-    if ( XFSControlGetArg ( self, "-f" ) != NULL ) {
+    if ( ! XFSControlIsDaemonize ( self ) ) {
         Result = fuse_opt_add_arg ( & FuseArgs, "-f" );
     }
 
@@ -172,11 +172,10 @@ MOO ( "H" );
 #endif /* MAC */
 
     if ( Result != 0 ) {
-        OUTMSG ( ( "Can not mount\n" ) );
+        LogErr ( klogErr, XFS_RC ( rcFailed ), "Can not mount" );
         return XFS_RC ( rcFailed ); 
     }
 
-MOO ( "H" );
         /*  Adding the mountpoint
          */
     Result = fuse_parse_cmdline (
@@ -186,25 +185,21 @@ MOO ( "H" );
                     & Foreground
                 );
     if ( Result != 0 ) {
-        OUTMSG ( ( "Can not parse arguments\n" ) );
+        LogErr ( klogErr, XFS_RC ( rcFailed ), "Can not parse arguments" );
         return XFS_RC ( rcFailed ); 
     }
 
-MOO ( "H" );
-
-OUTMSG ( ( "Mnt = %s\nMlt = %d\nFrg = %d\n", MountPoint, Multithreaded, Foreground ) );
+pLogMsg ( klogDebug, "MNT[$(mount)] MT[$(multi)] FG[$(fore)]", "mount=%s,multi=%d,fore=%d", MountPoint, Multithreaded, Foreground );
 
 
     FuseChannel = fuse_mount ( MountPoint, & FuseArgs );
     if ( FuseChannel == NULL ) {
         fuse_opt_free_args ( & FuseArgs );
 
-        OUTMSG ( ( "Can not mount\n" ) );
+        LogErr ( klogErr, XFS_RC ( rcFailed ), "Can not mount" );
         return XFS_RC ( rcFailed ); 
     }
     self -> ControlAux = FuseChannel;
-
-MOO ( "H" );
 
         /*  Note passing TreeDepot as private data to fuse_context
          */
@@ -220,13 +215,10 @@ MOO ( "H" );
 
         fuse_opt_free_args ( & FuseArgs );
 
-        OUTMSG ( ( "Can not fuse_new\n" ) );
+        LogErr ( klogErr, XFS_RC ( rcFailed ), "Can not fuse_new" );
         return XFS_RC ( rcFailed ); 
     }
     self -> Control = FuseStruct;
-
-
-MOO ( "H" );
 
     Result = fuse_daemonize ( Foreground );
     if ( Result == -1 ) {
@@ -234,11 +226,23 @@ MOO ( "H" );
 
         fuse_opt_free_args ( & FuseArgs );
 
-        OUTMSG ( ( "Can not daemonize\n" ) );
+        LogErr ( klogErr, XFS_RC ( rcFailed ), "Can not daemonize" );
         return XFS_RC ( rcFailed ); 
     }
 
-MOO ( "H" );
+        /*  Here we are setting the log file
+         */
+    if ( LogPath != NULL ) {
+        RCt = XFSLogInit ( LogPath );
+        if ( RCt != 0 ) {
+            fuse_unmount ( MountPoint, FuseChannel );
+
+            fuse_opt_free_args ( & FuseArgs );
+
+            LogErr ( klogErr, XFS_RC ( rcFailed ), "Can not set log file" );
+            return RCt;
+        }
+    }
 
     Result = fuse_set_signal_handlers ( fuse_get_session ( FuseStruct ) );
     if ( Result == -1 ) {
@@ -246,12 +250,11 @@ MOO ( "H" );
 
         fuse_opt_free_args ( & FuseArgs );
 
-        OUTMSG ( ( "Can not set signal handlers\n" ) );
+        LogErr ( klogErr, XFS_RC ( rcFailed ), "Can not set signal handlers" );
         return XFS_RC ( rcFailed ); 
     }
 
 /*
-MOO ( "H" );
     if ( Multithreaded != 0 ) {
         Result = fuse_loop_mt ( FuseStruct );
     }
@@ -259,48 +262,42 @@ MOO ( "H" );
         Result = fuse_loop ( FuseStruct );
     }
 
-MOO ( "H" );
-
     fuse_remove_signal_handlers ( fuse_get_session ( FuseStruct ) );
 */
 
+
     fuse_opt_free_args ( & FuseArgs );
 
-MOO ( "H" );
+    pLogMsg ( klogDebug, " [XFS_FUSE_mount_v1] [$(line)] [$(rc)]", "line=%d,rc=%d", __LINE__, Result );
 
-    return Result == 0 ? 0 : 1;
+
+    return Result == 0 ? 0 : XFS_RC ( rcInvalid );
 }   /* XFS_FUSE_mount_v1 () */
-
-static bool bashmalton = false;
 
 rc_t
 XFS_FUSE_loop_v1( struct XFSControl * self )
 {
     rc_t RCt;
-
     struct fuse * FuseStruct;
     int Result;
 
     RCt = 0;
+    FuseStruct = NULL;
+    Result = 0;
 
-    OUTMSG ( ( "XFS_FUSE_loop()\n" ) );
+    LogMsg ( klogDebug, "XFS_FUSE_loop()" );
 
     if ( self == NULL ) {
-        OUTMSG ( ( "XFS_FUSE_loop(): empty control passed\n" ) );
+        LogErr ( klogErr, XFS_RC ( rcInvalid ), "XFS_FUSE_loop(): empty control passed" );
         RCt = 1;
     }
     else {
         FuseStruct = (struct fuse * ) self -> Control;
 
-MOO ( "H" );
         Result = fuse_loop_mt ( FuseStruct );
-
-MOO ( "H" );
 
         RCt = Result == 0 ? 0 : 1;
     }
-
-	bashmalton = true;
 
     return RCt;
 }   /* XFS_FUSE_loop_v1 () */
@@ -308,11 +305,11 @@ MOO ( "H" );
 rc_t
 XFS_FUSE_unmount_v1 ( struct XFSControl * self )
 {
-    struct fuse * FuseStruct;
+    struct fuse * FuseStruct = NULL;
 
     FuseStruct = (struct fuse * ) self -> Control;
 
-    OUTMSG ( ( "XFS_FUSE_unmount()\n" ) );
+    LogMsg ( klogDebug, "XFS_FUSE_unmount()" );
 
     if ( self -> Control != NULL ) {
 
@@ -320,45 +317,43 @@ XFS_FUSE_unmount_v1 ( struct XFSControl * self )
         fuse_exit ( FuseStruct );
 #endif /* MAC */
 
-/*
-OUTMSG ( ( "|o|fuse_unmount()\n" ) );
-*/
+LogMsg ( klogDebug, "|o|fuse_unmount()" );
         fuse_unmount (
                     XFSControlGetMountPoint ( self ),
                     self -> ControlAux
                     );
 
-/*
-OUTMSG ( ( "|o|waiting thread()\n" ) );
-*/
-		KThreadWait ( self -> Thread, 0 );
-
-/*
-OUTMSG ( ( "|o|releasing thread()\n" ) );
-*/
-		KThreadRelease ( self -> Thread );
-		self -> Thread = NULL;
-
-/*
-OUTMSG ( ( "|o|fuse_remove_signal_handlers()\n" ) );
-*/
+LogMsg ( klogDebug, "|o|fuse_remove_signal_handlers()" );
         fuse_remove_signal_handlers ( fuse_get_session ( FuseStruct ) );
 
-/*
-OUTMSG ( ( "|o|fuse_destroy()\n" ) );
-*/
+LogMsg ( klogDebug, "|o|fuse_destroy()" );
         fuse_destroy ( FuseStruct );
 
         self -> Control = NULL;
         self -> ControlAux = NULL;
 
-/*
-OUTMSG ( ( "|o|exiting fuse()\n" ) );
-*/
+LogMsg ( klogDebug, "|o|exiting fuse()" );
+
+        XFSLogDestroy ( );
     }
     else {
-        OUTMSG ( ( "XFS_FUSE_unmount(): empty control passed\n" ) );
+        LogErr ( klogErr, XFS_RC ( rcNull ), "XFS_FUSE_unmount(): empty control passed" );
     }
 
     return 0;
 }   /* XFS_FUSE_unmount_v1 () */
+
+/*))    Special platform dependent method
+ ((*/
+void fuse_unmount_compat22(const char *mountpoint);
+
+LIB_EXPORT
+rc_t CC
+XFSUnmountAndDestroy ( const char * MountPoint )
+{
+        /*  Unfortunately, that method is standard, but returns nothing
+         *  So no error could be detected
+         */
+    fuse_unmount_compat22 ( MountPoint );
+    return 0;
+}   /* XFSUnmountAndDestroy () */

@@ -28,13 +28,15 @@
 #define _h_search_priv_
 
 #include <search/grep.h>
-#include <arch-impl.h>
 #include <klib/rc.h>
 #include <os-native.h>
 #include <compiler.h>
+#include <insdc/insdc.h>
 
 #include <stdlib.h>
 #include <string.h>
+
+#include <arch-impl.h>
 
 #ifdef __cplusplus
 extern "C" {

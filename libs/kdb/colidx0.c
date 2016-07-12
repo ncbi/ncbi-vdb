@@ -338,6 +338,71 @@ bool KColumnIdx0IdRange ( const KColumnIdx0 *self,
     return true;
 }
 
+
+/* FindFirstRowId
+ */
+typedef struct FindFirstRowIdData FindFirstRowIdData;
+struct FindFirstRowIdData
+{
+    int64_t start;
+    const KColumnIdx0Node * next;
+};
+
+static
+int64_t CC KColumnIdx0NodeFindFirstRowId ( const void * item, const BSTNode * n )
+{
+    FindFirstRowIdData * pb = ( FindFirstRowIdData * ) item;
+
+#define a ( pb -> start )
+#define b ( ( const KColumnIdx0Node * ) n )
+
+    if ( a < b -> loc . start_id )
+    {
+        if ( pb -> next == NULL )
+            pb -> next = b;
+        else if ( b -> loc . start_id < pb -> next -> loc . start_id )
+            pb -> next = b;
+        return -1;
+    }
+
+    return a >= ( b -> loc . start_id + b -> loc . id_range );
+
+#undef a
+#undef b
+}
+
+rc_t KColumnIdx0FindFirstRowId ( const KColumnIdx0 * self,
+    int64_t * found, int64_t start )
+{
+    FindFirstRowIdData pb;
+    const KColumnIdx0Node * n;
+
+    assert ( self != NULL );
+    assert ( found != NULL );
+
+    pb . start = start;
+    pb . next = NULL;
+
+    n = ( const KColumnIdx0Node* )
+        BSTreeFind ( & self -> bst, & pb, KColumnIdx0NodeFindFirstRowId );
+
+    if ( n != NULL )
+    {
+        assert ( start >= n -> loc . start_id && start < n -> loc . start_id + n -> loc . id_range );
+        * found = start;
+        return 0;
+    }
+
+    if ( pb . next != 0 )
+    {
+        assert ( pb . next -> loc . start_id > start );
+        * found = pb . next -> loc . start_id;
+        return 0;
+    }
+
+    return SILENT_RC ( rcDB, rcColumn, rcSelecting, rcRow, rcNotFound );
+}
+
 /* LocateBlob
  *  locate an existing blob
  */
@@ -354,7 +419,7 @@ rc_t KColumnIdx0LocateBlob ( const KColumnIdx0 *self,
         BSTreeFind ( & self -> bst, & first, KColumnIdx0NodeFind );
 
     if ( n == NULL )
-        return RC ( rcDB, rcColumn, rcSelecting, rcBlob, rcNotFound );
+        return SILENT_RC ( rcDB, rcColumn, rcSelecting, rcBlob, rcNotFound );
 
     assert ( first >= n -> loc . start_id );
     assert ( first < ( n -> loc . start_id + n -> loc . id_range ) );

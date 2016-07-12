@@ -62,6 +62,8 @@ static bool no_hup;
 static atomic32_t hangup;
 static atomic32_t quitting;
 
+static bool convert_args_paths = true;
+
 /* Quitting
  *  is the program supposed to exit
  */
@@ -141,7 +143,29 @@ int main2 ( int argc, char *argv [] )
 }
 
 static
-char *rewrite_arg ( const wchar_t *arg )
+char * convert_arg_utf8( const wchar_t *arg )
+{
+    size_t src_size, dst_size;
+    char * utf8;
+    /* measure the string */
+    wchar_cvt_string_measure ( arg, & src_size, & dst_size );
+    
+    /* allocate a UTF-8 buffer */
+    utf8 = malloc ( dst_size + 1 );
+    if ( utf8 != NULL )
+    {
+        /* copy the wide argument to utf8 */
+        wchar_cvt_string_copy ( utf8, dst_size + 1,
+                               arg, src_size );
+        
+        /* terminate the string */
+        utf8 [ dst_size ] = 0;
+    }
+    
+    return utf8;
+}
+
+char * CC rewrite_arg_as_path ( const wchar_t *arg, bool before_kmane )
 {
     char *utf8;
     bool has_drive = false;
@@ -150,7 +174,13 @@ char *rewrite_arg ( const wchar_t *arg )
 
     /* detect drive or full path */
     wchar_t rewrit [ MAX_PATH ];
-    if ( arg [ 0 ] < 128 )
+    /* 
+       we don't want to rewrite twice, 
+       so if we rewrote first time
+           from wmain (before_kmane = true, convert_args_paths = true),
+       then we skip second rewrite by checking convert_args_paths to be true
+     */
+    if ( arg [ 0 ] < 128 && (before_kmane || !convert_args_paths))
     {
         bool rewrite = false;
 
@@ -193,34 +223,16 @@ char *rewrite_arg ( const wchar_t *arg )
         }
     }
 
-    /* this point, we should only have normal arguments,
-       or network/full/drive-full/relative paths */
-
-    /* measure the string */
-    len = wchar_cvt_string_measure ( arg, & src_size, & dst_size );
-
     /* allocate a UTF-8 buffer */
-    utf8 = malloc ( dst_size + 1 );
+    utf8 = convert_arg_utf8 ( arg );
     if ( utf8 != NULL )
     {
-        /* normal arguments get no offsets */
-        uint32_t offset = 0;
-
-        /* check for need to convert drive */
-        if ( has_drive )
+        dst_size = string_size(utf8);
+        if (has_drive) 
         {
-            /* convert to pseudo mount point */
+            utf8 [ 1 ] = utf8 [ 0 ];
             utf8 [ 0 ] = '/';
-            utf8 [ 1 ] = ( char ) arg [ 0 ];
-            offset = 2;
         }
-
-        /* copy the wide argument to utf8 */
-        wchar_cvt_string_copy ( & utf8 [ offset ], dst_size - offset + 1,
-            & arg [ offset ], src_size - offset * sizeof * arg );
-
-        /* terminate the string */
-        utf8 [ dst_size ] = 0;
 
         /* map all backslashes to fwdslashes */
         for ( i = 0; i < dst_size; ++ i )
@@ -232,7 +244,6 @@ char *rewrite_arg ( const wchar_t *arg )
 
     return utf8;
 }
-
 
 int __cdecl wmain ( int argc, wchar_t *wargv [], wchar_t *envp [] )
 {
@@ -253,7 +264,15 @@ int __cdecl wmain ( int argc, wchar_t *wargv [], wchar_t *envp [] )
            rewriting anything that looks like a path */
         for ( i = 0; i < argc; ++ i )
         {
-            argv [ i ] = rewrite_arg ( wargv [ i ] );
+            if ( convert_args_paths )
+            {
+                argv [ i ] = rewrite_arg_as_path ( wargv [ i ], true );
+            }
+            else
+            {
+                argv [ i ] = convert_arg_utf8 ( wargv [ i ] );
+            }
+            
             if ( argv [ i ] == NULL )
                 break;
         }
@@ -272,4 +291,10 @@ int __cdecl wmain ( int argc, wchar_t *wargv [], wchar_t *envp [] )
     CoUninitialize ();
 
     return status;
+}
+
+void  __declspec( dllexport ) __stdcall wmainCRTStartupNoPathConversion()
+{
+    convert_args_paths = false;
+    wmainCRTStartup();
 }

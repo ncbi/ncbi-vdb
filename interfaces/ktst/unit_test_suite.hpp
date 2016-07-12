@@ -121,6 +121,7 @@ public:
 
     static std::string lastLocation;
     static LogLevel::E verbosity;
+    static bool verbositySet;
     bool catch_system_errors;
 
     static int RunProcessTestCase(TestCase&, void(TestCase::*)(), int);
@@ -148,6 +149,9 @@ public:
     
     static std::string FormatLocation(const std::string& p_file, uint64_t p_line);
 
+    static void SetVerbosity(LogLevel::E v)
+    {   verbosity = v; verbositySet = true; }
+
 private:
     static void TermHandler();
 
@@ -164,11 +168,14 @@ private:
 };
 
 class TestCase {
+    void Init(const char* name);
+
 public:
     typedef void ( TestCase ::* TestMethod ) ();
 
 protected:
-    TestCase(const char* name);
+    TestCase(const std::string &name) { Init(name.c_str()); }
+    TestCase(const char* name)        { Init(name); }
 
 public:    
     // explicit destruction, to be used before calling exit() in out-of-process test runner

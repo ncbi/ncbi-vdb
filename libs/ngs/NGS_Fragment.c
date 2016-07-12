@@ -85,6 +85,32 @@ NGS_String_v1 * ITF_Fragment_v1_get_quals ( const NGS_Fragment_v1 * self, NGS_Er
 }
 
 static    
+bool ITF_Fragment_v1_is_paired ( const NGS_Fragment_v1 * self, NGS_ErrBlock_v1 * err )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+    ON_FAIL ( bool ret = NGS_FragmentIsPaired ( Self ( self ), ctx ) )
+    {
+        NGS_ErrBlockThrow ( err, ctx );
+    }
+
+    CLEAR ();
+    return ret;
+}
+
+static    
+bool ITF_Fragment_v1_is_aligned ( const NGS_Fragment_v1 * self, NGS_ErrBlock_v1 * err )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+    ON_FAIL ( bool ret = NGS_FragmentIsAligned ( Self ( self ), ctx ) )
+    {
+        NGS_ErrBlockThrow ( err, ctx );
+    }
+
+    CLEAR ();
+    return ret;
+}
+
+static    
 bool ITF_Fragment_v1_next ( NGS_Fragment_v1 * self, NGS_ErrBlock_v1 * err )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
@@ -104,14 +130,16 @@ NGS_Fragment_v1_vt ITF_Fragment_vt =
     {
         "NGS_Fragment",
         "NGS_Fragment_v1",
-        0,
+        1,
         & ITF_Refcount_vt . dad
     },
 
     ITF_Fragment_v1_get_id,
     ITF_Fragment_v1_get_bases,
     ITF_Fragment_v1_get_quals,
-    ITF_Fragment_v1_next
+    ITF_Fragment_v1_next,
+    ITF_Fragment_v1_is_paired,
+    ITF_Fragment_v1_is_aligned
 };
 
 
@@ -181,6 +209,42 @@ struct NGS_String * NGS_FragmentGetQualities ( NGS_Fragment * self, ctx_t ctx, u
     }
 
     return NULL;
+}
+
+
+/* IsPaired
+ */
+bool NGS_FragmentIsPaired ( NGS_Fragment * self, ctx_t ctx )
+{
+    if ( self == NULL )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcRow, rcAccessing );
+        INTERNAL_ERROR ( xcSelfNull, "failed to test alignment" );
+    }
+    else
+    {
+        return VT ( self, is_paired ) ( self, ctx );
+    }
+
+    return false;
+}
+
+
+/* IsAligned
+ */
+bool NGS_FragmentIsAligned ( NGS_Fragment * self, ctx_t ctx )
+{
+    if ( self == NULL )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcRow, rcAccessing );
+        INTERNAL_ERROR ( xcSelfNull, "failed to test alignment" );
+    }
+    else
+    {
+        return VT ( self, is_aligned ) ( self, ctx );
+    }
+
+    return false;
 }
 
 

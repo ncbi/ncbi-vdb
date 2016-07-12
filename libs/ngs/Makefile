@@ -88,12 +88,15 @@ NGS_SRC =                 \
 	CSRA1_ReferenceWindow \
 	CSRA1_Reference       \
 	CSRA1_ReadCollection  \
+	CSRA1_Read            \
+	EBI_ReferenceSequence \
 	SRA_Statistics        \
 	SRA_DB_ReadCollection \
 	SRA_Read              \
 	SRA_ReadGroup         \
 	SRA_ReadGroupInfo     \
 	SRA_ReadCollection    \
+	SRA_ReferenceSequence \
 	NGS_Statistics        \
 	NGS_ReadCollection    \
 	NGS_PileupEvent       \
@@ -101,13 +104,16 @@ NGS_SRC =                 \
 	NGS_ReadGroup         \
 	NGS_Alignment         \
 	NGS_Reference         \
+	NGS_ReferenceSequence \
 	NGS_Read              \
 	NGS_Fragment          \
 	NGS_Cursor            \
 	NGS_Refcount          \
 	NGS_String            \
 	NGS_Id                \
-	NGS_ErrBlock
+	NGS_ErrBlock          \
+	NGS_FragmentBlob      \
+	NGS_FragmentBlobIterator      \
 
 NGS_OBJ = \
 	$(addsuffix .$(LOBX),$(NGS_SRC))

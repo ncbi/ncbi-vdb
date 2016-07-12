@@ -28,6 +28,7 @@
 #include <klib/text.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -42,13 +43,10 @@
 
 #include "mehr.h"
 #include "schwarzschraube.h"
-#include "ncon.h"
 #include "teleport.h"
 #include "common.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
 
 /*)))
  |||    That file contains 'native' KFile and KDirectory based nodes
@@ -195,7 +193,7 @@ XFSKfsNodeMake (
 
                 /* This is duplicate, but necessary one
                  */
-            ( & ( TheNode -> node ) ) -> vt = Type == kxfsDir
+            TheNode -> node . vt = Type == kxfsDir
                     ? ( ( const union XFSNode_vt * ) & _sKfsDirNodeVT_v1 )
                     : ( ( const union XFSNode_vt * ) & _sKfsFileNodeVT_v1 )
                     ;
@@ -212,7 +210,7 @@ XFSKfsNodeMake (
     }
 
 /*
-printf ( "XFSKfsNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) TheNode, Name, Type );
+pLogMsg ( klogDebug, "XFSKfsNodeMake ND[$(node)] NM[$(name)] TP[$(type)]", "node=%p,name=%s,type=%d", ( void * ) TheNode, Name, Type );
 */
 
     return RCt;
@@ -276,7 +274,7 @@ XFSKfsNodeDispose ( const struct XFSKfsNode * self )
     struct XFSKfsNode * Node = ( struct XFSKfsNode * ) self;
 
 /*
-printf ( "XFSKfsNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+pLogMsg ( klogDebug, "XFSKfsNodeDispose ( $(node) ) TP[$(type)]", "node=%p,type=%d", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
 */
 
     if ( Node == 0 ) {
@@ -365,22 +363,20 @@ _KfsDirNodeFindNode_v1 (
     rc_t RCt;
     uint32_t PathCount;
     const char * NodeName;
-    char PathBuf [ XFS_SIZE_4096 ];
-    size_t PathBufLen;
     struct XFSKfsNode * KfsNode;
     bool IsLast;
     KDirectory * NativeDir;
     XFSNType Type;
+    const struct XFSPath * xPath, * yPath;
 
     RCt = 0;
     PathCount = 0;
     NodeName = NULL;
-    * PathBuf = 0;
-    PathBufLen = 0;
     KfsNode = NULL;
     IsLast = false;
     NativeDir = NULL;
     Type = kxfsNotFound;
+    xPath = yPath = NULL;
 
     RCt = XFSNodeFindNodeCheckInitStandard (
                                             self,
@@ -405,52 +401,51 @@ _KfsDirNodeFindNode_v1 (
             return XFS_RC ( rcInvalid );
         }
 
-        PathBufLen = string_copy_measure (
-                                        PathBuf,
-                                        sizeof ( PathBuf ),
-                                        KfsNode -> path
-                                        );
-        * ( PathBuf + PathBufLen ) = '/';
             /*) Here we are trying to create new node
              (*/
-        RCt = XFSPathFrom (
-                        Path,
-                        PathIndex + 1,
-                        PathBuf + PathBufLen + 1,
-                        sizeof ( PathBuf ) - PathBufLen
-                        );
+        RCt = XFSPathFrom ( Path, PathIndex + 1, & xPath );
         if ( RCt == 0 ) {
-            RCt = KDirectoryNativeDir ( & NativeDir );
+            RCt = XFSPathMake (
+                            & yPath,
+                            true,
+                            "%s/%s",
+                            KfsNode -> path,
+                            XFSPathGet ( xPath )
+                            );
             if ( RCt == 0 ) {
-                switch ( KDirectoryPathType ( NativeDir, PathBuf ) ) {
-                    case kptFile :
-                            Type = kxfsFile;
-                            break;
-                    case kptDir :
-                            Type = kxfsDir;
-                            break;
-                    default :
-                            RCt = XFS_RC ( rcInvalid );
-                            break;
-                }
-
+                RCt = KDirectoryNativeDir ( & NativeDir );
                 if ( RCt == 0 ) {
-                    RCt = XFSKfsNodeMakeEx (
-                                        & KfsNode,
-                                        Type,
-                                        XFSPathName ( Path ),
-                                        PathBuf,
-                                        NULL
-                                        );
-                    if ( RCt == 0 ) {
-                        * Node = & ( KfsNode -> node );
-
-                        return 0;
+                    switch ( KDirectoryPathType ( NativeDir, XFSPathGet ( yPath ) ) ) {
+                        case kptFile :
+                                Type = kxfsFile;
+                                break;
+                        case kptDir :
+                                Type = kxfsDir;
+                                break;
+                        default :
+                                RCt = XFS_RC ( rcInvalid );
+                                break;
                     }
+                    if ( RCt == 0 ) {
+                        RCt = XFSKfsNodeMakeEx (
+                                            & KfsNode,
+                                            Type,
+                                            XFSPathName ( yPath ),
+                                            XFSPathGet ( yPath ),
+                                            NULL
+                                            );
+                        if ( RCt == 0 ) {
+                            * Node = & ( KfsNode -> node );
+                        }
+                    }
+
+                    KDirectoryRelease ( NativeDir );
                 }
 
-                KDirectoryRelease ( NativeDir );
+                XFSPathRelease ( yPath );
             }
+
+            XFSPathRelease ( xPath );
         }
     }
 
@@ -467,7 +462,7 @@ rc_t CC
 _KfsDir_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_KfsDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_KfsDir_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -1000,7 +995,7 @@ _KfsFile_dispose_v1 ( const struct XFSEditor * self )
     struct XFSKfsFileEditor * Editor = ( struct XFSKfsFileEditor * ) self;
 
 /*
-    printf ( "_KfsNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_KfsFile_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -1363,7 +1358,7 @@ rc_t CC
 _KfsAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_KfsAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_KfsAttr_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -1787,11 +1782,63 @@ _KfsNodeConstructor (
 (((*/
 LIB_EXPORT
 rc_t CC
+XFSFileNodeMakeHandle (
+                    const struct XFSHandle ** Handle,
+                    struct XFSNode * FileNode,
+                    struct KFile * File
+)
+{
+    rc_t RCt;
+    const struct XFSHandle * TheHandle;
+    struct XFSKfsFileEditor * Editor;
+
+    RCt = 0;
+    TheHandle = NULL;
+    Editor = NULL;
+
+    XFS_CSAN ( Handle )
+    XFS_CAN ( Handle )
+    XFS_CAN ( FileNode )
+    XFS_CAN ( File )
+
+    RCt = XFSNodeFileEditor (
+                        FileNode,
+                        ( const struct XFSFileEditor ** ) & Editor
+                        );
+    if ( RCt == 0 ) {
+        Editor -> File = File;
+
+        RCt = XFSHandleMake ( FileNode,  & TheHandle );
+        if ( RCt == 0 ) {
+            XFSHandleSet ( TheHandle, Editor );
+
+            * Handle = TheHandle;
+        }
+    }
+
+    if ( RCt != 0 ) {
+        * Handle = NULL;
+
+        if ( TheHandle != NULL ) {
+            XFSHandleRelease ( TheHandle );
+        }
+        else {
+            if ( Editor != NULL ) {
+                XFSEditorDispose ( ( const struct XFSEditor * ) Editor );
+            }
+        }
+    }
+
+    return RCt;
+}   /* XFSFileNodeMakeHandle () */
+
+LIB_EXPORT
+rc_t CC
 XFSFileNodeMake (
+            struct XFSNode ** Node,
             const char * Path,
             const char * Name,
-            const char * Perm,
-            struct XFSNode ** Node
+            const char * Perm
 )
 {
     rc_t RCt;
@@ -1819,10 +1866,10 @@ XFSFileNodeMake (
 LIB_EXPORT
 rc_t CC
 XFSDirNodeMake (
+            struct XFSNode ** Node,
             const char * Path,
             const char * Name,
-            const char * Perm,
-            struct XFSNode ** Node
+            const char * Perm
 )
 {
     rc_t RCt;
@@ -1872,7 +1919,7 @@ _FileNodeConstructor (
                             );
 
 /*
-printf ( "_FileNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_FileNodeConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,templat=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1892,7 +1939,7 @@ _FileNodeValidator (
     RCt = 0;
 
 /*
-printf ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_FileNodeValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,templat=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1943,7 +1990,7 @@ _DirNodeConstructor (
                             );
 
 /*
-printf ( "_DirNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_DirNodeConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,templat=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1963,7 +2010,7 @@ _DirNodeValidator (
     RCt = 0;
 
 /*
-printf ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_DirNodeValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,templat=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

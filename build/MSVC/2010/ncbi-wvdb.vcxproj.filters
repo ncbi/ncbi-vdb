@@ -390,6 +390,9 @@
     <ClCompile Include="..\..\..\libs\klib\namelist.c">
       <Filter>klib</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\ncbi-vdb-version.c">
+      <Filter>klib</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\klib\out.c">
       <Filter>klib</Filter>
     </ClCompile>
@@ -544,6 +547,9 @@
       <Filter>kproc</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\kproc\task.c">
+      <Filter>kproc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kproc\queue.c">
       <Filter>kproc</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\kproc\win\syscond.c">
@@ -874,6 +880,9 @@
       <Filter>vfs</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\resolver.c">
+      <Filter>vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\resolver-3.0.c">
       <Filter>vfs</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\win\syspath.c">

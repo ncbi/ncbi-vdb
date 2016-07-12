@@ -516,6 +516,8 @@ rc_t CC KSocketTimedWrite ( KSocket *self,
     ssize_t count;
 
     assert ( self != NULL );
+    assert ( buffer != NULL );
+    assert ( bsize != 0 );
     assert ( num_writ != NULL );
 
     DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedWrite(%d, %d)...\n", self, bsize, tm == NULL ? -1 : tm -> mS ) );
@@ -531,6 +533,7 @@ rc_t CC KSocketTimedWrite ( KSocket *self,
     if ( revents < 0 )
     {
         rc = HandleErrno ( __func__, __LINE__ );
+        assert ( rc != 0 );
         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedWrite socket_wait returned '%s'\n", self, strerror ( errno ) ) );
         return rc;
     }

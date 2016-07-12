@@ -993,7 +993,7 @@ static tar_header_type	what_header_type(const tar_header* header)
 	 */
 	else if (header->suntar.extnum &&
 		 header->suntar.extcount &&
-		 header->suntar.fullsize)
+		 header->suntar.fullsize[0])
 	{
 	    type = TAR_SUN;
 	}

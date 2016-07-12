@@ -159,6 +159,11 @@ rc_t KColumnCheckBlobs(const KColumn *self,
         
         rc = KColumnOpenBlobRead(self, &blob, row + start);
         if (rc) {
+            if (GetRCObject(rc) == rcBlob && GetRCState(rc) == rcNotFound) {
+                rc = 0;
+                ++row; /* try with the next row; linear scan seems wrong */
+                continue;
+            }
             nfo->info.done.rc = rc;
             nfo->info.done.mesg = "could not be read";
             nfo->type = ccrpt_Done;

@@ -151,7 +151,10 @@ rc_t string_flush_vprintf ( char *dst, size_t bsize, const KWrtHandler *flush,
     const char *hex_digits;
     uint32_t i, j, len, digits, min_field_width, max_field_width, precision;
     bool left_align, comma_separate, have_precision, byte_size, half_size, long_size;
-    bool alternate, trim_trailing_zeros, date_time_zone;
+    bool alternate, date_time_zone;
+#if ! USE_LIB_FLOAT
+    bool trim_trailing_zeros;
+#endif
 
     if ( fmt == NULL )
     {
@@ -308,7 +311,9 @@ rc_t string_flush_vprintf ( char *dst, size_t bsize, const KWrtHandler *flush,
         }
 
         /* format */
+#if ! USE_LIB_FLOAT
         trim_trailing_zeros = false;
+#endif
         switch ( fmt [  sidx  ] )
         {
         case 'd':
@@ -1400,7 +1405,6 @@ rc_t parse_format_string ( const char *fmt_str, va_list vargs,
     rc_t rc;
     uint32_t i, str_idx, fmt_idx, arg_idx;
 
-    String *str = * strp;
     PrintFmt *fmt = * fmtp;
     PrintArg *args = * argp;
 
@@ -1409,8 +1413,7 @@ rc_t parse_format_string ( const char *fmt_str, va_list vargs,
     {
         bool alternate, numeric;
         char size_modifier, time_modifier;
-        bool has_width, has_precision;
-        bool has_index, infinite_first;
+        bool has_precision, has_index, infinite_first;
 
         /* loop to gather literal portions */
         uint32_t start;
@@ -1432,7 +1435,6 @@ rc_t parse_format_string ( const char *fmt_str, va_list vargs,
                     if ( rc != 0 )
                         return rc;
 
-                    str = * strp;
                     fmt = * fmtp;
                     args = * argp;
                 }
@@ -1468,7 +1470,6 @@ rc_t parse_format_string ( const char *fmt_str, va_list vargs,
             if ( rc != 0 )
                 return rc;
 
-            str = * strp;
             fmt = * fmtp;
             args = * argp;
         }
@@ -1541,11 +1542,9 @@ rc_t parse_format_string ( const char *fmt_str, va_list vargs,
         }
 
         /* minimum field width */
-        has_width = false;
         if ( isdigit ( fmt_str [ i ] ) )
         {
             /* literal */
-            has_width = true;
             fmt [ fmt_idx ] . u . f . min_field_width = fmt_str [ i ] - '0';
             while ( isdigit ( fmt_str [ ++ i ] ) )
             {
@@ -1557,7 +1556,6 @@ rc_t parse_format_string ( const char *fmt_str, va_list vargs,
         {
             /* external - we populate the structure directly
                rather than marking the value as external */
-            has_width = true;
             fmt [ fmt_idx ] . u . f . min_field_width = va_arg ( vargs, uint32_t );
             ++ i;
         }

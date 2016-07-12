@@ -28,6 +28,7 @@
 #include <klib/text.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -48,8 +49,6 @@
 #include "xencws.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
 
 /*)))
  |||    That file contains 'native' KFile and KDirectory based nodes
@@ -210,7 +209,7 @@ _EncWsNodeMake (
 
                     /* This is duplicate, but necessary one
                      */
-                ( & ( TheNode -> node ) ) -> vt = Type == kxfsDir
+                TheNode -> node . vt = Type == kxfsDir
                         ? ( ( const union XFSNode_vt * ) & _sEncWsDirNodeVT_v1 )
                         : ( ( const union XFSNode_vt * ) & _sEncWsFileNodeVT_v1 )
                         ;
@@ -233,7 +232,7 @@ _EncWsNodeMake (
     }
 
 /*
-printf ( "_EncWsNodeMake ND[0x%p] NM[%s] TP[%d]\n", ( void * ) TheNode, Name, Type );
+pLogMsg ( klogDebug, "_EncWsNodeMake ND[$(node)] NM[$(name)] TP[$(type)]", "node=%p,name=%s,type=%d", ( void * ) TheNode, Name, Type );
 */
 
     return RCt;
@@ -252,7 +251,7 @@ _EncWsNodeDispose ( const struct _EncWsNode * self )
     struct _EncWsNode * Node = ( struct _EncWsNode * ) self;
 
 /*
-printf ( "_EncWsNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+pLogMsg ( klogDebug, "_EncWsNodeDispose ND[$(node)] TP[$(type)]", "node=%p,type=%d", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
 */
 
     if ( Node == 0 ) {
@@ -308,7 +307,6 @@ _EncWsFileNodeFindNode_v1 (
     NodeName = NULL;
     IsLast = false;
 
-printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
     RCt = XFSNodeFindNodeCheckInitStandard (
                                             self,
                                             Path,
@@ -318,7 +316,6 @@ printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
                                             & PathCount,
                                             & IsLast
                                             );
-printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
     if ( RCt == 0 ) {
         if ( IsLast ) {
             RCt = XFSNodeAddRef ( self );
@@ -327,7 +324,6 @@ printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
         }
     }
 
-printf ( " [FNF] [%d] [%d]\n", __LINE__, RCt );
 
     return RCt;
 }   /* _EncWsFileNodeFindNode () */
@@ -348,6 +344,7 @@ _EncWsDirNodeFindNode_v1 (
     char PathBuf [ XFS_SIZE_4096 ];
     size_t PathBufLen;
     struct _EncWsNode * EncWsNode;
+    const struct XFSPath * xPath;
     bool IsLast;
 
     RCt = 0;
@@ -356,6 +353,7 @@ _EncWsDirNodeFindNode_v1 (
     * PathBuf = 0;
     PathBufLen = 0;
     EncWsNode = NULL;
+    xPath = NULL;
     IsLast = false;
 
     RCt = XFSNodeFindNodeCheckInitStandard (
@@ -393,12 +391,19 @@ _EncWsDirNodeFindNode_v1 (
         * ( PathBuf + PathBufLen ) = '/';
             /*) Here we are trying to create new node
              (*/
-        RCt = XFSPathFrom (
-                        Path,
-                        PathIndex + 1,
+        RCt = XFSPathFrom ( Path, PathIndex + 1, & xPath );
+        if ( RCt == 0 ) {
+            if ( string_copy (
                         PathBuf + PathBufLen + 1,
-                        sizeof ( PathBuf ) - PathBufLen
-                        );
+                        sizeof ( PathBuf ) - PathBufLen,
+                        XFSPathGet ( xPath ),
+                        string_size ( XFSPathGet ( xPath ) )
+                        ) != string_size ( XFSPathGet ( xPath ) ) ) {
+
+                RCt = XFS_RC ( rcInvalid );
+            }
+            XFSPathRelease ( xPath );
+        }
         if ( RCt == 0 ) {
             RCt = _EncWsNodeMake (
                                 & EncWsNode,
@@ -408,8 +413,6 @@ _EncWsDirNodeFindNode_v1 (
                                 );
             if ( RCt == 0 ) {
                 * Node = & ( EncWsNode -> node );
-
-                return 0;
             }
         }
     }
@@ -428,7 +431,7 @@ rc_t CC
 _EncWsDir_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_EncWsDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_EncWsDir_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -937,7 +940,7 @@ _EncWsFile_dispose_v1 ( const struct XFSEditor * self )
     struct _EncWsFileEditor * Editor = ( struct _EncWsFileEditor * ) self;
 
 /*
-    printf ( "_EncWsNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_EncWsFile_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -1279,7 +1282,7 @@ rc_t CC
 _EncWsAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_EncWsAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_EncWsAttr_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -1643,7 +1646,7 @@ _EncWsNodeConstructor (
          */
     RCt = XFSEncDirectoryOpen (
                 & Workspace,
-                true,
+                ! XFSModelNodeReadOnly ( Template ),
                 XFSModelNodeProperty ( Template, XFS_MODEL_PASSWD ),
                 XFSModelNodeProperty ( Template, XFS_MODEL_ENCTYPE ),
                 XFSModelNodeProperty ( Template, XFS_MODEL_SOURCE )
@@ -1682,11 +1685,12 @@ _EncWsNodeConstructor (
 LIB_EXPORT
 rc_t CC
 XFSWorkspaceNodeMake (
+            struct XFSNode ** Node,
             const char * Name,
             const char * Path,
             const char * Password,
             const char * EncType,
-            struct XFSNode ** Node
+            bool ReadOnly
 )
 {
     rc_t RCt;
@@ -1705,7 +1709,7 @@ XFSWorkspaceNodeMake (
 
     RCt = XFSEncDirectoryOpen (
                             & Workspace,
-                            true,
+                            ! ReadOnly,
                             Password,
                             EncType,
                             Path
@@ -1741,7 +1745,7 @@ _WorkspaceNodeConstructor (
     RCt = _EncWsNodeConstructor ( Model, Template, Alias, Node );
 
 /*
-printf ( "_WorkspaceNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_WorkspaceNodeConstructor ( $(model), $(template) (\"name\"), \"alias\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1761,7 +1765,7 @@ _WorkspaceNodeValidator (
     RCt = 0;
 
 /*
-printf ( "_WorkspaceNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_WorkspaceNodeValidator ( $(model), $(template) (\"name\"), \"alias\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

@@ -146,6 +146,65 @@ rc_t KColumnIdxIdRange ( const KColumnIdx *self,
     return 0;
 }
 
+/* FindFirstRowId
+ */
+rc_t KColumnIdxFindFirstRowId ( const KColumnIdx * self,
+    int64_t * found, int64_t start )
+{
+    rc_t rc0, rc1;
+    KColBlockLoc bloc;
+    int64_t best0, best1;
+
+    assert ( self != NULL );
+    assert ( found != NULL );
+
+    /* global reject */
+    if ( start < self -> id_first || start >= self -> id_upper )
+        return RC ( rcDB, rcColumn, rcSelecting, rcRow, rcNotFound );
+
+    /* look in idx0 */
+    rc0 = KColumnIdx0FindFirstRowId ( & self -> idx0, found, start );
+    if ( rc0 == 0 )
+    {
+        if ( * found == start )
+            return 0;
+
+        best0 = * found;
+        assert ( best0 > start );
+    }
+
+    /* look in main index */
+    /* KColumnIdx1LocateFirstRowIdBlob returns the blob containing 'start', if such blob exists, otherwise the next blob (or RC if there's no next) */
+    rc1 = KColumnIdx1LocateFirstRowIdBlob ( & self -> idx1, & bloc, start );
+    if ( rc1 != 0 )
+    {
+        return rc0;
+    }
+    if ( start >= bloc . start_id )
+    {   /* found inside a blob */
+        best1 = start;
+    }
+    else
+    {   /* not found; pick the start of the next blob */
+        best1 = bloc . start_id;
+    }
+
+    if ( rc0 != 0 )
+    {
+        * found = best1;
+        return 0;
+    }
+
+    /* found in both - return lesser */
+
+    /* "found" already contains 'best0" */
+    assert ( * found == best0 );
+    if ( best1 < best0 )
+        * found = best1;
+
+    return 0;
+}
+
 /* LocateBlob
  *  locate an existing blob
  */

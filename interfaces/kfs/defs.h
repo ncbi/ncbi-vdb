@@ -102,7 +102,10 @@ enum
     kcmOpen,
     kcmInit,
     kcmCreate,
-    kcmValueMask = 7,
+    kcmSharedAppend,        /* special mode which works only on
+                             * needed for proper logging
+                             */
+    kcmValueMask = 15,
 
     /* modifier bits 3..7 */
     kcmMD5     = ( 1 << 6 ),

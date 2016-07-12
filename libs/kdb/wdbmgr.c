@@ -27,13 +27,20 @@
 #define TRACK_REFERENCES 0
 
 #include <kdb/extern.h>
-#include "libwkdb.vers.h"
+#include "libkdb.vers.h"
 #include "dbmgr-priv.h"
 #include "wkdb-priv.h"
 #include <kfs/impl.h>
+
+#include <vfs/manager.h>
+#include <vfs/resolver.h>
+#include <vfs/path.h>
+#include <vfs/path-priv.h>
+
 #include <klib/symbol.h>
 #include <klib/checksum.h>
 #include <klib/rc.h>
+
 #include <sysalloc.h>
 
 #include <limits.h>
@@ -332,17 +339,70 @@ LIB_EXPORT rc_t CC KDBManagerRunPeriodicTasks ( const KDBManager *self )
  * the KDirectory values if a path type is not specifically a
  * kdb object
  */
+LIB_EXPORT int CC KDBManagerPathTypeVP( const KDBManager * self, const VPath * path )
+{
+    int path_type = kptBadPath;
+    if ( self != NULL && path != NULL )
+    {
+        /*
+         * resolve the possible relative path or accession into
+         * a final path we can open directly
+         */
+		VPath * rpath;
+		rc_t rc = VFSManagerResolvePath( self->vfsmgr, vfsmgr_rflag_kdb_acc, path, &rpath );
+        if ( rc == 0 )
+        {
+            const KDirectory * dir;
+
+            /*
+             * Most KDBPathType values are based on 'directories'
+             * so try to open the resolved path as a directory
+             */
+            rc = VFSManagerOpenDirectoryReadDecrypt( self->vfsmgr, &dir, rpath );
+            if ( rc == 0 )
+            {
+                path_type = KDBPathTypeDir( dir, kptDir, NULL, "." );
+                KDirectoryRelease( dir );
+            }
+            /*
+             * If we couldn't open the path as a directory we 'might'
+             * have a KDB idx but we will only try that for a limited
+             * set of uri schemes.
+             */
+            else
+            {
+                if ( VPathIsFSCompatible( rpath ) )
+                {
+                    char buffer [ 4096 ];
+                    rc = VPathReadPath( rpath, buffer, sizeof buffer, NULL );
+                    if ( rc == 0 )
+                        path_type = KDBPathType( self -> wd, false, buffer );
+                }
+            }
+            VPathRelease( rpath );
+        }
+    }
+    return path_type;
+}
+
 
 LIB_EXPORT int CC KDBManagerVPathType ( const KDBManager * self, const char *path, va_list args )
 {
-    if ( self != NULL )
+    int path_type = kptBadPath;
+
+    if ( self != NULL && path != NULL )
     {
-        char full [ 4096 ];
-        rc_t rc = KDirectoryVResolvePath ( self -> wd, false, full, sizeof full, path, args );
+        VPath * vp;
+        rc_t rc;
+
+        rc = VFSManagerVMakePath( self -> vfsmgr, &vp, path, args );
         if ( rc == 0 )
-            return KDBPathType ( /*self,*/ self -> wd, NULL, full );
+        {
+            path_type = KDBManagerPathTypeVP( self, vp );
+            VPathRelease( vp );
+        }
     }
-    return kptBadPath;
+    return path_type;
 }
 
 

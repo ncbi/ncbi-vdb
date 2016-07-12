@@ -45,6 +45,7 @@ extern "C" {
  */
 struct KTable;
 struct KDBManager;
+struct KDataBuffer;
 
 
 /*--------------------------------------------------------------------------
@@ -184,6 +185,23 @@ KDB_EXTERN rc_t CC KColumnByteOrder ( const KColumn *self, bool *reversed );
 KDB_EXTERN rc_t CC KColumnIdRange ( const KColumn *self, int64_t *first, uint64_t *count );
 
 
+/* FindFirstRowId
+ *  locates the first valid row-id starting from a given id.
+ *  this will be either the start id provided, or
+ *  the first row from the next blob, if available.
+ *
+ *  "found" [ OUT ] - will contain the value of "start" if this is contained within a blob,
+ *  or the first row-id of the next blob after "start", if any.
+ *
+ *  "start" [ IN ] - starting row-id in search, inclusive. if this id is valid,
+ *  it will be returned in "found"
+ *
+ *  returns 0 if id is found, rcNotFound if no more data were available.
+ *  may return other codes upon error.
+ */
+KDB_EXTERN rc_t CC KColumnFindFirstRowId ( const KColumn * self, int64_t * found, int64_t start );
+
+
 /* Reindex
  *  optimize indices
  */
@@ -212,6 +230,22 @@ KDB_EXTERN rc_t CC KColumnOpenManagerUpdate ( KColumn *self, struct KDBManager *
  */
 KDB_EXTERN rc_t CC KColumnOpenParentRead ( const KColumn *self, struct KTable const **tbl );
 KDB_EXTERN rc_t CC KColumnOpenParentUpdate ( KColumn *self, struct KTable **tbl );
+
+
+/*--------------------------------------------------------------------------
+ * KColumnBlobCSData
+ *  checksum data
+ *
+ *  current version: 1
+ *
+ *  current checksum methods: CRC32, MD5
+ */
+typedef union KColumnBlobCSData KColumnBlobCSData;
+union KColumnBlobCSData
+{
+    uint32_t crc32;
+    uint8_t md5_digest [ 16 ];
+};
 
 
 /*--------------------------------------------------------------------------
@@ -261,6 +295,20 @@ KDB_EXTERN rc_t CC KColumnBlobRead ( const KColumnBlob *self,
     size_t offset, void *buffer, size_t bsize,
     size_t *num_read, size_t *remaining );
 
+/* ReadAll
+ *  read entire blob, plus any auxiliary checksum data
+ *
+ *  "buffer" [ OUT ] - pointer to a KDataBuffer structure that will be initialized
+ *  and resized to contain the entire blob. upon success, will contain the number of bytes
+ *  in buffer->elem_count and buffer->elem_bits == 8.
+ *
+ *  "opt_cs_data [ OUT, NULL OKAY ] - optional output parameter for checksum data
+ *  associated with the blob in "buffer", if any exist.
+ *
+ *  "cs_data_size" [ IN ] - sizeof of * opt_cs_data if not NULL, 0 otherwise
+ */
+KDB_EXTERN rc_t CC KColumnBlobReadAll ( const KColumnBlob * self, struct KDataBuffer * buffer,
+    KColumnBlobCSData * opt_cs_data, size_t cs_data_size );
 
 /* Append
  *  append data to open blob
@@ -274,6 +322,16 @@ KDB_EXTERN rc_t CC KColumnBlobAppend ( KColumnBlob *self, const void *buffer, si
  *  runs checksum validation on unmodified blob
  */
 KDB_EXTERN rc_t CC KColumnBlobValidate ( const KColumnBlob *self );
+
+/* ValidateBuffer
+ *  run checksum validation on buffer data
+ *
+ *  "buffer" [ IN ] - returned blob buffer from ReadAll
+ *
+ *  "cs_data" [ IN ] and "cs_data_size" [ IN ] - returned checksum data from ReadAll
+ */
+KDB_EXTERN rc_t CC KColumnBlobValidateBuffer ( const KColumnBlob * self,
+    struct KDataBuffer const * buffer, const KColumnBlobCSData * cs_data, size_t cs_data_size );
 
 
 /* IdRange

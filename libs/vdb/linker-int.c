@@ -77,6 +77,7 @@ extern VTRANSFACT_DECL ( ALIGN_raw_restore_read );
 extern VTRANSFACT_DECL ( ALIGN_ref_restore_read );
 extern VTRANSFACT_DECL ( ALIGN_ref_sub_select );
 extern VTRANSFACT_DECL ( ALIGN_seq_restore_read );
+extern VTRANSFACT_DECL ( ALIGN_seq_restore_linkage_group );
 extern VTRANSFACT_DECL ( INSDC_SEQ_rand_4na_2na );
 extern VTRANSFACT_DECL ( INSDC_SRA_format_spot_name );
 extern VTRANSFACT_DECL ( INSDC_SRA_format_spot_name_no_coord );
@@ -84,6 +85,7 @@ extern VTRANSFACT_DECL ( NCBI_SRA_ABI_tokenize_spot_name );
 extern VTRANSFACT_DECL ( NCBI_SRA_Helicos_tokenize_spot_name );
 extern VTRANSFACT_DECL ( NCBI_SRA_Illumina_tokenize_spot_name );
 extern VTRANSFACT_DECL ( NCBI_SRA_IonTorrent_tokenize_spot_name );
+extern VTRANSFACT_DECL ( NCBI_SRA_GenericFastq_tokenize_spot_name );
 extern VTRANSFACT_DECL ( NCBI_SRA__454__dynamic_read_desc );
 extern VTRANSFACT_DECL ( NCBI_SRA__454__process_position );
 extern VTRANSFACT_DECL ( NCBI_SRA__454__tokenize_spot_name );
@@ -463,6 +465,7 @@ rc_t VLinkerInitFactoriesRead ( VLinker *self,  KSymTable *tbl, const SchemaEnv 
         { ALIGN_ref_restore_read, "ALIGN:ref_restore_read" },
         { ALIGN_ref_sub_select, "ALIGN:ref_sub_select" },
         { ALIGN_seq_restore_read, "ALIGN:seq_restore_read" },
+        { ALIGN_seq_restore_linkage_group, "ALIGN:seq_restore_linkage_group" },
         { INSDC_SEQ_rand_4na_2na, "INSDC:SEQ:rand_4na_2na" },
         { INSDC_SRA_format_spot_name, "INSDC:SRA:format_spot_name" },
         { INSDC_SRA_format_spot_name_no_coord, "INSDC:SRA:format_spot_name_no_coord" },
@@ -470,6 +473,7 @@ rc_t VLinkerInitFactoriesRead ( VLinker *self,  KSymTable *tbl, const SchemaEnv 
         { NCBI_SRA_Helicos_tokenize_spot_name, "NCBI:SRA:Helicos:tokenize_spot_name" },
         { NCBI_SRA_Illumina_tokenize_spot_name, "NCBI:SRA:Illumina:tokenize_spot_name" },
         { NCBI_SRA_IonTorrent_tokenize_spot_name, "NCBI:SRA:IonTorrent:tokenize_spot_name" },
+        { NCBI_SRA_GenericFastq_tokenize_spot_name, "NCBI:SRA:GenericFastq:tokenize_spot_name" },
         { NCBI_SRA__454__dynamic_read_desc, "NCBI:SRA:_454_:dynamic_read_desc" },
         { NCBI_SRA__454__process_position, "NCBI:SRA:_454_:process_position" },
         { NCBI_SRA__454__tokenize_spot_name, "NCBI:SRA:_454_:tokenize_spot_name" },

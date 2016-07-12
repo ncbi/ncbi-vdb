@@ -543,6 +543,9 @@
     <ClCompile Include="..\..\..\libs\klib\namelist.c">
       <Filter>klib</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\ncbi-vdb-version.c">
+      <Filter>klib</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\klib\out.c">
       <Filter>klib</Filter>
     </ClCompile>
@@ -702,6 +705,9 @@
     <ClCompile Include="..\..\..\libs\kproc\task.c">
       <Filter>kproc</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\kproc\queue.c">
+      <Filter>kproc</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\kproc\win\syscond.c">
       <Filter>kproc</Filter>
     </ClCompile>
@@ -819,6 +825,9 @@
     <ClCompile Include="..\..\..\libs\ngs\NGS_Reference.c">
       <Filter>ngs</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceSequence.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\ngs\NGS_Statistics.c">
       <Filter>ngs</Filter>
     </ClCompile>
@@ -834,6 +843,9 @@
     <ClCompile Include="..\..\..\libs\ngs\SRA_ReadCollection.c">
       <Filter>ngs</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\SRA_ReferenceSequence.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\ngs\SRA_ReadGroup.c">
       <Filter>ngs</Filter>
     </ClCompile>
@@ -841,6 +853,9 @@
       <Filter>ngs</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\ngs\SRA_Statistics.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\EBI_ReferenceSequence.c">
       <Filter>ngs</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\search\agrep-dp.c">
@@ -1186,6 +1201,9 @@
       <Filter>vfs</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\resolver.c">
+      <Filter>vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\resolver-3.0.c">
       <Filter>vfs</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\win\syspath.c">

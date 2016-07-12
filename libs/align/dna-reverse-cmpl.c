@@ -39,7 +39,7 @@ LIB_EXPORT rc_t CC DNAReverseCompliment(const INSDC_dna_text* seq, INSDC_dna_tex
     uint32_t i;
     static INSDC_dna_text compl[256] = "~";
 
-    if( seq == NULL || compl == NULL ) {
+    if( seq == NULL || cmpl == NULL ) {
         rc = RC( rcAlign, rcType, rcConverting, rcParam, rcNull);
     } else {
         if( compl[0] == '~' ) {

@@ -26,6 +26,7 @@
 #include <klib/rc.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <xfs/model.h>
 #include <xfs/node.h>
@@ -98,11 +99,11 @@ _ReadMeNodeConstructor (
         RCt = XFSTextDocAppend ( ReadMe, "README:\n%s\n", TextOrSource );
         if ( RCt == 0 ) {
             RCt = XFSDocNodeMakeWithFlavor (
+                                & TheNode,
                                 ReadMe,
                                 NodeName,
                                 XFSModelNodeSecurity ( Template ),
-                                _sFlavorOfReadMe,
-                                & TheNode
+                                _sFlavorOfReadMe
                                 );
             if ( RCt == 0 ) {
                 * Node = TheNode;
@@ -144,7 +145,7 @@ _ReadMeConstructor (
                             );
 
 /*
-printf ( "_ReadMeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_ReadMeConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,templat=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -164,7 +165,7 @@ _ReadMeValidator (
     RCt = 0;
 
 /*
-printf ( "_ReadMeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_ReadMeValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,templat=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

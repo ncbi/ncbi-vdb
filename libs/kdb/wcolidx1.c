@@ -649,6 +649,70 @@ bool KColumnIdx1IdRange ( const KColumnIdx1 *self,
     return true;
 }
 
+/* LocateFirstRowIdBlob
+ */
+typedef struct FindFirstRowIdData FindFirstRowIdData;
+struct FindFirstRowIdData
+{
+    int64_t start;
+    const KColumnIdx1Node * next;
+};
+
+static
+int64_t CC KColumnIdx1NodeFindFirstRowId ( const void * item, const BSTNode * n )
+{
+    FindFirstRowIdData * pb = ( FindFirstRowIdData * ) item;
+
+#define a ( pb -> start )
+#define b ( ( const KColumnIdx1Node * ) n )
+
+    if ( a < b -> loc . start_id )
+    {
+        if ( pb -> next == NULL )
+            pb -> next = b;
+        else if ( b -> loc . start_id < pb -> next -> loc . start_id )
+            pb -> next = b;
+        return -1;
+    }
+
+    return a >= ( b -> loc . start_id + b -> loc . id_range );
+
+#undef a
+#undef b
+}
+
+rc_t KColumnIdx1LocateFirstRowIdBlob ( const KColumnIdx1 * self,
+    KColBlockLoc * bloc, int64_t start )
+{
+    FindFirstRowIdData pb;
+    const KColumnIdx1Node * n;
+
+    assert ( self != NULL );
+    assert ( bloc != NULL );
+
+    pb . start = start;
+    pb . next = NULL;
+
+    n = ( const KColumnIdx1Node* )
+        BSTreeFind ( & self -> bst, & pb, KColumnIdx1NodeFindFirstRowId );
+
+    if ( n != NULL )
+    {
+        assert ( start >= n -> loc . start_id && start < n -> loc . start_id + n -> loc . id_range );
+        * bloc = n -> loc;
+        return 0;
+    }
+
+    if ( pb . next != NULL )
+    {
+        assert ( start < pb . next -> loc . start_id );
+        * bloc = pb . next -> loc;
+        return 0;
+    }
+        
+    return SILENT_RC ( rcDB, rcColumn, rcSelecting, rcBlob, rcNotFound );
+}
+
 /* LocateBlock
  *  locates an idx2 block by range
  *  return values:

@@ -74,7 +74,7 @@ extern struct NGS_ReadCollection_v1_vt ITF_ReadCollection_vt;
  */
 #define NGS_ReadCollectionDuplicate( self, ctx ) \
     ( ( NGS_ReadCollection* ) NGS_RefcountDuplicate ( NGS_ReadCollectionToRefcount ( self ), ctx ) )
- 
+
 /* Make
  *  use provided specification to create an object
  *  any error returns NULL as a result and sets error in ctx
@@ -98,12 +98,14 @@ struct NGS_String * NGS_ReadCollectionGetName ( NGS_ReadCollection * self, ctx_t
 /* READ GROUPS
  */
 struct NGS_ReadGroup * NGS_ReadCollectionGetReadGroups ( NGS_ReadCollection * self, ctx_t ctx );
+bool NGS_ReadCollectionHasReadGroup ( NGS_ReadCollection * self, ctx_t ctx, const char * spec );
 struct NGS_ReadGroup * NGS_ReadCollectionGetReadGroup ( NGS_ReadCollection * self, ctx_t ctx, const char * spec );
 
 
 /* REFERENCES
  */
 struct NGS_Reference * NGS_ReadCollectionGetReferences ( NGS_ReadCollection * self, ctx_t ctx );
+bool NGS_ReadCollectionHasReference ( NGS_ReadCollection * self, ctx_t ctx, const char * spec );
 struct NGS_Reference * NGS_ReadCollectionGetReference ( NGS_ReadCollection * self, ctx_t ctx, const char * spec );
 
 
@@ -118,7 +120,7 @@ uint64_t NGS_ReadCollectionGetAlignmentCount ( NGS_ReadCollection * self, ctx_t 
 
 struct NGS_Alignment * NGS_ReadCollectionGetAlignmentRange ( NGS_ReadCollection * self, ctx_t ctx, uint64_t first, uint64_t count,
     bool wants_primary, bool wants_secondary );
-    
+
 /* READS
  */
 struct NGS_Read * NGS_ReadCollectionGetRead ( NGS_ReadCollection * self, ctx_t ctx, const char * readId );
@@ -128,17 +130,21 @@ struct NGS_Read * NGS_ReadCollectionGetReads ( NGS_ReadCollection * self, ctx_t 
 uint64_t NGS_ReadCollectionGetReadCount ( NGS_ReadCollection * self, ctx_t ctx,
     bool wants_full, bool wants_partial, bool wants_unaligned );
 
-struct NGS_Read * NGS_ReadCollectionGetReadRange ( NGS_ReadCollection * self, 
-                                                   ctx_t ctx, 
-                                                   uint64_t first, 
+struct NGS_Read * NGS_ReadCollectionGetReadRange ( NGS_ReadCollection * self,
+                                                   ctx_t ctx,
+                                                   uint64_t first,
                                                    uint64_t count,
-                                                   bool wants_full, 
-                                                   bool wants_partial, 
+                                                   bool wants_full,
+                                                   bool wants_partial,
                                                    bool wants_unaligned );
 
 /* STATISTICS
- */                                                   
+ */
 struct NGS_Statistics* NGS_ReadCollectionGetStatistics ( NGS_ReadCollection * self, ctx_t ctx );
+
+/* FRAGMENT BLOBS
+ */
+struct NGS_FragmentBlobIterator* NGS_ReadCollectionGetFragmentBlobs ( NGS_ReadCollection * self, ctx_t ctx );
 
 /*--------------------------------------------------------------------------
  * implementation details
@@ -155,8 +161,10 @@ struct NGS_ReadCollection_vt
 
     struct NGS_String*      ( * get_name )              ( NGS_READCOLLECTION * self, ctx_t ctx );
     struct NGS_ReadGroup*   ( * get_read_groups )       ( NGS_READCOLLECTION * self, ctx_t ctx );
+           bool             ( * has_read_group )        ( NGS_READCOLLECTION * self, ctx_t ctx, const char * spec );
     struct NGS_ReadGroup*   ( * get_read_group )        ( NGS_READCOLLECTION * self, ctx_t ctx, const char * spec );
     struct NGS_Reference*   ( * get_references )        ( NGS_READCOLLECTION * self, ctx_t ctx );
+           bool             ( * has_reference )         ( NGS_READCOLLECTION * self, ctx_t ctx, const char * spec );
     struct NGS_Reference*   ( * get_reference )         ( NGS_READCOLLECTION * self, ctx_t ctx, const char * spec );
     struct NGS_Alignment*   ( * get_alignments )        ( NGS_READCOLLECTION * self, ctx_t ctx, bool wants_primary, bool wants_secondary );
     struct NGS_Alignment*   ( * get_alignment )         ( NGS_READCOLLECTION * self, ctx_t ctx, const char * alignmentId );
@@ -168,6 +176,8 @@ struct NGS_ReadCollection_vt
         bool wants_full, bool wants_partial, bool wants_unaligned );
     struct NGS_Read*        ( * get_read_range )        ( NGS_READCOLLECTION * self, ctx_t ctx, uint64_t first, uint64_t count, bool wants_full, bool wants_partial, bool wants_unaligned );
     struct NGS_Statistics*  ( * get_statistics )        ( NGS_READCOLLECTION * self, ctx_t ctx );
+
+    struct NGS_FragmentBlobIterator *  ( * get_frag_blobs ) ( NGS_READCOLLECTION * self, ctx_t ctx );
 };
 
 

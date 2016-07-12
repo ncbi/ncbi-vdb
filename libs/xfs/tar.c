@@ -28,6 +28,7 @@
 #include <klib/text.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -48,7 +49,6 @@
 
 #include <sysalloc.h>
 
-#include <stdio.h>
 #include <string.h>     /* memset */
 
 /*)))
@@ -274,7 +274,7 @@ XFSTarNodeDispose ( const struct XFSTarNode * self )
     struct XFSTarNode * Node = ( struct XFSTarNode * ) self;
 
 /*
-printf ( "XFSTarNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+pLogMsg ( klogDebug, "XFSTarNodeDispose ( $(node) )", "node=%p", ( void * ) Node );
 */
 
     if ( Node == 0 ) {
@@ -299,7 +299,7 @@ XFSTarRootNodeDispose ( const struct XFSTarRootNode * self )
     struct XFSTarRootNode * Node = ( struct XFSTarRootNode * ) self;
 
 /*
-printf ( "XFSTarRootNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+pLogMsg ( klogDebug, "XFSTarRootNodeDispose ( $(node) )", "node=%p", ( void * ) Node );
 */
 
     if ( Node == 0 ) {
@@ -347,19 +347,19 @@ _TarNodeFindNode_v1 (
     rc_t RCt;
     uint32_t PathCount;
     const char * NodeName;
-    char PathBuf [ XFS_SIZE_4096 ];
     struct XFSTarRootNode * RootNode;
     struct XFSNode * RetNode;
     const struct XFSTarEntry * Entry;
+    const struct XFSPath * xPath;
     bool IsLast;
 
     RCt = 0;
     PathCount = 0;
     NodeName = NULL;
-    * PathBuf = 0;
     RootNode = NULL;
     RetNode = NULL;
     Entry = NULL;
+    xPath = NULL;
     IsLast = false;
 
     RCt = XFSNodeFindNodeCheckInitStandard (
@@ -385,18 +385,13 @@ _TarNodeFindNode_v1 (
             return XFS_RC ( rcInvalid );
         }
 
-        RCt = XFSPathFrom (
-                        Path,
-                        PathIndex + 1,
-                        PathBuf,
-                        sizeof ( PathBuf )
-                        );
+        RCt = XFSPathFrom ( Path, PathIndex + 1, & xPath );
         if ( RCt == 0 ) {
             RCt = XFSTarGetEntry (
-                                        RootNode -> tar,
-                                        PathBuf,
-                                        & Entry
-                                        );
+                                RootNode -> tar,
+                                XFSPathGet ( xPath ),
+                                & Entry
+                                );
             if ( RCt == 0 ) {
                 RCt = XFSTarNodeMake (
                                     & RetNode,
@@ -405,10 +400,10 @@ _TarNodeFindNode_v1 (
                                     );
                 if ( RCt == 0 ) {
                     * Node = RetNode;
-
-                    return 0;
                 }
             }
+
+            XFSPathRelease ( xPath );
         }
     }
 
@@ -426,7 +421,7 @@ _TarDir_dispose_v1 ( const struct XFSEditor * self )
 {
     struct XFSDirEditor * Editor = ( struct XFSDirEditor * ) self;
 /*
-    printf ( "_TarDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_TarDir_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -594,7 +589,7 @@ _TarFile_dispose_v1 ( const struct XFSEditor * self )
 {
     struct XFSTarFileEditor * Editor = ( struct XFSTarFileEditor * ) self;
 /*
-    printf ( "_TarNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_TarNodeFile_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -825,7 +820,7 @@ rc_t CC
 _TarAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_TarAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_TarAttr_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -1148,7 +1143,7 @@ _TarArchiveConstructor (
                                         );
 
 /*
-printf ( "_TarArchiveConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_TarArchiveConstructor ( $(node), $(template) (\"$(name)\"), \"$(alias)\" )", "node=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1168,7 +1163,7 @@ _TarArchiveValidator (
     RCt = 0;
 
 /*
-printf ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_TarArchiveValidator ( $(node), $(template) (\"$(name)\"), \"$(alias)\" )", "node=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1197,10 +1192,10 @@ XFSTarArchiveProvider ( const struct XFSTeleport ** Teleport )
 LIB_EXPORT
 rc_t CC
 XFSTarArchiveNodeMake (
+                struct XFSNode ** Node,
                 const char * Name,
                 const char * Path,
-                const char * Perm,
-                struct XFSNode ** Node
+                const char * Perm
 )
 {
     rc_t RCt;

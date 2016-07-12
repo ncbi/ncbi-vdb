@@ -28,6 +28,8 @@
 #include "jni_ErrorMsg.h"
 #include "jni_String.h"
 
+#include <kdb/manager.h> /* KDBManager */
+
 #include <kfc/ctx.h>
 #include <kfc/rsrc.h>
 #include <kfc/except.h>
@@ -36,12 +38,19 @@
 
 #include <kfc/rsrc-global.h>
 
-#include <klib/sra-release-version.h> /* SraReleaseVersion */
+#include <kns/manager.h>
+#include <klib/ncbi-vdb-version.h> /* GetPackageVersion */
+
+#include <vfs/manager.h> /* VFSManager */
+#include <vfs/path.h> /* VPath */
 
 #include "NGS_ReadCollection.h"
+#include "NGS_ReferenceSequence.h"
+#include "../klib/release-vers.h"
 
 #include <assert.h>
-#include <string.h> /* memset */
+
+static bool have_user_version_string;
 
 /*
  * Class:     gov_nih_nlm_ncbi_ngs_Manager
@@ -74,6 +83,35 @@ JNIEXPORT void JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_Shutdown
     KRsrcGlobalWhack ( ctx );
 }
 
+static
+void set_app_version_string ( const char * app_version )
+{
+    // get a KNSManager
+    KNSManager * kns;
+    rc_t rc = KNSManagerMake ( & kns );
+    if ( rc == 0 )
+    {
+        have_user_version_string = true;
+        KNSManagerSetUserAgent ( kns, "ncbi-ngs.%V %s", RELEASE_VERS, app_version );
+        KNSManagerRelease ( kns );
+    }
+}
+
+/*
+ * Class:     gov_nih_nlm_ncbi_ngs_Manager
+ * Method:    SetAppVersionString
+ * Signature: (Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_SetAppVersionString
+    ( JNIEnv * jenv, jclass jcls, jstring japp_version )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcMgr, rcUpdating );
+
+    const char * app_version = JStringData ( japp_version, ctx, jenv );
+
+    set_app_version_string ( app_version );
+}
+
 /*
  * Class:     gov_nih_nlm_ncbi_ngs_Manager
  * Method:    OpenReadCollection
@@ -84,9 +122,13 @@ JNIEXPORT jlong JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_OpenReadCollection
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcMgr, rcConstructing );
 
+    NGS_ReadCollection * new_ref = NULL;
     const char * spec = JStringData ( jspec, ctx, jenv );
-    NGS_ReadCollection * new_ref = NGS_ReadCollectionMake ( ctx, spec );
 
+    if ( ! have_user_version_string )
+        set_app_version_string ( "ncbi-ngs: unknown-application" );
+
+    new_ref = NGS_ReadCollectionMake ( ctx, spec );
     if ( FAILED () )
     {
         ErrorMsgThrow ( jenv, ctx, __LINE__, "failed to create ReadCollection from spec '%s'"
@@ -100,6 +142,84 @@ JNIEXPORT jlong JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_OpenReadCollection
 
     assert ( new_ref != NULL );
     return ( jlong ) ( size_t ) new_ref;
+}
+
+/*
+ * Class:     gov_nih_nlm_ncbi_ngs_Manager
+ * Method:    OpenReferenceSequence
+ * Signature: (Ljava/lang/String;)J
+ */
+JNIEXPORT jlong JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_OpenReferenceSequence
+    ( JNIEnv * jenv, jclass jcls, jstring jspec )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcMgr, rcConstructing );
+
+    NGS_ReferenceSequence* new_ref = NULL;
+    const char * spec = JStringData ( jspec, ctx, jenv );
+
+    if ( ! have_user_version_string )
+        set_app_version_string ( "ncbi-ngs: unknown-application" );
+
+    new_ref = NGS_ReferenceSequenceMake ( ctx, spec );
+    if ( FAILED () )
+    {
+        ErrorMsgThrow ( jenv, ctx, __LINE__, "failed to create ReferenceSequence from spec '%s'"
+                         , spec
+            );
+        JStringReleaseData ( jspec, ctx, jenv, spec );
+        return 0;
+    }
+
+    JStringReleaseData ( jspec, ctx, jenv, spec );
+
+    assert ( new_ref != NULL );
+    return ( jlong ) ( size_t ) new_ref;
+}
+
+/*
+ * Class:     gov_nih_nlm_ncbi_ngs_Manager
+ * Method:    IsValid
+ * Signature: (Ljava/lang/String;)Z
+ */
+JNIEXPORT jboolean JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_IsValid
+  ( JNIEnv * jenv, jclass jcls, jstring jspec )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcMgr, rcAccessing );
+
+    jboolean result = false;
+
+    VFSManager * vfs = NULL;
+    rc_t rc = VFSManagerMake ( & vfs );
+
+    if ( rc == 0 ) {
+        const char * spec = JStringData ( jspec, ctx, jenv );
+
+        VPath * path = NULL;
+        rc = VFSManagerMakePath ( vfs, & path, spec );
+
+        if ( rc == 0 ) {
+            const KDBManager * kdb = NULL;
+            rc = KDBManagerMakeRead ( & kdb, NULL );
+
+            if ( rc == 0 ) {
+                KPathType t = KDBManagerPathTypeVP ( kdb, path );
+                if (t == kptDatabase || t == kptTable) {
+                    result = true;
+                }
+
+                KDBManagerRelease ( kdb );
+                kdb = NULL;
+            }
+
+            VPathRelease ( path );
+            path = NULL;
+        }
+
+        VFSManagerRelease ( vfs );
+        vfs = NULL;
+    }
+
+    return result;
 }
 
 /*
@@ -126,22 +246,5 @@ JNIEXPORT jstring JNICALL Java_gov_nih_nlm_ncbi_ngs_Manager_Version
   (JNIEnv *jenv, jclass jcls)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcMgr, rcAccessing );
-
-    rc_t rc = 0;
-    char v[512] = "";
-
-    SraReleaseVersion version;
-    memset(&version, sizeof version, 0);
-
-    rc = SraReleaseVersionGet(&version);
-    if (rc == 0) {
-        rc = SraReleaseVersionPrint(&version, v, sizeof v, NULL);
-    }
-
-    if (rc == 0) {
-        return JStringMake(ctx, jenv, v);
-    }
-    else {
-        return JStringMake(ctx, jenv, "");
-    }
+    return JStringMake(ctx, jenv, GetPackageVersion());
 }

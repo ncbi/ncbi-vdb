@@ -2,14 +2,24 @@
 
     <!-- This file is currently for use on Windows; Linux/Mac builds are run via gmake -->
     <property environment="env"/>
-    <property name="vdb.build"      value="Debug" />
-    <property name="vdb.platform"   value="x64" />
+    <property name="Platform"       value="x64" />
+    <property name="Configuration"  value="Debug" />
+    <property name="Output"         value="${basedir}\..\..\..\OUTDIR" />
+    <property name="MSVS"           value="2013" />
     
-    <property name="ngs-source.dir" value="..\..\..\ngs" />
-    <property name="build.dir"   value="${env.USERPROFILE}\win\cl\${vdb.platform}\${vdb.build}" />
-    <property name="ngs.dir" value="${env.USERPROFILE}\ncbi-outdir\ngs-java" />
+    <condition property="PlatformToolset" value="v100" else="v120">
+        <equals arg1="${MSVS}" arg2="2010"/>
+    </condition>    
+    <property name="vdb.dir"        value="${Output}\ncbi-vdb\win\${PlatformToolset}\${Platform}\${Configuration}\bin" />
+    <property name="ngs.dir"        value="${Output}\ngs-sdk\win\${PlatformToolset}\${Platform}\${Configuration}\bin" />
     
-    <!-- Set this to full path to Python if not in PATH already -->
+    <property name="ngs-source.dir" value="${basedir}\..\..\..\ngs" />
+    
+    <!-- Set this to full path to Python if not in PATH already 
+        make sure that
+            python -c "import platform;print (platform.architecture()[0])" = "32bit" or "64bit" 
+        as needed for the platform
+    -->
     <property name="python.exe"     value="python" />
 	
     <target name="install">
@@ -22,7 +32,7 @@
 
     <target name="runtests" depends="install">
         <exec executable="${python.exe}" failonerror="true">
-            <env key="NGS_PY_LIBRARY_PATH" value="${build.dir}\bin"/>
+            <env key="Path" value="${vdb.dir};${ngs.dir};${env.Path}"/>            
             <env key="NGS_PY_DOWNLOAD_LIBRARY" value="0"/>
             <arg value="tests.py" />
         </exec>

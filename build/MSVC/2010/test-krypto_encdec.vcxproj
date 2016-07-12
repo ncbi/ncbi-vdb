@@ -31,9 +31,7 @@
     </Link>
   </ItemDefinitionGroup>
   
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\krypto\test-cmn.cpp" />
-    <ClCompile Include="..\..\..\test\krypto\test-encdec.cpp" />
-  </ItemGroup>
+  <Import Project="..\test-krypto_encdec.files" />  
+
   
 </Project>

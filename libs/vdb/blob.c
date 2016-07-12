@@ -376,21 +376,25 @@ static rc_t encode_header_v2(
 }
 
 static
-rc_t PageMapProcessRequestLock(PageMapProcessRequest *self)
+    rc_t PageMapProcessRequestLock(PageMapProcessRequest *self)
 {
-	rc_t rc=RC(rcVDB,rcPagemap, rcConstructing, rcSelf, rcNull);
-	if(self){
-		/*** no plans to wait here the thread should be released by now ****/
-		rc = KLockAcquire(self->lock);
-		if(rc == 0){
-			if(self->state != ePMPR_STATE_NONE){ /*** thread is not released yet **/
-				assert(0); /** should not happen ***/
-				KLockUnlock(self->lock);
-				rc=RC(rcVDB, rcPagemap, rcConstructing, rcThread, rcBusy);
-			}
-		}
-	}
-	return rc;
+    rc_t rc = 0;
+    if(self)
+    {
+        /*** no plans to wait here the thread should be released by now ****/
+        rc = KLockAcquire(self->lock);
+        if(rc == 0){
+            if(self->state != ePMPR_STATE_NONE){ /*** thread is not released yet **/
+                assert(0); /** should not happen ***/
+                KLockUnlock(self->lock);
+                rc=RC(rcVDB, rcPagemap, rcConstructing, rcThread, rcBusy);
+            }
+        }
+    }
+    else
+        rc = RC(rcVDB,rcPagemap, rcConstructing, rcSelf, rcNull);
+
+    return rc;
 }
 
 static
@@ -484,7 +488,7 @@ rc_t VBlobCreateFromData_v2(
             rc = BlobHeadersCreateFromData(&y->headers, src+offset , hsize);
         if (rc == 0) {
             if (msize > 0) {
-                if(PageMapProcessRequestLock(pmpr)==0) {
+                if(pmpr != NULL && PageMapProcessRequestLock(pmpr)==0) {
                     KDataBufferSub(data, &pmpr->data, pagemap_offset, msize);
                     pmpr->row_count = BlobRowCount(y);
                     pmpr->state = ePMPR_STATE_DESERIALIZE_REQUESTED;
@@ -1127,13 +1131,15 @@ rc_t VBlobSubblob( const struct VBlob *self,struct VBlob **sub, int64_t start_id
                     (unsigned)offset, (unsigned)length,
                     self->name);
 #endif
+            if (numrep == 0){
+                return RC(rcVDB, rcBlob, rcConverting, rcRow, rcEmpty);
+            }
             
             rc = KDataBufferSub(&self->data, &kd, offset, length);
             if(rc == 0){
                 int64_t	stop_id;
 
-                if(length > 0) stop_id = start_id + numrep - 1;
-                else           stop_id = start_id; /*** HACK - 0 sized data may be a sign that real data is somewhere else ***/
+                stop_id = start_id + numrep - 1;
 
                 rc = VBlobCreateFromSingleRow(sub, start_id, stop_id, &kd, self->byte_order);
                 KDataBufferWhack(&kd);

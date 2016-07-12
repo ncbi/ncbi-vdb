@@ -258,13 +258,15 @@ rc_t VDBManagerGetKfgPath ( const KConfig *kfg, const char *path, char *value, s
     if ( rc == 0 )
     {
         size_t remaining;
-        rc = KConfigNodeRead ( node, 0, value, value_size, num_read, & remaining );
+        rc = KConfigNodeRead ( node, 0, value, value_size - 1, num_read, & remaining );
         if ( rc == 0 )
         {
             if ( remaining != 0 )
                 rc = RC ( rcVDB, rcMgr, rcConstructing, rcPath, rcExcessive );
             else if ( string_chr ( value, * num_read, '%' ) != NULL )
                 rc = RC ( rcVDB, rcMgr, rcConstructing, rcPath, rcInvalid );
+            else
+                value[*num_read] = '\0';
         }
 
         KConfigNodeRelease ( node );
@@ -851,5 +853,65 @@ LIB_EXPORT rc_t CC VDBManagerSetResolver
         kbd = NULL;
     }
 
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC VDBManagerGetCacheRoot ( const struct VDBManager * self,
+    struct VPath const ** path )
+{
+    rc_t rc;
+    if ( path == NULL )
+        rc = RC ( rcVDB, rcMgr, rcListing, rcParam, rcNull );
+    else
+    {
+        * path = NULL;
+        if ( self == NULL )
+            rc = RC ( rcVDB, rcMgr, rcListing, rcSelf, rcNull );
+        else
+        {
+            const KDBManager * kbd = NULL;
+            rc = VDBManagerGetKDBManagerRead ( self, & kbd );
+            if ( rc == 0 )
+            {
+                VFSManager * vfs = NULL;
+                rc = KDBManagerGetVFSManager ( kbd, & vfs );
+                if ( rc == 0 )
+                {
+                    rc = VFSManagerGetCacheRoot ( vfs, path );
+                    VFSManagerRelease ( vfs );
+                }
+                KDBManagerRelease ( kbd );
+            }
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC VDBManagerSetCacheRoot ( const struct VDBManager * self,
+    struct VPath const * path )
+{
+    rc_t rc;
+    if ( path == NULL )
+        rc = RC ( rcVDB, rcMgr, rcSelecting, rcParam, rcNull );
+    else if ( self == NULL )
+        rc = RC ( rcVDB, rcMgr, rcSelecting, rcSelf, rcNull );
+    else
+    {
+        const KDBManager * kbd = NULL;
+        rc = VDBManagerGetKDBManagerRead ( self, & kbd );
+        if ( rc == 0 )
+        {
+            VFSManager * vfs = NULL;
+            rc = KDBManagerGetVFSManager ( kbd, & vfs );
+            if ( rc == 0 )
+            {
+                rc = VFSManagerSetCacheRoot ( vfs, path );
+                VFSManagerRelease ( vfs );
+            }
+            KDBManagerRelease ( kbd );
+        }
+    }
     return rc;
 }

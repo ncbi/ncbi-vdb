@@ -1254,7 +1254,10 @@ LIB_EXPORT rc_t CC KVectorSet ( KVector *self, uint64_t key,
         }
         else if ( self -> nancy_bool )
         {
-            switch ( * ( const bool* ) data )
+            /* clang gets upset about switching on boolean
+               the intent is to catch implementations that
+               may treat anything non-zero as true. */
+            switch ( ( uint32_t ) * ( const bool* ) data )
             {
             case 0:
             case 1:

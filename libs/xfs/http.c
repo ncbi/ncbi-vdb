@@ -28,6 +28,7 @@
 #include <klib/text.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -48,7 +49,6 @@
 
 #include <sysalloc.h>
 
-#include <stdio.h>
 #include <string.h>     /* memset */
 
 /*)))
@@ -272,7 +272,7 @@ XFSHttpNodeDispose ( const struct XFSHttpNode * self )
     struct XFSHttpNode * Node = ( struct XFSHttpNode * ) self;
 
 /*
-printf ( "XFSHttpNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+pLogMsg ( klogDebug, "XFSHttpNodeDispose ( $(node) )]", "node=%p", ( void * ) Node );
 */
 
     if ( Node == 0 ) {
@@ -296,7 +296,7 @@ XFSHttpRootNodeDispose ( const struct XFSHttpRootNode * self )
     struct XFSHttpRootNode * Node = ( struct XFSHttpRootNode * ) self;
 
 /*
-printf ( "XFSHttpRootNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+pLogMsg ( klogDebug, "XFSHttpRootNodeDispose ( $(node) )]", "node=%p", ( void * ) Node );
 */
 
     if ( Node == 0 ) {
@@ -344,19 +344,19 @@ _HttpNodeFindNode_v1 (
     rc_t RCt;
     uint32_t PathCount;
     const char * NodeName;
-    char PathBuf [ XFS_SIZE_4096 ];
     struct XFSHttpRootNode * RootNode;
     struct XFSNode * RetNode;
     const struct XFSHttpEntry * Entry;
+    const struct XFSPath * xPath;
     bool IsLast;
 
     RCt = 0;
     PathCount = 0;
     NodeName = NULL;
-    * PathBuf = 0;
     RootNode = NULL;
     RetNode = NULL;
     Entry = NULL;
+    xPath = NULL;
     IsLast = false;
 
     RCt = XFSNodeFindNodeCheckInitStandard (
@@ -382,16 +382,11 @@ _HttpNodeFindNode_v1 (
             return XFS_RC ( rcInvalid );
         }
 
-        RCt = XFSPathFrom (
-                        Path,
-                        PathIndex + 1,
-                        PathBuf,
-                        sizeof ( PathBuf )
-                        );
+        RCt = XFSPathFrom ( Path, PathIndex + 1, & xPath );
         if ( RCt == 0 ) {
             RCt = XFSHttpGetOrCreateEntry (
                                         RootNode -> http,
-                                        PathBuf,
+                                        XFSPathGet ( xPath ),
                                         & Entry
                                         );
             if ( RCt == 0 ) {
@@ -402,10 +397,10 @@ _HttpNodeFindNode_v1 (
                                     );
                 if ( RCt == 0 ) {
                     * Node = RetNode;
-
-                    return 0;
                 }
             }
+
+            XFSPathRelease ( xPath );
         }
     }
 
@@ -423,7 +418,7 @@ _HttpDir_dispose_v1 ( const struct XFSEditor * self )
 {
     struct XFSDirEditor * Editor = ( struct XFSDirEditor * ) self;
 /*
-    printf ( "_HttpDir_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_HttpDir_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -591,7 +586,7 @@ _HttpFile_dispose_v1 ( const struct XFSEditor * self )
 {
     struct XFSHttpFileEditor * Editor = ( struct XFSHttpFileEditor * ) self;
 /*
-    printf ( "_HttpNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_HttpFile_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -819,7 +814,7 @@ rc_t CC
 _HttpAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_HttpAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_HttpAttr_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -1131,7 +1126,7 @@ _RemoteRepositoryConstructor (
                                         );
 
 /*
-printf ( "_RemoteRepositoryConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_RemoteRepositoryConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1151,7 +1146,7 @@ _RemoteRepositoryValidator (
     RCt = 0;
 
 /*
-printf ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_RemoteRepositoryValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1258,7 +1253,7 @@ _RemoteFileConstructor (
                                         );
 
 /*
-printf ( "_RemoteFileConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_RemoteFileConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -1278,7 +1273,7 @@ _RemoteFileValidator (
     RCt = 0;
 
 /*
-printf ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_RemoteFileValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

@@ -1228,7 +1228,7 @@ LIB_EXPORT rc_t CC BSTreeInsertUnique ( BSTree *bt, BSTNode *n, BSTNode **exist,
                 /* fail to insert */
                 if ( exist != NULL )
                     * exist = p;
-                return RC ( rcCont, rcTree, rcInserting, rcNode, rcExists );
+                return SILENT_RC ( rcCont, rcTree, rcInserting, rcNode, rcExists );
             }
 
             q = p;

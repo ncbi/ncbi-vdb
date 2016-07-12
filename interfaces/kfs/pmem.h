@@ -59,16 +59,15 @@ typedef struct KMemBank KMemBank;
  *  the total amount of memory may be limited
  *  the memory may be drawn from an externally supplied page file
  *
- *  "block_size" [ IN ] - must be an even multiple of 2, minimum 64
+ *  "block_size" [ IN ] - ignored
  *
- *  "limit" [ IN, DFLT ZERO ] - the maximum number of bytes
- *  to be allocated zero for unlimited
+ *  "limit" [ IN, DFLT ZERO ] - ignored
  *
- *  "backing" [ IN, NULL OKAY ] - a page source for allocator.
+ *  "backing" [ IN ] - a page source for allocator.
  *  a new reference will be added if not null.
  */
 KFS_EXTERN rc_t CC KMemBankMake ( KMemBank **bank,
-    size_t block_size, uint64_t limit, struct KPageFile *backing );
+    size_t block_size, uint64_t limit, struct KFile *backing );
 
 
 /* AddRef

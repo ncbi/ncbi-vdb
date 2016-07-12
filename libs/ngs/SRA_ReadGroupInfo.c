@@ -118,21 +118,22 @@ void SRA_ReadGroupStatsInit( struct SRA_ReadGroupStats * self, ctx_t ctx, const 
     
     const KMDataNode * group_node;
     bool skip_group = true;
+    rc_t rc;
     
     assert ( self );
     assert ( meta );
     assert ( group_name );
 
-    ON_FAIL ( KMetadataOpenNodeRead ( meta, & group_node, "STATS/SPOT_GROUP/%s", group_name ) )
+    rc = KMetadataOpenNodeRead ( meta, & group_node, "STATS/SPOT_GROUP/%s", group_name );
+    if ( rc != 0 )
     {
         if ( strcmp ( group_name, "default" ) == 0 &&
-             ctx -> rc == RC ( rcDB, rcMetadata, rcReading, rcTransfer, rcIncomplete ) )
+             rc == RC ( rcDB, rcMetadata, rcReading, rcTransfer, rcIncomplete ) )
         {   /* no default read group - skip */ 
-            CLEAR ();
         }
         else
         {
-            INTERNAL_ERROR ( xcUnexpected, "KMetadataOpenNodeRead(STATS/SPOT_GROUP/%s) rc = %R", group_name, ctx -> rc );
+            INTERNAL_ERROR ( xcUnexpected, "KMetadataOpenNodeRead(STATS/SPOT_GROUP/%s) rc = %R", group_name, rc );
         }
     }
     
@@ -172,7 +173,22 @@ void SRA_ReadGroupStatsInit( struct SRA_ReadGroupStats * self, ctx_t ctx, const 
     {
         TRY ( ParseBamHeader ( self, ctx, meta, group_name ) )
         {
-            self -> name = NGS_StringMakeCopy ( ctx, group_name, string_size ( group_name ) );
+            /* if the node has attribute 'name', use it as the read group name, otherwise use the group node's key */
+            char buf[1024];
+            size_t size;
+            rc = KMDataNodeReadAttr ( group_node, "name", buf, sizeof ( buf ), & size );
+            if ( rc == 0 )
+            {
+                self -> name = NGS_StringMakeCopy ( ctx, buf, size );
+            }
+            else if ( GetRCState ( rc ) == rcNotFound )
+            {
+                self -> name = NGS_StringMakeCopy ( ctx, group_name, string_size ( group_name ) );
+            }
+            else
+            {
+                INTERNAL_ERROR ( xcUnexpected, "KMDataNodeReadAttr(STATS/SPOT_GROUP/%s, 'name') rc = %R", group_name, rc );
+            }
         }
     }
     
@@ -289,7 +305,7 @@ const SRA_ReadGroupInfo* SRA_ReadGroupInfoMake ( ctx_t ctx, const struct VTable*
     return NULL;
 }
 
-uint32_t SRA_ReadGroupInfoFind ( const SRA_ReadGroupInfo* self, ctx_t ctx, const struct NGS_String * name )
+uint32_t SRA_ReadGroupInfoFind ( const SRA_ReadGroupInfo* self, ctx_t ctx, char const* name, size_t name_size )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
     
@@ -297,21 +313,19 @@ uint32_t SRA_ReadGroupInfoFind ( const SRA_ReadGroupInfo* self, ctx_t ctx, const
     assert ( name != NULL );
 
     {
-        size_t name_size = NGS_StringSize ( name, ctx );
-        const char* name_data = NGS_StringData ( name, ctx );
         uint32_t i;
         for ( i = 0; i < self -> count; ++i )
         {
             if ( string_cmp ( NGS_StringData ( self -> groups [ i ] . name, ctx ), 
                               NGS_StringSize ( self -> groups [ i ] . name, ctx ), 
-                              name_data, 
+                              name, 
                               name_size, 
                               ( uint32_t ) name_size ) == 0 )
             {
                 return i;
             }
         }
-        INTERNAL_ERROR ( xcStringNotFound, "Read Group '%.*s' is not found", name_size, name_data );
+        INTERNAL_ERROR ( xcStringNotFound, "Read Group '%.*s' is not found", name_size, name );
     }
     return 0;
 }

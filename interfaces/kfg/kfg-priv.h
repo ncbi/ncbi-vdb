@@ -49,7 +49,8 @@ struct KNamelist;
 /*--------------------------------------------------------------------------
  * Environment and configuration keys
  */
-#define ENV_KRYPTO_PWFILE   "VDB_PWFILE"
+#define ENV_KRYPTO_PWFILE_OLD   "VDB_PWFILE"
+#define ENV_KRYPTO_PWFILE   "VDBPWFILEPTR"
 #define KFG_KRYPTO_PWFILE   "krypto/pwfile"
 #define KFG_KRYPTO_PWFD     "krypto/pwfd"
 

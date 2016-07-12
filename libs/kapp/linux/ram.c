@@ -38,14 +38,14 @@
 /* KAppGetTotalRam
  *  Linux specific function of getting amount of RAM
  */
-rc_t KAppGetTotalRam ( uint64_t * totalRamKb )
+rc_t KAppGetTotalRam ( uint64_t * totalRam )
 {
     rc_t rc;
 
     long numPages;
     long pageSize;
 
-    assert ( totalRamKb != 0 );
+    assert ( totalRam != 0 );
 
     numPages = sysconf( _SC_PHYS_PAGES );
     if ( numPages < 0 )
@@ -73,7 +73,7 @@ rc_t KAppGetTotalRam ( uint64_t * totalRamKb )
         return rc;
     }
 
-    *totalRamKb = (uint64_t) pageSize * numPages;
+    *totalRam = (uint64_t) pageSize * numPages;
 
     return 0;
 }

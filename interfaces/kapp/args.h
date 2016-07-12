@@ -54,6 +54,12 @@ extern "C" {
  * not work.
  */
 
+/*--------------------------------------------------------------------------
+ * Args
+ *  opaque class to build up option lists and parse the command line argc/argv
+ *  not reference counted
+ */
+typedef struct Args Args;
 
 /* ==========
  * Structure to define a command line option
@@ -61,6 +67,10 @@ extern "C" {
  * these are fed in one by one or through arrays to build up the
  * tables used to parse the caommand line argc/argv
  */
+
+typedef void (CC * WhackParamFnP) (void * object);
+typedef rc_t (CC * ConvertParamFnP) (const Args * self, uint32_t arg_index, const char * arg, size_t arg_len, void ** result, WhackParamFnP * whack);
+    
 typedef struct OptDef
 {
     const char *  name;           	/* UTF8/ASCII NUL terminated long name */
@@ -71,7 +81,14 @@ typedef struct OptDef
 #define OPT_UNLIM 0
     bool          needs_value;    	/* does this require an argument value? */
     bool          required;             /* is this a required parameter?  Not supported yet. */
+    ConvertParamFnP convert_fn;   /* function to convert option. can perform binary conversions. may be NULL */
 } OptDef;
+    
+typedef struct ParamDef ParamDef;
+struct ParamDef
+{
+    ConvertParamFnP convert_fn; /* function to convert option. can perform binary conversions. may be NULL */
+};
 
 extern OptDef StandardOptions [];
 
@@ -100,14 +117,6 @@ extern OptDef StandardOptions [];
 #define ALIAS_REPORT    ""
 #define OPTION_REPORT   "ncbi_error_report"
 
-/*--------------------------------------------------------------------------
- * Args
- *  opaque class to build up option lists and parse the command line argc/argv
- *  not reference counted
- */
-typedef struct Args Args;
-
-
 /* Make
  *  create the empty object
  */
@@ -123,6 +132,35 @@ rc_t CC ArgsWhack ( Args * self );
 #define ArgsRelease(self) ArgsWhack(self)
 #endif
 
+
+/* AddOption
+ *  takes the OptDef structure to add an option
+ * AddLongOption
+ *  splits the OptDef into simple parameters
+ *
+ *  "opt_short_names" [ IN, NULL OKAY ] - an optional list of single-characters used as
+ *  aliases for the option.
+ *
+ *  "long_name" [ IN ] - a required long option name
+ *
+ *  "opt_param_names [ IN, NULL OKAY ] - an optional list of option parameter names
+ *  currently limited to a single name. when not NULL/empty, implies that the option
+ *  must have a parameter.
+ *
+ *  "help_text" [ IN ] - text for generating help info.
+ *
+ *  "max_count" [ IN, ZERO => INFINITE ] - sets an upper limit on the number of times
+ *  the option can be specified on cmdline. the special value "0" is taken to mean
+ *  as many times as the system will support.
+ *
+ *  "required" [ IN ] - when true, the option must be specified at least once.
+ *  when false, the option is truly optional.
+ */
+rc_t CC ArgsAddOption ( Args * self, const OptDef * option );
+rc_t CC ArgsAddLongOption ( Args * self, const char * opt_short_names, const char * long_name,
+    const char * opt_param_names, const char * help_text, uint32_t max_count, bool required );
+
+
 /* AddOptionArray
  *  helper function to call the ArgsAddOption() multiple times
  */
@@ -132,9 +170,27 @@ rc_t CC ArgsAddOptionArray ( Args * self, const OptDef * option, uint32_t count
 #endif
     );
 
+/* AddParam
+ *  adds a slot for a known parameter
+ * AddLongParam
+ *  adds a slot for a cmdline parameter along with some params of its own
+ *
+ *  "param_name" [ IN ] - for help display.
+ *
+ *  "help_text" [ IN ] - for help display.
+ *
+ *  "opt_cvt" [ IN, NULL OKAY ] - optional parameter conversion function
+ */
+rc_t CC ArgsAddParam ( Args * self, const ParamDef * param_def );
+rc_t CC ArgsAddLongParam ( Args * self, const char * param_name, const char * help_text, ConvertParamFnP opt_cvt );
+
+/* ArgsAddParamsArray
+ *  adds parameter definitions for arguments parsing
+ */
+rc_t CC ArgsAddParamArray ( Args * self, const ParamDef * param, uint32_t count );
 
 /* AddStandardOptions
- *  helper macro to add the arracy of internally defined
+ *  helper macro to add the array of internally defined
  *  "standard" options that we want all programs to support
  */
 rc_t CC ArgsAddStandardOptions ( Args * self );
@@ -186,7 +242,7 @@ rc_t CC ArgsOptionCount ( const Args * self, const char * option_name, uint32_t 
  *  use OptionCount to know how many were seen.
  */
 rc_t CC ArgsOptionValue ( const Args * self, const char * option_name,
-    uint32_t iteration, const char ** value );
+    uint32_t iteration, const void ** value );
 
 /*
  * ParamCount
@@ -199,7 +255,7 @@ rc_t CC ArgsParamCount (const Args * self, uint32_t * count);
  *  What was the Nth parameter seen?  Use ParamCount to know how many
  *  were seen.
  */
-rc_t CC ArgsParamValue (const Args * self, uint32_t iteration, const char ** value_string);
+rc_t CC ArgsParamValue (const Args * self, uint32_t iteration, const void ** value);
 
 
 /*
@@ -252,8 +308,9 @@ rc_t CC ArgsHandleStandardOptions (Args * self);
 
 rc_t CC ArgsMakeAndHandle (Args ** pself, int argc, char ** argv, uint32_t table_count, ...);
 
-rc_t CC ArgsMakeAndHandleStandardOptions (Args ** pself, int argc, char ** argv,
-                                       OptDef * options, uint32_t opt_count);
+/* the same as ArgsMakeAndHandle but also accepts params definitions */
+rc_t CC ArgsMakeAndHandle2 (Args ** pself, int argc, char ** argv,
+                            ParamDef * params, uint32_t param_count, uint32_t table_count, ...);
 
 rc_t CC ArgsOptionSingleString (const Args * self, const char * option, const char ** value);
 

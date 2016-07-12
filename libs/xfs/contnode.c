@@ -29,6 +29,7 @@
 #include <klib/namelist.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <xfs/model.h>
 #include <xfs/tree.h>
@@ -45,8 +46,6 @@
 #include "contnode.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
 
 /*)))
   |||
@@ -104,7 +103,7 @@ _ContNodeDispose ( const struct XFSContNode * self )
                                 ( struct XFSContNode * ) self;
 
 /*
-printf ( "_ContNodeDispose ( 0x%p )\n", ( void * ) Container );
+pLogMsg ( klogDebug, "_ContNodeDispose ( $(container) )", "container=0x%p", ( void * ) Container );
 */
     if ( Container == 0 ) {
         return 0;
@@ -194,7 +193,7 @@ _ContNodeFindNode_v1 (
         }
 
             /*  Here we aren't last and looking forward; */
-        NodeName = XFSPathGet ( Path, PathIndex + 1 );
+        NodeName = XFSPathPartGet ( Path, PathIndex + 1 );
 
             /*))  Should not happen thou
              ((*/
@@ -237,7 +236,7 @@ _ContNodeDir_dispose_v1 ( const struct XFSEditor * self )
 
     Editor = ( struct XFSDirEditor * ) self;
 /*
-printf ( "_ContNodeDir_dispose_ ( 0x%p )\n", ( void * ) Editor );
+pLogMsg ( klogDebug, "_ContNodeDir_dispose_ ( $(editor) )", "editor=0x%p", ( void * ) Editor );
 */
 
     if ( Editor == 0 ) {
@@ -355,7 +354,7 @@ _ContNodeAttr_dispose_v1 ( const struct XFSEditor * self )
 
     Editor = ( struct XFSAttrEditor * ) self;
 /*
-printf ( "_ContNodeAttr_dispose_ ( 0x%p )\n", ( void * ) Editor );
+pLogMsg ( klogDebug, "_ContNodeAttr_dispose_ ( $(editor) )", "editor=0x%p", ( void * ) Editor );
 */
 
     if ( Editor == 0 ) {
@@ -637,7 +636,7 @@ XFSContNodeMakeWithFlavor (
         * Node = NULL;
     }
 /*
-printf ( "_ContNodeMake ND[0x%p] NM[%s]\n", ( void * ) Cont, Name );
+pLogMsg ( klogDebug, "_ContNodeMake ND[$(container)] NM[$(name)]", "container=0x%p,name=%s", ( void * ) Cont, Name );
 */
 
     return RCt;
@@ -671,3 +670,16 @@ XFSContNodeDelChild ( struct XFSNode * self, const char * ChildName )
 
     return XFSNodeContainerDel ( Cont -> container, ChildName );
 }   /* XFSContNodeDelChild () */
+
+LIB_EXPORT
+rc_t CC
+XFSContNodeClear ( struct XFSNode * self )
+{
+    struct XFSContNode * Cont = ( struct XFSContNode * ) self;
+
+    if ( Cont == NULL ) {
+        return XFS_RC ( rcNull );
+    }
+
+    return XFSNodeContainerClear ( Cont -> container );
+}   /* XFSContNodeClear () */

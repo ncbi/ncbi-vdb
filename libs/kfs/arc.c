@@ -46,6 +46,9 @@
 #include <kfs/file.h>
 #include <kfs/toc.h>
 #include <kfs/sra.h>
+#include <kfs/cacheteefile.h>
+
+#include <kns/http.h>
 
 #include <sysalloc.h>
 
@@ -506,7 +509,7 @@ static rc_t KArcListingInit (KArcListing *self,
     {
         /* -----
          * so we'll build a list iterator
-	 */
+         */
         KArcDirIterator listitr;
 
         if ((rc = KArcDirIteratorInit (& listitr, (const KArcDir*)dir, path)) == 0)
@@ -1319,7 +1322,7 @@ rc_t KArcDirVisitDir(KArcDirVisitData *pb)
  * [IN] const KArcDir *		self		Object oriented C; KArcDir object for this method
  * [IN] enum RCContext 		ctx
  * [IN] const char *		root
- * [IN] char *			path
+ * [IN, OUT] char *			path
  * [IN] size_t			path_max
  */
 static
@@ -1337,18 +1340,18 @@ rc_t KArcDirRelativePath (const KArcDir *self, enum RCContext ctx,
 
     for (; * r == * p; ++ r, ++ p)
     {
-	/* disallow identical paths */
-	if (* r == 0)
-	    return RC (rcFS, rcDirectory, ctx, rcPath, rcInvalid);
+        /* disallow identical paths */
+        if (* r == 0)
+            return RC (rcFS, rcDirectory, ctx, rcPath, rcInvalid);
     }
 
     /* paths are identical up to "r","p"
        if "r" is within a leaf name, then no backup is needed
        by counting every '/' from "r" to end, obtain backup count */
-     for (backup = 0; * r != 0; ++ r)
+    for (backup = 0; * r != 0; ++ r)
     {
-	if (* r == '/')
-	    ++ backup;
+        if (* r == '/')
+            ++ backup;
     }
 
     /* the number of bytes to be inserted */
@@ -1363,20 +1366,21 @@ rc_t KArcDirRelativePath (const KArcDir *self, enum RCContext ctx,
     /* open up space if needed */
     if ( (size_t)(p - path) < bsize )
     {
-	/* prevent overflow */
-	if (bsize + psize >= path_max)
-	    return RC (rcFS, rcDirectory, ctx, rcPath, rcExcessive);
-	memmove (path + bsize, p, psize);
+        /* prevent overflow */
+        if (bsize + psize >= path_max)
+            return RC (rcFS, rcDirectory, ctx, rcPath, rcExcessive);
+        
+        memmove (path + bsize, p, psize);
     }
 
     /* insert backup sequences */
     for (bsize = 0; backup > 0; bsize += 3, -- backup)
-	memcpy (& path [ bsize ], "../", 3);
+        memcpy (& path [ bsize ], "../", 3);
 
     /* close gap */
     if ( (size_t)( p - path ) > bsize )
 	{
-		strcpy (& path [ bsize ], p);
+		memmove (path + bsize, p, psize + 1);
 	}
 
 	return 0;
@@ -2386,42 +2390,42 @@ static rc_t CC KArcDirResolvePath (const KArcDir *self,
 
     if (rc == 0)
     {
-	uint32_t path_size = (uint32_t)strlen ( full );
+        uint32_t path_size = (uint32_t)strlen ( full );
 
-	if (absolute)
-	{
-	    /* test buffer capacity -  this is a limitation of KDirectory not in KArcDir */
-	    if ((path_size - self->root) >= rsize)
-	    {
-		rc =  RC (rcFS, rcDirectory, rcResolving, rcBuffer, rcInsufficient);
-	    }
-	    else
-	    {
-		/* ready to go */
-		strcpy (resolved, & full[self->root]);
-		assert (resolved[0] == '/');
-	    }
-	}
-	else
-	{
-	    rc = KArcDirRelativePath (self, rcResolving, self->path, full, path_size);
-	    if (rc == 0)
-	    {
-		path_size = (uint32_t)strlen ( full );
-		/* test buffer capacity -  this is a limitation of KDirectory not in KArcDir */
-		if (path_size >= rsize)
-		{
-		    rc = RC (rcFS, rcDirectory, rcResolving, rcBuffer, rcInsufficient);
-		}
-		else
-		{
-		    strcpy (resolved, full);
-		}
-	    }
-	}
+        if (absolute)
+        {
+            /* test buffer capacity -  this is a limitation of KDirectory not in KArcDir */
+            if ((path_size - self->root) >= rsize)
+            {
+                rc =  RC (rcFS, rcDirectory, rcResolving, rcBuffer, rcInsufficient);
+            }
+            else
+            {
+                /* ready to go */
+                strcpy (resolved, & full[self->root]);
+                assert (resolved[0] == '/');
+            }
+        }
+        else
+        {
+            rc = KArcDirRelativePath (self, rcResolving, self->path, full, path_size);
+            if (rc == 0)
+            {
+                path_size = (uint32_t)strlen ( full );
+                /* test buffer capacity -  this is a limitation of KDirectory not in KArcDir */
+                if (path_size >= rsize)
+                {
+                    rc = RC (rcFS, rcDirectory, rcResolving, rcBuffer, rcInsufficient);
+                }
+                else
+                {
+                    strcpy (resolved, full);
+                }
+            }
+        }
     }
     if (full != NULL)
-	free (full);
+        free (full);
 
     return rc;
 }
@@ -3396,7 +3400,7 @@ rc_t	KArcDirMake	(KArcDir ** self,
     if (dir == NULL)
     {
         *self = NULL;
-	return RC (rcFS, rcArc, rcCreating, rcMemory, rcExhausted);
+        return RC (rcFS, rcArc, rcCreating, rcMemory, rcExhausted);
     }
 
     dir->toc = NULL;
@@ -3721,7 +3725,7 @@ rc_t KDirectoryOpenArcDirRead_intern( const KDirectory * self,
             else
             {
                 rc = parse( toc,archive.v, filter, filterparam );
-                if ( rc == RC ( rcFS, rcArc, rcParsing, rcToc, rcIncomplete ) )
+                if ( rc == SILENT_RC ( rcFS, rcArc, rcParsing, rcToc, rcIncomplete ) )
                 {
                     rcaux = rc;
                     rc = 0;
@@ -4067,6 +4071,17 @@ rc_t KArcDirPersistHeader (const KArcDir * self,
     }
  
     return rc;
+}
+
+KFS_EXTERN bool CC KDirectoryIsKArcDir ( const KDirectory * self )
+{
+    return self != NULL && &self -> vt -> v1 == &vtKArcDir;
+}
+
+KFS_EXTERN bool CC KArcDirIsFromRemote ( const KArcDir * self )
+{
+    return self != NULL && self -> arctype == tocKFile &&
+            ( KFileIsKCacheTeeFile ( self -> archive . f ) || KFileIsKHttpFile ( self -> archive . f ) );
 }
 
 

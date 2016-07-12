@@ -59,7 +59,7 @@
 
 #define Self( obj ) \
     ( ( NGS_ReadCollection* ) ( obj ) )
-    
+
 static NGS_String_v1 * NGS_ReadCollection_v1_get_name ( const NGS_ReadCollection_v1 * self, NGS_ErrBlock_v1 * err )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
@@ -84,6 +84,14 @@ static struct NGS_ReadGroup_v1 * NGS_ReadCollection_v1_get_read_groups ( const N
     return ( struct NGS_ReadGroup_v1 * ) ret;
 }
 
+static bool NGS_ReadCollection_v1_has_read_group ( const NGS_ReadCollection_v1 * self, const char * spec )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+    bool ret = NGS_ReadCollectionHasReadGroup ( Self ( self ), ctx, spec );
+    CLEAR ();
+    return ret;
+}
+
 static struct NGS_ReadGroup_v1 * NGS_ReadCollection_v1_get_read_group ( const NGS_ReadCollection_v1 * self, NGS_ErrBlock_v1 * err, const char * spec )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
@@ -106,6 +114,14 @@ static struct NGS_Reference_v1 * NGS_ReadCollection_v1_get_references ( const NG
 
     CLEAR ();
     return ( struct NGS_Reference_v1 * ) ret;
+}
+
+static bool NGS_ReadCollection_v1_has_reference ( const NGS_ReadCollection_v1 * self, const char * spec )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+    bool ret = NGS_ReadCollectionHasReference ( Self ( self ), ctx, spec );
+    CLEAR ();
+    return ret;
 }
 
 static struct NGS_Reference_v1 * NGS_ReadCollection_v1_get_reference ( const NGS_ReadCollection_v1 * self, NGS_ErrBlock_v1 * err, const char * spec )
@@ -224,10 +240,11 @@ NGS_ReadCollection_v1_vt ITF_ReadCollection_vt =
     {
         "NGS_ReadCollection",
         "NGS_ReadCollection_v1",
-        0,
+        1,
         & ITF_Refcount_vt . dad
     },
 
+    /* v1.0 */
     NGS_ReadCollection_v1_get_name,
     NGS_ReadCollection_v1_get_read_groups,
     NGS_ReadCollection_v1_get_read_group,
@@ -240,7 +257,11 @@ NGS_ReadCollection_v1_vt ITF_ReadCollection_vt =
     NGS_ReadCollection_v1_get_read,
     NGS_ReadCollection_v1_get_reads,
     NGS_ReadCollection_v1_get_read_count,
-	NGS_ReadCollection_v1_read_range
+	NGS_ReadCollection_v1_read_range,
+
+    /* v1.1 */
+	NGS_ReadCollection_v1_has_read_group,
+	NGS_ReadCollection_v1_has_reference
 };
 
 
@@ -286,6 +307,22 @@ struct NGS_ReadGroup * NGS_ReadCollectionGetReadGroups ( NGS_ReadCollection * se
     return NULL;
 }
 
+bool NGS_ReadCollectionHasReadGroup ( NGS_ReadCollection * self, ctx_t ctx, const char * spec )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+    if ( self == NULL )
+        INTERNAL_WARNING ( xcSelfNull, "failed to get read group '%.128s'", spec );
+    else if ( spec == NULL )
+        INTERNAL_WARNING ( xcParamNull, "read group spec" );
+    else
+    {
+        POP_CTX ( ctx );
+        return VT ( self, has_read_group ) ( self, ctx, spec [ 0 ] == 0 ? DEFAULT_READGROUP_NAME : spec );
+    }
+
+    return false;
+}
+
 struct NGS_ReadGroup * NGS_ReadCollectionGetReadGroup ( NGS_ReadCollection * self, ctx_t ctx, const char * spec )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -318,6 +355,24 @@ struct NGS_Reference * NGS_ReadCollectionGetReferences ( NGS_ReadCollection * se
     }
 
     return NULL;
+}
+
+bool NGS_ReadCollectionHasReference ( NGS_ReadCollection * self, ctx_t ctx, const char * spec )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+    if ( self == NULL )
+        INTERNAL_WARNING ( xcSelfNull, "failed to get reference '%.128s'", spec );
+    else if ( spec == NULL )
+        INTERNAL_WARNING ( xcParamNull, "reference spec" );
+    else if ( spec [ 0 ] == 0 )
+        INTERNAL_WARNING ( xcStringEmpty, "reference spec" );
+    else
+    {
+        POP_CTX ( ctx );
+        return VT ( self, has_reference ) ( self, ctx, spec );
+    }
+
+    return false;
 }
 
 struct NGS_Reference * NGS_ReadCollectionGetReference ( NGS_ReadCollection * self, ctx_t ctx, const char * spec )
@@ -387,7 +442,7 @@ uint64_t NGS_ReadCollectionGetAlignmentCount ( NGS_ReadCollection * self, ctx_t 
     }
 
     return 0;
-}    
+}
 
 struct NGS_Alignment * NGS_ReadCollectionGetAlignmentRange ( NGS_ReadCollection * self, ctx_t ctx, uint64_t first, uint64_t count,
     bool wants_primary, bool wants_secondary )
@@ -487,6 +542,21 @@ struct NGS_Statistics* NGS_ReadCollectionGetStatistics ( NGS_ReadCollection * se
     return NULL;
 }
 
+struct NGS_FragmentBlobIterator* NGS_ReadCollectionGetFragmentBlobs ( NGS_ReadCollection * self, ctx_t ctx )
+{
+    if ( self == NULL )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get fragment blobs" );
+    }
+    else
+    {
+        return VT ( self, get_frag_blobs ) ( self, ctx );
+    }
+
+    return NULL;
+}
+
 
 /* Make
  *  use provided specification to create an object
@@ -533,12 +603,29 @@ NGS_ReadCollection * NGS_ReadCollectionMake ( ctx_t ctx, const char * spec )
             VSchemaRelease ( sra_schema );
 
             if ( rc == 0 )
-                return NGS_ReadCollectionMakeVTable ( ctx, tbl, spec );
+            {   /* VDB-2641: examine the schema name to make sure this is an SRA table */
+                char ts_buff[1024];
+                rc = VTableTypespec ( tbl, ts_buff, sizeof ( ts_buff ) );
+                if ( rc != 0 )
+                {
+                    INTERNAL_ERROR ( xcUnexpected, "VTableTypespec failed: rc = %R", rc );
+                }
+                else
+                {
+                    const char SRA_PREFIX[] = "NCBI:SRA:";
+                    size_t pref_size = sizeof ( SRA_PREFIX ) - 1;
+                    if ( string_match ( SRA_PREFIX, pref_size, ts_buff, string_size ( ts_buff ), pref_size, NULL ) == pref_size )
+                    {
+                        return NGS_ReadCollectionMakeVTable ( ctx, tbl, spec );
+                    }
+                    INTERNAL_ERROR ( xcUnimplemented, "Cannot open accession '%s' as an SRA table.", spec );
+                }
+            }
             else
             {
-                KConfig* kfg;
-                const KRepositoryMgr* repoMgr;
-                if ( KConfigMakeLocal ( & kfg, NULL ) != 0 || 
+                KConfig* kfg = NULL;
+                const KRepositoryMgr* repoMgr = NULL;
+                if ( KConfigMakeLocal ( & kfg, NULL ) != 0 ||
                      KConfigMakeRepositoryMgrRead ( kfg, & repoMgr ) != 0 ||
                      KRepositoryMgrHasRemoteAccess ( repoMgr ) )
                 {
@@ -551,6 +638,7 @@ NGS_ReadCollection * NGS_ReadCollectionMake ( ctx_t ctx, const char * spec )
                 KRepositoryMgrRelease ( repoMgr );
                 KConfigRelease ( kfg );
             }
+            VTableRelease ( tbl );
         }
     }
 
@@ -567,8 +655,10 @@ void NGS_ReadCollectionInit ( ctx_t ctx, NGS_ReadCollection * ref,
     {
         assert ( vt -> get_name != NULL );
         assert ( vt -> get_read_groups != NULL );
+        assert ( vt -> has_read_group != NULL );
         assert ( vt -> get_read_group != NULL );
         assert ( vt -> get_references != NULL );
+        assert ( vt -> has_reference != NULL );
         assert ( vt -> get_reference != NULL );
         assert ( vt -> get_alignments != NULL );
         assert ( vt -> get_alignment != NULL );
@@ -579,5 +669,6 @@ void NGS_ReadCollectionInit ( ctx_t ctx, NGS_ReadCollection * ref,
         assert ( vt -> get_read_range != NULL );
         assert ( vt -> get_read_count != NULL );
         assert ( vt -> get_statistics != NULL );
+        assert ( vt -> get_frag_blobs != NULL );
     }
 }

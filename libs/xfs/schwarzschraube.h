@@ -55,6 +55,12 @@ XFS_EXTERN rc_t CC XFS_SStrDup (
                                 const char ** Dst
                                 );
 
+/*)))   Checking if string ends with string
+ (((*/
+XFS_EXTERN rc_t CC XFS_StrEndsWith (
+                                const char * Str, const char * End
+                                );
+
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
@@ -71,6 +77,8 @@ XFS_EXTERN const struct VFSManager * CC XFS_VfsManager ( );
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
 /*)))   Sometimes I need KNSManager, and from different places, and
   |||   it is costly too
   (((*/
@@ -80,6 +88,28 @@ XFS_EXTERN rc_t CC XFS_KnsManagerInit ( );
 XFS_EXTERN rc_t CC XFS_KnsManagerDispose ( );
 
 XFS_EXTERN const struct KNSManager * CC XFS_KnsManager ( );
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*)))   Just resolving absolute/relative path. Need it sometime
+  |||
+  (((*/
+XFS_EXTERN rc_t CC XFS_ResolvePath (
+                                bool Absolute,
+                                char * Resolved,
+                                size_t ResolvedSize,
+                                const char * Format,
+                                ...
+                                );
+XFS_EXTERN rc_t CC XFS_VResolvePath (
+                                bool Absolute,
+                                char * Resolved,
+                                size_t ResolvedSize,
+                                const char * Format,
+                                va_list Args
+                                );
 
 #ifdef __cplusplus 
 }

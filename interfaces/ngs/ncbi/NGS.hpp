@@ -31,6 +31,10 @@
 #include <ngs/ReadCollection.hpp>
 #endif
 
+#ifndef _hpp_ngs_reference_sequence_
+#include <ngs/ReferenceSequence.hpp>
+#endif
+
 
 /*==========================================================================
  * NCBI NGS Engine
@@ -46,6 +50,7 @@ namespace ncbi
     typedef :: ngs :: String String;
     typedef :: ngs :: ErrorMsg ErrorMsg;
     typedef :: ngs :: ReadCollection ReadCollection;
+    typedef :: ngs :: ReferenceSequence ReferenceSequence;
 
 
     /*======================================================================
@@ -56,6 +61,16 @@ namespace ncbi
     {
     public:
 
+        /* setAppVersionString
+         *  updates User-Agent header in HTTP communications
+         *
+         *  example usage:
+         *    ncbi::NGS::setAppVersionString ( "pileup-stats.1.0.0" );
+         */
+        static
+        void setAppVersionString ( const String & app_version )
+            throw ();
+
         /* openReadCollection
          *  create an object representing a named collection of reads
          *  "spec" may be a path to an object
@@ -63,6 +78,15 @@ namespace ncbi
          */
         static 
         ReadCollection openReadCollection ( const String & spec )
+            throw ( ErrorMsg );
+
+        /* openReferenceSequence
+         *  create an object representing a named reference
+         *  "spec" may be a path to an object
+         *  or may be an id, accession, or URL
+         */
+        static 
+        ReferenceSequence openReferenceSequence ( const String & spec )
             throw ( ErrorMsg );
     };
 

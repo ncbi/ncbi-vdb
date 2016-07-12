@@ -89,7 +89,7 @@ SVDB_LIB = \
 #endif
 
 $(LIBDIR)/libsvdb.$(SHLX): $(SVDB_OBJ)
-	$(LD) --dlib --vers $(SRCDIR) -o $@ $^ $(SVDB_LIB)
+	$(LD) --dlib --vers $(SRCDIR)/../ncbi-vdb/libncbi-vdb.vers -o $@ $^ $(SVDB_LIB)
 
 $(LIBDIR)/libsvdb.$(LIBX): $(SVDB_OBJ)
-	$(LD) --slib --vers $(SRCDIR) -o $@ $^ $(SVDB_LIB)
+	$(LD) --slib --vers $(SRCDIR)/../ncbi-vdb/libncbi-vdb.vers -o $@ $^ $(SVDB_LIB)

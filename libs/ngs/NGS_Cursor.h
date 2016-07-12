@@ -125,7 +125,7 @@ const struct VCursor* NGS_CursorGetVCursor ( const NGS_Cursor * self );
 
 /* GetColumnIndex
  */
-uint32_t NGS_CursorGetColumnIndex ( const NGS_Cursor * self, uint32_t column_id );
+uint32_t NGS_CursorGetColumnIndex ( const NGS_Cursor * self, ctx_t ctx, uint32_t column_id );
 
 #ifdef __cplusplus
 }

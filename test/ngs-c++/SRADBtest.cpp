@@ -32,6 +32,8 @@
 
 #include <ngs/Statistics.hpp>
 
+#include <klib/text.h>
+
 using namespace std;
 using namespace ncbi::NK;
 
@@ -74,6 +76,23 @@ const char* SRADBFixture::SRADB_Accession = "SRR600096";
 //TODO: getReadCount (categories)
 //TODO: getReadGroups
 //TODO: error cases
+
+
+TEST_CASE (SRADB_ReadCollection_GetName)
+{
+    ngs::String name1, name2;
+    {
+        ngs::ReadCollection run = ncbi::NGS::openReadCollection ("./SRR600096");
+        name1 = run.getName();
+        char const* pNoSlash = string_rchr( name1.c_str(), name1.length(), '/' );
+        REQUIRE ( pNoSlash == NULL );
+    }
+    {
+        ngs::ReadCollection run = ncbi::NGS::openReadCollection ("SRR600096");
+        name2 = run.getName();
+    }
+    REQUIRE_EQ ( name1, name2 );
+}
 
 FIXTURE_TEST_CASE(SRADB_ReadCollection_Open, SRADBFixture)
 {
@@ -328,6 +347,13 @@ FIXTURE_TEST_CASE(SRADB_Fragment_Id, SRADBFixture)
     REQUIRE_EQ( ngs :: String ( SRADB_Accession ) + ".FR0.1",  read . getFragmentId() . toString () );
 }
 
+FIXTURE_TEST_CASE(SRADB_WGS_Fragment_Id, SRADBFixture)
+{
+    ngs :: Read read = NgsFixture :: getRead ( "ALWZ01", ngs :: String ( "ALWZ01" ) + ".R.1" );
+    REQUIRE ( read . nextFragment() );
+    REQUIRE_EQ( ngs :: String ( "ALWZ01" ) + ".FR0.1",  read . getFragmentId() . toString () );
+}
+
 FIXTURE_TEST_CASE(SRADB_Fragment_getFragmentBases, SRADBFixture)
 {
     ngs :: String expected(
@@ -403,6 +429,11 @@ FIXTURE_TEST_CASE(SRADB_ReadGroup_GetName, SRADBFixture)
 {
     ngs :: ReadGroup rg = ncbi :: NGS :: openReadCollection ( SRADB_Accession ) . getReadGroup ( "A1DLC.1" );
     REQUIRE_EQ ( ngs :: String("A1DLC.1"), rg . getName () );
+}
+FIXTURE_TEST_CASE(SRADB_HasReadGroup, SRADBFixture)
+{
+    REQUIRE ( ncbi::NGS::openReadCollection( SRADB_Accession ).hasReadGroup ( "A1DLC.1" ) );
+    REQUIRE ( ! ncbi::NGS::openReadCollection( SRADB_Accession ).hasReadGroup ( "non-existent read group" ) );
 }
 FIXTURE_TEST_CASE(SRADB_ReadGroup_GetStatistics, SRADBFixture)
 {

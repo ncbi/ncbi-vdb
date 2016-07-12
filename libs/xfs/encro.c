@@ -28,6 +28,7 @@
 #include <klib/text.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <kfs/file.h>
 #include <kfs/directory.h>
@@ -48,7 +49,6 @@
 
 #include <sysalloc.h>
 
-#include <stdio.h>
 #include <string.h>     /* memset */
 
 /*)))
@@ -175,11 +175,11 @@ XFSEncNodeMake (
 LIB_EXPORT
 rc_t CC
 XFSEncryptedFileNodeMake (
+                    struct XFSNode ** Node,
                     const char * Name,
                     const char * Path,
                     const char * Passwd,
-                    const char * EncType,
-                    struct XFSNode ** Node
+                    const char * EncType
 )
 {
     rc_t RCt;
@@ -234,7 +234,7 @@ XFSEncNodeDispose ( const struct XFSEncNode * self )
     struct XFSEncNode * Node = ( struct XFSEncNode * ) self;
 
 /*
-printf ( "XFSEncNodeDispose ( 0x%p ) [T=%d]\n", ( void * ) Node, ( Node == NULL ? 0 : Node -> type ) );
+pLogMsg ( klogDebug, "XFSEncNodeDispose ( $(node) ) EN[$(entry)]", "node=%p,entry=%d", ( void * ) Node, ( Node == NULL ? 0 : Node -> entry ) );
 */
 
     if ( Node == 0 ) {
@@ -319,7 +319,7 @@ _EncFile_dispose_v1 ( const struct XFSEditor * self )
 {
     struct XFSEncFileEditor * Editor = ( struct XFSEncFileEditor * ) self;
 /*
-    printf ( "_EncNodeFile_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_EncNodeFile_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( Editor != NULL ) {
@@ -522,7 +522,7 @@ rc_t CC
 _EncAttr_dispose_v1 ( const struct XFSEditor * self )
 {
 /*
-    printf ( "_EncAttr_dispose_v1 ( 0x%p )\n", ( void * ) self );
+    pLogMsg ( klogDebug, "_EncAttr_dispose_v1 ( $(editor) )", "editor=%p", ( void * ) self );
 */
 
     if ( self != NULL ) {
@@ -782,11 +782,11 @@ _EncryptedFileNodeConstructor (
     NodeName = Alias == NULL ? XFSModelNodeName ( Template ) : Alias;
 
     RCt = XFSEncryptedFileNodeMake (
+                & TheNode,
                 NodeName,
                 XFSModelNodeProperty ( Template, XFS_MODEL_SOURCE ),
                 XFSModelNodeProperty ( Template, XFS_MODEL_PASSWD ),
-                XFSModelNodeProperty ( Template, XFS_MODEL_ENCTYPE ),
-                & TheNode
+                XFSModelNodeProperty ( Template, XFS_MODEL_ENCTYPE )
                 );
     if ( RCt == 0 ) {
         * Node = ( struct XFSNode * ) TheNode;
@@ -827,7 +827,7 @@ _EncryptedFileConstructor (
                                         );
 
 /*
-printf ( "_EncryptedFileConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_EncryptedFileConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -847,7 +847,7 @@ _EncryptedFileValidator (
     RCt = 0;
 
 /*
-printf ( "_FileNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_EncryptedFileValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

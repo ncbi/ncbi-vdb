@@ -323,6 +323,8 @@ FIXTURE_TEST_CASE ( LoaderMeta_Write, LoaderFixture )
         REQUIRE_EQ ( string ( buf ), GetMetadata ( "SOFTWARE/formatter", "vers" ) );
         REQUIRE_EQ ( string ( buf ), GetMetadata ( "SOFTWARE/loader", "vers" ) );
     }
+    
+    std::remove ( schemaFile . c_str() );
 }
 
 FIXTURE_TEST_CASE ( LoaderMeta_WriteWithVersion, LoaderFixture ) 
@@ -365,6 +367,8 @@ FIXTURE_TEST_CASE ( LoaderMeta_WriteWithVersion, LoaderFixture )
         string_printf ( buf, sizeof buf, NULL, "%V", LoaderVersion ); 
         REQUIRE_EQ ( string ( buf ), GetMetadata ( "SOFTWARE/loader", "vers" ) );
     }
+    
+    std::remove ( schemaFile . c_str() );
 }
 
 //////////////////////////////////////////// Main

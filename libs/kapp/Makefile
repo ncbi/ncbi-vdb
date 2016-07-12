@@ -76,9 +76,12 @@ $(ILIBDIR)/libkapp: $(addprefix $(ILIBDIR)/libkapp.,$(LIBX))
 
 KAPP_CMN = \
 	args \
+	args-conv \
+	args-conv-os \
 	tokenizer \
 	sysmain \
-	ram
+	ram \
+	log-xml
 
 KAPP_SRC = \
 	main \
@@ -124,8 +127,7 @@ $(ILIBDIR)/libload: $(addprefix $(ILIBDIR)/libload.,$(LIBX))
 LOADLIB_SRC = \
 	progressbar \
 	loader-file \
-	loader-meta \
-	log-xml
+	loader-meta
 
 ifneq (win,$(OS))
 	LOADLIB_SRC += queue-file

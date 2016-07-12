@@ -28,6 +28,7 @@
 #include <klib/text.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <xfs/model.h>
 #include <xfs/tree.h>
@@ -43,9 +44,6 @@
 #include "common.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
-
 
 /*)))
  |||
@@ -88,11 +86,11 @@ _FooNodeMake ( struct XFSNode ** Foo, const char * NodeName )
         RCt = XFSTextDocAppend ( Doc, "FOO FILE: placeholder for not implemented node type\n\n" );
         if ( RCt  == 0 ) {
             RCt = XFSDocNodeMakeWithFlavor (
+                                        & TheFoo,
                                         Doc,
                                         NodeName,
                                         XFSPermRODefNodeChar (),
-                                        _sFlavorOfFoo,
-                                        & TheFoo
+                                        _sFlavorOfFoo
                                         );
             if ( RCt == 0 ) {
                 * Foo = TheFoo;
@@ -108,7 +106,7 @@ _FooNodeMake ( struct XFSNode ** Foo, const char * NodeName )
     }
 
 /*
-printf ( "_FooNodeMake ND[0x%p] NM[%s]\n", ( void * ) TheFoo, NodeName );
+pLogMsg ( klogDebug, "_FooNodeMake ND[$(node)] NM[$(name)]", "node=%p,name=%s", ( void * ) TheFoo, NodeName );
 */
 
     return RCt;
@@ -121,7 +119,7 @@ _FooNodeDispose ( const struct XFSNode * self )
     struct XFSNode * Foo = ( struct XFSNode * ) self;
 
 /*
-printf ( "_FooNodeDispose ( 0x%p )\n", ( void * ) Foo );
+pLogMsg ( klogDebug, "_FooNodeDispose ( $(node) )", "node=%p", ( void * ) Foo );
 */
 
     if ( Foo == NULL ) {
@@ -176,7 +174,7 @@ _FooNodeConstructor (
     }
 
 /*
-printf ( "_FooNodeConstructor ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_FooNodeConstructor ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )\n", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;
@@ -196,7 +194,7 @@ _FooNodeValidator (
     RCt = 0;
 
 /*
-printf ( "_FooNodeValidator ( 0x%p, 0x%p (\"%s\"), \"%s\" )\n", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
+pLogMsg ( klogDebug, "_FooNodeValidator ( $(model), $(template) (\"$(name)\"), \"$(alias)\" )\n", "model=%p,template=%p,name=%s,alias=%s", ( void * ) Model, ( void * ) Template, XFSModelNodeName ( Template ), ( Alias == NULL ? "NULL" : Alias ) );
 */
 
     return RCt;

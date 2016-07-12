@@ -140,6 +140,9 @@ struct VTable
     bool read_col_cache_valid;
     bool write_col_cache_valid;
 
+    /* should we perform blob validation on a file */
+    bool blob_validation;
+
    /* cache table for cached virtual columns if any */
     const VTable *cache_tbl;
 };

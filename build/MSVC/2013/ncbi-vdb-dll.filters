@@ -1,0 +1,1342 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="kfc">
+      <UniqueIdentifier>{16fee651-063b-449e-8d5b-3ee62b78e321}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="kfs">
+      <UniqueIdentifier>{3147ef8d-5182-43ac-a580-304d72dffb0a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="klib">
+      <UniqueIdentifier>{e43b3bd0-b5b5-42d7-b765-97d89dafc272}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="kproc">
+      <UniqueIdentifier>{5174e3cf-dd68-4fea-908f-905b836a10ee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="kns">
+      <UniqueIdentifier>{eb1428ba-1d5d-4652-b153-098763a6e395}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="kfg">
+      <UniqueIdentifier>{045e09bc-bfaa-4cbd-afb3-80efa675c3a4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="krypto">
+      <UniqueIdentifier>{8368a99d-2edb-4a43-8417-7d16608a44ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vfs">
+      <UniqueIdentifier>{a57b5539-b5d3-4fe1-bfce-a24651919182}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="kdb">
+      <UniqueIdentifier>{14dfa042-5ae0-4c6e-bf66-748d01a60380}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vdb">
+      <UniqueIdentifier>{9861ab93-800a-4e6c-a4be-43db9aef7be5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ksrch">
+      <UniqueIdentifier>{a2e8bd57-35e6-4cde-9bdd-cb375697eceb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ascp">
+      <UniqueIdentifier>{b92676f6-ee51-415a-9b50-ba4d0b16ea51}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="axf">
+      <UniqueIdentifier>{f85b859d-83e0-4856-87e5-801c45469d1f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vxf">
+      <UniqueIdentifier>{d8f92400-cffc-40f6-8e2e-b2252d7fb839}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="wgsxf">
+      <UniqueIdentifier>{c5721248-75f4-4d13-be7b-df6f711afa35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sraxf">
+      <UniqueIdentifier>{b36fb9d7-5665-4263-be64-f12a134ec766}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ngs">
+      <UniqueIdentifier>{2f56cc71-17ad-4853-ad2c-20a7b3a2c336}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="align">
+      <UniqueIdentifier>{d25a3901-b597-4d5b-b020-c69b492c1cfa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="blast">
+      <UniqueIdentifier>{0fa7b231-f722-49b5-9e2e-7c29de8f6b39}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sra">
+      <UniqueIdentifier>{80e21243-2048-4e7b-b109-2056d6636449}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ngs-jni">
+      <UniqueIdentifier>{a51982e3-befb-44af-91d1-60cedc402ac3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ngs-py">
+      <UniqueIdentifier>{201ed31f-e652-41d7-887d-46f7c1835e81}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ngs-c++">
+      <UniqueIdentifier>{1cca6da3-28fe-4790-9882-9041a5a9ea51}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\libs\align\al_iterator.c">
+      <Filter>align</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\align\align_mgr.c">
+      <Filter>align</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\align\align-access.c">
+      <Filter>align</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\align\bam.c">
+      <Filter>align</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\align\dna-reverse-cmpl.c">
+      <Filter>align</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\align\pl_iterator.c">
+      <Filter>align</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\align\quality-quantizer.c">
+      <Filter>align</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\align\reader-cmn.c">
+      <Filter>align</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\align\reader-refseq.c">
+      <Filter>align</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\align\reference-cmn.c">
+      <Filter>align</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\align\reference.c">
+      <Filter>align</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\align\refseq-mgr.c">
+      <Filter>align</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\align\ref_iterator.c">
+      <Filter>align</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ascp\ascp.c">
+      <Filter>ascp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ascp\win\ascp-path.c">
+      <Filter>ascp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ascp\win\connect.c">
+      <Filter>ascp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\align-local_ref_id.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\align-local_ref_start.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\align-ref-name.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\align-ref-pos.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\align-ref-seq-id.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\align-restore-read.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\cigar.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\generate-mismatch-qual.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\get-sam-flags.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\get_mate_align_ids.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\make-cmp-read_desc.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\mismatch-restore-qual.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\not-my-row.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\project_read_from_sequence.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\raw-restore-qual.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\raw-restore-read.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\ref-preserve_qual.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\ref-restore-read.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\ref-tbl-sub-select.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\ref-tbl.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\seq-construct-read.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\seq-restore-read.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\axf\template-len.c">
+      <Filter>axf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\blast\blast-mgr.c">
+      <Filter>blast</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\blast\reader.c">
+      <Filter>blast</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\blast\reference.c">
+      <Filter>blast</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\blast\run-set.c">
+      <Filter>blast</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\btree.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\coldata.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\colidx.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\colidx0.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\colidx1.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\colidx2.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\column-cc.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\column.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\database-cc.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\database.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\dbcc-cmn.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\dbmgr-cmn.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\dbmgr.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\idstats.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\idxblk.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\index.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\kdb.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\meta.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\ptrieval-v1.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\ptrieval-v2.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\table-cc.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\table.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\trieidx-v1.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\trieidx-v2.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\trieval-v1.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\trieval-v2.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kdb\u64idx-v3.c">
+      <Filter>kdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfc\except.c">
+      <Filter>kfc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfc\refcount.c">
+      <Filter>kfc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfc\rsrc.c">
+      <Filter>kfc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfc\test-except.c">
+      <Filter>kfc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfc\tstate.c">
+      <Filter>kfc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfc\vtbl.c">
+      <Filter>kfc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfc\win\sysctx.c">
+      <Filter>kfc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfc\win\sysrsrc.c">
+      <Filter>kfc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfc\xc.c">
+      <Filter>kfc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfg\config-grammar.c">
+      <Filter>kfg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfg\config-lex.c">
+      <Filter>kfg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfg\config.c">
+      <Filter>kfg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfg\kart.c">
+      <Filter>kfg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfg\keystore.c">
+      <Filter>kfg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfg\properties.c">
+      <Filter>kfg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfg\report-kfg.c">
+      <Filter>kfg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfg\repository.c">
+      <Filter>kfg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\arc.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\arrayfile.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\buffile-read.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\buffile-write.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\buffile.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\bzip.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\cacheteefile.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\countfile.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\crc32.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\directory.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\dir_test.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\file.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\from_to_namelist.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\gzip.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\lockfile.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\md5.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\mmap.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\nullfile.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\pagefile.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\pmem.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\quickmount.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\ramfile.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\readheadfile.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\report.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\sra.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\subfile.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\tar.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\teefile.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\toc.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\tocdir.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\tocentry.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\tocfile.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\win\directory-path.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\win\sysdir.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\win\sysdll.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\win\sysfile.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\win\syslockfile.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kfs\win\sysmmap.c">
+      <Filter>kfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\bsearch.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\bstpersist.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\container.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\cp1252.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\crc32.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\data-buffer.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\debug.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\http-tries.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\iso8859-1.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\iso8859.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy-vector.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy\JudyHS.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy\JudyMalloc.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy\JudySL.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy\Judy_Bit.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy\Judy_Bit_Cascade.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy\Judy_Bit_Count.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy\Judy_Bit_Decascade.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy\Judy_Bit_Next.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy\Judy_Bit_NextEmpty.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy\Judy_Bit_Prev.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy\Judy_Word.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy\Judy_Word_Cascade.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy\Judy_Word_Count.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy\Judy_Word_Decascade.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy\Judy_Word_Next.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy\Judy_Word_NextEmpty.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\judy\Judy_Word_Prev.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\ksort.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\log.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\md5.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\namelist.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\ncbi-vdb-version.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\out.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\pack.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\pbstree-native.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\pbstree-swapped.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\pbstree.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\printf.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\ptpersist.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\ptrie.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\qsort.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\rc-idx-tbl.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\rc-tbl.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\refcount.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\report-klib.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\SHA-32bit.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\SHA-64bit.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\sra-release-version.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\status-rc-strings.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\status-rc.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\status.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\symtab.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\text.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\time.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\token.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\trie.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\unpack.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\utf8.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\vector.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\vector_namelist.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\vlen-encode.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\win\misc.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\win\sysalloc.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\win\syserrcode.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\win\syslog.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\win\systime.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\win\syswriter.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\klib\writer.c">
+      <Filter>klib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\endpoint.c">
+      <Filter>kns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\http-client.c">
+      <Filter>kns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\http-file.c">
+      <Filter>kns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\http.c">
+      <Filter>kns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\kns_manager-ext.c">
+      <Filter>kns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\manager.c">
+      <Filter>kns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\stream-from-files.c">
+      <Filter>kns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\stream-from-streams.c">
+      <Filter>kns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\stream.c">
+      <Filter>kns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\undyinghttp.c">
+      <Filter>kns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\win\sysendpoint.c">
+      <Filter>kns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\win\sysmgr.c">
+      <Filter>kns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\win\syssock.c">
+      <Filter>kns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kns\win\sysstream.c">
+      <Filter>kns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kproc\procmgr.c">
+      <Filter>kproc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kproc\sem.c">
+      <Filter>kproc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kproc\task.c">
+      <Filter>kproc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kproc\win\syscond.c">
+      <Filter>kproc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kproc\win\syslock.c">
+      <Filter>kproc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kproc\win\sysmgr.c">
+      <Filter>kproc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kproc\win\systhread.c">
+      <Filter>kproc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\kproc\win\systimeout.c">
+      <Filter>kproc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\krypto\aes-byte.c">
+      <Filter>krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\krypto\aes_core.c">
+      <Filter>krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\krypto\cipher-byte.c">
+      <Filter>krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\krypto\cipher.c">
+      <Filter>krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\krypto\ciphermgr.c">
+      <Filter>krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\krypto\encfile.c">
+      <Filter>krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\krypto\encfilev2.c">
+      <Filter>krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\krypto\key.c">
+      <Filter>krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\krypto\no-null-ncbi.c">
+      <Filter>krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\krypto\reencfile.c">
+      <Filter>krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\krypto\wgaencrypt.c">
+      <Filter>krypto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs-jni\jni_ErrorMsg.c">
+      <Filter>ngs-jni</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs-jni\jni_Manager.c">
+      <Filter>ngs-jni</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs-jni\jni_String.c">
+      <Filter>ngs-jni</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs-py\py_Manager.c">
+      <Filter>ngs-py</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\CSRA1_Alignment.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\CSRA1_Pileup.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\CSRA1_PileupEvent.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\CSRA1_ReadCollection.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\CSRA1_Reference.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\CSRA1_ReferenceWindow.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NCBI-NGS.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Alignment.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Cursor.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_ErrBlock.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Fragment.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Id.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Pileup.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_PileupEvent.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Read.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_ReadCollection.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_ReadGroup.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Refcount.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Reference.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_ReferenceSequence.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_Statistics.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\NGS_String.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\SRA_DB_ReadCollection.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\SRA_Read.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\SRA_ReadCollection.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\SRA_ReferenceSequence.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\SRA_ReadGroup.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\SRA_ReadGroupInfo.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs\SRA_Statistics.c">
+      <Filter>ngs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\search\agrep-dp.c">
+      <Filter>ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\search\agrep-myers.c">
+      <Filter>ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\search\agrep-myersunltd.c">
+      <Filter>ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\search\agrep-wumanber.c">
+      <Filter>ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\search\fgrep-aho.c">
+      <Filter>ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\search\fgrep-boyermoore.c">
+      <Filter>ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\search\fgrep-dumb.c">
+      <Filter>ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\search\nucstrstr.c">
+      <Filter>ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\search\search.c">
+      <Filter>ksrch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\bio-start.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\color-from-dna.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\denormalize.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\dna-from-color.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\dynamic-454-read-descriptor.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\extract-coordinates.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\extract-name_coord.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\format-spot-name.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\fpcodec.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\index_lookup.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\make-position.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\normalize.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\process-position.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\qual4_decode.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\read-desc.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\read-seg-from-readn.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\rewrite-spot-name.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\rotate.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\spot-desc.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\stat_mod.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\swap.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\tokenize-spot_name-454.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\tokenize-spot_name-abi.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\tokenize-spot_name-helicos.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\tokenize-spot_name-illumina.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\tokenize-spot_name-ion-torrent.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\untyped.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\v0-decompress-init.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\v0-decompress.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\v0-funcs.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sraxf\varloc.c">
+      <Filter>sraxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sra\reader-abi.c">
+      <Filter>sra</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sra\reader-cmn.c">
+      <Filter>sra</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sra\reader-fastq.c">
+      <Filter>sra</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sra\reader-illumina.c">
+      <Filter>sra</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sra\reader-sff.c">
+      <Filter>sra</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sra\sra-schema.c">
+      <Filter>sra</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sra\sracache.c">
+      <Filter>sra</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sra\sracol.c">
+      <Filter>sra</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sra\sramgr-cmn.c">
+      <Filter>sra</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sra\sramgr.c">
+      <Filter>sra</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sra\sraschema-stub.c">
+      <Filter>sra</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sra\sraschema.c">
+      <Filter>sra</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sra\sratbl-cmn.c">
+      <Filter>sra</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sra\sratbl.c">
+      <Filter>sra</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\sra\types.c">
+      <Filter>sra</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\blob-headers.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\blob.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\cast.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\column-cmn.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\column.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\compare.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\cursor-cmn.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\cursor.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\database-cmn.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\database-depend.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\database-load.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\database.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\dbmgr-cmn.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\dbmgr.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\delta_average.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\environment-read.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\fixed-row-len.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\index_lookup.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\index_project.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\linker-cmn.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\linker-int.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\linker.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\merge.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\meta-attr-read.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\meta-read.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\meta-value.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\page-map.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\parameter-read.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\phys-cmn.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\phys-load.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\phys.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\prod-cmn.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\prod-expr.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\prod-func.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\prod.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\range-validate.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\redimension.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\report-vdb.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\row-id.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\row-len.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\schema-db.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\schema-dump.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\schema-eval.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\schema-expr.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\schema-func.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\schema-int.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\schema-parse.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\schema-prod.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\schema-tbl.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\schema-tok.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\schema-type.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\schema.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\split.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\table-cmn.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\table-load.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\table.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vdb\transpose.c">
+      <Filter>vdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\manager.c">
+      <Filter>vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\path.c">
+      <Filter>vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\resolver.c">
+      <Filter>vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\resolver-3.0.c">
+      <Filter>vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\win\syspath.c">
+      <Filter>vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\add-row-id.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\bit_or.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\bunzip.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\ceil.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\clip.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\cut.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\delta.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\deriv.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\diff.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\echo.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\exists.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\extract_token.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\floor.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\funzip.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\integral.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\integral_0.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\irzip.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\iunzip.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\izip.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\lower-case-tech-reads.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\map.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\max.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\min.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\outlier-decoder.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\outlier-encoder.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\pack.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\paste.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\rand_4na_2na.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\rldecode.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\round.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\simple-sub-select.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\sprintf.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\strtonum.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\subtract-row-id.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\sum.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\trim.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\trunc.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\undelta.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\unpack.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\unzip.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\vec-sum.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\vxf\wgs-tokenize-accession.c">
+      <Filter>vxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\wgsxf\build_read_type.c">
+      <Filter>wgsxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\wgsxf\build_scaffold.c">
+      <Filter>wgsxf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\libs\ngs-c++\NCBI-NGS.cpp">
+      <Filter>ngs-c++</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

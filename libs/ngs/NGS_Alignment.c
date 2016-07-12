@@ -184,6 +184,18 @@ static int64_t ITF_Alignment_v1_get_align_pos ( const NGS_Alignment_v1 * self, N
     return ret;
 }
 
+static uint64_t ITF_Alignment_v1_get_ref_pos_projection_range ( const NGS_Alignment_v1 * self, NGS_ErrBlock_v1 * err, int64_t ref_pos )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
+    ON_FAIL ( uint64_t ret = NGS_AlignmentGetReferencePositionProjectionRange ( Self ( self ), ctx, ref_pos ) )
+    {
+        NGS_ErrBlockThrow ( err, ctx );
+    }
+
+    CLEAR ();
+    return ret;
+}
+
 static uint64_t ITF_Alignment_v1_get_align_length ( const NGS_Alignment_v1 * self, NGS_ErrBlock_v1 * err )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
@@ -348,7 +360,7 @@ NGS_Alignment_v1_vt ITF_Alignment_vt =
     {
         "NGS_Alignment",
         "NGS_Alignment_v1",
-        1,
+        2,
         & ITF_Fragment_vt . dad
     },
 
@@ -378,7 +390,10 @@ NGS_Alignment_v1_vt ITF_Alignment_vt =
     ITF_Alignment_v1_next,
 
     /* v1.1 */
-    ITF_Alignment_v1_get_rna_orientation
+    ITF_Alignment_v1_get_rna_orientation,
+
+    /* v1.2 */
+    ITF_Alignment_v1_get_ref_pos_projection_range
 };
 
 
@@ -439,6 +454,20 @@ int NGS_AlignmentGetMappingQuality( NGS_Alignment* self, ctx_t ctx )
     else
     {
         return VT ( self, getMappingQuality ) ( self, ctx );
+    }
+    return 0;
+}
+
+INSDC_read_filter NGS_AlignmentGetReadFilter( NGS_Alignment* self, ctx_t ctx )
+{
+    if ( self == NULL )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+        INTERNAL_ERROR ( xcSelfNull, "NGS_AlignmentGetReadFilter failed" );
+    }
+    else
+    {
+        return VT ( self, getReadFilter ) ( self, ctx );
     }
     return 0;
 }
@@ -551,6 +580,20 @@ int64_t NGS_AlignmentGetAlignmentPosition( NGS_Alignment* self, ctx_t ctx )
     else
     {
         return VT ( self, getAlignmentPosition ) ( self, ctx );
+    }
+    return 0;
+}
+
+uint64_t NGS_AlignmentGetReferencePositionProjectionRange( NGS_Alignment* self, ctx_t ctx, int64_t ref_pos )
+{
+    if ( self == NULL )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+        INTERNAL_ERROR ( xcSelfNull, "NGS_AlignmentGetReferencePositionProjectionRange failed" );
+    }
+    else
+    {
+        return VT ( self, getReferencePositionProjectionRange ) ( self, ctx, ref_pos );
     }
     return 0;
 }
@@ -810,6 +853,13 @@ static bool NullAlignment_toBool ( NGS_ALIGNMENT* self, ctx_t ctx )
     return false;
 }
 
+static uint8_t NullAlignment_toU8 ( NGS_ALIGNMENT* self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+    INTERNAL_ERROR ( xcSelfNull, "NULL Alignment accessed" );
+    return 0;
+}
+
 static uint64_t NullAlignment_toU64 ( NGS_ALIGNMENT* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -840,7 +890,14 @@ static char NullAlignment_RNAOrientation ( NGS_ALIGNMENT * self, ctx_t ctx )
 {
     return '?';
 }
-  
+
+static uint64_t NullAlignment_ReferencePositionProjectionRange ( NGS_ALIGNMENT * self, ctx_t ctx, int64_t ref_pos )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+    INTERNAL_ERROR ( xcSelfNull, "NULL Alignment accessed" );
+    return -1 ^ (uint64_t)0xffffffff;
+}
+
 static NGS_Alignment_vt NullAlignment_vt_inst =
 {
     {
@@ -853,12 +910,15 @@ static NGS_Alignment_vt NullAlignment_vt_inst =
         NullAlignment_FragmentToString,
         NullAlignment_FragmentOffsetLenToString,
         NullAlignment_FragmentOffsetLenToString,
+        NullAlignment_FragmentToBool,
+        NullAlignment_FragmentToBool,
         NullAlignment_FragmentToBool
     },
     
     NullAlignment_toString,        /* getId                        */
     NullAlignment_toString,        /* getReferenceSpec             */
     NullAlignment_toInt,           /* getMappingQuality            */
+    NullAlignment_toU8,            /* getReadFilter                */
     NullAlignment_toString,        /* getReferenceBases            */
     NullAlignment_toString,        /* getReadGroup                 */
     NullAlignment_toString,        /* getReadId                    */
@@ -867,6 +927,7 @@ static NGS_Alignment_vt NullAlignment_vt_inst =
     NullAlignment_toString,        /* getAlignedFragmentBases      */
     NullAlignment_toBool,          /* isPrimary                    */
     NullAlignment_toI64,           /* getAlignmentPosition         */
+    NullAlignment_ReferencePositionProjectionRange, /* getReferencePositionProjectionRange */
     NullAlignment_toU64,           /* getAlignmentLength           */
     NullAlignment_toBool,          /* getIsReversedOrientation     */
     NullAlignment_boolToInt,       /* getSoftClip                  */
@@ -884,7 +945,7 @@ static NGS_Alignment_vt NullAlignment_vt_inst =
     NullAlignment_noNext           /* next                         */
 };
 
-struct NGS_Alignment * NGS_AlignmentMakeNull ( ctx_t ctx, const struct NGS_String * run_name )
+struct NGS_Alignment * NGS_AlignmentMakeNull ( ctx_t ctx, char const * run_name, size_t run_name_size )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
 
@@ -894,12 +955,12 @@ struct NGS_Alignment * NGS_AlignmentMakeNull ( ctx_t ctx, const struct NGS_Strin
 
     ref = calloc ( 1, sizeof * ref );
     if ( ref == NULL )
-        SYSTEM_ERROR ( xcNoMemory, "allocating NullAlignment on '%.*s'", NGS_StringSize ( run_name, ctx ), NGS_StringData ( run_name, ctx ) );
+        SYSTEM_ERROR ( xcNoMemory, "allocating NullAlignment on '%.*s'", run_name_size, run_name );
     else
     {
 #if _DEBUGGING
         char instname [ 256 ];
-        string_printf ( instname, sizeof instname, NULL, "%.*s(NULL)", NGS_StringSize ( run_name, ctx ), NGS_StringData ( run_name, ctx ) );
+        string_printf ( instname, sizeof instname, NULL, "%.*s(NULL)", run_name_size, run_name );
         instname [ sizeof instname - 1 ] = 0;
 #else
         const char *instname = "";

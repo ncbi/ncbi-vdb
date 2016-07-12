@@ -58,6 +58,3 @@ TEST_KFG_LIB = \
 $(TEST_BINDIR)/test-ktst: $(TEST_KFG_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KFG_LIB)
 
-valgrind_ktst: test-ktst
-	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-ktst # --suppressions=$(SRCDIR)/valgrind_suppressions.txt   
-    

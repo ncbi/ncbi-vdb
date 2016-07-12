@@ -97,19 +97,19 @@ struct NGS_String * NGS_IdMakeFragment ( ctx_t ctx, const NGS_String * run, bool
     return NGS_StringMakeCopy ( ctx, buf, num_writ );
 }
 
-struct NGS_Id NGS_IdParse ( const struct NGS_String * self, ctx_t ctx )
+struct NGS_Id NGS_IdParse ( char const * self, size_t self_size, ctx_t ctx )
 {
     struct NGS_Id ret;
     
     /* parse from the back using '.' as delimiters */
-    const char* start = NGS_StringData ( self, ctx );
-    const char* dot = string_rchr ( start, NGS_StringSize ( self, ctx ), '.' );
+    const char* start = self;
+    const char* dot = string_rchr ( start, self_size, '.' );
     
     memset ( & ret, 0, sizeof ( ret ) );
     
     if ( dot == NULL || dot == start )
     {
-        INTERNAL_ERROR ( xcParamUnexpected, "Badly formed ID string: %.*s", NGS_StringSize ( self, ctx ), NGS_StringData ( self, ctx ) );
+        INTERNAL_ERROR ( xcParamUnexpected, "Badly formed ID string: %.*s", self_size, self );
         return ret;
     }    
 
@@ -117,7 +117,7 @@ struct NGS_Id NGS_IdParse ( const struct NGS_String * self, ctx_t ctx )
     ret . rowId = strtoi64 ( dot + 1, NULL, 10 );
     if ( ret . rowId == 0 )
     {
-        INTERNAL_ERROR ( xcParamUnexpected, "Badly formed ID string (rowId): %.*s", NGS_StringSize ( self, ctx ), NGS_StringData ( self, ctx ) );
+        INTERNAL_ERROR ( xcParamUnexpected, "Badly formed ID string (rowId): %.*s", self_size, self );
         return ret;
     }    
     
@@ -125,7 +125,7 @@ struct NGS_Id NGS_IdParse ( const struct NGS_String * self, ctx_t ctx )
     dot = string_rchr ( start, dot - start - 1, '.' );
     if ( dot == NULL || dot == start )
     {
-        INTERNAL_ERROR ( xcParamUnexpected, "Badly formed ID string (object type ?): %.*s", NGS_StringSize ( self, ctx ), NGS_StringData ( self, ctx ) );
+        INTERNAL_ERROR ( xcParamUnexpected, "Badly formed ID string (object type ?): %.*s", self_size, self );
         return ret;
     }    
     switch ( dot [ 1 ] )
@@ -139,7 +139,7 @@ struct NGS_Id NGS_IdParse ( const struct NGS_String * self, ctx_t ctx )
             ret . object = NGSObject_PrimaryAlignment;
         else
         {
-            INTERNAL_ERROR ( xcParamUnexpected, "Badly formed ID string (object type P?): %.*s", NGS_StringSize ( self, ctx ), NGS_StringData ( self, ctx ) );
+            INTERNAL_ERROR ( xcParamUnexpected, "Badly formed ID string (object type P?): %.*s", self_size, self );
             return ret;
         }
         break;
@@ -149,7 +149,7 @@ struct NGS_Id NGS_IdParse ( const struct NGS_String * self, ctx_t ctx )
             ret . object = NGSObject_SecondaryAlignment;
         else
         {
-            INTERNAL_ERROR ( xcParamUnexpected, "Badly formed ID string (object type S?): %.*s", NGS_StringSize ( self, ctx ), NGS_StringData ( self, ctx ) );
+            INTERNAL_ERROR ( xcParamUnexpected, "Badly formed ID string (object type S?): %.*s", self_size, self );
             return ret;
         }
         break;
@@ -164,7 +164,7 @@ struct NGS_Id NGS_IdParse ( const struct NGS_String * self, ctx_t ctx )
             ret . object = NGSObject_AlignmentFragment;
             break;
         default  : 
-            INTERNAL_ERROR ( xcParamUnexpected, "Badly formed ID string (object type F?): %.*s", NGS_StringSize ( self, ctx ), NGS_StringData ( self, ctx ) );
+            INTERNAL_ERROR ( xcParamUnexpected, "Badly formed ID string (object type F?): %.*s", self_size, self );
             return ret;
         }
         ret . fragId = strtoul( dot + 3, NULL, 10 ); /* even if missing/invalid, set to 0 */

@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\..\libs\ktst\testcase.cpp" />
+    <ClCompile Include="..\..\..\libs\ktst\testenv.cpp" />
+    <ClCompile Include="..\..\..\libs\ktst\testrunner.cpp" />
+    <ClCompile Include="..\..\..\libs\ktst\win\systestenv.cpp" />
+  </ItemGroup>
+</Project>

@@ -94,6 +94,7 @@ typedef struct PageMap {
      * has data_recs elements
      * is sized to reserve_data elements
      * == leng_run + reserve_leng
+     * OPTIONAL
      */
     row_count_t *data_run;
     /** expanded offsets into data - needed for random access ***/
@@ -216,7 +217,7 @@ struct PageMapIterator {
 #endif
 };
 
-rc_t PageMapNewIterator(const PageMap *self, PageMapIterator *lhs, uint64_t first_row, uint64_t num_rows);
+VDB_EXTERN rc_t PageMapNewIterator(const PageMap *self, PageMapIterator *lhs, uint64_t first_row, uint64_t num_rows);
 
 static __inline__ bool PageMapIteratorAdvance(PageMapIterator *self, row_count_t rows)
 {
@@ -317,11 +318,12 @@ static __inline__ elem_count_t PageMapIteratorDataOffset(const PageMapIterator *
 
 static __inline__ row_count_t PageMapIteratorRepeatCount(const PageMapIterator *cself)
 {
+    assert( cself );
     if(cself->repeat_count==0){
 	PageMapIterator *self = (PageMapIterator*) cself;
 	if(self->rgns==NULL){ /** must be simple random access **/
 		uint64_t i;
-		assert(*self->exp_base);
+        assert( ( ( self->exp_base == NULL ) || ( *self->exp_base == NULL ) ) ? self->cur_row+1 >= self->last_row : true );
 		for(i=self->cur_row+1,self->repeat_count=1;
                     i< self->last_row && (*self->exp_base)[i]==(*self->exp_base)[self->cur_row];
                     i++,self->repeat_count++){}

@@ -27,10 +27,10 @@
 #include <kns/extern.h>
 
 #include "http-priv.h"
-#include "libkns.vers.h"
 #include "mgr-priv.h"
 #include "stream-priv.h"
 #include "sysmgr.h"
+#include "../klib/release-vers.h"
 
 #include <kfg/config.h>
 
@@ -45,6 +45,7 @@
 #include <vfs/manager.h>
 #include <vfs/path.h>
 
+#include <atomic.h>
 #include <sysalloc.h>
 
 #include <assert.h>
@@ -65,25 +66,44 @@
 
 static char kns_manager_user_agent [ 128 ] = "ncbi-vdb";
 
+#define USE_SINGLETON 1
+
+#if USE_SINGLETON
+static atomic_ptr_t kns_singleton;
+#endif
+
 static
 rc_t KNSManagerWhack ( KNSManager * self )
 {
     rc_t rc;
-    KConfigRelease ( self -> kfg );
+
+#if USE_SINGLETON
+    KNSManager * our_mgr = atomic_test_and_set_ptr ( & kns_singleton, NULL, NULL );
+    if ( self == our_mgr )
+        return 0;
+#endif
+
     if ( self -> http_proxy != NULL )
         StringWhack ( self -> http_proxy );
+
     if ( self -> aws_access_key_id != NULL )
         StringWhack ( self -> aws_access_key_id );
+
     if ( self -> aws_secret_access_key != NULL )
         StringWhack ( self -> aws_secret_access_key );
+
     if ( self -> aws_region != NULL )
         StringWhack ( self -> aws_region );
+
     if ( self -> aws_output != NULL )
         StringWhack ( self -> aws_output );
     
     rc = HttpRetrySpecsDestroy ( & self -> retry_specs );
+
     free ( self );
+
     KNSManagerCleanup ();
+
     return rc;
 }
 
@@ -119,10 +139,10 @@ LIB_EXPORT rc_t CC KNSManagerRelease ( const KNSManager *self )
 }
 
 static
-void KNSManagerHttpProxyInit ( KNSManager * self )
+void KNSManagerHttpProxyInit ( KNSManager * self, KConfig * kfg )
 {
     const KConfigNode * proxy;
-    rc_t rc = KConfigOpenNodeRead ( self -> kfg, & proxy, "http/proxy" );
+    rc_t rc = KConfigOpenNodeRead ( kfg, & proxy, "http/proxy" );
     if ( rc == 0 )
     {
         const KConfigNode * proxy_path;
@@ -167,12 +187,11 @@ void KNSManagerHttpProxyInit ( KNSManager * self )
 
 
 static
-void KNSManagerLoadAWS ( struct KNSManager *self )
+void KNSManagerLoadAWS ( struct KNSManager *self, const KConfig * kfg )
 {
     rc_t rc;
 
     const KConfigNode *aws_node;
-    const KConfig *kfg = self -> kfg;
 
     if ( self == NULL )
         return;
@@ -270,22 +289,17 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
                 /* the manager is not a proper singleton */
                 if ( kns_manager_user_agent [ 0 ] == 0 )
                 {
-                    ver_t version = LIBKNS_VERS;
+                    ver_t version = RELEASE_VERS;
                     KNSManagerSetUserAgent ( mgr, PKGNAMESTR " ncbi-vdb.%V", version );
                 }
 
-                rc = KConfigAddRef ( kfg );
+                rc = HttpRetrySpecsInit ( & mgr -> retry_specs, kfg );
                 if ( rc == 0 )
                 {
-                    mgr -> kfg = kfg;
-                    rc = HttpRetrySpecsInit ( & mgr -> retry_specs, mgr -> kfg );
-                    if ( rc == 0 )
-                    {
-                        KNSManagerHttpProxyInit ( mgr );
-                        * mgrp = mgr;
-                        return 0;
-                    }
-                    KConfigRelease ( kfg );
+                    KNSManagerLoadAWS ( mgr, kfg );
+                    KNSManagerHttpProxyInit ( mgr, kfg );
+                    * mgrp = mgr;
+                    return 0;
                 }
             }
 
@@ -298,23 +312,64 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
     return rc;
 }
 
-LIB_EXPORT rc_t CC KNSManagerMake ( KNSManager **mgrp )
+LIB_EXPORT rc_t CC KNSManagerMake ( KNSManager ** mgrp )
 {
-    KConfig* kfg;
-    rc_t rc = KConfigMake(&kfg, NULL);
-    if ( rc == 0 )
-    {
-        rc_t rc2;
-        rc = KNSManagerMakeConfig ( mgrp, kfg );
-        if ( rc == 0 )
-            KNSManagerLoadAWS ( *mgrp );
+    rc_t rc;
 
-        rc2 = KConfigRelease ( kfg );
+    if ( mgrp == NULL )
+        rc = RC ( rcNS, rcMgr, rcAllocating, rcParam, rcNull );
+    else
+    {
+        KConfig * kfg;
+        KNSManager * our_mgr;
+
+        * mgrp = NULL;
+
+#if USE_SINGLETON
+        /* grab single-shot singleton */
+        our_mgr = atomic_test_and_set_ptr ( & kns_singleton, NULL, NULL );
+        if ( our_mgr != NULL )
+        {
+            /* add a new reference and return */
+            rc = KNSManagerAddRef ( our_mgr );
+            if ( rc == 0 )
+                * mgrp = our_mgr;
+            return rc;
+        }
+#endif
+
+        /* singleton was NULL. make from scratch. */
+        rc = KConfigMake ( & kfg, NULL );
         if ( rc == 0 )
-        {   
-            rc = rc2;
+        {
+            rc = KNSManagerMakeConfig ( & our_mgr, kfg );
+            KConfigRelease ( kfg );
+
+            if ( rc == 0 )
+            {
+#if USE_SINGLETON
+                /* try to set single-shot ( set once, never reset ) */
+                KNSManager * new_mgr = atomic_test_and_set_ptr ( & kns_singleton, our_mgr, NULL );
+                if ( new_mgr != NULL )
+                {
+                    /* somebody else got here first - drop our version */
+                    assert ( our_mgr != new_mgr );
+                    KNSManagerRelease ( our_mgr );
+
+                    /* use the new manager, just add a reference and return */
+                    rc = KNSManagerAddRef ( new_mgr );
+                    if ( rc == 0 )
+                        * mgrp = new_mgr;
+                    return rc;
+                }
+#endif
+
+                /* return parameter */
+                * mgrp = our_mgr;
+            }
         }
     }
+
     return rc;
 }
 
@@ -599,7 +654,7 @@ LIB_EXPORT rc_t CC KNSManagerVSetHTTPProxyPath ( KNSManager * self, const char *
 
 
 /* GetHTTPProxyEnabled
- *  returns true iff a non-NULL proxy path exists and user wants to use it
+ *  returns true if a non-NULL proxy path exists and user wants to use it
  *  users indicate desire to use proxy through configuration or SetHTTPProxyEnabled
  */
 LIB_EXPORT bool CC KNSManagerGetHTTPProxyEnabled ( const KNSManager * self )

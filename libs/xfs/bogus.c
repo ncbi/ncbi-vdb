@@ -28,6 +28,7 @@
 #include <klib/text.h>
 #include <klib/refcount.h>
 #include <klib/printf.h>
+#include <klib/log.h>
 
 #include <xfs/model.h>
 #include <xfs/tree.h>
@@ -41,8 +42,6 @@
 #include "common.h"
 
 #include <sysalloc.h>
-
-#include <stdio.h>
 
 /*)))
  |||
@@ -134,7 +133,7 @@ _BogusNodeAttr_dispose_v1 ( const struct XFSEditor * self )
     Editor = ( struct XFSAttrEditor * ) self;
 
 /*
-    printf ( " _BogusNodeAttr_dispose_ ( 0x%p )\n", ( void * ) Editor );
+pLogMsg ( klogDebug, " _BogusNodeAttr_dispose_ ( $(editor) )", "editor=0x%p", ( void * ) Editor );
 */
 
     if ( Editor == 0 ) {
@@ -218,7 +217,7 @@ _BogusNodeAttr_v1 (
         free ( Editor );
     }
 /*
-printf ( " _BogusNodeAttr_ ( 0x%p )\n", Editor );
+pLogMsg ( klogDebug, " _BogusNodeAttr_ ( $(editor) )", "editor=0x%p", ( void * ) Editor );
 */
 
     return RCt;
@@ -285,7 +284,7 @@ _BogusNodeDispose ( const struct XFSBogusNode * self )
     struct XFSBogusNode * Node = ( struct XFSBogusNode * ) self;
 
 /*
-printf ( "_BogusNodeDispose ( 0x%p )\n", ( void * ) Node );
+pLogMsg ( klogDebug, " _BogusNodeDispose ( $(node) )", "node=0x%p", ( void * ) Node );
 */
     if ( Node == NULL ) {
         return 0;
@@ -335,7 +334,7 @@ _BogusNodeMake (
         }
     }
 /*
-printf ( "_BogusNodeMake ( %s, 0x%p )\n", NodeName, ( void * ) TheNode );
+pLogMsg ( klogDebug, " _BogusNodeDispose ( $(name), $(node) )", "name=%s,node=0x%p", NodeName, ( void * ) TheNode );
 */
 
     return RCt;

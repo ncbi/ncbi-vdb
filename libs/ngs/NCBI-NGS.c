@@ -27,6 +27,7 @@
 #include "NCBI-NGS.h"
 #include "NGS_ErrBlock.h"
 #include "NGS_ReadCollection.h"
+#include "NGS_ReferenceSequence.h"
 
 #include <kfc/ctx.h>
 #include <kfc/rsrc.h>
@@ -49,4 +50,17 @@ LIB_EXPORT struct NGS_ReadCollection_v1 * NCBI_NGS_OpenReadCollection ( const ch
 
     CLEAR ();
     return ( struct NGS_ReadCollection_v1 * ) ret;
+}
+
+LIB_EXPORT struct NGS_ReferenceSequence_v1 * NCBI_NGS_OpenReferenceSequence ( const char * spec, struct NGS_ErrBlock_v1 * err )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcTable, rcOpening );
+
+    ON_FAIL ( NGS_ReferenceSequence * ret = NGS_ReferenceSequenceMake ( ctx, spec ) )
+    {
+        NGS_ErrBlockThrow ( err, ctx );
+    }
+
+    CLEAR ();
+    return ( struct NGS_ReferenceSequence_v1 * ) ret;
 }

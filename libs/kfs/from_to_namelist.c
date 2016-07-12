@@ -183,6 +183,7 @@ static rc_t LoadFromFile( struct KFile const * f, VNamelist * nl )
 }
 
 
+
 /* -----
 
  * loads the content of a KFile into a Namelist
@@ -259,6 +260,153 @@ static rc_t SaveToFile( struct KFile * f, const VNamelist * nl, const char * del
     return rc;
 }
 
+
+static rc_t ProcessFromBuffer( buffer_range * range,
+    rc_t ( CC * on_line )( const String * line, void * data ), void * data  )
+{
+    rc_t rc = 0;
+    uint32_t idx;
+    const char * p = range->start;
+    String S;
+
+    S.addr = p;
+    S.len = S.size = range->processed;
+    for ( idx = range->processed; idx < range->count && rc == 0; ++idx )
+    {
+        switch( p[ idx ] )
+        {
+            case 0x0A : switch( range->state )
+                        {
+                            case STATE_ALPHA : /* ALPHA --> LF */
+                                                rc = on_line( &S, data );
+                                                range->state = STATE_LF;
+                                                break;
+
+                            case STATE_LF : /* LF --> LF */
+                                             break;
+
+                            case STATE_NL : /* NL --> LF */
+                                             range->state = STATE_LF;
+                                             break;
+                        }
+                        break;
+
+            case 0x0D : switch( range->state )
+                        {
+                            case STATE_ALPHA : /* ALPHA --> NL */
+                                                rc = on_line( &S, data );
+                                                range->state = STATE_NL;
+                                                break;
+
+                            case STATE_LF : /* LF --> NL */
+                                             range->state = STATE_NL;
+                                             break;
+
+                            case STATE_NL : /* NL --> NL */
+                                             break;
+                        }
+                        break;
+
+            default   : switch( range->state )
+                        {
+                            case STATE_ALPHA : /* ALPHA --> ALPHA */
+                                                S.len++; S.size++;
+                                                break;
+
+                            case STATE_LF : /* LF --> ALPHA */
+                                             S.addr = &p[ idx ]; S.len = S.size = 1;
+                                             range->state = STATE_ALPHA;
+                                             break;
+
+                            case STATE_NL : /* NL --> ALPHA */
+                                             S.addr = &p[ idx ]; S.len = S.size = 1;
+                                             range->state = STATE_ALPHA;
+                                             break;
+                        }
+                        break;
+        }
+    }
+    if ( range->state == STATE_ALPHA )
+    {
+        range->start = S.addr;
+        range->count = S.len;
+    }
+    else
+        range->count = 0;
+    return rc;
+}
+
+
+static rc_t ProcessLineByLine( struct KFile const * f,
+        rc_t ( CC * on_line )( const String * line, void * data ), void * data )
+{
+    rc_t rc = 0;
+    uint64_t pos = 0;
+    char buffer[ 4096 ];
+    buffer_range range;
+    bool done = false;
+
+    range.start = buffer;
+    range.count = 0;
+    range.processed = 0;
+    range.state = STATE_ALPHA;
+
+    do
+    {
+        size_t num_read;
+        rc = KFileRead ( f, pos, ( char * )( range.start + range.processed ),
+                        ( sizeof buffer ) - range.processed, &num_read );
+        if ( rc == 0 )
+        {
+            done = ( num_read == 0 );
+            if ( !done )
+            {
+                range.start = buffer;
+                range.count = range.processed + num_read;
+
+                rc = ProcessFromBuffer( &range, on_line, data );
+                if ( range.count > 0 )
+                {
+                    memmove ( buffer, range.start, range.count );
+                }
+                range.start = buffer;
+                range.processed = range.count;
+
+                pos += num_read;
+            }
+            else if ( range.state == STATE_ALPHA )
+            {
+                String S;
+                S.addr = range.start;
+                S.len = S.size = range.count;
+                rc = on_line( &S, data );
+            }
+        }
+    } while ( rc == 0 && !done );
+
+    return rc;
+}
+
+/* -----
+
+ * processes each line in a KFile by the callback
+ *
+ */
+LIB_EXPORT rc_t CC ProcessFileLineByLine( struct KFile const * self,
+    rc_t ( CC * on_line )( const String * line, void * data ), void * data )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC( rcFS, rcFile, rcValidating, rcSelf, rcNull );
+    else if ( on_line == NULL )
+        rc = RC( rcFS, rcFile, rcValidating, rcParam, rcNull );
+    else
+        rc = ProcessLineByLine( self, on_line, data );
+    return rc;
+}
+
+ 
+ 
 /* -----
 
  * writes content of a Namelist into a KFile

@@ -103,7 +103,7 @@ void SRA_ReadGroupInit ( ctx_t ctx,
                          const char *clsname, 
                          const char *instname, 
                          const NGS_String* run_name, 
-                         const NGS_String* group_name, 
+                         const char* group_name, size_t group_name_size,
                          const struct SRA_ReadGroupInfo* group_info )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
@@ -116,7 +116,7 @@ void SRA_ReadGroupInit ( ctx_t ctx,
         {   
             TRY ( self -> run_name = NGS_StringDuplicate ( run_name, ctx ) )
             {
-                TRY ( self -> name = NGS_StringDuplicate ( group_name, ctx ) )
+                TRY ( self -> name = NGS_StringMakeCopy ( ctx, group_name, group_name_size ) )
                 {
                     self -> group_info = SRA_ReadGroupInfoDuplicate ( group_info, ctx );
                 }
@@ -202,55 +202,50 @@ struct NGS_Read* SRA_ReadGroupGetRead ( const SRA_ReadGroup * self, ctx_t ctx, c
     }
     
     {
-        TRY ( const NGS_String* id_str = NGS_StringMake ( ctx, readIdStr, string_size ( readIdStr ) ) )
+        TRY ( struct NGS_Id id = NGS_IdParse ( readIdStr, string_size ( readIdStr ), ctx ) )
         {
-            TRY ( struct NGS_Id id = NGS_IdParse ( id_str, ctx ) )
+            if ( string_cmp ( NGS_StringData ( self -> run_name, ctx ), 
+                NGS_StringSize ( self -> run_name, ctx ),
+                id . run . addr, 
+                id . run . size, 
+                id . run . len ) != 0 ) 
             {
-                if ( string_cmp ( NGS_StringData ( self -> run_name, ctx ), 
-                                  NGS_StringSize ( self -> run_name, ctx ),
-                                  id . run . addr, 
-                                  id . run . size, 
-                                  id . run . len ) != 0 ) 
-                {
-                    INTERNAL_ERROR ( xcArcIncorrect, 
-                                     " expected '%.*s', actual '%.*s'", 
-                                     NGS_StringSize ( self -> run_name, ctx ),
-                                     NGS_StringData ( self -> run_name, ctx ), 
-                                     id . run . size, 
-                                     id . run . addr );
-                }    
-                else
+                INTERNAL_ERROR ( xcArcIncorrect, 
+                    " expected '%.*s', actual '%.*s'", 
+                    NGS_StringSize ( self -> run_name, ctx ),
+                    NGS_StringData ( self -> run_name, ctx ), 
+                    id . run . size, 
+                    id . run . addr );
+            }    
+            else
+            {   
+                /* make sure the requested read is from this read group */
+                NGS_Read* ret;
+                TRY ( ret = SRA_ReadMake ( ctx, self -> curs, id . rowId, self -> run_name ) )
                 {   
-                    /* make sure the requested read is from this read group */
-                    NGS_Read* ret;
-                    TRY ( ret = SRA_ReadMake ( ctx, self -> curs, id . rowId, self -> run_name ) )
-                    {   
-                        TRY ( const NGS_String* readGroup = NGS_ReadGetReadGroup ( ret, ctx ) )
+                    TRY ( const NGS_String* readGroup = NGS_ReadGetReadGroup ( ret, ctx ) )
+                    {
+                        if ( string_cmp ( NGS_StringData ( self -> name, ctx ), 
+                            NGS_StringSize ( self -> name, ctx ),
+                            NGS_StringData ( readGroup, ctx ), 
+                            NGS_StringSize ( readGroup, ctx ),
+                            NGS_StringSize ( readGroup, ctx ) ) == 0 ) 
                         {
-                            if ( string_cmp ( NGS_StringData ( self -> name, ctx ), 
-                                              NGS_StringSize ( self -> name, ctx ),
-                                              NGS_StringData ( readGroup, ctx ), 
-                                              NGS_StringSize ( readGroup, ctx ),
-                                              NGS_StringSize ( readGroup, ctx ) ) == 0 ) 
-                            {
-                                NGS_StringRelease ( id_str, ctx );
-                                NGS_StringRelease ( readGroup, ctx );
-                                return ret; 
-                            }
-                            INTERNAL_ERROR ( xcWrongReadGroup, 
-                                             "Requested read is from a difference read group (expected '%.*s', actual '%.s')", 
-                                             NGS_StringSize ( self -> name, ctx ),
-                                             NGS_StringData ( self -> name, ctx ), 
-                                             NGS_StringSize ( readGroup, ctx ),                            
-                                             NGS_StringData ( readGroup, ctx ) );
                             NGS_StringRelease ( readGroup, ctx );
+                            return ret; 
                         }
-                        NGS_ReadRelease ( ret, ctx );
+                        INTERNAL_ERROR ( xcWrongReadGroup, 
+                            "Requested read is from a difference read group (expected '%.*s', actual '%.s')", 
+                            NGS_StringSize ( self -> name, ctx ),
+                            NGS_StringData ( self -> name, ctx ), 
+                            NGS_StringSize ( readGroup, ctx ),                            
+                            NGS_StringData ( readGroup, ctx ) );
+                        NGS_StringRelease ( readGroup, ctx );
                     }
+                    NGS_ReadRelease ( ret, ctx );
                 }
             }
-            NGS_StringRelease ( id_str, ctx );
-        }   
+        }
     }
     return NULL;
 }
@@ -301,7 +296,7 @@ struct NGS_ReadGroup * SRA_ReadGroupMake ( ctx_t ctx,
                                            const struct NGS_Cursor * curs, 
                                            const struct SRA_ReadGroupInfo* group_info, 
                                            const struct NGS_String * run_name,
-                                           const struct NGS_String * group_name )
+                                           const char * group_name, size_t group_name_size )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     SRA_ReadGroup * ref;
@@ -321,11 +316,11 @@ struct NGS_ReadGroup * SRA_ReadGroupMake ( ctx_t ctx,
 #else
         const char *instname = "";
 #endif
-        TRY ( SRA_ReadGroupInit ( ctx, ref, "NGS_ReadGroup", instname, run_name, group_name, group_info ) )
+        TRY ( SRA_ReadGroupInit ( ctx, ref, "NGS_ReadGroup", instname, run_name, group_name, group_name_size, group_info ) )
         {
             TRY ( ref -> curs = NGS_CursorDuplicate ( curs, ctx ) )
             {
-                TRY ( ref -> cur_group = SRA_ReadGroupInfoFind ( ref -> group_info, ctx, group_name ) )
+                TRY ( ref -> cur_group = SRA_ReadGroupInfoFind ( ref -> group_info, ctx, group_name, group_name_size ) )
                 {
                     ref -> seen_first = true;
                     return & ref -> dad;
@@ -364,28 +359,23 @@ NGS_ReadGroup * SRA_ReadGroupIteratorMake ( ctx_t ctx,
         SYSTEM_ERROR ( xcNoMemory, "allocating NGS_ReadGroupIterator on '%.*s'", NGS_StringSize ( run_name, ctx ), NGS_StringData ( run_name, ctx ) );
     else
     {
-        TRY ( NGS_String * group_name = NGS_StringMake ( ctx, "", 0 ) )
-        {
 #if _DEBUGGING
-            char instname [ 256 ];
-            string_printf ( instname, sizeof instname, NULL, "%.*s", NGS_StringSize ( run_name, ctx ), NGS_StringData ( run_name, ctx ) );
-            instname [ sizeof instname - 1 ] = 0;
+        char instname [ 256 ];
+        string_printf ( instname, sizeof instname, NULL, "%.*s", NGS_StringSize ( run_name, ctx ), NGS_StringData ( run_name, ctx ) );
+        instname [ sizeof instname - 1 ] = 0;
 #else
-            const char *instname = "";
+        const char *instname = "";
 #endif
-            TRY ( SRA_ReadGroupInit ( ctx, ref, "NGS_ReadGroupIterator", instname, run_name, group_name, group_info ) )
+        TRY ( SRA_ReadGroupInit ( ctx, ref, "NGS_ReadGroupIterator", instname, run_name, "", 0, group_info ) )
+        {
+            TRY ( ref -> curs = NGS_CursorDuplicate ( curs, ctx ) )
             {
-                TRY ( ref -> curs = NGS_CursorDuplicate ( curs, ctx ) )
-                {
-                    NGS_StringRelease ( group_name, ctx );
-                    ref -> iterating = true;
-                    return & ref -> dad;
-                }
-                SRA_ReadGroupWhack ( ref, ctx );
+                ref -> iterating = true;
+                return & ref -> dad;
             }
-            
-            NGS_StringRelease ( group_name, ctx );
+            SRA_ReadGroupWhack ( ref, ctx );
         }
+
         free ( ref );
     }
 

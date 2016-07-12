@@ -27,6 +27,8 @@
  *
  */
 
+#include "blast-mgr.h" /* BTableType */
+
 #ifndef _h_insdc_insdc_
 #include <insdc/insdc.h> /* INSDC_coord_len */
 #endif
@@ -68,7 +70,7 @@ typedef enum {
 } EReadIdType;
 
 typedef struct {
-    EReadIdType type;
+    EReadIdType idType;
     uint32_t runBits;
     bool varReadN;
 } ReadIdDesc;
@@ -110,6 +112,14 @@ typedef struct {
     /* WGS */
     const struct VCursor *cursACCESSION;
     uint32_t col_ACCESSION;
+
+    /* SRA_PLATFORM_PACBIO_SMRT : variable read number */
+    const struct VCursor *cursSeq;
+    uint32_t col_READ_FILTER;
+    uint32_t col_READ_LEN;
+    uint32_t col_READ_TYPE;
+    uint32_t col_TRIM_LEN;
+    uint32_t col_TRIM_START;
 } VdbBlastDb;
 
 typedef struct {
@@ -171,6 +181,7 @@ typedef struct {
 
     uint64_t spot; /* 1-based */
     uint32_t read; /* 1-based */
+    uint32_t nReads; /* is variable in SRA_PLATFORM_PACBIO_SMRT */
 
     uint64_t read_id; /* BioReadId in RunSet */
 
@@ -257,10 +268,14 @@ struct VdbBlastRunSet {
     uint64_t maxSeqLen;
 };
 
-rc_t _VTableMakeCursor(const struct VTable *self,
-     const struct VCursor **curs, uint32_t *col_idx, const char *col_name);
+rc_t _VTableMakeCursor(const struct VTable *self, const struct VCursor **curs,
+    uint32_t *col_idx, const char *col_name, const char *acc);
 
-void ReadDescFixReadId(ReadDesc *self);
+rc_t _ReadDescFindNextRead(ReadDesc *self, bool *found);
+VdbBlastStatus _ReadDescFixReadId(ReadDesc *self);
+
+uint64_t _VdbBlastRunAdjustSequencesAmountForAlignments(VdbBlastRun *self,
+    VdbBlastStatus *status);
 
 #ifdef TEST_VdbBlastRunFillReadDesc
 VDB_EXTERN
@@ -271,17 +286,24 @@ uint32_t _VdbBlastRunFillReadDesc(VdbBlastRun *self,
 uint64_t _VdbBlastRunGetNumAlignments(VdbBlastRun *self,
     VdbBlastStatus *status);
 
-uint64_t _VdbBlastRunAdjustSequencesAmountForAlignments(VdbBlastRun *self,
-    VdbBlastStatus *status);
+bool _VdbBlastRunVarReadNum(const VdbBlastRun *self);
 
 uint32_t _RunSetFindReadDesc(const struct RunSet *self,
     uint64_t read_id, ReadDesc *desc);
 
 uint64_t _VdbBlastRunSet2naRead(const VdbBlastRunSet *self,
-    uint32_t *status, uint64_t *read_id, size_t *starting_base,
+    VdbBlastStatus *status, uint64_t *read_id, size_t *starting_base,
     uint8_t *buffer, size_t buffer_size, KVdbBlastReadMode mode);
 
 void _VdbBlastRunSetBeingRead(const VdbBlastRunSet *self);
+
+VdbBlastStatus _VdbBlastRunSetFindFirstRead
+    (const VdbBlastRunSet *self, uint64_t *read_id, bool useGetFirstRead);
+
+uint64_t _VdbBlastRunSetGetAllReads(const VdbBlastRunSet *self, uint32_t run);
+
+EReadIdType _VdbBlastRunSetGetReadIdType(const VdbBlastRunSet *self);
+
 
 #ifdef __cplusplus
 }

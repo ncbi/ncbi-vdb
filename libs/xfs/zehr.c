@@ -48,7 +48,6 @@
 
 #include <sysalloc.h>
 
-#include <string.h>
 #include <ctype.h>
 #include <os-native.h>
 
@@ -71,31 +70,35 @@ XFS_LoadConfig_ZHR (
     TmpConfig = NULL;
     File = NULL;
 
-    if ( Resource == NULL || Config == NULL ) {
-        return XFS_RC ( rcNull );
+        /* Now Resource could be NULL
+         */
+    XFS_CSAN ( Config )
+    XFS_CAN ( Config )
+
+    RCt = KConfigMake ( & TmpConfig, NULL );
+    if ( RCt != 0 ) {
+        return RCt;
     }
 
-    * Config = NULL;
-
-        /* Trying to open resource as file */
-    RCt = XFS_OpenResourceRead_MHR ( Resource, & File );
-    if ( RCt == 0 ) {
-        RCt = KConfigMake (
-                        & TmpConfig,
-                        NULL    /* We need new clear config each time */
-                        );
+    if ( Resource != NULL ) {
+            /* Trying to open resource as file */
+        RCt = XFS_OpenResourceRead_MHR ( Resource, & File );
         if ( RCt == 0 ) {
             RCt = KConfigLoadFile ( TmpConfig, Resource, File );
-            if ( RCt == 0 ) {
-                * Config = TmpConfig;
-            }
-            else {
-                KConfigRelease ( TmpConfig );
-            }
-        }
 
-        KFileRelease ( File );
+            KFileRelease ( File );
+        }
     }
+
+    if ( RCt == 0 ) {
+        * Config = TmpConfig;
+    }
+    else {
+        if ( TmpConfig != NULL ) {
+            KConfigRelease ( TmpConfig );
+        }
+    }
+
     return RCt;
 }   /* XFS_LoadConfig_ZHR () */
 
@@ -251,6 +254,185 @@ XFS_StringCompare4BST_ZHR ( const char * Str1, const char * Str2 )
 
     return strcmp ( Str1, Str2 );
 }   /* XFS_StringCompare4BST_XHR () */
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
+
+static
+rc_t CC
+_NameExtEndPosFromPath (
+                        const char * Path,
+                        const char ** Name,
+                        const char ** Ext,  /* Will be End if No */
+                        const char ** End   /* for Name + Ext */
+)
+{
+    const char * pStart;
+    const char * pEnd;
+    const char * pCurr;
+    const char * pExt;
+
+    pStart = pEnd = pCurr = pExt = NULL;
+
+    XFS_CSAN ( Name )
+    XFS_CSAN ( Ext )
+    XFS_CSAN ( End )
+    XFS_CAN ( Path )
+    XFS_CAN ( Name )
+    XFS_CAN ( Ext )
+    XFS_CAN ( End )
+
+    pStart = Path;
+    pEnd = Path + string_size ( Path );
+    pCurr = pEnd - 1;
+    pExt = pEnd;
+
+    if ( 0 == ( pEnd - pStart ) ) {
+        return XFS_RC ( rcInvalid );
+    }
+
+        /*  Lookin' for name
+         */
+    while ( pStart < pCurr ) {
+        if ( * pCurr == '/' ) {
+            pStart = pCurr + 1;
+            break;
+        }
+
+        pCurr --;
+    }
+
+        /*  Now lookin' for Extention
+         */
+    pCurr = pEnd - 1;
+    while ( pStart < pCurr ) {
+        if ( * pCurr == '.' ) {
+            pExt = pCurr;
+            break;
+        }
+
+        pCurr --;
+    }
+
+    * Name = pStart;
+    * Ext = pExt;
+    * End = pEnd;
+
+    return 0;
+}   /* _NameExtEndPosFromPath () */
+
+/*))
+ ||     Will return name with/without extension
+ ||     It will return new string, so don't forget to delete it
+((*/
+LIB_EXPORT
+rc_t CC
+XFS_NameFromPath_ZHR (
+                    const char * Path,
+                    const char ** Name,
+                    bool TrimExt
+)
+{
+    rc_t RCt;
+    const char * pName;
+    const char * pExt;
+    const char * pEnd;
+    char * RetVal;
+
+    RCt = 0;
+    pName = pExt = pEnd = NULL;
+    RetVal = NULL;
+
+    XFS_CSAN ( Name )
+    XFS_CAN ( Path )
+    XFS_CAN ( Name )
+
+    RCt = _NameExtEndPosFromPath ( Path, & pName, & pExt, & pEnd );
+    if ( RCt == 0 ) {
+
+        RetVal = string_dup (
+                            pName,
+                            ( TrimExt ? pExt : pEnd ) - pName
+                            );
+
+        if ( RetVal == NULL ) {
+            RCt = XFS_RC ( rcExhausted );
+        }
+        else {
+            * Name = RetVal;
+        }
+    }
+
+
+    return RCt;
+}   /* XFS_NameFromPath_ZHR () */
+
+/*))
+ ||     Will return null if Extension does not exists
+ ||     It will return new strings, so don't forget to delete them
+((*/
+LIB_EXPORT
+rc_t CC
+XFS_NameExtFromPath_ZHR (
+                    const char * Path,
+                    const char ** Name,
+                    const char ** Ext
+)
+{
+    rc_t RCt;
+    const char * pName;
+    const char * pExt;
+    const char * pEnd;
+    char * RetName;
+    char * RetExt;
+
+    RCt = 0;
+    pName = pExt = pEnd = NULL;
+    RetName = RetExt = NULL;
+
+    XFS_CSAN ( Name )
+    XFS_CSAN ( Ext )
+    XFS_CAN ( Path )
+    XFS_CAN ( Name )
+    XFS_CAN ( Ext )
+
+    RCt = _NameExtEndPosFromPath ( Path, & pName, & pExt, & pEnd );
+    if ( RCt == 0 ) {
+        RetName = string_dup ( pName, pExt - pName );
+        if ( RetName == NULL ) {
+            RCt = XFS_RC ( rcExhausted );
+        }
+        else {
+            if ( pExt != pEnd ) {
+
+                RetExt = string_dup ( pExt, pEnd - pExt );
+                if ( RetExt == NULL ) {
+                    RCt = XFS_RC ( rcExhausted );
+                }
+            }
+            if ( RCt == 0 ) {
+                * Name = RetName;
+                * Ext = RetExt;
+            }
+        }
+    }
+
+    if ( RCt != 0 ) {
+        * Name = NULL;
+        * Ext = NULL;
+
+        if ( RetName != NULL ) {
+            free ( RetName );
+        }
+
+        if ( RetExt != NULL ) {
+            free ( RetExt );
+        }
+    }
+
+    return RCt;
+}   /* XFS_NameExtFromPath_ZHR () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 

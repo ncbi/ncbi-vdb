@@ -200,7 +200,7 @@ LIB_EXPORT rc_t CC StringPopHead ( String *str, uint32_t *ch )
         else
         {
             if ( str -> len == 0 )
-                rc = RC ( rcText, rcChar, rcRemoving, rcString, rcEmpty );
+                rc = SILENT_RC ( rcText, rcChar, rcRemoving, rcString, rcEmpty );
             else
             {
                 int ch_len = utf8_utf32 ( ch, str -> addr, str -> addr + str -> size );

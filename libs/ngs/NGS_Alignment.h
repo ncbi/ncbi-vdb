@@ -37,6 +37,10 @@ typedef struct NGS_Alignment NGS_Alignment;
 #include "NGS_Fragment.h"
 #endif
 
+#ifndef _h_insdc_sra_
+#include <insdc/sra.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -53,6 +57,18 @@ extern struct NGS_Alignment_v1_vt ITF_Alignment_vt;
 /*--------------------------------------------------------------------------
  * NGS_Alignment
  */
+
+enum NGS_AlignmentFilterBits
+{
+    NGS_AlignmentFilterBits_pass_bad            = 0x01,
+    NGS_AlignmentFilterBits_pass_dups           = 0x02,
+    NGS_AlignmentFilterBits_min_map_qual        = 0x04,
+    NGS_AlignmentFilterBits_max_map_qual        = 0x08,
+    NGS_AlignmentFilterBits_no_wraparound       = 0x10,
+    NGS_AlignmentFilterBits_start_within_window = 0x20,
+
+    NGS_AlignmentFilterBits_map_qual = NGS_AlignmentFilterBits_min_map_qual | NGS_AlignmentFilterBits_max_map_qual
+};
 
  /* ToRefcount
  *  inline cast that preserves const
@@ -80,6 +96,8 @@ struct NGS_String * NGS_AlignmentGetReferenceSpec( NGS_Alignment* self, ctx_t ct
 
 int NGS_AlignmentGetMappingQuality( NGS_Alignment* self, ctx_t ctx );
 
+INSDC_read_filter NGS_AlignmentGetReadFilter ( NGS_Alignment * self, ctx_t ctx );
+
 struct NGS_String* NGS_AlignmentGetReferenceBases( NGS_Alignment* self, ctx_t ctx );
 
 struct NGS_String* NGS_AlignmentGetReadGroup( NGS_Alignment* self, ctx_t ctx );
@@ -95,6 +113,8 @@ struct NGS_String* NGS_AlignmentGetAlignedFragmentBases( NGS_Alignment* self, ct
 bool NGS_AlignmentIsPrimary( NGS_Alignment* self, ctx_t ctx );
 
 int64_t NGS_AlignmentGetAlignmentPosition( NGS_Alignment* self, ctx_t ctx );
+
+uint64_t NGS_AlignmentGetReferencePositionProjectionRange( NGS_Alignment* self, ctx_t ctx, int64_t ref_pos );
 
 uint64_t NGS_AlignmentGetAlignmentLength( NGS_Alignment* self, ctx_t ctx );
 
@@ -143,6 +163,7 @@ struct NGS_Alignment_vt
     struct NGS_String*      ( * getId )                         ( NGS_ALIGNMENT* self, ctx_t ctx );
     struct NGS_String*      ( * getReferenceSpec )              ( NGS_ALIGNMENT* self, ctx_t ctx );
     int                     ( * getMappingQuality )             ( NGS_ALIGNMENT* self, ctx_t ctx );
+    INSDC_read_filter       ( * getReadFilter )                 ( NGS_ALIGNMENT* self, ctx_t ctx );
     struct NGS_String*      ( * getReferenceBases )             ( NGS_ALIGNMENT* self, ctx_t ctx );
     struct NGS_String*      ( * getReadGroup )                  ( NGS_ALIGNMENT* self, ctx_t ctx );
     struct NGS_String*      ( * getReadId )                     ( NGS_ALIGNMENT* self, ctx_t ctx );
@@ -151,6 +172,7 @@ struct NGS_Alignment_vt
     struct NGS_String*      ( * getAlignedFragmentBases )       ( NGS_ALIGNMENT* self, ctx_t ctx );
     bool                    ( * isPrimary )                     ( NGS_ALIGNMENT* self, ctx_t ctx );
     int64_t                 ( * getAlignmentPosition )          ( NGS_ALIGNMENT* self, ctx_t ctx );
+    uint64_t                ( * getReferencePositionProjectionRange )( NGS_ALIGNMENT* self, ctx_t ctx, int64_t ref_pos );
     uint64_t                ( * getAlignmentLength )            ( NGS_ALIGNMENT* self, ctx_t ctx );
     bool                    ( * getIsReversedOrientation )      ( NGS_ALIGNMENT* self, ctx_t ctx );
     int                     ( * getSoftClip )                   ( NGS_ALIGNMENT* self, ctx_t ctx, bool left );
@@ -175,7 +197,7 @@ void NGS_AlignmentInit ( ctx_t ctx, NGS_ALIGNMENT * ref, const NGS_Alignment_vt 
 /* NullAlignment
  * will error out on any call; can be used as an empty alignment iterator
  */
-struct NGS_Alignment * NGS_AlignmentMakeNull ( ctx_t ctx, const struct NGS_String * run_name );
+struct NGS_Alignment * NGS_AlignmentMakeNull ( ctx_t ctx, char const * run_name, size_t run_name_size );
 
 #ifdef __cplusplus
 }

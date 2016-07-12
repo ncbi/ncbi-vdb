@@ -56,13 +56,13 @@
  *  value atomically in "cache" before returning.
  */
 uint32_t VSchemaCacheIntrinsicTypeId ( const VSchema *self,
-    atomic32_t *cache, const char *typename )
+    atomic32_t *cache, const char *type_name )
 {
     uint32_t id;
 
     assert ( self != NULL );
     assert ( cache != NULL );
-    assert ( typename != NULL && typename [ 0 ] != 0 );
+    assert ( type_name != NULL && type_name [ 0 ] != 0 );
 
     /* retrieve cached value */
     id = atomic32_read ( cache );
@@ -79,7 +79,7 @@ uint32_t VSchemaCacheIntrinsicTypeId ( const VSchema *self,
             intrinsic = intrinsic -> dad;
 
         /* find datatype U32 */
-        StringInitCString ( & name, typename );
+        StringInitCString ( & name, type_name );
         sym = ( const KSymbol* )
             BSTreeFind ( & intrinsic -> scope, & name, KSymbolCmp );
         assert ( sym != NULL );
@@ -434,7 +434,7 @@ LIB_EXPORT rc_t CC eval_numeric_expr ( const VSchema *self, const VTypedecl *td,
             return RC ( rcVDB, rcExpression, rcEvaluating, rcType, rcIncorrect );
         break;
     default:
-        return RC ( rcVDB, rcExpression, rcEvaluating, rcType, rcUnexpected );
+        return SILENT_RC ( rcVDB, rcExpression, rcEvaluating, rcType, rcUnexpected );
     }
 
     /* reset dimensions to account for explicit values */

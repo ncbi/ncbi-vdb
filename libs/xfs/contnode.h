@@ -89,6 +89,8 @@ XFS_EXTERN rc_t CC XFSContNodeDelChild (
                             const char * ChildName
                             );
 
+XFS_EXTERN rc_t CC XFSContNodeClear ( struct XFSNode * self );
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

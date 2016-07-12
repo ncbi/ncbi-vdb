@@ -97,6 +97,11 @@ VDB_EXTERN rc_t CC VDBManagerListExternalSchemaModules ( struct VDBManager const
  */
 VDB_EXTERN rc_t CC VDBManagerDisablePagemapThread ( struct VDBManager const *self );
 
+/* DisableFlushThread
+ *  Disable the background cursor flush thread, may be useful when debugging
+ */
+VDB_EXTERN rc_t CC VDBManagerDisableFlushThread ( struct VDBManager *self );
+
 
 /* Make with custom VFSManager */
 VDB_EXTERN rc_t CC VDBManagerMakeReadWithVFSManager (
@@ -188,6 +193,7 @@ VDB_EXTERN rc_t CC VTableListSeededWritableColumns ( struct VTable *self,
  *  avail: 2.5
  */
 VDB_EXTERN bool CC VTableHasStaticColumn ( struct VTable const *self, const char *name );
+VDB_EXTERN bool CC VTableVHasStaticColumn ( struct VTable const *self, const char *name, va_list args );
 
 
 /* VUntypedTableTest
@@ -272,6 +278,9 @@ VDB_EXTERN rc_t CC VCursorIsStaticColumn ( struct VCursor const *self,
 
 VDB_EXTERN rc_t CC VCursorLinkedCursorGet(const struct VCursor *cself,const char *tbl, struct VCursor const **curs);
 VDB_EXTERN rc_t CC VCursorLinkedCursorSet(const struct VCursor *cself,const char *tbl, struct VCursor const *curs);
+
+VDB_EXTERN uint64_t CC VCursorSetCacheCapacity(struct VCursor *self,uint64_t capacity);
+VDB_EXTERN uint64_t CC VCursorGetCacheCapacity(const struct VCursor *self);
 
 
 /*--------------------------------------------------------------------------

@@ -45,9 +45,7 @@
 
 #include <sysalloc.h>
 
-#include <string.h>
 #include <ctype.h>
-#include <stdio.h>
 #include <time.h>
 
 /*||*\
@@ -721,51 +719,6 @@ XFSTarFindOrCreate ( const char * Resource, const struct XFSTar ** Tar )
 }   /* XFSTarFindOrCreate () */
 
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-/* Misk Methods ...                                                  */
-/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
-static
-rc_t CC
-_TarExtractNameFromPath ( const char * Path, const char ** Name )
-{
-    size_t PathSize, Pos, RetSize;
-    char * RetName;
-
-    PathSize = Pos = RetSize = 0;
-    RetName = NULL;
-
-    if ( Name != NULL ) {
-        * Name = NULL;
-    }
-
-    if ( Path == NULL || Name == NULL ) {
-        return XFS_RC ( rcNull );
-    }
-
-    PathSize = Pos = string_size ( Path );
-    while ( 0 < Pos ) {
-        if ( Path [ Pos - 1 ] == '/' ) {
-            break;
-        }
-        Pos --;
-    }
-
-    RetSize = PathSize - Pos + 1;
-
-    RetName = calloc ( RetSize, sizeof ( char ) );
-    if ( RetName == NULL ) {
-        return XFS_RC ( rcExhausted );
-    }
-
-    if ( 1 < RetSize ) {
-        string_copy ( RetName, RetSize, Path + Pos,  PathSize - Pos );
-    }
-
-    * Name = RetName;
-
-    return 0;
-}   /* _TarExtractNameFromPath () */
-
-/*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 /* XFSTarEntry Make/Dispose Methods ...                             */
 /*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*/
 static
@@ -853,7 +806,7 @@ _TarCreateEntry (
 
         RCt = XFS_StrDup ( Path, & ( RetEntry -> path ) );
         if ( RCt == 0 ) {
-            RCt = _TarExtractNameFromPath ( Path, & ( RetEntry -> name ) );
+            RCt = XFS_NameFromPath_ZHR ( Path, & ( RetEntry -> name ), false );
             if ( RCt == 0 ) {
                 KRefcountInit (
                             & ( RetEntry -> refcount ),
@@ -1027,7 +980,7 @@ XFSTarEntryList (
         return XFS_RC ( rcNull );
     }
 
-    if ( ! self -> is_folder || ! self -> status == kxfsGood ) {
+    if ( ! self -> is_folder || ! ( self -> status == kxfsGood ) ) {
         return XFS_RC ( rcInvalid );
     }
 

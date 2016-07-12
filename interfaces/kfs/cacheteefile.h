@@ -145,6 +145,16 @@ KFS_EXTERN rc_t CC GetCacheTruncatedSize( const struct KFile * self, uint64_t * 
  */
 KFS_EXTERN rc_t CC Has_Cache_Zero_Blocks( const struct KFile * self, uint64_t * checked_blocks, uint64_t * empty_blocks );
 
+
+/* -----
+ * checks if the given file is completely cached, self has to be a open cacheteefile
+ *
+ */
+
+KFS_EXTERN rc_t CC IsCacheTeeComplete( const struct KFile * self, bool * complete );
+
+KFS_EXTERN bool CC KFileIsKCacheTeeFile( const struct KFile * self );
+
 #ifdef __cplusplus
 }
 #endif

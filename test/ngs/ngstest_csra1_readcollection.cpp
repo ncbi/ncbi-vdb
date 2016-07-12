@@ -79,7 +79,6 @@ public:
 };
 
 // CSRA1_ReadCollection
-//TODO: CSRA1_ReadCollectionGetReadCount with categories (not in vtable!!)
 
 FIXTURE_TEST_CASE(CSRA1_ReadCollection_Open, CSRA1_Fixture)
 {
@@ -103,12 +102,44 @@ FIXTURE_TEST_CASE(CSRA1_ReadCollection_GetRead, CSRA1_Fixture)
     EXIT;
 }
 
-FIXTURE_TEST_CASE(CSRA1_ReadCollection_GetReadCount, CSRA1_Fixture)
+const uint64_t GetReadCount_Total       = 2280633;
+const uint64_t GetReadCount_Unaligned   =  246555;
+const uint64_t GetReadCount_Aligned     = GetReadCount_Total - GetReadCount_Unaligned; // 2034078
+const uint64_t GetReadCount_FullyAligned = 1953623;
+const uint64_t GetReadCount_PartiallyAligned = GetReadCount_Aligned - GetReadCount_FullyAligned; // 80455
+
+FIXTURE_TEST_CASE(CSRA1_ReadCollection_GetReadCount_All, CSRA1_Fixture)
 {
     ENTRY_ACC( CSRA1_PrimaryOnly );
-    REQUIRE_EQ( (uint64_t)2280633, NGS_ReadCollectionGetReadCount ( m_coll, ctx, true, true, true ) ); 
+    REQUIRE_EQ( GetReadCount_Total, NGS_ReadCollectionGetReadCount ( m_coll, ctx, true, true, true ) ); 
     EXIT;
 }
+FIXTURE_TEST_CASE(CSRA1_ReadCollection_GetReadCount_Unaligned, CSRA1_Fixture)
+{
+    ENTRY_ACC( CSRA1_PrimaryOnly );
+    REQUIRE_EQ( GetReadCount_Unaligned, NGS_ReadCollectionGetReadCount ( m_coll, ctx, false, false, true ) ); 
+    EXIT;
+}
+FIXTURE_TEST_CASE(CSRA1_ReadCollection_GetReadCount_Aligned, CSRA1_Fixture)
+{
+    ENTRY_ACC( CSRA1_PrimaryOnly );
+    REQUIRE_EQ( GetReadCount_Aligned, NGS_ReadCollectionGetReadCount ( m_coll, ctx, true, true, false ) ); 
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_ReadCollection_GetReadCount_FullyAligned, CSRA1_Fixture)
+{
+    ENTRY_ACC( CSRA1_PrimaryOnly );
+    REQUIRE_EQ( GetReadCount_FullyAligned, NGS_ReadCollectionGetReadCount ( m_coll, ctx, true, false, false ) ); 
+    EXIT;
+}
+FIXTURE_TEST_CASE(CSRA1_ReadCollection_GetReadCount_PartiallyAligned, CSRA1_Fixture)
+{
+    ENTRY_ACC( CSRA1_PrimaryOnly );
+    REQUIRE_EQ( GetReadCount_PartiallyAligned, NGS_ReadCollectionGetReadCount ( m_coll, ctx, false, true, false ) ); 
+    EXIT;
+}
+
 
 FIXTURE_TEST_CASE(CSRA1_ReadCollection_GetReads_All, CSRA1_Fixture)
 {
@@ -249,6 +280,27 @@ FIXTURE_TEST_CASE(CSRA1_ReadCollectionGetReadGroup_WithGroups_Found, CSRA1_Fixtu
     ENTRY_ACC(CSRA1_PrimaryOnly);
     m_readGroup = NGS_ReadCollectionGetReadGroup ( m_coll, ctx, "C1ELY.6");
     REQUIRE_NOT_NULL ( m_readGroup );
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_ReadCollectionHasReadGroup_NotFound, CSRA1_Fixture)
+{   
+    ENTRY_ACC(CSRA1_PrimaryOnly);
+    REQUIRE ( ! NGS_ReadCollectionHasReadGroup ( m_coll, ctx, "wontfindme" ) );
+    EXIT;
+}
+    
+FIXTURE_TEST_CASE(CSRA1_ReadCollectionHasReadGroup_WithGroups_DefaultNotFound, CSRA1_Fixture)
+{   
+    ENTRY_ACC(CSRA1_PrimaryOnly);
+    REQUIRE ( ! NGS_ReadCollectionHasReadGroup ( m_coll, ctx, "" ) );
+    EXIT;
+}
+    
+FIXTURE_TEST_CASE(CSRA1_ReadCollectionHasReadGroup_WithGroups_Found, CSRA1_Fixture)
+{   
+    ENTRY_ACC(CSRA1_PrimaryOnly);
+    REQUIRE ( NGS_ReadCollectionHasReadGroup ( m_coll, ctx, "C1ELY.6") );
     EXIT;
 }
 

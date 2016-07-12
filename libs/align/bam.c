@@ -44,9 +44,8 @@
 #include <align/bam.h>
 #include "bam-priv.h"
 
+#include <vfs/manager.h>
 #include <vfs/path.h>
-#include <vfs/path-priv.h>
-#include <kfs/kfs-priv.h>
 
 #include <limits.h>
 #include <stdlib.h>
@@ -963,7 +962,7 @@ static rc_t BAMFileFillBuffer(BAMFile *self)
     if (rc)
         return rc;
     if (self->bufSize == 0 || self->bufSize <= self->bufCurrent)
-        return RC(rcAlign, rcFile, rcReading, rcData, rcInsufficient);
+        return SILENT_RC(rcAlign, rcFile, rcReading, rcData, rcInsufficient);
     return 0;
 }
 
@@ -1792,17 +1791,24 @@ LIB_EXPORT rc_t CC BAMFileMakeWithHeader ( const BAMFile **cself,
     return rc;
 }
 
-
-LIB_EXPORT rc_t CC BAMFileMakeWithVPath(const BAMFile **cself, const VPath *kpath)
+LIB_EXPORT rc_t CC BAMFileMakeWithVPath(const BAMFile **cself, const VPath *path)
 {
-    char path[4096];
-    size_t nread;
-    rc_t rc;
+    VFSManager *vfs = NULL;
+    KFile const *fp = NULL;
+    rc_t rc = 0;
 
-    rc = VPathReadPath(kpath, path, sizeof(path), &nread);
-    if (rc == 0)
-        rc = BAMFileMake(cself, "%.*s", (int)nread, path);
-    return rc;
+    rc = VFSManagerMake(&vfs);
+    if (rc) return rc;
+
+    rc = VFSManagerOpenFileRead(vfs, &fp, path);
+    VFSManagerRelease(vfs);
+    if (rc) return rc;
+
+    rc = BAMFileMakeWithKFile(cself, fp);
+    if (rc) return rc;
+
+    KFileRelease(fp);
+    return 0;
 }
 
 /* MARK: BAM File ref-counting */
@@ -2188,7 +2194,7 @@ static void BAMAlignmentLogParseError(BAMAlignment const *self)
                              : self->qual + getReadLen(self) > self->datasize ? "BAM Record EXTRA too long"
                              : "BAM Record EXTRA parsing failure";
     
-    LOGERR(klogErr, RC(rcAlign, rcFile, rcReading, rcRow, rcInvalid), reason);
+    LOGERR(klogErr, SILENT_RC(rcAlign, rcFile, rcReading, rcRow, rcInvalid), reason);
 }
 
 /* MARK: BAM Alignment readers */
@@ -2217,12 +2223,12 @@ rc_t BAMFileReadNoCopy(BAMFile *const self, unsigned actsize[], BAMAlignment rhs
         if ( GetRCObject( rc ) == (enum RCObject)rcData && GetRCState( rc ) == rcInsufficient )
         {
             self->eof = true;
-            return RC(rcAlign, rcFile, rcReading, rcRow, rcNotFound);
+            return SILENT_RC(rcAlign, rcFile, rcReading, rcRow, rcNotFound);
         }
         return rc;
     }
     if (maxPeek < 4)
-        return RC(rcAlign, rcFile, rcReading, rcBuffer, rcNotAvailable);
+        return SILENT_RC(rcAlign, rcFile, rcReading, rcBuffer, rcNotAvailable);
     else {
         int32_t const i32 = BAMFilePeekI32(self);
 
@@ -2230,7 +2236,7 @@ rc_t BAMFileReadNoCopy(BAMFile *const self, unsigned actsize[], BAMAlignment rhs
             return RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
         
         if (maxPeek < ( uint32_t ) i32 + 4)
-            return RC(rcAlign, rcFile, rcReading, rcBuffer, rcNotAvailable);
+            return SILENT_RC(rcAlign, rcFile, rcReading, rcBuffer, rcNotAvailable);
         
         isgood = BAMAlignmentInitLog(rhs, maxsize, i32, BAMFilePeek(self, 4));
         rhs[0].parent = self;
@@ -2238,7 +2244,7 @@ rc_t BAMFileReadNoCopy(BAMFile *const self, unsigned actsize[], BAMAlignment rhs
     }
     *actsize = BAMAlignmentSize(rhs[0].numExtra);
     if (isgood && *actsize > maxsize)
-        return RC(rcAlign, rcFile, rcReading, rcBuffer, rcInsufficient);
+        return SILENT_RC(rcAlign, rcFile, rcReading, rcBuffer, rcInsufficient);
 
     BAMFileAdvance(self, 4 + rhs->datasize);
     return isgood ? 0 : RC(rcAlign, rcFile, rcReading, rcRow, rcInvalid);
@@ -4174,25 +4180,16 @@ rc_t LoadIndex(BAMFile *self, const uint8_t buf[], size_t blen)
 }
 
 static
-rc_t BAMFileOpenIndexInternal(const BAMFile *self, const char *path)
+rc_t BAMFileOpenIndexKFile(const BAMFile *self, KFile const *kf)
 {
-    const KFile *kf;
     rc_t rc;
     size_t fsize;
     uint8_t *buf;
-    KDirectory *dir;
-    
-    rc = KDirectoryNativeDir(&dir);
-    if (rc) return rc;
-    rc = KDirectoryOpenFileRead(dir, &kf, "%s", path);
-    KDirectoryRelease(dir);
-    if (rc) return rc;
     {
         uint64_t u64;
 
         rc = KFileSize(kf, &u64);
         if (sizeof(size_t) < sizeof(u64) && (size_t)u64 != u64) {
-            KFileRelease(kf);
             return RC(rcAlign, rcIndex, rcReading, rcData, rcExcessive);
         }
         fsize = u64;
@@ -4202,8 +4199,7 @@ rc_t BAMFileOpenIndexInternal(const BAMFile *self, const char *path)
         if (buf != NULL) {
             size_t nread;
             
-            rc = KFileRead(kf, 0, buf, fsize, &nread);
-            KFileRelease(kf);
+            rc = KFileReadAll(kf, 0, buf, fsize, &nread);
             if (rc == 0) {
                 if (nread == fsize) {
                     rc = LoadIndex((BAMFile *)self, buf, nread);
@@ -4222,19 +4218,35 @@ rc_t BAMFileOpenIndexInternal(const BAMFile *self, const char *path)
 
 LIB_EXPORT rc_t CC BAMFileOpenIndex(const BAMFile *self, const char *path)
 {
-    return BAMFileOpenIndexInternal(self, path);
+    const KFile *kf;
+    rc_t rc;
+    KDirectory *dir;
+    
+    rc = KDirectoryNativeDir(&dir);
+    if (rc) return rc;
+    rc = KDirectoryOpenFileRead(dir, &kf, "%s", path);
+    KDirectoryRelease(dir);
+    if (rc) return rc;
+    rc = BAMFileOpenIndexKFile(self, kf);
+    KFileRelease(kf);
+    return rc;
 }
 
-LIB_EXPORT rc_t CC BAMFileOpenIndexWithVPath(const BAMFile *self, const VPath *kpath)
+LIB_EXPORT rc_t CC BAMFileOpenIndexWithVPath(const BAMFile *self, const VPath *path)
 {
-    char path[4096];
-    size_t nread;
-    rc_t rc = VPathReadPath(kpath, path, sizeof(path), &nread);
+    VFSManager *vfs = NULL;
+    KFile const *fp = NULL;
+    rc_t rc = 0;
 
-    if (rc == 0) {
-        path[nread] = '\0';
-        rc = BAMFileOpenIndexInternal(self, path);
-    }
+    rc = VFSManagerMake(&vfs);
+    if (rc) return rc;
+
+    rc = VFSManagerOpenFileRead(vfs, &fp, path);
+    VFSManagerRelease(vfs);
+    if (rc) return rc;
+
+    rc = BAMFileOpenIndexKFile(self, fp);
+    KFileRelease(fp);
     return rc;
 }
 

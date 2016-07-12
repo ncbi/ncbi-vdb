@@ -28,9 +28,17 @@
 #define _h_sra_read_
 
 typedef struct SRA_Read SRA_Read;
-#ifndef _h_ngs_read_
+
+#ifndef NGS_READ
 #define NGS_READ SRA_Read
+#endif
+
+#ifndef _h_ngs_read_
 #include "NGS_Read.h"
+#endif
+
+#ifndef _h_insdc_insdc_
+#include <insdc/insdc.h>
 #endif
 
 #ifdef __cplusplus
@@ -44,10 +52,9 @@ struct NGS_Cursor;
 struct NGS_String;
 
 enum SequenceTableColumn
-{
-    seq_READ_TYPE,
+{   // keep in sync with sequence_col_specs in SRA_Read.c 
     seq_READ,
-    seq_QUALITY_ASCII,
+    seq_READ_TYPE,
     seq_QUALITY,
     seq_READ_LEN,
     seq_NAME,
@@ -56,13 +63,65 @@ enum SequenceTableColumn
     seq_SPOT_COUNT,
 
     seq_NUM_COLS
-};
+};  // keep in sync with sequence_col_specs in SRA_Read.c 
 
 extern const char * sequence_col_specs [];
 
 /*--------------------------------------------------------------------------
  * SRA_Read
  */
+struct SRA_Read
+{
+    NGS_Read dad;   
+    
+    struct NGS_String * run_name;
+    struct NGS_String * group_name; /* if not NULL, only return reads from this read group */
+    
+    int64_t cur_row;
+    int64_t row_max;
+    uint64_t row_count;
+
+    const INSDC_read_type * READ_TYPE;
+    const INSDC_coord_len * READ_LEN;
+    
+    struct NGS_Cursor const * curs;
+
+    uint32_t cur_frag;
+    uint32_t bio_frags;
+    uint32_t frag_idx;
+    uint32_t frag_max;
+    uint32_t frag_start;
+    uint32_t frag_len;
+
+    bool seen_first;
+    bool seen_first_frag;
+    bool seen_last_frag;
+
+    /* read filtering criteria */
+    bool wants_full;
+    bool wants_partial; 
+    bool wants_unaligned;
+};
+
+void                     SRA_ReadWhack ( NGS_READ * self, ctx_t ctx );
+
+struct NGS_String * SRA_FragmentGetId ( NGS_READ * self, ctx_t ctx );
+struct NGS_String * SRA_FragmentGetSequence ( NGS_READ * self, ctx_t ctx, uint64_t offset, uint64_t length );
+struct NGS_String * SRA_FragmentGetQualities ( NGS_READ * self, ctx_t ctx, uint64_t offset, uint64_t length );
+bool                SRA_FragmentIsPaired ( NGS_READ * self, ctx_t ctx );
+bool                SRA_FragmentIsAligned ( NGS_READ * self, ctx_t ctx );
+bool                SRA_FragmentNext ( NGS_READ * self, ctx_t ctx );
+
+struct NGS_String *      SRA_ReadGetId ( NGS_READ * self, ctx_t ctx );
+struct NGS_String *      SRA_ReadGetName ( NGS_READ * self, ctx_t ctx );
+struct NGS_String *      SRA_ReadGetReadGroup ( NGS_READ * self, ctx_t ctx );
+enum NGS_ReadCategory    SRA_ReadGetCategory ( const NGS_READ * self, ctx_t ctx );
+struct NGS_String *      SRA_ReadGetSequence ( NGS_READ * self, ctx_t ctx, uint64_t offset, uint64_t length );
+struct NGS_String *      SRA_ReadGetQualities ( NGS_READ * self, ctx_t ctx, uint64_t offset, uint64_t length );
+uint32_t                 SRA_ReadNumFragments ( NGS_READ * self, ctx_t ctx );
+bool                     SRA_ReadFragIsAligned ( NGS_READ * self, ctx_t ctx, uint32_t frag_idx );
+bool                     SRA_ReadIteratorNext ( NGS_READ * self, ctx_t ctx );
+uint64_t                 SRA_ReadIteratorGetCount ( const NGS_READ * self, ctx_t ctx );    
 
 /* Make
  * a single read

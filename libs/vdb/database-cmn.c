@@ -48,6 +48,7 @@
 #include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/namelist.h>
+#include <klib/log.h>
 #include <sysalloc.h>
 
 #include <stdlib.h>
@@ -360,14 +361,34 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                             /* otherwise, ask resolver to find a local path,
                                or get a remote path and optional place to cache data */
                             rc = VResolverQuery ( resolver, eProtocolHttp, orig, & plocal, & premote, & pcache );
+                            if ( rc != 0 && GetRCState ( rc ) == rcNotFound )
+                            {
+                                rc = VPathAddRef ( orig );
+                                if ( rc == 0 )
+                                {
+                                    plocal = orig;
+                                }
+
+                            }
                         }
                         if ( rc == 0 )
                         {
                             /* now open the principal database */
                             if ( plocal != NULL )
                                 rc = VDBManagerVPathOpenLocalDBRead ( self, dbp, schema, plocal );
-                            else
+                            else if ( premote != NULL )
                                 rc = VDBManagerVPathOpenRemoteDBRead ( self, dbp, schema, premote, pcache );
+                            else
+                            {
+                                /* resolver was unable to resolve this, so perhaps it was
+                                   not an accession or OID, but a simple file name */
+                                rc = VPathAddRef ( orig );
+                                if ( rc == 0 )
+                                {
+                                    plocal = orig;
+                                    rc = VDBManagerVPathOpenLocalDBRead ( self, dbp, schema, plocal );
+                                }
+                            }
                             if ( rc == 0 )
                             {
                                 rc_t rc2;
@@ -402,11 +423,20 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBRead ( const VDBManager *self,
                                                 /* was not found locally - try to get one remotely */
                                                 if ( rc2 == 0 )
                                                 {
+                                                        /* We need suppress error message in the 
+                                                         * case if here any error happened
+                                                         */
+                                                    KLogLevel lvl = KLogLevelGet ();
+                                                    KLogLevelSet ( klogFatal );
                                                     assert ( premote == NULL );
                                                     assert ( pcache == NULL );
                                                     rc2 = VResolverQuery ( resolver, eProtocolHttp, orig, NULL, & premote, & pcache );
                                                     assert ( ( rc2 == 0 ) ||
                                                         ( rc2 != 0 && premote == NULL ) );
+
+                                                        /* Here we are restoring log level
+                                                         */
+                                                    KLogLevelSet ( lvl );
                                                 }
                                             }
                                         }

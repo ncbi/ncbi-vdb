@@ -68,6 +68,15 @@ void push_out(out_s **where, const char *out, int32_t whichpattern)
     *where = newout;
 }
     
+static void free_out ( out_s* self )
+{
+    if ( self != NULL )
+    {
+        out_s* next = self -> nxt;
+        free ( self );
+        free_out ( next );
+    }
+}
 
 struct trie {
     struct trie *next[256];  
@@ -102,7 +111,9 @@ void free_trie(struct trie *self)
             self->next[i] = NULL;
         }
     }
-    free(self);
+    free_out ( self -> outs );
+    free ( self -> debugs );
+    free ( self );
 }
 
 static
@@ -144,7 +155,7 @@ void trie_enter(struct trie *self, int32_t whichpattern, const char *s, int32_t 
             newone->debugs = create_substring(s, i+1);
             newone->depth = i+1;
             newone->hasmatch = 1;
-            memset( newone->next, 0, sizeof( *newone->next ) );
+            memset( newone->next, 0, sizeof( newone->next ) );
             cur->next[c] = newone;
             cur = newone;
         }
@@ -239,12 +250,16 @@ void buildtrie(struct trie **self, const char *strings[], int32_t numstrings)
             minlen = len;
         }
     }
-
+    
     *self = (struct trie *)malloc(sizeof(struct trie));
     for (i=0; i<256; i++) {
         (*self)->next[i] = NULL;
     }
+    (*self)->fail = NULL;
     (*self)->outs = NULL;
+    (*self)->debugs = NULL;
+    (*self)->depth = 0;
+    (*self)->hasmatch = 0;
   
     for (i=0; i<numstrings; i++) {
         trie_enter(*self, i, strings[i], minlen);

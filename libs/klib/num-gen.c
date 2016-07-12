@@ -53,6 +53,7 @@ typedef struct num_gen_node
 struct num_gen
 {
     Vector nodes;
+    bool sorted;
 };
 
 
@@ -60,7 +61,7 @@ struct num_gen_iter
 {
     Vector nodes;
     uint32_t curr_node;
-    uint32_t curr_node_sub_pos;
+    uint64_t curr_node_sub_pos;
     uint64_t total;
     uint64_t progress;
     int64_t min_value;
@@ -113,7 +114,7 @@ static int64_t CC num_gen_insert_helper( const void* item1, const void* item2 )
 
 
 /* helper callback to create a deep and conditional copy of a node-vector */
-static void CC num_gen_copy_cb( void *item, void *data )
+static void CC num_gen_copy_cb_sorted( void *item, void *data )
 {
     num_gen_node * node = item;
     if ( node != NULL && node -> count > 0 )
@@ -128,12 +129,32 @@ static void CC num_gen_copy_cb( void *item, void *data )
     }
 }
 
+static void CC num_gen_copy_cb_unsorted( void *item, void *data )
+{
+    num_gen_node * node = item;
+    if ( node != NULL && node -> count > 0 )
+    {
+        num_gen_node * new_node = num_gen_make_node( node->start, node->count );
+        if ( new_node != NULL )
+        {
+            Vector * dst = data;
+            if ( dst != NULL )
+                VectorAppend( dst, NULL, new_node );
+        }
+    }
+}
+
 
 /* helper function that creates a deep and conditional copy of a node-vector */
-static void num_gen_copy_vector( const Vector * src, Vector * dst )
+static void num_gen_copy_vector( const Vector * src, Vector * dst, bool sorted )
 {
     if ( src != NULL && dst != NULL )
-        VectorForEach ( src, false, num_gen_copy_cb, dst );    
+    {
+        if ( sorted )
+            VectorForEach ( src, false, num_gen_copy_cb_sorted, dst );
+        else
+            VectorForEach ( src, false, num_gen_copy_cb_unsorted, dst );
+    }
 }
 
 
@@ -178,7 +199,12 @@ static rc_t num_gen_add_node( struct num_gen * self, const int64_t from, const i
         if ( node == NULL )
             rc = RC( rcVDB, rcNoTarg, rcInserting, rcMemory, rcExhausted );
         else
-            rc = VectorInsert( &( self -> nodes ), node, NULL, num_gen_insert_helper );
+        {
+            if ( self->sorted )
+                rc = VectorInsert( &( self -> nodes ), node, NULL, num_gen_insert_helper );
+            else
+                rc = VectorAppend( &( self -> nodes ), NULL, node );
+        }
     }
     return rc;
 }
@@ -249,11 +275,59 @@ static rc_t num_gen_convert_and_add_ctx( struct num_gen * self, num_gen_parse_ct
 }
 
 
+static rc_t num_gen_parse_len( struct num_gen * self, const char * src, size_t len )
+{
+    rc_t rc = 0;
+
+    if ( len == 0 )
+        rc = RC( rcVDB, rcNoTarg, rcParsing, rcParam, rcEmpty );
+    else
+    {
+        size_t i;
+        num_gen_parse_ctx parse_ctx;
+
+        parse_ctx . num_str_idx = 0;
+        parse_ctx . this_is_the_first_number = true;
+
+        for ( i = 0; i < len && rc == 0; ++i )
+        {
+            switch ( src[ i ] )
+            {
+            /* a dash switches from N1-mode into N2-mode */
+            case '-' :
+                num_gen_convert_ctx( &parse_ctx );
+                break;
+
+            /* a comma ends a single number or a range */
+            case ',' :
+                rc = num_gen_convert_and_add_ctx( self, &parse_ctx );
+                break;
+
+            /* in both mode add the char to the temp string */
+            default:
+                if ( ( src[ i ] >= '0' ) && ( src[ i ] <= '9' )&&
+                     ( parse_ctx . num_str_idx < MAX_NUM_STR ) )
+                    parse_ctx . num_str[ parse_ctx . num_str_idx ++ ] = src[ i ];
+                break;
+            }
+        }
+
+        /* dont forget to add what is left in ctx.num_str ... */
+        if ( parse_ctx . num_str_idx > 0 )
+            rc = num_gen_convert_and_add_ctx( self, &parse_ctx );
+
+        if ( rc == 0 && self->sorted )
+            rc = num_gen_fix_overlaps( self, NULL );
+    }
+    return rc;
+}
+
+
 /* parse the given string and insert the found ranges 
    into the number-generator, fixes eventual overlaps */
 LIB_EXPORT rc_t CC num_gen_parse( struct num_gen * self, const char * src )
 {
-    rc_t rc = 0;
+    rc_t rc;
 
     if ( self == NULL )
         rc = RC( rcVDB, rcNoTarg, rcParsing, rcSelf, rcNull );
@@ -262,49 +336,24 @@ LIB_EXPORT rc_t CC num_gen_parse( struct num_gen * self, const char * src )
     else if ( src[ 0 ] == 0 )
         rc = RC( rcVDB, rcNoTarg, rcParsing, rcParam, rcEmpty );
     else
-    {
-        size_t n = string_measure ( src, NULL );
-        if ( n == 0 )
-            rc = RC( rcVDB, rcNoTarg, rcParsing, rcParam, rcEmpty );
-        else
-        {
-            size_t i;
-            num_gen_parse_ctx parse_ctx;
+        rc = num_gen_parse_len( self, src, string_measure ( src, NULL ) );
 
-            parse_ctx . num_str_idx = 0;
-            parse_ctx . this_is_the_first_number = true;
+    return rc;
+}
 
-            for ( i = 0; i < n && rc == 0; ++i )
-            {
-                switch ( src[ i ] )
-                {
-                /* a dash switches from N1-mode into N2-mode */
-                case '-' :
-                    num_gen_convert_ctx( &parse_ctx );
-                    break;
 
-                /* a comma ends a single number or a range */
-                case ',' :
-                    rc = num_gen_convert_and_add_ctx( self, &parse_ctx );
-                    break;
+LIB_EXPORT rc_t CC num_gen_parse_S( struct num_gen * self, const String * src )
+{
+    rc_t rc;
 
-                /* in both mode add the char to the temp string */
-                default:
-                    if ( ( src[ i ] >= '0' ) && ( src[ i ] <= '9' )&&
-                         ( parse_ctx . num_str_idx < MAX_NUM_STR ) )
-                        parse_ctx . num_str[ parse_ctx . num_str_idx ++ ] = src[ i ];
-                    break;
-                }
-            }
-
-            /* dont forget to add what is left in ctx.num_str ... */
-            if ( parse_ctx . num_str_idx > 0 )
-                rc = num_gen_convert_and_add_ctx( self, &parse_ctx );
-
-            if ( rc == 0 )
-                rc = num_gen_fix_overlaps( self, NULL );
-        }
-    }
+    if ( self == NULL )
+        rc = RC( rcVDB, rcNoTarg, rcParsing, rcSelf, rcNull );
+    else if ( src == NULL )
+        rc = RC( rcVDB, rcNoTarg, rcParsing, rcParam, rcNull );
+    else if ( src->len == 0 )
+        rc = RC( rcVDB, rcNoTarg, rcParsing, rcParam, rcEmpty );
+    else
+        rc = num_gen_parse_len( self, src->addr, src->len );
 
     return rc;
 }
@@ -323,7 +372,7 @@ LIB_EXPORT rc_t CC num_gen_add( struct num_gen * self, const int64_t first, cons
     else
     {
         rc = num_gen_add_node( self, first, ( first + count ) - 1 );
-        if ( rc == 0 )
+        if ( rc == 0 && self->sorted )
             rc = num_gen_fix_overlaps( self, NULL );
     }
     return rc;
@@ -514,6 +563,29 @@ LIB_EXPORT rc_t CC num_gen_make( struct num_gen ** self )
         else
         {
             VectorInit( &( ng -> nodes ), 0, 5 );
+            ng->sorted = false;
+            *self = ng;
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC num_gen_make_sorted( struct num_gen ** self, bool sorted )
+{
+    rc_t rc = 0;
+
+    if ( self == NULL )
+        rc = RC( rcVDB, rcNoTarg, rcConstructing, rcSelf, rcNull );
+    else
+    {
+        struct num_gen * ng = calloc( 1, sizeof( * ng ) );
+        if ( ng == NULL )
+            rc = RC( rcVDB, rcNoTarg, rcConstructing, rcMemory, rcExhausted );
+        else
+        {
+            VectorInit( &( ng -> nodes ), 0, 5 );
+            ng->sorted = sorted;
             *self = ng;
         }
     }
@@ -538,8 +610,6 @@ LIB_EXPORT rc_t CC num_gen_make_from_str( struct num_gen ** self, const char * s
         if ( rc == 0 )
         {
             rc = num_gen_parse( temp, src );
-            if ( rc == 0 )
-                rc = num_gen_fix_overlaps( temp, NULL );
         }
         if ( rc == 0 )
             *self = temp;
@@ -552,6 +622,35 @@ LIB_EXPORT rc_t CC num_gen_make_from_str( struct num_gen ** self, const char * s
     return rc;
 }
 
+
+LIB_EXPORT rc_t CC num_gen_make_from_str_sorted( struct num_gen ** self, const char * src, bool sorted )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC( rcVDB, rcNoTarg, rcConstructing, rcSelf, rcNull );
+    else if ( src == NULL || src[ 0 ] == 0 )
+    {
+        *self = NULL;
+        rc = RC( rcVDB, rcNoTarg, rcConstructing, rcSelf, rcNull );
+    }
+    else
+    {
+        struct num_gen * temp;
+        rc = num_gen_make_sorted( &temp, sorted );
+        if ( rc == 0 )
+        {
+            rc = num_gen_parse( temp, src );
+        }
+        if ( rc == 0 )
+            *self = temp;
+        else
+        {
+            *self = NULL;
+            num_gen_destroy( temp );
+        }
+    }
+    return rc;
+}
 
 LIB_EXPORT rc_t CC num_gen_make_from_range( struct num_gen ** self, int64_t first, uint64_t count )
 {
@@ -842,12 +941,12 @@ LIB_EXPORT rc_t CC num_gen_range_check( struct num_gen * self, const int64_t fir
 
 LIB_EXPORT rc_t CC num_gen_copy( const struct num_gen * self, struct num_gen ** dest )
 {
-	rc_t rc = num_gen_make( dest );
-	if ( rc == 0 )
-	{
-		num_gen_copy_vector( &( self -> nodes ), &( ( *dest ) -> nodes ) );
-	}
-	return rc;
+    rc_t rc = num_gen_make( dest );
+    if ( rc == 0 )
+    {
+        num_gen_copy_vector( &( self -> nodes ), &( ( *dest ) -> nodes ), self->sorted );
+    }
+    return rc;
 }
 
 
@@ -900,7 +999,7 @@ LIB_EXPORT rc_t CC num_gen_iterator_make( const struct num_gen * self, const str
             else
             {
                 VectorInit( &( temp -> nodes ), 0, count );
-                num_gen_copy_vector( &( self -> nodes ), &( temp -> nodes ) );
+                num_gen_copy_vector( &( self -> nodes ), &( temp -> nodes ), self->sorted );
                 temp -> total = num_gen_total_count( &( temp -> nodes ) );
                 temp -> min_value = min_vector_value( &( temp -> nodes ) );
                 temp -> max_value = max_vector_value( &( temp -> nodes ) );
@@ -965,7 +1064,7 @@ LIB_EXPORT bool CC num_gen_iterator_next( const struct num_gen_iter * self, int6
                     /* the node is a number range, add the sub-position */
                     *value = node -> start + temp -> curr_node_sub_pos;
                     ( temp -> curr_node_sub_pos )++;
-                    /* if the sub-positions are use up, switch to next node */
+                    /* if the sub-positions are used up, switch to next node */
                     if ( temp -> curr_node_sub_pos >= node -> count )
                     {
                         ( temp -> curr_node )++;

@@ -32,13 +32,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   
-  <ItemGroup>
-    <ClCompile Include="..\..\..\libs\kapp\args.c" />
-    <ClCompile Include="..\..\..\libs\kapp\main.c" />
-    <ClCompile Include="..\..\..\libs\kapp\tokenizer.c" />
-    <ClCompile Include="..\..\..\libs\kapp\win\ram.c" />
-    <ClCompile Include="..\..\..\libs\kapp\win\sysmain.c" />
-  </ItemGroup>
+  <Import Project="..\kapp.files" />  
   
   <PropertyGroup Label="Globals">
     <ProjectGuid>{6964A483-0F5F-459E-AA32-96927BDFB46F}</ProjectGuid>

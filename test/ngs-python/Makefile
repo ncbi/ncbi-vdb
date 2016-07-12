@@ -32,12 +32,26 @@ ALL_TARGS = \
 
 include $(TOP)/build/Makefile.env
 
+
+# make sure runs are not cached in the user repository when running tests
+ifeq ($(wildcard ../../../asm-trace),)
+	ifeq (,$(VDB_CONFIG))
+		VDB_CONFIG = $(shell pwd)/../only-remote-repository.kfg
+	endif
+endif
+
+
 #-------------------------------------------------------------------------------
 # runtests
 #
 runtests: pytest
 
 pytest:
-	python tests.py
+	python -c "from ngs import NGS" \
+		&& export VDB_CONFIG=$(VDB_CONFIG) ; export NGS_PY_DOWNLOAD_LIBRARY=0; \
+			unset NGS_PY_LIBRARY_PATH; \
+			export LD_LIBRARY_PATH=$(LIBDIR):$(NGS_LIBDIR):$$LD_LIBRARY_PATH; \
+			python tests.py \
+		|| echo "NGS Python tests are not run since ngs module does not appear to be installed"
 
 .PHONY: pytest

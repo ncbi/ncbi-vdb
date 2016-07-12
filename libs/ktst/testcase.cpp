@@ -28,12 +28,12 @@
 
 #include <klib/printf.h> 
 
+#include <cstring> // strlen
+#include <ctime> // time
+
 using namespace ncbi::NK;
 
-TestCase::TestCase(const char* name) 
-: _name(name), _ec(0) 
-{
-}
+void TestCase::Init(const char* name)  { _name = name; _ec = 0; } 
 
 void TestCase::report_error(const char* msg, const char* file, int line, bool is_msg, bool isCritical)
 {
@@ -90,6 +90,19 @@ void TestCase::report_rc(rc_t rc, const char* callStr, const char* file, int lin
         {
             report_error("***error message too large to print***", file, line, true, isCritical);
         }
+    }
+    else {
+        ncbi::NK::saveLocation(file, line);
+        time_t t = time(NULL);
+        char *pp = ctime(&t);
+        size_t s = strlen(pp);
+        if (s > 0) {
+            --s;
+        }
+        pp[s] = '\0';
+        LOG(LogLevel::e_all, file << "(" << line << "): [" << pp
+            << "] info: " "check " << callStr << " "
+            << (successExpected ? "=" : "!") << "= 0 passed" << std::endl);
     }
 }
 
