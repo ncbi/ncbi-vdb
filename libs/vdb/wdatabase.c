@@ -417,7 +417,7 @@ LIB_EXPORT rc_t CC VDatabaseVOpenDBUpdate ( VDatabase *self, VDatabase **dbp,
             rc = RC ( rcVDB, rcDatabase, rcOpening, rcDatabase, rcReadonly );
         else
         {
-            rc = VDatabaseMake ( dbp, NULL, self, self -> schema );
+            rc = VDatabaseMake ( dbp, self -> mgr, self, self -> schema );
             if ( rc == 0 )
             {
                 VDatabase *db = * dbp;

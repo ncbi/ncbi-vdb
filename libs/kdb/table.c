@@ -306,6 +306,9 @@ LIB_EXPORT rc_t CC KDatabaseVOpenTableRead ( const KDatabase *self,
     if ( self == NULL )
         return RC ( rcDB, rcDatabase, rcOpening, rcSelf, rcNull );
 
+    if ( name == NULL )
+        return RC ( rcDB, rcDatabase, rcOpening, rcParam, rcNull );
+
     rc = KDBVMakeSubPath ( self -> dir,
         path, sizeof path, "tbl", 3, name, args );
     if ( rc == 0 )
