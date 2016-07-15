@@ -27,8 +27,6 @@ The NCBI SRA Software Development Kit
 Contact: sra-tools@ncbi.nlm.nih.gov
 
 
-<<<<<<< HEAD
-=======
 NCBI External Developer Release: NCBI VDB 2.7.0
 July 12, 2016
 
@@ -47,7 +45,6 @@ July 12, 2016
   vdb: fixed a bug in the code used to iterate over blobs where rowmap expansion cache would reset iteration to initial row instead of respecting sequence
   vfs: environment variable VDB_PWFILE is no longer used
 
->>>>>>> 2.7.0rc
 
 NCBI External Developer Release: NCBI VDB 2.6.3
 May 25, 2016
