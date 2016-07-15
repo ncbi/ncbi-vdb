@@ -21,14 +21,8 @@
   
   <Import Project=".\lib-project.props" />  
   
-  <ItemGroup>
-    <ClCompile Include="..\..\..\libs\loader\alignment-writer.c" />
-    <ClCompile Include="..\..\..\libs\loader\common-reader.c" />
-    <ClCompile Include="..\..\..\libs\loader\common-writer.c" />
-    <ClCompile Include="..\..\..\libs\loader\mmarray.c" />
-    <ClCompile Include="..\..\..\libs\loader\reference-writer.c" />
-    <ClCompile Include="..\..\..\libs\loader\sequence-writer.c" />
-  </ItemGroup>
+  <Import Project="..\loader.files" />  
+
 
   <PropertyGroup Label="Globals">
     <ProjectGuid>{353472F0-8B23-4DD4-B8FA-F73E0548B5D8}</ProjectGuid>

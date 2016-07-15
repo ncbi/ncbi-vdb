@@ -51,6 +51,8 @@
 #include <endian.h>
 
 
+#define BLOB_VALIDATION 1
+
 /*--------------------------------------------------------------------------
  * KMDataNode
  */
@@ -407,16 +409,39 @@ rc_t VPhysicalReadKColumn ( VPhysical *self, VBlob **vblob, int64_t id, uint32_t
     rc = KColumnOpenBlobRead ( self -> kcol, & kblob, id );
     if ( rc == 0 )
     {
-        /* get blob size */
-        size_t num_read, remaining;
-        rc = KColumnBlobRead ( kblob, 0, NULL, 0, & num_read, & remaining );
+        /* get blob id range */
+        uint32_t count;
+        int64_t start_id;
+
+        rc = KColumnBlobIdRange ( kblob, & start_id, & count );
         if ( rc == 0 )
         {
-            /* get blob id range */
-            uint32_t count;
-            int64_t start_id;
-            rc = KColumnBlobIdRange ( kblob, & start_id, & count );
+            /* get blob size */
+            size_t num_read, remaining;
+
+#if BLOB_VALIDATION
+            KDataBuffer whole_blob;
+            KColumnBlobCSData cs_data;
+            bool validate_this_blob = self -> curs -> tbl -> blob_validation;
+
+            if ( rc == 0 && validate_this_blob )
+            {
+                rc = KColumnBlobReadAll ( kblob, & whole_blob, & cs_data, sizeof cs_data );
+                /* simulate the results of next read */
+                num_read = 0;
+                remaining = KDataBufferBytes ( & whole_blob );
+            }
+            else if ( rc == 0 && !validate_this_blob )
+#endif
+                rc = KColumnBlobRead ( kblob, 0, NULL, 0, & num_read, & remaining );
+
             if ( rc == 0 )
+#if BLOB_VALIDATION
+                if ( validate_this_blob )
+                    rc = KColumnBlobValidateBuffer ( kblob, & whole_blob, & cs_data, sizeof cs_data );
+            if ( rc == 0 )
+#endif
+
             {
                 KDataBuffer buffer;
 
@@ -427,14 +452,34 @@ rc_t VPhysicalReadKColumn ( VPhysical *self, VBlob **vblob, int64_t id, uint32_t
                 if ( self -> no_hdr )
                     num_read = 2;
 
+#if BLOB_VALIDATION
+                /* if already have a header, just steal the buffer */
+                else if ( validate_this_blob )
+                {
+                    buffer = whole_blob;
+                    memset ( & whole_blob, 0, sizeof whole_blob );
+                }
+
+                /* test again to see if the buffer should be made */
+                if ( self -> no_hdr || !validate_this_blob )
+#endif
                 /* create data buffer */
                 rc = KDataBufferMakeBytes ( & buffer, num_read + remaining );
                 if ( rc == 0 )
                 {
                     /* read entire blob */
                     uint8_t *p = buffer . base;
+#if BLOB_VALIDATION
+                    if ( validate_this_blob )
+                    {
+                        if ( self -> no_hdr )
+                            memcpy ( & p [ num_read ], whole_blob . base, remaining );
+                    }
+                    else
+#endif
                     rc = KColumnBlobRead ( kblob, 0,
                         & p [ num_read ], remaining, & num_read, & remaining );
+
                     if ( rc == 0 )
                     {
                         if ( self -> no_hdr )
@@ -459,6 +504,11 @@ rc_t VPhysicalReadKColumn ( VPhysical *self, VBlob **vblob, int64_t id, uint32_t
                     KDataBufferWhack ( & buffer );
                 }
             }
+
+#if BLOB_VALIDATION
+            if ( validate_this_blob )
+                KDataBufferWhack ( & whole_blob );
+#endif
         }
 
         KColumnBlobRelease ( kblob );

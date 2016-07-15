@@ -41,7 +41,8 @@ clean: stdclean
 # test-loader
 #
 TEST_LOADER_SRC = \
-	loadertest 
+	loadertest \
+	sequence-writer
 
 TEST_LOADER_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_LOADER_SRC))
@@ -49,7 +50,6 @@ TEST_LOADER_OBJ = \
 TEST_LOADER_LIB = \
 	-skapp \
     -sktst \
-    -sloader \
     -sncbi-wvdb \
     -sload \
 

@@ -71,6 +71,8 @@
 #include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/refcount.h>
+#include <klib/namelist.h>
+#include <klib/vector.h>
 
 #include <strtol.h>
 
@@ -3207,3 +3209,118 @@ LIB_EXPORT rc_t CC VFSManagerGetObjectId(const struct VFSManager* self, const st
     return rc;
 }
 
+
+static const char * default_path_key = "/repository/user/default-path";
+
+LIB_EXPORT rc_t CC VFSManagerGetCacheRoot ( const VFSManager * self,
+    struct VPath const ** path )
+{
+    rc_t rc;
+    if ( path == NULL )
+        rc = RC ( rcVFS, rcMgr, rcListing, rcParam, rcNull );
+    else
+    {
+        * path = NULL;
+        if ( self == NULL )
+            rc = RC ( rcVFS, rcMgr, rcListing, rcSelf, rcNull );
+        else if ( self -> cfg == NULL )
+            rc = RC ( rcVFS, rcMgr, rcListing, rcItem, rcNull );
+        else
+        {
+            struct String * spath;
+            rc = KConfigReadString ( self -> cfg, default_path_key, &spath );
+            if ( rc == 0 )
+            {
+                struct VPath * vp;
+                rc = VFSManagerMakePath ( self, &vp, "%S", spath );
+                if ( rc == 0 )
+                    *path = vp;
+                StringWhack( spath );
+            }
+        }
+    }
+    return rc;
+}
+
+
+/*
+    repo-path for instance '/repository/user/main/public'
+    read $(repo-path)/root, put it into frozen-list ( if is not already there )
+    write $(repository/user/default-path)/public as value into it ( just in case )
+*/
+static const char * indirect_root = "$(repository/user/default-path)/%s";
+
+LIB_EXPORT rc_t CC VFSManagerSetCacheRoot ( const VFSManager * self,
+    struct VPath const * path )
+{
+    rc_t rc;
+    if ( path == NULL )
+        rc = RC ( rcVFS, rcMgr, rcSelecting, rcParam, rcNull );
+    else if ( self == NULL )
+        rc = RC ( rcVFS, rcMgr, rcSelecting, rcSelf, rcNull );
+    else if ( self -> cfg == NULL )
+        rc = RC ( rcVFS, rcMgr, rcSelecting, rcItem, rcNull );
+    else
+    {
+        /* loop through the user-repositories to set the root property to the indirect path */
+        KRepositoryMgr * repo_mgr;
+        rc = KConfigMakeRepositoryMgrUpdate ( self -> cfg, &repo_mgr );
+        if ( rc == 0 )
+        {
+            KRepositoryVector user_repos;
+            rc = KRepositoryMgrUserRepositories ( repo_mgr, &user_repos );
+            if ( rc == 0 )
+            {
+                uint32_t start = VectorStart( &user_repos );
+                uint32_t count = VectorLength( &user_repos );
+                uint32_t idx;
+                for ( idx = 0; rc == 0 && idx < count; ++idx )
+                {
+                    KRepository * repo = VectorGet ( &user_repos, idx + start );
+                    if ( repo != NULL )
+                    {
+                        /* ask the repository to add it's current root to the root-history */
+                        rc = KRepositoryAppendToRootHistory( repo, NULL );
+                        if ( rc == 0 )
+                        {
+                            char repo_name[ 512 ];
+                            size_t repo_name_len;
+                            rc = KRepositoryName( repo, repo_name, sizeof repo_name, &repo_name_len );
+                            if ( rc == 0 )
+                            {
+                                char new_root[ 1024 ];
+                                size_t num_writ;
+                                repo_name[ repo_name_len ] = 0;
+                                rc = string_printf( new_root, sizeof new_root, &num_writ, indirect_root, repo_name );
+                                if ( rc == 0 )
+                                    rc = KRepositorySetRoot( repo, new_root, string_size( new_root ) );
+                            }
+                        }
+                    }
+                }
+                KRepositoryVectorWhack ( &user_repos );
+            }
+            KRepositoryMgrRelease ( repo_mgr );
+        }
+
+        /* write the new indirect path */
+        if ( rc == 0 )
+        {
+            String const * spath = NULL;
+            rc = VPathMakeString ( path, &spath );
+            if ( rc == 0 )
+            {
+                rc = KConfigWriteSString( self -> cfg, default_path_key, spath );
+                StringWhack( spath );
+                /*
+                    we do not commit, because ticket VDB-3060: 
+                    GBench wants to change the cache-root, but to automatically revert to previous value
+                    when GBench exits, this is achieved by not commiting here.
+                if ( rc == 0 )
+                    rc = KConfigCommit ( self -> cfg );
+                */
+            }
+        }
+    }
+    return rc;
+}

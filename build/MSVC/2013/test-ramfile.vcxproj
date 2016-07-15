@@ -27,8 +27,6 @@
     </Link>
   </ItemDefinitionGroup>
   
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\kfs\ramfiletest.cpp" />
-  </ItemGroup>
+  <Import Project="..\test-ramfile.files" />
   
 </Project>

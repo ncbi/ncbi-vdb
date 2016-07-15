@@ -85,6 +85,7 @@ struct RefSeq_RefSeq {
 struct RefSeq_WGS {
     TableReaderWGS const *reader;
     int64_t row;
+    unsigned prefixLen; /* e.g. AFNW01000001; common prefix is 'AFNW01' */
     char name[1];
 };
 
@@ -249,11 +250,26 @@ static RefSeq *RefSeq_WGS_init(RefSeq *const super,
                                 char const name[])
 {
     struct RefSeq_WGS *const self = &super->u.wgs;
+    unsigned prefixLen = 0;
+    unsigned digits = 0;
     
+    while (prefixLen < namelen && digits < 2) {
+        int const ch = name[prefixLen];
+        if (isdigit(ch))
+            ++digits;
+        else
+            digits = 0;
+        ++prefixLen;
+    }
+    assert(digits == 2);
+    assert(prefixLen > 0);
+    assert(prefixLen < namelen);
+
     memcpy(self->name, name, namelen);
-    self->name[namelen] = '\0';
+    self->name[prefixLen] = '\0';
+    self->prefixLen = prefixLen;
     super->mgr = mgr;
-    
+
     return super;
 }
 
@@ -302,15 +318,12 @@ static rc_t RefSeq_RefSeq_setRow(RefSeq *const super,
 static rc_t RefSeq_WGS_setRow(RefSeq *const super,
                               unsigned const N, char const name[])
 {
+    struct RefSeq_WGS *const self = &super->u.wgs;
     unsigned i;
-    unsigned alen = 0;
     int64_t row = 0;
-    
-    for (i = 0; i < N && i < alen + 2; ++i) {
-        if (isalpha(name[i]))
-            alen = i + 1;
-    }
-    for ( ; i < N; ++i) {
+
+    assert(strncmp(name, self->name, self->prefixLen) == 0);
+    for (i = self->prefixLen; i < N; ++i) {
         int const ch = name[i];
         
         if (isdigit(ch))
@@ -323,7 +336,7 @@ static rc_t RefSeq_WGS_setRow(RefSeq *const super,
         }
     }
     if (row) {
-        super->u.wgs.row = row;
+        self->row = row;
         return 0;
     }
     return RC(rcAlign, rcTable, rcAccessing, rcRow, rcInvalid);
@@ -401,31 +414,20 @@ static int RefSeq_RefSeq_compare(RefSeq const *super,
 
 static int RefSeq_WGS_compare(RefSeq const *super, unsigned const qlen, char const qry[])
 {
-    char const *const fnd = super->u.wgs.name;
+    struct RefSeq_WGS const *const self = &super->u.wgs;
+    char const *const fnd = self->name;
+    unsigned const prefixLen = self->prefixLen;
     unsigned i;
-    unsigned alen = 0;
-    
-    for (i = 0; ; ) {
-        int const a = i == qlen ? '\0' : qry[i];
-        int const b = fnd[i];
-        
-        ++i;
-        if (isalpha(b))
-            alen = i + 1;
-        
-        if (i == alen + 2)
-            break;
-        
-        if (a < b)
-            return -1;
-        
-        if (b < a)
-            return 1;
 
-        if (a == 0)
-            break;
+    for (i = 0; i < prefixLen && i < qlen; ++i) {
+        int const a = qry[i];
+        int const b = fnd[i];
+        int const diff = a - b;
+
+        if (diff != 0)
+            return diff;
     }
-    return 0;
+    return i == prefixLen ? 0 : qry[i];
 }
 
 static unsigned FindAccession(unsigned const N,

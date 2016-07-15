@@ -27,7 +27,5 @@
       <AdditionalDependencies>$(VDB_TARGET)lib\ncbi-vdb.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\vfs\pathtest.cpp" />
-  </ItemGroup>
+  <Import Project="..\test-path.files" />
 </Project>

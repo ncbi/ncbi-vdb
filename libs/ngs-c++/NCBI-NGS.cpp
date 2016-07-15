@@ -33,8 +33,7 @@
 #include <ngs/itf/ReadCollectionItf.h>
 #include <ngs/itf/ReferenceSequenceItf.h>
 #include "NCBI-NGS.h"
-
-#include "../kns/libkns.vers.h"
+#include "../klib/release-vers.h"
 
 namespace ncbi
 {
@@ -56,7 +55,7 @@ namespace ncbi
         if ( rc == 0 )
         {
             have_user_version_string = true;
-            KNSManagerSetUserAgent ( kns, "ncbi-ngs.%V %.*s", LIBKNS_VERS, ( uint32_t ) app_version . size (), app_version . data () );
+            KNSManagerSetUserAgent ( kns, "ncbi-ngs.%V %.*s", RELEASE_VERS, ( uint32_t ) app_version . size (), app_version . data () );
             KNSManagerRelease ( kns );
         }
     }

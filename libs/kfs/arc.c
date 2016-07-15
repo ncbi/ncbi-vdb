@@ -46,6 +46,9 @@
 #include <kfs/file.h>
 #include <kfs/toc.h>
 #include <kfs/sra.h>
+#include <kfs/cacheteefile.h>
+
+#include <kns/http.h>
 
 #include <sysalloc.h>
 
@@ -4068,6 +4071,17 @@ rc_t KArcDirPersistHeader (const KArcDir * self,
     }
  
     return rc;
+}
+
+KFS_EXTERN bool CC KDirectoryIsKArcDir ( const KDirectory * self )
+{
+    return self != NULL && &self -> vt -> v1 == &vtKArcDir;
+}
+
+KFS_EXTERN bool CC KArcDirIsFromRemote ( const KArcDir * self )
+{
+    return self != NULL && self -> arctype == tocKFile &&
+            ( KFileIsKCacheTeeFile ( self -> archive . f ) || KFileIsKHttpFile ( self -> archive . f ) );
 }
 
 

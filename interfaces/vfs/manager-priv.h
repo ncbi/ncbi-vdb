@@ -126,6 +126,25 @@ VFS_EXTERN rc_t CC VFSManagerSetResolver
     ( struct VFSManager * self, struct VResolver * resolver );
 
 
+/* GetCacheRoot
+ *  query the cache-root
+ *
+ *  path [ OUT ] - VPath of location of current cache-root
+ */
+VFS_EXTERN rc_t CC VFSManagerGetCacheRoot ( const struct VFSManager * self,
+    struct VPath const ** path );
+
+
+/* SetCacheRoot
+ *  set a new cache-root
+ *
+ *  path [ IN ] - VPath of new location of cache-root
+ */
+
+VFS_EXTERN rc_t CC VFSManagerSetCacheRoot ( const struct VFSManager * self,
+    struct VPath const * path );
+    
+
 #ifdef __cplusplus
 }
 #endif

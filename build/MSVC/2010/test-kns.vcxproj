@@ -37,10 +37,8 @@
     </ClCompile>
   </ItemDefinitionGroup>
   
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\kns\knstest.cpp" />
-  </ItemGroup>
-  
+  <Import Project="..\test-kns.files" />  
+
   <PropertyGroup Label="Globals">
     <ProjectGuid>{FC91CF87-4852-42FD-BD18-7D82E52A8AF5}</ProjectGuid>
   </PropertyGroup>

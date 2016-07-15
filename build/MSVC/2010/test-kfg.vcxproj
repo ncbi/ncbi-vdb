@@ -31,8 +31,7 @@
     </Link>
   </ItemDefinitionGroup>
   
-  <ItemGroup>
-    <ClCompile Include="..\..\..\test\kfg\kfgtest.cpp" />
-  </ItemGroup>
+  <Import Project="..\test-kfg.files" />  
+
   
 </Project>

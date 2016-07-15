@@ -358,6 +358,176 @@ LIB_EXPORT rc_t CC KRepositorySetRoot(KRepository *self,
     return rc;
 }
 
+
+const char root_history_key[] = "root/history";
+
+/* RootHistory
+ *  read the root-history as a semicolon separated list of POSIX paths
+ *
+ *  attempts to copy NUL-terminated path into provided buffer
+ *
+ *  "buffer" [ OUT ] and "bsize" [ IN ] - path output parameter
+ *
+ *  "roothistory_size" [ OUT, NULL OKAY ] - returns the root-history
+ *  size in bytes, excluding any NUL termination.
+ */
+LIB_EXPORT rc_t CC KRepositoryRootHistory ( const KRepository *self,
+    char *buffer, size_t bsize, size_t *roothistory_size )
+{
+    rc_t rc;
+
+    if ( self == NULL )
+        rc = RC ( rcKFG, rcNode, rcAccessing, rcSelf, rcNull );
+    else
+    {
+        const KConfigNode *node;
+
+        if ( roothistory_size != NULL )
+            * roothistory_size = 0;
+
+        rc = KConfigNodeOpenNodeRead ( self -> node, & node, root_history_key );
+        if ( rc == 0 )
+        {
+            size_t num_read, remaining;
+            rc = KConfigNodeRead ( node, 0, buffer, bsize, & num_read, & remaining );
+            KConfigNodeRelease ( node );
+
+            if ( rc == 0 )
+            {
+                if ( roothistory_size != NULL )
+                    * roothistory_size = num_read + remaining;
+
+                if ( remaining != 0 )
+                    rc = RC ( rcKFG, rcNode, rcAccessing, rcBuffer, rcInsufficient );
+                else if ( num_read < bsize )
+                    buffer [ num_read ] = 0;
+            }
+        }
+    }
+
+    return rc;
+
+}
+
+
+/* SetRootHistory
+ *  set the root-history list of paths
+ *
+ *  "roothistory" [ IN ] and "roothistory_size" [ IN ] - path input parameter
+ */
+LIB_EXPORT rc_t CC KRepositorySetRootHistory( KRepository *self,
+    const char *roothistory, size_t roothistory_size )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        return RC(rcKFG, rcNode, rcUpdating, rcSelf, rcNull);
+    else if ( roothistory == NULL )
+        return RC(rcKFG, rcNode, rcUpdating, rcParam, rcNull);
+    else
+    {
+        KConfigNode *self_node = ( KConfigNode* )self->node;
+        KConfigNode *node = NULL;
+
+        rc = KConfigNodeOpenNodeUpdate( self_node, &node, root_history_key );
+        if ( rc == 0 )
+        {
+            rc = KConfigNodeWrite( node, roothistory, roothistory_size );
+            KConfigNodeRelease( node );
+        }
+    }
+    return rc;
+}
+
+
+static rc_t append_to_root_history( KRepository *self, const char *item )
+{
+    size_t required;
+    rc_t rc = KRepositoryRootHistory( self, NULL, 0, &required );
+    if ( GetRCState( rc ) == rcNotFound && GetRCObject( rc ) == ( enum RCObject ) rcPath )
+    {
+        /* we do not have a root-history yet */
+        rc = KRepositorySetRootHistory( self, item, string_size( item ) );
+    }
+    else if ( GetRCState( rc ) == rcInsufficient && GetRCObject( rc ) == ( enum RCObject ) rcBuffer )
+    {
+        /* we expect the buffer to be insufficient, because we tested for size by giving a NULL as buffer */
+        char * temp = malloc( required + 1 );
+        if ( temp == NULL )
+            rc = RC( rcKFG, rcNode, rcUpdating, rcMemory, rcExhausted );
+        else
+        {
+            rc = KRepositoryRootHistory( self, temp, required, NULL );
+            if ( rc == 0 )
+            {
+                VNamelist * list;
+                temp[ required ] = 0;
+                rc = VNamelistFromStr ( &list, temp, ':' );
+                if ( rc == 0 )
+                {
+                    int32_t idx;
+                    rc = VNamelistContainsStr( list, item, &idx );
+                    if ( rc == 0 && idx < 0 )
+                    {
+                        rc = VNamelistAppend ( list, item );
+                        if ( rc == 0 )
+                        {
+                            const String * new_value;
+                            rc = VNamelistJoin( list, ':', &new_value );
+                            if ( rc == 0 )
+                            {
+                                rc = KRepositorySetRootHistory( self, new_value -> addr, new_value -> size );
+                                StringWhack( new_value );
+                            }
+                        }
+                    }
+                    VNamelistRelease ( list );
+                }
+            }
+            free( temp );
+        }
+    }
+    return rc;
+}
+
+
+/* AppendToRootHistory
+ *  append to the root-history
+ *
+ *  "roothistory" [ IN ] and "roothistory_size" [ IN ] - path input parameter
+ *  if item == NULL, add the current root to the root-history 
+ */
+LIB_EXPORT rc_t CC KRepositoryAppendToRootHistory( KRepository *self, const char *item )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        return RC( rcKFG, rcNode, rcUpdating, rcSelf, rcNull );
+    else if ( item == NULL )
+    {
+        size_t curr_root_size;
+        rc = KRepositoryRoot( self, NULL, 0, &curr_root_size );
+        if ( GetRCState( rc ) == rcInsufficient && GetRCObject( rc ) == ( enum RCObject ) rcBuffer )
+        {
+            char * root = malloc( curr_root_size + 1 );
+            if ( root == NULL )
+                rc = RC( rcKFG, rcNode, rcUpdating, rcMemory, rcExhausted );
+            else
+            {
+                rc = KRepositoryRoot( self, root, curr_root_size, NULL );
+                if ( rc == 0 )
+                {
+                    root[ curr_root_size ] = 0;
+                    rc = append_to_root_history( self, root );
+                }
+                free( root );
+            }
+        }
+    }
+    else
+        rc = append_to_root_history( self, item );
+    return rc;
+}
+
+    
 /* Resolver
  *  read the url of the CGI-resolver
  *

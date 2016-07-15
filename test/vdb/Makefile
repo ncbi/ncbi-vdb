@@ -33,8 +33,10 @@ TEST_TOOLS = \
 	test-wvdb \
 	test-dependencies \
 	test-sparse-col-rw \
-	test-sparse-col-rd
-
+	test-sparse-col-rd \
+	test-blob-val \
+	test-VDB-3060
+    
 include $(TOP)/build/Makefile.env
 
 
@@ -69,7 +71,7 @@ TEST_VDB_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_VDB_SRC))
 
 TEST_VDB_LIB = \
-    -skapp \
+	-skapp \
 	-sktst \
 	-sncbi-vdb \
 
@@ -92,7 +94,7 @@ TEST_DEPS_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_DEPS_SRC))
 
 TEST_DEPS_LIB = \
-    -skapp \
+	-skapp \
 	-sktst \
 	-sncbi-vdb \
 
@@ -112,7 +114,7 @@ TEST_WVDB_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_WVDB_SRC))
 
 TEST_WVDB_LIB = \
-    -skapp \
+	-skapp \
 	-sktst \
 	-sncbi-wvdb \
 
@@ -140,7 +142,7 @@ TEST_SPARSE_COL_OBJ_RD = \
 	$(addsuffix .$(OBJX),$(TEST_SPARSE_COL_SRC)-rd)
 
 TEST_SPARSE_COL_LIB = \
-    -skapp \
+	-skapp \
 	-sktst \
 
 $(TEST_SPARSE_COL_OBJ_RW): $(TEST_SPARSE_COL_SRC).cpp
@@ -162,6 +164,26 @@ sparse-col: test-sparse-col-rw test-sparse-col-rd
 valgrind_sparse-col: std
 	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-sparse-col-rw
 	valgrind --ncbi --show-reachable=no $(TEST_BINDIR)/test-sparse-col-rd   
+	
+#-------------------------------------------------------------------------------
+# test-blob-val
+#
+TEST_BLOB_VAL_SRC = \
+	test-blob-val
+
+TEST_BLOB_VAL_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_BLOB_VAL_SRC))
+	
+TEST_BLOB_VAL_LIB = \
+	-skapp \
+	-sktst \
+	-sncbi-vdb \
+
+$(TEST_BINDIR)/test-blob-val: $(TEST_BLOB_VAL_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_BLOB_VAL_LIB)
+
+blob-val: test-blob-val
+	$(TEST_BINDIR)/test-blob-val
 
 #-------------------------------------------------------------------------------
 # SYS-224064
@@ -180,3 +202,24 @@ $(TEST_BINDIR)/SYS-224064: $(SYS_224064_OBJ)
 
 SYS-224064: makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
+
+
+#-------------------------------------------------------------------------------
+# VDB-3060
+#
+VDB_3060_SRC = \
+	test-VDB-3060
+
+VDB_3060_OBJ = \
+	$(addsuffix .$(OBJX),$(VDB_3060_SRC))
+
+VDB_3060_LIB = \
+	-skapp \
+	-sktst \
+	-sncbi-vdb \
+
+$(TEST_BINDIR)/test-VDB-3060: $(VDB_3060_OBJ)
+	$(LP) --exe -o $@ $^ $(VDB_3060_LIB)
+
+VDB-3060: test-VDB-3060
+	$(TEST_BINDIR)/test-VDB-3060

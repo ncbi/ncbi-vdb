@@ -352,6 +352,8 @@ KNS_EXTERN rc_t CC KClientHttpResultGetHeader ( const KClientHttpResult *self, c
 KNS_EXTERN rc_t CC KClientHttpResultGetInputStream ( KClientHttpResult *self,
     struct KStream  ** s );
 
+KNS_EXTERN bool CC KFileIsKHttpFile ( const struct KFile * self );
+
     /* compatibility defines */
 #define KHttpResultAddRef KClientHttpResultAddRef
 #define KHttpResultRelease KClientHttpResultRelease

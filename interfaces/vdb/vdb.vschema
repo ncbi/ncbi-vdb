@@ -300,7 +300,7 @@ T diff #1.0 < * T k > ( T a * T b )
 /* deriv
  *  return the 1st derivative of an input row
  * integral
- *  return the integral of an input row
+ *  return the "integral" of an input row
  *   integral   -> starts with 1st value
  *   integral_0 -> starts with 0
  *
@@ -310,13 +310,52 @@ T diff #1.0 < * T k > ( T a * T b )
  *  "in" [ DATA ] - input to be modified
  *
  * SYNOPSIS:
- *  Takes/restores chained deltas of integer elements in a row
- *  Fist element is unmodified
+ *  derivative function is ( in [ i ] - in [ i - 1 ] )
+ *    for i = 0 .. length ( in ) - 1,
+ *    assuming in [ 0 - 1 ] = 0 ( i.e. leaves in [ 0 ] intact ).
+ *
+ *  integral function is sum ( in [ 0 ] .. in [ i ] )
+ *    for i = 0 .. length ( in ) - 1.
+ *
+ *  integral_0 function is sum ( in [ 0 ] .. in [ i - 1 ] )
+ *    for i = 1 .. length ( in ) - 1,
+ *    setting output [ 0 ] = 0.
+ *
+ * USAGE:
+ *  "deriv" and "integral" are reciprocal functions.
+ *  the oddity is that "deriv" creates an output series
+ *  with the same length as the input series, causing the
+ *  first element of input to be copied to first element
+ *  of output.
+ *
+ *  "integral_0" always creates an output with the first
+ *  element being 0. the oddity here is again that the output
+ *  series is the same length as the input, dropping the effect
+ *  from the last element of input. its utility is primarily in
+ *  operations such as creating absolute offsets from a series of
+ *  lengths.
+ *
+ * EXAMPLES:
+ *  given an input series ( 15, 17, 12, 315 ):
+ *  "deriv" produces ( 15, 2, -5, 303 ) [ NOTICE first element ]
+ *  integrating ( 15, 2, -5, 303 ):
+ *  "integral" produces ( 15, 17, 12, 315 ), while
+ *  "integral_0" produces ( 0, 15, 17, 12 ).
+ *
+ *  generating starting offsets from a series of lengths ( 15, 17, 12, 315 ):
+ *  "integral_0" produces ( 0, 15, 32, 44 ) which can be used
+ *  to accompany the input series for starts and lengths.
  */
 
-function < type T > T deriv #1.0  ( T in ) = vdb:deriv;
-function < type T > T integral #1.0  ( T in ) = vdb:integral;
-function < type T > T integral_0 #1.0  ( T in ) = vdb:integral_0;
+function < type T >
+T deriv #1.0 ( T in )
+    = vdb:deriv;
+function < type T >
+T integral #1.0 ( T in )
+    = vdb:integral;
+function < type T >
+T integral_0 #1.0.1 ( T in )
+    = vdb:integral_0;
 
 /* delta
  *  return the 1st derivative of a whole blob

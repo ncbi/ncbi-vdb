@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\..\libs\tui\dir_dlg.c" />
+    <ClCompile Include="..\..\..\libs\tui\eventring.c" />
+    <ClCompile Include="..\..\..\libs\tui\file_dlg.c" />
+    <ClCompile Include="..\..\..\libs\tui\line_policy.c" />
+    <ClCompile Include="..\..\..\libs\tui\screen.c" />
+    <ClCompile Include="..\..\..\libs\tui\string_cache.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_dlg.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_menu.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_palette.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_std_dlg.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_button.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_checkbox.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_grid.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_inputline.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_label.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_progress.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_radiobox.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_spin_edit.c" />
+    <ClCompile Include="..\..\..\libs\tui\tui_widget_string_list.c" />
+	<ClCompile Include="..\..\..\libs\tui\tui_dlg_helper.c" />
+    <ClCompile Include="..\..\..\libs\tui\win\systui.c" />
+  </ItemGroup>
+</Project>

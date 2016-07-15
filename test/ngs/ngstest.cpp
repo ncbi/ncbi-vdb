@@ -72,14 +72,14 @@ public:
     ~ReadGroupInfo_Fixture()
     {
     }
-    
+
     void MakeSRA( const char* acc )
     {
         if ( m_tbl != 0 )
             VTableRelease ( m_tbl );
         if ( VDBManagerOpenTableRead ( m_ctx -> rsrc -> vdb, & m_tbl, NULL, acc ) != 0 )
             throw logic_error ("ReadGroupInfo_Fixture::MakeSRA VDBManagerOpenTableRead failed");
-            
+
         if (m_rgi != 0 )
             SRA_ReadGroupInfoRelease ( m_rgi, m_ctx );
         m_rgi = SRA_ReadGroupInfoMake ( m_ctx, m_tbl );
@@ -93,14 +93,14 @@ public:
             throw logic_error ("ReadGroupInfo_Fixture::MakeSRADB VDBManagerOpenTableRead failed");
         if ( VDatabaseOpenTableRead ( db, & m_tbl, "SEQUENCE" ) != 0 )
             throw logic_error ("ReadGroupInfo_Fixture::MakeSRADB VDatabaseOpenTableRead failed");
-            
+
         VDatabaseRelease ( db );
-            
+
         if (m_rgi != 0 )
             SRA_ReadGroupInfoRelease ( m_rgi, m_ctx );
         m_rgi = SRA_ReadGroupInfoMake ( m_ctx, m_tbl );
     }
-    
+
     virtual void Release()
     {
         if (m_ctx != 0)
@@ -112,7 +112,7 @@ public:
         }
         NGS_C_Fixture :: Release ();
     }
-    
+
     const VTable*               m_tbl;
     const SRA_ReadGroupInfo*    m_rgi;
 };
@@ -122,41 +122,41 @@ FIXTURE_TEST_CASE ( ReadGroupInfo_Make, ReadGroupInfo_Fixture )
 {
     ENTRY;
     MakeSRA ( SRA_Accession_WithReadGroups );
-    
+
     REQUIRE ( ! FAILED () );
     REQUIRE_NOT_NULL ( m_rgi );
-    
+
     EXIT;
 }
-    
+
 FIXTURE_TEST_CASE ( ReadGroupInfo_Count, ReadGroupInfo_Fixture )
 {
     ENTRY;
     MakeSRA ( SRA_Accession_WithReadGroups );
-    
+
     REQUIRE_EQ ( (uint32_t)144, m_rgi -> count );
-    
+
     EXIT;
 }
-    
+
 FIXTURE_TEST_CASE ( ReadGroupInfo_Access, ReadGroupInfo_Fixture )
 {
     ENTRY;
     MakeSRA ( SRA_Accession_WithReadGroups );
     REQUIRE ( ! FAILED () );
-    
+
     REQUIRE_NOT_NULL ( m_rgi -> groups [ 2 ] . name );
     REQUIRE_EQ ( string ( "S104_V2" ), toString ( m_rgi -> groups [ 2 ] . name,    ctx ) );
-    
+
     REQUIRE_NULL ( m_rgi -> groups [ 2 ] . bam_LB );
     REQUIRE_NULL ( m_rgi -> groups [ 2 ] . bam_SM );
-    
+
     REQUIRE_EQ ( (uint64_t)3263,        m_rgi -> groups [ 2 ] . min_row );
     REQUIRE_EQ ( (uint64_t)6140,        m_rgi -> groups [ 2 ] . max_row );
     REQUIRE_EQ ( (uint64_t)2878,        m_rgi -> groups [ 2 ] . row_count );
     REQUIRE_EQ ( (uint64_t)759518,      m_rgi -> groups [ 2 ] . base_count );
     REQUIRE_EQ ( (uint64_t)653032,      m_rgi -> groups [ 2 ] . bio_base_count );
-    
+
     EXIT;
 }
 #if SHOW_UNIMPLEMENTED
@@ -165,16 +165,16 @@ FIXTURE_TEST_CASE ( ReadGroupInfo_BamHeader, ReadGroupInfo_Fixture )
     ENTRY;
     MakeSRADB ( SRADB_Accession_WithBamHeader );
     REQUIRE ( ! FAILED () );
-    
+
     REQUIRE_NOT_NULL ( m_rgi -> groups [ 0 ] . name );
     REQUIRE_EQ ( string ( "A1DLC.1" ), toString ( m_rgi -> groups [ 0 ] . name, ctx ) );
-    
+
     REQUIRE_NOT_NULL ( m_rgi -> groups [ 0 ] . bam_LB );
     REQUIRE_EQ ( string ( "Solexa-112136" ), toString ( m_rgi -> groups [ 0 ] . bam_LB,  ctx ) );
-    
+
     REQUIRE_NOT_NULL ( m_rgi -> groups [ 0 ] . bam_SM );
     REQUIRE_EQ ( string ( "12341_SN_05_1" ), toString ( m_rgi -> groups [ 0 ] . bam_SM,  ctx ) );
-    
+
     EXIT;
 }
 #endif
@@ -187,7 +187,7 @@ FIXTURE_TEST_CASE ( ReadGroupInfo_Find_Found, ReadGroupInfo_Fixture )
     REQUIRE_EQ ( (uint32_t)2, SRA_ReadGroupInfoFind ( m_rgi, ctx, NGS_StringData(s, ctx), NGS_StringSize(s, ctx) ) );
     REQUIRE ( ! FAILED () );
     NGS_StringRelease ( s, ctx );
-    
+
     EXIT;
 }
 
@@ -203,15 +203,15 @@ FIXTURE_TEST_CASE ( ReadGroupInfo_PrintAll, ReadGroupInfo_Fixture )
     {
         const NGS_String * name = m_rgi -> groups [ i ] . name;
         REQUIRE_NOT_NULL ( name );
-        cout << NGS_StringData ( name, ctx ) << " " 
-             << m_rgi -> groups [ i ] . min_row         << " " 
-             << m_rgi -> groups [ i ] . max_row         << " " 
-             << m_rgi -> groups [ i ] . row_count       << " " 
-             << m_rgi -> groups [ i ] . base_count      << " " 
-             << m_rgi -> groups [ i ] . bio_base_count  << " " 
+        cout << NGS_StringData ( name, ctx ) << " "
+             << m_rgi -> groups [ i ] . min_row         << " "
+             << m_rgi -> groups [ i ] . max_row         << " "
+             << m_rgi -> groups [ i ] . row_count       << " "
+             << m_rgi -> groups [ i ] . base_count      << " "
+             << m_rgi -> groups [ i ] . bio_base_count  << " "
              << endl;
     }
-    
+
     EXIT;
 }
 #endif
@@ -228,7 +228,7 @@ public:
     ~Id_Fixture()
     {
     }
-    
+
     void Release()
     {
         if (m_ctx != 0)
@@ -240,18 +240,18 @@ public:
         }
         NGS_C_Fixture :: Release ();
     }
-    
+
     void MakeId ( enum NGS_Object object, int64_t rowId )
     {
         run  = NGS_StringMake ( m_ctx, "run", strlen ( "run" ) );
-        id = NGS_IdMake ( m_ctx, run, object, rowId ); 
+        id = NGS_IdMake ( m_ctx, run, object, rowId );
     }
     void MakeFragmentId ( bool alignment, int64_t rowId, uint32_t frag_num )
     {
         run  = NGS_StringMake ( m_ctx, "run", strlen ( "run" ) );
-        id = NGS_IdMakeFragment ( m_ctx, run, alignment, rowId, frag_num); 
+        id = NGS_IdMakeFragment ( m_ctx, run, alignment, rowId, frag_num);
     }
-    
+
     NGS_String * run;
     NGS_String * id;
 };
@@ -262,28 +262,28 @@ public:
 FIXTURE_TEST_CASE(NGS_IdMake_Read, Id_Fixture)
 {
     ENTRY;
-    
-    MakeId ( NGSObject_Read, 12345678 ); 
+
+    MakeId ( NGSObject_Read, 12345678 );
     REQUIRE_EQ ( string ( "run.R.12345678" ), string ( NGS_StringData ( id, ctx ), NGS_StringSize ( id, ctx ) ) );
-    
+
     EXIT;
 }
 
 FIXTURE_TEST_CASE(NGS_IdMake_Primary, Id_Fixture)
 {
     ENTRY;
-    
-    MakeId ( NGSObject_PrimaryAlignment, 12345678 ); 
+
+    MakeId ( NGSObject_PrimaryAlignment, 12345678 );
     REQUIRE_EQ ( string ( "run.PA.12345678" ), string ( NGS_StringData ( id, ctx ), NGS_StringSize ( id, ctx ) ) );
-    
+
     EXIT;
 }
 
 FIXTURE_TEST_CASE(NGS_IdMake_Secondary, Id_Fixture)
 {
     ENTRY;
-    
-    MakeId ( NGSObject_SecondaryAlignment, 12345678 ); 
+
+    MakeId ( NGSObject_SecondaryAlignment, 12345678 );
     REQUIRE_EQ ( string ( "run.SA.12345678" ), string ( NGS_StringData ( id, ctx ), NGS_StringSize ( id, ctx ) ) );
 
     EXIT;
@@ -292,8 +292,8 @@ FIXTURE_TEST_CASE(NGS_IdMake_Secondary, Id_Fixture)
 FIXTURE_TEST_CASE(NGS_IdMake_ReadFragment, Id_Fixture)
 {
     ENTRY;
-    
-    MakeFragmentId ( false, 12345678, 1 ); 
+
+    MakeFragmentId ( false, 12345678, 1 );
     REQUIRE_EQ ( string ( "run.FR1.12345678" ), string ( NGS_StringData ( id, ctx ), NGS_StringSize ( id, ctx ) ) );
 
     EXIT;
@@ -302,80 +302,80 @@ FIXTURE_TEST_CASE(NGS_IdMake_ReadFragment, Id_Fixture)
 FIXTURE_TEST_CASE(NGS_IdMake_AlignmentFragment, Id_Fixture)
 {
     ENTRY;
-    
-    MakeFragmentId ( true, 12345678, 2 ); 
+
+    MakeFragmentId ( true, 12345678, 2 );
     REQUIRE_EQ ( string ( "run.FA2.12345678" ), string ( NGS_StringData ( id, ctx ), NGS_StringSize ( id, ctx ) ) );
-    
+
     EXIT;
 }
 
 FIXTURE_TEST_CASE(NGS_Id_Parse_Read, Id_Fixture)
 {
     ENTRY;
-    
-    MakeId ( NGSObject_Read, 12345678 ); 
+
+    MakeId ( NGSObject_Read, 12345678 );
     struct NGS_Id parsed = NGS_IdParse ( NGS_StringData(id, ctx), NGS_StringSize(id, ctx), ctx );
     REQUIRE_EQ ( string ( "run" ), string ( parsed . run . addr, parsed . run . len ) );
     REQUIRE_EQ ( (int32_t)NGSObject_Read, parsed . object );
     REQUIRE_EQ ( (int64_t)12345678, parsed . rowId );
     REQUIRE_EQ ( (uint32_t)0, parsed . fragId );
-    
+
     EXIT;
 }
 
 FIXTURE_TEST_CASE(NGS_Id_Parse_Primary, Id_Fixture)
 {
     ENTRY;
-    
-    MakeId ( NGSObject_PrimaryAlignment, 12345678 ); 
+
+    MakeId ( NGSObject_PrimaryAlignment, 12345678 );
     struct NGS_Id parsed = NGS_IdParse ( NGS_StringData(id, ctx), NGS_StringSize(id, ctx), ctx );
     REQUIRE_EQ ( string ( "run" ), string ( parsed . run . addr, parsed . run . len ) );
     REQUIRE_EQ ( (int32_t)NGSObject_PrimaryAlignment, parsed . object );
     REQUIRE_EQ ( (int64_t)12345678, parsed . rowId );
     REQUIRE_EQ ( (uint32_t)0, parsed . fragId );
-    
+
     EXIT;
 }
 
 FIXTURE_TEST_CASE(NGS_Id_Parse_Secondary, Id_Fixture)
 {
     ENTRY;
-    
-    MakeId ( NGSObject_SecondaryAlignment, 12345678 ); 
+
+    MakeId ( NGSObject_SecondaryAlignment, 12345678 );
     struct NGS_Id parsed = NGS_IdParse ( NGS_StringData(id, ctx), NGS_StringSize(id, ctx), ctx );
     REQUIRE_EQ ( string ( "run" ), string ( parsed . run . addr, parsed . run . len ) );
     REQUIRE_EQ ( (int32_t)NGSObject_SecondaryAlignment, parsed . object );
     REQUIRE_EQ ( (int64_t)12345678, parsed . rowId );
     REQUIRE_EQ ( (uint32_t)0, parsed . fragId );
-    
+
     EXIT;
 }
 
 FIXTURE_TEST_CASE(NGS_Id_Parse_ReadFragment, Id_Fixture)
 {
     ENTRY;
-    
-    MakeFragmentId ( false, 12345678, 1 ); 
+
+    MakeFragmentId ( false, 12345678, 1 );
     struct NGS_Id parsed = NGS_IdParse ( NGS_StringData(id, ctx), NGS_StringSize(id, ctx), ctx );
     REQUIRE_EQ ( string ( "run" ), string ( parsed . run . addr, parsed . run . len ) );
     REQUIRE_EQ ( (int32_t)NGSObject_ReadFragment, parsed . object );
     REQUIRE_EQ ( (int64_t)12345678, parsed . rowId );
     REQUIRE_EQ ( (uint32_t)1, parsed . fragId );
-    
+
     EXIT;
 }
 
 FIXTURE_TEST_CASE(NGS_Id_Parse_AlignmentFragment, Id_Fixture)
 {
     ENTRY;
-    
-    MakeFragmentId ( true, 12345678, 2 ); 
+
+    MakeFragmentId ( true, 12345678, 2 );
     struct NGS_Id parsed = NGS_IdParse ( NGS_StringData(id, ctx), NGS_StringSize(id, ctx), ctx );
     REQUIRE_EQ ( string ( "run" ), string ( parsed . run . addr, parsed . run . len ) );
     REQUIRE_EQ ( (int32_t)NGSObject_AlignmentFragment, parsed . object );
     REQUIRE_EQ ( (int64_t)12345678, parsed . rowId );
     REQUIRE_EQ ( (uint32_t)2, parsed . fragId );
-    
+
     EXIT;
 }
 
@@ -387,7 +387,7 @@ TEST_CASE(NGS_Statistics_Make)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
 }
@@ -396,7 +396,7 @@ TEST_CASE(NGS_Statistics_AddU64)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     NGS_StatisticsAddU64 ( stats, ctx, "path", 1 );
 	REQUIRE_EQ ( ( uint32_t ) NGS_StatisticValueType_UInt64, NGS_StatisticsGetValueType ( stats, ctx, "path" ) );
     REQUIRE_EQ ( (uint64_t)1, NGS_StatisticsGetAsU64 ( stats, ctx, "path" ) );
@@ -409,7 +409,7 @@ TEST_CASE(NGS_Statistics_AddI64)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     NGS_StatisticsAddI64 ( stats, ctx, "path", -12 );
 	REQUIRE_EQ ( ( uint32_t ) NGS_StatisticValueType_Int64, NGS_StatisticsGetValueType ( stats, ctx, "path" ) );
     REQUIRE_EQ ( (int64_t)-12, NGS_StatisticsGetAsI64 ( stats, ctx, "path" ) );
@@ -422,7 +422,7 @@ TEST_CASE(NGS_Statistics_AddString)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     const char* cstr = "blah";
     NGS_String * str = NGS_StringMake ( ctx, cstr, strlen ( cstr ) );
     NGS_StatisticsAddString ( stats, ctx, "path", str );
@@ -438,11 +438,11 @@ TEST_CASE(NGS_Statistics_AddDouble)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     NGS_StatisticsAddDouble ( stats, ctx, "path", 3.1415926 );
 	REQUIRE_EQ ( ( uint32_t ) NGS_StatisticValueType_Real, NGS_StatisticsGetValueType ( stats, ctx, "path" ) );
     REQUIRE_EQ ( 3.1415926, NGS_StatisticsGetAsDouble ( stats, ctx, "path" ) );
-    
+
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
 }
@@ -451,10 +451,10 @@ TEST_CASE(NGS_Statistics_AddNotANumber)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     NGS_StatisticsAddDouble ( stats, ctx, "path", std::numeric_limits<double>::quiet_NaN() );
     REQUIRE_FAILED ();
-    
+
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
 }
@@ -463,13 +463,13 @@ TEST_CASE(NGS_Statistics_OverwriteU64)
 {   // currently, an attempt to overwrite a path throws
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     NGS_StatisticsAddU64 ( stats, ctx, "path", 1 );
     NGS_StatisticsAddU64 ( stats, ctx, "path", 2 );
     REQUIRE_FAILED ();
-    
+
     REQUIRE_EQ ( (uint64_t)1, NGS_StatisticsGetAsU64 ( stats, ctx, "path" ) );
-    
+
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
 }
@@ -478,15 +478,15 @@ TEST_CASE(NGS_Statistics_FindFound)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     NGS_StatisticsAddU64 ( stats, ctx, "path1", 1 );
     NGS_StatisticsAddU64 ( stats, ctx, "path2", 2 );
     NGS_StatisticsAddU64 ( stats, ctx, "path3", 3 );
-    
+
     REQUIRE_EQ ( (uint64_t)1, NGS_StatisticsGetAsU64 ( stats, ctx, "path1" ) );
     REQUIRE_EQ ( (uint64_t)2, NGS_StatisticsGetAsU64 ( stats, ctx, "path2" ) );
     REQUIRE_EQ ( (uint64_t)3, NGS_StatisticsGetAsU64 ( stats, ctx, "path3" ) );
-    
+
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
 }
@@ -496,14 +496,14 @@ TEST_CASE(NGS_Statistics_FindNotFound)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     NGS_StatisticsAddU64 ( stats, ctx, "path1", 1 );
     NGS_StatisticsAddU64 ( stats, ctx, "path2", 2 );
     NGS_StatisticsAddU64 ( stats, ctx, "path3", 3 );
-    
+
     NGS_StatisticsGetAsU64 ( stats, ctx, "path4" );
     REQUIRE_FAILED ();
-    
+
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
 }
@@ -513,24 +513,24 @@ TEST_CASE(NGS_Statistics_Iterate)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     NGS_StatisticsAddU64 ( stats, ctx, "path3", 3 );
     NGS_StatisticsAddU64 ( stats, ctx, "path1", 1 );
     NGS_StatisticsAddU64 ( stats, ctx, "path2", 2 );
-    
+
     const char* path;
     REQUIRE ( NGS_StatisticsNextPath ( stats, ctx, "", & path ) );
     REQUIRE_EQ ( string ( "path1" ), string ( path ) );
 
     REQUIRE ( NGS_StatisticsNextPath ( stats, ctx, "path1", & path ) );
     REQUIRE_EQ ( string ( "path2" ), string ( path ) );
-    
+
     REQUIRE ( NGS_StatisticsNextPath ( stats, ctx, "path2", & path ) );
     REQUIRE_EQ ( string ( "path3" ), string ( path ) );
-    
+
     REQUIRE ( ! NGS_StatisticsNextPath ( stats, ctx, "path3", & path ) );
     REQUIRE_NULL ( path );
-    
+
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
 }
@@ -539,12 +539,12 @@ TEST_CASE(NGS_Statistics_ConversionU64)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     NGS_StatisticsAddU64 ( stats, ctx, "path", 1 );
     REQUIRE_EQ ( (int64_t)1, NGS_StatisticsGetAsI64 ( stats, ctx, "path" ) );
     REQUIRE_EQ ( 1.0, NGS_StatisticsGetAsDouble( stats, ctx, "path" ) );
     REQUIRE_EQ ( string ( "1" ), toString ( NGS_StatisticsGetAsString( stats, ctx, "path" ), ctx , true ) );
-    
+
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
 }
@@ -553,7 +553,7 @@ TEST_CASE(NGS_Statistics_ConversionU64_Error)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     // MAX_U64 throws when reading as I64
     NGS_StatisticsAddU64 ( stats, ctx, "path", std::numeric_limits<uint64_t>::max() );
     NGS_StatisticsGetAsI64 ( stats, ctx, "path" );
@@ -567,12 +567,12 @@ TEST_CASE(NGS_Statistics_ConversionI64)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     NGS_StatisticsAddI64 ( stats, ctx, "path", 1 );
     REQUIRE_EQ ( (uint64_t)1, NGS_StatisticsGetAsU64 ( stats, ctx, "path" ) );
     REQUIRE_EQ ( 1.0, NGS_StatisticsGetAsDouble( stats, ctx, "path" ) );
     REQUIRE_EQ ( string ( "1" ), toString ( NGS_StatisticsGetAsString( stats, ctx, "path" ), ctx , true ) );
-    
+
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
 }
@@ -581,7 +581,7 @@ TEST_CASE(NGS_Statistics_ConversionI64_Error)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     // negatives throw when reading as U64
     NGS_StatisticsAddI64 ( stats, ctx, "path", -1 );
     NGS_StatisticsGetAsU64 ( stats, ctx, "path" );
@@ -595,16 +595,16 @@ TEST_CASE(NGS_Statistics_ConversionReal)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     NGS_StatisticsAddDouble ( stats, ctx, "path", 3.14 );
-    
+
     // GetAsU64 truncates
     REQUIRE_EQ ( (uint64_t)3, NGS_StatisticsGetAsU64 ( stats, ctx, "path" ) );
     // GetAsI64 truncates
     REQUIRE_EQ ( (int64_t)3, NGS_StatisticsGetAsI64 ( stats, ctx, "path" ) );
     // GetAsString converts with a default precision */
     REQUIRE_EQ ( string ( "3.140000" ), toString ( NGS_StatisticsGetAsString( stats, ctx, "path" ), ctx , true ) );
-    
+
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
 }
@@ -613,16 +613,16 @@ TEST_CASE(NGS_Statistics_ConversionReal_Negative)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     NGS_StatisticsAddDouble ( stats, ctx, "path", -1.1 );
-    // GetAsU64 throws 
+    // GetAsU64 throws
     NGS_StatisticsGetAsU64( stats, ctx, "path" );
     REQUIRE_FAILED ();
     // GetAsI64 truncates
     REQUIRE_EQ ( (int64_t)-1, NGS_StatisticsGetAsI64 ( stats, ctx, "path" ) );
     // GetAsString converts with a default precision */
     REQUIRE_EQ ( string ( "-1.100000" ), toString ( NGS_StatisticsGetAsString( stats, ctx, "path" ), ctx , true ) );
-    
+
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
 }
@@ -631,14 +631,14 @@ TEST_CASE(NGS_Statistics_ConversionReal_ErrorSize)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     // throws when too big for a 64 bit number
     NGS_StatisticsAddDouble ( stats, ctx, "path", std::numeric_limits<double>::max() );
     NGS_StatisticsGetAsU64( stats, ctx, "path" );
     REQUIRE_FAILED ();
     NGS_StatisticsGetAsI64( stats, ctx, "path" );
     REQUIRE_FAILED ();
-    
+
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
 }
@@ -647,24 +647,24 @@ TEST_CASE(NGS_Statistics_ConversionString)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     const char* cstr = "   \t3.14"; /* leading space is ok */
     NGS_String * str = NGS_StringMake ( ctx, cstr, strlen ( cstr ) );
     NGS_StatisticsAddString ( stats, ctx, "path", str );
-    
+
     // GetAsU64 truncates
     REQUIRE_EQ ( (uint64_t)3, NGS_StatisticsGetAsU64 ( stats, ctx, "path" ) );
     // GetAsI64 truncates
     REQUIRE_EQ ( (int64_t)3, NGS_StatisticsGetAsI64 ( stats, ctx, "path" ) );
     REQUIRE_EQ ( 3.14, NGS_StatisticsGetAsDouble( stats, ctx, "path" ) );
-    
+
 //TODO: more conversions to real
 // "  +3.14"
 // "  -3.14"
-// "  -3E2" 
+// "  -3E2"
 // "  -3e2"
 // "  -3.14e2"
-// "  -0xF.0" 
+// "  -0xF.0"
 // "  -0xF.0P2" binary exponent P/p might not work on MSVS (MSVS doc on strtod mentions D/d without explanation)
 // "  -0xFp2"
 // "  -0xFp-2"
@@ -673,7 +673,7 @@ TEST_CASE(NGS_Statistics_ConversionString)
 // "  NAN"
 // "  nAn"
 // "  naN(blah)"
-    
+
     NGS_StringRelease ( str, ctx );
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
@@ -683,13 +683,13 @@ TEST_CASE(NGS_Statistics_ConversionString_BigUInt)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     const char* cstr = "18446744073709551615"; // std::numeric_limits<uint64_t>::max()
     NGS_String * str = NGS_StringMake ( ctx, cstr, strlen ( cstr ) );
     NGS_StatisticsAddString ( stats, ctx, "path", str );
-    
+
     REQUIRE_EQ ( std::numeric_limits<uint64_t>::max(), NGS_StatisticsGetAsU64 ( stats, ctx, "path" ) );
-    
+
     NGS_StringRelease ( str, ctx );
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
@@ -699,14 +699,14 @@ TEST_CASE(NGS_Statistics_ConversionString_BigUInt_Error)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     const char* cstr = "18446744073709551616"; // std::numeric_limits<uint64_t>::max() + 1
     NGS_String * str = NGS_StringMake ( ctx, cstr, strlen ( cstr ) );
     NGS_StatisticsAddString ( stats, ctx, "path", str );
-    
+
     NGS_StatisticsGetAsU64 ( stats, ctx, "path" );
     REQUIRE_FAILED ();
-    
+
     NGS_StringRelease ( str, ctx );
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
@@ -716,13 +716,13 @@ TEST_CASE(NGS_Statistics_ConversionString_BigInt)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     const char* cstr = "9223372036854775807"; // std::numeric_limits<int64_t>::max()
     NGS_String * str = NGS_StringMake ( ctx, cstr, strlen ( cstr ) );
     NGS_StatisticsAddString ( stats, ctx, "path", str );
-    
+
     REQUIRE_EQ ( std::numeric_limits<int64_t>::max(), NGS_StatisticsGetAsI64 ( stats, ctx, "path" ) );
-    
+
     NGS_StringRelease ( str, ctx );
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
@@ -732,14 +732,14 @@ TEST_CASE(NGS_Statistics_ConversionString_BigInt_Error)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     const char* cstr = "9223372036854775808"; // std::numeric_limits<int64_t>::max() + 1
     NGS_String * str = NGS_StringMake ( ctx, cstr, strlen ( cstr ) );
     NGS_StatisticsAddString ( stats, ctx, "path", str );
-    
+
     NGS_StatisticsGetAsI64 ( stats, ctx, "path" );
     REQUIRE_FAILED ();
-    
+
     NGS_StringRelease ( str, ctx );
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
@@ -749,14 +749,14 @@ TEST_CASE(NGS_Statistics_ConversionString_TrailingSpace)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_Statistics * stats = SRA_StatisticsMake ( ctx );
-    
+
     const char* cstr = "   \t3.14 \t\n  "; /* trailing space is an error*/
     NGS_String * str = NGS_StringMake ( ctx, cstr, strlen ( cstr ) );
     NGS_StatisticsAddString ( stats, ctx, "path", str );
-    
+
     NGS_StatisticsGetAsDouble( stats, ctx, "path" );
     REQUIRE_FAILED ();
-    
+
     NGS_StringRelease ( str, ctx );
     NGS_StatisticsRelease ( stats, ctx );
     REQUIRE ( ! FAILED () );
@@ -769,19 +769,19 @@ TEST_CASE(NGS_FailedToOpen)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
     NGS_ReadCollectionMake ( ctx, BAD_ACCESSION);
-    
+
     KConfig* kfg;
     REQUIRE_RC ( KConfigMakeLocal ( &kfg, NULL ) );
     const KRepositoryMgr* repoMgr;
     REQUIRE_RC ( KConfigMakeRepositoryMgrRead ( kfg, &repoMgr ) );
     if ( KRepositoryMgrHasRemoteAccess ( repoMgr ) )
     {
-        REQUIRE_EQ ( string ( "Cannot open accession '" BAD_ACCESSION "'"), 
+        REQUIRE_EQ ( string ( "Cannot open accession '" BAD_ACCESSION "'"),
                  string ( WHAT () ) );
     }
     else
     {
-        REQUIRE_EQ ( string ( "Cannot open accession '" BAD_ACCESSION "'. Note: remote access is disabled in the configuration"), 
+        REQUIRE_EQ ( string ( "Cannot open accession '" BAD_ACCESSION "'. Note: remote access is disabled in the configuration"),
                  string ( WHAT () ) );
     }
     REQUIRE_FAILED ();
@@ -811,29 +811,53 @@ TEST_CASE(NGS_OpenBySysPath)
 TEST_CASE ( NGS_Cursor_GetColumnIndex_adds_column)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
-    
+
     const VDBManager * mgr = ctx -> rsrc -> vdb;
     REQUIRE_NOT_NULL ( mgr );
-    
+
     const VDatabase *db;
     REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, & db, NULL, "%s", SRADB_Accession_WithBamHeader ) );
-    
+
     VTable* tbl;
     REQUIRE_RC ( VDatabaseOpenTableRead ( db, (const VTable**)&tbl, "SEQUENCE" ) );
-    
+
     const NGS_Cursor* curs = NGS_CursorMake ( ctx, tbl, sequence_col_specs, seq_NUM_COLS ); // this will add the first column (READ) to the cursor
     REQUIRE ( ! FAILED () );
-    
+
     REQUIRE_NE ( (uint32_t)0, NGS_CursorGetColumnIndex ( curs, ctx, seq_READ_LEN ) ); // this should add the column we are requesting to the cursor
-    
+
     NGS_CursorRelease ( curs, ctx );
     REQUIRE ( ! FAILED () );
 
-    REQUIRE_RC ( VTableRelease ( tbl ) );    
+    REQUIRE_RC ( VTableRelease ( tbl ) );
+
+    REQUIRE_RC ( VDatabaseRelease ( db ) );
 }
 
+TEST_CASE ( NGS_Cursor_Leak_when_Make_fails )
+{
+    HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
+
+    const VDBManager * mgr = ctx -> rsrc -> vdb;
+    REQUIRE_NOT_NULL ( mgr );
+
+    const VDatabase *db;
+    REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, & db, NULL, "%s", SRADB_Accession_WithBamHeader ) );
+
+    VTable* tbl;
+    REQUIRE_RC ( VDatabaseOpenTableRead ( db, (const VTable**)&tbl, "SEQUENCE" ) );
+
+    const char * bogus_col_specs [] = { "not a column at all!" };
+    REQUIRE_NULL ( NGS_CursorMake ( ctx, tbl, bogus_col_specs, 1 ) );
+    REQUIRE ( FAILED () );
+    CLEAR();
+
+    REQUIRE_RC ( VTableRelease ( tbl ) );
+    REQUIRE_RC ( VDatabaseRelease ( db ) );
+}
 
 //////////////////////////////////////////// Main
+
 extern "C"
 {
 

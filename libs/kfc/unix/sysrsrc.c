@@ -85,7 +85,7 @@ void KRsrcGlobalInit ( KCtx * ctx, const KFuncLoc * loc, bool full )
         int status = pthread_mutex_lock ( & crit );
         if ( status != 0 )
             exit ( status );
-    
+
         initialized = atomic32_read ( & s_initialized );
         if ( 0 <= initialized && initialized < 2 )
         {
@@ -133,7 +133,7 @@ void KRsrcGlobalWhack ( ctx_t ctx )
             s_rsrc . proc = NULL;
 
             /* run destructor tasks while we still have other mgrs */
-            KProcMgrWhack ();
+            /*KProcMgrWhack ();*/
 
             /* tear it down */
             KRsrcWhack ( & s_rsrc, ctx );

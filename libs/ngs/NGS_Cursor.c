@@ -47,18 +47,18 @@
  *  Shareable cursor with lazy adding of columns
  *  reference counted
  */
- 
+
 struct NGS_Cursor
 {
-    NGS_Refcount dad;   
-    
+    NGS_Refcount dad;
+
     VCursor* curs;
-    
+
     uint32_t num_cols;
     char ** col_specs;      /* [num_cols] */
     uint32_t* col_idx;      /* [num_cols] */
     NGS_String ** col_data; /* [num_cols] */
-    
+
     /* row range */
     int64_t first;
     uint64_t count;
@@ -67,11 +67,11 @@ struct NGS_Cursor
 void NGS_CursorWhack ( NGS_Cursor * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcConstructing );
-    
+
     uint32_t i;
-    
+
     VCursorRelease ( self -> curs );
-    
+
     for ( i = 0; i < self -> num_cols; ++i )
     {
         free ( self -> col_specs [ i ] );
@@ -80,7 +80,7 @@ void NGS_CursorWhack ( NGS_Cursor * self, ctx_t ctx )
 
     free ( self -> col_specs );
     free ( self -> col_data );
-            
+
     free ( self -> col_idx );
 }
 
@@ -94,7 +94,7 @@ static NGS_Refcount_vt NGS_Cursor_vt =
 const NGS_Cursor * NGS_CursorMake ( ctx_t ctx, const struct VTable* table, const char * col_specs[], uint32_t num_cols )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
-    
+
     NGS_Cursor* ref = calloc( 1, sizeof (*ref) );
     if ( ref == NULL )
         SYSTEM_ERROR ( xcNoMemory, "allocating NGS_Cursor" );
@@ -103,24 +103,26 @@ const NGS_Cursor * NGS_CursorMake ( ctx_t ctx, const struct VTable* table, const
         TRY ( NGS_RefcountInit ( ctx, (NGS_Refcount*) & ref -> dad, & ITF_Refcount_vt . dad, & NGS_Cursor_vt, "NGS_Cursor", "" ) )
         {
             rc_t rc = VTableCreateCursorRead ( table, (const VCursor**) & ref -> curs );
-            if ( rc != 0 ) 
+            if ( rc != 0 )
             {
                 INTERNAL_ERROR ( xcCursorCreateFailed, "VTableCreateCursorRead rc = %R", rc );
                 NGS_CursorWhack ( ref, ctx );
+                free ( ref );
                 return NULL;
             }
-        
+
             ref -> num_cols = num_cols;
-            
+
             /* make a copy of col specs */
             ref -> col_specs = malloc ( num_cols * sizeof ( col_specs [ 0 ] ) );
             if ( ref -> col_specs == NULL )
             {
                 SYSTEM_ERROR ( xcNoMemory, "allocating NGS_Cursor . col_specs" );
                 NGS_CursorWhack ( ref, ctx );
+                free ( ref );
                 return NULL;
             }
-            
+
             {
                 uint32_t i;
                 for ( i = 0; i < num_cols; ++i )
@@ -130,27 +132,30 @@ const NGS_Cursor * NGS_CursorMake ( ctx_t ctx, const struct VTable* table, const
                     {
                         SYSTEM_ERROR ( xcNoMemory, "populating NGS_Cursor . col_specs" );
                         NGS_CursorWhack ( ref, ctx );
+                        free ( ref );
                         return NULL;
                     }
                 }
             }
-            
+
             ref -> col_idx = calloc ( num_cols,  sizeof ( ref -> col_idx [ 0 ] ) );
             if ( ref -> col_idx == NULL )
             {
                 SYSTEM_ERROR ( xcNoMemory, "allocating NGS_Cursor . col_idx" );
                 NGS_CursorWhack ( ref, ctx );
+                free ( ref );
                 return NULL;
             }
-            
+
             ref -> col_data = calloc ( num_cols,  sizeof ( ref -> col_data[ 0 ] ) );
             if ( ref -> col_idx == NULL )
             {
                 SYSTEM_ERROR ( xcNoMemory, "allocating NGS_Cursor . col_data" );
                 NGS_CursorWhack ( ref, ctx );
+                free ( ref );
                 return NULL;
             }
-            
+
             {   /* add first column; leave other for lazy add */
                 const char * col_spec = col_specs [ 0 ];
                 rc_t rc = VCursorAddColumn ( ref -> curs, & ref -> col_idx [ 0 ], "%s", col_spec );
@@ -158,6 +163,7 @@ const NGS_Cursor * NGS_CursorMake ( ctx_t ctx, const struct VTable* table, const
                 {
                     INTERNAL_ERROR ( xcColumnNotFound, "VCursorAddColumn %s rc = %R", col_spec, rc );
                     NGS_CursorWhack ( ref, ctx );
+                    free ( ref );
                     return NULL;
                 }
 
@@ -166,6 +172,7 @@ const NGS_Cursor * NGS_CursorMake ( ctx_t ctx, const struct VTable* table, const
                 {
                     INTERNAL_ERROR ( xcCursorOpenFailed, "PostOpenAdd failed rc = %R", rc );
                     NGS_CursorWhack ( ref, ctx );
+                    free ( ref );
                     return NULL;
                 }
 
@@ -175,35 +182,36 @@ const NGS_Cursor * NGS_CursorMake ( ctx_t ctx, const struct VTable* table, const
                 {
                     INTERNAL_ERROR ( xcCursorOpenFailed, "VCursorOpen failed rc = %R", rc );
                     NGS_CursorWhack ( ref, ctx );
+                    free ( ref );
                     return NULL;
                 }
-                
+
                 rc = VCursorIdRange ( ref -> curs, 0, & ref -> first, & ref -> count );
                 if ( rc != 0 )
                 {
                     INTERNAL_ERROR ( xcCursorOpenFailed, "VCursorIdRange failed rc = %R", rc );
                     NGS_CursorWhack ( ref, ctx );
+                    free ( ref );
                     return NULL;
                 }
-                
+
                 return ref;
             }
-            free ( ref );
         }
     }
-    
+
     return NULL;
 }
 
-const NGS_Cursor* NGS_CursorMakeDb ( ctx_t ctx, 
-                                     const VDatabase* db, 
-                                     const NGS_String* run_name, 
-                                     const char* tableName, 
-                                     const char * col_specs[], 
+const NGS_Cursor* NGS_CursorMakeDb ( ctx_t ctx,
+                                     const VDatabase* db,
+                                     const NGS_String* run_name,
+                                     const char* tableName,
+                                     const char * col_specs[],
                                      uint32_t num_cols )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcConstructing );
-    
+
     const VTable * table;
     rc_t rc = VDatabaseOpenTableRead ( db, & table, "%s", tableName );
     if ( rc != 0 )
@@ -211,7 +219,7 @@ const NGS_Cursor* NGS_CursorMakeDb ( ctx_t ctx,
         INTERNAL_ERROR ( xcTableOpenFailed, "%.*s.%s", NGS_StringSize ( run_name, ctx ), NGS_StringData ( run_name, ctx ), tableName );
         return NULL;
     }
-    
+
     {
         const NGS_Cursor* ret = NGS_CursorMake ( ctx, table, col_specs, num_cols );
         VTableRelease ( table );
@@ -225,11 +233,11 @@ const NGS_Cursor* NGS_CursorMakeDb ( ctx_t ctx,
 void NGS_CursorRelease ( const NGS_Cursor * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcDestroying );
-    
+
     if ( self != NULL )
     {
         NGS_RefcountRelease ( & self -> dad, ctx );
-    }    
+    }
 }
 
 /* Duplicate
@@ -238,7 +246,7 @@ void NGS_CursorRelease ( const NGS_Cursor * self, ctx_t ctx )
 const NGS_Cursor * NGS_CursorDuplicate ( const NGS_Cursor * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcConstructing );
-    
+
     if ( self != NULL )
     {
         NGS_RefcountDuplicate( & self -> dad, ctx );
@@ -250,7 +258,7 @@ static
 void
 AddColumn ( const NGS_Cursor *self, ctx_t ctx, uint32_t colIdx )
 {   /* lazy add */
-    if ( self -> col_idx [ colIdx ] == 0 ) 
+    if ( self -> col_idx [ colIdx ] == 0 )
     {
         const char * col_spec = self -> col_specs [ colIdx ];
         rc_t rc = VCursorAddColumn ( self -> curs, & self -> col_idx [ colIdx ], "%s", col_spec );
@@ -258,24 +266,24 @@ AddColumn ( const NGS_Cursor *self, ctx_t ctx, uint32_t colIdx )
         {
             INTERNAL_ERROR ( xcColumnNotFound, "VCursorAddColumn failed: '%s' rc = %R", col_spec, rc );
         }
-    }    
+    }
 }
 
-void NGS_CursorCellDataDirect ( const NGS_Cursor *self, 
+void NGS_CursorCellDataDirect ( const NGS_Cursor *self,
                                 ctx_t ctx,
                                 int64_t rowId,
-                                uint32_t colIdx, 
-                                uint32_t *elem_bits, 
+                                uint32_t colIdx,
+                                uint32_t *elem_bits,
                                 const void **base,
-                                uint32_t *boff, 
+                                uint32_t *boff,
                                 uint32_t *row_len )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
     rc_t rc;
-    
+
     assert ( self != NULL );
-    
+
     TRY ( AddColumn ( self, ctx, colIdx ) )
     {
         rc = VCursorCellDataDirect ( self -> curs, rowId, self -> col_idx [ colIdx ], elem_bits, base, boff, row_len );
@@ -285,13 +293,13 @@ void NGS_CursorCellDataDirect ( const NGS_Cursor *self,
         }
     }
 }
-                                
+
 /* GetRowCount
  */
 uint64_t NGS_CursorGetRowCount ( const NGS_Cursor * self, ctx_t ctx )
 {
     assert ( self != NULL );
-    
+
     return self -> count;
 }
 
@@ -302,19 +310,19 @@ void NGS_CursorGetRowRange ( const NGS_Cursor * self, ctx_t ctx, int64_t* first,
     assert ( self != NULL );
     assert ( first != NULL );
     assert ( count != NULL );
-    
+
     *first = self -> first;
     *count = self -> count;
 }
-    
+
 NGS_String * NGS_CursorGetString ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t colIdx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     assert ( self );
     assert ( self -> col_data );
     assert ( self -> curs );
-    
+
     /* invalidate any outstanding string */
     NGS_StringInvalidate ( self -> col_data [ colIdx ], ctx );
 
@@ -338,18 +346,18 @@ NGS_String * NGS_CursorGetString ( const NGS_Cursor * self, ctx_t ctx, int64_t r
         }
     }
     return NULL;
-}    
+}
 
 /* GetInt64
-*/                                
+*/
 int64_t NGS_CursorGetInt64 ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t colIdx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     assert ( self );
     assert ( self -> col_data );
     assert ( self -> col_idx );
-    
+
     {
         const void * base;
         uint32_t elem_bits, boff, row_len;
@@ -374,15 +382,15 @@ int64_t NGS_CursorGetInt64 ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, 
 }
 
 /* GetUInt64
-*/                                
+*/
 uint64_t NGS_CursorGetUInt64 ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t colIdx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     assert ( self );
     assert ( self -> col_data );
     assert ( self -> col_idx );
-    
+
     {
         const void * base;
         uint32_t elem_bits, boff, row_len;
@@ -408,15 +416,15 @@ uint64_t NGS_CursorGetUInt64 ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId
 
 
 /* GetInt32
-*/                                
+*/
 int32_t NGS_CursorGetInt32 ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t colIdx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     assert ( self );
     assert ( self -> col_data );
     assert ( self -> col_idx );
-    
+
     {
         const void * base;
         uint32_t elem_bits, boff, row_len;
@@ -438,15 +446,15 @@ int32_t NGS_CursorGetInt32 ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, 
 }
 
 /* GetUInt32
-*/                                
+*/
 uint32_t NGS_CursorGetUInt32 ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t colIdx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     assert ( self );
     assert ( self -> col_data );
     assert ( self -> col_idx );
-    
+
     {
         const void * base;
         uint32_t elem_bits, boff, row_len;
@@ -468,15 +476,15 @@ uint32_t NGS_CursorGetUInt32 ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId
 }
 
 /* GetBool
-*/                                
+*/
 bool NGS_CursorGetBool ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t colIdx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     assert ( self );
     assert ( self -> col_data );
     assert ( self -> col_idx );
-    
+
     {
         const void * base;
         uint32_t elem_bits, boff, row_len;
@@ -498,15 +506,15 @@ bool NGS_CursorGetBool ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint
 }
 
 /* GetChar
-*/                                
+*/
 char NGS_CursorGetChar ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t colIdx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     assert ( self );
     assert ( self -> col_data );
     assert ( self -> col_idx );
-    
+
     {
         const void * base;
         uint32_t elem_bits, boff, row_len;
@@ -556,7 +564,7 @@ const VCursor* NGS_CursorGetVCursor ( const NGS_Cursor * self )
 uint32_t NGS_CursorGetColumnIndex ( const NGS_Cursor * self, ctx_t ctx, uint32_t column_id )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     assert ( self );
     ON_FAIL ( AddColumn ( self, ctx, column_id ) )
     {

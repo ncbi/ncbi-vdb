@@ -19,6 +19,9 @@ user.status
 *.sdf
 *.suo
 *.log
+/.cproject
+/.project
+/.pydevproject
 
 # mac os x meta-files
 .DS_Store
@@ -27,3 +30,4 @@ user.status
 *~
 \#*
 .\#*
+core
