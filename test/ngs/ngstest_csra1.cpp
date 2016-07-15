@@ -897,12 +897,90 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetFilteredAlignmentSlice_FullReference_NoW
     EXIT;
 }
 
+// NGS_ReferenceGetChunk
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetChunk_Empty, CSRA1_Fixture)
 {   // offset beyond the end of reference
     ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
     REQUIRE_STRING ( "", NGS_ReferenceGetChunk ( m_ref, ctx, 30000000, 10) );
     EXIT;
 }
+
+FIXTURE_TEST_CASE(CSRA1_Reference_GetReferenceChunk_All, CSRA1_Fixture)
+{
+    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
+    NGS_String * chunk = NGS_ReferenceGetChunk ( m_ref, ctx, 0, (size_t)-1 );
+    REQUIRE_EQ( (size_t)20000, NGS_StringSize ( chunk, ctx ) );
+
+    string str = string ( NGS_StringData ( chunk, ctx ), NGS_StringSize ( chunk, ctx ) );
+    REQUIRE_EQ( string("GAATTCT"), str . substr (0, 7) );
+    REQUIRE_EQ( string("CATCA"), str . substr ( str.size() - 5, 5 ) );
+
+    NGS_StringRelease ( chunk, ctx );
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_Reference_GetReferenceChunk_Offset_1, CSRA1_Fixture)
+{   // offset points into the first blob of REFERENCE.READ
+    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
+    NGS_String * chunk = NGS_ReferenceGetChunk ( m_ref, ctx, 1000, (size_t)-1 );
+    REQUIRE_EQ( (size_t)19000, NGS_StringSize ( chunk, ctx ) ); // first blob's size is 20000
+
+    string str = string ( NGS_StringData ( chunk, ctx ), NGS_StringSize ( chunk, ctx ) );
+    REQUIRE_EQ( string("TCCATTC"), str . substr (0, 7) );
+    REQUIRE_EQ( string("CATCA"), str . substr (str.size() - 5, 5) );
+
+    NGS_StringRelease ( chunk, ctx );
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_Reference_GetReferenceChunk_Offset_2, CSRA1_Fixture)
+{   // offset points into the second blob of REFERENCE.READ
+    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
+    NGS_String * chunk = NGS_ReferenceGetChunk ( m_ref, ctx, 22000, (size_t)-1 );
+    REQUIRE_EQ( (size_t)3000, NGS_StringSize ( chunk, ctx ) ); // second blob's size is 5000
+
+    string str = string ( NGS_StringData ( chunk, ctx ), NGS_StringSize ( chunk, ctx ) );
+    REQUIRE_EQ( string("CTCAGAT"), str . substr (0, 7)  );
+    REQUIRE_EQ( string("TATTC"), str . substr (str.size() - 5, 5) );
+
+    NGS_StringRelease ( chunk, ctx );
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_Reference_GetReferenceChunk_OffsetLength_1, CSRA1_Fixture)
+{
+    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
+
+    NGS_String * chunk = NGS_ReferenceGetChunk ( m_ref, ctx, 2000, 10 );
+    REQUIRE_EQ( string ( "GGGCAAATGA" ), string ( NGS_StringData ( chunk, ctx ), NGS_StringSize ( chunk, ctx ) ) );
+    NGS_StringRelease ( chunk, ctx );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_Reference_GetReferenceChunk_OffsetLength_2, CSRA1_Fixture)
+{
+    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
+
+    NGS_String * chunk = NGS_ReferenceGetChunk ( m_ref, ctx, 20020, 10 );
+    REQUIRE_EQ( string ( "ACATGACGGA" ), string ( NGS_StringData ( chunk, ctx ), NGS_StringSize ( chunk, ctx ) ) );
+    NGS_StringRelease ( chunk, ctx );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_Reference_GetReferenceChunk_OffsetLength_ReturnShorter, CSRA1_Fixture)
+{
+    ENTRY_GET_REF( CSRA1_PrimaryOnly, "supercont2.1" );
+
+    NGS_String * chunk = NGS_ReferenceGetChunk ( m_ref, ctx, 19995, 200 ); // only 5 bases left in this blob
+    REQUIRE_EQ( string ( "CATCA" ), string ( NGS_StringData ( chunk, ctx ), NGS_StringSize ( chunk, ctx ) ) );
+    NGS_StringRelease ( chunk, ctx );
+
+    EXIT;
+}
+
+//
 
 FIXTURE_TEST_CASE(CSRA1_NGS_Reference_SharedCursor, CSRA1_Fixture)
 {
