@@ -514,8 +514,9 @@ rc_t VFunctionProdCallNullaryRowFunc(VFunctionProd *self,
                                      uint32_t row_count,
                                      const VXformInfo *info)
 {
+    rc_t rc = 0;
     KDataBuffer scratch;
-    VRowData argv[1];
+    VRowData args[1];
     VRowResult rslt;
 
     memset(&scratch, 0, sizeof(scratch));
@@ -527,6 +528,8 @@ rc_t VFunctionProdCallNullaryRowFunc(VFunctionProd *self,
 
     rc = self->u.rf(self->fself, info, row_id, &rslt, 0, args);
     if (rc == 0) {
+        VBlob *blob = NULL;
+
 #if PROD_NAME
         rc = VBlobNew ( &blob, -INT64_MAX - 1, INT64_MAX, self->dad.name );
 #else
@@ -549,8 +552,64 @@ rc_t VFunctionProdCallNullaryRowFunc(VFunctionProd *self,
     return rc;
 }
 
+static bool computeWindow(uint32_t *const pwindow, int64_t const start_id, int64_t const stop_id, int64_t const row_id, uint32_t const max_blob_regroup)
+{
+    int64_t window = stop_id - start_id + 1;
+    bool window_resized = false;
+
+    /*** from previous fetch **/
+
+    /** detect sequentual io ***/
+    if (row_id == stop_id + 1)
+    {
+        if (window > max_blob_regroup)
+        {
+            window = max_blob_regroup;
+            window_resized = true;
+        }
+        else if (row_id % (4 * window) == 1)
+        {
+            if (window < max_blob_regroup)
+            {
+                if (4 * window <= max_blob_regroup)
+                    window *= 4;
+                else
+                    window = max_blob_regroup;
+                window_resized = true;
+            }
+            /* we know that row_id lands on the first row of the new window */
+        }
+    }
+    else
+    {
+        /* random access - use tiny blob window */
+        window = 1;
+        window_resized = true;
+    }
+    assert(window <= UINT32_MAX);
+    *pwindow = window;
+    return window_resized;
+}
+
+#if UNIT_TEST_VDB_3058
+static void UnitTest_VDB_3058(void)
+{
+/* test for case of integer overflow to zero causing divide-by-zero error in computeWindow */
+    uint32_t max_blob_regroup = 1024;
+    uint32_t window = 0;
+    int64_t start_id = 1;
+    int64_t stop_id = UINT32_MAX / 4 + 1;
+    int64_t row_id = stop_id + 1;
+    bool window_resized = computeWindow(&window, start_id, stop_id, row_id, max_blob_regroup);
+
+    /* this output isn't important, it's just to make sure that
+     * the compiler doesn't optimize out the relevant computations */
+    printf("window: %u\nwindow_resized: %s\n", window, window_resized ? "true" : "false");
+}
+#endif
+
 static
-rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_id,
+rc_t VFunctionProdCallRowFunc1( VFunctionProd *self, VBlob **prslt, int64_t row_id,
     uint32_t row_count, const VXformInfo *info, Vector *args,int64_t param_start_id,int64_t param_stop_id)
 {
     rc_t rc;
@@ -570,10 +629,6 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
     bool function_failed = false;
     bool window_resized = false;
     
-    if (argc == 0) {
-        return VFunctionProdCallNullaryRowFunc(self, prslt, row_id, row_count, info);
-    }
-
     if(self->curs->cache_curs && self->curs->cache_col_active){
         /*** since cache_cursor exist, trying to avoid prefetching data which is in cache cursor ***/
 		row_id_max = self->curs->cache_empty_end;
@@ -587,37 +642,7 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
 	}
     else
     {
-        /*** from previous fetch **/
-		window = self->stop_id - self->start_id + 1;
-
-        /** detect sequentual io ***/
-		if ( row_id == self->stop_id + 1 )
-        {
-            if ( window > max_blob_regroup )
-            {
-                window = max_blob_regroup;
-                window_resized = true;
-            }
-
-			else if( row_id % ( 4 * window ) == 1 ) 
-            {
-                if ( window < max_blob_regroup )
-                {
-                    if ( 4 * window <= max_blob_regroup )
-                        window *= 4;
-                    else
-                        window = max_blob_regroup;
-                    window_resized = true;
-                }
-                /* we know that row_id lands on the first row of the new window */
-			}
-		}
-        else
-        {
-            /* random access - use tiny blob window */
-			window = 1;
-            window_resized = true;
-		}
+        window_resized = computeWindow(&window, self->start_id, self->stop_id, row_id, max_blob_regroup);
 	}
 
     assert ( 0 < window && window <= max_blob_regroup );
@@ -828,6 +853,18 @@ rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_i
     vblob_release(blob, NULL);
     
     return rc;
+}
+
+static
+rc_t VFunctionProdCallRowFunc( VFunctionProd *self, VBlob **prslt, int64_t row_id,
+    uint32_t row_count, const VXformInfo *info, Vector *args,int64_t param_start_id,int64_t param_stop_id)
+{
+    uint32_t const argc = VectorLength(args);
+
+    if (argc == 0)
+        return VFunctionProdCallNullaryRowFunc(self, prslt, row_id, row_count, info);
+    else
+        return VFunctionProdCallRowFunc1(self, prslt, row_id, row_count, info, args, param_start_id, param_stop_id);
 }
 
 static

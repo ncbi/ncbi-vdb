@@ -44,43 +44,6 @@ LIB=\
 
 VDB_DIR=../
 
-VDB_SRC=\
-	page-map \
-	blob-headers \
-	blob \
-	column-cmn \
-	column \
-	schema \
-	schema-db \
-	schema-dump \
-	schema-eval \
-	schema-expr \
-	schema-func \
-	schema-parse \
-	schema-prod \
-	schema-tbl \
-	schema-tok \
-	schema-type \
-	schema-int \
-	cursor \
-	cursor-cmn \
-	table-cmn \
-	table-load \
-	database-cmn \
-	database-load \
-	database \
-	dbmgr \
-	dbmgr-cmn \
-	phys-cmn \
-	phys-load \
-	phys \
-	prod-func \
-	prod-expr \
-	prod \
-	linker-cmn
-
-VDB_OBJ=$(addsuffix .$(OBJX),$(addprefix $(VDB_DIR),$(VDB_SRC)))
-
 OBJ=$(addsuffix .$(OBJX),test-prod-cmn)
 
 $(TEST_BINDIR)/test-prod-cmn: $(OBJ) $(addprefix $(VDB_DIR),prod-cmn.c)
