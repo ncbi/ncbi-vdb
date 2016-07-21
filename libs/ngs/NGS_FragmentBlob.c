@@ -43,6 +43,7 @@
 #include "NGS_Id.h"
 #include "NGS_Cursor.h"
 #include "SRA_Read.h"
+#include "VByteBlob.h"
 
 struct NGS_FragmentBlob
 {
@@ -105,82 +106,17 @@ NGS_FragmentBlobMake ( ctx_t ctx, const NGS_String* run, const struct NGS_Cursor
             {
                 TRY ( ret -> run = NGS_StringDuplicate ( run, ctx ) )
                 {
-                    const struct VCursor* vcurs = NGS_CursorGetVCursor ( curs );
-                    rc_t rc = VCursorSetRowId ( vcurs, rowId );
-                    if ( rc != 0 )
+                    TRY ( ret -> blob_READ = NGS_CursorGetVBlob ( curs, ctx, rowId, seq_READ ) )
                     {
-                        INTERNAL_ERROR ( xcUnexpected, "VCursorSetRowId() rc = %R", rc );
-                    }
-                    else
-                    {
-                        rc = VCursorOpenRow ( vcurs );
-                        if ( rc != 0 )
+                        TRY ( ret -> blob_READ_LEN = NGS_CursorGetVBlob ( curs, ctx, rowId, seq_READ_LEN ) )
                         {
-                            INTERNAL_ERROR ( xcUnexpected, "VCursorOpenRow() rc = %R", rc );
-                        }
-                        else
-                        {
-                            rc = VCursorGetBlob ( vcurs, & ret -> blob_READ, NGS_CursorGetColumnIndex ( curs, ctx, seq_READ ) );
-                            if ( rc != 0  )
+                            TRY ( ret -> blob_READ_TYPE = NGS_CursorGetVBlob ( curs, ctx, rowId, seq_READ_TYPE ) );
                             {
-                                VCursorCloseRow ( vcurs );
-                                INTERNAL_ERROR ( xcUnexpected, "VCursorGetBlob(READ) rc = %R", rc );
-                            }
-                            else
-                            {
-                                rc = VCursorGetBlob ( vcurs, & ret -> blob_READ_LEN, NGS_CursorGetColumnIndex ( curs, ctx, seq_READ_LEN ) );
-                                if ( rc != 0  )
+                                ret -> rowId = rowId;
+                                ret -> curs = NGS_CursorDuplicate ( curs, ctx );
+                                TRY ( VByteBlob_ContiguousChunk ( ret -> blob_READ, ctx, ret -> rowId, &ret -> data, &ret -> size ) )
                                 {
-                                    VCursorCloseRow ( vcurs );
-                                    INTERNAL_ERROR ( xcUnexpected, "VCursorGetBlob(READ_LEN) rc = %R", rc );
-                                }
-                                else
-                                {
-                                    rc = VCursorGetBlob ( vcurs, & ret -> blob_READ_TYPE, NGS_CursorGetColumnIndex ( curs, ctx, seq_READ_TYPE ) );
-                                    if ( rc != 0  )
-                                    {
-                                        VCursorCloseRow ( vcurs );
-                                        INTERNAL_ERROR ( xcUnexpected, "VCursorGetBlob(READ_TYPE) rc = %R", rc );
-                                    }
-                                    else
-                                    {
-                                        rc = VCursorCloseRow ( vcurs );
-                                        if ( rc != 0 )
-                                        {
-                                            INTERNAL_ERROR ( xcUnexpected, "VCursorCloseRow() rc = %R", rc );
-                                        }
-                                        else
-                                        {
-                                            ret -> rowId = rowId;
-                                            ret -> curs = NGS_CursorDuplicate ( curs, ctx );
-                                            {
-                                                /* calculate data/size of the blob (sub-VBlob) starting at rowId */
-                                                uint32_t frag_type_elem_bits;
-                                                const void *frag_type_base;
-                                                uint32_t frag_type_boff;
-                                                uint32_t frag_type_row_len;
-                                                rc_t rc = VBlobCellData ( ret -> blob_READ,
-                                                                        ret -> rowId,
-                                                                        & frag_type_elem_bits,
-                                                                        & frag_type_base,
-                                                                        & frag_type_boff,
-                                                                        & frag_type_row_len );
-                                                if ( rc != 0 )
-                                                {
-                                                    INTERNAL_ERROR ( xcUnexpected, "VBlobCellData() rc = %R", rc );
-                                                }
-                                                else
-                                                {
-                                                    assert( frag_type_elem_bits == 8 );
-                                                    assert( frag_type_boff == 0 );
-                                                    ret -> data = frag_type_base;
-                                                    ret -> size = BlobBufferBytes ( ret -> blob_READ ) -
-                                                                ( (const uint8_t*)( ret -> data ) - (const uint8_t*)( ret -> blob_READ -> data . base ) );
-                                                    return ret;
-                                                }
-                                            }
-                                        }
-                                    }
+                                    return ret;
                                 }
                             }
                         }
@@ -428,7 +364,9 @@ NGS_FragmentBlobInfoByOffset ( const struct NGS_FragmentBlob * self, ctx_t ctx, 
                     elem_count_t length = PageMapIteratorDataLength ( &pmIt );
                     elem_count_t offset = PageMapIteratorDataOffset ( &pmIt );
                     row_count_t  repeat = PageMapIteratorRepeatCount ( &pmIt );
-
+/*TODO: with the updated design:
+                    assert ( repeat == 1 );
+ */
                     if ( offsetInBases < offset + length * repeat )
                     {
                         while ( repeat > 1 )

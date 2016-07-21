@@ -47,6 +47,7 @@
 
 #include <vdb/table.h>
 #include <vdb/database.h>
+#include <vdb/blob.h>
 
 #include <stdexcept>
 #include <cstring>
@@ -808,52 +809,90 @@ TEST_CASE(NGS_OpenBySysPath)
 
 //////////////////////////////////////////// NGS_Cursor
 
-TEST_CASE ( NGS_Cursor_GetColumnIndex_adds_column)
+class NGSCursorFixture : public NGS_C_Fixture
 {
-    HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
+public:
+    NGSCursorFixture()
+    : m_cursor ( 0 )
+    {
+    }
 
-    const VDBManager * mgr = ctx -> rsrc -> vdb;
-    REQUIRE_NOT_NULL ( mgr );
+    ~NGSCursorFixture()
+    {
+    }
 
-    const VDatabase *db;
-    REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, & db, NULL, "%s", SRADB_Accession_WithBamHeader ) );
+    virtual void Release()
+    {
+        if (m_ctx != 0)
+        {
+            NGS_CursorRelease ( m_cursor, m_ctx );
+        }
+        NGS_C_Fixture :: Release ();
+    }
 
-    VTable* tbl;
-    REQUIRE_RC ( VDatabaseOpenTableRead ( db, (const VTable**)&tbl, "SEQUENCE" ) );
+    void MakeCursor ( const string& p_acc, const string& p_table, const char * col_specs[], uint32_t num_cols )
+    {
+        const VDatabase *db;
+        THROW_ON_RC ( VDBManagerOpenDBRead ( m_ctx -> rsrc -> vdb, & db, NULL, "%s", p_acc . c_str () ) );
 
-    const NGS_Cursor* curs = NGS_CursorMake ( ctx, tbl, sequence_col_specs, seq_NUM_COLS ); // this will add the first column (READ) to the cursor
+        VTable* tbl;
+        THROW_ON_RC ( VDatabaseOpenTableRead ( db, (const VTable**)&tbl, p_table . c_str () ) );
+
+        m_cursor = NGS_CursorMake ( m_ctx, tbl, col_specs, num_cols ); // this will add the first column to the cursor
+
+        THROW_ON_RC ( VTableRelease ( tbl ) );
+        THROW_ON_RC ( VDatabaseRelease ( db ) );
+    }
+
+    const NGS_Cursor* m_cursor;
+};
+
+FIXTURE_TEST_CASE ( NGS_Cursor_GetColumnIndex_adds_column, NGSCursorFixture )
+{
+    ENTRY;
+    MakeCursor ( SRADB_Accession_WithBamHeader, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ); // this will add the first column (READ) to the cursor
     REQUIRE ( ! FAILED () );
+    REQUIRE_NOT_NULL ( m_cursor );
 
-    REQUIRE_NE ( (uint32_t)0, NGS_CursorGetColumnIndex ( curs, ctx, seq_READ_LEN ) ); // this should add the column we are requesting to the cursor
+    REQUIRE_NE ( (uint32_t)0, NGS_CursorGetColumnIndex ( m_cursor, ctx, seq_READ_LEN ) ); // this should add the column we are requesting to the cursor
 
-    NGS_CursorRelease ( curs, ctx );
-    REQUIRE ( ! FAILED () );
-
-    REQUIRE_RC ( VTableRelease ( tbl ) );
-
-    REQUIRE_RC ( VDatabaseRelease ( db ) );
+    EXIT;
 }
 
-TEST_CASE ( NGS_Cursor_Leak_when_Make_fails )
-{
-    HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
-
-    const VDBManager * mgr = ctx -> rsrc -> vdb;
-    REQUIRE_NOT_NULL ( mgr );
-
-    const VDatabase *db;
-    REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, & db, NULL, "%s", SRADB_Accession_WithBamHeader ) );
-
-    VTable* tbl;
-    REQUIRE_RC ( VDatabaseOpenTableRead ( db, (const VTable**)&tbl, "SEQUENCE" ) );
+FIXTURE_TEST_CASE ( NGS_Cursor_Leak_when_Make_fails, NGSCursorFixture )
+{   // use valgrind to detect the absence of a leak
+    ENTRY;
 
     const char * bogus_col_specs [] = { "not a column at all!" };
-    REQUIRE_NULL ( NGS_CursorMake ( ctx, tbl, bogus_col_specs, 1 ) );
+    MakeCursor ( SRADB_Accession_WithBamHeader, "SEQUENCE", bogus_col_specs, 1 );
     REQUIRE ( FAILED () );
+    REQUIRE_NULL ( m_cursor );
     CLEAR();
 
-    REQUIRE_RC ( VTableRelease ( tbl ) );
-    REQUIRE_RC ( VDatabaseRelease ( db ) );
+    EXIT;
+}
+
+FIXTURE_TEST_CASE ( NGS_Cursor_GetVBlob, NGSCursorFixture )
+{
+    ENTRY;
+    MakeCursor ( SRADB_Accession_WithBamHeader, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ); // this will add the first column (READ) to the cursor
+    REQUIRE ( ! FAILED () );
+    REQUIRE_NOT_NULL ( m_cursor );
+
+    const int64_t rowId = 10;
+    const struct VBlob* blob = NGS_CursorGetVBlob ( m_cursor, ctx, rowId, seq_READ );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_NOT_NULL ( blob );
+
+    int64_t first;
+    uint64_t count;
+    REQUIRE_RC ( VBlobIdRange ( blob, &first, &count ) );
+    REQUIRE_LE ( first, rowId );
+    REQUIRE_GT ( (int64_t)( first + count ), rowId );
+
+    REQUIRE_RC ( VBlobRelease ( blob ) );
+
+    EXIT;
 }
 
 //////////////////////////////////////////// Main

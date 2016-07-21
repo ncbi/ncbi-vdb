@@ -41,6 +41,8 @@ typedef struct CSRA1_Reference CSRA1_Reference;
 #include "CSRA1_ReferenceWindow.h"
 #include "CSRA1_Pileup.h"
 
+#include "VByteBlob.h"
+
 #include <kfc/ctx.h>
 #include <kfc/rsrc.h>
 #include <kfc/except.h>
@@ -327,11 +329,16 @@ struct NGS_String * CSRA1_ReferenceGetBases ( CSRA1_Reference * self, ctx_t ctx,
                 size_t cur_offset = 0;
                 while ( cur_offset < basesToReturn )
                 {
-                    /* we will potentially ask for more than available in the current chunk;
-                        CSRA1_ReferenceGetChunkSize will return only as much as is available in the chunk */
-                    NGS_String* chunk = CSRA1_ReferenceGetChunk ( self, ctx, offset + cur_offset, basesToReturn - cur_offset );
-                    cur_offset += string_copy(data + cur_offset, basesToReturn - cur_offset,
-                                              NGS_StringData ( chunk, ctx ), NGS_StringSize ( chunk, ctx ) );
+                    /* we will potentially ask for more than available in the current blob;
+                        CSRA1_ReferenceGetChunk will return only as much as is available in the blob */
+                    NGS_String* chunk;
+                    ON_FAIL ( chunk = CSRA1_ReferenceGetChunk ( self, ctx, offset + cur_offset, basesToReturn - cur_offset ) )
+                    {
+                        free ( data );
+                        return NULL;
+                    }
+                    cur_offset += string_copy ( data + cur_offset, basesToReturn - cur_offset,
+                                                NGS_StringData ( chunk, ctx ), NGS_StringSize ( chunk, ctx ) );
                     NGS_StringRelease ( chunk, ctx );
                 }
                 return NGS_StringMakeOwned ( ctx, data, basesToReturn );
@@ -341,7 +348,7 @@ struct NGS_String * CSRA1_ReferenceGetBases ( CSRA1_Reference * self, ctx_t ctx,
 }
 
 struct NGS_String * CSRA1_ReferenceGetChunk ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size )
-{   /* return bases starting from the offset and until min ( end of the blob, offset + size ) */
+{   /* return maximum available contiguous bases starting from the offset */
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
     NGS_String* ret = NULL;
@@ -360,72 +367,37 @@ struct NGS_String * CSRA1_ReferenceGetChunk ( CSRA1_Reference * self, ctx_t ctx,
     }
     else
     {
-        const struct VCursor* vcurs = NGS_CursorGetVCursor ( self -> curs );
-        int64_t rowId = self -> first_row + offset / self -> chunk_size;
-        rc_t rc = VCursorSetRowId ( vcurs, rowId );
-        if ( rc != 0 )
+        uint64_t totalBases = CSRA1_ReferenceGetLength ( self, ctx );
+        if ( offset >= totalBases )
         {
-            INTERNAL_ERROR ( xcUnexpected, "VCursorSetRowId() rc = %R", rc );
+            return NGS_StringMake ( ctx, "", 0 );
         }
         else
         {
-            rc = VCursorOpenRow ( vcurs );
-            if ( rc != 0 )
+            int64_t rowId = self -> first_row + offset / self -> chunk_size;
+            TRY ( const VBlob* blob = NGS_CursorGetVBlob ( self -> curs, ctx, rowId, reference_READ ) )
             {
-                INTERNAL_ERROR ( xcUnexpected, "VCursorOpenRow() rc = %R", rc );
-            }
-            else
-            {
-                const VBlob* blob;
-                rc = VCursorGetBlob ( vcurs, & blob, NGS_CursorGetColumnIndex ( self -> curs, ctx, reference_READ ) );
-                if ( rc != 0  )
+                rc_t rc;
+                const void* data;
+                uint64_t cont_size;
+                TRY ( VByteBlob_ContiguousChunk ( blob, ctx, rowId, &data, &cont_size ) )
                 {
-                    VCursorCloseRow ( vcurs );
-                    INTERNAL_ERROR ( xcUnexpected, "VCursorGetBlob(READ) rc = %R", rc );
+                    uint64_t offsetInBlob =  offset % self -> chunk_size;
+                    if ( size == (uint64_t)-1 || offsetInBlob + size > cont_size )
+                    {
+                        size = cont_size - offsetInBlob;
+                    }
+                    if ( offset + size > totalBases )
+                    {   /* when requested more bases than there are in the reference, be careful not to return a part of the next reference sitting in the same blob */
+                        size = totalBases - offset;
+                    }
+                    ret = NGS_StringMakeCopy ( ctx, (const char*)data + offsetInBlob, size ); /* have to make a copy since otherwise would have to hold on to the entire blob, with no idea when to release it */
                 }
-                else
+
+                rc = VBlobRelease ( (VBlob*) blob );
+                if ( rc != 0 )
                 {
-                    rc = VCursorCloseRow ( vcurs );
-                    if ( rc != 0 )
-                    {
-                        INTERNAL_ERROR ( xcUnexpected, "VCursorCloseRow() rc = %R", rc );
-                    }
-                    else
-                    {
-                        /* calculate data/size of the blob (sub-VBlob) starting at rowId */
-                        uint32_t elem_bits;
-                        const void *row_start;
-                        uint32_t boff;
-                        uint32_t row_len;
-                        rc = VBlobCellData ( blob,
-                                             rowId,
-                                             & elem_bits,
-                                             & row_start,
-                                             & boff,
-                                             & row_len );
-                        if ( rc != 0 )
-                        {
-                            INTERNAL_ERROR ( xcUnexpected, "VBlobCellData() rc = %R", rc );
-                        }
-                        else
-                        {
-                            size_t rest_of_blob;
-                            const char* start = (const char*)row_start + offset % self -> chunk_size;
-                            assert( elem_bits == 8 );
-                            assert( boff == 0 );
-                            rest_of_blob = BlobBufferBytes ( blob ) - ( start - (const char*)( blob -> data . base ) );
-                            if ( size == (size_t)-1 || size > rest_of_blob)
-                            {
-                                size = rest_of_blob;
-                            }
-                            ret = NGS_StringMakeCopy ( ctx, start, size ); /* have to make a copy since otherwise would have to hold on to the entire blob, with no idea when to release it */
-                            rc = VBlobRelease ( (VBlob*) blob );
-                            if ( rc != 0 )
-                            {
-                                INTERNAL_ERROR ( xcUnexpected, "VBlobRelease() rc = %R", rc );
-                            }
-                        }
-                    }
+                    INTERNAL_ERROR ( xcUnexpected, "VBlobRelease() rc = %R", rc );
                 }
             }
         }
