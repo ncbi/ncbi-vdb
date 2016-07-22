@@ -153,8 +153,8 @@ KNS_EXTERN rc_t CC KNSManagerMakeTimedClientHttp ( struct KNSManager const *self
  * Release
  *  ignores NULL references
  */
-KNS_EXTERN rc_t CC KClientHttpAddRef ( const KHttp *self );
-KNS_EXTERN rc_t CC KClientHttpRelease ( const KHttp *self );
+KNS_EXTERN rc_t CC KClientHttpAddRef ( const KClientHttp *self );
+KNS_EXTERN rc_t CC KClientHttpRelease ( const KClientHttp *self );
 
 /* compatibility for existing code */
 #define KNSManagerMakeHttp KNSManagerMakeClientHttp
