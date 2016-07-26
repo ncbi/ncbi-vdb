@@ -986,7 +986,7 @@ FIXTURE_TEST_CASE(CSRA1_Reference_GetReferenceChunk_Chunks_Vs_Blobs, CSRA1_Fixtu
     NGS_String * full = NGS_ReferenceGetBases ( m_ref, ctx, 0, (uint64_t)-1 );
     REQUIRE ( ! FAILED () );
     REQUIRE_NOT_NULL ( full );
-    REQUIRE_EQ ( NGS_ReferenceGetLength ( m_ref, ctx ), NGS_StringSize ( full, ctx ) );
+    REQUIRE_EQ ( (uint64_t)NGS_ReferenceGetLength ( m_ref, ctx ), (uint64_t)NGS_StringSize ( full, ctx ) );
 
     size_t offset=0;
     while ( offset < NGS_StringSize ( full, ctx ) )
