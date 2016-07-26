@@ -849,7 +849,7 @@ static int64_t decode_base64string (const uint8_t* str, size_t len)
  * byte is either 0x80 for a positive number or 0xFF for a negative number.
  */
 
-static int64_t tar_strtoll (const uint8_t * str, size_t len)
+static int64_t tar_strtollImpl ( const uint8_t * str, size_t len, bool silent )
 {
     int64_t	result = 0;
     bool negative = false;
@@ -927,14 +927,20 @@ static int64_t tar_strtoll (const uint8_t * str, size_t len)
         TAR_DEBUG (("%s: unknown integer storage type %c%c%c%c%c%c%c%c\n",
                     temp_buff[0],temp_buff[1],temp_buff[2],temp_buff[3],
                     temp_buff[4],temp_buff[5],temp_buff[6],temp_buff[7]));
-        PLOGMSG (klogErr, (klogErr, "unknown integer storage type $(B0)$(B1)$(B2)$(B3)$(B4)$(B5)$(B6)$(B7)",
+        if ( ! silent ) {
+            PLOGMSG (klogErr, (klogErr, "unknown integer storage type "
+                                     "$(B0)$(B1)$(B2)$(B3)$(B4)$(B5)$(B6)$(B7)",
                            "B0=%c,B1=%c,B2=%c,B3=%c,B4=%c,B5=%c,B6=%c,B7=%c",
                            temp_buff[0],temp_buff[1],temp_buff[2],temp_buff[3],
                            temp_buff[4],temp_buff[5],temp_buff[6],temp_buff[7]));
+        }
     }
     return result;
 }
 
+static int64_t tar_strtoll (const uint8_t * str, size_t len) {
+    return tar_strtollImpl ( str, len, false );
+}
 
 
 /* ======================================================================
@@ -1848,13 +1854,18 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
              *
              * this will be wrong if we ever support cpio...
              */
-            data_size = (uint64_t)(tar_strtoll((uint8_t*)current_header.h->tar.size,TAR_SIZE_LEN));
+            data_size = (uint64_t) ( tar_strtollImpl
+                ( (uint8_t*)current_header.h->tar.size,TAR_SIZE_LEN, silent ) );
 #if _DEBUGGING && 0
-            uid =  (tar_strtoll((uint8_t*)current_header.h->tar.uid,TAR_ID_LEN));
-            gid =  (tar_strtoll((uint8_t*)current_header.h->tar.gid,TAR_ID_LEN));
+            uid =  ( tar_strtollImpl
+                ( (uint8_t*)current_header.h->tar.uid,TAR_ID_LEN, silent ) );
+            gid =  ( tar_strtollImpl
+                ( (uint8_t*)current_header.h->tar.gid,TAR_ID_LEN, silent ) );
 #endif
-            mtime = (tar_strtoll((uint8_t*)current_header.h->tar.mtime,TAR_TIME_LEN));
-            mode = (uint32_t)(tar_strtoll((uint8_t*)current_header.h->tar.mode,TAR_MODE_LEN));
+            mtime = ( tar_strtollImpl
+                ( (uint8_t*)current_header.h->tar.mtime,TAR_TIME_LEN, silent) );
+            mode = (uint32_t) ( tar_strtollImpl
+                ( (uint8_t*)current_header.h->tar.mode,TAR_MODE_LEN, silent) );
         }
 
         /* -----
