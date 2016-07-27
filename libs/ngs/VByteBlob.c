@@ -62,14 +62,16 @@ VByteBlob_ContiguousChunk ( const VBlob* p_blob,  ctx_t ctx, int64_t rowId, cons
         }
         else
         {
+			rc_t rc;
+            int64_t first;
+            uint64_t count;
+
             assert( elem_bits == 8 );
             assert( boff == 0 );
             *p_data = base;
             *p_size = 0;
 
-            int64_t first;
-            uint64_t count;
-            rc_t rc = VBlobIdRange ( p_blob, & first, & count );
+            rc = VBlobIdRange ( p_blob, & first, & count );
             if ( rc != 0  )
             {
                 INTERNAL_ERROR ( xcUnexpected, "VBlobIdRange() rc = %R", rc );
@@ -78,9 +80,9 @@ VByteBlob_ContiguousChunk ( const VBlob* p_blob,  ctx_t ctx, int64_t rowId, cons
             {
                 PageMapIterator pmIt;
 
-                assert ( rowId >= first && rowId < first + count );
+                assert ( rowId >= first && rowId < first + (int64_t)count );
 
-                if ( rowId - first + 1 < count ) /* more rows in the blob */
+                if ( rowId - first + 1 < (int64_t)count ) /* more rows in the blob */
                 {   /* *p_size is the size of value on rowId. Increase size to include subsequent rows, until we see a repeat or the blob ends */
                     rc = PageMapNewIterator ( (const PageMap*)p_blob->pm, &pmIt, rowId - first, count - ( rowId - first ) ); /* here, rowId is relative to the blob */
                     if ( rc != 0 )
