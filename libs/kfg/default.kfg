@@ -42,9 +42,9 @@
 /repository/remote/aux/NCBI/apps/nakmer/volumes/fuseNAKMER = "sadb"
 /repository/remote/aux/NCBI/apps/nannot/volumes/fuseNANNOT = "sadb"
 /repository/remote/aux/NCBI/apps/refseq/volumes/refseq = "refseq"
-/repository/remote/aux/NCBI/apps/sra/volumes/fuse1000 = "sra-instant/reads/ByRun/sra"
+/repository/remote/aux/NCBI/apps/sra/volumes/flat = "srapub"
 /repository/remote/aux/NCBI/apps/wgs/volumes/fuseWGS = "wgs"
-/repository/remote/aux/NCBI/root = "http://ftp-trace.ncbi.nlm.nih.gov/sra"
+/repository/remote/aux/NCBI/root = "http://sra-download.ncbi.nlm.nih.gov"
 
 # Remote access to NCBI's protected repository
 /repository/remote/protected/CGI/resolver-cgi = "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi"

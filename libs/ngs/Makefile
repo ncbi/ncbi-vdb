@@ -111,7 +111,10 @@ NGS_SRC =                 \
 	NGS_Refcount          \
 	NGS_String            \
 	NGS_Id                \
-	NGS_ErrBlock
+	NGS_ErrBlock          \
+	NGS_FragmentBlob      \
+	NGS_FragmentBlobIterator      \
+    VByteBlob    \
 
 NGS_OBJ = \
 	$(addsuffix .$(LOBX),$(NGS_SRC))

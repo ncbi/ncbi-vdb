@@ -24,4 +24,24 @@
 *
 */
 
-#define LIBWKDB_VERS 0x0102000D
+#ifndef _h_vbyteblob_
+#define _h_vbyteblob_
+
+#include <kfc/ctx.h>
+
+struct VBlob;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Calculate the biggest available contiguous data portion of the blob:
+*  starts at rowId, ends before a repeated value or at the end of the blob
+*/
+void VByteBlob_ContiguousChunk ( const struct VBlob* p_blob,  ctx_t ctx, int64_t rowId, const void** p_data, uint64_t* p_size );
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _h_vbyteblob_ */

@@ -2878,11 +2878,15 @@ void add_predefined_nodes ( KConfig * self, const char * appname )
 
     DEFINE_ENV("HOST");
     DEFINE_ENV("USER");
-    value = getenv("HOME");
-    if (value == NULL) 
-    {   /* apparently on Windows, use USERPROFILE */
-        value = getenv("USERPROFILE");
+
+    value = NULL;
+#if WINDOWS
+    value = getenv ( "USERPROFILE" );
+#endif
+    if ( value == NULL ) {
+        value = getenv ( "HOME" );
     }
+
     if (value == NULL)
     {
         update_node(self, "HOME", "", true );
@@ -3664,13 +3668,17 @@ LIB_EXPORT rc_t CC KConfigNodeReadString ( const KConfigNode *self, String** res
                     rc = RC( rcKFG, rcNode, rcReading, rcMemory, rcExhausted );
                 else
                 {
-                    /* TBD - this is broken for non-ascii strings
-                       much better to be WITHIN the config.c implementation
-                       and reach into the node value directly! */
-                    StringInit ( value, (char*)( value + 1 ), to_read, (uint32_t)to_read + 1 );
+                    /* initialize in absence of data - assume ASCII */
+                    StringInit ( value, (char*)( value + 1 ), to_read, (uint32_t)to_read );
+
+                    /* read the actual data */
                     rc = ReadNodeValueFixed(self, (char*)value->addr, to_read + 1);
                     if ( rc == 0 )
+                    {
+                        /* measure length of data to handle non-ASCII */
+                        value -> len = string_len ( value -> addr, value -> size );
                         *result = value;
+                    }
                     else
                     {
                         rc = RC(rcKFG, rcNode, rcReading, rcFormat, rcIncorrect);
@@ -4341,6 +4349,19 @@ LIB_EXPORT rc_t CC KConfigWriteString( KConfig *self, const char * path, const c
     if ( rc == 0 )
     {
         rc = KConfigNodeWrite ( node, value, string_size( value ) );
+        KConfigNodeRelease ( node );
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC KConfigWriteSString( KConfig *self, const char * path, struct String const * value )
+{
+    KConfigNode * node;
+    rc_t rc = KConfigOpenNodeUpdate ( self, &node, "%s", path );
+    if ( rc == 0 )
+    {
+        rc = KConfigNodeWrite ( node, value->addr, value->size );
         KConfigNodeRelease ( node );
     }
     return rc;

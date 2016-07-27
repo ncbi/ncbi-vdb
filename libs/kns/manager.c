@@ -27,10 +27,10 @@
 #include <kns/extern.h>
 
 #include "http-priv.h"
-#include "libkns.vers.h"
 #include "mgr-priv.h"
 #include "stream-priv.h"
 #include "sysmgr.h"
+#include "../klib/release-vers.h"
 
 #include <kfg/config.h>
 
@@ -289,7 +289,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
                 /* the manager is not a proper singleton */
                 if ( kns_manager_user_agent [ 0 ] == 0 )
                 {
-                    ver_t version = LIBKNS_VERS;
+                    ver_t version = RELEASE_VERS;
                     KNSManagerSetUserAgent ( mgr, PKGNAMESTR " ncbi-vdb.%V", version );
                 }
 

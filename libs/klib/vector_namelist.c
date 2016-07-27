@@ -167,8 +167,6 @@ LIB_EXPORT rc_t CC VNamelistAppend( VNamelist *self, const char* src )
     {
         if ( src == NULL )
             rc = RC( rcCont, rcNamelist, rcInserting, rcString, rcNull );
-        else if ( src[0] == 0 )
-            rc = RC( rcCont, rcNamelist, rcInserting, rcString, rcEmpty );
         else
         {
             char* my_copy = string_dup( src, string_size( src ) );
@@ -196,7 +194,7 @@ LIB_EXPORT rc_t CC VNamelistAppendString( VNamelist *self, const String * src )
     {
         if ( src == NULL )
             rc = RC( rcCont, rcNamelist, rcInserting, rcString, rcNull );
-        else if ( src->addr == NULL || src->len == 0 )
+        else if ( src->addr == NULL )
             rc = RC( rcCont, rcNamelist, rcInserting, rcString, rcEmpty );
         else
         {
@@ -213,7 +211,6 @@ LIB_EXPORT rc_t CC VNamelistAppendString( VNamelist *self, const String * src )
     }
     return rc;
 }
-
 
 
 LIB_EXPORT rc_t CC VNamelistIndexOf( VNamelist *self, const char* s, uint32_t *found )
@@ -355,3 +352,282 @@ LIB_EXPORT void CC VNamelistReorder ( VNamelist *self, bool case_insensitive )
     }
 }
 
+
+/* ---- split and join of strings ---------------------------------------------------------------- */
+
+LIB_EXPORT rc_t CC foreach_String_part( const String * src, const uint32_t delim,
+                                     rc_t ( CC * f ) ( const String * part, void *data ), void * data )
+{
+    rc_t rc = 0;
+    if ( src == NULL || f == NULL )
+        rc = RC ( rcCont, rcNamelist, rcParsing, rcParam, rcNull );
+    else
+    {
+        String tmp, part;
+        char * cptr;
+        char last_cptr_char = 0;
+        
+        StringInit( &tmp, src -> addr, src -> size, src -> len );
+        cptr = string_chr( tmp.addr, tmp.size, delim );
+        if ( cptr != NULL ) last_cptr_char = cptr[ 0 ];
+        while ( rc == 0 && cptr != NULL && tmp.len > 0 )
+        {
+            uint32_t l = ( cptr - tmp.addr );
+            StringInit( &part, tmp.addr, l, l );
+            rc = f( &part, data );
+            if ( rc == 0 )
+            {
+                tmp.addr = cptr + 1;
+                tmp.size -= l + 1;
+                tmp.len -= l + 1;
+                cptr = string_chr( tmp.addr, tmp.size, delim );
+                if ( cptr != NULL ) last_cptr_char = cptr[ 0 ];
+            }
+        }
+        if ( rc == 0 )
+        {
+            if ( tmp.len > 0 )
+                rc = f( &tmp, data );
+            else if ( last_cptr_char == delim )
+            {
+                part.addr = &last_cptr_char;
+                part.size = 0;
+                part.len = 0;
+                rc = f( &part, data );
+            }
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC foreach_Str_part( const char * src, const uint32_t delim,
+                                  rc_t ( CC * f ) ( const String * part, void *data ), void * data )
+{
+    rc_t rc;
+    if ( src == NULL || f == NULL )
+        rc = RC ( rcCont, rcNamelist, rcParsing, rcParam, rcNull );
+    else
+    {
+        String S;
+        StringInitCString( &S, src );
+        rc = foreach_String_part( &S, delim, f, data );
+    }
+    return rc;
+}
+
+
+static rc_t CC add_to_nl( const String * part, void * data )
+{
+    return VNamelistAppendString ( data, part );
+}
+
+
+LIB_EXPORT rc_t CC VNamelistSplitString ( VNamelist * list, const String * str, const uint32_t delim )
+{
+    rc_t rc = 0;
+    if ( list == NULL )
+        rc = RC ( rcCont, rcNamelist, rcParsing, rcSelf, rcNull );
+    else if ( str == NULL )
+        rc = RC ( rcCont, rcNamelist, rcParsing, rcParam, rcNull );
+    else
+        rc = foreach_String_part( str, delim, add_to_nl, list );
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC VNamelistSplitStr ( VNamelist * list, const char * str, const uint32_t delim )
+{
+    String S;
+    StringInitCString( &S, str );
+    return VNamelistSplitString ( list, &S, delim );
+}
+
+
+LIB_EXPORT rc_t CC VNamelistFromString ( VNamelist ** list, const String * str, const uint32_t delim )
+{
+    rc_t rc = VNamelistMake( list, 10 );
+    if ( rc == 0 )
+    {
+        rc = VNamelistSplitString ( *list, str, delim );
+        if ( rc != 0 )
+        {
+            VNamelistRelease( *list );
+            *list = NULL;
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC VNamelistFromStr ( VNamelist ** list, const char * str, const uint32_t delim )
+{
+    String S;
+    StringInitCString( &S, str );
+    return VNamelistFromString ( list, &S, delim );
+}
+
+
+static rc_t join_size( const VNamelist * list, uint32_t count, size_t * size )
+{
+    rc_t rc = 0;
+    uint32_t idx;
+    *size = 0;
+    for ( idx = 0; rc == 0 && idx < count; ++idx )
+    {
+        const char * item;
+        rc = VNameListGet ( list, idx, &item );
+        if ( rc == 0 )
+            *size += string_size ( item );
+    }
+    *size += ( count - 1 );
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC VNamelistJoin( const VNamelist * list, const uint32_t delim, const String ** rslt )
+{
+    rc_t rc = 0;
+    if ( rslt == NULL )
+        rc = RC ( rcCont, rcNamelist, rcRetrieving, rcParam, rcNull );
+    else
+    {
+        *rslt = NULL;
+        if ( list == NULL )
+            rc = RC ( rcCont, rcNamelist, rcRetrieving, rcSelf, rcNull );
+        else
+        {
+            uint32_t count;
+            char empty[ 1 ];
+            
+            rc = VNameListCount ( list, &count );
+            if ( rc == 0 )
+            {
+                String j;
+                char * buffer = NULL;
+                if ( count < 1 )
+                {
+                    j.addr = empty;
+                    empty[ 0 ] = 0;
+                    j.len = 0;
+                    j.size = 1;
+                }
+                else if ( count == 1 )
+                {
+                    const char * item;
+                    rc = VNameListGet ( list, 0, &item );
+                    if ( rc == 0 )
+                        StringInitCString( &j, item );
+                }
+                else
+                {
+                    size_t js;
+                    rc = join_size( list, count, &js );
+                    if ( rc == 0 )
+                    {
+                        buffer = malloc( js + 1 );
+                        if ( buffer == NULL )
+                            rc = RC ( rcCont, rcNamelist, rcRetrieving, rcMemory, rcExhausted );
+                        else
+                        {
+                            uint32_t idx, dst = 0;
+                            size_t dst_size = js;
+                            for ( idx = 0; rc == 0 && idx < count; ++ idx )
+                            {
+                                const char * item;
+                                rc = VNameListGet ( list, idx, &item );
+                                if ( rc == 0 )
+                                {
+                                    size_t item_size = string_size ( item );
+                                    string_copy ( &buffer[ dst ], dst_size, item, item_size );
+                                    dst += item_size;
+                                    if ( idx < ( count - 1 ) )
+                                    {
+                                        buffer[ dst++ ] = delim;
+                                        dst_size -= ( item_size + 1 );
+                                    }
+                                }
+                            }
+                            if ( rc == 0 )
+                            {
+                                buffer[ dst ] = 0;
+                                StringInitCString( &j, buffer );
+                                /*
+                                j.addr = buffer;
+                                j.len  = ( uint32_t )( dst & 0xFFFFFFFF );
+                                j.size = dst;
+                                */
+                            }
+                        }
+                    }
+                }
+                if ( rc == 0 )
+                    rc = StringCopy ( rslt, &j );
+                if ( buffer != NULL )
+                    free( ( void * ) buffer );
+            }
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC VNamelistContainsString( const VNamelist * list,
+    const String * item, int32_t * idx )
+{
+    rc_t rc = 0;
+    if ( idx == NULL )
+        rc = RC ( rcCont, rcNamelist, rcRetrieving, rcParam, rcNull );
+    else
+    {
+        *idx = -1;
+        if ( item == NULL )
+            rc = RC ( rcCont, rcNamelist, rcRetrieving, rcParam, rcNull );
+        else if ( list == NULL )
+            rc = RC ( rcCont, rcNamelist, rcRetrieving, rcSelf, rcNull );
+        else
+        {
+            uint32_t count, i;
+            rc = VNameListCount ( list, &count );
+            for ( i = 0; rc == 0 && *idx < 0 && i < count; ++i )
+            {
+                const char * s;
+                rc = VNameListGet ( list, i, &s );
+                if ( rc == 0 )
+                {
+                    int cmp;
+                    String S;
+                    StringInitCString( &S, s );
+                    cmp = StringCompare( item, &S );
+                    if ( cmp == 0 )
+                        *idx = i;
+                }
+            }
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC VNamelistContainsStr( const VNamelist * list,
+        const char * item, int32_t * idx )
+{
+    rc_t rc = 0;
+    if ( idx == NULL )
+        rc = RC ( rcCont, rcNamelist, rcRetrieving, rcParam, rcNull );
+    else
+    {
+        *idx = -1;
+        if ( item == NULL )
+            rc = RC ( rcCont, rcNamelist, rcRetrieving, rcParam, rcNull );
+        else if ( list == NULL )
+            rc = RC ( rcCont, rcNamelist, rcRetrieving, rcSelf, rcNull );
+        else
+        {
+            String S;
+            StringInitCString( &S, item );
+            return VNamelistContainsString( list, &S, idx );
+        }
+    }
+    return rc;
+}

@@ -37,8 +37,10 @@ typedef struct NGS_Cursor NGS_Cursor;
 extern "C" {
 #endif
 
-struct VTable;
 struct VDatabase;
+struct VTable;
+struct VCursor;
+struct VBlob;
 struct NGS_String;
 
 /*--------------------------------------------------------------------------
@@ -50,11 +52,11 @@ struct NGS_String;
 /* Make
  */
 const NGS_Cursor* NGS_CursorMake ( ctx_t ctx, const struct VTable* table, const char * col_specs[], uint32_t num_cols );
-const NGS_Cursor* NGS_CursorMakeDb ( ctx_t ctx, 
-                                     const struct VDatabase* db, 
-                                     const struct NGS_String* run_name, 
-                                     const char* tableName, 
-                                     const char * col_specs[], 
+const NGS_Cursor* NGS_CursorMakeDb ( ctx_t ctx,
+                                     const struct VDatabase* db,
+                                     const struct NGS_String* run_name,
+                                     const char* tableName,
+                                     const char * col_specs[],
                                      uint32_t num_cols );
 
 /* Release
@@ -70,41 +72,41 @@ const NGS_Cursor * NGS_CursorDuplicate ( const NGS_Cursor * self, ctx_t ctx );
 /* CellDataDirect
  * Adds requested column if necessary and calls VCursorCellDataDirect
 */
-void NGS_CursorCellDataDirect ( const NGS_Cursor *self, 
+void NGS_CursorCellDataDirect ( const NGS_Cursor *self,
                                 ctx_t ctx,
                                 int64_t rowId,
-                                uint32_t colIdx, 
-                                uint32_t *elem_bits, 
+                                uint32_t colIdx,
+                                uint32_t *elem_bits,
                                 const void **base,
-                                uint32_t *boff, 
+                                uint32_t *boff,
                                 uint32_t *row_len );
 
 /* GetString
-*/                                
+*/
 struct NGS_String * NGS_CursorGetString ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t colIdx );
 
 /* GetInt64
-*/                                
+*/
 int64_t NGS_CursorGetInt64 ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t colIdx );
 
 /* GetUInt64
-*/                                
+*/
 uint64_t NGS_CursorGetUInt64 ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t colIdx );
 
 /* GetInt32
-*/                                
+*/
 int32_t NGS_CursorGetInt32 ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t colIdx );
 
 /* GetUInt32
-*/                                
+*/
 uint32_t NGS_CursorGetUInt32 ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t colIdx );
 
 /* GetBool
-*/                                
+*/
 bool NGS_CursorGetBool ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t colIdx );
 
 /* GetChar
-*/                                
+*/
 char NGS_CursorGetChar ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t colIdx );
 
 /* GetRowCount
@@ -117,15 +119,19 @@ void NGS_CursorGetRowRange ( const NGS_Cursor * self, ctx_t ctx, int64_t* first,
 
 /* GetTable
  */
-const struct VTable* NGS_CursorGetTable ( const NGS_Cursor * self, ctx_t ctx ); 
+const struct VTable* NGS_CursorGetTable ( const NGS_Cursor * self, ctx_t ctx );
 
 /* GetVCursor
  */
-const struct VCursor* NGS_CursorGetVCursor ( const NGS_Cursor * self ); 
+const struct VCursor* NGS_CursorGetVCursor ( const NGS_Cursor * self );
 
 /* GetColumnIndex
  */
 uint32_t NGS_CursorGetColumnIndex ( const NGS_Cursor * self, ctx_t ctx, uint32_t column_id );
+
+/* GetVBlob
+ */
+const struct VBlob* NGS_CursorGetVBlob ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t column_id );
 
 #ifdef __cplusplus
 }

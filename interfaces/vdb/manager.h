@@ -46,6 +46,7 @@ extern "C" {
  * forwards
  */
 struct KDirectory;
+struct VPath;
 
 /*--------------------------------------------------------------------------
  * VDBManager
@@ -192,7 +193,32 @@ VDB_EXTERN int CC VDBManagerPathType ( const VDBManager * self,
     const char *path, ... );
 VDB_EXTERN int CC VDBManagerVPathType ( const VDBManager * self,
     const char *path, va_list args );
-        
+
+
+/* GetCacheRoot
+ *  query the cache-root
+ *
+ *  path [ OUT ] - VPath of location of current cache-root
+ */
+VDB_EXTERN rc_t CC VDBManagerGetCacheRoot ( const VDBManager * self,
+    struct VPath const ** path );
+
+
+/* SetCacheRoot
+ *  set a new cache-root
+ *
+ *  path [ IN ] - VPath of new location of cache-root
+ *  
+ *  The change to the cache-root is temporary, it is not automatically stored
+ *  in the configuration-file. If the manager is released, the change will be
+ *  forgotten. If the user wants to make the change permanent, he has to obtain
+ *  a reference to the config-manager 'KConfig' and call KConfigCommit().
+ */
+
+VDB_EXTERN rc_t CC VDBManagerSetCacheRoot ( const VDBManager * self,
+    struct VPath const * path );
+ 
+
 #ifdef __cplusplus
 }
 #endif

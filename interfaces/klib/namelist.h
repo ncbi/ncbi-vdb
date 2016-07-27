@@ -174,6 +174,52 @@ KLIB_EXTERN rc_t CC VNameListGet ( const VNamelist *self, uint32_t idx, const ch
  */
 KLIB_EXTERN void CC VNamelistReorder ( VNamelist *self, bool case_insensitive );
 
+
+/* foreach_String_part, foreach_Str_part
+ *  splits a String or char-ptr by delim, invokes callback-funtion on each part
+ *  trailing delim's without content are omitted
+ */
+KLIB_EXTERN rc_t CC foreach_String_part( const String * src, const uint32_t delim,
+         rc_t ( CC * f ) ( const String * part, void *data ), void * data );
+         
+KLIB_EXTERN rc_t CC foreach_Str_part( const char * src, const uint32_t delim,
+         rc_t ( CC * f ) ( const String * part, void *data ), void * data );
+
+
+/* VNamelistSplitString, VNamelistSplitStr
+ *  splits a String or char-ptr and adds parts to existing VNamelist
+ */
+KLIB_EXTERN rc_t CC VNamelistSplitString ( VNamelist * list,
+        const String * str, const uint32_t delim );
+
+KLIB_EXTERN rc_t CC VNamelistSplitStr ( VNamelist * list,
+        const char * str, const uint32_t delim );
+
+
+/* VNamelistFromString, VNamelistFromStr
+ *  splits a String or char-ptr and creates VNamelist from parts
+ */
+KLIB_EXTERN rc_t CC VNamelistFromString ( VNamelist ** list,
+        const String * str, const uint32_t delim );
+
+KLIB_EXTERN rc_t CC VNamelistFromStr ( VNamelist ** list,
+        const char * str, const uint32_t delim );
+
+/* VNamelistJoin
+ *  join all strings in the given list and put delim's inbetween them
+ *  the function will allocate the result-String
+ */
+KLIB_EXTERN rc_t CC VNamelistJoin( const VNamelist * list,
+        const uint32_t delim, const String ** rslt );
+
+/* VNamelistContainsString, VNamelistContainsStr
+ *  loop through the list to and report if and where it contains the item
+ */
+KLIB_EXTERN rc_t CC VNamelistContainsString( const VNamelist * list,
+        const String * item, int32_t * idx );
+KLIB_EXTERN rc_t CC VNamelistContainsStr( const VNamelist * list,
+        const char * item, int32_t * idx );
+        
 #ifdef __cplusplus
 }
 #endif
