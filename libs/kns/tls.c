@@ -27,6 +27,7 @@
 struct KTLSStream;
 #define KSTREAM_IMPL struct KTLSStream
 
+#include <kns/manager.h>
 #include <kns/extern.h>
 #include <kns/manager.h>
 #include <kns/tls.h>
