@@ -221,7 +221,7 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
 
     STATUS ( 0, "Reading from server..." );
 
-    
+   
     self -> rc = 0;
     ret = mbedtls_ssl_read( &self -> ssl, buffer, bsize );
     STATUS ( 0, "%zu byte read as '%s'", bsize, buffer );
