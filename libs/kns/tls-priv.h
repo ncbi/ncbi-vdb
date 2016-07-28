@@ -24,69 +24,55 @@
 *
 */
 
-#ifndef _h_libs_kns_mgr_priv_
-#define _h_libs_kns_mgr_priv_
-
-#ifndef _h_kns_extern_
-#include <kns/extern.h>
-#endif
-
-#ifndef _h_klib_refcount_
-#include <klib/refcount.h>
-#endif
-
-#ifndef _h_kns_mgr_priv_
-#include <kns/kns-mgr-priv.h>
-#endif
-
 #ifndef _h_libs_kns_tls_priv_
-#include "tls-priv.h"
+#define _h_libs_kns_tls_priv_
+
+#ifndef _h_kns_tls_
+#include <kns/tls.h>
 #endif
+
+#if ! defined ( MBEDTLS_CONFIG_FILE )
+#include <mbedtls/config.h>
+#else
+#include MBEDTLS_CONFIG_FILE 
+#endif
+
+#include <mbedtls/net.h>
+#include <mbedtls/debug.h>
+#include <mbedtls/ssl.h>
+#include <mbedtls/aes.h>
+#include <mbedtls/entropy.h>
+#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/error.h>
+#include <mbedtls/certs.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct String;
-struct KConfig;
-struct HttpRetrySpecs;
-
-struct KNSManager
+/*--------------------------------------------------------------------------
+ * KTLSGlobals
+ */
+typedef struct KTLSGlobals KTLSGlobals;
+struct KTLSGlobals
 {
-    KRefcount refcount;
-    
-    struct String const *aws_access_key_id;
-    struct String const *aws_secret_access_key;
-    struct String const *aws_region;
-    struct String const *aws_output;
-    
-    struct HttpRetrySpecs retry_specs;
-
-    KTLSGlobals tlsg;
-
-    int32_t conn_timeout;
-    int32_t conn_read_timeout;
-    int32_t conn_write_timeout;
-    int32_t http_read_timeout;
-    int32_t http_write_timeout;
-    
-    uint32_t maxTotalWaitForReliableURLs_ms;
-
-    uint8_t  maxNumberOfRetriesOnFailureForReliableURLs;
-
-    bool http_proxy_enabled; /* TBD - does this need to be static today? */
-    bool http_proxy_only; /* no direct connection - proxy only */
-    HttpProxy * http_proxy;
-
-    bool verbose;
+    mbedtls_x509_crt cacert;
+    mbedtls_ctr_drbg_context ctr_drbg;
+    mbedtls_entropy_context entropy;
+    mbedtls_ssl_config config;
 };
 
-/* test */
-struct KStream;
-void KStreamForceSocketClose ( struct KStream const * self );
+/* Init
+ */
+rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg );
+
+/* Whack
+ */
+void KTLSGlobalsWhack ( KTLSGlobals * self );
+
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _h_libs_kns_mgr_priv_ */
+#endif /* _h_libs_kns_tls_priv_ */

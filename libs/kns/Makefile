@@ -85,7 +85,8 @@ KNS_NO_HTTP_SRC = \
 	sysendpoint \
 	syssock \
 	sysstream \
-    sysmgr
+	sysmgr \
+	tls
 
 ifneq (win,$(OS))
 KNS_NO_HTTP_SRC += \
