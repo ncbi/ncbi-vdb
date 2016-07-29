@@ -31,6 +31,7 @@
 #include <kproc/lock.h>
 #include <klib/refcount.h>
 #include <klib/rc.h>
+#include <atomic.h>
 
 #define rcTask rcCmd
 
@@ -130,19 +131,23 @@ LIB_EXPORT rc_t CC KProcMgrInit ( void )
     {
         KProcMgr *mgr = malloc ( sizeof * s_proc_mgr );
         if ( mgr == NULL )
+        {
             rc = RC ( rcPS, rcMgr, rcInitializing, rcMemory, rcExhausted );
+        }
         else
         {
-            rc = KLockMake ( & cleanup_lock );
-            if ( rc == 0 )
+            if ( atomic_test_and_set_ptr ( (atomic_ptr_t*) & s_proc_mgr, mgr, NULL ) == NULL )
             {
-                mgr -> cleanup = NULL;
-                KRefcountInit ( & mgr -> refcount, 0, "KProcMgr", "init", "process mgr" );
+                rc = KLockMake ( & cleanup_lock );
+                if ( rc == 0 )
+                {
+                    mgr -> cleanup = NULL;
+                    KRefcountInit ( & mgr -> refcount, 0, "KProcMgr", "init", "process mgr" );
 
-                s_proc_mgr = mgr;
-                return 0;
+                    s_proc_mgr = mgr;
+                    return 0;
+                }
             }
-
             free ( mgr );
         }
     }
