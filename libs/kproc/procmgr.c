@@ -149,7 +149,7 @@ LIB_EXPORT rc_t CC KProcMgrInit ( void )
                 KRefcountInit ( & mgr -> refcount, 0, "KProcMgr", "init", "process mgr" );
 
                 rslt = atomic_test_and_set_ptr ( & s_proc_mgr, mgr, NULL );
-                if ( rslt == mgr )
+                if ( rslt == NULL )
                     return 0;
 
                 /* someone beat us to it */
