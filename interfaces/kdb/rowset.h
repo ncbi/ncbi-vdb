@@ -35,6 +35,10 @@
 #include <klib/defs.h>
 #endif
 
+#ifndef _h_klib_defs_
+#include <klib/defs.h>
+#endif
+
 #include <stdarg.h>
 
 #ifdef __cplusplus
@@ -51,7 +55,7 @@ struct KTable;
  * KRowSet
  *  a subset of matching rows
  */
-typedef struct KRowSet KRowSet;
+typedef struct KRowSet_v1 KRowSet_v1;
 
 /* MakeRowSet
  *  may add others...
@@ -71,25 +75,20 @@ KDB_EXTERN rc_t CC KRowSetRelease ( const KRowSet * self );
  *  add a single row to set
  *
  *  "row_id" [ IN ] - row-id to be added
- *
- *  "optional_inserted" [ OUT, NULL OKAY ] - returns true if row-id
- *  was actually added, false otherwise.
  */
-KDB_EXTERN rc_t CC KRowSetAddRowId ( KRowSet * self, int64_t row_id,
-    bool * optional_inserted );
+KDB_EXTERN rc_t CC KRowSetAddRowId ( KRowSet * self, int64_t row_id );
 
 
 /* AddRowIdRange
  *  adds row-ids within specified range
  *
  *  "row_id" [ IN ] and "count" [ IN ] - range of row-ids to be added
- *
- *  "optional_inserted" [ OUT, NULL OKAY ] - returns the number of ids
- *  actually added. this can be from 0.."count" depending upon whether the
- *  row-id(s) already exist.
  */
-KDB_EXTERN rc_t CC KRowSetAddRowIdRange ( KRowSet * self, int64_t row_id,
-    uint64_t count, uint64_t * optional_inserted );
+KDB_EXTERN rc_t CC KRowSetAddRowIdRange ( KRowSet * self, int64_t row_id );
+
+/* needed (? maybe ?)
+ *  add an array of row-ids in random order
+ */
 
 
 /* GetNumRowIds
@@ -104,11 +103,15 @@ KDB_EXTERN rc_t CC KRowSetGetNumRowIds ( const KRowSet * self, uint64_t * num_ro
 KDB_EXTERN rc_t CC KRowSetVisit ( const KRowSet * self, bool reverse,
     void ( CC * f ) ( int64_t row_id, void * data ), void * data );
 
-/**
- * OpAnd
- *  performs an intersection with other rowset and updates a current one
+/* Intersect
+ *  performs an intersection between two sets and returns the result
  */
-KDB_EXTERN rc_t CC KRowSetOpAnd ( KRowSet * self, const KRowSet * other );
+KDB_EXTERN KRowSet * CC KRowSetIntersect ( ctx_t ctx, const KRowSet * a, const KRowSet * b );
+
+/* needed:
+ *  union, complement
+ */
+KDB_EXTERN KRowSet * CC KRowSetUnion ( ctx_t ctx, const KRowSet * a, const KRowSet * b );
 
 /*--------------------------------------------------------------------------
  * KRowSetIterator
