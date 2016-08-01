@@ -257,11 +257,10 @@ rc_t CC KTLSStreamWrite ( KTLSStream * self,
     STATUS ( 0, "Writing to server\n" );
     
     self -> rc = 0;
-    ret = mbedtls_ssl_write ( &self -> ssl, buffer, size );
-    if ( ret <= 0 )
+
+    do
     {
-#warning "this has to be checked - was a loop, may need/want to be a loop"
-#warning "can't be a loop right now or it can be infinite. fix me."
+        ret = mbedtls_ssl_write ( &self -> ssl, buffer, size );
         if ( ret != MBEDTLS_ERR_SSL_WANT_READ && 
              ret != MBEDTLS_ERR_SSL_WANT_WRITE )
         {
@@ -269,8 +268,9 @@ rc_t CC KTLSStreamWrite ( KTLSStream * self,
             return self -> rc;
         }
     }
+    while ( ret <= 0 )
 
-    assert ( ret >= 0 );
+    assert ( ret > 0 );
     * num_writ = ret;
 
     return 0;
@@ -330,6 +330,15 @@ int CC ktls_net_send ( void *ctx, const unsigned char *buf, size_t len )
     if ( self -> rc != 0 )
     {
         /* TBD - translate the error code into one of the MBEDTLS errors */
+        switch ( GetRCState ( self -> rc ) )
+        {
+        /* EPIPE - MBEDTLS_ERR_NET_CONN_RESET: broken pipe */
+        /* ECONNRESET - MBEDTLS_ERR_NET_CONN_RESET: connection reset */
+        /* EINTR - MBEDTLS_ERR_SSL_WANT_READ: we just continue ( shown in unix/sysstream.c ) */    
+        default:
+            /* anything else is just failed */
+            break;
+        }
         return -1;
     }
 
@@ -349,7 +358,17 @@ int CC ktls_net_recv ( void *ctx, unsigned char *buf, size_t len )
 
     if ( self -> rc != 0 )
     {
+        int err;
         /* TBD - discover if the read timed out - possibly return MBEDTLS_ERR_SSL_WANT_READ */
+        switch ( GetRCState ( self -> rc ) )
+        {
+        /* EPIPE - MBEDTLS_ERR_NET_CONN_RESET: broken pipe */
+        /* ECONNRESET - MBEDTLS_ERR_NET_CONN_RESET:connection reset */
+        /* EINTR - MBEDTLS_ERR_SSL_WANT_READ: we just continue ( shown in unix/sysstream.c ) */    
+        default:
+            /* anything else is just failed */
+            break;
+        }
 
         /* TBD - translate the error code into one of the MBEDTLS errors */
         return -1;
