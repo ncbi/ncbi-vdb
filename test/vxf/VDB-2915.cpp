@@ -47,6 +47,7 @@ TEST_CASE( RANDOM_UINT8_BETWEEN_1_AND_32 )
     
     /* first make a buffer of uint8_t's with random values ( between 1 and 32 ) */
     REQUIRE_RC ( make_random_uint8_buffer( &source, size32k, 1, 32 ) );
+    REQUIRE_RC( KOutMsg( "\na buffer of size %,ld bytes containing random values between 1..32 made\n", size32k ) );
     
     /* now compress it */
     w_buf compressed;
@@ -81,6 +82,7 @@ TEST_CASE( RANDOM_UINT8_BETWEEN_0_AND_255 )
     
     /* first make a buffer of uint8_t's with random values ( between 0 and 255 ) */
     REQUIRE_RC ( make_random_uint8_buffer( &source, size32k, 0, 255 ) );
+    REQUIRE_RC( KOutMsg( "\na buffer of size %,ld bytes containing random values between 0..255 made\n", size32k ) );
     
     /* now compress it */
     w_buf compressed;
