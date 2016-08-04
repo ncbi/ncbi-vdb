@@ -268,7 +268,6 @@ rc_t CC KTLSStreamWrite ( KTLSStream * self,
         STATUS ( 0, "failed...ssl write returned %d\n", ret );
         return self -> rc;
     }
-    while ( ret <= 0 )
 
     assert ( ret > 0 );
     * num_writ = ret;
@@ -358,7 +357,6 @@ int CC ktls_net_recv ( void *ctx, unsigned char *buf, size_t len )
 
     if ( self -> rc != 0 )
     {
-        int err;
         /* TBD - discover if the read timed out - possibly return MBEDTLS_ERR_SSL_WANT_READ */
         switch ( GetRCState ( self -> rc ) )
         {
