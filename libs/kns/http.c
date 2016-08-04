@@ -86,6 +86,8 @@ void URLBlockInit ( URLBlock *self )
     self -> port = 0; /* 0 = DEFAULT 80 for http, 443 for https */
 
     self -> scheme_type = st_NONE;
+    self -> tls = false;
+
     self -> port_dflt = true;
 }
 
@@ -146,6 +148,7 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
                 /* check for https */
                 b -> port = 443;
                 b -> scheme_type = st_HTTPS;
+                b -> tls = true;
                 if ( ! StringCaseEqual ( & b -> scheme, & https ) )
                 {
                     String s3;
@@ -154,6 +157,7 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
                     /* it is not http, check for s3 */
                     b -> port = 80;
                     b -> scheme_type = st_S3;
+                    b -> tls = false;
                     if ( ! StringCaseEqual ( & b -> scheme, & s3 ) )
                     {
                         b -> port = 0;
