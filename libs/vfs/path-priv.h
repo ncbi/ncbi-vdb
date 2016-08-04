@@ -126,6 +126,7 @@ typedef enum eVPUri_t
     vpuri_file,
     vpuri_ncbi_acc,
     vpuri_http,
+    vpuri_https,
     vpuri_ftp,
     vpuri_ncbi_legrefseq,
     vpuri_ncbi_obj,     /* for dbGaP objects */

@@ -251,6 +251,18 @@ void VPathCaptureScheme ( VPath * self, const char * uri, size_t start, size_t e
                 break;
             }
             break;
+        case 5:
+            /* 5 character schemes */
+            switch (  uri [ 0 ] )
+            {
+            case 'h':
+            case 'H':
+                /* https */
+                if ( strcase_cmp (  scheme + 1, 4, "https" + 1, 4, 4 ) == 0 )
+                    self -> scheme_type = vpuri_https;
+                break;
+            }
+            break;
             
         case 8:
             /* 8 character schemes starting with "ncbi-" */
@@ -3590,6 +3602,7 @@ LIB_EXPORT rc_t CC LegacyVPathMakeDirectoryRelative ( VPath ** new_path,
                         break;
 
                     case vpuri_http:
+                    case vpuri_https:
                     case vpuri_ftp:
                     case vpuri_fasp:
                         /* calling code would know how to handle these */
