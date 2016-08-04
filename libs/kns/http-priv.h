@@ -70,6 +70,7 @@ typedef enum
 {
     st_NONE,
     st_HTTP,
+    st_HTTPS,
     st_S3
 } SchemeType;
 

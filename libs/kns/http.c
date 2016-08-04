@@ -131,27 +131,33 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
             String http;
             CONST_STRING ( & http, "http" );
 
-            /* here we assume the scheme will be http */
-            b -> scheme_type = st_HTTP;
-
             /* assign scheme to the url_block */
             StringInit ( & b -> scheme, buf, sep - buf, ( uint32_t ) ( sep - buf ) );
 
-            /* check to make sure it is 'http' */
+            /* here we assume the scheme will be http */
+            b -> scheme_type = st_HTTP;
             if ( ! StringCaseEqual ( & b -> scheme, & http ) )
             {
-                /* it is not http, check for s3 */
-                String s3;
-                CONST_STRING ( & s3, "s3" );
-                
-                if ( ! StringCaseEqual ( & b -> scheme, & s3 ) )
+                String https;
+                CONST_STRING ( & https, "https" );
+
+                /* check for https */
+                b -> scheme_type = st_HTTPS;
+                if ( ! StringCaseEqual ( & b -> scheme, & https ) )
                 {
-                    b -> scheme_type = st_NONE;
-                    rc = RC ( rcNS, rcUrl, rcEvaluating, rcName, rcIncorrect );
-                    PLOGERR ( klogErr ,( klogErr, rc, "Scheme is '$(scheme)'", "scheme=%S", & b -> scheme ) );
-                    return rc;
+                    String s3;
+                    CONST_STRING ( & s3, "s3" );
+                
+                    /* it is not http, check for s3 */
+                    b -> scheme_type = st_S3;
+                    if ( ! StringCaseEqual ( & b -> scheme, & s3 ) )
+                    {
+                        b -> scheme_type = st_NONE;
+                        rc = RC ( rcNS, rcUrl, rcEvaluating, rcName, rcIncorrect );
+                        PLOGERR ( klogErr ,( klogErr, rc, "Scheme is '$(scheme)'", "scheme=%S", & b -> scheme ) );
+                        return rc;
+                    }
                 }
-                b -> scheme_type = st_S3;
             }
 
             /* accept scheme - skip past */
