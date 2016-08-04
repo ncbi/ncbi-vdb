@@ -86,6 +86,7 @@ struct URLBlock
     uint32_t port;
 
     SchemeType scheme_type;
+    bool port_dflt;
 };
 extern void URLBlockInit ( URLBlock *self );
 extern rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size );
