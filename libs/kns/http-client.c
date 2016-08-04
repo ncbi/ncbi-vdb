@@ -226,7 +226,10 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t por
 
 #if NO_HTTPS_SUPPORT
     if ( self -> tls )
+    {
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Unsupported request for TLS\n" ) );
         return RC ( rcNS, rcNoTarg, rcInitializing, rcParam, rcUnsupported );
+    }
 #endif
 
     for ( pp_idx = 0; pp_idx < sizeof dflt_proxy_ports / sizeof dflt_proxy_ports [ 0 ]; ++ pp_idx )
