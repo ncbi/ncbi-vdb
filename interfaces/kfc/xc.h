@@ -74,6 +74,7 @@ XOBJ ( xoStorage, "storage", rcStorage );
 XOBJ ( xoArgv, "argument vector", rcArgv );
 XOBJ ( xoZlib, "zlib stream", rcBlob );
 XOBJ ( xoAlignment, "alignment", rcData );
+XOBJ ( xoRefcount, "refcount", rcConstraint );
 
 /*--------------------------------------------------------------------------
  * XSTATE
@@ -109,6 +110,8 @@ XSTATE ( xsInconsistent, "inconsistent", rcInconsistent );
 XSTATE ( xsUnsupported, "unsupported", rcUnsupported );
 XSTATE_EXT ( xsInitFailed, xsFailed, "init failed", rcFailed );
 XSTATE ( xsNoPrimary, "missing primary", rcInvalid );
+XSTATE ( xsBadVersion, "bad version", rcBadVersion );
+XSTATE ( xsViolated, "violated", rcViolated );
 
 /*--------------------------------------------------------------------------
  * XC
@@ -178,6 +181,9 @@ XC ( xcFileAccessFailed, xoFile, xsAccessFailed );
 XC ( xcZlibInitFailed, xoZlib, xsInitFailed );
 XC ( xcZlibDataInvalid, xoZlib, xsInvalid );
 XC ( xcSecondaryAlignmentMissingPrimary, xoAlignment, xsNoPrimary );
+XC ( xcInterfaceBadVersion, xoInterface, xsBadVErsion );
+XC ( xcRefcountViolated, xoRefcount, xsViolated );
+XC ( xcSelfInvalid, xoSelf, xsInvalid );
 
 #ifdef __cplusplus
 }
