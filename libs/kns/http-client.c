@@ -404,9 +404,10 @@ rc_t KNSManagerMakeClientHttpInt ( const KNSManager *self, KClientHttp **_http,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttp ( const KNSManager *self,
+static
+rc_t KNSManagerMakeTimedClientHttpInt ( const KNSManager *self,
     KClientHttp **_http, KStream *opt_conn, ver_t vers, int32_t readMillis, int32_t writeMillis,
-    const String *host, uint32_t port )
+    const String *host, uint32_t port, uint32_t dflt_port )
 {
     rc_t rc;
     
@@ -453,9 +454,9 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttp ( const KNSManager *self,
                 else if ( writeMillis > MAX_HTTP_WRITE_LIMIT )
                     writeMillis = MAX_HTTP_WRITE_LIMIT;
 
-                /* default port for http */
+                /* default port */
                 if ( port == 0 )
-                    port = 80;
+                    port = dflt_port;
 
                 /* initialize http object - will create a new reference to hostname buffer */
                 rc = KNSManagerMakeClientHttpInt ( self, _http, & hostname_buffer,
@@ -475,6 +476,14 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttp ( const KNSManager *self,
     return rc;
 }
 
+
+LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttp ( const KNSManager *self,
+    KClientHttp ** http, KStream *opt_conn, ver_t vers, int32_t readMillis, int32_t writeMillis,
+    const String *host, uint32_t port )
+{
+    return KNSManagerMakeTimedClientHttpInt ( self, http, opt_conn, vers, readMillis, writeMillis, host, port, 80 );
+}
+
 LIB_EXPORT rc_t CC KNSManagerMakeClientHttp ( const KNSManager *self,
     KClientHttp **http, KStream *opt_conn, ver_t vers, const String *host, uint32_t port )
 {
@@ -489,6 +498,30 @@ LIB_EXPORT rc_t CC KNSManagerMakeClientHttp ( const KNSManager *self,
     }
 
     return KNSManagerMakeTimedClientHttp ( self, http, opt_conn, vers,
+        self -> http_read_timeout, self -> http_write_timeout, host, port );
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttps ( const KNSManager *self,
+    KClientHttp ** https, KStream *opt_conn, ver_t vers, int32_t readMillis, int32_t writeMillis,
+    const String *host, uint32_t port )
+{
+    return KNSManagerMakeTimedClientHttpInt ( self, https, opt_conn, vers, readMillis, writeMillis, host, port, 443 );
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakeClientHttps ( const KNSManager *self,
+    KClientHttp **https, KStream *opt_conn, ver_t vers, const String *host, uint32_t port )
+{
+    if ( self == NULL )
+    {
+        if ( https == NULL )
+            return RC ( rcNS, rcMgr, rcValidating, rcParam, rcNull );
+
+        * https = NULL;
+
+        return RC ( rcNS, rcMgr, rcValidating, rcSelf, rcNull );
+    }
+
+    return KNSManagerMakeTimedClientHttps ( self, https, opt_conn, vers,
         self -> http_read_timeout, self -> http_write_timeout, host, port );
 }
 
