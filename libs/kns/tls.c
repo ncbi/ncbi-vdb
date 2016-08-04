@@ -216,31 +216,35 @@ static
 rc_t CC KTLSStreamRead ( const KTLSStream * cself,
     void * buffer, size_t bsize, size_t * num_read )
 {
+    int ret;
     rc_t rc;
     KTLSStream * self = ( KTLSStream * ) cself;
 
     STATUS ( 0, "Reading from server..." );
 
-    while ( 1 )
+    
+    self -> rc = 0;
+    ret = mbedtls_ssl_read( &self -> ssl, buffer, bsize );
+    STATUS ( 0, "%zu byte read as '%s'", bsize, buffer );
+    
+    if ( ret < 0 )
     {
-        int ret;
-
-        self -> rc = 0;
-        ret = mbedtls_ssl_read( &self -> ssl, buffer, bsize );
-        STATUS ( 0, "%zu byte read as '%s'", bsize, buffer );
-
-        if ( ret >= 0 )
-            break;
-
-        if ( self -> tm != NULL )
-            break;
-
-        if ( ret != MBEDTLS_ERR_SSL_WANT_READ &&
-             ret != MBEDTLS_ERR_SSL_WANT_WRITE )
+        switch ( ret )
         {
+     /* case MBEDTLS_ERR_SSL_WANT_READ: ERRNO ( EINTR ) - we deal with this ourselves */
+     /* case MBEDTLS_ERR_SSL_WANT_WRITE: ERRNO ( EINTR ) - we deal with this ourselves */
+     /* case MBEDTLS_ERR_NET_CONN_RESET: ERRNO ( EPIPE || ECONNRESET ) - we deal with this ourselves */
+     /* case MBEDTLS_ERR_SSL_CLOSE_NOTIFY: - we deal with this ourselves */
+        case MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE:
+            self -> rc = RC ( rcNS, rcNoTarg, rcReading, rcTransfer, rcUnexpected );
+            break;
+        default:
+            self -> rc = RC ( rcNS, rcNoTarg, rcReading, rcTransfer, rcUnknown );
             break;
         }
     }
+
+    *num_read = ret;
 
     rc = self -> rc;
     self -> rc = 0;
@@ -258,17 +262,13 @@ rc_t CC KTLSStreamWrite ( KTLSStream * self,
     
     self -> rc = 0;
 
-    do
+    ret = mbedtls_ssl_write ( &self -> ssl, buffer, size );
+    if ( ret != MBEDTLS_ERR_SSL_WANT_READ && 
+         ret != MBEDTLS_ERR_SSL_WANT_WRITE )
     {
-        ret = mbedtls_ssl_write ( &self -> ssl, buffer, size );
-        if ( ret != MBEDTLS_ERR_SSL_WANT_READ && 
-             ret != MBEDTLS_ERR_SSL_WANT_WRITE )
-        {
-            STATUS ( 0, "failed...ssl write returned %d\n", ret );
-            return self -> rc;
-        }
+        STATUS ( 0, "failed...ssl write returned %d\n", ret );
+        return self -> rc;
     }
-    while ( ret <= 0 )
 
     assert ( ret > 0 );
     * num_writ = ret;
@@ -329,7 +329,6 @@ int CC ktls_net_send ( void *ctx, const unsigned char *buf, size_t len )
 
     if ( self -> rc != 0 )
     {
-        /* TBD - translate the error code into one of the MBEDTLS errors */
         switch ( GetRCState ( self -> rc ) )
         {
         /* EPIPE - MBEDTLS_ERR_NET_CONN_RESET: broken pipe */
@@ -339,12 +338,13 @@ int CC ktls_net_send ( void *ctx, const unsigned char *buf, size_t len )
             /* anything else is just failed */
             break;
         }
-        return -1;
+        return MBEDTLS_ERR_NET_SEND_FAILED;
     }
 
     return ( int ) num_writ;
 }
 
+/* called by mbedtls_ssl_fetch_input */
 static
 int CC ktls_net_recv ( void *ctx, unsigned char *buf, size_t len )
 {
@@ -358,20 +358,19 @@ int CC ktls_net_recv ( void *ctx, unsigned char *buf, size_t len )
 
     if ( self -> rc != 0 )
     {
-        int err;
         /* TBD - discover if the read timed out - possibly return MBEDTLS_ERR_SSL_WANT_READ */
         switch ( GetRCState ( self -> rc ) )
         {
         /* EPIPE - MBEDTLS_ERR_NET_CONN_RESET: broken pipe */
         /* ECONNRESET - MBEDTLS_ERR_NET_CONN_RESET:connection reset */
         /* EINTR - MBEDTLS_ERR_SSL_WANT_READ: we just continue ( shown in unix/sysstream.c ) */    
+        /* MBEDTLS_ERR_SSL_TIMEOUT */
         default:
             /* anything else is just failed */
             break;
         }
 
-        /* TBD - translate the error code into one of the MBEDTLS errors */
-        return -1;
+        return MBEDTLS_ERR_NET_RECV_FAILED;
     }
 
     return ( int ) num_read;
