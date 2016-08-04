@@ -295,7 +295,7 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, K
     rc_t rc;
 
     if ( port == 0 )
-        port = 80;
+        rc = RC ( rcNS, rcNoTarg, rcInitializing, rcParam, rcInvalid );
 
     /* we accept a NULL connection ( from ) */
     if ( conn == NULL )
@@ -452,6 +452,10 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttp ( const KNSManager *self,
                     writeMillis = -1;
                 else if ( writeMillis > MAX_HTTP_WRITE_LIMIT )
                     writeMillis = MAX_HTTP_WRITE_LIMIT;
+
+                /* default port for http */
+                if ( port == 0 )
+                    port = 80;
 
                 /* initialize http object - will create a new reference to hostname buffer */
                 rc = KNSManagerMakeClientHttpInt ( self, _http, & hostname_buffer,
