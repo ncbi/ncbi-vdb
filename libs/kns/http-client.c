@@ -130,6 +130,7 @@ struct KClientHttp
     bool proxy_default_port;
     
     bool reliable;
+    bool tls;
 };
 
 
@@ -163,6 +164,7 @@ rc_t KClientHttpClear ( KClientHttp *self )
     KClientHttpClose ( self );
 
     KDataBufferWhack ( & self -> hostname_buffer );
+    self -> tls = false;
 
     return 0;
 }
@@ -222,6 +224,14 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t por
     uint32_t pp_idx;
     static uint16_t dflt_proxy_ports [] = { 3128, 8080, 0 };
 
+#if NO_HTTPS_SUPPORT
+    if ( self -> tls )
+    {
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Unsupported request for TLS\n" ) );
+        return RC ( rcNS, rcNoTarg, rcInitializing, rcParam, rcUnsupported );
+    }
+#endif
+
     for ( pp_idx = 0; pp_idx < sizeof dflt_proxy_ports / sizeof dflt_proxy_ports [ 0 ]; ++ pp_idx )
     {
         /* if endpoint was not successfully opened on previous attempt */
@@ -245,6 +255,14 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t por
         /* if we did not try a proxy server before, exit loop */
         if ( self -> ep_valid || ! self -> proxy_ep )
             break;
+    }
+
+    /* wrap in TLS */
+    if ( rc == 0 && self -> tls )
+    {
+#if ! NO_HTTPS_SUPPORT
+#error "unimplemented"
+#endif
     }
 
     /* if the connection is open */
@@ -290,12 +308,12 @@ rc_t KClientHttpReopen ( KClientHttp * self )
 
 /* Initialize KClientHttp object */
 static
-rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, KStream * conn, ver_t _vers, const String * _host, uint32_t port )
+rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, KStream * conn, ver_t _vers, const String * _host, uint32_t port, bool tls )
 {
     rc_t rc;
 
     if ( port == 0 )
-        port = 80;
+        rc = RC ( rcNS, rcNoTarg, rcInitializing, rcParam, rcInvalid );
 
     /* we accept a NULL connection ( from ) */
     if ( conn == NULL )
@@ -321,9 +339,12 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, K
                               ( _host -> addr - ( const char* ) hostname_buffer -> base ),
                               _host -> size );
         if ( rc == 0 )
+        {
             /* Its safe to assign pointer because we know
                that the pointer is within the buffer */
             http -> hostname = * _host;
+            http -> tls = tls;
+        }
     }
     
     return rc;
@@ -344,11 +365,16 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, K
  *
  *  "port" [ IN, DEFAULT ZERO ] - if zero, defaults to standard for scheme
  *   if non-zero, is taken as explicit port specification
+ *
+ *  "reliable" [ IN ] - if true, then trust that the settings are good
+ *   and apply extra stubbornness to fail
+ *
+ *  "tls" [ IN ] - if true, wrap socket in a TLS encryption protocol
  */
 rc_t KNSManagerMakeClientHttpInt ( const KNSManager *self, KClientHttp **_http,
     const KDataBuffer *hostname_buffer,  KStream *opt_conn,
     ver_t vers, int32_t readMillis, int32_t writeMillis,
-    const String *host, uint32_t port, bool reliable )
+    const String *host, uint32_t port, bool reliable, bool tls )
 {
     rc_t rc;
 
@@ -386,10 +412,11 @@ rc_t KNSManagerMakeClientHttpInt ( const KNSManager *self, KClientHttp **_http,
             text [ host -> size ] = save;
 
             /* init the KClientHttp object */
-            rc = KClientHttpInit ( http, hostname_buffer, opt_conn, vers, host, port );
+            rc = KClientHttpInit ( http, hostname_buffer, opt_conn, vers, host, port, tls );
             if ( rc == 0 )
             {
                 http -> reliable = reliable;
+
                 /* assign to OUT http param */
                 * _http = http;
                 return 0;
@@ -404,9 +431,10 @@ rc_t KNSManagerMakeClientHttpInt ( const KNSManager *self, KClientHttp **_http,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttp ( const KNSManager *self,
+static
+rc_t KNSManagerMakeTimedClientHttpInt ( const KNSManager *self,
     KClientHttp **_http, KStream *opt_conn, ver_t vers, int32_t readMillis, int32_t writeMillis,
-    const String *host, uint32_t port )
+    const String *host, uint32_t port, uint32_t dflt_port, bool tls )
 {
     rc_t rc;
     
@@ -453,9 +481,13 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttp ( const KNSManager *self,
                 else if ( writeMillis > MAX_HTTP_WRITE_LIMIT )
                     writeMillis = MAX_HTTP_WRITE_LIMIT;
 
+                /* default port */
+                if ( port == 0 )
+                    port = dflt_port;
+
                 /* initialize http object - will create a new reference to hostname buffer */
                 rc = KNSManagerMakeClientHttpInt ( self, _http, & hostname_buffer,
-                    opt_conn, vers, readMillis, writeMillis, &_host, port, false );
+                    opt_conn, vers, readMillis, writeMillis, &_host, port, false, tls );
 
                 /* release our reference to buffer */
                 KDataBufferWhack ( & hostname_buffer );
@@ -469,6 +501,14 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttp ( const KNSManager *self,
     }
     
     return rc;
+}
+
+
+LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttp ( const KNSManager *self,
+    KClientHttp ** http, KStream *opt_conn, ver_t vers, int32_t readMillis, int32_t writeMillis,
+    const String *host, uint32_t port )
+{
+    return KNSManagerMakeTimedClientHttpInt ( self, http, opt_conn, vers, readMillis, writeMillis, host, port, 80, false );
 }
 
 LIB_EXPORT rc_t CC KNSManagerMakeClientHttp ( const KNSManager *self,
@@ -485,6 +525,30 @@ LIB_EXPORT rc_t CC KNSManagerMakeClientHttp ( const KNSManager *self,
     }
 
     return KNSManagerMakeTimedClientHttp ( self, http, opt_conn, vers,
+        self -> http_read_timeout, self -> http_write_timeout, host, port );
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttps ( const KNSManager *self,
+    KClientHttp ** https, KStream *opt_conn, ver_t vers, int32_t readMillis, int32_t writeMillis,
+    const String *host, uint32_t port )
+{
+    return KNSManagerMakeTimedClientHttpInt ( self, https, opt_conn, vers, readMillis, writeMillis, host, port, 443, true );
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakeClientHttps ( const KNSManager *self,
+    KClientHttp **https, KStream *opt_conn, ver_t vers, const String *host, uint32_t port )
+{
+    if ( self == NULL )
+    {
+        if ( https == NULL )
+            return RC ( rcNS, rcMgr, rcValidating, rcParam, rcNull );
+
+        * https = NULL;
+
+        return RC ( rcNS, rcMgr, rcValidating, rcSelf, rcNull );
+    }
+
+    return KNSManagerMakeTimedClientHttps ( self, https, opt_conn, vers,
         self -> http_read_timeout, self -> http_write_timeout, host, port );
 }
 
@@ -2303,7 +2367,7 @@ rc_t CC KNSManagerMakeClientRequestInt ( const KNSManager *self,
                     KClientHttp * http;
                     
                     rc = KNSManagerMakeClientHttpInt ( self, & http, & buf, conn, vers,
-                        self -> http_read_timeout, self -> http_write_timeout, & block . host, block . port, reliable );
+                        self -> http_read_timeout, self -> http_write_timeout, & block . host, block . port, reliable, block . tls );
                     if ( rc == 0 )
                     {
                         rc = KClientHttpMakeRequestInt ( http, req, & block, & buf );
@@ -2763,7 +2827,7 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttp
                 http -> ep_valid = false;
 
                 /* reinitialize the http from uri */
-                rc = KClientHttpInit ( http, &uri, NULL, http -> vers , &b . host, b . port );
+                rc = KClientHttpInit ( http, &uri, NULL, http -> vers , &b . host, b . port, b . tls );
                 if ( rc == 0 )
                 {
                     KClientHttpRequestClear ( self );
