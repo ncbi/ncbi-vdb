@@ -34,6 +34,10 @@
 #include <klib/defs.h>
 #endif
 
+#ifndef _h_klib_text_
+#include <klib/text.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -98,6 +102,37 @@ typedef struct {
 rc_t KHttpRetrierInit ( KHttpRetrier * self, const char * url, const struct KNSManager * kns );
 bool KHttpRetrierWait ( KHttpRetrier * self, uint32_t status );
 rc_t KHttpRetrierDestroy ( KHttpRetrier * self );
+
+/*--------------------------------------------------------------------------
+ * URLBlock
+ *  RFC 3986
+ */
+typedef enum
+{
+    st_NONE,
+    st_HTTP,
+    st_HTTPS,
+    st_S3
+} SchemeType;
+
+typedef struct URLBlock URLBlock;
+struct URLBlock
+{
+    String scheme;
+    String host;
+    String path; /* Path includes any parameter portion */
+    String query;
+    String fragment;
+
+    uint32_t port;
+
+    SchemeType scheme_type;
+    bool tls;
+
+    bool port_dflt;
+};
+extern void URLBlockInit ( URLBlock *self );
+extern rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size );
 
 #ifdef __cplusplus
 }

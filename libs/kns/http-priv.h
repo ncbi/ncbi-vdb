@@ -61,37 +61,7 @@ struct KClientHttp;
 struct KClientHttpRequest;
 struct KStream;
 struct timeout_t;
-
-/*--------------------------------------------------------------------------
- * URLBlock
- *  RFC 3986
- */
-typedef enum 
-{
-    st_NONE,
-    st_HTTP,
-    st_HTTPS,
-    st_S3
-} SchemeType;
-
-typedef struct URLBlock URLBlock;
-struct URLBlock
-{
-    String scheme;
-    String host;
-    String path; /* Path includes any parameter portion */
-    String query;
-    String fragment;
-
-    uint32_t port;
-
-    SchemeType scheme_type;
-    bool tls;
-
-    bool port_dflt;
-};
-extern void URLBlockInit ( URLBlock *self );
-extern rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size );
+struct URLBlock;
 
 /*--------------------------------------------------------------------------
  * KHttpHeader
@@ -136,7 +106,7 @@ void KClientHttpForceSocketClose(const struct KClientHttp *self);
  * KClientHttpRequest
  */
 rc_t KClientHttpMakeRequestInt ( struct KClientHttp const *self,
-    struct KClientHttpRequest **req, const URLBlock *block, const KDataBuffer *buf );
+    struct KClientHttpRequest **req, const struct URLBlock *block, const KDataBuffer *buf );
 
 
 /* exported private functions
