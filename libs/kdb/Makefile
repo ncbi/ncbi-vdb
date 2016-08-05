@@ -80,7 +80,6 @@ KDB_CMN = \
 	btree \
 	rowset \
 	rowset-simple \
-#	rowset-it \
 	dbmgr-cmn \
 #	database-cmn
 

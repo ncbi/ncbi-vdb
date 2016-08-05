@@ -99,9 +99,8 @@ KDB_EXTERN bool CC KRowSetHasRowId ( const KRowSet * self, ctx_t ctx, int64_t ro
 /* Visit
  *  execute a function on each row-id in set
  */
-/*
-KDB_EXTERN rc_t CC KRowSetVisit ( const KRowSet * self, bool reverse,
-    void ( CC * f ) ( int64_t row_id, void * data ), void * data );*/
+KDB_EXTERN void CC KRowSetVisit ( const KRowSet * self, ctx_t ctx, bool reverse,
+    void ( CC * f ) ( int64_t row_id, void * data ), void * data );
 
 /* Intersect
  *  performs an intersection between two sets and returns the result

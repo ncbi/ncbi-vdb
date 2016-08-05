@@ -152,6 +152,39 @@ KDB_EXTERN void CC KRowSetAddRowIdRange ( KRowSet * self, ctx_t ctx, int64_t row
         self -> vt ->add_row_id_range ( self, ctx, row_id, count );
 }
 
+/* Visit
+ *  execute a function on each row-id in set
+ */
+KDB_EXTERN void CC KRowSetVisit ( const KRowSet * self, ctx_t ctx, bool reverse,
+    void ( CC * f ) ( int64_t row_id, void * data ), void * data )
+{
+    FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcAccessing );
+    KRowSetIterator * it;
+
+    if ( self == NULL )
+        INTERNAL_ERROR ( xcSelfNull, "failed to iterate over rowset" );
+    else if ( reverse )
+        INTERNAL_ERROR ( xcFunctionUnsupported, "failed to iterate over rowset in reverse order" );
+    else
+    {
+        TRY ( it = KRowSetMakeIterator ( self, ctx ) )
+        {
+            while ( !FAILED() && KRowSetIteratorIsValid ( it ) )
+            {
+                int64_t row_id = KRowSetIteratorGetRowId ( it, ctx );
+                if ( FAILED() )
+                    break;
+
+                f ( row_id, data );
+
+                KRowSetIteratorNext ( it, ctx );
+            }
+
+            KRowSetIteratorRelease ( it, ctx );
+        }
+    }
+}
+
 /* MakeIterator
  *  create an iterator on set
  *  initially set to first row-id in set
@@ -303,7 +336,7 @@ KDB_EXTERN bool CC KRowSetIteratorIsValid ( const KRowSetIterator * self )
 /* RowId
  *  report current row id
  */
-KDB_EXTERN int64_t CC KRowSetIteratorRowId ( const KRowSetIterator * self, ctx_t ctx )
+KDB_EXTERN int64_t CC KRowSetIteratorGetRowId ( const KRowSetIterator * self, ctx_t ctx )
 {
     if ( self == NULL || self -> vt == NULL )
     {

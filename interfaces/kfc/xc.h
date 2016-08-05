@@ -74,7 +74,6 @@ XOBJ ( xoStorage, "storage", rcStorage );
 XOBJ ( xoArgv, "argument vector", rcArgv );
 XOBJ ( xoZlib, "zlib stream", rcBlob );
 XOBJ ( xoAlignment, "alignment", rcData );
-XOBJ ( xoRefcount, "refcount", rcConstraint );
 
 /*--------------------------------------------------------------------------
  * XSTATE
@@ -181,7 +180,7 @@ XC ( xcFileAccessFailed, xoFile, xsAccessFailed );
 XC ( xcZlibInitFailed, xoZlib, xsInitFailed );
 XC ( xcZlibDataInvalid, xoZlib, xsInvalid );
 XC ( xcSecondaryAlignmentMissingPrimary, xoAlignment, xsNoPrimary );
-XC ( xcInterfaceBadVersion, xoInterface, xsBadVErsion );
+XC ( xcInterfaceBadVersion, xoInterface, xsBadVersion );
 XC ( xcRefcountViolated, xoRefcount, xsViolated );
 XC ( xcSelfInvalid, xoSelf, xsInvalid );
 
