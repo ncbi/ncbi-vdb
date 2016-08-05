@@ -62,7 +62,7 @@ public:
         {
             VDatabaseRelease ( m_db );
         }
-        //RemoveDatabase();
+        RemoveDatabase();
     }
 
     void RemoveDatabase ()
