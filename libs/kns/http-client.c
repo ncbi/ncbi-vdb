@@ -34,6 +34,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 #include <kns/endpoint.h>
 #include <kns/socket.h>
 #include <kns/stream.h>
+#include <kns/tls.h>
 #include <kns/impl.h>
 #include <vfs/path.h>
 #include <kfs/file.h>
@@ -69,9 +70,6 @@ typedef struct KClientHttpStream KClientHttpStream;
 
 #include "http-priv.h"
 
-#if ! NO_HTTPS_SUPPORT
-#include <kns/tls.h>
-#endif
 
 #if _DEBUGGING && 0
 #include <stdio.h>
@@ -228,14 +226,6 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t por
     uint32_t pp_idx;
     static uint16_t dflt_proxy_ports [] = { 3128, 8080, 0 };
 
-#if NO_HTTPS_SUPPORT
-    if ( self -> tls )
-    {
-        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Unsupported request for TLS\n" ) );
-        return RC ( rcNS, rcNoTarg, rcInitializing, rcParam, rcUnsupported );
-    }
-#endif
-
     for ( pp_idx = 0; pp_idx < sizeof dflt_proxy_ports / sizeof dflt_proxy_ports [ 0 ]; ++ pp_idx )
     {
         /* if endpoint was not successfully opened on previous attempt */
@@ -264,11 +254,10 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t por
     /* if the connection is open */
     if ( rc == 0 )
     {
-#if ! NO_HTTPS_SUPPORT
         if ( self -> tls )
         {
             KTLSStream * tls_stream;
-            rc = KNSManagerMakeTKSStream ( mgr, & tls_stream, sock, hostname );
+            rc = KNSManagerMakeTLSStream ( mgr, & tls_stream, sock, hostname );
             KSocketRelease ( sock );
             if ( rc != 0 )
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create TLS stream for '%S'\n", hostname ) );
@@ -279,7 +268,6 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t por
             }
         }
         else
-#endif
         {
             rc = KSocketGetStream ( sock, & self -> sock );
             KSocketRelease ( sock );
