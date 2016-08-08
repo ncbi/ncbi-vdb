@@ -34,6 +34,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 #include <kns/endpoint.h>
 #include <kns/socket.h>
 #include <kns/stream.h>
+#include <kns/tls.h>
 #include <kns/impl.h>
 #include <vfs/path.h>
 #include <kfs/file.h>
@@ -69,9 +70,6 @@ typedef struct KClientHttpStream KClientHttpStream;
 
 #include "http-priv.h"
 
-#if ! NO_HTTPS_SUPPORT
-#include <kns/tls.h>
-#endif
 
 #if _DEBUGGING && 0
 #include <stdio.h>
@@ -311,11 +309,10 @@ static rc_t KClientHttpOpen
     /* if the connection is open */
     if ( rc == 0 )
     {
-#if ! NO_HTTPS_SUPPORT
         if ( self -> tls )
         {
             KTLSStream * tls_stream;
-            rc = KNSManagerMakeTKSStream ( mgr, & tls_stream, sock, hostname );
+            rc = KNSManagerMakeTLSStream ( mgr, & tls_stream, sock, hostname );
             KSocketRelease ( sock );
             if ( rc != 0 )
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create TLS stream for '%S'\n", hostname ) );
@@ -326,7 +323,6 @@ static rc_t KClientHttpOpen
             }
         }
         else
-#endif
         {
             rc = KSocketGetStream ( sock, & self -> sock );
             KSocketRelease ( sock );
