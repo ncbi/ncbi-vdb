@@ -51,22 +51,19 @@ struct KTLSStream;
 #include <stdlib.h>
 
 #if ! defined ( MBEDTLS_CONFIG_FILE )
-#include "mbedtls/config.h"
+#include <mbedtls/config.h>
 #else
 #include MBEDTLS_CONFIG_FILE 
 #endif
 
-#include "mbedtls/net.h"
-#include "mbedtls/debug.h"
-#include "mbedtls/ssl.h"
-#include "mbedtls/aes.h"
-#include "mbedtls/entropy.h"
-#include "mbedtls/ctr_drbg.h"
-#include "mbedtls/error.h"
-#include "mbedtls/certs.h"
-
-
-#define TLS_PORT "443"
+#include <mbedtls/net.h>
+#include <mbedtls/debug.h>
+#include <mbedtls/ssl.h>
+#include <mbedtls/aes.h>
+#include <mbedtls/entropy.h>
+#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/error.h>
+#include <mbedtls/certs.h>
 
 
 /*--------------------------------------------------------------------------
@@ -78,8 +75,7 @@ rc_t tlsg_seed_rng ( KTLSGlobals *self )
 {
     int ret;
     const char *pers = "vdb_tls_client";
-    size_t pers_size = string_size ( pers );
-    assert ( pers_size == sizeof "vdb_tls_client" - 1 );
+    const size_t pers_size = sizeof "vdb_tls_client" - 1;
 
     STATUS ( 0, "Seeding the random number generator\n" );
 
