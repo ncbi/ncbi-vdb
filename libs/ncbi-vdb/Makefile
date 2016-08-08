@@ -92,6 +92,9 @@ VDB_LIB_CMN =    \
 	ncbi-bam     \
 	vfs          \
 	$(LIBKXML)   \
+	mbedx509     \
+	mbedtls      \
+	mbedcrypto   \
 	kns          \
 	kfg          \
 	krypto       \
