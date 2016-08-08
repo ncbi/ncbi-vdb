@@ -62,9 +62,29 @@ FIXTURE_TEST_CASE(SRA_Reference_Open_FailsOnNonReference, NGS_C_Fixture)
 
 FIXTURE_TEST_CASE(EBI_Reference_Open_EBI_MD5, NGS_C_Fixture)
 {
+/* The following request should success it order to this test to work:
+http://www.ebi.ac.uk/ena/cram/md5/ffd6aeffb54ade3d28ec7644afada2e9 
+Otherwise CALL_TO_EBI_RESOLVER_FAILS is set
+and this test is expected to fail */
+    const bool CALL_TO_EBI_RESOLVER_FAILS = true;
+
     ENTRY;
     const char* EBI_Accession = "ffd6aeffb54ade3d28ec7644afada2e9";
+
+    if ( CALL_TO_EBI_RESOLVER_FAILS ) {
+    }
+
     NGS_ReferenceSequence * ref = NGS_ReferenceSequenceMake ( ctx, EBI_Accession );
+
+    if ( CALL_TO_EBI_RESOLVER_FAILS ) {
+        REQUIRE ( FAILED () );
+        REQUIRE_NULL ( ref );
+        LOG(ncbi::NK::LogLevel::e_error,
+            "CANNOT TEST EBI ACCESSION BECAUSE THEIR SITE DOES NOT RESPOND!\n");
+        LOG(ncbi::NK::LogLevel::e_error, "NOW EXPECTING AN ERROR MESSAGE ...");
+        return;
+    }
+
     REQUIRE ( ! FAILED () );
     REQUIRE_NOT_NULL ( ref );
 
