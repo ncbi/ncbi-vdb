@@ -184,7 +184,8 @@ struct KTLSStream
     mbedtls_ssl_context ssl;
 
     /* error returned from ciphertext stream */
-    rc_t rc;
+    rc_t rd_rc;
+    rc_t wr_rc;
 };
 
 static
@@ -212,37 +213,57 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
     void * buffer, size_t bsize, size_t * num_read )
 {
     int ret;
-    rc_t rc;
+    rc_t rc = 0;
     KTLSStream * self = ( KTLSStream * ) cself;
 
     STATUS ( 0, "Reading from server..." );
 
-    self -> rc = 0;
-    ret = mbedtls_ssl_read( &self -> ssl, buffer, bsize );
-    STATUS ( 0, "%zu byte read as '%s'", bsize, buffer );
-    
-    if ( ret < 0 )
+    self -> rd_rc = 0;
+
+    while ( 1 )
     {
+        /* read through TLS library */
+        ret = mbedtls_ssl_read( &self -> ssl, buffer, bsize );
+
+        /* no error */
+        if ( ret >= 0 )
+        {
+            STATUS ( 0, "%u bytes read", ret );
+            break;
+        }
+
+        STATUS ( 0, "error status %d", ret );
+
+        /* detect error at socket level */
+        if ( self -> rd_rc != 0 )
+        {
+            rc = self -> rd_rc;
+            ret = 0;
+            self -> rd_rc = 0;
+            break;
+        }
+    
+        /* this is a TLS error */
         switch ( ret )
         {
-     /* case MBEDTLS_ERR_SSL_WANT_READ: ERRNO ( EINTR ) - we deal with this ourselves */
-     /* case MBEDTLS_ERR_SSL_WANT_WRITE: ERRNO ( EINTR ) - we deal with this ourselves */
+        case MBEDTLS_ERR_SSL_WANT_READ:
+        case MBEDTLS_ERR_SSL_WANT_WRITE:
+            continue;
      /* case MBEDTLS_ERR_NET_CONN_RESET: ERRNO ( EPIPE || ECONNRESET ) - we deal with this ourselves */
      /* case MBEDTLS_ERR_SSL_CLOSE_NOTIFY: - we deal with this ourselves */
         case MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE:
-            self -> rc = RC ( rcNS, rcNoTarg, rcReading, rcTransfer, rcUnexpected );
+            rc = RC ( rcNS, rcNoTarg, rcReading, rcTransfer, rcUnexpected );
             break;
         default:
-            self -> rc = RC ( rcNS, rcNoTarg, rcReading, rcTransfer, rcUnknown );
+            rc = RC ( rcNS, rcNoTarg, rcReading, rcTransfer, rcUnknown );
             break;
         }
+
+        ret = 0;
+        break;
     }
 
     *num_read = ret;
-
-    rc = self -> rc;
-    self -> rc = 0;
-   
     return rc;
 }
 
@@ -251,23 +272,50 @@ rc_t CC KTLSStreamWrite ( KTLSStream * self,
     const void * buffer, size_t size, size_t * num_writ )
 {
     int ret;
+    rc_t rc = 0;
 
-    STATUS ( 0, "Writing to server\n" );
+    STATUS ( 0, "Writing %zu bytes to to server\n", size );
     
-    self -> rc = 0;
+    self -> wr_rc = 0;
 
-    ret = mbedtls_ssl_write ( &self -> ssl, buffer, size );
-    if ( ret != MBEDTLS_ERR_SSL_WANT_READ && 
-         ret != MBEDTLS_ERR_SSL_WANT_WRITE )
+    while ( 1 )
     {
-        STATUS ( 0, "failed...ssl write returned %d\n", ret );
-        return self -> rc;
+        /* write through TLS library */
+        ret = mbedtls_ssl_write ( &self -> ssl, buffer, size );
+
+        /* no error */
+        if ( ret >= 0 )
+        {
+            STATUS ( 0, "%u bytes written", ret );
+            break;
+        }
+
+        /* detect error at socket level */
+        if ( self -> wr_rc != 0 )
+        {
+            rc = self -> wr_rc;
+            ret = 0;
+            self -> wr_rc = 0;
+            break;
+        }
+
+        /* this is a TLS error */
+        switch ( ret )
+        {
+        case MBEDTLS_ERR_SSL_WANT_READ:
+        case MBEDTLS_ERR_SSL_WANT_WRITE:
+            continue;
+        default:
+            rc = RC ( rcNS, rcNoTarg, rcWriting, rcTransfer, rcUnknown );
+            break;
+        }
+
+        ret = 0;
+        break;
     }
 
-    assert ( ret > 0 );
     * num_writ = ret;
-
-    return 0;
+    return rc;
 }
 
 static
@@ -317,13 +365,13 @@ int CC ktls_net_send ( void *ctx, const unsigned char *buf, size_t len )
     size_t num_writ;
 
     if ( self -> tm != NULL )
-        self -> rc = KStreamTimedWriteAll ( self -> ciphertext, buf, len, & num_writ, self -> tm );
+        self -> wr_rc = KStreamTimedWriteAll ( self -> ciphertext, buf, len, & num_writ, self -> tm );
     else
-        self -> rc = KStreamWriteAll ( self -> ciphertext, buf, len, & num_writ );
+        self -> wr_rc = KStreamWriteAll ( self -> ciphertext, buf, len, & num_writ );
 
-    if ( self -> rc != 0 )
+    if ( self -> wr_rc != 0 )
     {
-        switch ( GetRCState ( self -> rc ) )
+        switch ( GetRCState ( self -> wr_rc ) )
         {
         /* EPIPE - MBEDTLS_ERR_NET_CONN_RESET: broken pipe */
         /* ECONNRESET - MBEDTLS_ERR_NET_CONN_RESET: connection reset */
@@ -346,14 +394,14 @@ int CC ktls_net_recv ( void *ctx, unsigned char *buf, size_t len )
     KTLSStream * self = ctx;
 
     if ( self -> tm != NULL )
-        self -> rc = KStreamTimedRead ( self -> ciphertext, buf, len, & num_read, self -> tm );
+        self -> rd_rc = KStreamTimedRead ( self -> ciphertext, buf, len, & num_read, self -> tm );
     else
-        self -> rc = KStreamRead ( self -> ciphertext, buf, len, & num_read );
+        self -> rd_rc = KStreamRead ( self -> ciphertext, buf, len, & num_read );
 
-    if ( self -> rc != 0 )
+    if ( self -> rd_rc != 0 )
     {
         /* TBD - discover if the read timed out - possibly return MBEDTLS_ERR_SSL_WANT_READ */
-        switch ( GetRCState ( self -> rc ) )
+        switch ( GetRCState ( self -> rd_rc ) )
         {
         /* EPIPE - MBEDTLS_ERR_NET_CONN_RESET: broken pipe */
         /* ECONNRESET - MBEDTLS_ERR_NET_CONN_RESET:connection reset */
@@ -460,23 +508,31 @@ static
 rc_t KTLSStreamMake ( KTLSStream ** objp, const KNSManager * mgr, const KSocket *ciphertext )
 {
     rc_t rc;
-    KTLSStream * obj = calloc ( 1, sizeof * obj );
+    KTLSStream * obj;
+
+    STATUS ( 0, "%s\n", __func__ );
+
+    obj = calloc ( 1, sizeof * obj );
     if ( obj == NULL )
         rc = RC ( rcNS, rcMgr, rcAllocating, rcMemory, rcExhausted );
     else
     {
         /* initialize the stream parent */
+        STATUS ( 0, "%s - initializing KStream\n", __func__ );
         rc = KStreamInit ( & obj -> dad, ( const KStream_vt* ) & vtKTLSStream, "KTLSStream", "", true, true );
         if ( rc == 0 )
         {
+            STATUS ( 0, "%s - attaching to KNSManager\n", __func__ );
             rc = KNSManagerAddRef ( mgr );
             if ( rc == 0 )
             {
+                STATUS ( 0, "%s - accessing KStream from socket\n", __func__ );
                 rc = KSocketGetStream ( ciphertext, & obj -> ciphertext );
                 if ( rc == 0 )
                 {
                     obj -> mgr = mgr;
 
+                    STATUS ( 0, "%s - initializing tls wrapper\n", __func__ );
                     mbedtls_ssl_init ( &obj -> ssl );
 
                     * objp = obj;
@@ -489,6 +545,8 @@ rc_t KTLSStreamMake ( KTLSStream ** objp, const KNSManager * mgr, const KSocket 
 
         free ( obj );
     }
+
+    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create TLS stream: %R\n", rc ) );
 
     * objp = NULL;
     return rc;
