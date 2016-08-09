@@ -151,6 +151,35 @@ KNS_EXTERN rc_t CC KNSManagerMakeTimedClientHttp ( struct KNSManager const *self
     struct String const *host, uint32_t port );
 
 
+/* MakeClientHttps
+ *  create an HTTPS protocol
+ *
+ *  "https" [ OUT ] - return parameter for HTTPS object
+ *
+ *  "opt_conn" [ IN, NULL OKAY ] - previously opened stream for communications.
+ *
+ *  "vers" [ IN ] - https version
+ *   the only legal types are 1.0 ( 0x01000000 ) and 1.1 ( 0x01010000 )
+ *
+ *  "readMillis" [ IN ] and "writeMillis" - when negative, infinite timeout
+ *   when 0, return immediately, positive gives maximum wait time in mS
+ *   for reads and writes respectively.
+ *
+ *  "host" [ IN ] - parameter to give the host dns name for the connection
+ *
+ *  "port" [ IN, DEFAULT ZERO ] - if zero, defaults to standard for scheme
+ *   if non-zero, is taken as explicit port specification
+ */
+KNS_EXTERN rc_t CC KNSManagerMakeClientHttps ( struct KNSManager const *self,
+    KClientHttp **https, struct KStream *conn, ver_t vers,
+    struct String const *host, uint32_t port );
+
+KNS_EXTERN rc_t CC KNSManagerMakeTimedClientHttps ( struct KNSManager const *self,
+    KClientHttp **https, struct KStream *opt_conn, ver_t vers,
+    int32_t readMillis, int32_t writeMillis,
+    struct String const *host, uint32_t port );
+
+
 /* AddRef
  * Release
  *  ignores NULL references

@@ -35,12 +35,15 @@
 #endif
 
 #ifndef _h_klib_text_
-#include <klib/text.h> /* String */
+#include <klib/text.h>
 #endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* remove once TLS/HTTPS support is present */
+#define NO_HTTPS_SUPPORT 1
 
 struct KStream;
 struct KHttpFile;
@@ -108,6 +111,38 @@ const HttpProxy * HttpProxyGetNextHttpProxy ( const HttpProxy * self );
 /* N.B.: DO NOT WHACK THE RETURNED http_proxy String !!! */
 void HttpProxyGet ( const HttpProxy * self,
     const String ** http_proxy, uint16_t * http_proxy_port );
+
+
+/*--------------------------------------------------------------------------
+ * URLBlock
+ *  RFC 3986
+ */
+typedef enum
+{
+    st_NONE,
+    st_HTTP,
+    st_HTTPS,
+    st_S3
+} SchemeType;
+
+typedef struct URLBlock URLBlock;
+struct URLBlock
+{
+    String scheme;
+    String host;
+    String path; /* Path includes any parameter portion */
+    String query;
+    String fragment;
+
+    uint32_t port;
+
+    SchemeType scheme_type;
+    bool tls;
+
+    bool port_dflt;
+};
+extern void URLBlockInit ( URLBlock *self );
+extern rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size );
 
 
 #ifdef __cplusplus

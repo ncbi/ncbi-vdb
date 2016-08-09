@@ -32,6 +32,8 @@
 #include <klib/refcount.h>
 #include <klib/rc.h>
 
+#include <atomic.h>
+
 #define rcTask rcCmd
 
 #include <sysalloc.h>
@@ -64,8 +66,7 @@ struct KProcMgr
     KRefcount refcount;
 };
 
-static KProcMgr * s_proc_mgr;
-
+static atomic_ptr_t s_proc_mgr;
 
 /* Whack
  *  tear down proc mgr
@@ -77,11 +78,16 @@ LIB_EXPORT rc_t CC KProcMgrWhack ( void )
 {
     rc_t rc = 0;
 
-    KProcMgr *self = s_proc_mgr;
-    if ( s_proc_mgr != NULL )
-    {
-        s_proc_mgr = NULL;
+    /* check to see if the singleton was created and
+       try to zero out the static variable */
+    KProcMgr * test, * self = s_proc_mgr . ptr;
+    if ( self != NULL ) do
+        self = atomic_test_and_set_ptr ( & s_proc_mgr, NULL, test = self );
+    while ( self != NULL && self != test );
 
+    /* check to see if this thread will be cleaning up on procmgr */
+    if ( self != NULL )
+    {
         rc = KLockAcquire ( self -> cleanup_lock );
         if ( rc == 0 )
         {
@@ -127,9 +133,9 @@ LIB_EXPORT rc_t CC KProcMgrInit ( void )
 {
     rc_t rc = 0;
 
-    if ( s_proc_mgr == NULL )
+    if ( s_proc_mgr . ptr == NULL )
     {
-        KProcMgr *mgr = malloc ( sizeof * s_proc_mgr );
+        KProcMgr * mgr = calloc ( 1, sizeof * mgr );
         if ( mgr == NULL )
             rc = RC ( rcPS, rcMgr, rcInitializing, rcMemory, rcExhausted );
         else
@@ -137,11 +143,17 @@ LIB_EXPORT rc_t CC KProcMgrInit ( void )
             rc = KLockMake ( & mgr -> cleanup_lock );
             if ( rc == 0 )
             {
+                KProcMgr * rslt;
+
                 mgr -> cleanup = NULL;
                 KRefcountInit ( & mgr -> refcount, 0, "KProcMgr", "init", "process mgr" );
 
-                s_proc_mgr = mgr;
-                return 0;
+                rslt = atomic_test_and_set_ptr ( & s_proc_mgr, mgr, NULL );
+                if ( rslt == NULL )
+                    return 0;
+
+                /* someone beat us to it */
+                KLockRelease ( mgr -> cleanup_lock );
             }
 
             free ( mgr );
@@ -164,12 +176,12 @@ LIB_EXPORT rc_t CC KProcMgrMakeSingleton ( KProcMgr ** mgrp )
         rc = RC ( rcPS, rcMgr, rcConstructing, rcParam, rcNull );
     else
     {
-        * mgrp = s_proc_mgr;
+        * mgrp = s_proc_mgr . ptr;
 
-        if ( s_proc_mgr == NULL )
+        if ( * mgrp == NULL )
             rc = RC ( rcPS, rcMgr, rcConstructing, rcMgr, rcNull );
         else
-            rc = KProcMgrAddRef ( s_proc_mgr );
+            rc = KProcMgrAddRef ( * mgrp );
     }
 
     return rc;
@@ -229,7 +241,7 @@ LIB_EXPORT rc_t CC KProcMgrAddCleanupTask ( KProcMgr *self, KTaskTicket *ticket,
 
         if ( self == NULL )
             rc = RC ( rcPS, rcQueue, rcInserting, rcSelf, rcNull );
-        else if ( self != s_proc_mgr )
+        else if ( self != s_proc_mgr . ptr )
             rc = RC ( rcPS, rcQueue, rcInserting, rcSelf, rcIncorrect );
         else if ( task == NULL )
             rc = RC ( rcPS, rcQueue, rcInserting, rcTask, rcNull );
@@ -368,7 +380,7 @@ LIB_EXPORT rc_t CC KProcMgrRemoveCleanupTask ( KProcMgr *self, const KTaskTicket
 
     if ( self == NULL )
         rc = RC ( rcPS, rcQueue, rcRemoving, rcSelf, rcNull );
-    else if ( self != s_proc_mgr )
+    else if ( self != s_proc_mgr . ptr )
         rc = RC ( rcPS, rcQueue, rcRemoving, rcSelf, rcIncorrect );
     else if ( ticket == NULL )
         rc = RC ( rcPS, rcQueue, rcRemoving, rcId, rcNull );
