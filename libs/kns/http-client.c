@@ -49,6 +49,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 #include <klib/container.h>
 #include <klib/out.h>
 #include <klib/log.h>
+#include <klib/status.h>
 #include <klib/refcount.h>
 #include <klib/rc.h>
 #include <klib/printf.h>
@@ -75,6 +76,9 @@ typedef struct KClientHttpStream KClientHttpStream;
 #include <stdio.h>
 #define TRACE( x, ... ) \
     fprintf ( stderr, "@@ %s:%d: %s: " x, __FILE__, __LINE__, __func__, __VA_ARGS__ )
+#elif _DEBUGGING && defined _h_klib_status_ && 1
+#define TRACE( x, ... ) \
+    STATUS ( 0, "@@ %s:%d: %s: " x, __FILE__, __LINE__, __func__, __VA_ARGS__ )
 #else
 #define TRACE( x, ... ) \
     ( ( void ) 0 )
@@ -309,27 +313,39 @@ static rc_t KClientHttpOpen
     /* if the connection is open */
     if ( rc == 0 )
     {
+        STATUS ( 0, "%s - connected to %S\n", __func__, hostname );
         if ( self -> tls )
         {
             KTLSStream * tls_stream;
+            STATUS ( 0, "%s - creating TLS wrapper on socket\n", __func__ );
             rc = KNSManagerMakeTLSStream ( mgr, & tls_stream, sock, hostname );
             KSocketRelease ( sock );
             if ( rc != 0 )
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create TLS stream for '%S'\n", hostname ) );
             else
             {
+                STATUS ( 0, "%s - verifying CA cert\n", __func__ );
+                rc = KTLSStreamVerifyCACert ( tls_stream );
+                if ( rc != 0 )
+                {
+                    STATUS ( 0, "%s - WARNING: failed to verify CA cert\n", __func__ );
+                }
+
+                STATUS ( 0, "%s - extracting TLS wrapper as stream\n", __func__ );
                 rc = KTLSStreamGetStream ( tls_stream, & self -> sock );
                 KTLSStreamRelease ( tls_stream );
             }
         }
         else
         {
+            STATUS ( 0, "%s - extracting stream from socket\n", __func__ );
             rc = KSocketGetStream ( sock, & self -> sock );
             KSocketRelease ( sock );
         }
 
         if ( rc == 0 )
         {
+            STATUS ( 0, "%s - setting port number- %d\n", __func__, port );
             self -> port = port;
             return 0;
         }
@@ -373,6 +389,9 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, K
     if ( port == 0 )
         rc = RC ( rcNS, rcNoTarg, rcInitializing, rcParam, rcInvalid );
 
+    /* early setting of TLS property */
+    http -> tls = tls;
+
     /* we accept a NULL connection ( from ) */
     if ( conn == NULL )
         rc = KClientHttpOpen ( http, _host, port );
@@ -401,7 +420,6 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, K
             /* Its safe to assign pointer because we know
                that the pointer is within the buffer */
             http -> hostname = * _host;
-            http -> tls = tls;
         }
     }
     
