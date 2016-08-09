@@ -31,10 +31,35 @@ MODULE = test/kns
 TEST_TOOLS = \
 	KNSManagerSingletonTest \
 	test-kns \
+	test-proxy \
 	test-http \
 	test-http-dropconn \
 
 include $(TOP)/build/Makefile.env
+
+EXT_TOOLS = \
+	test-proxy-with-env
+
+ALL_TOOLS = \
+	$(INT_TOOLS) \
+	$(EXT_TOOLS)
+
+#-------------------------------------------------------------------------------
+# outer targets
+#
+all std: makedirs
+	@ $(MAKE_CMD) $(TARGDIR)/$@
+
+$(ALL_TOOLS): makedirs
+	@ $(MAKE_CMD) $(BINDIR)/$@
+
+.PHONY: all std $(ALL_TOOLS)
+
+#-------------------------------------------------------------------------------
+# std
+#
+$(TARGDIR)/std: \
+	$(addprefix $(BINDIR)/,$(EXT_TOOLS))
 
 $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
@@ -89,6 +114,19 @@ $(TEST_BINDIR)/test-kns: $(KNSTEST_OBJ)
 
 kns: test-kns 
 	$(TEST_BINDIR)/test-kns  #-l=all
+
+#----------------------------------------------------------------
+# test-proxy
+#
+PROXYTEST_SRC = \
+	http-client \
+	test-proxy \
+
+PROXYTEST_OBJ = \
+	$(addsuffix .$(OBJX),$(PROXYTEST_SRC))
+
+$(TEST_BINDIR)/test-proxy: $(PROXYTEST_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
     
 #----------------------------------------------------------------
 # test-http
@@ -120,3 +158,15 @@ $(TEST_BINDIR)/test-http-dropconn: $(HTTP_DROPCONN_TEST_OBJ)
 dropconn: test-http-dropconn  
 	$(TEST_BINDIR)/test-http-dropconn  # -l=all
     
+#----------------------------------------------------------------
+# test-proxy-with-env
+# 
+TOOL_SRC = \
+	http-client \
+	test-proxy-with-env \
+
+TOOL_OBJ = \
+	$(addsuffix .$(OBJX),$(TOOL_SRC))
+
+$(BINDIR)/test-proxy-with-env: $(TOOL_OBJ)
+	$(LP) --exe -o $@ $^ -L$(VDB_LIBDIR) -L$(VDB_LIBDIR)/../ilib $(KNSTEST_LIB)

@@ -71,6 +71,8 @@ KNS_EXTERN rc_t CC KNSManagerSetHTTPTimeouts ( struct KNSManager * self,
  *  return status is 0 if the path is valid, non-zero otherwise
  *
  *  returned reference to String must be freed via StringWhack.
+ *
+ * DEPRECATED : THIS FUNCTION IS INCORRECT !!!
  */
 KNS_EXTERN rc_t CC KNSManagerGetHTTPProxyPath ( struct KNSManager const * self,
     struct String const ** proxy );

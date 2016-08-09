@@ -512,11 +512,15 @@ static rc_t ReportEnv(int indent) {
 
     const char tag[] = "Env";
 
-    const char *env_list[] = {
+    const char * env_list [] = {
+        "all_proxy",
+        "ALL_PROXY",
+        "http_proxy",
+        "HTTP_PROXY",
         "KLIB_CONFIG",
         "VDBCONFIG",
         "VDB_CONFIG",
-        ENV_KRYPTO_PWFILE
+        ENV_KRYPTO_PWFILE,
     };
 
     int i = 0;

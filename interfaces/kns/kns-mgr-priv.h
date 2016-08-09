@@ -34,6 +34,10 @@
 #include <klib/defs.h>
 #endif
 
+#ifndef _h_klib_text_
+#include <klib/text.h> /* String */
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -95,6 +99,16 @@ typedef struct {
 rc_t KHttpRetrierInit ( KHttpRetrier * self, const char * url, const struct KNSManager * kns );
 bool KHttpRetrierWait ( KHttpRetrier * self, uint32_t status );
 rc_t KHttpRetrierDestroy ( KHttpRetrier * self );
+
+
+typedef struct HttpProxy HttpProxy;
+const HttpProxy * KNSManagerGetHttpProxy ( const struct KNSManager * self );
+const HttpProxy * HttpProxyGetNextHttpProxy ( const HttpProxy * self );
+
+/* N.B.: DO NOT WHACK THE RETURNED http_proxy String !!! */
+void HttpProxyGet ( const HttpProxy * self,
+    const String ** http_proxy, uint16_t * http_proxy_port );
+
 
 #ifdef __cplusplus
 }
