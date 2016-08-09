@@ -304,7 +304,7 @@ FIXTURE_TEST_CASE ( VTableDropColumn_PhysicalColumn, WVDB_Fixture )
 
 FIXTURE_TEST_CASE ( CreateTableInNestedDatabase, WVDB_Fixture )
 {   // VDB-1617: VDatabaseOpenTableRead inside a nested database segfaults
-    m_databaseName = GetName();
+    m_databaseName = ScratchDir + GetName();
     string schemaText =
         "table table1 #1.0.0 { column ascii column1; };"
         "database database0 #1 { table table1 #1 TABLE1; } ;"
