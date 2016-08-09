@@ -183,42 +183,6 @@ rc_t KClientHttpWhack ( KClientHttp * self )
     return 0;
 }
 
-static
-rc_t KClientHttpInitDNSEndpoint ( KClientHttp * self, const String * hostname,
-    uint32_t port, uint16_t dflt_proxy_port,
-    const String * http_proxy, uint16_t proxy_port )
-{
-    rc_t rc = 0;
-
-    const KNSManager * mgr = NULL;
-
-    assert ( self );
-    mgr = self -> mgr;
-    assert ( mgr );
-
-    self -> proxy_default_port = false;
-
-    if ( dflt_proxy_port != 0 && mgr -> http_proxy_enabled ) {
-        if ( http_proxy != NULL ) {
-          if ( proxy_port == 0 ) {
-            proxy_port = dflt_proxy_port;
-            self -> proxy_default_port = true;
-          }
-
-          rc = KNSManagerInitDNSEndpoint
-              ( mgr, & self -> ep, http_proxy, proxy_port );
-          if ( rc == 0 ) {
-            self -> proxy_ep = true;
-            return 0;
-         }
-       }
-    }
-
-    self -> proxy_ep = false;
-
-    return KNSManagerInitDNSEndpoint ( mgr, & self -> ep, hostname, port );
-}
-
 
 typedef struct KEndPointArgsIterator {
     const HttpProxy * proxy;
@@ -309,6 +273,15 @@ static rc_t KClientHttpOpen
     bool proxy_ep = false;
     KEndPointArgsIterator it;
     const KNSManager * mgr = NULL;
+
+#if NO_HTTPS_SUPPORT
+    if ( self -> tls )
+    {
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Unsupported request for TLS\n" ) );
+        return RC ( rcNS, rcNoTarg, rcInitializing, rcParam, rcUnsupported );
+    }
+#endif
+
     assert ( self );
     mgr = self -> mgr;
     KEndPointArgsIteratorMake ( & it, mgr, aHostname, aPort  );
@@ -330,79 +303,6 @@ static rc_t KClientHttpOpen
             }
         }
     }
-
-    /* if the connection is open */
-    if ( rc == 0 )
-    {
-        rc = KSocketGetStream ( sock, & self -> sock );
-        KSocketRelease ( sock );
-
-        if ( rc == 0 )
-        {
-            self -> port = port;
-            return 0;
-        }
-    }
-
-    self -> sock = NULL;
-    return rc;
-}
-
-rc_t _KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t port )
-{
-    rc_t rc = 0;
-    KSocket * sock;
-    const KNSManager * mgr = self -> mgr;
-
-    /* default port list MUST end with 0 to try without proxy */
-    uint32_t pp_idx;
-    static uint16_t dflt_proxy_ports [] = { 3128, 8080, 0 };
-
-#if NO_HTTPS_SUPPORT
-    if ( self -> tls )
-    {
-        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Unsupported request for TLS\n" ) );
-        return RC ( rcNS, rcNoTarg, rcInitializing, rcParam, rcUnsupported );
-    }
-#endif
-
-    const HttpProxy * proxy = KNSManagerGetHttpProxy ( mgr );
-    do {
-      uint16_t proxy_port = 0;
-      const String * http_proxy = NULL;
-      HttpProxyGet ( proxy, & http_proxy, & proxy_port );
-      /* DO NOT WHACK http_proxy !!! */
-
-      for ( pp_idx = 0;
-          pp_idx < sizeof dflt_proxy_ports / sizeof dflt_proxy_ports [ 0 ];
-          ++ pp_idx )
-      {
-        /* if endpoint was not successfully opened on previous attempt */
-        if ( ! self -> ep_valid )
-        {
-            rc = KClientHttpInitDNSEndpoint ( self, hostname, port,
-                dflt_proxy_ports [ pp_idx ], http_proxy, proxy_port );
-            if ( rc != 0 )
-                break;
-        }
-
-        /* try to connect to endpoint */
-        rc = KNSManagerMakeTimedConnection ( mgr, & sock,
-            self -> read_timeout, self -> write_timeout, NULL, & self -> ep );
-        if ( rc == 0 )
-        {
-            /* this is a good endpoint */
-            self -> ep_valid = true;
-            break;
-        }
-
-        /* if we did not try a proxy server before, exit loop */
-        if ( self -> ep_valid || ! self -> proxy_ep )
-            break;
-      }
-
-      proxy = HttpProxyGetNextHttpProxy ( proxy );
-    } while ( proxy != NULL );
 
     /* wrap in TLS */
     if ( rc == 0 && self -> tls )
@@ -428,6 +328,7 @@ rc_t _KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t po
     self -> sock = NULL;
     return rc;
 }
+
 
 #if _DEBUGGING
 /* we need this hook to be able to test the re-connection logic */
