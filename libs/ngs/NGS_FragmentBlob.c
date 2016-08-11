@@ -54,7 +54,6 @@ struct NGS_FragmentBlob
     uint64_t size;      /* from the start of the first row until the end of the blob */
 
     const NGS_String* run;
-    const NGS_Cursor* curs;
     const VBlob* blob_READ;
     const VBlob* blob_READ_LEN;
     const VBlob* blob_READ_TYPE;
@@ -70,7 +69,6 @@ NGS_FragmentBlobWhack ( NGS_FragmentBlob * self, ctx_t ctx )
         VBlobRelease ( (VBlob*) self -> blob_READ );
         VBlobRelease ( (VBlob*) self -> blob_READ_LEN );
         VBlobRelease ( (VBlob*) self -> blob_READ_TYPE );
-        NGS_CursorRelease ( self -> curs, ctx );
         NGS_StringRelease ( self -> run, ctx );
     }
 }
@@ -113,7 +111,6 @@ NGS_FragmentBlobMake ( ctx_t ctx, const NGS_String* run, const struct NGS_Cursor
                             TRY ( ret -> blob_READ_TYPE = NGS_CursorGetVBlob ( curs, ctx, rowId, seq_READ_TYPE ) );
                             {
                                 ret -> rowId = rowId;
-                                ret -> curs = NGS_CursorDuplicate ( curs, ctx );
                                 TRY ( VByteBlob_ContiguousChunk ( ret -> blob_READ, ctx, ret -> rowId, &ret -> data, &ret -> size, false ) )
                                 {
                                     return ret;
@@ -364,9 +361,6 @@ NGS_FragmentBlobInfoByOffset ( const struct NGS_FragmentBlob * self, ctx_t ctx, 
                     elem_count_t length = PageMapIteratorDataLength ( &pmIt );
                     elem_count_t offset = PageMapIteratorDataOffset ( &pmIt );
                     row_count_t  repeat = PageMapIteratorRepeatCount ( &pmIt );
-/*TODO: with the updated design:
-                    assert ( repeat == 1 );
- */
                     if ( offsetInBases < offset + length * repeat )
                     {
                         while ( repeat > 1 )
@@ -377,6 +371,7 @@ NGS_FragmentBlobInfoByOffset ( const struct NGS_FragmentBlob * self, ctx_t ctx, 
                             }
                             offset += length;
                             ++rowInBlob;
+                            --repeat;
                         }
                         if ( rowId != NULL )
                         {

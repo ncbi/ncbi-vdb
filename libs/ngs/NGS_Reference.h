@@ -72,7 +72,7 @@ extern struct NGS_Reference_v1_vt ITF_Reference_vt;
  */
 #define NGS_ReferenceDuplicate( self, ctx ) \
     ( ( NGS_Reference* ) NGS_RefcountDuplicate ( NGS_ReferenceToRefcount ( self ), ctx ) )
-    
+
 /* GetCommonName
  */
 struct NGS_String * NGS_ReferenceGetCommonName ( NGS_Reference * self, ctx_t ctx );
@@ -150,18 +150,18 @@ struct NGS_Statistics* NGS_ReferenceGetStatistics ( const NGS_Reference * self, 
 /*--------------------------------------------------------------------------
  * NGS_ReferenceIterator
  */
- 
+
 /* Next
  */
 bool NGS_ReferenceIteratorNext ( NGS_Reference * self, ctx_t ctx );
- 
+
 /*--------------------------------------------------------------------------
  * implementation details
  */
 struct NGS_Reference
 {
     NGS_Refcount dad;
-    
+
     struct NGS_ReadCollection * coll;
 };
 
@@ -169,7 +169,7 @@ typedef struct NGS_Reference_vt NGS_Reference_vt;
 struct NGS_Reference_vt
 {
     NGS_Refcount_vt dad;
-    
+
     struct NGS_String *     ( * get_common_name    ) ( NGS_REFERENCE * self, ctx_t ctx );
     struct NGS_String *     ( * get_canonical_name ) ( NGS_REFERENCE * self, ctx_t ctx );
     bool                    ( * get_is_circular    ) ( const NGS_REFERENCE * self, ctx_t ctx );
@@ -191,17 +191,17 @@ struct NGS_Reference_vt
 
 /* Init
 */
-void NGS_ReferenceInit ( ctx_t ctx, 
-                         struct NGS_Reference * self, 
-                         NGS_Reference_vt * vt, 
-                         const char *clsname, 
-                         const char *instname, 
+void NGS_ReferenceInit ( ctx_t ctx,
+                         struct NGS_Reference * self,
+                         NGS_Reference_vt * vt,
+                         const char *clsname,
+                         const char *instname,
                          struct NGS_ReadCollection * coll );
-                         
+
 /* Whack
-*/                         
+*/
 void NGS_ReferenceWhack ( NGS_Reference * self, ctx_t ctx );
-                         
+
 /* NullReference
  * will error out on any call
  */

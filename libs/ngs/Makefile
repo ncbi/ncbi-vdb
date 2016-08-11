@@ -114,7 +114,8 @@ NGS_SRC =                 \
 	NGS_ErrBlock          \
 	NGS_FragmentBlob      \
 	NGS_FragmentBlobIterator      \
-    VByteBlob    \
+    NGS_ReferenceBlob       \
+    VByteBlob               \
 
 NGS_OBJ = \
 	$(addsuffix .$(LOBX),$(NGS_SRC))

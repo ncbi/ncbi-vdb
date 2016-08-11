@@ -130,7 +130,7 @@ void CSRA1_ReadCollectionWhack ( CSRA1_ReadCollection * self, ctx_t ctx )
     VDatabaseRelease ( self -> db );
 }
 
-static const char * reference_col_specs [] =
+const char * reference_col_specs [] =
 {
     "(bool)CIRCULAR",
     "(utf8)NAME",

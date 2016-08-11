@@ -38,6 +38,7 @@ TEST_TOOLS = \
     test-ngs_csra1_pileup \
     test-ngs_reference \
     test-ngs_fragmentblob \
+    test-ngs_referenceblob \
 
 include $(TOP)/build/Makefile.env
 
@@ -203,14 +204,29 @@ reference: test-ngs_reference
 #-------------------------------------------------------------------------------
 # test-ngs_fragmentblob
 #
-TEST_NGS_SRC = \
+TEST_NGS_FRAGBLOB_SRC = \
 	ngstest_fragmentblob
 
-TEST_NGS_OBJ = \
-	$(addsuffix .$(OBJX),$(TEST_NGS_SRC))
+TEST_NGS_FRAGBLOB_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_NGS_FRAGBLOB_SRC))
 
-$(TEST_BINDIR)/test-ngs_fragmentblob: $(TEST_NGS_OBJ) makedb
+$(TEST_BINDIR)/test-ngs_fragmentblob: $(TEST_NGS_FRAGBLOB_OBJ) makedb
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 fragmentblob: test-ngs_fragmentblob
+	cd $(SRCDIR); $(TEST_BINDIR)/$^
+
+#-------------------------------------------------------------------------------
+# test-ngs_referenceblob
+#
+TEST_NGS_REFBLOB_SRC = \
+	ngstest_referenceblob
+
+TEST_NGS_REFBLOB_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_NGS_REFBLOB_SRC))
+
+$(TEST_BINDIR)/test-ngs_referenceblob: $(TEST_NGS_REFBLOB_OBJ) makedb
+	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
+
+refblob: test-ngs_referenceblob
 	cd $(SRCDIR); $(TEST_BINDIR)/$^
