@@ -110,13 +110,16 @@ rc_t CC KStsDefaultFormatter( void* self, KWrtHandler* writer,
 LIB_EXPORT rc_t CC KStsInit ( void )
 {
     rc_t rc;
-    
+
     G_sts_level = 0;
     rc = KStsHandlerSetStdOut();
 
+    if ( rc == 0 )
+        rc = KStsLibHandlerSetStdOut ();
+#if 0
     if (rc == 0)
         rc = KStsLibHandlerSet(NULL, NULL);
-
+#endif
     if (rc == 0)
         rc = KStsFmtHandlerSetDefault();
 
