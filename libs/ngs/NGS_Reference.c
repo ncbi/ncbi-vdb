@@ -48,7 +48,7 @@
 
 #define Self( obj ) \
     ( ( NGS_Reference* ) ( obj ) )
-    
+
 static NGS_String_v1 * ITF_Reference_v1_get_cmn_name ( const NGS_Reference_v1 * self, NGS_ErrBlock_v1 * err )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
@@ -179,17 +179,17 @@ uint32_t align_flags_to_filters ( uint32_t flags )
     ( ( flags ) >> 2 )
 #endif
 
-static struct NGS_Alignment_v1 * ITF_Reference_v1_get_filtered_alignments ( const NGS_Reference_v1 * self, 
-                                                                            NGS_ErrBlock_v1 * err, 
-                                                                            enum NGS_ReferenceAlignFlags flags, 
+static struct NGS_Alignment_v1 * ITF_Reference_v1_get_filtered_alignments ( const NGS_Reference_v1 * self,
+                                                                            NGS_ErrBlock_v1 * err,
+                                                                            enum NGS_ReferenceAlignFlags flags,
                                                                             int32_t map_qual )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
-    
+
     bool wants_primary = ( flags & NGS_ReferenceAlignFlags_wants_primary ) != 0;
     bool wants_secondary = ( flags & NGS_ReferenceAlignFlags_wants_secondary ) != 0;
     uint32_t filters = align_flags_to_filters ( flags );
-    
+
     /*TODO: reject unimplemented flags */
     ON_FAIL ( struct NGS_Alignment * ret = NGS_ReferenceGetFilteredAlignments ( Self ( self ), ctx,
         wants_primary, wants_secondary, filters, map_qual ) )
@@ -213,19 +213,19 @@ static struct NGS_Alignment_v1 * ITF_Reference_v1_get_align_slice ( const NGS_Re
     return ( struct NGS_Alignment_v1 * ) ret;
 }
 
-static struct NGS_Alignment_v1 * ITF_Reference_v1_get_filtered_align_slice ( const NGS_Reference_v1 * self, 
-                                                                             NGS_ErrBlock_v1 * err, 
-                                                                             int64_t start, 
-                                                                             uint64_t length, 
-                                                                             enum NGS_ReferenceAlignFlags flags, 
+static struct NGS_Alignment_v1 * ITF_Reference_v1_get_filtered_align_slice ( const NGS_Reference_v1 * self,
+                                                                             NGS_ErrBlock_v1 * err,
+                                                                             int64_t start,
+                                                                             uint64_t length,
+                                                                             enum NGS_ReferenceAlignFlags flags,
                                                                              int32_t map_qual )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
-    
+
     bool wants_primary = ( flags & NGS_ReferenceAlignFlags_wants_primary ) != 0;
     bool wants_secondary = ( flags & NGS_ReferenceAlignFlags_wants_secondary ) != 0;
     uint32_t filters = align_flags_to_filters ( flags );
-    
+
     /*TODO: reject unimplemented flags */
     ON_FAIL ( struct NGS_Alignment * ret = NGS_ReferenceGetFilteredAlignmentSlice ( Self ( self ), ctx, start, length, wants_primary, wants_secondary, filters, map_qual ) )
     {
@@ -363,7 +363,7 @@ NGS_Reference_v1_vt ITF_Reference_vt =
 
     /* 1.2 */
     ITF_Reference_v1_get_align_count,
-    
+
     /* 1.3 */
     ITF_Reference_v1_get_filtered_alignments,
     ITF_Reference_v1_get_filtered_align_slice
@@ -375,21 +375,21 @@ NGS_Reference_v1_vt ITF_Reference_vt =
  */
 #define VT( self, msg ) \
     ( ( ( const NGS_Reference_vt* ) ( self ) -> dad . vt ) -> msg )
-    
+
 /* Init
 */
-void NGS_ReferenceInit ( ctx_t ctx, 
-                         struct NGS_Reference * self, 
-                         NGS_Reference_vt * vt, 
-                         const char *clsname, 
-                         const char *instname, 
+void NGS_ReferenceInit ( ctx_t ctx,
+                         struct NGS_Reference * self,
+                         NGS_Reference_vt * vt,
+                         const char *clsname,
+                         const char *instname,
                          struct NGS_ReadCollection * coll )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcRow, rcConstructing );
-    
+
     assert ( self );
     assert ( vt );
-    
+
     TRY ( NGS_RefcountInit ( ctx, & self -> dad, & ITF_Reference_vt . dad, & vt -> dad, clsname, instname ) )
     {
         assert ( vt -> get_common_name    != NULL );
@@ -406,8 +406,9 @@ void NGS_ReferenceInit ( ctx_t ctx,
         assert ( vt -> get_pileup_slice   != NULL );
         assert ( vt -> get_statistics     != NULL );
         assert ( vt -> next               != NULL );
+        assert ( vt -> get_blobs          != NULL );
     }
-    
+
     assert ( coll );
     self -> coll = NGS_ReadCollectionDuplicate ( coll, ctx );
 }
@@ -416,7 +417,7 @@ void NGS_ReferenceWhack( NGS_Reference * self, ctx_t ctx )
 {
     NGS_ReadCollectionRelease ( self -> coll, ctx );
 }
-                         
+
 /*--------------------------------------------------------------------------
  * NGS_ReferenceIterator
  */
@@ -598,11 +599,11 @@ uint64_t NGS_ReferenceGetAlignmentCount ( NGS_Reference * self, ctx_t ctx, bool 
 
 /* GetAlignmentSlice
  */
-struct NGS_Alignment* NGS_ReferenceGetAlignmentSlice ( NGS_Reference * self, 
-                                                       ctx_t ctx, 
-                                                       uint64_t offset, 
+struct NGS_Alignment* NGS_ReferenceGetAlignmentSlice ( NGS_Reference * self,
+                                                       ctx_t ctx,
+                                                       uint64_t offset,
                                                        uint64_t size,
-                                                       bool wants_primary, 
+                                                       bool wants_primary,
                                                        bool wants_secondary )
 {
     if ( self == NULL )
@@ -622,7 +623,7 @@ struct NGS_Alignment* NGS_ReferenceGetAlignmentSlice ( NGS_Reference * self,
 
 /* GetFilteredAlignmentSlice
  */
-struct NGS_Alignment* NGS_ReferenceGetFilteredAlignmentSlice ( NGS_Reference * self, 
+struct NGS_Alignment* NGS_ReferenceGetFilteredAlignmentSlice ( NGS_Reference * self,
     ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual )
 {
     if ( self == NULL )
@@ -675,12 +676,12 @@ struct NGS_Pileup* NGS_ReferenceGetFilteredPileups ( NGS_Reference * self, ctx_t
 
 /* GetPileupSlice
  */
-struct NGS_Pileup* NGS_ReferenceGetPileupSlice ( NGS_Reference * self, 
-                                                 ctx_t ctx, 
-                                                 uint64_t offset, 
+struct NGS_Pileup* NGS_ReferenceGetPileupSlice ( NGS_Reference * self,
+                                                 ctx_t ctx,
+                                                 uint64_t offset,
                                                  uint64_t size,
-                                                 bool wants_primary, 
-                                                 bool wants_secondary ) 
+                                                 bool wants_primary,
+                                                 bool wants_secondary )
 {
     if ( self == NULL )
     {
@@ -697,14 +698,14 @@ struct NGS_Pileup* NGS_ReferenceGetPileupSlice ( NGS_Reference * self,
 
 /* GetFilteredPileupSlice
  */
-struct NGS_Pileup* NGS_ReferenceGetFilteredPileupSlice ( NGS_Reference * self, 
-                                                         ctx_t ctx, 
-                                                         uint64_t offset, 
+struct NGS_Pileup* NGS_ReferenceGetFilteredPileupSlice ( NGS_Reference * self,
+                                                         ctx_t ctx,
+                                                         uint64_t offset,
                                                          uint64_t size,
-                                                         bool wants_primary, 
+                                                         bool wants_primary,
                                                          bool wants_secondary,
                                                          uint32_t filters,
-                                                         int32_t map_qual ) 
+                                                         int32_t map_qual )
 {
     if ( self == NULL )
     {
@@ -736,11 +737,28 @@ struct NGS_Statistics* NGS_ReferenceGetStatistics ( const NGS_Reference * self, 
     return NULL;
 }
 
+/* GetBlobs
+ */
+struct NGS_ReferenceBlobIterator* NGS_ReferenceGetBlobs ( NGS_Reference * self, ctx_t ctx )
+{
+    if ( self == NULL )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get blobs" );
+    }
+    else
+    {
+        return VT ( self, get_blobs ) ( self, ctx );
+    }
+
+    return NULL;
+}
+
 
 /*--------------------------------------------------------------------------
  * NGS_ReferenceIterator
  */
- 
+
 /* Next
  */
 bool NGS_ReferenceIteratorNext ( NGS_Reference * self, ctx_t ctx )
@@ -830,11 +848,11 @@ static uint64_t Null_ReferenceGetAlignmentCount ( const NGS_Reference * self, ct
     return 0;
 }
 
-static struct NGS_Alignment* Null_ReferenceGetAlignmentSlice ( NGS_Reference * self, 
-                                                               ctx_t ctx, 
-                                                               uint64_t offset, 
-                                                               uint64_t size, 
-                                                               bool wants_primary, 
+static struct NGS_Alignment* Null_ReferenceGetAlignmentSlice ( NGS_Reference * self,
+                                                               ctx_t ctx,
+                                                               uint64_t offset,
+                                                               uint64_t size,
+                                                               bool wants_primary,
                                                                bool wants_secondary,
                                                                uint32_t filters,
                                                                int32_t map_qual)
@@ -870,12 +888,18 @@ static bool Null_ReferenceIteratorNext ( NGS_Reference * self, ctx_t ctx )
     return false;
 }
 
+static struct NGS_ReferenceBlobIterator* Null_ReferenceGetBlobs ( const NGS_Reference * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing);
+    INTERNAL_ERROR ( xcSelfNull, "NULL Reference accessed" );
+    return NULL;
+}
 
 static NGS_Reference_vt Null_Reference_vt_inst =
 {
     /* NGS_Refcount */
     { Null_ReferenceWhack },
-    
+
     /* NGS_Reference */
     Null_ReferenceGetCommonName,
     Null_ReferenceGetCanonicalName,
@@ -890,11 +914,12 @@ static NGS_Reference_vt Null_Reference_vt_inst =
     Null_ReferenceGetPileups,
     Null_ReferenceGetPileupSlice,
     Null_ReferenceGetStatistics,
-    
+    Null_ReferenceGetBlobs,
+
     /* NGS_ReferenceIterator */
     Null_ReferenceIteratorNext
 };
- 
+
 struct NGS_Reference * NGS_ReferenceMakeNull ( ctx_t ctx, struct NGS_ReadCollection * coll )
  {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );

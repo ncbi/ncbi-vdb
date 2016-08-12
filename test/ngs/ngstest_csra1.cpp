@@ -43,6 +43,8 @@
 #include "NGS_Pileup.h"
 #include "NGS_FragmentBlobIterator.h"
 #include "NGS_FragmentBlob.h"
+#include "NGS_ReferenceBlobIterator.h"
+#include "NGS_ReferenceBlob.h"
 
 using namespace std;
 using namespace ncbi::NK;
@@ -1057,6 +1059,30 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetPileupSlice, CSRA1_Fixture)
     REQUIRE ( ! FAILED () && pileup );
 
     NGS_PileupRelease ( pileup, ctx );
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetBlobs, CSRA1_Fixture)
+{
+    ENTRY_GET_REF ( CSRA1_PrimaryOnly, "supercont2.1" );
+
+    NGS_ReferenceBlobIterator* blobIt = NGS_ReferenceGetBlobs( m_ref, ctx );
+    REQUIRE ( ! FAILED () && blobIt );
+
+    REQUIRE ( NGS_ReferenceBlobIteratorHasMore ( blobIt, ctx ) );
+    REQUIRE ( ! FAILED () );
+    struct NGS_ReferenceBlob* blob = NGS_ReferenceBlobIteratorNext ( blobIt, ctx );
+    REQUIRE ( ! FAILED () && blob );
+
+    int64_t first;
+    uint64_t count;
+    NGS_ReferenceBlobRowRange ( blob, ctx,  & first, & count );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_EQ ( (int64_t)1, first );
+    REQUIRE_EQ ( (uint64_t)4, count );
+
+    NGS_ReferenceBlobRelease ( blob, ctx );
+    NGS_ReferenceBlobIteratorRelease ( blobIt, ctx );
     EXIT;
 }
 

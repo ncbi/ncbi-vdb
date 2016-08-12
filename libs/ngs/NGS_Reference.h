@@ -155,6 +155,10 @@ struct NGS_Statistics* NGS_ReferenceGetStatistics ( const NGS_Reference * self, 
  */
 bool NGS_ReferenceIteratorNext ( NGS_Reference * self, ctx_t ctx );
 
+/* FRAGMENT BLOBS
+ */
+struct NGS_ReferenceBlobIterator* NGS_ReferenceGetBlobs ( NGS_Reference * self, ctx_t ctx );
+
 /*--------------------------------------------------------------------------
  * implementation details
  */
@@ -186,6 +190,7 @@ struct NGS_Reference_vt
     struct NGS_Pileup*      ( * get_pileup_slice   ) ( NGS_REFERENCE * self, ctx_t ctx, uint64_t offset, uint64_t size,
         bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
     struct NGS_Statistics*  ( * get_statistics     ) ( const NGS_REFERENCE * self, ctx_t ctx );
+    struct NGS_ReferenceBlobIterator* ( * get_blobs ) ( const NGS_REFERENCE * self, ctx_t ctx );
     bool                    ( * next               ) ( NGS_REFERENCE * self, ctx_t ctx );
 };
 

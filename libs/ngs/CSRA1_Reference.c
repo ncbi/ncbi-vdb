@@ -32,6 +32,7 @@ typedef struct CSRA1_Reference CSRA1_Reference;
 
 #include "NGS_ReadCollection.h"
 #include "NGS_Alignment.h"
+#include "NGS_ReferenceBlobIterator.h"
 
 #include "NGS_String.h"
 #include "NGS_Cursor.h"
@@ -85,6 +86,7 @@ static struct NGS_Alignment*    CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Referen
 static struct NGS_Pileup*       CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 static struct NGS_Pileup*       CSRA1_ReferenceGetPileupSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 struct NGS_Statistics*          CSRA1_ReferenceGetStatistics ( const CSRA1_Reference * self, ctx_t ctx );
+static struct NGS_ReferenceBlobIterator*  CSRA1_ReferenceGetBlobs ( const CSRA1_Reference * self, ctx_t ctx );
 static bool                     CSRA1_ReferenceIteratorNext ( CSRA1_Reference * self, ctx_t ctx );
 
 static NGS_Reference_vt CSRA1_Reference_vt_inst =
@@ -106,6 +108,7 @@ static NGS_Reference_vt CSRA1_Reference_vt_inst =
     CSRA1_ReferenceGetPileups,
     CSRA1_ReferenceGetPileupSlice,
     CSRA1_ReferenceGetStatistics,
+    CSRA1_ReferenceGetBlobs,
 
     /* NGS_ReferenceIterator */
     CSRA1_ReferenceIteratorNext,
@@ -784,6 +787,25 @@ struct NGS_Statistics* CSRA1_ReferenceGetStatistics ( const CSRA1_Reference * se
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     /* for now, return an empty stats object */
     return SRA_StatisticsMake ( ctx );
+}
+
+struct NGS_ReferenceBlobIterator* CSRA1_ReferenceGetBlobs ( const CSRA1_Reference * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+
+    assert ( self );
+    if ( self -> curs == NULL )
+    {
+        USER_ERROR ( xcCursorExhausted, "No more rows available" );
+        return NULL;
+    }
+    if ( ! self -> seen_first )
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Reference accessed before a call to ReferenceIteratorNext()" );
+        return NULL;
+    }
+
+    return NGS_ReferenceBlobIteratorMake ( ctx, self -> curs, self -> first_row, self -> last_row );
 }
 
 bool CSRA1_ReferenceFind ( NGS_Cursor const * curs, ctx_t ctx, const char * spec, int64_t* firstRow, uint64_t* rowCount )

@@ -37,6 +37,7 @@
 
 #include <NGS_Cursor.h>
 #include <NGS_ReferenceBlob.h>
+#include <NGS_ReferenceBlobIterator.h>
 
 #include <../libs/ngs/CSRA1_Reference.h>
 
@@ -146,10 +147,10 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_DuplicateRelease, ReferenceBlobFixture
     GetBlob ( CSRA1_Accession, 1 );
 
     // Duplicate
-    NGS_ReferenceBlob* anotherBlob = NGS_ReferenceBlobDuplicate ( m_blob, m_ctx );
+    NGS_ReferenceBlob* anotherBlob = NGS_ReferenceBlobDuplicate ( m_blob, ctx );
     REQUIRE_NOT_NULL ( anotherBlob );
     // Release
-    NGS_ReferenceBlobRelease ( anotherBlob, m_ctx );
+    NGS_ReferenceBlobRelease ( anotherBlob, ctx );
 
     EXIT;
 }
@@ -249,7 +250,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Size_BadArg, ReferenceBlobFixture )
 {
     ENTRY;
 
-    NGS_ReferenceBlobSize ( NULL, m_ctx );
+    NGS_ReferenceBlobSize ( NULL, ctx );
     REQUIRE_FAILED ();
 
     EXIT;
@@ -259,7 +260,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Size, ReferenceBlobFixture )
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
 
-    REQUIRE_EQ ( (uint64_t)20000, NGS_ReferenceBlobSize ( m_blob, m_ctx ) );
+    REQUIRE_EQ ( (uint64_t)20000, NGS_ReferenceBlobSize ( m_blob, ctx ) );
 
     EXIT;
 }
@@ -464,20 +465,20 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_FoundFirst, ReferenceBlobFi
 }
 
 FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_FoundNext, ReferenceBlobFixture )
-{
+{   // scan a portion of table with repeated rows to make sure they are all found and reported correctly
     ENTRY;
     GetCursor ( CSRA1_Accession_WithRepeats );
 
-    int64_t row=37;
-    while ( row < 620410 )
+    int64_t row=1;
+    while ( row < 4100 )
     {
-        m_blob = NGS_ReferenceBlobMake ( m_ctx, m_curs, row );
+        m_blob = NGS_ReferenceBlobMake ( ctx, m_curs, row );
         if ( FAILED () )
         {
             CLEAR ();
             break;
         }
-        //NGS_ReferenceBlobPrintPageMap(m_blob, m_ctx);
+        //NGS_ReferenceBlobPrintPageMap(m_blob, ctx);
         int64_t firstRow;
         uint64_t rowCount;
         NGS_ReferenceBlobRowRange ( m_blob, ctx, &firstRow, &rowCount );
@@ -532,40 +533,23 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_FoundNext, ReferenceBlobFix
         }
         row = firstRow + rowCount;
 
-        NGS_ReferenceBlobRelease ( m_blob, m_ctx );
+        NGS_ReferenceBlobRelease ( m_blob, ctx );
+        m_blob = NULL;
     }
 
     EXIT;
 }
 
-#if 0
-
-
 //////////////////////////////////////////// NGS_ReferenceBlobIterator
 
-class BlobIteratorFixture : public NGS_C_Fixture
+class ReferenceBlobIteratorFixture : public ReferenceBlobFixture
 {
 public:
-    BlobIteratorFixture ()
-    :   m_tbl ( 0 ),
-        m_blobIt ( 0 )
+    ReferenceBlobIteratorFixture ()
+    :   m_blobIt ( 0 )
     {
     }
 
-    void MakeSRA( const char* acc )
-    {
-        if ( m_tbl != 0 )
-            VTableRelease ( m_tbl );
-        if ( VDBManagerOpenTableRead ( m_ctx -> rsrc -> vdb, & m_tbl, NULL, acc ) != 0 )
-            throw logic_error ("BlobIteratorFixture::MakeSRA VDBManagerOpenTableRead failed");
-    }
-    void MakeIterator( const char* acc )
-    {
-        MakeSRA ( acc );
-        NGS_String* run = NGS_StringMake ( m_ctx, acc, string_size ( acc ) );
-        m_blobIt = NGS_ReferenceBlobIteratorMake ( m_ctx, run, m_tbl );
-        NGS_StringRelease ( run, m_ctx );
-    }
     virtual void Release()
     {
         if (m_ctx != 0)
@@ -574,177 +558,160 @@ public:
             {
                 NGS_ReferenceBlobIteratorRelease ( m_blobIt, m_ctx );
             }
-            if ( m_tbl != 0 )
-            {
-                VTableRelease ( m_tbl );
-            }
         }
-        NGS_C_Fixture :: Release ();
+        ReferenceBlobFixture :: Release ();
     }
 
-    const VTable* m_tbl;
+    void GetIterator ( const char* p_acc, int64_t p_rowId, int64_t p_lastRowId )
+    {
+        GetCursor ( p_acc );
+        if ( m_blobIt != 0 )
+        {
+            NGS_ReferenceBlobIteratorRelease ( m_blobIt, m_ctx );
+        }
+        m_blobIt = NGS_ReferenceBlobIteratorMake ( m_ctx, m_curs, p_rowId, p_lastRowId );
+    }
+
     struct NGS_ReferenceBlobIterator* m_blobIt;
 };
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_BadMake, BlobIteratorFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlobIteratorMake_NullCursor, ReferenceBlobIteratorFixture )
 {
     ENTRY;
 
-    NGS_String* run = NGS_StringMake ( m_ctx, "", 0 );
-    REQUIRE ( ! FAILED () );
-
-    struct NGS_ReferenceBlobIterator* blobIt = NGS_ReferenceBlobIteratorMake ( ctx, run, NULL );
+    struct NGS_ReferenceBlobIterator* blobIt = NGS_ReferenceBlobIteratorMake ( ctx, NULL, 1, 2 );
     REQUIRE_FAILED ();
     REQUIRE_NULL ( blobIt );
-    NGS_StringRelease ( run, ctx );
 
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_CreateRelease, BlobIteratorFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_CreateRelease, ReferenceBlobIteratorFixture )
 {
     ENTRY;
-    MakeSRA ( SRA_Accession );
+    GetCursor ( CSRA1_Accession );
 
-    NGS_String* run = NGS_StringMake ( m_ctx, SRA_Accession, string_size ( SRA_Accession ) );
+    struct NGS_ReferenceBlobIterator* blobIt = NGS_ReferenceBlobIteratorMake ( ctx, m_curs, 1, 2 );
     REQUIRE ( ! FAILED () );
-    struct NGS_ReferenceBlobIterator* blobIt = NGS_ReferenceBlobIteratorMake ( m_ctx, run, m_tbl );
-    REQUIRE ( ! FAILED () );
-    NGS_StringRelease ( run, m_ctx );
     REQUIRE_NOT_NULL ( blobIt );
-    REQUIRE ( ! FAILED () );
-    // Release
-    NGS_ReferenceBlobIteratorRelease ( blobIt, m_ctx );
+    NGS_ReferenceBlobIteratorRelease ( blobIt, ctx );
 
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_DuplicateRelease, BlobIteratorFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_DuplicateRelease, ReferenceBlobIteratorFixture )
 {
     ENTRY;
-    MakeIterator ( SRA_Accession );
+    GetIterator ( CSRA1_Accession, 1, 2 );
 
     // Duplicate
-    struct NGS_ReferenceBlobIterator* anotherBlobIt = NGS_ReferenceBlobIteratorDuplicate ( m_blobIt, m_ctx );
+    struct NGS_ReferenceBlobIterator* anotherBlobIt = NGS_ReferenceBlobIteratorDuplicate ( m_blobIt, ctx );
     REQUIRE_NOT_NULL ( anotherBlobIt );
     // Release
-    NGS_ReferenceBlobIteratorRelease ( anotherBlobIt, m_ctx );
+    NGS_ReferenceBlobIteratorRelease ( anotherBlobIt, ctx );
 
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_Next, BlobIteratorFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_Next_BadSelf, ReferenceBlobIteratorFixture )
 {
     ENTRY;
-    MakeIterator ( SRA_Accession );
+    GetIterator ( CSRA1_Accession, 1, 2 );
+    m_blob = NGS_ReferenceBlobIteratorNext ( NULL, ctx );
+    REQUIRE_FAILED ();
+    REQUIRE_NULL ( m_blob );
+    EXIT;
+}
 
-    struct NGS_ReferenceBlob* blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, m_ctx );
+FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_Next_Empty, ReferenceBlobIteratorFixture )
+{
+    ENTRY;
+    GetIterator ( CSRA1_Accession, 1, 0 );
+
+    m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx );
     REQUIRE ( ! FAILED () );
-    REQUIRE_NOT_NULL ( blob );
-    NGS_ReferenceBlobRelease ( blob, ctx );
+    REQUIRE_NULL ( m_blob );
 
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_HasMore, BlobIteratorFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_Next, ReferenceBlobIteratorFixture )
 {
     ENTRY;
-    MakeIterator ( SRA_Accession );
+    GetIterator ( CSRA1_Accession, 1, 2 );
 
-    REQUIRE ( NGS_ReferenceBlobIteratorHasMore ( m_blobIt, m_ctx ) );
+    m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_NOT_NULL ( m_blob );
+
+    int64_t first;
+    uint64_t count;
+    NGS_ReferenceBlobRowRange ( m_blob, ctx,  & first, & count );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_EQ ( (int64_t)1, first );
+    REQUIRE_EQ ( (uint64_t)4, count );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_Next_Multiple, ReferenceBlobIteratorFixture )
+{
+    ENTRY;
+    GetIterator ( CSRA1_Accession, 1, 100 );
+    m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx );
+    NGS_ReferenceBlobRelease ( m_blob, m_ctx );
+
+    m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_NOT_NULL ( m_blob );
+
+    int64_t first;
+    uint64_t count;
+    NGS_ReferenceBlobRowRange ( m_blob, ctx,  & first, & count );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_EQ ( (int64_t)5, first );
+    REQUIRE_EQ ( (uint64_t)4, count );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_Next_End, ReferenceBlobIteratorFixture )
+{
+    ENTRY;
+    GetIterator ( CSRA1_Accession, 1, 1 );
+    m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_NOT_NULL ( m_blob );
+    NGS_ReferenceBlobRelease ( m_blob, m_ctx );
+
+    m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_NULL ( m_blob );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_HasMore_Empty, ReferenceBlobIteratorFixture )
+{
+    ENTRY;
+    GetIterator ( CSRA1_Accession, 1, 0 );
+
+    REQUIRE ( ! NGS_ReferenceBlobIteratorHasMore ( m_blobIt, ctx ) );
     REQUIRE ( ! FAILED () );
 
     EXIT;
 }
 
-#if VDB_3075_has_been_fixed
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_FullScan, BlobIteratorFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_HasMore, ReferenceBlobIteratorFixture )
 {
     ENTRY;
-    MakeIterator ( SRA_Accession );
+    GetIterator ( CSRA1_Accession, 1, 1 );
 
-    uint32_t count = 0;
-    while ( NGS_ReferenceBlobIteratorHasMore ( m_blobIt, m_ctx ) )
-    {
-        struct NGS_ReferenceBlob* blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, m_ctx );
-        REQUIRE_NOT_NULL ( blob );
-        NGS_ReferenceBlobRelease ( blob, ctx );
-        ++count;
-    }
-    REQUIRE_EQ ( (uint32_t)243, count);
-    REQUIRE_NULL ( NGS_ReferenceBlobIteratorNext ( m_blobIt, m_ctx ) );
-
-    EXIT;
-}
-#endif
-
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_SparseTable, BlobIteratorFixture )
-{
-    ENTRY;
-    MakeIterator ( "./data/SparseReferenceBlobs" );
-    // only row 1 and 10 are present
-
-    REQUIRE ( NGS_ReferenceBlobIteratorHasMore ( m_blobIt, m_ctx ) );
-    {
-        struct NGS_ReferenceBlob* blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, m_ctx );
-        REQUIRE_NOT_NULL ( blob );
-        int64_t first = 0;
-        uint64_t count = 0;
-        NGS_ReferenceBlobRowRange ( blob, m_ctx, & first, & count );
-        REQUIRE_EQ ( (int64_t)1, first );
-        REQUIRE_EQ ( (uint64_t)1, count );
-        NGS_ReferenceBlobRelease ( blob, ctx );
-    }
-
-    REQUIRE ( NGS_ReferenceBlobIteratorHasMore ( m_blobIt, m_ctx ) );
-    {
-        struct NGS_ReferenceBlob* blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, m_ctx );
-        REQUIRE_NOT_NULL ( blob );
-        int64_t first = 0;
-        uint64_t count = 0;
-        NGS_ReferenceBlobRowRange ( blob, m_ctx, & first, & count );
-        REQUIRE_EQ ( (int64_t)10, first );
-        REQUIRE_EQ ( (uint64_t)1, count );
-        NGS_ReferenceBlobRelease ( blob, ctx );
-    }
-
-    REQUIRE ( ! NGS_ReferenceBlobIteratorHasMore ( m_blobIt, m_ctx ) );
+    REQUIRE ( NGS_ReferenceBlobIteratorHasMore ( m_blobIt, ctx ) );
 
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_IteratorRetreats, BlobIteratorFixture )
-{   // VDB-2809: NGS_ReferenceBlobIterator returns overlapping blobs on CSRA1 accessions
-    ENTRY;
-    const char* acc = "SRR833251";
-    const VDatabase *db;
-    REQUIRE_RC ( VDBManagerOpenDBRead ( m_ctx -> rsrc -> vdb, & db, NULL, acc ) );
-    REQUIRE_RC ( VDatabaseOpenTableRead ( db, & m_tbl, "SEQUENCE" ) );
-    REQUIRE_RC ( VDatabaseRelease ( db ) );
-
-    NGS_String* run = NGS_StringMake ( m_ctx, acc, string_size ( acc ) );
-    m_blobIt = NGS_ReferenceBlobIteratorMake ( m_ctx, run, m_tbl );
-    NGS_StringRelease ( run, m_ctx );
-
-    int64_t rowId = 1;
-    while (true)
-    {
-        struct NGS_ReferenceBlob* blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, m_ctx );
-        if ( blob == 0 )
-        {
-            break;
-        }
-        int64_t first = 0;
-        uint64_t count = 0;
-        NGS_ReferenceBlobRowRange ( blob, m_ctx, & first, & count );
-        REQUIRE_EQ ( rowId, first );
-        NGS_ReferenceBlobRelease ( blob, ctx );
-        rowId = first + count;
-    }
-
-    EXIT;
-}
-#endif
 //////////////////////////////////////////// Main
 
 extern "C"
