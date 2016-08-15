@@ -196,15 +196,9 @@ private:
         THROW_IF_FAILED ( "Failed to iterate over rowset" );
 
         if ( !reverse_walk )
-        {
             std::copy(inserted_rows_set.begin(), inserted_rows_set.end(), std::back_inserter(inserted_rows));
-            std::sort(returned_rows.begin(), returned_rows.end(), std::less<int64_t>());
-        }
         else
-        {
             std::copy(inserted_rows_set.rbegin(), inserted_rows_set.rend(), std::back_inserter(inserted_rows));
-            std::sort(returned_rows.begin(), returned_rows.end(), std::greater<int64_t>());
-        }
 
 /*
         // useful in debugging

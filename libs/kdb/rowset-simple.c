@@ -32,6 +32,7 @@
 #include <kfc/except.h>
 #include <kfc/xc.h>
 #include <klib/out.h>
+#include <klib/sort.h>
 
 #include <string.h>
 #include <assert.h>
@@ -56,6 +57,7 @@ struct KRowSetSimpleData
 {
     size_t size;
     uint64_t num_rows;
+    bool sorted;
     int64_t rows_array[1];
 };
 
@@ -76,6 +78,7 @@ KRowSetSimpleData * KRowSetSimpleAllocateData ( ctx_t ctx, size_t size )
         {
             data -> size = size;
             data -> num_rows = 0;
+            data -> sorted = true;
             return data;
         }
     }
@@ -110,6 +113,7 @@ bool CC KRowSetSimpleHasRowId ( const KRowSet * self, ctx_t ctx, int64_t row_id 
 
     TRY ( data = GetRowSetSimpleData ( (KRowSet *)self, ctx ) )
     {
+        // TODO: search in a sorted array more efficiently
         uint64_t i;
         for ( i = 0; i < data -> num_rows; ++i )
         {
@@ -118,6 +122,16 @@ bool CC KRowSetSimpleHasRowId ( const KRowSet * self, ctx_t ctx, int64_t row_id 
         }
     }
     return false;
+}
+
+static
+void KRowSetSimpleDataSort ( KRowSetSimpleData * data )
+{
+    if ( data == NULL || data -> sorted || data -> num_rows <= 1 )
+        return;
+
+    ksort_int64_t ( data -> rows_array, data -> num_rows );
+    data -> sorted = true;
 }
 
 static
@@ -145,6 +159,7 @@ void AppendRowId ( KRowSet *self, ctx_t ctx, int64_t row_id )
             {
                 memcpy ( &data -> rows_array, &old_data -> rows_array, old_data -> num_rows * sizeof(int64_t) );
                 data -> num_rows = old_data -> num_rows;
+                data -> sorted = old_data -> sorted;
                 self -> data = data;
                 ON_FAIL ( KRowSetSimpleDestroyData ( old_data, ctx ) )
                     return;
@@ -152,6 +167,8 @@ void AppendRowId ( KRowSet *self, ctx_t ctx, int64_t row_id )
             else
                 return;
         }
+        if ( data -> sorted )
+            data -> sorted = data -> num_rows == 0 || data -> rows_array[ data -> num_rows - 1 ] <= row_id;
         data -> rows_array[ data -> num_rows++ ] = row_id;
     }
 }
@@ -308,6 +325,7 @@ KRowSetSimpleIterator * CC KRowSetSimpleGetIterator ( const struct KRowSet * sel
         {
             TRY ( KRowSetIteratorInit ( &r -> dad, ctx, ( const KRowSetIterator_vt * ) &vtKRowSetIteratorSimple, "KRowSetSimpleIterator", "KRowSetSimpleIterator" ) )
             {
+                KRowSetSimpleDataSort ( self -> data ); // make sure rowset is sorted
                 r -> rowset = self;
                 r -> rowset_data = self -> data;
                 r -> array_index = 0;
