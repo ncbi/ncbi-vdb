@@ -30,6 +30,14 @@
 #include <kfc/except.h>
 #include <kfc/xc.h>
 
+/* MakeRowSet
+ *  may add others...
+ */
+KDB_EXTERN KRowSet * CC KTableMakeRowSet ( struct KTable const * self, ctx_t ctx )
+{
+    return KTableMakeRowSetSimple ( self, ctx );
+}
+
 /* Init
  *  initialize a newly allocated rowset object
  */
@@ -171,8 +179,8 @@ KDB_EXTERN void CC KRowSetVisit ( const KRowSet * self, ctx_t ctx, bool reverse,
         {
             while ( !FAILED() && KRowSetIteratorIsValid ( it ) )
             {
-                int64_t row_id = KRowSetIteratorGetRowId ( it, ctx );
-                if ( FAILED() )
+                int64_t row_id;
+                ON_FAIL ( row_id = KRowSetIteratorGetRowId ( it, ctx ) )
                     break;
 
                 f ( row_id, data );
@@ -183,6 +191,146 @@ KDB_EXTERN void CC KRowSetVisit ( const KRowSet * self, ctx_t ctx, bool reverse,
             KRowSetIteratorRelease ( it, ctx );
         }
     }
+}
+
+/* Intersect
+ *  performs an intersection between two sets and returns the result
+ */
+KDB_EXTERN KRowSet * CC KRowSetIntersect ( ctx_t ctx, const KRowSet * a, const KRowSet * b )
+{
+    FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcProcessing );
+    KRowSet * result;
+
+    TRY ( result = KTableMakeRowSet ( NULL, ctx ) )
+    {
+        KRowSetIterator * a_it;
+        KRowSetIterator * b_it;
+        TRY ( a_it = KRowSetMakeIterator ( a, ctx ) )
+        {
+            TRY ( b_it = KRowSetMakeIterator ( b, ctx ) )
+            {
+                while ( !FAILED() && KRowSetIteratorIsValid ( a_it ) && KRowSetIteratorIsValid ( b_it ) )
+                {
+                    int64_t a_row_id;
+                    int64_t b_row_id;
+                    ON_FAIL ( a_row_id = KRowSetIteratorGetRowId ( a_it, ctx ) )
+                        break;
+
+                    ON_FAIL ( b_row_id = KRowSetIteratorGetRowId ( b_it, ctx ) )
+                        break;
+
+                    if ( a_row_id < b_row_id )
+                        KRowSetIteratorNext ( a_it, ctx );
+                    else if ( a_row_id > b_row_id )
+                        KRowSetIteratorNext ( b_it, ctx );
+                    else
+                    {
+                        TRY ( KRowSetAddRowId ( result, ctx, a_row_id ) )
+                        {
+                            TRY ( KRowSetIteratorNext ( a_it, ctx ) )
+                            {
+                                KRowSetIteratorNext ( b_it, ctx );
+                            }
+                        }
+                    }
+                }
+                KRowSetIteratorRelease ( b_it, ctx );
+            }
+            KRowSetIteratorRelease ( a_it, ctx );
+        }
+        if ( !FAILED() )
+            return result;
+
+        KRowSetRelease ( result, ctx );
+    }
+
+    return NULL;
+}
+
+/* Union
+ *  performs a union between two sets and returns the result
+ */
+KDB_EXTERN KRowSet * CC KRowSetUnion ( ctx_t ctx, const KRowSet * a, const KRowSet * b )
+{
+    FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcProcessing );
+    KRowSet * result;
+
+    TRY ( result = KTableMakeRowSet ( NULL, ctx ) )
+    {
+        KRowSetIterator * a_it;
+        KRowSetIterator * b_it;
+        TRY ( a_it = KRowSetMakeIterator ( a, ctx ) )
+        {
+            TRY ( b_it = KRowSetMakeIterator ( b, ctx ) )
+            {
+                while ( !FAILED() && KRowSetIteratorIsValid ( a_it ) && KRowSetIteratorIsValid ( b_it ) )
+                {
+                    int64_t a_row_id;
+                    int64_t b_row_id;
+                    ON_FAIL ( a_row_id = KRowSetIteratorGetRowId ( a_it, ctx ) )
+                        break;
+
+                    ON_FAIL ( b_row_id = KRowSetIteratorGetRowId ( b_it, ctx ) )
+                        break;
+
+                    if ( a_row_id < b_row_id )
+                    {
+                        TRY ( KRowSetAddRowId ( result, ctx, a_row_id ) )
+                        {
+                            KRowSetIteratorNext ( a_it, ctx );
+                        }
+                    }
+                    else if ( a_row_id > b_row_id )
+                    {
+                        TRY ( KRowSetAddRowId ( result, ctx, b_row_id ) )
+                        {
+                            KRowSetIteratorNext ( b_it, ctx );
+                        }
+                    }
+                    else
+                    {
+                        TRY ( KRowSetAddRowId ( result, ctx, a_row_id ) )
+                        {
+                            TRY ( KRowSetIteratorNext ( a_it, ctx ) )
+                            {
+                                KRowSetIteratorNext ( b_it, ctx );
+                            }
+                        }
+                    }
+                }
+                while ( !FAILED() && KRowSetIteratorIsValid ( a_it ) )
+                {
+                    int64_t a_row_id;
+                    TRY ( a_row_id = KRowSetIteratorGetRowId ( a_it, ctx ) )
+                    {
+                        TRY ( KRowSetAddRowId ( result, ctx, a_row_id ) )
+                        {
+                            KRowSetIteratorNext ( a_it, ctx );
+                        }
+                    }
+                }
+                while ( !FAILED() && KRowSetIteratorIsValid ( b_it ) )
+                {
+                    int64_t b_row_id;
+                    TRY ( b_row_id = KRowSetIteratorGetRowId ( b_it, ctx ) )
+                    {
+                        TRY ( KRowSetAddRowId ( result, ctx, b_row_id ) )
+                        {
+                            KRowSetIteratorNext ( b_it, ctx );
+                        }
+                    }
+                }
+                KRowSetIteratorRelease ( b_it, ctx );
+            }
+            KRowSetIteratorRelease ( a_it, ctx );
+        }
+        if ( !FAILED() )
+            return result;
+
+        KRowSetRelease ( result, ctx );
+    }
+
+    return NULL;
 }
 
 /* MakeIterator

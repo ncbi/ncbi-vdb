@@ -55,7 +55,7 @@ typedef struct KRowSet KRowSet;
 /* MakeRowSet
  *  may add others...
  */
-KDB_EXTERN KRowSet * CC KTableMakeRowSetSimple ( struct KTable const * self, ctx_t ctx );
+KDB_EXTERN KRowSet * CC KTableMakeRowSet ( struct KTable const * self, ctx_t ctx );
 
 
 /* AddRef
@@ -107,8 +107,8 @@ KDB_EXTERN void CC KRowSetVisit ( const KRowSet * self, ctx_t ctx, bool reverse,
  */
 KDB_EXTERN KRowSet * CC KRowSetIntersect ( ctx_t ctx, const KRowSet * a, const KRowSet * b );
 
-/* needed:
- *  union, complement
+/* Union
+ *  performs a union between two sets and returns the result
  */
 KDB_EXTERN KRowSet * CC KRowSetUnion ( ctx_t ctx, const KRowSet * a, const KRowSet * b );
 

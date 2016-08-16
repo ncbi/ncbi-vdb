@@ -96,6 +96,10 @@ struct KRowSet_vt
 KDB_EXTERN void CC KRowSetInit ( struct KRowSet *self, ctx_t ctx, const KRowSet_vt *vt,
     const char *classname, const char *name );
 
+/* MakeRowSet
+ *  create specific instance of a rowset
+ */
+KDB_EXTERN KRowSet * CC KTableMakeRowSetSimple ( struct KTable const * self, ctx_t ctx );
 
 /*--------------------------------------------------------------------------
  * KRowSetIterator
