@@ -1,0 +1,10 @@
+port.config.proxy.gov 678
+no-port.config.proxy2.org 0
+port.http.proxy 1234
+no-port.http.proxy 0
+no-port.HTTP.proxy 0
+port.HTTP.proxy 567
+no-port.all.proxy 0
+port.all.proxy 89
+port.ALL.proxy 9
+no-port.ALL.proxy 0

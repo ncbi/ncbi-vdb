@@ -103,6 +103,16 @@ rc_t KHttpRetrierInit ( KHttpRetrier * self, const char * url, const struct KNSM
 bool KHttpRetrierWait ( KHttpRetrier * self, uint32_t status );
 rc_t KHttpRetrierDestroy ( KHttpRetrier * self );
 
+
+typedef struct HttpProxy HttpProxy;
+const HttpProxy * KNSManagerGetHttpProxy ( const struct KNSManager * self );
+const HttpProxy * HttpProxyGetNextHttpProxy ( const HttpProxy * self );
+
+/* N.B.: DO NOT WHACK THE RETURNED http_proxy String !!! */
+void HttpProxyGet ( const HttpProxy * self,
+    const String ** http_proxy, uint16_t * http_proxy_port );
+
+
 /*--------------------------------------------------------------------------
  * URLBlock
  *  RFC 3986
@@ -133,6 +143,7 @@ struct URLBlock
 };
 extern void URLBlockInit ( URLBlock *self );
 extern rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size );
+
 
 #ifdef __cplusplus
 }
