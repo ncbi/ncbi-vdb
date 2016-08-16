@@ -84,6 +84,7 @@ struct KRowSet_vt
     void ( CC * destroy_data ) ( KROWSET_DATA * self, ctx_t ctx );
     /* probably need a serialization function */
     void ( CC * add_row_id_range ) ( struct KROWSET * self, ctx_t ctx, int64_t start_row_id, uint64_t count );
+    uint64_t ( CC * get_num_rows ) ( const struct KROWSET * self, ctx_t ctx );
     bool ( CC * has_row_id ) ( const struct KROWSET * self, ctx_t ctx, int64_t row_id );
     struct KROWSET_IT * ( CC * get_iterator ) ( const struct KROWSET * self, ctx_t ctx );
     // TODO: add checks for all fn to KRowSetInit

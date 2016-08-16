@@ -193,7 +193,7 @@ private:
     {
         std::vector<int64_t> inserted_rows;
         std::vector<int64_t> returned_rows;
-//        uint64_t num_rows;
+        uint64_t num_rows;
 
         KRowSetVisit ( rowset, m_ctx, reverse_walk, vector_inserter, (void *)&returned_rows );
         THROW_IF_FAILED ( "Failed to iterate over rowset" );
@@ -203,6 +203,8 @@ private:
         else
             std::copy(inserted_rows_set.rbegin(), inserted_rows_set.rend(), std::back_inserter(inserted_rows));
 
+        num_rows = KRowSetGetNumRowIds( rowset, m_ctx );
+        THROW_IF_FAILED ( "Failed to get number of row ids in rowset" );
 /*
         // useful in debugging
         KOutMsg("Inserted rows: %lu, returned rows: %lu\n", inserted_rows.size(), returned_rows.size() );
@@ -222,8 +224,8 @@ private:
 
         if ( inserted_rows.size() != returned_rows.size() )
             FAIL("inserted_rows.size() != returned_rows.size()");
-//        if ( num_rows != returned_rows.size() )
-//            FAIL("num_rows != returned_rows.size()");
+        if ( num_rows != returned_rows.size() )
+            FAIL("num_rows != returned_rows.size()");
         if ( inserted_rows != returned_rows )
             FAIL("inserted_rows != returned_rows");
     }
@@ -398,9 +400,9 @@ FIXTURE_TEST_CASE ( KRowSetIterator, RowSetFixture )
     REQUIRE_EXPR ( rowset = KTableMakeRowSet ( NULL, ctx ) );
     REQUIRE_EXPR ( KRowSetAddRowIdRange ( rowset, ctx, row_id_inserted, 1 ) );
 
-//    uint64_t num_rows;
-//    REQUIRE_EXPR ( KRowSetGetNumRowIds ( rowset, &num_rows ) );
-//    REQUIRE_EQ ( num_rows, (uint64_t)1 );
+    uint64_t num_rows;
+    REQUIRE_EXPR ( num_rows = KRowSetGetNumRowIds ( rowset, ctx ) );
+    REQUIRE_EQ ( num_rows, (uint64_t)1 );
 
     int64_t row_id_retrieved;
     KRowSetIterator * it;

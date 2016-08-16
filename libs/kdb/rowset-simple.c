@@ -201,12 +201,26 @@ void CC KRowSetSimpleAddRowIdRange ( KRowSet *self, ctx_t ctx, int64_t start_row
     }
 }
 
+static
+uint64_t CC KRowSetSimpleGetNumRowIds ( const KRowSet * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcAccessing );
+    const KRowSetSimpleData * data;
+    TRY ( data = GetRowSetSimpleData ( (KRowSet *) self, ctx ) )
+    {
+        return data -> num_rows;
+    }
+
+    return 0;
+}
+
 static KRowSet_vt vtKRowSetSimple =
 {
     1, 0,
 
     KRowSetSimpleDestroyData,
     KRowSetSimpleAddRowIdRange,
+    KRowSetSimpleGetNumRowIds,
     KRowSetSimpleHasRowId,
     KRowSetSimpleGetIterator
 };

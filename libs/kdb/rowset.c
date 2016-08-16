@@ -157,7 +157,23 @@ KDB_EXTERN void CC KRowSetAddRowIdRange ( KRowSet * self, ctx_t ctx, int64_t row
         INTERNAL_ERROR ( xcSelfNull, "failed to insert rows into rowset" );
     }
     else
-        self -> vt ->add_row_id_range ( self, ctx, row_id, count );
+        self -> vt -> add_row_id_range ( self, ctx, row_id, count );
+}
+
+/* GetNumRowIds
+ *  return the number of elements in set
+ */
+KDB_EXTERN uint64_t CC KRowSetGetNumRowIds ( const KRowSet * self, ctx_t ctx )
+{
+    if ( self == NULL || self -> vt == NULL )
+    {
+        FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcAccessing );
+        INTERNAL_ERROR ( xcSelfNull, "failed to get number of rows in rowset" );
+    }
+    else
+        return self -> vt -> get_num_rows ( self, ctx );
+
+    return 0;
 }
 
 /* Visit
