@@ -130,6 +130,7 @@ struct KClientHttp
     bool proxy_default_port;
     
     bool reliable;
+    bool tls;
 };
 
 
@@ -163,6 +164,7 @@ rc_t KClientHttpClear ( KClientHttp *self )
     KClientHttpClose ( self );
 
     KDataBufferWhack ( & self -> hostname_buffer );
+    self -> tls = false;
 
     return 0;
 }
@@ -181,70 +183,133 @@ rc_t KClientHttpWhack ( KClientHttp * self )
     return 0;
 }
 
-static
-rc_t KClientHttpInitDNSEndpoint ( KClientHttp * self, const String * hostname, uint32_t port, uint16_t dflt_proxy_port )
+
+typedef struct KEndPointArgsIterator {
+    const HttpProxy * proxy;
+    const String * hostname;
+    uint16_t port;
+    uint16_t dflt_proxy_ports [ 2 ];
+    size_t dflt_proxy_ports_idx;
+    bool done;
+} KEndPointArgsIterator;
+static void KEndPointArgsIteratorMake ( KEndPointArgsIterator * self,
+    const KNSManager * mgr, const String * hostname, uint16_t port )
+{
+    assert ( self );
+    memset ( self, 0, sizeof * self );
+    self -> dflt_proxy_ports [ 0 ] = 3128;
+    self -> dflt_proxy_ports [ 1 ] = 8080;
+    if ( ! mgr -> http_proxy_only ) {
+        self -> hostname = hostname;
+        self -> port = port;
+    }
+    if ( mgr -> http_proxy_enabled ) {
+        self -> proxy = KNSManagerGetHttpProxy ( mgr );
+    }
+    if ( self -> hostname == NULL && self -> proxy == NULL ) {
+        self -> done = true;
+    }
+}
+
+static bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
+    const String ** hostname, uint16_t * port,
+    bool * proxy_default_port, bool * proxy_ep )
+{
+    static const uint16_t dflt_proxy_ports_sz =
+        sizeof self -> dflt_proxy_ports / sizeof self -> dflt_proxy_ports [ 0 ];
+    assert ( self );
+    if ( self -> done ) {
+        return false;
+    }
+
+    assert ( hostname && port && proxy_default_port && proxy_ep );
+
+    /* DO NOT WHACK hostname !!! */
+    HttpProxyGet ( self -> proxy, hostname, port );
+
+    * proxy_default_port = false;
+
+    if ( * hostname != NULL ) {
+        if ( * port == 0 ) {
+            assert ( self -> dflt_proxy_ports_idx < dflt_proxy_ports_sz );
+            * port
+                = self -> dflt_proxy_ports [ self -> dflt_proxy_ports_idx ++ ];
+            if ( self -> dflt_proxy_ports_idx >= dflt_proxy_ports_sz ) {
+                self -> dflt_proxy_ports_idx = 0;
+            }
+            * proxy_default_port = true;
+        }
+        else {
+            self -> dflt_proxy_ports_idx = 0;
+        }
+        if ( self -> dflt_proxy_ports_idx == 0 ) {
+            self -> proxy = HttpProxyGetNextHttpProxy ( self -> proxy );
+        }
+        * proxy_ep = true;
+        return true;
+    }
+
+    self -> done = true;
+    if ( self -> hostname != NULL ) {
+        * hostname = self -> hostname;
+        * port = self -> port;
+        * proxy_ep = false;
+        return true;
+    }
+
+    return false;
+}
+
+
+/******************************************************************************/
+static rc_t KClientHttpOpen
+    ( KClientHttp * self, const String * aHostname, uint32_t aPort )
 {
     rc_t rc = 0;
+    KSocket * sock = NULL;
+    const String * hostname = NULL;
+    uint16_t port = 0;
+    bool proxy_default_port = false;
+    bool proxy_ep = false;
+    KEndPointArgsIterator it;
+    const KNSManager * mgr = NULL;
 
-    const KNSManager * mgr = self -> mgr;
-
-    self -> proxy_default_port = false;
-
-    if ( dflt_proxy_port != 0 && mgr -> http_proxy_enabled && mgr -> http_proxy != NULL )
+#if NO_HTTPS_SUPPORT
+    if ( self -> tls )
     {
-        uint16_t proxy_port = mgr -> http_proxy_port;
-        if ( proxy_port == 0 )
-        {
-            proxy_port = dflt_proxy_port;
-            self -> proxy_default_port = true;
-        }
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Unsupported request for TLS\n" ) );
+        return RC ( rcNS, rcNoTarg, rcInitializing, rcParam, rcUnsupported );
+    }
+#endif
 
-        rc = KNSManagerInitDNSEndpoint ( mgr, & self -> ep, mgr -> http_proxy, proxy_port );
-        if ( rc == 0 )
-        {
-            self -> proxy_ep = true;
-            return 0;
+    assert ( self );
+    mgr = self -> mgr;
+    KEndPointArgsIteratorMake ( & it, mgr, aHostname, aPort  );
+    while ( KEndPointArgsIteratorNext
+        ( & it, & hostname, & port, & proxy_default_port, & proxy_ep ) )
+    {
+        rc = KNSManagerInitDNSEndpoint ( mgr, & self -> ep, hostname, port );
+        if ( rc == 0 ) {
+            self -> proxy_default_port = proxy_default_port;
+            self -> proxy_ep = proxy_ep;
+        }
+        if ( rc == 0 ) {
+            rc = KNSManagerMakeTimedConnection ( mgr, & sock,
+              self -> read_timeout, self -> write_timeout, NULL, & self -> ep );
+            if ( rc == 0 ) {
+                /* this is a good endpoint */
+                self -> ep_valid = true;
+                break;
+            }
         }
     }
 
-    self -> proxy_ep = false;
-
-    return KNSManagerInitDNSEndpoint ( mgr, & self -> ep, hostname, port );
-}
-
-rc_t KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t port )
-{
-    rc_t rc = 0;
-    KSocket * sock;
-    const KNSManager * mgr = self -> mgr;
-
-    /* default port list MUST end with 0 to try without proxy */
-    uint32_t pp_idx;
-    static uint16_t dflt_proxy_ports [] = { 3128, 8080, 0 };
-
-    for ( pp_idx = 0; pp_idx < sizeof dflt_proxy_ports / sizeof dflt_proxy_ports [ 0 ]; ++ pp_idx )
+    /* wrap in TLS */
+    if ( rc == 0 && self -> tls )
     {
-        /* if endpoint was not successfully opened on previous attempt */
-        if ( ! self -> ep_valid )
-        {
-            rc = KClientHttpInitDNSEndpoint ( self, hostname, port, dflt_proxy_ports [ pp_idx ] );
-            if ( rc != 0 )
-                break;
-        }
-
-        /* try to connect to endpoint */
-        rc = KNSManagerMakeTimedConnection ( mgr, & sock,
-            self -> read_timeout, self -> write_timeout, NULL, & self -> ep );
-        if ( rc == 0 )
-        {
-            /* this is a good endpoint */
-            self -> ep_valid = true;
-            break;
-        }
-
-        /* if we did not try a proxy server before, exit loop */
-        if ( self -> ep_valid || ! self -> proxy_ep )
-            break;
+#if ! NO_HTTPS_SUPPORT
+#error "unimplemented"
+#endif
     }
 
     /* if the connection is open */
@@ -263,6 +328,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * hostname, uint32_t por
     self -> sock = NULL;
     return rc;
 }
+
 
 #if _DEBUGGING
 /* we need this hook to be able to test the re-connection logic */
@@ -290,12 +356,12 @@ rc_t KClientHttpReopen ( KClientHttp * self )
 
 /* Initialize KClientHttp object */
 static
-rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, KStream * conn, ver_t _vers, const String * _host, uint32_t port )
+rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, KStream * conn, ver_t _vers, const String * _host, uint32_t port, bool tls )
 {
     rc_t rc;
 
     if ( port == 0 )
-        port = 80;
+        rc = RC ( rcNS, rcNoTarg, rcInitializing, rcParam, rcInvalid );
 
     /* we accept a NULL connection ( from ) */
     if ( conn == NULL )
@@ -321,9 +387,12 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, K
                               ( _host -> addr - ( const char* ) hostname_buffer -> base ),
                               _host -> size );
         if ( rc == 0 )
+        {
             /* Its safe to assign pointer because we know
                that the pointer is within the buffer */
             http -> hostname = * _host;
+            http -> tls = tls;
+        }
     }
     
     return rc;
@@ -344,15 +413,20 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, K
  *
  *  "port" [ IN, DEFAULT ZERO ] - if zero, defaults to standard for scheme
  *   if non-zero, is taken as explicit port specification
+ *
+ *  "reliable" [ IN ] - if true, then trust that the settings are good
+ *   and apply extra stubbornness to fail
+ *
+ *  "tls" [ IN ] - if true, wrap socket in a TLS encryption protocol
  */
 rc_t KNSManagerMakeClientHttpInt ( const KNSManager *self, KClientHttp **_http,
     const KDataBuffer *hostname_buffer,  KStream *opt_conn,
     ver_t vers, int32_t readMillis, int32_t writeMillis,
-    const String *host, uint32_t port, bool reliable )
+    const String *host, uint32_t port, bool reliable, bool tls )
 {
     rc_t rc;
 
-    KClientHttp * http = calloc ( 1, sizeof * http );
+    KClientHttp * http = ( KClientHttp * ) calloc ( 1, sizeof * http );
     if ( http == NULL )
         rc = RC ( rcNS, rcNoTarg, rcAllocating, rcMemory, rcNull );
     else
@@ -386,10 +460,11 @@ rc_t KNSManagerMakeClientHttpInt ( const KNSManager *self, KClientHttp **_http,
             text [ host -> size ] = save;
 
             /* init the KClientHttp object */
-            rc = KClientHttpInit ( http, hostname_buffer, opt_conn, vers, host, port );
+            rc = KClientHttpInit ( http, hostname_buffer, opt_conn, vers, host, port, tls );
             if ( rc == 0 )
             {
                 http -> reliable = reliable;
+
                 /* assign to OUT http param */
                 * _http = http;
                 return 0;
@@ -404,9 +479,10 @@ rc_t KNSManagerMakeClientHttpInt ( const KNSManager *self, KClientHttp **_http,
     return rc;
 }
 
-LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttp ( const KNSManager *self,
+static
+rc_t KNSManagerMakeTimedClientHttpInt ( const KNSManager *self,
     KClientHttp **_http, KStream *opt_conn, ver_t vers, int32_t readMillis, int32_t writeMillis,
-    const String *host, uint32_t port )
+    const String *host, uint32_t port, uint32_t dflt_port, bool tls )
 {
     rc_t rc;
     
@@ -437,11 +513,13 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttp ( const KNSManager *self,
                 String _host;
 
                 /* copy hostname with nul termination */
-                string_copy ( hostname_buffer . base, ( size_t ) hostname_buffer . elem_count,
+                string_copy ( ( char * ) hostname_buffer . base,
+                              ( size_t ) hostname_buffer . elem_count,
                               host -> addr, host -> size );
 
                 /* create copy of host that points into new buffer */
-                StringInit ( &_host, hostname_buffer . base, host -> size, host -> len );
+                StringInit ( & _host, ( const char * ) hostname_buffer . base,
+                             host -> size, host -> len );
 
                 /* limit timeouts */
                 if ( readMillis < 0 )
@@ -453,9 +531,13 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttp ( const KNSManager *self,
                 else if ( writeMillis > MAX_HTTP_WRITE_LIMIT )
                     writeMillis = MAX_HTTP_WRITE_LIMIT;
 
+                /* default port */
+                if ( port == 0 )
+                    port = dflt_port;
+
                 /* initialize http object - will create a new reference to hostname buffer */
                 rc = KNSManagerMakeClientHttpInt ( self, _http, & hostname_buffer,
-                    opt_conn, vers, readMillis, writeMillis, &_host, port, false );
+                    opt_conn, vers, readMillis, writeMillis, &_host, port, false, tls );
 
                 /* release our reference to buffer */
                 KDataBufferWhack ( & hostname_buffer );
@@ -469,6 +551,14 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttp ( const KNSManager *self,
     }
     
     return rc;
+}
+
+
+LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttp ( const KNSManager *self,
+    KClientHttp ** http, KStream *opt_conn, ver_t vers, int32_t readMillis, int32_t writeMillis,
+    const String *host, uint32_t port )
+{
+    return KNSManagerMakeTimedClientHttpInt ( self, http, opt_conn, vers, readMillis, writeMillis, host, port, 80, false );
 }
 
 LIB_EXPORT rc_t CC KNSManagerMakeClientHttp ( const KNSManager *self,
@@ -485,6 +575,30 @@ LIB_EXPORT rc_t CC KNSManagerMakeClientHttp ( const KNSManager *self,
     }
 
     return KNSManagerMakeTimedClientHttp ( self, http, opt_conn, vers,
+        self -> http_read_timeout, self -> http_write_timeout, host, port );
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakeTimedClientHttps ( const KNSManager *self,
+    KClientHttp ** https, KStream *opt_conn, ver_t vers, int32_t readMillis, int32_t writeMillis,
+    const String *host, uint32_t port )
+{
+    return KNSManagerMakeTimedClientHttpInt ( self, https, opt_conn, vers, readMillis, writeMillis, host, port, 443, true );
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakeClientHttps ( const KNSManager *self,
+    KClientHttp **https, KStream *opt_conn, ver_t vers, const String *host, uint32_t port )
+{
+    if ( self == NULL )
+    {
+        if ( https == NULL )
+            return RC ( rcNS, rcMgr, rcValidating, rcParam, rcNull );
+
+        * https = NULL;
+
+        return RC ( rcNS, rcMgr, rcValidating, rcSelf, rcNull );
+    }
+
+    return KNSManagerMakeTimedClientHttps ( self, https, opt_conn, vers,
         self -> http_read_timeout, self -> http_write_timeout, host, port );
 }
 
@@ -536,7 +650,7 @@ static
 rc_t KClientHttpGetCharFromResponse ( KClientHttp *self, char *ch, struct timeout_t *tm )
 {
     rc_t rc;
-    char * buffer = self -> block_buffer . base;
+    char * buffer = ( char * ) self -> block_buffer . base;
 
     /* check for data in buffer */
     if ( KClientHttpBlockBufferIsEmpty ( self ) )
@@ -553,7 +667,7 @@ rc_t KClientHttpGetCharFromResponse ( KClientHttp *self, char *ch, struct timeou
                 return rc;
 
             /* re-assign new base pointer */
-            buffer = self -> block_buffer . base;
+            buffer = ( char * ) self -> block_buffer . base;
         }
 
         /* zero out offsets */
@@ -593,7 +707,7 @@ rc_t KClientHttpGetLine ( KClientHttp *self, struct timeout_t *tm )
 {
     rc_t rc;
 
-    char * buffer = self -> line_buffer . base;
+    char * buffer = ( char * ) self -> line_buffer . base;
     size_t bsize = KDataBufferBytes ( & self -> line_buffer );
 
     /* num_valid bytes read starts at 0 */
@@ -634,7 +748,7 @@ rc_t KClientHttpGetLine ( KClientHttp *self, struct timeout_t *tm )
                 return rc;
 
             /* assign new base pointer */
-            buffer = self -> line_buffer . base;
+            buffer = ( char * ) self -> line_buffer . base;
         }
 
         /* buffer is not full, insert char into the buffer */
@@ -693,7 +807,7 @@ rc_t KClientHttpAddHeaderString
         if ( node == NULL )
         {
             /* node doesnt exist - allocate memory for a new one */
-            node = calloc ( 1, sizeof * node );
+            node = ( KHttpHeader * ) calloc ( 1, sizeof * node );
             if ( node == NULL )
                 rc = RC ( rcNS, rcNoTarg, rcAllocating, rcMemory, rcNull );
             else
@@ -704,14 +818,17 @@ rc_t KClientHttpAddHeaderString
                 if ( rc == 0 )
                 {
                     /* copy the string data into storage */
-                    rc = string_printf ( node -> value_storage . base, bsize, NULL,
+                    rc = string_printf ( ( char *) node -> value_storage . base,
+                                         bsize, NULL,
                                          "%S%S"
                                          , name
                                          , value );
                     if ( rc == 0 )
                     {
                         /* initialize the Strings to point into KHttpHeader node */
-                        StringInit ( & node -> name, node -> value_storage . base, name -> size, name -> len );
+                        StringInit ( & node -> name,
+                            ( const char * ) node -> value_storage . base,
+                            name -> size, name -> len );
                         StringInit ( & node -> value, node -> name . addr + name -> size, value -> size, value -> len );
                         
                         /* insert into tree, sorted by alphabetical order */
@@ -738,7 +855,7 @@ rc_t KClientHttpAddHeaderString
             rc = KDataBufferResize ( & node -> value_storage, cursize + value -> size + 1 + 1 );
             if ( rc == 0 )
             {
-                char *buffer = node -> value_storage . base;
+                char * buffer = ( char * ) node -> value_storage . base;
 
                 /* copy string data into buffer */
                 rc = string_printf ( & buffer [ cursize ], value -> size + 2, NULL,
@@ -768,12 +885,13 @@ rc_t KClientHttpAddHeaderString
                     KDataBufferResize ( & node -> value_storage, bsize );
                 }
                 /* copy the string data into storage */
-                rc = string_printf ( node -> value_storage . base, bsize,
-                    NULL, "%S%S", name, value );
+                rc = string_printf ( ( char * ) node -> value_storage . base,
+                    bsize, NULL, "%S%S", name, value );
                 if ( rc == 0 )
                 {
                     /* initialize the Strings to point into KHttpHeader node */
-                    StringInit ( & node -> name,  node -> value_storage . base,
+                    StringInit ( & node -> name,
+                        ( const char * ) node -> value_storage . base,
                         name -> size, name -> len );
                     StringInit ( & node -> value,
                         node -> name . addr + name -> size,
@@ -855,8 +973,8 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
         else
         {
             char * sep;
-            char * buffer = self -> line_buffer . base;
-            char * end = buffer + self -> line_valid;
+            const char * buffer = ( char * ) self -> line_buffer . base;
+            const char * end = buffer + self -> line_valid;
 
             DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("HTTP receive '%s'\n", buffer));
 
@@ -982,8 +1100,8 @@ rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, u
     if ( rc == 0 )
     {
         char * sep;
-        char * buffer = self -> line_buffer . base;
-        char * end = buffer + self -> line_valid;
+        const char * buffer = ( char * ) self -> line_buffer . base;
+        const char * end = buffer + self -> line_valid;
 
         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("HTTP receive '%s'\n", buffer));
 
@@ -1139,7 +1257,7 @@ rc_t CC KClientHttpStreamTimedRead ( const KClientHttpStream *cself,
     }
     else
     {
-        char *buf;
+        const char * buf = NULL;
 
         /* bytes available in buffer */
         uint64_t bytes_in_buffer = http -> block_valid - http -> block_read;
@@ -1149,7 +1267,7 @@ rc_t CC KClientHttpStreamTimedRead ( const KClientHttpStream *cself,
             num_to_read = bytes_in_buffer;
 
         /* capture base pointer */
-        buf = http -> block_buffer . base;
+        buf = ( char * ) http -> block_buffer . base;
 
         /* copy data into the user buffer from the offset of bytes not yet read */
         memcpy ( buffer, & buf [ http -> block_read ], num_to_read );
@@ -1225,7 +1343,8 @@ rc_t CC KClientHttpStreamTimedReadChunked ( const KClientHttpStream *cself,
 
         /* convert the hex number containing chunk size to uint64 
            sep should be pointing at nul byte */
-        self -> content_length = strtou64 ( http -> line_buffer . base, & sep, 16 );
+        self -> content_length 
+          = strtou64 ( ( const char * ) http -> line_buffer . base, & sep, 16 );
 
         /* TBD - eat spaces here? */
         /* check if there was no hex number, or sep isn't pointing to nul byte */
@@ -1331,7 +1450,7 @@ static
 rc_t KClientHttpStreamMake ( KClientHttp *self, KStream **sp, const char *strname, size_t content_length, bool size_unknown )
 {
     rc_t rc;
-    KClientHttpStream *s = calloc ( 1, sizeof * s );
+    KClientHttpStream * s = ( KClientHttpStream * ) calloc ( 1, sizeof * s );
     if ( s == NULL )
         rc = RC ( rcNS, rcNoTarg, rcConstructing, rcMemory, rcExhausted );
     else
@@ -1361,7 +1480,7 @@ static
 rc_t KClientHttpStreamMakeChunked ( KClientHttp *self, KStream **sp, const char *strname )
 {
     rc_t rc;
-    KClientHttpStream *s = calloc ( 1, sizeof * s );
+    KClientHttpStream * s = ( KClientHttpStream * ) calloc ( 1, sizeof * s );
     if ( s == NULL )
         rc = RC ( rcNS, rcNoTarg, rcConstructing, rcMemory, rcExhausted );
     else
@@ -1499,7 +1618,8 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
         if ( rc == 0 )
         {
             /* create a result object with enough space for msg string + nul */
-            KClientHttpResult *result = malloc ( sizeof * result + msg . size + 1 );
+            KClientHttpResult * result = ( KClientHttpResult * )
+                                    malloc ( sizeof * result + msg . size + 1 );
             if ( result == NULL )
                 rc = RC ( rcNS, rcNoTarg, rcAllocating, rcMemory, rcExhausted );
             else
@@ -1560,10 +1680,12 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
 }
 
 /* test */
+/*static
 void KClientHttpForceSocketClose(const KClientHttp *self)
 {
     KStreamForceSocketClose(self->sock);
 }
+*/
 
 /* AddRef
  * Release
@@ -2303,7 +2425,7 @@ rc_t CC KNSManagerMakeClientRequestInt ( const KNSManager *self,
                     KClientHttp * http;
                     
                     rc = KNSManagerMakeClientHttpInt ( self, & http, & buf, conn, vers,
-                        self -> http_read_timeout, self -> http_write_timeout, & block . host, block . port, reliable );
+                        self -> http_read_timeout, self -> http_write_timeout, & block . host, block . port, reliable, block . tls );
                     if ( rc == 0 )
                     {
                         rc = KClientHttpMakeRequestInt ( http, req, & block, & buf );
@@ -2763,7 +2885,7 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttp
                 http -> ep_valid = false;
 
                 /* reinitialize the http from uri */
-                rc = KClientHttpInit ( http, &uri, NULL, http -> vers , &b . host, b . port );
+                rc = KClientHttpInit ( http, &uri, NULL, http -> vers , &b . host, b . port, b . tls );
                 if ( rc == 0 )
                 {
                     KClientHttpRequestClear ( self );

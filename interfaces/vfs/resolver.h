@@ -76,10 +76,21 @@ VFS_EXTERN rc_t CC VResolverRelease ( const VResolver * self );
 typedef uint32_t VRemoteProtocols;
 enum
 {
-      eProtocolHttp
-    , eProtocolFasp
-    , eProtocolFaspHttp
-    , eProtocolHttpFasp
+      eProtocolHttp                 /* http only         */
+    , eProtocolFasp                 /* fasp only         */
+    , eProtocolFaspHttp             /* fasp, http        */
+    , eProtocolHttpFasp             /* http, fasp        */
+    , eProtocolHttps                /* https only        */
+    , eProtocolHttpsHttp            /* https, http       */
+    , eProtocolHttpHttps            /* http, https       */
+    , eProtocolFaspHttps            /* fasp, https       */
+    , eProtocolHttpsFasp            /* https, fasp       */
+    , eProtocolFaspHttpHttps        /* fasp, http, https */
+    , eProtocolHttpFaspHttps        /* http, fasp, https */
+    , eProtocolFaspHttpsHttp        /* fasp, https, http */
+    , eProtocolHttpHttpsFasp        /* http, https, fasp */
+    , eProtocolHttpsFaspHttp        /* https, fasp, http */
+    , eProtocolHttpsHttpFasp        /* https, http, fasp */
     , eProtocolLastDefined
 };
 

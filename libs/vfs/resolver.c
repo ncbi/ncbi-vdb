@@ -66,6 +66,13 @@
 #include <os-native.h>
 #include <assert.h>
 
+/* temporary - until we have HTTP/TLS support */
+#if NO_HTTPS_SUPPORT
+#define eProtocolDefaultHttp eProtocolHttp
+#else
+#define eProtocolDefaultHttp eProtocolHttps
+#endif
+
 /* to turn off CGI name resolution for
    any refseq accessions */
 #define NO_REFSEQ_CGI 0
@@ -655,10 +662,11 @@ rc_t VPathCheckFromNamesCGI ( const VPath * path, const String *ticket, const VP
     if ( ! path -> from_uri )
         return RC ( rcVFS, rcResolver, rcResolving, rcMessage, rcCorrupt );
 
-    /* can only be http or fasp */
+    /* can only be http, https or fasp */
     switch ( path -> scheme_type )
     {
     case vpuri_http:
+    case vpuri_https:
     case vpuri_fasp:
         break;
     default:
@@ -1343,32 +1351,71 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
             rc = KHttpRequestAddPostParam ( req, "tic=%S", self -> ticket );
         }
 
-        if (NAME_SERVICE_VERS >= ONE_DOT_ONE) { /* SRA-1690 */
-            if ( rc == 0 ) {
+        if ( NAME_SERVICE_VERS >= ONE_DOT_ONE )
+        {
+            if ( rc == 0 )
+            {
                 const char *val;
-                switch ( protocols ) {
-                    case eProtocolHttp:
-                        val = "http";
-                        break;
-                    case eProtocolFasp:
-                        val = "fasp";
-                        break;
-                    case eProtocolFaspHttp:
-                        val = "fasp,http";
-                        break;
-                    case eProtocolHttpFasp:
-                        val = "http,fasp";
-                        break;
-                    default:
-                        val = NULL;
-                        rc = RC(
-                            rcVFS, rcResolver, rcResolving, rcParam, rcInvalid);
+                switch ( protocols )
+                {
+                /* 1.1 protocols */
+                case eProtocolHttp:
+                    val = "http";
+                    break;
+                case eProtocolFasp:
+                    val = "fasp";
+                    break;
+                case eProtocolFaspHttp:
+                    val = "fasp,http";
+                    break;
+                case eProtocolHttpFasp:
+                    val = "http,fasp";
+                    break;
+
+                /* new for 1.2 */
+                case eProtocolHttps:
+                    val = "https";
+                    break;
+                case eProtocolHttpsHttp:
+                    val = "https,http";
+                    break;
+                case eProtocolHttpHttps:
+                    val = "http,https";
+                    break;
+                case eProtocolFaspHttps:
+                    val = "fasp,https";
+                    break;
+                case eProtocolHttpsFasp:
+                    val = "https,fasp";
+                    break;
+                case eProtocolFaspHttpHttps:
+                    val = "fasp,http,https";
+                    break;
+                case eProtocolHttpFaspHttps:
+                    val = "http,fasp,https";
+                    break;
+                case eProtocolFaspHttpsHttp:
+                    val = "fasp,https,http";
+                    break;
+                case eProtocolHttpHttpsFasp:
+                    val = "http,https,fasp";
+                    break;
+                case eProtocolHttpsFaspHttp:
+                    val = "https,fasp,http";
+                    break;
+                case eProtocolHttpsHttpFasp:
+                    val = "https,http,fasp";
+                    break;
+
+                default:
+                    val = NULL;
+                    rc = RC ( rcVFS, rcResolver, rcResolving, rcParam, rcInvalid );
                 }
 
-                if ( rc == 0 ) {
-                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
-                        ("  accept-proto = %s\n", val));
-                    rc = KHttpRequestAddPostParam(req, "accept-proto=%s", val);
+                if ( rc == 0 )
+                {
+                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("  accept-proto = %s\n", val));
+                    rc = KHttpRequestAddPostParam ( req, "accept-proto=%s", val );
                 }
             }
         }
@@ -1435,13 +1482,16 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
 
                         KStreamRelease ( response );
                     }
-                } else if ( code == 404 ) { /* HTTP/1.1 400 Bad Request -
-                                       resolver CGI was not found */
-                    rc = RC ( rcVFS, rcResolver, rcResolving, rcConnection,
-                        rcNotFound );
-                } else { /* Something completely unexpected */
-                    rc = RC ( rcVFS, rcResolver, rcResolving, rcConnection,
-                        rcUnexpected );
+                }
+                else if ( code == 404 )
+                {
+                    /* HTTP/1.1 400 Bad Request - resolver CGI was not found */
+                    rc = RC ( rcVFS, rcResolver, rcResolving, rcConnection, rcNotFound );
+                }
+                else
+                {
+                    /* Something completely unexpected */
+                    rc = RC ( rcVFS, rcResolver, rcResolving, rcConnection, rcUnexpected );
                 }
                 KHttpResultRelease ( rslt );
             }
@@ -2250,7 +2300,7 @@ LIB_EXPORT
 rc_t CC VResolverLocal ( const VResolver * self,
     const VPath * accession, const VPath ** path )
 {
-    rc_t rc =  VResolverQuery ( self, eProtocolHttp, accession, path, NULL, NULL );
+    rc_t rc =  VResolverQuery ( self, eProtocolDefaultHttp, accession, path, NULL, NULL );
     if ( rc == 0 )
     {
         switch ( accession -> path_type )
@@ -2782,7 +2832,7 @@ LIB_EXPORT
 rc_t CC VResolverCache ( const VResolver * self,
     const VPath * url, const VPath ** path, uint64_t file_size )
 {
-    return VResolverQuery ( self, eProtocolHttp, url, NULL, NULL, path );
+    return VResolverQuery ( self, eProtocolDefaultHttp, url, NULL, NULL, path );
 }
 
 /* QueryOID
@@ -3281,21 +3331,66 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                 break;
 
             case vpuri_http:
+                /* check for all that allow http */
                 switch ( protocols )
                 {
                 case eProtocolHttp:
                 case eProtocolFaspHttp:
                 case eProtocolHttpFasp:
+
+                case eProtocolHttpsHttp:
+                case eProtocolHttpHttps:
+
+                case eProtocolFaspHttpHttps:
+                case eProtocolHttpFaspHttps:
+                case eProtocolFaspHttpsHttp:
+                case eProtocolHttpHttpsFasp:
+                case eProtocolHttpsFaspHttp:
+                case eProtocolHttpsHttpFasp:
+
+                    return VResolverQueryURL ( self, protocols, query, remote, cache );
+                }
+                return RC ( rcVFS, rcResolver, rcResolving, rcPath, rcIncorrect );
+
+            case vpuri_https:
+                /* check for all that allow https */
+                switch ( protocols )
+                {
+                case eProtocolHttps:
+                case eProtocolHttpsHttp:
+                case eProtocolHttpHttps:
+                case eProtocolFaspHttps:
+                case eProtocolHttpsFasp:
+
+                case eProtocolFaspHttpHttps:
+                case eProtocolHttpFaspHttps:
+                case eProtocolFaspHttpsHttp:
+                case eProtocolHttpHttpsFasp:
+                case eProtocolHttpsFaspHttp:
+                case eProtocolHttpsHttpFasp:
+
                     return VResolverQueryURL ( self, protocols, query, remote, cache );
                 }
                 return RC ( rcVFS, rcResolver, rcResolving, rcPath, rcIncorrect );
 
             case vpuri_fasp:
+                /* check for all that allow fasp */
                 switch ( protocols )
                 {
                 case eProtocolFasp:
                 case eProtocolFaspHttp:
                 case eProtocolHttpFasp:
+
+                case eProtocolFaspHttps:
+                case eProtocolHttpsFasp:
+
+                case eProtocolFaspHttpHttps:
+                case eProtocolHttpFaspHttps:
+                case eProtocolFaspHttpsHttp:
+                case eProtocolHttpHttpsFasp:
+                case eProtocolHttpsFaspHttp:
+                case eProtocolHttpsHttpFasp:
+
                     return VResolverQueryURL ( self, protocols, query, remote, cache );
                 }
                 return RC ( rcVFS, rcResolver, rcResolving, rcPath, rcIncorrect );
@@ -4494,7 +4589,7 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         VectorReorder ( & self -> remote, VResolverAlgSort, NULL );
     }
 
-    self -> protocols = eProtocolHttp;
+    self -> protocols = eProtocolDefaultHttp;
 
     return rc;
 }
