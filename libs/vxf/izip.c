@@ -217,7 +217,7 @@ static rc_t zlib_compress(szbuf *dst, const void *src, uint32_t ssize, int32_t s
         break;
     }
     zr = deflateEnd(&s);
-    if (zr != Z_OK)
+    if ( zr != Z_OK && s.total_out != 0 )
         rc = RC(rcVDB, rcFunction, rcExecuting, rcSelf, rcUnexpected);
     if (rc == 0) {
         assert(s.total_out <= UINT32_MAX);
