@@ -58,13 +58,21 @@ typedef struct KRowSet KRowSet;
 KDB_EXTERN KRowSet * CC KTableMakeRowSet ( struct KTable const * self, ctx_t ctx );
 
 
-/* AddRef
+/* Duplicate
  * Release
  *  ignores NULL references
  */
-KDB_EXTERN void CC KRowSetAddRef ( const KRowSet * self, ctx_t ctx );
-KDB_EXTERN void CC KRowSetRelease ( const KRowSet * self, ctx_t ctx );
+static __inline__
+KRowSet * KRowSetDuplicate ( const KRowSet * self, ctx_t ctx, caps_t rm )
+{
+    return ( KFile_v2 * ) KRefcountDuplicate_v1 ( TO_REFCOUNT_V1 ( self ), ctx, rm );
+}
 
+static __inline__
+void KRowSetRelease ( const KRowSet * self, ctx_t ctx )
+{
+    KRefcountRelease_v1 ( TO_REFCOUNT_V1 ( self ), ctx );
+}
 
 /* AddRowId
  *  add a single row to set
@@ -100,7 +108,7 @@ KDB_EXTERN bool CC KRowSetHasRowId ( const KRowSet * self, ctx_t ctx, int64_t ro
  *  execute a function on each row-id in set
  */
 KDB_EXTERN void CC KRowSetVisit ( const KRowSet * self, ctx_t ctx,
-    void ( CC * f ) ( int64_t row_id, void * data ), void * data );
+    void ( CC * f ) ( ctx_t ctx, int64_t row_id, void * data ), void * data );
 
 /* Intersect
  *  performs an intersection between two sets and returns the result
@@ -133,6 +141,7 @@ KDB_EXTERN KRowSetIterator * CC KRowSetMakeIterator ( const KRowSet * self, ctx_
  * Release
  *  ignores NULL references
  */
+#error "fix me"
 KDB_EXTERN void CC KRowSetIteratorAddRef ( const KRowSetIterator * self, ctx_t ctx );
 KDB_EXTERN void CC KRowSetIteratorRelease ( const KRowSetIterator * self, ctx_t ctx );
 
@@ -150,9 +159,9 @@ KDB_EXTERN void CC KRowSetIteratorRelease ( const KRowSetIterator * self, ctx_t 
 
  *  advance to first row-id on initial invocation
  *  advance to next row-id subsequently
- *  returns rcDone if no more row-ids are available.
+ *  returns false if no more row-ids are available.
  */
-KDB_EXTERN void CC KRowSetIteratorNext ( KRowSetIterator * self, ctx_t ctx );
+KDB_EXTERN bool CC KRowSetIteratorNext ( KRowSetIterator * self, ctx_t ctx );
 
 
 /* Prev

@@ -113,6 +113,7 @@ bool CC KRowSetSimpleHasRowId ( const KRowSet * self, ctx_t ctx, int64_t row_id 
 
     TRY ( data = GetRowSetSimpleData ( (KRowSet *)self, ctx ) )
     {
+        /* TBD - only want this algorithm when count > some threshold... */
         if ( data -> sorted )
         {
             uint64_t start, end, idx;
@@ -358,7 +359,7 @@ KRowSetSimpleIterator * CC KRowSetSimpleGetIterator ( const struct KRowSet * sel
         {
             TRY ( KRowSetIteratorInit ( &r -> dad, ctx, ( const KRowSetIterator_vt * ) &vtKRowSetIteratorSimple, "KRowSetSimpleIterator", "KRowSetSimpleIterator" ) )
             {
-                KRowSetSimpleDataSort ( self -> data ); // make sure rowset is sorted
+                KRowSetSimpleDataSort ( self -> data ); /* make sure rowset is sorted */
                 r -> rowset = self;
                 r -> rowset_data = self -> data;
                 r -> array_index = 0;

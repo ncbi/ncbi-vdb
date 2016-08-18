@@ -98,6 +98,7 @@ void CC KRowSetDestroy ( KRowSet *self, ctx_t ctx )
     assert ( self -> vt -> destroy_data != NULL );
 
     ( * self -> vt -> destroy_data ) ( self -> data, ctx );
+    self -> data = NULL;
 
     free ( self );
 }
