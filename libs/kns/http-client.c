@@ -44,7 +44,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 #undef ERR
 #endif
 
-#include <klib/debug.h> /* DBGMSG */
+#include <klib/debug.h>
 #include <klib/text.h>
 #include <klib/container.h>
 #include <klib/out.h>
@@ -190,43 +190,52 @@ rc_t KClientHttpWhack ( KClientHttp * self )
 }
 
 
-typedef struct KEndPointArgsIterator {
+typedef struct KEndPointArgsIterator KEndPointArgsIterator;
+struct KEndPointArgsIterator
+{
     const HttpProxy * proxy;
     const String * hostname;
     uint16_t port;
     uint16_t dflt_proxy_ports [ 2 ];
     size_t dflt_proxy_ports_idx;
     bool done;
-} KEndPointArgsIterator;
-static void KEndPointArgsIteratorMake ( KEndPointArgsIterator * self,
+};
+
+static
+void KEndPointArgsIteratorMake ( KEndPointArgsIterator * self,
     const KNSManager * mgr, const String * hostname, uint16_t port )
 {
     assert ( self );
     memset ( self, 0, sizeof * self );
+
     self -> dflt_proxy_ports [ 0 ] = 3128;
     self -> dflt_proxy_ports [ 1 ] = 8080;
-    if ( ! mgr -> http_proxy_only ) {
+
+    if ( ! mgr -> http_proxy_only )
+    {
         self -> hostname = hostname;
         self -> port = port;
     }
-    if ( mgr -> http_proxy_enabled ) {
+
+    if ( mgr -> http_proxy_enabled )
         self -> proxy = KNSManagerGetHttpProxy ( mgr );
-    }
-    if ( self -> hostname == NULL && self -> proxy == NULL ) {
+
+    if ( self -> hostname == NULL && self -> proxy == NULL )
         self -> done = true;
-    }
 }
 
-static bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
+static
+bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
     const String ** hostname, uint16_t * port,
     bool * proxy_default_port, bool * proxy_ep )
 {
     static const uint16_t dflt_proxy_ports_sz =
         sizeof self -> dflt_proxy_ports / sizeof self -> dflt_proxy_ports [ 0 ];
-    assert ( self );
-    if ( self -> done ) {
+
+    assert ( self != NULL );
+
+    if ( self -> done )
         return false;
-    }
 
     assert ( hostname && port && proxy_default_port && proxy_ep );
 
@@ -235,28 +244,31 @@ static bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
 
     * proxy_default_port = false;
 
-    if ( * hostname != NULL ) {
-        if ( * port == 0 ) {
+    if ( * hostname != NULL )
+    {
+        if ( * port != 0 )
+            self -> dflt_proxy_ports_idx = 0;
+        else
+        {
             assert ( self -> dflt_proxy_ports_idx < dflt_proxy_ports_sz );
-            * port
-                = self -> dflt_proxy_ports [ self -> dflt_proxy_ports_idx ++ ];
-            if ( self -> dflt_proxy_ports_idx >= dflt_proxy_ports_sz ) {
+            * port = self -> dflt_proxy_ports [ self -> dflt_proxy_ports_idx ];
+
+            if ( ++ self -> dflt_proxy_ports_idx >= dflt_proxy_ports_sz )
                 self -> dflt_proxy_ports_idx = 0;
-            }
+
             * proxy_default_port = true;
         }
-        else {
-            self -> dflt_proxy_ports_idx = 0;
-        }
-        if ( self -> dflt_proxy_ports_idx == 0 ) {
+
+        if ( self -> dflt_proxy_ports_idx == 0 )
             self -> proxy = HttpProxyGetNextHttpProxy ( self -> proxy );
-        }
+
         * proxy_ep = true;
         return true;
     }
 
     self -> done = true;
-    if ( self -> hostname != NULL ) {
+    if ( self -> hostname != NULL )
+    {
         * hostname = self -> hostname;
         * port = self -> port;
         * proxy_ep = false;
@@ -267,7 +279,6 @@ static bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
 }
 
 
-/******************************************************************************/
 static rc_t KClientHttpOpen
     ( KClientHttp * self, const String * aHostname, uint32_t aPort )
 {
