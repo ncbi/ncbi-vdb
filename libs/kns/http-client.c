@@ -280,13 +280,7 @@ static rc_t KClientHttpOpen
     KEndPointArgsIterator it;
     const KNSManager * mgr = NULL;
 
-#if NO_HTTPS_SUPPORT
-    if ( self -> tls )
-    {
-        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Unsupported request for TLS\n" ) );
-        return RC ( rcNS, rcNoTarg, rcInitializing, rcParam, rcUnsupported );
-    }
-#endif
+    STATUS ( 0, "%s - opening socket to %S\n", __func__, hostname );
 
     assert ( self );
     mgr = self -> mgr;
@@ -295,14 +289,17 @@ static rc_t KClientHttpOpen
         ( & it, & hostname, & port, & proxy_default_port, & proxy_ep ) )
     {
         rc = KNSManagerInitDNSEndpoint ( mgr, & self -> ep, hostname, port );
-        if ( rc == 0 ) {
+        if ( rc == 0 )
+        {
             self -> proxy_default_port = proxy_default_port;
             self -> proxy_ep = proxy_ep;
         }
-        if ( rc == 0 ) {
+        if ( rc == 0 )
+        {
             rc = KNSManagerMakeTimedConnection ( mgr, & sock,
               self -> read_timeout, self -> write_timeout, NULL, & self -> ep );
-            if ( rc == 0 ) {
+            if ( rc == 0 )
+            {
                 /* this is a good endpoint */
                 self -> ep_valid = true;
                 break;
