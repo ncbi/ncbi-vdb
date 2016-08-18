@@ -55,14 +55,14 @@ KRowSetSimpleIterator * CC KRowSetSimpleGetIterator ( const struct KRowSet * sel
 
 struct KRowSetSimpleData
 {
-    size_t size;
+    uint64_t size;
     uint64_t num_rows;
     bool sorted;
     int64_t rows_array[1];
 };
 
 static
-KRowSetSimpleData * KRowSetSimpleAllocateData ( ctx_t ctx, size_t size )
+KRowSetSimpleData * KRowSetSimpleAllocateData ( ctx_t ctx, uint64_t size )
 {
     FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcAllocating );
     KRowSetSimpleData * data;
@@ -113,12 +113,31 @@ bool CC KRowSetSimpleHasRowId ( const KRowSet * self, ctx_t ctx, int64_t row_id 
 
     TRY ( data = GetRowSetSimpleData ( (KRowSet *)self, ctx ) )
     {
-        // TODO: search in a sorted array more efficiently
-        uint64_t i;
-        for ( i = 0; i < data -> num_rows; ++i )
+        if ( data -> sorted )
         {
-            if ( data -> rows_array[i] == row_id )
-                return true;
+            uint64_t start, end, idx;
+
+            start = 0;
+            end = data -> num_rows;
+            while (start < end)
+            {
+                idx = (start + end) / 2;
+                if (row_id < data -> rows_array[idx])
+                    end = idx;
+                else if (row_id > data -> rows_array[idx])
+                    start = idx + 1;
+                else
+                    return true;
+            }
+        }
+        else
+        {
+            uint64_t i;
+            for ( i = 0; i < data -> num_rows; ++i )
+            {
+                if ( data -> rows_array[i] == row_id )
+                    return true;
+            }
         }
     }
     return false;
@@ -144,7 +163,7 @@ void AppendRowId ( KRowSet *self, ctx_t ctx, int64_t row_id )
         if ( data -> size - data -> num_rows == 0 )
         {
             KRowSetSimpleData * old_data = data;
-            size_t new_size;
+            uint64_t new_size;
             if ( data -> size == SIZE_MAX )
             {
                 INTERNAL_ERROR ( xcIntegerOutOfBounds, "cannot allocate bigger simple container for row id insertion" );

@@ -63,7 +63,10 @@ KDB_EXTERN void CC KRowSetInit ( KRowSet *self, ctx_t ctx, const KRowSet_vt *vt,
             case 0:
 #if _DEBUGGING
                 if ( vt -> destroy_data == NULL         ||
-                     vt -> add_row_id_range == NULL )
+                     vt -> add_row_id_range == NULL     ||
+                     vt -> get_num_rows == NULL         ||
+                     vt -> has_row_id == NULL           ||
+                     vt -> get_iterator == NULL )
                 {
                     INTERNAL_ERROR ( xcInterfaceNull, "KRowSetInit failed" );
                     return;
@@ -179,7 +182,7 @@ KDB_EXTERN uint64_t CC KRowSetGetNumRowIds ( const KRowSet * self, ctx_t ctx )
 /* Visit
  *  execute a function on each row-id in set
  */
-KDB_EXTERN void CC KRowSetVisit ( const KRowSet * self, ctx_t ctx, bool reverse,
+KDB_EXTERN void CC KRowSetVisit ( const KRowSet * self, ctx_t ctx,
     void ( CC * f ) ( int64_t row_id, void * data ), void * data )
 {
     FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcAccessing );
@@ -187,8 +190,6 @@ KDB_EXTERN void CC KRowSetVisit ( const KRowSet * self, ctx_t ctx, bool reverse,
 
     if ( self == NULL )
         INTERNAL_ERROR ( xcSelfNull, "failed to iterate over rowset" );
-    else if ( reverse )
-        INTERNAL_ERROR ( xcFunctionUnsupported, "failed to iterate over rowset in reverse order" );
     else
     {
         TRY ( it = KRowSetMakeIterator ( self, ctx ) )

@@ -99,7 +99,7 @@ KDB_EXTERN bool CC KRowSetHasRowId ( const KRowSet * self, ctx_t ctx, int64_t ro
 /* Visit
  *  execute a function on each row-id in set
  */
-KDB_EXTERN void CC KRowSetVisit ( const KRowSet * self, ctx_t ctx, bool reverse,
+KDB_EXTERN void CC KRowSetVisit ( const KRowSet * self, ctx_t ctx,
     void ( CC * f ) ( int64_t row_id, void * data ), void * data );
 
 /* Intersect
@@ -122,6 +122,9 @@ typedef struct KRowSetIterator KRowSetIterator;
 /* MakeIterator
  *  create an iterator on set
  *  initially set to first row-id in set
+ *  iterator always goes over rows in sorted order
+ *  after creating an iterator, any modifications of rowset will result in undefined behavior
+ *    when accessing the iterator (except IteratorRelease function)
  */
 KDB_EXTERN KRowSetIterator * CC KRowSetMakeIterator ( const KRowSet * self, ctx_t ctx );
 

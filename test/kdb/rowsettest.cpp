@@ -152,8 +152,7 @@ public:
 
     void RunChecks ( const KRowSet * rowset, std::set<int64_t> & inserted_rows_set )
     {
-        RunChecksInt ( rowset, inserted_rows_set, false );
-//        RunChecksInt ( rowset, inserted_rows_set, true );
+        RunChecksInt ( rowset, inserted_rows_set );
     }
 
     std::set<int64_t> SetIntersection ( const std::set<int64_t>& set1, const std::set<int64_t>& set2 )
@@ -189,19 +188,16 @@ public:
         }
     }
 private:
-    void RunChecksInt ( const KRowSet * rowset, std::set<int64_t> & inserted_rows_set, bool reverse_walk )
+    void RunChecksInt ( const KRowSet * rowset, std::set<int64_t> & inserted_rows_set )
     {
         std::vector<int64_t> inserted_rows;
         std::vector<int64_t> returned_rows;
         uint64_t num_rows;
 
-        KRowSetVisit ( rowset, m_ctx, reverse_walk, vector_inserter, (void *)&returned_rows );
+        KRowSetVisit ( rowset, m_ctx, vector_inserter, (void *)&returned_rows );
         THROW_IF_FAILED ( "Failed to iterate over rowset" );
 
-        if ( !reverse_walk )
-            std::copy(inserted_rows_set.begin(), inserted_rows_set.end(), std::back_inserter(inserted_rows));
-        else
-            std::copy(inserted_rows_set.rbegin(), inserted_rows_set.rend(), std::back_inserter(inserted_rows));
+        std::copy(inserted_rows_set.begin(), inserted_rows_set.end(), std::back_inserter(inserted_rows));
 
         num_rows = KRowSetGetNumRowIds( rowset, m_ctx );
         THROW_IF_FAILED ( "Failed to get number of row ids in rowset" );
