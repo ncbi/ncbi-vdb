@@ -40,7 +40,7 @@
 #undef ERR
 #endif
 
-#include <klib/debug.h> /* DBGMSG */
+#include <klib/debug.h>
 #include <klib/log.h>
 #include <klib/out.h>
 #include <klib/printf.h>
@@ -99,7 +99,8 @@ struct KSocket
     int32_t write_timeout;
 
     int fd;
-    union {
+    union
+    {
         struct sockaddr_in  v4;     /* for ipv4 */
         struct sockaddr_in6 v6;     /* for ipv6 */
     } remote_addr;
@@ -300,95 +301,63 @@ rc_t HandleErrno ( const char *func_name, unsigned int lineno )
     return rc;
 }
 
+static
+rc_t KSocketHandleSocknameError ( int status )
+{
+    switch ( status )
+    {
+    case EBADF:
+        return RC ( rcNS, rcSocket, rcIdentifying, rcSocket, rcInvalid );
+    case EFAULT:
+    case EINVAL:
+        return RC ( rcNS, rcSocket, rcIdentifying, rcParam, rcInvalid );
+    case ENOBUFS:
+        return RC ( rcNS, rcSocket, rcIdentifying, rcBuffer, rcExhausted );
+    case ENOTCONN:
+        return RC ( rcNS, rcSocket, rcIdentifying, rcSocket, rcNotOpen );
+    case ENOTSOCK:
+        return RC ( rcNS, rcSocket, rcIdentifying, rcSocket, rcIncorrect );
+    }
+
+    return RC ( rcNS, rcSocket, rcIdentifying, rcError, rcUnknown );
+}
+
 
 static rc_t KSocketGetEndpointV6 ( const KSocket * self, KEndPoint * ep, bool remote )
 {
     rc_t rc = 0;
     struct sockaddr_in6 addr;
-    socklen_t l = sizeof( addr );
+    socklen_t l = sizeof addr;
     int res = 0;
 
-    
     if ( ! remote )
-    {
         res = getsockname( self -> fd, ( struct sockaddr * )&addr, &l );
-        if ( res < 0 )
-        {
-            int lerrno;
-            switch ( lerrno = errno )
-            {
-            case EBADF:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EFAULT:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EINVAL:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOBUFS:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOTSOCK:
-                rc = RC ( rcNS, , , , );
-                break;
-            default:
-                rc = RC ( rcNS, , , rcError, rcUnknown );
-                break;
-            }
-        }
-    }
+    else if ( ! self -> remote_addr_valid )
+        res = getpeername( self -> fd, ( struct sockaddr * )&addr, &l );
     else
-    { 
-        if ( ! self -> remote_addr_valid )
-        {
-            res = getpeername( self -> fd, ( struct sockaddr * )&addr, &l );
-            if ( res < 0 )
-            {
-                int lerrno;
-                switch ( lerrno = errno )
-                {
-                case EBADF:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EFAULT:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EINVAL:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ENOBUFS:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ENOTCONN:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ENOTSOCK:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                default:
-                    rc = RC ( rcNS, , , rcError, rcUnknown );
-                    break;
-                }
-            }
-        }
-        else
-        {
-            /* the remote part was already recorded through calling accept() */
-            memcpy ( ep -> u . ipv6 . addr,
-                     self -> remote_addr . v6 . sin6_addr . s6_addr,
-                     sizeof ( ep -> u . ipv6 . addr ) );
-            ep->u.ipv6.port = ntohs( self -> remote_addr . v6 . sin6_port );
-            ep->type = epIPV6;
-            return 0;
-        }
+    {
+        /* the remote part was already recorded through calling accept() */
+        memcpy ( ep -> u . ipv6 . addr,
+                 self -> remote_addr . v6 . sin6_addr . s6_addr,
+                 sizeof ( ep -> u . ipv6 . addr ) );
+        ep->u.ipv6.port = ntohs( self -> remote_addr . v6 . sin6_port );
+        ep->type = epIPV6;
+        return 0;
     }
 
-    memcpy ( ep -> u . ipv6 . addr,
-             addr . sin6_addr . s6_addr,
-             sizeof ( ep -> u . ipv6 . addr ) );
-    ep->u.ipv6.port = ntohs( addr . sin6_port );
-    ep->type = epIPV6;
+    if ( res == 0 )
+    {
+        memcpy ( ep -> u . ipv6 . addr,
+                 addr . sin6_addr . s6_addr,
+                 sizeof ( ep -> u . ipv6 . addr ) );
+        ep->u.ipv6.port = ntohs( addr . sin6_port );
+        ep->type = epIPV6;
+        return 0;
+    }
+
+    rc = KSocketHandleSocknameError ( errno );
+
+    ep -> type = epInvalid;
 
     return rc;
 }
@@ -398,84 +367,32 @@ static rc_t KSocketGetEndpointV4 ( const KSocket * self, KEndPoint * ep, bool re
 {
     rc_t rc = 0;
     struct sockaddr_in addr;
-    socklen_t l = sizeof( addr );
+    socklen_t l = sizeof addr;
     int res = 0;
 
     if ( ! remote )
-    {
         res = getsockname( self -> fd, ( struct sockaddr * )&addr, &l );
-        if ( res < 0 )
-        {
-            int lerrno;
-            switch ( lerrno = errno )
-            {
-            case EBADF:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EFAULT:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EINVAL:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOBUFS:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOTSOCK:
-                rc = RC ( rcNS, , , , );
-                break;
-            default:
-                rc = RC ( rcNS, , , rcError, rcUnknown );
-                break;
-            }
-        }
-    }
+    else if ( ! self -> remote_addr_valid )
+        res = getpeername( self -> fd, ( struct sockaddr * )&addr, &l );
     else
     {
-        if ( ! self -> remote_addr_valid )
-        {
-            res = getpeername( self -> fd, ( struct sockaddr * )&addr, &l );
-            if ( res < 0 )
-            {
-                int lerrno;
-                switch ( lerrno = errno )
-                {
-                case EBADF:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EFAULT:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EINVAL:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ENOBUFS:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ENOTCONN:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ENOTSOCK:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                default:
-                    rc = RC ( rcNS, , , rcError, rcUnknown );
-                    break;
-                }
-            }
-        }
-        else
-        {
-            /* the remote part was already recorded through calling accept() */
-            addr.sin_addr.s_addr = self -> remote_addr.v4.sin_addr.s_addr;
-            addr.sin_port        = self -> remote_addr.v4.sin_port;
-        }
+        /* the remote part was already recorded through calling accept() */
+        addr.sin_addr.s_addr = self -> remote_addr.v4.sin_addr.s_addr;
+        addr.sin_port        = self -> remote_addr.v4.sin_port;
     }
 
-    ep->u.ipv4.addr = ntohl( addr.sin_addr.s_addr );
-    ep->u.ipv4.port = ntohs( addr.sin_port );
-    ep->type = epIPV4;
-    
+    if ( res == 0 )
+    {
+        ep->u.ipv4.addr = ntohl( addr.sin_addr.s_addr );
+        ep->u.ipv4.port = ntohs( addr.sin_port );
+        ep->type = epIPV4;
+        return 0;
+    }
+
+    rc = KSocketHandleSocknameError ( errno );
+
+    ep -> type = epInvalid;
+
     return rc;
 }
 
@@ -487,17 +404,19 @@ static rc_t KSocketGetEndpoint ( const KSocket * self, KEndPoint * ep, bool remo
         rc = RC ( rcNS, rcSocket, rcEvaluating, rcParam, rcNull );
     else
     {
+        ep -> type = epInvalid;
+
         if ( self == NULL )
             rc = RC ( rcNS, rcSocket, rcEvaluating, rcSelf, rcNull );
         else
         {
             switch( self->type )
             {
-            case epIPV6: 
-                rc = KSocketGetEndpointV6( self, ep, remote ); 
-                break;
             case epIPV4: 
                 rc = KSocketGetEndpointV4( self, ep, remote ); 
+                break;
+            case epIPV6: 
+                rc = KSocketGetEndpointV6( self, ep, remote ); 
                 break;
             default: 
                 rc = RC ( rcNS, rcSocket, rcEvaluating, rcFunction, rcUnsupported );
@@ -545,62 +464,53 @@ rc_t CC KSocketTimedRead ( const KSocket *self,
     /* check for error */
     if ( revents < 0 )
     {
-        int lerrno;
-        switch ( lerrno = errno )
+        switch ( errno )
         {
         case EFAULT:
-            rc = RC ( rcNS, , , , );
+        case EINVAL:
+            rc = RC ( rcNS, rcSocket, rcReading, rcParam, rcInvalid );
             break;
         case EINTR:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EINVAL:
-            rc = RC ( rcNS, , , , );
+            rc = RC ( rcNS, rcSocket, rcReading, rcTransfer, rcInterrupted );
             break;
         case ENOMEM:
-            rc = RC ( rcNS, , , , );
+            rc = RC ( rcNS, rcSocket, rcReading, rcMemory, rcExhausted );
             break;
         default:
-            rc = RC ( rcNS, , , rcError, rcUnknown );
+            rc = RC ( rcNS, rcSocket, rcReading, rcError, rcUnknown );
             break;
         }
-        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead socket_wait returned '%s'\n", self, strerror(errno) ) );
+
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead socket_wait returned '%!'\n", self, errno ) );
         return rc;
     }
 
+    /* no error in errno - check for other potential errors */
     if ( ( revents & ( POLLERR | POLLNVAL ) ) != 0 )
     {
         if ( ( revents & POLLERR ) != 0)
         {
             int optval = 0;
             socklen_t optlen = sizeof optval;
-            if ( ( getsockopt ( self -> fd, SOL_SOCKET, SO_ERROR, & optval, & optlen ) == 0 )
-                 && optval > 0)
+            if ( ( getsockopt ( self -> fd, SOL_SOCKET, SO_ERROR, & optval, & optlen ) == 0 ) && optval > 0 )
             {
-                int lerrno;
-
                 errno = optval;
-                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead socket_wait/getsockopt returned '%s'\n", 
-                                                            self, strerror(optval) ) );
-                switch ( lerrno = errno )
+                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead socket_wait/getsockopt returned '%!'\n", 
+                                                            self, optval ) );
+                switch ( errno )
                 {
-                case EBADF:
-                    rc = RC ( rcNS, , , , );
-                    break;
                 case EFAULT:
-                    rc = RC ( rcNS, , , , );
-                    break;
                 case EINVAL:
-                    rc = RC ( rcNS, , , , );
+                    rc = RC ( rcNS, rcSocket, rcReading, rcParam, rcInvalid );
                     break;
-                case ENOPROTOOPT:
-                    rc = RC ( rcNS, , , , );
+                case EINTR:
+                    rc = RC ( rcNS, rcSocket, rcReading, rcTransfer, rcInterrupted );
                     break;
-                case ENOTSOCK:
-                    rc = RC ( rcNS, , , , );
+                case ENOMEM:
+                    rc = RC ( rcNS, rcSocket, rcReading, rcMemory, rcExhausted );
                     break;
                 default:
-                    rc = RC ( rcNS, , , rcError, rcUnknown );
+                    rc = RC ( rcNS, rcSocket, rcReading, rcError, rcUnknown );
                     break;
                 }
 
@@ -609,57 +519,53 @@ rc_t CC KSocketTimedRead ( const KSocket *self,
         }
 
         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead socket_wait returned POLLERR | POLLNVAL\n", self ) );
-        return RC ( rcNS, rcStream, rcReading, rcNoObj, rcUnknown );
+        return RC ( rcNS, rcSocket, rcReading, rcError, rcUnknown );
     }
 
     /* check for read availability */
     if ( ( revents & ( POLLRDNORM | POLLRDBAND ) ) != 0 )
     {
-        ssize_t count = recv ( self -> fd, buffer, bsize, 0 );        
-        if ( count < 0 )
+        ssize_t count = recv ( self -> fd, buffer, bsize, 0 );
+        if ( count >= 0 )
         {
-            int lerrno;
-            switch ( lerrno = errno )
-            {
-            case EAGAIN:
-            case EWOULDBLOCK:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EBADF:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ECONNREFUSED:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EFAULT:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EINTR:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EINVAL:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOMEM:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOTCONN:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOTSOCK:
-                rc = RC ( rcNS, , , , );
-                break;
-            default:
-                rc = RC ( rcNS, , , rcError, rcUnknown );
-                break;
-            }
-
-            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead recv returned count %d\n", self, count ) );
-            return rc;
+            * num_read = count;
+            return 0;
         }
 
-        * num_read = count;
-        return 0;
+        switch ( errno )
+        {
+        case EWOULDBLOCK:
+            rc = RC ( rcNS, rcSocket, rcReading, rcData, rcNotAvailable );
+            break;
+        case EBADF:
+            rc = RC ( rcNS, rcSocket, rcReading, rcSocket, rcInvalid );
+            break;
+        case ECONNREFUSED:
+            rc = RC ( rcNS, rcSocket, rcReading, rcConnection, rcFailed );
+            break;
+        case EFAULT:
+        case EINVAL:
+            rc = RC ( rcNS, rcSocket, rcReading, rcParam, rcInvalid );
+            break;
+        case EINTR:
+            rc = RC ( rcNS, rcSocket, rcReading, rcTransfer, rcInterrupted );
+            break;
+        case ENOMEM:
+            rc = RC ( rcNS, rcSocket, rcReading, rcMemory, rcExhausted );
+            break;
+        case ENOTCONN:
+            rc = RC ( rcNS, rcSocket, rcReading, rcConnection, rcInvalid );
+            break;
+        case ENOTSOCK:
+            rc = RC ( rcNS, rcSocket, rcReading, rcSocket, rcIncorrect );
+            break;
+        default:
+            rc = RC ( rcNS, rcSocket, rcReading, rcError, rcUnknown );
+            break;
+        }
+
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead recv returned count %d\n", self, count ) );
+        return rc;
     }
 
     /* check for broken connection */
@@ -670,13 +576,11 @@ rc_t CC KSocketTimedRead ( const KSocket *self,
         return 0;
     }
 
-#warning general errno catch
     /* anything else in revents is an error */
     if ( ( revents & ~ POLLIN ) != 0 && errno != 0 )
     {
-        rc = HandleErrno ( __func__, __LINE__ );
-        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead error '%s'\n", self, strerror ( errno ) ) );
-        return rc;
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedRead error '%!'\n", self, errno ) );
+        return RC ( rcNS, rcSocket, rcReading, rcError, rcUnknown );
     }
 
     /* finally, call this a timeout */
