@@ -232,7 +232,7 @@ RC_ENUM ( RCContext )
     RC_ENTRY ( rcRetrieving, "retrieving" )
     RC_ENTRY ( rcSending, "sending" )
     RC_ENTRY ( rcProcessing, "processing" )
-    RC_ENTRY ( rcIdentifying, "type identifying" )
+    RC_ENTRY ( rcIdentifying, "identifying" )
     RC_LAST ( rcLastContext_v1_1 )
 };
 
