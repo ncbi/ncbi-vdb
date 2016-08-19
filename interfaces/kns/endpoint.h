@@ -50,6 +50,7 @@ struct KNSManager;
 typedef uint32_t KEndPointType;
 enum
 {
+    epInvalid,
     epIPV4,
     epIPV6,
     epIPC
