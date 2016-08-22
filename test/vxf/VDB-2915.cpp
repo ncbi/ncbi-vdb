@@ -23,90 +23,308 @@
 * ===========================================================================
 *
 */
+#include <vdb/manager.h>
+#include <vdb/table.h>
+#include <vdb/cursor.h>
+#include <vdb/schema.h>
+
+#include <kdb/table.h>
 
 #include <ktst/unit_test.hpp>
 #include <klib/out.h>
+#include <klib/rc.h>
 
-#include "zlib_wrapper.h"
-#include <zlib.h>
+#include <sstream>
+#include <cstdlib>
+#include <algorithm>
+#include <iterator>
+#include <sysalloc.h>
 
-/* --------------------------------------------------------------------------
-This test case serves the purpose to fix an issue with the code-path in the
-file 'libs/vxf/irzip.c'. Because the code in question is not directly
-callable from outside of 'irzip.c., the code-section has been copied
-out into this test-directory into the file 'test-irzip.c'
---------------------------------------------------------------------------*/
+using namespace std;
 
 TEST_SUITE( VDB_2915_TEST_SUITE );
 
+/* --------------------------------------------------------------------------
+There was a problem in the irzip, izip and fzip encoding :
 
-TEST_CASE( RANDOM_UINT8_BETWEEN_1_AND_32 )
+If the data was too random, the library was not able to load the data.
+
+The reason for that was a copy-paste error which has now been fixed.
+
+This test creates a temporary output-tabe, and tries to load random
+data into it. This has to succeed!
+--------------------------------------------------------------------------*/
+
+const string ScratchDir = "./";
+
+static void fill_random_uint8_buffer( uint8_t * buffer, size_t value_count )
 {
-    uint8_t * source;
-    size_t size32k = 1024 * 1024 * 32;
-    
-    /* first make a buffer of uint8_t's with random values ( between 1 and 32 ) */
-    REQUIRE_RC ( make_random_uint8_buffer( &source, size32k, 1, 32 ) );
-    REQUIRE_RC( KOutMsg( "\na buffer of size %,ld bytes containing random values between 1..32 made\n", size32k ) );
-    
-    /* now compress it */
-    w_buf compressed;
-    REQUIRE_RC ( prepare_compress_buffer( &compressed, size32k ) );
-    
-    REQUIRE_RC ( wrapped_zlib_compress( &compressed, source, size32k, Z_RLE, Z_BEST_SPEED ) );
-    REQUIRE_RC( KOutMsg( "after compression ( Z_RLE, Z_BEST_SPEED ) : %,ld bytes -> %,ld bytes\n", size32k, compressed.used ) );
-    
-    REQUIRE_RC ( wrapped_zlib_compress( &compressed, source, size32k, Z_HUFFMAN_ONLY, Z_BEST_SPEED ) );
-    REQUIRE_RC( KOutMsg( "after compression ( Z_HUFFMAN_ONLY, Z_BEST_SPEED ) : %,ld bytes -> %,ld bytes\n", size32k, compressed.used ) );
-    
-    /* now decompress it again */
-    uint8_t * decompressed;
-    REQUIRE_RC( make_uint8_buffer( &decompressed, size32k ) );
-    size_t decompressed_size;
-    REQUIRE_RC( wrapped_zlib_decompress( decompressed, size32k, &decompressed_size, compressed.buf, compressed.used ) );
-    REQUIRE_RC( KOutMsg( "after decompression : %,ld bytes -> %,ld bytes\n", compressed.used, decompressed_size ) );
-    
-    REQUIRE_RC( wrapped_zlib_decompress( decompressed, size32k, &decompressed_size, compressed.buf, compressed.used ) );
-    REQUIRE_RC( KOutMsg( "after decompression : %,ld bytes -> %,ld bytes\n", compressed.used, decompressed_size ) );
-    
-    finish_compress_buffer( &compressed );
-    free( decompressed );
-    free( source );
+    for ( size_t i = 0; i < value_count; ++i )
+        buffer[ i ] = rand() & 0xFF;
 }
 
 
-TEST_CASE( RANDOM_UINT8_BETWEEN_0_AND_255 )
+static void fill_random_uint16_buffer( uint16_t * buffer, size_t value_count )
 {
-    uint8_t * source;
-    size_t size32k = 1024 * 1024 * 32;
+    for ( size_t i = 0; i < value_count; ++i )
+        buffer[ i ] = rand() & 0xFFFF;
+}
+
+static void fill_random_uint32_buffer( uint32_t * buffer, size_t value_count )
+{
+    for ( size_t i = 0; i < value_count; ++i )
+        buffer[ i ] = rand() & 0xFFFFFFFF;
+}
+
+static void fill_random_uint64_buffer( uint64_t * buffer, size_t value_count )
+{
+    for ( size_t i = 0; i < value_count; ++i )
+    {
+        uint64_t v = rand();
+        buffer[ i ] = v * rand();
+    }
+}
+
+/*
+typedef union
+{
+  float f;
+  struct
+  {
+    unsigned int mantisa : 23;
+    unsigned int exponent : 8;
+    unsigned int sign : 1;
+  } parts;
+} double_cast;
+
+static float random_float( void )
+{
+    double_cast x;
+    x.parts.mantisa = rand() & 0x7FFFFF;
+    x.parts.exponent = rand() & 0xFF;
+    x.parts.sign = rand() & 0x1;
+    return x.f;
+}
+
+static void fill_random_float_buffer( float * buffer, size_t value_count )
+{
+    for ( size_t i = 0; i < value_count; ++i )
+        buffer[ i ] = random_float();
+}
+*/
+
+class WVDB_Fixture
+{
+public:
+    WVDB_Fixture() : m_tableName( "RANDOM_DATA" ), m_table( 0 ), m_cursor( 0 ) { }
     
-    /* first make a buffer of uint8_t's with random values ( between 0 and 255 ) */
-    REQUIRE_RC ( make_random_uint8_buffer( &source, size32k, 0, 255 ) );
-    REQUIRE_RC( KOutMsg( "\na buffer of size %,ld bytes containing random values between 0..255 made\n", size32k ) );
+    ~WVDB_Fixture()
+    {
+        if ( m_cursor ) { VCursorRelease( m_cursor ); }
+        if ( m_table ) { VTableRelease( m_table ); }
+    }
+
+    void RemoveTable()
+    {
+        if ( ! m_tableName . empty () )
+        {
+            KDirectory *wd;
+            KDirectoryNativeDir( &wd );
+            KDirectoryRemove( wd, true, m_tableName.c_str() );
+            KDirectoryRelease( wd );
+        }
+    }
+
+    void MakeTable( const string& p_schemaText, const string& p_schemaSpec )
+    {
+        RemoveTable();
+
+        VDBManager * mgr;
+        THROW_ON_RC( VDBManagerMakeUpdate ( &mgr, NULL ) );
+        VSchema *schema;
+        THROW_ON_RC( VDBManagerMakeSchema ( mgr, &schema ) );
+        THROW_ON_RC( VSchemaParseText( schema, NULL, p_schemaText.c_str(), p_schemaText.size() ) );
+        THROW_ON_RC( VDBManagerCreateTable( mgr,
+                                            &m_table,
+                                            schema,
+                                            p_schemaSpec.c_str(),
+                                            kcmInit + kcmMD5,
+                                            "%s",
+                                            m_tableName.c_str() ) );
+        THROW_ON_RC( VTableCreateCursorWrite( m_table, &m_cursor, kcmInsert ) );
+        THROW_ON_RC( VSchemaRelease( schema ) );
+        THROW_ON_RC( VDBManagerRelease( mgr ) );
+    }
+
+    void OpenTable()
+    {
+        VDBManager * mgr;
+        THROW_ON_RC( VDBManagerMakeUpdate ( &mgr, NULL ) );
+        THROW_ON_RC( VDBManagerOpenTableRead( mgr,
+                                              ( const VTable ** )&m_table,
+                                              NULL,
+                                              "%s",
+                                              m_tableName.c_str() ) );
+        THROW_ON_RC( VTableCreateCursorRead( m_table, ( const VCursor ** )&m_cursor ) );
+        THROW_ON_RC( VDBManagerRelease( mgr ) );
+    }
     
-    /* now compress it */
-    w_buf compressed;
-    REQUIRE_RC ( prepare_compress_buffer( &compressed, size32k * 2 ) );
+    string m_tableName;
+    VTable * m_table;
+    VCursor * m_cursor;
+};
+
+
+FIXTURE_TEST_CASE ( LOAD_RANDOM_DATA, WVDB_Fixture )
+{
+    RemoveTable();
     
-    REQUIRE_RC ( wrapped_zlib_compress( &compressed, source, size32k, Z_RLE, Z_BEST_SPEED ) );
-    REQUIRE_RC( KOutMsg( "after compression ( Z_RLE, Z_BEST_SPEED ) : %,ld bytes -> %,ld bytes\n", size32k, compressed.used ) );
+    string schemaText = "version 1;"
+                        "include 'vdb/vdb.vschema';"
+                        "table A_TABLE #1.0"
+                        "{"
+                        "   column < U8 > izip_encoding C1;"
+                        "   column U8 R1;"                        
+                        "   column < U16 > izip_encoding C2;"
+                        "   column U16 R2;"
+                        "   column < U32 > izip_encoding C3;"
+                        "   column U32 R3;"
+                        "   column < U64 > izip_encoding C4;"
+                        "   column U64 R4;"
+                        "   column < F32 > fzip_encoding< 23 > F5;"
+                        "   column F32 R5;"
+                        "   column < F64 > fzip_encoding< 52 > F6;"
+                        "   column F64 R6;"
+                        "};";
+
+    REQUIRE_RC( KOutMsg( "creating table '%s'\n", m_tableName.c_str() ) );
     
-    REQUIRE_RC ( wrapped_zlib_compress( &compressed, source, size32k, Z_HUFFMAN_ONLY, Z_BEST_SPEED ) );
-    REQUIRE_RC( KOutMsg( "after compression ( Z_HUFFMAN_ONLY, Z_BEST_SPEED ) : %,ld bytes -> %,ld bytes\n", size32k, compressed.used ) );
+    MakeTable ( schemaText, "A_TABLE" );
     
-    /* now decompress it again */
-    uint8_t * decompressed;
-    REQUIRE_RC( make_uint8_buffer( &decompressed, size32k ) );
-    size_t decompressed_size;
-    REQUIRE_RC( wrapped_zlib_decompress( decompressed, size32k, &decompressed_size, compressed.buf, compressed.used ) );
-    REQUIRE_RC( KOutMsg( "after decompression : %,ld bytes -> %,ld bytes\n", compressed.used, decompressed_size ) );
+    uint32_t c1, c2, c3, c4;
+    uint32_t r1, r2, r3, r4;
+
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &c1, "%s", "C1" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &c2, "%s", "C2" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &c3, "%s", "C3" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &c4, "%s", "C4" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &r1, "%s", "R1" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &r2, "%s", "R2" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &r3, "%s", "R3" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &r4, "%s", "R4" ) );
+
+    REQUIRE_RC ( VCursorOpen ( m_cursor ) );
+
+    srand( 123456 );
+    for ( int64_t i = 1; i <= 512; ++i )
+    {
+        REQUIRE_RC ( VCursorOpenRow ( m_cursor ) );
+        
+        uint8_t src_1[ 1024 ];
+        fill_random_uint8_buffer( src_1, 1024 );
+        REQUIRE_RC ( VCursorWrite ( m_cursor, c1, 8, src_1, 0, 1024 ) );
+        REQUIRE_RC ( VCursorWrite ( m_cursor, r1, 8, src_1, 0, 1024 ) );        
+        
+        uint16_t src_2[ 1024 ];
+        fill_random_uint16_buffer( src_2, 1024 );
+        REQUIRE_RC ( VCursorWrite ( m_cursor, c2, 16, src_2, 0, 1024 ) );
+        REQUIRE_RC ( VCursorWrite ( m_cursor, r2, 16, src_2, 0, 1024 ) );
+        
+        uint32_t src_3[ 1024 ];
+        fill_random_uint32_buffer( src_3, 1024 );
+        REQUIRE_RC ( VCursorWrite ( m_cursor, c3, 32, src_3, 0, 1024 ) );
+        REQUIRE_RC ( VCursorWrite ( m_cursor, r3, 32, src_3, 0, 1024 ) );
+
+        uint64_t src_4[ 1024 ];
+        fill_random_uint64_buffer( src_4, 1024 );
+        REQUIRE_RC ( VCursorWrite ( m_cursor, c4, 64, src_4, 0, 1024 ) );
+        REQUIRE_RC ( VCursorWrite ( m_cursor, r4, 64, src_4, 0, 1024 ) );
+
+        REQUIRE_RC ( VCursorCommitRow ( m_cursor ) );
+        REQUIRE_RC ( VCursorCloseRow ( m_cursor ) );
+    }
+    REQUIRE_RC ( VCursorCommit ( m_cursor ) );
+}
+
+FIXTURE_TEST_CASE ( CHECK_RANDOM_DATA, WVDB_Fixture )
+{
+    OpenTable();
+
+    REQUIRE_RC( KOutMsg( "verify table '%s'\n", m_tableName.c_str() ) );
     
-    REQUIRE_RC( wrapped_zlib_decompress( decompressed, size32k, &decompressed_size, compressed.buf, compressed.used ) );
-    REQUIRE_RC( KOutMsg( "after decompression : %,ld bytes -> %,ld bytes\n", compressed.used, decompressed_size ) );
+    uint32_t c1, c2, c3, c4;
+    uint32_t r1, r2, r3, r4;
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &c1, "%s", "C1" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &c2, "%s", "C2" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &c3, "%s", "C3" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &c4, "%s", "C4" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &r1, "%s", "R1" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &r2, "%s", "R2" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &r3, "%s", "R3" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &r4, "%s", "R4" ) );
+
+    REQUIRE_RC ( VCursorOpen ( m_cursor ) );
     
-    finish_compress_buffer( &compressed );
-    free( decompressed );
-    free( source );
+    for ( int64_t i = 1; i <= 512; ++i )
+    {
+        uint32_t c_bits, r_bits, c_boff, r_boff, c_len, r_len;
+        {
+            uint8_t * c;
+            uint8_t * r;
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, c1, &c_bits, ( const void** )&c, &c_boff, &c_len ) );
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, r1, &r_bits, ( const void** )&r, &r_boff, &r_len ) );
+            REQUIRE_EQ ( c_bits, ( uint32_t )8 );
+            REQUIRE_EQ ( r_bits, ( uint32_t )8 );
+            REQUIRE_EQ ( c_boff, ( uint32_t )0 );
+            REQUIRE_EQ ( r_boff, ( uint32_t )0 );
+            REQUIRE_EQ ( c_len, ( uint32_t )1024 );
+            REQUIRE_EQ ( r_len, ( uint32_t )1024 );
+            REQUIRE ( std::equal( c, c + 1024, r ) );
+        }
+
+        {
+            uint16_t * c;
+            uint16_t * r;
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, c2, &c_bits, ( const void** )&c, &c_boff, &c_len ) );
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, r2, &r_bits, ( const void** )&r, &r_boff, &r_len ) );
+            REQUIRE_EQ ( c_bits, ( uint32_t )16 );
+            REQUIRE_EQ ( r_bits, ( uint32_t )16 );
+            REQUIRE_EQ ( c_boff, ( uint32_t )0 );
+            REQUIRE_EQ ( r_boff, ( uint32_t )0 );
+            REQUIRE_EQ ( c_len, ( uint32_t )1024 );
+            REQUIRE_EQ ( r_len, ( uint32_t )1024 );
+            REQUIRE ( std::equal( c, c + 1024, r ) );
+        }
+        
+        {
+            uint32_t * c;
+            uint32_t * r;
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, c3, &c_bits, ( const void** )&c, &c_boff, &c_len ) );
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, r3, &r_bits, ( const void** )&r, &r_boff, &r_len ) );
+            REQUIRE_EQ ( c_bits, ( uint32_t )32 );
+            REQUIRE_EQ ( r_bits, ( uint32_t )32 );
+            REQUIRE_EQ ( c_boff, ( uint32_t )0 );
+            REQUIRE_EQ ( r_boff, ( uint32_t )0 );
+            REQUIRE_EQ ( c_len, ( uint32_t )1024 );
+            REQUIRE_EQ ( r_len, ( uint32_t )1024 );
+            REQUIRE ( std::equal( c, c + 1024, r ) );
+        }
+
+        {
+            uint64_t * c;
+            uint64_t * r;
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, c4, &c_bits, ( const void** )&c, &c_boff, &c_len ) );
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, r4, &r_bits, ( const void** )&r, &r_boff, &r_len ) );
+            REQUIRE_EQ ( c_bits, ( uint32_t )64 );
+            REQUIRE_EQ ( r_bits, ( uint32_t )64 );
+            REQUIRE_EQ ( c_boff, ( uint32_t )0 );
+            REQUIRE_EQ ( r_boff, ( uint32_t )0 );
+            REQUIRE_EQ ( c_len, ( uint32_t )1024 );
+            REQUIRE_EQ ( r_len, ( uint32_t )1024 );
+            REQUIRE ( std::equal( c, c + 1024, r ) );
+        }
+        
+    }
 }
 
 //////////////////////////////////////////// Main

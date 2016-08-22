@@ -66,7 +66,6 @@ $(TEST_BINDIR)/wb-test-vxf: $(TEST_OBJ)
 # vdb-2915
 #
 VDB_2915_SRC = \
-	zlib_wrapper \
 	VDB-2915
 
 VDB_2915_OBJ = \
@@ -75,9 +74,10 @@ VDB_2915_OBJ = \
 VDB_2915_LIBS = \
     -skapp \
     -sktst \
-	-sncbi-vdb \
+	-sncbi-wvdb \
 	-sxml2 \
 	-sm
 
 $(TEST_BINDIR)/vdb-2915-test: $(VDB_2915_OBJ)
 	$(LP) --exe -o $@ $^ $(VDB_2915_LIBS)
+
