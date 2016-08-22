@@ -41,24 +41,23 @@ KDB_EXTERN KRowSet * CC KTableMakeRowSet ( struct KTable const * self, ctx_t ctx
 /* Init
  *  initialize a newly allocated rowset object
  */
-KDB_EXTERN void CC KRowSetInit ( KRowSet *self, ctx_t ctx, const KRowSet_vt *vt,
+KDB_EXTERN void CC KRowSetInit ( KRowSet *self, ctx_t ctx, const KVTable *kvt,
     const char *classname, const char *name )
 {
     FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcInitializing );
 
     if ( self == NULL )
         INTERNAL_ERROR ( xcSelfNull, "KRowSetInit failed" );
-    else if ( vt == NULL )
+    else if ( kvt == NULL )
         INTERNAL_ERROR ( xcParamNull, "KRowSetInit failed: vt is NULL" );
     else
     {
-        switch ( vt -> maj )
+        TRY ( KRefcountInit_v1 ( & self -> dad, ctx, kvt, name ) )
         {
-        case 0:
-            INTERNAL_ERROR ( xcInterfaceInvalid, "KRowSetInit failed" );
-            return;
-        case 1:
-            switch ( vt -> min )
+            const KRowSet_vt *vt = KVTABLE_CAST ( kvt, ctx, KRowSet );
+            if ( vt == NULL )
+                INTERNAL_ERROR ( xcInterfaceIncorrect, "vtable does not appear to implement KRowSet" );
+            else switch ( vt -> dad . min )
             {
             case 0:
 #if _DEBUGGING
@@ -68,72 +67,15 @@ KDB_EXTERN void CC KRowSetInit ( KRowSet *self, ctx_t ctx, const KRowSet_vt *vt,
                      vt -> has_row_id == NULL           ||
                      vt -> get_iterator == NULL )
                 {
-                    INTERNAL_ERROR ( xcInterfaceNull, "KRowSetInit failed" );
+                    INTERNAL_ERROR ( xcInterfaceInvalid, "null method pointer(s)" );
                     return;
                 }
 #endif
                 break;
             default:
-                INTERNAL_ERROR ( xcInterfaceBadVersion, "KRowSetInit failed" );
-                return;
+                INTERNAL_ERROR ( xcInterfaceInvalid, "rowset has an invalid version" );
             }
-            break;
 
-        default:
-            INTERNAL_ERROR ( xcInterfaceBadVersion, "KRowSetInit failed" );
-            return;
-        }
-
-        self -> vt = vt;
-        KRefcountInit ( & self -> refcount, 1, classname, "init", name );
-    }
-}
-
-static
-void CC KRowSetDestroy ( KRowSet *self, ctx_t ctx )
-{
-    FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcDestroying );
-
-    assert ( self -> vt != NULL );
-    assert ( self -> vt -> destroy_data != NULL );
-
-    ( * self -> vt -> destroy_data ) ( self -> data, ctx );
-    self -> data = NULL;
-
-    free ( self );
-}
-
-/* AddRef
- * Release
- *  ignores NULL references
- */
-KDB_EXTERN void CC KRowSetAddRef ( const KRowSet *self, ctx_t ctx )
-{
-    if ( self != NULL ) switch ( KRefcountAdd ( & self -> refcount, "KRowSet" ) )
-    {
-        case krefOkay:
-            break;
-        default:
-        {
-            FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcAttaching );
-            INTERNAL_ERROR ( xcRefcountViolated, "error while incrementing refcount" );
-        }
-    }
-}
-
-KDB_EXTERN void CC KRowSetRelease ( const KRowSet *self, ctx_t ctx )
-{
-    if ( self != NULL ) switch ( KRefcountDrop ( & self -> refcount, "KRowSet" ) )
-    {
-        case krefOkay:
-            break;
-        case krefWhack:
-            KRowSetDestroy ( ( KRowSet* ) self, ctx );
-            break;
-        default:
-        {
-            FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcReleasing );
-            INTERNAL_ERROR ( xcRefcountViolated, "error while decrementing refcount" );
         }
     }
 }
@@ -155,13 +97,19 @@ KDB_EXTERN void CC KRowSetAddRowId ( KRowSet * self, ctx_t ctx, int64_t row_id )
  */
 KDB_EXTERN void CC KRowSetAddRowIdRange ( KRowSet * self, ctx_t ctx, int64_t row_id, uint64_t count )
 {
-    if ( self == NULL || self -> vt == NULL )
+    if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcInserting );
         INTERNAL_ERROR ( xcSelfNull, "failed to insert rows into rowset" );
     }
     else
-        self -> vt -> add_row_id_range ( self, ctx, row_id, count );
+    {
+        const KRowSet_vt * vt = KVTABLE_CAST ( TO_REFCOUNT_V1 ( self ) -> vt, ctx, KRowSet );
+        if ( vt == NULL )
+            INTERNAL_ERROR ( xcInterfaceIncorrect, "this object does not support the KRowSet interface" );
+        else
+            vt -> add_row_id_range ( self, ctx, row_id, count );
+    }
 }
 
 /* GetNumRowIds
@@ -169,13 +117,19 @@ KDB_EXTERN void CC KRowSetAddRowIdRange ( KRowSet * self, ctx_t ctx, int64_t row
  */
 KDB_EXTERN uint64_t CC KRowSetGetNumRowIds ( const KRowSet * self, ctx_t ctx )
 {
-    if ( self == NULL || self -> vt == NULL )
+    if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcAccessing );
         INTERNAL_ERROR ( xcSelfNull, "failed to get number of rows in rowset" );
     }
     else
-        return self -> vt -> get_num_rows ( self, ctx );
+    {
+        const KRowSet_vt * vt = KVTABLE_CAST ( TO_REFCOUNT_V1 ( self ) -> vt, ctx, KRowSet );
+        if ( vt == NULL )
+            INTERNAL_ERROR ( xcInterfaceIncorrect, "this object does not support the KRowSet interface" );
+        else
+            return vt -> get_num_rows ( self, ctx );
+    }
 
     return 0;
 }
@@ -184,7 +138,7 @@ KDB_EXTERN uint64_t CC KRowSetGetNumRowIds ( const KRowSet * self, ctx_t ctx )
  *  execute a function on each row-id in set
  */
 KDB_EXTERN void CC KRowSetVisit ( const KRowSet * self, ctx_t ctx,
-    void ( CC * f ) ( int64_t row_id, void * data ), void * data )
+    void ( CC * f ) ( ctx_t ctx, int64_t row_id, void * data ), void * data )
 {
     FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcAccessing );
     KRowSetIterator * it;
@@ -201,7 +155,8 @@ KDB_EXTERN void CC KRowSetVisit ( const KRowSet * self, ctx_t ctx,
                 ON_FAIL ( row_id = KRowSetIteratorGetRowId ( it, ctx ) )
                     break;
 
-                f ( row_id, data );
+                ON_FAIL ( f ( ctx, row_id, data ) )
+                    break;
 
                 KRowSetIteratorNext ( it, ctx );
             }
@@ -357,13 +312,19 @@ KDB_EXTERN KRowSet * CC KRowSetUnion ( ctx_t ctx, const KRowSet * a, const KRowS
  */
 KDB_EXTERN KRowSetIterator * CC KRowSetMakeIterator ( const KRowSet * self, ctx_t ctx )
 {
-    if ( self == NULL || self -> vt == NULL )
+    if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcDB, rcIterator, rcCreating );
         INTERNAL_ERROR ( xcSelfNull, "failed to create rowset iterator" );
     }
     else
-        return self -> vt -> get_iterator ( self, ctx );
+    {
+        const KRowSet_vt * vt = KVTABLE_CAST ( TO_REFCOUNT_V1 ( self ) -> vt, ctx, KRowSet );
+        if ( vt == NULL )
+            INTERNAL_ERROR ( xcInterfaceIncorrect, "this object does not support the KRowSet interface" );
+        else
+            return vt -> get_iterator ( self, ctx );
+    }
 
     return NULL;
 }
@@ -473,7 +434,7 @@ KDB_EXTERN void CC KRowSetIteratorRelease ( const KRowSetIterator *self, ctx_t c
  *  advance to next row-id subsequently
  *  returns rcDone if no more row-ids are available.
  */
-KDB_EXTERN void CC KRowSetIteratorNext ( KRowSetIterator * self, ctx_t ctx )
+KDB_EXTERN bool CC KRowSetIteratorNext ( KRowSetIterator * self, ctx_t ctx )
 {
     if ( self == NULL || self -> vt == NULL )
     {
@@ -481,7 +442,9 @@ KDB_EXTERN void CC KRowSetIteratorNext ( KRowSetIterator * self, ctx_t ctx )
         INTERNAL_ERROR ( xcSelfNull, "failed to move rowset iterator" );
     }
     else
-        self -> vt -> next ( self, ctx );
+        return self -> vt -> next ( self, ctx );
+
+    return false;
 }
 
 /*IsValid

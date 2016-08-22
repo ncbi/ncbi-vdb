@@ -42,6 +42,7 @@
 
 #include <vector>
 #include <set>
+#include <algorithm>
 
 #define ENTRY \
     HYBRID_FUNC_ENTRY ( rcDB, rcRowSet, rcValidating ); \
@@ -69,7 +70,7 @@
 
 TEST_SUITE(KRowSetTestSuite);
 
-void vector_inserter ( int64_t row_id, void *data )
+void vector_inserter ( ctx_t ctx, int64_t row_id, void *data )
 {
     std::vector<int64_t> * rows = (std::vector<int64_t> *) data;
     rows->push_back ( row_id );

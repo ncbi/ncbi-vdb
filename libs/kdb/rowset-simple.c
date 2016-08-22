@@ -234,9 +234,38 @@ uint64_t CC KRowSetSimpleGetNumRowIds ( const KRowSet * self, ctx_t ctx )
     return 0;
 }
 
+static
+void CC KRowSetSimpleDestroy ( KRefcount_v1 *self_refcount, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcDestroying );
+
+    KRowSet * self = (KRowSet *)self_refcount;
+
+    const KRowSet_vt * vt = KVTABLE_CAST ( TO_REFCOUNT_V1 ( self ) -> vt, ctx, KRowSet );
+    if ( vt == NULL )
+        INTERNAL_ERROR ( xcInterfaceIncorrect, "this object does not support the KRowSet interface" );
+    else
+    {
+        assert ( vt != NULL );
+        assert ( vt -> destroy_data != NULL );
+
+        ( * vt -> destroy_data ) ( self -> data, ctx );
+        self -> data = NULL;
+    }
+}
+
+KITFTOK_DEF ( KRowSet );
+
+static KRefcount_v1_vt vtKRowSetSimpleRefCount =
+{
+    KVTABLE_INITIALIZER ( KRowSetSimpleRefCount, KRefcount_v1, 0, NULL ),
+    KRowSetSimpleDestroy,
+    NULL
+};
+
 static KRowSet_vt vtKRowSetSimple =
 {
-    1, 0,
+    KVTABLE_INITIALIZER ( KRowSetSimple, KRowSet, 0, &vtKRowSetSimpleRefCount.dad ),
 
     KRowSetSimpleDestroyData,
     KRowSetSimpleAddRowIdRange,
@@ -255,7 +284,7 @@ KDB_EXTERN KRowSet * CC KTableMakeRowSetSimple ( struct KTable const * self, ctx
         SYSTEM_ERROR ( xcNoMemory, "out of memory" );
     else
     {
-        TRY ( KRowSetInit ( r, ctx, ( const KRowSet_vt * ) &vtKRowSetSimple, "KRowSetSimple", "KRowSetSimple" ) )
+        TRY ( KRowSetInit ( r, ctx, &vtKRowSetSimple.dad, "KRowSetSimple", "KRowSetSimple" ) )
         {
             TRY ( r->data = KRowSetSimpleAllocateData ( ctx, 16 ) )
             {
@@ -295,15 +324,17 @@ void CC KRowSetSimpleIteratorDestroy ( KRowSetSimpleIterator *self, ctx_t ctx )
 }
 
 static
-void CC KRowSetSimpleIteratorNext ( struct KRowSetSimpleIterator * self, ctx_t ctx )
+bool CC KRowSetSimpleIteratorNext ( struct KRowSetSimpleIterator * self, ctx_t ctx )
 {
-    if ( self == NULL )
+    if ( self == NULL || self -> rowset_data == NULL )
     {
         FUNC_ENTRY ( ctx, rcDB, rcIterator, rcPositioning );
         INTERNAL_ERROR ( xcSelfNull, "failed to move rowset iterator" );
     }
     else
-        ++self -> array_index;
+        return ++self -> array_index < self -> rowset_data -> num_rows;
+
+    return false;
 }
 
 static
@@ -360,10 +391,9 @@ KRowSetSimpleIterator * CC KRowSetSimpleGetIterator ( const struct KRowSet * sel
             TRY ( KRowSetIteratorInit ( &r -> dad, ctx, ( const KRowSetIterator_vt * ) &vtKRowSetIteratorSimple, "KRowSetSimpleIterator", "KRowSetSimpleIterator" ) )
             {
                 KRowSetSimpleDataSort ( self -> data ); /* make sure rowset is sorted */
-                r -> rowset = self;
                 r -> rowset_data = self -> data;
                 r -> array_index = 0;
-                TRY ( KRowSetAddRef ( r -> rowset, ctx ) )
+                TRY ( r -> rowset = KRowSetDuplicate ( self, ctx, 0 ) )
                 {
                     return r;
                 }

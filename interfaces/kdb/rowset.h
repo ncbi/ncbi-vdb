@@ -27,6 +27,10 @@
 #ifndef _h_kdb_rowset_
 #define _h_kdb_rowset_
 
+#ifndef _h_kfc_refcount_
+#include <kfc/refcount.h>
+#endif
+
 #ifndef _h_kdb_extern_
 #include <kdb/extern.h>
 #endif
@@ -65,7 +69,7 @@ KDB_EXTERN KRowSet * CC KTableMakeRowSet ( struct KTable const * self, ctx_t ctx
 static __inline__
 KRowSet * KRowSetDuplicate ( const KRowSet * self, ctx_t ctx, caps_t rm )
 {
-    return ( KFile_v2 * ) KRefcountDuplicate_v1 ( TO_REFCOUNT_V1 ( self ), ctx, rm );
+    return ( KRowSet * ) KRefcountDuplicate_v1 ( TO_REFCOUNT_V1 ( self ), ctx, rm );
 }
 
 static __inline__
@@ -141,7 +145,7 @@ KDB_EXTERN KRowSetIterator * CC KRowSetMakeIterator ( const KRowSet * self, ctx_
  * Release
  *  ignores NULL references
  */
-#error "fix me"
+//#error "fix me"
 KDB_EXTERN void CC KRowSetIteratorAddRef ( const KRowSetIterator * self, ctx_t ctx );
 KDB_EXTERN void CC KRowSetIteratorRelease ( const KRowSetIterator * self, ctx_t ctx );
 
