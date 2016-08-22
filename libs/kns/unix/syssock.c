@@ -177,131 +177,6 @@ rc_t CC KSocketWhack ( KSocket *self )
 }
 
 static
-rc_t HandleErrno ( const char *func_name, unsigned int lineno )
-{
-    int lerrno;
-    rc_t rc = 0;
-    
-    switch ( lerrno = errno )
-    {
-    case EACCES: /* write permission denied */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcMemory, rcUnauthorized );            
-        break;
-    case EADDRINUSE: /* address is already in use */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcMemory, rcExists );
-        break;
-    case EADDRNOTAVAIL: /* requested address was not local */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcMemory, rcNotFound );
-        break;
-    case EAGAIN: /* no more free local ports or insufficient rentries in routing cache */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcNoObj, rcExhausted );            
-        break;
-    case EAFNOSUPPORT: /* address didnt have correct address family in ss_family field */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcName, rcInvalid );            
-        break;
-    case EALREADY: /* socket is non blocking and a previous connection has not yet completed */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcId, rcUndefined );
-        break;
-    case EBADF: /* invalid sock fd */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcId, rcInvalid );
-        break;
-    case ECONNREFUSED: /* remote host refused to allow network connection */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcCanceled );
-        break;
-    case ECONNRESET: /* connection reset by peer */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcCanceled );
-        break;
-    case EDESTADDRREQ: /* socket is not connection-mode and no peer address set */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcId, rcInvalid );
-        break;
-    case EFAULT: /* buffer pointer points outside of process's adress space */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcMemory, rcOutofrange );
-        break;
-    case EINPROGRESS: /* call is in progress */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcId, rcUndefined );
-        break;
-    case EINTR: /* recv interrupted before any data available */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcCanceled );
-        break;
-    case EINVAL: /* invalid argument */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcParam, rcInvalid );
-        break;
-    case EISCONN: /* connected already */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcExists );
-        break;
-    case ELOOP: /* too many symbolic links in resolving addr */
-        rc = RC ( rcNS, rcNoTarg, rcResolving, rcLink, rcExcessive );
-        break;
-    case EMFILE: /* process file table overflow */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcProcess, rcExhausted );
-        break;
-    case EMSGSIZE: /* msg size too big */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcMessage, rcExcessive );
-        break;
-    case ENAMETOOLONG: /* addr name is too long */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcName, rcExcessive );
-        break;
-    case ENETUNREACH: /* network is unreachable */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcNotAvailable );
-        break;
-    case ENOBUFS: /* output queue for a network connection was full. 
-                     ( wont typically happen in linux. Packets are just silently dropped */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcInterrupted );
-        break;
-    case ENOENT: /* file does not exist */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcId, rcNotFound );
-        break;
-    case ENOMEM: /* Could not allocate memory */
-        rc = RC ( rcNS, rcNoTarg, rcAllocating, rcMemory, rcExhausted );
-        break;
-    case ENOTCONN: /* socket has not been connected */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcInvalid );
-        break;
-    case ENOTDIR: /* component of path is not a directory */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcDirEntry, rcInvalid );
-        break;
-    case ENOTSOCK: /* sock fd does not refer to socket */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcId, rcInvalid );
-        break;
-    case EOPNOTSUPP: /* bits in flags argument is inappropriate */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcParam, rcInvalid );
-        break;
-    case EPERM:
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcMemory, rcUnauthorized );            
-        break;
-    case EPIPE: /* local end has been shut down. Will also receive SIGPIPE or MSG_NOSIGNAL */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcCanceled );
-        break;
-    case EPROTONOSUPPORT: /* specified protocol is not supported */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcAttr, rcUnsupported );
-        break;
-    case EROFS: /* socket inode on read only file system */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcNoObj, rcReadonly );
-        break;
-    case ETIMEDOUT: /* timeout */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcNotAvailable );
-        break;
-#if ! defined EAGAIN || ! defined EWOULDBLOCK || EAGAIN != EWOULDBLOCK
-    case EWOULDBLOCK:
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcCmd, rcBusy );
-        break;
-#endif
-    default:
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcError, rcUnknown );
-        PLOGERR (klogErr,
-                 (klogErr, rc, "unknown system error '$(S)($(E))'",
-                  "S=%!,E=%d", lerrno, lerrno));
-    }
-    
-    if ( rc != 0 )
-    {
-        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%R\n", rc ) );
-    }
-
-    return rc;
-}
-
-static
 rc_t KSocketHandleSocknameError ( int status )
 {
     switch ( status )
@@ -321,6 +196,142 @@ rc_t KSocketHandleSocknameError ( int status )
 
     return RC ( rcNS, rcSocket, rcIdentifying, rcError, rcUnknown );
 }
+
+static
+rc_t KSocketHandleSocketCall ( int status )
+{
+    switch ( status )
+    {
+    case EACCES:
+        return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcUnauthorized );
+    case EAFNOSUPPORT:
+    case EPROTONOSUPPORT:
+        return RC ( rcNS, rcSocket, rcCreating, rcInterface, rcUnsupported );
+    case EINVAL:
+        return RC ( rcNS, rcSocket, rcCreating, rcInterface, rcUnrecognized );
+    case EMFILE:
+    case ENFILE:
+        return RC ( rcNS, rcSocket, rcCreating, rcFileDesc, rcExcessive );
+    case ENOBUFS:
+        return RC ( rcNS, rcSocket, rcCreating, rcBuffer, rcExhausted );
+    case ENOMEM:
+        return RC ( rcNS, rcSocket, rcCreating, rcMemory, rcExhausted );
+    }
+
+    return RC ( rcNS, rcSocket, rcCreating, rcError, rcUnknown );
+}
+
+static
+rc_t KSocketHandleBindCall ( int status )
+{
+    switch ( status )
+    {
+    case EACCES:
+        return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcUnauthorized );
+    case EADDRINUSE:
+        return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcBusy );
+    case EADDRNOTAVAIL:
+        return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcNotAvailable);
+    case EBADF:
+        return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcInvalid );
+    case EFAULT:
+    case EINVAL:
+        return RC ( rcNS, rcSocket, rcCreating, rcParam, rcInvalid );
+    case ELOOP:
+        return RC ( rcNS, rcSocket, rcCreating, rcError, rcCorrupt );
+    case ENAMETOOLONG:
+        return RC ( rcNS, rcSocket, rcCreating, rcName, rcExcessive );
+    case ENOENT:
+        return RC ( rcNS, rcSocket, rcCreating, rcFile, rcNotFound );
+    case ENOMEM:
+        return RC ( rcNS, rcSocket, rcCreating, rcMemory, rcExhausted );
+    case ENOTDIR:
+        return RC ( rcNS, rcSocket, rcCreating, rcName, rcIncorrect );
+    case ENOTSOCK:
+        return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcIncorrect );
+    case EROFS:
+        return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcReadonly );
+    }
+
+    return RC ( rcNS, rcSocket, rcCreating, rcError, rcUnknown );
+}
+
+static
+rc_t KSocketHandleConnectCall ( int status )
+{
+    switch ( status )
+    {
+    case EACCES:
+    case EPERM:
+        return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcUnauthorized );
+    case EADDRINUSE:
+        return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcBusy );
+    case EADDRNOTAVAIL:
+        return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcNotAvailable );
+    case EAFNOSUPPORT:
+        return RC ( rcNS, rcSocket, rcCreating, rcInterface, rcIncorrect );
+    case EALREADY:
+        return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcBusy );
+    case EBADF:
+        return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcInvalid );
+    case ECONNREFUSED:
+        return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcFailed );
+    case EFAULT:
+        return RC ( rcNS, rcSocket, rcCreating, rcParam, rcInvalid );
+    case EINPROGRESS:
+        return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcBusy );
+    case EINTR:
+        return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcInterrupted );
+    case EISCONN:
+        return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcDuplicate );
+    case ENETUNREACH:
+        return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcNotAvailable );
+    case ENOTSOCK:
+        return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcIncorrect );
+    case ETIMEDOUT:
+        return RC ( rcNS, rcSocket, rcCreating, rcTimeout, rcExhausted );
+    }
+
+    return RC ( rcNS, rcSocket, rcCreating, rcError, rcUnknown );
+}
+
+static
+rc_t KSocketHandleAcceptCall ( int status )
+{
+    switch ( status )
+    {
+    case EWOULDBLOCK:
+        return RC ( rcNS, rcSocket, rcOpening, rcData, rcNotAvailable );
+    case EBADF:
+        return RC ( rcNS, rcSocket, rcOpening, rcSocket, rcInvalid );
+    case ECONNABORTED:
+        return RC ( rcNS, rcSocket, rcOpening, rcConnection, rcCanceled );
+    case EFAULT:
+    case EINVAL:
+        return RC ( rcNS, rcSocket, rcOpening, rcData, rcNotAvailable );
+    case EINTR:
+        return RC ( rcNS, rcSocket, rcOpening, rcConnection, rcInterrupted );
+    case EMFILE:
+    case ENFILE:
+        return RC ( rcNS, rcSocket, rcOpening, rcFileDesc, rcExcessive );
+    case ENOBUFS:
+        return RC ( rcNS, rcSocket, rcOpening, rcBuffer, rcExhausted );
+    case ENOMEM:
+        return RC ( rcNS, rcSocket, rcOpening, rcMemory, rcExhausted );
+    case ENOTSOCK:
+        return RC ( rcNS, rcSocket, rcOpening, rcSocket, rcIncorrect );
+    case EOPNOTSUPP:
+        return RC ( rcNS, rcSocket, rcOpening, rcSocket, rcUnsupported );
+    case EPROTO: /* check */
+        return RC ( rcNS, rcSocket, rcOpening, rcInterface, rcUnknown );
+    case EPERM: /* LINUX ONLY */
+        return RC ( rcNS, rcSocket, rcOpening, rcError, rcUnexpected );
+    }
+
+    return RC ( rcNS, rcSocket, rcOpening, rcError, rcUnknown );
+}
+
+
 
 
 static rc_t KSocketGetEndpointV6 ( const KSocket * self, KEndPoint * ep, bool remote )
@@ -627,23 +638,20 @@ rc_t CC KSocketTimedWrite ( KSocket *self,
     /* check for error */
     if ( revents < 0 )
     {
-        int lerrno;
-        switch ( lerrno = errno )
+        switch ( errno )
         {
         case EFAULT:
-            rc = RC ( rcNS, , , , );
+        case EINVAL:
+            rc = RC ( rcNS, rcSocket, rcWriting, rcParam, rcInvalid );
             break;
         case EINTR:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EINVAL:
-            rc = RC ( rcNS, , , , );
+            rc = RC ( rcNS, rcSocket, rcWriting, rcTransfer, rcInterrupted );
             break;
         case ENOMEM:
-            rc = RC ( rcNS, , , , );
+            rc = RC ( rcNS, rcSocket, rcWriting, rcMemory, rcExhausted );
             break;
         default:
-            rc = RC ( rcNS, , , rcError, rcUnknown );
+            rc = RC ( rcNS, rcSocket, rcWriting, rcError, rcUnknown );
             break;
         }
 
@@ -672,60 +680,50 @@ rc_t CC KSocketTimedWrite ( KSocket *self,
         count = send ( self -> fd, buffer, bsize, 0 );
         if ( count < 0 )
         {
-            int lerrno;
-            switch ( lerrno = errno )
+            switch ( errno )
             {
             case EACCES:
-                rc = RC ( rcNS, , , , );
+                rc = RC ( rcNS, rcSocket, rcWriting, rcSocket, rcUnauthorized);
                 break;
-            case EAGAIN:
             case EWOULDBLOCK:
-                rc = RC ( rcNS, , , , );
+                rc = RC ( rcNS, rcSocket, rcWriting, rcData, rcNotAvailable );
                 break;
             case EBADF:
-                rc = RC ( rcNS, , , , );
+                rc = RC ( rcNS, rcSocket, rcWriting, rcSocket, rcInvalid );
                 break;
             case ECONNRESET:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EDESTADDRREQ:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EFAULT:
-                rc = RC ( rcNS, , , , );
+                rc = RC ( rcNS, rcSocket, rcWriting, rcConnection, rcCanceled );
                 break;
             case EINTR:
-                rc = RC ( rcNS, , , , );
+                rc = RC ( rcNS, rcSocket, rcWriting, rcTransfer, rcInterrupted );
                 break;
+            case EFAULT:
             case EINVAL:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EISCONN:
-                rc = RC ( rcNS, , , , );
+                rc = RC ( rcNS, rcSocket, rcWriting, rcParam, rcInvalid );
                 break;
             case EMSGSIZE:
-                rc = RC ( rcNS, , , , );
+                rc = RC ( rcNS, rcSocket, rcWriting, rcData, rcExcessive );
                 break;
             case ENOBUFS:
-                rc = RC ( rcNS, , , , );
+                rc = RC ( rcNS, rcSocket, rcWriting, rcBuffer, rcExhausted );
                 break;
             case ENOMEM:
-                rc = RC ( rcNS, , , , );
+                rc = RC ( rcNS, rcSocket, rcWriting, rcMemory, rcExhausted );
                 break;
             case ENOTCONN:
-                rc = RC ( rcNS, , , , );
+                rc = RC ( rcNS, rcSocket, rcWriting, rcConnection, rcInvalid );
                 break;
             case ENOTSOCK:
-                rc = RC ( rcNS, , , , );
+                rc = RC ( rcNS, rcSocket, rcWriting, rcSocket, rcIncorrect );
                 break;
-            case EOPNOTSUPP:
-                rc = RC ( rcNS, , , , );
+            case EOPNOTSUPP: /* check */
+                rc = RC ( rcNS, rcSocket, rcWriting, rcParam, rcInvalid );
                 break;
-            case EPIPE:
-                rc = RC ( rcNS, , , , );
+            case EPIPE: /* check */
+                rc = RC ( rcNS, rcSocket, rcWriting, rcConnection, rcNoErr );
                 break;
             default:
-                rc = RC ( rcNS, , , rcError, rcUnknown );
+                rc = RC ( rcNS, rcSocket, rcWriting, rcError, rcUnknown );
                 break;
             }
 
@@ -738,13 +736,11 @@ rc_t CC KSocketTimedWrite ( KSocket *self,
         return 0;
     }
 
-#warning general errno catch
     /* anything else in revents is an error */
     if ( ( revents & ~ POLLOUT ) != 0 && errno != 0 )
     {
-        rc = HandleErrno ( __func__, __LINE__ );
         DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketTimedWrite error '%s'\n", self, strerror ( errno ) ) );
-        return rc;
+        return RC ( rcNS, rcSocket, rcWriting, rcError, rcUnknown );
     }
 
     /* finally, call this a timeout */
@@ -792,37 +788,30 @@ rc_t KSocketMakePath ( const char * name, char * buf, size_t buf_size )
     pwd = getpwuid ( geteuid () );
     if ( pwd == NULL )
     {
-        int lerrno;
-        switch ( lerrno = errno )
+        /* check the context 'rcAccessing' */
+        switch ( errno )
         {
-        case 0:
-        case ENOENT:
-        case ESRCH:
         case EBADF:
-        case EPERM:
-            /* given name or uid was not found */
-            rc = RC ( rcNS, , , , );
+            rc = RC ( rcNS, rcSocket, rcAccessing, rcFormat, rcInvalid );
             break;
         case EINTR:
-            rc = RC ( rcNS, , , , );
+            rc = RC ( rcNS, rcSocket, rcAccessing, rcConnection, rcInterrupted );
             break;
         case EIO:
-            rc = RC ( rcNS, , , , );
+            rc = RC ( rcNS, rcSocket, rcAccessing, rcNoObj, rcUndefined);
             break;
         case EMFILE:
-            rc = RC ( rcNS, , , , );
-            break;
         case ENFILE:
-            rc = RC ( rcNS, , , , );
+            rc = RC ( rcNS, rcSocket, rcAccessing, rcFileDesc, rcExcessive );
             break;
         case ENOMEM:
-            rc = RC ( rcNS, , , , );
+            rc = RC ( rcNS, rcSocket, rcAccessing, rcMemory, rcExhausted );
             break;
         case ERANGE:
-            rc = RC ( rcNS, , , , );
+            rc = RC ( rcNS, rcSocket, rcAccessing, rcBuffer, rcInsufficient );
             break;
         default:
-            rc = RC ( rcNS, , , rcError, rcUnknown );
+            rc = RC ( rcNS, rcSocket, rcAccessing, rcError, rcUnknown );
             break;
         }
 
@@ -864,37 +853,7 @@ rc_t KSocketConnectIPv4 ( KSocket *self, int32_t retryTimeout, const KEndPoint *
         /* create the OS socket */
         self -> fd = socket ( AF_INET, SOCK_STREAM, 0 );
         if ( self -> fd < 0 )
-        {
-            int lerrno;
-            switch ( lerrno = errno )
-            {
-            case EACCES:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EAFNOSUPPORT:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EINVAL:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EMFILE:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENFILE:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOBUFS:
-            case ENOMEM:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EPROTONOSUPPORT:
-                rc = RC ( rcNS, , , , );
-                break;
-            default:
-                rc = RC ( rcNS, , , rcError, rcUnknown );
-                break;
-            }
-        }
+            rc = KSocketHandleSocketCall ( errno );
         else
         {
             /* disable nagle algorithm */
@@ -903,111 +862,13 @@ rc_t KSocketConnectIPv4 ( KSocket *self, int32_t retryTimeout, const KEndPoint *
 
             /* bind */
             if ( from != NULL && bind ( self -> fd, ( struct sockaddr* ) & ss_from, sizeof ss_from ) != 0 )
-            {
-                int lerrno;
-                switch ( lerrno = errno )
-                {
-                case EACCES:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EADDRINUSE:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EADDRNOTAVAIL:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EBADF:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EFAULT:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EINVAL:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ELOOP:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ENAMETOOLONG:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ENOENT:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ENOMEM:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ENOTDIR:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ENOTSOCK:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EROFS:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                default:
-                    rc = RC ( rcNS, , , rcError, rcUnknown );
-                    break;
-                }
-            }
+                rc = KSocketHandleBindCall ( errno );
                 
             if ( rc == 0 )
             {
                 /* connect */
                 if ( connect ( self -> fd, ( struct sockaddr* ) & ss_to, sizeof ss_to ) != 0 )
-                {
-                    int lerrno;
-                    switch ( lerrno = errno )
-                    {
-                    case EACCES:
-                    case EPERM:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EADDRINUSE:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EAFNOSUPPORT:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EADDRNOTAVAIL:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EALREADY:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EBADF:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case ECONNREFUSED:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EFAULT:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EINPROGRESS:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EINTR:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EISCONN:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case ENETUNREACH:
-                        rc = RC ( rcQNS, , , , );
-                        break;
-                    case ENOTSOCK:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case ETIMEDOUT:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    default:
-                        rc = RC ( rcNS, , , rcError, rcUnknown );
-                        break;
-                    }
-                }
+                    rc = KSocketHandleConnectCall ( errno );
                 else
                 {
                     /* set non-blocking mode */
@@ -1068,37 +929,7 @@ rc_t KSocketConnectIPv6 ( KSocket *self, int32_t retryTimeout, const KEndPoint *
         /* create the OS socket */
         self -> fd = socket ( AF_INET6, SOCK_STREAM, 0 );
         if ( self -> fd < 0 )
-        {
-            int lerrno;
-            switch ( lerrno = errno )
-            {
-            case EACCES:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EAFNOSUPPORT:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EINVAL:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EMFILE:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENFILE:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOBUFS:
-            case ENOMEM:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EPROTONOSUPPORT:
-                rc = RC ( rcNS, , , , );
-                break;
-            default:
-                rc = RC ( rcNS, , , rcError, rcUnknown );
-                break;
-            }
-        }
+            rc = KSocketHandleSocketCall ( errno );
         else
         {
             /* disable nagle algorithm */
@@ -1107,111 +938,13 @@ rc_t KSocketConnectIPv6 ( KSocket *self, int32_t retryTimeout, const KEndPoint *
 
             /* bind */
             if ( from != NULL && bind ( self -> fd, ( struct sockaddr* ) & ss_from, sizeof ss_from ) != 0 )
-            {
-                int lerrno;
-                switch ( lerrno = errno )
-                {
-                case EACCES:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EADDRINUSE:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EADDRNOTAVAIL:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EBADF:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EFAULT:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EINVAL:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ELOOP:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ENAMETOOLONG:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ENOENT:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ENOMEM:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ENOTDIR:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ENOTSOCK:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EROFS:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                default:
-                    rc = RC ( rcNS, , , rcError, rcUnknown );
-                    break;
-                }
-            }
-                
+                rc = KSocketHandleBindCall ( errno );
+
             if ( rc == 0 )
             {
                 /* connect */
                 if ( connect ( self -> fd, ( struct sockaddr* ) & ss_to, sizeof ss_to ) != 0 )
-                {
-                    int lerrno;
-                    switch ( lerrno = errno )
-                    {
-                    case EACCES:
-                    case EPERM:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EADDRINUSE:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EAFNOSUPPORT:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EADDRNOTAVAIL:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EALREADY:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EBADF:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case ECONNREFUSED:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EFAULT:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EINPROGRESS:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EINTR:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EISCONN:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case ENETUNREACH:
-                        rc = RC ( rcQNS, , , , );
-                        break;
-                    case ENOTSOCK:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case ETIMEDOUT:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    default:
-                        rc = RC ( rcNS, , , rcError, rcUnknown );
-                        break;
-                    }
-                }
+                    rc = KSocketHandleConnectCall ( errno );
                 else
                 {
                     /* set non-blocking mode */
@@ -1259,97 +992,14 @@ rc_t KSocketConnectIPC ( KSocket *self, int32_t retryTimeout, const KEndPoint *t
         /* create the OS socket */
         self -> fd = socket ( AF_UNIX, SOCK_STREAM, 0 );
         if ( self -> fd < 0 )
-        {
-            int lerrno;
-            switch ( lerrno = errno )
-            {
-            case EACCES:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EAFNOSUPPORT:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EINVAL:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EMFILE:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENFILE:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOBUFS:
-            case ENOMEM:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EPROTONOSUPPORT:
-                rc = RC ( rcNS, , , , );
-                break;
-            default:
-                rc = RC ( rcNS, , , rcError, rcUnknown );
-                break;
-            }
-        }
+            rc = KSocketHandleSocketCall ( errno );
         else
         {
             /* connect */
             if ( connect ( self -> fd, ( struct sockaddr* ) & ss_to, sizeof ss_to ) != 0 )
-            {
-                int lerrno;
-                switch ( lerrno = errno )
-                {
-                case EACCES:
-                case EPERM:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EADDRINUSE:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EAFNOSUPPORT:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EADDRNOTAVAIL:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EALREADY:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EBADF:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ECONNREFUSED:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EFAULT:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EINPROGRESS:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EINTR:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case EISCONN:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ENETUNREACH:
-                    rc = RC ( rcQNS, , , , );
-                    break;
-                case ENOTSOCK:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                case ETIMEDOUT:
-                    rc = RC ( rcNS, , , , );
-                    break;
-                default:
-                    rc = RC ( rcNS, , , rcError, rcUnknown );
-                    break;
-                }
-            }
+                rc = KSocketHandleConnectCall ( errno );
             else
-            {
                 return 0;
-            }
             
             /* dump socket */
             close ( self -> fd );
@@ -1448,37 +1098,7 @@ rc_t KNSManagerMakeIPv6Listener ( KSocket *listener, const KEndPoint * ep )
 
     listener -> fd = socket ( AF_INET6, SOCK_STREAM, 0 );
     if ( listener -> fd < 0 )
-    {
-        int lerrno;
-        switch ( lerrno = errno )
-        {
-        case EACCES:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EAFNOSUPPORT:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EINVAL:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EMFILE:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ENFILE:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ENOBUFS:
-        case ENOMEM:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EPROTONOSUPPORT:
-            rc = RC ( rcNS, , , , );
-            break;
-        default:
-            rc = RC ( rcNS, , , rcError, rcUnknown );
-            break;
-        }
-    }
+        rc = KSocketHandleSocketCall ( errno );
     else
     {
         struct sockaddr_in6 ss;
@@ -1495,57 +1115,10 @@ rc_t KNSManagerMakeIPv6Listener ( KSocket *listener, const KEndPoint * ep )
 
         ss . sin6_port = htons ( ep -> u . ipv6 . port );
 
-        if ( bind ( listener -> fd, ( struct sockaddr* ) & ss, sizeof ss ) == 0 )
-            return 0;
+        if ( bind ( listener -> fd, ( struct sockaddr* ) & ss, sizeof ss ) != 0 )
+           rc = KSocketHandleBindCall ( errno );
         else
-        {
-            int lerrno;
-            switch ( lerrno = errno )
-            {
-            case EACCES:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EADDRINUSE:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EADDRNOTAVAIL:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EBADF:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EFAULT:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EINVAL:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ELOOP:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENAMETOOLONG:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOENT:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOMEM:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOTDIR:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOTSOCK:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EROFS:
-                rc = RC ( rcNS, , , , );
-                break;
-            default:
-                rc = RC ( rcNS, , , rcError, rcUnknown );
-                break;
-            }
-        }
+            return 0;
         
         close ( listener -> fd );
         listener -> fd = -1;
@@ -1562,37 +1135,7 @@ rc_t KNSManagerMakeIPv4Listener ( KSocket *listener, const KEndPoint * ep )
 
     listener -> fd = socket ( AF_INET, SOCK_STREAM, 0 );
     if ( listener -> fd < 0 )
-    {
-        int lerrno;
-        switch ( lerrno = errno )
-        {
-        case EACCES:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EAFNOSUPPORT:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EINVAL:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EMFILE:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ENFILE:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ENOBUFS:
-        case ENOMEM:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EPROTONOSUPPORT:
-            rc = RC ( rcNS, , , , );
-            break;
-        default:
-            rc = RC ( rcNS, , , rcError, rcUnknown );
-            break;
-        }
-    }
+        rc = KSocketHandleSocketCall ( errno );
     else
     {
         struct sockaddr_in ss;
@@ -1605,57 +1148,10 @@ rc_t KNSManagerMakeIPv4Listener ( KSocket *listener, const KEndPoint * ep )
         ss . sin_addr . s_addr = htonl ( ep -> u . ipv4 . addr );
         ss . sin_port = htons ( ep -> u . ipv4 . port );
 
-        if ( bind ( listener -> fd, ( struct sockaddr* ) & ss, sizeof ss ) == 0 )
-            return 0;
+        if ( bind ( listener -> fd, ( struct sockaddr* ) & ss, sizeof ss ) != 0 )
+            rc = KSocketHandleBindCall ( errno );
         else
-        {
-            int lerrno;
-            switch ( lerrno = errno )
-            {
-            case EACCES:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EADDRINUSE:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EADDRNOTAVAIL:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EBADF:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EFAULT:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EINVAL:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ELOOP:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENAMETOOLONG:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOENT:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOMEM:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOTDIR:
-                rc = RC ( rcNS, , , , );
-                break;
-            case ENOTSOCK:
-                rc = RC ( rcNS, , , , );
-                break;
-            case EROFS:
-                rc = RC ( rcNS, , , , );
-                break;
-            default:
-                rc = RC ( rcNS, , , rcError, rcUnknown );
-                break;
-            }
-        }
+            return 0;
 
         close ( listener -> fd );
         listener -> fd = -1;
@@ -1671,37 +1167,7 @@ rc_t KNSManagerMakeIPCListener ( KSocket *listener, const KEndPoint * ep )
 
     listener -> fd = socket ( AF_UNIX, SOCK_STREAM, 0 );
     if ( listener -> fd < 0 )
-    {
-        int lerrno;
-        switch ( lerrno = errno )
-        {
-        case EACCES:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EAFNOSUPPORT:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EINVAL:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EMFILE:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ENFILE:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ENOBUFS:
-        case ENOMEM:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EPROTONOSUPPORT:
-            rc = RC ( rcNS, , , , );
-            break;
-        default:
-            rc = RC ( rcNS, , , rcError, rcUnknown );
-            break;
-        }
-    }
+        rc = KSocketHandleSocketCall ( errno );
     else
     {
         struct sockaddr_un ss;
@@ -1717,54 +1183,7 @@ rc_t KNSManagerMakeIPCListener ( KSocket *listener, const KEndPoint * ep )
             {
                 unlink ( ss . sun_path );
                 if ( bind ( listener -> fd, ( struct sockaddr* ) & ss, sizeof ss ) != 0 )
-                {
-                    int lerrno;
-                    switch ( lerrno = errno )
-                    {
-                    case EACCES:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EADDRINUSE:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EADDRNOTAVAIL:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EBADF:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EFAULT:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EINVAL:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case ELOOP:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case ENAMETOOLONG:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case ENOENT:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case ENOMEM:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case ENOTDIR:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case ENOTSOCK:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    case EROFS:
-                        rc = RC ( rcNS, , , , );
-                        break;
-                    default:
-                        rc = RC ( rcNS, , , rcError, rcUnknown );
-                        break;
-                    }
-                }
+                    rc = KSocketHandleBindCall ( errno );
                 else
                 {
                     listener -> path = path;
@@ -1840,23 +1259,22 @@ LIB_EXPORT rc_t CC KNSManagerMakeListener ( const KNSManager *self,
                         }
                         else
                         {
-                            int lerrno;
-                            switch ( lerrno = errno )
+                            switch ( errno )
                             {
                             case EADDRINUSE:
-                                rc = RC ( rcNS, , , , );
+                                rc = RC ( rcNS, rcSocket, rcCreating, rcSocket, rcBusy );
                                 break;
                             case EBADF:
-                                rc = RC ( rcNS, , , , );
+                                rc = RC ( rcNS, rcSocket, rcCreating, rcSocket, rcInvalid );
                                 break;
                             case ENOTSOCK:
-                                rc = RC ( rcNS, , , , );
+                                rc = RC ( rcNS, rcSocket, rcCreating, rcSocket, rcIncorrect );
                                 break;
                             case EOPNOTSUPP:
-                                rc = RC ( rcNS, , , , );
+                                rc = RC ( rcNS, rcSocket, rcCreating, rcInterface, rcUnsupported );
                                 break;
                             default:
-                                rc = RC ( rcNS, , , rcError, rcUnknown );
+                                rc = RC ( rcNS, rcSocket, rcCreating, rcError, rcUnknown );
                                 break;
                             }
                         }
@@ -1892,58 +1310,7 @@ rc_t KListenerAcceptIPv4 ( KSocket *self, KSocket *conn )
     socklen_t len = sizeof conn->remote_addr.v4;
     conn -> fd = accept ( self -> fd, ( struct sockaddr * ) & conn->remote_addr.v4, & len );
     if ( conn -> fd < 0 )
-    {
-        int lerrno;
-        switch ( lerrno = errno )
-        {
-        case EAGAIN:
-        case EWOULDBLOCK:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EBADF:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ECONNABORTED:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EFAULT:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EINTR:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EINVAL:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EMFILE:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ENFILE:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ENOBUFS:
-        case ENOMEM:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ENOTSOCK:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EOPNOTSUPP:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EPROTO:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EPERM: /* LINUX ONLY */
-            rc = RC ( rcNS, , , , );
-            break;
-        default:
-            rc = RC ( rcNS, , , rcError, rcUnknown );
-            break;
-        }
-
-        return rc;
-    }
+        return KSocketHandleAcceptCall ( errno );
 
     if ( len > sizeof conn->remote_addr.v4 )
         return RC ( rcNS, rcConnection, rcWaiting, rcBuffer, rcInsufficient );
@@ -1958,58 +1325,7 @@ rc_t KListenerAcceptIPv6 ( KSocket *self, KSocket *conn )
     socklen_t len = sizeof conn->remote_addr.v6;
     conn -> fd = accept ( self -> fd, ( struct sockaddr * ) & conn->remote_addr.v6, & len );
     if ( conn -> fd < 0 )
-    {
-        int lerrno;
-        switch ( lerrno = errno )
-        {
-        case EAGAIN:
-        case EWOULDBLOCK:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EBADF:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ECONNABORTED:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EFAULT:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EINTR:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EINVAL:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EMFILE:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ENFILE:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ENOBUFS:
-        case ENOMEM:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ENOTSOCK:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EOPNOTSUPP:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EPROTO:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EPERM: /* LINUX ONLY */
-            rc = RC ( rcNS, , , , );
-            break;
-        default:
-            rc = RC ( rcNS, , , rcError, rcUnknown );
-            break;
-        }
-
-        return rc;
-    }
+        return KSocketHandleAcceptCall ( errno );
 
     if ( len > sizeof conn->remote_addr.v6 )
         return RC ( rcNS, rcConnection, rcWaiting, rcBuffer, rcInsufficient );
@@ -2024,58 +1340,7 @@ rc_t KListenerAcceptIPC ( KSocket *self, KSocket *conn )
     socklen_t len = sizeof remote;
     conn -> fd = accept ( self -> fd, ( struct sockaddr* ) & remote, & len );
     if ( conn -> fd < 0 )
-    {
-        int lerrno;
-        switch ( lerrno = errno )
-        {
-        case EAGAIN:
-        case EWOULDBLOCK:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EBADF:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ECONNABORTED:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EFAULT:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EINTR:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EINVAL:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EMFILE:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ENFILE:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ENOBUFS:
-        case ENOMEM:
-            rc = RC ( rcNS, , , , );
-            break;
-        case ENOTSOCK:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EOPNOTSUPP:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EPROTO:
-            rc = RC ( rcNS, , , , );
-            break;
-        case EPERM: /* LINUX ONLY */
-            rc = RC ( rcNS, , , , );
-            break;
-        default:
-            rc = RC ( rcNS, , , rcError, rcUnknown );
-            break;
-        }
-
-        return rc;
-    }
+        return KSocketHandleAcceptCall ( errno );
 
     if ( len > sizeof remote )
         return RC ( rcNS, rcConnection, rcWaiting, rcBuffer, rcInsufficient );
