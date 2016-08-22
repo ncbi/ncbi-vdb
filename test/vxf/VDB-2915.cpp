@@ -57,34 +57,6 @@ data into it. This has to succeed!
 
 const string ScratchDir = "./";
 
-static void fill_random_uint8_buffer( uint8_t * buffer, size_t value_count )
-{
-    for ( size_t i = 0; i < value_count; ++i )
-        buffer[ i ] = rand() & 0xFF;
-}
-
-
-static void fill_random_uint16_buffer( uint16_t * buffer, size_t value_count )
-{
-    for ( size_t i = 0; i < value_count; ++i )
-        buffer[ i ] = rand() & 0xFFFF;
-}
-
-static void fill_random_uint32_buffer( uint32_t * buffer, size_t value_count )
-{
-    for ( size_t i = 0; i < value_count; ++i )
-        buffer[ i ] = rand() & 0xFFFFFFFF;
-}
-
-static void fill_random_uint64_buffer( uint64_t * buffer, size_t value_count )
-{
-    for ( size_t i = 0; i < value_count; ++i )
-    {
-        uint64_t v = rand();
-        buffer[ i ] = v * rand();
-    }
-}
-
 /*
 typedef union
 {
@@ -113,15 +85,38 @@ static void fill_random_float_buffer( float * buffer, size_t value_count )
 }
 */
 
+static int32_t rand_int32()
+{
+    int32_t res = rand();
+    if ( rand() & 1 ) res *= -1;
+    return res;
+}
+
+static int64_t rand_int64()
+{
+    int64_t res = rand();
+    res *= rand();
+    if ( rand() & 1 ) res *= -1;
+    return res;
+}
+
+static uint64_t rand_uint64()
+{
+    uint64_t res = rand();
+    res *= rand();
+    return res;
+}
+
 class WVDB_Fixture
 {
 public:
-    WVDB_Fixture() : m_tableName( "RANDOM_DATA" ), m_table( 0 ), m_cursor( 0 ) { }
+    WVDB_Fixture() : m_remove( false ), m_tableName( "RANDOM_DATA" ), m_table( 0 ), m_cursor( 0 ) { }
     
     ~WVDB_Fixture()
     {
         if ( m_cursor ) { VCursorRelease( m_cursor ); }
         if ( m_table ) { VTableRelease( m_table ); }
+        if ( m_remove ) { RemoveTable(); }
     }
 
     void RemoveTable()
@@ -169,6 +164,7 @@ public:
         THROW_ON_RC( VDBManagerRelease( mgr ) );
     }
     
+    bool m_remove;
     string m_tableName;
     VTable * m_table;
     VCursor * m_cursor;
@@ -183,63 +179,118 @@ FIXTURE_TEST_CASE ( LOAD_RANDOM_DATA, WVDB_Fixture )
                         "include 'vdb/vdb.vschema';"
                         "table A_TABLE #1.0"
                         "{"
-                        "   column < U8 > izip_encoding C1;"
-                        "   column U8 R1;"                        
-                        "   column < U16 > izip_encoding C2;"
-                        "   column U16 R2;"
-                        "   column < U32 > izip_encoding C3;"
-                        "   column U32 R3;"
-                        "   column < U64 > izip_encoding C4;"
-                        "   column U64 R4;"
-                        "   column < F32 > fzip_encoding< 23 > F5;"
-                        "   column F32 R5;"
-                        "   column < F64 > fzip_encoding< 52 > F6;"
-                        "   column F64 R6;"
+                        "   column < U8 > izip_encoding CU1;"
+                        "   column U8 RU1;"
+                        "   column < U16 > izip_encoding CU2;"
+                        "   column U16 RU2;"
+                        "   column < U32 > izip_encoding CU3;"
+                        "   column U32 RU3;"
+                        "   column < U64 > izip_encoding CU4;"
+                        "   column U64 RU4;"
+                        
+                        "   column < I8 > izip_encoding CI1;"
+                        "   column I8 RI1;"                        
+                        "   column < I16 > izip_encoding CI2;"
+                        "   column I16 RI2;"
+                        "   column < I32 > izip_encoding CI3;"
+                        "   column I32 RI3;"
+                        "   column < I64 > izip_encoding CI4;"
+                        "   column I64 RI4;"
                         "};";
 
     REQUIRE_RC( KOutMsg( "creating table '%s'\n", m_tableName.c_str() ) );
     
     MakeTable ( schemaText, "A_TABLE" );
     
-    uint32_t c1, c2, c3, c4;
-    uint32_t r1, r2, r3, r4;
+    uint32_t cu1, cu2, cu3, cu4;
+    uint32_t ru1, ru2, ru3, ru4;
 
-    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &c1, "%s", "C1" ) );
-    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &c2, "%s", "C2" ) );
-    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &c3, "%s", "C3" ) );
-    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &c4, "%s", "C4" ) );
-    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &r1, "%s", "R1" ) );
-    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &r2, "%s", "R2" ) );
-    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &r3, "%s", "R3" ) );
-    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &r4, "%s", "R4" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &cu1, "%s", "CU1" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &cu2, "%s", "CU2" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &cu3, "%s", "CU3" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &cu4, "%s", "CU4" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ru1, "%s", "RU1" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ru2, "%s", "RU2" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ru3, "%s", "RU3" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ru4, "%s", "RU4" ) );
+
+    uint32_t ci1, ci2, ci3, ci4;
+    uint32_t ri1, ri2, ri3, ri4;
+
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ci1, "%s", "CI1" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ci2, "%s", "CI2" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ci3, "%s", "CI3" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ci4, "%s", "CI4" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ri1, "%s", "RI1" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ri2, "%s", "RI2" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ri3, "%s", "RI3" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ri4, "%s", "RI4" ) );
 
     REQUIRE_RC ( VCursorOpen ( m_cursor ) );
 
     srand( 123456 );
-    for ( int64_t i = 1; i <= 512; ++i )
+    
+    size_t i, j;
+    for ( i = 1; i <= 512; ++i )
     {
         REQUIRE_RC ( VCursorOpenRow ( m_cursor ) );
         
-        uint8_t src_1[ 1024 ];
-        fill_random_uint8_buffer( src_1, 1024 );
-        REQUIRE_RC ( VCursorWrite ( m_cursor, c1, 8, src_1, 0, 1024 ) );
-        REQUIRE_RC ( VCursorWrite ( m_cursor, r1, 8, src_1, 0, 1024 ) );        
+        {
+            uint8_t b[ 1024 ];
+            for ( j = 0; j < 1024; ++j ) b[ j ] = rand() & 0xFF;
+            REQUIRE_RC ( VCursorWrite ( m_cursor, cu1, 8, b, 0, 1024 ) );
+            REQUIRE_RC ( VCursorWrite ( m_cursor, ru1, 8, b, 0, 1024 ) );
+        }
         
-        uint16_t src_2[ 1024 ];
-        fill_random_uint16_buffer( src_2, 1024 );
-        REQUIRE_RC ( VCursorWrite ( m_cursor, c2, 16, src_2, 0, 1024 ) );
-        REQUIRE_RC ( VCursorWrite ( m_cursor, r2, 16, src_2, 0, 1024 ) );
+        {
+            int8_t b[ 1024 ];
+            for ( j = 0; j < 1024; ++j ) b[ j ] = rand() & 0xFF;
+            REQUIRE_RC ( VCursorWrite ( m_cursor, ci1, 8, b, 0, 1024 ) );
+            REQUIRE_RC ( VCursorWrite ( m_cursor, ri1, 8, b, 0, 1024 ) );
+        }
+
+        {
+            uint16_t b[ 1024 ];
+            for ( j = 0; j < 1024; ++j ) b[ j ] = rand() & 0xFFFF;
+            REQUIRE_RC ( VCursorWrite ( m_cursor, cu2, 16, b, 0, 1024 ) );
+            REQUIRE_RC ( VCursorWrite ( m_cursor, ru2, 16, b, 0, 1024 ) );
+        }
+
+        {
+            int16_t b[ 1024 ];
+            for ( j = 0; j < 1024; ++j ) b[ j ] = rand() & 0xFFFF;
+            REQUIRE_RC ( VCursorWrite ( m_cursor, ci2, 16, b, 0, 1024 ) );
+            REQUIRE_RC ( VCursorWrite ( m_cursor, ri2, 16, b, 0, 1024 ) );
+        }
+
+        {
+            uint32_t b[ 1024 ];
+            for ( j = 0; j < 1024; ++j ) b[ j ] = rand();
+            REQUIRE_RC ( VCursorWrite ( m_cursor, cu3, 32, b, 0, 1024 ) );
+            REQUIRE_RC ( VCursorWrite ( m_cursor, ru3, 32, b, 0, 1024 ) );
+        }
         
-        uint32_t src_3[ 1024 ];
-        fill_random_uint32_buffer( src_3, 1024 );
-        REQUIRE_RC ( VCursorWrite ( m_cursor, c3, 32, src_3, 0, 1024 ) );
-        REQUIRE_RC ( VCursorWrite ( m_cursor, r3, 32, src_3, 0, 1024 ) );
+        {
+            int32_t b[ 1024 ];
+            for ( j = 0; j < 1024; ++j ) b[ j ] = rand_int32();
+            REQUIRE_RC ( VCursorWrite ( m_cursor, ci3, 32, b, 0, 1024 ) );
+            REQUIRE_RC ( VCursorWrite ( m_cursor, ri3, 32, b, 0, 1024 ) );
+        }
 
-        uint64_t src_4[ 1024 ];
-        fill_random_uint64_buffer( src_4, 1024 );
-        REQUIRE_RC ( VCursorWrite ( m_cursor, c4, 64, src_4, 0, 1024 ) );
-        REQUIRE_RC ( VCursorWrite ( m_cursor, r4, 64, src_4, 0, 1024 ) );
+        {
+            uint64_t b[ 1024 ];
+            for ( j = 0; j < 1024; ++j ) b[ j ] = rand_uint64();
+            REQUIRE_RC ( VCursorWrite ( m_cursor, cu4, 64, b, 0, 1024 ) );
+            REQUIRE_RC ( VCursorWrite ( m_cursor, ru4, 64, b, 0, 1024 ) );
+        }
 
+        {
+            int64_t b[ 1024 ];
+            for ( j = 0; j < 1024; ++j ) b[ j ] = rand_int64();
+            REQUIRE_RC ( VCursorWrite ( m_cursor, ci4, 64, b, 0, 1024 ) );
+            REQUIRE_RC ( VCursorWrite ( m_cursor, ri4, 64, b, 0, 1024 ) );
+        }
+        
         REQUIRE_RC ( VCursorCommitRow ( m_cursor ) );
         REQUIRE_RC ( VCursorCloseRow ( m_cursor ) );
     }
@@ -252,16 +303,27 @@ FIXTURE_TEST_CASE ( CHECK_RANDOM_DATA, WVDB_Fixture )
 
     REQUIRE_RC( KOutMsg( "verify table '%s'\n", m_tableName.c_str() ) );
     
-    uint32_t c1, c2, c3, c4;
-    uint32_t r1, r2, r3, r4;
-    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &c1, "%s", "C1" ) );
-    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &c2, "%s", "C2" ) );
-    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &c3, "%s", "C3" ) );
-    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &c4, "%s", "C4" ) );
-    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &r1, "%s", "R1" ) );
-    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &r2, "%s", "R2" ) );
-    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &r3, "%s", "R3" ) );
-    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &r4, "%s", "R4" ) );
+    uint32_t cu1, cu2, cu3, cu4;
+    uint32_t ru1, ru2, ru3, ru4;
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &cu1, "%s", "CU1" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &cu2, "%s", "CU2" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &cu3, "%s", "CU3" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &cu4, "%s", "CU4" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ru1, "%s", "RU1" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ru2, "%s", "RU2" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ru3, "%s", "RU3" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ru4, "%s", "RU4" ) );
+
+    uint32_t ci1, ci2, ci3, ci4;
+    uint32_t ri1, ri2, ri3, ri4;
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ci1, "%s", "CI1" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ci2, "%s", "CI2" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ci3, "%s", "CI3" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ci4, "%s", "CI4" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ri1, "%s", "RI1" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ri2, "%s", "RI2" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ri3, "%s", "RI3" ) );
+    REQUIRE_RC ( VCursorAddColumn ( m_cursor, &ri4, "%s", "RI4" ) );
 
     REQUIRE_RC ( VCursorOpen ( m_cursor ) );
     
@@ -271,8 +333,8 @@ FIXTURE_TEST_CASE ( CHECK_RANDOM_DATA, WVDB_Fixture )
         {
             uint8_t * c;
             uint8_t * r;
-            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, c1, &c_bits, ( const void** )&c, &c_boff, &c_len ) );
-            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, r1, &r_bits, ( const void** )&r, &r_boff, &r_len ) );
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, cu1, &c_bits, ( const void** )&c, &c_boff, &c_len ) );
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, ru1, &r_bits, ( const void** )&r, &r_boff, &r_len ) );
             REQUIRE_EQ ( c_bits, ( uint32_t )8 );
             REQUIRE_EQ ( r_bits, ( uint32_t )8 );
             REQUIRE_EQ ( c_boff, ( uint32_t )0 );
@@ -283,10 +345,24 @@ FIXTURE_TEST_CASE ( CHECK_RANDOM_DATA, WVDB_Fixture )
         }
 
         {
+            int8_t * c;
+            int8_t * r;
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, ci1, &c_bits, ( const void** )&c, &c_boff, &c_len ) );
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, ri1, &r_bits, ( const void** )&r, &r_boff, &r_len ) );
+            REQUIRE_EQ ( c_bits, ( uint32_t )8 );
+            REQUIRE_EQ ( r_bits, ( uint32_t )8 );
+            REQUIRE_EQ ( c_boff, ( uint32_t )0 );
+            REQUIRE_EQ ( r_boff, ( uint32_t )0 );
+            REQUIRE_EQ ( c_len, ( uint32_t )1024 );
+            REQUIRE_EQ ( r_len, ( uint32_t )1024 );
+            REQUIRE ( std::equal( c, c + 1024, r ) );
+        }
+        
+        {
             uint16_t * c;
             uint16_t * r;
-            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, c2, &c_bits, ( const void** )&c, &c_boff, &c_len ) );
-            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, r2, &r_bits, ( const void** )&r, &r_boff, &r_len ) );
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, cu2, &c_bits, ( const void** )&c, &c_boff, &c_len ) );
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, ru2, &r_bits, ( const void** )&r, &r_boff, &r_len ) );
             REQUIRE_EQ ( c_bits, ( uint32_t )16 );
             REQUIRE_EQ ( r_bits, ( uint32_t )16 );
             REQUIRE_EQ ( c_boff, ( uint32_t )0 );
@@ -297,10 +373,38 @@ FIXTURE_TEST_CASE ( CHECK_RANDOM_DATA, WVDB_Fixture )
         }
         
         {
+            int16_t * c;
+            int16_t * r;
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, ci2, &c_bits, ( const void** )&c, &c_boff, &c_len ) );
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, ri2, &r_bits, ( const void** )&r, &r_boff, &r_len ) );
+            REQUIRE_EQ ( c_bits, ( uint32_t )16 );
+            REQUIRE_EQ ( r_bits, ( uint32_t )16 );
+            REQUIRE_EQ ( c_boff, ( uint32_t )0 );
+            REQUIRE_EQ ( r_boff, ( uint32_t )0 );
+            REQUIRE_EQ ( c_len, ( uint32_t )1024 );
+            REQUIRE_EQ ( r_len, ( uint32_t )1024 );
+            REQUIRE ( std::equal( c, c + 1024, r ) );
+        }
+
+        {
             uint32_t * c;
             uint32_t * r;
-            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, c3, &c_bits, ( const void** )&c, &c_boff, &c_len ) );
-            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, r3, &r_bits, ( const void** )&r, &r_boff, &r_len ) );
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, cu3, &c_bits, ( const void** )&c, &c_boff, &c_len ) );
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, ru3, &r_bits, ( const void** )&r, &r_boff, &r_len ) );
+            REQUIRE_EQ ( c_bits, ( uint32_t )32 );
+            REQUIRE_EQ ( r_bits, ( uint32_t )32 );
+            REQUIRE_EQ ( c_boff, ( uint32_t )0 );
+            REQUIRE_EQ ( r_boff, ( uint32_t )0 );
+            REQUIRE_EQ ( c_len, ( uint32_t )1024 );
+            REQUIRE_EQ ( r_len, ( uint32_t )1024 );
+            REQUIRE ( std::equal( c, c + 1024, r ) );
+        }
+
+        {
+            int32_t * c;
+            int32_t * r;
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, ci3, &c_bits, ( const void** )&c, &c_boff, &c_len ) );
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, ri3, &r_bits, ( const void** )&r, &r_boff, &r_len ) );
             REQUIRE_EQ ( c_bits, ( uint32_t )32 );
             REQUIRE_EQ ( r_bits, ( uint32_t )32 );
             REQUIRE_EQ ( c_boff, ( uint32_t )0 );
@@ -313,8 +417,8 @@ FIXTURE_TEST_CASE ( CHECK_RANDOM_DATA, WVDB_Fixture )
         {
             uint64_t * c;
             uint64_t * r;
-            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, c4, &c_bits, ( const void** )&c, &c_boff, &c_len ) );
-            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, r4, &r_bits, ( const void** )&r, &r_boff, &r_len ) );
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, cu4, &c_bits, ( const void** )&c, &c_boff, &c_len ) );
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, ru4, &r_bits, ( const void** )&r, &r_boff, &r_len ) );
             REQUIRE_EQ ( c_bits, ( uint32_t )64 );
             REQUIRE_EQ ( r_bits, ( uint32_t )64 );
             REQUIRE_EQ ( c_boff, ( uint32_t )0 );
@@ -323,9 +427,26 @@ FIXTURE_TEST_CASE ( CHECK_RANDOM_DATA, WVDB_Fixture )
             REQUIRE_EQ ( r_len, ( uint32_t )1024 );
             REQUIRE ( std::equal( c, c + 1024, r ) );
         }
-        
+
+        {
+            int64_t * c;
+            int64_t * r;
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, ci4, &c_bits, ( const void** )&c, &c_boff, &c_len ) );
+            REQUIRE_RC ( VCursorCellDataDirect ( m_cursor, i, ri4, &r_bits, ( const void** )&r, &r_boff, &r_len ) );
+            REQUIRE_EQ ( c_bits, ( uint32_t )64 );
+            REQUIRE_EQ ( r_bits, ( uint32_t )64 );
+            REQUIRE_EQ ( c_boff, ( uint32_t )0 );
+            REQUIRE_EQ ( r_boff, ( uint32_t )0 );
+            REQUIRE_EQ ( c_len, ( uint32_t )1024 );
+            REQUIRE_EQ ( r_len, ( uint32_t )1024 );
+            REQUIRE ( std::equal( c, c + 1024, r ) );
+        }
+
     }
+    
+    m_remove = true;
 }
+
 
 //////////////////////////////////////////// Main
 extern "C"
