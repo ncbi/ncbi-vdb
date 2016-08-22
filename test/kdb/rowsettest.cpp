@@ -35,7 +35,11 @@
 #include <kfc/ctx.h>
 #include <kfc/except.h>
 #include <kfc/xc.h>
+#include <kfs/directory.h>
+#include <kdb/manager.h>
+#include <kdb/table.h>
 #include <kdb/rowset.h>
+
 
 #include <stdlib.h>
 #include <time.h>
@@ -43,6 +47,7 @@
 #include <vector>
 #include <set>
 #include <algorithm>
+#include <string>
 
 #define ENTRY \
     HYBRID_FUNC_ENTRY ( rcDB, rcRowSet, rcValidating ); \
@@ -80,14 +85,50 @@ class RowSetFixture
 {
 public:
     const KCtx*         m_ctx;  // points into the test case's local memory
+    KDirectory*         m_wd;
+    KDBManager*         m_mgr;
+    KTable *            m_table;
+    std::string         m_tableName;
 
     RowSetFixture()
-    : m_ctx(0)
+    : m_ctx(NULL)
+    , m_table(NULL)
+    , m_tableName("")
     {
+        THROW_ON_RC ( KDirectoryNativeDir ( & m_wd ) );
+        THROW_ON_RC ( KDBManagerMakeUpdate ( & m_mgr, m_wd ) );
     }
 
     virtual ~RowSetFixture()
     {
+        if ( m_table != NULL && m_tableName != "" )
+            CloseRemoveTable();
+
+        KDBManagerRelease ( m_mgr );
+        KDirectoryRelease ( m_wd );
+    }
+
+    const KTable * GetTable ( const char * name )
+    {
+        if ( m_tableName . empty() )
+            m_tableName = name;
+
+        if ( m_tableName != name )
+            throw std :: invalid_argument ( "name does not match a name of already create table" );
+
+        if ( m_table == NULL )
+            CreateTable ();
+
+        return m_table;
+    }
+
+    void CloseRemoveTable ()
+    {
+        KTableRelease ( m_table );
+        m_table = NULL;
+
+        KDirectoryRemove ( m_wd, true, m_tableName . c_str () );
+        m_tableName = "";
     }
 
     int64_t GenerateId ( int64_t range_start, int64_t range_count )
@@ -226,6 +267,11 @@ private:
         if ( inserted_rows != returned_rows )
             FAIL("inserted_rows != returned_rows");
     }
+
+    void CreateTable ()
+    {
+        THROW_ON_RC ( KDBManagerCreateTable ( m_mgr, & m_table, kcmInit + kcmMD5, m_tableName . c_str() ) );
+    }
 };
 
 
@@ -235,7 +281,7 @@ FIXTURE_TEST_CASE ( KRowSetScatteredRows, RowSetFixture )
     KRowSet * rowset;
     std::set<int64_t> inserted_rows_set;
 
-    REQUIRE_EXPR ( rowset = KTableMakeRowSet ( NULL, ctx ) );
+    REQUIRE_EXPR ( rowset = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
 
     inserted_rows_set = InsertRandomRows ( rowset, 10000, -1 );
     RunChecks ( rowset, inserted_rows_set );
@@ -250,7 +296,7 @@ FIXTURE_TEST_CASE ( KRowSetDenseRows, RowSetFixture )
     KRowSet * rowset;
     std::set<int64_t> inserted_rows_set;
 
-    REQUIRE_EXPR ( rowset = KTableMakeRowSet ( NULL, ctx ) );
+    REQUIRE_EXPR ( rowset = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
 
     inserted_rows_set = InsertRandomRows ( rowset, 10000, 1 );
     RunChecks ( rowset, inserted_rows_set );
@@ -265,7 +311,7 @@ FIXTURE_TEST_CASE ( KRowSetSerialRows, RowSetFixture )
     KRowSet * rowset;
     std::set<int64_t> inserted_rows_set;
 
-    REQUIRE_EXPR ( rowset = KTableMakeRowSet ( NULL, ctx ) );
+    REQUIRE_EXPR ( rowset = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
 
     for ( int i = 0; i < 20000; ++i )
     {
@@ -288,7 +334,7 @@ FIXTURE_TEST_CASE ( KRowSetRowRanges, RowSetFixture )
     int64_t row_ids[] = { 0, 5, 1, 6, 20, 10, 55, 60, 65, 70, 75, 80, 85, 999,  2001 };
     uint64_t counts[]  = { 1, 1, 4, 4, 10, 10, 1,  1,  1,  1,  1,  1,  1,  1000, 1000 };
 
-    REQUIRE_EXPR ( rowset = KTableMakeRowSet ( NULL, ctx ) );
+    REQUIRE_EXPR ( rowset = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
 
     for ( int i = 0; i < sizeof row_ids / sizeof row_ids[0]; ++i )
     {
@@ -317,7 +363,7 @@ FIXTURE_TEST_CASE ( KRowSetRowRangesOverlapDuplicates, RowSetFixture )
     int64_t overlap_row_ids[] = { 0, 5, 5, 2, 9, 9, 14 };
     uint64_t overlap_counts[]  = { 6, 1, 2, 6, 2, 10, 2 };
 
-    REQUIRE_EXPR ( rowset = KTableMakeRowSet ( NULL, ctx ) );
+    REQUIRE_EXPR ( rowset = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
 
     for ( int i = 0; i < sizeof row_ids / sizeof row_ids[0]; ++i )
     {
@@ -356,7 +402,7 @@ FIXTURE_TEST_CASE ( KRowSetRowRangesDenseOverlapDuplicates, RowSetFixture )
     int64_t overlap_row_ids[] = { 500 };
     uint64_t overlap_counts[]  = { 1000 };
 
-    REQUIRE_EXPR ( rowset = KTableMakeRowSet ( NULL, ctx ) );
+    REQUIRE_EXPR ( rowset = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
 
     for ( int i = 0; i < sizeof row_ids / sizeof row_ids[0]; ++i )
     {
@@ -394,7 +440,7 @@ FIXTURE_TEST_CASE ( KRowSetIterator, RowSetFixture )
 
     int64_t row_id_inserted = 55;
 
-    REQUIRE_EXPR ( rowset = KTableMakeRowSet ( NULL, ctx ) );
+    REQUIRE_EXPR ( rowset = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
     REQUIRE_EXPR ( KRowSetAddRowIdRange ( rowset, ctx, row_id_inserted, 1 ) );
 
     uint64_t num_rows;
@@ -519,7 +565,7 @@ FIXTURE_TEST_CASE ( KRowSetIteratorOverEmptySet, RowSetFixture )
 {
     ENTRY;
     KRowSet * rowset;
-    REQUIRE_EXPR ( rowset = KTableMakeRowSet ( NULL, ctx ) );
+    REQUIRE_EXPR ( rowset = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
 
     KRowSetIterator * it;
     REQUIRE_EXPR ( it = KRowSetMakeIterator ( rowset, ctx ) );
@@ -538,8 +584,8 @@ FIXTURE_TEST_CASE ( KRowSetIntersectSimpleTest, RowSetFixture )
     std::set<int64_t> inserted_rows_set1;
     std::set<int64_t> inserted_rows_set2;
 
-    REQUIRE_EXPR ( rowset1 = KTableMakeRowSet ( NULL, ctx ) );
-    REQUIRE_EXPR ( rowset2 = KTableMakeRowSet ( NULL, ctx ) );
+    REQUIRE_EXPR ( rowset1 = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
+    REQUIRE_EXPR ( rowset2 = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
 
     for ( int i = 0; i < 5000; ++i )
     {
@@ -585,8 +631,8 @@ FIXTURE_TEST_CASE ( KRowSetIntersectNormalTest, RowSetFixture )
         std::set<int64_t> inserted_rows_set2;
         std::set<int64_t> intersection_set;
 
-        REQUIRE_EXPR ( rowset1 = KTableMakeRowSet ( NULL, ctx ) );
-        REQUIRE_EXPR ( rowset2 = KTableMakeRowSet ( NULL, ctx ) );
+        REQUIRE_EXPR ( rowset1 = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
+        REQUIRE_EXPR ( rowset2 = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
 
         inserted_rows_set1 = InsertRandomRows ( rowset1, 5000, (i & 1) ? 8 : 0 );
         inserted_rows_set2 = InsertRandomRows ( rowset2, 5000, (i & 2) ? 8 : 0 );
@@ -622,8 +668,8 @@ FIXTURE_TEST_CASE ( KRowSetUnionSimpleTest, RowSetFixture )
     std::set<int64_t> inserted_rows_set1;
     std::set<int64_t> inserted_rows_set2;
 
-    REQUIRE_EXPR ( rowset1 = KTableMakeRowSet ( NULL, ctx ) );
-    REQUIRE_EXPR ( rowset2 = KTableMakeRowSet ( NULL, ctx ) );
+    REQUIRE_EXPR ( rowset1 = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
+    REQUIRE_EXPR ( rowset2 = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
 
     for ( int i = 0; i < 5000; ++i )
     {
@@ -669,8 +715,8 @@ FIXTURE_TEST_CASE ( KRowSetUnionNormalTest, RowSetFixture )
         std::set<int64_t> inserted_rows_set2;
         std::set<int64_t> union_set;
 
-        REQUIRE_EXPR ( rowset1 = KTableMakeRowSet ( NULL, ctx ) );
-        REQUIRE_EXPR ( rowset2 = KTableMakeRowSet ( NULL, ctx ) );
+        REQUIRE_EXPR ( rowset1 = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
+        REQUIRE_EXPR ( rowset2 = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
 
         inserted_rows_set1 = InsertRandomRows ( rowset1, 5000, (i & 1) ? 8 : 0 );
         inserted_rows_set2 = InsertRandomRows ( rowset2, 5000, (i & 2) ? 8 : 0 );

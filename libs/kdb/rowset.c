@@ -24,11 +24,16 @@
  *
  */
 
+#include <kdb/extern.h>
+
 #include <kdb/rowset.h>
 #include <kdb/rowset-impl.h>
 #include <kfc/ctx.h>
 #include <kfc/except.h>
 #include <kfc/xc.h>
+
+KITFTOK_DEF ( KRowSet );
+KITFTOK_DEF ( KRowSetIterator );
 
 /* MakeRowSet
  *  may add others...
@@ -42,7 +47,7 @@ KDB_EXTERN KRowSet * CC KTableMakeRowSet ( struct KTable const * self, ctx_t ctx
  *  initialize a newly allocated rowset object
  */
 KDB_EXTERN void CC KRowSetInit ( KRowSet *self, ctx_t ctx, const KVTable *kvt,
-    const char *classname, const char *name )
+    const char *classname )
 {
     FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcInitializing );
 
@@ -52,9 +57,9 @@ KDB_EXTERN void CC KRowSetInit ( KRowSet *self, ctx_t ctx, const KVTable *kvt,
         INTERNAL_ERROR ( xcParamNull, "KRowSetInit failed: vt is NULL" );
     else
     {
-        TRY ( KRefcountInit_v1 ( & self -> dad, ctx, kvt, name ) )
+        TRY ( KRefcountInit_v1 ( & self -> dad, ctx, kvt, classname ) )
         {
-            const KRowSet_vt *vt = KVTABLE_CAST ( kvt, ctx, KRowSet );
+            const KRowSet_v1_vt *vt = KVTABLE_CAST ( kvt, ctx, KRowSet );
             if ( vt == NULL )
                 INTERNAL_ERROR ( xcInterfaceIncorrect, "vtable does not appear to implement KRowSet" );
             else switch ( vt -> dad . min )
@@ -104,9 +109,12 @@ KDB_EXTERN void CC KRowSetAddRowIdRange ( KRowSet * self, ctx_t ctx, int64_t row
     }
     else
     {
-        const KRowSet_vt * vt = KVTABLE_CAST ( TO_REFCOUNT_V1 ( self ) -> vt, ctx, KRowSet );
+        const KRowSet_v1_vt * vt = KVTABLE_CAST ( TO_REFCOUNT_V1 ( self ) -> vt, ctx, KRowSet );
         if ( vt == NULL )
+        {
+            FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcInserting );
             INTERNAL_ERROR ( xcInterfaceIncorrect, "this object does not support the KRowSet interface" );
+        }
         else
             vt -> add_row_id_range ( self, ctx, row_id, count );
     }
@@ -124,9 +132,12 @@ KDB_EXTERN uint64_t CC KRowSetGetNumRowIds ( const KRowSet * self, ctx_t ctx )
     }
     else
     {
-        const KRowSet_vt * vt = KVTABLE_CAST ( TO_REFCOUNT_V1 ( self ) -> vt, ctx, KRowSet );
+        const KRowSet_v1_vt * vt = KVTABLE_CAST ( TO_REFCOUNT_V1 ( self ) -> vt, ctx, KRowSet );
         if ( vt == NULL )
+        {
+            FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcAccessing );
             INTERNAL_ERROR ( xcInterfaceIncorrect, "this object does not support the KRowSet interface" );
+        }
         else
             return vt -> get_num_rows ( self, ctx );
     }
@@ -174,47 +185,52 @@ KDB_EXTERN KRowSet * CC KRowSetIntersect ( ctx_t ctx, const KRowSet * a, const K
     FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcProcessing );
     KRowSet * result;
 
-    TRY ( result = KTableMakeRowSet ( NULL, ctx ) )
+    if ( a -> table != b -> table )
+        USER_ERROR ( xcParamIncorrect, "cannot intersect rowsets from different tables" );
+    else
     {
-        KRowSetIterator * a_it;
-        KRowSetIterator * b_it;
-        TRY ( a_it = KRowSetMakeIterator ( a, ctx ) )
+        TRY ( result = KTableMakeRowSet ( a -> table, ctx ) )
         {
-            TRY ( b_it = KRowSetMakeIterator ( b, ctx ) )
+            KRowSetIterator * a_it;
+            KRowSetIterator * b_it;
+            TRY ( a_it = KRowSetMakeIterator ( a, ctx ) )
             {
-                while ( !FAILED() && KRowSetIteratorIsValid ( a_it ) && KRowSetIteratorIsValid ( b_it ) )
+                TRY ( b_it = KRowSetMakeIterator ( b, ctx ) )
                 {
-                    int64_t a_row_id;
-                    int64_t b_row_id;
-                    ON_FAIL ( a_row_id = KRowSetIteratorGetRowId ( a_it, ctx ) )
-                        break;
-
-                    ON_FAIL ( b_row_id = KRowSetIteratorGetRowId ( b_it, ctx ) )
-                        break;
-
-                    if ( a_row_id < b_row_id )
-                        KRowSetIteratorNext ( a_it, ctx );
-                    else if ( a_row_id > b_row_id )
-                        KRowSetIteratorNext ( b_it, ctx );
-                    else
+                    while ( !FAILED() && KRowSetIteratorIsValid ( a_it ) && KRowSetIteratorIsValid ( b_it ) )
                     {
-                        TRY ( KRowSetAddRowId ( result, ctx, a_row_id ) )
+                        int64_t a_row_id;
+                        int64_t b_row_id;
+                        ON_FAIL ( a_row_id = KRowSetIteratorGetRowId ( a_it, ctx ) )
+                            break;
+
+                        ON_FAIL ( b_row_id = KRowSetIteratorGetRowId ( b_it, ctx ) )
+                            break;
+
+                        if ( a_row_id < b_row_id )
+                            KRowSetIteratorNext ( a_it, ctx );
+                        else if ( a_row_id > b_row_id )
+                            KRowSetIteratorNext ( b_it, ctx );
+                        else
                         {
-                            TRY ( KRowSetIteratorNext ( a_it, ctx ) )
+                            TRY ( KRowSetAddRowId ( result, ctx, a_row_id ) )
                             {
-                                KRowSetIteratorNext ( b_it, ctx );
+                                TRY ( KRowSetIteratorNext ( a_it, ctx ) )
+                                {
+                                    KRowSetIteratorNext ( b_it, ctx );
+                                }
                             }
                         }
                     }
+                    KRowSetIteratorRelease ( b_it, ctx );
                 }
-                KRowSetIteratorRelease ( b_it, ctx );
+                KRowSetIteratorRelease ( a_it, ctx );
             }
-            KRowSetIteratorRelease ( a_it, ctx );
-        }
-        if ( !FAILED() )
-            return result;
+            if ( !FAILED() )
+                return result;
 
-        KRowSetRelease ( result, ctx );
+            KRowSetRelease ( result, ctx );
+        }
     }
 
     return NULL;
@@ -228,79 +244,84 @@ KDB_EXTERN KRowSet * CC KRowSetUnion ( ctx_t ctx, const KRowSet * a, const KRowS
     FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcProcessing );
     KRowSet * result;
 
-    TRY ( result = KTableMakeRowSet ( NULL, ctx ) )
+    if ( a -> table != b -> table )
+        USER_ERROR ( xcParamIncorrect, "cannot intersect rowsets from different tables" );
+    else
     {
-        KRowSetIterator * a_it;
-        KRowSetIterator * b_it;
-        TRY ( a_it = KRowSetMakeIterator ( a, ctx ) )
+        TRY ( result = KTableMakeRowSet ( a -> table, ctx ) )
         {
-            TRY ( b_it = KRowSetMakeIterator ( b, ctx ) )
+            KRowSetIterator * a_it;
+            KRowSetIterator * b_it;
+            TRY ( a_it = KRowSetMakeIterator ( a, ctx ) )
             {
-                while ( !FAILED() && KRowSetIteratorIsValid ( a_it ) && KRowSetIteratorIsValid ( b_it ) )
+                TRY ( b_it = KRowSetMakeIterator ( b, ctx ) )
                 {
-                    int64_t a_row_id;
-                    int64_t b_row_id;
-                    ON_FAIL ( a_row_id = KRowSetIteratorGetRowId ( a_it, ctx ) )
-                        break;
-
-                    ON_FAIL ( b_row_id = KRowSetIteratorGetRowId ( b_it, ctx ) )
-                        break;
-
-                    if ( a_row_id < b_row_id )
+                    while ( !FAILED() && KRowSetIteratorIsValid ( a_it ) && KRowSetIteratorIsValid ( b_it ) )
                     {
-                        TRY ( KRowSetAddRowId ( result, ctx, a_row_id ) )
+                        int64_t a_row_id;
+                        int64_t b_row_id;
+                        ON_FAIL ( a_row_id = KRowSetIteratorGetRowId ( a_it, ctx ) )
+                            break;
+
+                        ON_FAIL ( b_row_id = KRowSetIteratorGetRowId ( b_it, ctx ) )
+                            break;
+
+                        if ( a_row_id < b_row_id )
                         {
-                            KRowSetIteratorNext ( a_it, ctx );
+                            TRY ( KRowSetAddRowId ( result, ctx, a_row_id ) )
+                            {
+                                KRowSetIteratorNext ( a_it, ctx );
+                            }
+                        }
+                        else if ( a_row_id > b_row_id )
+                        {
+                            TRY ( KRowSetAddRowId ( result, ctx, b_row_id ) )
+                            {
+                                KRowSetIteratorNext ( b_it, ctx );
+                            }
+                        }
+                        else
+                        {
+                            TRY ( KRowSetAddRowId ( result, ctx, a_row_id ) )
+                            {
+                                TRY ( KRowSetIteratorNext ( a_it, ctx ) )
+                                {
+                                    KRowSetIteratorNext ( b_it, ctx );
+                                }
+                            }
                         }
                     }
-                    else if ( a_row_id > b_row_id )
+                    while ( !FAILED() && KRowSetIteratorIsValid ( a_it ) )
                     {
-                        TRY ( KRowSetAddRowId ( result, ctx, b_row_id ) )
+                        int64_t a_row_id;
+                        TRY ( a_row_id = KRowSetIteratorGetRowId ( a_it, ctx ) )
                         {
-                            KRowSetIteratorNext ( b_it, ctx );
+                            TRY ( KRowSetAddRowId ( result, ctx, a_row_id ) )
+                            {
+                                KRowSetIteratorNext ( a_it, ctx );
+                            }
                         }
                     }
-                    else
+                    while ( !FAILED() && KRowSetIteratorIsValid ( b_it ) )
                     {
-                        TRY ( KRowSetAddRowId ( result, ctx, a_row_id ) )
+                        int64_t b_row_id;
+                        TRY ( b_row_id = KRowSetIteratorGetRowId ( b_it, ctx ) )
                         {
-                            TRY ( KRowSetIteratorNext ( a_it, ctx ) )
+                            TRY ( KRowSetAddRowId ( result, ctx, b_row_id ) )
                             {
                                 KRowSetIteratorNext ( b_it, ctx );
                             }
                         }
                     }
+                    KRowSetIteratorRelease ( b_it, ctx );
                 }
-                while ( !FAILED() && KRowSetIteratorIsValid ( a_it ) )
-                {
-                    int64_t a_row_id;
-                    TRY ( a_row_id = KRowSetIteratorGetRowId ( a_it, ctx ) )
-                    {
-                        TRY ( KRowSetAddRowId ( result, ctx, a_row_id ) )
-                        {
-                            KRowSetIteratorNext ( a_it, ctx );
-                        }
-                    }
-                }
-                while ( !FAILED() && KRowSetIteratorIsValid ( b_it ) )
-                {
-                    int64_t b_row_id;
-                    TRY ( b_row_id = KRowSetIteratorGetRowId ( b_it, ctx ) )
-                    {
-                        TRY ( KRowSetAddRowId ( result, ctx, b_row_id ) )
-                        {
-                            KRowSetIteratorNext ( b_it, ctx );
-                        }
-                    }
-                }
-                KRowSetIteratorRelease ( b_it, ctx );
+                KRowSetIteratorRelease ( a_it, ctx );
             }
-            KRowSetIteratorRelease ( a_it, ctx );
-        }
-        if ( !FAILED() )
-            return result;
+            if ( !FAILED() )
+                return result;
 
-        KRowSetRelease ( result, ctx );
+            KRowSetRelease ( result, ctx );
+        }
     }
 
     return NULL;
@@ -319,9 +340,12 @@ KDB_EXTERN KRowSetIterator * CC KRowSetMakeIterator ( const KRowSet * self, ctx_
     }
     else
     {
-        const KRowSet_vt * vt = KVTABLE_CAST ( TO_REFCOUNT_V1 ( self ) -> vt, ctx, KRowSet );
+        const KRowSet_v1_vt * vt = KVTABLE_CAST ( TO_REFCOUNT_V1 ( self ) -> vt, ctx, KRowSet );
         if ( vt == NULL )
+        {
+            FUNC_ENTRY ( ctx, rcDB, rcIterator, rcCreating );
             INTERNAL_ERROR ( xcInterfaceIncorrect, "this object does not support the KRowSet interface" );
+        }
         else
             return vt -> get_iterator ( self, ctx );
     }
@@ -332,29 +356,27 @@ KDB_EXTERN KRowSetIterator * CC KRowSetMakeIterator ( const KRowSet * self, ctx_
 /* Init
  *  initialize a newly allocated rowset iterator object
  */
-KDB_EXTERN void CC KRowSetIteratorInit ( KRowSetIterator *self, ctx_t ctx, const KRowSetIterator_vt *vt,
-    const char *classname, const char *name )
+KDB_EXTERN void CC KRowSetIteratorInit ( KRowSetIterator *self, ctx_t ctx, const KVTable *kvt,
+    const char *classname )
 {
     FUNC_ENTRY ( ctx, rcDB, rcIterator, rcInitializing );
 
     if ( self == NULL )
         INTERNAL_ERROR ( xcSelfNull, "KRowSetIteratorInit failed" );
-    else if ( vt == NULL )
+    else if ( kvt == NULL )
         INTERNAL_ERROR ( xcParamNull, "KRowSetIteratorInit failed: vt is NULL" );
     else
     {
-        switch ( vt -> maj )
+        TRY ( KRefcountInit_v1 ( & self -> dad, ctx, kvt, classname ) )
         {
-        case 0:
-            INTERNAL_ERROR ( xcInterfaceInvalid, "KRowSetIteratorInit failed" );
-            return;
-        case 1:
-            switch ( vt -> min )
+            const KRowSetIterator_v1_vt *vt = KVTABLE_CAST ( kvt, ctx, KRowSetIterator );
+            if ( vt == NULL )
+                INTERNAL_ERROR ( xcInterfaceIncorrect, "vtable does not appear to implement KRowSetIterator" );
+            else switch ( vt -> dad . min )
             {
             case 0:
 #if _DEBUGGING
-                if ( vt -> destroy == NULL         ||
-                     vt -> next == NULL            ||
+                if ( vt -> next == NULL            ||
                      vt -> is_valid == NULL        ||
                      vt -> get_row_id == NULL )
                 {
@@ -364,65 +386,9 @@ KDB_EXTERN void CC KRowSetIteratorInit ( KRowSetIterator *self, ctx_t ctx, const
 #endif
                 break;
             default:
-                INTERNAL_ERROR ( xcInterfaceBadVersion, "KRowSetIteratorInit failed" );
-                return;
+                INTERNAL_ERROR ( xcInterfaceBadVersion, "rowset iterator has an invalid version" );
             }
-            break;
 
-        default:
-            INTERNAL_ERROR ( xcInterfaceBadVersion, "KRowSetIteratorInit failed" );
-            return;
-        }
-
-        self -> vt = vt;
-        KRefcountInit ( & self -> refcount, 1, classname, "init", name );
-    }
-}
-
-static
-void CC KRowSetIteratorDestroy ( KRowSetIterator *self, ctx_t ctx )
-{
-    FUNC_ENTRY ( ctx, rcDB, rcIterator, rcDestroying );
-
-    assert ( self -> vt != NULL );
-    assert ( self -> vt -> destroy != NULL );
-
-    ( * self -> vt -> destroy ) ( self, ctx );
-
-    free ( self );
-}
-
-/* AddRef
- * Release
- *  ignores NULL references
- */
-KDB_EXTERN void CC KRowSetIteratorAddRef ( const KRowSetIterator *self, ctx_t ctx )
-{
-    if ( self != NULL ) switch ( KRefcountAdd ( & self -> refcount, "KRowSetIterator" ) )
-    {
-        case krefOkay:
-            break;
-        default:
-        {
-            FUNC_ENTRY ( ctx, rcDB, rcIterator, rcAttaching );
-            INTERNAL_ERROR ( xcRefcountViolated, "error while incrementing refcount" );
-        }
-    }
-}
-
-KDB_EXTERN void CC KRowSetIteratorRelease ( const KRowSetIterator *self, ctx_t ctx )
-{
-    if ( self != NULL ) switch ( KRefcountDrop ( & self -> refcount, "KRowSetIterator" ) )
-    {
-        case krefOkay:
-            break;
-        case krefWhack:
-            KRowSetIteratorDestroy ( ( KRowSetIterator* ) self, ctx );
-            break;
-        default:
-        {
-            FUNC_ENTRY ( ctx, rcDB, rcIterator, rcReleasing );
-            INTERNAL_ERROR ( xcRefcountViolated, "error while decrementing refcount" );
         }
     }
 }
@@ -436,13 +402,23 @@ KDB_EXTERN void CC KRowSetIteratorRelease ( const KRowSetIterator *self, ctx_t c
  */
 KDB_EXTERN bool CC KRowSetIteratorNext ( KRowSetIterator * self, ctx_t ctx )
 {
-    if ( self == NULL || self -> vt == NULL )
+
+    if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcDB, rcIterator, rcPositioning );
         INTERNAL_ERROR ( xcSelfNull, "failed to move rowset iterator" );
     }
     else
-        return self -> vt -> next ( self, ctx );
+    {
+        const KRowSetIterator_v1_vt * vt = KVTABLE_CAST ( TO_REFCOUNT_V1 ( self ) -> vt, ctx, KRowSetIterator );
+        if ( vt == NULL )
+        {
+            FUNC_ENTRY ( ctx, rcDB, rcIterator, rcPositioning );
+            INTERNAL_ERROR ( xcInterfaceIncorrect, "this object does not support the KRowSetIterator interface" );
+        }
+        else
+            return vt -> next ( self, ctx );
+    }
 
     return false;
 }
@@ -454,12 +430,17 @@ KDB_EXTERN bool CC KRowSetIteratorNext ( KRowSetIterator * self, ctx_t ctx )
  */
 KDB_EXTERN bool CC KRowSetIteratorIsValid ( const KRowSetIterator * self )
 {
-    if ( self == NULL || self -> vt == NULL )
+    if ( self != NULL )
     {
-        return false;
+        HYBRID_FUNC_ENTRY ( rcDB, rcIterator, rcAccessing );
+        const KRowSetIterator_v1_vt * vt = KVTABLE_CAST ( TO_REFCOUNT_V1 ( self ) -> vt, ctx, KRowSetIterator );
+        if ( vt == NULL )
+            INTERNAL_ERROR ( xcInterfaceIncorrect, "this object does not support the KRowSetIterator interface" );
+        else
+            return vt -> is_valid ( self );
     }
-    else
-        return self -> vt -> is_valid ( self );
+
+    return false;
 }
 
 /* RowId
@@ -467,13 +448,22 @@ KDB_EXTERN bool CC KRowSetIteratorIsValid ( const KRowSetIterator * self )
  */
 KDB_EXTERN int64_t CC KRowSetIteratorGetRowId ( const KRowSetIterator * self, ctx_t ctx )
 {
-    if ( self == NULL || self -> vt == NULL )
+    if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcDB, rcIterator, rcAccessing );
         INTERNAL_ERROR ( xcSelfNull, "failed to access rowset iterator" );
     }
     else
-        return self -> vt -> get_row_id ( self, ctx );
+    {
+        const KRowSetIterator_v1_vt * vt = KVTABLE_CAST ( TO_REFCOUNT_V1 ( self ) -> vt, ctx, KRowSetIterator );
+        if ( vt == NULL )
+        {
+            FUNC_ENTRY ( ctx, rcDB, rcIterator, rcAccessing );
+            INTERNAL_ERROR ( xcInterfaceIncorrect, "this object does not support the KRowSetIterator interface" );
+        }
+        else
+            return vt -> get_row_id ( self, ctx );
+    }
 
     return -1;
 }

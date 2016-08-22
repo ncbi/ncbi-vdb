@@ -55,10 +55,11 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * forwards
  */
-typedef struct KRowSet_vt KRowSet_vt;
-typedef struct KRowSetIterator_vt KRowSetIterator_vt;
+typedef struct KRowSet_v1_vt KRowSet_v1_vt;
+typedef struct KRowSetIterator_v1_vt KRowSetIterator_v1_vt;
 
 extern KITFTOK_DECL ( KRowSet );
+extern KITFTOK_DECL ( KRowSetIterator );
 
 /*--------------------------------------------------------------------------
  * KRowSet
@@ -66,6 +67,7 @@ extern KITFTOK_DECL ( KRowSet );
 struct KRowSet
 {
     KRefcount_v1 dad;
+    struct KTable * table;
 
     /* "morphable" state */
     KROWSET_DATA * data;
@@ -73,9 +75,9 @@ struct KRowSet
 
 
 /*--------------------------------------------------------------------------
- * KRowSet_vt
+ * KRowSet_v1_vt
  */
-struct KRowSet_vt
+struct KRowSet_v1_vt
 {
     KVTable dad;
 
@@ -92,8 +94,8 @@ struct KRowSet_vt
 /* Init
  *  initialize a newly allocated RowSet object
  */
-KDB_EXTERN void CC KRowSetInit ( struct KRowSet *self, ctx_t ctx, const KVTable *vt,
-    const char *classname, const char *name );
+KDB_EXTERN void CC KRowSetInit ( struct KRowSet *self, ctx_t ctx, const KVTable *kvt,
+    const char *classname );
 
 /* MakeRowSet
  *  create specific instance of a rowset
@@ -105,33 +107,28 @@ KDB_EXTERN KRowSet * CC KTableMakeRowSetSimple ( struct KTable const * self, ctx
  */
 struct KRowSetIterator
 {
-    const KRowSetIterator_vt *vt;
-    KRefcount refcount;
+    KRefcount_v1 dad;
 };
 
 /*--------------------------------------------------------------------------
- * KRowSetIterator_vt
+ * KRowSetIterator_v1_vt
  */
-struct KRowSetIterator_vt
+struct KRowSetIterator_v1_vt
 {
-    /* version == 1.x */
-    uint32_t maj;
-    uint32_t min;
+    KVTable dad;
 
     /* start minor version == 0 */
-    void ( CC * destroy ) ( struct KROWSET_IT * self, ctx_t ctx );
     bool ( CC * next ) ( struct KROWSET_IT * self, ctx_t ctx );
     bool ( CC * is_valid ) ( const struct KROWSET_IT * self );
     int64_t ( CC * get_row_id ) ( const struct KROWSET_IT * self, ctx_t ctx );
-    // TODO: add checks for all fn to KRowSetIteratorInit
     /* end minor version == 0 */
 };
 
 /* Init
  *  initialize a newly allocated RowSet object
  */
-KDB_EXTERN void CC KRowSetIteratorInit ( struct KRowSetIterator *self, ctx_t ctx, const KRowSetIterator_vt *vt,
-    const char *classname, const char *name );
+KDB_EXTERN void CC KRowSetIteratorInit ( struct KRowSetIterator *self, ctx_t ctx, const KVTable *kvt,
+    const char *classname );
 
 
 #ifdef __cplusplus

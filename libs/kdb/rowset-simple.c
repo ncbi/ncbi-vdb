@@ -26,8 +26,11 @@
 
 #define KROWSET_IT KRowSetSimpleIterator
 
+#include <kdb/extern.h>
+
 #include <kdb/rowset.h>
 #include <kdb/rowset-impl.h>
+#include <kdb/table.h>
 #include <kfc/ctx.h>
 #include <kfc/except.h>
 #include <kfc/xc.h>
@@ -241,11 +244,14 @@ void CC KRowSetSimpleDestroy ( KRefcount_v1 *self_refcount, ctx_t ctx )
 
     KRowSet * self = (KRowSet *)self_refcount;
 
-    const KRowSet_vt * vt = KVTABLE_CAST ( TO_REFCOUNT_V1 ( self ) -> vt, ctx, KRowSet );
+    const KRowSet_v1_vt * vt = KVTABLE_CAST ( TO_REFCOUNT_V1 ( self ) -> vt, ctx, KRowSet );
     if ( vt == NULL )
         INTERNAL_ERROR ( xcInterfaceIncorrect, "this object does not support the KRowSet interface" );
     else
     {
+        KTableRelease ( self -> table );
+        self -> table = NULL;
+
         assert ( vt != NULL );
         assert ( vt -> destroy_data != NULL );
 
@@ -254,8 +260,6 @@ void CC KRowSetSimpleDestroy ( KRefcount_v1 *self_refcount, ctx_t ctx )
     }
 }
 
-KITFTOK_DEF ( KRowSet );
-
 static KRefcount_v1_vt vtKRowSetSimpleRefCount =
 {
     KVTABLE_INITIALIZER ( KRowSetSimpleRefCount, KRefcount_v1, 0, NULL ),
@@ -263,7 +267,7 @@ static KRefcount_v1_vt vtKRowSetSimpleRefCount =
     NULL
 };
 
-static KRowSet_vt vtKRowSetSimple =
+static KRowSet_v1_vt vtKRowSetSimple =
 {
     KVTABLE_INITIALIZER ( KRowSetSimple, KRowSet, 0, &vtKRowSetSimpleRefCount.dad ),
 
@@ -277,21 +281,32 @@ static KRowSet_vt vtKRowSetSimple =
 KDB_EXTERN KRowSet * CC KTableMakeRowSetSimple ( struct KTable const * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcConstructing );
-    KRowSet *r;
-
-    r = calloc ( 1, sizeof *r );
-    if ( r == NULL )
-        SYSTEM_ERROR ( xcNoMemory, "out of memory" );
+    if ( self == NULL )
+        INTERNAL_ERROR ( xcSelfNull, "failed to construct rowset: table is NULL" );
     else
     {
-        TRY ( KRowSetInit ( r, ctx, &vtKRowSetSimple.dad, "KRowSetSimple", "KRowSetSimple" ) )
+        KRowSet *r;
+
+        r = calloc ( 1, sizeof *r );
+        if ( r == NULL )
+            SYSTEM_ERROR ( xcNoMemory, "out of memory" );
+        else
         {
-            TRY ( r->data = KRowSetSimpleAllocateData ( ctx, 16 ) )
+            TRY ( KRowSetInit ( r, ctx, &vtKRowSetSimple.dad, "KRowSetSimple" ) )
             {
-                return r;
+                TRY ( r -> data = KRowSetSimpleAllocateData ( ctx, 16 ) )
+                {
+                    rc_t rc;
+                    r -> table = self;
+                    rc = KTableAddRef ( r -> table );
+                    if ( rc != 0 )
+                        INTERNAL_ERROR ( xcUnexpected, "unknown result from KTableAddRef: rc = %R", rc );
+                    else
+                        return r;
+                }
             }
+            free ( r );
         }
-        free ( r );
     }
 
     return NULL;
@@ -310,8 +325,9 @@ struct KRowSetSimpleIterator
 };
 
 static
-void CC KRowSetSimpleIteratorDestroy ( KRowSetSimpleIterator *self, ctx_t ctx )
+void CC KRowSetSimpleIteratorDestroy ( KRefcount_v1 *self_refcount, ctx_t ctx )
 {
+    KRowSetSimpleIterator * self = (KRowSetSimpleIterator *)self_refcount;
     if ( self == NULL || self -> rowset == NULL )
     {
         FUNC_ENTRY ( ctx, rcDB, rcIterator, rcDestroying );
@@ -363,11 +379,17 @@ int64_t CC KRowSetSimpleIteratorGetRowId ( const struct KRowSetSimpleIterator * 
     return self -> rowset_data -> rows_array[self -> array_index];
 }
 
-static KRowSetIterator_vt vtKRowSetIteratorSimple =
+static KRefcount_v1_vt vtKRowSetIteratorSimpleRefCount =
 {
-    1, 0,
-
+    KVTABLE_INITIALIZER ( KRowSetIteratorSimpleRefCount, KRefcount_v1, 0, NULL ),
     KRowSetSimpleIteratorDestroy,
+    NULL
+};
+
+static KRowSetIterator_v1_vt vtKRowSetIteratorSimple =
+{
+    KVTABLE_INITIALIZER ( KRowSetIteratorSimple, KRowSetIterator, 0, &vtKRowSetIteratorSimpleRefCount.dad ),
+
     KRowSetSimpleIteratorNext,
     KRowSetSimpleIteratorIsValid,
     KRowSetSimpleIteratorGetRowId
@@ -388,7 +410,7 @@ KRowSetSimpleIterator * CC KRowSetSimpleGetIterator ( const struct KRowSet * sel
             SYSTEM_ERROR ( xcNoMemory, "out of memory" );
         else
         {
-            TRY ( KRowSetIteratorInit ( &r -> dad, ctx, ( const KRowSetIterator_vt * ) &vtKRowSetIteratorSimple, "KRowSetSimpleIterator", "KRowSetSimpleIterator" ) )
+            TRY ( KRowSetIteratorInit ( &r -> dad, ctx, &vtKRowSetIteratorSimple.dad, "KRowSetIteratorSimple" ) )
             {
                 KRowSetSimpleDataSort ( self -> data ); /* make sure rowset is sorted */
                 r -> rowset_data = self -> data;

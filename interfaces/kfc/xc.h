@@ -183,6 +183,7 @@ XC ( xcSecondaryAlignmentMissingPrimary, xoAlignment, xsNoPrimary );
 XC ( xcInterfaceBadVersion, xoInterface, xsBadVersion );
 XC ( xcRefcountViolated, xoRefcount, xsViolated );
 XC ( xcSelfInvalid, xoSelf, xsInvalid );
+XC ( xcParamIncorrect, xoParam, xsIncorrect );
 
 #ifdef __cplusplus
 }

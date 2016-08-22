@@ -141,22 +141,21 @@ typedef struct KRowSetIterator KRowSetIterator;
 KDB_EXTERN KRowSetIterator * CC KRowSetMakeIterator ( const KRowSet * self, ctx_t ctx );
 
 
-/* AddRef
+/* Duplicate
  * Release
  *  ignores NULL references
  */
-//#error "fix me"
-KDB_EXTERN void CC KRowSetIteratorAddRef ( const KRowSetIterator * self, ctx_t ctx );
-KDB_EXTERN void CC KRowSetIteratorRelease ( const KRowSetIterator * self, ctx_t ctx );
+static __inline__
+KRowSet * KRowSetIteratorDuplicate ( const KRowSetIterator * self, ctx_t ctx, caps_t rm )
+{
+    return ( KRowSet * ) KRefcountDuplicate_v1 ( TO_REFCOUNT_V1 ( self ), ctx, rm );
+}
 
-
-/* First
- * Last
- *  rewind iterator to first or last item in set
- */
-//KDB_EXTERN void CC KRowSetIteratorFirst ( KRowSetIterator * self, ctx_t ctx );
-//KDB_EXTERN void CC KRowSetIteratorLast ( KRowSetIterator * self, ctx_t ctx );
-
+static __inline__
+void KRowSetIteratorRelease ( const KRowSetIterator * self, ctx_t ctx )
+{
+    KRefcountRelease_v1 ( TO_REFCOUNT_V1 ( self ), ctx );
+}
 
 /* Next
  *  advance iterator to next row-id
@@ -166,17 +165,6 @@ KDB_EXTERN void CC KRowSetIteratorRelease ( const KRowSetIterator * self, ctx_t 
  *  returns false if no more row-ids are available.
  */
 KDB_EXTERN bool CC KRowSetIteratorNext ( KRowSetIterator * self, ctx_t ctx );
-
-
-/* Prev
- *  advance iterator to previous row-id
-
- *  advance to last row-id on initial invocation
- *  advance to prev row-id subsequently
- *  returns rcDone if no more row-ids are available.
- */
-//KDB_EXTERN void CC KRowSetIteratorPrev ( KRowSetIterator * self, ctx_t ctx );
-
 
 /*IsValid
  * check if iterator points to a valid row

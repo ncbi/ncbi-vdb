@@ -78,7 +78,7 @@ TEST_ROWSET_OBJ = \
 TEST_ROWSET_LIB = \
 	-skapp \
 	-sktst \
-	-sncbi-vdb
+	-sncbi-wvdb
 
 $(TEST_BINDIR)/test-rowset: $(TEST_ROWSET_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_ROWSET_LIB)
