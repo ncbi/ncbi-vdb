@@ -181,7 +181,7 @@ void KVTableResolve ( const KVTable * cself, ctx_t ctx )
         uint32_t idx = KVTableDepth ( self /*, ctx */ );
 
         KHierCache * cache;
-        size_t bytes = sizeof * cache - sizeof cache -> parent + idx + sizeof cache -> parent [ 0 ];
+        size_t bytes = sizeof * cache - sizeof cache -> parent + idx * sizeof cache -> parent [ 0 ];
 
         cache = malloc ( bytes );
         if ( cache == NULL )
