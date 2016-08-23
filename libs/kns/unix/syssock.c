@@ -211,7 +211,7 @@ rc_t KSocketHandleSocketCall ( int status )
         return RC ( rcNS, rcSocket, rcCreating, rcInterface, rcUnrecognized );
     case EMFILE:
     case ENFILE:
-        return RC ( rcNS, rcSocket, rcCreating, rcFileDesc, rcExcessive );
+        return RC ( rcNS, rcSocket, rcCreating, rcFileDesc, rcExhausted );
     case ENOBUFS:
         return RC ( rcNS, rcSocket, rcCreating, rcBuffer, rcExhausted );
     case ENOMEM:
@@ -250,7 +250,7 @@ rc_t KSocketHandleBindCall ( int status )
     case ENOTSOCK:
         return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcIncorrect );
     case EROFS:
-        return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcReadonly );
+        return RC ( rcNS, rcSocket, rcCreating, rcDirectory, rcReadonly );
     }
 
     return RC ( rcNS, rcSocket, rcCreating, rcError, rcUnknown );
@@ -269,7 +269,7 @@ rc_t KSocketHandleConnectCall ( int status )
     case EADDRNOTAVAIL:
         return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcNotAvailable );
     case EAFNOSUPPORT:
-        return RC ( rcNS, rcSocket, rcCreating, rcInterface, rcIncorrect );
+        return RC ( rcNS, rcSocket, rcCreating, rcInterface, rcUnsupported );
     case EALREADY:
         return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcBusy );
     case EBADF:
@@ -281,9 +281,9 @@ rc_t KSocketHandleConnectCall ( int status )
     case EINPROGRESS:
         return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcBusy );
     case EINTR:
-        return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcInterrupted );
+        return 0;
     case EISCONN:
-        return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcDuplicate );
+        return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcBusy );
     case ENETUNREACH:
         return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcNotAvailable );
     case ENOTSOCK:
@@ -310,10 +310,10 @@ rc_t KSocketHandleAcceptCall ( int status )
     case EINVAL:
         return RC ( rcNS, rcSocket, rcOpening, rcData, rcNotAvailable );
     case EINTR:
-        return RC ( rcNS, rcSocket, rcOpening, rcConnection, rcInterrupted );
+        return 0;
     case EMFILE:
     case ENFILE:
-        return RC ( rcNS, rcSocket, rcOpening, rcFileDesc, rcExcessive );
+        return RC ( rcNS, rcSocket, rcOpening, rcFileDesc, rcExhausted );
     case ENOBUFS:
         return RC ( rcNS, rcSocket, rcOpening, rcBuffer, rcExhausted );
     case ENOMEM:
@@ -322,10 +322,9 @@ rc_t KSocketHandleAcceptCall ( int status )
         return RC ( rcNS, rcSocket, rcOpening, rcSocket, rcIncorrect );
     case EOPNOTSUPP:
         return RC ( rcNS, rcSocket, rcOpening, rcSocket, rcUnsupported );
-    case EPROTO: /* check */
-        return RC ( rcNS, rcSocket, rcOpening, rcInterface, rcUnknown );
+    case EPROTO:
     case EPERM: /* LINUX ONLY */
-        return RC ( rcNS, rcSocket, rcOpening, rcError, rcUnexpected );
+        return RC ( rcNS, rcSocket, rcOpening, rcConstraint, rcViolated );
     }
 
     return RC ( rcNS, rcSocket, rcOpening, rcError, rcUnknown );
@@ -716,11 +715,11 @@ rc_t CC KSocketTimedWrite ( KSocket *self,
             case ENOTSOCK:
                 rc = RC ( rcNS, rcSocket, rcWriting, rcSocket, rcIncorrect );
                 break;
-            case EOPNOTSUPP: /* check */
-                rc = RC ( rcNS, rcSocket, rcWriting, rcParam, rcInvalid );
+            case EOPNOTSUPP:
+                rc = RC ( rcNS, rcSocket, rcWriting, rcParam, rcIncorrect );
                 break;
-            case EPIPE: /* check */
-                rc = RC ( rcNS, rcSocket, rcWriting, rcConnection, rcNoErr );
+            case EPIPE:
+                rc = RC ( rcNS, rcSocket, rcWriting, rcConnection, rcInterrupted );
                 break;
             default:
                 rc = RC ( rcNS, rcSocket, rcWriting, rcError, rcUnknown );
@@ -783,6 +782,7 @@ rc_t KSocketMakePath ( const char * name, char * buf, size_t buf_size )
 {
     size_t num_writ;
 #if 0
+    rc_t rc;
     struct passwd* pwd;
     errno = 0; /* man page claims errno should be set to 0 before call if wanting to check after */
     pwd = getpwuid ( geteuid () );
@@ -792,26 +792,26 @@ rc_t KSocketMakePath ( const char * name, char * buf, size_t buf_size )
         switch ( errno )
         {
         case EBADF:
-            rc = RC ( rcNS, rcSocket, rcAccessing, rcFormat, rcInvalid );
+            rc = RC ( rcNS, rcFile, rcAccessing, rcFormat, rcInvalid );
             break;
         case EINTR:
-            rc = RC ( rcNS, rcSocket, rcAccessing, rcConnection, rcInterrupted );
+            rc = RC ( rcNS, rcFile, rcAccessing, rcConnection, rcInterrupted );
             break;
         case EIO:
-            rc = RC ( rcNS, rcSocket, rcAccessing, rcNoObj, rcUndefined);
+            rc = RC ( rcNS, rcFile, rcAccessing, rcNoObj, rcUndefined);
             break;
         case EMFILE:
         case ENFILE:
-            rc = RC ( rcNS, rcSocket, rcAccessing, rcFileDesc, rcExcessive );
+            rc = RC ( rcNS, rcFile, rcAccessing, rcFileDesc, rcExhausted );
             break;
         case ENOMEM:
-            rc = RC ( rcNS, rcSocket, rcAccessing, rcMemory, rcExhausted );
+            rc = RC ( rcNS, rcFile, rcAccessing, rcMemory, rcExhausted );
             break;
         case ERANGE:
-            rc = RC ( rcNS, rcSocket, rcAccessing, rcBuffer, rcInsufficient );
+            rc = RC ( rcNS, rcFile, rcAccessing, rcBuffer, rcInsufficient );
             break;
         default:
-            rc = RC ( rcNS, rcSocket, rcAccessing, rcError, rcUnknown );
+            rc = RC ( rcNS, rcFile, rcAccessing, rcError, rcUnknown );
             break;
         }
 
@@ -868,6 +868,7 @@ rc_t KSocketConnectIPv4 ( KSocket *self, int32_t retryTimeout, const KEndPoint *
             {
                 /* connect */
                 if ( connect ( self -> fd, ( struct sockaddr* ) & ss_to, sizeof ss_to ) != 0 )
+#warning "have an issue with EINTR here and other places"
                     rc = KSocketHandleConnectCall ( errno );
                 else
                 {
@@ -884,7 +885,6 @@ rc_t KSocketConnectIPv4 ( KSocket *self, int32_t retryTimeout, const KEndPoint *
         }
         
         /* rc != 0 */
-        assert ( rc != 0 );
         if (retryTimeout < 0 || retry_count < retryTimeout)
         {   /* retry */
             sleep ( 1 );
