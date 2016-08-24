@@ -67,7 +67,7 @@ extern KITFTOK_DECL ( KRowSetIterator );
 struct KRowSet
 {
     KRefcount_v1 dad;
-    struct KTable * table;
+    const struct KTable * table;
 
     /* "morphable" state */
     KROWSET_DATA * data;

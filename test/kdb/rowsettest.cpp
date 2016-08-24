@@ -239,7 +239,14 @@ private:
         KRowSetVisit ( rowset, m_ctx, vector_inserter, (void *)&returned_rows );
         THROW_IF_FAILED ( "Failed to iterate over rowset" );
 
-        std::copy(inserted_rows_set.begin(), inserted_rows_set.end(), std::back_inserter(inserted_rows));
+        for (std::set<int64_t>::iterator it = inserted_rows_set.begin(); it != inserted_rows_set.end(); ++it)
+        {
+            bool has_row = KRowSetHasRowId ( rowset, m_ctx, *it );
+            THROW_IF_FAILED ( "Failed to check a row in rowset" );
+            if ( ! has_row )
+                FAIL("Row is not found in rowset");
+            inserted_rows . push_back ( *it );
+        }
 
         num_rows = KRowSetGetNumRowIds( rowset, m_ctx );
         THROW_IF_FAILED ( "Failed to get number of row ids in rowset" );
@@ -280,8 +287,12 @@ FIXTURE_TEST_CASE ( KRowSetScatteredRows, RowSetFixture )
     ENTRY;
     KRowSet * rowset;
     std::set<int64_t> inserted_rows_set;
+    bool has_row;
 
     REQUIRE_EXPR ( rowset = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
+
+    REQUIRE_EXPR ( has_row = KRowSetHasRowId ( rowset, ctx, 1 ) );
+    REQUIRE ( ! has_row );
 
     inserted_rows_set = InsertRandomRows ( rowset, 10000, -1 );
     RunChecks ( rowset, inserted_rows_set );
@@ -336,13 +347,13 @@ FIXTURE_TEST_CASE ( KRowSetRowRanges, RowSetFixture )
 
     REQUIRE_EXPR ( rowset = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
 
-    for ( int i = 0; i < sizeof row_ids / sizeof row_ids[0]; ++i )
+    for ( size_t i = 0; i < sizeof row_ids / sizeof row_ids[0]; ++i )
     {
         int64_t row_id = row_ids[i];
         uint64_t count = counts[i];
 
         REQUIRE_EXPR ( KRowSetAddRowIdRange ( rowset, ctx, row_id, count ) );
-        for ( int j = 0; j < count; ++j )
+        for ( uint64_t j = 0; j < count; ++j )
             inserted_rows_set.insert( row_id + j );
     }
     RunChecks ( rowset, inserted_rows_set );
@@ -365,23 +376,23 @@ FIXTURE_TEST_CASE ( KRowSetRowRangesOverlapDuplicates, RowSetFixture )
 
     REQUIRE_EXPR ( rowset = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
 
-    for ( int i = 0; i < sizeof row_ids / sizeof row_ids[0]; ++i )
+    for ( size_t i = 0; i < sizeof row_ids / sizeof row_ids[0]; ++i )
     {
         int64_t row_id = row_ids[i];
         uint64_t count = counts[i];
 
         REQUIRE_EXPR ( KRowSetAddRowIdRange ( rowset, ctx, row_id, count ) );
-        for ( int j = 0; j < count; ++j )
+        for ( uint64_t j = 0; j < count; ++j )
             inserted_rows_set.insert( row_id + j );
     }
 
-    for ( int i = 0; i < sizeof overlap_row_ids / sizeof overlap_row_ids[0]; ++i )
+    for ( size_t i = 0; i < sizeof overlap_row_ids / sizeof overlap_row_ids[0]; ++i )
     {
         int64_t row_id = overlap_row_ids[i];
         uint64_t count = overlap_counts[i];
 
         REQUIRE_EXPR ( KRowSetAddRowIdRange ( rowset, ctx, row_id, count ) );
-        for ( int j = 0; j < count; ++j )
+        for ( uint64_t j = 0; j < count; ++j )
             inserted_rows_set.insert( row_id + j );
     }
     RunChecks ( rowset, inserted_rows_set );
@@ -404,23 +415,23 @@ FIXTURE_TEST_CASE ( KRowSetRowRangesDenseOverlapDuplicates, RowSetFixture )
 
     REQUIRE_EXPR ( rowset = KTableMakeRowSet ( GetTable ( GetName() ), ctx ) );
 
-    for ( int i = 0; i < sizeof row_ids / sizeof row_ids[0]; ++i )
+    for ( size_t i = 0; i < sizeof row_ids / sizeof row_ids[0]; ++i )
     {
         int64_t row_id = row_ids[i];
         uint64_t count = counts[i];
 
         REQUIRE_EXPR ( KRowSetAddRowIdRange ( rowset, ctx, row_id, count ) );
-        for ( int j = 0; j < count; ++j )
+        for ( uint64_t j = 0; j < count; ++j )
             inserted_rows_set.insert( row_id + j );
     }
 
-    for ( int i = 0; i < sizeof overlap_row_ids / sizeof overlap_row_ids[0]; ++i )
+    for ( size_t i = 0; i < sizeof overlap_row_ids / sizeof overlap_row_ids[0]; ++i )
     {
         int64_t row_id = overlap_row_ids[i];
         uint64_t count = overlap_counts[i];
 
         REQUIRE_EXPR ( KRowSetAddRowIdRange ( rowset, ctx, row_id, count ) );
-        for ( int j = 0; j < count; ++j )
+        for ( uint64_t j = 0; j < count; ++j )
             inserted_rows_set.insert( row_id + j );
 
     }
@@ -430,11 +441,9 @@ FIXTURE_TEST_CASE ( KRowSetRowRangesDenseOverlapDuplicates, RowSetFixture )
     EXIT;
 }
 
-//FIXTURE_TEST_CASE ( KRowSetIteratorOutOfBoundaries, RowSetFixture )
 FIXTURE_TEST_CASE ( KRowSetIterator, RowSetFixture )
 {
     ENTRY;
-//    const int move_out_boundaries = 2;
 
     KRowSet * rowset;
 
@@ -456,6 +465,13 @@ FIXTURE_TEST_CASE ( KRowSetIterator, RowSetFixture )
     REQUIRE ( KRowSetIteratorIsValid ( it ) );
     REQUIRE_EXPR ( row_id_retrieved = KRowSetIteratorGetRowId ( it, ctx ) );
     REQUIRE_EQ ( row_id_inserted, row_id_retrieved );
+
+    bool has_row;
+    REQUIRE_EXPR ( has_row = KRowSetIteratorNext ( it, ctx ) );
+    REQUIRE ( ! has_row );
+    REQUIRE ( ! KRowSetIteratorIsValid ( it ) );
+    REQUIRE_EXPR_FAILED ( KRowSetIteratorGetRowId ( it, ctx ) );
+    REQUIRE_EXPR_FAILED ( KRowSetIteratorNext ( it, ctx ) );
 
 //    // move forward out of boundaries and then move back
 //    for ( int i = 0; i < move_out_boundaries; ++i )

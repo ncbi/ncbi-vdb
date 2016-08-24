@@ -321,7 +321,7 @@ struct KRowSetSimpleIterator
     KRowSetIterator dad;
     const KRowSet * rowset;
     const KRowSetSimpleData * rowset_data;
-    int64_t array_index;
+    uint64_t array_index;
 };
 
 static
@@ -347,6 +347,11 @@ bool CC KRowSetSimpleIteratorNext ( struct KRowSetSimpleIterator * self, ctx_t c
         FUNC_ENTRY ( ctx, rcDB, rcIterator, rcPositioning );
         INTERNAL_ERROR ( xcSelfNull, "failed to move rowset iterator" );
     }
+    else if ( self -> array_index == self -> rowset_data -> num_rows )
+    {
+        FUNC_ENTRY ( ctx, rcDB, rcIterator, rcPositioning );
+        INTERNAL_ERROR ( xcIteratorExhausted, "failed to move rowset iterator - no more elements" );
+    }
     else
         return ++self -> array_index < self -> rowset_data -> num_rows;
 
@@ -359,7 +364,7 @@ bool CC KRowSetSimpleIteratorIsValid ( const struct KRowSetSimpleIterator * self
     if (self == NULL || self -> rowset_data == NULL || self -> rowset == NULL || self -> rowset_data != self -> rowset -> data )
         return false;
 
-    return self -> array_index >= 0 && self -> array_index < self -> rowset_data -> num_rows;
+    return self -> array_index < self -> rowset_data -> num_rows;
 }
 
 static

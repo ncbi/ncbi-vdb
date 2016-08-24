@@ -145,6 +145,31 @@ KDB_EXTERN uint64_t CC KRowSetGetNumRowIds ( const KRowSet * self, ctx_t ctx )
     return 0;
 }
 
+/* HasRowId
+ *  checks if element is present in set
+ */
+KDB_EXTERN bool CC KRowSetHasRowId ( const KRowSet * self, ctx_t ctx, int64_t row_id )
+{
+    if ( self == NULL )
+    {
+        FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcAccessing );
+        INTERNAL_ERROR ( xcSelfNull, "failed to find row in rowset" );
+    }
+    else
+    {
+        const KRowSet_v1_vt * vt = KVTABLE_CAST ( TO_REFCOUNT_V1 ( self ) -> vt, ctx, KRowSet );
+        if ( vt == NULL )
+        {
+            FUNC_ENTRY ( ctx, rcDB, rcRowSet, rcAccessing );
+            INTERNAL_ERROR ( xcInterfaceIncorrect, "this object does not support the KRowSet interface" );
+        }
+        else
+            return vt -> has_row_id ( self, ctx, row_id );
+    }
+
+    return false;
+}
+
 /* Visit
  *  execute a function on each row-id in set
  */
