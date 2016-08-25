@@ -27,12 +27,12 @@
 #include <vfs/extern.h>
 
 #include "path-priv.h"
-#include "resolver-priv.h" /* VResolverGetProjectId */
+#include "resolver-priv.h"
 
 #include <sra/srapath.h>
 
 #include <vfs/manager.h>
-#include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
+#include <vfs/manager-priv.h>
 #include <vfs/path.h>
 #include <vfs/path-priv.h>
 #include <vfs/resolver.h>
@@ -61,12 +61,12 @@
 #include <kfs/lockfile.h>
 
 #include <kns/http.h>
-#include <kns/kns-mgr-priv.h> /* KNSManagerMakeReliableHttpFile */
+#include <kns/kns-mgr-priv.h>
 #include <kns/manager.h>
 
 #include <kxml/xml.h>
 
-#include <klib/debug.h> /* DBGMSG */
+#include <klib/debug.h>
 #include <klib/log.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
@@ -84,7 +84,7 @@
 #include <assert.h>
 
 
-#ifdef _DEBUGGING
+#if _DEBUGGING
 #define MGR_DEBUG(msg) DBGMSG(DBG_VFS,DBG_FLAG(DBG_VFS_MGR), msg)
 #else
 #define MGR_DEBUG(msg)
@@ -125,6 +125,8 @@ struct VFSManager
     struct KKeyStore* keystore;
 
     KRefcount refcount;
+
+    VRemoteProtocols protocols;
 };
 
 static const char kfsmanager_classname [] = "VFSManager";
@@ -522,7 +524,7 @@ static rc_t VFSManagerResolvePathResolver (const VFSManager * self,
             
         if (not_done && ((flags & vfsmgr_rflag_no_acc_remote) == 0))
         {
-            rc = VResolverRemote (self->resolver, eProtocolHttp,
+            rc = VResolverRemote (self->resolver, self -> protocols,
                 in_path, (const VPath **)out_path);
         }
     }
@@ -626,6 +628,7 @@ static rc_t VFSManagerResolvePathInt (const VFSManager * self,
 
         /* these are considered fully resolved already */
     case vpuri_http:
+    case vpuri_https:
     case vpuri_ftp:
         rc = VPathAddRef (in_path);
         if (rc == 0)
@@ -1245,6 +1248,7 @@ LIB_EXPORT rc_t CC VFSManagerOpenFileRead ( const VFSManager *self,
                     break;
 
                 case vpuri_http:
+                case vpuri_https:
                 case vpuri_ftp:
                     rc = VFSManagerOpenCurlFile ( self, f, path );
                     break;
@@ -1285,6 +1289,7 @@ rc_t CC VFSManagerOpenDirectoryUpdateDirectoryRelative (const VFSManager *self,
     switch ( uri_type )
     {
     case vpuri_http :
+    case vpuri_https:
     case vpuri_ftp :
         return RC( rcVFS, rcMgr, rcOpening, rcParam, rcWrongType );
 
@@ -1823,6 +1828,7 @@ rc_t VFSManagerOpenDirectoryReadDirectoryRelativeInt (const VFSManager *self,
                 break;
 
             case vpuri_http:
+            case vpuri_https:
             case vpuri_ftp:
                 rc = VFSManagerOpenDirectoryReadHttp ( self, dir, d, path, force_decrypt );
                 break;
@@ -1888,6 +1894,7 @@ rc_t CC VFSManagerOpenDirectoryReadDecryptRemote (const VFSManager *self,
     switch ( VPathGetUri_t ( path ) )
     {
     case vpuri_http:
+    case vpuri_https:
     case vpuri_ftp:
         rc = VFSManagerOpenDirectoryReadHttpResolved ( self, d, path, cache, true );
         break;
@@ -2256,6 +2263,80 @@ LIB_EXPORT rc_t CC VFSManagerRemove ( const VFSManager *self, bool force,
     return rc;
 }
 
+/* RemoteProtocols
+ */
+LIB_EXPORT VRemoteProtocols CC  VRemoteProtocolsParse ( const String * protos )
+{
+    VRemoteProtocols parsed_protos = 0;
+
+    bool have_proto [ eProtocolMask + 1 ];
+
+    size_t i, end;
+    const char * start;
+    String http, https, fasp;
+
+    CONST_STRING ( & http,  "http"  );
+    CONST_STRING ( & https, "https" );
+    CONST_STRING ( & fasp,  "fasp"  );
+
+    end = protos -> size;
+    start = protos -> addr;
+
+    memset ( have_proto, 0, sizeof have_proto );
+
+    for ( i = end; i > 0; )
+    {
+        -- i;
+        if ( i == 0 || start [ i ] == ',' )
+        {
+            VRemoteProtocols parsed_proto = 0;
+
+            /* beginning of protocol string is either 0 or 1 past the comma */
+            size_t begin = ( i == 0 ) ? 0 : i + 1;
+
+            /* capture single protocol string */
+            String proto;
+            StringInit ( & proto, & start [ begin ], end - begin, string_len ( & start [ begin ], end - begin ) );
+
+            /* trim white space */
+            StringTrim ( & proto, & proto );
+
+            /* compare against known protocols */
+            if ( StringCaseEqual ( & http, & proto ) )
+                parsed_proto = eProtocolHttp;
+            else if ( StringCaseEqual ( & https, & proto ) )
+                parsed_proto = eProtocolHttps;
+            else if ( StringCaseEqual ( & fasp, & proto ) )
+                parsed_proto = eProtocolFasp;
+
+            if ( parsed_proto != eProtocolNone && ! have_proto [ parsed_proto ] )
+            {
+                parsed_protos <<= 3;
+                parsed_protos |= parsed_proto;
+                have_proto [ parsed_proto ] = true;
+            }
+
+            end = i;
+        }
+    }
+
+    return parsed_protos;
+}
+
+void KConfigReadRemoteProtocols ( const KConfig * self, VRemoteProtocols * remote_protos )
+{
+    String * protos;
+    rc_t rc = KConfigReadString ( self, "/name-resolver/remote-protocols", & protos );
+    if ( rc == 0 )
+    {
+        VRemoteProtocols parsed_protos = VRemoteProtocolsParse ( protos );
+        if ( parsed_protos != 0 )
+            * remote_protos = parsed_protos;
+
+        StringWhack ( protos );
+    }
+}
+
 /* Make
  */
 LIB_EXPORT rc_t CC VFSManagerMake ( VFSManager ** pmanager )
@@ -2292,6 +2373,9 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
             KRefcountInit (& obj -> refcount, 1,
                 kfsmanager_classname, "init", "singleton" );
 
+            /* hard-coded default */
+            obj -> protocols = eProtocolHttpHttps;
+
             rc = KDirectoryNativeDir ( & obj -> cwd );
             if ( rc == 0 )
             {
@@ -2305,6 +2389,9 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
                 }
                 if ( rc == 0 )
                 {
+                    /* look for remote protocols in configuration */
+                    KConfigReadRemoteProtocols ( obj -> cfg, & obj -> protocols );
+
                     rc = KCipherManagerMake ( & obj -> cipher );
                     if ( rc == 0 )
                     {
@@ -2326,7 +2413,7 @@ LIB_EXPORT rc_t CC VFSManagerMakeFromKfg ( struct VFSManager ** pmanager,
                             }
 
                             *pmanager = singleton = obj;
-       DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_MGR),  ("%s(%p)\n", __FUNCTION__, cfg));
+                            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_MGR),  ("%s(%p)\n", __FUNCTION__, cfg));
                             return 0;
                         }
                     }
@@ -2944,7 +3031,7 @@ static rc_t VFSManagerResolveAcc( const VFSManager * self,
     assert (local_cache);
 
 #if 1
-    rc = VResolverQuery ( self -> resolver, eProtocolHttp, source, & local, & remote, local_cache );
+    rc = VResolverQuery ( self -> resolver, self -> protocols, source, & local, & remote, local_cache );
     if ( rc == 0 )
     {
         assert ( local != NULL || remote != NULL );
@@ -2958,7 +3045,7 @@ static rc_t VFSManagerResolveAcc( const VFSManager * self,
     if ( GetRCState( rc ) == rcNotFound )
     {
         /* if not found localy, try to find it remotely */
-        rc = VResolverRemote ( self->resolver, eProtocolHttp,
+        rc = VResolverRemote ( self->resolver, self -> protocols,
             source, (const VPath **)path_to_build, remote_file );
         if ( rc == 0 && remote_file != NULL && local_cache != NULL )
         {
@@ -3108,6 +3195,7 @@ LIB_EXPORT rc_t CC VFSManagerResolveSpec ( const VFSManager * self,
                                            break;
 
                 case vpuri_http          : /* !! fall through !! */
+                case vpuri_https:
                 case vpuri_ftp           : rc = VFSManagerResolveRemote( self, &temp, path_to_build, remote_file, local_cache );
                                            break;
 
