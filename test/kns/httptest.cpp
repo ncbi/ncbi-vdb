@@ -796,6 +796,7 @@ TEST_CASE(ContentLength) {
     REQUIRE_RC ( KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000,
         NULL, "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" ) ); 
     REQUIRE_RC ( KHttpRequestAddPostParam ( req, "acc=AAAB01" ) );
+    REQUIRE_RC ( KHttpRequestAddPostParam ( req, "accept-proto=http" ) );
     REQUIRE_RC ( KHttpRequestPOST ( req, & rslt ) );
     REQUIRE_RC ( KClientHttpResultStatus ( rslt, & code, NULL, 0, NULL ) );
     REQUIRE_EQ ( code, 200u );
