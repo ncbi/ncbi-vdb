@@ -66,13 +66,6 @@
 #include <os-native.h>
 #include <assert.h>
 
-/* temporary - until we have HTTP/TLS support */
-#if NO_HTTPS_SUPPORT
-#define eProtocolDefaultHttp eProtocolHttp
-#else
-#define eProtocolDefaultHttp eProtocolHttps
-#endif
-
 /* to turn off CGI name resolution for
    any refseq accessions */
 #define NO_REFSEQ_CGI 0
@@ -89,18 +82,18 @@
 #define ALLOW_AUX_REPOSITORIES 0
 
 #define NAME_SERVICE_MAJ_VERS_ 1
-#define NAME_SERVICE_MIN_VERS_ 1
+#define NAME_SERVICE_MIN_VERS_ 2
 #define ONE_DOT_ONE 0x01010000
 static uint32_t NAME_SERVICE_MAJ_VERS = NAME_SERVICE_MAJ_VERS_;
-static uint32_t NAME_SERVICE_MIN_VERS = NAME_SERVICE_MAJ_VERS_;
+static uint32_t NAME_SERVICE_MIN_VERS = NAME_SERVICE_MIN_VERS_;
 static uint32_t NAME_SERVICE_VERS
-    = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MAJ_VERS_ << 16;
+    = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MIN_VERS_ << 16;
 
 static void VFSManagerSetNameResolverVersion(uint32_t maj, uint32_t min) {
     NAME_SERVICE_MAJ_VERS = maj;
     NAME_SERVICE_MIN_VERS = min;
     NAME_SERVICE_VERS
-        = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MAJ_VERS_ << 16;
+        = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MIN_VERS_ << 16;
 }
 void VFSManagerSetNameResolverVersion3_0(void)
 {   VFSManagerSetNameResolverVersion(3, 0); }
@@ -1229,6 +1222,7 @@ typedef enum {
     vBad,
     v1_0,
     v1_1,
+    v1_2,
     v2,
     v3,
 } TVersion;
@@ -1243,6 +1237,7 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
 {
     const char V1_0[] = "#1.0";
     const char V1_1[] = "#1.1";
+    const char V1_2[] = "#1.2";
     const char V2  [] = "#2.0";
     const char V3  [] = "#3.0";
     struct {
@@ -1253,6 +1248,7 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
             const VPath **mapping, const String *acc, const String *ticket);
     } version[] = {
         {V1_1, sizeof V1_1 - 1, v1_1, VResolverAlgParseResolverCGIResponse_1_1},
+        {V1_2, sizeof V1_2 - 1, v1_2, VResolverAlgParseResolverCGIResponse_1_1},
         {V3  , sizeof V3   - 1, v3  , VResolverAlgParseResolverCGIResponse_3_0},
         {V1_0, sizeof V1_0 - 1, v1_0, VResolverAlgParseResolverCGIResponse_1_0},
         {V2  , sizeof V2   - 1, v2  , VResolverAlgParseResolverCGIResponse_2_0},
@@ -1351,72 +1347,52 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
             rc = KHttpRequestAddPostParam ( req, "tic=%S", self -> ticket );
         }
 
-        if ( NAME_SERVICE_VERS >= ONE_DOT_ONE )
+        if ( rc == 0 && NAME_SERVICE_VERS >= ONE_DOT_ONE )
         {
-            if ( rc == 0 )
+            uint32_t i;
+            const char * prefs [ eProtocolMaxPref ];
+            const char * seps [ eProtocolMaxPref ];
+            VRemoteProtocols protos = protocols;
+
+            prefs [ 0 ] = seps [ 0 ] = NULL;
+            prefs [ 1 ] = prefs [ 2 ] = seps [ 1 ] = seps [ 2 ] = "";
+
+            for ( i = 0; protos != 0 && i < sizeof prefs / sizeof prefs [ 0 ]; protos >>= 3 )
             {
-                const char *val;
-                switch ( protocols )
-                {
                 /* 1.1 protocols */
+                switch ( protos & eProtocolMask )
+                {
                 case eProtocolHttp:
-                    val = "http";
+                    prefs [ i ] = "http";
+                    seps [ i ++ ] = ",";
                     break;
                 case eProtocolFasp:
-                    val = "fasp";
+                    prefs [ i ] = "fasp";
+                    seps [ i ++ ] = ",";
                     break;
-                case eProtocolFaspHttp:
-                    val = "fasp,http";
-                    break;
-                case eProtocolHttpFasp:
-                    val = "http,fasp";
-                    break;
-
-                /* new for 1.2 */
-                case eProtocolHttps:
-                    val = "https";
-                    break;
-                case eProtocolHttpsHttp:
-                    val = "https,http";
-                    break;
-                case eProtocolHttpHttps:
-                    val = "http,https";
-                    break;
-                case eProtocolFaspHttps:
-                    val = "fasp,https";
-                    break;
-                case eProtocolHttpsFasp:
-                    val = "https,fasp";
-                    break;
-                case eProtocolFaspHttpHttps:
-                    val = "fasp,http,https";
-                    break;
-                case eProtocolHttpFaspHttps:
-                    val = "http,fasp,https";
-                    break;
-                case eProtocolFaspHttpsHttp:
-                    val = "fasp,https,http";
-                    break;
-                case eProtocolHttpHttpsFasp:
-                    val = "http,https,fasp";
-                    break;
-                case eProtocolHttpsFaspHttp:
-                    val = "https,fasp,http";
-                    break;
-                case eProtocolHttpsHttpFasp:
-                    val = "https,http,fasp";
-                    break;
-
                 default:
-                    val = NULL;
-                    rc = RC ( rcVFS, rcResolver, rcResolving, rcParam, rcInvalid );
+                    if ( NAME_SERVICE_VERS > ONE_DOT_ONE )
+                    {
+                        /* 1.2 protocols */
+                        switch ( protos & eProtocolMask )
+                        {
+                        case eProtocolHttps:
+                            prefs [ i ] = "https";
+                            seps [ i ++ ] = ",";
+                            break;
+                        }
+                    }
                 }
+            }
 
-                if ( rc == 0 )
-                {
-                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("  accept-proto = %s\n", val));
-                    rc = KHttpRequestAddPostParam ( req, "accept-proto=%s", val );
-                }
+            if ( prefs [ 0 ] == NULL )
+                rc = RC ( rcVFS, rcResolver, rcResolving, rcParam, rcInvalid );
+
+            else
+            {
+                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS ),
+                         ("  accept-proto = %s%s%s%s%s\n", prefs [ 0 ], seps [ 1 ], prefs [ 1 ], seps [ 2 ], prefs [ 2 ] ) );
+                rc = KHttpRequestAddPostParam ( req, "accept-proto=%s%s%s%s%s", prefs [ 0 ], seps [ 1 ], prefs [ 1 ], seps [ 2 ], prefs [ 2 ] );
             }
         }
 
@@ -1753,7 +1729,7 @@ struct VResolver
     uint32_t num_app_vols [ appCount ];
 
     /* preferred protocols preferences. Default: HTTP */
-    VRemoteProtocols protocols;
+    VRemoteProtocols protocols, dflt_protocols;
 
     /** projectId of protected user repository;
         0 when repository is not user protected */
@@ -2300,7 +2276,7 @@ LIB_EXPORT
 rc_t CC VResolverLocal ( const VResolver * self,
     const VPath * accession, const VPath ** path )
 {
-    rc_t rc =  VResolverQuery ( self, eProtocolDefaultHttp, accession, path, NULL, NULL );
+    rc_t rc =  VResolverQuery ( self, self -> protocols, accession, path, NULL, NULL );
     if ( rc == 0 )
     {
         switch ( accession -> path_type )
@@ -2832,7 +2808,7 @@ LIB_EXPORT
 rc_t CC VResolverCache ( const VResolver * self,
     const VPath * url, const VPath ** path, uint64_t file_size )
 {
-    return VResolverQuery ( self, eProtocolDefaultHttp, url, NULL, NULL, path );
+    return VResolverQuery ( self, self -> protocols, url, NULL, NULL, path );
 }
 
 /* QueryOID
@@ -3288,6 +3264,9 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
         rc = RC ( rcVFS, rcResolver, rcResolving, rcParam, rcNull );
     else
     {
+        if ( protocols == 0 )
+            protocols = self -> protocols;
+
         if ( local != NULL )
         {
             * local = NULL;
@@ -3297,10 +3276,19 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
 
         if ( remote != NULL )
         {
+            VRemoteProtocols remote_protos;
+
             * remote = NULL;
 
-            if ( protocols >= eProtocolLastDefined )
-                return RC ( rcVFS, rcResolver, rcResolving, rcParam, rcInvalid );
+            if ( protocols > VRemoteProtocolsMake3 ( eProtocolMax, eProtocolMax, eProtocolMax ) )
+                return RC ( rcVFS, rcResolver, rcUpdating, rcParam, rcInvalid );
+
+            for ( remote_protos = protocols; remote_protos != 0; remote_protos >>= 3 )
+            {
+                VRemoteProtocols proto = remote_protos & eProtocolMask;
+                if ( proto == eProtocolNone || proto > eProtocolMax )
+                    return RC ( rcVFS, rcResolver, rcUpdating, rcParam, rcInvalid );
+            }
 
             if ( atomic32_read ( & enable_remote ) == vrAlwaysDisable )
                 remote = NULL;
@@ -3321,6 +3309,15 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
             rc = RC ( rcVFS, rcResolver, rcResolving, rcPath, rcNotFound );
         else
         {
+            uint32_t i;
+
+            /* record requested protocols */
+            bool has_proto [ eProtocolMask + 1 ];
+            memset ( has_proto, 0, sizeof has_proto );
+
+            for ( i = 0; i < eProtocolMaxPref; ++ i )
+                has_proto [ ( ( protocols >> ( i * 3 ) ) & eProtocolMask ) ] = true;
+
             switch ( query -> scheme_type )
             {
             case vpuri_none:
@@ -3332,67 +3329,20 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
 
             case vpuri_http:
                 /* check for all that allow http */
-                switch ( protocols )
-                {
-                case eProtocolHttp:
-                case eProtocolFaspHttp:
-                case eProtocolHttpFasp:
-
-                case eProtocolHttpsHttp:
-                case eProtocolHttpHttps:
-
-                case eProtocolFaspHttpHttps:
-                case eProtocolHttpFaspHttps:
-                case eProtocolFaspHttpsHttp:
-                case eProtocolHttpHttpsFasp:
-                case eProtocolHttpsFaspHttp:
-                case eProtocolHttpsHttpFasp:
-
+                if ( has_proto [ eProtocolHttp ] )
                     return VResolverQueryURL ( self, protocols, query, remote, cache );
-                }
                 return RC ( rcVFS, rcResolver, rcResolving, rcPath, rcIncorrect );
 
             case vpuri_https:
                 /* check for all that allow https */
-                switch ( protocols )
-                {
-                case eProtocolHttps:
-                case eProtocolHttpsHttp:
-                case eProtocolHttpHttps:
-                case eProtocolFaspHttps:
-                case eProtocolHttpsFasp:
-
-                case eProtocolFaspHttpHttps:
-                case eProtocolHttpFaspHttps:
-                case eProtocolFaspHttpsHttp:
-                case eProtocolHttpHttpsFasp:
-                case eProtocolHttpsFaspHttp:
-                case eProtocolHttpsHttpFasp:
-
+                if ( has_proto [ eProtocolHttps ] )
                     return VResolverQueryURL ( self, protocols, query, remote, cache );
-                }
                 return RC ( rcVFS, rcResolver, rcResolving, rcPath, rcIncorrect );
 
             case vpuri_fasp:
                 /* check for all that allow fasp */
-                switch ( protocols )
-                {
-                case eProtocolFasp:
-                case eProtocolFaspHttp:
-                case eProtocolHttpFasp:
-
-                case eProtocolFaspHttps:
-                case eProtocolHttpsFasp:
-
-                case eProtocolFaspHttpHttps:
-                case eProtocolHttpFaspHttps:
-                case eProtocolFaspHttpsHttp:
-                case eProtocolHttpHttpsFasp:
-                case eProtocolHttpsFaspHttp:
-                case eProtocolHttpsHttpFasp:
-
+                if ( has_proto [ eProtocolFasp ] )
                     return VResolverQueryURL ( self, protocols, query, remote, cache );
-                }
                 return RC ( rcVFS, rcResolver, rcResolving, rcPath, rcIncorrect );
 
             default:
@@ -4589,28 +4539,40 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protected,
         VectorReorder ( & self -> remote, VResolverAlgSort, NULL );
     }
 
-    self -> protocols = eProtocolDefaultHttp;
-
     return rc;
 }
 
 LIB_EXPORT
-rc_t CC VResolverProtocols ( VResolver * self,
-    VRemoteProtocols protocols )
+rc_t CC VResolverProtocols ( VResolver * self, VRemoteProtocols protocols )
 {
+    VRemoteProtocols remote_protos;
+
     if ( self == NULL )
         return RC ( rcVFS, rcResolver, rcUpdating, rcSelf, rcNull );
 
-    if ( protocols >= eProtocolLastDefined )
-        return RC ( rcVFS, rcResolver, rcUpdating, rcParam, rcInvalid );
+    if ( protocols == 0)
+        self -> protocols = self -> dflt_protocols;
+    else
+    {
+        if ( protocols > VRemoteProtocolsMake3 ( eProtocolMax, eProtocolMax, eProtocolMax ) )
+            return RC ( rcVFS, rcResolver, rcUpdating, rcParam, rcInvalid );
 
-    self -> protocols = protocols;
+        for ( remote_protos = protocols; remote_protos != 0; remote_protos >>= 3 )
+        {
+            VRemoteProtocols proto = remote_protos & eProtocolMask;
+            if ( proto == eProtocolNone || proto > eProtocolMax )
+                return RC ( rcVFS, rcResolver, rcUpdating, rcParam, rcInvalid );
+        }
+
+        self -> protocols = protocols;
+    }
 
     return 0;
 }
 
 
-rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId ) {
+rc_t VResolverGetProjectId ( const VResolver * self, uint32_t * projectId )
+{
     if ( self == NULL )
         return RC ( rcVFS, rcResolver, rcAccessing, rcSelf, rcNull );
     else if ( projectId == NULL )
@@ -4651,17 +4613,27 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
 
         KRefcountInit ( & obj -> refcount, 1, "VResolver", "make", "resolver" );
 
-        if (mgr != NULL) {
-            rc_t rc = VFSManagerGetKNSMgr(mgr, &kns);
-            if (rc != 0) {
+        if ( mgr != NULL )
+        {
+            rc_t rc = VFSManagerGetKNSMgr ( mgr, & kns );
+            if ( rc != 0 )
+            {
                 rc = 0;
                 kns = NULL;
             }
         }
 
+
+        /* set up protocols */
+        obj -> dflt_protocols = eProtocolHttpHttps;
+        if ( kfg != NULL )
+            KConfigReadRemoteProtocols ( kfg, & obj -> dflt_protocols );
+
+        obj -> protocols = obj -> dflt_protocols;
+
         rc = VResolverLoad ( obj, protected, kfg, kns );
 
-        KNSManagerRelease(kns);
+        KNSManagerRelease ( kns );
         kns = NULL;
 
         KRepositoryProjectId ( protected, & obj -> projectId );
