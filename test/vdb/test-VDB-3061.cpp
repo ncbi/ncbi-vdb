@@ -44,12 +44,64 @@ using namespace std;
 
 TEST_SUITE( VDB_3061 )
 
+char new_home[ 4096 ];
+
+static rc_t create_cache_file( KDirectory * dir, const char * path, const char * sub, const char * name, int64_t age )
+{
+    KFile * f;
+    rc_t rc = KDirectoryCreateFile( dir, &f, false, 0775, kcmInit, "%s/ncbi/%s/%s", path, sub, name );
+    if ( rc == 0 )
+    {
+        KFileRelease( f );
+        
+        KTime_t date = KTimeStamp() - age;
+        rc = KDirectorySetDate ( dir, false, date, "%s/ncbi/%s/%s", path, sub, name );
+    }
+    return rc;
+}
+
+static rc_t create_repo_dirs( KDirectory * dir, const char * path, const char * sub, uint32_t age )
+{
+    rc_t rc = KDirectoryCreateDir( dir, 0775, kcmInit | kcmParents, "%s/ncbi/%s/files", path, sub );
+    if ( rc == 0 )
+        rc = KDirectoryCreateDir( dir, 0775, kcmInit | kcmParents, "%s/ncbi/%s/nannot", path, sub );
+    if ( rc == 0 )
+        rc = KDirectoryCreateDir( dir, 0775, kcmInit | kcmParents, "%s/ncbi/%s/refseq", path, sub );
+    if ( rc == 0 )
+        rc = KDirectoryCreateDir( dir, 0775, kcmInit | kcmParents, "%s/ncbi/%s/sra", path, sub );
+    if ( rc == 0 )
+        rc = KDirectoryCreateDir( dir, 0775, kcmInit | kcmParents, "%s/ncbi/%s/wgs", path, sub );
+    if ( rc == 0 )
+        rc = create_cache_file( dir, path, sub, "/sra/file1.txt", 60 * 60 * 24 * age  );
+    return rc;
+}
+
+
 TEST_CASE( CLEAR_CACHE )
 {
+    /* create a repository-structure equivalent to the config-values, with 3 files in it */
+    KDirectory * dir;
+    REQUIRE_RC( KDirectoryNativeDir( &dir ) );
+    REQUIRE_RC( create_repo_dirs( dir, new_home, "public", 10 ) ); /* 10 days old */
+    REQUIRE_RC( create_repo_dirs( dir, new_home, "dbGaP-2956", 4 ) ); /* 4 days old */
+    REQUIRE_RC( create_repo_dirs( dir, new_home, "dbGaP-4831", 5 ) ); /* 5 days old*/
+    REQUIRE_RC( KDirectoryRelease ( dir ) );
+    
+    /* we run the new function VDBManagerDeleteCacheOlderThan() with a 5-day threshold */
     const VDBManager * vdb_mgr;
     REQUIRE_RC( VDBManagerMakeRead( &vdb_mgr, NULL ) );
     REQUIRE_RC( VDBManagerDeleteCacheOlderThan ( vdb_mgr, 5 ) );
     REQUIRE_RC( VDBManagerRelease ( vdb_mgr ) );
+
+    /* now the 10 day old one should have disappeared, the other 2 are still there */
+    REQUIRE_RC( KDirectoryNativeDir( &dir ) );
+    uint32_t pt1 = KDirectoryPathType( dir, "%s/ncbi/public/sra/file1.txt", new_home );
+    REQUIRE_EQ( pt1, (uint32_t)kptNotFound );
+    uint32_t pt2 = KDirectoryPathType( dir, "%s/ncbi/dbGaP-2956/sra/file1.txt", new_home );
+    REQUIRE_EQ( pt2, (uint32_t)kptFile );
+    uint32_t pt3 = KDirectoryPathType( dir, "%s/ncbi/dbGaP-4831/sra/file1.txt", new_home );
+    REQUIRE_EQ( pt3, (uint32_t)kptFile );
+    REQUIRE_RC( KDirectoryRelease ( dir ) );
 }
 
 static rc_t write_root( KConfig *cfg, const char * base, const char * cat, const char * sub_cat )
@@ -98,40 +150,8 @@ static rc_t create_test_config( const char * base )
     return rc;
 }
 
-static rc_t create_cache_file( KDirectory * dir, const char * path, const char * sub, const char * name, int64_t age )
-{
-    KFile * f;
-    rc_t rc = KDirectoryCreateFile( dir, &f, false, 0775, kcmInit, "%s/ncbi/%s/%s", path, sub, name );
-    if ( rc == 0 )
-    {
-        KFileRelease( f );
-        
-        KTime_t date = KTimeStamp() - age;
-        rc = KDirectorySetDate ( dir, false, date, "%s/ncbi/%s/%s", path, sub, name );
-    }
-    return rc;
-}
-
-static rc_t create_repo_dirs( KDirectory * dir, const char * path, const char * sub, uint32_t age )
-{
-    rc_t rc = KDirectoryCreateDir( dir, 0775, kcmInit | kcmParents, "%s/ncbi/%s/files", path, sub );
-    if ( rc == 0 )
-        rc = KDirectoryCreateDir( dir, 0775, kcmInit | kcmParents, "%s/ncbi/%s/nannot", path, sub );
-    if ( rc == 0 )
-        rc = KDirectoryCreateDir( dir, 0775, kcmInit | kcmParents, "%s/ncbi/%s/refseq", path, sub );
-    if ( rc == 0 )
-        rc = KDirectoryCreateDir( dir, 0775, kcmInit | kcmParents, "%s/ncbi/%s/sra", path, sub );
-    if ( rc == 0 )
-        rc = KDirectoryCreateDir( dir, 0775, kcmInit | kcmParents, "%s/ncbi/%s/wgs", path, sub );
-    if ( rc == 0 )
-        rc = create_cache_file( dir, path, sub, "/sra/file1.txt", 60 * 60 * 24 * age  );
-    return rc;
-}
-
 char * org_home;
-char new_home[ 4096 ];
 char new_home_buffer[ 4096 ]; /* buffer for putenv has to stay alive! */
-
 
 static rc_t prepare_test( const char * sub )
 {
@@ -144,25 +164,6 @@ static rc_t prepare_test( const char * sub )
         rc = putenv( new_home_buffer );
     if ( rc == 0 )
         rc = create_test_config( new_home );
-    /* 
-        now create the sub-directories,
-        fill it's ncbi/public ncbi/dbGap-XXXX subdirs with files 
-        give these files different ages
-    */
-    if ( rc == 0 )
-    {
-        KDirectory * dir;
-        rc = KDirectoryNativeDir( &dir );
-        if ( rc == 0 )
-        {
-            rc = create_repo_dirs( dir, new_home, "public", 10 );
-            if ( rc == 0 )
-                rc = create_repo_dirs( dir, new_home, "dbGaP-2956", 4 );
-            if ( rc == 0 )
-                rc = create_repo_dirs( dir, new_home, "dbGaP-4831", 4 );
-            KDirectoryRelease( dir );
-        }
-    }
     return rc;
 }
 
@@ -195,7 +196,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     rc_t rc = prepare_test( HomeSub );
     if ( rc == 0 )
         rc = VDB_3061( argc, argv );
-    //finish_test( HomeSub );
+    finish_test( HomeSub );
     return rc;
 }
 
