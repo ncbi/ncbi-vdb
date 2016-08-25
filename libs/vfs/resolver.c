@@ -4119,7 +4119,7 @@ rc_t VResolverForceRemoteRefseq ( VResolver *self )
         return 0;
 
     /* create one from hard-coded constants */
-    StringInitCString ( & local_root, "http://ftp-trace.ncbi.nlm.nih.gov/sra" );
+    StringInitCString ( & local_root, "https://ftp-trace.ncbi.nlm.nih.gov/sra" );
     rc = StringCopy ( & root, & local_root );    
     if ( rc == 0 )
     {
@@ -4183,7 +4183,7 @@ rc_t VResolverForceRemoteProtected ( VResolver *self )
 
     /* create one from hard-coded constants */
     String cgi_root;
-    StringInitCString ( & cgi_root, "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+    StringInitCString ( & cgi_root, "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
     rc = StringCopy ( & root, & cgi_root );    
     if ( rc == 0 )
     {
