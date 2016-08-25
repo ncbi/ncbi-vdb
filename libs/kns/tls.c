@@ -35,6 +35,7 @@ struct KTLSStream;
 #include <klib/rc.h>
 #include <klib/status.h>
 #include <klib/debug.h>
+#include <klib/log.h>
 #include <klib/text.h>
 #include <kproc/timeout.h>
 
@@ -65,6 +66,31 @@ struct KTLSStream;
 #include <mbedtls/certs.h>
 
 
+/*****************************
+ *******     NOTES     *******
+
+  1. catch MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY where it can occur
+  2. update STATUS() calls to have a reasonable level ( see <klib/status.h> )
+  3. change use of STATUS() on error to PLOGERR()
+  4. check the PLOGERR() messages to make sure they will read well
+  5. finish translating RC to mbedtls error codes and back
+  6. update Windows syssock.c for RC
+
+*****************************/
+
+
+/*--------------------------------------------------------------------------
+ * mbedtls_strerror
+ */
+
+static
+const char * mbedtls_strerror2 ( int err )
+{
+    static char buffer [ 256 ];
+    mbedtls_strerror ( err, buffer, sizeof buffer );
+    return buffer;
+}
+
 /*--------------------------------------------------------------------------
  * KTLSGlobals
  */
@@ -83,8 +109,14 @@ rc_t tlsg_seed_rng ( KTLSGlobals *self )
 
     if ( ret != 0 )
     {
-        STATUS ( 0, "failed...seed returned %d\n", ret );
-        return RC ( rcKrypto, rcRng, rcInitializing, rcSeed, rcFailed );
+        rc_t rc = RC ( rcKrypto, rcRng, rcInitializing, rcSeed, rcFailed );
+        PLOGERR ( klogSys, ( klogSys, rc
+                             , "mbedtls_ctr_drbg_seed returned $(ret) ( $(expl) )"
+                             , "ret=%d,expl=%s"
+                             , ret
+                             , mbedtls_strerror2 ( ret )
+                      ) );
+        return rc;
     }
    
     return 0;
@@ -101,7 +133,7 @@ rc_t tlsg_init_certs ( KTLSGlobals *self )
                                    mbedtls_test_cas_pem_len );
     if ( ret < 0 )
     {        
-        STATUS ( 0, "failed...crt_parse returned %d\n", -ret );
+        STATUS ( 0, "failed...crt_parse returned %d ( %s )\n", ret, mbedtls_strerror2 ( ret ) );
         return RC ( rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed );
     }
    
@@ -118,7 +150,7 @@ rc_t tlsg_setup ( KTLSGlobals * self )
 
     if ( ret != 0 )
     {
-        STATUS ( 0, "failed...config_defaults returned %d\n", ret );
+        STATUS ( 0, "failed...config_defaults returned %d ( %s )\n", ret, mbedtls_strerror2 ( ret ) );
         return RC ( rcKrypto, rcNoTarg, rcFormatting, rcEncryption, rcFailed );
     }
 
@@ -232,7 +264,7 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
             break;
         }
 
-        STATUS ( 0, "error status %d", ret );
+        STATUS ( 0, "error status %d ( %s )", ret, mbedtls_strerror2 ( ret ) );
 
         /* detect error at socket level */
         if ( self -> rd_rc != 0 )
@@ -433,7 +465,7 @@ rc_t ktls_ssl_setup ( KTLSStream *self, const String *host )
     ret = mbedtls_ssl_setup( &self -> ssl, &tlsg -> config );
     if ( ret != 0 )
     {
-        STATUS ( 0, "failed...ssl_setup returned %d\n", ret );
+        STATUS ( 0, "failed...ssl_setup returned %d ( %s )\n", ret, mbedtls_strerror2 ( ret ) );
         return RC ( rcKrypto, rcNoTarg, rcFormatting, rcEncryption, rcFailed );
     }
 
@@ -472,7 +504,7 @@ rc_t ktls_ssl_setup ( KTLSStream *self, const String *host )
 
     if ( ret != 0 )
     {
-        STATUS ( 0, "failed...ssl_set_hostname returned %d\n", ret );
+        STATUS ( 0, "failed...ssl_set_hostname returned %d ( %s )\n", ret, mbedtls_strerror2 ( ret ) );
         return RC ( rcKrypto, rcNoTarg, rcFormatting, rcEncryption, rcFailed );
     }
 
@@ -495,7 +527,7 @@ rc_t ktls_handshake ( KTLSStream *self )
         if ( ret != MBEDTLS_ERR_SSL_WANT_READ && 
              ret != MBEDTLS_ERR_SSL_WANT_WRITE )
         {
-            STATUS ( 0, "failed...handshake returned -0x%x\n", -ret );
+            STATUS ( 0, "failed...handshake returned -0x%x ( %s )\n", -ret, mbedtls_strerror2 ( ret ) );
             return RC ( rcKrypto, rcNoTarg, rcOpening, rcConnection, rcFailed );
         }
     }

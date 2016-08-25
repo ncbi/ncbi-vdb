@@ -278,9 +278,109 @@ bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
     return false;
 }
 
+static
+rc_t KClientHttpGetLine ( KClientHttp *self, struct timeout_t *tm );
 
-static rc_t KClientHttpOpen
-    ( KClientHttp * self, const String * aHostname, uint32_t aPort )
+static
+rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, uint32_t *status, ver_t *version );
+
+static
+rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint32_t port, KSocket * sock,
+    const String * phostname, uint32_t pport )
+{
+    rc_t rc;
+
+    STATUS ( 0, "%s - extracting stream from socket\n", __func__ );
+    assert ( sock != NULL );
+    rc = KSocketGetStream ( sock, & self -> sock );
+    if ( rc == 0 )
+    {
+        uint32_t port_save;
+        String hostname_save;
+
+        size_t len;
+        char buffer [ 4096 ];
+
+        STATUS ( 0, "%s - saving hostname and port\n", __func__ );
+        hostname_save = self -> hostname;
+        port_save = self -> port;
+
+        assert ( hostname != NULL );
+        STATUS ( 0, "%s - setting hostname and port to '%S:%u'\n", __func__, phostname, pport );
+        self -> hostname = * phostname;
+        self -> port = pport;
+
+        /* format CONNECT request */
+        rc = string_printf ( buffer, sizeof buffer, & len,
+                             "CONNECT %S:%u HTTP/1.1\r\n"
+                             "Host: %S:%u\r\n\r\n"
+                             , hostname
+                             , port
+                             , hostname
+                             , port
+            );
+
+        if ( rc != 0 )
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create proxy request: %R\n", rc ) );
+        else
+        {
+            size_t sent;
+            timeout_t tm;
+
+            STATUS ( 0, "%s - created proxy request '%.*s'\n", __func__, ( uint32_t ) len, buffer );
+
+            /* send request and receive a response */
+            STATUS ( 0, "%s - sending proxy request\n", __func__ );
+            TimeoutInit ( & tm, self -> write_timeout );
+            rc = KStreamTimedWriteAll ( self -> sock, buffer, len, & sent, & tm );
+            if ( rc != 0 )
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to send proxy request: %R\n", rc ) );
+            else
+            {
+                String msg;
+                ver_t version;
+                uint32_t status;
+
+                assert ( sent == len );
+
+                STATUS ( 0, "%s - reading proxy response status line\n", __func__ );
+                TimeoutInit ( & tm, self -> read_timeout );
+                rc = KClientHttpGetStatusLine ( self, & tm, & msg, & status, & version );
+                if ( rc != 0 )
+                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to read proxy response: %R\n", rc ) );
+                else
+                {
+                    if ( ( status / 100 ) != 2 )
+                    {
+                        rc = RC ( rcNS, rcNoTarg, rcOpening, rcConnection, rcFailed );
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create proxy tunnel: %03u '%S'\n", status, & msg ) );
+                    }
+                    else
+                    {
+                        STATUS ( 0, "%s - read proxy response status line: %03u '%S'\n", __func__, status, & msg );
+                        do
+                            rc = KClientHttpGetLine ( self, & tm );
+                        while ( self -> line_valid != 0 );
+                    }
+                }
+            }
+        }
+
+        STATUS ( 0, "%s - restoring hostname and port\n", __func__ );
+        self -> hostname = hostname_save;
+        self -> port = port_save;
+
+        STATUS ( 0, "%s - releasing socket stream\n", __func__ );
+        KStreamRelease ( self -> sock );
+        self -> sock = NULL;
+    }
+
+    return rc;
+}
+
+
+static
+rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aPort )
 {
     rc_t rc = 0;
     KSocket * sock = NULL;
@@ -291,10 +391,11 @@ static rc_t KClientHttpOpen
     KEndPointArgsIterator it;
     const KNSManager * mgr = NULL;
 
-    STATUS ( 0, "%s - opening socket to %S\n", __func__, hostname );
+    STATUS ( 0, "%s - opening socket to %S:%u\n", __func__, aHostname, aPort );
 
-    assert ( self );
+    assert ( self != NULL );
     mgr = self -> mgr;
+
     KEndPointArgsIteratorMake ( & it, mgr, aHostname, aPort  );
     while ( KEndPointArgsIteratorNext
         ( & it, & hostname, & port, & proxy_default_port, & proxy_ep ) )
@@ -307,8 +408,14 @@ static rc_t KClientHttpOpen
         }
         if ( rc == 0 )
         {
+            /* try to establish a connection */
             rc = KNSManagerMakeTimedConnection ( mgr, & sock,
               self -> read_timeout, self -> write_timeout, NULL, & self -> ep );
+
+            /* if we connected to a proxy, try to follow-through to server */
+            if ( proxy_ep && self -> tls && rc == 0 )
+                rc = KClientHttpProxyConnect ( self, aHostname, aPort, sock, hostname, port );
+
             if ( rc == 0 )
             {
                 /* this is a good endpoint */
@@ -325,12 +432,26 @@ static rc_t KClientHttpOpen
         if ( self -> tls )
         {
             KTLSStream * tls_stream;
+
             STATUS ( 0, "%s - creating TLS wrapper on socket\n", __func__ );
-            rc = KNSManagerMakeTLSStream ( mgr, & tls_stream, sock, hostname );
-            KSocketRelease ( sock );
+            rc = KNSManagerMakeTLSStream ( mgr, & tls_stream, sock, aHostname );
+
             if ( rc != 0 )
-                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create TLS stream for '%S'\n", hostname ) );
-            else
+            {
+                if ( ! proxy_ep )
+                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create TLS stream for '%S'\n", aHostname ) );
+                else
+                {
+                    STATUS ( 0, "%s - retrying TLS wrapper on socket with proxy hostname\n", __func__ );
+                    rc = KNSManagerMakeTLSStream ( mgr, & tls_stream, sock, hostname );
+                    if ( rc != 0 )
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create TLS stream for '%S'\n", hostname ) );
+                }
+            }
+
+            KSocketRelease ( sock );
+
+            if ( rc == 0 )
             {
                 STATUS ( 0, "%s - verifying CA cert\n", __func__ );
                 rc = KTLSStreamVerifyCACert ( tls_stream );
@@ -1121,6 +1242,7 @@ rc_t KClientHttpFindHeader ( const BSTree *hdrs, const char *_name, char *buffer
     return rc;
 }
 
+static
 rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, uint32_t *status, ver_t *version )
 {
     /* First time reading the response */
@@ -1153,7 +1275,10 @@ rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, u
         {
             /* make sure it is http */
             if ( strcase_cmp ( "http", 4, buffer, sep - buffer, 4 ) != 0 )
+            {
                 rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcUnsupported );
+                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("%s: protocol given as '%.*s'\n", __func__, ( uint32_t ) ( sep - buffer ), buffer ));
+            }
             else
             {
                 /* move buffer up to version */
