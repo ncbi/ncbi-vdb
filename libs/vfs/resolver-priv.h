@@ -234,6 +234,9 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
     const struct VPath ** path, const struct VPath **mapping,
     const struct KFile ** opt_file_rtn, bool refseq_ctx, bool is_oid );
 
+
+void KConfigReadRemoteProtocols ( struct KConfig const * self, VRemoteProtocols * remote_protos );
+
 #ifdef __cplusplus
 }
 #endif
