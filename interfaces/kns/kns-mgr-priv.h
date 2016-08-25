@@ -42,9 +42,6 @@
 extern "C" {
 #endif
 
-/* remove once TLS/HTTPS support is present */
-#define NO_HTTPS_SUPPORT 1
-
 struct KStream;
 struct KHttpFile;
 struct KNSManager;
