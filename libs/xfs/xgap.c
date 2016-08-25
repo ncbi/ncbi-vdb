@@ -825,7 +825,7 @@ XFSGapProjectLocateAccession (
     if ( RCt == 0 ) {
         RCt = VResolverQuery (
                         self -> resolver,
-                        eProtocolHttp,
+                        0,
                         Query,
                         NULL,
                         Remote,
@@ -874,7 +874,7 @@ XFSGapProjectLocateObject (
     if ( RCt == 0 ) {
         RCt = VResolverQuery (
                         self -> resolver,
-                        eProtocolHttp,
+                        0,
                         Query,
                         NULL,
                         Remote,

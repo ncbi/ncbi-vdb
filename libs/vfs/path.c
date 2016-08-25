@@ -3519,7 +3519,7 @@ rc_t LegacyVPathResolveAccession ( VPath ** new_path, const VPath * path )
         {
             rc = VResolverLocal ( resolver, path, ( const VPath** ) new_path );
             if ( GetRCState ( rc ) == rcNotFound )
-                rc = VResolverRemote ( resolver, eProtocolHttp, path, ( const VPath** ) new_path );
+                rc = VResolverRemote ( resolver, 0, path, ( const VPath** ) new_path );
 
             VResolverRelease ( resolver );
         }
