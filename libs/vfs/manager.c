@@ -3330,7 +3330,7 @@ LIB_EXPORT rc_t CC VFSManagerSetCacheRoot ( const VFSManager * self,
 
 static rc_t inspect_file( KDirectory * dir, KTime_t date, const char * path )
 {
-    KTime_t * file_date;
+    KTime_t file_date;
     rc_t rc = KDirectoryDate ( dir, &file_date, "%s", path );
     if ( rc == 0 )
     {
