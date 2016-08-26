@@ -1323,7 +1323,7 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     assert(path);
 
     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), ("names.cgi = %S\n", self -> root));
-    rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01000000, NULL, self -> root -> addr ); 
+    rc = KNSManagerMakeReliableClientRequest ( kns, & req, 0x01010000, NULL, self -> root -> addr ); 
     if ( rc == 0 )
     {
         /* build up POST information: */
