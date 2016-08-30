@@ -3387,7 +3387,7 @@ LIB_EXPORT rc_t CC VFSManagerDeleteCacheOlderThan ( const VFSManager * self,
     {
         /* loop through the user-repositories to get the root property */
         const KRepositoryMgr * repo_mgr;
-        KConfigMakeRepositoryMgrRead ( self -> cfg, &repo_mgr );
+        rc = KConfigMakeRepositoryMgrRead ( self -> cfg, &repo_mgr );
         if ( rc == 0 )
         {
             KRepositoryVector user_repos;

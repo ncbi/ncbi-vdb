@@ -130,22 +130,53 @@ static rc_t write_dflt_path( KConfig *cfg, const char * base )
     return rc;
 }
 
-static rc_t create_test_config( const char * base )
+#if WINDOWS
+static char * convert_sys_path( const char * sys_path )
 {
-    KConfig *cfg;
-    rc_t rc = KConfigMake ( &cfg, NULL );
+    char * res = NULL;
+    VFSManager * vfs_mgr;
+    rc_t rc = VFSManagerMake ( &vfs_mgr );
     if ( rc == 0 )
     {
-        rc = write_root( cfg, base, "main", "public" );
+        VPath * p;
+        rc = VFSManagerMakeSysPath ( vfs_mgr, &p, sys_path );
         if ( rc == 0 )
-            rc = write_root( cfg, base, "protected", "dbGaP-2956" );
-        if ( rc == 0 )
-            rc = write_root( cfg, base, "protected", "dbGaP-4831" );
-        if ( rc == 0 )
-            rc = write_dflt_path( cfg, base );
-        if ( rc == 0 )
-            rc = KConfigCommit ( cfg );
-        KConfigRelease ( cfg );
+        {
+            const String * S;
+            rc = VPathMakeString( p, &S );
+            if ( rc == 0 )
+                res = string_dup ( S->addr, S->size );
+            VPathRelease( p );
+        }
+        VFSManagerRelease( vfs_mgr );
+    }
+    return res;
+}
+#endif
+
+static rc_t create_test_config( KConfig **cfg, const char * base )
+{
+    rc_t rc = KConfigMake ( cfg, NULL );
+    if ( rc == 0 )
+    {
+#if WINDOWS
+        char * cfg_base = convert_sys_path( base );
+#elif
+        char * cfg_base = base;
+#endif
+        if ( cfg_base != NULL )
+        {
+            rc = write_root( *cfg, cfg_base, "main", "public" );
+            if ( rc == 0 )
+                rc = write_root( *cfg, cfg_base, "protected", "dbGaP-2956" );
+            if ( rc == 0 )
+                rc = write_root( *cfg, cfg_base, "protected", "dbGaP-4831" );
+            if ( rc == 0 )
+                rc = write_dflt_path( *cfg, cfg_base );
+#if WINDOWS
+            free( ( void * ) cfg_base );
+#endif
+        }
     }
     return rc;
 }
@@ -153,17 +184,26 @@ static rc_t create_test_config( const char * base )
 char * org_home;
 char new_home_buffer[ 4096 ]; /* buffer for putenv has to stay alive! */
 
-static rc_t prepare_test( const char * sub )
+static rc_t prepare_test( KConfig **cfg, const char * sub )
 {
-    org_home = getenv( "HOME" );
-    size_t num_writ;
+	size_t num_writ;
+#if WINDOWS
+    org_home = getenv ( "USERPROFILE" );
+    rc_t rc = string_printf ( new_home, sizeof new_home, &num_writ, "%s\\%s", org_home, sub );
+#elif
+	org_home = getenv( "HOME" );
     rc_t rc = string_printf ( new_home, sizeof new_home, &num_writ, "%s/%s", org_home, sub );
+#endif
     if ( rc == 0 )
+#if WINDOWS
         rc = string_printf ( new_home_buffer, sizeof new_home_buffer, &num_writ, "HOME=%s", new_home );
+#elif
+        rc = string_printf ( new_home_buffer, sizeof new_home_buffer, &num_writ, "USERPROFILE=%s", new_home );
+#endif
     if ( rc == 0 )
         rc = putenv( new_home_buffer );
     if ( rc == 0 )
-        rc = create_test_config( new_home );
+        rc = create_test_config( cfg, new_home );
     return rc;
 }
 
@@ -174,7 +214,11 @@ void finish_test( const char * sub )
     rc_t rc = KDirectoryNativeDir( &dir );
     if ( rc == 0 )
     {
+#if WINDOWS
         rc = KDirectoryRemove( dir, true, "%s/%s", org_home, sub );
+#elif
+        rc = KDirectoryRemove( dir, true, "%s\\%s", org_home, sub );
+#endif
         KDirectoryRelease( dir );
     }
 }
@@ -193,10 +237,12 @@ const char UsageDefaultName[] = "test-VDB-3060";
 rc_t CC KMain ( int argc, char *argv [] )
 {
     const char HomeSub[] = "test_root_history";
-    rc_t rc = prepare_test( HomeSub );
+    KConfig *cfg;
+    rc_t rc = prepare_test( &cfg, HomeSub );
     if ( rc == 0 )
         rc = VDB_3061( argc, argv );
     finish_test( HomeSub );
+    KConfigRelease ( cfg );
     return rc;
 }
 
