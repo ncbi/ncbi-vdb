@@ -49,7 +49,7 @@
 #include <sysalloc.h>
 
 #ifndef min
-#   define min(a,b) ( (a) < (b) ? (a) : (b) )            
+#   define min(a,b) ( (a) < (b) ? (a) : (b) )
 #endif
 
 /*--------------------------------------------------------------------------
@@ -84,7 +84,7 @@ static NGS_Read_vt NGS_Read_vt_inst =
         SRA_FragmentIsAligned,
         SRA_FragmentNext
     },
-    
+
     /* NGS_Read */
     SRA_ReadGetId,
     SRA_ReadGetName,
@@ -96,7 +96,7 @@ static NGS_Read_vt NGS_Read_vt_inst =
     SRA_ReadFragIsAligned,
     SRA_ReadIteratorNext,
     SRA_ReadIteratorGetCount,
-}; 
+};
 
 /* Init
  */
@@ -114,21 +114,21 @@ void SRA_ReadInit ( ctx_t ctx, SRA_Read * self, const char *clsname, const char 
             TRY ( self -> run_name = NGS_StringDuplicate ( run_name, ctx ) )
             {
                 self -> wants_full      = true;
-                self -> wants_partial   = true; 
-                self -> wants_unaligned = true;            
+                self -> wants_partial   = true;
+                self -> wants_unaligned = true;
             }
         }
     }
 }
 
 static
-void SRA_ReadIteratorInit ( ctx_t ctx, 
-                            SRA_Read * self, 
-                            const char *clsname, 
-                            const char *instname, 
+void SRA_ReadIteratorInit ( ctx_t ctx,
+                            SRA_Read * self,
+                            const char *clsname,
+                            const char *instname,
                             const NGS_String * run_name,
-                            bool wants_full, 
-                            bool wants_partial, 
+                            bool wants_full,
+                            bool wants_partial,
                             bool wants_unaligned )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
@@ -142,8 +142,8 @@ void SRA_ReadIteratorInit ( ctx_t ctx,
             TRY ( self -> run_name = NGS_StringDuplicate ( run_name, ctx ) )
             {
                 self -> wants_full      = wants_full;
-                self -> wants_partial   = wants_partial; 
-                self -> wants_unaligned = wants_unaligned;            
+                self -> wants_partial   = wants_partial;
+                self -> wants_unaligned = wants_unaligned;
             }
         }
     }
@@ -154,7 +154,7 @@ void SRA_ReadIteratorInit ( ctx_t ctx,
 void SRA_ReadWhack ( SRA_Read * self, ctx_t ctx )
 {
     NGS_CursorRelease ( self -> curs, ctx );
-    
+
     NGS_StringRelease ( self -> group_name, ctx );
     NGS_StringRelease ( self -> run_name, ctx );
 }
@@ -178,7 +178,6 @@ SRA_Read * SRA_ReadDuplicate ( const SRA_Read * self, ctx_t ctx )
     return NGS_RefcountDuplicate ( NGS_ReadToRefcount ( & self -> dad ), ctx );
 }
 
-static
 void SRA_ReadIteratorInitFragment ( SRA_Read * self, ctx_t ctx )
 {
     const void * base;
@@ -206,7 +205,12 @@ void SRA_ReadIteratorInitFragment ( SRA_Read * self, ctx_t ctx )
 
             /* NB - should also be taking READ_FILTER into account */
             for ( i = 0; i < row_len; ++ i )
-                self -> bio_frags += self -> READ_TYPE [ i ] & READ_TYPE_BIOLOGICAL;
+            {
+                if ( self -> READ_LEN [ i ] != 0 )
+                {
+                    self -> bio_frags += self -> READ_TYPE [ i ] & READ_TYPE_BIOLOGICAL;
+                }
+            }
         }
     }
 }
@@ -234,12 +238,12 @@ NGS_Read * SRA_ReadMake ( ctx_t ctx, const NGS_Cursor * curs, int64_t readId, co
         TRY ( SRA_ReadInit ( ctx, ref, "SRA_Read", instname, run_name ) )
         {
             uint64_t row_count = NGS_CursorGetRowCount ( curs, ctx );
-            
+
             /* validate the requested rowId and seek to it */
             if ( readId <= 0 || (uint64_t)readId > row_count )
             {
                 INTERNAL_ERROR ( xcCursorAccessFailed, "rowId ( %li ) out of range for %.*s", readId, NGS_StringSize ( run_name, ctx ), NGS_StringData ( run_name, ctx ) );
-            }                
+            }
             else
             {
                 ref -> curs = NGS_CursorDuplicate ( curs, ctx );
@@ -252,7 +256,7 @@ NGS_Read * SRA_ReadMake ( ctx_t ctx, const NGS_Cursor * curs, int64_t readId, co
                     return & ref -> dad;
                 }
             }
-            
+
             SRA_ReadRelease ( ref, ctx );
             return NULL;
         }
@@ -267,10 +271,10 @@ NGS_Read * SRA_ReadMake ( ctx_t ctx, const NGS_Cursor * curs, int64_t readId, co
 NGS_String * SRA_ReadGetId ( SRA_Read * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
-    
+
     assert ( self != NULL );
-    
-    if ( ! self -> seen_first ) 
+
+    if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Read accessed before a call to ReadIteratorNext()" );
         return NULL;
@@ -279,7 +283,7 @@ NGS_String * SRA_ReadGetId ( SRA_Read * self, ctx_t ctx )
     /* if current row is valid, read data */
     if ( self -> cur_row < self -> row_max )
         return NGS_IdMake ( ctx, self -> run_name, NGSObject_Read, self -> cur_row );
-    
+
     USER_ERROR ( xcCursorExhausted, "No more rows available" );
     return NULL;
 }
@@ -289,10 +293,10 @@ NGS_String * SRA_ReadGetId ( SRA_Read * self, ctx_t ctx )
 NGS_String * SRA_ReadGetName ( SRA_Read * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     assert ( self != NULL );
-    
-    if ( ! self -> seen_first ) 
+
+    if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Read accessed before a call to ReadIteratorNext()" );
         return NULL;
@@ -301,14 +305,14 @@ NGS_String * SRA_ReadGetName ( SRA_Read * self, ctx_t ctx )
     {
         NGS_String * ret;
         ON_FAIL ( ret = NGS_CursorGetString( self -> curs, ctx, self -> cur_row, seq_NAME ) )
-        {   
-            if ( GetRCObject ( ctx -> rc ) == rcColumn && GetRCState ( ctx -> rc ) == rcNotFound )
+        {
+            if ( GetRCObject ( ctx -> rc ) == (int)rcColumn && GetRCState ( ctx -> rc ) == rcNotFound )
             {   /* no NAME column; synthesize a read name based on run_name and row_id */
                 CLEAR ();
                 ret = NGS_IdMake ( ctx, self -> run_name, NGSObject_Read, self -> cur_row );
             }
         }
-        
+
         return ret;
     }
 }
@@ -318,15 +322,15 @@ NGS_String * SRA_ReadGetName ( SRA_Read * self, ctx_t ctx )
 NGS_String * SRA_ReadGetReadGroup ( SRA_Read * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     assert ( self != NULL );
-    
-    if ( ! self -> seen_first ) 
+
+    if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Read accessed before a call to ReadIteratorNext()" );
         return NULL;
     }
-    
+
     return NGS_CursorGetString ( self -> curs, ctx, self -> cur_row, seq_GROUP );
 }
 
@@ -335,8 +339,8 @@ enum NGS_ReadCategory SRA_ReadGetCategory ( const SRA_Read * self, ctx_t ctx )
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
 
     assert ( self != NULL );
-    
-    if ( ! self -> seen_first ) 
+
+    if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Read accessed before a call to ReadIteratorNext()" );
         return NGS_ReadCategory_unaligned;
@@ -351,7 +355,7 @@ enum NGS_ReadCategory SRA_ReadGetCategory ( const SRA_Read * self, ctx_t ctx )
             CLEAR();
             return NGS_ReadCategory_unaligned;
         }
-            
+
         {
             uint32_t i;
             bool seen_aligned = false;
@@ -375,7 +379,7 @@ enum NGS_ReadCategory SRA_ReadGetCategory ( const SRA_Read * self, ctx_t ctx )
             {
                 return seen_unaligned ? NGS_ReadCategory_partiallyAligned : NGS_ReadCategory_fullyAligned;
             }
-            else 
+            else
             {   /* no aligned fragments */
                 return NGS_ReadCategory_unaligned;
             }
@@ -393,8 +397,8 @@ NGS_String * SRA_ReadGetSequence ( SRA_Read * self, ctx_t ctx, uint64_t offset, 
     NGS_String * seq;
 
     assert ( self != NULL );
-    
-    if ( ! self -> seen_first ) 
+
+    if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Read accessed before a call to ReadIteratorNext()" );
         return NULL;
@@ -416,7 +420,7 @@ NGS_String * SRA_ReadGetSequence ( SRA_Read * self, ctx_t ctx, uint64_t offset, 
 /* GetReadQualities
  * GetReadSubQualities
  */
-static 
+static
 NGS_String * GetReadQualities ( SRA_Read * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
@@ -450,7 +454,7 @@ NGS_String * GetReadQualities ( SRA_Read * self, ctx_t ctx )
                         free ( copy );
                 }
             }
-            
+
             if ( ! FAILED () )
             {
                 return new_data;
@@ -465,15 +469,15 @@ NGS_String * SRA_ReadGetQualities ( SRA_Read * self, ctx_t ctx, uint64_t offset,
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     NGS_String * qual;
-    
+
     assert ( self != NULL );
-    
-    if ( ! self -> seen_first ) 
+
+    if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Read accessed before a call to ReadIteratorNext()" );
         return NULL;
     }
-    
+
     TRY ( qual = GetReadQualities ( self, ctx ) )
     {
         NGS_String * sub;
@@ -492,21 +496,21 @@ NGS_String * SRA_ReadGetQualities ( SRA_Read * self, ctx_t ctx, uint64_t offset,
 uint32_t SRA_ReadNumFragments ( SRA_Read * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     assert ( self != NULL );
-    
-    if ( ! self -> seen_first ) 
+
+    if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Read accessed before a call to ReadIteratorNext()" );
         return 0;
-    }    
-    
+    }
+
     if ( self -> cur_row >= self -> row_max )
     {
         USER_ERROR ( xcCursorExhausted, "No more rows available" );
         return false;
     }
-    
+
     return self -> bio_frags;
 }
 
@@ -515,15 +519,15 @@ uint32_t SRA_ReadNumFragments ( SRA_Read * self, ctx_t ctx )
 bool SRA_ReadFragIsAligned ( SRA_Read * self, ctx_t ctx, uint32_t frag_idx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     assert ( self != NULL );
-    
-    if ( ! self -> seen_first ) 
+
+    if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Read accessed before a call to ReadIteratorNext()" );
         return 0;
-    }    
-    
+    }
+
     if ( self -> cur_row >= self -> row_max )
     {
         USER_ERROR ( xcCursorExhausted, "No more rows available" );
@@ -535,7 +539,7 @@ bool SRA_ReadFragIsAligned ( SRA_Read * self, ctx_t ctx, uint32_t frag_idx )
         USER_ERROR ( xcIntegerOutOfBounds, "bad fragment index" );
         return false;
     }
-    
+
     return false;
 }
 
@@ -545,11 +549,11 @@ bool SRA_ReadFragIsAligned ( SRA_Read * self, ctx_t ctx, uint32_t frag_idx )
 
 /* Make
  */
-NGS_Read * SRA_ReadIteratorMake ( ctx_t ctx, 
-                                        const NGS_Cursor * curs, 
-                                        const NGS_String * run_name, 
-                                        bool wants_full, 
-                                        bool wants_partial, 
+NGS_Read * SRA_ReadIteratorMake ( ctx_t ctx,
+                                        const NGS_Cursor * curs,
+                                        const NGS_String * run_name,
+                                        bool wants_full,
+                                        bool wants_partial,
                                         bool wants_unaligned )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
@@ -590,13 +594,13 @@ NGS_Read * SRA_ReadIteratorMake ( ctx_t ctx,
 
 /* MakeRange
  */
-NGS_Read * SRA_ReadIteratorMakeRange ( ctx_t ctx, 
-                                       const NGS_Cursor * curs, 
-                                       const NGS_String * run_name, 
-                                       uint64_t first, 
-                                       uint64_t count, 
-                                       bool wants_full, 
-                                       bool wants_partial, 
+NGS_Read * SRA_ReadIteratorMakeRange ( ctx_t ctx,
+                                       const NGS_Cursor * curs,
+                                       const NGS_String * run_name,
+                                       uint64_t first,
+                                       uint64_t count,
+                                       bool wants_full,
+                                       bool wants_partial,
                                        bool wants_unaligned )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
@@ -638,25 +642,25 @@ NGS_Read * SRA_ReadIteratorMakeRange ( ctx_t ctx,
 
 /* MakeReadGroup
  */
-NGS_Read * SRA_ReadIteratorMakeReadGroup ( ctx_t ctx, 
-                                           const NGS_Cursor * curs, 
-                                           const NGS_String * run_name, 
-                                           const NGS_String * group_name, 
-                                           uint64_t first, 
-                                           uint64_t count, 
-                                           bool wants_full, 
-                                           bool wants_partial, 
+NGS_Read * SRA_ReadIteratorMakeReadGroup ( ctx_t ctx,
+                                           const NGS_Cursor * curs,
+                                           const NGS_String * run_name,
+                                           const NGS_String * group_name,
+                                           uint64_t first,
+                                           uint64_t count,
+                                           bool wants_full,
+                                           bool wants_partial,
                                            bool wants_unaligned )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
-    
-    TRY ( SRA_Read * ref = (SRA_Read*) SRA_ReadIteratorMakeRange ( ctx, 
-                                                                   curs, 
-                                                                   run_name, 
-                                                                   first, 
-                                                                   count, 
-                                                                   wants_full, 
-                                                                   wants_partial, 
+
+    TRY ( SRA_Read * ref = (SRA_Read*) SRA_ReadIteratorMakeRange ( ctx,
+                                                                   curs,
+                                                                   run_name,
+                                                                   first,
+                                                                   count,
+                                                                   wants_full,
+                                                                   wants_partial,
                                                                    wants_unaligned ) )
     {
         TRY ( ref -> group_name = NGS_StringDuplicate ( group_name, ctx ) )
@@ -679,17 +683,17 @@ bool SRA_ReadIteratorNext ( SRA_Read * self, ctx_t ctx )
     /* reset fragment */
     self -> seen_first_frag = false;
     self -> seen_last_frag = false;
-    
+
     self -> cur_frag = 0;
     self -> bio_frags = 0;
     self -> frag_idx = 0;
     self -> frag_max = 0;
     self -> frag_start = 0;
     self -> frag_len = 0;
-    
+
     self -> READ_TYPE = NULL;
     self -> READ_LEN = NULL;
-    
+
     if ( self -> seen_first )
     {   /* move to next row */
         ++ self -> cur_row;
@@ -698,17 +702,17 @@ bool SRA_ReadIteratorNext ( SRA_Read * self, ctx_t ctx )
     {
         self -> seen_first = true;
     }
-    
+
     while ( self -> cur_row < self -> row_max )
     {
         /* work the category filter */
-        if ( ! self -> wants_full || 
+        if ( ! self -> wants_full ||
              ! self -> wants_partial ||
              ! self -> wants_unaligned )
         {
             ON_FAIL ( enum NGS_ReadCategory cat = SRA_ReadGetCategory ( self, ctx ) )
                 return false;
-                
+
             if ( ( cat == NGS_ReadCategory_fullyAligned && ! self -> wants_full )
                  ||
                  ( cat == NGS_ReadCategory_partiallyAligned && ! self -> wants_partial )
@@ -716,21 +720,21 @@ bool SRA_ReadIteratorNext ( SRA_Read * self, ctx_t ctx )
                  ( cat == NGS_ReadCategory_unaligned && ! self -> wants_unaligned ) )
             {
                 ++ self -> cur_row;
-                continue; 
+                continue;
             }
         }
-        
+
         /* work the read group filter if required */
         if ( self -> group_name != NULL )
         {
             uint32_t size;
-        
+
             ON_FAIL ( NGS_String* group = NGS_CursorGetString ( self -> curs, ctx, self -> cur_row, seq_GROUP ) )
                 return false;
-                
+
             size = ( uint32_t ) NGS_StringSize ( group, ctx );
-            if ( string_cmp ( NGS_StringData ( self -> group_name, ctx ),  
-                              NGS_StringSize ( self -> group_name, ctx ),  
+            if ( string_cmp ( NGS_StringData ( self -> group_name, ctx ),
+                              NGS_StringSize ( self -> group_name, ctx ),
                               NGS_StringData ( group, ctx ),
                               size,
                               size ) != 0 )
@@ -746,10 +750,10 @@ bool SRA_ReadIteratorNext ( SRA_Read * self, ctx_t ctx )
         {
             return true;
         }
-        
+
         break;
     }
-    
+
     return false;
 }
 
@@ -759,7 +763,7 @@ bool SRA_ReadIteratorNext ( SRA_Read * self, ctx_t ctx )
 uint64_t SRA_ReadIteratorGetCount ( const SRA_Read * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
-    
+
     assert ( self != NULL );
     return self -> row_count;
 }
@@ -767,14 +771,14 @@ uint64_t SRA_ReadIteratorGetCount ( const SRA_Read * self, ctx_t ctx )
 NGS_String * SRA_FragmentGetId ( SRA_Read * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
-    
+
     assert ( self != NULL );
-    if ( ! self -> seen_first_frag ) 
+    if ( ! self -> seen_first_frag )
     {
         USER_ERROR ( xcIteratorUninitialized, "Fragment accessed before a call to FragmentIteratorNext()" );
         return NULL;
     }
-    if ( self -> seen_last_frag ) 
+    if ( self -> seen_last_frag )
     {
         USER_ERROR ( xcCursorExhausted, "No more rows available" );
         return NULL;
@@ -787,19 +791,19 @@ static
 NGS_String * GetFragmentString ( const SRA_Read * self, ctx_t ctx, NGS_String * str )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     assert ( self != NULL );
-    if ( ! self -> seen_first_frag ) 
+    if ( ! self -> seen_first_frag )
     {
         USER_ERROR ( xcIteratorUninitialized, "Fragment accessed before a call to FragmentIteratorNext()" );
         return NULL;
     }
-    if ( self -> seen_last_frag ) 
+    if ( self -> seen_last_frag )
     {
         USER_ERROR ( xcCursorExhausted, "No more rows available" );
         return NULL;
     }
-    
+
     if ( self -> cur_row < self -> row_max )
     {
         TRY ( NGS_String * frag = NGS_StringSubstrOffsetSize ( str, ctx, self -> frag_start, self -> frag_len ) )
@@ -815,19 +819,19 @@ struct NGS_String * SRA_FragmentGetSequence ( SRA_Read * self, ctx_t ctx, uint64
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     NGS_String * ret = NULL;
-    
+
     assert ( self != NULL );
-    if ( ! self -> seen_first_frag ) 
+    if ( ! self -> seen_first_frag )
     {
         USER_ERROR ( xcIteratorUninitialized, "Fragment accessed before a call to FragmentIteratorNext()" );
         return NULL;
     }
-    if ( self -> seen_last_frag ) 
+    if ( self -> seen_last_frag )
     {
         USER_ERROR ( xcCursorExhausted, "No more rows available" );
         return NULL;
-    }    
-    
+    }
+
     {
         TRY ( NGS_String * read = NGS_CursorGetString ( self -> curs, ctx, self -> cur_row, seq_READ ) )
         {
@@ -846,19 +850,19 @@ struct NGS_String * SRA_FragmentGetQualities ( SRA_Read * self, ctx_t ctx, uint6
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
     NGS_String * ret = NULL;
-    
+
     assert ( self != NULL );
-    if ( ! self -> seen_first_frag ) 
+    if ( ! self -> seen_first_frag )
     {
         USER_ERROR ( xcIteratorUninitialized, "Fragment accessed before a call to FragmentIteratorNext()" );
         return NULL;
     }
-    if ( self -> seen_last_frag ) 
+    if ( self -> seen_last_frag )
     {
         USER_ERROR ( xcCursorExhausted, "No more rows available" );
         return NULL;
     }
-    
+
     {
         TRY ( NGS_String * readQual = GetReadQualities ( self, ctx ) )
         {
@@ -876,14 +880,14 @@ struct NGS_String * SRA_FragmentGetQualities ( SRA_Read * self, ctx_t ctx, uint6
 bool SRA_FragmentIsPaired ( SRA_Read * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
-    
+
     assert ( self != NULL );
-    if ( ! self -> seen_first_frag ) 
+    if ( ! self -> seen_first_frag )
     {
         USER_ERROR ( xcIteratorUninitialized, "Fragment accessed before a call to FragmentIteratorNext()" );
         return false;
     }
-    if ( self -> seen_last_frag ) 
+    if ( self -> seen_last_frag )
     {
         USER_ERROR ( xcCursorExhausted, "No more rows available" );
         return false;
@@ -903,33 +907,36 @@ bool SRA_FragmentNext ( SRA_Read * self, ctx_t ctx )
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
 
     assert ( self != NULL );
-    
-    if ( ! self -> seen_first ) 
+
+    if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Read accessed before a call to ReadIteratorNext()" );
         return false;
     }
-    
+
     if ( self -> seen_first_frag )
     {   /* move to next fragment */
         ++ self -> cur_frag;
         ++ self -> frag_idx;
     }
 
-    /* advance to next biological fragment */
+    /* advance to next non-empty biological fragment */
     for ( self -> seen_first_frag = true; self -> frag_idx < self -> frag_max; ++ self -> frag_idx )
     {
-        /* get coordinates */
-        self -> frag_start += self -> frag_len;
-        self -> frag_len = self -> READ_LEN [ self -> frag_idx ];
+        if ( self -> READ_LEN [ self -> frag_idx ] != 0 )
+        {
+            /* get coordinates */
+            self -> frag_start += self -> frag_len;
+            self -> frag_len = self -> READ_LEN [ self -> frag_idx ];
 
-        /* test for biological fragment */
-        assert ( READ_TYPE_TECHNICAL == 0 );
-        assert ( READ_TYPE_BIOLOGICAL == 1 );
-        if ( ( self -> READ_TYPE [ self -> frag_idx ] & READ_TYPE_BIOLOGICAL ) != 0 )
-            return true;
+            /* test for biological fragment */
+            assert ( READ_TYPE_TECHNICAL == 0 );
+            assert ( READ_TYPE_BIOLOGICAL == 1 );
+            if ( ( self -> READ_TYPE [ self -> frag_idx ] & READ_TYPE_BIOLOGICAL ) != 0 )
+                return true;
+        }
     }
-    
+
     self -> seen_last_frag = true;
     return false;
 }
