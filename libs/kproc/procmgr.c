@@ -64,8 +64,10 @@ struct KProcMgr
     KRefcount refcount;
 };
 
-static atomic_ptr_t s_proc_mgr;
-static KLock *cleanup_lock = NULL;
+static atomic_ptr_t s_proc_mgr = { NULL };
+
+static atomic_ptr_t cleanup_lock_ptr = { NULL };
+#define cleanup_lock ( ( KLock * ) cleanup_lock_ptr . ptr )
 
 /* Whack
  *  tear down proc mgr
@@ -148,10 +150,16 @@ LIB_EXPORT rc_t CC KProcMgrInit ( void )
             rslt = atomic_test_and_set_ptr ( & s_proc_mgr, mgr, NULL );
             if ( rslt == NULL && s_proc_mgr .ptr == mgr )
             {
-                rc = KLockMake ( & cleanup_lock );
+                KLock* lock;
+                rc = KLockMake ( & lock );
                 if ( rc == 0 )
                 {
-                    return 0;
+                    KLock* lock_rslt = atomic_test_and_set_ptr ( & cleanup_lock_ptr, lock, NULL );
+                    if ( lock_rslt == NULL && cleanup_lock_ptr . ptr == lock )
+                    {
+                        return 0;
+                    }
+                    KLockRelease ( lock );
                 }
                 s_proc_mgr . ptr = NULL;
             }
