@@ -849,7 +849,7 @@ static int64_t decode_base64string (const uint8_t* str, size_t len)
  * byte is either 0x80 for a positive number or 0xFF for a negative number.
  */
 
-static int64_t tar_strtollImpl ( const uint8_t * str, size_t len, bool silent )
+static int64_t tar_strtoll ( const uint8_t * str, size_t len, bool silent )
 {
     int64_t	result = 0;
     bool negative = false;
@@ -937,11 +937,6 @@ static int64_t tar_strtollImpl ( const uint8_t * str, size_t len, bool silent )
     }
     return result;
 }
-
-static int64_t tar_strtoll (const uint8_t * str, size_t len) {
-    return tar_strtollImpl ( str, len, false );
-}
-
 
 /* ======================================================================
  * tar_header_type
@@ -1795,10 +1790,12 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
                 for (ix = 0; ix< GNU_SPARSES_IN_EXTRA_HEADER; ++ix)
                 {
                     rc_t ret;
-                    of = tar_strtoll((const uint8_t*)current_header.h->sparse.sparse[ix].offset,
-                                     TAR_SIZE_LEN);
-                    sz = tar_strtoll((const uint8_t*)current_header.h->sparse.sparse[ix].num_bytes,
-                                     TAR_SIZE_LEN);
+                    of = tar_strtoll(
+                     (const uint8_t*)current_header.h->sparse.sparse[ix].offset,
+                                     TAR_SIZE_LEN, silent);
+                    sz = tar_strtoll(
+                  (const uint8_t*)current_header.h->sparse.sparse[ix].num_bytes,
+                                     TAR_SIZE_LEN, silent);
                     if (sz == 0)
                     {
                         break;
@@ -1854,17 +1851,17 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
              *
              * this will be wrong if we ever support cpio...
              */
-            data_size = (uint64_t) ( tar_strtollImpl
+            data_size = (uint64_t) ( tar_strtoll
                 ( (uint8_t*)current_header.h->tar.size,TAR_SIZE_LEN, silent ) );
 #if _DEBUGGING && 0
-            uid =  ( tar_strtollImpl
+            uid =  ( tar_strtoll
                 ( (uint8_t*)current_header.h->tar.uid,TAR_ID_LEN, silent ) );
-            gid =  ( tar_strtollImpl
+            gid =  ( tar_strtoll
                 ( (uint8_t*)current_header.h->tar.gid,TAR_ID_LEN, silent ) );
 #endif
-            mtime = ( tar_strtollImpl
+            mtime = ( tar_strtoll
                 ( (uint8_t*)current_header.h->tar.mtime,TAR_TIME_LEN, silent) );
-            mode = (uint32_t) ( tar_strtollImpl
+            mode = (uint32_t) ( tar_strtoll
                 ( (uint8_t*)current_header.h->tar.mode,TAR_MODE_LEN, silent) );
         }
 
@@ -1957,14 +1954,18 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
                 int32_t ix;
                 rc_t	ret;
 
-                virtual_data_size = (uint64_t)(tar_strtoll((uint8_t*)current_header.h->gnu_89.realsize,TAR_SIZE_LEN));
+                virtual_data_size = (uint64_t)(tar_strtoll(
+                    (uint8_t*)current_header.h->gnu_89.realsize,TAR_SIZE_LEN,
+                    silent));
 
                 for (ix = 0; ix< GNU_SPARSES_IN_OLD_HEADER; ++ix)
                 {
-                    uint64_t soffset = tar_strtoll((const uint8_t*)current_header.h->gnu_89.sparse[ix].offset,
-                                                   TAR_SIZE_LEN);
-                    uint64_t ssize = tar_strtoll((const uint8_t*)current_header.h->gnu_89.sparse[ix].num_bytes,
-                                                 TAR_SIZE_LEN);
+                    uint64_t soffset = tar_strtoll(
+                     (const uint8_t*)current_header.h->gnu_89.sparse[ix].offset,
+                                                   TAR_SIZE_LEN, silent);
+                    uint64_t ssize = tar_strtoll(
+                  (const uint8_t*)current_header.h->gnu_89.sparse[ix].num_bytes,
+                                                 TAR_SIZE_LEN, silent);
                     if (ssize == 0)
                     {
                         break;
