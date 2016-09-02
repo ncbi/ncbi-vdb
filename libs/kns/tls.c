@@ -514,7 +514,7 @@ int CC ktls_net_recv ( void *ctx, unsigned char *buf, size_t len )
     if ( self -> rd_rc != 0 )
     {
         /* TBD - discover if the read timed out - possibly return MBEDTLS_ERR_SSL_WANT_READ */
-        switch ( GetRCObject ( self -> rd_rc ) )
+        switch ( ( int ) GetRCObject ( self -> rd_rc ) )
         {
         case rcData:
             return MBEDTLS_ERR_SSL_TIMEOUT;
@@ -572,7 +572,7 @@ rc_t ktls_ssl_setup ( KTLSStream *self, const String *host )
     assert ( host != NULL );
     assert ( host -> addr != NULL );
 
-    if ( ( ( & host -> addr [ host -> size ] ) & ( 4096 - 1 ) ) != 0 &&
+    if ( ( ( size_t ) ( & host -> addr [ host -> size ] ) & ( 4096 - 1 ) ) != 0 &&
          host -> addr [ host -> size ] == 0 )
     {
         hostz = host;
