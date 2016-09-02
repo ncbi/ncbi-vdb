@@ -97,7 +97,8 @@ struct NGS_ReferenceBlob * NGS_ReferenceBlobMake ( ctx_t ctx, const NGS_Cursor* 
             {
                 TRY ( ret -> blob = NGS_CursorGetVBlob ( p_curs, ctx, p_firstRowId, reference_READ ) )
                 {
-                    if ( PageMapFixedRowLength ( ret -> blob -> pm ) == ChunkSize )
+                    uint32_t row_len = PageMapGetIdxRowInfo ( ret -> blob -> pm, 0, NULL, NULL );
+                    if ( row_len == ChunkSize )
                     {
                         ret -> rowId = p_firstRowId;
                         TRY ( VByteBlob_ContiguousChunk ( ret -> blob, ctx, ret -> rowId, &ret -> data, &ret -> size, false ) )
@@ -117,7 +118,7 @@ struct NGS_ReferenceBlob * NGS_ReferenceBlobMake ( ctx_t ctx, const NGS_Cursor* 
                     }
                     else
                     {
-                        INTERNAL_ERROR ( xcFunctionUnsupported, "REFERENCE rows of size %u are not supported", PageMapFixedRowLength ( ret -> blob -> pm ) );
+                        INTERNAL_ERROR ( xcFunctionUnsupported, "REFERENCE rows of size %u are not supported", row_len );
                     }
                     VBlobRelease ( ( VBlob * ) ret -> blob );
                 }

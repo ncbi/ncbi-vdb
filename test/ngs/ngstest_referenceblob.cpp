@@ -712,6 +712,24 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_HasMore, ReferenceBlobIteratorFixt
     EXIT;
 }
 
+FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_FullScan, ReferenceBlobIteratorFixture )
+{
+    ENTRY;
+    GetIterator ( CSRA1_Accession, 1, 459 );
+    size_t count = 0;
+    while ( NGS_ReferenceBlobIteratorHasMore ( m_blobIt, ctx ) )
+    {
+        m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx );
+        REQUIRE ( ! FAILED () );
+        REQUIRE_NOT_NULL ( m_blob );
+        NGS_ReferenceBlobRelease ( m_blob, m_ctx );
+        ++count;
+    }
+    REQUIRE_EQ( (size_t)12, count);
+
+    EXIT;
+}
+
 //////////////////////////////////////////// Main
 
 extern "C"

@@ -87,7 +87,7 @@ void NGS_ReferenceBlobResolveOffset ( const struct NGS_ReferenceBlob * self, ctx
 
 /* Find repeated chunks
  *  startInBlob - an offset into the blob, start of the search for repated chunks
- *  nextInBlob [ OUT ] - offset into the blob corresponding to the next repeated chunk; use NGS_ReferenceBlobResolveOffset() to obtain details
+ *  nextInBlob [ OUT ] - offset into the blob corresponding to the found repeated chunk; use NGS_ReferenceBlobResolveOffset() to obtain details
  *  inReference [ OUT ] - offset into the reference, corresponding to nextInBlob
  *  uint32_t* repeatCount [ OUT, NULL OK ] - the number of repetitions of the reference chunk  the offset is inside of (1 if no repeats)
  *  uint64_t* increment [ OUT, NULL OK ] - size of the repeated chunk (0 if no repeats)
