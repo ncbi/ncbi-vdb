@@ -177,7 +177,7 @@ rc_t CC KSocketWhack ( KSocket *self )
 }
 
 static
-rc_t KSocketHandleSocknameError ( int status )
+rc_t KSocketHandleSocknameCall ( int status )
 {
     switch ( status )
     {
@@ -365,7 +365,7 @@ static rc_t KSocketGetEndpointV6 ( const KSocket * self, KEndPoint * ep, bool re
         return 0;
     }
 
-    rc = KSocketHandleSocknameError ( errno );
+    rc = KSocketHandleSocknameCall ( errno );
 
     ep -> type = epInvalid;
 
@@ -399,7 +399,7 @@ static rc_t KSocketGetEndpointV4 ( const KSocket * self, KEndPoint * ep, bool re
         return 0;
     }
 
-    rc = KSocketHandleSocknameError ( errno );
+    rc = KSocketHandleSocknameCall ( errno );
 
     ep -> type = epInvalid;
 
