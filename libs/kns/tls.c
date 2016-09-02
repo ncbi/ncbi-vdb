@@ -283,7 +283,7 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
         /* no error */
         if ( ret >= 0 )
         {
-            STATUS ( STAT_QA, "%u bytes read", ret );
+            STATUS ( STAT_PRG, "%u bytes read", ret );
             break;
         }
 
@@ -368,7 +368,7 @@ rc_t CC KTLSStreamWrite ( KTLSStream * self,
         return RC ( rcNS, rcSocket, rcWriting, rcSocket, rcInvalid );
     }
 
-    STATUS ( STAT_QA, "Writing %zu bytes to to server\n", size );
+    STATUS ( STAT_PRG, "Writing %zu bytes to to server\n", size );
     
     self -> wr_rc = 0;
 
@@ -389,7 +389,7 @@ rc_t CC KTLSStreamWrite ( KTLSStream * self,
         /* no error */
         if ( ret >= 0 )
         {
-            STATUS ( STAT_QA, "%u bytes written", ret );
+            STATUS ( STAT_PRG, "%u bytes written", ret );
             break;
         }
 
@@ -642,7 +642,7 @@ rc_t KTLSStreamMake ( KTLSStream ** objp, const KNSManager * mgr, const KSocket 
     rc_t rc;
     KTLSStream * obj;
 
-    STATUS ( STAT_QA, "%s\n", __func__ );
+    STATUS ( STAT_PRG, "%s\n", __func__ );
 
     obj = calloc ( 1, sizeof * obj );
     if ( obj == NULL )
@@ -650,21 +650,21 @@ rc_t KTLSStreamMake ( KTLSStream ** objp, const KNSManager * mgr, const KSocket 
     else
     {
         /* initialize the stream parent */
-        STATUS ( STAT_QA, "%s - initializing KStream\n", __func__ );
+        STATUS ( STAT_PRG, "%s - initializing KStream\n", __func__ );
         rc = KStreamInit ( & obj -> dad, ( const KStream_vt* ) & vtKTLSStream, "KTLSStream", "", true, true );
         if ( rc == 0 )
         {
-            STATUS ( STAT_QA, "%s - attaching to KNSManager\n", __func__ );
+            STATUS ( STAT_GEEK, "%s - attaching to KNSManager\n", __func__ );
             rc = KNSManagerAddRef ( mgr );
             if ( rc == 0 )
             {
-                STATUS ( STAT_QA, "%s - accessing KStream from socket\n", __func__ );
+                STATUS ( STAT_GEEK, "%s - accessing KStream from socket\n", __func__ );
                 rc = KSocketGetStream ( ciphertext, & obj -> ciphertext );
                 if ( rc == 0 )
                 {
                     obj -> mgr = mgr;
 
-                    STATUS ( STAT_QA, "%s - initializing tls wrapper\n", __func__ );
+                    STATUS ( STAT_PRG, "%s - initializing tls wrapper\n", __func__ );
                     mbedtls_ssl_init ( &obj -> ssl );
 
                     * objp = obj;
