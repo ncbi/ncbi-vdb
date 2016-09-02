@@ -69,11 +69,6 @@ struct KTLSStream;
 /*****************************
  *******     NOTES     *******
 
-  1. catch MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY where it can occur
-  2. update STATUS() calls to have a reasonable level ( see <klib/status.h> )
-  3. change use of STATUS() on error to PLOGERR()
-  4. check the PLOGERR() messages to make sure they will read well
-  5. finish translating RC to mbedtls error codes and back
   6. update Windows syssock.c for RC
 
 *****************************/
@@ -102,7 +97,7 @@ rc_t tlsg_seed_rng ( KTLSGlobals *self )
     const char *pers = "vdb_tls_client";
     const size_t pers_size = sizeof "vdb_tls_client" - 1;
 
-    STATUS ( 0, "Seeding the random number generator\n" );
+    STATUS ( STAT_QA, "Seeding the random number generator\n" );
 
     ret = mbedtls_ctr_drbg_seed ( &self -> ctr_drbg, mbedtls_entropy_func, 
                                   &self -> entropy, ( const unsigned char * ) pers, pers_size );
@@ -127,14 +122,20 @@ rc_t tlsg_init_certs ( KTLSGlobals *self )
 {
     int ret;
 
-    STATUS ( 0, "Loading the CA root certificate\n" );
+    STATUS ( STAT_QA, "Loading the CA root certificate\n" );
 
     ret = mbedtls_x509_crt_parse ( &self -> cacert, (const unsigned char *) mbedtls_test_cas_pem,
                                    mbedtls_test_cas_pem_len );
     if ( ret < 0 )
     {        
-        STATUS ( 0, "failed...crt_parse returned %d ( %s )\n", ret, mbedtls_strerror2 ( ret ) );
-        return RC ( rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed );
+        rc_t rc = RC ( rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed );
+        PLOGERR ( klogSys, ( klogSys, rc
+                             , "mbedtls_x509_crt_parse returned $(ret) ( $(expl) )"
+                             , "ret=%d,expl=%s"
+                             , ret
+                             , mbedtls_strerror2 ( ret )
+                      ) );
+        return rc;
     }
    
     return 0;
@@ -143,15 +144,25 @@ rc_t tlsg_init_certs ( KTLSGlobals *self )
 static
 rc_t tlsg_setup ( KTLSGlobals * self )
 {
-    int ret = mbedtls_ssl_config_defaults ( &self -> config,
+    int ret;
+
+    STATUS ( STAT_QA, "Configuring SSl defaults\n" );
+
+    ret = mbedtls_ssl_config_defaults ( &self -> config,
                                         MBEDTLS_SSL_IS_CLIENT,
                                         MBEDTLS_SSL_TRANSPORT_STREAM,
                                         MBEDTLS_SSL_PRESET_DEFAULT );
 
     if ( ret != 0 )
     {
-        STATUS ( 0, "failed...config_defaults returned %d ( %s )\n", ret, mbedtls_strerror2 ( ret ) );
-        return RC ( rcKrypto, rcNoTarg, rcFormatting, rcEncryption, rcFailed );
+        rc_t rc = RC ( rcKrypto, rcNoTarg, rcFormatting, rcEncryption, rcFailed );
+        PLOGERR ( klogSys, ( klogSys, rc
+                             , "mbedtls_ssl_config_defaults returned $(ret) ( $(expl) )"
+                             , "ret=%d,expl=%s"
+                             , ret
+                             , mbedtls_strerror2 ( ret )
+                      ) );
+        return rc;
     }
 
     mbedtls_ssl_conf_authmode( &self -> config, MBEDTLS_SSL_VERIFY_NONE );
@@ -221,7 +232,7 @@ struct KTLSStream
 };
 
 static
-rc_t CC KTLSStreamWhack ( KTLSStream *self )
+void KTLSStreamDestroy ( KTLSStream *self )
 {
     /* tear down all of the stuff created during Make */
     mbedtls_ssl_close_notify( &self -> ssl ); /* close connection - this might need to be elsewhere */
@@ -230,6 +241,12 @@ rc_t CC KTLSStreamWhack ( KTLSStream *self )
     /* release the ciphertext object */
     KStreamRelease ( self -> ciphertext );
     self -> ciphertext = NULL;
+}
+
+static
+rc_t CC KTLSStreamWhack ( KTLSStream *self )
+{
+    KTLSStreamDestroy ( self );
 
     /* release the manager */
     KNSManagerRelease ( self -> mgr );
@@ -248,7 +265,13 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
     rc_t rc = 0;
     KTLSStream * self = ( KTLSStream * ) cself;
 
-    STATUS ( 0, "Reading from server..." );
+    if ( self -> ciphertext == NULL )
+    {
+        * num_read = 0;
+        return RC ( rcNS, rcSocket, rcReading, rcSocket, rcInvalid );
+    }
+
+    STATUS ( STAT_QA, "Reading from server..." );
 
     self -> rd_rc = 0;
 
@@ -260,16 +283,21 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
         /* no error */
         if ( ret >= 0 )
         {
-            STATUS ( 0, "%u bytes read", ret );
+            STATUS ( STAT_QA, "%u bytes read", ret );
             break;
         }
-
-        STATUS ( 0, "error status %d ( %s )", ret, mbedtls_strerror2 ( ret ) );
 
         /* detect error at socket level */
         if ( self -> rd_rc != 0 )
         {
             rc = self -> rd_rc;
+            PLOGERR ( klogSys, ( klogSys, rc
+                                 , "mbedtls_ssl_read returned $(ret) ( $(expl) )"
+                                 , "ret=%d,expl=%s"
+                                 , ret
+                                 , mbedtls_strerror2 ( ret )
+                          ) );
+
             ret = 0;
             self -> rd_rc = 0;
             break;
@@ -278,19 +306,47 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
         /* this is a TLS error */
         switch ( ret )
         {
-        case MBEDTLS_ERR_SSL_WANT_READ:
+            /* The ret is anything other than the following 3, then the ssl context becomes
+             * becomes unusable and should either be freed or call
+             * mbedtls_ssl_session_reset () before a new connection; current connection
+             * must be closed
+             */
+        case MBEDTLS_ERR_SSL_WANT_READ: 
         case MBEDTLS_ERR_SSL_WANT_WRITE:
-            continue;
-     /* case MBEDTLS_ERR_NET_CONN_RESET: ERRNO ( EPIPE || ECONNRESET ) - we deal with this ourselves */
-     /* case MBEDTLS_ERR_SSL_CLOSE_NOTIFY: - we deal with this ourselves */
+            continue; /* TBD - allow the app to check signals */
+        case MBEDTLS_ERR_SSL_CLIENT_RECONNECT: 
+            /* can only happen server-side:   When this function return MBEDTLS_ERR_SSL_CLIENT_RECONNECT
+             * (which can only happen server-side), it means that a client
+             * is initiating a new connection using the same source port.
+             * You can either treat that as a connection close and wait
+             * for the client to resend a ClientHello, or directly
+             * continue with \c mbedtls_ssl_handshake() with the same
+             * context (as it has beeen reset internally). Either way, you
+             * should make sure this is seen by the application as a new
+             * connection: application state, if any, should be reset, and
+             * most importantly the identity of the client must be checked
+             * again. WARNING: not validating the identity of the client
+             * again, or not transmitting the new identity to the
+             * application layer, would allow authentication bypass!*/
+            rc = RC ( rcNS, rcSocket, rcReading, rcMode, rcUnsupported );
+            break;
+
+        case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY: /* check - only place their advanced sample client checks for this */
+            break;
+        case MBEDTLS_ERR_NET_CONN_RESET:
+            rc = RC ( rcNS, rcSocket, rcWriting, rcConnection, rcCanceled );
+            break;
+        case MBEDTLS_ERR_SSL_BAD_INPUT_DATA:
+            rc = RC ( rcNS, rcSocket, rcReading, rcParam, rcInvalid );
+            break;
+        case MBEDTLS_ERR_SSL_INTERNAL_ERROR: /* should never happen */
         case MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE:
-            rc = RC ( rcNS, rcNoTarg, rcReading, rcTransfer, rcUnexpected );
-            break;
         default:
-            rc = RC ( rcNS, rcNoTarg, rcReading, rcTransfer, rcUnknown );
-            break;
+            rc = RC ( rcNS, rcSocket, rcReading, rcError, rcUnexpected );
         }
 
+        /* invalidate the stream for any further use */
+        KTLSStreamDestroy ( self );
         ret = 0;
         break;
     }
@@ -306,19 +362,34 @@ rc_t CC KTLSStreamWrite ( KTLSStream * self,
     int ret;
     rc_t rc = 0;
 
-    STATUS ( 0, "Writing %zu bytes to to server\n", size );
+    if ( self -> ciphertext == NULL )
+    {
+        * num_writ = 0;
+        return RC ( rcNS, rcSocket, rcWriting, rcSocket, rcInvalid );
+    }
+
+    STATUS ( STAT_QA, "Writing %zu bytes to to server\n", size );
     
     self -> wr_rc = 0;
 
     while ( 1 )
     {
-        /* write through TLS library */
+        /* write through TLS library 
+        *  This function will do partial writes in some cases. If the
+        *  return value is non-negative but less than length, the
+        *  function must be called again with updated arguments:
+        *  buf + ret, len - ret (if ret is the return value) until
+        *  it returns a value equal to the last 'len' argument.
+        *
+        *  We expect to be called through KStreamWriteAll that will
+        *  avoid the issue above. 
+        */
         ret = mbedtls_ssl_write ( &self -> ssl, buffer, size );
 
         /* no error */
         if ( ret >= 0 )
         {
-            STATUS ( 0, "%u bytes written", ret );
+            STATUS ( STAT_QA, "%u bytes written", ret );
             break;
         }
 
@@ -326,6 +397,12 @@ rc_t CC KTLSStreamWrite ( KTLSStream * self,
         if ( self -> wr_rc != 0 )
         {
             rc = self -> wr_rc;
+            PLOGERR ( klogSys, ( klogSys, rc
+                                 , "mbedtls_ssl_write returned $(ret) ( $(expl) )"
+                                 , "ret=%d,expl=%s"
+                                 , ret
+                                 , mbedtls_strerror2 ( ret )
+                          ) );
             ret = 0;
             self -> wr_rc = 0;
             break;
@@ -337,8 +414,11 @@ rc_t CC KTLSStreamWrite ( KTLSStream * self,
         case MBEDTLS_ERR_SSL_WANT_READ:
         case MBEDTLS_ERR_SSL_WANT_WRITE:
             continue;
+        case MBEDTLS_ERR_SSL_BAD_INPUT_DATA:
+            rc = RC ( rcNS, rcSocket, rcReading, rcParam, rcInvalid );
+            break;
         default:
-            rc = RC ( rcNS, rcNoTarg, rcWriting, rcTransfer, rcUnknown );
+            rc = RC ( rcNS, rcSocket, rcWriting, rcError, rcUnknown );
             break;
         }
 
@@ -403,16 +483,17 @@ int CC ktls_net_send ( void *ctx, const unsigned char *buf, size_t len )
 
     if ( self -> wr_rc != 0 )
     {
-        switch ( GetRCState ( self -> wr_rc ) )
+        switch ( GetRCObject ( self -> wr_rc ) )
         {
-        /* EPIPE - MBEDTLS_ERR_NET_CONN_RESET: broken pipe */
-        /* ECONNRESET - MBEDTLS_ERR_NET_CONN_RESET: connection reset */
-        /* EINTR - MBEDTLS_ERR_SSL_WANT_READ: we just continue ( shown in unix/sysstream.c ) */    
+        case rcConnection: /* EPIPE && ECONNRESET */
+            if ( GetRCState ( self -> wr_rc ) == rcCanceled ||
+                 GetRCState ( self -> wr_rc ) == rcInterrupted )
+                return MBEDTLS_ERR_NET_CONN_RESET;
+        case rcTransfer: /* EINTR */
+            return MBEDTLS_ERR_SSL_WANT_WRITE;
         default:
-            /* anything else is just failed */
-            break;
+            return MBEDTLS_ERR_NET_SEND_FAILED;
         }
-        return MBEDTLS_ERR_NET_SEND_FAILED;
     }
 
     return ( int ) num_writ;
@@ -433,18 +514,19 @@ int CC ktls_net_recv ( void *ctx, unsigned char *buf, size_t len )
     if ( self -> rd_rc != 0 )
     {
         /* TBD - discover if the read timed out - possibly return MBEDTLS_ERR_SSL_WANT_READ */
-        switch ( GetRCState ( self -> rd_rc ) )
+        switch ( GetRCObject ( self -> rd_rc ) )
         {
-        /* EPIPE - MBEDTLS_ERR_NET_CONN_RESET: broken pipe */
-        /* ECONNRESET - MBEDTLS_ERR_NET_CONN_RESET:connection reset */
-        /* EINTR - MBEDTLS_ERR_SSL_WANT_READ: we just continue ( shown in unix/sysstream.c ) */    
-        /* MBEDTLS_ERR_SSL_TIMEOUT */
+        case rcData:
+            return MBEDTLS_ERR_SSL_TIMEOUT;
+        case rcConnection: /* EPIPE && ECONNRESET */
+            if ( GetRCState ( self -> rd_rc ) == rcCanceled ||
+                 GetRCState ( self -> rd_rc ) == rcInterrupted )
+                return MBEDTLS_ERR_NET_CONN_RESET;
+        case rcTransfer: /* EINTR */
+            return MBEDTLS_ERR_SSL_WANT_READ;
         default:
-            /* anything else is just failed */
-            break;
+            return MBEDTLS_ERR_NET_RECV_FAILED;
         }
-
-        return MBEDTLS_ERR_NET_RECV_FAILED;
     }
 
     return ( int ) num_read;
@@ -457,7 +539,7 @@ rc_t ktls_ssl_setup ( KTLSStream *self, const String *host )
     const String * hostz;
     const KTLSGlobals * tlsg;
 
-    STATUS ( 0, "Setting up SSL/TLS structure" );
+    STATUS ( STAT_QA, "Setting up SSL/TLS structure" );
 
     assert ( self -> mgr != NULL );
     tlsg = & self -> mgr -> tlsg;
@@ -465,8 +547,14 @@ rc_t ktls_ssl_setup ( KTLSStream *self, const String *host )
     ret = mbedtls_ssl_setup( &self -> ssl, &tlsg -> config );
     if ( ret != 0 )
     {
-        STATUS ( 0, "failed...ssl_setup returned %d ( %s )\n", ret, mbedtls_strerror2 ( ret ) );
-        return RC ( rcKrypto, rcNoTarg, rcFormatting, rcEncryption, rcFailed );
+        rc_t rc = RC ( rcKrypto, rcSocket, rcFormatting, rcEncryption, rcFailed );
+        PLOGERR ( klogSys, ( klogSys, rc
+                             , "mbedtls_ssl_setup returned $(ret) ( $(expl) )"
+                             , "ret=%d,expl=%s"
+                             , ret
+                             , mbedtls_strerror2 ( ret )
+                      ) );
+        return rc;
     }
 
     /* HEURISTIC - no memory pages will be less than 4K in size.
@@ -504,8 +592,14 @@ rc_t ktls_ssl_setup ( KTLSStream *self, const String *host )
 
     if ( ret != 0 )
     {
-        STATUS ( 0, "failed...ssl_set_hostname returned %d ( %s )\n", ret, mbedtls_strerror2 ( ret ) );
-        return RC ( rcKrypto, rcNoTarg, rcFormatting, rcEncryption, rcFailed );
+        rc_t rc = RC ( rcKrypto, rcSocket, rcFormatting, rcEncryption, rcFailed );
+        PLOGERR ( klogSys, ( klogSys, rc
+                             , "mbedtls_ctr_drbg_seed returned $(ret) ( $(expl) )"
+                             , "ret=%d,expl=%s"
+                             , ret
+                             , mbedtls_strerror2 ( ret )
+                      ) );
+        return rc;
     }
 
 
@@ -519,7 +613,7 @@ rc_t ktls_handshake ( KTLSStream *self )
 {
     int ret;
 
-    STATUS ( 0, "Performing SSL/TLS handshake...\n" );
+    STATUS ( STAT_QA, "Performing SSL/TLS handshake...\n" );
 
     ret = mbedtls_ssl_handshake( &self -> ssl );
     while ( ret != 0 )
@@ -527,8 +621,14 @@ rc_t ktls_handshake ( KTLSStream *self )
         if ( ret != MBEDTLS_ERR_SSL_WANT_READ && 
              ret != MBEDTLS_ERR_SSL_WANT_WRITE )
         {
-            STATUS ( 0, "failed...handshake returned -0x%x ( %s )\n", -ret, mbedtls_strerror2 ( ret ) );
-            return RC ( rcKrypto, rcNoTarg, rcOpening, rcConnection, rcFailed );
+            rc_t rc = RC ( rcKrypto, rcSocket, rcOpening, rcConnection, rcFailed );
+            PLOGERR ( klogSys, ( klogSys, rc
+                                 , "mbedtls_ssl_handshake returned $(ret) ( $(expl) )"
+                                 , "ret=%d,expl=%s"
+                                 , ret
+                                 , mbedtls_strerror2 ( ret )
+                          ) );
+            return rc;
         }
     }
 
@@ -542,7 +642,7 @@ rc_t KTLSStreamMake ( KTLSStream ** objp, const KNSManager * mgr, const KSocket 
     rc_t rc;
     KTLSStream * obj;
 
-    STATUS ( 0, "%s\n", __func__ );
+    STATUS ( STAT_QA, "%s\n", __func__ );
 
     obj = calloc ( 1, sizeof * obj );
     if ( obj == NULL )
@@ -550,21 +650,21 @@ rc_t KTLSStreamMake ( KTLSStream ** objp, const KNSManager * mgr, const KSocket 
     else
     {
         /* initialize the stream parent */
-        STATUS ( 0, "%s - initializing KStream\n", __func__ );
+        STATUS ( STAT_QA, "%s - initializing KStream\n", __func__ );
         rc = KStreamInit ( & obj -> dad, ( const KStream_vt* ) & vtKTLSStream, "KTLSStream", "", true, true );
         if ( rc == 0 )
         {
-            STATUS ( 0, "%s - attaching to KNSManager\n", __func__ );
+            STATUS ( STAT_QA, "%s - attaching to KNSManager\n", __func__ );
             rc = KNSManagerAddRef ( mgr );
             if ( rc == 0 )
             {
-                STATUS ( 0, "%s - accessing KStream from socket\n", __func__ );
+                STATUS ( STAT_QA, "%s - accessing KStream from socket\n", __func__ );
                 rc = KSocketGetStream ( ciphertext, & obj -> ciphertext );
                 if ( rc == 0 )
                 {
                     obj -> mgr = mgr;
 
-                    STATUS ( 0, "%s - initializing tls wrapper\n", __func__ );
+                    STATUS ( STAT_QA, "%s - initializing tls wrapper\n", __func__ );
                     mbedtls_ssl_init ( &obj -> ssl );
 
                     * objp = obj;
@@ -666,20 +766,26 @@ LIB_EXPORT rc_t CC KTLSStreamVerifyCACert ( const KTLSStream * self )
 {
     rc_t rc;
 
-   STATUS ( 0, "Verifying peer X.509 certificate..." );
+   STATUS ( STAT_QA, "Verifying peer X.509 certificate..." );
    
    if ( self == NULL )
-       rc = RC ( rcKrypto, rcNoTarg, rcValidating, rcSelf, rcNull );
+       rc = RC ( rcKrypto, rcToken, rcValidating, rcSelf, rcNull );
    else
    {
        uint32_t flags = mbedtls_ssl_get_verify_result( &self -> ssl );
        if ( flags != 0 )
        {
            char buf [ 512 ];
+           rc_t rc = RC ( rcKrypto, rcToken, rcValidating, rcEncryption, rcFailed );
+
            mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), "  ! ", flags );        
 
-           STATUS ( 0, "failed... %s\n", buf );
-           return RC ( rcKrypto, rcToken, rcValidating, rcEncryption, rcFailed );
+           PLOGERR ( klogSys, ( klogSys, rc
+                                , "mbedtls_ctr_drbg_seed returned $(ret) ( $(expl) )"
+                                , "buffer=%s"
+                                , &buf
+                         ) );
+           return rc;
        }
        
        rc = 0;
