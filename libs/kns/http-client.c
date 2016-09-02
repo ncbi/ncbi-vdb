@@ -457,8 +457,8 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
                 rc = KTLSStreamVerifyCACert ( tls_stream );
                 if ( rc != 0 )
                 {
-                    LOGERR ( klogErr, "failed to verify CA cert" );
-                    STATUS ( STAT_QA, "%s - WARNING: failed to verify CA cert\n", __func__ );
+                    LOGERR ( klogErr, rc, "failed to verify CA cert" );
+                    STATUS ( STAT_QA, "%s - WARNING: failed to verify CA cert - %R\n", __func__, rc );
                 }
 
                 if ( rc == 0 )
