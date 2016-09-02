@@ -68,7 +68,7 @@ static NGS_ReferenceSequence_vt EBI_ReferenceSequence_vt_inst =
 {
     /* NGS_Refcount */
     { EBI_ReferenceSequenceWhack }
-    
+
     /* NGS_ReferenceSequence */
     ,EBI_ReferenceSequenceGetCanonicalName
     ,EBI_ReferenceSequenceGetIsCircular
@@ -107,9 +107,9 @@ void EBI_ReferenceSequenceWhack ( EBI_ReferenceSequence * self, ctx_t ctx )
 /* Init
  */
 static
-void EBI_ReferenceSequenceInit ( ctx_t ctx, 
+void EBI_ReferenceSequenceInit ( ctx_t ctx,
                            EBI_ReferenceSequence * ref,
-                           const char *clsname, 
+                           const char *clsname,
                            const char *instname )
 {
     FUNC_ENTRY ( ctx, rcNS, rcTable, rcOpening );
@@ -340,9 +340,9 @@ NGS_ReferenceSequence * NGS_ReferenceSequenceMakeEBI ( ctx_t ctx, const char * s
 NGS_String * EBI_ReferenceSequenceGetCanonicalName ( EBI_ReferenceSequence * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcNS, rcDoc, rcReading );
-    
+
     assert ( self != NULL );
-    
+
     return NGS_StringDuplicate ( self -> ebi_ref_spec, ctx );
 }
 
@@ -351,7 +351,7 @@ bool EBI_ReferenceSequenceGetIsCircular ( const EBI_ReferenceSequence * self, ct
     FUNC_ENTRY ( ctx, rcNS, rcDoc, rcReading );
 
     assert ( self );
-   
+
     return false;
 }
 
@@ -365,11 +365,11 @@ uint64_t EBI_ReferenceSequenceGetLength ( EBI_ReferenceSequence * self, ctx_t ct
 }
 
 struct NGS_String * EBI_ReferenceSequenceGetBases ( EBI_ReferenceSequence * self, ctx_t ctx, uint64_t offset, uint64_t size )
-{   
+{
     FUNC_ENTRY ( ctx, rcNS, rcDoc, rcReading );
 
     assert ( self );
-    
+
     {
         uint64_t totalBases = EBI_ReferenceSequenceGetLength ( self, ctx );
         if ( offset >= totalBases )
@@ -377,29 +377,20 @@ struct NGS_String * EBI_ReferenceSequenceGetBases ( EBI_ReferenceSequence * self
             return NGS_StringMake ( ctx, "", 0 );
         }
         else
-        {   
+        {
             uint64_t basesToReturn = totalBases - offset;
             char* data;
-            
+
             if (size != (size_t)-1 && basesToReturn > size)
                 basesToReturn = size;
-                
-            data = (char*) malloc ( basesToReturn );
-            if ( data == NULL )
-            {
-                SYSTEM_ERROR ( xcNoMemory, "allocating %lu bases", basesToReturn );
-                return NGS_StringMake ( ctx, "", 0 );
-            }
-            else
-            {
-                return NGS_StringMakeCopy ( ctx, (const char*) self -> buf_ref_data + offset, basesToReturn );
-            }
+
+            return NGS_StringMakeCopy ( ctx, (const char*) self -> buf_ref_data + offset, basesToReturn );
         }
     }
 }
 
 struct NGS_String * EBI_ReferenceSequenceGetChunk ( EBI_ReferenceSequence * self, ctx_t ctx, uint64_t offset, uint64_t size )
-{   
+{
     FUNC_ENTRY ( ctx, rcNS, rcDoc, rcReading );
 
     assert ( self );

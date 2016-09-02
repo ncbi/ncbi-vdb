@@ -72,7 +72,7 @@
 #define THROW_ON_RC(call) \
     do { \
         if ( ( rc_t ) ( call ) != ( rc_t ) 0 ) \
-            throw std::logic_error ( string ( __func__ ) + #call + " failed" ); \
+            throw std::logic_error ( std::string ( __func__ ) + #call + " failed" ); \
     } while (0)
    
 ////////////////////////////////////////////////////////////////////////////////
