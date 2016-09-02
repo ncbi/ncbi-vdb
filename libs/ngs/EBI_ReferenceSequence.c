@@ -142,10 +142,14 @@ static bool is_md5 ( const char * spec )
     return i == char_count;
 }
 
+/* TBD - WHAT IS THIS? IT TAKES A CONTEXT AND RETURNS AN RC!!
+   THIS CODE CAN'T WORK AS INTENDED.
+*/
 static rc_t NGS_ReferenceSequenceComposeEBIUrl ( ctx_t ctx, const char * spec, bool ismd5, char* url, size_t url_size )
 {
+    /* TBD - obtain these from configuration */
     char const url_templ_md5[] = "http://www.ebi.ac.uk/ena/cram/md5/%s";
-    char const url_templ_acc[] = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&rettype=fasta&id=%s";
+    char const url_templ_acc[] = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&rettype=fasta&id=%s";
 
     size_t num_written = 0;
     rc_t rc = string_printf ( url, url_size, & num_written, ismd5 ? url_templ_md5 : url_templ_acc, spec );
