@@ -160,9 +160,9 @@ static rc_t create_test_config( KConfig **cfg, const char * base )
     if ( rc == 0 )
     {
 #ifdef WINDOWS
-        char * cfg_base = convert_sys_path( base );
-#elif
-        char * cfg_base = base;
+        const char * cfg_base = convert_sys_path( base );
+#else
+        const char * cfg_base = base;
 #endif
         if ( cfg_base != NULL )
         {
@@ -190,14 +190,14 @@ static rc_t prepare_test( KConfig **cfg, const char * sub )
 #ifdef WINDOWS
     org_home = getenv ( "USERPROFILE" );
     rc_t rc = string_printf ( new_home, sizeof new_home, &num_writ, "%s\\%s", org_home, sub );
-#elif
+#else
 	org_home = getenv( "HOME" );
     rc_t rc = string_printf ( new_home, sizeof new_home, &num_writ, "%s/%s", org_home, sub );
 #endif
     if ( rc == 0 )
 #ifdef WINDOWS
         rc = string_printf ( new_home_buffer, sizeof new_home_buffer, &num_writ, "HOME=%s", new_home );
-#elif
+#else
         rc = string_printf ( new_home_buffer, sizeof new_home_buffer, &num_writ, "USERPROFILE=%s", new_home );
 #endif
     if ( rc == 0 )
@@ -216,7 +216,7 @@ void finish_test( const char * sub )
     {
 #ifdef WINDOWS
         rc = KDirectoryRemove( dir, true, "%s/%s", org_home, sub );
-#elif
+#else
         rc = KDirectoryRemove( dir, true, "%s\\%s", org_home, sub );
 #endif
         KDirectoryRelease( dir );
