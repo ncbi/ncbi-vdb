@@ -59,8 +59,11 @@ typedef struct KSocket KSocket;
 #define SHUT_WR 1
 typedef SSIZE_T ssize_t;
 
-static rc_t HandleErrnoEx ( const char *func, unsigned int lineno );
-#define HandleErrno() HandleErrnoEx ( __func__, __LINE__ )
+static rc_t HandleErrnoEx ( const char *func, unsigned int lineno, rc_t rc_ctx );
+#define HandleErrno() HandleErrnoEx ( __func__, __LINE__, rc_ctx )
+#define RC_CTX( t, c ) \
+    const rc_t rc_ctx = CTX ( rcNS, t, c )
+    
 
 #define PIPE_NAME_LENGTH 256
 
@@ -252,6 +255,7 @@ static rc_t CC KIpv4SocketWhack ( KSocket * self )
     }
 
 #if 0
+    RC_CTX ( rcSocket, rcClosing );
     if ( shutdown ( data -> fd, SHUT_WR ) != -1 )
     {
         while ( 1 ) 
@@ -284,6 +288,8 @@ static rc_t CC KIpv4SocketWhack ( KSocket * self )
 static rc_t CC KIpv4SocketTimedRead ( const KSocket * self, void * buffer, size_t bsize,
                                       size_t * num_read, timeout_t * tm )
 {
+    RC_CTX ( rcSocket, rcReading );
+
     /* self != NULL and self->type == epIPV4 already checked by the caller */
 
     rc_t rc = 0;
@@ -398,7 +404,35 @@ rc_t KSocketHandleSendCallWin ()
 static rc_t CC KIpv4SocketTimedWrite ( KSocket * self, const void * buffer, size_t bsize,
                                        size_t * num_writ, timeout_t * tm )
 {
+    RC_CTX ( rcSocket, rcWriting );
+
     /* self != NULL and self->type == epIPV4 already checked by the caller */
+
+    rc_t rc = 0;
+    const KSocketIPv4 * data = &( self -> type_data.ipv4_data );
+    struct timeval ts;
+    fd_set readFds;
+    int selectRes;
+    
+    /* convert timeout (relative time) */
+    if ( tm != NULL )
+    {
+        ts.tv_sec = tm -> mS / 1000;
+        ts.tv_usec = ( tm -> mS % 1000 ) * 1000;
+    }
+    
+    /* wait for socket to become readable */
+    FD_ZERO( &readFds );
+    FD_SET( data -> fd, &readFds );
+    selectRes = select( 0, &readFds, NULL, NULL, ( tm == NULL ) ? NULL : &ts );
+    
+    /* check for error */
+    if ( selectRes == -1 )
+        rc = KSocketHandleSelectCallWin ( rcReading );
+    else if ( selectRes == 0 )
+        rc = RC ( rcNS, rcSocket, rcReading, rcTimeout, rcExhausted ); /* timeout */
+    else if ( ! FD_ISSET( data -> fd, &readFds ) )
+        rc =     /* self != NULL and self->type == epIPV4 already checked by the caller */
 
     rc_t rc = 0;
     KSocketIPv4 * data = &( self -> type_data.ipv4_data );
@@ -771,6 +805,8 @@ static rc_t KNSManagerMakeIPv4Listener ( const KNSManager *self, KSocket **out, 
         rc = RC ( rcNS, rcSocket, rcConstructing, rcMemory, rcExhausted );
     else
     {
+        listener -> type = epIPV4;
+
         /* pass these along to accepted sockets */
         listener -> read_timeout = self -> conn_read_timeout;
         listener -> write_timeout = self -> conn_write_timeout;
@@ -780,7 +816,7 @@ static rc_t KNSManagerMakeIPv4Listener ( const KNSManager *self, KSocket **out, 
         if ( rc == 0 )
         {
             KSocketIPv4 * data = &( listener -> type_data . ipv4_data );
-             data -> fd = socket ( AF_INET, SOCK_STREAM, 0 );
+            data -> fd = socket ( AF_INET, SOCK_STREAM, 0 );
             if ( data -> fd < 0 )
                 rc = KSockethandleSocketCallWin ();
             else
@@ -928,6 +964,8 @@ static rc_t KNSManagerMakeIPv6Listener ( const KNSManager *self, KSocket **out, 
         rc = RC ( rcNS, rcSocket, rcConstructing, rcMemory, rcExhausted );
     else
     {
+        listener -> type = epIPV6;
+
         /* pass these along to accepted sockets */
         listener -> read_timeout = self -> conn_read_timeout;
         listener -> write_timeout = self -> conn_write_timeout;
@@ -1078,6 +1116,8 @@ static rc_t KSocketGetEndpointV6 ( const KSocket * self, KEndPoint * ep, bool re
 /* helper function called by KIPCSocketWhack() = static function for IPC-implementation vtable */
 static rc_t KIPCSocketWhack_unconnected_server_side_pipe ( KSocket * self )
 {
+    RC_CTX ( rcSocket, rcClosing );
+
     rc_t rc = 0;
     KSocketIPC * data = &( self -> type_data.ipc_data );
 
@@ -1118,6 +1158,8 @@ static rc_t KIPCSocketWhack_unconnected_server_side_pipe ( KSocket * self )
 /* helper function called by KIPCSocketWhack() = static function for IPC-implementation vtable */
 static rc_t KIPCSocketWhack_server_side_pipe ( KSocket * self )
 {
+    RC_CTX ( rcSocket, rcClosing );
+
     rc_t rc = 0;
     KSocketIPC * data = &( self -> type_data.ipc_data );
 
@@ -1147,6 +1189,8 @@ static rc_t KIPCSocketWhack_server_side_pipe ( KSocket * self )
 /* helper function called by KIPCSocketWhack() = static function for IPC-implementation vtable */
 static rc_t KIPCSocketWhack_client_side_pipe ( KSocket * self )
 {
+    RC_CTX ( rcSocket, rcClosing );
+
     rc_t rc = 0;
     KSocketIPC * data = &( self -> type_data.ipc_data );
 
@@ -1186,6 +1230,8 @@ static rc_t CC KIPCSocketWhack ( KSocket * self )
 static rc_t WaitForData( const KSocket * self, void * buffer, size_t bsize,
                          size_t * num_read, uint32_t * tmMs, OVERLAPPED * overlap )
 {
+    RC_CTX ( rcSocket, rcReading );
+
     /* received a ERROR_NO_DATA trying to read from a pipe; wait for the data to arrive or a time out to expire */ 
     /* on success, will leave tmMs set to the remaining portion of timeout, if specified */
 
@@ -1247,6 +1293,8 @@ static rc_t WaitForData( const KSocket * self, void * buffer, size_t bsize,
 static rc_t CC KIPCSocketTimedRead ( const KSocket * self, void * buffer, size_t bsize,
                                      size_t * num_read, timeout_t * tm )
 {
+    RC_CTX ( rcSocket, rcReading );
+
     rc_t rc = 0;
     const KSocketIPC * data = &( self -> type_data.ipc_data );
     OVERLAPPED overlap;
@@ -1382,6 +1430,8 @@ static rc_t CC KIPCSocketRead ( const KSocket *self, void * buffer, size_t bsize
 static rc_t CC KIPCSocketTimedWrite ( KSocket * self, const void * buffer, size_t bsize,
                                       size_t * num_writ, timeout_t * tm )
 {
+    RC_CTX ( rcSocket, rcWriting );
+
     rc_t rc = 0;
     KSocketIPC * data;
     OVERLAPPED overlap;
@@ -1546,6 +1596,8 @@ static rc_t KNSManagerMakeIPCConnection ( struct KNSManager const *self,
                                           int32_t readMillis, 
                                           int32_t writeMillis )
 {
+    RC_CTX ( rcStream, rcConstructing );
+
     rc_t rc = 0;
     uint8_t retry_count = 0;
     char pipename[ PIPE_NAME_LENGTH ];
@@ -1693,6 +1745,8 @@ static rc_t KNSManagerMakeIPCListener( struct KNSManager const *self, struct KSo
         rc = RC ( rcNS, rcNoTarg, rcAllocating, rcNoObj, rcNull ); 
     else
     {
+        ksock -> type = epIPC;
+
         ksock -> read_timeout  = self -> conn_read_timeout;
         ksock -> write_timeout = self -> conn_write_timeout;
 
@@ -1730,6 +1784,8 @@ static rc_t KNSManagerMakeIPCListener( struct KNSManager const *self, struct KSo
 
 static rc_t KListenerIPCAccept ( KSocket * self, struct KSocket ** out )
 {
+    RC_CTX ( rcConnection, rcWaiting );
+
     rc_t rc = 0;
     KSocketIPC * data = &( self -> type_data.ipc_data );
 
@@ -2070,7 +2126,7 @@ LIB_EXPORT rc_t CC KListenerAccept ( KListener * self, struct KSocket ** out )
 
 ********************************************************************************************* */
 
-static rc_t HandleErrnoEx ( const char *func_name, unsigned int lineno )
+static rc_t HandleErrnoEx ( const char *func_name, unsigned int lineno, rc_t rc_ctx )
 {
     rc_t rc;
     int lerrno = WSAGetLastError();
@@ -2078,117 +2134,117 @@ static rc_t HandleErrnoEx ( const char *func_name, unsigned int lineno )
     switch ( lerrno )
     {
     case ERROR_FILE_NOT_FOUND:
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcFile, rcNotFound );            
+        rc = RC_FROM_CTX ( rc_ctx, rcFile, rcNotFound );
         break;
     case ERROR_INVALID_HANDLE:
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcId, rcInvalid );            
+        rc = RC_FROM_CTX ( rc_ctx, rcId, rcInvalid );            
         break;
     case ERROR_INVALID_PARAMETER:
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcParam, rcInvalid );            
+        rc = RC_FROM_CTX ( rc_ctx, rcParam, rcInvalid );            
         break;
     case ERROR_PIPE_BUSY:
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcCanceled );
+        rc = RC_FROM_CTX ( rc_ctx, rcConnection, rcCanceled );
         break;
     case ERROR_SEM_TIMEOUT:
-        rc = RC ( rcNS, rcStream, rcReading, rcTimeout, rcExhausted );
+        rc = RC_FROM_CTX ( rc_ctx, rcTimeout, rcExhausted );
         break;
     case WSAEACCES: /* write permission denied */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcMemory, rcUnauthorized );            
+        rc = RC_FROM_CTX ( rc_ctx, rcMemory, rcUnauthorized );            
         break;
     case WSAEADDRINUSE:/* address is already in use */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcMemory, rcExists );
+        rc = RC_FROM_CTX ( rc_ctx, rcMemory, rcExists );
         break;
     case WSAEADDRNOTAVAIL: /* requested address was not local */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcMemory, rcNotFound );
+        rc = RC_FROM_CTX ( rc_ctx, rcMemory, rcNotFound );
         break;
     case WSAEAFNOSUPPORT: /* address didnt have correct address family in ss_family field */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcName, rcInvalid );
+        rc = RC_FROM_CTX ( rc_ctx, rcName, rcInvalid );
         break;
     case WSAEALREADY: /* socket is non blocking and a previous connection has not yet completed */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcId, rcUndefined );
+        rc = RC_FROM_CTX ( rc_ctx, rcId, rcUndefined );
         break;
     case WSAECONNABORTED: /* virtual circuit terminated. Application should close socket */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcId, rcInterrupted );
+        rc = RC_FROM_CTX ( rc_ctx, rcId, rcInterrupted );
         break;
     case WSAECONNREFUSED: /* remote host refused to allow network connection */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcCanceled );
+        rc = RC_FROM_CTX ( rc_ctx, rcConnection, rcCanceled );
         break;
     case WSAECONNRESET: /* connection reset by peer */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcId, rcCanceled );
+        rc = RC_FROM_CTX ( rc_ctx, rcId, rcCanceled );
         break;
     case WSAEFAULT: /* name paremeter is not valid part of addr space */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcMemory, rcOutofrange );
+        rc = RC_FROM_CTX ( rc_ctx, rcMemory, rcOutofrange );
         break;
     case WSAEHOSTUNREACH: /* remote hoste cannot be reached at this time */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcNotAvailable );
+        rc = RC_FROM_CTX ( rc_ctx, rcConnection, rcNotAvailable );
         break;
     case WSAEINPROGRESS: /* call is in progress */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcId, rcUndefined );
+        rc = RC_FROM_CTX ( rc_ctx, rcId, rcUndefined );
         break;
     case WSAEINVAL: /* invalid argument */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcParam, rcInvalid );
+        rc = RC_FROM_CTX ( rc_ctx, rcParam, rcInvalid );
         break;
     case WSAEISCONN: /* connected already */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcExists );
+        rc = RC_FROM_CTX ( rc_ctx, rcConnection, rcExists );
         break;
     case WSAEMSGSIZE:  /* msg size too big */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcMessage, rcExcessive );
+        rc = RC_FROM_CTX ( rc_ctx, rcMessage, rcExcessive );
         break;
     case WSAENETDOWN:/* network subsystem failed */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcNoObj, rcFailed );
+        rc = RC_FROM_CTX ( rc_ctx, rcNoObj, rcFailed );
         break;
     case WSAENETRESET: /* connection broken due to keep-alive activity that 
                           detected a failure while in progress */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcCanceled );
+        rc = RC_FROM_CTX ( rc_ctx, rcConnection, rcCanceled );
         break;
     case WSAENETUNREACH: /* network is unreachable */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcNotAvailable );
+        rc = RC_FROM_CTX ( rc_ctx, rcConnection, rcNotAvailable );
         break;
     case WSAENOBUFS: /* output queue for a network connection was full. 
                      ( wont typically happen in linux. Packets are just silently dropped */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcInterrupted );
+        rc = RC_FROM_CTX ( rc_ctx, rcConnection, rcInterrupted );
         break;
     case ERROR_PIPE_NOT_CONNECTED:
     case WSAENOTCONN: /* socket is not connected */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcInvalid );
+        rc = RC_FROM_CTX ( rc_ctx, rcConnection, rcInvalid );
         break;
     case WSANOTINITIALISED: /* Must have WSAStartup call */
-        rc = RC ( rcNS, rcNoTarg, rcInitializing, rcEnvironment, rcUndefined );
+        rc = RC_FROM_CTX ( rc_ctx, rcEnvironment, rcUndefined );
         break;
     case WSAENOTSOCK: /* sock fd is not a socket */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcId, rcInvalid );
+        rc = RC_FROM_CTX ( rc_ctx, rcId, rcInvalid );
         break;
     case WSAEOPNOTSUPP: /* socket is not stream-style such as SOCK_STREAM */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcId, rcUnsupported );
+        rc = RC_FROM_CTX ( rc_ctx, rcId, rcUnsupported );
         break;
     case WSAEPROTONOSUPPORT: /* specified protocol is not supported */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcAttr, rcUnsupported );
+        rc = RC_FROM_CTX ( rc_ctx, rcAttr, rcUnsupported );
         break;
     case WSAEPROTOTYPE: /* wrong type of protocol for this socket */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcId, rcUnsupported );
+        rc = RC_FROM_CTX ( rc_ctx, rcId, rcUnsupported );
         break;
     case WSAEPROVIDERFAILEDINIT: /* service provider failed to initialize */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcTransfer, rcIncorrect );
+        rc = RC_FROM_CTX ( rc_ctx, rcTransfer, rcIncorrect );
         break;
     case ERROR_BROKEN_PIPE:
     case WSAESHUTDOWN: /* socket had been shutdown */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcId, rcUnsupported );
+        rc = RC_FROM_CTX ( rc_ctx, rcId, rcUnsupported );
         break;
     case WSAESOCKTNOSUPPORT: /* specified socket type is not supported */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcId, rcUnsupported );
+        rc = RC_FROM_CTX ( rc_ctx, rcId, rcUnsupported );
         break;
     case WSAETIMEDOUT: /* connection dropped because of network failure */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcCanceled );
+        rc = RC_FROM_CTX ( rc_ctx, rcConnection, rcCanceled );
         break;
     case WSAEWOULDBLOCK: /* socket is marked as non-blocking but the recv operation
                             would block */
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcCmd, rcBusy );
+        rc = RC_FROM_CTX ( rc_ctx, rcCmd, rcBusy );
         break;
 
     case WSAEINTR: /* call was cancelled */
     case WSAEMFILE: /* no more socket fd available */
     default:
-        rc = RC ( rcNS, rcNoTarg, rcReading, rcError, rcUnknown );
+        rc = RC_FROM_CTX ( rc_ctx, rcError, rcUnknown );
         PLOGERR ( klogErr, ( klogErr, rc, "unknown system error '$(S)($(E))', line=$(L)",
                              "S=%!,E=%d,L=%d", lerrno, lerrno, lineno ) );
     }
