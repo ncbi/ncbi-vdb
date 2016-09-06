@@ -130,7 +130,7 @@ static rc_t write_dflt_path( KConfig *cfg, const char * base )
     return rc;
 }
 
-#if WINDOWS
+#ifdef WINDOWS
 static char * convert_sys_path( const char * sys_path )
 {
     char * res = NULL;
@@ -159,7 +159,7 @@ static rc_t create_test_config( KConfig **cfg, const char * base )
     rc_t rc = KConfigMake ( cfg, NULL );
     if ( rc == 0 )
     {
-#if WINDOWS
+#ifdef WINDOWS
         char * cfg_base = convert_sys_path( base );
 #elif
         char * cfg_base = base;
@@ -173,7 +173,7 @@ static rc_t create_test_config( KConfig **cfg, const char * base )
                 rc = write_root( *cfg, cfg_base, "protected", "dbGaP-4831" );
             if ( rc == 0 )
                 rc = write_dflt_path( *cfg, cfg_base );
-#if WINDOWS
+#ifdef WINDOWS
             free( ( void * ) cfg_base );
 #endif
         }
@@ -187,7 +187,7 @@ char new_home_buffer[ 4096 ]; /* buffer for putenv has to stay alive! */
 static rc_t prepare_test( KConfig **cfg, const char * sub )
 {
 	size_t num_writ;
-#if WINDOWS
+#ifdef WINDOWS
     org_home = getenv ( "USERPROFILE" );
     rc_t rc = string_printf ( new_home, sizeof new_home, &num_writ, "%s\\%s", org_home, sub );
 #elif
@@ -195,7 +195,7 @@ static rc_t prepare_test( KConfig **cfg, const char * sub )
     rc_t rc = string_printf ( new_home, sizeof new_home, &num_writ, "%s/%s", org_home, sub );
 #endif
     if ( rc == 0 )
-#if WINDOWS
+#ifdef WINDOWS
         rc = string_printf ( new_home_buffer, sizeof new_home_buffer, &num_writ, "HOME=%s", new_home );
 #elif
         rc = string_printf ( new_home_buffer, sizeof new_home_buffer, &num_writ, "USERPROFILE=%s", new_home );
@@ -214,7 +214,7 @@ void finish_test( const char * sub )
     rc_t rc = KDirectoryNativeDir( &dir );
     if ( rc == 0 )
     {
-#if WINDOWS
+#ifdef WINDOWS
         rc = KDirectoryRemove( dir, true, "%s/%s", org_home, sub );
 #elif
         rc = KDirectoryRemove( dir, true, "%s\\%s", org_home, sub );
