@@ -76,7 +76,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 #include <stdio.h>
 #define TRACE( x, ... ) \
     fprintf ( stderr, "@@ %s:%d: %s: " x, __FILE__, __LINE__, __func__, __VA_ARGS__ )
-#elif _DEBUGGING && defined _h_klib_status_ && 1
+#elif _DEBUGGING && defined _h_klib_status_ && 0
 #define TRACE( x, ... ) \
     STATUS ( 0, "@@ %s:%d: %s: " x, __FILE__, __LINE__, __func__, __VA_ARGS__ )
 #else
