@@ -131,6 +131,16 @@ KLIB_EXTERN bool CC GetUnreadRCInfo ( rc_t *rc, const char **filename, const cha
         ( ( rc_t ) ( obj ) << 6 ) | /*  8 bits */            \
         ( ( rc_t ) ( state ) ) ) )  /*  6 bits */
 
+/* RC_FROM_CTX
+ *  form an rc but take input from existing CTX()
+ */
+#define RC_FROM_CTX( ctx, obj, state )                       \
+    ( rc_t ) ( ASSERT_OBJ_STATE (),                          \
+    SET_RC_FILE_FUNC_LINE (                                  \
+        ( ctx )                   | /* 18 bits */            \
+        ( ( rc_t ) ( obj ) << 6 ) | /*  8 bits */            \
+        ( ( rc_t ) ( state ) ) ) )  /*  6 bits */
+
 /* ResetRCContext
  *  rewrite rc to reflect different context
  *  typically used to pass out return codes
