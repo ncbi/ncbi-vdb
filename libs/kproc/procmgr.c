@@ -31,7 +31,6 @@
 #include <kproc/lock.h>
 #include <klib/refcount.h>
 #include <klib/rc.h>
-
 #include <atomic.h>
 
 #define rcTask rcCmd
@@ -61,12 +60,12 @@ struct KCleanupTaskQueue
  */
 struct KProcMgr
 {
-    KLock *cleanup_lock;
     KCleanupTaskQueue *cleanup;
     KRefcount refcount;
 };
 
 static atomic_ptr_t s_proc_mgr;
+static KLock *cleanup_lock = NULL;
 
 /* Whack
  *  tear down proc mgr
@@ -88,14 +87,14 @@ LIB_EXPORT rc_t CC KProcMgrWhack ( void )
     /* check to see if this thread will be cleaning up on procmgr */
     if ( self != NULL )
     {
-        rc = KLockAcquire ( self -> cleanup_lock );
+        rc = KLockAcquire ( cleanup_lock );
         if ( rc == 0 )
         {
             uint64_t i;
 
             KCleanupTaskQueue *cleanup = self -> cleanup;
             self -> cleanup = NULL;
-            KLockUnlock ( self -> cleanup_lock );
+            KLockUnlock ( cleanup_lock );
 
             if ( cleanup != NULL )
             {
@@ -117,7 +116,6 @@ LIB_EXPORT rc_t CC KProcMgrWhack ( void )
             }
         }
 
-        KLockRelease ( self -> cleanup_lock );
         free ( self );
     }
 
@@ -137,25 +135,27 @@ LIB_EXPORT rc_t CC KProcMgrInit ( void )
     {
         KProcMgr * mgr = calloc ( 1, sizeof * mgr );
         if ( mgr == NULL )
+        {
             rc = RC ( rcPS, rcMgr, rcInitializing, rcMemory, rcExhausted );
+        }
         else
         {
-            rc = KLockMake ( & mgr -> cleanup_lock );
-            if ( rc == 0 )
+            KProcMgr * rslt;
+
+            mgr -> cleanup = NULL;
+            KRefcountInit ( & mgr -> refcount, 0, "KProcMgr", "init", "process mgr" );
+
+            rslt = atomic_test_and_set_ptr ( & s_proc_mgr, mgr, NULL );
+            if ( rslt == NULL && s_proc_mgr .ptr == mgr )
             {
-                KProcMgr * rslt;
-
-                mgr -> cleanup = NULL;
-                KRefcountInit ( & mgr -> refcount, 0, "KProcMgr", "init", "process mgr" );
-
-                rslt = atomic_test_and_set_ptr ( & s_proc_mgr, mgr, NULL );
-                if ( rslt == NULL )
+                rc = KLockMake ( & cleanup_lock );
+                if ( rc == 0 )
+                {
                     return 0;
-
-                /* someone beat us to it */
-                KLockRelease ( mgr -> cleanup_lock );
+                }
+                s_proc_mgr . ptr = NULL;
             }
-
+            /* someone beat us to it */
             free ( mgr );
         }
     }
@@ -208,17 +208,30 @@ LIB_EXPORT rc_t CC KProcMgrRelease ( const KProcMgr *self )
 {
     if ( self != NULL )
     {
-        switch ( KRefcountDrop ( & self -> refcount, "KProcMgr" ) )
+        if ( KLockAcquire ( cleanup_lock ) == 0 ) /* once created, cleanup_lock does not go away */
         {
-        case krefWhack:
-            return 0;
-        case krefNegative:
-            return RC ( rcPS, rcMgr, rcReleasing, rcRange, rcExcessive );
+            if ( s_proc_mgr . ptr != NULL )
+            {
+                rc_t rc = KRefcountDrop ( & self -> refcount, "KProcMgr" );
+                KLockUnlock ( cleanup_lock );
+                switch ( rc )
+                {
+                case krefWhack:
+                    return 0;
+                case krefNegative:
+                    return RC ( rcPS, rcMgr, rcReleasing, rcRange, rcExcessive );
+                }
+                return rc;
+            }
+            else
+            {   /* VDB-3067: the singleton may have been destroyed by the main thread exiting; */
+                /* if so, this pointer is dead but we are on a thread that is terminating anyway, do nothing */
+                KLockUnlock ( cleanup_lock );
+            }
         }
     }
     return 0;
 }
-
 
 /* AddCleanupTask
  *  add a task to be performed at process exit time
@@ -250,7 +263,7 @@ LIB_EXPORT rc_t CC KProcMgrAddCleanupTask ( KProcMgr *self, KTaskTicket *ticket,
             rc = KTaskAddRef ( task );
             if ( rc == 0 )
             {
-                rc = KLockAcquire ( self -> cleanup_lock );
+                rc = KLockAcquire ( cleanup_lock );
                 if ( rc == 0 )
                 {
                     const uint64_t extend = 1024;
@@ -356,7 +369,7 @@ LIB_EXPORT rc_t CC KProcMgrAddCleanupTask ( KProcMgr *self, KTaskTicket *ticket,
                         ++ cleanup -> count;
                     }
 
-                    KLockUnlock ( self -> cleanup_lock );
+                    KLockUnlock ( cleanup_lock );
                 }
 
                 if ( rc != 0 )
@@ -392,7 +405,7 @@ LIB_EXPORT rc_t CC KProcMgrRemoveCleanupTask ( KProcMgr *self, const KTaskTicket
         idx ^= ( size_t ) self;
 
         /* go into queue */
-        rc = KLockAcquire ( self -> cleanup_lock );
+        rc = KLockAcquire ( cleanup_lock );
         if ( rc == 0 )
         {
             KCleanupTaskQueue *cleanup = self -> cleanup;
@@ -413,7 +426,7 @@ LIB_EXPORT rc_t CC KProcMgrRemoveCleanupTask ( KProcMgr *self, const KTaskTicket
                 }
             }
 
-            KLockUnlock ( self -> cleanup_lock );
+            KLockUnlock ( cleanup_lock );
         }
 
         if ( rc == 0 )

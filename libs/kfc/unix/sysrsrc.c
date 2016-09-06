@@ -133,7 +133,7 @@ void KRsrcGlobalWhack ( ctx_t ctx )
             s_rsrc . proc = NULL;
 
             /* run destructor tasks while we still have other mgrs */
-            /*KProcMgrWhack ();*/
+            KProcMgrWhack ();
 
             /* tear it down */
             KRsrcWhack ( & s_rsrc, ctx );
