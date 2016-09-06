@@ -923,7 +923,7 @@ FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
     // .../root = "repos/ngc/" ; creates the dir 
     //
     // also, creates the following node if it is not present
-    // /repository/remote/protected/CGI/resolver-cgi="http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi"
+    // /repository/remote/protected/CGI/resolver-cgi="https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi"
     {
         REQUIRE_RC(KConfigNodeReadVPath(GetNode("/repository/user/protected/dbGaP-2956/encryption-key-path"), &path));    
         VPathReadPath(path, buf, sizeof(buf), &num_read);    
@@ -965,7 +965,7 @@ FIXTURE_TEST_CASE(KConfigImportNgc_Basic, KfgFixture)
         const String* str;
         REQUIRE_RC(KConfigNodeReadVPath(GetNode("/repository/remote/protected/CGI/resolver-cgi"), &path));    
         REQUIRE_RC(VPathMakeString(path, &str));    
-        REQUIRE_EQ(string(str->addr), string("http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi"));
+        REQUIRE_EQ(string(str->addr), string("https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi"));
         StringWhack(str);
     }
     
