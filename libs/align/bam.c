@@ -4067,16 +4067,13 @@ rc_t LoadIndex2a(const uint8_t data[], size_t dlen, unsigned refNo,
     memset(minOffset, 0, sizeof(minOffset));
     for (i = 0; i != MAX_BIN; ++i) {
         const unsigned ival = bin2ival(i);
-        unsigned n_ival = bin_ival_count(i);
+        unsigned const n_ival = bin_ival_count(i);
         
         cp = ctx->bins[i];
         if (cp == 0)
             continue;
         if (n_ival <= 1)
             break;
-        
-        if (ival + n_ival > max_ival)
-            n_ival = max_ival - ival;
         
         chunk_count = LE2HI32(ctx->base + cp + 4); cp += 8;
         for (k = 0; k < chunk_count; ++k) {
@@ -4085,7 +4082,7 @@ rc_t LoadIndex2a(const uint8_t data[], size_t dlen, unsigned refNo,
             unsigned l;
             
             cp += 16;
-            for (l = 0; l != n_ival; ++l) {
+            for (l = 0; ival + l < max_ival; ++l) {
                 if (start < ctx->refSeq[refNo][ival + l] &&
                     ctx->refSeq[refNo][ival + l] <= end &&
                     (start < minOffset[ival + l] ||
