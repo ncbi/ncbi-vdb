@@ -150,7 +150,7 @@ VFS_EXTERN rc_t CC VFSManagerSetCacheRoot ( const struct VFSManager * self,
  *  days [ IN ] - files older than this will be deleted
  *  
  */
-VFS_EXTERN rc_t CC VFSManagerDeleteCacheOlderThan ( const VFSManager * self,
+VFS_EXTERN rc_t CC VFSManagerDeleteCacheOlderThan ( const struct VFSManager * self,
     uint32_t days );
 
 
