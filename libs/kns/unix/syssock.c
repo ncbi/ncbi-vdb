@@ -1231,6 +1231,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeListener ( const KNSManager *self,
                                    "KSocket", "", true, true );
                 if ( rc == 0 )
                 {
+                    listener -> type = ep -> type;
                     switch ( ep -> type )
                     {
                     case epIPV6:
