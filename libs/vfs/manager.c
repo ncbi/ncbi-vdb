@@ -59,6 +59,7 @@
 #include <kfs/quickmount.h>
 #include <kfs/cacheteefile.h>
 #include <kfs/lockfile.h>
+#include <kfs/defs.h>
 
 #include <kns/http.h>
 #include <kns/kns-mgr-priv.h>
@@ -73,6 +74,7 @@
 #include <klib/refcount.h>
 #include <klib/namelist.h>
 #include <klib/vector.h>
+#include <klib/time.h> 
 
 #include <strtol.h>
 
@@ -3376,7 +3378,7 @@ LIB_EXPORT rc_t CC VFSManagerSetCacheRoot ( const VFSManager * self,
                             rc = KRepositoryName( repo, repo_name, sizeof repo_name, &repo_name_len );
                             if ( rc == 0 )
                             {
-                                char new_root[ 1024 ];
+                                char new_root[ 4096 ];
                                 size_t num_writ;
                                 repo_name[ repo_name_len ] = 0;
                                 rc = string_printf( new_root, sizeof new_root, &num_writ, indirect_root, repo_name );
@@ -3408,6 +3410,99 @@ LIB_EXPORT rc_t CC VFSManagerSetCacheRoot ( const VFSManager * self,
                     rc = KConfigCommit ( self -> cfg );
                 */
             }
+        }
+    }
+    return rc;
+}
+
+
+static rc_t inspect_file( KDirectory * dir, KTime_t date, const char * path )
+{
+    KTime_t file_date;
+    rc_t rc = KDirectoryDate ( dir, &file_date, "%s", path );
+    if ( rc == 0 )
+    {
+        if ( file_date < date )
+            KDirectoryRemove ( dir, false, "%s", path );
+    }
+    return rc;
+} 
+
+
+static rc_t inspect_dir( KDirectory * dir, KTime_t date, const char * path )
+{
+    KNamelist * itemlist;
+    rc_t rc = KDirectoryList( dir, &itemlist, NULL, NULL, "%s", path );
+    if ( rc == 0 )
+    {
+        uint32_t count, idx;
+        rc = KNamelistCount ( itemlist, &count );
+        for ( idx = 0; rc == 0 && idx < count; idx++ )
+        {
+            const char * item;
+            rc = KNamelistGet ( itemlist, idx, &item );
+            {
+                char item_path[ 4096 ];
+                size_t num_writ;
+                rc = string_printf ( item_path, sizeof item_path, &num_writ, "%s/%s", path, item );
+                if ( rc == 0 )
+                {
+                    uint32_t pathtype = KDirectoryPathType( dir, "%s", item_path );
+                    switch( pathtype )
+                    {
+                        case kptFile : rc = inspect_file( dir, date, item_path ); break;
+                        case kptDir  : rc = inspect_dir( dir, date, item_path ); break; /* recursion! */
+                        default : break;
+                    }
+                }
+            }
+        }
+        KNamelistRelease( itemlist );
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC VFSManagerDeleteCacheOlderThan ( const VFSManager * self,
+    uint32_t days )
+{
+    rc_t rc;
+    if ( self == NULL )
+        rc = RC ( rcVFS, rcMgr, rcSelecting, rcSelf, rcNull );
+    else if ( self -> cfg == NULL )
+        rc = RC ( rcVFS, rcMgr, rcSelecting, rcItem, rcNull );
+    else
+    {
+        /* loop through the user-repositories to get the root property */
+        const KRepositoryMgr * repo_mgr;
+        rc = KConfigMakeRepositoryMgrRead ( self -> cfg, &repo_mgr );
+        if ( rc == 0 )
+        {
+            KRepositoryVector user_repos;
+            rc = KRepositoryMgrUserRepositories ( repo_mgr, &user_repos );
+            if ( rc == 0 )
+            {
+                uint32_t start = VectorStart( &user_repos );
+                uint32_t count = VectorLength( &user_repos );
+                uint32_t idx;
+                for ( idx = 0; rc == 0 && idx < count; ++idx )
+                {
+                    KRepository * repo = VectorGet ( &user_repos, idx + start );
+                    if ( repo != NULL )
+                    {
+                        char path[ 4096 ];
+                        size_t root_size;
+                        rc = KRepositoryRoot ( repo, path, sizeof path, &root_size );
+                        if ( rc == 0 )
+                        {
+                            KTime_t date = KTimeStamp() - ( days * 60 * 60 * 24 );
+                            rc = inspect_dir( self->cwd, date, path );
+                        }
+                    }
+                }
+                KRepositoryVectorWhack ( &user_repos );
+            }
+            KRepositoryMgrRelease ( repo_mgr );
         }
     }
     return rc;

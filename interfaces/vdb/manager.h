@@ -214,10 +214,18 @@ VDB_EXTERN rc_t CC VDBManagerGetCacheRoot ( const VDBManager * self,
  *  forgotten. If the user wants to make the change permanent, he has to obtain
  *  a reference to the config-manager 'KConfig' and call KConfigCommit().
  */
-
 VDB_EXTERN rc_t CC VDBManagerSetCacheRoot ( const VDBManager * self,
     struct VPath const * path );
- 
+
+/* DeleteCacheOlderThan
+ *  delete old cached files
+ *
+ *  days [ IN ] - files older than this will be deleted
+ *  
+ */
+VDB_EXTERN rc_t CC VDBManagerDeleteCacheOlderThan ( const VDBManager * self,
+    uint32_t days );
+    
 
 #ifdef __cplusplus
 }
