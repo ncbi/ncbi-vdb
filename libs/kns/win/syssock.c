@@ -153,10 +153,10 @@ rc_t CC KSocketHandleShutdownCallWin ()
         return RC ( rcNS, rcSocket, rcClosing, rcConnection, rcInvalid );
     case WSAENOTSOCK:
         return RC ( rcNS, rcSocket, rcClosing, rcSocket, rcIncorrect );
-    case WSANOTINITIALIZED:
+    case WSANOTINITIALISED:
         return RC ( rcNS, rcSocket, rcClosing, rcEnvironment, rcInvalid );
     }
-    return RC ( rcNS, rcSocket, rcClosing, rcError, rcUnkown );
+    return RC ( rcNS, rcSocket, rcClosing, rcError, rcUnknown );
 }
 
 static
@@ -164,7 +164,7 @@ rc_t CC KSocketHandleRecvCallWin ( rc_t context )
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED:
+    case WSANOTINITIALISED:
         return RC ( rcNS, rcSocket, context, rcEnvironment, rcInvalid );
     case WSAENETDOWN: /* ENETUNREACH */
         return RC ( rcNS, rcSocket, context, rcConnection, rcNotAvailable );
@@ -197,7 +197,7 @@ rc_t CC KSocketHandleRecvCallWin ( rc_t context )
         return RC ( rcNS, rcSocket, context, rcConnection, rcCanceled );
     }
 
-    return RC ( rcNS, rcSocket, context, rcError, rcUnkown );
+    return RC ( rcNS, rcSocket, context, rcError, rcUnknown );
 }
 
 static
@@ -205,7 +205,7 @@ rc_t CC KSocketHandleSelectCallWin ( rc_t context )
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED:
+    case WSANOTINITIALISED:
         return RC ( rcNS, rcSocket, context, rcEnvironment, rcInvalid );
     case WSAEINVAL:
     case WSAEFAULT:
@@ -220,7 +220,7 @@ rc_t CC KSocketHandleSelectCallWin ( rc_t context )
         return RC ( rcNS, rcSocket, context, rcSocket, rcIncorrect );
     }
 
-    return RC ( rcNS, rcSocket, context, rcError, rcUnkown );
+    return RC ( rcNS, rcSocket, context, rcError, rcUnknown );
 }
 
 static rc_t CC KIpv4SocketWhack ( KSocket * self )
@@ -360,7 +360,7 @@ rc_t KSocketHandleSendCallWin ()
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED:
+    case WSANOTINITIALISED:
         return RC ( rcNS, rcSocket, rcWriting, rcEnvironment, rcInvalid );
     case WSAENETDOWN:
     case WSAEHOSTUNREACH:
@@ -368,7 +368,7 @@ rc_t KSocketHandleSendCallWin ()
     case WSAEINVAL:
     case WSAEFAULT:
         return RC ( rcNS, rcSocket, rcWriting, rcParam, rcInvalid );
-    case WSAEACESS:
+    case WSAEACCES:
         return RC ( rcNS, rcSocket, rcWriting, rcSocket, rcUnauthorized );
     case WSAEINTR: /* canceled through WSACancelBlockingCall */
         return 0;
@@ -398,7 +398,7 @@ rc_t KSocketHandleSendCallWin ()
         return RC ( rcNS, rcSocket, rcWriting, rcTimeout, rcExhausted );
     }
     
-    return RC ( rcNS, rcSocket, rcWriting, rcError, rcUnkown );
+    return RC ( rcNS, rcSocket, rcWriting, rcError, rcUnknown );
  }
 
 static rc_t CC KIpv4SocketTimedWrite ( KSocket * self, const void * buffer, size_t bsize,
@@ -441,8 +441,8 @@ static rc_t CC KIpv4SocketTimedWrite ( KSocket * self, const void * buffer, size
                 rc = KSocketHandleSendCallWin ();
             else
             {
-                if ( num_writ != NULL );
-                * num_writ = count;
+                if ( num_writ != NULL )
+                    * num_writ = count;
                 return 0;
             }
 
@@ -499,7 +499,7 @@ rc_t KSocketHandleSocketCallWin ()
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED:
+    case WSANOTINITIALISED:
         return RC ( rcNS, rcSocket, rcCreating, rcEnvironment, rcInvalid );
     case WSAENETDOWN: /* ENETUNREACH */
         return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcNotAvailable );
@@ -535,11 +535,11 @@ rc_t KSocketHandleBindCallWin ()
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED:
+    case WSANOTINITIALISED:
         return RC ( rcNS, rcSocket, rcCreating, rcEnvironment, rcInvalid );
     case WSAENETDOWN: /* ENETUNREACH */
         return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcNotAvailable );
-    case WSAEADDRINUSE
+    case WSAEADDRINUSE:
         return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcBusy );
     case WSAEADDRNOTAVAIL:
         return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcNotAvailable );
@@ -562,13 +562,13 @@ rc_t KSocketHandleConnectCallWin ()
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED:
+    case WSANOTINITIALISED:
         return RC ( rcNS, rcSocket, rcCreating, rcEnvironment, rcInvalid );
     case WSAENETDOWN: /* ENETUNREACH */
     case WSAENETUNREACH:
     case WSAEHOSTUNREACH:
         return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcNotAvailable );
-    case WSAEADDRINUSE
+    case WSAEADDRINUSE:
         return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcBusy );
     case WSAEINTR: /* canceled through WSACancelBlockingCall */
         return 0;
@@ -605,11 +605,11 @@ rc_t KSocketHandleListenCallWin ()
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED:
+    case WSANOTINITIALISED:
         return RC ( rcNS, rcSocket, rcCreating, rcEnvironment, rcInvalid );
     case WSAENETDOWN: /* ENETUNREACH */
         return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcNotAvailable );
-    case WSAEADDRINUSE
+    case WSAEADDRINUSE:
         return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcBusy );
     case WSAEINPROGRESS:
         return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcBusy );
@@ -635,7 +635,7 @@ rc_t KSocketHandleAcceptCallWin ()
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED:
+    case WSANOTINITIALISED:
         return RC ( rcNS, rcSocket, rcOpening, rcEnvironment, rcInvalid );
     case WSAECONNRESET:
         return RC ( rcNS, rcSocket, rcOpening, rcConnection, rcCanceled );
@@ -660,7 +660,7 @@ rc_t KSocketHandleAcceptCallWin ()
         return RC ( rcNS, rcSocket, rcOpening, rcData, rcNotAvailable );
     }
 
-    return RC ( rcNS, rcSocket, rcOpening, rcError, rcUnkown );
+    return RC ( rcNS, rcSocket, rcOpening, rcError, rcUnknown );
 }
 
 static
@@ -668,7 +668,7 @@ rc_t KSocketHandleSocknameCallWin ()
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED:
+    case WSANOTINITIALISED:
         return RC ( rcNS, rcSocket, rcIdentifying, rcEnvironment, rcInvalid );
     case WSAENETDOWN: /* ENETUNREACH */
         return RC ( rcNS, rcSocket, rcIdentifying, rcConnection, rcNotAvailable );        
