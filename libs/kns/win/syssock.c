@@ -153,7 +153,7 @@ rc_t CC KSocketHandleShutdownCallWin ()
         return RC ( rcNS, rcSocket, rcClosing, rcConnection, rcInvalid );
     case WSAENOTSOCK:
         return RC ( rcNS, rcSocket, rcClosing, rcSocket, rcIncorrect );
-    case WSANOTINITIALIZED: /* unknown - check */
+    case WSANOTINITIALIZED:
         return RC ( rcNS, rcSocket, rcClosing, rcEnvironment, rcInvalid );
     }
     return RC ( rcNS, rcSocket, rcClosing, rcError, rcUnkown );
@@ -164,7 +164,7 @@ rc_t CC KSocketHandleRecvCallWin ( rc_t context )
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED: /* unknown - check */
+    case WSANOTINITIALIZED:
         return RC ( rcNS, rcSocket, context, rcEnvironment, rcInvalid );
     case WSAENETDOWN: /* ENETUNREACH */
         return RC ( rcNS, rcSocket, context, rcConnection, rcNotAvailable );
@@ -187,8 +187,8 @@ rc_t CC KSocketHandleRecvCallWin ( rc_t context )
         return RC ( rcNS, rcSocket, context, rcSocket, rcNotOpen );
     case WSAEWOULDBLOCK:
         return RC ( rcNS, rcSocket, context, rcData, rcNotAvailable );
-    case WSAEMSGSIZE: /* check */
-        return RC ( rcNS, rcSocket, context, rcBuffer, rcInsufficient );
+    case WSAEMSGSIZE:
+        return RC ( rcNS, rcSocket, context, rcData, rcExcessive );
     case WSAECONNABORTED:
         return RC ( rcNS, rcSocket, context, rcConnection, rcCanceled );
     case WSAETIMEDOUT:
@@ -205,7 +205,7 @@ rc_t CC KSocketHandleSelectCallWin ( rc_t context )
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED: /* unknown - check */
+    case WSANOTINITIALIZED:
         return RC ( rcNS, rcSocket, context, rcEnvironment, rcInvalid );
     case WSAEINVAL:
     case WSAEFAULT:
@@ -360,10 +360,10 @@ rc_t KSocketHandleSendCallWin ()
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED: /* unknown - check */
+    case WSANOTINITIALIZED:
         return RC ( rcNS, rcSocket, rcWriting, rcEnvironment, rcInvalid );
     case WSAENETDOWN:
-    case WSAEHOSTUNREACH: /* check */
+    case WSAEHOSTUNREACH:
         return RC ( rcNS, rcSocket, rcWriting, rcConnection, rcNotAvailable );
     case WSAEINVAL:
     case WSAEFAULT:
@@ -388,8 +388,8 @@ rc_t KSocketHandleSendCallWin ()
         return RC ( rcNS, rcSocket, rcWriting, rcSocket, rcNotOpen );
     case WSAEWOULDBLOCK:
         return RC ( rcNS, rcSocket, rcWriting, rcData, rcNotAvailable );
-    case WSAEMSGSIZE: /* check */
-        return RC ( rcNS, rcSocket, rcWriting, rcBuffer, rcInsufficient );
+    case WSAEMSGSIZE:
+        return RC ( rcNS, rcSocket, rcWriting, rcData, rcExcessive );
     case WSAECONNABORTED:
         return RC ( rcNS, rcSocket, rcWriting, rcConnection, rcCanceled );
     case WSAECONNRESET:
@@ -407,32 +407,6 @@ static rc_t CC KIpv4SocketTimedWrite ( KSocket * self, const void * buffer, size
     RC_CTX ( rcSocket, rcWriting );
 
     /* self != NULL and self->type == epIPV4 already checked by the caller */
-
-    rc_t rc = 0;
-    const KSocketIPv4 * data = &( self -> type_data.ipv4_data );
-    struct timeval ts;
-    fd_set readFds;
-    int selectRes;
-    
-    /* convert timeout (relative time) */
-    if ( tm != NULL )
-    {
-        ts.tv_sec = tm -> mS / 1000;
-        ts.tv_usec = ( tm -> mS % 1000 ) * 1000;
-    }
-    
-    /* wait for socket to become readable */
-    FD_ZERO( &readFds );
-    FD_SET( data -> fd, &readFds );
-    selectRes = select( 0, &readFds, NULL, NULL, ( tm == NULL ) ? NULL : &ts );
-    
-    /* check for error */
-    if ( selectRes == -1 )
-        rc = KSocketHandleSelectCallWin ( rcReading );
-    else if ( selectRes == 0 )
-        rc = RC ( rcNS, rcSocket, rcReading, rcTimeout, rcExhausted ); /* timeout */
-    else if ( ! FD_ISSET( data -> fd, &readFds ) )
-        rc =     /* self != NULL and self->type == epIPV4 already checked by the caller */
 
     rc_t rc = 0;
     KSocketIPv4 * data = &( self -> type_data.ipv4_data );
@@ -468,7 +442,7 @@ static rc_t CC KIpv4SocketTimedWrite ( KSocket * self, const void * buffer, size
             else
             {
                 if ( num_writ != NULL );
-                    * num_writ = count;
+                * num_writ = count;
                 return 0;
             }
 
@@ -525,7 +499,7 @@ rc_t KSocketHandleSocketCallWin ()
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED: /* unknown - check */
+    case WSANOTINITIALIZED:
         return RC ( rcNS, rcSocket, rcCreating, rcEnvironment, rcInvalid );
     case WSAENETDOWN: /* ENETUNREACH */
         return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcNotAvailable );
@@ -539,16 +513,18 @@ rc_t KSocketHandleSocketCallWin ()
         return RC ( rcNS, rcSocket, rcCreating, rcFileDesc, rcExhausted );
     case WSAEINVAL:
         return RC ( rcNS, rcSocket, rcCreating, rcParam, rcInvalid );
+    case WSAENOBUFS:
+        return RC ( rcNS, rcSocket, rcCreating, rcBuffer, rcExhausted );
+    case WSAESOCKTNOSUPPORT:
+        return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcIncorrect );
+#if 0
     case WSAEINVALIDPROVIDER:
         return /* service provider returned a version other than 2.2 */
     case WSAEINVALIDPROCTABLE:
         return /* service provider returned an invalid or incomplete procedure table to WSPStartup */
-    case WSAENOBUFS:
-        return RC ( rcNS, rcSocket, rcCreating, rcBuffer, rcExhausted );
     case WSAEPROVIDERFAILEDINIT:
         return /* service provider failed to initialize */
-    case WSAESOCKTNOSUPPORT:
-        return RC ( rcNS, rcSocket, rcCreating, rcSocket, rcIncorrect );
+#endif
     }
 
     return RC ( rcNS, rcSocket, rcCreating, rcError, rcUnknown );
@@ -559,7 +535,7 @@ rc_t KSocketHandleBindCallWin ()
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED: /* unknown - check */
+    case WSANOTINITIALIZED:
         return RC ( rcNS, rcSocket, rcCreating, rcEnvironment, rcInvalid );
     case WSAENETDOWN: /* ENETUNREACH */
         return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcNotAvailable );
@@ -586,7 +562,7 @@ rc_t KSocketHandleConnectCallWin ()
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED: /* unknown - check */
+    case WSANOTINITIALIZED:
         return RC ( rcNS, rcSocket, rcCreating, rcEnvironment, rcInvalid );
     case WSAENETDOWN: /* ENETUNREACH */
     case WSAENETUNREACH:
@@ -629,7 +605,7 @@ rc_t KSocketHandleListenCallWin ()
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED: /* unknown - check */
+    case WSANOTINITIALIZED:
         return RC ( rcNS, rcSocket, rcCreating, rcEnvironment, rcInvalid );
     case WSAENETDOWN: /* ENETUNREACH */
         return RC ( rcNS, rcSocket, rcCreating, rcConnection, rcNotAvailable );
@@ -659,7 +635,7 @@ rc_t KSocketHandleAcceptCallWin ()
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED: /* unknown - check */
+    case WSANOTINITIALIZED:
         return RC ( rcNS, rcSocket, rcOpening, rcEnvironment, rcInvalid );
     case WSAECONNRESET:
         return RC ( rcNS, rcSocket, rcOpening, rcConnection, rcCanceled );
@@ -692,7 +668,7 @@ rc_t KSocketHandleSocknameCallWin ()
 {
     switch ( WSAGetLastError () )
     {
-    case WSANOTINITIALIZED: /* unknown - check */
+    case WSANOTINITIALIZED:
         return RC ( rcNS, rcSocket, rcIdentifying, rcEnvironment, rcInvalid );
     case WSAENETDOWN: /* ENETUNREACH */
         return RC ( rcNS, rcSocket, rcIdentifying, rcConnection, rcNotAvailable );        
