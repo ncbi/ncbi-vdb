@@ -245,7 +245,7 @@ static rc_t CC KIpv4SocketWhack ( KSocket * self )
             char buffer [ 1024 ];
             ssize_t result = recv ( data -> fd, buffer, sizeof buffer, 0 );
             if ( result <= 0 )
-                rc = KSOcketHandleRecvCallWin ( rcClosing );
+                rc = KSocketHandleRecvCallWin ( rcClosing );
         }
 
         if ( shutdown ( data -> fd, SHUT_RD ) == -1 )
@@ -706,7 +706,7 @@ static rc_t KNSManagerMakeIPv4Connection ( struct KNSManager const * self,
     {
         fd = socket ( AF_INET, SOCK_STREAM, IPPROTO_TCP );
         if ( fd == INVALID_SOCKET )
-            rc = KSockethandleSocketCallWin ();
+            rc = KSocketHandleSocketCallWin ();
         else
         {
             struct sockaddr_in ss;
@@ -794,7 +794,7 @@ static rc_t KNSManagerMakeIPv4Listener ( const KNSManager *self, KSocket **out, 
             KSocketIPv4 * data = &( listener -> type_data . ipv4_data );
             data -> fd = socket ( AF_INET, SOCK_STREAM, 0 );
             if ( data -> fd < 0 )
-                rc = KSockethandleSocketCallWin ();
+                rc = KSocketHandleSocketCallWin ();
             else
             {
                 struct sockaddr_in ss;
@@ -954,7 +954,7 @@ static rc_t KNSManagerMakeIPv6Listener ( const KNSManager *self, KSocket **out, 
 
             data -> fd = socket ( AF_INET6, SOCK_STREAM, 0 );
             if ( data -> fd < 0 )
-                rc = KSockethandleSocketCallWin ();
+                rc = KSocketHandleSocketCallWin ();
             else
             {
                 struct sockaddr_in6 ss;
