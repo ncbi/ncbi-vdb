@@ -94,14 +94,20 @@ KLIB_EXTERN bool CC GetUnreadRCInfo ( rc_t *rc, const char **filename, const cha
 #endif
 
 #ifdef assert
-#define ASSERT_MOD_TARG_CTX() \
-    assert ( ( int ) rcLastModule_v1_1  < ( 1 << 5 ) ), \
-    assert ( ( int ) rcLastTarget_v1_1  < ( 1 << 6 ) ), \
-    assert ( ( int ) rcLastContext_v1_1  < ( 1 << 7 ) )
+#define ASSERT_MOD_TARG_CTX()                                    \
+    assert ( ( int ) rcKFG == ( int ) rcSRA + 1 ),               \
+    assert ( ( int ) rcProduction == ( int ) rcExpression + 1 ), \
+    assert ( ( int ) rcFlushing == ( int ) rcInflating + 1 ),    \
+    assert ( ( int ) rcLastModule_v1_1  <= ( 1 << 5 ) ),         \
+    assert ( ( int ) rcLastTarget_v1_1  <= ( 1 << 6 ) ),         \
+    assert ( ( int ) rcLastContext_v1_1  <= ( 1 << 7 ) )
 
 #define ASSERT_OBJ_STATE() \
-    assert ( ( int ) rcLastObject_v1_1  < ( 1 << 8 ) ), \
-    assert ( ( int ) rcLastState_v1_1  < ( 1 << 6 ) )
+    assert ( ( int ) rcLink == ( int ) rcRowSet + 1 ),           \
+    assert ( ( int ) rcItem == ( int ) rcLibrary + 1 ),          \
+    assert ( ( int ) rcOpen == ( int ) rcOutofrange + 1 ),       \
+    assert ( ( int ) rcLastObject_v1_1  <= ( 1 << 8 ) ),         \
+    assert ( ( int ) rcLastState_v1_1  <= ( 1 << 6 ) )
 #else
 #define ASSERT_MOD_TARG_CTX() ( void ) 0
 

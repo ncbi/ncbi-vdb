@@ -30,6 +30,8 @@
 
 #define RC_ENTRY( id, txt ) # id ,
 
+#define RC_VFIRST( id1, id2 )
+
 #define RC_VLAST( id )
 
 #define RC_LAST( id ) NULL
