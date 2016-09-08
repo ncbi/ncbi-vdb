@@ -49,11 +49,11 @@
 
 #if _DEBUGGING
 #   ifndef KLoaderFile_BUFFERSIZE
-#       define KLoaderFile_BUFFERSIZE (256 * 1024)
+#       define KLoaderFile_BUFFERSIZE (64 * 1024 * 1024)
 #   endif
 #else
 #   undef KLoaderFile_BUFFERSIZE
-#   define KLoaderFile_BUFFERSIZE (256 * 1024)
+#   define KLoaderFile_BUFFERSIZE (64 * 1024 * 1024)
 #endif
 
 struct KLoaderFile
@@ -426,13 +426,13 @@ LIB_EXPORT rc_t CC KLoaderFile_Readline(const KLoaderFile* cself, const void** b
         uint8_t* nl;
         bool refilled = false;
         bool eof;
-        
+
         rc = KLoaderFile_IsEof(cself, &eof);
         if( rc == 0 && eof ) {
             *buffer = NULL;
             return 0;
         }
-        
+
         while( rc == 0 ) {
             bool CR_last = false;
             int i, cnt = self->avail - self->eol;
@@ -471,7 +471,7 @@ LIB_EXPORT rc_t CC KLoaderFile_Readline(const KLoaderFile* cself, const void** b
                 if( self->buffer_size == self->avail ) {
                     /* buffer could be copied and next call will provide tail of line */
                     rc = RC( rcApp, rcFile, rcReading, rcString, rcTooLong);
-                } 
+                }
             } else {
                 *length = nl - (uint8_t*)*buffer;
                 self->eol = (uint32_t) ( nl - self->buffer_pos + 1 );
