@@ -23,6 +23,8 @@
 // ===========================================================================
 
 #include <vdb/manager.h> // VDBManager
+#include <kdb/manager.h> // KDBManager
+#include <kdb/kdb-priv.h>
 #include <vdb/vdb-priv.h>
 
 #include <ktst/unit_test.hpp> // TEST_CASE
@@ -219,7 +221,7 @@ TEST_CASE( GetCacheRoot_3 )
         VPathRelease( vpath );
 }
 
-TEST_CASE( tow_managers )
+TEST_CASE( two_managers )
 {
     const VDBManager * vdb_mgr2 = NULL;
     VPath const * vpath1 = NULL;
@@ -270,6 +272,35 @@ TEST_CASE( tow_managers )
     if ( vpath1 != NULL ) VPathRelease( vpath1 );
     if ( vpath2 != NULL ) VPathRelease( vpath2 );
     if ( vdb_mgr2 != NULL ) VDBManagerRelease ( vdb_mgr2 );
+}
+
+TEST_CASE( root_tmp )
+{
+    std::cout << "testing root-tmp" << std::endl;
+
+    const KDBManager * kdb_mgr = NULL;
+    rc_t rc = VDBManagerGetKDBManagerRead( vdb_mgr, &kdb_mgr) ;
+    if ( rc != 0 )
+        FAIL( "FAIL: VDBManagerGetKDBManagerRead() failed" );
+
+    VFSManager * vfs_mgr_1 = NULL;
+    rc = KDBManagerGetVFSManager( kdb_mgr, &vfs_mgr_1 );
+    if ( rc != 0 )
+        FAIL( "FAIL: KDBManagerGetVFSManager() failed" );
+    
+    VPath * vpath = NULL;
+    rc = VFSManagerMakeSysPath( vfs_mgr_1, &vpath, "/tmp1" );
+    if ( rc != 0 )
+        FAIL( "FAIL: VFSManagerMakeSysPath() failed" );
+        
+    rc = VDBManagerSetCacheRoot( vdb_mgr, vpath );
+    if ( rc != 0 )
+        FAIL( "FAIL: VDBManagerSetCacheRoot( mgr, vpath ) failed" );
+
+    if ( vpath != NULL ) VPathRelease( vpath );
+    if ( vfs_mgr_1 != NULL ) VFSManagerRelease ( vfs_mgr_1 );
+    if ( kdb_mgr != NULL ) KDBManagerRelease ( kdb_mgr );
+
 }
 
 char * org_home;
