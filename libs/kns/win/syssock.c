@@ -245,7 +245,10 @@ static rc_t CC KIpv4SocketWhack ( KSocket * self )
             char buffer [ 1024 ];
             ssize_t result = recv ( data -> fd, buffer, sizeof buffer, 0 );
             if ( result <= 0 )
+            {
                 rc = KSocketHandleRecvCallWin ( rcClosing );
+                break;
+            }
         }
 
         if ( shutdown ( data -> fd, SHUT_RD ) == -1 )
