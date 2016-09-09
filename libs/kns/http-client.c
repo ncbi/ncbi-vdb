@@ -422,6 +422,8 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
                 self -> ep_valid = true;
                 break;
             }
+            /* here rc is not 0, so we release the socket */
+            KSocketRelease ( sock );
         }
     }
 
