@@ -216,7 +216,7 @@ const NGS_Cursor* NGS_CursorMakeDb ( ctx_t ctx,
     rc_t rc = VDatabaseOpenTableRead ( db, & table, "%s", tableName );
     if ( rc != 0 )
     {
-        INTERNAL_ERROR ( xcTableOpenFailed, "%.*s.%s", NGS_StringSize ( run_name, ctx ), NGS_StringData ( run_name, ctx ), tableName );
+        INTERNAL_ERROR ( xcTableOpenFailed, "%.*s.%s rc = %R", NGS_StringSize ( run_name, ctx ), NGS_StringData ( run_name, ctx ), tableName, rc );
         return NULL;
     }
 
