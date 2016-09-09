@@ -354,6 +354,8 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
                     {
                         rc = RC ( rcNS, rcNoTarg, rcOpening, rcConnection, rcFailed );
                         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create proxy tunnel: %03u '%S'\n", status, & msg ) );
+                        KClientHttpBlockBufferReset ( self );
+                        KClientHttpLineBufferReset ( self );
                     }
                     else
                     {
