@@ -29,6 +29,7 @@ TOP ?= $(abspath ../..)
 MODULE = test/vfs
 
 TEST_TOOLS = \
+    redirect-rejected-names-cgi-http-to-https \
     test-caching \
     test-vfsmanager \
     test-path-c \
@@ -78,6 +79,16 @@ PATHTEST_LIB = \
 	-sncbi-vdb \
 
 $(TEST_BINDIR)/test-path: $(PATHTEST_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
+HTTPS_SRC = \
+	redirect-rejected-names-cgi-http-to-https
+
+HTTPS_OBJ = \
+	$(addsuffix .$(OBJX),$(HTTPS_SRC))
+
+$(TEST_BINDIR)/redirect-rejected-names-cgi-http-to-https: $(HTTPS_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------

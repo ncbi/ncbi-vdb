@@ -1310,6 +1310,8 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
     }
 }
 
+
+/*  test-only code to emulate 403 response while calling names.cgi */
 static bool TEST_VDB_3162 = false;
 void TESTING_VDB_3162 ( void ) {
     TEST_VDB_3162 = true;
@@ -1322,6 +1324,7 @@ static uint32_t TESTING_VDB_3162_CODE ( rc_t rc, uint32_t code ) {
         return code;
     }
 }
+
 
 /* RemoteProtectedResolve
  *  use NCBI CGI to resolve accession into URL
@@ -1512,6 +1515,8 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
 #define RELEASE( type, obj ) do { rc_t rc2 = type##Release ( obj ); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while ( false )
 
+/* If resolver-cgi is on government site and is called over http:
+   fix it to https */
 static
 rc_t VResolverAlgFixHTTPSOnlyStandard ( VResolverAlg * self, bool * fixed )
 {
@@ -1531,6 +1536,7 @@ rc_t VResolverAlgFixHTTPSOnlyStandard ( VResolverAlg * self, bool * fixed )
         CONST_STRING ( & http, "http://" );
         size = http . size;
 
+        /* resolver-cgi is called over http */
         if ( root -> size > size &&
              string_cmp ( root -> addr, size, http . addr, size, size ) == 0 )
         {
@@ -1545,6 +1551,7 @@ rc_t VResolverAlgFixHTTPSOnlyStandard ( VResolverAlg * self, bool * fixed )
                     CONST_STRING ( & gov, ".gov" );
                     size = gov . size;
 
+                    /* If resolver-cgi is on government site */
                     if ( host . size > size &&
                         string_cmp ( host . addr + host . size - size,
                             size, gov . addr, size, size ) == 0 )
@@ -1622,12 +1629,16 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
                 protocols, & tok -> acc, path, mapping, legacy_wgs_refseq );
             if ( rc == SILENT_RC (
                 rcVFS, rcResolver, rcResolving, rcConnection, rcUnauthorized ) )
-            {
+            { /* resolver-cgi is called over http instead of https:
+                 fix it */
                 bool fixed = false;
-                rc = VResolverAlgFixHTTPSOnlyStandard
+                rc_t r2 = VResolverAlgFixHTTPSOnlyStandard
                     ( ( VResolverAlg * ) self, & fixed );
-                if ( ! fixed || rc != 0 ) {
-                   done = true;
+                if ( ! fixed || r2 != 0 ) {
+                    if ( r2 != 0 ) {
+                        rc = r2;
+                    }
+                    done = true;
                 }
             }
             else {
