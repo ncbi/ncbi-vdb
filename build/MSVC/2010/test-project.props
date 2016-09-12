@@ -7,7 +7,6 @@
             <AdditionalDependencies>$(VDB_TARGET)lib\ktst.lib;%(AdditionalDependencies)</AdditionalDependencies>
             <AdditionalDependencies>$(VDB_TARGET)lib\zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
             <AdditionalDependencies>$(VDB_TARGET)lib\bz2.lib;%(AdditionalDependencies)</AdditionalDependencies>
-            <AdditionalDependencies>$(VDB_TARGET)lib\mbedtls.lib;%(AdditionalDependencies)</AdditionalDependencies>
         </Link>
     </ItemDefinitionGroup>
   
