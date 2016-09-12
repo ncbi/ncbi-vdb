@@ -1,110 +1,192 @@
+# ===========================================================================
+#
+#                            PUBLIC DOMAIN NOTICE
+#               National Center for Biotechnology Information
+#
+#  This software/database is a "United States Government Work" under the
+#  terms of the United States Copyright Act.  It was written as part of
+#  the author's official duties as a United States Government employee and
+#  thus cannot be copyrighted.  This software/database is freely available
+#  to the public for use. The National Library of Medicine and the U.S.
+#  Government have not placed any restriction on its use or reproduction.
+#
+#  Although all reasonable efforts have been taken to ensure the accuracy
+#  and reliability of the software and data, the NLM and the U.S.
+#  Government do not and cannot warrant the performance or results that
+#  may be obtained by using this software or data. The NLM and the U.S.
+#  Government disclaim all warranties, express or implied, including
+#  warranties of performance, merchantability or fitness for any particular
+#  purpose.
+#
+#  Please cite the author in any work or product based on this material.
+#
+# ===========================================================================
 
-DESTDIR=/usr/local
-PREFIX=mbedtls_
 
-.SILENT:
+default: std
 
-.PHONY: all no_test programs lib tests install uninstall clean test check covtest lcov apidoc apidoc_clean
+TOP ?= $(abspath ../../..)
+MODULE = libs/ext/mbedtls
 
-all: programs tests
-	$(MAKE) post_build
+include $(TOP)/build/Makefile.env
 
-no_test: programs
+INT_LIBS =        \
+	libmbedcrypto \
+	libmbedx509   \
+	libmbedtls
 
-programs: lib
-	$(MAKE) -C programs
+ALL_LIBS = \
+	$(INT_LIBS)
 
-lib:
-	$(MAKE) -C library
+OBJFILES =        \
+	$(CRYPTO_OBJ) \
+	$(X509_OBJ)   \
+	$(TLS_OBJ)
 
-tests: lib
-	$(MAKE) -C tests
+#-------------------------------------------------------------------------------
+# outer targets
+#
+std all: makedirs compile
+	@ $(MAKE_CMD) $(TARGDIR)/$@
 
-ifndef WINDOWS
-install: no_test
-	mkdir -p $(DESTDIR)/include/mbedtls
-	cp -r include/mbedtls $(DESTDIR)/include
-	
-	mkdir -p $(DESTDIR)/lib
-	cp -RP library/libmbedtls.*    $(DESTDIR)/lib
-	cp -RP library/libmbedx509.*   $(DESTDIR)/lib
-	cp -RP library/libmbedcrypto.* $(DESTDIR)/lib
-	
-	mkdir -p $(DESTDIR)/bin
-	for p in programs/*/* ; do              \
-	    if [ -x $$p ] && [ ! -d $$p ] ;     \
-	    then                                \
-	        f=$(PREFIX)`basename $$p` ;     \
-	        cp $$p $(DESTDIR)/bin/$$f ;     \
-	    fi                                  \
-	done
+$(INT_LIBS): makedirs
+	@ $(MAKE_CMD) $(ILIBDIR)/$@
 
-uninstall:
-	rm -rf $(DESTDIR)/include/mbedtls
-	rm -f $(DESTDIR)/lib/libmbedtls.*
-	rm -f $(DESTDIR)/lib/libmbedx509.*
-	rm -f $(DESTDIR)/lib/libmbedcrypto.*
-	
-	for p in programs/*/* ; do              \
-	    if [ -x $$p ] && [ ! -d $$p ] ;     \
-	    then                                \
-	        f=$(PREFIX)`basename $$p` ;     \
-	        rm -f $(DESTDIR)/bin/$$f ;      \
-	    fi                                  \
-	done
-endif
+.PHONY: all std $(ALL_LIBS)
 
-WARNING_BORDER      =*******************************************************\n
-NULL_ENTROPY_WARN_L1=****  WARNING!  MBEDTLS_TEST_NULL_ENTROPY defined! ****\n
-NULL_ENTROPY_WARN_L2=****  THIS BUILD HAS NO DEFINED ENTROPY SOURCES    ****\n
-NULL_ENTROPY_WARN_L3=****  AND IS *NOT* SUITABLE FOR PRODUCTION USE     ****\n
+#-------------------------------------------------------------------------------
+# all
+#
+$(TARGDIR)/all: $(addprefix $(ILIBDIR)/,$(INT_LIBS))
 
-NULL_ENTROPY_WARNING=\n$(WARNING_BORDER)$(NULL_ENTROPY_WARN_L1)$(NULL_ENTROPY_WARN_L2)$(NULL_ENTROPY_WARN_L3)$(WARNING_BORDER)
+.PHONY: $(TARGDIR)/all
 
-# Post build steps
-post_build:
-ifndef WINDOWS
-	# If NULL Entropy is configured, display an appropriate warning
-	-scripts/config.pl get MBEDTLS_TEST_NULL_ENTROPY && ([ $$? -eq 0 ]) && \
-	    echo '$(NULL_ENTROPY_WARNING)'
-endif
+#-------------------------------------------------------------------------------
+# std
+#
+$(TARGDIR)/std: $(addprefix $(ILIBDIR)/,$(INT_LIBS))
 
-clean:
-	$(MAKE) -C library clean
-	$(MAKE) -C programs clean
-	$(MAKE) -C tests clean
-ifndef WINDOWS
-	find . \( -name \*.gcno -o -name \*.gcda -o -name \*.info \) -exec rm {} +
-endif
+.PHONY: $(TARGDIR)/std
 
-check: lib
-	$(MAKE) -C tests check
+#-------------------------------------------------------------------------------
+# clean
+#
+clean: stdclean
 
-test: check
+.PHONY: clean
 
-ifndef WINDOWS
-# note: for coverage testing, build with:
-# make CFLAGS='--coverage -g3 -O0'
-covtest:
-	$(MAKE) check
-	programs/test/selftest
-	tests/compat.sh
-	tests/ssl-opt.sh
+#-------------------------------------------------------------------------------
+# libmbedcrypto
+#
+$(ILIBDIR)/libmbedcrypto: $(addprefix $(ILIBDIR)/libmbedcrypto.,$(LIBX))
 
-lcov:
-	rm -rf Coverage
-	lcov --capture --initial --directory library -o files.info
-	lcov --capture --directory library -o tests.info
-	lcov --add-tracefile files.info --add-tracefile tests.info -o all.info
-	lcov --remove all.info -o final.info '*.h'
-	gendesc tests/Descriptions.txt -o descriptions
-	genhtml --title "mbed TLS" --description-file descriptions --keep-descriptions --legend --no-branch-coverage -o Coverage final.info
-	rm -f files.info tests.info all.info final.info descriptions
+CRYPTO_SRC =            \
+    aes                 \
+    aesni               \
+    arc4                \
+    asn1parse           \
+    asn1write           \
+    base64              \
+    bignum              \
+    blowfish            \
+    camellia            \
+    ccm                 \
+    cipher              \
+    cipher_wrap         \
+    ctr_drbg            \
+    des                 \
+    dhm                 \
+    ecdh                \
+    ecdsa               \
+    ecjpake             \
+    ecp                 \
+    ecp_curves          \
+    entropy             \
+    entropy_poll        \
+    error               \
+    gcm                 \
+    havege              \
+    hmac_drbg           \
+    md                  \
+    md2                 \
+    md4                 \
+    md5                 \
+    md_wrap             \
+    memory_buffer_alloc \
+    oid                 \
+    padlock             \
+    pem                 \
+    pk                  \
+    pk_wrap             \
+    pkcs12              \
+    pkcs5               \
+    pkparse             \
+    pkwrite             \
+    platform            \
+    ripemd160           \
+    rsa                 \
+    sha1                \
+    sha256              \
+    sha512              \
+    threading           \
+    timing              \
+    version             \
+    version_features    \
+    xtea
 
-apidoc:
-	mkdir -p apidoc
-	doxygen doxygen/mbedtls.doxyfile
+CRYPTO_OBJ = \
+	$(addsuffix .$(LOBX),$(CRYPTO_SRC))
 
-apidoc_clean:
-	rm -rf apidoc
-endif
+$(ILIBDIR)/libmbedcrypto.$(LIBX): $(CRYPTO_OBJ)
+	$(LD) --slib -o $@ $^
+
+
+#-------------------------------------------------------------------------------
+# libmbedx509
+#
+$(ILIBDIR)/libmbedx509: $(addprefix $(ILIBDIR)/libmbedx509.,$(LIBX))
+
+X509_SRC =        \
+	certs         \
+	pkcs11        \
+	x509          \
+	x509_create   \
+	x509_crl      \
+	x509_crt      \
+	x509_csr      \
+	x509write_crt \
+	x509write_csr
+
+X509_OBJ = \
+	$(addsuffix .$(LOBX),$(X509_SRC))
+
+$(ILIBDIR)/libmbedx509.$(LIBX): $(X509_OBJ)
+	$(LD) --slib -o $@ $^
+
+
+#-------------------------------------------------------------------------------
+# libmbedtls
+#
+$(ILIBDIR)/libmbedtls: $(addprefix $(ILIBDIR)/libmbedtls.,$(LIBX))
+
+TLS_SRC =            \
+	debug            \
+	net              \
+	ssl_cache        \
+	ssl_ciphersuites \
+	ssl_cli          \
+	ssl_cookie       \
+	ssl_srv          \
+	ssl_ticket       \
+	ssl_tls
+
+TLS_OBJ = \
+	$(addsuffix .$(LOBX),$(TLS_SRC))
+
+$(ILIBDIR)/libmbedtls.$(LIBX): $(TLS_OBJ)
+	$(LD) --slib -o $@ $^
+
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)
