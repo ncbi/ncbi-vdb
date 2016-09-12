@@ -1310,6 +1310,19 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
     }
 }
 
+static bool TEST_VDB_3162 = false;
+void TESTING_VDB_3162 ( void ) {
+    TEST_VDB_3162 = true;
+}
+static uint32_t TESTING_VDB_3162_CODE ( rc_t rc, uint32_t code ) {
+    if ( rc == 0 && TEST_VDB_3162 ) {
+        TEST_VDB_3162 = false;
+        return 403;
+    } else {
+        return code;
+    }
+}
+
 /* RemoteProtectedResolve
  *  use NCBI CGI to resolve accession into URL
  */
@@ -1406,6 +1419,11 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
                 uint32_t code;
 
                 rc = KHttpResultStatus ( rslt, &code, NULL, 0, NULL );
+                if ( TEST_VDB_3162 ) {
+                    code = TESTING_VDB_3162_CODE ( rc, code );
+                }
+                DBGMSG
+                    ( DBG_VFS, DBG_FLAG ( DBG_VFS ), ( " Code = %d\n", code ) );
                 if ( code == 200 )
                 {
                     KStream *response;
@@ -1459,9 +1477,15 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
                         KStreamRelease ( response );
                     }
                 }
+                else if ( code == 403 ) {
+                    /* HTTP/1.1 403 Forbidden
+                     - resolver CGI was called over http insted of https */
+                    rc = RC ( rcVFS, rcResolver, rcResolving,
+                        rcConnection, rcUnauthorized );
+                }
                 else if ( code == 404 )
                 {
-                    /* HTTP/1.1 400 Bad Request - resolver CGI was not found */
+                    /* HTTP/1.1 404 Bad Request - resolver CGI was not found */
                     rc = RC ( rcVFS, rcResolver, rcResolving, rcConnection, rcNotFound );
                 }
                 else
@@ -1480,6 +1504,81 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     if (rc == 0 && *path == NULL) 
     {
         rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNull);
+    }
+
+    return rc;
+}
+
+#define RELEASE( type, obj ) do { rc_t rc2 = type##Release ( obj ); \
+    if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while ( false )
+
+static
+rc_t VResolverAlgFixHTTPSOnlyStandard ( VResolverAlg * self, bool * fixed )
+{
+    rc_t rc = 0;
+
+    const String * root = NULL;
+
+    assert ( self && fixed );
+
+    * fixed = false;
+
+    root = self -> root;
+
+    if ( root != NULL ) {
+        size_t size = 0;
+        String http;
+        CONST_STRING ( & http, "http://" );
+        size = http . size;
+
+        if ( root -> size > size &&
+             string_cmp ( root -> addr, size, http . addr, size, size ) == 0 )
+        {
+            VPath * path = NULL;
+            rc = VPathMakeFmt ( & path, "%S", root );
+            if ( rc == 0 ) {
+                String host;
+                rc = VPathGetHost ( path, & host );
+                if ( rc == 0 ) {
+                    size_t size = 0;
+                    String gov;
+                    CONST_STRING ( & gov, ".gov" );
+                    size = gov . size;
+
+                    if ( host . size > size &&
+                        string_cmp ( host . addr + host . size - size,
+                            size, gov . addr, size, size ) == 0 )
+                    {
+                        size_t newLen = root -> len + 2;
+                        String * tmp = malloc ( sizeof * tmp + newLen );
+                        if ( tmp == NULL ) {
+                            rc = RC ( rcVFS, rcResolver,
+                                rcResolving, rcMemory, rcExhausted );
+                        }
+                        else {
+                            size_t l = 0;
+                            tmp -> addr = ( char * ) tmp + sizeof * tmp;
+                            rc = string_printf ( ( char * ) tmp -> addr,
+                                newLen, & l, "https://%.*s",
+                                root -> len - http . len,
+                                root -> addr + http . len );
+                            if ( rc == 0 ) {
+                                StringInit ( tmp, tmp -> addr, l, l );
+                                rc = VectorAppend ( & self -> vols, NULL, tmp );
+                                if ( rc == 0 ) {
+                                    self -> root = tmp;
+                                    * fixed = true;
+                                }
+                            }
+                            else {
+                                free ( tmp );
+                            }
+                        }
+                    }
+                }
+            }
+            RELEASE ( VPath, path );
+        }
     }
 
     return rc;
@@ -1516,8 +1615,25 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
 #endif
         )
     {
-        rc = VResolverAlgRemoteProtectedResolve ( self,
-            kns, protocols, & tok -> acc, path, mapping, legacy_wgs_refseq );
+        bool done = false;
+        int i = 0;
+        for ( i = 0; i < 2 && ! done; ++i ) {
+            rc = VResolverAlgRemoteProtectedResolve ( self, kns,
+                protocols, & tok -> acc, path, mapping, legacy_wgs_refseq );
+            if ( rc == SILENT_RC (
+                rcVFS, rcResolver, rcResolving, rcConnection, rcUnauthorized ) )
+            {
+                bool fixed = false;
+                rc = VResolverAlgFixHTTPSOnlyStandard
+                    ( ( VResolverAlg * ) self, & fixed );
+                if ( ! fixed || rc != 0 ) {
+                   done = true;
+                }
+            }
+            else {
+                done = true;
+            }
+        }
 
         if (rc == 0 && path != NULL && *path != NULL &&
             opt_file_rtn != NULL && *opt_file_rtn == NULL &&
