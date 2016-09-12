@@ -4379,6 +4379,9 @@ LIB_EXPORT rc_t CC BAMFileSeek(const BAMFile *self, uint32_t refSeqId, uint64_t 
         /* start linear scan */
         BAMFileGetPosition(self, &rpos);
         rc = BAMFileGetAlignPosAtFilePos((BAMFile *)self, &rpos, &refSeq, &alignPos, &alignEndPos);
+        if ((int)GetRCObject(rc) == rcData && (int)GetRCState(rc) == rcInsufficient)
+            return RC(rcAlign, rcFile, rcPositioning, rcData, rcNotFound);
+        if (rc) return rc;
         if (rc) return rc;
         if (refSeq != refSeqId)
             return RC(rcAlign, rcFile, rcPositioning, rcData, rcNotFound);
