@@ -865,7 +865,7 @@ FIXTURE_TEST_CASE ( NGS_CursorMakeDB_fails, NGSCursorFixture )
     REQUIRE ( FAILED () );
     REQUIRE_NULL ( m_cursor );
     // make sure RC is reported
-    REQUIRE ( string ( WHAT () ) . find ( "rc=" ) != string :: npos);
+    REQUIRE ( string ( WHAT () ) . find ( "rc =" ) != string :: npos);
     CLEAR ();
 
     NGS_StringRelease ( runName, ctx );
