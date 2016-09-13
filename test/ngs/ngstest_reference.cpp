@@ -29,11 +29,15 @@
 */
 
 #include "ngs_c_fixture.hpp"
-#include <ktst/unit_test.hpp>
-#include "NGS_ReferenceSequence.h"
-#include "NGS_String.h"
 
 #include <string.h>
+
+#include <ktst/unit_test.hpp>
+
+#include <kfc/xc.h>
+
+#include "NGS_ReferenceSequence.h"
+#include "NGS_String.h"
 
 using namespace std;
 using namespace ncbi::NK;
@@ -56,6 +60,7 @@ FIXTURE_TEST_CASE(SRA_Reference_Open_FailsOnNonReference, NGS_C_Fixture)
     ENTRY;
     const char* SRA_Accession = "SRR000001";
     REQUIRE_NULL ( NGS_ReferenceSequenceMake ( ctx, SRA_Accession ) );
+    REQUIRE ( ctx_xc_isa ( ctx, xcTableOpenFailed )  );
     REQUIRE_FAILED ();
     EXIT;
 }

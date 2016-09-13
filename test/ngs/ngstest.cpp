@@ -33,6 +33,8 @@
 
 #include "ngs_c_fixture.hpp"
 
+#include <kfc/xc.h>
+
 #include <SRA_ReadGroupInfo.h>
 #include <SRA_Statistics.h>
 #include <NGS_Cursor.h>
@@ -769,7 +771,9 @@ TEST_CASE(NGS_Statistics_ConversionString_TrailingSpace)
 TEST_CASE(NGS_FailedToOpen)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
+
     NGS_ReadCollectionMake ( ctx, BAD_ACCESSION);
+    REQUIRE ( ctx_xc_isa ( ctx, xcTableOpenFailed ) );
 
     KConfig* kfg;
     REQUIRE_RC ( KConfigMakeLocal ( &kfg, NULL ) );
@@ -777,13 +781,16 @@ TEST_CASE(NGS_FailedToOpen)
     REQUIRE_RC ( KConfigMakeRepositoryMgrRead ( kfg, &repoMgr ) );
     if ( KRepositoryMgrHasRemoteAccess ( repoMgr ) )
     {
-        REQUIRE_EQ ( string ( "Cannot open accession '" BAD_ACCESSION "'"),
-                 string ( WHAT () ) );
+        string startsWith = "Cannot open accession '" BAD_ACCESSION "', rc = RC";
+        REQUIRE_EQ ( startsWith, string ( WHAT () ) . substr ( 0, startsWith . size () ) );
     }
     else
     {
-        REQUIRE_EQ ( string ( "Cannot open accession '" BAD_ACCESSION "'. Note: remote access is disabled in the configuration"),
-                 string ( WHAT () ) );
+        string startsWith = "Cannot open accession '" BAD_ACCESSION "', rc = RC";
+        string what = WHAT ();
+        REQUIRE_EQ ( startsWith, what . substr ( 0, startsWith . size () ) );
+        string endsWith = "Note: remote access is disabled in the configuration";
+        REQUIRE_EQ ( endsWith, what . substr ( what . size() - endsWith . size () ) );
     }
     REQUIRE_FAILED ();
     REQUIRE_RC ( KRepositoryMgrRelease ( repoMgr ) );
@@ -846,6 +853,27 @@ public:
 
     const NGS_Cursor* m_cursor;
 };
+
+FIXTURE_TEST_CASE ( NGS_CursorMakeDB_fails, NGSCursorFixture )
+{
+    ENTRY;
+    const VDatabase *db;
+    THROW_ON_RC ( VDBManagerOpenDBRead ( m_ctx -> rsrc -> vdb, & db, NULL, "%s", SRADB_Accession_WithBamHeader ) );
+
+    NGS_String* runName = NGS_StringMake ( ctx, SRADB_Accession_WithBamHeader, string_size ( SRADB_Accession_WithBamHeader ) );
+    m_cursor = NGS_CursorMakeDb ( m_ctx, db, runName, "bad table", sequence_col_specs, seq_NUM_COLS );
+    REQUIRE ( FAILED () );
+    REQUIRE_NULL ( m_cursor );
+    // make sure RC is reported
+    REQUIRE ( string ( WHAT () ) . find ( "rc=" ) != string :: npos);
+    CLEAR ();
+
+    NGS_StringRelease ( runName, ctx );
+
+    REQUIRE_RC ( VDatabaseRelease ( db ) );
+    EXIT;
+}
+
 
 FIXTURE_TEST_CASE ( NGS_Cursor_GetColumnIndex_adds_column, NGSCursorFixture )
 {
