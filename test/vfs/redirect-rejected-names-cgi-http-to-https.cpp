@@ -38,6 +38,8 @@
 
 extern "C" { void TESTING_VDB_3162 ( void ); }
 
+using std::cerr;
+
 TEST_SUITE(VResolverTestSuite);
 
 typedef enum {
@@ -117,16 +119,42 @@ public:
 };
 
 TEST_CASE(TEST) {
+#ifdef VDB_3162
+#else
+    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS ),
+        ( "Simulation 403 in VFS library was DISABLED\n\n" ) );
+#endif
     Test ( "Called over HTTP: retry over HTTPS after 403", this, e403 , "HTTP",
         "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+    Test ( "Called over htTP: retry over https after 403", this, e403 , "htTP",
+        "hTtP://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+    Test ( "Called over http to GOV: retry over HTTPS after 403",
+        this, e403 , "http-gOv",
+        "http://www.ncbi.nlm.nih.GoV/Traces/names/names.cgi" );
+
     Test ( "Called over HTTPS: got 200", this, e200, "HTTPS",
        "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+    Test ( "Called over httPS: got 200", this, e200, "httPS",
+       "httPS://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+    Test ( "Called over HTTPS to Gov: got 200", this, e200, "https to Gov",
+       "https://www.ncbi.nlm.nih.GoV/Traces/names/names.cgi" );
+
     Test (
         "Called over HTTP: fail after 403 - not retrying non-government sites",
-        this, e403, "HTTPS, not government",
+        this, e403, "HTTP, not government",
         "http://www/Traces/names/names.cgi", true );
+    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS ), ( "\n" ) );
+    Test (
+        "Called over htTP: fail after 403 - not retrying non-government sites",
+        this, e403, "htTP, not government",
+        "htTP://www/Traces/names/names.cgi", true );
+
+    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS ), ( "\n" ) );
     Test ( "Called over HTTPS: fail after 403", this, e403, "403 by HTTPS",
        "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi", true );
+    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS ), ( "\n" ) );
+    Test ( "Called over httPS: fail after 403", this, e403, "403 by httPS",
+       "httPS://www.ncbi.nlm.nih.gov/Traces/names/names.cgi", true );
 }
 
 extern "C" {

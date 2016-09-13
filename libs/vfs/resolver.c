@@ -1544,7 +1544,7 @@ rc_t VResolverAlgFixHTTPSOnlyStandard ( VResolverAlg * self, bool * fixed )
 
         /* resolver-cgi is called over http */
         if ( root -> size > size &&
-             string_cmp ( root -> addr, size, http . addr, size, size ) == 0 )
+             strcase_cmp ( root -> addr, size, http . addr, size, size ) == 0 )
         {
             VPath * path = NULL;
             rc = VPathMakeFmt ( & path, "%S", root );
@@ -1559,7 +1559,7 @@ rc_t VResolverAlgFixHTTPSOnlyStandard ( VResolverAlg * self, bool * fixed )
 
                     /* If resolver-cgi is on government site */
                     if ( host . size > size &&
-                        string_cmp ( host . addr + host . size - size,
+                        strcase_cmp ( host . addr + host . size - size,
                             size, gov . addr, size, size ) == 0 )
                     {
                         size_t newLen = root -> len + 2;
