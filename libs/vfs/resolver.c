@@ -1312,6 +1312,7 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
 
 
 #ifdef VDB_3162
+#error 1
 /*  test-only code to emulate 403 response while calling names.cgi */
 static bool TEST_VDB_3162 = false;
 void TESTING_VDB_3162 ( void ) {
@@ -1518,9 +1519,6 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     return rc;
 }
 
-#define RELEASE( type, obj ) do { rc_t rc2 = type##Release ( obj ); \
-    if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while ( false )
-
 /* If resolver-cgi is on government site and is called over http:
    fix it to https */
 static
@@ -1552,7 +1550,6 @@ rc_t VResolverAlgFixHTTPSOnlyStandard ( VResolverAlg * self, bool * fixed )
                 String host;
                 rc = VPathGetHost ( path, & host );
                 if ( rc == 0 ) {
-                    size_t size = 0;
                     String gov;
                     CONST_STRING ( & gov, ".gov" );
                     size = gov . size;
@@ -1568,29 +1565,35 @@ rc_t VResolverAlgFixHTTPSOnlyStandard ( VResolverAlg * self, bool * fixed )
                             rc = RC ( rcVFS, rcResolver,
                                 rcResolving, rcMemory, rcExhausted );
                         }
-                        else {
-                            size_t l = 0;
-                            tmp -> addr = ( char * ) tmp + sizeof * tmp;
+                        else
+                        {
+                            /* capture all of root past "http" */
+                            String remainder;
+                            StringSubstr ( root, & remainder, 4, 0 );
+
+                            /* prepare "tmp" to point to buffer space */
+                            tmp -> addr = ( char * ) ( tmp + 1 );
+
+                            /* print into buffer */
                             rc = string_printf ( ( char * ) tmp -> addr,
-                                newLen, & l, "https://%.*s",
-                                root -> len - http . len,
-                                root -> addr + http . len );
-                            if ( rc == 0 ) {
-                                StringInit ( tmp, tmp -> addr, l, l );
+                                newLen, & tmp -> size, "https%S", & remainder );
+                            if ( rc != 0 )
+                                free ( tmp );
+                            else
+                            {
+                                tmp -> len = root -> len + 1;
                                 rc = VectorAppend ( & self -> vols, NULL, tmp );
-                                if ( rc == 0 ) {
+                                if ( rc == 0 )
+                                {
                                     self -> root = tmp;
                                     * fixed = true;
                                 }
-                            }
-                            else {
-                                free ( tmp );
                             }
                         }
                     }
                 }
             }
-            RELEASE ( VPath, path );
+            VPathRelease ( path );
         }
     }
 
