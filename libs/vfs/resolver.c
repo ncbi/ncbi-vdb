@@ -1311,6 +1311,7 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
 }
 
 
+#ifdef VDB_3162
 /*  test-only code to emulate 403 response while calling names.cgi */
 static bool TEST_VDB_3162 = false;
 void TESTING_VDB_3162 ( void ) {
@@ -1324,6 +1325,7 @@ static uint32_t TESTING_VDB_3162_CODE ( rc_t rc, uint32_t code ) {
         return code;
     }
 }
+#endif
 
 
 /* RemoteProtectedResolve
@@ -1422,9 +1424,13 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
                 uint32_t code;
 
                 rc = KHttpResultStatus ( rslt, &code, NULL, 0, NULL );
+
+#ifdef VDB_3162
                 if ( TEST_VDB_3162 ) {
                     code = TESTING_VDB_3162_CODE ( rc, code );
                 }
+#endif
+
                 DBGMSG
                     ( DBG_VFS, DBG_FLAG ( DBG_VFS ), ( " Code = %d\n", code ) );
                 if ( code == 200 )

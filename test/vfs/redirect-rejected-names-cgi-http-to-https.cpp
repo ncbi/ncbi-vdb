@@ -81,13 +81,17 @@ public:
         const VPath * remote = NULL;
 
         if ( forbidden == e403 ) {
+#ifdef VDB_3162
             TESTING_VDB_3162 ();
+#endif
         }
 
+#ifdef VDB_3162
         if ( fail )
             REQUIRE_RC_FAIL
                 ( VResolverQuery ( resolver, 0, query, 0, & remote, 0 ) );
         else
+#endif
             REQUIRE_RC
                 ( VResolverQuery ( resolver, 0, query, 0, & remote, 0 ) );
         RELEASE ( VPath, query );
