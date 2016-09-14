@@ -3990,6 +3990,8 @@ rc_t LoadIndex1(const uint8_t data[], size_t dlen, unsigned refNo,
         ctx->intervals = (ctx->self->refSeq[refNo].length + 16383) >> 14;
         if (type == bai_16kIntervals && elements > ctx->intervals)
             return RC(rcAlign, rcIndex, rcReading, rcData, rcExcessive);
+        if (type == bai_StartStopPairs && bin2ival(binNo) > ctx->intervals)
+            return RC(rcAlign, rcIndex, rcReading, rcData, rcExcessive);
     }
     return 0;
 }
