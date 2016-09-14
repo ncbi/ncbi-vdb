@@ -80,7 +80,8 @@ KFG_EXTERN rc_t CC KConfigMakeLocal ( KConfig **cfg,
 
 
 /* make sure ResolverCgiNode is https */
-KFG_EXTERN rc_t KConfigFixResolverCgiNode ( KConfig * self );
+KFG_EXTERN rc_t KConfigFixMainResolverCgiNode ( KConfig * self );
+KFG_EXTERN rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self );
 
 
 /* PrintDebug

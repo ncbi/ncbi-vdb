@@ -3959,7 +3959,42 @@ rc_t _KConfigNncToKGapConfig(const KConfig *self, char *text, KGapConfig *kgc)
     return 0;
 }
 
-LIB_EXPORT rc_t KConfigFixResolverCgiNode ( KConfig * self ) {
+LIB_EXPORT rc_t KConfigFixMainResolverCgiNode ( KConfig * self ) {
+    rc_t rc = 0;
+
+    KConfigNode *node = NULL;
+    struct String *result = NULL;
+
+    assert(self);
+
+    if (rc == 0) {
+        rc = KConfigOpenNodeUpdate(self, &node,
+            "/repository/remote/main/CGI/resolver-cgi");
+    }
+
+    if (rc == 0) {
+        rc = KConfigNodeReadString(node, &result);
+    }
+
+    if (rc == 0) {
+        String http;
+        CONST_STRING ( & http,
+                   "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+        assert(result);
+        if ( result->size == 0 || StringEqual ( & http, result ) ) {
+            const char https []
+                = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+            rc = KConfigNodeWrite ( node, https, sizeof https );
+        }
+    }
+
+    free(result);
+
+    KConfigNodeRelease(node);
+
+    return rc;
+}
+LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
     rc_t rc = 0;
 
     KConfigNode *node = NULL;
@@ -4276,7 +4311,7 @@ aprintf("KConfigImportNgc %d\n", __LINE__);*/
             if (rc == 0) {
 /*DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG), ("KConfigImportNgc %d\n", __LINE__));
 aprintf("KConfigImportNgc %d\n", __LINE__);*/
-                rc = KConfigFixResolverCgiNode(self);
+                rc = KConfigFixProtectedResolverCgiNode(self);
 /*DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG), ("KConfigImportNgc %d\n", __LINE__));
 aprintf("KConfigImportNgc %d\n", __LINE__);*/
             }
