@@ -3959,7 +3959,7 @@ rc_t _KConfigNncToKGapConfig(const KConfig *self, char *text, KGapConfig *kgc)
     return 0;
 }
 
-static rc_t _KConfigFixResolverCgiNode(KConfig *self) {
+LIB_EXPORT rc_t KConfigFixResolverCgiNode ( KConfig * self ) {
     rc_t rc = 0;
 
     KConfigNode *node = NULL;
@@ -4276,7 +4276,7 @@ aprintf("KConfigImportNgc %d\n", __LINE__);*/
             if (rc == 0) {
 /*DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG), ("KConfigImportNgc %d\n", __LINE__));
 aprintf("KConfigImportNgc %d\n", __LINE__);*/
-                rc = _KConfigFixResolverCgiNode(self);
+                rc = KConfigFixResolverCgiNode(self);
 /*DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG), ("KConfigImportNgc %d\n", __LINE__));
 aprintf("KConfigImportNgc %d\n", __LINE__);*/
             }

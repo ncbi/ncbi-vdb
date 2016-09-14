@@ -78,6 +78,11 @@ KFG_EXTERN rc_t CC KConfigGetLoadPath ( const KConfig *self,
 KFG_EXTERN rc_t CC KConfigMakeLocal ( KConfig **cfg,
     struct KDirectory const * cfgdir );
 
+
+/* make sure ResolverCgiNode is https */
+KFG_EXTERN rc_t KConfigFixResolverCgiNode ( KConfig * self );
+
+
 /* PrintDebug
  *  print configuration including some internal nodes information
  */
