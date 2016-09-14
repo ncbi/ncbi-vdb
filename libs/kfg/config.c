@@ -32,17 +32,18 @@ struct KfgConfigNamelist;
 #include <klib/namelist.h>
 #include <klib/impl.h>
 
-#include <klib/token.h>
 #include <klib/container.h>
 #include <klib/data-buffer.h> /* KDataBuffer */
-#include <klib/refcount.h>
-#include <klib/text.h>
-#include <klib/printf.h>
-#include <klib/rc.h>
 #include <klib/debug.h>
 #include <klib/log.h>
 #include <klib/out.h> /* OUTMSG */
+#include <klib/printf.h>
+#include <klib/rc.h>
+#include <klib/refcount.h>
+#include <klib/text.h>
+#include <klib/token.h>
 #include <klib/klib-priv.h>
+
 #include <kfs/directory.h>
 #include <kfs/gzip.h> /* KFileMakeGzipForRead */
 #include <kfs/subfile.h> /* KFileMakeSubRead */
@@ -3976,11 +3977,14 @@ static rc_t _KConfigFixResolverCgiNode(KConfig *self) {
     }
 
     if (rc == 0) {
+        String http;
+        CONST_STRING ( & http,
+                   "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
         assert(result);
-        if (result->size == 0) {
-            const char buffer[]
+        if ( result->size == 0 || StringEqual ( & http, result ) ) {
+            const char https []
                 = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
-            rc = KConfigNodeWrite(node, buffer, sizeof buffer);
+            rc = KConfigNodeWrite ( node, https, sizeof https );
         }
     }
 
