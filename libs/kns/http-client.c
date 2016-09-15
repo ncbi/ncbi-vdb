@@ -3351,6 +3351,62 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
     return rc;
 }
 
+typedef enum {
+    eUPSBegin,
+    eUPSHost,
+    eUPSDone,
+} EUrlParseState;
+static bool GovSiteByHttp ( const char * path ) {
+    if ( path != NULL ) {
+        size_t path_size = string_measure ( path, NULL );
+        size_t size = 0;
+        String http;
+        CONST_STRING ( & http, "http://" );
+        size = http . size;
+
+        /* resolver-cgi is called over http */
+        if ( path_size > size &&
+             strcase_cmp ( path, size, http . addr, size, size ) == 0 )
+        {
+            EUrlParseState state = eUPSBegin;
+            int i = 0;
+            for ( i = 7; i < path_size && state != eUPSDone; ++i ) {
+                switch ( state ) {
+                    case eUPSBegin:
+                        if ( path [ i ] != '/' ) {
+                            state = eUPSHost;
+                        }
+                        break;
+                    case eUPSHost:
+                        if ( path [ i ] == '/' ) {
+                            state = eUPSDone;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            if ( state == eUPSBegin ) {
+                return false;
+            }
+            else {
+                size_t size = 0;
+                String gov;
+                CONST_STRING ( & gov, ".gov" );
+                size = gov . size;
+                if ( strcase_cmp
+                    ( path + i - 5, size, gov . addr, size, size ) == 0 )
+                {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
 /* POST
  *  send POST message
  *  query parameters are sent in URL
@@ -3359,7 +3415,16 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
 LIB_EXPORT rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHttpResult **_rslt )
 {
     KHttpRetrier retrier;
-    rc_t rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> http -> mgr ); 
+    rc_t rc = 0;
+
+    if ( self == NULL ) {
+        return RC ( rcNS, rcNoTarg, rcUpdating, rcSelf, rcNull );
+    }
+    if ( _rslt == NULL ) {
+        return RC ( rcNS, rcNoTarg, rcUpdating, rcParam, rcNull );
+    }
+
+    rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> http -> mgr ); 
     
     if ( rc == 0 )
     {
@@ -3370,12 +3435,22 @@ LIB_EXPORT rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHtt
             {   /* a non-HTTP problem */
                 break;
             }
+
+            assert ( * _rslt );
+
+            if ( ( * _rslt ) -> status  == 403 &&
+                 GovSiteByHttp ( self -> url_buffer . base ) )
+            {
+                break;
+            }
+
             if ( ! self -> http -> reliable || ! KHttpRetrierWait ( & retrier, ( * _rslt ) -> status ) )
             {   /* We are either not configured to retry, or HTTP status is not retriable, or we exhausted
                     the max number of retries or the total wait time.
                     rc is 0, but the caller will have to look at _rslt->status to determine success */
                 break;
             }
+
             KClientHttpResultRelease ( * _rslt );
         }
         
