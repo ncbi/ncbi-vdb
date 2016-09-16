@@ -471,9 +471,15 @@ static bool BAM_AlignmentMateIsReversedOrientation(void *const vp, ctx_t ctx)
 static bool BAM_AlignmentIsFirst(void *const vp, ctx_t ctx)
 {
     FUNC_ENTRY(ctx, rcSRA, rcFile, rcAccessing);
+    BAM_Alignment *const self = (BAM_Alignment *)vp;
 
-    (void)self;
-    UNIMPLEMENTED();
+    if (self->cur) {
+        bool const isMated = (self->cur->FLAG & 0x001) == 0 ? false : true;
+        bool const isFirst = (self->cur->FLAG & 0x040) == 0 ? false : true;
+        bool const isLast  = (self->cur->FLAG & 0x080) == 0 ? false : true;
+        return (isMated && isFirst && !isLast);
+    }
+    USER_ERROR(xcRowNotFound, "no current row");
     return false;
 }
 
