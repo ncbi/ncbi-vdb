@@ -46,6 +46,7 @@
 #include <klib/printf.h>
 #include <klib/rc.h>
 #include <klib/text.h>
+#include <klib/time.h>
 
 #include <kproc/timeout.h>
 
@@ -887,7 +888,7 @@ rc_t KSocketConnectIPv4 ( KSocket *self, int32_t retryTimeout, const KEndPoint *
         /* rc != 0 */
         if (retryTimeout < 0 || retry_count < retryTimeout)
         {   /* retry */
-            sleep ( 1 );
+            KSleepMs ( 1000 );
             ++retry_count;
             rc = 0;
         }
@@ -963,7 +964,7 @@ rc_t KSocketConnectIPv6 ( KSocket *self, int32_t retryTimeout, const KEndPoint *
         assert ( rc != 0 );
         if (retryTimeout < 0 || retry_count < retryTimeout)
         {   /* retry */
-            sleep ( 1 );
+            KSleepMs ( 1000 );
             ++retry_count;
             rc = 0;
         }
@@ -1009,7 +1010,7 @@ rc_t KSocketConnectIPC ( KSocket *self, int32_t retryTimeout, const KEndPoint *t
         /* rc != 0 */
         if (retryTimeout < 0 || retry_count < retryTimeout)
         {   /* retry */
-            sleep ( 1 );
+            KSleepMs ( 1000 );
             ++retry_count;
             rc = 0;
         }
