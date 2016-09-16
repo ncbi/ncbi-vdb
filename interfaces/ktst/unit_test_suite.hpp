@@ -446,7 +446,8 @@ public:
     const std::string& GetName(void) const { return _name; }
     ncbi::NK::counter_t GetErrorCounter(void) { return _ec; }
 protected:
-    void SetErrorCounter(ncbi::NK::counter_t ec) { _ec = ec; }
+    void SetErrorCounter(ncbi::NK::counter_t ec)
+    { _ec = ec; }
 private:
     const std::string _name;
     ncbi::NK::counter_t _ec;
