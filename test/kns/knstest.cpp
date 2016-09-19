@@ -716,7 +716,7 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_0_Timeout, TimedConnectio
 }
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_SettingsOverride_0_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.2.2 time out immediately when the server has not yet responded
-    REQUIRE_RC(KNSManagerSetConnectionTimeouts(mgr, 5, 0, 0)); // override default setting (long time-out) to "no wait"
+    REQUIRE_RC(KNSManagerSetConnectionTimeouts(mgr, 5000, 0, 0)); // override default setting (long time-out) to "no wait"
     string content = GetName();
 	TimedReadSocketFixture::SetupClient(content); 
 

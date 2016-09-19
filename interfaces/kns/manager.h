@@ -86,7 +86,7 @@ KNS_EXTERN bool CC KNSManagerIsVerbose ( const KNSManager *self );
  *  for connects, reads and writes respectively.
  */
 KNS_EXTERN rc_t CC KNSManagerSetConnectionTimeouts ( KNSManager *self,
-    int32_t connectSecs, int32_t readMillis, int32_t writeMillis );
+    int32_t connectMillis, int32_t readMillis, int32_t writeMillis );
 
 
 /* Set/Get UserAgent

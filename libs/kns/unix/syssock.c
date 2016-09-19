@@ -830,11 +830,15 @@ rc_t KSocketMakePath ( const char * name, char * buf, size_t buf_size )
 }
 
 static
-rc_t KSocketConnectIPv4 ( KSocket *self, int32_t retryTimeout, const KEndPoint *from, const KEndPoint *to )
+rc_t KSocketConnectIPv4 ( KSocket *self, int32_t retryTimeoutMillis, const KEndPoint *from, const KEndPoint *to )
 {
     rc_t rc = 0;
     uint32_t retry_count = 0;
+    int32_t retryTimeoutSecs = retryTimeoutMillis;
     struct sockaddr_in ss_from, ss_to;
+
+    if ( retryTimeoutSecs > 0 )
+        retryTimeoutSecs = (retryTimeoutSecs + 999) / 1000;
 
     memset ( & ss_from, 0, sizeof ss_from );
     if ( from != NULL )
@@ -886,7 +890,7 @@ rc_t KSocketConnectIPv4 ( KSocket *self, int32_t retryTimeout, const KEndPoint *
         }
         
         /* rc != 0 */
-        if (retryTimeout < 0 || retry_count < retryTimeout)
+        if (retryTimeoutSecs < 0 || retry_count < retryTimeoutSecs)
         {   /* retry */
             KSleepMs ( 1000 );
             ++retry_count;
@@ -902,11 +906,15 @@ rc_t KSocketConnectIPv4 ( KSocket *self, int32_t retryTimeout, const KEndPoint *
 
 
 static
-rc_t KSocketConnectIPv6 ( KSocket *self, int32_t retryTimeout, const KEndPoint *from, const KEndPoint *to )
+rc_t KSocketConnectIPv6 ( KSocket *self, int32_t retryTimeoutMillis, const KEndPoint *from, const KEndPoint *to )
 {
     rc_t rc = 0;
     uint32_t retry_count = 0;
+    int32_t retryTimeoutSecs = retryTimeoutMillis;
     struct sockaddr_in6 ss_from, ss_to;
+
+    if ( retryTimeoutSecs > 0 )
+        retryTimeoutSecs = (retryTimeoutSecs + 999) / 1000;
 
     memset ( & ss_from, 0, sizeof ss_from );
     if ( from != NULL )
@@ -962,7 +970,7 @@ rc_t KSocketConnectIPv6 ( KSocket *self, int32_t retryTimeout, const KEndPoint *
         
         /* rc != 0 */
         assert ( rc != 0 );
-        if (retryTimeout < 0 || retry_count < retryTimeout)
+        if (retryTimeoutSecs < 0 || retry_count < retryTimeoutSecs)
         {   /* retry */
             KSleepMs ( 1000 );
             ++retry_count;
@@ -978,11 +986,15 @@ rc_t KSocketConnectIPv6 ( KSocket *self, int32_t retryTimeout, const KEndPoint *
 
 
 static
-rc_t KSocketConnectIPC ( KSocket *self, int32_t retryTimeout, const KEndPoint *to )
+rc_t KSocketConnectIPC ( KSocket *self, int32_t retryTimeoutMillis, const KEndPoint *to )
 {
     rc_t rc = 0;
     uint32_t retry_count = 0;
+    int32_t retryTimeoutSecs = retryTimeoutMillis;
     struct sockaddr_un ss_to;
+
+    if ( retryTimeoutSecs > 0 )
+        retryTimeoutSecs = (retryTimeoutSecs + 999) / 1000;
 
     memset ( & ss_to, 0, sizeof ss_to );
     ss_to . sun_family = AF_UNIX;
@@ -1008,7 +1020,7 @@ rc_t KSocketConnectIPC ( KSocket *self, int32_t retryTimeout, const KEndPoint *t
         }
         
         /* rc != 0 */
-        if (retryTimeout < 0 || retry_count < retryTimeout)
+        if (retryTimeoutSecs < 0 || retry_count < retryTimeoutSecs)
         {   /* retry */
             KSleepMs ( 1000 );
             ++retry_count;
@@ -1023,7 +1035,7 @@ rc_t KSocketConnectIPC ( KSocket *self, int32_t retryTimeout, const KEndPoint *t
  }
 
 KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const * self,
-    struct KSocket **out, int32_t retryTimeout, int32_t readMillis, int32_t writeMillis,
+    struct KSocket **out, int32_t retryTimeoutMillis, int32_t readMillis, int32_t writeMillis,
     struct KEndPoint const *from, struct KEndPoint const *to )
 {
     rc_t rc;
@@ -1056,15 +1068,15 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                     switch ( to -> type )
                     {
                     case epIPV6:
-                        rc = KSocketConnectIPv6 ( conn, retryTimeout, from, to );
+                        rc = KSocketConnectIPv6 ( conn, retryTimeoutMillis, from, to );
                         break;
 
                     case epIPV4:
-                        rc = KSocketConnectIPv4 ( conn, retryTimeout, from, to );
+                        rc = KSocketConnectIPv4 ( conn, retryTimeoutMillis, from, to );
                         break;
 
                     case epIPC:
-                        rc = KSocketConnectIPC ( conn, retryTimeout, to );
+                        rc = KSocketConnectIPC ( conn, retryTimeoutMillis, to );
                         break;
 
                     default:

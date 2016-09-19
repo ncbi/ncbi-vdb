@@ -55,7 +55,7 @@
 #include <stdio.h> /* fprintf */
 
 #ifndef MAX_CONN_LIMIT
-#define MAX_CONN_LIMIT ( 10 * 60 )
+#define MAX_CONN_LIMIT ( 60 * 1000 )
 #endif
 
 #ifndef MAX_CONN_READ_LIMIT
@@ -534,7 +534,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedConnection ( struct KNSManager const * sel
  *  both endpoints have to be of type epIP; creates a TCP connection
  */    
 LIB_EXPORT rc_t CC KNSManagerMakeRetryConnection ( struct KNSManager const * self,
-    struct KSocket **conn, int32_t retryTimeout, struct KEndPoint const *from, struct KEndPoint const *to )
+    struct KSocket **conn, int32_t retryTimeoutMillis, struct KEndPoint const *from, struct KEndPoint const *to )
 {
     if ( self == NULL )
     {
@@ -547,7 +547,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeRetryConnection ( struct KNSManager const * sel
     }
 
     return KNSManagerMakeRetryTimedConnection ( self, conn, 
-        retryTimeout, self -> conn_read_timeout, self -> conn_write_timeout, from, to );
+        retryTimeoutMillis, self -> conn_read_timeout, self -> conn_write_timeout, from, to );
 }    
 
 /* SetConnectionTimeouts
@@ -558,16 +558,16 @@ LIB_EXPORT rc_t CC KNSManagerMakeRetryConnection ( struct KNSManager const * sel
  *  for connects, reads and writes respectively.
  */
 LIB_EXPORT rc_t CC KNSManagerSetConnectionTimeouts ( KNSManager *self,
-    int32_t connectSecs, int32_t readMillis, int32_t writeMillis )
+    int32_t connectMillis, int32_t readMillis, int32_t writeMillis )
 {
     if ( self == NULL )
         return RC ( rcNS, rcMgr, rcUpdating, rcSelf, rcNull );
 
     /* limit values */
-    if ( connectSecs < 0 )
-        connectSecs = -1;
-    else if ( connectSecs > MAX_CONN_LIMIT )
-        connectSecs = MAX_CONN_LIMIT;
+    if ( connectMillis < 0 )
+        connectMillis = -1;
+    else if ( connectMillis > MAX_CONN_LIMIT )
+        connectMillis = MAX_CONN_LIMIT;
         
     if ( readMillis < 0 )
         readMillis = -1;
@@ -579,7 +579,7 @@ LIB_EXPORT rc_t CC KNSManagerSetConnectionTimeouts ( KNSManager *self,
     else if ( writeMillis > MAX_CONN_WRITE_LIMIT )
         writeMillis = MAX_CONN_WRITE_LIMIT;
 
-    self -> conn_timeout = connectSecs;
+    self -> conn_timeout = connectMillis;
     self -> conn_read_timeout = readMillis;
     self -> conn_write_timeout = writeMillis;
 

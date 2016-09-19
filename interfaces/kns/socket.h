@@ -60,8 +60,8 @@ typedef struct KSocket KSocket;
  *
  *  "conn" [ OUT ] - a stream for communication with the server
  *
- *  "retryTimeout" [ IN ] - if connection is refused, retry with 1ms intervals: when negative, retry infinitely,
- *   when 0, do not retry, positive gives maximum wait time in seconds 
+ *  "retryTimeoutMillis" [ IN ] - if connection is refused, retry with 1ms intervals: when negative, retry infinitely,
+ *   when 0, do not retry, positive gives maximum wait time in mS
  *
  *  "readMillis" [ IN ] and "writeMillis" - when negative, infinite timeout
  *   when 0, return immediately, positive gives maximum wait time in mS
@@ -81,10 +81,10 @@ KNS_EXTERN rc_t CC KNSManagerMakeTimedConnection ( struct KNSManager const * sel
     struct KEndPoint const *from, struct KEndPoint const *to );
 
 KNS_EXTERN rc_t CC KNSManagerMakeRetryConnection ( struct KNSManager const * self,
-    struct KSocket **conn, int32_t retryTimeout, struct KEndPoint const *from, struct KEndPoint const *to );
+    struct KSocket **conn, int32_t retryTimeoutMillis, struct KEndPoint const *from, struct KEndPoint const *to );
 
 KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const * self,
-    struct KSocket **conn, int32_t retryTimeout, int32_t readMillis, int32_t writeMillis,
+    struct KSocket **conn, int32_t retryTimeoutMillis, int32_t readMillis, int32_t writeMillis,
     struct KEndPoint const *from, struct KEndPoint const *to );
 
 

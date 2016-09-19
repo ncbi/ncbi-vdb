@@ -691,12 +691,13 @@ static rc_t KNSManagerMakeIPv4Connection ( struct KNSManager const * self,
                                            KSocket ** out,
                                            const KEndPoint * from,
                                            const KEndPoint * to,
-                                           int32_t retryTimeout, 
+                                           int32_t retryTimeoutMillis,
                                            int32_t readMillis, 
                                            int32_t writeMillis )
 {
     rc_t rc = 0;
     uint32_t retry_count = 0;
+    int32_t retryTimeoutSecs = retryTimeoutMillis;
     SOCKET fd;
 
     * out = NULL;
@@ -704,6 +705,9 @@ static rc_t KNSManagerMakeIPv4Connection ( struct KNSManager const * self,
     assert ( to != NULL );
     assert ( to -> type == epIPV4 );
     assert ( ( from == NULL || from -> type == to -> type ) );
+
+    if ( retryTimeoutSecs > 0 )
+        retryTimeoutSecs = (retryTimeoutSecs + 999) / 1000;
 
     do
     {
@@ -763,7 +767,7 @@ static rc_t KNSManagerMakeIPv4Connection ( struct KNSManager const * self,
         }
         
         /* rc != 0 */
-        if ( retryTimeout < 0 || ( int32_t )retry_count < retryTimeout )
+        if ( retryTimeoutSecs < 0 || ( int32_t )retry_count < retryTimeoutSecs )
         {   /* retry */
             Sleep ( 1000 ); /*ms*/
             ++retry_count;
@@ -927,7 +931,7 @@ static rc_t KNSManagerMakeIPv6Connection ( struct KNSManager const * self,
                                            KSocket ** out,
                                            const KEndPoint * from,
                                            const KEndPoint * to,
-                                           int32_t retryTimeout, 
+                                           int32_t retryTimeoutMillis,
                                            int32_t readMillis, 
                                            int32_t writeMillis )
 {
@@ -1571,14 +1575,15 @@ static KStream_vt_v1 vtKIPCSocket =
 static rc_t KNSManagerMakeIPCConnection ( struct KNSManager const *self, 
                                           KSocket **out, 
                                           const KEndPoint *to, 
-                                          int32_t retryTimeout, 
+                                          int32_t retryTimeoutMillis,
                                           int32_t readMillis, 
                                           int32_t writeMillis )
 {
     RC_CTX ( rcStream, rcConstructing );
 
     rc_t rc = 0;
-    uint8_t retry_count = 0;
+    uint32_t retry_count = 0;
+    int32_t retryTimeoutSecs = retryTimeoutMillis;
     char pipename[ PIPE_NAME_LENGTH ];
     wchar_t pipenameW[ PIPE_NAME_LENGTH ];
     size_t num_writ;
@@ -1594,6 +1599,9 @@ static rc_t KNSManagerMakeIPCConnection ( struct KNSManager const *self,
         return RC ( rcNS, rcConnection, rcCreating, rcParam, rcNull );
     if ( to -> type != epIPC )
         return RC ( rcNS, rcConnection, rcCreating, rcParam, rcInvalid );
+
+    if ( retryTimeoutSecs > 0 )
+        retryTimeoutSecs = (retryTimeoutSecs + 999) / 1000;
 
     /* use named pipes to implement unix domain socket - like behavior */
     rc = string_printf( pipename, sizeof( pipename ), &num_writ, "\\\\.\\pipe\\%s", to->u.ipc_name );
@@ -1665,7 +1673,7 @@ static rc_t KNSManagerMakeIPCConnection ( struct KNSManager const *self,
                         /* time-out, try again */
                         rc = HandleErrno();
                         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KNSManagerMakeIPCConnection: WaitNamedPipeW returned FALSE(timeout)\n" ) );
-                        if ( retryTimeout < 0 || retry_count < retryTimeout )
+                        if ( retryTimeoutSecs < 0 || retry_count < retryTimeoutSecs )
                         {
                             Sleep( 1000 ); /* ms */
                             ++retry_count;
@@ -1676,7 +1684,7 @@ static rc_t KNSManagerMakeIPCConnection ( struct KNSManager const *self,
                     break;
                 
                 case ERROR_FILE_NOT_FOUND :
-                    if ( retryTimeout < 0 || retry_count < retryTimeout )
+                    if ( retryTimeoutSecs < 0 || retry_count < retryTimeoutSecs )
                     {
                         DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KNSManagerMakeIPCConnection: pipe not found, retrying\n" ) );
                         Sleep( 1000 ); /* ms */
@@ -1882,7 +1890,7 @@ static rc_t KListenerIPCAccept ( KSocket * self, struct KSocket ** out )
 
 LIB_EXPORT rc_t CC KNSManagerMakeRetryTimedConnection ( const KNSManager * self,
                                                         KSocket **out,
-                                                        int32_t retryTimeout,
+                                                        int32_t retryTimeoutMillis,
                                                         int32_t readMillis,
                                                         int32_t writeMillis,
                                                         const KEndPoint *from,
@@ -1905,15 +1913,15 @@ LIB_EXPORT rc_t CC KNSManagerMakeRetryTimedConnection ( const KNSManager * self,
             switch ( to -> type )
             {
             case epIPV4 :
-                rc = KNSManagerMakeIPv4Connection ( self, out, from, to, retryTimeout, readMillis, writeMillis );
+                rc = KNSManagerMakeIPv4Connection ( self, out, from, to, retryTimeoutMillis, readMillis, writeMillis );
                 break;
 
             case epIPV6 :
-                rc = KNSManagerMakeIPv6Connection ( self, out, from, to, retryTimeout, readMillis, writeMillis );
+                rc = KNSManagerMakeIPv6Connection ( self, out, from, to, retryTimeoutMillis, readMillis, writeMillis );
                 break;
 
             case epIPC :
-                rc = KNSManagerMakeIPCConnection ( self, out, to, retryTimeout, readMillis, writeMillis );
+                rc = KNSManagerMakeIPCConnection ( self, out, to, retryTimeoutMillis, readMillis, writeMillis );
                 break;
 
             default:
