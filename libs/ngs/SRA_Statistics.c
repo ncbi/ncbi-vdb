@@ -501,7 +501,7 @@ double SRA_StatisticsGetAsDouble ( const SRA_Statistics * self, ctx_t ctx, const
 bool SRA_StatisticsNextPath ( const SRA_Statistics * self, ctx_t ctx, const char * path, const char** next )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
-    const DictionaryEntry * node;
+    const DictionaryEntry * node = NULL;
     
     assert ( self );
     
