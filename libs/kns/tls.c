@@ -630,6 +630,7 @@ rc_t ktls_handshake ( KTLSStream *self )
                           ) );
             return rc;
         }
+        ret = mbedtls_ssl_handshake( &self -> ssl );
     }
 
     return 0;
