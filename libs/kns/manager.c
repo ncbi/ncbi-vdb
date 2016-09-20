@@ -769,10 +769,12 @@ static bool KNSManagerHttpProxyInitFromEnv ( KNSManager * self ) {
     bool loaded = false;
 
     const char * env_list [] = {
-        "http_proxy",
-        "HTTP_PROXY",
+        "https_proxy",
+        "HTTPS_PROXY",
         "all_proxy",
         "ALL_PROXY",
+        "http_proxy",
+        "HTTP_PROXY",
     };
 
     int i = 0;
