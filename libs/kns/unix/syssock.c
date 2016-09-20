@@ -830,91 +830,67 @@ rc_t KSocketMakePath ( const char * name, char * buf, size_t buf_size )
 }
 
 static
-rc_t KSocketConnectIPv4 ( KSocket *self, int32_t retryTimeoutMillis, const KEndPoint *from, const KEndPoint *to )
+rc_t KSocketConnectIPv4 ( KSocket *self, const KEndPoint *from, const KEndPoint *to )
 {
     rc_t rc = 0;
-    uint32_t retry_count = 0;
-    int32_t retryTimeoutSecs = retryTimeoutMillis;
-    struct sockaddr_in ss_from, ss_to;
 
-    if ( retryTimeoutSecs > 0 )
-        retryTimeoutSecs = (retryTimeoutSecs + 999) / 1000;
-
-    memset ( & ss_from, 0, sizeof ss_from );
-    if ( from != NULL )
+    /* create the OS socket */
+    self -> fd = socket ( AF_INET, SOCK_STREAM, 0 );
+    if ( self -> fd < 0 )
+        rc = KSocketHandleSocketCall ( errno );
+    else
     {
-        ss_from . sin_family = AF_INET;
-        ss_from . sin_addr . s_addr = htonl ( from -> u . ipv4 . addr );
-        ss_from . sin_port = htons ( from -> u . ipv4 . port );
-    }
+        /* disable nagle algorithm */
+        int flag = 1;
+        setsockopt ( self -> fd, IPPROTO_TCP, TCP_NODELAY, ( char* ) & flag, sizeof flag );
 
-    memset ( & ss_to, 0, sizeof ss_to );
-    ss_to . sin_family = AF_INET;
-    ss_to . sin_addr . s_addr = htonl ( to -> u . ipv4 . addr );
-    ss_to . sin_port = htons ( to -> u . ipv4 . port );
-
-    do 
-    {
-        /* create the OS socket */
-        self -> fd = socket ( AF_INET, SOCK_STREAM, 0 );
-        if ( self -> fd < 0 )
-            rc = KSocketHandleSocketCall ( errno );
-        else
+        struct sockaddr_in ss;
+        memset ( & ss, 0, sizeof ss );
+        ss . sin_family = AF_INET;
+        if ( from != NULL )
         {
-            /* disable nagle algorithm */
-            int flag = 1;
-            setsockopt ( self -> fd, IPPROTO_TCP, TCP_NODELAY, ( char* ) & flag, sizeof flag );
+            ss . sin_addr . s_addr = htonl ( from -> u . ipv4 . addr );
+            ss . sin_port = htons ( from -> u . ipv4 . port );
+        }
 
-            /* bind */
-            if ( from != NULL && bind ( self -> fd, ( struct sockaddr* ) & ss_from, sizeof ss_from ) != 0 )
-                rc = KSocketHandleBindCall ( errno );
+        /* bind */
+        if ( bind ( self -> fd, ( struct sockaddr* ) & ss, sizeof ss ) != 0 )
+            rc = KSocketHandleBindCall ( errno );
                 
-            if ( rc == 0 )
-            {
-                /* connect */
-                if ( connect ( self -> fd, ( struct sockaddr* ) & ss_to, sizeof ss_to ) != 0 )
-#warning "have an issue with EINTR here and other places"
-                    rc = KSocketHandleConnectCall ( errno );
-                else
-                {
-                    /* set non-blocking mode */
-                    flag = fcntl ( self -> fd, F_GETFL );
-                    fcntl ( self -> fd, F_SETFL, flag | O_NONBLOCK );
-                    return 0;
-                }
-            }
+        if ( rc == 0 )
+        {
+            ss . sin_port = htons ( to -> u . ipv4 . port );
+            ss . sin_addr . s_addr = htonl ( to -> u . ipv4 . addr );
 
-            /* dump socket */
-            close ( self -> fd );
-            self -> fd = -1;
+            /* connect */
+            if ( connect ( self -> fd, ( struct sockaddr* ) & ss, sizeof ss ) != 0 )
+#warning "have an issue with EINTR here and other places"
+                rc = KSocketHandleConnectCall ( errno );
+            else
+            {
+                /* set non-blocking mode */
+                flag = fcntl ( self -> fd, F_GETFL );
+                fcntl ( self -> fd, F_SETFL, flag | O_NONBLOCK );
+                return 0;
+            }
         }
-        
-        /* rc != 0 */
-        if (retryTimeoutSecs < 0 || retry_count < retryTimeoutSecs)
-        {   /* retry */
-            KSleepMs ( 1000 );
-            ++retry_count;
-            rc = 0;
-        }
+
+        /* dump socket */
+        close ( self -> fd );
+        self -> fd = -1;
     }
-    while ( rc == 0 );
-    
-    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketConnectIPv4 timed out\n", self ) );
+
+    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketConnectIPv4 failed - %R\n", self, rc ) );
 
     return rc;
 }
 
 
 static
-rc_t KSocketConnectIPv6 ( KSocket *self, int32_t retryTimeoutMillis, const KEndPoint *from, const KEndPoint *to )
+rc_t KSocketConnectIPv6 ( KSocket *self, const KEndPoint *from, const KEndPoint *to )
 {
     rc_t rc = 0;
-    uint32_t retry_count = 0;
-    int32_t retryTimeoutSecs = retryTimeoutMillis;
     struct sockaddr_in6 ss_from, ss_to;
-
-    if ( retryTimeoutSecs > 0 )
-        retryTimeoutSecs = (retryTimeoutSecs + 999) / 1000;
 
     memset ( & ss_from, 0, sizeof ss_from );
     if ( from != NULL )
@@ -933,110 +909,80 @@ rc_t KSocketConnectIPv6 ( KSocket *self, int32_t retryTimeoutMillis, const KEndP
              sizeof ( to -> u . ipv6 . addr ) );
     ss_to . sin6_port = htons ( to -> u . ipv6 . port );
 
-    do 
+    /* create the OS socket */
+    self -> fd = socket ( AF_INET6, SOCK_STREAM, 0 );
+    if ( self -> fd < 0 )
+        rc = KSocketHandleSocketCall ( errno );
+    else
     {
-        /* create the OS socket */
-        self -> fd = socket ( AF_INET6, SOCK_STREAM, 0 );
-        if ( self -> fd < 0 )
-            rc = KSocketHandleSocketCall ( errno );
-        else
+        /* disable nagle algorithm */
+        int flag = 1;
+        setsockopt ( self -> fd, IPPROTO_TCP, TCP_NODELAY, ( char* ) & flag, sizeof flag );
+
+        /* bind */
+        if ( from != NULL && bind ( self -> fd, ( struct sockaddr* ) & ss_from, sizeof ss_from ) != 0 )
+            rc = KSocketHandleBindCall ( errno );
+
+        if ( rc == 0 )
         {
-            /* disable nagle algorithm */
-            int flag = 1;
-            setsockopt ( self -> fd, IPPROTO_TCP, TCP_NODELAY, ( char* ) & flag, sizeof flag );
-
-            /* bind */
-            if ( from != NULL && bind ( self -> fd, ( struct sockaddr* ) & ss_from, sizeof ss_from ) != 0 )
-                rc = KSocketHandleBindCall ( errno );
-
-            if ( rc == 0 )
+            /* connect */
+            if ( connect ( self -> fd, ( struct sockaddr* ) & ss_to, sizeof ss_to ) != 0 )
+                rc = KSocketHandleConnectCall ( errno );
+            else
             {
-                /* connect */
-                if ( connect ( self -> fd, ( struct sockaddr* ) & ss_to, sizeof ss_to ) != 0 )
-                    rc = KSocketHandleConnectCall ( errno );
-                else
-                {
-                    /* set non-blocking mode */
-                    flag = fcntl ( self -> fd, F_GETFL );
-                    fcntl ( self -> fd, F_SETFL, flag | O_NONBLOCK );
-                    return 0;
-                }
+                /* set non-blocking mode */
+                flag = fcntl ( self -> fd, F_GETFL );
+                fcntl ( self -> fd, F_SETFL, flag | O_NONBLOCK );
+                return 0;
             }
+        }
 
-            /* dump socket */
-            close ( self -> fd );
-            self -> fd = -1;
-        }
-        
-        /* rc != 0 */
-        assert ( rc != 0 );
-        if (retryTimeoutSecs < 0 || retry_count < retryTimeoutSecs)
-        {   /* retry */
-            KSleepMs ( 1000 );
-            ++retry_count;
-            rc = 0;
-        }
+        /* dump socket */
+        close ( self -> fd );
+        self -> fd = -1;
     }
-    while ( rc == 0 );
     
-    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketConnectIPv6 timed out\n", self ) );
+    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketConnectIPv6 failed - %R\n", self, rc ) );
 
     return rc;
 }
 
 
 static
-rc_t KSocketConnectIPC ( KSocket *self, int32_t retryTimeoutMillis, const KEndPoint *to )
+rc_t KSocketConnectIPC ( KSocket *self, const KEndPoint *to )
 {
     rc_t rc = 0;
-    uint32_t retry_count = 0;
-    int32_t retryTimeoutSecs = retryTimeoutMillis;
     struct sockaddr_un ss_to;
-
-    if ( retryTimeoutSecs > 0 )
-        retryTimeoutSecs = (retryTimeoutSecs + 999) / 1000;
 
     memset ( & ss_to, 0, sizeof ss_to );
     ss_to . sun_family = AF_UNIX;
     rc = KSocketMakePath ( to -> u . ipc_name, ss_to . sun_path, sizeof ss_to . sun_path );
 
-    do 
+    /* create the OS socket */
+    self -> fd = socket ( AF_UNIX, SOCK_STREAM, 0 );
+    if ( self -> fd < 0 )
+        rc = KSocketHandleSocketCall ( errno );
+    else
     {
-        /* create the OS socket */
-        self -> fd = socket ( AF_UNIX, SOCK_STREAM, 0 );
-        if ( self -> fd < 0 )
-            rc = KSocketHandleSocketCall ( errno );
+        /* connect */
+        if ( connect ( self -> fd, ( struct sockaddr* ) & ss_to, sizeof ss_to ) != 0 )
+            rc = KSocketHandleConnectCall ( errno );
         else
-        {
-            /* connect */
-            if ( connect ( self -> fd, ( struct sockaddr* ) & ss_to, sizeof ss_to ) != 0 )
-                rc = KSocketHandleConnectCall ( errno );
-            else
-                return 0;
+            return 0;
             
-            /* dump socket */
-            close ( self -> fd );
-            self -> fd = -1;
-        }
-        
-        /* rc != 0 */
-        if (retryTimeoutSecs < 0 || retry_count < retryTimeoutSecs)
-        {   /* retry */
-            KSleepMs ( 1000 );
-            ++retry_count;
-            rc = 0;
-        }
+        /* dump socket */
+        close ( self -> fd );
+        self -> fd = -1;
     }
-    while (rc == 0);
 
-    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketConnectIPC timed out\n", self ) );            
+    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketConnectIPC failed - %R\n", self, rc ) );
 
     return rc;
  }
 
 KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const * self,
-    struct KSocket **out, int32_t retryTimeoutMillis, int32_t readMillis, int32_t writeMillis,
-    struct KEndPoint const *from, struct KEndPoint const *to )
+    struct KSocket ** out, timeout_t * retryTimeout, int32_t readMillis, int32_t writeMillis,
+    struct KEndPoint const * from, struct KEndPoint const * to )
 {
     rc_t rc;
 
@@ -1046,7 +992,7 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
     {
         if ( self == NULL )
             rc = RC ( rcNS, rcStream, rcConstructing, rcSelf, rcNull );
-        else if ( to == NULL )
+        else if ( retryTimeout == NULL || to == NULL )
             rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcNull );
         else if ( from != NULL && from -> type != to -> type )
             rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcIncorrect );
@@ -1063,30 +1009,88 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
 
                 rc = KStreamInit ( & conn -> dad, ( const KStream_vt* ) & vtKSocket,
                                    "KSocket", "", true, true );
+
+                /* prepare the timeout */
+                if ( rc == 0 )
+                    rc = TimeoutPrepare ( retryTimeout );
+
                 if ( rc == 0 )
                 {
+                    uint32_t retry;
+
                     switch ( to -> type )
                     {
-                    case epIPV6:
-                        rc = KSocketConnectIPv6 ( conn, retryTimeoutMillis, from, to );
-                        break;
 
+                    /* ensure the type is correct */
                     case epIPV4:
-                        rc = KSocketConnectIPv4 ( conn, retryTimeoutMillis, from, to );
-                        break;
-
+                    case epIPV6:
                     case epIPC:
-                        rc = KSocketConnectIPC ( conn, retryTimeoutMillis, to );
-                        break;
+
+                        /* a retry loop - retry upon a schedule for the alloted time */
+                        for ( retry = 0; ; ++ retry )
+                        {
+                            uint32_t remaining, delay;
+
+                            /* try to connect using appropriate protocol */
+                            switch ( to -> type )
+                            {
+                            case epIPV4:
+                                rc = KSocketConnectIPv4 ( conn, from, to );
+                                break;
+
+                            case epIPV6:
+                                rc = KSocketConnectIPv6 ( conn, from, to );
+                                break;
+
+                            case epIPC:
+                                rc = KSocketConnectIPC ( conn, to );
+                                break;
+                            }
+
+                            /* if connection was successful, return socket */
+                            if ( rc == 0 )
+                            {
+                                * out = conn;
+                                return 0;
+                            }
+
+                            /* check time remaining on timeout ( if any ) */
+                            remaining = TimeoutRemaining ( retryTimeout );
+
+                            /* break out of loop if no time left */
+                            if ( remaining == 0 )
+                                break;
+
+                            /* apply delay schedule */
+                            switch ( retry )
+                            {
+                            case 0:
+                                /* try immediately */
+                                continue;
+                            case 1:
+                            case 2:
+                            case 3:
+                                /* wait for 100mS between tries */
+                                delay = 100;
+                                break;
+                            default:
+                                /* wait for 250mS between tries */
+                                delay = 250;
+                            }
+
+                            /* never wait for more than the remaining timeout */
+                            if ( delay > remaining )
+                                delay = remaining;
+
+                            KSleepMs ( delay );
+                        }
+
+                        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET),
+                               ( "%p: KSocketConnect timed out\n", self ) ); 
+                       break;
 
                     default:
                         rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcIncorrect );
-                    }
-
-                    if ( rc == 0 )
-                    {
-                        * out = conn;
-                        return 0;
                     }
                 }
 

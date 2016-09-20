@@ -40,6 +40,7 @@ typedef struct KSocket KSocket;
 #include <klib/debug.h>
 #include <klib/log.h>
 #include <klib/printf.h>
+#include <klib/time.h>
 #include <sysalloc.h>
 #include <kproc/timeout.h>
 
@@ -687,95 +688,48 @@ rc_t KSocketHandleSocknameCallWin ()
     return RC ( rcNS, rcSocket, rcIdentifying, rcError, rcUnknown );
 }
 
-static rc_t KNSManagerMakeIPv4Connection ( struct KNSManager const * self,
-                                           KSocket ** out,
-                                           const KEndPoint * from,
-                                           const KEndPoint * to,
-                                           int32_t retryTimeoutMillis,
-                                           int32_t readMillis, 
-                                           int32_t writeMillis )
+static
+rc_t KSocketConnectIPv4 ( KSocket * self, const KEndPoint * from, const KEndPoint * to )
 {
     rc_t rc = 0;
-    uint32_t retry_count = 0;
-    int32_t retryTimeoutSecs = retryTimeoutMillis;
-    SOCKET fd;
 
-    * out = NULL;
-
-    assert ( to != NULL );
-    assert ( to -> type == epIPV4 );
-    assert ( ( from == NULL || from -> type == to -> type ) );
-
-    if ( retryTimeoutSecs > 0 )
-        retryTimeoutSecs = (retryTimeoutSecs + 999) / 1000;
-
-    do
+    self -> type_data . ipv4_data . fd = socket ( AF_INET, SOCK_STREAM, IPPROTO_TCP );
+    if ( self -> type_data . ipv4_data . fd == INVALID_SOCKET )
+        rc = KSocketHandleSocketCallWin ();
+    else
     {
-        fd = socket ( AF_INET, SOCK_STREAM, IPPROTO_TCP );
-        if ( fd == INVALID_SOCKET )
-            rc = KSocketHandleSocketCallWin ();
-        else
+        struct sockaddr_in ss;
+        memset ( & ss, 0, sizeof ss );
+        ss . sin_family = AF_INET;
+        if ( from != NULL )
         {
-            struct sockaddr_in ss;
-            memset ( & ss, 0, sizeof ss );
-            ss . sin_family = AF_INET;
-            if ( from != NULL )
-            {
-                ss . sin_port = htons ( from -> u. ipv4 . port );
-                ss . sin_addr . s_addr = htonl ( from -> u . ipv4 . addr );
-            }
-            if ( bind ( fd, ( const struct sockaddr* )&ss, sizeof ss  ) == SOCKET_ERROR ) 
-                rc = KSocketHandleBindCallWin ();
-                
-            if ( rc == 0 )
-            {
-                ss . sin_port = htons ( to -> u . ipv4 . port );
-                ss . sin_addr . s_addr = htonl ( to -> u . ipv4 . addr );
-                
-                if ( connect ( fd, (const struct sockaddr*)&ss, sizeof ss ) == SOCKET_ERROR )
-                    rc = KSocketHandleConnectCallWin ();
-                else
-                {   
-                    /* create the KSocket */
-                    KSocket * ksock = calloc ( sizeof * ksock, 1 );
-                    if ( ksock == NULL )
-                        rc = RC ( rcNS, rcSocket, rcAllocating, rcSocket, rcNull ); 
-                    else
-                    {   /* initialize the KSocket */
-                        rc = KStreamInit ( & ksock -> dad, ( const KStream_vt* ) & vtKIpv4Socket,
-                                           "KSocket", "tcp", true, true );
-                        if ( rc == 0 )
-                        {
-                            KSocketIPv4 * data = &( ksock -> type_data.ipv4_data );
-                            ksock -> read_timeout  = readMillis;
-                            ksock -> write_timeout = writeMillis;
-                            ksock -> type = epIPV4;
-                            data -> fd = fd;
-                            *out = ( KSocket * )& ksock -> dad;
-                            return 0;
-                        }
-                        free( ksock );
-                    }
-                    /* we connected but then then ran out of memory or something bad like that, so no need to retry 
-                       - simply close fd and return RC */
-                    closesocket( fd );
-                    return rc;
-                }
-            } 
-            /* dump socket */
-            closesocket( fd );
+            ss . sin_port = htons ( from -> u. ipv4 . port );
+            ss . sin_addr . s_addr = htonl ( from -> u . ipv4 . addr );
         }
-        
-        /* rc != 0 */
-        if ( retryTimeoutSecs < 0 || ( int32_t )retry_count < retryTimeoutSecs )
-        {   /* retry */
-            Sleep ( 1000 ); /*ms*/
-            ++retry_count;
-            rc = 0;
-        }            
+
+        if ( bind ( self -> type_data . ipv4_data . fd, ( struct sockaddr * ) & ss, sizeof ss  ) == SOCKET_ERROR ) 
+            rc = KSocketHandleBindCallWin ();
+                
+        if ( rc == 0 )
+        {
+            ss . sin_port = htons ( to -> u . ipv4 . port );
+            ss . sin_addr . s_addr = htonl ( to -> u . ipv4 . addr );
+                
+            if ( connect ( self -> type_data . ipv4_data . fd, ( struct sockaddr * ) & ss, sizeof ss ) == SOCKET_ERROR )
+                rc = KSocketHandleConnectCallWin ();
+            else
+            {
+                /* not doing non-blocking */
+                return 0;
+            }
+
+            /* dump socket */
+            closesocket ( self -> type_data . ipv4_data . fd );
+            self -> type_data . ipv4_data . fd = INVALID_SOCKET;
+        }
     }
-    while ( rc == 0 );
-    
+
+    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET), ( "%p: KSocketConnectIPv4 failed - %R\n", self, rc ) );    
     return rc;
 }
 
@@ -927,15 +881,10 @@ static rc_t KSocketGetEndpointV4 ( const KSocket * self, KEndPoint * ep, bool re
 
 ********************************************************************************************* */
 
-static rc_t KNSManagerMakeIPv6Connection ( struct KNSManager const * self,
-                                           KSocket ** out,
-                                           const KEndPoint * from,
-                                           const KEndPoint * to,
-                                           int32_t retryTimeoutMillis,
-                                           int32_t readMillis, 
-                                           int32_t writeMillis )
+static
+rc_t KSocketConnectIPv6 ( KSocket * self, const KEndPoint * from, const KEndPoint * to )
 {
-    return RC ( rcNS, rcSocket, rcAllocating, rcFunction, rcUnsupported ); 
+    return RC ( rcNS, rcSocket, rcConstructing, rcFunction, rcUnsupported ); 
 }
 
 
@@ -1572,36 +1521,15 @@ static KStream_vt_v1 vtKIPCSocket =
 };
 
 
-static rc_t KNSManagerMakeIPCConnection ( struct KNSManager const *self, 
-                                          KSocket **out, 
-                                          const KEndPoint *to, 
-                                          int32_t retryTimeoutMillis,
-                                          int32_t readMillis, 
-                                          int32_t writeMillis )
+static
+rc_t KSocketConnectIPC ( KSocket * self, timeout_t * retryTimeout, const KEndPoint * to )
 {
     RC_CTX ( rcStream, rcConstructing );
 
     rc_t rc = 0;
-    uint32_t retry_count = 0;
-    int32_t retryTimeoutSecs = retryTimeoutMillis;
     char pipename[ PIPE_NAME_LENGTH ];
     wchar_t pipenameW[ PIPE_NAME_LENGTH ];
     size_t num_writ;
-    
-    if ( self == NULL )
-        return RC ( rcNS, rcConnection, rcCreating, rcSelf, rcNull );
-    if ( out == NULL )
-        return RC ( rcNS, rcConnection, rcCreating, rcParam, rcNull );
-
-    * out = NULL;
-
-    if ( to == NULL )
-        return RC ( rcNS, rcConnection, rcCreating, rcParam, rcNull );
-    if ( to -> type != epIPC )
-        return RC ( rcNS, rcConnection, rcCreating, rcParam, rcInvalid );
-
-    if ( retryTimeoutSecs > 0 )
-        retryTimeoutSecs = (retryTimeoutSecs + 999) / 1000;
 
     /* use named pipes to implement unix domain socket - like behavior */
     rc = string_printf( pipename, sizeof( pipename ), &num_writ, "\\\\.\\pipe\\%s", to->u.ipc_name );
@@ -1610,99 +1538,79 @@ static rc_t KNSManagerMakeIPCConnection ( struct KNSManager const *self,
         
     while ( rc == 0 )
     {
-        HANDLE h = CreateFileW( pipenameW,                    /* pipe name */
-                                GENERIC_READ | GENERIC_WRITE, /* read and write access */
-                                0,                            /* no sharing */
+        HANDLE h = CreateFileW( pipenameW,                    /* pipe name                   */
+                                GENERIC_READ | GENERIC_WRITE, /* read and write access       */
+                                0,                            /* no sharing                  */
                                 NULL,                         /* default security attributes */
-                                OPEN_EXISTING,                /* opens existing pipe  */
-                                FILE_FLAG_OVERLAPPED,         /* using overlapped IO */
-                                NULL );                      /* no template file */
+                                OPEN_EXISTING,                /* opens existing pipe         */
+                                FILE_FLAG_OVERLAPPED,         /* using overlapped IO         */
+                                NULL );                       /* no template file            */
         if ( h != INVALID_HANDLE_VALUE )
-        {   /* create the KSocket */
+        {
+            /* create the KSocket */
             /* need NOWAIT if pipe is created in asynch mode */
             DWORD dwMode = ( PIPE_READMODE_MESSAGE | PIPE_NOWAIT );
-            if ( SetNamedPipeHandleState ( h,        /* pipe handle */
-                                           &dwMode,  /* new pipe mode */
-                                           NULL,     /* don't set maximum bytes */
-                                           NULL ) )  /* don't set maximum time */
+            if ( ! SetNamedPipeHandleState ( h,        /* pipe handle             */
+                                             &dwMode,  /* new pipe mode           */
+                                             NULL,     /* don't set maximum bytes */
+                                             NULL ) )  /* don't set maximum time  */
             {
-                KSocket* ksock = calloc ( sizeof * ksock, 1 );
-
-                if ( ksock == NULL )
-                    rc = RC ( rcNS, rcNoTarg, rcAllocating, rcNoObj, rcNull ); 
-                else
-                {   
-                    KSocketIPC * data;
-                    /* initialize the KSocket */
-                    rc = KStreamInit ( & ksock -> dad, ( const KStream_vt* ) & vtKIPCSocket,
-                                       "KSocket", "tcp", true, true );
-                    if ( rc == 0 )
-                    {
-                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
-                                ( "%p: KNSManagerMakeIPCConnection(%p,'%s')\n", 
-                                    ksock, to, pipename ) );
-                    
-                        ksock -> read_timeout  = readMillis;
-                        ksock -> write_timeout = writeMillis;
-                        ksock -> type = epIPC;
-                        data = &( ksock -> type_data.ipc_data );
-                        data -> type = isIpcPipeClient;
-                        data -> pipe = h;
-                        *out = ( KSocket * )& ksock -> dad;
-                        return 0;
-                    }
-                    free ( ksock );
-                }
+                rc = HandleErrno();
             }
             else
-                rc = HandleErrno();
+            {
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), 
+                         ( "%p: KNSManagerMakeIPCConnection(%p,'%s')\n", self, to, pipename ) );
+
+                self -> type_data . ipc_data . type = isIpcPipeClient;
+                self -> type_data . ipc_data . pipe = h;
+            }
         }
         else /* CreateFileW failed */
         {
             switch ( GetLastError() )
             {
-                case ERROR_PIPE_BUSY :
-                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KNSManagerMakeIPCConnection: pipe busy, retrying\n" ) );
+            case ERROR_PIPE_BUSY :
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KNSManagerMakeIPCConnection: pipe busy, retrying\n" ) );
+                {
+                    uint32_t remaining;
+
+                    BOOL pipeAvailable = WaitNamedPipeW( pipenameW, NMPWAIT_USE_DEFAULT_WAIT );
+                    if ( pipeAvailable )
                     {
-                        BOOL pipeAvailable = WaitNamedPipeW( pipenameW, NMPWAIT_USE_DEFAULT_WAIT );
-                        if ( pipeAvailable )
-                        {
-                            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KNSManagerMakeIPCConnection: WaitNamedPipeW returned TRUE\n" ) );
-                            continue;
-                        }
-                        /* time-out, try again */
-                        rc = HandleErrno();
-                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KNSManagerMakeIPCConnection: WaitNamedPipeW returned FALSE(timeout)\n" ) );
-                        if ( retryTimeoutSecs < 0 || retry_count < retryTimeoutSecs )
-                        {
-                            Sleep( 1000 ); /* ms */
-                            ++retry_count;
-                            rc = 0;
-                            continue;
-                        }
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KNSManagerMakeIPCConnection: WaitNamedPipeW returned TRUE\n" ) );
+                        continue;
                     }
-                    break;
-                
-                case ERROR_FILE_NOT_FOUND :
-                    if ( retryTimeoutSecs < 0 || retry_count < retryTimeoutSecs )
+
+                    /* time-out, grab RC from global, then try again */
+                    rc = HandleErrno();
+
+                    /* check time remaining on timeout ( if any ) */
+                    remaining = TimeoutRemaining ( retryTimeout );
+
+                    /* only retry if time remains */
+                    if ( remaining != 0 )
                     {
-                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), ( "KNSManagerMakeIPCConnection: pipe not found, retrying\n" ) );
-                        Sleep( 1000 ); /* ms */
-                        ++retry_count;
+                        /* never wait for more than the remaining timeout */
+                        uint32_t delay = 250;
+                        if ( delay > remaining )
+                            delay = remaining;
+
+                        KSleepMs ( delay );
                         rc = 0;
                         continue;
                     }
-                    else
-                        rc = HandleErrno();
-                    break;
+                }
+                break;
                 
-                default:
-                    rc = HandleErrno();
-                    break;
+            default:
+                rc = HandleErrno();
+                break;
             }
         }
         break;
     }
+
     return rc;
 }
 
@@ -1888,9 +1796,144 @@ static rc_t KListenerIPCAccept ( KSocket * self, struct KSocket ** out )
 
 ********************************************************************************************* */
 
+KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const * self,
+    struct KSocket ** out, timeout_t * retryTimeout, int32_t readMillis, int32_t writeMillis,
+    struct KEndPoint const * from, struct KEndPoint const * to )
+{
+    rc_t rc;
+
+    if ( out == NULL )
+        rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcNull );
+    else
+    {
+        if ( self == NULL )
+            rc = RC ( rcNS, rcStream, rcConstructing, rcSelf, rcNull );
+        else if ( retryTimeout == NULL || to == NULL )
+            rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcNull );
+        else if ( from != NULL && from -> type != to -> type )
+            rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcIncorrect );
+        else
+        {
+            KSocket *conn = calloc ( 1, sizeof * conn );
+            if ( conn == NULL )
+                rc = RC ( rcNS, rcStream, rcConstructing, rcMemory, rcExhausted );
+            else
+            {
+                const KStream_vt * vt;
+
+                conn -> read_timeout = readMillis;
+                conn -> write_timeout = writeMillis;
+
+                switch ( to -> type )
+                {
+                case epIPV4:
+                    conn -> type_data . ipv4_data . fd = INVALID_SOCKET;
+                    vt = ( const KStream_vt * ) & vtKIpv4Socket;
+                    break;
+                    
+                case epIPV6:
+                    conn -> type_data . ipv6_data . fd = INVALID_SOCKET;
+                    rc = RC ( rcNS, rcSocket, rcConstructing, rcFunction, rcUnsupported ); 
+                    break;
+
+                case epIPC:
+                    conn -> type_data . ipc_data . pipe = INVALID_HANDLE_VALUE;
+                    vt = ( const KStream_vt * ) & vtKIPCSocket;
+                    break;
+
+                default:
+                    rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcIncorrect );
+                }
+
+                /* initialize the socket */
+                if ( rc == 0 )
+                    rc = KStreamInit ( & conn -> dad, vt, "KSocket", "", true, true );
+
+                /* prepare the timeout */
+                if ( rc == 0 )
+                    rc = TimeoutPrepare ( retryTimeout );
+
+                if ( rc == 0 )
+                {
+                    uint32_t retry;
+
+                    /* a retry loop - retry upon a schedule for the alloted time */
+                    for ( retry = 0; ; ++ retry )
+                    {
+                        uint32_t remaining, delay;
+
+                        /* try to connect using appropriate protocol */
+                        switch ( to -> type )
+                        {
+                        case epIPV4:
+                            rc = KSocketConnectIPv4 ( conn, from, to );
+                            break;
+
+                        case epIPV6:
+                            rc = KSocketConnectIPv6 ( conn, from, to );
+                            break;
+
+                        case epIPC:
+                            rc = KSocketConnectIPC ( conn, retryTimeout, to );
+                            break;
+                        }
+
+                        /* if connection was successful, return socket */
+                        if ( rc == 0 )
+                        {
+                            * out = conn;
+                            return 0;
+                        }
+
+                        /* check time remaining on timeout ( if any ) */
+                        remaining = TimeoutRemaining ( retryTimeout );
+
+                        /* break out of loop if no time left */
+                        if ( remaining == 0 )
+                            break;
+
+                        /* apply delay schedule */
+                        switch ( retry )
+                        {
+                        case 0:
+                            /* try immediately */
+                            continue;
+                        case 1:
+                        case 2:
+                        case 3:
+                            /* wait for 100mS between tries */
+                            delay = 100;
+                            break;
+                        default:
+                            /* wait for 250mS between tries */
+                            delay = 250;
+                        }
+
+                        /* never wait for more than the remaining timeout */
+                        if ( delay > remaining )
+                            delay = remaining;
+
+                        KSleepMs ( delay );
+                    }
+
+                    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_SOCKET),
+                           ( "%p: KSocketConnect timed out\n", self ) ); 
+                }
+
+                free ( conn );
+            }
+        }
+
+        * out = NULL;
+    }
+
+    return rc;
+}
+
+#if 0
 LIB_EXPORT rc_t CC KNSManagerMakeRetryTimedConnection ( const KNSManager * self,
                                                         KSocket **out,
-                                                        int32_t retryTimeoutMillis,
+                                                        timeout_t * retryTimeout,
                                                         int32_t readMillis,
                                                         int32_t writeMillis,
                                                         const KEndPoint *from,
@@ -1904,7 +1947,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeRetryTimedConnection ( const KNSManager * self,
     {
         if ( self == NULL )
             rc = RC ( rcNS, rcStream, rcConstructing, rcSelf, rcNull );
-        else if ( to == NULL )
+        else if ( retryTimeout == NULL || to == NULL )
             rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcNull );
         else if ( from != NULL && from -> type != to -> type )
             rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcIncorrect );
@@ -1936,7 +1979,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeRetryTimedConnection ( const KNSManager * self,
     }
     return rc;
 }
-
+#endif
 
 LIB_EXPORT rc_t CC KSocketAddRef( const KSocket *self )
 {   /* this will handle all derived types */

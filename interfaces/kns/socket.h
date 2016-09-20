@@ -42,6 +42,7 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * forwards
  */
+struct timeout_t;
 struct KStream;
 struct KEndPoint;
 struct KNSManager;
@@ -53,15 +54,19 @@ typedef struct KSocket KSocket;
 
 
 /* MakeConnection
- * MakeTimedConnection
- * MakeRetryConnection
- * MakeRetryTimedConnection
  *  create a connection-oriented stream
+ * MakeTimedConnection
+ *  create a connection-oriented stream having specific read/write timeouts
+ * MakeRetryConnection
+ *  create a connection-oriented stream before stated timeout, retrying as necessary
+ * MakeRetryTimedConnection
+ *  create a connection-oriented stream having specific read/write timeouts,
+ *  before stated timeout, retrying as necessary
  *
  *  "conn" [ OUT ] - a stream for communication with the server
  *
- *  "retryTimeoutMillis" [ IN ] - if connection is refused, retry with 1ms intervals: when negative, retry infinitely,
- *   when 0, do not retry, positive gives maximum wait time in mS
+ *  "retryTimeout" [ IN ] - the connect request should be repeated upon failure
+ *   until this timeout expires.
  *
  *  "readMillis" [ IN ] and "writeMillis" - when negative, infinite timeout
  *   when 0, return immediately, positive gives maximum wait time in mS
@@ -74,18 +79,20 @@ typedef struct KSocket KSocket;
  *  both endpoints have to be of type epIP; creates a TCP connection
  */
 KNS_EXTERN rc_t CC KNSManagerMakeConnection ( struct KNSManager const * self,
-    struct KSocket **conn, struct KEndPoint const *from, struct KEndPoint const *to );
+    struct KSocket ** conn, struct KEndPoint const * from, struct KEndPoint const * to );
 
 KNS_EXTERN rc_t CC KNSManagerMakeTimedConnection ( struct KNSManager const * self,
-    struct KSocket **conn, int32_t readMillis, int32_t writeMillis,
-    struct KEndPoint const *from, struct KEndPoint const *to );
+    struct KSocket ** conn, int32_t readMillis, int32_t writeMillis,
+    struct KEndPoint const * from, struct KEndPoint const * to );
 
 KNS_EXTERN rc_t CC KNSManagerMakeRetryConnection ( struct KNSManager const * self,
-    struct KSocket **conn, int32_t retryTimeoutMillis, struct KEndPoint const *from, struct KEndPoint const *to );
+    struct KSocket ** conn, struct timeout_t * retryTimeout,
+    struct KEndPoint const * from, struct KEndPoint const * to );
 
 KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const * self,
-    struct KSocket **conn, int32_t retryTimeoutMillis, int32_t readMillis, int32_t writeMillis,
-    struct KEndPoint const *from, struct KEndPoint const *to );
+    struct KSocket ** conn, struct timeout_t * retryTimeout,
+    int32_t readMillis, int32_t writeMillis,
+    struct KEndPoint const * from, struct KEndPoint const * to );
 
 
 /* AddRef

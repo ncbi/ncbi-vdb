@@ -35,6 +35,8 @@
 
 #include <klib/printf.h>
 
+#include <kproc/timeout.h>
+
 #include <kns/manager.h>
 #include <kns/endpoint.h>
 #include <kns/stream.h>
@@ -179,8 +181,10 @@ FIXTURE_TEST_CASE(MakeIPCConnection_NoListener, KnsManagerFixture)
 {
     CONST_STRING(&name, "socket");
     REQUIRE_RC(KNSManagerInitIPCEndpoint(mgr, &ep, &name));
+    timeout_t tm;
+    TimeoutInit ( & tm, 0 );
     KSocket* socket;
-    REQUIRE_RC_FAIL(KNSManagerMakeRetryConnection(mgr, &socket, 0, NULL, &ep)); /* no server; no retries */
+    REQUIRE_RC_FAIL(KNSManagerMakeRetryConnection(mgr, &socket, &tm, NULL, &ep)); /* no server; no retries */
     REQUIRE_NULL(socket);
 }   
 
@@ -349,8 +353,11 @@ public:
     
     KStream* MakeStream( int32_t p_retryTimeout )
     {
+        timeout_t tm;
+        TimeoutInit ( & tm, p_retryTimeout );
+
         KSocket* socket;
-        THROW_ON_RC ( KNSManagerMakeRetryConnection(mgr, &socket, p_retryTimeout, NULL, &ep) );
+        THROW_ON_RC ( KNSManagerMakeRetryConnection(mgr, &socket, &tm, NULL, &ep) );
         if (socket == 0)
            throw logic_error ( "MakeStream: KStreamRelease failed" );
            
@@ -630,8 +637,11 @@ public:
 
     KStream* MakeStreamTimed( int32_t p_retryTimeout, int32_t p_readMillis, int32_t p_writeMillis  )
     {
+        timeout_t tm;
+        TimeoutInit ( & tm, p_retryTimeout );
+
         KSocket* socket;
-        THROW_ON_RC ( KNSManagerMakeRetryTimedConnection(mgr, &socket, p_retryTimeout, p_readMillis, p_writeMillis, NULL, &ep) );
+        THROW_ON_RC ( KNSManagerMakeRetryTimedConnection(mgr, &socket, &tm, p_readMillis, p_writeMillis, NULL, &ep) );
         if (socket == 0)
            throw logic_error ( "MakeStreamTimed: KStreamRelease failed" );
            
