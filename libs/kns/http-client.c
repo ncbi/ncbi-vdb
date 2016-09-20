@@ -296,7 +296,7 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
     if ( rc == 0 )
     {
         uint32_t port_save;
-        String hostname_save;
+        String hostname_save, hostname_copy;
 
         size_t len;
         char buffer [ 4096 ];
@@ -304,6 +304,9 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
         STATUS ( STAT_GEEK, "%s - saving hostname and port\n", __func__ );
         hostname_save = self -> hostname;
         port_save = self -> port;
+
+        STATUS ( STAT_GEEK, "%s - saving hostname param\n", __func__ );
+        hostname_copy = * hostname;
 
         assert ( hostname != NULL );
         STATUS ( STAT_GEEK, "%s - setting hostname and port to '%S:%u'\n", __func__, phostname, pport );
@@ -314,9 +317,9 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
         rc = string_printf ( buffer, sizeof buffer, & len,
                              "CONNECT %S:%u HTTP/1.1\r\n"
                              "Host: %S:%u\r\n\r\n"
-                             , hostname
+                             , & hostname_copy
                              , port
-                             , hostname
+                             , & hostname_copy
                              , port
             );
 
@@ -485,8 +488,8 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
 
         if ( rc == 0 )
         {
-            STATUS ( STAT_PRG, "%s - setting port number- %d\n", __func__, port );
-            self -> port = port;
+            STATUS ( STAT_PRG, "%s - setting port number - %d\n", __func__, aPort );
+            self -> port = aPort;
             return 0;
         }
     }
