@@ -68,11 +68,11 @@ LIB_EXPORT rc_t TimeoutPrepare ( timeout_t *self )
     if ( self == NULL )
         return RC ( rcPS, rcTimeout, rcUpdating, rcSelf, rcNull );
 
-    if ( ! tm -> prepared )
+    if ( ! self -> prepared )
     {
-        tm -> ts = KTimeMsStamp ();
-        tm -> ts += tm -> mS;
-        tm -> prepared = true;
+        self -> ts = KTimeMsStamp ();
+        self -> ts += self -> mS;
+        self -> prepared = true;
     }
 
     return 0;
