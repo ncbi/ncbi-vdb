@@ -390,7 +390,7 @@ PROCESS_FIXTURE_TEST_CASE(IPCEndpoint_Basic, SocketFixture, 0, 5)
 {   // client runs in a child process
     string content = GetName();
     
-    KStream* stream = MakeStream ( 50 ); /* this might make some retries while the server is setting up */
+    KStream* stream = MakeStream ( 50 * 1000 ); /* this might make some retries while the server is setting up */
     LOG(LogLevel::e_message, "client '" << GetName() << "' after KNSMakeConnection" << endl);    
     
     REQUIRE_RC(KStreamWrite(stream, content.c_str(), content.length(), &num));
@@ -407,12 +407,12 @@ PROCESS_FIXTURE_TEST_CASE(IPCEndpoint_Basic, SocketFixture, 0, 5)
 PROCESS_FIXTURE_TEST_CASE(IPCEndpoint_MultipleListeners, SocketFixture, 0, 100) 
 {   // client runs in a child process
     
-    KStream* stream = MakeStream ( 50 ); /* this might make some retries while the server is setting up */
+    KStream* stream = MakeStream ( 50 * 1000 ); /* this might make some retries while the server is setting up */
     LOG(LogLevel::e_message, "client '" << GetName() << "' after KNSMakeConnection1" << endl);    
 
     TestEnv::Sleep(1); // on Windows 32, when the two calls to KNSManagerMakeConnection follow too closely, sometimes things get messed up
     
-    KStream* stream2 = MakeStream ( 5 ); /* should work from the first try now*/
+    KStream* stream2 = MakeStream ( 5 * 1000 ); /* should work from the first try now*/
     LOG(LogLevel::e_message, "client '" << GetName() << "' after KNSMakeConnection2" << endl);    
     
     string content = string(GetName())+"_1";
@@ -441,7 +441,7 @@ PROCESS_FIXTURE_TEST_CASE(IPCEndpoint_ReadAll, SocketFixture, 0, 5)
 {   // call ReadAll requesting more bytes than available, see it return only what is available
     string content = GetName();
     
-    KStream* stream = MakeStream ( 5 ); 
+    KStream* stream = MakeStream ( 5 * 1000 );
     LOG(LogLevel::e_message, "client '" << GetName() << "' after KNSMakeConnection" << endl);    
     
     REQUIRE_RC(KStreamWrite(stream, content.c_str(), content.length(), &num));
@@ -487,7 +487,7 @@ public:
         if (KNSManagerInitIPCEndpoint(mgr, &ep, &name) != 0)
 			throw logic_error ( string("TimedReadSocketFixture: SetupClient(") + p_content + "), KNSManagerInitIPCEndpoint failed" );
 
-        m_stream = MakeStream ( 5 ); 
+        m_stream = MakeStream ( 5 * 1000 );
         LOG(LogLevel::e_message, "client '" << p_content << "' after KNSMakeConnection" << endl);    
 	}
 	void SetupClient(const string& p_content, uint32_t p_timeoutMs)
@@ -634,7 +634,7 @@ public:
         if (KNSManagerInitIPCEndpoint(mgr, &ep, &name) != 0)
 			throw logic_error ( string("TimedConnection_ReadSocketFixture: SetupClient(") + p_content + "), KNSManagerInitIPCEndpoint failed" );
     
-        m_stream = MakeStreamTimed( 5, p_readMillis, p_writeMillis );
+        m_stream = MakeStreamTimed( 5 * 1000, p_readMillis, p_writeMillis );
         LOG(LogLevel::e_message, "client '" << p_content << "' after KNSMakeConnection" << endl);    
 	}
 
@@ -842,8 +842,8 @@ public:
         if (KNSManagerInitIPCEndpoint(mgr, &ep, &name) != 0)
 			throw logic_error ( string("TimedWriteSocketFixture: SetupClient(") + p_name + "), KNSManagerInitIPCEndpoint failed" );
     
-        m_data = MakeStream ( 5 );
-        m_control = MakeStream ( 5 );
+        m_data = MakeStream ( 5 * 1000 );
+        m_control = MakeStream ( 5 * 1000 );
 			
 		// identify data/control channels to the server
 		WriteMessage(m_data, "data");
