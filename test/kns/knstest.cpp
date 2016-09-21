@@ -46,6 +46,8 @@
 #include <kfs/directory.h>
 #include <kfs/file.h>
 
+#include <kapp/args.h> /* ArgsMakeAndHandle */
+
 #include <kproc/thread.h>
 #include <kproc/timeout.h>
 
@@ -57,7 +59,8 @@
 #include <algorithm>
 #include <sstream>
 
-TEST_SUITE(KnsTestSuite);
+static rc_t argsHandler(int argc, char* argv[]);
+TEST_SUITE_WITH_ARGS_HANDLER(KnsTestSuite, argsHandler);
 
 using namespace std;
 using namespace ncbi::NK;
@@ -1044,6 +1047,14 @@ PROCESS_FIXTURE_TEST_CASE(TimedWrite_NULL_Timeout, TimedWriteSocketFixture, 0, 2
 //  TODO: KStreamWriteExactly, KStreamTimedWriteExactly
 
 //////////////////////////////////////////// Main
+
+static rc_t argsHandler(int argc, char * argv[]) {
+    Args * args = NULL;
+    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
+    ArgsWhack(args);
+    return rc;
+}
+
 extern "C"
 {
 
