@@ -44,6 +44,7 @@ struct KSysDir;
 #include <klib/out.h>
 #include <klib/debug.h>
 #include <klib/klib-priv.h>
+#include <klib/time.h>
 
 #include <sysalloc.h>
 
@@ -1611,7 +1612,7 @@ rc_t CC KSysDirRename ( KSysDir *self, bool force, const char *from, const char 
                             return RC ( rcFS, rcDirectory, rcRenaming, rcFile, rcNotFound );
                         case ERROR_ACCESS_DENIED:
                             try++;
-                            Sleep( 500 ); /* sleep for a half a second */
+                            KSleepMs( 500 ); /* sleep for a half a second */
                             rc = RC ( rcFS, rcDirectory, rcRenaming, rcFile, rcUnauthorized );
                             break;
                        case ERROR_SHARING_VIOLATION:

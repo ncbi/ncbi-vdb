@@ -155,7 +155,7 @@ public:
     {
         m_configName = name+".kfg";
         std::ofstream f(m_configName.c_str()); 
-        f   << "repository/remote/main/CGI/resolver-cgi = \"http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
+        f   << "repository/remote/main/CGI/resolver-cgi = \"https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
             << "repository/user/main/public/root=\"./root\"\n" 
             << "repository/user/main/public/apps/sra/volumes/sraFlat=\"sra\"\n"; 
         f.close();
@@ -188,7 +188,7 @@ public:
         if (VFSManagerMakePath ( m_vfsmgr, &accession, p_accession.c_str() ))
             throw logic_error ( "RemoteDBFixture::Resolve: VFSManagerMakePath failed" );
         
-        if (VResolverQuery( resolver, eProtocolHttp, accession, NULL, &m_path, &m_cache))
+        if (VResolverQuery( resolver, 0, accession, NULL, &m_path, &m_cache))
             throw logic_error ( "RemoteDBFixture::Resolve: VResolverQuery failed" );
         
         //cout << ToString(m_path) << endl; 
