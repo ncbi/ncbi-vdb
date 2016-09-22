@@ -24,6 +24,7 @@
 *
 */
 
+#include <kapp/args.h> /* ArgsMakeAndHandle */
 #include <kfg/config.h> /* KConfig */
 #include <kfs/directory.h> /* KDirectory */
 #include <kfs/file.h> /* KFileRelease */
@@ -45,7 +46,8 @@ using ncbi::NK::TestCase;
 using std::cerr;
 using std::string;
 
-TEST_SUITE(flatSraKfgTestSuite);
+static rc_t argsHandler(int argc, char* argv[]);
+TEST_SUITE_WITH_ARGS_HANDLER(flatSraKfgTestSuite, argsHandler);
 
 static KNSManager * kns = NULL;
 
@@ -124,9 +126,9 @@ static const char badCgi[]
 #ifdef ALL
 TEST_CASE(test_sra) {
     const string newShort
-        ("https://sra-download.ncbi.nlm.nih.gov/srapub/SRR000001");
+        ("http://sra-download.ncbi.nlm.nih.gov/srapub/SRR000001");
     const string newLong
-        ("https://sra-download.ncbi.nlm.nih.gov/srapub/SRR1000254");
+        ("http://sra-download.ncbi.nlm.nih.gov/srapub/SRR1000254");
     const string oldShort("https://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/"
                 "reads/ByRun/sra/SRR/SRR000/SRR000001/SRR000001.sra");
 
@@ -401,6 +403,16 @@ TEST_CASE(test_WGS_AAAB01_9) {
     Fixture fixture(this, "WGS AAAB01_2", "AAAB01.9",
         "/repository/remote/aux/NCBI/apps/wgs/volumes/fuseWGS", "wgs", NULL );
 }*/
+
+static rc_t argsHandler(int argc, char * argv[]) {
+    Args * args = NULL;
+    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
+    ArgsWhack(args);
+    return rc;
+}
+rc_t CC Usage ( const Args * args ) { return 0; }
+const char UsageDefaultName [] = "flat-sra-kfg";
+rc_t CC UsageSummary ( const char * prog_name ) { return 0; }
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char *argv [] ) {
