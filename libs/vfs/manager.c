@@ -2466,6 +2466,8 @@ LIB_EXPORT rc_t CC VFSManagerGetResolver ( const VFSManager * self, struct VReso
     {
         if ( self == NULL )
             rc = RC (rcVFS, rcMgr, rcAccessing, rcSelf, rcNull);
+        else if ( self -> resolver == NULL )
+            rc = RC ( rcVFS, rcMgr, rcAccessing, rcResolver, rcNull );
         else
         {
             rc = VResolverAddRef ( self -> resolver );
