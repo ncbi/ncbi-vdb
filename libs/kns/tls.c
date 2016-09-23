@@ -159,7 +159,7 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
 
         rc = KConfigOpenNodeRead ( kfg, & ca_crt, "%s", node_name );
         if ( rc != 0 )
-            rc = ResetRCContext ( rc, rcKrypto, rcToken, rcInitializing );
+            rc = 0;
         else
         {
             KNamelist * cert_names;
@@ -939,7 +939,7 @@ LIB_EXPORT rc_t CC KTLSStreamVerifyCACert ( const KTLSStream * self )
            char buf [ 4096 ];
            rc_t rc = RC ( rcKrypto, rcToken, rcValidating, rcEncryption, rcFailed );
 
-           mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), "\n  ! ", flags );        
+           mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), "  ! ", flags );        
 
            PLOGERR ( klogSys, ( klogSys, rc
                                 , "mbedtls_ssl_get_verify_result returned $(flags) ( $(info) )"
