@@ -50,6 +50,8 @@
 extern "C" {
 #endif
 
+struct KConfig;
+
 /*--------------------------------------------------------------------------
  * KTLSGlobals
  */
@@ -64,7 +66,7 @@ struct KTLSGlobals
 
 /* Init
  */
-rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg );
+rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, struct KConfig const * kfg );
 
 /* Whack
  */

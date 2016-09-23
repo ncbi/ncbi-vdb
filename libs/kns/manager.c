@@ -974,7 +974,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
                 rc = HttpRetrySpecsInit ( & mgr -> retry_specs, kfg );
                 if ( rc == 0 )
                 {
-                    rc = KTLSGlobalsInit ( & mgr -> tlsg );
+                    rc = KTLSGlobalsInit ( & mgr -> tlsg, kfg );
                     if ( rc == 0 )
                     {
                         KNSManagerLoadAWS ( mgr, kfg );
