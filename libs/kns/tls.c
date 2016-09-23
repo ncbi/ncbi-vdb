@@ -67,13 +67,30 @@ struct KTLSStream;
 #include <mbedtls/error.h>
 #include <mbedtls/certs.h>
 
-
-/*****************************
- *******     NOTES     *******
-
-  6. update Windows syssock.c for RC
-
-*****************************/
+static const char ca_crt_ncbi1 [] =
+    "-----BEGIN CERTIFICATE-----\r\n"
+    "MIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh\r\n"
+    "MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\r\n"
+    "d3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBD\r\n"
+    "QTAeFw0wNjExMTAwMDAwMDBaFw0zMTExMTAwMDAwMDBaMGExCzAJBgNVBAYTAlVT\r\n"
+    "MRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5j\r\n"
+    "b20xIDAeBgNVBAMTF0RpZ2lDZXJ0IEdsb2JhbCBSb290IENBMIIBIjANBgkqhkiG\r\n"
+    "9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4jvhEXLeqKTTo1eqUKKPC3eQyaKl7hLOllsB\r\n"
+    "CSDMAZOnTjC3U/dDxGkAV53ijSLdhwZAAIEJzs4bg7/fzTtxRuLWZscFs3YnFo97\r\n"
+    "nh6Vfe63SKMI2tavegw5BmV/Sl0fvBf4q77uKNd0f3p4mVmFaG5cIzJLv07A6Fpt\r\n"
+    "43C/dxC//AH2hdmoRBBYMql1GNXRor5H4idq9Joz+EkIYIvUX7Q6hL+hqkpMfT7P\r\n"
+    "T19sdl6gSzeRntwi5m3OFBqOasv+zbMUZBfHWymeMr/y7vrTC0LUq7dBMtoM1O/4\r\n"
+    "gdW7jVg/tRvoSSiicNoxBN33shbyTApOB6jtSj1etX+jkMOvJwIDAQABo2MwYTAO\r\n"
+    "BgNVHQ8BAf8EBAMCAYYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUA95QNVbR\r\n"
+    "TLtm8KPiGxvDl7I90VUwHwYDVR0jBBgwFoAUA95QNVbRTLtm8KPiGxvDl7I90VUw\r\n"
+    "DQYJKoZIhvcNAQEFBQADggEBAMucN6pIExIK+t1EnE9SsPTfrgT1eXkIoyQY/Esr\r\n"
+    "hMAtudXH/vTBH1jLuG2cenTnmCmrEbXjcKChzUyImZOMkXDiqw8cvpOp/2PV5Adg\r\n"
+    "06O/nVsJ8dWO41P0jmP6P6fbtGbfYmbW0W5BjfIttep3Sp+dWOIrWcBAI+0tKIJF\r\n"
+    "PnlUkiaY4IBIqDfv8NZ5YBberOgOzW6sRBc4L0na4UU+Krk2U886UAb3LujEV0ls\r\n"
+    "YSEY1QSteDwsOoBrp+uvFRTp2InBuThs4pFsiv9kuXclVzDAGySj4dzp30d8tbQk\r\n"
+    "CAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4wOTAeBggrBgEFBQcD\r\n"
+    "BAYIKwYBBQUHAwEGCCsGAQUFBwMDDBdEaWdpQ2VydCBHbG9iYWwgUm9vdCBDQQ==\r\n"
+    "-----END CERTIFICATE-----\r\n";
 
 
 /*--------------------------------------------------------------------------
@@ -124,137 +141,164 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
 {
     int ret;
 
-    rc_t rc;
-    const KConfigNode * ca_crt;
-    const char * node_name = "/tls/ca.crt";;
+    rc_t rc = 0;
+    uint32_t nidx, num_certs = 0;
+
+    static char * node_names [] =
+    {
+        "/tls/ca.crt",
+        "/tls/self-signed"
+    };
 
     STATUS ( STAT_QA, "Loading CA root certificates\n" );
 
-    rc = KConfigOpenNodeRead ( kfg, & ca_crt, "%s", node_name );
-    if ( rc != 0 )
+    for ( nidx = 0; rc == 0 && nidx < sizeof node_names / sizeof node_names [ 0 ]; ++ nidx )
     {
-        rc = ResetRCContext ( rc, rcKrypto, rcToken, rcInitializing );
-        PLOGERR ( klogInt, ( klogInt, rc
-                             , "failed to read config node '$(node)'"
-                             , "node=%s"
-                             , node_name
-                      ) );
-    }
-    else
-    {
-        KNamelist * cert_names;
+        const KConfigNode * ca_crt;
+        const char * node_name = node_names [ nidx ];
 
-        STATUS ( STAT_PRG, "Listing CA root certificates\n" );
-        rc = KConfigNodeListChildren ( ca_crt, & cert_names );
+        rc = KConfigOpenNodeRead ( kfg, & ca_crt, "%s", node_name );
         if ( rc != 0 )
-        {
             rc = ResetRCContext ( rc, rcKrypto, rcToken, rcInitializing );
-            PLOGERR ( klogInt, ( klogInt, rc
-                                 , "failed to list config node '$(node)'"
-                                 , "node=%s"
-                                 , node_name
-                          ) );
-        }
         else
         {
-            uint32_t count;
+            KNamelist * cert_names;
 
-            STATUS ( STAT_GEEK, "Counting CA root certificates\n" );
-            rc = KNamelistCount ( cert_names, & count );
+            STATUS ( STAT_PRG, "Listing CA root certificates\n" );
+            rc = KConfigNodeListChildren ( ca_crt, & cert_names );
             if ( rc != 0 )
             {
                 rc = ResetRCContext ( rc, rcKrypto, rcToken, rcInitializing );
                 PLOGERR ( klogInt, ( klogInt, rc
-                                     , "failed to count names in config node '$(node)'"
+                                     , "failed to list config node '$(node)'"
                                      , "node=%s"
                                      , node_name
                               ) );
             }
             else
             {
-                uint32_t i;
-                String * cert_string;
-                const KConfigNode * root_cert;
+                uint32_t count;
 
-                STATUS ( STAT_GEEK, "Found %u names in CA root certificates\n", count );
-                STATUS ( STAT_PRG, "Retrieving names in CA root certificates\n" );
-                for ( i = 0; i < count; ++ i )
+                STATUS ( STAT_GEEK, "Counting CA root certificates\n" );
+                rc = KNamelistCount ( cert_names, & count );
+                if ( rc != 0 )
                 {
-                    const char * cert_name;
+                    rc = ResetRCContext ( rc, rcKrypto, rcToken, rcInitializing );
+                    PLOGERR ( klogInt, ( klogInt, rc
+                                         , "failed to count names in config node '$(node)'"
+                                         , "node=%s"
+                                         , node_name
+                                  ) );
+                }
+                else
+                {
+                    uint32_t i;
+                    String * cert_string;
+                    const KConfigNode * root_cert;
 
-                    STATUS ( STAT_GEEK, "Retrieving name %u in CA root certificates\n", i );
-                    rc = KNamelistGet ( cert_names, i, & cert_name );
-                    if ( rc != 0 )
+                    STATUS ( STAT_GEEK, "Found %u names in CA root certificates\n", count );
+                    STATUS ( STAT_PRG, "Retrieving names in CA root certificates\n" );
+                    for ( i = 0; i < count; ++ i )
                     {
-                        rc = ResetRCContext ( rc, rcKrypto, rcToken, rcInitializing );
-                        PLOGERR ( klogInt, ( klogInt, rc
-                                             , "failed to read cert $(idx) in config node '$(node)'"
-                                             , "node=%s,idx=%u"
-                                             , node_name
-                                             , i
-                                      ) );
-                        break;
-                    }
+                        const char * cert_name;
 
-                    STATUS ( STAT_GEEK, "Retrieving node '%s' from CA root certificates\n", cert_name );
-                    rc = KConfigNodeOpenNodeRead ( ca_crt, & root_cert, "%s", cert_name );
-                    if ( rc != 0 )
-                    {
-                        rc = ResetRCContext ( rc, rcKrypto, rcToken, rcInitializing );
-                        PLOGERR ( klogInt, ( klogInt, rc
-                                             , "failed to read node for cert '$(name)' in config node '$(node)'"
-                                             , "node=%s,name=%s"
-                                             , node_name
-                                             , cert_name
-                                      ) );
-                        break;
-                    }
+                        STATUS ( STAT_GEEK, "Retrieving name %u in CA root certificates\n", i );
+                        rc = KNamelistGet ( cert_names, i, & cert_name );
+                        if ( rc != 0 )
+                        {
+                            rc = ResetRCContext ( rc, rcKrypto, rcToken, rcInitializing );
+                            PLOGERR ( klogInt, ( klogInt, rc
+                                                 , "failed to read cert $(idx) in config node '$(node)'"
+                                                 , "node=%s,idx=%u"
+                                                 , node_name
+                                                 , i
+                                          ) );
+                            break;
+                        }
+                        
+                        STATUS ( STAT_GEEK, "Retrieving node '%s' from CA root certificates\n", cert_name );
+                        rc = KConfigNodeOpenNodeRead ( ca_crt, & root_cert, "%s", cert_name );
+                        if ( rc != 0 )
+                        {
+                            rc = ResetRCContext ( rc, rcKrypto, rcToken, rcInitializing );
+                            PLOGERR ( klogInt, ( klogInt, rc
+                                                 , "failed to read node for cert '$(name)' in config node '$(node)'"
+                                                 , "node=%s,name=%s"
+                                                 , node_name
+                                                 , cert_name
+                                          ) );
+                            break;
+                        }
+                        
+                        STATUS ( STAT_GEEK, "Retrieving text for node '%s' from CA root certificates\n", cert_name );
+                        rc = KConfigNodeReadString ( root_cert, & cert_string );
+                        KConfigNodeRelease ( root_cert );
+                        
+                        if ( rc != 0 )
+                        {
+                            rc = ResetRCContext ( rc, rcKrypto, rcToken, rcInitializing );
+                            PLOGERR ( klogInt, ( klogInt, rc
+                                                 , "failed to read node text for cert '$(name)' in config node '$(node)'"
+                                                 , "node=%s,name=%s"
+                                                 , node_name
+                                                 , cert_name
+                                          ) );
+                            break;
+                        }
 
-                    STATUS ( STAT_GEEK, "Retrieving text for node '%s' from CA root certificates\n", cert_name );
-                    rc = KConfigNodeReadString ( root_cert, & cert_string );
-                    KConfigNodeRelease ( root_cert );
 
-                    if ( rc != 0 )
-                    {
-                        rc = ResetRCContext ( rc, rcKrypto, rcToken, rcInitializing );
-                        PLOGERR ( klogInt, ( klogInt, rc
-                                             , "failed to read node text for cert '$(name)' in config node '$(node)'"
-                                             , "node=%s,name=%s"
-                                             , node_name
-                                             , cert_name
-                                      ) );
-                        break;
-                    }
-
-
-                    /* these guys take a length, so presumably the string is not NUL terminated.
-                       yet, the first thing they do is see if the NUL is included in the length! */
-                    ret = mbedtls_x509_crt_parse ( &self -> cacert,
-                        ( const unsigned char * ) cert_string -> addr, cert_string -> size + 1 );
+                        /* these guys take a length, so presumably the string is not NUL terminated.
+                           yet, the first thing they do is see if the NUL is included in the length! */
+                        STATUS ( STAT_GEEK, "Parsing text for node '%s' from CA root certificates\n", cert_name );
+                        ret = mbedtls_x509_crt_parse ( &self -> cacert,
+                            ( const unsigned char * ) cert_string -> addr, cert_string -> size + 1 );
                     
-                    StringWhack ( cert_string );
+                        StringWhack ( cert_string );
                     
-                    if ( ret < 0 )
-                    {        
-                        rc = RC ( rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed );
-                        PLOGERR ( klogSys, ( klogSys, rc
-                                             , "mbedtls_x509_crt_parse returned $(ret) ( $(expl) )"
-                                             , "ret=%d,expl=%s"
-                                             , ret
-                                             , mbedtls_strerror2 ( ret )
-                                      ) );
-                        break;
+                        if ( ret < 0 )
+                        {        
+                            rc = RC ( rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed );
+                            PLOGERR ( klogSys, ( klogSys, rc
+                                                 , "mbedtls_x509_crt_parse returned $(ret) ( $(expl) )"
+                                                 , "ret=%d,expl=%s"
+                                                 , ret
+                                                 , mbedtls_strerror2 ( ret )
+                                          ) );
+                            break;
+                        }
+                        
+                        ++ num_certs;
                     }
                 }
-            }
             
-            KNamelistRelease ( cert_names );
-        }
+                KNamelistRelease ( cert_names );
+            }
 
-        KConfigNodeRelease ( ca_crt );
+            KConfigNodeRelease ( ca_crt );
+        }
     }
 
-    return rc;
+    if ( num_certs == 0 )
+    {
+        STATUS ( STAT_QA, "Parsing text for default CA root certificate\n" );
+        ret = mbedtls_x509_crt_parse ( &self -> cacert,
+            ( const unsigned char * ) ca_crt_ncbi1, sizeof ca_crt_ncbi1 );
+                    
+        if ( ret >= 0 )
+            num_certs = 1;
+        else
+        {        
+            rc = RC ( rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed );
+            PLOGERR ( klogSys, ( klogSys, rc
+                                 , "mbedtls_x509_crt_parse returned $(ret) ( $(expl) )"
+                                 , "ret=%d,expl=%s"
+                                 , ret
+                                 , mbedtls_strerror2 ( ret )
+                          ) );
+        }
+    }
+
+    return num_certs == 0 ? rc : 0;
 }
 
 static
