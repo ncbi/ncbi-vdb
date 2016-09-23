@@ -1440,8 +1440,8 @@ rc_t VFSManagerOpenDirectoryReadHttp (const VFSManager *self,
                 sizeof extension - 1,
                 extension, sizeof extension - 1, sizeof extension - 1 ) != 0 )
         {
-            PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(U)'",
-                             "U=%S:%S", & path -> scheme, & s ) );
+            PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(scheme):$(path)'",
+                             "scheme=%S,path=%S", & path -> scheme, s ) );
         }
     }
     else
@@ -1517,7 +1517,7 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
             if ( high_reliability )
             {
                 PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(U)'",
-                                     "U=%s", uri->addr ) );
+                                     "U=%S", uri ) );
             }
         }
         else
