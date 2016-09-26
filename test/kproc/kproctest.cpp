@@ -529,7 +529,9 @@ public:
     KConditionFixture()
     :   threadRc(0),
         thread(0),
-        lock(0)
+        lock(0),
+        is_signaled(false),
+        do_broadcast(false)
     {
         if (KLockMake(&lock) != 0)
             throw logic_error("KConditionFixture: KLockMake failed");
@@ -559,7 +561,10 @@ protected:
             TestEnv::SleepMs(300);
             LOG(LogLevel::e_message, "KCondition_ThreadFn: signaling condition" << endl);
             self->is_signaled = true;
-            self->threadRc = KConditionSignal(self->cond);
+            if (!self->do_broadcast)
+                self->threadRc = KConditionSignal(self->cond);
+            else
+                self->threadRc = KConditionBroadcast(self->cond);
 
             LOG(LogLevel::e_message, "KCondition_ThreadFn: exiting" << endl);
             return 0;
@@ -582,6 +587,7 @@ public:
     KLock* lock;
     KCondition* cond;
     bool is_signaled;
+    bool do_broadcast;
 };
 
 FIXTURE_TEST_CASE( KCondition_TimedWait_Timeout, KConditionFixture )
@@ -597,6 +603,20 @@ FIXTURE_TEST_CASE( KCondition_TimedWait_Timeout, KConditionFixture )
 FIXTURE_TEST_CASE( KCondition_TimedWait_Signaled, KConditionFixture )
 {
     is_signaled = false;
+
+    REQUIRE_RC(KLockAcquire(lock));
+
+    REQUIRE_RC(StartThread());
+    REQUIRE_RC(KConditionWait(cond, lock));
+    REQUIRE(is_signaled == true);
+
+    REQUIRE_RC(KLockUnlock(lock));
+}
+
+FIXTURE_TEST_CASE( KCondition_TimedWait_Signaled_Broadcast, KConditionFixture )
+{
+    is_signaled = false;
+    do_broadcast = true;
 
     REQUIRE_RC(KLockAcquire(lock));
 

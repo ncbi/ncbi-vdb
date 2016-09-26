@@ -172,7 +172,7 @@ int pthread_cond_waitImpl (pthread_cond_t *cv,
     cv->waiters_count_--;
 
     // Check to see if we're the last waiter after <pthread_cond_broadcast>.
-    last_waiter = ret == WAIT_OBJECT_0 && cv->was_broadcast_ && cv->waiters_count_ == 0;
+    last_waiter = cv->was_broadcast_ && cv->waiters_count_ == 0;
 
     LeaveCriticalSection (&cv->waiters_count_lock_);
 
