@@ -92,6 +92,32 @@ static const char ca_crt_ncbi1 [] =
     "BAYIKwYBBQUHAwEGCCsGAQUFBwMDDBdEaWdpQ2VydCBHbG9iYWwgUm9vdCBDQQ==\r\n"
     "-----END CERTIFICATE-----\r\n";
 
+static const char ca_crt_ncbi2 [] =
+    "-----BEGIN CERTIFICATE-----\r\n"
+    "MIIDxTCCAq2gAwIBAgIQAqxcJmoLQJuPC3nyrkYldzANBgkqhkiG9w0BAQUFADBs\r\n"
+    "MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\r\n"
+    "d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBIaWdoIEFzc3VyYW5j\r\n"
+    "ZSBFViBSb290IENBMB4XDTA2MTExMDAwMDAwMFoXDTMxMTExMDAwMDAwMFowbDEL\r\n"
+    "MAkGA1UEBhMCVVMxFTATBgNVBAoTDERpZ2lDZXJ0IEluYzEZMBcGA1UECxMQd3d3\r\n"
+    "LmRpZ2ljZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgSGlnaCBBc3N1cmFuY2Ug\r\n"
+    "RVYgUm9vdCBDQTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMbM5XPm\r\n"
+    "+9S75S0tMqbf5YE/yc0lSbZxKsPVlDRnogocsF9ppkCxxLeyj9CYpKlBWTrT3JTW\r\n"
+    "PNt0OKRKzE0lgvdKpVMSOO7zSW1xkX5jtqumX8OkhPhPYlG++MXs2ziS4wblCJEM\r\n"
+    "xChBVfvLWokVfnHoNb9Ncgk9vjo4UFt3MRuNs8ckRZqnrG0AFFoEt7oT61EKmEFB\r\n"
+    "Ik5lYYeBQVCmeVyJ3hlKV9Uu5l0cUyx+mM0aBhakaHPQNAQTXKFx01p8VdteZOE3\r\n"
+    "hzBWBOURtCmAEvF5OYiiAhF8J2a3iLd48soKqDirCmTCv2ZdlYTBoSUeh10aUAsg\r\n"
+    "EsxBu24LUTi4S8sCAwEAAaNjMGEwDgYDVR0PAQH/BAQDAgGGMA8GA1UdEwEB/wQF\r\n"
+    "MAMBAf8wHQYDVR0OBBYEFLE+w2kD+L9HAdSYJhoIAu9jZCvDMB8GA1UdIwQYMBaA\r\n"
+    "FLE+w2kD+L9HAdSYJhoIAu9jZCvDMA0GCSqGSIb3DQEBBQUAA4IBAQAcGgaX3Nec\r\n"
+    "nzyIZgYIVyHbIUf4KmeqvxgydkAQV8GK83rZEWWONfqe/EW1ntlMMUu4kehDLI6z\r\n"
+    "eM7b41N5cdblIZQB2lWHmiRk9opmzN6cN82oNLFpmyPInngiK3BD41VHMWEZ71jF\r\n"
+    "hS9OMPagMRYjyOfiZRYzy78aG6A9+MpeizGLYAiJLQwGXFK3xPkKmNEVX58Svnw2\r\n"
+    "Yzi9RKR/5CYrCsSXaQ3pjOLAEFe4yHYSkVXySGnYvCoCWw9E1CAx2/S6cCZdkGCe\r\n"
+    "vEsXCS+0yx5DaMkHJ8HSXPfqIbloEpw8nL+e/IBcm2PN7EeqJSdnoDfzAIJ9VNep\r\n"
+    "+OkuE6N36B9KMEQwHgYIKwYBBQUHAwQGCCsGAQUFBwMBBggrBgEFBQcDAwwiRGln\r\n"
+    "aUNlcnQgSGlnaCBBc3N1cmFuY2UgRVYgUm9vdCBDQQ==\r\n"
+    "-----END CERTIFICATE-----\r\n";
+
 
 /*--------------------------------------------------------------------------
  * mbedtls_strerror
@@ -278,15 +304,43 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
         }
     }
 
+#if _DEBUGGING
+    {
+        const KConfigNode * ca_crt;
+        rc_t rc2 = KConfigOpenNodeRead ( kfg, & ca_crt, "/tls/path/ca.crt" );
+        if ( rc2 == 0 )
+        {
+            String * ca_crt_path;
+            STATUS ( STAT_GEEK, "Retrieving path to CA root certificate file\n" );
+            rc2 = KConfigNodeReadString ( ca_crt, & ca_crt_path );
+            if ( rc2 == 0 )
+            {
+                STATUS ( STAT_GEEK, "Parsing text from CA root certificate file '%S'\n", ca_crt_path );
+                ret = mbedtls_x509_crt_parse_file ( &self -> cacert, ca_crt_path -> addr );
+                if ( ret < 0 )
+                {
+                    PLOGMSG ( klogWarn, ( klogWarn
+                                          , "mbedtls_x509_crt_parse_file ( '$(path)' ) returned $(ret) ( $(expl) )"
+                                          , "ret=%d,expl=%s,path=%S"
+                                          , ret
+                                          , mbedtls_strerror2 ( ret )
+                                          , ca_crt_path
+                                  ) );
+                }                
+                StringWhack ( ca_crt_path );
+            }
+            KConfigNodeRelease ( ca_crt );
+        }
+    }
+#endif
+
     if ( num_certs == 0 )
     {
-        STATUS ( STAT_QA, "Parsing text for default CA root certificate\n" );
+        STATUS ( STAT_QA, "Parsing text for default CA root certificates\n" );
         ret = mbedtls_x509_crt_parse ( &self -> cacert,
             ( const unsigned char * ) ca_crt_ncbi1, sizeof ca_crt_ncbi1 );
                     
-        if ( ret >= 0 )
-            num_certs = 1;
-        else
+        if ( ret < 0 )
         {        
             rc = RC ( rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed );
             PLOGERR ( klogSys, ( klogSys, rc
@@ -295,6 +349,26 @@ rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
                                  , ret
                                  , mbedtls_strerror2 ( ret )
                           ) );
+        }
+        else
+        {
+            num_certs = 1;
+            
+            ret = mbedtls_x509_crt_parse ( &self -> cacert,
+                ( const unsigned char * ) ca_crt_ncbi2, sizeof ca_crt_ncbi2 );
+
+            if ( ret >= 0 )
+                ++ num_certs;
+            else
+            {
+                rc = RC ( rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed );
+                PLOGERR ( klogSys, ( klogSys, rc
+                                     , "mbedtls_x509_crt_parse returned $(ret) ( $(expl) )"
+                                     , "ret=%d,expl=%s"
+                                     , ret
+                                     , mbedtls_strerror2 ( ret )
+                              ) );
+            }
         }
     }
 
@@ -782,12 +856,31 @@ rc_t ktls_handshake ( KTLSStream *self )
              ret != MBEDTLS_ERR_SSL_WANT_WRITE )
         {
             rc_t rc = RC ( rcKrypto, rcSocket, rcOpening, rcConnection, rcFailed );
+
             PLOGERR ( klogSys, ( klogSys, rc
                                  , "mbedtls_ssl_handshake returned $(ret) ( $(expl) )"
                                  , "ret=%d,expl=%s"
                                  , ret
                                  , mbedtls_strerror2 ( ret )
                           ) );
+
+            if ( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED )
+            {
+                uint32_t flags = mbedtls_ssl_get_verify_result( &self -> ssl );
+                if ( flags != 0 )
+                {
+                    char buf [ 4096 ];
+                    mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), " !! ", flags );
+
+                    PLOGMSG ( klogSys, ( klogSys
+                                         , "mbedtls_ssl_get_verify_result returned $(flags) ( $(info) )"
+                                         , "flags=0x%X,info=%s"
+                                         , flags
+                                         , buf
+                                  ) );
+                }
+            }
+
             return rc;
         }
         ret = mbedtls_ssl_handshake( &self -> ssl );
