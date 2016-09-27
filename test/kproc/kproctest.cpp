@@ -540,8 +540,15 @@ public:
     }
     ~KConditionFixture()
     {
-        if (thread != 0 && KThreadRelease(thread) != 0)
-            throw logic_error("~KConditionFixture: KThreadRelease failed");
+        if (thread != 0)
+        {
+            if (KThreadWait(thread, NULL) != 0)
+                throw logic_error("~KConditionFixture: KThreadWait failed");
+            if (threadRc != 0)
+                throw logic_error("~KConditionFixture: thread failed, threadRc != 0");
+            if (KThreadRelease(thread) != 0)
+                throw logic_error("~KConditionFixture: KThreadRelease failed");
+        }
         if (KLockRelease((const KLock*)lock) != 0)
             throw logic_error("~KConditionFixture: KLockRelease failed");
         if (KConditionRelease(cond) != 0)
