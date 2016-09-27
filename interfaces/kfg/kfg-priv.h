@@ -49,7 +49,8 @@ struct KNamelist;
 /*--------------------------------------------------------------------------
  * Environment and configuration keys
  */
-#define ENV_KRYPTO_PWFILE   "VDB_PWFILE"
+#define ENV_KRYPTO_PWFILE_OLD   "VDB_PWFILE"
+#define ENV_KRYPTO_PWFILE   "VDBPWFILEPTR"
 #define KFG_KRYPTO_PWFILE   "krypto/pwfile"
 #define KFG_KRYPTO_PWFD     "krypto/pwfd"
 
@@ -76,6 +77,12 @@ KFG_EXTERN rc_t CC KConfigGetLoadPath ( const KConfig *self,
  */
 KFG_EXTERN rc_t CC KConfigMakeLocal ( KConfig **cfg,
     struct KDirectory const * cfgdir );
+
+
+/* make sure ResolverCgiNode is https */
+KFG_EXTERN rc_t KConfigFixMainResolverCgiNode ( KConfig * self );
+KFG_EXTERN rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self );
+
 
 /* PrintDebug
  *  print configuration including some internal nodes information

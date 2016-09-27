@@ -220,6 +220,53 @@ LIB_EXPORT rc_t CC KConfig_Set_Http_Proxy_Enabled
 }
 
 /* -------------------------------------------------------------------------- */
+/* get/set priority of environmnet vs. configuration for HTTP proxy */
+LIB_EXPORT rc_t CC KConfig_Has_Http_Proxy_Env_Higher_Priority
+    ( const KConfig *self, bool *enabled )
+{
+    rc_t rc = 0;
+
+    if ( self == NULL ) {
+        rc = RC ( rcKFG, rcNode, rcReading, rcSelf, rcNull );
+    }
+    else if ( enabled == NULL ) {
+        rc = RC ( rcKFG, rcNode, rcReading, rcParam, rcNull );
+    }
+    else {
+        String * res = NULL;
+        * enabled = false;
+        rc = KConfigReadString ( self, "/http/proxy/use", &res );
+        if ( rc == 0 ) {
+            String v;
+            CONST_STRING ( & v, "env,kfg" );
+            if ( StringEqual ( res, & v ) ) {
+                * enabled = true;
+            }
+        } else {
+            rc = 0;
+        }
+        free ( res );
+    }
+
+    return rc;
+}
+LIB_EXPORT rc_t CC KConfig_Set_Http_Proxy_Env_Higher_Priority
+    ( KConfig *self, bool enabled )
+{
+    rc_t rc = 0;
+
+    if ( self == NULL ) {
+        rc = RC ( rcKFG, rcNode, rcWriting, rcSelf, rcNull );
+    }
+    else {
+        rc = KConfigWriteString
+            ( self, "/http/proxy/use", enabled ? "env,kfg" : "kfg,env" );
+    }
+
+    return rc;
+}
+
+/* -------------------------------------------------------------------------- */
 
 LIB_EXPORT rc_t CC KConfig_Get_Home( const KConfig *self, char * buffer, size_t buffer_size, size_t * written )
 {   return KConfig_Get_Repository_String( self, buffer, buffer_size, written, "HOME" ); }

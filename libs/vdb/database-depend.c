@@ -533,7 +533,7 @@ static rc_t FindRef(Ctx* ctx, const char* seqId, Resolved* resolved,
         }
 
         if (rc == 0) {
-            rc = VResolverRemote(ctx->resolver, eProtocolHttp, acc, &remote);
+            rc = VResolverRemote(ctx->resolver, 0, acc, &remote);
             if (rc == 0) {
                 rc = VPathMakeString(remote, &resolved->remote);
                 if (rc == 0) {

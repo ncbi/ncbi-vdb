@@ -412,7 +412,7 @@ FIXTURE_TEST_CASE(SRA_NGS_ReadNumFragments, SRA_Fixture)
 {
     ENTRY_GET_READ(SRA_Accession, 1);
     uint32_t num = NGS_ReadNumFragments ( m_read, ctx );
-    REQUIRE_EQ ( (uint32_t)2, num );
+    REQUIRE_EQ ( (uint32_t)1, num ); // VDB-3132: only count non-empty fragments
     EXIT;
 }
 
@@ -486,15 +486,26 @@ FIXTURE_TEST_CASE(SRA_NGS_FragmentGetQualities_Full, SRA_Fixture)
 // Iteration over Fragments
 FIXTURE_TEST_CASE(SRA_NGS_FragmentIteratorNext, SRA_Fixture)
 {
-    ENTRY_GET_READ(SRA_Accession, 1); // calls NGS_FragmentIteratorNext
+    ENTRY_GET_READ(SRA_Accession, 2); // calls NGS_FragmentIteratorNext
 
-    REQUIRE_STRING ( string ( SRA_Accession ) + ".FR0.1", NGS_FragmentGetId ( (NGS_Fragment*)m_read, ctx ) );
+    REQUIRE_STRING ( string ( SRA_Accession ) + ".FR0.2", NGS_FragmentGetId ( (NGS_Fragment*)m_read, ctx ) );
 
     REQUIRE ( NGS_FragmentIteratorNext ( (NGS_Fragment*)m_read, ctx ) );
     REQUIRE ( ! FAILED () );
 
-    REQUIRE_STRING ( string ( SRA_Accession ) + ".FR1.1", NGS_FragmentGetId ( (NGS_Fragment*)m_read, ctx ) );
+    REQUIRE_STRING ( string ( SRA_Accession ) + ".FR1.2", NGS_FragmentGetId ( (NGS_Fragment*)m_read, ctx ) );
 
+    REQUIRE ( ! NGS_FragmentIteratorNext ( (NGS_Fragment*)m_read, ctx ) );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(SRA_NGS_FragmentIteratorNext_SkipEmpty, SRA_Fixture)
+{
+    ENTRY_GET_READ(SRA_Accession, 1); // calls NGS_FragmentIteratorNext
+
+    REQUIRE_STRING ( string ( SRA_Accession ) + ".FR0.1", NGS_FragmentGetId ( (NGS_Fragment*)m_read, ctx ) );
+    // VDB-3132: skip empty FR1.1
     REQUIRE ( ! NGS_FragmentIteratorNext ( (NGS_Fragment*)m_read, ctx ) );
 
     EXIT;
@@ -519,10 +530,8 @@ FIXTURE_TEST_CASE(SRA_NGS_FragmentIterator_NullRead, SRA_Fixture)
 
 FIXTURE_TEST_CASE(SRA_NGS_FragmentIteratorNext_BeyondEnd, SRA_Fixture)
 {
-    ENTRY_GET_READ(SRA_Accession, 1);
-
-    REQUIRE ( NGS_FragmentIteratorNext ( (NGS_Fragment*)m_read, ctx ) );
-    REQUIRE ( ! FAILED () );
+    ENTRY_GET_READ(SRA_Accession, 1);  // calls NGS_FragmentIteratorNext
+    // row 1 contains only 1 non-empty bio fragment
     REQUIRE ( ! NGS_FragmentIteratorNext ( (NGS_Fragment*)m_read, ctx ) );
     REQUIRE ( ! FAILED () );
 
@@ -585,12 +594,7 @@ FIXTURE_TEST_CASE(SRA_ReadCollection_GetReads_Next, SRA_Fixture)
         REQUIRE ( ! FAILED () );
 
         REQUIRE_STRING ( string ( SRA_Accession ) + ".FR0.1", NGS_FragmentGetId ( (NGS_Fragment*)m_read, ctx ) );
-
-        REQUIRE ( NGS_FragmentIteratorNext ( (NGS_Fragment*)m_read, ctx ) );
-        REQUIRE ( ! FAILED () );
-
-        REQUIRE_STRING ( string ( SRA_Accession ) + ".FR1.1", NGS_FragmentGetId ( (NGS_Fragment*)m_read, ctx ) );
-
+        // the second bio read is empty and not reported
         REQUIRE ( ! NGS_FragmentIteratorNext ( (NGS_Fragment*)m_read, ctx ) );
         REQUIRE ( ! FAILED () );
     }
@@ -682,9 +686,10 @@ FIXTURE_TEST_CASE(SRA_ReadCollection_GetReads_NumFragments, SRA_Fixture)
 
     m_read = NGS_ReadCollectionGetReads ( m_coll, ctx, true, true, true );
 
+    REQUIRE ( NGS_ReadIteratorNext ( m_read, ctx ) ); // skip row 1 which has only 1 non-empty bio fragment
     REQUIRE ( NGS_ReadIteratorNext ( m_read, ctx ) );
 
-    REQUIRE_STRING ( ReadId ( 1 ),  NGS_ReadGetReadId ( m_read, ctx ) );
+    REQUIRE_STRING ( ReadId ( 2 ),  NGS_ReadGetReadId ( m_read, ctx ) );
     REQUIRE ( ! FAILED () );
     REQUIRE_EQ ( (uint32_t)2, NGS_ReadNumFragments ( m_read, ctx ) );
 
@@ -1026,6 +1031,7 @@ FIXTURE_TEST_CASE(SRA_GetFragmentBlobs, SRA_Fixture)
 
     REQUIRE_EQ ( (uint64_t)1080, NGS_FragmentBlobSize ( blob, ctx ) );
 
+    NGS_FragmentBlobRelease ( blob, ctx );
     NGS_FragmentBlobIteratorRelease ( blobIt, ctx );
 
     EXIT;

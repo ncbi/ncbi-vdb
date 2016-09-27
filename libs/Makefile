@@ -72,6 +72,8 @@ include $(TOP)/build/Makefile.targets
 
 $(SUBDIRS):
 	@ $(MAKE) -C $@
+	
+ncbi-vdb: $(patsubst ncbi-vdb,,$(SUBDIRS))	
 
 test:
 	@true

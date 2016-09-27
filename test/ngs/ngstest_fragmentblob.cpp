@@ -68,17 +68,25 @@ public:
     void MakeBlob ( const char* acc, int64_t rowId )
     {
         if ( m_tbl != 0 )
+        {
             VTableRelease ( m_tbl );
+        }
         if ( VDBManagerOpenTableRead ( m_ctx -> rsrc -> vdb, & m_tbl, NULL, acc ) != 0 )
-            throw logic_error ("FragmentBlobFixture::MakeCursor VDBManagerOpenTableRead failed");
+        {
+            throw logic_error ("FragmentBlobFixture::MakeBlob VDBManagerOpenTableRead failed");
+        }
         m_curs = NGS_CursorMake ( m_ctx, m_tbl, sequence_col_specs, seq_NUM_COLS );
         if ( m_curs == 0 )
-            throw logic_error ("FragmentBlobFixture::MakeCursor NGS_CursorMake failed");
+        {
+            throw logic_error ("FragmentBlobFixture::MakeBlob NGS_CursorMake failed");
+        }
         NGS_String* run = NGS_StringMake ( m_ctx, acc, string_size ( acc ) );
         m_blob = NGS_FragmentBlobMake ( m_ctx, run, m_curs, rowId );
         NGS_StringRelease ( run, m_ctx );
         if ( m_blob == 0 )
-            throw logic_error ("FragmentBlobFixture::MakeCursor NGS_FragmentBlobMake failed");
+        {
+            throw logic_error ("FragmentBlobFixture::MakeBlob NGS_FragmentBlobMake failed");
+        }
     }
     virtual void Release()
     {
@@ -248,6 +256,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_InfoByOffset_Biological, FragmentBlobFi
     // technical, start 403, len 44
     // biological #1, start 447, len 99
     NGS_FragmentBlobInfoByOffset ( m_blob, ctx, 300, & rowId, & fragStart, & baseCount, & bioNumber );
+    REQUIRE ( ! FAILED () );
     REQUIRE_EQ ( (int64_t)2, rowId );
     REQUIRE_EQ ( (uint64_t)288, fragStart );
     REQUIRE_EQ ( (uint64_t)115, baseCount );
@@ -271,10 +280,70 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_InfoByOffset_Technical, FragmentBlobFix
     // technical, start 403, len 44  <== expect to see this for offset 410
     // biological #1, start 447, len 99
     NGS_FragmentBlobInfoByOffset ( m_blob, ctx, 410, & rowId, & fragStart, & baseCount, & bioNumber );
+    REQUIRE ( ! FAILED () );
     REQUIRE_EQ ( (int64_t)2, rowId );
     REQUIRE_EQ ( (uint64_t)403, fragStart );
     REQUIRE_EQ ( (uint64_t)44, baseCount );
     REQUIRE_EQ ( (int32_t)-1, bioNumber );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE ( NGS_FragmentBlobMake_InfoByOffset_WithRepeat, FragmentBlobFixture )
+{   // VDB-3026, VDB-2809
+    ENTRY;
+
+    // In SRR341578.SEQUENCE, rows 197317 and 197318 have identical values in the READ column
+    // we test correct handling of the repeat count in the row map by providing an offset
+    // that points into the second of the two rows
+    const int64_t RepeatedRowId = 197318;
+    const uint64_t OffsetIntoRepeatedRowId = 8889;
+    const char* acc = "SRR341578";
+
+    const VDatabase *db;
+    REQUIRE_RC ( VDBManagerOpenDBRead ( m_ctx -> rsrc -> vdb, & db, NULL, acc ) );
+    REQUIRE_RC ( VDatabaseOpenTableRead ( db, & m_tbl, "SEQUENCE" ) );
+    REQUIRE_RC ( VDatabaseRelease ( db ) );
+
+    m_curs = NGS_CursorMake ( m_ctx, m_tbl, sequence_col_specs, seq_NUM_COLS );
+    REQUIRE_NOT_NULL ( m_curs );
+
+    // The blob-making code in vdb is very-very smart and decides on the size of the blob
+    // to create based on the access patterns.
+    // If we specify our rowId directly, we will get a one-row blob. We want
+    // more than one row so that repeat count is > 1. So, we walk from 1 up to our RepeatedRowId
+    // to make sure we got a bigger blob:
+    {
+        NGS_String* run = NGS_StringMake ( m_ctx, acc, string_size ( acc ) );
+        int64_t rowId = 1;
+        while ( ! FAILED () )
+        {
+            m_blob = NGS_FragmentBlobMake ( m_ctx, run, m_curs, rowId );
+            int64_t first = 0;
+            uint64_t count = 0;
+            NGS_FragmentBlobRowRange ( m_blob, m_ctx, & first, & count );
+            if ( first + (int64_t)count > RepeatedRowId )
+            {
+                break; // m_blob is what we need
+            }
+            NGS_FragmentBlobRelease ( m_blob, m_ctx );
+            rowId += count;
+        }
+        NGS_StringRelease ( run, m_ctx );
+    }
+
+    {   // verify access to the second of 2 repeated cells
+        int64_t rowId;
+        uint64_t fragStart;
+        uint64_t baseCount;
+        int32_t bioNumber;
+        NGS_FragmentBlobInfoByOffset ( m_blob, ctx, OffsetIntoRepeatedRowId, & rowId, & fragStart, & baseCount, & bioNumber );
+        REQUIRE ( ! FAILED () );
+        REQUIRE_EQ ( RepeatedRowId, rowId );
+        REQUIRE_EQ ( (uint64_t)8888, fragStart );
+        REQUIRE_EQ ( (uint64_t)101, baseCount );
+        REQUIRE_EQ ( (int32_t)0, bioNumber );
+    }
 
     EXIT;
 }
@@ -407,6 +476,7 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_HasMore, BlobIteratorFixture )
     EXIT;
 }
 
+#if VDB_3075_has_been_fixed
 FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_FullScan, BlobIteratorFixture )
 {
     ENTRY;
@@ -425,7 +495,74 @@ FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_FullScan, BlobIteratorFixture )
 
     EXIT;
 }
+#endif
 
+FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_SparseTable, BlobIteratorFixture )
+{
+    ENTRY;
+    MakeIterator ( "./data/SparseFragmentBlobs" );
+    // only row 1 and 10 are present
+
+    REQUIRE ( NGS_FragmentBlobIteratorHasMore ( m_blobIt, m_ctx ) );
+    {
+        struct NGS_FragmentBlob* blob = NGS_FragmentBlobIteratorNext ( m_blobIt, m_ctx );
+        REQUIRE_NOT_NULL ( blob );
+        int64_t first = 0;
+        uint64_t count = 0;
+        NGS_FragmentBlobRowRange ( blob, m_ctx, & first, & count );
+        REQUIRE_EQ ( (int64_t)1, first );
+        REQUIRE_EQ ( (uint64_t)1, count );
+        NGS_FragmentBlobRelease ( blob, ctx );
+    }
+
+    REQUIRE ( NGS_FragmentBlobIteratorHasMore ( m_blobIt, m_ctx ) );
+    {
+        struct NGS_FragmentBlob* blob = NGS_FragmentBlobIteratorNext ( m_blobIt, m_ctx );
+        REQUIRE_NOT_NULL ( blob );
+        int64_t first = 0;
+        uint64_t count = 0;
+        NGS_FragmentBlobRowRange ( blob, m_ctx, & first, & count );
+        REQUIRE_EQ ( (int64_t)10, first );
+        REQUIRE_EQ ( (uint64_t)1, count );
+        NGS_FragmentBlobRelease ( blob, ctx );
+    }
+
+    REQUIRE ( ! NGS_FragmentBlobIteratorHasMore ( m_blobIt, m_ctx ) );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE ( NGS_FragmentBlobIterator_IteratorRetreats, BlobIteratorFixture )
+{   // VDB-2809: NGS_FragmentBlobIterator returns overlapping blobs on CSRA1 accessions
+    ENTRY;
+    const char* acc = "SRR833251";
+    const VDatabase *db;
+    REQUIRE_RC ( VDBManagerOpenDBRead ( m_ctx -> rsrc -> vdb, & db, NULL, acc ) );
+    REQUIRE_RC ( VDatabaseOpenTableRead ( db, & m_tbl, "SEQUENCE" ) );
+    REQUIRE_RC ( VDatabaseRelease ( db ) );
+
+    NGS_String* run = NGS_StringMake ( m_ctx, acc, string_size ( acc ) );
+    m_blobIt = NGS_FragmentBlobIteratorMake ( m_ctx, run, m_tbl );
+    NGS_StringRelease ( run, m_ctx );
+
+    int64_t rowId = 1;
+    while (true)
+    {
+        struct NGS_FragmentBlob* blob = NGS_FragmentBlobIteratorNext ( m_blobIt, m_ctx );
+        if ( blob == 0 )
+        {
+            break;
+        }
+        int64_t first = 0;
+        uint64_t count = 0;
+        NGS_FragmentBlobRowRange ( blob, m_ctx, & first, & count );
+        REQUIRE_EQ ( rowId, first );
+        NGS_FragmentBlobRelease ( blob, ctx );
+        rowId = first + count;
+    }
+
+    EXIT;
+}
 
 //////////////////////////////////////////// Main
 

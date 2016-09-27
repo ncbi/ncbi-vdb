@@ -35,6 +35,10 @@
 #include <klib/defs.h>
 #endif
 
+#ifndef _h_os_native_
+#include <os-native.h> /* struct timeout_t */
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,13 +52,19 @@ typedef struct timeout_t timeout_t;
 /* Init
  *  initialize a timeout in milliseconds
  */
-KPROC_EXTERN rc_t CC TimeoutInit ( timeout_t *tm, uint32_t msec );
+KPROC_EXTERN rc_t CC TimeoutInit ( timeout_t * tm, uint32_t msec );
 
 
 /* Prepare
  *  ensures that a timeout is prepared with an absolute value
 */
-KPROC_EXTERN rc_t CC TimeoutPrepare ( timeout_t *tm );
+KPROC_EXTERN rc_t CC TimeoutPrepare ( timeout_t * tm );
+
+
+/* Remaining
+ *  ask how many milliseconds remain before timeout expires
+ */
+KPROC_EXTERN uint32_t TimeoutRemaining ( timeout_t * tm );
 
 
 #ifdef __cplusplus

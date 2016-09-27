@@ -137,8 +137,41 @@ KFG_EXTERN rc_t CC KRepositoryRoot ( const KRepository *self,
  *
  *  "root" [ IN ] and "root_size" [ IN ] - path input parameter
  */
-KFG_EXTERN rc_t CC KRepositorySetRoot(KRepository *self,
-    const char *root, size_t root_size);
+KFG_EXTERN rc_t CC KRepositorySetRoot( KRepository *self,
+    const char *root, size_t root_size );
+
+
+/* RootHistory
+ *  read the root-history as a semicolon separated list of POSIX paths
+ *
+ *  attempts to copy NUL-terminated path into provided buffer
+ *
+ *  "buffer" [ OUT ] and "bsize" [ IN ] - path output parameter
+ *
+ *  "roothistory_size" [ OUT, NULL OKAY ] - returns the root-history
+ *  size in bytes, excluding any NUL termination.
+ */
+KFG_EXTERN rc_t CC KRepositoryRootHistory ( const KRepository *self,
+    char *buffer, size_t bsize, size_t *roothistory_size );
+
+
+/* SetRootHistory
+ *  set the root-history list of paths
+ *
+ *  "roothistory" [ IN ] and "roothistory_size" [ IN ] - path input parameter
+ */
+KFG_EXTERN rc_t CC KRepositorySetRootHistory( KRepository *self,
+    const char *roothistory, size_t roothistory_size  );
+
+
+/* AppendToRootHistory
+ *  append to the root-history
+ *
+ *  "roothistory" [ IN ] and "roothistory_size" [ IN ] - path input parameter
+ *  if item == NULL, add the current root to the root-history
+ */
+KFG_EXTERN rc_t CC KRepositoryAppendToRootHistory( KRepository *self,
+    const char *item  );
 
 
 /* Resolver

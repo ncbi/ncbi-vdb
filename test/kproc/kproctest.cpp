@@ -523,6 +523,110 @@ TEST_CASE( KCondition_MakeRelease )
     REQUIRE_RC(KConditionRelease(cond));
 }
 
+class KConditionFixture
+{
+public:
+    KConditionFixture()
+    :   threadRc(0),
+        thread(0),
+        lock(0),
+        is_signaled(false),
+        do_broadcast(false)
+    {
+        if (KLockMake(&lock) != 0)
+            throw logic_error("KConditionFixture: KLockMake failed");
+        if (KConditionMake(&cond) != 0)
+            throw logic_error("KConditionFixture: KConditionMake failed");
+    }
+    ~KConditionFixture()
+    {
+        if (thread != 0 && KThreadRelease(thread) != 0)
+            throw logic_error("~KConditionFixture: KThreadRelease failed");
+        if (KLockRelease((const KLock*)lock) != 0)
+            throw logic_error("~KConditionFixture: KLockRelease failed");
+        if (KConditionRelease(cond) != 0)
+            throw logic_error("~KConditionFixture: KConditionRelease failed");
+    }
+
+protected:
+    class Thread {
+    public:
+        // danger - this should be an extern "C" function
+        // with CC calling convention on Windows
+        static rc_t KCondition_ThreadFn ( const KThread *thread, void *data )
+        {
+            KConditionFixture* self = (KConditionFixture*)data;
+
+            LOG(LogLevel::e_message, "KCondition_ThreadFn: sleeping" << endl);
+            TestEnv::SleepMs(300);
+            LOG(LogLevel::e_message, "KCondition_ThreadFn: signaling condition" << endl);
+            self->is_signaled = true;
+            if (!self->do_broadcast)
+                self->threadRc = KConditionSignal(self->cond);
+            else
+                self->threadRc = KConditionBroadcast(self->cond);
+
+            LOG(LogLevel::e_message, "KCondition_ThreadFn: exiting" << endl);
+            return 0;
+        }
+    };
+
+    rc_t StartThread()
+    {
+        LOG(LogLevel::e_message, "StartThread: starting thread" << endl);
+
+        threadRc = 0;
+        rc_t rc = KThreadMake(&thread, Thread::KCondition_ThreadFn, this);
+        return rc;
+    }
+
+public:
+    rc_t threadRc;
+    KThread* thread;
+    timeout_t tm;
+    KLock* lock;
+    KCondition* cond;
+    bool is_signaled;
+    bool do_broadcast;
+};
+
+FIXTURE_TEST_CASE( KCondition_TimedWait_Timeout, KConditionFixture )
+{
+    REQUIRE_RC(KLockAcquire(lock));
+    REQUIRE_RC(TimeoutInit(&tm, 100));
+    REQUIRE_RC(KConditionSignal(cond)); // signaling before waiting should not do anything
+    REQUIRE_EQ(KConditionTimedWait(cond, lock, &tm), RC ( rcPS, rcCondition, rcWaiting, rcTimeout, rcExhausted )); // timed out
+
+    REQUIRE_RC(KLockUnlock(lock));
+}
+
+FIXTURE_TEST_CASE( KCondition_TimedWait_Signaled, KConditionFixture )
+{
+    is_signaled = false;
+
+    REQUIRE_RC(KLockAcquire(lock));
+
+    REQUIRE_RC(StartThread());
+    REQUIRE_RC(KConditionWait(cond, lock));
+    REQUIRE(is_signaled == true);
+
+    REQUIRE_RC(KLockUnlock(lock));
+}
+
+FIXTURE_TEST_CASE( KCondition_TimedWait_Signaled_Broadcast, KConditionFixture )
+{
+    is_signaled = false;
+    do_broadcast = true;
+
+    REQUIRE_RC(KLockAcquire(lock));
+
+    REQUIRE_RC(StartThread());
+    REQUIRE_RC(KConditionWait(cond, lock));
+    REQUIRE(is_signaled == true);
+
+    REQUIRE_RC(KLockUnlock(lock));
+}
+
 ///////////////////////// KQueue
 TEST_CASE( KQueue_NULL )
 {

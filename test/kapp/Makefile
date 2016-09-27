@@ -35,7 +35,8 @@ TEST_TOOLS = \
 
 ALL_TOOLS = \
 	env-test-tool \
-	sig-core
+	sig-core \
+	report-kns-agent
     
 include $(TOP)/build/Makefile.env
 
@@ -122,13 +123,47 @@ SIG_CORE_TEST_LIB = \
 
 $(TEST_BINDIR)/sig-core: $(SIG_CORE_TEST_OBJ)
 	$(LD) --exe -o $@ $^ $(SIG_CORE_TEST_LIB)
+	
+#-------------------------------------------------------------------------------
+# report-kns-agent
+#
+REPORT_KNS_AGENT_TEST_SRC = \
+	report-kns-agent
+
+REPORT_KNS_AGENT_TEST_OBJ = \
+	$(addsuffix .$(OBJX),$(REPORT_KNS_AGENT_TEST_SRC))
+
+REPORT_KNS_AGENT_TEST_LIB = \
+	-skapp \
+	-sncbi-vdb
+
+$(TEST_BINDIR)/report-kns-agent: $(REPORT_KNS_AGENT_TEST_OBJ)
+	$(LD) --exe -o $@ $^ $(REPORT_KNS_AGENT_TEST_LIB)
 
 #-------------------------------------------------------------------------------
 # scripted tests
 #
-runtests: sig-core-tests
+runtests: sig-core-tests kns-agent-tests
 
-sig-core-tests: $(ALL_TOOLS)
+sig-core-tests: sig-core
 	@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 	@ echo "Running $(SRCDIR)/run-sig-core.sh $(TEST_BINDIR)/sig-core"
 	@ $(SRCDIR)/run-sig-core.sh $(TEST_BINDIR)/sig-core $(HOST_OS) $(BUILD)
+	
+kns-agent-tests: report-kns-agent
+	@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+	@ echo "Running kns-agent tests"
+	@ # simple tool name
+	@ export PATH=./tmp/export:$$PATH && $(SRCDIR)/run-kns-agent.sh $(TEST_BINDIR)/report-kns-agent ./tmp/export/a.123.99 a.1.2.3 a.123.99
+	@ export PATH=./tmp/export:$$PATH && $(SRCDIR)/run-kns-agent.sh $(TEST_BINDIR)/report-kns-agent ./tmp/export/abcdefghi abcdefghi.1.2.3 abcdefghi
+	@ # tool path where directory path length >= tool name length
+	@ $(SRCDIR)/run-kns-agent.sh $(TEST_BINDIR)/report-kns-agent ./tmp/path/tool.99.123 tool.1.2.3
+	@ $(SRCDIR)/run-kns-agent.sh $(TEST_BINDIR)/report-kns-agent ./tmp/path/tool tool.1.2.3
+	@ $(SRCDIR)/run-kns-agent.sh $(TEST_BINDIR)/report-kns-agent tmp/path/tool tool.1.2.3
+	@ $(SRCDIR)/run-kns-agent.sh $(TEST_BINDIR)/report-kns-agent ../kapp/tmp/path/tool tool.1.2.3
+	@ $(SRCDIR)/run-kns-agent.sh $(TEST_BINDIR)/report-kns-agent tmp/tool tool.1.2.3
+	@ # tool path where directory path length < tool name length
+	@ $(SRCDIR)/run-kns-agent.sh $(TEST_BINDIR)/report-kns-agent ./tmp/abcdefghi abcdefghi.1.2.3
+	@ $(SRCDIR)/run-kns-agent.sh $(TEST_BINDIR)/report-kns-agent ./tmp/abcdefghi.55.111 abcdefghi.1.2.3
+	@ rm -rf ./tmp/
+	

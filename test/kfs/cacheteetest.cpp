@@ -292,7 +292,6 @@ TEST_CASE( CacheTee_Read )
 	REQUIRE_RC( KDirectoryRelease( dir ) );
 }
 
-
 TEST_CASE( CacheTee_Promoting )
 {
 	KOutMsg( "Test: CacheTee_Promoting\n" );
@@ -337,7 +336,6 @@ TEST_CASE( CacheTee_Promoting )
 	REQUIRE_RC( KFileRelease( org ) );	
 	REQUIRE_RC( KDirectoryRelease( dir ) );
 }
-
 
 static rc_t cache_access( int tid, int num_threads, const KFile * origfile, const KFile * cacheteefile )
 {
@@ -409,8 +407,6 @@ static rc_t CC thread_func( const KThread *self, void *data )
 	return cache_access( td->tid, td->num_threads, td->origfile, td->cacheteefile );
 }
 
-// TODO: fix, this does not work on Windows
-#if !defined(WINDOWS) && !defined(_WIN32)
 TEST_CASE( CacheTee_Multiple_Users_Multiple_Inst )
 {
 	KOutMsg( "Test: CacheTee_Multiple_Users_Multiple_Inst\n" );
@@ -482,6 +478,8 @@ TEST_CASE( CacheTee_Multiple_Users_Single_Inst )
     REQUIRE_RC( KDirectoryRelease( dir ) );
 }
 
+// TODO: fix, this does not work on Windows
+#if !defined(WINDOWS) && !defined(_WIN32)
 TEST_CASE( CacheTee_ReadOnly )
 {
 	KOutMsg( "Test: CacheTee_ReadOnly\n" );
@@ -500,9 +498,8 @@ TEST_CASE( CacheTee_ReadOnly )
 	REQUIRE_RC( read_partial( tee, 100, 100 ) );
 	REQUIRE_RC( KFileRelease( tee ) );
 
-	/* switch the cache-file to read-only */
 	REQUIRE_RC( KDirectorySetAccess ( dir, false, 0, 0222, "%s", CACHEFILE1 ) );
-
+    
 	/* make a second cache-tee and read all from it... */
 	REQUIRE_RC( KDirectoryMakeCacheTee ( dir, &tee, org, BLOCKSIZE, "%s", CACHEFILE ) );
 	REQUIRE_RC( read_all( tee, 1024 * 32 )	);
@@ -523,7 +520,9 @@ TEST_CASE( CacheTee_ReadOnly )
 	REQUIRE_RC( KFileRelease( cache ) );		
 	REQUIRE_RC( KFileRelease( org ) );	
 	REQUIRE_RC( KDirectoryRelease( dir ) );
+  
 }
+#endif
 
 TEST_CASE( CacheTee_Multiple_Users_with_Promoting )
 {
@@ -562,7 +561,6 @@ TEST_CASE( CacheTee_Multiple_Users_with_Promoting )
 	REQUIRE_RC( KFileRelease( org ) );	
 	REQUIRE_RC( KDirectoryRelease( dir ) );
 }
-#endif
 
 //////////////////////////////////////////// Main
 extern "C"
@@ -598,6 +596,7 @@ rc_t CC KMain ( int argc, char *argv [] )
 		rc = CacheTeeTests( argc, argv );
 		finish_cachetee_tests();
 	}
+	KOutMsg( "and the result is: %d", rc );
     return rc;
 }
 

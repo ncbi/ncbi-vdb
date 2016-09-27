@@ -86,6 +86,7 @@ SRAXF_SRC = \
 	tokenize-spot_name-abi \
 	tokenize-spot_name-helicos \
 	tokenize-spot_name-ion-torrent \
+	tokenize-spot_name-generic-fastq \
 	color-from-dna \
 	dna-from-color \
 	spot-desc \

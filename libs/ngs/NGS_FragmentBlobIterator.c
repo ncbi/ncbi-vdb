@@ -32,6 +32,8 @@
 
 #include <ngs/itf/Refcount.h>
 
+#include <vdb/cursor.h>
+
 #include "NGS_String.h"
 #include "NGS_Cursor.h"
 #include "SRA_Read.h"
@@ -157,17 +159,26 @@ NGS_FragmentBlobIteratorNext ( NGS_FragmentBlobIterator * self, ctx_t ctx )
     }
     else if ( self -> next_row <= self -> last_row )
     {
-        TRY ( NGS_FragmentBlob* ret = NGS_FragmentBlobMake ( ctx, self -> run, self -> curs, self -> next_row ) )
+        int64_t nextRow;
+        rc_t rc = VCursorFindNextRowIdDirect ( NGS_CursorGetVCursor ( self -> curs ),
+                                               NGS_CursorGetColumnIndex ( self -> curs, ctx, seq_READ ),
+                                               self -> next_row,
+                                               & nextRow );
+        if ( rc == 0 )
         {
-            int64_t first;
-            uint64_t count;
-            TRY ( NGS_FragmentBlobRowRange ( ret, ctx, & first, & count ) )
+            TRY ( NGS_FragmentBlob* ret = NGS_FragmentBlobMake ( ctx, self -> run, self -> curs, nextRow ) )
             {
-                self -> next_row = first + count;
-                return ret;
+                int64_t first;
+                uint64_t count;
+                TRY ( NGS_FragmentBlobRowRange ( ret, ctx, & first, & count ) )
+                {
+                    self -> next_row = first + count;
+                    return ret;
+                }
+                NGS_FragmentBlobRelease ( ret, ctx );
             }
-            NGS_FragmentBlobRelease ( ret, ctx );
         }
+        self -> next_row = self -> last_row + 1;
     }
 
     return NULL;

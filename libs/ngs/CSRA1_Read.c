@@ -48,7 +48,7 @@
 #include <sysalloc.h>
 
 #ifndef min
-#   define min(a,b) ( (a) < (b) ? (a) : (b) )            
+#   define min(a,b) ( (a) < (b) ? (a) : (b) )
 #endif
 
 /*--------------------------------------------------------------------------
@@ -78,7 +78,7 @@ static NGS_Read_vt CSRA1_Read_vt_inst =
         CSRA1_FragmentIsAligned,
         SRA_FragmentNext
     },
-    
+
     /* NGS_Read */
     SRA_ReadGetId,
     SRA_ReadGetName,
@@ -90,7 +90,7 @@ static NGS_Read_vt CSRA1_Read_vt_inst =
     CSRA1_ReadFragIsAligned,
     SRA_ReadIteratorNext,
     SRA_ReadIteratorGetCount,
-}; 
+};
 
 /* Init
  */
@@ -108,44 +108,9 @@ void CSRA1_ReadInit ( ctx_t ctx, SRA_Read * self, const char *clsname, const cha
             TRY ( self -> run_name = NGS_StringDuplicate ( run_name, ctx ) )
             {
                 self -> wants_full      = true;
-                self -> wants_partial   = true; 
-                self -> wants_unaligned = true;            
+                self -> wants_partial   = true;
+                self -> wants_unaligned = true;
             }
-        }
-    }
-}
-
-/* Whack
- */
-static
-void CSRA1_ReadIteratorInitFragment ( SRA_Read * self, ctx_t ctx )
-{
-    const void * base;
-    uint32_t elem_bits, boff, row_len;
-
-    /* read from READ_TYPE must succeed */
-    TRY ( NGS_CursorCellDataDirect ( self -> curs, ctx, self -> cur_row, seq_READ_TYPE, & elem_bits, & base, & boff, & row_len ) )
-    {
-        assert ( elem_bits == 8 );
-        assert ( boff == 0 );
-        self -> READ_TYPE = base;
-
-        TRY ( NGS_CursorCellDataDirect ( self -> curs, ctx, self -> cur_row, seq_READ_LEN, & elem_bits, & base, & boff, & row_len ) )
-        {
-            uint32_t i;
-
-            assert ( elem_bits == 32 );
-            assert ( boff == 0 );
-            self -> READ_LEN = base;
-            self -> frag_max = row_len;
-
-            /* naked hackery to quickly scan types */
-            assert ( READ_TYPE_TECHNICAL == 0 );
-            assert ( READ_TYPE_BIOLOGICAL == 1 );
-
-            /* NB - should also be taking READ_FILTER into account */
-            for ( i = 0; i < row_len; ++ i )
-                self -> bio_frags += self -> READ_TYPE [ i ] & READ_TYPE_BIOLOGICAL;
         }
     }
 }
@@ -176,7 +141,7 @@ void CSRA1_ReadIteratorInit ( ctx_t ctx,
                              bool wants_unaligned )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
-    
+
     if ( cself == NULL )
         INTERNAL_ERROR ( xcParamNull, "bad object reference" );
     else
@@ -204,12 +169,12 @@ NGS_Read * CSRA1_ReadIteratorMake ( ctx_t ctx,
                                  bool wants_unaligned )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
-    
+
     CSRA1_Read * cref;
     SRA_Read * ref;
-    
+
     assert ( curs != NULL );
-    
+
     cref = calloc ( 1, sizeof * cref );
     if ( cref == NULL )
         SYSTEM_ERROR ( xcNoMemory, "allocating CSRA1_ReadIterator on '%.*s'", NGS_StringSize ( run_name, ctx ), NGS_StringData ( run_name, ctx ) );
@@ -225,7 +190,7 @@ NGS_Read * CSRA1_ReadIteratorMake ( ctx_t ctx,
         TRY ( CSRA1_ReadIteratorInit ( ctx, cref, "CSRA1_ReadIterator", instname, run_name, wants_full, wants_partial, wants_unaligned ) )
         {
             ref = & cref -> dad;
-            
+
             ref -> curs = NGS_CursorDuplicate ( curs, ctx );
             TRY ( NGS_CursorGetRowRange ( ref -> curs, ctx, & ref -> cur_row, & ref -> row_count ) )
             {
@@ -235,10 +200,10 @@ NGS_Read * CSRA1_ReadIteratorMake ( ctx_t ctx,
             CSRA1_ReadRelease ( cref, ctx );
             return NULL;
         }
-        
+
         free ( cref );
     }
-    
+
     return NULL;
 }
 
@@ -254,12 +219,12 @@ NGS_Read * CSRA1_ReadIteratorMakeRange ( ctx_t ctx,
                                       bool wants_unaligned )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
-    
+
     CSRA1_Read * cref;
     SRA_Read * ref;
-    
+
     assert ( curs != NULL );
-    
+
     cref = calloc ( 1, sizeof * ref );
     if ( cref == NULL )
         SYSTEM_ERROR ( xcNoMemory, "allocating CSRA1_ReadIterator on '%.*s'", NGS_StringSize ( run_name, ctx ), NGS_StringData ( run_name, ctx ) );
@@ -275,7 +240,7 @@ NGS_Read * CSRA1_ReadIteratorMakeRange ( ctx_t ctx,
         TRY ( CSRA1_ReadIteratorInit ( ctx, cref, "CSRA1_ReadIterator", instname, run_name, wants_full, wants_partial, wants_unaligned ) )
         {
             ref = & cref -> dad;
-            
+
             ref -> curs = NGS_CursorDuplicate ( curs, ctx );
             TRY ( NGS_CursorGetRowRange ( ref -> curs, ctx, & ref -> cur_row, & ref -> row_count ) )
             {
@@ -286,10 +251,10 @@ NGS_Read * CSRA1_ReadIteratorMakeRange ( ctx_t ctx,
             CSRA1_ReadRelease ( cref, ctx );
             return NULL;
         }
-        
+
         free ( cref );
     }
-    
+
     return NULL;
 }
 
@@ -306,7 +271,7 @@ NGS_Read * CSRA1_ReadIteratorMakeReadGroup ( ctx_t ctx,
                                           bool wants_unaligned )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
-    
+
     TRY ( CSRA1_Read * cref = (CSRA1_Read*) CSRA1_ReadIteratorMakeRange ( ctx,
                                                                   curs,
                                                                   run_name,
@@ -349,21 +314,21 @@ NGS_Read * CSRA1_ReadMake ( ctx_t ctx, const NGS_Cursor * curs, int64_t readId, 
         const char *instname = "";
 #endif
         ref = & cref -> dad;
-        
+
         TRY ( CSRA1_ReadInit ( ctx, ref, "CSRA1_Read", instname, run_name ) )
         {
             uint64_t row_count = NGS_CursorGetRowCount ( curs, ctx );
-            
+
             /* validate the requested rowId and seek to it */
             if ( readId <= 0 || (uint64_t)readId > row_count )
             {
                 INTERNAL_ERROR ( xcCursorAccessFailed, "rowId ( %li ) out of range for %.*s", readId, NGS_StringSize ( run_name, ctx ), NGS_StringData ( run_name, ctx ) );
-            }                
+            }
             else
             {
                 ref -> curs = NGS_CursorDuplicate ( curs, ctx );
                 ref -> cur_row = readId;
-                TRY ( CSRA1_ReadIteratorInitFragment ( ref, ctx ) )
+                TRY ( SRA_ReadIteratorInitFragment ( cref , ctx ) )
                 {
                     ref -> row_max = readId + 1;
                     ref -> row_count = 1;
@@ -371,7 +336,7 @@ NGS_Read * CSRA1_ReadMake ( ctx_t ctx, const NGS_Cursor * curs, int64_t readId, 
                     return & ref -> dad;
                 }
             }
-            
+
             CSRA1_ReadRelease ( cref, ctx );
             return NULL;
         }
@@ -385,35 +350,35 @@ bool CSRA1_FragmentIsAligned ( CSRA1_Read * cself, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
     const SRA_Read * self;
-    
+
     assert ( cself != NULL );
-    
+
     self = & cself -> dad;
-    
+
     if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Read accessed before a call to nextRead()" );
         return false;
     }
-    
+
     if ( self -> cur_row >= self -> row_max )
     {
         USER_ERROR ( xcCursorExhausted, "No more rows available" );
         return false;
     }
-    
+
     if ( ! self -> seen_first_frag )
     {
         USER_ERROR ( xcIteratorUninitialized, "Fragment accessed before a call to nextFragment()" );
         return false;
     }
-    
+
     if ( self -> frag_idx >= self -> frag_max )
     {
         USER_ERROR ( xcCursorExhausted, "No more fragments available" );
         return false;
     }
-    
+
     {
         const void * base;
         uint32_t elem_bits, boff, row_len;
@@ -422,33 +387,33 @@ bool CSRA1_FragmentIsAligned ( CSRA1_Read * cself, ctx_t ctx )
             CLEAR();
             return false;
         }
-        
+
         {
             const int64_t * orig = base;
             assert(elem_bits == 64);
             assert(boff == 0);
-            
+
             return orig[self -> frag_idx] != 0;
         }
     }
-    
+
 }
 
 bool CSRA1_ReadFragIsAligned ( CSRA1_Read * cself, ctx_t ctx, uint32_t frag_idx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
     const SRA_Read * self;
-    
+
     assert ( cself != NULL );
-    
+
     self = & cself -> dad;
-    
+
     if ( ! self -> seen_first )
     {
         USER_ERROR ( xcIteratorUninitialized, "Read accessed before a call to nextRead()" );
         return false;
     }
-    
+
     if ( self -> cur_row >= self -> row_max )
     {
         USER_ERROR ( xcCursorExhausted, "No more rows available" );
@@ -460,7 +425,7 @@ bool CSRA1_ReadFragIsAligned ( CSRA1_Read * cself, ctx_t ctx, uint32_t frag_idx 
         USER_ERROR ( xcIntegerOutOfBounds, "bad fragment index" );
         return false;
     }
-    
+
     {
         const void * base;
         uint32_t elem_bits, boff, row_len;
@@ -474,23 +439,25 @@ bool CSRA1_ReadFragIsAligned ( CSRA1_Read * cself, ctx_t ctx, uint32_t frag_idx 
             assert ( row_len == self -> frag_max );
 
             /* technically, we do not expect technical reads (fragments) within CSRA1,
-               but it is correct to check for this possibility */
+               but it is correct to check for this possibility
+               same applies to 0-length biological fragments (VDB-3132)
+            */
             if ( self -> bio_frags == self -> frag_max )
                 return orig [ frag_idx ] != 0;
 
             for ( idx = bidx = 0; idx < row_len; ++ idx )
             {
-                if ( ( self -> READ_TYPE [ idx ] & READ_TYPE_BIOLOGICAL ) != 0 )
+                if ( ( self -> READ_TYPE [ idx ] & READ_TYPE_BIOLOGICAL ) != 0 && self -> READ_LEN [ idx ] != 0 )
                 {
                     if ( bidx == frag_idx )
                         return orig [ idx ] != 0;
-                    
+
                     ++ bidx;
                 }
             }
         }
     }
-    
+
     CLEAR();
     return false;
 }

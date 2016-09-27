@@ -85,7 +85,7 @@ void KRsrcGlobalInit ( KCtx * ctx, const KFuncLoc * loc, bool full )
         int status = pthread_mutex_lock ( & crit );
         if ( status != 0 )
             exit ( status );
-    
+
         initialized = atomic32_read ( & s_initialized );
         if ( 0 <= initialized && initialized < 2 )
         {

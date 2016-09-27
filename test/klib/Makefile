@@ -37,7 +37,8 @@ TEST_TOOLS = \
 	test-out \
 	test-SraReleaseVersion \
 	test-klib \
-
+	test-vnamelist
+    
 include $(TOP)/build/Makefile.env
 
 std: $(TEST_TOOLS)
@@ -60,7 +61,7 @@ TEST_ASM_OBJ = \
     
 TEST_ASM_LIB = \
 	-skapp \
-    -sncbi-vdb \
+	-sncbi-vdb \
 	-sktst \
 
 $(TEST_BINDIR)/test-asm: $(TEST_ASM_OBJ)
@@ -77,7 +78,7 @@ TEST_MD5APPEND_OBJ = \
     
 TEST_MD5APPEND_LIB = \
 	-skapp \
-    -sncbi-vdb \
+	-sncbi-vdb \
 	-sktst \
 
 $(TEST_BINDIR)/test-md5append: $(TEST_MD5APPEND_OBJ)
@@ -94,7 +95,7 @@ TEST_PRINTF_OBJ = \
     
 TEST_PRINTF_LIB = \
 	-skapp \
-    -sncbi-vdb \
+	-sncbi-vdb \
 	-sktst \
 
 $(TEST_BINDIR)/test-printf: $(TEST_PRINTF_OBJ)
@@ -111,7 +112,7 @@ TEST_LOG_OBJ = \
     
 TEST_LOG_LIB = \
 	-skapp \
-    -sncbi-vdb \
+	-sncbi-vdb \
 	-sktst \
 
 $(TEST_BINDIR)/test-log: $(TEST_LOG_OBJ)
@@ -128,7 +129,7 @@ TEST_SRA_RELEASE_VERSION_OBJ = \
     
 TEST_SRA_RELEASE_VERSION_LIB = \
 	-skapp \
-    -sncbi-vdb \
+	-sncbi-vdb \
 	-sktst \
 
 
@@ -149,9 +150,9 @@ TEST_OUT_SRC = \
 
 TEST_OUT_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_OUT_SRC))
-    
+
 TEST_OUT_LIB = \
-    -sncbi-vdb \
+	-sncbi-vdb \
 	-sktst \
 
 $(TEST_BINDIR)/test-out: $(TEST_OUT_OBJ)
@@ -168,9 +169,30 @@ TEST_KLIB_OBJ = \
 
 TEST_KLIB_LIB = \
 	-skapp \
-    -sncbi-vdb \
+	-sncbi-vdb \
 	-sktst \
 
 $(TEST_BINDIR)/test-klib: $(TEST_KLIB_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KLIB_LIB)
     
+
+#-------------------------------------------------------------------------------
+# test-vnamelist
+#
+TEST_VNAMELIST_SRC = \
+	test-vnamelist
+
+TEST_VNAMELIST_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_VNAMELIST_SRC))
+
+TEST_VNAMELIST_LIB = \
+	-skapp \
+	-sncbi-vdb \
+	-sktst \
+
+$(TEST_BINDIR)/test-vnamelist: $(TEST_VNAMELIST_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_VNAMELIST_LIB)
+
+VNAMELIST: test-vnamelist
+	$(TEST_BINDIR)/test-vnamelist
+

@@ -142,6 +142,41 @@ LIB_EXPORT String * CC StringSubstr ( const String *str, String *sub,
     return NULL;
 }
 
+/* StringTrim
+ *  trims ascii white-space from both ends
+ *  returns trimmed string in "trimmed"
+ */
+LIB_EXPORT String * CC StringTrim ( const String * str, String * trimmed )
+{
+    if ( trimmed != NULL )
+    {
+        if ( str == NULL )
+            CONST_STRING ( trimmed, "" );
+        else
+        {
+            const char * addr = str -> addr;
+            size_t i, end, sz = str -> size;
+            uint32_t len = str -> len;
+
+            for ( end = sz; end > 0; -- end )
+            {
+                if ( ! isspace ( addr [ end - 1 ] ) )
+                    break;
+            }
+
+            for ( i = 0; i < end; ++ i )
+            {
+                if ( ! isspace ( addr [ i ] ) )
+                    break;
+            }
+
+            StringInit ( trimmed, & addr [ i ], end - i, len - ( i + sz - end ) );
+        }
+    }
+
+    return trimmed;
+}
+
 /* StringHead
  *  access the first character
  *

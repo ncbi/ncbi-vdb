@@ -84,3 +84,45 @@ LIB_EXPORT rc_t TimeoutPrepare ( timeout_t *self )
 
     return 0;
 }
+
+/* Remaining
+ *  ask how many milliseconds remain before timeout expires
+ */
+LIB_EXPORT uint32_t TimeoutRemaining ( timeout_t * self )
+{
+    struct timeval tv;
+    struct timezone tz;
+    int64_t cur_micros, end_micros;
+
+    if ( self == NULL )
+        return 0;
+
+    /* expect timeout to be prepared, but if it isn't
+       prepare it so that use within a loop eventually terminates */
+    if ( ! self -> prepared )
+    {
+        /* prepare an absolute timeout */
+        TimeoutPrepare ( self );
+
+        /* return the entire timeout */
+        return self -> mS;
+    }
+
+    /* current time in seconds and uS */
+    gettimeofday ( & tv, & tz );
+    
+    /* convert to uS */
+    cur_micros = tv . tv_sec;
+    cur_micros = cur_micros * 1000 * 1000 + tv . tv_usec;
+
+    /* capture end time in uS */
+    end_micros = self -> ts . tv_sec;
+    end_micros = end_micros * 1000 * 1000 + ( ( self -> ts . tv_nsec + 500 ) / 1000 );
+
+    /* never return negative */
+    if ( cur_micros >= end_micros )
+        return 0;
+
+    /* return positive difference as mS - truncated */
+    return ( end_micros - cur_micros ) / 1000;
+}

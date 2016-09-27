@@ -92,6 +92,9 @@ VDB_LIB_CMN =    \
 	ncbi-bam     \
 	vfs          \
 	$(LIBKXML)   \
+	mbedx509     \
+	mbedtls      \
+	mbedcrypto   \
 	kns          \
 	kfg          \
 	krypto       \
@@ -125,10 +128,11 @@ VDB_LIB = \
 	$(addprefix -s,$(VDB_LIB_RD))
 
 $(LIBDIR)/libncbi-vdb.$(SHLX): $(VDB_OBJ)
-	$(LD) --dlib --vers $(SRCDIR) -o $@ $(VDB_LIB)
+	echo $(SRCDIR)
+	$(LD) --dlib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(VDB_LIB)
 
 $(LIBDIR)/libncbi-vdb.$(LIBX): $(VDB_OBJ)
-	$(LD) --slib --vers $(SRCDIR) -o $@ $(VDB_LIB)
+	$(LD) --slib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(VDB_LIB)
 
 #-------------------------------------------------------------------------------
 # update version
@@ -150,7 +154,7 @@ WVDB_LIB = \
 	$(addprefix -s,$(VDB_LIB_RDWR))
 
 $(LIBDIR)/libncbi-wvdb.$(SHLX): $(WVDB_OBJ)
-	$(LD) --dlib --vers $(SRCDIR) -o $@ $(WVDB_LIB)
+	$(LD) --dlib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(WVDB_LIB)
 
 $(LIBDIR)/libncbi-wvdb.$(LIBX): $(WVDB_OBJ)
-	$(LD) --slib --vers $(SRCDIR) -o $@ $(WVDB_LIB)
+	$(LD) --slib --vers $(SRCDIR)/libncbi-vdb.vers -o $@ $(WVDB_LIB)

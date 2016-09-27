@@ -28,6 +28,7 @@
 
 #include <os-native.h>
 #include <kproc/timeout.h>
+#include <klib/time.h>
 #include <klib/rc.h>
 #include <sysalloc.h>
 #include <atomic32.h>
@@ -52,8 +53,9 @@ LIB_EXPORT rc_t TimeoutInit ( timeout_t *tm, uint32_t msec )
     if ( tm == NULL )
         return RC ( rcPS, rcTimeout, rcConstructing, rcSelf, rcNull );
 
+    tm -> ts = 0;
     tm -> mS = msec;
-    tm -> prepared = true;
+    tm -> prepared = false;
 
     return 0;
 }
@@ -66,5 +68,44 @@ LIB_EXPORT rc_t TimeoutPrepare ( timeout_t *self )
     if ( self == NULL )
         return RC ( rcPS, rcTimeout, rcUpdating, rcSelf, rcNull );
 
+    if ( ! self -> prepared )
+    {
+        self -> ts = KTimeMsStamp ();
+        self -> ts += self -> mS;
+        self -> prepared = true;
+    }
+
     return 0;
+}
+
+/* Remaining
+ *  ask how many milliseconds remain before timeout expires
+ */
+LIB_EXPORT uint32_t TimeoutRemaining ( timeout_t * self )
+{
+    KTimeMs_t cur_millis;
+
+    if ( self == NULL )
+        return 0;
+
+    /* expect timeout to be prepared, but if it isn't
+       prepare it so that use within a loop eventually terminates */
+    if ( ! self -> prepared )
+    {
+        /* prepare an absolute timeout */
+        TimeoutPrepare ( self );
+
+        /* return the entire timeout */
+        return self -> mS;
+    }
+
+    /* get current time */
+    cur_millis = KTimeMsStamp ();
+
+    /* never return negative */
+    if ( cur_millis >= self -> ts )
+        return 0;
+
+    /* return positive difference */
+    return self -> ts - cur_millis;
 }

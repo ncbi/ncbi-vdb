@@ -67,6 +67,26 @@ TEST_NGS_LIB = \
     -sktst
 
 #-------------------------------------------------------------------------------
+# ngs-makedb
+# Create test databases for use in other suites
+NGS_MAKEDB_SRC = \
+	ngstest_makedb
+
+NGS_MAKEDB_OBJ = \
+	$(addsuffix .$(OBJX),$(NGS_MAKEDB_SRC))
+
+NGS_MAKEDB_LIB = \
+    -skapp \
+	-sktst \
+    -sncbi-wvdb
+
+$(TEST_BINDIR)/ngs-makedb: $(NGS_MAKEDB_OBJ)
+	$(LP) --exe -o $@ $^ $(NGS_MAKEDB_LIB)
+
+makedb: $(TEST_BINDIR)/ngs-makedb
+	cd $(SRCDIR)/data; $(TEST_BINDIR)/ngs-makedb
+
+#-------------------------------------------------------------------------------
 # test-ngs
 #
 TEST_NGS_SRC = \
@@ -77,6 +97,9 @@ TEST_NGS_OBJ = \
 
 $(TEST_BINDIR)/test-ngs: $(TEST_NGS_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
+
+ngs: test-ngs
+	$(TEST_BINDIR)/$^
 
 #-------------------------------------------------------------------------------
 # test-ngs_sra
@@ -186,8 +209,8 @@ TEST_NGS_SRC = \
 TEST_NGS_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_NGS_SRC))
 
-$(TEST_BINDIR)/test-ngs_fragmentblob: $(TEST_NGS_OBJ)
+$(TEST_BINDIR)/test-ngs_fragmentblob: $(TEST_NGS_OBJ) makedb
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 fragmentblob: test-ngs_fragmentblob
-	$(TEST_BINDIR)/$^
+	cd $(SRCDIR); $(TEST_BINDIR)/$^
