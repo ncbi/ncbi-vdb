@@ -57,7 +57,7 @@ typedef struct CSRA1_ReferenceWindow CSRA1_ReferenceWindow;
 #include <limits.h>
 
 #ifndef min
-#   define min(a,b) ( (a) < (b) ? (a) : (b) )            
+#   define min(a,b) ( (a) < (b) ? (a) : (b) )
 #endif
 
 /*--------------------------------------------------------------------------
@@ -70,7 +70,7 @@ enum
 };
 struct AlignmentInfo
 {
-    int64_t id; 
+    int64_t id;
                         /* sort order */
     int64_t     pos;    /* asc */
     uint64_t    len;    /* desc */
@@ -81,25 +81,25 @@ typedef struct AlignmentInfo AlignmentInfo;
 
 struct CSRA1_ReferenceWindow
 {
-    NGS_Refcount dad;   
+    NGS_Refcount dad;
     NGS_ReadCollection * coll;
-    
+
     const NGS_Cursor * reference_curs;
-    
+
     bool circular;
     bool primary;
     bool secondary;
     uint32_t filters;  /* uses NGS_AlignmentFilterBits from NGS_Alignment.h */
     int32_t map_qual;
-    
+
     uint32_t chunk_size;
     uint64_t ref_length; /* total reference length in bases */
     uint64_t id_offset;
-    
+
     /* remaining range of chunks in the reference table */
     int64_t ref_begin;
     int64_t ref_end;
-    
+
     /* for use in a slice iterator: */
     /* slice (0, 0) = all */
     uint64_t slice_offset;
@@ -107,12 +107,12 @@ struct CSRA1_ReferenceWindow
     /* starting chunks for primary/secondary tables */
     int64_t ref_primary_begin;
     int64_t ref_secondary_begin;
-    
+
     /* false - not positioned on any chunk */
     bool seen_first;
-    
+
     /* alignments against current chunk, sorted in canonical order */
-    AlignmentInfo* align_info; 
+    AlignmentInfo* align_info;
     size_t align_info_cur;
     size_t align_info_total;
     NGS_Alignment* cur_align; /* cached current alignment, corresponds to align_info_cur */
@@ -149,7 +149,7 @@ static
 void CSRA1_ReferenceWindowWhack ( CSRA1_ReferenceWindow * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcDestroying );
-    
+
     NGS_AlignmentRelease ( self -> cur_align, ctx );
     free ( self -> align_info );
     NGS_CursorRelease ( self -> reference_curs, ctx );
@@ -158,20 +158,20 @@ void CSRA1_ReferenceWindowWhack ( CSRA1_ReferenceWindow * self, ctx_t ctx )
 
 static
 NGS_Alignment* GetAlignment ( CSRA1_ReferenceWindow* self, ctx_t ctx )
-{    
-    if ( self -> seen_first && 
+{
+    if ( self -> seen_first &&
          ( self -> circular || self -> ref_begin < self ->ref_end ) && /* for circular references, all chunks are loaded at once */
          self -> align_info_cur < self -> align_info_total )
-    {   
+    {
         if ( self -> cur_align == NULL )
         {
             TRY ( NGS_String * run_name = NGS_ReadCollectionGetName ( self -> coll, ctx ) )
             {
-                TRY ( const NGS_String * id = NGS_IdMake ( ctx, 
-                                                           run_name, 
-                                                           self -> align_info [ self -> align_info_cur ] . cat == Primary ? 
+                TRY ( const NGS_String * id = NGS_IdMake ( ctx,
+                                                           run_name,
+                                                           self -> align_info [ self -> align_info_cur ] . cat == Primary ?
                                                             NGSObject_PrimaryAlignment:
-                                                            NGSObject_SecondaryAlignment, 
+                                                            NGSObject_SecondaryAlignment,
                                                            self -> align_info [ self -> align_info_cur ] . id /* + self -> id_offset ? */) )
                 {
                     self -> cur_align = NGS_ReadCollectionGetAlignment ( self -> coll, ctx, NGS_StringData ( id, ctx ) );
@@ -187,11 +187,11 @@ NGS_Alignment* GetAlignment ( CSRA1_ReferenceWindow* self, ctx_t ctx )
 }
 
 
-static 
+static
 NGS_String* CSRA1_FragmentGetId ( CSRA1_ReferenceWindow * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_FragmentGetId ( (NGS_Fragment*)ref, ctx );
@@ -199,7 +199,7 @@ NGS_String* CSRA1_FragmentGetId ( CSRA1_ReferenceWindow * self, ctx_t ctx )
     return NULL;
 }
 
-static 
+static
 struct NGS_String * CSRA1_FragmentGetSequence ( CSRA1_ReferenceWindow * self, ctx_t ctx, uint64_t offset, uint64_t length )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
@@ -210,7 +210,7 @@ struct NGS_String * CSRA1_FragmentGetSequence ( CSRA1_ReferenceWindow * self, ct
     return NULL;
 }
 
-static 
+static
 struct NGS_String * CSRA1_FragmentGetQualities ( CSRA1_ReferenceWindow * self, ctx_t ctx, uint64_t offset, uint64_t length )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
@@ -221,7 +221,7 @@ struct NGS_String * CSRA1_FragmentGetQualities ( CSRA1_ReferenceWindow * self, c
     return NULL;
 }
 
-static 
+static
 bool CSRA1_FragmentIsPaired ( CSRA1_ReferenceWindow * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
@@ -232,14 +232,14 @@ bool CSRA1_FragmentIsPaired ( CSRA1_ReferenceWindow * self, ctx_t ctx )
     return false;
 }
 
-static 
+static
 bool CSRA1_FragmentIsAligned ( CSRA1_ReferenceWindow * self, ctx_t ctx )
 {
     assert ( self != NULL );
     return true;
 }
 
-static 
+static
 bool CSRA1_FragmentNext ( CSRA1_ReferenceWindow * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
@@ -263,7 +263,7 @@ static
 struct NGS_String* CSRA1_ReferenceWindowGetReferenceSpec( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetReferenceSpec ( ref, ctx );
@@ -275,7 +275,7 @@ static
 int CSRA1_ReferenceWindowGetMappingQuality( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetMappingQuality ( ref, ctx );
@@ -287,7 +287,7 @@ static
 INSDC_read_filter CSRA1_ReferenceWindowGetReadFilter( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetReadFilter ( ref, ctx );
@@ -299,7 +299,7 @@ static
 struct NGS_String* CSRA1_ReferenceWindowGetReferenceBases( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetReferenceBases ( ref, ctx );
@@ -311,7 +311,7 @@ static
 struct NGS_String* CSRA1_ReferenceWindowGetReadGroup( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetReadGroup ( ref, ctx );
@@ -323,7 +323,7 @@ static
 NGS_String * CSRA1_ReferenceWindowGetReadId( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetReadId ( ref, ctx );
@@ -335,7 +335,7 @@ static
 struct NGS_String* CSRA1_ReferenceWindowGetClippedFragmentBases( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetClippedFragmentBases ( ref, ctx );
@@ -347,7 +347,7 @@ static
 struct NGS_String* CSRA1_ReferenceWindowGetClippedFragmentQualities( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetClippedFragmentQualities ( ref, ctx );
@@ -359,7 +359,7 @@ static
 struct NGS_String* CSRA1_ReferenceWindowGetAlignedFragmentBases( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetAlignedFragmentBases ( ref, ctx );
@@ -371,7 +371,7 @@ static
 bool CSRA1_ReferenceWindowIsPrimary( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentIsPrimary ( ref, ctx );
@@ -383,7 +383,7 @@ static
 int64_t CSRA1_ReferenceWindowGetAlignmentPosition( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetAlignmentPosition ( ref, ctx );
@@ -395,7 +395,7 @@ static
 uint64_t CSRA1_ReferenceWindowGetReferencePositionProjectionRange( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t ref_pos )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetReferencePositionProjectionRange ( ref, ctx, ref_pos );
@@ -407,7 +407,7 @@ static
 uint64_t CSRA1_ReferenceWindowGetAlignmentLength( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetAlignmentLength ( ref, ctx );
@@ -419,7 +419,7 @@ static
 bool CSRA1_ReferenceWindowGetIsReversedOrientation( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetIsReversedOrientation ( ref, ctx );
@@ -431,7 +431,7 @@ static
 int CSRA1_ReferenceWindowGetSoftClip( CSRA1_ReferenceWindow* self, ctx_t ctx, bool left )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetSoftClip ( ref, ctx, left );
@@ -443,7 +443,7 @@ static
 uint64_t CSRA1_ReferenceWindowGetTemplateLength( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetTemplateLength ( ref, ctx );
@@ -455,7 +455,7 @@ static
 struct NGS_String* CSRA1_ReferenceWindowGetShortCigar( CSRA1_ReferenceWindow* self, ctx_t ctx, bool clipped )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetShortCigar ( ref, ctx, clipped );
@@ -467,7 +467,7 @@ static
 struct NGS_String* CSRA1_ReferenceWindowGetLongCigar( CSRA1_ReferenceWindow* self, ctx_t ctx, bool clipped )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetLongCigar ( ref, ctx, clipped );
@@ -479,7 +479,7 @@ static
 char CSRA1_ReferenceWindowGetRNAOrientation( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetRNAOrientation ( ref, ctx );
@@ -491,7 +491,7 @@ static
 bool CSRA1_ReferenceWindowHasMate( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentHasMate ( ref, ctx );
@@ -504,7 +504,7 @@ static
 struct NGS_String* CSRA1_ReferenceWindowGetMateAlignmentId( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetMateAlignmentId ( ref, ctx );
@@ -516,7 +516,7 @@ static
 CSRA1_ReferenceWindow* CSRA1_ReferenceWindowGetMateAlignment( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return ( CSRA1_ReferenceWindow * ) NGS_AlignmentGetMateAlignment( ref, ctx );
@@ -528,7 +528,7 @@ static
 struct NGS_String* CSRA1_ReferenceWindowGetMateReferenceSpec( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetMateReferenceSpec ( ref, ctx );
@@ -540,10 +540,22 @@ static
 bool CSRA1_ReferenceWindowGetMateIsReversedOrientation( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
     {
         return NGS_AlignmentGetMateIsReversedOrientation ( ref, ctx );
+    }
+    return false;
+}
+
+static
+bool CSRA1_ReferenceWindowIsFirst( CSRA1_ReferenceWindow* self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+
+    TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
+    {
+        return NGS_AlignmentIsFirst ( ref, ctx );
     }
     return false;
 }
@@ -556,19 +568,19 @@ int64_t AlignmentSort ( const void * p_a, const void * p_b, void *data )
 {
     const struct AlignmentInfo* a = ( const struct AlignmentInfo * ) p_a;
     const struct AlignmentInfo* b = ( const struct AlignmentInfo * ) p_b;
-    
+
     if ( a -> pos < b -> pos )
         return -1;
     else if ( a -> pos > b -> pos )
         return 1;
-    
+
     /* cannot use uint64_t - uint64_t because of possible overflow */
     if ( a -> len < b -> len ) return 1;
     if ( a -> len > b -> len ) return -1;
-    
+
     if ( a -> cat != b -> cat )
         return (int64_t) a -> cat - (int64_t) b -> cat;
-    
+
     /* sort by mapq in reverse order */
     if ( a -> mapq != b -> mapq )
         return (int64_t) b -> mapq - (int64_t) a -> mapq;
@@ -581,21 +593,21 @@ static
 void LoadAlignmentInfo ( CSRA1_ReferenceWindow* self, ctx_t ctx, size_t* idx, int64_t id, bool primary, int64_t offset, uint64_t size )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
-    TRY ( NGS_Alignment* al = CSRA1_AlignmentMake ( ctx, 
-                                                    ( struct CSRA1_ReadCollection * ) self -> coll, 
-                                                    id, 
-                                                    "", 0, 
-                                                    primary, 
+
+    TRY ( NGS_Alignment* al = CSRA1_AlignmentMake ( ctx,
+                                                    ( struct CSRA1_ReadCollection * ) self -> coll,
+                                                    id,
+                                                    "", 0,
+                                                    primary,
                                                     self -> id_offset ) )
     {
         int64_t pos = NGS_AlignmentGetAlignmentPosition ( al, ctx );
         int64_t len = (int64_t) NGS_AlignmentGetAlignmentLength ( al, ctx );
-        
+
         if ( ! CSRA1_ReferenceWindowFilterStartWithinWindow ( self ) || pos >= offset )
         {
             bool overlaps = true;
-            
+
             if ( size > 0 )
             {   /* a slice*/
                 int64_t end_slice =  offset + (int64_t)size;
@@ -605,11 +617,11 @@ void LoadAlignmentInfo ( CSRA1_ReferenceWindow* self, ctx_t ctx, size_t* idx, in
                 }
                 if ( ! CSRA1_ReferenceWindowFilterStartWithinWindow ( self ) &&
                      ! CSRA1_ReferenceWindowFilterNoWraparound ( self ) &&
-                     pos + len >= (int64_t) self -> ref_length ) 
+                     pos + len >= (int64_t) self -> ref_length )
                 {   /* account for possible carryover on a circular reference */
                     pos -= self -> ref_length;
                 }
-                overlaps = pos < end_slice && ( pos + len > offset );                
+                overlaps = pos < end_slice && ( pos + len > offset );
             }
 
             /* use single-pass loop as a sort of sanctimonious goto mechanism */
@@ -678,7 +690,7 @@ void LoadAlignmentInfo ( CSRA1_ReferenceWindow* self, ctx_t ctx, size_t* idx, in
                 break;
             }
         }
-        
+
         NGS_AlignmentRelease ( al, ctx );
     }
     CATCH ( xcSecondaryAlignmentMissingPrimary )
@@ -692,13 +704,13 @@ void LoadAlignmentIndex ( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t row_id
 {
     const void * base;
     uint32_t elem_bits, boff, row_len;
-    TRY ( NGS_CursorCellDataDirect ( self -> reference_curs, 
+    TRY ( NGS_CursorCellDataDirect ( self -> reference_curs,
                                      ctx,
-                                     row_id, 
-                                     id_col_idx, 
-                                     & elem_bits, 
-                                     & base, 
-                                     & boff, 
+                                     row_id,
+                                     id_col_idx,
+                                     & elem_bits,
+                                     & base,
+                                     & boff,
                                      & row_len ) )
     {
         assert ( elem_bits == 64 );
@@ -713,7 +725,7 @@ int64_t AlignmentSortCircular ( const void * p_a, const void * p_b, void *data )
 {
     const struct AlignmentInfo* a = ( const struct AlignmentInfo * ) p_a;
     const struct AlignmentInfo* b = ( const struct AlignmentInfo * ) p_b;
-    
+
     uint64_t total = *(uint64_t*)data;
     int64_t a_start = a -> pos;
     int64_t b_start = b -> pos;
@@ -725,19 +737,19 @@ int64_t AlignmentSortCircular ( const void * p_a, const void * p_b, void *data )
     {
         b_start -= total;
     }
-    
+
     if ( a_start < b_start )
         return -1;
     else if ( a_start > b_start )
         return 1;
-    
+
     /* cannot use uint64_t - uint64_t because of possible overflow */
     if ( a -> len < b -> len ) return 1;
     if ( a -> len > b -> len ) return -1;
 
     if ( a -> cat != b -> cat )
         return (int64_t) a -> cat - (int64_t) b -> cat;
-    
+
     /* sort by mapq in reverse order */
     if ( a -> mapq != b -> mapq )
         return (int64_t) b -> mapq - (int64_t) a -> mapq;
@@ -756,15 +768,15 @@ void LoadAlignments ( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t chunk_row_
     uint32_t total_added = 0;
 
     if ( self -> primary && self -> ref_primary_begin <= chunk_row_id )
-    {   
-        ON_FAIL ( LoadAlignmentIndex ( self, ctx, chunk_row_id, reference_PRIMARY_ALIGNMENT_IDS, & primary_idx, & primary_idx_end ) ) 
+    {
+        ON_FAIL ( LoadAlignmentIndex ( self, ctx, chunk_row_id, reference_PRIMARY_ALIGNMENT_IDS, & primary_idx, & primary_idx_end ) )
             return;
-    }        
+    }
 
     if ( self -> secondary && self -> ref_secondary_begin <= chunk_row_id )
-    {   
-        ON_FAIL ( LoadAlignmentIndex ( self, ctx, chunk_row_id, reference_SECONDARY_ALIGNMENT_IDS, & secondary_idx, & secondary_idx_end ) ) 
-        {   
+    {
+        ON_FAIL ( LoadAlignmentIndex ( self, ctx, chunk_row_id, reference_SECONDARY_ALIGNMENT_IDS, & secondary_idx, & secondary_idx_end ) )
+        {
             if ( GetRCObject ( ctx -> rc ) == rcColumn && GetRCState ( ctx -> rc ) == rcNotFound )
             {   /* SECONDARY_ALIGNMENT_IDS is missing; no problem */
                 self -> secondary = false; /* do not try anymore */
@@ -775,13 +787,13 @@ void LoadAlignments ( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t chunk_row_
                 return;
             }
         }
-    }        
+    }
 
     total_added = primary_idx_end + secondary_idx_end;
     if ( total_added > 0 )
-    {   
+    {
         self -> align_info = realloc ( self -> align_info, ( self -> align_info_total + total_added ) * sizeof ( * self -> align_info ) );
-        if ( self -> align_info == NULL ) 
+        if ( self -> align_info == NULL )
         {
             SYSTEM_ERROR ( xcNoMemory, "allocating CSRA1_ReferenceWindow chunk" );
             return;
@@ -791,12 +803,12 @@ void LoadAlignments ( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t chunk_row_
             uint32_t i;
             for ( i = 0; i < primary_idx_end; ++i )
             {
-                ON_FAIL ( LoadAlignmentInfo( self, ctx, & self -> align_info_total, primary_idx [ i ], true, offset, size ) ) 
+                ON_FAIL ( LoadAlignmentInfo( self, ctx, & self -> align_info_total, primary_idx [ i ], true, offset, size ) )
                     return;
             }
             for ( i = 0; i < secondary_idx_end; ++i )
             {
-                ON_FAIL ( LoadAlignmentInfo( self, ctx, & self -> align_info_total, secondary_idx [ i ] + self -> id_offset, false, offset, size ) ) 
+                ON_FAIL ( LoadAlignmentInfo( self, ctx, & self -> align_info_total, secondary_idx [ i ] + self -> id_offset, false, offset, size ) )
                     return;
             }
         }
@@ -810,10 +822,10 @@ bool LoadFirstCircular ( CSRA1_ReferenceWindow* self, ctx_t ctx )
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
     int64_t last_chunk = self -> ref_end - 1;
     assert ( self );
-    
+
     self -> align_info_total = 0;
 
-    /* for windows on circular references, self->ref_begin and and self->ref_end - 1 
+    /* for windows on circular references, self->ref_begin and and self->ref_end - 1
         are the rowId's of the first and last chunk of the reference, regardless of slicing */
     if ( ! CSRA1_ReferenceWindowFilterNoWraparound ( self ) && self -> ref_begin < last_chunk )
     {   /* load the last chunk of the reference, to cover possible overlaps into the first chunk */
@@ -823,16 +835,16 @@ bool LoadFirstCircular ( CSRA1_ReferenceWindow* self, ctx_t ctx )
                 return false;
         }
         else if ( self -> slice_offset < self -> chunk_size )
-        {   /* loading possible overlaps with a slice inside the first chunk */ 
+        {   /* loading possible overlaps with a slice inside the first chunk */
             ON_FAIL ( LoadAlignments ( self, ctx, last_chunk, self -> slice_offset, self -> chunk_size - self -> slice_offset ) )
                 return false;
         }
         /* target slice is not in the first chunk, no need to look for overlaps from the end of the reference */
     }
-    
+
     ON_FAIL ( LoadAlignments ( self, ctx, self -> ref_begin, self -> slice_offset, self -> slice_size ) )
         return false;
-    
+
     if ( self -> align_info_total > 0 )
     {
         ksort ( self -> align_info, self -> align_info_total, sizeof ( * self -> align_info ), AlignmentSortCircular, & self -> ref_length );
@@ -846,56 +858,56 @@ static
 bool LoadNextChunk ( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     assert ( self );
-    
+
     self -> align_info_total = 0;
     while ( self -> ref_begin < self -> ref_end )
     {
         ON_FAIL ( LoadAlignments ( self, ctx, self -> ref_begin, self -> slice_offset, self -> slice_size ) )
             return false;
-    
+
         if ( self -> align_info_total > 0 )
         {
             ksort ( self -> align_info, self -> align_info_total, sizeof ( * self -> align_info ), AlignmentSort, NULL );
             self -> align_info_cur = 0;
-        
+
             return true;
         }
 
         /* this chunk had no alignments - move to the next one */
         ++ self -> ref_begin;
     }
-    
+
     return false;
-} 
- 
+}
+
 static
 bool CSRA1_ReferenceWindowIteratorNext ( CSRA1_ReferenceWindow* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     if ( ! self -> seen_first )
     {   /* first call - position on the first alignment */
         self -> seen_first = true;
         if ( self -> circular )
-        {   
+        {
             return LoadFirstCircular ( self, ctx );
         }
     }
-    else 
+    else
     {
         /* clear cached alignment*/
         NGS_AlignmentRelease ( self -> cur_align, ctx );
         self -> cur_align = NULL;
-        
+
         ++ self -> align_info_cur;
         if ( self -> align_info_cur < self -> align_info_total )
             return true;
-            
+
         ++ self -> ref_begin;
     }
-    
+
     return LoadNextChunk ( self, ctx );
 }
 
@@ -913,8 +925,8 @@ static NGS_Alignment_vt CSRA1_ReferenceWindow_vt_inst =
         CSRA1_FragmentIsPaired,
         CSRA1_FragmentIsAligned,
         CSRA1_FragmentNext
-    }, 
-    
+    },
+
     CSRA1_ReferenceWindowGetAlignmentId,
     CSRA1_ReferenceWindowGetReferenceSpec,
     CSRA1_ReferenceWindowGetMappingQuality,
@@ -940,14 +952,15 @@ static NGS_Alignment_vt CSRA1_ReferenceWindow_vt_inst =
     CSRA1_ReferenceWindowGetMateAlignment,
     CSRA1_ReferenceWindowGetMateReferenceSpec,
     CSRA1_ReferenceWindowGetMateIsReversedOrientation,
+    CSRA1_ReferenceWindowIsFirst,
 
     /* Iterator */
     CSRA1_ReferenceWindowIteratorNext
 };
 
 static
-void CSRA1_ReferenceWindowInit ( CSRA1_ReferenceWindow * ref, 
-                                 ctx_t ctx, 
+void CSRA1_ReferenceWindowInit ( CSRA1_ReferenceWindow * ref,
+                                 ctx_t ctx,
                                  NGS_ReadCollection * coll,
                                  const struct NGS_Cursor* curs,
                                  bool circular,
@@ -965,7 +978,7 @@ void CSRA1_ReferenceWindowInit ( CSRA1_ReferenceWindow * ref,
                                  uint64_t id_offset )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
-    
+
     TRY ( NGS_AlignmentInit ( ctx, ref, & CSRA1_ReferenceWindow_vt_inst, "CSRA1_ReferenceWindow", "" ) )
     {
         TRY ( ref -> coll = (NGS_ReadCollection *) NGS_RefcountDuplicate ( & coll -> dad, ctx ) )
@@ -988,12 +1001,12 @@ void CSRA1_ReferenceWindowInit ( CSRA1_ReferenceWindow * ref,
             ref -> slice_size           = size;
         }
     }
-}                           
+}
 
 /* MakeCommon
  *  makes a common alignment from VCursor
  */
-NGS_Alignment * CSRA1_ReferenceWindowMake ( ctx_t ctx, 
+NGS_Alignment * CSRA1_ReferenceWindowMake ( ctx_t ctx,
                                             struct NGS_ReadCollection * coll,
                                             const struct NGS_Cursor* curs,
                                             bool circular,
@@ -1021,23 +1034,23 @@ NGS_Alignment * CSRA1_ReferenceWindowMake ( ctx_t ctx,
         SYSTEM_ERROR ( xcNoMemory, "allocating CSRA1_ReferenceWindow" );
     else
     {
-        TRY ( CSRA1_ReferenceWindowInit ( ref, 
-                                          ctx, 
-                                          coll, 
-                                          curs, 
+        TRY ( CSRA1_ReferenceWindowInit ( ref,
+                                          ctx,
+                                          coll,
+                                          curs,
                                           circular,
                                           ref_length,
                                           chunk_size,
                                           primary_begin_row,
                                           secondary_begin_row,
-                                          end_row, 
+                                          end_row,
                                           offset,
-                                          size, 
-                                          primary, 
+                                          size,
+                                          primary,
                                           secondary,
                                           filters,
                                           map_qual,
-                                          id_offset ) ) 
+                                          id_offset ) )
         {
             return ( NGS_Alignment * ) ref;
         }
