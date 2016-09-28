@@ -49,6 +49,7 @@ struct NGS_ReferenceBlob
 
     const VBlob* blob;
 
+    int64_t     refStart;  /* rowId of the first row in the reference */
     int64_t     rowId;  /* rowId of the first row in the blob */
     uint64_t    count;  /* number of rows in the blob */
 
@@ -73,16 +74,20 @@ static NGS_Refcount_vt NGS_ReferenceBlob_vt =
     NGS_ReferenceBlobWhack
 };
 
-struct NGS_ReferenceBlob * NGS_ReferenceBlobMake ( ctx_t ctx, const NGS_Cursor* p_curs, int64_t p_firstRowId )
+struct NGS_ReferenceBlob * NGS_ReferenceBlobMake ( ctx_t ctx, const NGS_Cursor* p_curs, int64_t p_refStartRowId, int64_t p_firstRowId )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcConstructing );
     if ( p_curs == NULL )
     {
         INTERNAL_ERROR ( xcParamNull, "NULL cursor object" );
     }
-    else if ( p_firstRowId < 1 )
+    else if ( p_refStartRowId < 1 )
     {
-        INTERNAL_ERROR ( xcParamNull, "Invalid rowId: %li", p_firstRowId );
+        INTERNAL_ERROR ( xcParamNull, "Invalid refStartRowId: %li", p_refStartRowId );
+    }
+    else if ( p_firstRowId < p_refStartRowId )
+    {
+        INTERNAL_ERROR ( xcParamNull, "Invalid rowId: %li (less than refStartId=%li)", p_firstRowId, p_refStartRowId );
     }
     else
     {
@@ -100,6 +105,7 @@ struct NGS_ReferenceBlob * NGS_ReferenceBlobMake ( ctx_t ctx, const NGS_Cursor* 
                     uint32_t row_len = PageMapGetIdxRowInfo ( ret -> blob -> pm, 0, NULL, NULL );
                     if ( row_len == ChunkSize )
                     {
+                        ret -> refStart = p_refStartRowId;
                         ret -> rowId = p_firstRowId;
                         TRY ( VByteBlob_ContiguousChunk ( ret -> blob, ctx, ret -> rowId, &ret -> data, &ret -> size, false ) )
                         {
@@ -199,6 +205,36 @@ uint64_t NGS_ReferenceBlobSize ( const struct NGS_ReferenceBlob * self, ctx_t ct
     return 0;
 }
 
+uint64_t NGS_ReferenceBlobUnpackedSize ( const struct NGS_ReferenceBlob * self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcAccessing );
+    uint64_t ret = 0;
+    if ( self == NULL )
+    {
+        INTERNAL_ERROR ( xcParamNull, "bad object reference" );
+    }
+    else
+    {
+        PageMapIterator pmIt;
+        rc_t rc = PageMapNewIterator ( (const PageMap*)self->blob->pm, &pmIt, self -> rowId - self -> first, self -> count );
+        if ( rc != 0 )
+        {
+            INTERNAL_ERROR ( xcUnexpected, "PageMapNewIterator() rc = %R", rc );
+        }
+        else
+        {
+            row_count_t  repeat;
+            do
+            {
+                repeat = PageMapIteratorRepeatCount ( &pmIt );
+                ret += repeat * PageMapIteratorDataLength ( &pmIt );
+            }
+            while ( PageMapIteratorAdvance ( &pmIt, repeat ) );
+        }
+    }
+    return ret;
+}
+
 void NGS_ReferenceBlobResolveOffset ( const struct NGS_ReferenceBlob * self, ctx_t ctx, uint64_t p_inBlob, uint64_t* p_inReference, uint32_t* p_repeatCount, uint64_t* p_increment )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcAccessing );
@@ -232,7 +268,7 @@ void NGS_ReferenceBlobResolveOffset ( const struct NGS_ReferenceBlob * self, ctx
                 assert ( PageMapIteratorDataLength ( &pmIt ) == ChunkSize );
                 if ( p_inBlob < offset + ChunkSize )
                 {
-                    * p_inReference =  ( self -> rowId - 1 ) * ChunkSize + inUnrolledBlob + p_inBlob % ChunkSize;
+                    * p_inReference =  ( self -> rowId - self -> refStart ) * ChunkSize + inUnrolledBlob + p_inBlob % ChunkSize;
                     if ( p_repeatCount != NULL )
                     {
                         * p_repeatCount = repeat;
@@ -286,7 +322,7 @@ bool NGS_ReferenceBlobFindRepeat ( const struct NGS_ReferenceBlob * self, ctx_t 
                 if ( repeat > 1 && p_startInBlob <= offset - baseOffset ) /* looking for the next repeated row */
                 {
                     * p_nextInBlob = offset - baseOffset;
-                    * p_inReference =  ( self -> rowId - 1 ) * ChunkSize + inUnrolledBlob;
+                    * p_inReference =  ( self -> rowId - self -> refStart ) * ChunkSize + inUnrolledBlob;
                     if ( p_repeatCount != NULL )
                     {
                         * p_repeatCount = repeat;

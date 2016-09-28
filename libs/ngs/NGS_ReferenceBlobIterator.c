@@ -44,6 +44,7 @@ struct NGS_ReferenceBlobIterator
     NGS_Refcount dad;
 
     const NGS_Cursor* curs;
+    int64_t first_row;
     int64_t last_row;
     int64_t next_row;
 };
@@ -84,6 +85,7 @@ NGS_ReferenceBlobIteratorMake ( ctx_t ctx, const struct NGS_Cursor* p_curs, int6
             {
                 TRY ( ret -> curs = NGS_CursorDuplicate ( p_curs, ctx ) )
                 {
+                    ret -> first_row = p_firstRowId;
                     ret -> last_row = p_lastRowId;
                     ret -> next_row = p_firstRowId;
                     return ret;
@@ -160,7 +162,7 @@ NGS_ReferenceBlobIteratorNext ( NGS_ReferenceBlobIterator * self, ctx_t ctx )
                                                & nextRow );
         if ( rc == 0 )
         {
-            TRY ( NGS_ReferenceBlob* ret = NGS_ReferenceBlobMake ( ctx, self -> curs, nextRow ) )
+            TRY ( NGS_ReferenceBlob* ret = NGS_ReferenceBlobMake ( ctx, self -> curs, self -> first_row, nextRow ) )
             {
                 int64_t first;
                 uint64_t count;

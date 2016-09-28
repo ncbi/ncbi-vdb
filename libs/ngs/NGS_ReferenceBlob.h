@@ -49,8 +49,10 @@ struct NGS_String;
 
 /* Make
  *  create a blob containing the given row in the reference
+ *  refStartId - Id of the first row of the reference containing the blob
+ *  firstRowId - Id of the first row of blob
  */
-struct NGS_ReferenceBlob * NGS_ReferenceBlobMake ( ctx_t ctx, const struct NGS_Cursor* curs, int64_t firstRowId );
+struct NGS_ReferenceBlob * NGS_ReferenceBlobMake ( ctx_t ctx, const struct NGS_Cursor* curs, int64_t refStartRowId, int64_t firstRowId );
 
 /* Release
  *  release reference to the blob
@@ -75,6 +77,11 @@ const void* NGS_ReferenceBlobData ( const struct NGS_ReferenceBlob * self, ctx_t
  *  returns the size the blob's data buffer
  */
 uint64_t NGS_ReferenceBlobSize ( const struct NGS_ReferenceBlob * self, ctx_t ctx );
+
+/* Unpacked Size
+ *  returns the unpacked size of the blob's data
+ */
+uint64_t NGS_ReferenceBlobUnpackedSize ( const struct NGS_ReferenceBlob * self, ctx_t ctx );
 
 /* ResolveOffset
  *  resolve offset inside the blob into offset on the reference

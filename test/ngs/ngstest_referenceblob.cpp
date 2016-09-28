@@ -93,14 +93,14 @@ public:
         NGS_StringRelease ( run_name, m_ctx );
         THROW_ON_RC ( VDatabaseRelease ( db ) );
     }
-    void GetBlob ( const char* p_acc, int64_t p_rowId )
+    void GetBlob ( const char* p_acc, int64_t p_rowId, int64_t p_refStart = 1 )
     {
         GetCursor ( p_acc );
         if ( m_blob != 0 )
         {
             NGS_ReferenceBlobRelease ( m_blob, m_ctx );
         }
-        m_blob = NGS_ReferenceBlobMake ( m_ctx, m_curs, p_rowId );
+        m_blob = NGS_ReferenceBlobMake ( m_ctx, m_curs, p_refStart, p_rowId );
     }
 
     const NGS_Cursor* m_curs;
@@ -113,7 +113,7 @@ TEST_CASE ( NGS_ReferenceBlob_Make_BadCursor)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
 
-    struct NGS_ReferenceBlob * blob = NGS_ReferenceBlobMake ( ctx, NULL, 1 );
+    struct NGS_ReferenceBlob * blob = NGS_ReferenceBlobMake ( ctx, NULL, 1, 1 );
     REQUIRE_FAILED ();
     REQUIRE_NULL ( blob );
 }
@@ -123,7 +123,19 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Make_BadRowId, ReferenceBlobFixture )
     ENTRY;
     GetCursor ( CSRA1_Accession );
 
-    struct NGS_ReferenceBlob * blob = NGS_ReferenceBlobMake ( ctx, m_curs, 0 );
+    struct NGS_ReferenceBlob * blob = NGS_ReferenceBlobMake ( ctx, m_curs, 1, 0 ); // rowId < refStart
+    REQUIRE_FAILED ();
+    REQUIRE_NULL ( blob );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Make_BadStartId, ReferenceBlobFixture )
+{
+    ENTRY;
+    GetCursor ( CSRA1_Accession );
+
+    struct NGS_ReferenceBlob * blob = NGS_ReferenceBlobMake ( ctx, m_curs, -1, 1 ); // bad refStart
     REQUIRE_FAILED ();
     REQUIRE_NULL ( blob );
 
@@ -135,7 +147,8 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Make, ReferenceBlobFixture )
     ENTRY;
     GetCursor ( CSRA1_Accession );
 
-    m_blob = NGS_ReferenceBlobMake ( ctx, m_curs, 1 );
+    m_blob = NGS_ReferenceBlobMake ( ctx, m_curs, 1, 1 );
+    REQUIRE ( ! FAILED () );
     REQUIRE_NOT_NULL ( m_blob );
 
     EXIT;
@@ -148,6 +161,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_DuplicateRelease, ReferenceBlobFixture
 
     // Duplicate
     NGS_ReferenceBlob* anotherBlob = NGS_ReferenceBlobDuplicate ( m_blob, ctx );
+    REQUIRE ( ! FAILED () );
     REQUIRE_NOT_NULL ( anotherBlob );
     // Release
     NGS_ReferenceBlobRelease ( anotherBlob, ctx );
@@ -157,36 +171,39 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_DuplicateRelease, ReferenceBlobFixture
 
 // Range
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Range_BadArg_1, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Range_NullArg_1, ReferenceBlobFixture )
 {
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
 
     uint64_t rowCount;
     NGS_ReferenceBlobRowRange ( m_blob, ctx, NULL, &rowCount );
+    REQUIRE ( ! FAILED () );
     REQUIRE_EQ ( (uint64_t)4, rowCount);
 
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Range_BadArg_2, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Range_NullArg_2, ReferenceBlobFixture )
 {
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
 
     int64_t firstRow;
     NGS_ReferenceBlobRowRange ( m_blob, ctx, &firstRow, NULL );
+    REQUIRE ( ! FAILED () );
     REQUIRE_EQ ( (int64_t)1, firstRow);
 
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Range_BadArg_3, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Range_NullArgs, ReferenceBlobFixture )
 {
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
 
     NGS_ReferenceBlobRowRange ( m_blob, ctx, NULL, NULL );
+    REQUIRE ( ! FAILED () );
 
     EXIT;
 }
@@ -199,6 +216,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Range, ReferenceBlobFixture )
     int64_t firstRow;
     uint64_t rowCount;
     NGS_ReferenceBlobRowRange ( m_blob, ctx, &firstRow, &rowCount );
+    REQUIRE ( ! FAILED () );
     REQUIRE_EQ ( (int64_t)1, firstRow );
     REQUIRE_EQ ( (uint64_t)4, rowCount );
 
@@ -213,6 +231,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Range_FirstRowInsideBlob, ReferenceBlobFix
     int64_t firstRow;
     uint64_t rowCount;
     NGS_ReferenceBlobRowRange ( m_blob, ctx, &firstRow, &rowCount );
+    REQUIRE ( ! FAILED () );
     REQUIRE_EQ ( (int64_t)3, firstRow );
     REQUIRE_EQ ( (uint64_t)1, rowCount );
 
@@ -238,6 +257,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Data, ReferenceBlobFixture )
     GetBlob ( CSRA1_Accession, 1 );
 
     const void* data = NGS_ReferenceBlobData ( m_blob, ctx );
+    REQUIRE ( ! FAILED () );
     REQUIRE_NOT_NULL ( data );
     REQUIRE_EQ ( string ( "GAATTCTAAA" ), string ( (const char*)data, 10 ) );
 
@@ -261,6 +281,26 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Size, ReferenceBlobFixture )
     GetBlob ( CSRA1_Accession, 1 );
 
     REQUIRE_EQ ( (uint64_t)20000, NGS_ReferenceBlobSize ( m_blob, ctx ) );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_UnpackedSize_NoRepeats, ReferenceBlobFixture )
+{
+    ENTRY;
+    GetBlob ( CSRA1_Accession, 1 );
+
+    REQUIRE_EQ ( (uint64_t)20000, NGS_ReferenceBlobUnpackedSize ( m_blob, ctx ) );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_UnpackedSize_WithRepeats, ReferenceBlobFixture )
+{
+    ENTRY;
+    GetBlob ( CSRA1_Accession_WithRepeats, 96 ); /* this blob consists of 9 repeated all-N rows */
+
+    REQUIRE_EQ ( (uint64_t)45000, NGS_ReferenceBlobUnpackedSize ( m_blob, ctx ) );
 
     EXIT;
 }
@@ -321,12 +361,31 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_FirstChunk_NoRepeat, Ref
     uint32_t repeatCount;
     uint64_t increment;
     NGS_ReferenceBlobResolveOffset ( m_blob, ctx, 6123, & inRef, & repeatCount, & increment );
+    REQUIRE ( ! FAILED () );
     REQUIRE_EQ ( (uint64_t)6123, inRef );
     REQUIRE_EQ ( (uint32_t)1, repeatCount  );
     REQUIRE_EQ ( (uint64_t)0, increment  );
 
     EXIT;
 }
+
+FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_NotTheFirstReference, ReferenceBlobFixture )
+{
+    ENTRY;
+    GetBlob ( CSRA1_Accession, 461, 460 ); /* 2nd row for the reference supercont2.1 */
+
+    uint64_t inRef;
+    uint32_t repeatCount;
+    uint64_t increment;
+    NGS_ReferenceBlobResolveOffset ( m_blob, ctx, 99, & inRef, & repeatCount, & increment );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_EQ ( (uint64_t)5099, inRef );   // relative to the reference the blob is in
+    REQUIRE_EQ ( (uint32_t)1, repeatCount  );
+    REQUIRE_EQ ( (uint64_t)0, increment  );
+
+    EXIT;
+}
+
 
 FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_NoRepeat, ReferenceBlobFixture )
 {
@@ -337,6 +396,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_NoRepeat, ReferenceBlobF
     uint32_t repeatCount;
     uint64_t increment;
     NGS_ReferenceBlobResolveOffset ( m_blob, ctx, 123, & inRef, & repeatCount, & increment );
+    REQUIRE ( ! FAILED () );
     REQUIRE_EQ ( (uint64_t)20123, inRef );
     REQUIRE_EQ ( (uint32_t)1, repeatCount  );
     REQUIRE_EQ ( (uint64_t)0, increment  );
@@ -353,6 +413,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_WithRepeat, ReferenceBlo
     uint32_t repeatCount;
     uint64_t increment;
     NGS_ReferenceBlobResolveOffset ( m_blob, ctx, 0, & inRef, & repeatCount, & increment );
+    REQUIRE ( ! FAILED () );
     REQUIRE_EQ ( (uint64_t)0, inRef );
     REQUIRE_EQ ( (uint32_t)2, repeatCount  );
     REQUIRE_EQ ( (uint64_t)5000, increment  );
@@ -369,6 +430,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_PastRepeat, ReferenceBlo
     uint32_t repeatCount;
     uint64_t increment;
     NGS_ReferenceBlobResolveOffset ( m_blob, ctx, 5100, & inRef, & repeatCount, & increment );
+    REQUIRE ( ! FAILED () );
     REQUIRE_EQ ( (uint64_t)10100, inRef );
     REQUIRE_EQ ( (uint32_t)1, repeatCount  );
     REQUIRE_EQ ( (uint64_t)0, increment  );
@@ -448,6 +510,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_FoundFirst, ReferenceBlobFi
     int64_t firstRow;
     uint64_t rowCount;
     NGS_ReferenceBlobRowRange ( m_blob, ctx, &firstRow, &rowCount );
+    REQUIRE ( ! FAILED () );
     REQUIRE_EQ ( (int64_t)repeatedRowId, firstRow );
     REQUIRE_EQ ( (uint64_t)9, rowCount );
 
@@ -456,6 +519,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_FoundFirst, ReferenceBlobFi
     uint32_t repeatCount;
     uint64_t increment;
     REQUIRE ( NGS_ReferenceBlobFindRepeat ( m_blob, ctx, 0, & nextInBlob, & inRef, & repeatCount, & increment ) );
+    REQUIRE ( ! FAILED () );
     REQUIRE_EQ ( (uint64_t)0, nextInBlob );
     REQUIRE_EQ ( (uint64_t)( repeatedRowId - 1 ) * 5000, inRef );
     REQUIRE_EQ ( (uint32_t)rowCount, repeatCount );
@@ -472,7 +536,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_FoundNext, ReferenceBlobFix
     int64_t row=1;
     while ( row < 4100 )
     {
-        m_blob = NGS_ReferenceBlobMake ( ctx, m_curs, row );
+        m_blob = NGS_ReferenceBlobMake ( ctx, m_curs, 1, row );
         if ( FAILED () )
         {
             CLEAR ();
@@ -482,6 +546,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_FoundNext, ReferenceBlobFix
         int64_t firstRow;
         uint64_t rowCount;
         NGS_ReferenceBlobRowRange ( m_blob, ctx, &firstRow, &rowCount );
+        REQUIRE ( ! FAILED () );
         if ( rowCount > 1 )
         {
             const bool PrintOn = false;
@@ -492,6 +557,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_FoundNext, ReferenceBlobFix
             uint64_t increment;
             while ( NGS_ReferenceBlobFindRepeat ( m_blob, ctx, nextInBlob, & nextInBlob, & inRef, & repeatCount, & increment ) )
             {
+                REQUIRE ( ! FAILED () );
                 if ( PrintOn && first )
                 {
                     cout << firstRow << ", " << rowCount << ": ";
@@ -519,8 +585,10 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_FoundNext, ReferenceBlobFix
                     int64_t rowId = inRef / increment + 1;
                     const void *base1;
                     NGS_CursorCellDataDirect ( m_curs, ctx, rowId, reference_READ, NULL, &base1, NULL, NULL );
+                    REQUIRE ( ! FAILED () );
                     const void *base2;
                     NGS_CursorCellDataDirect ( m_curs, ctx, rowId + 1, reference_READ, NULL, &base2, NULL, NULL );
+                    REQUIRE ( ! FAILED () );
                     REQUIRE_EQ ( 0, memcmp ( base1, base2, increment ) );
                 }
 
@@ -534,6 +602,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_FoundNext, ReferenceBlobFix
         row = firstRow + rowCount;
 
         NGS_ReferenceBlobRelease ( m_blob, ctx );
+        REQUIRE ( ! FAILED () );
         m_blob = NULL;
     }
 
@@ -606,6 +675,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_DuplicateRelease, ReferenceBlobIte
 
     // Duplicate
     struct NGS_ReferenceBlobIterator* anotherBlobIt = NGS_ReferenceBlobIteratorDuplicate ( m_blobIt, ctx );
+    REQUIRE ( ! FAILED () );
     REQUIRE_NOT_NULL ( anotherBlobIt );
     // Release
     NGS_ReferenceBlobIteratorRelease ( anotherBlobIt, ctx );
@@ -723,12 +793,53 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_FullScan, ReferenceBlobIteratorFix
         REQUIRE ( ! FAILED () );
         REQUIRE_NOT_NULL ( m_blob );
         NGS_ReferenceBlobRelease ( m_blob, m_ctx );
+        REQUIRE ( ! FAILED () );
+        m_blob = 0;
         ++count;
     }
     REQUIRE_EQ( (size_t)12, count);
 
     EXIT;
 }
+
+FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_MidTable, ReferenceBlobIteratorFixture )
+{
+    ENTRY;
+    GetIterator ( CSRA1_Accession, 100, 106 ); // start in the middle of the reference table
+
+    // move to the second blob in the set
+    m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_NOT_NULL ( m_blob );
+    NGS_ReferenceBlobRelease ( m_blob, ctx );
+    REQUIRE ( ! FAILED () );
+
+    m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_NOT_NULL ( m_blob );
+
+    // check blob's row range'
+    int64_t first;
+    uint64_t count;
+    NGS_ReferenceBlobRowRange ( m_blob, ctx,  & first, & count );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_EQ ( (int64_t)101, first );
+    REQUIRE_EQ ( (uint64_t)4, count );
+
+    // verify that the blob was given the right reference start row
+    uint64_t inRef;
+    uint32_t repeatCount;
+    uint64_t increment;
+    NGS_ReferenceBlobResolveOffset ( m_blob, ctx, 99, & inRef, & repeatCount, & increment );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_EQ ( (uint64_t)5099, inRef ); // relative to the ref start
+    REQUIRE_EQ ( (uint32_t)1, repeatCount  );
+    REQUIRE_EQ ( (uint64_t)0, increment  );
+
+    EXIT;
+}
+
+
 
 //////////////////////////////////////////// Main
 
