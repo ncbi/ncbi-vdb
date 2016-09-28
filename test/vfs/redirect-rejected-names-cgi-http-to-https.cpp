@@ -27,11 +27,16 @@
 #include <kfg/config.h> /* KConfig */
 #include <kfs/directory.h> /* KDirectory */
 #include <klib/debug.h> /* KDbgSetString */
+#include <klib/rc.h>
+#include <kns/http.h> /* KClientHttpRequest */
+#include <kns/manager.h> /* KNSManager */
 #include <ktst/unit_test.hpp>
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
 #include <vfs/path.h> /* VPath */
 #include <vfs/resolver.h> /* VResolver */
+
+#include "../../libs/kns/http-priv.h" /* KNSManagerMakeClientHttpInt */
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
@@ -94,8 +99,23 @@ public:
                 ( VResolverQuery ( resolver, 0, query, 0, & remote, 0 ) );
         else
 #endif
-            REQUIRE_RC
-                ( VResolverQuery ( resolver, 0, query, 0, & remote, 0 ) );
+        {
+            KNSManager * mgr = NULL;
+            REQUIRE_RC ( VFSManagerGetKNSMgr ( vfs, & mgr ) );
+            KClientHttpRequest * req = NULL;
+            if ( KNSManagerMakeClientRequest
+                    ( mgr, & req, 0x01010000, NULL, url )
+                ==  SILENT_RC
+                    ( rcNS, rcNoTarg, rcValidating, rcConnection, rcNotFound ) )
+            {
+                std::cerr << "Skipped test of not found " << url << "\n";
+            } else {
+                REQUIRE_RC
+                    ( VResolverQuery ( resolver, 0, query, 0, & remote, 0 ) );
+            }
+            RELEASE ( KClientHttpRequest, req );
+            RELEASE ( KNSManager, mgr );
+        }
         RELEASE ( VPath, query );
 
         RELEASE ( VPath, remote );
