@@ -1440,8 +1440,16 @@ rc_t VFSManagerOpenDirectoryReadHttp (const VFSManager *self,
                 sizeof extension - 1,
                 extension, sizeof extension - 1, sizeof extension - 1 ) != 0 )
         {
+          const String * p = NULL;
+          rc_t rc = VPathMakeString ( path, & p );
+          if ( rc == 0 ) {
+                PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(path)'",
+                                       "path=%S", p ) );
+                free (  ( void * ) p );
+          } else {
             PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(scheme):$(path)'",
                              "scheme=%S,path=%S", & path -> scheme, s ) );
+          }
         }
     }
     else
