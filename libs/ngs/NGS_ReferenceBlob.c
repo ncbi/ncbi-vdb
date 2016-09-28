@@ -265,17 +265,19 @@ void NGS_ReferenceBlobResolveOffset ( const struct NGS_ReferenceBlob * self, ctx
             {
                 elem_count_t offset = PageMapIteratorDataOffset ( &pmIt );
                 row_count_t  repeat = PageMapIteratorRepeatCount ( &pmIt );
-                assert ( PageMapIteratorDataLength ( &pmIt ) == ChunkSize );
-                if ( p_inBlob < offset + ChunkSize )
+                int64_t size = PageMapIteratorDataLength ( &pmIt );
+                assert ( size <= ChunkSize ); /* this may be the last chunk, shorter than ChunkSize */
+                if ( p_inBlob < offset + size * repeat )
                 {
-                    * p_inReference =  ( self -> rowId - self -> refStart ) * ChunkSize + inUnrolledBlob + p_inBlob % ChunkSize;
+                    /* assume all the prior chunks of this reference were ChunkSize long */
+                    * p_inReference =  ( self -> rowId - self -> refStart ) * ChunkSize + inUnrolledBlob + p_inBlob % size;
                     if ( p_repeatCount != NULL )
                     {
                         * p_repeatCount = repeat;
                     }
                     if ( p_increment != NULL )
                     {
-                        * p_increment = repeat > 1 ? ChunkSize : 0;
+                        * p_increment = repeat > 1 ? size : 0;
                     }
                     return;
                 }
@@ -284,7 +286,7 @@ void NGS_ReferenceBlobResolveOffset ( const struct NGS_ReferenceBlob * self, ctx
                     INTERNAL_ERROR ( xcParamNull, "offset %lu is not found in (row=%li, count=%lu)", p_inBlob, self -> rowId, self -> count );
                     return;
                 }
-                inUnrolledBlob += repeat * ChunkSize;
+                inUnrolledBlob += repeat * size;
             }
         }
     }
