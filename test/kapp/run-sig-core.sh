@@ -71,7 +71,7 @@ elif [ "$HOST_OS" = "linux" ]; then
 
    if [ "`cat /proc/sys/kernel/core_pattern`" != "core" ]; then
        echo "Unknown core file pattern" 1>&2
-       exit 0 # TEMPORARY, DO NOT COMMIT
+       exit 2
    fi
    CORE_FOLDER="./"
 else
@@ -83,7 +83,7 @@ fi
 # them in background. Lets start it normally and run
 # `kill` command in background.
 killFromBackground $$ &
-$BINARY_PATH
+$BINARY_PATH 
 
 # Wait for `kill` job
 wait
@@ -105,12 +105,12 @@ if [ "$BUILD_TYPE" = "dbg" ]; then
    fi
 else
    if [ -f $CORE_FILE ]; then
-       rm $CORE_FILE
+       rm $CORE_FILE 
        echo "Failed: Core file generated while shouldn't and was removed" 1>&2
        exit 4
     else
        echo "Success: No core file detected"
        exit 0
-    fi
+    fi 
 fi
 
