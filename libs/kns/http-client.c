@@ -23,6 +23,7 @@
 * ==============================================================================
 *
 */
+
 #include <kns/extern.h>
 
 #define KSTREAM_IMPL KClientHttpStream
@@ -30,6 +31,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 
 #include <kns/manager.h>
 #include <kns/http.h>
+#include <kns/http-priv.h> /* KClientHttpResultFormatMsg */
 #include <kns/adapt.h>
 #include <kns/endpoint.h>
 #include <kns/socket.h>
@@ -2891,6 +2893,49 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostParam ( KClientHttpRequest *self, co
     va_start ( args, fmt );
     rc = KClientHttpRequestVAddPostParam ( self, fmt, args );
     va_end ( args );
+
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC KClientHttpResultFormatMsg (
+    const struct KClientHttpResult * self, char * buffer,
+    size_t bsize, size_t * len, const char * bol, const char * eol )
+{
+    rc_t rc = 0;
+
+    size_t total = 0;
+
+    if ( self == NULL ) {
+        return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
+    }
+
+    if ( len == NULL || bol == NULL || eol == NULL ) {
+        return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
+    }
+
+    rc = string_printf ( buffer, bsize, len, 
+            "%sHTTP/%.2V %d %S%s", bol
+            , self -> version
+            , self -> status
+            , & self -> msg, eol
+        );
+    total = * len;
+
+    if ( rc == 0 ) {
+        const KHttpHeader * node = NULL;
+        for ( node = ( const KHttpHeader* ) BSTreeFirst ( & self -> hdrs );
+              rc == 0 && node != NULL;
+              node = ( const KHttpHeader* ) BSTNodeNext ( & node -> dad ) )
+        {
+            /* add header line */
+            rc = string_printf ( & buffer [ total ], bsize - total, len,
+                             "%s%S: %S\r%s", bol
+                             , & node -> name
+                             , & node -> value, eol );
+            total += * len;
+        }
+    }
 
     return rc;
 }
