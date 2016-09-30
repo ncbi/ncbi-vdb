@@ -1800,7 +1800,7 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
     struct KSocket ** out, timeout_t * retryTimeout, int32_t readMillis, int32_t writeMillis,
     struct KEndPoint const * from, struct KEndPoint const * to )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( out == NULL )
         rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcNull );

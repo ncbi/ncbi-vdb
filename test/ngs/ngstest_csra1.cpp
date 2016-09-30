@@ -500,6 +500,19 @@ FIXTURE_TEST_CASE(CSRA1_NGS_AlignmentIsPrimary_No, CSRA1_Fixture)
     EXIT;
 }
 
+FIXTURE_TEST_CASE(CSRA1_NGS_AlignmentIsFirst_Yes, CSRA1_Fixture)
+{
+    ENTRY_GET_ALIGN( CSRA1_PrimaryOnly, 1 );
+    REQUIRE( NGS_AlignmentIsFirst ( m_align, ctx ) );
+    EXIT;
+}
+FIXTURE_TEST_CASE(CSRA1_NGS_AlignmentIsFirst_No, CSRA1_Fixture)
+{
+    ENTRY_GET_ALIGN( CSRA1_PrimaryOnly, 2 );
+    REQUIRE( ! NGS_AlignmentIsFirst ( m_align, ctx ) );
+    EXIT;
+}
+
 FIXTURE_TEST_CASE(CSRA1_NGS_AlignmentGetAlignmentPosition, CSRA1_Fixture)
 {
     ENTRY_GET_ALIGN( CSRA1_PrimaryOnly, 1 );

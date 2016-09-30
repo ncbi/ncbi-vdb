@@ -37,7 +37,7 @@
 *  starts at rowId, ends before a repeated value or at the end of the blob
 */
 void
-VByteBlob_ContiguousChunk ( const VBlob* p_blob,  ctx_t ctx, int64_t rowId, const void** p_data, uint64_t* p_size )
+VByteBlob_ContiguousChunk ( const VBlob* p_blob,  ctx_t ctx, int64_t rowId, const void** p_data, uint64_t* p_size, bool p_stopAtRepeat )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcAccessing );
 
@@ -76,7 +76,7 @@ VByteBlob_ContiguousChunk ( const VBlob* p_blob,  ctx_t ctx, int64_t rowId, cons
             {
                 INTERNAL_ERROR ( xcUnexpected, "VBlobIdRange() rc = %R", rc );
             }
-            else
+            else if ( p_stopAtRepeat )
             {
                 PageMapIterator pmIt;
 
@@ -106,6 +106,10 @@ VByteBlob_ContiguousChunk ( const VBlob* p_blob,  ctx_t ctx, int64_t rowId, cons
                 {
                     *p_size = row_len;
                 }
+            }
+            else
+            {   /* set the size to include the rest of the blob's data */
+                *p_size = BlobBufferBytes ( p_blob ) - ( (const uint8_t*)( base ) - (const uint8_t*)( p_blob -> data . base ) );
             }
         }
     }
