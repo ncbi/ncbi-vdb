@@ -2903,7 +2903,6 @@ LIB_EXPORT rc_t CC KClientHttpResultFormatMsg (
     size_t bsize, size_t * len, const char * bol, const char * eol )
 {
     rc_t rc = 0;
-
     size_t total = 0;
 
     if ( self == NULL ) {
@@ -2922,20 +2921,39 @@ LIB_EXPORT rc_t CC KClientHttpResultFormatMsg (
         );
     total = * len;
 
-    if ( rc == 0 ) {
+    if ( rc == 0 ||
+        ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
+          GetRCState ( rc ) == rcInsufficient ) )
+    {
         const KHttpHeader * node = NULL;
         for ( node = ( const KHttpHeader* ) BSTreeFirst ( & self -> hdrs );
-              rc == 0 && node != NULL;
+              node != NULL;
               node = ( const KHttpHeader* ) BSTNodeNext ( & node -> dad ) )
         {
+            size_t p_bsize
+                = rc == 0
+                    ? bsize >= total ? bsize - total : 0
+                    : 0;
             /* add header line */
-            rc = string_printf ( & buffer [ total ], bsize - total, len,
+            rc_t r2 = string_printf ( & buffer [ total ], p_bsize, len,
                              "%s%S: %S\r%s", bol
                              , & node -> name
                              , & node -> value, eol );
             total += * len;
+            if ( rc == 0 ) {
+                rc = r2;
+            }
         }
     }
+
+    if ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
+        GetRCState ( rc ) == rcInsufficient )
+    {
+        ++ total;
+    }
+
+
+    * len = total;
 
     return rc;
 }
@@ -2949,6 +2967,7 @@ rc_t KClientHttpRequestFormatMsg ( KClientHttpRequest *self,
     bool have_user_agent = false;
     String user_agent_string;
     size_t total;
+    size_t p_bsize = 0;
     const KHttpHeader *node;
 
     KClientHttp *http = self -> http;
@@ -3032,8 +3051,10 @@ rc_t KClientHttpRequestFormatMsg ( KClientHttpRequest *self,
                 have_user_agent = true;
         }
 
+        p_bsize = bsize >= total ? bsize - total : 0;
+
         /* add header line */
-        rc = string_printf ( & buffer [ total ], bsize - total, len,
+        rc = string_printf ( & buffer [ total ], p_bsize, len,
                              "%S: %S\r\n"
                              , & node -> name
                              , & node -> value );
@@ -3047,7 +3068,9 @@ rc_t KClientHttpRequestFormatMsg ( KClientHttpRequest *self,
         rc = KNSManagerGetUserAgent ( &ua );
         if ( rc == 0 )
         {
-            rc = string_printf ( & buffer [ total ], bsize - total, len, "User-Agent: %s\r\n", ua );
+            p_bsize = bsize >= total ? bsize - total : 0;
+            rc = string_printf ( & buffer [ total ],
+                p_bsize, len, "User-Agent: %s\r\n", ua );
             total += * len;
         }
     }
@@ -3055,7 +3078,8 @@ rc_t KClientHttpRequestFormatMsg ( KClientHttpRequest *self,
     /* add terminating empty header line */
     if ( rc == 0 )
     {
-        rc = string_printf ( & buffer [ total ], bsize - total, len, "\r\n" );
+        p_bsize = bsize >= total ? bsize - total : 0;
+        rc = string_printf ( & buffer [ total ], p_bsize, len, "\r\n" );
         * len += total;
     }
     
