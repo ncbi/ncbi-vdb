@@ -797,6 +797,8 @@ static rc_t KListenerIPv4Accept ( KSocket * self, struct KSocket ** out )
         rc = RC ( rcNS, rcConnection, rcWaiting, rcMemory, rcExhausted );
     else
     {
+        new_socket -> type = ipIPV4;
+
         new_socket -> read_timeout = self -> read_timeout;
         new_socket -> write_timeout = self -> write_timeout;
 
@@ -953,6 +955,8 @@ static rc_t KListenerIPv6Accept ( KSocket * self, struct KSocket ** out )
         rc = RC ( rcNS, rcConnection, rcWaiting, rcMemory, rcExhausted );
     else
     {
+        new_socket -> type = ipIPV6;
+
         new_socket -> read_timeout = self -> read_timeout;
         new_socket -> write_timeout = self -> write_timeout;
 
@@ -1824,6 +1828,7 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                 conn -> read_timeout = readMillis;
                 conn -> write_timeout = writeMillis;
 
+                conn -> type = to -> type;
                 switch ( to -> type )
                 {
                 case epIPV4:

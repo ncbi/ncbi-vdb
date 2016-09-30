@@ -1032,6 +1032,7 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                             uint32_t remaining, delay;
 
                             /* try to connect using appropriate protocol */
+                            conn -> type = to -> type;
                             switch ( to -> type )
                             {
                             case epIPV4:
