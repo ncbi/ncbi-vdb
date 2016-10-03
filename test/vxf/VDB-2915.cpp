@@ -104,6 +104,8 @@ static uint64_t rand_uint64()
 {
     uint64_t res = rand();
     res *= rand();
+    res &= 0x0FFFFFFFFFFFFFFF; // JOJOBA: kinda strange :)
+    // res &= 0x7FFFFFFFFFFFFFFF;
     return res;
 }
 
