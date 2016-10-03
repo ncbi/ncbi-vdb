@@ -27,6 +27,11 @@
 #include <vdb/table.h>
 #include <vdb/cursor.h>
 #include <vdb/schema.h>
+#include <vdb/vdb-priv.h>
+
+#include <kfg/config.h>
+#include <vfs/manager.h>
+#include <vfs/manager-priv.h>
 
 #include <kdb/table.h>
 
@@ -138,8 +143,20 @@ public:
     {
         RemoveTable();
 
+        KDirectory * root_dir = NULL;
+        THROW_ON_RC( KDirectoryNativeDir( &root_dir ) );
+        
+        const KDirectory * dir = NULL;
+        THROW_ON_RC( KDirectoryOpenDirRead ( root_dir, &dir, false, "local_config" ) );
+        KConfig * cfg;
+        THROW_ON_RC( KConfigMake ( &cfg, dir ) );
+        
+        struct VFSManager * vfs_mgr;
+        THROW_ON_RC( VFSManagerMakeFromKfg ( &vfs_mgr, cfg ) );
+        
         VDBManager * mgr;
-        THROW_ON_RC( VDBManagerMakeUpdate ( &mgr, NULL ) );
+        THROW_ON_RC( VDBManagerMakeUpdateWithVFSManager ( &mgr, NULL, vfs_mgr ) );
+        
         VSchema *schema;
         THROW_ON_RC( VDBManagerMakeSchema ( mgr, &schema ) );
         THROW_ON_RC( VSchemaParseText( schema, NULL, p_schemaText.c_str(), p_schemaText.size() ) );
@@ -153,6 +170,10 @@ public:
         THROW_ON_RC( VTableCreateCursorWrite( m_table, &m_cursor, kcmInsert ) );
         THROW_ON_RC( VSchemaRelease( schema ) );
         THROW_ON_RC( VDBManagerRelease( mgr ) );
+        THROW_ON_RC( VFSManagerRelease( vfs_mgr ) );
+        THROW_ON_RC( KConfigRelease( cfg ) );
+        THROW_ON_RC( KDirectoryRelease( dir ) );
+        THROW_ON_RC( KDirectoryRelease( root_dir ) );        
     }
 
     void OpenTable()
