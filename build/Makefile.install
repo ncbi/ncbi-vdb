@@ -79,6 +79,7 @@ ifeq (true, $(LINUX_ROOT))
 	@ echo "Installing configuration files to $(KONFIG_DIR)"
 	@ mkdir -p $(KONFIG_DIR)
 	@ cp $(TOP)/libs/kfg/default.kfg $(KONFIG_DIR)/ncbi-vdb.kfg
+	@ cp $(TOP)/libs/kfg/certs.kfg $(KONFIG_DIR)/certs.kfg
 	@ #
 	@ echo "Updating $(PROFILE_FILE).[c]sh"
 	@ printf \
@@ -103,6 +104,7 @@ else
 	@ echo "Installing configuration files to $(LIB_TARGET)/ncbi/"
 	@ mkdir -p $(LIB_TARGET)/ncbi
 	@ cp $(TOP)/libs/kfg/default.kfg $(LIB_TARGET)/ncbi/ncbi-vdb.kfg
+	@ cp $(TOP)/libs/kfg/certs.kfg $(LIB_TARGET)/ncbi/certs.kfg
 	@ #
 	@ echo "Please add $(LIB_TARGET) to your LD_LIBRARY_PATH, e.g.:"
 	@ echo "      export LD_LIBRARY_PATH=$(LIB_TARGET):\$$LD_LIBRARY_PATH"
