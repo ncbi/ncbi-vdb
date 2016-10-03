@@ -63,7 +63,7 @@ static rc_t CC KNSManagerNewReleaseVersionImpl(const struct KNSManager *self,
     memset(&result, 0, sizeof result);
     if (rc == 0) {
         rc = KNSManagerMakeRequest(self, &req, 0x01010000, NULL,
-  "http://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current.version"
+  "https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current.version"
         );
     }
     if (rc == 0) {

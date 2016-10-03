@@ -51,34 +51,6 @@ rc_t aws_KConfigNodeUpdateChild ( KConfigNode *self, String *name, String *value
 
     return rc;
 }
-    
-static
-void StringTrim ( String *trim, const String *source )
-{
-    uint32_t str_len = source -> len;
-    const char *start = source -> addr;
-    const char *end = start + source -> size;
-
-    while ( start < end )
-    {
-        if ( ! isspace ( * start ) )
-            break;
-
-        ++ start;
-        -- str_len;
-    } 
-
-    while ( end > start )
-    {
-        if ( ! isspace ( end [ - 1 ] ) )
-            break;
-
-        -- end;
-        -- str_len;
-    } 
-
-    StringInit ( trim, start, end - start, str_len );
-}
 
 static
 rc_t aws_extract_key_value_pair ( const String *source, String *key, String *val )
@@ -93,13 +65,13 @@ rc_t aws_extract_key_value_pair ( const String *source, String *key, String *val
 
     /* key */
     StringInit ( &k, start, eql - start, string_len ( start, eql - start ) );
-    StringTrim ( key, &k );
+    StringTrim ( &k, key );
 
     start = eql + 1;
 
     /* value */
     StringInit ( &v, start, end - start,  string_len ( start, end - start ) ); 
-    StringTrim ( val, &v );
+    StringTrim ( &v, val );
     return 0;
 }
 
@@ -123,7 +95,7 @@ void aws_parse_file ( const KFile *self, KConfigNode *aws_node,
 
         StringInit ( &string, start, sep - start, string_len ( start, sep - start ) );
         
-        StringTrim ( &trim, &string );
+        StringTrim ( &string, &trim );
 
         /* check for comment line and skip */
         if ( StringLength ( & trim ) != 0 && trim . addr [ 0 ] == '#' )

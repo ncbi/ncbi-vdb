@@ -38,6 +38,8 @@
 #include <klib/refcount.h>
 #include <klib/rc.h>
 
+#include <kproc/timeout.h>
+
 #include <kns/manager.h>
 #include <kns/socket.h>
 #include <kns/http.h>
@@ -55,7 +57,7 @@
 #include <stdio.h> /* fprintf */
 
 #ifndef MAX_CONN_LIMIT
-#define MAX_CONN_LIMIT ( 10 * 60 )
+#define MAX_CONN_LIMIT ( 60 * 1000 )
 #endif
 
 #ifndef MAX_CONN_READ_LIMIT
@@ -268,6 +270,8 @@ rc_t KNSManagerWhack ( KNSManager * self )
     
     rc = HttpRetrySpecsDestroy ( & self -> retry_specs );
 
+    KTLSGlobalsWhack ( & self -> tlsg );
+
     free ( self );
 
     KNSManagerCleanup ();
@@ -468,6 +472,8 @@ LIB_EXPORT bool KNSManagerIsVerbose ( const KNSManager *self )
 LIB_EXPORT rc_t CC KNSManagerMakeConnection ( const KNSManager * self,
     struct KSocket **conn, struct KEndPoint const *from, struct KEndPoint const *to )
 {
+    timeout_t tm;
+
     if ( self == NULL )
     {
         if ( conn == NULL )
@@ -478,8 +484,10 @@ LIB_EXPORT rc_t CC KNSManagerMakeConnection ( const KNSManager * self,
         return RC ( rcNS, rcStream, rcConstructing, rcSelf, rcNull );
     }
 
+    TimeoutInit ( & tm, self -> conn_timeout );
+
     return KNSManagerMakeRetryTimedConnection ( self, conn, 
-        self -> conn_timeout, self -> conn_read_timeout, self -> conn_write_timeout, from, to );
+        & tm, self -> conn_read_timeout, self -> conn_write_timeout, from, to );
 }
 /* MakeTimedConnection
  *  create a connection-oriented stream
@@ -503,6 +511,8 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedConnection ( struct KNSManager const * sel
     struct KSocket **conn, int32_t readMillis, int32_t writeMillis,
     struct KEndPoint const *from, struct KEndPoint const *to )
 {
+    timeout_t tm;
+
     if ( self == NULL )
     {
         if ( conn == NULL )
@@ -513,8 +523,10 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedConnection ( struct KNSManager const * sel
         return RC ( rcNS, rcStream, rcConstructing, rcSelf, rcNull );
     }
 
+    TimeoutInit ( & tm, self -> conn_timeout );
+
     return KNSManagerMakeRetryTimedConnection ( self, conn, 
-        self -> conn_timeout, readMillis, writeMillis, from, to );
+        & tm, readMillis, writeMillis, from, to );
 }    
     
 /* MakeRetryConnection
@@ -532,7 +544,8 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedConnection ( struct KNSManager const * sel
  *  both endpoints have to be of type epIP; creates a TCP connection
  */    
 LIB_EXPORT rc_t CC KNSManagerMakeRetryConnection ( struct KNSManager const * self,
-    struct KSocket **conn, int32_t retryTimeout, struct KEndPoint const *from, struct KEndPoint const *to )
+    struct KSocket ** conn, timeout_t * retryTimeout,
+    struct KEndPoint const * from, struct KEndPoint const * to )
 {
     if ( self == NULL )
     {
@@ -556,28 +569,22 @@ LIB_EXPORT rc_t CC KNSManagerMakeRetryConnection ( struct KNSManager const * sel
  *  for connects, reads and writes respectively.
  */
 LIB_EXPORT rc_t CC KNSManagerSetConnectionTimeouts ( KNSManager *self,
-    int32_t connectSecs, int32_t readMillis, int32_t writeMillis )
+    int32_t connectMillis, int32_t readMillis, int32_t writeMillis )
 {
     if ( self == NULL )
         return RC ( rcNS, rcMgr, rcUpdating, rcSelf, rcNull );
 
     /* limit values */
-    if ( connectSecs < 0 )
-        connectSecs = -1;
-    else if ( connectSecs > MAX_CONN_LIMIT )
-        connectSecs = MAX_CONN_LIMIT;
+    if ( connectMillis < 0 || connectMillis > MAX_CONN_LIMIT )
+        connectMillis = MAX_CONN_LIMIT;
         
-    if ( readMillis < 0 )
-        readMillis = -1;
-    else if ( readMillis > MAX_CONN_READ_LIMIT )
+    if ( readMillis < 0 || readMillis > MAX_CONN_READ_LIMIT )
         readMillis = MAX_CONN_READ_LIMIT;
 
-    if ( writeMillis < 0 )
-        writeMillis = -1;
-    else if ( writeMillis > MAX_CONN_WRITE_LIMIT )
+    if ( writeMillis < 0 || writeMillis > MAX_CONN_WRITE_LIMIT )
         writeMillis = MAX_CONN_WRITE_LIMIT;
 
-    self -> conn_timeout = connectSecs;
+    self -> conn_timeout = connectMillis;
     self -> conn_read_timeout = readMillis;
     self -> conn_write_timeout = writeMillis;
 
@@ -599,14 +606,10 @@ LIB_EXPORT rc_t CC KNSManagerSetHTTPTimeouts ( KNSManager *self,
         return RC ( rcNS, rcMgr, rcUpdating, rcSelf, rcNull );
 
     /* limit values */
-    if ( readMillis < 0 )
-        readMillis = -1;
-    else if ( readMillis > MAX_HTTP_READ_LIMIT )
+    if ( readMillis < 0 || readMillis > MAX_HTTP_READ_LIMIT )
         readMillis = MAX_HTTP_READ_LIMIT;
 
-    if ( writeMillis < 0 )
-        writeMillis = -1;
-    else if ( writeMillis > MAX_HTTP_WRITE_LIMIT )
+    if ( writeMillis < 0 || writeMillis > MAX_HTTP_WRITE_LIMIT )
         writeMillis = MAX_HTTP_WRITE_LIMIT;
 
     self -> http_read_timeout = readMillis;
@@ -766,10 +769,12 @@ static bool KNSManagerHttpProxyInitFromEnv ( KNSManager * self ) {
     bool loaded = false;
 
     const char * env_list [] = {
-        "http_proxy",
-        "HTTP_PROXY",
+        "https_proxy",
+        "HTTPS_PROXY",
         "all_proxy",
         "ALL_PROXY",
+        "http_proxy",
+        "HTTP_PROXY",
     };
 
     int i = 0;
@@ -814,14 +819,18 @@ bool KNSManagerHttpProxyInitFromKfg ( KNSManager * self, const KConfig * kfg )
     return fromKfg;
 }
 
-static bool StringCmp ( const String * self, const char * val ) {
-    size_t sz = string_size (val );
+static bool StringCmp ( const String * self, const char * val )
+{
     String v;
-    StringInit ( & v, val, sz, sz );
-    return StringCompare ( self, & v ) == 0;
+    StringInitCString ( & v, val );
+    return StringEqual ( self, & v );
 }
 
-static rc_t StringRelease ( String * self ) { free ( self ); return 0; }
+static rc_t StringRelease ( String * self )
+{
+    StringWhack ( self );
+    return 0;
+}
 
 static
 void KNSManagerHttpProxyInit ( KNSManager * self, const KConfig * kfg )
@@ -965,10 +974,14 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
                 rc = HttpRetrySpecsInit ( & mgr -> retry_specs, kfg );
                 if ( rc == 0 )
                 {
-                    KNSManagerLoadAWS ( mgr, kfg );
-                    KNSManagerHttpProxyInit ( mgr, kfg );
-                    * mgrp = mgr;
-                    return 0;
+                    rc = KTLSGlobalsInit ( & mgr -> tlsg, kfg );
+                    if ( rc == 0 )
+                    {
+                        KNSManagerLoadAWS ( mgr, kfg );
+                        KNSManagerHttpProxyInit ( mgr, kfg );
+                        * mgrp = mgr;
+                        return 0;
+                    }
                 }
             }
 

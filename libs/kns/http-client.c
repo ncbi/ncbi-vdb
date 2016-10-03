@@ -34,6 +34,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 #include <kns/endpoint.h>
 #include <kns/socket.h>
 #include <kns/stream.h>
+#include <kns/tls.h>
 #include <kns/impl.h>
 #include <vfs/path.h>
 #include <kfs/file.h>
@@ -43,11 +44,12 @@ typedef struct KClientHttpStream KClientHttpStream;
 #undef ERR
 #endif
 
-#include <klib/debug.h> /* DBGMSG */
+#include <klib/debug.h>
 #include <klib/text.h>
 #include <klib/container.h>
 #include <klib/out.h>
 #include <klib/log.h>
+#include <klib/status.h>
 #include <klib/refcount.h>
 #include <klib/rc.h>
 #include <klib/printf.h>
@@ -69,10 +71,14 @@ typedef struct KClientHttpStream KClientHttpStream;
 
 #include "http-priv.h"
 
+
 #if _DEBUGGING && 0
 #include <stdio.h>
 #define TRACE( x, ... ) \
     fprintf ( stderr, "@@ %s:%d: %s: " x, __FILE__, __LINE__, __func__, __VA_ARGS__ )
+#elif _DEBUGGING && defined _h_klib_status_ && 0
+#define TRACE( x, ... ) \
+    STATUS ( 0, "@@ %s:%d: %s: " x, __FILE__, __LINE__, __func__, __VA_ARGS__ )
 #else
 #define TRACE( x, ... ) \
     ( ( void ) 0 )
@@ -184,43 +190,52 @@ rc_t KClientHttpWhack ( KClientHttp * self )
 }
 
 
-typedef struct KEndPointArgsIterator {
+typedef struct KEndPointArgsIterator KEndPointArgsIterator;
+struct KEndPointArgsIterator
+{
     const HttpProxy * proxy;
     const String * hostname;
     uint16_t port;
     uint16_t dflt_proxy_ports [ 2 ];
     size_t dflt_proxy_ports_idx;
     bool done;
-} KEndPointArgsIterator;
-static void KEndPointArgsIteratorMake ( KEndPointArgsIterator * self,
+};
+
+static
+void KEndPointArgsIteratorMake ( KEndPointArgsIterator * self,
     const KNSManager * mgr, const String * hostname, uint16_t port )
 {
     assert ( self );
     memset ( self, 0, sizeof * self );
+
     self -> dflt_proxy_ports [ 0 ] = 3128;
     self -> dflt_proxy_ports [ 1 ] = 8080;
-    if ( ! mgr -> http_proxy_only ) {
+
+    if ( ! mgr -> http_proxy_only )
+    {
         self -> hostname = hostname;
         self -> port = port;
     }
-    if ( mgr -> http_proxy_enabled ) {
+
+    if ( mgr -> http_proxy_enabled )
         self -> proxy = KNSManagerGetHttpProxy ( mgr );
-    }
-    if ( self -> hostname == NULL && self -> proxy == NULL ) {
+
+    if ( self -> hostname == NULL && self -> proxy == NULL )
         self -> done = true;
-    }
 }
 
-static bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
+static
+bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
     const String ** hostname, uint16_t * port,
     bool * proxy_default_port, bool * proxy_ep )
 {
     static const uint16_t dflt_proxy_ports_sz =
         sizeof self -> dflt_proxy_ports / sizeof self -> dflt_proxy_ports [ 0 ];
-    assert ( self );
-    if ( self -> done ) {
+
+    assert ( self != NULL );
+
+    if ( self -> done )
         return false;
-    }
 
     assert ( hostname && port && proxy_default_port && proxy_ep );
 
@@ -229,28 +244,31 @@ static bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
 
     * proxy_default_port = false;
 
-    if ( * hostname != NULL ) {
-        if ( * port == 0 ) {
+    if ( * hostname != NULL )
+    {
+        if ( * port != 0 )
+            self -> dflt_proxy_ports_idx = 0;
+        else
+        {
             assert ( self -> dflt_proxy_ports_idx < dflt_proxy_ports_sz );
-            * port
-                = self -> dflt_proxy_ports [ self -> dflt_proxy_ports_idx ++ ];
-            if ( self -> dflt_proxy_ports_idx >= dflt_proxy_ports_sz ) {
+            * port = self -> dflt_proxy_ports [ self -> dflt_proxy_ports_idx ];
+
+            if ( ++ self -> dflt_proxy_ports_idx >= dflt_proxy_ports_sz )
                 self -> dflt_proxy_ports_idx = 0;
-            }
+
             * proxy_default_port = true;
         }
-        else {
-            self -> dflt_proxy_ports_idx = 0;
-        }
-        if ( self -> dflt_proxy_ports_idx == 0 ) {
+
+        if ( self -> dflt_proxy_ports_idx == 0 )
             self -> proxy = HttpProxyGetNextHttpProxy ( self -> proxy );
-        }
+
         * proxy_ep = true;
         return true;
     }
 
     self -> done = true;
-    if ( self -> hostname != NULL ) {
+    if ( self -> hostname != NULL )
+    {
         * hostname = self -> hostname;
         * port = self -> port;
         * proxy_ep = false;
@@ -260,10 +278,114 @@ static bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
     return false;
 }
 
+static
+rc_t KClientHttpGetLine ( KClientHttp *self, struct timeout_t *tm );
 
-/******************************************************************************/
-static rc_t KClientHttpOpen
-    ( KClientHttp * self, const String * aHostname, uint32_t aPort )
+static
+rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, uint32_t *status, ver_t *version );
+
+static
+rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint32_t port, KSocket * sock,
+    const String * phostname, uint32_t pport )
+{
+    rc_t rc;
+
+    STATUS ( STAT_GEEK, "%s - extracting stream from socket\n", __func__ );
+    assert ( sock != NULL );
+    rc = KSocketGetStream ( sock, & self -> sock );
+    if ( rc == 0 )
+    {
+        uint32_t port_save;
+        String hostname_save, hostname_copy;
+
+        size_t len;
+        char buffer [ 4096 ];
+
+        STATUS ( STAT_GEEK, "%s - saving hostname and port\n", __func__ );
+        hostname_save = self -> hostname;
+        port_save = self -> port;
+
+        STATUS ( STAT_GEEK, "%s - saving hostname param\n", __func__ );
+        hostname_copy = * hostname;
+
+        assert ( hostname != NULL );
+        STATUS ( STAT_GEEK, "%s - setting hostname and port to '%S:%u'\n", __func__, phostname, pport );
+        self -> hostname = * phostname;
+        self -> port = pport;
+
+        /* format CONNECT request */
+        rc = string_printf ( buffer, sizeof buffer, & len,
+                             "CONNECT %S:%u HTTP/1.1\r\n"
+                             "Host: %S:%u\r\n\r\n"
+                             , & hostname_copy
+                             , port
+                             , & hostname_copy
+                             , port
+            );
+
+        if ( rc != 0 )
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create proxy request: %R\n", rc ) );
+        else
+        {
+            size_t sent;
+            timeout_t tm;
+
+            STATUS ( STAT_QA, "%s - created proxy request '%.*s'\n", __func__, ( uint32_t ) len, buffer );
+
+            /* send request and receive a response */
+            STATUS ( STAT_PRG, "%s - sending proxy request\n", __func__ );
+            TimeoutInit ( & tm, self -> write_timeout );
+            rc = KStreamTimedWriteAll ( self -> sock, buffer, len, & sent, & tm );
+            if ( rc != 0 )
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to send proxy request: %R\n", rc ) );
+            else
+            {
+                String msg;
+                ver_t version;
+                uint32_t status;
+
+                assert ( sent == len );
+
+                STATUS ( STAT_PRG, "%s - reading proxy response status line\n", __func__ );
+                TimeoutInit ( & tm, self -> read_timeout );
+                rc = KClientHttpGetStatusLine ( self, & tm, & msg, & status, & version );
+                if ( rc != 0 )
+                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to read proxy response: %R\n", rc ) );
+                else
+                {
+                    if ( ( status / 100 ) != 2 )
+                    {
+                        rc = RC ( rcNS, rcNoTarg, rcOpening, rcConnection, rcFailed );
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create proxy tunnel: %03u '%S'\n", status, & msg ) );
+                        KClientHttpBlockBufferReset ( self );
+                        KClientHttpLineBufferReset ( self );
+                    }
+                    else
+                    {
+                        STATUS ( STAT_QA, "%s - read proxy response status line: %03u '%S'\n", __func__, status, & msg );
+                        do
+                            rc = KClientHttpGetLine ( self, & tm );
+                        while ( self -> line_valid != 0 );
+                    }
+                }
+            }
+        }
+
+        STATUS ( STAT_GEEK, "%s - restoring hostname and port\n", __func__ );
+        self -> hostname = hostname_save;
+        self -> port = port_save;
+
+        STATUS ( STAT_GEEK, "%s - releasing socket stream\n", __func__ );
+        KStreamRelease ( self -> sock );
+        self -> sock = NULL;
+    }
+
+    return rc;
+}
+
+
+static
+rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aPort )
 {
     rc_t rc = 0;
     KSocket * sock = NULL;
@@ -274,53 +396,100 @@ static rc_t KClientHttpOpen
     KEndPointArgsIterator it;
     const KNSManager * mgr = NULL;
 
-#if NO_HTTPS_SUPPORT
-    if ( self -> tls )
-    {
-        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Unsupported request for TLS\n" ) );
-        return RC ( rcNS, rcNoTarg, rcInitializing, rcParam, rcUnsupported );
-    }
-#endif
+    STATUS ( STAT_QA, "%s - opening socket to %S:%u\n", __func__, aHostname, aPort );
 
-    assert ( self );
+    assert ( self != NULL );
     mgr = self -> mgr;
+
     KEndPointArgsIteratorMake ( & it, mgr, aHostname, aPort  );
     while ( KEndPointArgsIteratorNext
         ( & it, & hostname, & port, & proxy_default_port, & proxy_ep ) )
     {
         rc = KNSManagerInitDNSEndpoint ( mgr, & self -> ep, hostname, port );
-        if ( rc == 0 ) {
+        if ( rc == 0 )
+        {
             self -> proxy_default_port = proxy_default_port;
             self -> proxy_ep = proxy_ep;
         }
-        if ( rc == 0 ) {
+        if ( rc == 0 )
+        {
+            /* try to establish a connection */
             rc = KNSManagerMakeTimedConnection ( mgr, & sock,
               self -> read_timeout, self -> write_timeout, NULL, & self -> ep );
-            if ( rc == 0 ) {
+
+            /* if we connected to a proxy, try to follow-through to server */
+            if ( proxy_ep && self -> tls && rc == 0 )
+                rc = KClientHttpProxyConnect ( self, aHostname, aPort, sock, hostname, port );
+
+            if ( rc == 0 )
+            {
                 /* this is a good endpoint */
                 self -> ep_valid = true;
                 break;
             }
-        }
-    }
 
-    /* wrap in TLS */
-    if ( rc == 0 && self -> tls )
-    {
-#if ! NO_HTTPS_SUPPORT
-#error "unimplemented"
-#endif
+            /* here rc is not 0, so we release the socket */
+            KSocketRelease ( sock );
+            sock = NULL;
+        }
     }
 
     /* if the connection is open */
     if ( rc == 0 )
     {
-        rc = KSocketGetStream ( sock, & self -> sock );
-        KSocketRelease ( sock );
+        STATUS ( STAT_USR, "%s - connected to %S\n", __func__, hostname );
+        if ( self -> tls )
+        {
+            KTLSStream * tls_stream;
+
+            STATUS ( STAT_PRG, "%s - creating TLS wrapper on socket\n", __func__ );
+            rc = KNSManagerMakeTLSStream ( mgr, & tls_stream, sock, aHostname );
+
+            if ( rc != 0 )
+            {
+                if ( ! proxy_ep )
+                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create TLS stream for '%S'\n", aHostname ) );
+                else
+                {
+                    STATUS ( STAT_PRG, "%s - retrying TLS wrapper on socket with proxy hostname\n", __func__ );
+                    rc = KNSManagerMakeTLSStream ( mgr, & tls_stream, sock, hostname );
+                    if ( rc != 0 )
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create TLS stream for '%S'\n", hostname ) );
+                }
+            }
+
+            KSocketRelease ( sock );
+
+            if ( rc == 0 )
+            {
+                STATUS ( STAT_USR, "%s - verifying CA cert\n", __func__ );
+                rc = KTLSStreamVerifyCACert ( tls_stream );
+                if ( rc != 0 )
+                {
+                    LOGERR ( klogErr, rc, "failed to verify CA cert" );
+                    STATUS ( STAT_QA, "%s - WARNING: failed to verify CA cert - %R\n", __func__, rc );
+                }
+
+                if ( rc == 0 )
+                {
+                    STATUS ( STAT_PRG, "%s - extracting TLS wrapper as stream\n", __func__ );
+                    rc = KTLSStreamGetStream ( tls_stream, & self -> sock );
+                }
+
+                KTLSStreamRelease ( tls_stream );
+            }
+        }
+        else
+        {
+            STATUS ( STAT_PRG, "%s - extracting stream from socket\n", __func__ );
+            rc = KSocketGetStream ( sock, & self -> sock );
+            KSocketRelease ( sock );
+        }
 
         if ( rc == 0 )
         {
-            self -> port = port;
+            STATUS ( STAT_PRG, "%s - setting port number - %d\n", __func__, aPort );
+            self -> port = aPort;
             return 0;
         }
     }
@@ -363,6 +532,9 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, K
     if ( port == 0 )
         rc = RC ( rcNS, rcNoTarg, rcInitializing, rcParam, rcInvalid );
 
+    /* early setting of TLS property */
+    http -> tls = tls;
+
     /* we accept a NULL connection ( from ) */
     if ( conn == NULL )
         rc = KClientHttpOpen ( http, _host, port );
@@ -391,7 +563,6 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, K
             /* Its safe to assign pointer because we know
                that the pointer is within the buffer */
             http -> hostname = * _host;
-            http -> tls = tls;
         }
     }
     
@@ -1085,6 +1256,7 @@ rc_t KClientHttpFindHeader ( const BSTree *hdrs, const char *_name, char *buffer
     return rc;
 }
 
+static
 rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, uint32_t *status, ver_t *version )
 {
     /* First time reading the response */
@@ -1117,7 +1289,10 @@ rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, u
         {
             /* make sure it is http */
             if ( strcase_cmp ( "http", 4, buffer, sep - buffer, 4 ) != 0 )
+            {
                 rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcUnsupported );
+                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("%s: protocol given as '%.*s'\n", __func__, ( uint32_t ) ( sep - buffer ), buffer ));
+            }
             else
             {
                 /* move buffer up to version */
@@ -3179,6 +3354,62 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
     return rc;
 }
 
+typedef enum {
+    eUPSBegin,
+    eUPSHost,
+    eUPSDone,
+} EUrlParseState;
+static bool GovSiteByHttp ( const char * path ) {
+    if ( path != NULL ) {
+        size_t path_size = string_measure ( path, NULL );
+        size_t size = 0;
+        String http;
+        CONST_STRING ( & http, "http://" );
+        size = http . size;
+
+        /* resolver-cgi is called over http */
+        if ( path_size > size &&
+             strcase_cmp ( path, size, http . addr, size, size ) == 0 )
+        {
+            EUrlParseState state = eUPSBegin;
+            int i = 0;
+            for ( i = 7; i < path_size && state != eUPSDone; ++i ) {
+                switch ( state ) {
+                    case eUPSBegin:
+                        if ( path [ i ] != '/' ) {
+                            state = eUPSHost;
+                        }
+                        break;
+                    case eUPSHost:
+                        if ( path [ i ] == '/' ) {
+                            state = eUPSDone;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            if ( state == eUPSBegin ) {
+                return false;
+            }
+            else {
+                size_t size = 0;
+                String gov;
+                CONST_STRING ( & gov, ".gov" );
+                size = gov . size;
+                if ( strcase_cmp
+                    ( path + i - 5, size, gov . addr, size, size ) == 0 )
+                {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
 /* POST
  *  send POST message
  *  query parameters are sent in URL
@@ -3187,7 +3418,16 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
 LIB_EXPORT rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHttpResult **_rslt )
 {
     KHttpRetrier retrier;
-    rc_t rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> http -> mgr ); 
+    rc_t rc = 0;
+
+    if ( self == NULL ) {
+        return RC ( rcNS, rcNoTarg, rcUpdating, rcSelf, rcNull );
+    }
+    if ( _rslt == NULL ) {
+        return RC ( rcNS, rcNoTarg, rcUpdating, rcParam, rcNull );
+    }
+
+    rc = KHttpRetrierInit ( & retrier, self -> url_buffer . base, self -> http -> mgr ); 
     
     if ( rc == 0 )
     {
@@ -3198,12 +3438,22 @@ LIB_EXPORT rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHtt
             {   /* a non-HTTP problem */
                 break;
             }
+
+            assert ( * _rslt );
+
+            if ( ( * _rslt ) -> status  == 403 &&
+                 GovSiteByHttp ( self -> url_buffer . base ) )
+            {
+                break;
+            }
+
             if ( ! self -> http -> reliable || ! KHttpRetrierWait ( & retrier, ( * _rslt ) -> status ) )
             {   /* We are either not configured to retry, or HTTP status is not retriable, or we exhausted
                     the max number of retries or the total wait time.
                     rc is 0, but the caller will have to look at _rslt->status to determine success */
                 break;
             }
+
             KClientHttpResultRelease ( * _rslt );
         }
         

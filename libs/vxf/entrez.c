@@ -94,7 +94,7 @@ static uint32_t vrowdata_get32( const VRowData * src, uint32_t * dst )
     return RC ( rcXF, rcFunction, rcReading, rcType, rcIncorrect );
 }
 
-const char * entrez_server = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi";
+const char * entrez_server = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi";
 
 static rc_t CC perform_entrez_fetch ( void *self,
     const VXformInfo *info, int64_t row_id, VRowResult *rslt,

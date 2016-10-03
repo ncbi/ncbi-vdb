@@ -42,7 +42,7 @@
 static int num_errors = 0;
 
 /*
-  http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+  https://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
 
   http://www.inconteam.com/software-development/41-encryption/55-aes-test-vectors
 */

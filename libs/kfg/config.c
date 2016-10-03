@@ -32,17 +32,18 @@ struct KfgConfigNamelist;
 #include <klib/namelist.h>
 #include <klib/impl.h>
 
-#include <klib/token.h>
 #include <klib/container.h>
 #include <klib/data-buffer.h> /* KDataBuffer */
-#include <klib/refcount.h>
-#include <klib/text.h>
-#include <klib/printf.h>
-#include <klib/rc.h>
 #include <klib/debug.h>
 #include <klib/log.h>
 #include <klib/out.h> /* OUTMSG */
+#include <klib/printf.h>
+#include <klib/rc.h>
+#include <klib/refcount.h>
+#include <klib/text.h>
+#include <klib/token.h>
 #include <klib/klib-priv.h>
+
 #include <kfs/directory.h>
 #include <kfs/gzip.h> /* KFileMakeGzipForRead */
 #include <kfs/subfile.h> /* KFileMakeSubRead */
@@ -89,16 +90,9 @@ static const char default_kfg[] = {
 "/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"
 "/repository/user/main/public/root = \"$(HOME)/ncbi/public\"\n"
 "/repository/remote/main/CGI/resolver-cgi = "
-                      "\"http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
-"/repository/remote/aux/NCBI/apps/nakmer/volumes/fuseNAKMER = \"sadb\"\n"
-"/repository/remote/aux/NCBI/apps/nannot/volumes/fuseNANNOT = \"sadb\"\n"
-"/repository/remote/aux/NCBI/apps/refseq/volumes/refseq = \"refseq\"\n"
-"/repository/remote/aux/NCBI/apps/sra/volumes/fuse1000 = "
-                      "\"sra-instant/reads/ByRun/sra\"\n"
-"/repository/remote/aux/NCBI/apps/wgs/volumes/fuseWGS = \"wgs\"\n"
-"/repository/remote/aux/NCBI/root = \"http://ftp-trace.ncbi.nlm.nih.gov/sra\"\n"
+                      "\"https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
 "/repository/remote/protected/CGI/resolver-cgi = "
-                      "\"http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
+                      "\"https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
 "/tools/ascp/max_rate = \"1000m\"\n"
 };
 /*----------------------------------------------------------------------------*/
@@ -3965,7 +3959,42 @@ rc_t _KConfigNncToKGapConfig(const KConfig *self, char *text, KGapConfig *kgc)
     return 0;
 }
 
-static rc_t _KConfigFixResolverCgiNode(KConfig *self) {
+LIB_EXPORT rc_t KConfigFixMainResolverCgiNode ( KConfig * self ) {
+    rc_t rc = 0;
+
+    KConfigNode *node = NULL;
+    struct String *result = NULL;
+
+    assert(self);
+
+    if (rc == 0) {
+        rc = KConfigOpenNodeUpdate(self, &node,
+            "/repository/remote/main/CGI/resolver-cgi");
+    }
+
+    if (rc == 0) {
+        rc = KConfigNodeReadString(node, &result);
+    }
+
+    if (rc == 0) {
+        String http;
+        CONST_STRING ( & http,
+                   "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+        assert(result);
+        if ( result->size == 0 || StringEqual ( & http, result ) ) {
+            const char https []
+                = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+            rc = KConfigNodeWrite ( node, https, sizeof https );
+        }
+    }
+
+    free(result);
+
+    KConfigNodeRelease(node);
+
+    return rc;
+}
+LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
     rc_t rc = 0;
 
     KConfigNode *node = NULL;
@@ -3983,11 +4012,14 @@ static rc_t _KConfigFixResolverCgiNode(KConfig *self) {
     }
 
     if (rc == 0) {
+        String http;
+        CONST_STRING ( & http,
+                   "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
         assert(result);
-        if (result->size == 0) {
-            const char buffer[]
-                = "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
-            rc = KConfigNodeWrite(node, buffer, sizeof buffer);
+        if ( result->size == 0 || StringEqual ( & http, result ) ) {
+            const char https []
+                = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+            rc = KConfigNodeWrite ( node, https, sizeof https );
         }
     }
 
@@ -4279,7 +4311,7 @@ aprintf("KConfigImportNgc %d\n", __LINE__);*/
             if (rc == 0) {
 /*DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG), ("KConfigImportNgc %d\n", __LINE__));
 aprintf("KConfigImportNgc %d\n", __LINE__);*/
-                rc = _KConfigFixResolverCgiNode(self);
+                rc = KConfigFixProtectedResolverCgiNode(self);
 /*DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG), ("KConfigImportNgc %d\n", __LINE__));
 aprintf("KConfigImportNgc %d\n", __LINE__);*/
             }

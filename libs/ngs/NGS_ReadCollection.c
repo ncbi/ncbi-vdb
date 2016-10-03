@@ -618,7 +618,7 @@ NGS_ReadCollection * NGS_ReadCollectionMake ( ctx_t ctx, const char * spec )
                     {
                         return NGS_ReadCollectionMakeVTable ( ctx, tbl, spec );
                     }
-                    INTERNAL_ERROR ( xcUnimplemented, "Cannot open accession '%s' as an SRA table.", spec );
+                    USER_ERROR ( xcTableOpenFailed, "Cannot open accession '%s' as an SRA table.", spec );
                 }
             }
             else
@@ -629,11 +629,11 @@ NGS_ReadCollection * NGS_ReadCollectionMake ( ctx_t ctx, const char * spec )
                      KConfigMakeRepositoryMgrRead ( kfg, & repoMgr ) != 0 ||
                      KRepositoryMgrHasRemoteAccess ( repoMgr ) )
                 {
-                    INTERNAL_ERROR ( xcUnimplemented, "Cannot open accession '%s'.", spec );
+                    USER_ERROR ( xcTableOpenFailed, "Cannot open accession '%s', rc = %R", spec, rc );
                 }
                 else
                 {
-                    INTERNAL_ERROR ( xcUnimplemented, "Cannot open accession '%s'. Note: remote access is disabled in the configuration.", spec );
+                    USER_ERROR ( xcTableOpenFailed, "Cannot open accession '%s', rc = %R. Note: remote access is disabled in the configuration.", spec, rc );
                 }
                 KRepositoryMgrRelease ( repoMgr );
                 KConfigRelease ( kfg );
