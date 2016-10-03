@@ -148,14 +148,17 @@ public:
         
         const KDirectory * dir = NULL;
         THROW_ON_RC( KDirectoryOpenDirRead ( root_dir, &dir, false, "local_config" ) );
+        
         KConfig * cfg;
         THROW_ON_RC( KConfigMake ( &cfg, dir ) );
+        
+        KConfigPrint( cfg, NULL ); /* for test */
         
         struct VFSManager * vfs_mgr;
         THROW_ON_RC( VFSManagerMakeFromKfg ( &vfs_mgr, cfg ) );
         
         VDBManager * mgr;
-        THROW_ON_RC( VDBManagerMakeUpdateWithVFSManager ( &mgr, NULL, vfs_mgr ) );
+        THROW_ON_RC( VDBManagerMakeUpdateWithVFSManager ( &mgr, root_dir, vfs_mgr ) );
         
         VSchema *schema;
         THROW_ON_RC( VDBManagerMakeSchema ( mgr, &schema ) );
