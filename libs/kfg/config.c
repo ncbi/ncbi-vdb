@@ -3081,7 +3081,8 @@ extern rc_t ReportKfg ( const ReportFuncs *f, uint32_t indent,
     uint32_t configNodesSkipCount, va_list args );
 
 /* "cfg" [ OUT ] - return parameter for mgr
-   if ( "local" == true or cfgdir != NULL ) do not initialize G_kfg */
+   if ( "local" == true ) do not initialize G_kfg
+   if ( cfgdir != NULL ) then initialize G_kfg. It is used in unit tests */
 static
 rc_t KConfigMakeImpl(KConfig ** cfg, const KDirectory * cfgdir, bool local)
 {
@@ -3102,7 +3103,8 @@ rc_t KConfigMakeImpl(KConfig ** cfg, const KDirectory * cfgdir, bool local)
         KConfig * mgr = NULL;
 
         if ( cfgdir != NULL ) {
-            local = true;
+            /* local = true; 
+            ALWAYS create and/or return a singleton object. */
         }
 
         if ( ! local ) {
@@ -3159,8 +3161,7 @@ rc_t KConfigMakeImpl(KConfig ** cfg, const KDirectory * cfgdir, bool local)
 LIB_EXPORT
 rc_t CC KConfigMakeLocal(KConfig **cfg, const KDirectory *cfgdir)
 {
-    return KConfigMake(cfg, cfgdir);
-/*  return KConfigMakeImpl(cfg, cfgdir, true); */
+    return KConfigMakeImpl(cfg, cfgdir, true);
 }
 
 /* Make
