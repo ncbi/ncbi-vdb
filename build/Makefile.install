@@ -78,8 +78,13 @@ ifeq (true, $(LINUX_ROOT))
 	@ # install configuration file(s)
 	@ echo "Installing configuration files to $(KONFIG_DIR)"
 	@ mkdir -p $(KONFIG_DIR)
-	if [ -f $(KONFIG_DIR)/ncbi-vdb.kfg ] ; then mv -v $(KONFIG_DIR)/ncbi-vdb.kfg $(KONFIG_DIR)/ncbi-vdb.kfg.bak ; fi
-	if [ -f $(KONFIG_DIR)/default.kfg  ] ; then mv -v $(KONFIG_DIR)/default.kfg  $(KONFIG_DIR)/default.kfg.bak  ; fi
+	if [ -f $(KONFIG_DIR)/certs.kfg ] ; \
+	  then mv -v $(KONFIG_DIR)/certs.kfg    $(KONFIG_DIR)/certs.kfg.orig    ; fi
+	if [ -f $(KONFIG_DIR)/default.kfg  ] ; \
+	  then mv -v $(KONFIG_DIR)/default.kfg  $(KONFIG_DIR)/default.kfg.orig  ; fi
+	if [ -f $(KONFIG_DIR)/ncbi-vdb.kfg ] ; \
+	  then mv -v $(KONFIG_DIR)/ncbi-vdb.kfg $(KONFIG_DIR)/ncbi-vdb.kfg.orig ; fi
+	@ cp $(TOP)/libs/kfg/certs.kfg   $(KONFIG_DIR)
 	@ cp $(TOP)/libs/kfg/default.kfg $(KONFIG_DIR)
 	@ #
 	@ echo "Updating $(PROFILE_FILE).[c]sh"
@@ -104,8 +109,16 @@ else
 	@ #
 	@ echo "Installing configuration files to $(LIB_TARGET)/ncbi/"
 	@ mkdir -p $(LIB_TARGET)/ncbi
-	if [ -f $(LIB_TARGET)/ncbi/ncbi-vdb.kfg ] ; then mv -v $(LIB_TARGET)/ncbi/ncbi-vdb.kfg $(LIB_TARGET)/ncbi/ncbi-vdb.kfg.bak ; fi
-	if [ -f $(LIB_TARGET)/ncbi/default.kfg  ] ; then mv -v $(LIB_TARGET)/ncbi/default.kfg  $(LIB_TARGET)/ncbi/default.kfg.bak  ; fi
+	if [ -f $(LIB_TARGET)/ncbi/certs.kfg    ] ; then \
+	  mv -v $(LIB_TARGET)/ncbi/certs.kfg \
+	        $(LIB_TARGET)/ncbi/certs.kfg.orig ; fi
+	if [ -f $(LIB_TARGET)/ncbi/default.kfg  ] ; then \
+	  mv -v $(LIB_TARGET)/ncbi/default.kfg \
+	        $(LIB_TARGET)/ncbi/default.kfg.orig ; fi
+	if [ -f $(LIB_TARGET)/ncbi/ncbi-vdb.kfg ] ; then \
+	  mv -v $(LIB_TARGET)/ncbi/ncbi-vdb.kfg \
+	        $(LIB_TARGET)/ncbi/ncbi-vdb.kfg.orig ; fi
+	@ cp $(TOP)/libs/kfg/certs.kfg   $(LIB_TARGET)/ncbi
 	@ cp $(TOP)/libs/kfg/default.kfg $(LIB_TARGET)/ncbi
 	@ #
 	@ echo "Please add $(LIB_TARGET) to your LD_LIBRARY_PATH, e.g.:"
