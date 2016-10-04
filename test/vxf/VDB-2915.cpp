@@ -118,24 +118,39 @@ static uint64_t rand_uint64()
 
 class WVDB_Fixture
 {
+    KDirectory * _wd;
+    KConfig * _cfg;
 public:
-    WVDB_Fixture() : m_remove( false ), m_tableName( "RANDOM_DATA" ), m_table( 0 ), m_cursor( 0 ) { }
+    WVDB_Fixture() : _wd ( NULL ), _cfg ( NULL ), m_remove( false )
+        , m_tableName( "RANDOM_DATA" ), m_table( 0 ), m_cursor( 0 )
+    {
+        THROW_ON_RC( KDirectoryNativeDir( &_wd ) );
+        
+        const KDirectory * dir = NULL;
+        THROW_ON_RC
+            ( KDirectoryOpenDirRead ( _wd, &dir, false, "local_config" ) );
+        
+        THROW_ON_RC( KConfigMake ( &_cfg, dir ) );
+        
+        KConfigPrint( _cfg, 0 ); /* for test */
+
+        THROW_ON_RC( KDirectoryRelease( dir ) );
+    }
     
     ~WVDB_Fixture()
     {
         if ( m_cursor ) { VCursorRelease( m_cursor ); }
         if ( m_table ) { VTableRelease( m_table ); }
         if ( m_remove ) { RemoveTable(); }
+        KConfigRelease( _cfg );
+        KDirectoryRelease( _wd );        
     }
 
     void RemoveTable()
     {
         if ( ! m_tableName . empty () )
         {
-            KDirectory *wd;
-            KDirectoryNativeDir( &wd );
-            KDirectoryRemove( wd, true, m_tableName.c_str() );
-            KDirectoryRelease( wd );
+            KDirectoryRemove( _wd, true, m_tableName.c_str() );
         }
     }
 
@@ -143,22 +158,12 @@ public:
     {
         RemoveTable();
 
-        KDirectory * root_dir = NULL;
-        THROW_ON_RC( KDirectoryNativeDir( &root_dir ) );
-        
-        const KDirectory * dir = NULL;
-        THROW_ON_RC( KDirectoryOpenDirRead ( root_dir, &dir, false, "local_config" ) );
-        
-        KConfig * cfg;
-        THROW_ON_RC( KConfigMake ( &cfg, dir ) );
-        
-        KConfigPrint( cfg, NULL ); /* for test */
-        
         struct VFSManager * vfs_mgr;
-        THROW_ON_RC( VFSManagerMakeFromKfg ( &vfs_mgr, cfg ) );
+        THROW_ON_RC( VFSManagerMakeFromKfg ( &vfs_mgr, _cfg ) );
         
         VDBManager * mgr;
-        THROW_ON_RC( VDBManagerMakeUpdateWithVFSManager ( &mgr, root_dir, vfs_mgr ) );
+        THROW_ON_RC
+            ( VDBManagerMakeUpdateWithVFSManager ( &mgr, _wd, vfs_mgr ) );
         
         VSchema *schema;
         THROW_ON_RC( VDBManagerMakeSchema ( mgr, &schema ) );
@@ -174,9 +179,6 @@ public:
         THROW_ON_RC( VSchemaRelease( schema ) );
         THROW_ON_RC( VDBManagerRelease( mgr ) );
         THROW_ON_RC( VFSManagerRelease( vfs_mgr ) );
-        THROW_ON_RC( KConfigRelease( cfg ) );
-        THROW_ON_RC( KDirectoryRelease( dir ) );
-        THROW_ON_RC( KDirectoryRelease( root_dir ) );        
     }
 
     void OpenTable()
