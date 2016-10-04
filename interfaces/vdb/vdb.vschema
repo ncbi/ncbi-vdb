@@ -354,7 +354,7 @@ function < type T >
 T integral #1.0 ( T in )
     = vdb:integral;
 function < type T >
-T integral_0 #1.0.1 ( T in )
+T integral_0 #1.1 ( T in )
     = vdb:integral_0;
 
 /* delta
