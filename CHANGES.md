@@ -1,5 +1,25 @@
 # NCBI External Developer Release:
 
+## NCBI VDB 2.8.0
+**October 7, 2016**
+
+### HTTPS-ENABLED RELEASE
+
+  **kfg, kns**: Use environment variables to determine the proxy for a http protocol  
+  **kfg, vdb-config**: vdb-config-GUI has now option to pick up proxy-setting from environment  
+  **kns**: All tools and libraries now support https  
+  **kns**: replaced all direct uses of sleep() within code to enforce standardization upon mS.  
+  **kproc, ncbi-vdb**: Fixed KCondition to generate timeout error on Windows when timeout exhausted  
+  **ngs-engine**: improved diagnostic messages  
+  **test**: updated tests to not fail outside of NCBI  
+  **test-sra**: test-sra prints network information  
+  **test-sra**: test-sra prints version of ncbi-vdb or ngs-sdk dynamic library  
+  **vdb**: improved parameter checking on VDatabaseOpenTableRead()  
+  **vdb**: new function: "VDBManagerDeleteCacheOlderThan()"  
+  **vdb**: problem with buffer-overrun when compressing random data fixed  
+  **vdb**: remote/aux nodes have been removed from configuration  
+
+
 ## NCBI VDB 2.7.0
 **July 12, 2016**
 
