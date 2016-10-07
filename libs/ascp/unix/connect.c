@@ -427,7 +427,7 @@ rc_t run_ascp(const char *path, const char *key,
                         got = true;
                     }
                     if (!got) {
-                        sleep(1);
+                        KSleepMs(1000);
                         ++i;
                         if ((heartbeat > 0 && i >= heartbeat) || (i > 99)) {
                             uint64_t size = 0;

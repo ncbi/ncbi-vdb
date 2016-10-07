@@ -72,7 +72,7 @@
 #define THROW_ON_RC(call) \
     do { \
         if ( ( rc_t ) ( call ) != ( rc_t ) 0 ) \
-            throw std::logic_error ( string ( __func__ ) + #call + " failed" ); \
+            throw std::logic_error ( std::string ( __func__ ) + #call + " failed" ); \
     } while (0)
    
 ////////////////////////////////////////////////////////////////////////////////
@@ -446,7 +446,8 @@ public:
     const std::string& GetName(void) const { return _name; }
     ncbi::NK::counter_t GetErrorCounter(void) { return _ec; }
 protected:
-    void SetErrorCounter(ncbi::NK::counter_t ec) { _ec = ec; }
+    void SetErrorCounter(ncbi::NK::counter_t ec)
+    { _ec = ec; }
 private:
     const std::string _name;
     ncbi::NK::counter_t _ec;

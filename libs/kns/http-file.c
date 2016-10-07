@@ -82,7 +82,7 @@ typedef struct KHttpFile KHttpFile;
     ( ( void ) 0 )
 #endif
 
-#define USE_CACHE_CONTROL 0
+#define USE_CACHE_CONTROL 1
 #define NO_CACHE_LIMIT ( ( uint64_t ) ( 16 * 1024 * 1024 ) )
 
 
@@ -228,7 +228,6 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
             /* tell proxies not to cache if file is above limit */
             if ( rc == 0 && self -> no_cache )
                 rc = KClientHttpRequestSetNoCache ( req );
-#warning "using cache control"
 #endif
             if ( rc == 0 )
             {
@@ -515,7 +514,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                 KClientHttp *http;
                           
                                 rc = KNSManagerMakeClientHttpInt ( self, & http, buf, conn, vers,
-                                    self -> http_read_timeout, self -> http_write_timeout, &block . host, block . port, reliable );
+                                    self -> http_read_timeout, self -> http_write_timeout, &block . host, block . port, reliable, block . tls );
                                 if ( rc == 0 )
                                 {
                                     KClientHttpRequest *req;

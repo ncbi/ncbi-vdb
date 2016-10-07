@@ -24,6 +24,12 @@
 *
 */
 
+#ifndef _h_libs_kns_stream_priv_
+#define _h_libs_kns_stream_priv_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* VDB.v2 is end of life, and introducing new object types is
    dangerous. For our purposes, just call a stream a file */
@@ -38,3 +44,9 @@
 #ifndef rcUrl
 #define rcUrl rcPath
 #endif
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _h_libs_kns_stream_priv_ */

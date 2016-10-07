@@ -111,6 +111,12 @@ KLIB_EXTERN rc_t CC StringConcat ( const String **cat,
 KLIB_EXTERN String* CC StringSubstr ( const String *str,
     String *sub, uint32_t idx, uint32_t len );
 
+/* StringTrim
+ *  trims ascii white-space from both ends
+ *  returns trimmed string in "trimmed"
+ */
+KLIB_EXTERN String * CC StringTrim ( const String * str, String * trimmed );
+
 /* StringHead
  *  access the first character
  *

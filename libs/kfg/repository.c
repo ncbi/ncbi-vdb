@@ -518,8 +518,18 @@ LIB_EXPORT rc_t CC KRepositoryAppendToRootHistory( KRepository *self, const char
                     root[ curr_root_size ] = 0;
                     rc = append_to_root_history( self, root );
                 }
+                else
+                {
+                    /* we cannot determine the current root, because it is not stored */
+                    rc = 0;
+                }
                 free( root );
             }
+        }
+        else
+        {
+            /* we cannot determine the current root, because it is not stored */
+            rc = 0;
         }
     }
     else

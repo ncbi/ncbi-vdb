@@ -216,7 +216,7 @@ const NGS_Cursor* NGS_CursorMakeDb ( ctx_t ctx,
     rc_t rc = VDatabaseOpenTableRead ( db, & table, "%s", tableName );
     if ( rc != 0 )
     {
-        INTERNAL_ERROR ( xcTableOpenFailed, "%.*s.%s", NGS_StringSize ( run_name, ctx ), NGS_StringData ( run_name, ctx ), tableName );
+        INTERNAL_ERROR ( xcTableOpenFailed, "%.*s.%s rc = %R", NGS_StringSize ( run_name, ctx ), NGS_StringData ( run_name, ctx ), tableName, rc );
         return NULL;
     }
 
@@ -573,3 +573,39 @@ uint32_t NGS_CursorGetColumnIndex ( const NGS_Cursor * self, ctx_t ctx, uint32_t
     return self -> col_idx [ column_id ];
 }
 
+/* GetVBlob
+ */
+const struct VBlob* NGS_CursorGetVBlob ( const NGS_Cursor * self, ctx_t ctx, int64_t rowId, uint32_t column_id )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+
+    rc_t rc = VCursorSetRowId ( self -> curs, rowId );
+    if ( rc != 0 )
+    {
+        INTERNAL_ERROR ( xcUnexpected, "VCursorSetRowId() rc = %R", rc );
+    }
+    else
+    {
+        rc = VCursorOpenRow ( self -> curs );
+        if ( rc != 0 )
+        {
+            INTERNAL_ERROR ( xcUnexpected, "VCursorOpenRow() rc = %R", rc );
+        }
+        else
+        {
+            const struct VBlob* ret;
+            rc = VCursorGetBlob ( self -> curs, & ret, NGS_CursorGetColumnIndex ( self, ctx, column_id ) );
+            if ( rc != 0 || FAILED () )
+            {
+                VCursorCloseRow ( self -> curs );
+                INTERNAL_ERROR ( xcUnexpected, "VCursorGetBlob(READ) rc = %R", rc );
+            }
+            else
+            {
+                VCursorCloseRow ( self -> curs );
+                return ret;
+            }
+        }
+    }
+    return NULL;
+}

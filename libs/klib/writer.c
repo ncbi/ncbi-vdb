@@ -123,7 +123,8 @@ LIB_EXPORT rc_t CC KWrtInit( const char* appname, uint32_t vers )
         memcpy(wrt_app, appname, wrt_app_length);
         wrt_app[wrt_app_length] = '\0';
 
-        rc = string_printf ( wrt_vers, sizeof wrt_vers, & wrt_vers_length, "%V", vers );
+        rc = string_printf ( wrt_vers, sizeof wrt_vers, & wrt_vers_length,
+            "%.3V", vers );
         assert ( rc == 0 );
 
         rc = KWrtSysInit(&KWrt_DefaultWriterDataStdOut, &KWrt_DefaultWriterDataStdErr);

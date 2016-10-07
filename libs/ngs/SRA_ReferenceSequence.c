@@ -71,7 +71,7 @@ static NGS_ReferenceSequence_vt SRA_ReferenceSequence_vt_inst =
 {
     /* NGS_Refcount */
     { SRA_ReferenceSequenceWhack },
-    
+
     /* NGS_ReferenceSequence */
     SRA_ReferenceSequenceGetCanonicalName,
     SRA_ReferenceSequenceGetIsCircular,
@@ -89,7 +89,7 @@ struct SRA_ReferenceSequence
     const struct NGS_Cursor * curs;
 
     uint32_t chunk_size;
-    
+
     int64_t first_row;
     int64_t last_row;  /* inclusive */
     uint64_t cur_length; /* size of current reference in bases (0 = not yet counted) */
@@ -143,9 +143,9 @@ void SRA_ReferenceSequenceWhack ( SRA_ReferenceSequence * self, ctx_t ctx )
 /* Init
  */
 static
-void SRA_ReferenceSequenceInit ( ctx_t ctx, 
+void SRA_ReferenceSequenceInit ( ctx_t ctx,
                            SRA_ReferenceSequence * ref,
-                           const char *clsname, 
+                           const char *clsname,
                            const char *instname )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcOpening );
@@ -203,7 +203,7 @@ NGS_ReferenceSequence * NGS_ReferenceSequenceMakeSRA ( ctx_t ctx, const char * s
                     size_t pref_size = sizeof ( REF_PREFIX ) - 1;
                     if ( string_match ( REF_PREFIX, pref_size, ts_buff, string_size ( ts_buff ), (uint32_t)pref_size, NULL ) != pref_size )
                     {
-                        INTERNAL_ERROR ( xcUnimplemented, "Cannot open accession '%s' as a reference table.", spec );
+                        USER_ERROR ( xcTableOpenFailed, "Cannot open accession '%s' as a reference table.", spec );
                     }
                     else
                     {
@@ -246,9 +246,9 @@ int64_t SRA_ReferenceSequence_GetLastRowId ( const struct NGS_ReferenceSequence 
 NGS_String * SRA_ReferenceSequenceGetCanonicalName ( SRA_ReferenceSequence * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
-    
+
     assert ( self != NULL );
-    
+
     return NGS_CursorGetString ( self -> curs, ctx, self -> first_row, reference_SEQ_ID);
 }
 
@@ -257,7 +257,7 @@ bool SRA_ReferenceSequenceGetIsCircular ( const SRA_ReferenceSequence * self, ct
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
     assert ( self );
-   
+
     if ( self -> curs == NULL )
     {
         USER_ERROR ( xcCursorExhausted, "No more rows available" );
@@ -283,21 +283,21 @@ uint64_t SRA_ReferenceSequenceGetLength ( SRA_ReferenceSequence * self, ctx_t ct
         USER_ERROR ( xcCursorExhausted, "No more rows available" );
         return 0;
     }
-    
+
     if ( self -> cur_length == 0 ) /* not yet calculated */
-    {   
-        self -> cur_length =  self -> chunk_size * ( self -> last_row - self -> first_row ) + 
-                              NGS_CursorGetUInt32 ( self -> curs, 
-                                                    ctx, 
-                                                    self -> last_row, 
+    {
+        self -> cur_length =  self -> chunk_size * ( self -> last_row - self -> first_row ) +
+                              NGS_CursorGetUInt32 ( self -> curs,
+                                                    ctx,
+                                                    self -> last_row,
                                                     reference_SEQ_LEN );
     }
-    
+
     return self -> cur_length;
 }
 
 struct NGS_String * SRA_ReferenceSequenceGetBases ( SRA_ReferenceSequence * self, ctx_t ctx, uint64_t offset, uint64_t size )
-{   
+{
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
     assert ( self );
@@ -306,7 +306,7 @@ struct NGS_String * SRA_ReferenceSequenceGetBases ( SRA_ReferenceSequence * self
         USER_ERROR ( xcCursorExhausted, "No more rows available" );
         return NULL;
     }
-    
+
     {
         uint64_t totalBases = SRA_ReferenceSequenceGetLength ( self, ctx );
         if ( offset >= totalBases )
@@ -314,13 +314,13 @@ struct NGS_String * SRA_ReferenceSequenceGetBases ( SRA_ReferenceSequence * self
             return NGS_StringMake ( ctx, "", 0 );
         }
         else
-        {   
+        {
             uint64_t basesToReturn = totalBases - offset;
             char* data;
-            
+
             if (size != (size_t)-1 && basesToReturn > size)
                 basesToReturn = size;
-                
+
             data = (char*) malloc ( basesToReturn );
             if ( data == NULL )
             {
@@ -332,10 +332,10 @@ struct NGS_String * SRA_ReferenceSequenceGetBases ( SRA_ReferenceSequence * self
                 size_t cur_offset = 0;
                 while ( cur_offset < basesToReturn )
                 {
-                    /* we will potentially ask for more than available in the current chunk; 
+                    /* we will potentially ask for more than available in the current chunk;
                     SRA_ReferenceSequenceGetChunkSize will return only as much as is available in the chunk */
                     NGS_String* chunk = SRA_ReferenceSequenceGetChunk ( self, ctx, offset + cur_offset, basesToReturn - cur_offset );
-                    cur_offset += string_copy(data + cur_offset, basesToReturn - cur_offset, 
+                    cur_offset += string_copy(data + cur_offset, basesToReturn - cur_offset,
                         NGS_StringData ( chunk, ctx ), NGS_StringSize ( chunk, ctx ) );
                     NGS_StringRelease ( chunk, ctx );
                 }
@@ -346,7 +346,7 @@ struct NGS_String * SRA_ReferenceSequenceGetBases ( SRA_ReferenceSequence * self
 }
 
 struct NGS_String * SRA_ReferenceSequenceGetChunk ( SRA_ReferenceSequence * self, ctx_t ctx, uint64_t offset, uint64_t size )
-{   
+{
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
     assert ( self );

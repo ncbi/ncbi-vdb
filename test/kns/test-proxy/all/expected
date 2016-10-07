@@ -1,0 +1,5 @@
+no-port.config.proxy2.org 0
+no-port.all.proxy 0
+port.ALL.proxy 9
+port.http.proxy 1234
+no-port.HTTP.proxy 0

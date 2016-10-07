@@ -45,6 +45,7 @@ extern "C" {
  */
 struct KFile;
 struct VPath;
+struct String;
 struct KConfig;
 struct KRepository;
 struct VFSManager;
@@ -72,17 +73,64 @@ VFS_EXTERN rc_t CC VResolverAddRef ( const VResolver * self );
 VFS_EXTERN rc_t CC VResolverRelease ( const VResolver * self );
 
 
-/* Accepted protocol list ordered by preference */
+/* VRemoteProtocols
+ *  accepted protocol list
+ *  there is a simple set of protocols
+ *  where multiple protocols are involved,
+ *  they are ordered by preference from LSB toward MSB
+ */
 typedef uint32_t VRemoteProtocols;
 enum
 {
-      eProtocolHttp
-    , eProtocolFasp
-    , eProtocolFaspHttp
-    , eProtocolHttpFasp
-    , eProtocolLastDefined
+    /* version 1.1 protocols */
+      eProtocolNone  = 0
+    , eProtocolHttp  = 1
+    , eProtocolFasp  = 2
+
+      /* version 1.2 protocols */
+    , eProtocolHttps = 3
+
+      /* values 3..7 are available for future */
+
+    , eProtocolLast
+    , eProtocolMax   = eProtocolLast - 1
+    , eProtocolMask  = 7
+
+    , eProtocolMaxPref = 3
+
+      /* macros for building multi-protocol constants
+         ordered by preference from least to most significant bits */
+#define VRemoteProtocolsMake2( p1, p2 )                                     \
+      ( ( ( VRemoteProtocols ) ( p1 ) & eProtocolMask ) |                   \
+        ( ( ( VRemoteProtocols ) ( p2 ) & eProtocolMask ) << ( 3 * 1 ) ) )
+
+#define VRemoteProtocolsMake3( p1, p2, p3 )                                 \
+      ( VRemoteProtocolsMake2 ( p1, p2 ) |                                  \
+        ( ( ( VRemoteProtocols ) ( p3 ) & eProtocolMask ) << ( 3 * 2 ) ) )
+
+    , eProtocolFaspHttp         = VRemoteProtocolsMake2 ( eProtocolFasp,  eProtocolHttp  )
+    , eProtocolHttpFasp         = VRemoteProtocolsMake2 ( eProtocolHttp,  eProtocolFasp  )
+    , eProtocolHttpsHttp        = VRemoteProtocolsMake2 ( eProtocolHttps, eProtocolHttp  )
+    , eProtocolHttpHttps        = VRemoteProtocolsMake2 ( eProtocolHttp,  eProtocolHttps )
+    , eProtocolFaspHttps        = VRemoteProtocolsMake2 ( eProtocolFasp,  eProtocolHttps )
+    , eProtocolHttpsFasp        = VRemoteProtocolsMake2 ( eProtocolHttps, eProtocolFasp  )
+    , eProtocolFaspHttpHttps    = VRemoteProtocolsMake3 ( eProtocolFasp,  eProtocolHttp,  eProtocolHttps )
+    , eProtocolHttpFaspHttps    = VRemoteProtocolsMake3 ( eProtocolHttp,  eProtocolFasp,  eProtocolHttps )
+    , eProtocolFaspHttpsHttp    = VRemoteProtocolsMake3 ( eProtocolFasp,  eProtocolHttps, eProtocolHttp  )
+    , eProtocolHttpHttpsFasp    = VRemoteProtocolsMake3 ( eProtocolHttp,  eProtocolHttps, eProtocolFasp  )
+    , eProtocolHttpsFaspHttp    = VRemoteProtocolsMake3 ( eProtocolHttps, eProtocolFasp,  eProtocolHttp  )
+    , eProtocolHttpsHttpFasp    = VRemoteProtocolsMake3 ( eProtocolHttps, eProtocolHttp,  eProtocolFasp  )
 };
 
+/* Parse
+ *  parses a comma-separated list of case-insensitive protocols:
+ *    'http', 'https', 'fasp'
+ *
+ *  trims white-space, ignores unrecognized and empty terms
+ *
+ *  returns an ordered list of valid protocols
+ */
+VFS_EXTERN VRemoteProtocols CC  VRemoteProtocolsParse ( struct String const * protos );
 
 /* Query
  *  resolve object location to either an existing local path,

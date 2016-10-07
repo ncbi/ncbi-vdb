@@ -32,6 +32,8 @@ import static org.junit.Assert.assertFalse;
 import org.junit.Test;
 
 import ngs.ReadCollection;
+import ngs.ReadGroupIterator;
+import ngs.Statistics;
 import ngs.Alignment;
 import ngs.ErrorMsg;
 
@@ -857,4 +859,105 @@ public class ngs_test_CSRA1 {
         assertEquals ( name, r . getReadGroup () );
 */
     }    
+    
+    @Test
+    public void ReadCollection_openReadCollection_null() throws ngs.ErrorMsg
+    {
+    	try 
+        {
+    		NGS.openReadCollection(null);
+            fail();
+        }
+        catch ( ngs.ErrorMsg e ) {}   
+    }
+    
+    @Test
+    public void ReadCollection_setAppVersion_null() throws ngs.ErrorMsg
+    {
+		NGS.setAppVersionString(null);
+    }
+    
+    @Test
+    public void ReadCollection_openReferenceSequence_null() throws ngs.ErrorMsg
+    {
+    	try 
+        {
+    		NGS.openReferenceSequence(null);
+            fail();
+        }
+        catch ( ngs.ErrorMsg e ) {}   
+    }
+    
+    @Test
+    public void ReadCollection_isValid_null() throws ngs.ErrorMsg
+    {
+    	try 
+        {
+    		NGS.isValid(null);
+            fail();
+        }
+        catch ( NullPointerException e ) {}   
+    }
+    
+    @Test
+    public void ReadCollection_hasReadGroup_null() throws ngs.ErrorMsg
+    {
+    	try 
+        {
+    		ReadCollection run = NGS.openReadCollection(PrimaryOnly);
+            run.hasReadGroup(null);
+        }
+        catch ( ngs.ErrorMsg e ) 
+    	{
+        	fail();
+        }   
+    }
+    
+    @Test
+    public void ReadCollection_hasReference_null() throws ngs.ErrorMsg
+    {
+    	try 
+        {
+    		ReadCollection run = NGS.openReadCollection(PrimaryOnly);
+    		run.hasReference(null);
+        }
+        catch ( ngs.ErrorMsg e ) 
+    	{
+        	fail();
+    	}   
+    }
+    
+    @Test
+    public void ReadCollection_getReference_null() throws ngs.ErrorMsg
+    {
+    	try 
+        {
+    		ReadCollection run = NGS.openReadCollection(PrimaryOnly);
+    		run.getReference(null);
+            fail();
+        }
+        catch ( ngs.ErrorMsg e ) {}   
+    }
+    
+    @Test
+    public void ReadCollection_getAlignment_null() throws ngs.ErrorMsg
+    {
+    	try 
+        {
+    		ReadCollection run = NGS.openReadCollection(PrimaryOnly);
+    		run.getAlignment(null);
+            fail();
+        }
+        catch ( ngs.ErrorMsg e ) {}   
+    }
+    
+    @Test
+    public void ReadCollection_ReadGroup_Statistics_getValueType_null() throws ngs.ErrorMsg
+    {
+		ReadCollection run = NGS.openReadCollection(PrimaryOnly);
+		ReadGroupIterator rgIt = run.getReadGroups();
+        rgIt.nextReadGroup();
+        Statistics st = rgIt.getStatistics();
+        st.getValueType(null);
+    }
 }

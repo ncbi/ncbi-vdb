@@ -33,6 +33,8 @@
 
 #include "ngs_c_fixture.hpp"
 
+#include <kfc/xc.h>
+
 #include <SRA_ReadGroupInfo.h>
 #include <SRA_Statistics.h>
 #include <NGS_Cursor.h>
@@ -47,6 +49,7 @@
 
 #include <vdb/table.h>
 #include <vdb/database.h>
+#include <vdb/blob.h>
 
 #include <stdexcept>
 #include <cstring>
@@ -768,7 +771,9 @@ TEST_CASE(NGS_Statistics_ConversionString_TrailingSpace)
 TEST_CASE(NGS_FailedToOpen)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
+
     NGS_ReadCollectionMake ( ctx, BAD_ACCESSION);
+    REQUIRE ( ctx_xc_isa ( ctx, xcTableOpenFailed ) );
 
     KConfig* kfg;
     REQUIRE_RC ( KConfigMakeLocal ( &kfg, NULL ) );
@@ -776,13 +781,16 @@ TEST_CASE(NGS_FailedToOpen)
     REQUIRE_RC ( KConfigMakeRepositoryMgrRead ( kfg, &repoMgr ) );
     if ( KRepositoryMgrHasRemoteAccess ( repoMgr ) )
     {
-        REQUIRE_EQ ( string ( "Cannot open accession '" BAD_ACCESSION "'"),
-                 string ( WHAT () ) );
+        string startsWith = "Cannot open accession '" BAD_ACCESSION "', rc = RC";
+        REQUIRE_EQ ( startsWith, string ( WHAT () ) . substr ( 0, startsWith . size () ) );
     }
     else
     {
-        REQUIRE_EQ ( string ( "Cannot open accession '" BAD_ACCESSION "'. Note: remote access is disabled in the configuration"),
-                 string ( WHAT () ) );
+        string startsWith = "Cannot open accession '" BAD_ACCESSION "', rc = RC";
+        string what = WHAT ();
+        REQUIRE_EQ ( startsWith, what . substr ( 0, startsWith . size () ) );
+        string endsWith = "Note: remote access is disabled in the configuration";
+        REQUIRE_EQ ( endsWith, what . substr ( what . size() - endsWith . size () ) );
     }
     REQUIRE_FAILED ();
     REQUIRE_RC ( KRepositoryMgrRelease ( repoMgr ) );
@@ -808,52 +816,111 @@ TEST_CASE(NGS_OpenBySysPath)
 
 //////////////////////////////////////////// NGS_Cursor
 
-TEST_CASE ( NGS_Cursor_GetColumnIndex_adds_column)
+class NGSCursorFixture : public NGS_C_Fixture
 {
-    HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
+public:
+    NGSCursorFixture()
+    : m_cursor ( 0 )
+    {
+    }
 
-    const VDBManager * mgr = ctx -> rsrc -> vdb;
-    REQUIRE_NOT_NULL ( mgr );
+    ~NGSCursorFixture()
+    {
+    }
 
+    virtual void Release()
+    {
+        if (m_ctx != 0)
+        {
+            NGS_CursorRelease ( m_cursor, m_ctx );
+        }
+        NGS_C_Fixture :: Release ();
+    }
+
+    void MakeCursor ( const string& p_acc, const string& p_table, const char * col_specs[], uint32_t num_cols )
+    {
+        const VDatabase *db;
+        THROW_ON_RC ( VDBManagerOpenDBRead ( m_ctx -> rsrc -> vdb, & db, NULL, "%s", p_acc . c_str () ) );
+
+        VTable* tbl;
+        THROW_ON_RC ( VDatabaseOpenTableRead ( db, (const VTable**)&tbl, p_table . c_str () ) );
+
+        m_cursor = NGS_CursorMake ( m_ctx, tbl, col_specs, num_cols ); // this will add the first column to the cursor
+
+        THROW_ON_RC ( VTableRelease ( tbl ) );
+        THROW_ON_RC ( VDatabaseRelease ( db ) );
+    }
+
+    const NGS_Cursor* m_cursor;
+};
+
+FIXTURE_TEST_CASE ( NGS_CursorMakeDB_fails, NGSCursorFixture )
+{
+    ENTRY;
     const VDatabase *db;
-    REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, & db, NULL, "%s", SRADB_Accession_WithBamHeader ) );
+    THROW_ON_RC ( VDBManagerOpenDBRead ( m_ctx -> rsrc -> vdb, & db, NULL, "%s", SRADB_Accession_WithBamHeader ) );
 
-    VTable* tbl;
-    REQUIRE_RC ( VDatabaseOpenTableRead ( db, (const VTable**)&tbl, "SEQUENCE" ) );
+    NGS_String* runName = NGS_StringMake ( ctx, SRADB_Accession_WithBamHeader, string_size ( SRADB_Accession_WithBamHeader ) );
+    m_cursor = NGS_CursorMakeDb ( m_ctx, db, runName, "bad table", sequence_col_specs, seq_NUM_COLS );
+    REQUIRE ( FAILED () );
+    REQUIRE_NULL ( m_cursor );
+    // make sure RC is reported
+    REQUIRE ( string ( WHAT () ) . find ( "rc =" ) != string :: npos);
+    CLEAR ();
 
-    const NGS_Cursor* curs = NGS_CursorMake ( ctx, tbl, sequence_col_specs, seq_NUM_COLS ); // this will add the first column (READ) to the cursor
-    REQUIRE ( ! FAILED () );
-
-    REQUIRE_NE ( (uint32_t)0, NGS_CursorGetColumnIndex ( curs, ctx, seq_READ_LEN ) ); // this should add the column we are requesting to the cursor
-
-    NGS_CursorRelease ( curs, ctx );
-    REQUIRE ( ! FAILED () );
-
-    REQUIRE_RC ( VTableRelease ( tbl ) );
+    NGS_StringRelease ( runName, ctx );
 
     REQUIRE_RC ( VDatabaseRelease ( db ) );
+    EXIT;
 }
 
-TEST_CASE ( NGS_Cursor_Leak_when_Make_fails )
+
+FIXTURE_TEST_CASE ( NGS_Cursor_GetColumnIndex_adds_column, NGSCursorFixture )
 {
-    HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
+    ENTRY;
+    MakeCursor ( SRADB_Accession_WithBamHeader, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ); // this will add the first column (READ) to the cursor
+    REQUIRE ( ! FAILED () );
+    REQUIRE_NOT_NULL ( m_cursor );
 
-    const VDBManager * mgr = ctx -> rsrc -> vdb;
-    REQUIRE_NOT_NULL ( mgr );
+    REQUIRE_NE ( (uint32_t)0, NGS_CursorGetColumnIndex ( m_cursor, ctx, seq_READ_LEN ) ); // this should add the column we are requesting to the cursor
 
-    const VDatabase *db;
-    REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, & db, NULL, "%s", SRADB_Accession_WithBamHeader ) );
+    EXIT;
+}
 
-    VTable* tbl;
-    REQUIRE_RC ( VDatabaseOpenTableRead ( db, (const VTable**)&tbl, "SEQUENCE" ) );
+FIXTURE_TEST_CASE ( NGS_Cursor_Leak_when_Make_fails, NGSCursorFixture )
+{   // use valgrind to detect the absence of a leak
+    ENTRY;
 
     const char * bogus_col_specs [] = { "not a column at all!" };
-    REQUIRE_NULL ( NGS_CursorMake ( ctx, tbl, bogus_col_specs, 1 ) );
+    MakeCursor ( SRADB_Accession_WithBamHeader, "SEQUENCE", bogus_col_specs, 1 );
     REQUIRE ( FAILED () );
+    REQUIRE_NULL ( m_cursor );
     CLEAR();
 
-    REQUIRE_RC ( VTableRelease ( tbl ) );
-    REQUIRE_RC ( VDatabaseRelease ( db ) );
+    EXIT;
+}
+
+FIXTURE_TEST_CASE ( NGS_Cursor_GetVBlob, NGSCursorFixture )
+{
+    ENTRY;
+    MakeCursor ( SRADB_Accession_WithBamHeader, "SEQUENCE", sequence_col_specs, seq_NUM_COLS ); // this will add the first column (READ) to the cursor
+    REQUIRE ( ! FAILED () );
+    REQUIRE_NOT_NULL ( m_cursor );
+
+    const int64_t rowId = 10;
+    const struct VBlob* blob = NGS_CursorGetVBlob ( m_cursor, ctx, rowId, seq_READ );
+    REQUIRE ( ! FAILED () );
+    REQUIRE_NOT_NULL ( blob );
+
+    int64_t first;
+    uint64_t count;
+    REQUIRE_RC ( VBlobIdRange ( blob, &first, &count ) );
+    REQUIRE_LE ( first, rowId );
+    REQUIRE_GT ( (int64_t)( first + count ), rowId );
+
+    REQUIRE_RC ( VBlobRelease ( blob ) );
+
+    EXIT;
 }
 
 //////////////////////////////////////////// Main

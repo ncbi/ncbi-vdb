@@ -63,10 +63,10 @@ $(TARGDIR)/std: \
 #INTERM_SRC = \
 	$(SRCDIR)/config-lex.c \
 	$(SRCDIR)/config-grammar.c \
-	$(SRCDIR)/config-tokens.h 
+	$(SRCDIR)/config-tokens.h
 
 clean: stdclean
-	@ rm -f $(addsuffix /default.kfg,$(NCBIDIR)) $(TEST_BINDIR)/ncbi/default.kfg
+	@ rm -f $(addsuffix /default.kfg,$(NCBIDIR))
 
 .PHONY: clean
 
@@ -75,18 +75,20 @@ clean: stdclean
 #-------------------------------------------------------------------------------
 # kfg
 #
-$(ILIBDIR)/libkfg: $(TARGDIR)/default.kfg $(addprefix $(ILIBDIR)/libkfg.,$(ILIBEXT))
+$(ILIBDIR)/libkfg: \
+	$(TARGDIR)/default.kfg \
+	$(TARGDIR)/certs.kfg \
+	$(addprefix $(ILIBDIR)/libkfg.,$(ILIBEXT))
 
-$(TARGDIR)/default.kfg: $(addsuffix /default.kfg,$(NCBIDIR)) $(TEST_BINDIR)/ncbi/default.kfg
+$(TARGDIR)/default.kfg: $(addsuffix /default.kfg,$(NCBIDIR))
+
+$(TARGDIR)/certs.kfg: $(addsuffix /certs.kfg,$(NCBIDIR))
 
 $(addsuffix /default.kfg,$(NCBIDIR)): $(SRCDIR)/default.kfg
 	cp $^ $@
 
-ifneq ($(NCBIDIR),$(TEST_BINDIR)/ncbi)
-$(TEST_BINDIR)/ncbi/default.kfg: $(SRCDIR)/default.kfg
-	mkdir -p $(TEST_BINDIR)/ncbi
+$(addsuffix /certs.kfg,$(NCBIDIR)): $(SRCDIR)/certs.kfg
 	cp $^ $@
-endif
 
 KFG_SRC = \
 	config-lex \
@@ -98,14 +100,14 @@ KFG_SRC = \
 	properties \
 	ngc \
 	report-kfg \
-    keystore 
+    keystore
 
 # flex/bison should only be invoked manually in an environment ensures the correct versions:
 # bison 2.5, flex 2.5.35
 bison:
-	bison -o $(SRCDIR)/config-grammar.c --defines=$(SRCDIR)/config-tokens.h -v --no-lines $(SRCDIR)/config-grammar.y    
+	bison -o $(SRCDIR)/config-grammar.c --defines=$(SRCDIR)/config-tokens.h -v --no-lines $(SRCDIR)/config-grammar.y
 
-flex:    
+flex:
 	flex -t $(SRCDIR)/config-lex.l | grep -v '^#line' > $(SRCDIR)/config-lex.c
 
 #$(SRCDIR)/config-grammar.c $(SRCDIR)/config-tokens.h: $(SRCDIR)/config-grammar.y

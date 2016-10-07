@@ -29,11 +29,15 @@
 */
 
 #include "ngs_c_fixture.hpp"
-#include <ktst/unit_test.hpp>
-#include "NGS_ReferenceSequence.h"
-#include "NGS_String.h"
 
 #include <string.h>
+
+#include <ktst/unit_test.hpp>
+
+#include <kfc/xc.h>
+
+#include "NGS_ReferenceSequence.h"
+#include "NGS_String.h"
 
 using namespace std;
 using namespace ncbi::NK;
@@ -56,20 +60,41 @@ FIXTURE_TEST_CASE(SRA_Reference_Open_FailsOnNonReference, NGS_C_Fixture)
     ENTRY;
     const char* SRA_Accession = "SRR000001";
     REQUIRE_NULL ( NGS_ReferenceSequenceMake ( ctx, SRA_Accession ) );
+    REQUIRE ( ctx_xc_isa ( ctx, xcTableOpenFailed )  );
     REQUIRE_FAILED ();
     EXIT;
 }
 
 FIXTURE_TEST_CASE(EBI_Reference_Open_EBI_MD5, NGS_C_Fixture)
 {
+/* The following request should success it order to this test to work:
+http://www.ebi.ac.uk/ena/cram/md5/ffd6aeffb54ade3d28ec7644afada2e9
+Otherwise CALL_TO_EBI_RESOLVER_FAILS is set
+and this test is expected to fail */
+    const bool CALL_TO_EBI_RESOLVER_FAILS = false;
+
     ENTRY;
     const char* EBI_Accession = "ffd6aeffb54ade3d28ec7644afada2e9";
+
+    if ( CALL_TO_EBI_RESOLVER_FAILS ) {
+    }
+
     NGS_ReferenceSequence * ref = NGS_ReferenceSequenceMake ( ctx, EBI_Accession );
+
+    if ( CALL_TO_EBI_RESOLVER_FAILS ) {
+        REQUIRE ( FAILED () );
+        REQUIRE_NULL ( ref );
+        LOG(ncbi::NK::LogLevel::e_error,
+            "CANNOT TEST EBI ACCESSION BECAUSE THEIR SITE DOES NOT RESPOND!\n");
+        LOG(ncbi::NK::LogLevel::e_error, "NOW EXPECTING AN ERROR MESSAGE ...");
+        return;
+    }
+
     REQUIRE ( ! FAILED () );
     REQUIRE_NOT_NULL ( ref );
 
     NGS_String* bases = NGS_ReferenceSequenceGetBases ( ref, ctx, 4, 16 );
-    
+
     REQUIRE ( strcmp (NGS_StringData ( bases, ctx ), "CTTTCTGACCGAAATT") == 0 );
 
     REQUIRE_EQ ( NGS_ReferenceSequenceGetLength(ref, ctx), (uint64_t)784333 );

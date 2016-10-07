@@ -32,17 +32,18 @@ struct KfgConfigNamelist;
 #include <klib/namelist.h>
 #include <klib/impl.h>
 
-#include <klib/token.h>
 #include <klib/container.h>
 #include <klib/data-buffer.h> /* KDataBuffer */
-#include <klib/refcount.h>
-#include <klib/text.h>
+#include <klib/debug.h>
+#include <klib/log.h>
+#include <klib/out.h> /* OUTMSG */
 #include <klib/printf.h>
 #include <klib/rc.h>
-#include <klib/debug.h>
-#include <klib/log.h> 
-#include <klib/out.h> /* OUTMSG */
+#include <klib/refcount.h>
+#include <klib/text.h>
+#include <klib/token.h>
 #include <klib/klib-priv.h>
+
 #include <kfs/directory.h>
 #include <kfs/gzip.h> /* KFileMakeGzipForRead */
 #include <kfs/subfile.h> /* KFileMakeSubRead */
@@ -89,16 +90,9 @@ static const char default_kfg[] = {
 "/repository/user/main/public/apps/wgs/volumes/wgsFlat = \"wgs\"\n"
 "/repository/user/main/public/root = \"$(HOME)/ncbi/public\"\n"
 "/repository/remote/main/CGI/resolver-cgi = "
-                      "\"http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
-"/repository/remote/aux/NCBI/apps/nakmer/volumes/fuseNAKMER = \"sadb\"\n"
-"/repository/remote/aux/NCBI/apps/nannot/volumes/fuseNANNOT = \"sadb\"\n"
-"/repository/remote/aux/NCBI/apps/refseq/volumes/refseq = \"refseq\"\n"
-"/repository/remote/aux/NCBI/apps/sra/volumes/fuse1000 = "
-                      "\"sra-instant/reads/ByRun/sra\"\n"
-"/repository/remote/aux/NCBI/apps/wgs/volumes/fuseWGS = \"wgs\"\n"
-"/repository/remote/aux/NCBI/root = \"http://ftp-trace.ncbi.nlm.nih.gov/sra\"\n"
+                      "\"https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
 "/repository/remote/protected/CGI/resolver-cgi = "
-                      "\"http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
+                      "\"https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi\"\n"
 "/tools/ascp/max_rate = \"1000m\"\n"
 };
 /*----------------------------------------------------------------------------*/
@@ -413,32 +407,6 @@ rc_t find_home_directory ( KDyld *dyld,
     }
 
     rc = KDyldHomeDirectory ( dyld, dir, ( fptr_t ) KConfigMake );
-
-    if ( rc != 0
-        ||  (KDirectoryPathType ( * dir, "ncbi" ) & ~kptAlias) != kptDir )
-    {
-        KDylib * lib;
-        if ( rc == 0 )
-        {
-            /* Nominally succeeded, but got a useless directory
-             * (for a statically linked executable?); try again. */
-            KDirectoryRelease ( * dir );
-        }
-        rc = KDyldLoadLib ( dyld, & lib, LPFX "kfg-beacon" SHLX );
-        if ( rc == 0 )
-        {
-            KSymAddr * sym;
-            if ( ( rc = KDylibSymbol ( lib, & sym, "KConfigBeacon" ) ) == 0 )
-            {
-                fptr_t fp;
-                KSymAddrAsFunc ( sym, & fp );
-                rc = KDyldHomeDirectory ( dyld, dir, fp );
-                KSymAddrRelease ( sym );
-            }
-            KDylibRelease ( lib );
-        }
-    }
-
     if ( rc == 0  &&  KDirectoryAddRef ( * dir ) == 0 )
     {
         cached_dir = * dir;
@@ -614,7 +582,7 @@ KToken *KConfigNodeFind ( const KConfigNode *self, const KConfigNode **n, KToken
 /* Create
  */
 static
-KToken *KConfigNodeCreate ( KConfigNode *self, KConfigNode **n, KTokenSource *src, KToken *t, 
+KToken *KConfigNodeCreate ( KConfigNode *self, KConfigNode **n, KTokenSource *src, KToken *t,
                             KConfigIncluded *current_file )
 {
     bool created = false;
@@ -645,7 +613,7 @@ KToken *KConfigNodeCreate ( KConfigNode *self, KConfigNode **n, KTokenSource *sr
                 rc_t rc = KConfigNodeMake ( & child, & t -> str );
                 if ( rc != 0 )
                     return t;
-                BSTreeInsert ( & self -> children, & child -> n, KConfigNodeSort );  
+                BSTreeInsert ( & self -> children, & child -> n, KConfigNodeSort );
                 child -> dad = self;
                 self = child;
                 created = true;
@@ -715,7 +683,7 @@ rc_t KConfigNodeVOpenNodeReadInt ( const KConfigNode *self, const KConfig *mgr,
                 KTokenText tt;
                 KTokenSource src;
                 char full [ 4096 ];
-        
+
                 rc = init_token_source ( & tt, & src, full, sizeof full, "", path, args );
                 if ( rc == 0 )
                 {
@@ -887,7 +855,7 @@ rc_t KConfigNodeVOpenNodeUpdateInt ( KConfigNode *self, KConfig *mgr,
                 KTokenText tt;
                 KTokenSource src;
                 char full [ 4096 ];
-        
+
                 rc = init_token_source ( & tt, & src, full, sizeof full, "", path, args );
                 if ( rc == 0 )
                 {
@@ -1101,9 +1069,9 @@ LIB_EXPORT rc_t CC KConfigNodeWrite ( KConfigNode *self, const char *buffer, siz
         assert ( self -> val_buffer != NULL );
         string_copy ( self -> val_buffer, self -> value . size + 1, buffer, size );
         self -> value . len = string_len ( self -> val_buffer, size );
-        
+
         KConfigNodeSetDirty ( self );
-        
+
         rc = 0;
     }
 
@@ -1160,7 +1128,7 @@ LIB_EXPORT rc_t CC KConfigNodeAppend ( KConfigNode *self, const char *buffer, si
         string_copy ( & self -> val_buffer [ self -> value . size ], self -> value . size + size + 1, buffer, size );
         self -> value . size += size;
         self -> value . len = string_len ( self -> val_buffer, self -> value . size );
-        
+
         KConfigNodeSetDirty ( self );
 
         rc = 0;
@@ -1212,7 +1180,7 @@ LIB_EXPORT rc_t CC KConfigNodeDropAll ( KConfigNode *self )
 {
     if ( self == NULL )
         return RC ( rcKFG, rcNode, rcClearing, rcSelf, rcNull );
-    BSTreeWhack ( & self->children, KConfigNodeWhack, self->mgr); 
+    BSTreeWhack ( & self->children, KConfigNodeWhack, self->mgr);
     return 0;
 }
 
@@ -1270,8 +1238,8 @@ update_node ( KConfig* self, const char* key, const char* value,
     rc_t rc = KConfigOpenNodeUpdate ( self, &node, "%s", key);
     if (rc == 0)
     {
-/*        pLogMsg(klogInfo, "updating config key $(KEY) with '$(VALUE)'", 
-                          "KEY=%s,VALUE=%s", 
+/*        pLogMsg(klogInfo, "updating config key $(KEY) with '$(VALUE)'",
+                          "KEY=%s,VALUE=%s",
                           key, value);*/
         rc = KConfigNodeWrite (node, value, string_size(value));
         node -> internal = internal;
@@ -1334,7 +1302,7 @@ rc_t write_nvp(void* pself, const char* name, size_t nameLen, VNamelist* values)
 
     {   /* create the node */
         String* nameStr;
-    
+
         /* some old config files may have "dbGaP" in their repository keys misspelled as "dbGap" - fix if seen */
         const char* oldGaPprefix = "/repository/user/protected/dbGap-";
         size_t size = sizeof("/repository/user/protected/dbGap-") - 1;
@@ -1345,7 +1313,7 @@ rc_t write_nvp(void* pself, const char* name, size_t nameLen, VNamelist* values)
         StringCopy((const String**)&nameStr, &tmp);
         if (needsFix)
             ((char*)(nameStr->addr)) [ size - 2 ] = 'P';
-    
+
         rc = update_node(self, nameStr->addr, buf, false);
         if (needsFix)
         {
@@ -1360,7 +1328,7 @@ rc_t write_nvp(void* pself, const char* name, size_t nameLen, VNamelist* values)
         }
         StringWhack(nameStr);
     }
-    
+
     free(buf);
     return rc;
 }
@@ -1372,7 +1340,7 @@ bool look_up_var(void * self, struct KFGToken* pb)
     rc_t rc = KConfigOpenNodeRead((KConfig*)self, &node, "%.*s", pb->tokenLength-3, pb->tokenText+2);
     if (rc == 0)
     {
-        pb->tokenText   = node->value.addr; 
+        pb->tokenText   = node->value.addr;
         pb->tokenLength = node->value.len;
         pb->tokenId     = kfgVAR_REF;
     }
@@ -1383,13 +1351,13 @@ bool look_up_var(void * self, struct KFGToken* pb)
 static
 void CC report_error(KFGScanBlock* sb, const char* msg)
 {
-    pLogMsg(klogErr, "$(file):$(line):$(column): error: token='$(token)', msg='$(msg)'", 
-                     "file=%s,line=%d,column=%d,token=%.*s,msg=%s", 
-                     sb->file, 
-                     sb->lastToken->line_no, 
-                     sb->lastToken->column_no, 
-                     sb->lastToken->tokenLength, 
-                     sb->lastToken->tokenText, 
+    pLogMsg(klogErr, "$(file):$(line):$(column): error: token='$(token)', msg='$(msg)'",
+                     "file=%s,line=%d,column=%d,token=%.*s,msg=%s",
+                     sb->file,
+                     sb->lastToken->line_no,
+                     sb->lastToken->column_no,
+                     sb->lastToken->tokenLength,
+                     sb->lastToken->tokenText,
                      msg);
 }
 
@@ -1406,16 +1374,16 @@ typedef struct
 
     /* total bytes in buffer */
     size_t buffered;
-    
+
     rc_t rc;
-    
+
     /* buffer */
     char buffer [ 32 * 1024 ];
-    
+
 } PrintBuff;
 
 /* Init
- *  initialize your structure    
+ *  initialize your structure
  */
 static
 void PrintBuffInit ( PrintBuff *pb, KFile *f )
@@ -1448,7 +1416,7 @@ static rc_t PrintBuffFlush ( PrintBuff *self )
             rc = KFileWriteAll ( self -> f, self -> flushed,
                 self -> buffer, self -> buffered, & num_writ );
         }
-        
+
         if ( rc == 0 )
         {
             if ( num_writ != self -> buffered )
@@ -1482,7 +1450,7 @@ rc_t PrintBuffPrint ( PrintBuff *self, const char *fmt, ... )
     va_start ( args1, fmt );
     va_copy ( args2, args1 );
 
-    rc = string_vprintf ( & self -> buffer [ self -> buffered ], 
+    rc = string_vprintf ( & self -> buffer [ self -> buffered ],
             sizeof self -> buffer - self -> buffered, & num_writ, fmt, args1 );
     if ( rc == 0 )
         self -> buffered += num_writ;
@@ -1589,9 +1557,9 @@ static rc_t _printNodeData(const char *name, const char *data, uint32_t dlen,
         size_t l3 = sizeof d3 - 1;
 
         if ((string_cmp(name,
-                string_measure(name, NULL), d1, l1, (uint32_t)l1) == 0) || 
+                string_measure(name, NULL), d1, l1, (uint32_t)l1) == 0) ||
             (string_cmp(name,
-                string_measure(name, NULL), d2, l2, (uint32_t)l2) == 0) || 
+                string_measure(name, NULL), d2, l2, (uint32_t)l2) == 0) ||
             (string_cmp(name,
                 string_measure(name, NULL), d3, l3, (uint32_t)l3) == 0))
         {
@@ -1761,7 +1729,7 @@ static rc_t KConfigNodePrint(const KConfigNode *self, int indent,
 }
 
 static rc_t CC KConfigPrintImpl(const KConfig* self,
-    int indent, const char *root, bool debug, bool native, 
+    int indent, const char *root, bool debug, bool native,
     PrintBuff *pb, uint32_t skipCount, va_list args)
 {
     rc_t rc = 0;
@@ -1834,10 +1802,10 @@ rc_t parse_file ( KConfig * self, const char* path, const char * src )
     {   /* out of memory is the only reason we can get false here */
         return RC ( rcKFG, rcMgr, rcParsing, rcMemory, rcExhausted );
     }
-    
+
     KFG_parse(&pb, &sb); /* may have reported parse errors into log, but we should have been able to extract enough data to proceed regardless */
     KFGScan_yylex_destroy(&sb);
-    
+
     return 0;
 }
 
@@ -2164,7 +2132,7 @@ bool CC WriteDirtyNode ( BSTNode *n, void *data )
     PrintBuff *pb = data;
 
     if ( self -> dirty
-        || ( self -> came_from != NULL && self -> came_from -> is_magic_file 
+        || ( self -> came_from != NULL && self -> came_from -> is_magic_file
              && ! self -> internal ) )
     {
         if ( KConfigNodePrintPath ( self, pb ) )
@@ -2172,10 +2140,10 @@ bool CC WriteDirtyNode ( BSTNode *n, void *data )
 
         if ( PrintBuffPrint ( pb, " = " ) != 0 )
             return true;
-            
+
         if ( PrintBuffPrintQuoted ( pb, &self->value ) != 0 )
             return true;
-            
+
         if ( PrintBuffPrint ( pb, "\n" ) != 0 )
             return true;
     }
@@ -2209,7 +2177,7 @@ rc_t path_to_magic_file ( const KConfig *self, char *path, size_t buffer_size, s
            rc = RC ( rcKFG, rcNode, rcReading, rcBuffer, rcInsufficient );
 
         path[num_read] = '\0';
-        
+
         KConfigNodeRelease ( node );
     }
     return rc;
@@ -2247,8 +2215,8 @@ LIB_EXPORT rc_t CC KConfigCommit ( KConfig *self )
         rc = string_printf ( tmp_file_path, sizeof tmp_file_path, NULL, "%s.tmp", magic_file_path );
         if ( rc == 0 )
         {
-            KDirectory *dir;        
-            
+            KDirectory *dir;
+
             /* get current directory */
             rc = KDirectoryNativeDir ( & dir );
             if ( rc == 0 )
@@ -2271,12 +2239,12 @@ LIB_EXPORT rc_t CC KConfigCommit ( KConfig *self )
                         if ( BSTreeDoUntil ( & self -> tree, false, WriteDirtyNode, & pb ) )
                             /* failure */
                             rc = pb . rc;
-                        else 
+                        else
                             rc = PrintBuffFlush ( & pb );
                     }
-                        
+
                     KFileRelease ( tmp );
-                        
+
                     if ( rc == 0 )
                     {
                         /* Rename file */
@@ -2285,15 +2253,15 @@ LIB_EXPORT rc_t CC KConfigCommit ( KConfig *self )
                         {
                             /* clear dirty flags */
                             BSTreeForEach (  & self -> tree, false, UnsetDirtyNode, & pb);
-                                
+
                             self -> dirty = false;
                         }
                     }
-                        
+
                     if ( rc != 0 )
                         KDirectoryRemove ( dir, true, "%s", tmp_file_path );
                 }
-            
+
                 /* release dir */
                 KDirectoryRelease ( dir );
             }
@@ -2361,7 +2329,7 @@ bool load_from_file_path ( KConfig *self, const KDirectory *dir, const char *pat
     /* record magic file path, regardless of whether it exists as a file */
     if ( is_magic )
         record_magic_path ( self, dir, path, sz );
-    
+
     DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: try to load from file '%.*s'\n", (int)sz, path ) );
     rc = KDirectoryOpenFileRead ( dir, & cfg_file, "%.*s", ( int ) sz, path );
     if ( rc == 0 )
@@ -2492,7 +2460,7 @@ bool load_from_env_variable ( KConfig *self, const KDirectory *dir )
         "VDB_CONFIG",
         "VDBCONFIG"
     };
-    
+
     int i;
     bool loaded = false;
     for ( i = 0; ! loaded && i < sizeof env_list / sizeof env_list [ 0 ]; ++ i )
@@ -2520,7 +2488,7 @@ rc_t load_env_variable_rc ( KConfig *self, const KDirectory *dir, bool *loaded )
     {
         "NCBI_VDB_CONFIG"
     };
-    
+
     int i;
     rc_t rc;
 
@@ -2532,12 +2500,12 @@ rc_t load_env_variable_rc ( KConfig *self, const KDirectory *dir, bool *loaded )
         DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: try to load from env. var '%s'\n", env_list[ i ] ) );
         if ( eval == NULL || eval [ 0 ] == 0 )
             return 0;
-        
+
         DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: try to load from env. var '%s'\n", eval ) );
         rc = KConfigAppendToLoadPath(self, eval);
         if ( rc != 0 )
             return rc;
-        
+
         * loaded = load_from_path_list ( self, dir, eval );
         if ( * loaded )
             DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG), ( "KFG: found from env. var '%s'\n", eval ) );
@@ -2793,7 +2761,7 @@ void add_predefined_nodes ( KConfig * self, const char * appname )
     }
     update_node ( self, "vdb/lib/paths/kfg", rc == 0 ? buf : "", true );
 
-    /* Architecture */ 
+    /* Architecture */
 #if ! WINDOWS
     if (uname(&name) >= 0)
         update_node(self, "kfg/arch/name", name.nodename, true);
@@ -2807,7 +2775,7 @@ void add_predefined_nodes ( KConfig * self, const char * appname )
     /* *OS */
 #if LINUX
     #define OS "linux"
-#elif MAC 
+#elif MAC
     #define OS "mac"
 #elif WINDOWS
     #define OS "win"
@@ -2835,7 +2803,7 @@ void add_predefined_nodes ( KConfig * self, const char * appname )
     #define BUILD "PROFILE"
 #elif _DEBUGGING
     #define BUILD "DEBUG"
-#else 
+#else
     #define BUILD "RELEASE"
 #endif
     update_node(self, "BUILD", BUILD, true );
@@ -2860,7 +2828,7 @@ void add_predefined_nodes ( KConfig * self, const char * appname )
             bytes = appname + bytes - value;
         rc = KDirectoryResolvePath ( cwd, true, buf, sizeof buf, "%s", appname);
         if ( rc == 0 && bytes != 0 )
-            buf [ string_size(buf) - bytes ] = 0;    
+            buf [ string_size(buf) - bytes ] = 0;
         update_node(self, "APPPATH", rc == 0 ? buf : "", true );
     }
 
@@ -3113,7 +3081,8 @@ extern rc_t ReportKfg ( const ReportFuncs *f, uint32_t indent,
     uint32_t configNodesSkipCount, va_list args );
 
 /* "cfg" [ OUT ] - return parameter for mgr
-   if ( "local" == true or cfgdir != NULL ) do not initialize G_kfg */
+   if ( "local" == true ) do not initialize G_kfg
+   if ( cfgdir != NULL ) then initialize G_kfg. It is used in unit tests */
 static
 rc_t KConfigMakeImpl(KConfig ** cfg, const KDirectory * cfgdir, bool local)
 {
@@ -3134,7 +3103,8 @@ rc_t KConfigMakeImpl(KConfig ** cfg, const KDirectory * cfgdir, bool local)
         KConfig * mgr = NULL;
 
         if ( cfgdir != NULL ) {
-            local = true;
+            /* local = true; 
+            ALWAYS create and/or return a singleton object. */
         }
 
         if ( ! local ) {
@@ -3191,8 +3161,7 @@ rc_t KConfigMakeImpl(KConfig ** cfg, const KDirectory * cfgdir, bool local)
 LIB_EXPORT
 rc_t CC KConfigMakeLocal(KConfig **cfg, const KDirectory *cfgdir)
 {
-    return KConfigMake(cfg, cfgdir);
-/*  return KConfigMakeImpl(cfg, cfgdir, true); */
+    return KConfigMakeImpl(cfg, cfgdir, true);
 }
 
 /* Make
@@ -3215,7 +3184,7 @@ struct KfgConfigNamelist
     size_t count;
     const char *namelist [ 1 ];
 };
- 
+
 /* Whack
  */
 static
@@ -3224,7 +3193,7 @@ rc_t CC KfgConfigNamelistWhack ( KfgConfigNamelist *self )
     free ( self );
     return 0;
 }
- 
+
 /* Count
  */
 static
@@ -3234,7 +3203,7 @@ uint32_t *count )
     * count = ( uint32_t ) self -> count;
     return 0;
 }
- 
+
 /* Get
  */
 static
@@ -3246,7 +3215,7 @@ rc_t CC KfgConfigNamelistGet ( const KfgConfigNamelist *self,
     * name = self -> namelist [ idx ];
     return 0;
 }
- 
+
 /* Make
  */
 static KNamelist_vt_v1 vtKfgConfigNamelist =
@@ -3260,7 +3229,7 @@ static KNamelist_vt_v1 vtKfgConfigNamelist =
     KfgConfigNamelistGet
     /* end minor version 0 methods */
 };
- 
+
  static
  rc_t KfgConfigNamelistMake ( KNamelist **names, uint32_t count )
  {
@@ -3272,7 +3241,7 @@ static KNamelist_vt_v1 vtKfgConfigNamelist =
      else
      {
          self -> count = 0;
-         
+
          rc = KNamelistInit ( & self -> dad,
              ( const KNamelist_vt* ) & vtKfgConfigNamelist );
          if ( rc == 0 )
@@ -3280,13 +3249,13 @@ static KNamelist_vt_v1 vtKfgConfigNamelist =
              * names = & self -> dad;
              return 0;
          }
-         
+
          free ( self );
      }
- 
+
      return rc;
  }
- 
+
 /* List
  *  create metadata node listings
  */
@@ -3385,12 +3354,12 @@ static rc_t ReadNodeValueFixed ( const KConfigNode* self, char *buf, size_t bsiz
             rc = RC ( rcKFG, rcNode, rcReading, rcBuffer, rcInsufficient );
         else
             buf[num_read] = '\0';
-    }        
+    }
     return rc;
 }
 
 /**********************************************************/
- 
+
 /* ReadBool
  *  read a boolean node value
  *
@@ -3481,7 +3450,7 @@ LIB_EXPORT rc_t CC KConfigNodeReadI64 ( const KConfigNode *self, int64_t *result
         {
             /* allow for leading zeros */
             char buf [ 256 ];
-    
+
             rc = ReadNodeValueFixed(self, buf, sizeof(buf));
             if (rc == 0)
             {
@@ -3520,7 +3489,7 @@ LIB_EXPORT rc_t CC KConfigNodeReadU64 ( const KConfigNode *self, uint64_t* resul
         {
             /* allow for leading zeros */
             char buf [ 256 ];
-    
+
             rc = ReadNodeValueFixed(self, buf, sizeof(buf));
             if (rc == 0)
             {
@@ -3598,7 +3567,7 @@ static rc_t ReadNodeValueVariable( const KConfigNode* self, char** buf )
         }
         else
             rc = RC( rcKFG, rcNode, rcReading, rcMemory, rcExhausted );
-    }   
+    }
     return rc;
 }
 
@@ -3687,7 +3656,7 @@ LIB_EXPORT rc_t CC KConfigNodeReadString ( const KConfigNode *self, String** res
                 }
             }
         }
-    }    
+    }
     return rc;
 }
 
@@ -3711,7 +3680,7 @@ LIB_EXPORT rc_t CC KConfigRead ( const KConfig * self, const char * path,
     }
 
     return rc;
-}    
+}
 
 /* this macro wraps a call to KConfigNodeGetXXX in a node-accessing
    code to implement the corresponding KConfigGetXXX function */
@@ -3726,14 +3695,14 @@ LIB_EXPORT rc_t CC KConfigRead ( const KConfig * self, const char * path,
         if (rc == 0)                                        \
             rc = rc2;                                       \
     }                                                       \
-    return rc;                                              
-    
+    return rc;
+
 /* THESE FUNCTIONS ARE PROTECTED AGAINST BAD "self" AND "path"
    BY KConfigOpenNodeRead, BUT THE CONVERSION FUNCTIONS ARE NOT */
 LIB_EXPORT rc_t CC KConfigReadBool ( const KConfig* self, const char* path, bool* result )
 {
     NODE_TO_CONFIG_ACCESSOR(KConfigNodeReadBool);
-}    
+}
 LIB_EXPORT rc_t CC KConfigReadI64 ( const KConfig* self, const char* path, int64_t* result )
 {
     NODE_TO_CONFIG_ACCESSOR(KConfigNodeReadI64);
@@ -3883,7 +3852,7 @@ aprintf("decode_ncbi_gap %d\n", __LINE__);
                                     break;
 
                                 total += num_read;
-                                
+
                                 if ( num_read < to_read )
                                 {
 aprintf("decode_ncbi_gap %d\n", __LINE__);
@@ -3991,7 +3960,42 @@ rc_t _KConfigNncToKGapConfig(const KConfig *self, char *text, KGapConfig *kgc)
     return 0;
 }
 
-static rc_t _KConfigFixResolverCgiNode(KConfig *self) {
+LIB_EXPORT rc_t KConfigFixMainResolverCgiNode ( KConfig * self ) {
+    rc_t rc = 0;
+
+    KConfigNode *node = NULL;
+    struct String *result = NULL;
+
+    assert(self);
+
+    if (rc == 0) {
+        rc = KConfigOpenNodeUpdate(self, &node,
+            "/repository/remote/main/CGI/resolver-cgi");
+    }
+
+    if (rc == 0) {
+        rc = KConfigNodeReadString(node, &result);
+    }
+
+    if (rc == 0) {
+        String http;
+        CONST_STRING ( & http,
+                   "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
+        assert(result);
+        if ( result->size == 0 || StringEqual ( & http, result ) ) {
+            const char https []
+                = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+            rc = KConfigNodeWrite ( node, https, sizeof https );
+        }
+    }
+
+    free(result);
+
+    KConfigNodeRelease(node);
+
+    return rc;
+}
+LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
     rc_t rc = 0;
 
     KConfigNode *node = NULL;
@@ -4009,11 +4013,14 @@ static rc_t _KConfigFixResolverCgiNode(KConfig *self) {
     }
 
     if (rc == 0) {
+        String http;
+        CONST_STRING ( & http,
+                   "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi" );
         assert(result);
-        if (result->size == 0) {
-            const char buffer[]
-                = "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
-            rc = KConfigNodeWrite(node, buffer, sizeof buffer);
+        if ( result->size == 0 || StringEqual ( & http, result ) ) {
+            const char https []
+                = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+            rc = KConfigNodeWrite ( node, https, sizeof https );
         }
     }
 
@@ -4305,7 +4312,7 @@ aprintf("KConfigImportNgc %d\n", __LINE__);*/
             if (rc == 0) {
 /*DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG), ("KConfigImportNgc %d\n", __LINE__));
 aprintf("KConfigImportNgc %d\n", __LINE__);*/
-                rc = _KConfigFixResolverCgiNode(self);
+                rc = KConfigFixProtectedResolverCgiNode(self);
 /*DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG), ("KConfigImportNgc %d\n", __LINE__));
 aprintf("KConfigImportNgc %d\n", __LINE__);*/
             }
