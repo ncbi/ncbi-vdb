@@ -53,7 +53,7 @@ extern "C" {
 
 /* we do not want to expand the RC codes now */
 #define rcRowSet rcVector
-
+\
 
 /*--------------------------------------------------------------------------
  * forwards
