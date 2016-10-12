@@ -219,6 +219,7 @@ void finish_test( const char * sub )
 #else
         rc = KDirectoryRemove( dir, true, "%s\\%s", org_home, sub );
 #endif
+        rc = KDirectoryRemove( dir, true, "%s", new_home );
         KDirectoryRelease( dir );
     }
 }
