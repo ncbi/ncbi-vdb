@@ -739,7 +739,7 @@ struct NGS_Statistics* NGS_ReferenceGetStatistics ( const NGS_Reference * self, 
 
 /* GetBlobs
  */
-struct NGS_ReferenceBlobIterator* NGS_ReferenceGetBlobs ( NGS_Reference * self, ctx_t ctx )
+struct NGS_ReferenceBlobIterator* NGS_ReferenceGetBlobs ( NGS_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size )
 {
     if ( self == NULL )
     {
@@ -748,7 +748,7 @@ struct NGS_ReferenceBlobIterator* NGS_ReferenceGetBlobs ( NGS_Reference * self, 
     }
     else
     {
-        return VT ( self, get_blobs ) ( self, ctx );
+        return VT ( self, get_blobs ) ( self, ctx, offset, size );
     }
 
     return NULL;
@@ -888,7 +888,7 @@ static bool Null_ReferenceIteratorNext ( NGS_Reference * self, ctx_t ctx )
     return false;
 }
 
-static struct NGS_ReferenceBlobIterator* Null_ReferenceGetBlobs ( const NGS_Reference * self, ctx_t ctx )
+static struct NGS_ReferenceBlobIterator* Null_ReferenceGetBlobs ( const NGS_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing);
     INTERNAL_ERROR ( xcSelfNull, "NULL Reference accessed" );

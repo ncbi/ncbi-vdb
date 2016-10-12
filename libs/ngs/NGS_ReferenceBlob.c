@@ -254,6 +254,7 @@ void NGS_ReferenceBlobResolveOffset ( const struct NGS_ReferenceBlob * self, ctx
     {
         PageMapIterator pmIt;
         rc_t rc = PageMapNewIterator ( (const PageMap*)self->blob->pm, &pmIt, self -> rowId - self -> first, self -> count );
+//printf("PageMapNewIterator( rowId-first=%li count=%lu ) p_inBlob=%lu\n", (int64_t)self -> rowId - self -> first, (uint64_t)self -> count, p_inBlob );
         if ( rc != 0 )
         {
             INTERNAL_ERROR ( xcUnexpected, "PageMapNewIterator() rc = %R", rc );
@@ -263,11 +264,16 @@ void NGS_ReferenceBlobResolveOffset ( const struct NGS_ReferenceBlob * self, ctx
             uint64_t inUnrolledBlob = 0; /* offset from the starting position of self->rowId if all repetitions in the blob were unrolled */
             while ( true )
             {
-                elem_count_t offset = PageMapIteratorDataOffset ( &pmIt );
                 row_count_t  repeat = PageMapIteratorRepeatCount ( &pmIt );
                 int64_t size = PageMapIteratorDataLength ( &pmIt );
+                elem_count_t offset = PageMapIteratorDataOffset ( &pmIt );
+                if (inUnrolledBlob == 0)
+                {   /* the first offset is not always 0! */
+                    inUnrolledBlob = offset;
+                }
+//printf("inUnrolledBlob=%lu offset=%lu repeat=%lu size=%lu)\n", inUnrolledBlob, (uint64_t)offset, (uint64_t)repeat, (uint64_t)size );
                 assert ( size <= ChunkSize ); /* this may be the last chunk, shorter than ChunkSize */
-                if ( p_inBlob < offset + size * repeat )
+                if ( p_inBlob < offset + size )
                 {
                     /* assume all the prior chunks of this reference were ChunkSize long */
                     * p_inReference =  ( self -> rowId - self -> refStart ) * ChunkSize + inUnrolledBlob + p_inBlob % size;

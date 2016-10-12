@@ -86,7 +86,7 @@ static struct NGS_Alignment*    CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Referen
 static struct NGS_Pileup*       CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 static struct NGS_Pileup*       CSRA1_ReferenceGetPileupSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 struct NGS_Statistics*          CSRA1_ReferenceGetStatistics ( const CSRA1_Reference * self, ctx_t ctx );
-static struct NGS_ReferenceBlobIterator*  CSRA1_ReferenceGetBlobs ( const CSRA1_Reference * self, ctx_t ctx );
+static struct NGS_ReferenceBlobIterator*  CSRA1_ReferenceGetBlobs ( const CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size );
 static bool                     CSRA1_ReferenceIteratorNext ( CSRA1_Reference * self, ctx_t ctx );
 
 static NGS_Reference_vt CSRA1_Reference_vt_inst =
@@ -789,7 +789,7 @@ struct NGS_Statistics* CSRA1_ReferenceGetStatistics ( const CSRA1_Reference * se
     return SRA_StatisticsMake ( ctx );
 }
 
-struct NGS_ReferenceBlobIterator* CSRA1_ReferenceGetBlobs ( const CSRA1_Reference * self, ctx_t ctx )
+struct NGS_ReferenceBlobIterator* CSRA1_ReferenceGetBlobs ( const CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
@@ -805,7 +805,12 @@ struct NGS_ReferenceBlobIterator* CSRA1_ReferenceGetBlobs ( const CSRA1_Referenc
         return NULL;
     }
 
-    return NGS_ReferenceBlobIteratorMake ( ctx, self -> curs, self -> first_row, self -> last_row );
+   const uint64_t ChunkSize = 5000;
+   uint64_t startRow = self -> first_row + offset / ChunkSize;
+   uint64_t lastRow = size == (uint64_t)-1 ?
+                            self -> last_row :
+                            self -> first_row + ( offset + size - 1 ) / ChunkSize;
+   return NGS_ReferenceBlobIteratorMake ( ctx, self -> curs, startRow, lastRow );
 }
 
 bool CSRA1_ReferenceFind ( NGS_Cursor const * curs, ctx_t ctx, const char * spec, int64_t* firstRow, uint64_t* rowCount )
@@ -1056,6 +1061,8 @@ NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx,
  */
 bool CSRA1_ReferenceIteratorNext ( CSRA1_Reference * self, ctx_t ctx )
 {
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+
     assert ( self != NULL );
 
     if ( self -> curs == NULL  || self -> first_row > self -> iteration_row_last)

@@ -1066,7 +1066,7 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetBlobs, CSRA1_Fixture)
 {
     ENTRY_GET_REF ( CSRA1_PrimaryOnly, "supercont2.1" );
 
-    NGS_ReferenceBlobIterator* blobIt = NGS_ReferenceGetBlobs( m_ref, ctx );
+    NGS_ReferenceBlobIterator* blobIt = NGS_ReferenceGetBlobs( m_ref, ctx, 0, (uint64_t)-1 );
     REQUIRE ( ! FAILED () && blobIt );
 
     REQUIRE ( NGS_ReferenceBlobIteratorHasMore ( blobIt, ctx ) );

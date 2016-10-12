@@ -103,6 +103,23 @@ public:
         m_blob = NGS_ReferenceBlobMake ( m_ctx, m_curs, p_refStart, p_rowId );
     }
 
+    void CheckRange( ctx_t ctx, int64_t p_first, uint64_t p_count )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+        int64_t first;
+        uint64_t count;
+        ON_FAIL ( NGS_ReferenceBlobRowRange ( m_blob, ctx,  & first, & count ) )
+        {
+            throw std :: logic_error ( "NGS_ReferenceBlobRowRange() failed" );
+        }
+        if ( p_first != first || p_count != count )
+        {
+            ostringstream str;
+            str << "CheckRange(first=" << p_first << ", count=" << p_count << ") : first=" << first << ", count=" << count << endl;
+            throw std :: logic_error ( str.str() );
+        }
+    }
+
     const NGS_Cursor* m_curs;
     struct NGS_ReferenceBlob* m_blob;
 };
@@ -154,7 +171,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Make, ReferenceBlobFixture )
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_DuplicateRelease, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_DuplicateRelease, ReferenceBlobFixture )
 {
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
@@ -212,14 +229,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Range, ReferenceBlobFixture )
 {
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
-
-    int64_t firstRow;
-    uint64_t rowCount;
-    NGS_ReferenceBlobRowRange ( m_blob, ctx, &firstRow, &rowCount );
-    REQUIRE ( ! FAILED () );
-    REQUIRE_EQ ( (int64_t)1, firstRow );
-    REQUIRE_EQ ( (uint64_t)4, rowCount );
-
+    CheckRange ( ctx, 1, 4 );
     EXIT;
 }
 
@@ -227,14 +237,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Range_FirstRowInsideBlob, ReferenceBlobFix
 {
     ENTRY;
     GetBlob ( CSRA1_Accession, 3 );
-
-    int64_t firstRow;
-    uint64_t rowCount;
-    NGS_ReferenceBlobRowRange ( m_blob, ctx, &firstRow, &rowCount );
-    REQUIRE ( ! FAILED () );
-    REQUIRE_EQ ( (int64_t)3, firstRow );
-    REQUIRE_EQ ( (uint64_t)1, rowCount );
-
+    CheckRange ( ctx, 3, 1 );
     EXIT;
 }
 
@@ -307,7 +310,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_UnpackedSize_WithRepeats, ReferenceBlobFix
 
 // ResolveOffset
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_BadSelf, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_ResolveOffset_BadSelf, ReferenceBlobFixture )
 {
     ENTRY;
 
@@ -318,7 +321,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_BadSelf, ReferenceBlobFi
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_OffsetOutOfRange, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_ResolveOffset_OffsetOutOfRange, ReferenceBlobFixture )
 {
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
@@ -330,7 +333,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_OffsetOutOfRange, Refere
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_NullOutputParam, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_ResolveOffset_NullOutputParam, ReferenceBlobFixture )
 {
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
@@ -341,7 +344,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_NullOutputParam, Referen
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_NullOptionalParams, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_ResolveOffset_NullOptionalParams, ReferenceBlobFixture )
 {
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
@@ -352,7 +355,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_NullOptionalParams, Refe
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_FirstChunk_NoRepeat, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_ResolveOffset_FirstChunk_NoRepeat, ReferenceBlobFixture )
 {
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 ); /* ref positions 1-20000 in this blob */
@@ -369,7 +372,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_FirstChunk_NoRepeat, Ref
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_NotTheFirstReference, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_ResolveOffset_NotTheFirstReference, ReferenceBlobFixture )
 {
     ENTRY;
     GetBlob ( CSRA1_Accession, 461, 460 ); /* 2nd row for the reference supercont2.1 */
@@ -387,7 +390,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_NotTheFirstReference, Re
 }
 
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_NoRepeat, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_ResolveOffset_NoRepeat, ReferenceBlobFixture )
 {
     ENTRY;
     GetBlob ( CSRA1_Accession, 5 ); /* ref positions 20001-25000 in this blob */
@@ -404,7 +407,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_NoRepeat, ReferenceBlobF
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_WithRepeat, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_ResolveOffset_WithRepeat, ReferenceBlobFixture )
 {
     ENTRY;
     GetBlob ( CSRA1_Accession_WithRepeats, 1 );
@@ -421,7 +424,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_WithRepeat, ReferenceBlo
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_PastRepeat, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_ResolveOffset_PastRepeat, ReferenceBlobFixture )
 {
     ENTRY;
     GetBlob ( CSRA1_Accession_WithRepeats, 1 );
@@ -440,7 +443,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_ResolveOffset_PastRepeat, ReferenceBlo
 
 // FindRepeat
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_BadSelf, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_FindRepeat_BadSelf, ReferenceBlobFixture )
 {
     ENTRY;
 
@@ -452,7 +455,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_BadSelf, ReferenceBlobFixtu
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_OffsetOutOfRange, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_FindRepeat_OffsetOutOfRange, ReferenceBlobFixture )
 {
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
@@ -465,7 +468,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_OffsetOutOfRange, Reference
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_NullOutputParam_1, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_FindRepeat_NullOutputParam_1, ReferenceBlobFixture )
 {
     ENTRY;
     GetBlob ( CSRA1_Accession_WithRepeats, 1 );
@@ -477,7 +480,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_NullOutputParam_1, Referenc
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_NullOutputParam_2, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_FindRepeat_NullOutputParam_2, ReferenceBlobFixture )
 {
     ENTRY;
     GetBlob ( CSRA1_Accession_WithRepeats, 1 );
@@ -489,7 +492,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_NullOutputParam_2, Referenc
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_NotFound, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_FindRepeat_NotFound, ReferenceBlobFixture )
 {
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
@@ -502,17 +505,13 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_NotFound, ReferenceBlobFixt
 }
 
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_FoundFirst, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_FindRepeat_FoundFirst, ReferenceBlobFixture )
 {
     ENTRY;
     const int64_t repeatedRowId = 96;
+    const uint64_t repeatCount = 9;
     GetBlob ( CSRA1_Accession_WithRepeats, repeatedRowId ); /* this blob consists of 9 repeated all-N rows */
-    int64_t firstRow;
-    uint64_t rowCount;
-    NGS_ReferenceBlobRowRange ( m_blob, ctx, &firstRow, &rowCount );
-    REQUIRE ( ! FAILED () );
-    REQUIRE_EQ ( (int64_t)repeatedRowId, firstRow );
-    REQUIRE_EQ ( (uint64_t)9, rowCount );
+    CheckRange ( ctx, repeatedRowId, repeatCount );
 
     uint64_t nextInBlob;
     uint64_t inRef;
@@ -522,13 +521,13 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_FoundFirst, ReferenceBlobFi
     REQUIRE ( ! FAILED () );
     REQUIRE_EQ ( (uint64_t)0, nextInBlob );
     REQUIRE_EQ ( (uint64_t)( repeatedRowId - 1 ) * 5000, inRef );
-    REQUIRE_EQ ( (uint32_t)rowCount, repeatCount );
+    REQUIRE_EQ ( (uint32_t)repeatCount, repeatCount );
     REQUIRE_EQ ( (uint64_t)5000, increment );
 
     EXIT;
 }
 
-FIXTURE_TEST_CASE ( NGS_ReferenceBlobMake_FindRepeat_FoundNext, ReferenceBlobFixture )
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_FindRepeat_FoundNext, ReferenceBlobFixture )
 {   // scan a portion of table with repeated rows to make sure they are all found and reported correctly
     ENTRY;
     GetCursor ( CSRA1_Accession_WithRepeats );
@@ -641,6 +640,28 @@ public:
         m_blobIt = NGS_ReferenceBlobIteratorMake ( m_ctx, m_curs, p_rowId, p_lastRowId );
     }
 
+    bool NextBlob( ctx_t ctx )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+        if ( m_blob != 0)
+        {
+            NGS_ReferenceBlobRelease ( m_blob, m_ctx );
+            m_blob = 0;
+        }
+        TRY  ( bool ret =  NGS_ReferenceBlobIteratorHasMore ( m_blobIt, ctx ) )
+        {
+            if ( ret )
+            {
+                ON_FAIL ( m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx ) )
+                {
+                    throw std :: logic_error ( "NGS_ReferenceBlobIteratorNext() failed" );
+                }
+            }
+           return ret;
+        }
+        throw std :: logic_error ( "NGS_ReferenceBlobIteratorHasMore() failed" );
+    }
+
     struct NGS_ReferenceBlobIterator* m_blobIt;
 };
 
@@ -709,17 +730,8 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_Next, ReferenceBlobIteratorFixture
 {
     ENTRY;
     GetIterator ( CSRA1_Accession, 1, 2 );
-
-    m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx );
-    REQUIRE ( ! FAILED () );
-    REQUIRE_NOT_NULL ( m_blob );
-
-    int64_t first;
-    uint64_t count;
-    NGS_ReferenceBlobRowRange ( m_blob, ctx,  & first, & count );
-    REQUIRE ( ! FAILED () );
-    REQUIRE_EQ ( (int64_t)1, first );
-    REQUIRE_EQ ( (uint64_t)4, count );
+    REQUIRE ( NextBlob ( ctx ) );
+    CheckRange ( ctx, 1, 4 );
 
     EXIT;
 }
@@ -728,19 +740,9 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_Next_Multiple, ReferenceBlobIterat
 {
     ENTRY;
     GetIterator ( CSRA1_Accession, 1, 100 );
-    m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx );
-    NGS_ReferenceBlobRelease ( m_blob, m_ctx );
-
-    m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx );
-    REQUIRE ( ! FAILED () );
-    REQUIRE_NOT_NULL ( m_blob );
-
-    int64_t first;
-    uint64_t count;
-    NGS_ReferenceBlobRowRange ( m_blob, ctx,  & first, & count );
-    REQUIRE ( ! FAILED () );
-    REQUIRE_EQ ( (int64_t)5, first );
-    REQUIRE_EQ ( (uint64_t)4, count );
+    REQUIRE ( NextBlob ( ctx ) );
+    REQUIRE ( NextBlob ( ctx ) );
+    CheckRange ( ctx, 5, 4 );
 
     EXIT;
 }
@@ -749,14 +751,8 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_Next_End, ReferenceBlobIteratorFix
 {
     ENTRY;
     GetIterator ( CSRA1_Accession, 1, 1 );
-    m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx );
-    REQUIRE ( ! FAILED () );
-    REQUIRE_NOT_NULL ( m_blob );
-    NGS_ReferenceBlobRelease ( m_blob, m_ctx );
-
-    m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx );
-    REQUIRE ( ! FAILED () );
-    REQUIRE_NULL ( m_blob );
+    REQUIRE ( NextBlob ( ctx ) );
+    REQUIRE ( ! NextBlob ( ctx ) );
 
     EXIT;
 }
@@ -789,12 +785,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_FullScan, ReferenceBlobIteratorFix
     size_t count = 0;
     while ( NGS_ReferenceBlobIteratorHasMore ( m_blobIt, ctx ) )
     {
-        m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx );
-        REQUIRE ( ! FAILED () );
-        REQUIRE_NOT_NULL ( m_blob );
-        NGS_ReferenceBlobRelease ( m_blob, m_ctx );
-        REQUIRE ( ! FAILED () );
-        m_blob = 0;
+        REQUIRE ( NextBlob ( ctx ) );
         ++count;
     }
     REQUIRE_EQ( (size_t)12, count);
@@ -808,23 +799,10 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_MidTable, ReferenceBlobIteratorFix
     GetIterator ( CSRA1_Accession, 100, 106 ); // start in the middle of the reference table
 
     // move to the second blob in the set
-    m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx );
-    REQUIRE ( ! FAILED () );
-    REQUIRE_NOT_NULL ( m_blob );
-    NGS_ReferenceBlobRelease ( m_blob, ctx );
-    REQUIRE ( ! FAILED () );
+    REQUIRE ( NextBlob ( ctx ) );
+    REQUIRE ( NextBlob ( ctx ) );
 
-    m_blob = NGS_ReferenceBlobIteratorNext ( m_blobIt, ctx );
-    REQUIRE ( ! FAILED () );
-    REQUIRE_NOT_NULL ( m_blob );
-
-    // check blob's row range'
-    int64_t first;
-    uint64_t count;
-    NGS_ReferenceBlobRowRange ( m_blob, ctx,  & first, & count );
-    REQUIRE ( ! FAILED () );
-    REQUIRE_EQ ( (int64_t)101, first );
-    REQUIRE_EQ ( (uint64_t)4, count );
+    CheckRange ( ctx, 101, 4 );
 
     // verify that the blob was given the right reference start row
     uint64_t inRef;
@@ -839,7 +817,52 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_MidTable, ReferenceBlobIteratorFix
     EXIT;
 }
 
+// NGS_ReferenceGetBlobs
 
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetBlobs_All, ReferenceBlobIteratorFixture)
+{
+    ENTRY_GET_REF ( CSRA1_Accession, "supercont2.1" );
+
+    m_blobIt = NGS_ReferenceGetBlobs( m_ref, ctx, 0, (uint64_t)-1 );
+    REQUIRE ( ! FAILED () && m_blobIt );
+
+    REQUIRE ( NextBlob ( ctx ) );
+    CheckRange ( ctx, 1, 4 );
+    REQUIRE ( NextBlob ( ctx ) );
+    CheckRange ( ctx, 5, 4 );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetBlobs_Slice_SingleBlob, ReferenceBlobIteratorFixture)
+{
+    ENTRY_GET_REF ( CSRA1_Accession, "supercont2.1" );
+
+    m_blobIt = NGS_ReferenceGetBlobs( m_ref, ctx, 25000, 5000 );
+    REQUIRE ( ! FAILED () && m_blobIt );
+
+    REQUIRE ( NextBlob ( ctx ) );
+    CheckRange ( ctx, 6, 1 );
+    REQUIRE ( ! NextBlob ( ctx ) );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetBlobs_Slice_MultipleBlobs, ReferenceBlobIteratorFixture)
+{
+    ENTRY_GET_REF ( CSRA1_Accession, "supercont2.1" );
+
+    m_blobIt = NGS_ReferenceGetBlobs( m_ref, ctx, 6000, 5000 );
+    REQUIRE ( ! FAILED () && m_blobIt );
+
+    REQUIRE ( NextBlob ( ctx ) );
+    CheckRange ( ctx, 2, 1 );
+    REQUIRE ( NextBlob ( ctx ) );
+    CheckRange ( ctx, 3, 1 );
+    REQUIRE ( ! NextBlob ( ctx ) );
+
+    EXIT;
+}
 
 //////////////////////////////////////////// Main
 
