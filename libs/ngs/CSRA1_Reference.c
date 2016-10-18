@@ -810,7 +810,7 @@ struct NGS_ReferenceBlobIterator* CSRA1_ReferenceGetBlobs ( const CSRA1_Referenc
    uint64_t lastRow = size == (uint64_t)-1 ?
                             self -> last_row :
                             self -> first_row + ( offset + size - 1 ) / ChunkSize;
-   return NGS_ReferenceBlobIteratorMake ( ctx, self -> curs, startRow, lastRow );
+   return NGS_ReferenceBlobIteratorMake ( ctx, self -> curs, self -> first_row, startRow, lastRow );
 }
 
 bool CSRA1_ReferenceFind ( NGS_Cursor const * curs, ctx_t ctx, const char * spec, int64_t* firstRow, uint64_t* rowCount )

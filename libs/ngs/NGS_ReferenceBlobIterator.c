@@ -44,9 +44,9 @@ struct NGS_ReferenceBlobIterator
     NGS_Refcount dad;
 
     const NGS_Cursor* curs;
-    int64_t first_row;
-    int64_t last_row;
+    int64_t ref_start;
     int64_t next_row;
+    int64_t last_row;
 };
 
 void
@@ -65,7 +65,7 @@ static NGS_Refcount_vt NGS_ReferenceBlobIterator_vt =
 };
 
 NGS_ReferenceBlobIterator*
-NGS_ReferenceBlobIteratorMake ( ctx_t ctx, const struct NGS_Cursor* p_curs, int64_t p_firstRowId, int64_t p_lastRowId )
+NGS_ReferenceBlobIteratorMake ( ctx_t ctx, const struct NGS_Cursor* p_curs, int64_t p_refStartId, int64_t p_firstRowId, int64_t p_lastRowId )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcConstructing );
     if ( p_curs == NULL )
@@ -85,9 +85,9 @@ NGS_ReferenceBlobIteratorMake ( ctx_t ctx, const struct NGS_Cursor* p_curs, int6
             {
                 TRY ( ret -> curs = NGS_CursorDuplicate ( p_curs, ctx ) )
                 {
-                    ret -> first_row = p_firstRowId;
-                    ret -> last_row = p_lastRowId;
+                    ret -> ref_start = p_refStartId;
                     ret -> next_row = p_firstRowId;
+                    ret -> last_row = p_lastRowId;
                     return ret;
                 }
             }
@@ -162,7 +162,7 @@ NGS_ReferenceBlobIteratorNext ( NGS_ReferenceBlobIterator * self, ctx_t ctx )
                                                & nextRow );
         if ( rc == 0 )
         {
-            TRY ( NGS_ReferenceBlob* ret = NGS_ReferenceBlobMake ( ctx, self -> curs, self -> first_row, nextRow ) )
+            TRY ( NGS_ReferenceBlob* ret = NGS_ReferenceBlobMake ( ctx, self -> curs, self -> ref_start, nextRow ) )
             {
                 int64_t first;
                 uint64_t count;

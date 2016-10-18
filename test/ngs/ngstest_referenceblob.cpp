@@ -509,9 +509,9 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_FindRepeat_FoundFirst, ReferenceBlobFixtur
 {
     ENTRY;
     const int64_t repeatedRowId = 96;
-    const uint64_t repeatCount = 9;
+    const uint64_t repeatedRowCount = 9;
     GetBlob ( CSRA1_Accession_WithRepeats, repeatedRowId ); /* this blob consists of 9 repeated all-N rows */
-    CheckRange ( ctx, repeatedRowId, repeatCount );
+    CheckRange ( ctx, repeatedRowId, repeatedRowCount );
 
     uint64_t nextInBlob;
     uint64_t inRef;
@@ -637,7 +637,7 @@ public:
         {
             NGS_ReferenceBlobIteratorRelease ( m_blobIt, m_ctx );
         }
-        m_blobIt = NGS_ReferenceBlobIteratorMake ( m_ctx, m_curs, p_rowId, p_lastRowId );
+        m_blobIt = NGS_ReferenceBlobIteratorMake ( m_ctx, m_curs, 1, p_rowId, p_lastRowId );
     }
 
     bool NextBlob( ctx_t ctx )
@@ -669,7 +669,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobIteratorMake_NullCursor, ReferenceBlobItera
 {
     ENTRY;
 
-    struct NGS_ReferenceBlobIterator* blobIt = NGS_ReferenceBlobIteratorMake ( ctx, NULL, 1, 2 );
+    struct NGS_ReferenceBlobIterator* blobIt = NGS_ReferenceBlobIteratorMake ( ctx, NULL, 1, 1, 2 );
     REQUIRE_FAILED ();
     REQUIRE_NULL ( blobIt );
 
@@ -681,7 +681,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_CreateRelease, ReferenceBlobIterat
     ENTRY;
     GetCursor ( CSRA1_Accession );
 
-    struct NGS_ReferenceBlobIterator* blobIt = NGS_ReferenceBlobIteratorMake ( ctx, m_curs, 1, 2 );
+    struct NGS_ReferenceBlobIterator* blobIt = NGS_ReferenceBlobIteratorMake ( ctx, m_curs, 1, 1, 2 );
     REQUIRE ( ! FAILED () );
     REQUIRE_NOT_NULL ( blobIt );
     NGS_ReferenceBlobIteratorRelease ( blobIt, ctx );
@@ -810,7 +810,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_MidTable, ReferenceBlobIteratorFix
     uint64_t increment;
     NGS_ReferenceBlobResolveOffset ( m_blob, ctx, 99, & inRef, & repeatCount, & increment );
     REQUIRE ( ! FAILED () );
-    REQUIRE_EQ ( (uint64_t)5099, inRef ); // relative to the ref start
+    REQUIRE_EQ ( (uint64_t)500099, inRef ); // relative to the ref start, which is row 1 in this case
     REQUIRE_EQ ( (uint32_t)1, repeatCount  );
     REQUIRE_EQ ( (uint64_t)0, increment  );
 
@@ -843,6 +843,13 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetBlobs_Slice_SingleBlob, ReferenceBlobIte
 
     REQUIRE ( NextBlob ( ctx ) );
     CheckRange ( ctx, 6, 1 );
+    // inside a slice-bound iterator, blobs resolve offsets (inReference) to be in bases from the start of the reference, not the slice
+    uint64_t inReference = 0;
+    TRY (NGS_ReferenceBlobResolveOffset ( m_blob, ctx, 10, &inReference, NULL, NULL ) )
+    {
+        REQUIRE_EQ ( (uint64_t)25010, inReference );
+    }
+
     REQUIRE ( ! NextBlob ( ctx ) );
 
     EXIT;
@@ -857,8 +864,19 @@ FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetBlobs_Slice_MultipleBlobs, ReferenceBlob
 
     REQUIRE ( NextBlob ( ctx ) );
     CheckRange ( ctx, 2, 1 );
+    // inside a slice-bound iterator, blobs resolve offsets (inReference) to be in bases from the start of the reference, not the slice
+    uint64_t inReference = 0;
+    TRY (NGS_ReferenceBlobResolveOffset ( m_blob, ctx, 100, &inReference, NULL, NULL ) )
+    {
+        REQUIRE_EQ ( (uint64_t)5100, inReference );
+    }
+
     REQUIRE ( NextBlob ( ctx ) );
     CheckRange ( ctx, 3, 1 );
+    TRY (NGS_ReferenceBlobResolveOffset ( m_blob, ctx, 200, &inReference, NULL, NULL ) )
+    {
+        REQUIRE_EQ ( (uint64_t)10200, inReference );
+    }
     REQUIRE ( ! NextBlob ( ctx ) );
 
     EXIT;

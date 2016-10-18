@@ -102,29 +102,21 @@ struct NGS_ReferenceBlob * NGS_ReferenceBlobMake ( ctx_t ctx, const NGS_Cursor* 
             {
                 TRY ( ret -> blob = NGS_CursorGetVBlob ( p_curs, ctx, p_firstRowId, reference_READ ) )
                 {
-                    uint32_t row_len = PageMapGetIdxRowInfo ( ret -> blob -> pm, 0, NULL, NULL );
-                    if ( row_len == ChunkSize )
+                    ret -> refStart = p_refStartRowId;
+                    ret -> rowId = p_firstRowId;
+                    TRY ( VByteBlob_ContiguousChunk ( ret -> blob, ctx, ret -> rowId, &ret -> data, &ret -> size, false ) )
                     {
-                        ret -> refStart = p_refStartRowId;
-                        ret -> rowId = p_firstRowId;
-                        TRY ( VByteBlob_ContiguousChunk ( ret -> blob, ctx, ret -> rowId, &ret -> data, &ret -> size, false ) )
+                        int64_t first;
+                        uint64_t count;
+                        rc_t rc = VBlobIdRange ( ret -> blob, & first, & count );
+                        if ( rc == 0  )
                         {
-                            int64_t first;
-                            uint64_t count;
-                            rc_t rc = VBlobIdRange ( ret -> blob, & first, & count );
-                            if ( rc == 0  )
-                            {
-                                assert ( first <= ret -> rowId );
-                                ret -> first = first;
-                                ret -> count = count - ( ret -> rowId - first );
-                                return ret;
-                            }
-                            INTERNAL_ERROR ( xcUnexpected, "VBlobIdRange() rc = %R", rc );
+                            assert ( first <= ret -> rowId );
+                            ret -> first = first;
+                            ret -> count = count - ( ret -> rowId - first );
+                            return ret;
                         }
-                    }
-                    else
-                    {
-                        INTERNAL_ERROR ( xcFunctionUnsupported, "REFERENCE rows of size %u are not supported", row_len );
+                        INTERNAL_ERROR ( xcUnexpected, "VBlobIdRange() rc = %R", rc );
                     }
                     VBlobRelease ( ( VBlob * ) ret -> blob );
                 }
@@ -254,7 +246,6 @@ void NGS_ReferenceBlobResolveOffset ( const struct NGS_ReferenceBlob * self, ctx
     {
         PageMapIterator pmIt;
         rc_t rc = PageMapNewIterator ( (const PageMap*)self->blob->pm, &pmIt, self -> rowId - self -> first, self -> count );
-//printf("PageMapNewIterator( rowId-first=%li count=%lu ) p_inBlob=%lu\n", (int64_t)self -> rowId - self -> first, (uint64_t)self -> count, p_inBlob );
         if ( rc != 0 )
         {
             INTERNAL_ERROR ( xcUnexpected, "PageMapNewIterator() rc = %R", rc );
@@ -271,7 +262,6 @@ void NGS_ReferenceBlobResolveOffset ( const struct NGS_ReferenceBlob * self, ctx
                 {   /* the first offset is not always 0! */
                     inUnrolledBlob = offset;
                 }
-//printf("inUnrolledBlob=%lu offset=%lu repeat=%lu size=%lu)\n", inUnrolledBlob, (uint64_t)offset, (uint64_t)repeat, (uint64_t)size );
                 assert ( size <= ChunkSize ); /* this may be the last chunk, shorter than ChunkSize */
                 if ( p_inBlob < offset + size )
                 {

@@ -48,8 +48,11 @@ struct NGS_ReferenceBlob;
  */
 
 /* Make
+ * refStartId - Id of the fors row of the reference
+ * firstRowId - Id of the first row of the blob
+ * lastRowId  - Id of the last row of the blob
  */
-NGS_ReferenceBlobIterator* NGS_ReferenceBlobIteratorMake ( ctx_t ctx, const struct NGS_Cursor* curs, int64_t firstRowId, int64_t lastRowId );
+NGS_ReferenceBlobIterator* NGS_ReferenceBlobIteratorMake ( ctx_t ctx, const struct NGS_Cursor* curs, int64_t refStartId, int64_t firstRowId, int64_t lastRowId );
 
 /* Release
  *  release reference
