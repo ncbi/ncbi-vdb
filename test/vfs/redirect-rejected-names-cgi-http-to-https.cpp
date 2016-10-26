@@ -183,7 +183,7 @@ extern "C" {
     rc_t CC Usage        ( const struct Args * args ) { return 0; }
     const char UsageDefaultName[] = "redirect-rejected-names-cgi-http-to-https";
     rc_t CC KMain ( int argc, char *argv [] ) {
-        assert ( ! KDbgSetString ( "VFS" ) );
+        if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
         return VResolverTestSuite ( argc, argv );
     }
 }
