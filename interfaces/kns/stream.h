@@ -214,6 +214,9 @@ KNS_EXTERN rc_t CC KStreamMakeStdErr ( KStream **std_err );
 KNS_EXTERN rc_t CC KStreamMakeBuffered ( KStream ** buffered,
     const KStream * in, KStream * out, size_t bufer_size );
 
+KNS_EXTERN rc_t CC KBufferStreamMake ( KStream ** stream,
+    const char * buffer, size_t size );
+
 
 #ifdef __cplusplus
 }
