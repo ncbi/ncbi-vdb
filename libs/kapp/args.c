@@ -2015,6 +2015,8 @@ rc_t CC ArgsHandleStandardOptions (Args * self)
     return rc;
 }
 
+/* if pself == NULL
+   then process / initialize standard arguments and release Args */
 static
 rc_t ArgsMakeAndHandleInt ( Args ** pself, int argc, char ** argv,
     const ParamDef *params, uint32_t param_count, uint32_t optdef_count, va_list ap )
@@ -2022,7 +2024,10 @@ rc_t ArgsMakeAndHandleInt ( Args ** pself, int argc, char ** argv,
     rc_t rc;
     Args * self;
 
-    *pself = NULL;
+    if ( pself != NULL ) {
+        * pself = NULL;
+    }
+
     rc = ArgsMakeStandardOptions (&self);
     if ( rc == 0 && param_count != 0 )
     {
@@ -2083,7 +2088,12 @@ rc_t ArgsMakeAndHandleInt ( Args ** pself, int argc, char ** argv,
                 break;
             }
 
-            *pself = self;
+            if ( pself != NULL ) {
+                * pself = self;
+            }
+            else {
+                ArgsWhack ( self );
+            }
             return 0;
 
             break;
