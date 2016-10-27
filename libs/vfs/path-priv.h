@@ -54,6 +54,11 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * VPath
  */
+typedef enum {
+    eVPnoExt,
+    eVPWithId,
+    eVPext,
+} EVPathType;
 struct VPath
 {
     KDataBuffer data;
@@ -82,6 +87,12 @@ struct VPath
     bool from_uri;
     bool missing_port;
     bool highly_reliable;
+
+    EVPathType ext;
+    String     id;
+    String     tick;
+    size_t     size;
+    KTime_t    modification;
 };
 
 enum VPathVariant
@@ -140,6 +151,12 @@ VFS_EXTERN rc_t CC VPathGetScheme_t ( const VPath * self, VPUri_t * uri_type );
 #define VPathGetUri_t LegacyVPathGetUri_t
 VPUri_t VPathGetUri_t (const VPath * self);
 
+
+rc_t VPathMakeFromUrl ( VPath ** new_path,
+    const String * url, const String * tick,
+    bool ext, const String * id, size_t size, KTime_t date );
+
+rc_t VPathEqual       ( const VPath * l, const VPath * r, int * notequal );
 
 #ifdef __cplusplus
 }
