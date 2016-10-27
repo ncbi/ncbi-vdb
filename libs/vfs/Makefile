@@ -73,10 +73,13 @@ clean: stdclean
 $(ILIBDIR)/libvfs: $(addprefix $(ILIBDIR)/libvfs.,$(ILIBEXT))
 
 VFS_SRC_CMN = \
-	syspath \
 	manager  \
 	resolver \
 	resolver-3.0 \
+	services \
+	services-kfg \
+	syspath \
+	vpathset \
 
 VFS_SRC = \
 	path \
