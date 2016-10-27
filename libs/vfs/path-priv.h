@@ -31,6 +31,10 @@
 #include <vfs/extern.h>
 #endif
 
+#ifndef _h_vfs_pathsetlist_
+#include <vfs/pathsetlist.h>
+#endif
+
 #ifndef _h_klib_refcount_
 #include <klib/refcount.h>
 #endif
@@ -157,6 +161,37 @@ rc_t VPathMakeFromUrl ( VPath ** new_path,
     bool ext, const String * id, size_t size, KTime_t date );
 
 rc_t VPathEqual       ( const VPath * l, const VPath * r, int * notequal );
+
+
+/********************************** VPathSet **********************************/
+
+typedef struct VPathSet VPathSet;
+
+rc_t VPathSetRelease ( const VPathSet * self );
+rc_t VPathSetGet ( const VPathSet * self, VRemoteProtocols protocols,
+    const struct VPath ** path, const struct VPath ** vdbcache );
+
+
+rc_t VPathSetListMake ( VPathSetList ** self );
+rc_t VPathSetListAddRef ( const VPathSetList * self );
+rc_t VPathSetListRelease ( const VPathSetList * self );
+rc_t VPathSetListAppend ( VPathSetList * self, const VPathSet * set );
+uint32_t VPathSetListLength ( const VPathSetList * self );
+rc_t VPathSetListGet
+    ( const VPathSetList * self, uint32_t idx, const VPathSet ** set );
+
+
+/* response row converted into VDB objects */
+typedef struct {
+    struct VPath * fasp ; struct VPath * vcFasp;
+    struct VPath * file ; struct VPath * vcFile;
+    struct VPath * http ; struct VPath * vcHttp;
+    struct VPath * https; struct VPath * vcHttps;
+    struct VPath * mapping;
+} EVPath;
+rc_t VPathSetMake
+    ( VPathSet ** self, const EVPath * src, bool singleUrl );
+
 
 #ifdef __cplusplus
 }

@@ -25,7 +25,6 @@
  */
 
 #include "path-priv.h" /* VPathGetScheme_t */
-#include "services-priv.h"
 
 #include <klib/rc.h> /* RC */
 #include <klib/vector.h> /* Vector */
