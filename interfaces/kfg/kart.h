@@ -56,6 +56,7 @@ KFG_EXTERN rc_t CC KartItemRelease(const KartItem *self);
  *  N.B. returned String is not required to be NULL-terminated !
 KFG_EXTERN rc_t CC KartItemTypeId(const KartItem *self, const String **elem);
  */
+/* VERSION 1.0 ****************************************************************/
 KFG_EXTERN rc_t CC KartItemProjId(const KartItem *self, const String **elem);
 KFG_EXTERN rc_t CC KartItemProjIdNumber(const KartItem *self, uint64_t *id);
 KFG_EXTERN rc_t CC KartItemItemId(const KartItem *self, const String **elem);
@@ -63,6 +64,9 @@ KFG_EXTERN rc_t CC KartItemItemIdNumber(const KartItem *self, uint64_t *id);
 KFG_EXTERN rc_t CC KartItemAccession(const KartItem *self, const String **elem);
 KFG_EXTERN rc_t CC KartItemName(const KartItem *self, const String **elem);
 KFG_EXTERN rc_t CC KartItemItemDesc(const KartItem *self, const String **elem);
+/* VERSION 2.0 ****************************************************************/
+KFG_EXTERN rc_t CC KartItemObjType (const KartItem *self, const String **elem );
+KFG_EXTERN rc_t CC KartItemPath (const KartItem *self, const String **elem );
 
 typedef struct Kart Kart;
 
@@ -79,7 +83,7 @@ KFG_EXTERN rc_t CC KartMakeText(const struct KDirectory *dir, const char *path,
 KFG_EXTERN rc_t CC KartPrint(const Kart *self);
 KFG_EXTERN rc_t CC KartPrintNumbered(const Kart *self);
 
-KFG_EXTERN rc_t CC KartMakeNextItem(Kart *self, const KartItem **item);
+KFG_EXTERN rc_t CC KartMakeNextItem(const Kart *self, const KartItem **item);
 
 KFG_EXTERN rc_t CC KartItemsProcessed(const Kart *self, uint16_t *number);
 

@@ -24,7 +24,7 @@
  *
  */
 
-#include <kfg/kart.h>
+#include <kfg/kart-priv.h> /* KartMake2 */
 
 #include <kfs/directory.h> /* KDirectoryOpenFileRead */
 #include <kfs/file.h> /* KFile */
@@ -35,6 +35,7 @@
 #include <klib/rc.h>
 #include <klib/refcount.h> /* KRefcount */
 #include <klib/out.h> /* OUTMSG */
+#include <klib/vector.h> /* Vector */
 
 #include <strtol.h> /* strtou64 */
 #include <sysalloc.h>
@@ -46,27 +47,124 @@
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
+typedef enum {
+    eVersion1, // from kart 0x01000000
+    eVersion2, // from kart 0x02000000
+} Eversion;
+
 struct KartItem {
     KRefcount refcount;
 
     const Kart *dad;
 
-/*  String typeId; */
+    Eversion version;
+
     String projId;
     String itemId;
-    String accession;
+    String accession; /* 1.0 */
     String name;
     String itemDesc;
+
+    /* 2.0 */
+    String objType;
+    String path;
+    String size;
 };
 
 static void KartItemWhack(KartItem *self) {
     assert(self);
 
-    KartRelease(self->dad);
+    if ( self -> version < eVersion2 ) {
+        KartRelease(self->dad);
+    } else {
+        free ( ( void * ) self -> projId . addr );
+    }
 
     memset(self, 0, sizeof *self);
 
     free(self);
+}
+
+static rc_t KartItemMake2
+    ( KartItem ** self, const char * buffer, size_t size )
+{
+    bool BUG = false;
+    rc_t rc = 0;
+    KartItem * obj = NULL;
+    int i = 0;
+    assert ( self );
+    obj = calloc ( 1, sizeof * obj );
+    if ( obj == NULL ) {
+        return RC ( rcKFG, rcData, rcAllocating, rcMemory, rcExhausted );
+    }
+    obj -> version = eVersion2; /* 0x02000000; */
+    for ( i = 0; ; ++i ) {
+        size_t l = 0;
+        String * next = NULL;
+        const char * p = string_chr ( buffer, size, '|' );
+        if ( p == NULL ) {
+            if ( i != 7 ) {
+                rc = RC(rcKFG, rcFile, rcParsing, rcFile, rcInsufficient);
+                break;
+            }
+            l = size;
+        }
+        else {
+            l = p - buffer;
+        }
+        switch ( i ) {
+            case 0:
+                next = & obj -> projId;
+                break;
+            case 1:
+                next = & obj -> objType;
+                break;
+            case 2:
+                next = & obj -> itemId;
+                break;
+            case 3:
+                next = & obj -> name;
+                break;
+            case 4:
+                next = & obj -> path;
+                break;
+            case 5:
+                next = & obj -> size;
+                break;
+            case 6:
+                next = & obj -> itemDesc;
+                break;
+            case 7:
+                BUG = true;
+                break;
+            default:
+                rc = RC ( rcKFG, rcFile, rcParsing, rcFile, rcExcessive );
+                break;
+        }
+        if ( ! BUG ) {
+            assert ( next );
+            StringInit ( next, buffer, l, ( uint32_t ) l );
+            if ( l > size ) {
+                rc = RC ( rcKFG, rcFile, rcParsing, rcFile, rcInvalid );
+            }
+        }
+        if ( size == l ) {
+            break;
+        }
+        ++ l;
+        buffer += l;
+        size -= l;
+    }
+    if (rc == 0) {
+        KRefcountInit ( & obj -> refcount, 1,
+            "KartItem", "KartItemMake2", "kartitem" );
+        * self = obj;
+    }
+    else {
+        free ( obj );
+        obj = NULL;
+    }
+    return rc;
 }
 
 /* AddRef
@@ -137,14 +235,18 @@ static rc_t StringAsUint64(const String *self, uint64_t *pid) {
     return 0;
 }
 
-LIB_EXPORT rc_t CC KartItemProjIdNumber(const KartItem *self, uint64_t *pid) {
+LIB_EXPORT
+rc_t CC KartItemProjIdNumber(const KartItem *self, uint64_t *pid)
+{
     if (self == NULL) {
         return RC(rcKFG, rcFile, rcAccessing, rcSelf, rcNull);
     }
     return StringAsUint64(&self->projId, pid);
 }
 
-LIB_EXPORT rc_t CC KartItemItemIdNumber(const KartItem *self, uint64_t *pid) {
+LIB_EXPORT
+rc_t CC KartItemItemIdNumber(const KartItem *self, uint64_t *pid)
+{
     if (self == NULL) {
         return RC(rcKFG, rcFile, rcAccessing, rcSelf, rcNull);
     }
@@ -165,7 +267,8 @@ static rc_t KartItemCheck(const KartItem *self, const String **elem) {
     return 0;
 }
 
-LIB_EXPORT rc_t CC KartItemProjId(const KartItem *self, const String **elem)
+LIB_EXPORT
+rc_t CC KartItemProjId(const KartItem *self, const String **elem)
 {
     rc_t rc = KartItemCheck(self, elem);
     if (rc == 0) {
@@ -173,7 +276,8 @@ LIB_EXPORT rc_t CC KartItemProjId(const KartItem *self, const String **elem)
     }
     return rc;
 }
-LIB_EXPORT rc_t CC KartItemItemId(const KartItem *self, const String **elem)
+LIB_EXPORT
+rc_t CC KartItemItemId(const KartItem *self, const String **elem)
 {
     rc_t rc = KartItemCheck(self, elem);
     if (rc == 0) {
@@ -181,7 +285,8 @@ LIB_EXPORT rc_t CC KartItemItemId(const KartItem *self, const String **elem)
     }
     return rc;
 }
-LIB_EXPORT rc_t CC KartItemAccession(const KartItem *self, const String **elem)
+LIB_EXPORT
+rc_t CC KartItemAccession(const KartItem *self, const String **elem)
 {
     rc_t rc = KartItemCheck(self, elem);
     if (rc == 0) {
@@ -189,7 +294,8 @@ LIB_EXPORT rc_t CC KartItemAccession(const KartItem *self, const String **elem)
     }
     return rc;
 }
-LIB_EXPORT rc_t CC KartItemName(const KartItem *self, const String **elem)
+LIB_EXPORT
+rc_t CC KartItemName(const KartItem *self, const String **elem)
 {
     rc_t rc = KartItemCheck(self, elem);
     if (rc == 0) {
@@ -197,11 +303,28 @@ LIB_EXPORT rc_t CC KartItemName(const KartItem *self, const String **elem)
     }
     return rc;
 }
-LIB_EXPORT rc_t CC KartItemItemDesc(const KartItem *self, const String **elem)
+LIB_EXPORT
+rc_t CC KartItemItemDesc(const KartItem *self, const String **elem)
 {
     rc_t rc = KartItemCheck(self, elem);
     if (rc == 0) {
         *elem = &self->itemDesc;
+    }
+    return rc;
+}
+LIB_EXPORT rc_t CC KartItemObjType (const KartItem *self, const String **elem )
+{
+    rc_t rc = KartItemCheck(self, elem);
+    if (rc == 0) {
+        *elem = &self->objType;
+    }
+    return rc;
+}
+LIB_EXPORT rc_t CC KartItemPath (const KartItem *self, const String **elem )
+{
+    rc_t rc = KartItemCheck(self, elem);
+    if (rc == 0) {
+        *elem = &self->path;
     }
     return rc;
 }
@@ -226,18 +349,30 @@ LIB_EXPORT rc_t CC KartItemPrint(const KartItem *self) { /* AA-833 */
 struct Kart {
     KRefcount refcount;
 
-    KDataBuffer mem;
+    Eversion version;
 
+    /* version eVersion1 0x01000000 */
+    KDataBuffer mem;
     const char *text;
     uint64_t len;
-
     uint16_t itemsProcessed;
+
+    /* version eVersion2 0x02000000 */
+    Vector rows;
 };
+
+static void whackKartItem ( void * self, void * ignore ) {
+    KartItemRelease ( ( KartItem * ) self);
+}
 
 static void KartWhack(Kart *self) {
     assert(self);
 
-    KDataBufferWhack(&self->mem);
+    if ( self -> version < eVersion2 ) {
+        KDataBufferWhack(&self->mem);
+    } else {
+        VectorWhack ( & self -> rows, whackKartItem, NULL );
+    }
 
     memset(self, 0, sizeof *self);
 
@@ -454,7 +589,10 @@ LIB_EXPORT rc_t CC KartPrintNumbered(const Kart *self) {
     return rc;
 }
 
-LIB_EXPORT rc_t CC KartMakeNextItem(Kart *self, const KartItem **item) {
+LIB_EXPORT
+rc_t CC KartMakeNextItem ( const Kart * cself, const KartItem **item )
+{
+    Kart * self = ( Kart * ) cself;
     size_t len = 0;
     const char *line = NULL;
     const char *next = NULL;
@@ -467,45 +605,63 @@ LIB_EXPORT rc_t CC KartMakeNextItem(Kart *self, const KartItem **item) {
         return RC(rcKFG, rcFile, rcLoading, rcSelf, rcNull);
     }
 
-    while (self->len > 0
-        && (self->text[0] == '\r' || self->text[0] == '\n'))
-    {
-        ++self->text;
-        --self->len;
-    }
-
-    line = self->text;
-    next = string_chr(self->text, self->len, '\n');
-    if (next == NULL) {
-        return RC(rcKFG, rcFile, rcLoading, rcFile, rcInsufficient);
-    }
-
-    len = next - self->text;
-    if (*(next - 1) == '\r') {
-        --len;
-    }
-
-    if (self->len >= (uint64_t) (next - self->text + 1) ){
-        self->len -= next - self->text + 1;
-    }
-    else {
-        OUTMSG(("WARNING: STRING OVERFLOW DURING KART ROW PARSING"));
-        self->len = 0;
-    }
-
-    self->text = next + 1;
-
-    {
-        const char end[] = "$end";
-        if (string_cmp(line, len, end, sizeof end - 1, sizeof end - 1) == 0) {
-            return 0;
+    if ( self -> version < eVersion2 ) {
+        while (self->len > 0
+            && (self->text[0] == '\r' || self->text[0] == '\n'))
+        {
+            ++self->text;
+            --self->len;
         }
-    }
 
-    return KartItemInitFromKartRow(self, item, line, len);
+        line = self->text;
+        next = string_chr(self->text, self->len, '\n');
+        if (next == NULL) {
+            return RC(rcKFG, rcFile, rcLoading, rcFile, rcInsufficient);
+        }
+
+        len = next - self->text;
+        if (*(next - 1) == '\r') {
+            --len;
+        }
+
+        if (self->len >= (uint64_t) (next - self->text + 1) ){
+            self->len -= next - self->text + 1;
+        }
+        else {
+            OUTMSG(("WARNING: STRING OVERFLOW DURING KART ROW PARSING"));
+            self->len = 0;
+        }
+
+        self->text = next + 1;
+
+        {
+            const char end[] = "$end";
+            if (string_cmp(line, len, end, sizeof end - 1, sizeof end - 1) == 0)
+            {
+                return 0;
+            }
+        }
+
+        return KartItemInitFromKartRow(self, item, line, len);
+    } else {
+        rc_t rc = 0;
+        uint32_t l = VectorLength ( & self -> rows );
+        if ( self -> len < l ) {
+            KartItem * result = VectorGet ( & self -> rows, self -> len ++ );
+            if ( result != NULL ) {
+                rc = KartItemAddRef ( result );
+                if ( rc == 0 ) {
+                    * item = result;
+                }
+            }
+        }
+        return rc;
+    }
 }
 
-static rc_t decode_kart(KDataBuffer *mem, const KFile *orig, size_t hdr_sz) {
+static
+rc_t decode_kart(KDataBuffer *mem, const KFile *orig, size_t hdr_sz)
+{
     rc_t rc = 0;
     size_t num_read;
     uint64_t eof;
@@ -669,7 +825,45 @@ KFG_EXTERN rc_t CC KartMakeText(const struct KDirectory *dir, const char *path,
 }
 #endif
 
-LIB_EXPORT rc_t KartMake(const KDirectory *dir, const char *path,
+LIB_EXPORT rc_t CC KartMake2 ( Kart ** kart ) {
+    Kart * obj = NULL;
+    if ( kart == NULL ) {
+        return RC ( rcKFG, rcFile, rcReading, rcParam, rcNull );
+    }
+    obj = calloc ( 1, sizeof * obj );
+    if ( obj == NULL ) {
+        return RC ( rcKFG, rcData, rcAllocating, rcMemory, rcExhausted );
+    }
+    obj -> version = eVersion2;
+    KRefcountInit ( & obj->refcount, 1, "Kart", "KartMake2", "kart" );
+    * kart = obj;
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KartAddRow ( Kart * self, const char * row, size_t size ) {
+    if ( self == NULL ) {
+        return RC ( rcKFG, rcFile, rcUpdating, rcSelf, rcNull );
+    }
+    if ( row == NULL ) {
+        return RC ( rcKFG, rcFile, rcUpdating, rcParam, rcNull );
+    }
+    if ( self -> version < eVersion2 ) {
+        return RC ( rcKFG, rcFile, rcUpdating, rcInterface, rcBadVersion );
+    }
+    {
+        KartItem * item = NULL;
+        rc_t rc = KartItemMake2 ( & item, row, size );
+        if ( rc == 0 ) {
+            rc = VectorAppend ( & self -> rows, NULL, item );
+            if ( rc != 0 ) {
+                KartItemRelease ( item );
+            }
+        }
+        return rc;
+    }
+}
+
+LIB_EXPORT rc_t CC KartMake(const KDirectory *dir, const char *path,
     Kart **kart, bool *isKart)
 {
     rc_t rc = 0;
