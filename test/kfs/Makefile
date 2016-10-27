@@ -31,9 +31,9 @@ MODULE = test/kfs
 
 TEST_TOOLS = \
 	test-kfs \
-    test-ramfile \
-    test-resolve \
-    test-cachetee \
+	test-ramfile \
+	test-resolve \
+	test-cachetee \
 	test-kfs-md5
 
 include $(TOP)/build/Makefile.env
@@ -135,3 +135,47 @@ TEST_CACHETEE_LIB = \
 
 $(TEST_BINDIR)/test-cachetee: $(TEST_CACHETEE_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_CACHETEE_LIB)
+	rm *.o *.d
+
+#-------------------------------------------------------------------------------
+# fuse-proxy ( needed for the cachetee_out_of_space - test
+#
+FUSE_PROXY_SRC = \
+	fuse_proxy
+
+FUSE_PROXY_OBJ = \
+	$(addsuffix .$(OBJX),$(FUSE_PROXY_SRC))
+
+FUSE_PROXY_LIB = \
+	-lfuse
+
+$(TEST_BINDIR)/fuse-proxy: $(FUSE_PROXY_OBJ)
+	$(LP) --exe -o $@ $^ $(FUSE_PROXY_LIB)
+	rm *.o *.d
+
+#-------------------------------------------------------------------------------
+# cachetee_out_of_space
+#
+CTOFS_SRC = \
+	cachetee-out-of-space
+    
+CTOFS_OBJ = \
+	$(addsuffix .$(OBJX),$(CTOFS_SRC))
+
+CTOFS_LIB = \
+	-lkapp \
+    -sncbi-vdb \
+	-lktst
+
+$(TEST_BINDIR)/test-cachetee-out-of-space: $(CTOFS_OBJ)
+	$(LP) --exe -o $@ $^ $(CTOFS_LIB)
+
+#-------------------------------------------------------------------------------
+# scripted tests
+#
+runtests: cachetee-out-of-space-test
+
+cachetee-out-of-space-test: $(TEST_BINDIR)/fuse-proxy $(TEST_BINDIR)/test-cachetee-out-of-space run-cachetee-out-of-space-test.sh
+	@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+	@ echo "Running $(SRCDIR)/run-cachetee-out-of-space-test.sh"
+	@ $(SRCDIR)/run-cachetee-out-of-space-test.sh $(SRCDIR) $(TEST_BINDIR)
