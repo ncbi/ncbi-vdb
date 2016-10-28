@@ -2922,6 +2922,12 @@
           <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
           <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="..\..\..\libs\vfs\vpathset.c">
+          <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+          <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+          <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+          <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\..\..\libs\vfs\win\syspath.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)vfs-%(Filename).obj</ObjectFileName>
