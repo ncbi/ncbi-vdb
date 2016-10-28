@@ -24,7 +24,7 @@
  *
  */
 
-
+#include <vfs/extern.h>
 #include <kfg/kart-priv.h> /* KartItemMake2 */
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/log.h> /* KLogLevel */
