@@ -40,7 +40,7 @@
 #include <kproc/timeout.h> /* TimeoutInit */
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/pathsetlist.h> /* VPathSetListGetPath */
-#include <vfs/services.h> /* EObjectType */
+#include <vfs/services.h> /* KServiceMake */
 
 #include "path-priv.h" /* VPathMakeFmt */
 #include "services-priv.h"
@@ -173,51 +173,51 @@ typedef struct {
 typedef struct {
     KHttpRequest * req;
     rc_t rc;
-} EHttpRequestHelper;
+} SHttpRequestHelper;
 
 typedef struct {
     bool inited;
     char * cgi;
     Vector params;
-} ECgiRequest;
+} SCgiRequest;
 
 typedef struct {
     char * objectId;
     EObjectType objectType;
-} EObject;
+} SObject;
 
 typedef struct {
     Vector tickets;
     KDataBuffer str;
     size_t size;
     rc_t rc;
-} ETickets;
+} STickets;
 
 typedef struct {
-    EObject object [ 256 ];
+    SObject object [ 256 ];
     uint32_t objects;
     bool refseq_ctx;
-} ERequestData;
+} SRequestData;
 
 typedef struct {
     EServiceType serviceType;
     SVersion version;
-    ECgiRequest cgiReq;
-    ERequestData request;
-    ETickets tickets;
+    SCgiRequest cgiReq;
+    SRequestData request;
+    STickets tickets;
     int errorsToIgnore;
-} ERequest;
+} SRequest;
 
 /* request/response/processing helper objects */
 typedef struct {
     const KNSManager * mgr;
     uint32_t timeoutMs;
-} EHelper;
+} SHelper;
 
 /* service object */
 struct KService {
-    EHelper helper;
-    ERequest req;
+    SHelper helper;
+    SRequest req;
     SResponse resp;
 };
 
@@ -877,7 +877,7 @@ static rc_t EVPathInitMapping
 }
 
 static rc_t EVPathInit ( EVPath * self, const STyped * src, 
-    const ERequest * req, rc_t * r, const char * acc )
+    const SRequest * req, rc_t * r, const char * acc )
 {
     rc_t rc = 0;
     bool made = false;
@@ -979,7 +979,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
             "acc=%s,msg=%S,code=%u", acc, & src -> message, src -> code ) );
     }
     else {
-        -- ( ( ERequest * ) req ) -> errorsToIgnore;
+        -- ( ( SRequest * ) req ) -> errorsToIgnore;
     }
     return rc;
 }
@@ -1021,7 +1021,7 @@ static rc_t SRowWhack ( void * p ) {
 }
 
 static rc_t SRowMake ( SRow ** self,
-    char * src, const ERequest * req, const SConverters * f )
+    char * src, const SRequest * req, const SConverters * f )
 {
     rc_t rc = 0;
     rc_t r2 = 0;
@@ -1192,7 +1192,7 @@ rc_t SKVMake ( const SKV ** self, const char * k, const char * v )
     }
 }
 
-static rc_t SKVMakeObj ( const SKV ** self, const EObject * obj, ver_t version )
+static rc_t SKVMakeObj ( const SKV ** self, const SObject * obj, ver_t version )
 {
     bool old = version <= VERSION_3_0;
     char * p = NULL;
@@ -1287,8 +1287,8 @@ static void whackSKV ( void * p, void * ignore ) {
 }
 
 
-/* EHttpRequestHelper */
-static rc_t EHttpRequestHelperInit ( EHttpRequestHelper * self,
+/* SHttpRequestHelper */
+static rc_t SHttpRequestHelperInit ( SHttpRequestHelper * self,
     const KNSManager * mgr, const char * cgi )
 {
     rc_t rc = 0;
@@ -1301,7 +1301,7 @@ static rc_t EHttpRequestHelperInit ( EHttpRequestHelper * self,
     return rc;
 }
 
-static rc_t EHttpRequestHelperFini ( EHttpRequestHelper * self ) {
+static rc_t SHttpRequestHelperFini ( SHttpRequestHelper * self ) {
     rc_t rc = 0;
     assert ( self );
     RELEASE ( KHttpRequest, self -> req );
@@ -1309,10 +1309,10 @@ static rc_t EHttpRequestHelperFini ( EHttpRequestHelper * self ) {
 }
 
 static
-void EHttpRequestHelperAddPostParam ( void * item, void * data )
+void SHttpRequestHelperAddPostParam ( void * item, void * data )
 {
     const SKV          * kv = ( SKV                * ) item;
-    EHttpRequestHelper * p  = ( EHttpRequestHelper * ) data;
+    SHttpRequestHelper * p  = ( SHttpRequestHelper * ) data;
     rc_t rc = 0;
     assert ( kv && p );
     rc = KHttpRequestAddPostParam ( p -> req, kv -> k . addr );
@@ -1322,9 +1322,9 @@ void EHttpRequestHelperAddPostParam ( void * item, void * data )
 }
 
 
-/* ECgiRequest */
+/* SCgiRequest */
 static
-rc_t ECgiRequestInitCgi ( ECgiRequest * self, const char * cgi )
+rc_t SCgiRequestInitCgi ( SCgiRequest * self, const char * cgi )
 {
     assert ( self && ! self -> cgi );
     self -> cgi = string_dup_measure ( cgi, NULL );
@@ -1335,10 +1335,10 @@ rc_t ECgiRequestInitCgi ( ECgiRequest * self, const char * cgi )
 }
 
 static
-rc_t ECgiNamesRequestInit ( ERequest * request, VRemoteProtocols protocols,
+rc_t ECgiNamesRequestInit ( SRequest * request, VRemoteProtocols protocols,
     const char * cgi, const char * version )
 {
-    ECgiRequest * self = NULL;
+    SCgiRequest * self = NULL;
     rc_t rc = 0;
     const SKV * kv = NULL;
     assert ( request );
@@ -1356,7 +1356,7 @@ rc_t ECgiNamesRequestInit ( ERequest * request, VRemoteProtocols protocols,
             cgi =  "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
             cgi = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
         }
-        rc = ECgiRequestInitCgi ( self, cgi );
+        rc = SCgiRequestInitCgi ( self, cgi );
     }
     VectorInit ( & self -> params, 0, 5 );
     request -> serviceType = eSTnames;
@@ -1520,10 +1520,10 @@ rc_t ECgiNamesRequestInit ( ERequest * request, VRemoteProtocols protocols,
 
 
 static
-rc_t ECgiSearchRequestInit ( ERequest * request, const char * cgi,
+rc_t ECgiSearchRequestInit ( SRequest * request, const char * cgi,
     const char * version )
 {
-    ECgiRequest * self = NULL;
+    SCgiRequest * self = NULL;
     rc_t rc = 0;
     const SKV * kv = NULL;
     assert ( request );
@@ -1537,7 +1537,7 @@ rc_t ECgiSearchRequestInit ( ERequest * request, const char * cgi,
             cgi =  "http://www.ncbi.nlm.nih.gov/Traces/names/search.cgi";
             cgi = "https://www.ncbi.nlm.nih.gov/Traces/names/search.cgi";
         }
-        rc = ECgiRequestInitCgi ( self, cgi );
+        rc = SCgiRequestInitCgi ( self, cgi );
     }
     request -> serviceType = eSTsearch;
     VectorInit ( & self -> params, 0, 5 );
@@ -1606,24 +1606,24 @@ rc_t ECgiSearchRequestInit ( ERequest * request, const char * cgi,
 }
 
 
-static void ECgiRequestFini ( ECgiRequest * self ) {
+static void SCgiRequestFini ( SCgiRequest * self ) {
     assert ( self );
     free ( self -> cgi );
     VectorWhack ( & self -> params, whackSKV, NULL );
     memset ( self, 0, sizeof * self );
 }
 
-static rc_t ECgiRequestPerform ( const ECgiRequest * self,
-    const EHelper * helper, KStream ** response )
+static rc_t SCgiRequestPerform ( const SCgiRequest * self,
+    const SHelper * helper, KStream ** response )
 {
     rc_t rc = 0;
     assert ( self && helper );
     if ( rc == 0 ) {
-        EHttpRequestHelper h;
-        rc = EHttpRequestHelperInit ( & h, helper -> mgr, self-> cgi );
+        SHttpRequestHelper h;
+        rc = SHttpRequestHelperInit ( & h, helper -> mgr, self-> cgi );
         if ( rc == 0 ) {
             VectorForEach (
-                & self -> params, false, EHttpRequestHelperAddPostParam, & h );
+                & self -> params, false, SHttpRequestHelperAddPostParam, & h );
             rc = h . rc;
         }
         if ( rc == 0 ) {
@@ -1645,7 +1645,7 @@ static rc_t ECgiRequestPerform ( const ECgiRequest * self,
             RELEASE ( KHttpResult, rslt );
         }
         {
-            rc_t r2 = EHttpRequestHelperFini ( & h );
+            rc_t r2 = SHttpRequestHelperFini ( & h );
             if ( rc == 0 ) {
                 rc = r2;
             }
@@ -1655,8 +1655,8 @@ static rc_t ECgiRequestPerform ( const ECgiRequest * self,
 }
 
 
-/* EObject */
-static rc_t EObjectInit ( EObject * self,
+/* SObject */
+static rc_t SObjectInit ( SObject * self,
     const char * objectId, size_t objSz, EObjectType objectType )
 {
     assert ( self );
@@ -1670,16 +1670,16 @@ static rc_t EObjectInit ( EObject * self,
     return 0;
 }
 
-static void EObjectFini ( EObject * self ) {
+static void SObjectFini ( SObject * self ) {
     assert ( self );
     free ( self -> objectId );
     memset ( self, 0, sizeof * self );
 }
 
 
-/* ETickets */
+/* STickets */
 const uint64_t BICKETS = 1024;
-static rc_t ETicketsAppend ( ETickets * self, const char * ticket ) {
+static rc_t STicketsAppend ( STickets * self, const char * ticket ) {
     rc_t rc = 0;
     const char * comma = "";
     assert ( self );
@@ -1735,21 +1735,21 @@ static rc_t ETicketsAppend ( ETickets * self, const char * ticket ) {
     return rc;
 }
 
-/*static void ETicketsAppendFromVector ( void * item, void * data ) {
-    ETickets   * self   = ( ETickets * ) data;
-    rc_t rc = ETicketsAppend ( self, ( char * ) item );
+/*static void STicketsAppendFromVector ( void * item, void * data ) {
+    STickets   * self   = ( STickets * ) data;
+    rc_t rc = STicketsAppend ( self, ( char * ) item );
     if ( rc != 0 ) {
         self -> rc = rc;
     }
 }*/
 
-static rc_t ETicketsInit ( ETickets * self, const char * ticket ) {
+static rc_t STicketsInit ( STickets * self, const char * ticket ) {
     rc_t rc = 0;
     assert ( self );
     memset ( self, 0, sizeof * self );
     rc = KDataBufferMakeBytes ( & self -> str, BICKETS );
     if ( rc == 0 ) {
-        rc = ETicketsAppend ( self, ticket );
+        rc = STicketsAppend ( self, ticket );
     }
     return rc;
 }
@@ -1761,7 +1761,7 @@ static void whack_free ( void * self, void * ignore ) {
     }
 }
 
-static rc_t ETicketsFini ( ETickets * self ) {
+static rc_t STicketsFini ( STickets * self ) {
     assert ( self );
     rc_t rc = KDataBufferWhack ( & self -> str );
     VectorWhack ( & self -> tickets, whack_free, NULL );
@@ -1770,8 +1770,8 @@ static rc_t ETicketsFini ( ETickets * self ) {
 }
 
 
-/* ERequestData */
-static rc_t ERequestDataInit ( ERequestData * self,
+/* SRequestData */
+static rc_t SRequestDataInit ( SRequestData * self,
     const char * acc, size_t acc_sz, EObjectType objectType, bool refseq_ctx )
 {
     rc_t rc = 0;
@@ -1780,22 +1780,22 @@ static rc_t ERequestDataInit ( ERequestData * self,
     self -> refseq_ctx  = refseq_ctx;
     if ( acc != NULL && acc_sz != 0 ) {
         self -> objects = 1;
-        rc = EObjectInit ( & self -> object [ 0 ], acc, acc_sz, objectType );
+        rc = SObjectInit ( & self -> object [ 0 ], acc, acc_sz, objectType );
     }
     return rc;
 }
 
-static void ERequestDataFini ( ERequestData * self ) {
+static void SRequestDataFini ( SRequestData * self ) {
     uint32_t i = 0;
     assert ( self );
     for ( i = 0; i < self -> objects; ++i ) {
-        EObjectFini ( & self -> object [ i ] );
+        SObjectFini ( & self -> object [ i ] );
     }
     memset ( self, 0, sizeof * self );
 }
 
-static rc_t ERequestDataAppendObject
-    ( ERequestData * self, const char * id, EObjectType objectType )
+static rc_t SRequestDataAppendObject
+    ( SRequestData * self, const char * id, EObjectType objectType )
 {
     rc_t rc = 0;
     assert ( self );
@@ -1803,7 +1803,7 @@ static rc_t ERequestDataAppendObject
     {
         return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcExcessive );
     }
-    rc = EObjectInit ( & self -> object [ self -> objects ],
+    rc = SObjectInit ( & self -> object [ self -> objects ],
         id, string_measure ( id, NULL ), objectType );
     if ( rc == 0 ) {
         ++ self -> objects;
@@ -1812,8 +1812,8 @@ static rc_t ERequestDataAppendObject
 }
 
 
-/* ERequest */
-static rc_t ERequestInit ( ERequest * self, const char * acc, size_t acc_sz,
+/* SRequest */
+static rc_t SRequestInit ( SRequest * self, const char * acc, size_t acc_sz,
     const char * ticket, EObjectType objectType, bool refseq_ctx )
 {
     rc_t rc = 0;
@@ -1822,40 +1822,40 @@ static rc_t ERequestInit ( ERequest * self, const char * acc, size_t acc_sz,
     memset ( self, 0, sizeof * self );
 
     if ( rc == 0 ) {
-        rc = ETicketsInit ( & self -> tickets, ticket );
+        rc = STicketsInit ( & self -> tickets, ticket );
     }
 
     if ( rc == 0 ) {
-        rc = ERequestDataInit ( & self -> request, acc, acc_sz,
+        rc = SRequestDataInit ( & self -> request, acc, acc_sz,
             objectType, refseq_ctx );
     }
 
     return rc;
 }
 
-static rc_t ERequestFini ( ERequest * self ) {
+static rc_t SRequestFini ( SRequest * self ) {
     rc_t rc = 0;
     rc_t r2 = 0;
     assert ( self );
-    rc = ETicketsFini ( & self -> tickets );
+    rc = STicketsFini ( & self -> tickets );
     r2 = SVersionFini ( & self -> version );
     if ( rc == 0 ) {
         rc = r2;
     }
-    ERequestDataFini ( & self -> request );
-    ECgiRequestFini ( & self -> cgiReq );
+    SRequestDataFini ( & self -> request );
+    SCgiRequestFini ( & self -> cgiReq );
     memset ( self, 0, sizeof * self );
     return rc;
 }
 
-static rc_t ERequestAddTicket ( ERequest * self, const char * ticket ) {
+static rc_t SRequestAddTicket ( SRequest * self, const char * ticket ) {
     assert ( self );
-    return ETicketsAppend ( & self -> tickets, ticket );
+    return STicketsAppend ( & self -> tickets, ticket );
 }
 
 
-/* EHelper */
-static rc_t EHelperInit ( EHelper * self, const KNSManager * mgr ) {
+/* SHelper */
+static rc_t SHelperInit ( SHelper * self, const KNSManager * mgr ) {
     rc_t rc = 0;
     assert ( self );
     memset ( self, 0, sizeof * self );
@@ -1874,7 +1874,7 @@ static rc_t EHelperInit ( EHelper * self, const KNSManager * mgr ) {
     return rc;
 }
 
-static rc_t EHelperFini ( EHelper * self) {
+static rc_t SHelperFini ( SHelper * self) {
     rc_t rc = 0;
     assert ( self );
     RELEASE ( KNSManager, self -> mgr );
@@ -1893,13 +1893,13 @@ static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
     assert ( self ); 
     memset ( self, 0, sizeof * self );
     if ( rc == 0 ) {
-        rc = EHelperInit ( & self -> helper, mgr );
+        rc = SHelperInit ( & self -> helper, mgr );
     }
     if ( rc == 0 ) {
         rc = SResponseInit ( & self ->  resp );
     }
     if ( rc == 0 ) {
-        rc = ERequestInit ( & self -> req,  acc, acc_sz, ticket,
+        rc = SRequestInit ( & self -> req,  acc, acc_sz, ticket,
             objectType, refseq_ctx );
     }
     if ( rc == 0 ) {
@@ -1916,13 +1916,13 @@ rc_t KServiceInit ( KService * self, const KNSManager * mgr,
     assert ( self ); 
     memset ( self, 0, sizeof * self );
     if ( rc == 0 ) {
-        rc = EHelperInit ( & self -> helper, mgr );
+        rc = SHelperInit ( & self -> helper, mgr );
     }
     if ( rc == 0 ) {
         rc = SResponseInit ( & self ->  resp );
     }
     if ( rc == 0 ) {
-        rc = ERequestInit ( & self -> req, NULL, 0, NULL,  objectType, false );
+        rc = SRequestInit ( & self -> req, NULL, 0, NULL,  objectType, false );
     }
     return rc;
 }
@@ -1960,11 +1960,11 @@ static rc_t KServiceFini ( KService * self ) {
     if ( rc == 0 ) {
         rc = r2;
     }
-    r2 = ERequestFini ( & self -> req );
+    r2 = SRequestFini ( & self -> req );
     if ( rc == 0 ) {
         rc = r2;
     }
-    r2 = EHelperFini ( & self -> helper );
+    r2 = SHelperFini ( & self -> helper );
     if ( rc == 0 ) {
         rc = r2;
     }
@@ -1991,7 +1991,7 @@ rc_t KServiceAddObject ( KService * self,
     if ( self == NULL ) {
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
     }
-    return ERequestDataAppendObject ( & self -> req . request, id, objectType );
+    return SRequestDataAppendObject ( & self -> req . request, id, objectType );
 }
 
 rc_t KServiceAddId ( KService * self, const char * id ) {
@@ -2005,7 +2005,7 @@ rc_t KServiceAddTicket ( KService * self, const char * ticket ) {
     if ( ticket == NULL ) {
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
     }
-    return ERequestAddTicket ( & self -> req, ticket );
+    return SRequestAddTicket ( & self -> req, ticket );
 }
 
 static
@@ -2228,7 +2228,7 @@ rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
     }
     rc = KServiceInitNamesRequestWithVersion ( self, protocols, cgi, version );
     if ( rc == 0 ) {
-        rc = ECgiRequestPerform
+        rc = SCgiRequestPerform
             ( & self -> req . cgiReq, & self -> helper, & stream );
     }
     if ( rc == 0 ) {
@@ -2263,7 +2263,7 @@ static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
     rc = KServiceInitNames1 ( & service, mgr, url, version,
         acc, acc_sz, ticket, protocols, objectType, refseq_ctx );
     if ( rc == 0 ) {
-        rc = ECgiRequestPerform
+        rc = SCgiRequestPerform
             ( & service . req . cgiReq, & service . helper, & stream );
     }
     if ( rc == 0 ) {
@@ -2364,7 +2364,7 @@ rc_t KServiceSearchExecuteExt ( KService * self, const char * cgi,
     }
     rc = KServiceInitSearchRequestWithVersion ( self, cgi, version );
     if ( rc == 0 ) {
-        rc = ECgiRequestPerform
+        rc = SCgiRequestPerform
             ( & self -> req . cgiReq, & self -> helper, & stream );
     }
     if ( rc == 0 ) {
@@ -2417,7 +2417,7 @@ typedef struct {
     VRemoteProtocols protocols;
 } SKVCheck;
 
-static void ECgiRequestCheck ( void * item, void * data ) {
+static void SCgiRequestCheck ( void * item, void * data ) {
  /* const SKV * kv = ( SKV      * ) item; */
     SKVCheck  * p  = ( SKVCheck * ) data;
     assert ( p );
@@ -2447,7 +2447,7 @@ rc_t KServiceRequestTestNames1 ( const KNSManager * mgr,
         SKVCheck c;
         SKVCheckInit ( & c, acc, version, protocols );
         VectorForEach
-            ( & service . req . cgiReq . params, false, ECgiRequestCheck, & c );
+            ( & service . req . cgiReq . params, false, SCgiRequestCheck, & c );
         rc = c . passed;
     }
     {
@@ -2463,11 +2463,11 @@ typedef struct {
     const char * id;
     EObjectType type;
     const char * ticket;
-} EServiceRequestTestData;
+} SServiceRequestTestData;
 
 rc_t KServiceNamesRequestTest ( const KNSManager * mgr, const char * b,
     const char * cgi, VRemoteProtocols protocols,
-    const EServiceRequestTestData * d, ... )
+    const SServiceRequestTestData * d, ... )
 {
     va_list args;
     KService * service = NULL;
@@ -2481,7 +2481,7 @@ rc_t KServiceNamesRequestTest ( const KNSManager * mgr, const char * b,
         if ( rc == 0 && d -> ticket != NULL ) {
             rc = KServiceAddTicket ( service, d -> ticket );
         }
-        d = va_arg ( args, const EServiceRequestTestData * );
+        d = va_arg ( args, const SServiceRequestTestData * );
     }
     if ( rc == 0 ) {
         rc = KServiceInitNamesRequest ( service, protocols, cgi );
@@ -2490,7 +2490,7 @@ rc_t KServiceNamesRequestTest ( const KNSManager * mgr, const char * b,
         SKVCheck c;
     /*SKVCheckInit ( & c, acc, service -> req . version .raw . s, protocols );*/
         VectorForEach (
-            & service -> req . cgiReq . params, false, ECgiRequestCheck, & c );
+            & service -> req . cgiReq . params, false, SCgiRequestCheck, & c );
         rc = c . passed;
     }
     if ( rc == 0 ) {
@@ -2555,7 +2555,7 @@ rc_t KServiceFuserTest ( const KNSManager * mgr,  const char * ticket,
     return rc;
 }
 
-rc_t ECgiRequestPerformTestNames1 ( const KNSManager * mgr, const char * cgi,
+rc_t SCgiRequestPerformTestNames1 ( const KNSManager * mgr, const char * cgi,
     const char * version, const char * acc, const char * ticket,
     VRemoteProtocols protocols, EObjectType objectType )
 {
@@ -2564,7 +2564,7 @@ rc_t ECgiRequestPerformTestNames1 ( const KNSManager * mgr, const char * cgi,
         string_measure ( acc, NULL ), ticket, protocols, objectType, false );
     if ( rc == 0 ) {
         KStream * response = NULL;
-        rc = ECgiRequestPerform
+        rc = SCgiRequestPerform
             ( & service . req . cgiReq, & service . helper, & response );
         RELEASE ( KStream, response );
     }
