@@ -2336,8 +2336,8 @@ static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
     return rc;
 }
 
-
-rc_t KService1NameWithVersion ( const KNSManager * mgr, const char * url,
+LIB_EXPORT
+rc_t CC KService1NameWithVersion ( const KNSManager * mgr, const char * url,
     const char * acc, size_t acc_sz, const char * ticket,
     VRemoteProtocols protocols, const VPath ** remote, const VPath ** mapping,
     bool refseq_ctx, const char * version )
