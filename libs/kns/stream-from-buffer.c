@@ -27,6 +27,8 @@
 #define KSTREAM_IMPL KBufferStream
 typedef struct KBufferStream KBufferStream;
 
+#include <kns/extern.h>
+
 #include <klib/rc.h>
 #include <klib/text.h> /* String */
 #include <kns/impl.h> /* KStream */
