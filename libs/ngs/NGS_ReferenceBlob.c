@@ -49,7 +49,7 @@ struct NGS_ReferenceBlob
 
     const VBlob* blob;
 
-    int64_t     refStart;  /* rowId of the first row in the reference */
+    int64_t     refFirst;  /* rowId of the first row in the reference/slice */
     int64_t     rowId;  /* rowId of the first row in the blob */
     uint64_t    count;  /* number of rows in the blob */
 
@@ -74,20 +74,20 @@ static NGS_Refcount_vt NGS_ReferenceBlob_vt =
     NGS_ReferenceBlobWhack
 };
 
-struct NGS_ReferenceBlob * NGS_ReferenceBlobMake ( ctx_t ctx, const NGS_Cursor* p_curs, int64_t p_refStartRowId, int64_t p_firstRowId )
+struct NGS_ReferenceBlob * NGS_ReferenceBlobMake ( ctx_t ctx, const NGS_Cursor* p_curs, int64_t p_firstRowId, int64_t p_refFirstRowId, int64_t p_refLastRowId )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcConstructing );
     if ( p_curs == NULL )
     {
         INTERNAL_ERROR ( xcParamNull, "NULL cursor object" );
     }
-    else if ( p_refStartRowId < 1 )
+    else if ( p_refFirstRowId < 1 )
     {
-        INTERNAL_ERROR ( xcParamNull, "Invalid refStartRowId: %li", p_refStartRowId );
+        INTERNAL_ERROR ( xcParamNull, "Invalid refFirstRowId: %li", p_refFirstRowId );
     }
-    else if ( p_firstRowId < p_refStartRowId )
+    else if ( p_firstRowId < p_refFirstRowId )
     {
-        INTERNAL_ERROR ( xcParamNull, "Invalid rowId: %li (less than refStartId=%li)", p_firstRowId, p_refStartRowId );
+        INTERNAL_ERROR ( xcParamNull, "Invalid rowId: %li (less than refFirstRowId=%li)", p_firstRowId, p_refFirstRowId );
     }
     else
     {
@@ -102,9 +102,9 @@ struct NGS_ReferenceBlob * NGS_ReferenceBlobMake ( ctx_t ctx, const NGS_Cursor* 
             {
                 TRY ( ret -> blob = NGS_CursorGetVBlob ( p_curs, ctx, p_firstRowId, reference_READ ) )
                 {
-                    ret -> refStart = p_refStartRowId;
+                    ret -> refFirst = p_refFirstRowId;
                     ret -> rowId = p_firstRowId;
-                    TRY ( VByteBlob_ContiguousChunk ( ret -> blob, ctx, ret -> rowId, &ret -> data, &ret -> size, false ) )
+                    TRY ( VByteBlob_ContiguousChunk ( ret -> blob, ctx, ret -> rowId, p_refLastRowId - p_firstRowId + 1, &ret -> data, &ret -> size, false ) )
                     {
                         int64_t first;
                         uint64_t count;
@@ -113,7 +113,14 @@ struct NGS_ReferenceBlob * NGS_ReferenceBlobMake ( ctx_t ctx, const NGS_Cursor* 
                         {
                             assert ( first <= ret -> rowId );
                             ret -> first = first;
-                            ret -> count = count - ( ret -> rowId - first );
+                            if ( p_refLastRowId != 0 && first + count > p_refLastRowId )
+                            {   /* cut off rows beyound p_refLastRowId */
+                                ret -> count = p_refLastRowId + 1 - first;
+                            }
+                            else
+                            {
+                                ret -> count = count - ( ret -> rowId - first );
+                            }
                             return ret;
                         }
                         INTERNAL_ERROR ( xcUnexpected, "VBlobIdRange() rc = %R", rc );
@@ -266,7 +273,7 @@ void NGS_ReferenceBlobResolveOffset ( const struct NGS_ReferenceBlob * self, ctx
                 if ( p_inBlob < offset + size )
                 {
                     /* assume all the prior chunks of this reference were ChunkSize long */
-                    * p_inReference =  ( self -> rowId - self -> refStart ) * ChunkSize + inUnrolledBlob + p_inBlob % size;
+                    * p_inReference =  ( self -> rowId - self -> refFirst ) * ChunkSize + inUnrolledBlob + p_inBlob % size;
                     if ( p_repeatCount != NULL )
                     {
                         * p_repeatCount = repeat;
@@ -320,7 +327,7 @@ bool NGS_ReferenceBlobFindRepeat ( const struct NGS_ReferenceBlob * self, ctx_t 
                 if ( repeat > 1 && p_startInBlob <= offset - baseOffset ) /* looking for the next repeated row */
                 {
                     * p_nextInBlob = offset - baseOffset;
-                    * p_inReference =  ( self -> rowId - self -> refStart ) * ChunkSize + inUnrolledBlob;
+                    * p_inReference =  ( self -> rowId - self -> refFirst ) * ChunkSize + inUnrolledBlob;
                     if ( p_repeatCount != NULL )
                     {
                         * p_repeatCount = repeat;

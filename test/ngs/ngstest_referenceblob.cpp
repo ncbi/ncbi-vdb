@@ -40,6 +40,7 @@
 #include <NGS_ReferenceBlobIterator.h>
 
 #include <../libs/ngs/CSRA1_Reference.h>
+#include <../libs/ngs/VByteBlob.h>
 
 #include <stdexcept>
 
@@ -50,6 +51,7 @@ TEST_SUITE(NgsReferenceBlobTestSuite);
 
 const char* CSRA1_Accession = "SRR1063272";
 const char* CSRA1_Accession_WithRepeats = "SRR600094";
+const char* CSRA1_Accession_WithCircular = "SRR1769246";
 
 //////////////////////////////////////////// NGS_ReferenceBlob
 
@@ -93,14 +95,14 @@ public:
         NGS_StringRelease ( run_name, m_ctx );
         THROW_ON_RC ( VDatabaseRelease ( db ) );
     }
-    void GetBlob ( const char* p_acc, int64_t p_rowId, int64_t p_refStart = 1 )
+    void GetBlob ( const char* p_acc, int64_t p_rowId, int64_t p_refFirst = 1, int64_t p_refLast = 0 )
     {
         GetCursor ( p_acc );
         if ( m_blob != 0 )
         {
             NGS_ReferenceBlobRelease ( m_blob, m_ctx );
         }
-        m_blob = NGS_ReferenceBlobMake ( m_ctx, m_curs, p_refStart, p_rowId );
+        m_blob = NGS_ReferenceBlobMake ( m_ctx, m_curs, p_rowId, p_refFirst, p_refLast );
     }
 
     void CheckRange( ctx_t ctx, int64_t p_first, uint64_t p_count )
@@ -115,7 +117,7 @@ public:
         if ( p_first != first || p_count != count )
         {
             ostringstream str;
-            str << "CheckRange(first=" << p_first << ", count=" << p_count << ") : first=" << first << ", count=" << count << endl;
+            str << "CheckRange(first=" << p_first << ", count=" << p_count << ") : first=" << first << ", count=" << count;
             throw std :: logic_error ( str.str() );
         }
     }
@@ -130,7 +132,7 @@ TEST_CASE ( NGS_ReferenceBlob_Make_BadCursor)
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRow, rcAccessing );
 
-    struct NGS_ReferenceBlob * blob = NGS_ReferenceBlobMake ( ctx, NULL, 1, 1 );
+    struct NGS_ReferenceBlob * blob = NGS_ReferenceBlobMake ( ctx, NULL, 1, 1, 0 );
     REQUIRE_FAILED ();
     REQUIRE_NULL ( blob );
 }
@@ -140,7 +142,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Make_BadRowId, ReferenceBlobFixture )
     ENTRY;
     GetCursor ( CSRA1_Accession );
 
-    struct NGS_ReferenceBlob * blob = NGS_ReferenceBlobMake ( ctx, m_curs, 1, 0 ); // rowId < refStart
+    struct NGS_ReferenceBlob * blob = NGS_ReferenceBlobMake ( ctx, m_curs, 1, 2, 0 ); // rowId < refStart
     REQUIRE_FAILED ();
     REQUIRE_NULL ( blob );
 
@@ -152,7 +154,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Make_BadStartId, ReferenceBlobFixture )
     ENTRY;
     GetCursor ( CSRA1_Accession );
 
-    struct NGS_ReferenceBlob * blob = NGS_ReferenceBlobMake ( ctx, m_curs, -1, 1 ); // bad refStart
+    struct NGS_ReferenceBlob * blob = NGS_ReferenceBlobMake ( ctx, m_curs, 1, -1, 1 ); // bad refStart
     REQUIRE_FAILED ();
     REQUIRE_NULL ( blob );
 
@@ -164,7 +166,7 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Make, ReferenceBlobFixture )
     ENTRY;
     GetCursor ( CSRA1_Accession );
 
-    m_blob = NGS_ReferenceBlobMake ( ctx, m_curs, 1, 1 );
+    m_blob = NGS_ReferenceBlobMake ( ctx, m_curs, 1, 1, 0 );
     REQUIRE ( ! FAILED () );
     REQUIRE_NOT_NULL ( m_blob );
 
@@ -230,6 +232,14 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_Range, ReferenceBlobFixture )
     ENTRY;
     GetBlob ( CSRA1_Accession, 1 );
     CheckRange ( ctx, 1, 4 );
+    EXIT;
+}
+
+FIXTURE_TEST_CASE ( NGS_ReferenceBlob_RangeLimited, ReferenceBlobFixture )
+{
+    ENTRY;
+    GetBlob ( CSRA1_Accession, 1, 1, 3 );
+    CheckRange ( ctx, 1, 3 );
     EXIT;
 }
 
@@ -535,20 +545,24 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlob_FindRepeat_FoundNext, ReferenceBlobFixture
     int64_t row=1;
     while ( row < 4100 )
     {
-        m_blob = NGS_ReferenceBlobMake ( ctx, m_curs, 1, row );
+        m_blob = NGS_ReferenceBlobMake ( ctx, m_curs, row, 1, 0 );
         if ( FAILED () )
         {
             CLEAR ();
             break;
         }
         //NGS_ReferenceBlobPrintPageMap(m_blob, ctx);
+        const bool PrintOn = false;
         int64_t firstRow;
         uint64_t rowCount;
         NGS_ReferenceBlobRowRange ( m_blob, ctx, &firstRow, &rowCount );
+        if ( PrintOn )
+        {
+            cout << "Blob: " << firstRow << ", " << rowCount << ": " << endl;
+        }
         REQUIRE ( ! FAILED () );
         if ( rowCount > 1 )
         {
-            const bool PrintOn = false;
             bool first = true;
             uint64_t nextInBlob = 0;
             uint64_t inRef;
@@ -729,9 +743,19 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_Next_Empty, ReferenceBlobIteratorF
 FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_Next, ReferenceBlobIteratorFixture )
 {
     ENTRY;
-    GetIterator ( CSRA1_Accession, 1, 2 );
+    GetIterator ( CSRA1_Accession, 1, 10 );
     REQUIRE ( NextBlob ( ctx ) );
     CheckRange ( ctx, 1, 4 );
+
+    EXIT;
+}
+
+FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_Limited_Next, ReferenceBlobIteratorFixture )
+{
+    ENTRY;
+    GetIterator ( CSRA1_Accession, 1, 2 );
+    REQUIRE ( NextBlob ( ctx ) );
+    CheckRange ( ctx, 1, 2 );
 
     EXIT;
 }
@@ -821,15 +845,20 @@ FIXTURE_TEST_CASE ( NGS_ReferenceBlobIterator_MidTable, ReferenceBlobIteratorFix
 
 FIXTURE_TEST_CASE(CSRA1_NGS_ReferenceGetBlobs_All, ReferenceBlobIteratorFixture)
 {
-    ENTRY_GET_REF ( CSRA1_Accession, "supercont2.1" );
+    ENTRY_GET_REF ( CSRA1_Accession_WithCircular, "NC_012920.1" );
 
     m_blobIt = NGS_ReferenceGetBlobs( m_ref, ctx, 0, (uint64_t)-1 );
     REQUIRE ( ! FAILED () && m_blobIt );
 
     REQUIRE ( NextBlob ( ctx ) );
-    CheckRange ( ctx, 1, 4 );
+    CheckRange ( ctx, 619147, 1 );
     REQUIRE ( NextBlob ( ctx ) );
-    CheckRange ( ctx, 5, 4 );
+    CheckRange ( ctx, 619148, 1 );
+    REQUIRE ( NextBlob ( ctx ) );
+    // the actual blob contains 4 rows but only the first 2 are from this reference
+    CheckRange ( ctx, 619149, 2 );
+    // size includes only the 2 reported rows
+    REQUIRE_EQ ( (uint64_t)6569, NGS_ReferenceBlobSize ( m_blob, ctx ) );
 
     EXIT;
 }
@@ -903,7 +932,7 @@ rc_t CC Usage ( const Args * args )
     return 0;
 }
 
-const char UsageDefaultName[] = "test-ngs";
+const char UsageDefaultName[] = "test-ngs_referenceblob";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {

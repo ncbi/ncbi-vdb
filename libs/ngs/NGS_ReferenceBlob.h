@@ -49,10 +49,11 @@ struct NGS_String;
 
 /* Make
  *  create a blob containing the given row in the reference
- *  refStartId - Id of the first row of the reference containing the blob
- *  firstRowId - Id of the first row of blob
+ *  blobRowId - Id of the required row, becomes the first row of the blob
+ *  refFirstId - Id of the first row of the reference containing the blob
+ *  refLastId [ 0 OK ] - Id of the last row of the reference (or slice) containing the blob (blob will be cut off if it contains futher rows); 0 if no cutoff is needed
  */
-struct NGS_ReferenceBlob * NGS_ReferenceBlobMake ( ctx_t ctx, const struct NGS_Cursor* curs, int64_t refStartRowId, int64_t firstRowId );
+struct NGS_ReferenceBlob * NGS_ReferenceBlobMake ( ctx_t ctx, const struct NGS_Cursor* curs, int64_t blobRowId, int64_t refFirstId, int64_t refLastId );
 
 /* Release
  *  release reference to the blob

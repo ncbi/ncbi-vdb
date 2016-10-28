@@ -37,6 +37,7 @@ TEST_TOOLS = \
     test-ngs_csra1_refwin \
     test-ngs_csra1_pileup \
     test-ngs_reference \
+    test-ngs_byteblob \
     test-ngs_fragmentblob \
     test-ngs_referenceblob \
 
@@ -229,4 +230,19 @@ $(TEST_BINDIR)/test-ngs_referenceblob: $(TEST_NGS_REFBLOB_OBJ) makedb
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
 refblob: test-ngs_referenceblob
+	cd $(SRCDIR); $(TEST_BINDIR)/$^
+
+#-------------------------------------------------------------------------------
+# test-ngs_byteblob
+#
+TEST_NGS_BYTEBLOB_SRC = \
+	ngstest_byteblob
+
+TEST_NGS_BYTEBLOB_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_NGS_BYTEBLOB_SRC))
+
+$(TEST_BINDIR)/test-ngs_byteblob: $(TEST_NGS_BYTEBLOB_OBJ) makedb
+	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
+
+byteblob: test-ngs_byteblob
 	cd $(SRCDIR); $(TEST_BINDIR)/$^

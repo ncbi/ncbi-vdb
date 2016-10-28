@@ -162,7 +162,7 @@ NGS_ReferenceBlobIteratorNext ( NGS_ReferenceBlobIterator * self, ctx_t ctx )
                                                & nextRow );
         if ( rc == 0 )
         {
-            TRY ( NGS_ReferenceBlob* ret = NGS_ReferenceBlobMake ( ctx, self -> curs, self -> ref_start, nextRow ) )
+            TRY ( NGS_ReferenceBlob* ret = NGS_ReferenceBlobMake ( ctx, self -> curs, nextRow, self -> ref_start, self -> last_row ) )
             {
                 int64_t first;
                 uint64_t count;
