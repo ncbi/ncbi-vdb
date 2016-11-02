@@ -131,7 +131,6 @@ static rc_t leaf_find(Pager *const pager, Pager_vt const *const vt, void const *
 {
     const uint8_t *query_8 = query;
     size_t  qsize_8 = qsize;
-    rc_t rc = 0;
     const LeafNode *cnode = vt->access(pager, page);
     assert(cnode != NULL);
 
