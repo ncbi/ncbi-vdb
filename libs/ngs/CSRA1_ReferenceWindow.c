@@ -777,7 +777,7 @@ void LoadAlignments ( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t chunk_row_
     {
         ON_FAIL ( LoadAlignmentIndex ( self, ctx, chunk_row_id, reference_SECONDARY_ALIGNMENT_IDS, & secondary_idx, & secondary_idx_end ) )
         {
-            if ( GetRCObject ( ctx -> rc ) == rcColumn && GetRCState ( ctx -> rc ) == rcNotFound )
+            if ( GetRCObject ( ctx -> rc ) == ( enum RCObject )rcColumn && GetRCState ( ctx -> rc ) == rcNotFound )
             {   /* SECONDARY_ALIGNMENT_IDS is missing; no problem */
                 self -> secondary = false; /* do not try anymore */
                 CLEAR();
