@@ -478,6 +478,7 @@ void KEncFileFooterSwap (const KEncFile * self, KEncFileFooter * foot)
  * Read
  * If we know where the footer is we can read it specifically
  */
+#if 0
 static
 rc_t KEncFileFooterRead (KEncFile * self, const uint64_t pos,
                          const bool validate)
@@ -526,7 +527,7 @@ rc_t KEncFileFooterRead (KEncFile * self, const uint64_t pos,
 
     return rc;
 }
-
+#endif
 
 /* ----------
  * Write
