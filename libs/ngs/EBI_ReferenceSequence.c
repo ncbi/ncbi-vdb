@@ -383,7 +383,6 @@ struct NGS_String * EBI_ReferenceSequenceGetBases ( EBI_ReferenceSequence * self
         else
         {
             uint64_t basesToReturn = totalBases - offset;
-            char* data;
 
             if (size != (size_t)-1 && basesToReturn > size)
                 basesToReturn = size;
