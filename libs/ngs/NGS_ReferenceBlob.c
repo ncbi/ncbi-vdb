@@ -273,7 +273,7 @@ void NGS_ReferenceBlobResolveOffset ( const struct NGS_ReferenceBlob * self, ctx
                 if ( p_inBlob < offset + size )
                 {
                     /* assume all the prior chunks of this reference were ChunkSize long */
-                    * p_inReference =  ( self -> rowId - self -> refFirst ) * ChunkSize + inUnrolledBlob + p_inBlob % size;
+                    * p_inReference =  ( self -> rowId - self -> refFirst ) * ChunkSize + inUnrolledBlob + p_inBlob % ChunkSize;
                     if ( p_repeatCount != NULL )
                     {
                         * p_repeatCount = repeat;
