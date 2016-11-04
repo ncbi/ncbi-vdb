@@ -33,6 +33,8 @@
 #include <klib/rc.h> /* RC */
 #include <klib/text.h> /* String */
 #include <klib/vector.h> /* Vector */
+#include <kfg/config.h> /* KConfigRelease */
+#include <kfg/repository.h> /* KRepositoryMgrRelease */
 #include <kns/http.h> /* KHttpRequest */
 #include <kns/kns-mgr-priv.h> /* KNSManagerMakeReliableClientRequest */
 #include <kns/manager.h> /* KNSManager */
@@ -74,6 +76,14 @@ typedef enum {
     eSTnames,
     eSTsearch,
 } EServiceType;
+
+/* request/response/processing helper objects */
+typedef struct {
+    struct       KConfig        * kfg;
+    const struct KNSManager     * kMgr;
+    const struct KRepositoryMgr * repoMgr;
+    uint32_t timeoutMs;
+} SHelper;
 
 /* raw string text */
 typedef struct { char * s; } SRaw; 
@@ -207,12 +217,6 @@ typedef struct {
     STickets tickets;
     int errorsToIgnore;
 } SRequest;
-
-/* request/response/processing helper objects */
-typedef struct {
-    const KNSManager * mgr;
-    uint32_t timeoutMs;
-} SHelper;
 
 /* service object */
 struct KService {
@@ -1620,7 +1624,7 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
     assert ( self && helper );
     if ( rc == 0 ) {
         SHttpRequestHelper h;
-        rc = SHttpRequestHelperInit ( & h, helper -> mgr, self-> cgi );
+        rc = SHttpRequestHelperInit ( & h, helper -> kMgr, self-> cgi );
         if ( rc == 0 ) {
             VectorForEach (
                 & self -> params, false, SHttpRequestHelperAddPostParam, & h );
@@ -1868,7 +1872,7 @@ static rc_t SHelperInit ( SHelper * self, const KNSManager * mgr ) {
         rc = KNSManagerAddRef ( mgr );
     }
     if ( rc == 0) {
-        self -> mgr = mgr;
+        self -> kMgr = mgr;
     }
     self -> timeoutMs = 5000;
     return rc;
@@ -1876,12 +1880,64 @@ static rc_t SHelperInit ( SHelper * self, const KNSManager * mgr ) {
 
 static rc_t SHelperFini ( SHelper * self) {
     rc_t rc = 0;
+
     assert ( self );
-    RELEASE ( KNSManager, self -> mgr );
+
+    RELEASE ( KConfig       , self -> kfg );
+    RELEASE ( KNSManager    , self -> kMgr );
+    RELEASE ( KRepositoryMgr, self -> repoMgr );
+
     memset ( self, 0, sizeof * self );
-    return 0;
+
+    return rc;
 }
 
+VRemoteProtocols SHelperDefaultProtocols ( SHelper * self ) {
+    assert ( self );
+
+    VRemoteProtocols protocols = eProtocolHttpHttps;
+
+    if ( self -> kfg == NULL ) {
+        KConfigMake ( & self -> kfg, NULL );
+    }
+
+    KConfigReadRemoteProtocols ( self -> kfg, & protocols );
+
+    return protocols;
+}
+
+rc_t SHelperProjectToTicket ( SHelper * self, uint32_t projectId,
+    char * buffer, size_t bsize, size_t * ticket_size )
+{
+    rc_t rc = 0;
+
+    const KRepository * repo = NULL;
+
+    assert ( self );
+
+    if ( self -> repoMgr == NULL ) {
+        if ( self -> kfg == NULL ) {
+            rc = KConfigMake ( & self -> kfg, NULL );
+            if ( rc != 0 )
+                return rc;
+        }
+
+        rc = KConfigMakeRepositoryMgrRead ( self -> kfg, & self -> repoMgr );
+        if ( rc != 0 )
+            return rc;
+    }
+
+    rc = KRepositoryMgrGetProtectedRepository ( self -> repoMgr, projectId,
+        & repo );
+    if ( rc != 0 )
+        return rc;
+
+    rc = KRepositoryDownloadTicket ( repo, buffer, bsize, ticket_size );
+
+    RELEASE ( KRepository, repo );
+
+    return rc;
+}
 
 /* KService */
 static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
@@ -1999,13 +2055,27 @@ rc_t KServiceAddId ( KService * self, const char * id ) {
 }
 
 rc_t KServiceAddTicket ( KService * self, const char * ticket ) {
-    if ( self == NULL ) {
+    if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
-    }
-    if ( ticket == NULL ) {
+    if ( ticket == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-    }
     return SRequestAddTicket ( & self -> req, ticket );
+}
+
+rc_t KServiceAddProject ( KService * self, uint32_t project ) {
+    rc_t rc = 0;
+    char buffer [ 256 ] = "";
+    size_t ticket_size = ~0;
+    if ( project == 0 )
+        return 0;
+    if ( self == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+    rc = SHelperProjectToTicket ( & self -> helper, project,
+        buffer, sizeof buffer, & ticket_size );
+    if ( rc != 0 )
+        return rc;
+    assert ( ticket_size <= sizeof buffer );
+    return SRequestAddTicket ( & self -> req, buffer );
 }
 
 static

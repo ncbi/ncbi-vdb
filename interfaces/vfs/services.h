@@ -52,10 +52,7 @@ rc_t KServiceRelease ( KService * self );
 
 rc_t KServiceAddId     ( KService * self, const char * id );
 
-rc_t KServiceAddProject ( KService * self, const char * /*[u]int?*/ id );
-
-/* MOVE IT IT priv-h ! */
-rc_t KServiceAddTicket ( KService * self, const char * ticket );
+rc_t KServiceAddProject ( KService * self, uint32_t id );
 
 /************************** name service - version 3 **************************/
 rc_t KServiceNamesExecute ( KService * self, VRemoteProtocols protocols, 
