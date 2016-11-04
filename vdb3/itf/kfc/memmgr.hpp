@@ -74,25 +74,32 @@ namespace vdb3
         // Allocate an aligned block of memory, alignment must be a power of
         // 2 and size must be an integral multiple of alignment.
         // TODO: Support clear, optional fill bytes (or -1 for don't memset)?
-        virtual Mem aligned_alloc ( const size_t alignment, const bytes_t & size ) = 0;
+        virtual Mem aligned_alloc ( const bytes_t & alignment, const bytes_t & size ) = 0;
 
         // Reallocate a Mem object to size, will shallow copy contents.
         // TODO: How to return failure? Exceptions allowed?
         // TODO: Fill unused bytes?
-        virtual void realloc ( Mem & mem, const size_t size) = 0;
+        virtual void realloc ( Mem & mem, const bytes_t & size) = 0;
 
         // Return the rounded up allocation that would occur if size requested
-        virtual size_t nallocx ( const size_t size) = 0;
+        virtual bytes_t nallocx ( const bytes_t & size) = 0;
 
         // Pretty print statistics, probably as newline separated Tag=Values.
         // If any pair will exceed accumulated buf_size, stop at previous pair.
-        virtual void allocstats ( char * buf, const size_t buf_size) = 0;
+        virtual void allocstats ( char * buf, const bytes_t & buf_size) = 0;
 
         // TODO: Allocator option setter/getter.
         // TODO: Can also set via TBD $ENVVAR (NCBI_MEMMGR?)
         // possible options:
-        //   alloc_uninit_bytes   Fill allocated space with
-        //   alloc_free_bytes     Fill free space with
+        //   alloc_uninit_bytes   Fill allocated space with value, possibly
+        //                        random (-1?).
+        //   alloc_free_bytes     Fill free space "".
+        //   fail_randomly        Approximately ~1/N allocation fails.
+        //   checkuaf             Checksum free'd block, keep around a while
+        //                        and reverify checksum.
+        //   hugetlb              MMap 2MB pages, less pressure on DTLB.
+        //                        Check OS support and page merging
+        //                        in recent kernels.
 
         // support for C++ new and delete
         void * _new ( size_t bytes );
