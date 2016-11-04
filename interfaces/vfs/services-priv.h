@@ -36,8 +36,6 @@ extern "C" {
 #endif
 
 
-rc_t KServiceAddTicket ( KService * self, const char * ticket );
-
 rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols, 
     const char * cgi, const char * version,
     const struct VPathSetList ** result );
