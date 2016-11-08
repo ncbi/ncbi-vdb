@@ -49,6 +49,12 @@ rc_t CC KService1NameWithVersion ( const struct KNSManager * mgr,
     bool refseq_ctx, const char * names_version );
 
 
+/* THE FOLLOWING DEFINE TURNS ON COMPARING OLD/NEW RESOLVING CALLS AND
+   ASSERTING WHEN THE RESULTS DO NOT MATCH.
+   REMOVE IT WHEN MERGING THE BRANCH */
+#define TESTING_SERVICES_VS_OLD_RESOLVING 1
+
+
 #ifdef __cplusplus
 }
 #endif
