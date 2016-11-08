@@ -1196,7 +1196,9 @@ rc_t SKVMake ( const SKV ** self, const char * k, const char * v )
     }
 }
 
-static rc_t SKVMakeObj ( const SKV ** self, const SObject * obj, ver_t version )
+static
+rc_t SKVMakeObj ( const SKV ** self, const SObject * obj,
+    ver_t version )
 {
     bool old = version <= VERSION_3_0;
     char * p = NULL;
@@ -1581,7 +1583,9 @@ rc_t ECgiSearchRequestInit ( SRequest * request, const char * cgi,
                 return
                     RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
             }
-            for ( i = 0; rc == 0 && i < request -> request . objects; ++i ) {
+            for ( i = 0; rc == 0 && i < request -> request . objects;
+                ++i )
+            {
                 size_t num_writ = 0;
                 rc = string_printf ( b + o, l - o, & num_writ,
                     "%s", request -> request . object [ i ] );
@@ -1775,8 +1779,9 @@ static rc_t STicketsFini ( STickets * self ) {
 
 
 /* SRequestData */
-static rc_t SRequestDataInit ( SRequestData * self,
-    const char * acc, size_t acc_sz, EObjectType objectType, bool refseq_ctx )
+static
+rc_t SRequestDataInit ( SRequestData * self, const char * acc, size_t acc_sz,
+    EObjectType objectType, bool refseq_ctx )
 {
     rc_t rc = 0;
     assert ( self );
@@ -1964,10 +1969,7 @@ static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
     return rc;
 }
 
-static
-rc_t KServiceInit ( KService * self, const KNSManager * mgr,
-    EObjectType objectType)
-{
+static rc_t KServiceInit ( KService * self, const KNSManager * mgr ) {
     rc_t rc = 0;
     assert ( self ); 
     memset ( self, 0, sizeof * self );
@@ -1978,7 +1980,8 @@ rc_t KServiceInit ( KService * self, const KNSManager * mgr,
         rc = SResponseInit ( & self ->  resp );
     }
     if ( rc == 0 ) {
-        rc = SRequestInit ( & self -> req, NULL, 0, NULL,  objectType, false );
+        rc = SRequestInit
+            ( & self -> req, NULL, 0, NULL,  eOT_undefined, false );
     }
     return rc;
 }
@@ -1995,7 +1998,7 @@ rc_t KServiceMakeWithMgr ( KService ** self, const KNSManager * mgr )
     if ( p == NULL ) {
         return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
     }
-    rc = KServiceInit ( p, mgr, eOT_undefined );
+    rc = KServiceInit ( p, mgr );
     if ( rc == 0) {
         * self = p;
     } else {
@@ -2189,7 +2192,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             else {
                 if ( self -> req . serviceType == eSTsearch ) {
                     if ( size == 4 && s [ 0 ] == '$' && s [ 1 ] == 'e'
-                                   && s [ 2 ] == 'n' && s [ 3 ] == 'd' )
+                 && s [ 2 ] == 'n' && s [ 3 ] == 'd' )
                     {
                         free ( s );
                         s = NULL;
@@ -2207,7 +2210,8 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                         uint32_t l = VectorLength ( & self -> resp . rows );
                         if ( r2 == 0 ) {
                             if ( self -> resp . header. version. version
-                                                      >= VERSION_3_0 || l == 0 )
+                                                      >= VERSION_3_0
+                                 || l == 0 )
                             {
                                 r2 = VectorAppend
                                     ( & self -> resp . rows, NULL, row );
@@ -2462,7 +2466,7 @@ rc_t KService1Search ( const KNSManager * mgr, const char * cgi,
 {
     rc_t rc = 0;
     KService service;
-    rc = KServiceInit ( & service, mgr, eOT_undefined );
+    rc = KServiceInit ( & service, mgr );
     if ( rc == 0 ) {
         rc = KServiceAddId ( & service, acc );
     }
@@ -2741,7 +2745,7 @@ rc_t KServiceSearchTest1
     rc_t rc = 0;
     KService service;
     const Kart * result = NULL;
-    rc = KServiceInit ( & service, mgr, eOT_undefined );
+    rc = KServiceInit ( & service, mgr );
     if ( rc == 0 ) {
         rc = KServiceAddId ( & service, acc );
     }
@@ -2766,7 +2770,7 @@ rc_t KServiceSearchTest (
     KStream * stream = NULL;
     const Kart * result = NULL;
     KService service;
-    rc = KServiceInit ( & service, mgr, eOT_undefined );
+    rc = KServiceInit ( & service, mgr );
     va_start ( args, acc );
     while ( rc == 0 && acc != NULL ) {
         rc = KServiceAddObject ( & service, acc, eOT_undefined);
