@@ -93,14 +93,15 @@ enum
 
       /* version 3.0 protocols */
     , eProtocolFile  = 4
+    , eProtocolS3    = 5
 
-      /* values 5..7 are available for future */
+      /* values 6..7 are available for future */
 
     , eProtocolLast
     , eProtocolMax   = eProtocolLast - 1
     , eProtocolMask  = 7
 
-    , eProtocolMaxPref = 4
+    , eProtocolMaxPref = 5
 
       /* macros for building multi-protocol constants
          ordered by preference from least to most significant bits */
