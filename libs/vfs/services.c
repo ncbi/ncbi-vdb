@@ -94,6 +94,7 @@ typedef struct { char * s; } SRaw;
 #define VERSION_1_2 0x01020000
 #define VERSION_3_0 0x03000000
 #define VERSION_3_1 0x03010000
+#define VERSION_3_2 0x03020000
 
 typedef struct {
     SRaw raw;
@@ -112,6 +113,7 @@ typedef struct {
 #define N_NAMES1_1 10
 #define N_NAMES3_0  9
 #define N_NAMES3_1 17
+#define N_NAMES3_2 12
 
 /* response row parsed into array of Strings */
 typedef struct {
@@ -122,6 +124,7 @@ typedef struct {
 /* response row parsed into named typed fields */
 typedef struct {
     bool inited;
+    uint32_t ordId;
     EObjectType objectType;
     String accession; /* versios 1.1/1.2 only */
     String objectId;
@@ -130,14 +133,18 @@ typedef struct {
     KTime_t date;
     uint8_t md5 [ 16 ];
     String ticket;
+    String url;
     String hUrl;
     String fpUrl;
     String hsUrl;
     String flUrl;
+    String s3Url;
+    String vdbcacheUrl;
     String hVdbcacheUrl;
     String fpVdbcacheUrl;
     String hsVdbcacheUrl;
     String flVdbcacheUrl;
+    String s3VdbcacheUrl;
     KTime_t expiration;
     uint32_t code;
     String message;
@@ -265,38 +272,18 @@ static rc_t SVersionInit
     }
 
     if ( * s != '#' ) {
-        if ( serviceType != eSTnames || * s == '\0' || ! isdigit ( * s ) ) {
+        if ( serviceType != eSTnames || * s == '\0' || ! isdigit ( * s ) )
             return RC ( rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion );
-        }
-    } else {
-        ++ s;
     }
+    else
+        ++ s;
 
     if ( serviceType == eSTsearch ) {
-        if ( * ( s ++ ) != 'v' ) {
+        const char version [] = "version ";
+        size_t sz = sizeof version - 1;
+        if ( string_cmp ( s, sz, version, sz, ( uint32_t ) sz ) != 0 )
             return RC ( rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion );
-        }
-        if ( * ( s ++ ) != 'e' ) {
-            return RC ( rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion );
-        }
-        if ( * ( s ++ ) != 'r' ) {
-            return RC ( rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion );
-        }
-        if ( * ( s ++ ) != 's' ) {
-            return RC ( rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion );
-        }
-        if ( * ( s ++ ) != 'i' ) {
-            return RC ( rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion );
-        }
-        if ( * ( s ++ ) != 'o' ) {
-            return RC ( rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion );
-        }
-        if ( * ( s ++ ) != 'n' ) {
-            return RC ( rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion );
-        }
-        if ( * ( s ++ ) != ' ' ) {
-            return RC ( rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion );
-        }
+        s += sz;
     }
 
     if ( * s == '\0' ) {
@@ -423,7 +410,7 @@ static EObjectType StringToObjectType ( const String * s ) {
     if ( cmpStringAndObjectType ( s, "srapub_files" ) ) {
         return eOT_srapub_files;
     }
-    if ( cmpStringAndObjectType ( s, "sragap_files'") ) {
+    if ( cmpStringAndObjectType ( s, "sragap_files") ) {
         return eOT_sragap_files;
     }
     if ( cmpStringAndObjectType ( s, "refseq") ) {
@@ -654,6 +641,47 @@ static const SConverters * SConvertersNames3_1Make ( void ) {
     return & c;
 }
 
+/* converter from proposed names-3.0 response row to STyped object  */
+static void * STypedGetFieldNames3_2 ( STyped * self, int n ) {
+    assert ( self);
+    switch ( n ) {
+        case  0: return & self -> ordId;
+        case  1: return & self -> objectType;
+        case  2: return & self -> objectId;
+        case  3: return & self -> size;
+        case  4: return & self -> date;
+        case  5: return & self -> md5;
+        case  6: return & self -> ticket;
+        case  7: return & self -> url;
+        case  8: return & self -> vdbcacheUrl;
+        case  9: return & self -> expiration;
+        case 10: return & self -> code;
+        case 11: return & self -> message;
+    }
+    return 0;
+}
+
+static const SConverters * SConvertersNames3_2Make ( void ) {
+    static TConverter * f [ N_NAMES3_2 + 1 ] = {
+        uint32_tInit,    /*  0 ord-id */
+        EObjectTypeInit, /*  1 object-type */
+        aStringInit,     /*  2 object-id */
+        size_tInit,      /*  3 size */
+        KTimeInit,       /*  4 date */
+        md5Init,         /*  5 md5 */
+        aStringInit,     /*  6 ticket */
+        aStringInit,     /*  7 url */
+        aStringInit,     /*  8 vdbcache-url */
+        KTimeInit,       /* 9 expiration */
+        uint32_tInit,    /* 10 status-code */
+        aStringInit,     /* 11 message */
+        NULL };
+    static const SConverters c = {
+        N_NAMES3_2,
+        STypedGetFieldNames3_2, f };
+    return & c;
+}
+
 /* converter factory function */
 static
 rc_t SConvertersMake ( const SConverters ** self, SHeader * header )
@@ -675,6 +703,9 @@ rc_t SConvertersMake ( const SConverters ** self, SHeader * header )
         case VERSION_3_1:
             * self = SConvertersNames3_1Make ();
             return 0;
+        case VERSION_3_2:
+            * self = SConvertersNames3_2Make ();
+            return 0;
         default:
             * self = NULL;
             return RC ( rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion );
@@ -694,39 +725,150 @@ rc_t SOrderedInit ( SOrdered * self, const SRaw * raw, int fields )
         while ( size > 0 ) {
             size_t len = 0;
             char * n = string_chr ( str, size, '|' );
-            if ( n != NULL ) {
+            if ( n != NULL )
                 len = n - str;
-            } else {
+            else
                 len = size;
-            }
             if ( self -> n >= fields ) {
                 return RC ( rcVFS, rcQuery, rcResolving, rcName, rcExcessive );
-            } else {
+            }
+            else {
                 String * s = & self -> s [ self -> n ++ ];
                 StringInit ( s, str, len, len );
-                if ( n != NULL ) {
+                if ( n != NULL )
                     ++ len;
-                }
                 str += len;
-                if ( size >= len ) {
+                if ( size >= len )
                     size -= len;
-                } else {
+                else
                     size = 0;
-                }
             }
         }
     }
     return 0;
 }
 
+typedef struct {
+    const char * text;
+    VRemoteProtocols protocol;
+} SProtocol;
+static VRemoteProtocols SProtocolGet ( const String * url ) {
+    size_t i = 0;
+    SProtocol protocols [] = {
+        { "http", eProtocolHttp },
+        { "fasp", eProtocolFasp },
+        { "https",eProtocolHttps},
+        { "file", eProtocolFile },
+        { "s3"  , eProtocolS3   },
+    };
+    if ( url == NULL || url -> addr == NULL || url -> size == 0 ) {
+        return eProtocolNone;
+    }
+    for ( i = 0; i < sizeof protocols / sizeof protocols [ 0 ]; ++ i ) {
+        uint32_t sz = string_measure ( protocols [ i ] . text, NULL );
+        if ( string_cmp ( url -> addr, sz, protocols [ i ] . text, sz,
+            ( uint32_t ) sz ) == 0 )
+        {
+            return protocols [ i ] . protocol;
+        }
+    }
+    return eProtocolNone;
+}
 
 /* STyped */
-static rc_t STypedInit
-    ( STyped * self, const SOrdered * raw, const SConverters * how )
+static rc_t STypedInitUrls ( STyped * self ) {
+    VRemoteProtocols protocol = eProtocolNone;
+    String * str = NULL;
+    String * dst = NULL;
+    assert ( self );
+    str = & self -> url;
+    while ( str -> size > 0 ) {
+        size_t len = 0;
+        char * n = string_chr ( str -> addr, str -> size, '$' );
+        if ( n != NULL ) {
+            len = n - str -> addr;
+        }
+        else {
+            len = str -> size;
+        }
+        protocol = SProtocolGet ( str );
+        switch ( protocol ) {
+            case eProtocolFasp:
+                dst = & self -> fpUrl;
+                break;
+            case eProtocolFile:
+                dst = & self -> flUrl;
+                break;
+            case eProtocolHttp:
+                dst = & self -> hUrl;
+                break;
+            case eProtocolHttps:
+                dst = & self -> hsUrl;
+                break;
+            case eProtocolS3:
+                dst = & self -> s3Url;
+                break;
+            default:
+                return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
+        }
+        StringInit ( dst, str -> addr, len, len );
+        if ( n != NULL )
+            ++ len;
+        str -> addr += len;
+        if ( str -> size >= len )
+            str -> size -= len;
+        else
+            str -> size = 0;
+    }
+    str = & self -> vdbcacheUrl;
+    while ( str -> size > 0 ) {
+        size_t len = 0;
+        char * n = string_chr ( str -> addr, str -> size, '$' );
+        if ( n != NULL ) {
+            len = n - str -> addr;
+        }
+        else {
+            len = str -> size;
+        }
+        protocol = SProtocolGet ( str );
+        switch ( protocol ) {
+            case eProtocolFasp:
+                dst = & self -> fpVdbcacheUrl;
+                break;
+            case eProtocolFile:
+                dst = & self -> flVdbcacheUrl;
+                break;
+            case eProtocolHttp:
+                dst = & self -> hVdbcacheUrl;
+                break;
+            case eProtocolHttps:
+                dst = & self -> hsVdbcacheUrl;
+                break;
+            case eProtocolS3:
+                dst = & self -> s3VdbcacheUrl;
+                break;
+            default:
+                return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
+        }
+        StringInit ( dst, str -> addr, len, len );
+        if ( n != NULL )
+            ++ len;
+        str -> addr += len;
+        if ( str -> size >= len )
+            str -> size -= len;
+        else
+            str -> size = 0;
+    }
+    return 0;
+}
+
+static
+rc_t STypedInit ( STyped * self, const SOrdered * raw, const SConverters * how,
+    const SVersion * version )
 {
     rc_t rc = 0;
     int i = 0;
-    assert ( self && raw && how );
+    assert ( self && raw && how && version );
     memset ( self, 0, sizeof * self );
     if ( raw -> n != how -> n ) {
         return RC ( rcVFS, rcQuery, rcResolving, rcName, rcUnexpected );
@@ -747,6 +889,12 @@ static rc_t STypedInit
             break;
         }
     }
+    if ( rc == 0 ) {
+        if ( version -> version >= VERSION_3_2 ) {
+            rc = STypedInitUrls ( self );
+        }
+    }
+
     if ( rc == 0 ) {
         self -> inited = true;
     }
@@ -788,6 +936,9 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
                 bug . len = bug . size;
                 id = & bug;
             }
+        }
+        if ( src -> size == 0 ) {
+            assert ( src -> addr != NULL );
         }
         * rc = VPathMakeFromUrl
             ( new_path, src, ticket, ext, id, typed -> size, typed -> date );
@@ -1024,8 +1175,8 @@ static rc_t SRowWhack ( void * p ) {
     return rc;
 }
 
-static rc_t SRowMake ( SRow ** self,
-    char * src, const SRequest * req, const SConverters * f )
+static rc_t SRowMake ( SRow ** self, char * src, const SRequest * req,
+    const SConverters * f, const SVersion * version )
 {
     rc_t rc = 0;
     rc_t r2 = 0;
@@ -1033,16 +1184,17 @@ static rc_t SRowMake ( SRow ** self,
     if ( p == NULL ) {
         return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
     }
-    assert ( req );
+    assert ( req && version );
     SRawInit ( & p -> raw, src );
     if ( rc == 0 ) {
         assert ( f );
         rc = SOrderedInit ( & p -> ordered, & p -> raw, f -> n );
     }
     if ( rc == 0 ) {
-        rc = STypedInit ( & p -> typed, & p -> ordered, f );
+        rc = STypedInit ( & p -> typed, & p -> ordered, f, version );
     }
-    if ( rc == 0 && p -> typed . code == 200 && req -> request . objects == 1 )
+    if ( rc == 0 &&
+         p -> typed . code == 200 && req -> request . objects == 1 )
     {
         String acc;
         size_t l
@@ -1076,7 +1228,7 @@ static rc_t SRowMake ( SRow ** self,
 
     if ( rc == 0 ) {
         rc = VPathSetMake
-            ( & p -> set, & p -> path, req -> version . version < VERSION_3_1 );
+            ( & p -> set, & p -> path, version -> version < VERSION_3_1 );
     }
     if ( rc == 0 ) {
         assert ( self );
@@ -1751,15 +1903,10 @@ static rc_t STicketsAppend ( STickets * self, const char * ticket ) {
     }
 }*/
 
-static rc_t STicketsInit ( STickets * self, const char * ticket ) {
-    rc_t rc = 0;
+static rc_t STicketsInit ( STickets * self ) {
     assert ( self );
     memset ( self, 0, sizeof * self );
-    rc = KDataBufferMakeBytes ( & self -> str, BICKETS );
-    if ( rc == 0 ) {
-        rc = STicketsAppend ( self, ticket );
-    }
-    return rc;
+    return KDataBufferMakeBytes ( & self -> str, BICKETS );
 }
 
 static void whack_free ( void * self, void * ignore ) {
@@ -1779,20 +1926,19 @@ static rc_t STicketsFini ( STickets * self ) {
 
 
 /* SRequestData */
-static
+/*static
 rc_t SRequestDataInit ( SRequestData * self, const char * acc, size_t acc_sz,
-    EObjectType objectType, bool refseq_ctx )
+    EObjectType objectType )
 {
     rc_t rc = 0;
     assert ( self );
     memset ( self, 0, sizeof * self );
-    self -> refseq_ctx  = refseq_ctx;
     if ( acc != NULL && acc_sz != 0 ) {
         self -> objects = 1;
         rc = SObjectInit ( & self -> object [ 0 ], acc, acc_sz, objectType );
     }
     return rc;
-}
+}*/
 
 static void SRequestDataFini ( SRequestData * self ) {
     uint32_t i = 0;
@@ -1803,8 +1949,9 @@ static void SRequestDataFini ( SRequestData * self ) {
     memset ( self, 0, sizeof * self );
 }
 
-static rc_t SRequestDataAppendObject
-    ( SRequestData * self, const char * id, EObjectType objectType )
+static
+rc_t SRequestDataAppendObject ( SRequestData * self, const char * id,
+    size_t id_sz, EObjectType objectType )
 {
     rc_t rc = 0;
     assert ( self );
@@ -1812,8 +1959,10 @@ static rc_t SRequestDataAppendObject
     {
         return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcExcessive );
     }
-    rc = SObjectInit ( & self -> object [ self -> objects ],
-        id, string_measure ( id, NULL ), objectType );
+    if ( id_sz == 0 )
+        id_sz = string_measure ( id, NULL );
+    rc = SObjectInit ( & self -> object [ self -> objects ], id, id_sz,
+        objectType );
     if ( rc == 0 ) {
         ++ self -> objects;
     }
@@ -1822,24 +1971,12 @@ static rc_t SRequestDataAppendObject
 
 
 /* SRequest */
-static rc_t SRequestInit ( SRequest * self, const char * acc, size_t acc_sz,
-    const char * ticket, EObjectType objectType, bool refseq_ctx )
-{
-    rc_t rc = 0;
+static rc_t SRequestInit ( SRequest * self ) {
     assert ( self );
 
     memset ( self, 0, sizeof * self );
 
-    if ( rc == 0 ) {
-        rc = STicketsInit ( & self -> tickets, ticket );
-    }
-
-    if ( rc == 0 ) {
-        rc = SRequestDataInit ( & self -> request, acc, acc_sz,
-            objectType, refseq_ctx );
-    }
-
-    return rc;
+    return STicketsInit ( & self -> tickets );
 }
 
 static rc_t SRequestFini ( SRequest * self ) {
@@ -1945,139 +2082,55 @@ rc_t SHelperProjectToTicket ( SHelper * self, uint32_t projectId,
 }
 
 /* KService */
-static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
-    const char * cgi, const char * version, const char * acc,
-    size_t acc_sz, const char * ticket, VRemoteProtocols protocols,
-    EObjectType objectType, bool refseq_ctx )
-{
-    rc_t rc = 0;
-    assert ( self ); 
-    memset ( self, 0, sizeof * self );
-    if ( rc == 0 ) {
-        rc = SHelperInit ( & self -> helper, mgr );
-    }
-    if ( rc == 0 ) {
-        rc = SResponseInit ( & self ->  resp );
-    }
-    if ( rc == 0 ) {
-        rc = SRequestInit ( & self -> req,  acc, acc_sz, ticket,
-            objectType, refseq_ctx );
-    }
-    if ( rc == 0 ) {
-        rc = ECgiNamesRequestInit ( & self -> req, protocols, cgi, version );
-    }
-    return rc;
-}
-
-static rc_t KServiceInit ( KService * self, const KNSManager * mgr ) {
-    rc_t rc = 0;
-    assert ( self ); 
-    memset ( self, 0, sizeof * self );
-    if ( rc == 0 ) {
-        rc = SHelperInit ( & self -> helper, mgr );
-    }
-    if ( rc == 0 ) {
-        rc = SResponseInit ( & self ->  resp );
-    }
-    if ( rc == 0 ) {
-        rc = SRequestInit
-            ( & self -> req, NULL, 0, NULL,  eOT_undefined, false );
-    }
-    return rc;
-}
-
-static
-rc_t KServiceMakeWithMgr ( KService ** self, const KNSManager * mgr )
-{
-    rc_t rc = 0;
-    KService * p = NULL;
-    if ( self == NULL ) {
-        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-    }
-    p = ( KService * ) calloc ( 1, sizeof * p );
-    if ( p == NULL ) {
-        return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-    }
-    rc = KServiceInit ( p, mgr );
-    if ( rc == 0) {
-        * self = p;
-    } else {
-        free ( p );
-    }
-    return rc;
-}
-
-rc_t KServiceMake ( KService ** self) {
-    return KServiceMakeWithMgr ( self, NULL );
-}
-
-static rc_t KServiceFini ( KService * self ) {
-    rc_t rc = 0;
-    rc_t r2 = 0;
-    assert ( self );
-    r2 = SResponseFini ( & self -> resp );
-    if ( rc == 0 ) {
-        rc = r2;
-    }
-    r2 = SRequestFini ( & self -> req );
-    if ( rc == 0 ) {
-        rc = r2;
-    }
-    r2 = SHelperFini ( & self -> helper );
-    if ( rc == 0 ) {
-        rc = r2;
-    }
-    return rc;
-}
-
-rc_t KServiceRelease ( KService * self ) {
-    rc_t rc = 0;;
-    if ( self != NULL ) {
-        rc = KServiceFini ( self );
-        free ( self );
-    }
-    return rc;
-}
-
 static void KServiceExpectErrors ( KService * self, int n ) {
     assert ( self );
+
     self -> req . errorsToIgnore = n;
 }
 
-rc_t KServiceAddObject ( KService * self,
-    const char * id, EObjectType objectType )
+static rc_t KServiceAddObject ( KService * self,
+    const char * id, size_t id_sz, EObjectType objectType )
 {
-    if ( self == NULL ) {
+    if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-    }
-    return SRequestDataAppendObject ( & self -> req . request, id, objectType );
+
+    return SRequestDataAppendObject
+        ( & self -> req . request, id, id_sz, objectType );
 }
 
 rc_t KServiceAddId ( KService * self, const char * id ) {
-    return KServiceAddObject ( self, id, eOT_undefined );
+    return KServiceAddObject ( self, id, 0, eOT_undefined );
 }
 
-rc_t KServiceAddTicket ( KService * self, const char * ticket ) {
+static rc_t KServiceAddTicket ( KService * self, const char * ticket ) {
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
     if ( ticket == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
+
     return SRequestAddTicket ( & self -> req, ticket );
 }
 
 rc_t KServiceAddProject ( KService * self, uint32_t project ) {
     rc_t rc = 0;
+
     char buffer [ 256 ] = "";
     size_t ticket_size = ~0;
+
     if ( project == 0 )
         return 0;
+
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
     rc = SHelperProjectToTicket ( & self -> helper, project,
         buffer, sizeof buffer, & ticket_size );
     if ( rc != 0 )
         return rc;
+
     assert ( ticket_size <= sizeof buffer );
+
     return SRequestAddTicket ( & self -> req, buffer );
 }
 
@@ -2087,6 +2140,7 @@ rc_t KServiceInitNamesRequestWithVersion ( KService * self,
     const char * cgi, const char * version )
 {
     assert ( self );
+
     return ECgiNamesRequestInit ( & self -> req, protocols, cgi, version );
 }
 
@@ -2102,7 +2156,109 @@ rc_t KServiceInitSearchRequestWithVersion ( KService * self, const char * cgi,
     const char * version )
 {
     assert ( self );
+
     return ECgiSearchRequestInit ( & self -> req, cgi, version );
+}
+
+static rc_t KServiceInit ( KService * self, const KNSManager * mgr ) {
+    rc_t rc = 0;
+
+    assert ( self );
+    memset ( self, 0, sizeof * self );
+
+    if ( rc == 0 )
+        rc = SHelperInit ( & self -> helper, mgr );
+
+    if ( rc == 0 )
+        rc = SResponseInit ( & self ->  resp );
+
+    if ( rc == 0 )
+        rc = SRequestInit ( & self -> req );
+
+    return rc;
+}
+
+static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
+    const char * cgi, const char * version, const char * acc,
+    size_t acc_sz, const char * ticket, VRemoteProtocols protocols,
+    EObjectType objectType, bool refseq_ctx )
+{
+    rc_t rc = 0;
+
+    if ( rc == 0 )
+        rc = KServiceInit ( self, mgr );
+
+    if ( rc == 0 )
+        rc = KServiceAddObject ( self, acc, acc_sz, objectType );
+    if ( rc == 0 )
+        rc = SRequestAddTicket ( & self -> req,  ticket );
+    if ( rc == 0 )
+        self -> req . request . refseq_ctx = refseq_ctx;
+
+    if ( rc == 0 )
+        rc = KServiceInitNamesRequestWithVersion
+            ( self, protocols, cgi, version );
+
+    return rc;
+}
+
+static
+rc_t KServiceMakeWithMgr ( KService ** self, const KNSManager * mgr )
+{
+    rc_t rc = 0;
+
+    KService * p = NULL;
+
+    if ( self == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
+
+    p = ( KService * ) calloc ( 1, sizeof * p );
+    if ( p == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+
+    rc = KServiceInit ( p, mgr );
+    if ( rc == 0)
+        * self = p;
+    else
+        free ( p );
+
+    return rc;
+}
+
+rc_t KServiceMake ( KService ** self) {
+    return KServiceMakeWithMgr ( self, NULL );
+}
+
+static rc_t KServiceFini ( KService * self ) {
+    rc_t rc = 0;
+    rc_t r2 = 0;
+
+    assert ( self );
+
+    r2 = SResponseFini ( & self -> resp );
+    if ( rc == 0 )
+        rc = r2;
+
+    r2 = SRequestFini ( & self -> req );
+    if ( rc == 0 )
+        rc = r2;
+
+    r2 = SHelperFini ( & self -> helper );
+    if ( rc == 0 )
+        rc = r2;
+
+    return rc;
+}
+
+rc_t KServiceRelease ( KService * self ) {
+    rc_t rc = 0;
+
+    if ( self != NULL ) {
+        rc = KServiceFini ( self );
+        free ( self );
+    }
+
+    return rc;
 }
 
 static
@@ -2190,9 +2346,16 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                 start = false;
             }
             else {
-                if ( self -> req . serviceType == eSTsearch ) {
-                    if ( size == 4 && s [ 0 ] == '$' && s [ 1 ] == 'e'
-                 && s [ 2 ] == 'n' && s [ 3 ] == 'd' )
+                if ( s [ 0 ] == '$' ) {
+                    free ( s );
+                    s = NULL;
+                    break;
+                }
+                else if ( self -> req . serviceType == eSTsearch ) {
+                    const char end [] = "$end";
+                    size_t sz = sizeof end - 1;
+                    if ( string_cmp ( s, size, end, sz, ( uint32_t ) sz )
+                        == 0)
                     {
                         free ( s );
                         s = NULL;
@@ -2201,12 +2364,14 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                     else {
                         rc = KartAddRow ( self -> resp . kart, s, size );
                     }
-                } else {
+                }
+                else {
                     const SConverters * f = NULL;
                     rc = SConvertersMake ( & f, & self -> resp . header );
                     if ( rc == 0 ) {
                         SRow * row = NULL;
-                        rc_t r2 = SRowMake ( & row, s, & self -> req, f );
+                        rc_t r2 = SRowMake ( & row, s, & self -> req, f,
+                            & self -> resp . header . version );
                         uint32_t l = VectorLength ( & self -> resp . rows );
                         if ( r2 == 0 ) {
                             if ( self -> resp . header. version. version
@@ -2230,7 +2395,8 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                             if ( self -> resp . header . version. version
                                                           >= VERSION_3_0
                                ||
-                               VPathSetListLength ( self -> resp . list ) == 0 )
+                               VPathSetListLength ( self -> resp . list )
+                                                          == 0 )
                             {
                                 r2 = VPathSetListAppend
                                     ( self -> resp . list, row -> set );
@@ -2290,28 +2456,32 @@ rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
     const VPathSetList ** response )
 {
     rc_t rc = 0;
+
     KStream * stream = NULL;
-    if ( self == NULL ) {
+
+    if ( self == NULL )
          return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
-    }
-    if ( response == NULL ) {
+
+    if ( response == NULL )
          return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-    }
-    if ( version == NULL ) {
+
+    if ( version == NULL )
         version = "#3.0";
-    }
+
     rc = KServiceInitNamesRequestWithVersion ( self, protocols, cgi, version );
-    if ( rc == 0 ) {
+
+    if ( rc == 0 )
         rc = SCgiRequestPerform
             ( & self -> req . cgiReq, & self -> helper, & stream );
-    }
-    if ( rc == 0 ) {
+
+    if ( rc == 0 )
         rc = KServiceProcessStream ( self, stream );
-    }
-    if ( rc == 0 ) {
+
+    if ( rc == 0 )
         rc = KServiceGetResponse ( self, response );
-    }
+
     RELEASE ( KStream, stream );
+
     return rc;
 }
 
@@ -2329,59 +2499,58 @@ static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
     bool refseq_ctx, const char * version, EObjectType objectType )
 {
     rc_t rc = 0;
+
     KStream * stream = NULL;
+
     KService service;
-    if ( url == NULL || acc == NULL || remote == NULL ) {
+
+    if ( url == NULL || acc == NULL || remote == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-    }
+
     rc = KServiceInitNames1 ( & service, mgr, url, version,
         acc, acc_sz, ticket, protocols, objectType, refseq_ctx );
-    if ( rc == 0 ) {
+
+    if ( rc == 0 )
         rc = SCgiRequestPerform
             ( & service . req . cgiReq, & service . helper, & stream );
-    }
-    if ( rc == 0 ) {
+
+    if ( rc == 0 )
         rc = KServiceProcessStream ( & service, stream );
-    }
+
     if ( rc == 0 ) {
-        if ( VectorLength ( & service . resp . rows ) != 1) {
+        if ( VectorLength ( & service . resp . rows ) != 1)
             rc = 1;
-        }
         else {
             const SRow * r =
                 ( SRow * ) VectorGet ( & service . resp . rows, 0 );
-            if ( r == NULL) {
+            if ( r == NULL)
                 rc = 2;
-            }
             else {
                 const VPath * path = r -> path . http;
                 rc = VPathAddRef ( path );
-                if ( rc == 0 ) {
+                if ( rc == 0 )
                     * remote = path;
-                }
                 if ( mapping ) {
                     path = r -> path . mapping;
                     rc = VPathAddRef ( path );
-                    if ( rc == 0 ) {
+                    if ( rc == 0 )
                         * mapping = path;
-                    }
                 }
             }
         }
     }
+
     if ( rc == 0 ) {
         uint32_t l = VPathSetListLength ( service . resp . list );
-        if ( l != 1) {
+        if ( l != 1)
             rc = 3;
-        }
         else {
             const VPathSet * s = NULL;
             rc = VPathSetListGet ( service . resp . list, 0, & s );
             if ( rc != 0 ) {
             }
-            else if ( s == NULL ) {
+            else if ( s == NULL )
                 rc = 4;
-            }
             else {
                 const VPath * path = NULL;
                 const VPath * cache = NULL;
@@ -2390,9 +2559,8 @@ static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
                     int notequal = ~ 0;
                     assert ( remote );
                     rc = VPathEqual ( * remote, path, & notequal );
-                    if ( rc == 0 ) {
+                    if ( rc == 0 )
                         rc = notequal;
-                    }
                     RELEASE ( VPath, cache );
                     RELEASE ( VPath, path );
                 }
@@ -2400,13 +2568,15 @@ static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
             RELEASE ( VPathSet, s );
         }
     }
+
     {
         rc_t r2 = KServiceFini ( & service );
-        if ( rc == 0 ) {
+        if ( rc == 0 )
             rc = r2;
-        }
     }
+
     RELEASE ( KStream, stream );
+
     return rc;
 }
 
@@ -2417,6 +2587,7 @@ rc_t CC KService1NameWithVersion ( const KNSManager * mgr, const char * url,
     bool refseq_ctx, const char * version )
 {
     assert ( version );
+
     return KService1NameWithVersionAndType ( mgr, url, acc, acc_sz, ticket,
         protocols, remote, mapping, refseq_ctx, version, eOT_undefined );
 }
@@ -2425,33 +2596,36 @@ rc_t CC KService1NameWithVersion ( const KNSManager * mgr, const char * url,
 rc_t KServiceSearchExecuteExt ( KService * self, const char * cgi,
     const char * version, const Kart ** result )
 {
-    KStream * stream = NULL;
     rc_t rc = 0;
-    if ( self == NULL ) {
+
+    KStream * stream = NULL;
+
+    if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
-    }
-    if ( result == NULL ) {
+
+    if ( result == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-    }
-    if ( version == NULL ) {
+
+    if ( version == NULL )
         version = "#1.0";
-    }
+
     rc = KServiceInitSearchRequestWithVersion ( self, cgi, version );
-    if ( rc == 0 ) {
+
+    if ( rc == 0 )
         rc = SCgiRequestPerform
             ( & self -> req . cgiReq, & self -> helper, & stream );
-    }
-    if ( rc == 0 ) {
+
+    if ( rc == 0 )
         rc = KServiceProcessStream ( self, stream );
-    }
+
     if ( rc == 0 ) {
         rc = KartAddRef ( self -> resp . kart );
-        if ( rc == 0 ) {
-            assert ( result );
+        if ( rc == 0 )
             * result = self -> resp . kart;
-        }
     }
+
     RELEASE ( KStream, stream );
+
     return rc;
 }
 
@@ -2465,19 +2639,21 @@ rc_t KService1Search ( const KNSManager * mgr, const char * cgi,
     const char * acc, const Kart ** result )
 {
     rc_t rc = 0;
+
     KService service;
+
     rc = KServiceInit ( & service, mgr );
-    if ( rc == 0 ) {
+
+    if ( rc == 0 )
         rc = KServiceAddId ( & service, acc );
-    }
-    if ( rc == 0 ) {
+
+    if ( rc == 0 )
         rc = KServiceSearchExecute ( & service, result );
-    }
+
     {
         rc_t r2 = KServiceFini ( & service );
-        if ( rc == 0 ) {
+        if ( rc == 0 )
             rc = r2;
-        }
     }
     return rc;
 }
@@ -2550,7 +2726,7 @@ rc_t KServiceNamesRequestTest ( const KNSManager * mgr, const char * b,
     va_start ( args, d );
     while ( rc == 0 && d != NULL ) {
         if ( d -> id != NULL ) {
-            rc = KServiceAddObject ( service, d -> id, d -> type );
+            rc = KServiceAddObject ( service, d -> id, 0, d -> type );
         }
         if ( rc == 0 && d -> ticket != NULL ) {
             rc = KServiceAddTicket ( service, d -> ticket );
@@ -2658,12 +2834,13 @@ rc_t KServiceProcessStreamTestNames1 ( const KNSManager * mgr,
 {
     KService service;
     KStream * stream = NULL;
-    rc_t rc = KBufferStreamMake ( & stream, b, string_size ( b ) );
-    if ( rc == 0 ) {
+    rc_t rc = 0;
+    if ( rc == 0 )
         rc = KServiceInitNames1 ( & service, mgr, "", version, acc,
             string_measure ( acc, NULL ), ticket, eProtocolHttp,
             eOT_undefined, false );
-    }
+    if ( rc == 0 )
+        KBufferStreamMake ( & stream, b, string_size ( b ) );
     if ( rc == 0 ) {
         KServiceExpectErrors ( & service, errors );
     }
@@ -2706,6 +2883,24 @@ rc_t KServiceProcessStreamTestNames1 ( const KNSManager * mgr,
             rc = r2;
         }
     }
+    RELEASE ( KStream, stream );
+    return rc;
+}
+
+rc_t KServiceNames3_0StreamTest ( const char * buffer ) {
+    KService service;
+    KStream * stream = NULL;
+    rc_t rc = 0;
+    rc_t r2 = 0;
+    if ( rc == 0 )
+        rc = KServiceInit ( & service, NULL );
+    if ( rc == 0 )
+        rc = KBufferStreamMake ( & stream, buffer, string_size ( buffer ) );
+    if ( rc == 0 )
+        rc = KServiceProcessStream ( & service, stream );
+    r2 = KServiceFini ( & service );
+    if ( rc == 0 )
+        rc = r2;
     RELEASE ( KStream, stream );
     return rc;
 }
@@ -2773,7 +2968,7 @@ rc_t KServiceSearchTest (
     rc = KServiceInit ( & service, mgr );
     va_start ( args, acc );
     while ( rc == 0 && acc != NULL ) {
-        rc = KServiceAddObject ( & service, acc, eOT_undefined);
+        rc = KServiceAddObject ( & service, acc, 0, eOT_undefined);
         acc = va_arg ( args, const char * );
     }
     if ( rc == 0 ) {
