@@ -84,22 +84,22 @@ INSTALLED_FILES = \
 runtests: test-install
 
 test-install: cleanup
-	@echo "installing to $(INST_INCDIR)"
-	#
-	## 1. clean install
-	#
+	@ echo "installing to $(INSTALL_DIR)"
+	@ #
+	@ echo "1. clean install"
+	@ #
 	@ $(SUBMAKE) install
 	@ for i in $(INSTALLED_FILES); do test -f "$$i" || ( echo "$$i is not found" >>$(INST_INCDIR)/missing ); done
 	@ ! test -f $(INST_INCDIR)/missing || ! cat $(INST_INCDIR)/missing
-	#
-	## 2. uninstall
-	#
+	@ #
+	@ echo "2. uninstall"
+	@ #
 	@ $(SUBMAKE) uninstall
 	@ for i in $(INSTALLED_FILES); do ! test -f "$$i" || ( echo "$$i still exists" >>$(INST_INCDIR)/exist ); done
 	@ ! test -f $(INST_INCDIR)/exist || ! cat $(INST_INCDIR)/exist
-	#
-	## 3. re-install, preserving modified .kfg files:
-	#
+	@ #
+	@ echo "3. re-install, preserving modified .kfg files"
+	@ #
 	@ # install
 	@ $(SUBMAKE) install
 	@ # modify .kfg files
@@ -116,7 +116,7 @@ test-install: cleanup
 	@ grep newcert    $(KONFIG_DIR)/certs.kfg.orig       >/dev/null
 	@ grep newdflt    $(KONFIG_DIR)/default.kfg.orig     >/dev/null
 	@ #
-	#
+	@ #
 ifeq (,$(LINUX_ROOT))
 	#
 	# Run the same tests in simulated root mode
