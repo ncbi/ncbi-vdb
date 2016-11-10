@@ -2597,7 +2597,8 @@ rc_t CC KService1NameWithVersion ( const KNSManager * mgr, const char * url,
     VRemoteProtocols protocols, const VPath ** remote, const VPath ** mapping,
     bool refseq_ctx, const char * version )
 {
-    assert ( version );
+    if ( version == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
     return KService1NameWithVersionAndType ( mgr, url, acc, acc_sz, ticket,
         protocols, remote, mapping, refseq_ctx, version, eOT_undefined );
