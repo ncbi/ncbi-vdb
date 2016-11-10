@@ -106,6 +106,8 @@ rc_t VPathSetGet ( const VPathSet * self, VRemoteProtocols protocols,
 
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+    if ( protocols == eProtocolDefault )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcInvalid );
 
     for ( ; protocol != 0; protocol >>= 3 ) {
         switch ( protocol & eProtocolMask ) {
