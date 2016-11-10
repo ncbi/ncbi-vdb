@@ -1680,7 +1680,7 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
         bool done = false;
         int i = 0;
         for ( i = 0; i < 2 && ! done; ++i ) {
-            if ( version == 0 )
+            if ( version == NULL )
 #ifdef TESTING_SERVICES_VS_OLD_RESOLVING
               rc = oldVResolverAlgRemoteProtectedResolve ( self, kns,
                 protocols, & tok -> acc, path, mapping, legacy_wgs_refseq );
@@ -3080,8 +3080,9 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                         if ( rc == 0 )
                         {
                             const VPath * remote2, * remote_mapping = NULL;
-                            rc = VResolverRemoteResolve ( self, protocols, & accession,
-                                & remote2, & remote_mapping, NULL, refseq_ctx, true, false );
+                            rc = VResolverRemoteResolve ( self, protocols,
+                                & accession, & remote2, & remote_mapping, NULL,
+                                refseq_ctx, true, NULL );
                             if ( rc == 0 )
                             {
                                 /* got it. now enter into VFS manager's table */
@@ -3153,9 +3154,10 @@ rc_t VResolverQueryOID ( const VResolver * self, VRemoteProtocols protocols,
                     if ( rc == 0 )
                     {
                         const VPath * remote_mapping = NULL;
-                        rc = VResolverRemoteResolve ( self, protocols, & accession, remote,
-                            ( mapped_query == NULL && cache != NULL ) ? & remote_mapping : NULL,
-                            NULL, refseq_ctx, true, false );
+                        rc = VResolverRemoteResolve ( self, protocols,
+            & accession, remote,
+            ( mapped_query == NULL && cache != NULL ) ? & remote_mapping : NULL,
+            NULL, refseq_ctx, true, NULL );
 
                         if ( rc == 0 && mapped_query == NULL && cache != NULL && remote_mapping == NULL )
                         {
@@ -3602,7 +3604,8 @@ LIB_EXPORT
 rc_t CC oldVResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
     const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache )
 {
-    rc_t rc = VResolverQueryInt ( self, protocols, query, local, remote, cache, 0 );
+    rc_t rc = VResolverQueryInt ( self, protocols, query, local, remote, cache,
+        NULL );
     if ( rc == 0 )
     {
         /* the paths returned from resolver are highly reliable */
