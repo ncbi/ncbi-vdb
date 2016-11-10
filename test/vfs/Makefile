@@ -29,13 +29,13 @@ TOP ?= $(abspath ../..)
 MODULE = test/vfs
 
 TEST_TOOLS = \
-    redirect-rejected-names-cgi-http-to-https \
-    test-caching \
-    test-vfsmanager \
-    test-path-c \
-    test-path \
-    test-resolver
-
+	redirect-rejected-names-cgi-http-to-https \
+	test-caching \
+	test-names-30 \
+	test-path \
+	test-path-c \
+	test-resolver \
+	test-vfsmanager \
 
 include $(TOP)/build/Makefile.env
 
@@ -101,6 +101,18 @@ CACHING_OBJ = \
 	$(addsuffix .$(OBJX),$(CACHING_SRC))
 
 $(TEST_BINDIR)/test-caching: $(CACHING_OBJ)
+	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
+
+#----------------------------------------------------------------
+# test-names-30
+
+N30_SRC = \
+	test-names-30
+
+N30_OBJ = \
+	$(addsuffix .$(OBJX),$(N30_SRC))
+
+$(TEST_BINDIR)/test-names-30: $(N30_OBJ)
 	$(LP) --exe -o $@ $^ $(PATHTEST_LIB)
 
 #----------------------------------------------------------------
