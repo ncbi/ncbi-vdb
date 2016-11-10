@@ -223,6 +223,7 @@ typedef struct {
     SRequestData request;
     STickets tickets;
     int errorsToIgnore;
+    VRemoteProtocols protocols;
 } SRequest;
 
 /* service object */
@@ -231,6 +232,88 @@ struct KService {
     SRequest req;
     SResponse resp;
 };
+
+
+/* SHelper */
+static rc_t SHelperInit ( SHelper * self, const KNSManager * mgr ) {
+    rc_t rc = 0;
+    assert ( self );
+    memset ( self, 0, sizeof * self );
+    if ( mgr == NULL ) {
+        KNSManager * kns = NULL;
+        rc = KNSManagerMake ( & kns );
+        mgr = kns;
+    }
+    else {
+        rc = KNSManagerAddRef ( mgr );
+    }
+    if ( rc == 0) {
+        self -> kMgr = mgr;
+    }
+    self -> timeoutMs = 5000;
+    return rc;
+}
+
+static rc_t SHelperFini ( SHelper * self) {
+    rc_t rc = 0;
+
+    assert ( self );
+
+    RELEASE ( KConfig       , self -> kfg );
+    RELEASE ( KNSManager    , self -> kMgr );
+    RELEASE ( KRepositoryMgr, self -> repoMgr );
+
+    memset ( self, 0, sizeof * self );
+
+    return rc;
+}
+
+VRemoteProtocols SHelperDefaultProtocols ( SHelper * self ) {
+    assert ( self );
+
+    VRemoteProtocols protocols = DEFAULT_PROTOCOLS;
+
+    if ( self -> kfg == NULL ) {
+        KConfigMake ( & self -> kfg, NULL );
+    }
+
+    KConfigReadRemoteProtocols ( self -> kfg, & protocols );
+
+    return protocols;
+}
+
+rc_t SHelperProjectToTicket ( SHelper * self, uint32_t projectId,
+    char * buffer, size_t bsize, size_t * ticket_size )
+{
+    rc_t rc = 0;
+
+    const KRepository * repo = NULL;
+
+    assert ( self );
+
+    if ( self -> repoMgr == NULL ) {
+        if ( self -> kfg == NULL ) {
+            rc = KConfigMake ( & self -> kfg, NULL );
+            if ( rc != 0 )
+                return rc;
+        }
+
+        rc = KConfigMakeRepositoryMgrRead ( self -> kfg, & self -> repoMgr );
+        if ( rc != 0 )
+            return rc;
+    }
+
+    rc = KRepositoryMgrGetProtectedRepository ( self -> repoMgr, projectId,
+        & repo );
+    if ( rc != 0 )
+        return rc;
+
+    rc = KRepositoryDownloadTicket ( repo, buffer, bsize, ticket_size );
+
+    RELEASE ( KRepository, repo );
+
+    return rc;
+}
 
 
 /* SRaw */
@@ -1497,8 +1580,9 @@ rc_t SCgiRequestInitCgi ( SCgiRequest * self, const char * cgi )
 }
 
 static
-rc_t ECgiNamesRequestInit ( SRequest * request, VRemoteProtocols protocols,
-    const char * cgi, const char * version )
+rc_t ECgiNamesRequestInit ( SRequest * request, SHelper * helper,
+    VRemoteProtocols protocols, const char * cgi,
+    const char * version )
 {
     SCgiRequest * self = NULL;
     rc_t rc = 0;
@@ -1507,10 +1591,11 @@ rc_t ECgiNamesRequestInit ( SRequest * request, VRemoteProtocols protocols,
     rc = SVersionInit ( & request -> version, version, eSTnames );
     if ( rc != 0 )
         return rc;
-    if ( protocols == 0 ) {
+    if ( protocols == eProtocolDefault ) {
 /* get from kfg, otherwise use hardcoded below */
-        protocols = DEFAULT_PROTOCOLS;
+        protocols = SHelperDefaultProtocols ( helper );
     }
+    request -> protocols = protocols;
     self = & request -> cgiReq;
     if ( self -> cgi == NULL ) {
         if ( cgi == NULL ) {
@@ -2004,87 +2089,6 @@ static rc_t SRequestAddTicket ( SRequest * self, const char * ticket ) {
 }
 
 
-/* SHelper */
-static rc_t SHelperInit ( SHelper * self, const KNSManager * mgr ) {
-    rc_t rc = 0;
-    assert ( self );
-    memset ( self, 0, sizeof * self );
-    if ( mgr == NULL ) {
-        KNSManager * kns = NULL;
-        rc = KNSManagerMake ( & kns );
-        mgr = kns;
-    }
-    else {
-        rc = KNSManagerAddRef ( mgr );
-    }
-    if ( rc == 0) {
-        self -> kMgr = mgr;
-    }
-    self -> timeoutMs = 5000;
-    return rc;
-}
-
-static rc_t SHelperFini ( SHelper * self) {
-    rc_t rc = 0;
-
-    assert ( self );
-
-    RELEASE ( KConfig       , self -> kfg );
-    RELEASE ( KNSManager    , self -> kMgr );
-    RELEASE ( KRepositoryMgr, self -> repoMgr );
-
-    memset ( self, 0, sizeof * self );
-
-    return rc;
-}
-
-VRemoteProtocols SHelperDefaultProtocols ( SHelper * self ) {
-    assert ( self );
-
-    VRemoteProtocols protocols = DEFAULT_PROTOCOLS;
-
-    if ( self -> kfg == NULL ) {
-        KConfigMake ( & self -> kfg, NULL );
-    }
-
-    KConfigReadRemoteProtocols ( self -> kfg, & protocols );
-
-    return protocols;
-}
-
-rc_t SHelperProjectToTicket ( SHelper * self, uint32_t projectId,
-    char * buffer, size_t bsize, size_t * ticket_size )
-{
-    rc_t rc = 0;
-
-    const KRepository * repo = NULL;
-
-    assert ( self );
-
-    if ( self -> repoMgr == NULL ) {
-        if ( self -> kfg == NULL ) {
-            rc = KConfigMake ( & self -> kfg, NULL );
-            if ( rc != 0 )
-                return rc;
-        }
-
-        rc = KConfigMakeRepositoryMgrRead ( self -> kfg, & self -> repoMgr );
-        if ( rc != 0 )
-            return rc;
-    }
-
-    rc = KRepositoryMgrGetProtectedRepository ( self -> repoMgr, projectId,
-        & repo );
-    if ( rc != 0 )
-        return rc;
-
-    rc = KRepositoryDownloadTicket ( repo, buffer, bsize, ticket_size );
-
-    RELEASE ( KRepository, repo );
-
-    return rc;
-}
-
 /* KService */
 static void KServiceExpectErrors ( KService * self, int n ) {
     assert ( self );
@@ -2145,7 +2149,8 @@ rc_t KServiceInitNamesRequestWithVersion ( KService * self,
 {
     assert ( self );
 
-    return ECgiNamesRequestInit ( & self -> req, protocols, cgi, version );
+    return ECgiNamesRequestInit ( & self -> req,  & self -> helper, protocols,
+        cgi, version );
 }
 
 static
@@ -2508,11 +2513,13 @@ static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
 
     KService service;
 
-    if ( url == NULL || acc == NULL || remote == NULL )
+    if ( acc == NULL || remote == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
     rc = KServiceInitNames1 ( & service, mgr, url, version,
         acc, acc_sz, ticket, protocols, objectType, refseq_ctx );
+
+    protocols = service . req . protocols;
 
     if ( rc == 0 )
         rc = SCgiRequestPerform
