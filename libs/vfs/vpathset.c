@@ -24,6 +24,7 @@
  *
  */
 
+#include "resolver-priv.h" /* DEFAULT_PROTOCOLS */
 #include "path-priv.h" /* VPathGetScheme_t */
 
 #include <klib/rc.h> /* RC */
@@ -40,10 +41,12 @@ struct VPathSet {
     const VPath * file;
     const VPath * http;
     const VPath * https;
+    const VPath * s3;
     const VPath * cacheFasp;
     const VPath * cacheFile;
     const VPath * cacheHttp;
     const VPath * cacheHttps;
+    const VPath * cacheS3;
 };
 
 struct VPathSetList {
@@ -53,9 +56,9 @@ struct VPathSetList {
 
 /* VPathSet */
 rc_t VPathSetAddRef ( const VPathSet * self ) {
-    if ( self != NULL ) {
+    if ( self != NULL )
         atomic32_inc ( & ( ( VPathSet * ) self ) -> refcount );
-    }
+
     return 0;
 }
 
@@ -67,10 +70,12 @@ rc_t VPathSetWhack ( VPathSet * self ) {
         RELEASE ( VPath, self -> file );
         RELEASE ( VPath, self -> http );
         RELEASE ( VPath, self -> https );
+        RELEASE ( VPath, self -> s3 );
         RELEASE ( VPath, self -> cacheFasp );
         RELEASE ( VPath, self -> cacheFile );
         RELEASE ( VPath, self -> cacheHttp );
         RELEASE ( VPath, self -> cacheHttps );
+        RELEASE ( VPath, self -> cacheS3 );
 
         free ( self );
     }
@@ -85,9 +90,8 @@ static void whackVPathSet  ( void * self, void * ignore ) {
 rc_t VPathSetRelease ( const VPathSet * cself ) {
     VPathSet * self = ( VPathSet * ) cself;
 
-    if ( self != NULL && atomic32_dec_and_test ( & self -> refcount ) ) {
+    if ( self != NULL && atomic32_dec_and_test ( & self -> refcount ) )
         return VPathSetWhack ( self );
-    }
 
     return 0;
 }
@@ -99,9 +103,10 @@ rc_t VPathSetGet ( const VPathSet * self, VRemoteProtocols protocols,
     VRemoteProtocols protocol = protocols;
     const VPath * p = NULL;
     const VPath * c = NULL;
-    if ( self == NULL ) {
+
+    if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
-    }
+
     for ( ; protocol != 0; protocol >>= 3 ) {
         switch ( protocol & eProtocolMask ) {
             case eProtocolFasp:
@@ -120,28 +125,33 @@ rc_t VPathSetGet ( const VPathSet * self, VRemoteProtocols protocols,
                 p = self -> https;
                 c = self -> cacheHttps;
                 break;
+            case eProtocolS3:
+                p = self -> s3;
+                c = self -> cacheS3;
+                break;
             default:
-                assert ( 0 );
-                return -1;
+                return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcInvalid );
         }
+
         if ( p != NULL || c != NULL ) {
             if ( path != NULL ) {
                 rc = VPathAddRef ( p );
-                if ( rc == 0 ) {
+                if ( rc == 0 )
                     * path = p;
-                }
             }
+
             if ( vdbcache != NULL ) {
                 rc_t r2 = VPathAddRef ( c );
-                if ( r2 == 0 ) {
+                if ( r2 == 0 )
                     * vdbcache = c;
-                } else if ( rc == 0) {
+                else if ( rc == 0)
                     rc = r2;
-                }
             }
+
             return rc;
         }
     }
+
     return 0;
 }
 
@@ -151,11 +161,13 @@ rc_t VPathSetMake
     VPathSet * p = NULL;
     rc_t rc = 0;
     rc_t r2 = 0;
+
     assert ( self && src );
+
     p = ( VPathSet * ) calloc ( 1, sizeof * p );
-    if ( p == NULL ) {
+    if ( p == NULL )
         return RC ( rcVFS, rcPath, rcAllocating, rcMemory, rcExhausted );
-    }
+
     if ( singleUrl ) {
         VPUri_t uri_type = vpuri_invalid;
         rc = VPathGetScheme_t ( src -> http, & uri_type );
@@ -176,81 +188,89 @@ rc_t VPathSetMake
                     break;
                 default:
                     assert ( 0 );
-                    return -1;
+                    return RC (
+                        rcVFS, rcPath,  rcConstructing, rcParam, rcIncorrect );
             }
+
             r2 = VPathAddRef ( src -> http );
-            if ( r2 == 0 ) {
+            if ( r2 == 0 )
                 * d = src -> http;
-            } else if ( rc == 0 ) {
+            else if ( rc == 0 )
                 rc = r2;
-            }
         }
     }
     else {
         r2 = VPathAddRef ( src -> fasp );
-        if ( r2 == 0 ) {
+        if ( r2 == 0 )
             p -> fasp = src -> fasp;
-        } else if ( rc == 0 ) {
+        else if ( rc == 0 )
             rc = r2;
-        }
-        r2 = VPathAddRef ( src -> file );
-        if ( r2 == 0 ) {
-            p -> file = src -> file;
-        } else if ( rc == 0 ) {
-            rc = r2;
-        }
-        r2 = VPathAddRef ( src -> http );
-        if ( r2 == 0 ) {
-            p -> http = src -> http;
-        } else if ( rc == 0 ) {
-            rc = r2;
-        }
-        r2 = VPathAddRef ( src -> https );
-        if ( r2 == 0 ) {
-            p -> https = src -> https;
-        } else if ( rc == 0 ) {
-            rc = r2;
-        }
         r2 = VPathAddRef ( src -> vcFasp );
-        if ( r2 == 0 ) {
+        if ( r2 == 0 )
             p -> cacheFasp = src -> vcFasp;
-        } else if ( rc == 0 ) {
+        else if ( rc == 0 )
             rc = r2;
-        }
+
+        r2 = VPathAddRef ( src -> file );
+        if ( r2 == 0 )
+            p -> file = src -> file;
+        else if ( rc == 0 )
+            rc = r2;
         r2 = VPathAddRef ( src -> vcFile );
-        if ( r2 == 0 ) {
+        if ( r2 == 0 )
             p -> cacheFile = src -> vcFile;
-        } else if ( rc == 0 ) {
+        else if ( rc == 0 )
             rc = r2;
-        }
+
+        r2 = VPathAddRef ( src -> http );
+        if ( r2 == 0 )
+            p -> http = src -> http;
+        else if ( rc == 0 )
+            rc = r2;
         r2 = VPathAddRef ( src -> vcHttp );
-        if ( r2 == 0 ) {
+        if ( r2 == 0 )
             p -> cacheHttp = src -> vcHttp;
-        } else if ( rc == 0 ) {
+        else if ( rc == 0 )
             rc = r2;
-        }
+
+        r2 = VPathAddRef ( src -> https );
+        if ( r2 == 0 )
+            p -> https = src -> https;
+        else if ( rc == 0 )
+            rc = r2;
         r2 = VPathAddRef ( src -> vcHttps );
-        if ( r2 == 0 ) {
+        if ( r2 == 0 )
             p -> cacheHttps = src -> vcHttps;
-        } else if ( rc == 0 ) {
+        else if ( rc == 0 )
             rc = r2;
-        }
+
+        r2 = VPathAddRef ( src -> s3 );
+        if ( r2 == 0 )
+            p -> s3 = src -> s3;
+        else if ( rc == 0 )
+            rc = r2;
+        r2 = VPathAddRef ( src -> vcS3 );
+        if ( r2 == 0 )
+            p -> cacheS3 = src -> vcS3;
+        else if ( rc == 0 )
+            rc = r2;
     }
+
     if ( rc == 0 ) {
         atomic32_set ( & p -> refcount, 1 );
         * self = p;
-    } else {
-        VPathSetWhack ( p );
     }
+    else
+        VPathSetWhack ( p );
+
     return rc;
 }
 
 /* VPathSetList */
 rc_t VPathSetListMake ( VPathSetList ** self ) {
     VPathSetList * p = ( VPathSetList * ) calloc ( 1, sizeof * p );
-    if ( p == NULL ) {
+    if ( p == NULL )
         return RC ( rcVFS, rcPath, rcAllocating, rcMemory, rcExhausted );
-    }
 
     atomic32_set ( & p -> refcount, 1 );
 
@@ -262,9 +282,8 @@ rc_t VPathSetListMake ( VPathSetList ** self ) {
 }
 
 rc_t VPathSetListAddRef ( const VPathSetList * self ) {
-    if ( self != NULL ) {
+    if ( self != NULL )
         atomic32_inc ( & ( ( VPathSetList * ) self ) -> refcount );
-    }
 
     return 0;
 }
@@ -296,55 +315,42 @@ uint32_t VPathSetListLength ( const VPathSetList * self ) {
 rc_t VPathSetListGet
     ( const VPathSetList * self, uint32_t idx, const VPathSet ** set )
 {
-    if ( self == NULL ) {
+    if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
-    }
 
-    if ( set == NULL ) {
+    if ( set == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-    }
     else {
         const VPathSet * s = ( VPathSet * ) VectorGet ( & self -> list, idx );
-        if ( s == NULL ) {
+        if ( s == NULL )
             return RC ( rcVFS, rcPath, rcAccessing, rcItem, rcNotFound );
-        }
         else {
             rc_t rc = VPathSetAddRef ( s );
-            if ( rc == 0 ) {
+            if ( rc == 0 )
                 * set = s;
-            }
             return rc;
         }
     }
 }
 
 rc_t VPathSetListGetPath ( const VPathSetList * self, uint32_t idx,
-    VRemoteProtocols p, const VPath ** path )
+    VRemoteProtocols p, const VPath ** path, const VPath ** vdbcache )
 {
+    const VPathSet * s = NULL;
+
     if ( self == NULL ) {
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
     }
 
-    if ( path == NULL ) {
-        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-    }
-    else {
-        const VPathSet * s = ( VPathSet * ) VectorGet ( & self -> list, idx );
-        if ( p == 0 ) {
-            p = eProtocolHttpHttps;
-        }
-        if ( s == NULL ) {
-            return RC ( rcVFS, rcPath, rcAccessing, rcItem, rcNotFound );
-        }
-        else {
-            const VPath * v = NULL;
-            rc_t rc = VPathSetGet ( s, p, & v, NULL );
-            if ( rc == 0 ) {
-                * path = v;
-            }
-            return rc;
-        }
-    }
+    s = ( VPathSet * ) VectorGet ( & self -> list, idx );
+
+    if ( p == eProtocolDefault )
+        p = DEFAULT_PROTOCOLS;
+
+    if ( s == NULL )
+        return RC ( rcVFS, rcPath, rcAccessing, rcItem, rcNotFound );
+    else
+        return VPathSetGet ( s, p, path, vdbcache );
 }
 
 ////////////////////////////////////////////////////////////////////////////////

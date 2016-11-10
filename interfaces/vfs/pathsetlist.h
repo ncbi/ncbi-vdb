@@ -43,7 +43,8 @@ extern "C" {
 rc_t     VPathSetListRelease ( const VPathSetList * self );
 uint32_t VPathSetListLength  ( const VPathSetList * self );
 rc_t     VPathSetListGetPath ( const VPathSetList * self, uint32_t idx,
-                               VRemoteProtocols p, const struct VPath ** path );
+                               VRemoteProtocols p, const struct VPath ** path,
+                               const struct VPath ** vdbcache );
 /******************************************************************************/
 
 

@@ -187,6 +187,7 @@ typedef struct {
     struct VPath * file ; struct VPath * vcFile;
     struct VPath * http ; struct VPath * vcHttp;
     struct VPath * https; struct VPath * vcHttps;
+    struct VPath * s3   ; struct VPath * vcS3;
     struct VPath * mapping;
 } EVPath;
 rc_t VPathSetMake

@@ -755,11 +755,11 @@ typedef struct {
 static VRemoteProtocols SProtocolGet ( const String * url ) {
     size_t i = 0;
     SProtocol protocols [] = {
-        { "http", eProtocolHttp },
-        { "fasp", eProtocolFasp },
-        { "https",eProtocolHttps},
-        { "file", eProtocolFile },
-        { "s3"  , eProtocolS3   },
+        { "http:", eProtocolHttp },
+        { "fasp:", eProtocolFasp },
+        { "https:",eProtocolHttps},
+        { "file:", eProtocolFile },
+        { "s3:"  , eProtocolS3   },
     };
     if ( url == NULL || url -> addr == NULL || url -> size == 0 ) {
         return eProtocolNone;
@@ -1066,6 +1066,8 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
                 & src -> hsUrl, & src -> ticket, src, ext, & rc );
             made |= VPathMakeOrNot ( & self -> file,
                 & src -> flUrl, & src -> ticket, src, ext, & rc );
+            made |= VPathMakeOrNot ( & self -> s3,
+                & src -> s3Url, & src -> ticket, src, ext, & rc );
             VPathMakeOrNot ( & self -> vcHttp,
                 & src -> hVdbcacheUrl, & src -> ticket, src, ext, & rc );
             VPathMakeOrNot ( & self -> vcFasp,
@@ -1074,6 +1076,8 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
                 & src -> hsVdbcacheUrl, & src -> ticket, src, ext, & rc );
             VPathMakeOrNot ( & self -> vcFile,
                 & src -> flVdbcacheUrl, & src -> ticket, src, ext, & rc );
+            VPathMakeOrNot ( & self -> vcS3,
+                & src -> s3VdbcacheUrl, & src -> ticket, src, ext, & rc );
             if ( rc == 0 ) {
                 rc = EVPathInitMapping ( self, src, & req -> version );
             }
@@ -1505,7 +1509,7 @@ rc_t ECgiNamesRequestInit ( SRequest * request, VRemoteProtocols protocols,
         return rc;
     if ( protocols == 0 ) {
 /* get from kfg, otherwise use hardcoded below */
-        protocols = eProtocolHttpHttps;
+        protocols = DEFAULT_PROTOCOLS;
     }
     self = & request -> cgiReq;
     if ( self -> cgi == NULL ) {
@@ -2037,7 +2041,7 @@ static rc_t SHelperFini ( SHelper * self) {
 VRemoteProtocols SHelperDefaultProtocols ( SHelper * self ) {
     assert ( self );
 
-    VRemoteProtocols protocols = eProtocolHttpHttps;
+    VRemoteProtocols protocols = DEFAULT_PROTOCOLS;
 
     if ( self -> kfg == NULL ) {
         KConfigMake ( & self -> kfg, NULL );
@@ -2787,7 +2791,7 @@ rc_t KServiceFuserTest ( const KNSManager * mgr,  const char * ticket,
         uint32_t i = 0;
         for ( i = 0; rc == 0 && i < VPathSetListLength ( response ); ++i ) {
             const VPath * path = NULL;
-            rc = VPathSetListGetPath ( response, i, 0, & path );
+            rc = VPathSetListGetPath ( response, i, 0, & path, NULL );
             if ( rc == 0 ) {
                 rc_t r2;
 /*KTime_t mod = VPathGetModDate ( path );size_t size = VPathGetSize ( path );*/
@@ -2887,7 +2891,9 @@ rc_t KServiceProcessStreamTestNames1 ( const KNSManager * mgr,
     return rc;
 }
 
-rc_t KServiceNames3_0StreamTest ( const char * buffer ) {
+rc_t KServiceNames3_0StreamTest ( const char * buffer,
+    const VPathSetList ** response )
+{
     KService service;
     KStream * stream = NULL;
     rc_t rc = 0;
@@ -2898,6 +2904,8 @@ rc_t KServiceNames3_0StreamTest ( const char * buffer ) {
         rc = KBufferStreamMake ( & stream, buffer, string_size ( buffer ) );
     if ( rc == 0 )
         rc = KServiceProcessStream ( & service, stream );
+    if ( rc == 0 )
+        rc = KServiceGetResponse ( & service , response );
     r2 = KServiceFini ( & service );
     if ( rc == 0 )
         rc = r2;
