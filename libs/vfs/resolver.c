@@ -5027,7 +5027,7 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
 
 
         /* set up protocols */
-        obj -> dflt_protocols = eProtocolHttpHttps;
+        obj -> dflt_protocols = DEFAULT_PROTOCOLS;
         if ( kfg != NULL )
             KConfigReadRemoteProtocols ( kfg, & obj -> dflt_protocols );
 

@@ -35,6 +35,7 @@
 extern "C" {
 #endif
 
+#define DEFAULT_PROTOCOLS eProtocolHttpHttps
 
 /*--------------------------------------------------------------------------
  * KConfig Repository Structure
