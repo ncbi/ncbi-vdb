@@ -38,6 +38,8 @@ extern "C" {
 
 
 struct KNSManager;
+struct KSrvResponse;
+struct VPathSet;
 
 
 /* make name service call : request: 1 object, response: 1 object */
@@ -47,6 +49,16 @@ rc_t CC KService1NameWithVersion ( const struct KNSManager * mgr,
     const char * ticket, VRemoteProtocols protocols,
     const struct VPath ** remote, const struct VPath ** mapping,
     bool refseq_ctx, const char * names_version );
+
+
+/******************************** KSrvResponse ********************************/
+rc_t KSrvResponseMake ( struct KSrvResponse ** self );
+rc_t KSrvResponseAddRef ( const struct KSrvResponse * self );
+rc_t KSrvResponseAppend ( struct KSrvResponse * self,
+    const struct VPathSet * set );
+rc_t KSrvResponseGet ( const struct KSrvResponse * self, uint32_t idx,
+    const struct VPathSet ** set );
+/******************************************************************************/
 
 
 /* THE FOLLOWING DEFINE TURNS ON COMPARING OLD/NEW RESOLVING CALLS AND

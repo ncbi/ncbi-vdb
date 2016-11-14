@@ -41,7 +41,6 @@
 #include <kns/stream.h> /* KBufferStreamMake */
 #include <kproc/timeout.h> /* TimeoutInit */
 #include <vfs/manager.h> /* VFSManager */
-#include <vfs/pathsetlist.h> /* KSrvResponseGetPath */
 #include <vfs/services.h> /* KServiceMake */
 
 #include "path-priv.h" /* VPathMakeFmt */

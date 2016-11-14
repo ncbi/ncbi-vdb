@@ -31,10 +31,6 @@
 #include <vfs/extern.h>
 #endif
 
-#ifndef _h_vfs_pathsetlist_
-#include <vfs/pathsetlist.h>
-#endif
-
 #ifndef _h_klib_refcount_
 #include <klib/refcount.h>
 #endif
@@ -49,6 +45,10 @@
 
 #ifndef _h_vfs_path_
 #include <vfs/path.h>
+#endif
+
+#ifndef _h_vfs_resolver_
+#include <vfs/resolver.h> /* VRemoteProtocols */
 #endif
 
 #ifdef __cplusplus
@@ -171,16 +171,6 @@ rc_t VPathSetRelease ( const VPathSet * self );
 rc_t VPathSetGet ( const VPathSet * self, VRemoteProtocols protocols,
     const struct VPath ** path, const struct VPath ** vdbcache );
 
-
-rc_t KSrvResponseMake ( KSrvResponse ** self );
-rc_t KSrvResponseAddRef ( const KSrvResponse * self );
-rc_t KSrvResponseRelease ( const KSrvResponse * self );
-rc_t KSrvResponseAppend ( KSrvResponse * self, const VPathSet * set );
-uint32_t KSrvResponseLength ( const KSrvResponse * self );
-rc_t KSrvResponseGet
-    ( const KSrvResponse * self, uint32_t idx, const VPathSet ** set );
-
-
 /* response row converted into VDB objects */
 typedef struct {
     struct VPath * fasp ; struct VPath * vcFasp;
@@ -199,3 +189,10 @@ rc_t VPathSetMake
 #endif
 
 #endif /* _h_path_priv_ */
+
+#if 0
+/******************************** KSrvResponse ********************************/
+rc_t KSrvResponseRelease ( const KSrvResponse * self );
+uint32_t KSrvResponseLength ( const KSrvResponse * self );
+/******************************************************************************/
+#endif

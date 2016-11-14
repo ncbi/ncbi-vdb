@@ -26,11 +26,10 @@
 
 #include "resolver-priv.h" /* DEFAULT_PROTOCOLS */
 #include "path-priv.h" /* VPathGetScheme_t */
-
+#include <vfs/services.h> /* KSrvResponse */
 #include <klib/rc.h> /* RC */
 #include <klib/vector.h> /* Vector */
-#include <vfs/path.h> /* VPath */
-#include <atomic.h> /* atomic32_dec_and_test */
+
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
