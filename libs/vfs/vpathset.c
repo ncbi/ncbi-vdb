@@ -49,7 +49,7 @@ struct VPathSet {
     const VPath * cacheS3;
 };
 
-struct VPathSetList {
+struct KSrvResponse {
     atomic32_t refcount;
     Vector list;
 };
@@ -268,9 +268,9 @@ rc_t VPathSetMake
     return rc;
 }
 
-/* VPathSetList */
-rc_t VPathSetListMake ( VPathSetList ** self ) {
-    VPathSetList * p = ( VPathSetList * ) calloc ( 1, sizeof * p );
+/* KSrvResponse */
+rc_t KSrvResponseMake ( KSrvResponse ** self ) {
+    KSrvResponse * p = ( KSrvResponse * ) calloc ( 1, sizeof * p );
     if ( p == NULL )
         return RC ( rcVFS, rcPath, rcAllocating, rcMemory, rcExhausted );
 
@@ -283,15 +283,15 @@ rc_t VPathSetListMake ( VPathSetList ** self ) {
     return 0;
 }
 
-rc_t VPathSetListAddRef ( const VPathSetList * self ) {
+rc_t KSrvResponseAddRef ( const KSrvResponse * self ) {
     if ( self != NULL )
-        atomic32_inc ( & ( ( VPathSetList * ) self ) -> refcount );
+        atomic32_inc ( & ( ( KSrvResponse * ) self ) -> refcount );
 
     return 0;
 }
 
-rc_t VPathSetListRelease ( const VPathSetList * cself ) {
-    VPathSetList * self = ( VPathSetList * ) cself;
+rc_t KSrvResponseRelease ( const KSrvResponse * cself ) {
+    KSrvResponse * self = ( KSrvResponse * ) cself;
 
     if ( self != NULL && atomic32_dec_and_test ( & self -> refcount ) ) {
         VectorWhack ( & self -> list, whackVPathSet, NULL );
@@ -302,20 +302,20 @@ rc_t VPathSetListRelease ( const VPathSetList * cself ) {
     return 0;
 }
 
-rc_t VPathSetListAppend ( VPathSetList * self, const VPathSet * set ) {
+rc_t KSrvResponseAppend ( KSrvResponse * self, const VPathSet * set ) {
     assert ( self );
 
     return VectorAppend ( & self -> list, NULL, set );
 }
 
-uint32_t VPathSetListLength ( const VPathSetList * self ) {
+uint32_t KSrvResponseLength ( const KSrvResponse * self ) {
     assert ( self );
 
     return VectorLength ( & self -> list );
 }
 
-rc_t VPathSetListGet
-    ( const VPathSetList * self, uint32_t idx, const VPathSet ** set )
+rc_t KSrvResponseGet
+    ( const KSrvResponse * self, uint32_t idx, const VPathSet ** set )
 {
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
@@ -335,7 +335,7 @@ rc_t VPathSetListGet
     }
 }
 
-rc_t VPathSetListGetPath ( const VPathSetList * self, uint32_t idx,
+rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
     VRemoteProtocols p, const VPath ** path, const VPath ** vdbcache )
 {
     const VPathSet * s = NULL;

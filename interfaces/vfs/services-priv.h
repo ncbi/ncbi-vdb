@@ -38,7 +38,7 @@ extern "C" {
 
 rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols, 
     const char * cgi, const char * version,
-    const struct VPathSetList ** result );
+    const struct KSrvResponse ** result );
 
 rc_t KServiceSearchExecuteExt ( KService * self,
     const char * cgi, const char * version,

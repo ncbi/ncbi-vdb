@@ -41,7 +41,7 @@
 #include <kns/stream.h> /* KBufferStreamMake */
 #include <kproc/timeout.h> /* TimeoutInit */
 #include <vfs/manager.h> /* VFSManager */
-#include <vfs/pathsetlist.h> /* VPathSetListGetPath */
+#include <vfs/pathsetlist.h> /* KSrvResponseGetPath */
 #include <vfs/services.h> /* KServiceMake */
 
 #include "path-priv.h" /* VPathMakeFmt */
@@ -175,7 +175,7 @@ typedef struct {
     EServiceType serviceType;
     SHeader header;
     Vector rows;
-    VPathSetList * list;
+    KSrvResponse * list;
     Kart * kart;
 } SResponse;
 
@@ -1345,7 +1345,7 @@ static rc_t SResponseInit ( SResponse * self ) {
     rc_t rc = 0;
     assert ( self );
     VectorInit ( & self -> rows, 0, 5 );
-    rc = VPathSetListMake ( & self -> list );
+    rc = KSrvResponseMake ( & self -> list );
     return rc;
 }
 
@@ -1367,7 +1367,7 @@ static rc_t SResponseFini ( SResponse * self ) {
     }
 
     rc = SHeaderFini ( & self -> header );
-    r2 = VPathSetListRelease ( self -> list );
+    r2 = KSrvResponseRelease ( self -> list );
     if ( rc == 0 ) {
         rc = r2;
     }
@@ -1380,11 +1380,11 @@ static rc_t SResponseFini ( SResponse * self ) {
 }
 
 static rc_t SResponseGetResponse
-    ( const SResponse * self, const VPathSetList ** response )
+    ( const SResponse * self, const KSrvResponse ** response )
 {
     rc_t rc = 0;
     assert ( self );
-    rc = VPathSetListAddRef ( self -> list );
+    rc = KSrvResponseAddRef ( self -> list );
     if ( rc == 0 ) {
         * response = self -> list;
     }
@@ -2404,10 +2404,10 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                             if ( self -> resp . header . version. version
                                                           >= VERSION_3_0
                                ||
-                               VPathSetListLength ( self -> resp . list )
+                               KSrvResponseLength ( self -> resp . list )
                                                           == 0 )
                             {
-                                r2 = VPathSetListAppend
+                                r2 = KSrvResponseAppend
                                     ( self -> resp . list, row -> set );
                             }
                             else {
@@ -2446,7 +2446,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
 
 static
 rc_t KServiceGetResponse
-    ( const KService * self, const VPathSetList ** response )
+    ( const KService * self, const KSrvResponse ** response )
 {
     if ( self == NULL ) {
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
@@ -2462,7 +2462,7 @@ rc_t KServiceGetResponse
 
 rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
     const char * cgi, const char * version,
-    const VPathSetList ** response )
+    const KSrvResponse ** response )
 {
     rc_t rc = 0;
 
@@ -2496,7 +2496,7 @@ rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
 
 
 rc_t KServiceNamesExecute ( KService * self, VRemoteProtocols protocols,
-    const VPathSetList ** response ) 
+    const KSrvResponse ** response )
 {
     return KServiceNamesExecuteExt ( self, protocols, NULL, NULL, response );
 }
@@ -2552,12 +2552,12 @@ static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
     }
 
     if ( rc == 0 ) {
-        uint32_t l = VPathSetListLength ( service . resp . list );
+        uint32_t l = KSrvResponseLength ( service . resp . list );
         if ( l != 1)
             rc = 3;
         else {
             const VPathSet * s = NULL;
-            rc = VPathSetListGet ( service . resp . list, 0, & s );
+            rc = KSrvResponseGet ( service . resp . list, 0, & s );
             if ( rc != 0 ) {
             }
             else if ( s == NULL )
@@ -2762,18 +2762,18 @@ rc_t KServiceNamesRequestTest ( const KNSManager * mgr, const char * b,
         rc = KServiceProcessStream ( service, stream );
     }
     if ( rc == 0 ) {
-        const VPathSetList * l = NULL;
+        const KSrvResponse * l = NULL;
         rc = KServiceGetResponse ( service, & l );
         if ( rc == 0 ) {
             uint32_t i = 0;
-            uint32_t n = VPathSetListLength ( l );
+            uint32_t n = KSrvResponseLength ( l );
             for ( i = 0; rc == 0 && i < n; ++i ) {
                 const VPathSet * s = NULL;
-                rc = VPathSetListGet ( l, i, & s );
+                rc = KSrvResponseGet ( l, i, & s );
                 RELEASE ( VPathSet, s );
             }
         }
-        RELEASE ( VPathSetList, l );
+        RELEASE ( KSrvResponse, l );
     }
     RELEASE ( KStream, stream );
     RELEASE ( KService, service );
@@ -2785,7 +2785,7 @@ rc_t KServiceFuserTest ( const KNSManager * mgr,  const char * ticket,
 {
     va_list args;
     KService * service = NULL;
-    const VPathSetList * response = NULL;
+    const KSrvResponse * response = NULL;
     rc_t rc = KServiceMake ( & service);
     va_start ( args, acc );
     while ( rc == 0 && acc != NULL ) {
@@ -2797,9 +2797,9 @@ rc_t KServiceFuserTest ( const KNSManager * mgr,  const char * ticket,
     }
     if ( rc == 0 ) {
         uint32_t i = 0;
-        for ( i = 0; rc == 0 && i < VPathSetListLength ( response ); ++i ) {
+        for ( i = 0; rc == 0 && i < KSrvResponseLength ( response ); ++i ) {
             const VPath * path = NULL;
-            rc = VPathSetListGetPath ( response, i, 0, & path, NULL );
+            rc = KSrvResponseGetPath ( response, i, 0, & path, NULL );
             if ( rc == 0 ) {
                 rc_t r2;
 /*KTime_t mod = VPathGetModDate ( path );size_t size = VPathGetSize ( path );*/
@@ -2812,7 +2812,7 @@ rc_t KServiceFuserTest ( const KNSManager * mgr,  const char * ticket,
             RELEASE ( VPath, path );
         }
     }
-    RELEASE ( VPathSetList, response );
+    RELEASE ( KSrvResponse, response );
     RELEASE ( KService, service );
     return rc;
 }
@@ -2852,7 +2852,7 @@ rc_t KServiceProcessStreamTestNames1 ( const KNSManager * mgr,
             string_measure ( acc, NULL ), ticket, eProtocolHttp,
             eOT_undefined, false );
     if ( rc == 0 )
-        KBufferStreamMake ( & stream, b, string_size ( b ) );
+        rc = KBufferStreamMake ( & stream, b, string_size ( b ) );
     if ( rc == 0 ) {
         KServiceExpectErrors ( & service, errors );
     }
@@ -2900,7 +2900,7 @@ rc_t KServiceProcessStreamTestNames1 ( const KNSManager * mgr,
 }
 
 rc_t KServiceNames3_0StreamTest ( const char * buffer,
-    const VPathSetList ** response )
+    const KSrvResponse ** response )
 {
     KService service;
     KStream * stream = NULL;

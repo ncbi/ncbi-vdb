@@ -31,7 +31,7 @@
 
 #include <vfs/resolver.h> /* VRemoteProtocols */
 
-typedef struct VPathSetList VPathSetList;
+typedef struct KSrvResponse KSrvResponse;
 
 
 #ifdef __cplusplus
@@ -39,10 +39,10 @@ extern "C" {
 #endif
 
 
-/************************** VPathSetList **************************/
-rc_t     VPathSetListRelease ( const VPathSetList * self );
-uint32_t VPathSetListLength  ( const VPathSetList * self );
-rc_t     VPathSetListGetPath ( const VPathSetList * self, uint32_t idx,
+/************************** KSrvResponse **************************/
+rc_t     KSrvResponseRelease ( const KSrvResponse * self );
+uint32_t KSrvResponseLength  ( const KSrvResponse * self );
+rc_t     KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
                                VRemoteProtocols p, const struct VPath ** path,
                                const struct VPath ** vdbcache );
 /******************************************************************************/

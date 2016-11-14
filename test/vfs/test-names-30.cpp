@@ -42,7 +42,7 @@ static P Path  ( " ticket ", " object-id ", 90 );
 static P Path1 ( " ticke1 ", " object-i1 ", 10 );
 
 TEST_CASE ( INCOMPLETE ) {
-    const VPathSetList * response = NULL;
+    const KSrvResponse * response = NULL;
 
     REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( NULL, & response ) );
     REQUIRE_NULL ( response );
@@ -59,14 +59,14 @@ TEST_CASE ( INCOMPLETE ) {
 }
 
 TEST_CASE ( SINGLE ) {
-    const VPathSetList * response = NULL;
+    const KSrvResponse * response = NULL;
 
     // incomplete string
     REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.2\n"
         "SRR000001||http://dwnl.ncbi.nlm.nih.gov/srapub/SRR000001|200|ok",
         & response ) );
     REQUIRE_NULL ( response );
-    REQUIRE_RC ( VPathSetListRelease (response ) );
+    REQUIRE_RC ( KSrvResponseRelease (response ) );
     response = NULL;
 
     const VPath * ph = Path . make ( "http://url/" );
@@ -87,12 +87,12 @@ TEST_CASE ( SINGLE ) {
             " expiration |200| message\n"
         "$ timestamp\n", & response ) );
     CHECK_NOT_NULL ( response );
-    REQUIRE_EQ ( VPathSetListLength ( response ), 1u );
+    REQUIRE_EQ ( KSrvResponseLength ( response ), 1u );
 
     const VPath * path = NULL;
     const VPath * vdbcache = NULL;
 
-    REQUIRE_RC ( VPathSetListGetPath ( response, 0, eProtocolDefault,
+    REQUIRE_RC ( KSrvResponseGetPath ( response, 0, eProtocolDefault,
         & path, & vdbcache ) );
     int ne = ~0;
     REQUIRE_RC ( VPathEqual ( path, ph, & ne ) );
@@ -105,7 +105,7 @@ TEST_CASE ( SINGLE ) {
     REQUIRE_RC ( VPathRelease (vdbcache ) );
     vdbcache = NULL;
 
-    REQUIRE_RC ( VPathSetListGetPath ( response, 0, eProtocolHttp,
+    REQUIRE_RC ( KSrvResponseGetPath ( response, 0, eProtocolHttp,
         & path, & vdbcache ) );
     ne = ~0;
     REQUIRE_RC ( VPathEqual ( path, ph, & ne ) );
@@ -118,7 +118,7 @@ TEST_CASE ( SINGLE ) {
     REQUIRE_RC ( VPathRelease (vdbcache ) );
     vdbcache = NULL;
 
-    REQUIRE_RC ( VPathSetListGetPath ( response, 0, eProtocolHttpHttps,
+    REQUIRE_RC ( KSrvResponseGetPath ( response, 0, eProtocolHttpHttps,
         & path, & vdbcache ) );
     ne = ~0;
     REQUIRE_RC ( VPathEqual ( path, ph, & ne ) );
@@ -131,7 +131,7 @@ TEST_CASE ( SINGLE ) {
     REQUIRE_RC ( VPathRelease (vdbcache ) );
     vdbcache = NULL;
 
-    REQUIRE_RC ( VPathSetListGetPath ( response, 0, eProtocolFaspHttp,
+    REQUIRE_RC ( KSrvResponseGetPath ( response, 0, eProtocolFaspHttp,
         & path, & vdbcache ) );
     ne = ~0;
     REQUIRE_RC ( VPathEqual ( path, pf, & ne ) );
@@ -144,7 +144,7 @@ TEST_CASE ( SINGLE ) {
     REQUIRE_RC ( VPathRelease (vdbcache ) );
     vdbcache = NULL;
 
-    REQUIRE_RC ( VPathSetListGetPath ( response, 0, eProtocolFileFaspHttpHttps,
+    REQUIRE_RC ( KSrvResponseGetPath ( response, 0, eProtocolFileFaspHttpHttps,
         & path, & vdbcache ) );
     ne = ~0;
     REQUIRE_RC ( VPathEqual ( path, pfl, & ne ) );
@@ -157,7 +157,7 @@ TEST_CASE ( SINGLE ) {
     REQUIRE_RC ( VPathRelease (vdbcache ) );
     vdbcache = NULL;
 
-    REQUIRE_RC ( VPathSetListGetPath ( response, 0, eProtocolHttpsHttp,
+    REQUIRE_RC ( KSrvResponseGetPath ( response, 0, eProtocolHttpsHttp,
         & path, & vdbcache ) );
     ne = ~0;
     REQUIRE_RC ( VPathEqual ( path, phs, & ne ) );
@@ -170,7 +170,7 @@ TEST_CASE ( SINGLE ) {
     REQUIRE_RC ( VPathRelease (vdbcache ) );
     vdbcache = NULL;
 
-    REQUIRE_RC ( VPathSetListGetPath ( response, 0, eProtocolS3,
+    REQUIRE_RC ( KSrvResponseGetPath ( response, 0, eProtocolS3,
         & path, & vdbcache ) );
     ne = ~0;
     REQUIRE_RC ( VPathEqual ( path, p3, & ne ) );
@@ -183,7 +183,7 @@ TEST_CASE ( SINGLE ) {
     REQUIRE_RC ( VPathRelease (vdbcache ) );
     vdbcache = NULL;
 
-    REQUIRE_RC ( VPathSetListRelease (response ) );
+    REQUIRE_RC ( KSrvResponseRelease (response ) );
     response = NULL;
 
     REQUIRE_RC ( VPathRelease ( ph ) );
@@ -199,7 +199,7 @@ TEST_CASE ( SINGLE ) {
 }
 
 TEST_CASE ( DOUBLE ) {
-    const VPathSetList * response = NULL;
+    const KSrvResponse * response = NULL;
 
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
         "0|| object-id |90| date | md5 | ticket |"
@@ -211,12 +211,12 @@ TEST_CASE ( DOUBLE ) {
         "$ timestamp\n", & response ) );
 
     CHECK_NOT_NULL ( response );
-    REQUIRE_EQ ( VPathSetListLength ( response ), 2u );
+    REQUIRE_EQ ( KSrvResponseLength ( response ), 2u );
 
     const VPath * phs = Path . make ( "https://hsl/" );
     const VPath * path = NULL;
     const VPath * vdbcache = NULL;
-    REQUIRE_RC ( VPathSetListGetPath ( response, 0, eProtocolHttps,
+    REQUIRE_RC ( KSrvResponseGetPath ( response, 0, eProtocolHttps,
         & path, NULL ) );
     int ne = ~0;
     REQUIRE_RC ( VPathEqual ( path, phs, & ne ) );
@@ -227,7 +227,7 @@ TEST_CASE ( DOUBLE ) {
     REQUIRE_RC ( VPathRelease (phs ) );
 
     const VPath * ph = Path1 . make ( "http://ur1/" );
-    REQUIRE_RC ( VPathSetListGetPath ( response, 1, eProtocolHttp,
+    REQUIRE_RC ( KSrvResponseGetPath ( response, 1, eProtocolHttp,
         & path, & vdbcache ) );
     REQUIRE_NULL ( vdbcache );
     REQUIRE_RC ( VPathEqual ( path, ph, & ne ) );
@@ -238,7 +238,7 @@ TEST_CASE ( DOUBLE ) {
     REQUIRE_RC ( VPathRelease (ph ) );
 
     const VPath * vhs = Path1 . make ( "https://vdbcacheUrl1/" );
-    REQUIRE_RC ( VPathSetListGetPath ( response, 1, eProtocolHttps,
+    REQUIRE_RC ( KSrvResponseGetPath ( response, 1, eProtocolHttps,
         & path, & vdbcache ) );
     REQUIRE_NULL ( path );
     REQUIRE_RC ( VPathEqual ( vdbcache, vhs, & ne ) );
@@ -248,7 +248,7 @@ TEST_CASE ( DOUBLE ) {
     ne = ~0;
     REQUIRE_RC ( VPathRelease (vhs ) );
 
-    REQUIRE_RC ( VPathSetListRelease (response ) );
+    REQUIRE_RC ( KSrvResponseRelease (response ) );
     response = NULL;
 }
 

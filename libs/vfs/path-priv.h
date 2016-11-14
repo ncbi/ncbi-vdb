@@ -172,13 +172,13 @@ rc_t VPathSetGet ( const VPathSet * self, VRemoteProtocols protocols,
     const struct VPath ** path, const struct VPath ** vdbcache );
 
 
-rc_t VPathSetListMake ( VPathSetList ** self );
-rc_t VPathSetListAddRef ( const VPathSetList * self );
-rc_t VPathSetListRelease ( const VPathSetList * self );
-rc_t VPathSetListAppend ( VPathSetList * self, const VPathSet * set );
-uint32_t VPathSetListLength ( const VPathSetList * self );
-rc_t VPathSetListGet
-    ( const VPathSetList * self, uint32_t idx, const VPathSet ** set );
+rc_t KSrvResponseMake ( KSrvResponse ** self );
+rc_t KSrvResponseAddRef ( const KSrvResponse * self );
+rc_t KSrvResponseRelease ( const KSrvResponse * self );
+rc_t KSrvResponseAppend ( KSrvResponse * self, const VPathSet * set );
+uint32_t KSrvResponseLength ( const KSrvResponse * self );
+rc_t KSrvResponseGet
+    ( const KSrvResponse * self, uint32_t idx, const VPathSet ** set );
 
 
 /* response row converted into VDB objects */
