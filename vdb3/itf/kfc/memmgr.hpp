@@ -67,7 +67,39 @@ namespace vdb3
         virtual Mem alloc ( const bytes_t & size, bool clear ) = 0;
 
         // make a block of constant memory
+        // TODO: Does this mark a previously allocated block of memory constant
+        // or create a write-never block?
         virtual Mem make_const ( const void * ptr, const bytes_t & size ) = 0;
+
+        // Allocate an aligned block of memory, alignment must be a power of
+        // 2 and size must be an integral multiple of alignment.
+        // TODO: Support clear, optional fill bytes (or -1 for don't memset)?
+        virtual Mem aligned_alloc ( const bytes_t & alignment, const bytes_t & size ) = 0;
+
+        // Reallocate a Mem object to size, will shallow copy contents.
+        // TODO: How to return failure? Exceptions allowed?
+        // TODO: Fill unused bytes?
+        virtual void realloc ( Mem & mem, const bytes_t & size) = 0;
+
+        // Return the rounded up allocation that would occur if size requested
+        virtual bytes_t nallocx ( const bytes_t & size) = 0;
+
+        // Pretty print statistics, probably as newline separated Tag=Values.
+        // If any pair will exceed accumulated buf_size, stop at previous pair.
+        virtual void allocstats ( char * buf, const bytes_t & buf_size) = 0;
+
+        // TODO: Allocator option setter/getter.
+        // TODO: Can also set via TBD $ENVVAR (NCBI_MEMMGR?)
+        // possible options:
+        //   alloc_uninit_bytes   Fill allocated space with value, possibly
+        //                        random (-1?).
+        //   alloc_free_bytes     Fill free space "".
+        //   fail_randomly        Approximately ~1/N allocation fails.
+        //   checkuaf             Checksum free'd block, keep around a while
+        //                        and reverify checksum.
+        //   hugetlb              MMap 2MB pages, less pressure on DTLB.
+        //                        Check OS support and page merging
+        //                        in recent kernels.
 
         // support for C++ new and delete
         void * _new ( size_t bytes );
@@ -103,7 +135,7 @@ namespace vdb3
     {
     public:
 
-        // allocate memory 
+        // allocate memory
         Mem alloc ( const bytes_t & size, bool clear ) const;
 
         // make a block of constant memory
@@ -111,6 +143,11 @@ namespace vdb3
 
         // C++
         MemMgr ();
+        // TODO: pool support, here or in interface?
+        //MemMgr (int pool=0);
+        //TODO: ~MemMgr() destroys pool or add .release()?
+
+        // TODO: Create a new pool if copying/assigning from existing MemMgr?
         MemMgr ( const MemMgr & r );
         void operator = ( const MemMgr & r );
         MemMgr ( const MemMgr & r, caps_t reduce );

@@ -103,6 +103,12 @@ namespace vdb3
         // fill memory with repeats of single byte
         bytes_t fill ( count_t repeat, index_t offset, U8 byte );
 
+        // fill memory with random data, useful for testing/fuzzing
+        bytes_t spew ( count_t repeat, index_t offset );
+
+        // checksum memory block, useful for detecting changes
+        U64 cksum ( index_t offset=0 );
+
         // comparison
         bool operator == ( const Mem & m ) const;
         bool operator != ( const Mem & m ) const;
