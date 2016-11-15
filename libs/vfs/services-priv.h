@@ -103,7 +103,7 @@ rc_t KServiceRequestTestNames1 ( const struct KNSManager * mgr,
     const char * ticket, VRemoteProtocols protocols,
     EObjectType objectType );
 rc_t KServiceNames3_0StreamTest ( const char * buffer,
-    const struct KSrvResponse ** response );
+    const struct KSrvResponse ** response, int errorsToIgnore );
 rc_t KServiceNamesRequestTest ( const struct KNSManager * mgr, const char * b,
     const char * cgi, VRemoteProtocols protocols,
     const SServiceRequestTestData * d, ... );

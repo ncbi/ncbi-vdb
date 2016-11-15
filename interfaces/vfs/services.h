@@ -75,9 +75,14 @@ rc_t     KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
            const struct VPath ** vdbcache, const KSrvError ** error );
 
 /************************** KSrvError **************************/
-
 rc_t KSrvErrorRelease ( const KSrvError * self );
+rc_t KSrvErrorAddRef  ( const KSrvError * self );
+rc_t KSrvErrorRc      ( const KSrvError * self, rc_t     * rc   );
+rc_t KSrvErrorCode    ( const KSrvError * self, uint32_t * code );
 
+/*  returns pointer to internal String data
+ *  Strings remain valid while "self" is valid */
+rc_t KSrvErrorMessage ( const KSrvError * self, String * message );
 /******************************************************************************/
 
 #ifdef __cplusplus

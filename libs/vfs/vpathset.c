@@ -355,9 +355,8 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
 {
     const VPathSet * s = NULL;
 
-    if ( self == NULL ) {
+    if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
-    }
 
     s = ( VPathSet * ) VectorGet ( & self -> list, idx );
 
@@ -366,8 +365,25 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
 
     if ( s == NULL )
         return RC ( rcVFS, rcPath, rcAccessing, rcItem, rcNotFound );
-    else
-        return VPathSetGet ( s, p, path, vdbcache );
+    else {
+        if ( path != NULL )
+            * path = NULL;
+        if ( vdbcache != NULL )
+            * vdbcache = NULL;
+        if ( error != NULL )
+            * error = NULL;
+        if ( s -> error == NULL )
+            return VPathSetGet ( s, p, path, vdbcache );
+        else {
+            if ( error != NULL ) {
+                rc_t rc = KSrvErrorAddRef ( s -> error );
+                if ( rc == 0 )
+                    * error = s -> error;
+                return rc;
+            }
+            return RC ( rcVFS, rcQuery, rcExecuting, rcError, rcExists );
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

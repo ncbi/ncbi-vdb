@@ -1016,6 +1016,38 @@ rc_t KSrvErrorRelease ( const KSrvError * cself ) {
     return 0;
 }
 
+rc_t KSrvErrorRc      ( const KSrvError * self, rc_t     * rc   ) {
+    rc_t dummy = 0;
+    if ( rc == NULL )
+        rc = & dummy;
+    if ( self == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+    * rc = self -> rc;
+    return 0;
+}
+
+rc_t KSrvErrorCode    ( const KSrvError * self, uint32_t * code ) {
+    uint32_t dummy = 0;
+    if ( code == NULL )
+        code = & dummy;
+    if ( self == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+    * code = self -> code;
+    return 0;
+}
+
+/*  returns pointer to internal String data
+ *  Strings remain valid while "self" is valid */
+rc_t KSrvErrorMessage ( const KSrvError * self, String * message ) {
+    String dummy;
+    if ( message == NULL )
+        message = & dummy;
+    if ( self == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+    * message = self -> message;
+    return 0;
+}
+
 
 /* EVPath */
 static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
@@ -1248,9 +1280,15 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
     }
     /* log message to user */
     if ( req -> errorsToIgnore == 0 ) {
-        PLOGERR ( lvl, ( lvl, rc,
-            "failed to resolve accession '$(acc)' - $(msg) ( $(code) )",
-            "acc=%s,msg=%S,code=%u", acc, & src -> message, src -> code ) );
+        if ( src -> objectId . addr != NULL )
+            PLOGERR ( lvl, ( lvl, rc,
+                "failed to resolve accession '$(acc)' - $(msg) ( $(code) )",
+                "acc=%S,msg=%S,code=%u",
+                & src -> objectId, & src -> message, src -> code ) );
+        else
+            PLOGERR ( lvl, ( lvl, rc,
+                "failed to resolve accession '$(acc)' - $(msg) ( $(code) )",
+                "acc=%s,msg=%S,code=%u", acc, & src -> message, src -> code ) );
     }
     else
         -- ( ( SRequest * ) req ) -> errorsToIgnore;
@@ -2136,7 +2174,7 @@ static rc_t KServiceAddObject ( KService * self,
     const char * id, size_t id_sz, EObjectType objectType )
 {
     if ( self == NULL )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
+        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
 
     return SRequestDataAppendObject
         ( & self -> req . request, id, id_sz, objectType );
@@ -2926,24 +2964,34 @@ rc_t KServiceProcessStreamTestNames1 ( const KNSManager * mgr,
 }
 
 rc_t KServiceNames3_0StreamTest ( const char * buffer,
-    const KSrvResponse ** response )
+    const KSrvResponse ** response, int errorsToIgnore )
 {
-    KService service;
-    KStream * stream = NULL;
     rc_t rc = 0;
     rc_t r2 = 0;
+
+    KStream * stream = NULL;
+
+    KService service;
     if ( rc == 0 )
         rc = KServiceInit ( & service, NULL );
     if ( rc == 0 )
+        KServiceExpectErrors ( & service, errorsToIgnore );
+
+    if ( rc == 0 )
         rc = KBufferStreamMake ( & stream, buffer, string_size ( buffer ) );
+
     if ( rc == 0 )
         rc = KServiceProcessStream ( & service, stream );
+
     if ( rc == 0 )
         rc = KServiceGetResponse ( & service , response );
+
     r2 = KServiceFini ( & service );
     if ( rc == 0 )
         rc = r2;
+
     RELEASE ( KStream, stream );
+
     return rc;
 }
 
