@@ -83,7 +83,7 @@ VByteBlob_ContiguousChunk ( const VBlob* p_blob,  ctx_t ctx, int64_t rowId, uint
                 assert ( rowId >= first && rowId < first + (int64_t)count );
 
                 if ( rowId - first + 1 < (int64_t)count ) /* more rows in the blob */
-                {   /* *p_size is the size of value on rowId. Increase size to include subsequent rows, until we see a repeat, p_maxRows is reachec or the blob ends */
+                {   /* *p_size is the size of value on rowId. Increase size to include subsequent rows, until we see a repeat, p_maxRows is reached or the blob ends */
                     rc = PageMapNewIterator ( (const PageMap*)p_blob->pm, &pmIt, rowId - first, count - ( rowId - first ) ); /* here, rowId is relative to the blob */
                     if ( rc != 0 )
                     {
