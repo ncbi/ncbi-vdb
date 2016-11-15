@@ -67,27 +67,18 @@ namespace vdb3
         virtual Mem alloc ( const bytes_t & size, bool clear ) = 0;
 
         // make a block of constant memory
-        // TODO: Does this mark a previously allocated block of memory constant
-        // or create a write-never block?
-        virtual Mem make_const ( const void * ptr, const bytes_t & size ) = 0;
+        // definitely readonly, but moreover comes from the text section of process space
+        // has no lifetime < that of the process
+        virtual Mem makeConst ( const void * ptr, const bytes_t & size ) = 0;
 
         // Allocate an aligned block of memory, alignment must be a power of
         // 2 and size must be an integral multiple of alignment.
-        // TODO: Support clear, optional fill bytes (or -1 for don't memset)?
-        virtual Mem aligned_alloc ( const bytes_t & alignment, const bytes_t & size ) = 0;
-
-        // Reallocate a Mem object to size, will shallow copy contents.
-        // TODO: How to return failure? Exceptions allowed?
-        // TODO: Fill unused bytes?
-        virtual void realloc ( Mem & mem, const bytes_t & size) = 0;
-
-        // Return the rounded up allocation that would occur if size requested
-        virtual bytes_t nallocx ( const bytes_t & size) = 0;
-
+        virtual Mem alignedAlloc ( const bytes_t & alignment, const bytes_t & size, bool clear ) = 0;
+#if 0
         // Pretty print statistics, probably as newline separated Tag=Values.
         // If any pair will exceed accumulated buf_size, stop at previous pair.
-        virtual void allocstats ( char * buf, const bytes_t & buf_size) = 0;
-
+        virtual void allocStats ( char * buf, const bytes_t & buf_size ) = 0;
+#endif
         // TODO: Allocator option setter/getter.
         // TODO: Can also set via TBD $ENVVAR (NCBI_MEMMGR?)
         // possible options:
@@ -139,7 +130,7 @@ namespace vdb3
         Mem alloc ( const bytes_t & size, bool clear ) const;
 
         // make a block of constant memory
-        Mem make_const ( const void * ptr, const bytes_t & size ) const;
+        Mem makeConst ( const void * ptr, const bytes_t & size ) const;
 
         // C++
         MemMgr ();

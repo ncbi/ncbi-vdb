@@ -44,14 +44,14 @@ namespace vdb3
      */
 
     // returns a system error string
-    String SysErr( int errno );
+    String SysErr ( int errno );
 
     // throws a runtime error
-    void ThrowOSErr( U32 lineno, const String & func_name, int err_code )
+    void ThrowOSErr ( U32 lineno, const String & func_name, int err_code )
         __attribute__ ( ( noreturn ) );
 
 #define THROW_OSERR( func_name, err_code ) \
-    ThrowOSErr( __LINE__, CONST_STRING ( # func_name ), err_code )
+    ThrowOSErr ( __LINE__, CONST_STRING ( # func_name ), err_code )
 }
 
 #endif // _hpp_vdb3_kfc_syserr_

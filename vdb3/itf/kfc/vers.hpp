@@ -47,7 +47,7 @@ namespace vdb3
     public:
 
         U32 maj () const
-            { return ( U8 ) ( val >> 24 ); }
+        { return ( U8 ) ( val >> 24 ); }
 
         U32 min () const
         { return ( U8 ) ( val >> 16 ); }
