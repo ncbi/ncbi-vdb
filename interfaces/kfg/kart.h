@@ -44,6 +44,7 @@ extern "C" {
 #endif
 
 struct KDirectory;
+struct KSrvError;
 
 /* AA-833 */
 
@@ -67,6 +68,9 @@ KFG_EXTERN rc_t CC KartItemItemDesc(const KartItem *self, const String **elem);
 /* VERSION 2.0 ****************************************************************/
 KFG_EXTERN rc_t CC KartItemObjType (const KartItem *self, const String **elem );
 KFG_EXTERN rc_t CC KartItemPath (const KartItem *self, const String **elem );
+
+KFG_EXTERN rc_t CC KartItemGetError (const KartItem *self,
+    const struct KSrvError ** error );
 
 typedef struct Kart Kart;
 

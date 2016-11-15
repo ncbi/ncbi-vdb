@@ -149,6 +149,12 @@ typedef struct {
     String message;
 } STyped;
 
+struct KSrvError {
+    rc_t rc;
+    uint32_t code;
+    String message;
+};
+
 /* converter from server response string to an object */
 typedef rc_t TConverter ( void * dest, const String * src );
 typedef struct { TConverter * f; } SConverter;
@@ -984,6 +990,30 @@ rc_t STypedInit ( STyped * self, const SOrdered * raw, const SConverters * how,
 }
 
 
+/* KSrvError */
+static
+rc_t KSrvErrorMake ( const KSrvError ** self,
+    const STyped * src, rc_t rc )
+{
+    KSrvError * o = NULL;
+    assert ( self && src && rc );
+    o = ( KSrvError * ) calloc ( 1, sizeof * o );
+    if ( o == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+    o -> rc = rc;
+    o -> code = src -> code;
+    StringInit ( & o -> message,
+        src -> message . addr, src -> message . size, src -> message . len );
+    * self = o;
+    return 0;
+}
+
+rc_t KSrvErrorRelease ( const KSrvError * self ) {
+    free ( ( void * ) self );
+    return 0;
+}
+
+
 /* EVPath */
 static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
     const String * ticket, const STyped * typed, bool ext, rc_t * rc )
@@ -1219,10 +1249,9 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
             "failed to resolve accession '$(acc)' - $(msg) ( $(code) )",
             "acc=%s,msg=%S,code=%u", acc, & src -> message, src -> code ) );
     }
-    else {
+    else
         -- ( ( SRequest * ) req ) -> errorsToIgnore;
-    }
-    return rc;
+    return KSrvErrorMake ( & self -> error, src, rc );
 }
 
 static rc_t EVPathFini ( EVPath * self ) {
@@ -1233,10 +1262,15 @@ static rc_t EVPathFini ( EVPath * self ) {
     RELEASE ( VPath, self ->   fasp  );
     RELEASE ( VPath, self ->   https );
     RELEASE ( VPath, self ->   file  );
+    RELEASE ( VPath, self ->   s3    );
     RELEASE ( VPath, self -> vcHttp  );
     RELEASE ( VPath, self -> vcFasp  );
     RELEASE ( VPath, self -> vcHttps );
     RELEASE ( VPath, self -> vcFile  );
+    RELEASE ( VPath, self -> vcS3    );
+
+    RELEASE ( KSrvError, self -> error );
+
     return rc;
 }
 
@@ -2798,7 +2832,7 @@ rc_t KServiceFuserTest ( const KNSManager * mgr,  const char * ticket,
         uint32_t i = 0;
         for ( i = 0; rc == 0 && i < KSrvResponseLength ( response ); ++i ) {
             const VPath * path = NULL;
-            rc = KSrvResponseGetPath ( response, i, 0, & path, NULL );
+            rc = KSrvResponseGetPath ( response, i, 0, & path, NULL, NULL );
             if ( rc == 0 ) {
                 rc_t r2;
 /*KTime_t mod = VPathGetModDate ( path );size_t size = VPathGetSize ( path );*/

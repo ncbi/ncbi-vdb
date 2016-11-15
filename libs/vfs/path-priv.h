@@ -179,6 +179,7 @@ typedef struct {
     struct VPath * https; struct VPath * vcHttps;
     struct VPath * s3   ; struct VPath * vcS3;
     struct VPath * mapping;
+    const struct KSrvError * error;
 } EVPath;
 rc_t VPathSetMake
     ( VPathSet ** self, const EVPath * src, bool singleUrl );

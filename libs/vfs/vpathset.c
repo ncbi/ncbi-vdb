@@ -36,6 +36,7 @@
 
 struct VPathSet {
     atomic32_t refcount; 
+
     const VPath * fasp;
     const VPath * file;
     const VPath * http;
@@ -46,6 +47,8 @@ struct VPathSet {
     const VPath * cacheHttp;
     const VPath * cacheHttps;
     const VPath * cacheS3;
+
+    const struct KSrvError * error;
 };
 
 struct KSrvResponse {
@@ -75,6 +78,8 @@ rc_t VPathSetWhack ( VPathSet * self ) {
         RELEASE ( VPath, self -> cacheHttp );
         RELEASE ( VPath, self -> cacheHttps );
         RELEASE ( VPath, self -> cacheS3 );
+
+        RELEASE ( KSrvError, self -> error );
 
         free ( self );
     }
@@ -107,6 +112,8 @@ rc_t VPathSetGet ( const VPathSet * self, VRemoteProtocols protocols,
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
     if ( protocols == eProtocolDefault )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcInvalid );
+    if ( self -> error != NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcError, rcExists );
 
     for ( ; protocol != 0; protocol >>= 3 ) {
         switch ( protocol & eProtocolMask ) {
@@ -335,7 +342,8 @@ rc_t KSrvResponseGet
 }
 
 rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
-    VRemoteProtocols p, const VPath ** path, const VPath ** vdbcache )
+    VRemoteProtocols p, const VPath ** path, const VPath ** vdbcache,
+    const KSrvError ** error )
 {
     const VPathSet * s = NULL;
 

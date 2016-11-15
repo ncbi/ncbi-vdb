@@ -40,6 +40,7 @@ extern "C" {
 struct Kart;
 struct KNSManager;
 typedef struct KService KService;
+typedef struct KSrvError KSrvError;
 typedef struct KSrvResponse KSrvResponse;
 
 
@@ -70,8 +71,13 @@ rc_t KService1Search (
 rc_t     KSrvResponseRelease ( const KSrvResponse * self );
 uint32_t KSrvResponseLength  ( const KSrvResponse * self );
 rc_t     KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
-                               VRemoteProtocols p, const struct VPath ** path,
-                               const struct VPath ** vdbcache );
+           VRemoteProtocols p, const struct VPath ** path,
+           const struct VPath ** vdbcache, const KSrvError ** error );
+
+/************************** KSrvError **************************/
+
+rc_t KSrvErrorRelease ( const KSrvError * self );
+
 /******************************************************************************/
 
 #ifdef __cplusplus
