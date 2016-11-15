@@ -1,7 +1,9 @@
+#include "../../libs/vfs/services-priv.h" /* KServiceNames3_0StreamTest */
+#include "../../libs/vfs/path-priv.h" /* VPathEqual */
+#include <vfs/services.h> /* KSrvResponse */
+#include <vfs/path.h> /* VPath */
 #include "klib/text.h" /* CONST_STRING */
 #include <ktst/unit_test.hpp> /* KMain */
-
-#include "../../libs/vfs/services.c"  /* KServiceNames3_0StreamTest */
 
 TEST_SUITE ( Names3_0_TestSuite );
 

@@ -50,26 +50,10 @@
 #include <ctype.h> /* isdigit */
 #include <string.h> /* memset */
 
+
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
-
-typedef enum {
-    eOT_undefined,
-    eOT_empty,
-    eOT_dbgap,
-    eOT_provisional,
-    eOT_srapub,
-    eOT_sragap,
-    eOT_srapub_source,
-    eOT_sragap_source,
-    eOT_srapub_files,
-    eOT_sragap_files,
-    eOT_refseq,
-    eOT_wgs,
-    eOT_na,
-    eOT_nakmer,
-} EObjectType;
 
 typedef enum {
     eSTnames,
@@ -150,6 +134,8 @@ typedef struct {
 } STyped;
 
 struct KSrvError {
+    atomic32_t refcount;
+
     rc_t rc;
     uint32_t code;
     String message;
@@ -1004,12 +990,29 @@ rc_t KSrvErrorMake ( const KSrvError ** self,
     o -> code = src -> code;
     StringInit ( & o -> message,
         src -> message . addr, src -> message . size, src -> message . len );
+
+    atomic32_set ( & o -> refcount, 1 );
+
     * self = o;
+
     return 0;
 }
 
-rc_t KSrvErrorRelease ( const KSrvError * self ) {
-    free ( ( void * ) self );
+rc_t KSrvErrorAddRef ( const KSrvError * cself ) {
+    KSrvError * self = ( KSrvError * ) cself;
+
+    if ( self != NULL )
+        atomic32_inc ( & ( ( KSrvError * ) self ) -> refcount );
+
+    return 0;
+}
+
+rc_t KSrvErrorRelease ( const KSrvError * cself ) {
+    KSrvError * self = ( KSrvError * ) cself;
+
+    if ( self != NULL && atomic32_dec_and_test ( & self -> refcount ) )
+        free ( ( void * ) self );
+
     return 0;
 }
 
@@ -2754,12 +2757,6 @@ rc_t KServiceRequestTestNames1 ( const KNSManager * mgr,
     return rc;
 }
 
-typedef struct {
-    const char * id;
-    EObjectType type;
-    const char * ticket;
-} SServiceRequestTestData;
-
 rc_t KServiceNamesRequestTest ( const KNSManager * mgr, const char * b,
     const char * cgi, VRemoteProtocols protocols,
     const SServiceRequestTestData * d, ... )
@@ -2886,39 +2883,35 @@ rc_t KServiceProcessStreamTestNames1 ( const KNSManager * mgr,
             eOT_undefined, false );
     if ( rc == 0 )
         rc = KBufferStreamMake ( & stream, b, string_size ( b ) );
-    if ( rc == 0 ) {
+    if ( rc == 0 )
         KServiceExpectErrors ( & service, errors );
-    }
-    if ( rc == 0 ) {
+    if ( rc == 0 )
         rc = KServiceProcessStream ( & service, stream );
-    }
     if ( rc == 0 ) {
-        if ( VectorLength ( & service . resp . rows ) != 1) {
+        if ( VectorLength ( & service . resp . rows ) != 1 )
             rc = 1;
-        }
         else {
             const VPath * path = NULL;
             const SRow * r
                 = ( SRow * ) VectorGet ( & service . resp . rows, 0 );
-            if ( r == NULL) {
+            if ( r == NULL)
                 rc = 2;
-            }
-            else {
-                path = r -> path . http;
-            }
+            else
+                if ( r -> path . error != NULL )
+                    rc = r -> path . error -> rc;
+                else
+                    path = r -> path . http;
             if ( exp != NULL && rc == 0 ) {
                 int notequal = ~ 0;
                 rc = VPathEqual ( path, exp, & notequal );
-                if ( rc == 0 ) {
+                if ( rc == 0 )
                     rc = notequal;
-                }
             }
             if ( ex2 != NULL && rc == 0 ) {
                 int notequal = ~ 0;
                 rc = VPathEqual ( path, ex2, & notequal );
-                if ( rc == 0 ) {
+                if ( rc == 0 )
                     rc = notequal;
-                }
             }
         }
     }
@@ -2993,14 +2986,12 @@ rc_t KServiceSearchTest1
     if ( rc == 0 ) {
         rc = KServiceAddId ( & service, acc );
     }
-    if ( rc == 0 ) {
+    if ( rc == 0 )
         rc = KServiceSearchExecute ( & service, & result );
-    }
     {
         rc_t r2 = KServiceFini ( & service );
-        if ( rc == 0 ) {
+        if ( rc == 0 )
             rc = r2;
-        }
     }
     RELEASE ( Kart, result );
     return rc;

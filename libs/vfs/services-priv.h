@@ -37,6 +37,24 @@ extern "C" {
 #endif
 
 
+typedef enum {
+    eOT_undefined,
+    eOT_empty,
+    eOT_dbgap,
+    eOT_provisional,
+    eOT_srapub,
+    eOT_sragap,
+    eOT_srapub_source,
+    eOT_sragap_source,
+    eOT_srapub_files,
+    eOT_sragap_files,
+    eOT_refseq,
+    eOT_wgs,
+    eOT_na,
+    eOT_nakmer,
+} EObjectType;
+
+
 struct KNSManager;
 struct KSrvResponse;
 struct VPathSet;
@@ -58,8 +76,43 @@ rc_t KSrvResponseAppend ( struct KSrvResponse * self,
     const struct VPathSet * set );
 rc_t KSrvResponseGet ( const struct KSrvResponse * self, uint32_t idx,
     const struct VPathSet ** set );
-/******************************************************************************/
+/******************************** TESTS ********************************/
+typedef struct {
+    const char * id;
+    EObjectType type;
+    const char * ticket;
+} SServiceRequestTestData;
 
+rc_t KServiceCgiTest1 ( const struct KNSManager * mgr, const char * cgi,
+    const char * version, const char * acc, const char * ticket,
+    VRemoteProtocols protocols, EObjectType objectType,
+    const struct VPath * exp, const struct VPath * ex2 );
+
+rc_t KServiceFuserTest ( const struct KNSManager * mgr,  const char * ticket,
+    const char * acc, ... );
+
+rc_t SCgiRequestPerformTestNames1 ( const struct KNSManager * mgr,
+    const char * cgi, const char * version, const char * acc,
+    const char * ticket, VRemoteProtocols protocols, EObjectType objectType );
+rc_t KServiceProcessStreamTestNames1 ( const struct KNSManager * mgr,
+    const char * b, const char * version, const char * acc,
+    const struct VPath * exp, const char * ticket, const struct VPath * ex2,
+    int errors );
+rc_t KServiceRequestTestNames1 ( const struct KNSManager * mgr,
+    const char * cgi, const char * version, const char * acc, size_t acc_sz,
+    const char * ticket, VRemoteProtocols protocols,
+    EObjectType objectType );
+rc_t KServiceNames3_0StreamTest ( const char * buffer,
+    const struct KSrvResponse ** response );
+rc_t KServiceNamesRequestTest ( const struct KNSManager * mgr, const char * b,
+    const char * cgi, VRemoteProtocols protocols,
+    const SServiceRequestTestData * d, ... );
+
+rc_t KServiceSearchTest1
+    ( const struct KNSManager * mgr, const char * cgi, const char * acc );
+rc_t KServiceSearchTest (
+    const struct KNSManager * mgr, const char * cgi, const char * acc, ... );
+/******************************************************************************/
 
 /* THE FOLLOWING DEFINE TURNS ON COMPARING OLD/NEW RESOLVING CALLS AND
    ASSERTING WHEN THE RESULTS DO NOT MATCH.

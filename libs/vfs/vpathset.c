@@ -35,7 +35,7 @@
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
 struct VPathSet {
-    atomic32_t refcount; 
+    atomic32_t refcount;
 
     const VPath * fasp;
     const VPath * file;
@@ -53,6 +53,7 @@ struct VPathSet {
 
 struct KSrvResponse {
     atomic32_t refcount;
+
     Vector list;
 };
 
@@ -176,7 +177,13 @@ rc_t VPathSetMake
     if ( p == NULL )
         return RC ( rcVFS, rcPath, rcAllocating, rcMemory, rcExhausted );
 
-    if ( singleUrl ) {
+    if ( src -> error != NULL ) {
+        rc = KSrvErrorAddRef ( src -> error );
+        if ( rc == 0 )
+            p -> error = src -> error;
+    }
+
+    else if ( singleUrl ) {
         VPUri_t uri_type = vpuri_invalid;
         rc = VPathGetScheme_t ( src -> http, & uri_type );
         if ( rc == 0 ) {
@@ -266,6 +273,7 @@ rc_t VPathSetMake
 
     if ( rc == 0 ) {
         atomic32_set ( & p -> refcount, 1 );
+
         * self = p;
     }
     else
