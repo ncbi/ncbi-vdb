@@ -2,9 +2,12 @@
 #include "../../libs/vfs/path-priv.h" /* VPathEqual */
 #include <vfs/services.h> /* KSrvResponse */
 #include <vfs/path.h> /* VPath */
+#include <klib/debug.h> /* KDbgSetString */
 #include <klib/rc.h>
 #include <klib/text.h> /* CONST_STRING */
 #include <ktst/unit_test.hpp> /* KMain */
+
+//#include <cstdio> // printf
 
 TEST_SUITE ( Names3_0_TestSuite );
 
@@ -280,8 +283,8 @@ TEST_CASE ( ERROR ) {
 TEST_CASE ( AND_ERROR ) {
     const KSrvResponse * response = NULL;
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0||object-0|90| dat0 | md50 | tckt0|http://u/||expiraton0|200|messag\n"
-        "1||object-1|10| dat1 | md51 | tckt1         |||expiratin1|503|e mssg\n"
+        "0||object-0|90| dat0 | md50 | tckt0         |||expiratin0|503|e mssg\n"
+        "1||object-1|10| dat1 | md51 | tckt1|http://u/||expiraton1|200|messag\n"
         , & response, 1 ) );
     REQUIRE_NOT_NULL ( response );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 2u );
@@ -291,13 +294,6 @@ TEST_CASE ( AND_ERROR ) {
     const KSrvError * error = NULL;
 
     REQUIRE_RC ( KSrvResponseGetPath ( response, 0, eProtocolDefault,
-        & path, & vdbcache, & error ) );
-    REQUIRE_NULL ( vdbcache );
-    REQUIRE_NULL ( error );
-    REQUIRE_NOT_NULL ( path );
-    REQUIRE_RC ( VPathRelease ( path ) );
-
-    REQUIRE_RC ( KSrvResponseGetPath ( response, 1, eProtocolDefault,
         & path, & vdbcache, & error ) );
     REQUIRE_NULL ( path );
     REQUIRE_NULL ( vdbcache );
@@ -314,7 +310,20 @@ TEST_CASE ( AND_ERROR ) {
     String exp;
     CONST_STRING ( & exp, "e mssg" );
     REQUIRE ( StringEqual ( & message, & exp ) );
+/*  printf ( "KSrvErrorMessage: '%.*s'\n", (int)message. size, message. addr );
+    printf ( "Expected        : '%.*s'\n", (int)exp    . size, exp    . addr );
+    printf ( "KSrvErrorMessage.len: '%d'\n", message. len );
+    printf ( "Expected        .len: '%d'\n", exp    . len );
+    printf ( "KSrvErrorMessage.sz : '%ld'\n", message. size );
+    printf ( "Expected        .sz : '%ld'\n", exp    . size );*/
     REQUIRE_RC ( KSrvErrorRelease ( error ) );
+
+    REQUIRE_RC ( KSrvResponseGetPath ( response, 1, eProtocolDefault,
+        & path, & vdbcache, & error ) );
+    REQUIRE_NULL ( vdbcache );
+    REQUIRE_NULL ( error );
+    REQUIRE_NOT_NULL ( path );
+    REQUIRE_RC ( VPathRelease ( path ) );
 
     REQUIRE_RC ( KSrvResponseRelease ( response ) );
     response = NULL;
@@ -323,6 +332,7 @@ TEST_CASE ( AND_ERROR ) {
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] ) {
+        if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
         return Names3_0_TestSuite ( argc, argv );
     }
 }

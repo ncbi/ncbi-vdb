@@ -136,6 +136,8 @@ typedef struct {
 struct KSrvError {
     atomic32_t refcount;
 
+    SRaw raw;
+
     rc_t rc;
     uint32_t code;
     String message;
@@ -310,15 +312,21 @@ rc_t SHelperProjectToTicket ( SHelper * self, uint32_t projectId,
 /* SRaw */
 static void SRawInit ( SRaw * self, char * s ) {
     assert ( self );
+
     self -> s = s;
 }
 
-static rc_t SRawAlloc ( SRaw * self, const char * s ) {
-    char * p = string_dup_measure ( s, NULL );
-    if ( p == NULL ) {
+static rc_t SRawAlloc ( SRaw * self, const char * s, size_t sz ) {
+    char * p = NULL;
+    if ( sz == 0 )
+        p = string_dup_measure ( s, NULL );
+    else
+        p = string_dup ( s, sz );
+    if ( p == NULL )
         return RC ( rcVFS, rcPath, rcAllocating, rcMemory, rcExhausted );
-    }
+
     SRawInit ( self, p );
+
     return 0;
 }
 
@@ -381,7 +389,7 @@ static rc_t SVersionInit
 
         self -> version = self -> major << 24 | self -> minor << 16;
 
-        return SRawAlloc ( & self -> raw, src );
+        return SRawAlloc ( & self -> raw, src, 0 );
     }
 }
 
@@ -979,23 +987,29 @@ rc_t STypedInit ( STyped * self, const SOrdered * raw, const SConverters * how,
 /* KSrvError */
 static
 rc_t KSrvErrorMake ( const KSrvError ** self,
-    const STyped * src, rc_t rc )
+    const STyped * src, rc_t aRc )
 {
+    rc_t rc = 0;
     KSrvError * o = NULL;
-    assert ( self && src && rc );
+    assert ( self && src && aRc );
     o = ( KSrvError * ) calloc ( 1, sizeof * o );
     if ( o == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-    o -> rc = rc;
-    o -> code = src -> code;
-    StringInit ( & o -> message,
-        src -> message . addr, src -> message . size, src -> message . len );
+    rc = SRawAlloc ( & o -> raw, src -> message . addr, src -> message . size );
+    if ( rc == 0 ) {
+        o -> rc = aRc;
+        o -> code = src -> code;
+        StringInit ( & o -> message,
+            o -> raw . s, src -> message . size, src -> message . len );
 
-    atomic32_set ( & o -> refcount, 1 );
+        atomic32_set ( & o -> refcount, 1 );
 
-    * self = o;
+        * self = o;
+    }
+    else
+        * self = NULL;
 
-    return 0;
+    return rc;
 }
 
 rc_t KSrvErrorAddRef ( const KSrvError * cself ) {
@@ -1008,12 +1022,17 @@ rc_t KSrvErrorAddRef ( const KSrvError * cself ) {
 }
 
 rc_t KSrvErrorRelease ( const KSrvError * cself ) {
+    rc_t rc = 0;
+
     KSrvError * self = ( KSrvError * ) cself;
 
-    if ( self != NULL && atomic32_dec_and_test ( & self -> refcount ) )
+    if ( self != NULL && atomic32_dec_and_test ( & self -> refcount ) ) {
+        rc = SRawFini ( & self -> raw );
+        memset ( self, 0, sizeof * self );
         free ( ( void * ) self );
+    }
 
-    return 0;
+    return rc;
 }
 
 rc_t KSrvErrorRc      ( const KSrvError * self, rc_t     * rc   ) {

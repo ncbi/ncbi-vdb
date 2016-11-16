@@ -317,9 +317,16 @@ rc_t KSrvResponseRelease ( const KSrvResponse * cself ) {
 }
 
 rc_t KSrvResponseAppend ( KSrvResponse * self, const VPathSet * set ) {
+    rc_t rc = 0;
+
     assert ( self );
 
-    return VectorAppend ( & self -> list, NULL, set );
+    rc = VPathSetAddRef ( set );
+
+    if ( rc == 0 )
+        rc = VectorAppend ( & self -> list, NULL, set );
+
+    return rc;
 }
 
 uint32_t KSrvResponseLength ( const KSrvResponse * self ) {
