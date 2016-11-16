@@ -262,19 +262,46 @@ static rc_t SHelperFini ( SHelper * self) {
     return rc;
 }
 
+rc_t SHelperInitKfg ( SHelper * self ) {
+    rc_t rc = 0;
+    assert ( self );
+
+    if ( self -> kfg == NULL ) {
+        rc = KConfigMake ( & self -> kfg, NULL );
+    }
+
+    return rc;
+}
+
+/* get from kfg, otherwise use hardcoded */
 VRemoteProtocols SHelperDefaultProtocols ( SHelper * self ) {
     assert ( self );
 
     VRemoteProtocols protocols = DEFAULT_PROTOCOLS;
 
-    if ( self -> kfg == NULL ) {
-        KConfigMake ( & self -> kfg, NULL );
-    }
+    SHelperInitKfg ( self );
 
     KConfigReadRemoteProtocols ( self -> kfg, & protocols );
 
     return protocols;
 }
+
+/* try to get cgi from kfg, otherwise use hardcoded */
+const char * SHelperResolverCgi ( SHelper * self, bool aProtected ) {
+    static const char man [] = "/repository/remote/main/CGI/resolver-cgi";
+    static const char prt [] = "/repository/remote/protected/CGI/resolver-cgi";
+    static char buffer [ 1024 ]
+        = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+    rc_t rc = 0;
+    const char * path = aProtected ? prt : man;
+    assert ( self );
+    rc = SHelperInitKfg ( self );
+    if ( rc == 0 )
+        rc = KConfigRead ( self -> kfg, path, 0, buffer, sizeof buffer, NULL,
+            NULL );
+    return buffer;
+}
+
 
 rc_t SHelperProjectToTicket ( SHelper * self, uint32_t projectId,
     char * buffer, size_t bsize, size_t * ticket_size )
@@ -286,11 +313,9 @@ rc_t SHelperProjectToTicket ( SHelper * self, uint32_t projectId,
     assert ( self );
 
     if ( self -> repoMgr == NULL ) {
-        if ( self -> kfg == NULL ) {
-            rc = KConfigMake ( & self -> kfg, NULL );
-            if ( rc != 0 )
-                return rc;
-        }
+        rc = SHelperInitKfg ( self );
+        if ( rc != 0 )
+            return rc;
 
         rc = KConfigMakeRepositoryMgrRead ( self -> kfg, & self -> repoMgr );
         if ( rc != 0 )
@@ -1694,39 +1719,41 @@ static
 rc_t SCgiRequestInitCgi ( SCgiRequest * self, const char * cgi )
 {
     assert ( self && ! self -> cgi );
+
     self -> cgi = string_dup_measure ( cgi, NULL );
-    if ( self -> cgi == NULL ) {
+    if ( self -> cgi == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-    }
+
     return 0;
 }
 
 static
 rc_t ECgiNamesRequestInit ( SRequest * request, SHelper * helper,
     VRemoteProtocols protocols, const char * cgi,
-    const char * version )
+    const char * version, bool aProtected )
 {
     SCgiRequest * self = NULL;
     rc_t rc = 0;
     const SKV * kv = NULL;
+
     assert ( request );
+
     rc = SVersionInit ( & request -> version, version, eSTnames );
     if ( rc != 0 )
         return rc;
-    if ( protocols == eProtocolDefault ) {
-/* get from kfg, otherwise use hardcoded below */
+
+    if ( protocols == eProtocolDefault )
         protocols = SHelperDefaultProtocols ( helper );
-    }
     request -> protocols = protocols;
+
     self = & request -> cgiReq;
+
     if ( self -> cgi == NULL ) {
-        if ( cgi == NULL ) {
-/* try to get cgi from kfg, otherwise use hardcoded below */
-            cgi =  "http://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
-            cgi = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
-        }
+        if ( cgi == NULL )
+            cgi = SHelperResolverCgi ( helper, aProtected );
         rc = SCgiRequestInitCgi ( self, cgi );
     }
+
     VectorInit ( & self -> params, 0, 5 );
     request -> serviceType = eSTnames;
     DBGMSG ( DBG_VFS,
@@ -2267,19 +2294,20 @@ rc_t KServiceAddProject ( KService * self, uint32_t project ) {
 static
 rc_t KServiceInitNamesRequestWithVersion ( KService * self,
     VRemoteProtocols protocols,
-    const char * cgi, const char * version )
+    const char * cgi, const char * version, bool aProtected )
 {
     assert ( self );
 
     return ECgiNamesRequestInit ( & self -> req,  & self -> helper, protocols,
-        cgi, version );
+        cgi, version, aProtected );
 }
 
 static
 rc_t KServiceInitNamesRequest ( KService * self, VRemoteProtocols protocols,
     const char * cgi )
 {
-    return KServiceInitNamesRequestWithVersion ( self, protocols, cgi, "#3.0" );
+    return KServiceInitNamesRequestWithVersion ( self, protocols, cgi, "#3.0",
+        false );
 }
 
 static
@@ -2312,7 +2340,7 @@ static rc_t KServiceInit ( KService * self, const KNSManager * mgr ) {
 static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
     const char * cgi, const char * version, const char * acc,
     size_t acc_sz, const char * ticket, VRemoteProtocols protocols,
-    EObjectType objectType, bool refseq_ctx )
+    EObjectType objectType, bool refseq_ctx, bool aProtected )
 {
     rc_t rc = 0;
 
@@ -2328,7 +2356,7 @@ static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
 
     if ( rc == 0 )
         rc = KServiceInitNamesRequestWithVersion
-            ( self, protocols, cgi, version );
+            ( self, protocols, cgi, version, aProtected );
 
     return rc;
 }
@@ -2599,7 +2627,8 @@ rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
     if ( version == NULL )
         version = "#3.0";
 
-    rc = KServiceInitNamesRequestWithVersion ( self, protocols, cgi, version );
+    rc = KServiceInitNamesRequestWithVersion ( self, protocols, cgi, version,
+        false );
 
     if ( rc == 0 )
         rc = SCgiRequestPerform
@@ -2627,7 +2656,8 @@ rc_t KServiceNamesExecute ( KService * self, VRemoteProtocols protocols,
 static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
     const char * url, const char * acc, size_t acc_sz, const char * ticket,
     VRemoteProtocols protocols, const VPath ** remote,  const VPath ** mapping,
-    bool refseq_ctx, const char * version, EObjectType objectType )
+    bool refseq_ctx, const char * version, EObjectType objectType,
+    bool aProtected )
 {
     rc_t rc = 0;
 
@@ -2639,7 +2669,7 @@ static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
     rc = KServiceInitNames1 ( & service, mgr, url, version,
-        acc, acc_sz, ticket, protocols, objectType, refseq_ctx );
+        acc, acc_sz, ticket, protocols, objectType, refseq_ctx, aProtected );
 
     protocols = service . req . protocols;
 
@@ -2717,13 +2747,14 @@ LIB_EXPORT
 rc_t CC KService1NameWithVersion ( const KNSManager * mgr, const char * url,
     const char * acc, size_t acc_sz, const char * ticket,
     VRemoteProtocols protocols, const VPath ** remote, const VPath ** mapping,
-    bool refseq_ctx, const char * version )
+    bool refseq_ctx, const char * version, bool aProtected )
 {
     if ( version == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
     return KService1NameWithVersionAndType ( mgr, url, acc, acc_sz, ticket,
-        protocols, remote, mapping, refseq_ctx, version, eOT_undefined );
+        protocols, remote, mapping, refseq_ctx, version, eOT_undefined,
+        aProtected );
 }
 
 
@@ -2826,7 +2857,7 @@ rc_t KServiceRequestTestNames1 ( const KNSManager * mgr,
 {
     KService service;
     rc_t rc = KServiceInitNames1 ( & service, mgr, cgi, version,
-        acc, acc_sz,  ticket, protocols, objectType, false );
+        acc, acc_sz,  ticket, protocols, objectType, false, false );
     if ( rc == 0 ) {
         SKVCheck c;
         SKVCheckInit ( & c, acc, version, protocols );
@@ -2939,7 +2970,8 @@ rc_t SCgiRequestPerformTestNames1 ( const KNSManager * mgr, const char * cgi,
 {
     KService service;
     rc_t rc = KServiceInitNames1 ( & service, mgr, cgi, version, acc,
-        string_measure ( acc, NULL ), ticket, protocols, objectType, false );
+        string_measure ( acc, NULL ), ticket, protocols, objectType, false,
+        false );
     if ( rc == 0 ) {
         KStream * response = NULL;
         rc = SCgiRequestPerform
@@ -2966,7 +2998,7 @@ rc_t KServiceProcessStreamTestNames1 ( const KNSManager * mgr,
     if ( rc == 0 )
         rc = KServiceInitNames1 ( & service, mgr, "", version, acc,
             string_measure ( acc, NULL ), ticket, eProtocolHttp,
-            eOT_undefined, false );
+            eOT_undefined, false, false );
     if ( rc == 0 )
         rc = KBufferStreamMake ( & stream, b, string_size ( b ) );
     if ( rc == 0 )
@@ -3051,7 +3083,7 @@ rc_t KServiceCgiTest1 ( const KNSManager * mgr, const char * cgi,
     const VPath * path = NULL;
     rc_t rc = KService1NameWithVersionAndType ( mgr, cgi, acc,
         string_measure ( acc, NULL ), ticket, protocols,
-        & path, NULL, false, version, objectType );
+        & path, NULL, false, version, objectType, false );
     if ( rc == 0 ) {
         if ( exp != NULL && rc == 0 ) {
             int notequal = ~ 0;

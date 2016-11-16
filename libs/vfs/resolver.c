@@ -1552,7 +1552,7 @@ rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
 
     rc = KService1NameWithVersion ( kns, self -> root -> addr,
         acc -> addr, acc -> len, ticket, protocols, path, mapping,
-        legacy_wgs_refseq, version );
+        legacy_wgs_refseq, version, self -> protected );
 
     assert(*path != NULL || rc != 0);
 
