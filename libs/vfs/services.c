@@ -1179,21 +1179,21 @@ static rc_t EVPathInitMapping
                     ( & self -> mapping, "ncbi-acc:%S", & src -> objectId );
             }
             else {
-                if ( src -> objectId . size == 0 ) {
+                if ( src -> objectId . size == 0 )
                     return 0;
-                }
-                else {
+                else
                     rc = VPathMakeFmt (
                         & self -> mapping, "ncbi-file:%S", & src -> objectId );
-                }
             }
         }
-        if ( rc == 0 ) {
+
+        if ( rc == 0 )
             return 0;
-        }
+
         RELEASE ( VPath, self -> http );
         RELEASE ( VPath, self -> fasp );
     }
+
     return rc;
 }
 
@@ -1271,7 +1271,8 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
         case 404: /* 404|no data :
           If it is a real response then this assession is not found.
           What if it is a DB failure? Will be retried if configured to do so? */
-            return RC ( rcVFS, rcQuery, rcResolving, rcName, rcNotFound );
+            rc = RC ( rcVFS, rcQuery, rcResolving, rcName, rcNotFound );
+            break;
         case 410:
             rc = RC ( rcVFS, rcQuery, rcResolving, rcName, rcNotFound );
             break;
@@ -1297,6 +1298,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
       default:
         rc = RC ( rcVFS, rcQuery, rcResolving, rcError, rcUnexpected );
     }
+
     /* log message to user */
     if ( req -> errorsToIgnore == 0 ) {
         if ( src -> objectId . addr != NULL )
@@ -1311,12 +1313,15 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
     }
     else
         -- ( ( SRequest * ) req ) -> errorsToIgnore;
+
     return KSrvErrorMake ( & self -> error, src, rc );
 }
 
 static rc_t EVPathFini ( EVPath * self ) {
     rc_t rc = 0;
+
     assert ( self );
+
     RELEASE ( VPath, self -> mapping );
     RELEASE ( VPath, self ->   http  );
     RELEASE ( VPath, self ->   fasp  );
