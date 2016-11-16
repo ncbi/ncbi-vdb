@@ -77,8 +77,8 @@ VFS_SRC_CMN = \
 	resolver \
 	resolver-3.0 \
 	services \
+	srv-response \
 	syspath \
-	vpathset \
 
 VFS_SRC = \
 	path \
