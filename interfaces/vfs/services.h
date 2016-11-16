@@ -29,6 +29,7 @@
 */
 
 
+#include <kfg/kart.h>     /* EObjectType */
 #include <vfs/resolver.h> /* VRemoteProtocols */
 
 
@@ -80,9 +81,11 @@ rc_t KSrvErrorAddRef  ( const KSrvError * self );
 rc_t KSrvErrorRc      ( const KSrvError * self, rc_t     * rc   );
 rc_t KSrvErrorCode    ( const KSrvError * self, uint32_t * code );
 
-/*  returns pointer to internal String data
+/*  returns pointers to internal String data
  *  Strings remain valid while "self" is valid */
 rc_t KSrvErrorMessage ( const KSrvError * self, String * message );
+rc_t KSrvErrorObject  ( const KSrvError * self, String * id,
+    EObjectType * type );
 /******************************************************************************/
 
 #ifdef __cplusplus

@@ -29,30 +29,13 @@
 */
 
 
+#include <kfg/kart.h>      /* EObjectType */
 #include <vfs/resolver.h> /* VRemoteProtocols */
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-
-typedef enum {
-    eOT_undefined,
-    eOT_empty,
-    eOT_dbgap,
-    eOT_provisional,
-    eOT_srapub,
-    eOT_sragap,
-    eOT_srapub_source,
-    eOT_sragap_source,
-    eOT_srapub_files,
-    eOT_sragap_files,
-    eOT_refseq,
-    eOT_wgs,
-    eOT_na,
-    eOT_nakmer,
-} EObjectType;
 
 
 struct KNSManager;

@@ -136,11 +136,12 @@ typedef struct {
 struct KSrvError {
     atomic32_t refcount;
 
-    SRaw raw;
-
     rc_t rc;
     uint32_t code;
     String message;
+
+    String      objectId;
+    EObjectType objectType;
 };
 
 /* converter from server response string to an object */
@@ -989,27 +990,36 @@ static
 rc_t KSrvErrorMake ( const KSrvError ** self,
     const STyped * src, rc_t aRc )
 {
-    rc_t rc = 0;
     KSrvError * o = NULL;
     assert ( self && src && aRc );
     o = ( KSrvError * ) calloc ( 1, sizeof * o );
     if ( o == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-    rc = SRawAlloc ( & o -> raw, src -> message . addr, src -> message . size );
-    if ( rc == 0 ) {
-        o -> rc = aRc;
-        o -> code = src -> code;
-        StringInit ( & o -> message,
-            o -> raw . s, src -> message . size, src -> message . len );
 
-        atomic32_set ( & o -> refcount, 1 );
+    o -> message . addr = string_dup ( src -> message . addr,
+                                       src -> message . size );
+    if ( o -> message . addr == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+    o -> message . size = src -> message . size;
+    o -> message . len  = src -> message . len;
 
-        * self = o;
-    }
-    else
-        * self = NULL;
+    o -> objectId . addr = string_dup ( src -> objectId . addr,
+                                        src -> objectId . size );
+    if ( o -> objectId . addr == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+    o -> objectId . size = src -> objectId . size;
+    o -> objectId . len  = src -> objectId . len;
 
-    return rc;
+    o -> objectType = src -> objectType;
+
+    o -> rc = aRc;
+    o -> code = src -> code;
+
+    atomic32_set ( & o -> refcount, 1 );
+
+    * self = o;
+
+    return 0;
 }
 
 rc_t KSrvErrorAddRef ( const KSrvError * cself ) {
@@ -1027,7 +1037,8 @@ rc_t KSrvErrorRelease ( const KSrvError * cself ) {
     KSrvError * self = ( KSrvError * ) cself;
 
     if ( self != NULL && atomic32_dec_and_test ( & self -> refcount ) ) {
-        rc = SRawFini ( & self -> raw );
+        free ( ( void * ) self -> message  . addr );
+        free ( ( void * ) self -> objectId . addr );
         memset ( self, 0, sizeof * self );
         free ( ( void * ) self );
     }
@@ -1055,7 +1066,7 @@ rc_t KSrvErrorCode    ( const KSrvError * self, uint32_t * code ) {
     return 0;
 }
 
-/*  returns pointer to internal String data
+/*  returns pointers to internal String data
  *  Strings remain valid while "self" is valid */
 rc_t KSrvErrorMessage ( const KSrvError * self, String * message ) {
     String dummy;
@@ -1064,6 +1075,19 @@ rc_t KSrvErrorMessage ( const KSrvError * self, String * message ) {
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
     * message = self -> message;
+    return 0;
+}
+rc_t KSrvErrorObject ( const KSrvError * self, String * id, EObjectType * type )
+{
+    if ( self == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
+    if ( id != NULL )
+        * id = self -> objectId;
+
+    if ( type != NULL )
+        * type = self -> objectType;
+
     return 0;
 }
 

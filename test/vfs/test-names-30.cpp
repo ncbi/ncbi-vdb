@@ -258,6 +258,14 @@ TEST_CASE ( DOUBLE ) {
     response = NULL;
 }
 
+TEST_CASE ( BAD_TYPE ) {
+    const KSrvResponse * response = NULL;
+    REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.2\n"
+        "0|t| object-id |9| date | md5 | ticket |||" " expiration |200| mssg\n",
+        & response, 1 ) );
+    REQUIRE_NULL ( response );
+}
+
 TEST_CASE ( ERROR ) {
     const KSrvResponse * response = NULL;
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
@@ -283,7 +291,7 @@ TEST_CASE ( ERROR ) {
 TEST_CASE ( AND_ERROR ) {
     const KSrvResponse * response = NULL;
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0||object-0|90| dat0 | md50 | tckt0         |||expiratin0|503|e mssg\n"
+        "0|na|object-0|90| dat0 | md50 | tckt0       |||expiratin0|503|e mssg\n"
         "1||object-1|10| dat1 | md51 | tckt1|http://u/||expiraton1|200|messag\n"
         , & response, 1 ) );
     REQUIRE_NOT_NULL ( response );
@@ -305,17 +313,22 @@ TEST_CASE ( AND_ERROR ) {
     uint32_t code = 0;
     REQUIRE_RC ( KSrvErrorCode ( error, & code ) );
     REQUIRE_EQ ( code, 503u );
-    String message;
-    REQUIRE_RC ( KSrvErrorMessage ( error, & message ) );
+    String str;
+    REQUIRE_RC ( KSrvErrorMessage ( error, & str ) );
     String exp;
     CONST_STRING ( & exp, "e mssg" );
-    REQUIRE ( StringEqual ( & message, & exp ) );
+    REQUIRE ( StringEqual ( & str, & exp ) );
 /*  printf ( "KSrvErrorMessage: '%.*s'\n", (int)message. size, message. addr );
     printf ( "Expected        : '%.*s'\n", (int)exp    . size, exp    . addr );
     printf ( "KSrvErrorMessage.len: '%d'\n", message. len );
     printf ( "Expected        .len: '%d'\n", exp    . len );
     printf ( "KSrvErrorMessage.sz : '%ld'\n", message. size );
     printf ( "Expected        .sz : '%ld'\n", exp    . size );*/
+    EObjectType type = eOT_undefined;
+    REQUIRE_RC ( KSrvErrorObject ( error, & str, & type ) );
+    REQUIRE_EQ ( type, eOT_na );
+    CONST_STRING ( & exp, "object-0" );
+    REQUIRE ( StringEqual ( & str, & exp ) );
     REQUIRE_RC ( KSrvErrorRelease ( error ) );
 
     REQUIRE_RC ( KSrvResponseGetPath ( response, 1, eProtocolDefault,
