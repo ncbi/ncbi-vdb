@@ -25,11 +25,11 @@
  */
 
 
+#include <vfs/extern.h>
+
 #include "services-priv.h"
 #include "path-priv.h"
 #include "resolver-priv.h"
-
-#include <vfs/extern.h>
 
 #include <vfs/manager.h>
 #include <vfs/path.h>
