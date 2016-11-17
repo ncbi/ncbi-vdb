@@ -287,19 +287,29 @@ VRemoteProtocols SHelperDefaultProtocols ( SHelper * self ) {
 }
 
 /* try to get cgi from kfg, otherwise use hardcoded */
-const char * SHelperResolverCgi ( SHelper * self, bool aProtected ) {
-    static const char man [] = "/repository/remote/main/CGI/resolver-cgi";
-    static const char prt [] = "/repository/remote/protected/CGI/resolver-cgi";
-    static char buffer [ 1024 ]
-        = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+static
+rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
+    char * buffer, size_t bsize )
+{
+    const char man [] = "/repository/remote/main/CGI/resolver-cgi";
+    const char prt [] = "/repository/remote/protected/CGI/resolver-cgi";
+    const char cgi [] = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
     rc_t rc = 0;
     const char * path = aProtected ? prt : man;
     assert ( self );
     rc = SHelperInitKfg ( self );
-    if ( rc == 0 )
-        rc = KConfigRead ( self -> kfg, path, 0, buffer, sizeof buffer, NULL,
-            NULL );
-    return buffer;
+    if ( rc == 0 ) {
+        rc = KConfigRead ( self -> kfg, path, 0, buffer, bsize, NULL, NULL );
+        if ( rc != 0 ) {
+            if ( buffer == NULL )
+                return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
+            if ( bsize < sizeof cgi )
+                return RC ( rcVFS, rcQuery, rcExecuting, rcBuffer,
+                            rcInsufficient );
+            string_copy ( buffer, bsize, cgi, sizeof cgi );
+        }
+    }
+    return rc;
 }
 
 
@@ -1749,8 +1759,12 @@ rc_t ECgiNamesRequestInit ( SRequest * request, SHelper * helper,
     self = & request -> cgiReq;
 
     if ( self -> cgi == NULL ) {
-        if ( cgi == NULL )
-            cgi = SHelperResolverCgi ( helper, aProtected );
+        char buffer [ 1024 ] = "";
+        if ( cgi == NULL ) {
+            rc = SHelperResolverCgi ( helper, aProtected,
+                                       buffer, sizeof buffer );
+            cgi = buffer;
+        }
         rc = SCgiRequestInitCgi ( self, cgi );
     }
 
