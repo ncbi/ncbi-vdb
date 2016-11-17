@@ -39,6 +39,9 @@
 #include <kfc/ref.hpp>
 #endif
 
+#include <kfc/time.hpp>
+
+
 namespace vdb3
 {
 
@@ -63,20 +66,26 @@ namespace vdb3
      */
     interface MemMgrItf : public Refcount
     {
-        // allocate memory
-        virtual Mem alloc ( const bytes_t & size, bool clear ) = 0;
+        /** allocate memory
+         *  fill with zeros if clear is set
+         *  if timeout > 0, throw exception if can't be fulfilled within that
+         *  many ms
+         *  */
+        virtual Mem alloc ( const bytes_t & size, bool clear, mS_t timeout = 0 ) = 0;
 
-        // make a block of constant memory
-        // definitely readonly, but moreover comes from the text section of process space
-        // has no lifetime < that of the process
+        /** make a block of constant memory */
+        /*  definitely readonly, but moreover comes from the text section of process space
+            has no lifetime < that of the process */
         virtual Mem makeConst ( const void * ptr, const bytes_t & size ) = 0;
 
-        // Allocate an aligned block of memory, alignment must be a power of
-        // 2 and size must be an integral multiple of alignment.
+        /** Allocate an aligned block of memory, alignment must be a power of
+          * 2 and size must be an integral multiple of alignment.
+          */
         virtual Mem alignedAlloc ( const bytes_t & alignment, const bytes_t & size, bool clear ) = 0;
 #if 0
-        // Pretty print statistics, probably as newline separated Tag=Values.
-        // If any pair will exceed accumulated buf_size, stop at previous pair.
+        /** Pretty print statistics, probably as newline separated Tag=Values.
+          * If any pair will exceed accumulated buf_size, stop at previous pair.
+          */
         virtual void allocStats ( char * buf, const bytes_t & buf_size ) = 0;
 #endif
         // TODO: Allocator option setter/getter.

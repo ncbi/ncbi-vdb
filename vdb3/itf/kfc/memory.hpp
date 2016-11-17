@@ -35,6 +35,8 @@
 #include <kfc/ref.hpp>
 #endif
 
+#include <kfc/time.hpp>
+
 namespace vdb3
 {
 
