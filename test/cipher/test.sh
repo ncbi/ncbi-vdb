@@ -6,7 +6,7 @@ if [ $(uname) = "Darwin" ]; then
 fi
 
 #installing cipher module into newly created virtual env
-tmp_py_env=temp_env
+tmp_py_env=$(pwd)/temp_env
 python_bin=$(which python2)
 echo $python_bin
 if [ $python_bin == "" ]; then
