@@ -827,38 +827,47 @@ KFG_EXTERN rc_t CC KartMakeText(const struct KDirectory *dir, const char *path,
 
 LIB_EXPORT rc_t CC KartMake2 ( Kart ** kart ) {
     Kart * obj = NULL;
-    if ( kart == NULL ) {
+
+    if ( kart == NULL )
         return RC ( rcKFG, rcFile, rcReading, rcParam, rcNull );
-    }
+
     obj = calloc ( 1, sizeof * obj );
-    if ( obj == NULL ) {
+    if ( obj == NULL )
         return RC ( rcKFG, rcData, rcAllocating, rcMemory, rcExhausted );
-    }
+
     obj -> version = eVersion2;
+
     KRefcountInit ( & obj->refcount, 1, "Kart", "KartMake2", "kart" );
+
     * kart = obj;
+
     return 0;
 }
 
 LIB_EXPORT rc_t CC KartAddRow ( Kart * self, const char * row, size_t size ) {
-    if ( self == NULL ) {
+    if ( self == NULL )
         return RC ( rcKFG, rcFile, rcUpdating, rcSelf, rcNull );
-    }
-    if ( row == NULL ) {
+    if ( row == NULL )
         return RC ( rcKFG, rcFile, rcUpdating, rcParam, rcNull );
-    }
-    if ( self -> version < eVersion2 ) {
+
+    if ( self -> version < eVersion2 )
         return RC ( rcKFG, rcFile, rcUpdating, rcInterface, rcBadVersion );
-    }
+
     {
         KartItem * item = NULL;
-        rc_t rc = KartItemMake2 ( & item, row, size );
+
+        const char * p = string_dup ( row, size );
+        if ( p == NULL )
+            return RC ( rcKFG, rcFile, rcUpdating, rcMemory, rcExhausted );
+
+        rc_t rc = KartItemMake2 ( & item, p, size );
         if ( rc == 0 ) {
             rc = VectorAppend ( & self -> rows, NULL, item );
-            if ( rc != 0 ) {
+
+            if ( rc != 0 )
                 KartItemRelease ( item );
-            }
         }
+
         return rc;
     }
 }

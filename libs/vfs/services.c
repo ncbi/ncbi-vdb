@@ -454,12 +454,20 @@ static rc_t SVersionToString ( const SVersion * self, char ** s ) {
 
 /* SHeader */
 static rc_t SHeaderMake
-    ( SHeader * self, char * src, EServiceType serviceType )
+    ( SHeader * self, const String * src, EServiceType serviceType )
 {
-    assert ( self );
+    rc_t rc = 0;
+
+    assert ( self && src );
+
     memset ( self, 0, sizeof * self );
-    SRawInit ( & self -> raw, src );
-    return SVersionInit ( & self -> version, self -> raw . s, serviceType );
+
+    rc = SRawAlloc ( & self -> raw, src -> addr, src -> size );
+
+    if ( rc == 0 )
+        rc = SVersionInit ( & self -> version, self -> raw . s, serviceType );
+
+    return rc;
 }
 
 static rc_t SHeaderFini ( SHeader * self ) {
@@ -1419,17 +1427,19 @@ static rc_t SRowWhack ( void * p ) {
     return rc;
 }
 
-static rc_t SRowMake ( SRow ** self, char * src, const SRequest * req,
+static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
     const SConverters * f, const SVersion * version )
 {
     rc_t rc = 0;
     rc_t r2 = 0;
+
     SRow * p = ( SRow * ) calloc ( 1, sizeof * p );
-    if ( p == NULL ) {
+    if ( p == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-    }
-    assert ( req && version );
-    SRawInit ( & p -> raw, src );
+
+    assert ( req && version && src );
+
+    rc = SRawAlloc ( & p -> raw, src -> addr, src -> size );
     if ( rc == 0 ) {
         assert ( f );
         rc = SOrderedInit ( & p -> ordered, & p -> raw, f -> n );
@@ -2450,9 +2460,10 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
     assert ( self );
     self -> resp . serviceType = self -> req . serviceType;
     rc = TimeoutInit ( & tm, self -> helper . timeoutMs );
-    if ( rc == 0 && self -> req . serviceType == eSTsearch ) {
+
+    if ( rc == 0 && self -> req . serviceType == eSTsearch )
         rc = KartMake2 ( & self -> resp . kart );
-    }
+
     while ( rc == 0 ) {
         if ( sizeR == 0 ) {
             rc = KStreamTimedRead
@@ -2464,12 +2475,10 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                 ( "<<<<<<<<<<\n%.*s\n", ( int ) num_read - 1, buffer + offW ) );
             sizeR += num_read;
             offW += num_read;
-            if (sizeW >= num_read ) {
+            if (sizeW >= num_read )
                 sizeW -= num_read;
-            }
-            else {
+            else
                 sizeW = 0;
-            }
         }
         newline = string_chr ( buffer + offR, sizeR, '\n' );
 /* TODO different conditions: move buffer content; partial read; line > buf size
@@ -2496,54 +2505,44 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             }
             sizeR += num_read;
             offW += num_read;
-            if (sizeW >= num_read ) {
+            if (sizeW >= num_read )
                 sizeW -= num_read;
-            }
-            else {
+            else
                 sizeW = 0;
-            }
         }
         else {
             size_t size = newline - ( buffer + offR );
-            char * s = string_dup ( buffer + offR, size );
-            if ( s == NULL ) {
-                rc = RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-                break;
-            }
+            String s;
+            s . addr = buffer + offR;
+            s . len = s . size = size;
             if ( start ) {
                 rc = SHeaderMake
-                    ( & self -> resp . header, s, self -> req . serviceType );
-                if ( rc != 0 ) {
+                    ( & self -> resp . header, & s, self -> req . serviceType );
+                if ( rc != 0 )
                     break;
-                }
                 start = false;
             }
             else {
-                if ( s [ 0 ] == '$' ) {
-                    free ( s );
-                    s = NULL;
+                if ( s . addr [ 0 ] == '$' )
                     break;
-                }
                 else if ( self -> req . serviceType == eSTsearch ) {
                     const char end [] = "$end";
                     size_t sz = sizeof end - 1;
-                    if ( string_cmp ( s, size, end, sz, ( uint32_t ) sz )
-                        == 0)
+                    if ( string_cmp ( s . addr, s . size,
+                                      end, sz, ( uint32_t ) sz ) == 0)
                     {
-                        free ( s );
-                        s = NULL;
                         break;
                     }
-                    else {
-                        rc = KartAddRow ( self -> resp . kart, s, size );
-                    }
+                    else
+                        rc = KartAddRow ( self -> resp . kart,
+                                          s . addr, s . size );
                 }
                 else {
                     const SConverters * f = NULL;
                     rc = SConvertersMake ( & f, & self -> resp . header );
                     if ( rc == 0 ) {
                         SRow * row = NULL;
-                        rc_t r2 = SRowMake ( & row, s, & self -> req, f,
+                        rc_t r2 = SRowMake ( & row, & s, & self -> req, f,
                             & self -> resp . header . version );
                         uint32_t l = VectorLength ( & self -> resp . rows );
                         if ( r2 == 0 ) {
@@ -2574,27 +2573,22 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                                 r2 = KSrvResponseAppend
                                     ( self -> resp . list, row -> set );
                             }
-                            else {
+                            else
                                 assert ( ! row );
-                            }
                         }
-                        if ( r2 != 0 && rc == 0 && l != 1 ) {
+                        if ( r2 != 0 && rc == 0 && l != 1 )
                             rc = r2;
-                        }
                     }
                 }
-                if ( rc != 0 ) {
+                if ( rc != 0 )
                     break;
-                }
             }
             ++ size;
             offR += size;
-            if ( sizeR >= size ) {
+            if ( sizeR >= size )
                 sizeR -= size;
-            }
-            else {
+            else
                 sizeR = 0;
-            }
             if ( sizeR == 0 && offR == offW ) {
                 offR = offW = 0;
                 sizeW = sizeof buffer;
@@ -2698,20 +2692,36 @@ static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
         if ( VectorLength ( & service . resp . rows ) != 1)
             rc = 1;
         else {
-            const SRow * r =
-                ( SRow * ) VectorGet ( & service . resp . rows, 0 );
-            if ( r == NULL)
-                rc = 2;
-            else {
-                const VPath * path = r -> path . http;
-                rc = VPathAddRef ( path );
-                if ( rc == 0 )
-                    * remote = path;
-                if ( mapping ) {
-                    path = r -> path . mapping;
-                    rc = VPathAddRef ( path );
-                    if ( rc == 0 )
-                        * mapping = path;
+            uint32_t l = KSrvResponseLength ( service . resp . list );
+            if ( rc == 0 ) {
+                if ( l != 1 )
+                    rc = 3;
+                else {
+                    const KSrvError * error = NULL;
+                    rc = KSrvResponseGetPath ( service . resp . list, 0, 
+                        protocols, NULL, NULL, & error );
+                    if ( rc == 0 && error != NULL ) {
+                        KSrvErrorRc ( error, & rc );
+                        KSrvErrorRelease ( error );
+                    }
+                    else {
+                        const SRow * r =
+                            ( SRow * ) VectorGet ( & service . resp . rows, 0 );
+                        if ( r == NULL)
+                            rc = 2;
+                        else {
+                            const VPath * path = r -> path . http;
+                            rc = VPathAddRef ( path );
+                            if ( rc == 0 )
+                                * remote = path;
+                            if ( mapping ) {
+                                path = r -> path . mapping;
+                                rc = VPathAddRef ( path );
+                                if ( rc == 0 )
+                                    * mapping = path;
+                            }
+                        }
+                    }
                 }
             }
         }
