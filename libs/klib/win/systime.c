@@ -347,6 +347,115 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
     return ts;
 }
 
+
+LIB_EXPORT const KTime* CC KTimeIso8601 ( KTime *kt, const char * s )
+{
+    int i = 0;
+    int tmp = 0;
+    char c = 0;
+
+    if ( kt == NULL || s == NULL )
+        return NULL;
+
+    memset ( kt, 0, sizeof * kt );
+
+    for ( i = 0, tmp = 0; i < 4; ++ i ) {
+        char c = s [ i ];
+        if ( ! isdigit ( c ) )
+            return NULL;
+        tmp = tmp * 10 + c - '0';
+    }
+    if ( tmp < 1900 )
+        return NULL;
+    kt -> year = tmp - 1900;
+
+    if ( s [ i ] != '-' )
+        return NULL;
+
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = c - '0';
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = tmp * 10 + c - '0';
+    if ( tmp == 0 || tmp > 12 )
+        return NULL;
+    kt -> month = tmp - 1;
+
+    c = s [ ++ i ];
+    if ( c != '-' )
+        return NULL;
+
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = c - '0';
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = tmp * 10 + c - '0';
+    if ( tmp == 0 || tmp > 31 )
+        return NULL;
+    kt -> day = tmp;
+
+    c = s [ ++ i ];
+    if ( c != 'T' )
+        return NULL;
+
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = c - '0';
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = tmp * 10 + c - '0';
+    if ( tmp > 23 )
+        return NULL;
+    kt -> hour = tmp;
+
+    c = s [ ++ i ];
+    if ( c != ':' )
+        return NULL;
+
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = c - '0';
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = tmp * 10 + c - '0';
+    if ( tmp > 59 )
+        return NULL;
+    kt -> minute = tmp;
+
+    c = s [ ++ i ];
+    if ( c != ':' )
+        return NULL;
+
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = c - '0';
+    c = s [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return NULL;
+    tmp = tmp * 10 + c - '0';
+    if ( tmp > 59 )
+        return NULL;
+    kt -> second = tmp;
+
+    c = s [ ++ i ];
+    if ( c != 'Z' )
+        return NULL;
+
+    return kt;
+}
+
+
 LIB_EXPORT rc_t CC KSleepMs(uint32_t milliseconds) 
 {
     Sleep ( milliseconds );
