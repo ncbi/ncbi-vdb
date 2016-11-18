@@ -182,7 +182,7 @@ typedef struct {
 } SKV;
 
 typedef struct {
-    KHttpRequest * req;
+    KHttpRequest * httpReq;
     rc_t rc;
 } SHttpRequestHelper;
 
@@ -1809,19 +1809,24 @@ static rc_t SHttpRequestHelperInit ( SHttpRequestHelper * self,
     const KNSManager * mgr, const char * cgi )
 {
     rc_t rc = 0;
+
     assert ( self );
+
     memset ( self, 0, sizeof * self );
-    if ( rc == 0 ) {
-        rc = KNSManagerMakeReliableClientRequest
-            ( mgr, & self -> req, 0x01010000, NULL, cgi );
-    }
+
+    rc = KNSManagerMakeReliableClientRequest ( mgr, & self -> httpReq,
+        0x01010000, NULL, cgi );
+
     return rc;
 }
 
 static rc_t SHttpRequestHelperFini ( SHttpRequestHelper * self ) {
     rc_t rc = 0;
+
     assert ( self );
-    RELEASE ( KHttpRequest, self -> req );
+
+    RELEASE ( KHttpRequest, self -> httpReq );
+
     return rc;
 }
 
@@ -1830,12 +1835,14 @@ void SHttpRequestHelperAddPostParam ( void * item, void * data )
 {
     const SKV          * kv = ( SKV                * ) item;
     SHttpRequestHelper * p  = ( SHttpRequestHelper * ) data;
+
     rc_t rc = 0;
+
     assert ( kv && p );
-    rc = KHttpRequestAddPostParam ( p -> req, kv -> k . addr );
-    if ( p -> rc == 0 ) {
+
+    rc = KHttpRequestAddPostParam ( p -> httpReq, kv -> k . addr );
+    if ( p -> rc == 0 )
         p -> rc = rc;
-    }
 }
 
 
@@ -2155,7 +2162,7 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
         }
         if ( rc == 0 ) {
             KHttpResult * rslt = NULL;
-            rc = KHttpRequestPOST ( h . req, & rslt );
+            rc = KHttpRequestPOST ( h . httpReq, & rslt );
             if ( rc == 0 ) {
                 uint32_t code = 0;
                 rc = KHttpResultStatus ( rslt, & code, NULL, 0, NULL );
