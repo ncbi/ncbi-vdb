@@ -30,6 +30,7 @@
 
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h> /* memset */
 #include <stdio.h>
 #include <assert.h>
 #include <time.h>
@@ -144,6 +145,30 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
     }
 
     return ts;
+}
+
+
+LIB_EXPORT const KTime* CC KTimeIso8601 ( KTime *kt, const char * s )
+{
+    struct tm t;
+
+    const char * c = NULL;
+
+    if ( kt == NULL || s == NULL )
+        return NULL;
+
+    memset ( & t, 0, sizeof t );
+
+    c = strptime ( s, "%Y-%m-%dT%H:%M:%S%z", & t );
+    if ( c == NULL )
+        return NULL;
+    if ( c - s != 20 )
+        return NULL;
+
+    memset ( kt, 0, sizeof * kt );
+    KTimeMake ( kt, & t );
+
+    return kt;
 }
 
 
