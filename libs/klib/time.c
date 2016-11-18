@@ -78,7 +78,7 @@ LIB_EXPORT const KTime* CC KTimeIso8601 ( KTime *kt, const char * s )
     tmp = tmp * 10 + c - '0';
     if ( tmp == 0 || tmp > 31 )
         return NULL;
-    kt -> mday = tmp;
+    kt -> day = tmp;
 
     c = s [ ++ i ];
     if ( c != 'T' )
