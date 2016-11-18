@@ -597,6 +597,7 @@ static rc_t uint32_tInit ( void * p, const String * src ) {
     return rc;
 }
 
+#if LINUX
 #define TODO 1;
 rc_t YYYY_MM_DDThh_mm_ssZToTm ( const char * src, struct tm * result ) {
 /*YYYY-MM-DDThh:mm:ssTZD ISO 8601
@@ -699,6 +700,7 @@ tm_isdst	int	Daylight Saving Time flag	*/
     struct tm * t = gmtime_r ( & time, result );*/
     return 0;
 }
+#endif
 
 static rc_t KTimeInit ( void * p, const String * src ) { return 0; } /* TODO */
 static rc_t md5Init ( void * p, const String * src ) { return 0; }   /* TODO */
