@@ -597,6 +597,109 @@ static rc_t uint32_tInit ( void * p, const String * src ) {
     return rc;
 }
 
+#define TODO 1;
+rc_t YYYY_MM_DDThh_mm_ssZToTm ( const char * src, struct tm * result ) {
+/*YYYY-MM-DDThh:mm:ssTZD ISO 8601
+tm_sec	int	seconds after the minute	0-61*
+tm_min	int	minutes after the hour	0-59
+tm_hour	int	hours since midnight	0-23
+tm_mday	int	day of the month	1-31
+tm_mon	int	months since January	0-11
+tm_year	int	years since 1900	
+tm_wday	int	days since Sunday	0-6
+tm_yday	int	days since January 1	0-365
+tm_isdst	int	Daylight Saving Time flag	*/
+    int i = 0;
+    int tmp = 0;
+    char c = 0;
+    assert ( src && result );
+    memset ( result, 0, sizeof * result );
+    for ( i = 0, tmp = 0; i < 4; ++ i ) {
+        char c = src [ i ];
+        if ( ! isdigit ( c ) )
+            return TODO;
+        tmp = tmp * 10 + c - '0';
+    }
+    if ( tmp < 1900 )
+        return TODO;
+    result -> tm_year = tmp - 1900;
+    if ( src [ i ] != '-' )
+        return TODO;
+    c = src [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return TODO;
+    tmp = c - '0';
+    c = src [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return TODO;
+    tmp = tmp * 10 + c - '0';
+    if ( tmp == 0 || tmp > 12 )
+        return TODO;
+    result -> tm_mon = tmp - 1;
+    c = src [ ++ i ];
+    if ( c != '-' )
+        return TODO;
+    c = src [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return TODO;
+    tmp = c - '0';
+    c = src [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return TODO;
+    tmp = tmp * 10 + c - '0';
+    if ( tmp == 0 || tmp > 31 )
+        return TODO;
+    result -> tm_mday = tmp;
+    c = src [ ++ i ];
+    if ( c != 'T' )
+        return TODO;
+    c = src [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return TODO;
+    tmp = c - '0';
+    c = src [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return TODO;
+    tmp = tmp * 10 + c - '0';
+    if ( tmp > 23 )
+        return TODO;
+    result -> tm_hour = tmp;
+    c = src [ ++ i ];
+    if ( c != ':' )
+        return TODO;
+    c = src [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return TODO;
+    tmp = c - '0';
+    c = src [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return TODO;
+    tmp = tmp * 10 + c - '0';
+    if ( tmp > 59 )
+        return TODO;
+    result -> tm_min = tmp;
+    c = src [ ++ i ];
+    if ( c != ':' )
+        return TODO;
+    c = src [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return TODO;
+    tmp = c - '0';
+    c = src [ ++ i ];
+    if ( ! isdigit ( c ) )
+        return TODO;
+    tmp = tmp * 10 + c - '0';
+    if ( tmp > 59 )
+        return TODO;
+    result -> tm_sec = tmp;
+    c = src [ ++ i ];
+    if ( c != 'Z' )
+        return TODO;
+    /*time_t time = 0;
+    struct tm * t = gmtime_r ( & time, result );*/
+    return 0;
+}
+
 static rc_t KTimeInit ( void * p, const String * src ) { return 0; } /* TODO */
 static rc_t md5Init ( void * p, const String * src ) { return 0; }   /* TODO */
 
@@ -2445,6 +2548,65 @@ rc_t KServiceRelease ( KService * self ) {
 }
 
 static
+rc_t KServiceProcessLine ( KService * self, const String * line, bool * end )
+{
+    rc_t rc = 0;
+    assert ( self && line && end );
+    if ( line -> addr [ 0 ] == '$' ) {
+        * end = true;
+    }
+    else if ( self -> req . serviceType == eSTsearch ) {
+        const char str [] = "$end";
+        size_t sz = sizeof str - 1;
+        if ( string_cmp ( line -> addr, line -> size, str, sz, ( uint32_t ) sz )
+            == 0)
+        {
+            * end = true;
+        }
+        else
+            rc = KartAddRow ( self -> resp . kart, line -> addr, line -> size );
+    }
+    else {
+        const SConverters * f = NULL;
+        rc = SConvertersMake ( & f, & self -> resp . header );
+        if ( rc == 0 ) {
+            SRow * row = NULL;
+            rc_t r2 = SRowMake ( & row, line, & self -> req, f,
+                & self -> resp . header . version );
+            uint32_t l = VectorLength ( & self -> resp . rows );
+            if ( r2 == 0 ) {
+                if ( self -> resp . header. version. version >= VERSION_3_0 ||
+                     l == 0 )
+                {
+                    r2 = VectorAppend ( & self -> resp . rows, NULL, row );
+                }
+                else {
+            /* ACC.vdbcashe : TODO : search for vdb.cache extension */
+                    if ( row -> typed . objectId . len == 18 || 
+                         row -> typed . objectId . len == 19 )
+                    {
+                        r2 = SRowWhack ( row );
+                        row = NULL;
+                    }
+                }
+            }
+            if ( r2 == 0 ) {
+                if ( self -> resp . header . version. version >= VERSION_3_0 ||
+                     KSrvResponseLength ( self -> resp . list ) == 0 )
+                {
+                    r2 = KSrvResponseAppend ( self -> resp . list, row -> set );
+                }
+                else
+                    assert ( ! row );
+            }
+            if ( r2 != 0 && rc == 0 && l != 1 )
+                rc = r2;
+        }
+    }
+    return rc;
+}
+
+static
 rc_t KServiceProcessStream ( KService * self, KStream * stream )
 {
     bool start = true;
@@ -2468,9 +2630,8 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
         if ( sizeR == 0 ) {
             rc = KStreamTimedRead
                 ( stream, buffer + offW, sizeW, & num_read, & tm );
-            if ( rc != 0 || num_read == 0 ) {
+            if ( rc != 0 || num_read == 0 )
                 break;
-            }
             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
                 ( "<<<<<<<<<<\n%.*s\n", ( int ) num_read - 1, buffer + offW ) );
             sizeR += num_read;
@@ -2523,64 +2684,9 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
                 start = false;
             }
             else {
-                if ( s . addr [ 0 ] == '$' )
-                    break;
-                else if ( self -> req . serviceType == eSTsearch ) {
-                    const char end [] = "$end";
-                    size_t sz = sizeof end - 1;
-                    if ( string_cmp ( s . addr, s . size,
-                                      end, sz, ( uint32_t ) sz ) == 0)
-                    {
-                        break;
-                    }
-                    else
-                        rc = KartAddRow ( self -> resp . kart,
-                                          s . addr, s . size );
-                }
-                else {
-                    const SConverters * f = NULL;
-                    rc = SConvertersMake ( & f, & self -> resp . header );
-                    if ( rc == 0 ) {
-                        SRow * row = NULL;
-                        rc_t r2 = SRowMake ( & row, & s, & self -> req, f,
-                            & self -> resp . header . version );
-                        uint32_t l = VectorLength ( & self -> resp . rows );
-                        if ( r2 == 0 ) {
-                            if ( self -> resp . header. version. version
-                                                      >= VERSION_3_0
-                                 || l == 0 )
-                            {
-                                r2 = VectorAppend
-                                    ( & self -> resp . rows, NULL, row );
-                            }
-                            else {
-                      /* ACC.vdbcashe : TODO : search for vdb.cache extension */
-                                if ( row -> typed . objectId . len == 18 || 
-                                     row -> typed . objectId . len == 19 )
-                                {
-                                    r2 = SRowWhack ( row );
-                                    row = NULL;
-                                }
-                            }
-                        }
-                        if ( r2 == 0 ) {
-                            if ( self -> resp . header . version. version
-                                                          >= VERSION_3_0
-                               ||
-                               KSrvResponseLength ( self -> resp . list )
-                                                          == 0 )
-                            {
-                                r2 = KSrvResponseAppend
-                                    ( self -> resp . list, row -> set );
-                            }
-                            else
-                                assert ( ! row );
-                        }
-                        if ( r2 != 0 && rc == 0 && l != 1 )
-                            rc = r2;
-                    }
-                }
-                if ( rc != 0 )
+                bool end = false;
+                rc = KServiceProcessLine ( self, & s, & end );
+                if ( end || rc != 0 )
                     break;
             }
             ++ size;
@@ -2595,9 +2701,8 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             }
         }
     }
-    if ( start ) {
+    if ( start )
         rc = RC ( rcVFS, rcQuery, rcExecuting, rcString, rcInsufficient );
-    }
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( ">>>>>>>>>>\n\n" ) );
     return rc;
 }
