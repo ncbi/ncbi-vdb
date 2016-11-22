@@ -45,6 +45,11 @@ rc_t KServiceSearchExecuteExt ( KService * self,
     const struct Kart ** result );
 
 
+rc_t KServiceTestNamesExecuteExt ( KService * self, VRemoteProtocols protocols, 
+    const char * cgi, const char * version,
+    const struct KSrvResponse ** result, const char * expected );
+
+
 #ifdef __cplusplus
 }
 #endif
