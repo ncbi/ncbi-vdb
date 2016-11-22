@@ -82,7 +82,8 @@ KLIB_EXTERN const KTime* CC KTimeLocal ( KTime *kt, KTime_t ts );
  */
 KLIB_EXTERN const KTime* CC KTimeGlobal ( KTime *kt, KTime_t ts );
 
-KLIB_EXTERN const KTime* CC KTimeIso8601 ( KTime *kt, const char * s );
+KLIB_EXTERN const KTime* CC KTimeIso8601 ( KTime *kt, const char * s,
+    size_t size );
 
 
 /* MakeTime

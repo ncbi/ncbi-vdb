@@ -348,13 +348,14 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
 }
 
 
-LIB_EXPORT const KTime* CC KTimeIso8601 ( KTime *kt, const char * s )
+LIB_EXPORT const KTime* CC KTimeIso8601 ( KTime *kt, const char * s,
+    size_t size )
 {
     int i = 0;
     int tmp = 0;
     char c = 0;
 
-    if ( kt == NULL || s == NULL )
+    if ( kt == NULL || s == NULL || size < 18 || size > 20 )
         return NULL;
 
     memset ( kt, 0, sizeof * kt );
@@ -448,9 +449,11 @@ LIB_EXPORT const KTime* CC KTimeIso8601 ( KTime *kt, const char * s )
         return NULL;
     kt -> second = tmp;
 
-    c = s [ ++ i ];
-    if ( c != 'Z' )
-        return NULL;
+    if ( size > 19 ) {
+        c = s [ ++ i ];
+        if ( c != 'Z' )
+            return NULL;
+    }
 
     return kt;
 }

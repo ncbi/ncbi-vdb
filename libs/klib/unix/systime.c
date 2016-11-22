@@ -128,7 +128,7 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
     {
         struct tm t;
 
-        assert ( self -> year >= 1900 );
+        assert ( self -> year >= 1900 ); // TODO
         t . tm_year = self -> year - 1900;
         t . tm_mon = self -> month;
         t . tm_mday = self -> day + 1;
@@ -148,7 +148,8 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
 }
 
 
-LIB_EXPORT const KTime* CC KTimeIso8601 ( KTime *kt, const char * s )
+LIB_EXPORT const KTime* CC KTimeIso8601 ( KTime *kt, const char * s,
+    size_t size )
 {
     struct tm t;
 
@@ -159,10 +160,16 @@ LIB_EXPORT const KTime* CC KTimeIso8601 ( KTime *kt, const char * s )
 
     memset ( & t, 0, sizeof t );
 
-    c = strptime ( s, "%Y-%m-%dT%H:%M:%S%z", & t );
+    if ( size == 19 )
+        c = strptime ( s, "%Y-%m-%dT%H:%M:%S", & t );
+    else if ( size == 20 )
+        c = strptime ( s, "%Y-%m-%dT%H:%M:%S%z", & t );
+    else
+        return NULL;
+
     if ( c == NULL )
         return NULL;
-    if ( c - s != 20 )
+    if ( c - s != size )
         return NULL;
 
     memset ( kt, 0, sizeof * kt );
