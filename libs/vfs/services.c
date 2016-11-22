@@ -32,10 +32,12 @@
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
 #include <klib/text.h> /* String */
+#include <klib/time.h> /* KTime */
 #include <klib/vector.h> /* Vector */
 #include <kfg/config.h> /* KConfigRelease */
 #include <kfg/repository.h> /* KRepositoryMgrRelease */
 #include <kns/http.h> /* KHttpRequest */
+#include <kns/http-priv.h> /* KClientHttpRequestFormatMsg */
 #include <kns/kns-mgr-priv.h> /* KNSManagerMakeReliableClientRequest */
 #include <kns/manager.h> /* KNSManager */
 #include <kns/stream.h> /* KBufferStreamMake */
@@ -195,6 +197,7 @@ typedef struct {
 typedef struct {
     char * objectId;
     EObjectType objectType;
+    int ordId;
 } SObject;
 
 typedef struct {
@@ -702,7 +705,23 @@ tm_isdst	int	Daylight Saving Time flag	*/
 }
 #endif
 
-static rc_t KTimeInit ( void * p, const String * src ) { return 0; } /* TODO */
+static rc_t KTimeInit ( void * p, const String * src ) {
+    KTime_t * self = ( KTime_t * ) p;
+
+    assert ( self && src );
+
+    if ( src -> addr != NULL && src -> size > 0 ) {
+        KTime kt;
+        const KTime * t = KTimeIso8601 ( & kt, src -> addr, src -> size );
+        if ( t == NULL )
+            return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect );
+        else
+            * self = KTimeMakeTime ( & kt );
+    }
+
+    return 0;
+}
+
 static rc_t md5Init ( void * p, const String * src ) { return 0; }   /* TODO */
 
 /* converter from names-1.0 response row to STyped object  */
@@ -1714,36 +1733,37 @@ rc_t SKVMakeObj ( const SKV ** self, const SObject * obj,
     bool old = version <= VERSION_3_0;
     char * p = NULL;
     const char * k = "object";
-    if ( old ) {
+    if ( old )
         k = "acc";
-    }
+
     char tmp [] = "";
     size_t sk = string_size ( k );
     rc_t rc = 0;
     size_t num_writ = 0;
+
     assert ( self && obj );
     * self = NULL;
-    if ( old ) {
+
+    if ( old )
         rc = string_printf ( tmp, 1, & num_writ, "%s=%s", k,
             obj -> objectId );
-    }
-    else {
-        string_printf ( tmp, 1, & num_writ, "%s=%s|%s", k,
+    else
+        string_printf ( tmp, 1, & num_writ, "%s=%d|%s|%s", k, obj -> ordId,
             ObjectTypeToString ( obj -> objectType ), obj -> objectId );
-    }
+
     ++ num_writ;
     p = ( char * ) malloc ( num_writ );
-    if ( p == NULL ) {
+    if ( p == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-    }
-    if ( old ) {
+
+    if ( old )
         rc = string_printf ( p, num_writ, & num_writ, "%s=%s", k,
             obj -> objectId );
-    }
-    else {
-        rc = string_printf ( p, num_writ, & num_writ, "%s=%s|%s", k,
-            ObjectTypeToString ( obj -> objectType ), obj -> objectId );
-    }
+    else
+        rc = string_printf ( p, num_writ, & num_writ, "%s=%d|%s|%s", k,
+            obj -> ordId, ObjectTypeToString ( obj -> objectType ),
+            obj -> objectId );
+
     if ( rc != 0 ) {
         free ( p );
         p = NULL;
@@ -1763,6 +1783,7 @@ rc_t SKVMakeObj ( const SKV ** self, const SObject * obj,
             * self = kv;
         }
     }
+
     return rc;
 }
 
@@ -1880,6 +1901,9 @@ rc_t ECgiNamesRequestInit ( SRequest * request, SHelper * helper,
 
     self = & request -> cgiReq;
 
+    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
+        "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n" ) );
+
     if ( self -> cgi == NULL ) {
         char buffer [ 1024 ] = "";
         if ( cgi == NULL ) {
@@ -1933,6 +1957,7 @@ rc_t ECgiNamesRequestInit ( SRequest * request, SHelper * helper,
     else {
         uint32_t i = 0;
         for ( i = 0; i < request -> request . objects; ++i ) {
+            request -> request . object [ i ] . ordId = i;
             rc = SKVMakeObj ( & kv, & request -> request . object [ i ],
                 request -> version . version );
             if ( rc == 0 ) {
@@ -2148,43 +2173,85 @@ static void SCgiRequestFini ( SCgiRequest * self ) {
 }
 
 static rc_t SCgiRequestPerform ( const SCgiRequest * self,
-    const SHelper * helper, KStream ** response )
+    const SHelper * helper, KStream ** response, const char * expected )
 {
     rc_t rc = 0;
-    assert ( self && helper );
+
+    assert ( self && helper && response );
+
     if ( rc == 0 ) {
         SHttpRequestHelper h;
+//DBGMSG ( DBG_VFS,DBG_FLAG ( DBG_VFS_SERVICE ), ( "CGI = '%s'\n", self -> cgi ) );
         rc = SHttpRequestHelperInit ( & h, helper -> kMgr, self-> cgi );
         if ( rc == 0 ) {
             VectorForEach (
                 & self -> params, false, SHttpRequestHelperAddPostParam, & h );
             rc = h . rc;
         }
+
         if ( rc == 0 ) {
-            KHttpResult * rslt = NULL;
-            rc = KHttpRequestPOST ( h . httpReq, & rslt );
-            if ( rc == 0 ) {
-                uint32_t code = 0;
-                rc = KHttpResultStatus ( rslt, & code, NULL, 0, NULL );
-                if ( rc == 0 ) {
-                    if ( code == 200 ) {
-                        rc = KHttpResultGetInputStream ( rslt, response );
-                    }
-                    else {
-                        rc = RC ( rcVFS,
-                            rcQuery, rcExecuting, rcConnection, rcUnexpected );
-                    }
+/*          char buffer [ 1024 ] = "";
+            char * b = buffer;
+            size_t sizeof_b = sizeof buffer;
+            size_t len = 0;
+            char * allocated = NULL;
+            rc = KClientHttpRequestFormatMsg ( h . httpReq, b, sizeof_b, "POST",
+                & len );
+            if ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
+                    GetRCState ( rc ) == rcInsufficient )
+            {
+                free ( allocated );
+                sizeof_b = 0;
+                allocated = b = malloc ( len );
+                if ( allocated == NULL )
+                    rc = RC ( rcVFS, rcQuery, rcExecuting, rcMemory,
+                        rcExhausted );
+                else {
+                    sizeof_b = len;
+                    rc = KClientHttpRequestFormatMsg ( h . httpReq, b, sizeof_b,
+                        "POST", & len );
                 }
             }
-            RELEASE ( KHttpResult, rslt );
-        }
-        {
-            rc_t r2 = SHttpRequestHelperFini ( & h );
-            if ( rc == 0 ) {
-                rc = r2;
+            if ( rc == 0 )
+                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "%s", b ) );
+            free ( allocated );
+            rc = 0;*/
+            if ( expected == NULL ) {
+                KHttpResult * rslt = NULL;
+                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), (
+            ">>>>>>>>>>>>>>>> sending HTTP POST request >>>>>>>>>>>>>>>>\n" ) );
+                rc = KHttpRequestPOST ( h . httpReq, & rslt );
+                if ( rc == 0 ) {
+                    uint32_t code = 0;
+                    rc = KHttpResultStatus ( rslt, & code, NULL, 0, NULL );
+                    if ( rc == 0 ) {
+                        if ( code == 200 )
+                            rc = KHttpResultGetInputStream ( rslt, response );
+                        else
+                            rc = RC ( rcVFS, rcQuery, rcExecuting, rcConnection,
+                                      rcUnexpected );
+                    }
+                }
+                RELEASE ( KHttpResult, rslt );
+            }
+            else {
+                KStream * stream = NULL;
+                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
+            "XXXXXXXXXXXX NOT sending HTTP POST request XXXXXXXXXXXXXXXX\n" ) );
+                rc = KBufferStreamMake ( & stream, expected,
+                                         string_size ( expected ) );
+                if ( rc == 0 )
+                    * response = stream;
             }
         }
+
+        {
+            rc_t r2 = SHttpRequestHelperFini ( & h );
+            if ( rc == 0 )
+                rc = r2;
+        }
     }
+
     return rc;
 }
 
@@ -2632,8 +2699,16 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
     self -> resp . serviceType = self -> req . serviceType;
     rc = TimeoutInit ( & tm, self -> helper . timeoutMs );
 
+    if ( rc == 0 )
+        rc = SResponseFini ( & self -> resp );
+    if ( rc == 0 )
+        rc = SResponseInit ( & self -> resp );
+
     if ( rc == 0 && self -> req . serviceType == eSTsearch )
         rc = KartMake2 ( & self -> resp . kart );
+
+    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), (
+        "-----------------------------------------------------------\n" ) );
 
     while ( rc == 0 ) {
         if ( sizeR == 0 ) {
@@ -2642,7 +2717,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             if ( rc != 0 || num_read == 0 )
                 break;
             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
-                ( "<<<<<<<<<<\n%.*s\n", ( int ) num_read - 1, buffer + offW ) );
+                ( "%.*s\n", ( int ) num_read - 1, buffer + offW ) );
             sizeR += num_read;
             offW += num_read;
             if (sizeW >= num_read )
@@ -2712,7 +2787,9 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
     }
     if ( start )
         rc = RC ( rcVFS, rcQuery, rcExecuting, rcString, rcInsufficient );
-    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( ">>>>>>>>>>\n\n" ) );
+    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
+        ( "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ "
+          "rc = %R\n\n", rc ) );
     return rc;
 }
 
@@ -2720,21 +2797,19 @@ static
 rc_t KServiceGetResponse
     ( const KService * self, const KSrvResponse ** response )
 {
-    if ( self == NULL ) {
+    if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
-    }
-    if ( response == NULL ) {
+
+    if ( response == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-    }
-    else {
+    else
         return SResponseGetResponse ( & self -> resp, response );
-    }
 }
 
 
-rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
+rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
     const char * cgi, const char * version,
-    const KSrvResponse ** response )
+    const KSrvResponse ** response, const char * expected )
 {
     rc_t rc = 0;
 
@@ -2753,8 +2828,8 @@ rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
         false );
 
     if ( rc == 0 )
-        rc = SCgiRequestPerform
-            ( & self -> req . cgiReq, & self -> helper, & stream );
+        rc = SCgiRequestPerform ( & self -> req . cgiReq, & self -> helper,
+                                  & stream, expected );
 
     if ( rc == 0 )
         rc = KServiceProcessStream ( self, stream );
@@ -2767,13 +2842,27 @@ rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
     return rc;
 }
 
+rc_t KServiceTestNamesExecuteExt ( KService * self, VRemoteProtocols protocols, 
+    const char * cgi, const char * version,
+    const struct KSrvResponse ** response, const char * expected )
+{
+    return KServiceNamesExecuteExtImpl ( self, protocols, cgi, version,
+        response, expected );
+}
+    
+rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
+    const char * cgi, const char * version,
+    const KSrvResponse ** response )
+{
+    return KServiceNamesExecuteExtImpl ( self, protocols, cgi, version,
+        response, NULL );
+}
 
 rc_t KServiceNamesExecute ( KService * self, VRemoteProtocols protocols,
     const KSrvResponse ** response )
 {
     return KServiceNamesExecuteExt ( self, protocols, NULL, NULL, response );
 }
-
 
 static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
     const char * url, const char * acc, size_t acc_sz, const char * ticket,
@@ -2796,8 +2885,8 @@ static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
     protocols = service . req . protocols;
 
     if ( rc == 0 )
-        rc = SCgiRequestPerform
-            ( & service . req . cgiReq, & service . helper, & stream );
+        rc = SCgiRequestPerform ( & service . req . cgiReq, & service . helper,
+                                  & stream, NULL );
 
     if ( rc == 0 )
         rc = KServiceProcessStream ( & service, stream );
@@ -2915,8 +3004,8 @@ rc_t KServiceSearchExecuteExt ( KService * self, const char * cgi,
     rc = KServiceInitSearchRequestWithVersion ( self, cgi, version );
 
     if ( rc == 0 )
-        rc = SCgiRequestPerform
-            ( & self -> req . cgiReq, & self -> helper, & stream );
+        rc = SCgiRequestPerform ( & self -> req . cgiReq, & self -> helper,
+                                  & stream, NULL );
 
     if ( rc == 0 )
         rc = KServiceProcessStream ( self, stream );
@@ -3107,21 +3196,24 @@ rc_t SCgiRequestPerformTestNames1 ( const KNSManager * mgr, const char * cgi,
     VRemoteProtocols protocols, EObjectType objectType )
 {
     KService service;
+
     rc_t rc = KServiceInitNames1 ( & service, mgr, cgi, version, acc,
         string_measure ( acc, NULL ), ticket, protocols, objectType, false,
         false );
+
     if ( rc == 0 ) {
         KStream * response = NULL;
-        rc = SCgiRequestPerform
-            ( & service . req . cgiReq, & service . helper, & response );
+        rc = SCgiRequestPerform ( & service . req . cgiReq, & service . helper,
+                                  & response, NULL );
         RELEASE ( KStream, response );
     }
+
     {
         rc_t r2 = KServiceFini ( & service );
-        if ( rc == 0 ) {
+        if ( rc == 0 )
             rc = r2;
-        }
     }
+
     return rc;
 }
 
