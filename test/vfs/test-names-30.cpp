@@ -1,3 +1,31 @@
+/*===========================================================================
+*
+*                            PUBLIC DOMAIN NOTICE
+*               National Center for Biotechnology Information
+*
+*  This software/database is a "United States Government Work" under the
+*  terms of the United States Copyright Act.  It was written as part of
+*  the author's official duties as a United States Government employee and
+*  thus cannot be copyrighted.  This software/database is freely available
+*  to the public for use. The National Library of Medicine and the U.S.
+*  Government have not placed any restriction on its use or reproduction.
+*
+*  Although all reasonable efforts have been taken to ensure the accuracy
+*  and reliability of the software and data, the NLM and the U.S.
+*  Government do not and cannot warrant the performance or results that
+*  may be obtained by using this software or data. The NLM and the U.S.
+*  Government disclaim all warranties, express or implied, including
+*  warranties of performance, merchantability or fitness for any particular
+*  purpose.
+*
+*  Please cite the author in any work or product based on this material.
+*
+* ===========================================================================
+*
+*/
+
+
+#include <vfs/services-priv.h> /* KServiceTestNamesExecuteExt */
 #include "../../libs/vfs/services-priv.h" /* KServiceNames3_0StreamTest */
 #include "../../libs/vfs/path-priv.h" /* VPathEqual */
 #include <vfs/services.h> /* KSrvResponse */
@@ -54,13 +82,13 @@ TEST_CASE ( INCOMPLETE ) {
     REQUIRE_NULL ( response );
 
     REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|| object-id |90| date | md5 | ticket |"
+        "0|| object-id |90|1930-01-13T13:25:30| md5 | ticket |"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p|"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
-            " expiration |200| message\n"
+            "1930-01-13T13:25:30|200| message\n"
         "1|| object-i1 |10| dat1 | md1 | ticke1 |"
           "http://ur1/|https://vdbcacheUrl1/| expiratio1 |200| messag1\n"
-        "$ timestamp\n", NULL, 0 ) );
+        "$ 1930-01-13T13:25:30\n", NULL, 0 ) );
     REQUIRE_NULL ( response );
 }
 
@@ -87,11 +115,11 @@ TEST_CASE ( SINGLE ) {
     const VPath * v3 = Path . make ( "s3:v" );
 
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|| object-id |90| date | md5 | ticket |"
+        "0|| object-id |90|1980-01-13T13:25:30| md5 | ticket |"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p|"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
-            " expiration |200| message\n"
-        "$ timestamp\n", & response, 0 ) );
+            "2280-01-13T13:25:30|200| message\n"
+        "$ 2000-01-13T13:25:30\n", & response, 0 ) );
     CHECK_NOT_NULL ( response );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 1u );
 
@@ -208,13 +236,13 @@ TEST_CASE ( DOUBLE ) {
     const KSrvResponse * response = NULL;
 
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|| object-id |90| date | md5 | ticket |"
+        "0|| object-id |90|1981-01-13T13:25:30| md5 | ticket |"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p|"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
-            " expiration |200| message\n"
-        "1|| object-i1 |10| dat1 | md1 | ticke1 |"
-          "http://ur1/|https://vdbcacheUrl1/| expiratio1 |200| messag1\n"
-        "$ timestamp\n", & response, 0 ) );
+            "2281-01-13T13:25:30|200| message\n"
+        "1|| object-i1 |10|1981-01-13T13:25:31| md1 | ticke1 |"
+          "http://ur1/|https://vdbcacheUrl1/|2281-01-13T13:25:31|200| messag1\n"
+        "$ 2000-01-13T13:25:30\n", & response, 0 ) );
 
     CHECK_NOT_NULL ( response );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 2u );
@@ -261,7 +289,8 @@ TEST_CASE ( DOUBLE ) {
 TEST_CASE ( BAD_TYPE ) {
     const KSrvResponse * response = NULL;
     REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|t| object-id |9| date | md5 | ticket |||" " expiration |200| mssg\n",
+        "0|t| object-id |9|1981-01-13T13:25:30| md5 | ticket |||"
+          "1981-01-13T13:25:30|200| mssg\n",
         & response, 1 ) );
     REQUIRE_NULL ( response );
 }
@@ -269,7 +298,8 @@ TEST_CASE ( BAD_TYPE ) {
 TEST_CASE ( ERROR ) {
     const KSrvResponse * response = NULL;
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|| object-id |90| date | md5 | ticket |||" " expiration |500| mssg\n",
+        "0|| object-id |90|1981-01-13T13:25:30| md5 | ticket |||"
+           "1981-01-13T13:25:30|500| mssg\n",
         & response, 1 ) );
     REQUIRE_NOT_NULL ( response );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 1u );
@@ -291,8 +321,10 @@ TEST_CASE ( ERROR ) {
 TEST_CASE ( AND_ERROR ) {
     const KSrvResponse * response = NULL;
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|na|object-0|90| dat0 | md50 | tckt0       |||expiratin0|503|e mssg\n"
-        "1||object-1|10| dat1 | md51 | tckt1|http://u/||expiraton1|200|messag\n"
+        "0|na|object-0|90|1930-01-13T13:25:30|md50|tckt0|||"
+          "2234-01-13T13:25:30|503|e mssg\n"
+        "1||object-1|10|1931-01-13T13:25:31| md51 | tckt1|http://u/||"
+          "2231-01-13T13:25:31|200|messag\n"
         , & response, 1 ) );
     REQUIRE_NOT_NULL ( response );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 2u );
@@ -340,6 +372,70 @@ TEST_CASE ( AND_ERROR ) {
 
     REQUIRE_RC ( KSrvResponseRelease ( response ) );
     response = NULL;
+}
+
+TEST_CASE ( FULL_TEST_NO_HTTP ) {
+    assert ( ! KDbgSetString ( "VFS" ) );
+
+    REQUIRE_RC_FAIL ( KServiceMake ( NULL ) );
+
+    KService * service = NULL;
+    REQUIRE_RC ( KServiceMake ( & service ) );
+    REQUIRE_NOT_NULL ( service );
+
+    REQUIRE_RC_FAIL ( KServiceTestNamesExecuteExt ( service, 0, NULL, NULL,
+        NULL, NULL ) );
+
+    const KSrvResponse * response = NULL;
+if(0)    REQUIRE_RC_FAIL ( KServiceTestNamesExecuteExt ( service, 0, NULL, NULL,
+        & response, "" ) );
+
+    REQUIRE_RC_FAIL ( KServiceAddId ( NULL, "SRR000001" ) );
+
+    REQUIRE_RC ( KServiceAddId ( service, "SRR000001" ) );
+#if 0
+    REQUIRE_RC_FAIL ( KServiceTestNamesExecuteExt ( service, 0, NULL, "#3.2",
+        & response, "" ) );
+    REQUIRE_RC ( KServiceTestNamesExecuteExt ( service, 0, NULL, "#1.2",
+        & response, NULL ) );
+    REQUIRE_EQ ( KSrvResponseLength ( response ), 1u );
+    REQUIRE_RC ( KSrvResponseRelease ( response ));
+
+    REQUIRE_RC ( KServiceTestNamesExecuteExt ( service, 0, NULL, "#1.2",
+        & response, "#1.2\n"
+        "SRR000001||SRR000001|312527083|2015-04-07T21:54:15|"
+        "9bde35fefa9d955f457e22d9be52bcd9||"
+        "http://sra-download.ncbi.nlm.nih.gov/srapub/SRR000001|200|ok\n" ) );
+    REQUIRE_EQ ( KSrvResponseLength ( response ), 1u );
+    REQUIRE_RC ( KSrvResponseRelease ( response ));
+
+    REQUIRE_RC ( KServiceTestNamesExecuteExt ( service, 0, NULL, NULL,
+        & response, NULL ) );
+    REQUIRE_EQ ( KSrvResponseLength ( response ), 1u );
+    REQUIRE_RC ( KSrvResponseRelease ( response ));
+
+    REQUIRE_RC ( KServiceTestNamesExecuteExt ( service, 0, NULL, NULL,
+        & response, "#3.0\n"
+        "srapub|SRR000001|312527083|2015-04-07T21:54:15|"
+        "9bde35fefa9d955f457e22d9be52bcd9||"
+        "http://sra-download.ncbi.nlm.nih.gov/srapub/SRR000001|200|ok\n" ) );
+    REQUIRE_EQ ( KSrvResponseLength ( response ), 1u );
+    REQUIRE_RC ( KSrvResponseRelease ( response ));
+#endif
+
+    REQUIRE_RC ( KServiceTestNamesExecuteExt ( service, 0, NULL, "#3.2",
+        & response, "#3.2\n"
+        "0|srapub|SRR000001|312527083|2015-04-07T21:54:15|"
+        "9bde35fefa9d955f457e22d9be52bcd9||"
+        "http://sra-download.ncbi.nlm.nih.gov/srapub/SRR000001|||200|ok\n" ) );
+    REQUIRE_EQ ( KSrvResponseLength ( response ), 1u );
+    REQUIRE_RC ( KSrvResponseRelease ( response ));
+
+    REQUIRE_RC ( KServiceRelease ( service ) );
+
+    /*
+    REQUIRE_RC_FAIL ( KServiceTestNamesExecuteExt ( service, 0, NULL, NULL,
+        NULL, NULL ) );*/
 }
 
 extern "C" {
