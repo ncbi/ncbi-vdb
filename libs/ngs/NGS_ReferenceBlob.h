@@ -93,20 +93,6 @@ uint64_t NGS_ReferenceBlobUnpackedSize ( const struct NGS_ReferenceBlob * self, 
  */
 void NGS_ReferenceBlobResolveOffset ( const struct NGS_ReferenceBlob * self, ctx_t ctx, uint64_t inBlob, uint64_t* inReference, uint32_t* repeatCount, uint64_t* increment );
 
-/* Find repeated chunks
- *  startInBlob - an offset into the blob, start of the search for repated chunks
- *  nextInBlob [ OUT ] - offset into the blob corresponding to the found repeated chunk; use NGS_ReferenceBlobResolveOffset() to obtain details
- *  inReference [ OUT ] - offset into the reference, corresponding to nextInBlob
- *  uint32_t* repeatCount [ OUT, NULL OK ] - the number of repetitions of the reference chunk  the offset is inside of (1 if no repeats)
- *  uint64_t* increment [ OUT, NULL OK ] - size of the repeated chunk (0 if no repeats)
- *
- *  return false if no repeats are found
- */
-bool NGS_ReferenceBlobFindRepeat ( const struct NGS_ReferenceBlob * self, ctx_t ctx, uint64_t p_startInBlob, uint64_t* p_nextInBlob, uint64_t* p_inReference, uint32_t* p_repeatCount, uint64_t* p_increment );
-
-/*TEMPORARY*/
-void NGS_ReferenceBlobPrintPageMap ( const struct NGS_ReferenceBlob * self, ctx_t ctx );
-
 #ifdef __cplusplus
 }
 #endif

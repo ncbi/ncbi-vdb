@@ -102,12 +102,12 @@ VByteBlob_ContiguousChunk ( const VBlob* p_blob,  ctx_t ctx, int64_t rowId, uint
                                     p_maxRows -= repeat;
                                 }
                                 else
-                                {   // p_maxRows reached
+                                {   /* p_maxRows reached */
                                     break;
                                 }
                             }
                             if ( PageMapIteratorRepeatCount ( &pmIt ) > 1 )
-                            {   // repeated row found
+                            {   /* repeated row found */
                                 break;
                             }
 
@@ -121,7 +121,7 @@ VByteBlob_ContiguousChunk ( const VBlob* p_blob,  ctx_t ctx, int64_t rowId, uint
                 }
             }
             else if ( p_maxRows > 0 && p_maxRows < count - ( rowId - first ) )
-            {   // return the size of the first p_maxRows rows
+            {   /* return the size of the first p_maxRows rows */
                 const uint8_t* firstRow = (const uint8_t*)base;
                 rc = VBlobCellData ( p_blob,
                                      rowId + p_maxRows,

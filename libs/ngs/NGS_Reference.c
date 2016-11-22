@@ -554,7 +554,7 @@ struct NGS_Alignment* NGS_ReferenceGetAlignments ( NGS_Reference * self, ctx_t c
     }
     else
     {
-        // alignment iterator does not filter out bad reads and duplicates by default
+        /* alignment iterator does not filter out bad reads and duplicates by default */
         const uint32_t filters = NGS_AlignmentFilterBits_pass_bad | NGS_AlignmentFilterBits_pass_dups;
         return VT ( self, get_alignments ) ( self, ctx, wants_primary, wants_secondary, filters, 0 );
     }
@@ -613,7 +613,7 @@ struct NGS_Alignment* NGS_ReferenceGetAlignmentSlice ( NGS_Reference * self,
     }
     else
     {
-        // alignment iterator does not filter out bad reads and duplicates by default
+        /* alignment iterator does not filter out bad reads and duplicates by default */
         const uint32_t filters = NGS_AlignmentFilterBits_pass_bad | NGS_AlignmentFilterBits_pass_dups;
         return VT ( self, get_slice ) ( self, ctx, offset, size, wants_primary, wants_secondary, filters, 0 );
     }
@@ -650,7 +650,7 @@ struct NGS_Pileup* NGS_ReferenceGetPileups ( NGS_Reference * self, ctx_t ctx, bo
     }
     else
     {
-        // pileup filters out bad reads and duplicates by default
+        /* pileup filters out bad reads and duplicates by default */
         return VT ( self, get_pileups ) ( self, ctx, wants_primary, wants_secondary, 0, 0 );
     }
 
