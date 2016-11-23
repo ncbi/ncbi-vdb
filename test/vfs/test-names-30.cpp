@@ -25,6 +25,7 @@
 */
 
 
+#include <klib/time.h> /* KTimeMakeTime */
 #include <vfs/services-priv.h> /* KServiceTestNamesExecuteExt */
 #include "../../libs/vfs/services-priv.h" /* KServiceNames3_0StreamTest */
 #include "../../libs/vfs/path-priv.h" /* VPathEqual */
@@ -36,6 +37,8 @@
 #include <ktst/unit_test.hpp> /* KMain */
 
 //#include <cstdio> // printf
+
+using std :: string;
 
 TEST_SUITE ( Names3_0_TestSuite );
 
@@ -53,14 +56,23 @@ public:
         StringInit ( & _id, id, s, s );
     }
 
-    const VPath * make ( const char * path ) {
+    const VPath * make ( const char * path, const string & date = "" ) {
+        KTime_t t = 0;
+        if ( date . size () > 0 ) {
+            KTime kt;
+            const KTime * tt = KTimeIso8601 ( & kt, date . c_str (),
+                date . size () );
+            if ( tt != NULL )
+                t = KTimeMakeTime ( & kt );
+        }
+
         String url;
         size_t s = string_measure ( path, NULL );
         StringInit ( & url, path, s, s );
 
         VPath * p = NULL;
         rc_t rc
-            = VPathMakeFromUrl ( & p, & url, & _tick, true, & _id, _size, 0 );
+            = VPathMakeFromUrl ( & p, & url, & _tick, true, & _id, _size, t );
 
         if ( rc == 0 )
             rc = VPathMarkHighReliability ( p, true );
@@ -103,16 +115,17 @@ TEST_CASE ( SINGLE ) {
     REQUIRE_RC ( KSrvResponseRelease (response ) );
     response = NULL;
 
-    const VPath * ph = Path . make ( "http://url/" );
-    const VPath * vh = Path . make ( "http://vdbcacheUrl/" );
-    const VPath * phs= Path . make ( "https://hsl/" );
-    const VPath * vhs= Path . make ( "https://vdbcache/" );
-    const VPath * pf = Path . make ( "fasp://frl/" );
-    const VPath * vf = Path . make ( "fasp://fvdbcache/" );
-    const VPath * pfl= Path . make ( "file:///p" );
-    const VPath * vfl= Path . make ( "file:///vdbcache" );
-    const VPath * p3 = Path . make ( "s3:p" );
-    const VPath * v3 = Path . make ( "s3:v" );
+    const string date ( "1980-01-13T13:25:30" );
+    const VPath * ph = Path . make ( "http://url/", date );
+    const VPath * vh = Path . make ( "http://vdbcacheUrl/", date );
+    const VPath * phs= Path . make ( "https://hsl/", date );
+    const VPath * vhs= Path . make ( "https://vdbcache/", date );
+    const VPath * pf = Path . make ( "fasp://frl/", date );
+    const VPath * vf = Path . make ( "fasp://fvdbcache/", date );
+    const VPath * pfl= Path . make ( "file:///p", date );
+    const VPath * vfl= Path . make ( "file:///vdbcache", date );
+    const VPath * p3 = Path . make ( "s3:p", date );
+    const VPath * v3 = Path . make ( "s3:v", date );
 
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
         "0|| object-id |90|1980-01-13T13:25:30| md5 | ticket |"
@@ -235,6 +248,8 @@ TEST_CASE ( SINGLE ) {
 TEST_CASE ( DOUBLE ) {
     const KSrvResponse * response = NULL;
 
+    const string date  (  "1981-01-13T13:25:30" );
+    const string date1 (  "1981-01-13T13:25:31" );
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
         "0|| object-id |90|1981-01-13T13:25:30| md5 | ticket |"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p|"
@@ -247,7 +262,7 @@ TEST_CASE ( DOUBLE ) {
     CHECK_NOT_NULL ( response );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 2u );
 
-    const VPath * phs = Path . make ( "https://hsl/" );
+    const VPath * phs = Path . make ( "https://hsl/", date );
     const VPath * path = NULL;
     const VPath * vdbcache = NULL;
     REQUIRE_RC ( KSrvResponseGetPath ( response, 0, eProtocolHttps,
@@ -260,7 +275,7 @@ TEST_CASE ( DOUBLE ) {
     ne = ~0;
     REQUIRE_RC ( VPathRelease (phs ) );
 
-    const VPath * ph = Path1 . make ( "http://ur1/" );
+    const VPath * ph = Path1 . make ( "http://ur1/", date1 );
     REQUIRE_RC ( KSrvResponseGetPath ( response, 1, eProtocolHttp,
         & path, & vdbcache, NULL ) );
     REQUIRE_NULL ( vdbcache );
@@ -271,7 +286,7 @@ TEST_CASE ( DOUBLE ) {
     ne = ~0;
     REQUIRE_RC ( VPathRelease (ph ) );
 
-    const VPath * vhs = Path1 . make ( "https://vdbcacheUrl1/" );
+    const VPath * vhs = Path1 . make ( "https://vdbcacheUrl1/", date1 );
     REQUIRE_RC ( KSrvResponseGetPath ( response, 1, eProtocolHttps,
         & path, & vdbcache, NULL ) );
     REQUIRE_NULL ( path );
