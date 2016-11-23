@@ -27,6 +27,8 @@
 
 #include <vfs/extern.h>
 
+#include <klib/time.h> /* KTime */
+
 #include "services-priv.h"
 #include "path-priv.h"
 #include "resolver-priv.h"
@@ -1080,9 +1082,15 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
             if ( size_str . size != 0  && size_str . len != 0 ) {
                 rc_t r2 = 0;
                 size = StringToU64 ( & size_str, & r2 );
-                if ( r2 != 0 ) {
+                if ( r2 != 0 )
                     size = 0;
-                }
+            }
+            if ( mod_date . addr != NULL && mod_date . size > 0 ) {
+                KTime kt;
+                const KTime * t = KTimeIso8601 ( & kt, mod_date . addr,
+                    mod_date . size );
+                if ( t != NULL )
+                    date = KTimeMakeTime ( & kt );
             }
             /* normal public response *
             if ( download_ticket . size == 0
