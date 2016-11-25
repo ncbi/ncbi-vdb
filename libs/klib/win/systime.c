@@ -366,9 +366,7 @@ LIB_EXPORT const KTime* CC KTimeIso8601 ( KTime *kt, const char * s,
             return NULL;
         tmp = tmp * 10 + c - '0';
     }
-    if ( tmp < 1900 )
-        return NULL;
-    kt -> year = tmp - 1900;
+    kt -> year = tmp;
 
     if ( s [ i ] != '-' )
         return NULL;
@@ -464,4 +462,3 @@ LIB_EXPORT rc_t CC KSleepMs(uint32_t milliseconds)
     Sleep ( milliseconds );
     return 0;
 }
-
