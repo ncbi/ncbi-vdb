@@ -47,6 +47,24 @@ class P {
     String _id;
     size_t _size;
 
+static int getDigit ( char c, rc_t * rc ) {
+        assert ( rc );
+ 
+        if ( * rc != 0 )
+            return 0;
+ 
+        c = tolower ( c );
+        if ( ! isdigit ( c ) && c < 'a' && c > 'f' ) {
+            * rc = RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect );
+            return 0;
+        }
+ 
+        if ( isdigit ( c ) )
+            return c - '0';
+ 
+        return c - 'a' + 10;
+    }
+
 public:
     P ( const char * tick, const char * id, size_t size ) : _size ( size ) {
         size_t s = string_measure ( tick, NULL );
@@ -56,7 +74,9 @@ public:
         StringInit ( & _id, id, s, s );
     }
 
-    const VPath * make ( const char * path, const string & date = "" ) {
+    const VPath * make ( const char * path, const string & date = "",
+                         const string & md5 = "" )
+    {
         KTime_t t = 0;
         if ( date . size () > 0 ) {
             KTime kt;
@@ -65,14 +85,25 @@ public:
             if ( tt != NULL )
                 t = KTimeMakeTime ( & kt );
         }
+	
+        uint8_t ud5 [ 16 ];
+	uint8_t * pd5 = NULL;
+	if ( md5 . size () == 32 ) {
+            rc_t rc = 0;
+            for ( int i = 0; i < 16 && rc == 0; ++ i ) {
+                ud5 [ i ]  = getDigit ( md5 [ 2 * i     ], & rc ) * 16;
+                ud5 [ i ] += getDigit ( md5 [ 2 * i + 1 ], & rc );
+            }
+            pd5 = rc == 0 ? ud5 : NULL;
+	}
 
         String url;
         size_t s = string_measure ( path, NULL );
         StringInit ( & url, path, s, s );
 
         VPath * p = NULL;
-        rc_t rc
-            = VPathMakeFromUrl ( & p, & url, & _tick, true, & _id, _size, t,0 );
+        rc_t rc = VPathMakeFromUrl ( & p, & url, & _tick, true, & _id, _size, t,
+	                             pd5 );
 
         if ( rc == 0 )
             rc = VPathMarkHighReliability ( p, true );
@@ -116,16 +147,17 @@ TEST_CASE ( SINGLE ) {
     response = NULL;
 
     const string date ( "1980-01-13T13:25:30" );
-    const VPath * ph = Path . make ( "http://url/", date );
-    const VPath * vh = Path . make ( "http://vdbcacheUrl/", date );
-    const VPath * phs= Path . make ( "https://hsl/", date );
-    const VPath * vhs= Path . make ( "https://vdbcache/", date );
-    const VPath * pf = Path . make ( "fasp://frl/", date );
-    const VPath * vf = Path . make ( "fasp://fvdbcache/", date );
-    const VPath * pfl= Path . make ( "file:///p", date );
-    const VPath * vfl= Path . make ( "file:///vdbcache", date );
-    const VPath * p3 = Path . make ( "s3:p", date );
-    const VPath * v3 = Path . make ( "s3:v", date );
+    const string md5  ( "0123456789abcdefABCDEF012345678a" );
+    const VPath * ph = Path . make ( "http://url/", date, md5 );
+    const VPath * vh = Path . make ( "http://vdbcacheUrl/", date, md5 );
+    const VPath * phs= Path . make ( "https://hsl/", date, md5 );
+    const VPath * vhs= Path . make ( "https://vdbcache/", date, md5 );
+    const VPath * pf = Path . make ( "fasp://frl/", date, md5 );
+    const VPath * vf = Path . make ( "fasp://fvdbcache/", date, md5 );
+    const VPath * pfl= Path . make ( "file:///p", date, md5 );
+    const VPath * vfl= Path . make ( "file:///vdbcache", date, md5 );
+    const VPath * p3 = Path . make ( "s3:p", date, md5 );
+    const VPath * v3 = Path . make ( "s3:v", date, md5 );
 
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
         "0|| object-id |90|1980-01-13T13:25:30|0123456789abcdefABCDEF012345678a| ticket |"

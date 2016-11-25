@@ -938,6 +938,23 @@ rc_t VResolverAlgParseResolverCGIResponse_1_0 ( const char *start, size_t size,
     return rc;
 }
 
+static int getDigit ( char c, rc_t * rc ) {
+     assert ( rc );
+ 
+     if ( * rc != 0 )
+         return 0;
+ 
+     c = tolower ( c );
+     if ( ! isdigit ( c ) && c < 'a' && c > 'f' ) {
+         * rc = RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect );
+         return 0;
+     }
+ 
+     if ( isdigit ( c ) )
+         return c - '0';
+ 
+     return c - 'a' + 10;
+}
 
 /* ParseResolverCGIResponse_1_1
  *  expect single row table, with this structure (SRA-1690) :
@@ -950,7 +967,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
     const String *ticket )
 {
     const char *start = astart;
-    rc_t rc;
+    rc_t rc = 0;
     KLogLevel lvl;
     char *rslt_end;
     uint32_t result_code;
@@ -1077,6 +1094,8 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
            but can only handle 200 */
         if ( result_code == 200 )
         {
+            uint8_t ud5 [ 16 ];
+            bool has_md5 = false;
             KTime_t date = 0;
             size_t size = 0;
             if ( size_str . size != 0  && size_str . len != 0 ) {
@@ -1092,6 +1111,14 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
                 if ( t != NULL )
                     date = KTimeMakeTime ( & kt );
             }
+            if ( md5 . addr != NULL && md5 . size == 32 ) {
+                int i = 0;
+                for ( i = 0; i < 16 && rc == 0; ++ i ) {
+                    ud5 [ i ]  = getDigit ( md5 . addr [ 2 * i     ], & rc ) * 16;
+                    ud5 [ i ] += getDigit ( md5 . addr [ 2 * i + 1 ], & rc );
+                }
+                has_md5 = rc == 0;
+            }
             /* normal public response *
             if ( download_ticket . size == 0
 #if DO_NOT_USE_TIC_HACK
@@ -1100,7 +1127,8 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
                 )
             {*/
                 rc = VPathMakeFromUrl ( ( VPath** ) path, & url,
-                    & download_ticket, true, & accession, size, date, NULL );
+                    & download_ticket, true, & accession, size, date,
+		    has_md5 ? ud5 : NULL );
             /*}
             else
             {

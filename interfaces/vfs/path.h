@@ -290,6 +290,7 @@ VFS_EXTERN rc_t CC VPathGetId ( const VPath * self, struct String * str );
 VFS_EXTERN rc_t CC VPathGetTicket ( const VPath * self, struct String * str );
 VFS_EXTERN KTime_t CC VPathGetModDate ( const VPath * self );
 VFS_EXTERN size_t CC VPathGetSize ( const VPath * self );
+VFS_EXTERN const uint8_t * CC VPathGetMd5 ( const VPath * self );
 
 #ifdef __cplusplus
 }

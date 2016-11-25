@@ -3347,6 +3347,17 @@ LIB_EXPORT size_t CC VPathGetSize ( const VPath * self )
     return 0;
 }
 
+LIB_EXPORT const uint8_t * CC VPathGetMd5 ( const VPath * self )
+{
+    if ( self == NULL )
+        return NULL;
+    if ( ! self -> has_md5 )
+        return NULL;
+
+    return self -> md5;
+}
+
+
 /* MarkHighReliability
  *  mark a path as representing either a reliable URL
  *  or one where the reliability is unknown.
@@ -4028,15 +4039,31 @@ rc_t VPathEqual ( const VPath * l, const VPath * r, int * notequal ) {
                 rc = re;
         }
         if ( l -> ext == eVPext && r -> ext == eVPext ) {
-            KTime_t tp = VPathGetModDate ( l );
-            KTime_t te = VPathGetModDate ( r );
-            if ( tp != te )
-                * notequal |= 0x200;
+            {
+                KTime_t tp = VPathGetModDate ( l );
+                KTime_t te = VPathGetModDate ( r );
+                if ( tp != te )
+                    * notequal |= 0x200;
+            }
             {
                 size_t p = VPathGetSize ( l );
                 size_t e = VPathGetSize ( r );
                 if ( p != e )
                     * notequal |= 0x400;
+            }
+            {
+                const uint8_t * p = VPathGetMd5 ( l );
+                const uint8_t * e = VPathGetMd5 ( r );
+                if ( ( p == NULL && e != NULL ) || ( e == NULL && p != NULL ) )
+                    * notequal |= 0x800;
+		else if ( p != NULL ) {
+		    int i = 0;
+		    for ( i = 0; i < 16; ++i )
+		        if ( p [ i ] != e [ i ] ) {
+                            * notequal |= 0x1000;
+			    break;
+			}
+		}
             }
         }
     }

@@ -106,6 +106,11 @@ typedef struct {
     String s [ N_NAMES3_1 ];
 } SOrdered;
 
+typedef struct {
+    uint8_t md5 [ 16 ];
+    bool has_md5;
+} SMd5;
+
 /* response row parsed into named typed fields */
 typedef struct {
     bool inited;
@@ -116,7 +121,7 @@ typedef struct {
     String name;
     size_t size;
     KTime_t date;
-    uint8_t md5 [ 16 ];
+    SMd5 md5;
     String ticket;
     String url;
     String hUrl;
@@ -741,9 +746,11 @@ static int getDigit ( char c, rc_t * rc ) {
 }
 
 static rc_t md5Init ( void * p, const String * src ) {
-    uint8_t * md5 = p;
+    SMd5 * md5 = p;
 
     assert ( src && src -> addr && md5 );
+
+    md5 -> has_md5 = false;
 
     switch ( src -> size ) {
         case 0:
@@ -752,9 +759,10 @@ static rc_t md5Init ( void * p, const String * src ) {
             rc_t rc = 0;
             int i = 0;
             for ( i = 0; i < 16 && rc == 0; ++ i ) {
-                md5 [ i ]  = getDigit ( src -> addr [ 2 * i     ], & rc ) * 16;
-                md5 [ i ] += getDigit ( src -> addr [ 2 * i + 1 ], & rc );
+                md5 -> md5 [ i ]  = getDigit ( src -> addr [ 2 * i     ], & rc ) * 16;
+                md5 -> md5 [ i ] += getDigit ( src -> addr [ 2 * i + 1 ], & rc );
             }
+	    md5 -> has_md5 = rc == 0;
             return rc;
         }
         default:
@@ -1338,7 +1346,7 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
             assert ( src -> addr != NULL );
 
         * rc = VPathMakeFromUrl ( new_path, src, ticket, ext, id, typed -> size,
-                                  typed -> date, typed -> md5 );
+            typed -> date, typed -> md5 . has_md5 ? typed -> md5 . md5 : NULL );
         if ( * rc == 0 )
             VPathMarkHighReliability ( * new_path, true );
 
