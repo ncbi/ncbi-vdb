@@ -94,7 +94,7 @@ TEST_CASE ( INCOMPLETE ) {
     REQUIRE_NULL ( response );
 
     REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|| object-id |90|1930-01-13T13:25:30| md5 | ticket |"
+        "0|| object-id |90|1930-01-13T13:25:30|0123456789abcdefABCDEF0123456789| ticket |"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p|"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
             "1930-01-13T13:25:30|200| message\n"
@@ -128,7 +128,7 @@ TEST_CASE ( SINGLE ) {
     const VPath * v3 = Path . make ( "s3:v", date );
 
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|| object-id |90|1980-01-13T13:25:30| md5 | ticket |"
+        "0|| object-id |90|1980-01-13T13:25:30|0123456789abcdefABCDEF012345678a| ticket |"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p|"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
             "2280-01-13T13:25:30|200| message\n"
@@ -251,11 +251,11 @@ TEST_CASE ( DOUBLE ) {
     const string date  (  "1981-01-13T13:25:30" );
     const string date1 (  "1981-01-13T13:25:31" );
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|| object-id |90|1981-01-13T13:25:30| md5 | ticket |"
+        "0|| object-id |90|1981-01-13T13:25:30|| ticket |"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p|"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
             "2281-01-13T13:25:30|200| message\n"
-        "1|| object-i1 |10|1981-01-13T13:25:31| md1 | ticke1 |"
+        "1|| object-i1 |10|1981-01-13T13:25:31|| ticke1 |"
           "http://ur1/|https://vdbcacheUrl1/|2281-01-13T13:25:31|200| messag1\n"
         "$ 2000-01-13T13:25:30\n", & response, 0 ) );
 
@@ -304,7 +304,7 @@ TEST_CASE ( DOUBLE ) {
 TEST_CASE ( BAD_TYPE ) {
     const KSrvResponse * response = NULL;
     REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|t| object-id |9|1981-01-13T13:25:30| md5 | ticket |||"
+        "0|t| object-id |9|1981-01-13T13:25:30|0123456789abcdefABCDEF012345678b| ticket |||"
           "1981-01-13T13:25:30|200| mssg\n",
         & response, 1 ) );
     REQUIRE_NULL ( response );
@@ -313,7 +313,7 @@ TEST_CASE ( BAD_TYPE ) {
 TEST_CASE ( ERROR ) {
     const KSrvResponse * response = NULL;
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|| object-id |90|1981-01-13T13:25:30| md5 | ticket |||"
+        "0|| object-id |90|1981-01-13T13:25:30|0123456789abcdefABCDEF012345678c| ticket |||"
            "1981-01-13T13:25:30|500| mssg\n",
         & response, 1 ) );
     REQUIRE_NOT_NULL ( response );
@@ -336,9 +336,9 @@ TEST_CASE ( ERROR ) {
 TEST_CASE ( AND_ERROR ) {
     const KSrvResponse * response = NULL;
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|na|object-0|90|1930-01-13T13:25:30|md50|tckt0|||"
+        "0|na|object-0|90|1930-01-13T13:25:30|0123456789abcdefABCDEF012345678d|tckt0|||"
           "2234-01-13T13:25:30|503|e mssg\n"
-        "1||object-1|10|1931-01-13T13:25:31| md51 | tckt1|http://u/||"
+        "1||object-1|10|1931-01-13T13:25:31|0123456789abcdefABCDEF012345678e| tckt1|http://u/||"
           "2231-01-13T13:25:31|200|messag\n"
         , & response, 1 ) );
     REQUIRE_NOT_NULL ( response );
