@@ -20,7 +20,7 @@
  *
  *  Please cite the author in any work or product based on this material.
  *
- * ===========================================================================
+ * =============================================================================
  *
  */
 
@@ -722,7 +722,45 @@ static rc_t KTimeInit ( void * p, const String * src ) {
     return 0;
 }
 
-static rc_t md5Init ( void * p, const String * src ) { return 0; }   /* TODO */
+static int getDigit ( char c, rc_t * rc ) {
+    assert ( rc );
+
+    if ( * rc != 0 )
+        return 0;
+
+    c = tolower ( c );
+    if ( ! isdigit ( c ) && c < 'a' && c > 'f' ) {
+        * rc = RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect );
+        return 0;
+    }
+
+    if ( isdigit ( c ) )
+        return c - '0';
+
+    return c - 'a' + 10;
+}
+
+static rc_t md5Init ( void * p, const String * src ) {
+    uint8_t * md5 = p;
+
+    assert ( src && src -> addr && md5 );
+
+    switch ( src -> size ) {
+        case 0:
+            return 0;
+        case 32: {
+            rc_t rc = 0;
+            int i = 0;
+            for ( i = 0; i < 16 && rc == 0; ++ i ) {
+                md5 [ i ]  = getDigit ( src -> addr [ 2 * i     ], & rc ) * 16;
+                md5 [ i ] += getDigit ( src -> addr [ 2 * i + 1 ], & rc );
+            }
+            return rc;
+        }
+        default:
+            return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect );
+    }
+}
 
 /* converter from names-1.0 response row to STyped object  */
 static void * STypedGetFieldNames1_0 ( STyped * self, int n ) {
@@ -1265,15 +1303,16 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
 {
     String bug;
     memset ( & bug, 0, sizeof bug );
+
     assert ( new_path && src && typed && rc );
-    if ( * rc != 0 || src -> len == 0 ) {
+
+    if ( * rc != 0 || src -> len == 0 )
         return false;
-    }
     else {
         const String * id = & typed -> objectId;
-        if ( id -> size == 0 ) {
+        if ( id -> size == 0 )
             id = & typed -> accession;
-        }
+
         if ( id -> size == 0 ) {
 /* compensate current names.cgi-v3.0 bug: it does not return id for object-id-s
  */
@@ -1294,14 +1333,15 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
                 id = & bug;
             }
         }
-        if ( src -> size == 0 ) {
+
+        if ( src -> size == 0 )
             assert ( src -> addr != NULL );
-        }
-        * rc = VPathMakeFromUrl
-            ( new_path, src, ticket, ext, id, typed -> size, typed -> date );
-        if ( * rc == 0 ) {
+
+        * rc = VPathMakeFromUrl ( new_path, src, ticket, ext, id, typed -> size,
+                                  typed -> date, typed -> md5 );
+        if ( * rc == 0 )
             VPathMarkHighReliability ( * new_path, true );
-        }
+
         return true;
     }
 }

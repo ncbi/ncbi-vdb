@@ -97,6 +97,9 @@ struct VPath
     String     tick;
     size_t     size;
     KTime_t    modification;
+
+    uint8_t    md5 [ 16 ];
+    bool       has_md5;
 };
 
 enum VPathVariant
@@ -156,9 +159,9 @@ VFS_EXTERN rc_t CC VPathGetScheme_t ( const VPath * self, VPUri_t * uri_type );
 VPUri_t VPathGetUri_t (const VPath * self);
 
 
-rc_t VPathMakeFromUrl ( VPath ** new_path,
-    const String * url, const String * tick,
-    bool ext, const String * id, size_t size, KTime_t date );
+rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
+    const String * tick, bool ext, const String * id, size_t size, KTime_t date,
+    const uint8_t md5 [ 16 ] );
 
 rc_t VPathEqual       ( const VPath * l, const VPath * r, int * notequal );
 

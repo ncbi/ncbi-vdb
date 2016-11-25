@@ -1100,7 +1100,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
                 )
             {*/
                 rc = VPathMakeFromUrl ( ( VPath** ) path, & url,
-                    & download_ticket, true, & accession, size, date );
+                    & download_ticket, true, & accession, size, date, NULL );
             /*}
             else
             {

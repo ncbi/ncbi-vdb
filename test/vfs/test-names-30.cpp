@@ -72,7 +72,7 @@ public:
 
         VPath * p = NULL;
         rc_t rc
-            = VPathMakeFromUrl ( & p, & url, & _tick, true, & _id, _size, t );
+            = VPathMakeFromUrl ( & p, & url, & _tick, true, & _id, _size, t,0 );
 
         if ( rc == 0 )
             rc = VPathMarkHighReliability ( p, true );
