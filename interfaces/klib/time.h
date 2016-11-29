@@ -82,8 +82,14 @@ KLIB_EXTERN const KTime* CC KTimeLocal ( KTime *kt, KTime_t ts );
  */
 KLIB_EXTERN const KTime* CC KTimeGlobal ( KTime *kt, KTime_t ts );
 
-KLIB_EXTERN const KTime* CC KTimeIso8601 ( KTime *kt, const char * s,
-    size_t size );
+
+/* Iso8601
+ *  populate "kt" from "s" accoring to ISO-8601:
+ *         YYYY-MM-DDThh:mm:ssTZD
+ *      or YYYY-MM-DDThh:mm:ss
+ */
+KLIB_EXTERN const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
+                                           size_t size );
 
 
 /* MakeTime

@@ -148,7 +148,7 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
 }
 
 
-LIB_EXPORT const KTime* CC KTimeIso8601 ( KTime *kt, const char * s,
+LIB_EXPORT const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
     size_t size )
 {
     struct tm t;

@@ -348,8 +348,8 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
 }
 
 
-LIB_EXPORT const KTime* CC KTimeIso8601 ( KTime *kt, const char * s,
-    size_t size )
+LIB_EXPORT const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
+                                              size_t size )
 {
     int i = 0;
     int tmp = 0;

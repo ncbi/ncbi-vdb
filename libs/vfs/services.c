@@ -73,7 +73,8 @@ typedef struct {
 /* raw string text */
 typedef struct { char * s; } SRaw; 
 
-/* version from server response */
+/******************************************************************************/
+/* SERVICE VERSIONS */
 #define VERSION_1_0 0x01000000
 #define VERSION_1_1 0x01010000
 #define VERSION_1_2 0x01020000
@@ -81,6 +82,7 @@ typedef struct { char * s; } SRaw;
 #define VERSION_3_1 0x03010000
 #define VERSION_3_2 0x03020000
 
+/* version from server response */
 typedef struct {
     SRaw raw;
     ver_t version;
@@ -216,6 +218,16 @@ typedef struct {
     VPathSet * set;
 } SRow;
 
+typedef struct {
+    SRaw raw;
+    KTime_t time;
+} STimestamp;
+
+typedef struct {
+    STimestamp server;
+    STimestamp local;
+} SServerTimestamp;
+
 /* server response = header + vector of response rows */
 typedef struct {
     EServiceType serviceType;
@@ -223,6 +235,7 @@ typedef struct {
     Vector rows;
     KSrvResponse * list;
     Kart * kart;
+    SServerTimestamp timestamp;
 } SResponse;
 
 /* request info */
@@ -407,10 +420,12 @@ static void SRawInit ( SRaw * self, char * s ) {
 
 static rc_t SRawAlloc ( SRaw * self, const char * s, size_t sz ) {
     char * p = NULL;
+
     if ( sz == 0 )
         p = string_dup_measure ( s, NULL );
     else
         p = string_dup ( s, sz );
+
     if ( p == NULL )
         return RC ( rcVFS, rcPath, rcAllocating, rcMemory, rcExhausted );
 
@@ -424,6 +439,7 @@ static rc_t SRawFini ( SRaw * self ) {
         free ( self -> s );
         self -> s = NULL;
     }
+
     return 0;
 }
 
@@ -762,7 +778,7 @@ static rc_t KTimeInit ( void * p, const String * src ) {
 
     if ( src -> addr != NULL && src -> size > 0 ) {
         KTime kt;
-        const KTime * t = KTimeIso8601 ( & kt, src -> addr, src -> size );
+        const KTime * t = KTimeFromIso8601 ( & kt, src -> addr, src -> size );
         if ( t == NULL )
             return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect );
         else
@@ -1735,6 +1751,74 @@ static void whackKartItem ( void * self, void * ignore ) {
     return 0;
 }*/
 
+/* STimestamp */
+static rc_t STimestampInit ( STimestamp * self, const String * src ) {
+    rc_t rc = 0;
+
+    assert ( self && src );
+
+    rc = SRawAlloc ( & self -> raw, src -> addr, src -> size );
+
+    if ( rc == 0 )
+        rc = KTimeInit ( & self -> time, src );
+
+    return rc;
+}
+
+static rc_t STimestampInitCurrent ( STimestamp * self ) {
+    rc_t rc = 0;
+
+    assert ( self );
+
+    self -> time = KTimeStamp ();
+
+    return rc;
+}
+
+static rc_t STimestampFini ( STimestamp * self ) {
+    rc_t rc = 0;
+
+    assert ( self );
+
+    rc = SRawFini ( & self -> raw );
+
+    memset ( self, 0, sizeof * self );
+
+    return rc;
+}
+
+/* SServerTimestamp */
+static
+rc_t SServerTimestampInit ( SServerTimestamp * self,
+                            const String * src )
+{
+    rc_t rc = 0;
+    rc_t r2 = 0;
+
+    assert ( self );
+
+    rc = STimestampInit ( & self -> server, src );
+
+    r2 = STimestampInitCurrent ( & self -> local );
+    if ( rc == 0 )
+        rc = r2;
+
+    return rc;
+}
+
+static rc_t SServerTimestampFini ( SServerTimestamp * self ) {
+    rc_t rc = 0;
+    rc_t r2 = 0;
+
+    assert ( self );
+    rc = STimestampFini ( & self ->server );
+
+    r2 = STimestampFini ( & self ->local );
+    if ( rc == 0 )
+        rc = r2;
+
+    return rc;
+}
 
 /* SResponse */
 static rc_t SResponseInit ( SResponse * self ) {
@@ -1748,30 +1832,35 @@ static rc_t SResponseInit ( SResponse * self ) {
 static rc_t SResponseFini ( SResponse * self ) {
     rc_t rc = 0;
     rc_t r2 = 0;
+    
     assert ( self );
 
     {
         void ( CC * whack ) ( void *item, void *data ) = NULL;
-        if ( self -> serviceType == eSTsearch ) {
+        if ( self -> serviceType == eSTsearch )
             whack = whackKartItem;
-        }
-        else {
+        else
             whack = whackSRow;
-        }
         assert ( whack );
         VectorWhack ( & self -> rows, whack, NULL );
     }
 
     rc = SHeaderFini ( & self -> header );
+
     r2 = KSrvResponseRelease ( self -> list );
-    if ( rc == 0 ) {
+    if ( rc == 0 )
         rc = r2;
-    }
+
     r2 = KartRelease ( self -> kart );
-    if ( rc == 0 ) {
+    if ( rc == 0 )
         rc = r2;
-    }
+
+    r2 = SServerTimestampFini ( & self -> timestamp );
+    if ( rc == 0 )
+        rc = r2;
+
     memset ( self, 0, sizeof * self );
+
     return rc;
 }
 
@@ -2731,8 +2820,14 @@ rc_t KServiceProcessLine ( KService * self, const String * line, bool * end )
     if ( line -> addr [ 0 ] == '$' ) {
         * end = true;
         if ( SVersionResponseHasTimestamp
-            ( & self -> resp . header . version ) )
+                ( & self -> resp . header . version )
+            && line -> size > 2 && line -> len > 2 )
         {
+            String timestamp;
+            StringInit ( & timestamp, line -> addr + 2, line -> size - 2,
+                                                        line -> len  - 2 );
+            rc = SServerTimestampInit ( & self -> resp . timestamp,
+                                        & timestamp );
         }
     }
     else if ( self -> req . serviceType == eSTsearch ) {

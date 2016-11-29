@@ -1106,7 +1106,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
             }
             if ( mod_date . addr != NULL && mod_date . size > 0 ) {
                 KTime kt;
-                const KTime * t = KTimeIso8601 ( & kt, mod_date . addr,
+                const KTime * t = KTimeFromIso8601 ( & kt, mod_date . addr,
                     mod_date . size );
                 if ( t != NULL )
                     date = KTimeMakeTime ( & kt );

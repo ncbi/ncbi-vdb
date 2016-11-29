@@ -80,7 +80,7 @@ public:
         KTime_t t = 0;
         if ( date . size () > 0 ) {
             KTime kt;
-            const KTime * tt = KTimeIso8601 ( & kt, date . c_str (),
+            const KTime * tt = KTimeFromIso8601 ( & kt, date . c_str (),
                 date . size () );
             if ( tt != NULL )
                 t = KTimeMakeTime ( & kt );
@@ -89,7 +89,7 @@ public:
         KTime_t m = 0;
         if ( modifict . size () > 0 ) {
             KTime kt;
-            const KTime * tt = KTimeIso8601 ( & kt, modifict . c_str (),
+            const KTime * tt = KTimeFromIso8601 ( & kt, modifict . c_str (),
                 modifict . size () );
             if ( tt != NULL )
                 m = KTimeMakeTime ( & kt );
