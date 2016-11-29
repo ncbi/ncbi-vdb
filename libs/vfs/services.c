@@ -1766,13 +1766,26 @@ static rc_t STimestampInit ( STimestamp * self, const String * src ) {
 }
 
 static rc_t STimestampInitCurrent ( STimestamp * self ) {
-    rc_t rc = 0;
-
     assert ( self );
 
     self -> time = KTimeStamp ();
 
-    return rc;
+    if ( self -> time != 0 ) {
+        const size_t s = 21;
+        self -> raw . s = calloc ( 1, s );
+        if ( self -> raw . s == NULL )
+            return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+        else {
+            size_t sz = KTimeIso8601 ( self -> time, self -> raw . s, s );
+            if ( sz == 0 )
+                return RC ( rcVFS, rcQuery, rcExecuting, rcMemory,
+                    rcInsufficient );
+            else
+                return 0;
+        }
+    }
+    else
+        return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect );
 }
 
 static rc_t STimestampFini ( STimestamp * self ) {
