@@ -66,6 +66,7 @@ rc_t CC Usage( const Args* args )
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    int failed = 0;
     if ( argc < 2 )
     {
         cout << "Usage:\n\t" << argv[0] << " schema-file" << endl;
@@ -73,7 +74,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     }
     try
     {
-        int failed = 0;
+        cout << "Parsing " << argc - 1 << " schema-files" << endl;
         for ( int i = 0 ; i < argc - 1; ++i )
         {
             stringstream buffer;
@@ -87,10 +88,9 @@ rc_t CC KMain ( int argc, char *argv [] )
             {
                 cout << string ( "Parsing failed: " ) + argv [ i + 1 ] << endl;
                 ++ failed;
-                //throw runtime_error ( string ( "Parsing failed: " ) + argv [ i + 1 ] );
             }
         }
-        cout << "Total " << argc - 1 << ", failed " << failed << endl;
+        cout << "Failed: " << failed << endl;
     }
     catch ( exception& ex)
     {
@@ -102,7 +102,7 @@ rc_t CC KMain ( int argc, char *argv [] )
         cerr << " Unknown exception" << endl;
         return 3;
     }
-    return 0;
+    return failed == 0 ? 0 : 4;
 }
 
 }

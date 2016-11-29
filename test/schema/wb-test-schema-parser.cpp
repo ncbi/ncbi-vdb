@@ -104,6 +104,11 @@ TEST_CASE ( Function_Naked )
     REQUIRE ( SchemaParser () . ParseString ( "function t fn ( a b );" ) );
 }
 
+TEST_CASE ( Function_ArreyReturn )
+{   //TODO: verify that paramter-less functions are not allowed
+    REQUIRE ( SchemaParser () . ParseString ( "function t[3] fn ( a b );" ) );
+}
+
 TEST_CASE ( Function_Schema )
 {
     REQUIRE ( SchemaParser () . ParseString ( "function < type b,  a / fmt c > t fn ( a b );" ) );
@@ -198,6 +203,10 @@ TEST_CASE ( Table_Parents )
     REQUIRE ( SchemaParser () . ParseString ( "table t #1.1.1 = t1, t2, t3 { t a = 1; };" ) );
 }
 
+TEST_CASE ( Table_Empty )
+{
+    REQUIRE ( SchemaParser () . ParseString ( "table t #1 {};" ) );
+}
 TEST_CASE ( Table_ProdStmt )
 {
     REQUIRE ( SchemaParser () . ParseString ( "table t #1 { t a = 1; };" ) );
@@ -213,28 +222,38 @@ TEST_CASE ( Table_Column )
 }
 TEST_CASE ( Table_Column_PhysicalEncoding )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { column <1> p t c; };" ) );
+    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { column <1> p c; };" ) );
 }
 TEST_CASE ( Table_Column_PhysicalEncoding_WithVersion )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { column <1> p#1.2.3 t c; };" ) );
+    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { column <1> p#1.2.3 c; };" ) );
 }
 TEST_CASE ( Table_Column_PhysicalEncoding_WithFactory )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { column <1> p <1> t c; };" ) );
+    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { column <1> p <1> c; };" ) );
 }
 TEST_CASE ( Table_Column_PhysicalEncoding_WithVersionAndFactory )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { column <1> p#1 <1> t c; };" ) );
+    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { column <1> p#1 <1> c; };" ) );
 }
 TEST_CASE ( Table_Column_Default )
 {
     REQUIRE ( SchemaParser () . ParseString ( "table t #1 { default column t c; };" ) );
 }
-TEST_CASE ( Table_Column_Extern )
+TEST_CASE ( Table_Column_Extern_WithPhysical )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { extern column t c; };" ) );
+    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { extern column < U32 > izip_encoding #1 CHANNEL; };" ) );
 }
+TEST_CASE ( Table_Column_Extern_WithNakedPhysical )
+{
+    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { extern column bool_encoding #1 HIGH_QUALITY; };" ) );
+}
+TEST_CASE ( Table_Column_Extern_WithPhysicalFactor )
+{
+    REQUIRE ( SchemaParser () . ParseString ( "table t #1 {  column F32_4ch_encoding < 24 > BASE_FRACTION; };" ) );
+}
+
+
 TEST_CASE ( Table_Column_Readonly )
 {
     REQUIRE ( SchemaParser () . ParseString ( "table t #1 { readonly column t c; };" ) );
@@ -265,7 +284,7 @@ TEST_CASE ( Table_Column_withBody )
 TEST_CASE ( Table_Column_withExpr )
 {
     REQUIRE ( SchemaParser () . ParseString (
-        "table t #1 { column t c = 0; };" ) );
+        "table t #1 { column t c = 0 | 1; };" ) );
 }
 
 TEST_CASE ( Table_DefaultView )

@@ -76,15 +76,17 @@ SCHEMA_SRC = \
 bison $(SRCDIR)/schema-grammar.c: $(SRCDIR)/schema-grammar.y
 	bison -r state -o $(SRCDIR)/schema-grammar.c --defines=$(SRCDIR)/schema-tokens.h $(SRCDIR)/schema-grammar.y
 
-flex $(SRCDIR)/schema-lex.c: $(SRCDIR)/schema-lex.l
+flex $(SRCDIR)/schema-lex.c: $(SRCDIR)/schema-lex.l $(SRCDIR)/schema-grammar.c
 	flex -d -t $(SRCDIR)/schema-lex.l > $(SRCDIR)/schema-lex.c
 
 SCHEMA_OBJ = \
 	$(addsuffix .$(LOBX),$(SCHEMA_SRC))
 
-$(ILIBDIR)/libschema.$(LIBX): $(SCHEMA_OBJ)
+$(ILIBDIR)/libschema.$(LIBX):  $(SCHEMA_OBJ)
 	$(LD) --slib -o $@ $^
 
 compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
+
+.PHONY: bison flex

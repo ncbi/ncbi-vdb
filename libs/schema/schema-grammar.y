@@ -281,7 +281,7 @@ ext_func_1_0_decl
 /* function-1.0
  */
 function_1_0_decl
-    : KW_function func_1_0_decl ';'
+    : KW_function func_1_0_decl
     ;
 
 func_1_0_decl
@@ -328,7 +328,7 @@ func_1_0_schema_formal
 
 func_1_0_return_type
     : KW_void
-    | vardim_type_expr_1_0
+    | type_expr_1_0
     ;
 
 opt_func_1_0_fact_sig
@@ -372,8 +372,8 @@ func_1_0_vararg_formals
     ;
 
 func_1_0_prologue
-    : %empty                                                    /* this is a simple external function declaration    */
-    | '=' fqn_1_0                                               /* rename the function declaration with fqn          */
+    : ';'                                                       /* this is a simple external function declaration    */
+    | '=' fqn_1_0';'                                            /* rename the function declaration with fqn          */
     | '{' func_1_0_body '}'                                     /* this is a "script" function - cannot be extern!   */
     ;
 
@@ -392,9 +392,8 @@ script_1_0_stmt
     ;
 
 production_1_0_stmt
-    : fqn_1_0 '/' fqn_1_0   IDENTIFIER_1_0 assign_expr_1_0
-    | fqn_1_0               IDENTIFIER_1_0 assign_expr_1_0
-    | KW_trigger            IDENTIFIER_1_0 assign_expr_1_0
+    : type_expr_1_0 IDENTIFIER_1_0 assign_expr_1_0      /* cannot have format */
+    | KW_trigger    IDENTIFIER_1_0 assign_expr_1_0
     ;
 
 /* physical encoding
@@ -408,7 +407,6 @@ phys_1_0_decl
       phys_1_0_return_type phys_1_0_new_name
       opt_func_1_0_fact_sig
       phys_1_0_prologue
-      ';'
     ;
 
 phys_1_0_return_type
@@ -470,6 +468,7 @@ tbl_1_0_parent
 
 tbl_1_0_body
     : '{' tbl_1_0_stmt_seq '}'
+    | '{' '}'
     ;
 
 tbl_1_0_stmt_seq
@@ -479,13 +478,14 @@ tbl_1_0_stmt_seq
 
 tbl_1_0_stmt
     : production_1_0_stmt ';'
-    | column_1_0_decl ';'
-    | col_1_0_modifier_seq column_1_0_decl ';'
+    | column_1_0_decl
+    | col_1_0_modifier_seq column_1_0_decl
     | default_view_1_0_decl ';'
     | KW_static physmbr_1_0_decl ';'
     | KW_physical physmbr_1_0_decl ';'
     | KW_static KW_physical physmbr_1_0_decl ';'
     | KW___untyped untyped_tbl_expr_1_0 ';'
+    | ';'
     ;
 
 col_1_0_modifier_seq
@@ -502,25 +502,22 @@ col_1_0_modifier
 column_1_0_decl
     : KW_column col_1_0_decl
     | KW_column KW_default col_1_0_decl
-    | KW_column KW_limit '=' expression_1_0
-    | KW_column KW_default KW_limit '=' expression_1_0
+    | KW_column KW_limit '=' expression_1_0 ';'
+    | KW_column KW_default KW_limit '=' expression_1_0 ';'
     ;
 
 col_1_0_decl
-    : phys_encoding_expr_1_0 typespec_1_0 typed_column_decl_1_0
-    ;
-
-phys_encoding_expr_1_0
-    : %empty
-    /*    | fqn_1_0 */ /* creates conflict with the following typespec. TODO: find out if used anywhere */
-    | KW_physical '<' schema_parms_1_0 '>' ident_1_0 opt_version_1_0 opt_factory_parms_1_0
-    | '<' schema_parms_1_0 '>' ident_1_0 opt_version_1_0 opt_factory_parms_1_0
+    : KW_physical '<' schema_parms_1_0 '>' fqn_1_0 opt_version_1_0 opt_factory_parms_1_0 typed_column_decl_1_0
+    |             '<' schema_parms_1_0 '>' fqn_1_0 opt_version_1_0 opt_factory_parms_1_0 typed_column_decl_1_0
+    | fqn_1_0 VERSION opt_factory_parms_1_0 typed_column_decl_1_0
+    | fqn_1_0 '<' factory_parms_1_0 '>' typed_column_decl_1_0
+    | typespec_1_0 typed_column_decl_1_0
     ;
 
 typed_column_decl_1_0
     : ident_1_0 '{' column_body_1_0 '}'
-    | ident_1_0 '=' expression_1_0
-    | ident_1_0
+    | ident_1_0 '=' cond_expr_1_0 ';'
+    | ident_1_0 ';'
     ;
 
 column_body_1_0
@@ -532,7 +529,7 @@ column_stmt_1_0
     : KW_read '=' cond_expr_1_0
     | KW_validate '=' cond_expr_1_0
     | KW_limit '=' uint_expr_1_0
-    | ';'
+    | %empty
     ;
 
 default_view_1_0_decl
@@ -572,19 +569,6 @@ col_schema_value_1_0
     | uint_expr_1_0
     ;
 
-physical_stmts_1_0
-    : physical_stmt_1_0
-    | physical_stmts_1_0 physical_stmt_1_0
-    ;
-
-physical_stmt_1_0
-    : KW_read '=' cond_expr_1_0
-    | KW_read INCREMENT cond_expr_1_0
-    | KW_write '=' cond_expr_1_0
-    | KW_write INCREMENT cond_expr_1_0
-    | KW___untyped '=' untyped_tbl_expr_1_0
-    ;
-
 untyped_tbl_expr_1_0
     : '=' fqn_1_0 '(' ')'
 
@@ -593,14 +577,14 @@ untyped_tbl_expr_1_0
  */
 
 expression_1_0
-    : uncast_expr_1_0
+    : primary_expr_1_0
     | '(' type_expr_1_0 ')' expression_1_0
     ;
 
-uncast_expr_1_0
+primary_expr_1_0
     : fqn_1_0
-    | '.' IDENTIFIER_1_0   /*TODO: do it in flex */
-    | '@'                               /*TODO: there may be a better place for this */
+    | '.' IDENTIFIER_1_0   /*TODO: do it in flex, no space after period */
+    | '@'
     | func_expr_1_0
     | uint_expr_1_0
     | float_expr_1_0
@@ -631,8 +615,7 @@ schema_parms_1_0
     ;
 
 schema_parm_1_0
-    : fqn_1_0                   /* sym_const_expr, fact_param, schema_param, datatype, typeset, schematype */
-    | fqn_1_0 '/' fqn_1_0       /* format /  ? - see type_expr_1_0 */
+    : type_expr_1_0
     | uint_expr_1_0
     ;
 
@@ -709,6 +692,7 @@ negate_expr_1_0
 type_expr_1_0
     : fqn_1_0                   /* datatype, typeset, schematype */
     | fqn_1_0 '/' fqn_1_0       /* format /  ? */
+    | fqn_1_0 dim_1_0
     ;
 
  /* database */
@@ -756,19 +740,19 @@ opt_version_1_0
     | VERSION
     ;
 
-vardim_type_expr_1_0
-    : '[' '*' ']'
-    | type_expr_1_0
-    ;
-
-
 /* other stuff
  */
 fqn_1_0
     : ident_1_0
     | fqn_1_0 ':' ident_1_0
-    /* a hack to handle keywords used as names in existing 1.0 schemas */
+    /* a hack to handle keywords used as namespace identifiers in existing 1.0 schemas */
+    | fqn_1_0 ':' KW_database
+    | fqn_1_0 ':' KW_decode
+    | fqn_1_0 ':' KW_encode
     | fqn_1_0 ':' KW_read
+    | fqn_1_0 ':' KW_table
+    | fqn_1_0 ':' KW_type
+    | fqn_1_0 ':' KW_view
     | fqn_1_0 ':' KW_write
     ;
 
@@ -778,6 +762,7 @@ ident_1_0
 
 dim_1_0
     : '[' expression_1_0 ']'                                    /* expects unsigned integer constant expression */
+    | '[' '*'  ']'
     ;
 
 cond_expr_1_0

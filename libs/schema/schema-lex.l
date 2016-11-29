@@ -160,7 +160,8 @@ dstr_char   ([^\\"\f\r\n$]|$[^(\\])
 "void"            { return KW_void; }
 "write"           { return KW_write; }
 
-[a-z|A-Z|_][a-z|A-Z|_|0-9]* { return IDENTIFIER_1_0; }
+[a-z|A-Z|_][a-z|A-Z|_|0-9]*         { return IDENTIFIER_1_0; }
+[0-9][a-z|A-Z|_][a-z|A-Z|_|0-9]+    { return IDENTIFIER_1_0; }
 
 #[0-9]+\.[0-9]+\.[0-9]+     { return VERSION; }
 #[0-9]+\.[0-9]+             { return VERSION; }
