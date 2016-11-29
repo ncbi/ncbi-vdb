@@ -1263,9 +1263,12 @@ rc_t KSrvErrorRc      ( const KSrvError * self, rc_t     * rc   ) {
     rc_t dummy = 0;
     if ( rc == NULL )
         rc = & dummy;
+
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
     * rc = self -> rc;
+    
     return 0;
 }
 
@@ -1273,9 +1276,12 @@ rc_t KSrvErrorCode    ( const KSrvError * self, uint32_t * code ) {
     uint32_t dummy = 0;
     if ( code == NULL )
         code = & dummy;
+
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
     * code = self -> code;
+
     return 0;
 }
 
@@ -1285,11 +1291,15 @@ rc_t KSrvErrorMessage ( const KSrvError * self, String * message ) {
     String dummy;
     if ( message == NULL )
         message = & dummy;
+
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
     * message = self -> message;
+
     return 0;
 }
+
 rc_t KSrvErrorObject ( const KSrvError * self, String * id, EObjectType * type )
 {
     if ( self == NULL )
@@ -1307,7 +1317,8 @@ rc_t KSrvErrorObject ( const KSrvError * self, String * id, EObjectType * type )
 
 /* EVPath */
 static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
-    const String * ticket, const STyped * typed, bool ext, rc_t * rc )
+    const String * ticket, const STyped * typed, bool ext, rc_t * rc,
+    bool useDates )
 {
     String bug;
     memset ( & bug, 0, sizeof bug );
@@ -1346,7 +1357,9 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
             assert ( src -> addr != NULL );
 
         * rc = VPathMakeFromUrl ( new_path, src, ticket, ext, id, typed -> size,
-            typed -> date, typed -> md5 . has_md5 ? typed -> md5 . md5 : NULL );
+            useDates ? typed -> date : 0,
+			typed -> md5 . has_md5 ? typed -> md5 . md5 : NULL,
+            useDates ? typed -> expiration : 0 );
         if ( * rc == 0 )
             VPathMarkHighReliability ( * new_path, true );
 
@@ -1443,15 +1456,18 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
     bool made = false;
     KLogLevel lvl = klogInt;
     assert ( self && src && r );
+
     switch ( src -> code / 100 ) {
       case 0:
         rc = RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
         break;
+
       case 1:
         /* informational response
            not much we can do here */
         rc = RC ( rcVFS, rcQuery, rcResolving, rcError, rcUnexpected );
         break;
+
       case 2:
         /* successful response
            but can only handle 200 */
@@ -1463,34 +1479,36 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
             {
                 ext = false;
             }
+
             made |= VPathMakeOrNot ( & self -> http,
-                & src -> hUrl , & src -> ticket, src, ext, & rc );
+                & src -> hUrl , & src -> ticket, src, ext, & rc, true );
             made |= VPathMakeOrNot ( & self -> fasp,
-                & src -> fpUrl, & src -> ticket, src, ext, & rc );
+                & src -> fpUrl, & src -> ticket, src, ext, & rc, true );
             made |= VPathMakeOrNot ( & self -> https,
-                & src -> hsUrl, & src -> ticket, src, ext, & rc );
+                & src -> hsUrl, & src -> ticket, src, ext, & rc, true );
             made |= VPathMakeOrNot ( & self -> file,
-                & src -> flUrl, & src -> ticket, src, ext, & rc );
+                & src -> flUrl, & src -> ticket, src, ext, & rc, true );
             made |= VPathMakeOrNot ( & self -> s3,
-                & src -> s3Url, & src -> ticket, src, ext, & rc );
+                & src -> s3Url, & src -> ticket, src, ext, & rc, true );
             VPathMakeOrNot ( & self -> vcHttp,
-                & src -> hVdbcacheUrl, & src -> ticket, src, ext, & rc );
+                & src -> hVdbcacheUrl, & src -> ticket, src, ext, & rc, false );
             VPathMakeOrNot ( & self -> vcFasp,
-                & src -> fpVdbcacheUrl, & src -> ticket, src, ext, & rc );
+                & src -> fpVdbcacheUrl,& src -> ticket, src, ext, & rc, false );
             VPathMakeOrNot ( & self -> vcHttps,
-                & src -> hsVdbcacheUrl, & src -> ticket, src, ext, & rc );
+                & src -> hsVdbcacheUrl,& src -> ticket, src, ext, & rc, false );
             VPathMakeOrNot ( & self -> vcFile,
-                & src -> flVdbcacheUrl, & src -> ticket, src, ext, & rc );
+                & src -> flVdbcacheUrl,& src -> ticket, src, ext, & rc, false );
             VPathMakeOrNot ( & self -> vcS3,
-                & src -> s3VdbcacheUrl, & src -> ticket, src, ext, & rc );
-            if ( rc == 0 ) {
+                & src -> s3VdbcacheUrl,& src -> ticket, src, ext, & rc, false );
+
+            if ( rc == 0 )
                 rc = EVPathInitMapping ( self, src, & req -> version );
-            }
             return rc;
         }
         rc = RC ( rcVFS, rcQuery, rcResolving, rcError, rcUnexpected );
         break;
-      case 3:
+
+	  case 3:
         /* redirection
            currently this is being handled by our request object */
         rc = RC ( rcVFS, rcQuery, rcResolving, rcError, rcUnexpected );

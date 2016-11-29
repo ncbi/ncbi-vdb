@@ -75,7 +75,7 @@ public:
     }
 
     const VPath * make ( const char * path, const string & date = "",
-                         const string & md5 = "" )
+                         const string & md5 = "", const string & modifict = "" )
     {
         KTime_t t = 0;
         if ( date . size () > 0 ) {
@@ -86,16 +86,25 @@ public:
                 t = KTimeMakeTime ( & kt );
         }
 	
+        KTime_t m = 0;
+        if ( modifict . size () > 0 ) {
+            KTime kt;
+            const KTime * tt = KTimeIso8601 ( & kt, modifict . c_str (),
+                modifict . size () );
+            if ( tt != NULL )
+                m = KTimeMakeTime ( & kt );
+        }
+	
         uint8_t ud5 [ 16 ];
-	uint8_t * pd5 = NULL;
-	if ( md5 . size () == 32 ) {
+        uint8_t * pd5 = NULL;
+        if ( md5 . size () == 32 ) {
             rc_t rc = 0;
             for ( int i = 0; i < 16 && rc == 0; ++ i ) {
                 ud5 [ i ]  = getDigit ( md5 [ 2 * i     ], & rc ) * 16;
                 ud5 [ i ] += getDigit ( md5 [ 2 * i + 1 ], & rc );
             }
             pd5 = rc == 0 ? ud5 : NULL;
-	}
+        }
 
         String url;
         size_t s = string_measure ( path, NULL );
@@ -103,7 +112,7 @@ public:
 
         VPath * p = NULL;
         rc_t rc = VPathMakeFromUrl ( & p, & url, & _tick, true, & _id, _size, t,
-	                             pd5 );
+                                     pd5, m );
 
         if ( rc == 0 )
             rc = VPathMarkHighReliability ( p, true );
@@ -115,7 +124,7 @@ public:
     }
 };
 
-static P Path  ( " ticket ", " object-id ", 90 );
+static P Path  ( "ticket", " object-id ", 90 );
 static P Path1 ( " ticke1 ", " object-i1 ", 10 );
 
 TEST_CASE ( INCOMPLETE ) {
@@ -125,7 +134,7 @@ TEST_CASE ( INCOMPLETE ) {
     REQUIRE_NULL ( response );
 
     REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|| object-id |90|1930-01-13T13:25:30|0123456789abcdefABCDEF0123456789| ticket |"
+"0|| object-id |90|1930-01-13T13:25:30|0123456789abcdefABCDEF0123456789|ticket|"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p|"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
             "1930-01-13T13:25:30|200| message\n"
@@ -147,20 +156,21 @@ TEST_CASE ( SINGLE ) {
     response = NULL;
 
     const string date ( "1980-01-13T13:25:30" );
+    const string modf ( "2280-01-13T13:25:30" );
     const string md5  ( "0123456789abcdefABCDEF012345678a" );
-    const VPath * ph = Path . make ( "http://url/", date, md5 );
-    const VPath * vh = Path . make ( "http://vdbcacheUrl/", date, md5 );
-    const VPath * phs= Path . make ( "https://hsl/", date, md5 );
-    const VPath * vhs= Path . make ( "https://vdbcache/", date, md5 );
-    const VPath * pf = Path . make ( "fasp://frl/", date, md5 );
-    const VPath * vf = Path . make ( "fasp://fvdbcache/", date, md5 );
-    const VPath * pfl= Path . make ( "file:///p", date, md5 );
-    const VPath * vfl= Path . make ( "file:///vdbcache", date, md5 );
-    const VPath * p3 = Path . make ( "s3:p", date, md5 );
-    const VPath * v3 = Path . make ( "s3:v", date, md5 );
+    const VPath * ph = Path . make ( "http://url/"        , date, md5, modf );
+    const VPath * vh = Path . make ( "http://vdbcacheUrl/", "", md5  );
+    const VPath * phs= Path . make ( "https://hsl/", date , md5, modf );
+    const VPath * vhs= Path . make ( "https://vdbcache/"  , "", md5 );
+    const VPath * pf = Path . make ( "fasp://frl/"        , date, md5, modf );
+    const VPath * vf = Path . make ( "fasp://fvdbcache/"  , "", md5 );
+    const VPath * pfl= Path . make ( "file:///p"          , date, md5, modf );
+    const VPath * vfl= Path . make ( "file:///vdbcache"   , "", md5 );
+    const VPath * p3 = Path . make ( "s3:p"               , date, md5, modf );
+    const VPath * v3 = Path . make ( "s3:v"               , "", md5 );
 
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|| object-id |90|1980-01-13T13:25:30|0123456789abcdefABCDEF012345678a| ticket |"
+"0|| object-id |90|1980-01-13T13:25:30|0123456789abcdefABCDEF012345678a|ticket|"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p|"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
             "2280-01-13T13:25:30|200| message\n"
@@ -281,9 +291,11 @@ TEST_CASE ( DOUBLE ) {
     const KSrvResponse * response = NULL;
 
     const string date  (  "1981-01-13T13:25:30" );
+    const string modf  (  "2281-01-13T13:25:30" );
     const string date1 (  "1981-01-13T13:25:31" );
+    const string modf1 (  "2281-01-13T13:25:31" );
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|| object-id |90|1981-01-13T13:25:30|| ticket |"
+        "0|| object-id |90|1981-01-13T13:25:30||ticket|"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p|"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
             "2281-01-13T13:25:30|200| message\n"
@@ -294,7 +306,7 @@ TEST_CASE ( DOUBLE ) {
     CHECK_NOT_NULL ( response );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 2u );
 
-    const VPath * phs = Path . make ( "https://hsl/", date );
+    const VPath * phs = Path . make ( "https://hsl/", date, "", modf );
     const VPath * path = NULL;
     const VPath * vdbcache = NULL;
     REQUIRE_RC ( KSrvResponseGetPath ( response, 0, eProtocolHttps,
@@ -307,7 +319,7 @@ TEST_CASE ( DOUBLE ) {
     ne = ~0;
     REQUIRE_RC ( VPathRelease (phs ) );
 
-    const VPath * ph = Path1 . make ( "http://ur1/", date1 );
+    const VPath * ph = Path1 . make ( "http://ur1/", date1, "", modf1 );
     REQUIRE_RC ( KSrvResponseGetPath ( response, 1, eProtocolHttp,
         & path, & vdbcache, NULL ) );
     REQUIRE_NULL ( vdbcache );
@@ -318,7 +330,7 @@ TEST_CASE ( DOUBLE ) {
     ne = ~0;
     REQUIRE_RC ( VPathRelease (ph ) );
 
-    const VPath * vhs = Path1 . make ( "https://vdbcacheUrl1/", date1 );
+    const VPath * vhs = Path1 . make ( "https://vdbcacheUrl1/" );
     REQUIRE_RC ( KSrvResponseGetPath ( response, 1, eProtocolHttps,
         & path, & vdbcache, NULL ) );
     REQUIRE_NULL ( path );
@@ -336,8 +348,8 @@ TEST_CASE ( DOUBLE ) {
 TEST_CASE ( BAD_TYPE ) {
     const KSrvResponse * response = NULL;
     REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|t| object-id |9|1981-01-13T13:25:30|0123456789abcdefABCDEF012345678b| ticket |||"
-          "1981-01-13T13:25:30|200| mssg\n",
+        "0|t| object-id |9|1981-01-13T13:25:30|0123456789abcdefABCDEF012345678b"
+		"|ticket|||1981-01-13T13:25:30|200| mssg\n",
         & response, 1 ) );
     REQUIRE_NULL ( response );
 }
@@ -345,8 +357,8 @@ TEST_CASE ( BAD_TYPE ) {
 TEST_CASE ( ERROR ) {
     const KSrvResponse * response = NULL;
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|| object-id |90|1981-01-13T13:25:30|0123456789abcdefABCDEF012345678c| ticket |||"
-           "1981-01-13T13:25:30|500| mssg\n",
+        "0|| object-id |90|1981-01-13T13:25:30|0123456789abcdefABCDEF012345678c"
+		"|ticket|||1981-01-13T13:25:30|500| mssg\n",
         & response, 1 ) );
     REQUIRE_NOT_NULL ( response );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 1u );

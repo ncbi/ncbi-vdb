@@ -3800,7 +3800,7 @@ rc_t LegacyVPathMakeFmt ( VPath ** new_path, const char * fmt, ... )
 static
 rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
     const String * tick, size_t size, KTime_t date, const uint8_t md5 [ 16 ],
-    const char * fmt, va_list args )
+    KTime_t exp_date, const char * fmt, va_list args )
 {
     rc_t rc;
 
@@ -3830,6 +3830,7 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                 path -> ext = ext;
                 path -> size = size;
                 path -> modification = date;
+                path -> expiration = exp_date;
 
                 if ( md5 != NULL ) {
                     int i = 0;
@@ -3867,10 +3868,9 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
 }
 
 static
-rc_t VPathMakeFmtExt ( VPath ** new_path,
-    bool ext,
-    const String * id, const String * tick, size_t size,
-    KTime_t date, const uint8_t md5 [ 16 ], const char * fmt, ... )
+rc_t VPathMakeFmtExt ( VPath ** new_path, bool ext, const String * id,
+	const String * tick, size_t size, KTime_t date, const uint8_t md5 [ 16 ],
+	KTime_t exp_date, const char * fmt, ... )
 {
     EVPathType t = ext ? eVPext : eVPWithId; 
     rc_t rc;
@@ -3878,7 +3878,8 @@ rc_t VPathMakeFmtExt ( VPath ** new_path,
     va_list args;
     va_start ( args, fmt );
 
-    rc = VPathMakeVFmtExt ( t, new_path, id, tick, size, date, md5, fmt, args );
+    rc = VPathMakeVFmtExt ( t, new_path, id, tick, size, date, md5, exp_date,
+		fmt, args );
 
     va_end ( args );
 
@@ -3887,19 +3888,19 @@ rc_t VPathMakeFmtExt ( VPath ** new_path,
 
 rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     const String * tick, bool ext, const String * id, size_t size, KTime_t date,
-    const uint8_t md5 [ 16 ] )
+    const uint8_t md5 [ 16 ], KTime_t exp_date )
 {
     if ( tick == NULL || tick -> addr == NULL || tick -> size == 0 )
         return VPathMakeFmtExt ( new_path, ext, id, tick, size, date, md5,
-                                 "%S", url);
+		                         exp_date, "%S", url  );
     else
         return VPathMakeFmtExt ( new_path, ext, id, tick, size, date, md5,
-                                 "%S?tic=%S", url, tick );
+                                 exp_date, "%S?tic=%S", url, tick );
 }
 
 rc_t LegacyVPathMakeVFmt ( VPath ** new_path, const char * fmt, va_list args )
 {
-    return VPathMakeVFmtExt ( false, new_path, NULL, NULL, 0, 0, NULL, fmt,
+    return VPathMakeVFmtExt ( false, new_path, NULL, NULL, 0, 0, NULL, 0, fmt,
                               args );
 }
 
@@ -4026,6 +4027,7 @@ rc_t VPathEqual ( const VPath * l, const VPath * r, int * notequal ) {
             else
                 rc = re;
         }
+
         rp = VPathGetTicket ( l, & pstr );
         re = VPathGetTicket ( r, & estr );
         if ( rp == 0 && re == 0 ) {
@@ -4038,6 +4040,7 @@ rc_t VPathEqual ( const VPath * l, const VPath * r, int * notequal ) {
             else
                 rc = re;
         }
+
         if ( l -> ext == eVPext && r -> ext == eVPext ) {
             {
                 KTime_t tp = VPathGetModDate ( l );
@@ -4056,14 +4059,20 @@ rc_t VPathEqual ( const VPath * l, const VPath * r, int * notequal ) {
                 const uint8_t * e = VPathGetMd5 ( r );
                 if ( ( p == NULL && e != NULL ) || ( e == NULL && p != NULL ) )
                     * notequal |= 0x800;
-		else if ( p != NULL ) {
-		    int i = 0;
-		    for ( i = 0; i < 16; ++i )
-		        if ( p [ i ] != e [ i ] ) {
-                            * notequal |= 0x1000;
-			    break;
-			}
-		}
+                else if ( p != NULL ) {
+                int i = 0;
+                for ( i = 0; i < 16; ++i )
+                    if ( p [ i ] != e [ i ] ) {
+                        * notequal |= 0x1000;
+                        break;
+                    }
+                }
+            }
+			{
+                KTime_t tp = l -> expiration ;
+                KTime_t te = r  -> expiration;
+                if ( tp != te )
+                    * notequal |= 0x2000;
             }
         }
     }
