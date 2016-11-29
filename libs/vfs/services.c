@@ -88,6 +88,51 @@ typedef struct {
     uint8_t minor;
 } SVersion; 
 
+static bool SVersionNotExtendedVPaths ( const SVersion * self ) {
+    assert ( self );
+    return self -> version == VERSION_1_0;
+}
+
+static bool SVersionBefore3_0 ( const SVersion * self ) {
+    assert ( self );
+    return self -> version < VERSION_3_0;
+}
+
+static bool SVersionHasRefseqCtx ( const SVersion * self ) {
+    assert ( self );
+    return self -> version < VERSION_3_0;
+}
+
+static bool SVersionAccInRequest ( const SVersion * self ) {
+    assert ( self );
+    return self -> version <= VERSION_3_0;
+}
+
+static bool SVersionTypInRequest ( const SVersion * self ) {
+    assert ( self );
+    return self -> version == VERSION_3_0;
+}
+
+static bool SVersionHasMultpileObjects ( const SVersion * self ) {
+    assert ( self );
+    return self -> version >= VERSION_3_0;
+}
+
+static bool SVersionSingleUrl ( const SVersion * self ) {
+    assert ( self );
+    return self -> version < VERSION_3_1;
+}
+
+static bool SVersionResponseHasMultipeUrls ( const SVersion * self ) {
+    assert ( self );
+    return self -> version >= VERSION_3_2;
+}
+
+static bool SVersionResponseHasTimestamp ( const SVersion * self ) {
+    assert ( self );
+    return self -> version >= VERSION_3_2;
+}
+
 /* server response header */
 typedef struct {
     SRaw raw;
@@ -1166,9 +1211,10 @@ rc_t STypedInit ( STyped * self, const SOrdered * raw, const SConverters * how,
     int i = 0;
     assert ( self && raw && how && version );
     memset ( self, 0, sizeof * self );
-    if ( raw -> n != how -> n ) {
+
+    if ( raw -> n != how -> n )
         return RC ( rcVFS, rcQuery, rcResolving, rcName, rcUnexpected );
-    }
+
     for ( i = 0; i < raw -> n; ++i ) {
         void * dest = how -> get ( self, i );
         if ( dest == NULL ) {
@@ -1181,15 +1227,13 @@ rc_t STypedInit ( STyped * self, const SOrdered * raw, const SConverters * how,
             break;
         }
         rc = f ( dest, & raw -> s [ i ] );
-        if ( rc != 0 ) {
+        if ( rc != 0 )
             break;
-        }
     }
-    if ( rc == 0 ) {
-        if ( version -> version >= VERSION_3_2 ) {
+
+    if ( rc == 0 )
+        if ( SVersionResponseHasMultipeUrls ( version ) )
             rc = STypedInitUrls ( self );
-        }
-    }
 
     if ( rc == 0 ) {
         self -> inited = true;
@@ -1380,29 +1424,25 @@ static rc_t EVPathInitMapping
     rc = VPathCheckFromNamesCGI ( vsrc, & src -> ticket,
         ( const struct VPath ** ) ( & self -> mapping ) );
     if ( rc == 0) {
-        if ( version -> version < VERSION_3_0 ) {
+        if ( SVersionBefore3_0 ( version ) ) {
             if ( src -> ticket . size != 0 ) {
-                if ( src -> accession . size != 0 ) {
+                if ( src -> accession . size != 0 )
                     rc = VPathMakeFmt ( & self -> mapping, "ncbi-acc:%S?tic=%S",
                         & src -> accession, & src -> ticket );
-                } else if ( src -> name . size == 0 ) {
+                else if ( src -> name . size == 0 )
                     return 0;
-                } else {
+                else
                     rc = VPathMakeFmt ( & self -> mapping,
                         "ncbi-file:%S?tic=%S", & src -> name, & src -> ticket );
-                }
             }
-            else if ( src -> accession . size != 0 ) {
+            else if ( src -> accession . size != 0 )
                 rc = VPathMakeFmt
                     ( & self -> mapping, "ncbi-acc:%S", & src -> accession );
-            }
-            else if ( src -> name . size == 0 ) {
+            else if ( src -> name . size == 0 )
                 return 0;
-            }
-            else {
+            else
                 rc = VPathMakeFmt
                     ( & self -> mapping, "ncbi-file:%S", & src -> name );
-            }
         }
         else {
             if ( src -> ticket . size != 0 ) {
@@ -1475,7 +1515,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
             bool ext = true;
             assert ( req );
             if ( req -> serviceType == eSTnames &&
-                 req -> version .version == VERSION_1_0 )
+                 SVersionNotExtendedVPaths ( & req -> version ) )
             {
                 ext = false;
             }
@@ -1670,17 +1710,16 @@ static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
     }
 */
 
-    if ( rc == 0 ) {
-        rc = VPathSetMake
-            ( & p -> set, & p -> path, version -> version < VERSION_3_1 );
-    }
+    if ( rc == 0 )
+        rc = VPathSetMake ( & p -> set, & p -> path,
+                            SVersionSingleUrl ( version ) );
     if ( rc == 0 ) {
         assert ( self );
         * self = p;
     }
-    else {
+    else
         SRowWhack ( p );
-    }
+
     return rc;
 }
 
@@ -1794,9 +1833,9 @@ rc_t SKVMake ( const SKV ** self, const char * k, const char * v )
 
 static
 rc_t SKVMakeObj ( const SKV ** self, const SObject * obj,
-    ver_t version )
+    const SVersion * version )
 {
-    bool old = version <= VERSION_3_0;
+    bool old = SVersionAccInRequest ( version );
     char * p = NULL;
     const char * k = "object";
     if ( old )
@@ -1998,34 +2037,30 @@ rc_t ECgiNamesRequestInit ( SRequest * request, SHelper * helper,
                 ( "  %s=%s\n", name, version ) );
         }
         free ( version );
-        if ( rc != 0 ) {
+        if ( rc != 0 )
             return rc;
-        }
     }
-    if ( request -> version . version < VERSION_3_0 ) {
-        if ( request -> request . object [ 0 ] . objectId == NULL ) {
+    if ( ! SVersionHasMultpileObjects ( & request -> version ) ) {
+        if ( request -> request . object [ 0 ] . objectId == NULL )
             return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-        }
         else {
             const char name [] = "acc";
             rc = SKVMake
                 ( & kv, name, request -> request . object [ 0 ] . objectId );
             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "  %s=%s\n",
                 name, request -> request . object [ 0 ] . objectId ) );
-            if ( rc == 0 ) {
+            if ( rc == 0 )
                 rc = VectorAppend ( & self -> params, NULL, kv );
-            }
         }
-        if ( rc != 0 ) {
+        if ( rc != 0 )
             return rc;
-        }
     }
     else {
         uint32_t i = 0;
         for ( i = 0; i < request -> request . objects; ++i ) {
             request -> request . object [ i ] . ordId = i;
             rc = SKVMakeObj ( & kv, & request -> request . object [ i ],
-                request -> version . version );
+                & request -> version );
             if ( rc == 0 ) {
                 DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
                     ( "  %.*s=%.*s\n", kv -> k . len, kv -> k . addr,
@@ -2033,9 +2068,8 @@ rc_t ECgiNamesRequestInit ( SRequest * request, SHelper * helper,
                 rc = VectorAppend ( & self -> params, NULL, kv );
             }
         }
-        if ( rc != 0 ) {
+        if ( rc != 0 )
             return rc;
-        }
     }
     if ( request -> tickets . size != 0 ) { /* optional */
         Tickets t = { & self -> params, 0 };
@@ -2106,7 +2140,7 @@ rc_t ECgiNamesRequestInit ( SRequest * request, SHelper * helper,
             return rc;
         }
     }
-    if ( request -> version . version < VERSION_3_0 &&
+    if ( SVersionHasRefseqCtx ( & request -> version ) &&
          request -> request . refseq_ctx )
     {
         const char name [] = "ctx";
@@ -2120,7 +2154,7 @@ rc_t ECgiNamesRequestInit ( SRequest * request, SHelper * helper,
             return rc;
         }
     }
-    if ( request -> version . version == VERSION_3_0 ) {
+    if ( SVersionTypInRequest ( & request -> version ) ) {
         if ( request -> request . object [ 0 ] . objectType !=
             eOT_undefined )
         {
@@ -2696,6 +2730,10 @@ rc_t KServiceProcessLine ( KService * self, const String * line, bool * end )
     assert ( self && line && end );
     if ( line -> addr [ 0 ] == '$' ) {
         * end = true;
+        if ( SVersionResponseHasTimestamp
+            ( & self -> resp . header . version ) )
+        {
+        }
     }
     else if ( self -> req . serviceType == eSTsearch ) {
         const char str [] = "$end";
@@ -2717,8 +2755,9 @@ rc_t KServiceProcessLine ( KService * self, const String * line, bool * end )
                 & self -> resp . header . version );
             uint32_t l = VectorLength ( & self -> resp . rows );
             if ( r2 == 0 ) {
-                if ( self -> resp . header. version. version >= VERSION_3_0 ||
-                     l == 0 )
+                if ( SVersionHasMultpileObjects
+                        ( & self -> resp . header. version )
+                    || l == 0 )
                 {
                     r2 = VectorAppend ( & self -> resp . rows, NULL, row );
                 }
@@ -2733,8 +2772,9 @@ rc_t KServiceProcessLine ( KService * self, const String * line, bool * end )
                 }
             }
             if ( r2 == 0 ) {
-                if ( self -> resp . header . version. version >= VERSION_3_0 ||
-                     KSrvResponseLength ( self -> resp . list ) == 0 )
+                if ( SVersionHasMultpileObjects
+                        ( & self -> resp . header . version)
+                     || KSrvResponseLength ( self -> resp . list ) == 0 )
                 {
                     r2 = KSrvResponseAppend ( self -> resp . list, row -> set );
                 }
