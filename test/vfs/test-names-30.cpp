@@ -127,6 +127,7 @@ public:
 static P Path  ( "ticket", " object-id ", 90 );
 static P Path1 ( " ticke1 ", " object-i1 ", 10 );
 
+#if 1
 TEST_CASE ( INCOMPLETE ) {
     const KSrvResponse * response = NULL;
 
@@ -432,6 +433,7 @@ TEST_CASE ( AND_ERROR ) {
     REQUIRE_RC ( KSrvResponseRelease ( response ) );
     response = NULL;
 }
+#endif
 
 TEST_CASE ( FULL_TEST_NO_HTTP ) {
     assert ( ! KDbgSetString ( "VFS" ) );
@@ -446,7 +448,8 @@ TEST_CASE ( FULL_TEST_NO_HTTP ) {
         NULL, NULL ) );
 
     const KSrvResponse * response = NULL;
-if(0)    REQUIRE_RC_FAIL ( KServiceTestNamesExecuteExt ( service, 0, NULL, NULL,
+if ( 1 )
+    REQUIRE_RC_FAIL ( KServiceTestNamesExecuteExt ( service, 0, NULL, NULL,
         & response, "" ) );
 
     REQUIRE_RC_FAIL ( KServiceAddId ( NULL, "SRR000001" ) );
@@ -492,9 +495,11 @@ if(0)    REQUIRE_RC_FAIL ( KServiceTestNamesExecuteExt ( service, 0, NULL, NULL,
 
     REQUIRE_RC ( KServiceRelease ( service ) );
 
-    /*
     REQUIRE_RC_FAIL ( KServiceTestNamesExecuteExt ( service, 0, NULL, NULL,
-        NULL, NULL ) );*/
+        NULL, NULL ) );
+}
+
+TEST_CASE ( TEST_KFG ) {
 }
 
 extern "C" {
