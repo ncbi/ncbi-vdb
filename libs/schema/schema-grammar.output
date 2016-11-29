@@ -1,0 +1,5538 @@
+Nonterminals useless in grammar
+
+   physical_stmts_1_0
+   physical_stmt_1_0
+
+
+Terminals unused in grammar
+
+   UNRECOGNIZED
+   INCREMENT
+   UNTERM_STRING
+   UNTERM_ESCAPED_STRING
+   KW_virtual
+
+
+Rules useless in grammar
+
+  245 physical_stmts_1_0: physical_stmt_1_0
+  246                   | physical_stmts_1_0 physical_stmt_1_0
+
+  247 physical_stmt_1_0: KW_read '=' cond_expr_1_0
+  248                  | KW_read INCREMENT cond_expr_1_0
+  249                  | KW_write '=' cond_expr_1_0
+  250                  | KW_write INCREMENT cond_expr_1_0
+  251                  | KW___untyped '=' untyped_tbl_expr_1_0
+
+
+Grammar
+
+    0 $accept: parse "end of source"
+
+    1 parse: "end of source"
+    2      | source "end of source"
+
+    3 source: schema_1_0
+    4       | version_1_0 schema_1_0
+    5       | version_2_x schema_2_x
+
+    6 version_1_0: KW_version VERS_1_0 ';'
+
+    7 version_2_x: KW_version FLOAT ';'
+
+    8 schema_2_x: '$'
+
+    9 schema_1_0: schema_1_0_decl_seq
+
+   10 schema_1_0_decl_seq: schema_1_0_decl
+   11                    | schema_1_0_decl_seq schema_1_0_decl
+
+   12 schema_1_0_decl: typedef_1_0_decl
+   13                | typeset_1_0_decl
+   14                | format_1_0_decl
+   15                | const_1_0_decl
+   16                | alias_1_0_decl
+   17                | extern_1_0_decl
+   18                | function_1_0_decl
+   19                | script_1_0_decl
+   20                | validate_1_0_decl
+   21                | physical_1_0_decl
+   22                | table_1_0_decl
+   23                | database_1_0_decl
+   24                | include_directive
+   25                | ';'
+
+   26 script_1_0_decl: KW_schema func_1_0_decl
+   27                | KW_schema KW_function func_1_0_decl
+
+   28 validate_1_0_decl: KW_validate function_1_0_decl
+
+   29 include_directive: KW_include STRING
+
+   30 typedef_1_0_decl: KW_typedef fqn_1_0 typedef_1_0_new_name_list ';'
+
+   31 typedef_1_0_new_name_list: typedef_1_0_new_name
+   32                          | typedef_1_0_new_name_list ',' typedef_1_0_new_name
+
+   33 typedef_1_0_new_name: fqn_1_0
+   34                     | fqn_1_0 dim_1_0
+
+   35 typeset_1_0_decl: KW_typeset typeset_1_0_new_name typeset_1_0_def ';'
+
+   36 typeset_1_0_new_name: fqn_1_0
+
+   37 typeset_1_0_def: '{' typespec_1_0_list '}'
+
+   38 typespec_1_0_list: typespec_1_0
+   39                  | typespec_1_0_list ',' typespec_1_0
+
+   40 typespec_1_0: typespec_1_0_name
+   41             | typespec_1_0_name dim_1_0
+
+   42 typespec_1_0_name: fqn_1_0
+
+   43 format_1_0_decl: KW_fmtdef format_1_0_new_name ';'
+   44                | KW_fmtdef format_1_0_name format_1_0_new_name ';'
+
+   45 format_1_0_new_name: fqn_1_0
+
+   46 format_1_0_name: fqn_1_0
+
+   47 const_1_0_decl: KW_const fqn_1_0 const_1_0_new_name '=' expression_1_0 ';'
+   48               | KW_const fqn_1_0 dim_1_0 const_1_0_new_name '=' expression_1_0 ';'
+
+   49 const_1_0_new_name: fqn_1_0
+
+   50 alias_1_0_decl: KW_alias fqn_1_0 alias_1_0_new_name ';'
+
+   51 alias_1_0_new_name: fqn_1_0
+
+   52 extern_1_0_decl: KW_extern ext_func_1_0_decl
+
+   53 ext_func_1_0_decl: function_1_0_decl
+
+   54 function_1_0_decl: KW_function func_1_0_decl ';'
+
+   55 func_1_0_decl: untyped_func_1_0_decl
+   56              | row_length_func_1_0_decl
+   57              | opt_func_1_0_schema_sig func_1_0_return_type func_1_0_new_name opt_func_1_0_fact_sig func_1_0_param_sig func_1_0_prologue
+
+   58 untyped_func_1_0_decl: KW___untyped func_1_0_new_name '(' ')'
+
+   59 row_length_func_1_0_decl: KW___row_length func_1_0_new_name '(' ')'
+
+   60 func_1_0_new_name: fqn_1_0
+   61                  | fqn_1_0 VERSION
+
+   62 opt_func_1_0_schema_sig: %empty
+   63                        | func_1_0_schema_sig
+
+   64 func_1_0_schema_sig: '<' func_1_0_schema_formals '>'
+
+   65 func_1_0_schema_formals: func_1_0_schema_formal
+   66                        | func_1_0_schema_formals ',' func_1_0_schema_formal
+
+   67 func_1_0_schema_formal: KW_type ident_1_0
+   68                       | type_expr_1_0 ident_1_0
+
+   69 func_1_0_return_type: KW_void
+   70                     | vardim_type_expr_1_0
+
+   71 opt_func_1_0_fact_sig: %empty
+   72                      | func_1_0_fact_sig
+
+   73 func_1_0_fact_sig: '<' func_1_0_param_signature '>'
+
+   74 func_1_0_param_sig: '(' func_1_0_param_signature ')'
+
+   75 func_1_0_param_signature: %empty
+   76                         | func_1_0_formal_params func_1_0_vararg_formals
+   77                         | '*' func_1_0_formal_params func_1_0_vararg_formals
+   78                         | func_1_0_formal_params '*' func_1_0_formal_params func_1_0_vararg_formals
+   79                         | func_1_0_formal_params ',' '*' func_1_0_formal_params func_1_0_vararg_formals
+
+   80 func_1_0_formal_params: formal_param_1_0
+   81                       | func_1_0_formal_params ',' formal_param_1_0
+
+   82 formal_param_1_0: opt_control_1_0 typespec_1_0 IDENTIFIER_1_0
+
+   83 opt_control_1_0: %empty
+   84                | KW_control
+
+   85 func_1_0_vararg_formals: %empty
+   86                        | ',' ELLIPSIS
+
+   87 func_1_0_prologue: %empty
+   88                  | '=' fqn_1_0
+   89                  | '{' func_1_0_body '}'
+
+   90 func_1_0_body: script_1_0_stmt_seq
+
+   91 script_1_0_stmt_seq: script_1_0_stmt
+   92                    | script_1_0_stmt_seq script_1_0_stmt
+
+   93 script_1_0_stmt: KW_return cond_expr_1_0 ';'
+   94                | production_1_0_stmt ';'
+
+   95 production_1_0_stmt: fqn_1_0 '/' fqn_1_0 IDENTIFIER_1_0 assign_expr_1_0
+   96                    | fqn_1_0 IDENTIFIER_1_0 assign_expr_1_0
+   97                    | KW_trigger IDENTIFIER_1_0 assign_expr_1_0
+
+   98 physical_1_0_decl: KW_physical phys_1_0_decl
+
+   99 phys_1_0_decl: opt_func_1_0_schema_sig phys_1_0_return_type phys_1_0_new_name opt_func_1_0_fact_sig phys_1_0_prologue ';'
+
+  100 phys_1_0_return_type: func_1_0_return_type
+  101                     | KW___no_header func_1_0_return_type
+
+  102 phys_1_0_new_name: fqn_1_0 VERSION
+
+  103 phys_1_0_prologue: '=' phys_1_0_stmt
+  104                  | '{' phys_1_0_body '}'
+
+  105 phys_1_0_body: phys_1_0_body_stmt
+  106              | phys_1_0_body phys_1_0_body_stmt
+
+  107 phys_1_0_body_stmt: ';'
+  108                   | KW_decode phys_1_0_stmt
+  109                   | KW_encode phys_1_0_stmt
+  110                   | KW___row_length '=' fqn_1_0 '(' ')'
+
+  111 phys_1_0_stmt: '{' func_1_0_body '}'
+
+  112 table_1_0_decl: KW_table new_tbl_1_0_name opt_tbl_1_0_parents tbl_1_0_body
+
+  113 new_tbl_1_0_name: fqn_1_0 VERSION
+
+  114 opt_tbl_1_0_parents: %empty
+  115                    | '=' tbl_1_0_parents
+
+  116 tbl_1_0_parents: tbl_1_0_parent
+  117                | tbl_1_0_parents ',' tbl_1_0_parent
+
+  118 tbl_1_0_parent: fqn_1_0
+  119               | fqn_1_0 VERSION
+
+  120 tbl_1_0_body: '{' tbl_1_0_stmt_seq '}'
+
+  121 tbl_1_0_stmt_seq: tbl_1_0_stmt
+  122                 | tbl_1_0_stmt_seq tbl_1_0_stmt
+
+  123 tbl_1_0_stmt: production_1_0_stmt ';'
+  124             | column_1_0_decl ';'
+  125             | col_1_0_modifier_seq column_1_0_decl ';'
+  126             | default_view_1_0_decl ';'
+  127             | KW_static physmbr_1_0_decl ';'
+  128             | KW_physical physmbr_1_0_decl ';'
+  129             | KW_static KW_physical physmbr_1_0_decl ';'
+  130             | KW___untyped untyped_tbl_expr_1_0 ';'
+
+  131 col_1_0_modifier_seq: col_1_0_modifier
+  132                     | col_1_0_modifier_seq col_1_0_modifier
+
+  133 col_1_0_modifier: KW_default
+  134                 | KW_extern
+  135                 | KW_readonly
+
+  136 column_1_0_decl: KW_column col_1_0_decl
+  137                | KW_column KW_default col_1_0_decl
+  138                | KW_column KW_limit '=' expression_1_0
+  139                | KW_column KW_default KW_limit '=' expression_1_0
+
+  140 col_1_0_decl: phys_encoding_expr_1_0 typespec_1_0 typed_column_decl_1_0
+
+  141 phys_encoding_expr_1_0: %empty
+  142                       | KW_physical '<' schema_parms_1_0 '>' ident_1_0 opt_version_1_0 opt_factory_parms_1_0
+  143                       | '<' schema_parms_1_0 '>' ident_1_0 opt_version_1_0 opt_factory_parms_1_0
+
+  144 typed_column_decl_1_0: ident_1_0 '{' column_body_1_0 '}'
+  145                      | ident_1_0 '=' expression_1_0
+  146                      | ident_1_0
+
+  147 column_body_1_0: column_stmt_1_0
+  148                | column_body_1_0 ';' column_stmt_1_0
+
+  149 column_stmt_1_0: KW_read '=' cond_expr_1_0
+  150                | KW_validate '=' cond_expr_1_0
+  151                | KW_limit '=' uint_expr_1_0
+  152                | ';'
+
+  153 default_view_1_0_decl: KW_default KW_view STRING
+
+  154 physmbr_1_0_decl: opt_KW_column phys_coldef_1_0 '.' ident_1_0 '=' cond_expr_1_0
+
+  155 opt_KW_column: %empty
+  156              | KW_column
+
+  157 phys_coldef_1_0: opt_col_schema_parms_1_0 fqn_1_0 opt_version_1_0 opt_factory_parms_1_0
+
+  158 opt_col_schema_parms_1_0: %empty
+  159                         | '<' col_schema_parms_1_0 '>'
+
+  160 col_schema_parms_1_0: col_schema_parm_1_0
+  161                     | col_schema_parms_1_0 ',' col_schema_parm_1_0
+
+  162 col_schema_parm_1_0: fqn_1_0 '=' col_schema_value_1_0
+  163                    | col_schema_value_1_0
+
+  164 col_schema_value_1_0: fqn_1_0
+  165                     | uint_expr_1_0
+
+  166 untyped_tbl_expr_1_0: '=' fqn_1_0 '(' ')'
+
+  167 expression_1_0: uncast_expr_1_0
+  168               | '(' type_expr_1_0 ')' expression_1_0
+
+  169 uncast_expr_1_0: fqn_1_0
+  170                | '.' IDENTIFIER_1_0
+  171                | '@'
+  172                | func_expr_1_0
+  173                | uint_expr_1_0
+  174                | float_expr_1_0
+  175                | string_expr_1_0
+  176                | const_vect_expr_1_0
+  177                | bool_expr_1_0
+  178                | negate_expr_1_0
+  179                | '+' expression_1_0
+
+  180 assign_expr_1_0: '=' cond_expr_1_0
+
+  181 func_expr_1_0: '<' schema_parms_1_0 '>' func_1_0_name opt_factory_parms_1_0 '(' opt_func_1_0_parms ')'
+  182              | func_1_0_name opt_factory_parms_1_0 '(' opt_func_1_0_parms ')'
+
+  183 schema_parms_1_0: schema_parm_1_0
+  184                 | schema_parms_1_0 ',' schema_parm_1_0
+
+  185 schema_parm_1_0: fqn_1_0
+  186                | fqn_1_0 '/' fqn_1_0
+  187                | uint_expr_1_0
+
+  188 func_1_0_name: fqn_1_0
+  189              | fqn_1_0 VERSION
+
+  190 opt_factory_parms_1_0: %empty
+  191                      | '<' factory_parms_1_0 '>'
+
+  192 factory_parms_1_0: factory_parm_1_0
+  193                  | factory_parms_1_0 ',' factory_parm_1_0
+
+  194 factory_parm_1_0: expression_1_0
+  195                 | IDENTIFIER_1_0 '=' expression_1_0
+
+  196 opt_func_1_0_parms: %empty
+  197                   | func_1_0_parms
+
+  198 func_1_0_parms: expression_1_0
+  199               | func_1_0_parms ',' expression_1_0
+
+  200 uint_expr_1_0: DECIMAL
+  201              | HEX
+  202              | OCTAL
+
+  203 float_expr_1_0: FLOAT
+  204               | EXP_FLOAT
+
+  205 string_expr_1_0: STRING
+  206                | ESCAPED_STRING
+
+  207 const_vect_expr_1_0: '[' opt_const_vect_exprlist_1_0 ']'
+
+  208 opt_const_vect_exprlist_1_0: %empty
+  209                            | const_vect_exprlist_1_0
+
+  210 const_vect_exprlist_1_0: expression_1_0
+  211                        | const_vect_exprlist_1_0 ',' expression_1_0
+
+  212 bool_expr_1_0: KW_true
+  213              | KW_false
+
+  214 negate_expr_1_0: '-' fqn_1_0
+  215                | '-' uint_expr_1_0
+  216                | '-' float_expr_1_0
+
+  217 type_expr_1_0: fqn_1_0
+  218              | fqn_1_0 '/' fqn_1_0
+
+  219 database_1_0_decl: KW_database fqn_1_0 VERSION opt_database_dad_1_0 database_body_1_0
+
+  220 opt_database_dad_1_0: %empty
+  221                     | '=' fqn_1_0 opt_version_1_0
+
+  222 database_body_1_0: '{' '}'
+  223                  | '{' database_members_1_0 '}'
+
+  224 database_members_1_0: database_member_1_0
+  225                     | database_members_1_0 database_member_1_0
+
+  226 database_member_1_0: opt_template_1_0 db_member_1_0
+  227                    | opt_template_1_0 table_member_1_0
+  228                    | ';'
+
+  229 opt_template_1_0: %empty
+  230                 | KW_template
+
+  231 db_member_1_0: KW_database fqn_1_0 opt_version_1_0 IDENTIFIER_1_0 ';'
+
+  232 table_member_1_0: KW_table fqn_1_0 opt_version_1_0 IDENTIFIER_1_0 ';'
+
+  233 opt_version_1_0: %empty
+  234                | VERSION
+
+  235 vardim_type_expr_1_0: '[' '*' ']'
+  236                     | type_expr_1_0
+
+  237 fqn_1_0: ident_1_0
+  238        | fqn_1_0 ':' ident_1_0
+  239        | fqn_1_0 ':' KW_read
+  240        | fqn_1_0 ':' KW_write
+
+  241 ident_1_0: IDENTIFIER_1_0
+
+  242 dim_1_0: '[' expression_1_0 ']'
+
+  243 cond_expr_1_0: expression_1_0
+  244              | cond_expr_1_0 '|' expression_1_0
+
+
+Terminals, with rules where they appear
+
+"end of source" (0) 0 1 2
+'$' (36) 8
+'(' (40) 58 59 74 110 166 168 181 182
+')' (41) 58 59 74 110 166 168 181 182
+'*' (42) 77 78 79 235
+'+' (43) 179
+',' (44) 32 39 66 79 81 86 117 161 184 193 199 211
+'-' (45) 214 215 216
+'.' (46) 154 170
+'/' (47) 95 186 218
+':' (58) 238 239 240
+';' (59) 6 7 25 30 35 43 44 47 48 50 54 93 94 99 107 123 124 125 126
+    127 128 129 130 148 152 228 231 232
+'<' (60) 64 73 142 143 159 181 191
+'=' (61) 47 48 88 103 110 115 138 139 145 149 150 151 154 162 166 180
+    195 221
+'>' (62) 64 73 142 143 159 181 191
+'@' (64) 171
+'[' (91) 207 235 242
+']' (93) 207 235 242
+'{' (123) 37 89 104 111 120 144 222 223
+'|' (124) 244
+'}' (125) 37 89 104 111 120 144 222 223
+error (256)
+UNRECOGNIZED (258)
+ELLIPSIS (259) 86
+INCREMENT (260)
+DECIMAL (261) 200
+OCTAL (262) 202
+HEX (263) 201
+FLOAT (264) 7 203
+EXP_FLOAT (265) 204
+STRING (266) 29 153 205
+ESCAPED_STRING (267) 206
+IDENTIFIER_1_0 (268) 82 95 96 97 170 195 231 232 241
+VERSION (269) 61 102 113 119 189 219 234
+UNTERM_STRING (270)
+UNTERM_ESCAPED_STRING (271)
+VERS_1_0 (272) 6
+KW___no_header (273) 101
+KW___row_length (274) 59 110
+KW___untyped (275) 58 130
+KW_alias (276) 50
+KW_column (277) 136 137 138 139 156
+KW_const (278) 47 48
+KW_control (279) 84
+KW_database (280) 219 231
+KW_decode (281) 108
+KW_default (282) 133 137 139 153
+KW_encode (283) 109
+KW_extern (284) 52 134
+KW_false (285) 213
+KW_fmtdef (286) 43 44
+KW_function (287) 27 54
+KW_include (288) 29
+KW_limit (289) 138 139 151
+KW_physical (290) 98 128 129 142
+KW_read (291) 149 239
+KW_readonly (292) 135
+KW_return (293) 93
+KW_schema (294) 26 27
+KW_static (295) 127 129
+KW_table (296) 112 232
+KW_template (297) 230
+KW_trigger (298) 97
+KW_true (299) 212
+KW_type (300) 67
+KW_typedef (301) 30
+KW_typeset (302) 35
+KW_validate (303) 28 150
+KW_version (304) 6 7
+KW_view (305) 153
+KW_virtual (306)
+KW_void (307) 69
+KW_write (308) 240
+
+
+Nonterminals, with rules where they appear
+
+$accept (74)
+    on left: 0
+parse (75)
+    on left: 1 2, on right: 0
+source (76)
+    on left: 3 4 5, on right: 2
+version_1_0 (77)
+    on left: 6, on right: 4
+version_2_x (78)
+    on left: 7, on right: 5
+schema_2_x (79)
+    on left: 8, on right: 5
+schema_1_0 (80)
+    on left: 9, on right: 3 4
+schema_1_0_decl_seq (81)
+    on left: 10 11, on right: 9 11
+schema_1_0_decl (82)
+    on left: 12 13 14 15 16 17 18 19 20 21 22 23 24 25, on right: 10
+    11
+script_1_0_decl (83)
+    on left: 26 27, on right: 19
+validate_1_0_decl (84)
+    on left: 28, on right: 20
+include_directive (85)
+    on left: 29, on right: 24
+typedef_1_0_decl (86)
+    on left: 30, on right: 12
+typedef_1_0_new_name_list (87)
+    on left: 31 32, on right: 30 32
+typedef_1_0_new_name (88)
+    on left: 33 34, on right: 31 32
+typeset_1_0_decl (89)
+    on left: 35, on right: 13
+typeset_1_0_new_name (90)
+    on left: 36, on right: 35
+typeset_1_0_def (91)
+    on left: 37, on right: 35
+typespec_1_0_list (92)
+    on left: 38 39, on right: 37 39
+typespec_1_0 (93)
+    on left: 40 41, on right: 38 39 82 140
+typespec_1_0_name (94)
+    on left: 42, on right: 40 41
+format_1_0_decl (95)
+    on left: 43 44, on right: 14
+format_1_0_new_name (96)
+    on left: 45, on right: 43 44
+format_1_0_name (97)
+    on left: 46, on right: 44
+const_1_0_decl (98)
+    on left: 47 48, on right: 15
+const_1_0_new_name (99)
+    on left: 49, on right: 47 48
+alias_1_0_decl (100)
+    on left: 50, on right: 16
+alias_1_0_new_name (101)
+    on left: 51, on right: 50
+extern_1_0_decl (102)
+    on left: 52, on right: 17
+ext_func_1_0_decl (103)
+    on left: 53, on right: 52
+function_1_0_decl (104)
+    on left: 54, on right: 18 28 53
+func_1_0_decl (105)
+    on left: 55 56 57, on right: 26 27 54
+untyped_func_1_0_decl (106)
+    on left: 58, on right: 55
+row_length_func_1_0_decl (107)
+    on left: 59, on right: 56
+func_1_0_new_name (108)
+    on left: 60 61, on right: 57 58 59
+opt_func_1_0_schema_sig (109)
+    on left: 62 63, on right: 57 99
+func_1_0_schema_sig (110)
+    on left: 64, on right: 63
+func_1_0_schema_formals (111)
+    on left: 65 66, on right: 64 66
+func_1_0_schema_formal (112)
+    on left: 67 68, on right: 65 66
+func_1_0_return_type (113)
+    on left: 69 70, on right: 57 100 101
+opt_func_1_0_fact_sig (114)
+    on left: 71 72, on right: 57 99
+func_1_0_fact_sig (115)
+    on left: 73, on right: 72
+func_1_0_param_sig (116)
+    on left: 74, on right: 57
+func_1_0_param_signature (117)
+    on left: 75 76 77 78 79, on right: 73 74
+func_1_0_formal_params (118)
+    on left: 80 81, on right: 76 77 78 79 81
+formal_param_1_0 (119)
+    on left: 82, on right: 80 81
+opt_control_1_0 (120)
+    on left: 83 84, on right: 82
+func_1_0_vararg_formals (121)
+    on left: 85 86, on right: 76 77 78 79
+func_1_0_prologue (122)
+    on left: 87 88 89, on right: 57
+func_1_0_body (123)
+    on left: 90, on right: 89 111
+script_1_0_stmt_seq (124)
+    on left: 91 92, on right: 90 92
+script_1_0_stmt (125)
+    on left: 93 94, on right: 91 92
+production_1_0_stmt (126)
+    on left: 95 96 97, on right: 94 123
+physical_1_0_decl (127)
+    on left: 98, on right: 21
+phys_1_0_decl (128)
+    on left: 99, on right: 98
+phys_1_0_return_type (129)
+    on left: 100 101, on right: 99
+phys_1_0_new_name (130)
+    on left: 102, on right: 99
+phys_1_0_prologue (131)
+    on left: 103 104, on right: 99
+phys_1_0_body (132)
+    on left: 105 106, on right: 104 106
+phys_1_0_body_stmt (133)
+    on left: 107 108 109 110, on right: 105 106
+phys_1_0_stmt (134)
+    on left: 111, on right: 103 108 109
+table_1_0_decl (135)
+    on left: 112, on right: 22
+new_tbl_1_0_name (136)
+    on left: 113, on right: 112
+opt_tbl_1_0_parents (137)
+    on left: 114 115, on right: 112
+tbl_1_0_parents (138)
+    on left: 116 117, on right: 115 117
+tbl_1_0_parent (139)
+    on left: 118 119, on right: 116 117
+tbl_1_0_body (140)
+    on left: 120, on right: 112
+tbl_1_0_stmt_seq (141)
+    on left: 121 122, on right: 120 122
+tbl_1_0_stmt (142)
+    on left: 123 124 125 126 127 128 129 130, on right: 121 122
+col_1_0_modifier_seq (143)
+    on left: 131 132, on right: 125 132
+col_1_0_modifier (144)
+    on left: 133 134 135, on right: 131 132
+column_1_0_decl (145)
+    on left: 136 137 138 139, on right: 124 125
+col_1_0_decl (146)
+    on left: 140, on right: 136 137
+phys_encoding_expr_1_0 (147)
+    on left: 141 142 143, on right: 140
+typed_column_decl_1_0 (148)
+    on left: 144 145 146, on right: 140
+column_body_1_0 (149)
+    on left: 147 148, on right: 144 148
+column_stmt_1_0 (150)
+    on left: 149 150 151 152, on right: 147 148
+default_view_1_0_decl (151)
+    on left: 153, on right: 126
+physmbr_1_0_decl (152)
+    on left: 154, on right: 127 128 129
+opt_KW_column (153)
+    on left: 155 156, on right: 154
+phys_coldef_1_0 (154)
+    on left: 157, on right: 154
+opt_col_schema_parms_1_0 (155)
+    on left: 158 159, on right: 157
+col_schema_parms_1_0 (156)
+    on left: 160 161, on right: 159 161
+col_schema_parm_1_0 (157)
+    on left: 162 163, on right: 160 161
+col_schema_value_1_0 (158)
+    on left: 164 165, on right: 162 163
+untyped_tbl_expr_1_0 (159)
+    on left: 166, on right: 130
+expression_1_0 (160)
+    on left: 167 168, on right: 47 48 138 139 145 168 179 194 195 198
+    199 210 211 242 243 244
+uncast_expr_1_0 (161)
+    on left: 169 170 171 172 173 174 175 176 177 178 179, on right:
+    167
+assign_expr_1_0 (162)
+    on left: 180, on right: 95 96 97
+func_expr_1_0 (163)
+    on left: 181 182, on right: 172
+schema_parms_1_0 (164)
+    on left: 183 184, on right: 142 143 181 184
+schema_parm_1_0 (165)
+    on left: 185 186 187, on right: 183 184
+func_1_0_name (166)
+    on left: 188 189, on right: 181 182
+opt_factory_parms_1_0 (167)
+    on left: 190 191, on right: 142 143 157 181 182
+factory_parms_1_0 (168)
+    on left: 192 193, on right: 191 193
+factory_parm_1_0 (169)
+    on left: 194 195, on right: 192 193
+opt_func_1_0_parms (170)
+    on left: 196 197, on right: 181 182
+func_1_0_parms (171)
+    on left: 198 199, on right: 197 199
+uint_expr_1_0 (172)
+    on left: 200 201 202, on right: 151 165 173 187 215
+float_expr_1_0 (173)
+    on left: 203 204, on right: 174 216
+string_expr_1_0 (174)
+    on left: 205 206, on right: 175
+const_vect_expr_1_0 (175)
+    on left: 207, on right: 176
+opt_const_vect_exprlist_1_0 (176)
+    on left: 208 209, on right: 207
+const_vect_exprlist_1_0 (177)
+    on left: 210 211, on right: 209 211
+bool_expr_1_0 (178)
+    on left: 212 213, on right: 177
+negate_expr_1_0 (179)
+    on left: 214 215 216, on right: 178
+type_expr_1_0 (180)
+    on left: 217 218, on right: 68 168 236
+database_1_0_decl (181)
+    on left: 219, on right: 23
+opt_database_dad_1_0 (182)
+    on left: 220 221, on right: 219
+database_body_1_0 (183)
+    on left: 222 223, on right: 219
+database_members_1_0 (184)
+    on left: 224 225, on right: 223 225
+database_member_1_0 (185)
+    on left: 226 227 228, on right: 224 225
+opt_template_1_0 (186)
+    on left: 229 230, on right: 226 227
+db_member_1_0 (187)
+    on left: 231, on right: 226
+table_member_1_0 (188)
+    on left: 232, on right: 227
+opt_version_1_0 (189)
+    on left: 233 234, on right: 142 143 157 221 231 232
+vardim_type_expr_1_0 (190)
+    on left: 235 236, on right: 70
+fqn_1_0 (191)
+    on left: 237 238 239 240, on right: 30 33 34 36 42 45 46 47 48
+    49 50 51 60 61 88 95 96 102 110 113 118 119 157 162 164 166 169
+    185 186 188 189 214 217 218 219 221 231 232 238 239 240
+ident_1_0 (192)
+    on left: 241, on right: 67 68 142 143 144 145 146 154 237 238
+dim_1_0 (193)
+    on left: 242, on right: 34 41 48
+cond_expr_1_0 (194)
+    on left: 243 244, on right: 93 149 150 154 180 244
+
+
+State 0
+
+    0 $accept: . parse "end of source"
+
+    "end of source"  shift, and go to state 1
+    KW_alias         shift, and go to state 2
+    KW_const         shift, and go to state 3
+    KW_database      shift, and go to state 4
+    KW_extern        shift, and go to state 5
+    KW_fmtdef        shift, and go to state 6
+    KW_function      shift, and go to state 7
+    KW_include       shift, and go to state 8
+    KW_physical      shift, and go to state 9
+    KW_schema        shift, and go to state 10
+    KW_table         shift, and go to state 11
+    KW_typedef       shift, and go to state 12
+    KW_typeset       shift, and go to state 13
+    KW_validate      shift, and go to state 14
+    KW_version       shift, and go to state 15
+    ';'              shift, and go to state 16
+
+    parse                go to state 17
+    source               go to state 18
+    version_1_0          go to state 19
+    version_2_x          go to state 20
+    schema_1_0           go to state 21
+    schema_1_0_decl_seq  go to state 22
+    schema_1_0_decl      go to state 23
+    script_1_0_decl      go to state 24
+    validate_1_0_decl    go to state 25
+    include_directive    go to state 26
+    typedef_1_0_decl     go to state 27
+    typeset_1_0_decl     go to state 28
+    format_1_0_decl      go to state 29
+    const_1_0_decl       go to state 30
+    alias_1_0_decl       go to state 31
+    extern_1_0_decl      go to state 32
+    function_1_0_decl    go to state 33
+    physical_1_0_decl    go to state 34
+    table_1_0_decl       go to state 35
+    database_1_0_decl    go to state 36
+
+
+State 1
+
+    1 parse: "end of source" .
+
+    $default  reduce using rule 1 (parse)
+
+
+State 2
+
+   50 alias_1_0_decl: KW_alias . fqn_1_0 alias_1_0_new_name ';'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    fqn_1_0    go to state 38
+    ident_1_0  go to state 39
+
+
+State 3
+
+   47 const_1_0_decl: KW_const . fqn_1_0 const_1_0_new_name '=' expression_1_0 ';'
+   48               | KW_const . fqn_1_0 dim_1_0 const_1_0_new_name '=' expression_1_0 ';'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    fqn_1_0    go to state 40
+    ident_1_0  go to state 39
+
+
+State 4
+
+  219 database_1_0_decl: KW_database . fqn_1_0 VERSION opt_database_dad_1_0 database_body_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    fqn_1_0    go to state 41
+    ident_1_0  go to state 39
+
+
+State 5
+
+   52 extern_1_0_decl: KW_extern . ext_func_1_0_decl
+
+    KW_function  shift, and go to state 7
+
+    ext_func_1_0_decl  go to state 42
+    function_1_0_decl  go to state 43
+
+
+State 6
+
+   43 format_1_0_decl: KW_fmtdef . format_1_0_new_name ';'
+   44                | KW_fmtdef . format_1_0_name format_1_0_new_name ';'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    format_1_0_new_name  go to state 44
+    format_1_0_name      go to state 45
+    fqn_1_0              go to state 46
+    ident_1_0            go to state 39
+
+
+State 7
+
+   54 function_1_0_decl: KW_function . func_1_0_decl ';'
+
+    KW___row_length  shift, and go to state 47
+    KW___untyped     shift, and go to state 48
+    '<'              shift, and go to state 49
+
+    $default  reduce using rule 62 (opt_func_1_0_schema_sig)
+
+    func_1_0_decl             go to state 50
+    untyped_func_1_0_decl     go to state 51
+    row_length_func_1_0_decl  go to state 52
+    opt_func_1_0_schema_sig   go to state 53
+    func_1_0_schema_sig       go to state 54
+
+
+State 8
+
+   29 include_directive: KW_include . STRING
+
+    STRING  shift, and go to state 55
+
+
+State 9
+
+   98 physical_1_0_decl: KW_physical . phys_1_0_decl
+
+    '<'  shift, and go to state 49
+
+    $default  reduce using rule 62 (opt_func_1_0_schema_sig)
+
+    opt_func_1_0_schema_sig  go to state 56
+    func_1_0_schema_sig      go to state 54
+    phys_1_0_decl            go to state 57
+
+
+State 10
+
+   26 script_1_0_decl: KW_schema . func_1_0_decl
+   27                | KW_schema . KW_function func_1_0_decl
+
+    KW___row_length  shift, and go to state 47
+    KW___untyped     shift, and go to state 48
+    KW_function      shift, and go to state 58
+    '<'              shift, and go to state 49
+
+    $default  reduce using rule 62 (opt_func_1_0_schema_sig)
+
+    func_1_0_decl             go to state 59
+    untyped_func_1_0_decl     go to state 51
+    row_length_func_1_0_decl  go to state 52
+    opt_func_1_0_schema_sig   go to state 53
+    func_1_0_schema_sig       go to state 54
+
+
+State 11
+
+  112 table_1_0_decl: KW_table . new_tbl_1_0_name opt_tbl_1_0_parents tbl_1_0_body
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    new_tbl_1_0_name  go to state 60
+    fqn_1_0           go to state 61
+    ident_1_0         go to state 39
+
+
+State 12
+
+   30 typedef_1_0_decl: KW_typedef . fqn_1_0 typedef_1_0_new_name_list ';'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    fqn_1_0    go to state 62
+    ident_1_0  go to state 39
+
+
+State 13
+
+   35 typeset_1_0_decl: KW_typeset . typeset_1_0_new_name typeset_1_0_def ';'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    typeset_1_0_new_name  go to state 63
+    fqn_1_0               go to state 64
+    ident_1_0             go to state 39
+
+
+State 14
+
+   28 validate_1_0_decl: KW_validate . function_1_0_decl
+
+    KW_function  shift, and go to state 7
+
+    function_1_0_decl  go to state 65
+
+
+State 15
+
+    6 version_1_0: KW_version . VERS_1_0 ';'
+    7 version_2_x: KW_version . FLOAT ';'
+
+    FLOAT     shift, and go to state 66
+    VERS_1_0  shift, and go to state 67
+
+
+State 16
+
+   25 schema_1_0_decl: ';' .
+
+    $default  reduce using rule 25 (schema_1_0_decl)
+
+
+State 17
+
+    0 $accept: parse . "end of source"
+
+    "end of source"  shift, and go to state 68
+
+
+State 18
+
+    2 parse: source . "end of source"
+
+    "end of source"  shift, and go to state 69
+
+
+State 19
+
+    4 source: version_1_0 . schema_1_0
+
+    KW_alias     shift, and go to state 2
+    KW_const     shift, and go to state 3
+    KW_database  shift, and go to state 4
+    KW_extern    shift, and go to state 5
+    KW_fmtdef    shift, and go to state 6
+    KW_function  shift, and go to state 7
+    KW_include   shift, and go to state 8
+    KW_physical  shift, and go to state 9
+    KW_schema    shift, and go to state 10
+    KW_table     shift, and go to state 11
+    KW_typedef   shift, and go to state 12
+    KW_typeset   shift, and go to state 13
+    KW_validate  shift, and go to state 14
+    ';'          shift, and go to state 16
+
+    schema_1_0           go to state 70
+    schema_1_0_decl_seq  go to state 22
+    schema_1_0_decl      go to state 23
+    script_1_0_decl      go to state 24
+    validate_1_0_decl    go to state 25
+    include_directive    go to state 26
+    typedef_1_0_decl     go to state 27
+    typeset_1_0_decl     go to state 28
+    format_1_0_decl      go to state 29
+    const_1_0_decl       go to state 30
+    alias_1_0_decl       go to state 31
+    extern_1_0_decl      go to state 32
+    function_1_0_decl    go to state 33
+    physical_1_0_decl    go to state 34
+    table_1_0_decl       go to state 35
+    database_1_0_decl    go to state 36
+
+
+State 20
+
+    5 source: version_2_x . schema_2_x
+
+    '$'  shift, and go to state 71
+
+    schema_2_x  go to state 72
+
+
+State 21
+
+    3 source: schema_1_0 .
+
+    $default  reduce using rule 3 (source)
+
+
+State 22
+
+    9 schema_1_0: schema_1_0_decl_seq .
+   11 schema_1_0_decl_seq: schema_1_0_decl_seq . schema_1_0_decl
+
+    KW_alias     shift, and go to state 2
+    KW_const     shift, and go to state 3
+    KW_database  shift, and go to state 4
+    KW_extern    shift, and go to state 5
+    KW_fmtdef    shift, and go to state 6
+    KW_function  shift, and go to state 7
+    KW_include   shift, and go to state 8
+    KW_physical  shift, and go to state 9
+    KW_schema    shift, and go to state 10
+    KW_table     shift, and go to state 11
+    KW_typedef   shift, and go to state 12
+    KW_typeset   shift, and go to state 13
+    KW_validate  shift, and go to state 14
+    ';'          shift, and go to state 16
+
+    $default  reduce using rule 9 (schema_1_0)
+
+    schema_1_0_decl    go to state 73
+    script_1_0_decl    go to state 24
+    validate_1_0_decl  go to state 25
+    include_directive  go to state 26
+    typedef_1_0_decl   go to state 27
+    typeset_1_0_decl   go to state 28
+    format_1_0_decl    go to state 29
+    const_1_0_decl     go to state 30
+    alias_1_0_decl     go to state 31
+    extern_1_0_decl    go to state 32
+    function_1_0_decl  go to state 33
+    physical_1_0_decl  go to state 34
+    table_1_0_decl     go to state 35
+    database_1_0_decl  go to state 36
+
+
+State 23
+
+   10 schema_1_0_decl_seq: schema_1_0_decl .
+
+    $default  reduce using rule 10 (schema_1_0_decl_seq)
+
+
+State 24
+
+   19 schema_1_0_decl: script_1_0_decl .
+
+    $default  reduce using rule 19 (schema_1_0_decl)
+
+
+State 25
+
+   20 schema_1_0_decl: validate_1_0_decl .
+
+    $default  reduce using rule 20 (schema_1_0_decl)
+
+
+State 26
+
+   24 schema_1_0_decl: include_directive .
+
+    $default  reduce using rule 24 (schema_1_0_decl)
+
+
+State 27
+
+   12 schema_1_0_decl: typedef_1_0_decl .
+
+    $default  reduce using rule 12 (schema_1_0_decl)
+
+
+State 28
+
+   13 schema_1_0_decl: typeset_1_0_decl .
+
+    $default  reduce using rule 13 (schema_1_0_decl)
+
+
+State 29
+
+   14 schema_1_0_decl: format_1_0_decl .
+
+    $default  reduce using rule 14 (schema_1_0_decl)
+
+
+State 30
+
+   15 schema_1_0_decl: const_1_0_decl .
+
+    $default  reduce using rule 15 (schema_1_0_decl)
+
+
+State 31
+
+   16 schema_1_0_decl: alias_1_0_decl .
+
+    $default  reduce using rule 16 (schema_1_0_decl)
+
+
+State 32
+
+   17 schema_1_0_decl: extern_1_0_decl .
+
+    $default  reduce using rule 17 (schema_1_0_decl)
+
+
+State 33
+
+   18 schema_1_0_decl: function_1_0_decl .
+
+    $default  reduce using rule 18 (schema_1_0_decl)
+
+
+State 34
+
+   21 schema_1_0_decl: physical_1_0_decl .
+
+    $default  reduce using rule 21 (schema_1_0_decl)
+
+
+State 35
+
+   22 schema_1_0_decl: table_1_0_decl .
+
+    $default  reduce using rule 22 (schema_1_0_decl)
+
+
+State 36
+
+   23 schema_1_0_decl: database_1_0_decl .
+
+    $default  reduce using rule 23 (schema_1_0_decl)
+
+
+State 37
+
+  241 ident_1_0: IDENTIFIER_1_0 .
+
+    $default  reduce using rule 241 (ident_1_0)
+
+
+State 38
+
+   50 alias_1_0_decl: KW_alias fqn_1_0 . alias_1_0_new_name ';'
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    IDENTIFIER_1_0  shift, and go to state 37
+    ':'             shift, and go to state 74
+
+    alias_1_0_new_name  go to state 75
+    fqn_1_0             go to state 76
+    ident_1_0           go to state 39
+
+
+State 39
+
+  237 fqn_1_0: ident_1_0 .
+
+    $default  reduce using rule 237 (fqn_1_0)
+
+
+State 40
+
+   47 const_1_0_decl: KW_const fqn_1_0 . const_1_0_new_name '=' expression_1_0 ';'
+   48               | KW_const fqn_1_0 . dim_1_0 const_1_0_new_name '=' expression_1_0 ';'
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    IDENTIFIER_1_0  shift, and go to state 37
+    '['             shift, and go to state 77
+    ':'             shift, and go to state 74
+
+    const_1_0_new_name  go to state 78
+    fqn_1_0             go to state 79
+    ident_1_0           go to state 39
+    dim_1_0             go to state 80
+
+
+State 41
+
+  219 database_1_0_decl: KW_database fqn_1_0 . VERSION opt_database_dad_1_0 database_body_1_0
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    VERSION  shift, and go to state 81
+    ':'      shift, and go to state 74
+
+
+State 42
+
+   52 extern_1_0_decl: KW_extern ext_func_1_0_decl .
+
+    $default  reduce using rule 52 (extern_1_0_decl)
+
+
+State 43
+
+   53 ext_func_1_0_decl: function_1_0_decl .
+
+    $default  reduce using rule 53 (ext_func_1_0_decl)
+
+
+State 44
+
+   43 format_1_0_decl: KW_fmtdef format_1_0_new_name . ';'
+
+    ';'  shift, and go to state 82
+
+
+State 45
+
+   44 format_1_0_decl: KW_fmtdef format_1_0_name . format_1_0_new_name ';'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    format_1_0_new_name  go to state 83
+    fqn_1_0              go to state 84
+    ident_1_0            go to state 39
+
+
+State 46
+
+   45 format_1_0_new_name: fqn_1_0 .
+   46 format_1_0_name: fqn_1_0 .
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    ':'  shift, and go to state 74
+
+    IDENTIFIER_1_0  reduce using rule 46 (format_1_0_name)
+    $default        reduce using rule 45 (format_1_0_new_name)
+
+
+State 47
+
+   59 row_length_func_1_0_decl: KW___row_length . func_1_0_new_name '(' ')'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    func_1_0_new_name  go to state 85
+    fqn_1_0            go to state 86
+    ident_1_0          go to state 39
+
+
+State 48
+
+   58 untyped_func_1_0_decl: KW___untyped . func_1_0_new_name '(' ')'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    func_1_0_new_name  go to state 87
+    fqn_1_0            go to state 86
+    ident_1_0          go to state 39
+
+
+State 49
+
+   64 func_1_0_schema_sig: '<' . func_1_0_schema_formals '>'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_type         shift, and go to state 88
+
+    func_1_0_schema_formals  go to state 89
+    func_1_0_schema_formal   go to state 90
+    type_expr_1_0            go to state 91
+    fqn_1_0                  go to state 92
+    ident_1_0                go to state 39
+
+
+State 50
+
+   54 function_1_0_decl: KW_function func_1_0_decl . ';'
+
+    ';'  shift, and go to state 93
+
+
+State 51
+
+   55 func_1_0_decl: untyped_func_1_0_decl .
+
+    $default  reduce using rule 55 (func_1_0_decl)
+
+
+State 52
+
+   56 func_1_0_decl: row_length_func_1_0_decl .
+
+    $default  reduce using rule 56 (func_1_0_decl)
+
+
+State 53
+
+   57 func_1_0_decl: opt_func_1_0_schema_sig . func_1_0_return_type func_1_0_new_name opt_func_1_0_fact_sig func_1_0_param_sig func_1_0_prologue
+
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_void         shift, and go to state 94
+    '['             shift, and go to state 95
+
+    func_1_0_return_type  go to state 96
+    type_expr_1_0         go to state 97
+    vardim_type_expr_1_0  go to state 98
+    fqn_1_0               go to state 92
+    ident_1_0             go to state 39
+
+
+State 54
+
+   63 opt_func_1_0_schema_sig: func_1_0_schema_sig .
+
+    $default  reduce using rule 63 (opt_func_1_0_schema_sig)
+
+
+State 55
+
+   29 include_directive: KW_include STRING .
+
+    $default  reduce using rule 29 (include_directive)
+
+
+State 56
+
+   99 phys_1_0_decl: opt_func_1_0_schema_sig . phys_1_0_return_type phys_1_0_new_name opt_func_1_0_fact_sig phys_1_0_prologue ';'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW___no_header  shift, and go to state 99
+    KW_void         shift, and go to state 94
+    '['             shift, and go to state 95
+
+    func_1_0_return_type  go to state 100
+    phys_1_0_return_type  go to state 101
+    type_expr_1_0         go to state 97
+    vardim_type_expr_1_0  go to state 98
+    fqn_1_0               go to state 92
+    ident_1_0             go to state 39
+
+
+State 57
+
+   98 physical_1_0_decl: KW_physical phys_1_0_decl .
+
+    $default  reduce using rule 98 (physical_1_0_decl)
+
+
+State 58
+
+   27 script_1_0_decl: KW_schema KW_function . func_1_0_decl
+
+    KW___row_length  shift, and go to state 47
+    KW___untyped     shift, and go to state 48
+    '<'              shift, and go to state 49
+
+    $default  reduce using rule 62 (opt_func_1_0_schema_sig)
+
+    func_1_0_decl             go to state 102
+    untyped_func_1_0_decl     go to state 51
+    row_length_func_1_0_decl  go to state 52
+    opt_func_1_0_schema_sig   go to state 53
+    func_1_0_schema_sig       go to state 54
+
+
+State 59
+
+   26 script_1_0_decl: KW_schema func_1_0_decl .
+
+    $default  reduce using rule 26 (script_1_0_decl)
+
+
+State 60
+
+  112 table_1_0_decl: KW_table new_tbl_1_0_name . opt_tbl_1_0_parents tbl_1_0_body
+
+    '='  shift, and go to state 103
+
+    $default  reduce using rule 114 (opt_tbl_1_0_parents)
+
+    opt_tbl_1_0_parents  go to state 104
+
+
+State 61
+
+  113 new_tbl_1_0_name: fqn_1_0 . VERSION
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    VERSION  shift, and go to state 105
+    ':'      shift, and go to state 74
+
+
+State 62
+
+   30 typedef_1_0_decl: KW_typedef fqn_1_0 . typedef_1_0_new_name_list ';'
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    IDENTIFIER_1_0  shift, and go to state 37
+    ':'             shift, and go to state 74
+
+    typedef_1_0_new_name_list  go to state 106
+    typedef_1_0_new_name       go to state 107
+    fqn_1_0                    go to state 108
+    ident_1_0                  go to state 39
+
+
+State 63
+
+   35 typeset_1_0_decl: KW_typeset typeset_1_0_new_name . typeset_1_0_def ';'
+
+    '{'  shift, and go to state 109
+
+    typeset_1_0_def  go to state 110
+
+
+State 64
+
+   36 typeset_1_0_new_name: fqn_1_0 .
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    ':'  shift, and go to state 74
+
+    $default  reduce using rule 36 (typeset_1_0_new_name)
+
+
+State 65
+
+   28 validate_1_0_decl: KW_validate function_1_0_decl .
+
+    $default  reduce using rule 28 (validate_1_0_decl)
+
+
+State 66
+
+    7 version_2_x: KW_version FLOAT . ';'
+
+    ';'  shift, and go to state 111
+
+
+State 67
+
+    6 version_1_0: KW_version VERS_1_0 . ';'
+
+    ';'  shift, and go to state 112
+
+
+State 68
+
+    0 $accept: parse "end of source" .
+
+    $default  accept
+
+
+State 69
+
+    2 parse: source "end of source" .
+
+    $default  reduce using rule 2 (parse)
+
+
+State 70
+
+    4 source: version_1_0 schema_1_0 .
+
+    $default  reduce using rule 4 (source)
+
+
+State 71
+
+    8 schema_2_x: '$' .
+
+    $default  reduce using rule 8 (schema_2_x)
+
+
+State 72
+
+    5 source: version_2_x schema_2_x .
+
+    $default  reduce using rule 5 (source)
+
+
+State 73
+
+   11 schema_1_0_decl_seq: schema_1_0_decl_seq schema_1_0_decl .
+
+    $default  reduce using rule 11 (schema_1_0_decl_seq)
+
+
+State 74
+
+  238 fqn_1_0: fqn_1_0 ':' . ident_1_0
+  239        | fqn_1_0 ':' . KW_read
+  240        | fqn_1_0 ':' . KW_write
+
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_read         shift, and go to state 113
+    KW_write        shift, and go to state 114
+
+    ident_1_0  go to state 115
+
+
+State 75
+
+   50 alias_1_0_decl: KW_alias fqn_1_0 alias_1_0_new_name . ';'
+
+    ';'  shift, and go to state 116
+
+
+State 76
+
+   51 alias_1_0_new_name: fqn_1_0 .
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    ':'  shift, and go to state 74
+
+    $default  reduce using rule 51 (alias_1_0_new_name)
+
+
+State 77
+
+  242 dim_1_0: '[' . expression_1_0 ']'
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 133
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+
+
+State 78
+
+   47 const_1_0_decl: KW_const fqn_1_0 const_1_0_new_name . '=' expression_1_0 ';'
+
+    '='  shift, and go to state 144
+
+
+State 79
+
+   49 const_1_0_new_name: fqn_1_0 .
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    ':'  shift, and go to state 74
+
+    $default  reduce using rule 49 (const_1_0_new_name)
+
+
+State 80
+
+   48 const_1_0_decl: KW_const fqn_1_0 dim_1_0 . const_1_0_new_name '=' expression_1_0 ';'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    const_1_0_new_name  go to state 145
+    fqn_1_0             go to state 79
+    ident_1_0           go to state 39
+
+
+State 81
+
+  219 database_1_0_decl: KW_database fqn_1_0 VERSION . opt_database_dad_1_0 database_body_1_0
+
+    '='  shift, and go to state 146
+
+    $default  reduce using rule 220 (opt_database_dad_1_0)
+
+    opt_database_dad_1_0  go to state 147
+
+
+State 82
+
+   43 format_1_0_decl: KW_fmtdef format_1_0_new_name ';' .
+
+    $default  reduce using rule 43 (format_1_0_decl)
+
+
+State 83
+
+   44 format_1_0_decl: KW_fmtdef format_1_0_name format_1_0_new_name . ';'
+
+    ';'  shift, and go to state 148
+
+
+State 84
+
+   45 format_1_0_new_name: fqn_1_0 .
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    ':'  shift, and go to state 74
+
+    $default  reduce using rule 45 (format_1_0_new_name)
+
+
+State 85
+
+   59 row_length_func_1_0_decl: KW___row_length func_1_0_new_name . '(' ')'
+
+    '('  shift, and go to state 149
+
+
+State 86
+
+   60 func_1_0_new_name: fqn_1_0 .
+   61                  | fqn_1_0 . VERSION
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    VERSION  shift, and go to state 150
+    ':'      shift, and go to state 74
+
+    $default  reduce using rule 60 (func_1_0_new_name)
+
+
+State 87
+
+   58 untyped_func_1_0_decl: KW___untyped func_1_0_new_name . '(' ')'
+
+    '('  shift, and go to state 151
+
+
+State 88
+
+   67 func_1_0_schema_formal: KW_type . ident_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    ident_1_0  go to state 152
+
+
+State 89
+
+   64 func_1_0_schema_sig: '<' func_1_0_schema_formals . '>'
+   66 func_1_0_schema_formals: func_1_0_schema_formals . ',' func_1_0_schema_formal
+
+    ','  shift, and go to state 153
+    '>'  shift, and go to state 154
+
+
+State 90
+
+   65 func_1_0_schema_formals: func_1_0_schema_formal .
+
+    $default  reduce using rule 65 (func_1_0_schema_formals)
+
+
+State 91
+
+   68 func_1_0_schema_formal: type_expr_1_0 . ident_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    ident_1_0  go to state 155
+
+
+State 92
+
+  217 type_expr_1_0: fqn_1_0 .
+  218              | fqn_1_0 . '/' fqn_1_0
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    '/'  shift, and go to state 156
+    ':'  shift, and go to state 74
+
+    $default  reduce using rule 217 (type_expr_1_0)
+
+
+State 93
+
+   54 function_1_0_decl: KW_function func_1_0_decl ';' .
+
+    $default  reduce using rule 54 (function_1_0_decl)
+
+
+State 94
+
+   69 func_1_0_return_type: KW_void .
+
+    $default  reduce using rule 69 (func_1_0_return_type)
+
+
+State 95
+
+  235 vardim_type_expr_1_0: '[' . '*' ']'
+
+    '*'  shift, and go to state 157
+
+
+State 96
+
+   57 func_1_0_decl: opt_func_1_0_schema_sig func_1_0_return_type . func_1_0_new_name opt_func_1_0_fact_sig func_1_0_param_sig func_1_0_prologue
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    func_1_0_new_name  go to state 158
+    fqn_1_0            go to state 86
+    ident_1_0          go to state 39
+
+
+State 97
+
+  236 vardim_type_expr_1_0: type_expr_1_0 .
+
+    $default  reduce using rule 236 (vardim_type_expr_1_0)
+
+
+State 98
+
+   70 func_1_0_return_type: vardim_type_expr_1_0 .
+
+    $default  reduce using rule 70 (func_1_0_return_type)
+
+
+State 99
+
+  101 phys_1_0_return_type: KW___no_header . func_1_0_return_type
+
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_void         shift, and go to state 94
+    '['             shift, and go to state 95
+
+    func_1_0_return_type  go to state 159
+    type_expr_1_0         go to state 97
+    vardim_type_expr_1_0  go to state 98
+    fqn_1_0               go to state 92
+    ident_1_0             go to state 39
+
+
+State 100
+
+  100 phys_1_0_return_type: func_1_0_return_type .
+
+    $default  reduce using rule 100 (phys_1_0_return_type)
+
+
+State 101
+
+   99 phys_1_0_decl: opt_func_1_0_schema_sig phys_1_0_return_type . phys_1_0_new_name opt_func_1_0_fact_sig phys_1_0_prologue ';'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    phys_1_0_new_name  go to state 160
+    fqn_1_0            go to state 161
+    ident_1_0          go to state 39
+
+
+State 102
+
+   27 script_1_0_decl: KW_schema KW_function func_1_0_decl .
+
+    $default  reduce using rule 27 (script_1_0_decl)
+
+
+State 103
+
+  115 opt_tbl_1_0_parents: '=' . tbl_1_0_parents
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    tbl_1_0_parents  go to state 162
+    tbl_1_0_parent   go to state 163
+    fqn_1_0          go to state 164
+    ident_1_0        go to state 39
+
+
+State 104
+
+  112 table_1_0_decl: KW_table new_tbl_1_0_name opt_tbl_1_0_parents . tbl_1_0_body
+
+    '{'  shift, and go to state 165
+
+    tbl_1_0_body  go to state 166
+
+
+State 105
+
+  113 new_tbl_1_0_name: fqn_1_0 VERSION .
+
+    $default  reduce using rule 113 (new_tbl_1_0_name)
+
+
+State 106
+
+   30 typedef_1_0_decl: KW_typedef fqn_1_0 typedef_1_0_new_name_list . ';'
+   32 typedef_1_0_new_name_list: typedef_1_0_new_name_list . ',' typedef_1_0_new_name
+
+    ';'  shift, and go to state 167
+    ','  shift, and go to state 168
+
+
+State 107
+
+   31 typedef_1_0_new_name_list: typedef_1_0_new_name .
+
+    $default  reduce using rule 31 (typedef_1_0_new_name_list)
+
+
+State 108
+
+   33 typedef_1_0_new_name: fqn_1_0 .
+   34                     | fqn_1_0 . dim_1_0
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    '['  shift, and go to state 77
+    ':'  shift, and go to state 74
+
+    $default  reduce using rule 33 (typedef_1_0_new_name)
+
+    dim_1_0  go to state 169
+
+
+State 109
+
+   37 typeset_1_0_def: '{' . typespec_1_0_list '}'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    typespec_1_0_list  go to state 170
+    typespec_1_0       go to state 171
+    typespec_1_0_name  go to state 172
+    fqn_1_0            go to state 173
+    ident_1_0          go to state 39
+
+
+State 110
+
+   35 typeset_1_0_decl: KW_typeset typeset_1_0_new_name typeset_1_0_def . ';'
+
+    ';'  shift, and go to state 174
+
+
+State 111
+
+    7 version_2_x: KW_version FLOAT ';' .
+
+    $default  reduce using rule 7 (version_2_x)
+
+
+State 112
+
+    6 version_1_0: KW_version VERS_1_0 ';' .
+
+    $default  reduce using rule 6 (version_1_0)
+
+
+State 113
+
+  239 fqn_1_0: fqn_1_0 ':' KW_read .
+
+    $default  reduce using rule 239 (fqn_1_0)
+
+
+State 114
+
+  240 fqn_1_0: fqn_1_0 ':' KW_write .
+
+    $default  reduce using rule 240 (fqn_1_0)
+
+
+State 115
+
+  238 fqn_1_0: fqn_1_0 ':' ident_1_0 .
+
+    $default  reduce using rule 238 (fqn_1_0)
+
+
+State 116
+
+   50 alias_1_0_decl: KW_alias fqn_1_0 alias_1_0_new_name ';' .
+
+    $default  reduce using rule 50 (alias_1_0_decl)
+
+
+State 117
+
+  200 uint_expr_1_0: DECIMAL .
+
+    $default  reduce using rule 200 (uint_expr_1_0)
+
+
+State 118
+
+  202 uint_expr_1_0: OCTAL .
+
+    $default  reduce using rule 202 (uint_expr_1_0)
+
+
+State 119
+
+  201 uint_expr_1_0: HEX .
+
+    $default  reduce using rule 201 (uint_expr_1_0)
+
+
+State 120
+
+  203 float_expr_1_0: FLOAT .
+
+    $default  reduce using rule 203 (float_expr_1_0)
+
+
+State 121
+
+  204 float_expr_1_0: EXP_FLOAT .
+
+    $default  reduce using rule 204 (float_expr_1_0)
+
+
+State 122
+
+  205 string_expr_1_0: STRING .
+
+    $default  reduce using rule 205 (string_expr_1_0)
+
+
+State 123
+
+  206 string_expr_1_0: ESCAPED_STRING .
+
+    $default  reduce using rule 206 (string_expr_1_0)
+
+
+State 124
+
+  213 bool_expr_1_0: KW_false .
+
+    $default  reduce using rule 213 (bool_expr_1_0)
+
+
+State 125
+
+  212 bool_expr_1_0: KW_true .
+
+    $default  reduce using rule 212 (bool_expr_1_0)
+
+
+State 126
+
+  168 expression_1_0: '(' . type_expr_1_0 ')' expression_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    type_expr_1_0  go to state 175
+    fqn_1_0        go to state 92
+    ident_1_0      go to state 39
+
+
+State 127
+
+  181 func_expr_1_0: '<' . schema_parms_1_0 '>' func_1_0_name opt_factory_parms_1_0 '(' opt_func_1_0_parms ')'
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    schema_parms_1_0  go to state 176
+    schema_parm_1_0   go to state 177
+    uint_expr_1_0     go to state 178
+    fqn_1_0           go to state 179
+    ident_1_0         go to state 39
+
+
+State 128
+
+  170 uncast_expr_1_0: '.' . IDENTIFIER_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 180
+
+
+State 129
+
+  171 uncast_expr_1_0: '@' .
+
+    $default  reduce using rule 171 (uncast_expr_1_0)
+
+
+State 130
+
+  179 uncast_expr_1_0: '+' . expression_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 181
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+
+
+State 131
+
+  207 const_vect_expr_1_0: '[' . opt_const_vect_exprlist_1_0 ']'
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    $default  reduce using rule 208 (opt_const_vect_exprlist_1_0)
+
+    expression_1_0               go to state 182
+    uncast_expr_1_0              go to state 134
+    func_expr_1_0                go to state 135
+    func_1_0_name                go to state 136
+    uint_expr_1_0                go to state 137
+    float_expr_1_0               go to state 138
+    string_expr_1_0              go to state 139
+    const_vect_expr_1_0          go to state 140
+    opt_const_vect_exprlist_1_0  go to state 183
+    const_vect_exprlist_1_0      go to state 184
+    bool_expr_1_0                go to state 141
+    negate_expr_1_0              go to state 142
+    fqn_1_0                      go to state 143
+    ident_1_0                    go to state 39
+
+
+State 132
+
+  214 negate_expr_1_0: '-' . fqn_1_0
+  215                | '-' . uint_expr_1_0
+  216                | '-' . float_expr_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    uint_expr_1_0   go to state 185
+    float_expr_1_0  go to state 186
+    fqn_1_0         go to state 187
+    ident_1_0       go to state 39
+
+
+State 133
+
+  242 dim_1_0: '[' expression_1_0 . ']'
+
+    ']'  shift, and go to state 188
+
+
+State 134
+
+  167 expression_1_0: uncast_expr_1_0 .
+
+    $default  reduce using rule 167 (expression_1_0)
+
+
+State 135
+
+  172 uncast_expr_1_0: func_expr_1_0 .
+
+    $default  reduce using rule 172 (uncast_expr_1_0)
+
+
+State 136
+
+  182 func_expr_1_0: func_1_0_name . opt_factory_parms_1_0 '(' opt_func_1_0_parms ')'
+
+    '<'  shift, and go to state 189
+
+    $default  reduce using rule 190 (opt_factory_parms_1_0)
+
+    opt_factory_parms_1_0  go to state 190
+
+
+State 137
+
+  173 uncast_expr_1_0: uint_expr_1_0 .
+
+    $default  reduce using rule 173 (uncast_expr_1_0)
+
+
+State 138
+
+  174 uncast_expr_1_0: float_expr_1_0 .
+
+    $default  reduce using rule 174 (uncast_expr_1_0)
+
+
+State 139
+
+  175 uncast_expr_1_0: string_expr_1_0 .
+
+    $default  reduce using rule 175 (uncast_expr_1_0)
+
+
+State 140
+
+  176 uncast_expr_1_0: const_vect_expr_1_0 .
+
+    $default  reduce using rule 176 (uncast_expr_1_0)
+
+
+State 141
+
+  177 uncast_expr_1_0: bool_expr_1_0 .
+
+    $default  reduce using rule 177 (uncast_expr_1_0)
+
+
+State 142
+
+  178 uncast_expr_1_0: negate_expr_1_0 .
+
+    $default  reduce using rule 178 (uncast_expr_1_0)
+
+
+State 143
+
+  169 uncast_expr_1_0: fqn_1_0 .
+  188 func_1_0_name: fqn_1_0 .
+  189              | fqn_1_0 . VERSION
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    VERSION  shift, and go to state 191
+    ':'      shift, and go to state 74
+
+    '('       reduce using rule 188 (func_1_0_name)
+    '<'       reduce using rule 188 (func_1_0_name)
+    $default  reduce using rule 169 (uncast_expr_1_0)
+
+
+State 144
+
+   47 const_1_0_decl: KW_const fqn_1_0 const_1_0_new_name '=' . expression_1_0 ';'
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 192
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+
+
+State 145
+
+   48 const_1_0_decl: KW_const fqn_1_0 dim_1_0 const_1_0_new_name . '=' expression_1_0 ';'
+
+    '='  shift, and go to state 193
+
+
+State 146
+
+  221 opt_database_dad_1_0: '=' . fqn_1_0 opt_version_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    fqn_1_0    go to state 194
+    ident_1_0  go to state 39
+
+
+State 147
+
+  219 database_1_0_decl: KW_database fqn_1_0 VERSION opt_database_dad_1_0 . database_body_1_0
+
+    '{'  shift, and go to state 195
+
+    database_body_1_0  go to state 196
+
+
+State 148
+
+   44 format_1_0_decl: KW_fmtdef format_1_0_name format_1_0_new_name ';' .
+
+    $default  reduce using rule 44 (format_1_0_decl)
+
+
+State 149
+
+   59 row_length_func_1_0_decl: KW___row_length func_1_0_new_name '(' . ')'
+
+    ')'  shift, and go to state 197
+
+
+State 150
+
+   61 func_1_0_new_name: fqn_1_0 VERSION .
+
+    $default  reduce using rule 61 (func_1_0_new_name)
+
+
+State 151
+
+   58 untyped_func_1_0_decl: KW___untyped func_1_0_new_name '(' . ')'
+
+    ')'  shift, and go to state 198
+
+
+State 152
+
+   67 func_1_0_schema_formal: KW_type ident_1_0 .
+
+    $default  reduce using rule 67 (func_1_0_schema_formal)
+
+
+State 153
+
+   66 func_1_0_schema_formals: func_1_0_schema_formals ',' . func_1_0_schema_formal
+
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_type         shift, and go to state 88
+
+    func_1_0_schema_formal  go to state 199
+    type_expr_1_0           go to state 91
+    fqn_1_0                 go to state 92
+    ident_1_0               go to state 39
+
+
+State 154
+
+   64 func_1_0_schema_sig: '<' func_1_0_schema_formals '>' .
+
+    $default  reduce using rule 64 (func_1_0_schema_sig)
+
+
+State 155
+
+   68 func_1_0_schema_formal: type_expr_1_0 ident_1_0 .
+
+    $default  reduce using rule 68 (func_1_0_schema_formal)
+
+
+State 156
+
+  218 type_expr_1_0: fqn_1_0 '/' . fqn_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    fqn_1_0    go to state 200
+    ident_1_0  go to state 39
+
+
+State 157
+
+  235 vardim_type_expr_1_0: '[' '*' . ']'
+
+    ']'  shift, and go to state 201
+
+
+State 158
+
+   57 func_1_0_decl: opt_func_1_0_schema_sig func_1_0_return_type func_1_0_new_name . opt_func_1_0_fact_sig func_1_0_param_sig func_1_0_prologue
+
+    '<'  shift, and go to state 202
+
+    $default  reduce using rule 71 (opt_func_1_0_fact_sig)
+
+    opt_func_1_0_fact_sig  go to state 203
+    func_1_0_fact_sig      go to state 204
+
+
+State 159
+
+  101 phys_1_0_return_type: KW___no_header func_1_0_return_type .
+
+    $default  reduce using rule 101 (phys_1_0_return_type)
+
+
+State 160
+
+   99 phys_1_0_decl: opt_func_1_0_schema_sig phys_1_0_return_type phys_1_0_new_name . opt_func_1_0_fact_sig phys_1_0_prologue ';'
+
+    '<'  shift, and go to state 202
+
+    $default  reduce using rule 71 (opt_func_1_0_fact_sig)
+
+    opt_func_1_0_fact_sig  go to state 205
+    func_1_0_fact_sig      go to state 204
+
+
+State 161
+
+  102 phys_1_0_new_name: fqn_1_0 . VERSION
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    VERSION  shift, and go to state 206
+    ':'      shift, and go to state 74
+
+
+State 162
+
+  115 opt_tbl_1_0_parents: '=' tbl_1_0_parents .
+  117 tbl_1_0_parents: tbl_1_0_parents . ',' tbl_1_0_parent
+
+    ','  shift, and go to state 207
+
+    $default  reduce using rule 115 (opt_tbl_1_0_parents)
+
+
+State 163
+
+  116 tbl_1_0_parents: tbl_1_0_parent .
+
+    $default  reduce using rule 116 (tbl_1_0_parents)
+
+
+State 164
+
+  118 tbl_1_0_parent: fqn_1_0 .
+  119               | fqn_1_0 . VERSION
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    VERSION  shift, and go to state 208
+    ':'      shift, and go to state 74
+
+    $default  reduce using rule 118 (tbl_1_0_parent)
+
+
+State 165
+
+  120 tbl_1_0_body: '{' . tbl_1_0_stmt_seq '}'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW___untyped    shift, and go to state 209
+    KW_column       shift, and go to state 210
+    KW_default      shift, and go to state 211
+    KW_extern       shift, and go to state 212
+    KW_physical     shift, and go to state 213
+    KW_readonly     shift, and go to state 214
+    KW_static       shift, and go to state 215
+    KW_trigger      shift, and go to state 216
+
+    production_1_0_stmt    go to state 217
+    tbl_1_0_stmt_seq       go to state 218
+    tbl_1_0_stmt           go to state 219
+    col_1_0_modifier_seq   go to state 220
+    col_1_0_modifier       go to state 221
+    column_1_0_decl        go to state 222
+    default_view_1_0_decl  go to state 223
+    fqn_1_0                go to state 224
+    ident_1_0              go to state 39
+
+
+State 166
+
+  112 table_1_0_decl: KW_table new_tbl_1_0_name opt_tbl_1_0_parents tbl_1_0_body .
+
+    $default  reduce using rule 112 (table_1_0_decl)
+
+
+State 167
+
+   30 typedef_1_0_decl: KW_typedef fqn_1_0 typedef_1_0_new_name_list ';' .
+
+    $default  reduce using rule 30 (typedef_1_0_decl)
+
+
+State 168
+
+   32 typedef_1_0_new_name_list: typedef_1_0_new_name_list ',' . typedef_1_0_new_name
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    typedef_1_0_new_name  go to state 225
+    fqn_1_0               go to state 108
+    ident_1_0             go to state 39
+
+
+State 169
+
+   34 typedef_1_0_new_name: fqn_1_0 dim_1_0 .
+
+    $default  reduce using rule 34 (typedef_1_0_new_name)
+
+
+State 170
+
+   37 typeset_1_0_def: '{' typespec_1_0_list . '}'
+   39 typespec_1_0_list: typespec_1_0_list . ',' typespec_1_0
+
+    ','  shift, and go to state 226
+    '}'  shift, and go to state 227
+
+
+State 171
+
+   38 typespec_1_0_list: typespec_1_0 .
+
+    $default  reduce using rule 38 (typespec_1_0_list)
+
+
+State 172
+
+   40 typespec_1_0: typespec_1_0_name .
+   41             | typespec_1_0_name . dim_1_0
+
+    '['  shift, and go to state 77
+
+    $default  reduce using rule 40 (typespec_1_0)
+
+    dim_1_0  go to state 228
+
+
+State 173
+
+   42 typespec_1_0_name: fqn_1_0 .
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    ':'  shift, and go to state 74
+
+    $default  reduce using rule 42 (typespec_1_0_name)
+
+
+State 174
+
+   35 typeset_1_0_decl: KW_typeset typeset_1_0_new_name typeset_1_0_def ';' .
+
+    $default  reduce using rule 35 (typeset_1_0_decl)
+
+
+State 175
+
+  168 expression_1_0: '(' type_expr_1_0 . ')' expression_1_0
+
+    ')'  shift, and go to state 229
+
+
+State 176
+
+  181 func_expr_1_0: '<' schema_parms_1_0 . '>' func_1_0_name opt_factory_parms_1_0 '(' opt_func_1_0_parms ')'
+  184 schema_parms_1_0: schema_parms_1_0 . ',' schema_parm_1_0
+
+    ','  shift, and go to state 230
+    '>'  shift, and go to state 231
+
+
+State 177
+
+  183 schema_parms_1_0: schema_parm_1_0 .
+
+    $default  reduce using rule 183 (schema_parms_1_0)
+
+
+State 178
+
+  187 schema_parm_1_0: uint_expr_1_0 .
+
+    $default  reduce using rule 187 (schema_parm_1_0)
+
+
+State 179
+
+  185 schema_parm_1_0: fqn_1_0 .
+  186                | fqn_1_0 . '/' fqn_1_0
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    '/'  shift, and go to state 232
+    ':'  shift, and go to state 74
+
+    $default  reduce using rule 185 (schema_parm_1_0)
+
+
+State 180
+
+  170 uncast_expr_1_0: '.' IDENTIFIER_1_0 .
+
+    $default  reduce using rule 170 (uncast_expr_1_0)
+
+
+State 181
+
+  179 uncast_expr_1_0: '+' expression_1_0 .
+
+    $default  reduce using rule 179 (uncast_expr_1_0)
+
+
+State 182
+
+  210 const_vect_exprlist_1_0: expression_1_0 .
+
+    $default  reduce using rule 210 (const_vect_exprlist_1_0)
+
+
+State 183
+
+  207 const_vect_expr_1_0: '[' opt_const_vect_exprlist_1_0 . ']'
+
+    ']'  shift, and go to state 233
+
+
+State 184
+
+  209 opt_const_vect_exprlist_1_0: const_vect_exprlist_1_0 .
+  211 const_vect_exprlist_1_0: const_vect_exprlist_1_0 . ',' expression_1_0
+
+    ','  shift, and go to state 234
+
+    $default  reduce using rule 209 (opt_const_vect_exprlist_1_0)
+
+
+State 185
+
+  215 negate_expr_1_0: '-' uint_expr_1_0 .
+
+    $default  reduce using rule 215 (negate_expr_1_0)
+
+
+State 186
+
+  216 negate_expr_1_0: '-' float_expr_1_0 .
+
+    $default  reduce using rule 216 (negate_expr_1_0)
+
+
+State 187
+
+  214 negate_expr_1_0: '-' fqn_1_0 .
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    ':'  shift, and go to state 74
+
+    $default  reduce using rule 214 (negate_expr_1_0)
+
+
+State 188
+
+  242 dim_1_0: '[' expression_1_0 ']' .
+
+    $default  reduce using rule 242 (dim_1_0)
+
+
+State 189
+
+  191 opt_factory_parms_1_0: '<' . factory_parms_1_0 '>'
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 235
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 236
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    factory_parms_1_0    go to state 237
+    factory_parm_1_0     go to state 238
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+
+
+State 190
+
+  182 func_expr_1_0: func_1_0_name opt_factory_parms_1_0 . '(' opt_func_1_0_parms ')'
+
+    '('  shift, and go to state 239
+
+
+State 191
+
+  189 func_1_0_name: fqn_1_0 VERSION .
+
+    $default  reduce using rule 189 (func_1_0_name)
+
+
+State 192
+
+   47 const_1_0_decl: KW_const fqn_1_0 const_1_0_new_name '=' expression_1_0 . ';'
+
+    ';'  shift, and go to state 240
+
+
+State 193
+
+   48 const_1_0_decl: KW_const fqn_1_0 dim_1_0 const_1_0_new_name '=' . expression_1_0 ';'
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 241
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+
+
+State 194
+
+  221 opt_database_dad_1_0: '=' fqn_1_0 . opt_version_1_0
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    VERSION  shift, and go to state 242
+    ':'      shift, and go to state 74
+
+    $default  reduce using rule 233 (opt_version_1_0)
+
+    opt_version_1_0  go to state 243
+
+
+State 195
+
+  222 database_body_1_0: '{' . '}'
+  223                  | '{' . database_members_1_0 '}'
+
+    KW_template  shift, and go to state 244
+    ';'          shift, and go to state 245
+    '}'          shift, and go to state 246
+
+    $default  reduce using rule 229 (opt_template_1_0)
+
+    database_members_1_0  go to state 247
+    database_member_1_0   go to state 248
+    opt_template_1_0      go to state 249
+
+
+State 196
+
+  219 database_1_0_decl: KW_database fqn_1_0 VERSION opt_database_dad_1_0 database_body_1_0 .
+
+    $default  reduce using rule 219 (database_1_0_decl)
+
+
+State 197
+
+   59 row_length_func_1_0_decl: KW___row_length func_1_0_new_name '(' ')' .
+
+    $default  reduce using rule 59 (row_length_func_1_0_decl)
+
+
+State 198
+
+   58 untyped_func_1_0_decl: KW___untyped func_1_0_new_name '(' ')' .
+
+    $default  reduce using rule 58 (untyped_func_1_0_decl)
+
+
+State 199
+
+   66 func_1_0_schema_formals: func_1_0_schema_formals ',' func_1_0_schema_formal .
+
+    $default  reduce using rule 66 (func_1_0_schema_formals)
+
+
+State 200
+
+  218 type_expr_1_0: fqn_1_0 '/' fqn_1_0 .
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    ':'  shift, and go to state 74
+
+    $default  reduce using rule 218 (type_expr_1_0)
+
+
+State 201
+
+  235 vardim_type_expr_1_0: '[' '*' ']' .
+
+    $default  reduce using rule 235 (vardim_type_expr_1_0)
+
+
+State 202
+
+   73 func_1_0_fact_sig: '<' . func_1_0_param_signature '>'
+
+    KW_control  shift, and go to state 250
+    '*'         shift, and go to state 251
+
+    IDENTIFIER_1_0  reduce using rule 83 (opt_control_1_0)
+    $default        reduce using rule 75 (func_1_0_param_signature)
+
+    func_1_0_param_signature  go to state 252
+    func_1_0_formal_params    go to state 253
+    formal_param_1_0          go to state 254
+    opt_control_1_0           go to state 255
+
+
+State 203
+
+   57 func_1_0_decl: opt_func_1_0_schema_sig func_1_0_return_type func_1_0_new_name opt_func_1_0_fact_sig . func_1_0_param_sig func_1_0_prologue
+
+    '('  shift, and go to state 256
+
+    func_1_0_param_sig  go to state 257
+
+
+State 204
+
+   72 opt_func_1_0_fact_sig: func_1_0_fact_sig .
+
+    $default  reduce using rule 72 (opt_func_1_0_fact_sig)
+
+
+State 205
+
+   99 phys_1_0_decl: opt_func_1_0_schema_sig phys_1_0_return_type phys_1_0_new_name opt_func_1_0_fact_sig . phys_1_0_prologue ';'
+
+    '{'  shift, and go to state 258
+    '='  shift, and go to state 259
+
+    phys_1_0_prologue  go to state 260
+
+
+State 206
+
+  102 phys_1_0_new_name: fqn_1_0 VERSION .
+
+    $default  reduce using rule 102 (phys_1_0_new_name)
+
+
+State 207
+
+  117 tbl_1_0_parents: tbl_1_0_parents ',' . tbl_1_0_parent
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    tbl_1_0_parent  go to state 261
+    fqn_1_0         go to state 164
+    ident_1_0       go to state 39
+
+
+State 208
+
+  119 tbl_1_0_parent: fqn_1_0 VERSION .
+
+    $default  reduce using rule 119 (tbl_1_0_parent)
+
+
+State 209
+
+  130 tbl_1_0_stmt: KW___untyped . untyped_tbl_expr_1_0 ';'
+
+    '='  shift, and go to state 262
+
+    untyped_tbl_expr_1_0  go to state 263
+
+
+State 210
+
+  136 column_1_0_decl: KW_column . col_1_0_decl
+  137                | KW_column . KW_default col_1_0_decl
+  138                | KW_column . KW_limit '=' expression_1_0
+  139                | KW_column . KW_default KW_limit '=' expression_1_0
+
+    KW_default   shift, and go to state 264
+    KW_limit     shift, and go to state 265
+    KW_physical  shift, and go to state 266
+    '<'          shift, and go to state 267
+
+    $default  reduce using rule 141 (phys_encoding_expr_1_0)
+
+    col_1_0_decl            go to state 268
+    phys_encoding_expr_1_0  go to state 269
+
+
+State 211
+
+  133 col_1_0_modifier: KW_default .
+  153 default_view_1_0_decl: KW_default . KW_view STRING
+
+    KW_view  shift, and go to state 270
+
+    $default  reduce using rule 133 (col_1_0_modifier)
+
+
+State 212
+
+  134 col_1_0_modifier: KW_extern .
+
+    $default  reduce using rule 134 (col_1_0_modifier)
+
+
+State 213
+
+  128 tbl_1_0_stmt: KW_physical . physmbr_1_0_decl ';'
+
+    KW_column  shift, and go to state 271
+
+    $default  reduce using rule 155 (opt_KW_column)
+
+    physmbr_1_0_decl  go to state 272
+    opt_KW_column     go to state 273
+
+
+State 214
+
+  135 col_1_0_modifier: KW_readonly .
+
+    $default  reduce using rule 135 (col_1_0_modifier)
+
+
+State 215
+
+  127 tbl_1_0_stmt: KW_static . physmbr_1_0_decl ';'
+  129             | KW_static . KW_physical physmbr_1_0_decl ';'
+
+    KW_column    shift, and go to state 271
+    KW_physical  shift, and go to state 274
+
+    $default  reduce using rule 155 (opt_KW_column)
+
+    physmbr_1_0_decl  go to state 275
+    opt_KW_column     go to state 273
+
+
+State 216
+
+   97 production_1_0_stmt: KW_trigger . IDENTIFIER_1_0 assign_expr_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 276
+
+
+State 217
+
+  123 tbl_1_0_stmt: production_1_0_stmt . ';'
+
+    ';'  shift, and go to state 277
+
+
+State 218
+
+  120 tbl_1_0_body: '{' tbl_1_0_stmt_seq . '}'
+  122 tbl_1_0_stmt_seq: tbl_1_0_stmt_seq . tbl_1_0_stmt
+
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW___untyped    shift, and go to state 209
+    KW_column       shift, and go to state 210
+    KW_default      shift, and go to state 211
+    KW_extern       shift, and go to state 212
+    KW_physical     shift, and go to state 213
+    KW_readonly     shift, and go to state 214
+    KW_static       shift, and go to state 215
+    KW_trigger      shift, and go to state 216
+    '}'             shift, and go to state 278
+
+    production_1_0_stmt    go to state 217
+    tbl_1_0_stmt           go to state 279
+    col_1_0_modifier_seq   go to state 220
+    col_1_0_modifier       go to state 221
+    column_1_0_decl        go to state 222
+    default_view_1_0_decl  go to state 223
+    fqn_1_0                go to state 224
+    ident_1_0              go to state 39
+
+
+State 219
+
+  121 tbl_1_0_stmt_seq: tbl_1_0_stmt .
+
+    $default  reduce using rule 121 (tbl_1_0_stmt_seq)
+
+
+State 220
+
+  125 tbl_1_0_stmt: col_1_0_modifier_seq . column_1_0_decl ';'
+  132 col_1_0_modifier_seq: col_1_0_modifier_seq . col_1_0_modifier
+
+    KW_column    shift, and go to state 210
+    KW_default   shift, and go to state 280
+    KW_extern    shift, and go to state 212
+    KW_readonly  shift, and go to state 214
+
+    col_1_0_modifier  go to state 281
+    column_1_0_decl   go to state 282
+
+
+State 221
+
+  131 col_1_0_modifier_seq: col_1_0_modifier .
+
+    $default  reduce using rule 131 (col_1_0_modifier_seq)
+
+
+State 222
+
+  124 tbl_1_0_stmt: column_1_0_decl . ';'
+
+    ';'  shift, and go to state 283
+
+
+State 223
+
+  126 tbl_1_0_stmt: default_view_1_0_decl . ';'
+
+    ';'  shift, and go to state 284
+
+
+State 224
+
+   95 production_1_0_stmt: fqn_1_0 . '/' fqn_1_0 IDENTIFIER_1_0 assign_expr_1_0
+   96                    | fqn_1_0 . IDENTIFIER_1_0 assign_expr_1_0
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    IDENTIFIER_1_0  shift, and go to state 285
+    '/'             shift, and go to state 286
+    ':'             shift, and go to state 74
+
+
+State 225
+
+   32 typedef_1_0_new_name_list: typedef_1_0_new_name_list ',' typedef_1_0_new_name .
+
+    $default  reduce using rule 32 (typedef_1_0_new_name_list)
+
+
+State 226
+
+   39 typespec_1_0_list: typespec_1_0_list ',' . typespec_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    typespec_1_0       go to state 287
+    typespec_1_0_name  go to state 172
+    fqn_1_0            go to state 173
+    ident_1_0          go to state 39
+
+
+State 227
+
+   37 typeset_1_0_def: '{' typespec_1_0_list '}' .
+
+    $default  reduce using rule 37 (typeset_1_0_def)
+
+
+State 228
+
+   41 typespec_1_0: typespec_1_0_name dim_1_0 .
+
+    $default  reduce using rule 41 (typespec_1_0)
+
+
+State 229
+
+  168 expression_1_0: '(' type_expr_1_0 ')' . expression_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 288
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+
+
+State 230
+
+  184 schema_parms_1_0: schema_parms_1_0 ',' . schema_parm_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    schema_parm_1_0  go to state 289
+    uint_expr_1_0    go to state 178
+    fqn_1_0          go to state 179
+    ident_1_0        go to state 39
+
+
+State 231
+
+  181 func_expr_1_0: '<' schema_parms_1_0 '>' . func_1_0_name opt_factory_parms_1_0 '(' opt_func_1_0_parms ')'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    func_1_0_name  go to state 290
+    fqn_1_0        go to state 291
+    ident_1_0      go to state 39
+
+
+State 232
+
+  186 schema_parm_1_0: fqn_1_0 '/' . fqn_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    fqn_1_0    go to state 292
+    ident_1_0  go to state 39
+
+
+State 233
+
+  207 const_vect_expr_1_0: '[' opt_const_vect_exprlist_1_0 ']' .
+
+    $default  reduce using rule 207 (const_vect_expr_1_0)
+
+
+State 234
+
+  211 const_vect_exprlist_1_0: const_vect_exprlist_1_0 ',' . expression_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 293
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+
+
+State 235
+
+  195 factory_parm_1_0: IDENTIFIER_1_0 . '=' expression_1_0
+  241 ident_1_0: IDENTIFIER_1_0 .
+
+    '='  shift, and go to state 294
+
+    $default  reduce using rule 241 (ident_1_0)
+
+
+State 236
+
+  194 factory_parm_1_0: expression_1_0 .
+
+    $default  reduce using rule 194 (factory_parm_1_0)
+
+
+State 237
+
+  191 opt_factory_parms_1_0: '<' factory_parms_1_0 . '>'
+  193 factory_parms_1_0: factory_parms_1_0 . ',' factory_parm_1_0
+
+    ','  shift, and go to state 295
+    '>'  shift, and go to state 296
+
+
+State 238
+
+  192 factory_parms_1_0: factory_parm_1_0 .
+
+    $default  reduce using rule 192 (factory_parms_1_0)
+
+
+State 239
+
+  182 func_expr_1_0: func_1_0_name opt_factory_parms_1_0 '(' . opt_func_1_0_parms ')'
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    $default  reduce using rule 196 (opt_func_1_0_parms)
+
+    expression_1_0       go to state 297
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    opt_func_1_0_parms   go to state 298
+    func_1_0_parms       go to state 299
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+
+
+State 240
+
+   47 const_1_0_decl: KW_const fqn_1_0 const_1_0_new_name '=' expression_1_0 ';' .
+
+    $default  reduce using rule 47 (const_1_0_decl)
+
+
+State 241
+
+   48 const_1_0_decl: KW_const fqn_1_0 dim_1_0 const_1_0_new_name '=' expression_1_0 . ';'
+
+    ';'  shift, and go to state 300
+
+
+State 242
+
+  234 opt_version_1_0: VERSION .
+
+    $default  reduce using rule 234 (opt_version_1_0)
+
+
+State 243
+
+  221 opt_database_dad_1_0: '=' fqn_1_0 opt_version_1_0 .
+
+    $default  reduce using rule 221 (opt_database_dad_1_0)
+
+
+State 244
+
+  230 opt_template_1_0: KW_template .
+
+    $default  reduce using rule 230 (opt_template_1_0)
+
+
+State 245
+
+  228 database_member_1_0: ';' .
+
+    $default  reduce using rule 228 (database_member_1_0)
+
+
+State 246
+
+  222 database_body_1_0: '{' '}' .
+
+    $default  reduce using rule 222 (database_body_1_0)
+
+
+State 247
+
+  223 database_body_1_0: '{' database_members_1_0 . '}'
+  225 database_members_1_0: database_members_1_0 . database_member_1_0
+
+    KW_template  shift, and go to state 244
+    ';'          shift, and go to state 245
+    '}'          shift, and go to state 301
+
+    $default  reduce using rule 229 (opt_template_1_0)
+
+    database_member_1_0  go to state 302
+    opt_template_1_0     go to state 249
+
+
+State 248
+
+  224 database_members_1_0: database_member_1_0 .
+
+    $default  reduce using rule 224 (database_members_1_0)
+
+
+State 249
+
+  226 database_member_1_0: opt_template_1_0 . db_member_1_0
+  227                    | opt_template_1_0 . table_member_1_0
+
+    KW_database  shift, and go to state 303
+    KW_table     shift, and go to state 304
+
+    db_member_1_0     go to state 305
+    table_member_1_0  go to state 306
+
+
+State 250
+
+   84 opt_control_1_0: KW_control .
+
+    $default  reduce using rule 84 (opt_control_1_0)
+
+
+State 251
+
+   77 func_1_0_param_signature: '*' . func_1_0_formal_params func_1_0_vararg_formals
+
+    KW_control  shift, and go to state 250
+
+    $default  reduce using rule 83 (opt_control_1_0)
+
+    func_1_0_formal_params  go to state 307
+    formal_param_1_0        go to state 254
+    opt_control_1_0         go to state 255
+
+
+State 252
+
+   73 func_1_0_fact_sig: '<' func_1_0_param_signature . '>'
+
+    '>'  shift, and go to state 308
+
+
+State 253
+
+   76 func_1_0_param_signature: func_1_0_formal_params . func_1_0_vararg_formals
+   78                         | func_1_0_formal_params . '*' func_1_0_formal_params func_1_0_vararg_formals
+   79                         | func_1_0_formal_params . ',' '*' func_1_0_formal_params func_1_0_vararg_formals
+   81 func_1_0_formal_params: func_1_0_formal_params . ',' formal_param_1_0
+
+    ','  shift, and go to state 309
+    '*'  shift, and go to state 310
+
+    $default  reduce using rule 85 (func_1_0_vararg_formals)
+
+    func_1_0_vararg_formals  go to state 311
+
+
+State 254
+
+   80 func_1_0_formal_params: formal_param_1_0 .
+
+    $default  reduce using rule 80 (func_1_0_formal_params)
+
+
+State 255
+
+   82 formal_param_1_0: opt_control_1_0 . typespec_1_0 IDENTIFIER_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    typespec_1_0       go to state 312
+    typespec_1_0_name  go to state 172
+    fqn_1_0            go to state 173
+    ident_1_0          go to state 39
+
+
+State 256
+
+   74 func_1_0_param_sig: '(' . func_1_0_param_signature ')'
+
+    KW_control  shift, and go to state 250
+    '*'         shift, and go to state 251
+
+    IDENTIFIER_1_0  reduce using rule 83 (opt_control_1_0)
+    $default        reduce using rule 75 (func_1_0_param_signature)
+
+    func_1_0_param_signature  go to state 313
+    func_1_0_formal_params    go to state 253
+    formal_param_1_0          go to state 254
+    opt_control_1_0           go to state 255
+
+
+State 257
+
+   57 func_1_0_decl: opt_func_1_0_schema_sig func_1_0_return_type func_1_0_new_name opt_func_1_0_fact_sig func_1_0_param_sig . func_1_0_prologue
+
+    '{'  shift, and go to state 314
+    '='  shift, and go to state 315
+
+    $default  reduce using rule 87 (func_1_0_prologue)
+
+    func_1_0_prologue  go to state 316
+
+
+State 258
+
+  104 phys_1_0_prologue: '{' . phys_1_0_body '}'
+
+    KW___row_length  shift, and go to state 317
+    KW_decode        shift, and go to state 318
+    KW_encode        shift, and go to state 319
+    ';'              shift, and go to state 320
+
+    phys_1_0_body       go to state 321
+    phys_1_0_body_stmt  go to state 322
+
+
+State 259
+
+  103 phys_1_0_prologue: '=' . phys_1_0_stmt
+
+    '{'  shift, and go to state 323
+
+    phys_1_0_stmt  go to state 324
+
+
+State 260
+
+   99 phys_1_0_decl: opt_func_1_0_schema_sig phys_1_0_return_type phys_1_0_new_name opt_func_1_0_fact_sig phys_1_0_prologue . ';'
+
+    ';'  shift, and go to state 325
+
+
+State 261
+
+  117 tbl_1_0_parents: tbl_1_0_parents ',' tbl_1_0_parent .
+
+    $default  reduce using rule 117 (tbl_1_0_parents)
+
+
+State 262
+
+  166 untyped_tbl_expr_1_0: '=' . fqn_1_0 '(' ')'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    fqn_1_0    go to state 326
+    ident_1_0  go to state 39
+
+
+State 263
+
+  130 tbl_1_0_stmt: KW___untyped untyped_tbl_expr_1_0 . ';'
+
+    ';'  shift, and go to state 327
+
+
+State 264
+
+  137 column_1_0_decl: KW_column KW_default . col_1_0_decl
+  139                | KW_column KW_default . KW_limit '=' expression_1_0
+
+    KW_limit     shift, and go to state 328
+    KW_physical  shift, and go to state 266
+    '<'          shift, and go to state 267
+
+    $default  reduce using rule 141 (phys_encoding_expr_1_0)
+
+    col_1_0_decl            go to state 329
+    phys_encoding_expr_1_0  go to state 269
+
+
+State 265
+
+  138 column_1_0_decl: KW_column KW_limit . '=' expression_1_0
+
+    '='  shift, and go to state 330
+
+
+State 266
+
+  142 phys_encoding_expr_1_0: KW_physical . '<' schema_parms_1_0 '>' ident_1_0 opt_version_1_0 opt_factory_parms_1_0
+
+    '<'  shift, and go to state 331
+
+
+State 267
+
+  143 phys_encoding_expr_1_0: '<' . schema_parms_1_0 '>' ident_1_0 opt_version_1_0 opt_factory_parms_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    schema_parms_1_0  go to state 332
+    schema_parm_1_0   go to state 177
+    uint_expr_1_0     go to state 178
+    fqn_1_0           go to state 179
+    ident_1_0         go to state 39
+
+
+State 268
+
+  136 column_1_0_decl: KW_column col_1_0_decl .
+
+    $default  reduce using rule 136 (column_1_0_decl)
+
+
+State 269
+
+  140 col_1_0_decl: phys_encoding_expr_1_0 . typespec_1_0 typed_column_decl_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    typespec_1_0       go to state 333
+    typespec_1_0_name  go to state 172
+    fqn_1_0            go to state 173
+    ident_1_0          go to state 39
+
+
+State 270
+
+  153 default_view_1_0_decl: KW_default KW_view . STRING
+
+    STRING  shift, and go to state 334
+
+
+State 271
+
+  156 opt_KW_column: KW_column .
+
+    $default  reduce using rule 156 (opt_KW_column)
+
+
+State 272
+
+  128 tbl_1_0_stmt: KW_physical physmbr_1_0_decl . ';'
+
+    ';'  shift, and go to state 335
+
+
+State 273
+
+  154 physmbr_1_0_decl: opt_KW_column . phys_coldef_1_0 '.' ident_1_0 '=' cond_expr_1_0
+
+    '<'  shift, and go to state 336
+
+    $default  reduce using rule 158 (opt_col_schema_parms_1_0)
+
+    phys_coldef_1_0           go to state 337
+    opt_col_schema_parms_1_0  go to state 338
+
+
+State 274
+
+  129 tbl_1_0_stmt: KW_static KW_physical . physmbr_1_0_decl ';'
+
+    KW_column  shift, and go to state 271
+
+    $default  reduce using rule 155 (opt_KW_column)
+
+    physmbr_1_0_decl  go to state 339
+    opt_KW_column     go to state 273
+
+
+State 275
+
+  127 tbl_1_0_stmt: KW_static physmbr_1_0_decl . ';'
+
+    ';'  shift, and go to state 340
+
+
+State 276
+
+   97 production_1_0_stmt: KW_trigger IDENTIFIER_1_0 . assign_expr_1_0
+
+    '='  shift, and go to state 341
+
+    assign_expr_1_0  go to state 342
+
+
+State 277
+
+  123 tbl_1_0_stmt: production_1_0_stmt ';' .
+
+    $default  reduce using rule 123 (tbl_1_0_stmt)
+
+
+State 278
+
+  120 tbl_1_0_body: '{' tbl_1_0_stmt_seq '}' .
+
+    $default  reduce using rule 120 (tbl_1_0_body)
+
+
+State 279
+
+  122 tbl_1_0_stmt_seq: tbl_1_0_stmt_seq tbl_1_0_stmt .
+
+    $default  reduce using rule 122 (tbl_1_0_stmt_seq)
+
+
+State 280
+
+  133 col_1_0_modifier: KW_default .
+
+    $default  reduce using rule 133 (col_1_0_modifier)
+
+
+State 281
+
+  132 col_1_0_modifier_seq: col_1_0_modifier_seq col_1_0_modifier .
+
+    $default  reduce using rule 132 (col_1_0_modifier_seq)
+
+
+State 282
+
+  125 tbl_1_0_stmt: col_1_0_modifier_seq column_1_0_decl . ';'
+
+    ';'  shift, and go to state 343
+
+
+State 283
+
+  124 tbl_1_0_stmt: column_1_0_decl ';' .
+
+    $default  reduce using rule 124 (tbl_1_0_stmt)
+
+
+State 284
+
+  126 tbl_1_0_stmt: default_view_1_0_decl ';' .
+
+    $default  reduce using rule 126 (tbl_1_0_stmt)
+
+
+State 285
+
+   96 production_1_0_stmt: fqn_1_0 IDENTIFIER_1_0 . assign_expr_1_0
+
+    '='  shift, and go to state 341
+
+    assign_expr_1_0  go to state 344
+
+
+State 286
+
+   95 production_1_0_stmt: fqn_1_0 '/' . fqn_1_0 IDENTIFIER_1_0 assign_expr_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    fqn_1_0    go to state 345
+    ident_1_0  go to state 39
+
+
+State 287
+
+   39 typespec_1_0_list: typespec_1_0_list ',' typespec_1_0 .
+
+    $default  reduce using rule 39 (typespec_1_0_list)
+
+
+State 288
+
+  168 expression_1_0: '(' type_expr_1_0 ')' expression_1_0 .
+
+    $default  reduce using rule 168 (expression_1_0)
+
+
+State 289
+
+  184 schema_parms_1_0: schema_parms_1_0 ',' schema_parm_1_0 .
+
+    $default  reduce using rule 184 (schema_parms_1_0)
+
+
+State 290
+
+  181 func_expr_1_0: '<' schema_parms_1_0 '>' func_1_0_name . opt_factory_parms_1_0 '(' opt_func_1_0_parms ')'
+
+    '<'  shift, and go to state 189
+
+    $default  reduce using rule 190 (opt_factory_parms_1_0)
+
+    opt_factory_parms_1_0  go to state 346
+
+
+State 291
+
+  188 func_1_0_name: fqn_1_0 .
+  189              | fqn_1_0 . VERSION
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    VERSION  shift, and go to state 191
+    ':'      shift, and go to state 74
+
+    $default  reduce using rule 188 (func_1_0_name)
+
+
+State 292
+
+  186 schema_parm_1_0: fqn_1_0 '/' fqn_1_0 .
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    ':'  shift, and go to state 74
+
+    $default  reduce using rule 186 (schema_parm_1_0)
+
+
+State 293
+
+  211 const_vect_exprlist_1_0: const_vect_exprlist_1_0 ',' expression_1_0 .
+
+    $default  reduce using rule 211 (const_vect_exprlist_1_0)
+
+
+State 294
+
+  195 factory_parm_1_0: IDENTIFIER_1_0 '=' . expression_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 347
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+
+
+State 295
+
+  193 factory_parms_1_0: factory_parms_1_0 ',' . factory_parm_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 235
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 236
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    factory_parm_1_0     go to state 348
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+
+
+State 296
+
+  191 opt_factory_parms_1_0: '<' factory_parms_1_0 '>' .
+
+    $default  reduce using rule 191 (opt_factory_parms_1_0)
+
+
+State 297
+
+  198 func_1_0_parms: expression_1_0 .
+
+    $default  reduce using rule 198 (func_1_0_parms)
+
+
+State 298
+
+  182 func_expr_1_0: func_1_0_name opt_factory_parms_1_0 '(' opt_func_1_0_parms . ')'
+
+    ')'  shift, and go to state 349
+
+
+State 299
+
+  197 opt_func_1_0_parms: func_1_0_parms .
+  199 func_1_0_parms: func_1_0_parms . ',' expression_1_0
+
+    ','  shift, and go to state 350
+
+    $default  reduce using rule 197 (opt_func_1_0_parms)
+
+
+State 300
+
+   48 const_1_0_decl: KW_const fqn_1_0 dim_1_0 const_1_0_new_name '=' expression_1_0 ';' .
+
+    $default  reduce using rule 48 (const_1_0_decl)
+
+
+State 301
+
+  223 database_body_1_0: '{' database_members_1_0 '}' .
+
+    $default  reduce using rule 223 (database_body_1_0)
+
+
+State 302
+
+  225 database_members_1_0: database_members_1_0 database_member_1_0 .
+
+    $default  reduce using rule 225 (database_members_1_0)
+
+
+State 303
+
+  231 db_member_1_0: KW_database . fqn_1_0 opt_version_1_0 IDENTIFIER_1_0 ';'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    fqn_1_0    go to state 351
+    ident_1_0  go to state 39
+
+
+State 304
+
+  232 table_member_1_0: KW_table . fqn_1_0 opt_version_1_0 IDENTIFIER_1_0 ';'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    fqn_1_0    go to state 352
+    ident_1_0  go to state 39
+
+
+State 305
+
+  226 database_member_1_0: opt_template_1_0 db_member_1_0 .
+
+    $default  reduce using rule 226 (database_member_1_0)
+
+
+State 306
+
+  227 database_member_1_0: opt_template_1_0 table_member_1_0 .
+
+    $default  reduce using rule 227 (database_member_1_0)
+
+
+State 307
+
+   77 func_1_0_param_signature: '*' func_1_0_formal_params . func_1_0_vararg_formals
+   81 func_1_0_formal_params: func_1_0_formal_params . ',' formal_param_1_0
+
+    ','  shift, and go to state 353
+
+    $default  reduce using rule 85 (func_1_0_vararg_formals)
+
+    func_1_0_vararg_formals  go to state 354
+
+
+State 308
+
+   73 func_1_0_fact_sig: '<' func_1_0_param_signature '>' .
+
+    $default  reduce using rule 73 (func_1_0_fact_sig)
+
+
+State 309
+
+   79 func_1_0_param_signature: func_1_0_formal_params ',' . '*' func_1_0_formal_params func_1_0_vararg_formals
+   81 func_1_0_formal_params: func_1_0_formal_params ',' . formal_param_1_0
+   86 func_1_0_vararg_formals: ',' . ELLIPSIS
+
+    ELLIPSIS    shift, and go to state 355
+    KW_control  shift, and go to state 250
+    '*'         shift, and go to state 356
+
+    $default  reduce using rule 83 (opt_control_1_0)
+
+    formal_param_1_0  go to state 357
+    opt_control_1_0   go to state 255
+
+
+State 310
+
+   78 func_1_0_param_signature: func_1_0_formal_params '*' . func_1_0_formal_params func_1_0_vararg_formals
+
+    KW_control  shift, and go to state 250
+
+    $default  reduce using rule 83 (opt_control_1_0)
+
+    func_1_0_formal_params  go to state 358
+    formal_param_1_0        go to state 254
+    opt_control_1_0         go to state 255
+
+
+State 311
+
+   76 func_1_0_param_signature: func_1_0_formal_params func_1_0_vararg_formals .
+
+    $default  reduce using rule 76 (func_1_0_param_signature)
+
+
+State 312
+
+   82 formal_param_1_0: opt_control_1_0 typespec_1_0 . IDENTIFIER_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 359
+
+
+State 313
+
+   74 func_1_0_param_sig: '(' func_1_0_param_signature . ')'
+
+    ')'  shift, and go to state 360
+
+
+State 314
+
+   89 func_1_0_prologue: '{' . func_1_0_body '}'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_return       shift, and go to state 361
+    KW_trigger      shift, and go to state 216
+
+    func_1_0_body        go to state 362
+    script_1_0_stmt_seq  go to state 363
+    script_1_0_stmt      go to state 364
+    production_1_0_stmt  go to state 365
+    fqn_1_0              go to state 224
+    ident_1_0            go to state 39
+
+
+State 315
+
+   88 func_1_0_prologue: '=' . fqn_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    fqn_1_0    go to state 366
+    ident_1_0  go to state 39
+
+
+State 316
+
+   57 func_1_0_decl: opt_func_1_0_schema_sig func_1_0_return_type func_1_0_new_name opt_func_1_0_fact_sig func_1_0_param_sig func_1_0_prologue .
+
+    $default  reduce using rule 57 (func_1_0_decl)
+
+
+State 317
+
+  110 phys_1_0_body_stmt: KW___row_length . '=' fqn_1_0 '(' ')'
+
+    '='  shift, and go to state 367
+
+
+State 318
+
+  108 phys_1_0_body_stmt: KW_decode . phys_1_0_stmt
+
+    '{'  shift, and go to state 323
+
+    phys_1_0_stmt  go to state 368
+
+
+State 319
+
+  109 phys_1_0_body_stmt: KW_encode . phys_1_0_stmt
+
+    '{'  shift, and go to state 323
+
+    phys_1_0_stmt  go to state 369
+
+
+State 320
+
+  107 phys_1_0_body_stmt: ';' .
+
+    $default  reduce using rule 107 (phys_1_0_body_stmt)
+
+
+State 321
+
+  104 phys_1_0_prologue: '{' phys_1_0_body . '}'
+  106 phys_1_0_body: phys_1_0_body . phys_1_0_body_stmt
+
+    KW___row_length  shift, and go to state 317
+    KW_decode        shift, and go to state 318
+    KW_encode        shift, and go to state 319
+    ';'              shift, and go to state 320
+    '}'              shift, and go to state 370
+
+    phys_1_0_body_stmt  go to state 371
+
+
+State 322
+
+  105 phys_1_0_body: phys_1_0_body_stmt .
+
+    $default  reduce using rule 105 (phys_1_0_body)
+
+
+State 323
+
+  111 phys_1_0_stmt: '{' . func_1_0_body '}'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_return       shift, and go to state 361
+    KW_trigger      shift, and go to state 216
+
+    func_1_0_body        go to state 372
+    script_1_0_stmt_seq  go to state 363
+    script_1_0_stmt      go to state 364
+    production_1_0_stmt  go to state 365
+    fqn_1_0              go to state 224
+    ident_1_0            go to state 39
+
+
+State 324
+
+  103 phys_1_0_prologue: '=' phys_1_0_stmt .
+
+    $default  reduce using rule 103 (phys_1_0_prologue)
+
+
+State 325
+
+   99 phys_1_0_decl: opt_func_1_0_schema_sig phys_1_0_return_type phys_1_0_new_name opt_func_1_0_fact_sig phys_1_0_prologue ';' .
+
+    $default  reduce using rule 99 (phys_1_0_decl)
+
+
+State 326
+
+  166 untyped_tbl_expr_1_0: '=' fqn_1_0 . '(' ')'
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    '('  shift, and go to state 373
+    ':'  shift, and go to state 74
+
+
+State 327
+
+  130 tbl_1_0_stmt: KW___untyped untyped_tbl_expr_1_0 ';' .
+
+    $default  reduce using rule 130 (tbl_1_0_stmt)
+
+
+State 328
+
+  139 column_1_0_decl: KW_column KW_default KW_limit . '=' expression_1_0
+
+    '='  shift, and go to state 374
+
+
+State 329
+
+  137 column_1_0_decl: KW_column KW_default col_1_0_decl .
+
+    $default  reduce using rule 137 (column_1_0_decl)
+
+
+State 330
+
+  138 column_1_0_decl: KW_column KW_limit '=' . expression_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 375
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+
+
+State 331
+
+  142 phys_encoding_expr_1_0: KW_physical '<' . schema_parms_1_0 '>' ident_1_0 opt_version_1_0 opt_factory_parms_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    schema_parms_1_0  go to state 376
+    schema_parm_1_0   go to state 177
+    uint_expr_1_0     go to state 178
+    fqn_1_0           go to state 179
+    ident_1_0         go to state 39
+
+
+State 332
+
+  143 phys_encoding_expr_1_0: '<' schema_parms_1_0 . '>' ident_1_0 opt_version_1_0 opt_factory_parms_1_0
+  184 schema_parms_1_0: schema_parms_1_0 . ',' schema_parm_1_0
+
+    ','  shift, and go to state 230
+    '>'  shift, and go to state 377
+
+
+State 333
+
+  140 col_1_0_decl: phys_encoding_expr_1_0 typespec_1_0 . typed_column_decl_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    typed_column_decl_1_0  go to state 378
+    ident_1_0              go to state 379
+
+
+State 334
+
+  153 default_view_1_0_decl: KW_default KW_view STRING .
+
+    $default  reduce using rule 153 (default_view_1_0_decl)
+
+
+State 335
+
+  128 tbl_1_0_stmt: KW_physical physmbr_1_0_decl ';' .
+
+    $default  reduce using rule 128 (tbl_1_0_stmt)
+
+
+State 336
+
+  159 opt_col_schema_parms_1_0: '<' . col_schema_parms_1_0 '>'
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    col_schema_parms_1_0  go to state 380
+    col_schema_parm_1_0   go to state 381
+    col_schema_value_1_0  go to state 382
+    uint_expr_1_0         go to state 383
+    fqn_1_0               go to state 384
+    ident_1_0             go to state 39
+
+
+State 337
+
+  154 physmbr_1_0_decl: opt_KW_column phys_coldef_1_0 . '.' ident_1_0 '=' cond_expr_1_0
+
+    '.'  shift, and go to state 385
+
+
+State 338
+
+  157 phys_coldef_1_0: opt_col_schema_parms_1_0 . fqn_1_0 opt_version_1_0 opt_factory_parms_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    fqn_1_0    go to state 386
+    ident_1_0  go to state 39
+
+
+State 339
+
+  129 tbl_1_0_stmt: KW_static KW_physical physmbr_1_0_decl . ';'
+
+    ';'  shift, and go to state 387
+
+
+State 340
+
+  127 tbl_1_0_stmt: KW_static physmbr_1_0_decl ';' .
+
+    $default  reduce using rule 127 (tbl_1_0_stmt)
+
+
+State 341
+
+  180 assign_expr_1_0: '=' . cond_expr_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 388
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+    cond_expr_1_0        go to state 389
+
+
+State 342
+
+   97 production_1_0_stmt: KW_trigger IDENTIFIER_1_0 assign_expr_1_0 .
+
+    $default  reduce using rule 97 (production_1_0_stmt)
+
+
+State 343
+
+  125 tbl_1_0_stmt: col_1_0_modifier_seq column_1_0_decl ';' .
+
+    $default  reduce using rule 125 (tbl_1_0_stmt)
+
+
+State 344
+
+   96 production_1_0_stmt: fqn_1_0 IDENTIFIER_1_0 assign_expr_1_0 .
+
+    $default  reduce using rule 96 (production_1_0_stmt)
+
+
+State 345
+
+   95 production_1_0_stmt: fqn_1_0 '/' fqn_1_0 . IDENTIFIER_1_0 assign_expr_1_0
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    IDENTIFIER_1_0  shift, and go to state 390
+    ':'             shift, and go to state 74
+
+
+State 346
+
+  181 func_expr_1_0: '<' schema_parms_1_0 '>' func_1_0_name opt_factory_parms_1_0 . '(' opt_func_1_0_parms ')'
+
+    '('  shift, and go to state 391
+
+
+State 347
+
+  195 factory_parm_1_0: IDENTIFIER_1_0 '=' expression_1_0 .
+
+    $default  reduce using rule 195 (factory_parm_1_0)
+
+
+State 348
+
+  193 factory_parms_1_0: factory_parms_1_0 ',' factory_parm_1_0 .
+
+    $default  reduce using rule 193 (factory_parms_1_0)
+
+
+State 349
+
+  182 func_expr_1_0: func_1_0_name opt_factory_parms_1_0 '(' opt_func_1_0_parms ')' .
+
+    $default  reduce using rule 182 (func_expr_1_0)
+
+
+State 350
+
+  199 func_1_0_parms: func_1_0_parms ',' . expression_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 392
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+
+
+State 351
+
+  231 db_member_1_0: KW_database fqn_1_0 . opt_version_1_0 IDENTIFIER_1_0 ';'
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    VERSION  shift, and go to state 242
+    ':'      shift, and go to state 74
+
+    $default  reduce using rule 233 (opt_version_1_0)
+
+    opt_version_1_0  go to state 393
+
+
+State 352
+
+  232 table_member_1_0: KW_table fqn_1_0 . opt_version_1_0 IDENTIFIER_1_0 ';'
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    VERSION  shift, and go to state 242
+    ':'      shift, and go to state 74
+
+    $default  reduce using rule 233 (opt_version_1_0)
+
+    opt_version_1_0  go to state 394
+
+
+State 353
+
+   81 func_1_0_formal_params: func_1_0_formal_params ',' . formal_param_1_0
+   86 func_1_0_vararg_formals: ',' . ELLIPSIS
+
+    ELLIPSIS    shift, and go to state 355
+    KW_control  shift, and go to state 250
+
+    $default  reduce using rule 83 (opt_control_1_0)
+
+    formal_param_1_0  go to state 357
+    opt_control_1_0   go to state 255
+
+
+State 354
+
+   77 func_1_0_param_signature: '*' func_1_0_formal_params func_1_0_vararg_formals .
+
+    $default  reduce using rule 77 (func_1_0_param_signature)
+
+
+State 355
+
+   86 func_1_0_vararg_formals: ',' ELLIPSIS .
+
+    $default  reduce using rule 86 (func_1_0_vararg_formals)
+
+
+State 356
+
+   79 func_1_0_param_signature: func_1_0_formal_params ',' '*' . func_1_0_formal_params func_1_0_vararg_formals
+
+    KW_control  shift, and go to state 250
+
+    $default  reduce using rule 83 (opt_control_1_0)
+
+    func_1_0_formal_params  go to state 395
+    formal_param_1_0        go to state 254
+    opt_control_1_0         go to state 255
+
+
+State 357
+
+   81 func_1_0_formal_params: func_1_0_formal_params ',' formal_param_1_0 .
+
+    $default  reduce using rule 81 (func_1_0_formal_params)
+
+
+State 358
+
+   78 func_1_0_param_signature: func_1_0_formal_params '*' func_1_0_formal_params . func_1_0_vararg_formals
+   81 func_1_0_formal_params: func_1_0_formal_params . ',' formal_param_1_0
+
+    ','  shift, and go to state 353
+
+    $default  reduce using rule 85 (func_1_0_vararg_formals)
+
+    func_1_0_vararg_formals  go to state 396
+
+
+State 359
+
+   82 formal_param_1_0: opt_control_1_0 typespec_1_0 IDENTIFIER_1_0 .
+
+    $default  reduce using rule 82 (formal_param_1_0)
+
+
+State 360
+
+   74 func_1_0_param_sig: '(' func_1_0_param_signature ')' .
+
+    $default  reduce using rule 74 (func_1_0_param_sig)
+
+
+State 361
+
+   93 script_1_0_stmt: KW_return . cond_expr_1_0 ';'
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 388
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+    cond_expr_1_0        go to state 397
+
+
+State 362
+
+   89 func_1_0_prologue: '{' func_1_0_body . '}'
+
+    '}'  shift, and go to state 398
+
+
+State 363
+
+   90 func_1_0_body: script_1_0_stmt_seq .
+   92 script_1_0_stmt_seq: script_1_0_stmt_seq . script_1_0_stmt
+
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_return       shift, and go to state 361
+    KW_trigger      shift, and go to state 216
+
+    $default  reduce using rule 90 (func_1_0_body)
+
+    script_1_0_stmt      go to state 399
+    production_1_0_stmt  go to state 365
+    fqn_1_0              go to state 224
+    ident_1_0            go to state 39
+
+
+State 364
+
+   91 script_1_0_stmt_seq: script_1_0_stmt .
+
+    $default  reduce using rule 91 (script_1_0_stmt_seq)
+
+
+State 365
+
+   94 script_1_0_stmt: production_1_0_stmt . ';'
+
+    ';'  shift, and go to state 400
+
+
+State 366
+
+   88 func_1_0_prologue: '=' fqn_1_0 .
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    ':'  shift, and go to state 74
+
+    $default  reduce using rule 88 (func_1_0_prologue)
+
+
+State 367
+
+  110 phys_1_0_body_stmt: KW___row_length '=' . fqn_1_0 '(' ')'
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    fqn_1_0    go to state 401
+    ident_1_0  go to state 39
+
+
+State 368
+
+  108 phys_1_0_body_stmt: KW_decode phys_1_0_stmt .
+
+    $default  reduce using rule 108 (phys_1_0_body_stmt)
+
+
+State 369
+
+  109 phys_1_0_body_stmt: KW_encode phys_1_0_stmt .
+
+    $default  reduce using rule 109 (phys_1_0_body_stmt)
+
+
+State 370
+
+  104 phys_1_0_prologue: '{' phys_1_0_body '}' .
+
+    $default  reduce using rule 104 (phys_1_0_prologue)
+
+
+State 371
+
+  106 phys_1_0_body: phys_1_0_body phys_1_0_body_stmt .
+
+    $default  reduce using rule 106 (phys_1_0_body)
+
+
+State 372
+
+  111 phys_1_0_stmt: '{' func_1_0_body . '}'
+
+    '}'  shift, and go to state 402
+
+
+State 373
+
+  166 untyped_tbl_expr_1_0: '=' fqn_1_0 '(' . ')'
+
+    ')'  shift, and go to state 403
+
+
+State 374
+
+  139 column_1_0_decl: KW_column KW_default KW_limit '=' . expression_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 404
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+
+
+State 375
+
+  138 column_1_0_decl: KW_column KW_limit '=' expression_1_0 .
+
+    $default  reduce using rule 138 (column_1_0_decl)
+
+
+State 376
+
+  142 phys_encoding_expr_1_0: KW_physical '<' schema_parms_1_0 . '>' ident_1_0 opt_version_1_0 opt_factory_parms_1_0
+  184 schema_parms_1_0: schema_parms_1_0 . ',' schema_parm_1_0
+
+    ','  shift, and go to state 230
+    '>'  shift, and go to state 405
+
+
+State 377
+
+  143 phys_encoding_expr_1_0: '<' schema_parms_1_0 '>' . ident_1_0 opt_version_1_0 opt_factory_parms_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    ident_1_0  go to state 406
+
+
+State 378
+
+  140 col_1_0_decl: phys_encoding_expr_1_0 typespec_1_0 typed_column_decl_1_0 .
+
+    $default  reduce using rule 140 (col_1_0_decl)
+
+
+State 379
+
+  144 typed_column_decl_1_0: ident_1_0 . '{' column_body_1_0 '}'
+  145                      | ident_1_0 . '=' expression_1_0
+  146                      | ident_1_0 .
+
+    '{'  shift, and go to state 407
+    '='  shift, and go to state 408
+
+    $default  reduce using rule 146 (typed_column_decl_1_0)
+
+
+State 380
+
+  159 opt_col_schema_parms_1_0: '<' col_schema_parms_1_0 . '>'
+  161 col_schema_parms_1_0: col_schema_parms_1_0 . ',' col_schema_parm_1_0
+
+    ','  shift, and go to state 409
+    '>'  shift, and go to state 410
+
+
+State 381
+
+  160 col_schema_parms_1_0: col_schema_parm_1_0 .
+
+    $default  reduce using rule 160 (col_schema_parms_1_0)
+
+
+State 382
+
+  163 col_schema_parm_1_0: col_schema_value_1_0 .
+
+    $default  reduce using rule 163 (col_schema_parm_1_0)
+
+
+State 383
+
+  165 col_schema_value_1_0: uint_expr_1_0 .
+
+    $default  reduce using rule 165 (col_schema_value_1_0)
+
+
+State 384
+
+  162 col_schema_parm_1_0: fqn_1_0 . '=' col_schema_value_1_0
+  164 col_schema_value_1_0: fqn_1_0 .
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    '='  shift, and go to state 411
+    ':'  shift, and go to state 74
+
+    $default  reduce using rule 164 (col_schema_value_1_0)
+
+
+State 385
+
+  154 physmbr_1_0_decl: opt_KW_column phys_coldef_1_0 '.' . ident_1_0 '=' cond_expr_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    ident_1_0  go to state 412
+
+
+State 386
+
+  157 phys_coldef_1_0: opt_col_schema_parms_1_0 fqn_1_0 . opt_version_1_0 opt_factory_parms_1_0
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    VERSION  shift, and go to state 242
+    ':'      shift, and go to state 74
+
+    $default  reduce using rule 233 (opt_version_1_0)
+
+    opt_version_1_0  go to state 413
+
+
+State 387
+
+  129 tbl_1_0_stmt: KW_static KW_physical physmbr_1_0_decl ';' .
+
+    $default  reduce using rule 129 (tbl_1_0_stmt)
+
+
+State 388
+
+  243 cond_expr_1_0: expression_1_0 .
+
+    $default  reduce using rule 243 (cond_expr_1_0)
+
+
+State 389
+
+  180 assign_expr_1_0: '=' cond_expr_1_0 .
+  244 cond_expr_1_0: cond_expr_1_0 . '|' expression_1_0
+
+    '|'  shift, and go to state 414
+
+    $default  reduce using rule 180 (assign_expr_1_0)
+
+
+State 390
+
+   95 production_1_0_stmt: fqn_1_0 '/' fqn_1_0 IDENTIFIER_1_0 . assign_expr_1_0
+
+    '='  shift, and go to state 341
+
+    assign_expr_1_0  go to state 415
+
+
+State 391
+
+  181 func_expr_1_0: '<' schema_parms_1_0 '>' func_1_0_name opt_factory_parms_1_0 '(' . opt_func_1_0_parms ')'
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    $default  reduce using rule 196 (opt_func_1_0_parms)
+
+    expression_1_0       go to state 297
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    opt_func_1_0_parms   go to state 416
+    func_1_0_parms       go to state 299
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+
+
+State 392
+
+  199 func_1_0_parms: func_1_0_parms ',' expression_1_0 .
+
+    $default  reduce using rule 199 (func_1_0_parms)
+
+
+State 393
+
+  231 db_member_1_0: KW_database fqn_1_0 opt_version_1_0 . IDENTIFIER_1_0 ';'
+
+    IDENTIFIER_1_0  shift, and go to state 417
+
+
+State 394
+
+  232 table_member_1_0: KW_table fqn_1_0 opt_version_1_0 . IDENTIFIER_1_0 ';'
+
+    IDENTIFIER_1_0  shift, and go to state 418
+
+
+State 395
+
+   79 func_1_0_param_signature: func_1_0_formal_params ',' '*' func_1_0_formal_params . func_1_0_vararg_formals
+   81 func_1_0_formal_params: func_1_0_formal_params . ',' formal_param_1_0
+
+    ','  shift, and go to state 353
+
+    $default  reduce using rule 85 (func_1_0_vararg_formals)
+
+    func_1_0_vararg_formals  go to state 419
+
+
+State 396
+
+   78 func_1_0_param_signature: func_1_0_formal_params '*' func_1_0_formal_params func_1_0_vararg_formals .
+
+    $default  reduce using rule 78 (func_1_0_param_signature)
+
+
+State 397
+
+   93 script_1_0_stmt: KW_return cond_expr_1_0 . ';'
+  244 cond_expr_1_0: cond_expr_1_0 . '|' expression_1_0
+
+    ';'  shift, and go to state 420
+    '|'  shift, and go to state 414
+
+
+State 398
+
+   89 func_1_0_prologue: '{' func_1_0_body '}' .
+
+    $default  reduce using rule 89 (func_1_0_prologue)
+
+
+State 399
+
+   92 script_1_0_stmt_seq: script_1_0_stmt_seq script_1_0_stmt .
+
+    $default  reduce using rule 92 (script_1_0_stmt_seq)
+
+
+State 400
+
+   94 script_1_0_stmt: production_1_0_stmt ';' .
+
+    $default  reduce using rule 94 (script_1_0_stmt)
+
+
+State 401
+
+  110 phys_1_0_body_stmt: KW___row_length '=' fqn_1_0 . '(' ')'
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    '('  shift, and go to state 421
+    ':'  shift, and go to state 74
+
+
+State 402
+
+  111 phys_1_0_stmt: '{' func_1_0_body '}' .
+
+    $default  reduce using rule 111 (phys_1_0_stmt)
+
+
+State 403
+
+  166 untyped_tbl_expr_1_0: '=' fqn_1_0 '(' ')' .
+
+    $default  reduce using rule 166 (untyped_tbl_expr_1_0)
+
+
+State 404
+
+  139 column_1_0_decl: KW_column KW_default KW_limit '=' expression_1_0 .
+
+    $default  reduce using rule 139 (column_1_0_decl)
+
+
+State 405
+
+  142 phys_encoding_expr_1_0: KW_physical '<' schema_parms_1_0 '>' . ident_1_0 opt_version_1_0 opt_factory_parms_1_0
+
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    ident_1_0  go to state 422
+
+
+State 406
+
+  143 phys_encoding_expr_1_0: '<' schema_parms_1_0 '>' ident_1_0 . opt_version_1_0 opt_factory_parms_1_0
+
+    VERSION  shift, and go to state 242
+
+    $default  reduce using rule 233 (opt_version_1_0)
+
+    opt_version_1_0  go to state 423
+
+
+State 407
+
+  144 typed_column_decl_1_0: ident_1_0 '{' . column_body_1_0 '}'
+
+    KW_limit     shift, and go to state 424
+    KW_read      shift, and go to state 425
+    KW_validate  shift, and go to state 426
+    ';'          shift, and go to state 427
+
+    column_body_1_0  go to state 428
+    column_stmt_1_0  go to state 429
+
+
+State 408
+
+  145 typed_column_decl_1_0: ident_1_0 '=' . expression_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 430
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+
+
+State 409
+
+  161 col_schema_parms_1_0: col_schema_parms_1_0 ',' . col_schema_parm_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    col_schema_parm_1_0   go to state 431
+    col_schema_value_1_0  go to state 382
+    uint_expr_1_0         go to state 383
+    fqn_1_0               go to state 384
+    ident_1_0             go to state 39
+
+
+State 410
+
+  159 opt_col_schema_parms_1_0: '<' col_schema_parms_1_0 '>' .
+
+    $default  reduce using rule 159 (opt_col_schema_parms_1_0)
+
+
+State 411
+
+  162 col_schema_parm_1_0: fqn_1_0 '=' . col_schema_value_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    IDENTIFIER_1_0  shift, and go to state 37
+
+    col_schema_value_1_0  go to state 432
+    uint_expr_1_0         go to state 383
+    fqn_1_0               go to state 433
+    ident_1_0             go to state 39
+
+
+State 412
+
+  154 physmbr_1_0_decl: opt_KW_column phys_coldef_1_0 '.' ident_1_0 . '=' cond_expr_1_0
+
+    '='  shift, and go to state 434
+
+
+State 413
+
+  157 phys_coldef_1_0: opt_col_schema_parms_1_0 fqn_1_0 opt_version_1_0 . opt_factory_parms_1_0
+
+    '<'  shift, and go to state 189
+
+    $default  reduce using rule 190 (opt_factory_parms_1_0)
+
+    opt_factory_parms_1_0  go to state 435
+
+
+State 414
+
+  244 cond_expr_1_0: cond_expr_1_0 '|' . expression_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 436
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+
+
+State 415
+
+   95 production_1_0_stmt: fqn_1_0 '/' fqn_1_0 IDENTIFIER_1_0 assign_expr_1_0 .
+
+    $default  reduce using rule 95 (production_1_0_stmt)
+
+
+State 416
+
+  181 func_expr_1_0: '<' schema_parms_1_0 '>' func_1_0_name opt_factory_parms_1_0 '(' opt_func_1_0_parms . ')'
+
+    ')'  shift, and go to state 437
+
+
+State 417
+
+  231 db_member_1_0: KW_database fqn_1_0 opt_version_1_0 IDENTIFIER_1_0 . ';'
+
+    ';'  shift, and go to state 438
+
+
+State 418
+
+  232 table_member_1_0: KW_table fqn_1_0 opt_version_1_0 IDENTIFIER_1_0 . ';'
+
+    ';'  shift, and go to state 439
+
+
+State 419
+
+   79 func_1_0_param_signature: func_1_0_formal_params ',' '*' func_1_0_formal_params func_1_0_vararg_formals .
+
+    $default  reduce using rule 79 (func_1_0_param_signature)
+
+
+State 420
+
+   93 script_1_0_stmt: KW_return cond_expr_1_0 ';' .
+
+    $default  reduce using rule 93 (script_1_0_stmt)
+
+
+State 421
+
+  110 phys_1_0_body_stmt: KW___row_length '=' fqn_1_0 '(' . ')'
+
+    ')'  shift, and go to state 440
+
+
+State 422
+
+  142 phys_encoding_expr_1_0: KW_physical '<' schema_parms_1_0 '>' ident_1_0 . opt_version_1_0 opt_factory_parms_1_0
+
+    VERSION  shift, and go to state 242
+
+    $default  reduce using rule 233 (opt_version_1_0)
+
+    opt_version_1_0  go to state 441
+
+
+State 423
+
+  143 phys_encoding_expr_1_0: '<' schema_parms_1_0 '>' ident_1_0 opt_version_1_0 . opt_factory_parms_1_0
+
+    '<'  shift, and go to state 189
+
+    $default  reduce using rule 190 (opt_factory_parms_1_0)
+
+    opt_factory_parms_1_0  go to state 442
+
+
+State 424
+
+  151 column_stmt_1_0: KW_limit . '=' uint_expr_1_0
+
+    '='  shift, and go to state 443
+
+
+State 425
+
+  149 column_stmt_1_0: KW_read . '=' cond_expr_1_0
+
+    '='  shift, and go to state 444
+
+
+State 426
+
+  150 column_stmt_1_0: KW_validate . '=' cond_expr_1_0
+
+    '='  shift, and go to state 445
+
+
+State 427
+
+  152 column_stmt_1_0: ';' .
+
+    $default  reduce using rule 152 (column_stmt_1_0)
+
+
+State 428
+
+  144 typed_column_decl_1_0: ident_1_0 '{' column_body_1_0 . '}'
+  148 column_body_1_0: column_body_1_0 . ';' column_stmt_1_0
+
+    ';'  shift, and go to state 446
+    '}'  shift, and go to state 447
+
+
+State 429
+
+  147 column_body_1_0: column_stmt_1_0 .
+
+    $default  reduce using rule 147 (column_body_1_0)
+
+
+State 430
+
+  145 typed_column_decl_1_0: ident_1_0 '=' expression_1_0 .
+
+    $default  reduce using rule 145 (typed_column_decl_1_0)
+
+
+State 431
+
+  161 col_schema_parms_1_0: col_schema_parms_1_0 ',' col_schema_parm_1_0 .
+
+    $default  reduce using rule 161 (col_schema_parms_1_0)
+
+
+State 432
+
+  162 col_schema_parm_1_0: fqn_1_0 '=' col_schema_value_1_0 .
+
+    $default  reduce using rule 162 (col_schema_parm_1_0)
+
+
+State 433
+
+  164 col_schema_value_1_0: fqn_1_0 .
+  238 fqn_1_0: fqn_1_0 . ':' ident_1_0
+  239        | fqn_1_0 . ':' KW_read
+  240        | fqn_1_0 . ':' KW_write
+
+    ':'  shift, and go to state 74
+
+    $default  reduce using rule 164 (col_schema_value_1_0)
+
+
+State 434
+
+  154 physmbr_1_0_decl: opt_KW_column phys_coldef_1_0 '.' ident_1_0 '=' . cond_expr_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 388
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+    cond_expr_1_0        go to state 448
+
+
+State 435
+
+  157 phys_coldef_1_0: opt_col_schema_parms_1_0 fqn_1_0 opt_version_1_0 opt_factory_parms_1_0 .
+
+    $default  reduce using rule 157 (phys_coldef_1_0)
+
+
+State 436
+
+  244 cond_expr_1_0: cond_expr_1_0 '|' expression_1_0 .
+
+    $default  reduce using rule 244 (cond_expr_1_0)
+
+
+State 437
+
+  181 func_expr_1_0: '<' schema_parms_1_0 '>' func_1_0_name opt_factory_parms_1_0 '(' opt_func_1_0_parms ')' .
+
+    $default  reduce using rule 181 (func_expr_1_0)
+
+
+State 438
+
+  231 db_member_1_0: KW_database fqn_1_0 opt_version_1_0 IDENTIFIER_1_0 ';' .
+
+    $default  reduce using rule 231 (db_member_1_0)
+
+
+State 439
+
+  232 table_member_1_0: KW_table fqn_1_0 opt_version_1_0 IDENTIFIER_1_0 ';' .
+
+    $default  reduce using rule 232 (table_member_1_0)
+
+
+State 440
+
+  110 phys_1_0_body_stmt: KW___row_length '=' fqn_1_0 '(' ')' .
+
+    $default  reduce using rule 110 (phys_1_0_body_stmt)
+
+
+State 441
+
+  142 phys_encoding_expr_1_0: KW_physical '<' schema_parms_1_0 '>' ident_1_0 opt_version_1_0 . opt_factory_parms_1_0
+
+    '<'  shift, and go to state 189
+
+    $default  reduce using rule 190 (opt_factory_parms_1_0)
+
+    opt_factory_parms_1_0  go to state 449
+
+
+State 442
+
+  143 phys_encoding_expr_1_0: '<' schema_parms_1_0 '>' ident_1_0 opt_version_1_0 opt_factory_parms_1_0 .
+
+    $default  reduce using rule 143 (phys_encoding_expr_1_0)
+
+
+State 443
+
+  151 column_stmt_1_0: KW_limit '=' . uint_expr_1_0
+
+    DECIMAL  shift, and go to state 117
+    OCTAL    shift, and go to state 118
+    HEX      shift, and go to state 119
+
+    uint_expr_1_0  go to state 450
+
+
+State 444
+
+  149 column_stmt_1_0: KW_read '=' . cond_expr_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 388
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+    cond_expr_1_0        go to state 451
+
+
+State 445
+
+  150 column_stmt_1_0: KW_validate '=' . cond_expr_1_0
+
+    DECIMAL         shift, and go to state 117
+    OCTAL           shift, and go to state 118
+    HEX             shift, and go to state 119
+    FLOAT           shift, and go to state 120
+    EXP_FLOAT       shift, and go to state 121
+    STRING          shift, and go to state 122
+    ESCAPED_STRING  shift, and go to state 123
+    IDENTIFIER_1_0  shift, and go to state 37
+    KW_false        shift, and go to state 124
+    KW_true         shift, and go to state 125
+    '('             shift, and go to state 126
+    '<'             shift, and go to state 127
+    '.'             shift, and go to state 128
+    '@'             shift, and go to state 129
+    '+'             shift, and go to state 130
+    '['             shift, and go to state 131
+    '-'             shift, and go to state 132
+
+    expression_1_0       go to state 388
+    uncast_expr_1_0      go to state 134
+    func_expr_1_0        go to state 135
+    func_1_0_name        go to state 136
+    uint_expr_1_0        go to state 137
+    float_expr_1_0       go to state 138
+    string_expr_1_0      go to state 139
+    const_vect_expr_1_0  go to state 140
+    bool_expr_1_0        go to state 141
+    negate_expr_1_0      go to state 142
+    fqn_1_0              go to state 143
+    ident_1_0            go to state 39
+    cond_expr_1_0        go to state 452
+
+
+State 446
+
+  148 column_body_1_0: column_body_1_0 ';' . column_stmt_1_0
+
+    KW_limit     shift, and go to state 424
+    KW_read      shift, and go to state 425
+    KW_validate  shift, and go to state 426
+    ';'          shift, and go to state 427
+
+    column_stmt_1_0  go to state 453
+
+
+State 447
+
+  144 typed_column_decl_1_0: ident_1_0 '{' column_body_1_0 '}' .
+
+    $default  reduce using rule 144 (typed_column_decl_1_0)
+
+
+State 448
+
+  154 physmbr_1_0_decl: opt_KW_column phys_coldef_1_0 '.' ident_1_0 '=' cond_expr_1_0 .
+  244 cond_expr_1_0: cond_expr_1_0 . '|' expression_1_0
+
+    '|'  shift, and go to state 414
+
+    $default  reduce using rule 154 (physmbr_1_0_decl)
+
+
+State 449
+
+  142 phys_encoding_expr_1_0: KW_physical '<' schema_parms_1_0 '>' ident_1_0 opt_version_1_0 opt_factory_parms_1_0 .
+
+    $default  reduce using rule 142 (phys_encoding_expr_1_0)
+
+
+State 450
+
+  151 column_stmt_1_0: KW_limit '=' uint_expr_1_0 .
+
+    $default  reduce using rule 151 (column_stmt_1_0)
+
+
+State 451
+
+  149 column_stmt_1_0: KW_read '=' cond_expr_1_0 .
+  244 cond_expr_1_0: cond_expr_1_0 . '|' expression_1_0
+
+    '|'  shift, and go to state 414
+
+    $default  reduce using rule 149 (column_stmt_1_0)
+
+
+State 452
+
+  150 column_stmt_1_0: KW_validate '=' cond_expr_1_0 .
+  244 cond_expr_1_0: cond_expr_1_0 . '|' expression_1_0
+
+    '|'  shift, and go to state 414
+
+    $default  reduce using rule 150 (column_stmt_1_0)
+
+
+State 453
+
+  148 column_body_1_0: column_body_1_0 ';' column_stmt_1_0 .
+
+    $default  reduce using rule 148 (column_body_1_0)

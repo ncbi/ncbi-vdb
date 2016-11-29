@@ -22,69 +22,69 @@
 #
 # ===========================================================================
 
-by_default: default
 
-TOP ?= $(abspath ..)
-MODULE = libs
+default: std
 
-include $(TOP)/build/Makefile.shell
+TOP ?= $(abspath ../..)
+MODULE = libs/schema
 
-include $(TOP)/build/Makefile.config
+INT_LIBS = \
+    libschema
 
-#-------------------------------------------------------------------------------
-# default
-#
-SUBDIRS =    \
-	ext      \
-	kfc      \
-	klib     \
-	kproc    \
-	kfs      \
-	kns      \
-	kfg      \
-	krypto   \
-	vfs      \
-	kapp     \
-	kdb      \
-	vdb      \
-	vxf      \
-	search   \
-	sraxf    \
-	align    \
-	axf      \
-	wgsxf    \
-	ktst     \
-	loader   \
-	blast    \
-	ascp     \
-	schema   \
-	sra      \
-	ngs      \
-	ngs-c++  \
-	ngs-jni  \
-	ngs-py   \
-	kxml     \
-	hdf5     \
-	ncbi-vdb \
-	tui
+ALL_LIBS = \
+	$(INT_LIBS)
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
-
-$(SUBDIRS):
-	@ $(MAKE) -C $@
-
-ncbi-vdb: $(patsubst ncbi-vdb,,$(SUBDIRS))
-
-test:
-	@true
-
-.PHONY: default $(SUBDIRS) test
+include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
-# pass-through
+# outer targets
 #
-out debug profile release GCC ICC VC++:
-	@ $(MAKE) TOP=$(TOP) -f $(TOP)/build/Makefile.env $@
+all std: makedirs compile
+	@ $(MAKE_CMD) $(TARGDIR)/std
 
-.PHONY: out debug profile release GCC ICC VC++
+$(INT_LIBS): makedirs
+	@ $(MAKE_CMD) $(ILIBDIR)/$@
+
+.PHONY: all std $(ALL_LIBS)
+
+#-------------------------------------------------------------------------------
+# std
+#
+$(TARGDIR)/std: \
+	$(addprefix $(ILIBDIR)/,$(INT_LIBS))
+
+.PHONY: $(TARGDIR)/all $(TARGDIR)/std
+
+#-------------------------------------------------------------------------------
+# clean
+#
+clean: stdclean
+
+.PHONY: clean
+
+#-------------------------------------------------------------------------------
+# schema parser library
+#
+$(ILIBDIR)/libschema: $(addprefix $(ILIBDIR)/libschema.,$(ILIBEXT))
+
+SCHEMA_SRC = \
+    schema-grammar \
+    schema-lex \
+    SchemaScanner \
+    SchemaParser \
+
+bison $(SRCDIR)/schema-grammar.c: $(SRCDIR)/schema-grammar.y
+	bison -r state -o $(SRCDIR)/schema-grammar.c --defines=$(SRCDIR)/schema-tokens.h $(SRCDIR)/schema-grammar.y
+
+flex $(SRCDIR)/schema-lex.c: $(SRCDIR)/schema-lex.l
+	flex -d -t $(SRCDIR)/schema-lex.l > $(SRCDIR)/schema-lex.c
+
+SCHEMA_OBJ = \
+	$(addsuffix .$(LOBX),$(SCHEMA_SRC))
+
+$(ILIBDIR)/libschema.$(LIBX): $(SCHEMA_OBJ)
+	$(LD) --slib -o $@ $^
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)
