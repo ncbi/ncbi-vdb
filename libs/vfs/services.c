@@ -2074,6 +2074,299 @@ void SHttpRequestHelperAddPostParam ( void * item, void * data )
 }
 
 
+static void SCgiRequestFini ( SCgiRequest * self ) {
+    assert ( self );
+    free ( self -> cgi );
+    VectorWhack ( & self -> params, whackSKV, NULL );
+    memset ( self, 0, sizeof * self );
+}
+
+static rc_t SCgiRequestPerform ( const SCgiRequest * self,
+    const SHelper * helper, KStream ** response,
+    const char * expected )
+{
+    rc_t rc = 0;
+
+    assert ( self && helper && response );
+
+    if ( rc == 0 ) {
+        SHttpRequestHelper h;
+//DBGMSG ( DBG_VFS,DBG_FLAG ( DBG_VFS_SERVICE ), ( "CGI = '%s'\n", self -> cgi ) );
+        rc = SHttpRequestHelperInit ( & h, helper -> kMgr, self-> cgi );
+        if ( rc == 0 ) {
+            VectorForEach (
+                & self -> params, false, SHttpRequestHelperAddPostParam, & h );
+            rc = h . rc;
+        }
+
+        if ( rc == 0 ) {
+/*          char buffer [ 1024 ] = "";
+            char * b = buffer;
+            size_t sizeof_b = sizeof buffer;
+            size_t len = 0;
+            char * allocated = NULL;
+            rc = KClientHttpRequestFormatMsg ( h . httpReq, b, sizeof_b, "POST",
+                & len );
+            if ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
+                    GetRCState ( rc ) == rcInsufficient )
+            {
+                free ( allocated );
+                sizeof_b = 0;
+                allocated = b = malloc ( len );
+                if ( allocated == NULL )
+                    rc = RC ( rcVFS, rcQuery, rcExecuting, rcMemory,
+                        rcExhausted );
+                else {
+                    sizeof_b = len;
+                    rc = KClientHttpRequestFormatMsg ( h . httpReq, b, sizeof_b,
+                        "POST", & len );
+                }
+            }
+            if ( rc == 0 )
+                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "%s", b ) );
+            free ( allocated );
+            rc = 0;*/
+            if ( expected == NULL ) {
+                KHttpResult * rslt = NULL;
+                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), (
+            ">>>>>>>>>>>>>>>> sending HTTP POST request >>>>>>>>>>>>>>>>\n" ) );
+                rc = KHttpRequestPOST ( h . httpReq, & rslt );
+                if ( rc == 0 ) {
+                    uint32_t code = 0;
+                    rc = KHttpResultStatus ( rslt, & code, NULL, 0, NULL );
+                    if ( rc == 0 ) {
+                        if ( code == 200 )
+                            rc = KHttpResultGetInputStream ( rslt, response );
+                        else
+                            rc = RC ( rcVFS, rcQuery, rcExecuting, rcConnection,
+                                      rcUnexpected );
+                    }
+                }
+                RELEASE ( KHttpResult, rslt );
+            }
+            else {
+                KStream * stream = NULL;
+                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
+            "XXXXXXXXXXXX NOT sending HTTP POST request XXXXXXXXXXXXXXXX\n" ) );
+                rc = KBufferStreamMake ( & stream, expected,
+                                         string_size ( expected ) );
+                if ( rc == 0 )
+                    * response = stream;
+            }
+        }
+
+        {
+            rc_t r2 = SHttpRequestHelperFini ( & h );
+            if ( rc == 0 )
+                rc = r2;
+        }
+    }
+
+    return rc;
+}
+
+
+/* STickets */
+const uint64_t BICKETS = 1024;
+static rc_t STicketsAppend ( STickets * self, const char * ticket ) {
+    rc_t rc = 0;
+    const char * comma = "";
+    assert ( self );
+    if ( ticket == NULL ) {
+        return 0;
+    }
+    if ( self -> size > 0 ) {
+        comma = ",";
+    }
+    do {
+        size_t num_writ = 0;
+        char * p = ( char * ) self -> str . base;
+        assert ( comma );
+        rc = string_printf ( p + self -> size,
+            self -> str . elem_count - self -> size, & num_writ,
+            "%s%s", comma, ticket );
+        if ( rc == 0 ) {
+            rc_t r2 = 0;
+            String * s = ( String * ) malloc ( sizeof * s );
+            if ( s == NULL ) {
+                rc = RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+            } else {
+                const char * addr = p + self -> size;
+                uint32_t len = num_writ;
+                if ( comma [ 0 ] != '\0' ) {
+                    ++ addr;
+                    -- len;
+                }
+                StringInit ( s, addr, len, len );
+                r2 = VectorAppend ( & self -> tickets, NULL, s );
+                if ( r2 != 0 ) {
+                    rc = r2;
+                    free ( s );
+                }
+                self -> size += num_writ;
+                break;
+            }
+        }
+        else if ( GetRCState ( rc ) == rcInsufficient
+            && GetRCObject ( rc ) == ( enum RCObject ) rcBuffer )
+        {
+            size_t needed = BICKETS;
+            if ( self -> str . elem_count - self -> size + needed < num_writ ) {
+                needed = num_writ;
+            }
+            rc = KDataBufferResize
+                ( & self -> str, self -> str . elem_count + needed );
+        }
+        else {
+            break;
+        }
+    } while ( rc == 0 );
+    return rc;
+}
+
+/*static void STicketsAppendFromVector ( void * item, void * data ) {
+    STickets   * self   = ( STickets * ) data;
+    rc_t rc = STicketsAppend ( self, ( char * ) item );
+    if ( rc != 0 ) {
+        self -> rc = rc;
+    }
+}*/
+
+static rc_t STicketsInit ( STickets * self ) {
+    assert ( self );
+    memset ( self, 0, sizeof * self );
+    return KDataBufferMakeBytes ( & self -> str, BICKETS );
+}
+
+static void whack_free ( void * self, void * ignore ) {
+    if ( self != NULL ) {
+        memset ( self, 0, sizeof ( * ( char * ) self ) );
+        free ( self );
+    }
+}
+
+static rc_t STicketsFini ( STickets * self ) {
+    assert ( self );
+    rc_t rc = KDataBufferWhack ( & self -> str );
+    VectorWhack ( & self -> tickets, whack_free, NULL );
+    memset ( self, 0 , sizeof * self );
+    return rc;
+}
+
+
+/* SObject */
+static rc_t SObjectInit ( SObject * self,
+    const char * objectId, size_t objSz, EObjectType objectType )
+{
+    assert ( self );
+    self -> objectType = objectType;
+    if ( objectId != NULL && objSz != 0 ) {
+        self -> objectId = string_dup ( objectId, objSz );
+        if ( self -> objectId == NULL ) {
+            return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+        }
+    }
+    return 0;
+}
+
+static void SObjectFini ( SObject * self ) {
+    assert ( self );
+    free ( self -> objectId );
+    memset ( self, 0, sizeof * self );
+}
+
+
+/* SRequestData */
+/*static
+rc_t SRequestDataInit ( SRequestData * self, const char * acc, size_t acc_sz,
+    EObjectType objectType )
+{
+    rc_t rc = 0;
+    assert ( self );
+    memset ( self, 0, sizeof * self );
+    if ( acc != NULL && acc_sz != 0 ) {
+        self -> objects = 1;
+        rc = SObjectInit ( & self -> object [ 0 ], acc, acc_sz, objectType );
+    }
+    return rc;
+}*/
+
+static void SRequestDataFini ( SRequestData * self ) {
+    uint32_t i = 0;
+    assert ( self );
+    for ( i = 0; i < self -> objects; ++i ) {
+        SObjectFini ( & self -> object [ i ] );
+    }
+    memset ( self, 0, sizeof * self );
+}
+
+static
+rc_t SRequestDataAppendObject ( SRequestData * self, const char * id,
+    size_t id_sz, EObjectType objectType )
+{
+    rc_t rc = 0;
+    assert ( self );
+    if ( self -> objects > sizeof self -> object / sizeof self -> object [ 0 ] )
+    {
+        return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcExcessive );
+    }
+    if ( id_sz == 0 )
+        id_sz = string_measure ( id, NULL );
+    rc = SObjectInit ( & self -> object [ self -> objects ], id, id_sz,
+        objectType );
+    if ( rc == 0 ) {
+        ++ self -> objects;
+    }
+    return rc;
+}
+
+
+/* SRequest */
+static rc_t SRequestInit ( SRequest * self ) {
+    assert ( self );
+
+    memset ( self, 0, sizeof * self );
+
+    return STicketsInit ( & self -> tickets );
+}
+
+static rc_t SRequestReset ( SRequest * self ) {
+    rc_t rc = 0;
+    rc_t r2 = 0;
+
+    assert ( self );
+
+    r2 = SVersionFini ( & self -> version );
+    if ( rc == 0 )
+        rc = r2;
+
+    SRequestDataFini ( & self -> request );
+    SCgiRequestFini ( & self -> cgiReq );
+
+    return rc;
+}
+
+static rc_t SRequestFini ( SRequest * self ) {
+    rc_t r2 = 0;
+    rc_t rc = SRequestReset ( self );
+
+    assert ( self );
+
+    r2 = STicketsFini ( & self -> tickets );
+    if ( rc == 0 )
+        rc = r2;
+
+    memset ( self, 0, sizeof * self );
+
+    return rc;
+}
+
+static rc_t SRequestAddTicket ( SRequest * self, const char * ticket ) {
+    assert ( self );
+    return STicketsAppend ( & self -> tickets, ticket );
+}
+
+
 /* SCgiRequest */
 static
 rc_t SCgiRequestInitCgi ( SCgiRequest * self, const char * cgi )
@@ -2097,6 +2390,8 @@ rc_t ECgiNamesRequestInit ( SRequest * request, SHelper * helper,
     const SKV * kv = NULL;
 
     assert ( request );
+
+//  SRequestFini ( request );
 
     rc = SVersionInit ( & request -> version, version, eSTnames );
     if ( rc != 0 )
@@ -2122,6 +2417,7 @@ rc_t ECgiNamesRequestInit ( SRequest * request, SHelper * helper,
     }
 
     VectorInit ( & self -> params, 0, 5 );
+
     request -> serviceType = eSTnames;
     DBGMSG ( DBG_VFS,
         DBG_FLAG ( DBG_VFS_SERVICE ), ( "CGI = '%s'\n", self -> cgi ) );
@@ -2364,282 +2660,6 @@ rc_t ECgiSearchRequestInit ( SRequest * request, const char * cgi,
         }
     }
     return rc;
-}
-
-
-static void SCgiRequestFini ( SCgiRequest * self ) {
-    assert ( self );
-    free ( self -> cgi );
-    VectorWhack ( & self -> params, whackSKV, NULL );
-    memset ( self, 0, sizeof * self );
-}
-
-static rc_t SCgiRequestPerform ( const SCgiRequest * self,
-    const SHelper * helper, KStream ** response, const char * expected )
-{
-    rc_t rc = 0;
-
-    assert ( self && helper && response );
-
-    if ( rc == 0 ) {
-        SHttpRequestHelper h;
-//DBGMSG ( DBG_VFS,DBG_FLAG ( DBG_VFS_SERVICE ), ( "CGI = '%s'\n", self -> cgi ) );
-        rc = SHttpRequestHelperInit ( & h, helper -> kMgr, self-> cgi );
-        if ( rc == 0 ) {
-            VectorForEach (
-                & self -> params, false, SHttpRequestHelperAddPostParam, & h );
-            rc = h . rc;
-        }
-
-        if ( rc == 0 ) {
-/*          char buffer [ 1024 ] = "";
-            char * b = buffer;
-            size_t sizeof_b = sizeof buffer;
-            size_t len = 0;
-            char * allocated = NULL;
-            rc = KClientHttpRequestFormatMsg ( h . httpReq, b, sizeof_b, "POST",
-                & len );
-            if ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
-                    GetRCState ( rc ) == rcInsufficient )
-            {
-                free ( allocated );
-                sizeof_b = 0;
-                allocated = b = malloc ( len );
-                if ( allocated == NULL )
-                    rc = RC ( rcVFS, rcQuery, rcExecuting, rcMemory,
-                        rcExhausted );
-                else {
-                    sizeof_b = len;
-                    rc = KClientHttpRequestFormatMsg ( h . httpReq, b, sizeof_b,
-                        "POST", & len );
-                }
-            }
-            if ( rc == 0 )
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "%s", b ) );
-            free ( allocated );
-            rc = 0;*/
-            if ( expected == NULL ) {
-                KHttpResult * rslt = NULL;
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), (
-            ">>>>>>>>>>>>>>>> sending HTTP POST request >>>>>>>>>>>>>>>>\n" ) );
-                rc = KHttpRequestPOST ( h . httpReq, & rslt );
-                if ( rc == 0 ) {
-                    uint32_t code = 0;
-                    rc = KHttpResultStatus ( rslt, & code, NULL, 0, NULL );
-                    if ( rc == 0 ) {
-                        if ( code == 200 )
-                            rc = KHttpResultGetInputStream ( rslt, response );
-                        else
-                            rc = RC ( rcVFS, rcQuery, rcExecuting, rcConnection,
-                                      rcUnexpected );
-                    }
-                }
-                RELEASE ( KHttpResult, rslt );
-            }
-            else {
-                KStream * stream = NULL;
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
-            "XXXXXXXXXXXX NOT sending HTTP POST request XXXXXXXXXXXXXXXX\n" ) );
-                rc = KBufferStreamMake ( & stream, expected,
-                                         string_size ( expected ) );
-                if ( rc == 0 )
-                    * response = stream;
-            }
-        }
-
-        {
-            rc_t r2 = SHttpRequestHelperFini ( & h );
-            if ( rc == 0 )
-                rc = r2;
-        }
-    }
-
-    return rc;
-}
-
-
-/* SObject */
-static rc_t SObjectInit ( SObject * self,
-    const char * objectId, size_t objSz, EObjectType objectType )
-{
-    assert ( self );
-    self -> objectType = objectType;
-    if ( objectId != NULL && objSz != 0 ) {
-        self -> objectId = string_dup ( objectId, objSz );
-        if ( self -> objectId == NULL ) {
-            return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-        }
-    }
-    return 0;
-}
-
-static void SObjectFini ( SObject * self ) {
-    assert ( self );
-    free ( self -> objectId );
-    memset ( self, 0, sizeof * self );
-}
-
-
-/* STickets */
-const uint64_t BICKETS = 1024;
-static rc_t STicketsAppend ( STickets * self, const char * ticket ) {
-    rc_t rc = 0;
-    const char * comma = "";
-    assert ( self );
-    if ( ticket == NULL ) {
-        return 0;
-    }
-    if ( self -> size > 0 ) {
-        comma = ",";
-    }
-    do {
-        size_t num_writ = 0;
-        char * p = ( char * ) self -> str . base;
-        assert ( comma );
-        rc = string_printf ( p + self -> size,
-            self -> str . elem_count - self -> size, & num_writ,
-            "%s%s", comma, ticket );
-        if ( rc == 0 ) {
-            rc_t r2 = 0;
-            String * s = ( String * ) malloc ( sizeof * s );
-            if ( s == NULL ) {
-                rc = RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-            } else {
-                const char * addr = p + self -> size;
-                uint32_t len = num_writ;
-                if ( comma [ 0 ] != '\0' ) {
-                    ++ addr;
-                    -- len;
-                }
-                StringInit ( s, addr, len, len );
-                r2 = VectorAppend ( & self -> tickets, NULL, s );
-                if ( r2 != 0 ) {
-                    rc = r2;
-                    free ( s );
-                }
-                self -> size += num_writ;
-                break;
-            }
-        }
-        else if ( GetRCState ( rc ) == rcInsufficient
-            && GetRCObject ( rc ) == ( enum RCObject ) rcBuffer )
-        {
-            size_t needed = BICKETS;
-            if ( self -> str . elem_count - self -> size + needed < num_writ ) {
-                needed = num_writ;
-            }
-            rc = KDataBufferResize
-                ( & self -> str, self -> str . elem_count + needed );
-        }
-        else {
-            break;
-        }
-    } while ( rc == 0 );
-    return rc;
-}
-
-/*static void STicketsAppendFromVector ( void * item, void * data ) {
-    STickets   * self   = ( STickets * ) data;
-    rc_t rc = STicketsAppend ( self, ( char * ) item );
-    if ( rc != 0 ) {
-        self -> rc = rc;
-    }
-}*/
-
-static rc_t STicketsInit ( STickets * self ) {
-    assert ( self );
-    memset ( self, 0, sizeof * self );
-    return KDataBufferMakeBytes ( & self -> str, BICKETS );
-}
-
-static void whack_free ( void * self, void * ignore ) {
-    if ( self != NULL ) {
-        memset ( self, 0, sizeof ( * ( char * ) self ) );
-        free ( self );
-    }
-}
-
-static rc_t STicketsFini ( STickets * self ) {
-    assert ( self );
-    rc_t rc = KDataBufferWhack ( & self -> str );
-    VectorWhack ( & self -> tickets, whack_free, NULL );
-    memset ( self, 0 , sizeof * self );
-    return rc;
-}
-
-
-/* SRequestData */
-/*static
-rc_t SRequestDataInit ( SRequestData * self, const char * acc, size_t acc_sz,
-    EObjectType objectType )
-{
-    rc_t rc = 0;
-    assert ( self );
-    memset ( self, 0, sizeof * self );
-    if ( acc != NULL && acc_sz != 0 ) {
-        self -> objects = 1;
-        rc = SObjectInit ( & self -> object [ 0 ], acc, acc_sz, objectType );
-    }
-    return rc;
-}*/
-
-static void SRequestDataFini ( SRequestData * self ) {
-    uint32_t i = 0;
-    assert ( self );
-    for ( i = 0; i < self -> objects; ++i ) {
-        SObjectFini ( & self -> object [ i ] );
-    }
-    memset ( self, 0, sizeof * self );
-}
-
-static
-rc_t SRequestDataAppendObject ( SRequestData * self, const char * id,
-    size_t id_sz, EObjectType objectType )
-{
-    rc_t rc = 0;
-    assert ( self );
-    if ( self -> objects > sizeof self -> object / sizeof self -> object [ 0 ] )
-    {
-        return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcExcessive );
-    }
-    if ( id_sz == 0 )
-        id_sz = string_measure ( id, NULL );
-    rc = SObjectInit ( & self -> object [ self -> objects ], id, id_sz,
-        objectType );
-    if ( rc == 0 ) {
-        ++ self -> objects;
-    }
-    return rc;
-}
-
-
-/* SRequest */
-static rc_t SRequestInit ( SRequest * self ) {
-    assert ( self );
-
-    memset ( self, 0, sizeof * self );
-
-    return STicketsInit ( & self -> tickets );
-}
-
-static rc_t SRequestFini ( SRequest * self ) {
-    rc_t rc = 0;
-    rc_t r2 = 0;
-    assert ( self );
-    rc = STicketsFini ( & self -> tickets );
-    r2 = SVersionFini ( & self -> version );
-    if ( rc == 0 ) {
-        rc = r2;
-    }
-    SRequestDataFini ( & self -> request );
-    SCgiRequestFini ( & self -> cgiReq );
-    memset ( self, 0, sizeof * self );
-    return rc;
-}
-
-static rc_t SRequestAddTicket ( SRequest * self, const char * ticket ) {
-    assert ( self );
-    return STicketsAppend ( & self -> tickets, ticket );
 }
 
 
