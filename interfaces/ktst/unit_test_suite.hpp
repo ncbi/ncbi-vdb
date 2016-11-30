@@ -30,6 +30,7 @@
 // turn on INT64_C, UINT64_C etc.
 #define __STDC_CONSTANT_MACROS
 #include <klib/defs.h>
+#undef memcpy
 
 #include <string>
 #include <vector>
