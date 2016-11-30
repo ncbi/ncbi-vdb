@@ -34,6 +34,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
 #ifdef __cplusplus
@@ -175,6 +176,18 @@ typedef uint32_t ver_t;
  */
 #if ! defined PKGNAMESTR && defined PKGNAME
 #define PKGNAMESTR stringize ( PKGNAME )
+#endif
+
+/*--------------------------------------------------------------------------
+ * memcpy()
+ *  as of 11/29/2016 we are prohibiting the use of memcpy
+ *  NB - we depend upon including <string.h> BEFORE redefining
+ */
+#undef memcpy
+#if _DEBUGGING
+#define memcpy "DON'T USE MEMCPY! USE MEMMOVE INSTEAD!!"
+#else
+#define memcpy memmove
 #endif
 
 #ifdef __cplusplus
