@@ -44,7 +44,7 @@ include $(TOP)/build/Makefile.env
 $(ALL_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
-.PHONY: $(TEST_TOOLS)
+.PHONY: $(ALL_TOOLS)
 
 clean: stdclean
 
@@ -107,44 +107,8 @@ $(TEST_BINDIR)/test-schema-parse: $(TESTPARSE_OBJ)
 #
 runtests: scantest parsetest
 
-SCHEMATA := \
-    vdb/built-in \
-	sra/generic-fastq \
-	sra/454 \
-	sra/nanopore \
-	sra/illumina \
-	sra/pevents \
-	sra/pacbio \
-	sra/abi \
-	sra/ion-torrent \
-	sra/helicos \
-	ncbi/spotname \
-	ncbi/ncbi \
-	ncbi/seq-graph \
-	ncbi/stats \
-	ncbi/wgs-contig \
-	ncbi/varloc \
-	ncbi/seq \
-	ncbi/clip \
-	ncbi/pnbrdb \
-	ncbi/sra \
-	vdb/vdb \
-	vdb/built-in \
-	insdc/seq \
-	insdc/insdc \
-	insdc/sra \
-	csra2/read \
-	csra2/stats \
-	csra2/csra2 \
-	csra2/reference \
-	align/mate-cache \
-	align/align \
-	align/refseq \
-	align/seq \
-	align/qstat \
-	align/pileup-stats \
+SCHEMATA := $(shell find $(TOP) -name "*.vschema")
 
-SCHEMATA := $(addprefix $(TOP)/interfaces/,$(addsuffix .vschema,$(SCHEMATA)))
 OUT = $(SRCDIR)/actual/test-schema-scan
 
 scantest: test-schema-scan
@@ -155,3 +119,5 @@ scantest: test-schema-scan
 
 parsetest: test-schema-parse
 	-$(TEST_BINDIR)/test-schema-parse $(SCHEMATA)
+
+.PHONY: scantest parsetest

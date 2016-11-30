@@ -162,13 +162,14 @@ dstr_char   ([^\\"\f\r\n$]|$[^(\\])
 
 [a-z|A-Z|_][a-z|A-Z|_|0-9]*         { return IDENTIFIER_1_0; }
 [0-9][a-z|A-Z|_][a-z|A-Z|_|0-9]+    { return IDENTIFIER_1_0; }
+\.[a-z|A-Z|_][a-z|A-Z|_|0-9]*         { return PHYSICAL_IDENTIFIER_1_0; }
 
 #[0-9]+\.[0-9]+\.[0-9]+     { return VERSION; }
 #[0-9]+\.[0-9]+             { return VERSION; }
 #[0-9]+                     { return VERSION; }
 
  /* multi-line comments */
-\/\*                                            { yy_push_state ( CMT_SLASH_STAR, yyscanner ); }
+<*>\/\*                                         { yy_push_state ( CMT_SLASH_STAR, yyscanner ); }
 <CMT_SLASH_STAR,CMT_MULTI_LINE>[^*\n]+          /* ignore */
 <CMT_SLASH_STAR,CMT_MULTI_LINE>\*+[^*/\n]+      /* ignore */
 <CMT_SLASH_STAR,CMT_MULTI_LINE>\**\n            { BEGIN CMT_MULTI_LINE; }
@@ -176,13 +177,13 @@ dstr_char   ([^\\"\f\r\n$]|$[^(\\])
 <CMT_MULTI_LINE>\*+\/                           { yy_pop_state ( yyscanner ); }
 
  /* line comments */
-\/\/.*                                     /* ignore */
+<*>\/\/.*                                     /* ignore */
 
  /* ignored tokens */
-[ \t\f\v\r\n]                             /* ignore */
+<*>[ \t\f\v\r\n]                             /* ignore */
 
  /* unrecognized input */
-.                                       { return UNRECOGNIZED; }
+<*>.                                       { return UNRECOGNIZED; }
 
 %%
 

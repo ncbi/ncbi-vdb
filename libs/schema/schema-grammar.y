@@ -65,6 +65,7 @@
 %token ESCAPED_STRING
 
 %token IDENTIFIER_1_0
+%token PHYSICAL_IDENTIFIER_1_0
 %token VERSION
 
 /* unterminated strings are dealt with by flex */
@@ -537,7 +538,8 @@ default_view_1_0_decl
     ;
 
 physmbr_1_0_decl
-    : opt_KW_column phys_coldef_1_0 '.' ident_1_0 '=' cond_expr_1_0
+    : opt_KW_column phys_coldef_1_0 PHYSICAL_IDENTIFIER_1_0 '=' cond_expr_1_0
+    | opt_KW_column phys_coldef_1_0 PHYSICAL_IDENTIFIER_1_0
     ;
 
 opt_KW_column
@@ -576,6 +578,11 @@ untyped_tbl_expr_1_0
 /* expression
  */
 
+cond_expr_1_0
+    : expression_1_0
+    | cond_expr_1_0 '|' expression_1_0
+    ;
+
 expression_1_0
     : primary_expr_1_0
     | '(' type_expr_1_0 ')' expression_1_0
@@ -583,7 +590,6 @@ expression_1_0
 
 primary_expr_1_0
     : fqn_1_0
-    | '.' IDENTIFIER_1_0   /*TODO: do it in flex, no space after period */
     | '@'
     | func_expr_1_0
     | uint_expr_1_0
@@ -758,6 +764,7 @@ fqn_1_0
 
 ident_1_0
     : IDENTIFIER_1_0                                            /* this is just a C identifier */
+    | PHYSICAL_IDENTIFIER_1_0                                   /* starts with a '.' */
     ;
 
 dim_1_0
@@ -765,7 +772,3 @@ dim_1_0
     | '[' '*'  ']'
     ;
 
-cond_expr_1_0
-    : expression_1_0
-    | cond_expr_1_0 '|' expression_1_0
-    ;

@@ -103,6 +103,7 @@ REQUIRE_TERMINAL ( EscapedSQString,     ESCAPED_STRING, "'q\\werty'" )
 REQUIRE_TERMINAL ( Identifier_OneChar,  IDENTIFIER_1_0, "T" )
 REQUIRE_TERMINAL ( Identifier,          IDENTIFIER_1_0, "abc123_" )
 REQUIRE_TERMINAL ( Identifier_StartsWithDigit, IDENTIFIER_1_0,  "1abc123_" ) // "2na" is used in 1.0 schemas
+REQUIRE_TERMINAL ( PhysicalIdentifier,  PHYSICAL_IDENTIFIER_1_0, ".T" )
 
 REQUIRE_TERMINAL ( Version_Maj,         VERSION, "#1" )
 REQUIRE_TERMINAL ( Version_MajMin,      VERSION, "#1.2" )
@@ -184,6 +185,14 @@ TEST_CASE ( WhiteSpace )
 TEST_CASE ( VERS_1 )
 {
     SchemaScanner s ( "version 1;" );
+    REQUIRE_EQ ( KW_version, s . Scan () );
+    REQUIRE_EQ ( VERS_1_0, s . Scan () );
+    REQUIRE_EQ ( ( SchemaScanner ::  Token ) ';', s . Scan () );
+}
+
+TEST_CASE ( VERS_1_comment )
+{
+    SchemaScanner s ( "version /*!!*/ 1;" );
     REQUIRE_EQ ( KW_version, s . Scan () );
     REQUIRE_EQ ( VERS_1_0, s . Scan () );
     REQUIRE_EQ ( ( SchemaScanner ::  Token ) ';', s . Scan () );

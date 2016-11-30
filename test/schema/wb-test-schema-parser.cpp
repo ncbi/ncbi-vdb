@@ -248,11 +248,10 @@ TEST_CASE ( Table_Column_Extern_WithNakedPhysical )
 {
     REQUIRE ( SchemaParser () . ParseString ( "table t #1 { extern column bool_encoding #1 HIGH_QUALITY; };" ) );
 }
-TEST_CASE ( Table_Column_Extern_WithPhysicalFactor )
+TEST_CASE ( Table_Column_Extern_WithPhysicalFactory )
 {
     REQUIRE ( SchemaParser () . ParseString ( "table t #1 {  column F32_4ch_encoding < 24 > BASE_FRACTION; };" ) );
 }
-
 
 TEST_CASE ( Table_Column_Readonly )
 {
@@ -300,6 +299,11 @@ TEST_CASE ( Table_PhysMbr_Physical )
 {
     REQUIRE ( SchemaParser () . ParseString ( "table t #1 { physical t .c = 1; };" ) );
 }
+TEST_CASE ( Table_PhysMbr_PhysicalWithVErsion )
+{
+    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { physical column NCBI #1 .CLIP_ADAPTER_LEFT; };" ) );
+}
+
 TEST_CASE ( Table_PhysMbr_StaticPhysical )
 {
     REQUIRE ( SchemaParser () . ParseString ( "table t #1 { static physical t .c = 1; };" ) );
