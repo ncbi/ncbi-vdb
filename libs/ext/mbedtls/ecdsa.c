@@ -296,7 +296,7 @@ static int ecdsa_signature_to_asn1( const mbedtls_mpi *r, const mbedtls_mpi *s,
     MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( &p, buf,
                                        MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE ) );
 
-    memcpy( sig, p, len );
+    memmove( sig, p, len );
     *slen = len;
 
     return( 0 );

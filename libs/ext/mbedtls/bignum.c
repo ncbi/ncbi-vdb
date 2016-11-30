@@ -125,7 +125,7 @@ int mbedtls_mpi_grow( mbedtls_mpi *X, size_t nblimbs )
 
         if( X->p != NULL )
         {
-            memcpy( p, X->p, X->n * ciL );
+            memmove( p, X->p, X->n * ciL );
             mbedtls_mpi_zeroize( X->p, X->n );
             mbedtls_free( X->p );
         }
@@ -163,7 +163,7 @@ int mbedtls_mpi_shrink( mbedtls_mpi *X, size_t nblimbs )
 
     if( X->p != NULL )
     {
-        memcpy( p, X->p, i * ciL );
+        memmove( p, X->p, i * ciL );
         mbedtls_mpi_zeroize( X->p, X->n );
         mbedtls_free( X->p );
     }
@@ -201,7 +201,7 @@ int mbedtls_mpi_copy( mbedtls_mpi *X, const mbedtls_mpi *Y )
     MBEDTLS_MPI_CHK( mbedtls_mpi_grow( X, i ) );
 
     memset( X->p, 0, X->n * ciL );
-    memcpy( X->p, Y->p, i * ciL );
+    memmove( X->p, Y->p, i * ciL );
 
 cleanup:
 
@@ -215,9 +215,9 @@ void mbedtls_mpi_swap( mbedtls_mpi *X, mbedtls_mpi *Y )
 {
     mbedtls_mpi T;
 
-    memcpy( &T,  X, sizeof( mbedtls_mpi ) );
-    memcpy(  X,  Y, sizeof( mbedtls_mpi ) );
-    memcpy(  Y, &T, sizeof( mbedtls_mpi ) );
+    memmove( &T,  X, sizeof( mbedtls_mpi ) );
+    memmove(  X,  Y, sizeof( mbedtls_mpi ) );
+    memmove(  Y, &T, sizeof( mbedtls_mpi ) );
 }
 
 /*
@@ -1571,7 +1571,7 @@ static int mpi_montmul( mbedtls_mpi *A, const mbedtls_mpi *B, const mbedtls_mpi 
         *d++ = u0; d[n + 1] = 0;
     }
 
-    memcpy( A->p, d, ( n + 1 ) * ciL );
+    memmove( A->p, d, ( n + 1 ) * ciL );
 
     if( mbedtls_mpi_cmp_abs( A, N ) >= 0 )
         mpi_sub_hlp( n, N->p, A->p );
@@ -1657,10 +1657,10 @@ int mbedtls_mpi_exp_mod( mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi
         MBEDTLS_MPI_CHK( mbedtls_mpi_mod_mpi( &RR, &RR, N ) );
 
         if( _RR != NULL )
-            memcpy( _RR, &RR, sizeof( mbedtls_mpi ) );
+            memmove( _RR, &RR, sizeof( mbedtls_mpi ) );
     }
     else
-        memcpy( &RR, _RR, sizeof( mbedtls_mpi ) );
+        memmove( &RR, _RR, sizeof( mbedtls_mpi ) );
 
     /*
      * W[1] = A * R^2 * R^-1 mod N = A * R mod N

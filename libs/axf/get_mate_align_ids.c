@@ -172,7 +172,7 @@ static rc_t get_mate_algn_id_impl( ID_cache_t *const self,
                 else
                     return rc;
             }
-            memcpy( ids, ptr, rlen * sizeof( *ptr ) );
+            memmove( ids, ptr, rlen * sizeof( *ptr ) );
             if ( ids[ 0 ] != 0 && ids[ 1 ] != 0 && labs( ids[ 0 ] - ids[ 1 ] ) > MIN_DIFF_TO_CACHE )
             {
                 rc = cache_mate( ( ID_cache_t* )self, ids[ 0 ], ids[ 1 ] );

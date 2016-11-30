@@ -59,7 +59,7 @@ LIB_EXPORT rc_t CC StringCopy ( const String **cpy, const String *str )
             {
                 char *addr = ( char* ) ( s + 1 );
                 StringInit ( s, addr, size, str -> len );
-                memcpy ( addr, str -> addr, size );
+                memmove ( addr, str -> addr, size );
                 addr [ size ] = 0;
                 * cpy = s;
                 return 0;
@@ -89,8 +89,8 @@ LIB_EXPORT rc_t CC StringConcat ( const String **cat, const String *a, const Str
             {
                 char *addr = ( char* ) ( s + 1 );
                 StringInit ( s, addr, size, a -> len + b -> len );
-                memcpy ( addr, a -> addr, a -> size );
-                memcpy ( & addr [ a -> size ], b -> addr, b -> size );
+                memmove ( addr, a -> addr, a -> size );
+                memmove ( & addr [ a -> size ], b -> addr, b -> size );
                 addr [ size ] = 0;
                 * cat = s;
                 return 0;

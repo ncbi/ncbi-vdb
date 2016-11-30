@@ -305,7 +305,7 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
                                             result_size = aBsize;
 
                                         if (bPtr == buf)
-                                            memcpy(aBuf, buf + skip, result_size);
+                                            memmove(aBuf, buf + skip, result_size);
                                         else if (skip > 0)
                                         {
                                             const void *src = ( const char * ) aBuf + skip;

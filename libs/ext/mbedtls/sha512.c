@@ -285,7 +285,7 @@ void mbedtls_sha512_update( mbedtls_sha512_context *ctx, const unsigned char *in
 
     if( left && ilen >= fill )
     {
-        memcpy( (void *) (ctx->buffer + left), input, fill );
+        memmove( (void *) (ctx->buffer + left), input, fill );
         mbedtls_sha512_process( ctx, ctx->buffer );
         input += fill;
         ilen  -= fill;
@@ -300,7 +300,7 @@ void mbedtls_sha512_update( mbedtls_sha512_context *ctx, const unsigned char *in
     }
 
     if( ilen > 0 )
-        memcpy( (void *) (ctx->buffer + left), input, ilen );
+        memmove( (void *) (ctx->buffer + left), input, ilen );
 }
 
 static const unsigned char sha512_padding[128] =

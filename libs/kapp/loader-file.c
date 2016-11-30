@@ -593,7 +593,7 @@ LIB_EXPORT rc_t CC KLoaderFile_Make(const KLoaderFile **file, const KDirectory* 
                 obj->dir = dir;
                 if( md5_digest != NULL ) {
                     obj->has_md5 = true;
-                    memcpy(obj->md5_digest, md5_digest, sizeof(obj->md5_digest));
+                    memmove(obj->md5_digest, md5_digest, sizeof(obj->md5_digest));
                 }
                 if( (rc = KLoaderFile_AllocateBuffer(obj)) == 0 ) {
                     char resolved[4096];

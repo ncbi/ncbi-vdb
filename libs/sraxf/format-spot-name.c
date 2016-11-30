@@ -185,7 +185,7 @@ rc_t CC format_spot_name ( void *self,
         /* the output name */
         name = dst -> base;
         
-        memcpy ( name, sname, elem_count );
+        memmove ( name, sname, elem_count );
         rslt -> elem_count = elem_count;
         return 0;
     }
@@ -203,7 +203,7 @@ rc_t CC format_spot_name ( void *self,
                 return rc;
         }
         name = dst->base;
-        memcpy(dst->base, sname, elem_count);
+        memmove(dst->base, sname, elem_count);
         rslt->elem_count = elem_count;
         name[elem_count] = 0;
         return 0;
@@ -284,7 +284,7 @@ rc_t CC format_spot_name_no_coord ( void *self,
         /* the output name */
         name = dst -> base;
         
-        memcpy ( name, sname, elem_count );
+        memmove ( name, sname, elem_count );
         rslt -> elem_count = elem_count;
         return 0;
     }
@@ -302,7 +302,7 @@ rc_t CC format_spot_name_no_coord ( void *self,
                 return rc;
         }
         name = dst->base;
-        memcpy(dst->base, sname, elem_count);
+        memmove(dst->base, sname, elem_count);
         rslt->elem_count = elem_count;
         name[elem_count] = 0;
         return 0;

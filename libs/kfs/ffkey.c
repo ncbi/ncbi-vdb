@@ -148,7 +148,7 @@ rc_t KFFClassMake (KFFClass ** kffcp,	/* pointer to new object */
 		atomic32_set (&self->refcount,1);
 		self->class = class;
 		self->len = len;
-		memcpy (self->descr, descr, len);
+		memmove (self->descr, descr, len);
 		self->descr[self->len] = '\0';
 		*kffcp = self;
 		return 0;
@@ -268,7 +268,7 @@ rc_t KFFTypeMake (KFFType ** kfftp,
 		/* self->node needs not be initialized  */
 		atomic32_set (&self->refcount,1);
 		self->len = len;
-		memcpy (self->descr, descr, len);
+		memmove (self->descr, descr, len);
 		self->descr[self->len] = '\0';
 		self->type = type;
 		self->class = class;

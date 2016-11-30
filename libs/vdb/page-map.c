@@ -663,11 +663,11 @@ rc_t PageMapGrow(PageMap *self, uint32_t new_reserve_leng, uint32_t new_reserve_
     self->start_valid = 0;
     
     if (self->leng_recs > 0 && temp.length != NULL) {
-        memcpy(self->length  , temp.length  , self->reserve_leng * sizeof(uint32_t));
-        memcpy(self->leng_run, temp.leng_run, self->reserve_leng * sizeof(uint32_t));
+        memmove(self->length  , temp.length  , self->reserve_leng * sizeof(uint32_t));
+        memmove(self->leng_run, temp.leng_run, self->reserve_leng * sizeof(uint32_t));
     }
     if (self->data_recs > 0 && temp.data_run != NULL)
-        memcpy(self->data_run, temp.data_run, self->reserve_data * sizeof(uint32_t));
+        memmove(self->data_run, temp.data_run, self->reserve_data * sizeof(uint32_t));
 
     self->reserve_leng = reserve_leng;
     self->reserve_data = reserve_data;
@@ -726,12 +726,12 @@ rc_t PageMapToRandomAccess(PageMap **rslt, PageMap * src,uint32_t *data_offset) 
 			dst->length = dst->cstorage.base;
 			dst->leng_run    = dst->length   + dst->leng_recs;
 			dst->data_recs = src->row_count;
-			memcpy(dst->length,  src->length,  sizeof(uint32_t)*dst->leng_recs);
-			memcpy(dst->leng_run,src->leng_run,sizeof(uint32_t)*dst->leng_recs);
+			memmove(dst->length,  src->length,  sizeof(uint32_t)*dst->leng_recs);
+			memmove(dst->leng_run,src->leng_run,sizeof(uint32_t)*dst->leng_recs);
 			if(data_offset){
 				dst->data_offset = dst->leng_run + dst->leng_recs;
 				if(simple){
-					memcpy(dst->data_offset,data_offset,sizeof(uint32_t)*dst->row_count);
+					memmove(dst->data_offset,data_offset,sizeof(uint32_t)*dst->row_count);
 				} else {
 					uint32_t i,j;
 					for(i=j=0;i<src->data_recs;i++){
@@ -1182,7 +1182,7 @@ rc_t serialize(const PageMap *self, KDataBuffer *buffer, uint64_t *size) {
         rc = KDataBufferResize(buffer, hsize + compress.elem_count);
         if (rc == 0) {
             if (version == 0)
-                memcpy(((uint8_t *)buffer->base) + hsize, compress.base, compress.elem_count);
+                memmove(((uint8_t *)buffer->base) + hsize, compress.base, compress.elem_count);
             else {
                 z_stream zs;
                 int zr;
@@ -1252,7 +1252,7 @@ rc_t PageMapSerialize (const PageMap *self, KDataBuffer *buffer, uint64_t offset
         if (rc == 0) {
             rc = KDataBufferResize(buffer, offset + sz);
             if (rc == 0)
-                memcpy(&((char *)buffer->base)[offset], temp.base, sz);
+                memmove(&((char *)buffer->base)[offset], temp.base, sz);
             *size = sz;
         }
         KDataBufferWhack(&temp);
@@ -1474,7 +1474,7 @@ rc_t PageMapDeserialize_v1(PageMap **lhs, const uint8_t *Src, uint64_t ssize, ui
     if (rc)
         return rc;
 
-    memcpy(decompress.base, Src, hsize);
+    memmove(decompress.base, Src, hsize);
     memset(&zs, 0, sizeof(zs));
     
     zs.next_in = (Bytef *)src;
@@ -1698,14 +1698,14 @@ rc_t PageMapAppend(PageMap *self, const PageMap *other) {
         pm_stats.currentFootprint -= self->reserve_data * sizeof(self->data_run[0]) +
                                      self->reserve_leng * (sizeof(self->leng_run[0]) + sizeof(self->length[0]));
 #endif
-        memcpy(length                  , self->length , self->leng_recs  * sizeof(length[0]));
-        memcpy(length + self->leng_recs, other->length, other->leng_recs * sizeof(length[0]));
+        memmove(length                  , self->length , self->leng_recs  * sizeof(length[0]));
+        memmove(length + self->leng_recs, other->length, other->leng_recs * sizeof(length[0]));
 
-        memcpy(leng_run                  , self->leng_run , self->leng_recs  * sizeof(leng_run[0]));
-        memcpy(leng_run + self->leng_recs, other->leng_run, other->leng_recs * sizeof(leng_run[0]));
+        memmove(leng_run                  , self->leng_run , self->leng_recs  * sizeof(leng_run[0]));
+        memmove(leng_run + self->leng_recs, other->leng_run, other->leng_recs * sizeof(leng_run[0]));
         
-        memcpy(data_run                  , self->data_run , self->data_recs  * sizeof(data_run[0]));
-        memcpy(data_run + self->data_recs, other->data_run, other->data_recs * sizeof(data_run[0]));
+        memmove(data_run                  , self->data_run , self->data_recs  * sizeof(data_run[0]));
+        memmove(data_run + self->data_recs, other->data_run, other->data_recs * sizeof(data_run[0]));
         
         KDataBufferWhack(&self->cstorage);
         self->cstorage = cstorage;

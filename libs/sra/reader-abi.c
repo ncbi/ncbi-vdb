@@ -347,7 +347,7 @@ LIB_EXPORT rc_t CC AbsolidReaderBase(const AbsolidReader* self, uint32_t readId,
     } else {
         const char* b = self->csread->base;
         data[0] = (*me->cs_key)[readId];
-        memcpy(&data[1], &b[read_start], read_len - 1);
+        memmove(&data[1], &b[read_start], read_len - 1);
     }
     data[read_len] = '\0';
     return rc;

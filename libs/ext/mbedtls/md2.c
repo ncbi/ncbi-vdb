@@ -163,7 +163,7 @@ void mbedtls_md2_update( mbedtls_md2_context *ctx, const unsigned char *input, s
         else
             fill = ilen;
 
-        memcpy( ctx->buffer + ctx->left, input, fill );
+        memmove( ctx->buffer + ctx->left, input, fill );
 
         ctx->left += fill;
         input += fill;
@@ -192,10 +192,10 @@ void mbedtls_md2_finish( mbedtls_md2_context *ctx, unsigned char output[16] )
 
     mbedtls_md2_process( ctx );
 
-    memcpy( ctx->buffer, ctx->cksum, 16 );
+    memmove( ctx->buffer, ctx->cksum, 16 );
     mbedtls_md2_process( ctx );
 
-    memcpy( output, ctx->state, 16 );
+    memmove( output, ctx->state, 16 );
 }
 
 #endif /* !MBEDTLS_MD2_ALT */

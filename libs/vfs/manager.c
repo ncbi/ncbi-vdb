@@ -2680,9 +2680,9 @@ LIB_EXPORT rc_t CC VFSManagerUpdateKryptoPassword (const VFSManager * self,
 /*                 bool save_old_password; */
                 char * pc;
 
-                memcpy (password_dir, old_password_file, old_password_file_size);
-                memcpy (new_password_file, old_password_file, old_password_file_size);
-                memcpy (new_password_file + old_password_file_size, temp_extension, sizeof temp_extension);
+                memmove (password_dir, old_password_file, old_password_file_size);
+                memmove (new_password_file, old_password_file, old_password_file_size);
+                memmove (new_password_file + old_password_file_size, temp_extension, sizeof temp_extension);
                 /* new_password_file_size = old_password_file_size + sizeof temp_extension - 1; */
 
                 pc = string_rchr (password_dir, old_password_file_size, '/');

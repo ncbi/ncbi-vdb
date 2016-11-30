@@ -180,7 +180,7 @@ void AppendRowId ( KRowSet *self, ctx_t ctx, int64_t row_id )
 
             TRY ( data = KRowSetSimpleAllocateData ( ctx, new_size ) )
             {
-                memcpy ( &data -> rows_array, &old_data -> rows_array, old_data -> num_rows * sizeof(int64_t) );
+                memmove ( &data -> rows_array, &old_data -> rows_array, old_data -> num_rows * sizeof(int64_t) );
                 data -> num_rows = old_data -> num_rows;
                 data -> sorted = old_data -> sorted;
                 self -> data = data;

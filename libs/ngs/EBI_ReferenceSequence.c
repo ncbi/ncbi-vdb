@@ -173,7 +173,7 @@ static rc_t NGS_ReferenceSequenceEBIInitReference (
 
     if ( ismd5 )
     {
-        memcpy ( ref->buf_ref_data, ebi_data, ebi_data_size );
+        memmove ( ref->buf_ref_data, ebi_data, ebi_data_size );
         ref -> cur_length = ebi_data_size;
     }
     else
