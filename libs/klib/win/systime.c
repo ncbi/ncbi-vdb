@@ -25,6 +25,9 @@
 */
 
 #include <klib/extern.h>
+
+#include<klib/printf.h> /* string_printf */
+#include <klib/rc.h> /* SILENT_RC */
 #include <klib/time.h>
 
 /* do not include windows.h, it is included already by os-native.h */
