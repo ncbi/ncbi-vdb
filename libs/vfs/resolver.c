@@ -1727,7 +1727,10 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
               rc = VResolverAlgRemoteProtectedResolve ( self, kns,
                 protocols, & tok -> acc, path, mapping, legacy_wgs_refseq, version );
             if ( rc == SILENT_RC (
-                rcVFS, rcResolver, rcResolving, rcConnection, rcUnauthorized ) )
+                rcVFS, rcResolver, rcResolving, rcConnection, rcUnauthorized )
+                ||  rc == SILENT_RC (
+                rcVFS, rcQuery, rcExecuting, rcConnection, rcUnauthorized )
+               )
             { /* resolver-cgi is called over http instead of https:
                  fix it */
                 bool fixed = false;

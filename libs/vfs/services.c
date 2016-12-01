@@ -2135,11 +2135,28 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
                     uint32_t code = 0;
                     rc = KHttpResultStatus ( rslt, & code, NULL, 0, NULL );
                     if ( rc == 0 ) {
-                        if ( code == 200 )
+                        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), (
+                            "  code=%d\n", code ) );
+                        switch ( code ) {
+                          case 200:
                             rc = KHttpResultGetInputStream ( rslt, response );
-                        else
+                            break;
+                          case 403:
+                     /* HTTP/1.1 403 Forbidden
+                      - resolver CGI was called over http insted of https */
+                            rc = RC ( rcVFS, rcQuery, rcExecuting, rcConnection,
+                                      rcUnauthorized );
+                            break;
+                          case 404:
+                    /* HTTP/1.1 404 Bad Request - resolver CGI was not found */
+                            rc = RC ( rcVFS, rcQuery, rcExecuting, rcConnection,
+                                      rcNotFound );
+                            break;
+                          default: /* Something completely unexpected */
                             rc = RC ( rcVFS, rcQuery, rcExecuting, rcConnection,
                                       rcUnexpected );
+                            break;
+                        }
                     }
                 }
                 RELEASE ( KHttpResult, rslt );
