@@ -159,6 +159,7 @@ TEST_CASE(TEST) {
     Test ( "Called over HTTPS to Gov: got 200", this, e200, "https to Gov",
        "https://www.ncbi.nlm.nih.GoV/Traces/names/names.cgi" );
 
+#if NOW_NAMES_CGI_ALWAYS_RETURNS_403_WHEN_ASKED_FOR_HTTP 
     Test (
         "Called over HTTP: fail after 403 - not retrying non-government sites",
         this, e403, "HTTP, not government",
@@ -168,6 +169,7 @@ TEST_CASE(TEST) {
         "Called over htTP: fail after 403 - not retrying non-government sites",
         this, e403, "htTP, not government",
         "htTP://www/Traces/names/names.cgi", true );
+#endif
 
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS ), ( "\n" ) );
     Test ( "Called over HTTPS: fail after 403", this, e403, "403 by HTTPS",
