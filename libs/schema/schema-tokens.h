@@ -103,7 +103,7 @@ extern int Schema_debug;
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef int YYSTYPE;
+typedef SchemaToken YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
 #endif
@@ -124,6 +124,6 @@ struct YYLTYPE
 
 
 
-int Schema_parse (struct SchemaScanBlock* sb);
+int Schema_parse (ParseTree** tree, struct SchemaScanBlock* sb);
 
 #endif /* !YY_SCHEMA_HOME_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED  */

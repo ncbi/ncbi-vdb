@@ -74,19 +74,26 @@
 
     #include <stdio.h>
 
+    #include "ParseTree.hpp"
+    using namespace ncbi::SchemaParser;
+
+    #include "schema-tokens.h"
     #include "schema-lex.h"
     #define Schema_lex SchemaScan_yylex
 
-    #include "ParseTree.hpp"
-
-    void Schema_error ( YYLTYPE *llocp, struct SchemaScanBlock* sb, const char* msg )
+    void Schema_error ( YYLTYPE *llocp, void* parser, struct SchemaScanBlock* sb, const char* msg )
     {
         /*TODO: send message to the C++ parser for proper display and recovery */
         printf("Line %i pos %i: %s\n", llocp -> first_line, llocp -> first_column, msg);
     }
 
+    extern "C"
+    {
+        extern enum yytokentype SchemaScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, SchemaScanBlock* sb );
+    }
 
-#line 90 "/home/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.c" /* yacc.c:339  */
+
+#line 97 "/home/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -179,7 +186,7 @@ extern int Schema_debug;
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef int YYSTYPE;
+typedef SchemaToken YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
 #endif
@@ -200,13 +207,13 @@ struct YYLTYPE
 
 
 
-int Schema_parse (struct SchemaScanBlock* sb);
+int Schema_parse (ParseTree** tree, struct SchemaScanBlock* sb);
 
 #endif /* !YY_SCHEMA_HOME_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED  */
 
 /* Copy the second part of user declarations.  */
 
-#line 210 "/home/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.c" /* yacc.c:358  */
+#line 217 "/home/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -510,32 +517,32 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   120,   120,   121,   129,   130,   131,   135,   139,   143,
-     149,   153,   154,   158,   159,   160,   161,   162,   163,   164,
-     165,   166,   167,   168,   169,   170,   171,   175,   176,   180,
-     184,   190,   197,   198,   202,   203,   209,   213,   217,   223,
-     224,   228,   229,   233,   240,   241,   245,   249,   256,   257,
-     261,   268,   272,   279,   283,   290,   294,   295,   296,   304,
-     308,   312,   313,   317,   318,   322,   326,   327,   331,   332,
-     336,   337,   341,   342,   346,   350,   354,   355,   356,   357,
-     358,   362,   363,   367,   371,   372,   376,   377,   381,   382,
-     383,   387,   391,   392,   396,   397,   401,   402,   408,   412,
-     419,   420,   424,   428,   429,   433,   434,   438,   439,   440,
-     441,   445,   451,   457,   461,   462,   466,   467,   471,   472,
-     476,   477,   481,   482,   486,   487,   488,   489,   490,   491,
-     492,   493,   494,   498,   499,   503,   504,   505,   509,   510,
-     511,   512,   516,   517,   518,   519,   520,   524,   525,   526,
-     530,   531,   535,   536,   537,   538,   542,   546,   547,   551,
-     552,   556,   560,   561,   565,   566,   570,   571,   575,   576,
-     580,   587,   588,   592,   593,   597,   598,   599,   600,   601,
-     602,   603,   604,   605,   606,   610,   614,   618,   624,   625,
-     629,   630,   634,   635,   639,   640,   644,   645,   649,   650,
-     654,   655,   659,   660,   664,   665,   666,   670,   671,   675,
-     676,   680,   683,   684,   688,   689,   693,   694,   698,   699,
-     700,   704,   705,   706,   712,   716,   717,   721,   722,   726,
-     727,   731,   732,   733,   737,   738,   742,   746,   750,   751,
-     757,   758,   760,   761,   762,   763,   764,   765,   766,   767,
-     771,   772,   776,   777
+       0,   130,   130,   131,   140,   141,   142,   146,   150,   154,
+     160,   164,   165,   169,   170,   171,   172,   173,   174,   175,
+     176,   177,   178,   179,   180,   181,   182,   186,   187,   191,
+     195,   201,   208,   209,   213,   214,   220,   224,   228,   234,
+     235,   239,   240,   244,   251,   252,   256,   260,   267,   268,
+     272,   279,   283,   290,   294,   301,   305,   306,   307,   315,
+     319,   323,   324,   328,   329,   333,   337,   338,   342,   343,
+     347,   348,   352,   353,   357,   361,   365,   366,   367,   368,
+     369,   373,   374,   378,   382,   383,   387,   388,   392,   393,
+     394,   398,   402,   403,   407,   408,   412,   413,   419,   423,
+     430,   431,   435,   439,   440,   444,   445,   449,   450,   451,
+     452,   456,   462,   468,   472,   473,   477,   478,   482,   483,
+     487,   488,   492,   493,   497,   498,   499,   500,   501,   502,
+     503,   504,   505,   509,   510,   514,   515,   516,   520,   521,
+     522,   523,   527,   528,   529,   530,   531,   535,   536,   537,
+     541,   542,   546,   547,   548,   549,   553,   557,   558,   562,
+     563,   567,   571,   572,   576,   577,   581,   582,   586,   587,
+     591,   598,   599,   603,   604,   608,   609,   610,   611,   612,
+     613,   614,   615,   616,   617,   621,   625,   629,   635,   636,
+     640,   641,   645,   646,   650,   651,   655,   656,   660,   661,
+     665,   666,   670,   671,   675,   676,   677,   681,   682,   686,
+     687,   691,   694,   695,   699,   700,   704,   705,   709,   710,
+     711,   715,   716,   717,   723,   727,   728,   732,   733,   737,
+     738,   742,   743,   744,   748,   749,   753,   757,   761,   762,
+     768,   769,   771,   772,   773,   774,   775,   776,   777,   778,
+     782,   783,   787,   788
 };
 #endif
 
@@ -1025,7 +1032,7 @@ do                                                              \
     }                                                           \
   else                                                          \
     {                                                           \
-      yyerror (&yylloc, sb, YY_("syntax error: cannot back up")); \
+      yyerror (&yylloc, tree, sb, YY_("syntax error: cannot back up")); \
       YYERROR;                                                  \
     }                                                           \
 while (0)
@@ -1127,7 +1134,7 @@ do {                                                                      \
     {                                                                     \
       YYFPRINTF (stderr, "%s ", Title);                                   \
       yy_symbol_print (stderr,                                            \
-                  Type, Value, Location, sb); \
+                  Type, Value, Location, tree, sb); \
       YYFPRINTF (stderr, "\n");                                           \
     }                                                                     \
 } while (0)
@@ -1138,11 +1145,12 @@ do {                                                                      \
 `----------------------------------------*/
 
 static void
-yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, struct SchemaScanBlock* sb)
+yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ParseTree** tree, struct SchemaScanBlock* sb)
 {
   FILE *yyo = yyoutput;
   YYUSE (yyo);
   YYUSE (yylocationp);
+  YYUSE (tree);
   YYUSE (sb);
   if (!yyvaluep)
     return;
@@ -1159,14 +1167,14 @@ yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvalue
 `--------------------------------*/
 
 static void
-yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, struct SchemaScanBlock* sb)
+yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ParseTree** tree, struct SchemaScanBlock* sb)
 {
   YYFPRINTF (yyoutput, "%s %s (",
              yytype < YYNTOKENS ? "token" : "nterm", yytname[yytype]);
 
   YY_LOCATION_PRINT (yyoutput, *yylocationp);
   YYFPRINTF (yyoutput, ": ");
-  yy_symbol_value_print (yyoutput, yytype, yyvaluep, yylocationp, sb);
+  yy_symbol_value_print (yyoutput, yytype, yyvaluep, yylocationp, tree, sb);
   YYFPRINTF (yyoutput, ")");
 }
 
@@ -1199,7 +1207,7 @@ do {                                                            \
 `------------------------------------------------*/
 
 static void
-yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, struct SchemaScanBlock* sb)
+yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, ParseTree** tree, struct SchemaScanBlock* sb)
 {
   unsigned long int yylno = yyrline[yyrule];
   int yynrhs = yyr2[yyrule];
@@ -1213,7 +1221,7 @@ yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule
       yy_symbol_print (stderr,
                        yystos[yyssp[yyi + 1 - yynrhs]],
                        &(yyvsp[(yyi + 1) - (yynrhs)])
-                       , &(yylsp[(yyi + 1) - (yynrhs)])                       , sb);
+                       , &(yylsp[(yyi + 1) - (yynrhs)])                       , tree, sb);
       YYFPRINTF (stderr, "\n");
     }
 }
@@ -1221,7 +1229,7 @@ yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule
 # define YY_REDUCE_PRINT(Rule)          \
 do {                                    \
   if (yydebug)                          \
-    yy_reduce_print (yyssp, yyvsp, yylsp, Rule, sb); \
+    yy_reduce_print (yyssp, yyvsp, yylsp, Rule, tree, sb); \
 } while (0)
 
 /* Nonzero means print parse trace.  It is left uninitialized so that
@@ -1479,10 +1487,11 @@ yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
 `-----------------------------------------------*/
 
 static void
-yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocationp, struct SchemaScanBlock* sb)
+yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocationp, ParseTree** tree, struct SchemaScanBlock* sb)
 {
   YYUSE (yyvaluep);
   YYUSE (yylocationp);
+  YYUSE (tree);
   YYUSE (sb);
   if (!yymsg)
     yymsg = "Deleting";
@@ -1501,7 +1510,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 `----------*/
 
 int
-yyparse (struct SchemaScanBlock* sb)
+yyparse (ParseTree** tree, struct SchemaScanBlock* sb)
 {
 /* The lookahead symbol.  */
 int yychar;
@@ -1775,23 +1784,24 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 120 "/home/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) = new TokenNode ( Token ( (yyvsp[0]) ) ); }
-#line 1781 "/home/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.c" /* yacc.c:1646  */
+#line 130 "/home/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    { /* PARSER->SetRoot( new TokenNode ( Token ( (yytokentype)$1 ) ) );*/ }
+#line 1790 "/home/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
   case 3:
-#line 121 "/home/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    {
-                                (yyval) = new RuleNode("#parse");
-                                (yyval) -> AddChild ( (yyvsp[-1]) );
-                                (yyval) -> AddChild ( new TokenNode ( Token ( (yyvsp[0]) ) ) );
-                            }
-#line 1791 "/home/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.c" /* yacc.c:1646  */
+#line 131 "/home/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
+    {/*
+                                RuleNode* r = new RuleNode ( "#parse" );
+                                r -> AddChild ( PARSER->GetRoot() );
+                                r -> AddChild ( new TokenNode ( Token ( (yytokentype)$2 ) ) );
+                                PARSER->SetRoot( r );
+                            */}
+#line 1801 "/home/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
 
-#line 1795 "/home/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.c" /* yacc.c:1646  */
+#line 1805 "/home/ncbi/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -1842,7 +1852,7 @@ yyerrlab:
     {
       ++yynerrs;
 #if ! YYERROR_VERBOSE
-      yyerror (&yylloc, sb, YY_("syntax error"));
+      yyerror (&yylloc, tree, sb, YY_("syntax error"));
 #else
 # define YYSYNTAX_ERROR yysyntax_error (&yymsg_alloc, &yymsg, \
                                         yyssp, yytoken)
@@ -1869,7 +1879,7 @@ yyerrlab:
                 yymsgp = yymsg;
               }
           }
-        yyerror (&yylloc, sb, yymsgp);
+        yyerror (&yylloc, tree, sb, yymsgp);
         if (yysyntax_error_status == 2)
           goto yyexhaustedlab;
       }
@@ -1893,7 +1903,7 @@ yyerrlab:
       else
         {
           yydestruct ("Error: discarding",
-                      yytoken, &yylval, &yylloc, sb);
+                      yytoken, &yylval, &yylloc, tree, sb);
           yychar = YYEMPTY;
         }
     }
@@ -1950,7 +1960,7 @@ yyerrlab1:
 
       yyerror_range[1] = *yylsp;
       yydestruct ("Error: popping",
-                  yystos[yystate], yyvsp, yylsp, sb);
+                  yystos[yystate], yyvsp, yylsp, tree, sb);
       YYPOPSTACK (1);
       yystate = *yyssp;
       YY_STACK_PRINT (yyss, yyssp);
@@ -1992,7 +2002,7 @@ yyabortlab:
 | yyexhaustedlab -- memory exhaustion comes here.  |
 `-------------------------------------------------*/
 yyexhaustedlab:
-  yyerror (&yylloc, sb, YY_("memory exhausted"));
+  yyerror (&yylloc, tree, sb, YY_("memory exhausted"));
   yyresult = 2;
   /* Fall through.  */
 #endif
@@ -2004,7 +2014,7 @@ yyreturn:
          user semantic actions for why this is necessary.  */
       yytoken = YYTRANSLATE (yychar);
       yydestruct ("Cleanup: discarding lookahead",
-                  yytoken, &yylval, &yylloc, sb);
+                  yytoken, &yylval, &yylloc, tree, sb);
     }
   /* Do not reclaim the symbols of the rule whose action triggered
      this YYABORT or YYACCEPT.  */
@@ -2013,7 +2023,7 @@ yyreturn:
   while (yyssp != yyss)
     {
       yydestruct ("Cleanup: popping",
-                  yystos[*yyssp], yyvsp, yylsp, sb);
+                  yystos[*yyssp], yyvsp, yylsp, tree, sb);
       YYPOPSTACK (1);
     }
 #ifndef yyoverflow

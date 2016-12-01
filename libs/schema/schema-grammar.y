@@ -29,20 +29,31 @@
 
     #include <stdio.h>
 
+    #include "ParseTree.hpp"
+    using namespace ncbi::SchemaParser;
+
+    #include "schema-tokens.h"
     #include "schema-lex.h"
     #define Schema_lex SchemaScan_yylex
 
-    void Schema_error ( YYLTYPE *llocp, struct SchemaScanBlock* sb, const char* msg )
+    void Schema_error ( YYLTYPE *llocp, void* parser, struct SchemaScanBlock* sb, const char* msg )
     {
-    /*TODO: call back into the C++ parser */
-    /*    sb->report_error ( sb, msg );*/
+        /*TODO: send message to the C++ parser for proper display and recovery */
         printf("Line %i pos %i: %s\n", llocp -> first_line, llocp -> first_column, msg);
+    }
+
+    extern "C"
+    {
+        extern enum yytokentype SchemaScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, SchemaScanBlock* sb );
     }
 
 %}
 
 %name-prefix "Schema_"
+%parse-param { ParseTree** tree }
 %param { struct SchemaScanBlock* sb }
+
+%define api.value.type {SchemaToken}
 
 %define parse.error verbose
 %locations
@@ -116,8 +127,13 @@
 %%
 
 parse
-    : END_SOURCE
-    | source END_SOURCE
+    : END_SOURCE            { /* PARSER->SetRoot( new TokenNode ( Token ( (yytokentype)$1 ) ) );*/ }
+    | source END_SOURCE     {/*
+                                RuleNode* r = new RuleNode ( "#parse" );
+                                r -> AddChild ( PARSER->GetRoot() );
+                                r -> AddChild ( new TokenNode ( Token ( (yytokentype)$2 ) ) );
+                                PARSER->SetRoot( r );
+                            */}
     ;
 
 source

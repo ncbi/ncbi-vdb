@@ -28,7 +28,10 @@
 
 #define YYDEBUG 1
 
-    #include "schema-lex.h"
+#include "schema-lex.h"
+
+typedef struct ParseTree ParseTree; /* a fake declaration to make the scanner compile */
+#include "schema-tokens.h"
 
 #define YY_USER_ACTION \
     yylloc->first_line = yylloc->last_line; \

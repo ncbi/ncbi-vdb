@@ -42,7 +42,15 @@ SchemaScanner :: ~SchemaScanner ()
     SchemaScan_yylex_destroy ( & m_scanBlock );
 }
 
-SchemaScanner :: Token
+// direct access to flex-generated scanner
+class ParseTree; // need this declared for the following header to compile
+#include "schema-tokens.h"
+
+extern "C" {
+    extern enum yytokentype SchemaScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, SchemaScanBlock* sb );
+}
+
+SchemaScanner :: TokenType
 SchemaScanner :: Scan()
 {
     YYSTYPE tok;

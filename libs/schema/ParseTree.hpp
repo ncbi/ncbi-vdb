@@ -24,32 +24,50 @@
  *
  */
 
-#ifndef _hpp_SchemaScanner_
-#define _hpp_SchemaScanner_
+#ifndef _hpp_ParseTree_
+#define _hpp_ParseTree_
 
-#include "schema-lex.h"
+#include "Token.hpp"
 
 namespace ncbi
 {
     namespace SchemaParser
     {
-        class SchemaScanner
+        class ParseTree
         {
         public:
-            typedef int TokenType;
+            virtual ~ParseTree ();
 
+            void AddChild(ParseTree*);
+
+            unsigned int ChildrenCount() const;
+            ParseTree* GetChild(unsigned int idx);
+            const ParseTree* GetChild(unsigned int idx) const;
+
+        protected:
+            ParseTree ();
+        };
+
+        class TokenNode : public ParseTree
+        {
         public:
-            SchemaScanner ( const char * source, bool p_debug = false );
-            ~SchemaScanner ();
+            TokenNode(const Token& token);
+            virtual ~TokenNode();
 
-            TokenType Scan(); /* this is mostly for testing; bison-generated parser calls SchemaScan_yylex directly */
-
-            const char* LastTokenValue() const { return m_scanBlock . last_token; }
-
-            :: SchemaScanBlock & GetScanBlock () { return m_scanBlock; }
+            const Token& GetToken() const { return m_token; }
 
         private:
-            :: SchemaScanBlock  m_scanBlock;
+            Token m_token;
+        };
+
+        class RuleNode : public ParseTree
+        {
+        public:
+            RuleNode(const char* name);
+            virtual ~RuleNode();
+
+        private:
+            char* m_name;
         };
     }
 }

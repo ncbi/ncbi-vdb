@@ -30,6 +30,7 @@
 */
 
 #include "../../libs/schema/SchemaParser.hpp"
+#include "../../libs/schema/ParseTree.hpp"
 
 using namespace std;
 using namespace ncbi::SchemaParser;
@@ -84,11 +85,13 @@ rc_t CC KMain ( int argc, char *argv [] )
                 throw runtime_error ( string ( "Invalid file " ) + argv [ i + 1 ] );
             }
             buffer << in.rdbuf();
-            if ( ! SchemaParser () . ParseString ( buffer . str () . c_str () ) )
+            ParseTree* pt;
+            if ( ! SchemaParser () . ParseString ( buffer . str () . c_str (), pt ) )
             {
                 cout << string ( "Parsing failed: " ) + argv [ i + 1 ] << endl;
                 ++ failed;
             }
+            delete pt;
         }
         cout << "Failed: " << failed << endl;
     }

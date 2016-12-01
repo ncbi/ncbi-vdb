@@ -31,17 +31,25 @@ namespace ncbi
 {
     namespace SchemaParser
     {
+        class ParseTree;
+
         class SchemaParser
         {
         public:
             SchemaParser ( bool debug = false );
             ~SchemaParser ();
 
-            bool ParseString ( const char * input );
-            bool ParseFile ( const char * source_file );
+            bool ParseString ( const char * input, ParseTree*& );
+            bool ParseFile ( const char * source_file, ParseTree*& );
 
-        public:
+            ParseTree* GetRoot () const;
+
+        public: // for access from bison
+            void SetRoot ( ParseTree* );
+
+        private:
             bool m_debug;
+            ParseTree* m_root;
         };
     }
 }

@@ -31,9 +31,11 @@
 extern "C" {
 #endif
 
-struct SchemaScanBlock;
-
-#include "schema-tokens.h"
+typedef struct SchemaToken
+{
+    int type;
+    const char* value;
+} SchemaToken;
 
 typedef struct SchemaScanBlock
 {
@@ -47,8 +49,6 @@ extern void SchemaScan_yylex_init ( SchemaScanBlock* sb, const char *str );
 extern void SchemaScan_yylex_destroy ( SchemaScanBlock* sb );
 
 extern void SchemaScan_set_debug ( SchemaScanBlock* sb, int on );
-
-extern enum yytokentype SchemaScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, SchemaScanBlock* sb );
 
 #ifdef __cplusplus
 }

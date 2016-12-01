@@ -70,11 +70,16 @@ $(ILIBDIR)/libschema: $(addprefix $(ILIBDIR)/libschema.,$(ILIBEXT))
 SCHEMA_SRC = \
     schema-grammar \
     schema-lex \
+    Token \
     SchemaScanner \
     SchemaParser \
+    ParseTree \
 
-bison $(SRCDIR)/schema-grammar.c: $(SRCDIR)/schema-grammar.y
-	bison -r state -o $(SRCDIR)/schema-grammar.c --defines=$(SRCDIR)/schema-tokens.h $(SRCDIR)/schema-grammar.y
+schema-grammar.$(LOBX): $(SRCDIR)/schema-grammar.cpp
+	$(CP) -o $@ -fPIC $(OPT) -D_LIBRARY $< $(LOC_INFO) -D__file_ext__=cpp
+
+bison $(SRCDIR)/schema-grammar.cpp: $(SRCDIR)/schema-grammar.y
+	bison -r state -o $(SRCDIR)/schema-grammar.cpp --defines=$(SRCDIR)/schema-tokens.h $(SRCDIR)/schema-grammar.y
 
 flex $(SRCDIR)/schema-lex.c: $(SRCDIR)/schema-lex.l $(SRCDIR)/schema-grammar.c
 	flex -d -t $(SRCDIR)/schema-lex.l > $(SRCDIR)/schema-lex.c

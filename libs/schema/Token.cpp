@@ -24,34 +24,19 @@
  *
  */
 
-#ifndef _hpp_SchemaScanner_
-#define _hpp_SchemaScanner_
+#include "Token.hpp"
 
-#include "schema-lex.h"
+#include <klib/text.h>
 
-namespace ncbi
+using namespace ncbi :: SchemaParser;
+
+Token :: Token ( SchemaToken& p_token )
+:   m_type ( p_token . type ),
+    m_value ( string_dup_measure ( p_token . value, NULL ) )
 {
-    namespace SchemaParser
-    {
-        class SchemaScanner
-        {
-        public:
-            typedef int TokenType;
-
-        public:
-            SchemaScanner ( const char * source, bool p_debug = false );
-            ~SchemaScanner ();
-
-            TokenType Scan(); /* this is mostly for testing; bison-generated parser calls SchemaScan_yylex directly */
-
-            const char* LastTokenValue() const { return m_scanBlock . last_token; }
-
-            :: SchemaScanBlock & GetScanBlock () { return m_scanBlock; }
-
-        private:
-            :: SchemaScanBlock  m_scanBlock;
-        };
-    }
 }
 
-#endif
+Token :: ~Token ()
+{
+    free ( m_value );
+}

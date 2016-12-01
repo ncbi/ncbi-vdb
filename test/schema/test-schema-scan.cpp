@@ -30,9 +30,12 @@
 */
 
 #include "../../libs/schema/SchemaScanner.hpp"
+#include "../../libs/schema/ParseTree.hpp"
 
 using namespace std;
 using namespace ncbi::SchemaParser;
+
+#include "../../libs/schema/schema-tokens.h"
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>
@@ -67,7 +70,7 @@ rc_t CC Usage( const Args* args )
 bool
 NextToken ( SchemaScanner & p_s)
 {
-    SchemaScanner :: Token t = p_s . Scan ();
+    SchemaScanner :: TokenType t = p_s . Scan ();
     if ( t == END_SOURCE )
     {
         return false;

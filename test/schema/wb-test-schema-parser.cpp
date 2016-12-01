@@ -31,347 +31,383 @@
 #include <ktst/unit_test.hpp>
 
 #include "../../libs/schema/SchemaParser.hpp"
+#include "../../libs/schema/ParseTree.hpp"
+
+using namespace ncbi::SchemaParser;
+#include "../../libs/schema/schema-tokens.h"
 
 using namespace std;
 using namespace ncbi::NK;
-using namespace ncbi::SchemaParser;
 
 TEST_SUITE ( SchemaParserTestSuite );
 
+// Token
+TEST_CASE(Token_Construct)
+{
+    SchemaToken st = { KW_virtual, "virtual" };
+    Token t ( st );
+    REQUIRE_EQ ( (int)KW_virtual, t . GetType() );
+    REQUIRE_EQ ( string ( "virtual" ), string ( t . GetValue() ) );
+}
+
+// // TokenNode
+// TEST_CASE(TokenNode_Construct)
+// {
+//     TokenNode t(Token())
+// }
+// // ParseTree
+
+// TEST_CASE(ParseTree_CreateDestroy)
+// {
+//     ParseTree pt;
+// }
+
+// TEST_CASE(ParseTree_AddChild)
+// {
+//     ParseTree pt;
+//     pt. AddChild();
+// }
+
+bool ParseAndVerify(const char* p_source)
+{
+    ParseTree* pt;
+    bool ret = SchemaParser () . ParseString ( p_source, pt );
+    delete pt;
+    return ret;
+}
+
 TEST_CASE ( EmptyInput )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "" ) );
+    REQUIRE ( ParseAndVerify ( "" ) );
 }
 
 TEST_CASE ( Version1 )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "version 1; include \"qq\";" ) );
+    REQUIRE ( ParseAndVerify ( "version 1; include \"qq\";" ) );
 }
 
 TEST_CASE ( Typedef )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "typedef oldName newName;" ) );
+    REQUIRE ( ParseAndVerify ( "typedef oldName newName;" ) );
 }
 TEST_CASE ( TypedefDim )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "typedef oldName newName [ 12 ];" ) );
+    REQUIRE ( ParseAndVerify ( "typedef oldName newName [ 12 ];" ) );
 }
 TEST_CASE ( TypedefMultipleNames )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "typedef oldName neawName1, newName2 [ 12 ], newName3;" ) );
+    REQUIRE ( ParseAndVerify ( "typedef oldName neawName1, newName2 [ 12 ], newName3;" ) );
 }
 
 TEST_CASE ( Typeset )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "typeset newName { a, b[1], c };" ) );
+    REQUIRE ( ParseAndVerify ( "typeset newName { a, b[1], c };" ) );
 }
 
 TEST_CASE ( Format )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "fmtdef newName;" ) );
+    REQUIRE ( ParseAndVerify ( "fmtdef newName;" ) );
 }
 TEST_CASE ( FormatRename )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "fmtdef oldName newName;" ) );
+    REQUIRE ( ParseAndVerify ( "fmtdef oldName newName;" ) );
 }
 
 TEST_CASE ( Const )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "const t c = 1;" ) );
+    REQUIRE ( ParseAndVerify ( "const t c = 1;" ) );
 }
 TEST_CASE ( ConstDim )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "const t[2] c = 1;" ) );
+    REQUIRE ( ParseAndVerify ( "const t[2] c = 1;" ) );
 }
 
 TEST_CASE ( Alias )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "alias a b;" ) );
+    REQUIRE ( ParseAndVerify ( "alias a b;" ) );
 }
 
 TEST_CASE ( Extern_AndUntyped )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "extern function __untyped fn ();" ) );
+    REQUIRE ( ParseAndVerify ( "extern function __untyped fn ();" ) );
 }
 
 TEST_CASE ( Function_RowLength )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "function __row_length fn ();" ) );
+    REQUIRE ( ParseAndVerify ( "function __row_length fn ();" ) );
 }
 
 TEST_CASE ( Function_Naked )
 {   //TODO: verify that paramter-less functions are not allowed
-    REQUIRE ( SchemaParser () . ParseString ( "function t fn ( a b );" ) );
+    REQUIRE ( ParseAndVerify ( "function t fn ( a b );" ) );
 }
 
 TEST_CASE ( Function_ArreyReturn )
 {   //TODO: verify that paramter-less functions are not allowed
-    REQUIRE ( SchemaParser () . ParseString ( "function t[3] fn ( a b );" ) );
+    REQUIRE ( ParseAndVerify ( "function t[3] fn ( a b );" ) );
 }
 
 TEST_CASE ( Function_Schema )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "function < type b,  a / fmt c > t fn ( a b );" ) );
+    REQUIRE ( ParseAndVerify ( "function < type b,  a / fmt c > t fn ( a b );" ) );
 }
 
 TEST_CASE ( Function_Factory )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "function t fn < a b > ( a b );" ) );
+    REQUIRE ( ParseAndVerify ( "function t fn < a b > ( a b );" ) );
 }
 
 TEST_CASE ( Function_NoFormals )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "function t fn ();" ) );
+    REQUIRE ( ParseAndVerify ( "function t fn ();" ) );
 }
 TEST_CASE ( Function_Formals_OptionalOnly )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "function t fn ( * a b );" ) );
+    REQUIRE ( ParseAndVerify ( "function t fn ( * a b );" ) );
 }
 TEST_CASE ( Function_Formals_MandatoryAndOptional_NoComma )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "function t fn ( a b * a b );" ) );
+    REQUIRE ( ParseAndVerify ( "function t fn ( a b * a b );" ) );
 }
 TEST_CASE ( Function_Formals_MandatoryAndOptional )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "function t fn ( a b, * a b );" ) );
+    REQUIRE ( ParseAndVerify ( "function t fn ( a b, * a b );" ) );
 }
 TEST_CASE ( Function_Formals_MandatoryAndVariadic )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "function t fn ( a b, ...  );" ) );
+    REQUIRE ( ParseAndVerify ( "function t fn ( a b, ...  );" ) );
 }
 TEST_CASE ( Function_Formals_MandatoryOptionalAndVariadic )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "function t fn ( a b, * a b, ...  );" ) );
+    REQUIRE ( ParseAndVerify ( "function t fn ( a b, * a b, ...  );" ) );
 }
 TEST_CASE ( Function_Formals_Control )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "function t fn ( control a b );" ) );
+    REQUIRE ( ParseAndVerify ( "function t fn ( control a b );" ) );
 }
 
 TEST_CASE ( Function_Prologue_Rename )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "function t fn ( a b ) = fn;" ) );
+    REQUIRE ( ParseAndVerify ( "function t fn ( a b ) = fn;" ) );
 }
 TEST_CASE ( Function_Prologue_Script_Return )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "function t fn ( a b ) { return 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "function t fn ( a b ) { return 1; };" ) );
 }
 TEST_CASE ( Function_Prologue_Script_AssignFormat )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "function t fn ( a b ) { a / b c = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "function t fn ( a b ) { a / b c = 1; };" ) );
 }
 TEST_CASE ( Function_Prologue_Script_Assign )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "function t fn ( a b ) { a c = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "function t fn ( a b ) { a c = 1; };" ) );
 }
 TEST_CASE ( Function_Prologue_Script_Trigger )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "function t fn ( a b ) { trigger c = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "function t fn ( a b ) { trigger c = 1; };" ) );
 }
 
 TEST_CASE ( Script )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "schema t fn ( a b );" ) );
+    REQUIRE ( ParseAndVerify ( "schema t fn ( a b );" ) );
 }
 TEST_CASE ( Script_Function )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "schema function t fn ( a b );" ) );
+    REQUIRE ( ParseAndVerify ( "schema function t fn ( a b );" ) );
 }
 
 TEST_CASE ( Validate )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "validate function t fn ( a b );" ) );
+    REQUIRE ( ParseAndVerify ( "validate function t fn ( a b );" ) );
 }
 
 TEST_CASE ( Physical_Shorthand )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "physical t fn #1.0 = { return 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "physical t fn #1.0 = { return 1; };" ) );
 }
 
 TEST_CASE ( Physical_Longhand )
 {
-    REQUIRE ( SchemaParser () . ParseString (
+    REQUIRE ( ParseAndVerify (
         "physical t fn #1.0 { decode { return 1; } ; encode { return 1; } ; __row_length = f () };" ) );
 }
 
 TEST_CASE ( Table_NoParents )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1.1.1 { t a = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1.1.1 { t a = 1; };" ) );
 }
 TEST_CASE ( Table_Parents )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1.1.1 = t1, t2, t3 { t a = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1.1.1 = t1, t2, t3 { t a = 1; };" ) );
 }
 
 TEST_CASE ( Table_Empty )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 {};" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 {};" ) );
 }
 TEST_CASE ( Table_ProdStmt )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { t a = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { t a = 1; };" ) );
 }
 TEST_CASE ( Table_ProdStmt_NoFormals )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { t p = < t > fn < 1 > (); };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { t p = < t > fn < 1 > (); };" ) );
 }
 
 TEST_CASE ( Table_Column )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { column t c; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { column t c; };" ) );
 }
 TEST_CASE ( Table_Column_PhysicalEncoding )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { column <1> p c; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { column <1> p c; };" ) );
 }
 TEST_CASE ( Table_Column_PhysicalEncoding_WithVersion )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { column <1> p#1.2.3 c; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { column <1> p#1.2.3 c; };" ) );
 }
 TEST_CASE ( Table_Column_PhysicalEncoding_WithFactory )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { column <1> p <1> c; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { column <1> p <1> c; };" ) );
 }
 TEST_CASE ( Table_Column_PhysicalEncoding_WithVersionAndFactory )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { column <1> p#1 <1> c; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { column <1> p#1 <1> c; };" ) );
 }
 TEST_CASE ( Table_Column_Default )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { default column t c; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { default column t c; };" ) );
 }
 TEST_CASE ( Table_Column_Extern_WithPhysical )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { extern column < U32 > izip_encoding #1 CHANNEL; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { extern column < U32 > izip_encoding #1 CHANNEL; };" ) );
 }
 TEST_CASE ( Table_Column_Extern_WithNakedPhysical )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { extern column bool_encoding #1 HIGH_QUALITY; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { extern column bool_encoding #1 HIGH_QUALITY; };" ) );
 }
 TEST_CASE ( Table_Column_Extern_WithPhysicalFactory )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 {  column F32_4ch_encoding < 24 > BASE_FRACTION; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 {  column F32_4ch_encoding < 24 > BASE_FRACTION; };" ) );
 }
 
 TEST_CASE ( Table_Column_Readonly )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { readonly column t c; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { readonly column t c; };" ) );
 }
 TEST_CASE ( Table_Column_AllMods )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { default extern readonly column t c; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { default extern readonly column t c; };" ) );
 }
 
 TEST_CASE ( Table_Column_default )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { column default t c; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { column default t c; };" ) );
 }
 TEST_CASE ( Table_Column_limit )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { column limit = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { column limit = 1; };" ) );
 }
 TEST_CASE ( Table_Column_default_limit )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { column default limit = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { column default limit = 1; };" ) );
 }
 
 TEST_CASE ( Table_Column_withBody )
 {
-    REQUIRE ( SchemaParser () . ParseString (
-        "table t #1 { column t c { read = 1 | 2; validate = 2 | 3; limit = 100}; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { column t c { read = 1 | 2; validate = 2 | 3; limit = 100}; };" ) );
 }
 TEST_CASE ( Table_Column_withExpr )
 {
-    REQUIRE ( SchemaParser () . ParseString (
-        "table t #1 { column t c = 0 | 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { column t c = 0 | 1; };" ) );
 }
 
 TEST_CASE ( Table_DefaultView )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { default view \"QQ\"; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { default view \"QQ\"; };" ) );
 }
 
 TEST_CASE ( Table_PhysMbr_Static )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { static t .c = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { static t .c = 1; };" ) );
 }
 TEST_CASE ( Table_PhysMbr_Physical )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { physical t .c = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { physical t .c = 1; };" ) );
 }
 TEST_CASE ( Table_PhysMbr_PhysicalWithVErsion )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { physical column NCBI #1 .CLIP_ADAPTER_LEFT; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { physical column NCBI #1 .CLIP_ADAPTER_LEFT; };" ) );
 }
 
 TEST_CASE ( Table_PhysMbr_StaticPhysical )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { static physical t .c = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { static physical t .c = 1; };" ) );
 }
 TEST_CASE ( Table_PhysMbr_WithColumn )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { static column t .c = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { static column t .c = 1; };" ) );
 }
 
 TEST_CASE ( Table_PhysMbr_WithSchema )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { static column <1> t .c = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { static column <1> t .c = 1; };" ) );
 }
 TEST_CASE ( Table_PhysMbr_WithVErsion )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { static column t#1 .c = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { static column t#1 .c = 1; };" ) );
 }
 TEST_CASE ( Table_PhysMbr_WithFactory )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { static column t<1> .c = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { static column t<1> .c = 1; };" ) );
 }
 TEST_CASE ( Table_PhysMbr_WithAll )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { static column <1>t#2.3.4<5> .c = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { static column <1>t#2.3.4<5> .c = 1; };" ) );
 }
 
 TEST_CASE ( Table_Untyped )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "table t #1 { __untyped = a:b(); };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { __untyped = a:b(); };" ) );
 }
 
 TEST_CASE ( Database_Empty )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "database a:b #1.2.3 {};" ) );
+    REQUIRE ( ParseAndVerify ( "database a:b #1.2.3 {};" ) );
 }
 TEST_CASE ( Database_WithParent )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "database a:b #1.2.3 = ns:dad #4.5.6 {};" ) );
+    REQUIRE ( ParseAndVerify ( "database a:b #1.2.3 = ns:dad #4.5.6 {};" ) );
 }
 
 TEST_CASE ( Database_DbMember )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "database d#1 { database ns : db DB; };" ) );
+    REQUIRE ( ParseAndVerify ( "database d#1 { database ns : db DB; };" ) );
 }
 TEST_CASE ( Database_DbMember_WithTemplate )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "database d#1 { template database ns : db DB; };" ) );
+    REQUIRE ( ParseAndVerify ( "database d#1 { template database ns : db DB; };" ) );
 }
 
 TEST_CASE ( Database_TableMember )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "database d#1 { table ns : tbl T; };" ) );
+    REQUIRE ( ParseAndVerify ( "database d#1 { table ns : tbl T; };" ) );
 }
 TEST_CASE ( Database_TableMember_WithTemplate )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "database d#1 { template table ns : tbl T; };" ) );
+    REQUIRE ( ParseAndVerify ( "database d#1 { template table ns : tbl T; };" ) );
 }
 
 TEST_CASE ( Include )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "include 'insdc/sra.vschema';" ) );
+    REQUIRE ( ParseAndVerify ( "include 'insdc/sra.vschema';" ) );
 }
 
 // Version 2
 
 TEST_CASE ( VersionOther )
 {
-    REQUIRE ( SchemaParser () . ParseString ( "version 3.14; $" ) ); //TODO
+    REQUIRE ( ParseAndVerify ( "version 3.14; $" ) ); //TODO
 }
 
 
