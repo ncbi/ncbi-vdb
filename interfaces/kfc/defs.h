@@ -185,7 +185,7 @@ typedef uint32_t ver_t;
  *  NB - we depend upon including <string.h> BEFORE redefining
  */
 #undef memcpy
-#if _DEBUGGING
+#if _DEBUGGING && LINUX
 #define memcpy "DON'T USE MEMCPY! USE MEMMOVE INSTEAD!!"
 #else
 #define memcpy memmove
