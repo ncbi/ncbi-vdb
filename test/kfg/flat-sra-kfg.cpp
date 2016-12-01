@@ -126,9 +126,9 @@ static const char badCgi[]
 #ifdef ALL
 TEST_CASE(test_sra) {
     const string newShort
-        ("http://sra-download.ncbi.nlm.nih.gov/srapub/SRR000001");
+        ("https://sra-download.ncbi.nlm.nih.gov/srapub/SRR000001");
     const string newLong
-        ("http://sra-download.ncbi.nlm.nih.gov/srapub/SRR1000254");
+        ("https://sra-download.ncbi.nlm.nih.gov/srapub/SRR1000254");
     const string oldShort("https://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/"
                 "reads/ByRun/sra/SRR/SRR000/SRR000001/SRR000001.sra");
 
