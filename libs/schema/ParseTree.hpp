@@ -27,6 +27,8 @@
 #ifndef _hpp_ParseTree_
 #define _hpp_ParseTree_
 
+#include <klib/vector.h>
+
 #include "Token.hpp"
 
 namespace ncbi
@@ -36,38 +38,24 @@ namespace ncbi
         class ParseTree
         {
         public:
+            ParseTree ( const SchemaToken& token);
+            ParseTree ( const SchemaToken& token, ParseTree * );
+            ParseTree ( const SchemaToken& token, ParseTree *, ParseTree * );
+            ParseTree ( const SchemaToken& token, ParseTree *, ParseTree *, ParseTree * );
             virtual ~ParseTree ();
 
-            void AddChild(ParseTree*);
+            void AddChild ( ParseTree * ); // allocated with new
 
-            unsigned int ChildrenCount() const;
-            ParseTree* GetChild(unsigned int idx);
-            const ParseTree* GetChild(unsigned int idx) const;
+            const Token & GetToken () const { return m_token; }
 
-        protected:
-            ParseTree ();
-        };
+            uint32_t ChildrenCount () const;
 
-        class TokenNode : public ParseTree
-        {
-        public:
-            TokenNode(const Token& token);
-            virtual ~TokenNode();
-
-            const Token& GetToken() const { return m_token; }
+            const ParseTree* GetChild ( uint32_t idx ) const;
+                  ParseTree* GetChild ( uint32_t idx );
 
         private:
             Token m_token;
-        };
-
-        class RuleNode : public ParseTree
-        {
-        public:
-            RuleNode(const char* name);
-            virtual ~RuleNode();
-
-        private:
-            char* m_name;
+            Vector m_children;
         };
     }
 }

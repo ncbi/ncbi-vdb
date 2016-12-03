@@ -26,6 +26,8 @@
 
 #include "SchemaScanner.hpp"
 
+#include <string.h>
+
 using namespace ncbi::SchemaParser;
 
 SchemaScanner :: SchemaScanner ( const char * source, bool p_debug )
@@ -35,6 +37,7 @@ SchemaScanner :: SchemaScanner ( const char * source, bool p_debug )
     {
         SchemaScan_set_debug ( & m_scanBlock, 1 );
     }
+    memset ( & m_lastToken, 0, sizeof m_lastToken );
 }
 
 SchemaScanner :: ~SchemaScanner ()
@@ -53,8 +56,7 @@ extern "C" {
 SchemaScanner :: TokenType
 SchemaScanner :: Scan()
 {
-    YYSTYPE tok;
-    YYLTYPE loc;
-    return SchemaScan_yylex ( & tok, & loc, & m_scanBlock );
+    YYLTYPE loc; //TODO: make a data member, or place in SchemaToken
+    return SchemaScan_yylex ( & m_lastToken, & loc, & m_scanBlock );
 }
 

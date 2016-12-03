@@ -77,9 +77,9 @@ NextToken ( SchemaScanner & p_s)
     }
     if ( t == UNRECOGNIZED )
     {
-        throw runtime_error ( string ( "Unrecognized token " ) + p_s . LastTokenValue () );
+        throw runtime_error ( string ( "Unrecognized token " ) +
+                        string ( p_s . LastTokenValue ()  . value, p_s . LastTokenValue ()  . value_len ) );
     }
-    cout << p_s . LastTokenValue () << endl;
     return true;
 }
 
@@ -105,6 +105,9 @@ rc_t CC KMain ( int argc, char *argv [] )
             SchemaScanner s ( buffer . str () . c_str () );
             while ( NextToken ( s ) )
             {
+                cout << s . LastTokenValue () . leading_ws
+                     << string ( s . LastTokenValue ()  . value, s . LastTokenValue ()  . value_len )
+                     << endl;
             }
         }
     }

@@ -113,7 +113,7 @@ OUT = $(SRCDIR)/actual/test-schema-scan
 
 scantest: test-schema-scan
 	@mkdir -p $(SRCDIR)/actual;
-	$(TEST_BINDIR)/test-schema-scan $(SCHEMATA) >$(OUT)
+	-$(TEST_BINDIR)/test-schema-scan $(SCHEMATA) >$(OUT)
 	#@diff $(OUT) $(SRCDIR)/expected/test-schema-scan
 	@echo "Schema scanner test complete"
 

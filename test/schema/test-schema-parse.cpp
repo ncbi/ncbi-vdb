@@ -85,13 +85,12 @@ rc_t CC KMain ( int argc, char *argv [] )
                 throw runtime_error ( string ( "Invalid file " ) + argv [ i + 1 ] );
             }
             buffer << in.rdbuf();
-            ParseTree* pt;
-            if ( ! SchemaParser () . ParseString ( buffer . str () . c_str (), pt ) )
+            SchemaParser parser;
+            if ( ! parser . ParseString ( buffer . str () . c_str () ) )
             {
                 cout << string ( "Parsing failed: " ) + argv [ i + 1 ] << endl;
                 ++ failed;
             }
-            delete pt;
         }
         cout << "Failed: " << failed << endl;
     }

@@ -47,10 +47,11 @@
         extern enum yytokentype SchemaScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, SchemaScanBlock* sb );
     }
 
+    #define RULE_TOKEN(v,t) SchemaToken v = { t, NULL, 0, NULL, NULL };
 %}
 
 %name-prefix "Schema_"
-%parse-param { ParseTree** tree }
+%parse-param { ParseTree** root }
 %param { struct SchemaScanBlock* sb }
 
 %define api.value.type {SchemaToken}
@@ -122,28 +123,52 @@
 %token KW_void
 %token KW_write
 
+    /* Parse tree rule nodes */
+%token PT_PARSE
+%token PT_SOURCE
+%token PT_VERSION_1_0
+%token PT_SCHEMA_1_0
+%token PT_INCLUDE
+
 %start parse
 
 %%
 
 parse
-    : END_SOURCE            { /* PARSER->SetRoot( new TokenNode ( Token ( (yytokentype)$1 ) ) );*/ }
-    | source END_SOURCE     {/*
-                                RuleNode* r = new RuleNode ( "#parse" );
-                                r -> AddChild ( PARSER->GetRoot() );
-                                r -> AddChild ( new TokenNode ( Token ( (yytokentype)$2 ) ) );
-                                PARSER->SetRoot( r );
-                            */}
+    : END_SOURCE            {
+                                RULE_TOKEN ( t, PT_PARSE);
+                                *root =  new ParseTree ( t, new ParseTree ( $1 ) );
+                            }
+    | source END_SOURCE     {
+                                RULE_TOKEN ( t, PT_PARSE);
+                                *root =  new ParseTree ( t, ( ParseTree* ) $1 . subtree, new ParseTree ( $2 ) );
+                            }
     ;
 
 source
     : schema_1_0
+                            {
+                                RULE_TOKEN ( t, PT_SOURCE);
+                                $$ . subtree = new ParseTree ( t, ( ParseTree* ) $1 . subtree );
+                            }
     | version_1_0 schema_1_0
+                            {
+                                RULE_TOKEN ( t, PT_SOURCE);
+                                $$ . subtree = new ParseTree ( t, ( ParseTree* ) $1 . subtree, ( ParseTree* ) $2 . subtree );
+                            }
     | version_2_x schema_2_x
+                            {
+                                RULE_TOKEN ( t, PT_SOURCE);
+                                $$ . subtree = new ParseTree ( t, ( ParseTree* ) $1 . subtree, ( ParseTree* ) $2 . subtree );
+                            }
     ;
 
 version_1_0
     : KW_version VERS_1_0 ';'
+                            {
+                                RULE_TOKEN ( t, PT_VERSION_1_0);
+                                $$ . subtree = new ParseTree ( t, new ParseTree ( $1 ), new ParseTree ( $2 ), new ParseTree ( $3 ) );
+                            }
     ;
 
 version_2_x
@@ -158,11 +183,19 @@ schema_2_x
  */
 schema_1_0
     : schema_1_0_decl_seq
+                            {
+                                RULE_TOKEN ( t, PT_SCHEMA_1_0);
+                                $$ . subtree = new ParseTree ( t, ( ParseTree* ) $1 . subtree );
+                            }
     ;
 
 schema_1_0_decl_seq
-    : schema_1_0_decl
+    : schema_1_0_decl       { $$ . subtree = $1 . subtree; }
     | schema_1_0_decl_seq schema_1_0_decl
+                            {
+                                ( ( ParseTree* ) $1 . subtree ) -> AddChild ( ( ParseTree* ) $2 . subtree );
+                                $$ . subtree = $1 . subtree;
+                            }
     ;
 
 schema_1_0_decl
@@ -178,8 +211,8 @@ schema_1_0_decl
     | physical_1_0_decl
     | table_1_0_decl
     | database_1_0_decl
-    | include_directive
-    | ';'                                                       /* for lots of reasons, we tolerate stray semicolons */
+    | include_directive     { $$ . subtree = $1 . subtree; }
+    | ';'                   { $$ . subtree = new ParseTree ( $1 ); }  /* for lots of reasons, we tolerate stray semicolons */
     ;
 
 script_1_0_decl
@@ -193,6 +226,10 @@ validate_1_0_decl
 
 include_directive
     : KW_include STRING
+                            {
+                                RULE_TOKEN ( t, PT_INCLUDE);
+                                $$ . subtree = new ParseTree ( t, new ParseTree ( $1 ), new ParseTree ( $2 ) );
+                            }
     ;
 
 /* typedef-1.0

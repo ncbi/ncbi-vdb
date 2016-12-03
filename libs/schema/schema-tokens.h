@@ -97,7 +97,12 @@ extern int Schema_debug;
     KW_view = 306,
     KW_virtual = 307,
     KW_void = 308,
-    KW_write = 309
+    KW_write = 309,
+    PT_PARSE = 310,
+    PT_SOURCE = 311,
+    PT_VERSION_1_0 = 312,
+    PT_SCHEMA_1_0 = 313,
+    PT_INCLUDE = 314
   };
 #endif
 
@@ -124,6 +129,6 @@ struct YYLTYPE
 
 
 
-int Schema_parse (ParseTree** tree, struct SchemaScanBlock* sb);
+int Schema_parse (ParseTree** root, struct SchemaScanBlock* sb);
 
 #endif /* !YY_SCHEMA_HOME_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_SCHEMA_TOKENS_H_INCLUDED  */

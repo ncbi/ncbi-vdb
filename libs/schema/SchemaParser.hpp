@@ -39,13 +39,10 @@ namespace ncbi
             SchemaParser ( bool debug = false );
             ~SchemaParser ();
 
-            bool ParseString ( const char * input, ParseTree*& );
-            bool ParseFile ( const char * source_file, ParseTree*& );
+            bool ParseString ( const char * input );
+            bool ParseFile ( const char * source_file );
 
-            ParseTree* GetRoot () const;
-
-        public: // for access from bison
-            void SetRoot ( ParseTree* );
+            ParseTree* GetParseTree () const { return m_root; }
 
         private:
             bool m_debug;

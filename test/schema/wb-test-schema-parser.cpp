@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <sstream>
+
 #include "../../libs/schema/SchemaParser.hpp"
 #include "../../libs/schema/ParseTree.hpp"
 
@@ -46,34 +48,103 @@ TEST_CASE(Token_Construct)
 {
     SchemaToken st = { KW_virtual, "virtual" };
     Token t ( st );
-    REQUIRE_EQ ( (int)KW_virtual, t . GetType() );
+    REQUIRE_EQ ( ( int ) KW_virtual, t . GetType() );
     REQUIRE_EQ ( string ( "virtual" ), string ( t . GetValue() ) );
 }
 
-// // TokenNode
-// TEST_CASE(TokenNode_Construct)
-// {
-//     TokenNode t(Token())
-// }
-// // ParseTree
-
-// TEST_CASE(ParseTree_CreateDestroy)
-// {
-//     ParseTree pt;
-// }
-
-// TEST_CASE(ParseTree_AddChild)
-// {
-//     ParseTree pt;
-//     pt. AddChild();
-// }
-
-bool ParseAndVerify(const char* p_source)
+// ParseTree
+bool
+operator == ( const Token & l, const Token & r)
 {
-    ParseTree* pt;
-    bool ret = SchemaParser () . ParseString ( p_source, pt );
-    delete pt;
-    return ret;
+    return l . GetType() == r . GetType() && string ( l . GetValue() ) == string ( r . GetValue() );
+}
+
+static SchemaToken st = { KW_virtual, "virtual" };
+static SchemaToken st0 = { KW_void, "void" };
+static SchemaToken st1 = { KW_write, "write" };
+static SchemaToken st2 = { KW_version, "version" };
+
+TEST_CASE(ParseTree_Construct0)
+{
+    ParseTree t ( st );
+    REQUIRE ( t . GetToken() == Token ( st ) );
+}
+TEST_CASE(ParseTree_Construct1)
+{
+    ParseTree t ( st, new ParseTree ( st0 ) );
+    REQUIRE ( t . GetToken() == Token ( st ) );
+    REQUIRE ( t . GetChild ( 0 ) -> GetToken () == Token ( st0 ) );
+}
+TEST_CASE(ParseTree_Construct2)
+{
+    ParseTree t ( st, new ParseTree ( st0 ), new ParseTree ( st1 ) );
+    REQUIRE ( t . GetToken() == Token ( st ) );
+    REQUIRE ( t . GetChild ( 0 ) -> GetToken () == Token ( st0 ) );
+    REQUIRE ( t . GetChild ( 1 ) -> GetToken () == Token ( st1 ) );
+}
+TEST_CASE(ParseTree_Construct3)
+{
+    ParseTree t ( st, new ParseTree ( st0 ), new ParseTree ( st1 ), new ParseTree ( st2 )  );
+    REQUIRE ( t . GetToken() == Token ( st ) );
+    REQUIRE ( t . GetChild ( 0 ) -> GetToken () == Token ( st0 ) );
+    REQUIRE ( t . GetChild ( 1 ) -> GetToken () == Token ( st1 ) );
+    REQUIRE ( t . GetChild ( 2 ) -> GetToken () == Token ( st2 ) );
+}
+TEST_CASE(ParseTree_ChildrenCount)
+{
+    ParseTree t ( st, new ParseTree ( st0 ), new ParseTree ( st1 ), new ParseTree ( st2 )  );
+    REQUIRE_EQ ( 3u, t . ChildrenCount () );
+}
+TEST_CASE(ParseTree_AddChild)
+{
+    SchemaToken st = { PT_PARSE, "" };
+    ParseTree t ( st );
+    t. AddChild ( new ParseTree ( st0 ) );
+    t. AddChild ( new ParseTree ( st1 ) );
+
+    REQUIRE ( t . GetChild ( 0 ) -> GetToken () == Token ( st0 ) );
+    REQUIRE ( t . GetChild ( 1 ) -> GetToken () == Token ( st1 ) );
+}
+
+// Print parse tree
+
+static
+void
+PrintParseTree ( const ParseTree * p_t, ostream& p_out )
+{
+    if ( p_t == 0 )
+    {
+        p_out << " NULL";
+        return;
+    }
+
+    p_out << p_t -> GetToken () . GetLeadingWhitespace () << p_t -> GetToken () . GetValue ();
+
+    for ( uint32_t i = 0 ; i < p_t -> ChildrenCount (); ++ i )
+    {
+        PrintParseTree ( p_t -> GetChild ( i ), p_out );
+    }
+}
+
+// Grammar
+
+bool
+ParseAndVerify ( const char* p_source )
+{
+    SchemaParser p;
+    if ( ! p . ParseString ( p_source ) )
+    {
+        return false;
+    }
+    ostringstream str;
+    PrintParseTree ( p . GetParseTree (), str );
+    if ( str . str () == p_source )
+    {
+        return true;
+    }
+    cout << "expected: '" << p_source << "'" << endl
+         << "actual:   '" << str . str () << "'" << endl;
+    return false;
 }
 
 TEST_CASE ( EmptyInput )
@@ -86,6 +157,12 @@ TEST_CASE ( Version1 )
     REQUIRE ( ParseAndVerify ( "version 1; include \"qq\";" ) );
 }
 
+TEST_CASE ( MultipleDecls )
+{
+    REQUIRE ( ParseAndVerify ( "version 1; include \"qq\"; include \"aa\";" ) );
+}
+
+#if 0
 TEST_CASE ( Typedef )
 {
     REQUIRE ( ParseAndVerify ( "typedef oldName newName;" ) );
@@ -409,7 +486,7 @@ TEST_CASE ( VersionOther )
 {
     REQUIRE ( ParseAndVerify ( "version 3.14; $" ) ); //TODO
 }
-
+#endif
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>

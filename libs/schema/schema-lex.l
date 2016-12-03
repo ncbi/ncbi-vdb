@@ -45,6 +45,11 @@ typedef struct ParseTree ParseTree; /* a fake declaration to make the scanner co
             yylloc->last_column++; \
         } \
     }
+
+static void AddWhitespace ( SchemaScanBlock* p_sb, const char* p_ws, size_t p_length );
+
+#define AddWs() AddWhitespace ( ( SchemaScanBlock * ) yyextra, yytext, yyleng )
+
 %}
 
 %option never-interactive nounistd yylineno
@@ -165,36 +170,40 @@ dstr_char   ([^\\"\f\r\n$]|$[^(\\])
 
 [a-z|A-Z|_][a-z|A-Z|_|0-9]*         { return IDENTIFIER_1_0; }
 [0-9][a-z|A-Z|_][a-z|A-Z|_|0-9]+    { return IDENTIFIER_1_0; }
-\.[a-z|A-Z|_][a-z|A-Z|_|0-9]*         { return PHYSICAL_IDENTIFIER_1_0; }
+\.[a-z|A-Z|_][a-z|A-Z|_|0-9]*       { return PHYSICAL_IDENTIFIER_1_0; }
 
 #[0-9]+\.[0-9]+\.[0-9]+     { return VERSION; }
 #[0-9]+\.[0-9]+             { return VERSION; }
 #[0-9]+                     { return VERSION; }
 
  /* multi-line comments */
-<*>\/\*                                         { yy_push_state ( CMT_SLASH_STAR, yyscanner ); }
-<CMT_SLASH_STAR,CMT_MULTI_LINE>[^*\n]+          /* ignore */
-<CMT_SLASH_STAR,CMT_MULTI_LINE>\*+[^*/\n]+      /* ignore */
+<*>\/\*                                         { yy_push_state ( CMT_SLASH_STAR, yyscanner ); AddWs(); }
+<CMT_SLASH_STAR,CMT_MULTI_LINE>[^*\n]+          { AddWs(); }
+<CMT_SLASH_STAR,CMT_MULTI_LINE>\*+[^*/\n]+      { AddWs(); }
 <CMT_SLASH_STAR,CMT_MULTI_LINE>\**\n            { BEGIN CMT_MULTI_LINE; }
-<CMT_SLASH_STAR>\*+\/                           { yy_pop_state ( yyscanner ); }
-<CMT_MULTI_LINE>\*+\/                           { yy_pop_state ( yyscanner ); }
+<CMT_SLASH_STAR>\*+\/                           { yy_pop_state ( yyscanner ); AddWs(); }
+<CMT_MULTI_LINE>\*+\/                           { yy_pop_state ( yyscanner ); AddWs(); }
 
  /* line comments */
-<*>\/\/.*                                     /* ignore */
+<*>\/\/.*                                       { AddWs(); }
 
  /* ignored tokens */
-<*>[ \t\f\v\r\n]                             /* ignore */
+<*>[ \t\f\v\r\n]                                { AddWs(); }
 
  /* unrecognized input */
 <*>.                                       { return UNRECOGNIZED; }
 
 %%
 
+#include <klib/text.h>
+
 void
 SchemaScan_yylex_init ( SchemaScanBlock* sb, const char *str )
 {
-    yylex_init(&sb->scanner);
+    yylex_init ( & sb -> scanner );
     sb -> buffer = yy_scan_string ( ( yyconst char * ) str, sb -> scanner );
+    sb -> whitespace = NULL;
+    ( ( struct yyguts_t * ) sb -> scanner ) -> yyextra_r = sb; /* back pointer to the scan block, not touched by flex */
 }
 
 void
@@ -207,6 +216,7 @@ SchemaScan_yylex_destroy ( SchemaScanBlock* sb )
     }
     sb -> scanner = NULL;
     sb -> buffer = NULL;
+    free ( sb -> whitespace );
 }
 
 void
@@ -219,7 +229,32 @@ enum yytokentype
 SchemaScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, SchemaScanBlock* sb )
 {
     enum yytokentype ret = ( enum yytokentype ) yylex ( lvalp, llocp, sb -> scanner );
-    sb -> last_token = ( ( struct yyguts_t * ) sb -> scanner ) -> yytext_r;
+    lvalp -> value      = ( ( struct yyguts_t * ) sb -> scanner ) -> yytext_r;
+    lvalp -> value_len  = ( ( struct yyguts_t * ) sb -> scanner ) -> yyleng_r;
+    lvalp -> leading_ws = sb -> whitespace; /* will be freed by the new owner */
+    sb -> whitespace = NULL;
     return ret;
 }
 
+void
+AddWhitespace ( SchemaScanBlock* p_sb, const char* p_ws, size_t p_length )
+{
+    if ( p_sb -> whitespace == NULL )
+    {
+        p_sb -> whitespace = malloc ( p_length + 1 );
+        if ( p_sb -> whitespace != NULL )
+        {
+            string_copy ( p_sb -> whitespace, p_length + 1, p_ws, p_length ); /* will NUL-terminate */
+        }
+    }
+    else
+    {
+        size_t old_size = string_size ( p_sb -> whitespace );
+        size_t new_size = old_size + p_length + 1;
+        p_sb -> whitespace = realloc ( p_sb -> whitespace, new_size );
+        if ( p_sb -> whitespace != NULL )
+        {
+            string_copy ( p_sb -> whitespace + old_size, p_length + 1, p_ws, p_length ); /* will NUL-terminate */
+        }
+    }
+}

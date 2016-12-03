@@ -26,37 +26,69 @@
 
 #include "ParseTree.hpp"
 
+#include <klib/text.h>
+
 using namespace ncbi::SchemaParser;
 
-ParseTree :: ParseTree ()
+static const uint32_t BlockSize = 1024; //TODO: pick a good initial size
+
+ParseTree :: ParseTree ( const SchemaToken & p_token )
+: m_token ( p_token )
 {
+    VectorInit ( & m_children, 0, BlockSize );
+}
+ParseTree :: ParseTree ( const SchemaToken& p_token, ParseTree * p_node1 )
+: m_token ( p_token )
+{
+    VectorInit ( & m_children, 0, BlockSize );
+    AddChild ( p_node1 );
+}
+ParseTree :: ParseTree ( const SchemaToken& p_token, ParseTree * p_node1, ParseTree * p_node2 )
+: m_token ( p_token )
+{
+    VectorInit ( & m_children, 0, BlockSize );
+    AddChild ( p_node1 );
+    AddChild ( p_node2 );
+}
+ParseTree :: ParseTree ( const SchemaToken& p_token, ParseTree * p_node1, ParseTree * p_node2, ParseTree * p_node3 )
+: m_token ( p_token )
+{
+    VectorInit ( & m_children, 0, BlockSize );
+    AddChild ( p_node1 );
+    AddChild ( p_node2 );
+    AddChild ( p_node3 );
+}
+
+void DestroyChild ( void * item, void * )
+{
+    delete ( ParseTree * ) item;
 }
 
 ParseTree :: ~ParseTree ()
 {
+    VectorWhack ( & m_children, DestroyChild, NULL );
 }
 
 void
-ParseTree ::AddChild(ParseTree*)
+ParseTree :: AddChild ( ParseTree * p_node )
 {
-
+    VectorSet ( & m_children, VectorLength ( & m_children ), p_node );
 }
 
-TokenNode :: TokenNode(const Token& p_token)
-: m_token ( p_token )
+uint32_t
+ParseTree :: ChildrenCount () const
 {
-
+    return VectorLength ( & m_children );
 }
 
-TokenNode ::  ~TokenNode()
+const ParseTree*
+ParseTree :: GetChild ( uint32_t p_idx ) const
 {
-
+    return ( const ParseTree * ) VectorGet ( & m_children, p_idx );
 }
-RuleNode :: RuleNode(const char* name)
-{
 
-}
-RuleNode ::  ~RuleNode()
+ParseTree*
+ParseTree :: GetChild ( uint32_t p_idx )
 {
-
+    return ( ParseTree * ) VectorGet ( & m_children, p_idx );
 }

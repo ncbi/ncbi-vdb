@@ -46,6 +46,13 @@ TEST_CASE ( EmptyInput )
     REQUIRE_EQ ( (int)END_SOURCE, SchemaScanner ( "" ) . Scan () );
 }
 
+TEST_CASE ( Whitspace )
+{
+    SchemaScanner s ( "    " );
+    REQUIRE_EQ ( (int)END_SOURCE, s . Scan () );
+    REQUIRE_EQ ( string ( "    " ), string ( s . LastTokenValue () . leading_ws ) );
+}
+
 TEST_CASE ( Unrecognized )
 {
     REQUIRE_EQ ( (int)UNRECOGNIZED, SchemaScanner ( "ъ" ) . Scan () );
@@ -53,7 +60,7 @@ TEST_CASE ( Unrecognized )
 
 #define REQUIRE_LITERAL(name, lit) \
     TEST_CASE ( name ) { REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) lit [ 0 ], SchemaScanner ( lit ) . Scan () ); }
-#if 0
+
 REQUIRE_LITERAL ( Semicolon,     ";" )
 REQUIRE_LITERAL ( Dollar,        "$" )
 REQUIRE_LITERAL ( Comma,         "," )
@@ -78,15 +85,18 @@ REQUIRE_LITERAL ( At,            "@" )
 
 TEST_CASE ( Ellipsis )
 {
-    REQUIRE_EQ ( ELLIPSIS, SchemaScanner ( "..." ) . Scan () );
+    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) ELLIPSIS, SchemaScanner ( "..." ) . Scan () );
 }
+
+#define REQUIRE_TOKEN(expected, scanner) \
+    REQUIRE_EQ ( string ( expected ), string ( scanner . LastTokenValue () . value, scanner . LastTokenValue () . value_len ) )
 
 #define REQUIRE_TERMINAL(name, token, term) \
 TEST_CASE ( name ) \
 { \
     SchemaScanner s ( term ); \
-    REQUIRE_EQ ( token, s . Scan () ); \
-    REQUIRE_EQ ( string ( term ), string ( s . LastTokenValue () ) ); \
+    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) token, s . Scan () ); \
+    REQUIRE_TOKEN ( term, s ); \
 }
 
 REQUIRE_TERMINAL ( Decimal,             DECIMAL,        "123456789" )
@@ -116,8 +126,8 @@ REQUIRE_TERMINAL ( Version_MajMinRel,   VERSION, "#1.2.3" )
 TEST_CASE ( kw_##word ) \
 { \
     SchemaScanner s ( #word ); \
-    REQUIRE_EQ ( KW_##word, s . Scan () ); \
-    REQUIRE_EQ ( string ( #word ), string ( s . LastTokenValue () ) ); \
+    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) KW_##word, s . Scan () ); \
+    REQUIRE_TOKEN ( #word, s ); \
 }
 
 REQUIRE_KEYWORD(__no_header)
@@ -160,49 +170,49 @@ REQUIRE_KEYWORD(write)
 TEST_CASE ( Comment )
 {
     SchemaScanner s ( "/**/abc" );
-    REQUIRE_EQ ( IDENTIFIER_1_0, s . Scan () );
-    REQUIRE_EQ ( string ( "abc" ), string ( s . LastTokenValue () ) );
+    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) IDENTIFIER_1_0, s . Scan () );
+    REQUIRE_TOKEN ( "abc", s ); \
 }
 
 TEST_CASE ( LineComment )
 {
     SchemaScanner s ( "//qed\nabc" );
-    REQUIRE_EQ ( IDENTIFIER_1_0, s . Scan () );
-    REQUIRE_EQ ( string ( "abc" ), string ( s . LastTokenValue () ) );
+    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) IDENTIFIER_1_0, s . Scan () );
+    REQUIRE_TOKEN ( "abc", s ); \
 }
 
 TEST_CASE ( MultiLineComment )
 {
     SchemaScanner s ( "/*\n\n*/abc" );
-    REQUIRE_EQ ( IDENTIFIER_1_0, s . Scan () );
-    REQUIRE_EQ ( string ( "abc" ), string ( s . LastTokenValue () ) );
+    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) IDENTIFIER_1_0, s . Scan () );
+    REQUIRE_TOKEN ( "abc", s ); \
 }
 
 TEST_CASE ( WhiteSpace )
 {
     SchemaScanner s ( " \t\f\v\r\nabc \t\f\v\r\n" );
-    REQUIRE_EQ ( IDENTIFIER_1_0, s . Scan () );
-    REQUIRE_EQ ( string ( "abc" ), string ( s . LastTokenValue () ) );
+    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) IDENTIFIER_1_0, s . Scan () );
+    REQUIRE_TOKEN ( "abc", s ); \
 }
 
 TEST_CASE ( VERS_1 )
 {
     SchemaScanner s ( "version 1;" );
-    REQUIRE_EQ ( KW_version, s . Scan () );
-    REQUIRE_EQ ( VERS_1_0, s . Scan () );
+    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) KW_version, s . Scan () );
+    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) VERS_1_0, s . Scan () );
     REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) ';', s . Scan () );
 }
 
 TEST_CASE ( VERS_1_comment )
 {
     SchemaScanner s ( "version /*!!*/ 1;" );
-    REQUIRE_EQ ( KW_version, s . Scan () );
-    REQUIRE_EQ ( VERS_1_0, s . Scan () );
+    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) KW_version, s . Scan () );
+    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) VERS_1_0, s . Scan () );
     REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) ';', s . Scan () );
 }
 
 //TODO: unterminated strings
-#endif
+
 //////////////////////////////////////////// Main
 #include <kapp/args.h>
 #include <kfg/config.h>

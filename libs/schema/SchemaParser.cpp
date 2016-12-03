@@ -35,38 +35,30 @@ using namespace ncbi::SchemaParser;
 extern int Schema_debug;
 
 SchemaParser :: SchemaParser ( bool p_debug )
-:   m_debug ( p_debug )
+:   m_debug ( p_debug ),
+    m_root ( 0 )
 {
 }
 
 SchemaParser :: ~SchemaParser ()
 {
+    delete m_root;
 }
 
 bool
-SchemaParser :: ParseString ( const char * input, ParseTree*& p_tree )
+SchemaParser :: ParseString ( const char * input )
 {
     SchemaScanner s ( input );
     Schema_debug = m_debug;
-    p_tree = 0;
+    delete m_root;
+    m_root = 0;
     return Schema_parse ( & m_root, & s . GetScanBlock () ) == 0;
 }
 
 bool
-SchemaParser :: ParseFile ( const char * source_file, ParseTree*& p_tree )
+SchemaParser :: ParseFile ( const char * source_file )
 {
-    p_tree = 0;
+    delete m_root;
+    m_root = 0;
     return false;
-}
-
-ParseTree*
-SchemaParser :: GetRoot () const
-{
-    return m_root;
-}
-
-void
-SchemaParser :: SetRoot ( ParseTree* p_root )
-{
-    m_root = p_root;
 }

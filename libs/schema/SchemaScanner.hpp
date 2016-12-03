@@ -42,14 +42,15 @@ namespace ncbi
             SchemaScanner ( const char * source, bool p_debug = false );
             ~SchemaScanner ();
 
-            TokenType Scan(); /* this is mostly for testing; bison-generated parser calls SchemaScan_yylex directly */
-
-            const char* LastTokenValue() const { return m_scanBlock . last_token; }
-
             :: SchemaScanBlock & GetScanBlock () { return m_scanBlock; }
+
+        public: /* this is for testing only; bison-generated parser calls SchemaScan_yylex directly */
+            TokenType Scan();
+            const SchemaToken& LastTokenValue() const { return m_lastToken; } // valid until the next call to SchemaScan_yylex
 
         private:
             :: SchemaScanBlock  m_scanBlock;
+            SchemaToken m_lastToken;
         };
     }
 }
