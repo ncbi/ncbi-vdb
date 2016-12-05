@@ -1614,7 +1614,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
 
     /* log message to user */
     if ( req -> errorsToIgnore == 0 ) {
-        if ( src -> objectId . addr != NULL )
+        if ( src -> objectId . size > 0 )
             PLOGERR ( lvl, ( lvl, rc,
                 "failed to resolve accession '$(acc)' - $(msg) ( $(code) )",
                 "acc=%S,msg=%S,code=%u",
@@ -3478,10 +3478,13 @@ rc_t KServiceProcessStreamTestNames1 ( const KNSManager * mgr,
     rc_t rc = 0;
     if ( rc == 0 )
         rc = KServiceInitNames1 ( & service, mgr, "", version, acc,
-            string_measure ( acc, NULL ), ticket, eProtocolHttp,
+            string_measure ( acc, NULL ), ticket, eProtocolHttps,
             eOT_undefined, false, false );
-    if ( rc == 0 )
+    if ( rc == 0 ) {
+        DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
+            "XXXXXXXXXXXX NOT sending HTTP POST request XXXXXXXXXXXXXXXX\n" ) );
         rc = KBufferStreamMake ( & stream, b, string_size ( b ) );
+    }
     if ( rc == 0 )
         KServiceExpectErrors ( & service, errors );
     if ( rc == 0 )
