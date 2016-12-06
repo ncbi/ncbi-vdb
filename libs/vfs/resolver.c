@@ -3663,6 +3663,7 @@ LIB_EXPORT
 rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
     const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache )
 {
+    const bool USE_HTTP_ONLY_PROTOCOL = false;
     rc_t rcs = -1;
     rc_t rc = rcs = VResolverQueryInt
         ( self, protocols, query, local, remote, cache, "#1.2" );
@@ -3696,30 +3697,30 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
             }
         }
         assert ( rc == ro );
-        if ( remote == NULL ) {
+        if ( remote == NULL )
             assert ( p == NULL );
-        } else if ( * remote == NULL ) {
+        else if ( * remote == NULL )
             assert ( p && * p == NULL && oath == NULL );
-        } else {
+        else {
             int notequal = ~ 0;
             assert ( ! VPathEqual ( * remote, oath, & notequal ) );
             assert ( ! notequal );
         }
-        if ( cache == NULL ) {
+        if ( cache == NULL )
             assert ( c == NULL );
-        } else if ( * cache == NULL ) {
+        else if ( * cache == NULL )
             assert ( c && * c == NULL && cath == NULL );
-        } else {
+        else {
             int notequal = ~ 0;
             VPathMarkHighReliability ( ( VPath * ) cath, true );
             assert ( ! VPathEqual ( * cache, cath, & notequal ) );
             assert ( ! notequal );
         }
-        if ( local == NULL ) {
+        if ( local == NULL )
             assert ( l == NULL );
-        } else if ( * local == NULL ) {
+        else if ( * local == NULL )
             assert ( l && * l == NULL && lath == NULL );
-        } else {
+        else {
             int notequal = ~ 0;
             VPathMarkHighReliability ( ( VPath * ) lath, true );
             assert ( ! VPathEqual ( * local, lath, & notequal ) );
@@ -3729,8 +3730,9 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
         RELEASE ( VPath, oath );
         RELEASE ( VPath, cath );
     }
-    if ( protocols != 0 && protocols != 3 /*https*/ && 
-         protocols != 25 /*https,http*/ )
+    if ( USE_HTTP_ONLY_PROTOCOL && protocols != 0
+                     && protocols !=  3 /*https*/
+                     && protocols != 25 /*https,http*/ )
     {
         const VPath * oath = NULL;
         const VPath ** p = remote ? & oath : NULL;
@@ -3752,19 +3754,19 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
         }
         if ( cache == NULL ) {
             assert ( c == NULL );
-        } else if ( * cache == NULL ) {
+        } else if ( * cache == NULL )
             assert ( c && * c == NULL && cath == NULL );
-        } else {
+        else {
             int notequal = ~ 0;
             VPathMarkHighReliability ( ( VPath * ) cath, true );
             assert ( ! VPathEqual ( * cache, cath, & notequal ) );
             assert ( ! notequal );
         }
-        if ( local == NULL ) {
+        if ( local == NULL )
             assert ( l == NULL );
-        } else if ( * local == NULL ) {
+        else if ( * local == NULL )
             assert ( l && * l == NULL && lath == NULL );
-        } else {
+        else {
             int notequal = ~ 0;
             VPathMarkHighReliability ( ( VPath * ) lath, true );
             assert ( ! VPathEqual ( * local, lath, & notequal ) );
@@ -3774,8 +3776,9 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
         RELEASE ( VPath, oath );
         RELEASE ( VPath, cath );
     }
-    if ( protocols != 0 && protocols != 3 /*https*/ && 
-         protocols != 25 /*https,http*/ )
+    if ( USE_HTTP_ONLY_PROTOCOL && protocols != 0
+                     && protocols != 3 /*https*/
+                     && protocols != 25 /*https,http*/ )
     {
         const VPath * oath = NULL;
         const VPath ** p = remote ? & oath : NULL;
