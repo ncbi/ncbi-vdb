@@ -2408,7 +2408,9 @@ rc_t ECgiNamesRequestInit ( SRequest * request, SHelper * helper,
 
     assert ( request );
 
-//  SRequestFini ( request );
+    rc = SVersionFini ( & request -> version );
+    if ( rc != 0 )
+        return rc;
 
     rc = SVersionInit ( & request -> version, version, eSTnames );
     if ( rc != 0 )
@@ -2432,6 +2434,8 @@ rc_t ECgiNamesRequestInit ( SRequest * request, SHelper * helper,
         }
         rc = SCgiRequestInitCgi ( self, cgi );
     }
+
+    VectorWhack ( & self -> params, whackSKV, NULL );
 
     VectorInit ( & self -> params, 0, 5 );
 
