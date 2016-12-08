@@ -90,6 +90,13 @@ extern rc_t KHttpGetStatusLine ( struct KClientHttp *self, struct timeout_t *tm,
 #define KHttpGetStatusLine KClientHttpGetStatusLine
 */
 
+rc_t KClientHttpGetHeaderLine ( struct KClientHttp * self,
+    struct timeout_t * tm, BSTree * hdrs, bool * blank, bool *  len_zero,
+    bool * close_connection );
+rc_t KClientHttpGetStatusLine ( struct KClientHttp * self,
+    struct timeout_t * tm, String * msg, uint32_t * status, ver_t * version );
+
+
 /*--------------------------------------------------------------------------
  * KClientHttp
  */

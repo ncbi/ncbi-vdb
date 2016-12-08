@@ -37,6 +37,7 @@
 #include <klib/rc.h>
 #include <kfg/config.h>
 
+#include <kns/adapt.h> /* KStreamFromKFilePair */
 #include <kns/manager.h>
 #include <kns/kns-mgr-priv.h>
 #include <kns/http.h>
@@ -781,6 +782,7 @@ FIXTURE_TEST_CASE(HttpReliableRequest_POST_5xx_retry, HttpFixture)
 
 #endif
 
+#ifdef ALL
 /* VDB-3059: KHttpRequestPOST generates incorrect Content-Length after retry :
  it makes web server to return 400 Bad Request */
 TEST_CASE(ContentLength) {
@@ -824,6 +826,94 @@ TEST_CASE(ContentLength) {
     RELEASE ( KHttpRequest, req );
 
     RELEASE ( KNSManager, kns );
+    REQUIRE_RC ( rc );
+}
+#endif
+
+TEST_CASE ( RepeatedHeader ) {
+    rc_t rc = 0;
+    KDirectory * dir = NULL;
+    REQUIRE_RC ( KDirectoryNativeDir ( & dir ) );
+
+    const KFile * f = NULL;
+    REQUIRE_RC ( KDirectoryOpenFileRead ( dir, & f, "double_header.txt" ) );
+
+    KNSManager * mgr = NULL;
+    REQUIRE_RC ( KNSManagerMake ( & mgr ) );
+    KStream * sock = NULL;
+    REQUIRE_RC ( KStreamFromKFilePair ( & sock, f, NULL ) );
+    String host;
+    CONST_STRING ( & host, "www.ncbi.nlm.nih.gov" );
+    KClientHttp * http = NULL;
+    REQUIRE_RC ( KNSManagerMakeHttp
+                 ( mgr, & http, sock, 0x01010000, & host, 80 ) );
+
+    String msg;
+    uint32_t status = 0;
+    ver_t version = 0;;
+    REQUIRE_RC ( KClientHttpGetStatusLine
+                 ( http, NULL, & msg, & status, & version ) );
+
+    BSTree hdrs;
+    BSTreeInit ( & hdrs );
+    for ( bool blank = false, close_connection = false, len_zero = false;
+         ! blank; )
+    {
+        REQUIRE_RC ( KClientHttpGetHeaderLine
+            ( http, NULL, & hdrs, & blank, & len_zero, & close_connection ) );
+    }
+
+    bool doubleChecked   = false;
+    bool repeatedChecked = false;
+    bool singleChecked   = false;
+
+    String AcceptRanges;
+    CONST_STRING ( & AcceptRanges, "Accept-Ranges" );
+    string bytes ( "bytes" );
+
+    String Server;
+    CONST_STRING ( & Server, "Server" );
+    string Apache ( "Apache" );
+
+    String Via;
+    CONST_STRING ( & Via, "Via" );
+    string via ( "1.0 fred,1.1 example.com (Apache/1.1)" );
+
+    for ( const KHttpHeader * hdr = reinterpret_cast
+                < const KHttpHeader * > ( BSTreeFirst ( & hdrs ) ); 
+          hdr != NULL;
+          hdr = reinterpret_cast
+                < const KHttpHeader * > ( BSTNodeNext ( & hdr -> dad ) )
+        )
+    {
+        if ( StringEqual ( & hdr -> name, & AcceptRanges ) )  {
+            REQUIRE_EQ ( string ( hdr -> value . addr, hdr -> value . size ),
+                         bytes );
+            repeatedChecked = true;
+        }
+        else if ( StringEqual ( & hdr -> name, & Server ) )  {
+            REQUIRE_EQ ( string ( hdr -> value . addr, hdr -> value . size ),
+                         Apache );
+            singleChecked = true;
+        }
+        else if ( StringEqual ( & hdr -> name, & Via ) ) {
+            REQUIRE_EQ ( string ( hdr -> value . addr, hdr -> value . size ),
+                         via );
+            doubleChecked = true;
+        }
+    }
+
+    REQUIRE ( doubleChecked && repeatedChecked && singleChecked );
+
+    BSTreeWhack ( & hdrs, KHttpHeaderWhack, NULL );
+
+    RELEASE ( KClientHttp, http );
+    RELEASE ( KStream, sock );
+    RELEASE ( KNSManager, mgr );
+
+    RELEASE ( KFile, f );
+
+    RELEASE ( KDirectory, dir );
     REQUIRE_RC ( rc );
 }
 

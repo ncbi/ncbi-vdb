@@ -281,7 +281,6 @@ bool KEndPointArgsIteratorNext ( KEndPointArgsIterator * self,
 static
 rc_t KClientHttpGetLine ( KClientHttp *self, struct timeout_t *tm );
 
-static
 rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, uint32_t *status, ver_t *version );
 
 static
@@ -1021,8 +1020,10 @@ rc_t KClientHttpAddHeaderString
         {
           /* find the current size of the data in the node */
           size_t cursize = node -> name . size + node -> value . size;
-          if ( add ) { /* add value to node -> value */
-            /* resize databuffer to hold the additional value data + comma + nul */
+          if ( add ) { /* add value to node -> value
+                          do not add value if node -> value == value */
+           if ( ! StringEqual ( & node -> value, value ) ) {
+         /* resize databuffer to hold the additional value data + comma + nul */
             rc = KDataBufferResize ( & node -> value_storage, cursize + value -> size + 1 + 1 );
             if ( rc == 0 )
             {
@@ -1044,6 +1045,7 @@ rc_t KClientHttpAddHeaderString
                    restore values to what they were */
                 KDataBufferResize ( & node -> value_storage, cursize + 1 );
             }
+           }
           } else { /* replace value with node -> value */
             if ( ! StringEqual ( & node -> value, value ) )
             /* values are not equal - need to replace */
@@ -1130,12 +1132,12 @@ rc_t KClientHttpReplaceHeader
 }
 
 /* Capture each header line to add to BSTree */
-static
 rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
     bool * blank, bool * len_zero, bool * close_connection )
 {
     /* Starting from the second line of the response */
     rc_t rc = KClientHttpGetLine ( self, tm );
+    assert ( len_zero );
     if ( rc == 0 )
     {
         /* blank = empty line_buffer = separation between headers and body of response */
@@ -1256,7 +1258,6 @@ rc_t KClientHttpFindHeader ( const BSTree *hdrs, const char *_name, char *buffer
     return rc;
 }
 
-static
 rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, uint32_t *status, ver_t *version )
 {
     /* First time reading the response */
