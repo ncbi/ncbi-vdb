@@ -22,9 +22,6 @@
 *
 * ===========================================================================
 *
-*/
-
-/**
 * Unit tests for HTTP interfaces
 */
 
@@ -57,6 +54,8 @@
 #include <list>
 #include <sstream>
 
+#define ALL
+
 static rc_t argsHandler ( int argc, char * argv [] );
 TEST_SUITE_WITH_ARGS_HANDLER ( HttpTestSuite, argsHandler );
 
@@ -70,7 +69,6 @@ class TestStream;
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
-#define ALL
 
 class TestStream
 {
@@ -830,6 +828,21 @@ TEST_CASE(ContentLength) {
 }
 #endif
 
+struct NV {
+    String AcceptRanges;
+    const string bytes;
+
+    String host;
+
+    NV ( void ) : bytes ( "bytes"  ) {
+        CONST_STRING ( & AcceptRanges, "Accept-Ranges" );
+
+#define HOST "www.ncbi.nlm.nih.gov"
+        CONST_STRING ( & host, HOST );
+    }
+};
+static const NV s_v;
+
 TEST_CASE ( RepeatedHeader ) {
     rc_t rc = 0;
     KDirectory * dir = NULL;
@@ -842,11 +855,10 @@ TEST_CASE ( RepeatedHeader ) {
     REQUIRE_RC ( KNSManagerMake ( & mgr ) );
     KStream * sock = NULL;
     REQUIRE_RC ( KStreamFromKFilePair ( & sock, f, NULL ) );
-    String host;
-    CONST_STRING ( & host, "www.ncbi.nlm.nih.gov" );
+
     KClientHttp * http = NULL;
     REQUIRE_RC ( KNSManagerMakeHttp
-                 ( mgr, & http, sock, 0x01010000, & host, 80 ) );
+                 ( mgr, & http, sock, 0x01010000, & s_v . host, 80 ) );
 
     String msg;
     uint32_t status = 0;
@@ -867,10 +879,6 @@ TEST_CASE ( RepeatedHeader ) {
     bool repeatedChecked = false;
     bool singleChecked   = false;
 
-    String AcceptRanges;
-    CONST_STRING ( & AcceptRanges, "Accept-Ranges" );
-    string bytes ( "bytes" );
-
     String Server;
     CONST_STRING ( & Server, "Server" );
     string Apache ( "Apache" );
@@ -886,9 +894,9 @@ TEST_CASE ( RepeatedHeader ) {
                 < const KHttpHeader * > ( BSTNodeNext ( & hdr -> dad ) )
         )
     {
-        if ( StringEqual ( & hdr -> name, & AcceptRanges ) )  {
+        if ( StringEqual ( & hdr -> name, & s_v . AcceptRanges ) )  {
             REQUIRE_EQ ( string ( hdr -> value . addr, hdr -> value . size ),
-                         bytes );
+                         s_v . bytes );
             repeatedChecked = true;
         }
         else if ( StringEqual ( & hdr -> name, & Server ) )  {
@@ -914,6 +922,40 @@ TEST_CASE ( RepeatedHeader ) {
     RELEASE ( KFile, f );
 
     RELEASE ( KDirectory, dir );
+    REQUIRE_RC ( rc );
+}
+
+// this test relies on real server responses
+TEST_CASE ( TestKClientHttpResultTestHeaderValue ) {
+    rc_t rc = 0;
+
+    KNSManager * mgr = NULL;
+    REQUIRE_RC ( KNSManagerMake ( & mgr ) );
+
+    KClientHttp * http = NULL;
+    REQUIRE_RC ( KNSManagerMakeHttp
+                 ( mgr, & http, NULL, 0x01010000, & s_v . host, 80 ) );
+
+    string url ( "http://" HOST );
+    KClientHttpRequest * req = NULL;
+    REQUIRE_RC ( KClientHttpMakeRequest ( http, & req, url . c_str () ) );
+
+    KClientHttpResult * rslt = NULL;
+    REQUIRE_RC ( KClientHttpRequestHEAD ( req, & rslt ) );
+
+    REQUIRE ( KClientHttpResultTestHeaderValue ( rslt,
+                s_v . AcceptRanges . addr, s_v . bytes . c_str () ) );
+
+    REQUIRE ( ! KClientHttpResultTestHeaderValue ( rslt, "foo", "bar" ) );
+
+    RELEASE ( KClientHttpResult, rslt );
+
+    RELEASE ( KClientHttpRequest, req );
+
+    RELEASE ( KClientHttp, http );
+
+    RELEASE ( KNSManager, mgr );
+
     REQUIRE_RC ( rc );
 }
 
@@ -950,6 +992,7 @@ const char UsageDefaultName[] = "test-http";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    if ( 0 ) assert ( ! KDbgSetString ( "KNS" ) );
     if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
 
     KConfigDisableUserSettings();
