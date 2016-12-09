@@ -1762,7 +1762,7 @@ case 87:
 /* rule 87 can match eol */
 YY_RULE_SETUP
 #line 183 "/home/ncbi/devel/ncbi-vdb/libs/schema/schema-lex.l"
-{ BEGIN CMT_MULTI_LINE; }
+{ BEGIN CMT_MULTI_LINE; AddWs(); }
 	YY_BREAK
 case 88:
 YY_RULE_SETUP

@@ -32,31 +32,10 @@ using namespace ncbi::SchemaParser;
 
 static const uint32_t BlockSize = 1024; //TODO: pick a good initial size
 
-ParseTree :: ParseTree ( const SchemaToken & p_token )
+ParseTree :: ParseTree ( const SchemaToken& p_token )
 : m_token ( p_token )
 {
     VectorInit ( & m_children, 0, BlockSize );
-}
-ParseTree :: ParseTree ( const SchemaToken& p_token, ParseTree * p_node1 )
-: m_token ( p_token )
-{
-    VectorInit ( & m_children, 0, BlockSize );
-    AddChild ( p_node1 );
-}
-ParseTree :: ParseTree ( const SchemaToken& p_token, ParseTree * p_node1, ParseTree * p_node2 )
-: m_token ( p_token )
-{
-    VectorInit ( & m_children, 0, BlockSize );
-    AddChild ( p_node1 );
-    AddChild ( p_node2 );
-}
-ParseTree :: ParseTree ( const SchemaToken& p_token, ParseTree * p_node1, ParseTree * p_node2, ParseTree * p_node3 )
-: m_token ( p_token )
-{
-    VectorInit ( & m_children, 0, BlockSize );
-    AddChild ( p_node1 );
-    AddChild ( p_node2 );
-    AddChild ( p_node3 );
 }
 
 void DestroyChild ( void * item, void * )

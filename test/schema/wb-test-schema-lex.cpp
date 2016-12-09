@@ -90,6 +90,8 @@ TEST_CASE ( Ellipsis )
 
 #define REQUIRE_TOKEN(expected, scanner) \
     REQUIRE_EQ ( string ( expected ), string ( scanner . LastTokenValue () . value, scanner . LastTokenValue () . value_len ) )
+#define REQUIRE_WS(expected, scanner) \
+    REQUIRE_EQ ( string ( expected ), string ( scanner . LastTokenValue () . leading_ws ) )
 
 #define REQUIRE_TERMINAL(name, token, term) \
 TEST_CASE ( name ) \
@@ -171,7 +173,8 @@ TEST_CASE ( Comment )
 {
     SchemaScanner s ( "/**/abc" );
     REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) IDENTIFIER_1_0, s . Scan () );
-    REQUIRE_TOKEN ( "abc", s ); \
+    REQUIRE_TOKEN ( "abc", s );
+    REQUIRE_WS ( "/**/", s );
 }
 
 TEST_CASE ( LineComment )
@@ -179,6 +182,7 @@ TEST_CASE ( LineComment )
     SchemaScanner s ( "//qed\nabc" );
     REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) IDENTIFIER_1_0, s . Scan () );
     REQUIRE_TOKEN ( "abc", s ); \
+    REQUIRE_WS ( "//qed\n", s );
 }
 
 TEST_CASE ( MultiLineComment )
@@ -186,6 +190,7 @@ TEST_CASE ( MultiLineComment )
     SchemaScanner s ( "/*\n\n*/abc" );
     REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) IDENTIFIER_1_0, s . Scan () );
     REQUIRE_TOKEN ( "abc", s ); \
+    REQUIRE_WS ( "/*\n\n*/", s );
 }
 
 TEST_CASE ( WhiteSpace )

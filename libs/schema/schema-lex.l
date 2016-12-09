@@ -180,7 +180,7 @@ dstr_char   ([^\\"\f\r\n$]|$[^(\\])
 <*>\/\*                                         { yy_push_state ( CMT_SLASH_STAR, yyscanner ); AddWs(); }
 <CMT_SLASH_STAR,CMT_MULTI_LINE>[^*\n]+          { AddWs(); }
 <CMT_SLASH_STAR,CMT_MULTI_LINE>\*+[^*/\n]+      { AddWs(); }
-<CMT_SLASH_STAR,CMT_MULTI_LINE>\**\n            { BEGIN CMT_MULTI_LINE; }
+<CMT_SLASH_STAR,CMT_MULTI_LINE>\**\n            { BEGIN CMT_MULTI_LINE; AddWs(); }
 <CMT_SLASH_STAR>\*+\/                           { yy_pop_state ( yyscanner ); AddWs(); }
 <CMT_MULTI_LINE>\*+\/                           { yy_pop_state ( yyscanner ); AddWs(); }
 

@@ -31,6 +31,7 @@
 #include <ktst/unit_test.hpp>
 
 #include <sstream>
+#include <cstring>
 
 #include "../../libs/schema/SchemaParser.hpp"
 #include "../../libs/schema/ParseTree.hpp"
@@ -43,10 +44,17 @@ using namespace ncbi::NK;
 
 TEST_SUITE ( SchemaParserTestSuite );
 
+#define KW_TOKEN(v,k) SchemaToken v = { KW_##k, #k, strlen(#k), 0, 0 }
+
+KW_TOKEN( st  ,virtual );
+KW_TOKEN( st0 ,void );
+KW_TOKEN( st1 ,write );
+KW_TOKEN( st2 ,version );
+KW_TOKEN( st3 ,include );
+
 // Token
 TEST_CASE(Token_Construct)
 {
-    SchemaToken st = { KW_virtual, "virtual" };
     Token t ( st );
     REQUIRE_EQ ( ( int ) KW_virtual, t . GetType() );
     REQUIRE_EQ ( string ( "virtual" ), string ( t . GetValue() ) );
@@ -59,42 +67,12 @@ operator == ( const Token & l, const Token & r)
     return l . GetType() == r . GetType() && string ( l . GetValue() ) == string ( r . GetValue() );
 }
 
-static SchemaToken st = { KW_virtual, "virtual" };
-static SchemaToken st0 = { KW_void, "void" };
-static SchemaToken st1 = { KW_write, "write" };
-static SchemaToken st2 = { KW_version, "version" };
-
-TEST_CASE(ParseTree_Construct0)
+TEST_CASE(ParseTree_Construct)
 {
     ParseTree t ( st );
     REQUIRE ( t . GetToken() == Token ( st ) );
 }
-TEST_CASE(ParseTree_Construct1)
-{
-    ParseTree t ( st, new ParseTree ( st0 ) );
-    REQUIRE ( t . GetToken() == Token ( st ) );
-    REQUIRE ( t . GetChild ( 0 ) -> GetToken () == Token ( st0 ) );
-}
-TEST_CASE(ParseTree_Construct2)
-{
-    ParseTree t ( st, new ParseTree ( st0 ), new ParseTree ( st1 ) );
-    REQUIRE ( t . GetToken() == Token ( st ) );
-    REQUIRE ( t . GetChild ( 0 ) -> GetToken () == Token ( st0 ) );
-    REQUIRE ( t . GetChild ( 1 ) -> GetToken () == Token ( st1 ) );
-}
-TEST_CASE(ParseTree_Construct3)
-{
-    ParseTree t ( st, new ParseTree ( st0 ), new ParseTree ( st1 ), new ParseTree ( st2 )  );
-    REQUIRE ( t . GetToken() == Token ( st ) );
-    REQUIRE ( t . GetChild ( 0 ) -> GetToken () == Token ( st0 ) );
-    REQUIRE ( t . GetChild ( 1 ) -> GetToken () == Token ( st1 ) );
-    REQUIRE ( t . GetChild ( 2 ) -> GetToken () == Token ( st2 ) );
-}
-TEST_CASE(ParseTree_ChildrenCount)
-{
-    ParseTree t ( st, new ParseTree ( st0 ), new ParseTree ( st1 ), new ParseTree ( st2 )  );
-    REQUIRE_EQ ( 3u, t . ChildrenCount () );
-}
+
 TEST_CASE(ParseTree_AddChild)
 {
     SchemaToken st = { PT_PARSE, "" };
@@ -105,8 +83,17 @@ TEST_CASE(ParseTree_AddChild)
     REQUIRE ( t . GetChild ( 0 ) -> GetToken () == Token ( st0 ) );
     REQUIRE ( t . GetChild ( 1 ) -> GetToken () == Token ( st1 ) );
 }
+TEST_CASE(ParseTree_ChildrenCount)
+{
+    SchemaToken st = { PT_PARSE, "" };
+    ParseTree t ( st );
+    t. AddChild ( new ParseTree ( st0 ) );
+    t. AddChild ( new ParseTree ( st1 ) );
 
-// Print parse tree
+    REQUIRE_EQ ( 2u, t . ChildrenCount () );
+}
+
+// Grammar
 
 static
 void
@@ -126,8 +113,7 @@ PrintParseTree ( const ParseTree * p_t, ostream& p_out )
     }
 }
 
-// Grammar
-
+static
 bool
 ParseAndVerify ( const char* p_source )
 {
@@ -162,15 +148,25 @@ TEST_CASE ( MultipleDecls )
     REQUIRE ( ParseAndVerify ( "version 1; include \"qq\"; include \"aa\";" ) );
 }
 
-#if 0
 TEST_CASE ( Typedef )
 {
-    REQUIRE ( ParseAndVerify ( "typedef oldName newName;" ) );
+    REQUIRE ( ParseAndVerify ( "typedef ns:oldName newName;" ) );
 }
+TEST_CASE ( Keywords_as_identifiers )
+{
+    REQUIRE ( ParseAndVerify (
+        "typedef ns:database:decode:encode:read:table:type:view:write newName;" ) );
+}
+
 TEST_CASE ( TypedefDim )
 {
     REQUIRE ( ParseAndVerify ( "typedef oldName newName [ 12 ];" ) );
 }
+TEST_CASE ( TypedefVarDim )
+{
+    REQUIRE ( ParseAndVerify ( "typedef oldName newName [ * ];" ) );
+}
+
 TEST_CASE ( TypedefMultipleNames )
 {
     REQUIRE ( ParseAndVerify ( "typedef oldName neawName1, newName2 [ 12 ], newName3;" ) );
@@ -215,12 +211,12 @@ TEST_CASE ( Function_RowLength )
 }
 
 TEST_CASE ( Function_Naked )
-{   //TODO: verify that paramter-less functions are not allowed
+{
     REQUIRE ( ParseAndVerify ( "function t fn ( a b );" ) );
 }
 
-TEST_CASE ( Function_ArreyReturn )
-{   //TODO: verify that paramter-less functions are not allowed
+TEST_CASE ( Function_ArrayReturn )
+{
     REQUIRE ( ParseAndVerify ( "function t[3] fn ( a b );" ) );
 }
 
@@ -231,13 +227,14 @@ TEST_CASE ( Function_Schema )
 
 TEST_CASE ( Function_Factory )
 {
-    REQUIRE ( ParseAndVerify ( "function t fn < a b > ( a b );" ) );
+    REQUIRE ( ParseAndVerify ( "function t fn < a b, c d > ( a b );" ) );
 }
 
 TEST_CASE ( Function_NoFormals )
 {
     REQUIRE ( ParseAndVerify ( "function t fn ();" ) );
 }
+
 TEST_CASE ( Function_Formals_OptionalOnly )
 {
     REQUIRE ( ParseAndVerify ( "function t fn ( * a b );" ) );
@@ -270,10 +267,6 @@ TEST_CASE ( Function_Prologue_Rename )
 TEST_CASE ( Function_Prologue_Script_Return )
 {
     REQUIRE ( ParseAndVerify ( "function t fn ( a b ) { return 1; };" ) );
-}
-TEST_CASE ( Function_Prologue_Script_AssignFormat )
-{
-    REQUIRE ( ParseAndVerify ( "function t fn ( a b ) { a / b c = 1; };" ) );
 }
 TEST_CASE ( Function_Prologue_Script_Assign )
 {
@@ -309,6 +302,12 @@ TEST_CASE ( Physical_Longhand )
         "physical t fn #1.0 { decode { return 1; } ; encode { return 1; } ; __row_length = f () };" ) );
 }
 
+TEST_CASE ( Physical_noheader )
+{
+    REQUIRE ( ParseAndVerify (
+        "physical __no_header t fn #1.0 = { return a; };" ) );
+}
+
 TEST_CASE ( Table_NoParents )
 {
     REQUIRE ( ParseAndVerify ( "table t #1.1.1 { t a = 1; };" ) );
@@ -316,6 +315,10 @@ TEST_CASE ( Table_NoParents )
 TEST_CASE ( Table_Parents )
 {
     REQUIRE ( ParseAndVerify ( "table t #1.1.1 = t1, t2, t3 { t a = 1; };" ) );
+}
+TEST_CASE ( Table_ParentsWithVersion )
+{
+    REQUIRE ( ParseAndVerify ( "table t #1.1.1 = t1, t2, t3#1.2.3 { t a = 1; };" ) );
 }
 
 TEST_CASE ( Table_Empty )
@@ -326,16 +329,20 @@ TEST_CASE ( Table_ProdStmt )
 {
     REQUIRE ( ParseAndVerify ( "table t #1 { t a = 1; };" ) );
 }
-TEST_CASE ( Table_ProdStmt_NoFormals )
+TEST_CASE ( Table_ProdStmt_FunCallSchemaNoFormals )
 {
-    REQUIRE ( ParseAndVerify ( "table t #1 { t p = < t > fn < 1 > (); };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { t p = < t, 1 > fn < 1 > (); };" ) );
 }
 
 TEST_CASE ( Table_Column )
 {
     REQUIRE ( ParseAndVerify ( "table t #1 { column t c; };" ) );
 }
-TEST_CASE ( Table_Column_PhysicalEncoding )
+TEST_CASE ( Table_Column_PhysicalEncoding_1)
+{
+    REQUIRE ( ParseAndVerify ( "table t #1 { column physical <1> p c; };" ) );
+}
+TEST_CASE ( Table_Column_PhysicalEncoding_2)
 {
     REQUIRE ( ParseAndVerify ( "table t #1 { column <1> p c; };" ) );
 }
@@ -390,9 +397,13 @@ TEST_CASE ( Table_Column_default_limit )
     REQUIRE ( ParseAndVerify ( "table t #1 { column default limit = 1; };" ) );
 }
 
-TEST_CASE ( Table_Column_withBody )
+TEST_CASE ( Table_Column_withBody_1 )
 {
     REQUIRE ( ParseAndVerify ( "table t #1 { column t c { read = 1 | 2; validate = 2 | 3; limit = 100}; };" ) );
+}
+TEST_CASE ( Table_Column_withBody_2 )
+{
+    REQUIRE ( ParseAndVerify ( "table t #1 { column t c { read = 1 | 2; validate = 2 | 3; limit = 100} };" ) );
 }
 TEST_CASE ( Table_Column_withExpr )
 {
@@ -406,13 +417,17 @@ TEST_CASE ( Table_DefaultView )
 
 TEST_CASE ( Table_PhysMbr_Static )
 {
+    REQUIRE ( ParseAndVerify ( "table t #1 { static t .c; };" ) );
+}
+TEST_CASE ( Table_PhysMbr_StaticWithInit )
+{
     REQUIRE ( ParseAndVerify ( "table t #1 { static t .c = 1; };" ) );
 }
 TEST_CASE ( Table_PhysMbr_Physical )
 {
     REQUIRE ( ParseAndVerify ( "table t #1 { physical t .c = 1; };" ) );
 }
-TEST_CASE ( Table_PhysMbr_PhysicalWithVErsion )
+TEST_CASE ( Table_PhysMbr_PhysicalWithVersion )
 {
     REQUIRE ( ParseAndVerify ( "table t #1 { physical column NCBI #1 .CLIP_ADAPTER_LEFT; };" ) );
 }
@@ -428,9 +443,9 @@ TEST_CASE ( Table_PhysMbr_WithColumn )
 
 TEST_CASE ( Table_PhysMbr_WithSchema )
 {
-    REQUIRE ( ParseAndVerify ( "table t #1 { static column <1> t .c = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { static column <1, 2> t .c = 1; };" ) );
 }
-TEST_CASE ( Table_PhysMbr_WithVErsion )
+TEST_CASE ( Table_PhysMbr_WithVersion )
 {
     REQUIRE ( ParseAndVerify ( "table t #1 { static column t#1 .c = 1; };" ) );
 }
@@ -440,7 +455,7 @@ TEST_CASE ( Table_PhysMbr_WithFactory )
 }
 TEST_CASE ( Table_PhysMbr_WithAll )
 {
-    REQUIRE ( ParseAndVerify ( "table t #1 { static column <1>t#2.3.4<5> .c = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { static column <1, t = a:b> t #2.3.4 < 5 > .c = 1; };" ) );
 }
 
 TEST_CASE ( Table_Untyped )
@@ -475,10 +490,109 @@ TEST_CASE ( Database_TableMember_WithTemplate )
     REQUIRE ( ParseAndVerify ( "database d#1 { template table ns : tbl T; };" ) );
 }
 
+TEST_CASE ( Database_MultipleMembers )
+{
+    REQUIRE ( ParseAndVerify ( "database d#1 { database ns : db DB; table ns : tbl T; };" ) );
+}
+
 TEST_CASE ( Include )
 {
     REQUIRE ( ParseAndVerify ( "include 'insdc/sra.vschema';" ) );
 }
+
+// Expressions
+TEST_CASE ( CastExpr )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return (a)b; };" ) );
+}
+
+TEST_CASE ( AtExpr )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return @; };" ) );
+}
+
+TEST_CASE ( HexExpr )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return 0x1290ABEF; };" ) );
+}
+
+TEST_CASE ( FloatExpr )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return 1.2; };" ) );
+}
+
+TEST_CASE ( ExpFloatExpr )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return 1E2; };" ) );
+}
+
+TEST_CASE ( StringExpr )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return \"qq\"; };" ) );
+}
+
+TEST_CASE ( EscapedStringExpr )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return \"q\\q\"; };" ) );
+}
+
+TEST_CASE ( ConstVectExpr_Empty )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return [ ]; };" ) );
+}
+TEST_CASE ( ConstVectExpr )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return [ 1, 2, 3 ]; };" ) );
+}
+
+TEST_CASE ( BoolExpr_True )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return true; };" ) );
+}
+TEST_CASE ( BoolExpr_False )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return false; };" ) );
+}
+
+TEST_CASE ( NegateExpr_Ident )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return -a; };" ) );
+}
+TEST_CASE ( NegateExpr_Int )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return -1; };" ) );
+}
+TEST_CASE ( NegateExpr_Float )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return -1.0; };" ) );
+}
+
+TEST_CASE ( FuncExpr_NoSchemaNoFactNoParms )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return f(); };" ) );
+}
+TEST_CASE ( FuncExpr_NoSchemaFactNoParms )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return f<1>(); };" ) );
+}
+TEST_CASE ( FuncExpr_NoSchemaNoFactParms )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return f(1); };" ) );
+}
+TEST_CASE ( FuncExpr_NoSchemaFactParms )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return f<a, b>(c, d); };" ) );
+}
+TEST_CASE ( FuncExpr_Version )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return f#1<a, b>(c, d); };" ) );
+}
+
+TEST_CASE ( PhysicalIdent )
+{
+    REQUIRE ( ParseAndVerify ( "function t f() { return .b; };" ) );
+}
+
 
 // Version 2
 
@@ -486,7 +600,6 @@ TEST_CASE ( VersionOther )
 {
     REQUIRE ( ParseAndVerify ( "version 3.14; $" ) ); //TODO
 }
-#endif
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>

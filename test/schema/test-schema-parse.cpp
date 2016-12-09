@@ -45,6 +45,52 @@ using namespace ncbi::SchemaParser;
 #include <sstream>
 #include <stdexcept>
 
+static
+void
+PrintParseTree ( const ParseTree * p_t, ostream& p_out )
+{
+    if ( p_t == 0 )
+    {
+        p_out << " NULL";
+        return;
+    }
+
+    p_out << p_t -> GetToken () . GetLeadingWhitespace () << p_t -> GetToken () . GetValue ();
+
+    for ( uint32_t i = 0 ; i < p_t -> ChildrenCount (); ++ i )
+    {
+        PrintParseTree ( p_t -> GetChild ( i ), p_out );
+    }
+}
+
+static
+bool
+MatchStrings ( const string& p_source, const string p_print )
+{
+    const size_t Context = 20;
+    for ( size_t i = 0; i < p_source . length (); ++ i )
+    {
+        if ( i >= p_print . length () )
+        {
+            cout << "premature end of print after " << p_source . substr ( i > Context ? i - Context : 0 ) << endl;
+            return false;
+        }
+        if ( p_source [ i ] != p_print [ i ] )
+        {
+            cout << "mismatch at " << i << ", after " << p_source . substr ( i > Context ? i - Context : 0, Context ) << endl;
+            cout << "source: '" << p_source . substr ( i, Context ) << "'" << endl;
+            cout << "print : '" << p_print . substr ( i, Context ) << "'" << endl;
+            return false;
+        }
+    }
+    if ( p_print . length () > p_source . length () )
+    {
+        cout << "extra characters printed: " << p_print . substr ( p_source . length () ) << endl;
+        return false;
+    }
+    return true;
+}
+
 extern "C"
 {
 
@@ -89,6 +135,14 @@ rc_t CC KMain ( int argc, char *argv [] )
             if ( ! parser . ParseString ( buffer . str () . c_str () ) )
             {
                 cout << string ( "Parsing failed: " ) + argv [ i + 1 ] << endl;
+                ++ failed;
+            }
+
+            ostringstream out;
+            PrintParseTree ( parser . GetParseTree (), out );
+            if ( ! MatchStrings ( buffer . str (), out . str () ) )
+            {
+                cout << string ( "Printout mismatch: " ) + argv [ i + 1 ] << endl;
                 ++ failed;
             }
         }

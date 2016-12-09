@@ -38,10 +38,7 @@ namespace ncbi
         class ParseTree
         {
         public:
-            ParseTree ( const SchemaToken& token);
-            ParseTree ( const SchemaToken& token, ParseTree * );
-            ParseTree ( const SchemaToken& token, ParseTree *, ParseTree * );
-            ParseTree ( const SchemaToken& token, ParseTree *, ParseTree *, ParseTree * );
+            ParseTree ( const SchemaToken& token );
             virtual ~ParseTree ();
 
             void AddChild ( ParseTree * ); // allocated with new
