@@ -40,6 +40,7 @@ extern "C" {
 
 struct Kart;
 struct KNSManager;
+
 typedef struct KService KService;
 typedef struct KSrvError KSrvError;
 typedef struct KSrvResponse KSrvResponse;
@@ -52,41 +53,66 @@ rc_t KServiceMake ( KService ** self);
 /* Release KService object */
 rc_t KServiceRelease ( KService * self );
 
+/* Add an Id ( Accession or Object-Id ) to service request */
 rc_t KServiceAddId     ( KService * self, const char * id );
 
+/* Add a dbGaP Project to service request */
 rc_t KServiceAddProject ( KService * self, uint32_t id );
 
-/************************** name service - version 3 **************************/
-rc_t KServiceNamesExecute ( KService * self, VRemoteProtocols protocols, 
-    const KSrvResponse ** result );
-/************************** search service - version 1 ************************/
-rc_t KServiceSearchExecute ( KService * self,
-    const struct Kart ** result );
 
-/* MOVE IT IT priv-h ! */
-rc_t KService1Search (
-    const struct KNSManager * mgr, const char * cgi, const char * acc,
-    const struct Kart ** result );
+/************************** name service - version 3 **************************/
+/* Execute Names Service Call using currentdefault protocol version;
+   get KSrvResponse */
+rc_t KServiceNamesExecute ( KService * self, VRemoteProtocols protocols, 
+                             const KSrvResponse ** response );
+
+
+/************************** search service - version 1 ************************/
+/* Execute Search Service Call; get Kart response */
+rc_t KServiceSearchExecute ( KService * self,
+                             const struct Kart ** response );
+
 
 /************************** KSrvResponse **************************/
+/* Release:
+ * Release KSrvResponse object */
 rc_t     KSrvResponseRelease ( const KSrvResponse * self );
-uint32_t KSrvResponseLength  ( const KSrvResponse * self );
-rc_t     KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
-           VRemoteProtocols p, const struct VPath ** path,
-           const struct VPath ** vdbcache, const KSrvError ** error );
 
-/************************** KSrvError **************************/
+/* Length:
+ * Number of elements in KSrvResponse */
+uint32_t KSrvResponseLength  ( const KSrvResponse * self );
+
+/* GetPath:
+ * Get KSrvResponse element number "idx" for "protocol":
+ * - "path"/"vdbcache",
+ * or "error"
+ */
+rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
+    VRemoteProtocols p, const struct VPath ** path,
+    const struct VPath ** vdbcache, const KSrvError ** error );
+
+/************************** KSrvError ******************************
+ * KSrvError is generated for Id-s from request that produced an error response
+ */
 rc_t KSrvErrorRelease ( const KSrvError * self );
 rc_t KSrvErrorAddRef  ( const KSrvError * self );
+
+/* Rc - rc code corresponding to this Error */
 rc_t KSrvErrorRc      ( const KSrvError * self, rc_t     * rc   );
+
+/* Code - Status-Code returned by server */
 rc_t KSrvErrorCode    ( const KSrvError * self, uint32_t * code );
 
 /*  returns pointers to internal String data
- *  Strings remain valid while "self" is valid */
+ *  Strings remain valid while "self" is valid
+ */
+/* Message - message returned by server */
 rc_t KSrvErrorMessage ( const KSrvError * self, String * message );
-rc_t KSrvErrorObject  ( const KSrvError * self, String * id,
-    EObjectType * type );
+/* Object - Object-Id/Object-Type that produced this Error */
+rc_t KSrvErrorObject  ( const KSrvError * self,
+                        String * id, EObjectType * type );
 /******************************************************************************/
+
 
 #ifdef __cplusplus
 }

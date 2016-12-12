@@ -50,6 +50,10 @@ rc_t KServiceTestNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
     const struct KSrvResponse ** result, const char * expected );
 
 
+rc_t KService1Search ( const KNSManager * mgr, const char * cgi,
+    const char * acc, const struct Kart ** result );
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -85,6 +85,9 @@ rc_t KServiceRequestTestNames1 ( const struct KNSManager * mgr,
     const char * cgi, const char * version, const char * acc, size_t acc_sz,
     const char * ticket, VRemoteProtocols protocols,
     EObjectType objectType );
+
+/* Parse "buffer" as names-3.0 response.
+   Do not log "errorsToIgnore" messages during response processing */
 rc_t KServiceNames3_0StreamTest ( const char * buffer,
     const struct KSrvResponse ** response, int errorsToIgnore );
 rc_t KServiceNamesRequestTest ( const struct KNSManager * mgr, const char * b,

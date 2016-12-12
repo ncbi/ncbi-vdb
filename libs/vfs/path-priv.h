@@ -58,10 +58,13 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * VPath
  */
+/* VPath Type:
+ * how many extended properties ( from name resolver response ) are initialized
+ */
 typedef enum {
-    eVPnoExt,
-    eVPWithId,
-    eVPext,
+    eVPnoExt,  /* does not have extended part */
+    eVPWithId, /* has object-id */
+    eVPext,    /* has all extanded properties */
 } EVPathType;
 struct VPath
 {
@@ -92,14 +95,19 @@ struct VPath
     bool missing_port;
     bool highly_reliable;
 
+    /* how many extended properties ( from name resolver response )
+       are initialized */
     EVPathType ext;
-    String     id;
-    String     tick;
-    size_t     size;
-    KTime_t    modification;
-    KTime_t    expiration;
 
-    uint8_t    md5 [ 16 ];
+    String     id;           /* object-id */
+
+    String     tick;         /* dbGaP download ticket */
+    size_t     size;         /* object's un-encrypted size in byte */
+    KTime_t    modification; /* object's modification date. 0 if unknown */
+    KTime_t    expiration;   /* expiration date of this VPath object.
+                                0 if infinite */
+
+    uint8_t    md5 [ 16 ];  /* md5 checksum object's un-encrypted if known */
     bool       has_md5;
 };
 
@@ -164,10 +172,18 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
     const String * tick, bool ext, const String * id, size_t size, KTime_t date,
     const uint8_t md5 [ 16 ], KTime_t exp_date );
 
+/* Equal
+ *  compares two VPath-s
+ *
+ * "notequal" [ OUT ] - is set
+ *  to union of bits corresponding to difference in different VPath properties
+ *
+ *  returns non-0 rc after a failed call to get property from any of VPath-s
+ */
 rc_t VPathEqual       ( const VPath * l, const VPath * r, int * notequal );
 
 
-/********************************** VPathSet **********************************/
+/***** VPathSet - set of VPath's - genetated from name resolver response ******/
 
 typedef struct VPathSet VPathSet;
 
@@ -175,7 +191,7 @@ rc_t VPathSetRelease ( const VPathSet * self );
 rc_t VPathSetGet ( const VPathSet * self, VRemoteProtocols protocols,
     const struct VPath ** path, const struct VPath ** vdbcache );
 
-/* response row converted into VDB objects */
+/* name resolver response row converted into VDB objects */
 typedef struct {
     struct VPath * fasp ; struct VPath * vcFasp;
     struct VPath * file ; struct VPath * vcFile;
@@ -185,6 +201,7 @@ typedef struct {
     struct VPath * mapping;
     const struct KSrvError * error;
 } EVPath;
+
 rc_t VPathSetMake
     ( VPathSet ** self, const EVPath * src, bool singleUrl );
 
