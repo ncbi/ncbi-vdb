@@ -40,7 +40,7 @@
 #include <kns/http-priv.h> /* KClientHttpRequestFormatMsg */
 #include <kns/kns-mgr-priv.h> /* KNSManagerMakeReliableClientRequest */
 #include <kns/manager.h> /* KNSManager */
-#include <kns/stream.h> /* KBufferStreamMake */
+#include <kns/stream.h> /* KStreamMakeFromBuffer */
 #include <kproc/timeout.h> /* TimeoutInit */
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/services.h> /* KServiceMake */
@@ -2165,7 +2165,7 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
                 KStream * stream = NULL;
                 DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
             "XXXXXXXXXXXX NOT sending HTTP POST request XXXXXXXXXXXXXXXX\n" ) );
-                rc = KBufferStreamMake ( & stream, expected,
+                rc = KStreamMakeFromBuffer ( & stream, expected,
                                          string_size ( expected ) );
                 if ( rc == 0 )
                     * response = stream;
@@ -3097,6 +3097,11 @@ rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
     return rc;
 }
 
+
+/* Emulate Names Service Call :
+   - prepare the request;
+   - use expected instead of calling cgi
+   - parse expected as cgi response */
 rc_t KServiceTestNamesExecuteExt ( KService * self, VRemoteProtocols protocols, 
     const char * cgi, const char * version,
     const struct KSrvResponse ** response, const char * expected )
@@ -3104,7 +3109,9 @@ rc_t KServiceTestNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
     return KServiceNamesExecuteExtImpl ( self, protocols, cgi, version,
         response, expected );
 }
-    
+
+
+/* Execute Names Service Call : extended version */
 rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
     const char * cgi, const char * version,
     const KSrvResponse ** response )
@@ -3240,6 +3247,7 @@ rc_t CC KService1NameWithVersion ( const KNSManager * mgr, const char * url,
 }
 
 
+/* Execute Search Service Call : extended version */
 rc_t KServiceSearchExecuteExt ( KService * self, const char * cgi,
     const char * version, const Kart ** result )
 {
@@ -3282,6 +3290,8 @@ rc_t KServiceSearchExecute ( KService * self, const Kart ** result ) {
 }
 
 
+/* Execute a simple Search Service Call: one accession in request;
+   get Kart response */
 rc_t KService1Search ( const KNSManager * mgr, const char * cgi,
     const char * acc, const Kart ** result )
 {
@@ -3385,7 +3395,7 @@ rc_t KServiceNamesRequestTest ( const KNSManager * mgr, const char * b,
         rc = c . passed;
     }
     if ( rc == 0 ) {
-        rc = KBufferStreamMake ( & stream, b, string_size ( b ) );
+        rc = KStreamMakeFromBuffer ( & stream, b, string_size ( b ) );
     }
     if ( rc == 0 ) {
         rc = KServiceProcessStream ( service, stream );
@@ -3487,7 +3497,7 @@ rc_t KServiceProcessStreamTestNames1 ( const KNSManager * mgr,
     if ( rc == 0 ) {
         DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( 
             "XXXXXXXXXXXX NOT sending HTTP POST request XXXXXXXXXXXXXXXX\n" ) );
-        rc = KBufferStreamMake ( & stream, b, string_size ( b ) );
+        rc = KStreamMakeFromBuffer ( & stream, b, string_size ( b ) );
     }
     if ( rc == 0 )
         KServiceExpectErrors ( & service, errors );
@@ -3546,7 +3556,7 @@ rc_t KServiceNames3_0StreamTest ( const char * buffer,
         KServiceExpectErrors ( & service, errorsToIgnore );
 
     if ( rc == 0 )
-        rc = KBufferStreamMake ( & stream, buffer, string_size ( buffer ) );
+        rc = KStreamMakeFromBuffer ( & stream, buffer, string_size ( buffer ) );
 
     if ( rc == 0 )
         rc = KServiceProcessStream ( & service, stream );

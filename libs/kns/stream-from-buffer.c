@@ -121,7 +121,7 @@ static KStream_vt_v1 vtKBufferStream = {
     KBufferStreamTWrite,
 };
 
-LIB_EXPORT rc_t CC KBufferStreamMake ( KStream ** self, const char * buffer,
+LIB_EXPORT rc_t CC KStreamMakeFromBuffer ( KStream ** self, const char * buffer,
     size_t size )
 {
     rc_t rc= 0;    
@@ -164,19 +164,19 @@ void test ( void ) {
     }
     const KStream * s = NULL;
 puts("TEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEST");
-    rc_t rc = KBufferStreamMake (   0,  0 , 0,        0 );
+    rc_t rc = KStreamMakeFromBuffer (   0,  0 , 0,        0 );
     assert(rc);
-    rc      = KBufferStreamMake ( & s,  0 , 0,        0 );
+    rc      = KStreamMakeFromBuffer ( & s,  0 , 0,        0 );
     assert ( ! rc );
     rc = KStreamRelease ( s );
     assert ( ! rc );
-    rc      = KBufferStreamMake ( 0  , "X", 0,        0 );
+    rc      = KStreamMakeFromBuffer ( 0  , "X", 0,        0 );
     assert ( rc );
-    rc      = KBufferStreamMake ( 0  ,  0 , b,        0 );
+    rc      = KStreamMakeFromBuffer ( 0  ,  0 , b,        0 );
     assert ( rc );
-    rc      = KBufferStreamMake ( 0  ,  0 , 0, sizeof b );
+    rc      = KStreamMakeFromBuffer ( 0  ,  0 , 0, sizeof b );
     assert ( rc );
-    rc      = KBufferStreamMake ( & s, "X", 0,        0 );
+    rc      = KStreamMakeFromBuffer ( & s, "X", 0,        0 );
     assert ( ! rc );
     char c[99] = "";
     size_t num_read = 0;
