@@ -24,8 +24,12 @@
  *
  */
 
+
+/******************************************************************************/
+
+
 #include <vfs/extern.h>
-#include <kfg/kart-priv.h> /* KartItemMake2 */
+
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/log.h> /* KLogLevel */
 #include <klib/out.h> /* KOutMsg */
@@ -34,33 +38,44 @@
 #include <klib/text.h> /* String */
 #include <klib/time.h> /* KTime */
 #include <klib/vector.h> /* Vector */
+
 #include <kfg/config.h> /* KConfigRelease */
+#include <kfg/kart-priv.h> /* KartItemMake2 */
 #include <kfg/repository.h> /* KRepositoryMgrRelease */
+
 #include <kns/http.h> /* KHttpRequest */
 #include <kns/http-priv.h> /* KClientHttpRequestFormatMsg */
 #include <kns/kns-mgr-priv.h> /* KNSManagerMakeReliableClientRequest */
 #include <kns/manager.h> /* KNSManager */
 #include <kns/stream.h> /* KStreamMakeFromBuffer */
+
 #include <kproc/timeout.h> /* TimeoutInit */
+
 #include <vfs/manager.h> /* VFSManager */
 #include <vfs/services.h> /* KServiceMake */
 
 #include "path-priv.h" /* VPathMakeFmt */
-#include "services-priv.h"
 #include "resolver-priv.h" /* VPathCheckFromNamesCGI */
+#include "services-priv.h"
 
 #include <ctype.h> /* isdigit */
 #include <string.h> /* memset */
+
+
+/******************************************************************************/
 
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
 
 
+/******************************************************************************/
+/* service type - names of search */
 typedef enum {
     eSTnames,
     eSTsearch,
 } EServiceType;
+
 
 /* request/response/processing helper objects */
 typedef struct {
@@ -70,8 +85,10 @@ typedef struct {
     uint32_t timeoutMs;
 } SHelper;
 
+
 /* raw string text */
 typedef struct { char * s; } SRaw; 
+
 
 /******************************************************************************/
 /* SERVICE VERSIONS */
@@ -82,7 +99,8 @@ typedef struct { char * s; } SRaw;
 #define VERSION_3_1 0x03010000
 #define VERSION_3_2 0x03020000
 
-/* version from server response */
+
+/* version in server request / response */
 typedef struct {
     SRaw raw;
     ver_t version;
@@ -90,6 +108,7 @@ typedef struct {
     uint8_t minor;
 } SVersion; 
 
+/* features that are different for different protocol versions ****************/
 static bool SVersionNotExtendedVPaths ( const SVersion * self ) {
     assert ( self );
     return self -> version == VERSION_1_0;
@@ -134,6 +153,8 @@ static bool SVersionResponseHasTimestamp ( const SVersion * self ) {
     assert ( self );
     return self -> version >= VERSION_3_2;
 }
+/******************************************************************************/
+
 
 /* server response header */
 typedef struct {
@@ -141,22 +162,21 @@ typedef struct {
     SVersion version;
 } SHeader;
 
+
+/* number of fields in different versions of name resolver protocol */
 #define N_NAMES1_0 5
 #define N_NAMES1_1 10
 #define N_NAMES3_0  9
 #define N_NAMES3_1 17
 #define N_NAMES3_2 12
 
-/* response row parsed into array of Strings */
-typedef struct {
-    int n;
-    String s [ N_NAMES3_1 ];
-} SOrdered;
 
+/* md5 checksum */
 typedef struct {
     uint8_t md5 [ 16 ];
     bool has_md5;
 } SMd5;
+
 
 /* response row parsed into named typed fields */
 typedef struct {
@@ -187,6 +207,27 @@ typedef struct {
     String message;
 } STyped;
 
+
+/* converter from server response string to a typed object */
+typedef rc_t TConverter ( void * dest, const String * src );
+typedef struct { TConverter * f; } SConverter;
+typedef void * TFieldGetter ( STyped * self, int n );
+
+typedef struct {
+    int n;
+    TFieldGetter * get;
+    TConverter ** f;
+} SConverters;
+
+
+/* response row parsed into array of Strings */
+typedef struct {
+    int n;
+    String s [ N_NAMES3_1 ];
+} SOrdered;
+
+
+/* server error row */
 struct KSrvError {
     atomic32_t refcount;
 
@@ -198,16 +239,6 @@ struct KSrvError {
     EObjectType objectType;
 };
 
-/* converter from server response string to an object */
-typedef rc_t TConverter ( void * dest, const String * src );
-typedef struct { TConverter * f; } SConverter;
-typedef void * TFieldGetter ( STyped * self, int n );
-
-typedef struct {
-    int n;
-    TFieldGetter * get;
-    TConverter ** f;
-} SConverters;
 
 /* a response row */
 typedef struct {
@@ -218,17 +249,22 @@ typedef struct {
     VPathSet * set;
 } SRow;
 
+
+/* timestamp object */
 typedef struct {
     SRaw raw;
     KTime_t time;
 } STimestamp;
 
+
+/* server timestamp */
 typedef struct {
     STimestamp server;
     STimestamp local;
 } SServerTimestamp;
 
-/* server response = header + vector of response rows */
+
+/* server response = header; vector of response rows; generated objects */
 typedef struct {
     EServiceType serviceType;
     SHeader header;
@@ -238,7 +274,6 @@ typedef struct {
     SServerTimestamp timestamp;
 } SResponse;
 
-/* request info */
 
 /* key-value */
 typedef struct {
@@ -246,23 +281,39 @@ typedef struct {
     String v;
 } SKV;
 
+
+/* helper object to add cgi parameters to KHttpRequest */
 typedef struct {
     KHttpRequest * httpReq;
     rc_t rc;
 } SHttpRequestHelper;
 
+
+/* cgi request info */
 typedef struct {
     bool inited;
     char * cgi;
     Vector params;
 } SCgiRequest;
 
+
+/* request object */
 typedef struct {
     char * objectId;
     EObjectType objectType;
     int ordId;
 } SObject;
 
+
+/* service request data ( objects to query ) */
+typedef struct {
+    SObject object [ 256 ];
+    uint32_t objects;
+    bool refseq_ctx;
+} SRequestData;
+
+
+/* tickets - access authorization keys */
 typedef struct {
     Vector tickets;
     KDataBuffer str;
@@ -270,12 +321,8 @@ typedef struct {
     rc_t rc;
 } STickets;
 
-typedef struct {
-    SObject object [ 256 ];
-    uint32_t objects;
-    bool refseq_ctx;
-} SRequestData;
 
+/* service request */
 typedef struct {
     EServiceType serviceType;
     SVersion version;
@@ -286,6 +333,7 @@ typedef struct {
     VRemoteProtocols protocols;
 } SRequest;
 
+
 /* service object */
 struct KService {
     SHelper helper;
@@ -294,7 +342,10 @@ struct KService {
 };
 
 
-/* SHelper */
+/******************************************************************************/
+
+
+/* SHelper ********************************************************************/
 static rc_t SHelperInit ( SHelper * self, const KNSManager * mgr ) {
     rc_t rc = 0;
     assert ( self );
@@ -314,6 +365,7 @@ static rc_t SHelperInit ( SHelper * self, const KNSManager * mgr ) {
     return rc;
 }
 
+
 static rc_t SHelperFini ( SHelper * self) {
     rc_t rc = 0;
 
@@ -328,7 +380,8 @@ static rc_t SHelperFini ( SHelper * self) {
     return rc;
 }
 
-rc_t SHelperInitKfg ( SHelper * self ) {
+
+static rc_t SHelperInitKfg ( SHelper * self ) {
     rc_t rc = 0;
     assert ( self );
 
@@ -339,8 +392,9 @@ rc_t SHelperInitKfg ( SHelper * self ) {
     return rc;
 }
 
+
 /* get from kfg, otherwise use hardcoded */
-VRemoteProtocols SHelperDefaultProtocols ( SHelper * self ) {
+static VRemoteProtocols SHelperDefaultProtocols ( SHelper * self ) {
     assert ( self );
 
     VRemoteProtocols protocols = DEFAULT_PROTOCOLS;
@@ -351,6 +405,7 @@ VRemoteProtocols SHelperDefaultProtocols ( SHelper * self ) {
 
     return protocols;
 }
+
 
 /* try to get cgi from kfg, otherwise use hardcoded */
 static
@@ -379,6 +434,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
 }
 
 
+static
 rc_t SHelperProjectToTicket ( SHelper * self, uint32_t projectId,
     char * buffer, size_t bsize, size_t * ticket_size )
 {
@@ -411,12 +467,13 @@ rc_t SHelperProjectToTicket ( SHelper * self, uint32_t projectId,
 }
 
 
-/* SRaw */
+/* SRaw ***********************************************************************/
 static void SRawInit ( SRaw * self, char * s ) {
     assert ( self );
 
     self -> s = s;
 }
+
 
 static rc_t SRawAlloc ( SRaw * self, const char * s, size_t sz ) {
     char * p = NULL;
@@ -434,6 +491,7 @@ static rc_t SRawAlloc ( SRaw * self, const char * s, size_t sz ) {
     return 0;
 }
 
+
 static rc_t SRawFini ( SRaw * self ) {
     if ( self != NULL ) {
         free ( self -> s );
@@ -444,7 +502,7 @@ static rc_t SRawFini ( SRaw * self ) {
 }
 
 
-/* SVersion */
+/* SVersion *******************************************************************/
 static rc_t SVersionInit
     ( SVersion * self, const char * src, EServiceType serviceType )
 {
@@ -498,6 +556,7 @@ static rc_t SVersionInit
     }
 }
 
+
 static rc_t SVersionFini ( SVersion * self ) {
     rc_t rc = 0;
     assert ( self );
@@ -505,6 +564,7 @@ static rc_t SVersionFini ( SVersion * self ) {
     memset ( self, 0, sizeof * self );
     return rc;
 }
+
 
 static rc_t SVersionToString ( const SVersion * self, char ** s ) {
     size_t num_writ = 0;
@@ -521,7 +581,7 @@ static rc_t SVersionToString ( const SVersion * self, char ** s ) {
 }
 
 
-/* SHeader */
+/* SHeader ********************************************************************/
 static rc_t SHeaderMake
     ( SHeader * self, const String * src, EServiceType serviceType )
 {
@@ -539,6 +599,7 @@ static rc_t SHeaderMake
     return rc;
 }
 
+
 static rc_t SHeaderFini ( SHeader * self ) {
     rc_t rc = 0;
     if ( self != NULL ) {
@@ -552,8 +613,166 @@ static rc_t SHeaderFini ( SHeader * self ) {
 }
 
 
+/* SProtocol ******************************************************************/
+typedef struct {
+    const char * text;
+    VRemoteProtocols protocol;
+} SProtocol;
+
+
+static VRemoteProtocols SProtocolGet ( const String * url ) {
+    size_t i = 0;
+    SProtocol protocols [] = {
+        { "http:", eProtocolHttp },
+        { "fasp:", eProtocolFasp },
+        { "https:",eProtocolHttps},
+        { "file:", eProtocolFile },
+        { "s3:"  , eProtocolS3   },
+    };
+    if ( url == NULL || url -> addr == NULL || url -> size == 0 ) {
+        return eProtocolNone;
+    }
+    for ( i = 0; i < sizeof protocols / sizeof protocols [ 0 ]; ++ i ) {
+        uint32_t sz = string_measure ( protocols [ i ] . text, NULL );
+        if ( string_cmp ( url -> addr, sz, protocols [ i ] . text, sz,
+            ( uint32_t ) sz ) == 0 )
+        {
+            return protocols [ i ] . protocol;
+        }
+    }
+    return eProtocolNone;
+}
+
+
+/* STyped *********************************************************************/
+static rc_t STypedInitUrls ( STyped * self ) {
+    VRemoteProtocols protocol = eProtocolNone;
+    String * str = NULL;
+    String * dst = NULL;
+    assert ( self );
+    str = & self -> url;
+    while ( str -> size > 0 ) {
+        size_t len = 0;
+        char * n = string_chr ( str -> addr, str -> size, '$' );
+        if ( n != NULL ) {
+            len = n - str -> addr;
+        }
+        else {
+            len = str -> size;
+        }
+        protocol = SProtocolGet ( str );
+        switch ( protocol ) {
+            case eProtocolFasp:
+                dst = & self -> fpUrl;
+                break;
+            case eProtocolFile:
+                dst = & self -> flUrl;
+                break;
+            case eProtocolHttp:
+                dst = & self -> hUrl;
+                break;
+            case eProtocolHttps:
+                dst = & self -> hsUrl;
+                break;
+            case eProtocolS3:
+                dst = & self -> s3Url;
+                break;
+            default:
+                return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
+        }
+        StringInit ( dst, str -> addr, len, len );
+        if ( n != NULL )
+            ++ len;
+        str -> addr += len;
+        if ( str -> size >= len )
+            str -> size -= len;
+        else
+            str -> size = 0;
+    }
+    str = & self -> vdbcacheUrl;
+    while ( str -> size > 0 ) {
+        size_t len = 0;
+        char * n = string_chr ( str -> addr, str -> size, '$' );
+        if ( n != NULL ) {
+            len = n - str -> addr;
+        }
+        else {
+            len = str -> size;
+        }
+        protocol = SProtocolGet ( str );
+        switch ( protocol ) {
+            case eProtocolFasp:
+                dst = & self -> fpVdbcacheUrl;
+                break;
+            case eProtocolFile:
+                dst = & self -> flVdbcacheUrl;
+                break;
+            case eProtocolHttp:
+                dst = & self -> hVdbcacheUrl;
+                break;
+            case eProtocolHttps:
+                dst = & self -> hsVdbcacheUrl;
+                break;
+            case eProtocolS3:
+                dst = & self -> s3VdbcacheUrl;
+                break;
+            default:
+                return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
+        }
+        StringInit ( dst, str -> addr, len, len );
+        if ( n != NULL )
+            ++ len;
+        str -> addr += len;
+        if ( str -> size >= len )
+            str -> size -= len;
+        else
+            str -> size = 0;
+    }
+    return 0;
+}
+
+
+static
+rc_t STypedInit ( STyped * self, const SOrdered * raw, const SConverters * how,
+    const SVersion * version )
+{
+    rc_t rc = 0;
+    int i = 0;
+    assert ( self && raw && how && version );
+    memset ( self, 0, sizeof * self );
+
+    if ( raw -> n != how -> n )
+        return RC ( rcVFS, rcQuery, rcResolving, rcName, rcUnexpected );
+
+    for ( i = 0; i < raw -> n; ++i ) {
+        void * dest = how -> get ( self, i );
+        if ( dest == NULL ) {
+            rc = RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
+            break;
+        }
+        TConverter * f = how -> f [ i ];
+        if ( f == NULL ) {
+            rc = RC ( rcVFS, rcQuery, rcResolving, rcFunction, rcNotFound );
+            break;
+        }
+        rc = f ( dest, & raw -> s [ i ] );
+        if ( rc != 0 )
+            break;
+    }
+
+    if ( rc == 0 )
+        if ( SVersionResponseHasMultipeUrls ( version ) )
+            rc = STypedInitUrls ( self );
+
+    if ( rc == 0 ) {
+        self -> inited = true;
+    }
+    return rc;
+}
+
+
 /* CONVERTERS */
-/* functions to initialize objects from response row field Strings */
+/* functions to initialize objects from response row field Strings ************/
 static
 bool cmpStringAndObjectType ( const String * s, const char * val )
 {
@@ -562,6 +781,7 @@ bool cmpStringAndObjectType ( const String * s, const char * val )
     StringInit ( & v, val, sz, sz );
     return StringCompare ( s, & v ) == 0;
 }
+
 
 /* N.B. DO NOT FREE RETURNED STRING !!! */
 static const char * ObjectTypeToString ( EObjectType self ) {
@@ -582,6 +802,7 @@ static const char * ObjectTypeToString ( EObjectType self ) {
         default: assert ( 0 ); return "";
     }
 }
+
 
 static EObjectType StringToObjectType ( const String * s ) {
     if ( cmpStringAndObjectType ( s, "" ) ) {
@@ -623,6 +844,7 @@ static EObjectType StringToObjectType ( const String * s ) {
     return eOT_undefined;
 }
 
+
 static rc_t EObjectTypeInit ( void * p, const String * src ) {
     EObjectType * self = ( EObjectType * ) p;
     EObjectType t = StringToObjectType ( src );
@@ -634,12 +856,14 @@ static rc_t EObjectTypeInit ( void * p, const String * src ) {
     return 0;
 }
 
+
 static rc_t aStringInit ( void * p, const String * src ) {
     String * self = ( String * ) p;
     assert ( src );
     StringInit ( self, src -> addr, src -> size, src -> len );
     return 0;
 }
+
 
 static rc_t size_tInit ( void * p, const String * src ) {
     rc_t rc = 0;
@@ -655,6 +879,7 @@ static rc_t size_tInit ( void * p, const String * src ) {
     return rc;
 }
 
+
 static rc_t uint32_tInit ( void * p, const String * src ) {
     rc_t rc = 0;
     uint32_t * self = ( uint32_t * ) p;
@@ -666,9 +891,12 @@ static rc_t uint32_tInit ( void * p, const String * src ) {
     return rc;
 }
 
-#if LINUX
+
+#if 0 && LINUX
 #define TODO 1;
-rc_t YYYY_MM_DDThh_mm_ssZToTm ( const char * src, struct tm * result ) {
+static
+rc_t YYYY_MM_DDThh_mm_ssZToTm ( const char * src, struct tm * result )
+{
 /*YYYY-MM-DDThh:mm:ssTZD ISO 8601
 tm_sec	int	seconds after the minute	0-61*
 tm_min	int	minutes after the hour	0-59
@@ -771,6 +999,7 @@ tm_isdst	int	Daylight Saving Time flag	*/
 }
 #endif
 
+
 static rc_t KTimeInit ( void * p, const String * src ) {
     KTime_t * self = ( KTime_t * ) p;
 
@@ -787,6 +1016,7 @@ static rc_t KTimeInit ( void * p, const String * src ) {
 
     return 0;
 }
+
 
 static int getDigit ( char c, rc_t * rc ) {
     assert ( rc );
@@ -806,6 +1036,7 @@ static int getDigit ( char c, rc_t * rc ) {
     return c - 'a' + 10;
 }
 
+
 static rc_t md5Init ( void * p, const String * src ) {
     SMd5 * md5 = p;
 
@@ -820,10 +1051,12 @@ static rc_t md5Init ( void * p, const String * src ) {
             rc_t rc = 0;
             int i = 0;
             for ( i = 0; i < 16 && rc == 0; ++ i ) {
-                md5 -> md5 [ i ]  = getDigit ( src -> addr [ 2 * i     ], & rc ) * 16;
-                md5 -> md5 [ i ] += getDigit ( src -> addr [ 2 * i + 1 ], & rc );
+                md5 -> md5 [ i ]  = getDigit ( src -> addr [ 2 * i     ], & rc )
+                                    * 16;
+                md5 -> md5 [ i ] += getDigit ( src -> addr [ 2 * i + 1 ],
+                                                                         & rc );
             }
-	    md5 -> has_md5 = rc == 0;
+	        md5 -> has_md5 = rc == 0;
             return rc;
         }
         default:
@@ -831,6 +1064,8 @@ static rc_t md5Init ( void * p, const String * src ) {
     }
 }
 
+
+/* SConverters ****************************************************************/
 /* converter from names-1.0 response row to STyped object  */
 static void * STypedGetFieldNames1_0 ( STyped * self, int n ) {
     assert ( self );
@@ -844,6 +1079,7 @@ static void * STypedGetFieldNames1_0 ( STyped * self, int n ) {
     return 0;
 }
 
+
 static const SConverters * SConvertersNames1_0Make ( void ) {
     static TConverter * f [ N_NAMES1_0 + 1 ] = {
         aStringInit,
@@ -856,6 +1092,7 @@ static const SConverters * SConvertersNames1_0Make ( void ) {
         STypedGetFieldNames1_0, f };
     return & c;
 }
+
 
 /* converter from names-1.1 response row to STyped object  */
 static void * STypedGetFieldNames1_1 ( STyped * self, int n ) {
@@ -875,6 +1112,7 @@ static void * STypedGetFieldNames1_1 ( STyped * self, int n ) {
     return 0;
 }
 
+
 static const SConverters * SConvertersNames1_1Make ( void ) {
     static TConverter * f [ N_NAMES1_1 + 1 ] = {
         aStringInit,
@@ -892,6 +1130,7 @@ static const SConverters * SConvertersNames1_1Make ( void ) {
         STypedGetFieldNames1_1, f };
     return & c;
 }
+
 
 static const SConverters * SConvertersNames1_2Make ( void ) {
     static TConverter * f [ N_NAMES1_1 + 1 ] = {
@@ -911,6 +1150,7 @@ static const SConverters * SConvertersNames1_2Make ( void ) {
     return & c;
 }
 
+
 /* converter from current names-3.0 response row to STyped object  */
 static void * STypedGetFieldNames3_0 ( STyped * self, int n ) {
     assert ( self);
@@ -927,6 +1167,7 @@ static void * STypedGetFieldNames3_0 ( STyped * self, int n ) {
     }
     return 0;
 }
+
 
 static const SConverters * SConvertersNames3_0Make ( void ) {
     static TConverter * f [ N_NAMES3_0 + 1 ] = {
@@ -947,6 +1188,7 @@ static const SConverters * SConvertersNames3_0Make ( void ) {
         STypedGetFieldNames3_0, f };
     return & c;
 }
+
 
 /* converter from proposed names-3.0 response row to STyped object  */
 static void * STypedGetFieldNames3_1 ( STyped * self, int n ) {
@@ -973,6 +1215,7 @@ static void * STypedGetFieldNames3_1 ( STyped * self, int n ) {
     return 0;
 }
 
+
 static const SConverters * SConvertersNames3_1Make ( void ) {
     static TConverter * f [ N_NAMES3_1 + 1 ] = {
         EObjectTypeInit,
@@ -998,6 +1241,7 @@ static const SConverters * SConvertersNames3_1Make ( void ) {
     return & c;
 }
 
+
 /* converter from proposed names-3.0 response row to STyped object  */
 static void * STypedGetFieldNames3_2 ( STyped * self, int n ) {
     assert ( self);
@@ -1017,6 +1261,7 @@ static void * STypedGetFieldNames3_2 ( STyped * self, int n ) {
     }
     return 0;
 }
+
 
 static const SConverters * SConvertersNames3_2Make ( void ) {
     static TConverter * f [ N_NAMES3_2 + 1 ] = {
@@ -1038,6 +1283,7 @@ static const SConverters * SConvertersNames3_2Make ( void ) {
         STypedGetFieldNames3_2, f };
     return & c;
 }
+
 
 /* converter factory function */
 static
@@ -1070,7 +1316,7 @@ rc_t SConvertersMake ( const SConverters ** self, SHeader * header )
 }
 
 
-/* SOrdered */
+/* SOrdered *******************************************************************/
 static
 rc_t SOrderedInit ( SOrdered * self, const SRaw * raw, int fields )
 {
@@ -1105,160 +1351,8 @@ rc_t SOrderedInit ( SOrdered * self, const SRaw * raw, int fields )
     return 0;
 }
 
-typedef struct {
-    const char * text;
-    VRemoteProtocols protocol;
-} SProtocol;
-static VRemoteProtocols SProtocolGet ( const String * url ) {
-    size_t i = 0;
-    SProtocol protocols [] = {
-        { "http:", eProtocolHttp },
-        { "fasp:", eProtocolFasp },
-        { "https:",eProtocolHttps},
-        { "file:", eProtocolFile },
-        { "s3:"  , eProtocolS3   },
-    };
-    if ( url == NULL || url -> addr == NULL || url -> size == 0 ) {
-        return eProtocolNone;
-    }
-    for ( i = 0; i < sizeof protocols / sizeof protocols [ 0 ]; ++ i ) {
-        uint32_t sz = string_measure ( protocols [ i ] . text, NULL );
-        if ( string_cmp ( url -> addr, sz, protocols [ i ] . text, sz,
-            ( uint32_t ) sz ) == 0 )
-        {
-            return protocols [ i ] . protocol;
-        }
-    }
-    return eProtocolNone;
-}
 
-/* STyped */
-static rc_t STypedInitUrls ( STyped * self ) {
-    VRemoteProtocols protocol = eProtocolNone;
-    String * str = NULL;
-    String * dst = NULL;
-    assert ( self );
-    str = & self -> url;
-    while ( str -> size > 0 ) {
-        size_t len = 0;
-        char * n = string_chr ( str -> addr, str -> size, '$' );
-        if ( n != NULL ) {
-            len = n - str -> addr;
-        }
-        else {
-            len = str -> size;
-        }
-        protocol = SProtocolGet ( str );
-        switch ( protocol ) {
-            case eProtocolFasp:
-                dst = & self -> fpUrl;
-                break;
-            case eProtocolFile:
-                dst = & self -> flUrl;
-                break;
-            case eProtocolHttp:
-                dst = & self -> hUrl;
-                break;
-            case eProtocolHttps:
-                dst = & self -> hsUrl;
-                break;
-            case eProtocolS3:
-                dst = & self -> s3Url;
-                break;
-            default:
-                return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
-        }
-        StringInit ( dst, str -> addr, len, len );
-        if ( n != NULL )
-            ++ len;
-        str -> addr += len;
-        if ( str -> size >= len )
-            str -> size -= len;
-        else
-            str -> size = 0;
-    }
-    str = & self -> vdbcacheUrl;
-    while ( str -> size > 0 ) {
-        size_t len = 0;
-        char * n = string_chr ( str -> addr, str -> size, '$' );
-        if ( n != NULL ) {
-            len = n - str -> addr;
-        }
-        else {
-            len = str -> size;
-        }
-        protocol = SProtocolGet ( str );
-        switch ( protocol ) {
-            case eProtocolFasp:
-                dst = & self -> fpVdbcacheUrl;
-                break;
-            case eProtocolFile:
-                dst = & self -> flVdbcacheUrl;
-                break;
-            case eProtocolHttp:
-                dst = & self -> hVdbcacheUrl;
-                break;
-            case eProtocolHttps:
-                dst = & self -> hsVdbcacheUrl;
-                break;
-            case eProtocolS3:
-                dst = & self -> s3VdbcacheUrl;
-                break;
-            default:
-                return RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
-        }
-        StringInit ( dst, str -> addr, len, len );
-        if ( n != NULL )
-            ++ len;
-        str -> addr += len;
-        if ( str -> size >= len )
-            str -> size -= len;
-        else
-            str -> size = 0;
-    }
-    return 0;
-}
-
-static
-rc_t STypedInit ( STyped * self, const SOrdered * raw, const SConverters * how,
-    const SVersion * version )
-{
-    rc_t rc = 0;
-    int i = 0;
-    assert ( self && raw && how && version );
-    memset ( self, 0, sizeof * self );
-
-    if ( raw -> n != how -> n )
-        return RC ( rcVFS, rcQuery, rcResolving, rcName, rcUnexpected );
-
-    for ( i = 0; i < raw -> n; ++i ) {
-        void * dest = how -> get ( self, i );
-        if ( dest == NULL ) {
-            rc = RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
-            break;
-        }
-        TConverter * f = how -> f [ i ];
-        if ( f == NULL ) {
-            rc = RC ( rcVFS, rcQuery, rcResolving, rcFunction, rcNotFound );
-            break;
-        }
-        rc = f ( dest, & raw -> s [ i ] );
-        if ( rc != 0 )
-            break;
-    }
-
-    if ( rc == 0 )
-        if ( SVersionResponseHasMultipeUrls ( version ) )
-            rc = STypedInitUrls ( self );
-
-    if ( rc == 0 ) {
-        self -> inited = true;
-    }
-    return rc;
-}
-
-
-/* KSrvError */
+/* KSrvError ******************************************************************/
 static
 rc_t KSrvErrorMake ( const KSrvError ** self,
     const STyped * src, rc_t aRc )
@@ -1295,6 +1389,7 @@ rc_t KSrvErrorMake ( const KSrvError ** self,
     return 0;
 }
 
+
 rc_t KSrvErrorAddRef ( const KSrvError * cself ) {
     KSrvError * self = ( KSrvError * ) cself;
 
@@ -1303,6 +1398,7 @@ rc_t KSrvErrorAddRef ( const KSrvError * cself ) {
 
     return 0;
 }
+
 
 rc_t KSrvErrorRelease ( const KSrvError * cself ) {
     rc_t rc = 0;
@@ -1319,6 +1415,8 @@ rc_t KSrvErrorRelease ( const KSrvError * cself ) {
     return rc;
 }
 
+
+/* Rc - rc code corresponding to this Error */
 rc_t KSrvErrorRc      ( const KSrvError * self, rc_t     * rc   ) {
     rc_t dummy = 0;
     if ( rc == NULL )
@@ -1332,6 +1430,8 @@ rc_t KSrvErrorRc      ( const KSrvError * self, rc_t     * rc   ) {
     return 0;
 }
 
+
+/* Code - Status-Code returned by server */
 rc_t KSrvErrorCode    ( const KSrvError * self, uint32_t * code ) {
     uint32_t dummy = 0;
     if ( code == NULL )
@@ -1345,8 +1445,10 @@ rc_t KSrvErrorCode    ( const KSrvError * self, uint32_t * code ) {
     return 0;
 }
 
+
 /*  returns pointers to internal String data
  *  Strings remain valid while "self" is valid */
+/* Message - message returned by server */
 rc_t KSrvErrorMessage ( const KSrvError * self, String * message ) {
     String dummy;
     if ( message == NULL )
@@ -1360,7 +1462,10 @@ rc_t KSrvErrorMessage ( const KSrvError * self, String * message ) {
     return 0;
 }
 
-rc_t KSrvErrorObject ( const KSrvError * self, String * id, EObjectType * type )
+
+/* Object - Object-Id/Object-Type that produced this Error */
+rc_t KSrvErrorObject ( const KSrvError * self,
+    String * id, EObjectType * type )
 {
     if ( self == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
@@ -1375,7 +1480,7 @@ rc_t KSrvErrorObject ( const KSrvError * self, String * id, EObjectType * type )
 }
 
 
-/* EVPath */
+/* EVPath *********************************************************************/
 static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
     const String * ticket, const STyped * typed, bool ext, rc_t * rc,
     bool useDates )
@@ -1426,6 +1531,7 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
         return true;
     }
 }
+
 
 static rc_t EVPathInitMapping
     ( EVPath * self, const STyped * src, const SVersion * version )
@@ -1504,6 +1610,7 @@ static rc_t EVPathInitMapping
 
     return rc;
 }
+
 
 static rc_t EVPathInit ( EVPath * self, const STyped * src, 
     const SRequest * req, rc_t * r, const char * acc )
@@ -1630,6 +1737,7 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
     return KSrvErrorMake ( & self -> error, src, rc );
 }
 
+
 static rc_t EVPathFini ( EVPath * self ) {
     rc_t rc = 0;
 
@@ -1653,7 +1761,7 @@ static rc_t EVPathFini ( EVPath * self ) {
 }
 
 
-/* SRow */
+/* SRow ***********************************************************************/
 static rc_t SRowWhack ( void * p ) {
     rc_t rc = 0;
     rc_t r2 = 0;
@@ -1672,6 +1780,7 @@ static rc_t SRowWhack ( void * p ) {
     }
     return rc;
 }
+
 
 static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
     const SConverters * f, const SVersion * version )
@@ -1739,19 +1848,18 @@ static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
     return rc;
 }
 
+
 static void whackSRow ( void * self, void * ignore ) {
     SRowWhack ( self);
 }
 
-static void whackKartItem ( void * self, void * ignore ) {
-    KartItemRelease ( ( KartItem * ) self);
-}
 
 /*static rc_t SRowUpdate ( SRow * self, const SRow * row ) {
     return 0;
 }*/
 
-/* STimestamp */
+
+/* STimestamp ****************************************************************/
 static rc_t STimestampInit ( STimestamp * self, const String * src ) {
     rc_t rc = 0;
 
@@ -1764,6 +1872,7 @@ static rc_t STimestampInit ( STimestamp * self, const String * src ) {
 
     return rc;
 }
+
 
 static rc_t STimestampInitCurrent ( STimestamp * self ) {
     assert ( self );
@@ -1788,6 +1897,7 @@ static rc_t STimestampInitCurrent ( STimestamp * self ) {
         return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect );
 }
 
+
 static rc_t STimestampFini ( STimestamp * self ) {
     rc_t rc = 0;
 
@@ -1800,7 +1910,8 @@ static rc_t STimestampFini ( STimestamp * self ) {
     return rc;
 }
 
-/* SServerTimestamp */
+
+/* SServerTimestamp************************************************************/
 static
 rc_t SServerTimestampInit ( SServerTimestamp * self,
                             const String * src )
@@ -1819,6 +1930,7 @@ rc_t SServerTimestampInit ( SServerTimestamp * self,
     return rc;
 }
 
+
 static rc_t SServerTimestampFini ( SServerTimestamp * self ) {
     rc_t rc = 0;
     rc_t r2 = 0;
@@ -1833,7 +1945,8 @@ static rc_t SServerTimestampFini ( SServerTimestamp * self ) {
     return rc;
 }
 
-/* SResponse */
+
+/* SResponse ******************************************************************/
 static rc_t SResponseInit ( SResponse * self ) {
     rc_t rc = 0;
     assert ( self );
@@ -1841,6 +1954,12 @@ static rc_t SResponseInit ( SResponse * self ) {
     rc = KSrvResponseMake ( & self -> list );
     return rc;
 }
+
+
+static void whackKartItem ( void * self, void * ignore ) {
+    KartItemRelease ( ( KartItem * ) self);
+}
+
 
 static rc_t SResponseFini ( SResponse * self ) {
     rc_t rc = 0;
@@ -1877,6 +1996,7 @@ static rc_t SResponseFini ( SResponse * self ) {
     return rc;
 }
 
+
 static rc_t SResponseGetResponse
     ( const SResponse * self, const KSrvResponse ** response )
 {
@@ -1890,7 +2010,7 @@ static rc_t SResponseGetResponse
 }
 
 
-/* SKV */
+/* SKV ************************************************************************/
 static
 rc_t SKVMake ( const SKV ** self, const char * k, const char * v )
 {
@@ -1932,6 +2052,7 @@ rc_t SKVMake ( const SKV ** self, const char * k, const char * v )
         return rc;
     }
 }
+
 
 static
 rc_t SKVMakeObj ( const SKV ** self, const SObject * obj,
@@ -1995,44 +2116,7 @@ rc_t SKVMakeObj ( const SKV ** self, const SObject * obj,
 }
 
 
-typedef struct {
-    Vector * v;
-    rc_t   rc;
-} Tickets;
-
-static void TicketsAppendTicket ( void * item, void * data ) {
-    const String * ticket = ( String    * ) item;
-    Tickets    * v      = ( Tickets * ) data;
-    const SKV * kv = NULL;
-    const char k [] = "tic";
-    char * c = string_dup ( ticket -> addr, ticket -> size );
-    if ( c == NULL ) {
-        v -> rc = RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-        return;
-    }
-    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "  %s=%s\n",
-        k, c ) );
-    rc_t rc = SKVMake ( & kv, k, c );
-    free ( c );
-    if ( rc == 0 ) {
-        rc_t rc = VectorAppend ( v -> v, NULL, kv );
-        if ( rc != 0 && v -> rc == 0) {
-            v -> rc = rc;
-        }
-    }
-}
-
-
-static void whackSKV ( void * p, void * ignore ) {
-    SKV * self = ( SKV * ) p;
-    assert ( self );
-    free ( ( void * ) self -> k . addr );
-    memset ( self, 0, sizeof * self );
-    free ( self );
-}
-
-
-/* SHttpRequestHelper */
+/* SHttpRequestHelper ********************************************************/
 static rc_t SHttpRequestHelperInit ( SHttpRequestHelper * self,
     const KNSManager * mgr, const char * cgi )
 {
@@ -2048,6 +2132,7 @@ static rc_t SHttpRequestHelperInit ( SHttpRequestHelper * self,
     return rc;
 }
 
+
 static rc_t SHttpRequestHelperFini ( SHttpRequestHelper * self ) {
     rc_t rc = 0;
 
@@ -2057,6 +2142,7 @@ static rc_t SHttpRequestHelperFini ( SHttpRequestHelper * self ) {
 
     return rc;
 }
+
 
 static
 void SHttpRequestHelperAddPostParam ( void * item, void * data )
@@ -2074,12 +2160,36 @@ void SHttpRequestHelperAddPostParam ( void * item, void * data )
 }
 
 
+/* SCgiRequest ****************************************************************/
+static
+rc_t SCgiRequestInitCgi ( SCgiRequest * self, const char * cgi )
+{
+    assert ( self && ! self -> cgi );
+
+    self -> cgi = string_dup_measure ( cgi, NULL );
+    if ( self -> cgi == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
+
+    return 0;
+}
+
+
+static void whackSKV ( void * p, void * ignore ) {
+    SKV * self = ( SKV * ) p;
+    assert ( self );
+    free ( ( void * ) self -> k . addr );
+    memset ( self, 0, sizeof * self );
+    free ( self );
+}
+
+
 static void SCgiRequestFini ( SCgiRequest * self ) {
     assert ( self );
     free ( self -> cgi );
     VectorWhack ( & self -> params, whackSKV, NULL );
     memset ( self, 0, sizeof * self );
 }
+
 
 static rc_t SCgiRequestPerform ( const SCgiRequest * self,
     const SHelper * helper, KStream ** response,
@@ -2091,7 +2201,6 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
 
     if ( rc == 0 ) {
         SHttpRequestHelper h;
-//DBGMSG ( DBG_VFS,DBG_FLAG ( DBG_VFS_SERVICE ), ( "CGI = '%s'\n", self -> cgi ) );
         rc = SHttpRequestHelperInit ( & h, helper -> kMgr, self-> cgi );
         if ( rc == 0 ) {
             VectorForEach (
@@ -2100,32 +2209,6 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
         }
 
         if ( rc == 0 ) {
-/*          char buffer [ 1024 ] = "";
-            char * b = buffer;
-            size_t sizeof_b = sizeof buffer;
-            size_t len = 0;
-            char * allocated = NULL;
-            rc = KClientHttpRequestFormatMsg ( h . httpReq, b, sizeof_b, "POST",
-                & len );
-            if ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
-                    GetRCState ( rc ) == rcInsufficient )
-            {
-                free ( allocated );
-                sizeof_b = 0;
-                allocated = b = malloc ( len );
-                if ( allocated == NULL )
-                    rc = RC ( rcVFS, rcQuery, rcExecuting, rcMemory,
-                        rcExhausted );
-                else {
-                    sizeof_b = len;
-                    rc = KClientHttpRequestFormatMsg ( h . httpReq, b, sizeof_b,
-                        "POST", & len );
-                }
-            }
-            if ( rc == 0 )
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "%s", b ) );
-            free ( allocated );
-            rc = 0;*/
             if ( expected == NULL ) {
                 KHttpResult * rslt = NULL;
                 DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), (
@@ -2183,7 +2266,77 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
 }
 
 
-/* STickets */
+/* SObject ********************************************************************/
+static rc_t SObjectInit ( SObject * self,
+    const char * objectId, size_t objSz, EObjectType objectType )
+{
+    assert ( self );
+    self -> objectType = objectType;
+    if ( objectId != NULL && objSz != 0 ) {
+        self -> objectId = string_dup ( objectId, objSz );
+        if ( self -> objectId == NULL ) {
+            return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+        }
+    }
+    return 0;
+}
+
+
+static void SObjectFini ( SObject * self ) {
+    assert ( self );
+    free ( self -> objectId );
+    memset ( self, 0, sizeof * self );
+}
+
+
+/* SRequestData ***************************************************************/
+/*static
+rc_t SRequestDataInit ( SRequestData * self, const char * acc, size_t acc_sz,
+    EObjectType objectType )
+{
+    rc_t rc = 0;
+    assert ( self );
+    memset ( self, 0, sizeof * self );
+    if ( acc != NULL && acc_sz != 0 ) {
+        self -> objects = 1;
+        rc = SObjectInit ( & self -> object [ 0 ], acc, acc_sz, objectType );
+    }
+    return rc;
+}*/
+
+
+static void SRequestDataFini ( SRequestData * self ) {
+    uint32_t i = 0;
+    assert ( self );
+    for ( i = 0; i < self -> objects; ++i ) {
+        SObjectFini ( & self -> object [ i ] );
+    }
+    memset ( self, 0, sizeof * self );
+}
+
+
+static
+rc_t SRequestDataAppendObject ( SRequestData * self, const char * id,
+    size_t id_sz, EObjectType objectType )
+{
+    rc_t rc = 0;
+    assert ( self );
+    if ( self -> objects > sizeof self -> object / sizeof self -> object [ 0 ] )
+    {
+        return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcExcessive );
+    }
+    if ( id_sz == 0 )
+        id_sz = string_measure ( id, NULL );
+    rc = SObjectInit ( & self -> object [ self -> objects ], id, id_sz,
+        objectType );
+    if ( rc == 0 ) {
+        ++ self -> objects;
+    }
+    return rc;
+}
+
+
+/* STickets *******************************************************************/
 const uint64_t BICKETS = 1024;
 static rc_t STicketsAppend ( STickets * self, const char * ticket ) {
     rc_t rc = 0;
@@ -2241,6 +2394,7 @@ static rc_t STicketsAppend ( STickets * self, const char * ticket ) {
     return rc;
 }
 
+
 /*static void STicketsAppendFromVector ( void * item, void * data ) {
     STickets   * self   = ( STickets * ) data;
     rc_t rc = STicketsAppend ( self, ( char * ) item );
@@ -2249,11 +2403,13 @@ static rc_t STicketsAppend ( STickets * self, const char * ticket ) {
     }
 }*/
 
+
 static rc_t STicketsInit ( STickets * self ) {
     assert ( self );
     memset ( self, 0, sizeof * self );
     return KDataBufferMakeBytes ( & self -> str, BICKETS );
 }
+
 
 static void whack_free ( void * self, void * ignore ) {
     if ( self != NULL ) {
@@ -2261,6 +2417,7 @@ static void whack_free ( void * self, void * ignore ) {
         free ( self );
     }
 }
+
 
 static rc_t STicketsFini ( STickets * self ) {
     assert ( self );
@@ -2271,74 +2428,37 @@ static rc_t STicketsFini ( STickets * self ) {
 }
 
 
-/* SObject */
-static rc_t SObjectInit ( SObject * self,
-    const char * objectId, size_t objSz, EObjectType objectType )
-{
-    assert ( self );
-    self -> objectType = objectType;
-    if ( objectId != NULL && objSz != 0 ) {
-        self -> objectId = string_dup ( objectId, objSz );
-        if ( self -> objectId == NULL ) {
-            return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+/* Tickets ********************************************************************/
+typedef struct {
+    Vector * v;
+    rc_t   rc;
+} Tickets;
+
+
+static void TicketsAppendTicket ( void * item, void * data ) {
+    const String * ticket = ( String    * ) item;
+    Tickets    * v      = ( Tickets * ) data;
+    const SKV * kv = NULL;
+    const char k [] = "tic";
+    char * c = string_dup ( ticket -> addr, ticket -> size );
+    if ( c == NULL ) {
+        v -> rc = RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+        return;
+    }
+    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "  %s=%s\n",
+        k, c ) );
+    rc_t rc = SKVMake ( & kv, k, c );
+    free ( c );
+    if ( rc == 0 ) {
+        rc_t rc = VectorAppend ( v -> v, NULL, kv );
+        if ( rc != 0 && v -> rc == 0) {
+            v -> rc = rc;
         }
     }
-    return 0;
-}
-
-static void SObjectFini ( SObject * self ) {
-    assert ( self );
-    free ( self -> objectId );
-    memset ( self, 0, sizeof * self );
 }
 
 
-/* SRequestData */
-/*static
-rc_t SRequestDataInit ( SRequestData * self, const char * acc, size_t acc_sz,
-    EObjectType objectType )
-{
-    rc_t rc = 0;
-    assert ( self );
-    memset ( self, 0, sizeof * self );
-    if ( acc != NULL && acc_sz != 0 ) {
-        self -> objects = 1;
-        rc = SObjectInit ( & self -> object [ 0 ], acc, acc_sz, objectType );
-    }
-    return rc;
-}*/
-
-static void SRequestDataFini ( SRequestData * self ) {
-    uint32_t i = 0;
-    assert ( self );
-    for ( i = 0; i < self -> objects; ++i ) {
-        SObjectFini ( & self -> object [ i ] );
-    }
-    memset ( self, 0, sizeof * self );
-}
-
-static
-rc_t SRequestDataAppendObject ( SRequestData * self, const char * id,
-    size_t id_sz, EObjectType objectType )
-{
-    rc_t rc = 0;
-    assert ( self );
-    if ( self -> objects > sizeof self -> object / sizeof self -> object [ 0 ] )
-    {
-        return RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcExcessive );
-    }
-    if ( id_sz == 0 )
-        id_sz = string_measure ( id, NULL );
-    rc = SObjectInit ( & self -> object [ self -> objects ], id, id_sz,
-        objectType );
-    if ( rc == 0 ) {
-        ++ self -> objects;
-    }
-    return rc;
-}
-
-
-/* SRequest */
+/* SRequest *******************************************************************/
 static rc_t SRequestInit ( SRequest * self ) {
     assert ( self );
 
@@ -2346,6 +2466,7 @@ static rc_t SRequestInit ( SRequest * self ) {
 
     return STicketsInit ( & self -> tickets );
 }
+
 
 static rc_t SRequestReset ( SRequest * self ) {
     rc_t rc = 0;
@@ -2363,6 +2484,7 @@ static rc_t SRequestReset ( SRequest * self ) {
     return rc;
 }
 
+
 static rc_t SRequestFini ( SRequest * self ) {
     rc_t r2 = 0;
     rc_t rc = SRequestReset ( self );
@@ -2378,27 +2500,15 @@ static rc_t SRequestFini ( SRequest * self ) {
     return rc;
 }
 
+
 static rc_t SRequestAddTicket ( SRequest * self, const char * ticket ) {
     assert ( self );
     return STicketsAppend ( & self -> tickets, ticket );
 }
 
 
-/* SCgiRequest */
 static
-rc_t SCgiRequestInitCgi ( SCgiRequest * self, const char * cgi )
-{
-    assert ( self && ! self -> cgi );
-
-    self -> cgi = string_dup_measure ( cgi, NULL );
-    if ( self -> cgi == NULL )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-
-    return 0;
-}
-
-static
-rc_t ECgiNamesRequestInit ( SRequest * request, SHelper * helper,
+rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     VRemoteProtocols protocols, const char * cgi,
     const char * version, bool aProtected )
 {
@@ -2596,7 +2706,7 @@ rc_t ECgiNamesRequestInit ( SRequest * request, SHelper * helper,
 
 
 static
-rc_t ECgiSearchRequestInit ( SRequest * request, const char * cgi,
+rc_t SRequestInitSearchSCgiRequest ( SRequest * request, const char * cgi,
     const char * version )
 {
     SCgiRequest * self = NULL;
@@ -2684,12 +2794,13 @@ rc_t ECgiSearchRequestInit ( SRequest * request, const char * cgi,
 }
 
 
-/* KService */
+/* KService *******************************************************************/
 static void KServiceExpectErrors ( KService * self, int n ) {
     assert ( self );
 
     self -> req . errorsToIgnore = n;
 }
+
 
 static rc_t KServiceAddObject ( KService * self,
     const char * id, size_t id_sz, EObjectType objectType )
@@ -2701,9 +2812,12 @@ static rc_t KServiceAddObject ( KService * self,
         ( & self -> req . request, id, id_sz, objectType );
 }
 
+
+/* Add an Id ( Accession or Object-Id ) to service request */
 rc_t KServiceAddId ( KService * self, const char * id ) {
     return KServiceAddObject ( self, id, 0, eOT_undefined );
 }
+
 
 static rc_t KServiceAddTicket ( KService * self, const char * ticket ) {
     if ( self == NULL )
@@ -2715,6 +2829,8 @@ static rc_t KServiceAddTicket ( KService * self, const char * ticket ) {
     return SRequestAddTicket ( & self -> req, ticket );
 }
 
+
+/* Add a dbGaP Project to service request */
 rc_t KServiceAddProject ( KService * self, uint32_t project ) {
     rc_t rc = 0;
 
@@ -2737,6 +2853,7 @@ rc_t KServiceAddProject ( KService * self, uint32_t project ) {
     return SRequestAddTicket ( & self -> req, buffer );
 }
 
+
 static
 rc_t KServiceInitNamesRequestWithVersion ( KService * self,
     VRemoteProtocols protocols,
@@ -2744,9 +2861,10 @@ rc_t KServiceInitNamesRequestWithVersion ( KService * self,
 {
     assert ( self );
 
-    return ECgiNamesRequestInit ( & self -> req,  & self -> helper, protocols,
-        cgi, version, aProtected );
+    return SRequestInitNamesSCgiRequest ( & self -> req,  & self -> helper,
+        protocols, cgi, version, aProtected );
 }
+
 
 static
 rc_t KServiceInitNamesRequest ( KService * self, VRemoteProtocols protocols,
@@ -2756,14 +2874,16 @@ rc_t KServiceInitNamesRequest ( KService * self, VRemoteProtocols protocols,
         false );
 }
 
+
 static
 rc_t KServiceInitSearchRequestWithVersion ( KService * self, const char * cgi,
     const char * version )
 {
     assert ( self );
 
-    return ECgiSearchRequestInit ( & self -> req, cgi, version );
+    return SRequestInitSearchSCgiRequest ( & self -> req, cgi, version );
 }
+
 
 static rc_t KServiceInit ( KService * self, const KNSManager * mgr ) {
     rc_t rc = 0;
@@ -2783,6 +2903,9 @@ static rc_t KServiceInit ( KService * self, const KNSManager * mgr ) {
     return rc;
 }
 
+
+/* Initialize KService with a single "acc"/"objectType" and optional "ticket"
+   in Request */
 static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
     const char * cgi, const char * version, const char * acc,
     size_t acc_sz, const char * ticket, VRemoteProtocols protocols,
@@ -2807,6 +2930,7 @@ static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
     return rc;
 }
 
+
 static
 rc_t KServiceMakeWithMgr ( KService ** self, const KNSManager * mgr )
 {
@@ -2830,9 +2954,12 @@ rc_t KServiceMakeWithMgr ( KService ** self, const KNSManager * mgr )
     return rc;
 }
 
+
+/* Make KService object */
 rc_t KServiceMake ( KService ** self) {
     return KServiceMakeWithMgr ( self, NULL );
 }
+
 
 static rc_t KServiceFini ( KService * self ) {
     rc_t rc = 0;
@@ -2855,6 +2982,8 @@ static rc_t KServiceFini ( KService * self ) {
     return rc;
 }
 
+
+/* Release KService object */
 rc_t KServiceRelease ( KService * self ) {
     rc_t rc = 0;
 
@@ -2866,8 +2995,10 @@ rc_t KServiceRelease ( KService * self ) {
     return rc;
 }
 
+
 static
-rc_t KServiceProcessLine ( KService * self, const String * line, bool * end )
+rc_t KServiceProcessLine ( KService * self,
+    const String * line, bool * end )
 {
     rc_t rc = 0;
     assert ( self && line && end );
@@ -2936,6 +3067,7 @@ rc_t KServiceProcessLine ( KService * self, const String * line, bool * end )
     }
     return rc;
 }
+
 
 static
 rc_t KServiceProcessStream ( KService * self, KStream * stream )
@@ -3048,6 +3180,7 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
     return rc;
 }
 
+
 static
 rc_t KServiceGetResponse
     ( const KService * self, const KSrvResponse ** response )
@@ -3062,6 +3195,7 @@ rc_t KServiceGetResponse
 }
 
 
+static
 rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
     const char * cgi, const char * version,
     const KSrvResponse ** response, const char * expected )
@@ -3100,8 +3234,8 @@ rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
 
 /* Emulate Names Service Call :
    - prepare the request;
-   - use expected instead of calling cgi
-   - parse expected as cgi response */
+   - use "expected" instead of calling "cgi"
+   - parse "expected" as "cgi" response */
 rc_t KServiceTestNamesExecuteExt ( KService * self, VRemoteProtocols protocols, 
     const char * cgi, const char * version,
     const struct KSrvResponse ** response, const char * expected )
@@ -3120,11 +3254,15 @@ rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
         response, NULL );
 }
 
+
+/* Execute Names Service Call using currentdefault protocol version;
+   get KSrvResponse */
 rc_t KServiceNamesExecute ( KService * self, VRemoteProtocols protocols,
     const KSrvResponse ** response )
 {
     return KServiceNamesExecuteExt ( self, protocols, NULL, NULL, response );
 }
+
 
 static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
     const char * url, const char * acc, size_t acc_sz, const char * ticket,
@@ -3232,6 +3370,8 @@ static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
     return rc;
 }
 
+
+/* make name service call : request: 1 object, response: 1 object */
 LIB_EXPORT
 rc_t CC KService1NameWithVersion ( const KNSManager * mgr, const char * url,
     const char * acc, size_t acc_sz, const char * ticket,
@@ -3285,12 +3425,13 @@ rc_t KServiceSearchExecuteExt ( KService * self, const char * cgi,
 }
 
 
-rc_t KServiceSearchExecute ( KService * self, const Kart ** result ) {
-    return KServiceSearchExecuteExt ( self, NULL, NULL, result );
+/* Execute Search Service Call; get Kart response */
+rc_t KServiceSearchExecute ( KService * self, const Kart ** response ) {
+    return KServiceSearchExecuteExt ( self, NULL, NULL, response );
 }
 
 
-/* Execute a simple Search Service Call: one accession in request;
+/* Execute a simple ( one accession in request ) Search Service Call;
    get Kart response */
 rc_t KService1Search ( const KNSManager * mgr, const char * cgi,
     const char * acc, const Kart ** result )
@@ -3316,7 +3457,7 @@ rc_t KService1Search ( const KNSManager * mgr, const char * cgi,
 }
 
 
-/* TESTS */
+/* TESTS **********************************************************************/
 typedef struct {
     rc_t passed;
     const char * acc;
@@ -3541,6 +3682,9 @@ rc_t KServiceProcessStreamTestNames1 ( const KNSManager * mgr,
     return rc;
 }
 
+
+/* Parse "buffer" as names-3.0 response.
+   Do not log "errorsToIgnore" messages during response processing */
 rc_t KServiceNames3_0StreamTest ( const char * buffer,
     const KSrvResponse ** response, int errorsToIgnore )
 {
@@ -3656,11 +3800,9 @@ rc_t KServiceSearchTest (
     return rc;
 }
 
-/******************************************************************************/
-
-/*   ResponseRow */
-
 #if 0
+/******************************************************************************/
+/*   ResponseRow */
 rc_t ResponseRowGetType   ( const ResponseRow * self, const EObjectType * res );
 rc_t ResponseRowGetId     ( const ResponseRow * self, const String      * res );
 rc_t ResponseRowGetSize   ( const ResponseRow * self, const size_t      * res );
