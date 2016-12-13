@@ -366,7 +366,7 @@ rc_t GetKeyID(CommonWriterSettings *const settings,
             ctx->key2id_name[f] = ctx->key2id_name_max;
             ctx->key2id_name_max = name_max;
 
-            memcpy(&ctx->key2id_names[ctx->key2id_name[f]], key, keylen + 1);
+            memmove(&ctx->key2id_names[ctx->key2id_name[f]], key, keylen + 1);
             ctx->key2id[f] = tree;
             ctx->idCount[f] = 0;
             if ((uint8_t)ctx->key2id_hash[h] < 3) {
@@ -559,10 +559,10 @@ rc_t WriteSoloFragments(const CommonWriterSettings* settings, SpotAssembler* ctx
             srec.is_bad[read] = fip->is_bad;
             srec.orientation[read] = fip->orientation;
             srec.cskey[read] = fip->cskey;
-            memcpy(srec.seq + srec.readStart[read], src, srec.readLen[read]);
+            memmove(srec.seq + srec.readStart[read], src, srec.readLen[read]);
             src += fip->readlen;
             
-            memcpy(srec.qual + srec.readStart[read], src, srec.readLen[read]);
+            memmove(srec.qual + srec.readStart[read], src, srec.readLen[read]);
             src += fip->readlen;
             srec.spotGroup = (char *)src;
             srec.spotGroupLen = fip->sglen;
@@ -798,7 +798,7 @@ void COPY_QUAL(uint8_t D[], uint8_t const S[], unsigned const L, bool const R)
             D[i] = S[j];
     }
     else
-        memcpy(D, S, L);
+        memmove(D, S, L);
 }
 
 void COPY_READ(INSDC_dna_text D[], INSDC_dna_text const S[], unsigned const L, bool const R)
@@ -845,7 +845,7 @@ void COPY_READ(INSDC_dna_text D[], INSDC_dna_text const S[], unsigned const L, b
             D[i] = compl[((uint8_t const *)S)[j]];
     }
     else
-        memcpy(D, S, L);
+        memmove(D, S, L);
 }
 
 /*--------------------------------------------------------------------------
@@ -1179,7 +1179,7 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
                     (void)LOGERR(klogErr, rc, "Failed to resize CIGAR buffer");
                     goto LOOP_END;
                 }
-                memcpy(cigBuf.base, tmp, opCount * sizeof(uint32_t));
+                memmove(cigBuf.base, tmp, opCount * sizeof(uint32_t));
             }
             
             SequenceGetReadLength(sequence, &readlen);
@@ -1231,7 +1231,7 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
             else 
             {  
                 if (G->useQUAL)
-                    memcpy(qual, squal, readlen);
+                    memmove(qual, squal, readlen);
                 else
                 {
                     switch (qualType)
@@ -1247,11 +1247,11 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
                                 qual[i] = squal[i] - qoffset;
                         }
                         else
-                            memcpy(qual, squal, readlen);
+                            memmove(qual, squal, readlen);
                         break;
                         
                     default:
-                        memcpy(qual, squal, readlen);
+                        memmove(qual, squal, readlen);
                         break;
                     }
                 }
@@ -1540,7 +1540,7 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
                         qual[i] = squal[i] - qoffset;
                 }
                 else if (squal != NULL)
-                    memcpy(qual, squal, csSeqLen);
+                    memmove(qual, squal, csSeqLen);
                 else
                     memset(qual, 0, csSeqLen);
                 readlen = csSeqLen;
@@ -1641,13 +1641,13 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
                     }
                     {{
                         uint8_t *dst = (uint8_t*) fragBuf.base;
-                        memcpy(dst,&fi,sizeof(fi));
+                        memmove(dst,&fi,sizeof(fi));
                         dst += sizeof(fi);
                         COPY_READ((char *)dst, seqDNA, fi.readlen, (isColorSpace && !aligned) ? 0 : fi.orientation == ReadOrientationReverse);
                         dst += fi.readlen;
                         COPY_QUAL(dst, qual, fi.readlen, (isColorSpace && !aligned) ? 0 : fi.orientation == ReadOrientationReverse);
                         dst += fi.readlen;
-                        memcpy(dst,spotGroup,fi.sglen);
+                        memmove(dst,spotGroup,fi.sglen);
                     }}
                     rc = KMemBankWrite(frags, fragmentId, 0, fragBuf.base, sz, &rsize);
                     if (rc) {
@@ -1705,9 +1705,9 @@ rc_t ArchiveFile(const struct ReaderFile *const reader,
                         srec.is_bad[read1] = fip->is_bad;
                         srec.orientation[read1] = fip->orientation;
                         srec.cskey[read1] = fip->cskey;
-                        memcpy(srec.seq + srec.readStart[read1], src, fip->readlen);
+                        memmove(srec.seq + srec.readStart[read1], src, fip->readlen);
                         src += fip->readlen;
-                        memcpy(srec.qual + srec.readStart[read1], src, fip->readlen);
+                        memmove(srec.qual + srec.readStart[read1], src, fip->readlen);
                         src += fip->readlen;
                         
                         srec.orientation[read2] = readOrientation;

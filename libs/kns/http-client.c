@@ -1445,7 +1445,7 @@ rc_t CC KClientHttpStreamTimedRead ( const KClientHttpStream *cself,
         buf = ( char * ) http -> block_buffer . base;
 
         /* copy data into the user buffer from the offset of bytes not yet read */
-        memcpy ( buffer, & buf [ http -> block_read ], num_to_read );
+        memmove ( buffer, & buf [ http -> block_read ], num_to_read );
 
         /* update the amount read */
         http -> block_read += num_to_read;
@@ -3280,7 +3280,7 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         if (body != NULL && body -> base != NULL && body -> elem_count > 0 && 
                 len + body -> elem_count - 1 <= sizeof buffer) 
         {
-            memcpy(buffer + len, body -> base, body -> elem_count - 1);
+            memmove(buffer + len, body -> base, body -> elem_count - 1);
             len += body -> elem_count - 1;
             body = NULL;
         }

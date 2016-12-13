@@ -886,13 +886,13 @@ int mbedtls_aes_crypt_cbc( mbedtls_aes_context *ctx,
     {
         while( length > 0 )
         {
-            memcpy( temp, input, 16 );
+            memmove( temp, input, 16 );
             mbedtls_aes_crypt_ecb( ctx, mode, input, output );
 
             for( i = 0; i < 16; i++ )
                 output[i] = (unsigned char)( output[i] ^ iv[i] );
 
-            memcpy( iv, temp, 16 );
+            memmove( iv, temp, 16 );
 
             input  += 16;
             output += 16;
@@ -907,7 +907,7 @@ int mbedtls_aes_crypt_cbc( mbedtls_aes_context *ctx,
                 output[i] = (unsigned char)( input[i] ^ iv[i] );
 
             mbedtls_aes_crypt_ecb( ctx, mode, output, output );
-            memcpy( iv, output, 16 );
+            memmove( iv, output, 16 );
 
             input  += 16;
             output += 16;
@@ -981,7 +981,7 @@ int mbedtls_aes_crypt_cfb8( mbedtls_aes_context *ctx,
 
     while( length-- )
     {
-        memcpy( ov, iv, 16 );
+        memmove( ov, iv, 16 );
         mbedtls_aes_crypt_ecb( ctx, MBEDTLS_AES_ENCRYPT, iv, iv );
 
         if( mode == MBEDTLS_AES_DECRYPT )
@@ -992,7 +992,7 @@ int mbedtls_aes_crypt_cfb8( mbedtls_aes_context *ctx,
         if( mode == MBEDTLS_AES_ENCRYPT )
             ov[16] = c;
 
-        memcpy( iv, ov + 1, 16 );
+        memmove( iv, ov + 1, 16 );
     }
 
     return( 0 );
@@ -1338,9 +1338,9 @@ int mbedtls_aes_self_test( int verbose )
 
                 mbedtls_aes_crypt_cbc( &ctx, v, 16, iv, buf, buf );
 
-                memcpy( tmp, prv, 16 );
-                memcpy( prv, buf, 16 );
-                memcpy( buf, tmp, 16 );
+                memmove( tmp, prv, 16 );
+                memmove( prv, buf, 16 );
+                memmove( buf, tmp, 16 );
             }
 
             if( memcmp( prv, aes_test_cbc_enc[u], 16 ) != 0 )
@@ -1374,15 +1374,15 @@ int mbedtls_aes_self_test( int verbose )
             mbedtls_printf( "  AES-CFB128-%3d (%s): ", 128 + u * 64,
                              ( v == MBEDTLS_AES_DECRYPT ) ? "dec" : "enc" );
 
-        memcpy( iv,  aes_test_cfb128_iv, 16 );
-        memcpy( key, aes_test_cfb128_key[u], 16 + u * 8 );
+        memmove( iv,  aes_test_cfb128_iv, 16 );
+        memmove( key, aes_test_cfb128_key[u], 16 + u * 8 );
 
         offset = 0;
         mbedtls_aes_setkey_enc( &ctx, key, 128 + u * 64 );
 
         if( v == MBEDTLS_AES_DECRYPT )
         {
-            memcpy( buf, aes_test_cfb128_ct[u], 64 );
+            memmove( buf, aes_test_cfb128_ct[u], 64 );
             mbedtls_aes_crypt_cfb128( &ctx, v, 64, &offset, iv, buf, buf );
 
             if( memcmp( buf, aes_test_cfb128_pt, 64 ) != 0 )
@@ -1396,7 +1396,7 @@ int mbedtls_aes_self_test( int verbose )
         }
         else
         {
-            memcpy( buf, aes_test_cfb128_pt, 64 );
+            memmove( buf, aes_test_cfb128_pt, 64 );
             mbedtls_aes_crypt_cfb128( &ctx, v, 64, &offset, iv, buf, buf );
 
             if( memcmp( buf, aes_test_cfb128_ct[u], 64 ) != 0 )
@@ -1430,8 +1430,8 @@ int mbedtls_aes_self_test( int verbose )
             mbedtls_printf( "  AES-CTR-128 (%s): ",
                              ( v == MBEDTLS_AES_DECRYPT ) ? "dec" : "enc" );
 
-        memcpy( nonce_counter, aes_test_ctr_nonce_counter[u], 16 );
-        memcpy( key, aes_test_ctr_key[u], 16 );
+        memmove( nonce_counter, aes_test_ctr_nonce_counter[u], 16 );
+        memmove( key, aes_test_ctr_key[u], 16 );
 
         offset = 0;
         mbedtls_aes_setkey_enc( &ctx, key, 128 );
@@ -1439,7 +1439,7 @@ int mbedtls_aes_self_test( int verbose )
         if( v == MBEDTLS_AES_DECRYPT )
         {
             len = aes_test_ctr_len[u];
-            memcpy( buf, aes_test_ctr_ct[u], len );
+            memmove( buf, aes_test_ctr_ct[u], len );
 
             mbedtls_aes_crypt_ctr( &ctx, len, &offset, nonce_counter, stream_block,
                            buf, buf );
@@ -1456,7 +1456,7 @@ int mbedtls_aes_self_test( int verbose )
         else
         {
             len = aes_test_ctr_len[u];
-            memcpy( buf, aes_test_ctr_pt[u], len );
+            memmove( buf, aes_test_ctr_pt[u], len );
 
             mbedtls_aes_crypt_ctr( &ctx, len, &offset, nonce_counter, stream_block,
                            buf, buf );

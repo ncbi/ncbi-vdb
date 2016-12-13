@@ -242,7 +242,7 @@ namespace vdb3
         {
             char * dp = ( char * ) ptr;
             const char * sp = ( const char * ) src . ptr;
-            memcpy ( & dp [ dst_offset ], & sp [ src_offset ], ( size_t ) amount );
+            memmove ( & dp [ dst_offset ], & sp [ src_offset ], ( size_t ) amount );
         }
 
         return bytes_t ( amount );

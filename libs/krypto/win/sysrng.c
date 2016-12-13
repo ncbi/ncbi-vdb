@@ -122,7 +122,7 @@ rc_t KRngSysEntropy (KRng * self, uint8_t * buffer, size_t buff_size)
         MD5StateFinish (&state, digest);
 
         len = sizeof digest > buff_size ? buff_size : sizeof digest;
-        memcpy (buffer, digest, len);
+        memmove (buffer, digest, len);
 
         buffer += len;
         buff_size -= len;

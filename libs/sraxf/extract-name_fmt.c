@@ -189,7 +189,7 @@ rc_t extract_name_fmt_2 (KIndex *ndx, const VXformInfo *info, int64_t row_id,
             rc = KDataBufferResize ( rslt -> data, fmtsize );
             if ( rc != 0 )
                 return rc;
-            memcpy ( rslt -> data -> base, name_fmt, fmtsize );
+            memmove ( rslt -> data -> base, name_fmt, fmtsize );
         }
 
         rslt -> elem_count = fmtsize;

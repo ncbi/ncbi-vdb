@@ -861,7 +861,7 @@ static int64_t tar_strtoll ( const uint8_t * str, size_t len, bool silent )
      */
     if ( len >= sizeof temp_buff )
         len = sizeof temp_buff - 1;
-    memcpy (temp_buff, str, len);
+    memmove (temp_buff, str, len);
     temp_buff[ len ] = 0x00;
 
     /* -----

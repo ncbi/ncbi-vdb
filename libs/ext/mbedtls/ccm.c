@@ -184,7 +184,7 @@ static int ccm_auth_crypt( mbedtls_ccm_context *ctx, int mode, size_t length,
     b[0] |= ( ( tag_len - 2 ) / 2 ) << 3;
     b[0] |= q - 1;
 
-    memcpy( b + 1, iv, iv_len );
+    memmove( b + 1, iv, iv_len );
 
     for( i = 0, len_left = length; i < q; i++, len_left >>= 8 )
         b[15-i] = (unsigned char)( len_left & 0xFF );
@@ -212,7 +212,7 @@ static int ccm_auth_crypt( mbedtls_ccm_context *ctx, int mode, size_t length,
         b[1] = (unsigned char)( ( add_len      ) & 0xFF );
 
         use_len = len_left < 16 - 2 ? len_left : 16 - 2;
-        memcpy( b + 2, src, use_len );
+        memmove( b + 2, src, use_len );
         len_left -= use_len;
         src += use_len;
 
@@ -223,7 +223,7 @@ static int ccm_auth_crypt( mbedtls_ccm_context *ctx, int mode, size_t length,
             use_len = len_left > 16 ? 16 : len_left;
 
             memset( b, 0, 16 );
-            memcpy( b, src, use_len );
+            memmove( b, src, use_len );
             UPDATE_CBC_MAC;
 
             len_left -= use_len;
@@ -242,7 +242,7 @@ static int ccm_auth_crypt( mbedtls_ccm_context *ctx, int mode, size_t length,
      * 2 .. 0   q - 1
      */
     ctr[0] = q - 1;
-    memcpy( ctr + 1, iv, iv_len );
+    memmove( ctr + 1, iv, iv_len );
     memset( ctr + 1 + iv_len, 0, q );
     ctr[15] = 1;
 
@@ -263,7 +263,7 @@ static int ccm_auth_crypt( mbedtls_ccm_context *ctx, int mode, size_t length,
         if( mode == CCM_ENCRYPT )
         {
             memset( b, 0, 16 );
-            memcpy( b, src, use_len );
+            memmove( b, src, use_len );
             UPDATE_CBC_MAC;
         }
 
@@ -272,7 +272,7 @@ static int ccm_auth_crypt( mbedtls_ccm_context *ctx, int mode, size_t length,
         if( mode == CCM_DECRYPT )
         {
             memset( b, 0, 16 );
-            memcpy( b, dst, use_len );
+            memmove( b, dst, use_len );
             UPDATE_CBC_MAC;
         }
 
@@ -296,7 +296,7 @@ static int ccm_auth_crypt( mbedtls_ccm_context *ctx, int mode, size_t length,
         ctr[15-i] = 0;
 
     CTR_CRYPT( y, y, 16 );
-    memcpy( tag, y, tag_len );
+    memmove( tag, y, tag_len );
 
     return( 0 );
 }

@@ -207,7 +207,7 @@ static int ecjpake_hash( const mbedtls_md_info_t *md_info,
     if( end < p || (size_t)( end - p ) < id_len )
         return( MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL );
 
-    memcpy( p, id, id_len );
+    memmove( p, id, id_len );
     p += id_len;
 
     /* Compute hash */
@@ -943,7 +943,7 @@ static int ecjpake_lgc( void *p, unsigned char *out, size_t len )
     {
         size_t use_len = len > 4 ? 4 : len;
         x = 1664525 * x + 1013904223;
-        memcpy( out, &x, use_len );
+        memmove( out, &x, use_len );
         out += use_len;
         len -= use_len;
     }
