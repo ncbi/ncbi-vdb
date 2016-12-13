@@ -24,20 +24,40 @@
 *
 */
 
-/* THIS FILE IS NOT GENERATED AUTOMATICALLY! */
 
-/* The Version of current SRA Toolkit Release */
-#define RELEASE_VERS 0x02080001
-
-/* The Revision of Version of current SRA Toolkit Release */
-#define RELEASE_REVISION 1
+#ifndef _h_kns_http_priv_
+#define _h_kns_http_priv_
 
 
-/* The Type of Version of current SRA Toolkit Release is one of:
- *  'd' - development
- *  'a' - alpha
- *  'b' - beta
- *  'c' - release candidate
- *  'r' - final
- */
-#define RELEASE_TYPE 'd'
+#ifndef _h_klib_defs_
+#include <klib/defs.h> /* rc_t */
+#endif
+
+#ifndef _h_kns_extern_
+#include <kns/extern.h> /* KNS_EXTERN */
+#endif
+
+
+struct KClientHttpResult;
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+KNS_EXTERN rc_t CC KClientHttpRequestFormatMsg (
+    const struct KClientHttpRequest * self, char * buffer,
+    size_t bsize, const char * method, size_t * len );
+
+KNS_EXTERN rc_t CC KClientHttpResultFormatMsg (
+    const struct KClientHttpResult * self, char * buffer,
+    size_t bsize, size_t * len, const char * bol, const char * eol );
+
+
+#ifdef __cplusplus
+}
+#endif
+
+
+#endif /* _h_kns_http_priv_ */
