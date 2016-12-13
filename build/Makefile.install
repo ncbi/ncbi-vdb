@@ -79,9 +79,13 @@ copykfg: checkversion
 	@ # install configuration file(s)
 	@ echo "Installing configuration files to $(KONFIG_DIR)"
 	@ mkdir -p $(KONFIG_DIR)
-	@ if [ -f $(KONFIG_DIR)/certs.kfg   -a "$$(diff $(TOP)/libs/kfg/certs.kfg   $(KONFIG_DIR))" != "" ] ; then mv -v $(KONFIG_DIR)/certs.kfg    $(KONFIG_DIR)/certs.kfg.orig    ; fi
+	@ if [ -f $(KONFIG_DIR)/certs.kfg   -a "$$(diff $(TOP)/libs/kfg/certs.kfg   $(KONFIG_DIR)/certs.kfg 2>/dev/null)" != "" ] ; \
+        then mv -v $(KONFIG_DIR)/certs.kfg    $(KONFIG_DIR)/certs.kfg.orig    ; fi
 	@ cp $(TOP)/libs/kfg/certs.kfg   $(KONFIG_DIR)
-	@ if [ -f $(KONFIG_DIR)/default.kfg -a "$$(diff $(TOP)/libs/kfg/default.kfg $(KONFIG_DIR))" != "" ] ; then mv -v $(KONFIG_DIR)/default.kfg  $(KONFIG_DIR)/default.kfg.orig  ; fi
+	@ if [ -f $(KONFIG_DIR)/default.kfg -a "$$(diff $(TOP)/libs/kfg/default.kfg $(KONFIG_DIR)/default.kfg 2>/dev/null)" != "" ] ; \
+        then mv -v $(KONFIG_DIR)/default.kfg  $(KONFIG_DIR)/default.kfg.orig  ; fi
+	@ if [ -f $(KONFIG_DIR)/ncbi-vdb.kfg ] ; \
+        then mv -v $(KONFIG_DIR)/ncbi-vdb.kfg  $(KONFIG_DIR)/ncbi-vdb.kfg.orig  ; fi
 	@ cp $(TOP)/libs/kfg/default.kfg $(KONFIG_DIR)
 
 install: copylibs copyincludes copykfg

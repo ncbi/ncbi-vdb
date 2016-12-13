@@ -76,9 +76,9 @@ INSTALLED_FILES = \
 	$(INST_LIBDIR)/libncbi-wvdb.so              \
 	$(INST_LIBDIR)/libncbi-wvdb.so.$(MAJVERS)   \
 	$(INST_LIBDIR)/libncbi-wvdb.so.$(VERSION)   \
-	$(KONFIG_DIR)/certs.kfg               \
-	$(KONFIG_DIR)/default.kfg             \
-	$(INST_INCDIR)/ncbi-vdb/NGS.hpp                    \
+	$(KONFIG_DIR)/certs.kfg                     \
+	$(KONFIG_DIR)/default.kfg                   \
+	$(INST_INCDIR)/ncbi-vdb/NGS.hpp             \
 
 
 runtests: test-install
@@ -105,16 +105,21 @@ test-install: cleanup
 	@ # modify .kfg files
 	@ echo newcert  >$(KONFIG_DIR)/certs.kfg
 	@ echo newdflt  >$(KONFIG_DIR)/default.kfg
+	@ echo newncbi  >$(KONFIG_DIR)/ncbi-vdb.kfg     # this should be renamed and never installed again
 	@ # reinstall
 	@ $(SUBMAKE) install
 	@ # verify changed files have been saved
 	@ grep newcert    $(KONFIG_DIR)/certs.kfg.orig       >/dev/null
 	@ grep newdflt    $(KONFIG_DIR)/default.kfg.orig     >/dev/null
+	@ grep newncbi    $(KONFIG_DIR)/ncbi-vdb.kfg.orig    >/dev/null
+	@ ! test -f $(KONFIG_DIR)/ncbi-vdb.kfg          # gone ...
 	@ # verify that further reinstall does not overwrite previously saved files if there is no change
 	@ $(SUBMAKE) install
 	@ # verify saved files are still there
 	@ grep newcert    $(KONFIG_DIR)/certs.kfg.orig       >/dev/null
 	@ grep newdflt    $(KONFIG_DIR)/default.kfg.orig     >/dev/null
+	@ grep newncbi    $(KONFIG_DIR)/ncbi-vdb.kfg.orig    >/dev/null
+	@ ! test -f $(KONFIG_DIR)/ncbi-vdb.kfg          # ... and stays gone
 	@ #
 	@ #
 ifeq (,$(LINUX_ROOT))
