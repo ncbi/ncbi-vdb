@@ -863,7 +863,7 @@ rc_t KSysDirMakeSimulatedFSPath ( const KSysDir* self, enum RCContext ctx, bool 
     /* prepend UTF-16 directory path */
     if ( buffer_length_in_wchars != 0 )
     {
-        memcpy ( buffer, self -> path, buffer_length_in_wchars * sizeof * buffer );
+        memmove ( buffer, self -> path, buffer_length_in_wchars * sizeof * buffer );
 
         /* if path is relative, expect trailing '\\'
             if path is full, expect NO trailing '\\' */
@@ -3010,7 +3010,7 @@ rc_t KSysDirInit ( KSysDir *self, enum RCContext ctx, uint32_t dad_root,
 
     if ( path != NULL )
     {
-        memcpy( self->path, path, path_size );
+        memmove( self->path, path, path_size );
     }
 
     self->root = chroot ? path_length : dad_root;

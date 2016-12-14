@@ -605,7 +605,7 @@ static int c_string_assign ( c_string* self, char const* src, size_t src_size )
     if ( self->capacity < src_size && !c_string_realloc_no_preserve (self, max(self->capacity * 2, src_size)) )
         return 0;
 
-    memcpy ( self -> str, src, src_size );
+    memmove ( self -> str, src, src_size );
     self -> str [src_size] = '\0';
     self -> size = src_size;
 
@@ -619,7 +619,7 @@ static int c_string_append ( c_string* self, char const* append, size_t append_s
         size_t new_size = self->size + append_size;
         if ( self->capacity >= new_size )
         {
-            memcpy ( self->str + self->size, append, append_size );
+            memmove ( self->str + self->size, append, append_size );
             self->size = new_size;
             self->str [new_size] = '\0';
         }
@@ -630,8 +630,8 @@ static int c_string_append ( c_string* self, char const* append, size_t append_s
             if (new_str == NULL)
                 return 0;
 
-            memcpy (new_str, self->str, self->size);
-            memcpy (new_str + self->size, append, append_size );
+            memmove (new_str, self->str, self->size);
+            memmove (new_str + self->size, append, append_size );
             new_str [ new_size ] = '\0';
 
             c_string_destruct ( self );
@@ -660,9 +660,9 @@ static int c_string_wrap ( c_string* self,
         if (new_str == NULL)
             return 0;
 
-        memcpy ( new_str, prefix, prefix_size );
-        memcpy ( new_str + prefix_size, self -> str, self -> size );
-        memcpy ( new_str + prefix_size + self->size, postfix, postfix_size );
+        memmove ( new_str, prefix, prefix_size );
+        memmove ( new_str + prefix_size, self -> str, self -> size );
+        memmove ( new_str + prefix_size + self->size, postfix, postfix_size );
         new_str [ new_size ] = '\0';
 
         c_string_destruct ( self );
@@ -674,8 +674,8 @@ static int c_string_wrap ( c_string* self,
     else
     {
         memmove ( self->str + prefix_size, self->str, self->size );
-        memcpy ( self->str, prefix, prefix_size );
-        memcpy (self->str + prefix_size + self->size, postfix, postfix_size );
+        memmove ( self->str, prefix, prefix_size );
+        memmove (self->str + prefix_size + self->size, postfix, postfix_size );
         self->str [new_size] = '\0';
     }
     return 1;

@@ -553,7 +553,7 @@ int mbedtls_rsa_rsaes_oaep_encrypt( mbedtls_rsa_context *ctx,
     p += hlen;
     p += olen - 2 * hlen - 2 - ilen;
     *p++ = 1;
-    memcpy( p, input, ilen );
+    memmove( p, input, ilen );
 
     mbedtls_md_init( &md_ctx );
     if( ( ret = mbedtls_md_setup( &md_ctx, md_info, 0 ) ) != 0 )
@@ -637,7 +637,7 @@ int mbedtls_rsa_rsaes_pkcs1_v15_encrypt( mbedtls_rsa_context *ctx,
     }
 
     *p++ = 0;
-    memcpy( p, input, ilen );
+    memmove( p, input, ilen );
 
     return( ( mode == MBEDTLS_RSA_PUBLIC )
             ? mbedtls_rsa_public(  ctx, output, output )
@@ -792,7 +792,7 @@ int mbedtls_rsa_rsaes_oaep_decrypt( mbedtls_rsa_context *ctx,
         return( MBEDTLS_ERR_RSA_OUTPUT_TOO_LARGE );
 
     *olen = ilen - (p - buf);
-    memcpy( output, p, *olen );
+    memmove( output, p, *olen );
 
     return( 0 );
 }
@@ -879,7 +879,7 @@ int mbedtls_rsa_rsaes_pkcs1_v15_decrypt( mbedtls_rsa_context *ctx,
         return( MBEDTLS_ERR_RSA_OUTPUT_TOO_LARGE );
 
     *olen = ilen - (p - buf);
-    memcpy( output, p, *olen );
+    memmove( output, p, *olen );
 
     return( 0 );
 }
@@ -976,7 +976,7 @@ int mbedtls_rsa_rsassa_pss_sign( mbedtls_rsa_context *ctx,
     msb = mbedtls_mpi_bitlen( &ctx->N ) - 1;
     p += olen - hlen * 2 - 2;
     *p++ = 0x01;
-    memcpy( p, salt, slen );
+    memmove( p, salt, slen );
     p += slen;
 
     mbedtls_md_init( &md_ctx );
@@ -1072,7 +1072,7 @@ int mbedtls_rsa_rsassa_pkcs1_v15_sign( mbedtls_rsa_context *ctx,
 
     if( md_alg == MBEDTLS_MD_NONE )
     {
-        memcpy( p, hash, hashlen );
+        memmove( p, hash, hashlen );
     }
     else
     {
@@ -1091,13 +1091,13 @@ int mbedtls_rsa_rsassa_pkcs1_v15_sign( mbedtls_rsa_context *ctx,
         *p++ = (unsigned char) ( 0x04 + oid_size );
         *p++ = MBEDTLS_ASN1_OID;
         *p++ = oid_size & 0xFF;
-        memcpy( p, oid, oid_size );
+        memmove( p, oid, oid_size );
         p += oid_size;
         *p++ = MBEDTLS_ASN1_NULL;
         *p++ = 0x00;
         *p++ = MBEDTLS_ASN1_OCTET_STRING;
         *p++ = hashlen;
-        memcpy( p, hash, hashlen );
+        memmove( p, hash, hashlen );
     }
 
     if( mode == MBEDTLS_RSA_PUBLIC )
@@ -1132,7 +1132,7 @@ int mbedtls_rsa_rsassa_pkcs1_v15_sign( mbedtls_rsa_context *ctx,
         goto cleanup;
     }
 
-    memcpy( sig, sig_try, ctx->len );
+    memmove( sig, sig_try, ctx->len );
 
 cleanup:
     mbedtls_free( sig_try );
@@ -1650,7 +1650,7 @@ int mbedtls_rsa_self_test( int verbose )
     if( verbose != 0 )
         mbedtls_printf( "passed\n  PKCS#1 encryption : " );
 
-    memcpy( rsa_plaintext, RSA_PT, PT_LEN );
+    memmove( rsa_plaintext, RSA_PT, PT_LEN );
 
     if( mbedtls_rsa_pkcs1_encrypt( &rsa, myrand, NULL, MBEDTLS_RSA_PUBLIC, PT_LEN,
                            rsa_plaintext, rsa_ciphertext ) != 0 )

@@ -681,7 +681,7 @@ int mbedtls_des_crypt_cbc( mbedtls_des_context *ctx,
                 output[i] = (unsigned char)( input[i] ^ iv[i] );
 
             mbedtls_des_crypt_ecb( ctx, output, output );
-            memcpy( iv, output, 8 );
+            memmove( iv, output, 8 );
 
             input  += 8;
             output += 8;
@@ -692,13 +692,13 @@ int mbedtls_des_crypt_cbc( mbedtls_des_context *ctx,
     {
         while( length > 0 )
         {
-            memcpy( temp, input, 8 );
+            memmove( temp, input, 8 );
             mbedtls_des_crypt_ecb( ctx, input, output );
 
             for( i = 0; i < 8; i++ )
                 output[i] = (unsigned char)( output[i] ^ iv[i] );
 
-            memcpy( iv, temp, 8 );
+            memmove( iv, temp, 8 );
 
             input  += 8;
             output += 8;
@@ -780,7 +780,7 @@ int mbedtls_des3_crypt_cbc( mbedtls_des3_context *ctx,
                 output[i] = (unsigned char)( input[i] ^ iv[i] );
 
             mbedtls_des3_crypt_ecb( ctx, output, output );
-            memcpy( iv, output, 8 );
+            memmove( iv, output, 8 );
 
             input  += 8;
             output += 8;
@@ -791,13 +791,13 @@ int mbedtls_des3_crypt_cbc( mbedtls_des3_context *ctx,
     {
         while( length > 0 )
         {
-            memcpy( temp, input, 8 );
+            memmove( temp, input, 8 );
             mbedtls_des3_crypt_ecb( ctx, input, output );
 
             for( i = 0; i < 8; i++ )
                 output[i] = (unsigned char)( output[i] ^ iv[i] );
 
-            memcpy( iv, temp, 8 );
+            memmove( iv, temp, 8 );
 
             input  += 8;
             output += 8;
@@ -893,7 +893,7 @@ int mbedtls_des_self_test( int verbose )
                              ( u == 0 ) ? ' ' : '3', 56 + u * 56,
                              ( v == MBEDTLS_DES_DECRYPT ) ? "dec" : "enc" );
 
-        memcpy( buf, des3_test_buf, 8 );
+        memmove( buf, des3_test_buf, 8 );
 
         switch( i )
         {
@@ -966,9 +966,9 @@ int mbedtls_des_self_test( int verbose )
                              ( u == 0 ) ? ' ' : '3', 56 + u * 56,
                              ( v == MBEDTLS_DES_DECRYPT ) ? "dec" : "enc" );
 
-        memcpy( iv,  des3_test_iv,  8 );
-        memcpy( prv, des3_test_iv,  8 );
-        memcpy( buf, des3_test_buf, 8 );
+        memmove( iv,  des3_test_iv,  8 );
+        memmove( prv, des3_test_iv,  8 );
+        memmove( buf, des3_test_buf, 8 );
 
         switch( i )
         {
@@ -1021,12 +1021,12 @@ int mbedtls_des_self_test( int verbose )
                 else
                     mbedtls_des3_crypt_cbc( &ctx3, v, 8, iv, buf, buf );
 
-                memcpy( tmp, prv, 8 );
-                memcpy( prv, buf, 8 );
-                memcpy( buf, tmp, 8 );
+                memmove( tmp, prv, 8 );
+                memmove( prv, buf, 8 );
+                memmove( buf, tmp, 8 );
             }
 
-            memcpy( buf, prv, 8 );
+            memmove( buf, prv, 8 );
         }
 
         if( ( v == MBEDTLS_DES_DECRYPT &&

@@ -1009,7 +1009,7 @@ LIB_EXPORT rc_t CC KConfigNodeRead ( const KConfigNode *self,
             if ( avail > bsize )
                 avail = bsize;
             if ( avail > 0 )
-                memcpy ( buffer, & self -> value . addr [ offset ], avail );
+                memmove ( buffer, & self -> value . addr [ offset ], avail );
             * num_read = avail;
             * remaining -= avail;
             return 0;
@@ -2289,7 +2289,7 @@ rc_t record_magic_path ( KConfig *self, const KDirectory *dir, const char *path,
             free ( (void*) self -> magic_file_path );
             self -> magic_file_path = magic_file_path;
             self -> magic_file_path_size = sz;
-            memcpy ( magic_file_path, buff, sz + 1 );
+            memmove ( magic_file_path, buff, sz + 1 );
         }
     }
 

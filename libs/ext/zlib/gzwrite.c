@@ -215,7 +215,7 @@ int ZEXPORT gzwrite(file, buf, len)
             copy = state->size - have;
             if (copy > len)
                 copy = len;
-            memcpy(state->in + have, buf, copy);
+            memmove(state->in + have, buf, copy);
             strm->avail_in += copy;
             state->x.pos += copy;
             buf = (const char *)buf + copy;

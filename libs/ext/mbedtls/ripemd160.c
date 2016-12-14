@@ -313,7 +313,7 @@ void mbedtls_ripemd160_update( mbedtls_ripemd160_context *ctx,
 
     if( left && ilen >= fill )
     {
-        memcpy( (void *) (ctx->buffer + left), input, fill );
+        memmove( (void *) (ctx->buffer + left), input, fill );
         mbedtls_ripemd160_process( ctx, ctx->buffer );
         input += fill;
         ilen  -= fill;
@@ -329,7 +329,7 @@ void mbedtls_ripemd160_update( mbedtls_ripemd160_context *ctx,
 
     if( ilen > 0 )
     {
-        memcpy( (void *) (ctx->buffer + left), input, ilen );
+        memmove( (void *) (ctx->buffer + left), input, ilen );
     }
 }
 

@@ -453,7 +453,7 @@ rc_t KSysDirMakePath_v1 ( const KSysDir_v1 * self, enum RCContext ctx, bool cano
                 return RC ( rcFS, rcDirectory, ctx, rcPath, rcExcessive );
             memmove ( buffer + bsize, buffer, psize + 1 );
             assert ( self -> path [ bsize - 1 ] == '/' );
-            memcpy ( buffer, self -> path, bsize );
+            memmove ( buffer, self -> path, bsize );
         }
         else if ( ( bsize = self -> root ) != 0 )
         {
@@ -461,7 +461,7 @@ rc_t KSysDirMakePath_v1 ( const KSysDir_v1 * self, enum RCContext ctx, bool cano
                 return RC ( rcFS, rcDirectory, ctx, rcPath, rcExcessive );
             memmove ( buffer + bsize, buffer, psize + 1 );
             assert ( self -> path [ bsize - 1 ] != '/' );
-            memcpy ( buffer, self -> path, bsize );
+            memmove ( buffer, self -> path, bsize );
         }
     }
     else
@@ -469,12 +469,12 @@ rc_t KSysDirMakePath_v1 ( const KSysDir_v1 * self, enum RCContext ctx, bool cano
         if ( path [ 0 ] != '/' )
         {
             assert ( self -> path [ self -> size - 1 ] == '/' );
-            memcpy ( buffer, self -> path, bsize = self -> size );
+            memmove ( buffer, self -> path, bsize = self -> size );
         }
         else if ( ( bsize = self -> root ) != 0 )
         {
             assert ( self -> path [ bsize - 1 ] != '/' );
-            memcpy ( buffer, self -> path, bsize );
+            memmove ( buffer, self -> path, bsize );
         }
 
         if ( args == NULL )
@@ -820,7 +820,7 @@ rc_t KSysDirRelativePath_v1 ( const KSysDir_v1 * self, enum RCContext ctx,
 
     /* insert backup sequences */
     for ( bsize = 0; backup > 0; bsize += 3, -- backup )
-        memcpy ( & path [ bsize ], "../", 3 );
+        memmove ( & path [ bsize ], "../", 3 );
 
     /* close gap */
     if ( p - path > bsize )
@@ -2346,7 +2346,7 @@ rc_t KSysDirInit_v1 ( KSysDir_v1 * self, enum RCContext ctx, uint32_t dad_root,
         return ResetRCContext ( rc, rcFS, rcDirectory, ctx );
 
     if ( path != NULL )
-        memcpy ( self -> path, path, path_size );
+        memmove ( self -> path, path, path_size );
     self -> root = chroot ? path_size : dad_root;
     self -> size = path_size + 1;
     self -> path [ path_size ] = '/';
