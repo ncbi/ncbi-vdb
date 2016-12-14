@@ -121,7 +121,7 @@ namespace vdb3
     };
 }
 
-#if defined x86_64
+#if defined __x86_64__
 #include <kfc/atomic-x86_64.hpp>
 #include <kfc/atomic-ia32.hpp>
 #elif defined i686 || defined i386
