@@ -118,7 +118,7 @@ namespace vdb3
                               , & hostproc
             );
 #endif
-    
+
         // print message
         if ( fmt != 0 && fmt [ 0 ] != 0 )
             buffer . vappend ( fmt, args );

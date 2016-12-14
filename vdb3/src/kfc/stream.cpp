@@ -391,5 +391,5 @@ namespace vdb3
         : Ref < StreamItf > ( obj, itf, caps )
     {
     }
-    
 }
+

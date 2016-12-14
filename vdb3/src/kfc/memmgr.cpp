@@ -93,7 +93,7 @@ namespace vdb3
      *  memory manager reference
      */
 
-    // allocate memory 
+    // allocate memory
     Mem MemMgr :: alloc ( const bytes_t & size, bool clear ) const
     {
         FUNC_ENTRY ();

@@ -737,7 +737,7 @@ namespace vdb3
             case 'u':
                 u64 = va_arg ( args, U64 );
                 goto cvt_decimal_int;
-                
+
             case 'd':
             case 'i':
                 i64 = va_arg ( args, I64 );
@@ -824,7 +824,7 @@ namespace vdb3
             u64 = va_arg ( args, U32 );
             base = 8;
             goto cvt_integer;
-            
+
         case 'b':
             u64 = va_arg ( args, U32 );
             base = 2;
@@ -875,7 +875,7 @@ namespace vdb3
                 u64 = -i64;
                 neg = true;
                 goto cvt_decimal_int;
-                
+
             case 'X':
                 chmap = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
             case 'x':
@@ -904,7 +904,7 @@ namespace vdb3
             case 'u':
                 u64 = ( U8 ) va_arg ( args, U32 );
                 goto cvt_decimal_int;
-                
+
             case 'd':
             case 'i':
                 i64 = ( I8 ) va_arg ( args, I32 );
@@ -933,7 +933,7 @@ namespace vdb3
                 u64 = ( U8 ) va_arg ( args, U32 );
                 base = 2;
                 goto cvt_integer;
-                
+
             default:
                 THROW ( xc_bad_fmt_err, "expected one of [udiXxob] after length modifier 't' but found '%c'", fmt [ i ] );
             }
@@ -1183,7 +1183,7 @@ namespace vdb3
                     append ( use_sign );
 
                 append ( ConstString ( & num [ j ], field_width ) );
- 
+
                 if ( total_field_width < min_field_width )
                     append ( ' ', min_field_width - total_field_width );
             }
@@ -1320,5 +1320,6 @@ namespace vdb3
             buffer . resize ( rounded_size, true );
         }
     }
-    
+
 }
+

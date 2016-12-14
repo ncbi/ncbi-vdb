@@ -133,5 +133,6 @@ namespace vdb3
 
     template class integer_t < bytes_t, U64 >;
     template class integer_t < bitsz_t, U64 >;
-    
+
 }
+
