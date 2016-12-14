@@ -172,14 +172,13 @@ namespace vdb3
 #endif
 
         // allocate the object memory
-        PrimordMemMgr * obj;
         void * mem = calloc ( 1, sizeof(PrimordMemMgr) );
         if ( mem == 0 )
             throw "out of memory allocating primordial memory manager";
 
         // construct the primordial mmgr
-        // TODO :FIXME
-        //obj = new ( mem ) PrimordMemMgr ( quota, quota - sizeof(PrimordMemMgr));
+        PrimordMemMgr * obj = NULL; // TODO :FIXME
+        //PrimordMemMgr * obj = new ( mem ) PrimordMemMgr ( quota, quota - sizeof(PrimordMemMgr));
 
         // embed self into object
         // DO NOT STORE DUPLICATE

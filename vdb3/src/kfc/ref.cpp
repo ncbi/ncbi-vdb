@@ -38,7 +38,7 @@ namespace vdb3
     // construct a src_loc for hpp
     static SrcLoc hpp_src_loc =
     {
-        __mod_name__, __file__, "hpp"
+        __mod__, __file__, "hpp"
     };
 
     static inline

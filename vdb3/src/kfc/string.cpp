@@ -691,8 +691,8 @@ namespace vdb3
     {
         FUNC_ENTRY ();
 
-        I64 i64;
-        U64 u64;
+        I64 i64=0;
+        U64 u64=0;
         //F64 f64;
         UTF32 ch;
         U32 j, base;
@@ -947,9 +947,9 @@ namespace vdb3
     {
         FUNC_ENTRY ();
 
-        I64 i64;
-        U64 u64;
-        F64 f64;
+        I64 i64=0;
+        U64 u64=0;
+        F64 f64=0.0;
         UTF32 ch;
         U32 j, k, base;
         const String * str;
@@ -1041,7 +1041,7 @@ namespace vdb3
 
         // STORAGE SIZE
         U8 arg_size = sizeof ( U32 );
-        bool date_time_zone = false;
+//        bool date_time_zone = false;
         switch ( fmt [ i ] )
         {
         case 't':
@@ -1057,7 +1057,7 @@ namespace vdb3
             ++ i;
             break;
         case 'z':
-            date_time_zone = true;
+ //           date_time_zone = true;
             arg_size = sizeof ( size_t );
             ++ i;
             break;

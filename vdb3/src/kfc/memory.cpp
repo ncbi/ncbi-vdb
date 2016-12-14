@@ -85,7 +85,7 @@ namespace vdb3
             return -1;
 
         const char * p = ( const char * ) ptr;
-        void * loc = memchr ( & p [ offset ], byte, bytes - ( U64 ) offset );
+        const void * loc = memchr ( & p [ offset ], byte, bytes - ( U64 ) offset );
         if ( loc != 0 )
             return ( const char * ) loc - p;
 
@@ -106,7 +106,7 @@ namespace vdb3
             sz = bytes - ( U64 ) offset;
 
         const char * p = ( const char * ) ptr;
-        void * loc = memchr ( & p [ offset ], byte, sz );
+        const void * loc = memchr ( & p [ offset ], byte, sz );
         if ( loc != 0 )
             return ( const char * ) loc - p;
 
