@@ -35,6 +35,7 @@
 #endif
 
 #include <csignal>
+#include <stdio.h>
 
 using namespace std;
 using namespace ncbi::NK;
@@ -179,6 +180,7 @@ const char UsageDefaultName[] = "test-kfg";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    fprintf(stderr,"*************** Testing\n");
     rc_t rc=KtstTestSuite(argc, argv);
     return rc;
 }

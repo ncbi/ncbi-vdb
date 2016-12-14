@@ -27,9 +27,7 @@
 #ifndef _hpp_vdb3_kfc_callstk_
 #define _hpp_vdb3_kfc_callstk_
 
-#ifndef _hpp_vdb3_kfc_defs_
 #include <kfc/defs.hpp>
-#endif
 
 namespace vdb3
 {
@@ -109,6 +107,7 @@ namespace vdb3
      * FUNC_ENTRY
      *  macro to create stack frame linked with caller
      *  uses GCC __PRETTY_FUNCTION__ to produce function signature
+     *  TODO: MSVC uses __FUNCSIG__
      */
 #define FUNC_ENTRY()                                                                  \
     vdb3 :: CallStk local_stack_frame ( vdb3 :: s_src_loc, __PRETTY_FUNCTION__ )

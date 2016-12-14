@@ -26,25 +26,38 @@
 default: std
 
 TOP ?= $(abspath ../../..)
-include $(TOP)/build/Makefile.config
+MODULE = vdb3/src/kfc
 
-# repairs to Makefile.config
-INCDIRS = -I. -I$(TOP)/vdb3/itf
+
+INT_LIBS = libvdb3
+
+ALL_LIBS = $(INT_LIBS)
 
 OBJFILES = \
-	$(KFC_OBJ)
+	$(VDB3_OBJ)
 
-INTLIBS = \
-	vdb3-kfc
+include $(TOP)/build/Makefile.env
+#EXTLIBS =
+INCDIRS += -I. -I$(TOP)/vdb3/itf
 
-EXTLIBS =   \
+all std: makedirs compile
+#	@ $(MAKE_CMD) $(TARGDIR)/std
 
-TARGETS =      \
-	$(INTLIBS) \
-	$(EXTLIBS)
+#$(INT_LIBS): makedirs
+#	@ $(MAKE_CMD) $(ILIBDIR)/$@
+
+.PHONY: default all std $(ALL_LIBS) $(TARGDIR)/all $(TARGDIR)/std
+
+$(TARGDIR)/std: $(addprefix $(ILIBDIR)/,$(INT_LIBS))
+
+$(ILIBDIR)/libvdb3: $(addprefix $(ILIBDIR)/livdb3.,$(LIBEXT))
+
+#TARGETS = \
+#	$(INTLIBS) \
+#	$(EXTLIBS)
 
 # kernel-like facilities
-KFC_SRC =    \
+VDB3_SRC =  \
 	rsrc     \
 	pfdmgr   \
 	fdmgr    \
@@ -69,20 +82,32 @@ KFC_SRC =    \
 	callstk
 
 # object files
-KFC_OBJ = \
-	$(addprefix $(OBJDIR)/,$(addsuffix .$(LOBX),$(KFC_SRC)))
+VDB3_OBJ = $(addprefix $(OBJDIR)/,$(addsuffix .$(LOBX),$(VDB3_SRC)))
 
-all std: $(TARGETS)
+#$(INT_LIBS): makedirs
+#	@ $(MAKE_CMD) $(ILIBDIR)/$@
 
-compile: $(OBJDIR) $(OBJFILES)
+#$(TARGDIR)/std:
+#	$(addprefix $(ILIBDIR)/,$(INT_LIBS))
+#	echo "MV: std"
+#	echo "MV: $@"
+
+#$(ILIBDIR)/libvdb3: $(addprefix $(ILIBDIR)/libvdb3.,$(ILIBEXT))
+
+$(ILIBDIR)/libvdb3.$(LIBX): $(VDB3_OBJ)
+	$(LD) --slib -o $@ $^ $(VDB3_LIB)
 
 clean:
 	rm -rf $(ILIBDIR)/$(LPFX)ngs-disp* $(OBJDIR)
 
-.PHONY: default all std $(TARGETS)
 
-vdb3-kfc: $(ILIBDIR) $(OBJDIR) $(ILIBDIR)/$(LPFX)vdb3-kfc.$(LIBX)
+libvdb3: $(ILIBDIR) $(OBJDIR) $(ILIBDIR)/$(LPFX)libvdb3.$(LIBX)
 
 # rule to produce the static library
-$(ILIBDIR)/$(LPFX)vdb3-kfc.$(LIBX): $(KFC_OBJ)
+$(ILIBDIR)/$(LPFX)libvdb3.$(LIBX): $(VDB3_OBJ)
 	$(AR) $@ $^
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES)
+

@@ -94,8 +94,8 @@ namespace vdb3
 #define tok_to_string( tok ) # tok
 
 // generate string values for SrcLoc
-#if ! defined __mod__ && defined __mod_path__
-#define __mod__ stringize ( __mod_path__ )
+#if ! defined __mod__ && defined __mod_name__
+#define __mod__ stringize ( __mod_name__ )
 #endif
 
 #if ! defined __file__ && defined __file_name__

@@ -29,7 +29,8 @@ TOP ?= $(abspath ../..)
 MODULE = test/kfc
 
 TEST_TOOLS = \
-	test-except
+	test-except \
+	test-callstk
 
 include $(TOP)/build/Makefile.env
 
@@ -55,3 +56,25 @@ TEST_LIB = \
 
 $(TEST_BINDIR)/test-except: $(TEST_OBJ)
 	$(LD) --exe -o $@ $^ $(TEST_LIB)
+
+#$(TEST_BINDIR)/test-callstk: $(TEST_OBJ)
+#	$(LD) --exe -o $@ $^ $(TEST_LIB)
+
+
+TEST_CALLSTK_SRC= \
+	test-callstk
+
+TEST_CALLSTK_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_CALLSTK_SRC))
+
+TEST_CALLSTK_LIB = \
+	-skapp \
+	-sktst \
+	-sncbi-vdb
+
+$(TEST_BINDIR)/test-callstk: $(TEST_CALLSTK_OBJ)
+	$(LD) --exe -o $@ $^ $(TEST_CALLSTK_LIB)
+
+TEST_CALLSTK: test-callstk
+	$(TEST_BINDIR)/test-callstk
+

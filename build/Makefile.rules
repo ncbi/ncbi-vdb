@@ -25,6 +25,8 @@
 
 ## build rules
 LOC_INFO = -D__mod_name__=$(MODULE) -D__file_name__=$*
+CFLAGS += -D__mod_name__=$(MODULE) -D__file_name__=$* -D__file_ext__=tbd
+CPFLAGS += -D__mod_name__=$(MODULE) -D__file_name__=$* -D__file_ext__=tbd
 
 # executable image
 %.$(OBJX): %.c
