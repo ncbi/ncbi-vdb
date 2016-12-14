@@ -47,8 +47,8 @@ namespace vdb3
 
         static MemMgr make_primordial ();
 
-        virtual Mem alloc ( const bytes_t & size, bool clear );
-        virtual Mem make_const ( const void * ptr, const bytes_t & size );
+        virtual Mem alloc ( const bytes_t & size, bool clear, mS_t timeout =0 );
+        virtual Mem make_const ( const void * ptr, const bytes_t & size);
 
     protected:
 

@@ -76,7 +76,7 @@ namespace vdb3
         /** make a block of constant memory */
         /*  definitely readonly, but moreover comes from the text section of process space
             has no lifetime < that of the process */
-        virtual Mem makeConst ( const void * ptr, const bytes_t & size ) = 0;
+        virtual Mem make_const ( const void * ptr, const bytes_t & size ) = 0;
 
         /** Allocate an aligned block of memory, alignment must be a power of
           * 2 and size must be an integral multiple of alignment.
@@ -139,7 +139,7 @@ namespace vdb3
         Mem alloc ( const bytes_t & size, bool clear ) const;
 
         // make a block of constant memory
-        Mem makeConst ( const void * ptr, const bytes_t & size ) const;
+        Mem make_const ( const void * ptr, const bytes_t & size ) const;
 
         // C++
         MemMgr ();

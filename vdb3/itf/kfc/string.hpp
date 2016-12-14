@@ -119,8 +119,9 @@ namespace vdb3
     /*------------------------------------------------------------------
      * StringPair
      */
-    struct StringPair
+    class StringPair
     {
+      public:
         String left, right;
 
         StringPair () {}

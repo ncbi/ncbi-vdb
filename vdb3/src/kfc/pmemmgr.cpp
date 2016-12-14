@@ -173,18 +173,19 @@ namespace vdb3
 
         // allocate the object memory
         PrimordMemMgr * obj;
-        obj = ( PrimordMemMgr * ) calloc ( 1, sizeof * obj );
-        if ( obj == 0 )
+        void * mem = calloc ( 1, sizeof(PrimordMemMgr) );
+        if ( mem == 0 )
             throw "out of memory allocating primordial memory manager";
 
         // construct the primordial mmgr
-        new ( obj ) PrimordMemMgr ( quota, quota - sizeof * obj );
+        // TODO :FIXME
+        //obj = new ( mem ) PrimordMemMgr ( quota, quota - sizeof(PrimordMemMgr));
 
         // embed self into object
         // DO NOT STORE DUPLICATE
         // as this would introduce a cycle
         obj -> mmgr = obj;
-        obj -> obj_size = sizeof * obj;
+        obj -> obj_size = sizeof(PrimordMemMgr);
 
         // create the reference
         return obj -> make_mmgr_ref ( obj, CAP_RDWR | CAP_ALLOC );
@@ -193,7 +194,7 @@ namespace vdb3
 
     /* alloc
      */
-    Mem PrimordMemMgr :: alloc ( const bytes_t & size, bool clear )
+    Mem PrimordMemMgr :: alloc ( const bytes_t & size, bool clear, mS_t timeout )
     {
         FUNC_ENTRY ();
 
