@@ -178,6 +178,10 @@ NGS_FragmentBlobIteratorNext ( NGS_FragmentBlobIterator * self, ctx_t ctx )
                 NGS_FragmentBlobRelease ( ret, ctx );
             }
         }
+        else
+        {
+            INTERNAL_ERROR ( xcUnexpected, "VCursorFindNextRowIdDirect(READ, row=%li ) rc = %R", self -> next_row, rc );
+        }
         self -> next_row = self -> last_row + 1;
     }
 

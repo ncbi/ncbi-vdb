@@ -805,11 +805,10 @@ struct NGS_ReferenceBlobIterator* CSRA1_ReferenceGetBlobs ( const CSRA1_Referenc
         return NULL;
     }
 
-   const uint64_t ChunkSize = 5000;
-   uint64_t startRow = self -> first_row + offset / ChunkSize;
+   uint64_t startRow = self -> first_row + offset / self -> chunk_size;
    uint64_t lastRow = size == (uint64_t)-1 ?
                             self -> last_row :
-                            self -> first_row + ( offset + size - 1 ) / ChunkSize;
+                            self -> first_row + ( offset + size - 1 ) / self -> chunk_size;
    return NGS_ReferenceBlobIteratorMake ( ctx, self -> curs, self -> first_row, startRow, lastRow );
 }
 
@@ -845,6 +844,7 @@ bool CSRA1_ReferenceFind ( NGS_Cursor const * curs, ctx_t ctx, const char * spec
         }
     }
     /* index not available - do a table scan */
+    if ( ! FAILED () )
     {
         int64_t cur_row;
         int64_t end_row;
