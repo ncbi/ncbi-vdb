@@ -30,6 +30,8 @@
 #include <kfc/except.h>
 #include <kfc/xc.h>
 
+#include <klib/rc.h>
+
 #include <ngs/itf/Refcount.h>
 
 #include <vdb/cursor.h>
@@ -174,7 +176,7 @@ NGS_ReferenceBlobIteratorNext ( NGS_ReferenceBlobIterator * self, ctx_t ctx )
                 NGS_ReferenceBlobRelease ( ret, ctx );
             }
         }
-        else
+        else if ( GetRCState ( rc ) != rcNotFound )
         {
             INTERNAL_ERROR ( xcUnexpected, "VCursorFindNextRowIdDirect(READ, row=%li ) rc = %R", self -> next_row, rc );
         }

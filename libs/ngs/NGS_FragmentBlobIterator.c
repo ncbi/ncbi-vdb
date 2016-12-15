@@ -32,6 +32,8 @@
 
 #include <ngs/itf/Refcount.h>
 
+#include <klib/rc.h>
+
 #include <vdb/cursor.h>
 
 #include "NGS_String.h"
@@ -178,7 +180,7 @@ NGS_FragmentBlobIteratorNext ( NGS_FragmentBlobIterator * self, ctx_t ctx )
                 NGS_FragmentBlobRelease ( ret, ctx );
             }
         }
-        else
+        else if ( GetRCState ( rc ) != rcNotFound )
         {
             INTERNAL_ERROR ( xcUnexpected, "VCursorFindNextRowIdDirect(READ, row=%li ) rc = %R", self -> next_row, rc );
         }
