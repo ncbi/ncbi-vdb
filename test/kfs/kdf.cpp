@@ -107,7 +107,7 @@ FIXTURE_TEST_CASE ( Mac, FIXTURE ) {
     REQUIRE_RC_FAIL ( KDirectoryGetDiskFreeSpace ( NULL,
                         & free_bytes_available, & total_number_of_bytes ) );
 
-    if ( s_path != NULL ) {
+    if ( _path != NULL ) {
         REQUIRE_RC ( KDirectoryGetDiskFreeSpace ( _dir,
                         & free_bytes_available, & total_number_of_bytes ) );
 
@@ -131,7 +131,7 @@ FIXTURE_TEST_CASE ( Linux, FIXTURE ) {
     REQUIRE_RC_FAIL ( KDirectoryGetDiskFreeSpace ( NULL,
                         & free_bytes_available, & total_number_of_bytes ) );
 
-    if ( s_path != NULL ) {
+    if ( _path != NULL ) {
         REQUIRE_RC ( KDirectoryGetDiskFreeSpace ( _dir,
                         & free_bytes_available, & total_number_of_bytes ) );
 
@@ -143,7 +143,7 @@ FIXTURE_TEST_CASE ( Linux, FIXTURE ) {
         double percent = 100. * used / total_number_of_bytes ;
         OUTMSG ( ( "\n                               %d   %d  %d%% %s",
                    used / 1024, free_bytes_available / 1024,
-                   static_cast < int > ( ceil ( percent ) ), p ) ) ;
+                   static_cast < int > ( ceil ( percent ) ), _path ) ) ;
     }
 }
 
