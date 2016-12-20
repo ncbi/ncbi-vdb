@@ -28,6 +28,8 @@
 * Unit tests for Kdb interface
 */
 
+#include <kapp/args.h>
+
 #include <ktst/unit_test.hpp>
 
 #include <sysalloc.h>
@@ -41,7 +43,8 @@
 
 using namespace std;
 
-TEST_SUITE(KdbTestSuite);
+static rc_t argsHandler(int argc, char* argv[]);
+TEST_SUITE_WITH_ARGS_HANDLER(KdbTestSuite, argsHandler);
 
 #define KDB_MANAGER_MAKE(mgr, wd) KDBManagerMakeRead((const KDBManager **)mgr, (struct KDirectory const *)wd)
 #include "remote_open_test.cpp"
@@ -139,6 +142,12 @@ FIXTURE_TEST_CASE ( ColumnBlobRead_insufficient_buffer, ColumnBlobReadFixture )
 }
 
 //////////////////////////////////////////// Main
+static rc_t argsHandler(int argc, char* argv[]) {
+    Args* args = NULL;
+    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
+    ArgsWhack(args);
+    return rc;
+}
 extern "C"
 {
 

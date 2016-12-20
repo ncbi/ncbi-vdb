@@ -53,6 +53,9 @@ LIB_EXPORT rc_t CC SraReleaseVersionGet(SraReleaseVersion *version) {
         case 'c':
             version->type = eSraReleaseVersionTypeRC;
             break;
+        case 'd':
+            version->type = eSraReleaseVersionTypeDev;
+            break;
         default:
             version->type = eSraReleaseVersionTypeFinal;
     }
@@ -294,6 +297,9 @@ LIB_EXPORT rc_t CC SraReleaseVersionPrint ( const SraReleaseVersion *self,
     }
 
     switch (self->type) {
+        case eSraReleaseVersionTypeDev:
+            type = "-dev";
+            break;
         case eSraReleaseVersionTypeAlpha:
             type = "-a";
             break;

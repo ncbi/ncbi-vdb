@@ -27,13 +27,15 @@
 #ifndef _h_kfg_repository_
 #define _h_kfg_repository_
 
+
 #ifndef _h_kfg_extern_
 #include <kfg/extern.h>
 #endif
-
-#ifndef _h_klib_defs_
-#include <klib/defs.h>
+ 
+#ifndef _h_klib_vector_
+#include <klib/vector.h> /* Vector */
 #endif
+
 
 #ifdef __cplusplus
 extern "C" {
