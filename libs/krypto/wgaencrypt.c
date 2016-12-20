@@ -308,7 +308,7 @@ rc_t KWGAEncFileKeyInit (KWGAEncFile * self, const char * key, size_t key_size)
     memset (g_key, 0, sizeof g_key);
     if (key_size > sizeof (g_key))
         key_size = sizeof (g_key);
-    memcpy (g_key, key, key_size);
+    memmove (g_key, key, key_size);
 
     if (key_size < 16) /* even though g_key and some cipher keys are larger than 16 */
     {
@@ -743,9 +743,9 @@ rc_t KWGAEncFileHeaderRead (KWGAEncFile * self)
     self->md5_here = (header.md5_here != 0);
 
     if (self->md5_here)
-        memcpy (self->md5, header.md5, sizeof (self->md5));
+        memmove (self->md5, header.md5, sizeof (self->md5));
 
-    memcpy (self->md51, header.md51, sizeof (self->md51));
+    memmove (self->md51, header.md51, sizeof (self->md51));
 
     return 0; /* yeah not really checking later errors am i? */
 }
@@ -1151,7 +1151,7 @@ KRYPTO_EXTERN rc_t CC WGAEncValidate (const KFile * encrypted,
                                                     string_printf (&ascii_md5[2*ix], 2, &zz, "%2.2x",
                                                                (unsigned)(uint8_t)md5[ix]);
                                                 }
-                                                memcpy (header_ascii_md5,
+                                                memmove (header_ascii_md5,
                                                         u.decryptor->md5,
                                                         sizeof header_ascii_md5);
                                             }

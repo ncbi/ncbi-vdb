@@ -45,7 +45,6 @@ rc_t CC tokenize_spot_name_genericFastq ( void *self, const VXformInfo *info, in
 										  VRowResult *rslt, uint32_t argc, const VRowData argv [] )
 {
     rc_t rc;
-    const char *name;
     spot_name_token_t *spot_name_tok;
     const int EXPECTED_NUMBER_OF_TOKENS = 1;
     

@@ -220,7 +220,7 @@ _StrCReserve ( struct _StrC * self, size_t Amount )
 
         if ( self -> e != NULL ) {
             if ( self -> q != 0 ) {
-                memcpy (
+                memmove (
                         NewArr,
                         self -> e,
                         sizeof ( char * ) * self -> q
@@ -327,12 +327,12 @@ _StrCAdd (
     XFS_CAN ( Str )
     XFS_CA ( StrLen, 0 )
 
-    TheStr = malloc ( sizeof ( char ) * ( StrLen + 1 ) );
+    TheStr = calloc ( StrLen + 1, sizeof ( char ) );
     if ( TheStr == NULL ) {
         return XFS_RC ( rcExhausted );
     }
 
-    memcpy ( TheStr, Str, sizeof ( char ) * StrLen );
+    memmove ( TheStr, Str, sizeof ( char ) * StrLen );
     * ( TheStr + StrLen ) = 0;
 
     RCt = _StrCInsert ( self, TheStr, _StrCCount ( self ) );
@@ -507,7 +507,7 @@ _PathCompile ( struct XFSPath * self, const char ** Str )
         }
     }
 
-    Path = malloc ( sizeof ( char ) * ( StrSize + 1 ) );
+    Path = calloc ( StrSize + 1, sizeof ( char ) );
     if ( Path == NULL ) {
         return XFS_RC ( rcExhausted );
     }
@@ -580,12 +580,13 @@ _PathParse (
 )
 {
     rc_t RCt;
-    const char * Bg, * Cr;
+    const char * Bg, * Cr, * En;
     bool Abs;
 
     RCt = 0;
     Bg = NULL;
     Cr = NULL;
+    En = NULL;
     Abs = false;
 
     XFS_CAN ( self )
@@ -602,7 +603,8 @@ _PathParse (
     if ( RCt == 0 ) {
         Bg = Path;
         Cr = Path;
-        while ( * Cr != 0 ) {
+        En = Bg + string_size ( Path );
+        while ( Cr < En ) {
             if ( * Cr == '/' ) {
                 if ( 0 < Cr - Bg ) {
                     RCt = _StrCAdd ( self -> tokens, Bg, Cr - Bg );
@@ -611,7 +613,7 @@ _PathParse (
                     }
                 }
 
-                while ( * Cr != 0 ) {
+        	    while ( Cr < En ) {
                     if ( * Cr != '/' ) {
                         Bg = Cr;
                         break;
@@ -1079,7 +1081,7 @@ XFSPathAppendPath (
                         );
     if ( RCt == 0 ) {
         NewLen = strlen ( TheSelf -> orig ) + strlen ( Path -> orig );
-        NewOrig = malloc ( sizeof ( char ) * ( 1 + NewLen ) );
+        NewOrig = calloc ( 1 + NewLen, sizeof ( char ) );
         if ( NewOrig == NULL ) {
             RCt = XFS_RC ( rcExhausted );
         }

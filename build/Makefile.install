@@ -60,7 +60,7 @@ copyincludes: checkversion
 
 INCLUDE_SYMLINK = $(ROOT)/usr/include/ncbi-vdb
 PROFILE_FILE = $(ROOT)/etc/profile.d/ncbi-vdb
-KONFIG_DIR = $(ROOT)/etc/ncbi/
+KONFIG_DIR = $(ROOT)/etc/ncbi
 
 ifeq (linux, $(OS))
     ifeq (0, $(shell id -u))
@@ -78,7 +78,14 @@ ifeq (true, $(LINUX_ROOT))
 	@ # install configuration file(s)
 	@ echo "Installing configuration files to $(KONFIG_DIR)"
 	@ mkdir -p $(KONFIG_DIR)
-	@ cp $(TOP)/libs/kfg/default.kfg $(KONFIG_DIR)/ncbi-vdb.kfg
+	if [ -f $(KONFIG_DIR)/certs.kfg ] ; \
+	  then mv -v $(KONFIG_DIR)/certs.kfg    $(KONFIG_DIR)/certs.kfg.orig    ; fi
+	if [ -f $(KONFIG_DIR)/default.kfg  ] ; \
+	  then mv -v $(KONFIG_DIR)/default.kfg  $(KONFIG_DIR)/default.kfg.orig  ; fi
+	if [ -f $(KONFIG_DIR)/ncbi-vdb.kfg ] ; \
+	  then mv -v $(KONFIG_DIR)/ncbi-vdb.kfg $(KONFIG_DIR)/ncbi-vdb.kfg.orig ; fi
+	@ cp $(TOP)/libs/kfg/certs.kfg   $(KONFIG_DIR)
+	@ cp $(TOP)/libs/kfg/default.kfg $(KONFIG_DIR)
 	@ #
 	@ echo "Updating $(PROFILE_FILE).[c]sh"
 	@ printf \
@@ -102,7 +109,17 @@ else
 	@ #
 	@ echo "Installing configuration files to $(LIB_TARGET)/ncbi/"
 	@ mkdir -p $(LIB_TARGET)/ncbi
-	@ cp $(TOP)/libs/kfg/default.kfg $(LIB_TARGET)/ncbi/ncbi-vdb.kfg
+	if [ -f $(LIB_TARGET)/ncbi/certs.kfg    ] ; then \
+	  mv -v $(LIB_TARGET)/ncbi/certs.kfg \
+	        $(LIB_TARGET)/ncbi/certs.kfg.orig ; fi
+	if [ -f $(LIB_TARGET)/ncbi/default.kfg  ] ; then \
+	  mv -v $(LIB_TARGET)/ncbi/default.kfg \
+	        $(LIB_TARGET)/ncbi/default.kfg.orig ; fi
+	if [ -f $(LIB_TARGET)/ncbi/ncbi-vdb.kfg ] ; then \
+	  mv -v $(LIB_TARGET)/ncbi/ncbi-vdb.kfg \
+	        $(LIB_TARGET)/ncbi/ncbi-vdb.kfg.orig ; fi
+	@ cp $(TOP)/libs/kfg/certs.kfg   $(LIB_TARGET)/ncbi
+	@ cp $(TOP)/libs/kfg/default.kfg $(LIB_TARGET)/ncbi
 	@ #
 	@ echo "Please add $(LIB_TARGET) to your LD_LIBRARY_PATH, e.g.:"
 	@ echo "      export LD_LIBRARY_PATH=$(LIB_TARGET):\$$LD_LIBRARY_PATH"
@@ -117,7 +134,10 @@ endif
 # 
 
 TO_UNINSTALL = $(LIB_TARGET)/libncbi-vdb.* $(LIB_TARGET)/libncbi-wvdb.* $(LIB_TARGET)/libncbi-ngs-c++.*
-TO_UNINSTALL_AS_ROOT = $(INCLUDE_SYMLINK) $(KONFIG_DIR)/ncbi-vdb.kfg $(PROFILE_FILE).sh $(PROFILE_FILE).csh
+ifneq (true, $(LINUX_ROOT))
+    TO_UNINSTALL += $(LIB_TARGET)/ncbi/ncbi-vdb.kfg $(LIB_TARGET)/ncbi/default.kfg
+endif
+TO_UNINSTALL_AS_ROOT = $(INCLUDE_SYMLINK) $(KONFIG_DIR)/ncbi-vdb.kfg  $(KONFIG_DIR)/default.kfg $(PROFILE_FILE).sh $(PROFILE_FILE).csh
 
 uninstall:
 	@ echo "Uninstalling $(TO_UNINSTALL) ..."

@@ -297,7 +297,7 @@ int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
     if( ( p = mbedtls_calloc( 1, buflen ) ) == NULL )
         return( MBEDTLS_ERR_X509_ALLOC_FAILED );
 
-    memcpy( p, buf, buflen );
+    memmove( p, buf, buflen );
 
     crl->raw.p = p;
     crl->raw.len = buflen;

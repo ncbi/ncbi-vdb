@@ -37,7 +37,9 @@ struct KTLSStream;
 #include <klib/debug.h>
 #include <klib/log.h>
 #include <klib/text.h>
+#include <klib/namelist.h>
 #include <kproc/timeout.h>
+#include <kfg/config.h>
 
 #include <os-native.h>
 
@@ -65,13 +67,56 @@ struct KTLSStream;
 #include <mbedtls/error.h>
 #include <mbedtls/certs.h>
 
+static const char ca_crt_ncbi1 [] =
+    "-----BEGIN CERTIFICATE-----\r\n"
+    "MIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh\r\n"
+    "MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\r\n"
+    "d3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBD\r\n"
+    "QTAeFw0wNjExMTAwMDAwMDBaFw0zMTExMTAwMDAwMDBaMGExCzAJBgNVBAYTAlVT\r\n"
+    "MRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5j\r\n"
+    "b20xIDAeBgNVBAMTF0RpZ2lDZXJ0IEdsb2JhbCBSb290IENBMIIBIjANBgkqhkiG\r\n"
+    "9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4jvhEXLeqKTTo1eqUKKPC3eQyaKl7hLOllsB\r\n"
+    "CSDMAZOnTjC3U/dDxGkAV53ijSLdhwZAAIEJzs4bg7/fzTtxRuLWZscFs3YnFo97\r\n"
+    "nh6Vfe63SKMI2tavegw5BmV/Sl0fvBf4q77uKNd0f3p4mVmFaG5cIzJLv07A6Fpt\r\n"
+    "43C/dxC//AH2hdmoRBBYMql1GNXRor5H4idq9Joz+EkIYIvUX7Q6hL+hqkpMfT7P\r\n"
+    "T19sdl6gSzeRntwi5m3OFBqOasv+zbMUZBfHWymeMr/y7vrTC0LUq7dBMtoM1O/4\r\n"
+    "gdW7jVg/tRvoSSiicNoxBN33shbyTApOB6jtSj1etX+jkMOvJwIDAQABo2MwYTAO\r\n"
+    "BgNVHQ8BAf8EBAMCAYYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUA95QNVbR\r\n"
+    "TLtm8KPiGxvDl7I90VUwHwYDVR0jBBgwFoAUA95QNVbRTLtm8KPiGxvDl7I90VUw\r\n"
+    "DQYJKoZIhvcNAQEFBQADggEBAMucN6pIExIK+t1EnE9SsPTfrgT1eXkIoyQY/Esr\r\n"
+    "hMAtudXH/vTBH1jLuG2cenTnmCmrEbXjcKChzUyImZOMkXDiqw8cvpOp/2PV5Adg\r\n"
+    "06O/nVsJ8dWO41P0jmP6P6fbtGbfYmbW0W5BjfIttep3Sp+dWOIrWcBAI+0tKIJF\r\n"
+    "PnlUkiaY4IBIqDfv8NZ5YBberOgOzW6sRBc4L0na4UU+Krk2U886UAb3LujEV0ls\r\n"
+    "YSEY1QSteDwsOoBrp+uvFRTp2InBuThs4pFsiv9kuXclVzDAGySj4dzp30d8tbQk\r\n"
+    "CAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4wOTAeBggrBgEFBQcD\r\n"
+    "BAYIKwYBBQUHAwEGCCsGAQUFBwMDDBdEaWdpQ2VydCBHbG9iYWwgUm9vdCBDQQ==\r\n"
+    "-----END CERTIFICATE-----\r\n";
 
-/*****************************
- *******     NOTES     *******
-
-  6. update Windows syssock.c for RC
-
-*****************************/
+static const char ca_crt_ncbi2 [] =
+    "-----BEGIN CERTIFICATE-----\r\n"
+    "MIIDxTCCAq2gAwIBAgIQAqxcJmoLQJuPC3nyrkYldzANBgkqhkiG9w0BAQUFADBs\r\n"
+    "MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\r\n"
+    "d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBIaWdoIEFzc3VyYW5j\r\n"
+    "ZSBFViBSb290IENBMB4XDTA2MTExMDAwMDAwMFoXDTMxMTExMDAwMDAwMFowbDEL\r\n"
+    "MAkGA1UEBhMCVVMxFTATBgNVBAoTDERpZ2lDZXJ0IEluYzEZMBcGA1UECxMQd3d3\r\n"
+    "LmRpZ2ljZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgSGlnaCBBc3N1cmFuY2Ug\r\n"
+    "RVYgUm9vdCBDQTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMbM5XPm\r\n"
+    "+9S75S0tMqbf5YE/yc0lSbZxKsPVlDRnogocsF9ppkCxxLeyj9CYpKlBWTrT3JTW\r\n"
+    "PNt0OKRKzE0lgvdKpVMSOO7zSW1xkX5jtqumX8OkhPhPYlG++MXs2ziS4wblCJEM\r\n"
+    "xChBVfvLWokVfnHoNb9Ncgk9vjo4UFt3MRuNs8ckRZqnrG0AFFoEt7oT61EKmEFB\r\n"
+    "Ik5lYYeBQVCmeVyJ3hlKV9Uu5l0cUyx+mM0aBhakaHPQNAQTXKFx01p8VdteZOE3\r\n"
+    "hzBWBOURtCmAEvF5OYiiAhF8J2a3iLd48soKqDirCmTCv2ZdlYTBoSUeh10aUAsg\r\n"
+    "EsxBu24LUTi4S8sCAwEAAaNjMGEwDgYDVR0PAQH/BAQDAgGGMA8GA1UdEwEB/wQF\r\n"
+    "MAMBAf8wHQYDVR0OBBYEFLE+w2kD+L9HAdSYJhoIAu9jZCvDMB8GA1UdIwQYMBaA\r\n"
+    "FLE+w2kD+L9HAdSYJhoIAu9jZCvDMA0GCSqGSIb3DQEBBQUAA4IBAQAcGgaX3Nec\r\n"
+    "nzyIZgYIVyHbIUf4KmeqvxgydkAQV8GK83rZEWWONfqe/EW1ntlMMUu4kehDLI6z\r\n"
+    "eM7b41N5cdblIZQB2lWHmiRk9opmzN6cN82oNLFpmyPInngiK3BD41VHMWEZ71jF\r\n"
+    "hS9OMPagMRYjyOfiZRYzy78aG6A9+MpeizGLYAiJLQwGXFK3xPkKmNEVX58Svnw2\r\n"
+    "Yzi9RKR/5CYrCsSXaQ3pjOLAEFe4yHYSkVXySGnYvCoCWw9E1CAx2/S6cCZdkGCe\r\n"
+    "vEsXCS+0yx5DaMkHJ8HSXPfqIbloEpw8nL+e/IBcm2PN7EeqJSdnoDfzAIJ9VNep\r\n"
+    "+OkuE6N36B9KMEQwHgYIKwYBBQUHAwQGCCsGAQUFBwMBBggrBgEFBQcDAwwiRGln\r\n"
+    "aUNlcnQgSGlnaCBBc3N1cmFuY2UgRVYgUm9vdCBDQQ==\r\n"
+    "-----END CERTIFICATE-----\r\n";
 
 
 /*--------------------------------------------------------------------------
@@ -118,27 +163,216 @@ rc_t tlsg_seed_rng ( KTLSGlobals *self )
 }
 
 static 
-rc_t tlsg_init_certs ( KTLSGlobals *self )
+rc_t tlsg_init_certs ( KTLSGlobals *self, const KConfig * kfg )
 {
     int ret;
 
-    STATUS ( STAT_QA, "Loading the CA root certificate\n" );
+    rc_t rc = 0;
+    uint32_t nidx, num_certs = 0;
 
-    ret = mbedtls_x509_crt_parse ( &self -> cacert, (const unsigned char *) mbedtls_test_cas_pem,
-                                   mbedtls_test_cas_pem_len );
-    if ( ret < 0 )
-    {        
-        rc_t rc = RC ( rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed );
-        PLOGERR ( klogSys, ( klogSys, rc
-                             , "mbedtls_x509_crt_parse returned $(ret) ( $(expl) )"
-                             , "ret=%d,expl=%s"
-                             , ret
-                             , mbedtls_strerror2 ( ret )
-                      ) );
-        return rc;
+    static char * node_names [] =
+    {
+        "/tls/ca.crt",
+        "/tls/self-signed"
+    };
+
+    STATUS ( STAT_QA, "Loading CA root certificates\n" );
+
+    for ( nidx = 0; rc == 0 && nidx < sizeof node_names / sizeof node_names [ 0 ]; ++ nidx )
+    {
+        const KConfigNode * ca_crt;
+        const char * node_name = node_names [ nidx ];
+
+        rc = KConfigOpenNodeRead ( kfg, & ca_crt, "%s", node_name );
+        if ( rc != 0 )
+            rc = 0;
+        else
+        {
+            KNamelist * cert_names;
+
+            STATUS ( STAT_PRG, "Listing CA root certificates\n" );
+            rc = KConfigNodeListChildren ( ca_crt, & cert_names );
+            if ( rc != 0 )
+            {
+                rc = ResetRCContext ( rc, rcKrypto, rcToken, rcInitializing );
+                PLOGERR ( klogInt, ( klogInt, rc
+                                     , "failed to list config node '$(node)'"
+                                     , "node=%s"
+                                     , node_name
+                              ) );
+            }
+            else
+            {
+                uint32_t count;
+
+                STATUS ( STAT_GEEK, "Counting CA root certificates\n" );
+                rc = KNamelistCount ( cert_names, & count );
+                if ( rc != 0 )
+                {
+                    rc = ResetRCContext ( rc, rcKrypto, rcToken, rcInitializing );
+                    PLOGERR ( klogInt, ( klogInt, rc
+                                         , "failed to count names in config node '$(node)'"
+                                         , "node=%s"
+                                         , node_name
+                                  ) );
+                }
+                else
+                {
+                    uint32_t i;
+                    String * cert_string;
+                    const KConfigNode * root_cert;
+
+                    STATUS ( STAT_GEEK, "Found %u names in CA root certificates\n", count );
+                    STATUS ( STAT_PRG, "Retrieving names in CA root certificates\n" );
+                    for ( i = 0; i < count; ++ i )
+                    {
+                        const char * cert_name;
+
+                        STATUS ( STAT_GEEK, "Retrieving name %u in CA root certificates\n", i );
+                        rc = KNamelistGet ( cert_names, i, & cert_name );
+                        if ( rc != 0 )
+                        {
+                            rc = ResetRCContext ( rc, rcKrypto, rcToken, rcInitializing );
+                            PLOGERR ( klogInt, ( klogInt, rc
+                                                 , "failed to read cert $(idx) in config node '$(node)'"
+                                                 , "node=%s,idx=%u"
+                                                 , node_name
+                                                 , i
+                                          ) );
+                            break;
+                        }
+                        
+                        STATUS ( STAT_GEEK, "Retrieving node '%s' from CA root certificates\n", cert_name );
+                        rc = KConfigNodeOpenNodeRead ( ca_crt, & root_cert, "%s", cert_name );
+                        if ( rc != 0 )
+                        {
+                            rc = ResetRCContext ( rc, rcKrypto, rcToken, rcInitializing );
+                            PLOGERR ( klogInt, ( klogInt, rc
+                                                 , "failed to read node for cert '$(name)' in config node '$(node)'"
+                                                 , "node=%s,name=%s"
+                                                 , node_name
+                                                 , cert_name
+                                          ) );
+                            break;
+                        }
+                        
+                        STATUS ( STAT_GEEK, "Retrieving text for node '%s' from CA root certificates\n", cert_name );
+                        rc = KConfigNodeReadString ( root_cert, & cert_string );
+                        KConfigNodeRelease ( root_cert );
+                        
+                        if ( rc != 0 )
+                        {
+                            rc = ResetRCContext ( rc, rcKrypto, rcToken, rcInitializing );
+                            PLOGERR ( klogInt, ( klogInt, rc
+                                                 , "failed to read node text for cert '$(name)' in config node '$(node)'"
+                                                 , "node=%s,name=%s"
+                                                 , node_name
+                                                 , cert_name
+                                          ) );
+                            break;
+                        }
+
+
+                        /* these guys take a length, so presumably the string is not NUL terminated.
+                           yet, the first thing they do is see if the NUL is included in the length! */
+                        STATUS ( STAT_GEEK, "Parsing text for node '%s' from CA root certificates\n", cert_name );
+                        ret = mbedtls_x509_crt_parse ( &self -> cacert,
+                            ( const unsigned char * ) cert_string -> addr, cert_string -> size + 1 );
+                    
+                        StringWhack ( cert_string );
+                    
+                        if ( ret < 0 )
+                        {        
+                            rc = RC ( rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed );
+                            PLOGERR ( klogSys, ( klogSys, rc
+                                                 , "mbedtls_x509_crt_parse returned $(ret) ( $(expl) )"
+                                                 , "ret=%d,expl=%s"
+                                                 , ret
+                                                 , mbedtls_strerror2 ( ret )
+                                          ) );
+                            break;
+                        }
+                        
+                        ++ num_certs;
+                    }
+                }
+            
+                KNamelistRelease ( cert_names );
+            }
+
+            KConfigNodeRelease ( ca_crt );
+        }
     }
-   
-    return 0;
+
+#if _DEBUGGING
+    {
+        const KConfigNode * ca_crt;
+        rc_t rc2 = KConfigOpenNodeRead ( kfg, & ca_crt, "/tls/path/ca.crt" );
+        if ( rc2 == 0 )
+        {
+            String * ca_crt_path;
+            STATUS ( STAT_GEEK, "Retrieving path to CA root certificate file\n" );
+            rc2 = KConfigNodeReadString ( ca_crt, & ca_crt_path );
+            if ( rc2 == 0 )
+            {
+                STATUS ( STAT_GEEK, "Parsing text from CA root certificate file '%S'\n", ca_crt_path );
+                ret = mbedtls_x509_crt_parse_file ( &self -> cacert, ca_crt_path -> addr );
+                if ( ret < 0 )
+                {
+                    PLOGMSG ( klogWarn, ( klogWarn
+                                          , "mbedtls_x509_crt_parse_file ( '$(path)' ) returned $(ret) ( $(expl) )"
+                                          , "ret=%d,expl=%s,path=%S"
+                                          , ret
+                                          , mbedtls_strerror2 ( ret )
+                                          , ca_crt_path
+                                  ) );
+                }                
+                StringWhack ( ca_crt_path );
+            }
+            KConfigNodeRelease ( ca_crt );
+        }
+    }
+#endif
+
+    if ( num_certs == 0 )
+    {
+        STATUS ( STAT_QA, "Parsing text for default CA root certificates\n" );
+        ret = mbedtls_x509_crt_parse ( &self -> cacert,
+            ( const unsigned char * ) ca_crt_ncbi1, sizeof ca_crt_ncbi1 );
+                    
+        if ( ret < 0 )
+        {        
+            rc = RC ( rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed );
+            PLOGERR ( klogSys, ( klogSys, rc
+                                 , "mbedtls_x509_crt_parse returned $(ret) ( $(expl) )"
+                                 , "ret=%d,expl=%s"
+                                 , ret
+                                 , mbedtls_strerror2 ( ret )
+                          ) );
+        }
+        else
+        {
+            num_certs = 1;
+            
+            ret = mbedtls_x509_crt_parse ( &self -> cacert,
+                ( const unsigned char * ) ca_crt_ncbi2, sizeof ca_crt_ncbi2 );
+
+            if ( ret >= 0 )
+                ++ num_certs;
+            else
+            {
+                rc = RC ( rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed );
+                PLOGERR ( klogSys, ( klogSys, rc
+                                     , "mbedtls_x509_crt_parse returned $(ret) ( $(expl) )"
+                                     , "ret=%d,expl=%s"
+                                     , ret
+                                     , mbedtls_strerror2 ( ret )
+                              ) );
+            }
+        }
+    }
+
+    return num_certs == 0 ? rc : 0;
 }
 
 static
@@ -165,7 +399,7 @@ rc_t tlsg_setup ( KTLSGlobals * self )
         return rc;
     }
 
-    mbedtls_ssl_conf_authmode( &self -> config, MBEDTLS_SSL_VERIFY_NONE );
+    mbedtls_ssl_conf_authmode( &self -> config, MBEDTLS_SSL_VERIFY_REQUIRED );
     mbedtls_ssl_conf_ca_chain( &self -> config, &self -> cacert, NULL );
     mbedtls_ssl_conf_rng( &self -> config, mbedtls_ctr_drbg_random, &self -> ctr_drbg );
 
@@ -174,7 +408,7 @@ rc_t tlsg_setup ( KTLSGlobals * self )
 
 /* Init
  */
-rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg )
+rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, const KConfig * kfg )
 {
     rc_t rc;
 
@@ -186,7 +420,7 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg )
     rc = tlsg_seed_rng ( tlsg );
     if ( rc == 0 )
     {
-        rc = tlsg_init_certs ( tlsg );
+        rc = tlsg_init_certs ( tlsg, kfg );
         if ( rc == 0 )
             rc = tlsg_setup ( tlsg );
     }
@@ -594,7 +828,7 @@ rc_t ktls_ssl_setup ( KTLSStream *self, const String *host )
     {
         rc_t rc = RC ( rcKrypto, rcSocket, rcFormatting, rcEncryption, rcFailed );
         PLOGERR ( klogSys, ( klogSys, rc
-                             , "mbedtls_ctr_drbg_seed returned $(ret) ( $(expl) )"
+                             , "mbedtls_ssl_set_hostname returned $(ret) ( $(expl) )"
                              , "ret=%d,expl=%s"
                              , ret
                              , mbedtls_strerror2 ( ret )
@@ -622,12 +856,31 @@ rc_t ktls_handshake ( KTLSStream *self )
              ret != MBEDTLS_ERR_SSL_WANT_WRITE )
         {
             rc_t rc = RC ( rcKrypto, rcSocket, rcOpening, rcConnection, rcFailed );
+
             PLOGERR ( klogSys, ( klogSys, rc
                                  , "mbedtls_ssl_handshake returned $(ret) ( $(expl) )"
                                  , "ret=%d,expl=%s"
                                  , ret
                                  , mbedtls_strerror2 ( ret )
                           ) );
+
+            if ( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED )
+            {
+                uint32_t flags = mbedtls_ssl_get_verify_result( &self -> ssl );
+                if ( flags != 0 )
+                {
+                    char buf [ 4096 ];
+                    mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), " !! ", flags );
+
+                    PLOGMSG ( klogSys, ( klogSys
+                                         , "mbedtls_ssl_get_verify_result returned $(flags) ( $(info) )"
+                                         , "flags=0x%X,info=%s"
+                                         , flags
+                                         , buf
+                                  ) );
+                }
+            }
+
             return rc;
         }
         ret = mbedtls_ssl_handshake( &self -> ssl );
@@ -765,7 +1018,7 @@ LIB_EXPORT rc_t CC KTLSStreamRelease ( const KTLSStream * self )
  */
 LIB_EXPORT rc_t CC KTLSStreamVerifyCACert ( const KTLSStream * self )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
    STATUS ( STAT_QA, "Verifying peer X.509 certificate..." );
    
@@ -776,20 +1029,19 @@ LIB_EXPORT rc_t CC KTLSStreamVerifyCACert ( const KTLSStream * self )
        uint32_t flags = mbedtls_ssl_get_verify_result( &self -> ssl );
        if ( flags != 0 )
        {
-           char buf [ 512 ];
+           char buf [ 4096 ];
            rc_t rc = RC ( rcKrypto, rcToken, rcValidating, rcEncryption, rcFailed );
 
            mbedtls_x509_crt_verify_info ( buf, sizeof( buf ), "  ! ", flags );        
 
            PLOGERR ( klogSys, ( klogSys, rc
-                                , "mbedtls_ctr_drbg_seed returned $(ret) ( $(expl) )"
-                                , "buffer=%s"
-                                , &buf
+                                , "mbedtls_ssl_get_verify_result returned $(flags) ( $(info) )"
+                                , "flags=0x%X,info=%s"
+                                , flags
+                                , buf
                          ) );
            return rc;
        }
-       
-       rc = 0;
    }
    
    return rc;

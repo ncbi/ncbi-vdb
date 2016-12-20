@@ -849,7 +849,7 @@ static int64_t decode_base64string (const uint8_t* str, size_t len)
  * byte is either 0x80 for a positive number or 0xFF for a negative number.
  */
 
-static int64_t tar_strtoll (const uint8_t * str, size_t len)
+static int64_t tar_strtoll ( const uint8_t * str, size_t len, bool silent )
 {
     int64_t	result = 0;
     bool negative = false;
@@ -861,7 +861,7 @@ static int64_t tar_strtoll (const uint8_t * str, size_t len)
      */
     if ( len >= sizeof temp_buff )
         len = sizeof temp_buff - 1;
-    memcpy (temp_buff, str, len);
+    memmove (temp_buff, str, len);
     temp_buff[ len ] = 0x00;
 
     /* -----
@@ -927,15 +927,16 @@ static int64_t tar_strtoll (const uint8_t * str, size_t len)
         TAR_DEBUG (("%s: unknown integer storage type %c%c%c%c%c%c%c%c\n",
                     temp_buff[0],temp_buff[1],temp_buff[2],temp_buff[3],
                     temp_buff[4],temp_buff[5],temp_buff[6],temp_buff[7]));
-        PLOGMSG (klogErr, (klogErr, "unknown integer storage type $(B0)$(B1)$(B2)$(B3)$(B4)$(B5)$(B6)$(B7)",
+        if ( ! silent ) {
+            PLOGMSG (klogErr, (klogErr, "unknown integer storage type "
+                                     "$(B0)$(B1)$(B2)$(B3)$(B4)$(B5)$(B6)$(B7)",
                            "B0=%c,B1=%c,B2=%c,B3=%c,B4=%c,B5=%c,B6=%c,B7=%c",
                            temp_buff[0],temp_buff[1],temp_buff[2],temp_buff[3],
                            temp_buff[4],temp_buff[5],temp_buff[6],temp_buff[7]));
+        }
     }
     return result;
 }
-
-
 
 /* ======================================================================
  * tar_header_type
@@ -1789,10 +1790,12 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
                 for (ix = 0; ix< GNU_SPARSES_IN_EXTRA_HEADER; ++ix)
                 {
                     rc_t ret;
-                    of = tar_strtoll((const uint8_t*)current_header.h->sparse.sparse[ix].offset,
-                                     TAR_SIZE_LEN);
-                    sz = tar_strtoll((const uint8_t*)current_header.h->sparse.sparse[ix].num_bytes,
-                                     TAR_SIZE_LEN);
+                    of = tar_strtoll(
+                     (const uint8_t*)current_header.h->sparse.sparse[ix].offset,
+                                     TAR_SIZE_LEN, silent);
+                    sz = tar_strtoll(
+                  (const uint8_t*)current_header.h->sparse.sparse[ix].num_bytes,
+                                     TAR_SIZE_LEN, silent);
                     if (sz == 0)
                     {
                         break;
@@ -1848,13 +1851,18 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
              *
              * this will be wrong if we ever support cpio...
              */
-            data_size = (uint64_t)(tar_strtoll((uint8_t*)current_header.h->tar.size,TAR_SIZE_LEN));
+            data_size = (uint64_t) ( tar_strtoll
+                ( (uint8_t*)current_header.h->tar.size,TAR_SIZE_LEN, silent ) );
 #if _DEBUGGING && 0
-            uid =  (tar_strtoll((uint8_t*)current_header.h->tar.uid,TAR_ID_LEN));
-            gid =  (tar_strtoll((uint8_t*)current_header.h->tar.gid,TAR_ID_LEN));
+            uid =  ( tar_strtoll
+                ( (uint8_t*)current_header.h->tar.uid,TAR_ID_LEN, silent ) );
+            gid =  ( tar_strtoll
+                ( (uint8_t*)current_header.h->tar.gid,TAR_ID_LEN, silent ) );
 #endif
-            mtime = (tar_strtoll((uint8_t*)current_header.h->tar.mtime,TAR_TIME_LEN));
-            mode = (uint32_t)(tar_strtoll((uint8_t*)current_header.h->tar.mode,TAR_MODE_LEN));
+            mtime = ( tar_strtoll
+                ( (uint8_t*)current_header.h->tar.mtime,TAR_TIME_LEN, silent) );
+            mode = (uint32_t) ( tar_strtoll
+                ( (uint8_t*)current_header.h->tar.mode,TAR_MODE_LEN, silent) );
         }
 
         /* -----
@@ -1946,14 +1954,18 @@ uint64_t process_one_entry (KTarState * self, uint64_t offset, uint64_t hard_lim
                 int32_t ix;
                 rc_t	ret;
 
-                virtual_data_size = (uint64_t)(tar_strtoll((uint8_t*)current_header.h->gnu_89.realsize,TAR_SIZE_LEN));
+                virtual_data_size = (uint64_t)(tar_strtoll(
+                    (uint8_t*)current_header.h->gnu_89.realsize,TAR_SIZE_LEN,
+                    silent));
 
                 for (ix = 0; ix< GNU_SPARSES_IN_OLD_HEADER; ++ix)
                 {
-                    uint64_t soffset = tar_strtoll((const uint8_t*)current_header.h->gnu_89.sparse[ix].offset,
-                                                   TAR_SIZE_LEN);
-                    uint64_t ssize = tar_strtoll((const uint8_t*)current_header.h->gnu_89.sparse[ix].num_bytes,
-                                                 TAR_SIZE_LEN);
+                    uint64_t soffset = tar_strtoll(
+                     (const uint8_t*)current_header.h->gnu_89.sparse[ix].offset,
+                                                   TAR_SIZE_LEN, silent);
+                    uint64_t ssize = tar_strtoll(
+                  (const uint8_t*)current_header.h->gnu_89.sparse[ix].num_bytes,
+                                                 TAR_SIZE_LEN, silent);
                     if (ssize == 0)
                     {
                         break;

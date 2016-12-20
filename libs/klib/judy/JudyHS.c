@@ -5,7 +5,7 @@
 //   email - doug@sourcejudy.com -or- dougbaskins@yahoo.com
 //=======================================================================
 
-#include <string.h>                     // for memcmp(), memcpy()
+#include <string.h>                     // for memcmp(), memmove()
 
 #include <Judy.h>                       // for JudyL* routines/macros
 
@@ -355,7 +355,7 @@ insStrJudyLTree(uint8_t * String,      // string to add to tree of JudyL arrays
                 return (PPJERR);
             }
             Pls->ls_Value = 0;                          // clear Value word
-            memcpy(Pls->ls_String, String, Len);        // copy to new struct
+            memmove(Pls->ls_String, String, Len);        // copy to new struct
             *PPValue = (Pvoid_t)SET_PLS(Pls);           // mark pointer
             return ((PPvoid_t) (&Pls->ls_Value));       // return ^ to Value
         }                                               // no exit here

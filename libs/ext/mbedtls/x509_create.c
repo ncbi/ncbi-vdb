@@ -175,7 +175,7 @@ int mbedtls_x509_set_extension( mbedtls_asn1_named_data **head, const char *oid,
     }
 
     cur->val.p[0] = critical;
-    memcpy( cur->val.p + 1, val, val_len );
+    memmove( cur->val.p + 1, val, val_len );
 
     return( 0 );
 }
@@ -264,7 +264,7 @@ int mbedtls_x509_write_sig( unsigned char **p, unsigned char *start,
 
     len = size;
     (*p) -= len;
-    memcpy( *p, sig, len );
+    memmove( *p, sig, len );
 
     if( *p - start < 1 )
         return( MBEDTLS_ERR_ASN1_BUF_TOO_SMALL );

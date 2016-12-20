@@ -348,7 +348,7 @@ static rc_t KSocketGetEndpointV6 ( const KSocket * self, KEndPoint * ep, bool re
     else
     {
         /* the remote part was already recorded through calling accept() */
-        memcpy ( ep -> u . ipv6 . addr,
+        memmove ( ep -> u . ipv6 . addr,
                  self -> remote_addr . v6 . sin6_addr . s6_addr,
                  sizeof ( ep -> u . ipv6 . addr ) );
         ep->u.ipv6.port = ntohs( self -> remote_addr . v6 . sin6_port );
@@ -358,7 +358,7 @@ static rc_t KSocketGetEndpointV6 ( const KSocket * self, KEndPoint * ep, bool re
 
     if ( res == 0 )
     {
-        memcpy ( ep -> u . ipv6 . addr,
+        memmove ( ep -> u . ipv6 . addr,
                  addr . sin6_addr . s6_addr,
                  sizeof ( ep -> u . ipv6 . addr ) );
         ep->u.ipv6.port = ntohs( addr . sin6_port );
@@ -896,7 +896,7 @@ rc_t KSocketConnectIPv6 ( KSocket *self, const KEndPoint *from, const KEndPoint 
     if ( from != NULL )
     {
         ss_from . sin6_family = AF_INET6;
-        memcpy ( ss_from . sin6_addr . s6_addr,
+        memmove ( ss_from . sin6_addr . s6_addr,
                  from -> u . ipv6 . addr,
                  sizeof ( from -> u . ipv6 . addr ) );
         ss_from . sin6_port = htons ( from -> u . ipv6 . port );
@@ -904,7 +904,7 @@ rc_t KSocketConnectIPv6 ( KSocket *self, const KEndPoint *from, const KEndPoint 
 
     memset ( & ss_to, 0, sizeof ss_to );
     ss_to . sin6_family = AF_INET6;
-    memcpy ( ss_to . sin6_addr . s6_addr,
+    memmove ( ss_to . sin6_addr . s6_addr,
              to -> u . ipv6 . addr,
              sizeof ( to -> u . ipv6 . addr ) );
     ss_to . sin6_port = htons ( to -> u . ipv6 . port );
@@ -1032,6 +1032,7 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                             uint32_t remaining, delay;
 
                             /* try to connect using appropriate protocol */
+                            conn -> type = to -> type;
                             switch ( to -> type )
                             {
                             case epIPV4:
@@ -1126,7 +1127,7 @@ rc_t KNSManagerMakeIPv6Listener ( KSocket *listener, const KEndPoint * ep )
         memset ( & ss, 0, sizeof ss );
         ss . sin6_family = AF_INET6;
 
-        memcpy ( ss . sin6_addr . s6_addr,
+        memmove ( ss . sin6_addr . s6_addr,
                  ep -> u . ipv6 . addr,
                  sizeof ( ep -> u . ipv6 . addr ) );
 

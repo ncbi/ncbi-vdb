@@ -1440,8 +1440,16 @@ rc_t VFSManagerOpenDirectoryReadHttp (const VFSManager *self,
                 sizeof extension - 1,
                 extension, sizeof extension - 1, sizeof extension - 1 ) != 0 )
         {
-            PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(U)'",
-                             "U=%S:%S", & path -> scheme, & s ) );
+          const String * p = NULL;
+          rc_t rc = VPathMakeString ( path, & p );
+          if ( rc == 0 ) {
+                PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(path)'",
+                                       "path=%S", p ) );
+                free (  ( void * ) p );
+          } else {
+            PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(scheme):$(path)'",
+                             "scheme=%S,path=%S", & path -> scheme, s ) );
+          }
         }
     }
     else
@@ -1517,7 +1525,7 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
             if ( high_reliability )
             {
                 PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(U)'",
-                                     "U=%s", uri->addr ) );
+                                     "U=%S", uri ) );
             }
         }
         else
@@ -2466,6 +2474,8 @@ LIB_EXPORT rc_t CC VFSManagerGetResolver ( const VFSManager * self, struct VReso
     {
         if ( self == NULL )
             rc = RC (rcVFS, rcMgr, rcAccessing, rcSelf, rcNull);
+        else if ( self -> resolver == NULL )
+            rc = RC ( rcVFS, rcMgr, rcAccessing, rcResolver, rcNull );
         else
         {
             rc = VResolverAddRef ( self -> resolver );
@@ -2670,9 +2680,9 @@ LIB_EXPORT rc_t CC VFSManagerUpdateKryptoPassword (const VFSManager * self,
 /*                 bool save_old_password; */
                 char * pc;
 
-                memcpy (password_dir, old_password_file, old_password_file_size);
-                memcpy (new_password_file, old_password_file, old_password_file_size);
-                memcpy (new_password_file + old_password_file_size, temp_extension, sizeof temp_extension);
+                memmove (password_dir, old_password_file, old_password_file_size);
+                memmove (new_password_file, old_password_file, old_password_file_size);
+                memmove (new_password_file + old_password_file_size, temp_extension, sizeof temp_extension);
                 /* new_password_file_size = old_password_file_size + sizeof temp_extension - 1; */
 
                 pc = string_rchr (password_dir, old_password_file_size, '/');

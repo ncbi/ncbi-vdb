@@ -131,7 +131,7 @@ LIB_EXPORT rc_t CC SRACacheElementMake(SRACacheElement**        self,
         
             (*self)->key = key;
         
-            memcpy(&(*self)->metrics, metrics, sizeof((*self)->metrics));
+            memmove(&(*self)->metrics, metrics, sizeof((*self)->metrics));
         }
     }
         
@@ -275,7 +275,7 @@ LIB_EXPORT rc_t CC SRACacheGetSoftThreshold(SRACache* self, SRACacheMetrics* met
         return RC( rcSRA, rcData, rcAccessing, rcSelf, rcNull );
     if (metrics == NULL)
         return RC( rcSRA, rcData, rcAccessing, rcParam, rcNull );
-    memcpy(metrics, &self->softThreshold, sizeof(self->softThreshold));
+    memmove(metrics, &self->softThreshold, sizeof(self->softThreshold));
     return 0;
 }
 
@@ -285,7 +285,7 @@ LIB_EXPORT rc_t CC SRACacheSetSoftThreshold(SRACache* self, const SRACacheMetric
         return RC( rcSRA, rcData, rcUpdating, rcSelf, rcNull );
     if (metrics == NULL)
         return RC( rcSRA, rcData, rcUpdating, rcParam, rcNull );
-    memcpy(&self->softThreshold, metrics, sizeof(self->softThreshold));
+    memmove(&self->softThreshold, metrics, sizeof(self->softThreshold));
     return 0;
 }
 
@@ -295,7 +295,7 @@ LIB_EXPORT rc_t CC SRACacheGetHardThreshold(SRACache* self, SRACacheMetrics* met
         return RC( rcSRA, rcData, rcAccessing, rcSelf, rcNull );
     if (metrics == NULL)
         return RC( rcSRA, rcData, rcAccessing, rcParam, rcNull );
-    memcpy(metrics, &self->hardThreshold, sizeof(self->hardThreshold));
+    memmove(metrics, &self->hardThreshold, sizeof(self->hardThreshold));
     return 0;
 }
 
@@ -305,7 +305,7 @@ LIB_EXPORT rc_t CC SRACacheSetHardThreshold(SRACache* self, const SRACacheMetric
         return RC( rcSRA, rcData, rcUpdating, rcSelf, rcNull );
     if (metrics == NULL)
         return RC( rcSRA, rcData, rcUpdating, rcParam, rcNull );
-    memcpy(&self->hardThreshold, metrics, sizeof(self->hardThreshold));
+    memmove(&self->hardThreshold, metrics, sizeof(self->hardThreshold));
     return 0;
 }
 

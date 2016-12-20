@@ -140,10 +140,12 @@ struct NGS_String* NGS_AlignmentGetMateReferenceSpec( NGS_Alignment* self, ctx_t
 
 bool NGS_AlignmentGetMateIsReversedOrientation( NGS_Alignment* self, ctx_t ctx );
 
+bool NGS_AlignmentIsFirst ( NGS_Alignment* self, ctx_t ctx );
+
 /*--------------------------------------------------------------------------
  * NGS_AlignmentIterator
  */
- 
+
 bool NGS_AlignmentIteratorNext ( NGS_Alignment* self, ctx_t ctx );
 
 /*--------------------------------------------------------------------------
@@ -185,6 +187,7 @@ struct NGS_Alignment_vt
     NGS_ALIGNMENT*          ( * getMateAlignment )              ( NGS_ALIGNMENT* self, ctx_t ctx );
     struct NGS_String*      ( * getMateReferenceSpec )          ( NGS_ALIGNMENT* self, ctx_t ctx );
     bool                    ( * getMateIsReversedOrientation )  ( NGS_ALIGNMENT* self, ctx_t ctx );
+    bool                    ( * isFirst )                       ( NGS_ALIGNMENT* self, ctx_t ctx );
 
     /* Iterator */
     bool                    ( * next )                          ( NGS_ALIGNMENT* self, ctx_t ctx );

@@ -548,6 +548,18 @@ bool CSRA1_ReferenceWindowGetMateIsReversedOrientation( CSRA1_ReferenceWindow* s
     return false;
 }
 
+static
+bool CSRA1_ReferenceWindowIsFirst( CSRA1_ReferenceWindow* self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+
+    TRY ( NGS_Alignment* ref = GetAlignment ( self, ctx ) )
+    {
+        return NGS_AlignmentIsFirst ( ref, ctx );
+    }
+    return false;
+}
+
 /*--------------------------------------------------------------------------
  * Iterator
  */
@@ -797,7 +809,7 @@ void LoadAlignments ( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t chunk_row_
     {
         ON_FAIL ( LoadAlignmentIndex ( self, ctx, chunk_row_id, reference_SECONDARY_ALIGNMENT_IDS, & secondary_idx, & secondary_idx_end ) )
         {
-            if ( GetRCObject ( ctx -> rc ) == (int)rcColumn && GetRCState ( ctx -> rc ) == rcNotFound )
+            if ( GetRCObject ( ctx -> rc ) == ( enum RCObject )rcColumn && GetRCState ( ctx -> rc ) == rcNotFound )
             {   /* SECONDARY_ALIGNMENT_IDS is missing; no problem */
                 self -> secondary = false; /* do not try anymore */
                 CLEAR();
@@ -977,6 +989,7 @@ static NGS_Alignment_vt CSRA1_ReferenceWindow_vt_inst =
     CSRA1_ReferenceWindowGetMateAlignment,
     CSRA1_ReferenceWindowGetMateReferenceSpec,
     CSRA1_ReferenceWindowGetMateIsReversedOrientation,
+    CSRA1_ReferenceWindowIsFirst,
 
     /* Iterator */
     CSRA1_ReferenceWindowIteratorNext

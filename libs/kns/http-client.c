@@ -23,6 +23,7 @@
 * ==============================================================================
 *
 */
+
 #include <kns/extern.h>
 
 #define KSTREAM_IMPL KClientHttpStream
@@ -32,6 +33,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 #include <kns/http.h>
 #include <kns/adapt.h>
 #include <kns/endpoint.h>
+#include <kns/http-priv.h> /* KClientHttpResultFormatMsg */
 #include <kns/socket.h>
 #include <kns/stream.h>
 #include <kns/tls.h>
@@ -1445,7 +1447,7 @@ rc_t CC KClientHttpStreamTimedRead ( const KClientHttpStream *cself,
         buf = ( char * ) http -> block_buffer . base;
 
         /* copy data into the user buffer from the offset of bytes not yet read */
-        memcpy ( buffer, & buf [ http -> block_read ], num_to_read );
+        memmove ( buffer, & buf [ http -> block_read ], num_to_read );
 
         /* update the amount read */
         http -> block_read += num_to_read;
@@ -2896,20 +2898,99 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddPostParam ( KClientHttpRequest *self, co
 }
 
 
-static
-rc_t KClientHttpRequestFormatMsg ( KClientHttpRequest *self,
+LIB_EXPORT rc_t CC KClientHttpResultFormatMsg (
+    const struct KClientHttpResult * self, char * buffer,
+    size_t bsize, size_t * len, const char * bol, const char * eol )
+{
+    rc_t rc = 0;
+    size_t total = 0;
+
+    if ( self == NULL ) {
+        return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
+    }
+
+    if ( len == NULL || bol == NULL || eol == NULL ) {
+        return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
+    }
+
+    rc = string_printf ( buffer, bsize, len, 
+            "%sHTTP/%.2V %d %S%s", bol
+            , self -> version
+            , self -> status
+            , & self -> msg, eol
+        );
+    total = * len;
+
+    if ( rc == 0 ||
+        ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
+          GetRCState ( rc ) == rcInsufficient ) )
+    {
+        const KHttpHeader * node = NULL;
+        for ( node = ( const KHttpHeader* ) BSTreeFirst ( & self -> hdrs );
+              node != NULL;
+              node = ( const KHttpHeader* ) BSTNodeNext ( & node -> dad ) )
+        {
+            size_t p_bsize
+                = rc == 0
+                    ? bsize >= total ? bsize - total : 0
+                    : 0;
+            /* add header line */
+            rc_t r2 = string_printf ( & buffer [ total ], p_bsize, len,
+                             "%s%S: %S\r%s", bol
+                             , & node -> name
+                             , & node -> value, eol );
+            total += * len;
+            if ( rc == 0 ) {
+                rc = r2;
+            }
+        }
+    }
+
+    if ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
+        GetRCState ( rc ) == rcInsufficient )
+    {
+        ++ total;
+    }
+
+
+    * len = total;
+
+    return rc;
+}
+
+
+LIB_EXPORT
+rc_t CC KClientHttpRequestFormatMsg ( const KClientHttpRequest *self,
     char *buffer, size_t bsize, const char *method, size_t *len )
 {
     rc_t rc;
+    rc_t r2 = 0;
     bool have_user_agent = false;
     String user_agent_string;
     size_t total;
+    size_t p_bsize = 0;
     const KHttpHeader *node;
+    size_t dummy;
 
-    KClientHttp *http = self -> http;
+    const char * has_query = NULL;
+    String hostname;
+    KClientHttp * http = NULL;
+
+    if ( self == NULL ) {
+         return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
+    }
+    if ( buffer == NULL ) {
+         return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
+    }
+
+    if ( len == NULL ) {
+        len = & dummy;
+    }
+
+    http = self -> http;
 
     /* determine if there is a query */
-    const char *has_query = ( self -> url_block . query . size == 0 ) ? "" : "?";
+    has_query = ( self -> url_block . query . size == 0 ) ? "" : "?";
 
 
     /* there are 2 places where the can be a host name stored
@@ -2918,7 +2999,7 @@ rc_t KClientHttpRequestFormatMsg ( KClientHttpRequest *self,
        If that one is empty, we look at the http object for its
        host name.
        Error if both are empty */
-    String hostname = self -> url_block . host;
+    hostname = self -> url_block . host;
     if ( hostname . size == 0 )
     {
         hostname = http -> hostname;
@@ -2977,7 +3058,10 @@ rc_t KClientHttpRequestFormatMsg ( KClientHttpRequest *self,
     /* print all headers remaining into buffer */
     total = * len;
     for ( node = ( const KHttpHeader* ) BSTreeFirst ( & self -> hdrs );
-          rc == 0 && node != NULL;
+          ( rc == 0  ||
+            ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
+              GetRCState ( rc ) == rcInsufficient )
+          ) && node != NULL;
           node = ( const KHttpHeader* ) BSTNodeNext ( & node -> dad ) )
     {
         /* look for "User-Agent" */
@@ -2987,33 +3071,57 @@ rc_t KClientHttpRequestFormatMsg ( KClientHttpRequest *self,
                 have_user_agent = true;
         }
 
+        p_bsize = bsize >= total ? bsize - total : 0;
+
         /* add header line */
-        rc = string_printf ( & buffer [ total ], bsize - total, len,
+        r2 = string_printf ( & buffer [ total ], p_bsize, len,
                              "%S: %S\r\n"
                              , & node -> name
                              , & node -> value );
         total += * len;
+        if ( rc == 0 ) {
+            rc = r2;
+        }
     }
 
     /* add an User-Agent header from the kns-manager if we did not find one already in the header tree */
     if ( !have_user_agent )
     {
         const char * ua = NULL;
-        rc = KNSManagerGetUserAgent ( &ua );
-        if ( rc == 0 )
+        rc_t r3 = KNSManagerGetUserAgent ( &ua );
+        if ( r3 == 0 )
         {
-            rc = string_printf ( & buffer [ total ], bsize - total, len, "User-Agent: %s\r\n", ua );
+            p_bsize = bsize >= total ? bsize - total : 0;
+            r2 = string_printf ( & buffer [ total ],
+                p_bsize, len, "User-Agent: %s\r\n", ua );
             total += * len;
+            if ( rc == 0 ) {
+                rc = r2;
+            }
         }
     }
 
     /* add terminating empty header line */
-    if ( rc == 0 )
+    if ( rc == 0 ||
+        ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
+          GetRCState ( rc ) == rcInsufficient ) )
     {
-        rc = string_printf ( & buffer [ total ], bsize - total, len, "\r\n" );
-        * len += total;
+        p_bsize = bsize >= total ? bsize - total : 0;
+        r2 = string_printf ( & buffer [ total ], p_bsize, len, "\r\n" );
+        total += * len;
+        if ( rc == 0 ) {
+            rc = r2;
+        }
     }
     
+    if ( GetRCObject ( rc ) == ( enum RCObject ) rcBuffer &&
+        GetRCState ( rc ) == rcInsufficient )
+    {
+        ++ total;
+    }
+
+    * len = total;
+
     return rc;
 }
 
@@ -3280,7 +3388,7 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
         if (body != NULL && body -> base != NULL && body -> elem_count > 0 && 
                 len + body -> elem_count - 1 <= sizeof buffer) 
         {
-            memcpy(buffer + len, body -> base, body -> elem_count - 1);
+            memmove(buffer + len, body -> base, body -> elem_count - 1);
             len += body -> elem_count - 1;
             body = NULL;
         }

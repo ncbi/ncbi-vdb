@@ -859,6 +859,26 @@ bool CSRA1_AlignmentGetMateIsReversedOrientation( CSRA1_Alignment* self, ctx_t c
     return NGS_CursorGetBool ( GetCursor ( self ), ctx, self -> cur_row, align_MATE_REF_ORIENTATION);
 }
 
+bool CSRA1_AlignmentIsFirst( CSRA1_Alignment* self, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+    int32_t seq_read_id;
+
+    assert ( self );
+    if ( ! self -> seen_first )
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Alignment accessed before a call to AlignmentIteratorNext()" );
+        return false;
+    }
+
+    TRY ( seq_read_id = NGS_CursorGetInt64 ( GetCursor ( self ), ctx, self -> cur_row, align_SEQ_READ_ID ) )
+    {
+        return seq_read_id == 1;
+    }
+    return false;
+}
+
+
 /*--------------------------------------------------------------------------
  * NGS_AlignmentIterator
  */
@@ -1134,6 +1154,7 @@ static NGS_Alignment_vt CSRA1_Alignment_vt_inst =
     CSRA1_AlignmentGetMateAlignment,
     CSRA1_AlignmentGetMateReferenceSpec,
     CSRA1_AlignmentGetMateIsReversedOrientation,
+    CSRA1_AlignmentIsFirst,
 
     /* Iterator */
     CSRA1_AlignmentIteratorNext

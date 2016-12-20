@@ -51,7 +51,7 @@
 
 #define Self( obj ) \
     ( ( NGS_Alignment* ) ( obj ) )
-    
+
 static NGS_String_v1 * ITF_Alignment_v1_get_id ( const NGS_Alignment_v1 * self, NGS_ErrBlock_v1 * err )
 {
     HYBRID_FUNC_ENTRY ( rcSRA, rcRefcount, rcAccessing );
@@ -766,6 +766,20 @@ bool NGS_AlignmentGetMateIsReversedOrientation( NGS_Alignment* self, ctx_t ctx )
     return false;
 }
 
+bool NGS_AlignmentIsFirst ( NGS_Alignment* self, ctx_t ctx )
+{
+    if ( self == NULL )
+    {
+        FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+        INTERNAL_ERROR ( xcSelfNull, "NGS_AlignmentIsFirst failed" );
+    }
+    else
+    {
+        return VT ( self, isFirst ) ( self, ctx );
+    }
+    return false;
+}
+
 /*--------------------------------------------------------------------------
  * NGS_AlignmentIterator
  */
@@ -793,7 +807,7 @@ void NullAlignmentWhack ( NGS_Alignment * self, ctx_t ctx )
 {
 }
 
-static 
+static
 struct NGS_String * NullAlignment_FragmentToString ( NGS_Alignment * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -801,7 +815,7 @@ struct NGS_String * NullAlignment_FragmentToString ( NGS_Alignment * self, ctx_t
     return 0;
 }
 
-static 
+static
 struct NGS_String * NullAlignment_FragmentOffsetLenToString ( NGS_Alignment * self, ctx_t ctx, uint64_t offset, uint64_t length )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -809,7 +823,7 @@ struct NGS_String * NullAlignment_FragmentOffsetLenToString ( NGS_Alignment * se
     return 0;
 }
 
-static 
+static
 bool NullAlignment_FragmentToBool ( NGS_Alignment * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
@@ -818,14 +832,14 @@ bool NullAlignment_FragmentToBool ( NGS_Alignment * self, ctx_t ctx )
 }
 
 
-static int64_t NullAlignment_toI64 ( NGS_ALIGNMENT* self, ctx_t ctx ) 
+static int64_t NullAlignment_toI64 ( NGS_ALIGNMENT* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
     INTERNAL_ERROR ( xcSelfNull, "NULL Alignment accessed" );
     return 0;
 }
 
-static struct NGS_String* NullAlignment_toString ( NGS_ALIGNMENT* self, ctx_t ctx ) 
+static struct NGS_String* NullAlignment_toString ( NGS_ALIGNMENT* self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcDatabase, rcAccessing );
     INTERNAL_ERROR ( xcSelfNull, "NULL Alignment accessed" );
@@ -914,7 +928,7 @@ static NGS_Alignment_vt NullAlignment_vt_inst =
         NullAlignment_FragmentToBool,
         NullAlignment_FragmentToBool
     },
-    
+
     NullAlignment_toString,        /* getId                        */
     NullAlignment_toString,        /* getReferenceSpec             */
     NullAlignment_toInt,           /* getMappingQuality            */
@@ -940,6 +954,7 @@ static NGS_Alignment_vt NullAlignment_vt_inst =
     NullAlignment_toAlignment,     /* getMateAlignment             */
     NullAlignment_toString,        /* getMateReferenceSpec         */
     NullAlignment_toBool,          /* getMateIsReversedOrientation */
+    NullAlignment_toBool,          /* isFirst                      */
 
     /* Iterator */
     NullAlignment_noNext           /* next                         */

@@ -314,6 +314,8 @@ struct KConfig
     const char *magic_file_path;
     size_t magic_file_path_size;
 
+    bool disableFileLoadOnKfgCreating;
+
     bool dirty;
     bool initialized;
 };
@@ -1007,7 +1009,7 @@ LIB_EXPORT rc_t CC KConfigNodeRead ( const KConfigNode *self,
             if ( avail > bsize )
                 avail = bsize;
             if ( avail > 0 )
-                memcpy ( buffer, & self -> value . addr [ offset ], avail );
+                memmove ( buffer, & self -> value . addr [ offset ], avail );
             * num_read = avail;
             * remaining -= avail;
             return 0;
@@ -2287,7 +2289,7 @@ rc_t record_magic_path ( KConfig *self, const KDirectory *dir, const char *path,
             free ( (void*) self -> magic_file_path );
             self -> magic_file_path = magic_file_path;
             self -> magic_file_path_size = sz;
-            memcpy ( magic_file_path, buff, sz + 1 );
+            memmove ( magic_file_path, buff, sz + 1 );
         }
     }
 
@@ -3064,7 +3066,8 @@ rc_t KConfigFill ( KConfig * self, const KDirectory * cfgdir,
 
         add_aws_nodes ( self );
 
-        rc = load_config_files ( self, cfgdir, & ks, & loaded_from_dir );
+        if ( ! self -> disableFileLoadOnKfgCreating )
+            rc = load_config_files ( self, cfgdir, & ks, & loaded_from_dir );
 
         if ( rc == 0 ) {
          /* commit changes made to magic file nodes
@@ -3081,9 +3084,11 @@ extern rc_t ReportKfg ( const ReportFuncs *f, uint32_t indent,
     uint32_t configNodesSkipCount, va_list args );
 
 /* "cfg" [ OUT ] - return parameter for mgr
-   if ( "local" == true or cfgdir != NULL ) do not initialize G_kfg */
+   if ( "local" == true ) do not initialize G_kfg
+   if ( cfgdir != NULL ) then initialize G_kfg. It is used in unit tests */
 static
-rc_t KConfigMakeImpl(KConfig ** cfg, const KDirectory * cfgdir, bool local)
+rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
+    bool disableFileLoadOnKfgCreating )
 {
     rc_t rc;
     static const char * appname = NULL;
@@ -3102,7 +3107,8 @@ rc_t KConfigMakeImpl(KConfig ** cfg, const KDirectory * cfgdir, bool local)
         KConfig * mgr = NULL;
 
         if ( cfgdir != NULL ) {
-            local = true;
+            /* local = true; 
+            ALWAYS create and/or return a singleton object. */
         }
 
         if ( ! local ) {
@@ -3120,6 +3126,7 @@ rc_t KConfigMakeImpl(KConfig ** cfg, const KDirectory * cfgdir, bool local)
             rc = RC ( rcKFG, rcMgr, rcCreating, rcMemory, rcExhausted );
         else
         {
+            mgr -> disableFileLoadOnKfgCreating = disableFileLoadOnKfgCreating;
             rc = KConfigFill (mgr, cfgdir, appname, local);
 
             mgr -> initialized = true;
@@ -3155,14 +3162,6 @@ rc_t KConfigMakeImpl(KConfig ** cfg, const KDirectory * cfgdir, bool local)
     return rc;
 }
 
-/* call KConfigMake; do not initialize G_kfg */
-LIB_EXPORT
-rc_t CC KConfigMakeLocal(KConfig **cfg, const KDirectory *cfgdir)
-{
-    return KConfigMake(cfg, cfgdir);
-/*  return KConfigMakeImpl(cfg, cfgdir, true); */
-}
-
 /* Make
  *  create a process-global configuration manager
  *
@@ -3170,7 +3169,21 @@ rc_t CC KConfigMakeLocal(KConfig **cfg, const KDirectory *cfgdir)
  */
 LIB_EXPORT rc_t CC KConfigMake(KConfig **cfg, const KDirectory *cfgdir)
 {
-    return KConfigMakeImpl(cfg, cfgdir, false);
+    return KConfigMakeImpl(cfg, cfgdir, false, false);
+}
+
+/* call KConfigMake; do not initialize G_kfg */
+LIB_EXPORT
+rc_t CC KConfigMakeLocal(KConfig **cfg, const KDirectory *cfgdir)
+{
+    return KConfigMakeImpl(cfg, cfgdir, true, false);
+}
+
+/* call KConfigMake; do not load any file except user settings ( optionally ) */
+LIB_EXPORT
+rc_t CC KConfigMakeEmpty ( KConfig ** cfg )
+{
+    return KConfigMakeImpl ( cfg, NULL, false, true );
 }
 
 /*--------------------------------------------------------------------------

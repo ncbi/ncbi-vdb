@@ -214,7 +214,7 @@ int mbedtls_x509write_csr_der( mbedtls_x509write_csr *ctx, unsigned char *buf, s
                                         sig_oid, sig_oid_len, sig, sig_len ) );
 
     c2 -= len;
-    memcpy( c2, c, len );
+    memmove( c2, c, len );
 
     len += sig_and_oid_len;
     MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( &c2, buf, len ) );

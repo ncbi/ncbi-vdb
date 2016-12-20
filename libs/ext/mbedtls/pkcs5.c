@@ -186,7 +186,7 @@ int mbedtls_pkcs5_pbes2( const mbedtls_asn1_buf *pbe_params, int mode,
     mbedtls_md_init( &md_ctx );
     mbedtls_cipher_init( &cipher_ctx );
 
-    memcpy( iv, enc_scheme_params.p, enc_scheme_params.len );
+    memmove( iv, enc_scheme_params.p, enc_scheme_params.len );
 
     if( ( ret = mbedtls_md_setup( &md_ctx, md_info, 1 ) ) != 0 )
         goto exit;
@@ -250,7 +250,7 @@ int mbedtls_pkcs5_pbkdf2_hmac( mbedtls_md_context_t *ctx, const unsigned char *p
         if( ( ret = mbedtls_md_hmac_finish( ctx, work ) ) != 0 )
             return( ret );
 
-        memcpy( md1, work, md_size );
+        memmove( md1, work, md_size );
 
         for( i = 1; i < iteration_count; i++ )
         {
@@ -272,7 +272,7 @@ int mbedtls_pkcs5_pbkdf2_hmac( mbedtls_md_context_t *ctx, const unsigned char *p
         }
 
         use_len = ( key_length < md_size ) ? key_length : md_size;
-        memcpy( out_p, work, use_len );
+        memmove( out_p, work, use_len );
 
         key_length -= (uint32_t) use_len;
         out_p += use_len;

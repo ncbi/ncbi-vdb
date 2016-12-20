@@ -255,7 +255,7 @@ void mbedtls_sha256_update( mbedtls_sha256_context *ctx, const unsigned char *in
 
     if( left && ilen >= fill )
     {
-        memcpy( (void *) (ctx->buffer + left), input, fill );
+        memmove( (void *) (ctx->buffer + left), input, fill );
         mbedtls_sha256_process( ctx, ctx->buffer );
         input += fill;
         ilen  -= fill;
@@ -270,7 +270,7 @@ void mbedtls_sha256_update( mbedtls_sha256_context *ctx, const unsigned char *in
     }
 
     if( ilen > 0 )
-        memcpy( (void *) (ctx->buffer + left), input, ilen );
+        memmove( (void *) (ctx->buffer + left), input, ilen );
 }
 
 static const unsigned char sha256_padding[64] =

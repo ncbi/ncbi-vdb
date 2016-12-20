@@ -110,7 +110,7 @@ static void ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
     *p++ = (unsigned char)( ( hostname_len >> 8 ) & 0xFF );
     *p++ = (unsigned char)( ( hostname_len      ) & 0xFF );
 
-    memcpy( p, ssl->hostname, hostname_len );
+    memmove( p, ssl->hostname, hostname_len );
 
     *olen = hostname_len + 9;
 }
@@ -147,7 +147,7 @@ static void ssl_write_renegotiation_ext( mbedtls_ssl_context *ssl,
     *p++ = ( ssl->verify_data_len + 1 ) & 0xFF;
     *p++ = ssl->verify_data_len & 0xFF;
 
-    memcpy( p, ssl->own_verify_data, ssl->verify_data_len );
+    memmove( p, ssl->own_verify_data, ssl->verify_data_len );
 
     *olen = 5 + ssl->verify_data_len;
 }
@@ -398,7 +398,7 @@ static void ssl_write_ecjpake_kkpp_ext( mbedtls_ssl_context *ssl,
             return;
         }
 
-        memcpy( ssl->handshake->ecjpake_cache, p + 2, kkpp_len );
+        memmove( ssl->handshake->ecjpake_cache, p + 2, kkpp_len );
         ssl->handshake->ecjpake_cache_len = kkpp_len;
     }
     else
@@ -413,7 +413,7 @@ static void ssl_write_ecjpake_kkpp_ext( mbedtls_ssl_context *ssl,
             return;
         }
 
-        memcpy( p + 2, ssl->handshake->ecjpake_cache, kkpp_len );
+        memmove( p + 2, ssl->handshake->ecjpake_cache, kkpp_len );
     }
 
     *p++ = (unsigned char)( ( kkpp_len >> 8 ) & 0xFF );
@@ -595,7 +595,7 @@ static void ssl_write_session_ticket_ext( mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "sending session ticket of length %d", tlen ) );
 
-    memcpy( p, ssl->session_negotiate->ticket, tlen );
+    memmove( p, ssl->session_negotiate->ticket, tlen );
 
     *olen += tlen;
 }
@@ -645,7 +645,7 @@ static void ssl_write_alpn_ext( mbedtls_ssl_context *ssl,
     for( cur = ssl->conf->alpn_list; *cur != NULL; cur++ )
     {
         *p = (unsigned char)( strlen( *cur ) & 0xFF );
-        memcpy( p + 1, *cur, *p );
+        memmove( p + 1, *cur, *p );
         p += 1 + *p;
     }
 
@@ -760,7 +760,7 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
         return( ret );
     }
 
-    memcpy( p, ssl->handshake->randbytes, 32 );
+    memmove( p, ssl->handshake->randbytes, 32 );
     MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, random bytes", p, 32 );
     p += 32;
 
@@ -835,7 +835,7 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
                               ssl->handshake->verify_cookie_len );
 
             *p++ = ssl->handshake->verify_cookie_len;
-            memcpy( p, ssl->handshake->verify_cookie,
+            memmove( p, ssl->handshake->verify_cookie,
                        ssl->handshake->verify_cookie_len );
             p += ssl->handshake->verify_cookie_len;
         }
@@ -1364,7 +1364,7 @@ static int ssl_parse_hello_verify_request( mbedtls_ssl_context *ssl )
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     }
 
-    memcpy( ssl->handshake->verify_cookie, p, cookie_len );
+    memmove( ssl->handshake->verify_cookie, p, cookie_len );
     ssl->handshake->verify_cookie_len = cookie_len;
 
     /* Start over at ClientHello */
@@ -1500,7 +1500,7 @@ static int ssl_parse_server_hello( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, current time: %lu", t ) );
 #endif
 
-    memcpy( ssl->handshake->randbytes + 32, buf + 2, 32 );
+    memmove( ssl->handshake->randbytes + 32, buf + 2, 32 );
 
     n = buf[34];
 
@@ -1597,7 +1597,7 @@ static int ssl_parse_server_hello( mbedtls_ssl_context *ssl )
         ssl->session_negotiate->ciphersuite = i;
         ssl->session_negotiate->compression = comp;
         ssl->session_negotiate->id_len = n;
-        memcpy( ssl->session_negotiate->id, buf + 35, n );
+        memmove( ssl->session_negotiate->id, buf + 35, n );
     }
     else
     {
@@ -2823,7 +2823,7 @@ static int ssl_write_client_key_exchange( mbedtls_ssl_context *ssl )
         ssl->out_msg[i++] = (unsigned char)( n >> 8 );
         ssl->out_msg[i++] = (unsigned char)( n      );
 
-        memcpy( ssl->out_msg + i, ssl->conf->psk_identity, ssl->conf->psk_identity_len );
+        memmove( ssl->out_msg + i, ssl->conf->psk_identity, ssl->conf->psk_identity_len );
         i += ssl->conf->psk_identity_len;
 
 #if defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED)
@@ -3228,7 +3228,7 @@ static int ssl_parse_new_session_ticket( mbedtls_ssl_context *ssl )
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     }
 
-    memcpy( ticket, msg + 6, ticket_len );
+    memmove( ticket, msg + 6, ticket_len );
 
     ssl->session_negotiate->ticket = ticket;
     ssl->session_negotiate->ticket_len = ticket_len;

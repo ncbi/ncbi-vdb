@@ -797,6 +797,8 @@ static rc_t KListenerIPv4Accept ( KSocket * self, struct KSocket ** out )
         rc = RC ( rcNS, rcConnection, rcWaiting, rcMemory, rcExhausted );
     else
     {
+        new_socket -> type = epIPV4;
+
         new_socket -> read_timeout = self -> read_timeout;
         new_socket -> write_timeout = self -> write_timeout;
 
@@ -920,7 +922,7 @@ static rc_t KNSManagerMakeIPv6Listener ( const KNSManager *self, KSocket **out, 
 
                 memset ( & ss, 0, sizeof ss );
                 ss . sin6_family = AF_INET6;
-                memcpy ( ss . sin6_addr . s6_addr,
+                memmove ( ss . sin6_addr . s6_addr,
                          ep -> u . ipv6 . addr,
                          sizeof ( ep -> u . ipv6 . addr ) );
                 ss . sin6_port = htons ( ep -> u . ipv6 . port );
@@ -953,6 +955,8 @@ static rc_t KListenerIPv6Accept ( KSocket * self, struct KSocket ** out )
         rc = RC ( rcNS, rcConnection, rcWaiting, rcMemory, rcExhausted );
     else
     {
+        new_socket -> type = epIPV6;
+
         new_socket -> read_timeout = self -> read_timeout;
         new_socket -> write_timeout = self -> write_timeout;
 
@@ -1006,7 +1010,7 @@ static rc_t KSocketGetEndpointV6 ( const KSocket * self, KEndPoint * ep, bool re
     else
     {
         /* the remote part was already recorded through calling accept() */
-        memcpy ( ep -> u . ipv6 . addr,
+        memmove ( ep -> u . ipv6 . addr,
                  data -> remote_addr . sin6_addr . s6_addr,
                  sizeof ( ep -> u . ipv6 . addr ) );
         ep->u.ipv6.port = ntohs( data -> remote_addr . sin6_port );
@@ -1016,7 +1020,7 @@ static rc_t KSocketGetEndpointV6 ( const KSocket * self, KEndPoint * ep, bool re
 
     if ( res == 0 )
     {
-        memcpy ( ep -> u . ipv6 . addr,
+        memmove ( ep -> u . ipv6 . addr,
                  addr . sin6_addr . s6_addr,
                  sizeof ( ep -> u . ipv6 . addr ) );
         ep -> u.ipv6.port = ntohs( addr . sin6_port );
@@ -1800,7 +1804,7 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
     struct KSocket ** out, timeout_t * retryTimeout, int32_t readMillis, int32_t writeMillis,
     struct KEndPoint const * from, struct KEndPoint const * to )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( out == NULL )
         rc = RC ( rcNS, rcStream, rcConstructing, rcParam, rcNull );
@@ -1824,6 +1828,7 @@ KNS_EXTERN rc_t CC KNSManagerMakeRetryTimedConnection ( struct KNSManager const 
                 conn -> read_timeout = readMillis;
                 conn -> write_timeout = writeMillis;
 
+                conn -> type = to -> type;
                 switch ( to -> type )
                 {
                 case epIPV4:

@@ -66,20 +66,20 @@
 
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-static uint16_t LE2HUI16(void const *X) { uint16_t y; memcpy(&y, X, sizeof(y)); return y; }
-static uint32_t LE2HUI32(void const *X) { uint32_t y; memcpy(&y, X, sizeof(y)); return y; }
-static uint64_t LE2HUI64(void const *X) { uint64_t y; memcpy(&y, X, sizeof(y)); return y; }
-static  int16_t  LE2HI16(void const *X) {  int16_t y; memcpy(&y, X, sizeof(y)); return y; }
-static  int32_t  LE2HI32(void const *X) {  int32_t y; memcpy(&y, X, sizeof(y)); return y; }
-/* static  int64_t  LE2HI64(void const *X) {  int64_t y; memcpy(&y, X, sizeof(y)); return y; } */
+static uint16_t LE2HUI16(void const *X) { uint16_t y; memmove(&y, X, sizeof(y)); return y; }
+static uint32_t LE2HUI32(void const *X) { uint32_t y; memmove(&y, X, sizeof(y)); return y; }
+static uint64_t LE2HUI64(void const *X) { uint64_t y; memmove(&y, X, sizeof(y)); return y; }
+static  int16_t  LE2HI16(void const *X) {  int16_t y; memmove(&y, X, sizeof(y)); return y; }
+static  int32_t  LE2HI32(void const *X) {  int32_t y; memmove(&y, X, sizeof(y)); return y; }
+/* static  int64_t  LE2HI64(void const *X) {  int64_t y; memmove(&y, X, sizeof(y)); return y; } */
 #endif
 #if __BYTE_ORDER == __BIG_ENDIAN
-static uint16_t LE2HUI16(void const *X) { uint16_t y; memcpy(&y, X, sizeof(y)); return (uint16_t)bswap_16(y); }
-static uint32_t LE2HUI32(void const *X) { uint32_t y; memcpy(&y, X, sizeof(y)); return (uint32_t)bswap_32(y); }
-static uint64_t LE2HUI64(void const *X) { uint64_t y; memcpy(&y, X, sizeof(y)); return (uint64_t)bswap_64(y); }
-static  int16_t  LE2HI16(void const *X) {  int16_t y; memcpy(&y, X, sizeof(y)); return ( int16_t)bswap_16(y); }
-static  int32_t  LE2HI32(void const *X) {  int32_t y; memcpy(&y, X, sizeof(y)); return ( int32_t)bswap_32(y); }
-static  int64_t  LE2HI64(void const *X) {  int64_t y; memcpy(&y, X, sizeof(y)); return ( int64_t)bswap_64(y); }
+static uint16_t LE2HUI16(void const *X) { uint16_t y; memmove(&y, X, sizeof(y)); return (uint16_t)bswap_16(y); }
+static uint32_t LE2HUI32(void const *X) { uint32_t y; memmove(&y, X, sizeof(y)); return (uint32_t)bswap_32(y); }
+static uint64_t LE2HUI64(void const *X) { uint64_t y; memmove(&y, X, sizeof(y)); return (uint64_t)bswap_64(y); }
+static  int16_t  LE2HI16(void const *X) {  int16_t y; memmove(&y, X, sizeof(y)); return ( int16_t)bswap_16(y); }
+static  int32_t  LE2HI32(void const *X) {  int32_t y; memmove(&y, X, sizeof(y)); return ( int32_t)bswap_32(y); }
+static  int64_t  LE2HI64(void const *X) {  int64_t y; memmove(&y, X, sizeof(y)); return ( int64_t)bswap_64(y); }
 #endif
 
 typedef struct BAMIndex BAMIndex;
@@ -535,7 +535,7 @@ static rc_t BGZThreadFileRead(BGZThreadFile *self, zlib_block_t dst, unsigned *p
             
             self->pos = work.pos;
             if (work.buf) {
-                memcpy(dst, work.buf, *pNumRead = work.bsz);
+                memmove(dst, work.buf, *pNumRead = work.bsz);
                 memmove(&self->que[0], &self->que[1], --self->nque * sizeof(self->que[0]));
                 KConditionSignal(self->need_data);
             }
@@ -979,7 +979,7 @@ static rc_t BAMFileReadn(BAMFile *self, const unsigned len, uint8_t dst[/* len *
             n = self->bufSize - self->bufCurrent;
             if (cur + n > len)
                 n = len - cur;
-            memcpy(&dst[cur], &self->buffer[self->bufCurrent], n);
+            memmove(&dst[cur], &self->buffer[self->bufCurrent], n);
             self->bufCurrent += n;
         }
         if (self->bufCurrent != self->bufSize && self->bufSize != 0)
@@ -1229,7 +1229,7 @@ DONE:
                 x->species = rs.species;
                 if (rs.checksum) {
                     x->checksum = &x->checksum_array[0];
-                    memcpy(x->checksum_array, rs.checksum_array, 16);
+                    memmove(x->checksum_array, rs.checksum_array, 16);
                 }
                 else
                     x->checksum = NULL;
@@ -1526,12 +1526,12 @@ static rc_t ReadHeaders(BAMFile *self,
                 }
                 rdat = tmp;
             }
-            memcpy(rdat + rdsz, &i32, 4);
+            memmove(rdat + rdsz, &i32, 4);
             rdsz += 4;
             rc = BAMFileReadn(self, i32, &rdat[rdsz]); if (rc) goto BAILOUT;
             rdsz += i32;
             rc = BAMFileReadI32(self, &i32); if (rc) goto BAILOUT;
-            memcpy(rdat + rdsz, &i32, 4);
+            memmove(rdat + rdsz, &i32, 4);
             rdsz += 4;
         }
     }
@@ -1588,7 +1588,7 @@ static rc_t ProcessHeader(BAMFile *self, char const headerText[])
             free(rdat);
             return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
         }
-        memcpy(htxt, headerText, hlen + 1);
+        memmove(htxt, headerText, hlen + 1);
     }
     
     self->headerData2 = rdat;
@@ -1597,7 +1597,7 @@ static rc_t ProcessHeader(BAMFile *self, char const headerText[])
         self->headerData1 = malloc(hlen + 1);
         if (self->headerData1 == NULL)
             return RC(rcAlign, rcFile, rcConstructing, rcMemory, rcExhausted);
-        memcpy(self->headerData1, self->header, hlen + 1);
+        memmove(self->headerData1, self->header, hlen + 1);
     }
     else {
         htxt = malloc(1);
@@ -1621,11 +1621,11 @@ static rc_t ProcessHeader(BAMFile *self, char const headerText[])
             
             rs_by_name[i] = i;
             self->refSeq[i].id = i;
-            memcpy(&nlen, &self->headerData2[cp], 4);
+            memmove(&nlen, &self->headerData2[cp], 4);
             cp += 4;
             self->refSeq[i].name = (char const *)&self->headerData2[cp];
             cp += nlen;
-            memcpy(&rlen, &self->headerData2[cp], 4);
+            memmove(&rlen, &self->headerData2[cp], 4);
             self->headerData2[cp] = 0;
             cp += 4;
             self->refSeq[i].length = rlen;
@@ -2353,7 +2353,7 @@ rc_t BAMFileBreakLock(BAMFile *const self)
         if (self->bufLocker->storage == NULL)
             return RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
         
-        memcpy(self->bufLocker->storage, self->bufLocker->data, self->bufLocker->datasize);
+        memmove(self->bufLocker->storage, self->bufLocker->data, self->bufLocker->datasize);
         self->bufLocker->data = (bam_alignment *)&self->bufLocker->storage[0];
         self->bufLocker = NULL;
     }
@@ -3246,7 +3246,7 @@ static rc_t FormatSAMBuffer(BAMAlignment const *self,
     if (actsize > maxsize)
         return RC(rcAlign, rcReading, rcRow, rcBuffer, rcInsufficient);
 
-    memcpy(buffer, scratch, actsize);
+    memmove(buffer, scratch, actsize);
     return 0;
 }
 
@@ -3295,7 +3295,7 @@ static bool i_OptDataForEach(BAMAlignment const *cself, void *Ctx, char const ta
     ctx->val->type = type;
     ctx->val->element_count = (type == dt_CSTRING || type == dt_HEXSTRING) ? size - 1 : count;
     
-    memcpy(ctx->val->u.u8, value, size * count);
+    memmove(ctx->val->u.u8, value, size * count);
 #if __BYTE_ORDER == __BIG_ENDIAN
     {{
         unsigned di;
@@ -3582,7 +3582,7 @@ static unsigned splice(uint32_t cigar[], unsigned n, unsigned at, unsigned out, 
     assert(at + out <= n);
     memmove(&cigar[at + in], &cigar[at + out], (n - at - out) * 4);
     if (in)
-        memcpy(&cigar[at], new_values, in * 4);
+        memmove(&cigar[at], new_values, in * 4);
     return n + in - out;
 }
 
@@ -3762,7 +3762,7 @@ static unsigned GetCGCigar(BAMAlignment const *self, unsigned const N, uint32_t 
     if (N < n + 5)
         return RC(rcAlign, rcRow, rcReading, rcBuffer, rcInsufficient);
     
-    memcpy(cigar, getCigarBase(self), n * 4);
+    memmove(cigar, getCigarBase(self), n * 4);
     n = canonicalize(cigar, n); /* just in case */
     for (i = 0, S = 0; i < CG_NUM_SEGS - 1; ++i) {
         S += cg_segs[2*i];
@@ -4379,6 +4379,8 @@ LIB_EXPORT rc_t CC BAMFileSeek(const BAMFile *self, uint32_t refSeqId, uint64_t 
         /* start linear scan */
         BAMFileGetPosition(self, &rpos);
         rc = BAMFileGetAlignPosAtFilePos((BAMFile *)self, &rpos, &refSeq, &alignPos, &alignEndPos);
+        if ((int)GetRCObject(rc) == rcData && (int)GetRCState(rc) == rcInsufficient)
+            return RC(rcAlign, rcFile, rcPositioning, rcData, rcNotFound);
         if (rc) return rc;
         if (refSeq != refSeqId)
             return RC(rcAlign, rcFile, rcPositioning, rcData, rcNotFound);
@@ -4889,8 +4891,8 @@ static rc_t BAMValidate2(void *Ctx, const BGZFile *file,
                         for (i = 0, cp = refs_start; cp != data_start; ++i) {
                             int32_t len;
                             
-                            memcpy(&len, &ctx->buf[cp], 4);
-                            memcpy(&ctx->refLen[i], &ctx->buf[cp + 4 + len], 4);
+                            memmove(&len, &ctx->buf[cp], 4);
+                            memmove(&ctx->refLen[i], &ctx->buf[cp + 4 + len], 4);
                             cp += len + 8;
                         }
                     }

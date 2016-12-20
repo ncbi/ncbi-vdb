@@ -333,7 +333,7 @@ EMPTY_ITERATOR: {
                 slice->chunks = chunks;
                 slice->refID = self->cur;
                 if (chunks)
-                    memcpy(slice->chunk, chunk, chunks * sizeof(*chunk));
+                    memmove(slice->chunk, chunk, chunks * sizeof(*chunk));
 
                 free(slice);
 
@@ -627,8 +627,7 @@ static size_t ReadN(BAM_ReadCollection *self, ctx_t ctx, size_t const N, void *D
 
         if (avail_in) {
             size_t const copy = avail_out < avail_in ? avail_out : avail_in;
-
-            memcpy(dst + n, self->bambuffer + self->bam_cur, copy);
+            memmove(dst + n, self->bambuffer + self->bam_cur, copy);
             self->bam_cur += copy;
             n += copy;
             if (n == N)
@@ -647,7 +646,7 @@ static uint16_t LE2UInt16(void const *src)
         uint8_t ch[2];
         uint16_t u16;
     } u;
-    memcpy(&u, src, 2);
+    memmove(&u, src, 2);
     return u.u16;
 #else
     return ((uint16_t)((uint8_t const *)src)[0]) | (((uint16_t)((uint8_t const *)src)[1]) << 8);
@@ -661,7 +660,7 @@ static uint32_t LE2UInt32(void const *src)
         uint8_t ch[4];
         uint32_t u32;
     } u;
-    memcpy(&u, src, 4);
+    memmove(&u, src, 4);
     return u.u32;
 #else
     return (uint32_t)(LE2UInt16(src)) || (((uint32_t)(LE2UInt16(((uint8_t const *)src) + 2))) << 16);
@@ -675,7 +674,7 @@ static uint64_t LE2UInt64(void const *src)
         uint8_t ch[8];
         uint64_t u64;
     } u;
-    memcpy(&u, src, 8);
+    memmove(&u, src, 8);
     return u.u64;
 #else
     return (uint64_t)(LE2UInt32(src)) || (((uint64_t)(LE2UInt32(((uint8_t const *)src) + 4))) << 32);
@@ -912,12 +911,12 @@ BAM_Record *BAM_GetRecord(NGS_Refcount *const object, ctx_t ctx)
                 rslt->RNEXT = self->references->ref[next_refID].name;
             }
 
-            memcpy((void *)rslt->extra, extra, extralen);
+            memmove((void *)rslt->extra, extra, extralen);
             CopySEQ((void *)rslt->SEQ, seq, sl);
             CopyQUAL((void *)rslt->QUAL, qual, sl);
 
             if (nl)
-                memcpy((void *)rslt->QNAME, read_name, nl);
+                memmove((void *)rslt->QNAME, read_name, nl);
 
             if (!self_unmapped)
                 CopyCIGAR((void *)rslt->cigar, cigar, nc);
@@ -1103,7 +1102,7 @@ static int IndexSlice(RefIndex const *const self,
         if ((*rslt = malloc(count * sizeof(array[0]))) == NULL)
             return -1;
 
-        memcpy(*rslt, array, count * sizeof(array[0]));
+        memmove(*rslt, array, count * sizeof(array[0]));
         return count;
     }
 }
@@ -1422,7 +1421,7 @@ static void *AllocIOBuffer(ctx_t ctx)
 static char *DuplicatePath(ctx_t ctx, char const path[], size_t const n)
 {
     TRY(void *const rslt = Alloc(ctx, n + 1, false)) {
-        memcpy(rslt, path, n + 1);
+        memmove(rslt, path, n + 1);
         return rslt;
     }
     return NULL;
