@@ -41,4 +41,4 @@
 #define RELEASE_TYPE 'r'
 
 /* Revision of Version of current SRA Toolkit Release */
-#define RELEASE_REVISION 2
+#define RELEASE_REVISION 0
