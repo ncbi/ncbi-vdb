@@ -66,13 +66,11 @@ typedef enum {
     e403,
 } EForbidden;
 
-class Test : protected ncbi :: NK :: TestCase {
-    TestCase * _dad;
-public:
+struct Test : protected ncbi :: NK :: SharedTest {
     Test ( const std :: string & description, TestCase * dad,
             EForbidden forbidden, const char * name, const char * url,
             bool fail = false )
-        : TestCase ( name ), _dad ( dad )
+        : SharedTest ( dad, name )
     {
         rc_t rc = 0;
 
@@ -145,10 +143,6 @@ public:
         RELEASE ( KDirectory, native );
 
         REQUIRE ( ! rc );
-    }
-    ~Test ( void ) {
-        assert( _dad );
-        _dad -> ErrorCounterAdd ( GetErrorCounter () );
     }
 };
 
