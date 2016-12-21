@@ -51,6 +51,9 @@ static const char * s_path = NULL;
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
 
+using std::cerr;
+
+
 struct FIXTURE {
     const char * _path;
     const KDirectory * _dir;
@@ -149,57 +152,101 @@ FIXTURE_TEST_CASE ( Linux, FIXTURE ) {
 
 #endif
 
+struct C {
+    static bool df ( const char * command, uint64_t & free_bytes_available,
+                                           uint64_t & total_number_of_byte )
+    {
+        FILE * fp = popen ( command, "r" );
+        if ( fp == NULL )
+            return false;
+
+        char line [ 2 ] [ 1035 ];
+        char * crnt = line [ 0 ];
+        char * prev = line [ 1 ];
+        while ( fgets ( crnt, sizeof line [ 0 ] - 1, fp ) != NULL ) {
+            char * tmp = crnt;
+            crnt = prev;
+            prev = tmp;
+        }
+
+        pclose ( fp );
+
+        assert ( prev );
+
+        crnt = prev;
+        for ( int i = 0, in = true; * crnt != '\0'; ++ crnt ) {
+            if ( * crnt == ' ' ) {
+                if ( in ) {
+                    in = false;
+                    ++ i;
+                }
+            }
+            else
+                if ( ! in ) {
+                    in = true;
+                    if ( i == 1 || i == 3 ) {
+                        uint64_t r = strtou64 ( crnt, & crnt, 10 );
+                        switch ( i ) {
+                            case 1:
+                                total_number_of_byte = r;
+                                break;
+                            case 3:
+                                free_bytes_available = r;
+                                return true;
+                        }
+                        -- crnt;
+                    }
+                }
+        }
+        return false;
+    }
+};
+
 TEST_CASE ( testKDirectoryGetDiskFreeSpace ) {
     FIXTURE fixture ( "~" );
-    uint64_t free_bytes_available = 0;
-    uint64_t total_number_of_bytes = 0;
-    REQUIRE_RC ( KDirectoryGetDiskFreeSpace ( fixture . _dir,
-                    & free_bytes_available, & total_number_of_bytes ) );
 
     char command [ 256 ] = "";
     REQUIRE_RC ( string_printf
         ( command, sizeof command, NULL, "df -k %s", fixture . _path ) );
 
-    FILE * fp = popen ( command, "r" );
-    REQUIRE ( fp );
+    uint64_t total_number_of_bytes = 0;
+    uint64_t free_bytes_available = 0;
 
-    char line [ 2 ] [ 1035 ];
-    char * crnt = line [ 0 ];
-    char * prev = line [ 1 ];
-    while ( fgets ( crnt, sizeof line [ 0 ] - 1, fp ) != NULL ) {
-        char * tmp = crnt;
-        crnt = prev;
-        prev = tmp;
-    }
+    uint64_t blocks = 0;
+    uint64_t available = 0;
 
-    REQUIRE_EQ ( pclose ( fp ), 0 );
+    bool started = false;
+    for ( int i = 1; i < 9; ++i ) {
+        REQUIRE_RC ( KDirectoryGetDiskFreeSpace ( fixture . _dir,
+                        & free_bytes_available, & total_number_of_bytes ) );
 
-    REQUIRE ( prev );
-
-    crnt = prev;
-    for ( int i = 0, in = true; * crnt != '\0'; ++ crnt ) {
-        if ( * crnt == ' ' ) {
-            if ( in ) {
-                in = false;
-                ++ i;
+        if ( started ) {
+            if ( available == free_bytes_available / 1024 ) {
+                cerr << "DONE in " << i << ".5 iterations";
+                return;
             }
         }
-        else
-            if ( ! in ) {
-                in = true;
-                if ( i == 1 || i == 3 ) {
-                    uint64_t r = strtou64 ( crnt, & crnt, 10 );
-                    switch ( i ) {
-                        case 1:
-                            CHECK_EQ ( r, total_number_of_bytes / 1024 );
-                            break;
-                        case 3:
-                            CHECK_EQ ( r, free_bytes_available / 1024 );
-                    }
-                    -- crnt;
-                }
-            }
+
+        REQUIRE ( C::df ( command, available, blocks ) );
+
+        if ( ! started ) {
+            REQUIRE_EQ ( blocks, total_number_of_bytes / 1024 );
+            started = true;
+        }
+
+        if ( available == free_bytes_available / 1024 ) {
+            cerr << "DONE in " << i << " iterations";
+            return;
+        }
+        else {
+            cerr << i << " KDirectoryGetDiskFreeSpace="
+                 << free_bytes_available / 1024
+                 << " Available=" << available << " ( "
+                 << abs ( free_bytes_available / 1024 - available ) << " )\n";
+        }
     }
+
+    REPORT_ERROR ( "Cannot match KDirectoryGetDiskFreeSpace and df results" );
 }
 
 static rc_t argsHandler ( int argc, char * argv [] ) {
