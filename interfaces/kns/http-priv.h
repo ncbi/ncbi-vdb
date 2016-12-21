@@ -24,4 +24,40 @@
 *
 */
 
-#define LIBKDB_VERS 0x02070016
+
+#ifndef _h_kns_http_priv_
+#define _h_kns_http_priv_
+
+
+#ifndef _h_klib_defs_
+#include <klib/defs.h> /* rc_t */
+#endif
+
+#ifndef _h_kns_extern_
+#include <kns/extern.h> /* KNS_EXTERN */
+#endif
+
+
+struct KClientHttpResult;
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+KNS_EXTERN rc_t CC KClientHttpRequestFormatMsg (
+    const struct KClientHttpRequest * self, char * buffer,
+    size_t bsize, const char * method, size_t * len );
+
+KNS_EXTERN rc_t CC KClientHttpResultFormatMsg (
+    const struct KClientHttpResult * self, char * buffer,
+    size_t bsize, size_t * len, const char * bol, const char * eol );
+
+
+#ifdef __cplusplus
+}
+#endif
+
+
+#endif /* _h_kns_http_priv_ */

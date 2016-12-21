@@ -392,7 +392,7 @@ rc_t KDylibMake ( KDylib **libp, const WString *path )
     cpy = ( wchar_t* ) ( lib + 1 );
     lib -> handle = NULL;
 
-    memcpy ( cpy, path -> addr, path -> size );
+    memmove ( cpy, path -> addr, path -> size );
     cpy [ path -> len ] = 0;
 
     WStringInit ( & lib -> path, cpy, path -> size, path -> len );

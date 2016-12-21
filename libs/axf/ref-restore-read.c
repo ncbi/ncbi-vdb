@@ -150,7 +150,7 @@ rc_t CC ref_restore_read_impl ( void *data, const VXformInfo *info, int64_t row_
             {
                 if ( read_len > 0 )
                 {
-                    memcpy( dst, read, read_len );
+                    memmove( dst, read, read_len );
                     if ( read_len < seq_len )
                     {
                         memset( dst + read_len, 15, seq_len - read_len ); /* pad with 'N' */

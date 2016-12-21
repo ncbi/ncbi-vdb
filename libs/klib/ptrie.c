@@ -158,7 +158,7 @@ LIB_EXPORT rc_t CC PTNodeMakeKey ( const PTNode *self, const String **keyp )
                                     char *text = ( char* ) ( key + 1 );
                                     tbsize = utf32_cvt_string_copy ( text, tbsize + 1,
                                         traceback, depth * sizeof traceback [ 0 ] );
-                                    memcpy ( & text [ tbsize ], addr, nsize + 1 );
+                                    memmove ( & text [ tbsize ], addr, nsize + 1 );
                                     StringInit ( key, text, tbsize + nsize, depth + nlen );
                                     * keyp = key;
                                 }

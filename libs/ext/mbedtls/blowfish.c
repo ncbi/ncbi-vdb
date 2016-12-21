@@ -275,13 +275,13 @@ int mbedtls_blowfish_crypt_cbc( mbedtls_blowfish_context *ctx,
     {
         while( length > 0 )
         {
-            memcpy( temp, input, MBEDTLS_BLOWFISH_BLOCKSIZE );
+            memmove( temp, input, MBEDTLS_BLOWFISH_BLOCKSIZE );
             mbedtls_blowfish_crypt_ecb( ctx, mode, input, output );
 
             for( i = 0; i < MBEDTLS_BLOWFISH_BLOCKSIZE;i++ )
                 output[i] = (unsigned char)( output[i] ^ iv[i] );
 
-            memcpy( iv, temp, MBEDTLS_BLOWFISH_BLOCKSIZE );
+            memmove( iv, temp, MBEDTLS_BLOWFISH_BLOCKSIZE );
 
             input  += MBEDTLS_BLOWFISH_BLOCKSIZE;
             output += MBEDTLS_BLOWFISH_BLOCKSIZE;
@@ -296,7 +296,7 @@ int mbedtls_blowfish_crypt_cbc( mbedtls_blowfish_context *ctx,
                 output[i] = (unsigned char)( input[i] ^ iv[i] );
 
             mbedtls_blowfish_crypt_ecb( ctx, mode, output, output );
-            memcpy( iv, output, MBEDTLS_BLOWFISH_BLOCKSIZE );
+            memmove( iv, output, MBEDTLS_BLOWFISH_BLOCKSIZE );
 
             input  += MBEDTLS_BLOWFISH_BLOCKSIZE;
             output += MBEDTLS_BLOWFISH_BLOCKSIZE;

@@ -37,13 +37,13 @@ unsigned int mbedtls_version_get_number()
 
 void mbedtls_version_get_string( char *string )
 {
-    memcpy( string, MBEDTLS_VERSION_STRING,
+    memmove( string, MBEDTLS_VERSION_STRING,
             sizeof( MBEDTLS_VERSION_STRING ) );
 }
 
 void mbedtls_version_get_string_full( char *string )
 {
-    memcpy( string, MBEDTLS_VERSION_STRING_FULL,
+    memmove( string, MBEDTLS_VERSION_STRING_FULL,
             sizeof( MBEDTLS_VERSION_STRING_FULL ) );
 }
 

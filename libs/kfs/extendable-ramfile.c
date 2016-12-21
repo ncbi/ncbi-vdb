@@ -173,7 +173,7 @@ static rc_t CC KExtendableRamFileRead(const KExtendableRamFile *self,
     if (pos + bsize > self->pos)
         bsize = self->pos - pos;
 
-    memcpy(buffer, self->buffer + pos, bsize);
+    memmove(buffer, self->buffer + pos, bsize);
 
     *num_read = bsize;
     return 0;
@@ -216,7 +216,7 @@ static rc_t CC KExtendableRamFileWrite(KExtendableRamFile *self,
         self->bsize = req;
     }
 
-    memcpy(self->buffer + self->pos, buffer, bsize);
+    memmove(self->buffer + self->pos, buffer, bsize);
     self->pos += bsize;
     *num_writ = bsize;
 

@@ -28,6 +28,7 @@
 #include <kfg/config.h> /* KConfig */
 #include <kfs/directory.h> /* KDirectory */
 #include <kfs/file.h> /* KFileRelease */
+#include <klib/debug.h> /* KDbgSetString */
 #include <kns/kns-mgr-priv.h> /* KNSManagerMakeReliableHttpFile */
 #include <kns/manager.h> /* KNSManagerMake */
 #include <ktst/unit_test.hpp>
@@ -79,9 +80,9 @@ public:
 
         const VPath * remote = NULL;
         const KFile * f = NULL;
-        if ( expectedShort . size () ) {
-            REQUIRE_RC ( VResolverQuery
-                ( resolver, 0, queryShort, NULL, & remote, NULL ) );
+        if ( expectedShort . size () > 0 ) {
+            REQUIRE_RC ( VResolverQuery ( resolver, eProtocolHttps, queryShort,
+                                          NULL, & remote, NULL ) );
             compare ( remote, expectedShort );
             RELEASE ( VPath, remote );
             REQUIRE_RC ( KNSManagerMakeReliableHttpFile
@@ -92,9 +93,9 @@ public:
                 ( resolver, 0, queryShort, NULL, & remote, NULL ) );
         }
 
-        if ( expectedLong . size () ) {
-            REQUIRE_RC ( VResolverQuery
-                ( resolver, 0, queryLong, NULL, & remote, NULL ) );
+        if ( expectedLong . size () > 0 ) {
+            REQUIRE_RC ( VResolverQuery ( resolver, eProtocolHttps, queryLong,
+                         NULL, & remote, NULL ) );
             compare ( remote, expectedLong );
             RELEASE ( VPath, remote );
             REQUIRE_RC ( KNSManagerMakeReliableHttpFile
@@ -126,9 +127,9 @@ static const char badCgi[]
 #ifdef ALL
 TEST_CASE(test_sra) {
     const string newShort
-        ("http://sra-download.ncbi.nlm.nih.gov/srapub/SRR000001");
+        ("https://sra-download.ncbi.nlm.nih.gov/srapub/SRR000001");
     const string newLong
-        ("http://sra-download.ncbi.nlm.nih.gov/srapub/SRR1000254");
+        ("https://sra-download.ncbi.nlm.nih.gov/srapub/SRR1000254");
     const string oldShort("https://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/"
                 "reads/ByRun/sra/SRR/SRR000/SRR000001/SRR000001.sra");
 
@@ -416,6 +417,7 @@ rc_t CC UsageSummary ( const char * prog_name ) { return 0; }
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char *argv [] ) {
+if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
         KConfigDisableUserSettings();
         rc_t rc = KNSManagerMake(&kns);
         if (rc == 0) {

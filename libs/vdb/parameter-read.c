@@ -58,7 +58,7 @@ rc_t CC parameter_read_func(
     rslt->data->elem_count = 0;
     rc = KDataBufferResize(rslt->data, value->elem_count);
     if (rc == 0) {
-        memcpy(rslt->data->base, value->base, KDataBufferBytes(value));
+        memmove(rslt->data->base, value->base, KDataBufferBytes(value));
         rc = KDataBufferCast(rslt->data, rslt->data, rslt->elem_bits, true);
         if (rc == 0)
             rslt->elem_count = rslt->data->elem_count;
@@ -72,7 +72,7 @@ static rc_t get_databuffer( KDataBuffer **rslt, struct VCursorParams const *para
     if (len >= sizeof(name))
         return RC(rcVDB, rcFunction, rcConstructing, rcName, rcTooLong);
     
-    memcpy(name, Name, len);
+    memmove(name, Name, len);
     name[len] = '\0';
     
     return VCursorParamsGet(params, name, rslt);

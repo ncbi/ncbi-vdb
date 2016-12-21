@@ -180,7 +180,7 @@ bool CC KMAttrNodeInflate ( PBSTNode *n, void *data )
 
     b -> value = & b -> name [ 1 + size ];
     b -> vsize = n -> data . size - size - 1;
-    memcpy ( b -> name, name, n -> data . size );
+    memmove ( b -> name, name, n -> data . size );
     BSTreeInsert ( pb -> bst, & b -> n, KMAttrNodeSort );
     return false;
 }
@@ -338,7 +338,7 @@ bool CC KMDataNodeInflate_v1 ( PBSTNode *n, void *data )
     value = malloc ( b -> vsize );
     if ( value != NULL )
     {
-        memcpy ( value, b -> value, b -> vsize );
+        memmove ( value, b -> value, b -> vsize );
         b -> value = value;
         BSTreeInsert ( pb -> bst, & b -> n, KMDataNodeSort );
         return false;
@@ -472,7 +472,7 @@ bool CC KMDataNodeInflate ( PBSTNode *n, void *data )
     BSTreeInit ( & b -> attr );
     BSTreeInit ( & b -> child );
     KRefcountInit ( & b -> refcount, 0, "KMDataNode", "inflate", b -> name );
-    memcpy ( b -> name, name, size );
+    memmove ( b -> name, name, size );
     b -> name [ size ] = 0;
 
     pb -> rc = ( bits & 1 ) != 0 ? KMDataNodeInflateAttr ( b, pb -> byteswap ) : 0;
@@ -494,7 +494,7 @@ bool CC KMDataNodeInflate ( PBSTNode *n, void *data )
             value = malloc ( b -> vsize );
             if ( value != NULL )
             {
-                memcpy ( value, b -> value, b -> vsize );
+                memmove ( value, b -> value, b -> vsize );
                 b -> value = value;
                 BSTreeInsert ( pb -> bst, & b -> n, KMDataNodeSort );
                 return false;
@@ -748,7 +748,7 @@ LIB_EXPORT rc_t CC KMDataNodeRead ( const KMDataNode *self,
                 to_read = bsize;
 
             if ( to_read > 0 )
-                memcpy ( buffer, ( const char* ) self -> value + offset, to_read );
+                memmove ( buffer, ( const char* ) self -> value + offset, to_read );
 
             * num_read = to_read;
             * remaining = avail - to_read;
@@ -1200,7 +1200,7 @@ LIB_EXPORT rc_t CC KMDataNodeReadAttr ( const KMDataNode *self, const char *name
                 * size = n -> vsize;
                 if ( n -> vsize < bsize )
                 {
-                    memcpy ( buffer, n -> value, n -> vsize );
+                    memmove ( buffer, n -> value, n -> vsize );
                     buffer [ n -> vsize ] = 0;
                     return 0;
                 }

@@ -92,7 +92,7 @@ int mbedtls_ssl_cache_get( void *data, mbedtls_ssl_session *session )
                     entry->session.id_len ) != 0 )
             continue;
 
-        memcpy( session->master, entry->session.master, 48 );
+        memmove( session->master, entry->session.master, 48 );
 
         session->verify_result = entry->session.verify_result;
 
@@ -239,7 +239,7 @@ int mbedtls_ssl_cache_set( void *data, const mbedtls_ssl_session *session )
 #endif
     }
 
-    memcpy( &cur->session, session, sizeof( mbedtls_ssl_session ) );
+    memmove( &cur->session, session, sizeof( mbedtls_ssl_session ) );
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     /*
@@ -263,7 +263,7 @@ int mbedtls_ssl_cache_set( void *data, const mbedtls_ssl_session *session )
             goto exit;
         }
 
-        memcpy( cur->peer_cert.p, session->peer_cert->raw.p,
+        memmove( cur->peer_cert.p, session->peer_cert->raw.p,
                 session->peer_cert->raw.len );
         cur->peer_cert.len = session->peer_cert->raw.len;
 

@@ -709,7 +709,7 @@ static int x509_crt_parse_der_core( mbedtls_x509_crt *crt, const unsigned char *
     if( p == NULL )
         return( MBEDTLS_ERR_X509_ALLOC_FAILED );
 
-    memcpy( p, buf, crt->raw.len );
+    memmove( p, buf, crt->raw.len );
 
     // Direct pointers to the new buffer 
     p += crt->raw.len - len;
@@ -1117,7 +1117,7 @@ int mbedtls_x509_crt_parse_path( mbedtls_x509_crt *chain, const char *path )
 
     memset( szDir, 0, sizeof(szDir) );
     memset( filename, 0, MAX_PATH );
-    memcpy( filename, path, len );
+    memmove( filename, path, len );
     filename[len++] = '\\';
     p = filename + len;
     filename[len++] = '*';

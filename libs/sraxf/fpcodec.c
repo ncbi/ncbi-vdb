@@ -156,7 +156,7 @@ rc_t CC fp_extend ( void *self, const VXformInfo *info,
     if(ssize < sizeof(tkey))
         return RC(rcXF, rcFunction, rcUnpacking, rcData, rcUnexpected);
     ssize -= sizeof(tkey); 
-    memcpy(&tkey,src+ssize,sizeof(tkey));
+    memmove(&tkey,src+ssize,sizeof(tkey));
 
     if(tkey.mbits > 24 || tkey.mbits > keep) 
         return RC(rcXF, rcFunction, rcUnpacking, rcData, rcUnexpected);
@@ -167,14 +167,14 @@ rc_t CC fp_extend ( void *self, const VXformInfo *info,
         if ( ssize < sizeof count32 )
             return RC(rcXF, rcFunction, rcUnpacking, rcData, rcUnexpected);
         ssize -= sizeof count32;
-        memcpy ( & count32, src+ssize, sizeof count32 );
+        memmove ( & count32, src+ssize, sizeof count32 );
         count = count32;
         break;
     case 1:
         if ( ssize < sizeof count )
             return RC(rcXF, rcFunction, rcUnpacking, rcData, rcUnexpected);
         ssize -= sizeof count;
-        memcpy ( & count, src+ssize, sizeof count );
+        memmove ( & count, src+ssize, sizeof count );
         break;
     default:
         return RC ( rcXF, rcFunction, rcUnpacking, rcBlob, rcBadVersion );
@@ -207,7 +207,7 @@ rc_t CC fp_extend ( void *self, const VXformInfo *info,
         return RC(rcXF, rcFunction, rcUnpacking, rcMemory, rcExhausted);
 
     if ( tkey.exp_not_compressed )
-        memcpy( dexp, src+psize, (size_t)count );
+        memmove( dexp, src+psize, (size_t)count );
     else
         /*** uncompress the exponent ***/
         rc = hufDecodeBytes_zlib( dexp, (size_t)count, &bsize, src+psize, ssize << 3 );

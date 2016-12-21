@@ -100,7 +100,7 @@ static int pk_write_ec_pubkey( unsigned char **p, unsigned char *start,
         return( MBEDTLS_ERR_ASN1_BUF_TOO_SMALL );
 
     *p -= len;
-    memcpy( *p, buf, len );
+    memmove( *p, buf, len );
 
     return( (int) len );
 }
