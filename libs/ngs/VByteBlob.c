@@ -93,8 +93,9 @@ VByteBlob_ContiguousChunk ( const VBlob* p_blob,  ctx_t ctx, int64_t rowId, uint
                     {
                         do
                         {
+                            row_count_t  repeat;
                             *p_size += PageMapIteratorDataLength ( &pmIt );
-                            row_count_t  repeat = PageMapIteratorRepeatCount ( &pmIt );
+                            repeat = PageMapIteratorRepeatCount ( &pmIt );
                             if ( p_maxRows != 0 )
                             {
                                 if ( repeat < p_maxRows )
