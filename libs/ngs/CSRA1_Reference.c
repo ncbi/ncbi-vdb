@@ -32,6 +32,7 @@ typedef struct CSRA1_Reference CSRA1_Reference;
 
 #include "NGS_ReadCollection.h"
 #include "NGS_Alignment.h"
+#include "NGS_ReferenceBlobIterator.h"
 
 #include "NGS_String.h"
 #include "NGS_Cursor.h"
@@ -85,6 +86,7 @@ static struct NGS_Alignment*    CSRA1_ReferenceGetAlignmentSlice ( CSRA1_Referen
 static struct NGS_Pileup*       CSRA1_ReferenceGetPileups ( CSRA1_Reference * self, ctx_t ctx, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 static struct NGS_Pileup*       CSRA1_ReferenceGetPileupSlice ( CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size, bool wants_primary, bool wants_secondary, uint32_t filters, int32_t map_qual );
 struct NGS_Statistics*          CSRA1_ReferenceGetStatistics ( const CSRA1_Reference * self, ctx_t ctx );
+static struct NGS_ReferenceBlobIterator*  CSRA1_ReferenceGetBlobs ( const CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size );
 static bool                     CSRA1_ReferenceIteratorNext ( CSRA1_Reference * self, ctx_t ctx );
 
 static NGS_Reference_vt CSRA1_Reference_vt_inst =
@@ -106,6 +108,7 @@ static NGS_Reference_vt CSRA1_Reference_vt_inst =
     CSRA1_ReferenceGetPileups,
     CSRA1_ReferenceGetPileupSlice,
     CSRA1_ReferenceGetStatistics,
+    CSRA1_ReferenceGetBlobs,
 
     /* NGS_ReferenceIterator */
     CSRA1_ReferenceIteratorNext,
@@ -380,7 +383,7 @@ struct NGS_String * CSRA1_ReferenceGetChunk ( CSRA1_Reference * self, ctx_t ctx,
                 rc_t rc;
                 const void* data;
                 uint64_t cont_size;
-                TRY ( VByteBlob_ContiguousChunk ( blob, ctx, rowId, &data, &cont_size, true ) ) /* stop at a repeated row */
+                TRY ( VByteBlob_ContiguousChunk ( blob, ctx, rowId, 0, &data, &cont_size, true ) ) /* stop at a repeated row */
                 {
                     uint64_t offsetInBlob =  offset % self -> chunk_size;
                     if ( size == (uint64_t)-1 || offsetInBlob + size > cont_size )
@@ -786,6 +789,31 @@ struct NGS_Statistics* CSRA1_ReferenceGetStatistics ( const CSRA1_Reference * se
     return SRA_StatisticsMake ( ctx );
 }
 
+struct NGS_ReferenceBlobIterator* CSRA1_ReferenceGetBlobs ( const CSRA1_Reference * self, ctx_t ctx, uint64_t offset, uint64_t size )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+
+    assert ( self );
+    if ( self -> curs == NULL )
+    {
+        USER_ERROR ( xcCursorExhausted, "No more rows available" );
+        return NULL;
+    }
+    if ( ! self -> seen_first )
+    {
+        USER_ERROR ( xcIteratorUninitialized, "Reference accessed before a call to ReferenceIteratorNext()" );
+        return NULL;
+    }
+    else
+    {
+        uint64_t startRow = self -> first_row + offset / self -> chunk_size;
+        uint64_t lastRow = size == (uint64_t)-1 ?
+                                    self -> last_row :
+                                    self -> first_row + ( offset + size - 1 ) / self -> chunk_size;
+        return NGS_ReferenceBlobIteratorMake ( ctx, self -> curs, self -> first_row, startRow, lastRow );
+    }
+}
+
 bool CSRA1_ReferenceFind ( NGS_Cursor const * curs, ctx_t ctx, const char * spec, int64_t* firstRow, uint64_t* rowCount )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcConstructing );
@@ -818,6 +846,7 @@ bool CSRA1_ReferenceFind ( NGS_Cursor const * curs, ctx_t ctx, const char * spec
         }
     }
     /* index not available - do a table scan */
+    if ( ! FAILED () )
     {
         int64_t cur_row;
         int64_t end_row;
@@ -1034,6 +1063,8 @@ NGS_Reference * CSRA1_ReferenceIteratorMake ( ctx_t ctx,
  */
 bool CSRA1_ReferenceIteratorNext ( CSRA1_Reference * self, ctx_t ctx )
 {
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+
     assert ( self != NULL );
 
     if ( self -> curs == NULL  || self -> first_row > self -> iteration_row_last)

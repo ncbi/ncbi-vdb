@@ -590,7 +590,62 @@ int64_t AlignmentSort ( const void * p_a, const void * p_b, void *data )
 }
 
 static
-void LoadAlignmentInfo ( CSRA1_ReferenceWindow* self, ctx_t ctx, size_t* idx, int64_t id, bool primary, int64_t offset, uint64_t size )
+bool
+ApplyFilters( CSRA1_ReferenceWindow* self, ctx_t ctx, NGS_Alignment* p_al, uint32_t* p_map_qual )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
+
+    bool have_map_qual = false;
+    uint32_t map_qual;
+
+    /* test for additional filtering */
+    if ( ( self -> filters & NGS_AlignmentFilterBits_prop_mask ) != 0 )
+    {
+        TRY ( INSDC_read_filter read_filter = NGS_AlignmentGetReadFilter ( p_al, ctx ) )
+        {
+            switch ( read_filter )
+            {
+            case READ_FILTER_PASS:
+                if ( CSRA1_ReferenceWindowFilterMapQual ( self ) )
+                {
+                    TRY ( map_qual = NGS_AlignmentGetMappingQuality ( p_al, ctx ) )
+                    {
+                        have_map_qual = true;
+                        if ( CSRA1_ReferenceWindowFilterMinMapQual ( self ) )
+                        {
+                            /* map_qual must be >= filter level */
+                            if ( map_qual < self -> map_qual )
+                                return false;
+                        }
+                        else
+                        {
+                            /* map qual must be <= filter level */
+                            if ( map_qual > self -> map_qual )
+                                return false;
+                        }
+                    }
+                }
+                break;
+            case READ_FILTER_REJECT:
+                if ( CSRA1_ReferenceWindowFilterDropBad ( self ) )
+                    return false;
+                break;
+            case READ_FILTER_CRITERIA:
+                if ( CSRA1_ReferenceWindowFilterDropDups ( self ) )
+                    return false;
+                break;
+            case READ_FILTER_REDACTED:
+                return false;
+                break;
+            }
+        }
+    }
+    *p_map_qual = have_map_qual ? map_qual : NGS_AlignmentGetMappingQuality ( p_al, ctx );
+    return true;
+}
+
+static
+void LoadAlignmentInfo ( CSRA1_ReferenceWindow* self, ctx_t ctx, size_t* idx, int64_t id, bool primary, int64_t offset, uint64_t size, bool wraparoundOnly )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcReading );
 
@@ -616,78 +671,55 @@ void LoadAlignmentInfo ( CSRA1_ReferenceWindow* self, ctx_t ctx, size_t* idx, in
                     end_slice = self -> ref_length;
                 }
                 if ( ! CSRA1_ReferenceWindowFilterStartWithinWindow ( self ) &&
-                     ! CSRA1_ReferenceWindowFilterNoWraparound ( self ) &&
                      pos + len >= (int64_t) self -> ref_length )
-                {   /* account for possible carryover on a circular reference */
-                    pos -= self -> ref_length;
-                }
-                overlaps = pos < end_slice && ( pos + len > offset );
-            }
-
-            /* use single-pass loop as a sort of sanctimonious goto mechanism */
-            while ( overlaps )
-            {
-                int32_t map_qual = 0;
-                bool have_map_qual = false;
-
-                /* test for additional filtering */
-                if ( ( self -> filters & NGS_AlignmentFilterBits_prop_mask ) != 0 )
-                {
-                    TRY ( INSDC_read_filter read_filter = NGS_AlignmentGetReadFilter ( al, ctx ) )
+                {   /* account for possible wraparounds on a circular reference */
+                    if ( wraparoundOnly )
                     {
-                        switch ( read_filter )
-                        {
-                        case READ_FILTER_PASS:
-                            if ( CSRA1_ReferenceWindowFilterMapQual ( self ) )
-                            {
-                                TRY ( map_qual = NGS_AlignmentGetMappingQuality ( al, ctx ) )
-                                {
-                                    have_map_qual = true;
-                                    if ( CSRA1_ReferenceWindowFilterMinMapQual ( self ) )
-                                    {
-                                        /* map_qual must be >= filter level */
-                                        if ( map_qual < self -> map_qual )
-                                            overlaps = false;
-                                    }
-                                    else
-                                    {
-                                        /* map qual must be <= filter level */
-                                        if ( map_qual > self -> map_qual )
-                                            overlaps = false;
-                                    }
-                                }
-                            }
-                            break;
-                        case READ_FILTER_REJECT:
-                            if ( CSRA1_ReferenceWindowFilterDropBad ( self ) )
-                                overlaps = false;
-                            break;
-                        case READ_FILTER_CRITERIA:
-                            if ( CSRA1_ReferenceWindowFilterDropDups ( self ) )
-                                overlaps = false;
-                            break;
-                        case READ_FILTER_REDACTED:
-                            overlaps = false;
-                            break;
+                        if ( end_slice == self -> ref_length )
+                        {   /* both slice and alignment wrap around */
+                            overlaps = true;
                         }
-
-                        if ( ! overlaps )
-                            break;
+                        else
+                        {   /* alignment wraps around and overlaps with the slice */
+                            overlaps = pos + len > self -> ref_length + offset;
+                        }
+/*printf("LoadAlignmentInfo(offset=%li, size=%lu) pos=%li len=%li overlaps=%i\n", offset, size, pos, len, (int)overlaps);*/
+                    }
+                    else
+                    {   /* ignore the wraparound */
+                        overlaps = false;
                     }
                 }
+                else if ( wraparoundOnly )
+                {
+                    overlaps = false;
+                }
+                else
+                {
+                    overlaps = pos < end_slice && ( pos + len > offset );
+                }
+            }
+            else if ( ! CSRA1_ReferenceWindowFilterStartWithinWindow ( self ) && wraparoundOnly )
+            {
+                if ( pos + len < (int64_t) self -> ref_length )
+                {
+                    overlaps = false;
+                }
+            }
 
-                /* accept record */
-
-    /*printf("%li, %li, %i, %li\n", pos, len, NGS_AlignmentGetMappingQuality ( al, ctx ), id);        */
-                self -> align_info [ *idx ] . id = id;
-                self -> align_info [ *idx ] . pos = pos;
-                self -> align_info [ *idx ] . len = len;
-                self -> align_info [ *idx ] . cat = primary ? Primary : Secondary;
-                self -> align_info [ *idx ] . mapq = have_map_qual ? map_qual : NGS_AlignmentGetMappingQuality ( al, ctx );
-                ++ ( * idx );
-
-                /* MUST break here to exit single pass */
-                break;
+            if ( overlaps )
+            {
+                uint32_t map_qual;
+                if ( ApplyFilters ( self, ctx, al, &map_qual ) )
+                {   /* accept record */
+/*printf("pos=%li, len=%li, end=%li, q=%i, id=%li, wrap=%i\n", pos, len, pos+len, NGS_AlignmentGetMappingQuality ( al, ctx ), id, wraparoundOnly);*/
+                    self -> align_info [ *idx ] . id = id;
+                    self -> align_info [ *idx ] . pos = pos;
+                    self -> align_info [ *idx ] . len = len;
+                    self -> align_info [ *idx ] . cat = primary ? Primary : Secondary;
+                    self -> align_info [ *idx ] . mapq = map_qual;
+                    ++ ( * idx );
+                }
             }
         }
 
@@ -759,7 +791,7 @@ int64_t AlignmentSortCircular ( const void * p_a, const void * p_b, void *data )
 }
 
 static
-void LoadAlignments ( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t chunk_row_id, int64_t offset, uint64_t size )
+void LoadAlignments ( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t chunk_row_id, int64_t offset, uint64_t size, bool wraparounds )
 {   /* append alignments for the specified chunk to self -> align_info */
     const int64_t* primary_idx = NULL;
     uint32_t primary_idx_end = 0;
@@ -803,12 +835,12 @@ void LoadAlignments ( CSRA1_ReferenceWindow* self, ctx_t ctx, int64_t chunk_row_
             uint32_t i;
             for ( i = 0; i < primary_idx_end; ++i )
             {
-                ON_FAIL ( LoadAlignmentInfo( self, ctx, & self -> align_info_total, primary_idx [ i ], true, offset, size ) )
+                ON_FAIL ( LoadAlignmentInfo( self, ctx, & self -> align_info_total, primary_idx [ i ], true, offset, size, wraparounds ) )
                     return;
             }
             for ( i = 0; i < secondary_idx_end; ++i )
             {
-                ON_FAIL ( LoadAlignmentInfo( self, ctx, & self -> align_info_total, secondary_idx [ i ] + self -> id_offset, false, offset, size ) )
+                ON_FAIL ( LoadAlignmentInfo( self, ctx, & self -> align_info_total, secondary_idx [ i ] + self -> id_offset, false, offset, size, wraparounds ) )
                     return;
             }
         }
@@ -831,18 +863,23 @@ bool LoadFirstCircular ( CSRA1_ReferenceWindow* self, ctx_t ctx )
     {   /* load the last chunk of the reference, to cover possible overlaps into the first chunk */
         if ( self -> slice_size == 0 )
         {   /* loading possible overlaps with the first chunk */
-            ON_FAIL ( LoadAlignments ( self, ctx, last_chunk, 0, self -> chunk_size ) )
+            ON_FAIL ( LoadAlignments ( self, ctx, last_chunk, 0, self -> chunk_size, true ) )
                 return false;
         }
         else if ( self -> slice_offset < self -> chunk_size )
-        {   /* loading possible overlaps with a slice inside the first chunk */
-            ON_FAIL ( LoadAlignments ( self, ctx, last_chunk, self -> slice_offset, self -> chunk_size - self -> slice_offset ) )
+        {   /* the slice starts in the first chunk; load alignments wrapped around from the last chunk */
+            ON_FAIL ( LoadAlignments ( self, ctx, last_chunk, self -> slice_offset, self -> chunk_size - self -> slice_offset, true ) )
+                return false;
+        }
+        else if ( self -> slice_offset + self -> slice_size > self -> ref_length )
+        {   /* the slice starts in the last and wraps around to the first chunk; load alignments wrapped around into the first chunk  */
+            ON_FAIL ( LoadAlignments ( self, ctx, last_chunk, self -> slice_offset, self -> slice_size, true ) )
                 return false;
         }
         /* target slice is not in the first chunk, no need to look for overlaps from the end of the reference */
     }
 
-    ON_FAIL ( LoadAlignments ( self, ctx, self -> ref_begin, self -> slice_offset, self -> slice_size ) )
+    ON_FAIL ( LoadAlignments ( self, ctx, self -> ref_begin, self -> slice_offset, self -> slice_size, false ) )
         return false;
 
     if ( self -> align_info_total > 0 )
@@ -864,7 +901,7 @@ bool LoadNextChunk ( CSRA1_ReferenceWindow* self, ctx_t ctx )
     self -> align_info_total = 0;
     while ( self -> ref_begin < self -> ref_end )
     {
-        ON_FAIL ( LoadAlignments ( self, ctx, self -> ref_begin, self -> slice_offset, self -> slice_size ) )
+        ON_FAIL ( LoadAlignments ( self, ctx, self -> ref_begin, self -> slice_offset, self -> slice_size, false ) )
             return false;
 
         if ( self -> align_info_total > 0 )

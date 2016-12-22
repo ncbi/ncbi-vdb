@@ -24,77 +24,73 @@
 *
 */
 
-#include "NGS_FragmentBlobIterator.h"
+#include "NGS_ReferenceBlobIterator.h"
 
 #include <kfc/ctx.h>
 #include <kfc/except.h>
 #include <kfc/xc.h>
 
-#include <ngs/itf/Refcount.h>
-
 #include <klib/rc.h>
+
+#include <ngs/itf/Refcount.h>
 
 #include <vdb/cursor.h>
 
 #include "NGS_String.h"
 #include "NGS_Cursor.h"
 #include "SRA_Read.h"
-#include "NGS_FragmentBlob.h"
+#include "NGS_ReferenceBlob.h"
 
-struct NGS_FragmentBlobIterator
+struct NGS_ReferenceBlobIterator
 {
     NGS_Refcount dad;
 
-    const NGS_String* run;
     const NGS_Cursor* curs;
-    int64_t last_row;
+    int64_t ref_start;
     int64_t next_row;
+    int64_t last_row;
 };
 
 void
-NGS_FragmentBlobIteratorWhack ( NGS_FragmentBlobIterator * self, ctx_t ctx )
+NGS_ReferenceBlobIteratorWhack ( NGS_ReferenceBlobIterator * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcDestroying );
     if ( self != NULL )
     {
         NGS_CursorRelease ( self->curs, ctx );
-        NGS_StringRelease ( self->run, ctx );
     }
 }
 
-static NGS_Refcount_vt NGS_FragmentBlobIterator_vt =
+static NGS_Refcount_vt NGS_ReferenceBlobIterator_vt =
 {
-    NGS_FragmentBlobIteratorWhack
+    NGS_ReferenceBlobIteratorWhack
 };
 
-NGS_FragmentBlobIterator*
-NGS_FragmentBlobIteratorMake ( ctx_t ctx, const NGS_String* run, const struct VTable* tbl )
+NGS_ReferenceBlobIterator*
+NGS_ReferenceBlobIteratorMake ( ctx_t ctx, const struct NGS_Cursor* p_curs, int64_t p_refStartId, int64_t p_firstRowId, int64_t p_lastRowId )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcConstructing );
-    if ( tbl == NULL )
+    if ( p_curs == NULL )
     {
-        INTERNAL_ERROR ( xcParamNull, "NULL table object" );
+        INTERNAL_ERROR ( xcParamNull, "NULL cursor object" );
     }
     else
     {
-        NGS_FragmentBlobIterator* ret = malloc ( sizeof * ret );
+        NGS_ReferenceBlobIterator* ret = malloc ( sizeof * ret );
         if ( ret == NULL )
         {
-            SYSTEM_ERROR ( xcNoMemory, "allocating NGS_FragmentBlobIterator" );
+            SYSTEM_ERROR ( xcNoMemory, "allocating NGS_ReferenceBlobIterator" );
         }
         else
         {
-            TRY ( NGS_RefcountInit ( ctx, & ret -> dad, & ITF_Refcount_vt . dad, & NGS_FragmentBlobIterator_vt, "NGS_FragmentBlobIterator", "" ) )
+            TRY ( NGS_RefcountInit ( ctx, & ret -> dad, & ITF_Refcount_vt . dad, & NGS_ReferenceBlobIterator_vt, "NGS_ReferenceBlobIterator", "" ) )
             {
-                TRY ( ret -> curs = NGS_CursorMake ( ctx, tbl, sequence_col_specs, seq_NUM_COLS ) )
+                TRY ( ret -> curs = NGS_CursorDuplicate ( p_curs, ctx ) )
                 {
-                    TRY ( ret -> run = NGS_StringDuplicate ( run, ctx ) )
-                    {
-                        ret -> last_row = NGS_CursorGetRowCount ( ret->curs, ctx );
-                        ret -> next_row = 1;
-                        return ret;
-                    }
-                    NGS_CursorRelease ( ret -> curs, ctx );
+                    ret -> ref_start = p_refStartId;
+                    ret -> next_row = p_firstRowId;
+                    ret -> last_row = p_lastRowId;
+                    return ret;
                 }
             }
             free ( ret );
@@ -107,7 +103,7 @@ NGS_FragmentBlobIteratorMake ( ctx_t ctx, const NGS_String* run, const struct VT
  *  release reference
  */
 void
-NGS_FragmentBlobIteratorRelease ( NGS_FragmentBlobIterator * self, ctx_t ctx )
+NGS_ReferenceBlobIteratorRelease ( NGS_ReferenceBlobIterator * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcReleasing );
     if ( self != NULL )
@@ -119,45 +115,45 @@ NGS_FragmentBlobIteratorRelease ( NGS_FragmentBlobIterator * self, ctx_t ctx )
 /* Duplicate
  *  duplicate reference
  */
-NGS_FragmentBlobIterator *
-NGS_FragmentBlobIteratorDuplicate ( NGS_FragmentBlobIterator * self, ctx_t ctx )
+NGS_ReferenceBlobIterator *
+NGS_ReferenceBlobIteratorDuplicate ( NGS_ReferenceBlobIterator * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcAccessing );
     if ( self != NULL )
     {
         NGS_RefcountDuplicate( & self -> dad, ctx );
     }
-    return ( NGS_FragmentBlobIterator* ) self;
+    return ( NGS_ReferenceBlobIterator* ) self;
 }
 
 /* HasMore
  *  return true if there are more blobs to iterate on
  */
 bool
-NGS_FragmentBlobIteratorHasMore ( NGS_FragmentBlobIterator * self, ctx_t ctx )
+NGS_ReferenceBlobIteratorHasMore ( NGS_ReferenceBlobIterator * self, ctx_t ctx )
 {
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcRow, rcSelecting );
-        INTERNAL_ERROR ( xcSelfNull, "NULL FragmentBlobIterator accessed" );
+        INTERNAL_ERROR ( xcSelfNull, "NULL ReferenceBlobIterator accessed" );
         return false;
     }
-    return self != NULL && self -> next_row <= self -> last_row;
+    return self -> next_row <= self -> last_row;
 }
 
 /* Next
  *  return the next blob, to be Release()d by the caller.
  *  NULL if there are no more blobs
  */
-NGS_FragmentBlob*
-NGS_FragmentBlobIteratorNext ( NGS_FragmentBlobIterator * self, ctx_t ctx )
+NGS_ReferenceBlob*
+NGS_ReferenceBlobIteratorNext ( NGS_ReferenceBlobIterator * self, ctx_t ctx )
 {
     FUNC_ENTRY ( ctx, rcSRA, rcBlob, rcAccessing );
 
     if ( self == NULL )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcRow, rcSelecting );
-        INTERNAL_ERROR ( xcSelfNull, "NULL FragmentBlobIterator accessed" );
+        INTERNAL_ERROR ( xcSelfNull, "NULL ReferenceBlobIterator accessed" );
     }
     else if ( self -> next_row <= self -> last_row )
     {
@@ -168,16 +164,16 @@ NGS_FragmentBlobIteratorNext ( NGS_FragmentBlobIterator * self, ctx_t ctx )
                                                & nextRow );
         if ( rc == 0 )
         {
-            TRY ( NGS_FragmentBlob* ret = NGS_FragmentBlobMake ( ctx, self -> run, self -> curs, nextRow ) )
+            TRY ( NGS_ReferenceBlob* ret = NGS_ReferenceBlobMake ( ctx, self -> curs, nextRow, self -> ref_start, self -> last_row ) )
             {
                 int64_t first;
                 uint64_t count;
-                TRY ( NGS_FragmentBlobRowRange ( ret, ctx, & first, & count ) )
+                TRY ( NGS_ReferenceBlobRowRange ( ret, ctx, & first, & count ) )
                 {
                     self -> next_row = first + count;
                     return ret;
                 }
-                NGS_FragmentBlobRelease ( ret, ctx );
+                NGS_ReferenceBlobRelease ( ret, ctx );
             }
         }
         else if ( GetRCState ( rc ) != rcNotFound )

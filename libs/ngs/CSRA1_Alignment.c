@@ -920,7 +920,7 @@ bool CSRA1_AlignmentIteratorNext ( CSRA1_Alignment* self, ctx_t ctx )
         self -> cur_row = self -> secondary_start;
         self -> row_max = self -> secondary_max;
 
-        // let's re-run "next" again to check SEQ_SPOT_ID
+        /* let's re-run "next" again to check SEQ_SPOT_ID */
         self -> seen_first = false;
         return CSRA1_AlignmentIteratorNext ( self, ctx );
     }
