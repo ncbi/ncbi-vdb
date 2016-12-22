@@ -804,12 +804,14 @@ struct NGS_ReferenceBlobIterator* CSRA1_ReferenceGetBlobs ( const CSRA1_Referenc
         USER_ERROR ( xcIteratorUninitialized, "Reference accessed before a call to ReferenceIteratorNext()" );
         return NULL;
     }
-
-   uint64_t startRow = self -> first_row + offset / self -> chunk_size;
-   uint64_t lastRow = size == (uint64_t)-1 ?
-                            self -> last_row :
-                            self -> first_row + ( offset + size - 1 ) / self -> chunk_size;
-   return NGS_ReferenceBlobIteratorMake ( ctx, self -> curs, self -> first_row, startRow, lastRow );
+    else
+    {
+        uint64_t startRow = self -> first_row + offset / self -> chunk_size;
+        uint64_t lastRow = size == (uint64_t)-1 ?
+                                    self -> last_row :
+                                    self -> first_row + ( offset + size - 1 ) / self -> chunk_size;
+        return NGS_ReferenceBlobIteratorMake ( ctx, self -> curs, self -> first_row, startRow, lastRow );
+    }
 }
 
 bool CSRA1_ReferenceFind ( NGS_Cursor const * curs, ctx_t ctx, const char * spec, int64_t* firstRow, uint64_t* rowCount )
