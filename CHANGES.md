@@ -1,5 +1,11 @@
 # NCBI External Developer Release:
 
+## NCBI VDB 2.8.1
+**December 22, 2016**
+
+  **kfg**: added possibility to create an empty KConfig object that does not try to load any file  
+
+
 ## NCBI VDB 2.8.0
 **October 7, 2016**
 
