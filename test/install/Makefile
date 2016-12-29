@@ -66,16 +66,16 @@ INSTALLED_FILES = \
 	$(INST_LIBDIR)/libncbi-vdb.a                \
 	$(INST_LIBDIR)/libncbi-vdb.a.$(MAJVERS)     \
 	$(INST_LIBDIR)/libncbi-vdb.a.$(VERSION)     \
-	$(INST_LIBDIR)/libncbi-vdb.so               \
-	$(INST_LIBDIR)/libncbi-vdb.so.$(MAJVERS)    \
-	$(INST_LIBDIR)/libncbi-vdb.so.$(VERSION)    \
+	$(INST_LIBDIR)/libncbi-vdb.$(SHLX)          \
+	$(INST_LIBDIR)/libncbi-vdb.$(MAJVERS_SHLX)  \
+	$(INST_LIBDIR)/libncbi-vdb.$(VERSION_SHLX)  \
 	$(INST_LIBDIR)/libncbi-wvdb-static.a        \
 	$(INST_LIBDIR)/libncbi-wvdb.a               \
 	$(INST_LIBDIR)/libncbi-wvdb.a.$(MAJVERS)    \
 	$(INST_LIBDIR)/libncbi-wvdb.a.$(VERSION)    \
-	$(INST_LIBDIR)/libncbi-wvdb.so              \
-	$(INST_LIBDIR)/libncbi-wvdb.so.$(MAJVERS)   \
-	$(INST_LIBDIR)/libncbi-wvdb.so.$(VERSION)   \
+	$(INST_LIBDIR)/libncbi-wvdb.$(SHLX)         \
+	$(INST_LIBDIR)/libncbi-wvdb.$(MAJVERS_SHLX) \
+	$(INST_LIBDIR)/libncbi-wvdb.$(VERSION_SHLX) \
 	$(KONFIG_DIR)/certs.kfg                     \
 	$(KONFIG_DIR)/default.kfg                   \
 	$(INST_INCDIR)/ncbi-vdb/NGS.hpp             \
