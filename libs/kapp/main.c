@@ -301,7 +301,6 @@ void CC atexit_task ( void )
 {
     KProcMgrWhack ();
 }
-#endif
 
 rc_t KMane ( int argc, char *argv [] )
 {
@@ -313,24 +312,24 @@ rc_t KMane ( int argc, char *argv [] )
     KCtx local_ctx, * ctx = & local_ctx;
     DECLARE_FUNC_LOC ( rcExe, rcProcess, rcExecuting );
 #endif
-
+    
     /* get application version */
     ver_t vers = KAppVersion ();
-
+    
     /* initialize error reporting */
     ReportInit ( argc, argv, vers );
-
+    
 #if NO_KRSRC
     /* initialize cleanup tasks */
     status = atexit ( atexit_task );
     if ( status != 0 )
         return SILENT_RC ( rcApp, rcNoTarg, rcInitializing, rcFunction, rcNotAvailable );
-
+    
     /* initialize proc mgr */
     rc = KProcMgrInit ();
     if ( rc != 0 )
         return rc;
-
+    
     kns = ( KNSManager* ) ( size_t ) -1;
 #else
     ON_FAIL ( KRsrcGlobalInit ( & local_ctx, & s_func_loc, false ) )
@@ -338,35 +337,35 @@ rc_t KMane ( int argc, char *argv [] )
         assert ( ctx -> rc != 0 );
         return ctx -> rc;
     }
-
+    
     kns = ctx -> rsrc -> kns;
 #endif
-
+    
     /* initialize the default User-Agent in the kns-manager to default value - using "vers" and argv[0] above strrchr '/' */
     {
         const char * tool = argv[ 0 ];
         size_t tool_size = string_size ( tool );
-
+        
         const char * sep = string_rchr ( tool, tool_size, '/' );
         if ( sep ++ == NULL )
             sep = tool;
         else
             tool_size -= sep - tool;
-
+        
         sep = string_chr ( tool = sep, tool_size, '.' );
         if ( sep != NULL )
             tool_size = sep - tool;
-
+        
         KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%V", ( uint32_t ) tool_size, tool, vers );
     }
-
+    
     /* initialize logging */
     rc = KWrtInit(argv[0], vers);
     if ( rc == 0 )
         rc = KLogLibHandlerSetStdErr ();
     if ( rc == 0 )
         rc = KStsLibHandlerSetStdOut ();
-
+    
     if ( rc == 0 )
     {
 #if KFG_COMMON_CREATION
@@ -378,7 +377,7 @@ rc_t KMane ( int argc, char *argv [] )
             rc = KMain ( argc, argv );
             if ( rc != 0 )
             {
-
+                
 #if _DEBUGGING
                 rc_t rc2;
                 uint32_t lineno;
@@ -386,28 +385,139 @@ rc_t KMane ( int argc, char *argv [] )
                 while ( GetUnreadRCInfo ( & rc2, & filename, & function, & lineno ) )
                 {
                     pLogErr ( klogWarn, rc2, "$(filename):$(lineno) within $(function)"
-                              , "filename=%s,lineno=%u,function=%s"
-                              , filename
-                              , lineno
-                              , function
-                        );
+                             , "filename=%s,lineno=%u,function=%s"
+                             , filename
+                             , lineno
+                             , function
+                             );
                 }
 #endif
-
+                
             }
 #if KFG_COMMON_CREATION
             KConfigRelease ( kfg );
         }
 #endif
     }
-
+    
     /* finalize error reporting */
     ReportSilence ();
     ReportFinalize ( rc );
-
+    
 #if ! NO_KRSRC
     KRsrcGlobalWhack ( ctx );
 #endif
-
+    
     return rc;
 }
+#else
+
+rc_t KMane ( int argc, char *argv [] )
+{
+    rc_t rc;
+    KNSManager * kns;
+#if NO_KRSRC
+    int status;
+#else
+    KCtx local_ctx, * ctx = & local_ctx;
+    DECLARE_FUNC_LOC ( rcExe, rcProcess, rcExecuting );
+#endif
+    
+    /* get application version */
+    ver_t vers = KAppVersion ();
+    
+    /* initialize error reporting */
+    ReportInit ( argc, argv, vers );
+    
+#if NO_KRSRC
+    /* initialize cleanup tasks */
+    status = atexit ( atexit_task );
+    if ( status != 0 )
+        return SILENT_RC ( rcApp, rcNoTarg, rcInitializing, rcFunction, rcNotAvailable );
+    
+    /* initialize proc mgr */
+    rc = KProcMgrInit ();
+    if ( rc != 0 )
+        return rc;
+    
+    kns = ( KNSManager* ) ( size_t ) -1;
+#else
+    ON_FAIL ( KRsrcGlobalInit ( & local_ctx, & s_func_loc, false ) )
+    {
+        assert ( ctx -> rc != 0 );
+        return ctx -> rc;
+    }
+    
+    kns = ctx -> rsrc -> kns;
+#endif
+    
+    /* initialize the default User-Agent in the kns-manager to default value - using "vers" and argv[0] above strrchr '/' */
+    {
+        const char * tool = argv[ 0 ];
+        size_t tool_size = string_size ( tool );
+        
+        const char * sep = string_rchr ( tool, tool_size, '/' );
+        if ( sep ++ == NULL )
+            sep = tool;
+        else
+            tool_size -= sep - tool;
+        
+        sep = string_chr ( tool = sep, tool_size, '.' );
+        if ( sep != NULL )
+            tool_size = sep - tool;
+        
+        KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%V", ( uint32_t ) tool_size, tool, vers );
+    }
+    
+    /* initialize logging */
+    rc = KWrtInit(argv[0], vers);
+    if ( rc == 0 )
+        rc = KLogLibHandlerSetStdErr ();
+    if ( rc == 0 )
+        rc = KStsLibHandlerSetStdOut ();
+    
+    if ( rc == 0 )
+    {
+#if KFG_COMMON_CREATION
+        KConfig *kfg;
+        rc = KConfigMake ( & kfg );
+        if ( rc == 0 )
+        {
+#endif
+            rc = KMain ( argc, argv );
+            if ( rc != 0 )
+            {
+                
+#if _DEBUGGING
+                rc_t rc2;
+                uint32_t lineno;
+                const char *filename, *function;
+                while ( GetUnreadRCInfo ( & rc2, & filename, & function, & lineno ) )
+                {
+                    pLogErr ( klogWarn, rc2, "$(filename):$(lineno) within $(function)"
+                             , "filename=%s,lineno=%u,function=%s"
+                             , filename
+                             , lineno
+                             , function
+                             );
+                }
+#endif
+                
+            }
+#if KFG_COMMON_CREATION
+            KConfigRelease ( kfg );
+        }
+#endif
+    }
+    
+    /* finalize error reporting */
+    ReportSilence ();
+    ReportFinalize ( rc );
+    
+#if ! NO_KRSRC
+    KRsrcGlobalWhack ( ctx );
+#endif
+    
+    return rc;
+}
+#endif
