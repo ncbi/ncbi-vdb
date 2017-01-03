@@ -38,13 +38,6 @@
 #include <klib/rc.h>
 #include <kns/manager.h>
 
-#if ! NO_KRSRC
-#include <kfc/except.h>
-#include <kfc/rsrc.h>
-#include <kfc/rsrc-global.h>
-#include <kfc/ctx.h>
-#endif
-
 #include <strtol.h>
 
 #include <stdlib.h>
@@ -306,12 +299,7 @@ rc_t KMane ( int argc, char *argv [] )
 {
     rc_t rc;
     KNSManager * kns;
-#if NO_KRSRC
     int status;
-#else
-    KCtx local_ctx, * ctx = & local_ctx;
-    DECLARE_FUNC_LOC ( rcExe, rcProcess, rcExecuting );
-#endif
     
     /* get application version */
     ver_t vers = KAppVersion ();
@@ -319,7 +307,6 @@ rc_t KMane ( int argc, char *argv [] )
     /* initialize error reporting */
     ReportInit ( argc, argv, vers );
     
-#if NO_KRSRC
     /* initialize cleanup tasks */
     status = atexit ( atexit_task );
     if ( status != 0 )
@@ -331,15 +318,6 @@ rc_t KMane ( int argc, char *argv [] )
         return rc;
     
     kns = ( KNSManager* ) ( size_t ) -1;
-#else
-    ON_FAIL ( KRsrcGlobalInit ( & local_ctx, & s_func_loc, false ) )
-    {
-        assert ( ctx -> rc != 0 );
-        return ctx -> rc;
-    }
-    
-    kns = ctx -> rsrc -> kns;
-#endif
     
     /* initialize the default User-Agent in the kns-manager to default value - using "vers" and argv[0] above strrchr '/' */
     {
@@ -404,24 +382,20 @@ rc_t KMane ( int argc, char *argv [] )
     ReportSilence ();
     ReportFinalize ( rc );
     
-#if ! NO_KRSRC
-    KRsrcGlobalWhack ( ctx );
-#endif
-    
     return rc;
 }
 #else
+#include <kfc/except.h>
+#include <kfc/rsrc.h>
+#include <kfc/rsrc-global.h>
+#include <kfc/ctx.h>
 
 rc_t KMane ( int argc, char *argv [] )
 {
     rc_t rc;
     KNSManager * kns;
-#if NO_KRSRC
-    int status;
-#else
     KCtx local_ctx, * ctx = & local_ctx;
     DECLARE_FUNC_LOC ( rcExe, rcProcess, rcExecuting );
-#endif
     
     /* get application version */
     ver_t vers = KAppVersion ();
@@ -429,19 +403,6 @@ rc_t KMane ( int argc, char *argv [] )
     /* initialize error reporting */
     ReportInit ( argc, argv, vers );
     
-#if NO_KRSRC
-    /* initialize cleanup tasks */
-    status = atexit ( atexit_task );
-    if ( status != 0 )
-        return SILENT_RC ( rcApp, rcNoTarg, rcInitializing, rcFunction, rcNotAvailable );
-    
-    /* initialize proc mgr */
-    rc = KProcMgrInit ();
-    if ( rc != 0 )
-        return rc;
-    
-    kns = ( KNSManager* ) ( size_t ) -1;
-#else
     ON_FAIL ( KRsrcGlobalInit ( & local_ctx, & s_func_loc, false ) )
     {
         assert ( ctx -> rc != 0 );
@@ -449,7 +410,6 @@ rc_t KMane ( int argc, char *argv [] )
     }
     
     kns = ctx -> rsrc -> kns;
-#endif
     
     /* initialize the default User-Agent in the kns-manager to default value - using "vers" and argv[0] above strrchr '/' */
     {
@@ -514,9 +474,7 @@ rc_t KMane ( int argc, char *argv [] )
     ReportSilence ();
     ReportFinalize ( rc );
     
-#if ! NO_KRSRC
     KRsrcGlobalWhack ( ctx );
-#endif
     
     return rc;
 }
