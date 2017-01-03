@@ -272,6 +272,35 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter )
     return LogLevelAbsolute ( level_parameter );
 }
 
+static void setupUserAgent(KNSManager *kns, char const *tool, ver_t vers)
+{
+    /* initialize the default User-Agent in the kns-manager to default value - using "vers" and argv[0] above strrchr '/' */
+
+    size_t tool_size = string_size ( tool );
+    const char * sep = string_rchr ( tool, tool_size, '/' );
+
+    if ( sep ++ == NULL )
+        sep = tool;
+    else
+        tool_size -= sep - tool;
+    
+    sep = string_chr ( tool = sep, tool_size, '.' );
+    if ( sep != NULL )
+        tool_size = sep - tool;
+    
+    KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%V", ( uint32_t ) tool_size, tool, vers );
+}
+
+static rc_t setupLogging(char const *tool, ver_t vers)
+{
+    rc_t rc = KWrtInit(tool, vers);
+    if ( rc == 0 )
+        rc = KLogLibHandlerSetStdErr ();
+    if ( rc == 0 )
+        rc = KStsLibHandlerSetStdOut ();
+    return rc;
+}
+
 /* KMane
  *  executable entrypoint "main" is implemented by
  *  an OS-specific wrapper that takes care of establishing
@@ -295,14 +324,15 @@ void CC atexit_task ( void )
     KProcMgrWhack ();
 }
 
-rc_t KMane ( int argc, char *argv [] )
+struct KExecutionContext {
+    KConfig *kfg;
+};
+
+static rc_t setup(struct KExecutionContext *ctx, int argc, char *argv[], ver_t vers)
 {
     rc_t rc;
     KNSManager * kns;
     int status;
-    
-    /* get application version */
-    ver_t vers = KAppVersion ();
     
     /* initialize error reporting */
     ReportInit ( argc, argv, vers );
@@ -318,164 +348,111 @@ rc_t KMane ( int argc, char *argv [] )
         return rc;
     
     kns = ( KNSManager* ) ( size_t ) -1;
+    setupUserAgent(kns, argv[0], vers);
+    rc = setupLogging(argv[0], vers);
     
-    /* initialize the default User-Agent in the kns-manager to default value - using "vers" and argv[0] above strrchr '/' */
-    {
-        const char * tool = argv[ 0 ];
-        size_t tool_size = string_size ( tool );
-        
-        const char * sep = string_rchr ( tool, tool_size, '/' );
-        if ( sep ++ == NULL )
-            sep = tool;
-        else
-            tool_size -= sep - tool;
-        
-        sep = string_chr ( tool = sep, tool_size, '.' );
-        if ( sep != NULL )
-            tool_size = sep - tool;
-        
-        KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%V", ( uint32_t ) tool_size, tool, vers );
-    }
-    
-    /* initialize logging */
-    rc = KWrtInit(argv[0], vers);
-    if ( rc == 0 )
-        rc = KLogLibHandlerSetStdErr ();
-    if ( rc == 0 )
-        rc = KStsLibHandlerSetStdOut ();
-    
+#if KFG_COMMON_CREATION
     if ( rc == 0 )
     {
-#if KFG_COMMON_CREATION
-        KConfig *kfg;
-        rc = KConfigMake ( & kfg );
-        if ( rc == 0 )
-        {
-#endif
-            rc = KMain ( argc, argv );
-            if ( rc != 0 )
-            {
-                
-#if _DEBUGGING
-                rc_t rc2;
-                uint32_t lineno;
-                const char *filename, *function;
-                while ( GetUnreadRCInfo ( & rc2, & filename, & function, & lineno ) )
-                {
-                    pLogErr ( klogWarn, rc2, "$(filename):$(lineno) within $(function)"
-                             , "filename=%s,lineno=%u,function=%s"
-                             , filename
-                             , lineno
-                             , function
-                             );
-                }
-#endif
-                
-            }
-#if KFG_COMMON_CREATION
-            KConfigRelease ( kfg );
-        }
-#endif
+        rc = KConfigMake ( &ctx->kfg );
     }
-    
+#endif
+    return rc;
+}
+
+static void teardown(struct KExecutionContext *ctx, rc_t rc)
+{
+    KConfigRelease ( ctx->kfg );
+
     /* finalize error reporting */
     ReportSilence ();
     ReportFinalize ( rc );
-    
-    return rc;
 }
+
 #else
 #include <kfc/except.h>
 #include <kfc/rsrc.h>
 #include <kfc/rsrc-global.h>
 #include <kfc/ctx.h>
 
-rc_t KMane ( int argc, char *argv [] )
+struct KExecutionContext {
+    KCtx kctx;
+    KConfig *kfg;
+};
+
+static rc_t setup(struct KExecutionContext *ectx, int argc, char *argv[], ver_t vers)
 {
     rc_t rc;
     KNSManager * kns;
-    KCtx local_ctx, * ctx = & local_ctx;
+    KCtx *ctx = &ectx->kctx;
     DECLARE_FUNC_LOC ( rcExe, rcProcess, rcExecuting );
-    
-    /* get application version */
-    ver_t vers = KAppVersion ();
     
     /* initialize error reporting */
     ReportInit ( argc, argv, vers );
     
-    ON_FAIL ( KRsrcGlobalInit ( & local_ctx, & s_func_loc, false ) )
+    ON_FAIL ( KRsrcGlobalInit ( & ectx->kctx, & s_func_loc, false ) )
     {
         assert ( ctx -> rc != 0 );
         return ctx -> rc;
     }
     
     kns = ctx -> rsrc -> kns;
+    setupUserAgent(kns, argv[0], vers);
+    rc = setupLogging(argv[0], vers);
     
-    /* initialize the default User-Agent in the kns-manager to default value - using "vers" and argv[0] above strrchr '/' */
-    {
-        const char * tool = argv[ 0 ];
-        size_t tool_size = string_size ( tool );
-        
-        const char * sep = string_rchr ( tool, tool_size, '/' );
-        if ( sep ++ == NULL )
-            sep = tool;
-        else
-            tool_size -= sep - tool;
-        
-        sep = string_chr ( tool = sep, tool_size, '.' );
-        if ( sep != NULL )
-            tool_size = sep - tool;
-        
-        KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%V", ( uint32_t ) tool_size, tool, vers );
-    }
-    
-    /* initialize logging */
-    rc = KWrtInit(argv[0], vers);
-    if ( rc == 0 )
-        rc = KLogLibHandlerSetStdErr ();
-    if ( rc == 0 )
-        rc = KStsLibHandlerSetStdOut ();
-    
+#if KFG_COMMON_CREATION
     if ( rc == 0 )
     {
-#if KFG_COMMON_CREATION
-        KConfig *kfg;
-        rc = KConfigMake ( & kfg );
-        if ( rc == 0 )
-        {
-#endif
-            rc = KMain ( argc, argv );
-            if ( rc != 0 )
-            {
-                
-#if _DEBUGGING
-                rc_t rc2;
-                uint32_t lineno;
-                const char *filename, *function;
-                while ( GetUnreadRCInfo ( & rc2, & filename, & function, & lineno ) )
-                {
-                    pLogErr ( klogWarn, rc2, "$(filename):$(lineno) within $(function)"
-                             , "filename=%s,lineno=%u,function=%s"
-                             , filename
-                             , lineno
-                             , function
-                             );
-                }
-#endif
-                
-            }
-#if KFG_COMMON_CREATION
-            KConfigRelease ( kfg );
-        }
-#endif
+        rc = KConfigMake ( &ectx->kfg );
     }
+#endif
+    return rc;
+}
+
+static void teardown(struct KExecutionContext *ectx, rc_t rc)
+{
+    KConfigRelease ( ectx->kfg );
     
     /* finalize error reporting */
     ReportSilence ();
     ReportFinalize ( rc );
     
-    KRsrcGlobalWhack ( ctx );
+    KRsrcGlobalWhack ( &ectx->kctx );
+}
+#endif
+
+rc_t KMane ( int argc, char *argv [] )
+{
+    rc_t rc;
+    struct KExecutionContext ctx;
+
+    /* get application version */
+    ver_t vers = KAppVersion ();
+    
+    memset(&ctx, 0, sizeof(ctx));
+    
+    rc = setup(&ctx, argc, argv, vers);
+    if (rc == 0) {
+        rc = KMain(argc, argv);
+#if _DEBUGGING
+        if ( rc != 0 )
+        {
+            rc_t rc2;
+            uint32_t lineno;
+            const char *filename, *function;
+            while ( GetUnreadRCInfo ( & rc2, & filename, & function, & lineno ) )
+            {
+                pLogErr ( klogWarn, rc2, "$(filename):$(lineno) within $(function)"
+                         , "filename=%s,lineno=%u,function=%s"
+                         , filename
+                         , lineno
+                         , function
+                         );
+            }
+        }
+#endif
+    }
+    teardown(&ctx, rc);
     
     return rc;
 }
-#endif
