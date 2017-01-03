@@ -334,54 +334,6 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter )
     return LogLevelAbsolute ( level_parameter );
 }
 
-#if 0
-static
-void CC HandleLogLevelError ( rc_t rc )
-{
-    LOGERR ( klogFatal, rc, "expected log level" );
-    exit ( 10 );
-}
-
-/* NextLogLevel
- *  handle a numeric or textual argument to --log-level <level>  The --log-level is not
- *  specified here and could be any string of the programmers choice
- */ 
-void CC NextLogLevel ( const char ** argp,
-		    int *ip,
-		    int argc,
-		    char *argv [],
-		    const char* ( CC * handle_null ) ( void *data ), void *data )
-{
-    rc_t rc = NextLogLevelCommon ( NextArg ( argp, ip, argc, argv, handle_null, data ) );
-    if ( rc != 0 )
-    {
-        if ( handle_null != NULL )
-            ( * handle_null ) ( data );
-        else
-            HandleLogLevelError ( rc );
-    }
-}
-
-/* NextLogLevelh
- *  handle a numeric or textual argument to --log-level <level>  The --log-level is not
- *  specified here and could be any string of the programmers choice
- */ 
-void CC NextLogLevelh (int *ip,
-		    int argc,
-		    char *argv [],
-		    const char* ( CC * handle_null ) ( void *data ), void *data )
-{
-    rc_t rc = NextLogLevelCommon ( NextArgh ( ip, argc, argv, handle_null, data ) );
-    if ( rc != 0 )
-    {
-        if ( handle_null != NULL )
-            ( * handle_null ) ( data );
-        else
-            HandleLogLevelError ( rc );
-    }
-}
-#endif
-
 /* KMane
  *  executable entrypoint "main" is implemented by
  *  an OS-specific wrapper that takes care of establishing
