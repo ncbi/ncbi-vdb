@@ -51,61 +51,6 @@
 #include <assert.h>
 #include <string.h>
 
-#if 0
-/* NextArg
- *  extracts the next argument from a switch parameter
- *
- *  "arg" is an indirect pointer to somewhere within an
- *  argument string, representing the last character parsed,
- *  e.g. "-auv"
- *         ^    : "arg" indicates the 'a'.
- *  in the example given, NextArg will advance the pointer
- *  to point to the 'u'.
- *
- *  had "arg" pointed instead to the 'v' above, i.e. there
- *  are no characters remaining in "arg" to be parsed, then
- *  an attempt to return the next element of "argv" will be
- *  made by invoking NextArgh.
- *
- *  "arg" [ IN, OUT ] - current argument string as indicated above
- *
- *  "i" [ IN, OUT ] - loop counter. required to be < argc,
- *  advanced if necessary to access next argument in argv.
- *
- *  "argc" [ IN ] - number of arguments in argv
- *
- *  "argv" [ IN ] - program arguments
- *
- *  "handle_null" [ IN, NULL OKAY ] and "data" [ IN, OPAQUE ] -
- *  optional callback function to handle NULL arguments. default
- *  behavior is to log error using "logerr" and invoke "exit".
- */
-const char * CC NextArg ( const char **argp, int *i, int argc, char *argv [],
-    const char * ( CC * handle_null ) ( void *data ), void *data )
-{
-    if ( argp != NULL )
-    {
-        const char *arg = * argp;
-        if ( arg != NULL && arg [ 0 ] != 0 && arg [ 1 ] != 0 )
-        {
-            * argp = "-";
-            return arg + 1;
-        }
-        return NextArgh ( i, argc, argv, handle_null, data );
-    }
-
-    /* report a fatal error if no arg given */
-    if ( handle_null == NULL )
-    {
-        rc_t rc = RC ( rcApp, rcArgv, rcAccessing, rcParam, rcNull );
-        LOGERR ( klogFatal, ( klogFatal, rc, "internal error" ));
-        exit ( 5 );
-    }
-
-    return ( * handle_null ) ( data );
-}
-#endif
-
 rc_t CC KAppCheckEnvironment ( bool require64Bits, uint64_t requireRamSize )
 {
     rc_t rc;
