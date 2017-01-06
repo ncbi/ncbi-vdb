@@ -54,94 +54,16 @@
 #include <ctype.h>
 #include <os-native.h>
 
+static bool convert_args_paths = true;
+
 /*--------------------------------------------------------------------------
  * Main
  */
-
-static bool no_hup;
-static atomic32_t hangup;
-static atomic32_t quitting;
-
-static bool convert_args_paths = true;
-
-/* Quitting
- *  is the program supposed to exit
- */
-rc_t CC Quitting ( void )
-{
-    if ( atomic32_read ( & quitting ) == 0 )
-        return 0;
-    LOGMSG ( klogInfo, "EXITING..." );
-    return RC ( rcExe, rcProcess, rcExecuting, rcProcess, rcCanceled );
-}
-
-/* SignalQuit
- *  tell the program to quit
- */
-rc_t CC SignalQuit ( void )
-{
-    return RC ( rcExe, rcProcess, rcSignaling, rcNoObj, rcUnknown );
-}
-
-/* Hangup
- *  has the program received a SIGHUP
- */
-rc_t CC Hangup ( void )
-{
-    if ( atomic32_read ( & hangup ) == 0 )
-        return 0;
-    LOGMSG ( klogInfo, "HANGUP...\n" );
-    return RC ( rcExe, rcProcess, rcExecuting, rcProcess, rcIncomplete );
-}
-
-/* SignalHup
- *  send the program a SIGHUP
- */
-rc_t CC SignalHup ( void )
-{
-    return RC ( rcExe, rcProcess, rcSignaling, rcNoObj, rcUnknown );
-}
-
-/* SignalNoHup
- *  tell the program to stay alive even after SIGHUP
- */
-rc_t CC SignalNoHup ( void )
-{
-    no_hup = true;
-    return 0;
-}
-
-
-BOOL CC Our_HandlerRoutine( DWORD dwCtrlType )
-{
-    BOOL res = FALSE;
-    switch( dwCtrlType )
-    {
-    case CTRL_C_EVENT : ReportSilence ();
-                        atomic32_inc ( & quitting );
-                        res = TRUE;
-                        break;
-    }
-    return res;
-}
 
 
 /* main
  *  Windows specific main entrypoint
  */
-static
-int main2 ( int argc, char *argv [] )
-{
-    rc_t rc;
-
-    SetConsoleCtrlHandler( ( PHANDLER_ROUTINE ) Our_HandlerRoutine, TRUE );
-
-    /* run this guy */
-    rc = KMane ( argc, argv );
-
-    return ( rc == 0 ) ? 0 : 3;
-}
-
 static
 char * convert_arg_utf8( const wchar_t *arg )
 {
@@ -247,50 +169,8 @@ char * CC rewrite_arg_as_path ( const wchar_t *arg, bool before_kmane )
 
 int __cdecl wmain ( int argc, wchar_t *wargv [], wchar_t *envp [] )
 {
-    char **argv;
-    int i, status;
-
-    /* must initialize COM... must initialize COM... */
-    /* CoInitializeEx ( NULL, COINIT_MULTITHREADED ); */
-    CoInitialize(NULL);
-
-    /* create a copy of args */
-    argv = calloc ( argc + 1, sizeof * argv );
-    if ( argv == NULL )
-        status = 5;
-    else
-    {
-        /* convert wchar_t arguments to UTF-8
-           rewriting anything that looks like a path */
-        for ( i = 0; i < argc; ++ i )
-        {
-            if ( convert_args_paths )
-            {
-                argv [ i ] = rewrite_arg_as_path ( wargv [ i ], true );
-            }
-            else
-            {
-                argv [ i ] = convert_arg_utf8 ( wargv [ i ] );
-            }
-            
-            if ( argv [ i ] == NULL )
-                break;
-        }
-
-        /* perform normal main operations on UTF-8 with POSIX-style paths */
-        if ( i == argc )
-            status = main2 ( argc, argv );
-
-        /* tear down argv */
-        while ( -- i >= 0 )
-            free ( argv [ i ] );
-        free ( argv );
-    }
-
-    /* balance the COM initialization */
-    CoUninitialize ();
-
-    return status;
+    rc_t rc = KAppRun(argc, (char **)&wargv[0], KAppVersion(), KMane);
+    return rc == 0 ? 0 : 3;
 }
 
 void  __declspec( dllexport ) __stdcall wmainCRTStartupNoPathConversion()

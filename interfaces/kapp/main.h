@@ -96,6 +96,11 @@ ver_t CC KAppVersion ( void );
  */
 rc_t CC KMain ( int argc, char *argv [] );
 
+rc_t KAppSetup(int argc, char *argv[], ver_t vers);
+
+void KAppTeardown(rc_t rc);
+
+rc_t CC KAppRun(int argc, char *argv[], ver_t vers, rc_t (CC *main)(int argc, char *argv[]));
 
 /* Usage - EXTERN
  *  This function is called when the command line argument

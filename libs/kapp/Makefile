@@ -80,6 +80,8 @@ KAPP_CMN = \
 	args-conv-os \
 	tokenizer \
 	sysmain \
+    app-setup \
+    init \
 	ram \
 	log-xml
 

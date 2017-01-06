@@ -28,11 +28,35 @@
 #include <kapp/main.h>
 #include <klib/rc.h>
 
-/* main
- *  Unix specific main entrypoint
- */
-int main(int argc, char *argv[], char *envp[])
+static char const *getValue(char const *name, char *pairs[])
 {
-    rc_t rc = KAppRun(argc, argv, KAppVersion(), KMane);
+    char *s;
+    
+    while ((s = *pairs++) != NULL) {
+        int i;
+        
+        for (i = 0; ; ++i) {
+            int const qry = name[i];
+            int const fnd = s[i];
+            
+            if (fnd == '\0')
+                break;
+            if (fnd == '=' && qry == '\0')
+                return s + i + 1;
+            if (fnd != qry)
+                break;
+        }
+    }
+    return NULL;
+}
+
+/* main
+ *  Darwin/OSX specific main entrypoint
+ */
+int main(int argc, char *argv[], char *envp[], char *apple[])
+{
+    char const *exePath = getValue("executable_path", apple);
+    rc_t rc = KAppRun(argc, argv, KAppVersion(), KMain);
+    (void)exePath;
     return rc == 0 ? 0 : 3;
 }

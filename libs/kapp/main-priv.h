@@ -24,21 +24,8 @@
 *
 */
 
-#ifndef _h_main_priv_
-#define _h_main_priv_
-
-#ifndef _h_klib_defs_
 #include <klib/defs.h>
-#endif
-
-#ifndef _h_kapp_extern_
- #include <kapp/extern.h>
-#endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+#include <kapp/extern.h>
     
 /*--------------------------------------------------------------------------
  * KMane
@@ -68,9 +55,3 @@ rc_t KMane ( int argc, char *argv [] );
  * in bytes
  */
 rc_t KAppGetTotalRam ( uint64_t * totalRam );
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* _h_main_priv_ */
