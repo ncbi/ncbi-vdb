@@ -37,6 +37,7 @@ namespace ncbi
         {
         public:
             typedef int TokenType;
+            static const TokenType EndSource = 0; // bison convention
 
         public:
             SchemaScanner ( const char * source, bool p_debug = false );

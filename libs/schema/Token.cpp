@@ -37,6 +37,13 @@ Token :: Token ( const SchemaToken& p_token )
 {
 }
 
+Token :: Token ( const Token& p_token )
+:   m_type ( p_token . m_type ),
+    m_value ( string_dup_measure ( p_token . m_value, 0 ) ),
+    m_ws ( string_dup_measure ( p_token . m_ws, 0 ) )
+{
+}
+
 Token :: ~Token ()
 {
     free ( m_value );

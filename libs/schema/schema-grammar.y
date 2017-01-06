@@ -90,15 +90,24 @@
         return ret;
     }
 
+    /* Create a flat list */
+    static
+    ParseTree *
+    MakeList ( YYSTYPE & p_prod )
+    {
+        SchemaToken v = { PT_ASTLIST, NULL, 0, NULL, NULL };
+        ParseTree * ret = new ParseTree ( v );
+        ret -> AddChild ( P ( p_prod ) );
+        return ret;
+    }
+
     /* Add to a flat list node */
     static
     ParseTree *
-    AddToList ( ParseTree * p_root, ParseTree * p_br1 = 0, ParseTree * p_br2 = 0 )
+    AddToList ( ParseTree * p_root, ParseTree * p_br1, ParseTree * p_br2 = 0 )
     {
-        if ( p_br1 != 0 )
-        {
-            p_root -> AddChild ( p_br1 );
-        }
+        assert ( p_br1 != 0 );
+        p_root -> AddChild ( p_br1 );
         if ( p_br2 != 0 )
         {
             p_root -> AddChild ( p_br2 );
@@ -119,6 +128,9 @@
 %locations
 
 %define api.pure full
+
+
+ /* !!! Keep token declarations in synch with schema-ast.y */
 
 %token END_SOURCE 0 "end of source"
 
@@ -182,7 +194,8 @@
 %token KW_void
 %token KW_write
 
-    /* Parse tree rule nodes */
+    /* Parse tree nodes */
+%token PT_ASTLIST
 %token PT_PARSE
 %token PT_SOURCE
 %token PT_VERSION_1_0
@@ -233,7 +246,6 @@
 %token PT_TYPEDCOL
 %token PT_COLMODIFIER
 %token PT_COLSTMT
-%token PT_CONDEXPR
 %token PT_DFLTVIEW
 %token PT_PHYSMBR
 %token PT_PHYSCOL
@@ -256,6 +268,10 @@
 %token PT_UNARYPLUS
 %token PT_FACTPARMNAMED
 %token PT_VERSNAME
+%token PT_ARRAY
+
+ /* !!! Keep token declarations above in synch with schema-ast.y */
+
 
 %start parse
 
@@ -277,7 +293,7 @@ version_1_0
     ;
 
 version_2_x
-    : KW_version FLOAT ';'      { $$ . subtree = MakeTree ( PT_VERSION_2, T ( $1 ), T ( $2 ), T ( $3 ) ); }                                             /* and check for valid version number */
+    : KW_version FLOAT ';'      { $$ . subtree = MakeTree ( PT_VERSION_2, T ( $1 ), T ( $2 ), T ( $3 ) ); } /* later checked for valid version number */
     ;
 
 schema_2_x
@@ -287,12 +303,8 @@ schema_2_x
 /* schema-1.0
  */
 schema_1_0
-    : schema_1_0_decl_seq       { $$ . subtree = MakeTree ( PT_SCHEMA_1_0, P ( $1 ) ); }
-    ;
-
-schema_1_0_decl_seq
-    : schema_1_0_decl                       { $$ = $1; }
-    | schema_1_0_decl_seq schema_1_0_decl   { $$ . subtree = AddToList ( P ( $1 ) , P ( $2 ) ); }
+    : schema_1_0_decl              { $$ . subtree = MakeTree ( PT_SCHEMA_1_0, P ( $1 ) ); }
+    | schema_1_0 schema_1_0_decl   { $$ . subtree = AddToList ( P ( $1 ) , P ( $2 ) ); }
     ;
 
 schema_1_0_decl
@@ -335,17 +347,17 @@ typedef_1_0_decl
         fqn_1_0 /* must be from 'typedef' or schema template */
         typedef_1_0_new_name_list
         ';'
-                            { $$ . subtree = MakeTree ( PT_INCLUDE, T ( $1 ), P ( $2 ), P ( $3 ), T ( $4 ) ); }
+                            { $$ . subtree = MakeTree ( PT_TYPEDEF, T ( $1 ), P ( $2 ), P ( $3 ), T ( $4 ) ); }
     ;
 
 typedef_1_0_new_name_list
-    : typedef_1_0_new_name                                  { $$ = $1; }
+    : typedef_1_0_new_name                                  { $$ . subtree = MakeList ( $1 ); }
     | typedef_1_0_new_name_list ',' typedef_1_0_new_name    { $$ . subtree = AddToList ( P($1), T($2), P($3) ); }
     ;
 
 typedef_1_0_new_name
     : fqn_1_0               { $$ = $1; } /* simple fqn, apparently ( but not necessarily ) scalar */
-    | fqn_1_0 dim_1_0       { $$ . subtree = AddToList ( P ( $1 ), P ( $2 ) ); } /* vector fqn with dimension */
+    | fqn_1_0 dim_1_0       { $$ . subtree = MakeTree ( PT_ARRAY, P ( $1 ), P ( $2 ) ); } /* vector fqn with dimension */
 
     ;
 
@@ -368,12 +380,12 @@ typeset_1_0_def
 /* typespec-1.0
  */
 typespec_1_0_list
-    : typespec_1_0                          { $$ = $1; }
+    : typespec_1_0                          { $$ . subtree = MakeList ( $1 ); }
     | typespec_1_0_list ',' typespec_1_0    { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     ;
 
 typespec_1_0
-    : typespec_1_0_name                     { $$ = $1; }
+    : typespec_1_0_name                     { $$ . subtree = MakeList ( $1 ); }
     | typespec_1_0_name dim_1_0             { $$ . subtree = AddToList ( P ( $1 ), P ( $2 ) ); }
     ;
 
@@ -476,7 +488,7 @@ func_1_0_schema_sig
     ;
 
 func_1_0_schema_formals
-    : func_1_0_schema_formal                                { $$ = $1; }
+    : func_1_0_schema_formal                                { $$ . subtree = MakeList ( $1 ); }
     | func_1_0_schema_formals ',' func_1_0_schema_formal    { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     ;
 
@@ -516,7 +528,7 @@ func_1_0_param_signature
     ;
 
 func_1_0_formal_params
-    : formal_param_1_0                                  { $$ = $1; }
+    : formal_param_1_0                                  { $$ . subtree = MakeList ( $1 ); }
     | func_1_0_formal_params ',' formal_param_1_0       { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     ;
 
@@ -545,7 +557,7 @@ func_1_0_prologue
     ;
 
 script_1_0_stmt_seq
-    : script_1_0_stmt                       { $$ = $1; }
+    : script_1_0_stmt                       { $$ . subtree = MakeList ( $1 ); }
     | script_1_0_stmt_seq script_1_0_stmt   { $$ . subtree = AddToList ( P ( $1 ), P ( $2 ) ); }
     ;
 
@@ -586,7 +598,7 @@ phys_1_0_prologue
     ;
 
 phys_1_0_body
-    : phys_1_0_body_stmt                    { $$ = $1; }
+    : phys_1_0_body_stmt                    { $$ . subtree = MakeList ( $1 ); }
     | phys_1_0_body phys_1_0_body_stmt      { $$ . subtree = AddToList ( P ( $1 ), P ( $2 ) ); }
     ;
 
@@ -622,7 +634,7 @@ opt_tbl_1_0_parents
     ;
 
 tbl_1_0_parents
-    : fqn_opt_vers                        { $$ = $1; }
+    : fqn_opt_vers                        { $$ . subtree = MakeList ( $1 ); }
     | tbl_1_0_parents ',' fqn_opt_vers    { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     ;
 
@@ -634,7 +646,7 @@ tbl_1_0_body
     ;
 
 tbl_1_0_stmt_seq
-    : tbl_1_0_stmt                      { $$ = $1; }
+    : tbl_1_0_stmt                      { $$ . subtree = MakeList ( $1 ); }
     | tbl_1_0_stmt_seq tbl_1_0_stmt     { $$ . subtree = AddToList ( P ( $1 ), P ( $2 ) ); }
     ;
 
@@ -666,7 +678,7 @@ opt_col_1_0_modifier_seq
     ;
 
 col_1_0_modifier_seq
-    : col_1_0_modifier                          { $$ = $1; }
+    : col_1_0_modifier                          { $$ . subtree = MakeList ( $1 ); }
     | col_1_0_modifier_seq col_1_0_modifier     { $$ . subtree = AddToList ( P ( $1 ), P ( $2 ) ); }
     ;
 
@@ -699,7 +711,7 @@ typed_column_decl_1_0
     ;
 
 column_body_1_0
-    : column_stmt_1_0                       { $$ = $1; }
+    : column_stmt_1_0                       { $$ . subtree = MakeList ( $1 ); }
     | column_body_1_0 ';' column_stmt_1_0   { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     ;
 
@@ -737,7 +749,7 @@ opt_col_schema_parms_1_0
     ;
 
 col_schema_parms_1_0
-    : col_schema_parm_1_0                           { $$ = $1; }
+    : col_schema_parm_1_0                           { $$ . subtree = MakeList ( $1 ); }
     | col_schema_parms_1_0 ',' col_schema_parm_1_0  { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     ;
 
@@ -755,7 +767,7 @@ col_schema_value_1_0
  */
 
 cond_expr_1_0
-    : expression_1_0                        { $$ . subtree = MakeTree ( PT_CONDEXPR, P ( $1 ) ); }
+    : expression_1_0                        { $$ . subtree = MakeList ( $1 ); }
     | cond_expr_1_0 '|' expression_1_0      { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     ;
 
@@ -800,7 +812,7 @@ func_expr_1_0
     ;
 
 schema_parms_1_0
-    : schema_parm_1_0                       { $$ = $1; }
+    : schema_parm_1_0                       { $$ . subtree = MakeList ( $1 ); }
     | schema_parms_1_0 ',' schema_parm_1_0  { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     ;
 
@@ -815,7 +827,7 @@ opt_factory_parms_1_0
     ;
 
 factory_parms_1_0
-    : factory_parm_1_0                          { $$ = $1; }
+    : factory_parm_1_0                          { $$ . subtree = MakeList ( $1 ); }
     | factory_parms_1_0 ',' factory_parm_1_0    { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     ;
 
@@ -830,7 +842,7 @@ opt_func_1_0_parms
     ;
 
 func_1_0_parms
-    : expression_1_0                        { $$ = $1; }
+    : expression_1_0                        { $$ . subtree = MakeList ( $1 ); }
     | func_1_0_parms ',' expression_1_0     { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     ;
 
@@ -860,7 +872,7 @@ opt_const_vect_exprlist_1_0
     ;
 
 const_vect_exprlist_1_0
-    : expression_1_0                                { $$ = $1; }
+    : expression_1_0                                { $$ . subtree = MakeList ( $1 ); }
     | const_vect_exprlist_1_0 ',' expression_1_0    { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     ;
 
@@ -902,7 +914,7 @@ database_body_1_0
     ;
 
 database_members_1_0
-    : database_member_1_0                       { $$ = $1; }
+    : database_member_1_0                       { $$ . subtree = MakeList ( $1 ); }
     | database_members_1_0 database_member_1_0  { $$ . subtree = AddToList ( P ( $1 ), P ( $2 ) ); }
     ;
 
@@ -930,7 +942,7 @@ table_member_1_0
 /* other stuff
  */
 fqn_1_0
-    : ident_1_0                                     { $$ = $1; }
+    : ident_1_0                                     { $$ . subtree = MakeList ( $1 ); }
     | fqn_1_0 ':' ident_1_0                         { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     /* a hack to handle keywords used as namespace identifiers in existing 1.0 schemas */
     | fqn_1_0 ':' KW_database                       { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }

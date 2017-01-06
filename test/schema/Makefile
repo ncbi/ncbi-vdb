@@ -32,6 +32,7 @@ MODULE = test/schema
 TEST_TOOLS = \
 	wb-test-schema-lex \
 	wb-test-schema-parser \
+	wb-test-schema-ast \
 
 INT_TOOLS = \
     test-schema-scan \
@@ -100,6 +101,18 @@ TESTPARSE_OBJ = \
 	$(addsuffix .$(OBJX),$(TESTPARSE_SRC))
 
 $(TEST_BINDIR)/test-schema-parse: $(TESTPARSE_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_LIB)
+
+#-------------------------------------------------------------------------------
+# AST test
+#
+TESTAST_SRC = \
+	wb-test-schema-ast
+
+TESTAST_OBJ = \
+	$(addsuffix .$(OBJX),$(TESTAST_SRC))
+
+$(TEST_BINDIR)/wb-test-schema-ast: $(TESTAST_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_LIB)
 
 #-------------------------------------------------------------------------------

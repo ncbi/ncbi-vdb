@@ -36,15 +36,21 @@ namespace ncbi
         class Token
         {
         public:
+            typedef SchemaScanner :: TokenType TokenType;
+
+        public:
             Token ( const SchemaToken& );
+            Token ( const Token& );
             ~Token ();
 
-            SchemaScanner :: TokenType GetType () const { return m_type; }
+            TokenType GetType () const { return m_type; }
             const char* GetValue () const               { return m_value == 0 ? "" : m_value; }
             const char* GetLeadingWhitespace () const   { return m_ws == 0 ? "" : m_ws; }
 
+            bool IsFake() const { return m_value == 0; }
+
         private:
-            SchemaScanner :: TokenType m_type;
+            TokenType m_type;
             char* m_value;
             char* m_ws;
         };

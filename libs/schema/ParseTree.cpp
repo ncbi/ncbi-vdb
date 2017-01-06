@@ -26,16 +26,39 @@
 
 #include "ParseTree.hpp"
 
-#include <klib/text.h>
+#include <stdexcept>
+#include <iostream>
 
+#include <klib/text.h>
+#include <klib/printf.h>
+
+using namespace std;
 using namespace ncbi::SchemaParser;
 
-static const uint32_t BlockSize = 1024; //TODO: pick a good initial size
+static const uint32_t ChildrenBlockSize = 1024; //TODO: pick a good initial size
+
+static
+void
+ThrowRc ( const char* p_msg, rc_t p_rc )
+{
+    char msg[1024];
+    string_printf ( msg, sizeof msg, NULL, "%s, rc = %R", p_msg, p_rc );
+    //INTERNAL_ERROR ( xcUnexpected, "VectorRemove: rc = %R", rc );
+    throw logic_error ( msg );
+}
+
+// ParseTree
 
 ParseTree :: ParseTree ( const SchemaToken& p_token )
 : m_token ( p_token )
 {
-    VectorInit ( & m_children, 0, BlockSize );
+    VectorInit ( & m_children, 0,   ChildrenBlockSize );
+}
+
+ParseTree :: ParseTree ( const Token& p_token )
+: m_token ( p_token )
+{
+    VectorInit ( & m_children, 0,   ChildrenBlockSize );
 }
 
 void DestroyChild ( void * item, void * )
@@ -70,4 +93,75 @@ ParseTree*
 ParseTree :: GetChild ( uint32_t p_idx )
 {
     return ( ParseTree * ) VectorGet ( & m_children, p_idx );
+}
+
+void
+ParseTree :: MoveChildren ( ParseTree& p_source )
+{
+    VectorWhack ( & m_children, DestroyChild, NULL );
+    VectorCopy ( & p_source . m_children, & m_children );
+    VectorWhack ( & p_source . m_children, NULL, NULL );
+}
+
+// ParseTreeScanner
+
+static const uint32_t StackBlockSize    = 1024; //TODO: pick a good initial size
+
+ParseTreeScanner :: ParseTreeScanner ( const ParseTree& p_root )
+{
+    VectorInit ( & m_stack, 0, StackBlockSize );
+    PushNode ( & p_root );
+}
+
+ParseTreeScanner :: ~ParseTreeScanner ()
+{
+    VectorWhack ( & m_stack, NULL, NULL );
+}
+
+static const SchemaToken OpenParToken  = { '(', NULL, 0, NULL, NULL };
+static const ParseTree ChildrenOpen  ( OpenParToken );
+
+static const SchemaToken CloseParToken = { ')', NULL, 0, NULL, NULL };
+static const ParseTree ChildrenClose ( CloseParToken );
+
+void
+ParseTreeScanner :: PushNode ( const ParseTree* p_node )
+{
+//cout << "pushing " << p_node -> GetToken () . GetType () << endl;
+    VectorAppend ( & m_stack, NULL, p_node );
+}
+
+
+SchemaScanner :: TokenType
+ParseTreeScanner :: NextToken ( const Token*& p_token )
+{
+    while ( VectorLength ( & m_stack ) != 0 )
+    {
+        const ParseTree* node;
+        rc_t rc = VectorRemove ( & m_stack, VectorLength ( & m_stack ) - 1, ( void ** ) & node );
+        if ( rc != 0 )
+        {
+            ThrowRc ( "VectorRemove", rc );
+        }
+
+        assert ( node != 0 );
+//cout << "popped " << node -> GetToken () . GetType () << endl;
+
+        uint32_t count = node -> ChildrenCount ();
+        if ( count > 0 )
+        {   // push '(' children ')' in reverse order
+            PushNode ( & ChildrenClose );
+
+            for ( uint32_t i = count; i > 0; --i )
+            {
+                PushNode ( node -> GetChild ( i - 1 ) );
+            }
+
+            PushNode ( & ChildrenOpen );
+        }
+
+        p_token = & node -> GetToken ();
+        return p_token -> GetType ();
+    }
+    return SchemaScanner::EndSource;
 }

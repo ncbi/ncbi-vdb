@@ -72,7 +72,7 @@ MatchStrings ( const string& p_source, const string p_print )
     {
         if ( i >= p_print . length () )
         {
-            cout << "premature end of print after " << p_source . substr ( i > Context ? i - Context : 0 ) << endl;
+            cout << "premature end of print after '" << p_source . substr ( i > Context ? i - Context : 0 ) << "', " << ( i - p_print . length () + 1 ) << " character(s) missing" << endl;
             return false;
         }
         if ( p_source [ i ] != p_print [ i ] )

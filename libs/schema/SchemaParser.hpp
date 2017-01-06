@@ -42,7 +42,8 @@ namespace ncbi
             bool ParseString ( const char * input );
             bool ParseFile ( const char * source_file );
 
-            ParseTree* GetParseTree () const { return m_root; }
+            const ParseTree* GetParseTree () const { return m_root; }
+                  ParseTree* MoveParseTree (); // Transfer ownership to caller; destroy with delete
 
         private:
             bool m_debug;

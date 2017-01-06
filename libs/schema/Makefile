@@ -74,12 +74,22 @@ SCHEMA_SRC = \
     SchemaScanner \
     SchemaParser \
     ParseTree \
+    schema-ast \
+    AST \
 
 schema-grammar.$(LOBX): $(SRCDIR)/schema-grammar.cpp
 	$(CP) -o $@ -fPIC $(OPT) -D_LIBRARY $< $(LOC_INFO) -D__file_ext__=cpp
 
-bison $(SRCDIR)/schema-grammar.cpp: $(SRCDIR)/schema-grammar.y
+bison: grammar ast
+
+grammar $(SRCDIR)/schema-grammar.cpp: $(SRCDIR)/schema-grammar.y
 	bison -r state -o $(SRCDIR)/schema-grammar.cpp --defines=$(SRCDIR)/schema-tokens.h $(SRCDIR)/schema-grammar.y
+
+ast $(SRCDIR)/schema-ast.cpp: $(SRCDIR)/schema-ast.y
+	bison -r state -o $(SRCDIR)/schema-ast.cpp --defines=$(SRCDIR)/schema-ast-tokens.h $(SRCDIR)/schema-ast.y
+
+schema-lex.$(LOBX): $(SRCDIR)/schema-lex.c
+	$(CC)  -Wno-unused-function -o $@ -fPIC $(OPT) -D_LIBRARY $< $(LOC_INFO) -D__file_ext__=c
 
 flex $(SRCDIR)/schema-lex.c: $(SRCDIR)/schema-lex.l $(SRCDIR)/schema-grammar.c
 	flex -d -t $(SRCDIR)/schema-lex.l > $(SRCDIR)/schema-lex.c
@@ -94,4 +104,4 @@ compile: stdcompile
 
 $(TARGDIR)/compile: $(OBJFILES)
 
-.PHONY: bison flex
+.PHONY: bison flex grammar ast

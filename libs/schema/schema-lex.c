@@ -3245,10 +3245,14 @@ enum yytokentype
 SchemaScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, SchemaScanBlock* sb )
 {
     enum yytokentype ret = ( enum yytokentype ) schema_yylex ( lvalp, llocp, sb -> scanner );
+    lvalp -> type       = ret;
     lvalp -> value      = ( ( struct yyguts_t * ) sb -> scanner ) -> yytext_r;
     lvalp -> value_len  = ( ( struct yyguts_t * ) sb -> scanner ) -> yyleng_r;
     lvalp -> leading_ws = sb -> whitespace; /* will be freed by the new owner */
+    lvalp -> subtree = NULL;
+
     sb -> whitespace = NULL;
+
     return ret;
 }
 

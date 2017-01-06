@@ -31,6 +31,7 @@
 #include <ktst/unit_test.hpp>
 
 #include <sstream>
+#include <fstream>
 #include <cstring>
 
 #include "../../libs/schema/SchemaParser.hpp"
@@ -41,6 +42,8 @@ using namespace ncbi::SchemaParser;
 
 using namespace std;
 using namespace ncbi::NK;
+
+const string DataDir = "./actual";
 
 TEST_SUITE ( SchemaParserTestSuite );
 
@@ -58,6 +61,14 @@ TEST_CASE(Token_Construct)
     Token t ( st );
     REQUIRE_EQ ( ( int ) KW_virtual, t . GetType() );
     REQUIRE_EQ ( string ( "virtual" ), string ( t . GetValue() ) );
+    REQUIRE ( ! t . IsFake () );
+}
+
+TEST_CASE(Token_Construct_Fake)
+{
+    SchemaToken st = { 42, NULL, 0, 0, 0 };
+    Token t ( st );
+    REQUIRE ( t . IsFake () );
 }
 
 // ParseTree
@@ -91,6 +102,59 @@ TEST_CASE(ParseTree_ChildrenCount)
     t. AddChild ( new ParseTree ( st1 ) );
 
     REQUIRE_EQ ( 2u, t . ChildrenCount () );
+}
+
+TEST_CASE(ParseTree_MoveChildren)
+{
+
+    SchemaToken st = { PT_PARSE, "" };
+    ParseTree source ( st );
+    source. AddChild ( new ParseTree ( st0 ) );
+    source. AddChild ( new ParseTree ( st1 ) );
+
+    class TestTree : public ParseTree
+    {
+    public:
+        using ParseTree :: MoveChildren;
+        TestTree(const SchemaToken & p_st) : ParseTree( p_st ) {};
+    } target ( st );
+
+    target . MoveChildren ( source );
+
+    REQUIRE_EQ ( 0u, source . ChildrenCount () );
+
+    REQUIRE_EQ ( 2u, target . ChildrenCount () );
+    REQUIRE ( target . GetChild ( 0 ) -> GetToken () == Token ( st0 ) );
+    REQUIRE ( target . GetChild ( 1 ) -> GetToken () == Token ( st1 ) );
+}
+
+// SchemaParser
+
+TEST_CASE(SchemaParser_ParseString)
+{
+    SchemaParser p;
+    REQUIRE ( p . ParseString ( "" ) );
+    REQUIRE_NOT_NULL ( p . GetParseTree () );
+}
+
+#if SHOW_UNIMPLEMENTED
+TEST_CASE(SchemaParser_ParseFile)
+{
+    const string FileName = DataDir + "/" + GetName ();
+    ofstream ( FileName . c_str () ) << "" << ends;
+    SchemaParser p;
+    REQUIRE ( p . ParseFile ( FileName. c_str () ) );
+    REQUIRE_NOT_NULL ( p . GetParseTree () );
+}
+#endif
+
+TEST_CASE(SchemaParser_MoveParseTree)
+{
+    SchemaParser p;
+    p . ParseString ( "" );
+    ParseTree * root = p . MoveParseTree ();
+    REQUIRE_NULL ( p . GetParseTree () );
+    delete root;
 }
 
 // Grammar

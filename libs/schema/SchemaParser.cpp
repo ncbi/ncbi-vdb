@@ -30,9 +30,8 @@
 #include "ParseTree.hpp"
 
 using namespace ncbi::SchemaParser;
+#define YYDEBUG 1
 #include "schema-tokens.h"
-
-extern int Schema_debug;
 
 SchemaParser :: SchemaParser ( bool p_debug )
 :   m_debug ( p_debug ),
@@ -61,4 +60,12 @@ SchemaParser :: ParseFile ( const char * source_file )
     delete m_root;
     m_root = 0;
     return false;
+}
+
+ParseTree*
+SchemaParser :: MoveParseTree ()
+{
+    ParseTree* ret = m_root;
+    m_root = 0;
+    return ret;
 }

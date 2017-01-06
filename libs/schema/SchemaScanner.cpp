@@ -30,6 +30,8 @@
 
 using namespace ncbi::SchemaParser;
 
+const SchemaScanner :: TokenType SchemaScanner :: EndSource;
+
 SchemaScanner :: SchemaScanner ( const char * source, bool p_debug )
 {
     SchemaScan_yylex_init ( & m_scanBlock, source );
