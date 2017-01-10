@@ -58,6 +58,7 @@
 %union {
   const Token*  tok;
   AST*          node;
+  AST_FQN*      fqn;
 }
 
 %define parse.error verbose
@@ -208,7 +209,8 @@
 
 %start parse
 
-%type <node> source schema_1 schema_decls schema_decl schema_2 typedef new_type_names new_type_name fqn qualnames expr
+%type <node> source schema_1 schema_decls schema_decl schema_2 typedef new_type_names new_type_name expr
+%type <fqn> fqn qualnames
 %type <tok> END_SOURCE version_1 PT_VERSION_1_0 PT_VERSION_2 PT_SCHEMA_1_0 FLOAT version_2 PT_TYPEDEF PT_IDENT IDENTIFIER_1_0 DECIMAL PT_ASTLIST PT_ARRAY
 
 %%
@@ -272,9 +274,9 @@ fqn
     ;
 
 qualnames
-    : PT_IDENT '(' IDENTIFIER_1_0 ')'                               { $$ = new AST (); $$ -> AddNode ( $3 ); }
-    /*| PT_IDENT '(' PHYSICAL_IDENTIFIER_1_0 ')'                    { $$ = new AST (); $$ -> AddNode ( $3 ); }*/
-    /*| qualnames ':' PT_IDENT  '(' IDENTIFIER_1_0 ')'              { $$ = $1; $$ -> AddNode ( $5 ); }*/
+    : PT_IDENT '(' IDENTIFIER_1_0 ')'                               { $$ = new AST_FQN ( $3 ); }
+    /*| PT_IDENT '(' PHYSICAL_IDENTIFIER_1_0 ')'                    { $$ = new AST_FQN ( $3 ); }*/
+    | qualnames ':' PT_IDENT  '(' IDENTIFIER_1_0 ')'                { $$ = $1; $$ -> AddNode ( $5 ); }
     /*| qualnames ':' PT_IDENT  '(' PHYSICAL_IDENTIFIER_1_0 ')'     { $$ = $1; $$ -> AddNode ( $5 ); }*/
     ;
 

@@ -32,3 +32,4 @@ user.status
 .\#*
 core
 *.pyc
+.vscode

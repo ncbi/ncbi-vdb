@@ -39,6 +39,8 @@ namespace ncbi
 {
     namespace SchemaParser
     {
+        class AST_FQN;
+
         class AST : public ParseTree
         {
         public:
@@ -66,16 +68,17 @@ namespace ncbi
 
             const VSchema * GetSchema () const { return m_schema; }
 
-            void Declare ( const Token& p_ident, KSymbol* );
-            void DeclareType ( const Token& p_ident, const KSymbol* p_super, const AST* p_dimension );
+            void DeclareType ( const AST_FQN& p_fqn, const KSymbol& p_super, const AST* p_dimension );
 
-            KSymbol* Resolve ( const Token& p_ident );
+            KSymbol* Resolve ( const AST_FQN& p_fqn );
 
             // error list is cleared by a call to Build
             uint32_t GetErrorCount() const { return VectorLength ( & m_errors ); }
             const char* GetErrorMessage ( uint32_t p_idx ) const { return ( const char * ) VectorGet ( & m_errors, p_idx ); }
 
             void ReportError ( const char* p_fmt, ... );
+
+            KSymbol* CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const void * p_obj );
 
         private:
             bool Init();
@@ -112,19 +115,37 @@ namespace ncbi
         public:
             AST_TypeDef ( ASTBuilder &,
                           const Token*,
-                          AST* baseType,
+                          AST_FQN* baseType,
                           AST* newTypes );
             virtual ~AST_TypeDef();
         };
 
-        class AST_ArrayDef : public AST
+        class AST_ArrayDef : public AST // not clear if needed
         {
         public:
             AST_ArrayDef ( const Token*,
-                           AST* typeName,
+                           AST_FQN* typeName,
                            AST* dimension );
             virtual ~AST_ArrayDef();
+
+            const AST_FQN& GetBaseType () const;
         };
+
+        class AST_FQN : public AST
+        {
+        public:
+            AST_FQN ( const Token* );
+            virtual ~AST_FQN();
+
+            uint32_t NamespaceCount() const;
+            void GetNamespace ( uint32_t p_idx, String & ) const;
+            void GetIdentifier ( String & ) const;
+
+            // reconstruct the full name "ns1:ns2:...:ident", 0-terminated. Returns size in bytes
+            void GetFullName ( char* p_buf, size_t p_bufSize ) const;
+            void GetPartialName ( char* p_buf, size_t p_bufSize, uint32_t p_lastMember ) const;
+        };
+
     }
 }
 

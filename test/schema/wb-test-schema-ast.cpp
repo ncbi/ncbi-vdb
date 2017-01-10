@@ -124,6 +124,84 @@ TEST_CASE(SchemaAST_WalkParseTree)
     delete root;
 }
 
+// AST subclasses
+static
+AST_FQN *
+MakeFqn ( const char* p_text ) // p_text = (ident:)+ident
+{
+    std::string s ( p_text );
+    SchemaToken list = { PT_ASTLIST, 0, 0, 0, 0 };
+    Token tlist ( list );
+    AST_FQN * ret = 0;
+
+    while ( s . length () > 0 )
+    {
+        std::string token;
+        size_t pos = s . find(':');
+        if (pos != std::string::npos)
+        {
+            token = s . substr ( 0, pos );
+            s . erase(0, pos + 1);
+        }
+        else
+        {
+            token = s;
+            s . clear ();
+        }
+        SchemaToken name = { IDENTIFIER_1_0, token . c_str () , token . length (), 0, 0 };
+        Token tname ( name );
+        if ( ret == 0 )
+        {
+            ret = new AST_FQN ( & tname );
+        }
+        else
+        {
+            ret -> AddNode ( & tname );
+        }
+    }
+
+    return ret;
+}
+
+TEST_CASE ( AST_FQN_NakedIdent )
+{
+    AST_FQN* fqn = MakeFqn ( "a" );
+
+    REQUIRE_EQ ( 0u, fqn -> NamespaceCount () );
+
+    String str;
+    fqn -> GetIdentifier ( str );
+    REQUIRE_EQ ( string ("a"), string ( str . addr, str . len ) );
+
+    char buf [ 10 ];
+    fqn -> GetFullName ( buf, sizeof buf );
+    REQUIRE_EQ ( string ("a"), string ( buf ) );
+
+    delete fqn;
+}
+
+TEST_CASE ( AST_FQN_Full )
+{
+    AST_FQN* fqn = MakeFqn ( "a:b:c" );
+
+    REQUIRE_EQ ( 2u, fqn -> NamespaceCount () );
+
+    String str;
+    fqn -> GetIdentifier ( str );
+    REQUIRE_EQ ( string ("c"), string ( str . addr, str . len ) );
+
+    char buf [ 10 ];
+    fqn -> GetFullName ( buf, sizeof buf );
+    REQUIRE_EQ ( string ("a:b:c"), string ( buf ) );
+
+    fqn -> GetPartialName ( buf, sizeof buf, 1 );
+    REQUIRE_EQ ( string ("a:b"), string ( buf ) );
+
+    delete fqn;
+}
+
+// AST builder
+
 class AST_Fixture
 {
 public:
@@ -191,6 +269,10 @@ public:
         {
             throw std :: logic_error ( "AST_Fixture::MakeAst : ParseString() failed" );
         }
+        if ( m_parseTree != 0 )
+        {
+            delete m_parseTree;
+        }
         m_parseTree = m_parser . MoveParseTree ();
         if ( m_parseTree == 0 )
         {
@@ -199,6 +281,10 @@ public:
         if ( p_printTree )
         {
             PrintTree ( * m_parseTree );
+        }
+        if ( m_ast != 0 )
+        {
+            delete m_ast;
         }
         m_ast = m_builder . Build ( * m_parseTree );
         if ( m_builder . GetErrorCount() != 0)
@@ -240,17 +326,10 @@ public:
         return ( enum yytokentype ) p_node -> GetToken () . GetType ();
     }
 
-    Token
-    MakeIdent ( const char* p_text )
-    {
-        SchemaToken t = { IDENTIFIER_1_0, p_text, strlen ( p_text ), 0, 0 };
-        return Token ( t );
-    }
-
     void VerifySymbol ( const char* p_name, uint32_t p_type )
     {
-        SchemaToken v = { IDENTIFIER_1_0, p_name, strlen ( p_name ), 0, 0 };
-        KSymbol* sym = m_builder . Resolve ( v );
+        AST_FQN * ast = MakeFqn ( p_name );
+        KSymbol* sym = m_builder . Resolve ( * ast );
 
         if ( sym == 0 )
         {
@@ -259,7 +338,7 @@ public:
         else
         {
             String expName;
-            StringInitCString ( & expName, p_name );
+            StringInitCString ( & expName, ast -> GetChild ( ast -> ChildrenCount() - 1 ) -> GetToken () . GetValue () );
             if ( StringCompare ( & expName, & sym -> name )  != 0 )
             {
                 throw std :: logic_error ( "AST_Fixture::VerifySymbol : object name mismatch" );
@@ -269,6 +348,8 @@ public:
                 throw std :: logic_error ( "AST_Fixture::VerifySymbol : wrong object type" );
             }
         }
+
+        delete ast;
     }
 
     SchemaParser    m_parser;
@@ -291,8 +372,10 @@ FIXTURE_TEST_CASE(SchemaAST_Intrinsic, AST_Fixture)
 
 FIXTURE_TEST_CASE(Builder_ErrorReporting, AST_Fixture)
 {
-    REQUIRE_NULL ( m_builder . Resolve ( MakeIdent ( "foo" ) ) );
-    REQUIRE_NULL ( m_builder . Resolve ( MakeIdent ( "bar" ) ) );
+    AST_FQN * id = MakeFqn ( "foo" );
+    REQUIRE_NULL ( m_builder . Resolve ( * id ) ); delete id;
+    id = MakeFqn ( "bar" );
+    REQUIRE_NULL ( m_builder . Resolve ( * id ) ); delete id;
     REQUIRE_EQ ( 2u, m_builder . GetErrorCount () );
     REQUIRE_EQ ( string ( "Undeclared identifier: 'foo'" ), string ( m_builder . GetErrorMessage ( 0 ) ) );
     REQUIRE_EQ ( string ( "Undeclared identifier: 'bar'" ), string ( m_builder . GetErrorMessage ( 1 ) ) );
@@ -376,6 +459,23 @@ FIXTURE_TEST_CASE(SchemaAST_Typedef_SimpleNames_MultipleScalars, AST_Fixture)
     MakeAst ( "typedef U8 t1, t2;" );
     VerifySymbol ( "t1", eDatatype );
     VerifySymbol ( "t2", eDatatype );
+}
+
+FIXTURE_TEST_CASE(SchemaAST_Typedef_FQN_OneScalar, AST_Fixture)
+{
+    MakeAst ( "typedef U8 a:b:t;" );
+    VerifySymbol ( "a", eNamespace );
+    VerifySymbol ( "a:b", eNamespace );
+    VerifySymbol ( "a:b:t", eDatatype );
+}
+
+FIXTURE_TEST_CASE(SchemaAST_Resolve_UndefinedNamespace, AST_Fixture)
+{
+    VerifyErrorMessage ( "typedef a:zz t;", "Namespace not found: a" );
+}
+FIXTURE_TEST_CASE(SchemaAST_Resolve_UndefinedNameInNamespace, AST_Fixture)
+{
+    VerifyErrorMessage ( "typedef U8 a:t; typedef a:zz t;", "Undeclared identifier: 'a:zz'" );
 }
 
 #if SHOW_UNIMPLEMENTED
