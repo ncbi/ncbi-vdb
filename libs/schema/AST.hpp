@@ -34,6 +34,7 @@
 #include <vdb/schema.h>
 
 struct KSymbol;
+struct BSTree;
 
 namespace ncbi
 {
@@ -47,13 +48,13 @@ namespace ncbi
             AST ( const Token* token );
             explicit AST (); // no token; a synthesized node
 
-            virtual ~AST ();
-
             void AddNode ( AST * ); // allocate with new
             void AddNode ( const Token * );
 
             const AST* GetChild ( uint32_t idx ) const  { return static_cast < const AST * > ( ParseTree :: GetChild ( idx ) ); }
                   AST* GetChild ( uint32_t idx )        { return static_cast <       AST * > ( ParseTree :: GetChild ( idx ) ); }
+
+            const char* GetTokenValue () const { return GetToken () . GetValue (); }
         };
 
         class ASTBuilder
@@ -69,16 +70,18 @@ namespace ncbi
             const VSchema * GetSchema () const { return m_schema; }
 
             void DeclareType ( const AST_FQN& p_fqn, const KSymbol& p_super, const AST* p_dimension );
+            void DeclareTypeSet ( const AST_FQN& p_fqn, const BSTree& p_types, uint32_t p_typeCount );
 
-            KSymbol* Resolve ( const AST_FQN& p_fqn );
+            const KSymbol* Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown = true );
 
             // error list is cleared by a call to Build
             uint32_t GetErrorCount() const { return VectorLength ( & m_errors ); }
             const char* GetErrorMessage ( uint32_t p_idx ) const { return ( const char * ) VectorGet ( & m_errors, p_idx ); }
 
             void ReportError ( const char* p_fmt, ... );
+            void ReportError ( const char* p_msg, const AST_FQN& p_fqn );
 
-            KSymbol* CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const void * p_obj );
+            const KSymbol* CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const void * p_obj );
 
         private:
             bool Init();
@@ -101,8 +104,6 @@ namespace ncbi
                          unsigned int version = 1 );
             explicit AST_Schema ();
 
-            virtual ~AST_Schema();
-
             void SetVersion ( const char* ); // version specified as n.m; checked for valid version number here
 
         private:
@@ -117,7 +118,6 @@ namespace ncbi
                           const Token*,
                           AST_FQN* baseType,
                           AST* newTypes );
-            virtual ~AST_TypeDef();
         };
 
         class AST_ArrayDef : public AST // not clear if needed
@@ -126,16 +126,23 @@ namespace ncbi
             AST_ArrayDef ( const Token*,
                            AST_FQN* typeName,
                            AST* dimension );
-            virtual ~AST_ArrayDef();
 
             const AST_FQN& GetBaseType () const;
+        };
+
+        class AST_TypeSet : public AST
+        {
+        public:
+            AST_TypeSet ( ASTBuilder &,
+                          const Token*,
+                          AST_FQN* name,
+                          AST* typeSpecs );
         };
 
         class AST_FQN : public AST
         {
         public:
             AST_FQN ( const Token* );
-            virtual ~AST_FQN();
 
             uint32_t NamespaceCount() const;
             void GetNamespace ( uint32_t p_idx, String & ) const;

@@ -385,8 +385,8 @@ typespec_1_0_list
     ;
 
 typespec_1_0
-    : typespec_1_0_name                     { $$ . subtree = MakeList ( $1 ); }
-    | typespec_1_0_name dim_1_0             { $$ . subtree = AddToList ( P ( $1 ), P ( $2 ) ); }
+    : typespec_1_0_name                     { $$ = $1; }
+    | typespec_1_0_name dim_1_0             { $$ . subtree = MakeTree ( PT_ARRAY, P ( $1 ), P ( $2 ) ); }
     ;
 
 typespec_1_0_name
@@ -702,12 +702,21 @@ col_1_0_decl
     ;
 
 typed_column_decl_1_0
-    : ident_1_0 '{' column_body_1_0 '}'
+    : col_ident '{' column_body_1_0 '}'
             { $$ . subtree = MakeTree ( PT_TYPEDCOL, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
-    | ident_1_0 '=' cond_expr_1_0 ';'
+    | col_ident '=' cond_expr_1_0 ';'
             { $$ . subtree = MakeTree ( PT_TYPEDCOL, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
-    | ident_1_0 ';'
+    | col_ident ';'
             { $$ . subtree = MakeTree ( PT_TYPEDCOL, P ( $1 ), T ( $2 ) ); }
+    ;
+
+col_ident
+    : ident_1_0                     { $$ = $1; }
+    | phys_ident                    { $$ = $1; }
+    ;
+
+phys_ident
+    : PHYSICAL_IDENTIFIER_1_0       { $$ . subtree = MakeTree ( PT_IDENT, T ( $1 ) ); }     /* starts with a '.' */
     ;
 
 column_body_1_0
@@ -778,6 +787,7 @@ expression_1_0
 
 primary_expr_1_0
     : fqn_1_0                   { $$ = $1; }
+    | phys_ident                { $$ = $1; }
     | '@'                       { $$ . subtree = T ( $1 ); }
     | func_expr_1_0             { $$ = $1; }
     | uint_expr_1_0             { $$ = $1; }
@@ -883,6 +893,7 @@ bool_expr_1_0
 
 negate_expr_1_0
     : '-' fqn_1_0               { $$ . subtree = MakeTree ( PT_NEGATE, T ( $1 ), P ( $2 ) ); }
+    | '-' phys_ident            { $$ . subtree = MakeTree ( PT_NEGATE, T ( $1 ), P ( $2 ) ); }
     | '-' uint_expr_1_0         { $$ . subtree = MakeTree ( PT_NEGATE, T ( $1 ), P ( $2 ) ); }
     | '-' float_expr_1_0        { $$ . subtree = MakeTree ( PT_NEGATE, T ( $1 ), P ( $2 ) ); }
     ;
@@ -956,8 +967,7 @@ fqn_1_0
     ;
 
 ident_1_0
-    : IDENTIFIER_1_0                { $$ . subtree = MakeTree ( PT_IDENT, T ( $1 ) ); }     /* this is just a C identifier */
-    | PHYSICAL_IDENTIFIER_1_0       { $$ . subtree = MakeTree ( PT_IDENT, T ( $1 ) ); }     /* starts with a '.' */
+    : IDENTIFIER_1_0    { $$ . subtree = MakeTree ( PT_IDENT, T ( $1 ) ); }     /* this is just a C identifier */
     ;
 
 dim_1_0

@@ -30,11 +30,12 @@
 #include <klib/printf.h>
 #include <klib/rc.h>
 
-#include "../vdb/schema-priv.h"
 // hide an unfortunately named C function typename()
 #define typename __typename
-#include "../../libs/vdb/schema-parse.h"
+#include "../vdb/schema-parse.h"
 #undef typename
+#include "../vdb/dbmgr-priv.h"
+#include "../vdb/schema-priv.h"
 
 using namespace ncbi::SchemaParser;
 #define YYDEBUG 1
@@ -53,10 +54,6 @@ AST :: AST ()
 
 AST :: AST ( const Token * p_token )
 : ParseTree ( * p_token )
-{
-}
-
-AST :: ~AST ()
 {
 }
 
@@ -135,6 +132,14 @@ ASTBuilder :: ReportError ( const char* p_fmt, ... )
     VectorAppend ( & m_errors, 0, string_dup_measure ( buf, 0 ) );
 }
 
+void
+ASTBuilder :: ReportError ( const char* p_msg, const AST_FQN& p_fqn )
+{
+    char buf [ 1024 ];
+    p_fqn . GetFullName ( buf, sizeof buf );
+    ReportError ( "%s: '%s'", p_msg, buf ); //TODO: add location of the original declaration
+}
+
 bool
 ASTBuilder :: Init()
 {
@@ -181,7 +186,7 @@ ASTBuilder :: Build ( const ParseTree& p_root )
     return 0;
 }
 
-KSymbol*
+const KSymbol*
 ASTBuilder :: CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const void * p_obj )
 {
     rc_t rc = 0;
@@ -189,7 +194,7 @@ ASTBuilder :: CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const voi
     for ( uint32_t i = 0 ; i < count; ++ i )
     {
         String name;
-        StringInitCString ( & name, p_fqn . GetChild ( i ) -> GetToken () . GetValue() );
+        StringInitCString ( & name, p_fqn . GetChild ( i ) -> GetTokenValue () );
         KSymbol *ns;
         rc = KSymTableCreateNamespace ( & m_symtab, & ns, & name );
         if ( rc == 0 )
@@ -214,9 +219,7 @@ ASTBuilder :: CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const voi
         rc = KSymTableCreateSymbol ( & m_symtab, & ret, & name, p_type, p_obj );
         if ( GetRCState ( rc ) == rcExists )
         {
-            char buf [ 1024 ];
-            p_fqn . GetFullName ( buf, sizeof buf );
-            ReportError ( "Object already declared: '%s'", buf ); //TODO: add location of the original declaration
+            ReportError ( "Object already declared", p_fqn );
         }
         else if ( rc != 0 )
         {
@@ -232,8 +235,8 @@ ASTBuilder :: CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const voi
     return ret;
 }
 
-KSymbol*
-ASTBuilder :: Resolve ( const AST_FQN& p_fqn )
+const KSymbol*
+ASTBuilder :: Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown )
 {
     uint32_t count = p_fqn . ChildrenCount ();
     assert ( count > 0 );
@@ -241,7 +244,7 @@ ASTBuilder :: Resolve ( const AST_FQN& p_fqn )
     for ( uint32_t i = 0 ; i < count - 1; ++ i )
     {
         String name;
-        StringInitCString ( & name, p_fqn . GetChild ( i ) -> GetToken () . GetValue() );
+        StringInitCString ( & name, p_fqn . GetChild ( i ) -> GetTokenValue () );
         KSymbol *ns;
         if ( i == 0 )
         {
@@ -253,7 +256,10 @@ ASTBuilder :: Resolve ( const AST_FQN& p_fqn )
         }
         if ( ns == 0 )
         {
-            ReportError ( "Namespace not found: %S", & name );
+            if ( p_reportUnknown )
+            {
+                ReportError ( "Namespace not found: %S", & name );
+            }
             count = i;
             ns_resolved = false;
             break;
@@ -276,15 +282,13 @@ ASTBuilder :: Resolve ( const AST_FQN& p_fqn )
     KSymbol * ret = 0;
     if ( ns_resolved )
     {
-        const char* ident = p_fqn . GetChild ( count - 1 ) -> GetToken () . GetValue();
+        const char* ident = p_fqn . GetChild ( count - 1 ) -> GetTokenValue ();
         String name;
         StringInitCString ( & name, ident );
         ret = KSymTableFind ( & m_symtab, & name );
-        if ( ret == 0 )
+        if ( ret == 0 && p_reportUnknown )
         {
-            char buf [ 1024 ];
-            p_fqn . GetFullName ( buf, sizeof buf );
-            ReportError ( "Undeclared identifier: '%s'", buf ); //TODO: add location
+            ReportError ( "Undeclared identifier", p_fqn ); //TODO: add location
         }
     }
 
@@ -307,7 +311,7 @@ ASTBuilder :: DeclareType ( const AST_FQN& p_fqn, const KSymbol& p_super, const 
 
     /* allocate a datatype */
     SDatatype * dt = static_cast < SDatatype * > ( malloc ( sizeof * dt ) ); // VSchema's tables dispose of objects with free()
-    if ( dt == NULL )
+    if ( dt == 0 )
     {
         ReportError ( "malloc failed: %R", RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted ) );
     }
@@ -327,7 +331,7 @@ ASTBuilder :: DeclareType ( const AST_FQN& p_fqn, const KSymbol& p_super, const 
             const SDatatype * super = static_cast < const SDatatype * > ( p_super . u . obj );
 
             // create a symtab entry
-            KSymbol* symbol = CreateFqnSymbol ( p_fqn, eDatatype, dt ); // will add missing namespaces to symtab
+            const KSymbol* symbol = CreateFqnSymbol ( p_fqn, eDatatype, dt ); // will add missing namespaces to symtab
             if ( symbol != 0 )
             {
                 /* fill it out from super-type */
@@ -338,6 +342,72 @@ ASTBuilder :: DeclareType ( const AST_FQN& p_fqn, const KSymbol& p_super, const 
                 dt -> dim       = dimension;
                 dt -> domain    = super -> domain;
             }
+        }
+    }
+}
+
+/*--------------------------------------------------------------------------
+ * STypesetMbr
+ *  a typedecl that can be tested for uniqueness
+ */
+typedef struct STypesetMbr STypesetMbr;
+struct STypesetMbr
+{
+    BSTNode n;
+    VTypedecl td;
+};
+
+static
+void CC STypesetPopulate ( BSTNode *n, void *data )
+{
+    const STypesetMbr *mbr = ( const STypesetMbr* ) n;
+    STypeset *ts = static_cast < STypeset * > ( data );
+    ts -> td [ ts -> count ++ ] = mbr -> td;
+}
+
+/* Cmp
+ * Sort
+ */
+static
+int64_t VTypedeclCmp ( const VTypedecl *a, const VTypedecl *b )
+{
+    if ( a -> type_id != b -> type_id )
+        return ( int64_t ) a -> type_id - ( int64_t ) b -> type_id;
+    return ( int64_t ) a -> dim - ( int64_t ) b -> dim;
+}
+
+static
+int64_t CC STypesetMbrSort ( const BSTNode *item, const BSTNode *n )
+{
+    const STypesetMbr *a = ( const STypesetMbr* ) item;
+    const STypesetMbr *b = ( const STypesetMbr* ) n;
+    return VTypedeclCmp ( & a -> td, & b -> td );
+}
+
+void
+ASTBuilder :: DeclareTypeSet ( const AST_FQN & p_fqn, const BSTree & p_types, uint32_t p_typeCount )
+{
+    STypeset *ts = static_cast < STypeset * > ( malloc ( sizeof * ts - sizeof ts -> td + p_typeCount * sizeof ts -> td [ 0 ] ) );
+    if ( ts == 0 )
+    {
+        ReportError ( "malloc failed: %R", RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted ) );
+    }
+    else
+    {
+        ts -> count = 0;
+        BSTreeForEach ( & p_types, false, STypesetPopulate, ts );
+
+        rc_t rc = VectorAppend ( & m_schema -> ts, & ts -> id, ts );
+        if ( rc != 0 )
+        {
+            ReportError ( "VectorAppend failed: %R", rc );
+            free ( ts );
+        }
+        else
+        {
+            const KSymbol* symbol = CreateFqnSymbol ( p_fqn, eTypeset, ts ); // will add missing namespaces to symtab
+            ts -> name = symbol;
+            ts -> count = p_typeCount;
         }
     }
 }
@@ -363,30 +433,28 @@ AST_Schema :: AST_Schema ( const Token * p_token, AST* p_decls /*NULL OK*/, unsi
     }
 }
 
-AST_Schema :: ~AST_Schema()
-{
-}
-
 void
 AST_Schema :: SetVersion ( const char* ) // version specified as n.m; checked for valid version number here
 {
     //TODO
 }
 
+// AST_TypeDef
+
 AST_TypeDef :: AST_TypeDef ( ASTBuilder & p_builder, const Token * p_token, AST_FQN* p_baseType, AST* p_newTypes )
 :   AST ( p_token )
-{
+{   //TODO: do we need to keep all these subtrees beyond the population of symtab?
     assert ( p_baseType != 0 );
     AddNode ( p_baseType );
     assert ( p_newTypes != 0 );
     AddNode ( p_newTypes );
 
-    KSymbol * baseType = p_builder . Resolve ( * p_baseType ); // will report unknown name
+    const KSymbol * baseType = p_builder . Resolve ( * p_baseType ); // will report unknown name
     if ( baseType != 0 )
     {
         if ( baseType -> type != eDatatype )
         {
-            p_builder . ReportError ( "Not a datatype: '%s'", p_baseType -> GetChild ( 0 ) -> GetToken () . GetValue () ); //TODO: add location
+            p_builder . ReportError ( "Not a datatype: '%s'", p_baseType -> GetChild ( 0 ) -> GetTokenValue () ); //TODO: add location
             //TODO: recover? pretend it is "any"?
             return;
         }
@@ -395,25 +463,19 @@ AST_TypeDef :: AST_TypeDef ( ASTBuilder & p_builder, const Token * p_token, AST_
         for ( uint32_t i = 0; i < count; ++i )
         {
             const AST * newType = p_newTypes -> GetChild ( i );
-            if ( newType -> GetToken () . GetType () == PT_ARRAY )
-            {
-                const AST_ArrayDef & arr = dynamic_cast < const AST_ArrayDef & > ( * newType );
-                p_builder . DeclareType ( arr . GetBaseType (),
-                                          * baseType,
-                                          arr . GetChild ( 1 ) ); //TODO: support *; will report duplicate definition
-            }
-            else // scalar
-            {
+            if ( newType -> GetToken () . GetType () == PT_IDENT )
+            {   //TODO: get rid of AST_ArrayDef
                 const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( * newType );
                 p_builder . DeclareType ( fqn, * baseType, 0 ); // will report duplicate definition
+            }
+            else // fqn dim
+            {   //TODO: get rid of AST_ArrayDef
             }
         }
     }
 }
 
-AST_TypeDef :: ~AST_TypeDef()
-{
-}
+// AST_ArrayDef
 
 AST_ArrayDef :: AST_ArrayDef ( const Token * p_token, AST_FQN* p_typeName, AST* p_dimension )
 :   AST ( p_token )
@@ -426,9 +488,141 @@ AST_ArrayDef :: AST_ArrayDef ( const Token * p_token, AST_FQN* p_typeName, AST* 
     }
 }
 
-AST_ArrayDef :: ~AST_ArrayDef()
+// AST_TypeSet
+static
+bool
+TypeSetAddType ( ASTBuilder & p_builder, BSTree & p_tree, const VTypedecl & p_type, uint32_t & p_typeCount )
 {
+    STypesetMbr * mbr = static_cast < STypesetMbr * > ( malloc ( sizeof * mbr ) );
+    if ( mbr == 0 )
+    {
+        p_builder . ReportError ( "malloc failed: %R", RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted ) );
+        return false;
+    }
+
+    mbr -> td = p_type;
+
+    /* ignore/allow duplicates */
+    BSTNode * exist;
+    if ( BSTreeInsertUnique ( & p_tree, & mbr -> n, & exist, STypesetMbrSort ) != 0 )
+    {
+        free ( mbr );
+    }
+    else
+    {
+        ++ p_typeCount;
+    }
+    return true;
 }
+
+AST_TypeSet :: AST_TypeSet ( ASTBuilder &   p_builder,
+                             const Token*   p_token,
+                             AST_FQN*       p_name,
+                             AST*           p_typeSpecs )
+:   AST ( p_token )
+{
+    assert ( p_name != 0 );
+    AddNode ( p_name );
+    assert ( p_typeSpecs != 0 );
+    AddNode ( p_typeSpecs );
+
+    const KSymbol * existing = p_builder . Resolve ( * p_name, false );
+
+    // traverse p_typeSpecs, add to tree
+    BSTree tree;
+    BSTreeInit ( & tree );
+
+    uint32_t typeCount = 0;
+    uint32_t count = p_typeSpecs -> ChildrenCount ();
+    for ( uint32_t i = 0; i < count; ++i )
+    {
+        const AST * spec = p_typeSpecs -> GetChild ( i );
+        if ( spec -> GetToken () . GetType () == PT_IDENT )
+        {   // scalar
+            const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( * spec );
+            const KSymbol * type = p_builder . Resolve ( fqn ); // will report unknown name
+            if ( type != 0 )
+            {
+                switch ( type -> type )
+                {
+                case eDatatype:
+                    {
+                        VTypedecl td;
+                        const SDatatype * typeDef = static_cast < const SDatatype * > ( type -> u . obj );
+
+                        td . type_id = typeDef -> id;
+                        td . dim = 1;
+                        if ( ! TypeSetAddType ( p_builder, tree, td, typeCount ) )
+                        {
+                            goto EXIT;
+                        }
+                    }
+                    break;
+                case eTypeset:
+                    {
+                        const STypeset * typeset = static_cast < const STypeset * > ( type -> u . obj );
+                        for ( uint16_t j = 0; j < typeset -> count; ++j )
+                        {
+                            if ( ! TypeSetAddType ( p_builder, tree, typeset -> td [ j ], typeCount ) )
+                            {
+                                goto EXIT;
+                            }
+                        }
+                    }
+                    break;
+                default:
+                    {
+                        p_builder . ReportError ( "Not a datatype", fqn );
+                    }
+                    continue;
+                }
+            }
+        }
+        else // fqn dim
+        {   //TODO
+        }
+    }
+
+    if ( existing != 0 )
+    {
+        if ( existing -> type != eTypeset )
+        {
+            p_builder . ReportError ( "Already declared and is not a typeset", * p_name );
+        }
+        else
+        {   // allow benign redefine
+            const STypeset * orig = static_cast < const STypeset * > ( existing -> u . obj );
+            if ( orig -> count != typeCount )
+            {
+                p_builder . ReportError ( "Typeset already declared differently", * p_name );
+            }
+            else
+            {
+                BSTNode* node = BSTreeFirst ( &tree );
+                for ( uint32_t i = 0; i < typeCount; ++ i )
+                {
+                    assert ( node != 0 );
+                    STypesetMbr * mbr = reinterpret_cast < STypesetMbr * > ( node );
+                    if ( VTypedeclCmp ( & orig -> td [ i ], & mbr -> td ) != 0 )
+                    {
+                        p_builder . ReportError ( "Typeset already declared differently", * p_name );
+                        break;
+                    }
+                    node = BSTNodeNext ( node );
+                }
+            }
+        }
+    }
+    else
+    {
+        p_builder . DeclareTypeSet ( * p_name, tree, typeCount );
+    }
+
+EXIT:
+    BSTreeWhack ( & tree, BSTreeMbrWhack, NULL );
+}
+
+// AST_FQN
 
 const AST_FQN&
 AST_ArrayDef :: GetBaseType () const
@@ -437,28 +631,30 @@ AST_ArrayDef :: GetBaseType () const
 ;}
 
 
-AST_FQN :: AST_FQN ( const Token* p_ident )
+AST_FQN :: AST_FQN ( const Token* p_token )
+: AST ( p_token )
 {
-    assert ( p_ident != 0 );
-    AddNode ( p_ident );
-}
-
-AST_FQN :: ~ AST_FQN()
-{
-
 }
 
 uint32_t
 AST_FQN :: NamespaceCount() const
 {
-    return ChildrenCount () - 1;
+    uint32_t count = ChildrenCount ();
+    return count > 0 ? ChildrenCount () - 1 : 0;
 }
 
 void
 AST_FQN :: GetIdentifier ( String & p_str ) const
 {
-    uint32_t last = ChildrenCount () - 1;
-    StringInitCString ( & p_str, GetChild ( last ) -> GetToken () . GetValue () );
+    uint32_t count = ChildrenCount ();
+    if ( count > 0 )
+    {
+        StringInitCString ( & p_str, GetChild ( count - 1 ) -> GetTokenValue () );
+    }
+    else
+    {
+        CONST_STRING ( & p_str, "" );
+    }
 }
 
 void
@@ -480,8 +676,8 @@ AST_FQN :: GetPartialName ( char* p_buf, size_t p_bufSize, uint32_t p_lastMember
     {
         size_t num_writ;
         rc_t rc = string_printf ( p_buf + offset, p_bufSize - offset - 1, & num_writ, "%s%s",
-                             GetChild ( i ) -> GetToken () . GetValue(),
-                             i == count - 1 ? "" : ":" );
+                                  GetChild ( i ) -> GetTokenValue (),
+                                  i == count - 1 ? "" : ":" );
         offset += num_writ;
         if ( rc != 0 )
         {
@@ -491,3 +687,4 @@ AST_FQN :: GetPartialName ( char* p_buf, size_t p_bufSize, uint32_t p_lastMember
 
     p_buf [ p_bufSize ] = 0;
 }
+

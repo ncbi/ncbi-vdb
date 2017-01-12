@@ -58,7 +58,7 @@ bool
 SchemaParser :: ParseFile ( const char * source_file )
 {
     delete m_root;
-    m_root = 0;
+    m_root = 0;//TBD
     return false;
 }
 

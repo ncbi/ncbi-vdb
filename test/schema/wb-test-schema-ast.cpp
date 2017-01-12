@@ -61,6 +61,13 @@ TEST_SUITE ( SchemaASTTestSuite );
 // AST
 
 static
+string
+ToCppString ( const String & p_str)
+{
+    return string ( p_str . addr, p_str . len );
+}
+
+static
 bool
 VerifyNextToken ( ParseTreeScanner& p_scan, int p_type)
 {
@@ -129,10 +136,11 @@ static
 AST_FQN *
 MakeFqn ( const char* p_text ) // p_text = (ident:)+ident
 {
+    SchemaToken id = { PT_IDENT, 0, 0, 0, 0 };
+    Token ident ( id );
+    AST_FQN * ret = new AST_FQN ( & ident );
+
     std::string s ( p_text );
-    SchemaToken list = { PT_ASTLIST, 0, 0, 0, 0 };
-    Token tlist ( list );
-    AST_FQN * ret = 0;
 
     while ( s . length () > 0 )
     {
@@ -150,14 +158,7 @@ MakeFqn ( const char* p_text ) // p_text = (ident:)+ident
         }
         SchemaToken name = { IDENTIFIER_1_0, token . c_str () , token . length (), 0, 0 };
         Token tname ( name );
-        if ( ret == 0 )
-        {
-            ret = new AST_FQN ( & tname );
-        }
-        else
-        {
-            ret -> AddNode ( & tname );
-        }
+        ret -> AddNode ( & tname );
     }
 
     return ret;
@@ -171,7 +172,7 @@ TEST_CASE ( AST_FQN_NakedIdent )
 
     String str;
     fqn -> GetIdentifier ( str );
-    REQUIRE_EQ ( string ("a"), string ( str . addr, str . len ) );
+    REQUIRE_EQ ( string ("a"), ToCppString ( str ) );
 
     char buf [ 10 ];
     fqn -> GetFullName ( buf, sizeof buf );
@@ -188,7 +189,7 @@ TEST_CASE ( AST_FQN_Full )
 
     String str;
     fqn -> GetIdentifier ( str );
-    REQUIRE_EQ ( string ("c"), string ( str . addr, str . len ) );
+    REQUIRE_EQ ( string ("c"), ToCppString ( str ) );
 
     char buf [ 10 ];
     fqn -> GetFullName ( buf, sizeof buf );
@@ -235,6 +236,8 @@ public:
                 case_ ( PT_SOURCE );
                 case_ ( PT_SCHEMA_1_0 );
                 case_ ( PT_TYPEDEF );
+                case_ ( PT_TYPESET );
+                case_ ( PT_TYPESETDEF );
                 case_ ( PT_IDENT );
                 case_ ( PT_ASTLIST );
                 case_ ( PT_DIM );
@@ -326,10 +329,10 @@ public:
         return ( enum yytokentype ) p_node -> GetToken () . GetType ();
     }
 
-    void VerifySymbol ( const char* p_name, uint32_t p_type )
+    const KSymbol* VerifySymbol ( const char* p_name, uint32_t p_type )
     {
         AST_FQN * ast = MakeFqn ( p_name );
-        KSymbol* sym = m_builder . Resolve ( * ast );
+        const KSymbol* sym = m_builder . Resolve ( * ast );
 
         if ( sym == 0 )
         {
@@ -337,9 +340,8 @@ public:
         }
         else
         {
-            String expName;
-            StringInitCString ( & expName, ast -> GetChild ( ast -> ChildrenCount() - 1 ) -> GetToken () . GetValue () );
-            if ( StringCompare ( & expName, & sym -> name )  != 0 )
+            if ( ToCppString ( sym -> name ) !=
+                 ast -> GetChild ( ast -> ChildrenCount() - 1 ) -> GetTokenValue () )
             {
                 throw std :: logic_error ( "AST_Fixture::VerifySymbol : object name mismatch" );
             }
@@ -350,6 +352,8 @@ public:
         }
 
         delete ast;
+
+        return sym;
     }
 
     SchemaParser    m_parser;
@@ -429,29 +433,15 @@ FIXTURE_TEST_CASE(SchemaAST_Typedef_SimpleNames_OneScalar, AST_Fixture)
 {
     MakeAst ( "typedef U8 t;" );
 
-    REQUIRE_EQ ( PT_SCHEMA_1_0, TokenType ( m_ast ) );
-    REQUIRE_EQ ( 1u,            m_ast -> ChildrenCount () );
-
-    const ParseTree* typeDef = m_ast -> GetChild ( 0 );
-
-    REQUIRE_EQ ( PT_TYPEDEF,    TokenType ( typeDef ) );
-    REQUIRE_EQ ( 2u,            typeDef -> ChildrenCount () );
-
-    const ParseTree* baseType = typeDef -> GetChild ( 0 );
-    REQUIRE_EQ ( 1u,                baseType -> ChildrenCount () );
-    REQUIRE_EQ ( IDENTIFIER_1_0,    TokenType ( baseType -> GetChild ( 0 ) ) );
-    REQUIRE_EQ ( string ( "U8" ),   string ( baseType -> GetChild ( 0 )-> GetToken () . GetValue () ) );
-
-    const ParseTree* newTypes = typeDef -> GetChild ( 1 );
-    REQUIRE_EQ ( 1u, newTypes -> ChildrenCount () );
-
-    const ParseTree* newType = newTypes -> GetChild ( 0 );
-    REQUIRE_EQ ( 1u,                newType -> ChildrenCount () );
-    REQUIRE_EQ ( IDENTIFIER_1_0,    TokenType ( newType -> GetChild ( 0 ) ) );
-    REQUIRE_EQ ( string ( "t" ),    string ( newType -> GetChild ( 0 ) -> GetToken () . GetValue () ) );
-
     // find "t" in the global scope
     VerifySymbol ( "t", eDatatype );
+    const KSymbol* sym = VerifySymbol ( "t", eDatatype );
+    const SDatatype* dt = static_cast < const SDatatype* > ( sym -> u . obj );
+    REQUIRE_NOT_NULL ( dt -> super );
+    REQUIRE_EQ ( string ( "U8" ), ToCppString ( dt -> super -> name -> name ) );
+    REQUIRE_EQ ( 1u, dt -> dim );
+    REQUIRE_EQ ( 8u, dt -> size );
+    REQUIRE_EQ ( dt -> super -> domain, dt -> domain );
 }
 
 FIXTURE_TEST_CASE(SchemaAST_Typedef_SimpleNames_MultipleScalars, AST_Fixture)
@@ -514,6 +504,98 @@ FIXTURE_TEST_CASE(SchemaAST_Typedef_BaseNotAType, AST_Fixture)
 //TODO: typedef U8 t[non-const expr]; - error
 
 //TODO: typedef U8 t1,t2[2],t3;
+
+FIXTURE_TEST_CASE(SchemaAST_Typeset_OneScalar, AST_Fixture)
+{
+    MakeAst ( "typeset t { U8 };" );
+    const KSymbol* sym = VerifySymbol ( "t", eTypeset );
+    const STypeset* ts = static_cast < const STypeset* > ( sym -> u . obj );
+    REQUIRE_NOT_NULL ( ts );
+    REQUIRE_EQ ( string ( "t" ), ToCppString ( ts -> name -> name ) );
+    REQUIRE_EQ ( (uint16_t)1, ts -> count );
+    REQUIRE_EQ ( (uint32_t)9, ts -> td [ 0 ] . type_id );
+    REQUIRE_EQ ( (uint32_t)1, ts -> td [ 0 ] . dim );
+}
+
+FIXTURE_TEST_CASE(SchemaAST_Typeset_MultipleScalars, AST_Fixture)
+{
+    MakeAst ( "typeset t { U8, U32 };" );
+    const KSymbol* sym = VerifySymbol ( "t", eTypeset );
+    const STypeset* ts = static_cast < const STypeset* > ( sym -> u . obj );
+    REQUIRE_NOT_NULL ( ts );
+    REQUIRE_EQ ( string ( "t" ), ToCppString ( ts -> name -> name ) );
+    REQUIRE_EQ ( (uint16_t)2, ts -> count );
+    REQUIRE_EQ ( (uint32_t)11, ts -> td [ 1 ] . type_id );
+    REQUIRE_EQ ( (uint32_t)1, ts -> td [ 1 ] . dim );
+}
+
+#if SHOW_UNIMPLEMENTED
+FIXTURE_TEST_CASE(SchemaAST_Typeset_OneArray, AST_Fixture)
+{
+    MakeAst ( "typeset t { U8[2] };" );
+    const KSymbol* sym = VerifySymbol ( "t", eTypeset );
+    const STypeset* ts = static_cast < const STypeset* > ( sym -> u . obj );
+    REQUIRE_NOT_NULL ( ts );
+    REQUIRE_EQ ( string ( "t" ), ToCppString ( ts -> name -> name ) );
+    REQUIRE_EQ ( (uint16_t)1, ts -> count );
+    REQUIRE_EQ ( (uint32_t)9, ts -> td [ 1 ] . type_id );
+    REQUIRE_EQ ( (uint32_t)2, ts -> td [ 1 ] . dim );
+}
+#endif
+
+FIXTURE_TEST_CASE(SchemaAST_Typeset_AlreadyNotTypeset, AST_Fixture)
+{
+    VerifyErrorMessage ( "typedef U8 t; typeset t { U8 };", "Already declared and is not a typeset: 't'" );
+}
+
+FIXTURE_TEST_CASE(SchemaAST_Typeset_DirectDuplicatesAllowed, AST_Fixture)
+{
+    MakeAst ( "typeset t { U8, U8 };" );
+    const KSymbol* sym = VerifySymbol ( "t", eTypeset );
+    const STypeset* ts = static_cast < const STypeset* > ( sym -> u . obj );
+    REQUIRE_NOT_NULL ( ts );
+    REQUIRE_EQ ( string ( "t" ), ToCppString ( ts -> name -> name ) );
+    REQUIRE_EQ ( (uint16_t)1, ts -> count );
+}
+
+FIXTURE_TEST_CASE(SchemaAST_Typeset_BenignRedefinesAllowed, AST_Fixture)
+{
+    MakeAst ( "typeset t { U8 }; typeset t { U8 };" );
+    VerifySymbol ( "t", eTypeset );
+}
+
+FIXTURE_TEST_CASE(SchemaAST_Typeset_BadRedefine_1, AST_Fixture)
+{
+    VerifyErrorMessage ( "typedef U8 t; typeset t { U8 };", "Already declared and is not a typeset: 't'" );
+}
+FIXTURE_TEST_CASE(SchemaAST_Typeset_BadRedefine_2, AST_Fixture)
+{
+    VerifyErrorMessage ( "typeset t { U8 }; typeset t { U8, U16 };", "Typeset already declared differently: 't'" );
+}
+FIXTURE_TEST_CASE(SchemaAST_Typeset_BadRedefine_3, AST_Fixture)
+{
+    VerifyErrorMessage ( "typeset t { U8 }; typeset t { U16 };", "Typeset already declared differently: 't'" );
+}
+
+FIXTURE_TEST_CASE(SchemaAST_Typeset_IncludesAnotherTypeset, AST_Fixture)
+{
+    MakeAst ( "typeset t1 { U8, U16 }; typeset t2 { t1, U32 };" );
+    const KSymbol* sym = VerifySymbol ( "t2", eTypeset );
+    const STypeset* ts = static_cast < const STypeset* > ( sym -> u . obj );
+    REQUIRE_NOT_NULL ( ts );
+    REQUIRE_EQ ( (uint16_t)3, ts -> count );
+}
+
+FIXTURE_TEST_CASE(SchemaAST_Typeset_InirectDuplicatesAllowed, AST_Fixture)
+{
+    MakeAst ( "typeset t1 { U8, U16 }; typeset t2 { t1, U8 };" );
+    const KSymbol* sym = VerifySymbol ( "t2", eTypeset );
+    const STypeset* ts = static_cast < const STypeset* > ( sym -> u . obj );
+    REQUIRE_NOT_NULL ( ts );
+    REQUIRE_EQ ( (uint16_t)2, ts -> count );
+}
+
+//TODO: indirect duplicates in typeset are allowed: typeset t1 { U8 }; typeset t2 { t1, U8 };
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>

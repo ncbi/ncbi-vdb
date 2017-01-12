@@ -209,9 +209,12 @@
 
 %start parse
 
-%type <node> source schema_1 schema_decls schema_decl schema_2 typedef new_type_names new_type_name expr
+%type <node> source schema_1 schema_decls schema_decl schema_2 typedef new_type_names new_type_name
+%type <node> expr typeset typeset_spec typespec dim
+
 %type <fqn> fqn qualnames
-%type <tok> END_SOURCE version_1 PT_VERSION_1_0 PT_VERSION_2 PT_SCHEMA_1_0 FLOAT version_2 PT_TYPEDEF PT_IDENT IDENTIFIER_1_0 DECIMAL PT_ASTLIST PT_ARRAY
+
+%type <tok> END_SOURCE version_1 PT_VERSION_1_0 PT_VERSION_2 PT_SCHEMA_1_0 FLOAT version_2 PT_TYPEDEF PT_IDENT IDENTIFIER_1_0 DECIMAL PT_ASTLIST PT_ARRAY PT_TYPESET
 
 %%
 
@@ -250,12 +253,13 @@ schema_decls
 
 schema_decl
     : typedef   { $$ = $1; }
-    /* | TBD */
+    | typeset   { $$ = $1; }
     | ';'       { $$ = new AST (); }
     ;
 
 typedef
-    : PT_TYPEDEF '(' KW_typedef fqn PT_ASTLIST '(' new_type_names ')' ';' ')'            { $$ = new AST_TypeDef ( p_builder, $1, $4, $7 ); /*TODO: resolve $4; declare all in $7 */}
+    : PT_TYPEDEF '(' KW_typedef fqn PT_ASTLIST '(' new_type_names ')' ';' ')'
+                                            { $$ = new AST_TypeDef ( p_builder, $1, $4, $7 ); }
     ;
 
 new_type_names
@@ -265,8 +269,22 @@ new_type_names
 
 new_type_name
     : fqn                                               { $$ = $1; }
-    | PT_ARRAY '(' fqn PT_DIM '(' '[' expr ']' ')' ')'  { $$ = new AST_ArrayDef ( $1, $3, $7 ); }
-    /*| PT_ASTLIST '(' fqn PT_DIM '[' '*' ']' ')'       { $$ = new AST_ArrayDef ( $1, $3, 0 ); }*/
+    | PT_ARRAY '(' fqn dim ')'  { $$ = new AST_ArrayDef ( $1, $3, $4 ); }
+    ;
+
+typeset
+    :  PT_TYPESET '(' KW_typeset fqn PT_TYPESETDEF '(' '{' PT_ASTLIST '(' typeset_spec ')' '}' ')' ';' ')'
+                { $$ = new AST_TypeSet ( p_builder, $1, $4, $10 ); }
+    ;
+
+typeset_spec
+    : typespec                      { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | typeset_spec ',' typespec     { $$ = $1; $$ -> AddNode ( $3 ); }
+    ;
+
+typespec
+    : fqn                           { $$ = $1; }
+    | PT_ARRAY '(' fqn dim ')'      { $$ = new AST (); $$ -> AddNode ( $3 ); $$ -> AddNode ( $4 ); }
     ;
 
 fqn
@@ -274,13 +292,17 @@ fqn
     ;
 
 qualnames
-    : PT_IDENT '(' IDENTIFIER_1_0 ')'                               { $$ = new AST_FQN ( $3 ); }
-    /*| PT_IDENT '(' PHYSICAL_IDENTIFIER_1_0 ')'                    { $$ = new AST_FQN ( $3 ); }*/
-    | qualnames ':' PT_IDENT  '(' IDENTIFIER_1_0 ')'                { $$ = $1; $$ -> AddNode ( $5 ); }
-    /*| qualnames ':' PT_IDENT  '(' PHYSICAL_IDENTIFIER_1_0 ')'     { $$ = $1; $$ -> AddNode ( $5 ); }*/
+    : PT_IDENT '(' IDENTIFIER_1_0 ')'                       { $$ = new AST_FQN ( $1 ); $$ -> AddNode ( $3 ); }
+    | qualnames ':' PT_IDENT  '(' IDENTIFIER_1_0 ')'        { $$ = $1; $$ -> AddNode ( $5 ); }
     ;
 
 expr
     : PT_UINT '(' DECIMAL ')'   { $$ = new AST ( $3 ); }
     /*| TBD */
     ;
+
+dim
+    : PT_DIM '(' '[' expr ']' ')'   { $$ = $4; }
+    | PT_DIM '(' '[' '*' ']' ')'    { $$ = new AST (); }
+    ;
+
