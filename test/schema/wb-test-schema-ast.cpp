@@ -429,6 +429,8 @@ FIXTURE_TEST_CASE(SchemaAST_MultipleDecls, AST_Fixture)
     REQUIRE_EQ ( PT_EMPTY,      TokenType ( m_ast -> GetChild ( 2 ) ) );
 }
 
+///////// typedef
+
 FIXTURE_TEST_CASE(SchemaAST_Typedef_SimpleNames_OneScalar, AST_Fixture)
 {
     MakeAst ( "typedef U8 t;" );
@@ -504,6 +506,8 @@ FIXTURE_TEST_CASE(SchemaAST_Typedef_BaseNotAType, AST_Fixture)
 //TODO: typedef U8 t[non-const expr]; - error
 
 //TODO: typedef U8 t1,t2[2],t3;
+
+///////// typeset
 
 FIXTURE_TEST_CASE(SchemaAST_Typeset_OneScalar, AST_Fixture)
 {
@@ -595,7 +599,37 @@ FIXTURE_TEST_CASE(SchemaAST_Typeset_InirectDuplicatesAllowed, AST_Fixture)
     REQUIRE_EQ ( (uint16_t)2, ts -> count );
 }
 
-//TODO: indirect duplicates in typeset are allowed: typeset t1 { U8 }; typeset t2 { t1, U8 };
+///////// fmtdef
+FIXTURE_TEST_CASE(SchemaAST_Format_Simple, AST_Fixture)
+{
+    MakeAst ( "fmtdef f;" );
+    const KSymbol* sym = VerifySymbol ( "f", eFormat );
+    const SFormat* f = static_cast < const SFormat* > ( sym -> u . obj );
+    REQUIRE_NOT_NULL ( f );
+    REQUIRE_EQ ( string ( "f" ), ToCppString ( f -> name -> name ) );
+    REQUIRE_NULL ( f -> super );
+}
+
+FIXTURE_TEST_CASE(SchemaAST_Format_Derived, AST_Fixture)
+{
+    MakeAst ( "fmtdef s; fmtdef s f;" );
+    const KSymbol* sym = VerifySymbol ( "f", eFormat );
+    const SFormat* f = static_cast < const SFormat* > ( sym -> u . obj );
+    REQUIRE_NOT_NULL ( f );
+    REQUIRE_EQ ( string ( "f" ), ToCppString ( f -> name -> name ) );
+    REQUIRE_NOT_NULL ( f -> super );
+    REQUIRE_EQ ( string ( "s" ), ToCppString ( f -> super -> name -> name ) );
+}
+
+FIXTURE_TEST_CASE(SchemaAST_Format_SuperUndefined, AST_Fixture)
+{
+    VerifyErrorMessage ( "fmtdef s f;", "Undeclared identifier: 's'" );
+}
+
+FIXTURE_TEST_CASE(SchemaAST_Format_SuperWrong, AST_Fixture)
+{
+    VerifyErrorMessage ( "typedef U8 s; fmtdef s f;", "Not a format: 's'" );
+}
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>

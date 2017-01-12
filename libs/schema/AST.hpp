@@ -83,6 +83,13 @@ namespace ncbi
 
             const KSymbol* CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const void * p_obj );
 
+        public:
+            // AST node creation methods for use from bison
+            AST * TypeDef ( const Token*, AST_FQN* baseType, AST* newTypes );
+            AST * ArrayDef ( const Token*, AST_FQN* baseType, AST* dim );
+            AST * TypeSet ( const Token*, AST_FQN* name, AST* typeSpecs );
+            AST * FmtDef  ( const Token*, AST_FQN* name, AST_FQN* super_opt );
+
         private:
             bool Init();
 
@@ -109,34 +116,6 @@ namespace ncbi
         private:
             uint32_t m_versMajor;
             uint32_t m_versMinor;
-        };
-
-        class AST_TypeDef : public AST
-        {
-        public:
-            AST_TypeDef ( ASTBuilder &,
-                          const Token*,
-                          AST_FQN* baseType,
-                          AST* newTypes );
-        };
-
-        class AST_ArrayDef : public AST // not clear if needed
-        {
-        public:
-            AST_ArrayDef ( const Token*,
-                           AST_FQN* typeName,
-                           AST* dimension );
-
-            const AST_FQN& GetBaseType () const;
-        };
-
-        class AST_TypeSet : public AST
-        {
-        public:
-            AST_TypeSet ( ASTBuilder &,
-                          const Token*,
-                          AST_FQN* name,
-                          AST* typeSpecs );
         };
 
         class AST_FQN : public AST

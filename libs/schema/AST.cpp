@@ -439,56 +439,55 @@ AST_Schema :: SetVersion ( const char* ) // version specified as n.m; checked fo
     //TODO
 }
 
-// AST_TypeDef
-
-AST_TypeDef :: AST_TypeDef ( ASTBuilder & p_builder, const Token * p_token, AST_FQN* p_baseType, AST* p_newTypes )
-:   AST ( p_token )
+AST *
+ASTBuilder :: TypeDef ( const Token * p_token, AST_FQN* p_baseType, AST* p_newTypes )
 {   //TODO: do we need to keep all these subtrees beyond the population of symtab?
+    AST * ret = new AST ( p_token );
     assert ( p_baseType != 0 );
-    AddNode ( p_baseType );
+    ret -> AddNode ( p_baseType );
     assert ( p_newTypes != 0 );
-    AddNode ( p_newTypes );
+    ret -> AddNode ( p_newTypes );
 
-    const KSymbol * baseType = p_builder . Resolve ( * p_baseType ); // will report unknown name
+    const KSymbol * baseType = Resolve ( * p_baseType ); // will report unknown name
     if ( baseType != 0 )
     {
         if ( baseType -> type != eDatatype )
         {
-            p_builder . ReportError ( "Not a datatype: '%s'", p_baseType -> GetChild ( 0 ) -> GetTokenValue () ); //TODO: add location
+            ReportError ( "Not a datatype: '%s'", p_baseType -> GetChild ( 0 ) -> GetTokenValue () ); //TODO: add location
             //TODO: recover? pretend it is "any"?
-            return;
         }
-
-        uint32_t count = p_newTypes -> ChildrenCount ();
-        for ( uint32_t i = 0; i < count; ++i )
+        else
         {
-            const AST * newType = p_newTypes -> GetChild ( i );
-            if ( newType -> GetToken () . GetType () == PT_IDENT )
-            {   //TODO: get rid of AST_ArrayDef
-                const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( * newType );
-                p_builder . DeclareType ( fqn, * baseType, 0 ); // will report duplicate definition
-            }
-            else // fqn dim
-            {   //TODO: get rid of AST_ArrayDef
+            uint32_t count = p_newTypes -> ChildrenCount ();
+            for ( uint32_t i = 0; i < count; ++i )
+            {
+                const AST * newType = p_newTypes -> GetChild ( i );
+                if ( newType -> GetToken () . GetType () == PT_IDENT )
+                {
+                    const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( * newType );
+                    DeclareType ( fqn, * baseType, 0 ); // will report duplicate definition
+                }
+                else // fqn dim
+                {   //TODO
+                }
             }
         }
     }
+    return ret;
 }
 
-// AST_ArrayDef
-
-AST_ArrayDef :: AST_ArrayDef ( const Token * p_token, AST_FQN* p_typeName, AST* p_dimension )
-:   AST ( p_token )
+AST *
+ASTBuilder :: ArrayDef ( const Token* p_token, AST_FQN* p_baseType, AST* p_dim )
 {
-    assert ( p_typeName != 0 );
-    AddNode ( p_typeName );
-    if ( p_dimension != 0 )
-    {
-        AddNode ( p_dimension );
-    }
+    AST * ret = new AST ( p_token );
+    assert ( p_baseType != 0 );
+    ret -> AddNode ( p_baseType );
+    assert ( p_dim != 0 );
+    ret -> AddNode ( p_dim );
+    //TBD
+    return ret;
 }
 
-// AST_TypeSet
 static
 bool
 TypeSetAddType ( ASTBuilder & p_builder, BSTree & p_tree, const VTypedecl & p_type, uint32_t & p_typeCount )
@@ -515,18 +514,16 @@ TypeSetAddType ( ASTBuilder & p_builder, BSTree & p_tree, const VTypedecl & p_ty
     return true;
 }
 
-AST_TypeSet :: AST_TypeSet ( ASTBuilder &   p_builder,
-                             const Token*   p_token,
-                             AST_FQN*       p_name,
-                             AST*           p_typeSpecs )
-:   AST ( p_token )
+AST *
+ASTBuilder :: TypeSet ( const Token* p_token, AST_FQN * p_name, AST * p_typeSpecs )
 {
+    AST * ret = new AST ( p_token );
     assert ( p_name != 0 );
-    AddNode ( p_name );
+    ret -> AddNode ( p_name );
     assert ( p_typeSpecs != 0 );
-    AddNode ( p_typeSpecs );
+    ret -> AddNode ( p_typeSpecs );
 
-    const KSymbol * existing = p_builder . Resolve ( * p_name, false );
+    const KSymbol * existing = Resolve ( * p_name, false );
 
     // traverse p_typeSpecs, add to tree
     BSTree tree;
@@ -540,7 +537,7 @@ AST_TypeSet :: AST_TypeSet ( ASTBuilder &   p_builder,
         if ( spec -> GetToken () . GetType () == PT_IDENT )
         {   // scalar
             const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( * spec );
-            const KSymbol * type = p_builder . Resolve ( fqn ); // will report unknown name
+            const KSymbol * type = Resolve ( fqn ); // will report unknown name
             if ( type != 0 )
             {
                 switch ( type -> type )
@@ -552,7 +549,7 @@ AST_TypeSet :: AST_TypeSet ( ASTBuilder &   p_builder,
 
                         td . type_id = typeDef -> id;
                         td . dim = 1;
-                        if ( ! TypeSetAddType ( p_builder, tree, td, typeCount ) )
+                        if ( ! TypeSetAddType ( * this, tree, td, typeCount ) )
                         {
                             goto EXIT;
                         }
@@ -563,7 +560,7 @@ AST_TypeSet :: AST_TypeSet ( ASTBuilder &   p_builder,
                         const STypeset * typeset = static_cast < const STypeset * > ( type -> u . obj );
                         for ( uint16_t j = 0; j < typeset -> count; ++j )
                         {
-                            if ( ! TypeSetAddType ( p_builder, tree, typeset -> td [ j ], typeCount ) )
+                            if ( ! TypeSetAddType ( *this, tree, typeset -> td [ j ], typeCount ) )
                             {
                                 goto EXIT;
                             }
@@ -572,7 +569,7 @@ AST_TypeSet :: AST_TypeSet ( ASTBuilder &   p_builder,
                     break;
                 default:
                     {
-                        p_builder . ReportError ( "Not a datatype", fqn );
+                        ReportError ( "Not a datatype", fqn );
                     }
                     continue;
                 }
@@ -587,14 +584,14 @@ AST_TypeSet :: AST_TypeSet ( ASTBuilder &   p_builder,
     {
         if ( existing -> type != eTypeset )
         {
-            p_builder . ReportError ( "Already declared and is not a typeset", * p_name );
+            ReportError ( "Already declared and is not a typeset", * p_name );
         }
         else
         {   // allow benign redefine
             const STypeset * orig = static_cast < const STypeset * > ( existing -> u . obj );
             if ( orig -> count != typeCount )
             {
-                p_builder . ReportError ( "Typeset already declared differently", * p_name );
+                ReportError ( "Typeset already declared differently", * p_name );
             }
             else
             {
@@ -605,7 +602,7 @@ AST_TypeSet :: AST_TypeSet ( ASTBuilder &   p_builder,
                     STypesetMbr * mbr = reinterpret_cast < STypesetMbr * > ( node );
                     if ( VTypedeclCmp ( & orig -> td [ i ], & mbr -> td ) != 0 )
                     {
-                        p_builder . ReportError ( "Typeset already declared differently", * p_name );
+                        ReportError ( "Typeset already declared differently", * p_name );
                         break;
                     }
                     node = BSTNodeNext ( node );
@@ -615,21 +612,69 @@ AST_TypeSet :: AST_TypeSet ( ASTBuilder &   p_builder,
     }
     else
     {
-        p_builder . DeclareTypeSet ( * p_name, tree, typeCount );
+        DeclareTypeSet ( * p_name, tree, typeCount );
     }
 
 EXIT:
     BSTreeWhack ( & tree, BSTreeMbrWhack, NULL );
+
+    return ret;
 }
 
-// AST_FQN
-
-const AST_FQN&
-AST_ArrayDef :: GetBaseType () const
+AST *
+ASTBuilder :: FmtDef ( const Token* p_token, AST_FQN* p_fqn, AST_FQN* p_super_opt )
 {
-    return dynamic_cast < const AST_FQN & > ( * GetChild ( 0 ) )
-;}
+    AST * ret = new AST ( p_token );
+    assert ( p_fqn != 0 );
+    ret -> AddNode ( p_fqn );
+    if ( p_super_opt != 0 )
+    {
+        ret -> AddNode ( p_super_opt );
+    }
 
+    SFormat * fmt = static_cast < SFormat * > ( malloc ( sizeof * fmt ) );
+    if ( fmt == NULL )
+    {
+        ReportError ( "malloc failed: %R", RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted ) );
+    }
+    else
+    {
+        // superfmt
+        fmt -> super = 0;
+        if ( p_super_opt != 0 )
+        {
+            const KSymbol* super = Resolve ( * p_super_opt ); // will report undefined
+            if ( super != 0 )
+            {
+                if ( super -> type != eFormat )
+                {
+                    ReportError ( "Not a format", * p_super_opt );
+                    free ( fmt );
+                    return ret;
+                }
+                fmt -> super = static_cast < const SFormat * > ( super -> u . obj );
+            }
+        }
+
+        /* insert into vector */
+        rc_t rc = VectorAppend ( & m_schema -> fmt, & fmt -> id, fmt );
+        if ( rc != 0 )
+        {
+            ReportError ( "VectorAppend failed: %R", rc );
+            free ( fmt );
+        }
+        else
+        {   // create a symtab entry, link fmt to it
+            fmt -> name = CreateFqnSymbol ( * p_fqn, eFormat, fmt ); // will add missing namespaces to symtab
+        }
+    }
+
+    return ret;
+}
+
+
+
+// AST_FQN
 
 AST_FQN :: AST_FQN ( const Token* p_token )
 : AST ( p_token )

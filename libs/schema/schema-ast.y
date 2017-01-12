@@ -210,11 +210,11 @@
 %start parse
 
 %type <node> source schema_1 schema_decls schema_decl schema_2 typedef new_type_names new_type_name
-%type <node> expr typeset typeset_spec typespec dim
+%type <node> expr typeset typeset_spec typespec dim fmtdef
 
 %type <fqn> fqn qualnames
 
-%type <tok> END_SOURCE version_1 PT_VERSION_1_0 PT_VERSION_2 PT_SCHEMA_1_0 FLOAT version_2 PT_TYPEDEF PT_IDENT IDENTIFIER_1_0 DECIMAL PT_ASTLIST PT_ARRAY PT_TYPESET
+%type <tok> END_SOURCE version_1 PT_VERSION_1_0 PT_VERSION_2 PT_SCHEMA_1_0 FLOAT version_2 PT_TYPEDEF PT_IDENT IDENTIFIER_1_0 DECIMAL PT_ASTLIST PT_ARRAY PT_TYPESET PT_FORMAT
 
 %%
 
@@ -251,15 +251,19 @@ schema_decls
     | schema_decls schema_decl                      { $$ = $1; $$ -> AddNode ( $2 ); }
     ;
 
+/* declarations */
+
 schema_decl
     : typedef   { $$ = $1; }
     | typeset   { $$ = $1; }
+    | fmtdef    { $$ = $1; }
+    /*TBD*/
     | ';'       { $$ = new AST (); }
     ;
 
 typedef
     : PT_TYPEDEF '(' KW_typedef fqn PT_ASTLIST '(' new_type_names ')' ';' ')'
-                                            { $$ = new AST_TypeDef ( p_builder, $1, $4, $7 ); }
+                                            { $$ = p_builder . TypeDef ( $1, $4, $7 ); }
     ;
 
 new_type_names
@@ -268,13 +272,13 @@ new_type_names
     ;
 
 new_type_name
-    : fqn                                               { $$ = $1; }
-    | PT_ARRAY '(' fqn dim ')'  { $$ = new AST_ArrayDef ( $1, $3, $4 ); }
+    : fqn                           { $$ = $1; }
+    | PT_ARRAY '(' fqn dim ')'      { $$ = p_builder . ArrayDef ( $1, $3, $4 ); }
     ;
 
 typeset
     :  PT_TYPESET '(' KW_typeset fqn PT_TYPESETDEF '(' '{' PT_ASTLIST '(' typeset_spec ')' '}' ')' ';' ')'
-                { $$ = new AST_TypeSet ( p_builder, $1, $4, $10 ); }
+                { $$ = p_builder . TypeSet ( $1, $4, $10 ); }
     ;
 
 typeset_spec
@@ -287,6 +291,20 @@ typespec
     | PT_ARRAY '(' fqn dim ')'      { $$ = new AST (); $$ -> AddNode ( $3 ); $$ -> AddNode ( $4 ); }
     ;
 
+fmtdef
+    : PT_FORMAT '(' KW_fmtdef fqn ';' ')'       { $$ = p_builder . FmtDef ( $1, $4, 0 ); }
+    | PT_FORMAT '(' KW_fmtdef fqn fqn ';' ')'   { $$ = p_builder . FmtDef ( $1, $5, $4 ); } /* note the flipped order */
+    ;
+
+/* expressions */
+
+expr
+    : PT_UINT '(' DECIMAL ')'   { $$ = new AST ( $3 ); }
+    /*| TBD */
+    ;
+
+/* commonly used productions */
+
 fqn
     : PT_ASTLIST '(' qualnames ')'  { $$ = $3; }
     ;
@@ -294,11 +312,6 @@ fqn
 qualnames
     : PT_IDENT '(' IDENTIFIER_1_0 ')'                       { $$ = new AST_FQN ( $1 ); $$ -> AddNode ( $3 ); }
     | qualnames ':' PT_IDENT  '(' IDENTIFIER_1_0 ')'        { $$ = $1; $$ -> AddNode ( $5 ); }
-    ;
-
-expr
-    : PT_UINT '(' DECIMAL ')'   { $$ = new AST ( $3 ); }
-    /*| TBD */
     ;
 
 dim
