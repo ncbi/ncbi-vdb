@@ -272,6 +272,10 @@ static rc_t CC KKeyStoreGetKeyInt(const KKeyStore* self, const char* obj_key,
                         rc = KRepositoryEncryptionKeyFile ( protected, path, sizeof(path), NULL );
                         if ( rc == 0 && path [ 0 ] != 0 )
                             rc = KEncryptionKeyMakeFromFile(path, enc_key);
+                        else
+                            rc = KRepositoryEncryptionKey ( protected, path, sizeof(path), NULL );
+                            if ( rc == 0 )
+                                rc = KEncryptionKeyMake ( path, enc_key );
                             
                         rc2 = KRepositoryRelease ( protected );
                         if (rc == 0)
