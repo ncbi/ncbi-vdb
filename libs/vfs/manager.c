@@ -3469,6 +3469,21 @@ static rc_t inspect_dir( KDirectory * dir, KTime_t date, const char * path )
         }
         KNamelistRelease( itemlist );
     }
+    else
+    {
+		if ( ( GetRCModule( rc ) == rcFS ) && 
+			 ( GetRCTarget( rc ) == rcDirectory ) &&
+			 ( GetRCContext( rc ) == rcListing ) &&
+			 ( GetRCObject( rc ) == ( enum RCObject )rcPath ) &&
+			 ( GetRCState( rc ) == rcNotFound ) )
+		{
+			rc = 0;
+		}
+		else
+		{
+			PLOGERR( klogErr, ( klogErr, rc, "KDirectoryList( '$(P)' )", "P=%s", path ) );
+		}
+    }
     return rc;
 }
 
