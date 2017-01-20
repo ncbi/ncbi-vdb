@@ -205,7 +205,6 @@
 %token PT_TYPEDEF
 %token PT_FQN
 %token PT_IDENT
-%token PT_DIM
 %token PT_UINT
 %token PT_TYPESET
 %token PT_TYPESETDEF
@@ -229,7 +228,6 @@
 %token PT_FUNCPROLOGUE
 %token PT_RETURN
 %token PT_PRODSTMT
-%token PT_ASSIGN
 %token PT_SCHEMA
 %token PT_VALIDATE
 %token PT_PHYSICAL
@@ -313,8 +311,8 @@ schema_1_0_decl
     | format_1_0_decl       { $$ = $1; }
     | const_1_0_decl        { $$ = $1; }
     | alias_1_0_decl        { $$ = $1; }
-    | extern_1_0_decl       { $$ = $1; }
     | function_1_0_decl     { $$ = $1; }
+    | extern_1_0_decl       { $$ = $1; }
     | script_1_0_decl       { $$ = $1; }
     | validate_1_0_decl     { $$ = $1; }
     | physical_1_0_decl     { $$ = $1; }
@@ -351,14 +349,8 @@ typedef_1_0_decl
     ;
 
 typedef_1_0_new_name_list
-    : typedef_1_0_new_name                                  { $$ . subtree = MakeList ( $1 ); }
-    | typedef_1_0_new_name_list ',' typedef_1_0_new_name    { $$ . subtree = AddToList ( P($1), T($2), P($3) ); }
-    ;
-
-typedef_1_0_new_name
-    : fqn_1_0               { $$ = $1; } /* simple fqn, apparently ( but not necessarily ) scalar */
-    | fqn_1_0 dim_1_0       { $$ . subtree = MakeTree ( PT_ARRAY, P ( $1 ), P ( $2 ) ); } /* vector fqn with dimension */
-
+    : typespec_1_0                                  { $$ . subtree = MakeList ( $1 ); }
+    | typedef_1_0_new_name_list ',' typespec_1_0    { $$ . subtree = AddToList ( P($1), T($2), P($3) ); }
     ;
 
 /* typeset-1.0
@@ -385,14 +377,14 @@ typespec_1_0_list
     ;
 
 typespec_1_0
-    : typespec_1_0_name                     { $$ = $1; }
-    | typespec_1_0_name dim_1_0             { $$ . subtree = MakeTree ( PT_ARRAY, P ( $1 ), P ( $2 ) ); }
+    : fqn_1_0                   { $$ = $1; }
+    | fqn_1_0 '[' dim_1_0 ']'   { $$ . subtree = MakeTree ( PT_ARRAY, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
     ;
 
-typespec_1_0_name
-    : fqn_1_0                               { $$ = $1; }    /* must be a typedef, schema type, or typeset */
+dim_1_0
+    : expression_1_0    { $$ = $1; }        /* expects unsigned integer constant expression */
+    | '*'               { $$ . subtree = T ( $1 ); }
     ;
-
 
 /* format-1.0
  */
@@ -415,16 +407,9 @@ format_1_0_name
 /* const-1.0
  */
 const_1_0_decl
-    : KW_const fqn_1_0 const_1_0_new_name '=' expression_1_0 ';'
+    : KW_const typespec_1_0 fqn_1_0 '=' expression_1_0 ';'
             { $$ . subtree = MakeTree ( PT_CONST, T ( $1 ), P ( $2 ), P ( $3 ), T ( $4 ), P ( $5 ), T ( $6 ) ); }
-    | KW_const fqn_1_0 dim_1_0 const_1_0_new_name '=' expression_1_0 ';'
-            { $$ . subtree = MakeTree ( PT_CONST, T ( $1 ), P ( $2 ), P ( $3 ), P ( $4 ), T ( $5 ), P ( $6 ), T ( $7 ) ); }
     ;
-
-const_1_0_new_name
-    : fqn_1_0                       { $$ = $1; }   /* also supposed to allow for duplicate redefinition */
-    ;
-
 
 /* alias-1.0
  */
@@ -469,12 +454,12 @@ func_1_0_decl
     ;
 
 untyped_func_1_0_decl
-    : KW___untyped fqn_opt_vers '(' ')'
+    : KW___untyped fqn_1_0 '(' ')'
             { $$ . subtree = MakeTree ( PT_UNTYPED, T ( $1 ), P ( $2 ), T ( $3 ), T ( $4 ) ); }
     ;
 
 row_length_func_1_0_decl
-    : KW___row_length fqn_opt_vers '(' ')'
+    : KW___row_length fqn_1_0 '(' ')'
             { $$ . subtree = MakeTree ( PT_ROWLENGTH, T ( $1 ), P ( $2 ), T ( $3 ), T ( $4 ) ); }
     ;
 
@@ -567,10 +552,10 @@ script_1_0_stmt
     ;
 
 production_1_0_stmt
-    : type_expr_1_0 IDENTIFIER_1_0 assign_expr_1_0 ';'    /* cannot have format */
-                                     { $$ . subtree = MakeTree ( PT_PRODSTMT, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
-    | KW_trigger    IDENTIFIER_1_0 assign_expr_1_0 ';'
-                                     { $$ . subtree = MakeTree ( PT_PRODSTMT, T ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
+    : typespec_1_0 IDENTIFIER_1_0 '=' cond_expr_1_0 ';'    /* cannot have format */
+                                     { $$ . subtree = MakeTree ( PT_PRODSTMT, P ( $1 ), T ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
+    | KW_trigger    IDENTIFIER_1_0 '=' cond_expr_1_0 ';'
+                                     { $$ . subtree = MakeTree ( PT_PRODSTMT, T ( $1 ), T ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
     ;
 
 /* physical encoding
@@ -799,10 +784,6 @@ primary_expr_1_0
     | '+' expression_1_0        { $$ . subtree = MakeTree ( PT_UNARYPLUS, T ( $1 ), P ( $2 ) ); }
     ;
 
-assign_expr_1_0
-    : '=' cond_expr_1_0         { $$ . subtree = MakeTree ( PT_ASSIGN, T ( $1 ), P ( $2 ) ); }
-    ;
-
 func_expr_1_0
     :   '<'
         schema_parms_1_0
@@ -899,9 +880,8 @@ negate_expr_1_0
     ;
 
 type_expr_1_0
-    : fqn_1_0                   { $$ = $1; } /* datatype, typeset, schematype */
+    : typespec_1_0              { $$ = $1; } /* datatype, typeset, schematype */
     | fqn_1_0 '/' fqn_1_0       { $$ . subtree = MakeTree ( PT_TYPEEXPR, P ( $1 ), T ( $2), P ( $3 ) ); } /* format /  ? */
-    | fqn_1_0 dim_1_0           { $$ . subtree = MakeTree ( PT_TYPEEXPR, P ( $1 ), P ( $2 ) ); }
     ;
 
  /* database */
@@ -968,11 +948,6 @@ fqn_1_0
 
 ident_1_0
     : IDENTIFIER_1_0    { $$ . subtree = MakeTree ( PT_IDENT, T ( $1 ) ); }     /* this is just a C identifier */
-    ;
-
-dim_1_0
-    : '[' expression_1_0 ']'   { $$ . subtree = MakeTree ( PT_DIM, T ( $1 ), P ( $2 ), T ( $3 ) ); } /* expects unsigned integer constant expression */
-    | '[' '*'  ']'              { $$ . subtree = MakeTree ( PT_DIM, T ( $1 ), T ( $2 ), T ( $3 ) ); }
     ;
 
 empty

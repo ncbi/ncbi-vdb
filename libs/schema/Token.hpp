@@ -40,6 +40,7 @@ namespace ncbi
 
         public:
             Token ( const SchemaToken& );
+            Token ( TokenType );
             Token ( const Token& );
             ~Token ();
 

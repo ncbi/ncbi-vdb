@@ -76,6 +76,7 @@ SCHEMA_SRC = \
     ParseTree \
     schema-ast \
     AST \
+    ASTBuilder \
 
 schema-grammar.$(LOBX): $(SRCDIR)/schema-grammar.cpp
 	$(CP) -o $@ -fPIC $(OPT) -D_LIBRARY $< $(LOC_INFO) -D__file_ext__=cpp

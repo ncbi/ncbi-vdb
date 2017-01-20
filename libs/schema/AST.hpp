@@ -33,20 +33,27 @@
 
 #include <vdb/schema.h>
 
-struct KSymbol;
-struct BSTree;
+struct SExpression;
+struct VTypedecl;
 
 namespace ncbi
 {
     namespace SchemaParser
     {
-        class AST_FQN;
+        class ASTBuilder;
 
         class AST : public ParseTree
         {
         public:
             AST ( const Token* token );
+            AST ( Token :: TokenType tokenType ); // no-value token
             explicit AST (); // no token; a synthesized node
+
+            // convenience overloads; chilren nodes cannot be NULL
+            AST ( const Token* token, AST* );
+            AST ( const Token* token, AST*, AST* );
+            AST ( const Token* token, AST*, AST*, AST* );
+            AST ( const Token* token, AST*, AST*, AST*, AST*, AST*, AST* );
 
             void AddNode ( AST * ); // allocate with new
             void AddNode ( const Token * );
@@ -54,68 +61,22 @@ namespace ncbi
             const AST* GetChild ( uint32_t idx ) const  { return static_cast < const AST * > ( ParseTree :: GetChild ( idx ) ); }
                   AST* GetChild ( uint32_t idx )        { return static_cast <       AST * > ( ParseTree :: GetChild ( idx ) ); }
 
+            Token :: TokenType GetTokenType () const { return GetToken () . GetType (); }
             const char* GetTokenValue () const { return GetToken () . GetValue (); }
-        };
-
-        class ASTBuilder
-        {
-        public:
-            ASTBuilder ();
-            ~ASTBuilder ();
-
-            void DebugOn ();
-
-            AST* Build ( const ParseTree& p_root );
-
-            const VSchema * GetSchema () const { return m_schema; }
-
-            void DeclareType ( const AST_FQN& p_fqn, const KSymbol& p_super, const AST* p_dimension );
-            void DeclareTypeSet ( const AST_FQN& p_fqn, const BSTree& p_types, uint32_t p_typeCount );
-
-            const KSymbol* Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown = true );
-
-            // error list is cleared by a call to Build
-            uint32_t GetErrorCount() const { return VectorLength ( & m_errors ); }
-            const char* GetErrorMessage ( uint32_t p_idx ) const { return ( const char * ) VectorGet ( & m_errors, p_idx ); }
-
-            void ReportError ( const char* p_fmt, ... );
-            void ReportError ( const char* p_msg, const AST_FQN& p_fqn );
-
-            const KSymbol* CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const void * p_obj );
-
-        public:
-            // AST node creation methods for use from bison
-            AST * TypeDef ( const Token*, AST_FQN* baseType, AST* newTypes );
-            AST * ArrayDef ( const Token*, AST_FQN* baseType, AST* dim );
-            AST * TypeSet ( const Token*, AST_FQN* name, AST* typeSpecs );
-            AST * FmtDef  ( const Token*, AST_FQN* name, AST_FQN* super_opt );
-
-        private:
-            bool Init();
-
-        private:
-            bool m_debug;
-
-            VSchema*    m_intrinsic;
-            VSchema*    m_schema;
-            KSymTable   m_symtab;
-
-            Vector      m_errors;
         };
 
         class AST_Schema : public AST
         {
         public:
             AST_Schema ( const Token*,
-                         AST* decls, // NULL OK; is deleted here
-                         unsigned int version = 1 );
+                         AST* decls ); // NULL OK; is deleted here
             explicit AST_Schema ();
 
-            void SetVersion ( const char* ); // version specified as n.m; checked for valid version number here
+            void SetVersion ( const char* ); // version specified as "#maj[.min[.rel]]]"
+            uint32_t GetVersion () const { return m_version; } // encoded as ( maj << 24 ) | ( min << 16 ) | ( rel )
 
         private:
-            uint32_t m_versMajor;
-            uint32_t m_versMinor;
+            uint32_t m_version;
         };
 
         class AST_FQN : public AST
@@ -123,15 +84,28 @@ namespace ncbi
         public:
             AST_FQN ( const Token* );
 
+            void SetVersion ( const char* ); // version specified as "#maj[.min[.rel]]]"
+            uint32_t GetVersion () const { return m_version; } // encoded as ( maj << 24 ) | ( min << 16 ) | ( rel )
+
             uint32_t NamespaceCount() const;
-            void GetNamespace ( uint32_t p_idx, String & ) const;
+            void GetNamespace ( uint32_t idx, String & ) const;
             void GetIdentifier ( String & ) const;
 
             // reconstruct the full name "ns1:ns2:...:ident", 0-terminated. Returns size in bytes
-            void GetFullName ( char* p_buf, size_t p_bufSize ) const;
-            void GetPartialName ( char* p_buf, size_t p_bufSize, uint32_t p_lastMember ) const;
+            void GetFullName ( char* buf, size_t bufSize ) const;
+            void GetPartialName ( char* buf, size_t bufSize, uint32_t lastMember ) const;
+
+        private:
+            uint32_t m_version;
         };
 
+        class AST_Expr : public AST
+        {
+        public:
+            AST_Expr ( const Token* );
+
+            SExpression * EvaluateConst ( ASTBuilder& ) const; // reports problems
+        };
     }
 }
 

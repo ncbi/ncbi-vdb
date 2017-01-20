@@ -29,7 +29,7 @@
 
     #include <stdio.h>
 
-    #include "AST.hpp"
+    #include "ASTBuilder.hpp"
     using namespace ncbi::SchemaParser;
 
     #include "schema-ast-tokens.h"
@@ -59,6 +59,7 @@
   const Token*  tok;
   AST*          node;
   AST_FQN*      fqn;
+  AST_Expr*     expr;
 }
 
 %define parse.error verbose
@@ -140,7 +141,6 @@
 %token PT_TYPEDEF
 %token PT_FQN
 %token PT_IDENT
-%token PT_DIM
 %token PT_UINT
 %token PT_TYPESET
 %token PT_TYPESETDEF
@@ -164,7 +164,6 @@
 %token PT_FUNCPROLOGUE
 %token PT_RETURN
 %token PT_PRODSTMT
-%token PT_ASSIGN
 %token PT_SCHEMA
 %token PT_VALIDATE
 %token PT_PHYSICAL
@@ -209,12 +208,20 @@
 
 %start parse
 
-%type <node> source schema_1 schema_decls schema_decl schema_2 typedef new_type_names new_type_name
-%type <node> expr typeset typeset_spec typespec dim fmtdef
+%type <node> source schema_1 schema_decls schema_decl schema_2 typedef new_type_names
+%type <node> typeset typeset_spec typespec dim fmtdef const alias function func_decl
+%type <node> schema_sig return_type fact_sig param_sig prologue
+%type <node> param_signature schema_formals schema_formal type_expr formals formal
+%type <node> script_stmts script_stmt cond_expr
 
-%type <fqn> fqn qualnames
+%type <fqn> fqn qualnames fqn_opt_vers ident
 
-%type <tok> END_SOURCE version_1 PT_VERSION_1_0 PT_VERSION_2 PT_SCHEMA_1_0 FLOAT version_2 PT_TYPEDEF PT_IDENT IDENTIFIER_1_0 DECIMAL PT_ASTLIST PT_ARRAY PT_TYPESET PT_FORMAT
+%type <expr> expr
+
+%type <tok> END_SOURCE version_1 PT_VERSION_1_0 PT_VERSION_2 PT_SCHEMA_1_0 FLOAT version_2
+%type <tok> PT_TYPEDEF PT_IDENT IDENTIFIER_1_0 DECIMAL PT_ASTLIST PT_ARRAY PT_TYPESET
+%type <tok> PT_FORMAT PT_CONST PT_UINT PT_ALIAS vararg PT_EMPTY PT_ELLIPSIS PT_RETURN
+%type <tok> VERSION PT_UNTYPED PT_ROWLENGTH PT_FUNCDECL
 
 %%
 
@@ -257,6 +264,9 @@ schema_decl
     : typedef   { $$ = $1; }
     | typeset   { $$ = $1; }
     | fmtdef    { $$ = $1; }
+    | const     { $$ = $1; }
+    | alias     { $$ = $1; }
+    | function  { $$ = $1; }
     /*TBD*/
     | ';'       { $$ = new AST (); }
     ;
@@ -267,13 +277,18 @@ typedef
     ;
 
 new_type_names
-    : new_type_name                         { $$ = new AST (); $$ -> AddNode ( $1 ); }
-    | new_type_names ',' new_type_name      { $$ = $1; $$ -> AddNode ( $3 ); }
+    : typespec                         { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | new_type_names ',' typespec      { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 
-new_type_name
-    : fqn                           { $$ = $1; }
-    | PT_ARRAY '(' fqn dim ')'      { $$ = p_builder . ArrayDef ( $1, $3, $4 ); }
+typespec
+    : fqn                               { $$ = $1; }
+    | PT_ARRAY '(' fqn '[' dim ']' ')'  { $$ = new AST ( PT_ARRAY ); $$ -> AddNode ( $3 ); $$ -> AddNode ( $5 ); }
+    ;
+
+dim
+    : expr   { $$ = $1; }
+    | '*'    { $$ = new AST ( PT_EMPTY ); }
     ;
 
 typeset
@@ -286,21 +301,114 @@ typeset_spec
     | typeset_spec ',' typespec     { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 
-typespec
-    : fqn                           { $$ = $1; }
-    | PT_ARRAY '(' fqn dim ')'      { $$ = new AST (); $$ -> AddNode ( $3 ); $$ -> AddNode ( $4 ); }
-    ;
-
 fmtdef
     : PT_FORMAT '(' KW_fmtdef fqn ';' ')'       { $$ = p_builder . FmtDef ( $1, $4, 0 ); }
     | PT_FORMAT '(' KW_fmtdef fqn fqn ';' ')'   { $$ = p_builder . FmtDef ( $1, $5, $4 ); } /* note the flipped order */
     ;
 
+const
+    : PT_CONST '(' KW_const typespec fqn '=' expr ';' ')'        { $$ = p_builder . ConstDef ( $1, $4, $5, $7 ); }
+    ;
+
+alias
+    : PT_ALIAS '(' KW_alias fqn fqn ';' ')'  { $$ = p_builder . AliasDef ( $1, $4, $5 ); }
+    ;
+
+function
+    : PT_FUNCTION '(' KW_function func_decl ')' { $$ = $4; }
+    ;
+
+func_decl
+    : PT_UNTYPED '(' KW___untyped fqn '(' ')' ')'      { $$ = p_builder . UntypedFunctionDecl ( $1, $4 ); }
+    | PT_ROWLENGTH '(' KW___row_length fqn '(' ')' ')' { $$ = p_builder . RowlenFunctionDecl ( $1, $4 ); }
+    | PT_FUNCDECL '(' schema_sig return_type fqn_opt_vers fact_sig param_sig prologue ')'
+                { $$ = p_builder . FunctionDecl ( $1, $3, $4, $5, $6, $7, $8 ); }
+    ;
+
+schema_sig
+    : PT_EMPTY                                    { $$ = new AST (); }
+    | PT_SCHEMASIG '(' '<' schema_formals '>' ')' { $$ = $4; }
+    ;
+
+schema_formals
+    : schema_formal                     { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | schema_formals ',' schema_formal  { $$ = $1; $$ -> AddNode ( $3 ); }
+    ;
+
+schema_formal
+    : PT_SCHEMAFORMAL '(' KW_type ident ')'     { $$ = new AST (); $$ -> AddNode ( $4 ); }
+    | PT_SCHEMAFORMAL '(' type_expr ident ')'   { $$ = new AST (); $$ -> AddNode ( $3 ); $$ -> AddNode ( $4 ); }
+    ;
+
+return_type
+    : PT_RETURNTYPE '(' KW_void ')'     { $$ = new AST (); }
+    | PT_RETURNTYPE '(' type_expr ')'   { $$ = new AST (); $$ -> AddNode ( $3 ); }
+    ;
+
+fact_sig
+    : PT_EMPTY                                   { $$ = new AST (); }
+    | PT_FACTSIG '(' '<' param_signature '>' ')' { $$ = $4; }
+    ;
+
+param_sig
+    :  PT_FUNCSIG '(' '(' param_signature ')' ')' { $$ = $4; }
+    ;
+
+param_signature
+    : PT_EMPTY                                              { $$ = new AST (); }
+    | PT_FUNCPARAMS '(' formals vararg ')'                  { $$ = new AST (); $$ -> AddNode ( $3 ); $$ -> AddNode ( new AST () );$$ -> AddNode ( $4 );}
+    | PT_FUNCPARAMS '(' '*' formals vararg ')'              { $$ = new AST (); $$ -> AddNode ( new AST () ); $$ -> AddNode ( $4 );$$ -> AddNode ( $5 );}
+    | PT_FUNCPARAMS '(' formals '*' formals vararg ')'      { $$ = new AST (); $$ -> AddNode ( $3 ); $$ -> AddNode ( $5 );$$ -> AddNode ( $6 );}
+    | PT_FUNCPARAMS '(' formals ',' '*' formals vararg ')'  { $$ = new AST (); $$ -> AddNode ( $3 ); $$ -> AddNode ( $6 );$$ -> AddNode ( $7 );}
+    ;
+
+formals
+    : formal                { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | formals ',' formal    { $$ = $1; $$ -> AddNode ( $3 ); }
+    ;
+
+formal
+    : typespec IDENTIFIER_1_0               { $$ = new AST (); $$ -> AddNode ( $1 ); ;$$ -> AddNode ( $2 ); }
+    | KW_control typespec IDENTIFIER_1_0    { $$ = new AST (); $$ -> AddNode ( new AST () ); ;$$ -> AddNode ( $2 ); $$ -> AddNode ( $3 ); }
+    ;
+
+vararg
+    : PT_EMPTY                          { $$ = $1; }
+    | PT_ELLIPSIS '(' ',' ELLIPSIS ')'  { $$ = $1; }
+    ;
+
+prologue
+    : PT_FUNCPROLOGUE '(' ';' ')'                   { $$ = new AST (); }
+    | PT_FUNCPROLOGUE '(' '=' fqn ';' ')'           { $$ = new AST (); $$ -> AddNode ( $4 ); }
+    | PT_FUNCPROLOGUE '(' '=' script_stmts ';' ')'  { $$ = new AST (); $$ -> AddNode ( $4 ); }
+    ;
+
+script_stmts
+    : script_stmt               { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | script_stmts script_stmt  { $$ = $1; $$ -> AddNode ( $2 ); }
+    ;
+
+script_stmt
+    : PT_RETURN '(' KW_return cond_expr ';' ')'                         { $$ = new AST (); $$ -> AddNode ( $1 ); $$ -> AddNode ( $4 ); }
+    | PT_PRODSTMT '(' typespec IDENTIFIER_1_0 '=' cond_expr ';' ')'     { $$ = new AST (); $$ -> AddNode ( $3 ); $$ -> AddNode ( $4 );  $$ -> AddNode ( $6 ); }
+    | PT_PRODSTMT '(' KW_trigger IDENTIFIER_1_0 '=' cond_expr ';' ')'   { $$ = new AST (); $$ -> AddNode ( new AST () ); $$ -> AddNode ( $4 );  $$ -> AddNode ( $6 ); }
+    ;
+
 /* expressions */
 
 expr
-    : PT_UINT '(' DECIMAL ')'   { $$ = new AST ( $3 ); }
+    : PT_UINT '(' DECIMAL ')'   { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
     /*| TBD */
+    ;
+
+cond_expr
+    : expr                  { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | cond_expr '|' expr    { $$ = $1; $$ -> AddNode ( $3 ); }
+    ;
+
+type_expr
+    : typespec                          { $$ = $1; }
+    | PT_TYPEEXPR '(' fqn '/' fqn ')'   { $$ = new AST ( PT_TYPEEXPR ); $$ -> AddNode ( $3 ); $$ -> AddNode ( $5 ); }
     ;
 
 /* commonly used productions */
@@ -310,12 +418,16 @@ fqn
     ;
 
 qualnames
-    : PT_IDENT '(' IDENTIFIER_1_0 ')'                       { $$ = new AST_FQN ( $1 ); $$ -> AddNode ( $3 ); }
-    | qualnames ':' PT_IDENT  '(' IDENTIFIER_1_0 ')'        { $$ = $1; $$ -> AddNode ( $5 ); }
+    : ident                                             { $$ = $1; }
+    | qualnames ':' PT_IDENT  '(' IDENTIFIER_1_0 ')'    { $$ = $1; $$ -> AddNode ( $5 ); }
     ;
 
-dim
-    : PT_DIM '(' '[' expr ']' ')'   { $$ = $4; }
-    | PT_DIM '(' '[' '*' ']' ')'    { $$ = new AST (); }
+ident
+    : PT_IDENT '(' IDENTIFIER_1_0 ')'   { $$ = new AST_FQN ( $1 ); $$ -> AddNode ( $3 ); }
+    ;
+
+fqn_opt_vers
+    : fqn                               { $$ = $1; }
+    | PT_VERSNAME '(' fqn VERSION ')'   { $$ = $3; $$ -> SetVersion ( $4 -> GetValue () ); }
     ;
 

@@ -33,9 +33,8 @@ using namespace ncbi::SchemaParser;
 #define YYDEBUG 1
 #include "schema-tokens.h"
 
-SchemaParser :: SchemaParser ( bool p_debug )
-:   m_debug ( p_debug ),
-    m_root ( 0 )
+SchemaParser :: SchemaParser ()
+:   m_root ( 0 )
 {
 }
 
@@ -45,10 +44,10 @@ SchemaParser :: ~SchemaParser ()
 }
 
 bool
-SchemaParser :: ParseString ( const char * input )
+SchemaParser :: ParseString ( const char * p_input, bool p_debug )
 {
-    SchemaScanner s ( input );
-    Schema_debug = m_debug;
+    SchemaScanner s ( p_input );
+    Schema_debug = p_debug;
     delete m_root;
     m_root = 0;
     return Schema_parse ( & m_root, & s . GetScanBlock () ) == 0;

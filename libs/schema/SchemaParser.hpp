@@ -36,10 +36,10 @@ namespace ncbi
         class SchemaParser
         {
         public:
-            SchemaParser ( bool debug = false );
+            SchemaParser ();
             ~SchemaParser ();
 
-            bool ParseString ( const char * input );
+            bool ParseString ( const char * input, bool debug = false );
             bool ParseFile ( const char * source_file );
 
             const ParseTree* GetParseTree () const { return m_root; }
