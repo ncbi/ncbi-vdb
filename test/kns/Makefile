@@ -198,6 +198,8 @@ $(BINDIR)/test-proxy-with-env: $(TOOL_OBJ)
 # just when there is a good proxy specified via configuration or environment
 
 run-test-proxy-with-scheme:
+	@ echo test-proxy-with-scheme: BEGIN ...
+
 	# no proxy specified: fail
 	$(BINDIR)/test-proxy-with-scheme
 
@@ -239,4 +241,4 @@ run-test-proxy-with-scheme:
 	all_proxy=http://      $(BINDIR)/test-proxy-with-scheme
 	all_proxy=http://:3128 $(BINDIR)/test-proxy-with-scheme
 
-	@ echo test-proxy-with-scheme: OK
+	@ echo ... test-proxy-with-scheme: END
