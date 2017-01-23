@@ -238,3 +238,5 @@ run-test-proxy-with-scheme:
 	all_proxy=h:/w.g:3128  $(BINDIR)/test-proxy-with-scheme
 	all_proxy=http://      $(BINDIR)/test-proxy-with-scheme
 	all_proxy=http://:3128 $(BINDIR)/test-proxy-with-scheme
+
+	@ echo test-proxy-with-scheme: OK
