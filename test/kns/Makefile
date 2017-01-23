@@ -25,20 +25,23 @@
 
 default: runtests
 
+runtests: run-test-proxy-with-scheme
+
 TOP ?= $(abspath ../..)
 MODULE = test/kns
 
 TEST_TOOLS = \
-	KNSManagerSingletonTest \
 	test-kns \
 	test-proxy \
 	test-http \
 	test-http-dropconn \
+	KNSManagerSingletonTest \
 
 include $(TOP)/build/Makefile.env
 
 EXT_TOOLS = \
-	test-proxy-with-env
+	test-proxy-with-env \
+	test-proxy-with-scheme \
 
 ALL_TOOLS = \
 	$(INT_TOOLS) \
@@ -128,6 +131,20 @@ PROXYTEST_OBJ = \
 $(TEST_BINDIR)/test-proxy: $(PROXYTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
     
+
+#----------------------------------------------------------------
+# test-proxy-with-scheme
+#
+PROXYSCH_SRC = \
+	test-proxy-with-scheme \
+
+PROXYSCH_OBJ = \
+	$(addsuffix .$(OBJX),$(PROXYSCH_SRC))
+
+$(BINDIR)/test-proxy-with-scheme: $(PROXYSCH_OBJ)
+	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
+
+
 #----------------------------------------------------------------
 # test-http
 #
@@ -170,3 +187,54 @@ TOOL_OBJ = \
 
 $(BINDIR)/test-proxy-with-env: $(TOOL_OBJ)
 	$(LP) --exe -o $@ $^ -L$(VDB_LIBDIR) -L$(VDB_LIBDIR)/../ilib $(KNSTEST_LIB)
+
+
+#----------------------------------------------------------------
+
+
+# test-proxy-with-scheme never does direct intermet connection
+# ( /http/proxy/only = "true" )
+# It can access internet
+# just when there is a good proxy specified via configuration or environment
+
+run-test-proxy-with-scheme:
+	# no proxy specified: fail
+	$(BINDIR)/test-proxy-with-scheme
+
+	# bad proxy in configuration: fail
+	$(BINDIR)/test-proxy-with-scheme =BAD.proxy.ncbi.nlm.nih.gov
+
+	# good proxy in configuration: success
+	$(BINDIR)/test-proxy-with-scheme =webproxy.ncbi.nlm.nih.gov  SUCCESS
+
+	# bad proxy in environment: fail
+	all_proxy=BAD.proxy.ncbi.nlm.nih.gov $(BINDIR)/test-proxy-with-scheme
+
+	# good proxy in environment: success
+	all_proxy=webproxy.ncbi.nlm.nih.gov \
+		$(BINDIR)/test-proxy-with-scheme                         SUCCESS
+
+	# good proxy with schema in environment: success
+	ALL_PROXY=http://webproxy.ncbi.nlm.nih.gov \
+		$(BINDIR)/test-proxy-with-scheme                         SUCCESS
+
+	# good proxy with schema and port in environment: success
+	http_proxy=http://webproxy.ncbi.nlm.nih.gov:3128 \
+		$(BINDIR)/test-proxy-with-scheme                         SUCCESS
+
+	# good proxy with any schema in environment: success
+	HTTP_PROXY=anySchemaWillBeIgnored://webproxy.ncbi.nlm.nih.gov \
+		$(BINDIR)/test-proxy-with-scheme                         SUCCESS
+
+	# bad proxy port in environment: fail
+	all_proxy=http://webproxy.ncbi.nlm.nih.gov:3 \
+		$(BINDIR)/test-proxy-with-scheme
+
+	# bad proxy specifications in environment: fail
+	all_proxy=h            $(BINDIR)/test-proxy-with-scheme
+	all_proxy=:            $(BINDIR)/test-proxy-with-scheme
+	all_proxy=:a           $(BINDIR)/test-proxy-with-scheme
+	all_proxy=:2           $(BINDIR)/test-proxy-with-scheme
+	all_proxy=h:/w.g:3128  $(BINDIR)/test-proxy-with-scheme
+	all_proxy=http://      $(BINDIR)/test-proxy-with-scheme
+	all_proxy=http://:3128 $(BINDIR)/test-proxy-with-scheme
