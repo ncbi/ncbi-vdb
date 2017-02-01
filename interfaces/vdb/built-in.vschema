@@ -37,6 +37,10 @@ version 1;
 // Row id range consist of row_id_start and row_id_stop
 typedef I64 vdb:row_id_range [ 2 ];
 
+// keys into column dictionaries
+typedef U32 vdb:dict:key;
+typedef vdb:dict:key vdb:dict:text:key;
+
 
 /*--------------------------------------------------------------------------
  * typesets
@@ -391,7 +395,8 @@ const U8 CASE_INSENSITIVE_UPPER =  2;
  *  Version 1.1: look into "substitute" (if available) first and then to the index,
  *  added parameter "case_sensitivity"
  */
-function text8_set idx:text:project #1.1 < ascii index_name, * U8 case_sensitivity > ( * text8_set substitute );
+function
+text8_set idx:text:project #1.1 < ascii index_name, * U8 case_sensitivity > ( * text8_set substitute );
 
 
 /* idx:text:insert
@@ -400,7 +405,8 @@ function text8_set idx:text:project #1.1 < ascii index_name, * U8 case_sensitivi
  *
  *  Version 1.1: added parameter "case_sensitivity"
  */
-function text8_set idx:text:insert #1.1 < ascii index_name, * U8 case_sensitivity > ( text8_set key );
+function
+text8_set idx:text:insert #1.1 < ascii index_name, * U8 case_sensitivity > ( text8_set key );
 
 
 /* idx:text:lookup
@@ -409,4 +415,21 @@ function text8_set idx:text:insert #1.1 < ascii index_name, * U8 case_sensitivit
  *
  *  Version 1.1: added parameter "case_sensitivity"
  */
-function vdb:row_id_range  idx:text:lookup #1.1 < ascii index_name , ascii query_by_name, * U8 case_sensitivity > ();
+function
+vdb:row_id_range  idx:text:lookup #1.1 < ascii index_name , ascii query_by_name, * U8 case_sensitivity > ();
+
+
+/* dict:text:insert
+ *  given some textual value, insert it in idempotent fashion
+ *  the value is case sensitive and may be EMPTY
+ */
+function
+vdb:dict:text:key dict:text:insert #1.0 ( text8_set value );
+
+
+/* dict:text:lookup
+ *   given a key that was returned by dict:text:insert(),
+ *   return the original text that was inserted.
+ */
+function
+text8_set dict:text:lookup #1.0 ( vdb:dict:text:key key );

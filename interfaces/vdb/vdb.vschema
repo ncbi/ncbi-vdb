@@ -857,3 +857,23 @@ numeric_set strtonum #1.0 < * U32 radix > ( text_set str )
 function
 text_set sprintf #1.0 < ascii fmt > ( any p1, ... )
     = vdb:sprintf;
+
+
+/* dict:text:encoding
+ *  a type of compression that converts text to an integer key
+ *  then applies integer compression to the keys
+ */
+physical
+text8_set dict:text:encoding #1.0
+{
+    decode
+    {
+        vdb:dict:text:key keys = iunzip #2.1 ( @ );
+        return dict:text:lookup #1.0 ( keys );
+    }
+    encode
+    {
+        vdb:dict:text:key keys = dict:text:insert #1.0 ( @ );
+        return izip #2.1 ( keys );
+    }
+};
