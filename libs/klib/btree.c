@@ -1455,3 +1455,99 @@ LIB_EXPORT rc_t CC BTreeForEach ( uint32_t root, Pager *pager, Pager_vt const *v
     }
     return 0;
 }
+
+struct Pager {
+    uint32_t next;
+    uint32_t max;
+    void **blocks;
+};
+
+static void const *PagerAlloc(Pager *const self, uint32_t *const newId)
+{
+    void *rslt;
+    
+    assert(self != NULL);
+    if (self->next == 0xFFFFFFFFul) /* hit id limit */
+        return NULL;
+    if (self->next == self->max) {
+        size_t const n = ((size_t)self->max) * 2;
+        if (n == ((uint32_t)n)) {
+            void *const p = realloc(self->blocks, n * sizeof(self->blocks[0]));
+            if (p == NULL)
+                return NULL;
+            self->blocks = p;
+            self->max = (uint32_t)n;
+        }
+        else {
+            return NULL;
+        }
+    }
+    rslt = self->blocks[self->next] = calloc(1, 32 * 1024);
+    if (rslt) {
+        *newId = ++self->next;
+    }
+    else {
+        *newId = 0;
+    }
+    return rslt;
+}
+
+static void const *PagerUse(Pager *const self, uint32_t const pageId)
+{
+    assert(self != NULL);
+    assert(pageId > 0);
+    return self->blocks[pageId - 1];
+}
+
+static void const *PagerAccess(Pager *const self, void const *const page)
+{
+    assert(self != NULL);
+    assert(page != NULL);
+    return page;
+}
+
+static void *PagerUpdate(Pager *const self, void const *const page)
+{
+    assert(self != NULL);
+    assert(page != NULL);
+    return (void *)page;
+}
+
+static void PagerUnuse(Pager *const self, void const *const page)
+{
+    return;
+}
+
+static Pager_vt const MallocPager_vt = {
+    PagerAlloc,
+    PagerUse,
+    PagerAccess,
+    PagerUpdate,
+    PagerUnuse
+};
+
+LIB_EXPORT rc_t CC MallocPagerMake(Pager **const rslt, Pager_vt const **const vt)
+{
+    Pager *const self = malloc(sizeof(self[0]));
+    assert(rslt != NULL);
+    assert(vt != NULL);
+    if (self) {
+        self->next = self->max = 0;
+        self->blocks = malloc(512 * sizeof(self->blocks[0]));
+        if (self->blocks)
+            self->max = 512;
+    }
+    *rslt = self;
+    *vt = &MallocPager_vt;
+    return 0;
+}
+
+LIB_EXPORT void CC MallocPagerWhack(Pager *const self)
+{
+    if (self) {
+        uint32_t i;
+        for (i = 0; i < self->next; ++i)
+            free(self->blocks[i]);
+        free(self);
+    }
+}

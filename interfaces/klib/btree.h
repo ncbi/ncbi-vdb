@@ -54,11 +54,6 @@ extern "C" {
  * thus the maximum amount of memory that a pager
  * can provide is 32k * (2**31-1) = ~64G
  * keys are stored compressed, so 64G can store a lot of keys.
- *
- * If you don't provide a pager, but you do provide a backing file
- * KPageFile will be used to provide the paging.
- * If you don't provide a pager or a backing file, pages will be
- * provided by malloc, up to the given memory limit.
  */
 typedef struct Pager Pager;
     
@@ -105,6 +100,14 @@ struct Pager_vt {
     void       *(*update)(Pager *self, void const *page);
     void        (*unuse )(Pager *self, void const *page);
 };
+
+/* Make
+ * Whack
+ *
+ * Create and destroy a simple malloc based Pager
+ */
+KLIB_EXTERN rc_t CC MallocPagerMake(Pager **rslt, Pager_vt const **vt);
+KLIB_EXTERN void CC MallocPagerWhack(Pager *self);
 
 /* Find
  *  searches for a match
