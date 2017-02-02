@@ -107,7 +107,8 @@ $(TEST_BINDIR)/test-schema-parse: $(TESTPARSE_OBJ)
 # AST test
 #
 TESTAST_SRC = \
-	wb-test-schema-ast
+	AST_Fixture \
+	wb-test-schema-ast \
 
 TESTAST_OBJ = \
 	$(addsuffix .$(OBJX),$(TESTAST_SRC))

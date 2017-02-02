@@ -28,33 +28,13 @@
 * Unit tests for schema AST
 */
 
+#include "AST_Fixture.hpp"
+
 #include <ktst/unit_test.hpp>
 
-#include <sstream>
-#include <cstring>
-
-#include <klib/text.h>
 #include <klib/symbol.h>
-#include <klib/symtab.h>
 
-#include <vdb/manager.h>
-
-#include "../../libs/vdb/schema-priv.h"
 #include "../../libs/vdb/schema-expr.h"
-
-// hide an unfortunately named C function
-#define typename __typename
-#include "../../libs/vdb/schema-parse.h"
-#undef typename
-
-#include "../../libs/schema/SchemaParser.hpp"
-#include "../../libs/schema/ParseTree.hpp"
-#include "../../libs/schema/ASTBuilder.hpp"
-
-using namespace ncbi::SchemaParser;
-#include "../../libs/schema/schema-tokens.h"
-
-#define KW_TOKEN(v,k) SchemaToken v = { KW_##k, #k, strlen(#k), 0, 0 }
 
 using namespace std;
 using namespace ncbi::NK;
@@ -62,13 +42,6 @@ using namespace ncbi::NK;
 TEST_SUITE ( SchemaASTTestSuite );
 
 // AST
-
-static
-string
-ToCppString ( const String & p_str)
-{
-    return string ( p_str . addr, p_str . len );
-}
 
 static
 bool
@@ -135,47 +108,16 @@ TEST_CASE(WalkParseTree)
 }
 
 // AST subclasses
-static
-AST_FQN *
-MakeFqn ( const char* p_text ) // p_text = (ident:)+ident
-{
-    SchemaToken id = { PT_IDENT, 0, 0, 0, 0 };
-    Token ident ( id );
-    AST_FQN * ret = new AST_FQN ( & ident );
-
-    std::string s ( p_text );
-
-    while ( s . length () > 0 )
-    {
-        std::string token;
-        size_t pos = s . find(':');
-        if (pos != std::string::npos)
-        {
-            token = s . substr ( 0, pos );
-            s . erase(0, pos + 1);
-        }
-        else
-        {
-            token = s;
-            s . clear ();
-        }
-        SchemaToken name = { IDENTIFIER_1_0, token . c_str () , token . length (), 0, 0 };
-        Token tname ( name );
-        ret -> AddNode ( & tname );
-    }
-
-    return ret;
-}
 
 TEST_CASE ( AST_FQN_NakedIdent )
 {
-    AST_FQN* fqn = MakeFqn ( "a" );
+    AST_FQN* fqn = AST_Fixture :: MakeFqn ( "a" );
 
     REQUIRE_EQ ( 0u, fqn -> NamespaceCount () );
 
     String str;
     fqn -> GetIdentifier ( str );
-    REQUIRE_EQ ( string ("a"), ToCppString ( str ) );
+    REQUIRE_EQ ( string ("a"), AST_Fixture :: ToCppString ( str ) );
 
     char buf [ 10 ];
     fqn -> GetFullName ( buf, sizeof buf );
@@ -186,13 +128,13 @@ TEST_CASE ( AST_FQN_NakedIdent )
 
 TEST_CASE ( AST_FQN_Full )
 {
-    AST_FQN* fqn = MakeFqn ( "a:b:c" );
+    AST_FQN* fqn = AST_Fixture :: MakeFqn ( "a:b:c" );
 
     REQUIRE_EQ ( 2u, fqn -> NamespaceCount () );
 
     String str;
     fqn -> GetIdentifier ( str );
-    REQUIRE_EQ ( string ("c"), ToCppString ( str ) );
+    REQUIRE_EQ ( string ("c"), AST_Fixture :: ToCppString ( str ) );
 
     char buf [ 10 ];
     fqn -> GetFullName ( buf, sizeof buf );
@@ -206,21 +148,21 @@ TEST_CASE ( AST_FQN_Full )
 
 TEST_CASE ( AST_FQN_WithVersionMaj )
 {
-    AST_FQN* fqn = MakeFqn ( "a" );
+    AST_FQN* fqn = AST_Fixture :: MakeFqn ( "a" );
     fqn -> SetVersion ( "#1" );
     REQUIRE_EQ ( 1 << 24, ( int ) fqn -> GetVersion () );
     delete fqn;
 }
 TEST_CASE ( AST_FQN_WithVersionMajMin )
 {
-    AST_FQN* fqn = MakeFqn ( "a" );
+    AST_FQN* fqn = AST_Fixture :: MakeFqn ( "a" );
     fqn -> SetVersion ( "#1.22" );
     REQUIRE_EQ ( ( 1 << 24 ) | ( 22 << 16 ), ( int ) fqn -> GetVersion () );
     delete fqn;
 }
 TEST_CASE ( AST_FQN_WithVersionMajMinRel )
 {
-    AST_FQN* fqn = MakeFqn ( "a" );
+    AST_FQN* fqn = AST_Fixture :: MakeFqn ( "a" );
     fqn -> SetVersion ( "#1.22.33" );
     REQUIRE_EQ ( ( 1 << 24 ) | ( 22 << 16 ) | 33, ( int ) fqn -> GetVersion () );
     delete fqn;
@@ -236,237 +178,6 @@ TEST_CASE ( AST_ParamSig_Empty )
 
 // AST builder
 
-// intrinsic type ids as defined in libs/vdb/schema-int.c
-const uint32_t U8_id     = 9;
-const uint32_t U16_id    = 10;
-const uint32_t U32_id    = 11;
-
-class AST_Fixture
-{
-public:
-    AST_Fixture()
-    :   m_parseTree ( 0 ),
-        m_ast ( 0 )
-    {
-    }
-    ~AST_Fixture()
-    {
-        delete m_ast;
-        delete m_parseTree;
-    }
-
-    void PrintTree ( const ParseTree& p_tree )
-    {
-        ParseTreeScanner sc ( p_tree );
-        const Token* tok;
-        SchemaScanner :: TokenType tt;
-        unsigned int indent = 0;
-        do
-        {
-            tt = sc . NextToken ( tok );
-            string v = tok -> GetValue ();
-            if ( v . empty () )
-            {
-                switch (tt)
-                {
-                #define case_(t) case t:  v = #t; break
-                case_ ( PT_PARSE );
-                case_ ( PT_SOURCE );
-                case_ ( PT_SCHEMA_1_0 );
-                case_ ( PT_TYPEDEF );
-                case_ ( PT_TYPESET );
-                case_ ( PT_TYPESETDEF );
-                case_ ( PT_IDENT );
-                case_ ( PT_ASTLIST );
-                case_ ( PT_ARRAY );
-                case_ ( END_SOURCE );
-                case_ ( PT_FUNCTION );
-                case_ ( PT_FUNCDECL );
-                case_ ( PT_EMPTY );
-                case_ ( PT_SCHEMASIG );
-                case_ ( PT_SCHEMAFORMAL );
-                case_ ( PT_RETURNTYPE );
-                case_ ( PT_FUNCSIG );
-                case_ ( PT_FUNCPROLOGUE );
-                case_ ( PT_FUNCPARAMS );
-                case_ ( PT_FORMALPARAM );
-                default:
-                    if ( tt < 256 )
-                    {
-                        v = string ( 1, ( char ) tt );
-                    }
-                    break;
-                }
-            }
-            if ( tt == ')' && indent != 0 )
-            {
-                --indent;
-            }
-            cout << string ( indent * 2, ' ' ) << v << " (" << tt << ")" << endl;
-            if ( tt == '(' )
-            {
-                ++indent;
-            }
-        }
-        while ( tt != END_SOURCE );
-        cout << string ( indent * 2, ' ' ) << ") (41)" << endl;
-    }
-
-    AST * MakeAst ( const char* p_source, bool p_debugParse = false, bool p_printTree = false )
-    {
-        if ( ! m_parser . ParseString ( p_source, p_debugParse ) )
-        {
-            throw std :: logic_error ( "AST_Fixture::MakeAst : ParseString() failed" );
-        }
-        if ( m_parseTree != 0 )
-        {
-            delete m_parseTree;
-        }
-        m_parseTree = m_parser . MoveParseTree ();
-        if ( m_parseTree == 0 )
-        {
-            throw std :: logic_error ( "AST_Fixture::MakeAst : MoveParseTree() returned 0" );
-        }
-        if ( p_printTree )
-        {
-            PrintTree ( * m_parseTree );
-        }
-        if ( m_ast != 0 )
-        {
-            delete m_ast;
-        }
-        m_ast = m_builder . Build ( * m_parseTree );
-        if ( m_builder . GetErrorCount() != 0)
-        {
-            throw std :: logic_error ( string ( "AST_Fixture::MakeAst : ASTBuilder::Build() failed: " ) + string ( m_builder . GetErrorMessage ( 0 ) ) );
-        }
-        else if ( m_ast == 0 )
-        {
-            throw std :: logic_error ( "AST_Fixture::MakeAst : ASTBuilder::Build() failed, no message!" );
-        }
-        return m_ast;
-    }
-
-    void VerifyErrorMessage ( const char* p_source, const char* p_expectedError )
-    {
-        if ( ! m_parser . ParseString ( p_source ) )
-        {
-            throw std :: logic_error ( "AST_Fixture::MakeAst : ParseString() failed" );
-        }
-        m_parseTree = m_parser . MoveParseTree ();
-        if ( m_parseTree == 0 )
-        {
-            throw std :: logic_error ( "AST_Fixture::MakeAst : MoveParseTree() returned 0" );
-        }
-        delete m_builder . Build ( * m_parseTree );
-        if ( m_builder . GetErrorCount() == 0 )
-        {
-            throw std :: logic_error ( "AST_Fixture::MakeAstExpectError : no error" );
-        }
-        if ( string ( m_builder . GetErrorMessage ( 0 ) ) != string ( p_expectedError ) )
-        {
-            throw std :: logic_error ( "AST_Fixture::MakeAstExpectError : expected '" + string ( p_expectedError ) +
-                                                                      "', received '" + string ( m_builder . GetErrorMessage ( 0 ) ) + "'" );
-        }
-    }
-
-    enum yytokentype TokenType ( const ParseTree * p_node ) const
-    {
-        return ( enum yytokentype ) p_node -> GetToken () . GetType ();
-    }
-
-    const KSymbol* VerifySymbol ( const char* p_name, uint32_t p_type )
-    {
-        AST_FQN * ast = MakeFqn ( p_name );
-        const KSymbol* sym = m_builder . Resolve ( * ast );
-
-        if ( sym == 0 )
-        {
-            throw std :: logic_error ( "AST_Fixture::VerifySymbol : symbol not found" );
-        }
-        else
-        {
-            if ( ToCppString ( sym -> name ) !=
-                 ast -> GetChild ( ast -> ChildrenCount() - 1 ) -> GetTokenValue () )
-            {
-                throw std :: logic_error ( "AST_Fixture::VerifySymbol : object name mismatch" );
-            }
-            else if ( sym -> type != p_type )
-            {
-                throw std :: logic_error ( "AST_Fixture::VerifySymbol : wrong object type" );
-            }
-        }
-
-        delete ast;
-
-        return sym;
-    }
-
-    const SDatatype* VerifyDatatype ( const char* p_name, const char* p_baseName, uint32_t p_dim, uint32_t p_size )
-    {
-        const KSymbol* sym = VerifySymbol ( p_name, eDatatype );
-        const SDatatype* ret = static_cast < const SDatatype* > ( sym -> u . obj );
-        if ( ret -> super == 0 )
-        {
-            throw std :: logic_error ( "AST_Fixture::VerifyDatatype : super == 0" );
-        }
-        if ( string ( p_baseName ) != ToCppString ( ret -> super -> name -> name ) )
-        {
-            throw std :: logic_error ( "AST_Fixture::VerifyDatatype : wrong baseName" );
-        }
-        if ( p_dim != ret -> dim )
-        {
-            throw std :: logic_error ( "AST_Fixture::VerifyDatatype : wrong dim" );
-        }
-        if ( p_size != ret -> size )
-        {
-            throw std :: logic_error ( "AST_Fixture::VerifyDatatype : wrong size" );
-        }
-        if ( ret -> super -> domain != ret -> domain )
-        {
-            throw std :: logic_error ( "AST_Fixture::VerifyDatatype : wrong domain" );
-        }
-        return ret;
-    }
-
-    const SFunction* VerifyFunction ( const char* p_name, uint32_t p_type = eFunction ) // not overloaded
-    {
-        const KSymbol* sym = VerifySymbol ( p_name, p_type );
-
-        // for functions, sym points to an entry in the overloads table (schema->fname)
-        const SNameOverload* name = static_cast < const SNameOverload* > ( sym -> u . obj );
-        if ( 1u != VectorLength ( & name -> items ) )
-        {
-            throw std :: logic_error ( "AST_Fixture::VerifyFunction : too many overloads" );
-        }
-        const SFunction* ret = static_cast < const SFunction* > ( VectorGet ( & name -> items, 0 ) );
-        if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )
-        {
-            throw std :: logic_error ( "AST_Fixture::VerifyFunction : wrong name" );
-        }
-
-        return ret;
-    }
-
-    const SFunction * VerifyOverload ( const char* p_name, uint32_t p_idx )
-    {
-        const KSymbol* sym = VerifySymbol ( p_name, eFunction );
-
-        // for functions, sym points to an entry in the overloads table (schema->fname)
-        const SNameOverload* name = static_cast < const SNameOverload* > ( sym -> u . obj );
-        if ( p_idx >= VectorLength ( & name -> items ) )
-        {
-            throw std :: logic_error ( "AST_Fixture::VerifyOverload : index out of range" );
-        }
-        return static_cast < const SFunction * > ( VectorGet ( & name -> items, p_idx ) );
-    }
-
-    SchemaParser    m_parser;
-    ParseTree *     m_parseTree;
-    ASTBuilder      m_builder;
-    AST*            m_ast;
-};
-
 FIXTURE_TEST_CASE(Empty_Source, AST_Fixture)
 {
     REQUIRE_EQ ( END_SOURCE, TokenType ( MakeAst ( "" ) ) );
@@ -481,9 +192,9 @@ FIXTURE_TEST_CASE(Intrinsic, AST_Fixture)
 
 FIXTURE_TEST_CASE(Builder_ErrorReporting, AST_Fixture)
 {
-    AST_FQN * id = MakeFqn ( "foo" );
+    AST_FQN * id = AST_Fixture :: MakeFqn ( "foo" );
     REQUIRE_NULL ( m_builder . Resolve ( * id ) ); delete id;
-    id = MakeFqn ( "bar" );
+    id = AST_Fixture :: MakeFqn ( "bar" );
     REQUIRE_NULL ( m_builder . Resolve ( * id ) ); delete id;
     REQUIRE_EQ ( 2u, m_builder . GetErrorCount () );
     REQUIRE_EQ ( string ( "Undeclared identifier: 'foo'" ), string ( m_builder . GetErrorMessage ( 0 ) ) );
@@ -563,7 +274,7 @@ FIXTURE_TEST_CASE(Resolve_UndefinedNamespace, AST_Fixture)
 }
 FIXTURE_TEST_CASE(Resolve_UndefinedNameInNamespace, AST_Fixture)
 {
-    VerifyErrorMessage ( "typedef U8 a:t; typedef a:zz t;", "Undeclared identifier: 'a:zz'" );
+    VerifyErrorMessage ( "typedef U8 a:t; typedef a:zz t;", "Undeclared identifier: 'zz'" );
 }
 
 FIXTURE_TEST_CASE(Typedef_Array, AST_Fixture)
@@ -784,223 +495,11 @@ FIXTURE_TEST_CASE(AliasedTypesetInTypeset, AST_Fixture)
     VerifySymbol ( "ts2", eTypeset );
 }
 
-///////// function
-
-FIXTURE_TEST_CASE(Func_Untyped, AST_Fixture)
-{
-    MakeAst ( "function __untyped f();" );
-    const SFunction* fn = VerifyFunction ( "f", eUntypedFunc );
-    REQUIRE_NULL ( fn -> rt );
-}
-
-FIXTURE_TEST_CASE(Func_UntypedRedeclared, AST_Fixture)
-{
-    MakeAst ( "function __untyped f(); function __untyped f();" );
-    VerifyFunction ( "f", eUntypedFunc );
-}
-
-FIXTURE_TEST_CASE(Func_Untyped_Exists, AST_Fixture)
-{
-    VerifyErrorMessage ( "typedef U8 f; function __untyped f();", "Declared earlier with a different type: 'f'" );
-}
-
-FIXTURE_TEST_CASE(Func_Rowlength, AST_Fixture)
-{   // implemented by the same code as untyped, the basic test case will suffice
-    MakeAst ( "function __row_length f();" );
-    VerifyFunction ( "f", eRowLengthFunc );
-}
-
-FIXTURE_TEST_CASE(Func_Scalar_NoParams, AST_Fixture)
-{
-    MakeAst ( "function U8 f();" );
-    const SFunction* fn = VerifyFunction ( "f" );
-    REQUIRE_EQ ( U8_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
-    REQUIRE_EQ ( 1u, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . dim );
-}
-
-FIXTURE_TEST_CASE(Func_Array_NoParams, AST_Fixture)
-{
-    MakeAst ( "function U8[2] f();" );
-    const SFunction* fn = VerifyFunction ( "f" );
-    REQUIRE_EQ ( U8_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
-    REQUIRE_EQ ( 2u, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . dim );
-}
-
-FIXTURE_TEST_CASE(Func_VarArray_NoParams, AST_Fixture)
-{
-    MakeAst ( "function U8[*] f();" );
-    const SFunction* fn = VerifyFunction ( "f" );
-    REQUIRE_EQ ( U8_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
-    REQUIRE_EQ ( 0u, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . dim );
-}
-
-FIXTURE_TEST_CASE(Func_WithVersion, AST_Fixture)
-{
-    MakeAst ( "function U8 f#1.2();" );
-    const SFunction* fn = VerifyFunction ( "f" );
-    REQUIRE_EQ ( ( 1 << 24 ) | ( 2 << 16 ), ( int ) fn -> version );
-}
-
-FIXTURE_TEST_CASE(Func_Redeclared_NoVersion, AST_Fixture)
-{
-    MakeAst ( "function U8 f();function U16 f();" );
-    const SFunction* fn = VerifyOverload ( "f", 0 );
-    REQUIRE_EQ ( U8_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id ); // 2nd decl with the same version ignored
-    REQUIRE_EQ ( 1u, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . dim );
-}
-
-FIXTURE_TEST_CASE(Func_Redeclared_SameVersion, AST_Fixture)
-{
-    MakeAst ( "function U8 f#1.2();function U16 f#1.2();" );
-    const SFunction* fn = VerifyOverload ( "f", 0 );
-    REQUIRE_EQ ( U8_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id ); // 2nd decl with the same version ignored
-}
-
-FIXTURE_TEST_CASE(Func_Redeclared_DiffMajor, AST_Fixture)
-{   // 2 overloads created
-    MakeAst ( "function U8 f#2();function U16 f#1.2();" );
-    {
-        const SFunction* fn = VerifyOverload ( "f", 0 );    // lower version
-        REQUIRE_EQ ( U16_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id ); // U16
-    }
-    {
-        const SFunction* fn = VerifyOverload ( "f", 1 );    // higher version
-        REQUIRE_EQ ( U8_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id ); // U8
-    }
-}
-
-FIXTURE_TEST_CASE(Func_Redeclared_HigherMinor, AST_Fixture)
-{   // higner minor is used
-    MakeAst ( "function U8 f#1();function U16 f#1.2();" );
-    const SFunction* fn = VerifyOverload ( "f", 0 );
-    REQUIRE_EQ ( U16_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id ); // 2nd decl used
-}
-
-FIXTURE_TEST_CASE(Func_NoReleaseNumberForSimpleFunctions, AST_Fixture)
-{
-    VerifyErrorMessage ( "function U16 f#1.2.3();", "Release number is not allowed for simple function: 'f'" );
-}
-
-FIXTURE_TEST_CASE(Func_ReturnArray, AST_Fixture)
-{
-    MakeAst ( "function U8[10] f();" );
-    const SFunction* fn = VerifyOverload ( "f", 0 );
-    REQUIRE_EQ ( U8_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
-    REQUIRE_EQ ( (uint32_t)10, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . dim );
-}
-
-FIXTURE_TEST_CASE(Func_ReturnTypeset, AST_Fixture)
-{
-    MakeAst ( "typeset ts { U8 }; function ts f();" );
-    const SFunction* fn = VerifyOverload ( "f", 0 );
-    REQUIRE_EQ ( (uint32_t)0x40000000, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
-    REQUIRE_EQ ( (uint32_t)1, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . dim );
-}
-
-FIXTURE_TEST_CASE(Func_ReturnFormat, AST_Fixture)
-{
-    MakeAst ( "fmtdef fmt; function fmt f();" );
-    const SFunction* fn = VerifyOverload ( "f", 0 );
-    REQUIRE_EQ ( (uint32_t)1, ( ( STypeExpr * ) ( fn -> rt ) ) -> fmt -> id );
-    REQUIRE_EQ ( (uint32_t)1, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
-    REQUIRE_EQ ( (uint32_t)1, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . dim );
-}
-
-FIXTURE_TEST_CASE(Func_ReturnBad, AST_Fixture)
-{
-    VerifyErrorMessage ( "function U8 f1(); function f1 f2();", "Not a datatype: 'f1'" );
-}
-
-FIXTURE_TEST_CASE(Func_BadParamType, AST_Fixture)
-{
-    VerifyErrorMessage ( "function U8 f1(); function U8 f2( f1 p );", "Not a datatype: 'f1'" );
-}
-FIXTURE_TEST_CASE(Func_BadParamName, AST_Fixture)
-{
-    VerifyErrorMessage ( "function U8 f(U8 U16);", "Cannot be used as a formal parameter name: 'U16'" );
-}
-
-FIXTURE_TEST_CASE(Func_OneParamScalar, AST_Fixture)
-{
-    MakeAst ( "function U8 f(U8 p);" );
-    //TODO: verify
-}
-FIXTURE_TEST_CASE(Func_OneParamArray, AST_Fixture)
-{
-    MakeAst ( "function U8 f(U8[1] p);" );
-    //TODO: verify
-}
-FIXTURE_TEST_CASE(Func_OneParamVarArray, AST_Fixture)
-{
-    MakeAst ( "function U8 f(U8[*] p);" );
-    //TODO: verify
-}
-FIXTURE_TEST_CASE(Func_ControlParam, AST_Fixture)
-{
-    MakeAst ( "function U8 f( control U8 p);" );
-    //TODO: verify
-}
-
-FIXTURE_TEST_CASE(Func_TwoParamsSameName, AST_Fixture)
-{
-    VerifyErrorMessage ( "function U8 f(U8 p, U16 p);", "Cannot be used as a formal parameter name: 'p'" );
-}
-
-FIXTURE_TEST_CASE(Func_TwoParams, AST_Fixture)
-{
-    MakeAst ( "function U8 f(U8 p1, U16 p2);" );
-    //TODO: verify
-}
-
-FIXTURE_TEST_CASE(Func_SchemaParam_Type, AST_Fixture)
-{
-    MakeAst ( "function < type T > T f ( T p1 );" );
-    //TODO: verify
-}
-#if 0
-FIXTURE_TEST_CASE(Func_SchemaParam_Value, AST_Fixture)
-{
-    MakeAst ( "function < int T > u8[T] f ( U8[T] p1 );" );
-    //TODO: verify
-}
-#endif
-//TODO: param with control
-
-FIXTURE_TEST_CASE(Old_Func_Scalar_NoParams, AST_Fixture)
-{
-    const VDBManager *mgr;
-    REQUIRE_RC ( VDBManagerMakeRead ( & mgr, 0 ) );
-    VSchema *schema;
-    REQUIRE_RC ( VDBManagerMakeSchema ( mgr, & schema ) );
-    string input = "function < type T > T f ( T p1 );";
-    REQUIRE_RC ( VSchemaParseText ( schema, 0, input . c_str (), input . length () ) );
-
-    REQUIRE_EQ ( 1u, VectorLength ( & schema -> func ) );
-    const SFunction* fn = static_cast < const SFunction* > ( VectorGet ( & schema -> func, 0 ) );
-    REQUIRE_EQ ( string ( "f" ), ToCppString ( fn -> name -> name ) );
-//    REQUIRE_EQ ( (uint32_t)1, ( ( STypeExpr * ) ( fn -> rt ) ) -> fmt -> id );
-//    REQUIRE ( ( ( STypeExpr * ) ( fn -> rt ) ) -> resolved );
-
-    VSchemaRelease ( schema );
-    VDBManagerRelease ( mgr );
-}
-
-//TODO: script + untyped - error
-//TODO: validate + untyped - error
-//TODO: script fn without a body - error
-//TODO: non-script fn with a body - error
-//TODO: validate + non-void return - error
-//TODO: non-validate + void return - error
-
-//TODO: function returning a schema param type
-
-//TODO: release number for schema function
-//TODO: release number for extern function (?)
-//TODO: release number for validate function (?)
-
-//TODO:array of arrays in typedef, typeset, constdef, return type
+//TODO: array of arrays in typedef, typeset, constdef, return type
 
 //TODO: function call: no arguments
+
+#include "wb-test-schema-func.cpp"
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>

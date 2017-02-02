@@ -408,6 +408,7 @@ script_stmt
 
 expr
     : PT_UINT '(' DECIMAL ')'   { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
+    | fqn                       { $$ = new AST_Expr ( $1 ); }
     /*| TBD */
     ;
 
@@ -424,11 +425,11 @@ type_expr
 /* commonly used productions */
 
 fqn
-    : PT_ASTLIST '(' qualnames ')'  { $$ = $3; }
+    : PT_FQN '(' qualnames ')'  { $$ = $3; }
     ;
 
 qualnames
-    : ident                                             { $$ = $1; }
+    : PT_IDENT '(' IDENTIFIER_1_0 ')'                   { $$ = new AST_FQN ( $1 ); $$ -> AddNode ( $3 ); }
     | qualnames ':' PT_IDENT  '(' IDENTIFIER_1_0 ')'    { $$ = $1; $$ -> AddNode ( $5 ); }
     ;
 

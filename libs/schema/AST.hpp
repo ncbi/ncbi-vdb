@@ -82,7 +82,7 @@ namespace ncbi
         class AST_FQN : public AST
         {
         public:
-            AST_FQN ( const Token* );
+            AST_FQN ( const Token* ); // always PT_IDENT
 
             void SetVersion ( const char* ); // version specified as "#maj[.min[.rel]]]"
             uint32_t GetVersion () const { return m_version; } // encoded as ( maj << 24 ) | ( min << 16 ) | ( rel )
@@ -103,6 +103,7 @@ namespace ncbi
         {
         public:
             AST_Expr ( const Token* );
+            AST_Expr ( AST_FQN* );
 
             SExpression * EvaluateConst ( ASTBuilder& ) const; // reports problems
         };

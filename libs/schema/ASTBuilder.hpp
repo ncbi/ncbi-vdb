@@ -52,6 +52,7 @@ namespace ncbi
             AST* Build ( const ParseTree& p_root );
 
             const KSymbol* Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown = true );
+            const KSymbol* Resolve ( const char* p_ident, bool p_reportUnknown = true );
 
             uint32_t IntrinsicTypeId ( const char * p_type ) const;
 
@@ -89,11 +90,11 @@ namespace ncbi
             void DeclareFunction ( const AST_FQN&           fqn,
                                    uint32_t                 type,
                                    struct STypeExpr *       retType,
+                                   SFormParmlist *          param,
                                    const BSTree *           sscope,
                                    const Vector *           stypes,
                                    const Vector *           sparams,
-                                   const BSTree *           fscope,
-                                   const SFormParmlist *    params );
+                                   const BSTree *           fscope );
 
             struct STypeExpr * MakeTypeExpr ( const AST & p_type );
             struct SFormParmlist * MakeFormalParams ( const AST_ParamSig & );

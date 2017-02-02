@@ -161,6 +161,7 @@ AST_FQN :: AST_FQN ( const Token* p_token )
 :   AST ( p_token ),
     m_version ( 0 )
 {
+    assert ( p_token -> GetType () == PT_IDENT );
 }
 
 uint32_t
@@ -244,9 +245,15 @@ AST_Expr :: AST_Expr ( const Token* p_token )
 {
 }
 
+AST_Expr :: AST_Expr ( AST_FQN* p_fqn )
+: AST ( & p_fqn -> GetToken () )
+{
+    AddNode ( p_fqn );
+}
+
 SExpression *
 AST_Expr :: EvaluateConst ( ASTBuilder & p_builder ) const
-{   //TBD. for now, only handles a literal int constant
+{   //TBD. for now, only handles a literal int constant and a direct reference to a schema parameter
     switch ( GetToken () . GetType () )
     {
     case PT_UINT:
@@ -272,6 +279,33 @@ AST_Expr :: EvaluateConst ( ASTBuilder & p_builder ) const
                 x -> td . dim = 1;
 
                 return & x -> dad;
+            }
+            break;
+        }
+    case PT_IDENT:
+        {
+            const AST_FQN* fqn = dynamic_cast < const AST_FQN * > ( GetChild ( 0 ) );
+            assert ( fqn != 0 );
+            const KSymbol* sym = p_builder . Resolve ( * fqn ); // will report unknown
+            if ( sym != 0 )
+            {
+                if ( sym -> type == eSchemaParam )
+                {
+                    SSymExpr *x = p_builder . Alloc < SSymExpr > ();
+                    if ( x != 0 )
+                    {
+                        x -> dad . var = eIndirectExpr;
+                        atomic32_set ( & x -> dad . refcount, 1 );
+                        x -> _sym = sym;
+                        x -> alt = false;
+
+                        return & x -> dad;
+                    }
+                }
+                else
+                {
+                    p_builder . ReportError ( "Not yet implemented" );
+                }
             }
             break;
         }

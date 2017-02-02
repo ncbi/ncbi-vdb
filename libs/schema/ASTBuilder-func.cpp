@@ -47,11 +47,11 @@ void
 ASTBuilder :: DeclareFunction ( const AST_FQN&          p_fqn,
                                 uint32_t                p_type,
                                 struct STypeExpr *      p_retType,
+                                SFormParmlist *         p_params,
                                 const BSTree *          p_sscope,
                                 const Vector *          p_stypes,
                                 const Vector *          p_sparams,
-                                const BSTree *          p_fscope,
-                                const SFormParmlist *   p_params )
+                                const BSTree *          p_fscope )
 {
     const KSymbol * priorDecl = Resolve ( p_fqn, false );
     if ( priorDecl != 0 && priorDecl -> type != p_type )
@@ -95,24 +95,51 @@ ASTBuilder :: DeclareFunction ( const AST_FQN&          p_fqn,
             }
             else
             {
+                f -> func . mand    = p_params -> mand;
+                f -> func . vararg  = p_params -> vararg;
+                // move formal parameters from p_params, dispose of the original
                 rc_t rc = VectorCopy ( & p_params -> parms, & f -> func . parms );
                 if ( rc != 0 )
                 {
                     ReportError ( "VectorCopy", rc );
                 }
-                f -> func . mand    = p_params -> mand;
-                f -> func . vararg  = p_params -> vararg;
+                VectorWhack ( & p_params -> parms, 0, 0 );
+                SFormParmlistWhack ( p_params, 0 );
+                free ( p_params );
             }
 
-            VectorInit ( & f -> type, 0, 8 );//TODO
+            if ( p_stypes == 0 )
+            {
+                VectorInit ( & f -> type, 0, 8 );
+            }
+            else
+            {
+                rc_t rc = VectorCopy ( p_stypes, & f -> type );
+                if ( rc != 0 )
+                {
+                    ReportError ( "VectorCopy", rc );
+                }
+            }
 
             f -> version = p_fqn . GetVersion ();
+
             if ( ( f -> version & 0xFFFF ) != 0 && p_type == eFunction )
             {
                 ReportError ( "Release number is not allowed for simple function", p_fqn );
             }
 
-            VectorInit ( & f -> schem, 0, 8 );//TODO
+            if ( p_sparams == 0 )
+            {
+                VectorInit ( & f -> type, 0, 8 );
+            }
+            else
+            {
+                rc_t rc = VectorCopy ( p_sparams, & f -> schem );
+                if ( rc != 0 )
+                {
+                    ReportError ( "VectorCopy", rc );
+                }
+            }
 
             f -> script = false; //TODO
             f -> marked = false;
@@ -136,7 +163,7 @@ ASTBuilder :: DeclareFunction ( const AST_FQN&          p_fqn,
                         {
                             if ( VectorAppend ( & m_schema -> fname, & name -> cid . id, name ) == 0 )
                             {
-                                return;
+                                return; // success
                             }
                         }
                     }
@@ -173,18 +200,19 @@ ASTBuilder :: DeclareFunction ( const AST_FQN&          p_fqn,
                     if ( f -> version > exist -> version )
                     {
                         /* insert our function in name overload */
-                        void * ignore;
-                        VectorSwap ( & name -> items, idx, f, & ignore );
+                        void * prior;
+                        VectorSwap ( & name -> items, idx, f, & prior );
 
                         /* if existing is in the same schema... */
                         if ( ( const void* ) name == exist -> name -> u . obj )
                         {
                             /* need to swap with old */
                             assert ( exist -> id >= VectorStart ( & m_schema -> func ) );
-                            VectorSwap ( & m_schema -> func, exist -> id, f, & ignore );
+                            VectorSwap ( & m_schema -> func, exist -> id, f, & prior );
                             f -> id = exist -> id;
+                            SFunctionWhack ( (SFunction*)prior, 0 );
                         }
-                        return;
+                        return; // success
                     }
                 }
                 else if ( rc != 0 )
@@ -208,89 +236,6 @@ AST * ASTBuilder :: RowlenFunctionDecl ( const Token* p_token, AST_FQN* p_name )
 {
     AST * ret = new AST ( p_token, p_name );
     DeclareFunction ( * p_name, eRowLengthFunc, 0, 0, 0, 0, 0, 0 );
-    return ret;
-}
-
-STypeExpr *
-ASTBuilder :: MakeTypeExpr ( const AST & p_type )
-{
-    STypeExpr * ret = Alloc < STypeExpr > ();
-    if ( ret == 0 )
-    {
-        return 0;
-    }
-
-    ret -> dad . var = eTypeExpr;
-    atomic32_set ( & ret -> dad . refcount, 1 );
-    ret -> fmt = 0;
-    ret -> dt = 0;
-    ret -> ts = 0;
-    ret -> id = 0;
-    ret -> dim = 0;
-    ret -> fd . fmt = 0;
-    ret -> resolved = true;
-
-    const AST_FQN * fqn = 0;
-    switch ( p_type . GetTokenType () )
-    {
-    case PT_IDENT : // scalar
-        {
-            fqn = dynamic_cast < const AST_FQN * > ( & p_type );
-            ret -> fd . td . dim = 1;
-        }
-        break;
-    case PT_ARRAY : // fqn [ const-expr | * ]
-        {
-            const AST & arrayType = p_type;
-            assert ( arrayType . ChildrenCount () == 2 );
-            fqn = dynamic_cast < const AST_FQN * > ( arrayType . GetChild ( 0 ) );
-            const AST & dimension = * arrayType . GetChild ( 1 );
-            if ( dimension . GetTokenType() == PT_EMPTY )
-            {
-                ret -> fd . td . dim = 0;
-            }
-            else
-            {
-                const AST_Expr & dimExpr = dynamic_cast < const AST_Expr & > ( dimension );
-                ret -> fd . td . dim = EvalConstExpr ( dimExpr );
-            }
-        }
-        break;
-    default:
-        assert ( false ); // should not happen
-        break;
-    }
-
-    if ( fqn != 0 )
-    {
-        const KSymbol * type = Resolve ( * fqn ); // will report unknown name
-        if ( type != 0 )
-        {
-            switch ( type -> type )
-            {
-            case eDatatype:
-                ret -> dt                   = static_cast < const SDatatype * > ( type -> u . obj );
-                ret -> fd . td . type_id    = ret -> dt -> id;
-                break;
-            case eTypeset:
-                ret -> ts                   = static_cast < const STypeset * > ( type -> u . obj );
-                ret -> fd . td . type_id    = ret -> ts -> id;
-                break;
-            case eFormat:
-                ret -> fmt                  = static_cast < const SFormat * > ( type -> u . obj );
-                ret -> fd . td . type_id    = ret -> fmt -> id;
-                break;
-            case eSchemaType:
-                ret -> id                   = static_cast < const SIndirectType * > ( type -> u . obj );
-                ret -> fd . td . type_id    = ret -> id -> id;
-                break;
-            default:
-                ReportError ( "Not a datatype", * fqn );
-                break;
-            }
-        }
-    }
-
     return ret;
 }
 
@@ -394,8 +339,9 @@ ASTBuilder :: MakeSchemaParams ( const AST & p_sig, Vector & p_types, Vector & p
                         {
                             /* initialize to raw format,
                             undefined type, and no dimension */
-                            formal -> pos += i;
+                            formal -> pos = i;
                             formal -> type_id = ++ m_schema -> num_indirect;
+                            continue; // success
                         }
                         else
                         {
@@ -411,12 +357,58 @@ ASTBuilder :: MakeSchemaParams ( const AST & p_sig, Vector & p_types, Vector & p
                 {
                     ReportError ( "KSymTableCreateConstSymbol", rc );
                 }
+                SIndirectTypeWhack ( formal, 0 );
             }
         }
         else // value
         {
-            assert ( false );
+            STypeExpr * type = MakeTypeExpr ( * p . GetChild ( 0 ) );
+            if ( type != 0 )
+            {
+                const AST_FQN & name = dynamic_cast < const AST_FQN & > ( * p . GetChild ( 1 ) );
+                String nameStr;
+                name . GetIdentifier ( nameStr );
+                if ( type -> dt != 0 &&
+                     type -> dt -> domain == ddUint &&
+                     type -> fd . td. dim == 1 )
+                {
+                    // scalar unsigned int type required
+                    SIndirectConst *formal = Alloc < SIndirectConst > ();
+                    if ( formal != 0 )
+                    {
+                        /* create symbol */
+                        rc_t rc = KSymTableCreateConstSymbol ( & m_symtab, & formal -> name, & nameStr, eSchemaParam, formal );
+                        if ( rc == 0 )
+                        {
+                            /* record positional */
+                            rc = VectorAppend ( & p_values, & formal -> pos, formal );
+                            if ( rc == 0 )
+                            {
+                                formal -> td = & type -> dad;
+                                formal -> expr_id = ++ m_schema -> num_indirect;
+                                formal -> pos = i;
+                                continue; // success
+                            }
+                            else
+                            {
+                                ReportError ( "VectorAppend", rc);
+                            }
+                        }
+                        else
+                        {
+                            ReportError ( "KSymTableCreateConstSymbol", rc );
+                        }
+                        SIndirectConstWhack ( formal, 0 );
+                    }
+                }
+                else
+                {
+                    ReportError ( "Not a scalar unsigned integer: '%S'", & nameStr );
+                }
+                SExpressionWhack ( & type -> dad );
+            }
         }
+        break;
     }
 }
 
@@ -502,11 +494,10 @@ ASTBuilder :: FunctionDecl ( const Token*     p_token,
         ReportError ( "KSymTablePushScope", rc );
     }
 
-    if ( rc == 0 )
-    {
-        DeclareFunction ( * p_name, eFunction, retType, & sscope, & stypes, & sparams, & fscope, fp );
-                        // makes shallow copies of scopes and vectors - no need to whack them here
-    }
+    DeclareFunction ( * p_name, eFunction, retType, fp, & sscope, & stypes, & sparams, & fscope );
+    // made shallow copies of scopes and vectors - no need to whack the contents here
+    VectorWhack ( & stypes, 0, 0 );
+    VectorWhack ( & sparams, 0, 0 );
 
     return ret;
 }

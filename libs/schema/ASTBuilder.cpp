@@ -159,8 +159,8 @@ ASTBuilder :: Build ( const ParseTree& p_root )
     {
         return ret;
     }
-
     //TODO: report error(s)
+    delete ret;
     return 0;
 }
 
@@ -225,6 +225,19 @@ ASTBuilder :: CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const voi
 }
 
 const KSymbol*
+ASTBuilder :: Resolve ( const char* p_ident, bool p_reportUnknown )
+{
+    String name;
+    StringInitCString ( & name, p_ident );
+    const KSymbol* ret = KSymTableFind ( & m_symtab, & name );
+    if ( ret == 0 && p_reportUnknown )
+    {
+        ReportError ( "Undeclared identifier: '%s'", p_ident ); //TODO: add location
+    }
+    return ret;
+}
+
+const KSymbol*
 ASTBuilder :: Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown )
 {
     uint32_t count = p_fqn . ChildrenCount ();
@@ -268,17 +281,10 @@ ASTBuilder :: Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown )
         }
     }
 
-    KSymbol * ret = 0;
+    const KSymbol * ret = 0;
     if ( ns_resolved )
     {
-        const char* ident = p_fqn . GetChild ( count - 1 ) -> GetTokenValue ();
-        String name;
-        StringInitCString ( & name, ident );
-        ret = KSymTableFind ( & m_symtab, & name );
-        if ( ret == 0 && p_reportUnknown )
-        {
-            ReportError ( "Undeclared identifier", p_fqn ); //TODO: add location
-        }
+        ret = Resolve ( p_fqn . GetChild ( count - 1 ) -> GetTokenValue (), p_reportUnknown );
     }
 
     if ( count > 0 )
@@ -311,11 +317,20 @@ ASTBuilder :: EvalConstExpr ( const AST_Expr & p_expr )
     SExpression * expr = p_expr . EvaluateConst ( *this ); // will report problems
     if ( expr != 0 )
     {
-        assert ( expr -> var == eConstExpr);
-        SConstExpr* cexpr = reinterpret_cast < SConstExpr* > ( expr );
-        // this may change as more kinds of const expressions are supported
-        assert ( cexpr -> td . type_id = IntrinsicTypeId ( "U64" ) );
-        ret = cexpr -> u . u64 [ 0 ];
+        switch ( expr -> var )
+        {
+        case eConstExpr :
+            {
+                SConstExpr* cexpr = reinterpret_cast < SConstExpr* > ( expr );
+                // this may change as more kinds of const expressions are supported
+                assert ( cexpr -> td . type_id = IntrinsicTypeId ( "U64" ) );
+                ret = cexpr -> u . u64 [ 0 ];
+            }
+            break;
+        default:
+            ReportError ( "Unsupported in const expressions: %s%d", "", expr -> var ); // dont want the rc_t overload!
+            break;
+        }
         SExpressionWhack ( expr );
     }
     return ret;
@@ -354,6 +369,116 @@ ASTBuilder :: DeclareType ( const AST_FQN& p_fqn, const KSymbol& p_super, const 
             free ( dt );
         }
     }
+}
+
+STypeExpr *
+ASTBuilder :: MakeTypeExpr ( const AST & p_type )
+{
+    STypeExpr * ret = Alloc < STypeExpr > ();
+    if ( ret == 0 )
+    {
+        return 0;
+    }
+
+    ret -> dad . var = eTypeExpr;
+    atomic32_set ( & ret -> dad . refcount, 1 );
+    ret -> fmt = 0;
+    ret -> dt = 0;
+    ret -> ts = 0;
+    ret -> id = 0;
+    ret -> dim = 0;
+    ret -> fd . fmt = 0;
+    ret -> resolved = true;
+
+    const AST_FQN * fqn = 0;
+    switch ( p_type . GetTokenType () )
+    {
+    case PT_IDENT : // scalar
+        {
+            fqn = dynamic_cast < const AST_FQN * > ( & p_type );
+            ret -> fd . td . dim = 1;
+        }
+        break;
+    case PT_ARRAY : // fqn [ const-expr | * ]
+        {
+            const AST & arrayType = p_type;
+            assert ( arrayType . ChildrenCount () == 2 );
+            fqn = dynamic_cast < const AST_FQN * > ( arrayType . GetChild ( 0 ) );
+            const AST & dimension = * arrayType . GetChild ( 1 );
+            if ( dimension . GetTokenType() == PT_EMPTY )
+            {
+                ret -> fd . td . dim = 0;
+            }
+            else
+            {
+                const AST_Expr & dimExpr = dynamic_cast < const AST_Expr & > ( dimension );
+                SExpression * expr = dimExpr . EvaluateConst ( * this ); // will report problems
+                if ( expr != 0 )
+                {
+                    switch ( expr -> var )
+                    {
+                    case eConstExpr :
+                        {
+                            SConstExpr* cexpr = reinterpret_cast < SConstExpr* > ( expr );
+                            // this may change as more kinds of const expressions are supported
+                            assert ( cexpr -> td . type_id = IntrinsicTypeId ( "U64" ) );
+                            ret -> fd . td . dim = cexpr -> u . u64 [ 0 ];
+                        }
+                        SExpressionWhack ( expr );
+                        break;
+                    case eIndirectExpr:
+                        {
+                            ret -> fd . td . dim = 0;
+                            ret -> dim = expr;
+                            ret -> resolved = false;
+                            break;
+                        }
+                    default:
+                        ReportError ( "Not allowed in array subscripts: %s%d", "", expr -> var ); // dont want the rc_t overload!
+                        SExpressionWhack ( expr );
+                        break;
+                    }
+                }
+            }
+        }
+        break;
+    default:
+        assert ( false ); // should not happen
+        break;
+    }
+
+    if ( fqn != 0 )
+    {
+        const KSymbol * type = Resolve ( * fqn ); // will report unknown name
+        if ( type != 0 )
+        {
+            switch ( type -> type )
+            {
+            case eDatatype:
+                ret -> dt                   = static_cast < const SDatatype * > ( type -> u . obj );
+                ret -> fd . td . type_id    = ret -> dt -> id;
+                break;
+            case eTypeset:
+                ret -> ts                   = static_cast < const STypeset * > ( type -> u . obj );
+                ret -> fd . td . type_id    = ret -> ts -> id;
+                break;
+            case eFormat:
+                ret -> fmt                  = static_cast < const SFormat * > ( type -> u . obj );
+                ret -> fd . td . type_id    = ret -> fmt -> id;
+                break;
+            case eSchemaType:
+                ret -> id                   = static_cast < const SIndirectType * > ( type -> u . obj );
+                ret -> fd . td . type_id    = ret -> id -> id;
+                ret -> resolved             = false;
+                break;
+            default:
+                ReportError ( "Not a datatype", * fqn );
+                break;
+            }
+        }
+    }
+
+    return ret;
 }
 
 /*--------------------------------------------------------------------------
@@ -695,3 +820,4 @@ ASTBuilder :: AliasDef  ( const Token* p_token, AST_FQN* p_name, AST_FQN* p_newN
 
     return ret;
 }
+

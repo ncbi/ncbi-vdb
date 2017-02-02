@@ -929,7 +929,7 @@ table_member_1_0
 /* other stuff
  */
 fqn_1_0
-    : ident_1_0                                     { $$ . subtree = MakeList ( $1 ); }
+    : ident_1_0                                     { $$ . subtree = MakeTree ( PT_FQN, P ( $1 ) ); }
     | fqn_1_0 ':' ident_1_0                         { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     /* a hack to handle keywords used as namespace identifiers in existing 1.0 schemas */
     | fqn_1_0 ':' KW_database                       { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }

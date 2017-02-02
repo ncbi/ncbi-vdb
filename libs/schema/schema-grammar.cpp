@@ -3316,7 +3316,7 @@ yyreduce:
 
   case 226:
 #line 932 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-grammar.y" /* yacc.c:1646  */
-    { (yyval) . subtree = MakeList ( (yyvsp[0]) ); }
+    { (yyval) . subtree = MakeTree ( PT_FQN, P ( (yyvsp[0]) ) ); }
 #line 3321 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-grammar.cpp" /* yacc.c:1646  */
     break;
 
