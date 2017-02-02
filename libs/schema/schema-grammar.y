@@ -518,13 +518,9 @@ func_1_0_formal_params
     ;
 
 formal_param_1_0
-    : opt_control_1_0 typespec_1_0 IDENTIFIER_1_0
-                                        { $$ . subtree = MakeTree ( PT_FORMALPARAM, P ( $1 ), P ( $2 ), T ( $3 ) ); }
-    ;
-
-opt_control_1_0
-    : empty                     { $$ = $1; }
-    | KW_control                { $$ . subtree = T ( $1 ); }
+    : typespec_1_0 IDENTIFIER_1_0       { $$ . subtree = MakeTree ( PT_FORMALPARAM, P ( $1 ), T ( $2 ) ); }
+    | KW_control typespec_1_0 IDENTIFIER_1_0
+                                        { $$ . subtree = MakeTree ( PT_FORMALPARAM, T ( $1 ), P ( $2 ), T ( $3 ) ); }
     ;
 
 func_1_0_vararg_formals

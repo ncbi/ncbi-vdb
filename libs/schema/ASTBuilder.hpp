@@ -35,6 +35,7 @@ struct KSymbol;
 struct BSTree;
 struct STypeExpr;
 struct SFunction;
+struct SFormParmlist;
 
 namespace ncbi
 {
@@ -56,6 +57,7 @@ namespace ncbi
 
             void ReportError ( const char* p_fmt, ... );
             void ReportError ( const char* p_msg, const AST_FQN& p_fqn );
+            void ReportError ( const char* p_msg, rc_t );
 
             // error list is cleared by a call to Build
             uint32_t GetErrorCount() const { return VectorLength ( & m_errors ); }
@@ -75,7 +77,7 @@ namespace ncbi
             AST * AliasDef  ( const Token*, AST_FQN* name, AST_FQN* newName );
             AST * UntypedFunctionDecl ( const Token*, AST_FQN* name );
             AST * RowlenFunctionDecl ( const Token*, AST_FQN* name );
-            AST * FunctionDecl ( const Token*, AST * schema_opt, AST * returnType, AST_FQN* name, AST* fact_opt, AST* params, AST* prologue );
+            AST * FunctionDecl ( const Token*, AST * schema, AST * returnType, AST_FQN* name, AST* fact, AST_ParamSig* params, AST* prologue );
 
         private:
             bool Init();
@@ -84,9 +86,19 @@ namespace ncbi
 
             void DeclareType ( const AST_FQN& fqn, const KSymbol& super, const AST_Expr* dimension_opt );
             void DeclareTypeSet ( const AST_FQN& fqn, const BSTree& types, uint32_t typeCount );
-            void DeclareFunction ( const AST_FQN& fqn, uint32_t type, struct STypeExpr * retType );
+            void DeclareFunction ( const AST_FQN&           fqn,
+                                   uint32_t                 type,
+                                   struct STypeExpr *       retType,
+                                   const BSTree *           sscope,
+                                   const Vector *           stypes,
+                                   const Vector *           sparams,
+                                   const BSTree *           fscope,
+                                   const SFormParmlist *    params );
 
-            struct STypeExpr * MakeReturnType ( const AST & p_type );
+            struct STypeExpr * MakeTypeExpr ( const AST & p_type );
+            struct SFormParmlist * MakeFormalParams ( const AST_ParamSig & );
+            void AddFormals ( Vector& p_sig, const AST & p_params );
+            void MakeSchemaParams ( const AST & p_sig, Vector& p_types, Vector & p_values );
 
             uint64_t EvalConstExpr ( const AST_Expr &expr );
             void AddOverload ( struct SFunction * fn, const KSymbol * priorDecl);

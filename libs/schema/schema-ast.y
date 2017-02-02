@@ -60,6 +60,8 @@
   AST*          node;
   AST_FQN*      fqn;
   AST_Expr*     expr;
+  AST_ParamSig* paramSig;
+  bool          boolean;
 }
 
 %define parse.error verbose
@@ -210,18 +212,22 @@
 
 %type <node> source schema_1 schema_decls schema_decl schema_2 typedef new_type_names
 %type <node> typeset typeset_spec typespec dim fmtdef const alias function func_decl
-%type <node> schema_sig return_type fact_sig param_sig prologue
-%type <node> param_signature schema_formals schema_formal type_expr formals formal
+%type <node> schema_sig_opt return_type fact_sig prologue formals_list
+%type <node>  schema_formals schema_formal type_expr formals formal
 %type <node> script_stmts script_stmt cond_expr
 
 %type <fqn> fqn qualnames fqn_opt_vers ident
 
 %type <expr> expr
 
+%type <paramSig> param_sig param_signature
+
+%type <boolean> vararg
+
 %type <tok> END_SOURCE version_1 PT_VERSION_1_0 PT_VERSION_2 PT_SCHEMA_1_0 FLOAT version_2
 %type <tok> PT_TYPEDEF PT_IDENT IDENTIFIER_1_0 DECIMAL PT_ASTLIST PT_ARRAY PT_TYPESET
-%type <tok> PT_FORMAT PT_CONST PT_UINT PT_ALIAS vararg PT_EMPTY PT_ELLIPSIS PT_RETURN
-%type <tok> VERSION PT_UNTYPED PT_ROWLENGTH PT_FUNCDECL
+%type <tok> PT_FORMAT PT_CONST PT_UINT PT_ALIAS PT_EMPTY PT_ELLIPSIS PT_RETURN
+%type <tok> VERSION PT_UNTYPED PT_ROWLENGTH PT_FUNCDECL PT_FUNCPARAMS PT_FORMALPARAM
 
 %%
 
@@ -321,13 +327,13 @@ function
 func_decl
     : PT_UNTYPED '(' KW___untyped fqn '(' ')' ')'      { $$ = p_builder . UntypedFunctionDecl ( $1, $4 ); }
     | PT_ROWLENGTH '(' KW___row_length fqn '(' ')' ')' { $$ = p_builder . RowlenFunctionDecl ( $1, $4 ); }
-    | PT_FUNCDECL '(' schema_sig return_type fqn_opt_vers fact_sig param_sig prologue ')'
+    | PT_FUNCDECL '(' schema_sig_opt return_type fqn_opt_vers fact_sig param_sig prologue ')'
                 { $$ = p_builder . FunctionDecl ( $1, $3, $4, $5, $6, $7, $8 ); }
     ;
 
-schema_sig
-    : PT_EMPTY                                    { $$ = new AST (); }
-    | PT_SCHEMASIG '(' '<' schema_formals '>' ')' { $$ = $4; }
+schema_sig_opt
+    : PT_EMPTY                                                          { $$ = new AST ( PT_EMPTY ); }
+    | PT_SCHEMASIG '(' '<' PT_ASTLIST '(' schema_formals ')' '>' ')'    { $$ = $6; }
     ;
 
 schema_formals
@@ -336,17 +342,17 @@ schema_formals
     ;
 
 schema_formal
-    : PT_SCHEMAFORMAL '(' KW_type ident ')'     { $$ = new AST (); $$ -> AddNode ( $4 ); }
-    | PT_SCHEMAFORMAL '(' type_expr ident ')'   { $$ = new AST (); $$ -> AddNode ( $3 ); $$ -> AddNode ( $4 ); }
+    : PT_SCHEMAFORMAL '(' KW_type ident ')'     { $$ = new AST ( PT_SCHEMAFORMAL ); $$ -> AddNode ( $4 ); }
+    | PT_SCHEMAFORMAL '(' type_expr ident ')'   { $$ = new AST ( PT_SCHEMAFORMAL ); $$ -> AddNode ( $3 ); $$ -> AddNode ( $4 ); }
     ;
 
 return_type
     : PT_RETURNTYPE '(' KW_void ')'     { $$ = new AST (); }
-    | PT_RETURNTYPE '(' type_expr ')'   { $$ = new AST (); $$ -> AddNode ( $3 ); }
+    | PT_RETURNTYPE '(' type_expr ')'   { $$ = $3; }
     ;
 
 fact_sig
-    : PT_EMPTY                                   { $$ = new AST (); }
+    : PT_EMPTY                                   { $$ = new AST ( PT_EMPTY ); }
     | PT_FACTSIG '(' '<' param_signature '>' ')' { $$ = $4; }
     ;
 
@@ -355,11 +361,15 @@ param_sig
     ;
 
 param_signature
-    : PT_EMPTY                                              { $$ = new AST (); }
-    | PT_FUNCPARAMS '(' formals vararg ')'                  { $$ = new AST (); $$ -> AddNode ( $3 ); $$ -> AddNode ( new AST () );$$ -> AddNode ( $4 );}
-    | PT_FUNCPARAMS '(' '*' formals vararg ')'              { $$ = new AST (); $$ -> AddNode ( new AST () ); $$ -> AddNode ( $4 );$$ -> AddNode ( $5 );}
-    | PT_FUNCPARAMS '(' formals '*' formals vararg ')'      { $$ = new AST (); $$ -> AddNode ( $3 ); $$ -> AddNode ( $5 );$$ -> AddNode ( $6 );}
-    | PT_FUNCPARAMS '(' formals ',' '*' formals vararg ')'  { $$ = new AST (); $$ -> AddNode ( $3 ); $$ -> AddNode ( $6 );$$ -> AddNode ( $7 );}
+    : PT_EMPTY                                                          { $$ = new AST_ParamSig ( $1, 0, 0, false); }
+    | PT_FUNCPARAMS '(' formals_list vararg ')'                         { $$ = new AST_ParamSig ( $1, $3, 0, $4 ); }
+    | PT_FUNCPARAMS '(' '*' formals_list vararg ')'                     { $$ = new AST_ParamSig ( $1, 0, $4, $5 ); }
+    | PT_FUNCPARAMS '(' formals_list '*' formals_list vararg ')'        { $$ = new AST_ParamSig ( $1, $3, $5, $6 ); }
+    | PT_FUNCPARAMS '(' formals_list ',' '*' formals_list vararg ')'    { $$ = new AST_ParamSig ( $1, $3, $6, $7 ); }
+    ;
+
+formals_list
+    : PT_ASTLIST '(' formals ')'    { $$ = $3; }
     ;
 
 formals
@@ -368,13 +378,13 @@ formals
     ;
 
 formal
-    : typespec IDENTIFIER_1_0               { $$ = new AST (); $$ -> AddNode ( $1 ); ;$$ -> AddNode ( $2 ); }
-    | KW_control typespec IDENTIFIER_1_0    { $$ = new AST (); $$ -> AddNode ( new AST () ); ;$$ -> AddNode ( $2 ); $$ -> AddNode ( $3 ); }
+    : PT_FORMALPARAM '(' typespec IDENTIFIER_1_0 ')'            { $$ = new AST_Formal ( $1, $3, $4, false ); }
+    | PT_FORMALPARAM '(' KW_control typespec IDENTIFIER_1_0 ')' { $$ = new AST_Formal ( $1, $4, $5, true ); }
     ;
 
 vararg
-    : PT_EMPTY                          { $$ = $1; }
-    | PT_ELLIPSIS '(' ',' ELLIPSIS ')'  { $$ = $1; }
+    : PT_EMPTY                          { $$ = false; }
+    | PT_ELLIPSIS '(' ',' ELLIPSIS ')'  { $$ = true; }
     ;
 
 prologue

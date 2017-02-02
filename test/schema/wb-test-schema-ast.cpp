@@ -226,7 +226,20 @@ TEST_CASE ( AST_FQN_WithVersionMajMinRel )
     delete fqn;
 }
 
+TEST_CASE ( AST_ParamSig_Empty )
+{
+    SchemaToken id = { PT_FUNCPARAMS, 0, 0, 0, 0 };
+    Token tok ( id );
+    AST_ParamSig* sig = new AST_ParamSig ( & tok, 0, 0, false );
+    delete sig;
+}
+
 // AST builder
+
+// intrinsic type ids as defined in libs/vdb/schema-int.c
+const uint32_t U8_id     = 9;
+const uint32_t U16_id    = 10;
+const uint32_t U32_id    = 11;
 
 class AST_Fixture
 {
@@ -275,6 +288,8 @@ public:
                 case_ ( PT_RETURNTYPE );
                 case_ ( PT_FUNCSIG );
                 case_ ( PT_FUNCPROLOGUE );
+                case_ ( PT_FUNCPARAMS );
+                case_ ( PT_FORMALPARAM );
                 default:
                     if ( tt < 256 )
                     {
@@ -600,7 +615,7 @@ FIXTURE_TEST_CASE(Typeset_OneScalar, AST_Fixture)
     REQUIRE_NOT_NULL ( ts );
     REQUIRE_EQ ( string ( "t" ), ToCppString ( ts -> name -> name ) );
     REQUIRE_EQ ( (uint16_t)1, ts -> count );
-    REQUIRE_EQ ( (uint32_t)9, ts -> td [ 0 ] . type_id );
+    REQUIRE_EQ ( U8_id, ts -> td [ 0 ] . type_id );
     REQUIRE_EQ ( (uint32_t)1, ts -> td [ 0 ] . dim );
 }
 
@@ -611,10 +626,10 @@ FIXTURE_TEST_CASE(Typeset_MultipleScalars, AST_Fixture)
     const STypeset* ts = static_cast < const STypeset* > ( sym -> u . obj );
     REQUIRE_NOT_NULL ( ts );
     REQUIRE_EQ ( string ( "t" ), ToCppString ( ts -> name -> name ) );
-    REQUIRE_EQ ( (uint16_t)2, ts -> count );
-    REQUIRE_EQ ( (uint32_t)9, ts -> td [ 0 ] . type_id );
+    REQUIRE_EQ ( (uint16_t)2u, ts -> count );
+    REQUIRE_EQ ( U8_id, ts -> td [ 0 ] . type_id );
     REQUIRE_EQ ( (uint32_t)1, ts -> td [ 0 ] . dim );
-    REQUIRE_EQ ( (uint32_t)11, ts -> td [ 1 ] . type_id );
+    REQUIRE_EQ ( U32_id, ts -> td [ 1 ] . type_id );
     REQUIRE_EQ ( (uint32_t)1, ts -> td [ 1 ] . dim );
 }
 
@@ -626,7 +641,7 @@ FIXTURE_TEST_CASE(Typeset_OneArray, AST_Fixture)
     REQUIRE_NOT_NULL ( ts );
     REQUIRE_EQ ( string ( "t" ), ToCppString ( ts -> name -> name ) );
     REQUIRE_EQ ( (uint16_t)1, ts -> count );
-    REQUIRE_EQ ( (uint32_t)9, ts -> td [ 0 ] . type_id );
+    REQUIRE_EQ ( U8_id, ts -> td [ 0 ] . type_id );
     REQUIRE_EQ ( (uint32_t)2, ts -> td [ 0 ] . dim );
 }
 
@@ -692,6 +707,7 @@ FIXTURE_TEST_CASE(Format_Simple, AST_Fixture)
     REQUIRE_NOT_NULL ( f );
     REQUIRE_EQ ( string ( "f" ), ToCppString ( f -> name -> name ) );
     REQUIRE_NULL ( f -> super );
+    REQUIRE_EQ ( (uint32_t)1, f -> id );
 }
 
 FIXTURE_TEST_CASE(Format_Derived, AST_Fixture)
@@ -702,6 +718,7 @@ FIXTURE_TEST_CASE(Format_Derived, AST_Fixture)
     REQUIRE_NOT_NULL ( f );
     REQUIRE_EQ ( string ( "f" ), ToCppString ( f -> name -> name ) );
     REQUIRE_NOT_NULL ( f -> super );
+    REQUIRE_EQ ( (uint32_t)2, f -> id );
     REQUIRE_EQ ( string ( "s" ), ToCppString ( f -> super -> name -> name ) );
 }
 
@@ -724,7 +741,7 @@ FIXTURE_TEST_CASE(Const_Simple, AST_Fixture)
     const SConstant* c = static_cast < const SConstant* > ( sym -> u . obj );
     REQUIRE_NOT_NULL ( c );
     REQUIRE_EQ ( string ( "c" ), ToCppString ( c -> name -> name ) );
-    REQUIRE_EQ ( 9u, c -> td . type_id );
+    REQUIRE_EQ ( U8_id, c -> td . type_id );
     REQUIRE_NOT_NULL ( c -> expr );
     REQUIRE_EQ ( ( uint32_t ) eConstExpr, c -> expr -> var );
     const SConstExpr & expr =  * reinterpret_cast < const SConstExpr * > ( c -> expr );
@@ -797,7 +814,7 @@ FIXTURE_TEST_CASE(Func_Scalar_NoParams, AST_Fixture)
 {
     MakeAst ( "function U8 f();" );
     const SFunction* fn = VerifyFunction ( "f" );
-    REQUIRE_EQ ( 9u, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
+    REQUIRE_EQ ( U8_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
     REQUIRE_EQ ( 1u, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . dim );
 }
 
@@ -805,7 +822,7 @@ FIXTURE_TEST_CASE(Func_Array_NoParams, AST_Fixture)
 {
     MakeAst ( "function U8[2] f();" );
     const SFunction* fn = VerifyFunction ( "f" );
-    REQUIRE_EQ ( 9u, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
+    REQUIRE_EQ ( U8_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
     REQUIRE_EQ ( 2u, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . dim );
 }
 
@@ -813,7 +830,7 @@ FIXTURE_TEST_CASE(Func_VarArray_NoParams, AST_Fixture)
 {
     MakeAst ( "function U8[*] f();" );
     const SFunction* fn = VerifyFunction ( "f" );
-    REQUIRE_EQ ( 9u, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
+    REQUIRE_EQ ( U8_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
     REQUIRE_EQ ( 0u, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . dim );
 }
 
@@ -828,29 +845,126 @@ FIXTURE_TEST_CASE(Func_Redeclared_NoVersion, AST_Fixture)
 {
     MakeAst ( "function U8 f();function U16 f();" );
     const SFunction* fn = VerifyOverload ( "f", 0 );
-    REQUIRE_EQ ( 9u, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id ); // 2nd decl with the same version ignored
+    REQUIRE_EQ ( U8_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id ); // 2nd decl with the same version ignored
     REQUIRE_EQ ( 1u, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . dim );
 }
 
 FIXTURE_TEST_CASE(Func_Redeclared_SameVersion, AST_Fixture)
 {
-    MakeAst ( "function U8 f#1.2.3();function U16 f#1.2.3();" );
+    MakeAst ( "function U8 f#1.2();function U16 f#1.2();" );
     const SFunction* fn = VerifyOverload ( "f", 0 );
-    REQUIRE_EQ ( 9u, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id ); // 2nd decl with the same version ignored
+    REQUIRE_EQ ( U8_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id ); // 2nd decl with the same version ignored
 }
 
 FIXTURE_TEST_CASE(Func_Redeclared_DiffMajor, AST_Fixture)
 {   // 2 overloads created
-    MakeAst ( "function U8 f#2();function U16 f#1.2.3();" ); // release does not break
+    MakeAst ( "function U8 f#2();function U16 f#1.2();" );
     {
         const SFunction* fn = VerifyOverload ( "f", 0 );    // lower version
-        REQUIRE_EQ ( 10u, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id ); // U16
+        REQUIRE_EQ ( U16_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id ); // U16
     }
     {
         const SFunction* fn = VerifyOverload ( "f", 1 );    // higher version
-        REQUIRE_EQ ( 9u, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id ); // U8
+        REQUIRE_EQ ( U8_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id ); // U8
     }
 }
+
+FIXTURE_TEST_CASE(Func_Redeclared_HigherMinor, AST_Fixture)
+{   // higner minor is used
+    MakeAst ( "function U8 f#1();function U16 f#1.2();" );
+    const SFunction* fn = VerifyOverload ( "f", 0 );
+    REQUIRE_EQ ( U16_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id ); // 2nd decl used
+}
+
+FIXTURE_TEST_CASE(Func_NoReleaseNumberForSimpleFunctions, AST_Fixture)
+{
+    VerifyErrorMessage ( "function U16 f#1.2.3();", "Release number is not allowed for simple function: 'f'" );
+}
+
+FIXTURE_TEST_CASE(Func_ReturnArray, AST_Fixture)
+{
+    MakeAst ( "function U8[10] f();" );
+    const SFunction* fn = VerifyOverload ( "f", 0 );
+    REQUIRE_EQ ( U8_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
+    REQUIRE_EQ ( (uint32_t)10, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . dim );
+}
+
+FIXTURE_TEST_CASE(Func_ReturnTypeset, AST_Fixture)
+{
+    MakeAst ( "typeset ts { U8 }; function ts f();" );
+    const SFunction* fn = VerifyOverload ( "f", 0 );
+    REQUIRE_EQ ( (uint32_t)0x40000000, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
+    REQUIRE_EQ ( (uint32_t)1, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . dim );
+}
+
+FIXTURE_TEST_CASE(Func_ReturnFormat, AST_Fixture)
+{
+    MakeAst ( "fmtdef fmt; function fmt f();" );
+    const SFunction* fn = VerifyOverload ( "f", 0 );
+    REQUIRE_EQ ( (uint32_t)1, ( ( STypeExpr * ) ( fn -> rt ) ) -> fmt -> id );
+    REQUIRE_EQ ( (uint32_t)1, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
+    REQUIRE_EQ ( (uint32_t)1, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . dim );
+}
+
+FIXTURE_TEST_CASE(Func_ReturnBad, AST_Fixture)
+{
+    VerifyErrorMessage ( "function U8 f1(); function f1 f2();", "Not a datatype: 'f1'" );
+}
+
+FIXTURE_TEST_CASE(Func_BadParamType, AST_Fixture)
+{
+    VerifyErrorMessage ( "function U8 f1(); function U8 f2( f1 p );", "Not a datatype: 'f1'" );
+}
+FIXTURE_TEST_CASE(Func_BadParamName, AST_Fixture)
+{
+    VerifyErrorMessage ( "function U8 f(U8 U16);", "Cannot be used as a formal parameter name: 'U16'" );
+}
+
+FIXTURE_TEST_CASE(Func_OneParamScalar, AST_Fixture)
+{
+    MakeAst ( "function U8 f(U8 p);" );
+    //TODO: verify
+}
+FIXTURE_TEST_CASE(Func_OneParamArray, AST_Fixture)
+{
+    MakeAst ( "function U8 f(U8[1] p);" );
+    //TODO: verify
+}
+FIXTURE_TEST_CASE(Func_OneParamVarArray, AST_Fixture)
+{
+    MakeAst ( "function U8 f(U8[*] p);" );
+    //TODO: verify
+}
+FIXTURE_TEST_CASE(Func_ControlParam, AST_Fixture)
+{
+    MakeAst ( "function U8 f( control U8 p);" );
+    //TODO: verify
+}
+
+FIXTURE_TEST_CASE(Func_TwoParamsSameName, AST_Fixture)
+{
+    VerifyErrorMessage ( "function U8 f(U8 p, U16 p);", "Cannot be used as a formal parameter name: 'p'" );
+}
+
+FIXTURE_TEST_CASE(Func_TwoParams, AST_Fixture)
+{
+    MakeAst ( "function U8 f(U8 p1, U16 p2);" );
+    //TODO: verify
+}
+
+FIXTURE_TEST_CASE(Func_SchemaParam_Type, AST_Fixture)
+{
+    MakeAst ( "function < type T > T f ( T p1 );" );
+    //TODO: verify
+}
+#if 0
+FIXTURE_TEST_CASE(Func_SchemaParam_Value, AST_Fixture)
+{
+    MakeAst ( "function < int T > u8[T] f ( U8[T] p1 );" );
+    //TODO: verify
+}
+#endif
+//TODO: param with control
 
 FIXTURE_TEST_CASE(Old_Func_Scalar_NoParams, AST_Fixture)
 {
@@ -858,29 +972,18 @@ FIXTURE_TEST_CASE(Old_Func_Scalar_NoParams, AST_Fixture)
     REQUIRE_RC ( VDBManagerMakeRead ( & mgr, 0 ) );
     VSchema *schema;
     REQUIRE_RC ( VDBManagerMakeSchema ( mgr, & schema ) );
-    string input = "function U8 f#2();function U16 f#1.2();"; // release breaks (why?)
+    string input = "function < type T > T f ( T p1 );";
     REQUIRE_RC ( VSchemaParseText ( schema, 0, input . c_str (), input . length () ) );
 
-    REQUIRE_EQ ( 2u, VectorLength ( & schema -> func ) );
+    REQUIRE_EQ ( 1u, VectorLength ( & schema -> func ) );
     const SFunction* fn = static_cast < const SFunction* > ( VectorGet ( & schema -> func, 0 ) );
     REQUIRE_EQ ( string ( "f" ), ToCppString ( fn -> name -> name ) );
-    REQUIRE_EQ ( 9u, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
-    fn = static_cast < const SFunction* > ( VectorGet ( & schema -> func, 1 ) );
-    REQUIRE_EQ ( string ( "f" ), ToCppString ( fn -> name -> name ) );
-    REQUIRE_EQ ( 10u, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
-
-    REQUIRE_EQ ( 1u, VectorLength ( & schema -> fname ) );
-    const SNameOverload* name = static_cast < const SNameOverload* > ( VectorGet ( & schema -> fname, 0 ) );
-    REQUIRE_EQ ( 0u, name -> cid . id );
-    REQUIRE_EQ ( 2u, VectorLength ( & name -> items ) );
+//    REQUIRE_EQ ( (uint32_t)1, ( ( STypeExpr * ) ( fn -> rt ) ) -> fmt -> id );
+//    REQUIRE ( ( ( STypeExpr * ) ( fn -> rt ) ) -> resolved );
 
     VSchemaRelease ( schema );
     VDBManagerRelease ( mgr );
 }
-
-//TODO: function redeclared with diff major version (overload)
-//TODO: function redeclared with same major and lower minor version (no effect)
-//TODO: function redeclared with same major and higher minor version (replaces)
 
 //TODO: script + untyped - error
 //TODO: validate + untyped - error
@@ -888,12 +991,16 @@ FIXTURE_TEST_CASE(Old_Func_Scalar_NoParams, AST_Fixture)
 //TODO: non-script fn with a body - error
 //TODO: validate + non-void return - error
 //TODO: non-validate + void return - error
-//TODO: function returning a typeset
-//TODO: function returning a schema type
-//TODO: function returning a format (?)
-//TODO: function returning something else - error
+
+//TODO: function returning a schema param type
+
+//TODO: release number for schema function
+//TODO: release number for extern function (?)
+//TODO: release number for validate function (?)
 
 //TODO:array of arrays in typedef, typeset, constdef, return type
+
+//TODO: function call: no arguments
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>

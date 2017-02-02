@@ -53,7 +53,7 @@ ASTBuilder :: ASTBuilder ()
     rc_t rc = VSchemaMakeIntrinsic ( & m_intrinsic );
     if ( rc != 0 )
     {
-        ReportError ( "VSchemaMakeIntrinsic failed: %R", rc  );
+        ReportError ( "VSchemaMakeIntrinsic", rc  );
         m_intrinsic = 0;
     }
     else
@@ -61,7 +61,7 @@ ASTBuilder :: ASTBuilder ()
         rc = KSymTableInit ( & m_symtab, 0 );
         if ( rc != 0 )
         {
-            ReportError ( "KSymTableInit failed: %R", rc );
+            ReportError ( "KSymTableInit", rc );
             VSchemaRelease ( m_intrinsic );
             m_intrinsic = 0;
         }
@@ -112,6 +112,12 @@ ASTBuilder :: ReportError ( const char* p_msg, const AST_FQN& p_fqn )
     ReportError ( "%s: '%s'", p_msg, buf ); //TODO: add location of the original declaration
 }
 
+void
+ASTBuilder :: ReportError ( const char* p_msg, rc_t p_rc )
+{
+    ReportError ( "%s: rc=%R", p_msg, p_rc );
+}
+
 bool
 ASTBuilder :: Init()
 {
@@ -123,7 +129,7 @@ ASTBuilder :: Init()
     rc_t rc = VSchemaMake ( & m_schema, m_intrinsic );
     if ( rc != 0 )
     {
-        ReportError ( "VSchemaMake failed: %R", rc );
+        ReportError ( "VSchemaMake", rc );
         m_schema = 0;
         return false;
     }
@@ -131,7 +137,7 @@ ASTBuilder :: Init()
     rc = init_symtab ( & m_symtab, m_schema ); // this pushes the global scope
     if ( rc != 0 )
     {
-        ReportError ( "init_symtab failed: %R", rc );
+        ReportError ( "init_symtab", rc );
         return false;
     }
 
@@ -164,11 +170,10 @@ ASTBuilder :: VectorAppend ( Vector *p_self, uint32_t *p_idx, const void *p_item
     rc_t rc = :: VectorAppend ( p_self, p_idx, p_item );
     if ( rc != 0 )
     {
-        ReportError ( "VectorAppend failed: %R", rc );
+        ReportError ( "VectorAppend", rc );
     }
     return rc;
 }
-
 
 const KSymbol*
 ASTBuilder :: CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const void * p_obj )
@@ -186,12 +191,12 @@ ASTBuilder :: CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const voi
             rc = KSymTablePushNamespace ( & m_symtab, ns );
             if ( rc != 0 )
             {
-                ReportError ( "KSymTablePushNamespace failed: %R", rc );
+                ReportError ( "KSymTablePushNamespace", rc );
             }
         }
         else
         {
-            ReportError ( "KSymTableCreateNamespace failed: %R", rc );
+            ReportError ( "KSymTableCreateNamespace", rc );
         }
     }
 
@@ -207,7 +212,7 @@ ASTBuilder :: CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const voi
         }
         else if ( rc != 0 )
         {
-            ReportError ( "KSymTableCreateSymbol failed: %R", rc );
+            ReportError ( "KSymTableCreateSymbol", rc );
         }
     }
 
@@ -255,7 +260,7 @@ ASTBuilder :: Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown )
             rc = KSymTablePushNamespace ( & m_symtab, ns );
             if ( rc != 0 )
             {
-                ReportError ( "KSymTablePushNamespace failed: %R", rc );
+                ReportError ( "KSymTablePushNamespace", rc );
                 count = i;
                 ns_resolved = false;
                 break;
@@ -411,31 +416,6 @@ ASTBuilder :: DeclareTypeSet ( const AST_FQN & p_fqn, const BSTree & p_types, ui
     }
 }
 
-// AST nodes
-
-AST_Schema :: AST_Schema ()
-:   m_version ( 0 )
-{
-}
-
-
-AST_Schema :: AST_Schema ( const Token * p_token, AST* p_decls /*NULL OK*/ )
-:   AST ( p_token ),
-    m_version ( 0 )
-{
-    if ( p_decls != 0 )
-    {
-        MoveChildren ( * p_decls );
-        delete p_decls;
-    }
-}
-
-void
-AST_Schema :: SetVersion ( const char* ) // version specified as "#maj[.min[.rel]]]"
-{
-    assert ( false );
-}
-
 AST *
 ASTBuilder :: TypeDef ( const Token * p_token, AST_FQN* p_baseType, AST* p_newTypes )
 {   //TODO: do we need to keep all these subtrees beyond the population of symtab?
@@ -446,7 +426,7 @@ ASTBuilder :: TypeDef ( const Token * p_token, AST_FQN* p_baseType, AST* p_newTy
     {
         if ( baseType -> type != eDatatype )
         {
-            ReportError ( "Not a datatype: '%s'", p_baseType -> GetChild ( 0 ) -> GetTokenValue () ); //TODO: add location
+            ReportError ( "Not a datatype", p_baseType -> GetChild ( 0 ) -> GetTokenValue () ); //TODO: add location
             //TODO: recover? pretend it is "any"?
         }
         else
@@ -712,226 +692,6 @@ ASTBuilder :: AliasDef  ( const Token* p_token, AST_FQN* p_name, AST_FQN* p_newN
     {
         VectorAppend ( & m_schema -> alias, 0, CreateFqnSymbol ( * p_newName, sym -> type, sym -> u . obj ) );
     }
-
-    return ret;
-}
-
-void
-ASTBuilder :: DeclareFunction ( const AST_FQN& p_fqn, uint32_t p_type, struct STypeExpr * p_retType )
-{
-    const KSymbol * priorDecl = Resolve ( p_fqn, false );
-    if ( priorDecl != 0 && priorDecl -> type != p_type )
-    {
-        ReportError ( "Declared earlier with a different type", p_fqn );
-    }
-    else
-    {
-        SFunction *f = Alloc < SFunction > ();
-        if ( f != 0 )
-        {
-            memset ( f, 0, sizeof * f );
-            if ( p_retType != 0 )
-            {
-                f -> rt = & p_retType -> dad;
-            }
-            VectorInit ( & f -> fact . parms, 0, 8 );
-            VectorInit ( & f -> func . parms, 0, 8 );
-            VectorInit ( & f -> type, 0, 8 );
-            f -> version = p_fqn . GetVersion ();
-            VectorInit ( & f -> schem, 0, 8 );
-
-            if ( priorDecl == 0 )
-            {
-                const KSymbol * sym = CreateFqnSymbol ( p_fqn, p_type, f );
-                f -> name = sym;
-
-                SNameOverload *name;
-                rc_t rc = SNameOverloadMake ( & name, f -> name, 0, 4 );
-                if ( rc == 0 )
-                {
-                    rc = VectorInsertUnique ( & name -> items, f, 0, SFunctionSort );
-                    if ( rc == 0 )
-                    {
-                        if ( VectorAppend ( & m_schema -> func, & f -> id, f ) == 0 )
-                        {
-                            if ( VectorAppend ( & m_schema -> fname, & name -> cid . id, name ) == 0 )
-                            {
-                                return;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        ReportError ( "VectorInsertUnique failed: %R", rc );
-                    }
-                    SNameOverloadWhack ( name, 0 );
-                }
-                else
-                {
-                    ReportError ( "SNameOverloadMake failed: %R", rc );
-                }
-            }
-            else // declared previously
-            {
-                f -> name = priorDecl;
-
-                SNameOverload *name = ( SNameOverload* ) f -> name -> u . obj;
-                assert ( name != 0 );
-                uint32_t idx;
-                rc_t rc = VectorInsertUnique ( & name -> items, f, & idx, SFunctionSort );
-                if ( rc == 0 ) // overload added
-                {
-                    if ( VectorAppend ( & m_schema -> func, & f -> id, f ) == 0 )
-                    {
-                        return;
-                    }
-                }
-                if ( GetRCState ( rc ) == rcExists )
-                {   /* an overload with the same major version exists */
-                    /* see if new function trumps old */
-                    SFunction *exist = static_cast < SFunction * > ( VectorGet ( & name -> items, idx ) );
-                    if ( f -> version > exist -> version )
-                    {
-                        /* insert our function in name overload */
-                        void * ignore;
-                        VectorSwap ( & name -> items, idx, f, & ignore );
-
-                        /* if existing is in the same schema... */
-                        if ( ( const void* ) name == exist -> name -> u . obj )
-                        {
-                            /* need to swap with old */
-                            assert ( exist -> id >= VectorStart ( & m_schema -> func ) );
-                            VectorSwap ( & m_schema -> func, exist -> id, f, & ignore );
-                            f -> id = exist -> id;
-                        }
-                    }
-                }
-                else if ( rc != 0 )
-                {
-                    ReportError ( "VectorInsertUnique failed: %R", rc );
-                }
-            }
-            SFunctionWhack ( f, 0 );
-        }
-    }
-}
-
-AST * ASTBuilder :: UntypedFunctionDecl ( const Token* p_token, AST_FQN* p_name )
-{
-    AST * ret = new AST ( p_token, p_name );
-    DeclareFunction ( * p_name, eUntypedFunc, 0 );
-    return ret;
-}
-
-AST * ASTBuilder :: RowlenFunctionDecl ( const Token* p_token, AST_FQN* p_name )
-{
-    AST * ret = new AST ( p_token, p_name );
-    DeclareFunction ( * p_name, eRowLengthFunc, 0 );
-    return ret;
-}
-
-STypeExpr *
-ASTBuilder :: MakeReturnType ( const AST & p_type )
-{
-    STypeExpr * ret = Alloc < STypeExpr > ();
-    ret -> dad . var = eTypeExpr;
-    atomic32_set ( & ret -> dad . refcount, 1 );
-    ret -> fmt = 0;
-    ret -> dt = 0;
-    ret -> ts = 0;
-    ret -> id = 0;
-    ret -> dim = 0;
-    ret -> fd . fmt = 0;
-    ret -> resolved = true;
-
-    const AST_FQN * fqn;
-    uint64_t dim;
-    if ( p_type . GetChild ( 0 ) -> GetTokenType () == PT_IDENT )
-    {   // scalar
-        fqn = dynamic_cast < const AST_FQN * > ( p_type . GetChild ( 0 ) );
-        dim = 1;
-    }
-    else // fqn [ const-expr | * ]
-    {
-        const AST & arrayType = * p_type . GetChild ( 0 );
-        assert ( arrayType . GetTokenType () == PT_ARRAY );
-        assert ( arrayType . ChildrenCount () == 2 );
-        fqn = dynamic_cast < const AST_FQN * > ( arrayType . GetChild ( 0 ) );
-        const AST & dimension = * arrayType . GetChild ( 1 );
-        if ( dimension . GetTokenType() == PT_EMPTY )
-        {
-            dim = 0;
-        }
-        else
-        {
-            const AST_Expr & dimExpr = dynamic_cast < const AST_Expr & > ( dimension );
-            dim = EvalConstExpr ( dimExpr );
-        }
-    }
-
-    const KSymbol * type = Resolve ( * fqn ); // will report unknown name
-    if ( type != 0 )
-    {
-        switch ( type -> type )
-        {
-        case eDatatype:
-            ret -> dt                   = static_cast < const SDatatype * > ( type -> u . obj );
-            ret -> fd . td . type_id    = ret -> dt -> id;
-            ret -> fd . td . dim        = dim;
-            break;
-        case eTypeset:
-        case eSchemaType:
-            assert ( false );
-            break;
-        default:
-            ReportError ( "Not a datatype", fqn );
-            break;
-        }
-    }
-
-    return ret;
-}
-
-AST * ASTBuilder :: FunctionDecl ( const Token* p_token,
-                                   AST *        p_schema_opt,
-                                   AST *        p_returnType,
-                                   AST_FQN*     p_name,
-                                   AST*         p_fact_opt,
-                                   AST*         p_params,
-                                   AST*         p_prologue )
-{
-    AST * ret = new AST ( p_token, p_schema_opt, p_returnType, p_name, p_fact_opt, p_params, p_prologue );
-
-    if ( p_schema_opt -> GetTokenType () != PT_EMPTY )
-    {
-        assert ( false );
-    }
-
-    STypeExpr * retType = 0;
-    if ( p_returnType -> ChildrenCount () == 0 ) // void
-    {
-        assert ( false ); // only for "validate"
-    }
-    else if ( p_returnType -> GetChild ( 0 ) -> GetTokenType () == PT_TYPEEXPR )
-    {
-        assert ( false ); // fqn / fqn
-    }
-    else
-    {
-        retType = MakeReturnType ( * p_returnType );
-    }
-
-    if ( p_fact_opt -> GetTokenType () != PT_EMPTY )
-    {
-        assert ( false );
-    }
-
-    if ( p_params -> ChildrenCount () != 0 )
-    {
-        assert ( false );
-    }
-
-    DeclareFunction ( * p_name, eFunction, retType );
 
     return ret;
 }

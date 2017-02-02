@@ -106,6 +106,33 @@ namespace ncbi
 
             SExpression * EvaluateConst ( ASTBuilder& ) const; // reports problems
         };
+
+        class AST_ParamSig : public AST
+        {
+        public:
+            AST_ParamSig ( const Token *, AST * mandatory /*NULL OK*/, AST * optional /*NULL OK*/, bool variadic );
+
+            const AST & GetMandatory () const { return * GetChild ( 0 ); }
+            const AST & GetOptional () const { return * GetChild ( 1 ); }
+            bool IsVariadic () const { return m_isVariadic; }
+
+        private:
+            bool m_isVariadic;
+        };
+
+        class AST_Formal : public AST
+        {
+        public:
+            AST_Formal ( const Token *, AST * typespec, const Token* id, bool control );
+
+            const AST & GetType () const { return * GetChild ( 0 ); }
+            const char * GetIdent () const { return GetChild ( 1 ) -> GetTokenValue (); }
+            bool HasControl () const { return m_hasControl; }
+
+        private:
+            bool m_hasControl;
+        };
+
     }
 }
 
