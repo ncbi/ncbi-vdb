@@ -220,6 +220,10 @@ KNS_EXTERN rc_t CC KClientHttpMakeRequest ( const KClientHttp *self,
 KNS_EXTERN rc_t CC KNSManagerMakeClientRequest ( struct KNSManager const *self,
     KClientHttpRequest **req, ver_t version, struct KStream *conn, const char *url, ... );
 
+KNS_EXTERN rc_t CC KClientHttpRead ( const KClientHttp *self,
+    void *buffer, size_t bsize, size_t *num_read );
+KNS_EXTERN rc_t CC KClientHttpWriteAll ( const KClientHttp *self,
+    const void *buffer, size_t size, size_t *num_writ );
 
 /* AddRef
  * Release

@@ -284,9 +284,6 @@ static
 rc_t KClientHttpGetLine ( KClientHttp *self, struct timeout_t *tm );
 
 static
-rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, uint32_t *status, ver_t *version );
-
-static
 rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint32_t port, KSocket * sock,
     const String * phostname, uint32_t pport )
 {
@@ -816,6 +813,26 @@ LIB_EXPORT rc_t CC KClientHttpRelease ( const KClientHttp *self )
     return 0;
 }
 
+
+LIB_EXPORT rc_t CC KClientHttpRead ( const KClientHttp *self,
+    void *buffer, size_t bsize, size_t *num_read )
+{
+    if ( self == NULL )
+        return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
+
+    return KStreamRead ( self -> sock, buffer, bsize, num_read );
+}
+
+LIB_EXPORT rc_t CC KClientHttpWriteAll ( const KClientHttp *self,
+    const void *buffer, size_t size, size_t *num_writ )
+{
+    if ( self == NULL )
+        return RC ( rcNS, rcNoTarg, rcReading, rcSelf, rcNull );
+
+     return KStreamWriteAll ( self -> sock, buffer, size, num_writ );
+}
+
+
 /* Communication Methods
  *  Read in the http response and return 1 char at a time
  */
@@ -1132,7 +1149,6 @@ rc_t KClientHttpReplaceHeader
 }
 
 /* Capture each header line to add to BSTree */
-static
 rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
     bool * blank, bool * len_zero, bool * close_connection )
 {
@@ -1258,7 +1274,6 @@ rc_t KClientHttpFindHeader ( const BSTree *hdrs, const char *_name, char *buffer
     return rc;
 }
 
-static
 rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, uint32_t *status, ver_t *version )
 {
     /* First time reading the response */
