@@ -29,7 +29,8 @@ TOP ?= $(abspath ../../..)
 MODULE = libs/vdb/test
 
 TEST_TOOLS=\
-	test-prod-cmn
+	test-prod-cmn \
+	test-dictionary
 
 include $(TOP)/build/Makefile.env
 
@@ -40,12 +41,16 @@ clean: stdclean
 
 LIB=\
 	-skapp \
-	-sncbi-vdb
+	-sncbi-wvdb
 
 VDB_DIR=../
 
-OBJ=$(addsuffix .$(OBJX),test-prod-cmn)
+PROD_CMN_OBJ=$(addsuffix .$(OBJX),test-prod-cmn)
 
-$(TEST_BINDIR)/test-prod-cmn: $(OBJ) $(addprefix $(VDB_DIR),prod-cmn.c)
-	$(LD) --exe -o $@ $(OBJ) $(LIB)
+$(TEST_BINDIR)/test-prod-cmn: $(PROD_CMN_OBJ) $(addprefix $(VDB_DIR),prod-cmn.c)
+	$(LD) --exe -o $@ $(PROD_CMN_OBJ) $(LIB)
 
+DICTIONARY_OBJ=$(addsuffix .$(OBJX),test-dictionary)
+
+$(TEST_BINDIR)/test-dictionary: $(DICTIONARY_OBJ) $(addprefix $(VDB_DIR),dictionary-read.c dictionary-write.c)
+	$(LD) --exe -o $@ $(DICTIONARY_OBJ) $(LIB)

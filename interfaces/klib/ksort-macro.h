@@ -254,4 +254,174 @@ struct ksort_stack_node
     }                                                                             \
     ( void ) 0
 
+/*
+ adapted from the above macro, it is a mixture of qsort and insert sort
+ all access to the sortee are via supplied macros, all of which work on index
+ values.
+ this code requires that indices of the array are contiguous integers,
+ random-accessible, and are >= 0 and < N
+ 
+Required macros:
+ LESS(INDEX_1, INDEX_2)
+    provides the ordering for the sort
+
+ SAVE(INDEX)
+    arranges to save the value at INDEX, probably just copy it to a temporary
+
+ COPY(DST_INDEX, SRC_INDEX)
+    copy the value at SRC_INDEX to DST_INDEX
+
+ LOAD(INDEX)
+    load the value saved by the SAVE macro
+
+ The last 3 are used for moving elements around.  For example, swap(a, b) would
+ be:
+    SAVE(a); COPY(a, b); LOAD(b);
+ They are always used like this, e.g. save an element, copy some elements while
+ overwriting the position of the saved one, and then restore the saved element
+ at its new position.  This sort has more ways to move things around than swap.
+
+Example:
+static void sort_int(size_t const N, int array[N])
+{
+#define SAVE(A) int const tmp = array[A]
+#define LOAD(A) ((void)(array[A] = tmp))
+#define COPY(DST, SRC) ((void)(array[(DST)] = array[(SRC)]))
+#define LESS(A, B) (array[A] < array[B])
+    ASORT(N)
+#undef SAVE
+#undef LOAD
+#undef COPY
+#undef LESS
+}
+*/
+
+#define ASORT_INSERT_SORT_2(L)                                                  \
+    if (LESS((L)+1, (L))) { SAVE((L)+1); COPY((L)+1, (L)); LOAD((L)); }
+
+#define ASORT_INSERT_SORT_3(L)                                                  \
+    if (LESS((L)+2, (L))) {                                                     \
+        SAVE((L)+2); COPY((L)+2, (L)+1); COPY((L)+1, (L)); LOAD((L));           \
+    } else ASORT_INSERT_SORT_2((L)+1)
+
+#define ASORT_INSERT_SORT_4(L)                                                  \
+    if (LESS((L)+3, (L))) {                                                     \
+        SAVE((L)+3); COPY((L)+3, (L)+2); COPY((L)+2, (L)+1);                    \
+        COPY((L)+1, (L)); LOAD((L));                                            \
+    } else ASORT_INSERT_SORT_3((L)+1)
+
+#define ASORT_INSERT_SORT_5(L)                                                  \
+    if (LESS((L)+4, (L))) {                                                     \
+        SAVE((L)+4); COPY((L)+4, (L)+3); COPY((L)+3, (L)+2);                    \
+        COPY((L)+2, (L)+1); COPY((L)+1, (L)); LOAD((L));                        \
+    } else ASORT_INSERT_SORT_4((L)+1)
+
+#define ASORT_INSERT_SORT_6(L)                                                  \
+    if (LESS((L)+5, (L))) {                                                     \
+        SAVE((L)+5); COPY((L)+5, (L)+4); COPY((L)+4, (L)+3);                    \
+        COPY((L)+3, (L)+2); COPY((L)+2, (L)+1); COPY((L)+1, (L));               \
+        LOAD((L));                                                              \
+    } else ASORT_INSERT_SORT_5((L)+1)
+
+#define ASORT_INSERT_SORT_7(L)                                                  \
+    if (LESS((L)+6, (L))) {                                                     \
+        SAVE((L)+6); COPY((L)+6, (L)+5); COPY((L)+5, (L)+4);                    \
+        COPY((L)+4, (L)+3); COPY((L)+3, (L)+2); COPY((L)+2, (L)+1);             \
+        COPY((L)+1, (L)); LOAD((L));                                            \
+    } else ASORT_INSERT_SORT_6((L)+1)
+
+#define ASORT_INSERT_SORT_LIN(L, N)                                             \
+    size_t a = (L); size_t const b = (L) + (N) - 1;                             \
+    do { if (LESS(b, a)) {                                                      \
+            size_t bb = b;                                                      \
+            SAVE(b);                                                            \
+            while (a < bb) { COPY(bb, bb-1); --bb; }                            \
+            LOAD(a);                                                            \
+            break;                                                              \
+    }} while (++a < b)
+
+#define ASORT_INSERT_SORT(L, N)                                                 \
+    if (N > 1) { ASORT_INSERT_SORT_2(L) }                                       \
+    if (N > 2) { ASORT_INSERT_SORT_3(L) }                                       \
+    if (N > 3) { ASORT_INSERT_SORT_4(L) }                                       \
+    if (N > 4) { ASORT_INSERT_SORT_5(L) }                                       \
+    if (N > 5) { ASORT_INSERT_SORT_6(L) }                                       \
+    if (N > 6) {                                                                \
+        size_t M; for (M = 7; ; ++M) {                                          \
+            ASORT_INSERT_SORT_LIN(L, M); if (M == N) break;                     \
+        }}
+
+#define ASORT(N)                                                                \
+    struct { size_t L, R; } stack[8*sizeof(size_t)];                            \
+    unsigned top = 0;                                                           \
+    size_t L = 0;                                                               \
+    size_t R = N - 1;                                                           \
+    for ( ; ; ) {                                                               \
+        size_t const n = R + 1 - L;                                             \
+        if (n > 7) { /* this is qsort */                                        \
+            size_t mp = L + (n >> 1);                                           \
+            size_t ll = L + 1;                                                  \
+            size_t rr = R - 1;                                                  \
+            if (LESS(mp, L)) {                                                  \
+                SAVE(mp); COPY(mp, L); LOAD(L);                                 \
+            }                                                                   \
+            if (LESS(R, mp)) {                                                  \
+                SAVE(R); COPY(R, mp); LOAD(mp);                                 \
+                if (LESS(mp, L)) {                                              \
+                    SAVE(mp); COPY(mp, L); LOAD(L);                             \
+                }                                                               \
+            }                                                                   \
+            do {                                                                \
+                while (LESS(ll, mp))                                            \
+                    ++ll;                                                       \
+                while (LESS(mp, rr))                                            \
+                    --rr;                                                       \
+                if (ll < rr) {                                                  \
+                    SAVE(ll); COPY(ll, rr); LOAD(rr);                           \
+                    if (mp == ll)                                               \
+                        mp = rr;                                                \
+                    else if (mp == rr)                                          \
+                        mp = ll;                                                \
+                    ++ll;                                                       \
+                    --rr;                                                       \
+                }                                                               \
+                else if (ll == rr) {                                            \
+                    ++ll;                                                       \
+                    --rr;                                                       \
+                    break;                                                      \
+                }                                                               \
+            } while (ll <= rr);                                                 \
+            { /* the split is [L..rr][ll..R], the larger is deferred */         \
+                size_t const ls = R + 1 - ll;                                   \
+                size_t const rs = rr + 1 - L;                                   \
+                if (ls < 2)                                                     \
+                    R = rr;                                                     \
+                else if (rs < 2)                                                \
+                    L = ll;                                                     \
+                else if (ls < rs) {                                             \
+                    stack[top].L = L;                                           \
+                    stack[top].R = rr;                                          \
+                    ++top;                                                      \
+                    L = ll;                                                     \
+                }                                                               \
+                else {                                                          \
+                    stack[top].L = ll;                                          \
+                    stack[top].R = R;                                           \
+                    ++top;                                                      \
+                    R = rr;                                                     \
+                }                                                               \
+            }                                                                   \
+        }                                                                       \
+        else {                                                                  \
+            ASORT_INSERT_SORT(L, n);                                            \
+            /* the partition [L..R] is now sorted */                            \
+            if (top == 0) break;                                                \
+            /* recall a deferred partition */                                   \
+            --top;                                                              \
+            L = stack[top].L;                                                   \
+            R = stack[top].R;                                                   \
+        }                                                                       \
+    }                                                                           \
+    ((void)0)
+
 #endif /* _h_klib_ksort_macro_ */

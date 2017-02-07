@@ -31,7 +31,6 @@
 #include <vdb/table.h>
 #include <vdb/xform.h>
 #include <vdb/schema.h>
-#include <kdb/meta.h>
 #include <kdb/column.h>
 #include <klib/data-buffer.h>
 #include <bitstr.h>
@@ -44,6 +43,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <zlib.h>
 
 typedef struct self_t {
     KColumn const *kcol;
@@ -60,48 +60,141 @@ static void CC self_whack(void *const vp) {
     free(self);
 }
 
-static size_t KColumnBlobSize(KColumnBlob const *self)
-{
-    size_t dummy = 0;
-    size_t remain = 0;
-    rc_t const rc = KColumnBlobRead(self, 0, NULL, 0, &dummy, &remain);
+#ifndef INFLATE_BACK_INPUT_BUFFER_SIZE
+#define INFLATE_BACK_INPUT_BUFFER_SIZE (32u * 1024u) /* should be enough to read the whole blob in one shot */
+#endif
 
-    assert(rc == 0); /* this should be infallible */
-    return remain;
+struct readBlobContext {
+    KColumnBlob const *source;
+    size_t cur;
+    rc_t rc;
+    uint8_t input[INFLATE_BACK_INPUT_BUFFER_SIZE];
+};
+
+static unsigned readBlob(void *const Ctx, uint8_t **const input)
+{
+    struct readBlobContext *ctx = Ctx;
+    size_t nread = 0;
+    size_t dummy = 0;
+    
+    ctx->rc = KColumnBlobRead(ctx->source, ctx->cur, ctx->input, sizeof(ctx->input), &nread, &dummy);
+    if (nread == 0)
+        return 0;
+    ctx->cur += nread;
+    
+    *input = ctx->input;
+    return (unsigned)nread;
 }
 
-static rc_t KColumnBlobReadBuffer(KColumnBlob const *self, KDataBuffer *buffer)
+static int resizeAndCopy(void *const Ctx, uint8_t *const data, unsigned const length)
 {
-    size_t const size = KColumnBlobSize(self);
-    rc_t rc = KDataBufferMake(buffer, 8, size);
-    size_t cur = 0;
-    uint8_t *base = buffer->base;
-
+    KDataBuffer *const outputBuffer = Ctx;
+    unsigned const at = (unsigned)outputBuffer->elem_count;
+    rc_t rc = KDataBufferResize(outputBuffer, at + length);
     assert(rc == 0);
-    if (rc) return rc;
-    while (cur < size) {
-        size_t nread = 0;
-        size_t dummy = 0;
-        
-        rc = KColumnBlobRead(self, cur, base + cur, size - cur, &nread, &dummy);
-        if (rc) break;
-        assert(nread > 0);
-        cur += nread;
+    if (rc == 0) {
+        uint8_t *const out = outputBuffer->base;
+        memmove(out + at, data, length);
+        return 0;
     }
-    return rc;
+    return -1;
+}
+static rc_t decompress(struct readBlobContext *const ctx, KDataBuffer *const rslt)
+{
+    uint8_t window[1u << MAX_WBITS];
+    int zrc = 0;
+    z_stream strm;
+    
+    memset(&strm, 0, sizeof(strm));
+    zrc = inflateBackInit(&strm, MAX_WBITS, window);
+    assert(zrc == Z_OK);
+    
+    strm.next_in = ctx->input + 1;
+    strm.avail_in = ctx->cur - 1;
+    
+    zrc = inflateBack(&strm, readBlob, ctx, resizeAndCopy, rslt);
+    {
+        rc_t rc = 0;
+        switch (zrc) {
+        case Z_STREAM_END:
+            break;
+        case Z_DATA_ERROR:
+            /* programmer error or corrupt data */
+            rc = RC(rcVDB, rcFunction, rcExecuting, rcData, rcCorrupt);
+            assert(rc == 0); /* let's assume it's programmer error */
+            break;
+        case Z_BUF_ERROR:
+            if (strm.next_in == Z_NULL) {
+                /* the error came from readBlob or blob was truncated */
+                rc = ctx->rc;
+                assert(rc != 0); /* let's assume truncation is programmer error */
+                if (rc == 0)
+                    rc = RC(rcVDB, rcFunction, rcExecuting, rcBlob, rcTooShort);
+            }
+            else {
+                /* the error came from resizeAndCopy */
+                rc = RC(rcVDB, rcFunction, rcExecuting, rcMemory, rcExhausted);
+            }
+        default:
+            /* programmer error */
+            abort();
+            break;
+        }
+        inflateBackEnd(&strm);
+        return rc;
+    }
+}
+
+static rc_t loadBlob(KColumnBlob const *blob, KDataBuffer *rslt)
+{
+    struct readBlobContext ctx;
+    size_t nread = 0;
+    size_t remain = 0;
+    
+    ctx.rc = KColumnBlobRead(blob, 0, ctx.input, sizeof(ctx.input), &nread, &remain);
+    assert(ctx.rc == 0);
+    if (ctx.rc) return ctx.rc;
+
+    if (ctx.input[0] == 0x78) {
+        ctx.rc = KDataBufferMake(rslt, 8, (nread + remain - 1) * 4);
+        assert(ctx.rc == 0);
+        if (ctx.rc != 0)
+            return ctx.rc;
+        rslt->elem_count = 0;
+
+        ctx.source = blob;
+        ctx.cur = nread;
+        
+        return decompress(&ctx, rslt);
+    }
+    else {
+        /* not compressed */
+        ctx.rc = KDataBufferMake(rslt, 8, nread + remain - 1);
+        assert(ctx.rc == 0);
+        if (ctx.rc) return ctx.rc;
+
+        memmove(rslt->base, ctx.input + 1, nread - 1);
+        if (remain > 0) {
+            size_t dummy = 0;
+            uint8_t *dst = rslt->base;
+            dst += nread - 1;
+            return KColumnBlobRead(blob, nread, dst, remain, &nread, &dummy);
+        }
+        return 0;
+    }
 }
 
 static
-rc_t CC row_func(void *const Self,
-                 VXformInfo const *const info,
-                 int64_t const row_id,
-                 VRowResult *const rslt,
-                 uint32_t const argc,
-                 VRowData const *const argv)
+rc_t CC dictionaryDecode(void *const Self,
+                         VXformInfo const *const info,
+                         int64_t const row_id,
+                         VRowResult *const rslt,
+                         uint32_t const argc,
+                         VRowData const *const argv)
 {
     self_t *const self = Self;
-    uint32_t const *const key = ((uint8_t const *)argv[0].u.data.base) + ((argv[0].u.data.first_elem * argv[0].u.data.elem_bits) / 8);
-    size_t const count = (argv[0].u.data.elem_count * argv[0].u.data.elem_bits) / 8;
+    uint32_t const *const key = (void const *)(((uint8_t const *)argv[0].u.data.base) + ((argv[0].u.data.first_elem * argv[0].u.data.elem_bits) / 8));
+    size_t const count = argv[0].u.data.elem_count;
     rc_t rc = 0;
 
     assert(count == 1);
@@ -116,24 +209,34 @@ rc_t CC row_func(void *const Self,
         self->dataRowStart = self->dataRowEnd = 0;
         
         rc = KColumnOpenBlobRead(self->kcol, &kblob, row_id);
+        assert(rc == 0);
         if (rc) return rc;
+        
         rc = KColumnBlobIdRange(kblob, &startId, &rowCount);
         assert(rc == 0);
         if (rc) return rc;
-        rc = KColumnBlobReadBuffer(kblob, &self->data);
+
+        rc = loadBlob(kblob, &self->data);
+        KColumnBlobRelease(kblob);
         assert(rc == 0);
         if (rc) return rc;
-        KColumnBlobRelease(kblob);
+        
         self->dataRowStart = startId;
-        self->dataRowLast = startId + rowCount;
+        self->dataRowEnd = startId + rowCount;
     }
     {
+        uint8_t const *const endp = ((uint8_t const *)self->data.base) + self->data.elem_count;
         uint8_t const *const data = ((uint8_t const *)self->data.base) + key[0];
         size_t len;
+
         for (len = 0; ; ++len) {
-            int const ch = data[len];
-            if (ch == '\0')
-                break;
+            if (data + len < endp) {
+                int const ch = data[len];
+                if (ch == '\0')
+                    break;
+            }
+            else
+                return RC(rcVDB, rcFunction, rcExecuting, rcData, rcInvalid);
         }
         rc = KDataBufferResize(rslt->data, len);
         if (rc == 0) {
@@ -144,50 +247,33 @@ rc_t CC row_func(void *const Self,
     return rc;
 }
 
+#ifdef UNIT_TEST
+static rc_t make_dict_text_lookup(VFuncDesc *rslt, KColumn const *kcol)
+{
+    self_t *const self = calloc(1, sizeof(self_t));
+    
+    self->kcol = kcol;
+    
+    rslt->self = self;
+    rslt->whack = self_whack;
+    rslt->variant = vftRow;
+    rslt->u.ndf = dictionaryDecode;
+    
+    return 0;
+}
+#else
 /* 
- function < type T > T meta:read #1.0 < ascii node, * bool deterministic > ();
+ function
+ text8_set dict:text:lookup #1.0 ( vdb:dict:text:key key );
  */
-VTRANSFACT_BUILTIN_IMPL ( meta_read, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
+VTRANSFACT_BUILTIN_IMPL ( dict_text_lookup, 1, 0, 0 ) ( const void *Self, const VXfactInfo *info,
     VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
-    rc_t rc = 0;
-    self_t *self;
-    SDatatype *sdt;
-    bool need_byte_swap;
-    bool deterministic = true;
-    
-    if (cp->argc > 1)
-        deterministic = cp->argv[1].data.b[0];
-        
-    sdt = VSchemaFindTypeid(info->schema, info->fdesc.fd.td.type_id);
-    assert(sdt != NULL);
-    
-	self = calloc(1, sizeof(self_t));
-	if (self == NULL)
-		rc = RC(rcVDB, rcFunction, rcConstructing, rcMemory, rcExhausted);
-    else
-    {
-        const KMetadata *meta;
-        
-        rc = VTableOpenMetadataRead(info->tbl, &meta);
-        if (rc == 0) {
-            rc = KMetadataOpenNodeRead(meta, &self->node, "%.*s", cp->argv[0].count, cp->argv[0].data.ascii);
-            KMetadataRelease(meta);
-            if (rc == 0) {
-                KMDataNodeByteOrder(self->node, &need_byte_swap);
-                if (need_byte_swap)
-                    self->byte_swap = sdt->byte_swap;
-                
-                rslt->self = self;
-                rslt->whack = self_whack;
-                
-                rslt->variant = deterministic ? vftRow : vftNonDetRow;
-                rslt->u.ndf = meta_read_func;
-                
-                return 0;
-            }
-        }
-        self_whack(self);
-	}
-    return rc;
+    rslt->self = calloc(1, sizeof(self_t));
+    rslt->whack = self_whack;
+    rslt->variant = vftRow;
+    rslt->u.ndf = dictionaryDecode;
+
+    return 0;
 }
+#endif
