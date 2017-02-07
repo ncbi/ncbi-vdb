@@ -568,7 +568,7 @@ static int s_GzipAndWrite ( KGZipFile *self,
         assert( ret != Z_STREAM_ERROR );  /* state not clobbered */
         have = sizeof( self->buff ) - strm->avail_out;
         written = 0;
-        *rc = KFileWrite( self->file, self->filePosition, self->buff, have, &written );
+        *rc = KFileWriteAll( self->file, self->filePosition, self->buff, have, &written );
         /* this is wrong - Z_ERRNO would tell us to check errno for error
            but the error is in *rc */
         if ( *rc != 0 )
