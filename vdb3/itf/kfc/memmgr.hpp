@@ -27,17 +27,10 @@
 #ifndef _hpp_vdb3_kfc_memmgr_
 #define _hpp_vdb3_kfc_memmgr_
 
-#ifndef _hpp_vdb3_kfc_except_
 #include <kfc/except.hpp>
-#endif
-
-#ifndef _hpp_vdb3_kfc_refcount_
 #include <kfc/refcount.hpp>
-#endif
-
-#ifndef _hpp_vdb3_kfc_ref_
 #include <kfc/ref.hpp>
-#endif
+#include <kfc/time.hpp>
 
 namespace vdb3
 {
