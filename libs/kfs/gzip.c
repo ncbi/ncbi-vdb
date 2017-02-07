@@ -31,6 +31,7 @@ struct KGZipFile;
 #include <kfs/impl.h>  /* KFile_vt_v1 */
 #include <kfs/gzip.h>  /* KFileMakeGzipFor... */
 #include <klib/debug.h>
+#include <klib/status.h>
 #include <klib/rc.h>
 #include <klib/out.h>
 #include <sysalloc.h>
@@ -44,6 +45,15 @@ struct KGZipFile;
 #define GZIP_DEBUG(msg) DBGMSG(DBG_KFS,DBG_FLAG(DBG_KFS_GZIP), msg)
 #else
 #define GZIP_DEBUG(msg)
+#endif
+
+#if _DEBUGGING && 0
+/* set limit to 1MB */
+#define USE_FILE_LIMIT 0x100000
+#endif
+
+#ifdef USE_FILE_LIMIT
+#include <kfs/limitfile.h>
 #endif
 
 /***************************************************************************************/
@@ -416,52 +426,66 @@ LIB_EXPORT rc_t CC KFileMakeGzipForWrite( struct KFile **result,
     struct KFile *file )
 {
     rc_t rc;
-    z_stream* strm;
-    KGZipFile *obj;
 
-    if ( result == NULL || file == NULL )
-        return RC ( rcFS, rcFile, rcConstructing, rcParam, rcNull );
-
-    obj = (KGZipFile*) malloc(sizeof(KGZipFile));
-    if (!obj)
-        return RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
-
-    rc = KFileInit(&obj->dad, (const KFile_vt*) &s_vtKFile_OutGz, "KGZipFile", "no-name", false, true);
-    if (rc != 0) {
-        free(obj);
-        return rc;
-    }
-
-    strm = &obj->strm;
-    strm->zalloc   = Z_NULL;
-    strm->zfree    = Z_NULL;
-    strm->opaque   = Z_NULL;
-    strm->avail_in = 0;
-    strm->next_in  = Z_NULL;
-
-    /* TBD - this should check gzlib error codes */
-    if (deflateInit2(strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, WINDOW_BITS,
-        8, /* The default value for the memLevel parameter is 8 */
-        Z_DEFAULT_STRATEGY) != Z_OK)
-    {
-        free(obj);
-        return RC ( rcFS, rcFile, rcConstructing, rcNoObj, rcUnknown );
-    }
-
-    obj->myPosition   = 0;
-    obj->filePosition = 0;
-    obj->completed    = false;
-
-    rc = KFileAddRef(file);
-    if ( rc != 0 )
-    {
-        obj->file = NULL;
-        KGZipFile_OutDestroy ( obj );
-    }
+    if ( result == NULL )
+        rc = RC ( rcFS, rcFile, rcConstructing, rcParam, rcNull );
     else
     {
-        obj->file = file;
-        *result = &obj->dad;
+        if ( file == NULL )
+            rc = RC ( rcFS, rcFile, rcConstructing, rcParam, rcNull );
+        else if ( ! file -> write_enabled )
+        {
+            if ( file -> read_enabled )
+                rc = RC ( rcFS, rcFile, rcConstructing, rcFile, rcReadonly );
+            else
+                rc = RC ( rcFS, rcFile, rcConstructing, rcFile, rcNoPerm );
+        }
+        else
+        {
+            KGZipFile * obj = calloc ( 1, sizeof * obj );
+            if ( obj == NULL )
+                rc = RC ( rcFS, rcFile, rcConstructing, rcMemory, rcExhausted );
+            else
+            {
+                rc = KFileInit( & obj->dad, (const KFile_vt*) &s_vtKFile_OutGz,
+                    "KGZipFile", "no-name", false, true );
+                if ( rc == 0 )
+                {
+                    /* The default value for the memLevel parameter is 8 */
+                    if ( deflateInit2 (&obj->strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
+                             WINDOW_BITS, 8, Z_DEFAULT_STRATEGY) != Z_OK )
+                    {
+                        rc = RC ( rcFS, rcFile, rcConstructing, rcNoObj, rcUnknown );
+                    }
+                    else
+                    {
+#if USE_FILE_LIMIT
+                        KFile * limitFile;
+                        STATUS ( STAT_USR, "wrapping gzip output file in a limit file with limit %u bytes per block.\n", USE_FILE_LIMIT );
+                        rc = KFileMakeLimitFile ( & limitFile, file, USE_FILE_LIMIT );
+                        if ( rc == 0 )
+                        {
+                            obj -> file = limitFile;
+                            * result = & obj -> dad;
+                            return 0;
+                        }
+#else
+                        rc = KFileAddRef ( file );
+                        if ( rc == 0 )
+                        {
+                            obj -> file = file;
+                            * result = & obj -> dad;
+                            return 0;
+                        }
+#endif
+                    }
+                }
+
+                free ( obj );
+            }
+        }
+
+        * result = NULL;
     }
 
     return rc;
