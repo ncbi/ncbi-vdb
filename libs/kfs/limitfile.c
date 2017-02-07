@@ -159,7 +159,7 @@ static const KFile_vt_v1 vtKLimitFile =
  *  create a new file object
  */
 
-rc_t KLimitFileMake ( KFile ** pself, const KFile * original, size_t block_size )
+LIB_EXPORT rc_t CC KFileMakeLimitFile ( KFile ** pself, const KFile * original, size_t block_size )
 {
     rc_t rc;
 
