@@ -68,6 +68,8 @@ public:
 
     AST * MakeAst ( const char* p_source, bool p_debugParse = false, bool p_printTree = false );
 
+    bool OldParse ( const char* p_source );
+
     void VerifyErrorMessage ( const char* p_source, const char* p_expectedError );
 
     enum yytokentype TokenType ( const ParseTree * p_node ) const

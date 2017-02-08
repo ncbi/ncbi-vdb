@@ -57,6 +57,7 @@ public:
 
         const STypeExpr *   ReturnType () const { return reinterpret_cast < const STypeExpr * > ( m_fn -> rt ); }
         uint32_t            Version () const { return m_fn -> version; }
+
         uint16_t            MandatoryParamCount () const { return m_fn -> func . mand; }
         bool                IsVariadic () const { return m_fn -> func . vararg != 0 ; }
         uint32_t            ParamCount () const { return VectorLength ( & m_fn -> func . parms ); }
@@ -64,6 +65,7 @@ public:
         {
             return static_cast < const SProduction * > ( VectorGet ( & m_fn -> func . parms, p_idx ) );
         }
+
         uint32_t SchemaTypeParamCount () const { return VectorLength ( & m_fn -> type ); }
         uint32_t SchemaConstParamCount () const { return VectorLength ( & m_fn -> schem ); }
         const SIndirectType* GetSchemaTypeParam ( uint32_t p_idx ) const
@@ -75,27 +77,72 @@ public:
             return static_cast < const SIndirectConst* > ( VectorGet ( & m_fn -> schem, p_idx ) );
         }
 
+        uint16_t            FactoryMandatoryParamCount () const { return m_fn -> fact . mand; }
+        bool                FactoryIsVariadic () const { return m_fn -> fact . vararg != 0 ; }
+        uint32_t            FactoryParamCount () const { return VectorLength ( & m_fn -> fact . parms ); }
+        const SIndirectConst * FactoryGetParam ( uint32_t p_idx ) const
+        {
+            return static_cast < const SIndirectConst * > ( VectorGet ( & m_fn -> fact . parms, p_idx ) );
+        }
+
         const SFunction* m_fn;
     };
 
-    FunctionAccess GetFunction ( const char* p_name, uint32_t p_type = eFunction )
+public:
+    AST_Function_Fixture ()
+    :   m_newParse ( true ),
+        m_schema ( 0 )
     {
-        const KSymbol* sym = VerifySymbol ( p_name, p_type );
+    }
+    ~AST_Function_Fixture ()
+    {
+        VSchemaRelease ( m_schema );
+    }
 
-        // for functions, sym points to an entry in the overloads table (schema->fname)
-        const SNameOverload* name = static_cast < const SNameOverload* > ( sym -> u . obj );
-        if ( 1u != VectorLength ( & name -> items ) )
+    FunctionAccess ParseFunction ( const char * p_source, const char * p_name, uint32_t p_type = eFunction )
+    {
+        const SFunction* ret = 0;
+        if ( m_newParse )
         {
-            throw std :: logic_error ( "AST_Function_Fixture::GetFunction : too many overloads" );
-        }
-        const SFunction* ret = static_cast < const SFunction* > ( VectorGet ( & name -> items, 0 ) );
-        if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )
-        {
-            throw std :: logic_error ( "AST_Function_Fixture::GetFunction : wrong name" );
-        }
+            MakeAst ( p_source, false, false );
+            const KSymbol* sym = VerifySymbol ( p_name, p_type );
 
+            // for functions, sym points to an entry in the overloads table (schema->fname)
+            const SNameOverload* name = static_cast < const SNameOverload* > ( sym -> u . obj );
+            if ( 1u != VectorLength ( & name -> items ) )
+            {
+                throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : too many overloads" );
+            }
+            ret = static_cast < const SFunction* > ( VectorGet ( & name -> items, 0 ) );
+            if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )
+            {
+                throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : wrong name" );
+            }
+        }
+        else
+        {
+            const VDBManager *mgr;
+            if ( VDBManagerMakeRead ( & mgr, 0 ) != 0 )
+            {
+                throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : VDBManagerMakeRead() failed" );
+            }
+            if ( VDBManagerMakeSchema ( mgr, & m_schema ) != 0 )
+            {
+                throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : VDBManagerMakeSchema() failed" );
+            }
+
+            if ( VSchemaParseText ( m_schema, 0, p_source, string_size ( p_source ) ) != 0 )
+            {
+                throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : VSchemaParseText() failed" );
+            }
+
+            ret = static_cast < const SFunction* > ( VectorGet ( & m_schema -> func, 0 ) );
+
+            VDBManagerRelease ( mgr );
+        }
         return FunctionAccess ( ret );
     }
+
     FunctionAccess GetOverload ( const char* p_name, uint32_t p_idx = 0 )
     {
         const KSymbol* sym = VerifySymbol ( p_name, eFunction );
@@ -109,35 +156,35 @@ public:
 
         return FunctionAccess ( static_cast < const SFunction * > ( VectorGet ( & name -> items, p_idx ) ) );
     }
+
+    // old parsing support
+    bool m_newParse;
+    VSchema *m_schema;
 };
 
 // untyped
 
 FIXTURE_TEST_CASE(Func_Untyped, AST_Function_Fixture)
 {
-    MakeAst ( "function __untyped f();" );
-    FunctionAccess fn = GetFunction ( "f", eUntypedFunc );
+    FunctionAccess fn = ParseFunction ( "function __untyped f();", "f", eUntypedFunc );
     REQUIRE_NULL ( fn . ReturnType () );
 }
 
 FIXTURE_TEST_CASE(Func_UntypedRedeclared, AST_Function_Fixture)
 {
-    MakeAst ( "function __untyped f(); function __untyped f();" );
-    FunctionAccess fn = GetFunction ( "f", eUntypedFunc );
-    REQUIRE_NULL ( fn . ReturnType () );
+    VerifyErrorMessage ( "function __untyped f(); function __untyped f();", "Declared earlier and cannot be overloaded: 'f'");
+}
+
+FIXTURE_TEST_CASE(Func_Untyped_Exists, AST_Function_Fixture)
+{
+    VerifyErrorMessage ( "typedef U8 f; function __untyped f();", "Declared earlier and cannot be overloaded: 'f'" );
 }
 
 // row_length
 
-FIXTURE_TEST_CASE(Func_Untyped_Exists, AST_Function_Fixture)
-{
-    VerifyErrorMessage ( "typedef U8 f; function __untyped f();", "Declared earlier with a different type: 'f'" );
-}
-
 FIXTURE_TEST_CASE(Func_Rowlength, AST_Function_Fixture)
 {   // implemented by the same code as untyped, the basic test case will suffice
-    MakeAst ( "function __row_length f();" );
-    FunctionAccess fn = GetFunction ( "f", eRowLengthFunc );
+    FunctionAccess fn = ParseFunction ( "function __row_length f();", "f", eRowLengthFunc );
     REQUIRE_NULL ( fn . ReturnType () );
 }
 
@@ -145,51 +192,44 @@ FIXTURE_TEST_CASE(Func_Rowlength, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_Scalar_NoParams, AST_Function_Fixture)
 {
-    MakeAst ( "function U8 f();" );
-    FunctionAccess fn = GetFunction ( "f" );
+    FunctionAccess fn = ParseFunction ( "function U8 f();", "f" );
     REQUIRE_EQ ( U8_id, fn . ReturnType () -> fd . td . type_id );
     REQUIRE_EQ ( 1u,    fn . ReturnType () -> fd . td . dim );
 }
 
 FIXTURE_TEST_CASE(Func_Array_NoParams, AST_Function_Fixture)
 {
-    MakeAst ( "function U8[2] f();" );
-    FunctionAccess fn = GetFunction ( "f" );
+    FunctionAccess fn = ParseFunction ( "function U8[2] f();", "f" );
     REQUIRE_EQ ( U8_id, fn . ReturnType () -> fd . td . type_id );
     REQUIRE_EQ ( 2u,    fn . ReturnType () -> fd . td . dim );
 }
 
 FIXTURE_TEST_CASE(Func_VarArray_NoParams, AST_Function_Fixture)
 {
-    MakeAst ( "function U8[*] f();" );
-    FunctionAccess fn = GetFunction ( "f" );
+    FunctionAccess fn = ParseFunction ( "function U8[*] f();", "f" );
     REQUIRE_EQ ( U8_id, fn . ReturnType () -> fd . td . type_id );
     REQUIRE_EQ ( 0u,    fn . ReturnType () -> fd . td . dim );
 }
 
 FIXTURE_TEST_CASE(Func_ReturnArray, AST_Function_Fixture)
 {
-    MakeAst ( "function U8[10] f();" );
-    FunctionAccess fn = GetFunction ( "f" );
+    FunctionAccess fn = ParseFunction ( "function U8[10] f();", "f" );
     REQUIRE_EQ ( U8_id,         fn . ReturnType () -> fd . td . type_id );
     REQUIRE_EQ ( (uint32_t)10,  fn . ReturnType () -> fd . td . dim );
 }
 
 FIXTURE_TEST_CASE(Func_ReturnTypeset, AST_Function_Fixture)
 {
-    MakeAst ( "typeset ts { U8 }; function ts f();" );
-    FunctionAccess fn = GetFunction ( "f" );
+    FunctionAccess fn = ParseFunction ( "typeset ts { U8 }; function ts f();", "f" );
     REQUIRE_EQ ( (uint32_t)0x40000000,  fn . ReturnType () -> fd . td . type_id );
     REQUIRE_EQ ( (uint32_t)1,           fn . ReturnType () -> fd . td . dim );
 }
 
 FIXTURE_TEST_CASE(Func_ReturnFormat, AST_Function_Fixture)
 {
-    MakeAst ( "fmtdef fmt; function fmt f();" );
-    FunctionAccess fn = GetFunction ( "f" );
+    FunctionAccess fn = ParseFunction ( "fmtdef fmt; function fmt f();", "f" );
     REQUIRE_EQ ( (uint32_t)1, fn . ReturnType () -> fmt -> id );
-    REQUIRE_EQ ( (uint32_t)1, fn . ReturnType () -> fd . td . type_id );
-    REQUIRE_EQ ( (uint32_t)1, fn . ReturnType () -> fd . td . dim );
+    REQUIRE_EQ ( (uint32_t)1, fn . ReturnType () -> fd . fmt );
 }
 
 FIXTURE_TEST_CASE(Func_ReturnBad, AST_Function_Fixture)
@@ -201,23 +241,20 @@ FIXTURE_TEST_CASE(Func_ReturnBad, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_WithVersion, AST_Function_Fixture)
 {
-    MakeAst ( "function U8 f#1.2();" );
-    FunctionAccess fn = GetFunction ( "f" );
+    FunctionAccess fn = ParseFunction ( "function U8 f#1.2();", "f" );
     REQUIRE_EQ ( (uint32_t) ( 1 << 24 ) | ( 2 << 16 ), fn . Version () );
 }
 
 FIXTURE_TEST_CASE(Func_Redeclared_NoVersion, AST_Function_Fixture)
 {
-    MakeAst ( "function U8 f();function U16 f();" );
-    FunctionAccess fn = GetOverload ( "f", 0 );
+    FunctionAccess fn = ParseFunction ( "function U8 f();function U16 f();", "f" );
     REQUIRE_EQ ( U8_id, fn . ReturnType () -> fd . td . type_id ); // 2nd decl with the same version ignored
     REQUIRE_EQ ( 1u,    fn . ReturnType () -> fd . td . dim );
 }
 
 FIXTURE_TEST_CASE(Func_Redeclared_SameVersion, AST_Function_Fixture)
 {
-    MakeAst ( "function U8 f#1.2();function U16 f#1.2();" );
-    FunctionAccess fn = GetOverload ( "f", 0 );
+    FunctionAccess fn = ParseFunction ( "function U8 f#1.2();function U16 f#1.2();", "f" );
     REQUIRE_EQ ( U8_id, fn . ReturnType () -> fd . td . type_id ); // 2nd decl with the same version ignored
 }
 
@@ -236,9 +273,11 @@ FIXTURE_TEST_CASE(Func_Redeclared_DiffMajor, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_Redeclared_HigherMinor, AST_Function_Fixture)
 {   // higner minor is used
-    MakeAst ( "function U8 f#1();function U16 f#1.2();" );
-    FunctionAccess fn = GetFunction ( "f" );
-    REQUIRE_EQ ( U16_id, fn . ReturnType () -> fd . td . type_id ); // 2nd decl used
+    if ( m_newParse ) // the old parser fails here!
+    {
+        FunctionAccess fn = ParseFunction ( "function U8 f#1();function U16 f#1.2();",  "f" );
+        REQUIRE_EQ ( U16_id, fn . ReturnType () -> fd . td . type_id ); // 2nd decl used
+    }
 }
 
 FIXTURE_TEST_CASE(Func_NoReleaseNumberForSimpleFunctions, AST_Function_Fixture)
@@ -254,13 +293,12 @@ FIXTURE_TEST_CASE(Func_BadParamType, AST_Function_Fixture)
 }
 FIXTURE_TEST_CASE(Func_BadParamName, AST_Function_Fixture)
 {
-    VerifyErrorMessage ( "function U8 f(U8 U16);", "Cannot be used as a formal parameter name: 'U16'" );
+    VerifyErrorMessage ( "function U8 f(U8 U16);", "Cannot be used as a parameter name: 'U16'" );
 }
 
 FIXTURE_TEST_CASE(Func_OneParamScalar, AST_Function_Fixture)
 {
-    MakeAst ( "function U8 f(U8 p);" );
-    FunctionAccess fn = GetFunction ( "f" );
+    FunctionAccess fn = ParseFunction  ( "function U8 f(U8 p);", "f" );
     REQUIRE_EQ ( (uint16_t)1, fn . MandatoryParamCount () );
     REQUIRE ( ! fn .  IsVariadic () );
     REQUIRE_EQ ( (uint32_t)1, fn . ParamCount () );
@@ -278,8 +316,7 @@ FIXTURE_TEST_CASE(Func_OneParamScalar, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_OneParamArray, AST_Function_Fixture)
 {
-    MakeAst ( "function U8 f(U8[2] p);" );
-    FunctionAccess fn = GetFunction ( "f" );
+    FunctionAccess fn = ParseFunction ( "function U8 f(U8[2] p);", "f" );
     const SProduction * param = fn . GetParam ( 0 );
     const STypeExpr * type = reinterpret_cast < const STypeExpr * > ( param -> fd );
     REQUIRE_EQ ( (uint32_t)2, type -> fd . td. dim );
@@ -287,8 +324,7 @@ FIXTURE_TEST_CASE(Func_OneParamArray, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_OneParamVarArray, AST_Function_Fixture)
 {
-    MakeAst ( "function U8 f(U8[*] p);" );
-    FunctionAccess fn = GetFunction ( "f" );
+    FunctionAccess fn = ParseFunction ( "function U8 f(U8[*] p);", "f" );
     const SProduction * param = fn . GetParam ( 0 );
     const STypeExpr * type = reinterpret_cast < const STypeExpr * > ( param -> fd );
     REQUIRE_EQ ( (uint32_t)0, type -> fd . td. dim );
@@ -296,21 +332,19 @@ FIXTURE_TEST_CASE(Func_OneParamVarArray, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_ControlParam, AST_Function_Fixture)
 {
-    MakeAst ( "function U8 f( control U8 p);" );
-    FunctionAccess fn = GetFunction ( "f" );
+    FunctionAccess fn = ParseFunction ( "function U8 f( control U8 p);", "f" );
     const SProduction * param = fn . GetParam ( 0 );
     REQUIRE ( param -> control );
 }
 
 FIXTURE_TEST_CASE(Func_TwoParamsSameName, AST_Function_Fixture)
 {
-    VerifyErrorMessage ( "function U8 f(U8 p, U16 p);", "Cannot be used as a formal parameter name: 'p'" );
+    VerifyErrorMessage ( "function U8 f(U8 p, U16 p);", "Cannot be used as a parameter name: 'p'" );
 }
 
 FIXTURE_TEST_CASE(Func_TwoParams, AST_Function_Fixture)
 {
-    MakeAst ( "function U8 f(U8 p1, U16 p2);" );
-    FunctionAccess fn = GetFunction ( "f" );
+    FunctionAccess fn = ParseFunction ( "function U8 f(U8 p1, U16 p2);", "f" );
     REQUIRE_EQ ( (uint16_t)2, fn . MandatoryParamCount () );
     REQUIRE ( ! fn .  IsVariadic () );
     REQUIRE_EQ ( (uint32_t)2, fn . ParamCount () );
@@ -322,12 +356,40 @@ FIXTURE_TEST_CASE(Func_TwoParams, AST_Function_Fixture)
     REQUIRE_EQ ( string ( "p2" ), string ( param -> name -> name . addr ) );
 }
 
+FIXTURE_TEST_CASE(Func_OptionalParams, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction ( "function U8 f( * U8 p1, U16 p2);", "f" );
+    REQUIRE_EQ ( (uint16_t)0, fn . MandatoryParamCount () );
+    REQUIRE ( ! fn .  IsVariadic () );
+    REQUIRE_EQ ( (uint32_t)2, fn . ParamCount () );
+}
+FIXTURE_TEST_CASE(Func_Varargs, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction ( "function U8 f(U8 p, ...);", "f" );
+    REQUIRE_EQ ( (uint16_t)1, fn . MandatoryParamCount () );
+    REQUIRE ( fn .  IsVariadic () );
+    REQUIRE_EQ ( (uint32_t)1, fn . ParamCount () );
+}
+FIXTURE_TEST_CASE(Func_OprionalAndVarargs, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction ( "function U8 f( * U8 p, ...);", "f" );
+    REQUIRE_EQ ( (uint16_t)0, fn . MandatoryParamCount () );
+    REQUIRE ( fn .  IsVariadic () );
+    REQUIRE_EQ ( (uint32_t)1, fn . ParamCount () );
+}
+FIXTURE_TEST_CASE(Func_MandatoryOprionalAndVarargs, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "function U8 f(U8 p1, * U16 p2, ...);", "f" );
+    REQUIRE_EQ ( (uint16_t)1, fn . MandatoryParamCount () );
+    REQUIRE ( fn .  IsVariadic () );
+    REQUIRE_EQ ( (uint32_t)2, fn . ParamCount () );
+}
+
 // schema signature
 
 FIXTURE_TEST_CASE(Func_SchemaParam_Type, AST_Function_Fixture)
 {
-    MakeAst ( "function < type T > T f ( T p1 );" );
-    FunctionAccess fn = GetFunction ( "f" );
+    FunctionAccess fn = ParseFunction  ( "function < type T > T f ( T p1 );", "f" );
     REQUIRE_EQ ( (uint32_t)1, fn . SchemaTypeParamCount () );
     REQUIRE_EQ ( (uint32_t)0, fn . SchemaConstParamCount () );
 
@@ -341,8 +403,7 @@ FIXTURE_TEST_CASE(Func_SchemaParam_Type, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_SchemaParam_Value, AST_Function_Fixture)
 {
-    MakeAst ( "function < U32 T > U8 f ( U8 p );" );
-    FunctionAccess fn = GetFunction ( "f" );
+    FunctionAccess fn = ParseFunction  ( "function < U32 T > U8 f ( U8 p );", "f" );
     REQUIRE_EQ ( (uint32_t)0, fn . SchemaTypeParamCount () );
     REQUIRE_EQ ( (uint32_t)1, fn . SchemaConstParamCount () );
 
@@ -368,8 +429,7 @@ FIXTURE_TEST_CASE(Func_SchemaParam_IntArray, AST_Function_Fixture)
 }
 FIXTURE_TEST_CASE(Func_SchemaParam_IntPseudoArray, AST_Function_Fixture)
 {
-    MakeAst ( "function < U8[1] X > U8 f ();" );
-    FunctionAccess fn = GetFunction ( "f" );
+    FunctionAccess fn = ParseFunction  ( "function < U8[1] X > U8 f ();", "f" );
     const SIndirectConst* param = fn . GetSchemaConstParam ( 0 );
     const STypeExpr * type = reinterpret_cast < const STypeExpr* > ( param -> td );
     REQUIRE_EQ ( U8_id, type -> fd . td . type_id );
@@ -382,8 +442,7 @@ FIXTURE_TEST_CASE(Func_SchemaParam_UnresolvedTypeUsed, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_SchemaParam_UsedInReturn, AST_Function_Fixture)
 {
-    MakeAst ( "function < U32 T > U8[T] f ( U8 p );" );
-    FunctionAccess fn = GetFunction ( "f" );
+    FunctionAccess fn = ParseFunction  ( "function < U32 T > U8[T] f ( U8 p );", "f" );
     const STypeExpr * type = fn. ReturnType ();
     REQUIRE_EQ ( U8_id, type -> fd . td . type_id );
     REQUIRE ( ! type -> resolved );
@@ -392,8 +451,7 @@ FIXTURE_TEST_CASE(Func_SchemaParam_UsedInReturn, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_SchemaParam_UsedInParam, AST_Function_Fixture)
 {
-    MakeAst ( "function < U32 T > U8 f ( U8[T] p );" );
-    FunctionAccess fn = GetFunction ( "f" );
+    FunctionAccess fn = ParseFunction  ( "function < U32 T > U8 f ( U8[T] p );", "f" );
     const SProduction * param = fn . GetParam ( 0 );
     const STypeExpr * type = reinterpret_cast < const STypeExpr * > ( param -> fd );
     REQUIRE_EQ ( U8_id, type -> fd . td . type_id );
@@ -401,31 +459,48 @@ FIXTURE_TEST_CASE(Func_SchemaParam_UsedInParam, AST_Function_Fixture)
     REQUIRE_EQ ( (uint32_t)0, type -> fd . td. dim );
 }
 
-// sandbox for exploring the old parsing logic
-FIXTURE_TEST_CASE(Old_Parse, AST_Function_Fixture)
+// factory signature
+
+FIXTURE_TEST_CASE(Func_FactoryParam_Empty, AST_Function_Fixture)
 {
-    const VDBManager *mgr;
-    REQUIRE_RC ( VDBManagerMakeRead ( & mgr, 0 ) );
-    VSchema *schema;
-    REQUIRE_RC ( VDBManagerMakeSchema ( mgr, & schema ) );
-
-    string input = "function < U32 T > U8[T] f ( U8 p );";
-
-    REQUIRE_RC ( VSchemaParseText ( schema, 0, input . c_str (), input . length () ) );
-
-    const SFunction* fn = static_cast < const SFunction* > ( VectorGet ( & schema -> func, 0 ) );
-    REQUIRE_EQ ( U8_id, ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . type_id );
-    REQUIRE ( ! ( ( STypeExpr * ) ( fn -> rt ) ) -> resolved );
-    REQUIRE_EQ ( 0u,    ( ( STypeExpr * ) ( fn -> rt ) ) -> fd . td . dim );
-
-    VSchemaRelease ( schema );
-    VDBManagerRelease ( mgr );
+    FunctionAccess fn = ParseFunction  ( "function U8 f <> ( U8 p1 );", "f" );
+    REQUIRE_EQ ( (uint16_t)0, fn . FactoryMandatoryParamCount () );
+    REQUIRE ( ! fn . FactoryIsVariadic () );
+    REQUIRE_EQ ( (uint32_t)0, fn . FactoryParamCount ());
 }
-
-//TODO: optional parameters
-//TODO: vararg
-
-//TODO: factory parameters
+FIXTURE_TEST_CASE(Func_FactoryParam_Mandatory, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "function U8 f <U16 fp1, U32 fp2 > ();", "f" );
+    REQUIRE_EQ ( (uint16_t)2, fn . FactoryMandatoryParamCount () );
+    REQUIRE ( ! fn . FactoryIsVariadic () );
+    REQUIRE_EQ ( (uint32_t)2, fn . FactoryParamCount ());
+    const SIndirectConst * p1 = fn . FactoryGetParam ( 0 );
+    REQUIRE_EQ ( string ( "fp1" ), ToCppString ( p1 -> name -> name ) );
+    REQUIRE_EQ ( U16_id, reinterpret_cast < const STypeExpr * > ( p1 -> td ) -> dt -> id );
+    REQUIRE_EQ ( (uint32_t)1, p1 -> expr_id );
+    REQUIRE_EQ ( (uint32_t)0, p1 -> pos );
+}
+FIXTURE_TEST_CASE(Func_FactoryParam_Optional, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "function U8 f < * U16 fp > ();", "f" );
+    REQUIRE_EQ ( (uint16_t)0, fn . FactoryMandatoryParamCount () );
+    REQUIRE_EQ ( (uint32_t)1, fn . FactoryParamCount ());
+}
+FIXTURE_TEST_CASE(Func_FactoryParam_Vararg, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "function U8 f <U16 fp, ... > ();", "f" );
+    REQUIRE ( fn . FactoryIsVariadic () );
+}
+FIXTURE_TEST_CASE(Func_FactoryParam_Used, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "function U8 f <U16 fp> ( U8[fp] p1 );", "f" );
+    const SProduction * param = fn . GetParam ( 0 );
+    const STypeExpr * type = reinterpret_cast < const STypeExpr * > ( param -> fd );
+    REQUIRE_EQ ( (uint32_t)eIndirectExpr, type -> dim -> var );
+    REQUIRE_EQ ( U8_id, type -> fd . td . type_id );
+    REQUIRE ( ! type -> resolved );
+    REQUIRE_EQ ( (uint32_t)0, type -> fd . td. dim );
+}
 
 //TODO: script + untyped - error
 //TODO: validate + untyped - error

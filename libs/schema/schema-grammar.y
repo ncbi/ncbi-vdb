@@ -493,7 +493,28 @@ opt_func_1_0_fact_sig
     ;
 
 func_1_0_fact_sig
-    : '<' func_1_0_param_signature '>'  { $$ . subtree = MakeTree ( PT_FACTSIG, T ( $1 ), P ( $2 ), T ( $3 ) ); }
+    : '<' func_1_0_fact_signature '>'  { $$ . subtree = MakeTree ( PT_FACTSIG, T ( $1 ), P ( $2 ), T ( $3 ) ); }
+    ;
+
+func_1_0_fact_signature
+    : empty                 { $$ = $1; }
+    | func_1_0_fact_params func_1_0_vararg_formals
+                            { $$ . subtree = MakeTree ( PT_FUNCPARAMS, P ( $1 ), P ( $2 ) ); }
+    | '*' func_1_0_fact_params func_1_0_vararg_formals
+                            { $$ . subtree = MakeTree ( PT_FUNCPARAMS, T ( $1 ), P ( $2 ), P ( $3 ) ); }
+    | func_1_0_fact_params '*' func_1_0_fact_params func_1_0_vararg_formals
+                            { $$ . subtree = MakeTree ( PT_FUNCPARAMS, P ( $1 ), T ( $2 ), P ( $3 ), P ( $4 ) ); }
+    | func_1_0_fact_params ',' '*' func_1_0_fact_params func_1_0_vararg_formals
+                            { $$ . subtree = MakeTree ( PT_FUNCPARAMS, P ( $1 ), T ( $2 ), T ( $3 ), P ( $4 ), P ( $5 ) ); }
+    ;
+
+func_1_0_fact_params
+    : fact_param_1_0                                { $$ . subtree = MakeList ( $1 ); }
+    | func_1_0_fact_params ',' fact_param_1_0       { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
+    ;
+
+fact_param_1_0
+    : typespec_1_0 IDENTIFIER_1_0       { $$ . subtree = MakeTree ( PT_FORMALPARAM, P ( $1 ), T ( $2 ) ); }
     ;
 
 func_1_0_param_sig

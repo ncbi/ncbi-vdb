@@ -498,6 +498,8 @@ FIXTURE_TEST_CASE(AliasedTypesetInTypeset, AST_Fixture)
 //TODO: array of arrays in typedef, typeset, constdef, return type
 
 //TODO: function call: no arguments
+//TODO: function call: optional parameters
+//TODO: function call: vararg
 
 #include "wb-test-schema-func.cpp"
 

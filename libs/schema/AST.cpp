@@ -289,22 +289,26 @@ AST_Expr :: EvaluateConst ( ASTBuilder & p_builder ) const
             const KSymbol* sym = p_builder . Resolve ( * fqn ); // will report unknown
             if ( sym != 0 )
             {
-                if ( sym -> type == eSchemaParam )
+                switch ( sym -> type )
                 {
-                    SSymExpr *x = p_builder . Alloc < SSymExpr > ();
-                    if ( x != 0 )
+                case eSchemaParam :
+                case eFactParam :
                     {
-                        x -> dad . var = eIndirectExpr;
-                        atomic32_set ( & x -> dad . refcount, 1 );
-                        x -> _sym = sym;
-                        x -> alt = false;
+                        SSymExpr *x = p_builder . Alloc < SSymExpr > ();
+                        if ( x != 0 )
+                        {
+                            x -> dad . var = eIndirectExpr;
+                            atomic32_set ( & x -> dad . refcount, 1 );
+                            x -> _sym = sym;
+                            x -> alt = false;
 
-                        return & x -> dad;
+                            return & x -> dad;
+                        }
                     }
-                }
-                else
-                {
-                    p_builder . ReportError ( "Not yet implemented" );
+                    break;
+                default:
+                    p_builder . ReportError ( "Not yet implemented in a constant expression" );
+                    break;
                 }
             }
             break;

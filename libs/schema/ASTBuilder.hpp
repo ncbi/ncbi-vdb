@@ -36,6 +36,8 @@ struct BSTree;
 struct STypeExpr;
 struct SFunction;
 struct SFormParmlist;
+struct SIndirectType;
+struct SIndirectConst;
 
 namespace ncbi
 {
@@ -78,7 +80,7 @@ namespace ncbi
             AST * AliasDef  ( const Token*, AST_FQN* name, AST_FQN* newName );
             AST * UntypedFunctionDecl ( const Token*, AST_FQN* name );
             AST * RowlenFunctionDecl ( const Token*, AST_FQN* name );
-            AST * FunctionDecl ( const Token*, AST * schema, AST * returnType, AST_FQN* name, AST* fact, AST_ParamSig* params, AST* prologue );
+            AST * FunctionDecl ( const Token*, AST * schema, AST * returnType, AST_FQN* name, AST_ParamSig* fact, AST_ParamSig* params, AST* prologue );
 
         private:
             bool Init();
@@ -90,22 +92,36 @@ namespace ncbi
             void DeclareFunction ( const AST_FQN&           fqn,
                                    uint32_t                 type,
                                    struct STypeExpr *       retType,
-                                   SFormParmlist *          param,
+                                   SFormParmlist *          factory,
+                                   SFormParmlist *          formals,
                                    const BSTree *           sscope,
                                    const Vector *           stypes,
                                    const Vector *           sparams,
-                                   const BSTree *           fscope );
+                                   const BSTree *           fscope,
+                                   bool                     canOverload );
 
             struct STypeExpr * MakeTypeExpr ( const AST & p_type );
+
+            struct SFormParmlist * MakeFactoryParams ( const AST_ParamSig & );
+            void AddFactoryParams ( Vector& p_sig, const AST & p_params );
+
             struct SFormParmlist * MakeFormalParams ( const AST_ParamSig & );
-            void AddFormals ( Vector& p_sig, const AST & p_params );
+            void AddFormalParams ( Vector& p_sig, const AST & p_params );
+
             void MakeSchemaParams ( const AST & p_sig, Vector& p_types, Vector & p_values );
+            struct SIndirectType * MakeSchemaParamType ( const AST_FQN & p_name );
+            struct SIndirectConst * MakeSchemaParamConst ( const AST_FQN & p_name );
 
             uint64_t EvalConstExpr ( const AST_Expr &expr );
-            void AddOverload ( struct SFunction * fn, const KSymbol * priorDecl);
+            bool HandleOverload ( struct SFunction * fn, const KSymbol * priorDecl);
 
             // false - failed, error reported
             rc_t VectorAppend ( Vector *self, uint32_t *idx, const void *item );
+
+            void VectorMove ( Vector & p_dest, const Vector * p_source );
+
+            void SFormParmlistMove ( SFormParmlist & p_dest, SFormParmlist * p_source );
+            struct KSymbol * CreateParamSymbol ( const char* p_name, int p_type, void * p_obj );
 
         private:
             bool m_debug;

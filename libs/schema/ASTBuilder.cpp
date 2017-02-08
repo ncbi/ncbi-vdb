@@ -464,7 +464,7 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
                 break;
             case eFormat:
                 ret -> fmt                  = static_cast < const SFormat * > ( type -> u . obj );
-                ret -> fd . td . type_id    = ret -> fmt -> id;
+                ret -> fd . fmt             = ret -> fmt -> id;
                 break;
             case eSchemaType:
                 ret -> id                   = static_cast < const SIndirectType * > ( type -> u . obj );

@@ -212,7 +212,7 @@
 
 %type <node> source schema_1 schema_decls schema_decl schema_2 typedef new_type_names
 %type <node> typeset typeset_spec typespec dim fmtdef const alias function func_decl
-%type <node> schema_sig_opt return_type fact_sig prologue formals_list
+%type <node> schema_sig_opt return_type prologue formals_list
 %type <node>  schema_formals schema_formal type_expr formals formal
 %type <node> script_stmts script_stmt cond_expr
 
@@ -220,7 +220,7 @@
 
 %type <expr> expr
 
-%type <paramSig> param_sig param_signature
+%type <paramSig> param_sig param_signature fact_sig
 
 %type <boolean> vararg
 
@@ -352,7 +352,7 @@ return_type
     ;
 
 fact_sig
-    : PT_EMPTY                                   { $$ = new AST ( PT_EMPTY ); }
+    : PT_EMPTY                                   { $$ = new AST_ParamSig ( $1, 0, 0, false); }
     | PT_FACTSIG '(' '<' param_signature '>' ')' { $$ = $4; }
     ;
 
