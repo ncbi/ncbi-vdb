@@ -40,7 +40,6 @@
 #include <kdb/table.h>
 #include <kdb/rowset.h>
 
-
 #include <stdlib.h>
 #include <time.h>
 
@@ -50,7 +49,7 @@
 #include <string>
 
 #define ENTRY \
-    HYBRID_FUNC_ENTRY ( rcDB, rcRowSet, rcValidating ); \
+    HYBRID_FUNC_ENTRY ( rcDB, rcVector, rcValidating ); \
     m_ctx = ctx
 
 #define EXIT \

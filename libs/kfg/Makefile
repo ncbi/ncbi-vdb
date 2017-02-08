@@ -75,11 +75,19 @@ clean: stdclean
 #-------------------------------------------------------------------------------
 # kfg
 #
-$(ILIBDIR)/libkfg: $(TARGDIR)/default.kfg $(addprefix $(ILIBDIR)/libkfg.,$(ILIBEXT))
+$(ILIBDIR)/libkfg: \
+	$(TARGDIR)/default.kfg \
+	$(TARGDIR)/certs.kfg \
+	$(addprefix $(ILIBDIR)/libkfg.,$(ILIBEXT))
 
 $(TARGDIR)/default.kfg: $(addsuffix /default.kfg,$(NCBIDIR))
 
+$(TARGDIR)/certs.kfg: $(addsuffix /certs.kfg,$(NCBIDIR))
+
 $(addsuffix /default.kfg,$(NCBIDIR)): $(SRCDIR)/default.kfg
+	cp $^ $@
+
+$(addsuffix /certs.kfg,$(NCBIDIR)): $(SRCDIR)/certs.kfg
 	cp $^ $@
 
 KFG_SRC = \

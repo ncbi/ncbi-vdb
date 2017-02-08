@@ -173,7 +173,7 @@ static rc_t NGS_ReferenceSequenceEBIInitReference (
 
     if ( ismd5 )
     {
-        memcpy ( ref->buf_ref_data, ebi_data, ebi_data_size );
+        memmove ( ref->buf_ref_data, ebi_data, ebi_data_size );
         ref -> cur_length = ebi_data_size;
     }
     else
@@ -383,7 +383,6 @@ struct NGS_String * EBI_ReferenceSequenceGetBases ( EBI_ReferenceSequence * self
         else
         {
             uint64_t basesToReturn = totalBases - offset;
-            char* data;
 
             if (size != (size_t)-1 && basesToReturn > size)
                 basesToReturn = size;

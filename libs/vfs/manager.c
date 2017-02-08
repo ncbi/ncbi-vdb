@@ -1416,7 +1416,6 @@ rc_t TransformFileToDirectory(const KDirectory * dir,
     return rc;
 }
 
-/* also handles ftp - if it cant we'll need another function */
 static
 rc_t VFSManagerOpenDirectoryReadHttp (const VFSManager *self,
                                       const KDirectory * dir,
@@ -1441,13 +1440,13 @@ rc_t VFSManagerOpenDirectoryReadHttp (const VFSManager *self,
                 extension, sizeof extension - 1, sizeof extension - 1 ) != 0 )
         {
           const String * p = NULL;
-          rc_t rc = VPathMakeString ( path, & p );
-          if ( rc == 0 ) {
-                PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(path)'",
+          rc_t rc2 = VPathMakeString ( path, & p );
+          if ( rc2 == 0 ) {
+                PLOGERR ( klogErr, ( klogErr, rc, "error with https open '$(path)'",
                                        "path=%S", p ) );
                 free (  ( void * ) p );
           } else {
-            PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(scheme):$(path)'",
+            PLOGERR ( klogErr, ( klogErr, rc, "error with https open '$(scheme):$(path)'",
                              "scheme=%S,path=%S", & path -> scheme, s ) );
           }
         }
@@ -1524,7 +1523,7 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
         {
             if ( high_reliability )
             {
-                PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(U)'",
+                PLOGERR ( klogErr, ( klogErr, rc, "error with https open '$(U)'",
                                      "U=%S", uri ) );
             }
         }
@@ -2680,9 +2679,9 @@ LIB_EXPORT rc_t CC VFSManagerUpdateKryptoPassword (const VFSManager * self,
 /*                 bool save_old_password; */
                 char * pc;
 
-                memcpy (password_dir, old_password_file, old_password_file_size);
-                memcpy (new_password_file, old_password_file, old_password_file_size);
-                memcpy (new_password_file + old_password_file_size, temp_extension, sizeof temp_extension);
+                memmove (password_dir, old_password_file, old_password_file_size);
+                memmove (new_password_file, old_password_file, old_password_file_size);
+                memmove (new_password_file + old_password_file_size, temp_extension, sizeof temp_extension);
                 /* new_password_file_size = old_password_file_size + sizeof temp_extension - 1; */
 
                 pc = string_rchr (password_dir, old_password_file_size, '/');

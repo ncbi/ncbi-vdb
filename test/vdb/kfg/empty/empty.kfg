@@ -1,3 +1,1 @@
-repository/remote/main/NCBI/apps/sra/volumes/fuse1000 = "sra-instant/reads/ByRun/sra"
-repository/remote/main/NCBI/apps/refseq/volumes/refseq = "refseq"
-repository/remote/main/NCBI/root = "http://ftp-trace.ncbi.nlm.nih.gov/sra"
+repository/remote/main/CGI/resolver-cgi = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi"

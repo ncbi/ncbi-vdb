@@ -256,7 +256,7 @@ rc_t KReencFileReadHeaderOut (KReencFile * self, size_t offset, void * buffer,
     if (offset + bsize > sizeof (KEncFileHeader))
         bsize = sizeof (KEncFileHeader) - offset;
 
-    memcpy (buffer, self->block.text + offset, bsize);
+    memmove (buffer, self->block.text + offset, bsize);
     self->block_id = NO_CURRENT_BLOCK;
     *num_read = bsize;
     
@@ -277,7 +277,7 @@ rc_t KReencFileReadBlockOut (KReencFile * self, size_t offset, void * buffer,
     if (offset + bsize > sizeof self->block)
         bsize = sizeof self->block - offset;
 
-    memcpy (buffer, self->block.text + offset, bsize);
+    memmove (buffer, self->block.text + offset, bsize);
     *num_read = bsize;
 
     return 0;
@@ -300,7 +300,7 @@ rc_t KReencFileReadFooterOut (KReencFile * self, size_t offset,
     if (offset + bsize > sizeof self->foot)
         bsize = sizeof self->foot - offset;
 
-    memcpy (buffer, self->foot.text + offset, bsize);
+    memmove (buffer, self->foot.text + offset, bsize);
     self->block_id = NO_CURRENT_BLOCK;
     *num_read = bsize;
 

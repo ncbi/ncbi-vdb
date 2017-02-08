@@ -363,9 +363,9 @@ bool NGS_ReadCollectionHasReference ( NGS_ReadCollection * self, ctx_t ctx, cons
     if ( self == NULL )
         INTERNAL_WARNING ( xcSelfNull, "failed to get reference '%.128s'", spec );
     else if ( spec == NULL )
-        INTERNAL_WARNING ( xcParamNull, "reference spec" );
+        INTERNAL_WARNING ( xcParamNull, "NULL reference spec" );
     else if ( spec [ 0 ] == 0 )
-        INTERNAL_WARNING ( xcStringEmpty, "reference spec" );
+        INTERNAL_WARNING ( xcStringEmpty, "empty reference spec" );
     else
     {
         POP_CTX ( ctx );
@@ -381,9 +381,9 @@ struct NGS_Reference * NGS_ReadCollectionGetReference ( NGS_ReadCollection * sel
     if ( self == NULL )
         INTERNAL_ERROR ( xcSelfNull, "failed to get reference '%.128s'", spec );
     else if ( spec == NULL )
-        INTERNAL_ERROR ( xcParamNull, "reference spec" );
+        INTERNAL_ERROR ( xcParamNull, "NULL reference spec" );
     else if ( spec [ 0 ] == 0 )
-        INTERNAL_ERROR ( xcStringEmpty, "reference spec" );
+        INTERNAL_ERROR ( xcStringEmpty, "empty reference spec" );
     else
     {
         POP_CTX ( ctx );

@@ -173,8 +173,8 @@ rc_t KMagicNodeMake (KMagicNode ** kmmp, const KFFTables * tables,
 		    self->kfflen = kfflen;
 		    self->magiclen = magiclen;
 		    self->magicdescr = self->kffdescr + kfflen + 1;
-		    memcpy (self->kffdescr, kffdescr, kfflen);
-		    memcpy (self->magicdescr, magicdescr, magiclen);
+		    memmove (self->kffdescr, kffdescr, kfflen);
+		    memmove (self->magicdescr, magicdescr, magiclen);
 		    self->kffdescr[self->kfflen] = '\0';
 		    self->magicdescr[self->magiclen] = '\0';
 		    *kmmp = self;
@@ -344,7 +344,7 @@ rc_t KMagicTableFindKFFDescr (KMagicTable * self, const char * str, char * kff, 
 	LOGERR (klogErr, rc, "KMagicTableFindKFFDecr: found storage is NULL");
 	return rc;
     }
-    memcpy (kff, np->kffdescr, np->kfflen);
+    memmove (kff, np->kffdescr, np->kfflen);
     kff[np->kfflen] = '\0';
     return rc;
 }
@@ -838,7 +838,7 @@ LIB_EXPORT rc_t CC KMagicFileFormatMake (KFileFormat ** pft, const char * magic_
                             z = strlen (magic_path);
                             if (magic_path_cursor != magic_path_buff)
                                 *magic_path_cursor++ = ':';
-                            memcpy (magic_path_cursor, magic_path, z);
+                            memmove (magic_path_cursor, magic_path, z);
                             magic_path_cursor += z;
                             *magic_path_cursor = '\0';
                             DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_KFF),
@@ -871,7 +871,7 @@ LIB_EXPORT rc_t CC KMagicFileFormatMake (KFileFormat ** pft, const char * magic_
                                         kfg_magic_path_buff[z] = '\0';
                                         if (magic_path_cursor != magic_path_buff)
                                             *magic_path_cursor++ = ':';
-                                        memcpy (magic_path_cursor,kfg_magic_path_buff, z);
+                                        memmove (magic_path_cursor,kfg_magic_path_buff, z);
                                         magic_path_cursor += z;
                                         *magic_path_cursor = '\0';
                                         DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_KFF),
@@ -923,7 +923,7 @@ LIB_EXPORT rc_t CC KMagicFileFormatMake (KFileFormat ** pft, const char * magic_
                                     z = strlen (unix_magic_path);
                                     if (magic_path_cursor != magic_path_buff)
                                         *magic_path_cursor++ = ':';
-                                    memcpy (magic_path_cursor, unix_magic_path, z);
+                                    memmove (magic_path_cursor, unix_magic_path, z);
                                     magic_path_cursor += z;
                                     *magic_path_cursor = '\0';
                                     DBGMSG (DBG_KFS, DBG_FLAG(DBG_KFS_KFF),

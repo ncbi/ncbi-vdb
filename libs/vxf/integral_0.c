@@ -44,8 +44,8 @@ rc_t CC INTEGRAL_NAME ( T ) ( void *data,                                \
     uint32_t i;                                                          \
     T prior, * dst = rslt -> base;                                       \
     const T * src = argv [ 0 ] . u . data . base;                        \
-    dst += rslt -> first_elem;						                     \
-    src += argv [ 0 ] . u . data . first_elem;				             \
+    dst += rslt -> first_elem;                                           \
+    src += argv [ 0 ] . u . data . first_elem;                           \
     for ( prior = 0, i = 0; i < rslt -> elem_count; ++ i )               \
     {                                                                    \
         dst [ i ] = prior;                                               \
@@ -66,6 +66,7 @@ static VFixedRowFunc integral0_func [] =
     INTEGRAL_NAME ( int32_t ),
     INTEGRAL_NAME ( int64_t )
 };
+
 /* integral
  *  return the 1 integral of input
  *
@@ -81,7 +82,7 @@ static VFixedRowFunc integral0_func [] =
  * USAGE:
  *    I32 position = < I32 > integral_0 ( pos_1st_d );
  */
-VTRANSFACT_IMPL ( vdb_integral_0, 1, 0, 0 ) ( const void *self, const VXfactInfo *info,
+VTRANSFACT_IMPL ( vdb_integral_0, 1, 1, 0 ) ( const void *self, const VXfactInfo *info,
     VFuncDesc *rslt, const VFactoryParams *cp, const VFunctionParams *dp )
 {
     int size_idx;

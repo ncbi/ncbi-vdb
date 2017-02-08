@@ -51,6 +51,9 @@ extern "C" {
 #define KROWSET_DATA void
 #endif
 
+/* we do not want to expand the RC codes now */
+#define rcRowSet rcVector
+\
 
 /*--------------------------------------------------------------------------
  * forwards

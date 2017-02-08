@@ -147,7 +147,7 @@ int mbedtls_hmac_drbg_reseed( mbedtls_hmac_drbg_context *ctx,
     /* 1. Concatenate entropy and additional data if any */
     if( additional != NULL && len != 0 )
     {
-        memcpy( seed + seedlen, additional, len );
+        memmove( seed + seedlen, additional, len );
         seedlen += len;
     }
 
@@ -288,7 +288,7 @@ int mbedtls_hmac_drbg_random_with_add( void *p_rng,
         mbedtls_md_hmac_update( &ctx->md_ctx, ctx->V, md_len );
         mbedtls_md_hmac_finish( &ctx->md_ctx, ctx->V );
 
-        memcpy( out, ctx->V, use_len );
+        memmove( out, ctx->V, use_len );
         out += use_len;
         left -= use_len;
     }
@@ -451,7 +451,7 @@ static int hmac_drbg_self_test_entropy( void *data,
                                         unsigned char *buf, size_t len )
 {
     const unsigned char *p = data;
-    memcpy( buf, p + test_offset, len );
+    memmove( buf, p + test_offset, len );
     test_offset += len;
     return( 0 );
 }

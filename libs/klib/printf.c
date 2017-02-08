@@ -1363,9 +1363,9 @@ rc_t create_overflow ( KDataBuffer *overflow, const char *fmt_str,
         PrintArg *dargs = ( void* ) ( dfmt + fmt_str_size );
 
         /* copy existing data */
-        memcpy ( dstr, str, str_idx * sizeof * dstr );
-        memcpy ( dfmt, fmt, fmt_idx * sizeof * dfmt );
-        memcpy ( dargs, args, arg_idx * sizeof * dargs );
+        memmove ( dstr, str, str_idx * sizeof * dstr );
+        memmove ( dfmt, fmt, fmt_idx * sizeof * dfmt );
+        memmove ( dargs, args, arg_idx * sizeof * dargs );
 
         /* if there are any pointers into "str", relocate them */
         if ( str_idx != 0 )
@@ -2271,7 +2271,7 @@ rc_t write_buffer ( KBufferedWrtHandler *out, const char *data, size_t bytes )
             num_writ = out -> bsize - out -> cur;
             if ( total + num_writ > bytes )
                 num_writ = bytes - total;
-            memcpy ( & out -> buff [ out -> cur ], & data [ total ], num_writ );
+            memmove ( & out -> buff [ out -> cur ], & data [ total ], num_writ );
         }
     }
     return 0;
@@ -2834,10 +2834,10 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                     switch ( f . radix )
                     {
                     case 2:
-                        memcpy ( prefix, "0b", prefix_len = 2 );
+                        memmove ( prefix, "0b", prefix_len = 2 );
                         break;
                     case 8:
-                        memcpy ( prefix, "0", prefix_len = prefix_contribution = 1 );
+                        memmove ( prefix, "0", prefix_len = prefix_contribution = 1 );
 #if OCTAL_PREFIX_COUNTS_TOWARD_PRECISION
                         if ( f . add_prefix && f . u . f . precision != 0 )
                             -- f . u . f . precision;
@@ -2846,10 +2846,10 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                     case 16:
 #if HEX_PREFIX_FOLLOWS_CASE
                         if ( to_numeral [ 10 ] == 'A' )
-                            memcpy ( prefix, "0X", prefix_len = 2 );
+                            memmove ( prefix, "0X", prefix_len = 2 );
                         else
 #endif
-                            memcpy ( prefix, "0x", prefix_len = 2 );
+                            memmove ( prefix, "0x", prefix_len = 2 );
                         break;
                     }
                 }

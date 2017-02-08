@@ -562,7 +562,7 @@ rc_t VBlobCreateFromData_v1(
     {
         /* produce little-endian 64-bit row-length */
         row_len = 0;
-        memcpy ( & row_len, & src [ 1 ], rls );
+        memmove ( & row_len, & src [ 1 ], rls );
 
 #if __BYTE_ORDER != __LITTLE_ENDIAN
         /* correct for big-endian */
@@ -819,7 +819,7 @@ void VBlobPageMapOptimize ( VBlob **vblobp)
 									data_offset[j]    = dst_offset;
 									rc = KDataBufferResize(&new_data,dst_offset+pm->length[i]);
 									if(rc == 0){
-										memcpy((uint8_t*)new_data.base+dst_offset*elem_sz,src,pm->length[i]*elem_sz);
+										memmove((uint8_t*)new_data.base+dst_offset*elem_sz,src,pm->length[i]*elem_sz);
 										dst_offset += pm->length[i];
 									}
 								}
@@ -889,7 +889,7 @@ rc_t VBlobSerialize ( const VBlob *self, KDataBuffer *result ) {
 #endif
             rc = encode_header_v1(result->base, result->elem_count, &sz, row_length, data_bits, self->byte_order);
             if (rc == 0) {
-                memcpy(&((uint8_t *)result->base)[sz], self->data.base, data_bytes);
+                memmove(&((uint8_t *)result->base)[sz], self->data.base, data_bytes);
                 result->elem_count = sz + data_bytes;
             }
         }
@@ -918,11 +918,11 @@ rc_t VBlobSerialize ( const VBlob *self, KDataBuffer *result ) {
                         if (rc == 0) {
                             rc = encode_header_v2(result->base, result->elem_count, &sz, headers.elem_count, pagemap.elem_count, data_bits);
                             if (rc == 0) {
-                                memcpy(&((uint8_t *)result->base)[sz], headers.base, headers.elem_count);
+                                memmove(&((uint8_t *)result->base)[sz], headers.base, headers.elem_count);
                                 sz += headers.elem_count;
-                                memcpy(&((uint8_t *)result->base)[sz], pagemap.base, pagemap.elem_count);
+                                memmove(&((uint8_t *)result->base)[sz], pagemap.base, pagemap.elem_count);
                                 sz += pagemap.elem_count;
-                                memcpy(&((uint8_t *)result->base)[sz], self->data.base, data_bytes);
+                                memmove(&((uint8_t *)result->base)[sz], self->data.base, data_bytes);
                                 result->elem_count = sz + data_bytes;
                             }
                         }
@@ -1008,7 +1008,7 @@ uint32_t VBlobFixedRowLength( const struct VBlob *self ) {
 #define COPY(FORCE, BITS, DBASE, DOFF, SBASE, SOFF, LENGTH) \
     (((FORCE == 0) || (BITS & 7) != 0) ? ( \
         bitcpy(DBASE, DOFF * BITS + FORCE, SBASE, SOFF * BITS, LENGTH * BITS)) : ( \
-        (void)memcpy(((      char *)DBASE)+((DOFF * BITS) >> 3), \
+        (void)memmove(((      char *)DBASE)+((DOFF * BITS) >> 3), \
                ((const char *)SBASE)+((SOFF * BITS) >> 3), \
                ((LENGTH * BITS) >> 3))))
 
@@ -1265,7 +1265,7 @@ LIB_EXPORT rc_t CC VBlobRead ( const VBlob *self, int64_t row_id,
 
     /* copy out data up to limit */
     assert ( boff == 0 );
-    memcpy ( buffer, base, ( size_t ) ( to_read >> 3 ) );
+    memmove ( buffer, base, ( size_t ) ( to_read >> 3 ) );
 
     return rc;
 }

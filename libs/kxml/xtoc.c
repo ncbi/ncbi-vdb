@@ -559,7 +559,7 @@ rc_t XTocTreeAddFile      (XTocEntry * self, XTocEntry ** pentry,
         StringInit (&entry->u.file.filetype, pc, z, string_len (pc, z));
         entry->u.file.size = size;
         entry->u.file.offset = offset;
-        memcpy (entry->u.file.md5, md5, sizeof entry->u.file.md5);
+        memmove (entry->u.file.md5, md5, sizeof entry->u.file.md5);
         entry->u.file.has_tree = false;
         entry->u.file.archive = false;
         entry->u.file.container = false;
@@ -873,7 +873,7 @@ rc_t XTocMake (XToc ** pself, const String * base_path)
         return RC (rcFS, rcToc, rcConstructing, rcMemory, rcExhausted);
 
     pc = (char*)(self+1);
-    memcpy (pc, base_path->addr, StringSize(base_path));
+    memmove (pc, base_path->addr, StringSize(base_path));
     pc[StringSize(base_path)] = '\0';
     StringInit (&self->base_path, pc, StringSize(base_path),
                 StringLength(base_path));
@@ -1934,7 +1934,7 @@ rc_t KXTocDirRelativePath (const KXTocDir *self, enum RCContext ctx,
 
     /* insert backup sequences */
     for (bsize = 0; backup > 0; bsize += 3, -- backup)
-	memcpy (& path [ bsize ], "../", 3);
+	memmove (& path [ bsize ], "../", 3);
 
     /* close gap */
     if ( (size_t)( p - path ) > bsize )
@@ -2160,7 +2160,7 @@ static rc_t CC KXTocDirResolvePath (const KXTocDir *self,
                     size_t k = self->toc->base_path.size;
                     if (k > 1)
                     {
-                        memcpy (resolved, self->toc->base_path.addr, k);
+                        memmove (resolved, self->toc->base_path.addr, k);
                         resolved += k;
                         rsize -= k;
                     }

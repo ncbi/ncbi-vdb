@@ -35,7 +35,7 @@ rc_t ArgsConvDefault(const Args * args, uint32_t arg_index, const char * arg, si
     if (!result)
         return RC(rcRuntime, rcArgv, rcConstructing, rcMemory, rcExhausted);
     
-    memcpy(res, arg, arg_len);
+    memmove(res, arg, arg_len);
     res[arg_len] = 0;
     
     *result = res;

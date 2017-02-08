@@ -121,6 +121,7 @@ KFS_CMN = \
 	syslockfile \
 	cacheteefile \
 	from_to_namelist \
+	limitfile \
 	sparsefile
 
 KFS_SRC = \

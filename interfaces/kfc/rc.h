@@ -161,7 +161,6 @@ RC_ENUM ( RCTarget )
     RC_ENTRY ( rcData, "data" )
     RC_ENTRY ( rcQuery, "query" )
     RC_ENTRY ( rcUri, "uri" )
-	RC_ENTRY ( rcRowSet, "row set" )
     RC_LAST  ( rcLastTarget_v1_1 )
 };
 
