@@ -129,7 +129,11 @@ static KDataBuffer compressToBuffer(int bytes, void *data)
     KDataBuffer compressed;
     KDataBuffer result;
     rc_t rc = KDataBufferMake(&compressed, 8, bytes + 1);
+
+    memset(&result, 0, sizeof(result));
     assert(rc == 0);
+    if (rc)
+        return result;
 
     memset(&strm, 0, sizeof(strm));
     zrc = deflateInit2(&strm, Z_BEST_COMPRESSION, Z_DEFLATED, -15, 9, Z_DEFAULT_STRATEGY);
@@ -214,6 +218,8 @@ static rc_t updateKColumnAndReset(self_t *const self, bool final)
     rc_t rc = 0;
 
     assert(count - ((uint32_t)count) == 0);
+    if (compressed.elem_count == 0)
+        return RC(rcVDB, rcFunction, rcExecuting, rcMemory, rcExhausted);
 
     /* reset state */
     MallocPagerWhack(self->pager);
@@ -248,6 +254,32 @@ static rc_t updateKColumnAndReset(self_t *const self, bool final)
     KDataBufferWhack(&data);
     
     return rc;
+}
+
+static rc_t CC getValueFromCurrent(void *const Self, int64_t row_id, uint32_t key, VRowResult *rslt)
+{
+    self_t *const self = Self;
+    
+    if (row_id < self->keysRowStart || row_id > self->keysRowLast)
+        return RC(rcVDB, rcFunction, rcExecuting, rcRow, rcNotFound);
+    else {
+        uint8_t const *const endp = ((uint8_t const *)self->data.base) + self->data.elem_count;
+        uint8_t const *const data = ((uint8_t const *)self->data.base) + key;
+        uint32_t len;
+        
+        for (len = 0; data + len < endp; ++len) {
+            int const ch = data[len];
+            if (ch == '\0') {
+                rc_t rc = KDataBufferResize(rslt->data, len);
+                if (rc == 0) {
+                    memmove(rslt->data->base, data, len);
+                    rslt->elem_count = len;
+                }
+                return rc;
+            }
+        }
+    }
+    return RC(rcVDB, rcFunction, rcExecuting, rcData, rcInvalid);
 }
 
 static

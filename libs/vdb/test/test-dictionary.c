@@ -24,19 +24,17 @@
 #define TEST_SIZE (1024u * 1024u)
 #define VALUE_COUNT (1024u * 2u)
 
-static uint32_t keyData[TEST_SIZE];
-static uint32_t goldData[TEST_SIZE];
-static char *testData[VALUE_COUNT];
+static uint32_t encoded[TEST_SIZE];
+static uint32_t original[TEST_SIZE];
+static char *testValue[VALUE_COUNT];
 
-static void testWrite(KDBManager *mgr)
+static void generateValues()
 {
-    KColumn *kcol;
-    rc_t rc = KDBManagerCreateColumn(mgr, &kcol, kcmInit, kcmMD5, 0, "FOO");
-    int i;
     char value[256];
+    int i;
     
     srand(time(0));
-    for (i = 0; i < TEST_SIZE; ++i) {
+    for (i = 0; i < VALUE_COUNT; ++i) {
         int j;
         
         for (j = 0; j < 255; ++j) {
@@ -48,8 +46,16 @@ static void testWrite(KDBManager *mgr)
             value[j] = ch;
         }
         value[j] = 0;
-        testData[i] = strdup(value);
+        testValue[i] = strdup(value);
     }
+}
+
+static void testWrite(KDBManager *mgr)
+{
+    KColumn *kcol;
+    rc_t rc = KDBManagerCreateColumn(mgr, &kcol, kcmInit, kcmMD5, 0, "FOO");
+    int i;
+    
     if (rc == 0) {
         VFuncDesc desc;
         
@@ -66,15 +72,15 @@ static void testWrite(KDBManager *mgr)
             for (i = 0; i < TEST_SIZE; ++i) {
                 VRowData row;
 
-                memset(&row, 0, sizeof(data));
+                memset(&row, 0, sizeof(row));
                 row.u.data.elem_bits = 8;
-                row.u.data.base = testData[goldData[i] = random() % VALUE_COUNT];
+                row.u.data.base = testValue[original[i] = random() % VALUE_COUNT];
                 row.u.data.elem_count = strlen(row.u.data.base);
                 
                 rc = desc.u.ndf(desc.self, NULL, i + 1, &result, 1, &row);
                 if (rc) break;
                 
-                keyData[i] = *(uint32_t *)data.base;
+                encoded[i] = *(uint32_t *)data.base;
             }
             KDataBufferWhack(&data);
             desc.whack(desc.self);
@@ -98,7 +104,7 @@ static void testRead(KDBManager const *mgr)
     if (rc == 0) {
         VFuncDesc desc;
         
-        rc = make_dict_text_lookup(&desc, kcol);
+        rc = make_dict_text_lookup(&desc, kcol, NULL, NULL);
         if (rc == 0) {
             KDataBuffer data;
             VRowResult result;
@@ -110,15 +116,15 @@ static void testRead(KDBManager const *mgr)
             memset(&result, 0, sizeof(result));
             result.data = &data;
             
-            memset(&row, 0, sizeof(data));
+            memset(&row, 0, sizeof(row));
             row.u.data.elem_bits = 32;
             row.u.data.base = &key;
             row.u.data.elem_count = 1;
             
             for (i = 0; i < TEST_SIZE; ++i) {
-                char const *const expected = testData[goldData[i]];
+                char const *const expected = testValue[original[i]];
                 
-                key = keyData[i];
+                key = encoded[i];
                 rc = desc.u.ndf(desc.self, NULL, i + 1, &result, 1, &row);
                 if (memcmp(expected, data.base, data.elem_count) != 0) {
                     fprintf(stderr, "expected: %s\ngot: %.*s\n", expected, (int)data.elem_count, data.base);
@@ -141,6 +147,7 @@ int main(int argc, char *argv[])
     KDBManager *mgr;
     rc_t rc;
     
+    generateValues();
     rc = KDBManagerMakeUpdate(&mgr, NULL);
     if (rc == 0) {
         testWrite(mgr);

@@ -62,6 +62,7 @@ extern VTRANSFACT_DECL ( meta_value );
 extern VTRANSFACT_DECL ( meta_attr_read );
 extern VTRANSFACT_DECL ( idx_text_project );
 extern VTRANSFACT_DECL ( idx_text_lookup );
+extern VTRANSFACT_DECL ( dict_text_lookup );
 extern VTRANSFACT_DECL ( parameter_read );
 extern VTRANSFACT_DECL ( environment_read );
 
@@ -451,6 +452,7 @@ rc_t VLinkerInitFactoriesRead ( VLinker *self,  KSymTable *tbl, const SchemaEnv 
         { meta_attr_read, "meta:attr:read" },
         { idx_text_project, "idx:text:project" },
         { idx_text_lookup, "idx:text:lookup" },
+        { dict_text_lookup, "dict:text:lookup" },
         { parameter_read, "parameter:read" },
 /*        { environment_read, "environment:read" }, */
 

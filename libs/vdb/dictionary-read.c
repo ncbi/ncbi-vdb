@@ -45,8 +45,12 @@
 #include <string.h>
 #include <zlib.h>
 
+typedef rc_t (CC *getValueFromCurrent_f)(void *encoder, int64_t row, uint32_t key, VRowResult *);
+
 typedef struct self_t {
     KColumn const *kcol;
+    void *encoder;
+    getValueFromCurrent_f getValueFromCurrent;
     KDataBuffer data; /* values are stored here */
     int64_t dataRowStart;
     int64_t dataRowEnd;
@@ -99,6 +103,7 @@ static int resizeAndCopy(void *const Ctx, uint8_t *const data, unsigned const le
     }
     return -1;
 }
+
 static rc_t decompress(struct readBlobContext *const ctx, KDataBuffer *const rslt)
 {
     uint8_t window[1u << MAX_WBITS];
@@ -184,6 +189,25 @@ static rc_t loadBlob(KColumnBlob const *blob, KDataBuffer *rslt)
     }
 }
 
+static rc_t doLookup(uint32_t const key, KDataBuffer const *values, KDataBuffer*rslt)
+{
+    rc_t rc;
+    uint8_t const *const endp = ((uint8_t const *)values->base) + values->elem_count;
+    uint8_t const *const data = ((uint8_t const *)values->base) + key;
+    uint32_t len;
+    
+    for (len = 0; data + len < endp; ++len) {
+        int const ch = data[len];
+        if (ch == '\0') {
+            rc = KDataBufferResize(rslt, len);
+            if (rc == 0)
+                memmove(rslt->base, data, len);
+            return rc;
+        }
+    }
+    return RC(rcVDB, rcFunction, rcExecuting, rcData, rcInvalid);
+}
+
 static
 rc_t CC dictionaryDecode(void *const Self,
                          VXformInfo const *const info,
@@ -200,6 +224,18 @@ rc_t CC dictionaryDecode(void *const Self,
     assert(count == 1);
     assert(argv[0].u.data.elem_bits == 32);
     
+    if (self->encoder) {
+        /* perform the lookup from the encoders current block
+         * will fail with (rcRow, rcNotFound) if row is not in current block
+         */
+        rc = self->getValueFromCurrent(self->encoder, row_id, key[0], rslt);
+        if (rc == 0)
+            return 0;
+
+        if (!(GetRCObject(rc) == (int)rcRow && GetRCState(rc) == (int)rcNotFound))
+            return rc;
+    }
+    /* perform the lookup from the KColumn */
     if (row_id >= self->dataRowEnd || row_id < self->dataRowStart) {
         KColumnBlob const *kblob = NULL;
         uint32_t rowCount = 0;
@@ -224,35 +260,20 @@ rc_t CC dictionaryDecode(void *const Self,
         self->dataRowStart = startId;
         self->dataRowEnd = startId + rowCount;
     }
-    {
-        uint8_t const *const endp = ((uint8_t const *)self->data.base) + self->data.elem_count;
-        uint8_t const *const data = ((uint8_t const *)self->data.base) + key[0];
-        size_t len;
-
-        for (len = 0; ; ++len) {
-            if (data + len < endp) {
-                int const ch = data[len];
-                if (ch == '\0')
-                    break;
-            }
-            else
-                return RC(rcVDB, rcFunction, rcExecuting, rcData, rcInvalid);
-        }
-        rc = KDataBufferResize(rslt->data, len);
-        if (rc == 0) {
-            memmove(rslt->data->base, data, len);
-            rslt->elem_count = len;
-        }
-    }
+    rc = doLookup(key[0], &self->data, rslt->data);
+    if (rc == 0)
+        rslt->elem_count = rslt->data->elem_count;
     return rc;
 }
 
 #ifdef UNIT_TEST
-static rc_t make_dict_text_lookup(VFuncDesc *rslt, KColumn const *kcol)
+static rc_t make_dict_text_lookup(VFuncDesc *rslt, KColumn const *kcol, void *encoder, getValueFromCurrent_f getValueFromCurrent)
 {
     self_t *const self = calloc(1, sizeof(self_t));
     
     self->kcol = kcol;
+    self->encoder = encoder;
+    self->getValueFromCurrent = getValueFromCurrent;
     
     rslt->self = self;
     rslt->whack = self_whack;

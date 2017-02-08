@@ -55,6 +55,7 @@ extern VTRANSFACT_DECL ( NCBI_seq_stats_trigger );
 #endif
 extern VTRANSFACT_DECL ( NCBI_refSeq_stats );
 extern VTRANSFACT_DECL ( idx_text_insert );
+extern VTRANSFACT_DECL ( dict_text_insert );
 extern VTRANSFACT_DECL ( vdb_bzip );
 extern VTRANSFACT_DECL ( vdb_checksum );
 extern VTRANSFACT_DECL ( vdb_fzip );
@@ -84,6 +85,7 @@ rc_t VLinkerInitFactories ( VLinker *self, struct KSymTable *tbl, struct SchemaE
 #endif
         { NCBI_refSeq_stats, "NCBI:refSeq:stats" },
         { idx_text_insert, "idx:text:insert" },
+        { dict_text_insert, "dict:text:insert" },
         { vdb_bzip, "vdb:bzip" },
         { vdb_checksum, "vdb:checksum" },
         { vdb_fzip, "vdb:fzip" },

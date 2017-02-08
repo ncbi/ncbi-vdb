@@ -118,6 +118,7 @@ VDBCMN_SRC = \
 	redimension \
 	index_project \
 	index_lookup \
+	dictionary-read \
 	transpose \
 	delta_average \
 	report-vdb
@@ -166,7 +167,8 @@ WVDB_SRC = \
 	meta-write \
 	meta-attr-write \
 	meta-append \
-	index_insert
+	index_insert \
+	dictionary-write
 
 WVDB_OBJ = \
 	$(addsuffix .$(LOBX),$(WVDB_SRC))

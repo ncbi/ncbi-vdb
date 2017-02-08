@@ -30,7 +30,8 @@ MODULE = libs/vdb/test
 
 TEST_TOOLS=\
 	test-prod-cmn \
-	test-dictionary
+	test-dictionary \
+	test-dictionary-rw
 
 include $(TOP)/build/Makefile.env
 
@@ -54,3 +55,8 @@ DICTIONARY_OBJ=$(addsuffix .$(OBJX),test-dictionary)
 
 $(TEST_BINDIR)/test-dictionary: $(DICTIONARY_OBJ) $(addprefix $(VDB_DIR),dictionary-read.c dictionary-write.c)
 	$(LD) --exe -o $@ $(DICTIONARY_OBJ) $(LIB)
+
+DICTIONARY_RW_OBJ=$(addsuffix .$(OBJX),test-dictionary-rw)
+
+$(TEST_BINDIR)/test-dictionary-rw: $(DICTIONARY_RW_OBJ) $(addprefix $(VDB_DIR),dictionary-read.c dictionary-write.c)
+	$(LD) --exe -o $@ $(DICTIONARY_RW_OBJ) $(LIB)
