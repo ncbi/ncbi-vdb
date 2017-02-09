@@ -148,6 +148,45 @@ ASTBuilder :: HandleOverload ( SFunction * p_f, const KSymbol * p_priorDecl )
 }
 
 void
+ASTBuilder :: HandlePrologue ( SFunction & f, const AST & p_prologue )
+{
+    switch ( p_prologue . GetTokenType () )
+    {
+        case PT_IDENT:
+        {
+            const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( p_prologue );
+            const KSymbol * priorDecl = Resolve ( fqn, false );
+            if ( priorDecl != 0 )
+            {
+                if ( priorDecl -> type == eFunction || priorDecl -> type == eFactory )
+                {
+                    f . u. ext . fact = priorDecl;
+                }
+                else
+                {
+                    ReportError ( "Cannot be used as factory", fqn );
+                }
+            }
+            else
+            {
+                f . u. ext . fact = CreateFqnSymbol ( fqn, eFactory, 0 );
+            }
+        }
+        break;
+    case PT_EMPTY:
+        {
+            if ( p_prologue . ChildrenCount () > 0 )
+            {
+                ReportError ( "Only schema functions can have body: '%S'", & f . name -> name );
+            }
+        }
+        break;
+    default:
+        assert (false);
+    }
+}
+
+void
 ASTBuilder :: DeclareFunction ( const AST_FQN&          p_fqn,
                                 uint32_t                p_type,
                                 struct STypeExpr *      p_retType,
@@ -157,12 +196,18 @@ ASTBuilder :: DeclareFunction ( const AST_FQN&          p_fqn,
                                 const Vector *          p_stypes,
                                 const Vector *          p_sparams,
                                 const BSTree *          p_fscope,
-                                bool                    p_canOverload )
+                                bool                    p_canOverload,
+                                const AST *             p_prologue )
 {
     const KSymbol * priorDecl = Resolve ( p_fqn, false );
     if ( priorDecl != 0 && ( priorDecl -> type != p_type || ! p_canOverload ) )
     {
+        free ( p_retType );
         ReportError ( "Declared earlier and cannot be overloaded", p_fqn );
+        SFormParmlistWhack ( p_factory, SIndirectConstWhack );
+        free ( p_factory );
+        SFormParmlistWhack ( p_params, SProductionWhack );
+        free ( p_params );
         return;
     }
 
@@ -211,6 +256,10 @@ ASTBuilder :: DeclareFunction ( const AST_FQN&          p_fqn,
                     {
                         if ( VectorAppend ( & m_schema -> fname, & name -> cid . id, name ) == 0 )
                         {
+                            if ( p_prologue != 0 )
+                            {
+                                HandlePrologue ( * f, * p_prologue );
+                            }
                             return; // success
                         }
                     }
@@ -228,6 +277,10 @@ ASTBuilder :: DeclareFunction ( const AST_FQN&          p_fqn,
         }
         else if ( HandleOverload ( f, priorDecl ) ) // declared previously
         {
+            if ( p_prologue != 0 )
+            {
+                HandlePrologue ( * f, * p_prologue );
+            }
             return;
         }
         SFunctionWhack ( f, 0 );
@@ -237,14 +290,14 @@ ASTBuilder :: DeclareFunction ( const AST_FQN&          p_fqn,
 AST * ASTBuilder :: UntypedFunctionDecl ( const Token* p_token, AST_FQN* p_name )
 {
     AST * ret = new AST ( p_token, p_name );
-    DeclareFunction ( * p_name, eUntypedFunc, 0, 0, 0, 0, 0, 0, 0, false );
+    DeclareFunction ( * p_name, eUntypedFunc, 0, 0, 0, 0, 0, 0, 0, false, 0 );
     return ret;
 }
 
 AST * ASTBuilder :: RowlenFunctionDecl ( const Token* p_token, AST_FQN* p_name )
 {
     AST * ret = new AST ( p_token, p_name );
-    DeclareFunction ( * p_name, eRowLengthFunc, 0, 0, 0, 0, 0, 0, 0, false );
+    DeclareFunction ( * p_name, eRowLengthFunc, 0, 0, 0, 0, 0, 0, 0, false, 0 );
     return ret;
 }
 
@@ -293,7 +346,6 @@ ASTBuilder :: AddFactoryParams ( Vector& p_sig, const AST & p_params )
         if ( type != 0 )
         {
             param -> td = & type -> dad;
-
         }
 
         if ( VectorAppend ( & p_sig, & param -> pos, param ) != 0 )
@@ -580,7 +632,7 @@ ASTBuilder :: FunctionDecl ( const Token*     p_token,
         ReportError ( "KSymTablePushScope", rc );
     }
 
-    DeclareFunction ( * p_name, eFunction, retType, factory, formals, & sscope, & stypes, & sparams, & fscope, true );
+    DeclareFunction ( * p_name, eFunction, retType, factory, formals, & sscope, & stypes, & sparams, & fscope, true, p_prologue );
     // made shallow copies of scopes and vectors - no need to whack the contents here
     VectorWhack ( & stypes, 0, 0 );
     VectorWhack ( & sparams, 0, 0 );

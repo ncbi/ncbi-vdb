@@ -85,6 +85,8 @@ public:
             return static_cast < const SIndirectConst * > ( VectorGet ( & m_fn -> fact . parms, p_idx ) );
         }
 
+        const KSymbol * FactoryId () const { return m_fn -> u . ext . fact; }
+
         const SFunction* m_fn;
     };
 
@@ -99,7 +101,7 @@ public:
         VSchemaRelease ( m_schema );
     }
 
-    FunctionAccess ParseFunction ( const char * p_source, const char * p_name, uint32_t p_type = eFunction )
+    FunctionAccess ParseFunction ( const char * p_source, const char * p_name, uint32_t p_idx = 0, uint32_t p_type = eFunction )
     {
         const SFunction* ret = 0;
         if ( m_newParse )
@@ -136,7 +138,11 @@ public:
                 throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : VSchemaParseText() failed" );
             }
 
-            ret = static_cast < const SFunction* > ( VectorGet ( & m_schema -> func, 0 ) );
+            ret = static_cast < const SFunction* > ( VectorGet ( & m_schema -> func, p_idx ) );
+            if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )
+            {
+                throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : wrong name" );
+            }
 
             VDBManagerRelease ( mgr );
         }
@@ -166,7 +172,7 @@ public:
 
 FIXTURE_TEST_CASE(Func_Untyped, AST_Function_Fixture)
 {
-    FunctionAccess fn = ParseFunction ( "function __untyped f();", "f", eUntypedFunc );
+    FunctionAccess fn = ParseFunction ( "function __untyped f();", "f", 0, eUntypedFunc );
     REQUIRE_NULL ( fn . ReturnType () );
 }
 
@@ -184,7 +190,7 @@ FIXTURE_TEST_CASE(Func_Untyped_Exists, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_Rowlength, AST_Function_Fixture)
 {   // implemented by the same code as untyped, the basic test case will suffice
-    FunctionAccess fn = ParseFunction ( "function __row_length f();", "f", eRowLengthFunc );
+    FunctionAccess fn = ParseFunction ( "function __row_length f();", "f", 0, eRowLengthFunc );
     REQUIRE_NULL ( fn . ReturnType () );
 }
 
@@ -502,13 +508,68 @@ FIXTURE_TEST_CASE(Func_FactoryParam_Used, AST_Function_Fixture)
     REQUIRE_EQ ( (uint32_t)0, type -> fd . td. dim );
 }
 
+// Factory spec in prologue
+
+FIXTURE_TEST_CASE(Func_FactorySpec_Undefined, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "function U8 fn() = fact;", "fn" );
+    const KSymbol * factId = fn . FactoryId ();
+    REQUIRE_NOT_NULL ( factId );
+    REQUIRE_EQ ( string ( "fact" ), ToCppString ( factId -> name ) );
+    REQUIRE_EQ ( (uint32_t)eFactory, factId -> type );
+}
+
+FIXTURE_TEST_CASE(Func_FactorySpec_DefinedBefore, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "function U8 f1(); function U8 f2() = f1;", "f2", 1 );
+    const KSymbol * factId = fn . FactoryId ();
+    REQUIRE_NOT_NULL ( factId );
+    REQUIRE_EQ ( string ( "f1" ), ToCppString ( factId -> name ) );
+    REQUIRE_EQ ( (uint32_t)eFunction, factId -> type );
+}
+
+FIXTURE_TEST_CASE(Func_FactorySpec_Reused, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "function U8 f1() = fact; function U8 f2() = fact;", "f2", 1 );
+    const KSymbol * factId = fn . FactoryId ();
+    REQUIRE_EQ ( string ( "fact" ), ToCppString ( factId -> name ) );
+    REQUIRE_EQ ( (uint32_t)eFactory, factId -> type );
+}
+
+FIXTURE_TEST_CASE(Func_FactorySpec_DefinedAfter, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "function U8 f1() = fact; function U8 fact();", "Declared earlier and cannot be overloaded: 'fact'" );
+}
+
+// Statements in non-scripts prologue
+
+FIXTURE_TEST_CASE(Func_Body_NonScript, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "function U8 f() { return 1; };", "Only schema functions can have body: 'f'" );
+}
+
+// Schema (script) functions
+
+FIXTURE_TEST_CASE(Func_Script, AST_Function_Fixture)
+{
+    m_newParse = false;
+    FunctionAccess fn = ParseFunction  ( "schema function U8 f#1.2.3() { return 1; };", "f" );
+    //TODO: verify
+}
+
+FIXTURE_TEST_CASE(Func_Script_FullVersion, AST_Function_Fixture)
+{
+    m_newParse = false;
+    FunctionAccess fn = ParseFunction  ( "schema function U8 f#1.2.3() { return 1; };", "f" );
+    //TODO: verify
+}
+
 //TODO: script + untyped - error
-//TODO: validate + untyped - error
 //TODO: script fn without a body - error
-//TODO: non-script fn with a body - error
+
+//TODO: validate + untyped - error
 //TODO: validate + non-void return - error
+//TODO: release number for validate function (#1.2.?)
 //TODO: non-validate + void return - error
 
-//TODO: release number for schema function (#1.2.?)
 //TODO: release number for extern function (#1.2.?)
-//TODO: release number for validate function (#1.2.?)

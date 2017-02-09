@@ -80,6 +80,8 @@ AST_Fixture :: PrintTree ( const ParseTree& p_tree )
             case_ ( PT_FUNCPROLOGUE );
             case_ ( PT_FUNCPARAMS );
             case_ ( PT_FORMALPARAM );
+            case_ ( PT_RETURN );
+            case_ ( PT_UINT );
             default:
                 if ( tt < 256 )
                 {
@@ -134,7 +136,7 @@ AST_Fixture :: MakeFqn ( const char* p_text ) // p_text = (ident:)+ident
 }
 
 AST *
-AST_Fixture :: MakeAst ( const char* p_source, bool p_debugParse, bool p_printTree )
+AST_Fixture :: MakeAst ( const char* p_source, bool p_debugParse, bool p_printTree, bool p_debugAst )
 {
     if ( ! m_parser . ParseString ( p_source, p_debugParse ) )
     {
@@ -157,7 +159,7 @@ AST_Fixture :: MakeAst ( const char* p_source, bool p_debugParse, bool p_printTr
     {
         delete m_ast;
     }
-    m_ast = m_builder . Build ( * m_parseTree );
+    m_ast = m_builder . Build ( * m_parseTree, p_debugAst );
     if ( m_builder . GetErrorCount() != 0)
     {
         throw std :: logic_error ( string ( "AST_Fixture::MakeAst : ASTBuilder::Build() failed: " ) + string ( m_builder . GetErrorMessage ( 0 ) ) );

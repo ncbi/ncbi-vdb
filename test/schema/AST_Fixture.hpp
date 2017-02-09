@@ -66,7 +66,10 @@ public:
 
     void PrintTree ( const ParseTree& p_tree );
 
-    AST * MakeAst ( const char* p_source, bool p_debugParse = false, bool p_printTree = false );
+    AST * MakeAst ( const char* p_source,
+                    bool p_debugParse = false,
+                    bool p_printTree = false,
+                    bool p_debugAst = false );
 
     bool OldParse ( const char* p_source );
 

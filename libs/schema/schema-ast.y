@@ -214,11 +214,11 @@
 %type <node> typeset typeset_spec typespec dim fmtdef const alias function func_decl
 %type <node> schema_sig_opt return_type prologue formals_list
 %type <node>  schema_formals schema_formal type_expr formals formal
-%type <node> script_stmts script_stmt cond_expr
+%type <node> script_stmts script_stmt
 
 %type <fqn> fqn qualnames fqn_opt_vers ident
 
-%type <expr> expr
+%type <expr> expr cond_expr cond_chain
 
 %type <paramSig> param_sig param_signature fact_sig
 
@@ -388,9 +388,9 @@ vararg
     ;
 
 prologue
-    : PT_FUNCPROLOGUE '(' ';' ')'                   { $$ = new AST (); }
-    | PT_FUNCPROLOGUE '(' '=' fqn ';' ')'           { $$ = new AST (); $$ -> AddNode ( $4 ); }
-    | PT_FUNCPROLOGUE '(' '=' script_stmts ';' ')'  { $$ = new AST (); $$ -> AddNode ( $4 ); }
+    : PT_FUNCPROLOGUE '(' ';' ')'                                       { $$ = new AST ( PT_EMPTY ); }
+    | PT_FUNCPROLOGUE '(' '=' fqn ';' ')'                               { $$ = $4; }
+    | PT_FUNCPROLOGUE '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')'   { $$ = $6; }
     ;
 
 script_stmts
@@ -413,7 +413,11 @@ expr
     ;
 
 cond_expr
-    : expr                  { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : PT_ASTLIST '(' cond_chain ')' { $$ = $3; }
+    ;
+
+cond_chain
+    : expr                  { $$ = new AST_Expr ( $1 ); }
     | cond_expr '|' expr    { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 

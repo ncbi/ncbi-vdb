@@ -49,9 +49,7 @@ namespace ncbi
             ASTBuilder ();
             ~ASTBuilder ();
 
-            void DebugOn ();
-
-            AST* Build ( const ParseTree& p_root );
+            AST* Build ( const ParseTree& p_root, bool p_debugParse = false );
 
             const KSymbol* Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown = true );
             const KSymbol* Resolve ( const char* p_ident, bool p_reportUnknown = true );
@@ -98,7 +96,8 @@ namespace ncbi
                                    const Vector *           stypes,
                                    const Vector *           sparams,
                                    const BSTree *           fscope,
-                                   bool                     canOverload );
+                                   bool                     canOverload,
+                                   const AST *              prologue );
 
             struct STypeExpr * MakeTypeExpr ( const AST & p_type );
 
@@ -115,6 +114,8 @@ namespace ncbi
             uint64_t EvalConstExpr ( const AST_Expr &expr );
             bool HandleOverload ( struct SFunction * fn, const KSymbol * priorDecl);
 
+            void HandlePrologue ( struct SFunction & f, const AST & p_prologue );
+
             // false - failed, error reported
             rc_t VectorAppend ( Vector *self, uint32_t *idx, const void *item );
 
@@ -124,8 +125,6 @@ namespace ncbi
             struct KSymbol * CreateParamSymbol ( const char* p_name, int p_type, void * p_obj );
 
         private:
-            bool m_debug;
-
             VSchema*    m_intrinsic;
             VSchema*    m_schema;
             KSymTable   m_symtab;

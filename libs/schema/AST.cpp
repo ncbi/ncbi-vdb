@@ -251,6 +251,11 @@ AST_Expr :: AST_Expr ( AST_FQN* p_fqn )
     AddNode ( p_fqn );
 }
 
+AST_Expr :: AST_Expr ( AST_Expr* p_fqn )
+{
+    AddNode ( p_fqn );
+}
+
 SExpression *
 AST_Expr :: EvaluateConst ( ASTBuilder & p_builder ) const
 {   //TBD. for now, only handles a literal int constant and a direct reference to a schema parameter

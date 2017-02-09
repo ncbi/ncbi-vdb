@@ -44,8 +44,7 @@ using namespace ncbi::SchemaParser;
 using namespace std;
 
 ASTBuilder :: ASTBuilder ()
-:   m_debug ( false ),
-    m_intrinsic ( 0 ),
+:   m_intrinsic ( 0 ),
     m_schema ( 0 )
 {
     VectorInit ( & m_errors, 0, 1024 );
@@ -66,13 +65,6 @@ ASTBuilder :: ASTBuilder ()
             m_intrinsic = 0;
         }
     }
-}
-
-
-void
-ASTBuilder :: DebugOn ()
-{
-    m_debug = true;
 }
 
 static
@@ -145,7 +137,7 @@ ASTBuilder :: Init()
 }
 
 AST *
-ASTBuilder :: Build ( const ParseTree& p_root )
+ASTBuilder :: Build ( const ParseTree& p_root, bool p_debugParse )
 {
     if ( m_intrinsic == 0 || ! Init () )
     {
@@ -153,7 +145,7 @@ ASTBuilder :: Build ( const ParseTree& p_root )
     }
 
     AST* ret = 0;
-    AST_debug = m_debug;
+    AST_debug = p_debugParse;
     ParseTreeScanner scanner ( p_root );
     if ( AST_parse ( ret, * this, scanner ) == 0 )
     {
