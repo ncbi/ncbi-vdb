@@ -98,7 +98,7 @@ rc_t CC meta_write_func(
     }
     else
     {
-        memcpy ( rslt -> data -> base, & sbuf [ offset >> 3 ], length );
+        memmove ( rslt -> data -> base, & sbuf [ offset >> 3 ], length );
     }
 
     /* write row to metadata-node */

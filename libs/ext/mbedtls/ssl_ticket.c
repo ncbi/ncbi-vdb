@@ -179,7 +179,7 @@ static int ssl_save_session( const mbedtls_ssl_session *session,
     if( left < sizeof( mbedtls_ssl_session ) )
         return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
 
-    memcpy( p, session, sizeof( mbedtls_ssl_session ) );
+    memmove( p, session, sizeof( mbedtls_ssl_session ) );
     p += sizeof( mbedtls_ssl_session );
     left -= sizeof( mbedtls_ssl_session );
 
@@ -197,7 +197,7 @@ static int ssl_save_session( const mbedtls_ssl_session *session,
     *p++ = (unsigned char)( cert_len       & 0xFF );
 
     if( session->peer_cert != NULL )
-        memcpy( p, session->peer_cert->raw.p, cert_len );
+        memmove( p, session->peer_cert->raw.p, cert_len );
 
     p += cert_len;
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
@@ -222,7 +222,7 @@ static int ssl_load_session( mbedtls_ssl_session *session,
     if( p + sizeof( mbedtls_ssl_session ) > end )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    memcpy( session, p, sizeof( mbedtls_ssl_session ) );
+    memmove( session, p, sizeof( mbedtls_ssl_session ) );
     p += sizeof( mbedtls_ssl_session );
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -321,7 +321,7 @@ int mbedtls_ssl_ticket_write( void *p_ticket,
 
     *ticket_lifetime = ctx->ticket_lifetime;
 
-    memcpy( key_name, key->name, 4 );
+    memmove( key_name, key->name, 4 );
 
     if( ( ret = ctx->f_rng( ctx->p_rng, iv, 12 ) ) != 0 )
         goto cleanup;

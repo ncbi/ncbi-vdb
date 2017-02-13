@@ -119,7 +119,7 @@ int mbedtls_asn1_write_raw_buffer( unsigned char **p, unsigned char *start,
 
     len = size;
     (*p) -= len;
-    memcpy( *p, buf, len );
+    memmove( *p, buf, len );
 
     return( (int) len );
 }
@@ -302,7 +302,7 @@ int mbedtls_asn1_write_bitstring( unsigned char **p, unsigned char *start,
 
     len = size + 1;
     (*p) -= size;
-    memcpy( *p, buf, size );
+    memmove( *p, buf, size );
 
     // Write unused bits
     //
@@ -352,7 +352,7 @@ mbedtls_asn1_named_data *mbedtls_asn1_store_named_data( mbedtls_asn1_named_data 
             return( NULL );
         }
 
-        memcpy( cur->oid.p, oid, oid_len );
+        memmove( cur->oid.p, oid, oid_len );
 
         cur->val.len = val_len;
         cur->val.p = mbedtls_calloc( 1, val_len );
@@ -383,7 +383,7 @@ mbedtls_asn1_named_data *mbedtls_asn1_store_named_data( mbedtls_asn1_named_data 
     }
 
     if( val != NULL )
-        memcpy( cur->val.p, val, val_len );
+        memmove( cur->val.p, val, val_len );
 
     return( cur );
 }

@@ -550,7 +550,7 @@ rc_t KEncFileFooterWrite (KEncFile * self)
     }
     else
     {
-        memcpy ( & foot, & self -> foot, sizeof foot );
+        memmove ( & foot, & self -> foot, sizeof foot );
     }
 
     KEncFileFooterSwap (self, &foot);
@@ -1079,7 +1079,7 @@ rc_t KEncFileBlockRead (KEncFile * self, KEncFileBlock * block,
                         rc = RC (rcKrypto, rcFile, rcReading, rcData, rcIncomplete);
                     else
                     {
-                        memcpy (block, &u.b, sizeof u.b);
+                        memmove (block, &u.b, sizeof u.b);
                         rc = 0;
                     }
                 }
@@ -2543,7 +2543,7 @@ LIB_EXPORT rc_t CC KFileIsEnc_v2 (const char * buffer, size_t buffer_size)
     
     count = buffer_size > sizeof header ? sizeof header : buffer_size;
 
-    memcpy (&header, buffer, count);
+    memmove (&header, buffer, count);
 
     if (header.byte_order == const_header.byte_order)
         byte_swapped = false;
@@ -2592,7 +2592,7 @@ LIB_EXPORT rc_t CC KFileIsSraEnc (const char * buffer, size_t buffer_size)
     
     count = buffer_size > sizeof header ? sizeof header : buffer_size;
 
-    memcpy (&header, buffer, count);
+    memmove (&header, buffer, count);
 
     if (header.byte_order == const_header.byte_order)
         byte_swapped = false;

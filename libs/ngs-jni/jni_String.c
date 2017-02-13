@@ -162,7 +162,7 @@ jstring NGS_StringCopyToJString ( const NGS_String * self, ctx_t ctx, JNIEnv * j
             {
                 jstring jstr;
 
-                memcpy ( copy, data, size );
+                memmove ( copy, data, size );
                 copy [ size ] = 0;
 
                 jstr = ( ( * jenv ) -> NewStringUTF ) ( jenv, copy );

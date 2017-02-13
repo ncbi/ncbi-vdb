@@ -193,7 +193,7 @@ bool CC KMAttrNodeInflate ( PBSTNode *n, void *data )
 
     b -> value = & b -> name [ 1 + size ];
     b -> vsize = n -> data . size - size - 1;
-    memcpy ( b -> name, name, n -> data . size );
+    memmove ( b -> name, name, n -> data . size );
     BSTreeInsert ( pb -> bst, & b -> n, KMAttrNodeSort );
     return false;
 }
@@ -210,7 +210,7 @@ rc_t KMAttrNodeRename ( const KMAttrNode *self,
     b -> value = & b -> name [ 1 + size ];
     b -> vsize = self -> vsize;
     strcpy ( b -> name, name );
-    memcpy ( b -> value, self -> value, self -> vsize );
+    memmove ( b -> value, self -> value, self -> vsize );
     * renamed = b;
     return 0;
 }
@@ -228,7 +228,7 @@ rc_t KMAttrNodeMake ( KMAttrNode **np,
     n -> vsize = vsize;
     strcpy ( n -> name, name );
     if ( vsize != 0 )
-        memcpy ( n -> value, value, vsize );
+        memmove ( n -> value, value, vsize );
     * np = n;
     return 0;
 }
@@ -391,7 +391,7 @@ bool CC KMDataNodeInflate_v1 ( PBSTNode *n, void *data )
     value = malloc ( b -> vsize );
     if ( value != NULL )
     {
-        memcpy ( value, b -> value, b -> vsize );
+        memmove ( value, b -> value, b -> vsize );
         b -> value = value;
         BSTreeInsert ( pb -> bst, & b -> n, KMDataNodeSort );
         return false;
@@ -534,7 +534,7 @@ bool CC KMDataNodeInflate ( PBSTNode *n, void *data )
     b -> vsize = n -> data . size - size - 1;
     BSTreeInit ( & b -> attr );
     BSTreeInit ( & b -> child );
-    memcpy ( b -> name, name, size );
+    memmove ( b -> name, name, size );
     b -> name [ size ] = 0;
     KRefcountInit ( & b -> refcount, 0, "KMDataNode", "inflate", b -> name );
     b -> read_only = 0;
@@ -558,7 +558,7 @@ bool CC KMDataNodeInflate ( PBSTNode *n, void *data )
             value = malloc ( b -> vsize );
             if ( value != NULL )
             {
-                memcpy ( value, b -> value, b -> vsize );
+                memmove ( value, b -> value, b -> vsize );
                 b -> value = value;
                 BSTreeInsert ( pb -> bst, & b -> n, KMDataNodeSort );
                 return false;
@@ -1043,7 +1043,7 @@ LIB_EXPORT rc_t CC KMDataNodeRead ( const KMDataNode *self,
                 to_read = bsize;
 
             if ( to_read > 0 )
-                memcpy ( buffer, ( const char* ) self -> value + offset, to_read );
+                memmove ( buffer, ( const char* ) self -> value + offset, to_read );
 
             * num_read = to_read;
             * remaining = avail - to_read;
@@ -1118,7 +1118,7 @@ LIB_EXPORT rc_t CC KMDataNodeWrite ( KMDataNode *self, const void *buffer, size_
         if ( size == 0 )
             return 0;
 
-        memcpy ( self -> value, buffer, size );
+        memmove ( self -> value, buffer, size );
     }
     else
     {
@@ -1134,7 +1134,7 @@ LIB_EXPORT rc_t CC KMDataNodeWrite ( KMDataNode *self, const void *buffer, size_
             value = malloc ( size );
             if ( value == NULL )
                 return RC ( rcDB, rcNode, rcWriting, rcMemory, rcExhausted );
-            memcpy ( value, buffer, size );
+            memmove ( value, buffer, size );
         }
             
         if ( self -> value != NULL )
@@ -1173,7 +1173,7 @@ LIB_EXPORT rc_t CC KMDataNodeAppend ( KMDataNode *self, const void *buffer, size
         void *value = realloc ( self -> value, self -> vsize + size );
         if ( value == NULL )
             return RC ( rcDB, rcNode, rcWriting, rcMemory, rcExhausted );
-        memcpy ( ( char* ) value + self -> vsize, buffer, size );
+        memmove ( ( char* ) value + self -> vsize, buffer, size );
         self -> value = value;
         self -> vsize += size;
         self -> meta -> dirty = true;
@@ -1634,7 +1634,7 @@ LIB_EXPORT rc_t CC KMDataNodeReadAttr ( const KMDataNode *self, const char *name
                 * size = n -> vsize;
                 if ( n -> vsize < bsize )
                 {
-                    memcpy ( buffer, n -> value, n -> vsize );
+                    memmove ( buffer, n -> value, n -> vsize );
                     buffer [ n -> vsize ] = 0;
                     return 0;
                 }
@@ -2192,7 +2192,7 @@ rc_t CC KMDWriteFunc ( void *param, const void *buffer, size_t size, size_t *num
 
         if ( to_write > 0 )
         {
-            memcpy ( pb -> buffer + pb -> marker,
+            memmove ( pb -> buffer + pb -> marker,
                 ( const uint8_t* ) buffer + total, to_write );
             pb -> marker += to_write;
         }
@@ -2218,7 +2218,7 @@ rc_t CC KMDWriteFunc ( void *param, const void *buffer, size_t size, size_t *num
             pb -> pos += num_flushed;
 
             if ( pb -> marker != 0 )
-                memcpy ( pb -> buffer, pb -> buffer + num_flushed, pb -> marker );
+                memmove ( pb -> buffer, pb -> buffer + num_flushed, pb -> marker );
         }
     }
 

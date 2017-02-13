@@ -215,7 +215,7 @@ int mbedtls_cipher_set_iv( mbedtls_cipher_context_t *ctx,
             return( MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA );
     }
 
-    memcpy( ctx->iv, iv, actual_iv_size );
+    memmove( ctx->iv, iv, actual_iv_size );
     ctx->iv_size = actual_iv_size;
 
     return( 0 );
@@ -311,7 +311,7 @@ int mbedtls_cipher_update( mbedtls_cipher_context_t *ctx, const unsigned char *i
              ( ctx->operation == MBEDTLS_ENCRYPT &&
                 ilen + ctx->unprocessed_len < block_size ) )
         {
-            memcpy( &( ctx->unprocessed_data[ctx->unprocessed_len] ), input,
+            memmove( &( ctx->unprocessed_data[ctx->unprocessed_len] ), input,
                     ilen );
 
             ctx->unprocessed_len += ilen;
@@ -325,7 +325,7 @@ int mbedtls_cipher_update( mbedtls_cipher_context_t *ctx, const unsigned char *i
         {
             copy_len = block_size - ctx->unprocessed_len;
 
-            memcpy( &( ctx->unprocessed_data[ctx->unprocessed_len] ), input,
+            memmove( &( ctx->unprocessed_data[ctx->unprocessed_len] ), input,
                     copy_len );
 
             if( 0 != ( ret = ctx->cipher_info->base->cbc_func( ctx->cipher_ctx,
@@ -357,7 +357,7 @@ int mbedtls_cipher_update( mbedtls_cipher_context_t *ctx, const unsigned char *i
             if( copy_len == 0 && ctx->operation == MBEDTLS_DECRYPT )
                 copy_len = block_size;
 
-            memcpy( ctx->unprocessed_data, &( input[ilen - copy_len] ),
+            memmove( ctx->unprocessed_data, &( input[ilen - copy_len] ),
                     copy_len );
 
             ctx->unprocessed_len += copy_len;

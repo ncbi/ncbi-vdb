@@ -257,7 +257,7 @@ LIB_EXPORT rc_t CC AlignAccessRefSeqEnumeratorGetID(const AlignAccessRefSeqEnume
         *id_size = id_act_size;
     if (id_buffer != NULL) {
         if (buffer_size >= id_act_size)
-            memcpy(id_buffer, cur->name, id_act_size);
+            memmove(id_buffer, cur->name, id_act_size);
         else
             rc = RC(rcAlign, rcTable, rcAccessing, rcBuffer, rcInsufficient);
     }
@@ -491,7 +491,7 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetRefSeqID(
         *id_size = id_act_size;
     if (id_buffer != NULL) {
         if (buffer_size >= id_act_size)
-            memcpy(id_buffer, cur->name, id_act_size);
+            memmove(id_buffer, cur->name, id_act_size);
         else
             rc = RC(rcAlign, rcTable, rcAccessing, rcBuffer, rcInsufficient);
     }
@@ -577,7 +577,7 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetShortSeqAccessionID(
             *id_size = id_act_size;
         if (id_buffer != NULL) {
             if (buffer_size >= id_act_size)
-                memcpy(id_buffer, readGroupName, id_act_size);
+                memmove(id_buffer, readGroupName, id_act_size);
             else
                 rc = RC(rcAlign, rcTable, rcAccessing, rcBuffer, rcInsufficient);
         }
@@ -607,7 +607,7 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetShortSeqID(
         *id_size = id_act_size;
     if (id_buffer != NULL) {
         if (buffer_size >= id_act_size)
-            memcpy(id_buffer, readName, id_act_size);
+            memmove(id_buffer, readName, id_act_size);
         else
             rc = RC(rcAlign, rcTable, rcAccessing, rcBuffer, rcInsufficient);
     }
@@ -660,7 +660,7 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetCIGAR(
         cig1len = sprintf(cig1, "%c%u", op, len);
         if (cigbuf + cig1len < endp) {
             if (cigar_buffer != NULL) {
-                memcpy(cigbuf, cig1, cig1len);
+                memmove(cigbuf, cig1, cig1len);
                 cigbuf[cig1len] = 0;
             }
         }

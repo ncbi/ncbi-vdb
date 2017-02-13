@@ -82,7 +82,7 @@ rc_t CC index_insert( void *Self, const VXformInfo *info, int64_t row_id,
     }
     switch (self->case_sensitivity) {
         case CASE_SENSITIVE:
-            memcpy(key, x, key_len);
+            memmove(key, x, key_len);
             break;
         case CASE_INSENSITIVE_LOWER:
             tolower_copy(key, sizeof skey, x, key_len);
@@ -105,7 +105,7 @@ rc_t CC index_insert( void *Self, const VXformInfo *info, int64_t row_id,
         rc = KDataBufferResize ( rslt -> data, key_len );
         if ( rc != 0 )
             return rc;
-        memcpy ( rslt -> data -> base, x, key_len );
+        memmove ( rslt -> data -> base, x, key_len );
         
         rslt -> elem_count = key_len;
     }

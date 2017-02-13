@@ -219,7 +219,7 @@ int mbedtls_hardclock_poll( void *data,
     if( len < sizeof(unsigned long) )
         return( 0 );
 
-    memcpy( output, &timer, sizeof(unsigned long) );
+    memmove( output, &timer, sizeof(unsigned long) );
     *olen = sizeof(unsigned long);
 
     return( 0 );
@@ -258,7 +258,7 @@ int mbedtls_nv_seed_poll( void *data,
     if( len < use_len )
       use_len = len;
 
-    memcpy( output, buf, use_len );
+    memmove( output, buf, use_len );
     *olen = use_len;
 
     return( 0 );

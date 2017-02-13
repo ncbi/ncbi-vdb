@@ -255,7 +255,7 @@ void mbedtls_aesni_inverse_key( unsigned char *invkey,
     unsigned char *ik = invkey;
     const unsigned char *fk = fwdkey + 16 * nr;
 
-    memcpy( ik, fk, 16 );
+    memmove( ik, fk, 16 );
 
     for( fk -= 16, ik += 16; fk > fwdkey; fk -= 16, ik += 16 )
         asm( "movdqu (%0), %%xmm0       \n\t"
@@ -265,7 +265,7 @@ void mbedtls_aesni_inverse_key( unsigned char *invkey,
              : "r" (fk), "r" (ik)
              : "memory", "xmm0" );
 
-    memcpy( ik, fk, 16 );
+    memmove( ik, fk, 16 );
 }
 
 /*
