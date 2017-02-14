@@ -216,7 +216,9 @@ TEST_CASE ( testKDirectoryGetDiskFreeSpace ) {
     uint64_t available = 0;
 
     bool started = false;
-    for ( int i = 1; i < 9; ++i ) {
+    int64_t min = 9876543210;
+    int i = 0;
+    for ( i = 1; i < 10; ++i ) {
         REQUIRE_RC ( KDirectoryGetDiskFreeSpace ( fixture . _dir,
                         & free_bytes_available, & total_number_of_bytes ) );
 
@@ -238,18 +240,21 @@ TEST_CASE ( testKDirectoryGetDiskFreeSpace ) {
             cerr << "DONE in " << i << " iterations";
             return;
         }
-        else if ( abs ( available - free_bytes_available / 1024 ) < 29 ) {
-            cerr << "DONE in " << i << " iterations: (" << available << " - "
-                 << ( free_bytes_available / 1024 ) << " = "
-                 << ( available - free_bytes_available / 1024 ) << ")\n";
-            return;
-        }
         else {
+            if ( abs ( available - free_bytes_available / 1024 ) < min )
+                min = abs ( available - free_bytes_available / 1024 );
             cerr << i << " KDirectoryGetDiskFreeSpace="
                  << free_bytes_available / 1024
                  << " Available=" << available << " ( "
                  << abs ( free_bytes_available / 1024 - available ) << " )\n";
         }
+    }
+
+    if ( min < 28 ) {
+        cerr << "DONE in " << i
+             << " iterations: ( available - ( free_bytes_available / 1024 ) = "
+             << min << ")\n";
+        return;
     }
 
     REPORT_ERROR ( "Cannot match KDirectoryGetDiskFreeSpace and df results" );
