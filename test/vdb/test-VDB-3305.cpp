@@ -42,7 +42,7 @@
 
 using namespace std;
 
-TEST_SUITE( VDB_3060 )
+TEST_SUITE( VDB_3305 )
 
 std::string original_value = std::string( "" );
 
@@ -75,6 +75,7 @@ static void release_global_managers( void )
     print the currently stored value
     store this value in the global: original_value
 */
+/*
 TEST_CASE( GetCacheRoot_1 )
 {
     VPath const * vpath = NULL;
@@ -104,6 +105,7 @@ TEST_CASE( GetCacheRoot_1 )
     if ( vpath != NULL )
         VPathRelease( vpath );
 }
+*/
 
 const char other_path[] = "/some/other/path";
 
@@ -139,6 +141,7 @@ TEST_CASE( SetCacheRoot_1 )
     call VDBManagerGetCacheRoot() to verify that the new value
     is indeed the value we did set in the test-case above
 */
+/*
 TEST_CASE( GetCacheRoot_2 )
 {
     VPath const * vpath = NULL;
@@ -170,11 +173,12 @@ TEST_CASE( GetCacheRoot_2 )
     if ( vpath != NULL )
         VPathRelease( vpath );
 }
-
+*/
 
 /*
     put the value stored in the global 'original_value' back in place
 */
+/*
 TEST_CASE( SetCacheRoot_2 )
 {
     VPath * vpath;
@@ -189,11 +193,12 @@ TEST_CASE( SetCacheRoot_2 )
     if ( vpath != NULL )
         VPathRelease( vpath );
 }
-
+*/
 
 /*
     check if the original value is back in place
 */
+/*
 TEST_CASE( GetCacheRoot_3 )
 {
     VPath const * vpath = NULL;
@@ -220,7 +225,9 @@ TEST_CASE( GetCacheRoot_3 )
     if ( vpath != NULL )
         VPathRelease( vpath );
 }
+*/
 
+/*
 TEST_CASE( two_managers )
 {
     const VDBManager * vdb_mgr2 = NULL;
@@ -302,6 +309,7 @@ TEST_CASE( root_tmp )
     if ( kdb_mgr != NULL ) KDBManagerRelease ( kdb_mgr );
 
 }
+*/
 
 char * org_home;
 const char HomeSub[] = "test_root_history";
@@ -355,7 +363,7 @@ rc_t create_test_config( const char * base )
     return rc;
 }
 
-rc_t prepare_test( const char * sub )
+rc_t prepare_test( const char * sub, bool create_config )
 {
     org_home = getenv( "HOME" );
     size_t num_writ;
@@ -364,7 +372,7 @@ rc_t prepare_test( const char * sub )
         rc = string_printf ( new_home_buffer, sizeof new_home_buffer, &num_writ, "HOME=%s", new_home );
     if ( rc == 0 )
         rc = putenv( new_home_buffer );
-    if ( rc == 0 )
+    if ( rc == 0 && create_config )
         rc = create_test_config( org_home );
     return rc;
 }
@@ -390,17 +398,17 @@ extern "C"
 ver_t CC KAppVersion ( void ) { return 0x1000000; }
 rc_t CC UsageSummary ( const char * progname ) { return 0; }
 rc_t CC Usage ( const Args * args ) { return 0; }
-const char UsageDefaultName[] = "test-VDB-3060";
+const char UsageDefaultName[] = "test-VDB-3305";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
-    rc_t rc = prepare_test( HomeSub );
+    rc_t rc = prepare_test( HomeSub, false );
     if ( rc == 0 )
     {
         rc = make_global_managers();
         if ( rc == 0 )
         {
-            rc = VDB_3060( argc, argv );
+            rc = VDB_3305( argc, argv );
             release_global_managers();
         }
     }

@@ -244,3 +244,23 @@ $(TEST_BINDIR)/test-VDB-3061: $(VDB_3061_OBJ)
 
 VDB-3061: test-VDB-3061
 	$(TEST_BINDIR)/test-VDB-3061
+
+#-------------------------------------------------------------------------------
+# VDB-3305
+#
+VDB_3305_SRC = \
+	test-VDB-3305
+
+VDB_3305_OBJ = \
+	$(addsuffix .$(OBJX),$(VDB_3305_SRC))
+
+VDB_3305_LIB = \
+	-skapp \
+	-sktst \
+	-sncbi-vdb
+
+$(TEST_BINDIR)/test-VDB-3305: $(VDB_3305_OBJ)
+	$(LP) --exe -o $@ $^ $(VDB_3305_LIB)
+
+VDB-3305: test-VDB-3305
+	$(TEST_BINDIR)/test-VDB-3305
