@@ -37,7 +37,7 @@ TEST_TOOLS = \
 	test-blob-val \
 	test-VDB-3060 \
 	test-VDB-3061
-    
+
 include $(TOP)/build/Makefile.env
 
 
