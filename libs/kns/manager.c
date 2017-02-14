@@ -687,6 +687,10 @@ static rc_t CC KNSManagerVSetHTTPProxyPathImpl
 
                 colon = string_chr ( p, s, ':' );
                 if ( colon != NULL ) {
+                    char * end = NULL;
+                    const char * port_spec = NULL;
+                    long port_num = 0;
+
                     int have = colon - p;
                     int remains = s - have;
                     if ( remains > 2 ) {
@@ -701,10 +705,10 @@ static rc_t CC KNSManagerVSetHTTPProxyPathImpl
                             continue;
                         }
                     }
-                    char * end = NULL;
-                    const char * port_spec = colon + 1;
+
+                    port_spec = colon + 1;
              /* it is true that some day we might read symbolic port names... */
-                    long port_num = strtol ( port_spec, & end, 10 );
+                    port_num = strtol ( port_spec, & end, 10 );
                     if ( port_num <= 0 || port_num >= 0x10000 ||
                          ( end [ 0 ] != 0 && comma == NULL ) )
                         rc = RC ( rcNS, rcMgr, rcUpdating, rcPath, rcInvalid );
