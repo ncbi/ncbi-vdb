@@ -238,6 +238,12 @@ TEST_CASE ( testKDirectoryGetDiskFreeSpace ) {
             cerr << "DONE in " << i << " iterations";
             return;
         }
+        else if ( abs ( available - free_bytes_available / 1024 ) < 29 ) {
+            cerr << "DONE in " << i << " iterations: (" << available << " - "
+                 << ( free_bytes_available / 1024 ) << " = "
+                 << ( available - free_bytes_available / 1024 ) << ")\n";
+            return;
+        }
         else {
             cerr << i << " KDirectoryGetDiskFreeSpace="
                  << free_bytes_available / 1024
