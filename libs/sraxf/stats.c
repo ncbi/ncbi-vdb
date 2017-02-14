@@ -59,7 +59,7 @@ static int string_buffer_add(KDataBuffer *const self,
     PLOGMSG(klogInfo, (klogInfo, "New spot group '$(NAME)'", "NAME=%.*s", (int)len, name));
 #endif
     
-    memcpy(((char *)self->base) + rslt, name, len);
+    memmove(((char *)self->base) + rslt, name, len);
     
     return (int)rslt;
 }
@@ -148,7 +148,7 @@ static void stats_data_update_mru(stats_data_t *const self, group_stats_t *const
                 ++di;
             }
         }
-        memcpy(self->mru, newmru, sizeof(newmru));
+        memmove(self->mru, newmru, sizeof(newmru));
     }
 }
 
@@ -272,7 +272,7 @@ static rc_t group_stats_write_name(KMDataNode *const node,
     if (buffer == NULL)
         return RC(rcXF, rcFunction, rcExecuting, rcMemory, rcExhausted);
 
-    memcpy(buffer, name, namelen);
+    memmove(buffer, name, namelen);
     buffer[namelen] = '\0';
     {
         rc_t const rc = KMDataNodeWriteAttr(node, STATS_NODE_NAME_ATTR, buffer);
@@ -328,7 +328,7 @@ static rc_t group_stats_write(group_stats_t const *const self,
     KMDataNode *node;
     rc_t rc;
 
-    memcpy(namepath, namebase, sizeof(namebase));
+    memmove(namepath, namebase, sizeof(namebase));
     name[4] = '\0';
     name[3] = nodeid % 26 + 'A'; nodeid /= 26;
     name[2] = nodeid % 26 + 'A'; nodeid /= 26;

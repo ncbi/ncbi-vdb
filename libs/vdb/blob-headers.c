@@ -283,7 +283,7 @@ static rc_t serialize1( const BlobHeaders *self, KDataBuffer *buffer, uint64_t o
     dst += sz; dsize -= sz;
     
     if (op_count > 0) {
-        memcpy(dst, self->data->ops, op_count);
+        memmove(dst, self->data->ops, op_count);
         dst += op_count;
         dsize -= op_count;
     }
@@ -360,7 +360,7 @@ static rc_t deserialize_v0( BlobHeaders **dst, const uint8_t *src, uint64_t ssiz
             BlobHeadersRelease(y);
             return RC(rcVDB, rcHeader, rcConstructing, rcData, rcInsufficient);
         }
-        memcpy(y->data->ops, src, op_count);
+        memmove(y->data->ops, src, op_count);
         src += op_count; ssize -= op_count;
     }        
     if (arg_count > 0) {

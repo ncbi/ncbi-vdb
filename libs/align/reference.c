@@ -180,9 +180,9 @@ static rc_t ReferenceObj_Alloc( ReferenceObj** self, const char* seqid, size_t s
             obj->seqid = ( char* )&obj[ 1 ];
             obj->name = obj->seqid;
             obj->name += seqid_sz + 1;
-            memcpy( obj->seqid, seqid, seqid_sz );
+            memmove( obj->seqid, seqid, seqid_sz );
             obj->seqid[ seqid_sz ] = '\0';
-            memcpy( obj->name, name, name_sz );
+            memmove( obj->name, name, name_sz );
             obj->name[ name_sz ] = '\0';
             *self = obj;
         }
@@ -222,7 +222,7 @@ static rc_t ReferenceList_handle_filter( const KIndex* iname, const char * filt_
                 char name[ 4096 ];
                 if ( h[ 0 ].len < sizeof( name ) )
                 {
-                    memcpy( name, h[ 0 ].base.str, h[ 0 ].len );
+                    memmove( name, h[ 0 ].base.str, h[ 0 ].len );
                     name[ h[ 0 ].len ] = '\0';
                     rc = KIndexFindText( iname, name, &r_start, count, NULL, NULL );
                     if ( rc == 0 && *start > r_start )
@@ -565,7 +565,7 @@ static rc_t ReferenceList_OpenCursor( ReferenceList* self )
 
     assert( self != NULL );
 
-    memcpy( self->reader_cols, ReferenceList_cols, sizeof( ReferenceList_cols ) );
+    memmove( self->reader_cols, ReferenceList_cols, sizeof( ReferenceList_cols ) );
 
     if ( self->options & ereferencelist_4na )
     {
@@ -637,7 +637,7 @@ static rc_t ReferenceList_OpenCursor2( ReferenceList* self, align_id_src ids )
                            ( ids == secondary_align_ids ? "SECONDARY_ALIGNMENT" : "EVIDENCE_INTERVAL" ) );
                     if ( rc == 0 )
                     {
-                        memcpy( self->iter_cols, PlacementIterator_cols, sizeof( PlacementIterator_cols ) );
+                        memmove( self->iter_cols, PlacementIterator_cols, sizeof( PlacementIterator_cols ) );
                         rc = TableReader_Make( &self->iter, vtbl, self->iter_cols, self->cache );
                     }
                     VDatabaseRelease( db );
@@ -748,7 +748,7 @@ LIB_EXPORT rc_t CC ReferenceList_Find( const ReferenceList* cself, const Referen
     }
     else
     {
-        memcpy( b, key, key_sz );
+        memmove( b, key, key_sz );
         b[ key_sz ] = '\0';
         *obj = ( ReferenceObj* )BSTreeFind( &cself->seqid_tree, b, ReferenceObj_CmpSeqId );
         if ( *obj == NULL )
@@ -1004,7 +1004,7 @@ LIB_EXPORT rc_t CC ReferenceObj_Read( const ReferenceObj* cself, INSDC_coord_zer
                     {
                         q = cself->mgr->reader_cols[ereflst_cn_SEQ_LEN].base.coord_len[0] - s;
                         if ( q > len ) { q = len; }
-                        memcpy( &buffer[ *written ], &cself->mgr->reader_cols[ cid ].base.str[ s ], q );
+                        memmove( &buffer[ *written ], &cself->mgr->reader_cols[ cid ].base.str[ s ], q );
                         *written += q;
                         offset += q;
                         len -= q;
@@ -1343,7 +1343,7 @@ LIB_EXPORT rc_t CC ReferenceObj_MakePlacementIterator ( const ReferenceObj* csel
             }
             else
             {
-                memcpy( o->ref_cols_own, ReferenceList_cols, sizeof( o->ref_cols_own ) );
+                memmove( o->ref_cols_own, ReferenceList_cols, sizeof( o->ref_cols_own ) );
                 o->ref_cols = o->ref_cols_own;
                 rc = TableReader_MakeCursor( &o->ref_reader, ref_cur, o->ref_cols_own );
             }
@@ -1364,7 +1364,7 @@ LIB_EXPORT rc_t CC ReferenceObj_MakePlacementIterator ( const ReferenceObj* csel
             }
             else
             {
-                memcpy( o->align_cols_own, PlacementIterator_cols, sizeof( o->align_cols_own ) );
+                memmove( o->align_cols_own, PlacementIterator_cols, sizeof( o->align_cols_own ) );
                 o->align_cols = o->align_cols_own;
                 o->align_curs = align_cur;
                 rc = TableReader_MakeCursor( &o->align_reader, align_cur, o->align_cols );

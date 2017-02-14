@@ -1130,7 +1130,7 @@ static int ecp_mod_p521( mbedtls_mpi *N )
     if( M.n > P521_WIDTH + 1 )
         M.n = P521_WIDTH + 1;
     M.p = Mp;
-    memcpy( Mp, N->p + P521_WIDTH - 1, M.n * sizeof( mbedtls_mpi_uint ) );
+    memmove( Mp, N->p + P521_WIDTH - 1, M.n * sizeof( mbedtls_mpi_uint ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_shift_r( &M, 521 % ( 8 * sizeof( mbedtls_mpi_uint ) ) ) );
 
     /* N = A0 */
@@ -1177,7 +1177,7 @@ static int ecp_mod_p255( mbedtls_mpi *N )
         M.n = P255_WIDTH + 1;
     M.p = Mp;
     memset( Mp, 0, sizeof Mp );
-    memcpy( Mp, N->p + P255_WIDTH - 1, M.n * sizeof( mbedtls_mpi_uint ) );
+    memmove( Mp, N->p + P255_WIDTH - 1, M.n * sizeof( mbedtls_mpi_uint ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_shift_r( &M, 255 % ( 8 * sizeof( mbedtls_mpi_uint ) ) ) );
     M.n++; /* Make room for multiplication by 19 */
 
@@ -1232,7 +1232,7 @@ static inline int ecp_mod_koblitz( mbedtls_mpi *N, mbedtls_mpi_uint *Rp, size_t 
     if( M.n > p_limbs + adjust )
         M.n = p_limbs + adjust;
     memset( Mp, 0, sizeof Mp );
-    memcpy( Mp, N->p + p_limbs - adjust, M.n * sizeof( mbedtls_mpi_uint ) );
+    memmove( Mp, N->p + p_limbs - adjust, M.n * sizeof( mbedtls_mpi_uint ) );
     if( shift != 0 )
         MBEDTLS_MPI_CHK( mbedtls_mpi_shift_r( &M, shift ) );
     M.n += R.n - adjust; /* Make room for multiplication by R */
@@ -1254,7 +1254,7 @@ static inline int ecp_mod_koblitz( mbedtls_mpi *N, mbedtls_mpi_uint *Rp, size_t 
     if( M.n > p_limbs + adjust )
         M.n = p_limbs + adjust;
     memset( Mp, 0, sizeof Mp );
-    memcpy( Mp, N->p + p_limbs - adjust, M.n * sizeof( mbedtls_mpi_uint ) );
+    memmove( Mp, N->p + p_limbs - adjust, M.n * sizeof( mbedtls_mpi_uint ) );
     if( shift != 0 )
         MBEDTLS_MPI_CHK( mbedtls_mpi_shift_r( &M, shift ) );
     M.n += R.n - adjust; /* Make room for multiplication by R */

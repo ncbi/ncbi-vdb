@@ -27,9 +27,10 @@
 #ifndef _hpp_vdb3_kfc_string_
 #define _hpp_vdb3_kfc_string_
 
-#ifndef _hpp_vdb3_kfc_memory_
+namespace vdb3 { class String; } // forwards for includes
+
 #include <kfc/memory.hpp>
-#endif
+#include <kfc/ptr.hpp>
 
 namespace vdb3
 {
@@ -155,10 +156,12 @@ namespace vdb3
     public:
 
         // supports nasty cast to NUL-terminated string
-        operator const char * () const;
+        operator char const * () const;
 
         NULTermString ( const String & str );
         void operator = ( const String & str );
+    private:
+        const Ptr < char > rgn;
     };
 
 

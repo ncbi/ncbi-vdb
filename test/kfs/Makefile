@@ -30,6 +30,7 @@ TOP ?= $(abspath ../..)
 MODULE = test/kfs
 
 TEST_TOOLS = \
+	kdf \
 	test-kfs \
 	test-ramfile \
 	test-resolve \
@@ -66,6 +67,20 @@ endif
 
 $(TEST_BINDIR)/test-kfs: $(TEST_KFS_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_KFS_LIB)
+
+
+#-------------------------------------------------------------------------------
+# df
+#
+DU_SRC = \
+	kdf
+
+DU_OBJ = \
+	$(addsuffix .$(OBJX),$(DU_SRC))
+
+$(TEST_BINDIR)/kdf: $(DU_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_KFS_LIB)
+
 
 #-------------------------------------------------------------------------------
 # test-kfs-md5

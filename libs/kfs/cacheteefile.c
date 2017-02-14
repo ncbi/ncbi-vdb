@@ -1016,7 +1016,7 @@ static rc_t KCacheTeeFileRead_simple2( const KCacheTeeFile *cself, uint64_t pos,
                 { /** EOF in remote file something left**/
                    to_read_total = to_read = valid_scratch_bytes - offset;
                 }
-                memcpy( buffer, scratch_buffer + offset, to_read );
+                memmove( buffer, scratch_buffer + offset, to_read );
             }
 
             /*** move source counters **/

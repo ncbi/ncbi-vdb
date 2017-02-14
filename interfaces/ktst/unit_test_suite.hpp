@@ -30,6 +30,7 @@
 // turn on INT64_C, UINT64_C etc.
 #define __STDC_CONSTANT_MACROS
 #include <klib/defs.h>
+#undef memcpy
 
 #include <string>
 #include <vector>
@@ -166,6 +167,7 @@ private:
     static struct Args* args;
 #endif
 };
+
 
 class TestCase {
     void Init(const char* name);
@@ -436,6 +438,24 @@ private:
     const char* _name;
     ncbi::NK::counter_t _ec;
 };
+
+
+class SharedTest : protected TestCase {
+    TestCase * _dad;
+
+protected:
+    SharedTest ( TestCase * dad, const char * name )
+        : TestCase ( std::string ( dad -> GetName () ) + "." + name )
+        , _dad ( dad )
+    {
+        assert ( _dad );
+    }
+
+    ~SharedTest ( void ) {
+        _dad -> ErrorCounterAdd ( GetErrorCounter () );
+    }
+};
+
 
 class TestInvoker {
 protected:

@@ -236,7 +236,7 @@ void mbedtls_md4_update( mbedtls_md4_context *ctx, const unsigned char *input, s
 
     if( left && ilen >= fill )
     {
-        memcpy( (void *) (ctx->buffer + left),
+        memmove( (void *) (ctx->buffer + left),
                 (void *) input, fill );
         mbedtls_md4_process( ctx, ctx->buffer );
         input += fill;
@@ -253,7 +253,7 @@ void mbedtls_md4_update( mbedtls_md4_context *ctx, const unsigned char *input, s
 
     if( ilen > 0 )
     {
-        memcpy( (void *) (ctx->buffer + left),
+        memmove( (void *) (ctx->buffer + left),
                 (void *) input, ilen );
     }
 }

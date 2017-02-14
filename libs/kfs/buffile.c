@@ -251,7 +251,7 @@ rc_t CC KBufFileRead ( const KBufFile *cself, uint64_t pos,
             partial = remain;
 
         /* copy bytes */
-        memcpy ( & dst [ total ], & src [ offset ], partial );
+        memmove ( & dst [ total ], & src [ offset ], partial );
     }
 
     if ( total != 0 )
@@ -318,7 +318,7 @@ rc_t CC KBufFileWrite ( KBufFile *self, uint64_t pos,
             partial = remain;
 
         /* copy bytes */
-        memcpy ( & dst [ offset ], & src [ total ], partial );
+        memmove ( & dst [ offset ], & src [ total ], partial );
     }
 
     if ( total != 0 )
