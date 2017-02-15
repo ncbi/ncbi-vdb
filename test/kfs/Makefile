@@ -187,6 +187,7 @@ $(TEST_BINDIR)/test-cachetee-out-of-space: $(CTOFS_OBJ)
 	rm *.o *.d
 
 ifeq (linux,$(OS))
+ifeq (1,$(HAVE_FUSE))
 #-------------------------------------------------------------------------------
 # scripted tests
 #
@@ -196,4 +197,5 @@ cachetee-out-of-space-test: $(TEST_BINDIR)/fuse-proxy $(TEST_BINDIR)/test-cachet
 	@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 	@ echo "Running $(SRCDIR)/run-cachetee-out-of-space-test.sh"
 	@ $(SRCDIR)/run-cachetee-out-of-space-test.sh $(SRCDIR) $(TEST_BINDIR)
+endif
 endif
