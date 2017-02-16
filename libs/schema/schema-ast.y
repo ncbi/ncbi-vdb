@@ -166,6 +166,7 @@
 %token PT_FUNCPROLOGUE
 %token PT_RETURN
 %token PT_PRODSTMT
+%token PT_PRODTRIGGER
 %token PT_SCHEMA
 %token PT_VALIDATE
 %token PT_PHYSICAL
@@ -213,8 +214,9 @@
 %type <node> source schema_1 schema_decls schema_decl schema_2 typedef new_type_names
 %type <node> typeset typeset_spec typespec dim fmtdef const alias function func_decl
 %type <node> schema_sig_opt return_type prologue formals_list
-%type <node>  schema_formals schema_formal type_expr formals formal
-%type <node> script_stmts script_stmt
+%type <node> schema_formals schema_formal type_expr formals formal
+%type <node> script_stmts script_stmt extern_function script script_decl validate
+%type <node> script_prologue
 
 %type <fqn> fqn qualnames fqn_opt_vers ident
 
@@ -228,6 +230,7 @@
 %type <tok> PT_TYPEDEF PT_IDENT IDENTIFIER_1_0 DECIMAL PT_ASTLIST PT_ARRAY PT_TYPESET
 %type <tok> PT_FORMAT PT_CONST PT_UINT PT_ALIAS PT_EMPTY PT_ELLIPSIS PT_RETURN
 %type <tok> VERSION PT_UNTYPED PT_ROWLENGTH PT_FUNCDECL PT_FUNCPARAMS PT_FORMALPARAM
+%type <tok> PT_VALIDATE
 
 %%
 
@@ -267,14 +270,17 @@ schema_decls
 /* declarations */
 
 schema_decl
-    : typedef   { $$ = $1; }
-    | typeset   { $$ = $1; }
-    | fmtdef    { $$ = $1; }
-    | const     { $$ = $1; }
-    | alias     { $$ = $1; }
-    | function  { $$ = $1; }
+    : typedef           { $$ = $1; }
+    | typeset           { $$ = $1; }
+    | fmtdef            { $$ = $1; }
+    | const             { $$ = $1; }
+    | alias             { $$ = $1; }
+    | function          { $$ = $1; }
+    | extern_function   { $$ = $1; }
+    | script            { $$ = $1; }
+    | validate          { $$ = $1; }
     /*TBD*/
-    | ';'       { $$ = new AST (); }
+    | ';'               { $$ = new AST (); }
     ;
 
 typedef
@@ -328,7 +334,7 @@ func_decl
     : PT_UNTYPED '(' KW___untyped fqn '(' ')' ')'      { $$ = p_builder . UntypedFunctionDecl ( $1, $4 ); }
     | PT_ROWLENGTH '(' KW___row_length fqn '(' ')' ')' { $$ = p_builder . RowlenFunctionDecl ( $1, $4 ); }
     | PT_FUNCDECL '(' schema_sig_opt return_type fqn_opt_vers fact_sig param_sig prologue ')'
-                { $$ = p_builder . FunctionDecl ( $1, $3, $4, $5, $6, $7, $8 ); }
+                { $$ = p_builder . FunctionDecl ( $1, false, $3, $4, $5, $6, $7, $8 ); }
     ;
 
 schema_sig_opt
@@ -390,7 +396,11 @@ vararg
 prologue
     : PT_FUNCPROLOGUE '(' ';' ')'                                       { $$ = new AST ( PT_EMPTY ); }
     | PT_FUNCPROLOGUE '(' '=' fqn ';' ')'                               { $$ = $4; }
-    | PT_FUNCPROLOGUE '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')'   { $$ = $6; }
+    | script_prologue
+    ;
+
+script_prologue
+    : PT_FUNCPROLOGUE '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')'   { $$ = $6; }
     ;
 
 script_stmts
@@ -399,9 +409,31 @@ script_stmts
     ;
 
 script_stmt
-    : PT_RETURN '(' KW_return cond_expr ';' ')'                         { $$ = new AST (); $$ -> AddNode ( $1 ); $$ -> AddNode ( $4 ); }
-    | PT_PRODSTMT '(' typespec IDENTIFIER_1_0 '=' cond_expr ';' ')'     { $$ = new AST (); $$ -> AddNode ( $3 ); $$ -> AddNode ( $4 );  $$ -> AddNode ( $6 ); }
-    | PT_PRODSTMT '(' KW_trigger IDENTIFIER_1_0 '=' cond_expr ';' ')'   { $$ = new AST (); $$ -> AddNode ( new AST () ); $$ -> AddNode ( $4 );  $$ -> AddNode ( $6 ); }
+    : PT_RETURN '(' KW_return cond_expr ';' ')'                         { $$ = new AST ( PT_RETURN ); $$ -> AddNode ( $4 ); }
+    | PT_PRODSTMT '(' type_expr IDENTIFIER_1_0 '=' cond_expr ';' ')'    { $$ = new AST ( PT_PRODSTMT ); $$ -> AddNode ( $3 );  $$ -> AddNode ( $4 );  $$ -> AddNode ( $6 ); }
+    | PT_PRODTRIGGER '(' KW_trigger IDENTIFIER_1_0 '=' cond_expr ';' ')'   { $$ = new AST ( PT_PRODTRIGGER ); $$ -> AddNode ( $4 );  $$ -> AddNode ( $6 ); }
+    ;
+
+extern_function
+    : PT_EXTERN '(' KW_extern function ')'    { $$ = $4; }
+
+script
+    : PT_SCHEMA '(' KW_schema script_decl ')'             { $$ = $4; }
+    | PT_SCHEMA '(' KW_schema KW_function script_decl ')' { $$ = $5; }
+    ;
+
+script_decl
+    : PT_FUNCDECL '(' schema_sig_opt return_type fqn_opt_vers fact_sig param_sig script_prologue ')'
+                { $$ = p_builder . FunctionDecl ( $1, true, $3, $4, $5, $6, $7, $8 ); }
+    ;
+
+validate
+    : PT_VALIDATE '(' KW_validate
+        PT_FUNCTION '(' KW_function
+            PT_FUNCDECL '(' schema_sig_opt return_type fqn_opt_vers fact_sig param_sig prologue ')'
+        ')'
+      ')'
+        { $$ = p_builder . FunctionDecl ( $1, false, $9, $10, $11, $12, $13, $14 ); }
     ;
 
 /* expressions */
@@ -417,7 +449,7 @@ cond_expr
     ;
 
 cond_chain
-    : expr                  { $$ = new AST_Expr ( $1 ); }
+    : expr                  { $$ = $1; }
     | cond_expr '|' expr    { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 

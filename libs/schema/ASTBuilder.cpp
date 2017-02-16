@@ -156,15 +156,16 @@ ASTBuilder :: Build ( const ParseTree& p_root, bool p_debugParse )
     return 0;
 }
 
-rc_t
-ASTBuilder :: VectorAppend ( Vector *p_self, uint32_t *p_idx, const void *p_item )
+bool
+ASTBuilder :: VectorAppend ( Vector & p_self, uint32_t *p_idx, const void *p_item )
 {
-    rc_t rc = :: VectorAppend ( p_self, p_idx, p_item );
+    rc_t rc = :: VectorAppend ( & p_self, p_idx, p_item );
     if ( rc != 0 )
     {
         ReportError ( "VectorAppend", rc );
+        return false;
     }
-    return rc;
+    return true;
 }
 
 const KSymbol*
@@ -340,7 +341,7 @@ ASTBuilder :: DeclareType ( const AST_FQN& p_fqn, const KSymbol& p_super, const 
     if ( dt != 0 )
     {
         /* insert into type vector */
-        if ( VectorAppend ( & m_schema -> dt, & dt -> id, dt ) == 0 )
+        if ( VectorAppend ( m_schema -> dt, & dt -> id, dt ) )
         {
             // create a symtab entry
             const KSymbol* symbol = CreateFqnSymbol ( p_fqn, eDatatype, dt ); // will add missing namespaces to symtab
@@ -404,7 +405,7 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
             else
             {
                 const AST_Expr & dimExpr = dynamic_cast < const AST_Expr & > ( dimension );
-                SExpression * expr = dimExpr . EvaluateConst ( * this ); // will report problems
+                SExpression * expr = dimExpr . MakeExpression ( * this ); // will report problems
                 if ( expr != 0 )
                 {
                     switch ( expr -> var )
@@ -431,6 +432,25 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
                         break;
                     }
                 }
+            }
+        }
+        break;
+    case PT_TYPEEXPR :  // fqn (format) / fqn (type)
+        {
+            fqn = dynamic_cast < const AST_FQN * > ( p_type . GetChild ( 0 ) );
+            const KSymbol * fmt = Resolve ( * fqn ); // will report unknown name
+            if ( fmt -> type != eFormat )
+            {
+                ReportError ( "Not a format", *fqn );
+                fqn = 0;
+            }
+            else
+            {
+                ret -> fmt = static_cast < const SFormat * > ( fmt -> u . obj );
+                ret -> fd . fmt = ret -> fmt -> id;
+                ret -> fd . td . dim = 1;
+
+                fqn = dynamic_cast < const AST_FQN * > ( p_type . GetChild ( 1 ) );
             }
         }
         break;
@@ -520,7 +540,7 @@ ASTBuilder :: DeclareTypeSet ( const AST_FQN & p_fqn, const BSTree & p_types, ui
         ts -> count = 0;
         BSTreeForEach ( & p_types, false, STypesetPopulate, ts );
 
-        if ( VectorAppend ( & m_schema -> ts, & ts -> id, ts ) == 0 )
+        if ( VectorAppend ( m_schema -> ts, & ts -> id, ts ) )
         {
             const KSymbol* symbol = CreateFqnSymbol ( p_fqn, eTypeset, ts ); // will add missing namespaces to symtab
             ts -> name = symbol;
@@ -749,7 +769,7 @@ ASTBuilder :: FmtDef ( const Token* p_token, AST_FQN* p_fqn, AST_FQN* p_super_op
         }
 
         /* insert into vector */
-        if ( VectorAppend ( & m_schema -> fmt, & fmt -> id, fmt ) == 0 )
+        if ( VectorAppend ( m_schema -> fmt, & fmt -> id, fmt ) )
         {   // create a symtab entry, link fmt to it
             fmt -> name = CreateFqnSymbol ( * p_fqn, eFormat, fmt ); // will add missing namespaces to symtab
         }
@@ -776,7 +796,7 @@ ASTBuilder :: ConstDef  ( const Token* p_token, AST* p_type, AST_FQN* p_fqn, AST
             const KSymbol * type = Resolve ( fqn ); // will report unknown name
             if ( type != 0 )
             {
-                if ( VectorAppend ( & m_schema -> cnst, & cnst -> id, cnst ) == 0 )
+                if ( VectorAppend ( m_schema -> cnst, & cnst -> id, cnst ) )
                 {
                     cnst -> name = CreateFqnSymbol ( * p_fqn, eConstant, cnst );
                     cnst -> expr = p_expr -> EvaluateConst ( *this ); // will report problems
@@ -807,7 +827,7 @@ ASTBuilder :: AliasDef  ( const Token* p_token, AST_FQN* p_name, AST_FQN* p_newN
     const KSymbol * sym = Resolve ( * p_name ); // will report unknown name
     if ( sym != 0 )
     {
-        VectorAppend ( & m_schema -> alias, 0, CreateFqnSymbol ( * p_newName, sym -> type, sym -> u . obj ) );
+        VectorAppend ( m_schema -> alias, 0, CreateFqnSymbol ( * p_newName, sym -> type, sym -> u . obj ) );
     }
 
     return ret;

@@ -501,6 +501,8 @@ FIXTURE_TEST_CASE(AliasedTypesetInTypeset, AST_Fixture)
 //TODO: function call: optional parameters
 //TODO: function call: vararg
 
+//TODO: formatted type in production in a table (not allowed?)
+
 #include "wb-test-schema-func.cpp"
 
 //////////////////////////////////////////// Main

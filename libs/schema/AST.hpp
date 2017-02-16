@@ -103,10 +103,11 @@ namespace ncbi
         {
         public:
             AST_Expr ( const Token* );  // literal constant
-            AST_Expr ( AST_FQN* );      // fullu qualified name
+            AST_Expr ( AST_FQN* );      // fully qualified name
             AST_Expr ( AST_Expr* );     // first sub-expression in a conditional ( ex1 | ex2 | ... )
 
             SExpression * EvaluateConst ( ASTBuilder& ) const; // reports problems
+            SExpression * MakeExpression ( ASTBuilder& ) const; // reports problems
         };
 
         class AST_ParamSig : public AST

@@ -87,6 +87,19 @@ public:
 
         const KSymbol * FactoryId () const { return m_fn -> u . ext . fact; }
 
+        bool IsScript () const { return m_fn -> script; }
+        bool IsValidate () const { return m_fn -> validate; }
+        bool IsUntyped () const { return m_fn -> untyped; }
+        bool IsRowLength () const { return m_fn -> row_length; }
+
+        const SExpression * ReturnExpr () const { return m_fn -> u . script . rtn; }
+
+        uint32_t ProductionCount () const { return VectorLength ( & m_fn -> u . script . prod ); }
+        const SProduction * Production ( uint32_t p_idx ) const
+        {
+            return static_cast < const SProduction * > ( VectorGet ( & m_fn -> u . script . prod, p_idx ) );
+        }
+
         const SFunction* m_fn;
     };
 
@@ -173,6 +186,7 @@ public:
 FIXTURE_TEST_CASE(Func_Untyped, AST_Function_Fixture)
 {
     FunctionAccess fn = ParseFunction ( "function __untyped f();", "f", 0, eUntypedFunc );
+    REQUIRE ( fn . IsUntyped () );
     REQUIRE_NULL ( fn . ReturnType () );
 }
 
@@ -191,6 +205,7 @@ FIXTURE_TEST_CASE(Func_Untyped_Exists, AST_Function_Fixture)
 FIXTURE_TEST_CASE(Func_Rowlength, AST_Function_Fixture)
 {   // implemented by the same code as untyped, the basic test case will suffice
     FunctionAccess fn = ParseFunction ( "function __row_length f();", "f", 0, eRowLengthFunc );
+    REQUIRE ( fn . IsRowLength () );
     REQUIRE_NULL ( fn . ReturnType () );
 }
 
@@ -201,6 +216,11 @@ FIXTURE_TEST_CASE(Func_Scalar_NoParams, AST_Function_Fixture)
     FunctionAccess fn = ParseFunction ( "function U8 f();", "f" );
     REQUIRE_EQ ( U8_id, fn . ReturnType () -> fd . td . type_id );
     REQUIRE_EQ ( 1u,    fn . ReturnType () -> fd . td . dim );
+
+    REQUIRE ( ! fn . IsScript () );
+    REQUIRE ( ! fn . IsValidate () );
+    REQUIRE ( ! fn . IsUntyped () );
+    REQUIRE ( ! fn . IsRowLength () );
 }
 
 FIXTURE_TEST_CASE(Func_Array_NoParams, AST_Function_Fixture)
@@ -236,6 +256,15 @@ FIXTURE_TEST_CASE(Func_ReturnFormat, AST_Function_Fixture)
     FunctionAccess fn = ParseFunction ( "fmtdef fmt; function fmt f();", "f" );
     REQUIRE_EQ ( (uint32_t)1, fn . ReturnType () -> fmt -> id );
     REQUIRE_EQ ( (uint32_t)1, fn . ReturnType () -> fd . fmt );
+}
+
+FIXTURE_TEST_CASE(Func_ReturnFormatted, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction ( "fmtdef fmt; function fmt / U8 f();", "f" );
+    REQUIRE_EQ ( U8_id, fn . ReturnType () -> fd . td . type_id );
+    REQUIRE_EQ ( 1u,    fn . ReturnType () -> fd . td . dim );
+    REQUIRE_EQ ( 1u,    fn . ReturnType () -> fd . fmt );
+    REQUIRE_EQ ( 1u,    fn . ReturnType () -> fmt -> id );
 }
 
 FIXTURE_TEST_CASE(Func_ReturnBad, AST_Function_Fixture)
@@ -288,7 +317,7 @@ FIXTURE_TEST_CASE(Func_Redeclared_HigherMinor, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_NoReleaseNumberForSimpleFunctions, AST_Function_Fixture)
 {
-    VerifyErrorMessage ( "function U16 f#1.2.3();", "Release number is not allowed for simple function: 'f'" );
+    VerifyErrorMessage ( "function U16 f#1.2.3();", "Release number is not allowed: 'f'" );
 }
 
 // formal parameters
@@ -299,7 +328,7 @@ FIXTURE_TEST_CASE(Func_BadParamType, AST_Function_Fixture)
 }
 FIXTURE_TEST_CASE(Func_BadParamName, AST_Function_Fixture)
 {
-    VerifyErrorMessage ( "function U8 f(U8 U16);", "Cannot be used as a parameter name: 'U16'" );
+    VerifyErrorMessage ( "function U8 f(U8 U16);", "Name already in use: 'U16'" );
 }
 
 FIXTURE_TEST_CASE(Func_OneParamScalar, AST_Function_Fixture)
@@ -345,7 +374,7 @@ FIXTURE_TEST_CASE(Func_ControlParam, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_TwoParamsSameName, AST_Function_Fixture)
 {
-    VerifyErrorMessage ( "function U8 f(U8 p, U16 p);", "Cannot be used as a parameter name: 'p'" );
+    VerifyErrorMessage ( "function U8 f(U8 p, U16 p);", "Name already in use: 'p'" );
 }
 
 FIXTURE_TEST_CASE(Func_TwoParams, AST_Function_Fixture)
@@ -541,6 +570,21 @@ FIXTURE_TEST_CASE(Func_FactorySpec_DefinedAfter, AST_Function_Fixture)
     VerifyErrorMessage  ( "function U8 f1() = fact; function U8 fact();", "Declared earlier and cannot be overloaded: 'fact'" );
 }
 
+// Extern functions
+FIXTURE_TEST_CASE(Func_Extern, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "extern function U8 f();", "f" );
+    REQUIRE ( ! fn . IsScript () );
+    REQUIRE ( ! fn . IsValidate () );
+    REQUIRE ( ! fn . IsUntyped () );
+    REQUIRE ( ! fn . IsRowLength () );
+}
+
+FIXTURE_TEST_CASE(Func_Extern_ReleaseNumber, AST_Function_Fixture)
+{
+    VerifyErrorMessage ( "extern function U16 f#1.2.3();", "Release number is not allowed: 'f'" );
+}
+
 // Statements in non-scripts prologue
 
 FIXTURE_TEST_CASE(Func_Body_NonScript, AST_Function_Fixture)
@@ -552,24 +596,123 @@ FIXTURE_TEST_CASE(Func_Body_NonScript, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_Script, AST_Function_Fixture)
 {
-    m_newParse = false;
-    FunctionAccess fn = ParseFunction  ( "schema function U8 f#1.2.3() { return 1; };", "f" );
-    //TODO: verify
+    FunctionAccess fn = ParseFunction  ( "schema function U8 f() { return 1; };", "f", 0 , eScriptFunc );
+    REQUIRE ( fn . IsScript () );
+    REQUIRE ( ! fn . IsValidate () );
+    REQUIRE ( ! fn . IsUntyped () );
+    REQUIRE ( ! fn . IsRowLength () );
+
+    const SExpression * ret = fn . ReturnExpr ();
+    REQUIRE_NOT_NULL ( ret );
+    REQUIRE_EQ ( (uint32_t)eConstExpr, ret -> var );
+    REQUIRE_EQ ( (uint64_t)1, reinterpret_cast < const SConstExpr * > ( ret ) -> u . u64 [ 0 ] );
+}
+
+FIXTURE_TEST_CASE(Func_ExternRedeclaredAsScript, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "function U8 f(); schema function U8 f() { return 1; };", "Declared earlier and cannot be overloaded: 'f'" );
 }
 
 FIXTURE_TEST_CASE(Func_Script_FullVersion, AST_Function_Fixture)
 {
-    m_newParse = false;
-    FunctionAccess fn = ParseFunction  ( "schema function U8 f#1.2.3() { return 1; };", "f" );
-    //TODO: verify
+    FunctionAccess fn = ParseFunction  ( "schema function U8 f#1.2.3() { return 1; };", "f", 0 , eScriptFunc );
+    REQUIRE_EQ ( (uint32_t)(1 << 24 | 2 << 16 | 3 ), fn . Version () );
 }
 
-//TODO: script + untyped - error
-//TODO: script fn without a body - error
+FIXTURE_TEST_CASE(Func_Script_MultipleReturns, AST_Function_Fixture)
+{
+    VerifyErrorMessage ( "schema function U8 f() { return 1; return 2; };", "Multiple return statements in a function: 'f'" );
+}
 
-//TODO: validate + untyped - error
-//TODO: validate + non-void return - error
-//TODO: release number for validate function (#1.2.?)
-//TODO: non-validate + void return - error
+FIXTURE_TEST_CASE(Func_Script_SimpleProduction, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "schema function U8 f() { U8 v = 1; return v; };", "f", 0 , eScriptFunc );
+    REQUIRE_EQ ( (uint32_t)1, fn. ProductionCount () );
 
-//TODO: release number for extern function (#1.2.?)
+    const SProduction * prod = fn . Production ( 0 );
+    REQUIRE_NOT_NULL ( prod );
+    // verify type
+    REQUIRE_NOT_NULL ( prod -> fd );
+    REQUIRE_EQ ( (uint32_t)eTypeExpr, prod -> fd -> var );
+    REQUIRE_EQ ( U8_id, ( ( const STypeExpr * ) ( prod -> fd ) ) -> dt -> id );
+    // verify name
+    REQUIRE_EQ ( string ( "v" ), string ( prod -> name -> name . addr ) );
+    // verify right hand side
+    REQUIRE_NOT_NULL ( prod -> expr );
+    REQUIRE_EQ ( (uint32_t)eConstExpr, prod -> expr -> var );
+
+    // verify reference to "v" in the return expression
+    REQUIRE_EQ ( (uint32_t)eProdExpr, fn . ReturnExpr () -> var );
+}
+
+FIXTURE_TEST_CASE(Func_Script_NoReturn, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "schema function U8 f() { U8 v = 1; };", "Schema function does not contain a return statement: 'f'" );
+}
+
+FIXTURE_TEST_CASE(Func_Script_FormattedType, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "fmtdef fmt; schema function U8 f() { fmt / U8 v = 1; return v; };", "f", 0 , eScriptFunc );
+    REQUIRE_EQ ( (uint32_t)1, fn. ProductionCount () );
+
+    const SProduction * prod = fn . Production ( 0 );
+    REQUIRE_NOT_NULL ( prod );
+    // verify type
+    REQUIRE_NOT_NULL ( prod -> fd );
+    REQUIRE_NOT_NULL ( ( ( const STypeExpr * ) ( prod -> fd ) ) -> fmt );
+}
+
+FIXTURE_TEST_CASE(Func_Script_FormattedType_NotFormat, AST_Function_Fixture)
+{
+    VerifyErrorMessage ( "typedef U16 t; schema function U8 f() { t / U8 v = 1; return v; };", "Not a format: 't'" );
+}
+
+// Validate functions
+
+FIXTURE_TEST_CASE(Func_Validate, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "validate function void f(U8 a, U8 b);", "f", 0 , eFunction );
+    REQUIRE ( ! fn . IsScript () );
+    REQUIRE ( fn . IsValidate () );
+    REQUIRE ( ! fn . IsUntyped () );
+    REQUIRE ( ! fn . IsRowLength () );
+}
+
+FIXTURE_TEST_CASE(Func_NonValidate_void, AST_Function_Fixture)
+{
+   VerifyErrorMessage  ( "function void f(U8 a, U8 b);", "Only validate functions can return void: 'f'" );
+}
+
+FIXTURE_TEST_CASE(Func_Validate_FullVersion, AST_Function_Fixture)
+{
+    VerifyErrorMessage ( "validate function void f#1.2.3(U8 a, U8 b);", "Release number is not allowed: 'f'" );
+}
+
+FIXTURE_TEST_CASE(Func_Validate_NonVoid, AST_Function_Fixture)
+{
+   VerifyErrorMessage  ( "validate function U8 f(U8 a, U8 b);", "Validate functions have to return void: 'f'" );
+}
+
+FIXTURE_TEST_CASE(Func_Validate_OptionalParameters, AST_Function_Fixture)
+{
+   VerifyErrorMessage  ( "validate function void f(U8 a, U8 b, *U8 c);", "Validate functions cannot have optional parameters: 'f'" );
+}
+
+FIXTURE_TEST_CASE(Func_Validate_Not2Parameters, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "validate function void f(U8 a);", "Validate functions have to have 2 mandatory parameters: 'f'" );
+}
+
+FIXTURE_TEST_CASE(Func_Validate_Varargs, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "validate function void f(U8 a, U8 b, ...);", "Validate functions cannot have variable parameters: 'f'" );
+}
+
+FIXTURE_TEST_CASE(Func_Validate_FactorySpec, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "validate function void f(U8 a, U8 b) = fact;", "f", 0 , eFunction );
+    const KSymbol * factId = fn . FactoryId ();
+    REQUIRE_NOT_NULL ( factId );
+    REQUIRE_EQ ( string ( "fact" ), ToCppString ( factId -> name ) );
+    REQUIRE_EQ ( (uint32_t)eFactory, factId -> type );
+}

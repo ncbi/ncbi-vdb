@@ -330,15 +330,11 @@ TEST_CASE ( Function_Prologue_Rename )
 }
 TEST_CASE ( Function_Prologue_Script_Return )
 {
-    REQUIRE ( ParseAndVerify ( "function t fn ( a b ) { return 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "schema t fn ( a b ) { return 1; };" ) );
 }
 TEST_CASE ( Function_Prologue_Script_Assign )
 {
-    REQUIRE ( ParseAndVerify ( "function t fn ( a b ) { a c = 1; };" ) );
-}
-TEST_CASE ( Function_Prologue_Script_Trigger )
-{
-    REQUIRE ( ParseAndVerify ( "function t fn ( a b ) { trigger c = 1; };" ) );
+    REQUIRE ( ParseAndVerify ( "schema function t fn ( a b ) { a c = 1; };" ) );
 }
 
 TEST_CASE ( Script )

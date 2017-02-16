@@ -68,6 +68,10 @@ namespace ncbi
             template < typename T > T* Alloc ( size_t p_size = sizeof ( T ) );
 
             const VSchema * GetSchema () const { return m_schema; }
+            VSchema * GetSchema () { return m_schema; }
+
+            const KSymTable & GetSymTab () const { return m_symtab; }
+            KSymTable & GetSymTab () { return m_symtab; }
 
         public:
             // AST node creation methods for use from bison
@@ -78,51 +82,27 @@ namespace ncbi
             AST * AliasDef  ( const Token*, AST_FQN* name, AST_FQN* newName );
             AST * UntypedFunctionDecl ( const Token*, AST_FQN* name );
             AST * RowlenFunctionDecl ( const Token*, AST_FQN* name );
-            AST * FunctionDecl ( const Token*, AST * schema, AST * returnType, AST_FQN* name, AST_ParamSig* fact, AST_ParamSig* params, AST* prologue );
+            AST * FunctionDecl ( const Token*, bool script, AST * schema, AST * returnType, AST_FQN* name, AST_ParamSig* fact, AST_ParamSig* params, AST* prologue );
+
+        public: // schema object construction helpers
+            const KSymbol* CreateFqnSymbol ( const AST_FQN& fqn, uint32_t type, const void * obj );
+            struct STypeExpr * MakeTypeExpr ( const AST & p_type );
+            // false - failed, error reported
+            bool VectorAppend ( Vector & self, uint32_t *idx, const void *item );
 
         private:
             bool Init();
 
-            const KSymbol* CreateFqnSymbol ( const AST_FQN& fqn, uint32_t type, const void * obj );
-
             void DeclareType ( const AST_FQN& fqn, const KSymbol& super, const AST_Expr* dimension_opt );
             void DeclareTypeSet ( const AST_FQN& fqn, const BSTree& types, uint32_t typeCount );
-            void DeclareFunction ( const AST_FQN&           fqn,
-                                   uint32_t                 type,
-                                   struct STypeExpr *       retType,
-                                   SFormParmlist *          factory,
-                                   SFormParmlist *          formals,
-                                   const BSTree *           sscope,
-                                   const Vector *           stypes,
-                                   const Vector *           sparams,
-                                   const BSTree *           fscope,
-                                   bool                     canOverload,
-                                   const AST *              prologue );
-
-            struct STypeExpr * MakeTypeExpr ( const AST & p_type );
 
             struct SFormParmlist * MakeFactoryParams ( const AST_ParamSig & );
-            void AddFactoryParams ( Vector& p_sig, const AST & p_params );
+            void AddFactoryParams ( Vector& sig, const AST & params );
 
             struct SFormParmlist * MakeFormalParams ( const AST_ParamSig & );
-            void AddFormalParams ( Vector& p_sig, const AST & p_params );
-
-            void MakeSchemaParams ( const AST & p_sig, Vector& p_types, Vector & p_values );
-            struct SIndirectType * MakeSchemaParamType ( const AST_FQN & p_name );
-            struct SIndirectConst * MakeSchemaParamConst ( const AST_FQN & p_name );
+            void AddFormalParams ( Vector& sig, const AST & params );
 
             uint64_t EvalConstExpr ( const AST_Expr &expr );
-            bool HandleOverload ( struct SFunction * fn, const KSymbol * priorDecl);
-
-            void HandlePrologue ( struct SFunction & f, const AST & p_prologue );
-
-            // false - failed, error reported
-            rc_t VectorAppend ( Vector *self, uint32_t *idx, const void *item );
-
-            void VectorMove ( Vector & p_dest, const Vector * p_source );
-
-            void SFormParmlistMove ( SFormParmlist & p_dest, SFormParmlist * p_source );
-            struct KSymbol * CreateParamSymbol ( const char* p_name, int p_type, void * p_obj );
 
         private:
             VSchema*    m_intrinsic;

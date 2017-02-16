@@ -228,6 +228,7 @@
 %token PT_FUNCPROLOGUE
 %token PT_RETURN
 %token PT_PRODSTMT
+%token PT_PRODTRIGGER
 %token PT_SCHEMA
 %token PT_VALIDATE
 %token PT_PHYSICAL
@@ -322,22 +323,6 @@ schema_1_0_decl
     | ';'                   { $$ . subtree = T ( $1 ); }  /* for lots of reasons, we tolerate stray semicolons */
     ;
 
-script_1_0_decl
-    : KW_schema func_1_0_decl                                   /* MUST have a function body      */
-                            { $$ . subtree = MakeTree ( PT_SCHEMA, T ( $1 ), P ( $2 ) ); }
-    | KW_schema KW_function func_1_0_decl                       /* "function" keyword is optional */
-                            { $$ . subtree = MakeTree ( PT_SCHEMA, T ( $1 ), T ( $2 ), P ( $3 ) ); }
-    ;
-
-validate_1_0_decl
-    : KW_validate function_1_0_decl                             /* has exactly 2 parameters and is not inline */
-                            { $$ . subtree = MakeTree ( PT_VALIDATE, T ( $1 ), P ( $2 ) ); }
-    ;
-
-include_directive
-    : KW_include STRING     { $$ . subtree = MakeTree ( PT_INCLUDE, T ( $1 ), T ( $2 ) ); }
-    ;
-
 /* typedef-1.0
  */
 typedef_1_0_decl
@@ -421,19 +406,6 @@ alias_1_0_decl
 alias_1_0_new_name
     : fqn_1_0                       { $$ = $1; }    /* for some reason, does not allow duplicate redefinition */
     ;
-
-
-/* extern-1.0
- */
-extern_1_0_decl
-    : KW_extern ext_func_1_0_decl                               /* supposed to be an extern C function */
-            { $$ . subtree = MakeTree ( PT_EXTERN, T ( $1 ), P ( $2 ) ); }
-    ;
-
-ext_func_1_0_decl
-    : function_1_0_decl             { $$ = $1; }    /* there are restrictions and potentially additions */
-    ;
-
 
 /* function-1.0
  */
@@ -565,14 +537,37 @@ script_1_0_stmt_seq
 
 script_1_0_stmt
     : KW_return cond_expr_1_0 ';'   { $$ . subtree = MakeTree ( PT_RETURN, T ( $1 ), P ( $2 ), T ( $3 ) ); }
-    | production_1_0_stmt           { $$ = $1; }
+    | type_expr_1_0 IDENTIFIER_1_0 '=' cond_expr_1_0 ';'
+                                     { $$ . subtree = MakeTree ( PT_PRODSTMT, P ( $1 ), T ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
     ;
 
-production_1_0_stmt
-    : typespec_1_0 IDENTIFIER_1_0 '=' cond_expr_1_0 ';'    /* cannot have format */
-                                     { $$ . subtree = MakeTree ( PT_PRODSTMT, P ( $1 ), T ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
-    | KW_trigger    IDENTIFIER_1_0 '=' cond_expr_1_0 ';'
-                                     { $$ . subtree = MakeTree ( PT_PRODSTMT, T ( $1 ), T ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
+/* extern-1.0
+ */
+extern_1_0_decl
+    : KW_extern ext_func_1_0_decl                               /* supposed to be an extern C function */
+            { $$ . subtree = MakeTree ( PT_EXTERN, T ( $1 ), P ( $2 ) ); }
+    ;
+
+ext_func_1_0_decl
+    : function_1_0_decl             { $$ = $1; }    /* there are restrictions and potentially additions */
+    ;
+
+/* script
+ */
+
+script_1_0_decl
+    : KW_schema func_1_0_decl                                   /* MUST have a function body      */
+                            { $$ . subtree = MakeTree ( PT_SCHEMA, T ( $1 ), P ( $2 ) ); }
+    | KW_schema KW_function func_1_0_decl                       /* "function" keyword is optional */
+                            { $$ . subtree = MakeTree ( PT_SCHEMA, T ( $1 ), T ( $2 ), P ( $3 ) ); }
+    ;
+
+/* validate
+ */
+
+validate_1_0_decl
+    : KW_validate function_1_0_decl                             /* has exactly 2 parameters and is not inline */
+                            { $$ . subtree = MakeTree ( PT_VALIDATE, T ( $1 ), P ( $2 ) ); }
     ;
 
 /* physical encoding
@@ -661,6 +656,13 @@ tbl_1_0_stmt
     | KW_static KW_physical physmbr_1_0_decl    { $$ . subtree = MakeTree ( PT_PHYSCOL, T ( $1 ), T ( $2 ), P ( $3 ) ); }
     | KW___untyped '=' fqn_1_0 '(' ')' ';'      { $$ . subtree = MakeTree ( PT_COLUNTYPED, T ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ), T ( $5 ), T ( $6 ) ); }
     | ';'                                       { $$ . subtree = T ( $1 ); }
+    ;
+
+production_1_0_stmt
+    : typespec_1_0 IDENTIFIER_1_0 '=' cond_expr_1_0 ';'    /* cannot have format */
+                                     { $$ . subtree = MakeTree ( PT_PRODSTMT, P ( $1 ), T ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
+    | KW_trigger    IDENTIFIER_1_0 '=' cond_expr_1_0 ';'
+                                     { $$ . subtree = MakeTree ( PT_PRODTRIGGER, T ( $1 ), T ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
     ;
 
 column_1_0_decl
@@ -898,7 +900,7 @@ negate_expr_1_0
 
 type_expr_1_0
     : typespec_1_0              { $$ = $1; } /* datatype, typeset, schematype */
-    | fqn_1_0 '/' fqn_1_0       { $$ . subtree = MakeTree ( PT_TYPEEXPR, P ( $1 ), T ( $2), P ( $3 ) ); } /* format /  ? */
+    | fqn_1_0 '/' fqn_1_0       { $$ . subtree = MakeTree ( PT_TYPEEXPR, P ( $1 ), T ( $2), P ( $3 ) ); } /* format /  type */
     ;
 
  /* database */
@@ -946,6 +948,15 @@ table_member_1_0
     : KW_table fqn_opt_vers IDENTIFIER_1_0 ';'
             { $$ . subtree = MakeTree ( PT_TBLMEMBER, T ( $1 ), P ( $2 ), T ( $3 ), T ( $4 ) ); }
     ;
+
+/* include
+ */
+
+include_directive
+    : KW_include STRING     { $$ . subtree = MakeTree ( PT_INCLUDE, T ( $1 ), T ( $2 ) ); }
+    ;
+
+
 
 /* other stuff
  */

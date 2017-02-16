@@ -259,6 +259,23 @@ AST_Expr :: AST_Expr ( AST_Expr* p_fqn )
 SExpression *
 AST_Expr :: EvaluateConst ( ASTBuilder & p_builder ) const
 {   //TBD. for now, only handles a literal int constant and a direct reference to a schema parameter
+    SExpression * ret = MakeExpression ( p_builder );
+    if ( ret != 0 )
+    {
+        if ( ret -> var != eConstExpr )
+        {
+            assert ( false );
+
+            SExpressionWhack ( ret );
+            ret = 0;
+        }
+    }
+    return ret;
+}
+
+SExpression *
+AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
+{   //TBD. for now, only handles a literal int constant and a direct reference to a schema parameter
     switch ( GetToken () . GetType () )
     {
     case PT_UINT:
@@ -311,8 +328,22 @@ AST_Expr :: EvaluateConst ( ASTBuilder & p_builder ) const
                         }
                     }
                     break;
+                case eProduction:
+                    {
+                        SSymExpr *x = p_builder . Alloc < SSymExpr > ();
+                        if ( x != 0 )
+                        {
+                            x -> dad . var = eProdExpr;
+                            atomic32_set ( & x -> dad . refcount, 1 );
+                            x -> _sym = sym;
+                            x -> alt = false;
+
+                            return & x -> dad;
+                        }
+                    }
+                    break;
                 default:
-                    p_builder . ReportError ( "Not yet implemented in a constant expression" );
+                    p_builder . ReportError ( "Not yet implemented in an expression" );
                     break;
                 }
             }
