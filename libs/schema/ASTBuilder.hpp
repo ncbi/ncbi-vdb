@@ -58,7 +58,7 @@ namespace ncbi
 
             void ReportError ( const char* p_fmt, ... );
             void ReportError ( const char* p_msg, const AST_FQN& p_fqn );
-            void ReportError ( const char* p_msg, rc_t );
+            void ReportRc ( const char* p_msg, rc_t );
 
             // error list is cleared by a call to Build
             uint32_t GetErrorCount() const { return VectorLength ( & m_errors ); }
@@ -83,12 +83,17 @@ namespace ncbi
             AST * UntypedFunctionDecl ( const Token*, AST_FQN* name );
             AST * RowlenFunctionDecl ( const Token*, AST_FQN* name );
             AST * FunctionDecl ( const Token*, bool script, AST * schema, AST * returnType, AST_FQN* name, AST_ParamSig* fact, AST_ParamSig* params, AST* prologue );
+            AST * PhysicalDecl ( const Token*, AST * schema, AST * returnType, AST_FQN* name, AST_ParamSig* fact, AST* body );
 
         public: // schema object construction helpers
             const KSymbol* CreateFqnSymbol ( const AST_FQN& fqn, uint32_t type, const void * obj );
             struct STypeExpr * MakeTypeExpr ( const AST & p_type );
             // false - failed, error reported
             bool VectorAppend ( Vector & self, uint32_t *idx, const void *item );
+            const KSymbol * CreateOverload ( const AST_FQN & p_name, const void * p_object, int p_type, int64_t CC (*p_sort)(const void *, const void *), Vector & p_functions, Vector & p_names, uint32_t * p_id );
+            bool HandleFunctionOverload ( const void * p_object, uint32_t p_version, const KSymbol * p_priorDecl, uint32_t * p_id );
+            bool HandlePhysicalOverload ( const void * p_object, uint32_t p_version, const KSymbol * p_priorDecl, uint32_t * p_id );
+            void HandlePhysicalBody ( const String & p_name, const AST * p_schema, const AST_ParamSig* p_fact, const AST* p_body, SFunction & p_func );
 
         private:
             bool Init();

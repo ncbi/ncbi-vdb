@@ -53,6 +53,7 @@ namespace ncbi
             AST ( const Token* token, AST* );
             AST ( const Token* token, AST*, AST* );
             AST ( const Token* token, AST*, AST*, AST* );
+            AST ( const Token* token, AST*, AST*, AST*, AST *, AST * );
             AST ( const Token* token, AST*, AST*, AST*, AST*, AST*, AST* );
 
             void AddNode ( AST * ); // allocate with new
@@ -105,9 +106,12 @@ namespace ncbi
             AST_Expr ( const Token* );  // literal constant
             AST_Expr ( AST_FQN* );      // fully qualified name
             AST_Expr ( AST_Expr* );     // first sub-expression in a conditional ( ex1 | ex2 | ... )
+            AST_Expr ( Token :: TokenType );    // '@' etc
 
-            SExpression * EvaluateConst ( ASTBuilder& ) const; // reports problems
-            SExpression * MakeExpression ( ASTBuilder& ) const; // reports problems
+            // these methods report problems
+            SExpression * EvaluateConst ( ASTBuilder & ) const;
+            SExpression * MakeExpression ( ASTBuilder & ) const;
+            SExpression * MakeSymExpr ( ASTBuilder & , const KSymbol * p_sym ) const;
         };
 
         class AST_ParamSig : public AST

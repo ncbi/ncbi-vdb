@@ -268,6 +268,7 @@
 %token PT_FACTPARMNAMED
 %token PT_VERSNAME
 %token PT_ARRAY
+%token PT_AT
 
  /* !!! Keep token declarations above in synch with schema-ast.y */
 

@@ -170,7 +170,8 @@ extern int AST_debug;
     PT_UNARYPLUS = 379,
     PT_FACTPARMNAMED = 380,
     PT_VERSNAME = 381,
-    PT_ARRAY = 382
+    PT_ARRAY = 382,
+    PT_AT = 383
   };
 #endif
 
@@ -188,7 +189,7 @@ union YYSTYPE
   AST_ParamSig* paramSig;
   bool          boolean;
 
-#line 192 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
+#line 193 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

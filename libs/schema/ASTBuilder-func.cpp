@@ -47,12 +47,11 @@ class FunctionDeclaration // Wrapper around SFunction
 {
 public:
     FunctionDeclaration ( ASTBuilder & p_builder );
+    FunctionDeclaration ( ASTBuilder & p_builder, SFunction & ); // physical function; will not be overloaded or added to symtab
     ~FunctionDeclaration ();
 
     BSTree * SchemaScope () { return m_self == 0 ? 0 : & m_self -> sscope; }
     BSTree * FunctionScope () { return m_self == 0 ? 0 : & m_self -> fscope; }
-
-    bool HandleOverload ( const KSymbol * p_priorDecl );
 
     bool SetName ( const AST_FQN &  p_fqn,
                    uint32_t         p_type,
@@ -63,7 +62,10 @@ public:
     void SetReturnType ( STypeExpr * p_retType );
     void SetFactoryParams ( const AST_ParamSig & p_sig );
     void SetFormalParams ( const AST_ParamSig & p_sig );
+    void SetPhysicalParams ();
     void SetPrologue ( const AST & p_prologue );
+
+    void HandleScript ( const AST & p_body, const String & p_funcName );
 
 private:
     KSymbol * CreateLocalSymbol ( const char* p_name, int p_type, void * p_obj );
@@ -76,15 +78,13 @@ private:
 private:
     ASTBuilder &    m_builder;
     SFunction *     m_self;
-    const KSymbol * m_priorDecl;
     bool            m_destroy;
 };
 
 
 FunctionDeclaration :: FunctionDeclaration ( ASTBuilder & p_builder )
-: m_builder ( p_builder ),
+:   m_builder ( p_builder ),
     m_self ( m_builder . Alloc < SFunction > () ),
-    m_priorDecl ( 0 ),
     m_destroy ( true )
 {
     if ( m_self != 0 )
@@ -94,60 +94,22 @@ FunctionDeclaration :: FunctionDeclaration ( ASTBuilder & p_builder )
     }
 }
 
+FunctionDeclaration :: FunctionDeclaration ( ASTBuilder & p_builder, SFunction & p_func )
+:   m_builder ( p_builder ),
+    m_self ( & p_func ),
+    m_destroy ( false )
+{
+    memset ( m_self, 0, sizeof * m_self );
+    VectorInit ( & m_self -> fact . parms, 0, 8 );
+    m_self -> script        = true;
+}
+
 FunctionDeclaration :: ~FunctionDeclaration ()
 {
     if ( m_self != 0 && m_destroy )
     {
         SFunctionWhack ( m_self, 0 );
     }
-}
-
-bool
-FunctionDeclaration :: HandleOverload ( const KSymbol * p_priorDecl )
-{
-    assert ( m_self != 0 );
-    assert ( p_priorDecl != 0 );
-
-    m_self -> name = p_priorDecl;
-
-    SNameOverload *name = ( SNameOverload* ) m_self -> name -> u . obj;
-    assert ( name != 0 );
-    uint32_t idx;
-    rc_t rc = VectorInsertUnique ( & name -> items, m_self, & idx, SFunctionSort );
-    if ( rc == 0 ) // overload added
-    {
-        if ( m_builder . VectorAppend ( m_builder . GetSchema () -> func, & m_self -> id, m_self ) )
-        {
-            return true;
-        }
-    }
-    if ( GetRCState ( rc ) == rcExists )
-    {   /* an overload with the same major version exists */
-        /* see if new function trumps old */
-        SFunction *exist = static_cast < SFunction * > ( VectorGet ( & name -> items, idx ) );
-        if ( m_self -> version > exist -> version )
-        {
-            /* insert our function in name overload */
-            void * prior;
-            VectorSwap ( & name -> items, idx, m_self, & prior );
-
-            /* if existing is in the same schema... */
-            if ( ( const void* ) name == exist -> name -> u . obj )
-            {
-                /* need to swap with old */
-                assert ( exist -> id >= VectorStart ( & m_builder . GetSchema () -> func ) );
-                VectorSwap ( & m_builder . GetSchema () -> func, exist -> id, m_self, & prior );
-                m_self -> id = exist -> id;
-                SFunctionWhack ( (SFunction*)prior, 0 );
-            }
-            return true;
-        }
-    }
-    else if ( rc != 0 )
-    {
-        m_builder . ReportError ( "VectorInsertUnique", rc );
-    }
-    return false;
 }
 
 bool
@@ -166,55 +128,44 @@ FunctionDeclaration :: SetName ( const AST_FQN &  p_fqn,
     m_self -> row_length    = p_type == eRowLengthFunc;
     m_self -> validate      = p_validate;
 
+    const KSymbol * priorDecl = m_builder . Resolve ( p_fqn, false );
+
     m_self -> version = p_fqn . GetVersion ();
-    if ( ( m_self -> version & 0xFFFF ) != 0 && p_type == eFunction )
+    if ( ( m_self -> version & 0xFFFF ) != 0 && priorDecl != 0 && priorDecl -> type == eFunction )
     {
-        m_builder . ReportError ( "Release number is not allowed", p_fqn );
+        m_builder . ReportError ( "Changing release number is not allowed", p_fqn );
         return false;
     }
 
-    m_priorDecl = m_builder . Resolve ( p_fqn, false );
-    if ( m_priorDecl == 0 )
+    if ( priorDecl == 0 )
     {
-        m_self -> name = m_builder . CreateFqnSymbol ( p_fqn, p_type, m_self );
-
-        SNameOverload *name;
-        rc_t rc = SNameOverloadMake ( & name, m_self -> name, 0, 4 );
-        if ( rc == 0 )
+        m_self -> name = m_builder . CreateOverload ( p_fqn,
+                                                      m_self,
+                                                      p_type,
+                                                      SFunctionSort,
+                                                      m_builder . GetSchema () -> func,
+                                                      m_builder . GetSchema () -> fname,
+                                                      & m_self -> id );
+        if ( m_self -> name != 0 )
         {
-            rc = VectorInsertUnique ( & name -> items, m_self, 0, SFunctionSort );
-            if ( rc == 0 )
-            {
-                if ( m_builder . VectorAppend ( m_builder . GetSchema () -> func, & m_self -> id, m_self ) )
-                {
-                    if ( m_builder . VectorAppend ( m_builder . GetSchema () -> fname, & name -> cid . id, name ) )
-                    {
-                        m_destroy = false;
-                        return true;
-                    }
-                }
-            }
-            else
-            {
-                m_builder . ReportError ( "VectorInsertUnique", rc );
-            }
-            SNameOverloadWhack ( name, 0 );
-        }
-        else
-        {
-            m_builder . ReportError ( "SNameOverloadMake", rc );
+            m_destroy = false;
+            return true;
         }
     }
     else
     {
-        if ( m_priorDecl -> type != p_type || ! p_canOverload )
+        if ( priorDecl -> type != p_type || ! p_canOverload )
         {
             m_builder . ReportError ( "Declared earlier and cannot be overloaded", p_fqn );
             return false;
         }
 
-        if ( HandleOverload ( m_priorDecl ) ) // declared previously
-        {
+        if ( m_builder . HandleFunctionOverload ( m_self,
+                                                  m_self -> version,
+                                                  priorDecl,
+                                                  & m_self -> id ) )
+        {   // declared previously, this version not ignored
+            m_self -> name = priorDecl;
             m_destroy = false;
             return true;
         }
@@ -249,7 +200,7 @@ FunctionDeclaration :: CreateLocalSymbol ( const char* p_name, int p_type, void 
         rc_t rc = KSymTableCreateSymbol ( & m_builder . GetSymTab (), & ret, & name, p_type, p_obj );
         if ( rc != 0 )
         {
-            m_builder . ReportError ( "KSymTableCreateSymbol", rc );
+            m_builder . ReportRc ( "KSymTableCreateSymbol", rc );
         }
     }
 
@@ -348,6 +299,43 @@ FunctionDeclaration :: SetFormalParams ( const AST_ParamSig & p_sig )
     }
 }
 
+void
+FunctionDeclaration :: SetPhysicalParams ()
+{
+    if ( m_self != 0 )
+    {
+        VectorInit ( & m_self -> func . parms, 0, 1 );
+        m_self -> func . mand     = 1;
+        m_self -> func . vararg   = false;
+
+        /* create special input symbol */
+        SProduction * parm = m_builder . Alloc < SProduction > ();
+        if ( parm != 0 )
+        {
+            memset ( parm, 0, sizeof * parm );
+            if ( m_builder . VectorAppend ( m_self -> func . parms, & parm -> cid . id, parm ) )
+            {
+                /* create special input symbol */
+                String symstr;
+                CONST_STRING ( & symstr, "@" );
+                rc_t rc = KSymTableCreateConstSymbol ( & m_builder . GetSymTab (), & parm -> name, & symstr, eFuncParam, parm );
+                if ( rc == 0 )
+                {
+                    VectorInit ( & m_self -> u . script . prod, 0, 8 );
+                }
+                else
+                {
+                    m_builder . ReportRc ( "KSymTableCreateConstSymbol", rc );
+                }
+            }
+            else
+            {
+                SProductionWhack ( parm, 0 );
+            }
+        }
+    }
+}
+
 SIndirectType *
 FunctionDeclaration :: MakeSchemaParamType ( const AST_FQN & p_name )
 {
@@ -370,7 +358,7 @@ FunctionDeclaration :: MakeSchemaParamType ( const AST_FQN & p_name )
         }
         else
         {
-            m_builder . ReportError ( "KSymTableCreateConstSymbol", rc );
+            m_builder . ReportRc ( "KSymTableCreateConstSymbol", rc );
         }
         SIndirectTypeWhack ( ret, 0 );
     }
@@ -394,7 +382,7 @@ FunctionDeclaration :: MakeSchemaParamConst ( const AST_FQN & p_name )
         }
         else
         {
-            m_builder . ReportError ( "KSymTableCreateConstSymbol", rc );
+            m_builder . ReportRc ( "KSymTableCreateConstSymbol", rc );
         }
         SIndirectConstWhack ( ret, 0 );
     }
@@ -470,15 +458,15 @@ FunctionDeclaration :: HandleStatement ( const AST & p_stmt )
     {
     case PT_RETURN:
         {
-            if ( m_self -> u . script . rtn != 0 )
-            {
-                m_builder . ReportError ( "Multiple return statements in a function: '%S'", & m_self -> name -> name );
-            }
-            else
+            if ( m_self -> u . script . rtn == 0 )
             {
                 assert ( p_stmt . ChildrenCount () == 1 );
                 const AST_Expr & expr = * dynamic_cast < const AST_Expr * > ( p_stmt . GetChild ( 0 ) ) ;
                 m_self -> u . script . rtn = expr . MakeExpression ( m_builder );
+            }
+            else
+            {
+                m_builder . ReportError ( "Multiple return statements in a function: '%S'", & m_self -> name -> name );
             }
             break;
         }
@@ -506,9 +494,43 @@ FunctionDeclaration :: HandleStatement ( const AST & p_stmt )
         }
         break;
     }
+    case PT_EMPTY:
+        break;
     default:
         m_builder . ReportError ("Unsupported statement type: %i", p_stmt . GetTokenType () );
         break;
+    }
+}
+
+void
+FunctionDeclaration :: HandleScript ( const AST & p_body, const String & p_funcName )
+{
+    rc_t rc = KSymTablePushScope ( & m_builder . GetSymTab (), SchemaScope () );
+    if ( rc == 0 )
+    {
+        rc = KSymTablePushScope ( & m_builder . GetSymTab (), FunctionScope () );
+        if ( rc == 0 )
+        {
+            uint32_t stmtCount = p_body . ChildrenCount ();
+            for ( uint32_t i = 0 ; i < stmtCount; ++ i )
+            {
+                HandleStatement ( * p_body . GetChild ( i ) );
+            }
+            if ( m_self -> script && m_self -> u . script . rtn == 0 )
+            {
+                m_builder . ReportError ( "Schema function does not contain a return statement: '%S'", & p_funcName );
+            }
+            KSymTablePopScope ( & m_builder . GetSymTab () );
+        }
+        else
+        {
+            m_builder . ReportRc ( "KSymTablePushScope", rc );
+        }
+        KSymTablePopScope ( & m_builder . GetSymTab () );
+    }
+    else
+    {
+        m_builder . ReportRc ( "KSymTablePushScope", rc );
     }
 }
 
@@ -540,38 +562,19 @@ FunctionDeclaration :: SetPrologue ( const AST & p_prologue )
         break;
     case PT_EMPTY:
         {
-            uint32_t stmtCount = p_prologue . ChildrenCount ();
-            if ( stmtCount > 0 && ! m_self -> script )
+            if ( p_prologue . ChildrenCount () > 0 )
             {
-                m_builder . ReportError ( "Only schema functions can have body: '%S'", & m_self -> name -> name );
-            }
-            else
-            {
-                rc_t rc = KSymTablePushScope ( & m_builder . GetSymTab (), SchemaScope () );
-                if ( rc == 0 )
+                if ( m_self -> fact . vararg )
                 {
-                    rc = KSymTablePushScope ( & m_builder . GetSymTab (), FunctionScope () );
-                    if ( rc == 0 )
-                    {
-                        for ( uint32_t i = 0 ; i < stmtCount; ++ i )
-                        {
-                            HandleStatement ( * p_prologue . GetChild ( i ) );
-                        }
-                        if ( m_self -> script && m_self -> u . script . rtn == 0 )
-                        {
-                            m_builder . ReportError ( "Schema function does not contain a return statement: '%S'", & m_self -> name -> name );
-                        }
-                        KSymTablePopScope ( & m_builder . GetSymTab () );
-                    }
-                    else
-                    {
-                        m_builder . ReportError ( "KSymTablePushScope", rc );
-                    }
-                    KSymTablePopScope ( & m_builder . GetSymTab () );
+                    m_builder . ReportError ( "Function with factory varargs cannot have a body: '%S'", & m_self -> name -> name );
+                }
+                else if ( ! m_self -> script )
+                {
+                    m_builder . ReportError ( "Overload canot have a body: '%S'", & m_self -> name -> name );
                 }
                 else
                 {
-                    m_builder . ReportError ( "KSymTablePushScope", rc );
+                    HandleScript ( p_prologue, m_self -> name -> name );
                 }
             }
         }
@@ -625,7 +628,7 @@ ASTBuilder :: FunctionDecl ( const Token*     p_token,
             }
             else
             {
-                ReportError ( "KSymTablePushScope", rc );
+                ReportRc ( "KSymTablePushScope", rc );
                 hasSchemaParms = false; // do not pop later on
             }
         }
@@ -678,7 +681,7 @@ ASTBuilder :: FunctionDecl ( const Token*     p_token,
         }
         else
         {
-            ReportError ( "KSymTablePushScope", rc );
+            ReportRc ( "KSymTablePushScope", rc );
         }
 
         if ( hasSchemaParms )
@@ -694,3 +697,343 @@ ASTBuilder :: FunctionDecl ( const Token*     p_token,
 
     return ret;
 }
+
+const KSymbol *
+ASTBuilder :: CreateOverload ( const AST_FQN &  p_name,
+                               const void *     p_object,
+                               int              p_type,
+                               int64_t CC       (*p_sort)(const void *, const void *),
+                               Vector &         p_functions,
+                               Vector &         p_names,
+                               uint32_t *       p_id )
+{
+    const KSymbol * ret = CreateFqnSymbol ( p_name, p_type, p_object );
+
+    SNameOverload *name;
+    rc_t rc = SNameOverloadMake ( & name, ret, 0, 4 );
+    if ( rc == 0 )
+    {
+        rc = VectorInsertUnique ( & name -> items, p_object, 0, p_sort );
+        if ( rc == 0 )
+        {
+            if ( VectorAppend ( p_functions, p_id, p_object ) )
+            {
+                if ( VectorAppend ( p_names, & name -> cid . id, name ) )
+                {
+                    return ret;
+                }
+            }
+        }
+        else
+        {
+            ReportRc ( "VectorInsertUnique", rc );
+        }
+        SNameOverloadWhack ( name, 0 );
+    }
+    else
+    {
+        ReportRc ( "SNameOverloadMake", rc );
+    }
+    return 0;
+}
+
+bool
+ASTBuilder :: HandleFunctionOverload ( const void *     p_object,
+                                       uint32_t         p_version,
+                                       const KSymbol *  p_priorDecl,
+                                       uint32_t *       p_id )
+{
+    assert ( p_object != 0 );
+    assert ( p_priorDecl != 0 );
+    assert ( p_id != 0 );
+
+    Vector & functions = GetSchema () -> func;
+
+    SNameOverload *name = ( SNameOverload* ) p_priorDecl -> u . obj;
+    assert ( name != 0 );
+    uint32_t idx;
+    rc_t rc = VectorInsertUnique ( & name -> items, p_object, & idx, SFunctionSort );
+    if ( rc == 0 ) // overload added
+    {
+        if ( VectorAppend ( functions, p_id, p_object ) )
+        {
+            return true;
+        }
+    }
+    if ( GetRCState ( rc ) == rcExists )
+    {   /* an overload with the same major version exists */
+        /* see if new function trumps old */
+        SFunction *exist = static_cast < SFunction * > ( VectorGet ( & name -> items, idx ) );
+        if ( p_version > exist -> version )
+        {
+            /* insert our function in name overload */
+            void * prior;
+            VectorSwap ( & name -> items, idx, p_object, & prior );
+
+            /* if existing is in the same schema... */
+            if ( ( const void* ) name == exist -> name -> u . obj )
+            {
+                /* need to swap with old */
+                assert ( exist -> id >= VectorStart ( & functions ) );
+                VectorSwap ( & functions, exist -> id, p_object, & prior );
+                * p_id = exist -> id;
+                SFunctionWhack ( (SFunction*)prior, 0 );
+            }
+            return true;
+        }
+    }
+    else if ( rc != 0 )
+    {
+        ReportRc ( "VectorInsertUnique", rc );
+    }
+    return false;
+}
+
+bool
+ASTBuilder :: HandlePhysicalOverload ( const void *     p_object,
+                                       uint32_t         p_version,
+                                       const KSymbol *  p_priorDecl,
+                                       uint32_t *       p_id )
+{
+    assert ( p_object != 0 );
+    assert ( p_priorDecl != 0 );
+    assert ( p_id != 0 );
+
+    Vector & functions = GetSchema () -> phys;
+
+    SNameOverload *name = ( SNameOverload* ) p_priorDecl -> u . obj;
+    assert ( name != 0 );
+    uint32_t idx;
+    rc_t rc = VectorInsertUnique ( & name -> items, p_object, & idx, SFunctionSort );
+    if ( rc == 0 ) // overload added
+    {
+        if ( VectorAppend ( functions, p_id, p_object ) )
+        {
+            return true;
+        }
+    }
+    if ( GetRCState ( rc ) == rcExists )
+    {   /* an overload with the same major version exists */
+        /* see if new function trumps old */
+        SPhysical *exist = static_cast < SPhysical * > ( VectorGet ( & name -> items, idx ) );
+        if ( p_version > exist -> version )
+        {
+            /* insert our function in name overload */
+            void * prior;
+            VectorSwap ( & name -> items, idx, p_object, & prior );
+
+            /* if existing is in the same schema... */
+            if ( ( const void* ) name == exist -> name -> u . obj )
+            {
+                /* need to swap with old */
+                assert ( exist -> id >= VectorStart ( & functions ) );
+                VectorSwap ( & functions, exist -> id, p_object, & prior );
+                * p_id = exist -> id;
+                SPhysicalWhack ( (SPhysical*)prior, 0 );
+            }
+            return true;
+        }
+    }
+    else if ( rc != 0 )
+    {
+        ReportRc ( "VectorInsertUnique", rc );
+    }
+    return false;
+}
+
+static
+void init_function ( SFunction *f )
+{
+    memset ( f, 0, sizeof * f );
+    f -> script = true;
+}
+
+void
+ASTBuilder :: HandlePhysicalBody ( const String & p_name, const AST * p_schema, const AST_ParamSig* p_fact, const AST* p_body, SFunction & p_func )
+{
+    rc_t rc = 0;
+    FunctionDeclaration func ( * this, p_func );
+    bool hasSchemaParms = p_schema -> ChildrenCount () != 0;
+    if ( hasSchemaParms )
+    {
+        rc = KSymTablePushScope ( & m_symtab, func . SchemaScope () );
+        if ( rc == 0 )
+        {
+            func . SetSchemaParams ( * p_schema );
+        }
+        else
+        {
+            ReportRc ( "KSymTablePushScope", rc );
+            hasSchemaParms = false; // do not pop later on
+        }
+    }
+
+    rc = KSymTablePushScope ( & m_symtab, func . FunctionScope () );
+    if ( rc == 0 )
+    {
+        if ( p_fact -> GetTokenType () != PT_EMPTY )
+        {
+            func . SetFactoryParams ( * p_fact );
+        }
+
+        func . SetPhysicalParams ();  /* simulate a schema function signature */
+        func . HandleScript ( * p_body, p_name );
+
+        KSymTablePopScope ( & m_symtab );
+    }
+    else
+    {
+        ReportRc ( "KSymTablePushScope", rc );
+    }
+
+    if ( hasSchemaParms )
+    {   // now, can pop schema params' scope
+        KSymTablePopScope ( & m_symtab );
+    }
+
+}
+
+AST *
+ASTBuilder :: PhysicalDecl ( const Token* p_token, AST * p_schema, AST * p_returnType, AST_FQN* p_name, AST_ParamSig* p_fact, AST* p_body )
+{
+    AST * ret = new AST ( p_token, p_schema, p_returnType, p_name, p_fact, p_body );
+
+    SPhysical * p = Alloc < SPhysical > ();
+    if ( p != 0 )
+    {
+        p -> name = 0;
+        p -> row_length = 0;
+        init_function ( & p -> encode );
+        init_function ( & p -> decode );
+        if ( p_returnType -> GetTokenType () == PT_NOHEADER )
+        {
+            p -> td = & MakeTypeExpr ( * p_returnType -> GetChild ( 0 ) ) -> dad;
+            p -> no_hdr = true;
+        }
+        else
+        {
+            p -> td = & MakeTypeExpr ( * p_returnType ) -> dad;
+            p -> no_hdr = false;
+        }
+        p -> version = p_name -> GetVersion ();
+        p -> read_only = true; // will change if see encode()
+        p -> marked = false;
+
+        const KSymbol* priorDecl = Resolve ( * p_name, false );
+        if ( priorDecl == 0 )
+        {
+            p -> name = CreateOverload ( * p_name,
+                                         p,
+                                         ePhysical,
+                                         SPhysicalSort,
+                                         m_schema -> phys,
+                                         m_schema -> pname,
+                                         & p -> id );
+            if ( p -> name == 0 )
+            {
+                return ret;
+            }
+        }
+        else
+        {
+            if ( priorDecl -> type != ePhysical )
+            {
+                ReportError ( "Declared earlier and cannot be overloaded", * p_name );
+                SPhysicalWhack ( p, 0 );
+                return ret;
+            }
+
+            if ( ! HandlePhysicalOverload ( p, p -> version, priorDecl, & p -> id ) )
+            {
+                SPhysicalWhack ( p, 0 );
+                return ret;
+            }
+            // declared previously, this declaration not ignored
+            p -> name = priorDecl;
+        }
+
+        String name;
+        p_name -> GetIdentifier ( name );
+        if ( p_body -> GetTokenType () == PT_PHYSSTMT ) // shorthand for decode-only
+        {
+            HandlePhysicalBody ( name, p_schema, p_fact, p_body -> GetChild ( 0 ), p -> decode );
+        }
+        else
+        {   // a sequence of decode, encode, row_length. No repeats, decode has to be present
+            // PT_empty are allowed and ignored
+            bool hasDecode = false;
+            bool hasEncode = false;
+            uint32_t count = p_body -> ChildrenCount ();
+            for ( uint32_t i = 0; i < count; ++i )
+            {
+                const AST & node = * p_body -> GetChild ( i );
+                switch ( node . GetTokenType () )
+                {
+                case KW_decode:
+                    if ( ! hasDecode )
+                    {
+                        HandlePhysicalBody ( name, p_schema, p_fact, node . GetChild ( 0 ), p -> decode );
+                        hasDecode = true;
+                    }
+                    else
+                    {
+                        ReportError ( "Multiply defined decode()", * p_name );
+                    }
+                    break;
+                case KW_encode:
+                    if ( p -> no_hdr )
+                    {
+                        ReportError ( "__no_header cannot define enable()", * p_name );
+                    }
+                    else if ( hasEncode )
+                    {
+                        ReportError ( "Multiply defined encode()", * p_name );
+                    }
+                    else
+                    {
+                        HandlePhysicalBody ( name, p_schema, p_fact, node . GetChild ( 0 ), p -> encode );
+                        p -> read_only = false;
+                        hasEncode = true;
+                    }
+                    break;
+                case KW___row_length:
+                    {
+                        if ( p -> row_length == 0 )
+                        {
+                            const KSymbol * rl = Resolve ( dynamic_cast < const AST_FQN & > ( * node . GetChild ( 0 ) ), true );
+                            if ( rl != 0 )
+                            {
+                                if ( rl -> type == eRowLengthFunc )
+                                {
+                                    const SNameOverload * name = static_cast < const SNameOverload * > ( rl -> u . obj );
+                                    p -> row_length = static_cast < SFunction * > ( VectorLast ( & name -> items ) );
+                                }
+                                else
+                                {
+                                    ReportError ( "Not a row_length function: '%S'", & rl -> name );
+                                }
+                            }
+                        }
+                        else
+                        {
+                            ReportError ( "Multiply defined __row_length()", * p_name );
+                        }
+                    }
+                    break;
+                case PT_EMPTY:
+                    break;
+                default:
+                    assert ( false );
+                    break;
+                }
+            }
+            if ( ! hasDecode )
+            {
+                ReportError ( "Missing decode()", * p_name );
+            }
+        }
+    }
+
+    return ret;
+}
+

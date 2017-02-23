@@ -170,7 +170,8 @@ extern int Schema_debug;
     PT_UNARYPLUS = 379,
     PT_FACTPARMNAMED = 380,
     PT_VERSNAME = 381,
-    PT_ARRAY = 382
+    PT_ARRAY = 382,
+    PT_AT = 383
   };
 #endif
 

@@ -53,6 +53,7 @@ namespace ncbi
 
         protected:
             void MoveChildren ( ParseTree& );
+            void SetToken ( const Token & p_token ) {  m_token = p_token; }
 
         private:
             Token   m_token;

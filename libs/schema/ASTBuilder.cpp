@@ -52,7 +52,7 @@ ASTBuilder :: ASTBuilder ()
     rc_t rc = VSchemaMakeIntrinsic ( & m_intrinsic );
     if ( rc != 0 )
     {
-        ReportError ( "VSchemaMakeIntrinsic", rc  );
+        ReportRc ( "VSchemaMakeIntrinsic", rc  );
         m_intrinsic = 0;
     }
     else
@@ -60,7 +60,7 @@ ASTBuilder :: ASTBuilder ()
         rc = KSymTableInit ( & m_symtab, 0 );
         if ( rc != 0 )
         {
-            ReportError ( "KSymTableInit", rc );
+            ReportRc ( "KSymTableInit", rc );
             VSchemaRelease ( m_intrinsic );
             m_intrinsic = 0;
         }
@@ -105,7 +105,7 @@ ASTBuilder :: ReportError ( const char* p_msg, const AST_FQN& p_fqn )
 }
 
 void
-ASTBuilder :: ReportError ( const char* p_msg, rc_t p_rc )
+ASTBuilder :: ReportRc ( const char* p_msg, rc_t p_rc )
 {
     ReportError ( "%s: rc=%R", p_msg, p_rc );
 }
@@ -121,7 +121,7 @@ ASTBuilder :: Init()
     rc_t rc = VSchemaMake ( & m_schema, m_intrinsic );
     if ( rc != 0 )
     {
-        ReportError ( "VSchemaMake", rc );
+        ReportRc ( "VSchemaMake", rc );
         m_schema = 0;
         return false;
     }
@@ -129,7 +129,7 @@ ASTBuilder :: Init()
     rc = init_symtab ( & m_symtab, m_schema ); // this pushes the global scope
     if ( rc != 0 )
     {
-        ReportError ( "init_symtab", rc );
+        ReportRc ( "init_symtab", rc );
         return false;
     }
 
@@ -162,7 +162,7 @@ ASTBuilder :: VectorAppend ( Vector & p_self, uint32_t *p_idx, const void *p_ite
     rc_t rc = :: VectorAppend ( & p_self, p_idx, p_item );
     if ( rc != 0 )
     {
-        ReportError ( "VectorAppend", rc );
+        ReportRc ( "VectorAppend", rc );
         return false;
     }
     return true;
@@ -184,12 +184,12 @@ ASTBuilder :: CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const voi
             rc = KSymTablePushNamespace ( & m_symtab, ns );
             if ( rc != 0 )
             {
-                ReportError ( "KSymTablePushNamespace", rc );
+                ReportRc ( "KSymTablePushNamespace", rc );
             }
         }
         else
         {
-            ReportError ( "KSymTableCreateNamespace", rc );
+            ReportRc ( "KSymTableCreateNamespace", rc );
         }
     }
 
@@ -205,7 +205,7 @@ ASTBuilder :: CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const voi
         }
         else if ( rc != 0 )
         {
-            ReportError ( "KSymTableCreateSymbol", rc );
+            ReportRc ( "KSymTableCreateSymbol", rc );
         }
     }
 
@@ -266,7 +266,7 @@ ASTBuilder :: Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown )
             rc = KSymTablePushNamespace ( & m_symtab, ns );
             if ( rc != 0 )
             {
-                ReportError ( "KSymTablePushNamespace", rc );
+                ReportRc ( "KSymTablePushNamespace", rc );
                 count = i;
                 ns_resolved = false;
                 break;

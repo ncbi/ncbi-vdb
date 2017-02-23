@@ -99,6 +99,26 @@ AST :: AST ( const Token * p_token,
              AST * p_child2,
              AST * p_child3,
              AST * p_child4,
+             AST * p_child5 )
+: ParseTree ( * p_token )
+{
+    assert ( p_child1 != 0 );
+    AddNode ( p_child1 );
+    assert ( p_child2 != 0 );
+    AddNode ( p_child2 );
+    assert ( p_child3 != 0 );
+    AddNode ( p_child3 );
+    assert ( p_child4 != 0 );
+    AddNode ( p_child4 );
+    assert ( p_child5 != 0 );
+    AddNode ( p_child5 );
+}
+
+AST :: AST ( const Token * p_token,
+             AST * p_child1,
+             AST * p_child2,
+             AST * p_child3,
+             AST * p_child4,
              AST * p_child5,
              AST * p_child6 )
 : ParseTree ( * p_token )
@@ -256,6 +276,12 @@ AST_Expr :: AST_Expr ( AST_Expr* p_fqn )
     AddNode ( p_fqn );
 }
 
+AST_Expr :: AST_Expr ( Token :: TokenType p_type )    // '@' etc
+{
+    SchemaToken st = { p_type, NULL, 0, 0, 0 };
+    SetToken ( Token ( st ) );
+}
+
 SExpression *
 AST_Expr :: EvaluateConst ( ASTBuilder & p_builder ) const
 {   //TBD. for now, only handles a literal int constant and a direct reference to a schema parameter
@@ -273,9 +299,48 @@ AST_Expr :: EvaluateConst ( ASTBuilder & p_builder ) const
     return ret;
 }
 
+static
+SExpression * SSymExprMake ( ASTBuilder & p_builder, uint32_t p_type, const KSymbol* p_sym )
+{
+    SSymExpr *x = p_builder . Alloc < SSymExpr > ();
+    if ( x == 0 )
+    {
+        return 0;
+    }
+
+    x -> dad . var = p_type;
+    atomic32_set ( & x -> dad . refcount, 1 );
+    x -> _sym = p_sym;
+    x -> alt = false;
+
+    return & x -> dad;
+}
+
+SExpression *
+AST_Expr :: MakeSymExpr ( ASTBuilder & p_builder, const KSymbol* p_sym ) const
+{
+    if ( p_sym != 0 )
+    {
+        switch ( p_sym -> type )
+        {
+        case eSchemaParam :
+        case eFactParam :
+            return SSymExprMake ( p_builder, eIndirectExpr, p_sym );
+        case eProduction:
+            return SSymExprMake ( p_builder, eProdExpr, p_sym );
+        case eFuncParam :
+            return SSymExprMake ( p_builder, eParamExpr, p_sym );
+        default:
+            p_builder . ReportError ( "Not yet implemented in an expression" );
+            break;
+        }
+    }
+    return 0;
+}
+
 SExpression *
 AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
-{   //TBD. for now, only handles a literal int constant and a direct reference to a schema parameter
+{   //TODO: complete
     switch ( GetToken () . GetType () )
     {
     case PT_UINT:
@@ -308,47 +373,10 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
         {
             const AST_FQN* fqn = dynamic_cast < const AST_FQN * > ( GetChild ( 0 ) );
             assert ( fqn != 0 );
-            const KSymbol* sym = p_builder . Resolve ( * fqn ); // will report unknown
-            if ( sym != 0 )
-            {
-                switch ( sym -> type )
-                {
-                case eSchemaParam :
-                case eFactParam :
-                    {
-                        SSymExpr *x = p_builder . Alloc < SSymExpr > ();
-                        if ( x != 0 )
-                        {
-                            x -> dad . var = eIndirectExpr;
-                            atomic32_set ( & x -> dad . refcount, 1 );
-                            x -> _sym = sym;
-                            x -> alt = false;
-
-                            return & x -> dad;
-                        }
-                    }
-                    break;
-                case eProduction:
-                    {
-                        SSymExpr *x = p_builder . Alloc < SSymExpr > ();
-                        if ( x != 0 )
-                        {
-                            x -> dad . var = eProdExpr;
-                            atomic32_set ( & x -> dad . refcount, 1 );
-                            x -> _sym = sym;
-                            x -> alt = false;
-
-                            return & x -> dad;
-                        }
-                    }
-                    break;
-                default:
-                    p_builder . ReportError ( "Not yet implemented in an expression" );
-                    break;
-                }
-            }
-            break;
+            return MakeSymExpr ( p_builder, p_builder . Resolve ( * fqn ) );
         }
+    case PT_AT:
+        return MakeSymExpr ( p_builder, p_builder . Resolve ( "@" ) );
     default:
         p_builder . ReportError ( "Not yet implemented" );
         break;

@@ -43,65 +43,67 @@ using namespace ncbi::NK;
 
 TEST_SUITE ( ASTFuctionTestSuite );
 
+class FunctionAccess // encapsulates access to an SFunction in a VSchema
+{
+public:
+    FunctionAccess ( const SFunction* p_fn )
+    : m_self ( p_fn )
+    {
+    }
+
+    const STypeExpr *   ReturnType () const { return reinterpret_cast < const STypeExpr * > ( m_self -> rt ); }
+    uint32_t            Version () const { return m_self -> version; }
+
+    uint16_t            MandatoryParamCount () const { return m_self -> func . mand; }
+    bool                IsVariadic () const { return m_self -> func . vararg != 0 ; }
+    uint32_t            ParamCount () const { return VectorLength ( & m_self -> func . parms ); }
+    const SProduction * GetParam ( uint32_t p_idx ) const
+    {
+        return static_cast < const SProduction * > ( VectorGet ( & m_self -> func . parms, p_idx ) );
+    }
+
+    uint32_t SchemaTypeParamCount () const { return VectorLength ( & m_self -> type ); }
+    uint32_t SchemaConstParamCount () const { return VectorLength ( & m_self -> schem ); }
+    const SIndirectType* GetSchemaTypeParam ( uint32_t p_idx ) const
+    {
+        return static_cast < const SIndirectType* > ( VectorGet ( & m_self -> type, p_idx ) );
+    }
+    const SIndirectConst* GetSchemaConstParam ( uint32_t p_idx ) const
+    {
+        return static_cast < const SIndirectConst* > ( VectorGet ( & m_self -> schem, p_idx ) );
+    }
+
+    uint16_t            FactoryMandatoryParamCount () const { return m_self -> fact . mand; }
+    bool                FactoryIsVariadic () const { return m_self -> fact . vararg != 0 ; }
+    uint32_t            FactoryParamCount () const { return VectorLength ( & m_self -> fact . parms ); }
+    const SIndirectConst * FactoryGetParam ( uint32_t p_idx ) const
+    {
+        return static_cast < const SIndirectConst * > ( VectorGet ( & m_self -> fact . parms, p_idx ) );
+    }
+
+    const KSymbol * FactoryId () const { return m_self -> u . ext . fact; }
+
+    bool IsScript () const { return m_self -> script; }
+    bool IsValidate () const { return m_self -> validate; }
+    bool IsUntyped () const { return m_self -> untyped; }
+    bool IsRowLength () const { return m_self -> row_length; }
+
+    const SExpression * ReturnExpr () const { return m_self -> u . script . rtn; }
+
+    uint32_t ProductionCount () const { return VectorLength ( & m_self -> u . script . prod ); }
+    const SProduction * Production ( uint32_t p_idx ) const
+    {
+        return static_cast < const SProduction * > ( VectorGet ( & m_self -> u . script . prod, p_idx ) );
+    }
+
+    const SFunction* m_self;
+};
+
+class PhysicalAccess;
+
 class AST_Function_Fixture : public AST_Fixture
 {
 public:
-
-    class FunctionAccess // encapsulates access to an SFunction in a VSchema
-    {
-    public:
-        FunctionAccess ( const SFunction* p_fn )
-        : m_fn ( p_fn )
-        {
-        }
-
-        const STypeExpr *   ReturnType () const { return reinterpret_cast < const STypeExpr * > ( m_fn -> rt ); }
-        uint32_t            Version () const { return m_fn -> version; }
-
-        uint16_t            MandatoryParamCount () const { return m_fn -> func . mand; }
-        bool                IsVariadic () const { return m_fn -> func . vararg != 0 ; }
-        uint32_t            ParamCount () const { return VectorLength ( & m_fn -> func . parms ); }
-        const SProduction * GetParam ( uint32_t p_idx ) const
-        {
-            return static_cast < const SProduction * > ( VectorGet ( & m_fn -> func . parms, p_idx ) );
-        }
-
-        uint32_t SchemaTypeParamCount () const { return VectorLength ( & m_fn -> type ); }
-        uint32_t SchemaConstParamCount () const { return VectorLength ( & m_fn -> schem ); }
-        const SIndirectType* GetSchemaTypeParam ( uint32_t p_idx ) const
-        {
-            return static_cast < const SIndirectType* > ( VectorGet ( & m_fn -> type, p_idx ) );
-        }
-        const SIndirectConst* GetSchemaConstParam ( uint32_t p_idx ) const
-        {
-            return static_cast < const SIndirectConst* > ( VectorGet ( & m_fn -> schem, p_idx ) );
-        }
-
-        uint16_t            FactoryMandatoryParamCount () const { return m_fn -> fact . mand; }
-        bool                FactoryIsVariadic () const { return m_fn -> fact . vararg != 0 ; }
-        uint32_t            FactoryParamCount () const { return VectorLength ( & m_fn -> fact . parms ); }
-        const SIndirectConst * FactoryGetParam ( uint32_t p_idx ) const
-        {
-            return static_cast < const SIndirectConst * > ( VectorGet ( & m_fn -> fact . parms, p_idx ) );
-        }
-
-        const KSymbol * FactoryId () const { return m_fn -> u . ext . fact; }
-
-        bool IsScript () const { return m_fn -> script; }
-        bool IsValidate () const { return m_fn -> validate; }
-        bool IsUntyped () const { return m_fn -> untyped; }
-        bool IsRowLength () const { return m_fn -> row_length; }
-
-        const SExpression * ReturnExpr () const { return m_fn -> u . script . rtn; }
-
-        uint32_t ProductionCount () const { return VectorLength ( & m_fn -> u . script . prod ); }
-        const SProduction * Production ( uint32_t p_idx ) const
-        {
-            return static_cast < const SProduction * > ( VectorGet ( & m_fn -> u . script . prod, p_idx ) );
-        }
-
-        const SFunction* m_fn;
-    };
 
 public:
     AST_Function_Fixture ()
@@ -129,6 +131,10 @@ public:
                 throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : too many overloads" );
             }
             ret = static_cast < const SFunction* > ( VectorGet ( & name -> items, 0 ) );
+            if ( ret -> name == 0 )
+            {
+                throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : NULL name" );
+            }
             if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )
             {
                 throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : wrong name" );
@@ -136,28 +142,17 @@ public:
         }
         else
         {
-            const VDBManager *mgr;
-            if ( VDBManagerMakeRead ( & mgr, 0 ) != 0 )
-            {
-                throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : VDBManagerMakeRead() failed" );
-            }
-            if ( VDBManagerMakeSchema ( mgr, & m_schema ) != 0 )
-            {
-                throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : VDBManagerMakeSchema() failed" );
-            }
-
-            if ( VSchemaParseText ( m_schema, 0, p_source, string_size ( p_source ) ) != 0 )
+            if ( ! OldParse ( p_source ) )
             {
                 throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : VSchemaParseText() failed" );
             }
 
             ret = static_cast < const SFunction* > ( VectorGet ( & m_schema -> func, p_idx ) );
+
             if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )
             {
                 throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : wrong name" );
             }
-
-            VDBManagerRelease ( mgr );
         }
         return FunctionAccess ( ret );
     }
@@ -175,6 +170,43 @@ public:
 
         return FunctionAccess ( static_cast < const SFunction * > ( VectorGet ( & name -> items, p_idx ) ) );
     }
+
+    PhysicalAccess ParsePhysical ( const char * p_source, const char * p_name );
+
+    void VerifyErrorMessage ( const char* p_source, const char* p_expectedError )
+    {
+        if ( m_newParse )
+        {
+            return AST_Fixture :: VerifyErrorMessage ( p_source, p_expectedError );
+        }
+        if ( OldParse ( p_source ) )
+        {
+            throw std :: logic_error ( "AST_Function_Fixture::VerifyErrorMessage : no error" );
+        }
+    }
+
+    bool OldParse ( const char* p_source )
+    {
+        const VDBManager *mgr;
+        if ( VDBManagerMakeRead ( & mgr, 0 ) != 0 )
+        {
+            throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : VDBManagerMakeRead() failed" );
+        }
+        if ( VDBManagerMakeSchema ( mgr, & m_schema ) != 0 )
+        {
+            throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : VDBManagerMakeSchema() failed" );
+        }
+        // expect an error, do not need to see it
+        KWrtHandler* h =  KLogLibHandlerGet ();
+        KLogLibHandlerSet ( NULL, NULL );
+        bool ret = VSchemaParseText ( m_schema, 0, p_source, string_size ( p_source ) ) == 0;
+        KLogLibHandlerSet ( h -> writer, h -> data );
+
+        VDBManagerRelease ( mgr );
+
+        return ret;
+    }
+
 
     // old parsing support
     bool m_newParse;
@@ -276,8 +308,8 @@ FIXTURE_TEST_CASE(Func_ReturnBad, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_WithVersion, AST_Function_Fixture)
 {
-    FunctionAccess fn = ParseFunction ( "function U8 f#1.2();", "f" );
-    REQUIRE_EQ ( (uint32_t) ( 1 << 24 ) | ( 2 << 16 ), fn . Version () );
+    FunctionAccess fn = ParseFunction ( "function U8 f#1.2.3();", "f" );
+    REQUIRE_EQ ( (uint32_t) ( 1 << 24 ) | ( 2 << 16 ) | 3, fn . Version () );
 }
 
 FIXTURE_TEST_CASE(Func_Redeclared_NoVersion, AST_Function_Fixture)
@@ -315,9 +347,9 @@ FIXTURE_TEST_CASE(Func_Redeclared_HigherMinor, AST_Function_Fixture)
     }
 }
 
-FIXTURE_TEST_CASE(Func_NoReleaseNumberForSimpleFunctions, AST_Function_Fixture)
+FIXTURE_TEST_CASE(Func_NoChangingReleaseNumberForSimpleFunctions, AST_Function_Fixture)
 {
-    VerifyErrorMessage ( "function U16 f#1.2.3();", "Release number is not allowed: 'f'" );
+    VerifyErrorMessage ( "function U16 f#1(); function U16 f#1.2.4();", "Changing release number is not allowed: 'f'" );
 }
 
 // formal parameters
@@ -418,6 +450,15 @@ FIXTURE_TEST_CASE(Func_MandatoryOprionalAndVarargs, AST_Function_Fixture)
     REQUIRE_EQ ( (uint16_t)1, fn . MandatoryParamCount () );
     REQUIRE ( fn .  IsVariadic () );
     REQUIRE_EQ ( (uint32_t)2, fn . ParamCount () );
+}
+FIXTURE_TEST_CASE(Func_FactoryVarargsWithBody, AST_Function_Fixture)
+{
+    VerifyErrorMessage ( "function U8 f<U8 p, ...>() { return 1; }", "Function with factory varargs cannot have a body: 'f'" );
+}
+
+FIXTURE_TEST_CASE(Func_Body_NonScript, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "function U8 f#1(); function U8 f#2() { return 1; };", "Overload canot have a body: 'f'" );
 }
 
 // schema signature
@@ -580,18 +621,6 @@ FIXTURE_TEST_CASE(Func_Extern, AST_Function_Fixture)
     REQUIRE ( ! fn . IsRowLength () );
 }
 
-FIXTURE_TEST_CASE(Func_Extern_ReleaseNumber, AST_Function_Fixture)
-{
-    VerifyErrorMessage ( "extern function U16 f#1.2.3();", "Release number is not allowed: 'f'" );
-}
-
-// Statements in non-scripts prologue
-
-FIXTURE_TEST_CASE(Func_Body_NonScript, AST_Function_Fixture)
-{
-    VerifyErrorMessage  ( "function U8 f() { return 1; };", "Only schema functions can have body: 'f'" );
-}
-
 // Schema (script) functions
 
 FIXTURE_TEST_CASE(Func_Script, AST_Function_Fixture)
@@ -683,11 +712,6 @@ FIXTURE_TEST_CASE(Func_NonValidate_void, AST_Function_Fixture)
    VerifyErrorMessage  ( "function void f(U8 a, U8 b);", "Only validate functions can return void: 'f'" );
 }
 
-FIXTURE_TEST_CASE(Func_Validate_FullVersion, AST_Function_Fixture)
-{
-    VerifyErrorMessage ( "validate function void f#1.2.3(U8 a, U8 b);", "Release number is not allowed: 'f'" );
-}
-
 FIXTURE_TEST_CASE(Func_Validate_NonVoid, AST_Function_Fixture)
 {
    VerifyErrorMessage  ( "validate function U8 f(U8 a, U8 b);", "Validate functions have to return void: 'f'" );
@@ -715,4 +739,184 @@ FIXTURE_TEST_CASE(Func_Validate_FactorySpec, AST_Function_Fixture)
     REQUIRE_NOT_NULL ( factId );
     REQUIRE_EQ ( string ( "fact" ), ToCppString ( factId -> name ) );
     REQUIRE_EQ ( (uint32_t)eFactory, factId -> type );
+}
+
+// Physical
+
+class PhysicalAccess
+{
+public:
+    PhysicalAccess ( const SPhysical * p_fn )
+    : m_self ( p_fn )
+    {
+    }
+
+    const STypeExpr * ReturnType () const { return reinterpret_cast < const STypeExpr * > ( m_self -> td ); }
+    uint32_t          Version () const { return m_self -> version; }
+
+    FunctionAccess Encode () const { return FunctionAccess ( & m_self -> encode ); }
+    FunctionAccess Decode () const { return FunctionAccess ( & m_self -> decode ); }
+    FunctionAccess RowLength () const { return FunctionAccess ( m_self -> row_length ); } // can be NULL
+
+    bool IsReadOnly () const { return m_self -> read_only; }
+
+    const SPhysical * m_self;
+};
+
+PhysicalAccess
+AST_Function_Fixture :: ParsePhysical ( const char * p_source, const char * p_name )
+{
+    const SPhysical* ret = 0;
+    if ( m_newParse )
+    {
+        MakeAst ( p_source, false, false );
+        const KSymbol* sym = VerifySymbol ( p_name, ePhysical );
+
+        // for physical functions, sym points to an entry in the overloads table (schema->pname)
+        const SNameOverload* name = static_cast < const SNameOverload* > ( sym -> u . obj );
+        if ( 1u != VectorLength ( & name -> items ) )
+        {
+            throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : too many overloads" );
+        }
+        ret = static_cast < const SPhysical* > ( VectorGet ( & name -> items, 0 ) );
+        if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )
+        {
+            throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : wrong name" );
+        }
+    }
+    else
+    {
+        const VDBManager *mgr;
+        if ( VDBManagerMakeRead ( & mgr, 0 ) != 0 )
+        {
+            throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : VDBManagerMakeRead() failed" );
+        }
+        if ( VDBManagerMakeSchema ( mgr, & m_schema ) != 0 )
+        {
+            throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : VDBManagerMakeSchema() failed" );
+        }
+
+        if ( VSchemaParseText ( m_schema, 0, p_source, string_size ( p_source ) ) != 0 )
+        {
+            throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : VSchemaParseText() failed" );
+        }
+
+        ret = static_cast < const SPhysical* > ( VectorGet ( & m_schema -> phys, 0 ) );
+        if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )
+        {
+            throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : wrong name" );
+        }
+
+        VDBManagerRelease ( mgr );
+    }
+    return PhysicalAccess ( ret );
+}
+
+FIXTURE_TEST_CASE(Func_Physical_Simple, AST_Function_Fixture)
+{
+    PhysicalAccess fn = ParsePhysical  ( "physical U8 f#1.2 = { return 1; }", "f" );
+
+    REQUIRE_NOT_NULL ( fn . ReturnType () );
+    REQUIRE_EQ ( U8_id, fn . ReturnType () -> fd . td . type_id );
+    REQUIRE_EQ ( 1u,    fn . ReturnType () -> fd . td . dim );
+
+    REQUIRE_EQ ( (uint32_t) ( 1 << 24 ) | ( 2 << 16 ), fn . Version () );
+
+    REQUIRE_NULL ( fn . Encode () . ReturnExpr () );
+    REQUIRE_NOT_NULL ( fn . Decode () . ReturnExpr () );
+
+    REQUIRE ( fn . IsReadOnly () );
+}
+
+FIXTURE_TEST_CASE(Func_Physical_Redeclared, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "function U8 f(); physical U16 f#1.2 = { return 2; }", "Declared earlier and cannot be overloaded: 'f'" );
+}
+
+FIXTURE_TEST_CASE(Func_Physical_OverloadSameVersion, AST_Function_Fixture)
+{
+    PhysicalAccess fn = ParsePhysical  ( "physical U8 f#1.2 = { return 1; } physical U16 f#1.2 = { return 2; }", "f" );
+    REQUIRE_NOT_NULL ( fn . ReturnType () );
+    REQUIRE_EQ ( U8_id, fn . ReturnType () -> fd . td . type_id ); // 2nd version ignored
+}
+FIXTURE_TEST_CASE(Func_Physical_OverloadOlderVersion, AST_Function_Fixture)
+{
+    PhysicalAccess fn = ParsePhysical  ( "physical U8 f#1.2 = { return 1; } physical U16 f#1.1 = { return 2; }", "f" );
+    REQUIRE_NOT_NULL ( fn . ReturnType () );
+    REQUIRE_EQ ( U8_id, fn . ReturnType () -> fd . td . type_id ); // 2nd version ignored
+}
+FIXTURE_TEST_CASE(Func_Physical_OverloadNewerVersion, AST_Function_Fixture)
+{
+    if ( m_newParse ) // the old parser fails here!
+    {
+        PhysicalAccess fn = ParsePhysical  ( "physical U8 f#1.2 = { return 1; } physical U16 f#1.3 = { return 2; }", "f" );
+        REQUIRE_NOT_NULL ( fn . ReturnType () );
+        REQUIRE_EQ ( U16_id, fn . ReturnType () -> fd . td . type_id ); // 2nd version chosen
+    }
+}
+
+FIXTURE_TEST_CASE(Func_Physical_Decode, AST_Function_Fixture)
+{
+    PhysicalAccess fn = ParsePhysical  ( "physical U8 f#1.2 { decode { return 1; } }", "f" );
+
+    REQUIRE_NULL ( fn . Encode () . ReturnExpr () );
+    REQUIRE_NOT_NULL ( fn . Decode () . ReturnExpr () );
+    REQUIRE_NULL ( fn . RowLength () . m_self );
+    REQUIRE ( fn . IsReadOnly () );
+}
+
+FIXTURE_TEST_CASE(Func_Physical_EncodeDecode, AST_Function_Fixture)
+{
+    PhysicalAccess fn = ParsePhysical  ( "physical U8 f#1 { decode { return 1; } encode { return 1; } }", "f" );
+
+    REQUIRE_NOT_NULL ( fn . Encode () . ReturnExpr () );
+    REQUIRE_NOT_NULL ( fn . Decode () . ReturnExpr () );
+    REQUIRE_NULL ( fn . RowLength () . m_self );
+    REQUIRE ( ! fn . IsReadOnly () );
+}
+
+FIXTURE_TEST_CASE(Func_Physical_DecodeRowLen, AST_Function_Fixture)
+{
+    PhysicalAccess fn = ParsePhysical  ( "function __row_length rl(); physical __no_header U8 f#1 { decode { return 1; } __row_length = rl(); }", "f" );
+
+    REQUIRE_NULL ( fn . Encode () . ReturnExpr () );
+    REQUIRE_NOT_NULL ( fn . Decode () . ReturnExpr () );
+    REQUIRE_NOT_NULL ( fn . RowLength () . m_self );
+    REQUIRE ( fn . IsReadOnly () );
+}
+
+FIXTURE_TEST_CASE(Func_Physical_NotARowlen, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "function U8 rl(); physical __no_header U8 f#1 { decode { return 1; } __row_length = rl() }", "Not a row_length function: 'rl'" );
+}
+
+FIXTURE_TEST_CASE(Func_Physical_EncodeNoDecode, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "function __row_length rl(); physical U8 f#1 { encode { return 1; } __row_length = rl(); }", "Missing decode(): 'f'" );
+}
+FIXTURE_TEST_CASE(Func_Physical_RowlenNoDecode, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "function __row_length rl(); physical __no_header U8 f#1 { __row_length = rl(); }", "Missing decode(): 'f'" );
+}
+FIXTURE_TEST_CASE(Func_Physical_EncodeRepeated, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "physical U8 f#1 { encode { return 1; } decode { return 1; } encode { return 1; } }", "Multiply defined encode(): 'f'" );
+}
+FIXTURE_TEST_CASE(Func_Physical_DecodeRepeated, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "physical U8 f#1 { decode { return 1; } decode { return 1; } encode { return 1; } }", "Multiply defined decode(): 'f'" );
+}
+FIXTURE_TEST_CASE(Func_Physical_RowlenRepeated, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "function __row_length rl(); physical __no_header U8 f#1 { decode { return 1; } __row_length = rl();  __row_length = rl(); }", "Multiply defined __row_length(): 'f'" );
+}
+FIXTURE_TEST_CASE(Func_Physical_NoHeaderWithEncode, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "physical __no_header U8 f#1 { decode { return 1; } encode { return 1; } }", "__no_header cannot define enable(): 'f'" );
+}
+
+FIXTURE_TEST_CASE(Func_Physical_At, AST_Function_Fixture)
+{
+    m_newParse = false;
+    PhysicalAccess fn = ParsePhysical  ( "physical U8 f#1.2 { decode { return @; } }", "f" );
 }

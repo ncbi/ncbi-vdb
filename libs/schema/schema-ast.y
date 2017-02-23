@@ -206,6 +206,7 @@
 %token PT_FACTPARMNAMED
 %token PT_VERSNAME
 %token PT_ARRAY
+%token PT_AT
 
  /* !!! Keep token declarations above in synch with schema-grammar.y */
 
@@ -216,9 +217,10 @@
 %type <node> schema_sig_opt return_type prologue formals_list
 %type <node> schema_formals schema_formal type_expr formals formal
 %type <node> script_stmts script_stmt extern_function script script_decl validate
-%type <node> script_prologue
+%type <node> script_prologue physical phys_prologue phys_body phys_body_stmt
+%type <node> phys_return_type
 
-%type <fqn> fqn qualnames fqn_opt_vers ident
+%type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
 
 %type <expr> expr cond_expr cond_chain
 
@@ -230,7 +232,7 @@
 %type <tok> PT_TYPEDEF PT_IDENT IDENTIFIER_1_0 DECIMAL PT_ASTLIST PT_ARRAY PT_TYPESET
 %type <tok> PT_FORMAT PT_CONST PT_UINT PT_ALIAS PT_EMPTY PT_ELLIPSIS PT_RETURN
 %type <tok> VERSION PT_UNTYPED PT_ROWLENGTH PT_FUNCDECL PT_FUNCPARAMS PT_FORMALPARAM
-%type <tok> PT_VALIDATE
+%type <tok> PT_VALIDATE PT_PHYSICAL PT_PHYSSTMT
 
 %%
 
@@ -279,6 +281,7 @@ schema_decl
     | extern_function   { $$ = $1; }
     | script            { $$ = $1; }
     | validate          { $$ = $1; }
+    | physical          { $$ = $1; }
     /*TBD*/
     | ';'               { $$ = new AST (); }
     ;
@@ -436,11 +439,40 @@ validate
         { $$ = p_builder . FunctionDecl ( $1, false, $9, $10, $11, $12, $13, $14 ); }
     ;
 
+physical
+    : PT_PHYSICAL '(' KW_physical schema_sig_opt phys_return_type fqn_vers fact_sig phys_prologue ')'
+            { $$ = p_builder . PhysicalDecl ( $1, $4, $5, $6, $7, $8 ); }
+    ;
+
+phys_return_type
+    : return_type                                       { $$ = $1; }
+    | PT_NOHEADER '(' KW___no_header return_type ')'    { $$ = new AST ( PT_NOHEADER ); $$ -> AddNode ( $4 ); }
+
+phys_prologue
+    : PT_PHYSPROLOGUE '(' '=' PT_PHYSSTMT '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')' ')'
+                { $$ = new AST ( $4, $9 ); }
+    | PT_PHYSPROLOGUE '(' '{' PT_ASTLIST '(' phys_body ')' '}' ')'
+                { $$ = $6; }
+    ;
+
+phys_body
+    : phys_body_stmt            { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | phys_body phys_body_stmt  { $$ = $1; $$ -> AddNode ( $2 ); }
+    ;
+
+phys_body_stmt
+    : PT_PHYSBODYSTMT '(' ';' ')'                               { $$ = new AST ( PT_EMPTY ); }
+    | PT_PHYSBODYSTMT '(' KW_decode PT_PHYSSTMT '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')' ')'   { $$ = new AST ( KW_decode ); $$ -> AddNode ( $9 ) ; }
+    | PT_PHYSBODYSTMT '(' KW_encode PT_PHYSSTMT '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')' ')'   { $$ = new AST ( KW_encode ); $$ -> AddNode ( $9 ); }
+    | PT_PHYSBODYSTMT '(' KW___row_length '=' fqn '(' ')' ')'   { $$ = new AST ( KW___row_length ); $$ -> AddNode ( $5 ); }
+    ;
+
 /* expressions */
 
 expr
     : PT_UINT '(' DECIMAL ')'   { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
     | fqn                       { $$ = new AST_Expr ( $1 ); }
+    | '@'                       { $$ = new AST_Expr ( PT_AT ); }
     /*| TBD */
     ;
 
@@ -474,7 +506,11 @@ ident
     ;
 
 fqn_opt_vers
-    : fqn                               { $$ = $1; }
-    | PT_VERSNAME '(' fqn VERSION ')'   { $$ = $3; $$ -> SetVersion ( $4 -> GetValue () ); }
+    : fqn       { $$ = $1; }
+    | fqn_vers  { $$ = $1; }
+    ;
+
+fqn_vers
+    : PT_VERSNAME '(' fqn VERSION ')'   { $$ = $3; $$ -> SetVersion ( $4 -> GetValue () ); }
     ;
 
