@@ -184,7 +184,7 @@ public:
 
 public:
     ncbi::NK::counter_t GetErrorCounter(void) { return _ec; }
-    const std::string& GetName(void) const { return _name; }
+    const char * GetName(void) const { return _name . c_str (); }
     void ErrorCounterAdd(ncbi::NK::counter_t ec) { _ec += ec; }
 
 protected:
