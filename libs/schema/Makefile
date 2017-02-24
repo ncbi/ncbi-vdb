@@ -84,11 +84,30 @@ schema-grammar.$(LOBX): $(SRCDIR)/schema-grammar.cpp
 
 bison: grammar ast
 
-grammar $(SRCDIR)/schema-grammar.cpp: $(SRCDIR)/schema-grammar.y
+grammar: $(SRCDIR)/schema-grammar.cpp
+
+ast: $(SRCDIR)/schema-ast.cpp
+
+BISON_VERSION = $(word 4,$(shell bison -V | grep "(GNU Bison)"))
+
+ifeq (1,$(shell echo "3.0<=$(BISON_VERSION)") | bc -l )
+
+$(SRCDIR)/schema-grammar.cpp: $(SRCDIR)/schema-grammar.y
 	bison -r state -o $(SRCDIR)/schema-grammar.cpp --defines=$(SRCDIR)/schema-tokens.h $(SRCDIR)/schema-grammar.y
 
-ast $(SRCDIR)/schema-ast.cpp: $(SRCDIR)/schema-ast.y
+$(SRCDIR)/schema-ast.cpp: $(SRCDIR)/schema-ast.y
 	bison -r state -o $(SRCDIR)/schema-ast.cpp --defines=$(SRCDIR)/schema-ast-tokens.h $(SRCDIR)/schema-ast.y
+
+else
+
+BISON_ERROR = "NOTE: The current Bison version is $(BISON_VERSION). Version 3.0 or newer is required in the PATH. Using the existing $@."
+$(SRCDIR)/schema-grammar.cpp: $(SRCDIR)/schema-grammar.y
+	@echo $(BISON_ERROR)
+
+$(SRCDIR)/schema-ast.cpp: $(SRCDIR)/schema-ast.y
+	@echo $(BISON_ERROR)
+
+endif
 
 schema-lex.$(LOBX): $(SRCDIR)/schema-lex.c
 	$(CC)  -Wno-unused-function -o $@ -fPIC $(OPT) -D_LIBRARY $< $(LOC_INFO) -D__file_ext__=c

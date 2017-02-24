@@ -15,8 +15,8 @@
 
 #define FLEX_SCANNER
 #define YY_FLEX_MAJOR_VERSION 2
-#define YY_FLEX_MINOR_VERSION 6
-#define YY_FLEX_SUBMINOR_VERSION 0
+#define YY_FLEX_MINOR_VERSION 5
+#define YY_FLEX_SUBMINOR_VERSION 35
 #if YY_FLEX_SUBMINOR_VERSION > 0
 #define FLEX_BETA
 #endif
@@ -77,6 +77,7 @@ typedef int flex_int32_t;
 typedef unsigned char flex_uint8_t; 
 typedef unsigned short int flex_uint16_t;
 typedef unsigned int flex_uint32_t;
+#endif /* ! C99 */
 
 /* Limits of integral types. */
 #ifndef INT8_MIN
@@ -106,8 +107,6 @@ typedef unsigned int flex_uint32_t;
 #ifndef UINT32_MAX
 #define UINT32_MAX             (4294967295U)
 #endif
-
-#endif /* ! C99 */
 
 #endif /* ! FLEXINT_H */
 
@@ -200,15 +199,7 @@ typedef void* yyscan_t;
 
 /* Size of default input buffer. */
 #ifndef YY_BUF_SIZE
-#ifdef __ia64__
-/* On IA-64, the buffer size is 16k, not 8k.
- * Moreover, YY_BUF_SIZE is 2*YY_READ_BUF_SIZE in the general case.
- * Ditto for the __ia64__ case accordingly.
- */
-#define YY_BUF_SIZE 32768
-#else
 #define YY_BUF_SIZE 16384
-#endif /* __ia64__ */
 #endif
 
 /* The state buf must be large enough to hold one state per character in the main buffer.
@@ -218,11 +209,6 @@ typedef void* yyscan_t;
 #ifndef YY_TYPEDEF_YY_BUFFER_STATE
 #define YY_TYPEDEF_YY_BUFFER_STATE
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
-#endif
-
-#ifndef YY_TYPEDEF_YY_SIZE_T
-#define YY_TYPEDEF_YY_SIZE_T
-typedef size_t yy_size_t;
 #endif
 
 /* %if-not-reentrant */
@@ -251,13 +237,6 @@ typedef size_t yy_size_t;
                     if ( yytext[yyl] == '\n' )\
                         --yylineno;\
             }while(0)
-    #define YY_LINENO_REWIND_TO(dst) \
-            do {\
-                const char *p;\
-                for ( p = yy_cp-1; p >= (dst); --p)\
-                    if ( *p == '\n' )\
-                        --yylineno;\
-            }while(0)
     
 /* Return all but the first "n" matched characters back to the input stream. */
 #define yyless(n) \
@@ -274,6 +253,11 @@ typedef size_t yy_size_t;
 	while ( 0 )
 
 #define unput(c) yyunput( c, yyg->yytext_ptr , yyscanner )
+
+#ifndef YY_TYPEDEF_YY_SIZE_T
+#define YY_TYPEDEF_YY_SIZE_T
+typedef size_t yy_size_t;
+#endif
 
 #ifndef YY_STRUCT_YY_BUFFER_STATE
 #define YY_STRUCT_YY_BUFFER_STATE
@@ -394,7 +378,7 @@ static void schema_yy_init_buffer (YY_BUFFER_STATE b,FILE *file ,yyscan_t yyscan
 
 YY_BUFFER_STATE schema_yy_scan_buffer (char *base,yy_size_t size ,yyscan_t yyscanner );
 YY_BUFFER_STATE schema_yy_scan_string (yyconst char *yy_str ,yyscan_t yyscanner );
-YY_BUFFER_STATE schema_yy_scan_bytes (yyconst char *bytes,yy_size_t len ,yyscan_t yyscanner );
+YY_BUFFER_STATE schema_yy_scan_bytes (yyconst char *bytes,int len ,yyscan_t yyscanner );
 
 /* %endif */
 
@@ -429,7 +413,7 @@ void schema_yyfree (void * ,yyscan_t yyscanner );
 /* %% [1.0] yytext/yyin/yyout/yy_state_type/yylineno etc. def's & init go here */
 /* Begin user sect3 */
 
-#define schema_yywrap(yyscanner) (/*CONSTCOND*/1)
+#define schema_yywrap(n) 1
 #define YY_SKIP_YYWRAP
 
 #define FLEX_DEBUG
@@ -440,16 +424,11 @@ typedef int yy_state_type;
 
 #define yytext_ptr yytext_r
 
-/* %% [1.5] DFA */
-
 /* %if-c-only Standard (non-C++) definition */
 
 static yy_state_type yy_get_previous_state (yyscan_t yyscanner );
 static yy_state_type yy_try_NUL_trans (yy_state_type current_state  ,yyscan_t yyscanner);
 static int yy_get_next_buffer (yyscan_t yyscanner );
-#if defined(__GNUC__) && __GNUC__ >= 3
-__attribute__((__noreturn__))
-#endif
 static void yy_fatal_error (yyconst char msg[] ,yyscan_t yyscanner );
 
 /* %endif */
@@ -514,7 +493,7 @@ static yyconst flex_int16_t yy_accept[303] =
        39,    0
     } ;
 
-static yyconst YY_CHAR yy_ec[256] =
+static yyconst flex_int32_t yy_ec[256] =
     {   0,
         1,    1,    1,    1,    1,    1,    1,    1,    2,    3,
         2,    4,    4,    1,    1,    1,    1,    1,    1,    1,
@@ -546,7 +525,7 @@ static yyconst YY_CHAR yy_ec[256] =
         1,    1,    1,    1,    1
     } ;
 
-static yyconst YY_CHAR yy_meta[59] =
+static yyconst flex_int32_t yy_meta[59] =
     {   0,
         1,    1,    2,    3,    1,    1,    1,    1,    1,    1,
         4,    1,    1,    1,    5,    1,    6,    6,    6,    1,
@@ -556,7 +535,7 @@ static yyconst YY_CHAR yy_meta[59] =
         6,    6,    6,    6,    6,    1,    6,    1
     } ;
 
-static yyconst flex_uint16_t yy_base[319] =
+static yyconst flex_int16_t yy_base[319] =
     {   0,
         0,    0,   57,   60,   63,   78,   81,   88,  511,  512,
       512,  512,   65,   69,  512,   70,  512,  512,  512,  512,
@@ -634,7 +613,7 @@ static yyconst flex_int16_t yy_def[319] =
       302,  302,  302,  302,  302,  302,  302,  302
     } ;
 
-static yyconst flex_uint16_t yy_nxt[571] =
+static yyconst flex_int16_t yy_nxt[571] =
     {   0,
        10,   11,   12,   11,   13,   14,   15,   16,   17,   18,
        19,   20,   21,   22,   23,   24,   25,   26,   26,   27,
@@ -797,7 +776,7 @@ static yyconst flex_int16_t yy_rule_linenum[93] =
 #define yymore() yymore_used_but_not_detected
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
-#line 1 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 1 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -823,7 +802,7 @@ static yyconst flex_int16_t yy_rule_linenum[93] =
 * ===========================================================================
 *
 */
-#line 28 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 28 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 
 #define YYDEBUG 1
 
@@ -835,7 +814,7 @@ typedef struct ParseTree ParseTree; /* a fake declaration to make the scanner co
 #define YY_USER_ACTION \
     yylloc->first_line = yylloc->last_line; \
     yylloc->first_column = yylloc->last_column; \
-    for(int i = 0; yytext[i] != '\0'; i++) { \
+    { int i; for(i = 0; yytext[i] != '\0'; i++) { \
         if(yytext[i] == '\n') { \
             yylloc->last_line++; \
             yylloc->last_column = 1; \
@@ -843,7 +822,7 @@ typedef struct ParseTree ParseTree; /* a fake declaration to make the scanner co
         else { \
             yylloc->last_column++; \
         } \
-    }
+    }}
 
 static void AddWhitespace ( SchemaScanBlock* p_sb, const char* p_ws, size_t p_length );
 
@@ -857,7 +836,7 @@ static void AddWhitespace ( SchemaScanBlock* p_sb, const char* p_ws, size_t p_le
 
 
 
-#line 861 "<stdout>"
+#line 840 "<stdout>"
 
 #define INITIAL 0
 #define CMT_SLASH_STAR 1
@@ -897,7 +876,7 @@ struct yyguts_t
     YY_BUFFER_STATE * yy_buffer_stack; /**< Stack as an array. */
     char yy_hold_char;
     int yy_n_chars;
-    yy_size_t yyleng_r;
+    int yyleng_r;
     char *yy_c_buf_p;
     int yy_init;
     int yy_start;
@@ -958,23 +937,19 @@ void schema_yyset_extra (YY_EXTRA_TYPE user_defined ,yyscan_t yyscanner );
 
 FILE *schema_yyget_in (yyscan_t yyscanner );
 
-void schema_yyset_in  (FILE * _in_str ,yyscan_t yyscanner );
+void schema_yyset_in  (FILE * in_str ,yyscan_t yyscanner );
 
 FILE *schema_yyget_out (yyscan_t yyscanner );
 
-void schema_yyset_out  (FILE * _out_str ,yyscan_t yyscanner );
+void schema_yyset_out  (FILE * out_str ,yyscan_t yyscanner );
 
-yy_size_t schema_yyget_leng (yyscan_t yyscanner );
+int schema_yyget_leng (yyscan_t yyscanner );
 
 char *schema_yyget_text (yyscan_t yyscanner );
 
 int schema_yyget_lineno (yyscan_t yyscanner );
 
-void schema_yyset_lineno (int _line_number ,yyscan_t yyscanner );
-
-int schema_yyget_column  (yyscan_t yyscanner );
-
-void schema_yyset_column (int _column_no ,yyscan_t yyscanner );
+void schema_yyset_lineno (int line_number ,yyscan_t yyscanner );
 
 /* %if-bison-bridge */
 
@@ -1002,11 +977,8 @@ extern int schema_yywrap (yyscan_t yyscanner );
 
 /* %not-for-header */
 
-#ifndef YY_NO_UNPUT
-    
     static void yyunput (int c,char *buf_ptr  ,yyscan_t yyscanner);
     
-#endif
 /* %ok-for-header */
 
 /* %endif */
@@ -1035,7 +1007,7 @@ static int input (yyscan_t yyscanner );
 
 /* %if-c-only */
 
-    static void yy_push_state (int _new_state ,yyscan_t yyscanner);
+    static void yy_push_state (int new_state ,yyscan_t yyscanner);
     
     static void yy_pop_state (yyscan_t yyscanner );
     
@@ -1045,12 +1017,7 @@ static int input (yyscan_t yyscanner );
 
 /* Amount of stuff to slurp up with each read. */
 #ifndef YY_READ_BUF_SIZE
-#ifdef __ia64__
-/* On IA-64, the buffer size is 16k, not 8k */
-#define YY_READ_BUF_SIZE 16384
-#else
 #define YY_READ_BUF_SIZE 8192
-#endif /* __ia64__ */
 #endif
 
 /* Copy whatever the last rule matched to the standard output. */
@@ -1059,7 +1026,7 @@ static int input (yyscan_t yyscanner );
 /* This used to be an fputs(), but since the string might contain NUL's,
  * we now use fwrite().
  */
-#define ECHO do { if (fwrite( yytext, yyleng, 1, yyout )) {} } while (0)
+#define ECHO fwrite( yytext, yyleng, 1, yyout )
 /* %endif */
 /* %if-c++-only C++ definition */
 /* %endif */
@@ -1074,7 +1041,7 @@ static int input (yyscan_t yyscanner );
 	if ( YY_CURRENT_BUFFER_LVALUE->yy_is_interactive ) \
 		{ \
 		int c = '*'; \
-		size_t n; \
+		int n; \
 		for ( n = 0; n < max_size && \
 			     (c = getc( yyin )) != EOF && c != '\n'; ++n ) \
 			buf[n] = (char) c; \
@@ -1165,7 +1132,7 @@ extern int schema_yylex \
 
 /* Code executed at the end of each rule. */
 #ifndef YY_BREAK
-#define YY_BREAK /*LINTED*/break;
+#define YY_BREAK break;
 #endif
 
 /* %% [6.0] YY_RULE_SETUP definition goes here */
@@ -1178,10 +1145,18 @@ extern int schema_yylex \
  */
 YY_DECL
 {
-	yy_state_type yy_current_state;
-	char *yy_cp, *yy_bp;
-	int yy_act;
+	register yy_state_type yy_current_state;
+	register char *yy_cp, *yy_bp;
+	register int yy_act;
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
+
+/* %% [7.0] user's declarations go here */
+#line 79 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
+
+
+ /* literals */
+
+#line 1160 "<stdout>"
 
     yylval = yylval_param;
 
@@ -1221,16 +1196,7 @@ YY_DECL
 		schema_yy_load_buffer_state(yyscanner );
 		}
 
-	{
-/* %% [7.0] user's declarations go here */
-#line 79 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
-
-
- /* literals */
-
-#line 1232 "<stdout>"
-
-	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
+	while ( 1 )		/* loops until end-of-file is reached */
 		{
 /* %% [8.0] yymore()-related code goes here */
 		yy_cp = yyg->yy_c_buf_p;
@@ -1248,7 +1214,7 @@ YY_DECL
 yy_match:
 		do
 			{
-			YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)] ;
+			register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)];
 			if ( yy_accept[yy_current_state] )
 				{
 				yyg->yy_last_accepting_state = yy_current_state;
@@ -1277,7 +1243,7 @@ yy_find_action:
 
 		if ( yy_act != YY_END_OF_BUFFER && yy_rule_can_match_eol[yy_act] )
 			{
-			yy_size_t yyl;
+			int yyl;
 			for ( yyl = 0; yyl < yyleng; ++yyl )
 				if ( yytext[yyl] == '\n' )
 					   
@@ -1318,487 +1284,487 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 83 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 83 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 84 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 84 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 85 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 85 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 86 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 86 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 87 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 87 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 88 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 88 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 89 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 89 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 90 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 90 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 91 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 91 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 92 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 92 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 93 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 93 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 94 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 94 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 95 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 95 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 96 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 96 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 97 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 97 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 98 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 98 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 99 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 99 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 100 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 100 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 101 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 101 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 102 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 102 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 103 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 103 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return yytext [ 0 ]; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 105 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 105 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return ELLIPSIS; }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 107 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 107 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return DECIMAL; }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 108 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 108 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return OCTAL; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 109 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 109 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return HEX; }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 110 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 110 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return EXP_FLOAT; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 111 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 111 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return EXP_FLOAT; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 112 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 112 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return FLOAT; }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 113 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 113 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return FLOAT; }
 	YY_BREAK
 /* single quoted strings */
 case 30:
 /* rule 30 can match eol */
 YY_RULE_SETUP
-#line 116 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 116 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return STRING; }
 	YY_BREAK
 case 31:
 /* rule 31 can match eol */
 YY_RULE_SETUP
-#line 117 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 117 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return STRING; } /*TODO: handle unterminated */
 	YY_BREAK
 case 32:
 /* rule 32 can match eol */
 YY_RULE_SETUP
-#line 118 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 118 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return ESCAPED_STRING; }
 	YY_BREAK
 case 33:
 /* rule 33 can match eol */
 YY_RULE_SETUP
-#line 119 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 119 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return ESCAPED_STRING; }  /*TODO: handle unterminated */
 	YY_BREAK
 /* double quoted strings */
 case 34:
 /* rule 34 can match eol */
 YY_RULE_SETUP
-#line 122 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 122 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return STRING; }
 	YY_BREAK
 case 35:
 /* rule 35 can match eol */
 YY_RULE_SETUP
-#line 123 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 123 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return STRING; } /*TODO: handle unterminated */
 	YY_BREAK
 case 36:
 /* rule 36 can match eol */
 YY_RULE_SETUP
-#line 124 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 124 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return ESCAPED_STRING; }
 	YY_BREAK
 case 37:
 /* rule 37 can match eol */
 YY_RULE_SETUP
-#line 125 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 125 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return ESCAPED_STRING; }  /*TODO: handle unterminated */
 	YY_BREAK
 /* keywords */
 case 38:
 YY_RULE_SETUP
-#line 128 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 128 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW___no_header; }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 129 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 129 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW___row_length; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 130 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 130 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW___untyped; }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 131 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 131 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_alias; }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 132 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 132 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_column; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 133 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 133 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_const; }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 134 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 134 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_control; }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 135 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 135 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_database; }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 136 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 136 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_decode; }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 137 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 137 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_default; }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 138 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 138 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_encode; }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 139 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 139 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_extern; }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 140 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 140 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_false; }
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 141 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 141 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_fmtdef; }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 142 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 142 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_function; }
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 143 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 143 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_include; }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 144 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 144 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_limit; }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 145 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 145 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_physical; }
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 146 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 146 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_read; }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 147 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 147 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_readonly; }
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
-#line 148 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 148 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_return; }
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 149 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 149 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_schema; }
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
-#line 150 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 150 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_static; }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 151 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 151 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_table; }
 	YY_BREAK
 case 62:
 YY_RULE_SETUP
-#line 152 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 152 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_template; }
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
-#line 153 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 153 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_trigger; }
 	YY_BREAK
 case 64:
 YY_RULE_SETUP
-#line 154 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 154 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_true; }
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
-#line 155 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 155 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_type; }
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
-#line 156 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 156 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_typedef; }
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
-#line 157 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 157 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_typeset; }
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
-#line 158 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 158 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_validate; }
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
-#line 160 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 160 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { yy_push_state ( VERSION_STATE, yyscanner ); return KW_version; }
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
-#line 161 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 161 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { yy_pop_state ( yyscanner ); return VERS_1_0; }
 	YY_BREAK
 case 71:
 YY_RULE_SETUP
-#line 162 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 162 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { yy_pop_state ( yyscanner ); return VERS_1_0; }
 	YY_BREAK
 case 72:
 YY_RULE_SETUP
-#line 163 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 163 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { yy_pop_state ( yyscanner ); return FLOAT; }
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
-#line 164 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 164 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { yy_pop_state ( yyscanner ); return DECIMAL; }
 	YY_BREAK
 case 74:
 YY_RULE_SETUP
-#line 166 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 166 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_view; }
 	YY_BREAK
 case 75:
 YY_RULE_SETUP
-#line 167 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 167 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_virtual; }
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
-#line 168 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 168 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_void; }
 	YY_BREAK
 case 77:
 YY_RULE_SETUP
-#line 169 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 169 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return KW_write; }
 	YY_BREAK
 case 78:
 YY_RULE_SETUP
-#line 171 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 171 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return IDENTIFIER_1_0; }
 	YY_BREAK
 case 79:
 YY_RULE_SETUP
-#line 172 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 172 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return IDENTIFIER_1_0; }
 	YY_BREAK
 case 80:
 YY_RULE_SETUP
-#line 173 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 173 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return PHYSICAL_IDENTIFIER_1_0; }
 	YY_BREAK
 case 81:
 YY_RULE_SETUP
-#line 175 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 175 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return VERSION; }
 	YY_BREAK
 case 82:
 YY_RULE_SETUP
-#line 176 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 176 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return VERSION; }
 	YY_BREAK
 case 83:
 YY_RULE_SETUP
-#line 177 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 177 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return VERSION; }
 	YY_BREAK
 /* multi-line comments */
 case 84:
 YY_RULE_SETUP
-#line 180 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 180 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { yy_push_state ( CMT_SLASH_STAR, yyscanner ); AddWs(); }
 	YY_BREAK
 case 85:
 YY_RULE_SETUP
-#line 181 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 181 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { AddWs(); }
 	YY_BREAK
 case 86:
 YY_RULE_SETUP
-#line 182 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 182 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { AddWs(); }
 	YY_BREAK
 case 87:
 /* rule 87 can match eol */
 YY_RULE_SETUP
-#line 183 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 183 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { BEGIN CMT_MULTI_LINE; AddWs(); }
 	YY_BREAK
 case 88:
 YY_RULE_SETUP
-#line 184 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 184 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { yy_pop_state ( yyscanner ); AddWs(); }
 	YY_BREAK
 case 89:
 YY_RULE_SETUP
-#line 185 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 185 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { yy_pop_state ( yyscanner ); AddWs(); }
 	YY_BREAK
 /* line comments */
 case 90:
 YY_RULE_SETUP
-#line 188 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 188 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { AddWs(); }
 	YY_BREAK
 /* ignored tokens */
 case 91:
 /* rule 91 can match eol */
 YY_RULE_SETUP
-#line 191 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 191 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { AddWs(); }
 	YY_BREAK
 /* unrecognized input */
 case 92:
 YY_RULE_SETUP
-#line 194 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 194 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 { return UNRECOGNIZED; }
 	YY_BREAK
 case 93:
 YY_RULE_SETUP
-#line 196 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 196 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 ECHO;
 	YY_BREAK
-#line 1802 "<stdout>"
+#line 1768 "<stdout>"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(CMT_SLASH_STAR):
 case YY_STATE_EOF(CMT_MULTI_LINE):
@@ -1826,11 +1792,7 @@ case YY_STATE_EOF(VERSION_STATE):
 			 * back-up) that will match for the new input source.
 			 */
 			yyg->yy_n_chars = YY_CURRENT_BUFFER_LVALUE->yy_n_chars;
-/* %if-c-only */
 			YY_CURRENT_BUFFER_LVALUE->yy_input_file = yyin;
-/* %endif */
-/* %if-c++-only */
-/* %endif */
 			YY_CURRENT_BUFFER_LVALUE->yy_buffer_status = YY_BUFFER_NORMAL;
 			}
 
@@ -1938,7 +1900,6 @@ case YY_STATE_EOF(VERSION_STATE):
 			"fatal flex scanner internal error--no action found" );
 	} /* end of action switch */
 		} /* end of scanning one token */
-	} /* end of user's declarations */
 } /* end of schema_yylex */
 /* %ok-for-header */
 
@@ -1963,9 +1924,9 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 /* %endif */
 {
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
-	char *dest = YY_CURRENT_BUFFER_LVALUE->yy_ch_buf;
-	char *source = yyg->yytext_ptr;
-	yy_size_t number_to_move, i;
+	register char *dest = YY_CURRENT_BUFFER_LVALUE->yy_ch_buf;
+	register char *source = yyg->yytext_ptr;
+	register int number_to_move, i;
 	int ret_val;
 
 	if ( yyg->yy_c_buf_p > &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[yyg->yy_n_chars + 1] )
@@ -1994,7 +1955,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	/* Try to read more data. */
 
 	/* First move last chars to start of buffer. */
-	number_to_move = (yy_size_t) (yyg->yy_c_buf_p - yyg->yytext_ptr) - 1;
+	number_to_move = (int) (yyg->yy_c_buf_p - yyg->yytext_ptr) - 1;
 
 	for ( i = 0; i < number_to_move; ++i )
 		*(dest++) = *(source++);
@@ -2007,21 +1968,21 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 
 	else
 		{
-			yy_size_t num_to_read =
+			int num_to_read =
 			YY_CURRENT_BUFFER_LVALUE->yy_buf_size - number_to_move - 1;
 
 		while ( num_to_read <= 0 )
 			{ /* Not enough room in the buffer - grow it. */
 
 			/* just a shorter name for the current buffer */
-			YY_BUFFER_STATE b = YY_CURRENT_BUFFER_LVALUE;
+			YY_BUFFER_STATE b = YY_CURRENT_BUFFER;
 
 			int yy_c_buf_p_offset =
 				(int) (yyg->yy_c_buf_p - b->yy_ch_buf);
 
 			if ( b->yy_is_our_buffer )
 				{
-				yy_size_t new_size = b->yy_buf_size * 2;
+				int new_size = b->yy_buf_size * 2;
 
 				if ( new_size <= 0 )
 					b->yy_buf_size += b->yy_buf_size / 8;
@@ -2052,7 +2013,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 
 		/* Read in more data. */
 		YY_INPUT( (&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[number_to_move]),
-			yyg->yy_n_chars, num_to_read );
+			yyg->yy_n_chars, (size_t) num_to_read );
 
 		YY_CURRENT_BUFFER_LVALUE->yy_n_chars = yyg->yy_n_chars;
 		}
@@ -2076,9 +2037,9 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	else
 		ret_val = EOB_ACT_CONTINUE_SCAN;
 
-	if ((int) (yyg->yy_n_chars + number_to_move) > YY_CURRENT_BUFFER_LVALUE->yy_buf_size) {
+	if ((yy_size_t) (yyg->yy_n_chars + number_to_move) > YY_CURRENT_BUFFER_LVALUE->yy_buf_size) {
 		/* Extend the array by 50%, plus the number we really need. */
-		int new_size = yyg->yy_n_chars + number_to_move + (yyg->yy_n_chars >> 1);
+		yy_size_t new_size = yyg->yy_n_chars + number_to_move + (yyg->yy_n_chars >> 1);
 		YY_CURRENT_BUFFER_LVALUE->yy_ch_buf = (char *) schema_yyrealloc((void *) YY_CURRENT_BUFFER_LVALUE->yy_ch_buf,new_size ,yyscanner );
 		if ( ! YY_CURRENT_BUFFER_LVALUE->yy_ch_buf )
 			YY_FATAL_ERROR( "out of dynamic memory in yy_get_next_buffer()" );
@@ -2103,8 +2064,8 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 /* %if-c++-only */
 /* %endif */
 {
-	yy_state_type yy_current_state;
-	char *yy_cp;
+	register yy_state_type yy_current_state;
+	register char *yy_cp;
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 
 /* %% [15.0] code to get the start state into yy_current_state goes here */
@@ -2113,7 +2074,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	for ( yy_cp = yyg->yytext_ptr + YY_MORE_ADJ; yy_cp < yyg->yy_c_buf_p; ++yy_cp )
 		{
 /* %% [16.0] code to find the next state goes here */
-		YY_CHAR yy_c = (*yy_cp ? yy_ec[YY_SC_TO_UI(*yy_cp)] : 1);
+		register YY_CHAR yy_c = (*yy_cp ? yy_ec[YY_SC_TO_UI(*yy_cp)] : 1);
 		if ( yy_accept[yy_current_state] )
 			{
 			yyg->yy_last_accepting_state = yy_current_state;
@@ -2142,12 +2103,12 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 /* %if-c++-only */
 /* %endif */
 {
-	int yy_is_jam;
+	register int yy_is_jam;
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner; /* This var may be unused depending upon options. */
 /* %% [17.0] code to find the next state, and perhaps do backing up, goes here */
-	char *yy_cp = yyg->yy_c_buf_p;
+	register char *yy_cp = yyg->yy_c_buf_p;
 
-	YY_CHAR yy_c = 1;
+	register YY_CHAR yy_c = 1;
 	if ( yy_accept[yy_current_state] )
 		{
 		yyg->yy_last_accepting_state = yy_current_state;
@@ -2162,19 +2123,17 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	yy_current_state = yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
 	yy_is_jam = (yy_current_state == 302);
 
-	(void)yyg;
 	return yy_is_jam ? 0 : yy_current_state;
 }
 
-#ifndef YY_NO_UNPUT
 /* %if-c-only */
 
-    static void yyunput (int c, char * yy_bp , yyscan_t yyscanner)
+    static void yyunput (int c, register char * yy_bp , yyscan_t yyscanner)
 /* %endif */
 /* %if-c++-only */
 /* %endif */
 {
-	char *yy_cp;
+	register char *yy_cp;
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 
     yy_cp = yyg->yy_c_buf_p;
@@ -2185,10 +2144,10 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	if ( yy_cp < YY_CURRENT_BUFFER_LVALUE->yy_ch_buf + 2 )
 		{ /* need to shift things up to make room */
 		/* +2 for EOB chars. */
-		yy_size_t number_to_move = yyg->yy_n_chars + 2;
-		char *dest = &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[
+		register int number_to_move = yyg->yy_n_chars + 2;
+		register char *dest = &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[
 					YY_CURRENT_BUFFER_LVALUE->yy_buf_size + 2];
-		char *source =
+		register char *source =
 				&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[number_to_move];
 
 		while ( source > YY_CURRENT_BUFFER_LVALUE->yy_ch_buf )
@@ -2218,7 +2177,6 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 /* %if-c-only */
 
 /* %endif */
-#endif
 
 /* %if-c-only */
 #ifndef YY_NO_INPUT
@@ -2249,7 +2207,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 
 		else
 			{ /* need more input */
-			yy_size_t offset = yyg->yy_c_buf_p - yyg->yytext_ptr;
+			int offset = yyg->yy_c_buf_p - yyg->yytext_ptr;
 			++yyg->yy_c_buf_p;
 
 			switch ( yy_get_next_buffer( yyscanner ) )
@@ -2332,9 +2290,6 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	schema_yy_load_buffer_state(yyscanner );
 }
 
-/* %if-c++-only */
-/* %endif */
-
 /** Switch to a different input buffer.
  * @param new_buffer The new input buffer.
  * @param yyscanner The scanner object.
@@ -2384,11 +2339,7 @@ static void schema_yy_load_buffer_state  (yyscan_t yyscanner)
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 	yyg->yy_n_chars = YY_CURRENT_BUFFER_LVALUE->yy_n_chars;
 	yyg->yytext_ptr = yyg->yy_c_buf_p = YY_CURRENT_BUFFER_LVALUE->yy_buf_pos;
-/* %if-c-only */
 	yyin = YY_CURRENT_BUFFER_LVALUE->yy_input_file;
-/* %endif */
-/* %if-c++-only */
-/* %endif */
 	yyg->yy_hold_char = *yyg->yy_c_buf_p;
 }
 
@@ -2410,7 +2361,7 @@ static void schema_yy_load_buffer_state  (yyscan_t yyscanner)
 	if ( ! b )
 		YY_FATAL_ERROR( "out of dynamic memory in schema_yy_create_buffer()" );
 
-	b->yy_buf_size = (yy_size_t)size;
+	b->yy_buf_size = size;
 
 	/* yy_ch_buf has to be 2 characters longer than the size given because
 	 * we need to put in 2 end-of-buffer characters.
@@ -2425,9 +2376,6 @@ static void schema_yy_load_buffer_state  (yyscan_t yyscanner)
 
 	return b;
 }
-
-/* %if-c++-only */
-/* %endif */
 
 /** Destroy the buffer.
  * @param b a buffer created with schema_yy_create_buffer()
@@ -2453,6 +2401,13 @@ static void schema_yy_load_buffer_state  (yyscan_t yyscanner)
 	schema_yyfree((void *) b ,yyscanner );
 }
 
+/* %if-c-only */
+
+/* %endif */
+
+/* %if-c++-only */
+/* %endif */
+
 /* Initializes or reinitializes a buffer.
  * This function is sometimes called more than once on the same buffer,
  * such as during a schema_yyrestart() or at EOF.
@@ -2469,11 +2424,7 @@ static void schema_yy_load_buffer_state  (yyscan_t yyscanner)
 
 	schema_yy_flush_buffer(b ,yyscanner);
 
-/* %if-c-only */
 	b->yy_input_file = file;
-/* %endif */
-/* %if-c++-only */
-/* %endif */
 	b->yy_fill_buffer = 1;
 
     /* If b is the current buffer, then schema_yy_init_buffer was _probably_
@@ -2603,7 +2554,7 @@ static void schema_yyensure_buffer_stack (yyscan_t yyscanner)
 /* %if-c++-only */
 /* %endif */
 {
-	yy_size_t num_to_alloc;
+	int num_to_alloc;
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 
 	if (!yyg->yy_buffer_stack) {
@@ -2612,7 +2563,7 @@ static void schema_yyensure_buffer_stack (yyscan_t yyscanner)
 		 * scanner will even need a stack. We use 2 instead of 1 to avoid an
 		 * immediate realloc on the next call.
          */
-		num_to_alloc = 1; /* After all that talk, this was set to 1 anyways... */
+		num_to_alloc = 1;
 		yyg->yy_buffer_stack = (struct yy_buffer_state**)schema_yyalloc
 								(num_to_alloc * sizeof(struct yy_buffer_state*)
 								, yyscanner);
@@ -2629,7 +2580,7 @@ static void schema_yyensure_buffer_stack (yyscan_t yyscanner)
 	if (yyg->yy_buffer_stack_top >= (yyg->yy_buffer_stack_max) - 1){
 
 		/* Increase the buffer to prepare for a possible push. */
-		yy_size_t grow_size = 8 /* arbitrary grow size */;
+		int grow_size = 8 /* arbitrary grow size */;
 
 		num_to_alloc = yyg->yy_buffer_stack_max + grow_size;
 		yyg->yy_buffer_stack = (struct yy_buffer_state**)schema_yyrealloc
@@ -2702,17 +2653,17 @@ YY_BUFFER_STATE schema_yy_scan_string (yyconst char * yystr , yyscan_t yyscanner
 /* %if-c-only */
 /** Setup the input buffer state to scan the given bytes. The next call to schema_yylex() will
  * scan from a @e copy of @a bytes.
- * @param yybytes the byte buffer to scan
- * @param _yybytes_len the number of bytes in the buffer pointed to by @a bytes.
+ * @param bytes the byte buffer to scan
+ * @param len the number of bytes in the buffer pointed to by @a bytes.
  * @param yyscanner The scanner object.
  * @return the newly allocated buffer state object.
  */
-YY_BUFFER_STATE schema_yy_scan_bytes  (yyconst char * yybytes, yy_size_t  _yybytes_len , yyscan_t yyscanner)
+YY_BUFFER_STATE schema_yy_scan_bytes  (yyconst char * yybytes, int  _yybytes_len , yyscan_t yyscanner)
 {
 	YY_BUFFER_STATE b;
 	char *buf;
 	yy_size_t n;
-	yy_size_t i;
+	int i;
     
 	/* Get memory for full buffer, including space for trailing EOB's. */
 	n = _yybytes_len + 2;
@@ -2739,7 +2690,7 @@ YY_BUFFER_STATE schema_yy_scan_bytes  (yyconst char * yybytes, yy_size_t  _yybyt
 /* %endif */
 
 /* %if-c-only */
-    static void yy_push_state (int  _new_state , yyscan_t yyscanner)
+    static void yy_push_state (int  new_state , yyscan_t yyscanner)
 /* %endif */
 /* %if-c++-only */
 /* %endif */
@@ -2764,7 +2715,7 @@ YY_BUFFER_STATE schema_yy_scan_bytes  (yyconst char * yybytes, yy_size_t  _yybyt
 
 	yyg->yy_start_stack[yyg->yy_start_stack_ptr++] = YY_START;
 
-	BEGIN(_new_state);
+	BEGIN(new_state);
 }
 
 /* %if-c-only */
@@ -2797,9 +2748,7 @@ YY_BUFFER_STATE schema_yy_scan_bytes  (yyconst char * yybytes, yy_size_t  _yybyt
 /* %if-c-only */
 static void yy_fatal_error (yyconst char* msg , yyscan_t yyscanner)
 {
-	struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
-	(void)yyg;
-	(void) fprintf( stderr, "%s\n", msg );
+    	(void) fprintf( stderr, "%s\n", msg );
 	exit( YY_EXIT_FAILURE );
 }
 /* %endif */
@@ -2886,7 +2835,7 @@ FILE *schema_yyget_out  (yyscan_t yyscanner)
 /** Get the length of the current token.
  * @param yyscanner The scanner object.
  */
-yy_size_t schema_yyget_leng  (yyscan_t yyscanner)
+int schema_yyget_leng  (yyscan_t yyscanner)
 {
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
     return yyleng;
@@ -2917,51 +2866,51 @@ void schema_yyset_extra (YY_EXTRA_TYPE  user_defined , yyscan_t yyscanner)
 /* %endif */
 
 /** Set the current line number.
- * @param _line_number line number
+ * @param line_number
  * @param yyscanner The scanner object.
  */
-void schema_yyset_lineno (int  _line_number , yyscan_t yyscanner)
+void schema_yyset_lineno (int  line_number , yyscan_t yyscanner)
 {
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 
         /* lineno is only valid if an input buffer exists. */
         if (! YY_CURRENT_BUFFER )
-           YY_FATAL_ERROR( "schema_yyset_lineno called with no buffer" );
+           yy_fatal_error( "schema_yyset_lineno called with no buffer" , yyscanner); 
     
-    yylineno = _line_number;
+    yylineno = line_number;
 }
 
 /** Set the current column.
- * @param _column_no column number
+ * @param line_number
  * @param yyscanner The scanner object.
  */
-void schema_yyset_column (int  _column_no , yyscan_t yyscanner)
+void schema_yyset_column (int  column_no , yyscan_t yyscanner)
 {
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 
         /* column is only valid if an input buffer exists. */
         if (! YY_CURRENT_BUFFER )
-           YY_FATAL_ERROR( "schema_yyset_column called with no buffer" );
+           yy_fatal_error( "schema_yyset_column called with no buffer" , yyscanner); 
     
-    yycolumn = _column_no;
+    yycolumn = column_no;
 }
 
 /** Set the input stream. This does not discard the current
  * input buffer.
- * @param _in_str A readable stream.
+ * @param in_str A readable stream.
  * @param yyscanner The scanner object.
  * @see schema_yy_switch_to_buffer
  */
-void schema_yyset_in (FILE *  _in_str , yyscan_t yyscanner)
+void schema_yyset_in (FILE *  in_str , yyscan_t yyscanner)
 {
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
-    yyin = _in_str ;
+    yyin = in_str ;
 }
 
-void schema_yyset_out (FILE *  _out_str , yyscan_t yyscanner)
+void schema_yyset_out (FILE *  out_str , yyscan_t yyscanner)
 {
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
-    yyout = _out_str ;
+    yyout = out_str ;
 }
 
 int schema_yyget_debug  (yyscan_t yyscanner)
@@ -2970,10 +2919,10 @@ int schema_yyget_debug  (yyscan_t yyscanner)
     return yy_flex_debug;
 }
 
-void schema_yyset_debug (int  _bdebug , yyscan_t yyscanner)
+void schema_yyset_debug (int  bdebug , yyscan_t yyscanner)
 {
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
-    yy_flex_debug = _bdebug ;
+    yy_flex_debug = bdebug ;
 }
 
 /* %endif */
@@ -3151,10 +3100,7 @@ int schema_yylex_destroy  (yyscan_t yyscanner)
 #ifndef yytext_ptr
 static void yy_flex_strncpy (char* s1, yyconst char * s2, int n , yyscan_t yyscanner)
 {
-	struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
-	(void)yyg;
-
-	int i;
+	register int i;
 	for ( i = 0; i < n; ++i )
 		s1[i] = s2[i];
 }
@@ -3163,7 +3109,7 @@ static void yy_flex_strncpy (char* s1, yyconst char * s2, int n , yyscan_t yysca
 #ifdef YY_NEED_STRLEN
 static int yy_flex_strlen (yyconst char * s , yyscan_t yyscanner)
 {
-	int n;
+	register int n;
 	for ( n = 0; s[n]; ++n )
 		;
 
@@ -3173,16 +3119,11 @@ static int yy_flex_strlen (yyconst char * s , yyscan_t yyscanner)
 
 void *schema_yyalloc (yy_size_t  size , yyscan_t yyscanner)
 {
-	struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
-	(void)yyg;
 	return (void *) malloc( size );
 }
 
 void *schema_yyrealloc  (void * ptr, yy_size_t  size , yyscan_t yyscanner)
 {
-	struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
-	(void)yyg;
-
 	/* The cast to (char *) in the following accommodates both
 	 * implementations that use char* generic pointers, and those
 	 * that use void* generic pointers.  It works with the latter
@@ -3195,8 +3136,6 @@ void *schema_yyrealloc  (void * ptr, yy_size_t  size , yyscan_t yyscanner)
 
 void schema_yyfree (void * ptr , yyscan_t yyscanner)
 {
-	struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
-	(void)yyg;
 	free( (char *) ptr );	/* see schema_yyrealloc() for (char *) cast */
 }
 
@@ -3207,7 +3146,7 @@ void schema_yyfree (void * ptr , yyscan_t yyscanner)
 
 /* %ok-for-header */
 
-#line 196 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-lex.l"
+#line 196 "/home/boshkina/devel/ncbi-vdb/libs/schema/schema-lex.l"
 
 
 

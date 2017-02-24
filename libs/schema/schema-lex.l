@@ -36,7 +36,7 @@ typedef struct ParseTree ParseTree; /* a fake declaration to make the scanner co
 #define YY_USER_ACTION \
     yylloc->first_line = yylloc->last_line; \
     yylloc->first_column = yylloc->last_column; \
-    for(int i = 0; yytext[i] != '\0'; i++) { \
+    { int i; for(i = 0; yytext[i] != '\0'; i++) { \
         if(yytext[i] == '\n') { \
             yylloc->last_line++; \
             yylloc->last_column = 1; \
@@ -44,7 +44,7 @@ typedef struct ParseTree ParseTree; /* a fake declaration to make the scanner co
         else { \
             yylloc->last_column++; \
         } \
-    }
+    }}
 
 static void AddWhitespace ( SchemaScanBlock* p_sb, const char* p_ws, size_t p_length );
 
