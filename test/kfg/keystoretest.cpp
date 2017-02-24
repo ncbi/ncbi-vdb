@@ -106,12 +106,12 @@ FIXTURE_TEST_CASE(KeyStoreGetKey_TempFile, KeyStoreFixture)
 {
     const char tempKey[] = "tempkey from file";
     {
-        ofstream f(GetName());
+        ofstream f(GetName().c_str());
         f << tempKey;
     }
 
     const KFile* file;
-    REQUIRE_RC(KDirectoryOpenFileRead(wd, &file, GetName()));
+    REQUIRE_RC(KDirectoryOpenFileRead(wd, &file, GetName().c_str()));
     
     REQUIRE_RC(KKeyStoreSetTemporaryKeyFromFile(ks, file));
     
@@ -124,7 +124,7 @@ FIXTURE_TEST_CASE(KeyStoreGetKey_TempFile, KeyStoreFixture)
     REQUIRE_RC_FAIL(KKeyStoreGetKey(ks, "boohoo i am ignored here", &key)); 
     
     REQUIRE_RC(KFileRelease(file));
-    REQUIRE_RC(KDirectoryRemove(wd, true, GetName()));
+    REQUIRE_RC(KDirectoryRemove(wd, true, GetName().c_str()));
 }
 
 FIXTURE_TEST_CASE(KeyStoreGetKey_Kfg_Default, KeyStoreFixture)
@@ -136,11 +136,11 @@ FIXTURE_TEST_CASE(KeyStoreGetKey_Kfg, KeyStoreFixture)
 {
     const char tempKey[] = "tempkey from file";
     {
-        ofstream f(GetName());
+        ofstream f(GetName().c_str());
         f << tempKey << endl;
     }
     
-    KfgUpdateNode(KFG_KRYPTO_PWFILE, GetName());
+    KfgUpdateNode(KFG_KRYPTO_PWFILE, GetName().c_str());
     
     REQUIRE_RC(KKeyStoreSetConfig(ks, kfg));
     
@@ -148,19 +148,19 @@ FIXTURE_TEST_CASE(KeyStoreGetKey_Kfg, KeyStoreFixture)
     REQUIRE_NOT_NULL(key);
     REQUIRE_EQ(string(tempKey), string(key->value.addr, key->value.len));
     
-    REQUIRE_RC(KDirectoryRemove(wd, true, GetName()));
+    REQUIRE_RC(KDirectoryRemove(wd, true, GetName().c_str()));
 }
 
 FIXTURE_TEST_CASE(KeyStoreGetKey_Protected, KeyStoreFixture)
 {
     const char tempKey[] = "another tempkey from file";
     {
-        ofstream f(GetName());
+        ofstream f(GetName().c_str());
         f << tempKey << endl;
     }
     
     KfgUpdateNode("/repository/user/protected/dbGaP-2956/root", ".");
-    KfgUpdateNode("/repository/user/protected/dbGaP-2956/encryption-key-path", GetName());
+    KfgUpdateNode("/repository/user/protected/dbGaP-2956/encryption-key-path", GetName().c_str());
 
     REQUIRE_RC(KKeyStoreSetConfig(ks, kfg));
     
@@ -168,14 +168,14 @@ FIXTURE_TEST_CASE(KeyStoreGetKey_Protected, KeyStoreFixture)
     REQUIRE_NOT_NULL(key);
     REQUIRE_EQ(string(tempKey), string(key->value.addr, key->value.len));
     
-    REQUIRE_RC(KDirectoryRemove(wd, true, GetName()));
+    REQUIRE_RC(KDirectoryRemove(wd, true, GetName().c_str()));
 }
 
 FIXTURE_TEST_CASE(KeyStoreGetKeyById_Protected, KeyStoreFixture)
 {
     const char tempKey[] = "another tempkey from file";
     {
-        ofstream f(GetName());
+        ofstream f(GetName().c_str());
         f << tempKey << endl;
     }
     
@@ -184,7 +184,7 @@ FIXTURE_TEST_CASE(KeyStoreGetKeyById_Protected, KeyStoreFixture)
         "wrong file!");
     KfgUpdateNode("/repository/user/protected/dbGaP-2957/root", ".");
     KfgUpdateNode("/repository/user/protected/dbGaP-2957/encryption-key-path",
-        GetName());
+        GetName().c_str());
 
     REQUIRE_RC(KKeyStoreSetConfig(ks, kfg));
     
@@ -193,7 +193,7 @@ FIXTURE_TEST_CASE(KeyStoreGetKeyById_Protected, KeyStoreFixture)
     REQUIRE_NOT_NULL(key);
     REQUIRE_EQ(string(tempKey), string(key->value.addr, key->value.len));
     
-    REQUIRE_RC(KDirectoryRemove(wd, true, GetName()));
+    REQUIRE_RC(KDirectoryRemove(wd, true, GetName().c_str()));
 }
 
 //
@@ -383,7 +383,7 @@ FIXTURE_TEST_CASE(ObjIdRegister_Lock, ObjIdBindingFixture)
     SetUp(GetName());
 
     KFile* lockedFile;
-    REQUIRE_RC(KDirectoryCreateExclusiveAccessFile(wd, &lockedFile, true, 0600, kcmOpen, GetName()));
+    REQUIRE_RC(KDirectoryCreateExclusiveAccessFile(wd, &lockedFile, true, 0600, kcmOpen, GetName().c_str()));
     
     String name11;
     CONST_STRING(&name11, "name11");
