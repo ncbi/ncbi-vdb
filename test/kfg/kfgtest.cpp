@@ -416,7 +416,7 @@ FIXTURE_TEST_CASE(predef_KFGDIR, KfgFixture)
 FIXTURE_TEST_CASE(predef_KFGNAME, KfgFixture)
 {
     CreateAndLoad(GetName(), "var=$(kfg/name)\n");
-    REQUIRE(ValueMatches("var", GetName().c_str()));
+    REQUIRE(ValueMatches("var", GetName()));
 }
 
 
