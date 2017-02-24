@@ -131,8 +131,9 @@ public:
         file=0;
     }
 
-    void CreateAndLoad(const char* name, const char* contents)
+    void CreateAndLoad(const string & sname, const char* contents)
     {
+        const char * name = sname . c_str ();
 #ifdef DBG_KFG
         cout << "26 CreateAndLoad(" << name << ")\n";
 #endif
@@ -415,7 +416,7 @@ FIXTURE_TEST_CASE(predef_KFGDIR, KfgFixture)
 FIXTURE_TEST_CASE(predef_KFGNAME, KfgFixture)
 {
     CreateAndLoad(GetName(), "var=$(kfg/name)\n");
-    REQUIRE(ValueMatches("var", GetName()));
+    REQUIRE(ValueMatches("var", GetName().c_str()));
 }
 
 
