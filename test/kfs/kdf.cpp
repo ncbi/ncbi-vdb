@@ -218,7 +218,7 @@ TEST_CASE ( testKDirectoryGetDiskFreeSpace ) {
     bool started = false;
     int64_t min = 9876543210;
     int i = 0;
-    for ( i = 1; i < 20; ++i ) {
+    for ( i = 1; i < 25; ++i ) {
         REQUIRE_RC ( KDirectoryGetDiskFreeSpace ( fixture . _dir,
                         & free_bytes_available, & total_number_of_bytes ) );
 
@@ -250,7 +250,7 @@ TEST_CASE ( testKDirectoryGetDiskFreeSpace ) {
         }
     }
 
-    if ( min < 30 ) {
+    if ( min < 50 ) {
         cerr << "DONE in " << i
              << " iterations: ( available - ( free_bytes_available / 1024 ) = "
              << min << ")\n";
