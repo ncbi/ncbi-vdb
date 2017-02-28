@@ -32,7 +32,7 @@
 #if defined(MBEDTLS_THREADING_PTHREAD)
 static void threading_mutex_init_pthread( mbedtls_threading_mutex_t *mutex )
 {
-    if( mutex == NULL )
+    if( mutex == NULL || mutex->is_valid )
         return;
 
     mutex->is_valid = pthread_mutex_init( &mutex->mutex, NULL ) == 0;
@@ -40,10 +40,11 @@ static void threading_mutex_init_pthread( mbedtls_threading_mutex_t *mutex )
 
 static void threading_mutex_free_pthread( mbedtls_threading_mutex_t *mutex )
 {
-    if( mutex == NULL )
+    if( mutex == NULL || !mutex->is_valid )
         return;
 
     (void) pthread_mutex_destroy( &mutex->mutex );
+    mutex->is_valid = 0;
 }
 
 static int threading_mutex_lock_pthread( mbedtls_threading_mutex_t *mutex )
@@ -100,7 +101,7 @@ int (*mbedtls_mutex_unlock)( mbedtls_threading_mutex_t * ) = threading_mutex_fai
 /*
  * Set functions pointers and initialize global mutexes
  */
-void mbedtls_threading_set_alt( void (*mutex_init)( mbedtls_threading_mutex_t * ),
+void vdb_mbedtls_threading_set_alt( void (*mutex_init)( mbedtls_threading_mutex_t * ),
                        void (*mutex_free)( mbedtls_threading_mutex_t * ),
                        int (*mutex_lock)( mbedtls_threading_mutex_t * ),
                        int (*mutex_unlock)( mbedtls_threading_mutex_t * ) )
@@ -110,17 +111,17 @@ void mbedtls_threading_set_alt( void (*mutex_init)( mbedtls_threading_mutex_t * 
     mbedtls_mutex_lock = mutex_lock;
     mbedtls_mutex_unlock = mutex_unlock;
 
-    mbedtls_mutex_init( &mbedtls_threading_readdir_mutex );
-    mbedtls_mutex_init( &mbedtls_threading_gmtime_mutex );
+    mbedtls_mutex_init( &vdb_mbedtls_threading_readdir_mutex );
+    mbedtls_mutex_init( &vdb_mbedtls_threading_gmtime_mutex );
 }
 
 /*
  * Free global mutexes
  */
-void mbedtls_threading_free_alt( void )
+void vdb_mbedtls_threading_free_alt( void )
 {
-    mbedtls_mutex_free( &mbedtls_threading_readdir_mutex );
-    mbedtls_mutex_free( &mbedtls_threading_gmtime_mutex );
+    mbedtls_mutex_free( &vdb_mbedtls_threading_readdir_mutex );
+    mbedtls_mutex_free( &vdb_mbedtls_threading_gmtime_mutex );
 }
 #endif /* MBEDTLS_THREADING_ALT */
 
@@ -130,7 +131,7 @@ void mbedtls_threading_free_alt( void )
 #ifndef MUTEX_INIT
 #define MUTEX_INIT
 #endif
-mbedtls_threading_mutex_t mbedtls_threading_readdir_mutex MUTEX_INIT;
-mbedtls_threading_mutex_t mbedtls_threading_gmtime_mutex MUTEX_INIT;
+mbedtls_threading_mutex_t vdb_mbedtls_threading_readdir_mutex MUTEX_INIT;
+mbedtls_threading_mutex_t vdb_mbedtls_threading_gmtime_mutex MUTEX_INIT;
 
 #endif /* MBEDTLS_THREADING_C */

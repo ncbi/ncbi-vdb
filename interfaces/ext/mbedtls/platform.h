@@ -106,13 +106,13 @@ extern "C" {
 #if defined(MBEDTLS_PLATFORM_MEMORY)
 #if defined(MBEDTLS_PLATFORM_FREE_MACRO) && \
     defined(MBEDTLS_PLATFORM_CALLOC_MACRO)
-#define mbedtls_free       MBEDTLS_PLATFORM_FREE_MACRO
+#define vdb_mbedtls_free       MBEDTLS_PLATFORM_FREE_MACRO
 #define mbedtls_calloc     MBEDTLS_PLATFORM_CALLOC_MACRO
 #else
 /* For size_t */
 #include <stddef.h>
 extern void * (*mbedtls_calloc)( size_t n, size_t size );
-extern void (*mbedtls_free)( void *ptr );
+extern void (*vdb_mbedtls_free)( void *ptr );
 
 /**
  * \brief   Set your own memory implementation function pointers
@@ -122,11 +122,11 @@ extern void (*mbedtls_free)( void *ptr );
  *
  * \return              0 if successful
  */
-int mbedtls_platform_set_calloc_free( void * (*calloc_func)( size_t, size_t ),
+int vdb_mbedtls_platform_set_calloc_free( void * (*calloc_func)( size_t, size_t ),
                               void (*free_func)( void * ) );
 #endif /* MBEDTLS_PLATFORM_FREE_MACRO && MBEDTLS_PLATFORM_CALLOC_MACRO */
 #else /* !MBEDTLS_PLATFORM_MEMORY */
-#define mbedtls_free       free
+#define vdb_mbedtls_free       free
 #define mbedtls_calloc     calloc
 #endif /* MBEDTLS_PLATFORM_MEMORY && !MBEDTLS_PLATFORM_{FREE,CALLOC}_MACRO */
 
@@ -145,7 +145,7 @@ extern int (*mbedtls_fprintf)( FILE *stream, const char *format, ... );
  *
  * \return              0
  */
-int mbedtls_platform_set_fprintf( int (*fprintf_func)( FILE *stream, const char *,
+int vdb_mbedtls_platform_set_fprintf( int (*fprintf_func)( FILE *stream, const char *,
                                                ... ) );
 #else
 #if defined(MBEDTLS_PLATFORM_FPRINTF_MACRO)
@@ -168,7 +168,7 @@ extern int (*mbedtls_printf)( const char *format, ... );
  *
  * \return              0
  */
-int mbedtls_platform_set_printf( int (*printf_func)( const char *, ... ) );
+int vdb_mbedtls_platform_set_printf( int (*printf_func)( const char *, ... ) );
 #else /* !MBEDTLS_PLATFORM_PRINTF_ALT */
 #if defined(MBEDTLS_PLATFORM_PRINTF_MACRO)
 #define mbedtls_printf     MBEDTLS_PLATFORM_PRINTF_MACRO
@@ -188,7 +188,7 @@ int mbedtls_platform_set_printf( int (*printf_func)( const char *, ... ) );
  */
 #if defined(_WIN32)
 /* For Windows (inc. MSYS2), we provide our own fixed implementation */
-int mbedtls_platform_win32_snprintf( char *s, size_t n, const char *fmt, ... );
+int vdb_mbedtls_platform_win32_snprintf( char *s, size_t n, const char *fmt, ... );
 #endif
 
 #if defined(MBEDTLS_PLATFORM_SNPRINTF_ALT)
@@ -201,7 +201,7 @@ extern int (*mbedtls_snprintf)( char * s, size_t n, const char * format, ... );
  *
  * \return              0
  */
-int mbedtls_platform_set_snprintf( int (*snprintf_func)( char * s, size_t n,
+int vdb_mbedtls_platform_set_snprintf( int (*snprintf_func)( char * s, size_t n,
                                                  const char * format, ... ) );
 #else /* MBEDTLS_PLATFORM_SNPRINTF_ALT */
 #if defined(MBEDTLS_PLATFORM_SNPRINTF_MACRO)
@@ -224,7 +224,7 @@ extern void (*mbedtls_exit)( int status );
  *
  * \return              0
  */
-int mbedtls_platform_set_exit( void (*exit_func)( int status ) );
+int vdb_mbedtls_platform_set_exit( void (*exit_func)( int status ) );
 #else
 #if defined(MBEDTLS_PLATFORM_EXIT_MACRO)
 #define mbedtls_exit   MBEDTLS_PLATFORM_EXIT_MACRO
@@ -256,8 +256,8 @@ int mbedtls_platform_set_exit( void (*exit_func)( int status ) );
 #if defined(MBEDTLS_ENTROPY_NV_SEED)
 #if !defined(MBEDTLS_PLATFORM_NO_STD_FUNCTIONS) && defined(MBEDTLS_FS_IO)
 /* Internal standard platform definitions */
-int mbedtls_platform_std_nv_seed_read( unsigned char *buf, size_t buf_len );
-int mbedtls_platform_std_nv_seed_write( unsigned char *buf, size_t buf_len );
+int vdb_mbedtls_platform_std_nv_seed_read( unsigned char *buf, size_t buf_len );
+int vdb_mbedtls_platform_std_nv_seed_write( unsigned char *buf, size_t buf_len );
 #endif
 
 #if defined(MBEDTLS_PLATFORM_NV_SEED_ALT)
@@ -272,7 +272,7 @@ extern int (*mbedtls_nv_seed_write)( unsigned char *buf, size_t buf_len );
  *
  * \return              0
  */
-int mbedtls_platform_set_nv_seed(
+int vdb_mbedtls_platform_set_nv_seed(
             int (*nv_seed_read_func)( unsigned char *buf, size_t buf_len ),
             int (*nv_seed_write_func)( unsigned char *buf, size_t buf_len )
             );

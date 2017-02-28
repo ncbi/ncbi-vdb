@@ -74,7 +74,7 @@ static const unsigned char base64_dec_map[128] =
 /*
  * Encode a buffer into base64 format
  */
-int mbedtls_base64_encode( unsigned char *dst, size_t dlen, size_t *olen,
+int vdb_mbedtls_base64_encode( unsigned char *dst, size_t dlen, size_t *olen,
                    const unsigned char *src, size_t slen )
 {
     size_t i, n;
@@ -141,7 +141,7 @@ int mbedtls_base64_encode( unsigned char *dst, size_t dlen, size_t *olen,
 /*
  * Decode a base64-formatted buffer
  */
-int mbedtls_base64_decode( unsigned char *dst, size_t dlen, size_t *olen,
+int vdb_mbedtls_base64_decode( unsigned char *dst, size_t dlen, size_t *olen,
                    const unsigned char *src, size_t slen )
 {
     size_t i, n;
@@ -244,7 +244,7 @@ static const unsigned char base64_test_enc[] =
 /*
  * Checkup routine
  */
-int mbedtls_base64_self_test( int verbose )
+int vdb_mbedtls_base64_self_test( int verbose )
 {
     size_t len;
     const unsigned char *src;
@@ -255,7 +255,7 @@ int mbedtls_base64_self_test( int verbose )
 
     src = base64_test_dec;
 
-    if( mbedtls_base64_encode( buffer, sizeof( buffer ), &len, src, 64 ) != 0 ||
+    if( vdb_mbedtls_base64_encode( buffer, sizeof( buffer ), &len, src, 64 ) != 0 ||
          memcmp( base64_test_enc, buffer, 88 ) != 0 )
     {
         if( verbose != 0 )
@@ -269,7 +269,7 @@ int mbedtls_base64_self_test( int verbose )
 
     src = base64_test_enc;
 
-    if( mbedtls_base64_decode( buffer, sizeof( buffer ), &len, src, 88 ) != 0 ||
+    if( vdb_mbedtls_base64_decode( buffer, sizeof( buffer ), &len, src, 88 ) != 0 ||
          memcmp( base64_test_dec, buffer, 64 ) != 0 )
     {
         if( verbose != 0 )

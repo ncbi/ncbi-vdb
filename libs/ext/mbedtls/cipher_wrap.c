@@ -70,7 +70,7 @@
 #else
 #include <stdlib.h>
 #define mbedtls_calloc    calloc
-#define mbedtls_free       free
+#define vdb_mbedtls_free       free
 #endif
 
 #if defined(MBEDTLS_GCM_C)
@@ -80,15 +80,15 @@ static void *gcm_ctx_alloc( void )
     void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_gcm_context ) );
 
     if( ctx != NULL )
-        mbedtls_gcm_init( (mbedtls_gcm_context *) ctx );
+        vdb_mbedtls_gcm_init( (mbedtls_gcm_context *) ctx );
 
     return( ctx );
 }
 
 static void gcm_ctx_free( void *ctx )
 {
-    mbedtls_gcm_free( ctx );
-    mbedtls_free( ctx );
+    vdb_mbedtls_gcm_free( ctx );
+    vdb_mbedtls_free( ctx );
 }
 #endif /* MBEDTLS_GCM_C */
 
@@ -99,15 +99,15 @@ static void *ccm_ctx_alloc( void )
     void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_ccm_context ) );
 
     if( ctx != NULL )
-        mbedtls_ccm_init( (mbedtls_ccm_context *) ctx );
+        vdb_mbedtls_ccm_init( (mbedtls_ccm_context *) ctx );
 
     return( ctx );
 }
 
 static void ccm_ctx_free( void *ctx )
 {
-    mbedtls_ccm_free( ctx );
-    mbedtls_free( ctx );
+    vdb_mbedtls_ccm_free( ctx );
+    vdb_mbedtls_free( ctx );
 }
 #endif /* MBEDTLS_CCM_C */
 
@@ -116,14 +116,14 @@ static void ccm_ctx_free( void *ctx )
 static int aes_crypt_ecb_wrap( void *ctx, mbedtls_operation_t operation,
         const unsigned char *input, unsigned char *output )
 {
-    return mbedtls_aes_crypt_ecb( (mbedtls_aes_context *) ctx, operation, input, output );
+    return vdb_mbedtls_aes_crypt_ecb( (mbedtls_aes_context *) ctx, operation, input, output );
 }
 
 #if defined(MBEDTLS_CIPHER_MODE_CBC)
 static int aes_crypt_cbc_wrap( void *ctx, mbedtls_operation_t operation, size_t length,
         unsigned char *iv, const unsigned char *input, unsigned char *output )
 {
-    return mbedtls_aes_crypt_cbc( (mbedtls_aes_context *) ctx, operation, length, iv, input,
+    return vdb_mbedtls_aes_crypt_cbc( (mbedtls_aes_context *) ctx, operation, length, iv, input,
                           output );
 }
 #endif /* MBEDTLS_CIPHER_MODE_CBC */
@@ -133,7 +133,7 @@ static int aes_crypt_cfb128_wrap( void *ctx, mbedtls_operation_t operation,
         size_t length, size_t *iv_off, unsigned char *iv,
         const unsigned char *input, unsigned char *output )
 {
-    return mbedtls_aes_crypt_cfb128( (mbedtls_aes_context *) ctx, operation, length, iv_off, iv,
+    return vdb_mbedtls_aes_crypt_cfb128( (mbedtls_aes_context *) ctx, operation, length, iv_off, iv,
                              input, output );
 }
 #endif /* MBEDTLS_CIPHER_MODE_CFB */
@@ -143,7 +143,7 @@ static int aes_crypt_ctr_wrap( void *ctx, size_t length, size_t *nc_off,
         unsigned char *nonce_counter, unsigned char *stream_block,
         const unsigned char *input, unsigned char *output )
 {
-    return mbedtls_aes_crypt_ctr( (mbedtls_aes_context *) ctx, length, nc_off, nonce_counter,
+    return vdb_mbedtls_aes_crypt_ctr( (mbedtls_aes_context *) ctx, length, nc_off, nonce_counter,
                           stream_block, input, output );
 }
 #endif /* MBEDTLS_CIPHER_MODE_CTR */
@@ -151,13 +151,13 @@ static int aes_crypt_ctr_wrap( void *ctx, size_t length, size_t *nc_off,
 static int aes_setkey_dec_wrap( void *ctx, const unsigned char *key,
                                 unsigned int key_bitlen )
 {
-    return mbedtls_aes_setkey_dec( (mbedtls_aes_context *) ctx, key, key_bitlen );
+    return vdb_mbedtls_aes_setkey_dec( (mbedtls_aes_context *) ctx, key, key_bitlen );
 }
 
 static int aes_setkey_enc_wrap( void *ctx, const unsigned char *key,
                                 unsigned int key_bitlen )
 {
-    return mbedtls_aes_setkey_enc( (mbedtls_aes_context *) ctx, key, key_bitlen );
+    return vdb_mbedtls_aes_setkey_enc( (mbedtls_aes_context *) ctx, key, key_bitlen );
 }
 
 static void * aes_ctx_alloc( void )
@@ -167,15 +167,15 @@ static void * aes_ctx_alloc( void )
     if( aes == NULL )
         return( NULL );
 
-    mbedtls_aes_init( aes );
+    vdb_mbedtls_aes_init( aes );
 
     return( aes );
 }
 
 static void aes_ctx_free( void *ctx )
 {
-    mbedtls_aes_free( (mbedtls_aes_context *) ctx );
-    mbedtls_free( ctx );
+    vdb_mbedtls_aes_free( (mbedtls_aes_context *) ctx );
+    vdb_mbedtls_free( ctx );
 }
 
 static const mbedtls_cipher_base_t aes_info = {
@@ -341,7 +341,7 @@ static const mbedtls_cipher_info_t aes_256_ctr_info = {
 static int gcm_aes_setkey_wrap( void *ctx, const unsigned char *key,
                                 unsigned int key_bitlen )
 {
-    return mbedtls_gcm_setkey( (mbedtls_gcm_context *) ctx, MBEDTLS_CIPHER_ID_AES,
+    return vdb_mbedtls_gcm_setkey( (mbedtls_gcm_context *) ctx, MBEDTLS_CIPHER_ID_AES,
                      key, key_bitlen );
 }
 
@@ -404,7 +404,7 @@ static const mbedtls_cipher_info_t aes_256_gcm_info = {
 static int ccm_aes_setkey_wrap( void *ctx, const unsigned char *key,
                                 unsigned int key_bitlen )
 {
-    return mbedtls_ccm_setkey( (mbedtls_ccm_context *) ctx, MBEDTLS_CIPHER_ID_AES,
+    return vdb_mbedtls_ccm_setkey( (mbedtls_ccm_context *) ctx, MBEDTLS_CIPHER_ID_AES,
                      key, key_bitlen );
 }
 
@@ -470,7 +470,7 @@ static const mbedtls_cipher_info_t aes_256_ccm_info = {
 static int camellia_crypt_ecb_wrap( void *ctx, mbedtls_operation_t operation,
         const unsigned char *input, unsigned char *output )
 {
-    return mbedtls_camellia_crypt_ecb( (mbedtls_camellia_context *) ctx, operation, input,
+    return vdb_mbedtls_camellia_crypt_ecb( (mbedtls_camellia_context *) ctx, operation, input,
                                output );
 }
 
@@ -479,7 +479,7 @@ static int camellia_crypt_cbc_wrap( void *ctx, mbedtls_operation_t operation,
         size_t length, unsigned char *iv,
         const unsigned char *input, unsigned char *output )
 {
-    return mbedtls_camellia_crypt_cbc( (mbedtls_camellia_context *) ctx, operation, length, iv,
+    return vdb_mbedtls_camellia_crypt_cbc( (mbedtls_camellia_context *) ctx, operation, length, iv,
                                input, output );
 }
 #endif /* MBEDTLS_CIPHER_MODE_CBC */
@@ -489,7 +489,7 @@ static int camellia_crypt_cfb128_wrap( void *ctx, mbedtls_operation_t operation,
         size_t length, size_t *iv_off, unsigned char *iv,
         const unsigned char *input, unsigned char *output )
 {
-    return mbedtls_camellia_crypt_cfb128( (mbedtls_camellia_context *) ctx, operation, length,
+    return vdb_mbedtls_camellia_crypt_cfb128( (mbedtls_camellia_context *) ctx, operation, length,
                                   iv_off, iv, input, output );
 }
 #endif /* MBEDTLS_CIPHER_MODE_CFB */
@@ -499,7 +499,7 @@ static int camellia_crypt_ctr_wrap( void *ctx, size_t length, size_t *nc_off,
         unsigned char *nonce_counter, unsigned char *stream_block,
         const unsigned char *input, unsigned char *output )
 {
-    return mbedtls_camellia_crypt_ctr( (mbedtls_camellia_context *) ctx, length, nc_off,
+    return vdb_mbedtls_camellia_crypt_ctr( (mbedtls_camellia_context *) ctx, length, nc_off,
                                nonce_counter, stream_block, input, output );
 }
 #endif /* MBEDTLS_CIPHER_MODE_CTR */
@@ -507,13 +507,13 @@ static int camellia_crypt_ctr_wrap( void *ctx, size_t length, size_t *nc_off,
 static int camellia_setkey_dec_wrap( void *ctx, const unsigned char *key,
                                      unsigned int key_bitlen )
 {
-    return mbedtls_camellia_setkey_dec( (mbedtls_camellia_context *) ctx, key, key_bitlen );
+    return vdb_mbedtls_camellia_setkey_dec( (mbedtls_camellia_context *) ctx, key, key_bitlen );
 }
 
 static int camellia_setkey_enc_wrap( void *ctx, const unsigned char *key,
                                      unsigned int key_bitlen )
 {
-    return mbedtls_camellia_setkey_enc( (mbedtls_camellia_context *) ctx, key, key_bitlen );
+    return vdb_mbedtls_camellia_setkey_enc( (mbedtls_camellia_context *) ctx, key, key_bitlen );
 }
 
 static void * camellia_ctx_alloc( void )
@@ -524,15 +524,15 @@ static void * camellia_ctx_alloc( void )
     if( ctx == NULL )
         return( NULL );
 
-    mbedtls_camellia_init( ctx );
+    vdb_mbedtls_camellia_init( ctx );
 
     return( ctx );
 }
 
 static void camellia_ctx_free( void *ctx )
 {
-    mbedtls_camellia_free( (mbedtls_camellia_context *) ctx );
-    mbedtls_free( ctx );
+    vdb_mbedtls_camellia_free( (mbedtls_camellia_context *) ctx );
+    vdb_mbedtls_free( ctx );
 }
 
 static const mbedtls_cipher_base_t camellia_info = {
@@ -698,7 +698,7 @@ static const mbedtls_cipher_info_t camellia_256_ctr_info = {
 static int gcm_camellia_setkey_wrap( void *ctx, const unsigned char *key,
                                      unsigned int key_bitlen )
 {
-    return mbedtls_gcm_setkey( (mbedtls_gcm_context *) ctx, MBEDTLS_CIPHER_ID_CAMELLIA,
+    return vdb_mbedtls_gcm_setkey( (mbedtls_gcm_context *) ctx, MBEDTLS_CIPHER_ID_CAMELLIA,
                      key, key_bitlen );
 }
 
@@ -761,7 +761,7 @@ static const mbedtls_cipher_info_t camellia_256_gcm_info = {
 static int ccm_camellia_setkey_wrap( void *ctx, const unsigned char *key,
                                      unsigned int key_bitlen )
 {
-    return mbedtls_ccm_setkey( (mbedtls_ccm_context *) ctx, MBEDTLS_CIPHER_ID_CAMELLIA,
+    return vdb_mbedtls_ccm_setkey( (mbedtls_ccm_context *) ctx, MBEDTLS_CIPHER_ID_CAMELLIA,
                      key, key_bitlen );
 }
 
@@ -828,21 +828,21 @@ static int des_crypt_ecb_wrap( void *ctx, mbedtls_operation_t operation,
         const unsigned char *input, unsigned char *output )
 {
     ((void) operation);
-    return mbedtls_des_crypt_ecb( (mbedtls_des_context *) ctx, input, output );
+    return vdb_mbedtls_des_crypt_ecb( (mbedtls_des_context *) ctx, input, output );
 }
 
 static int des3_crypt_ecb_wrap( void *ctx, mbedtls_operation_t operation,
         const unsigned char *input, unsigned char *output )
 {
     ((void) operation);
-    return mbedtls_des3_crypt_ecb( (mbedtls_des3_context *) ctx, input, output );
+    return vdb_mbedtls_des3_crypt_ecb( (mbedtls_des3_context *) ctx, input, output );
 }
 
 #if defined(MBEDTLS_CIPHER_MODE_CBC)
 static int des_crypt_cbc_wrap( void *ctx, mbedtls_operation_t operation, size_t length,
         unsigned char *iv, const unsigned char *input, unsigned char *output )
 {
-    return mbedtls_des_crypt_cbc( (mbedtls_des_context *) ctx, operation, length, iv, input,
+    return vdb_mbedtls_des_crypt_cbc( (mbedtls_des_context *) ctx, operation, length, iv, input,
                           output );
 }
 #endif /* MBEDTLS_CIPHER_MODE_CBC */
@@ -851,7 +851,7 @@ static int des_crypt_cbc_wrap( void *ctx, mbedtls_operation_t operation, size_t 
 static int des3_crypt_cbc_wrap( void *ctx, mbedtls_operation_t operation, size_t length,
         unsigned char *iv, const unsigned char *input, unsigned char *output )
 {
-    return mbedtls_des3_crypt_cbc( (mbedtls_des3_context *) ctx, operation, length, iv, input,
+    return vdb_mbedtls_des3_crypt_cbc( (mbedtls_des3_context *) ctx, operation, length, iv, input,
                            output );
 }
 #endif /* MBEDTLS_CIPHER_MODE_CBC */
@@ -861,7 +861,7 @@ static int des_setkey_dec_wrap( void *ctx, const unsigned char *key,
 {
     ((void) key_bitlen);
 
-    return mbedtls_des_setkey_dec( (mbedtls_des_context *) ctx, key );
+    return vdb_mbedtls_des_setkey_dec( (mbedtls_des_context *) ctx, key );
 }
 
 static int des_setkey_enc_wrap( void *ctx, const unsigned char *key,
@@ -869,7 +869,7 @@ static int des_setkey_enc_wrap( void *ctx, const unsigned char *key,
 {
     ((void) key_bitlen);
 
-    return mbedtls_des_setkey_enc( (mbedtls_des_context *) ctx, key );
+    return vdb_mbedtls_des_setkey_enc( (mbedtls_des_context *) ctx, key );
 }
 
 static int des3_set2key_dec_wrap( void *ctx, const unsigned char *key,
@@ -877,7 +877,7 @@ static int des3_set2key_dec_wrap( void *ctx, const unsigned char *key,
 {
     ((void) key_bitlen);
 
-    return mbedtls_des3_set2key_dec( (mbedtls_des3_context *) ctx, key );
+    return vdb_mbedtls_des3_set2key_dec( (mbedtls_des3_context *) ctx, key );
 }
 
 static int des3_set2key_enc_wrap( void *ctx, const unsigned char *key,
@@ -885,7 +885,7 @@ static int des3_set2key_enc_wrap( void *ctx, const unsigned char *key,
 {
     ((void) key_bitlen);
 
-    return mbedtls_des3_set2key_enc( (mbedtls_des3_context *) ctx, key );
+    return vdb_mbedtls_des3_set2key_enc( (mbedtls_des3_context *) ctx, key );
 }
 
 static int des3_set3key_dec_wrap( void *ctx, const unsigned char *key,
@@ -893,7 +893,7 @@ static int des3_set3key_dec_wrap( void *ctx, const unsigned char *key,
 {
     ((void) key_bitlen);
 
-    return mbedtls_des3_set3key_dec( (mbedtls_des3_context *) ctx, key );
+    return vdb_mbedtls_des3_set3key_dec( (mbedtls_des3_context *) ctx, key );
 }
 
 static int des3_set3key_enc_wrap( void *ctx, const unsigned char *key,
@@ -901,7 +901,7 @@ static int des3_set3key_enc_wrap( void *ctx, const unsigned char *key,
 {
     ((void) key_bitlen);
 
-    return mbedtls_des3_set3key_enc( (mbedtls_des3_context *) ctx, key );
+    return vdb_mbedtls_des3_set3key_enc( (mbedtls_des3_context *) ctx, key );
 }
 
 static void * des_ctx_alloc( void )
@@ -911,15 +911,15 @@ static void * des_ctx_alloc( void )
     if( des == NULL )
         return( NULL );
 
-    mbedtls_des_init( des );
+    vdb_mbedtls_des_init( des );
 
     return( des );
 }
 
 static void des_ctx_free( void *ctx )
 {
-    mbedtls_des_free( (mbedtls_des_context *) ctx );
-    mbedtls_free( ctx );
+    vdb_mbedtls_des_free( (mbedtls_des_context *) ctx );
+    vdb_mbedtls_free( ctx );
 }
 
 static void * des3_ctx_alloc( void )
@@ -930,15 +930,15 @@ static void * des3_ctx_alloc( void )
     if( des3 == NULL )
         return( NULL );
 
-    mbedtls_des3_init( des3 );
+    vdb_mbedtls_des3_init( des3 );
 
     return( des3 );
 }
 
 static void des3_ctx_free( void *ctx )
 {
-    mbedtls_des3_free( (mbedtls_des3_context *) ctx );
-    mbedtls_free( ctx );
+    vdb_mbedtls_des3_free( (mbedtls_des3_context *) ctx );
+    vdb_mbedtls_free( ctx );
 }
 
 static const mbedtls_cipher_base_t des_info = {
@@ -1081,7 +1081,7 @@ static const mbedtls_cipher_info_t des_ede3_cbc_info = {
 static int blowfish_crypt_ecb_wrap( void *ctx, mbedtls_operation_t operation,
         const unsigned char *input, unsigned char *output )
 {
-    return mbedtls_blowfish_crypt_ecb( (mbedtls_blowfish_context *) ctx, operation, input,
+    return vdb_mbedtls_blowfish_crypt_ecb( (mbedtls_blowfish_context *) ctx, operation, input,
                                output );
 }
 
@@ -1090,7 +1090,7 @@ static int blowfish_crypt_cbc_wrap( void *ctx, mbedtls_operation_t operation,
         size_t length, unsigned char *iv, const unsigned char *input,
         unsigned char *output )
 {
-    return mbedtls_blowfish_crypt_cbc( (mbedtls_blowfish_context *) ctx, operation, length, iv,
+    return vdb_mbedtls_blowfish_crypt_cbc( (mbedtls_blowfish_context *) ctx, operation, length, iv,
                                input, output );
 }
 #endif /* MBEDTLS_CIPHER_MODE_CBC */
@@ -1100,7 +1100,7 @@ static int blowfish_crypt_cfb64_wrap( void *ctx, mbedtls_operation_t operation,
         size_t length, size_t *iv_off, unsigned char *iv,
         const unsigned char *input, unsigned char *output )
 {
-    return mbedtls_blowfish_crypt_cfb64( (mbedtls_blowfish_context *) ctx, operation, length,
+    return vdb_mbedtls_blowfish_crypt_cfb64( (mbedtls_blowfish_context *) ctx, operation, length,
                                  iv_off, iv, input, output );
 }
 #endif /* MBEDTLS_CIPHER_MODE_CFB */
@@ -1110,7 +1110,7 @@ static int blowfish_crypt_ctr_wrap( void *ctx, size_t length, size_t *nc_off,
         unsigned char *nonce_counter, unsigned char *stream_block,
         const unsigned char *input, unsigned char *output )
 {
-    return mbedtls_blowfish_crypt_ctr( (mbedtls_blowfish_context *) ctx, length, nc_off,
+    return vdb_mbedtls_blowfish_crypt_ctr( (mbedtls_blowfish_context *) ctx, length, nc_off,
                                nonce_counter, stream_block, input, output );
 }
 #endif /* MBEDTLS_CIPHER_MODE_CTR */
@@ -1118,7 +1118,7 @@ static int blowfish_crypt_ctr_wrap( void *ctx, size_t length, size_t *nc_off,
 static int blowfish_setkey_wrap( void *ctx, const unsigned char *key,
                                  unsigned int key_bitlen )
 {
-    return mbedtls_blowfish_setkey( (mbedtls_blowfish_context *) ctx, key, key_bitlen );
+    return vdb_mbedtls_blowfish_setkey( (mbedtls_blowfish_context *) ctx, key, key_bitlen );
 }
 
 static void * blowfish_ctx_alloc( void )
@@ -1129,15 +1129,15 @@ static void * blowfish_ctx_alloc( void )
     if( ctx == NULL )
         return( NULL );
 
-    mbedtls_blowfish_init( ctx );
+    vdb_mbedtls_blowfish_init( ctx );
 
     return( ctx );
 }
 
 static void blowfish_ctx_free( void *ctx )
 {
-    mbedtls_blowfish_free( (mbedtls_blowfish_context *) ctx );
-    mbedtls_free( ctx );
+    vdb_mbedtls_blowfish_free( (mbedtls_blowfish_context *) ctx );
+    vdb_mbedtls_free( ctx );
 }
 
 static const mbedtls_cipher_base_t blowfish_info = {
@@ -1217,7 +1217,7 @@ static int arc4_crypt_stream_wrap( void *ctx, size_t length,
                                    const unsigned char *input,
                                    unsigned char *output )
 {
-    return( mbedtls_arc4_crypt( (mbedtls_arc4_context *) ctx, length, input, output ) );
+    return( vdb_mbedtls_arc4_crypt( (mbedtls_arc4_context *) ctx, length, input, output ) );
 }
 
 static int arc4_setkey_wrap( void *ctx, const unsigned char *key,
@@ -1227,7 +1227,7 @@ static int arc4_setkey_wrap( void *ctx, const unsigned char *key,
     if( key_bitlen % 8 != 0 )
         return( MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA );
 
-    mbedtls_arc4_setup( (mbedtls_arc4_context *) ctx, key, key_bitlen / 8 );
+    vdb_mbedtls_arc4_setup( (mbedtls_arc4_context *) ctx, key, key_bitlen / 8 );
     return( 0 );
 }
 
@@ -1239,15 +1239,15 @@ static void * arc4_ctx_alloc( void )
     if( ctx == NULL )
         return( NULL );
 
-    mbedtls_arc4_init( ctx );
+    vdb_mbedtls_arc4_init( ctx );
 
     return( ctx );
 }
 
 static void arc4_ctx_free( void *ctx )
 {
-    mbedtls_arc4_free( (mbedtls_arc4_context *) ctx );
-    mbedtls_free( ctx );
+    vdb_mbedtls_arc4_free( (mbedtls_arc4_context *) ctx );
+    vdb_mbedtls_free( ctx );
 }
 
 static const mbedtls_cipher_base_t arc4_base_info = {
@@ -1346,7 +1346,7 @@ static const mbedtls_cipher_info_t null_cipher_info = {
 };
 #endif /* defined(MBEDTLS_CIPHER_NULL_CIPHER) */
 
-const mbedtls_cipher_definition_t mbedtls_cipher_definitions[] =
+const mbedtls_cipher_definition_t vdb_mbedtls_cipher_definitions[] =
 {
 #if defined(MBEDTLS_AES_C)
     { MBEDTLS_CIPHER_AES_128_ECB,          &aes_128_ecb_info },
@@ -1445,7 +1445,7 @@ const mbedtls_cipher_definition_t mbedtls_cipher_definitions[] =
     { MBEDTLS_CIPHER_NONE, NULL }
 };
 
-#define NUM_CIPHERS sizeof mbedtls_cipher_definitions / sizeof mbedtls_cipher_definitions[0]
-int mbedtls_cipher_supported[NUM_CIPHERS];
+#define NUM_CIPHERS sizeof vdb_mbedtls_cipher_definitions / sizeof vdb_mbedtls_cipher_definitions[0]
+int vdb_mbedtls_cipher_supported[NUM_CIPHERS];
 
 #endif /* MBEDTLS_CIPHER_C */

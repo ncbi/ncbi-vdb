@@ -38,7 +38,7 @@
 #include <stdlib.h>
 #endif
 
-#include "mbedtls/net.h"
+#include "mbedtls/net_sockets.h"
 
 #include <string.h>
 
@@ -133,7 +133,8 @@ void vdb_mbedtls_net_init( mbedtls_net_context *ctx )
 /*
  * Initiate a TCP connection with host:port and the given protocol
  */
-int vdb_mbedtls_net_connect( mbedtls_net_context *ctx, const char *host, const char *port, int proto )
+int vdb_mbedtls_net_connect( mbedtls_net_context *ctx, const char *host,
+                         const char *port, int proto )
 {
     int ret;
     struct addrinfo hints, *addr_list, *cur;
@@ -238,7 +239,7 @@ int vdb_mbedtls_net_bind( mbedtls_net_context *ctx, const char *bind_ip, const c
             }
         }
 
-        /* I we ever get there, it's a success */
+        /* Bind was successful */
         ret = 0;
         break;
     }
@@ -322,7 +323,7 @@ int vdb_mbedtls_net_accept( mbedtls_net_context *bind_ctx,
     {
         /* TCP: actual accept() */
         ret = client_ctx->fd = (int) accept( bind_ctx->fd,
-                                         (struct sockaddr *) &client_addr, &n );
+                                             (struct sockaddr *) &client_addr, &n );
     }
     else
     {
@@ -390,7 +391,7 @@ int vdb_mbedtls_net_accept( mbedtls_net_context *bind_ctx,
             if( buf_size < *ip_len )
                 return( MBEDTLS_ERR_NET_BUFFER_TOO_SMALL );
 
-            memmove( client_ip, &addr4->sin_addr.s_addr, *ip_len );
+            memcpy( client_ip, &addr4->sin_addr.s_addr, *ip_len );
         }
         else
         {
@@ -400,7 +401,7 @@ int vdb_mbedtls_net_accept( mbedtls_net_context *bind_ctx,
             if( buf_size < *ip_len )
                 return( MBEDTLS_ERR_NET_BUFFER_TOO_SMALL );
 
-            memmove( client_ip, &addr6->sin6_addr.s6_addr, *ip_len);
+            memcpy( client_ip, &addr6->sin6_addr.s6_addr, *ip_len);
         }
     }
 

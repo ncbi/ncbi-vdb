@@ -52,12 +52,12 @@ static void mbedtls_zeroize( void *v, size_t n ) {
     volatile unsigned char *p = (unsigned char*)v; while( n-- ) *p++ = 0;
 }
 
-void mbedtls_arc4_init( mbedtls_arc4_context *ctx )
+void vdb_mbedtls_arc4_init( mbedtls_arc4_context *ctx )
 {
     memset( ctx, 0, sizeof( mbedtls_arc4_context ) );
 }
 
-void mbedtls_arc4_free( mbedtls_arc4_context *ctx )
+void vdb_mbedtls_arc4_free( mbedtls_arc4_context *ctx )
 {
     if( ctx == NULL )
         return;
@@ -68,7 +68,7 @@ void mbedtls_arc4_free( mbedtls_arc4_context *ctx )
 /*
  * ARC4 key schedule
  */
-void mbedtls_arc4_setup( mbedtls_arc4_context *ctx, const unsigned char *key,
+void vdb_mbedtls_arc4_setup( mbedtls_arc4_context *ctx, const unsigned char *key,
                  unsigned int keylen )
 {
     int i, j, a;
@@ -98,7 +98,7 @@ void mbedtls_arc4_setup( mbedtls_arc4_context *ctx, const unsigned char *key,
 /*
  * ARC4 cipher function
  */
-int mbedtls_arc4_crypt( mbedtls_arc4_context *ctx, size_t length, const unsigned char *input,
+int vdb_mbedtls_arc4_crypt( mbedtls_arc4_context *ctx, size_t length, const unsigned char *input,
                 unsigned char *output )
 {
     int x, y, a, b;
@@ -159,24 +159,24 @@ static const unsigned char arc4_test_ct[3][8] =
 /*
  * Checkup routine
  */
-int mbedtls_arc4_self_test( int verbose )
+int vdb_mbedtls_arc4_self_test( int verbose )
 {
     int i, ret = 0;
     unsigned char ibuf[8];
     unsigned char obuf[8];
     mbedtls_arc4_context ctx;
 
-    mbedtls_arc4_init( &ctx );
+    vdb_mbedtls_arc4_init( &ctx );
 
     for( i = 0; i < 3; i++ )
     {
         if( verbose != 0 )
             mbedtls_printf( "  ARC4 test #%d: ", i + 1 );
 
-        memmove( ibuf, arc4_test_pt[i], 8 );
+        memcpy( ibuf, arc4_test_pt[i], 8 );
 
-        mbedtls_arc4_setup( &ctx, arc4_test_key[i], 8 );
-        mbedtls_arc4_crypt( &ctx, 8, ibuf, obuf );
+        vdb_mbedtls_arc4_setup( &ctx, arc4_test_key[i], 8 );
+        vdb_mbedtls_arc4_crypt( &ctx, 8, ibuf, obuf );
 
         if( memcmp( obuf, arc4_test_ct[i], 8 ) != 0 )
         {
@@ -195,7 +195,7 @@ int mbedtls_arc4_self_test( int verbose )
         mbedtls_printf( "\n" );
 
 exit:
-    mbedtls_arc4_free( &ctx );
+    vdb_mbedtls_arc4_free( &ctx );
 
     return( ret );
 }
