@@ -50,7 +50,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf printf
+#define vdb_mbedtls_printf printf
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST && MBEDTLS_AES_C */
 
@@ -751,7 +751,7 @@ int vdb_mbedtls_gcm_self_test( int verbose )
         for( i = 0; i < MAX_TESTS; i++ )
         {
             if( verbose != 0 )
-                mbedtls_printf( "  AES-GCM-%3d #%d (%s): ",
+                vdb_mbedtls_printf( "  AES-GCM-%3d #%d (%s): ",
                                  key_len, i, "enc" );
 
             vdb_mbedtls_gcm_setkey( &ctx, cipher, key[key_index[i]], key_len );
@@ -767,7 +767,7 @@ int vdb_mbedtls_gcm_self_test( int verbose )
                 memcmp( tag_buf, tag[j * 6 + i], 16 ) != 0 )
             {
                 if( verbose != 0 )
-                    mbedtls_printf( "failed\n" );
+                    vdb_mbedtls_printf( "failed\n" );
 
                 return( 1 );
             }
@@ -775,10 +775,10 @@ int vdb_mbedtls_gcm_self_test( int verbose )
             vdb_mbedtls_gcm_free( &ctx );
 
             if( verbose != 0 )
-                mbedtls_printf( "passed\n" );
+                vdb_mbedtls_printf( "passed\n" );
 
             if( verbose != 0 )
-                mbedtls_printf( "  AES-GCM-%3d #%d (%s): ",
+                vdb_mbedtls_printf( "  AES-GCM-%3d #%d (%s): ",
                                  key_len, i, "dec" );
 
             vdb_mbedtls_gcm_setkey( &ctx, cipher, key[key_index[i]], key_len );
@@ -794,7 +794,7 @@ int vdb_mbedtls_gcm_self_test( int verbose )
                 memcmp( tag_buf, tag[j * 6 + i], 16 ) != 0 )
             {
                 if( verbose != 0 )
-                    mbedtls_printf( "failed\n" );
+                    vdb_mbedtls_printf( "failed\n" );
 
                 return( 1 );
             }
@@ -802,10 +802,10 @@ int vdb_mbedtls_gcm_self_test( int verbose )
             vdb_mbedtls_gcm_free( &ctx );
 
             if( verbose != 0 )
-                mbedtls_printf( "passed\n" );
+                vdb_mbedtls_printf( "passed\n" );
 
             if( verbose != 0 )
-                mbedtls_printf( "  AES-GCM-%3d #%d split (%s): ",
+                vdb_mbedtls_printf( "  AES-GCM-%3d #%d split (%s): ",
                                  key_len, i, "enc" );
 
             vdb_mbedtls_gcm_setkey( &ctx, cipher, key[key_index[i]], key_len );
@@ -816,7 +816,7 @@ int vdb_mbedtls_gcm_self_test( int verbose )
             if( ret != 0 )
             {
                 if( verbose != 0 )
-                    mbedtls_printf( "failed\n" );
+                    vdb_mbedtls_printf( "failed\n" );
 
                 return( 1 );
             }
@@ -828,7 +828,7 @@ int vdb_mbedtls_gcm_self_test( int verbose )
                 if( ret != 0 )
                 {
                     if( verbose != 0 )
-                        mbedtls_printf( "failed\n" );
+                        vdb_mbedtls_printf( "failed\n" );
 
                     return( 1 );
                 }
@@ -838,7 +838,7 @@ int vdb_mbedtls_gcm_self_test( int verbose )
                 if( ret != 0 )
                 {
                     if( verbose != 0 )
-                        mbedtls_printf( "failed\n" );
+                        vdb_mbedtls_printf( "failed\n" );
 
                     return( 1 );
                 }
@@ -849,7 +849,7 @@ int vdb_mbedtls_gcm_self_test( int verbose )
                 if( ret != 0 )
                 {
                     if( verbose != 0 )
-                        mbedtls_printf( "failed\n" );
+                        vdb_mbedtls_printf( "failed\n" );
 
                     return( 1 );
                 }
@@ -861,7 +861,7 @@ int vdb_mbedtls_gcm_self_test( int verbose )
                 memcmp( tag_buf, tag[j * 6 + i], 16 ) != 0 )
             {
                 if( verbose != 0 )
-                    mbedtls_printf( "failed\n" );
+                    vdb_mbedtls_printf( "failed\n" );
 
                 return( 1 );
             }
@@ -869,10 +869,10 @@ int vdb_mbedtls_gcm_self_test( int verbose )
             vdb_mbedtls_gcm_free( &ctx );
 
             if( verbose != 0 )
-                mbedtls_printf( "passed\n" );
+                vdb_mbedtls_printf( "passed\n" );
 
             if( verbose != 0 )
-                mbedtls_printf( "  AES-GCM-%3d #%d split (%s): ",
+                vdb_mbedtls_printf( "  AES-GCM-%3d #%d split (%s): ",
                                  key_len, i, "dec" );
 
             vdb_mbedtls_gcm_setkey( &ctx, cipher, key[key_index[i]], key_len );
@@ -883,7 +883,7 @@ int vdb_mbedtls_gcm_self_test( int verbose )
             if( ret != 0 )
             {
                 if( verbose != 0 )
-                    mbedtls_printf( "failed\n" );
+                    vdb_mbedtls_printf( "failed\n" );
 
                 return( 1 );
             }
@@ -895,7 +895,7 @@ int vdb_mbedtls_gcm_self_test( int verbose )
                 if( ret != 0 )
                 {
                     if( verbose != 0 )
-                        mbedtls_printf( "failed\n" );
+                        vdb_mbedtls_printf( "failed\n" );
 
                     return( 1 );
                 }
@@ -905,7 +905,7 @@ int vdb_mbedtls_gcm_self_test( int verbose )
                 if( ret != 0 )
                 {
                     if( verbose != 0 )
-                        mbedtls_printf( "failed\n" );
+                        vdb_mbedtls_printf( "failed\n" );
 
                     return( 1 );
                 }
@@ -916,7 +916,7 @@ int vdb_mbedtls_gcm_self_test( int verbose )
                 if( ret != 0 )
                 {
                     if( verbose != 0 )
-                        mbedtls_printf( "failed\n" );
+                        vdb_mbedtls_printf( "failed\n" );
 
                     return( 1 );
                 }
@@ -928,7 +928,7 @@ int vdb_mbedtls_gcm_self_test( int verbose )
                 memcmp( tag_buf, tag[j * 6 + i], 16 ) != 0 )
             {
                 if( verbose != 0 )
-                    mbedtls_printf( "failed\n" );
+                    vdb_mbedtls_printf( "failed\n" );
 
                 return( 1 );
             }
@@ -936,13 +936,13 @@ int vdb_mbedtls_gcm_self_test( int verbose )
             vdb_mbedtls_gcm_free( &ctx );
 
             if( verbose != 0 )
-                mbedtls_printf( "passed\n" );
+                vdb_mbedtls_printf( "passed\n" );
 
         }
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
     return( 0 );
 }

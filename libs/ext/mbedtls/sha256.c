@@ -42,8 +42,8 @@
 #else
 #include <stdio.h>
 #include <stdlib.h>
-#define mbedtls_printf printf
-#define mbedtls_calloc    calloc
+#define vdb_mbedtls_printf printf
+#define vdb_mbedtls_calloc    calloc
 #define vdb_mbedtls_free       free
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
@@ -396,11 +396,11 @@ int vdb_mbedtls_sha256_self_test( int verbose )
     unsigned char sha256sum[32];
     mbedtls_sha256_context ctx;
 
-    buf = mbedtls_calloc( 1024, sizeof(unsigned char) );
+    buf = vdb_mbedtls_calloc( 1024, sizeof(unsigned char) );
     if( NULL == buf )
     {
         if( verbose != 0 )
-            mbedtls_printf( "Buffer allocation failed\n" );
+            vdb_mbedtls_printf( "Buffer allocation failed\n" );
 
         return( 1 );
     }
@@ -413,7 +413,7 @@ int vdb_mbedtls_sha256_self_test( int verbose )
         k = i < 3;
 
         if( verbose != 0 )
-            mbedtls_printf( "  SHA-%d test #%d: ", 256 - k * 32, j + 1 );
+            vdb_mbedtls_printf( "  SHA-%d test #%d: ", 256 - k * 32, j + 1 );
 
         vdb_mbedtls_sha256_starts( &ctx, k );
 
@@ -433,18 +433,18 @@ int vdb_mbedtls_sha256_self_test( int verbose )
         if( memcmp( sha256sum, sha256_test_sum[i], 32 - k * 4 ) != 0 )
         {
             if( verbose != 0 )
-                mbedtls_printf( "failed\n" );
+                vdb_mbedtls_printf( "failed\n" );
 
             ret = 1;
             goto exit;
         }
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
 exit:
     vdb_mbedtls_sha256_free( &ctx );

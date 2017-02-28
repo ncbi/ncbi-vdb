@@ -52,8 +52,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #define vdb_mbedtls_free       free
-#define mbedtls_calloc    calloc
-#define mbedtls_snprintf   snprintf
+#define vdb_mbedtls_calloc    calloc
+#define vdb_mbedtls_snprintf   snprintf
 #endif
 
 #if defined(_WIN32) && !defined(EFIX64) && !defined(EFI32)
@@ -237,7 +237,7 @@ static int x509_get_entries( unsigned char **p,
 
         if( *p < end )
         {
-            cur_entry->next = mbedtls_calloc( 1, sizeof( mbedtls_x509_crl_entry ) );
+            cur_entry->next = vdb_mbedtls_calloc( 1, sizeof( mbedtls_x509_crl_entry ) );
 
             if( cur_entry->next == NULL )
                 return( MBEDTLS_ERR_X509_ALLOC_FAILED );
@@ -279,7 +279,7 @@ int vdb_mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
 
     if( crl->version != 0 && crl->next == NULL )
     {
-        crl->next = mbedtls_calloc( 1, sizeof( mbedtls_x509_crl ) );
+        crl->next = vdb_mbedtls_calloc( 1, sizeof( mbedtls_x509_crl ) );
 
         if( crl->next == NULL )
         {
@@ -294,7 +294,7 @@ int vdb_mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
     /*
      * Copy raw DER-encoded CRL
      */
-    if( ( p = mbedtls_calloc( 1, buflen ) ) == NULL )
+    if( ( p = vdb_mbedtls_calloc( 1, buflen ) ) == NULL )
         return( MBEDTLS_ERR_X509_ALLOC_FAILED );
 
     memcpy( p, buf, buflen );
@@ -588,23 +588,23 @@ int vdb_mbedtls_x509_crl_info( char *buf, size_t size, const char *prefix,
     p = buf;
     n = size;
 
-    ret = mbedtls_snprintf( p, n, "%sCRL version   : %d",
+    ret = vdb_mbedtls_snprintf( p, n, "%sCRL version   : %d",
                                prefix, crl->version );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
-    ret = mbedtls_snprintf( p, n, "\n%sissuer name   : ", prefix );
+    ret = vdb_mbedtls_snprintf( p, n, "\n%sissuer name   : ", prefix );
     MBEDTLS_X509_SAFE_SNPRINTF;
     ret = vdb_mbedtls_x509_dn_gets( p, n, &crl->issuer );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
-    ret = mbedtls_snprintf( p, n, "\n%sthis update   : " \
+    ret = vdb_mbedtls_snprintf( p, n, "\n%sthis update   : " \
                    "%04d-%02d-%02d %02d:%02d:%02d", prefix,
                    crl->this_update.year, crl->this_update.mon,
                    crl->this_update.day,  crl->this_update.hour,
                    crl->this_update.min,  crl->this_update.sec );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
-    ret = mbedtls_snprintf( p, n, "\n%snext update   : " \
+    ret = vdb_mbedtls_snprintf( p, n, "\n%snext update   : " \
                    "%04d-%02d-%02d %02d:%02d:%02d", prefix,
                    crl->next_update.year, crl->next_update.mon,
                    crl->next_update.day,  crl->next_update.hour,
@@ -613,20 +613,20 @@ int vdb_mbedtls_x509_crl_info( char *buf, size_t size, const char *prefix,
 
     entry = &crl->entry;
 
-    ret = mbedtls_snprintf( p, n, "\n%sRevoked certificates:",
+    ret = vdb_mbedtls_snprintf( p, n, "\n%sRevoked certificates:",
                                prefix );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
     while( entry != NULL && entry->raw.len != 0 )
     {
-        ret = mbedtls_snprintf( p, n, "\n%sserial number: ",
+        ret = vdb_mbedtls_snprintf( p, n, "\n%sserial number: ",
                                prefix );
         MBEDTLS_X509_SAFE_SNPRINTF;
 
         ret = vdb_mbedtls_x509_serial_gets( p, n, &entry->serial );
         MBEDTLS_X509_SAFE_SNPRINTF;
 
-        ret = mbedtls_snprintf( p, n, " revocation date: " \
+        ret = vdb_mbedtls_snprintf( p, n, " revocation date: " \
                    "%04d-%02d-%02d %02d:%02d:%02d",
                    entry->revocation_date.year, entry->revocation_date.mon,
                    entry->revocation_date.day,  entry->revocation_date.hour,
@@ -636,14 +636,14 @@ int vdb_mbedtls_x509_crl_info( char *buf, size_t size, const char *prefix,
         entry = entry->next;
     }
 
-    ret = mbedtls_snprintf( p, n, "\n%ssigned using  : ", prefix );
+    ret = vdb_mbedtls_snprintf( p, n, "\n%ssigned using  : ", prefix );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
     ret = vdb_mbedtls_x509_sig_alg_gets( p, n, &crl->sig_oid, crl->sig_pk, crl->sig_md,
                              crl->sig_opts );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
-    ret = mbedtls_snprintf( p, n, "\n" );
+    ret = vdb_mbedtls_snprintf( p, n, "\n" );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
     return( (int) ( size - n ) );

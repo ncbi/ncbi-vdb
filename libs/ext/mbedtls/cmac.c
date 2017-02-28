@@ -57,11 +57,11 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdlib.h>
-#define mbedtls_calloc     calloc
+#define vdb_mbedtls_calloc     calloc
 #define vdb_mbedtls_free       free
 #if defined(MBEDTLS_SELF_TEST)
 #include <stdio.h>
-#define mbedtls_printf     printf
+#define vdb_mbedtls_printf     printf
 #endif /* MBEDTLS_SELF_TEST */
 #endif /* MBEDTLS_PLATFORM_C */
 
@@ -228,7 +228,7 @@ int vdb_mbedtls_cipher_cmac_starts( mbedtls_cipher_context_t *ctx,
 
     /* Allocated and initialise in the cipher context memory for the CMAC
      * context */
-    cmac_ctx = mbedtls_calloc( 1, sizeof( mbedtls_cmac_context_t ) );
+    cmac_ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_cmac_context_t ) );
     if( cmac_ctx == NULL )
         return( MBEDTLS_ERR_CIPHER_ALLOC_FAILED );
 
@@ -781,14 +781,14 @@ static int cmac_test_subkeys( int verbose,
     for( i = 0; i < num_tests; i++ )
     {
         if( verbose != 0 )
-            mbedtls_printf( "  %s CMAC subkey #%u: ", testname, i + 1 );
+            vdb_mbedtls_printf( "  %s CMAC subkey #%u: ", testname, i + 1 );
 
         vdb_mbedtls_cipher_init( &ctx );
 
         if( ( ret = vdb_mbedtls_cipher_setup( &ctx, cipher_info ) ) != 0 )
         {
             if( verbose != 0 )
-                mbedtls_printf( "test execution failed\n" );
+                vdb_mbedtls_printf( "test execution failed\n" );
 
             goto cleanup;
         }
@@ -797,7 +797,7 @@ static int cmac_test_subkeys( int verbose,
                                        MBEDTLS_ENCRYPT ) ) != 0 )
         {
             if( verbose != 0 )
-                mbedtls_printf( "test execution failed\n" );
+                vdb_mbedtls_printf( "test execution failed\n" );
 
             goto cleanup;
         }
@@ -806,7 +806,7 @@ static int cmac_test_subkeys( int verbose,
         if( ret != 0 )
         {
            if( verbose != 0 )
-                mbedtls_printf( "failed\n" );
+                vdb_mbedtls_printf( "failed\n" );
 
             goto cleanup;
         }
@@ -815,13 +815,13 @@ static int cmac_test_subkeys( int verbose,
             ( ret = memcmp( K2, &subkeys[block_size], block_size ) ) != 0 )
         {
             if( verbose != 0 )
-                mbedtls_printf( "failed\n" );
+                vdb_mbedtls_printf( "failed\n" );
 
             goto cleanup;
         }
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
 
         vdb_mbedtls_cipher_free( &ctx );
     }
@@ -861,25 +861,25 @@ static int cmac_test_wth_cipher( int verbose,
     for( i = 0; i < num_tests; i++ )
     {
         if( verbose != 0 )
-            mbedtls_printf( "  %s CMAC #%u: ", testname, i + 1 );
+            vdb_mbedtls_printf( "  %s CMAC #%u: ", testname, i + 1 );
 
         if( ( ret = vdb_mbedtls_cipher_cmac( cipher_info, key, keybits, messages,
                                          message_lengths[i], output ) ) != 0 )
         {
             if( verbose != 0 )
-                mbedtls_printf( "failed\n" );
+                vdb_mbedtls_printf( "failed\n" );
             goto exit;
         }
 
         if( ( ret = memcmp( output, &expected_result[i * block_size], block_size ) ) != 0 )
         {
             if( verbose != 0 )
-                mbedtls_printf( "failed\n" );
+                vdb_mbedtls_printf( "failed\n" );
             goto exit;
         }
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
     }
 
 exit:
@@ -895,20 +895,20 @@ static int test_aes128_cmac_prf( int verbose )
 
     for( i = 0; i < NB_PRF_TESTS; i++ )
     {
-        mbedtls_printf( "  AES CMAC 128 PRF #%u: ", i );
+        vdb_mbedtls_printf( "  AES CMAC 128 PRF #%u: ", i );
         ret = vdb_mbedtls_aes_cmac_prf_128( PRFK, PRFKlen[i], PRFM, 20, output );
         if( ret != 0 ||
             memcmp( output, PRFT[i], MBEDTLS_AES_BLOCK_SIZE ) != 0 )
         {
 
             if( verbose != 0 )
-                mbedtls_printf( "failed\n" );
+                vdb_mbedtls_printf( "failed\n" );
 
             return( ret );
         }
         else if( verbose != 0 )
         {
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
         }
     }
     return( ret );
@@ -1064,7 +1064,7 @@ int vdb_mbedtls_cmac_self_test( int verbose )
 #endif /* MBEDTLS_AES_C */
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
     return( 0 );
 }

@@ -51,7 +51,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf     printf
+#define vdb_mbedtls_printf     printf
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
@@ -388,7 +388,7 @@ int vdb_mbedtls_entropy_update_nv_seed( mbedtls_entropy_context *ctx )
     if( ( ret = vdb_mbedtls_entropy_func( ctx, buf, MBEDTLS_ENTROPY_BLOCK_SIZE ) ) != 0 )
         return( ret );
 
-    if( mbedtls_nv_seed_write( buf, MBEDTLS_ENTROPY_BLOCK_SIZE ) < 0 )
+    if( vdb_mbedtls_nv_seed_write( buf, MBEDTLS_ENTROPY_BLOCK_SIZE ) < 0 )
         return( MBEDTLS_ERR_ENTROPY_FILE_IO_ERROR );
 
     /* Manually update the remaining stream with a separator value to diverge */
@@ -534,7 +534,7 @@ int vdb_mbedtls_entropy_source_self_test( int verbose )
     unsigned char buf1[2 * sizeof( unsigned long long int )];
 
     if( verbose != 0 )
-        mbedtls_printf( "  ENTROPY_BIAS test: " );
+        vdb_mbedtls_printf( "  ENTROPY_BIAS test: " );
 
     memset( buf0, 0x00, sizeof( buf0 ) );
     memset( buf1, 0x00, sizeof( buf1 ) );
@@ -558,11 +558,11 @@ cleanup:
     if( verbose != 0 )
     {
         if( ret != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
         else
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
 
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
     }
 
     return( ret != 0 );
@@ -586,7 +586,7 @@ int vdb_mbedtls_entropy_self_test( int verbose )
 #endif /* !MBEDTLS_TEST_NULL_ENTROPY */
 
     if( verbose != 0 )
-        mbedtls_printf( "  ENTROPY test: " );
+        vdb_mbedtls_printf( "  ENTROPY test: " );
 
 #if !defined(MBEDTLS_TEST_NULL_ENTROPY)
     vdb_mbedtls_entropy_init( &ctx );
@@ -641,11 +641,11 @@ cleanup:
     if( verbose != 0 )
     {
         if( ret != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
         else
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
 
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
     }
 
     return( ret != 0 );

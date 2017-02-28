@@ -52,8 +52,8 @@
 #else
 #include <stdlib.h>
 #include <stdio.h>
-#define mbedtls_printf     printf
-#define mbedtls_calloc    calloc
+#define vdb_mbedtls_printf     printf
+#define vdb_mbedtls_calloc    calloc
 #define vdb_mbedtls_free       free
 #endif
 
@@ -533,7 +533,7 @@ static int load_file( const char *path, unsigned char **buf, size_t *n )
     *n = (size_t) size;
 
     if( *n + 1 == 0 ||
-        ( *buf = mbedtls_calloc( 1, *n + 1 ) ) == NULL )
+        ( *buf = vdb_mbedtls_calloc( 1, *n + 1 ) ) == NULL )
     {
         fclose( f );
         return( MBEDTLS_ERR_DHM_ALLOC_FAILED );
@@ -600,21 +600,21 @@ int vdb_mbedtls_dhm_self_test( int verbose )
     vdb_mbedtls_dhm_init( &dhm );
 
     if( verbose != 0 )
-        mbedtls_printf( "  DHM parameter load: " );
+        vdb_mbedtls_printf( "  DHM parameter load: " );
 
     if( ( ret = vdb_mbedtls_dhm_parse_dhm( &dhm,
                     (const unsigned char *) mbedtls_test_dhm_params,
                     mbedtls_test_dhm_params_len ) ) != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         ret = 1;
         goto exit;
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n\n" );
+        vdb_mbedtls_printf( "passed\n\n" );
 
 exit:
     vdb_mbedtls_dhm_free( &dhm );

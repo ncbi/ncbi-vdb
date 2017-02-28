@@ -38,7 +38,7 @@
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
-#define mbedtls_snprintf snprintf
+#define vdb_mbedtls_snprintf snprintf
 #endif
 
 #if defined(MBEDTLS_X509_USE_C) || defined(MBEDTLS_X509_CREATE_C)
@@ -681,7 +681,7 @@ int vdb_mbedtls_oid_get_numeric_string( char *buf, size_t size,
     /* First byte contains first two dots */
     if( oid->len > 0 )
     {
-        ret = mbedtls_snprintf( p, n, "%d.%d", oid->p[0] / 40, oid->p[0] % 40 );
+        ret = vdb_mbedtls_snprintf( p, n, "%d.%d", oid->p[0] / 40, oid->p[0] % 40 );
         OID_SAFE_SNPRINTF;
     }
 
@@ -698,7 +698,7 @@ int vdb_mbedtls_oid_get_numeric_string( char *buf, size_t size,
         if( !( oid->p[i] & 0x80 ) )
         {
             /* Last byte */
-            ret = mbedtls_snprintf( p, n, ".%d", value );
+            ret = vdb_mbedtls_snprintf( p, n, ".%d", value );
             OID_SAFE_SNPRINTF;
             value = 0;
         }

@@ -42,7 +42,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf printf
+#define vdb_mbedtls_printf printf
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
@@ -356,7 +356,7 @@ int vdb_mbedtls_md4_self_test( int verbose )
     for( i = 0; i < 7; i++ )
     {
         if( verbose != 0 )
-            mbedtls_printf( "  MD4 test #%d: ", i + 1 );
+            vdb_mbedtls_printf( "  MD4 test #%d: ", i + 1 );
 
         vdb_mbedtls_md4( (unsigned char *) md4_test_str[i],
              strlen( md4_test_str[i] ), md4sum );
@@ -364,17 +364,17 @@ int vdb_mbedtls_md4_self_test( int verbose )
         if( memcmp( md4sum, md4_test_sum[i], 16 ) != 0 )
         {
             if( verbose != 0 )
-                mbedtls_printf( "failed\n" );
+                vdb_mbedtls_printf( "failed\n" );
 
             return( 1 );
         }
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
     return( 0 );
 }

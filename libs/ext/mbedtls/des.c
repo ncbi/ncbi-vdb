@@ -42,7 +42,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf printf
+#define vdb_mbedtls_printf printf
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
@@ -889,7 +889,7 @@ int vdb_mbedtls_des_self_test( int verbose )
         v = i  & 1;
 
         if( verbose != 0 )
-            mbedtls_printf( "  DES%c-ECB-%3d (%s): ",
+            vdb_mbedtls_printf( "  DES%c-ECB-%3d (%s): ",
                              ( u == 0 ) ? ' ' : '3', 56 + u * 56,
                              ( v == MBEDTLS_DES_DECRYPT ) ? "dec" : "enc" );
 
@@ -939,18 +939,18 @@ int vdb_mbedtls_des_self_test( int verbose )
                 memcmp( buf, des3_test_ecb_enc[u], 8 ) != 0 ) )
         {
             if( verbose != 0 )
-                mbedtls_printf( "failed\n" );
+                vdb_mbedtls_printf( "failed\n" );
 
             ret = 1;
             goto exit;
         }
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
 #if defined(MBEDTLS_CIPHER_MODE_CBC)
     /*
@@ -962,7 +962,7 @@ int vdb_mbedtls_des_self_test( int verbose )
         v = i  & 1;
 
         if( verbose != 0 )
-            mbedtls_printf( "  DES%c-CBC-%3d (%s): ",
+            vdb_mbedtls_printf( "  DES%c-CBC-%3d (%s): ",
                              ( u == 0 ) ? ' ' : '3', 56 + u * 56,
                              ( v == MBEDTLS_DES_DECRYPT ) ? "dec" : "enc" );
 
@@ -1035,19 +1035,19 @@ int vdb_mbedtls_des_self_test( int verbose )
                 memcmp( buf, des3_test_cbc_enc[u], 8 ) != 0 ) )
         {
             if( verbose != 0 )
-                mbedtls_printf( "failed\n" );
+                vdb_mbedtls_printf( "failed\n" );
 
             ret = 1;
             goto exit;
         }
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
     }
 #endif /* MBEDTLS_CIPHER_MODE_CBC */
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
 exit:
     vdb_mbedtls_des_free( &ctx );

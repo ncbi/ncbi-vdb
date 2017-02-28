@@ -31,7 +31,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdlib.h>
-#define mbedtls_calloc    calloc
+#define vdb_mbedtls_calloc    calloc
 #define vdb_mbedtls_free      free
 #endif
 
@@ -243,7 +243,7 @@ static int ssl_load_session( mbedtls_ssl_session *session,
         if( p + cert_len > end )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-        session->peer_cert = mbedtls_calloc( 1, sizeof( mbedtls_x509_crt ) );
+        session->peer_cert = vdb_mbedtls_calloc( 1, sizeof( mbedtls_x509_crt ) );
 
         if( session->peer_cert == NULL )
             return( MBEDTLS_ERR_SSL_ALLOC_FAILED );

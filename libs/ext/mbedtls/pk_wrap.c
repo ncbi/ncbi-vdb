@@ -45,7 +45,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdlib.h>
-#define mbedtls_calloc    calloc
+#define vdb_mbedtls_calloc    calloc
 #define vdb_mbedtls_free       free
 #endif
 
@@ -133,7 +133,7 @@ static int rsa_check_pair_wrap( const void *pub, const void *prv )
 
 static void *rsa_alloc_wrap( void )
 {
-    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_rsa_context ) );
+    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_rsa_context ) );
 
     if( ctx != NULL )
         vdb_mbedtls_rsa_init( (mbedtls_rsa_context *) ctx, 0, 0 );
@@ -249,7 +249,7 @@ static int eckey_check_pair( const void *pub, const void *prv )
 
 static void *eckey_alloc_wrap( void )
 {
-    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_ecp_keypair ) );
+    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_ecp_keypair ) );
 
     if( ctx != NULL )
         vdb_mbedtls_ecp_keypair_init( ctx );
@@ -348,7 +348,7 @@ static int ecdsa_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
 
 static void *ecdsa_alloc_wrap( void )
 {
-    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_ecdsa_context ) );
+    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_ecdsa_context ) );
 
     if( ctx != NULL )
         vdb_mbedtls_ecdsa_init( (mbedtls_ecdsa_context *) ctx );
@@ -457,7 +457,7 @@ static int rsa_alt_check_pair( const void *pub, const void *prv )
 
 static void *rsa_alt_alloc_wrap( void )
 {
-    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_rsa_alt_context ) );
+    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_rsa_alt_context ) );
 
     if( ctx != NULL )
         memset( ctx, 0, sizeof( mbedtls_rsa_alt_context ) );

@@ -41,7 +41,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf printf
+#define vdb_mbedtls_printf printf
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
@@ -404,7 +404,7 @@ int vdb_mbedtls_sha1_self_test( int verbose )
     for( i = 0; i < 3; i++ )
     {
         if( verbose != 0 )
-            mbedtls_printf( "  SHA-1 test #%d: ", i + 1 );
+            vdb_mbedtls_printf( "  SHA-1 test #%d: ", i + 1 );
 
         vdb_mbedtls_sha1_starts( &ctx );
 
@@ -424,18 +424,18 @@ int vdb_mbedtls_sha1_self_test( int verbose )
         if( memcmp( sha1sum, sha1_test_sum[i], 20 ) != 0 )
         {
             if( verbose != 0 )
-                mbedtls_printf( "failed\n" );
+                vdb_mbedtls_printf( "failed\n" );
 
             ret = 1;
             goto exit;
         }
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
 exit:
     vdb_mbedtls_sha1_free( &ctx );

@@ -40,7 +40,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdlib.h>
-#define mbedtls_calloc    calloc
+#define vdb_mbedtls_calloc    calloc
 #define vdb_mbedtls_free       free
 #endif
 
@@ -324,7 +324,7 @@ int vdb_mbedtls_pem_read_buffer( mbedtls_pem_context *ctx, const char *header, c
     if( ret == MBEDTLS_ERR_BASE64_INVALID_CHARACTER )
         return( MBEDTLS_ERR_PEM_INVALID_DATA + ret );
 
-    if( ( buf = mbedtls_calloc( 1, len ) ) == NULL )
+    if( ( buf = vdb_mbedtls_calloc( 1, len ) ) == NULL )
         return( MBEDTLS_ERR_PEM_ALLOC_FAILED );
 
     if( ( ret = vdb_mbedtls_base64_decode( buf, len, &len, s1, s2 - s1 ) ) != 0 )
@@ -410,7 +410,7 @@ int vdb_mbedtls_pem_write_buffer( const char *header, const char *footer,
         return( MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL );
     }
 
-    if( ( encode_buf = mbedtls_calloc( 1, use_len ) ) == NULL )
+    if( ( encode_buf = vdb_mbedtls_calloc( 1, use_len ) ) == NULL )
         return( MBEDTLS_ERR_PEM_ALLOC_FAILED );
 
     if( ( ret = vdb_mbedtls_base64_encode( encode_buf, use_len, &use_len, der_data,

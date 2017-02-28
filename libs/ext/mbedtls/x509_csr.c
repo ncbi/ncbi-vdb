@@ -52,8 +52,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #define vdb_mbedtls_free       free
-#define mbedtls_calloc    calloc
-#define mbedtls_snprintf   snprintf
+#define vdb_mbedtls_calloc    calloc
+#define vdb_mbedtls_snprintf   snprintf
 #endif
 
 #if defined(MBEDTLS_FS_IO) || defined(EFIX64) || defined(EFI32)
@@ -112,7 +112,7 @@ int vdb_mbedtls_x509_csr_parse_der( mbedtls_x509_csr *csr,
     /*
      * first copy the raw DER data
      */
-    p = mbedtls_calloc( 1, len = buflen );
+    p = vdb_mbedtls_calloc( 1, len = buflen );
 
     if( p == NULL )
         return( MBEDTLS_ERR_X509_ALLOC_FAILED );
@@ -348,16 +348,16 @@ int vdb_mbedtls_x509_csr_info( char *buf, size_t size, const char *prefix,
     p = buf;
     n = size;
 
-    ret = mbedtls_snprintf( p, n, "%sCSR version   : %d",
+    ret = vdb_mbedtls_snprintf( p, n, "%sCSR version   : %d",
                                prefix, csr->version );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
-    ret = mbedtls_snprintf( p, n, "\n%ssubject name  : ", prefix );
+    ret = vdb_mbedtls_snprintf( p, n, "\n%ssubject name  : ", prefix );
     MBEDTLS_X509_SAFE_SNPRINTF;
     ret = vdb_mbedtls_x509_dn_gets( p, n, &csr->subject );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
-    ret = mbedtls_snprintf( p, n, "\n%ssigned using  : ", prefix );
+    ret = vdb_mbedtls_snprintf( p, n, "\n%ssigned using  : ", prefix );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
     ret = vdb_mbedtls_x509_sig_alg_gets( p, n, &csr->sig_oid, csr->sig_pk, csr->sig_md,
@@ -370,7 +370,7 @@ int vdb_mbedtls_x509_csr_info( char *buf, size_t size, const char *prefix,
         return( ret );
     }
 
-    ret = mbedtls_snprintf( p, n, "\n%s%-" BC "s: %d bits\n", prefix, key_size_str,
+    ret = vdb_mbedtls_snprintf( p, n, "\n%s%-" BC "s: %d bits\n", prefix, key_size_str,
                           (int) vdb_mbedtls_pk_get_bitlen( &csr->pk ) );
     MBEDTLS_X509_SAFE_SNPRINTF;
 

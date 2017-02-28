@@ -65,7 +65,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdlib.h>
-#define mbedtls_calloc    calloc
+#define vdb_mbedtls_calloc    calloc
 #define vdb_mbedtls_free       free
 #endif
 
@@ -89,7 +89,7 @@ static void md2_finish_wrap( void *ctx, unsigned char *output )
 
 static void *md2_ctx_alloc( void )
 {
-    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_md2_context ) );
+    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_md2_context ) );
 
     if( ctx != NULL )
         vdb_mbedtls_md2_init( (mbedtls_md2_context *) ctx );
@@ -153,7 +153,7 @@ static void md4_finish_wrap( void *ctx, unsigned char *output )
 
 static void *md4_ctx_alloc( void )
 {
-    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_md4_context ) );
+    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_md4_context ) );
 
     if( ctx != NULL )
         vdb_mbedtls_md4_init( (mbedtls_md4_context *) ctx );
@@ -215,7 +215,7 @@ static void md5_finish_wrap( void *ctx, unsigned char *output )
 
 static void *md5_ctx_alloc( void )
 {
-    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_md5_context ) );
+    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_md5_context ) );
 
     if( ctx != NULL )
         vdb_mbedtls_md5_init( (mbedtls_md5_context *) ctx );
@@ -277,7 +277,7 @@ static void ripemd160_finish_wrap( void *ctx, unsigned char *output )
 
 static void *ripemd160_ctx_alloc( void )
 {
-    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_ripemd160_context ) );
+    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_ripemd160_context ) );
 
     if( ctx != NULL )
         vdb_mbedtls_ripemd160_init( (mbedtls_ripemd160_context *) ctx );
@@ -339,7 +339,7 @@ static void sha1_finish_wrap( void *ctx, unsigned char *output )
 
 static void *sha1_ctx_alloc( void )
 {
-    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_sha1_context ) );
+    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_sha1_context ) );
 
     if( ctx != NULL )
         vdb_mbedtls_sha1_init( (mbedtls_sha1_context *) ctx );
@@ -410,7 +410,7 @@ static void sha224_wrap( const unsigned char *input, size_t ilen,
 
 static void *sha224_ctx_alloc( void )
 {
-    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_sha256_context ) );
+    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_sha256_context ) );
 
     if( ctx != NULL )
         vdb_mbedtls_sha256_init( (mbedtls_sha256_context *) ctx );
@@ -504,7 +504,7 @@ static void sha384_wrap( const unsigned char *input, size_t ilen,
 
 static void *sha384_ctx_alloc( void )
 {
-    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_sha512_context ) );
+    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_sha512_context ) );
 
     if( ctx != NULL )
         vdb_mbedtls_sha512_init( (mbedtls_sha512_context *) ctx );

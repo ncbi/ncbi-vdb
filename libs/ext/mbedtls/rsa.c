@@ -56,8 +56,8 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf printf
-#define mbedtls_calloc calloc
+#define vdb_mbedtls_printf printf
+#define vdb_mbedtls_calloc calloc
 #define vdb_mbedtls_free   free
 #endif
 
@@ -1105,11 +1105,11 @@ int vdb_mbedtls_rsa_rsassa_pkcs1_v15_sign( mbedtls_rsa_context *ctx,
      * In order to prevent Lenstra's attack, make the signature in a
      * temporary buffer and check it before returning it.
      */
-    sig_try = mbedtls_calloc( 1, ctx->len );
+    sig_try = vdb_mbedtls_calloc( 1, ctx->len );
     if( sig_try == NULL )
         return( MBEDTLS_ERR_MPI_ALLOC_FAILED );
 
-    verif   = mbedtls_calloc( 1, ctx->len );
+    verif   = vdb_mbedtls_calloc( 1, ctx->len );
     if( verif == NULL )
     {
         vdb_mbedtls_free( sig_try );
@@ -1634,19 +1634,19 @@ int vdb_mbedtls_rsa_self_test( int verbose )
     MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_read_string( &rsa.QP, 16, RSA_QP ) );
 
     if( verbose != 0 )
-        mbedtls_printf( "  RSA key validation: " );
+        vdb_mbedtls_printf( "  RSA key validation: " );
 
     if( vdb_mbedtls_rsa_check_pubkey(  &rsa ) != 0 ||
         vdb_mbedtls_rsa_check_privkey( &rsa ) != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         return( 1 );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n  PKCS#1 encryption : " );
+        vdb_mbedtls_printf( "passed\n  PKCS#1 encryption : " );
 
     memcpy( rsa_plaintext, RSA_PT, PT_LEN );
 
@@ -1654,20 +1654,20 @@ int vdb_mbedtls_rsa_self_test( int verbose )
                            rsa_plaintext, rsa_ciphertext ) != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         return( 1 );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n  PKCS#1 decryption : " );
+        vdb_mbedtls_printf( "passed\n  PKCS#1 decryption : " );
 
     if( vdb_mbedtls_rsa_pkcs1_decrypt( &rsa, myrand, NULL, MBEDTLS_RSA_PRIVATE, &len,
                            rsa_ciphertext, rsa_decrypted,
                            sizeof(rsa_decrypted) ) != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         return( 1 );
     }
@@ -1675,17 +1675,17 @@ int vdb_mbedtls_rsa_self_test( int verbose )
     if( memcmp( rsa_decrypted, rsa_plaintext, len ) != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         return( 1 );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
 #if defined(MBEDTLS_SHA1_C)
     if( verbose != 0 )
-        mbedtls_printf( "  PKCS#1 data sign  : " );
+        vdb_mbedtls_printf( "  PKCS#1 data sign  : " );
 
     vdb_mbedtls_sha1( rsa_plaintext, PT_LEN, sha1sum );
 
@@ -1693,29 +1693,29 @@ int vdb_mbedtls_rsa_self_test( int verbose )
                         sha1sum, rsa_ciphertext ) != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         return( 1 );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n  PKCS#1 sig. verify: " );
+        vdb_mbedtls_printf( "passed\n  PKCS#1 sig. verify: " );
 
     if( vdb_mbedtls_rsa_pkcs1_verify( &rsa, NULL, NULL, MBEDTLS_RSA_PUBLIC, MBEDTLS_MD_SHA1, 0,
                           sha1sum, rsa_ciphertext ) != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         return( 1 );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 #endif /* MBEDTLS_SHA1_C */
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
 cleanup:
     vdb_mbedtls_rsa_free( &rsa );

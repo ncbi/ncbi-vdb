@@ -771,7 +771,7 @@ cleanup:
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf     printf
+#define vdb_mbedtls_printf     printf
 #endif
 
 #if !defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED) || \
@@ -977,7 +977,7 @@ int vdb_mbedtls_ecjpake_self_test( int verbose )
     vdb_mbedtls_ecjpake_init( &srv );
 
     if( verbose != 0 )
-        mbedtls_printf( "  ECJPAKE test #0 (setup): " );
+        vdb_mbedtls_printf( "  ECJPAKE test #0 (setup): " );
 
     TEST_ASSERT( vdb_mbedtls_ecjpake_setup( &cli, MBEDTLS_ECJPAKE_CLIENT,
                     MBEDTLS_MD_SHA256, MBEDTLS_ECP_DP_SECP256R1,
@@ -990,10 +990,10 @@ int vdb_mbedtls_ecjpake_self_test( int verbose )
             sizeof( ecjpake_test_password ) ) == 0 );
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
     if( verbose != 0 )
-        mbedtls_printf( "  ECJPAKE test #1 (random handshake): " );
+        vdb_mbedtls_printf( "  ECJPAKE test #1 (random handshake): " );
 
     TEST_ASSERT( vdb_mbedtls_ecjpake_write_round_one( &cli,
                  buf, sizeof( buf ), &len, ecjpake_lgc, NULL ) == 0 );
@@ -1025,10 +1025,10 @@ int vdb_mbedtls_ecjpake_self_test( int verbose )
     TEST_ASSERT( memcmp( buf, pms, len ) == 0 );
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
     if( verbose != 0 )
-        mbedtls_printf( "  ECJPAKE test #2 (reference handshake): " );
+        vdb_mbedtls_printf( "  ECJPAKE test #2 (reference handshake): " );
 
     /* Simulate generation of round one */
     MBEDTLS_MPI_CHK( ecjpake_test_load( &cli,
@@ -1074,7 +1074,7 @@ int vdb_mbedtls_ecjpake_self_test( int verbose )
     TEST_ASSERT( memcmp( buf, ecjpake_test_pms, len ) == 0 );
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
 cleanup:
     vdb_mbedtls_ecjpake_free( &cli );
@@ -1083,13 +1083,13 @@ cleanup:
     if( ret != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         ret = 1;
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
     return( ret );
 }

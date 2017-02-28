@@ -48,7 +48,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf printf
+#define vdb_mbedtls_printf printf
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
@@ -1250,7 +1250,7 @@ int vdb_mbedtls_aes_self_test( int verbose )
         v = i  & 1;
 
         if( verbose != 0 )
-            mbedtls_printf( "  AES-ECB-%3d (%s): ", 128 + u * 64,
+            vdb_mbedtls_printf( "  AES-ECB-%3d (%s): ", 128 + u * 64,
                              ( v == MBEDTLS_AES_DECRYPT ) ? "dec" : "enc" );
 
         memset( buf, 0, 16 );
@@ -1265,7 +1265,7 @@ int vdb_mbedtls_aes_self_test( int verbose )
             if( memcmp( buf, aes_test_ecb_dec[u], 16 ) != 0 )
             {
                 if( verbose != 0 )
-                    mbedtls_printf( "failed\n" );
+                    vdb_mbedtls_printf( "failed\n" );
 
                 ret = 1;
                 goto exit;
@@ -1281,7 +1281,7 @@ int vdb_mbedtls_aes_self_test( int verbose )
             if( memcmp( buf, aes_test_ecb_enc[u], 16 ) != 0 )
             {
                 if( verbose != 0 )
-                    mbedtls_printf( "failed\n" );
+                    vdb_mbedtls_printf( "failed\n" );
 
                 ret = 1;
                 goto exit;
@@ -1289,11 +1289,11 @@ int vdb_mbedtls_aes_self_test( int verbose )
         }
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
 #if defined(MBEDTLS_CIPHER_MODE_CBC)
     /*
@@ -1305,7 +1305,7 @@ int vdb_mbedtls_aes_self_test( int verbose )
         v = i  & 1;
 
         if( verbose != 0 )
-            mbedtls_printf( "  AES-CBC-%3d (%s): ", 128 + u * 64,
+            vdb_mbedtls_printf( "  AES-CBC-%3d (%s): ", 128 + u * 64,
                              ( v == MBEDTLS_AES_DECRYPT ) ? "dec" : "enc" );
 
         memset( iv , 0, 16 );
@@ -1322,7 +1322,7 @@ int vdb_mbedtls_aes_self_test( int verbose )
             if( memcmp( buf, aes_test_cbc_dec[u], 16 ) != 0 )
             {
                 if( verbose != 0 )
-                    mbedtls_printf( "failed\n" );
+                    vdb_mbedtls_printf( "failed\n" );
 
                 ret = 1;
                 goto exit;
@@ -1346,7 +1346,7 @@ int vdb_mbedtls_aes_self_test( int verbose )
             if( memcmp( prv, aes_test_cbc_enc[u], 16 ) != 0 )
             {
                 if( verbose != 0 )
-                    mbedtls_printf( "failed\n" );
+                    vdb_mbedtls_printf( "failed\n" );
 
                 ret = 1;
                 goto exit;
@@ -1354,11 +1354,11 @@ int vdb_mbedtls_aes_self_test( int verbose )
         }
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 #endif /* MBEDTLS_CIPHER_MODE_CBC */
 
 #if defined(MBEDTLS_CIPHER_MODE_CFB)
@@ -1371,7 +1371,7 @@ int vdb_mbedtls_aes_self_test( int verbose )
         v = i  & 1;
 
         if( verbose != 0 )
-            mbedtls_printf( "  AES-CFB128-%3d (%s): ", 128 + u * 64,
+            vdb_mbedtls_printf( "  AES-CFB128-%3d (%s): ", 128 + u * 64,
                              ( v == MBEDTLS_AES_DECRYPT ) ? "dec" : "enc" );
 
         memcpy( iv,  aes_test_cfb128_iv, 16 );
@@ -1388,7 +1388,7 @@ int vdb_mbedtls_aes_self_test( int verbose )
             if( memcmp( buf, aes_test_cfb128_pt, 64 ) != 0 )
             {
                 if( verbose != 0 )
-                    mbedtls_printf( "failed\n" );
+                    vdb_mbedtls_printf( "failed\n" );
 
                 ret = 1;
                 goto exit;
@@ -1402,7 +1402,7 @@ int vdb_mbedtls_aes_self_test( int verbose )
             if( memcmp( buf, aes_test_cfb128_ct[u], 64 ) != 0 )
             {
                 if( verbose != 0 )
-                    mbedtls_printf( "failed\n" );
+                    vdb_mbedtls_printf( "failed\n" );
 
                 ret = 1;
                 goto exit;
@@ -1410,11 +1410,11 @@ int vdb_mbedtls_aes_self_test( int verbose )
         }
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 #endif /* MBEDTLS_CIPHER_MODE_CFB */
 
 #if defined(MBEDTLS_CIPHER_MODE_CTR)
@@ -1427,7 +1427,7 @@ int vdb_mbedtls_aes_self_test( int verbose )
         v = i  & 1;
 
         if( verbose != 0 )
-            mbedtls_printf( "  AES-CTR-128 (%s): ",
+            vdb_mbedtls_printf( "  AES-CTR-128 (%s): ",
                              ( v == MBEDTLS_AES_DECRYPT ) ? "dec" : "enc" );
 
         memcpy( nonce_counter, aes_test_ctr_nonce_counter[u], 16 );
@@ -1447,7 +1447,7 @@ int vdb_mbedtls_aes_self_test( int verbose )
             if( memcmp( buf, aes_test_ctr_pt[u], len ) != 0 )
             {
                 if( verbose != 0 )
-                    mbedtls_printf( "failed\n" );
+                    vdb_mbedtls_printf( "failed\n" );
 
                 ret = 1;
                 goto exit;
@@ -1464,7 +1464,7 @@ int vdb_mbedtls_aes_self_test( int verbose )
             if( memcmp( buf, aes_test_ctr_ct[u], len ) != 0 )
             {
                 if( verbose != 0 )
-                    mbedtls_printf( "failed\n" );
+                    vdb_mbedtls_printf( "failed\n" );
 
                 ret = 1;
                 goto exit;
@@ -1472,11 +1472,11 @@ int vdb_mbedtls_aes_self_test( int verbose )
         }
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 #endif /* MBEDTLS_CIPHER_MODE_CTR */
 
     ret = 0;

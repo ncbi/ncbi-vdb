@@ -42,7 +42,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf printf
+#define vdb_mbedtls_printf printf
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
@@ -438,7 +438,7 @@ int vdb_mbedtls_ripemd160_self_test( int verbose )
     for( i = 0; i < TESTS; i++ )
     {
         if( verbose != 0 )
-            mbedtls_printf( "  RIPEMD-160 test #%d: ", i + 1 );
+            vdb_mbedtls_printf( "  RIPEMD-160 test #%d: ", i + 1 );
 
         vdb_mbedtls_ripemd160( (const unsigned char *) ripemd160_test_input[i],
                    strlen( ripemd160_test_input[i] ),
@@ -447,17 +447,17 @@ int vdb_mbedtls_ripemd160_self_test( int verbose )
         if( memcmp( output, ripemd160_test_md[i], 20 ) != 0 )
         {
             if( verbose != 0 )
-                mbedtls_printf( "failed\n" );
+                vdb_mbedtls_printf( "failed\n" );
 
             return( 1 );
         }
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
     return( 0 );
 }

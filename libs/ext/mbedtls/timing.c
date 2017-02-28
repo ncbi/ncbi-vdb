@@ -29,7 +29,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf     printf
+#define vdb_mbedtls_printf     printf
 #endif
 
 #if defined(MBEDTLS_TIMING_C)
@@ -381,7 +381,7 @@ static void busy_msleep( unsigned long msec )
 #define FAIL    do                      \
 {                                       \
     if( verbose != 0 )                  \
-        mbedtls_printf( "failed\n" );   \
+        vdb_mbedtls_printf( "failed\n" );   \
                                         \
     return( 1 );                        \
 } while( 0 )
@@ -402,11 +402,11 @@ int vdb_mbedtls_timing_self_test( int verbose )
     mbedtls_timing_delay_context ctx;
 
     if( verbose != 0 )
-        mbedtls_printf( "  TIMING tests note: will take some time!\n" );
+        vdb_mbedtls_printf( "  TIMING tests note: will take some time!\n" );
 
 
     if( verbose != 0 )
-        mbedtls_printf( "  TIMING test #1 (set_alarm / get_timer): " );
+        vdb_mbedtls_printf( "  TIMING test #1 (set_alarm / get_timer): " );
 
     for( secs = 1; secs <= 3; secs++ )
     {
@@ -423,17 +423,17 @@ int vdb_mbedtls_timing_self_test( int verbose )
         if( millisecs < 800 * secs || millisecs > 1200 * secs + 300 )
         {
             if( verbose != 0 )
-                mbedtls_printf( "failed\n" );
+                vdb_mbedtls_printf( "failed\n" );
 
             return( 1 );
         }
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
     if( verbose != 0 )
-        mbedtls_printf( "  TIMING test #2 (set/get_delay        ): " );
+        vdb_mbedtls_printf( "  TIMING test #2 (set/get_delay        ): " );
 
     for( a = 200; a <= 400; a += 200 )
     {
@@ -465,10 +465,10 @@ int vdb_mbedtls_timing_self_test( int verbose )
         FAIL;
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
     if( verbose != 0 )
-        mbedtls_printf( "  TIMING test #3 (hardclock / get_timer): " );
+        vdb_mbedtls_printf( "  TIMING test #3 (hardclock / get_timer): " );
 
     /*
      * Allow one failure for possible counter wrapping.
@@ -481,7 +481,7 @@ hard_test:
     if( hardfail > 1 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed (ignored)\n" );
+            vdb_mbedtls_printf( "failed (ignored)\n" );
 
         goto hard_test_done;
     }
@@ -510,12 +510,12 @@ hard_test:
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
 hard_test_done:
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
     return( 0 );
 }

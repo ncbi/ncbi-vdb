@@ -54,9 +54,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #define vdb_mbedtls_free      free
-#define mbedtls_calloc    calloc
-#define mbedtls_printf    printf
-#define mbedtls_snprintf  snprintf
+#define vdb_mbedtls_calloc    calloc
+#define vdb_mbedtls_printf    printf
+#define vdb_mbedtls_snprintf  snprintf
 #endif
 
 
@@ -457,7 +457,7 @@ int vdb_mbedtls_x509_get_name( unsigned char **p, const unsigned char *end,
             /* Mark this item as being no the only one in a set */
             cur->next_merged = 1;
 
-            cur->next = mbedtls_calloc( 1, sizeof( mbedtls_x509_name ) );
+            cur->next = vdb_mbedtls_calloc( 1, sizeof( mbedtls_x509_name ) );
 
             if( cur->next == NULL )
                 return( MBEDTLS_ERR_X509_ALLOC_FAILED );
@@ -471,7 +471,7 @@ int vdb_mbedtls_x509_get_name( unsigned char **p, const unsigned char *end,
         if( *p == end )
             return( 0 );
 
-        cur->next = mbedtls_calloc( 1, sizeof( mbedtls_x509_name ) );
+        cur->next = vdb_mbedtls_calloc( 1, sizeof( mbedtls_x509_name ) );
 
         if( cur->next == NULL )
             return( MBEDTLS_ERR_X509_ALLOC_FAILED );
@@ -631,7 +631,7 @@ int vdb_mbedtls_x509_get_sig_alg( const mbedtls_x509_buf *sig_oid, const mbedtls
     {
         mbedtls_pk_rsassa_pss_options *pss_opts;
 
-        pss_opts = mbedtls_calloc( 1, sizeof( mbedtls_pk_rsassa_pss_options ) );
+        pss_opts = vdb_mbedtls_calloc( 1, sizeof( mbedtls_pk_rsassa_pss_options ) );
         if( pss_opts == NULL )
             return( MBEDTLS_ERR_X509_ALLOC_FAILED );
 
@@ -729,16 +729,16 @@ int vdb_mbedtls_x509_dn_gets( char *buf, size_t size, const mbedtls_x509_name *d
 
         if( name != dn )
         {
-            ret = mbedtls_snprintf( p, n, merge ? " + " : ", " );
+            ret = vdb_mbedtls_snprintf( p, n, merge ? " + " : ", " );
             MBEDTLS_X509_SAFE_SNPRINTF;
         }
 
         ret = vdb_mbedtls_oid_get_attr_short_name( &name->oid, &short_name );
 
         if( ret == 0 )
-            ret = mbedtls_snprintf( p, n, "%s=", short_name );
+            ret = vdb_mbedtls_snprintf( p, n, "%s=", short_name );
         else
-            ret = mbedtls_snprintf( p, n, "\?\?=" );
+            ret = vdb_mbedtls_snprintf( p, n, "\?\?=" );
         MBEDTLS_X509_SAFE_SNPRINTF;
 
         for( i = 0; i < name->val.len; i++ )
@@ -752,7 +752,7 @@ int vdb_mbedtls_x509_dn_gets( char *buf, size_t size, const mbedtls_x509_name *d
             else s[i] = c;
         }
         s[i] = '\0';
-        ret = mbedtls_snprintf( p, n, "%s", s );
+        ret = vdb_mbedtls_snprintf( p, n, "%s", s );
         MBEDTLS_X509_SAFE_SNPRINTF;
 
         merge = name->next_merged;
@@ -783,14 +783,14 @@ int vdb_mbedtls_x509_serial_gets( char *buf, size_t size, const mbedtls_x509_buf
         if( i == 0 && nr > 1 && serial->p[i] == 0x0 )
             continue;
 
-        ret = mbedtls_snprintf( p, n, "%02X%s",
+        ret = vdb_mbedtls_snprintf( p, n, "%02X%s",
                 serial->p[i], ( i < nr - 1 ) ? ":" : "" );
         MBEDTLS_X509_SAFE_SNPRINTF;
     }
 
     if( nr != serial->len )
     {
-        ret = mbedtls_snprintf( p, n, "...." );
+        ret = vdb_mbedtls_snprintf( p, n, "...." );
         MBEDTLS_X509_SAFE_SNPRINTF;
     }
 
@@ -811,9 +811,9 @@ int vdb_mbedtls_x509_sig_alg_gets( char *buf, size_t size, const mbedtls_x509_bu
 
     ret = vdb_mbedtls_oid_get_sig_alg_desc( sig_oid, &desc );
     if( ret != 0 )
-        ret = mbedtls_snprintf( p, n, "???"  );
+        ret = vdb_mbedtls_snprintf( p, n, "???"  );
     else
-        ret = mbedtls_snprintf( p, n, "%s", desc );
+        ret = vdb_mbedtls_snprintf( p, n, "%s", desc );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
@@ -827,7 +827,7 @@ int vdb_mbedtls_x509_sig_alg_gets( char *buf, size_t size, const mbedtls_x509_bu
         md_info = vdb_mbedtls_md_info_from_type( md_alg );
         mgf_md_info = vdb_mbedtls_md_info_from_type( pss_opts->mgf1_hash_id );
 
-        ret = mbedtls_snprintf( p, n, " (%s, MGF1-%s, 0x%02X)",
+        ret = vdb_mbedtls_snprintf( p, n, " (%s, MGF1-%s, 0x%02X)",
                               md_info ? vdb_mbedtls_md_get_name( md_info ) : "???",
                               mgf_md_info ? vdb_mbedtls_md_get_name( mgf_md_info ) : "???",
                               pss_opts->expected_salt_len );
@@ -851,7 +851,7 @@ int vdb_mbedtls_x509_key_size_helper( char *buf, size_t buf_size, const char *na
     size_t n = buf_size;
     int ret;
 
-    ret = mbedtls_snprintf( p, n, "%s key size", name );
+    ret = vdb_mbedtls_snprintf( p, n, "%s key size", name );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
     return( 0 );
@@ -1007,7 +1007,7 @@ int vdb_mbedtls_x509_self_test( int verbose )
     mbedtls_x509_crt clicert;
 
     if( verbose != 0 )
-        mbedtls_printf( "  X.509 certificate load: " );
+        vdb_mbedtls_printf( "  X.509 certificate load: " );
 
     vdb_mbedtls_x509_crt_init( &clicert );
 
@@ -1016,7 +1016,7 @@ int vdb_mbedtls_x509_self_test( int verbose )
     if( ret != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         return( ret );
     }
@@ -1028,25 +1028,25 @@ int vdb_mbedtls_x509_self_test( int verbose )
     if( ret != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         return( ret );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n  X.509 signature verify: ");
+        vdb_mbedtls_printf( "passed\n  X.509 signature verify: ");
 
     ret = vdb_mbedtls_x509_crt_verify( &clicert, &cacert, NULL, NULL, &flags, NULL, NULL );
     if( ret != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         return( ret );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n\n");
+        vdb_mbedtls_printf( "passed\n\n");
 
     vdb_mbedtls_x509_crt_free( &cacert  );
     vdb_mbedtls_x509_crt_free( &clicert );

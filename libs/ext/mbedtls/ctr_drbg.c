@@ -45,7 +45,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf printf
+#define vdb_mbedtls_printf printf
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
@@ -529,7 +529,7 @@ static int ctr_drbg_self_test_entropy( void *data, unsigned char *buf,
 #define CHK( c )    if( (c) != 0 )                          \
                     {                                       \
                         if( verbose != 0 )                  \
-                            mbedtls_printf( "failed\n" );  \
+                            vdb_mbedtls_printf( "failed\n" );  \
                         return( 1 );                        \
                     }
 
@@ -547,7 +547,7 @@ int vdb_mbedtls_ctr_drbg_self_test( int verbose )
      * Based on a NIST CTR_DRBG test vector (PR = True)
      */
     if( verbose != 0 )
-        mbedtls_printf( "  CTR_DRBG (PR = TRUE) : " );
+        vdb_mbedtls_printf( "  CTR_DRBG (PR = TRUE) : " );
 
     test_offset = 0;
     CHK( vdb_mbedtls_ctr_drbg_seed_entropy_len( &ctx, ctr_drbg_self_test_entropy,
@@ -560,13 +560,13 @@ int vdb_mbedtls_ctr_drbg_self_test( int verbose )
     vdb_mbedtls_ctr_drbg_free( &ctx );
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
     /*
      * Based on a NIST CTR_DRBG test vector (PR = FALSE)
      */
     if( verbose != 0 )
-        mbedtls_printf( "  CTR_DRBG (PR = FALSE): " );
+        vdb_mbedtls_printf( "  CTR_DRBG (PR = FALSE): " );
 
     vdb_mbedtls_ctr_drbg_init( &ctx );
 
@@ -581,10 +581,10 @@ int vdb_mbedtls_ctr_drbg_self_test( int verbose )
     vdb_mbedtls_ctr_drbg_free( &ctx );
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
     if( verbose != 0 )
-            mbedtls_printf( "\n" );
+            vdb_mbedtls_printf( "\n" );
 
     return( 0 );
 }

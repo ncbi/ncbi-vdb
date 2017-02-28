@@ -42,7 +42,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf printf
+#define vdb_mbedtls_printf printf
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
@@ -916,7 +916,7 @@ int vdb_mbedtls_camellia_self_test( int verbose )
     v = j & 1;
 
     if( verbose != 0 )
-        mbedtls_printf( "  CAMELLIA-ECB-%3d (%s): ", 128 + u * 64,
+        vdb_mbedtls_printf( "  CAMELLIA-ECB-%3d (%s): ", 128 + u * 64,
                          (v == MBEDTLS_CAMELLIA_DECRYPT) ? "dec" : "enc");
 
     for( i = 0; i < CAMELLIA_TESTS_ECB; i++ ) {
@@ -937,18 +937,18 @@ int vdb_mbedtls_camellia_self_test( int verbose )
         if( memcmp( buf, dst, 16 ) != 0 )
         {
             if( verbose != 0 )
-                mbedtls_printf( "failed\n" );
+                vdb_mbedtls_printf( "failed\n" );
 
             return( 1 );
         }
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
 #if defined(MBEDTLS_CIPHER_MODE_CBC)
     /*
@@ -960,7 +960,7 @@ int vdb_mbedtls_camellia_self_test( int verbose )
         v = j  & 1;
 
         if( verbose != 0 )
-            mbedtls_printf( "  CAMELLIA-CBC-%3d (%s): ", 128 + u * 64,
+            vdb_mbedtls_printf( "  CAMELLIA-CBC-%3d (%s): ", 128 + u * 64,
                              ( v == MBEDTLS_CAMELLIA_DECRYPT ) ? "dec" : "enc" );
 
         memcpy( src, camellia_test_cbc_iv, 16 );
@@ -990,19 +990,19 @@ int vdb_mbedtls_camellia_self_test( int verbose )
             if( memcmp( buf, dst, 16 ) != 0 )
             {
                 if( verbose != 0 )
-                    mbedtls_printf( "failed\n" );
+                    vdb_mbedtls_printf( "failed\n" );
 
                 return( 1 );
             }
         }
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
     }
 #endif /* MBEDTLS_CIPHER_MODE_CBC */
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
 #if defined(MBEDTLS_CIPHER_MODE_CTR)
     /*
@@ -1014,7 +1014,7 @@ int vdb_mbedtls_camellia_self_test( int verbose )
         v = i  & 1;
 
         if( verbose != 0 )
-            mbedtls_printf( "  CAMELLIA-CTR-128 (%s): ",
+            vdb_mbedtls_printf( "  CAMELLIA-CTR-128 (%s): ",
                              ( v == MBEDTLS_CAMELLIA_DECRYPT ) ? "dec" : "enc" );
 
         memcpy( nonce_counter, camellia_test_ctr_nonce_counter[u], 16 );
@@ -1034,7 +1034,7 @@ int vdb_mbedtls_camellia_self_test( int verbose )
             if( memcmp( buf, camellia_test_ctr_pt[u], len ) != 0 )
             {
                 if( verbose != 0 )
-                    mbedtls_printf( "failed\n" );
+                    vdb_mbedtls_printf( "failed\n" );
 
                 return( 1 );
             }
@@ -1050,18 +1050,18 @@ int vdb_mbedtls_camellia_self_test( int verbose )
             if( memcmp( buf, camellia_test_ctr_ct[u], len ) != 0 )
             {
                 if( verbose != 0 )
-                    mbedtls_printf( "failed\n" );
+                    vdb_mbedtls_printf( "failed\n" );
 
                 return( 1 );
             }
         }
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 #endif /* MBEDTLS_CIPHER_MODE_CTR */
 
     return( 0 );

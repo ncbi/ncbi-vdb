@@ -252,7 +252,7 @@ int vdb_mbedtls_nv_seed_poll( void *data,
 
     memset( buf, 0, MBEDTLS_ENTROPY_BLOCK_SIZE );
 
-    if( mbedtls_nv_seed_read( buf, MBEDTLS_ENTROPY_BLOCK_SIZE ) < 0 )
+    if( vdb_mbedtls_nv_seed_read( buf, MBEDTLS_ENTROPY_BLOCK_SIZE ) < 0 )
       return( MBEDTLS_ERR_ENTROPY_SOURCE_FAILED );
 
     if( len < use_len )

@@ -48,7 +48,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf printf
+#define vdb_mbedtls_printf printf
 #endif
 
 static int pkcs5_parse_pbkdf2_params( const mbedtls_asn1_buf *params,
@@ -291,7 +291,7 @@ int vdb_mbedtls_pkcs5_pbkdf2_hmac( mbedtls_md_context_t *ctx, const unsigned cha
 int vdb_mbedtls_pkcs5_self_test( int verbose )
 {
     if( verbose != 0 )
-        mbedtls_printf( "  PBKDF2 (SHA1): skipped\n\n" );
+        vdb_mbedtls_printf( "  PBKDF2 (SHA1): skipped\n\n" );
 
     return( 0 );
 }
@@ -373,7 +373,7 @@ int vdb_mbedtls_pkcs5_self_test( int verbose )
     for( i = 0; i < MAX_TESTS; i++ )
     {
         if( verbose != 0 )
-            mbedtls_printf( "  PBKDF2 (SHA1) #%d: ", i );
+            vdb_mbedtls_printf( "  PBKDF2 (SHA1) #%d: ", i );
 
         ret = vdb_mbedtls_pkcs5_pbkdf2_hmac( &sha1_ctx, password[i], plen[i], salt[i],
                                   slen[i], it_cnt[i], key_len[i], key );
@@ -381,18 +381,18 @@ int vdb_mbedtls_pkcs5_self_test( int verbose )
             memcmp( result_key[i], key, key_len[i] ) != 0 )
         {
             if( verbose != 0 )
-                mbedtls_printf( "failed\n" );
+                vdb_mbedtls_printf( "failed\n" );
 
             ret = 1;
             goto exit;
         }
 
         if( verbose != 0 )
-            mbedtls_printf( "passed\n" );
+            vdb_mbedtls_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
 exit:
     vdb_mbedtls_md_free( &sha1_ctx );

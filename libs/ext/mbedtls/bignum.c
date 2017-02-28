@@ -53,8 +53,8 @@
 #else
 #include <stdio.h>
 #include <stdlib.h>
-#define mbedtls_printf     printf
-#define mbedtls_calloc    calloc
+#define vdb_mbedtls_printf     printf
+#define vdb_mbedtls_calloc    calloc
 #define vdb_mbedtls_free       free
 #endif
 
@@ -120,7 +120,7 @@ int vdb_mbedtls_mpi_grow( mbedtls_mpi *X, size_t nblimbs )
 
     if( X->n < nblimbs )
     {
-        if( ( p = (mbedtls_mpi_uint*)mbedtls_calloc( nblimbs, ciL ) ) == NULL )
+        if( ( p = (mbedtls_mpi_uint*)vdb_mbedtls_calloc( nblimbs, ciL ) ) == NULL )
             return( MBEDTLS_ERR_MPI_ALLOC_FAILED );
 
         if( X->p != NULL )
@@ -158,7 +158,7 @@ int vdb_mbedtls_mpi_shrink( mbedtls_mpi *X, size_t nblimbs )
     if( i < nblimbs )
         i = nblimbs;
 
-    if( ( p = (mbedtls_mpi_uint*)mbedtls_calloc( i, ciL ) ) == NULL )
+    if( ( p = (mbedtls_mpi_uint*)vdb_mbedtls_calloc( i, ciL ) ) == NULL )
         return( MBEDTLS_ERR_MPI_ALLOC_FAILED );
 
     if( X->p != NULL )
@@ -653,7 +653,7 @@ int vdb_mbedtls_mpi_write_file( const char *p, const mbedtls_mpi *X, int radix, 
             return( MBEDTLS_ERR_MPI_FILE_IO_ERROR );
     }
     else
-        mbedtls_printf( "%s%s", p, s );
+        vdb_mbedtls_printf( "%s%s", p, s );
 
 cleanup:
 
@@ -2316,19 +2316,19 @@ int vdb_mbedtls_mpi_self_test( int verbose )
         "30879B56C61DE584A0F53A2447A51E" ) );
 
     if( verbose != 0 )
-        mbedtls_printf( "  MPI test #1 (mul_mpi): " );
+        vdb_mbedtls_printf( "  MPI test #1 (mul_mpi): " );
 
     if( vdb_mbedtls_mpi_cmp_mpi( &X, &U ) != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         ret = 1;
         goto cleanup;
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
     MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_div_mpi( &X, &Y, &A, &N ) );
 
@@ -2341,20 +2341,20 @@ int vdb_mbedtls_mpi_self_test( int verbose )
         "9EE50D0657C77F374E903CDFA4C642" ) );
 
     if( verbose != 0 )
-        mbedtls_printf( "  MPI test #2 (div_mpi): " );
+        vdb_mbedtls_printf( "  MPI test #2 (div_mpi): " );
 
     if( vdb_mbedtls_mpi_cmp_mpi( &X, &U ) != 0 ||
         vdb_mbedtls_mpi_cmp_mpi( &Y, &V ) != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         ret = 1;
         goto cleanup;
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
     MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_exp_mod( &X, &A, &E, &N, NULL ) );
 
@@ -2364,19 +2364,19 @@ int vdb_mbedtls_mpi_self_test( int verbose )
         "325D24D6A3C12710F10A09FA08AB87" ) );
 
     if( verbose != 0 )
-        mbedtls_printf( "  MPI test #3 (exp_mod): " );
+        vdb_mbedtls_printf( "  MPI test #3 (exp_mod): " );
 
     if( vdb_mbedtls_mpi_cmp_mpi( &X, &U ) != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         ret = 1;
         goto cleanup;
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
     MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_inv_mod( &X, &A, &N ) );
 
@@ -2386,22 +2386,22 @@ int vdb_mbedtls_mpi_self_test( int verbose )
         "C5B8A74DAC4D09E03B5E0BE779F2DF61" ) );
 
     if( verbose != 0 )
-        mbedtls_printf( "  MPI test #4 (inv_mod): " );
+        vdb_mbedtls_printf( "  MPI test #4 (inv_mod): " );
 
     if( vdb_mbedtls_mpi_cmp_mpi( &X, &U ) != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         ret = 1;
         goto cleanup;
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
     if( verbose != 0 )
-        mbedtls_printf( "  MPI test #5 (simple gcd): " );
+        vdb_mbedtls_printf( "  MPI test #5 (simple gcd): " );
 
     for( i = 0; i < GCD_PAIR_COUNT; i++ )
     {
@@ -2413,7 +2413,7 @@ int vdb_mbedtls_mpi_self_test( int verbose )
         if( vdb_mbedtls_mpi_cmp_int( &A, gcd_pairs[i][2] ) != 0 )
         {
             if( verbose != 0 )
-                mbedtls_printf( "failed at %d\n", i );
+                vdb_mbedtls_printf( "failed at %d\n", i );
 
             ret = 1;
             goto cleanup;
@@ -2421,18 +2421,18 @@ int vdb_mbedtls_mpi_self_test( int verbose )
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
 cleanup:
 
     if( ret != 0 && verbose != 0 )
-        mbedtls_printf( "Unexpected error, return code = %08X\n", ret );
+        vdb_mbedtls_printf( "Unexpected error, return code = %08X\n", ret );
 
     vdb_mbedtls_mpi_free( &A ); vdb_mbedtls_mpi_free( &E ); vdb_mbedtls_mpi_free( &N ); vdb_mbedtls_mpi_free( &X );
     vdb_mbedtls_mpi_free( &Y ); vdb_mbedtls_mpi_free( &U ); vdb_mbedtls_mpi_free( &V );
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
     return( ret );
 }

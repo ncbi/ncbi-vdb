@@ -38,7 +38,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdlib.h>
-#define mbedtls_calloc    calloc
+#define vdb_mbedtls_calloc    calloc
 #define vdb_mbedtls_free       free
 #endif
 
@@ -232,7 +232,7 @@ int vdb_mbedtls_md_setup( mbedtls_md_context_t *ctx, const mbedtls_md_info_t *md
 
     if( hmac != 0 )
     {
-        ctx->hmac_ctx = mbedtls_calloc( 2, md_info->block_size );
+        ctx->hmac_ctx = vdb_mbedtls_calloc( 2, md_info->block_size );
         if( ctx->hmac_ctx == NULL )
         {
             md_info->ctx_free_func( ctx->md_ctx );

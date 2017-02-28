@@ -39,7 +39,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdlib.h>
-#define mbedtls_calloc    calloc
+#define vdb_mbedtls_calloc    calloc
 #define vdb_mbedtls_free      free
 #endif
 
@@ -166,7 +166,7 @@ static int ssl_session_copy( mbedtls_ssl_session *dst, const mbedtls_ssl_session
     {
         int ret;
 
-        dst->peer_cert = mbedtls_calloc( 1, sizeof(mbedtls_x509_crt) );
+        dst->peer_cert = vdb_mbedtls_calloc( 1, sizeof(mbedtls_x509_crt) );
         if( dst->peer_cert == NULL )
             return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
@@ -185,7 +185,7 @@ static int ssl_session_copy( mbedtls_ssl_session *dst, const mbedtls_ssl_session
 #if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C)
     if( src->ticket != NULL )
     {
-        dst->ticket = mbedtls_calloc( 1, src->ticket_len );
+        dst->ticket = vdb_mbedtls_calloc( 1, src->ticket_len );
         if( dst->ticket == NULL )
             return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
@@ -930,7 +930,7 @@ int vdb_mbedtls_ssl_derive_keys( mbedtls_ssl_context *ssl )
         if( ssl->compress_buf == NULL )
         {
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "Allocating compression buffer" ) );
-            ssl->compress_buf = mbedtls_calloc( 1, MBEDTLS_SSL_BUFFER_LEN );
+            ssl->compress_buf = vdb_mbedtls_calloc( 1, MBEDTLS_SSL_BUFFER_LEN );
             if( ssl->compress_buf == NULL )
             {
                 MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc(%d bytes) failed",
@@ -2474,14 +2474,14 @@ static int ssl_flight_append( mbedtls_ssl_context *ssl )
     mbedtls_ssl_flight_item *msg;
 
     /* Allocate space for current message */
-    if( ( msg = mbedtls_calloc( 1, sizeof(  mbedtls_ssl_flight_item ) ) ) == NULL )
+    if( ( msg = vdb_mbedtls_calloc( 1, sizeof(  mbedtls_ssl_flight_item ) ) ) == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc %d bytes failed",
                             sizeof( mbedtls_ssl_flight_item ) ) );
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     }
 
-    if( ( msg->p = mbedtls_calloc( 1, ssl->out_msglen ) ) == NULL )
+    if( ( msg->p = vdb_mbedtls_calloc( 1, ssl->out_msglen ) ) == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc %d bytes failed", ssl->out_msglen ) );
         vdb_mbedtls_free( msg );
@@ -2953,7 +2953,7 @@ static int ssl_reassemble_dtls_handshake( mbedtls_ssl_context *ssl )
         /* The bitmask needs one bit per byte of message excluding header */
         alloc_len = 12 + msg_len + msg_len / 8 + ( msg_len % 8 != 0 );
 
-        ssl->handshake->hs_msg = mbedtls_calloc( 1, alloc_len );
+        ssl->handshake->hs_msg = vdb_mbedtls_calloc( 1, alloc_len );
         if( ssl->handshake->hs_msg == NULL )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc failed (%d bytes)", alloc_len ) );
@@ -4345,7 +4345,7 @@ int vdb_mbedtls_ssl_parse_certificate( mbedtls_ssl_context *ssl )
         vdb_mbedtls_free( ssl->session_negotiate->peer_cert );
     }
 
-    if( ( ssl->session_negotiate->peer_cert = mbedtls_calloc( 1,
+    if( ( ssl->session_negotiate->peer_cert = vdb_mbedtls_calloc( 1,
                     sizeof( mbedtls_x509_crt ) ) ) == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc(%d bytes) failed",
@@ -5297,17 +5297,17 @@ static int ssl_handshake_init( mbedtls_ssl_context *ssl )
      */
     if( ssl->transform_negotiate == NULL )
     {
-        ssl->transform_negotiate = mbedtls_calloc( 1, sizeof(mbedtls_ssl_transform) );
+        ssl->transform_negotiate = vdb_mbedtls_calloc( 1, sizeof(mbedtls_ssl_transform) );
     }
 
     if( ssl->session_negotiate == NULL )
     {
-        ssl->session_negotiate = mbedtls_calloc( 1, sizeof(mbedtls_ssl_session) );
+        ssl->session_negotiate = vdb_mbedtls_calloc( 1, sizeof(mbedtls_ssl_session) );
     }
 
     if( ssl->handshake == NULL )
     {
-        ssl->handshake = mbedtls_calloc( 1, sizeof(mbedtls_ssl_handshake_params) );
+        ssl->handshake = vdb_mbedtls_calloc( 1, sizeof(mbedtls_ssl_handshake_params) );
     }
 
     /* All pointers should exist and can be directly freed without issue */
@@ -5401,8 +5401,8 @@ int vdb_mbedtls_ssl_setup( mbedtls_ssl_context *ssl,
     /*
      * Prepare base structures
      */
-    if( ( ssl-> in_buf = mbedtls_calloc( 1, len ) ) == NULL ||
-        ( ssl->out_buf = mbedtls_calloc( 1, len ) ) == NULL )
+    if( ( ssl-> in_buf = vdb_mbedtls_calloc( 1, len ) ) == NULL ||
+        ( ssl->out_buf = vdb_mbedtls_calloc( 1, len ) ) == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "alloc(%d bytes) failed", len ) );
         vdb_mbedtls_free( ssl->in_buf );
@@ -5728,7 +5728,7 @@ static int ssl_append_key_cert( mbedtls_ssl_key_cert **head,
 {
     mbedtls_ssl_key_cert *new;
 
-    new = mbedtls_calloc( 1, sizeof( mbedtls_ssl_key_cert ) );
+    new = vdb_mbedtls_calloc( 1, sizeof( mbedtls_ssl_key_cert ) );
     if( new == NULL )
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
@@ -5844,8 +5844,8 @@ int vdb_mbedtls_ssl_conf_psk( mbedtls_ssl_config *conf,
         conf->psk_identity = NULL;
     }
 
-    if( ( conf->psk = mbedtls_calloc( 1, psk_len ) ) == NULL ||
-        ( conf->psk_identity = mbedtls_calloc( 1, psk_identity_len ) ) == NULL )
+    if( ( conf->psk = vdb_mbedtls_calloc( 1, psk_len ) ) == NULL ||
+        ( conf->psk_identity = vdb_mbedtls_calloc( 1, psk_identity_len ) ) == NULL )
     {
         vdb_mbedtls_free( conf->psk );
         vdb_mbedtls_free( conf->psk_identity );
@@ -5875,7 +5875,7 @@ int vdb_mbedtls_ssl_set_hs_psk( mbedtls_ssl_context *ssl,
     if( ssl->handshake->psk != NULL )
         vdb_mbedtls_free( ssl->handshake->psk );
 
-    if( ( ssl->handshake->psk = mbedtls_calloc( 1, psk_len ) ) == NULL )
+    if( ( ssl->handshake->psk = vdb_mbedtls_calloc( 1, psk_len ) ) == NULL )
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
     ssl->handshake->psk_len = psk_len;
@@ -5975,7 +5975,7 @@ int vdb_mbedtls_ssl_set_hostname( mbedtls_ssl_context *ssl, const char *hostname
     if( hostname_len > MBEDTLS_SSL_MAX_HOST_NAME_LEN )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    ssl->hostname = mbedtls_calloc( 1, hostname_len + 1 );
+    ssl->hostname = vdb_mbedtls_calloc( 1, hostname_len + 1 );
 
     if( ssl->hostname == NULL )
         return( MBEDTLS_ERR_SSL_ALLOC_FAILED );

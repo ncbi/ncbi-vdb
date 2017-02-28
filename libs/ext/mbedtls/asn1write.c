@@ -35,7 +35,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdlib.h>
-#define mbedtls_calloc    calloc
+#define vdb_mbedtls_calloc    calloc
 #define vdb_mbedtls_free       free
 #endif
 
@@ -339,13 +339,13 @@ mbedtls_asn1_named_data *vdb_mbedtls_asn1_store_named_data( mbedtls_asn1_named_d
     {
         // Add new entry if not present yet based on OID
         //
-        cur = (mbedtls_asn1_named_data*)mbedtls_calloc( 1,
+        cur = (mbedtls_asn1_named_data*)vdb_mbedtls_calloc( 1,
                                             sizeof(mbedtls_asn1_named_data) );
         if( cur == NULL )
             return( NULL );
 
         cur->oid.len = oid_len;
-        cur->oid.p = mbedtls_calloc( 1, oid_len );
+        cur->oid.p = vdb_mbedtls_calloc( 1, oid_len );
         if( cur->oid.p == NULL )
         {
             vdb_mbedtls_free( cur );
@@ -355,7 +355,7 @@ mbedtls_asn1_named_data *vdb_mbedtls_asn1_store_named_data( mbedtls_asn1_named_d
         memcpy( cur->oid.p, oid, oid_len );
 
         cur->val.len = val_len;
-        cur->val.p = mbedtls_calloc( 1, val_len );
+        cur->val.p = vdb_mbedtls_calloc( 1, val_len );
         if( cur->val.p == NULL )
         {
             vdb_mbedtls_free( cur->oid.p );
@@ -373,7 +373,7 @@ mbedtls_asn1_named_data *vdb_mbedtls_asn1_store_named_data( mbedtls_asn1_named_d
          * Preserve old data until the allocation succeeded, to leave list in
          * a consistent state in case allocation fails.
          */
-        void *p = mbedtls_calloc( 1, val_len );
+        void *p = vdb_mbedtls_calloc( 1, val_len );
         if( p == NULL )
             return( NULL );
 

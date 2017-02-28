@@ -39,7 +39,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdlib.h>
-#define mbedtls_calloc    calloc
+#define vdb_mbedtls_calloc    calloc
 #define vdb_mbedtls_free       free
 #endif
 
@@ -269,7 +269,7 @@ int vdb_mbedtls_asn1_get_sequence_of( unsigned char **p,
         /* Allocate and assign next pointer */
         if( *p < end )
         {
-            cur->next = (mbedtls_asn1_sequence*)mbedtls_calloc( 1,
+            cur->next = (mbedtls_asn1_sequence*)vdb_mbedtls_calloc( 1,
                                             sizeof( mbedtls_asn1_sequence ) );
 
             if( cur->next == NULL )

@@ -57,8 +57,8 @@
 #else
 #include <stdlib.h>
 #include <stdio.h>
-#define mbedtls_printf     printf
-#define mbedtls_calloc    calloc
+#define vdb_mbedtls_printf     printf
+#define vdb_mbedtls_calloc    calloc
 #define vdb_mbedtls_free       free
 #endif
 
@@ -796,7 +796,7 @@ static int ecp_normalize_jac_many( const mbedtls_ecp_group *grp,
     if( t_len < 2 )
         return( ecp_normalize_jac( grp, *T ) );
 
-    if( ( c = mbedtls_calloc( t_len, sizeof( mbedtls_mpi ) ) ) == NULL )
+    if( ( c = vdb_mbedtls_calloc( t_len, sizeof( mbedtls_mpi ) ) ) == NULL )
         return( MBEDTLS_ERR_ECP_ALLOC_FAILED );
 
     vdb_mbedtls_mpi_init( &u ); vdb_mbedtls_mpi_init( &Zi ); vdb_mbedtls_mpi_init( &ZZi );
@@ -1367,7 +1367,7 @@ static int ecp_mul_comb( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
 
     if( T == NULL )
     {
-        T = mbedtls_calloc( pre_len, sizeof( mbedtls_ecp_point ) );
+        T = vdb_mbedtls_calloc( pre_len, sizeof( mbedtls_ecp_point ) );
         if( T == NULL )
         {
             ret = MBEDTLS_ERR_ECP_ALLOC_FAILED;
@@ -1995,7 +1995,7 @@ int vdb_mbedtls_ecp_self_test( int verbose )
 #endif
 
     if( verbose != 0 )
-        mbedtls_printf( "  ECP test #1 (constant op_count, base point G): " );
+        vdb_mbedtls_printf( "  ECP test #1 (constant op_count, base point G): " );
 
     /* Do a dummy multiplication first to trigger precomputation */
     MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_lset( &m, 2 ) );
@@ -2024,7 +2024,7 @@ int vdb_mbedtls_ecp_self_test( int verbose )
             mul_count != mul_c_prev )
         {
             if( verbose != 0 )
-                mbedtls_printf( "failed (%u)\n", (unsigned int) i );
+                vdb_mbedtls_printf( "failed (%u)\n", (unsigned int) i );
 
             ret = 1;
             goto cleanup;
@@ -2032,10 +2032,10 @@ int vdb_mbedtls_ecp_self_test( int verbose )
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
     if( verbose != 0 )
-        mbedtls_printf( "  ECP test #2 (constant op_count, other point): " );
+        vdb_mbedtls_printf( "  ECP test #2 (constant op_count, other point): " );
     /* We computed P = 2G last time, use it */
 
     add_count = 0;
@@ -2061,7 +2061,7 @@ int vdb_mbedtls_ecp_self_test( int verbose )
             mul_count != mul_c_prev )
         {
             if( verbose != 0 )
-                mbedtls_printf( "failed (%u)\n", (unsigned int) i );
+                vdb_mbedtls_printf( "failed (%u)\n", (unsigned int) i );
 
             ret = 1;
             goto cleanup;
@@ -2069,12 +2069,12 @@ int vdb_mbedtls_ecp_self_test( int verbose )
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
 cleanup:
 
     if( ret < 0 && verbose != 0 )
-        mbedtls_printf( "Unexpected error, return code = %08X\n", ret );
+        vdb_mbedtls_printf( "Unexpected error, return code = %08X\n", ret );
 
     vdb_mbedtls_ecp_group_free( &grp );
     vdb_mbedtls_ecp_point_free( &R );
@@ -2082,7 +2082,7 @@ cleanup:
     vdb_mbedtls_mpi_free( &m );
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
     return( ret );
 }

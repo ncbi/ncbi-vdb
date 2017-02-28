@@ -37,7 +37,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf printf
+#define vdb_mbedtls_printf printf
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
@@ -251,7 +251,7 @@ int vdb_mbedtls_base64_self_test( int verbose )
     unsigned char buffer[128];
 
     if( verbose != 0 )
-        mbedtls_printf( "  Base64 encoding test: " );
+        vdb_mbedtls_printf( "  Base64 encoding test: " );
 
     src = base64_test_dec;
 
@@ -259,13 +259,13 @@ int vdb_mbedtls_base64_self_test( int verbose )
          memcmp( base64_test_enc, buffer, 88 ) != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         return( 1 );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n  Base64 decoding test: " );
+        vdb_mbedtls_printf( "passed\n  Base64 decoding test: " );
 
     src = base64_test_enc;
 
@@ -273,13 +273,13 @@ int vdb_mbedtls_base64_self_test( int verbose )
          memcmp( base64_test_dec, buffer, 64 ) != 0 )
     {
         if( verbose != 0 )
-            mbedtls_printf( "failed\n" );
+            vdb_mbedtls_printf( "failed\n" );
 
         return( 1 );
     }
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n\n" );
+        vdb_mbedtls_printf( "passed\n\n" );
 
     return( 0 );
 }

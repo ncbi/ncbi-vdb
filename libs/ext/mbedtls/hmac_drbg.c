@@ -46,7 +46,7 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf printf
+#define vdb_mbedtls_printf printf
 #endif /* MBEDTLS_SELF_TEST */
 #endif /* MBEDTLS_PLATFORM_C */
 
@@ -459,7 +459,7 @@ static int hmac_drbg_self_test_entropy( void *data,
 #define CHK( c )    if( (c) != 0 )                          \
                     {                                       \
                         if( verbose != 0 )                  \
-                            mbedtls_printf( "failed\n" );  \
+                            vdb_mbedtls_printf( "failed\n" );  \
                         return( 1 );                        \
                     }
 
@@ -478,7 +478,7 @@ int vdb_mbedtls_hmac_drbg_self_test( int verbose )
      * PR = True
      */
     if( verbose != 0 )
-        mbedtls_printf( "  HMAC_DRBG (PR = True) : " );
+        vdb_mbedtls_printf( "  HMAC_DRBG (PR = True) : " );
 
     test_offset = 0;
     CHK( vdb_mbedtls_hmac_drbg_seed( &ctx, md_info,
@@ -493,13 +493,13 @@ int vdb_mbedtls_hmac_drbg_self_test( int verbose )
     vdb_mbedtls_hmac_drbg_free( &ctx );
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
     /*
      * PR = False
      */
     if( verbose != 0 )
-        mbedtls_printf( "  HMAC_DRBG (PR = False) : " );
+        vdb_mbedtls_printf( "  HMAC_DRBG (PR = False) : " );
 
     vdb_mbedtls_hmac_drbg_init( &ctx );
 
@@ -516,10 +516,10 @@ int vdb_mbedtls_hmac_drbg_self_test( int verbose )
     vdb_mbedtls_hmac_drbg_free( &ctx );
 
     if( verbose != 0 )
-        mbedtls_printf( "passed\n" );
+        vdb_mbedtls_printf( "passed\n" );
 
     if( verbose != 0 )
-        mbedtls_printf( "\n" );
+        vdb_mbedtls_printf( "\n" );
 
     return( 0 );
 }
