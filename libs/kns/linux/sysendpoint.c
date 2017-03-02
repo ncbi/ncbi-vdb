@@ -114,7 +114,7 @@ rc_t CC KNSManagerInitDNSEndpoint ( struct KNSManager const *self,
                     if ( ghbnr == 0 && remote != NULL )
                     { 
                         ep -> type = epIPV4;
-                        memcpy ( & ep -> u . ipv4 . addr, remote -> h_addr_list [ 0 ], sizeof ep -> u . ipv4 . addr );
+                        memmove ( & ep -> u . ipv4 . addr, remote -> h_addr_list [ 0 ], sizeof ep -> u . ipv4 . addr );
                         ep -> u . ipv4 . addr = htonl ( ep -> u . ipv4 . addr );
                         ep -> u . ipv4 . port = ( uint16_t ) port;
                     }

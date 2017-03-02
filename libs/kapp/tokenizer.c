@@ -210,7 +210,7 @@ static rc_t add_buffer_to_token( tokenzr *t, const char *buffer, size_t buflen )
     }
     if ( rc == 0 )
     {
-        memcpy( t->token + t->used, buffer, buflen );
+        memmove( t->token + t->used, buffer, buflen );
         t->used += buflen;
     }
     return rc;

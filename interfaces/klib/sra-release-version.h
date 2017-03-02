@@ -57,10 +57,11 @@ struct SraReleaseVersion
     ver_t version;     /* major . minor . release */
     uint32_t revision;
     enum {
+        eSraReleaseVersionTypeDev, /* developmemt */
         eSraReleaseVersionTypeAlpha,
         eSraReleaseVersionTypeBeta,
-        eSraReleaseVersionTypeRC, /* release candidate */
-        eSraReleaseVersionTypeFinal
+        eSraReleaseVersionTypeRC,  /* release candidate */
+        eSraReleaseVersionTypeFinal,
     } type;
 };
 

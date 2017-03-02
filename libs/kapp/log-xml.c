@@ -128,7 +128,7 @@ rc_t CC XMLLogger_Encode(const char* src, char *dst, size_t dst_sz, size_t *num_
                 rc = RC(rcApp, rcLog, rcEncoding, rcBuffer, rcInsufficient);
                 break;
             } else {
-                memcpy(dst, p, bytes);
+                memmove(dst, p, bytes);
                 *num_writ = *num_writ + bytes;
                 dst += bytes;
             }

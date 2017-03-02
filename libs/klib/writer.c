@@ -120,7 +120,7 @@ LIB_EXPORT rc_t CC KWrtInit( const char* appname, uint32_t vers )
         if ( wrt_app_length >= sizeof(wrt_app) ) {
             wrt_app_length = sizeof(wrt_app) - 1;
         }
-        memcpy(wrt_app, appname, wrt_app_length);
+        memmove(wrt_app, appname, wrt_app_length);
         wrt_app[wrt_app_length] = '\0';
 
         rc = string_printf ( wrt_vers, sizeof wrt_vers, & wrt_vers_length,
@@ -512,7 +512,7 @@ LIB_EXPORT rc_t CC LogAppName(char *buffer, size_t bsize, size_t *num_writ)
     if( wrt_app_length > bsize ) {
         return RC(rcRuntime, rcLog, rcLogging, rcBuffer, rcInsufficient);
     }
-    memcpy(buffer, wrt_app, wrt_app_length);
+    memmove(buffer, wrt_app, wrt_app_length);
     *num_writ = wrt_app_length;
     return 0;
 }
@@ -522,7 +522,7 @@ LIB_EXPORT rc_t CC LogAppVersion(char *buffer, size_t bsize, size_t *num_writ)
     if( wrt_vers_length > bsize ) {
         return RC(rcRuntime, rcLog, rcLogging, rcBuffer, rcInsufficient);
     }
-    memcpy(buffer, wrt_vers, wrt_vers_length);
+    memmove(buffer, wrt_vers, wrt_vers_length);
     *num_writ = wrt_vers_length;
     return 0;
 }

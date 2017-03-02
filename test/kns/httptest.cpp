@@ -110,13 +110,13 @@ public:
         
         if ( response.size() >= bsize )
         {
-            memcpy(buffer, response.c_str(), bsize);
+            memmove(buffer, response.c_str(), bsize);
             * num_read = bsize; 
             response = response.substr(bsize);
         }
         else
         {
-            memcpy(buffer, response.c_str(), response.size());
+            memmove(buffer, response.c_str(), response.size());
             * num_read = response.size();
             response.clear();
         }
