@@ -44,6 +44,7 @@ using namespace std;
 
 TEST_SUITE( VDB_3061 )
 
+const char HomeSub[] = "test_root_history";
 char new_home[ 4096 ];
 
 static rc_t create_cache_file( KDirectory * dir, const char * path, const char * sub, const char * name, int64_t age )
@@ -77,8 +78,26 @@ static rc_t create_repo_dirs( KDirectory * dir, const char * path, const char * 
 }
 
 
-TEST_CASE( CLEAR_CACHE )
+static void clear_out( const char * path )
 {
+    /* clear the temp. home-directory */
+    KDirectory * dir;
+    rc_t rc = KDirectoryNativeDir( &dir );
+    if ( rc == 0 )
+    {
+#ifdef WINDOWS
+        rc = KDirectoryRemove( dir, true, "%s", path );
+#else
+        rc = KDirectoryRemove( dir, true, "%s", path );
+#endif
+        KDirectoryRelease( dir );
+    }
+}
+
+TEST_CASE( CLEAR_CACHE_1 )
+{
+	REQUIRE_RC( KOutMsg( "running: CLEAR_CACHE_1\n" ) );
+    
     /* create a repository-structure equivalent to the config-values, with 3 files in it */
     KDirectory * dir;
     REQUIRE_RC( KDirectoryNativeDir( &dir ) );
@@ -102,7 +121,26 @@ TEST_CASE( CLEAR_CACHE )
     uint32_t pt3 = KDirectoryPathType( dir, "%s/ncbi/dbGaP-4831/sra/file1.txt", new_home );
     REQUIRE_EQ( pt3, (uint32_t)kptFile );
     REQUIRE_RC( KDirectoryRelease ( dir ) );
+    
+	REQUIRE_RC( KOutMsg( "done: CLEAR_CACHE_1\n" ) );
 }
+
+
+TEST_CASE( CLEAR_CACHE_2 )
+{
+	REQUIRE_RC( KOutMsg( "running: CLEAR_CACHE_2\n" ) );
+
+	REQUIRE_RC( KOutMsg( "clearing: %s\n", new_home ) );
+	clear_out( new_home );
+
+    const VDBManager * vdb_mgr;
+    REQUIRE_RC( VDBManagerMakeRead( &vdb_mgr, NULL ) );
+    REQUIRE_RC( VDBManagerDeleteCacheOlderThan ( vdb_mgr, 0 ) );
+    REQUIRE_RC( VDBManagerRelease ( vdb_mgr ) );
+
+	REQUIRE_RC( KOutMsg( "done: CLEAR_CACHE_2\n" ) );
+}
+
 
 static rc_t write_root( KConfig *cfg, const char * base, const char * cat, const char * sub_cat )
 {
@@ -219,6 +257,7 @@ void finish_test( const char * sub )
 #else
         rc = KDirectoryRemove( dir, true, "%s\\%s", org_home, sub );
 #endif
+        rc = KDirectoryRemove( dir, true, "%s", new_home );
         KDirectoryRelease( dir );
     }
 }

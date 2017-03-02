@@ -590,8 +590,8 @@ static int ecp_group_load( mbedtls_ecp_group *grp,
     ecp_mpi_load( &grp->G.Y, gy, gylen );
     ecp_mpi_set1( &grp->G.Z );
 
-    grp->pbits = mbedtls_mpi_bitlen( &grp->P );
-    grp->nbits = mbedtls_mpi_bitlen( &grp->N );
+    grp->pbits = vdb_mbedtls_mpi_bitlen( &grp->P );
+    grp->nbits = vdb_mbedtls_mpi_bitlen( &grp->N );
 
     grp->h = 1;
 
@@ -660,26 +660,26 @@ static int ecp_use_curve25519( mbedtls_ecp_group *grp )
     int ret;
 
     /* Actually ( A + 2 ) / 4 */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_read_string( &grp->A, 16, "01DB42" ) );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_read_string( &grp->A, 16, "01DB42" ) );
 
     /* P = 2^255 - 19 */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &grp->P, 1 ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_shift_l( &grp->P, 255 ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_int( &grp->P, &grp->P, 19 ) );
-    grp->pbits = mbedtls_mpi_bitlen( &grp->P );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_lset( &grp->P, 1 ) );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_shift_l( &grp->P, 255 ) );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_sub_int( &grp->P, &grp->P, 19 ) );
+    grp->pbits = vdb_mbedtls_mpi_bitlen( &grp->P );
 
     /* Y intentionaly not set, since we use x/z coordinates.
      * This is used as a marker to identify Montgomery curves! */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &grp->G.X, 9 ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &grp->G.Z, 1 ) );
-    mbedtls_mpi_free( &grp->G.Y );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_lset( &grp->G.X, 9 ) );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_lset( &grp->G.Z, 1 ) );
+    vdb_mbedtls_mpi_free( &grp->G.Y );
 
     /* Actually, the required msb for private keys */
     grp->nbits = 254;
 
 cleanup:
     if( ret != 0 )
-        mbedtls_ecp_group_free( grp );
+        vdb_mbedtls_ecp_group_free( grp );
 
     return( ret );
 }
@@ -688,9 +688,9 @@ cleanup:
 /*
  * Set a group using well-known domain parameters
  */
-int mbedtls_ecp_group_load( mbedtls_ecp_group *grp, mbedtls_ecp_group_id id )
+int vdb_mbedtls_ecp_group_load( mbedtls_ecp_group *grp, mbedtls_ecp_group_id id )
 {
-    mbedtls_ecp_group_free( grp );
+    vdb_mbedtls_ecp_group_free( grp );
 
     grp->id = id;
 
@@ -766,7 +766,7 @@ int mbedtls_ecp_group_load( mbedtls_ecp_group *grp, mbedtls_ecp_group_id id )
 #endif /* MBEDTLS_ECP_DP_CURVE25519_ENABLED */
 
         default:
-            mbedtls_ecp_group_free( grp );
+            vdb_mbedtls_ecp_group_free( grp );
             return( MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE );
     }
 }
@@ -835,7 +835,7 @@ static int ecp_mod_p192( mbedtls_mpi *N )
     mbedtls_mpi_uint *p, *end;
 
     /* Make sure we have enough blocks so that A(5) is legal */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_grow( N, 6 * WIDTH ) );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_grow( N, 6 * WIDTH ) );
 
     p = N->p;
     end = p + N->n;
@@ -932,7 +932,7 @@ static inline void sub32( uint32_t *dst, uint32_t src, signed char *carry )
     C.p = Cp;                                               \
     memset( Cp, 0, C.n * sizeof( mbedtls_mpi_uint ) );                \
                                                             \
-    MBEDTLS_MPI_CHK( mbedtls_mpi_grow( N, b * 2 / 8 / sizeof( mbedtls_mpi_uint ) ) ); \
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_grow( N, b * 2 / 8 / sizeof( mbedtls_mpi_uint ) ) ); \
     LOAD32;
 
 #define NEXT                    \
@@ -968,7 +968,7 @@ static inline int fix_negative( mbedtls_mpi *N, signed char c, mbedtls_mpi *C, s
         C->p[ C->n - 1 ] = (mbedtls_mpi_uint) -c;
 
     /* N = - ( C - N ) */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_sub_abs( N, C, N ) );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_sub_abs( N, C, N ) );
     N->s = -1;
 
 cleanup:
@@ -1131,7 +1131,7 @@ static int ecp_mod_p521( mbedtls_mpi *N )
         M.n = P521_WIDTH + 1;
     M.p = Mp;
     memcpy( Mp, N->p + P521_WIDTH - 1, M.n * sizeof( mbedtls_mpi_uint ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_shift_r( &M, 521 % ( 8 * sizeof( mbedtls_mpi_uint ) ) ) );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_shift_r( &M, 521 % ( 8 * sizeof( mbedtls_mpi_uint ) ) ) );
 
     /* N = A0 */
     N->p[P521_WIDTH - 1] &= P521_MASK;
@@ -1139,7 +1139,7 @@ static int ecp_mod_p521( mbedtls_mpi *N )
         N->p[i] = 0;
 
     /* N = A0 + A1 */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_add_abs( N, N, &M ) );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_add_abs( N, N, &M ) );
 
 cleanup:
     return( ret );
@@ -1178,17 +1178,17 @@ static int ecp_mod_p255( mbedtls_mpi *N )
     M.p = Mp;
     memset( Mp, 0, sizeof Mp );
     memcpy( Mp, N->p + P255_WIDTH - 1, M.n * sizeof( mbedtls_mpi_uint ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_shift_r( &M, 255 % ( 8 * sizeof( mbedtls_mpi_uint ) ) ) );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_shift_r( &M, 255 % ( 8 * sizeof( mbedtls_mpi_uint ) ) ) );
     M.n++; /* Make room for multiplication by 19 */
 
     /* N = A0 */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_set_bit( N, 255, 0 ) );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_set_bit( N, 255, 0 ) );
     for( i = P255_WIDTH; i < N->n; i++ )
         N->p[i] = 0;
 
     /* N = A0 + 19 * A1 */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_int( &M, &M, 19 ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_add_abs( N, N, &M ) );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_mul_int( &M, &M, 19 ) );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_add_abs( N, N, &M ) );
 
 cleanup:
     return( ret );
@@ -1234,7 +1234,7 @@ static inline int ecp_mod_koblitz( mbedtls_mpi *N, mbedtls_mpi_uint *Rp, size_t 
     memset( Mp, 0, sizeof Mp );
     memcpy( Mp, N->p + p_limbs - adjust, M.n * sizeof( mbedtls_mpi_uint ) );
     if( shift != 0 )
-        MBEDTLS_MPI_CHK( mbedtls_mpi_shift_r( &M, shift ) );
+        MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_shift_r( &M, shift ) );
     M.n += R.n - adjust; /* Make room for multiplication by R */
 
     /* N = A0 */
@@ -1244,8 +1244,8 @@ static inline int ecp_mod_koblitz( mbedtls_mpi *N, mbedtls_mpi_uint *Rp, size_t 
         N->p[i] = 0;
 
     /* N = A0 + R * A1 */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mpi( &M, &M, &R ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_add_abs( N, N, &M ) );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_mul_mpi( &M, &M, &R ) );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_add_abs( N, N, &M ) );
 
     /* Second pass */
 
@@ -1256,7 +1256,7 @@ static inline int ecp_mod_koblitz( mbedtls_mpi *N, mbedtls_mpi_uint *Rp, size_t 
     memset( Mp, 0, sizeof Mp );
     memcpy( Mp, N->p + p_limbs - adjust, M.n * sizeof( mbedtls_mpi_uint ) );
     if( shift != 0 )
-        MBEDTLS_MPI_CHK( mbedtls_mpi_shift_r( &M, shift ) );
+        MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_shift_r( &M, shift ) );
     M.n += R.n - adjust; /* Make room for multiplication by R */
 
     /* N = A0 */
@@ -1266,8 +1266,8 @@ static inline int ecp_mod_koblitz( mbedtls_mpi *N, mbedtls_mpi_uint *Rp, size_t 
         N->p[i] = 0;
 
     /* N = A0 + R * A1 */
-    MBEDTLS_MPI_CHK( mbedtls_mpi_mul_mpi( &M, &M, &R ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_add_abs( N, N, &M ) );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_mul_mpi( &M, &M, &R ) );
+    MBEDTLS_MPI_CHK( vdb_mbedtls_mpi_add_abs( N, N, &M ) );
 
 cleanup:
     return( ret );

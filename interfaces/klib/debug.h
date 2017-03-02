@@ -152,7 +152,7 @@ extern "C" {
     _condition(KNS,ERR) _condition(KNS,HTTP) _condition(KNS,MGR) _condition(KNS,SOCKET)
 
 #define VFS_CONDITIONS() \
-    _condition(VFS,MGR)     _condition(VFS,PATH)
+    _condition(VFS,MGR)     _condition(VFS,PATH)     _condition(VFS,SERVICE)
 
 #define XML_CONDITIONS() \
     _condition(XML,XML)

@@ -799,7 +799,7 @@ rc_t HDF5DirInit ( HDF5Dir *self, enum RCContext ctx, uint32_t dad_root,
         return ResetRCContext ( rc, rcFS, rcDirectory, ctx );
 
     if ( path != NULL )
-        memcpy ( self -> path, path, path_size );
+        memmove ( self -> path, path, path_size );
     self -> root = chroot ? path_size : dad_root;
     self -> size = path_size + 1;
     self -> path [ path_size ] = '/';

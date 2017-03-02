@@ -588,7 +588,7 @@ const char UsageDefaultName[] = "cachetee-test";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
-    srand(time(NULL));
+    srand( time( NULL ) );
     KConfigDisableUserSettings();
 	rc_t rc = prepare_cachetee_tests();
 	if ( rc == 0 )
@@ -596,7 +596,7 @@ rc_t CC KMain ( int argc, char *argv [] )
 		rc = CacheTeeTests( argc, argv );
 		finish_cachetee_tests();
 	}
-	KOutMsg( "and the result is: %d", rc );
+	KOutMsg( "and the result is: %R\n", rc );
     return rc;
 }
 

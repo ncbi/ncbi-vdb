@@ -98,7 +98,7 @@ size_t CC KUrlFetcherCurlCallback( void *ptr, size_t size, size_t nmemb, void *d
                 /* the caller-provided buffer can hold a part of it... */
                 if ( self -> buff )
                 {
-                    memcpy( &( self -> buff [ self -> in_buff ] ), ptr, given_bytes );
+                    memmove( &( self -> buff [ self -> in_buff ] ), ptr, given_bytes );
                     self -> in_buff += given_bytes;
                 }
             }
@@ -113,7 +113,7 @@ size_t CC KUrlFetcherCurlCallback( void *ptr, size_t size, size_t nmemb, void *d
                                                        self -> spill_over_buffsize + remaining );
                 if ( self -> spill_over_buff != NULL )
                 {
-                    memcpy( &( self -> spill_over_buff [ self -> spill_over_buffsize ] ), ptr, remaining );
+                    memmove( &( self -> spill_over_buff [ self -> spill_over_buffsize ] ), ptr, remaining );
                     self -> spill_over_buffsize += remaining;
                 }
             }
@@ -123,7 +123,7 @@ size_t CC KUrlFetcherCurlCallback( void *ptr, size_t size, size_t nmemb, void *d
             /* the caller-provided buffer IS enough... */
             if ( self -> buff )
             {
-                memcpy( &( self -> buff [ self -> in_buff ] ), ptr, given_bytes );
+                memmove( &( self -> buff [ self -> in_buff ] ), ptr, given_bytes );
                 self -> in_buff += given_bytes;
             }
         }

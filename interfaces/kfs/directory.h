@@ -527,6 +527,9 @@ KFS_EXTERN rc_t CC KDirectoryCopyPaths_v1 ( const KDirectory_v1 * src_dir,
 KFS_EXTERN rc_t CC KDirectoryCopy_v1 ( const KDirectory_v1 *src_dir,
     KDirectory_v1 *dst_dir, bool recursive, const char *src, const char *dst );
 
+KFS_EXTERN rc_t CC KDirectoryGetDiskFreeSpace_v1 ( const KDirectory * self,
+    uint64_t * free_bytes_available, uint64_t * total_number_of_bytes );
+
 /* NativeDir
  *  returns a native file-system directory node reference
  *  the directory root will be "/" and set to the native
@@ -581,6 +584,10 @@ typedef struct NAME_VERS ( KDirectory, KDIRECTORY_VERS ) KDirectory;
 #define KDirectoryCopyPath NAME_VERS ( KDirectoryCopyPath , KDIRECTORY_VERS )
 #define KDirectoryCopyPaths NAME_VERS ( KDirectoryCopyPaths , KDIRECTORY_VERS )
 #define KDirectoryCopy NAME_VERS ( KDirectoryCopy , KDIRECTORY_VERS )
+
+#define KDirectoryGetDiskFreeSpace NAME_VERS \
+      ( KDirectoryGetDiskFreeSpace , KDIRECTORY_VERS )
+
 #define KDirectoryNativeDir NAME_VERS ( KDirectoryNativeDir , KDIRECTORY_VERS )
 
 

@@ -36,9 +36,9 @@ extern "C" {
 #endif
 
 /* Calculate the biggest available contiguous data portion of the blob:
-*  starts at rowId, ends before a repeated value or at the end of the blob
+*  starts at rowId, ends at MaxRows if not 0, before a repeated value or at the end of the blob
 */
-void VByteBlob_ContiguousChunk ( const struct VBlob* blob,  ctx_t ctx, int64_t rowId, const void** data, uint64_t* size, bool stopAtRepeat );
+void VByteBlob_ContiguousChunk ( const struct VBlob* blob,  ctx_t ctx, int64_t rowId, uint64_t maxRows, const void** data, uint64_t* size, bool stopAtRepeat );
 
 #ifdef __cplusplus
 }

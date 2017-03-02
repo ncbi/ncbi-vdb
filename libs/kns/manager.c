@@ -684,13 +684,31 @@ static rc_t CC KNSManagerVSetHTTPProxyPathImpl
                     break;
 #endif
                 }
-                colon = string_rchr ( p, s, ':' );
-                if ( colon != NULL )
-                {
-                    char * end;
-                    const char * port_spec = colon + 1;
-                    /* it is true that some day we might read symbolic port names... */
-                    long port_num = strtol ( port_spec, & end, 10 );
+
+                colon = string_chr ( p, s, ':' );
+                if ( colon != NULL ) {
+                    char * end = NULL;
+                    const char * port_spec = NULL;
+                    long port_num = 0;
+
+                    int have = colon - p;
+                    int remains = s - have;
+                    if ( remains > 2 ) {
+                        assert ( colon [ 0 ] == ':' );
+                        if ( colon [ 1 ] == '/' && colon [ 2 ] == '/' ) {
+          /* strip off the scheme from proxy specification: it is ignored now */
+                            psize -= have + 3;
+                            p = colon + 3;
+                            if ( psize == 0 )
+                                return RC ( rcNS, rcMgr, rcUpdating,
+                                            rcPath, rcInvalid );
+                            continue;
+                        }
+                    }
+
+                    port_spec = colon + 1;
+             /* it is true that some day we might read symbolic port names... */
+                    port_num = strtol ( port_spec, & end, 10 );
                     if ( port_num <= 0 || port_num >= 0x10000 ||
                          ( end [ 0 ] != 0 && comma == NULL ) )
                         rc = RC ( rcNS, rcMgr, rcUpdating, rcPath, rcInvalid );

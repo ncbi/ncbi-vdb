@@ -485,6 +485,7 @@ foreach my $href (@REQ) {
     my $need_build = $a{type} =~ /B/;
     my $need_lib = $a{type} =~ /L|D/;
     my $need_itf = ! ($a{type} =~ /D/ || $a{type} =~ /E/ || $a{type} =~ /J/);
+    $need_itf = 1 if ($a{type} =~ /I/);
     my $need_jar = $a{type} =~ /J/;
 
     my ($bin, $inc, $lib, $ilib, $src)
@@ -530,12 +531,13 @@ foreach my $href (@REQ) {
                     undef $il;
                     ++$has_option{sources};
                 }
-                my ($fi, $fl, $fil)
+                my ($fi, $fl, $fil, $fs)
                     = find_in_dir($try, $i, $l, $il, undef, undef, $src);
                 if ($fi || $fl || $fil) {
                     $found_itf  = $fi  if (! $found_itf  && $fi);
                     $found_lib  = $fl  if (! $found_lib  && $fl);
                     $found_ilib = $fil if (! $found_ilib && $fil);
+                    $found_src  = $fs  if (! $found_src  && $fs);
                 } elsif (! ($try =~ /$a{name}$/)) {
                     $try = File::Spec->catdir($try, $a{name});
                     ($fi, $fl, $fil) = find_in_dir($try, $i, $l, $il);
@@ -892,9 +894,11 @@ EndText
     L($F, "NO_ARRAY_BOUNDS_WARNING = $NO_ARRAY_BOUNDS_WARNING");
     L($F);
 
-    print $F <<EndText;
+# $PACKAGE_NAME and library version
 # \$(VERSION) is defined in a separate file which is updated every release
-include \$(TOP)/build/Makefile.vers
+    L($F, "include \$(TOP)/" . CONFIG_OUT() . "/Makefile.vers" );
+
+    print $F <<EndText;
 
 empty :=
 space := \$(empty) \$(empty)
@@ -1439,17 +1443,33 @@ sub check_tool {
     }
 }
 
-sub check_no_array_bounds {
-    check_compiler('O', '-Wno-array-bounds');
-}
-
 sub check_static_libstdcpp {
     my $option = '-static-libstdc++';
-    my $save = $TOOLS;
-    $TOOLS = $CPP;
-    $_ = check_compiler('O', $option);
-    $TOOLS = $save;
-    $_ ? $option : ''
+
+    print "checking whether $CPP accepts $option... ";
+
+    my $log = 'int main() {}\n';
+    my $cmd = $log;
+    $cmd =~ s/\\n/\n/g;
+    my $gcc = "echo -e '$log' | $CPP -xc $option - 2>&1";
+    print "\n\t\trunning $gcc\n" if ($OPT{'debug'});
+    my $out = `$gcc`;
+    my $ok = $? == 0;
+    if ( $ok && $out ) {
+        $ok = 0 if ( $out =~ /unrecognized option '-static-libstdc\+\+'/ );
+    }
+    print "$out\t" if ($OPT{'debug'});
+    println $ok ? 'yes' : 'no';
+
+    unlink 'a.out';
+
+    return '' if (!$ok);
+
+    return $option;
+}
+
+sub check_no_array_bounds {
+    check_compiler('O', '-Wno-array-bounds');
 }
 
 sub find_lib {

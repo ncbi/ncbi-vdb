@@ -79,16 +79,16 @@ struct KHttpHeader
 extern void KHttpHeaderWhack ( BSTNode *n, void *ignore );
 extern int64_t CC KHttpHeaderSort ( const BSTNode *na, const BSTNode *nb );
 extern int64_t CC KHttpHeaderCmp ( const void *item, const BSTNode *n );
-/*
-extern rc_t KHttpGetHeaderLine ( struct KClientHttp *self, struct timeout_t *tm, BSTree *hdrs, bool *blank, bool *close_connection );
-extern rc_t KHttpGetStatusLine ( struct KClientHttp *self, struct timeout_t *tm, String *msg, uint32_t *status, ver_t *version );
-*/
+
+extern rc_t KClientHttpGetHeaderLine ( struct KClientHttp *self, struct timeout_t *tm, BSTree *hdrs, bool *blank, bool * len_zero, bool *close_connection );
+extern rc_t KClientHttpGetStatusLine ( struct KClientHttp *self, struct timeout_t *tm, String *msg, uint32_t *status, ver_t *version );
+
 
 /* compatibility for existing code */
-/*
+
 #define KHttpGetHeaderLine KClientHttpGetHeaderLine
 #define KHttpGetStatusLine KClientHttpGetStatusLine
-*/
+
 
 /*--------------------------------------------------------------------------
  * KClientHttp

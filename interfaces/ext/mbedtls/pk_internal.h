@@ -95,20 +95,20 @@ typedef struct
 #endif
 
 #if defined(MBEDTLS_RSA_C)
-extern const mbedtls_pk_info_t mbedtls_rsa_info;
+extern const mbedtls_pk_info_t vdb_mbedtls_rsa_info;
 #endif
 
 #if defined(MBEDTLS_ECP_C)
-extern const mbedtls_pk_info_t mbedtls_eckey_info;
-extern const mbedtls_pk_info_t mbedtls_eckeydh_info;
+extern const mbedtls_pk_info_t vdb_mbedtls_eckey_info;
+extern const mbedtls_pk_info_t vdb_mbedtls_eckeydh_info;
 #endif
 
 #if defined(MBEDTLS_ECDSA_C)
-extern const mbedtls_pk_info_t mbedtls_ecdsa_info;
+extern const mbedtls_pk_info_t vdb_mbedtls_ecdsa_info;
 #endif
 
 #if defined(MBEDTLS_PK_RSA_ALT_SUPPORT)
-extern const mbedtls_pk_info_t mbedtls_rsa_alt_info;
+extern const mbedtls_pk_info_t vdb_mbedtls_rsa_alt_info;
 #endif
 
 #endif /* MBEDTLS_PK_WRAP_H */

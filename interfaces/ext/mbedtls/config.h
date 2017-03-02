@@ -71,6 +71,10 @@
  * The time does not need to be correct, only time differences are used,
  * by contrast with MBEDTLS_HAVE_TIME_DATE
  *
+ * Defining MBEDTLS_HAVE_TIME allows you to specify MBEDTLS_PLATFORM_TIME_ALT,
+ * MBEDTLS_PLATFORM_TIME_MACRO, MBEDTLS_PLATFORM_TIME_TYPE_MACRO and
+ * MBEDTLS_PLATFORM_STD_TIME.
+ *
  * Comment if your system does not support time functions
  */
 #define MBEDTLS_HAVE_TIME
@@ -148,6 +152,8 @@
  * \warning MBEDTLS_PLATFORM_XXX_ALT cannot be defined at the same time as
  * MBEDTLS_PLATFORM_XXX_MACRO!
  *
+ * Requires: MBEDTLS_PLATFORM_TIME_ALT requires MBEDTLS_HAVE_TIME
+ *
  * Uncomment a macro to enable alternate implementation of specific base
  * platform function
  */
@@ -198,8 +204,8 @@
 /**
  * \def MBEDTLS_TIMING_ALT
  *
- * Uncomment to provide your own alternate implementation for mbedtls_timing_hardclock(),
- * mbedtls_timing_get_timer(), mbedtls_set_alarm(), mbedtls_set/get_delay()
+ * Uncomment to provide your own alternate implementation for vdb_mbedtls_timing_hardclock(),
+ * vdb_mbedtls_timing_get_timer(), vdb_mbedtls_set_alarm(), mbedtls_set/get_delay()
  *
  * Only works if you have MBEDTLS_TIMING_C enabled.
  *
@@ -252,8 +258,8 @@
  * used, in contrast to the MBEDTLS__MODULE_NAME__ALT flags.
  *
  * Example: In case you uncomment MBEDTLS_SHA256_PROCESS_ALT, mbed TLS will
- * no longer provide the mbedtls_sha1_process() function, but it will still provide
- * the other function (using your mbedtls_sha1_process() function) and the definition
+ * no longer provide the vdb_mbedtls_sha1_process() function, but it will still provide
+ * the other function (using your vdb_mbedtls_sha1_process() function) and the definition
  * of mbedtls_sha1_context, so your implementation of mbedtls_sha1_process must be compatible
  * with this definition.
  *
@@ -302,7 +308,7 @@
  * Uncomment this macro to let mbed TLS use your own implementation of a
  * hardware entropy collector.
  *
- * Your function must be called \c mbedtls_hardware_poll(), have the same
+ * Your function must be called \c vdb_mbedtls_hardware_poll(), have the same
  * prototype as declared in entropy_poll.h, and accept NULL as first argument.
  *
  * Uncomment to use your own hardware entropy collector.
@@ -417,8 +423,8 @@
  *
  * Remove RC4 ciphersuites by default in SSL / TLS.
  * This flag removes the ciphersuites based on RC4 from the default list as
- * returned by mbedtls_ssl_list_ciphersuites(). However, it is still possible to
- * enable (some of) them with mbedtls_ssl_conf_ciphersuites() by including them
+ * returned by vdb_mbedtls_ssl_list_ciphersuites(). However, it is still possible to
+ * enable (some of) them with vdb_mbedtls_ssl_conf_ciphersuites() by including them
  * explicitly.
  *
  * Uncomment this macro to remove RC4 ciphersuites by default.
@@ -749,15 +755,15 @@
 /**
  * \def MBEDTLS_ERROR_STRERROR_DUMMY
  *
- * Enable a dummy error function to make use of mbedtls_strerror() in
+ * Enable a dummy error function to make use of vdb_mbedtls_strerror() in
  * third party libraries easier when MBEDTLS_ERROR_C is disabled
  * (no effect when MBEDTLS_ERROR_C is enabled).
  *
  * You can safely disable this if MBEDTLS_ERROR_C is enabled, or if you're
- * not using mbedtls_strerror() or error_strerror() in your application.
+ * not using vdb_mbedtls_strerror() or error_strerror() in your application.
  *
  * Disable if you run into name conflicts and want to really remove the
- * mbedtls_strerror()
+ * vdb_mbedtls_strerror()
  */
 #define MBEDTLS_ERROR_STRERROR_DUMMY
 
@@ -927,24 +933,12 @@
  * The default implementation is meant to be a reasonnable compromise between
  * performance and size. This version optimizes more aggressively for size at
  * the expense of performance. Eg on Cortex-M4 it reduces the size of
- * mbedtls_sha256_process() from ~2KB to ~0.5KB for a performance hit of about
+ * vdb_mbedtls_sha256_process() from ~2KB to ~0.5KB for a performance hit of about
  * 30%.
  *
  * Uncomment to enable the smaller implementation of SHA256.
  */
 //#define MBEDTLS_SHA256_SMALLER
-
-/**
- * \def MBEDTLS_SSL_AEAD_RANDOM_IV
- *
- * Generate a random IV rather than using the record sequence number as a
- * nonce for ciphersuites using and AEAD algorithm (GCM or CCM).
- *
- * Using the sequence number is generally recommended.
- *
- * Uncomment this macro to always use random IVs with AEAD ciphersuites.
- */
-//#define MBEDTLS_SSL_AEAD_RANDOM_IV
 
 /**
  * \def MBEDTLS_SSL_ALL_ALERT_MESSAGES
@@ -1176,7 +1170,7 @@
  *           MBEDTLS_SSL_PROTO_DTLS
  *
  * \warning Disabling this is often a security risk!
- * See mbedtls_ssl_conf_dtls_anti_replay() for details.
+ * See vdb_mbedtls_ssl_conf_dtls_anti_replay() for details.
  *
  * Comment this to disable anti-replay in DTLS.
  */
@@ -1221,7 +1215,7 @@
  *
  * Enable support for a limit of records with bad MAC.
  *
- * See mbedtls_ssl_conf_dtls_badmac_limit().
+ * See vdb_mbedtls_ssl_conf_dtls_badmac_limit().
  *
  * Requires: MBEDTLS_SSL_PROTO_DTLS
  */
@@ -1298,7 +1292,7 @@
  *
  * Allow run-time checking of compile-time enabled features. Thus allowing users
  * to check at run-time if the library is for instance compiled with threading
- * support via mbedtls_version_check_feature().
+ * support via vdb_mbedtls_version_check_feature().
  *
  * Requires: MBEDTLS_VERSION_C
  *
@@ -1531,7 +1525,7 @@
  *          library/pkwrite.c
  *          library/x509_create.c
  *          library/x509write_crt.c
- *          library/mbedtls_x509write_csr.c
+ *          library/x509write_csr.c
  */
 #define MBEDTLS_ASN1_WRITE_C
 
@@ -1664,6 +1658,19 @@
  * Uncomment to enable generic cipher wrappers.
  */
 #define MBEDTLS_CIPHER_C
+
+/**
+ * \def MBEDTLS_CMAC_C
+ *
+ * Enable the CMAC (Cipher-based Message Authentication Code) mode for block
+ * ciphers.
+ *
+ * Module:  library/cmac.c
+ *
+ * Requires: MBEDTLS_AES_C or MBEDTLS_DES_C
+ *
+ */
+//#define MBEDTLS_CMAC_C
 
 /**
  * \def MBEDTLS_CTR_DRBG_C
@@ -1819,7 +1826,7 @@
  * Module:  library/error.c
  * Caller:
  *
- * This module enables mbedtls_strerror().
+ * This module enables vdb_mbedtls_strerror().
  */
 #define MBEDTLS_ERROR_C
 
@@ -1879,7 +1886,7 @@
  *
  * Enable the generic message digest layer.
  *
- * Module:  library/mbedtls_md.c
+ * Module:  library/md.c
  * Caller:
  *
  * Uncomment to enable generic message digest wrappers.
@@ -1891,7 +1898,7 @@
  *
  * Enable the MD2 hash algorithm.
  *
- * Module:  library/mbedtls_md2.c
+ * Module:  library/md2.c
  * Caller:
  *
  * Uncomment to enable support for (rare) MD2-signed X.509 certs.
@@ -1903,7 +1910,7 @@
  *
  * Enable the MD4 hash algorithm.
  *
- * Module:  library/mbedtls_md4.c
+ * Module:  library/md4.c
  * Caller:
  *
  * Uncomment to enable support for (rare) MD4-signed X.509 certs.
@@ -1915,8 +1922,8 @@
  *
  * Enable the MD5 hash algorithm.
  *
- * Module:  library/mbedtls_md5.c
- * Caller:  library/mbedtls_md.c
+ * Module:  library/md5.c
+ * Caller:  library/md.c
  *          library/pem.c
  *          library/ssl_tls.c
  *
@@ -1948,13 +1955,13 @@
  *
  * \note This module only works on POSIX/Unix (including Linux, BSD and OS X)
  * and Windows. For other platforms, you'll want to disable it, and write your
- * own networking callbacks to be passed to \c mbedtls_ssl_set_bio().
+ * own networking callbacks to be passed to \c vdb_mbedtls_ssl_set_bio().
  *
  * \note See also our Knowledge Base article about porting to a new
  * environment:
  * https://tls.mbed.org/kb/how-to/how-do-i-port-mbed-tls-to-a-new-environment-OS
  *
- * Module:  library/net.c
+ * Module:  library/net_sockets.c
  *
  * This module provides networking routines.
  */
@@ -1973,11 +1980,11 @@
  *          library/rsa.c
  *          library/x509.c
  *          library/x509_create.c
- *          library/mbedtls_x509_crl.c
- *          library/mbedtls_x509_crt.c
- *          library/mbedtls_x509_csr.c
+ *          library/x509_crl.c
+ *          library/x509_crt.c
+ *          library/x509_csr.c
  *          library/x509write_crt.c
- *          library/mbedtls_x509write_csr.c
+ *          library/x509write_csr.c
  *
  * This modules translates between OIDs and internal values.
  */
@@ -2005,9 +2012,9 @@
  * Module:  library/pem.c
  * Caller:  library/dhm.c
  *          library/pkparse.c
- *          library/mbedtls_x509_crl.c
- *          library/mbedtls_x509_crt.c
- *          library/mbedtls_x509_csr.c
+ *          library/x509_crl.c
+ *          library/x509_crt.c
+ *          library/x509_csr.c
  *
  * Requires: MBEDTLS_BASE64_C
  *
@@ -2023,7 +2030,7 @@
  * Module:  library/pem.c
  * Caller:  library/pkwrite.c
  *          library/x509write_crt.c
- *          library/mbedtls_x509write_csr.c
+ *          library/x509write_csr.c
  *
  * Requires: MBEDTLS_BASE64_C
  *
@@ -2053,8 +2060,8 @@
  * Enable the generic public (asymetric) key parser.
  *
  * Module:  library/pkparse.c
- * Caller:  library/mbedtls_x509_crt.c
- *          library/mbedtls_x509_csr.c
+ * Caller:  library/x509_crt.c
+ *          library/x509_csr.c
  *
  * Requires: MBEDTLS_PK_C
  *
@@ -2145,8 +2152,8 @@
  *
  * Enable the RIPEMD-160 hash algorithm.
  *
- * Module:  library/mbedtls_ripemd160.c
- * Caller:  library/mbedtls_md.c
+ * Module:  library/ripemd160.c
+ * Caller:  library/md.c
  *
  */
 #define MBEDTLS_RIPEMD160_C
@@ -2174,8 +2181,8 @@
  *
  * Enable the SHA1 cryptographic hash algorithm.
  *
- * Module:  library/mbedtls_sha1.c
- * Caller:  library/mbedtls_md.c
+ * Module:  library/sha1.c
+ * Caller:  library/md.c
  *          library/ssl_cli.c
  *          library/ssl_srv.c
  *          library/ssl_tls.c
@@ -2190,9 +2197,9 @@
  *
  * Enable the SHA-224 and SHA-256 cryptographic hash algorithms.
  *
- * Module:  library/mbedtls_sha256.c
+ * Module:  library/sha256.c
  * Caller:  library/entropy.c
- *          library/mbedtls_md.c
+ *          library/md.c
  *          library/ssl_cli.c
  *          library/ssl_srv.c
  *          library/ssl_tls.c
@@ -2207,9 +2214,9 @@
  *
  * Enable the SHA-384 and SHA-512 cryptographic hash algorithms.
  *
- * Module:  library/mbedtls_sha512.c
+ * Module:  library/sha512.c
  * Caller:  library/entropy.c
- *          library/mbedtls_md.c
+ *          library/md.c
  *          library/ssl_cli.c
  *          library/ssl_srv.c
  *
@@ -2325,7 +2332,7 @@
  * \note The provided implementation only works on POSIX/Unix (including Linux,
  * BSD and OS X) and Windows. On other platforms, you can either disable that
  * module and provide your own implementations of the callbacks needed by
- * \c mbedtls_ssl_set_timer_cb() for DTLS, or leave it enabled and provide
+ * \c vdb_mbedtls_ssl_set_timer_cb() for DTLS, or leave it enabled and provide
  * your own implementation of the whole module by setting
  * \c MBEDTLS_TIMING_ALT in the current file.
  *
@@ -2357,9 +2364,9 @@
  * Enable X.509 core for using certificates.
  *
  * Module:  library/x509.c
- * Caller:  library/mbedtls_x509_crl.c
- *          library/mbedtls_x509_crt.c
- *          library/mbedtls_x509_csr.c
+ * Caller:  library/x509_crl.c
+ *          library/x509_crt.c
+ *          library/x509_csr.c
  *
  * Requires: MBEDTLS_ASN1_PARSE_C, MBEDTLS_BIGNUM_C, MBEDTLS_OID_C,
  *           MBEDTLS_PK_PARSE_C
@@ -2373,7 +2380,7 @@
  *
  * Enable X.509 certificate parsing.
  *
- * Module:  library/mbedtls_x509_crt.c
+ * Module:  library/x509_crt.c
  * Caller:  library/ssl_cli.c
  *          library/ssl_srv.c
  *          library/ssl_tls.c
@@ -2389,8 +2396,8 @@
  *
  * Enable X.509 CRL parsing.
  *
- * Module:  library/mbedtls_x509_crl.c
- * Caller:  library/mbedtls_x509_crt.c
+ * Module:  library/x509_crl.c
+ * Caller:  library/x509_crt.c
  *
  * Requires: MBEDTLS_X509_USE_C
  *
@@ -2403,7 +2410,7 @@
  *
  * Enable X.509 Certificate Signing Request (CSR) parsing.
  *
- * Module:  library/mbedtls_x509_csr.c
+ * Module:  library/x509_csr.c
  * Caller:  library/x509_crt_write.c
  *
  * Requires: MBEDTLS_X509_USE_C
@@ -2503,6 +2510,7 @@
 /* Entropy options */
 //#define MBEDTLS_ENTROPY_MAX_SOURCES                20 /**< Maximum number of sources supported */
 //#define MBEDTLS_ENTROPY_MAX_GATHER                128 /**< Maximum amount requested from entropy sources */
+//#define MBEDTLS_ENTROPY_MIN_HARDWARE               32 /**< Default minimum number of bytes required for the hardware entropy source vdb_mbedtls_hardware_poll() before entropy is released */
 
 /* Memory buffer allocator options */
 //#define MBEDTLS_MEMORY_ALIGN_MULTIPLE      4 /**< Align on multiples of this value */
@@ -2512,15 +2520,15 @@
 //#define MBEDTLS_PLATFORM_STD_CALLOC        calloc /**< Default allocator to use, can be undefined */
 //#define MBEDTLS_PLATFORM_STD_FREE            free /**< Default free to use, can be undefined */
 //#define MBEDTLS_PLATFORM_STD_EXIT            exit /**< Default exit to use, can be undefined */
-//#define MBEDTLS_PLATFORM_STD_TIME            time /**< Default time to use, can be undefined */
+//#define MBEDTLS_PLATFORM_STD_TIME            time /**< Default time to use, can be undefined. MBEDTLS_HAVE_TIME must be enabled */
 //#define MBEDTLS_PLATFORM_STD_FPRINTF      fprintf /**< Default fprintf to use, can be undefined */
 //#define MBEDTLS_PLATFORM_STD_PRINTF        printf /**< Default printf to use, can be undefined */
 /* Note: your snprintf must correclty zero-terminate the buffer! */
 //#define MBEDTLS_PLATFORM_STD_SNPRINTF    snprintf /**< Default snprintf to use, can be undefined */
 //#define MBEDTLS_PLATFORM_STD_EXIT_SUCCESS       0 /**< Default exit value to use, can be undefined */
 //#define MBEDTLS_PLATFORM_STD_EXIT_FAILURE       1 /**< Default exit value to use, can be undefined */
-//#define MBEDTLS_PLATFORM_STD_NV_SEED_READ   mbedtls_platform_std_nv_seed_read /**< Default nv_seed_read function to use, can be undefined */
-//#define MBEDTLS_PLATFORM_STD_NV_SEED_WRITE  mbedtls_platform_std_nv_seed_write /**< Default nv_seed_write function to use, can be undefined */
+//#define MBEDTLS_PLATFORM_STD_NV_SEED_READ   vdb_mbedtls_platform_std_nv_seed_read /**< Default nv_seed_read function to use, can be undefined */
+//#define MBEDTLS_PLATFORM_STD_NV_SEED_WRITE  vdb_mbedtls_platform_std_nv_seed_write /**< Default nv_seed_write function to use, can be undefined */
 //#define MBEDTLS_PLATFORM_STD_NV_SEED_FILE  "seedfile" /**< Seed file to read/write with default implementation */
 
 /* To Use Function Macros MBEDTLS_PLATFORM_C must be enabled */
@@ -2528,14 +2536,14 @@
 //#define MBEDTLS_PLATFORM_CALLOC_MACRO        calloc /**< Default allocator macro to use, can be undefined */
 //#define MBEDTLS_PLATFORM_FREE_MACRO            free /**< Default free macro to use, can be undefined */
 //#define MBEDTLS_PLATFORM_EXIT_MACRO            exit /**< Default exit macro to use, can be undefined */
-//#define MBEDTLS_PLATFORM_TIME_MACRO            time /**< Default time macro to use, can be undefined */
-//#define MBEDTLS_PLATFORM_TIME_TYPE_MACRO       time_t /**< Default time macro to use, can be undefined */
+//#define MBEDTLS_PLATFORM_TIME_MACRO            time /**< Default time macro to use, can be undefined. MBEDTLS_HAVE_TIME must be enabled */
+//#define MBEDTLS_PLATFORM_TIME_TYPE_MACRO       time_t /**< Default time macro to use, can be undefined. MBEDTLS_HAVE_TIME must be enabled */
 //#define MBEDTLS_PLATFORM_FPRINTF_MACRO      fprintf /**< Default fprintf macro to use, can be undefined */
 //#define MBEDTLS_PLATFORM_PRINTF_MACRO        printf /**< Default printf macro to use, can be undefined */
 /* Note: your snprintf must correclty zero-terminate the buffer! */
 //#define MBEDTLS_PLATFORM_SNPRINTF_MACRO    snprintf /**< Default snprintf macro to use, can be undefined */
-//#define MBEDTLS_PLATFORM_NV_SEED_READ_MACRO   mbedtls_platform_std_nv_seed_read /**< Default nv_seed_read function to use, can be undefined */
-//#define MBEDTLS_PLATFORM_NV_SEED_WRITE_MACRO  mbedtls_platform_std_nv_seed_write /**< Default nv_seed_write function to use, can be undefined */
+//#define MBEDTLS_PLATFORM_NV_SEED_READ_MACRO   vdb_mbedtls_platform_std_nv_seed_read /**< Default nv_seed_read function to use, can be undefined */
+//#define MBEDTLS_PLATFORM_NV_SEED_WRITE_MACRO  vdb_mbedtls_platform_std_nv_seed_write /**< Default nv_seed_write function to use, can be undefined */
 
 /* SSL Cache options */
 //#define MBEDTLS_SSL_CACHE_DEFAULT_TIMEOUT       86400 /**< 1 day  */
@@ -2563,6 +2571,7 @@
 
 /* X509 options */
 //#define MBEDTLS_X509_MAX_INTERMEDIATE_CA   8   /**< Maximum number of intermediate CAs in a verification chain. */
+//#define MBEDTLS_X509_MAX_FILE_PATH_LEN     512 /**< Maximum length of a path/filename string in bytes including the null terminator character ('\0'). */
 
 /* \} name SECTION: Customisation configuration options */
 
