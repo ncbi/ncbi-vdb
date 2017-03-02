@@ -252,6 +252,22 @@ TEST_CASE ( TEST_PROXY_ENV_commaErr ) {
 }
 #endif
 
+TEST_CASE ( TEST_PROXY_ENV_envWithSchema ) {
+    TestRunner ( this, "env-with-schema" );
+}
+
+TEST_CASE ( TEST_PROXY_ENV_envWithSchemaAndPort ) {
+    TestRunner ( this, "env-with-schema-and-port" );
+}
+
+TEST_CASE ( TEST_PROXY_ENV_kfgWithSchema ) {
+    TestRunner ( this, "kfg-with-schema" );
+}
+
+TEST_CASE ( TEST_PROXY_ENV_kfgWithSchemaAndPort ) {
+    TestRunner ( this, "kfg-with-schema-and-port" );
+}
+
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] )  {

@@ -70,28 +70,28 @@ mbedtls_des3_context;
  *
  * \param ctx      DES context to be initialized
  */
-void mbedtls_des_init( mbedtls_des_context *ctx );
+void vdb_mbedtls_des_init( mbedtls_des_context *ctx );
 
 /**
  * \brief          Clear DES context
  *
  * \param ctx      DES context to be cleared
  */
-void mbedtls_des_free( mbedtls_des_context *ctx );
+void vdb_mbedtls_des_free( mbedtls_des_context *ctx );
 
 /**
  * \brief          Initialize Triple-DES context
  *
  * \param ctx      DES3 context to be initialized
  */
-void mbedtls_des3_init( mbedtls_des3_context *ctx );
+void vdb_mbedtls_des3_init( mbedtls_des3_context *ctx );
 
 /**
  * \brief          Clear Triple-DES context
  *
  * \param ctx      DES3 context to be cleared
  */
-void mbedtls_des3_free( mbedtls_des3_context *ctx );
+void vdb_mbedtls_des3_free( mbedtls_des3_context *ctx );
 
 /**
  * \brief          Set key parity on the given key to odd.
@@ -101,7 +101,7 @@ void mbedtls_des3_free( mbedtls_des3_context *ctx );
  *
  * \param key      8-byte secret key
  */
-void mbedtls_des_key_set_parity( unsigned char key[MBEDTLS_DES_KEY_SIZE] );
+void vdb_mbedtls_des_key_set_parity( unsigned char key[MBEDTLS_DES_KEY_SIZE] );
 
 /**
  * \brief          Check that key parity on the given key is odd.
@@ -113,7 +113,7 @@ void mbedtls_des_key_set_parity( unsigned char key[MBEDTLS_DES_KEY_SIZE] );
  *
  * \return         0 is parity was ok, 1 if parity was not correct.
  */
-int mbedtls_des_key_check_key_parity( const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
+int vdb_mbedtls_des_key_check_key_parity( const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
 
 /**
  * \brief          Check that key is not a weak or semi-weak DES key
@@ -122,7 +122,7 @@ int mbedtls_des_key_check_key_parity( const unsigned char key[MBEDTLS_DES_KEY_SI
  *
  * \return         0 if no weak key was found, 1 if a weak key was identified.
  */
-int mbedtls_des_key_check_weak( const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
+int vdb_mbedtls_des_key_check_weak( const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
 
 /**
  * \brief          DES key schedule (56-bit, encryption)
@@ -132,7 +132,7 @@ int mbedtls_des_key_check_weak( const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
  *
  * \return         0
  */
-int mbedtls_des_setkey_enc( mbedtls_des_context *ctx, const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
+int vdb_mbedtls_des_setkey_enc( mbedtls_des_context *ctx, const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
 
 /**
  * \brief          DES key schedule (56-bit, decryption)
@@ -142,7 +142,7 @@ int mbedtls_des_setkey_enc( mbedtls_des_context *ctx, const unsigned char key[MB
  *
  * \return         0
  */
-int mbedtls_des_setkey_dec( mbedtls_des_context *ctx, const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
+int vdb_mbedtls_des_setkey_dec( mbedtls_des_context *ctx, const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
 
 /**
  * \brief          Triple-DES key schedule (112-bit, encryption)
@@ -152,7 +152,7 @@ int mbedtls_des_setkey_dec( mbedtls_des_context *ctx, const unsigned char key[MB
  *
  * \return         0
  */
-int mbedtls_des3_set2key_enc( mbedtls_des3_context *ctx,
+int vdb_mbedtls_des3_set2key_enc( mbedtls_des3_context *ctx,
                       const unsigned char key[MBEDTLS_DES_KEY_SIZE * 2] );
 
 /**
@@ -163,7 +163,7 @@ int mbedtls_des3_set2key_enc( mbedtls_des3_context *ctx,
  *
  * \return         0
  */
-int mbedtls_des3_set2key_dec( mbedtls_des3_context *ctx,
+int vdb_mbedtls_des3_set2key_dec( mbedtls_des3_context *ctx,
                       const unsigned char key[MBEDTLS_DES_KEY_SIZE * 2] );
 
 /**
@@ -174,7 +174,7 @@ int mbedtls_des3_set2key_dec( mbedtls_des3_context *ctx,
  *
  * \return         0
  */
-int mbedtls_des3_set3key_enc( mbedtls_des3_context *ctx,
+int vdb_mbedtls_des3_set3key_enc( mbedtls_des3_context *ctx,
                       const unsigned char key[MBEDTLS_DES_KEY_SIZE * 3] );
 
 /**
@@ -185,7 +185,7 @@ int mbedtls_des3_set3key_enc( mbedtls_des3_context *ctx,
  *
  * \return         0
  */
-int mbedtls_des3_set3key_dec( mbedtls_des3_context *ctx,
+int vdb_mbedtls_des3_set3key_dec( mbedtls_des3_context *ctx,
                       const unsigned char key[MBEDTLS_DES_KEY_SIZE * 3] );
 
 /**
@@ -197,7 +197,7 @@ int mbedtls_des3_set3key_dec( mbedtls_des3_context *ctx,
  *
  * \return         0 if successful
  */
-int mbedtls_des_crypt_ecb( mbedtls_des_context *ctx,
+int vdb_mbedtls_des_crypt_ecb( mbedtls_des_context *ctx,
                     const unsigned char input[8],
                     unsigned char output[8] );
 
@@ -220,7 +220,7 @@ int mbedtls_des_crypt_ecb( mbedtls_des_context *ctx,
  * \param input    buffer holding the input data
  * \param output   buffer holding the output data
  */
-int mbedtls_des_crypt_cbc( mbedtls_des_context *ctx,
+int vdb_mbedtls_des_crypt_cbc( mbedtls_des_context *ctx,
                     int mode,
                     size_t length,
                     unsigned char iv[8],
@@ -237,7 +237,7 @@ int mbedtls_des_crypt_cbc( mbedtls_des_context *ctx,
  *
  * \return         0 if successful
  */
-int mbedtls_des3_crypt_ecb( mbedtls_des3_context *ctx,
+int vdb_mbedtls_des3_crypt_ecb( mbedtls_des3_context *ctx,
                      const unsigned char input[8],
                      unsigned char output[8] );
 
@@ -262,7 +262,7 @@ int mbedtls_des3_crypt_ecb( mbedtls_des3_context *ctx,
  *
  * \return         0 if successful, or MBEDTLS_ERR_DES_INVALID_INPUT_LENGTH
  */
-int mbedtls_des3_crypt_cbc( mbedtls_des3_context *ctx,
+int vdb_mbedtls_des3_crypt_cbc( mbedtls_des3_context *ctx,
                      int mode,
                      size_t length,
                      unsigned char iv[8],
@@ -278,7 +278,7 @@ int mbedtls_des3_crypt_cbc( mbedtls_des3_context *ctx,
  * \param SK       Round keys
  * \param key      Base key
  */
-void mbedtls_des_setkey( uint32_t SK[32],
+void vdb_mbedtls_des_setkey( uint32_t SK[32],
                          const unsigned char key[MBEDTLS_DES_KEY_SIZE] );
 #ifdef __cplusplus
 }
@@ -297,7 +297,7 @@ extern "C" {
  *
  * \return         0 if successful, or 1 if the test failed
  */
-int mbedtls_des_self_test( int verbose );
+int vdb_mbedtls_des_self_test( int verbose );
 
 #ifdef __cplusplus
 }

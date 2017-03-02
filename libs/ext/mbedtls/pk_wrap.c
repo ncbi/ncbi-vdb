@@ -45,8 +45,8 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdlib.h>
-#define mbedtls_calloc    calloc
-#define mbedtls_free       free
+#define vdb_mbedtls_calloc    calloc
+#define vdb_mbedtls_free       free
 #endif
 
 #if defined(MBEDTLS_PK_RSA_ALT_SUPPORT)
@@ -77,7 +77,7 @@ static int rsa_verify_wrap( void *ctx, mbedtls_md_type_t md_alg,
     if( sig_len < ((mbedtls_rsa_context *) ctx)->len )
         return( MBEDTLS_ERR_RSA_VERIFY_FAILED );
 
-    if( ( ret = mbedtls_rsa_pkcs1_verify( (mbedtls_rsa_context *) ctx, NULL, NULL,
+    if( ( ret = vdb_mbedtls_rsa_pkcs1_verify( (mbedtls_rsa_context *) ctx, NULL, NULL,
                                   MBEDTLS_RSA_PUBLIC, md_alg,
                                   (unsigned int) hash_len, hash, sig ) ) != 0 )
         return( ret );
@@ -95,7 +95,7 @@ static int rsa_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
 {
     *sig_len = ((mbedtls_rsa_context *) ctx)->len;
 
-    return( mbedtls_rsa_pkcs1_sign( (mbedtls_rsa_context *) ctx, f_rng, p_rng, MBEDTLS_RSA_PRIVATE,
+    return( vdb_mbedtls_rsa_pkcs1_sign( (mbedtls_rsa_context *) ctx, f_rng, p_rng, MBEDTLS_RSA_PRIVATE,
                 md_alg, (unsigned int) hash_len, hash, sig ) );
 }
 
@@ -107,7 +107,7 @@ static int rsa_decrypt_wrap( void *ctx,
     if( ilen != ((mbedtls_rsa_context *) ctx)->len )
         return( MBEDTLS_ERR_RSA_BAD_INPUT_DATA );
 
-    return( mbedtls_rsa_pkcs1_decrypt( (mbedtls_rsa_context *) ctx, f_rng, p_rng,
+    return( vdb_mbedtls_rsa_pkcs1_decrypt( (mbedtls_rsa_context *) ctx, f_rng, p_rng,
                 MBEDTLS_RSA_PRIVATE, olen, input, output, osize ) );
 }
 
@@ -121,30 +121,30 @@ static int rsa_encrypt_wrap( void *ctx,
     if( *olen > osize )
         return( MBEDTLS_ERR_RSA_OUTPUT_TOO_LARGE );
 
-    return( mbedtls_rsa_pkcs1_encrypt( (mbedtls_rsa_context *) ctx,
+    return( vdb_mbedtls_rsa_pkcs1_encrypt( (mbedtls_rsa_context *) ctx,
                 f_rng, p_rng, MBEDTLS_RSA_PUBLIC, ilen, input, output ) );
 }
 
 static int rsa_check_pair_wrap( const void *pub, const void *prv )
 {
-    return( mbedtls_rsa_check_pub_priv( (const mbedtls_rsa_context *) pub,
+    return( vdb_mbedtls_rsa_check_pub_priv( (const mbedtls_rsa_context *) pub,
                                 (const mbedtls_rsa_context *) prv ) );
 }
 
 static void *rsa_alloc_wrap( void )
 {
-    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_rsa_context ) );
+    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_rsa_context ) );
 
     if( ctx != NULL )
-        mbedtls_rsa_init( (mbedtls_rsa_context *) ctx, 0, 0 );
+        vdb_mbedtls_rsa_init( (mbedtls_rsa_context *) ctx, 0, 0 );
 
     return( ctx );
 }
 
 static void rsa_free_wrap( void *ctx )
 {
-    mbedtls_rsa_free( (mbedtls_rsa_context *) ctx );
-    mbedtls_free( ctx );
+    vdb_mbedtls_rsa_free( (mbedtls_rsa_context *) ctx );
+    vdb_mbedtls_free( ctx );
 }
 
 static void rsa_debug( const void *ctx, mbedtls_pk_debug_item *items )
@@ -160,7 +160,7 @@ static void rsa_debug( const void *ctx, mbedtls_pk_debug_item *items )
     items->value = &( ((mbedtls_rsa_context *) ctx)->E );
 }
 
-const mbedtls_pk_info_t mbedtls_rsa_info = {
+const mbedtls_pk_info_t vdb_mbedtls_rsa_info = {
     MBEDTLS_PK_RSA,
     "RSA",
     rsa_get_bitlen,
@@ -210,12 +210,12 @@ static int eckey_verify_wrap( void *ctx, mbedtls_md_type_t md_alg,
     int ret;
     mbedtls_ecdsa_context ecdsa;
 
-    mbedtls_ecdsa_init( &ecdsa );
+    vdb_mbedtls_ecdsa_init( &ecdsa );
 
-    if( ( ret = mbedtls_ecdsa_from_keypair( &ecdsa, ctx ) ) == 0 )
+    if( ( ret = vdb_mbedtls_ecdsa_from_keypair( &ecdsa, ctx ) ) == 0 )
         ret = ecdsa_verify_wrap( &ecdsa, md_alg, hash, hash_len, sig, sig_len );
 
-    mbedtls_ecdsa_free( &ecdsa );
+    vdb_mbedtls_ecdsa_free( &ecdsa );
 
     return( ret );
 }
@@ -228,13 +228,13 @@ static int eckey_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
     int ret;
     mbedtls_ecdsa_context ecdsa;
 
-    mbedtls_ecdsa_init( &ecdsa );
+    vdb_mbedtls_ecdsa_init( &ecdsa );
 
-    if( ( ret = mbedtls_ecdsa_from_keypair( &ecdsa, ctx ) ) == 0 )
+    if( ( ret = vdb_mbedtls_ecdsa_from_keypair( &ecdsa, ctx ) ) == 0 )
         ret = ecdsa_sign_wrap( &ecdsa, md_alg, hash, hash_len, sig, sig_len,
                                f_rng, p_rng );
 
-    mbedtls_ecdsa_free( &ecdsa );
+    vdb_mbedtls_ecdsa_free( &ecdsa );
 
     return( ret );
 }
@@ -243,24 +243,24 @@ static int eckey_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
 
 static int eckey_check_pair( const void *pub, const void *prv )
 {
-    return( mbedtls_ecp_check_pub_priv( (const mbedtls_ecp_keypair *) pub,
+    return( vdb_mbedtls_ecp_check_pub_priv( (const mbedtls_ecp_keypair *) pub,
                                 (const mbedtls_ecp_keypair *) prv ) );
 }
 
 static void *eckey_alloc_wrap( void )
 {
-    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_ecp_keypair ) );
+    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_ecp_keypair ) );
 
     if( ctx != NULL )
-        mbedtls_ecp_keypair_init( ctx );
+        vdb_mbedtls_ecp_keypair_init( ctx );
 
     return( ctx );
 }
 
 static void eckey_free_wrap( void *ctx )
 {
-    mbedtls_ecp_keypair_free( (mbedtls_ecp_keypair *) ctx );
-    mbedtls_free( ctx );
+    vdb_mbedtls_ecp_keypair_free( (mbedtls_ecp_keypair *) ctx );
+    vdb_mbedtls_free( ctx );
 }
 
 static void eckey_debug( const void *ctx, mbedtls_pk_debug_item *items )
@@ -270,7 +270,7 @@ static void eckey_debug( const void *ctx, mbedtls_pk_debug_item *items )
     items->value = &( ((mbedtls_ecp_keypair *) ctx)->Q );
 }
 
-const mbedtls_pk_info_t mbedtls_eckey_info = {
+const mbedtls_pk_info_t vdb_mbedtls_eckey_info = {
     MBEDTLS_PK_ECKEY,
     "EC",
     eckey_get_bitlen,
@@ -299,7 +299,7 @@ static int eckeydh_can_do( mbedtls_pk_type_t type )
             type == MBEDTLS_PK_ECKEY_DH );
 }
 
-const mbedtls_pk_info_t mbedtls_eckeydh_info = {
+const mbedtls_pk_info_t vdb_mbedtls_eckeydh_info = {
     MBEDTLS_PK_ECKEY_DH,
     "EC_DH",
     eckey_get_bitlen,         /* Same underlying key structure */
@@ -328,7 +328,7 @@ static int ecdsa_verify_wrap( void *ctx, mbedtls_md_type_t md_alg,
     int ret;
     ((void) md_alg);
 
-    ret = mbedtls_ecdsa_read_signature( (mbedtls_ecdsa_context *) ctx,
+    ret = vdb_mbedtls_ecdsa_read_signature( (mbedtls_ecdsa_context *) ctx,
                                 hash, hash_len, sig, sig_len );
 
     if( ret == MBEDTLS_ERR_ECP_SIG_LEN_MISMATCH )
@@ -342,27 +342,27 @@ static int ecdsa_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
                    unsigned char *sig, size_t *sig_len,
                    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
 {
-    return( mbedtls_ecdsa_write_signature( (mbedtls_ecdsa_context *) ctx,
+    return( vdb_mbedtls_ecdsa_write_signature( (mbedtls_ecdsa_context *) ctx,
                 md_alg, hash, hash_len, sig, sig_len, f_rng, p_rng ) );
 }
 
 static void *ecdsa_alloc_wrap( void )
 {
-    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_ecdsa_context ) );
+    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_ecdsa_context ) );
 
     if( ctx != NULL )
-        mbedtls_ecdsa_init( (mbedtls_ecdsa_context *) ctx );
+        vdb_mbedtls_ecdsa_init( (mbedtls_ecdsa_context *) ctx );
 
     return( ctx );
 }
 
 static void ecdsa_free_wrap( void *ctx )
 {
-    mbedtls_ecdsa_free( (mbedtls_ecdsa_context *) ctx );
-    mbedtls_free( ctx );
+    vdb_mbedtls_ecdsa_free( (mbedtls_ecdsa_context *) ctx );
+    vdb_mbedtls_free( ctx );
 }
 
-const mbedtls_pk_info_t mbedtls_ecdsa_info = {
+const mbedtls_pk_info_t vdb_mbedtls_ecdsa_info = {
     MBEDTLS_PK_ECDSA,
     "ECDSA",
     eckey_get_bitlen,     /* Compatible key structures */
@@ -457,7 +457,7 @@ static int rsa_alt_check_pair( const void *pub, const void *prv )
 
 static void *rsa_alt_alloc_wrap( void )
 {
-    void *ctx = mbedtls_calloc( 1, sizeof( mbedtls_rsa_alt_context ) );
+    void *ctx = vdb_mbedtls_calloc( 1, sizeof( mbedtls_rsa_alt_context ) );
 
     if( ctx != NULL )
         memset( ctx, 0, sizeof( mbedtls_rsa_alt_context ) );
@@ -468,10 +468,10 @@ static void *rsa_alt_alloc_wrap( void )
 static void rsa_alt_free_wrap( void *ctx )
 {
     mbedtls_zeroize( ctx, sizeof( mbedtls_rsa_alt_context ) );
-    mbedtls_free( ctx );
+    vdb_mbedtls_free( ctx );
 }
 
-const mbedtls_pk_info_t mbedtls_rsa_alt_info = {
+const mbedtls_pk_info_t vdb_mbedtls_rsa_alt_info = {
     MBEDTLS_PK_RSA_ALT,
     "RSA-alt",
     rsa_alt_get_bitlen,

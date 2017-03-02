@@ -1416,7 +1416,6 @@ rc_t TransformFileToDirectory(const KDirectory * dir,
     return rc;
 }
 
-/* also handles ftp - if it cant we'll need another function */
 static
 rc_t VFSManagerOpenDirectoryReadHttp (const VFSManager *self,
                                       const KDirectory * dir,
@@ -1441,13 +1440,13 @@ rc_t VFSManagerOpenDirectoryReadHttp (const VFSManager *self,
                 extension, sizeof extension - 1, sizeof extension - 1 ) != 0 )
         {
           const String * p = NULL;
-          rc_t rc = VPathMakeString ( path, & p );
-          if ( rc == 0 ) {
-                PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(path)'",
+          rc_t rc2 = VPathMakeString ( path, & p );
+          if ( rc2 == 0 ) {
+                PLOGERR ( klogErr, ( klogErr, rc, "error with https open '$(path)'",
                                        "path=%S", p ) );
                 free (  ( void * ) p );
           } else {
-            PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(scheme):$(path)'",
+            PLOGERR ( klogErr, ( klogErr, rc, "error with https open '$(scheme):$(path)'",
                              "scheme=%S,path=%S", & path -> scheme, s ) );
           }
         }
@@ -1524,7 +1523,7 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
         {
             if ( high_reliability )
             {
-                PLOGERR ( klogErr, ( klogErr, rc, "error with http open '$(U)'",
+                PLOGERR ( klogErr, ( klogErr, rc, "error with https open '$(U)'",
                                      "U=%S", uri ) );
             }
         }

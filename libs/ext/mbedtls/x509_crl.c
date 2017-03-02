@@ -51,9 +51,9 @@
 #else
 #include <stdlib.h>
 #include <stdio.h>
-#define mbedtls_free       free
-#define mbedtls_calloc    calloc
-#define mbedtls_snprintf   snprintf
+#define vdb_mbedtls_free       free
+#define vdb_mbedtls_calloc    calloc
+#define vdb_mbedtls_snprintf   snprintf
 #endif
 
 #if defined(_WIN32) && !defined(EFIX64) && !defined(EFI32)
@@ -80,7 +80,7 @@ static int x509_crl_get_version( unsigned char **p,
 {
     int ret;
 
-    if( ( ret = mbedtls_asn1_get_int( p, end, ver ) ) != 0 )
+    if( ( ret = vdb_mbedtls_asn1_get_int( p, end, ver ) ) != 0 )
     {
         if( ret == MBEDTLS_ERR_ASN1_UNEXPECTED_TAG )
         {
@@ -105,7 +105,7 @@ static int x509_get_crl_ext( unsigned char **p,
     size_t len = 0;
 
     /* Get explicit tag */
-    if( ( ret = mbedtls_x509_get_ext( p, end, ext, 0) ) != 0 )
+    if( ( ret = vdb_mbedtls_x509_get_ext( p, end, ext, 0) ) != 0 )
     {
         if( ret == MBEDTLS_ERR_ASN1_UNEXPECTED_TAG )
             return( 0 );
@@ -115,7 +115,7 @@ static int x509_get_crl_ext( unsigned char **p,
 
     while( *p < end )
     {
-        if( ( ret = mbedtls_asn1_get_tag( p, end, &len,
+        if( ( ret = vdb_mbedtls_asn1_get_tag( p, end, &len,
                 MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE ) ) != 0 )
             return( MBEDTLS_ERR_X509_INVALID_EXTENSIONS + ret );
 
@@ -150,7 +150,7 @@ static int x509_get_crl_entry_ext( unsigned char **p,
      * Get CRL-entry extension sequence header
      * crlEntryExtensions      Extensions OPTIONAL  -- if present, MUST be v2
      */
-    if( ( ret = mbedtls_asn1_get_tag( p, end, &ext->len,
+    if( ( ret = vdb_mbedtls_asn1_get_tag( p, end, &ext->len,
             MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE ) ) != 0 )
     {
         if( ret == MBEDTLS_ERR_ASN1_UNEXPECTED_TAG )
@@ -169,7 +169,7 @@ static int x509_get_crl_entry_ext( unsigned char **p,
 
     while( *p < end )
     {
-        if( ( ret = mbedtls_asn1_get_tag( p, end, &len,
+        if( ( ret = vdb_mbedtls_asn1_get_tag( p, end, &len,
                 MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE ) ) != 0 )
             return( MBEDTLS_ERR_X509_INVALID_EXTENSIONS + ret );
 
@@ -197,7 +197,7 @@ static int x509_get_entries( unsigned char **p,
     if( *p == end )
         return( 0 );
 
-    if( ( ret = mbedtls_asn1_get_tag( p, end, &entry_len,
+    if( ( ret = vdb_mbedtls_asn1_get_tag( p, end, &entry_len,
             MBEDTLS_ASN1_SEQUENCE | MBEDTLS_ASN1_CONSTRUCTED ) ) != 0 )
     {
         if( ret == MBEDTLS_ERR_ASN1_UNEXPECTED_TAG )
@@ -213,7 +213,7 @@ static int x509_get_entries( unsigned char **p,
         size_t len2;
         const unsigned char *end2;
 
-        if( ( ret = mbedtls_asn1_get_tag( p, end, &len2,
+        if( ( ret = vdb_mbedtls_asn1_get_tag( p, end, &len2,
                 MBEDTLS_ASN1_SEQUENCE | MBEDTLS_ASN1_CONSTRUCTED ) ) != 0 )
         {
             return( ret );
@@ -224,10 +224,10 @@ static int x509_get_entries( unsigned char **p,
         cur_entry->raw.len = len2;
         end2 = *p + len2;
 
-        if( ( ret = mbedtls_x509_get_serial( p, end2, &cur_entry->serial ) ) != 0 )
+        if( ( ret = vdb_mbedtls_x509_get_serial( p, end2, &cur_entry->serial ) ) != 0 )
             return( ret );
 
-        if( ( ret = mbedtls_x509_get_time( p, end2,
+        if( ( ret = vdb_mbedtls_x509_get_time( p, end2,
                                    &cur_entry->revocation_date ) ) != 0 )
             return( ret );
 
@@ -237,7 +237,7 @@ static int x509_get_entries( unsigned char **p,
 
         if( *p < end )
         {
-            cur_entry->next = mbedtls_calloc( 1, sizeof( mbedtls_x509_crl_entry ) );
+            cur_entry->next = vdb_mbedtls_calloc( 1, sizeof( mbedtls_x509_crl_entry ) );
 
             if( cur_entry->next == NULL )
                 return( MBEDTLS_ERR_X509_ALLOC_FAILED );
@@ -252,7 +252,7 @@ static int x509_get_entries( unsigned char **p,
 /*
  * Parse one  CRLs in DER format and append it to the chained list
  */
-int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
+int vdb_mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
                         const unsigned char *buf, size_t buflen )
 {
     int ret;
@@ -279,25 +279,25 @@ int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
 
     if( crl->version != 0 && crl->next == NULL )
     {
-        crl->next = mbedtls_calloc( 1, sizeof( mbedtls_x509_crl ) );
+        crl->next = vdb_mbedtls_calloc( 1, sizeof( mbedtls_x509_crl ) );
 
         if( crl->next == NULL )
         {
-            mbedtls_x509_crl_free( crl );
+            vdb_mbedtls_x509_crl_free( crl );
             return( MBEDTLS_ERR_X509_ALLOC_FAILED );
         }
 
-        mbedtls_x509_crl_init( crl->next );
+        vdb_mbedtls_x509_crl_init( crl->next );
         crl = crl->next;
     }
 
     /*
      * Copy raw DER-encoded CRL
      */
-    if( ( p = mbedtls_calloc( 1, buflen ) ) == NULL )
+    if( ( p = vdb_mbedtls_calloc( 1, buflen ) ) == NULL )
         return( MBEDTLS_ERR_X509_ALLOC_FAILED );
 
-    memmove( p, buf, buflen );
+    memcpy( p, buf, buflen );
 
     crl->raw.p = p;
     crl->raw.len = buflen;
@@ -310,16 +310,16 @@ int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
      *      signatureAlgorithm   AlgorithmIdentifier,
      *      signatureValue       BIT STRING  }
      */
-    if( ( ret = mbedtls_asn1_get_tag( &p, end, &len,
+    if( ( ret = vdb_mbedtls_asn1_get_tag( &p, end, &len,
             MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE ) ) != 0 )
     {
-        mbedtls_x509_crl_free( crl );
+        vdb_mbedtls_x509_crl_free( crl );
         return( MBEDTLS_ERR_X509_INVALID_FORMAT );
     }
 
     if( len != (size_t) ( end - p ) )
     {
-        mbedtls_x509_crl_free( crl );
+        vdb_mbedtls_x509_crl_free( crl );
         return( MBEDTLS_ERR_X509_INVALID_FORMAT +
                 MBEDTLS_ERR_ASN1_LENGTH_MISMATCH );
     }
@@ -329,10 +329,10 @@ int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
      */
     crl->tbs.p = p;
 
-    if( ( ret = mbedtls_asn1_get_tag( &p, end, &len,
+    if( ( ret = vdb_mbedtls_asn1_get_tag( &p, end, &len,
             MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE ) ) != 0 )
     {
-        mbedtls_x509_crl_free( crl );
+        vdb_mbedtls_x509_crl_free( crl );
         return( MBEDTLS_ERR_X509_INVALID_FORMAT + ret );
     }
 
@@ -346,9 +346,9 @@ int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
      * signature            AlgorithmIdentifier
      */
     if( ( ret = x509_crl_get_version( &p, end, &crl->version ) ) != 0 ||
-        ( ret = mbedtls_x509_get_alg( &p, end, &crl->sig_oid, &sig_params1 ) ) != 0 )
+        ( ret = vdb_mbedtls_x509_get_alg( &p, end, &crl->sig_oid, &sig_params1 ) ) != 0 )
     {
-        mbedtls_x509_crl_free( crl );
+        vdb_mbedtls_x509_crl_free( crl );
         return( ret );
     }
 
@@ -356,15 +356,15 @@ int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
 
     if( crl->version > 2 )
     {
-        mbedtls_x509_crl_free( crl );
+        vdb_mbedtls_x509_crl_free( crl );
         return( MBEDTLS_ERR_X509_UNKNOWN_VERSION );
     }
 
-    if( ( ret = mbedtls_x509_get_sig_alg( &crl->sig_oid, &sig_params1,
+    if( ( ret = vdb_mbedtls_x509_get_sig_alg( &crl->sig_oid, &sig_params1,
                                   &crl->sig_md, &crl->sig_pk,
                                   &crl->sig_opts ) ) != 0 )
     {
-        mbedtls_x509_crl_free( crl );
+        vdb_mbedtls_x509_crl_free( crl );
         return( MBEDTLS_ERR_X509_UNKNOWN_SIG_ALG );
     }
 
@@ -373,16 +373,16 @@ int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
      */
     crl->issuer_raw.p = p;
 
-    if( ( ret = mbedtls_asn1_get_tag( &p, end, &len,
+    if( ( ret = vdb_mbedtls_asn1_get_tag( &p, end, &len,
             MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE ) ) != 0 )
     {
-        mbedtls_x509_crl_free( crl );
+        vdb_mbedtls_x509_crl_free( crl );
         return( MBEDTLS_ERR_X509_INVALID_FORMAT + ret );
     }
 
-    if( ( ret = mbedtls_x509_get_name( &p, p + len, &crl->issuer ) ) != 0 )
+    if( ( ret = vdb_mbedtls_x509_get_name( &p, p + len, &crl->issuer ) ) != 0 )
     {
-        mbedtls_x509_crl_free( crl );
+        vdb_mbedtls_x509_crl_free( crl );
         return( ret );
     }
 
@@ -392,20 +392,20 @@ int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
      * thisUpdate          Time
      * nextUpdate          Time OPTIONAL
      */
-    if( ( ret = mbedtls_x509_get_time( &p, end, &crl->this_update ) ) != 0 )
+    if( ( ret = vdb_mbedtls_x509_get_time( &p, end, &crl->this_update ) ) != 0 )
     {
-        mbedtls_x509_crl_free( crl );
+        vdb_mbedtls_x509_crl_free( crl );
         return( ret );
     }
 
-    if( ( ret = mbedtls_x509_get_time( &p, end, &crl->next_update ) ) != 0 )
+    if( ( ret = vdb_mbedtls_x509_get_time( &p, end, &crl->next_update ) ) != 0 )
     {
         if( ret != ( MBEDTLS_ERR_X509_INVALID_DATE +
                         MBEDTLS_ERR_ASN1_UNEXPECTED_TAG ) &&
             ret != ( MBEDTLS_ERR_X509_INVALID_DATE +
                         MBEDTLS_ERR_ASN1_OUT_OF_DATA ) )
         {
-            mbedtls_x509_crl_free( crl );
+            vdb_mbedtls_x509_crl_free( crl );
             return( ret );
         }
     }
@@ -420,7 +420,7 @@ int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
      */
     if( ( ret = x509_get_entries( &p, end, &crl->entry ) ) != 0 )
     {
-        mbedtls_x509_crl_free( crl );
+        vdb_mbedtls_x509_crl_free( crl );
         return( ret );
     }
 
@@ -434,14 +434,14 @@ int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
 
         if( ret != 0 )
         {
-            mbedtls_x509_crl_free( crl );
+            vdb_mbedtls_x509_crl_free( crl );
             return( ret );
         }
     }
 
     if( p != end )
     {
-        mbedtls_x509_crl_free( crl );
+        vdb_mbedtls_x509_crl_free( crl );
         return( MBEDTLS_ERR_X509_INVALID_FORMAT +
                 MBEDTLS_ERR_ASN1_LENGTH_MISMATCH );
     }
@@ -452,9 +452,9 @@ int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
      *  signatureAlgorithm   AlgorithmIdentifier,
      *  signatureValue       BIT STRING
      */
-    if( ( ret = mbedtls_x509_get_alg( &p, end, &sig_oid2, &sig_params2 ) ) != 0 )
+    if( ( ret = vdb_mbedtls_x509_get_alg( &p, end, &sig_oid2, &sig_params2 ) ) != 0 )
     {
-        mbedtls_x509_crl_free( crl );
+        vdb_mbedtls_x509_crl_free( crl );
         return( ret );
     }
 
@@ -464,19 +464,19 @@ int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
         ( sig_params1.len != 0 &&
           memcmp( sig_params1.p, sig_params2.p, sig_params1.len ) != 0 ) )
     {
-        mbedtls_x509_crl_free( crl );
+        vdb_mbedtls_x509_crl_free( crl );
         return( MBEDTLS_ERR_X509_SIG_MISMATCH );
     }
 
-    if( ( ret = mbedtls_x509_get_sig( &p, end, &crl->sig ) ) != 0 )
+    if( ( ret = vdb_mbedtls_x509_get_sig( &p, end, &crl->sig ) ) != 0 )
     {
-        mbedtls_x509_crl_free( crl );
+        vdb_mbedtls_x509_crl_free( crl );
         return( ret );
     }
 
     if( p != end )
     {
-        mbedtls_x509_crl_free( crl );
+        vdb_mbedtls_x509_crl_free( crl );
         return( MBEDTLS_ERR_X509_INVALID_FORMAT +
                 MBEDTLS_ERR_ASN1_LENGTH_MISMATCH );
     }
@@ -487,7 +487,7 @@ int mbedtls_x509_crl_parse_der( mbedtls_x509_crl *chain,
 /*
  * Parse one or more CRLs and add them to the chained list
  */
-int mbedtls_x509_crl_parse( mbedtls_x509_crl *chain, const unsigned char *buf, size_t buflen )
+int vdb_mbedtls_x509_crl_parse( mbedtls_x509_crl *chain, const unsigned char *buf, size_t buflen )
 {
 #if defined(MBEDTLS_PEM_PARSE_C)
     int ret;
@@ -500,14 +500,14 @@ int mbedtls_x509_crl_parse( mbedtls_x509_crl *chain, const unsigned char *buf, s
 
     do
     {
-        mbedtls_pem_init( &pem );
+        vdb_mbedtls_pem_init( &pem );
 
-        // Avoid calling mbedtls_pem_read_buffer() on non-null-terminated
+        // Avoid calling vdb_mbedtls_pem_read_buffer() on non-null-terminated
         // string
         if( buflen == 0 || buf[buflen - 1] != '\0' )
             ret = MBEDTLS_ERR_PEM_NO_HEADER_FOOTER_PRESENT;
         else
-            ret = mbedtls_pem_read_buffer( &pem,
+            ret = vdb_mbedtls_pem_read_buffer( &pem,
                                            "-----BEGIN X509 CRL-----",
                                            "-----END X509 CRL-----",
                                             buf, NULL, 0, &use_len );
@@ -522,17 +522,17 @@ int mbedtls_x509_crl_parse( mbedtls_x509_crl *chain, const unsigned char *buf, s
             buflen -= use_len;
             buf += use_len;
 
-            if( ( ret = mbedtls_x509_crl_parse_der( chain,
+            if( ( ret = vdb_mbedtls_x509_crl_parse_der( chain,
                                             pem.buf, pem.buflen ) ) != 0 )
             {
                 return( ret );
             }
 
-            mbedtls_pem_free( &pem );
+            vdb_mbedtls_pem_free( &pem );
         }
         else if( ret != MBEDTLS_ERR_PEM_NO_HEADER_FOOTER_PRESENT )
         {
-            mbedtls_pem_free( &pem );
+            vdb_mbedtls_pem_free( &pem );
             return( ret );
         }
     }
@@ -544,26 +544,26 @@ int mbedtls_x509_crl_parse( mbedtls_x509_crl *chain, const unsigned char *buf, s
         return( 0 );
     else
 #endif /* MBEDTLS_PEM_PARSE_C */
-        return( mbedtls_x509_crl_parse_der( chain, buf, buflen ) );
+        return( vdb_mbedtls_x509_crl_parse_der( chain, buf, buflen ) );
 }
 
 #if defined(MBEDTLS_FS_IO)
 /*
  * Load one or more CRLs and add them to the chained list
  */
-int mbedtls_x509_crl_parse_file( mbedtls_x509_crl *chain, const char *path )
+int vdb_mbedtls_x509_crl_parse_file( mbedtls_x509_crl *chain, const char *path )
 {
     int ret;
     size_t n;
     unsigned char *buf;
 
-    if( ( ret = mbedtls_pk_load_file( path, &buf, &n ) ) != 0 )
+    if( ( ret = vdb_mbedtls_pk_load_file( path, &buf, &n ) ) != 0 )
         return( ret );
 
-    ret = mbedtls_x509_crl_parse( chain, buf, n );
+    ret = vdb_mbedtls_x509_crl_parse( chain, buf, n );
 
     mbedtls_zeroize( buf, n );
-    mbedtls_free( buf );
+    vdb_mbedtls_free( buf );
 
     return( ret );
 }
@@ -577,7 +577,7 @@ int mbedtls_x509_crl_parse_file( mbedtls_x509_crl *chain, const char *path )
 /*
  * Return an informational string about the CRL.
  */
-int mbedtls_x509_crl_info( char *buf, size_t size, const char *prefix,
+int vdb_mbedtls_x509_crl_info( char *buf, size_t size, const char *prefix,
                    const mbedtls_x509_crl *crl )
 {
     int ret;
@@ -588,23 +588,23 @@ int mbedtls_x509_crl_info( char *buf, size_t size, const char *prefix,
     p = buf;
     n = size;
 
-    ret = mbedtls_snprintf( p, n, "%sCRL version   : %d",
+    ret = vdb_mbedtls_snprintf( p, n, "%sCRL version   : %d",
                                prefix, crl->version );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
-    ret = mbedtls_snprintf( p, n, "\n%sissuer name   : ", prefix );
+    ret = vdb_mbedtls_snprintf( p, n, "\n%sissuer name   : ", prefix );
     MBEDTLS_X509_SAFE_SNPRINTF;
-    ret = mbedtls_x509_dn_gets( p, n, &crl->issuer );
+    ret = vdb_mbedtls_x509_dn_gets( p, n, &crl->issuer );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
-    ret = mbedtls_snprintf( p, n, "\n%sthis update   : " \
+    ret = vdb_mbedtls_snprintf( p, n, "\n%sthis update   : " \
                    "%04d-%02d-%02d %02d:%02d:%02d", prefix,
                    crl->this_update.year, crl->this_update.mon,
                    crl->this_update.day,  crl->this_update.hour,
                    crl->this_update.min,  crl->this_update.sec );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
-    ret = mbedtls_snprintf( p, n, "\n%snext update   : " \
+    ret = vdb_mbedtls_snprintf( p, n, "\n%snext update   : " \
                    "%04d-%02d-%02d %02d:%02d:%02d", prefix,
                    crl->next_update.year, crl->next_update.mon,
                    crl->next_update.day,  crl->next_update.hour,
@@ -613,20 +613,20 @@ int mbedtls_x509_crl_info( char *buf, size_t size, const char *prefix,
 
     entry = &crl->entry;
 
-    ret = mbedtls_snprintf( p, n, "\n%sRevoked certificates:",
+    ret = vdb_mbedtls_snprintf( p, n, "\n%sRevoked certificates:",
                                prefix );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
     while( entry != NULL && entry->raw.len != 0 )
     {
-        ret = mbedtls_snprintf( p, n, "\n%sserial number: ",
+        ret = vdb_mbedtls_snprintf( p, n, "\n%sserial number: ",
                                prefix );
         MBEDTLS_X509_SAFE_SNPRINTF;
 
-        ret = mbedtls_x509_serial_gets( p, n, &entry->serial );
+        ret = vdb_mbedtls_x509_serial_gets( p, n, &entry->serial );
         MBEDTLS_X509_SAFE_SNPRINTF;
 
-        ret = mbedtls_snprintf( p, n, " revocation date: " \
+        ret = vdb_mbedtls_snprintf( p, n, " revocation date: " \
                    "%04d-%02d-%02d %02d:%02d:%02d",
                    entry->revocation_date.year, entry->revocation_date.mon,
                    entry->revocation_date.day,  entry->revocation_date.hour,
@@ -636,14 +636,14 @@ int mbedtls_x509_crl_info( char *buf, size_t size, const char *prefix,
         entry = entry->next;
     }
 
-    ret = mbedtls_snprintf( p, n, "\n%ssigned using  : ", prefix );
+    ret = vdb_mbedtls_snprintf( p, n, "\n%ssigned using  : ", prefix );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
-    ret = mbedtls_x509_sig_alg_gets( p, n, &crl->sig_oid, crl->sig_pk, crl->sig_md,
+    ret = vdb_mbedtls_x509_sig_alg_gets( p, n, &crl->sig_oid, crl->sig_pk, crl->sig_md,
                              crl->sig_opts );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
-    ret = mbedtls_snprintf( p, n, "\n" );
+    ret = vdb_mbedtls_snprintf( p, n, "\n" );
     MBEDTLS_X509_SAFE_SNPRINTF;
 
     return( (int) ( size - n ) );
@@ -652,7 +652,7 @@ int mbedtls_x509_crl_info( char *buf, size_t size, const char *prefix,
 /*
  * Initialize a CRL chain
  */
-void mbedtls_x509_crl_init( mbedtls_x509_crl *crl )
+void vdb_mbedtls_x509_crl_init( mbedtls_x509_crl *crl )
 {
     memset( crl, 0, sizeof(mbedtls_x509_crl) );
 }
@@ -660,7 +660,7 @@ void mbedtls_x509_crl_init( mbedtls_x509_crl *crl )
 /*
  * Unallocate all CRL data
  */
-void mbedtls_x509_crl_free( mbedtls_x509_crl *crl )
+void vdb_mbedtls_x509_crl_free( mbedtls_x509_crl *crl )
 {
     mbedtls_x509_crl *crl_cur = crl;
     mbedtls_x509_crl *crl_prv;
@@ -675,7 +675,7 @@ void mbedtls_x509_crl_free( mbedtls_x509_crl *crl )
     do
     {
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
-        mbedtls_free( crl_cur->sig_opts );
+        vdb_mbedtls_free( crl_cur->sig_opts );
 #endif
 
         name_cur = crl_cur->issuer.next;
@@ -684,7 +684,7 @@ void mbedtls_x509_crl_free( mbedtls_x509_crl *crl )
             name_prv = name_cur;
             name_cur = name_cur->next;
             mbedtls_zeroize( name_prv, sizeof( mbedtls_x509_name ) );
-            mbedtls_free( name_prv );
+            vdb_mbedtls_free( name_prv );
         }
 
         entry_cur = crl_cur->entry.next;
@@ -693,13 +693,13 @@ void mbedtls_x509_crl_free( mbedtls_x509_crl *crl )
             entry_prv = entry_cur;
             entry_cur = entry_cur->next;
             mbedtls_zeroize( entry_prv, sizeof( mbedtls_x509_crl_entry ) );
-            mbedtls_free( entry_prv );
+            vdb_mbedtls_free( entry_prv );
         }
 
         if( crl_cur->raw.p != NULL )
         {
             mbedtls_zeroize( crl_cur->raw.p, crl_cur->raw.len );
-            mbedtls_free( crl_cur->raw.p );
+            vdb_mbedtls_free( crl_cur->raw.p );
         }
 
         crl_cur = crl_cur->next;
@@ -714,7 +714,7 @@ void mbedtls_x509_crl_free( mbedtls_x509_crl *crl )
 
         mbedtls_zeroize( crl_prv, sizeof( mbedtls_x509_crl ) );
         if( crl_prv != crl )
-            mbedtls_free( crl_prv );
+            vdb_mbedtls_free( crl_prv );
     }
     while( crl_cur != NULL );
 }
