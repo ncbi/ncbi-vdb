@@ -177,7 +177,7 @@ NGS_Reference * SRA_DB_ReadCollectionGetReferences ( SRA_DB_ReadCollection * sel
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
 
-    // create empty reference iterator
+    /* create empty reference iterator */
     return NGS_ReferenceMakeNull ( ctx, & self -> dad );
 }
 
@@ -192,7 +192,7 @@ NGS_Reference * SRA_DB_ReadCollectionGetReference ( SRA_DB_ReadCollection * self
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
 
-    // always fail
+    /* always fail */
     INTERNAL_ERROR ( xcRowNotFound, "Reference not found ( NAME = %s )", spec );
     return NULL;
 }
@@ -203,7 +203,7 @@ NGS_Alignment * SRA_DB_ReadCollectionGetAlignments ( SRA_DB_ReadCollection * sel
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
 
-    // create empty alignment iterator
+    /* create empty alignment iterator */
     return NGS_AlignmentMakeNull ( ctx, NGS_StringData(self -> run_name, ctx), NGS_StringSize(self -> run_name, ctx) );
 }
 
@@ -212,7 +212,7 @@ NGS_Alignment * SRA_DB_ReadCollectionGetAlignment ( SRA_DB_ReadCollection * self
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
 
-    // always fail
+    /* always fail */
     INTERNAL_ERROR ( xcRowNotFound, "Aligment not found ( ID = %ld )", alignmentId );
     return NULL;
 }
@@ -230,7 +230,7 @@ NGS_Alignment * SRA_DB_ReadCollectionGetAlignmentRange ( SRA_DB_ReadCollection *
 {
     FUNC_ENTRY ( ctx, rcSRA, rcTable, rcAccessing );
 
-    // create empty alignment iterator
+    /* create empty alignment iterator */
     return NGS_AlignmentMakeNull ( ctx, NGS_StringData(self -> run_name, ctx), NGS_StringSize(self -> run_name, ctx) );
 }
 

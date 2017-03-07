@@ -65,7 +65,7 @@ extern mbedtls_time_t (*mbedtls_time)( mbedtls_time_t* time );
  *
  * \return              0
  */
-int mbedtls_platform_set_time( mbedtls_time_t (*time_func)( mbedtls_time_t* time ) );
+int vdb_mbedtls_platform_set_time( mbedtls_time_t (*time_func)( mbedtls_time_t* time ) );
 #else
 #if defined(MBEDTLS_PLATFORM_TIME_MACRO)
 #define mbedtls_time    MBEDTLS_PLATFORM_TIME_MACRO

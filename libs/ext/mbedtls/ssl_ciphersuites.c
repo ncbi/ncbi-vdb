@@ -1694,7 +1694,7 @@ static const mbedtls_ssl_ciphersuite_t ciphersuite_definitions[] =
 };
 
 #if defined(MBEDTLS_SSL_CIPHERSUITES)
-const int *mbedtls_ssl_list_ciphersuites( void )
+const int *vdb_mbedtls_ssl_list_ciphersuites( void )
 {
     return( ciphersuite_preference );
 }
@@ -1704,7 +1704,7 @@ const int *mbedtls_ssl_list_ciphersuites( void )
 static int supported_ciphersuites[MAX_CIPHERSUITES];
 static int supported_init = 0;
 
-const int *mbedtls_ssl_list_ciphersuites( void )
+const int *vdb_mbedtls_ssl_list_ciphersuites( void )
 {
     /*
      * On initial call filter out all ciphersuites not supported by current
@@ -1721,10 +1721,10 @@ const int *mbedtls_ssl_list_ciphersuites( void )
         {
 #if defined(MBEDTLS_REMOVE_ARC4_CIPHERSUITES)
             const mbedtls_ssl_ciphersuite_t *cs_info;
-            if( ( cs_info = mbedtls_ssl_ciphersuite_from_id( *p ) ) != NULL &&
+            if( ( cs_info = vdb_mbedtls_ssl_ciphersuite_from_id( *p ) ) != NULL &&
                 cs_info->cipher != MBEDTLS_CIPHER_ARC4_128 )
 #else
-            if( mbedtls_ssl_ciphersuite_from_id( *p ) != NULL )
+            if( vdb_mbedtls_ssl_ciphersuite_from_id( *p ) != NULL )
 #endif
                 *(q++) = *p;
         }
@@ -1737,7 +1737,7 @@ const int *mbedtls_ssl_list_ciphersuites( void )
 }
 #endif /* MBEDTLS_SSL_CIPHERSUITES */
 
-const mbedtls_ssl_ciphersuite_t *mbedtls_ssl_ciphersuite_from_string(
+const mbedtls_ssl_ciphersuite_t *vdb_mbedtls_ssl_ciphersuite_from_string(
                                                 const char *ciphersuite_name )
 {
     const mbedtls_ssl_ciphersuite_t *cur = ciphersuite_definitions;
@@ -1756,7 +1756,7 @@ const mbedtls_ssl_ciphersuite_t *mbedtls_ssl_ciphersuite_from_string(
     return( NULL );
 }
 
-const mbedtls_ssl_ciphersuite_t *mbedtls_ssl_ciphersuite_from_id( int ciphersuite )
+const mbedtls_ssl_ciphersuite_t *vdb_mbedtls_ssl_ciphersuite_from_id( int ciphersuite )
 {
     const mbedtls_ssl_ciphersuite_t *cur = ciphersuite_definitions;
 
@@ -1771,11 +1771,11 @@ const mbedtls_ssl_ciphersuite_t *mbedtls_ssl_ciphersuite_from_id( int ciphersuit
     return( NULL );
 }
 
-const char *mbedtls_ssl_get_ciphersuite_name( const int ciphersuite_id )
+const char *vdb_mbedtls_ssl_get_ciphersuite_name( const int ciphersuite_id )
 {
     const mbedtls_ssl_ciphersuite_t *cur;
 
-    cur = mbedtls_ssl_ciphersuite_from_id( ciphersuite_id );
+    cur = vdb_mbedtls_ssl_ciphersuite_from_id( ciphersuite_id );
 
     if( cur == NULL )
         return( "unknown" );
@@ -1783,11 +1783,11 @@ const char *mbedtls_ssl_get_ciphersuite_name( const int ciphersuite_id )
     return( cur->name );
 }
 
-int mbedtls_ssl_get_ciphersuite_id( const char *ciphersuite_name )
+int vdb_mbedtls_ssl_get_ciphersuite_id( const char *ciphersuite_name )
 {
     const mbedtls_ssl_ciphersuite_t *cur;
 
-    cur = mbedtls_ssl_ciphersuite_from_string( ciphersuite_name );
+    cur = vdb_mbedtls_ssl_ciphersuite_from_string( ciphersuite_name );
 
     if( cur == NULL )
         return( 0 );
@@ -1796,7 +1796,7 @@ int mbedtls_ssl_get_ciphersuite_id( const char *ciphersuite_name )
 }
 
 #if defined(MBEDTLS_PK_C)
-mbedtls_pk_type_t mbedtls_ssl_get_ciphersuite_sig_pk_alg( const mbedtls_ssl_ciphersuite_t *info )
+mbedtls_pk_type_t vdb_mbedtls_ssl_get_ciphersuite_sig_pk_alg( const mbedtls_ssl_ciphersuite_t *info )
 {
     switch( info->key_exchange )
     {
@@ -1820,7 +1820,7 @@ mbedtls_pk_type_t mbedtls_ssl_get_ciphersuite_sig_pk_alg( const mbedtls_ssl_ciph
 #endif /* MBEDTLS_PK_C */
 
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C)
-int mbedtls_ssl_ciphersuite_uses_ec( const mbedtls_ssl_ciphersuite_t *info )
+int vdb_mbedtls_ssl_ciphersuite_uses_ec( const mbedtls_ssl_ciphersuite_t *info )
 {
     switch( info->key_exchange )
     {
@@ -1838,7 +1838,7 @@ int mbedtls_ssl_ciphersuite_uses_ec( const mbedtls_ssl_ciphersuite_t *info )
 #endif /* MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C */
 
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
-int mbedtls_ssl_ciphersuite_uses_psk( const mbedtls_ssl_ciphersuite_t *info )
+int vdb_mbedtls_ssl_ciphersuite_uses_psk( const mbedtls_ssl_ciphersuite_t *info )
 {
     switch( info->key_exchange )
     {

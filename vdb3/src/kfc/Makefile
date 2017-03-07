@@ -26,7 +26,7 @@
 default: std
 
 TOP ?= $(abspath ../../..)
-include $(TOP)/build/Makefile.config
+MODULE = vdb3/src/kfc
 
 # repairs to Makefile.config
 INCDIRS = -I. -I$(TOP)/vdb3/itf
@@ -77,12 +77,20 @@ all std: $(TARGETS)
 compile: $(OBJDIR) $(OBJFILES)
 
 clean:
-	rm -rf $(ILIBDIR)/$(LPFX)ngs-disp* $(OBJDIR)
+	rm -rf $(ILIBDIR)/$(LPFX)vdb3* $(OBJDIR)
 
 .PHONY: default all std $(TARGETS)
 
-vdb3-kfc: $(ILIBDIR) $(OBJDIR) $(ILIBDIR)/$(LPFX)vdb3-kfc.$(LIBX)
-
 # rule to produce the static library
+vdb3-kfc: $(ILIBDIR) $(OBJDIR) $(ILIBDIR)/$(LPFX)vdb3-kfc.$(LIBX)
 $(ILIBDIR)/$(LPFX)vdb3-kfc.$(LIBX): $(KFC_OBJ)
 	$(AR) $@ $^
+
+libvdb3: $(ILIBDIR) $(OBJDIR) $(ILIBDIR)/$(LPFX)vdb3.$(LIBX)
+$(ILIBDIR)/$(LPFX)vdb3.$(LIBX): $(VDB3_OBJ)
+	$(AR) $@ $^
+
+compile: stdcompile
+
+$(TARGDIR)/compile: $(OBJFILES) libvdb3
+

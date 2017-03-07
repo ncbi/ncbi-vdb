@@ -31,8 +31,8 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdlib.h>
-#define mbedtls_calloc    calloc
-#define mbedtls_free      free
+#define vdb_mbedtls_calloc    calloc
+#define vdb_mbedtls_free      free
 #endif
 
 #include "mbedtls/ssl_ticket.h"
@@ -47,7 +47,7 @@ static void mbedtls_zeroize( void *v, size_t n ) {
 /*
  * Initialze context
  */
-void mbedtls_ssl_ticket_init( mbedtls_ssl_ticket_context *ctx )
+void vdb_mbedtls_ssl_ticket_init( mbedtls_ssl_ticket_context *ctx )
 {
     memset( ctx, 0, sizeof( mbedtls_ssl_ticket_context ) );
 
@@ -79,8 +79,8 @@ static int ssl_ticket_gen_key( mbedtls_ssl_ticket_context *ctx,
         return( ret );
 
     /* With GCM and CCM, same context can encrypt & decrypt */
-    ret = mbedtls_cipher_setkey( &key->ctx, buf,
-                                 mbedtls_cipher_get_key_bitlen( &key->ctx ),
+    ret = vdb_mbedtls_cipher_setkey( &key->ctx, buf,
+                                 vdb_mbedtls_cipher_get_key_bitlen( &key->ctx ),
                                  MBEDTLS_ENCRYPT );
 
     mbedtls_zeroize( buf, sizeof( buf ) );
@@ -119,7 +119,7 @@ static int ssl_ticket_update_keys( mbedtls_ssl_ticket_context *ctx )
 /*
  * Setup context for actual use
  */
-int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
+int vdb_mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
     int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
     mbedtls_cipher_type_t cipher,
     uint32_t lifetime )
@@ -132,7 +132,7 @@ int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
 
     ctx->ticket_lifetime = lifetime;
 
-    cipher_info = mbedtls_cipher_info_from_type( cipher);
+    cipher_info = vdb_mbedtls_cipher_info_from_type( cipher);
     if( cipher_info == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
@@ -145,8 +145,8 @@ int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
     if( cipher_info->key_bitlen > 8 * MAX_KEY_BYTES )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    if( ( ret = mbedtls_cipher_setup( &ctx->keys[0].ctx, cipher_info ) ) != 0 ||
-        ( ret = mbedtls_cipher_setup( &ctx->keys[1].ctx, cipher_info ) ) != 0 )
+    if( ( ret = vdb_mbedtls_cipher_setup( &ctx->keys[0].ctx, cipher_info ) ) != 0 ||
+        ( ret = vdb_mbedtls_cipher_setup( &ctx->keys[1].ctx, cipher_info ) ) != 0 )
     {
         return( ret );
     }
@@ -179,7 +179,7 @@ static int ssl_save_session( const mbedtls_ssl_session *session,
     if( left < sizeof( mbedtls_ssl_session ) )
         return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
 
-    memmove( p, session, sizeof( mbedtls_ssl_session ) );
+    memcpy( p, session, sizeof( mbedtls_ssl_session ) );
     p += sizeof( mbedtls_ssl_session );
     left -= sizeof( mbedtls_ssl_session );
 
@@ -197,7 +197,7 @@ static int ssl_save_session( const mbedtls_ssl_session *session,
     *p++ = (unsigned char)( cert_len       & 0xFF );
 
     if( session->peer_cert != NULL )
-        memmove( p, session->peer_cert->raw.p, cert_len );
+        memcpy( p, session->peer_cert->raw.p, cert_len );
 
     p += cert_len;
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
@@ -222,7 +222,7 @@ static int ssl_load_session( mbedtls_ssl_session *session,
     if( p + sizeof( mbedtls_ssl_session ) > end )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    memmove( session, p, sizeof( mbedtls_ssl_session ) );
+    memcpy( session, p, sizeof( mbedtls_ssl_session ) );
     p += sizeof( mbedtls_ssl_session );
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -243,18 +243,18 @@ static int ssl_load_session( mbedtls_ssl_session *session,
         if( p + cert_len > end )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-        session->peer_cert = mbedtls_calloc( 1, sizeof( mbedtls_x509_crt ) );
+        session->peer_cert = vdb_mbedtls_calloc( 1, sizeof( mbedtls_x509_crt ) );
 
         if( session->peer_cert == NULL )
             return( MBEDTLS_ERR_SSL_ALLOC_FAILED );
 
-        mbedtls_x509_crt_init( session->peer_cert );
+        vdb_mbedtls_x509_crt_init( session->peer_cert );
 
-        if( ( ret = mbedtls_x509_crt_parse_der( session->peer_cert,
+        if( ( ret = vdb_mbedtls_x509_crt_parse_der( session->peer_cert,
                                         p, cert_len ) ) != 0 )
         {
-            mbedtls_x509_crt_free( session->peer_cert );
-            mbedtls_free( session->peer_cert );
+            vdb_mbedtls_x509_crt_free( session->peer_cert );
+            vdb_mbedtls_free( session->peer_cert );
             session->peer_cert = NULL;
             return( ret );
         }
@@ -282,7 +282,7 @@ static int ssl_load_session( mbedtls_ssl_session *session,
  * The key_name, iv, and length of encrypted_state are the additional
  * authenticated data.
  */
-int mbedtls_ssl_ticket_write( void *p_ticket,
+int vdb_mbedtls_ssl_ticket_write( void *p_ticket,
                               const mbedtls_ssl_session *session,
                               unsigned char *start,
                               const unsigned char *end,
@@ -321,7 +321,7 @@ int mbedtls_ssl_ticket_write( void *p_ticket,
 
     *ticket_lifetime = ctx->ticket_lifetime;
 
-    memmove( key_name, key->name, 4 );
+    memcpy( key_name, key->name, 4 );
 
     if( ( ret = ctx->f_rng( ctx->p_rng, iv, 12 ) ) != 0 )
         goto cleanup;
@@ -338,7 +338,7 @@ int mbedtls_ssl_ticket_write( void *p_ticket,
 
     /* Encrypt and authenticate */
     tag = state + clear_len;
-    if( ( ret = mbedtls_cipher_auth_encrypt( &key->ctx,
+    if( ( ret = vdb_mbedtls_cipher_auth_encrypt( &key->ctx,
                     iv, 12, key_name, 4 + 12 + 2,
                     state, clear_len, state, &ciph_len, tag, 16 ) ) != 0 )
     {
@@ -378,9 +378,9 @@ static mbedtls_ssl_ticket_key *ssl_ticket_select_key(
 }
 
 /*
- * Load session ticket (see mbedtls_ssl_ticket_write for structure)
+ * Load session ticket (see vdb_mbedtls_ssl_ticket_write for structure)
  */
-int mbedtls_ssl_ticket_parse( void *p_ticket,
+int vdb_mbedtls_ssl_ticket_parse( void *p_ticket,
                               mbedtls_ssl_session *session,
                               unsigned char *buf,
                               size_t len )
@@ -398,7 +398,7 @@ int mbedtls_ssl_ticket_parse( void *p_ticket,
     if( ctx == NULL || ctx->f_rng == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    /* See mbedtls_ssl_ticket_write() */
+    /* See vdb_mbedtls_ssl_ticket_write() */
     if( len < 4 + 12 + 2 + 16 )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
@@ -429,7 +429,7 @@ int mbedtls_ssl_ticket_parse( void *p_ticket,
     }
 
     /* Decrypt and authenticate */
-    if( ( ret = mbedtls_cipher_auth_decrypt( &key->ctx, iv, 12,
+    if( ( ret = vdb_mbedtls_cipher_auth_decrypt( &key->ctx, iv, 12,
                     key_name, 4 + 12 + 2, ticket, enc_len,
                     ticket, &clear_len, tag, 16 ) ) != 0 )
     {
@@ -474,10 +474,10 @@ cleanup:
 /*
  * Free context
  */
-void mbedtls_ssl_ticket_free( mbedtls_ssl_ticket_context *ctx )
+void vdb_mbedtls_ssl_ticket_free( mbedtls_ssl_ticket_context *ctx )
 {
-    mbedtls_cipher_free( &ctx->keys[0].ctx );
-    mbedtls_cipher_free( &ctx->keys[1].ctx );
+    vdb_mbedtls_cipher_free( &ctx->keys[0].ctx );
+    vdb_mbedtls_cipher_free( &ctx->keys[1].ctx );
 
 #if defined(MBEDTLS_THREADING_C)
     mbedtls_mutex_free( &ctx->mutex );

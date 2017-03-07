@@ -122,7 +122,7 @@ table INSDC:SRA:tbl:spotcoord #1
  *  1.0.1 - split X and Y into spotcoord table
  *  1.0.2 - added ability to get name from TRACE_NAME
  */
-table INSDC:SRA:tbl:spotname #1.0.2 = INSDC:SRA:tbl:spotcoord #1
+table INSDC:SRA:tbl:spotname #1.0.1 = INSDC:SRA:tbl:spotcoord #1
 {
     /* NAME
      *  external name for spot
@@ -145,7 +145,7 @@ table INSDC:SRA:tbl:spotname #1.0.2 = INSDC:SRA:tbl:spotcoord #1
         | INSDC:SRA:format_spot_name ( out_name_fmt, out_x_coord, out_y_coord )
         | INSDC:SRA:format_spot_name_no_coord (out_name_fmt)
         | out_spot_name
-        | out_trace_name
+    //  | out_trace_name // temporarily commented out to revert version back to 1.0.1
         ;
 
 
