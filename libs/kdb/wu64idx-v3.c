@@ -310,13 +310,12 @@ rc_t KU64IndexPersist_v3(KU64Index_v3* self, bool proj, KDirectory *dir, const c
 
         if( self->rc == 0 ) {
             struct KIndexFileHeader_v3 head;
-            size_t writ = 0;
 
             KDBHdrInit(&head.h, 3);
             head.index_type = kitU64;
-            self->rc = KFileWrite(pd.file, pd.pos, &head, sizeof(struct KIndexFileHeader_v3), &writ);
+            self->rc = KFileWriteExactly(pd.file, pd.pos, &head, sizeof head);
             if( self->rc == 0 ) {
-                pd.pos += writ;
+                pd.pos += sizeof head;
                 if( use_md5 ) {
                     KMD5FileBeginTransaction(pd.file_md5);
                 }

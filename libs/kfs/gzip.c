@@ -582,7 +582,6 @@ static int s_GzipAndWrite ( KGZipFile *self,
        compression if all of source has been read in */
     do {
         uint32_t have;
-        size_t written;
         strm->avail_out = sizeof( self->buff );
         strm->next_out = self->buff;
         ret = deflate( strm, flush );    /* no bad return value */
@@ -591,13 +590,13 @@ static int s_GzipAndWrite ( KGZipFile *self,
 */
         assert( ret != Z_STREAM_ERROR );  /* state not clobbered */
         have = sizeof( self->buff ) - strm->avail_out;
-        written = 0;
-        *rc = KFileWriteAll( self->file, self->filePosition, self->buff, have, &written );
+        *rc = KFileWriteExactly( self->file, self->filePosition, self->buff, have );
         /* this is wrong - Z_ERRNO would tell us to check errno for error
            but the error is in *rc */
         if ( *rc != 0 )
             return Z_ERRNO;
-        self->filePosition += written;
+        self->filePosition += have;
+        /* "avail_in" does not change: only "strm->avail_in". the assignment is correct. */
         *num_writ = avail_in - strm->avail_in;
     } while ( strm->avail_out == 0 );
 

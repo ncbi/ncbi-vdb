@@ -1050,7 +1050,7 @@ rc_t CC KTrieIndexWrite_v2 ( void *param,
         if ( pb -> marker == pb -> bsize )
         {
             size_t num_flushed;
-            pb -> rc = KFileWrite ( pb -> f, pb -> pos,
+            pb -> rc = KFileWriteAll ( pb -> f, pb -> pos,
                 pb -> buffer, pb -> bsize, & num_flushed );
             if ( pb -> rc != 0 )
             {

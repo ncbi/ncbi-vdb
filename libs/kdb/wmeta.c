@@ -2327,7 +2327,7 @@ rc_t KMetadataFlush ( KMetadata *self )
             if ( rc == 0 && pb . marker != 0 )
             {
                 size_t num_flushed;
-                rc = KFileWrite ( pb . f, pb . pos,
+                rc = KFileWriteAll ( pb . f, pb . pos,
                                   pb . buffer, pb . marker, & num_flushed );
                 if ( rc == 0 && num_flushed != pb . marker )
                     rc = RC ( rcDB, rcMetadata, rcPersisting, rcTransfer, rcIncomplete );

@@ -68,6 +68,9 @@ rc_t KMMapUnmapRgn ( KMMap *self )
 
         if ( self -> dirty )
         {
+            /*
+              TBD - replace with KFileWriteAll()
+             */
             size_t num_writ, total;
             for (  total = 0; total < self -> size; total += num_writ )
             {

@@ -86,7 +86,7 @@ static
 rc_t CC KStreamFromFilesWrite ( KStreamFromFiles *self,
     const void *buffer, size_t size, size_t *num_writ )
 {
-    rc_t rc = KFileWrite ( self -> out, self -> out_pos, buffer, size, num_writ );
+    rc_t rc = KFileWriteAll ( self -> out, self -> out_pos, buffer, size, num_writ );
     if ( rc == 0 )
         self -> out_pos += * num_writ;
 

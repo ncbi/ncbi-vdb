@@ -666,7 +666,7 @@ static rc_t AppendObject(KFile* file, const char* name, const String* value)
         size_t num_writ;
         rc = string_printf(buf, sizeof(buf), &num_writ, "%s=%S\n", name, value);
         if (rc == 0)
-            rc = KFileWrite ( file, size, buf, num_writ, &num_writ );
+            rc = KFileWriteExactly ( file, size, buf, num_writ );
     }
     return rc;
 }

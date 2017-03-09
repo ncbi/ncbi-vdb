@@ -174,7 +174,7 @@ rc_t KColumnDataWrite ( KColumnData *self, KColumnPageMap *pm,
     }
 
     pos = pm -> pg * self -> pgsize;
-    return KFileWrite ( self -> f, pos + offset, buffer, bytes, num_writ );
+    return KFileWriteAll ( self -> f, pos + offset, buffer, bytes, num_writ );
 }
 
 /* Commit

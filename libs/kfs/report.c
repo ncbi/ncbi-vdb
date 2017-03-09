@@ -89,7 +89,7 @@ static rc_t CC fileWriter
         return rc;
     }
 
-    rc = KFileWrite(self->f, self->pos, buffer, bytes, num_writ);
+    rc = KFileWriteAll(self->f, self->pos, buffer, bytes, num_writ);
     self->pos += *num_writ;
 
     return rc;

@@ -521,8 +521,7 @@ rc_t CC KQueueFileRunWrite ( const KThread *t, void *data )
         }
 
         /* write to file */
-        rc = KFileWriteAll ( self -> f, b -> pos, b -> data, b -> bytes, & num_writ );
-        assert ( num_writ == b -> bytes || rc != 0 );
+        rc = KFileWriteExactly ( self -> f, b -> pos, b -> data, b -> bytes );
 
         /* TBD - need a better way to deal with this */
         if ( rc != 0 )

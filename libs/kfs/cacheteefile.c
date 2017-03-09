@@ -852,7 +852,6 @@ static rc_t switch_to_read_only( const KCacheTeeFile *cself, rc_t rc )
 static rc_t write_bitmap( const KCacheTeeFile *cself, uint64_t block )
 {
     rc_t rc;
-    size_t written;
     uint64_t pos;
     size_t to_write;
 #if USE_32BIT_BITMAP_WORDS
@@ -865,12 +864,12 @@ static rc_t write_bitmap( const KCacheTeeFile *cself, uint64_t block )
     if (bitmap_pos + to_write > cself->bitmap_bytes)
         to_write = cself->bitmap_bytes - bitmap_pos;
 
-    rc = KFileWriteAll( cself->local, pos, ( const void * ) &cself->bitmap[ block_word ], to_write, &written );
+    rc = KFileWriteExactly( cself->local, pos, ( const void * ) &cself->bitmap[ block_word ], to_write );
 #else
     uint32_t block_byte = ( uint32_t ) ( block >> 3 );
     pos = cself->remote_size + block_byte;
     to_write = 1;
-    rc = KFileWriteAll( cself->local, pos, ( const void * ) &cself->bitmap[ block_byte ], to_write, &written );
+    rc = KFileWriteExactly( cself->local, pos, ( const void * ) &cself->bitmap[ block_byte ], to_write );
 #endif
     if ( rc != 0 )
     {

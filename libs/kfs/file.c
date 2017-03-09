@@ -462,7 +462,7 @@ LIB_EXPORT rc_t CC KFileTimedReadAll_v1 ( const KFile_v1 *self, uint64_t pos,
 LIB_EXPORT rc_t CC KFileReadExactly_v1 ( const KFile_v1 *self,
     uint64_t pos, void *buffer, size_t bytes )
 {
-    rc_t rc;
+    rc_t rc = 0;
     uint8_t *b;
     size_t total, count;
 
@@ -488,6 +488,7 @@ LIB_EXPORT rc_t CC KFileReadExactly_v1 ( const KFile_v1 *self,
             {
                 if ( GetRCObject ( rc ) != ( enum RCObject ) rcTimeout || GetRCState ( rc ) != rcExhausted )
                     break;
+                count = 0;
             }
             else if ( count == 0 )
             {
@@ -506,7 +507,7 @@ LIB_EXPORT rc_t CC KFileReadExactly_v1 ( const KFile_v1 *self,
 LIB_EXPORT rc_t CC KFileTimedReadExactly_v1 ( const KFile_v1 *self,
     uint64_t pos, void *buffer, size_t bytes, struct timeout_t *tm )
 {
-    rc_t rc;
+    rc_t rc = 0;
     uint8_t *b;
     size_t total, count;
 
@@ -536,6 +537,7 @@ LIB_EXPORT rc_t CC KFileTimedReadExactly_v1 ( const KFile_v1 *self,
                         break;
                     if ( GetRCObject ( rc ) != ( enum RCObject ) rcTimeout || GetRCState ( rc ) != rcExhausted )
                         break;
+                    count = 0;
                 }
                 else if ( count == 0 )
                 {
@@ -556,6 +558,7 @@ LIB_EXPORT rc_t CC KFileTimedReadExactly_v1 ( const KFile_v1 *self,
                 {
                     if ( GetRCObject ( rc ) != ( enum RCObject ) rcTimeout || GetRCState ( rc ) != rcExhausted )
                         break;
+                    count = 0;
                 }
                 else if ( count == 0 )
                 {
@@ -659,7 +662,7 @@ LIB_EXPORT rc_t CC KFileTimedWrite_v1 ( KFile_v1 *self, uint64_t pos,
 LIB_EXPORT rc_t CC KFileWriteAll_v1 ( KFile_v1 *self, uint64_t pos,
     const void *buffer, size_t size, size_t *num_writ )
 {
-    rc_t rc;
+    rc_t rc = 0;
     const uint8_t *b;
     size_t total, count;
 
@@ -733,7 +736,7 @@ LIB_EXPORT rc_t CC KFileWriteAll_v1 ( KFile_v1 *self, uint64_t pos,
 LIB_EXPORT rc_t CC KFileTimedWriteAll_v1 ( KFile_v1 *self, uint64_t pos,
     const void *buffer, size_t size, size_t *num_writ, struct timeout_t *tm )
 {
-    rc_t rc;
+    rc_t rc = 0;
     const uint8_t *b;
     size_t total, count;
 
@@ -797,6 +800,33 @@ LIB_EXPORT rc_t CC KFileTimedWriteAll_v1 ( KFile_v1 *self, uint64_t pos,
     if ( rc == 0 )
         return RC ( rcFS, rcFile, rcWriting, rcTransfer, rcIncomplete );
     return rc;
+}
+
+/* WriteExactly
+ *  write to file until "bytes" have been transferred
+ *  or return incomplete transfer error
+ *
+ *  "pos" [ IN ] - starting position within file
+ *
+ *  "buffer" [ IN ] and "bytes" [ IN ] - data to be written
+ *
+ *  "tm" [ IN/OUT, NULL OKAY ] - an optional indicator of
+ *  blocking behavior. not all implementations will support
+ *  timed writes. a NULL timeout will block indefinitely,
+ *  a value of "tm->mS == 0" will have non-blocking behavior
+ *  if supported by implementation, and "tm->mS > 0" will indicate
+ *  a maximum wait timeout.
+ */
+LIB_EXPORT rc_t CC KFileWriteExactly_v1 ( KFile_v1 *self, uint64_t pos,
+    const void *buffer, size_t size )
+{
+    return KFileWriteAll_v1 ( self, pos, buffer, size, NULL );
+}
+
+LIB_EXPORT rc_t CC KFileTimedWriteExactly_v1 ( KFile_v1 *self, uint64_t pos,
+    const void *buffer, size_t size, struct timeout_t *tm )
+{
+    return KFileTimedWriteAll_v1 ( self, pos, buffer, size, NULL, tm );
 }
 
 /* Init

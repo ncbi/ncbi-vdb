@@ -24,21 +24,6 @@
  */
 
 #include <kfs/extern.h>
-/* #include <klib/container.h> */
-/* #include <klib/vector.h> */
-/* #include <klib/pbstree.h> */
-/* #include <klib/text.h> */
-/* #include <kfs/file.h> */
-/* #include <assert.h> */
-/* #include <limits.h> */
-/* #include <stdio.h> */
-/* #include <stdlib.h> */
-/* #include <string.h> */
-
-/* #include <klib/container.h> */
-/* #include <klib/vector.h> */
-/* #include <klib/pbstree.h> */
-/* #include <klib/text.h> */
 #include <klib/log.h>
 #include <klib/rc.h>
 #include <kfs/file.h>
@@ -46,10 +31,7 @@
 #include <sysalloc.h>
 
 #include <assert.h>
-/* #include <limits.h> */
-/* #include <stdio.h> */
 #include <stdlib.h>
-/* #include <string.h> */
 
 /* ======================================================================
  * KTeeFile
@@ -144,7 +126,7 @@ rc_t KTeeFileSeek (const KTeeFile *cself, uint64_t pos)
         size_t to_read = sizeof buff;
         if (self->maxposition + sizeof buff > pos )
             to_read = (size_t) (pos - self->maxposition);
-
+        
         /* read bytes */
         rc = KFileRead (&self->dad, self->maxposition, buff, to_read, &num_read );
         if ( rc != 0 )
@@ -196,28 +178,28 @@ rc_t KTeeFileMake (KTeeFile ** self,
     pF = malloc (sizeof (KTeeFile));
     if (pF == NULL)	/* allocation failed */
     {
-	/* fail */
-	rc = RC (rcFS, rcFile, rcConstructing, rcMemory, rcExhausted);
+        /* fail */
+        rc = RC (rcFS, rcFile, rcConstructing, rcMemory, rcExhausted);
     }
     else
     {
-	rc = KFileInit (&pF->dad,			/* initialize base class */
-			vt,			 	/* VTable for KTeeFile */
-            "KTeeFile", "no-name",
-			read_enabled,			/* read allowed */
-			write_enabled);			/* write disallowed */
-	if (rc == 0)
-	{
-/* take over the existing KFile Reference for original and copy*/
-	    /* succeed */
-	    pF->original = original;
-	    pF->copy = copy;
-	    pF->maxposition = 0;
-	    *self = pF;
-	    return 0;
-	}
-	/* fail */
-	free (pF);
+        rc = KFileInit (&pF->dad,			/* initialize base class */
+                        vt,			 	/* VTable for KTeeFile */
+                        "KTeeFile", "no-name",
+                        read_enabled,			/* read allowed */
+                        write_enabled);			/* write disallowed */
+        if (rc == 0)
+        {
+            /* take over the existing KFile Reference for original and copy*/
+            /* succeed */
+            pF->original = original;
+            pF->copy = copy;
+            pF->maxposition = 0;
+            *self = pF;
+            return 0;
+        }
+        /* fail */
+        free (pF);
     }
     return rc;
 }
@@ -251,12 +233,12 @@ rc_t CC KTeeFileDestroy (KTeeFile *self)
         last_max = self->maxposition;
 
         /* keep seeking ahead by a Gigabyte until we read no more */
-	rc = KTeeFileSeek (self, last_max + 1024*1024*1024);
-	if (rc != 0)
-	    return rc;
-
+        rc = KTeeFileSeek (self, last_max + 1024*1024*1024);
+        if (rc != 0)
+            return rc;
+        
     } while (last_max < self->maxposition);
-
+    
     rc = KFileRelease (self->original);
     if ( rc == 0 )
     {
@@ -302,7 +284,7 @@ rc_t CC KTeeFileRandomAccessUpdate (const KTeeFile *self)
     assert (self != NULL);
     rc = KFileRandomAccess (self->original);
     if (rc == 0)
-	rc = KFileRandomAccess (self->copy);
+        rc = KFileRandomAccess (self->copy);
     return rc;
 }
 static
@@ -346,8 +328,8 @@ rc_t CC KTeeFileSize (const KTeeFile *self, uint64_t *size)
 
     if (rc == 0)
     {
-	/* success */
-	*size = fsize;
+        /* success */
+        *size = fsize;
     }
     /* pass along RC value */
     return rc;
@@ -366,7 +348,7 @@ rc_t CC KTeeFileSetSizeUpdate (KTeeFile *self, uint64_t size)
 
     rc = KFileSetSize (self->original, size);
     if (rc == 0)
-	rc = KFileSetSize (self->copy, size);
+        rc = KFileSetSize (self->copy, size);
     return rc;
 }
 static
@@ -417,34 +399,34 @@ rc_t CC KTeeFileRead	(const KTeeFile *cself,
     self = (KTeeFile*)cself;
     maxposition = self->maxposition;
     if (pos > maxposition)
-	rc = KTeeFileSeek (self, pos);
+        rc = KTeeFileSeek (self, pos);
     if (rc == 0)
     {
-	rc = KFileRead (self->original, pos, buffer, bsize, &read);
-	if (rc == 0)
-	{
-	    if (pos + read > maxposition)
-	    {
-		for ( sofar = (size_t)( maxposition - pos );
-			  sofar < read;
-		      sofar += written)
-		{
-		    rc = KFileWrite (self->copy, pos + sofar, (uint8_t*)buffer + sofar,
-				     read - sofar, &written);
-		    if (rc != 0)
-			break;
-		    if (written == 0)
-		    {
-			LOGERR (klogErr, rc, "Failure to write to copy in KTeeFileRead");
-			rc = RC (rcFS, rcFile, rcReading, rcFile, rcIncomplete);
-		    break;
-		    }
-		}
-		maxposition = pos + sofar;
-		if (maxposition > self->maxposition)
-		    self->maxposition = maxposition;
-	    }
-	}
+        rc = KFileRead (self->original, pos, buffer, bsize, &read);
+        if (rc == 0)
+        {
+            if (pos + read > maxposition)
+            {
+                for ( sofar = (size_t)( maxposition - pos );
+                      sofar < read;
+                      sofar += written)
+                {
+                    rc = KFileWrite (self->copy, pos + sofar, (uint8_t*)buffer + sofar,
+                                     read - sofar, &written);
+                    if (rc != 0)
+                        break;
+                    if (written == 0)
+                    {
+                        LOGERR (klogErr, rc, "Failure to write to copy in KTeeFileRead");
+                        rc = RC (rcFS, rcFile, rcReading, rcFile, rcIncomplete);
+                        break;
+                    }
+                }
+                maxposition = pos + sofar;
+                if (maxposition > self->maxposition)
+                    self->maxposition = maxposition;
+            }
+        }
     }
     *num_read = read;
     return rc;
@@ -482,29 +464,29 @@ rc_t CC KTeeFileWriteUpdate (KTeeFile *self, uint64_t pos,
     writ = 0;
     rc = 0;
     if (pos > self->maxposition)
-	rc = KTeeFileSeek (self, pos);
+        rc = KTeeFileSeek (self, pos);
     if (rc == 0)
     {
-	rc = KFileWrite (self->original, pos, buffer, bsize, &writ);
-	if (rc == 0)
-	{
-	    for ( sofar = written = 0; sofar < writ; sofar += written)
-	    {
-		rc = KFileWrite (self->copy, pos + sofar, (uint8_t*)buffer + sofar,
-			     writ - sofar, &written);
-		if (rc != 0)
-		    break;
-		if (written == 0)
-		{
-		    rc = RC (rcFS, rcFile, rcReading, rcFile, rcIncomplete);
-		    LOGERR (klogErr, rc, "Failure to write to copy in KTeeFileWrite");
-		    break;
-		}
-	    }
-	    max_position = pos + sofar;
-	    if (max_position > self->maxposition)
-		self->maxposition = max_position;
-	}
+        rc = KFileWrite (self->original, pos, buffer, bsize, &writ);
+        if (rc == 0)
+        {
+            for ( sofar = written = 0; sofar < writ; sofar += written)
+            {
+                rc = KFileWrite (self->copy, pos + sofar, (uint8_t*)buffer + sofar,
+                                 writ - sofar, &written);
+                if (rc != 0)
+                    break;
+                if (written == 0)
+                {
+                    rc = RC (rcFS, rcFile, rcReading, rcFile, rcIncomplete);
+                    LOGERR (klogErr, rc, "Failure to write to copy in KTeeFileWrite");
+                    break;
+                }
+            }
+            max_position = pos + sofar;
+            if (max_position > self->maxposition)
+                self->maxposition = max_position;
+        }
     }
     *num_writ = writ;
     return rc;

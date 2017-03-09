@@ -553,19 +553,19 @@ static int s_SzipAndWrite( KSZipFile *self,
        compression if all of source has been read in */
     do {
         uint32_t have;
-        size_t written;
+
         strm->avail_out = sizeof(self->buff);
         strm->next_out = self->buff;
         ret = SZ_Compress( strm, flush ? SZ_FINISH : SZ_NO_FLUSH );  /* no bad return value */
         assert( ret != SZ_STREAM_ERROR );  /* state not clobbered */
         have = sizeof( self->buff ) - strm->avail_out;
-        written = 0;
-        *rc = KFileWrite( self->file, self->filePosition, self->buff, have, &written );
+
+        *rc = KFileWriteExactly( self->file, self->filePosition, self->buff, have );
         /* this is wrong - Z_ERRNO would tell us to check errno for error
            but the error is in *rc */
         if ( *rc != 0 )
             return SZ_STREAM_ERROR;
-        self->filePosition += written;
+        self->filePosition += have;
         *num_writ = avail_in - strm->avail_in;
     } while ( strm->avail_out == 0 );
     assert( strm->avail_in == 0 );     /* all input will be used */

@@ -108,7 +108,6 @@ rc_t KBZipFileWriteInt (KBZipFile *self,
     do
     {
         uint32_t num_comp;
-        size_t written;
         int zret;
 
         /* compress one internal buffers worth */
@@ -125,9 +124,9 @@ rc_t KBZipFileWriteInt (KBZipFile *self,
          * it says it didn't use */
         num_comp = sizeof(self->buff) - strm->avail_out;
 
-        rc = KFileWrite (self->file, self->filePosition, self->buff, num_comp, &written);
+        rc = KFileWriteExactly (self->file, self->filePosition, self->buff, num_comp);
 
-        self->filePosition += written;
+        self->filePosition += num_comp;
 
         *pnumwrit = avail_in - strm->avail_in;
 

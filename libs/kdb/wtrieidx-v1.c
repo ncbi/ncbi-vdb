@@ -282,7 +282,7 @@ rc_t KTrieIndexPersistTrie_v1 ( const KTrieIndex_v1 *self, PersistTrieData *pb )
     if ( rc == 0 && pb -> marker != 0 )
     {
         size_t num_writ;
-        rc = KFileWrite ( pb -> f, pb -> pos,
+        rc = KFileWriteAll ( pb -> f, pb -> pos,
             pb -> buffer, pb -> marker, & num_writ );
         if ( rc == 0 && num_writ != pb -> marker )
             rc = RC ( rcDB, rcIndex, rcPersisting, rcTransfer, rcIncomplete );
@@ -458,7 +458,7 @@ rc_t KTrieIndexPersistProj_v1 ( const KTrieIndex_v1 *self, PersistTrieData *pb )
                 rc = RC ( rcDB, rcIndex, rcPersisting, rcTransfer, rcIncomplete );
             else
             {
-                rc = KFileWrite ( pb -> f, file_size, ( uint8_t* ) addr + num_to_read,
+                rc = KFileWriteAll ( pb -> f, file_size, ( uint8_t* ) addr + num_to_read,
                     map_size - num_to_read, & num_writ );
                 if ( rc == 0  && num_writ != map_size - num_to_read )
                     rc = RC ( rcDB, rcIndex, rcPersisting, rcHeader, rcInsufficient );
