@@ -302,17 +302,17 @@ struct mbedtls_ssl_ciphersuite_t
     unsigned char flags;
 };
 
-const int *mbedtls_ssl_list_ciphersuites( void );
+const int *vdb_mbedtls_ssl_list_ciphersuites( void );
 
-const mbedtls_ssl_ciphersuite_t *mbedtls_ssl_ciphersuite_from_string( const char *ciphersuite_name );
-const mbedtls_ssl_ciphersuite_t *mbedtls_ssl_ciphersuite_from_id( int ciphersuite_id );
+const mbedtls_ssl_ciphersuite_t *vdb_mbedtls_ssl_ciphersuite_from_string( const char *ciphersuite_name );
+const mbedtls_ssl_ciphersuite_t *vdb_mbedtls_ssl_ciphersuite_from_id( int ciphersuite_id );
 
 #if defined(MBEDTLS_PK_C)
-mbedtls_pk_type_t mbedtls_ssl_get_ciphersuite_sig_pk_alg( const mbedtls_ssl_ciphersuite_t *info );
+mbedtls_pk_type_t vdb_mbedtls_ssl_get_ciphersuite_sig_pk_alg( const mbedtls_ssl_ciphersuite_t *info );
 #endif
 
-int mbedtls_ssl_ciphersuite_uses_ec( const mbedtls_ssl_ciphersuite_t *info );
-int mbedtls_ssl_ciphersuite_uses_psk( const mbedtls_ssl_ciphersuite_t *info );
+int vdb_mbedtls_ssl_ciphersuite_uses_ec( const mbedtls_ssl_ciphersuite_t *info );
+int vdb_mbedtls_ssl_ciphersuite_uses_psk( const mbedtls_ssl_ciphersuite_t *info );
 
 #ifdef __cplusplus
 }

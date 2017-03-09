@@ -155,12 +155,12 @@ static void blowfish_dec( mbedtls_blowfish_context *ctx, uint32_t *xl, uint32_t 
     *xr = Xr;
 }
 
-void mbedtls_blowfish_init( mbedtls_blowfish_context *ctx )
+void vdb_mbedtls_blowfish_init( mbedtls_blowfish_context *ctx )
 {
     memset( ctx, 0, sizeof( mbedtls_blowfish_context ) );
 }
 
-void mbedtls_blowfish_free( mbedtls_blowfish_context *ctx )
+void vdb_mbedtls_blowfish_free( mbedtls_blowfish_context *ctx )
 {
     if( ctx == NULL )
         return;
@@ -171,7 +171,7 @@ void mbedtls_blowfish_free( mbedtls_blowfish_context *ctx )
 /*
  * Blowfish key schedule
  */
-int mbedtls_blowfish_setkey( mbedtls_blowfish_context *ctx, const unsigned char *key,
+int vdb_mbedtls_blowfish_setkey( mbedtls_blowfish_context *ctx, const unsigned char *key,
                      unsigned int keybits )
 {
     unsigned int i, j, k;
@@ -229,7 +229,7 @@ int mbedtls_blowfish_setkey( mbedtls_blowfish_context *ctx, const unsigned char 
 /*
  * Blowfish-ECB block encryption/decryption
  */
-int mbedtls_blowfish_crypt_ecb( mbedtls_blowfish_context *ctx,
+int vdb_mbedtls_blowfish_crypt_ecb( mbedtls_blowfish_context *ctx,
                     int mode,
                     const unsigned char input[MBEDTLS_BLOWFISH_BLOCKSIZE],
                     unsigned char output[MBEDTLS_BLOWFISH_BLOCKSIZE] )
@@ -258,7 +258,7 @@ int mbedtls_blowfish_crypt_ecb( mbedtls_blowfish_context *ctx,
 /*
  * Blowfish-CBC buffer encryption/decryption
  */
-int mbedtls_blowfish_crypt_cbc( mbedtls_blowfish_context *ctx,
+int vdb_mbedtls_blowfish_crypt_cbc( mbedtls_blowfish_context *ctx,
                     int mode,
                     size_t length,
                     unsigned char iv[MBEDTLS_BLOWFISH_BLOCKSIZE],
@@ -275,13 +275,13 @@ int mbedtls_blowfish_crypt_cbc( mbedtls_blowfish_context *ctx,
     {
         while( length > 0 )
         {
-            memmove( temp, input, MBEDTLS_BLOWFISH_BLOCKSIZE );
-            mbedtls_blowfish_crypt_ecb( ctx, mode, input, output );
+            memcpy( temp, input, MBEDTLS_BLOWFISH_BLOCKSIZE );
+            vdb_mbedtls_blowfish_crypt_ecb( ctx, mode, input, output );
 
             for( i = 0; i < MBEDTLS_BLOWFISH_BLOCKSIZE;i++ )
                 output[i] = (unsigned char)( output[i] ^ iv[i] );
 
-            memmove( iv, temp, MBEDTLS_BLOWFISH_BLOCKSIZE );
+            memcpy( iv, temp, MBEDTLS_BLOWFISH_BLOCKSIZE );
 
             input  += MBEDTLS_BLOWFISH_BLOCKSIZE;
             output += MBEDTLS_BLOWFISH_BLOCKSIZE;
@@ -295,8 +295,8 @@ int mbedtls_blowfish_crypt_cbc( mbedtls_blowfish_context *ctx,
             for( i = 0; i < MBEDTLS_BLOWFISH_BLOCKSIZE; i++ )
                 output[i] = (unsigned char)( input[i] ^ iv[i] );
 
-            mbedtls_blowfish_crypt_ecb( ctx, mode, output, output );
-            memmove( iv, output, MBEDTLS_BLOWFISH_BLOCKSIZE );
+            vdb_mbedtls_blowfish_crypt_ecb( ctx, mode, output, output );
+            memcpy( iv, output, MBEDTLS_BLOWFISH_BLOCKSIZE );
 
             input  += MBEDTLS_BLOWFISH_BLOCKSIZE;
             output += MBEDTLS_BLOWFISH_BLOCKSIZE;
@@ -312,7 +312,7 @@ int mbedtls_blowfish_crypt_cbc( mbedtls_blowfish_context *ctx,
 /*
  * Blowfish CFB buffer encryption/decryption
  */
-int mbedtls_blowfish_crypt_cfb64( mbedtls_blowfish_context *ctx,
+int vdb_mbedtls_blowfish_crypt_cfb64( mbedtls_blowfish_context *ctx,
                        int mode,
                        size_t length,
                        size_t *iv_off,
@@ -328,7 +328,7 @@ int mbedtls_blowfish_crypt_cfb64( mbedtls_blowfish_context *ctx,
         while( length-- )
         {
             if( n == 0 )
-                mbedtls_blowfish_crypt_ecb( ctx, MBEDTLS_BLOWFISH_ENCRYPT, iv, iv );
+                vdb_mbedtls_blowfish_crypt_ecb( ctx, MBEDTLS_BLOWFISH_ENCRYPT, iv, iv );
 
             c = *input++;
             *output++ = (unsigned char)( c ^ iv[n] );
@@ -342,7 +342,7 @@ int mbedtls_blowfish_crypt_cfb64( mbedtls_blowfish_context *ctx,
         while( length-- )
         {
             if( n == 0 )
-                mbedtls_blowfish_crypt_ecb( ctx, MBEDTLS_BLOWFISH_ENCRYPT, iv, iv );
+                vdb_mbedtls_blowfish_crypt_ecb( ctx, MBEDTLS_BLOWFISH_ENCRYPT, iv, iv );
 
             iv[n] = *output++ = (unsigned char)( iv[n] ^ *input++ );
 
@@ -360,7 +360,7 @@ int mbedtls_blowfish_crypt_cfb64( mbedtls_blowfish_context *ctx,
 /*
  * Blowfish CTR buffer encryption/decryption
  */
-int mbedtls_blowfish_crypt_ctr( mbedtls_blowfish_context *ctx,
+int vdb_mbedtls_blowfish_crypt_ctr( mbedtls_blowfish_context *ctx,
                        size_t length,
                        size_t *nc_off,
                        unsigned char nonce_counter[MBEDTLS_BLOWFISH_BLOCKSIZE],
@@ -374,7 +374,7 @@ int mbedtls_blowfish_crypt_ctr( mbedtls_blowfish_context *ctx,
     while( length-- )
     {
         if( n == 0 ) {
-            mbedtls_blowfish_crypt_ecb( ctx, MBEDTLS_BLOWFISH_ENCRYPT, nonce_counter,
+            vdb_mbedtls_blowfish_crypt_ecb( ctx, MBEDTLS_BLOWFISH_ENCRYPT, nonce_counter,
                                 stream_block );
 
             for( i = MBEDTLS_BLOWFISH_BLOCKSIZE; i > 0; i-- )

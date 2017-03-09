@@ -3409,6 +3409,14 @@ LIB_EXPORT rc_t CC VFSManagerSetCacheRoot ( const VFSManager * self,
             rc = VPathMakeString ( path, &spath );
             if ( rc == 0 )
             {
+                /* in case the path ends in a '/' ( the path-separator ) we have to remove it... */
+                if ( spath->addr[ spath->len - 1 ] == '/' )
+                {
+                    String * p = ( String * )spath;
+                    p->len -= 1;
+                    p->size -= 1;
+                    ( ( char * )p->addr )[ p->len ] = 0;
+                }
                 rc = KConfigWriteSString( self -> cfg, default_path_key, spath );
                 StringWhack( spath );
                 /*
@@ -3467,6 +3475,21 @@ static rc_t inspect_dir( KDirectory * dir, KTime_t date, const char * path )
             }
         }
         KNamelistRelease( itemlist );
+    }
+    else
+    {
+		if ( ( GetRCModule( rc ) == rcFS ) && 
+			 ( GetRCTarget( rc ) == rcDirectory ) &&
+			 ( GetRCContext( rc ) == rcListing ) &&
+			 ( GetRCObject( rc ) == ( enum RCObject )rcPath ) &&
+			 ( GetRCState( rc ) == rcNotFound ) )
+		{
+			rc = 0;
+		}
+		else
+		{
+			PLOGERR( klogErr, ( klogErr, rc, "KDirectoryList( '$(P)' )", "P=%s", path ) );
+		}
     }
     return rc;
 }
