@@ -143,6 +143,7 @@
 %token PT_TYPEDEF
 %token PT_FQN
 %token PT_IDENT
+%token PT_PHYSIDENT
 %token PT_UINT
 %token PT_TYPESET
 %token PT_TYPESETDEF
@@ -179,9 +180,9 @@
 %token PT_FUNCEXPR
 %token PT_FACTPARMS
 %token PT_COLUMN
+%token PT_COLUMNEXPR
 %token PT_COLDECL
 %token PT_TYPEDCOL
-%token PT_COLMODIFIER
 %token PT_COLSTMT
 %token PT_DFLTVIEW
 %token PT_PHYSMBR
@@ -203,10 +204,11 @@
 %token PT_CONSTVECT
 %token PT_NEGATE
 %token PT_UNARYPLUS
-%token PT_FACTPARMNAMED
 %token PT_VERSNAME
 %token PT_ARRAY
 %token PT_AT
+%token PT_PHYSENCEXPR
+%token PT_PHYSENCREF
 
  /* !!! Keep token declarations above in synch with schema-grammar.y */
 
@@ -218,11 +220,15 @@
 %type <node> schema_formals schema_formal type_expr formals formal
 %type <node> script_stmts script_stmt extern_function script script_decl validate
 %type <node> script_prologue physical phys_prologue phys_body phys_body_stmt
-%type <node> phys_return_type
+%type <node> phys_return_type table parents_opt tbl_body tbl_stmts tbl_stmt
+%type <node> tbl_parents production column_decl col_modifiers_opt col_modifiers
+%type <node> col_modifier col_decl col_ident col_body col_stmt typed_col column_expr
+%type <node> factory_parms factory_parms_opt schema_parm
+%type <node> schema_parms arrayspec phys_enc_ref
 
 %type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
 
-%type <expr> expr cond_expr cond_chain
+%type <expr> expr cond_expr cond_chain uint_expr
 
 %type <paramSig> param_sig param_signature fact_sig
 
@@ -232,7 +238,11 @@
 %type <tok> PT_TYPEDEF PT_IDENT IDENTIFIER_1_0 DECIMAL PT_ASTLIST PT_ARRAY PT_TYPESET
 %type <tok> PT_FORMAT PT_CONST PT_UINT PT_ALIAS PT_EMPTY PT_ELLIPSIS PT_RETURN
 %type <tok> VERSION PT_UNTYPED PT_ROWLENGTH PT_FUNCDECL PT_FUNCPARAMS PT_FORMALPARAM
-%type <tok> PT_VALIDATE PT_PHYSICAL PT_PHYSSTMT
+%type <tok> PT_VALIDATE PT_PHYSICAL PT_PHYSSTMT PT_TABLE PT_COLUMN PT_COLUMNEXPR
+%type <tok> KW_default KW_extern KW_readonly PHYSICAL_IDENTIFIER_1_0 HEX OCTAL PT_COLSTMT
+%type <tok> KW_read KW_validate KW_limit PT_SCHEMAFORMAL PT_PRODSTMT PT_PRODTRIGGER
+%type <tok> PT_NOHEADER KW_decode KW_encode KW___row_length PT_COLDECL PT_TYPEDCOL PT_TYPEEXPR
+%type <tok> PT_PHYSENCEXPR PT_PHYSENCREF
 
 %%
 
@@ -282,6 +292,7 @@ schema_decl
     | script            { $$ = $1; }
     | validate          { $$ = $1; }
     | physical          { $$ = $1; }
+    | table             { $$ = $1; }
     /*TBD*/
     | ';'               { $$ = new AST (); }
     ;
@@ -297,8 +308,12 @@ new_type_names
     ;
 
 typespec
-    : fqn                               { $$ = $1; }
-    | PT_ARRAY '(' fqn '[' dim ']' ')'  { $$ = new AST ( PT_ARRAY ); $$ -> AddNode ( $3 ); $$ -> AddNode ( $5 ); }
+    : fqn       { $$ = $1; }
+    | arrayspec { $$ = $1; }
+    ;
+
+arrayspec
+    : PT_ARRAY '(' fqn '[' dim ']' ')'  { $$ = new AST ( $1, $3, $5 ); }
     ;
 
 dim
@@ -341,7 +356,7 @@ func_decl
     ;
 
 schema_sig_opt
-    : PT_EMPTY                                                          { $$ = new AST ( PT_EMPTY ); }
+    : PT_EMPTY                                                          { $$ = new AST ( $1 ); }
     | PT_SCHEMASIG '(' '<' PT_ASTLIST '(' schema_formals ')' '>' ')'    { $$ = $6; }
     ;
 
@@ -351,8 +366,8 @@ schema_formals
     ;
 
 schema_formal
-    : PT_SCHEMAFORMAL '(' KW_type ident ')'     { $$ = new AST ( PT_SCHEMAFORMAL ); $$ -> AddNode ( $4 ); }
-    | PT_SCHEMAFORMAL '(' type_expr ident ')'   { $$ = new AST ( PT_SCHEMAFORMAL ); $$ -> AddNode ( $3 ); $$ -> AddNode ( $4 ); }
+    : PT_SCHEMAFORMAL '(' KW_type ident ')'     { $$ = new AST ( $1, $4 ); }
+    | PT_SCHEMAFORMAL '(' type_expr ident ')'   { $$ = new AST ( $1, $3, $4 ); }
     ;
 
 return_type
@@ -397,8 +412,8 @@ vararg
     ;
 
 prologue
-    : PT_FUNCPROLOGUE '(' ';' ')'                                       { $$ = new AST ( PT_EMPTY ); }
-    | PT_FUNCPROLOGUE '(' '=' fqn ';' ')'                               { $$ = $4; }
+    : PT_FUNCPROLOGUE '(' ';' ')'           { $$ = new AST ( PT_EMPTY ); }
+    | PT_FUNCPROLOGUE '(' '=' fqn ';' ')'   { $$ = $4; }
     | script_prologue
     ;
 
@@ -412,9 +427,13 @@ script_stmts
     ;
 
 script_stmt
-    : PT_RETURN '(' KW_return cond_expr ';' ')'                         { $$ = new AST ( PT_RETURN ); $$ -> AddNode ( $4 ); }
-    | PT_PRODSTMT '(' type_expr IDENTIFIER_1_0 '=' cond_expr ';' ')'    { $$ = new AST ( PT_PRODSTMT ); $$ -> AddNode ( $3 );  $$ -> AddNode ( $4 );  $$ -> AddNode ( $6 ); }
-    | PT_PRODTRIGGER '(' KW_trigger IDENTIFIER_1_0 '=' cond_expr ';' ')'   { $$ = new AST ( PT_PRODTRIGGER ); $$ -> AddNode ( $4 );  $$ -> AddNode ( $6 ); }
+    : PT_RETURN '(' KW_return cond_expr ';' ')'     { $$ = new AST ( $1, $4 ); }
+    | production                                    { $$ = $1; }
+    ;
+
+production
+    : PT_PRODSTMT '(' type_expr ident '=' cond_expr ';' ')'        { $$ = new AST ( $1, $3, $4, $6 ); }
+    | PT_PRODTRIGGER '(' KW_trigger ident '=' cond_expr ';' ')'    { $$ = new AST ( $1, $4, $6 ); }
     ;
 
 extern_function
@@ -446,7 +465,7 @@ physical
 
 phys_return_type
     : return_type                                       { $$ = $1; }
-    | PT_NOHEADER '(' KW___no_header return_type ')'    { $$ = new AST ( PT_NOHEADER ); $$ -> AddNode ( $4 ); }
+    | PT_NOHEADER '(' KW___no_header return_type ')'    { $$ = new AST ( $1, $4 ); }
 
 phys_prologue
     : PT_PHYSPROLOGUE '(' '=' PT_PHYSSTMT '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')' ')'
@@ -461,18 +480,121 @@ phys_body
     ;
 
 phys_body_stmt
-    : PT_PHYSBODYSTMT '(' ';' ')'                               { $$ = new AST ( PT_EMPTY ); }
-    | PT_PHYSBODYSTMT '(' KW_decode PT_PHYSSTMT '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')' ')'   { $$ = new AST ( KW_decode ); $$ -> AddNode ( $9 ) ; }
-    | PT_PHYSBODYSTMT '(' KW_encode PT_PHYSSTMT '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')' ')'   { $$ = new AST ( KW_encode ); $$ -> AddNode ( $9 ); }
-    | PT_PHYSBODYSTMT '(' KW___row_length '=' fqn '(' ')' ')'   { $$ = new AST ( KW___row_length ); $$ -> AddNode ( $5 ); }
+    : PT_PHYSBODYSTMT '(' ';' ')'
+        { $$ = new AST ( PT_EMPTY ); }
+    | PT_PHYSBODYSTMT '(' KW_decode PT_PHYSSTMT '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')' ')'
+        { $$ = new AST ( $3, $9 ) ; }
+    | PT_PHYSBODYSTMT '(' KW_encode PT_PHYSSTMT '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')' ')'
+        { $$ = new AST ( $3, $9 ); }
+    | PT_PHYSBODYSTMT '(' KW___row_length '=' fqn '(' ')' ')'
+        { $$ = new AST ( $3, $5 ); }
+    ;
+
+/* tables */
+
+table
+    : PT_TABLE '(' KW_table fqn_vers parents_opt PT_TABLEBODY '(' '{' tbl_body '}' ')' ')'
+                { $$ = p_builder . TableDef ( $1, $4, $5, $9 ); }
+    ;
+
+parents_opt
+    : PT_EMPTY                                                      { $$ = new AST ( $1 ); }
+    | PT_TABLEPARENTS '(' '=' PT_ASTLIST '(' tbl_parents ')' ')'    { $$ = $6; }
+    ;
+
+tbl_parents
+    : fqn_opt_vers                  { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | tbl_parents ',' fqn_opt_vers  { $$ = $1; $$ -> AddNode ( $3 ); }
+    ;
+
+tbl_body
+    : %empty                        { $$ = new AST ( PT_EMPTY ); }
+    | PT_ASTLIST '(' tbl_stmts ')'  { $$ = $3; }
+    ;
+
+tbl_stmts
+    : tbl_stmt              { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | tbl_stmts tbl_stmt    { $$ = $1; $$ -> AddNode ( $2 ); }
+    ;
+
+tbl_stmt
+    : production    { $$ = $1; }
+    | column_decl   { $$ = $1; }
+    | column_expr   { $$ = $1; }
+    ;
+
+column_decl
+    : PT_COLUMN '(' col_modifiers_opt KW_column col_decl ')' { $$ = new AST ( $1, $3, $5 ); }
+    ;
+
+column_expr
+    : PT_COLUMNEXPR '(' col_modifiers_opt KW_column KW_limit '=' expr ')'
+        { $$ = new AST ( $1, $3, $7 ); }
+    | PT_COLUMNEXPR '(' col_modifiers_opt KW_column KW_default KW_limit '=' expr ')'
+        { $$ = new AST ( $1, $3, $8, new AST ( $5 ) ); }
+    ;
+
+col_modifiers_opt
+    : PT_EMPTY                          { $$ = new AST ( $1 ); }
+    | PT_ASTLIST '(' col_modifiers ')'  { $$ = $3; }
+    ;
+
+col_modifiers
+    : col_modifier                  { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | col_modifiers col_modifier    { $$ = $1; $$ -> AddNode ( $2 ); }
+    ;
+
+col_modifier
+    : KW_default    { $$ = new AST ( $1 ); }
+    | KW_extern     { $$ = new AST ( $1 ); }
+    | KW_readonly   { $$ = new AST ( $1 ); }
+    ;
+
+col_decl
+    : PT_COLDECL '(' typespec typed_col ')'         { $$ = new AST ( $1, $3, $4 ); }
+    | PT_COLDECL '(' phys_enc_ref typed_col ')'    { $$ = new AST ( $1, $3, $4 ); }
+    /*TBD*/
+    ;
+
+phys_enc_ref
+    : PT_PHYSENCREF '(' '<' PT_ASTLIST '(' schema_parms ')' '>' fqn_opt_vers factory_parms_opt ')' { $$ = new AST ( $1, $6, $9, $10 ); }
+    | PT_PHYSENCREF '(' fqn_vers factory_parms_opt ')'                          { $$ = new AST ( $1, $3, $4 ); }
+    | PT_PHYSENCREF '(' fqn '<' factory_parms '>' ')'                           { $$ = new AST ( $1, $3, $5 ); }
+    ;
+
+typed_col
+    : PT_TYPEDCOL '(' col_ident '{' PT_ASTLIST '(' col_body ')' '}' ')'
+            {  $$ = new AST ( $1, $3, $7 ); }
+    | PT_TYPEDCOL '(' col_ident '=' cond_expr ')'
+            {  $$ = new AST ( $1, $3, $5 ); }
+    | PT_TYPEDCOL '(' col_ident ';' ')'
+            {  $$ = new AST ( $1, $3 ); }
+    ;
+
+col_ident
+    : ident                     { $$ = $1; }
+    | PHYSICAL_IDENTIFIER_1_0   { $$ = new AST ( $1 ); }
+    ;
+
+col_body
+    : col_stmt                  { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | col_body ';' col_stmt     { $$ = $1; $$ -> AddNode ( $3 ); }
+    ;
+
+col_stmt
+    : PT_EMPTY                                      { $$ = new AST ( $1 ); }
+    | PT_COLSTMT '(' KW_read '=' cond_expr ')'      { $$ = new AST ( $1, new AST ( $3 ), $5 ); }
+    | PT_COLSTMT '(' KW_validate '=' cond_expr ')'  { $$ = new AST ( $1, new AST ( $3 ), $5 ); }
+    | PT_COLSTMT '(' KW_limit '=' uint_expr ')'     { $$ = new AST ( $1, new AST ( $3 ), $5 ); }
     ;
 
 /* expressions */
 
 expr
-    : PT_UINT '(' DECIMAL ')'   { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
+    : uint_expr                 { $$ = $1; }
     | fqn                       { $$ = new AST_Expr ( $1 ); }
     | '@'                       { $$ = new AST_Expr ( PT_AT ); }
+    | PHYSICAL_IDENTIFIER_1_0   { $$ = new AST_Expr ( $1 ); }
     /*| TBD */
     ;
 
@@ -487,7 +609,41 @@ cond_chain
 
 type_expr
     : typespec                          { $$ = $1; }
-    | PT_TYPEEXPR '(' fqn '/' fqn ')'   { $$ = new AST ( PT_TYPEEXPR ); $$ -> AddNode ( $3 ); $$ -> AddNode ( $5 ); }
+    | PT_TYPEEXPR '(' fqn '/' fqn ')'   { $$ = new AST ( $1, $3, $5 ); }
+    ;
+
+uint_expr
+    : PT_UINT '(' DECIMAL ')'   { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
+    | PT_UINT '(' HEX ')'       { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
+    | PT_UINT '(' OCTAL ')'     { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
+    ;
+
+/*
+phys_enc_expr
+    : PT_PHYSENCEXPR '(' '<' PT_ASTLIST '(' schema_parms ')' '>' fqn_opt_vers factory_parms_opt ')'
+        { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $6 ); $$ -> AddNode ( $9 ); $$ -> AddNode ( $10 ); }
+    ;
+*/
+
+schema_parms
+    : schema_parm                   { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | schema_parms ',' schema_parm  { $$ = $1; $$ -> AddNode ( $3 ); }
+    ;
+
+schema_parm
+    : fqn           { $$ = $1; }
+    | arrayspec     { $$ = $1; }
+    | uint_expr     { $$ = $1; }
+    ;
+
+factory_parms_opt
+    : PT_EMPTY                                                          { $$ = new AST ( $1 ); }
+    | PT_FACTPARMS '(' '<' PT_ASTLIST '(' factory_parms ')' '>' ')'     { $$ = $6; }
+    ;
+
+factory_parms
+    : expr                      { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | factory_parms ',' expr    { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 
 /* commonly used productions */

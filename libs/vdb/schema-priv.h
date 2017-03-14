@@ -112,7 +112,8 @@ struct SDatabase;
 struct VDBManager;
 struct SExpression;
 struct SDumper;
-
+struct KSymTable;
+struct SchemaEnv;
 
 /*--------------------------------------------------------------------------
  * VCtxId
@@ -196,7 +197,7 @@ bool VFormatdeclCommonAncestor ( const VFormatdecl *self, const VSchema *schema,
 /*--------------------------------------------------------------------------
  * SNameOverload
  *  describes an overloaded name
- *  used to implement versioning 
+ *  used to implement versioning
  */
 typedef struct SNameOverload SNameOverload;
 struct SNameOverload
@@ -983,6 +984,12 @@ rc_t STableCloneExtend ( const STable *self, STable **clone, VSchema *schema );
 int64_t CC STableCmp ( const void *item, const void *n );
 int64_t CC STableSort ( const void *item, const void *n );
 
+/*
+ * Deep comparison of 2 tables, taking versions into account
+ * exhaustive: if false, stop at first mismatch
+ */
+rc_t STableCompare ( const STable *a, const STable *b, const STable **newer, bool exhaustive );
+
 /* Find
  *  generic object find within table scope
  *
@@ -1038,6 +1045,26 @@ rc_t VSchemaDumpTableName ( const VSchema *self, uint32_t mode, const STable *st
 rc_t VSchemaDumpTableDecl ( const VSchema *self, uint32_t mode, const STable *stbl,
     rc_t ( CC * flush ) ( void *dst, const void *buffer, size_t bsize ), void *dst );
 
+/* Extend
+ * records a parent table
+ */
+rc_t STableExtend ( struct KSymTable *tbl, STable *self, const STable *dad );
+
+/* schema_update_tbl_ref
+ * updates references to a table's ancestor with the ancestor's newer version
+ */
+rc_t schema_update_tbl_ref ( VSchema *self, const STable *exist, const STable *table );
+
+/* table_fwd_scan
+ *  converts unresolved column references to virtual columns
+ */
+typedef struct STableScanData STableScanData;
+struct STableScanData
+{
+    STable *self;
+    rc_t rc;
+};
+bool CC table_fwd_scan ( BSTNode *n, void *data );
 
 /*--------------------------------------------------------------------------
  * SColumn
@@ -1106,6 +1133,10 @@ rc_t STableImplicitColMember ( STable *self,
 bool CC SColumnDefDump ( void *item, void *dumper );
 rc_t SColumnDump ( const SColumn *self, struct SDumper *d );
 
+/* Create an implicit physical member for a simple column
+ */
+rc_t implicit_physical_member ( struct KSymTable *tbl, const struct SchemaEnv *env,
+    struct STable *table, struct SColumn *c, struct KSymbol *sym );
 
 /*--------------------------------------------------------------------------
  * SPhysMember

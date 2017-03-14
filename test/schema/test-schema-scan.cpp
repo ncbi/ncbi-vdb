@@ -83,8 +83,38 @@ NextToken ( SchemaScanner & p_s)
     return true;
 }
 
+
+static
+bool
+MatchStrings ( const string& p_source, const string p_print )
+{
+    const size_t Context = 20;
+    for ( size_t i = 0; i < p_source . length (); ++ i )
+    {
+        if ( i >= p_print . length () )
+        {
+            cout << "premature end of print after '" << p_source . substr ( i > Context ? i - Context : 0 ) << "', " << ( i - p_print . length () + 1 ) << " character(s) missing" << endl;
+            return false;
+        }
+        if ( p_source [ i ] != p_print [ i ] )
+        {
+            cout << "mismatch at " << i << ", after " << p_source . substr ( i > Context ? i - Context : 0, Context ) << endl;
+            cout << "source: '" << p_source . substr ( i, Context ) << "'" << endl;
+            cout << "print : '" << p_print . substr ( i, Context ) << "'" << endl;
+            return false;
+        }
+    }
+    if ( p_print . length () > p_source . length () )
+    {
+        cout << "extra characters printed: " << p_print . substr ( p_source . length () ) << endl;
+        return false;
+    }
+    return true;
+}
+
 rc_t CC KMain ( int argc, char *argv [] )
 {
+    int failed = 0;
     if ( argc < 2 )
     {
         cout << "Usage:\n\t" << argv[0] << " schema-file" << endl;
@@ -92,6 +122,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     }
     try
     {
+        cout << "Scanning " << argc - 1 << " schema-files" << endl;
         for ( int i = 0 ; i < argc - 1; ++i )
         {
             stringstream buffer;
@@ -102,14 +133,23 @@ rc_t CC KMain ( int argc, char *argv [] )
             }
             buffer << in.rdbuf();
 
+            stringstream out;
             SchemaScanner s ( buffer . str () . c_str () );
             while ( NextToken ( s ) )
             {
-                cout << s . LastTokenValue () . leading_ws
-                     << string ( s . LastTokenValue ()  . value, s . LastTokenValue ()  . value_len )
-                     << endl;
+                Token t ( s . LastTokenValue () );
+                out << t . GetLeadingWhitespace () << t . GetValue ();
+            }
+            // print trailing whitespace
+            out << Token ( s . LastTokenValue () ) . GetLeadingWhitespace ();
+
+            if ( ! MatchStrings ( buffer . str (), out . str () ) )
+            {
+                cout << string ( "Printout mismatch: " ) + argv [ i + 1 ] << endl;
+                ++ failed;
             }
         }
+        cout << "Failed: " << failed << endl;
     }
     catch ( exception& ex)
     {

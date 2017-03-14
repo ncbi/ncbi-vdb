@@ -341,7 +341,7 @@ AST_Expr :: MakeSymExpr ( ASTBuilder & p_builder, const KSymbol* p_sym ) const
 SExpression *
 AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
 {   //TODO: complete
-    switch ( GetToken () . GetType () )
+    switch ( GetTokenType () )
     {
     case PT_UINT:
         {
@@ -374,6 +374,27 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
             const AST_FQN* fqn = dynamic_cast < const AST_FQN * > ( GetChild ( 0 ) );
             assert ( fqn != 0 );
             return MakeSymExpr ( p_builder, p_builder . Resolve ( * fqn ) );
+        }
+    case PHYSICAL_IDENTIFIER_1_0 :
+        {
+            const KSymbol * sym = p_builder . Resolve ( GetTokenValue (), false );
+            if ( sym != 0 )
+            {
+                return MakeSymExpr ( p_builder, sym );
+            }
+            else
+            {
+                SSymExpr * x = p_builder . Alloc < SSymExpr > ();
+                x -> _sym = p_builder . CreateConstSymbol ( GetTokenValue (), eForward, NULL );
+                if (x -> _sym != 0 )
+                {
+                    x -> dad . var = eFwdExpr;
+                    atomic32_set ( & x -> dad . refcount, 1 );
+                    x -> alt = false;
+                    return & x -> dad;
+                }
+                free ( x );
+            }
         }
     case PT_AT:
         return MakeSymExpr ( p_builder, p_builder . Resolve ( "@" ) );

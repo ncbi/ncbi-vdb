@@ -398,11 +398,7 @@ TEST_CASE ( Table_Column )
 {
     REQUIRE ( ParseAndVerify ( "table t #1 { column t c; };" ) );
 }
-TEST_CASE ( Table_Column_PhysicalEncoding_1)
-{
-    REQUIRE ( ParseAndVerify ( "table t #1 { column physical <1> p c; };" ) );
-}
-TEST_CASE ( Table_Column_PhysicalEncoding_2)
+TEST_CASE ( Table_Column_PhysicalEncoding)
 {
     REQUIRE ( ParseAndVerify ( "table t #1 { column <1> p c; };" ) );
 }
@@ -444,10 +440,6 @@ TEST_CASE ( Table_Column_AllMods )
     REQUIRE ( ParseAndVerify ( "table t #1 { default extern readonly column t c; };" ) );
 }
 
-TEST_CASE ( Table_Column_default )
-{
-    REQUIRE ( ParseAndVerify ( "table t #1 { column default t c; };" ) );
-}
 TEST_CASE ( Table_Column_limit )
 {
     REQUIRE ( ParseAndVerify ( "table t #1 { column limit = 1; };" ) );

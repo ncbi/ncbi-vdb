@@ -89,10 +89,17 @@ public:
 
     static AST_FQN * MakeFqn ( const char* p_text ); // p_text = (ident:)+ident
 
+    bool OldParse ( const char* p_source );
+
+    const VSchema * GetSchema () const { return m_newParse ? m_builder . GetSchema () : m_schema; }
+
     SchemaParser    m_parser;
     ParseTree *     m_parseTree;
     ASTBuilder      m_builder;
     AST*            m_ast;
+
+    VSchema *   m_schema;
+    bool        m_newParse;
 };
 
 #endif

@@ -364,6 +364,50 @@ ASTBuilder :: DeclareType ( const AST_FQN& p_fqn, const KSymbol& p_super, const 
     }
 }
 
+static
+void
+TypeExprInit ( STypeExpr & p_expr )
+{
+    p_expr . dad . var = eTypeExpr;
+    atomic32_set ( & p_expr . dad . refcount, 1 );
+    p_expr . fmt = 0;
+    p_expr . dt = 0;
+    p_expr . ts = 0;
+    p_expr . id = 0;
+    p_expr . dim = 0;
+    p_expr . fd . fmt = 0;
+    p_expr . resolved = true;
+}
+
+static
+void
+TypeExprFillTypeId ( ASTBuilder & p_builder, STypeExpr & p_expr, const KSymbol & p_sym )
+{
+    switch ( p_sym . type )
+    {
+    case eDatatype:
+        p_expr . dt                   = static_cast < const SDatatype * > ( p_sym . u . obj );
+        p_expr . fd . td . type_id    = p_expr . dt -> id;
+        break;
+    case eTypeset:
+        p_expr . ts                   = static_cast < const STypeset * > ( p_sym . u . obj );
+        p_expr . fd . td . type_id    = p_expr . ts -> id;
+        break;
+    case eFormat:
+        p_expr . fmt                  = static_cast < const SFormat * > ( p_sym . u . obj );
+        p_expr . fd . fmt             = p_expr . fmt -> id;
+        break;
+    case eSchemaType:
+        p_expr . id                   = static_cast < const SIndirectType * > ( p_sym . u . obj );
+        p_expr . fd . td . type_id    = p_expr . id -> id;
+        p_expr . resolved             = false;
+        break;
+    default:
+        p_builder . ReportError ( "Not a datatype: '%S'", & p_sym . name );
+        break;
+    }
+}
+
 STypeExpr *
 ASTBuilder :: MakeTypeExpr ( const AST & p_type )
 {
@@ -372,16 +416,7 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
     {
         return 0;
     }
-
-    ret -> dad . var = eTypeExpr;
-    atomic32_set ( & ret -> dad . refcount, 1 );
-    ret -> fmt = 0;
-    ret -> dt = 0;
-    ret -> ts = 0;
-    ret -> id = 0;
-    ret -> dim = 0;
-    ret -> fd . fmt = 0;
-    ret -> resolved = true;
+    TypeExprInit ( * ret );
 
     const AST_FQN * fqn = 0;
     switch ( p_type . GetTokenType () )
@@ -450,7 +485,7 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
                 ret -> fd . fmt = ret -> fmt -> id;
                 ret -> fd . td . dim = 1;
 
-                fqn = dynamic_cast < const AST_FQN * > ( p_type . GetChild ( 1 ) );
+                fqn = dynamic_cast < const AST_FQN * > ( p_type . GetChild ( 1 ) ); // has to be a type!
             }
         }
         break;
@@ -464,33 +499,81 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
         const KSymbol * type = Resolve ( * fqn ); // will report unknown name
         if ( type != 0 )
         {
-            switch ( type -> type )
-            {
-            case eDatatype:
-                ret -> dt                   = static_cast < const SDatatype * > ( type -> u . obj );
-                ret -> fd . td . type_id    = ret -> dt -> id;
-                break;
-            case eTypeset:
-                ret -> ts                   = static_cast < const STypeset * > ( type -> u . obj );
-                ret -> fd . td . type_id    = ret -> ts -> id;
-                break;
-            case eFormat:
-                ret -> fmt                  = static_cast < const SFormat * > ( type -> u . obj );
-                ret -> fd . fmt             = ret -> fmt -> id;
-                break;
-            case eSchemaType:
-                ret -> id                   = static_cast < const SIndirectType * > ( type -> u . obj );
-                ret -> fd . td . type_id    = ret -> id -> id;
-                ret -> resolved             = false;
-                break;
-            default:
-                ReportError ( "Not a datatype", * fqn );
-                break;
-            }
+            TypeExprFillTypeId ( * this, * ret, * type );
         }
     }
 
     return ret;
+}
+
+void
+ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
+{
+    uint32_t count = p_parms . ChildrenCount ();
+    for ( uint32_t i = 0; i < count; ++ i )
+    {
+        const AST & parm = * p_parms . GetChild ( i );
+        switch ( parm . GetTokenType () )
+        {
+        case PT_IDENT :
+            {
+                assert ( parm . ChildrenCount () == 1 );
+                const KSymbol * sym = Resolve ( parm. GetChild ( 0 ) -> GetTokenValue () ); // will report unknown name
+                if ( sym != 0 )
+                {
+                    switch ( sym -> type )
+                    {
+                    /* type parameter */
+                    case eFormat:
+                    case eDatatype:
+                    case eTypeset:
+                    case eSchemaType:
+                        {
+                            STypeExpr * ret = Alloc < STypeExpr > ();
+                            if ( ret == 0 )
+                            {
+                                return;
+                            }
+                            TypeExprInit ( * ret );
+                            TypeExprFillTypeId ( * this, * ret, * sym );
+                            if ( ! VectorAppend ( p_v, 0, ret ) )
+                            {
+                                SExpressionWhack ( & ret -> dad );
+                            }
+                        }
+                        break;
+
+                    /* symbolic constant must be uint */
+                    case eConstant:
+                        //return sym_const_expr ( tbl, src, t, env, self, ( const SConstExpr** ) v );
+                        assert ( false );
+                        break;
+
+                    /* schema or factory constant must be uint
+                    but may not yet be completely resolved */
+                    case eSchemaParam:
+                    case eFactParam:
+                        //return indirect_const_expr ( tbl, src, t, env, self, v );
+                        assert ( false );
+                        break;
+
+                    default:
+                        ReportError ( "Cannot be used as a schema parameter: '%S'", & sym -> name );
+                        break;
+                    }
+                }
+            }
+            break;
+        case PT_UINT :
+            assert ( false ); //TODO
+            break;
+        case PT_ARRAY:
+            assert ( false );  //TODO
+            break;
+        default:
+            assert ( false );
+        }
+    }
 }
 
 /*--------------------------------------------------------------------------
@@ -615,6 +698,62 @@ TypeSetAddType ( ASTBuilder & p_builder, BSTree & p_tree, const VTypedecl & p_ty
     return true;
 }
 
+const KSymbol *
+ASTBuilder :: TypeSpec ( const AST & p_spec, VTypedecl & p_td )
+{
+    const KSymbol * ret = 0;
+    if ( p_spec . GetTokenType () == PT_IDENT )
+    {   // scalar
+        const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( p_spec );
+        ret = Resolve ( fqn ); // will report unknown name
+        if ( ret != 0 )
+        {
+            switch ( ret -> type )
+            {
+            case eDatatype:
+                {
+                    const SDatatype * typeDef = static_cast < const SDatatype * > ( ret -> u . obj );
+                    p_td . type_id = typeDef -> id;
+                    p_td . dim = 1;
+                }
+                break;
+            case eTypeset:
+                {
+                    const STypeset * typeset = static_cast < const STypeset * > ( ret -> u . obj );
+                    p_td . type_id = typeset -> id;
+                    p_td . dim = 1;
+                }
+                break;
+            default:
+                {
+                    ReportError ( "Not a datatype", fqn );
+                }
+                return 0;
+            }
+        }
+    }
+    else // fqn [ const-expr ]
+    {
+        assert ( p_spec . GetTokenType () == PT_ARRAY );
+        assert ( p_spec . ChildrenCount () == 2 ); // fqn expr
+        const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( * p_spec . GetChild ( 0 ) );
+        const AST_Expr & dim = dynamic_cast < const AST_Expr & > ( * p_spec . GetChild ( 1 ) );
+        ret = Resolve ( fqn ); // will report unknown name
+        if ( ret != 0 )
+        {
+            if ( ret -> type != eDatatype )
+            {
+                ReportError ( "Not a datatype", fqn );
+                return 0;
+            }
+            const SDatatype * typeDef = static_cast < const SDatatype * > ( ret -> u . obj );
+            p_td . type_id    = typeDef -> id;
+            p_td . dim        = EvalConstExpr ( dim );
+        }
+    }
+    return ret;
+}
+
 AST *
 ASTBuilder :: TypeSet ( const Token* p_token, AST_FQN * p_name, AST * p_typeSpecs )
 {
@@ -628,77 +767,41 @@ ASTBuilder :: TypeSet ( const Token* p_token, AST_FQN * p_name, AST * p_typeSpec
 
     uint32_t typeCount = 0;
     uint32_t count = p_typeSpecs -> ChildrenCount ();
+    bool error = false;
     for ( uint32_t i = 0; i < count; ++i )
     {
         const AST * spec = p_typeSpecs -> GetChild ( i );
-        if ( spec -> GetTokenType () == PT_IDENT )
-        {   // scalar
-            const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( * spec );
-            const KSymbol * type = Resolve ( fqn ); // will report unknown name
-            if ( type != 0 )
+        VTypedecl td;
+        const KSymbol * type = TypeSpec ( * spec, td );
+        if ( type != 0  )
+        {
+            if ( type -> type == eDatatype )
             {
-                switch ( type -> type )
+                if ( ! TypeSetAddType ( * this, tree, td, typeCount ) )
                 {
-                case eDatatype:
+                    error = true;
+                }
+            }
+            else
+            {
+                assert ( type -> type == eTypeset );
+                const STypeset * typeset = static_cast < const STypeset * > ( type -> u . obj );
+                for ( uint16_t j = 0; j < typeset -> count; ++j )
+                {
+                    if ( ! TypeSetAddType ( *this, tree, typeset -> td [ j ], typeCount ) )
                     {
-                        VTypedecl td;
-                        const SDatatype * typeDef = static_cast < const SDatatype * > ( type -> u . obj );
-
-                        td . type_id = typeDef -> id;
-                        td . dim = 1;
-                        if ( ! TypeSetAddType ( * this, tree, td, typeCount ) )
-                        {
-                            goto EXIT;
-                        }
+                        error = true;
                     }
-                    break;
-                case eTypeset:
-                    {
-                        const STypeset * typeset = static_cast < const STypeset * > ( type -> u . obj );
-                        for ( uint16_t j = 0; j < typeset -> count; ++j )
-                        {
-                            if ( ! TypeSetAddType ( *this, tree, typeset -> td [ j ], typeCount ) )
-                            {
-                                goto EXIT;
-                            }
-                        }
-                    }
-                    break;
-                default:
-                    {
-                        ReportError ( "Not a datatype", fqn );
-                    }
-                    continue;
                 }
             }
         }
-        else // fqn [ const-expr ]
+        else
         {
-            assert ( spec -> ChildrenCount () == 2 );
-            const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( * spec -> GetChild ( 0 ) );
-            const AST_Expr & dim = dynamic_cast < const AST_Expr & > ( * spec -> GetChild ( 1 ) );
-            const KSymbol * type = Resolve ( fqn ); // will report unknown name
-            if ( type != 0 )
-            {
-                if ( type -> type != eDatatype )
-                {
-                    ReportError ( "Not a datatype", fqn );
-                    continue;
-                }
-                const SDatatype * typeDef = static_cast < const SDatatype * > ( type -> u . obj );
-                VTypedecl td;
-                td . type_id    = typeDef -> id;
-                td . dim        = EvalConstExpr ( dim );
-
-                if ( ! TypeSetAddType ( * this, tree, td, typeCount ) )
-                {
-                    goto EXIT;
-                }
-            }
+            error = true;
         }
     }
 
-    if ( existing != 0 )
+    if ( ! error && existing != 0 )
     {
         if ( existing -> type != eTypeset )
         {
@@ -733,7 +836,6 @@ ASTBuilder :: TypeSet ( const Token* p_token, AST_FQN * p_name, AST * p_typeSpec
         DeclareTypeSet ( * p_name, tree, typeCount );
     }
 
-EXIT:
     BSTreeWhack ( & tree, BSTreeMbrWhack, 0 );
 
     return ret;
@@ -812,7 +914,7 @@ ASTBuilder :: ConstDef  ( const Token* p_token, AST* p_type, AST_FQN* p_fqn, AST
         }
         else // fqn dim
         {
-            //TBD
+            //TBD - use ArraySpec()
         }
     }
 
@@ -832,4 +934,3 @@ ASTBuilder :: AliasDef  ( const Token* p_token, AST_FQN* p_name, AST_FQN* p_newN
 
     return ret;
 }
-

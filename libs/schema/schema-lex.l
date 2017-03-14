@@ -75,6 +75,8 @@ static void AddWhitespace ( SchemaScanBlock* p_sb, const char* p_ws, size_t p_le
 
 sstr_char   ([^\\'\f\r\n$]|$[^(\\])
 dstr_char   ([^\\"\f\r\n$]|$[^(\\])
+alpha       [a-zA-Z_]
+alphanum    [a-zA-Z_0-9]
 
 %%
 
@@ -106,9 +108,9 @@ dstr_char   ([^\\"\f\r\n$]|$[^(\\])
 
 [1-9][0-9]*                 { return DECIMAL; }
 0[0-9]*                     { return OCTAL; }
-0[x|X][0-9|a-f|A-F]+        { return HEX; }
-[0-9]+\.[0-9]*[e|E][0-9]+   { return EXP_FLOAT; }
-\.[0-9]+[e|E][0-9]+         { return EXP_FLOAT; }
+0[xX][0-9a-fA-F]+        { return HEX; }
+[0-9]+\.[0-9]*[eE][0-9]+   { return EXP_FLOAT; }
+\.[0-9]+[eE][0-9]+         { return EXP_FLOAT; }
 [0-9]+\.[0-9]*              { return FLOAT; }
 \.[0-9]+                    { return FLOAT; }
 
@@ -168,9 +170,9 @@ dstr_char   ([^\\"\f\r\n$]|$[^(\\])
 "void"            { return KW_void; }
 "write"           { return KW_write; }
 
-[a-z|A-Z|_][a-z|A-Z|_|0-9]*         { return IDENTIFIER_1_0; }
-[0-9][a-z|A-Z|_][a-z|A-Z|_|0-9]+    { return IDENTIFIER_1_0; }
-\.[a-z|A-Z|_][a-z|A-Z|_|0-9]*       { return PHYSICAL_IDENTIFIER_1_0; }
+{alpha}{alphanum}*         { return IDENTIFIER_1_0; }
+[0-9]{alpha}{alphanum}+    { return IDENTIFIER_1_0; } /* for things like 4na */
+\.{alpha}{alphanum}*       { return PHYSICAL_IDENTIFIER_1_0; }
 
 #[0-9]+\.[0-9]+\.[0-9]+     { return VERSION; }
 #[0-9]+\.[0-9]+             { return VERSION; }

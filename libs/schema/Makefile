@@ -78,6 +78,7 @@ SCHEMA_SRC = \
     AST \
     ASTBuilder \
     ASTBuilder-func \
+    ASTBuilder-tbl \
 
 schema-grammar.$(LOBX): $(SRCDIR)/schema-grammar.cpp
 	$(CP) -o $@ -fPIC $(OPT) -D_LIBRARY $< $(LOC_INFO) -D__file_ext__=cpp
@@ -88,9 +89,10 @@ grammar: $(SRCDIR)/schema-grammar.cpp
 
 ast: $(SRCDIR)/schema-ast.cpp
 
-BISON_VERSION = $(word 4,$(shell bison -V | grep "(GNU Bison)"))
+#looak at the major version of Bison
+BISON_VERSION = $(word 4,$(subst ., ,$(shell bison -V | grep "(GNU Bison)")))
 
-ifeq (1,$(shell echo "3.0<=$(BISON_VERSION)") | bc -l )
+ifeq (1,$(shell echo "3<=$(BISON_VERSION)" | bc -l))
 
 $(SRCDIR)/schema-grammar.cpp: $(SRCDIR)/schema-grammar.y
 	bison -r state -o $(SRCDIR)/schema-grammar.cpp --defines=$(SRCDIR)/schema-tokens.h $(SRCDIR)/schema-grammar.y

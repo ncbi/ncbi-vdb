@@ -205,6 +205,7 @@
 %token PT_TYPEDEF
 %token PT_FQN
 %token PT_IDENT
+%token PT_PHYSIDENT
 %token PT_UINT
 %token PT_TYPESET
 %token PT_TYPESETDEF
@@ -241,9 +242,9 @@
 %token PT_FUNCEXPR
 %token PT_FACTPARMS
 %token PT_COLUMN
+%token PT_COLUMNEXPR
 %token PT_COLDECL
 %token PT_TYPEDCOL
-%token PT_COLMODIFIER
 %token PT_COLSTMT
 %token PT_DFLTVIEW
 %token PT_PHYSMBR
@@ -265,10 +266,11 @@
 %token PT_CONSTVECT
 %token PT_NEGATE
 %token PT_UNARYPLUS
-%token PT_FACTPARMNAMED
 %token PT_VERSNAME
 %token PT_ARRAY
 %token PT_AT
+%token PT_PHYSENCEXPR
+%token PT_PHYSENCREF
 
  /* !!! Keep token declarations above in synch with schema-ast.y */
 
@@ -538,8 +540,8 @@ script_1_0_stmt_seq
 
 script_1_0_stmt
     : KW_return cond_expr_1_0 ';'   { $$ . subtree = MakeTree ( PT_RETURN, T ( $1 ), P ( $2 ), T ( $3 ) ); }
-    | type_expr_1_0 IDENTIFIER_1_0 '=' cond_expr_1_0 ';'
-                                     { $$ . subtree = MakeTree ( PT_PRODSTMT, P ( $1 ), T ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
+    | type_expr_1_0 ident_1_0 '=' cond_expr_1_0 ';'
+                                     { $$ . subtree = MakeTree ( PT_PRODSTMT, P ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
     ;
 
 /* extern-1.0
@@ -660,21 +662,19 @@ tbl_1_0_stmt
     ;
 
 production_1_0_stmt
-    : typespec_1_0 IDENTIFIER_1_0 '=' cond_expr_1_0 ';'    /* cannot have format */
-                                     { $$ . subtree = MakeTree ( PT_PRODSTMT, P ( $1 ), T ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
-    | KW_trigger    IDENTIFIER_1_0 '=' cond_expr_1_0 ';'
-                                     { $$ . subtree = MakeTree ( PT_PRODTRIGGER, T ( $1 ), T ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
+    : typespec_1_0 ident_1_0 '=' cond_expr_1_0 ';'    /* cannot have format */
+                                     { $$ . subtree = MakeTree ( PT_PRODSTMT, P ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
+    | KW_trigger ident_1_0 '=' cond_expr_1_0 ';'
+                                     { $$ . subtree = MakeTree ( PT_PRODTRIGGER, T ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
     ;
 
 column_1_0_decl
     :   opt_col_1_0_modifier_seq KW_column col_1_0_decl
             { $$ . subtree = MakeTree ( PT_COLUMN, P ( $1 ), T ( $2 ), P ( $3 ) ); }
-    |   opt_col_1_0_modifier_seq KW_column KW_default col_1_0_decl
-            { $$ . subtree = MakeTree ( PT_COLUMN, P ( $1 ), T ( $2 ), T ( $3 ), P ( $4 ) ); }
     |   opt_col_1_0_modifier_seq KW_column KW_limit '=' expression_1_0 ';'
-            { $$ . subtree = MakeTree ( PT_COLUMN, P ( $1 ), T ( $2 ), T ( $3 ), T ( $4 ), P ( $5 ), T ( $6 ) ); }
+            { $$ . subtree = MakeTree ( PT_COLUMNEXPR, P ( $1 ), T ( $2 ), T ( $3 ), T ( $4 ), P ( $5 ), T ( $6 ) ); }
     |   opt_col_1_0_modifier_seq KW_column KW_default KW_limit '=' expression_1_0 ';'
-            { $$ . subtree = MakeTree ( PT_COLUMN, P ( $1 ), T ( $2 ), T ( $3 ), T ( $4 ), T ( $5 ), P ( $6 ), T ( $7 ) ); }
+            { $$ . subtree = MakeTree ( PT_COLUMNEXPR, P ( $1 ), T ( $2 ), T ( $3 ), T ( $4 ), T ( $5 ), P ( $6 ), T ( $7 ) ); }
     ;
 
 opt_col_1_0_modifier_seq
@@ -688,22 +688,25 @@ col_1_0_modifier_seq
     ;
 
 col_1_0_modifier
-    : KW_default        { $$ . subtree = MakeTree ( PT_COLMODIFIER, T ( $1 ) ); }
-    | KW_extern         { $$ . subtree = MakeTree ( PT_COLMODIFIER, T ( $1 ) ); }
-    | KW_readonly       { $$ . subtree = MakeTree ( PT_COLMODIFIER, T ( $1 ) ); }
+    : KW_default        { $$ . subtree = T ( $1 ); }
+    | KW_extern         { $$ . subtree = T ( $1 ); }
+    | KW_readonly       { $$ . subtree = T ( $1 ); }
     ;
 
 col_1_0_decl
-    : KW_physical '<' schema_parms_1_0 '>' fqn_opt_vers opt_factory_parms_1_0 typed_column_decl_1_0
-            { $$ . subtree = MakeTree ( PT_COLDECL, T ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ), P ( $5 ), P ( $6 ), P ( $7 ) ); }
-    |             '<' schema_parms_1_0 '>' fqn_opt_vers opt_factory_parms_1_0 typed_column_decl_1_0
-            { $$ . subtree = MakeTree ( PT_COLDECL, T ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), P ( $5 ), P ( $6 ) ); }
-    | fqn_vers opt_factory_parms_1_0 typed_column_decl_1_0
-            { $$ . subtree = MakeTree ( PT_COLDECL, P ( $1 ), P ( $2 ), P ( $3 ) ); }
-    | fqn_1_0 '<' factory_parms_1_0 '>' typed_column_decl_1_0
-            { $$ . subtree = MakeTree ( PT_COLDECL, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ), P ( $5 ) ); }
-    | typespec_1_0 typed_column_decl_1_0
+    : typespec_1_0 typed_column_decl_1_0
             { $$ . subtree = MakeTree ( PT_COLDECL, P ( $1 ), P ( $2 ) ); }
+    | phys_enc_ref typed_column_decl_1_0
+            { $$ . subtree = MakeTree ( PT_COLDECL, P ( $1 ), P ( $2 ) ); }
+    ;
+
+phys_enc_ref
+    : '<' schema_parms_1_0 '>' fqn_opt_vers opt_factory_parms_1_0
+            { $$ . subtree = MakeTree ( PT_PHYSENCREF, T ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), P ( $5 ) ); }
+    | fqn_vers opt_factory_parms_1_0
+            { $$ . subtree = MakeTree ( PT_PHYSENCREF, P ( $1 ), P ( $2 ) ); }
+    | fqn_1_0 '<' factory_parms_1_0 '>'
+            { $$ . subtree = MakeTree ( PT_PHYSENCREF, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
     ;
 
 typed_column_decl_1_0
@@ -721,7 +724,7 @@ col_ident
     ;
 
 phys_ident
-    : PHYSICAL_IDENTIFIER_1_0       { $$ . subtree = MakeTree ( PT_IDENT, T ( $1 ) ); }     /* starts with a '.' */
+    : PHYSICAL_IDENTIFIER_1_0       { $$ . subtree = T ( $1 ); }     /* starts with a '.' */
     ;
 
 column_body_1_0
@@ -805,15 +808,11 @@ primary_expr_1_0
     ;
 
 func_expr_1_0
-    :   '<'
-        schema_parms_1_0
-        '>'
-        fqn_opt_vers
-        opt_factory_parms_1_0
+    :   phys_enc_expr
         '('
         opt_func_1_0_parms
         ')'
-             { $$ . subtree = MakeTree ( PT_FUNCEXPR, T ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), P ( $5 ), T ( $6 ), P ( $7 ), T ( $8 ) ); }
+             { $$ . subtree = MakeTree ( PT_FUNCEXPR, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
     |   fqn_opt_vers
         opt_factory_parms_1_0
         '('
@@ -822,14 +821,20 @@ func_expr_1_0
              { $$ . subtree = MakeTree ( PT_FUNCEXPR, P ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
     ;
 
+phys_enc_expr
+    : '<' schema_parms_1_0 '>' fqn_opt_vers opt_factory_parms_1_0
+             { $$ . subtree = MakeTree ( PT_PHYSENCEXPR, T ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), P ( $5 ) ); }
+    ;
+
 schema_parms_1_0
     : schema_parm_1_0                       { $$ . subtree = MakeList ( $1 ); }
     | schema_parms_1_0 ',' schema_parm_1_0  { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     ;
 
 schema_parm_1_0
-    : type_expr_1_0                         { $$ = $1; }
-    | uint_expr_1_0                         { $$ = $1; }
+    : fqn_1_0                   { $$ = $1; }
+    | fqn_1_0 '[' dim_1_0 ']'   { $$ . subtree = MakeTree ( PT_ARRAY, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
+    | uint_expr_1_0             { $$ = $1; }
     ;
 
 opt_factory_parms_1_0
@@ -838,13 +843,8 @@ opt_factory_parms_1_0
     ;
 
 factory_parms_1_0
-    : factory_parm_1_0                          { $$ . subtree = MakeList ( $1 ); }
-    | factory_parms_1_0 ',' factory_parm_1_0    { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
-    ;
-
-factory_parm_1_0
-    : expression_1_0                        { $$ = $1; }
-    | IDENTIFIER_1_0 '=' expression_1_0     { $$ . subtree = MakeTree ( PT_FACTPARMNAMED, T ( $1 ), T ( $2 ), P ( $2 ) ); }
+    : expression_1_0                          { $$ . subtree = MakeList ( $1 ); }
+    | factory_parms_1_0 ',' expression_1_0    { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     ;
 
 opt_func_1_0_parms

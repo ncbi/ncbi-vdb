@@ -25,23 +25,8 @@
 */
 
 /**
-* Unit tests for schema AST, this file is #included into a bigger test suite
+* Unit tests for function declarations in schema, this file is #included into a bigger test suite
 */
-
-#include <ktst/unit_test.hpp>
-
-#include <klib/symbol.h>
-
-#include <vdb/manager.h>
-
-#include "../../libs/vdb/schema-expr.h"
-
-#include "AST_Fixture.hpp"
-
-using namespace std;
-using namespace ncbi::NK;
-
-TEST_SUITE ( ASTFuctionTestSuite );
 
 class FunctionAccess // encapsulates access to an SFunction in a VSchema
 {
@@ -107,13 +92,10 @@ public:
 
 public:
     AST_Function_Fixture ()
-    :   m_newParse ( true ),
-        m_schema ( 0 )
     {
     }
     ~AST_Function_Fixture ()
     {
-        VSchemaRelease ( m_schema );
     }
 
     FunctionAccess ParseFunction ( const char * p_source, const char * p_name, uint32_t p_idx = 0, uint32_t p_type = eFunction )
@@ -184,33 +166,6 @@ public:
             throw std :: logic_error ( "AST_Function_Fixture::VerifyErrorMessage : no error" );
         }
     }
-
-    bool OldParse ( const char* p_source )
-    {
-        const VDBManager *mgr;
-        if ( VDBManagerMakeRead ( & mgr, 0 ) != 0 )
-        {
-            throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : VDBManagerMakeRead() failed" );
-        }
-        if ( VDBManagerMakeSchema ( mgr, & m_schema ) != 0 )
-        {
-            throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : VDBManagerMakeSchema() failed" );
-        }
-        // expect an error, do not need to see it
-        KWrtHandler* h =  KLogLibHandlerGet ();
-        KLogLibHandlerSet ( NULL, NULL );
-        bool ret = VSchemaParseText ( m_schema, 0, p_source, string_size ( p_source ) ) == 0;
-        KLogLibHandlerSet ( h -> writer, h -> data );
-
-        VDBManagerRelease ( mgr );
-
-        return ret;
-    }
-
-
-    // old parsing support
-    bool m_newParse;
-    VSchema *m_schema;
 };
 
 // untyped
@@ -784,30 +739,13 @@ AST_Function_Fixture :: ParsePhysical ( const char * p_source, const char * p_na
             throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : wrong name" );
         }
     }
-    else
+    else if ( OldParse ( p_source ) )
     {
-        const VDBManager *mgr;
-        if ( VDBManagerMakeRead ( & mgr, 0 ) != 0 )
-        {
-            throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : VDBManagerMakeRead() failed" );
-        }
-        if ( VDBManagerMakeSchema ( mgr, & m_schema ) != 0 )
-        {
-            throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : VDBManagerMakeSchema() failed" );
-        }
-
-        if ( VSchemaParseText ( m_schema, 0, p_source, string_size ( p_source ) ) != 0 )
-        {
-            throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : VSchemaParseText() failed" );
-        }
-
         ret = static_cast < const SPhysical* > ( VectorGet ( & m_schema -> phys, 0 ) );
         if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )
         {
             throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : wrong name" );
         }
-
-        VDBManagerRelease ( mgr );
     }
     return PhysicalAccess ( ret );
 }
@@ -917,6 +855,13 @@ FIXTURE_TEST_CASE(Func_Physical_NoHeaderWithEncode, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_Physical_At, AST_Function_Fixture)
 {
-    m_newParse = false;
-    PhysicalAccess fn = ParsePhysical  ( "physical U8 f#1.2 { decode { return @; } }", "f" );
+    /*PhysicalAccess fn = */ParsePhysical  ( "physical U8 f#1.2 { decode { return @; } }", "f" );
+    //TODO:verify access to @
+}
+
+FIXTURE_TEST_CASE(Func_Physical_SchemaParams, AST_Function_Fixture)
+{
+    //m_newParse = false;
+    PhysicalAccess fn = ParsePhysical  ( "physical <type T> T f#1.2 { decode { return 1; } }", "f" );
+    REQUIRE_EQ ( 1u, fn . Decode () . SchemaTypeParamCount () );
 }

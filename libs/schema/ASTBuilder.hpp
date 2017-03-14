@@ -38,6 +38,10 @@ struct SFunction;
 struct SFormParmlist;
 struct SIndirectType;
 struct SIndirectConst;
+struct STable;
+struct SColumn;
+struct SExpression;
+struct VTypedecl;
 
 namespace ncbi
 {
@@ -75,31 +79,49 @@ namespace ncbi
 
         public:
             // AST node creation methods for use from bison
-            AST * TypeDef ( const Token*, AST_FQN* baseType, AST* newTypes );
-            AST * TypeSet ( const Token*, AST_FQN* name, AST* typeSpecs );
-            AST * FmtDef  ( const Token*, AST_FQN* name, AST_FQN* super_opt );
-            AST * ConstDef  ( const Token*, AST* type, AST_FQN* name, AST_Expr* expr );
-            AST * AliasDef  ( const Token*, AST_FQN* name, AST_FQN* newName );
-            AST * UntypedFunctionDecl ( const Token*, AST_FQN* name );
-            AST * RowlenFunctionDecl ( const Token*, AST_FQN* name );
-            AST * FunctionDecl ( const Token*, bool script, AST * schema, AST * returnType, AST_FQN* name, AST_ParamSig* fact, AST_ParamSig* params, AST* prologue );
-            AST * PhysicalDecl ( const Token*, AST * schema, AST * returnType, AST_FQN* name, AST_ParamSig* fact, AST* body );
+            AST * TypeDef ( const Token *, AST_FQN * baseType, AST * newTypes );
+            AST * TypeSet ( const Token *, AST_FQN * name, AST * typeSpecs );
+            AST * FmtDef  ( const Token *, AST_FQN * name, AST_FQN * super_opt );
+            AST * ConstDef  ( const Token *, AST * type, AST_FQN * name, AST_Expr * expr );
+            AST * AliasDef  ( const Token *, AST_FQN * name, AST_FQN * newName );
+            AST * UntypedFunctionDecl ( const Token *, AST_FQN * name );
+            AST * RowlenFunctionDecl ( const Token *, AST_FQN * name );
+            AST * FunctionDecl ( const Token *, bool script, AST * schema, AST * returnType, AST_FQN * name, AST_ParamSig * fact, AST_ParamSig* params, AST* prologue );
+            AST * PhysicalDecl ( const Token *, AST * schema, AST * returnType, AST_FQN * name, AST_ParamSig * fact, AST * body );
+            AST * TableDef ( const Token *, AST_FQN * name, AST * parents, AST * body );
 
         public: // schema object construction helpers
             const KSymbol* CreateFqnSymbol ( const AST_FQN& fqn, uint32_t type, const void * obj );
+            KSymbol * CreateLocalSymbol ( const char* p_name, int p_type, void * p_obj );
+            KSymbol * CreateLocalSymbol ( const String & p_name, int p_type, void * p_obj );
+            KSymbol * CreateConstSymbol ( const char* p_name, int p_type, void * p_obj );
+
             struct STypeExpr * MakeTypeExpr ( const AST & p_type );
+
             // false - failed, error reported
             bool VectorAppend ( Vector & self, uint32_t *idx, const void *item );
-            const KSymbol * CreateOverload ( const AST_FQN & p_name, const void * p_object, int p_type, int64_t CC (*p_sort)(const void *, const void *), Vector & p_functions, Vector & p_names, uint32_t * p_id );
+
+            const KSymbol * CreateOverload ( const AST_FQN & p_name, const void * p_object, int p_type, int64_t CC (*p_sort)(const void *, const void *), Vector & p_objects, Vector & p_names, uint32_t * p_id );
+
             bool HandleFunctionOverload ( const void * p_object, uint32_t p_version, const KSymbol * p_priorDecl, uint32_t * p_id );
             bool HandlePhysicalOverload ( const void * p_object, uint32_t p_version, const KSymbol * p_priorDecl, uint32_t * p_id );
-            void HandlePhysicalBody ( const String & p_name, const AST * p_schema, const AST_ParamSig* p_fact, const AST* p_body, SFunction & p_func );
+            struct SExpression * HandlePhysicalBody ( const String & p_name, const AST & p_schema, const AST & p_returnType, const AST_ParamSig & p_fact, const AST & p_body, SFunction & p_func, bool p_makeReturn );
+
+            bool HandleTableOverload ( const struct STable *    p_table,
+                                       uint32_t                 p_version,
+                                       const KSymbol *          p_priorDecl,
+                                       uint32_t *               p_id );
+            void AddProduction ( Vector & p_list, const AST & p_prod );
+
+            void FillSchemaParms ( const AST & p_parms, Vector & p_v );
+            struct SExpression * MakePhysicalEncodingSpec ( const AST & p_node, struct VTypedecl & p_type );
 
         private:
             bool Init();
 
             void DeclareType ( const AST_FQN& fqn, const KSymbol& super, const AST_Expr* dimension_opt );
             void DeclareTypeSet ( const AST_FQN& fqn, const BSTree& types, uint32_t typeCount );
+            const KSymbol * TypeSpec ( const AST & p_spec, VTypedecl & p_td );
 
             struct SFormParmlist * MakeFactoryParams ( const AST_ParamSig & );
             void AddFactoryParams ( Vector& sig, const AST & params );
@@ -108,6 +130,12 @@ namespace ncbi
             void AddFormalParams ( Vector& sig, const AST & params );
 
             uint64_t EvalConstExpr ( const AST_Expr &expr );
+
+            void HandleTableParents ( STable & p_table, const AST & p_parents );
+            void HandleTableBody    ( STable & p_table, const AST & p_body );
+            bool HandleSimpleColumn ( STable & p_table, struct SColumn & p_col, const AST & p_typedCol );
+
+            void AddColumn ( STable & p_table, const AST & p_modifiers, const AST & p_decl, const AST * p_default );
 
         private:
             VSchema*    m_intrinsic;
@@ -127,6 +155,7 @@ namespace ncbi
             {
                 ReportError ( "malloc failed: %R", RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted ) );
             }
+            memset ( ret, 0, p_size );
             return ret;
         }
 

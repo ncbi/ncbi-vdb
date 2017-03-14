@@ -461,6 +461,7 @@ FIXTURE_TEST_CASE(Const_Simple, AST_Fixture)
     REQUIRE_EQ ( 1u, expr . td . dim );
 }
 
+//TODO: not a type: const U8 c = 1; const c cc = 1; - error
 //TODO: const U8 [2] c = [1,2];
 //TODO: const U8 c = [1,2]; - error ( not an array )
 //TODO: const U8 c[2] = 1; - error ( not a scalar )
@@ -496,6 +497,7 @@ FIXTURE_TEST_CASE(AliasedTypesetInTypeset, AST_Fixture)
 }
 
 //TODO: array of arrays in typedef, typeset, constdef, return type
+//TODO: array of typeset: typeset ts { U8 }; typedef ts t[2];
 
 //TODO: function call: no arguments
 //TODO: function call: optional parameters
@@ -503,7 +505,10 @@ FIXTURE_TEST_CASE(AliasedTypesetInTypeset, AST_Fixture)
 
 //TODO: formatted type in production in a table (not allowed?)
 
+//TODO: expressions: hex, octal
+
 #include "wb-test-schema-func.cpp"
+#include "wb-test-schema-table.cpp"
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>

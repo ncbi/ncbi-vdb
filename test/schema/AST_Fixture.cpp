@@ -29,19 +29,24 @@
 
 #include <klib/symbol.h>
 
+#include <vdb/manager.h>
+
 #include "AST_Fixture.hpp"
 
 using namespace std;
 
 AST_Fixture :: AST_Fixture()
 :   m_parseTree ( 0 ),
-    m_ast ( 0 )
+    m_ast ( 0 ),
+    m_schema ( 0 ),
+    m_newParse ( true )
 {
 }
 AST_Fixture :: ~AST_Fixture()
 {
     delete m_ast;
     delete m_parseTree;
+    VSchemaRelease ( m_schema );
 }
 
 void
@@ -87,6 +92,14 @@ AST_Fixture :: PrintTree ( const ParseTree& p_tree )
             case_ ( PT_PHYSSTMT );
             case_ ( PT_PHYSBODYSTMT );
             case_ ( PT_FQN );
+            case_ ( PT_TABLE );
+            case_ ( PT_TABLEBODY );
+            case_ ( PT_TYPEDCOL );
+            case_ ( PT_COLUMN );
+            case_ ( PT_COLDECL );
+            case_ ( PT_PHYSENCEXPR );
+            case_ ( PT_FACTPARMS );
+            case_ ( PT_PHYSENCREF );
             default:
                 if ( tt < 256 )
                 {
@@ -253,5 +266,28 @@ AST_Fixture :: VerifyDatatype ( const char* p_name, const char* p_baseName, uint
     {
         throw std :: logic_error ( "AST_Fixture::VerifyDatatype : wrong domain" );
     }
+    return ret;
+}
+
+bool
+AST_Fixture :: OldParse ( const char* p_source )
+{
+    const VDBManager *mgr;
+    if ( VDBManagerMakeRead ( & mgr, 0 ) != 0 )
+    {
+        throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : VDBManagerMakeRead() failed" );
+    }
+    if ( VDBManagerMakeSchema ( mgr, & m_schema ) != 0 )
+    {
+        throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : VDBManagerMakeSchema() failed" );
+    }
+    // expect an error, do not need to see it
+    KWrtHandler* h =  KLogLibHandlerGet ();
+    //KLogLibHandlerSet ( NULL, NULL );
+    bool ret = VSchemaParseText ( m_schema, 0, p_source, string_size ( p_source ) ) == 0;
+    KLogLibHandlerSet ( h -> writer, h -> data );
+
+    VDBManagerRelease ( mgr );
+
     return ret;
 }

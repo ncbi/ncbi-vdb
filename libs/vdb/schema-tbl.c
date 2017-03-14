@@ -787,7 +787,6 @@ bool CC STableScanVirtuals ( void *item, void *data )
     return false;
 }
 
-static
 rc_t STableExtend ( KSymTable *tbl, STable *self, const STable *dad )
 {
     rc_t rc;
@@ -1142,7 +1141,6 @@ enum
     stbl_cmp_older     = 1 << 4
 };
 
-static
 rc_t STableCompare ( const STable *a, const STable *b, const STable **newer, bool exhaustive )
 {
     rc_t stage_rc, cmp_rc = 0;
@@ -1589,7 +1587,7 @@ rc_t physical_mbr ( KSymTable *tbl, KTokenSource *src, KToken *t,
         {
             /* column is probably based upon a physical structure */
             if ( t -> id == ePhysical )
-                rc = phys_encoding_expr ( tbl, src, t, env, self, & m -> td, & m -> type );            
+                rc = phys_encoding_expr ( tbl, src, t, env, self, & m -> td, & m -> type );
             else if ( t -> id != eDatatype )
                 return KTokenExpected ( t, klogErr, "typename or physical column type" );
             else
@@ -1658,7 +1656,6 @@ rc_t physical_member ( KSymTable *tbl, KTokenSource *src, KToken *t,
     return rc;
 }
 
-static
 rc_t implicit_physical_member ( KSymTable *tbl, const SchemaEnv *env,
     STable *table, SColumn *c, KSymbol *sym )
 {
@@ -2303,14 +2300,7 @@ rc_t table_local_decl ( KSymTable *tbl, KTokenSource *src, KToken *t,
  *
  * table-decl-list    = <tbl-local-decl> ';' [ <table-decl-list> ]
  */
-typedef struct STableScanData STableScanData;
-struct STableScanData
-{
-    STable *self;
-    rc_t rc;
-};
 
-static
 bool CC table_fwd_scan ( BSTNode *n, void *data )
 {
     STableScanData *pb = data;
@@ -2681,8 +2671,10 @@ void table_set_context ( STable *self )
 }
 
 #if NO_UPDATE_TBL_REF || 0
-#define schema_update_tbl_ref( self, exist, table ) \
-    0
+rc_t schema_update_tbl_ref ( VSchema *, const STable *, const STable * )
+{
+    return 0;
+}
 #else
 typedef struct update_tbl_ref_data update_tbl_ref_data;
 struct update_tbl_ref_data
@@ -2835,7 +2827,6 @@ bool CC db_update_tbl_ref ( void *item, void *data )
     return VectorDoUntil ( & self -> db, false, db_update_tbl_ref, data );
 }
 
-static
 rc_t schema_update_tbl_ref ( VSchema *self, const STable *exist, const STable *table )
 {
     update_tbl_ref_data pb;
