@@ -198,7 +198,7 @@ struct KEndPointArgsIterator
     const HttpProxy * proxy;
     const String * hostname;
     uint16_t port;
-    uint16_t dflt_proxy_ports [ 2 ];
+    uint16_t dflt_proxy_ports [ 3 ];
     size_t dflt_proxy_ports_idx;
     bool done;
 };
@@ -212,6 +212,7 @@ void KEndPointArgsIteratorMake ( KEndPointArgsIterator * self,
 
     self -> dflt_proxy_ports [ 0 ] = 3128;
     self -> dflt_proxy_ports [ 1 ] = 8080;
+    self -> dflt_proxy_ports [ 2 ] = 80;
 
     if ( ! mgr -> http_proxy_only )
     {
