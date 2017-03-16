@@ -3940,7 +3940,9 @@ VPUri_t LegacyVPathGetUri_t ( const VPath * self )
     return uri_type;
 }
 
-rc_t VPathEqual ( const VPath * l, const VPath * r, int * notequal ) {
+rc_t VPathClose ( const VPath * l, const VPath * r, int * notequal,
+                  KTime_t expirationRange )
+{
     rc_t rc = 0;
     char pbuffer [ 999 ] = "";;
     size_t pnumred = 0;
@@ -4068,14 +4070,20 @@ rc_t VPathEqual ( const VPath * l, const VPath * r, int * notequal ) {
                     }
                 }
             }
-			{
-                KTime_t tp = l -> expiration ;
-                KTime_t te = r  -> expiration;
-                if ( tp != te )
+            {
+                KTime_t tp = l -> expiration;
+                KTime_t te = r -> expiration;
+                if ( tp != te ) {
+/* TO IMPLEMENT     KTime_t diff = abs ( l -> expiration - r -> expiration );*/
                     * notequal |= 0x2000;
+                }
             }
         }
     }
 
     return rc;
+}
+
+rc_t VPathEqual ( const VPath * l, const VPath * r, int * notequal ) {
+    return VPathClose ( l, r, notequal, 0 );
 }

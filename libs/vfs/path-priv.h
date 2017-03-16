@@ -180,7 +180,12 @@ rc_t VPathMakeFromUrl ( VPath ** new_path, const String * url,
  *
  *  returns non-0 rc after a failed call to get property from any of VPath-s
  */
-rc_t VPathEqual       ( const VPath * l, const VPath * r, int * notequal );
+rc_t VPathEqual ( const VPath * l, const VPath * r, int * notequal );
+/* Close
+ *  compares two VPath-s
+ *  difference between expirations should be withing expirationRange */
+rc_t VPathClose ( const VPath * l, const VPath * r, int * notequal,
+                  KTime_t expirationRange );
 
 
 /***** VPathSet - set of VPath's - genetated from name resolver response ******/
