@@ -146,7 +146,7 @@ static bool SVersionSingleUrl ( const SVersion * self ) {
 
 static bool SVersionResponseHasMultipeUrls ( const SVersion * self ) {
     assert ( self );
-    return self -> version >= VERSION_3_2;
+    return self -> version >= VERSION_3_1;
 }
 
 static bool SVersionResponseHasTimestamp ( const SVersion * self ) {
@@ -167,8 +167,8 @@ typedef struct {
 #define N_NAMES1_0 5
 #define N_NAMES1_1 10
 #define N_NAMES3_0  9
-#define N_NAMES3_1 17
 #define N_NAMES3_2 12
+#define N_NAMES3_1 N_NAMES3_2
 
 
 /* md5 checksum */
@@ -414,7 +414,11 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
 {
     const char man [] = "/repository/remote/main/CGI/resolver-cgi";
     const char prt [] = "/repository/remote/protected/CGI/resolver-cgi";
-    const char cgi [] = "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+#ifndef TESTING_SERVICES_VS_OLD_RESOLVING
+    const char cgi[]=     "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+#else
+    const char cgi[]="https://sponomar.ncbi.nlm.nih.gov/Traces/names/names.cgi";
+#endif
     rc_t rc = 0;
     const char * path = aProtected ? prt : man;
     assert ( self );
@@ -741,7 +745,7 @@ rc_t STypedInit ( STyped * self, const SOrdered * raw, const SConverters * how,
     assert ( self && raw && how && version );
     memset ( self, 0, sizeof * self );
 
-    if ( raw -> n != how -> n )
+    if ( raw -> n != how -> n )                              /* BREAK */
         return RC ( rcVFS, rcQuery, rcResolving, rcName, rcUnexpected );
 
     for ( i = 0; i < raw -> n; ++i ) {
@@ -757,7 +761,7 @@ rc_t STypedInit ( STyped * self, const SOrdered * raw, const SConverters * how,
         }
         rc = f ( dest, & raw -> s [ i ] );
         if ( rc != 0 )
-            break;
+            break;             /* BREAK */
     }
 
     if ( rc == 0 )
@@ -1001,6 +1005,22 @@ tm_isdst	int	Daylight Saving Time flag	*/
 
 
 static rc_t KTimeInit ( void * p, const String * src ) {
+    rc_t rc = 0;
+
+    KTime_t * self = ( KTime_t * ) p;
+
+    assert ( self && src );
+
+    if ( src -> addr != NULL && src -> size > 0 )
+        * self = StringToU64 ( src, & rc );
+
+    return rc;
+}
+
+
+static rc_t KTimeInitFromIso8601 ( void * p, const String * src ) {
+    rc_t rc = 0;
+
     KTime_t * self = ( KTime_t * ) p;
 
     assert ( self && src );
@@ -1014,7 +1034,7 @@ static rc_t KTimeInit ( void * p, const String * src ) {
             * self = KTimeMakeTime ( & kt );
     }
 
-    return 0;
+    return rc;
 }
 
 
@@ -1119,7 +1139,7 @@ static const SConverters * SConvertersNames1_1Make ( void ) {
         aStringInit,
         aStringInit,
         size_tInit,
-        KTimeInit,
+        KTimeInitFromIso8601,
         md5Init,
         aStringInit,
         aStringInit,
@@ -1138,7 +1158,7 @@ static const SConverters * SConvertersNames1_2Make ( void ) {
         aStringInit,
         aStringInit,
         size_tInit,
-        KTimeInit,
+        KTimeInitFromIso8601,
         md5Init,
         aStringInit,
         aStringInit,
@@ -1177,7 +1197,7 @@ static const SConverters * SConvertersNames3_0Make ( void ) {
 #endif
         aStringInit,
         size_tInit,
-        KTimeInit,
+        KTimeInitFromIso8601,
         md5Init,
         aStringInit,
         aStringInit,
@@ -1190,7 +1210,7 @@ static const SConverters * SConvertersNames3_0Make ( void ) {
 }
 
 
-/* converter from proposed names-3.0 response row to STyped object  */
+/* converter from proposed names-3.0 response row to STyped object  *
 static void * STypedGetFieldNames3_1 ( STyped * self, int n ) {
     assert ( self);
     switch ( n ) {
@@ -1213,33 +1233,7 @@ static void * STypedGetFieldNames3_1 ( STyped * self, int n ) {
         case 16: return & self -> message;
     }
     return 0;
-}
-
-
-static const SConverters * SConvertersNames3_1Make ( void ) {
-    static TConverter * f [ N_NAMES3_1 + 1 ] = {
-        EObjectTypeInit,
-        aStringInit,
-        size_tInit,
-        KTimeInit,
-        md5Init,
-        aStringInit,
-        aStringInit,
-        aStringInit,
-        aStringInit,
-        aStringInit,
-        aStringInit,
-        aStringInit,
-        aStringInit,
-        aStringInit,
-        KTimeInit,
-        uint32_tInit,
-        aStringInit, NULL };
-    static const SConverters c = {
-        N_NAMES3_1,
-        STypedGetFieldNames3_1, f };
-    return & c;
-}
+}*/
 
 
 /* converter from proposed names-3.0 response row to STyped object  */
@@ -1265,23 +1259,50 @@ static void * STypedGetFieldNames3_2 ( STyped * self, int n ) {
 
 static const SConverters * SConvertersNames3_2Make ( void ) {
     static TConverter * f [ N_NAMES3_2 + 1 ] = {
-        uint32_tInit,    /*  0 ord-id */
-        EObjectTypeInit, /*  1 object-type */
-        aStringInit,     /*  2 object-id */
-        size_tInit,      /*  3 size */
-        KTimeInit,       /*  4 date */
-        md5Init,         /*  5 md5 */
-        aStringInit,     /*  6 ticket */
-        aStringInit,     /*  7 url */
-        aStringInit,     /*  8 vdbcache-url */
-        KTimeInit,       /* 9 expiration */
-        uint32_tInit,    /* 10 status-code */
-        aStringInit,     /* 11 message */
+        uint32_tInit,        /*  0 ord-id */
+        EObjectTypeInit,     /*  1 object-type */
+        aStringInit,         /*  2 object-id */
+        size_tInit,          /*  3 size */
+        KTimeInitFromIso8601,/*  4 date */
+        md5Init,             /*  5 md5 */
+        aStringInit,         /*  6 ticket */
+        aStringInit,         /*  7 url */
+        aStringInit,         /*  8 vdbcache-url */
+        KTimeInit,           /*  9 expiration */
+        uint32_tInit,        /* 10 status-code */
+        aStringInit,         /* 11 message */
         NULL };
     static const SConverters c = {
         N_NAMES3_2,
         STypedGetFieldNames3_2, f };
     return & c;
+}
+
+
+static const SConverters * SConvertersNames3_1Make ( void ) {
+    return SConvertersNames3_2Make ();
+    /*static TConverter * f [ N_NAMES3_1 + 1 ] = {
+        EObjectTypeInit,
+        aStringInit,
+        size_tInit,
+        KTimeInit,
+        md5Init,
+        aStringInit,
+        aStringInit,
+        aStringInit,
+        aStringInit,
+        aStringInit,
+        aStringInit,
+        aStringInit,
+        aStringInit,
+        aStringInit,
+        KTimeInit,
+        uint32_tInit,
+        aStringInit, NULL };
+    static const SConverters c = {
+        N_NAMES3_1,
+        STypedGetFieldNames3_1, f };
+    return & c;*/
 }
 
 
@@ -3211,7 +3232,7 @@ rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
          return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
     if ( version == NULL )
-        version = "#3.0";
+        version = "#3.1";
 
     rc = KServiceInitNamesRequestWithVersion ( self, protocols, cgi, version,
         false );
