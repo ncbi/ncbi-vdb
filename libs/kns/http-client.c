@@ -139,6 +139,8 @@ struct KClientHttp
     
     bool reliable;
     bool tls;
+
+    bool close_connection;
 };
 
 
@@ -180,6 +182,14 @@ rc_t KClientHttpClear ( KClientHttp *self )
 static
 rc_t KClientHttpWhack ( KClientHttp * self )
 {
+    if ( self -> close_connection )
+    {
+        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+            ("*** closing connection ***\n"));
+        KClientHttpClose ( self );
+        self -> close_connection = false;
+    }
+
     KClientHttpClear ( self );
     
     KDataBufferWhack ( & self -> block_buffer );
@@ -1718,22 +1728,19 @@ struct KClientHttpResult
 
     KRefcount refcount;
     bool len_zero;
-    bool close_connection;
 };
 
 static
 rc_t KClientHttpResultWhack ( KClientHttpResult * self )
 {
     BSTreeWhack ( & self -> hdrs, KHttpHeaderWhack, NULL );
-    if ( self -> close_connection )
-    {
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
-            ("*** closing connection ***\n"));
-        KClientHttpClose ( self -> http );
-    }
+
     KClientHttpRelease ( self -> http );
+
     KRefcountWhack ( & self -> refcount, "KClientHttpResult" );
+
     free ( self );
+
     return 0;
 }
 
@@ -1848,7 +1855,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
                     for ( blank = false; ! blank && rc == 0; )
                     {
                         rc = KClientHttpGetHeaderLine ( self, & tm, & result -> hdrs,
-                            & blank, & result -> len_zero, & result -> close_connection );
+                            & blank, & result -> len_zero, & self -> close_connection );
                     }
 
                     if ( rc == 0 && status != 100 )
@@ -2376,8 +2383,11 @@ LIB_EXPORT rc_t CC KClientHttpResultGetInputStream ( KClientHttpResult *self, KS
                 return KClientHttpStreamMake ( self -> http, s, "KClientHttpStream", content_length, false );
 
             /* detect connection: close or pre-HTTP/1.1 dynamic content */
-            if ( self -> close_connection || self -> version < 0x01010000 )
+            if ( self -> http -> close_connection ||
+                 self -> version < 0x01010000 )
+            {
                 return KClientHttpStreamMake ( self -> http, s, "KClientHttpStream", 0, true );
+            }
 
 #if _DEBUGGING
             KOutMsg ( "HTTP/%.2V %03u %S\n", self -> version, self -> status, & self -> msg );
@@ -3275,7 +3285,7 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 
         default:
 
-            if ( ! rslt -> len_zero || rslt -> close_connection )
+            if ( ! rslt -> len_zero || self -> http -> close_connection )
             {
                 /* the connection is no good */
                 KClientHttpClose ( self -> http );
@@ -3455,7 +3465,7 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
 
         default:
 
-            if ( ! rslt -> len_zero || rslt -> close_connection )
+            if ( ! rslt -> len_zero || self -> http -> close_connection )
             {
                 /* the connection is no good */
                 KClientHttpClose ( self -> http );
