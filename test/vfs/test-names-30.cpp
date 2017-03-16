@@ -75,7 +75,7 @@ public:
     }
 
     const VPath * make ( const char * path, const string & date = "",
-                         const string & md5 = "", const string & modifict = "" )
+        const string & md5 = "", KTime_t expiration = 0 )
     {
         KTime_t t = 0;
         if ( date . size () > 0 ) {
@@ -84,15 +84,6 @@ public:
                 date . size () );
             if ( tt != NULL )
                 t = KTimeMakeTime ( & kt );
-        }
-	
-        KTime_t m = 0;
-        if ( modifict . size () > 0 ) {
-            KTime kt;
-            const KTime * tt = KTimeFromIso8601 ( & kt, modifict . c_str (),
-                modifict . size () );
-            if ( tt != NULL )
-                m = KTimeMakeTime ( & kt );
         }
 	
         uint8_t ud5 [ 16 ];
@@ -112,7 +103,7 @@ public:
 
         VPath * p = NULL;
         rc_t rc = VPathMakeFromUrl ( & p, & url, & _tick, true, & _id, _size, t,
-                                     pd5, m );
+                                     pd5, expiration );
 
         if ( rc == 0 )
             rc = VPathMarkHighReliability ( p, true );
@@ -138,10 +129,10 @@ TEST_CASE ( INCOMPLETE ) {
 "0|| object-id |90|1930-01-13T13:25:30|0123456789abcdefABCDEF0123456789|ticket|"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p|"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
-            "1930-01-13T13:25:30|200| message\n"
+            "1490000000|200| message\n"
         "1|| object-i1 |10| dat1 | md1 | ticke1 |"
           "http://ur1/|https://vdbcacheUrl1/| expiratio1 |200| messag1\n"
-        "$ 1930-01-13T13:25:30\n", NULL, 0 ) );
+        "$1500000000\n", NULL, 0 ) );
     REQUIRE_NULL ( response );
 }
 
@@ -157,25 +148,25 @@ TEST_CASE ( SINGLE ) {
     response = NULL;
 
     const string date ( "1980-01-13T13:25:30" );
-    const string modf ( "2280-01-13T13:25:30" );
+    const KTime_t exp = 2000000000 ;
     const string md5  ( "0123456789abcdefABCDEF012345678a" );
-    const VPath * ph = Path . make ( "http://url/"        , date, md5, modf );
-    const VPath * vh = Path . make ( "http://vdbcacheUrl/", "", md5  );
-    const VPath * phs= Path . make ( "https://hsl/", date , md5, modf );
-    const VPath * vhs= Path . make ( "https://vdbcache/"  , "", md5 );
-    const VPath * pf = Path . make ( "fasp://frl/"        , date, md5, modf );
-    const VPath * vf = Path . make ( "fasp://fvdbcache/"  , "", md5 );
-    const VPath * pfl= Path . make ( "file:///p"          , date, md5, modf );
-    const VPath * vfl= Path . make ( "file:///vdbcache"   , "", md5 );
-    const VPath * p3 = Path . make ( "s3:p"               , date, md5, modf );
-    const VPath * v3 = Path . make ( "s3:v"               , "", md5 );
+    const VPath * ph = Path . make ( "http://url/"        , date, md5, exp );
+    const VPath * vh = Path . make ( "http://vdbcacheUrl/",   "", md5  );
+    const VPath * phs= Path . make ( "https://hsl/"       , date, md5, exp );
+    const VPath * vhs= Path . make ( "https://vdbcache/"  , ""  , md5 );
+    const VPath * pf = Path . make ( "fasp://frl/"        , date, md5, exp );
+    const VPath * vf = Path . make ( "fasp://fvdbcache/"  , ""  , md5 );
+    const VPath * pfl= Path . make ( "file:///p"          , date, md5, exp );
+    const VPath * vfl= Path . make ( "file:///vdbcache"   , ""  , md5 );
+    const VPath * p3 = Path . make ( "s3:p"               , date, md5, exp );
+    const VPath * v3 = Path . make ( "s3:v"               , ""  , md5 );
 
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
 "0|| object-id |90|1980-01-13T13:25:30|0123456789abcdefABCDEF012345678a|ticket|"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p|"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
-            "2280-01-13T13:25:30|200| message\n"
-        "$ 2016-01-13T13:25:30\n", & response, 0 ) );
+            "2000000000|200| message\n"
+        "$1500000000\n", & response, 0 ) );
     CHECK_NOT_NULL ( response );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 1u );
 
@@ -292,22 +283,22 @@ TEST_CASE ( DOUBLE ) {
     const KSrvResponse * response = NULL;
 
     const string date  (  "1981-01-13T13:25:30" );
-    const string modf  (  "2281-01-13T13:25:30" );
+    const KTime_t exp = 1489700000  ;
     const string date1 (  "1981-01-13T13:25:31" );
-    const string modf1 (  "2281-01-13T13:25:31" );
+    const KTime_t exp1 = 1489710000  ;
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
         "0|| object-id |90|1981-01-13T13:25:30||ticket|"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p|"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
-            "2281-01-13T13:25:30|200| message\n"
+            "1489700000|200| message\n"
         "1|| object-i1 |10|1981-01-13T13:25:31|| ticke1 |"
-          "http://ur1/|https://vdbcacheUrl1/|2281-01-13T13:25:31|200| messag1\n"
-        "$ 2000-01-13T13:25:30\n", & response, 0 ) );
+          "http://ur1/|https://vdbcacheUrl1/|1489710000|200| messag1\n"
+        "$1489690000\n", & response, 0 ) );
 
     CHECK_NOT_NULL ( response );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 2u );
 
-    const VPath * phs = Path . make ( "https://hsl/", date, "", modf );
+    const VPath * phs = Path . make ( "https://hsl/", date, "", exp );
     const VPath * path = NULL;
     const VPath * vdbcache = NULL;
     REQUIRE_RC ( KSrvResponseGetPath ( response, 0, eProtocolHttps,
@@ -320,7 +311,7 @@ TEST_CASE ( DOUBLE ) {
     ne = ~0;
     REQUIRE_RC ( VPathRelease (phs ) );
 
-    const VPath * ph = Path1 . make ( "http://ur1/", date1, "", modf1 );
+    const VPath * ph = Path1 . make ( "http://ur1/", date1, "", exp1 );
     REQUIRE_RC ( KSrvResponseGetPath ( response, 1, eProtocolHttp,
         & path, & vdbcache, NULL ) );
     REQUIRE_NULL ( vdbcache );
@@ -359,7 +350,7 @@ TEST_CASE ( ERROR ) {
     const KSrvResponse * response = NULL;
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
         "0|| object-id |90|1981-01-13T13:25:30|0123456789abcdefABCDEF012345678c"
-		"|ticket|||1981-01-13T13:25:30|500| mssg\n",
+		"|ticket|||1489688000|500| mssg\n",
         & response, 1 ) );
     REQUIRE_NOT_NULL ( response );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 1u );
@@ -381,10 +372,10 @@ TEST_CASE ( ERROR ) {
 TEST_CASE ( AND_ERROR ) {
     const KSrvResponse * response = NULL;
     REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "0|na|object-0|90|1930-01-13T13:25:30|0123456789abcdefABCDEF012345678d|tckt0|||"
-          "2234-01-13T13:25:30|503|e mssg\n"
-        "1||object-1|10|1931-01-13T13:25:31|0123456789abcdefABCDEF012345678e| tckt1|http://u/||"
-          "2231-01-13T13:25:31|200|messag\n"
+"0|na|object-0|90|1930-01-13T13:25:30|0123456789abcdefABCDEF012345678d|tckt0|||"
+          "1489687900|503|e mssg\n"
+"1||objc1|10|1931-01-13T13:25:31|0123456789abcdefABCDEF012345678e|1|http://u/||"
+          "1489687200|200|messag\n"
         , & response, 1 ) );
     REQUIRE_NOT_NULL ( response );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 2u );
