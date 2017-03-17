@@ -59,6 +59,14 @@ $(ALL_TOOLS): makedirs
 .PHONY: all std $(ALL_TOOLS)
 
 #-------------------------------------------------------------------------------
+# all
+#
+$(TARGDIR)/all: \
+	$(addprefix $(BINDIR)/,$(ALL_TOOLS))
+
+.PHONY: $(TARGDIR)/all
+
+#-------------------------------------------------------------------------------
 # std
 #
 $(TARGDIR)/std: \
@@ -115,7 +123,7 @@ KNSTEST_OBJ = \
 $(TEST_BINDIR)/test-kns: $(KNSTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
-kns: test-kns 
+kns: test-kns
 	$(TEST_BINDIR)/test-kns  #-l=all
 
 #----------------------------------------------------------------
@@ -130,7 +138,7 @@ PROXYTEST_OBJ = \
 
 $(TEST_BINDIR)/test-proxy: $(PROXYTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
-    
+
 
 #----------------------------------------------------------------
 # test-proxy-with-scheme
@@ -157,9 +165,9 @@ HTTPTEST_OBJ = \
 $(TEST_BINDIR)/test-http: $(HTTPTEST_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
-http: test-http  
+http: test-http
 	$(TEST_BINDIR)/test-http  # -l=all
-    
+
 #----------------------------------------------------------------
 # test-http-dropconn
 #
@@ -172,12 +180,12 @@ HTTP_DROPCONN_TEST_OBJ = \
 $(TEST_BINDIR)/test-http-dropconn: $(HTTP_DROPCONN_TEST_OBJ)
 	$(LP) --exe -o $@ $^ $(KNSTEST_LIB)
 
-dropconn: test-http-dropconn  
+dropconn: test-http-dropconn
 	$(TEST_BINDIR)/test-http-dropconn  # -l=all
-    
+
 #----------------------------------------------------------------
 # test-proxy-with-env
-# 
+#
 TOOL_SRC = \
 	http-client \
 	test-proxy-with-env \

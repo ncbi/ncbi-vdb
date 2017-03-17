@@ -71,6 +71,14 @@ $(ALL_TOOLS): makedirs
 .PHONY: all std $(ALL_TOOLS)
 
 #-------------------------------------------------------------------------------
+# all
+#
+$(TARGDIR)/all: \
+	$(addprefix $(BINDIR)/,$(ALL_TOOLS))
+
+.PHONY: $(TARGDIR)/all
+
+#-------------------------------------------------------------------------------
 # std
 #
 $(TARGDIR)/std: \
@@ -122,7 +130,7 @@ $(TEST_BINDIR)/test-aes-ciphers: $(TEST_AES_CIPHERS_OBJ)
 # test cipher speed
 # run a null cipher and the aes cipher in all implmentations supported on the
 # test machine.
-# Comparing specific two versions will test possible speed gains from verious 
+# Comparing specific two versions will test possible speed gains from verious
 # optimizations.  Comparing the null cipher (just a copy) versions against each
 # other offer insight into whether vector and vector register optimiztions are
 # beneficial and by how much
