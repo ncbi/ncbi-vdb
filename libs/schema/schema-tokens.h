@@ -173,7 +173,8 @@ extern int Schema_debug;
     PT_ARRAY = 382,
     PT_AT = 383,
     PT_PHYSENCEXPR = 384,
-    PT_PHYSENCREF = 385
+    PT_PHYSENCREF = 385,
+    PT_TYPEDCOLEXPR = 386
   };
 #endif
 

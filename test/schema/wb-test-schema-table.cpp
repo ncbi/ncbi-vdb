@@ -72,6 +72,12 @@ public:
 
     /* assignment statements */
     const Vector & Productions () const { return m_self -> prod; }
+    uint32_t ProductionCount () const { return VectorLength ( & m_self -> prod ); }
+    uint32_t ProductionStart () const { return VectorStart ( & m_self -> prod ); }
+    const SProduction * GetProduction ( uint32_t p_idx ) const
+    {
+        return static_cast < const SProduction * > ( VectorGet ( & m_self -> prod, ProductionStart () + p_idx ) );
+    }
 
     /* introduced virtual ( undefined ) productions
        contents are unowned KSymbol pointers */
@@ -121,7 +127,8 @@ class AST_Table_Fixture : public AST_Fixture
 {
 public:
     AST_Table_Fixture ()
-    : m_showAst ( false )
+    :   m_showAst ( false ),
+        m_debugParse ( false )
     {
     }
     ~AST_Table_Fixture ()
@@ -132,7 +139,7 @@ public:
     {
         if ( m_newParse )
         {
-            MakeAst ( p_source, false, m_showAst );
+            MakeAst ( p_source, false, m_showAst, m_debugParse );
         }
         else if ( ! OldParse ( p_source ) )
         {
@@ -179,6 +186,7 @@ public:
 #undef THROW_ON_TRUE
 
     bool m_showAst;
+    bool m_debugParse;
 };
 
 FIXTURE_TEST_CASE(Table_Empty, AST_Table_Fixture)
@@ -321,6 +329,14 @@ FIXTURE_TEST_CASE(Table_Production, AST_Table_Fixture)
 {
     TableAccess t = ParseTable ( "table t#1 { U8 i = 1; }", "t" );
     REQUIRE_EQ ( 1u, VectorLength ( & t . Productions () ) );
+    REQUIRE ( ! t . GetProduction ( 0 ) -> trigger );
+}
+
+FIXTURE_TEST_CASE(Table_Trigger, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { trigger tr = 1; }", "t" );
+    REQUIRE_EQ ( 1u, VectorLength ( & t . Productions () ) );
+    REQUIRE ( t . GetProduction ( 0 ) -> trigger );
 }
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_Simple, AST_Table_Fixture)
@@ -351,7 +367,8 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_Simple, AST_Table_Fixture)
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_SimpleColumn_Typeset, AST_Table_Fixture)
 {
-    VerifyErrorMessage ( "typeset TypeSet {U8}; table t#1 { column TypeSet c; }", "Simple columns cannot have typeset as type: 'c'" );
+    VerifyErrorMessage ( "typeset TypeSet {U8}; table t#1 { column TypeSet c; }",
+                         "Cannot be used as a column type: 'TypeSet'" );
 }
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_PhysicalForwarded, AST_Table_Fixture)
@@ -391,13 +408,13 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_ModExtern, AST_Table_Fixture)
 }
 FIXTURE_TEST_CASE(Table_ColumnDecl_ModReadOnly, AST_Table_Fixture)
 {
-    TableAccess t = ParseTable ( "table t#1 { readonly column U8 c {} }", "t" );
+    TableAccess t = ParseTable ( "table t#1 { readonly column U8 c { read = 1; } }", "t" );
     const SColumn & c = * t . GetColumn ( 0 );
     REQUIRE ( c . read_only );
 }
 FIXTURE_TEST_CASE(Table_ColumnDecl_ModAll, AST_Table_Fixture)
 {
-    TableAccess t = ParseTable ( "table t#1 { default extern readonly column U8 c {} }", "t" );
+    TableAccess t = ParseTable ( "table t#1 { default extern readonly column U8 c { read = 1; } }", "t" );
     const SColumn & c = * t . GetColumn ( 0 );
     REQUIRE ( c . dflt );
     REQUIRE ( c . read_only );
@@ -414,13 +431,21 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_ColumnExists, AST_Table_Fixture)
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_NotAType, AST_Table_Fixture)
 {
-    VerifyErrorMessage ( "table t1#1 {}; table t2#1 { column t1 c; }", "Not a datatype: 't1'" );
+    VerifyErrorMessage ( "table t1#1 {}; table t2#1 { column t1 c; }", "Cannot be used as a column type: 't1'" );
+}
+
+static
+const SPhysEncExpr &
+GetEncode ( const SColumn & p_col )
+{
+    assert ( p_col . ptype != 0 );
+    return * reinterpret_cast < const SPhysEncExpr * > ( p_col . ptype );
 }
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_ReferenceToPhysical, AST_Table_Fixture)
 {
     TableAccess t = ParseTable (
-        "physical < type T > T ph #1.2 { decode { return 1; } encode { return 1; } };"
+        "physical < type T > T ph #1 = { return 1; }"
         "table t#1 { column <U8> ph#1 c; }",
         "t", 0 );
     const SColumn & c = * t . GetColumn ( 0 );
@@ -429,7 +454,7 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_ReferenceToPhysical, AST_Table_Fixture)
     REQUIRE_NOT_NULL ( c . ptype );
     REQUIRE_EQ ( ( uint32_t ) ePhysEncExpr, c . ptype -> var );
 
-    const SPhysEncExpr & enc = * reinterpret_cast < const SPhysEncExpr * > ( c . ptype );
+    const SPhysEncExpr & enc = GetEncode ( c );
 
     REQUIRE_EQ ( 1u, VectorLength ( & enc . schem ) );
     REQUIRE_EQ ( U8_id , ( ( const STypeExpr * ) VectorGet ( & enc . schem, 0 ) ) -> dt -> id );
@@ -446,30 +471,215 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_ReferenceToPhysical, AST_Table_Fixture)
 FIXTURE_TEST_CASE(Table_ColumnDecl_ReferenceToPhysical_BadVersion, AST_Table_Fixture)
 {
     VerifyErrorMessage (
-        "physical < type T > T ph #1.2 { decode { return 1; } encode { return 1; } };"
+        "physical < type T > T ph #1.2 = { return 1; }"
         "table t#1 { column <U8> ph#100.200.300 c; }",
         "Requested version does not exist: 'ph#100.200.300'" );
 }
 FIXTURE_TEST_CASE(Table_ColumnDecl_PhysicalWithFactoryArgs, AST_Table_Fixture)
 {
     TableAccess t = ParseTable (
-        "physical < type T > T ph #1.2 < U8 i > { decode { return i; } encode { return i; } };"
+        "physical < type T > T ph #1 < U8 i > = { return i; }"
         "table t#1 { column < U8 > ph#1 < 1 > c; }",
         "t", 0 );
-    const SColumn & c = * t . GetColumn ( 0 );
-    const SPhysEncExpr & enc = * reinterpret_cast < const SPhysEncExpr * > ( c . ptype );
+    const SPhysEncExpr & enc = GetEncode ( * t . GetColumn ( 0 ) );
     REQUIRE_EQ ( 1u, VectorLength ( & enc . pfact ) );
     REQUIRE_EQ ( (uint32_t)eConstExpr , ( ( const SExpression * ) VectorGet ( & enc . pfact, 0 ) ) -> var );
 }
 
-//TODO: phys_enc_expr: format as a schema argument
-//TODO: phys_enc_expr: typeset as a schema argument
-//TODO: phys_enc_expr: schema type as a schema argument
-//TODO: phys_enc_expr: symbolic constant as a schema argument
-//TODO: phys_enc_expr: schema parameter as a schema argument
-//TODO: phys_enc_expr: factory parameter as a schema argument
-//TODO: phys_enc_expr: invalid schema argument (e.g. table name)
-//TODO: phys_enc_expr: undefined name as schema argument
+FIXTURE_TEST_CASE(Table_ColumnDecl_PhysicalNoSchemaArgsWithFactoryArgs, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable (
+        "physical U8 ph #1 < U8 i > = { return i; }"
+        "table t#1 { column ph#1 < 1 > c; }",
+        "t", 0 );
+    const SPhysEncExpr & enc = GetEncode ( * t . GetColumn ( 0 ) );
+    REQUIRE_EQ ( 1u, VectorLength ( & enc . pfact ) );
+    REQUIRE_EQ ( (uint32_t)eConstExpr , ( ( const SExpression * ) VectorGet ( & enc . pfact, 0 ) ) -> var );
+}
 
-//TODO: column expr
-//TODO: column trigger
+FIXTURE_TEST_CASE(Table_ColumnDecl_PhysicalNoSchemaArgsNoFactoryArgs, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable (
+        "physical U8 ph #1 = { return 1; }"
+        "table t#1 { column ph#1 c; }",
+        "t", 0 );
+    const SPhysEncExpr & enc = GetEncode ( * t . GetColumn ( 0 ) );
+    REQUIRE_EQ ( 0u, VectorLength ( & enc . pfact ) );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_PhysicalNoSchemaArgsNoFactoryArgsNoVersion, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable (
+        "physical U8 ph #1 = { return 1; }"
+        "table t#1 { column ph c; }",
+        "t", 0 );
+    const SPhysEncExpr & enc = GetEncode ( * t . GetColumn ( 0 ) );
+    REQUIRE_EQ ( 0u, VectorLength ( & enc . pfact ) );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_ReferenceToPhysical_NotPhysical, AST_Table_Fixture)
+{
+    VerifyErrorMessage ( "table ph#1 {} table t#1 { column ph#1 c; }", "Not a physical encoding: 'ph'" );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_Physical_FormatAsSchemaArg, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable (
+        "physical < type T > T ph #1 = { return 1; }"
+        "fmtdef fmt; "
+        "table t#1 { column < fmt > ph#1  c; }",
+        "t", 0 );
+    const SPhysEncExpr & enc = GetEncode ( * t . GetColumn ( 0 ) );
+    REQUIRE_EQ ( 1u, VectorLength ( & enc . schem ) );
+    const STypeExpr & arg = * reinterpret_cast < const STypeExpr * > ( VectorGet ( & enc . schem, 0 ) );
+    REQUIRE_NOT_NULL ( arg . fmt );
+    REQUIRE_EQ ( string ( "fmt" ), ToCppString ( arg . fmt -> name -> name ) );
+    REQUIRE_EQ ( arg . fd . fmt, arg . fmt -> id ) ;
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_Physical_TypesetAsSchemaArg, AST_Table_Fixture)
+{
+    VerifyErrorMessage (
+        "physical < type T > T ph #1 = { return 1; }"
+        "typeset ts { U8, U32 }; "
+        "table t#1 { column < ts > ph#1  c; }",
+        "Simple columns cannot have typeset as type: 'c'" );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_SymConstAsSchemaArg, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable (
+        "physical < U8 C > U8 ph #1 = { return C; }"
+        "const U8 c1 = 1; "
+        "table t#1 { column < c1 > ph#1  c; }",
+        "t" );
+    const SPhysEncExpr & enc = GetEncode ( * t . GetColumn ( 0 ) );
+    REQUIRE_EQ ( 1u, VectorLength ( & enc . schem ) );
+    REQUIRE_EQ ( (uint32_t)eConstExpr,
+                 reinterpret_cast < const SExpression * > ( VectorGet ( & enc . schem, 0 ) ) -> var );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_NonUintSymConstAsSchemaArg, AST_Table_Fixture)
+{   // schema constant arguments must be uint
+    if ( m_newParse ) // old parser does not check this condition, only mentions it in a comment
+    {
+        VerifyErrorMessage (
+            "physical < U8 C > U8 ph #1 = { return C; }"
+            "const I8 c1 = 1; "
+            "table t#1 { column < c1 > ph#1  c; }",
+            "Schema argument constant has to be an unsigned integer scalar: 'c1'" );
+    }
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_BadSchemaArg, AST_Table_Fixture)
+{
+    VerifyErrorMessage (
+        "physical < U8 C > U8 ph #1 = { return C; }"
+        "table t1#1 {} "
+        "table t2#1 { column < t1 > ph#1  c; }",
+        "Cannot be used as a schema parameter: 't1'" );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_UndefinedSchemaArg, AST_Table_Fixture)
+{
+    VerifyErrorMessage (
+        "physical < U8 C > U8 ph #1 = { return C; }"
+        "table t#1 { column < Undef > ph#1  c; }",
+        "Undeclared identifier: 'Undef'" );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_Limit, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { column limit = 1; }", "t" );
+    REQUIRE_NOT_NULL ( t . Limit () );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_LimitTwice, AST_Table_Fixture)
+{
+    VerifyErrorMessage ( "table t#1 { column limit = 1; column limit = 2; }", "Limit constraint already specified" );
+}
+
+#if WHEN_IMPLEMENTED_FUNCTION_CALL
+FIXTURE_TEST_CASE(Table_ColumnDecl_LimitNonConst, AST_Table_Fixture)
+{
+    ParseTable (
+        "extern function U8 f();"
+        "table t#1 { column limit = f(); }",
+        "Expression is not constant" );
+}
+#endif
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_DefaultLimit, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { column default limit = 1; }", "t" );
+    REQUIRE_NOT_NULL ( t . Limit () );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDeclBody_Empty, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { column U8 c {} }", "t" );
+    const SColumn & c = * t . GetColumn ( 0 );
+    REQUIRE_NOT_NULL ( c . read ); // an implicit physical read is generated
+    REQUIRE_NULL ( c . validate );
+    REQUIRE_NULL ( c . limit );
+    REQUIRE ( c . simple );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDeclBody_EmptyStmt, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { column U8 c { ; } }", "t" );
+    const SColumn & c = * t . GetColumn ( 0 );
+    REQUIRE_NOT_NULL ( c . read ); // an implicit physical read is generated
+    REQUIRE_NULL ( c . validate );
+    REQUIRE_NULL ( c . limit );
+    REQUIRE ( c . simple );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDeclBody_Read, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { column U8 c { read = 1 | 2; } }", "t" );
+    const SColumn & c = * t . GetColumn ( 0 );
+    REQUIRE_NOT_NULL ( c . read );
+    REQUIRE_EQ ( ( uint32_t ) eCondExpr, c . read -> var );
+    REQUIRE_NULL ( c . validate );
+    REQUIRE_NULL ( c . limit );
+    REQUIRE ( ! c . simple );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDeclBody_Validate, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { column U8 c { validate = 1 | 2; } }", "t" );
+    const SColumn & c = * t . GetColumn ( 0 );
+    REQUIRE_NULL ( c . read ); // an implicit physical read is not generated when validate is present
+    REQUIRE_NOT_NULL ( c . validate );
+    REQUIRE_NULL ( c . limit );
+    REQUIRE ( ! c . simple );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDeclBody_Limit, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { column U8 c { limit = 1; } }", "t" );
+    const SColumn & c = * t . GetColumn ( 0 );
+    REQUIRE_NOT_NULL ( c . read ); // an implicit physical read is generated
+    REQUIRE_NULL ( c . validate );
+    REQUIRE_NOT_NULL ( c . limit );
+    REQUIRE ( c . simple );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDeclBody_All, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { column U8 c { read = 1; validate = 2; limit = 3; } }", "t" );
+    const SColumn & c = * t . GetColumn ( 0 );
+    REQUIRE_NOT_NULL ( c . read );
+    REQUIRE_NOT_NULL ( c . validate );
+    REQUIRE_NOT_NULL ( c . limit );
+    REQUIRE ( ! c . simple );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_Init, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { column U8 c = 1; }", "t" );
+    const SColumn & c = * t . GetColumn ( 0 );
+    REQUIRE_NOT_NULL ( c . read );
+    REQUIRE ( ! c . simple );
+}

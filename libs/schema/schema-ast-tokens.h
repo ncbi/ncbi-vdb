@@ -173,7 +173,8 @@ extern int AST_debug;
     PT_ARRAY = 382,
     PT_AT = 383,
     PT_PHYSENCEXPR = 384,
-    PT_PHYSENCREF = 385
+    PT_PHYSENCREF = 385,
+    PT_TYPEDCOLEXPR = 386
   };
 #endif
 
@@ -191,7 +192,7 @@ union YYSTYPE
   AST_ParamSig* paramSig;
   bool          boolean;
 
-#line 195 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
+#line 196 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

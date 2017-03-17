@@ -69,20 +69,6 @@ public:
 
     SFunction * GetSFunction () { return m_self; }
 
-    void CopyParams ( const FunctionDeclaration & p_source )
-    {
-        /* copy schema and factory parameters
-            NB - must be cleared before destruction */
-        m_self -> sscope = p_source . m_self -> sscope;
-        m_self -> type   = p_source . m_self -> type;
-        m_self -> schem  = p_source . m_self -> schem;
-        m_self -> fact   = p_source . m_self -> fact;
-
-        /* clone factory parameter symbols */
-        if ( BSTreeDoUntil ( & p -> decode . fscope, false, KSymbolCopyScope, & p -> encode . fscope ) )
-            rc = RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );
-    }
-
 private:
     bool HandleFunctionOverload ( const KSymbol *  p_priorDecl );
     void AddFactoryParams ( Vector& p_sig, const AST & p_params );
@@ -490,13 +476,21 @@ FunctionDeclaration :: HandleStatement ( const AST & p_stmt )
             {
                 m_builder . ReportError ( "Multiple return statements in a function: '%S'", & m_self -> name -> name );
             }
-            break;
         }
-    case PT_PRODSTMT:
-    {
-        m_builder . AddProduction ( m_self -> u . script . prod, p_stmt);
         break;
-    }
+    case PT_PRODSTMT:
+        {
+            assert ( p_stmt . ChildrenCount () == 3 );
+            const AST * ident = p_stmt . GetChild ( 1 );
+            assert ( ident -> ChildrenCount () == 1 );
+            const AST_Expr * expr = dynamic_cast < const AST_Expr * > ( p_stmt . GetChild ( 2 ) ) ;
+            assert ( expr != 0 );
+            m_builder . AddProduction (  m_self -> u . script . prod,
+                                         ident -> GetChild ( 0 ) -> GetTokenValue (),
+                                         * expr,
+                                         p_stmt . GetChild ( 0 ) );
+        }
+        break;
     case PT_EMPTY:
         break;
     default:
@@ -592,12 +586,12 @@ FunctionDeclaration :: SetPrologue ( const AST & p_prologue )
 class PhysicalDeclaration // Wrapper around SPhysical
 {
 public:
-    PhysicalDeclaration ( ASTBuilder & p_builder, const AST & p_returnType, const AST_ParamSig & p_factParams );
+    PhysicalDeclaration ( ASTBuilder & p_builder, const AST & p_returnType );
     ~PhysicalDeclaration ();
 
     bool SetName ( const AST_FQN &  p_fqn );
 
-    void SetSchemaParams ( const AST & p_schemaParams );
+    void SetParams ( const AST & p_schemaParams, const AST_ParamSig & p_factParams );
 
     void HandleBody ( const AST & p_body, FunctionDeclaration & );
     void HandleRowLength ( const AST & p_body );
@@ -614,7 +608,6 @@ private:
 private:
     ASTBuilder &            m_builder;
     const AST &             m_returnType;
-    const AST_ParamSig &    m_factParams;
 
     SPhysical *             m_self;
     FunctionDeclaration     m_decode;
@@ -623,10 +616,9 @@ private:
     bool m_delete;
 };
 
-PhysicalDeclaration :: PhysicalDeclaration ( ASTBuilder & p_builder, const AST & p_returnType, const AST_ParamSig & p_factParams )
+PhysicalDeclaration :: PhysicalDeclaration ( ASTBuilder & p_builder, const AST & p_returnType )
 :   m_builder ( p_builder ),
     m_returnType ( p_returnType . GetTokenType () == PT_NOHEADER ? * p_returnType . GetChild ( 0 ) : p_returnType ),
-    m_factParams ( p_factParams ),
     m_self ( m_builder . Alloc < SPhysical > () ),
     m_decode ( p_builder, m_self -> decode ),
     m_encode ( p_builder, m_self -> encode ),
@@ -737,8 +729,8 @@ PhysicalDeclaration :: SetName ( const AST_FQN &  p_name )
 }
 
 void
-PhysicalDeclaration :: SetSchemaParams ( const AST & p_schemaParams )
-{
+PhysicalDeclaration :: SetParams ( const AST & p_schemaParams, const AST_ParamSig & p_factParams )
+{   // schema/factory parameters are evaluated once for decode and then copied over to encode
     rc_t rc = KSymTablePushScope ( & m_builder . GetSymTab (), m_decode . SchemaScope () );
     if ( rc != 0 )
     {
@@ -747,7 +739,22 @@ PhysicalDeclaration :: SetSchemaParams ( const AST & p_schemaParams )
     }
 
     m_decode . SetSchemaParams ( p_schemaParams );
-    m_encode . CopySchemaParams ( m_decode );
+    m_decode . SetFactoryParams ( p_factParams );
+
+    /* copy schema and factory parameters
+        NB - must be cleared before destruction ( see SPhysicalWhack() ) */
+    SFunction & enc = * m_encode . GetSFunction ();
+    const SFunction & dec = * m_decode . GetSFunction ();
+    enc . sscope = dec . sscope;
+    enc . type   = dec . type;
+    enc . schem  = dec . schem;
+    enc . fact   = dec . fact;
+
+    /* clone factory parameter symbols */
+    if ( BSTreeDoUntil ( & enc . fscope, false, KSymbolCopyScope, const_cast < BSTree * > ( & dec . fscope ) ) )
+    {
+        m_builder . ReportRc ( "FunctionDeclaration::CopyParams BSTreeDoUntil", RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted ) );
+    }
 
     /* interpret return type within schema param scope */
     m_self -> td = & m_builder . MakeTypeExpr ( m_returnType ) -> dad;
@@ -768,11 +775,6 @@ PhysicalDeclaration :: HandleBody ( const AST & p_body, FunctionDeclaration & p_
     rc = KSymTablePushScope ( & m_builder . GetSymTab (), p_func . FunctionScope () );
     if ( rc == 0 )
     {
-        if ( m_factParams . GetTokenType () != PT_EMPTY )
-        {
-            p_func . SetFactoryParams ( m_factParams );
-        }
-
         p_func . SetPhysicalParams ();  /* simulate a schema function signature */
         p_func . HandleScript ( p_body, m_self -> name -> name );
 
@@ -1008,10 +1010,10 @@ ASTBuilder :: PhysicalDecl ( const Token* p_token, AST * p_schema, AST * p_retur
 {
     AST * ret = new AST ( p_token, p_schema, p_returnType, p_name, p_fact, p_body );
 
-    PhysicalDeclaration decl ( * this, * p_returnType, * p_fact );
+    PhysicalDeclaration decl ( * this, * p_returnType );
     if ( decl . SetName ( * p_name ) )
     {
-        decl . SetSchemaParams ( * p_schema );
+        decl . SetParams ( * p_schema, * p_fact );
 
         if ( p_body -> GetTokenType () == PT_PHYSSTMT ) // shorthand for decode-only
         {

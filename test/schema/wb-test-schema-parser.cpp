@@ -451,11 +451,11 @@ TEST_CASE ( Table_Column_default_limit )
 
 TEST_CASE ( Table_Column_withBody_1 )
 {
-    REQUIRE ( ParseAndVerify ( "table t #1 { column t c { read = 1 | 2; validate = 2 | 3; limit = 100}; };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { column t c { read = 1 | 2; validate = 2 | 3; limit = 100; }; };" ) );
 }
 TEST_CASE ( Table_Column_withBody_2 )
 {
-    REQUIRE ( ParseAndVerify ( "table t #1 { column t c { read = 1 | 2; validate = 2 | 3; limit = 100} };" ) );
+    REQUIRE ( ParseAndVerify ( "table t #1 { column t c { read = 1 | 2; validate = 2 | 3; limit = 100; } };" ) );
 }
 TEST_CASE ( Table_Column_withExpr )
 {

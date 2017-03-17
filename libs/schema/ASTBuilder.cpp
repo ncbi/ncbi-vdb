@@ -506,7 +506,7 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
     return ret;
 }
 
-void
+bool
 ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
 {
     uint32_t count = p_parms . ChildrenCount ();
@@ -519,48 +519,69 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
             {
                 assert ( parm . ChildrenCount () == 1 );
                 const KSymbol * sym = Resolve ( parm. GetChild ( 0 ) -> GetTokenValue () ); // will report unknown name
-                if ( sym != 0 )
+                if ( sym == 0 )
                 {
-                    switch ( sym -> type )
+                    return false;
+                }
+
+                switch ( sym -> type )
+                {
+                /* type parameter */
+                case eFormat:
+                case eDatatype:
+                case eTypeset:
+                case eSchemaType:
                     {
-                    /* type parameter */
-                    case eFormat:
-                    case eDatatype:
-                    case eTypeset:
-                    case eSchemaType:
+                        STypeExpr * ret = Alloc < STypeExpr > ();
+                        if ( ret == 0 )
                         {
-                            STypeExpr * ret = Alloc < STypeExpr > ();
-                            if ( ret == 0 )
+                            return false;
+                        }
+                        TypeExprInit ( * ret );
+                        TypeExprFillTypeId ( * this, * ret, * sym );
+                        if ( ! VectorAppend ( p_v, 0, ret ) )
+                        {
+                            SExpressionWhack ( & ret -> dad );
+                            return false;
+                        }
+                    }
+                    break;
+
+                case eConstant:
+                    {
+                        const SConstant * cnst = static_cast < const SConstant * > ( sym -> u . obj );
+                        assert ( cnst -> expr != NULL );
+                        const SDatatype *dt = VSchemaFindTypeid ( m_schema, cnst -> td . type_id );
+                        assert ( dt != 0 );
+                        if ( dt -> domain == ddUint && dt -> dim == 1 )
+                        {
+                            atomic32_inc ( & ( ( SExpression* ) cnst -> expr ) -> refcount );
+                            if ( ! VectorAppend ( p_v, 0, cnst -> expr ) )
                             {
-                                return;
-                            }
-                            TypeExprInit ( * ret );
-                            TypeExprFillTypeId ( * this, * ret, * sym );
-                            if ( ! VectorAppend ( p_v, 0, ret ) )
-                            {
-                                SExpressionWhack ( & ret -> dad );
+                                atomic32_dec ( & ( ( SExpression* ) cnst -> expr ) -> refcount );
+                                return false;
                             }
                         }
-                        break;
-
-                    /* symbolic constant must be uint */
-                    case eConstant:
-                        //return sym_const_expr ( tbl, src, t, env, self, ( const SConstExpr** ) v );
-                        assert ( false );
-                        break;
-
-                    /* schema or factory constant must be uint
-                    but may not yet be completely resolved */
-                    case eSchemaParam:
-                    case eFactParam:
-                        //return indirect_const_expr ( tbl, src, t, env, self, v );
-                        assert ( false );
-                        break;
-
-                    default:
-                        ReportError ( "Cannot be used as a schema parameter: '%S'", & sym -> name );
-                        break;
+                        else
+                        {
+                            ReportError ( "Schema argument constant has to be an unsigned integer scalar: '%S'",
+                                            & sym -> name );
+                            return false;
+                        }
                     }
+                    break;
+
+                /* schema or factory constant must be uint
+                but may not yet be completely resolved */
+                case eSchemaParam:
+                case eFactParam:
+                    //return indirect_const_expr ( tbl, src, t, env, self, v );
+                    assert ( false );
+                    break;
+
+                default:
+                    ReportError ( "Cannot be used as a schema parameter: '%S'", & sym -> name );
+                    return false;
                 }
             }
             break;
@@ -574,6 +595,7 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
             assert ( false );
         }
     }
+    return true;
 }
 
 /*--------------------------------------------------------------------------

@@ -93,24 +93,26 @@ ASTBuilder :: HandleTableOverload ( const STable *     p_table,
 }
 
 void
-ASTBuilder :: AddProduction ( Vector & p_list, const AST & p_prod )
+ASTBuilder :: AddProduction ( Vector & p_list, const char * p_name, const AST_Expr & p_expr, const AST * p_type )
 {
-    assert ( p_prod . ChildrenCount () == 3 ); // type-expr, ident, cond-expr
     SProduction * prod = Alloc < SProduction > ();
     if ( prod != 0 )
     {
-        STypeExpr * type = MakeTypeExpr ( * p_prod . GetChild ( 0 ) );
-        if ( type != 0 )
+        if ( p_type != 0 )
         {
-            prod -> fd = & type -> dad;
+            STypeExpr * type = MakeTypeExpr ( * p_type );
+            if ( type != 0 )
+            {
+                prod -> fd = & type -> dad;
+            }
+        }
+        else
+        {
+            prod -> trigger = true;
         }
 
-        const AST& ident = * p_prod . GetChild ( 1 );
-        assert ( ident . ChildrenCount () == 1 );
-        prod -> name = CreateLocalSymbol ( ident . GetChild ( 0 ) -> GetTokenValue (), eProduction, prod );
-
-        const AST_Expr & expr = * dynamic_cast < const AST_Expr * > ( p_prod . GetChild ( 2 ) ) ;
-        prod -> expr = expr . MakeExpression ( *this ) ;
+        prod -> name = CreateLocalSymbol ( p_name, eProduction, prod );
+        prod -> expr = p_expr . MakeExpression ( *this ) ;
 
         if ( ! VectorAppend ( p_list, & prod -> cid . id, prod ) )
         {
@@ -120,19 +122,11 @@ ASTBuilder :: AddProduction ( Vector & p_list, const AST & p_prod )
 }
 
 bool
-ASTBuilder :: HandleSimpleColumn ( STable & p_table, SColumn & c, const AST & typedCol )
+ASTBuilder :: HandleTypedColumn ( STable & p_table, SColumn & p_col, const AST & p_typedCol )
 {
-    assert ( typedCol . ChildrenCount () == 1 );
-    assert ( typedCol . GetChild ( 0 ) -> GetTokenType () == PT_IDENT );
-    const char * ident = typedCol . GetChild ( 0 ) -> GetChild ( 0 ) -> GetTokenValue ();
-
-    if ( c . read_only )
-    {
-        ReportError ( "Simple column cannot be readonly: '%s'", ident);
-        return false;
-    }
-    c . simple = true;
-
+    assert ( p_typedCol . ChildrenCount () >= 1 );
+    assert ( p_typedCol . GetChild ( 0 ) -> GetTokenType () == PT_IDENT );
+    const char * ident = p_typedCol . GetChild ( 0 ) -> GetChild ( 0 ) -> GetTokenValue ();
     String name;
     StringInitCString ( & name, ident );
     if ( KSymTableFindShallow ( & GetSymTab (), & name ) != 0 ||
@@ -143,7 +137,7 @@ ASTBuilder :: HandleSimpleColumn ( STable & p_table, SColumn & c, const AST & ty
     }
     else
     {
-        rc_t rc = KSymTableCreateConstSymbol ( & GetSymTab (), & c . name, & name, eColumn, 0 );
+        rc_t rc = KSymTableCreateConstSymbol ( & GetSymTab (), & p_col . name, & name, eColumn, 0 );
         if ( rc != 0 )
         {
             ReportRc ( "KSymTableCreateConstSymbol", rc );
@@ -153,7 +147,7 @@ ASTBuilder :: HandleSimpleColumn ( STable & p_table, SColumn & c, const AST & ty
 
     // add column name to p_table . cname
     SNameOverload *ovl;
-    rc_t rc = SNameOverloadMake ( & ovl, c . name, 0, 4 );
+    rc_t rc = SNameOverloadMake ( & ovl, p_col . name, 0, 4 );
     if ( rc == 0 )
     {
         ovl -> cid . ctx = -1;
@@ -163,7 +157,7 @@ ASTBuilder :: HandleSimpleColumn ( STable & p_table, SColumn & c, const AST & ty
             ReportRc ( "SNameOverloadWhack", rc);
             return false;
         }
-        rc = VectorInsertUnique ( & ovl -> items, & c, 0, SColumnSort );
+        rc = VectorInsertUnique ( & ovl -> items, & p_col, 0, SColumnSort );
         if ( rc != 0 )
         {
            ReportRc ( "VectorInsertUnique", rc);
@@ -171,62 +165,74 @@ ASTBuilder :: HandleSimpleColumn ( STable & p_table, SColumn & c, const AST & ty
         }
     }
 
-    // generate and attach the corresponding physical column
-    String physname;
-    char physnamebuff [ 256 ];
-    /* tack a dot onto the beginning and look up the symbol */
-    physnamebuff [ 0 ] = '.';
-    memcpy ( & physnamebuff [ 1 ], c . name -> name . addr, c . name -> name . size );
-    StringInit ( & physname, physnamebuff, c . name -> name . size + 1, c . name -> name . len + 1 );
-    KSymbol * sym = KSymTableFind ( & m_symtab, & physname );
+    if ( p_col . simple )
+    {
+        if ( p_col . read_only )
+        {
+            ReportError ( "Simple column cannot be readonly: '%s'", ident);
+            return false;
+        }
 
-    /* if the symbol exists, then this CANNOT be a simple column */
-    if ( sym != 0 && ! ( sym -> type == eForward || sym -> type == eVirtual ) )
-    {
-        /* check for explicit physical type */
-        if ( c . ptype != 0 )
+        // generate and attach the corresponding physical column
+        String physname;
+        char physnamebuff [ 256 ];
+        /* tack a dot onto the beginning and look up the symbol */
+        physnamebuff [ 0 ] = '.';
+        memcpy ( & physnamebuff [ 1 ], p_col . name -> name . addr, p_col . name -> name . size );
+        StringInit ( & physname, physnamebuff, p_col . name -> name . size + 1, p_col . name -> name . len + 1 );
+        KSymbol * sym = KSymTableFind ( & m_symtab, & physname );
+        /* if the symbol exists, then this CANNOT be a simple column */
+        if ( sym != 0 && ! ( sym -> type == eForward || sym -> type == eVirtual ) )
         {
-            ReportError ( "Implicit physical column previously declared: '%S'", & name );
-            return false;
-        }
-        else
-        {
-            ReportError ( "Missing column read or validate expression: '%S'", & name );
-            return false;
-        }
-    }
-    else if ( ( c . td . type_id & 0xC0000000 ) != 0 )
-    {
-        ReportError ( "Simple columns cannot have typeset as type: '%S'", & name );
-        return false;
-    }
-    else
-    {
-        if ( sym != 0 )
-        {
-            sym -> type = ePhysMember;
-        }
-        else
-        {
-            sym = CreateLocalSymbol ( physname, ePhysMember, 0 );
-        }
-        if ( sym != 0 )
-        {
-            rc = implicit_physical_member ( & m_symtab, 0, & p_table, & c, sym );
-            if ( rc != 0 )
+            /* check for explicit physical type */
+            if ( p_col . ptype != 0 )
             {
-                ReportRc ( "implicit_physical_member", rc);
+                ReportError ( "Implicit physical column previously declared: '%S'", & name );
+                return false;
+            }
+            else
+            {
+                ReportError ( "Missing column read or validate expression: '%S'", & name );
                 return false;
             }
         }
+        else if ( ( p_col . td . type_id & 0xC0000000 ) != 0 )
+        {
+            ReportError ( "Simple columns cannot have typeset as type: '%S'", & name );
+            return false;
+        }
+        else
+        {
+            if ( sym != 0 )
+            {
+                sym -> type = ePhysMember;
+            }
+            else
+            {
+                sym = CreateLocalSymbol ( physname, ePhysMember, 0 );
+            }
+            if ( sym != 0 )
+            {
+                rc = implicit_physical_member ( & m_symtab, 0, & p_table, & p_col, sym );
+                if ( rc != 0 )
+                {
+                    ReportRc ( "implicit_physical_member", rc);
+                    return false;
+                }
+            }
+        }
     }
+
     return true;
 }
 
 SExpression *
-ASTBuilder :: MakePhysicalEncodingSpec ( const AST & p_node, VTypedecl & p_type )
+ASTBuilder :: MakePhysicalEncodingSpec ( const KSymbol & p_sym,
+                                         const AST_FQN & p_fqn,
+                                         const AST * p_schemaArgs,
+                                         const AST * p_factoryArgs,
+                                         VTypedecl & p_type )
 {
-    assert ( p_node . ChildrenCount () == 3 ); // schema_parms fqn_opt_vers factory_parms_opt
     SPhysEncExpr * ret = Alloc < SPhysEncExpr > ();
     if ( ret != 0 )
     {
@@ -237,15 +243,16 @@ ASTBuilder :: MakePhysicalEncodingSpec ( const AST & p_node, VTypedecl & p_type 
         VectorInit ( & ret -> schem, 0, 4 );
         VectorInit ( & ret -> pfact, 0, 8 );
 
-        FillSchemaParms ( * p_node . GetChild ( 0 ), ret -> schem );
+        if ( p_schemaArgs != 0 && ! FillSchemaParms ( * p_schemaArgs, ret -> schem ) )
+        {
+            SExpressionWhack ( & ret -> dad );
+            return 0;
+        }
 
-        // resolve fqn_opt_vers, has to be ePhysical, capture requested version
-        assert ( p_node . GetChild ( 1 ) -> GetTokenType () == PT_IDENT );
-        const AST_FQN & fqn = * dynamic_cast < const AST_FQN * > ( p_node . GetChild ( 1 ) );
-        const KSymbol * sym = Resolve ( fqn );
-
-        const SNameOverload *name = static_cast < const SNameOverload * > ( sym -> u . obj );
-        ret -> version = fqn . GetVersion ();
+        // capture requested version
+        assert ( p_sym . type == ePhysical );
+        const SNameOverload *name = static_cast < const SNameOverload * > ( p_sym . u . obj );
+        ret -> version = p_fqn . GetVersion ();
         if ( ret -> version != 0 )
         {
             ret -> phys = static_cast < const SPhysical * > ( VectorFind ( & name -> items, & ret -> version, NULL, SPhysicalCmp ) );
@@ -260,7 +267,7 @@ ASTBuilder :: MakePhysicalEncodingSpec ( const AST & p_node, VTypedecl & p_type 
         /* evaluate type expression */
         if ( ret -> phys == 0 )
         {
-            ReportError ( "Requested version does not exist: '%S#%V'", & sym -> name, ret -> version );
+            ReportError ( "Requested version does not exist: '%S#%V'", & p_sym . name, ret -> version );
         }
         else
         {
@@ -281,16 +288,18 @@ ASTBuilder :: MakePhysicalEncodingSpec ( const AST & p_node, VTypedecl & p_type 
             }
 
             if ( rc == 0 )
-            {    // populate ret -> pfact
-                const AST & fact = * p_node . GetChild ( 2 );
-                uint32_t count = fact . ChildrenCount ();
-                for ( uint32_t i = 0; i < count; ++ i )
-                {
-                    const AST_Expr & expr = * static_cast < const AST_Expr * > ( fact . GetChild ( i ) );
-                    if ( ! VectorAppend ( ret -> pfact, 0, expr . MakeExpression ( * this ) ) )
+            {
+                if ( p_factoryArgs != 0 )
+                {    // populate ret -> pfact
+                    uint32_t count = p_factoryArgs -> ChildrenCount ();
+                    for ( uint32_t i = 0; i < count; ++ i )
                     {
-                        SExpressionWhack ( & ret -> dad );
-                        return 0;
+                        const AST_Expr & expr = * static_cast < const AST_Expr * > ( p_factoryArgs -> GetChild ( i ) );
+                        if ( ! VectorAppend ( ret -> pfact, 0, expr . MakeExpression ( * this ) ) )
+                        {
+                            SExpressionWhack ( & ret -> dad );
+                            return 0;
+                        }
                     }
                 }
                 return & ret -> dad;
@@ -302,6 +311,31 @@ ASTBuilder :: MakePhysicalEncodingSpec ( const AST & p_node, VTypedecl & p_type 
 }
 
 
+static
+void
+HandleColumnModifiers ( const AST & p_modifiers, bool & p_default, bool & p_readonly )
+{
+    p_default = false;
+    p_readonly = false;
+    uint32_t modCount = p_modifiers . ChildrenCount ();
+    for ( uint32_t i = 0 ; i < modCount; ++i )
+    {
+        switch ( p_modifiers . GetChild ( i ) -> GetTokenType () )
+        {
+        case KW_default:
+            p_default = true;
+            break;
+        case KW_extern:
+            break;
+        case KW_readonly:
+            p_readonly = true;
+            break;
+        default:
+            assert ( false );
+        }
+    }
+}
+
 void
 ASTBuilder :: AddColumn ( STable & p_table, const AST & p_modifiers, const AST & p_decl, const AST * p_default )
 {
@@ -311,38 +345,78 @@ ASTBuilder :: AddColumn ( STable & p_table, const AST & p_modifiers, const AST &
     SColumn * c = Alloc < SColumn > ();
     if ( c != 0 )
     {
-        // process modifiers
-        uint32_t modCount = p_modifiers . ChildrenCount ();
-        for ( uint32_t i = 0 ; i < modCount; ++i )
-        {
-            switch ( p_modifiers . GetChild ( i ) -> GetTokenType () )
-            {
-            case KW_default:
-                c -> dflt = true;
-                break;
-            case KW_extern:
-                break;
-            case KW_readonly:
-                c -> read_only = true;
-                break;
-            default:
-                assert ( false );
-            }
-        }
+        HandleColumnModifiers ( p_modifiers, c -> dflt, c -> read_only);
 
-        if ( p_decl . GetChild ( 0 ) -> GetTokenType () == PT_PHYSENCREF )
-        {
-            c -> ptype = MakePhysicalEncodingSpec ( * p_decl . GetChild ( 0 ), c -> td  );
-        }
-        else // p_decl . GetChild ( 0 ) represents a type
-        {
-            TypeSpec ( * p_decl . GetChild ( 0 ), c -> td );
+        const AST & type = * p_decl . GetChild ( 0 );
+        switch ( type . GetTokenType () )
+        {   // p_decl . GetChild ( 0 ) represents a type or a physical encoding
+        case PT_PHYSENCREF:
+            {
+                const AST * schemaArgs = 0;
+                const AST_FQN * fqn = 0;
+                const AST * factoryArgs = 0;
+                switch ( type . ChildrenCount () )
+                {
+                    case 3: // schema_parms fqn_opt_vers factory_parms_opt
+                        schemaArgs = type . GetChild ( 0 );
+                        fqn = dynamic_cast < const AST_FQN * > ( type . GetChild ( 1 ) );
+                        assert ( fqn -> GetTokenType () == PT_IDENT );
+                        factoryArgs = type . GetChild ( 2 );
+                        break;
+                    case 2: // fqn_vers_opt factory_parms_opt
+                        fqn = dynamic_cast < const AST_FQN * > ( type . GetChild ( 0 ) );
+                        assert ( fqn -> GetTokenType () == PT_IDENT );
+                        factoryArgs = type . GetChild ( 1 );
+                        break;
+                    default:
+                        assert ( false );
+                }
+                const KSymbol * sym = Resolve ( * fqn ); // will report unknown name
+                if ( sym -> type == ePhysical )
+                {
+                    c -> ptype = MakePhysicalEncodingSpec ( * sym, * fqn, schemaArgs, factoryArgs, c -> td  );
+                }
+                else
+                {
+                    ReportError ( "Not a physical encoding", * fqn);
+                }
+            }
+            break;
+        case PT_IDENT:
+            {
+                const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( type );
+                const KSymbol * sym = Resolve ( fqn ); // will report unknown name
+                if ( sym != 0 )
+                {
+                    switch ( sym -> type )
+                    {
+                    case eDatatype:
+                        {
+                            const SDatatype * typeDef = static_cast < const SDatatype * > ( sym -> u . obj );
+                            c -> td . type_id = typeDef -> id;
+                            c -> td . dim = 1;
+                        }
+                        break;
+                    case ePhysical:
+                        c -> ptype = MakePhysicalEncodingSpec ( * sym, fqn, 0, 0, c -> td  );
+                        break;
+                    default:
+                        ReportError ( "Cannot be used as a column type", fqn );
+                        break;
+                    }
+                }
+            }
+            break;
+        default: // likely an array
+            TypeSpec ( type, c -> td );
+            break;
         }
 
         const AST & typedCol = * p_decl . GetChild ( 1 );
         if ( typedCol . ChildrenCount () == 1 )
         {
-            if ( ! HandleSimpleColumn ( p_table, * c, typedCol ) )
+            c -> simple = true;
+            if ( ! HandleTypedColumn ( p_table, * c, typedCol ) )
             {
                 SColumnWhack ( c, 0 );
                 return;
@@ -350,9 +424,66 @@ ASTBuilder :: AddColumn ( STable & p_table, const AST & p_modifiers, const AST &
         }
         else
         {
-            //TODO: process other kinds of typed_col
-            //assert ( false );
+            switch ( typedCol . GetTokenType () )
+            {
+            case  PT_TYPEDCOL: // ident { stmts }
+                {
+                    assert ( typedCol . ChildrenCount () == 2 );
+                    const AST & body = * typedCol . GetChild ( 1 );
+                    c -> simple = true; // will override if see 'read'' or 'validate'
+                    uint32_t count = body . ChildrenCount ();
+                    for ( uint32_t i = 0; i < count; ++i )
+                    {
+                        const AST & node = * body . GetChild ( i );
+                        if ( node . GetTokenType () != PT_EMPTY )
+                        {
+                            assert ( node . GetTokenType () == PT_COLSTMT );
+                            assert ( node . ChildrenCount () == 2 );
+                            const AST_Expr * expr = dynamic_cast < const AST_Expr * > ( node . GetChild ( 1 ) );
+                            assert ( expr != 0 );
+                            switch ( node . GetChild ( 0 ) -> GetTokenType () )
+                            {
+                            case KW_read:
+                                c -> read = expr -> MakeExpression ( * this );
+                                c -> simple = false;
+                                break;
+                            case KW_validate:
+                                c -> validate = expr -> MakeExpression ( * this );
+                                c -> simple = false;
+                                break;
+                            case KW_limit:
+                                c -> limit = expr -> MakeExpression ( * this );
+                                break;
+                            default:
+                                assert ( false );
+                            }
+                        }
+                    }
+                    if ( ! HandleTypedColumn ( p_table, * c, typedCol ) )
+                    {
+                        SColumnWhack ( c, 0 );
+                        return;
+                    }
+                }
+                break;
+            case PT_TYPEDCOLEXPR: // ident = cond_expr
+                {
+                    assert ( typedCol . ChildrenCount () == 2 );
+                    const AST_Expr * expr = dynamic_cast < const AST_Expr * > ( typedCol . GetChild ( 1 ) );
+                    assert ( expr != 0 );
+                    c -> read = expr -> MakeExpression ( * this );
+                    if ( ! HandleTypedColumn ( p_table, * c, typedCol ) )
+                    {
+                        SColumnWhack ( c, 0 );
+                        return;
+                    }
+                }
+                break;
+            default:
+                assert ( false );
+            }
         }
+
         if ( VectorAppend ( p_table . col, & c -> cid . id, c ) )
         {
             return;
@@ -416,18 +547,51 @@ ASTBuilder :: HandleTableBody ( STable & p_table, const AST & p_body )
             switch ( stmt . GetTokenType () )
             {
             case PT_PRODSTMT:
-                AddProduction ( p_table . prod, stmt );
-                break;
             case PT_PRODTRIGGER:
-                assert ( false );
+                {
+                    const AST * datatype;
+                    const AST * ident;
+                    const AST * expr;
+                    switch ( stmt . ChildrenCount () )
+                    {
+                    case 2: // trigger
+                        datatype    = 0;
+                        ident       = stmt . GetChild ( 0 );
+                        expr        = stmt . GetChild ( 1 );
+                        break;
+                    case 3: // has datatype
+                        datatype    = stmt . GetChild ( 0 );
+                        ident       = stmt . GetChild ( 1 );
+                        expr        = stmt . GetChild ( 2 );
+                        break;
+                    default:
+                        assert ( false );
+                    }
+                    assert ( ident -> ChildrenCount () == 1 );
+                    const AST_Expr * ex = dynamic_cast < const AST_Expr * > ( expr ) ;
+                    assert ( ex != 0 );
+                    AddProduction ( p_table . prod,
+                                    ident -> GetChild ( 0 ) -> GetTokenValue (),
+                                    * ex,
+                                    datatype );
+                }
                 break;
             case PT_COLUMN:
                 // modifiers col_decl [ default ]
                 AddColumn ( p_table, * stmt . GetChild ( 0 ), * stmt . GetChild ( 1 ), stmt . GetChild ( 2 ) );
                 break;
             case PT_COLUMNEXPR:
-                //TODO: process modifiers
-                assert ( false );
+                if ( p_table . limit == 0 )
+                {
+                    assert ( stmt . ChildrenCount () == 1 );
+                    const AST_Expr * expr = dynamic_cast < const AST_Expr * > ( stmt . GetChild ( 0 ) );
+                    assert ( expr != 0 );
+                    p_table . limit = expr -> MakeExpression ( * this );
+                }
+                else
+                {
+                    ReportError ( "Limit constraint already specified" );
+                }
                 break;
             default:
                 assert ( false );

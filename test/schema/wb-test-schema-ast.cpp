@@ -467,7 +467,7 @@ FIXTURE_TEST_CASE(Const_Simple, AST_Fixture)
 //TODO: const U8 c[2] = 1; - error ( not a scalar )
 //TODO: const U8 c = 1.0; - error ( wrong type ) ?
 //TODO: const U8 c1; const U8 c2 = c1 + 1;
-//TODO: typedef U8 t; const U8 c2 = t; - error ( not const )
+//TODO: extern function U8 f(); const U8 c2 = f(); - error ( not const )
 
 ///////// alias
 

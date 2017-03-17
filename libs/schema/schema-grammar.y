@@ -271,6 +271,7 @@
 %token PT_AT
 %token PT_PHYSENCEXPR
 %token PT_PHYSENCREF
+%token PT_TYPEDCOLEXPR
 
  /* !!! Keep token declarations above in synch with schema-ast.y */
 
@@ -669,17 +670,17 @@ production_1_0_stmt
     ;
 
 column_1_0_decl
-    :   opt_col_1_0_modifier_seq KW_column col_1_0_decl
-            { $$ . subtree = MakeTree ( PT_COLUMN, P ( $1 ), T ( $2 ), P ( $3 ) ); }
-    |   opt_col_1_0_modifier_seq KW_column KW_limit '=' expression_1_0 ';'
-            { $$ . subtree = MakeTree ( PT_COLUMNEXPR, P ( $1 ), T ( $2 ), T ( $3 ), T ( $4 ), P ( $5 ), T ( $6 ) ); }
-    |   opt_col_1_0_modifier_seq KW_column KW_default KW_limit '=' expression_1_0 ';'
-            { $$ . subtree = MakeTree ( PT_COLUMNEXPR, P ( $1 ), T ( $2 ), T ( $3 ), T ( $4 ), T ( $5 ), P ( $6 ), T ( $7 ) ); }
+    :   col_1_0_modifiers col_1_0_decl
+            { $$ . subtree = MakeTree ( PT_COLUMN, P ( $1 ), P ( $2 ) ); }
+    |   KW_column KW_limit '=' expression_1_0 ';'
+            { $$ . subtree = MakeTree ( PT_COLUMNEXPR, T ( $1 ), T ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
+    |   KW_column KW_default KW_limit '=' expression_1_0 ';'
+            { $$ . subtree = MakeTree ( PT_COLUMNEXPR, T ( $1 ), T ( $2 ), T ( $3 ), T ( $4 ), P ( $5 ), T ( $6 ) ); }
     ;
 
-opt_col_1_0_modifier_seq
-    : empty                     { $$ = $1; }
-    | col_1_0_modifier_seq      { $$ = $1; }
+col_1_0_modifiers
+    : KW_column                         { $$ . subtree = T ( $1 ); }
+    | col_1_0_modifier_seq KW_column    { $$ = $1; AddToList ( P ( $1 ), T ( $2 ) ); }
     ;
 
 col_1_0_modifier_seq
@@ -710,10 +711,10 @@ phys_enc_ref
     ;
 
 typed_column_decl_1_0
-    : col_ident '{' column_body_1_0 '}'
+    : col_ident '{' column_body_1_0_opt '}'
             { $$ . subtree = MakeTree ( PT_TYPEDCOL, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
     | col_ident '=' cond_expr_1_0 ';'
-            { $$ . subtree = MakeTree ( PT_TYPEDCOL, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
+            { $$ . subtree = MakeTree ( PT_TYPEDCOLEXPR, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
     | col_ident ';'
             { $$ . subtree = MakeTree ( PT_TYPEDCOL, P ( $1 ), T ( $2 ) ); }
     ;
@@ -727,16 +728,21 @@ phys_ident
     : PHYSICAL_IDENTIFIER_1_0       { $$ . subtree = T ( $1 ); }     /* starts with a '.' */
     ;
 
+column_body_1_0_opt
+    : empty             { $$ = $1; }
+    | column_body_1_0   { $$ = $1; }
+    ;
+
 column_body_1_0
-    : column_stmt_1_0                       { $$ . subtree = MakeList ( $1 ); }
-    | column_body_1_0 ';' column_stmt_1_0   { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
+    : column_stmt_1_0                   { $$ . subtree = MakeList ( $1 ); }
+    | column_body_1_0 column_stmt_1_0   { $$ . subtree = AddToList ( P ( $1 ), P ( $2 ) ); }
     ;
 
 column_stmt_1_0
-    : KW_read '=' cond_expr_1_0             { $$ . subtree = MakeTree ( PT_COLSTMT, T ( $1 ), T ( $2 ), P ( $3 ) ); }
-    | KW_validate '=' cond_expr_1_0         { $$ . subtree = MakeTree ( PT_COLSTMT, T ( $1 ), T ( $2 ), P ( $3 ) ); }
-    | KW_limit '=' uint_expr_1_0            { $$ . subtree = MakeTree ( PT_COLSTMT, T ( $1 ), T ( $2 ), P ( $3 ) ); }
-    | empty                                 { $$ = $1; }
+    : KW_read '=' cond_expr_1_0 ';'     { $$ . subtree = MakeTree ( PT_COLSTMT, T ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
+    | KW_validate '=' cond_expr_1_0 ';' { $$ . subtree = MakeTree ( PT_COLSTMT, T ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
+    | KW_limit '=' uint_expr_1_0 ';'    { $$ . subtree = MakeTree ( PT_COLSTMT, T ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
+    | ';'                               { $$ . subtree = T ( $1 ); }
     ;
 
 default_view_1_0_decl

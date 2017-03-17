@@ -209,6 +209,7 @@
 %token PT_AT
 %token PT_PHYSENCEXPR
 %token PT_PHYSENCREF
+%token PT_TYPEDCOLEXPR
 
  /* !!! Keep token declarations above in synch with schema-grammar.y */
 
@@ -223,8 +224,8 @@
 %type <node> phys_return_type table parents_opt tbl_body tbl_stmts tbl_stmt
 %type <node> tbl_parents production column_decl col_modifiers_opt col_modifiers
 %type <node> col_modifier col_decl col_ident col_body col_stmt typed_col column_expr
-%type <node> factory_parms factory_parms_opt schema_parm
-%type <node> schema_parms arrayspec phys_enc_ref
+%type <node> factory_parms factory_parms_opt schema_parm schema_parms arrayspec
+%type <node> phys_enc_ref col_body_opt
 
 %type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
 
@@ -242,7 +243,7 @@
 %type <tok> KW_default KW_extern KW_readonly PHYSICAL_IDENTIFIER_1_0 HEX OCTAL PT_COLSTMT
 %type <tok> KW_read KW_validate KW_limit PT_SCHEMAFORMAL PT_PRODSTMT PT_PRODTRIGGER
 %type <tok> PT_NOHEADER KW_decode KW_encode KW___row_length PT_COLDECL PT_TYPEDCOL PT_TYPEEXPR
-%type <tok> PT_PHYSENCEXPR PT_PHYSENCREF
+%type <tok> PT_PHYSENCEXPR PT_PHYSENCREF KW_column PT_TYPEDCOLEXPR
 
 %%
 
@@ -524,19 +525,19 @@ tbl_stmt
     ;
 
 column_decl
-    : PT_COLUMN '(' col_modifiers_opt KW_column col_decl ')' { $$ = new AST ( $1, $3, $5 ); }
+    : PT_COLUMN '(' col_modifiers_opt col_decl ')' { $$ = new AST ( $1, $3, $4 ); }
     ;
 
 column_expr
-    : PT_COLUMNEXPR '(' col_modifiers_opt KW_column KW_limit '=' expr ')'
-        { $$ = new AST ( $1, $3, $7 ); }
-    | PT_COLUMNEXPR '(' col_modifiers_opt KW_column KW_default KW_limit '=' expr ')'
-        { $$ = new AST ( $1, $3, $8, new AST ( $5 ) ); }
+    : PT_COLUMNEXPR '(' KW_column KW_limit '=' expr ';' ')'
+        { $$ = new AST ( $1, $6 ); }
+    | PT_COLUMNEXPR '(' KW_column KW_default KW_limit '=' expr ';' ')'
+        { $$ = new AST ( $1, $7 ); }
     ;
 
 col_modifiers_opt
-    : PT_EMPTY                          { $$ = new AST ( $1 ); }
-    | PT_ASTLIST '(' col_modifiers ')'  { $$ = $3; }
+    : KW_column                                     { $$ = new AST ( $1 ); }
+    | PT_ASTLIST '(' col_modifiers KW_column ')'    { $$ = $3; }
     ;
 
 col_modifiers
@@ -563,9 +564,9 @@ phys_enc_ref
     ;
 
 typed_col
-    : PT_TYPEDCOL '(' col_ident '{' PT_ASTLIST '(' col_body ')' '}' ')'
-            {  $$ = new AST ( $1, $3, $7 ); }
-    | PT_TYPEDCOL '(' col_ident '=' cond_expr ')'
+    : PT_TYPEDCOL '(' col_ident '{' col_body_opt '}' ')'
+            {  $$ = new AST ( $1, $3, $5 ); }
+    | PT_TYPEDCOLEXPR '(' col_ident '=' cond_expr ';' ')'
             {  $$ = new AST ( $1, $3, $5 ); }
     | PT_TYPEDCOL '(' col_ident ';' ')'
             {  $$ = new AST ( $1, $3 ); }
@@ -576,16 +577,21 @@ col_ident
     | PHYSICAL_IDENTIFIER_1_0   { $$ = new AST ( $1 ); }
     ;
 
+col_body_opt
+    : PT_EMPTY                      { $$ = new AST (); }
+    | PT_ASTLIST '(' col_body ')'   { $$ = $3; }
+    ;
+
 col_body
-    : col_stmt                  { $$ = new AST (); $$ -> AddNode ( $1 ); }
-    | col_body ';' col_stmt     { $$ = $1; $$ -> AddNode ( $3 ); }
+    : col_stmt          { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | col_body col_stmt { $$ = $1; $$ -> AddNode ( $2 ); }
     ;
 
 col_stmt
-    : PT_EMPTY                                      { $$ = new AST ( $1 ); }
-    | PT_COLSTMT '(' KW_read '=' cond_expr ')'      { $$ = new AST ( $1, new AST ( $3 ), $5 ); }
-    | PT_COLSTMT '(' KW_validate '=' cond_expr ')'  { $$ = new AST ( $1, new AST ( $3 ), $5 ); }
-    | PT_COLSTMT '(' KW_limit '=' uint_expr ')'     { $$ = new AST ( $1, new AST ( $3 ), $5 ); }
+    : ';'                                           { $$ = new AST (); }
+    | PT_COLSTMT '(' KW_read '=' cond_expr ';' ')'      { $$ = new AST ( $1, new AST ( $3 ), $5 ); }
+    | PT_COLSTMT '(' KW_validate '=' cond_expr ';' ')'  { $$ = new AST ( $1, new AST ( $3 ), $5 ); }
+    | PT_COLSTMT '(' KW_limit '=' uint_expr ';' ')'     { $$ = new AST ( $1, new AST ( $3 ), $5 ); }
     ;
 
 /* expressions */
@@ -603,8 +609,8 @@ cond_expr
     ;
 
 cond_chain
-    : expr                  { $$ = $1; }
-    | cond_expr '|' expr    { $$ = $1; $$ -> AddNode ( $3 ); }
+    : expr                   { $$ = new AST_Expr ( $1 ); }
+    | cond_chain '|' expr    { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 
 type_expr

@@ -111,10 +111,14 @@ namespace ncbi
                                        uint32_t                 p_version,
                                        const KSymbol *          p_priorDecl,
                                        uint32_t *               p_id );
-            void AddProduction ( Vector & p_list, const AST & p_prod );
+            void AddProduction ( Vector & p_list, const char * p_name, const AST_Expr & p_expr, const AST * p_type );
 
-            void FillSchemaParms ( const AST & p_parms, Vector & p_v );
-            struct SExpression * MakePhysicalEncodingSpec ( const AST & p_node, struct VTypedecl & p_type );
+            bool FillSchemaParms ( const AST & p_parms, Vector & p_v );
+            struct SExpression * MakePhysicalEncodingSpec ( const KSymbol & p_sym,
+                                                            const AST_FQN & p_fqn,
+                                                            const AST * p_schemaArgs,
+                                                            const AST * p_factoryArgs,
+                                                            VTypedecl & p_type );
 
         private:
             bool Init();
@@ -133,7 +137,7 @@ namespace ncbi
 
             void HandleTableParents ( STable & p_table, const AST & p_parents );
             void HandleTableBody    ( STable & p_table, const AST & p_body );
-            bool HandleSimpleColumn ( STable & p_table, struct SColumn & p_col, const AST & p_typedCol );
+            bool HandleTypedColumn ( STable & p_table, struct SColumn & p_col, const AST & p_typedCol );
 
             void AddColumn ( STable & p_table, const AST & p_modifiers, const AST & p_decl, const AST * p_default );
 

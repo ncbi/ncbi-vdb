@@ -343,6 +343,38 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
 {   //TODO: complete
     switch ( GetTokenType () )
     {
+    case PT_EMPTY: // expr [ | expr | ... ]
+        {
+            uint32_t count = ChildrenCount ();
+            assert ( count > 0 );
+            const AST_Expr * left = dynamic_cast < const AST_Expr * > (  GetChild ( 0 ) );
+            assert ( left != 0 );
+
+            SExpression * xp = left -> MakeExpression ( p_builder );
+            for ( uint32_t i = 0; i < count - 1; ++i )
+            {
+                const AST_Expr * right = dynamic_cast < const AST_Expr * > (  GetChild ( i + 1 ) );
+                assert ( right != 0 );
+                SBinExpr * x = p_builder . Alloc < SBinExpr > ();
+                if ( x == NULL )
+                {
+                    SExpressionWhack ( xp );
+                    return 0;
+                }
+                x -> dad . var = eCondExpr;
+                atomic32_set ( & x -> dad . refcount, 1 );
+                x -> left = xp;
+                x -> right = right -> MakeExpression ( p_builder );
+                if ( x -> right == 0 )
+                {
+                    SExpressionWhack ( xp );
+                    return 0;
+                }
+                xp = & x -> dad;
+            }
+
+            return xp;
+        }
     case PT_UINT:
         {
             SConstExpr * x = p_builder . Alloc < SConstExpr > ( sizeof * x - sizeof x -> u + sizeof x -> u . u64 [ 0 ] );
