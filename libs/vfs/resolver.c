@@ -3666,7 +3666,7 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
     const bool USE_HTTP_ONLY_PROTOCOL = false;
     rc_t rcs = -1;
     rc_t rc = rcs = VResolverQueryInt
-        ( self, protocols, query, local, remote, cache, "#1.2" );
+        ( self, protocols, query, local, remote, cache, "#3.1" );
     if ( rc == 0 )
     {
         /* the paths returned from resolver are highly reliable */
@@ -3704,7 +3704,9 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
         else {
             int notequal = ~ 0;
             assert ( ! VPathEqual ( * remote, oath, & notequal ) );
-            assert ( ! notequal );
+            if ( notequal ) {
+                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
+            }
         }
         if ( cache == NULL )
             assert ( c == NULL );
@@ -3714,7 +3716,9 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
             int notequal = ~ 0;
             VPathMarkHighReliability ( ( VPath * ) cath, true );
             assert ( ! VPathEqual ( * cache, cath, & notequal ) );
-            assert ( ! notequal );
+            if ( notequal ) {
+                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
+            }
         }
         if ( local == NULL )
             assert ( l == NULL );
@@ -3865,7 +3869,7 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
         RELEASE ( VPath, oath );
         RELEASE ( VPath, cath );
     }
-    if ( ! VPathHasRefseqContext ( query ) ) {
+    {
         const VPath * oath = NULL;
         const VPath ** p = remote ? & oath : NULL;
         const VPath * cath = NULL;
@@ -3873,7 +3877,7 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
         const VPath * lath = NULL;
         const VPath ** l = local ? & lath : NULL;
         rc_t ro = VResolverQueryInt
-            ( self, protocols, query, l, p, c, "#3.1" );
+            ( self, protocols, query, l, p, c, "#1.2" );
         assert ( rcs == ro );
         if ( remote == NULL ) {
             assert ( p == NULL );
@@ -3882,7 +3886,9 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
         } else {
             int notequal = ~ 0;
             assert ( ! VPathEqual ( * remote, oath, & notequal ) );
-            assert ( ! notequal );
+            if ( notequal ) {
+                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
+            }
         }
         if ( cache == NULL ) {
             assert ( c == NULL );
@@ -3892,7 +3898,9 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
             int notequal = ~ 0;
             VPathMarkHighReliability ( ( VPath * ) cath, true );
             assert ( ! VPathEqual ( * cache, cath, & notequal ) );
-            assert ( ! notequal );
+            if ( notequal ) {
+                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
+            }
         }
         if ( local == NULL ) {
             assert ( l == NULL );
