@@ -3334,7 +3334,31 @@ static rc_t CC KService1NameWithVersionAndType ( const KNSManager * mgr,
                         if ( r == NULL)
                             rc = 2;
                         else {
-                            const VPath * path = r -> path . http;
+                            const VPath * path = NULL;
+                            VRemoteProtocols protos = protocols;
+                            int i = 0;
+                            for ( i = 0; protos != 0 && i < eProtocolMaxPref;
+                                  protos >>= 3, ++ i )
+                            {
+                                switch ( protos & eProtocolMask ) {
+                                    case eProtocolHttp:
+                                        path = r -> path . http;
+                                        break;
+                                    case eProtocolFasp:
+                                        path = r -> path . fasp;
+                                        break;
+                                    case eProtocolHttps:
+                                        path = r -> path . https;
+                                        break;
+                                }
+                                if ( path != NULL )
+                                    break;
+                            }
+
+              /* in early versions of protocol only http path was initialized */
+                            if ( path == NULL )
+                                path = r -> path . http;
+
                             rc = VPathAddRef ( path );
                             if ( rc == 0 )
                                 * remote = path;
