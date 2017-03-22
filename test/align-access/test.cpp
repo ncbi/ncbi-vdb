@@ -38,7 +38,151 @@ extern "C" {
 #include <klib/rc.h>
 #include <align/bam.h>
 #include <align/align-access.h>
+#include <vfs/path.h>
+#include <vfs/manager.h>
 }
+
+#define VERY_VERBOSE (0)
+static bool const verbose = false;
+
+namespace AlignAccess {
+    class AlignmentEnumerator;
+    class Database;
+    class Manager;
+
+    class AlignmentEnumerator {
+        friend class Database;
+        AlignAccessAlignmentEnumerator *const self;
+        explicit AlignmentEnumerator(AlignAccessAlignmentEnumerator *Self) : self(Self) {}
+    public:
+        AlignmentEnumerator(AlignmentEnumerator const &rhs) : self(rhs.self) {
+#if VERY_VERBOSE
+            std::cerr << "AlignAccessAlignmentEnumeratorAddRef" << std::endl;
+#endif
+            rc_t const rc = AlignAccessAlignmentEnumeratorAddRef(self);
+            if (rc) throw std::logic_error("AlignAccessAlignmentEnumeratorAddRef failed");
+        }
+        ~AlignmentEnumerator() {
+#if VERY_VERBOSE
+            std::cerr << "AlignAccessAlignmentEnumeratorRelease" << std::endl;
+#endif
+            AlignAccessAlignmentEnumeratorRelease(self);
+        }
+        bool next() {
+            if (self) {
+                rc_t const rc = AlignAccessAlignmentEnumeratorNext(self);
+                if (rc == 0) return true;
+                if ((int)GetRCObject(rc) == rcRow && (int)GetRCState(rc) == rcNotFound)
+                    return false;
+                throw std::runtime_error("AlignAccessAlignmentEnumeratorNext failed");
+            }
+            return false;
+        }
+    };
+    class Database {
+        friend class Manager;
+        AlignAccessDB const *const self;
+        explicit Database(AlignAccessDB const *Self) : self(Self) {}
+    public:
+        Database(Database const &rhs) : self(rhs.self) {
+#if VERY_VERBOSE
+            std::cerr << "AlignAccessDBAddRef" << std::endl;
+#endif
+            rc_t const rc = AlignAccessDBAddRef(self);
+            if (rc) throw std::logic_error("AlignAccessDBAddRef failed");
+        }
+        ~Database() {
+#if VERY_VERBOSE
+            std::cerr << "AlignAccessDBRelease" << std::endl;
+#endif
+            AlignAccessDBRelease(self);
+        }
+
+        AlignmentEnumerator slice(std::string const &refName, int start, int end) const
+        {
+            AlignAccessAlignmentEnumerator *p = 0;
+            rc_t const rc = AlignAccessDBWindowedAlignments(self, &p, refName.c_str(), start, end - start);
+            if (rc == 0) return AlignmentEnumerator(p);
+            if ((int)GetRCObject(rc) == rcRow && (int)GetRCState(rc) == rcNotFound)
+                return AlignmentEnumerator(0);
+            throw std::logic_error("AlignAccessDBWindowedAlignments failed");
+        }
+    };
+    class Manager {
+        AlignAccessMgr const *const self;
+        explicit Manager(AlignAccessMgr const *Self) : self(Self) {}
+        Manager() : self(0) {}
+    public:
+        ~Manager() {
+#if VERY_VERBOSE
+            std::cerr << "AlignAccessMgrRelease" << std::endl;
+#endif
+            AlignAccessMgrRelease(self);
+        }
+
+        Database open(std::string const &path, std::string const &indexPath) const {
+            VPath *dbp = 0;
+            VPath *idxp = 0;
+            rc_t rc = 0;
+            {
+                VFSManager *fsm = 0;
+                
+                rc = VFSManagerMake(&fsm);
+                if (rc) throw std::logic_error("VFSManagerMake failed");
+            
+                rc = VFSManagerMakeSysPath(fsm, &dbp, path.c_str());
+                if (rc) throw std::logic_error("VFSManagerMakeSysPath failed");
+            
+                rc = VFSManagerMakeSysPath(fsm, &idxp, indexPath.c_str());
+                if (rc) throw std::logic_error("VFSManagerMakeSysPath failed");
+
+                VFSManagerRelease(fsm);
+            }
+            AlignAccessDB const *db = 0;
+            rc = AlignAccessMgrMakeIndexBAMDB(self, &db, dbp, idxp);
+            VPathRelease(dbp);
+            VPathRelease(idxp);
+            if (rc) throw std::runtime_error(std::string("failed to open ") + path + " with index " + indexPath);
+            if (verbose) std::cerr << "opened " << path << " with index " << indexPath << std::endl;
+            return Database(db);
+        }
+
+        Database open(std::string const &path) const {
+            try {
+                return open(path, path + ".bai");
+            }
+            catch (std::runtime_error const &e) {}
+            catch (...) { throw; }
+
+            VPath *dbp = 0;
+            rc_t rc = 0;
+            {
+                VFSManager *fsm = 0;
+
+                rc = VFSManagerMake(&fsm);
+                if (rc) throw std::logic_error("VFSManagerMake failed");
+            
+                rc = VFSManagerMakeSysPath(fsm, &dbp, path.c_str());
+                if (rc) throw std::logic_error("VFSManagerMakeSysPath failed");
+                VFSManagerRelease(fsm);
+            }
+            AlignAccessDB const *db = 0;
+            rc = AlignAccessMgrMakeBAMDB(self, &db, dbp);
+            VPathRelease(dbp);
+            if (rc) throw std::runtime_error(std::string("failed to open ") + path);
+            if (verbose) std::cerr << "opened " << path << std::endl;
+            return Database(db);
+        }
+
+        static Manager make() {
+            AlignAccessMgr const *mgr = 0;
+            rc_t rc = AlignAccessMgrMake(&mgr);
+            if (rc != 0)
+                throw std::logic_error("AlignAccessMgrMake failed");
+            return Manager(mgr);
+        }
+    };
+};
 
 using namespace std;
 
@@ -46,32 +190,27 @@ TEST_SUITE(IndexTestSuite);
 
 class LoaderFixture
 {
-    BAMFile const *bam;
+    AlignAccess::Database const db;
 
     static std::string BAM_FILE_NAME(void) {
-        return std::string("/panfs/pan1/sra-test/bam/VDB-3148.bam");
-    }
-    static std::string INDEX_FILE_NAME(void) {
-        return BAM_FILE_NAME() + ".bai";
+        return std::string("/panfs/pan1/trace-flatten/durbrowk/HG002.GRCh38.300x.bam");
     }
 public:
-    LoaderFixture()
+    LoaderFixture() : db(AlignAccess::Manager::make().open(BAM_FILE_NAME()))
     {
-        rc_t const rc = BAMFileMake(&bam, BAM_FILE_NAME().c_str());
-        if (rc != 0)
-            throw std::runtime_error("can't open " + BAM_FILE_NAME());
     }
     ~LoaderFixture()
     {
-        BAMFileRelease(bam);
     }
     void testIndex(void) const {
-        rc_t const expected_rc = SILENT_RC(rcAlign, rcIndex, rcReading, rcData, rcExcessive);
-        rc_t const rc = BAMFileOpenIndex(bam, INDEX_FILE_NAME().c_str());
-        if (rc == 0)
-            throw std::runtime_error("Index open was supposed to fail");
-        if (rc != expected_rc)
-            throw std::runtime_error("Index open did not fail with the expected result code; perhaps the test file is missing?");
+        std::cerr << "starting test" << std::endl;
+        int alignments = 0;
+        AlignAccess::AlignmentEnumerator e = db.slice("chr1", 141484029, 141484029 + 11733);
+        while (e.next()) {
+            ++alignments;
+        }
+        std::cout << alignments << " alignments" << std::endl;
+        std::cerr << "test complete" << std::endl;
     }
 };    
 
