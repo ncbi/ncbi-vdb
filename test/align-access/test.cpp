@@ -43,7 +43,9 @@ extern "C" {
 }
 
 #define VERY_VERBOSE (0)
-static bool const verbose = false;
+static bool const verbose = true;
+
+#define SLICING (1u << 24)
 
 namespace AlignAccess {
     class AlignmentEnumerator;
@@ -68,7 +70,7 @@ namespace AlignAccess {
 #endif
             AlignAccessAlignmentEnumeratorRelease(self);
         }
-        bool next() {
+        bool next() const {
             if (self) {
                 rc_t const rc = AlignAccessAlignmentEnumeratorNext(self);
                 if (rc == 0) return true;
@@ -77,6 +79,14 @@ namespace AlignAccess {
                 throw std::runtime_error("AlignAccessAlignmentEnumeratorNext failed");
             }
             return false;
+        }
+        int position() const {
+            if (self) {
+                uint64_t p = 0;
+                AlignAccessAlignmentEnumeratorGetRefSeqPos(self, &p);
+                return (int)p;
+            }
+            return -1;
         }
     };
     class Database {
@@ -101,6 +111,7 @@ namespace AlignAccess {
         AlignmentEnumerator slice(std::string const &refName, int start, int end) const
         {
             AlignAccessAlignmentEnumerator *p = 0;
+            if (verbose) std::cerr << "Generating slice " << refName << ':' << start << '-' << end << std::endl;
             rc_t const rc = AlignAccessDBWindowedAlignments(self, &p, refName.c_str(), start, end - start);
             if (rc == 0) return AlignmentEnumerator(p);
             if ((int)GetRCObject(rc) == rcRow && (int)GetRCState(rc) == rcNotFound)
@@ -193,7 +204,11 @@ class LoaderFixture
     AlignAccess::Database const db;
 
     static std::string BAM_FILE_NAME(void) {
+#if MAC
+        return std::string("/net/traces04/giab05/ftp/data/AshkenazimTrio/HG002_NA24385_son/NIST_HiSeq_HG002_Homogeneity-10953946/NHGRI_Illumina300X_AJtrio_novoalign_bams/HG002.GRCh38.300x.bam");
+#else
         return std::string("/panfs/pan1/trace-flatten/durbrowk/HG002.GRCh38.300x.bam");
+#endif
     }
 public:
     LoaderFixture() : db(AlignAccess::Manager::make().open(BAM_FILE_NAME()))
@@ -204,12 +219,19 @@ public:
     }
     void testIndex(void) const {
         std::cerr << "starting test" << std::endl;
+        int last = -1;
         int alignments = 0;
         AlignAccess::AlignmentEnumerator e = db.slice("chr1", 141484029, 141484029 + 11733);
         while (e.next()) {
+            last = e.position();
+            if (alignments == 0)
+                std::cout << "first: " << last << std::endl;
             ++alignments;
         }
         std::cout << alignments << " alignments" << std::endl;
+        if (alignments > 0) {
+            std::cout << "last: " << last << std::endl;
+        }
         std::cerr << "test complete" << std::endl;
     }
 };    
