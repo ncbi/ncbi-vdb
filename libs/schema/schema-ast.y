@@ -195,9 +195,7 @@
 %token PT_TYPEEXPR
 %token PT_DBBODY
 %token PT_DBDAD
-%token PT_DATABASEMEMBER
 %token PT_DBMEMBER
-%token PT_TABLEMEMBER
 %token PT_TBLMEMBER
 %token PT_NOHEADER
 %token PT_CASTEXPR
@@ -225,7 +223,8 @@
 %type <node> tbl_parents production column_decl col_modifiers_opt col_modifiers
 %type <node> col_modifier col_decl col_ident col_body col_stmt typed_col column_expr
 %type <node> factory_parms factory_parms_opt schema_parm schema_parms arrayspec
-%type <node> phys_enc_ref col_body_opt
+%type <node> phys_enc_ref col_body_opt database opt_dbdad dbbody db_members
+%type <node> db_dbmember template_opt
 
 %type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
 
@@ -243,7 +242,8 @@
 %type <tok> KW_default KW_extern KW_readonly PHYSICAL_IDENTIFIER_1_0 HEX OCTAL PT_COLSTMT
 %type <tok> KW_read KW_validate KW_limit PT_SCHEMAFORMAL PT_PRODSTMT PT_PRODTRIGGER
 %type <tok> PT_NOHEADER KW_decode KW_encode KW___row_length PT_COLDECL PT_TYPEDCOL PT_TYPEEXPR
-%type <tok> PT_PHYSENCEXPR PT_PHYSENCREF KW_column PT_TYPEDCOLEXPR
+%type <tok> PT_PHYSENCEXPR PT_PHYSENCREF KW_column PT_TYPEDCOLEXPR PT_DATABASE PT_DBBODY
+%type <tok> KW_template KW_database PT_DBMEMBER
 
 %%
 
@@ -294,6 +294,7 @@ schema_decl
     | validate          { $$ = $1; }
     | physical          { $$ = $1; }
     | table             { $$ = $1; }
+    | database          { $$ = $1; }
     /*TBD*/
     | ';'               { $$ = new AST (); }
     ;
@@ -650,6 +651,37 @@ factory_parms_opt
 factory_parms
     : expr                      { $$ = new AST (); $$ -> AddNode ( $1 ); }
     | factory_parms ',' expr    { $$ = $1; $$ -> AddNode ( $3 ); }
+    ;
+
+/* database */
+database
+    : PT_DATABASE '(' KW_database fqn_vers opt_dbdad dbbody ')' { $$ = p_builder . DatabaseDef ( $1, $4, $5, $6 ); }
+    ;
+
+opt_dbdad
+    : PT_EMPTY                             { $$ = new AST ( $1 ); }
+    | PT_DBDAD '(' '=' fqn_opt_vers ')'    { $$ = $4; }
+
+dbbody
+    : PT_DBBODY '(' '{' PT_ASTLIST '(' db_members ')' '}' ')'   { $$ = $6; }
+    | PT_DBBODY '(' '{' '}' ')'                                 { $$ = new AST ( $1 ); }
+    ;
+
+db_members
+    : db_dbmember               { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | ';'                       { $$ = new AST (); }
+    | db_members db_dbmember    { $$ = $1; $$ -> AddNode ( $2 ); }
+    | db_members ';'            { $$ = $1; }
+    ;
+
+db_dbmember
+    : PT_DBMEMBER '(' template_opt KW_database fqn_opt_vers ident ';' ')'
+        { $$ = new AST ( $1, $3, $5, $6 ); }
+    ;
+
+template_opt
+    : PT_EMPTY      { $$ = new AST ( $1 ); }
+    | KW_template   { $$ = new AST ( $1 ); }
     ;
 
 /* commonly used productions */

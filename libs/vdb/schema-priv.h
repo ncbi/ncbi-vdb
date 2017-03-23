@@ -1269,6 +1269,14 @@ void CC SDatabaseNameMark ( const SNameOverload *self, const VSchema *schema );
 bool CC SDatabaseDefDump ( void *self, void *dumper );
 rc_t SDatabaseDump ( const SDatabase *self, struct SDumper *d );
 
+/* Extend
+ * records a parent database
+ */
+rc_t CC SDatabaseExtend ( SDatabase *self, const SDatabase *dad );
+
+/* Compare
+*/
+rc_t SDatabaseCompare ( const SDatabase *a, const SDatabase *b, const SDatabase **newer, bool exhaustive );
 
 /*--------------------------------------------------------------------------
  * STblMember

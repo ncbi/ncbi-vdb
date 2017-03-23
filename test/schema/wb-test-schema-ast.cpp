@@ -509,6 +509,7 @@ FIXTURE_TEST_CASE(AliasedTypesetInTypeset, AST_Fixture)
 
 #include "wb-test-schema-func.cpp"
 #include "wb-test-schema-table.cpp"
+#include "wb-test-schema-db.cpp"
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>

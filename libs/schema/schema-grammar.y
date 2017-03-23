@@ -257,9 +257,7 @@
 %token PT_TYPEEXPR
 %token PT_DBBODY
 %token PT_DBDAD
-%token PT_DATABASEMEMBER
 %token PT_DBMEMBER
-%token PT_TABLEMEMBER
 %token PT_TBLMEMBER
 %token PT_NOHEADER
 %token PT_CASTEXPR
@@ -936,9 +934,9 @@ database_members_1_0
     ;
 
 database_member_1_0
-    : opt_template_1_0 db_member_1_0            { $$ . subtree = MakeTree ( PT_DATABASEMEMBER, P ( $1 ), P ( $2 ) ); }
-    | opt_template_1_0 table_member_1_0         { $$ . subtree = MakeTree ( PT_TABLEMEMBER, P ( $1 ), P ( $2 ) ); }
-    | ';'
+    : db_member_1_0             { $$ = $1; }
+    | table_member_1_0          { $$ = $1; }
+    | ';'                       { $$ . subtree = T ( $1 ); }
     ;
 
 opt_template_1_0
@@ -947,13 +945,13 @@ opt_template_1_0
     ;
 
 db_member_1_0
-    : KW_database fqn_opt_vers IDENTIFIER_1_0 ';'
-            { $$ . subtree = MakeTree ( PT_DBMEMBER, T ( $1 ), P ( $2 ), T ( $3 ), T ( $4 ) ); }
+    : opt_template_1_0 KW_database fqn_opt_vers ident_1_0 ';'
+            { $$ . subtree = MakeTree ( PT_DBMEMBER, P ( $1 ), T ( $2 ), P ( $3 ), P ( $4 ), T ( $5 ) ); }
     ;
 
 table_member_1_0
-    : KW_table fqn_opt_vers IDENTIFIER_1_0 ';'
-            { $$ . subtree = MakeTree ( PT_TBLMEMBER, T ( $1 ), P ( $2 ), T ( $3 ), T ( $4 ) ); }
+    : opt_template_1_0 KW_table fqn_opt_vers ident_1_0 ';'
+            { $$ . subtree = MakeTree ( PT_TBLMEMBER, P ( $1 ), T ( $2 ), P ( $3 ), P ( $4 ), T ( $5 ) ); }
     ;
 
 /* include

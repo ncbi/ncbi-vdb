@@ -41,7 +41,9 @@ struct SIndirectConst;
 struct STable;
 struct SColumn;
 struct SExpression;
+struct SDatabase;
 struct VTypedecl;
+struct SNameOverload;
 
 namespace ncbi
 {
@@ -89,6 +91,7 @@ namespace ncbi
             AST * FunctionDecl ( const Token *, bool script, AST * schema, AST * returnType, AST_FQN * name, AST_ParamSig * fact, AST_ParamSig* params, AST* prologue );
             AST * PhysicalDecl ( const Token *, AST * schema, AST * returnType, AST_FQN * name, AST_ParamSig * fact, AST * body );
             AST * TableDef ( const Token *, AST_FQN * name, AST * parents, AST * body );
+            AST * DatabaseDef ( const Token *, AST_FQN * name, AST * parent, AST * body );
 
         public: // schema object construction helpers
             const KSymbol* CreateFqnSymbol ( const AST_FQN& fqn, uint32_t type, const void * obj );
@@ -111,6 +114,11 @@ namespace ncbi
                                        uint32_t                 p_version,
                                        const KSymbol *          p_priorDecl,
                                        uint32_t *               p_id );
+            bool HandleDbOverload ( const struct SDatabase *     p_db,
+                                    uint32_t                     p_version,
+                                    const KSymbol *              p_priorDecl,
+                                    uint32_t *                   p_id );
+
             void AddProduction ( Vector & p_list, const char * p_name, const AST_Expr & p_expr, const AST * p_type );
 
             bool FillSchemaParms ( const AST & p_parms, Vector & p_v );
@@ -140,6 +148,10 @@ namespace ncbi
             bool HandleTypedColumn ( STable & p_table, struct SColumn & p_col, const AST & p_typedCol );
 
             void AddColumn ( STable & p_table, const AST & p_modifiers, const AST & p_decl, const AST * p_default );
+
+            void HandleDbBody ( SDatabase & p_db, const AST & p_body );
+
+            const void * SelectVersion ( const struct KSymbol & p_ovl, int64_t ( CC * p_cmp ) ( const void *item, const void *n ), uint32_t * p_version );
 
         private:
             VSchema*    m_intrinsic;

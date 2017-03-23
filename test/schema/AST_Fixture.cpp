@@ -36,7 +36,10 @@
 using namespace std;
 
 AST_Fixture :: AST_Fixture()
-:   m_parseTree ( 0 ),
+:   m_debugParse ( false ),
+    m_printTree ( false ),
+    m_debugAst ( false ),
+    m_parseTree ( 0 ),
     m_ast ( 0 ),
     m_schema ( 0 ),
     m_newParse ( true )
@@ -101,6 +104,9 @@ AST_Fixture :: PrintTree ( const ParseTree& p_tree )
             case_ ( PT_FACTPARMS );
             case_ ( PT_PHYSENCREF );
             case_ ( PT_COLSTMT );
+            case_ ( PT_DBBODY );
+            case_ ( PT_DBMEMBER );
+
             default:
                 if ( tt < 256 )
                 {
@@ -155,9 +161,9 @@ AST_Fixture :: MakeFqn ( const char* p_text ) // p_text = (ident:)+ident
 }
 
 AST *
-AST_Fixture :: MakeAst ( const char* p_source, bool p_debugParse, bool p_printTree, bool p_debugAst )
+AST_Fixture :: MakeAst ( const char* p_source )
 {
-    if ( ! m_parser . ParseString ( p_source, p_debugParse ) )
+    if ( ! m_parser . ParseString ( p_source, m_debugParse ) )
     {
         throw std :: logic_error ( "AST_Fixture::MakeAst : ParseString() failed" );
     }
@@ -170,7 +176,7 @@ AST_Fixture :: MakeAst ( const char* p_source, bool p_debugParse, bool p_printTr
     {
         throw std :: logic_error ( "AST_Fixture::MakeAst : MoveParseTree() returned 0" );
     }
-    if ( p_printTree )
+    if ( m_printTree )
     {
         PrintTree ( * m_parseTree );
     }
@@ -178,7 +184,7 @@ AST_Fixture :: MakeAst ( const char* p_source, bool p_debugParse, bool p_printTr
     {
         delete m_ast;
     }
-    m_ast = m_builder . Build ( * m_parseTree, p_debugAst );
+    m_ast = m_builder . Build ( * m_parseTree, m_debugAst );
     if ( m_builder . GetErrorCount() != 0)
     {
         throw std :: logic_error ( string ( "AST_Fixture::MakeAst : ASTBuilder::Build() failed: " ) + string ( m_builder . GetErrorMessage ( 0 ) ) );
@@ -193,24 +199,31 @@ AST_Fixture :: MakeAst ( const char* p_source, bool p_debugParse, bool p_printTr
 void
 AST_Fixture :: VerifyErrorMessage ( const char* p_source, const char* p_expectedError )
 {
-    if ( ! m_parser . ParseString ( p_source ) )
+    if ( m_newParse )
     {
-        throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : ParseString() failed" );
+        if ( ! m_parser . ParseString ( p_source ) )
+        {
+            throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : ParseString() failed" );
+        }
+        m_parseTree = m_parser . MoveParseTree ();
+        if ( m_parseTree == 0 )
+        {
+            throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : MoveParseTree() returned 0" );
+        }
+        delete m_builder . Build ( * m_parseTree );
+        if ( m_builder . GetErrorCount() == 0 )
+        {
+            throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : no error" );
+        }
+        if ( string ( m_builder . GetErrorMessage ( 0 ) ) != string ( p_expectedError ) )
+        {
+            throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : expected '" + string ( p_expectedError ) +
+                                                                        "', received '" + string ( m_builder . GetErrorMessage ( 0 ) ) + "'" );
+        }
     }
-    m_parseTree = m_parser . MoveParseTree ();
-    if ( m_parseTree == 0 )
+    else if ( OldParse ( p_source ) )
     {
-        throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : MoveParseTree() returned 0" );
-    }
-    delete m_builder . Build ( * m_parseTree );
-    if ( m_builder . GetErrorCount() == 0 )
-    {
-        throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : no error" );
-    }
-    if ( string ( m_builder . GetErrorMessage ( 0 ) ) != string ( p_expectedError ) )
-    {
-        throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : expected '" + string ( p_expectedError ) +
-                                                                    "', received '" + string ( m_builder . GetErrorMessage ( 0 ) ) + "'" );
+        throw std :: logic_error ( "AST_Function_Fixture::VerifyErrorMessage : no error" );
     }
 }
 

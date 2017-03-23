@@ -127,8 +127,6 @@ class AST_Table_Fixture : public AST_Fixture
 {
 public:
     AST_Table_Fixture ()
-    :   m_showAst ( false ),
-        m_debugParse ( false )
     {
     }
     ~AST_Table_Fixture ()
@@ -139,7 +137,7 @@ public:
     {
         if ( m_newParse )
         {
-            MakeAst ( p_source, false, m_showAst, m_debugParse );
+            MakeAst ( p_source );
         }
         else if ( ! OldParse ( p_source ) )
         {
@@ -152,11 +150,6 @@ public:
             throw std :: logic_error ( "AST_Table_Fixture::ParseTable : wrong name" );
         }
         return TableAccess ( ret );
-    }
-
-    uint32_t Version ( uint32_t p_major, uint32_t p_minor = 0, uint32_t p_release = 0 )
-    {
-        return ( p_major << 24 ) + ( p_minor << 16 ) + p_release;
     }
 
 #define THROW_ON_TRUE(cond) if ( cond ) throw logic_error ( "VerifyPhysicalColumn: " #cond );
@@ -184,9 +177,6 @@ public:
         THROW_ON_TRUE ( p_col . name != colExpr . _sym );
     }
 #undef THROW_ON_TRUE
-
-    bool m_showAst;
-    bool m_debugParse;
 };
 
 FIXTURE_TEST_CASE(Table_Empty, AST_Table_Fixture)
@@ -275,7 +265,7 @@ FIXTURE_TEST_CASE(Table_OneParent, AST_Table_Fixture)
 
 FIXTURE_TEST_CASE(Table_ParentDifferentMajorVersion, AST_Table_Fixture)
 {
-    VerifyErrorMessage  ( "table p#2 { }; table t#1 = p#1 { };", "Parent table not found: 'p'" );
+    VerifyErrorMessage  ( "table p#2 { }; table t#1 = p#1 { };", "Requested version does not exist: 'p#1'" );
 }
 FIXTURE_TEST_CASE(Table_ParentOlderMinorVersion, AST_Table_Fixture)
 {   // requesting an older minor version is not a problem
@@ -284,11 +274,11 @@ FIXTURE_TEST_CASE(Table_ParentOlderMinorVersion, AST_Table_Fixture)
 }
 FIXTURE_TEST_CASE(Table_ParentNewerMinorVersion, AST_Table_Fixture)
 {
-    VerifyErrorMessage  ( "table p#1.1 { }; table t#1 = p#1.2 { };", "Parent table not found: 'p'" );
+    VerifyErrorMessage  ( "table p#1.1 { }; table t#1 = p#1.2 { };", "Requested version does not exist: 'p#1.2'" );
 }
 FIXTURE_TEST_CASE(Table_ParentNewerRelease, AST_Table_Fixture)
 {
-    VerifyErrorMessage  ( "table p#1.1.1 { }; table t#1 = p#1.1.2 { };", "Parent table not found: 'p'" );
+    VerifyErrorMessage  ( "table p#1.1.1 { }; table t#1 = p#1.1.2 { };", "Requested version does not exist: 'p#1.1.2'" );
 }
 FIXTURE_TEST_CASE(Table_ParentOlderRelease, AST_Table_Fixture)
 {   // requesting an older release is not a problem
@@ -322,6 +312,8 @@ FIXTURE_TEST_CASE(Table_ParentRedeclared, AST_Table_Fixture)
     TableAccess p ( static_cast < const STable * > ( VectorGet ( & t . Parents (), 0 ) ) );
     REQUIRE_EQ ( Version ( 1, 2 ), p. Version () );
 }
+
+//TODO: parent not a table
 
 // table body
 

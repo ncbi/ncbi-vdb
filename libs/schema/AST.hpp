@@ -53,6 +53,7 @@ namespace ncbi
             AST ( const Token* token, AST* );
             AST ( const Token* token, AST*, AST* );
             AST ( const Token* token, AST*, AST*, AST* );
+            AST ( const Token* token, AST*, AST*, AST*, AST * );
             AST ( const Token* token, AST*, AST*, AST*, AST *, AST * );
             AST ( const Token* token, AST*, AST*, AST*, AST*, AST*, AST* );
 

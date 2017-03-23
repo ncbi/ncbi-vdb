@@ -160,21 +160,19 @@ extern int AST_debug;
     PT_TYPEEXPR = 369,
     PT_DBBODY = 370,
     PT_DBDAD = 371,
-    PT_DATABASEMEMBER = 372,
-    PT_DBMEMBER = 373,
-    PT_TABLEMEMBER = 374,
-    PT_TBLMEMBER = 375,
-    PT_NOHEADER = 376,
-    PT_CASTEXPR = 377,
-    PT_CONSTVECT = 378,
-    PT_NEGATE = 379,
-    PT_UNARYPLUS = 380,
-    PT_VERSNAME = 381,
-    PT_ARRAY = 382,
-    PT_AT = 383,
-    PT_PHYSENCEXPR = 384,
-    PT_PHYSENCREF = 385,
-    PT_TYPEDCOLEXPR = 386
+    PT_DBMEMBER = 372,
+    PT_TBLMEMBER = 373,
+    PT_NOHEADER = 374,
+    PT_CASTEXPR = 375,
+    PT_CONSTVECT = 376,
+    PT_NEGATE = 377,
+    PT_UNARYPLUS = 378,
+    PT_VERSNAME = 379,
+    PT_ARRAY = 380,
+    PT_AT = 381,
+    PT_PHYSENCEXPR = 382,
+    PT_PHYSENCREF = 383,
+    PT_TYPEDCOLEXPR = 384
   };
 #endif
 
@@ -192,7 +190,7 @@ union YYSTYPE
   AST_ParamSig* paramSig;
   bool          boolean;
 
-#line 196 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
+#line 194 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

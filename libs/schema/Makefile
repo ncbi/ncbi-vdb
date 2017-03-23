@@ -79,6 +79,7 @@ SCHEMA_SRC = \
     ASTBuilder \
     ASTBuilder-func \
     ASTBuilder-tbl \
+    ASTBuilder-db \
 
 schema-grammar.$(LOBX): $(SRCDIR)/schema-grammar.cpp
 	$(CP) -o $@ -fPIC $(OPT) -D_LIBRARY $< $(LOC_INFO) -D__file_ext__=cpp

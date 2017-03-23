@@ -66,10 +66,7 @@ public:
 
     void PrintTree ( const ParseTree& p_tree );
 
-    AST * MakeAst ( const char* p_source,
-                    bool p_debugParse = false,
-                    bool p_printTree = false,
-                    bool p_debugAst = false );
+    AST * MakeAst ( const char* p_source );
 
     void VerifyErrorMessage ( const char* p_source, const char* p_expectedError );
 
@@ -93,6 +90,17 @@ public:
 
     const VSchema * GetSchema () const { return m_newParse ? m_builder . GetSchema () : m_schema; }
 
+    uint32_t Version ( uint32_t p_major, uint32_t p_minor = 0, uint32_t p_release = 0 )
+    {
+        return ( p_major << 24 ) + ( p_minor << 16 ) + p_release;
+    }
+
+    // set to true to control debugging output (all false by default)
+    bool m_debugParse;
+    bool m_printTree;
+    bool m_debugAst;
+    //
+
     SchemaParser    m_parser;
     ParseTree *     m_parseTree;
     ASTBuilder      m_builder;
@@ -100,6 +108,7 @@ public:
 
     VSchema *   m_schema;
     bool        m_newParse;
+
 };
 
 #endif

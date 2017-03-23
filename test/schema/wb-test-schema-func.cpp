@@ -103,7 +103,7 @@ public:
         const SFunction* ret = 0;
         if ( m_newParse )
         {
-            MakeAst ( p_source, false, false );
+            MakeAst ( p_source );
             const KSymbol* sym = VerifySymbol ( p_name, p_type );
 
             // for functions, sym points to an entry in the overloads table (schema->fname)
@@ -154,18 +154,6 @@ public:
     }
 
     PhysicalAccess ParsePhysical ( const char * p_source, const char * p_name );
-
-    void VerifyErrorMessage ( const char* p_source, const char* p_expectedError )
-    {
-        if ( m_newParse )
-        {
-            return AST_Fixture :: VerifyErrorMessage ( p_source, p_expectedError );
-        }
-        if ( OldParse ( p_source ) )
-        {
-            throw std :: logic_error ( "AST_Function_Fixture::VerifyErrorMessage : no error" );
-        }
-    }
 };
 
 // untyped
@@ -724,7 +712,7 @@ AST_Function_Fixture :: ParsePhysical ( const char * p_source, const char * p_na
     const SPhysical* ret = 0;
     if ( m_newParse )
     {
-        MakeAst ( p_source, false, false );
+        MakeAst ( p_source );
         const KSymbol* sym = VerifySymbol ( p_name, ePhysical );
 
         // for physical functions, sym points to an entry in the overloads table (schema->pname)

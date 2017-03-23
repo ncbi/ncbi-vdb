@@ -118,6 +118,23 @@ AST :: AST ( const Token * p_token,
              AST * p_child1,
              AST * p_child2,
              AST * p_child3,
+             AST * p_child4 )
+: ParseTree ( * p_token )
+{
+    assert ( p_child1 != 0 );
+    AddNode ( p_child1 );
+    assert ( p_child2 != 0 );
+    AddNode ( p_child2 );
+    assert ( p_child3 != 0 );
+    AddNode ( p_child3 );
+    assert ( p_child4 != 0 );
+    AddNode ( p_child4 );
+}
+
+AST :: AST ( const Token * p_token,
+             AST * p_child1,
+             AST * p_child2,
+             AST * p_child3,
              AST * p_child4,
              AST * p_child5,
              AST * p_child6 )

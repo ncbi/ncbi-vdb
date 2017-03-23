@@ -40,11 +40,12 @@ using namespace ncbi::SchemaParser;
 #include "schema-ast-tokens.h"
 
 using namespace std;
+
 bool
-ASTBuilder :: HandleTableOverload ( const STable *     p_table,
-                                       uint32_t         p_version,
-                                       const KSymbol *  p_priorDecl,
-                                       uint32_t *       p_id )
+ASTBuilder :: HandleTableOverload ( const STable *   p_table,
+                                    uint32_t         p_version,
+                                    const KSymbol *  p_priorDecl,
+                                    uint32_t *       p_id )
 {
     assert ( p_table != 0 );
     assert ( p_priorDecl != 0 );
@@ -226,6 +227,27 @@ ASTBuilder :: HandleTypedColumn ( STable & p_table, SColumn & p_col, const AST &
     return true;
 }
 
+const void *
+ASTBuilder :: SelectVersion ( const KSymbol & p_ovl, int64_t ( CC * p_cmp ) ( const void *item, const void *n ), uint32_t * p_version )
+{
+    const SNameOverload *name = static_cast < const SNameOverload * > ( p_ovl . u . obj );
+    assert ( p_version != 0 );
+    const void * ret = 0;
+    if ( * p_version != 0 )
+    {
+        ret = VectorFind ( & name -> items, p_version, NULL, p_cmp );
+        if ( ret == 0 )
+        {
+            ReportError ( "Requested version does not exist: '%S#%V'", & p_ovl . name, * p_version );
+        }
+    }
+    else
+    {
+        ret = VectorLast ( & name -> items );
+    }
+    return ret;
+}
+
 SExpression *
 ASTBuilder :: MakePhysicalEncodingSpec ( const KSymbol & p_sym,
                                          const AST_FQN & p_fqn,
@@ -251,25 +273,12 @@ ASTBuilder :: MakePhysicalEncodingSpec ( const KSymbol & p_sym,
 
         // capture requested version
         assert ( p_sym . type == ePhysical );
-        const SNameOverload *name = static_cast < const SNameOverload * > ( p_sym . u . obj );
         ret -> version = p_fqn . GetVersion ();
-        if ( ret -> version != 0 )
-        {
-            ret -> phys = static_cast < const SPhysical * > ( VectorFind ( & name -> items, & ret -> version, NULL, SPhysicalCmp ) );
-            ret -> version_requested = true;
-        }
-        else
-        {
-            ret -> phys = static_cast < const SPhysical * > ( VectorLast ( & name -> items ) );
-            ret -> version_requested = false;
-        }
+        ret -> version_requested = ret -> version != 0;
+        ret -> phys = static_cast < const SPhysical * > ( SelectVersion ( p_sym, SPhysicalCmp, & ret -> version ) );
 
         /* evaluate type expression */
-        if ( ret -> phys == 0 )
-        {
-            ReportError ( "Requested version does not exist: '%S#%V'", & p_sym . name, ret -> version );
-        }
-        else
+        if ( ret -> phys != 0 )
         {
             rc_t rc;
             {
@@ -499,34 +508,18 @@ ASTBuilder :: HandleTableParents ( STable & p_table, const AST & p_parents )
     for ( uint32_t i = 0 ; i < parentCount; ++i )
     {
         const AST_FQN * parent = dynamic_cast < const AST_FQN * > ( p_parents . GetChild ( i ) );
-        if ( parent != 0 )
+        assert ( parent != 0 );
+        const KSymbol * parentDecl = Resolve ( * parent, true );
+        if ( parentDecl != 0 )
         {
-            const KSymbol * parentDecl = Resolve ( * parent, true );
-            if ( parentDecl != 0 )
+            uint32_t vers = parent -> GetVersion ();
+            const STable * dad = static_cast < const STable * > ( SelectVersion ( * parentDecl, STableCmp, & vers ) );
+            if ( dad != 0 )
             {
-                uint32_t vers = parent -> GetVersion ();
-                const STable * dad;
-                const SNameOverload * name = static_cast < const SNameOverload * > ( parentDecl -> u . obj );
-                if ( vers == 0 )
+                rc_t rc = STableExtend ( & m_symtab, & p_table, dad );
+                if ( rc != 0 )
                 {
-                    dad = static_cast < const STable * > ( VectorLast ( & name -> items ) );
-                }
-                else
-                {
-                    dad = static_cast < const STable * > ( VectorFind ( & name -> items, & vers, NULL, STableCmp ) );
-                }
-                if ( dad != 0 )
-                {
-                    rc_t rc = STableExtend ( & m_symtab, & p_table, dad );
-                    if ( rc != 0 )
-                    {
-                        ReportRc ( "STableExtend", rc );
-                        break;
-                    }
-                }
-                else
-                {
-                    ReportError ( "Parent table not found", * parent );
+                    ReportRc ( "STableExtend", rc );
                     break;
                 }
             }
