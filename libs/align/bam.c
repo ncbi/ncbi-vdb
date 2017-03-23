@@ -4008,10 +4008,10 @@ rc_t MeasureIndex(const uint8_t data[], size_t dlen, unsigned refNo,
     
     ctx->refs = refs;
     if (elements != 0) {
-        if (type == bai_intervals && binNo < MAX_BIN) {
+        if (type == bai_intervals) {
             ctx->intervals += elements;
         }
-        else if (type == bai_pairs) {
+        else if (type == bai_pairs && binNo < MAX_BIN) {
             ctx->pairs += elements;
         }
     }
