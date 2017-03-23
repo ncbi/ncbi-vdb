@@ -224,7 +224,7 @@
 %type <node> col_modifier col_decl col_ident col_body col_stmt typed_col column_expr
 %type <node> factory_parms factory_parms_opt schema_parm schema_parms arrayspec
 %type <node> phys_enc_ref col_body_opt database opt_dbdad dbbody db_members
-%type <node> db_dbmember template_opt
+%type <node> db_member template_opt
 
 %type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
 
@@ -243,7 +243,7 @@
 %type <tok> KW_read KW_validate KW_limit PT_SCHEMAFORMAL PT_PRODSTMT PT_PRODTRIGGER
 %type <tok> PT_NOHEADER KW_decode KW_encode KW___row_length PT_COLDECL PT_TYPEDCOL PT_TYPEEXPR
 %type <tok> PT_PHYSENCEXPR PT_PHYSENCREF KW_column PT_TYPEDCOLEXPR PT_DATABASE PT_DBBODY
-%type <tok> KW_template KW_database PT_DBMEMBER
+%type <tok> KW_template KW_database PT_DBMEMBER PT_TBLMEMBER
 
 %%
 
@@ -668,14 +668,16 @@ dbbody
     ;
 
 db_members
-    : db_dbmember               { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    : db_member               { $$ = new AST (); $$ -> AddNode ( $1 ); }
     | ';'                       { $$ = new AST (); }
-    | db_members db_dbmember    { $$ = $1; $$ -> AddNode ( $2 ); }
+    | db_members db_member    { $$ = $1; $$ -> AddNode ( $2 ); }
     | db_members ';'            { $$ = $1; }
     ;
 
-db_dbmember
+db_member
     : PT_DBMEMBER '(' template_opt KW_database fqn_opt_vers ident ';' ')'
+        { $$ = new AST ( $1, $3, $5, $6 ); }
+    | PT_TBLMEMBER '(' template_opt KW_table fqn_opt_vers ident ';' ')'
         { $$ = new AST ( $1, $3, $5, $6 ); }
     ;
 

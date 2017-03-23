@@ -46,6 +46,12 @@ public:
         return static_cast < const SDBMember * > ( VectorGet ( & m_self -> db, p_idx ) );
     }
 
+    uint32_t TableMemberCount () const { return VectorLength ( & m_self -> tbl ); }
+    const STblMember * GetTableMember ( uint32_t p_idx ) const
+    {
+        return static_cast < const STblMember * > ( VectorGet ( & m_self -> tbl, p_idx ) );
+    }
+
     uint32_t OverloadCount () const
     {
         const SNameOverload * ovl = static_cast < const SNameOverload * > ( m_self -> name -> u . obj );
@@ -83,7 +89,11 @@ public:
         }
 
         const SDatabase * ret = static_cast < const SDatabase* > ( VectorGet ( & GetSchema () -> db, p_idx ) );
-        if ( ret == 0 || ret -> name == 0 || string ( p_name ) != ToCppString ( ret -> name -> name ) )
+        if ( ret == 0 )
+        {
+            throw std :: logic_error ( "AST_Db_Fixture::ParseDatabase : DB not found" );
+        }
+        if ( ret -> name == 0 || string ( p_name ) != ToCppString ( ret -> name -> name ) )
         {
             throw std :: logic_error ( "AST_Db_Fixture::ParseDatabase : wrong name" );
         }
@@ -160,7 +170,6 @@ FIXTURE_TEST_CASE(DB_DbMemberVersionDoesNotExist, AST_Table_Fixture)
                          "Requested version does not exist: 'p#2'" );
 }
 
-//TODO: template database member
 FIXTURE_TEST_CASE(DB_DbMemberTemplate, AST_Db_Fixture)
 {
     DbAccess db = ParseDatabase ( "database p#1 {}; database d#1 { template database p m_p; };", "d", 1 );
@@ -169,8 +178,23 @@ FIXTURE_TEST_CASE(DB_DbMemberTemplate, AST_Db_Fixture)
     REQUIRE ( m -> tmpl );
 }
 
-//TODO: table member
-//TODO: template table member
+FIXTURE_TEST_CASE(DB_TableMember, AST_Db_Fixture)
+{
+    DbAccess db = ParseDatabase ( "table t#1 {}; database d#1 { table t m_p; };", "d", 0 );
+    REQUIRE_EQ ( 1u, db . TableMemberCount () );
+    const STblMember * m = db . GetTableMember ( 0 );
+    REQUIRE_NOT_NULL ( m );
+    REQUIRE_NOT_NULL ( m -> name );
+    REQUIRE_EQ ( string ( "m_p" ), ToCppString ( m -> name -> name ) );
+    REQUIRE ( ! m -> tmpl );
+    REQUIRE_NOT_NULL ( m -> tbl );
+    REQUIRE_EQ ( 0u, m -> tbl -> id );
+}
 
-
-
+FIXTURE_TEST_CASE(DB_TableMemberTemplate, AST_Db_Fixture)
+{
+    DbAccess db = ParseDatabase ( "table t#1 {}; database d#1 { template table t m_p; };", "d", 0 );
+    REQUIRE_EQ ( 1u, db . TableMemberCount () );
+    const STblMember * m = db . GetTableMember ( 0 );
+    REQUIRE ( m -> tmpl );
+}

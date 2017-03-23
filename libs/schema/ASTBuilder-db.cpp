@@ -33,6 +33,7 @@
 #include "../vdb/schema-parse.h"
 #undef typename
 #include "../vdb/schema-priv.h"
+#include "../vdb/dbmgr-priv.h"
 
 using namespace ncbi::SchemaParser;
 #define YYDEBUG 1
@@ -89,6 +90,117 @@ ASTBuilder :: HandleDbOverload ( const SDatabase *  p_db,
 }
 
 void
+ASTBuilder :: HandleDbMemberDb ( SDatabase & p_db, const AST & p_member )
+{
+    assert ( p_member . ChildrenCount () == 3 );
+
+    SDBMember * m = Alloc < SDBMember > ();
+    if ( m != 0 )
+    {
+        if ( p_member . GetChild ( 0 ) -> GetTokenType () == KW_template )
+        {
+            m -> tmpl = true;
+        }
+
+        const AST_FQN * type = dynamic_cast < const AST_FQN* > ( p_member . GetChild ( 1 ) );
+        assert ( type != 0 );
+        const KSymbol * dbName = Resolve ( * type );
+        if ( dbName != 0 )
+        {
+            if ( dbName -> type == eDatabase )
+            {
+                if ( dbName != p_db . name )
+                {
+                    String memName;
+                    assert ( p_member . GetChild ( 2 ) -> GetChild ( 0 ) != 0 );
+                    StringInitCString ( & memName, p_member . GetChild ( 2 ) -> GetChild ( 0 ) -> GetTokenValue () );
+                    rc_t rc = KSymTableCreateConstSymbol ( & GetSymTab (), & m -> name, & memName, eDBMember, m );
+                    if ( rc == 0 )
+                    {
+                        uint32_t vers = type -> GetVersion ();
+                        m -> db = static_cast < const SDatabase * > ( SelectVersion ( * dbName, SDatabaseCmp, & vers ) );
+                        if ( m -> db != 0 )
+                        {
+                            VectorAppend ( p_db . db, & m -> cid . id, m );
+                            return;
+                        }
+                    }
+                    else if ( GetRCState ( rc ) == rcExists )
+                    {
+                        ReportError ( "Member already exists: '%S'", & memName );
+                    }
+                    else
+                    {
+                        ReportRc ( "KSymTableCreateConstSymbol", rc);
+                    }
+                }
+                else
+                {
+                    ReportError ( "Database declared but not defined", * type );
+                }
+            }
+            else
+            {
+                ReportError ( "Not a database", * type );
+            }
+        }
+        SDBMemberWhack ( m, 0 );
+    }
+}
+
+void
+ASTBuilder :: HandleDbMemberTable ( SDatabase & p_db, const AST & p_member )
+{
+    assert ( p_member . ChildrenCount () == 3 );
+
+    STblMember * m = Alloc < STblMember > ();
+    if ( m != 0 )
+    {
+        if ( p_member . GetChild ( 0 ) -> GetTokenType () == KW_template )
+        {
+            m -> tmpl = true;
+        }
+
+        const AST_FQN * type = dynamic_cast < const AST_FQN* > ( p_member . GetChild ( 1 ) );
+        assert ( type != 0 );
+        const KSymbol * tblName = Resolve ( * type );
+        if ( tblName != 0 )
+        {
+            if ( tblName -> type == eTable )
+            {
+                String memName;
+                assert ( p_member . GetChild ( 2 ) -> GetChild ( 0 ) != 0 );
+                StringInitCString ( & memName, p_member . GetChild ( 2 ) -> GetChild ( 0 ) -> GetTokenValue () );
+                rc_t rc = KSymTableCreateConstSymbol ( & GetSymTab (), & m -> name, & memName, eDBMember, m );
+                if ( rc == 0 )
+                {
+                    uint32_t vers = type -> GetVersion ();
+                    m -> tbl = static_cast < const STable * > ( SelectVersion ( * tblName, STableCmp, & vers ) );
+                    if ( m -> tbl != 0 )
+                    {
+                        VectorAppend ( p_db . tbl, & m -> cid . id, m );
+                        return;
+                    }
+                }
+                else if ( GetRCState ( rc ) == rcExists )
+                {
+                    ReportError ( "Member already exists: '%S'", & memName );
+                }
+                else
+                {
+                    ReportRc ( "KSymTableCreateConstSymbol", rc);
+                }
+            }
+            else
+            {
+                ReportError ( "Not a table", * type );
+            }
+        }
+        STblMemberWhack ( m, 0 );
+    }
+}
+
+void
 ASTBuilder :: HandleDbBody ( SDatabase & p_db, const AST & p_body )
 {
     rc_t rc = push_db_scope ( & GetSymTab (), & p_db );
@@ -104,62 +216,16 @@ ASTBuilder :: HandleDbBody ( SDatabase & p_db, const AST & p_body )
                 switch ( member . GetTokenType () )
                 {
                 case PT_DBMEMBER:
-                    {
-                        assert ( member . ChildrenCount () == 3 );
-
-                        SDBMember * m = Alloc < SDBMember > ();
-
-                        if ( member . GetChild ( 0 ) -> GetTokenType () == KW_template )
-                        {
-                            m -> tmpl = true;
-                        }
-
-                        const AST_FQN * type = dynamic_cast < const AST_FQN* > ( member . GetChild ( 1 ) );
-                        assert ( type != 0 );
-                        const KSymbol * dbName = Resolve ( * type );
-                        if ( dbName != 0 )
-                        {
-                            if ( dbName -> type == eDatabase )
-                            {
-                                if ( dbName != p_db . name )
-                                {
-                                    String memName;
-                                    assert ( member . GetChild ( 2 ) -> GetChild ( 0 ) != 0 );
-                                    StringInitCString ( & memName, member . GetChild ( 2 ) -> GetChild ( 0 ) -> GetTokenValue () );
-                                    rc = KSymTableCreateConstSymbol ( & GetSymTab (), & m -> name, & memName, eDBMember, m );
-                                    if ( rc == 0 )
-                                    {
-                                        uint32_t vers = type -> GetVersion ();
-                                        m -> db = static_cast < const SDatabase * > ( SelectVersion ( * dbName, SDatabaseCmp, & vers ) );
-                                        if ( m -> db != 0 )
-                                        {
-                                            VectorAppend ( p_db . db, & m -> cid . id, m );
-                                        }
-                                    }
-                                    else if ( GetRCState ( rc ) == rcExists )
-                                    {
-                                        ReportError ( "Member already exists: '%S'", & memName );
-                                    }
-                                    else
-                                    {
-                                        ReportRc ( "KSymTableCreateConstSymbol", rc);
-                                    }
-                                }
-                                else
-                                {
-                                    ReportError ( "Database declared but not defined", * type );
-                                }
-                            }
-                            else
-                            {
-                                ReportError ( "Not a database", * type );
-                            }
-                        }
-
-                    }
+                    HandleDbMemberDb ( p_db, member );
                     break;
+
+                case PT_TBLMEMBER:
+                    HandleDbMemberTable ( p_db, member );
+                    break;
+
                 case PT_EMPTY:
                     break;
+
                 default:
                     assert ( false );
                 }

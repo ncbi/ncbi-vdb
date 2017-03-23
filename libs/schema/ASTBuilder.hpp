@@ -150,6 +150,8 @@ namespace ncbi
             void AddColumn ( STable & p_table, const AST & p_modifiers, const AST & p_decl, const AST * p_default );
 
             void HandleDbBody ( SDatabase & p_db, const AST & p_body );
+            void HandleDbMemberDb ( SDatabase & p_db, const AST & p_member );
+            void HandleDbMemberTable ( SDatabase & p_db, const AST & p_member );
 
             const void * SelectVersion ( const struct KSymbol & p_ovl, int64_t ( CC * p_cmp ) ( const void *item, const void *n ), uint32_t * p_version );
 
