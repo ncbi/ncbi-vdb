@@ -656,6 +656,9 @@ foreach my $href (@REQ) {
         } elsif ($quasi_optional && $found_itf && ($need_lib && ! $found_lib)) {
             println "configure: $a{name} package: "
                 . "found interface files but not libraries.";
+            $found_itf = abs_path($found_itf);
+            push(@dependencies, "$a{aname}_INCDIR = $found_itf");
+            println "includes: $found_itf";
         } else {
             if ($OPT{'debug'}) {
                 $_ = "$a{name}: includes: ";
