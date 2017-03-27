@@ -4070,6 +4070,7 @@ rc_t LoadIndex(BAMFile *self, const uint8_t buf[], size_t blen)
         size_t indexDataCount = ctx1.pairs * 2 + ctx1.intervals;
         BAMIndex *idx = calloc(1, indexRootSize);
         if (idx) {
+            idx->numRefs = ctx1.refs;
             idx->data = calloc(indexDataCount, sizeof(BAMFilePosition));
             if (idx->data) {
                 struct LoadIndex2_s ctx2;
@@ -4236,7 +4237,12 @@ struct BAMFileRange {
     BAMFilePosition end;
 };
 
-typedef struct BAMFileSlice BAMFileSlice;
+static int64_t CC BAMFileRange_cmp(void const *const A, void const *const B, void *ctx)
+{
+    struct BAMFileRange const *const a = (struct BAMFileRange const *)A;
+    struct BAMFileRange const *const b = (struct BAMFileRange const *)B;
+    return a->start < b->start ? -1 : b->start < a->start ? 1 : a->end < b->end ? -1 : b->end < a->end ? 1 : 0;
+}
 
 struct BAMFileSlice {
     unsigned refSeqId;
@@ -4304,11 +4310,17 @@ LIB_EXPORT rc_t CC BAMFileMakeSlice(const BAMFile *self, BAMFileSlice **rslt, ui
             BAMFilePosition const *const range = refIndex->bin + refIndex->binStart[bin];
             unsigned k;
             
+            /* fprintf(stderr, "examining bin %u\n", bin); */
             for (k = 0; k < binSize; ++k) {
                 BAMFilePosition const chunk_beg = range[k * 2 + 0];
                 BAMFilePosition const chunk_end = range[k * 2 + 1];
-                if (chunk_end < maxPos)
+                if (chunk_beg < maxPos) {
+                    /* fprintf(stderr, "\tadding range %012llX|%04X - %012llX|%04X\n", (unsigned long long)(chunk_beg >> 16), (unsigned)(chunk_beg & 0xFFFF), (unsigned long long)(chunk_end >> 16), (unsigned)(chunk_end & 0xFFFF)); */
                     ++ranges;
+                }
+                else {
+                    /* fprintf(stderr, "\tskiping range %012llX|%04X - %012llX|%04X\n", (unsigned long long)(chunk_beg >> 16), (unsigned)(chunk_beg & 0xFFFF), (unsigned long long)(chunk_end >> 16), (unsigned)(chunk_end & 0xFFFF)); */
+                }
             }
         }
     }
@@ -4333,24 +4345,23 @@ LIB_EXPORT rc_t CC BAMFileMakeSlice(const BAMFile *self, BAMFileSlice **rslt, ui
                     for (k = 0; k < binSize; ++k) {
                         BAMFilePosition const chunk_beg = range[k * 2 + 0];
                         BAMFilePosition const chunk_end = range[k * 2 + 1];
-                        if (chunk_end < maxPos) {
+                        if (chunk_beg < maxPos) {
                             slice->range[ranges].start = chunk_beg;
-                            slice->range[ranges].end = chunk_end;
+                            slice->range[ranges].end = chunk_end < maxPos ? chunk_end : maxPos;
                             ++ranges;
                         }
                     }
                 }
             }
+            ksort(slice->range, slice->ranges, sizeof(slice->range[0]), BAMFileRange_cmp, NULL);
         }
     }
     else {
-        slice = malloc(sizeof(*slice));
+        slice = calloc(1, sizeof(*slice));
         if (slice) {
             slice->refSeqId = refSeqId;
             slice->sliceStart = alignStart;
             slice->sliceEnd = alignEnd;
-            slice->ranges = 0;
-            slice->current = 0;
         }
     }
     *rslt = slice;
@@ -4367,20 +4378,23 @@ LIB_EXPORT rc_t CC BAMFileReadSlice(const BAMFile *cself, const BAMAlignment **r
     
     while (slice->current < slice->ranges) {
         BAMFilePosition curPos = 0;
-        
+        BAMFilePosition const start = slice->range[slice->current].start;
+        BAMFilePosition const end = slice->range[slice->current].end;
+
         if (slice->started == 0) {
-            rc_t rc = BAMFileSetPosition(cself, &slice->range[0].start);
+            rc_t rc = BAMFileSetPosition(cself, &start);
             if (rc) break;
+            /* fprintf(stderr, "checking range %012llX|%04X - %012llX|%04X\n", (unsigned long long)(start >> 16), (unsigned)(start & 0xFFFF), (unsigned long long)(end >> 16), (unsigned)(end & 0xFFFF)); */
         }
         ++slice->started;
         BAMFileGetPosition(cself, &curPos);
-        if (curPos < slice->range[slice->current].end) {
+        if (curPos < end) {
             return BAMFileRead2(cself, rhs);
         }
         ++slice->current;
         slice->started = 0;
     }
-    return 0;
+    return RC(rcAlign, rcFile, rcReading, rcRow, rcNotFound);
 }
 
 LIB_EXPORT rc_t CC BAMFileSeek(const BAMFile *self, uint32_t refSeqId, uint64_t alignStart, uint64_t alignEnd)
