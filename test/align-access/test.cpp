@@ -43,9 +43,7 @@ extern "C" {
 }
 
 #define VERY_VERBOSE (0)
-static bool const verbose = true;
-
-#define SLICING (1u << 24)
+static bool const verbose = false;
 
 namespace AlignAccess {
     class AlignmentEnumerator;
@@ -58,16 +56,10 @@ namespace AlignAccess {
         explicit AlignmentEnumerator(AlignAccessAlignmentEnumerator *Self) : self(Self) {}
     public:
         AlignmentEnumerator(AlignmentEnumerator const &rhs) : self(rhs.self) {
-#if VERY_VERBOSE
-            std::cerr << "AlignAccessAlignmentEnumeratorAddRef" << std::endl;
-#endif
             rc_t const rc = AlignAccessAlignmentEnumeratorAddRef(self);
             if (rc) throw std::logic_error("AlignAccessAlignmentEnumeratorAddRef failed");
         }
         ~AlignmentEnumerator() {
-#if VERY_VERBOSE
-            std::cerr << "AlignAccessAlignmentEnumeratorRelease" << std::endl;
-#endif
             AlignAccessAlignmentEnumeratorRelease(self);
         }
         bool next() const {
@@ -95,23 +87,17 @@ namespace AlignAccess {
         explicit Database(AlignAccessDB const *Self) : self(Self) {}
     public:
         Database(Database const &rhs) : self(rhs.self) {
-#if VERY_VERBOSE
-            std::cerr << "AlignAccessDBAddRef" << std::endl;
-#endif
             rc_t const rc = AlignAccessDBAddRef(self);
             if (rc) throw std::logic_error("AlignAccessDBAddRef failed");
         }
         ~Database() {
-#if VERY_VERBOSE
-            std::cerr << "AlignAccessDBRelease" << std::endl;
-#endif
             AlignAccessDBRelease(self);
         }
 
         AlignmentEnumerator slice(std::string const &refName, int start, int end) const
         {
             AlignAccessAlignmentEnumerator *p = 0;
-            if (verbose) std::cerr << "Generating slice " << refName << ':' << start << '-' << end << std::endl;
+            if (verbose) std::cerr << "Generating slice " << refName << ':' << (start + 1) << '-' << end << std::endl;
             rc_t const rc = AlignAccessDBWindowedAlignments(self, &p, refName.c_str(), start, end - start);
             if (rc == 0) return AlignmentEnumerator(p);
             if ((int)GetRCObject(rc) == rcRow && (int)GetRCState(rc) == rcNotFound)
@@ -125,9 +111,6 @@ namespace AlignAccess {
         Manager() : self(0) {}
     public:
         ~Manager() {
-#if VERY_VERBOSE
-            std::cerr << "AlignAccessMgrRelease" << std::endl;
-#endif
             AlignAccessMgrRelease(self);
         }
 
@@ -210,6 +193,22 @@ class LoaderFixture
         return std::string("/panfs/pan1/trace-flatten/durbrowk/HG002.GRCh38.300x.bam");
 #endif
     }
+    void test1Range(int const start, int const length) const {
+        int last = -1;
+        int first = -1;
+        int alignments = 0;
+        AlignAccess::AlignmentEnumerator e = db.slice("chr1", start, start + length);
+        while (e.next()) {
+            last = e.position();
+            if (alignments == 0)
+                first = last;
+            ++alignments;
+        }
+        if (alignments > 0)
+            std::cout << start + 1 << '-' << start + length << ": " << alignments << " (" << first + 1 << '-' << last + 1 << ")\n";
+        else
+            std::cout << start + 1 << '-' << start + length << ": 0\n";
+    }
 public:
     LoaderFixture() : db(AlignAccess::Manager::make().open(BAM_FILE_NAME()))
     {
@@ -218,21 +217,8 @@ public:
     {
     }
     void testIndex(void) const {
-        std::cerr << "starting test" << std::endl;
-        int last = -1;
-        int alignments = 0;
-        AlignAccess::AlignmentEnumerator e = db.slice("chr1", 141484029, 141484029 + 11733);
-        while (e.next()) {
-            last = e.position();
-            if (alignments == 0)
-                std::cout << "first: " << last << std::endl;
-            ++alignments;
-        }
-        std::cout << alignments << " alignments" << std::endl;
-        if (alignments > 0) {
-            std::cout << "last: " << last << std::endl;
-        }
-        std::cerr << "test complete" << std::endl;
+        test1Range(100000000, 1);
+        test1Range(141484029, 11733);
     }
 };    
 
