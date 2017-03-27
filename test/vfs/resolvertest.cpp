@@ -192,11 +192,15 @@ public:
 
     ~ResolverFixtureCustomConfig()
     {
-        if (vfs && VFSManagerRelease(vfs) != 0)
-            throw logic_error ( "~ResolverFixtureCustomConfig: VFSManagerRelease failed" );
+        rc_t rc = VFSManagerRelease(vfs);
+        if ( rc != 0 )
+            fprintf ( stderr, "~ResolverFixtureCustomConfig: VFSManagerRelease()=%u\n", rc );
+        vfs = NULL;
 
-        if (resolver && VResolverRelease(resolver) != 0)
-            throw logic_error ( "~ResolverFixtureCustomConfig: VResolverRelease failed" );
+        rc = VResolverRelease(resolver);
+        if ( rc != 0 )
+            fprintf ( stderr, "~ResolverFixtureCustomConfig: VResolverRelease()=%u\n", rc );
+        resolver = NULL;
 
         remove(m_configName.c_str());
     }
