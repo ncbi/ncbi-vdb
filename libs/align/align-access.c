@@ -440,7 +440,7 @@ AGAIN:
         }
         else {
             endpos = (uint64_t)pos + length;
-            if (endpos <= self->startpos)
+            if (endpos < self->startpos)
                 goto AGAIN;
         }
     }
