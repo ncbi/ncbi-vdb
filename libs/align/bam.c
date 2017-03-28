@@ -4415,7 +4415,7 @@ LIB_EXPORT rc_t CC BAMFileReadSlice(const BAMFile *cself, const BAMAlignment **r
         if (slice->started == 0) {
             rc_t rc = BAMFileSetPosition(cself, &start);
             if (rc) break;
-#if 1
+#if 0
             fprintf(stderr, "checking range %012llX|%04X - %012llX|%04X\n", (unsigned long long)(start >> 16), (unsigned)(start & 0xFFFF), (unsigned long long)(end >> 16), (unsigned)(end & 0xFFFF));
 #endif
         }
