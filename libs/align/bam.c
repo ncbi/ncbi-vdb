@@ -4353,7 +4353,7 @@ static void cleanSlice(BAMFileSlice *slice)
         unsigned const cur = i - 1;
         unsigned const prv = cur - 1;
         
-        if (slice->range[cur].start >= slice->range[prv].end) {
+        if (slice->range[cur].start <= slice->range[prv].end) {
             slice->range[prv].end = slice->range[cur].end;
             memmove(&slice->range[cur], &slice->range[i], (slice->ranges - i) * sizeof(slice->range[0]));
             --slice->ranges;
