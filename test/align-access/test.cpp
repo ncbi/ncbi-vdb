@@ -33,6 +33,7 @@
 
 #include <stdexcept> 
 #include <string>
+#include <algorithm>
 
 extern "C" {
 #include <klib/rc.h>
@@ -227,6 +228,64 @@ FIXTURE_TEST_CASE ( LoadIndex, LoaderFixture )
     testIndex();
 }
 
+typedef struct BinRange {
+    uint16_t beg, end;
+} BinRange;
+
+typedef struct BinList {
+    BinRange range[6];
+} BinList;
+
+BinList calcBinList(unsigned const refBeg, unsigned const refEnd)
+{
+    BinList rslt;
+    unsigned size = 1 << 29;
+    unsigned offset = 0;
+    unsigned i;
+    
+    for (i = 0; i < 6; ++i) {
+        rslt.range[i].beg = offset + refBeg / size;
+        rslt.range[i].end = 1 + offset + (refEnd - 1) / size;
+        offset += 1 << (3 * i);
+        size >>= 3;
+    }
+    assert(rslt.range[0].beg == 0 && rslt.range[0].end == 1);
+    return rslt;
+}
+
+#define MAX_BIN (((1<<18)-1)/7)
+unsigned reg2bins(unsigned beg, unsigned end, uint16_t list[MAX_BIN])
+{
+    unsigned i = 0, k;
+    --end;
+    list[i++] = 0;
+    for (k =    1 + (beg>>26); k <=    1 + (end>>26); ++k) list[i++] = k;
+    for (k =    9 + (beg>>23); k <=    9 + (end>>23); ++k) list[i++] = k;
+    for (k =   73 + (beg>>20); k <=   73 + (end>>20); ++k) list[i++] = k;
+    for (k =  585 + (beg>>17); k <=  585 + (end>>17); ++k) list[i++] = k;
+    for (k = 4681 + (beg>>14); k <= 4681 + (end>>14); ++k) list[i++] = k;
+    return i;
+}
+
+bool testBinList(unsigned const beg, unsigned const end) {
+    BinRange const expected[] = {
+        {    0            ,    1                 },
+        {    1 + (beg>>26),    2 + ((end-1)>>26) },
+        {    9 + (beg>>23),   10 + ((end-1)>>23) },
+        {   73 + (beg>>20),   74 + ((end-1)>>20) },
+        {  585 + (beg>>17),  586 + ((end-1)>>17) },
+        { 4681 + (beg>>14), 4682 + ((end-1)>>14) },
+    };
+    BinList const bins = calcBinList(beg, end);
+    
+    for (unsigned i = 0; i < 6; ++i) {
+        if (expected[i].beg != bins.range[i].beg || expected[i].end != bins.range[i].end) {
+            std::cerr << "Layer " << (i + 1) << ": " << bins.range[i].beg << " - " << bins.range[i].end << "; expected " << expected[i].beg << " - " << expected[i].end << std::endl;
+        }
+    }
+    return true;
+}
+
 //////////////////////////////////////////// Main
 #include <kapp/args.h>
 #include <klib/out.h>
@@ -234,7 +293,7 @@ FIXTURE_TEST_CASE ( LoadIndex, LoaderFixture )
 
 extern "C"
 {
-
+    
 ver_t CC KAppVersion ( void )
 {
     return 0x1000000;
