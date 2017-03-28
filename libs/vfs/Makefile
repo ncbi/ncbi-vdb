@@ -76,7 +76,7 @@ VFS_SRC_CMN = \
 	manager  \
 	resolver \
 	resolver-3.0 \
-	services \
+	remote-services \
 	srv-response \
 	syspath \
 
