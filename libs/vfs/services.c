@@ -167,7 +167,7 @@ typedef struct {
 #define N_NAMES1_0 5
 #define N_NAMES1_1 10
 #define N_NAMES3_0  9
-#define N_NAMES3_2 12
+#define N_NAMES3_2 15
 #define N_NAMES3_1 N_NAMES3_2
 
 
@@ -196,6 +196,9 @@ typedef struct {
     String hsUrl;
     String flUrl;
     String s3Url;
+    size_t vdbcacheSize;
+    KTime_t vdbcacheDate;
+    SMd5 vdbcacheMd5;
     String vdbcacheUrl;
     String hVdbcacheUrl;
     String fpVdbcacheUrl;
@@ -1248,10 +1251,13 @@ static void * STypedGetFieldNames3_2 ( STyped * self, int n ) {
         case  5: return & self -> md5;
         case  6: return & self -> ticket;
         case  7: return & self -> url;
-        case  8: return & self -> vdbcacheUrl;
-        case  9: return & self -> expiration;
-        case 10: return & self -> code;
-        case 11: return & self -> message;
+        case  8: return & self -> vdbcacheSize;
+        case  9: return & self -> vdbcacheDate;
+        case 10: return & self -> vdbcacheMd5;
+        case 11: return & self -> vdbcacheUrl;
+        case 12: return & self -> expiration;
+        case 13: return & self -> code;
+        case 14: return & self -> message;
     }
     return 0;
 }
@@ -1267,10 +1273,13 @@ static const SConverters * SConvertersNames3_2Make ( void ) {
         md5Init,             /*  5 md5 */
         aStringInit,         /*  6 ticket */
         aStringInit,         /*  7 url */
-        aStringInit,         /*  8 vdbcache-url */
-        KTimeInit,           /*  9 expiration */
-        uint32_tInit,        /* 10 status-code */
-        aStringInit,         /* 11 message */
+        size_tInit,          /*  8 vdbcache-size */
+        KTimeInitFromIso8601,/*  9 vdbcache-date */
+        md5Init,             /* 10 vdbcache-md5 */
+        aStringInit,         /* 11 vdbcache-url */
+        KTimeInit,           /* 12 expiration */
+        uint32_tInit,        /* 13 status-code */
+        aStringInit,         /* 14 message */
         NULL };
     static const SConverters c = {
         N_NAMES3_2,
