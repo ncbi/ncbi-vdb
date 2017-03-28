@@ -4055,7 +4055,7 @@ rc_t LoadIndex2(const uint8_t data[], size_t dlen, unsigned refNo,
         }
     }
     else if (type == bai_intervals) {
-        BAMFilePosition *const dst = ctx->self->pos[ctx->cur_pos];
+        BAMFilePosition *const dst = ctx->self->pos + ctx->cur_pos;
         self->intervals = elements;
         self->interval = dst;
         for (i = 0; i < elements; ++i) {
