@@ -4244,13 +4244,6 @@ rc_t BAMFileGetAlignPosAtFilePos(BAMFile *const self,
     return rc;
 }
 
-static int64_t CC BAMFileRange_cmp(void const *const A, void const *const B, void *ctx)
-{
-    struct BAMFileRange const *const a = (struct BAMFileRange const *)A;
-    struct BAMFileRange const *const b = (struct BAMFileRange const *)B;
-    return a->start < b->start ? -1 : b->start < a->start ? 1 : a->end < b->end ? -1 : b->end < a->end ? 1 : 0;
-}
-
 struct BAMFileSlice {
     unsigned refSeqId;
     unsigned sliceStart;
@@ -4344,6 +4337,31 @@ static void copyRanges(BAMFileSlice *slice, BAMIndexReference const *const refIn
     assert(j == slice->ranges);
 }
 
+static int64_t CC BAMFileRange_cmp(void const *const A, void const *const B, void *ctx)
+{
+    struct BAMFileRange const *const a = (struct BAMFileRange const *)A;
+    struct BAMFileRange const *const b = (struct BAMFileRange const *)B;
+    return a->start < b->start ? -1 : b->start < a->start ? 1 : a->end < b->end ? -1 : b->end < a->end ? 1 : 0;
+}
+
+static void cleanSlice(BAMFileSlice *slice)
+{
+    unsigned i = slice->ranges;
+    
+    ksort(slice->range, slice->ranges, sizeof(slice->range[0]), BAMFileRange_cmp, NULL);
+    while (i > 1) {
+        unsigned const cur = i - 1;
+        unsigned const prv = cur - 1;
+        
+        if (slice->range[cur].start >= slice->range[prv].end) {
+            slice->range[prv].end = slice->range[cur].end;
+            memmove(&slice->range[cur], &slice->range[i], (slice->ranges - i) * sizeof(slice->range[0]));
+            --slice->ranges;
+        }
+        --i;
+    }
+}
+
 static BAMFileSlice *makeSlice(BAMFile const *const self,
                                unsigned const refSeqId,
                                unsigned const alignStart,
@@ -4367,7 +4385,7 @@ static BAMFileSlice *makeSlice(BAMFile const *const self,
             slice->started = 0;
             
             copyRanges(slice, refIndex, minPos, bins.range);
-            ksort(slice->range, slice->ranges, sizeof(slice->range[0]), BAMFileRange_cmp, NULL);
+            cleanSlice(slice);
         }
     }
     else {
@@ -4415,7 +4433,7 @@ LIB_EXPORT rc_t CC BAMFileReadSlice(const BAMFile *cself, const BAMAlignment **r
         if (slice->started == 0) {
             rc_t rc = BAMFileSetPosition(cself, &start);
             if (rc) break;
-#if 0
+#if 1
             fprintf(stderr, "checking range %012llX|%04X - %012llX|%04X\n", (unsigned long long)(start >> 16), (unsigned)(start & 0xFFFF), (unsigned long long)(end >> 16), (unsigned)(end & 0xFFFF));
 #endif
         }
