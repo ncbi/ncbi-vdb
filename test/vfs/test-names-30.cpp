@@ -125,9 +125,9 @@ TEST_CASE ( INCOMPLETE ) {
     REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( NULL, & response, 0 ) );
     REQUIRE_NULL ( response );
 
-    REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.2\n"
+    REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.1\n"
 "0|| object-id |90|1930-01-13T13:25:30|0123456789abcdefABCDEF0123456789|ticket|"
-"http://url/$fasp://frl/$https://hsl/$file:///p$s3:p|"
+"http://url/$fasp://frl/$https://hsl/$file:///p$s3:p||||"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
             "1490000000|200| message\n"
         "1|| object-i1 |10| dat1 | md1 | ticke1 |"
@@ -140,8 +140,8 @@ TEST_CASE ( SINGLE ) {
     const KSrvResponse * response = NULL;
 
     // incomplete string
-    REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.2\n"
-        "SRR000001||http://dwnl.ncbi.nlm.nih.gov/srapub/SRR000001|200|ok",
+    REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.1\n"
+        "SRR000001||http://dwnl.ncbi.nlm.nih.gov/srapub/SRR000001||||200|ok",
         & response, 0 ) );
     REQUIRE_NULL ( response );
     REQUIRE_RC ( KSrvResponseRelease (response ) );
@@ -161,9 +161,9 @@ TEST_CASE ( SINGLE ) {
     const VPath * p3 = Path . make ( "s3:p"               , date, md5, exp );
     const VPath * v3 = Path . make ( "s3:v"               , ""  , md5 );
 
-    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
+    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.1\n"
 "0|| object-id |90|1980-01-13T13:25:30|0123456789abcdefABCDEF012345678a|ticket|"
-"http://url/$fasp://frl/$https://hsl/$file:///p$s3:p|"
+"http://url/$fasp://frl/$https://hsl/$file:///p$s3:p||||"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
             "2000000000|200| message\n"
         "$1500000000\n", & response, 0 ) );
@@ -286,13 +286,13 @@ TEST_CASE ( DOUBLE ) {
     const KTime_t exp = 1489700000  ;
     const string date1 (  "1981-01-13T13:25:31" );
     const KTime_t exp1 = 1489710000  ;
-    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
+    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.1\n"
         "0|| object-id |90|1981-01-13T13:25:30||ticket|"
-"http://url/$fasp://frl/$https://hsl/$file:///p$s3:p|"
+"http://url/$fasp://frl/$https://hsl/$file:///p$s3:p||||"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
             "1489700000|200| message\n"
         "1|| object-i1 |10|1981-01-13T13:25:31|| ticke1 |"
-          "http://ur1/|https://vdbcacheUrl1/|1489710000|200| messag1\n"
+          "http://ur1/||||https://vdbcacheUrl1/|1489710000|200| messag1\n"
         "$1489690000\n", & response, 0 ) );
 
     CHECK_NOT_NULL ( response );
@@ -339,18 +339,18 @@ TEST_CASE ( DOUBLE ) {
 
 TEST_CASE ( BAD_TYPE ) {
     const KSrvResponse * response = NULL;
-    REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.2\n"
+    REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.1\n"
         "0|t| object-id |9|1981-01-13T13:25:30|0123456789abcdefABCDEF012345678b"
-		"|ticket|||1981-01-13T13:25:30|200| mssg\n",
+		"|ticket|||1981-01-13T13:25:30||||200| mssg\n",
         & response, 1 ) );
     REQUIRE_NULL ( response );
 }
 
 TEST_CASE ( ERROR ) {
     const KSrvResponse * response = NULL;
-    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
+    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.1\n"
         "0|| object-id |90|1981-01-13T13:25:30|0123456789abcdefABCDEF012345678c"
-		"|ticket|||1489688000|500| mssg\n",
+		"|ticket||||||1489688000|500| mssg\n",
         & response, 1 ) );
     REQUIRE_NOT_NULL ( response );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 1u );
@@ -371,11 +371,11 @@ TEST_CASE ( ERROR ) {
 
 TEST_CASE ( AND_ERROR ) {
     const KSrvResponse * response = NULL;
-    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.2\n"
+    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.1\n"
 "0|na|object-0|90|1930-01-13T13:25:30|0123456789abcdefABCDEF012345678d|tckt0|||"
-          "1489687900|503|e mssg\n"
+          "|||1489687900|503|e mssg\n"
 "1||objc1|10|1931-01-13T13:25:31|0123456789abcdefABCDEF012345678e|1|http://u/||"
-          "1489687200|200|messag\n"
+          "|||1489687200|200|messag\n"
         , & response, 1 ) );
     REQUIRE_NOT_NULL ( response );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 2u );
@@ -447,7 +447,7 @@ if ( 1 )
 
     REQUIRE_RC ( KServiceAddId ( service, "SRR000001" ) );
 #if 0
-    REQUIRE_RC_FAIL ( KServiceTestNamesExecuteExt ( service, 0, NULL, "#3.2",
+    REQUIRE_RC_FAIL ( KServiceTestNamesExecuteExt ( service, 0, NULL, "#3.1",
         & response, "" ) );
     REQUIRE_RC ( KServiceTestNamesExecuteExt ( service, 0, NULL, "#1.2",
         & response, NULL ) );
@@ -476,11 +476,12 @@ if ( 1 )
     REQUIRE_RC ( KSrvResponseRelease ( response ));
 #endif
 
-    REQUIRE_RC ( KServiceTestNamesExecuteExt ( service, 0, NULL, "#3.2",
+    REQUIRE_RC ( KServiceTestNamesExecuteExt ( service, 0, NULL, "#3.1",
         & response, "#3.2\n"
         "0|srapub|SRR000001|312527083|2015-04-07T21:54:15|"
         "9bde35fefa9d955f457e22d9be52bcd9||"
-        "http://sra-download.ncbi.nlm.nih.gov/srapub/SRR000001|||200|ok\n" ) );
+        "http://sra-download.ncbi.nlm.nih.gov/srapub/SRR000001||||||200|ok\n"
+    ) );
     REQUIRE_EQ ( KSrvResponseLength ( response ), 1u );
     REQUIRE_RC ( KSrvResponseRelease ( response ));
 
@@ -496,7 +497,7 @@ TEST_CASE ( TEST_KFG ) {
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] ) {
-        if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
+        if ( 1 ) assert ( ! KDbgSetString ( "VFS" ) );
         return Names3_0_TestSuite ( argc, argv );
     }
 }
