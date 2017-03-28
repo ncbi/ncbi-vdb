@@ -54,7 +54,8 @@ namespace AlignAccess {
     class AlignmentEnumerator {
         friend class Database;
         AlignAccessAlignmentEnumerator *const self;
-        explicit AlignmentEnumerator(AlignAccessAlignmentEnumerator *Self) : self(Self) {}
+        mutable bool skip;
+        explicit AlignmentEnumerator(AlignAccessAlignmentEnumerator *Self) : self(Self), skip(true) {}
     public:
         AlignmentEnumerator(AlignmentEnumerator const &rhs) : self(rhs.self) {
             rc_t const rc = AlignAccessAlignmentEnumeratorAddRef(self);
@@ -65,6 +66,10 @@ namespace AlignAccess {
         }
         bool next() const {
             if (self) {
+                if (skip) {
+                    skip = false;
+                    return true;
+                }
                 rc_t const rc = AlignAccessAlignmentEnumeratorNext(self);
                 if (rc == 0) return true;
                 if ((int)GetRCObject(rc) == rcRow && (int)GetRCState(rc) == rcNotFound)
@@ -183,7 +188,8 @@ using namespace std;
 
 TEST_SUITE(IndexTestSuite);
 
-class LoaderFixture
+#if 1
+class LoaderFixture1
 {
     AlignAccess::Database const db;
 
@@ -191,14 +197,14 @@ class LoaderFixture
 #if MAC
         return std::string("/net/traces04/giab05/ftp/data/AshkenazimTrio/HG002_NA24385_son/NIST_HiSeq_HG002_Homogeneity-10953946/NHGRI_Illumina300X_AJtrio_novoalign_bams/HG002.GRCh38.300x.bam");
 #else
-        return std::string("/panfs/pan1/trace-flatten/durbrowk/HG002.GRCh38.300x.bam");
+        return std::string("/netmnt/traces04/giab05/ftp/data/AshkenazimTrio/HG002_NA24385_son/NIST_HiSeq_HG002_Homogeneity-10953946/NHGRI_Illumina300X_AJtrio_novoalign_bams/HG002.GRCh38.300x.bam");
 #endif
     }
-    void test1Range(int const start, int const length) const {
+    void test1Range(std::string const &ref, int const start, int const length) const {
         int last = -1;
         int first = -1;
         int alignments = 0;
-        AlignAccess::AlignmentEnumerator e = db.slice("chr1", start, start + length);
+        AlignAccess::AlignmentEnumerator e = db.slice(ref.c_str(), start, start + length);
         while (e.next()) {
             last = e.position();
             if (alignments == 0)
@@ -211,23 +217,65 @@ class LoaderFixture
             std::cout << start + 1 << '-' << start + length << ": 0\n";
     }
 public:
-    LoaderFixture() : db(AlignAccess::Manager::make().open(BAM_FILE_NAME()))
-    {
-    }
-    ~LoaderFixture()
+    LoaderFixture1() : db(AlignAccess::Manager::make().open(BAM_FILE_NAME()))
     {
     }
     void testIndex(void) const {
-        test1Range(100000000, 1);
-        test1Range(141484029, 11733);
+        test1Range("chr1", 100000000, 1);
+        test1Range("chr1", 141484029, 11733);
     }
 };    
 
-FIXTURE_TEST_CASE ( LoadIndex, LoaderFixture ) 
+FIXTURE_TEST_CASE ( LoadIndex1, LoaderFixture1 ) 
+{
+    testIndex();
+}
+#endif
+
+class LoaderFixture2
+{
+    AlignAccess::Database const db;
+
+    static std::string BAM_FILE_NAME(void) {
+#if MAC
+        return std::string("/net/snowman/vol/projects/toolkit_test_data/traces04//1000genomes3/ftp/data/NA19240/exome_alignment/NA19240.mapped.SOLID.bfast.YRI.exome.20111114.bam");
+#else
+        return std::string("/net/snowman/vol/projects/toolkit_test_data/traces04//1000genomes3/ftp/data/NA19240/exome_alignment/NA19240.mapped.SOLID.bfast.YRI.exome.20111114.bam");
+#endif
+    }
+    void test1Range(std::string const &ref, int const start, int const length) const {
+        int last = -1;
+        int first = -1;
+        int alignments = 0;
+        AlignAccess::AlignmentEnumerator e = db.slice(ref.c_str(), start, start + length);
+        while (e.next()) {
+            last = e.position();
+//            std::cout << last + 1 << std::endl;
+            if (alignments == 0)
+                first = last;
+            ++alignments;
+        }
+        if (alignments > 0)
+            std::cout << start + 1 << '-' << start + length << ": " << alignments << " (" << first + 1 << '-' << last + 1 << ")\n";
+        else
+            std::cout << start + 1 << '-' << start + length << ": 0\n";
+    }
+public:
+    LoaderFixture2() : db(AlignAccess::Manager::make().open(BAM_FILE_NAME()))
+    {
+    }
+    void testIndex(void) const {
+        test1Range("1", 1100000, 100000);
+        test1Range("1", 1200000, 100000);
+    }
+};    
+
+FIXTURE_TEST_CASE ( LoadIndex2, LoaderFixture2 ) 
 {
     testIndex();
 }
 
+#if 0
 typedef struct BinRange {
     uint16_t beg, end;
 } BinRange;
@@ -285,6 +333,7 @@ bool testBinList(unsigned const beg, unsigned const end) {
     }
     return true;
 }
+#endif
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>
