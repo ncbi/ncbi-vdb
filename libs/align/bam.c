@@ -833,7 +833,7 @@ static void const *getCigarBase(BAMAlignment const *cself)
     return &cself->data->raw[cself->cigar];
 }
 
-static int opt_tag_cmp(uint8_t const a[2], uint8_t const b[2])
+static int opt_tag_cmp(char const a[2], char const b[2])
 {
     int const d0 = (int)a[0] - (int)b[0];
     return d0 ? d0 : ((int)a[1] - (int)b[1]);
@@ -844,8 +844,8 @@ static int64_t CC OptTag_sort(void const *A, void const *B, void *ctx)
     BAMAlignment const *const self = ctx;
     unsigned const a_off = ((struct offset_size_s const *)A)->offset;
     unsigned const b_off = ((struct offset_size_s const *)B)->offset;
-    uint8_t const *const a = &self->data->raw[a_off];
-    uint8_t const *const b = &self->data->raw[b_off];
+    char const *const a = (char const *)&self->data->raw[a_off];
+    char const *const b = (char const *)&self->data->raw[b_off];
     int const diff = opt_tag_cmp(a, b);
     
     return diff ? (int64_t)diff : (int64_t)a - (int64_t)b;
@@ -858,7 +858,7 @@ static unsigned tag_findfirst(BAMAlignment const *const self, char const tag[2])
     
     while (f < e) {
         unsigned const m = (f + e) >> 1;
-        char const *const mtag = &self->data->raw[self->extra[m].offset];
+        char const *const mtag = (char const *)&self->data->raw[self->extra[m].offset];
         int const d = opt_tag_cmp(tag, mtag);
         
         if (d > 0)
@@ -876,7 +876,7 @@ static unsigned tag_runlength(BAMAlignment const *const self,
     unsigned n;
     
     for (n = 0; n + at < self->numExtra; ++n) {
-        if (opt_tag_cmp(tag, &self->data->raw[self->extra[n + at].offset]) != 0)
+        if (opt_tag_cmp(tag, (char const *)&self->data->raw[self->extra[n + at].offset]) != 0)
             break;
     }
     return n;
@@ -1860,8 +1860,12 @@ LIB_EXPORT float CC BAMFileGetProportionalPosition(const BAMFile *self)
     return self->vt.FileProPos(&self->file);
 }
 
+static BAMFilePosition BAMFileGetPositionInt(const BAMFile *self) {
+    return (self->fpos_cur << 16) | self->bufCurrent;
+}
+
 LIB_EXPORT rc_t CC BAMFileGetPosition(const BAMFile *self, BAMFilePosition *pos) {
-    *pos = (self->fpos_cur << 16) | self->bufCurrent;
+    *pos = BAMFileGetPositionInt(self);
     return 0;
 }
 
@@ -3855,6 +3859,7 @@ static uint64_t get_pos(uint8_t const buf[])
     return LE2HUI64(buf);
 }
 
+#if 0
 static uint16_t bin2ival(uint16_t bin)
 {
     if (bin < 1)
@@ -3900,6 +3905,7 @@ static uint16_t bin_ival_count(uint16_t bin)
     
     return 0;
 }
+#endif
 
 enum BAMIndexStructureTypes {
     bai_pairs,
@@ -4189,61 +4195,6 @@ LIB_EXPORT bool CC BAMFileIndexHasRefSeqId(const BAMFile *self, uint32_t refSeqI
 	return false;
 }
 
-static void BAMAlignmentAlignInfo(BAMAlignment *const self,
-                                  int32_t ref[],
-                                  int32_t beg[],
-                                  int32_t end[])
-{
-    (void)BAMAlignmentSetOffsets(self);
-    
-    ref[0] = getRefSeqId(self);
-    end[0] = (beg[0] = getPosition(self)) + ReferenceLengthFromCIGAR(self);
-}
-
-static
-rc_t BAMFileGetAlignPosAtFilePos(BAMFile *const self,
-                                 BAMFilePosition const *const fpos,
-                                 int32_t ref[],
-                                 int32_t beg[],
-                                 int32_t end[])
-{
-    rc_t rc = BAMFileSetPosition(self, fpos);
-    
-    if (rc == 0) {
-        BAMAlignment x;
-        int32_t i32;
-        
-        rc = BAMFileReadI32(self, &i32); if (rc) return rc;
-        if (i32 <= 0)
-            return RC(rcAlign, rcFile, rcReading, rcData, rcInvalid);
-
-        memset(&x, 0, sizeof(x));
-        x.datasize = i32;
-        if (x.datasize <= BAMFileMaxPeek(self)) {
-            x.data = (void *)&self->buffer[self->bufCurrent];
-            BAMFileAdvance(self, x.datasize);
-
-            BAMAlignmentAlignInfo(&x, ref, beg, end);
-        }
-        else {
-            void *const temp = malloc(x.datasize);
-            
-            if (temp) {
-                x.data = temp;
-                
-                rc = BAMFileReadn(self, x.datasize, temp);
-                if (rc == 0)
-                    BAMAlignmentAlignInfo(&x, ref, beg, end);
-                
-                free(temp);
-            }
-            else
-                rc = RC(rcAlign, rcFile, rcReading, rcMemory, rcExhausted);
-        }
-    }
-    return rc;
-}
-
 struct BAMFileSlice {
     unsigned refSeqId;
     unsigned sliceStart;
@@ -4278,7 +4229,24 @@ BinList calcBinList(unsigned const refBeg, unsigned const refEnd)
     return rslt;
 }
 
-static unsigned countRanges(BAMIndexReference const *const refIndex, BAMFilePosition const minPos, BinRange const *const ranges)
+/*
+ BAM spec says the following:
+> 5.1.3 Combining with linear index
+>
+> For an alignment starting beyond 64Mbp, we always need to seek to some chunks
+> in bin 0, which can be avoided by using a linear index. In the linear index,
+> for each tiling 16384bp window on the reference, we record the smallest file
+> offset of the alignments that start in the window. Given a region [rbeg,rend),
+> we only need to visit a chunk whose end file offset is larger than the file
+> offset of the 16kbp window containing rbeg.
+
+ But, I'm not sure that's true.
+ */
+#define USE_SECTION_5_1_3 (0)
+static unsigned countRanges(BAMIndexReference const *const refIndex,
+                            BAMFilePosition const minPos,
+                            BAMFilePosition const maxPos,
+                            BinRange const ranges[6])
 {
     unsigned j = 0;
     unsigned i;
@@ -4291,17 +4259,20 @@ static unsigned countRanges(BAMIndexReference const *const refIndex, BAMFilePosi
             BAMFileRange const *const range = refIndex->bin + refIndex->binStart[bin];
             unsigned k;
             
-            /* fprintf(stderr, "examining bin %u\n", bin); */
             for (k = 0; k < binSize; ++k) {
-                BAMFilePosition const chunk_beg = range[k].start;
-                BAMFilePosition const chunk_end = range[k].end;
-                if (chunk_end > minPos) {
-                    /* fprintf(stderr, "\tadding range %012llX|%04X - %012llX|%04X\n", (unsigned long long)(chunk_beg >> 16), (unsigned)(chunk_beg & 0xFFFF), (unsigned long long)(chunk_end >> 16), (unsigned)(chunk_end & 0xFFFF)); */
-                    ++j;
+                {
+                    BAMFilePosition const chunk_beg = range[k].start;
+                    if (chunk_beg >= maxPos)
+                        continue;
                 }
-                else {
-                    /* fprintf(stderr, "\tskiping range %012llX|%04X - %012llX|%04X\n", (unsigned long long)(chunk_beg >> 16), (unsigned)(chunk_beg & 0xFFFF), (unsigned long long)(chunk_end >> 16), (unsigned)(chunk_end & 0xFFFF)); */
+#if USE_SECTION_5_1_3
+                {
+                    BAMFilePosition const chunk_end = range[k].end;
+                    if (chunk_end <= minPos)
+                        continue;
                 }
+#endif
+                ++j;
             }
             ++bin;
         }
@@ -4309,7 +4280,13 @@ static unsigned countRanges(BAMIndexReference const *const refIndex, BAMFilePosi
     return j;
 }
 
-static void copyRanges(BAMFileSlice *slice, BAMIndexReference const *const refIndex, BAMFilePosition const minPos, BinRange const *const ranges)
+/* whether to merge while inserting into slice.range */
+#define PRE_MERGE (0)
+static void copyRanges(BAMFileSlice *slice,
+                       BAMIndexReference const *const refIndex,
+                       BAMFilePosition const minPos,
+                       BAMFilePosition const maxPos,
+                       BinRange const ranges[6])
 {
     unsigned j = 0;
     unsigned i;
@@ -4325,41 +4302,65 @@ static void copyRanges(BAMFileSlice *slice, BAMIndexReference const *const refIn
             for (k = 0; k < binSize; ++k) {
                 BAMFilePosition const chunk_beg = range[k].start;
                 BAMFilePosition const chunk_end = range[k].end;
-                if (chunk_end > minPos) {
-                    slice->range[j].start = chunk_beg;
-                    slice->range[j].end = chunk_end;
-                    ++j;
+                unsigned f = 0;
+                unsigned e = j;
+
+                if (chunk_beg >= maxPos)
+                    continue;
+#if USE_SECTION_5_1_3
+                if (chunk_end < minPos)
+                    continue;
+#endif
+                while (f < e) {
+                    unsigned const m = f + ((e - f) >> 1);
+                    BAMFilePosition const fnd = slice->range[m].start;
+                    if (chunk_beg < fnd)
+                        e = m;
+                    else if (chunk_beg > fnd)
+                        f = m + 1;
+                    else
+                        break;
                 }
+#if PRE_MERGE
+                if (f == j) {
+                    /* append */
+                    slice->range[f].start = chunk_beg;
+                    slice->range[f].end = chunk_end;
+                    ++j;
+                    continue;
+                }
+                if (chunk_end < slice->range[f].start) {
+                    /* insert */
+                    memmove(&slice->range[f + 1], &slice->range[f], (j - f) * sizeof(slice->range[0]));
+                    ++j;
+                    slice->range[f].start = chunk_beg;
+                    slice->range[f].end = chunk_end;
+                    continue;
+                }
+                /* merge */
+                if (slice->range[f].start > chunk_beg)
+                    slice->range[f].start = chunk_beg;
+                if (slice->range[f].end < chunk_end)
+                    slice->range[f].end = chunk_end;
+                if (f == 0)
+                    continue;
+                if (slice->range[f-1].end <= chunk_beg) {
+                    /* merge to previous and remove */
+                    slice->range[f-1].end = chunk_end;
+                    memmove(&slice->range[f], &slice->range[f+1], (j - (f+1)) * sizeof(slice->range[0]));
+                    --j;
+                }
+#else
+                memmove(&slice->range[f + 1], &slice->range[f], (j - f) * sizeof(slice->range[0]));
+                ++j;
+                slice->range[f].start = chunk_beg;
+                slice->range[f].end = chunk_end;
+#endif
             }
             ++bin;
         }
     }
-    assert(j == slice->ranges);
-}
-
-static int64_t CC BAMFileRange_cmp(void const *const A, void const *const B, void *ctx)
-{
-    struct BAMFileRange const *const a = (struct BAMFileRange const *)A;
-    struct BAMFileRange const *const b = (struct BAMFileRange const *)B;
-    return a->start < b->start ? -1 : b->start < a->start ? 1 : a->end < b->end ? -1 : b->end < a->end ? 1 : 0;
-}
-
-static void cleanSlice(BAMFileSlice *slice)
-{
-    unsigned i = slice->ranges;
-
-    ksort(slice->range, slice->ranges, sizeof(slice->range[0]), BAMFileRange_cmp, NULL);
-    while (i > 1) {
-        unsigned const cur = i - 1;
-        unsigned const prv = cur - 1;
-        
-        if (slice->range[cur].start <= slice->range[prv].end) {
-            slice->range[prv].end = slice->range[cur].end;
-            memmove(&slice->range[cur], &slice->range[i], (slice->ranges - i) * sizeof(slice->range[0]));
-            --slice->ranges;
-        }
-        --i;
-    }
+    slice->ranges = j;
 }
 
 static BAMFileSlice *makeSlice(BAMFile const *const self,
@@ -4370,8 +4371,10 @@ static BAMFileSlice *makeSlice(BAMFile const *const self,
     BinList const bins = calcBinList(alignStart, alignEnd);
     BAMIndexReference const *const refIndex = &self->ndx->ref[refSeqId];
     unsigned const startBin = alignStart >> 14;
+    unsigned const endBin = ((alignEnd - 1) >> 14) + 1;
     BAMFilePosition const minPos = refIndex->interval[startBin];
-    unsigned const ranges = countRanges(refIndex, minPos, bins.range);
+    BAMFilePosition const maxPos = endBin < refIndex->intervals ? refIndex->interval[endBin] : refIndex->end;
+    unsigned const ranges = countRanges(refIndex, minPos, maxPos, bins.range);
     BAMFileSlice *slice = 0;
     
     if (ranges > 0) {
@@ -4384,8 +4387,7 @@ static BAMFileSlice *makeSlice(BAMFile const *const self,
             slice->current = 0;
             slice->started = 0;
             
-            copyRanges(slice, refIndex, minPos, bins.range);
-            cleanSlice(slice);
+            copyRanges(slice, refIndex, minPos, maxPos, bins.range);
         }
     }
     else {
@@ -4426,24 +4428,27 @@ LIB_EXPORT rc_t CC BAMFileReadSlice(const BAMFile *cself, const BAMAlignment **r
         return RC(rcAlign, rcFile, rcReading, rcParam, rcNull);
     
     while (slice->current < slice->ranges) {
-        BAMFilePosition curPos = 0;
-        BAMFilePosition const start = slice->range[slice->current].start;
-        BAMFilePosition const end = slice->range[slice->current].end;
-
         if (slice->started == 0) {
-            rc_t rc = BAMFileSetPosition(cself, &start);
+            rc_t rc = BAMFileSetPosition(cself, &slice->range[slice->current].start);
             if (rc) break;
 #if 0
-            fprintf(stderr, "checking range %012llX|%04X - %012llX|%04X\n", (unsigned long long)(start >> 16), (unsigned)(start & 0xFFFF), (unsigned long long)(end >> 16), (unsigned)(end & 0xFFFF));
+            {
+                BAMFilePosition const start = slice->range[slice->current].start;
+                BAMFilePosition const end = slice->range[slice->current].end;
+                fprintf(stderr, "checking range %012llX|%04X - %012llX|%04X\n", (unsigned long long)(start >> 16), (unsigned)(start & 0xFFFF), (unsigned long long)(end >> 16), (unsigned)(end & 0xFFFF));
+            }
 #endif
         }
         ++slice->started;
-        BAMFileGetPosition(cself, &curPos);
-        if (curPos < end) {
-            return BAMFileRead2(cself, rhs);
+        {
+            BAMFilePosition const curPos = BAMFileGetPositionInt(cself);
+            if (curPos < slice->range[slice->current].end) {
+                return BAMFileRead2(cself, rhs);
+            }
+            ++slice->current;
+            if (slice->current < slice->ranges && curPos < slice->range[slice->current].start)
+                slice->started = 0;
         }
-        ++slice->current;
-        slice->started = 0;
     }
     return RC(rcAlign, rcFile, rcReading, rcRow, rcNotFound);
 }
