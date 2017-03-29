@@ -106,6 +106,7 @@ namespace AlignAccess {
             if (verbose) std::cerr << "Generating slice " << refName << ':' << (start + 1) << '-' << end << std::endl;
             rc_t const rc = AlignAccessDBWindowedAlignments(self, &p, refName.c_str(), start, end - start);
             if (rc == 0) return AlignmentEnumerator(p);
+            AlignAccessAlignmentEnumeratorRelease(p);
             if ((int)GetRCObject(rc) == rcRow && (int)GetRCState(rc) == rcNotFound)
                 return AlignmentEnumerator(0);
             throw std::logic_error("AlignAccessDBWindowedAlignments failed");
@@ -200,29 +201,41 @@ class LoaderFixture1
         return std::string("/netmnt/traces04/giab05/ftp/data/AshkenazimTrio/HG002_NA24385_son/NIST_HiSeq_HG002_Homogeneity-10953946/NHGRI_Illumina300X_AJtrio_novoalign_bams/HG002.GRCh38.300x.bam");
 #endif
     }
-    void test1Range(std::string const &ref, int const start, int const length) const {
-        int last = -1;
-        int first = -1;
+    int test1Range(char const *ref, int const start, int const length) const {
         int alignments = 0;
-        AlignAccess::AlignmentEnumerator e = db.slice(ref.c_str(), start, start + length);
+        AlignAccess::AlignmentEnumerator e = db.slice(ref, start, start + length);
         while (e.next()) {
-            last = e.position();
-            if (alignments == 0)
-                first = last;
             ++alignments;
         }
-        if (alignments > 0)
-            std::cout << start + 1 << '-' << start + length << ": " << alignments << " (" << first + 1 << '-' << last + 1 << ")\n";
-        else
-            std::cout << start + 1 << '-' << start + length << ": 0\n";
+        return alignments;
     }
 public:
     LoaderFixture1() : db(AlignAccess::Manager::make().open(BAM_FILE_NAME()))
     {
     }
     void testIndex(void) const {
-        test1Range("chr1", 100000000, 1);
-        test1Range("chr1", 141484029, 11733);
+        struct {
+            char const *ref;
+            int start;
+            int length;
+            int expected;
+            int result;
+        } test[] = {
+            { "chr1", 100000000, 1, 348, -1 },
+            { "chr1", 141484029, 11733, 0, -1 },
+        };
+        int const n = 2;
+        bool failed = false;
+        for (int i = 0; i < n; ++i)
+            test[i].result = test1Range(test[i].ref, test[i].start, test[i].length);
+        for (int i = 0; i < n; ++i) {
+            std::cout << "slice " << test[i].ref << ':' << test[i].start + 1 << '-' << test[i].start + test[i].length << " should have " << test[i].expected << " alignments, got " << test[i].result << std::endl;
+            if (test[i].result != test[i].expected) {
+                failed = true;
+            }
+        }
+        if (failed)
+            throw std::runtime_error("failed");
     }
 };    
 
@@ -232,6 +245,7 @@ FIXTURE_TEST_CASE ( LoadIndex1, LoaderFixture1 )
 }
 #endif
 
+#if 1
 class LoaderFixture2
 {
     AlignAccess::Database const db;
@@ -243,30 +257,41 @@ class LoaderFixture2
         return std::string("/net/snowman/vol/projects/toolkit_test_data/traces04//1000genomes3/ftp/data/NA19240/exome_alignment/NA19240.mapped.SOLID.bfast.YRI.exome.20111114.bam");
 #endif
     }
-    void test1Range(std::string const &ref, int const start, int const length) const {
-        int last = -1;
-        int first = -1;
+    int test1Range(char const *ref, int const start, int const length) const {
         int alignments = 0;
-        AlignAccess::AlignmentEnumerator e = db.slice(ref.c_str(), start, start + length);
+        AlignAccess::AlignmentEnumerator e = db.slice(ref, start, start + length);
         while (e.next()) {
-            last = e.position();
-//            std::cout << last + 1 << std::endl;
-            if (alignments == 0)
-                first = last;
             ++alignments;
         }
-        if (alignments > 0)
-            std::cout << start + 1 << '-' << start + length << ": " << alignments << " (" << first + 1 << '-' << last + 1 << ")\n";
-        else
-            std::cout << start + 1 << '-' << start + length << ": 0\n";
+        return alignments;
     }
 public:
     LoaderFixture2() : db(AlignAccess::Manager::make().open(BAM_FILE_NAME()))
     {
     }
     void testIndex(void) const {
-        test1Range("1", 1100000, 100000);
-        test1Range("1", 1200000, 100000);
+        struct {
+            char const *ref;
+            int start;
+            int length;
+            int expected;
+            int result;
+        } test[] = {
+            { "1", 1100000, 100000, 10387, -1 },
+            { "1", 1200000, 100000, 14957, -1 },
+        };
+        int const n = 2;
+        bool failed = false;
+        for (int i = 0; i < n; ++i)
+            test[i].result = test1Range(test[i].ref, test[i].start, test[i].length);
+        for (int i = 0; i < n; ++i) {
+            std::cout << "slice " << test[i].ref << ':' << test[i].start + 1 << '-' << test[i].start + test[i].length << " should have " << test[i].expected << " alignments, got " << test[i].result << std::endl;
+            if (test[i].result != test[i].expected) {
+                failed = true;
+            }
+        }
+        if (failed)
+            throw std::runtime_error("failed");
     }
 };    
 
@@ -274,7 +299,7 @@ FIXTURE_TEST_CASE ( LoadIndex2, LoaderFixture2 )
 {
     testIndex();
 }
-
+#endif
 #if 0
 typedef struct BinRange {
     uint16_t beg, end;
