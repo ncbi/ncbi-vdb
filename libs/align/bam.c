@@ -4229,22 +4229,7 @@ BinList calcBinList(unsigned const refBeg, unsigned const refEnd)
     return rslt;
 }
 
-/*
- BAM spec says the following:
-> 5.1.3 Combining with linear index
->
-> For an alignment starting beyond 64Mbp, we always need to seek to some chunks
-> in bin 0, which can be avoided by using a linear index. In the linear index,
-> for each tiling 16384bp window on the reference, we record the smallest file
-> offset of the alignments that start in the window. Given a region [rbeg,rend),
-> we only need to visit a chunk whose end file offset is larger than the file
-> offset of the 16kbp window containing rbeg.
-
- But, I'm not sure that's true.
- */
-#define USE_SECTION_5_1_3 (0)
 static unsigned countRanges(BAMIndexReference const *const refIndex,
-                            BAMFilePosition const minPos,
                             BAMFilePosition const maxPos,
                             BinRange const ranges[6])
 {
@@ -4260,18 +4245,11 @@ static unsigned countRanges(BAMIndexReference const *const refIndex,
             unsigned k;
             
             for (k = 0; k < binSize; ++k) {
-                {
+                if (maxPos != 0) {
                     BAMFilePosition const chunk_beg = range[k].start;
-                    if (chunk_beg >= maxPos)
+                    if (chunk_beg > maxPos)
                         continue;
                 }
-#if USE_SECTION_5_1_3
-                {
-                    BAMFilePosition const chunk_end = range[k].end;
-                    if (chunk_end <= minPos)
-                        continue;
-                }
-#endif
                 ++j;
             }
             ++bin;
@@ -4280,11 +4258,15 @@ static unsigned countRanges(BAMIndexReference const *const refIndex,
     return j;
 }
 
-/* whether to merge while inserting into slice.range */
-#define PRE_MERGE (0)
+static int64_t CC BAMFileRange_cmp(void const *const A, void const *const B, void *ctx)
+{
+    struct BAMFileRange const *const a = (struct BAMFileRange const *)A;
+    struct BAMFileRange const *const b = (struct BAMFileRange const *)B;
+    return a->start < b->start ? -1 : b->start < a->start ? 1 : a->end < b->end ? -1 : b->end < a->end ? 1 : 0;
+}
+
 static void copyRanges(BAMFileSlice *slice,
                        BAMIndexReference const *const refIndex,
-                       BAMFilePosition const minPos,
                        BAMFilePosition const maxPos,
                        BinRange const ranges[6])
 {
@@ -4302,65 +4284,17 @@ static void copyRanges(BAMFileSlice *slice,
             for (k = 0; k < binSize; ++k) {
                 BAMFilePosition const chunk_beg = range[k].start;
                 BAMFilePosition const chunk_end = range[k].end;
-                unsigned f = 0;
-                unsigned e = j;
 
-                if (chunk_beg >= maxPos)
+                if (chunk_beg > maxPos && maxPos != 0)
                     continue;
-#if USE_SECTION_5_1_3
-                if (chunk_end < minPos)
-                    continue;
-#endif
-                while (f < e) {
-                    unsigned const m = f + ((e - f) >> 1);
-                    BAMFilePosition const fnd = slice->range[m].start;
-                    if (chunk_beg < fnd)
-                        e = m;
-                    else if (chunk_beg > fnd)
-                        f = m + 1;
-                    else
-                        break;
-                }
-#if PRE_MERGE
-                if (f == j) {
-                    /* append */
-                    slice->range[f].start = chunk_beg;
-                    slice->range[f].end = chunk_end;
-                    ++j;
-                    continue;
-                }
-                if (chunk_end < slice->range[f].start) {
-                    /* insert */
-                    memmove(&slice->range[f + 1], &slice->range[f], (j - f) * sizeof(slice->range[0]));
-                    ++j;
-                    slice->range[f].start = chunk_beg;
-                    slice->range[f].end = chunk_end;
-                    continue;
-                }
-                /* merge */
-                if (slice->range[f].start > chunk_beg)
-                    slice->range[f].start = chunk_beg;
-                if (slice->range[f].end < chunk_end)
-                    slice->range[f].end = chunk_end;
-                if (f == 0)
-                    continue;
-                if (slice->range[f-1].end <= chunk_beg) {
-                    /* merge to previous and remove */
-                    slice->range[f-1].end = chunk_end;
-                    memmove(&slice->range[f], &slice->range[f+1], (j - (f+1)) * sizeof(slice->range[0]));
-                    --j;
-                }
-#else
-                memmove(&slice->range[f + 1], &slice->range[f], (j - f) * sizeof(slice->range[0]));
+                slice->range[j].start = chunk_beg;
+                slice->range[j].end = chunk_end;
                 ++j;
-                slice->range[f].start = chunk_beg;
-                slice->range[f].end = chunk_end;
-#endif
             }
             ++bin;
         }
     }
-    slice->ranges = j;
+    ksort(slice->range, slice->ranges, sizeof(slice->range[0]), BAMFileRange_cmp, NULL);
 }
 
 static BAMFileSlice *makeSlice(BAMFile const *const self,
@@ -4370,11 +4304,9 @@ static BAMFileSlice *makeSlice(BAMFile const *const self,
 {
     BinList const bins = calcBinList(alignStart, alignEnd);
     BAMIndexReference const *const refIndex = &self->ndx->ref[refSeqId];
-    unsigned const startBin = alignStart >> 14;
     unsigned const endBin = ((alignEnd - 1) >> 14) + 1;
-    BAMFilePosition const minPos = refIndex->interval[startBin];
     BAMFilePosition const maxPos = endBin < refIndex->intervals ? refIndex->interval[endBin] : refIndex->end;
-    unsigned const ranges = countRanges(refIndex, minPos, maxPos, bins.range);
+    unsigned const ranges = countRanges(refIndex, maxPos, bins.range);
     BAMFileSlice *slice = 0;
     
     if (ranges > 0) {
@@ -4387,7 +4319,7 @@ static BAMFileSlice *makeSlice(BAMFile const *const self,
             slice->current = 0;
             slice->started = 0;
             
-            copyRanges(slice, refIndex, minPos, maxPos, bins.range);
+            copyRanges(slice, refIndex, maxPos, bins.range);
         }
     }
     else {
@@ -4431,13 +4363,6 @@ LIB_EXPORT rc_t CC BAMFileReadSlice(const BAMFile *cself, const BAMAlignment **r
         if (slice->started == 0) {
             rc_t rc = BAMFileSetPosition(cself, &slice->range[slice->current].start);
             if (rc) break;
-#if 0
-            {
-                BAMFilePosition const start = slice->range[slice->current].start;
-                BAMFilePosition const end = slice->range[slice->current].end;
-                fprintf(stderr, "checking range %012llX|%04X - %012llX|%04X\n", (unsigned long long)(start >> 16), (unsigned)(start & 0xFFFF), (unsigned long long)(end >> 16), (unsigned)(end & 0xFFFF));
-            }
-#endif
         }
         ++slice->started;
         {
@@ -4446,7 +4371,9 @@ LIB_EXPORT rc_t CC BAMFileReadSlice(const BAMFile *cself, const BAMAlignment **r
                 return BAMFileRead2(cself, rhs);
             }
             ++slice->current;
-            if (slice->current < slice->ranges && curPos < slice->range[slice->current].start)
+            if (slice->current == slice->ranges)
+                break;
+            if (curPos < slice->range[slice->current].start)
                 slice->started = 0;
         }
     }
