@@ -49,6 +49,12 @@ struct VPathSet {
     const VPath * cacheS3;
 
     const struct KSrvError * error;
+
+    const VPath * local;
+    const VPath * cache;
+    /* rc code after call to VResolverQuery(&local,&cache) */
+    rc_t          localRc;
+    rc_t          cacheRc;
 };
 
 struct KSrvResponse {
@@ -164,8 +170,56 @@ rc_t VPathSetGet ( const VPathSet * self, VRemoteProtocols protocols,
     return 0;
 }
 
-rc_t VPathSetMake
-    ( VPathSet ** self, const EVPath * src, bool singleUrl )
+static
+rc_t VPathSetGetLocal ( const VPathSet * self, const VPath ** path )
+{
+    rc_t rc = 0;
+
+    if ( self == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+    if ( self -> error != NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcError, rcExists );
+    if ( path == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
+
+    * path = NULL;
+
+    if ( self -> localRc != 0 )
+        return self -> localRc;
+
+    rc = VPathAddRef ( self -> local );
+    if ( rc == 0 )
+        * path = self -> local;
+
+    return rc;
+}
+
+static
+rc_t VPathSetGetCache ( const VPathSet * self, const VPath ** path )
+{
+    rc_t rc = 0;
+
+    if ( self == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+    if ( self -> error != NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcError, rcExists );
+    if ( path == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
+
+    * path = NULL;
+
+    if ( self -> cacheRc != 0 )
+        return self -> cacheRc;
+
+    rc = VPathAddRef ( self -> cache );
+    if ( rc == 0 )
+        * path = self -> cache;
+
+    return rc;
+}
+
+rc_t VPathSetMake ( VPathSet ** self, const EVPath * src,
+                    bool singleUrl )
 {
     VPathSet * p = NULL;
     rc_t rc = 0;
@@ -282,6 +336,46 @@ rc_t VPathSetMake
     return rc;
 }
 
+rc_t VPathSetMakeQuery ( VPathSet ** self, const VPath * local, rc_t localRc,
+                         const VPath * cache, rc_t cacheRc )
+{
+    rc_t rc = 0;
+
+    VPathSet * p = NULL;
+
+    assert ( self );
+
+    p = ( VPathSet * ) calloc ( 1, sizeof * p );
+    if ( p == NULL )
+        return RC ( rcVFS, rcPath, rcAllocating, rcMemory, rcExhausted );
+
+    if ( localRc == 0 ) {
+        rc = VPathAddRef ( local );
+        if ( rc == 0 )
+            p -> local = local;
+    }
+    else
+        p -> localRc = localRc;
+
+    if ( cacheRc == 0 ) {
+        rc = VPathAddRef ( cache );
+        if ( rc == 0 )
+            p -> cache = cache;
+    }
+    else
+        p -> cacheRc = cacheRc;
+
+    if ( rc == 0 ) {
+        atomic32_set ( & p -> refcount, 1 );
+
+        * self = p;
+    }
+    else
+        VPathSetWhack ( p );
+
+    return rc;
+}
+
 /* KSrvResponse */
 rc_t KSrvResponseMake ( KSrvResponse ** self ) {
     KSrvResponse * p = ( KSrvResponse * ) calloc ( 1, sizeof * p );
@@ -327,6 +421,45 @@ rc_t KSrvResponseAppend ( KSrvResponse * self, const VPathSet * set ) {
         rc = VectorAppend ( & self -> list, NULL, set );
 
     return rc;
+}
+
+rc_t KSrvResponseAddLocalAndCache ( KSrvResponse * self, uint32_t idx,
+                                    const VPathSet * localAndCache )
+{
+    if ( self == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
+    if ( localAndCache == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
+    else {
+        VPathSet * s = ( VPathSet * ) VectorGet ( & self -> list, idx );
+        if ( s == NULL )
+            return RC ( rcVFS, rcPath, rcAccessing, rcItem, rcNotFound );
+        else {
+            rc_t rc = 0;
+            RELEASE ( VPath, s -> local );
+            if ( rc == 0 ) {
+                if ( localAndCache -> localRc == 0 ) {
+                    rc = VPathAddRef ( localAndCache -> local );
+                    if ( rc == 0 )
+                        s -> local = localAndCache -> local;
+                }
+                else
+                    s -> localRc = localAndCache -> localRc;
+            }
+            RELEASE ( VPath, s -> cache );
+            if ( rc == 0 ) {
+                if ( localAndCache -> cacheRc == 0 ) {
+                    rc = VPathAddRef ( localAndCache -> cache );
+                    if ( rc == 0 )
+                        s -> cache = localAndCache -> cache;
+                }
+                else
+                    s -> cacheRc = localAndCache -> cacheRc;
+            }
+            return rc;
+        }
+    }
 }
 
 uint32_t KSrvResponseLength ( const KSrvResponse * self ) {
@@ -393,4 +526,54 @@ rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
+rc_t KSrvResponseGetLocal ( const KSrvResponse * self, uint32_t idx,
+                            const VPath ** path )
+{
+    const VPathSet * s = NULL;
+
+    if ( self == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
+    s = ( VPathSet * ) VectorGet ( & self -> list, idx );
+
+    if ( s == NULL )
+        return RC ( rcVFS, rcPath, rcAccessing, rcItem, rcNotFound );
+    else {
+        if ( path != NULL )
+            * path = NULL;
+        if ( s -> error == NULL )
+            return VPathSetGetLocal ( s, path );
+        else {
+            rc_t erc = 0;
+            rc_t rc = KSrvErrorRc ( s -> error, & erc );
+            return rc == 0 ? erc : rc;
+        }
+    }
+}
+
+rc_t KSrvResponseGetCache ( const KSrvResponse * self, uint32_t idx,
+                            const VPath ** path )
+{
+    const VPathSet * s = NULL;
+
+    if ( self == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+
+    s = ( VPathSet * ) VectorGet ( & self -> list, idx );
+
+    if ( s == NULL )
+        return RC ( rcVFS, rcPath, rcAccessing, rcItem, rcNotFound );
+    else {
+        if ( path != NULL )
+            * path = NULL;
+        if ( s -> error == NULL )
+            return VPathSetGetCache ( s, path );
+        else {
+            rc_t erc = 0;
+            rc_t rc = KSrvErrorRc ( s -> error, & erc );
+            return rc == 0 ? erc : rc;
+        }
+    }
+}
+
+/******************************************************************************/

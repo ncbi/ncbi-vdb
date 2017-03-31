@@ -61,11 +61,13 @@ rc_t KServiceAddProject ( KService * self, uint32_t id );
 
 
 /************************** name service - version 3 **************************/
-/* Execute Names Service Call using currentdefault protocol version;
-   get KSrvResponse */
-rc_t KServiceNamesExecute ( KService * self, VRemoteProtocols protocols, 
-                             const KSrvResponse ** response );
-
+/* Execute Names Service Call using current default protocol version;
+ * get KSrvResponse - it contains:
+ *   - remote/local/cache location for every requested Id
+ *   - or KSrvError
+ */
+rc_t KServiceNamesQuery ( KService * self, VRemoteProtocols protocols, 
+                          const KSrvResponse ** response );
 
 /************************** search service - version 1 ************************/
 /* Execute Search Service Call; get Kart response */
@@ -90,6 +92,18 @@ uint32_t KSrvResponseLength  ( const KSrvResponse * self );
 rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
     VRemoteProtocols p, const struct VPath ** path,
     const struct VPath ** vdbcache, const KSrvError ** error );
+
+/* GetLocal:
+ *  get local path
+ */
+rc_t KSrvResponseGetLocal ( const KSrvResponse * self, uint32_t idx,
+                            const struct VPath ** local );
+
+/* GetCache:
+ *  get cache path
+ */
+rc_t KSrvResponseGetCache ( const KSrvResponse * self, uint32_t idx,
+                            const struct VPath ** cache );
 
 /************************** KSrvError ******************************
  * KSrvError is generated for Id-s from request that produced an error response

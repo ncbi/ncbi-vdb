@@ -30,6 +30,7 @@
 
 #include <vfs/extern.h>
 
+#include <klib/container.h> /* BSTree */
 #include <klib/debug.h> /* DBGMSG */
 #include <klib/log.h> /* KLogLevel */
 #include <klib/out.h> /* KOutMsg */
@@ -80,8 +81,13 @@ typedef enum {
 /* request/response/processing helper objects */
 typedef struct {
     struct       KConfig        * kfg;
+
     const struct KNSManager     * kMgr;
+                               /* KNSManagerMakeReliableClientRequest */
+
     const struct KRepositoryMgr * repoMgr;
+                               /* KRepositoryMgrGetProtectedRepository */
+
     uint32_t timeoutMs;
 } SHelper;
 
@@ -243,6 +249,9 @@ struct KSrvError {
 };
 
 
+/* EVPath is defined in ./path-priv.h */
+
+
 /* a response row */
 typedef struct {
     SRaw raw;
@@ -316,8 +325,16 @@ typedef struct {
 } SRequestData;
 
 
+typedef struct {
+    BSTNode n;
+    char * ticket;
+    uint32_t project;
+} BSTItem;
+
+
 /* tickets - access authorization keys */
 typedef struct {
+    BSTree ticketsToProjects;
     Vector tickets;
     KDataBuffer str;
     size_t size;
@@ -349,20 +366,20 @@ struct KService {
 
 
 /* SHelper ********************************************************************/
-static rc_t SHelperInit ( SHelper * self, const KNSManager * mgr ) {
+static rc_t SHelperInit ( SHelper * self, const KNSManager * kMgr ) {
     rc_t rc = 0;
     assert ( self );
     memset ( self, 0, sizeof * self );
-    if ( mgr == NULL ) {
+    if ( kMgr == NULL ) {
         KNSManager * kns = NULL;
         rc = KNSManagerMake ( & kns );
-        mgr = kns;
+        kMgr = kns;
     }
     else {
-        rc = KNSManagerAddRef ( mgr );
+        rc = KNSManagerAddRef ( kMgr );
     }
     if ( rc == 0) {
-        self -> kMgr = mgr;
+        self -> kMgr = kMgr;
     }
     self -> timeoutMs = 5000;
     return rc;
@@ -386,10 +403,27 @@ static rc_t SHelperFini ( SHelper * self) {
 
 static rc_t SHelperInitKfg ( SHelper * self ) {
     rc_t rc = 0;
+
     assert ( self );
 
-    if ( self -> kfg == NULL ) {
+    if ( self -> kfg == NULL )
         rc = KConfigMake ( & self -> kfg, NULL );
+
+    return rc;
+}
+
+
+static rc_t SHelperInitRepoMgr ( SHelper * self ) {
+    rc_t rc = 0;
+
+    assert ( self );
+
+    if ( self -> repoMgr == NULL ) {
+        rc = SHelperInitKfg ( self );
+        if ( rc != 0 )
+            return rc;
+
+        rc = KConfigMakeRepositoryMgrRead ( self -> kfg, & self -> repoMgr );
     }
 
     return rc;
@@ -451,15 +485,7 @@ rc_t SHelperProjectToTicket ( SHelper * self, uint32_t projectId,
 
     assert ( self );
 
-    if ( self -> repoMgr == NULL ) {
-        rc = SHelperInitKfg ( self );
-        if ( rc != 0 )
-            return rc;
-
-        rc = KConfigMakeRepositoryMgrRead ( self -> kfg, & self -> repoMgr );
-        if ( rc != 0 )
-            return rc;
-    }
+    rc = SHelperInitRepoMgr ( self );
 
     rc = KRepositoryMgrGetProtectedRepository ( self -> repoMgr, projectId,
         & repo );
@@ -1388,29 +1414,32 @@ rc_t KSrvErrorMake ( const KSrvError ** self,
     const STyped * src, rc_t aRc )
 {
     KSrvError * o = NULL;
-    assert ( self && src && aRc );
+    assert ( self && aRc );
     o = ( KSrvError * ) calloc ( 1, sizeof * o );
     if ( o == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
 
-    o -> message . addr = string_dup ( src -> message . addr,
-                                       src -> message . size );
-    if ( o -> message . addr == NULL )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-    o -> message . size = src -> message . size;
-    o -> message . len  = src -> message . len;
+    if ( src != NULL ) {
+        o -> message . addr = string_dup ( src -> message . addr,
+                                           src -> message . size );
+        if ( o -> message . addr == NULL )
+            return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+        o -> message . size = src -> message . size;
+        o -> message . len  = src -> message . len;
 
-    o -> objectId . addr = string_dup ( src -> objectId . addr,
+        o -> objectId . addr = string_dup ( src -> objectId . addr,
                                         src -> objectId . size );
-    if ( o -> objectId . addr == NULL )
-        return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-    o -> objectId . size = src -> objectId . size;
-    o -> objectId . len  = src -> objectId . len;
+        if ( o -> objectId . addr == NULL )
+            return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
+        o -> objectId . size = src -> objectId . size;
+        o -> objectId . len  = src -> objectId . len;
 
-    o -> objectType = src -> objectType;
+        o -> objectType = src -> objectType;
+
+        o -> code = src -> code;
+    }
 
     o -> rc = aRc;
-    o -> code = src -> code;
 
     atomic32_set ( & o -> refcount, 1 );
 
@@ -1884,11 +1913,6 @@ static void whackSRow ( void * self, void * ignore ) {
 }
 
 
-/*static rc_t SRowUpdate ( SRow * self, const SRow * row ) {
-    return 0;
-}*/
-
-
 /* STimestamp ****************************************************************/
 static rc_t STimestampInit ( STimestamp * self, const String * src ) {
     rc_t rc = 0;
@@ -2148,7 +2172,7 @@ rc_t SKVMakeObj ( const SKV ** self, const SObject * obj,
 
 /* SHttpRequestHelper ********************************************************/
 static rc_t SHttpRequestHelperInit ( SHttpRequestHelper * self,
-    const KNSManager * mgr, const char * cgi )
+    const KNSManager * kMgr, const char * cgi )
 {
     rc_t rc = 0;
 
@@ -2156,7 +2180,7 @@ static rc_t SHttpRequestHelperInit ( SHttpRequestHelper * self,
 
     memset ( self, 0, sizeof * self );
 
-    rc = KNSManagerMakeReliableClientRequest ( mgr, & self -> httpReq,
+    rc = KNSManagerMakeReliableClientRequest ( kMgr, & self -> httpReq,
         0x01010000, NULL, cgi );
 
     return rc;
@@ -2366,18 +2390,78 @@ rc_t SRequestDataAppendObject ( SRequestData * self, const char * id,
 }
 
 
+/* BSTItem *******************************************************************/
+static int64_t CC BSTItemCmp ( const void * item, const BSTNode * n ) {
+    const String * s = item;
+    const BSTItem * i = ( BSTItem * ) n;
+
+    assert ( s && i );
+
+    return string_cmp ( s -> addr, s -> size,
+        i -> ticket, string_measure ( i -> ticket, NULL ), s -> size );
+}
+
+static int64_t CC BSTreeSort ( const BSTNode * item, const BSTNode * n ) {
+    const BSTItem * i = ( BSTItem * ) item;
+    String str;
+    size_t size = 0;
+    uint32_t len = string_measure ( i -> ticket, & size );
+    StringInit ( & str, i -> ticket, size, len );
+    return BSTItemCmp ( & str, n );
+}
+
+static void BSTItemWhack ( BSTNode * n, void * ignore ) {
+    BSTItem * i = ( BSTItem * ) n;
+    assert ( i );
+    free ( i -> ticket );
+    memset ( i, 0, sizeof * i );
+    free ( i );
+}
+
 /* STickets *******************************************************************/
 const uint64_t BICKETS = 1024;
-static rc_t STicketsAppend ( STickets * self, const char * ticket ) {
+static rc_t STicketsAppend ( STickets * self, uint32_t project,
+                             const char * ticket )
+{
     rc_t rc = 0;
+
     const char * comma = "";
+
     assert ( self );
-    if ( ticket == NULL ) {
+
+    if ( ticket == NULL )
         return 0;
+
+    if ( rc == 0 && project > 0 && ticket [ 0 ] ) {
+        BSTItem * i = NULL;
+
+        String str;
+        size_t size = 0;
+        uint32_t len = string_measure ( ticket, & size );
+        StringInit ( & str, ticket, size, len );
+
+        i = ( BSTItem * ) BSTreeFind
+            ( & self -> ticketsToProjects, & str, BSTItemCmp );
+        if ( i != NULL )
+            return 0;
+
+        i = calloc ( 1, sizeof * i );
+        if ( i != NULL )
+            i -> ticket = string_dup_measure ( ticket, NULL );
+        if ( i == NULL || i -> ticket == NULL ) {
+            free ( i );
+            return RC ( rcVFS, rcStorage, rcAllocating, rcMemory, rcExhausted );
+        }
+
+        i -> project = project;
+
+        rc = BSTreeInsert ( & self -> ticketsToProjects, ( BSTNode * ) i,
+                            BSTreeSort );
     }
-    if ( self -> size > 0 ) {
+
+    if ( self -> size > 0 )
         comma = ",";
-    }
+
     do {
         size_t num_writ = 0;
         char * p = ( char * ) self -> str . base;
@@ -2388,9 +2472,9 @@ static rc_t STicketsAppend ( STickets * self, const char * ticket ) {
         if ( rc == 0 ) {
             rc_t r2 = 0;
             String * s = ( String * ) malloc ( sizeof * s );
-            if ( s == NULL ) {
+            if ( s == NULL )
                 rc = RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
-            } else {
+            else {
                 const char * addr = p + self -> size;
                 uint32_t len = num_writ;
                 if ( comma [ 0 ] != '\0' ) {
@@ -2411,16 +2495,15 @@ static rc_t STicketsAppend ( STickets * self, const char * ticket ) {
             && GetRCObject ( rc ) == ( enum RCObject ) rcBuffer )
         {
             size_t needed = BICKETS;
-            if ( self -> str . elem_count - self -> size + needed < num_writ ) {
+            if ( self -> str . elem_count - self -> size + needed < num_writ )
                 needed = num_writ;
-            }
             rc = KDataBufferResize
                 ( & self -> str, self -> str . elem_count + needed );
         }
-        else {
+        else
             break;
-        }
     } while ( rc == 0 );
+
     return rc;
 }
 
@@ -2437,6 +2520,7 @@ static rc_t STicketsAppend ( STickets * self, const char * ticket ) {
 static rc_t STicketsInit ( STickets * self ) {
     assert ( self );
     memset ( self, 0, sizeof * self );
+    BSTreeInit ( & self -> ticketsToProjects );
     return KDataBufferMakeBytes ( & self -> str, BICKETS );
 }
 
@@ -2448,11 +2532,11 @@ static void whack_free ( void * self, void * ignore ) {
     }
 }
 
-
 static rc_t STicketsFini ( STickets * self ) {
     assert ( self );
     rc_t rc = KDataBufferWhack ( & self -> str );
     VectorWhack ( & self -> tickets, whack_free, NULL );
+    BSTreeWhack ( & self -> ticketsToProjects, BSTItemWhack, NULL );
     memset ( self, 0 , sizeof * self );
     return rc;
 }
@@ -2531,9 +2615,11 @@ static rc_t SRequestFini ( SRequest * self ) {
 }
 
 
-static rc_t SRequestAddTicket ( SRequest * self, const char * ticket ) {
+static rc_t SRequestAddTicket ( SRequest * self, uint32_t project,
+                                const char * ticket )
+{
     assert ( self );
-    return STicketsAppend ( & self -> tickets, ticket );
+    return STicketsAppend ( & self -> tickets, project, ticket );
 }
 
 
@@ -2856,7 +2942,7 @@ static rc_t KServiceAddTicket ( KService * self, const char * ticket ) {
     if ( ticket == NULL )
         return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
-    return SRequestAddTicket ( & self -> req, ticket );
+    return SRequestAddTicket ( & self -> req, 0, ticket );
 }
 
 
@@ -2880,7 +2966,7 @@ rc_t KServiceAddProject ( KService * self, uint32_t project ) {
 
     assert ( ticket_size <= sizeof buffer );
 
-    return SRequestAddTicket ( & self -> req, buffer );
+    return SRequestAddTicket ( & self -> req, project, buffer );
 }
 
 
@@ -2949,7 +3035,7 @@ static rc_t KServiceInitNames1 ( KService * self, const KNSManager * mgr,
     if ( rc == 0 )
         rc = KServiceAddObject ( self, acc, acc_sz, objectType );
     if ( rc == 0 )
-        rc = SRequestAddTicket ( & self -> req,  ticket );
+        rc = SRequestAddTicket ( & self -> req, 0, ticket );
     if ( rc == 0 )
         self -> req . request . refseq_ctx = refseq_ctx;
 
@@ -3225,6 +3311,66 @@ rc_t KServiceGetResponse
 }
 
 
+rc_t KServiceGetConfig ( struct KService * self, const KConfig ** kfg) {
+    rc_t rc = 0;
+
+    if ( self == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
+    if ( kfg == NULL )
+        return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
+
+    rc = SHelperInitKfg ( & self -> helper );
+    if ( rc == 0 )
+        rc = KConfigAddRef ( self -> helper . kfg );
+
+    if ( rc == 0 )
+        * kfg = self -> helper . kfg;
+
+    return rc;
+}
+
+rc_t KServiceGetResolver ( KService * self, const String * ticket,
+                           VResolver ** resolver )
+{
+    uint32_t project = 0;
+
+    if ( self == NULL || ticket == NULL ||
+         ticket -> addr == NULL || ticket -> size == 0 || resolver == NULL)
+    {
+        return 0;
+    }
+    else {
+        const BSTItem * i = ( BSTItem * ) BSTreeFind 
+            ( & self -> req . tickets . ticketsToProjects, ticket, BSTItemCmp );
+        if ( i == NULL )
+            return 0;
+
+        project = i -> project;
+    }
+
+    * resolver = NULL;
+
+    if ( project != 0 ) {
+        const KRepository * r = NULL;
+        rc_t rc = SHelperInitRepoMgr ( & self -> helper );
+        if ( rc != 0 )
+            return rc;
+
+        rc = KRepositoryMgrGetProtectedRepository
+            ( self -> helper . repoMgr,  project, & r );
+        if ( rc != 0 )
+            return rc;
+
+        rc = KRepositoryMakeResolver ( r, resolver, self -> helper . kfg );
+
+        RELEASE ( KRepository, r );
+
+        return rc;
+    }
+
+    return 0;
+}
+
 static
 rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
     const char * cgi, const char * version,
@@ -3285,7 +3431,7 @@ rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
 }
 
 
-/* Execute Names Service Call using currentdefault protocol version;
+/* Execute Names Service Call using current default protocol version;
    get KSrvResponse */
 rc_t KServiceNamesExecute ( KService * self, VRemoteProtocols protocols,
     const KSrvResponse ** response )
@@ -3627,7 +3773,7 @@ rc_t KServiceFuserTest ( const KNSManager * mgr,  const char * ticket,
         acc = va_arg ( args, const char * );
     }
     if ( rc == 0 ) {
-        rc = KServiceNamesExecute ( service, eProtocolDefault, & response );
+        rc = KServiceNamesQuery ( service, eProtocolDefault, & response );
     }
     if ( rc == 0 ) {
         uint32_t i = 0;

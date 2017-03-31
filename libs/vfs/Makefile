@@ -74,9 +74,10 @@ $(ILIBDIR)/libvfs: $(addprefix $(ILIBDIR)/libvfs.,$(ILIBEXT))
 
 VFS_SRC_CMN = \
 	manager  \
+	remote-services \
 	resolver \
 	resolver-3.0 \
-	remote-services \
+	services \
 	srv-response \
 	syspath \
 

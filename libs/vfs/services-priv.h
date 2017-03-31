@@ -39,6 +39,7 @@ extern "C" {
 
 
 struct KNSManager;
+struct KService;
 struct KSrvResponse;
 struct VPathSet;
 
@@ -56,9 +57,20 @@ rc_t CC KService1NameWithVersion ( const struct KNSManager * mgr,
 rc_t KSrvResponseMake ( struct KSrvResponse ** self );
 rc_t KSrvResponseAddRef ( const struct KSrvResponse * self );
 rc_t KSrvResponseAppend ( struct KSrvResponse * self,
-    const struct VPathSet * set );
+                          const struct VPathSet * set );
+rc_t KSrvResponseAddLocalAndCache ( struct KSrvResponse * self, uint32_t idx,
+                                    const struct VPathSet * localAndCache );
 rc_t KSrvResponseGet ( const struct KSrvResponse * self, uint32_t idx,
-    const struct VPathSet ** set );
+                       const struct VPathSet ** set );
+/**************************** KServiceNamesExecute ****************************/
+/* Execute Names Service Call using current default protocol version;
+   get KSrvResponse (remote-only resolution) */
+rc_t KServiceNamesExecute ( struct KService * self, VRemoteProtocols protocols, 
+                            const struct KSrvResponse ** response );
+/***************** Interface services.c -> remote-services.c  *****************/
+rc_t KServiceGetConfig ( struct KService * self, const struct KConfig ** kfg);
+rc_t KServiceGetResolver ( struct KService * self, const String * ticket,
+                           VResolver ** resolver );
 /******************************** TESTS ********************************/
 typedef struct {
     const char * id;

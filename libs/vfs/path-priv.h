@@ -210,6 +210,8 @@ typedef struct {
 rc_t VPathSetMake
     ( VPathSet ** self, const EVPath * src, bool singleUrl );
 
+rc_t VPathSetMakeQuery ( VPathSet ** self, const VPath * local, rc_t localRc,
+                         const VPath * cache, rc_t cacheRc );
 
 #ifdef __cplusplus
 }
