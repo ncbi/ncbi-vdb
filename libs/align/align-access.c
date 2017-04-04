@@ -422,7 +422,9 @@ AGAIN:
         }
         return rc;
     }
-    
+    if (!BAMAlignmentIsMapped(self->innerSelf))
+        goto AGAIN;
+
     BAMAlignmentGetRefSeqId(self->innerSelf, &refSeqID);
     if (self->refSeqID != refSeqID) {
         self->atend = 1;
@@ -431,15 +433,14 @@ AGAIN:
     else if (self->endpos != 0) {
         int64_t pos;
         uint32_t length;
-        uint64_t endpos;
-        
+
         BAMAlignmentGetPosition2(self->innerSelf, &pos, &length);
-        if (pos < 0 || pos >= (int64_t)self->endpos) {
+        if (pos >= (int64_t)self->endpos) {
             self->atend = 1;
             rc = AlignAccessAlignmentEnumeratorEOFCode;
         }
         else {
-            endpos = (uint64_t)pos + length;
+            int64_t const endpos = pos + length;
             if (endpos < self->startpos)
                 goto AGAIN;
         }
