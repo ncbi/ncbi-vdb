@@ -300,65 +300,33 @@ FIXTURE_TEST_CASE ( LoadIndex2, LoaderFixture2 )
     testIndex();
 }
 #endif
-#if 0
-typedef struct BinRange {
-    uint16_t beg, end;
-} BinRange;
 
-typedef struct BinList {
-    BinRange range[6];
-} BinList;
-
-BinList calcBinList(unsigned const refBeg, unsigned const refEnd)
+static void test1Range(char const *path, char const *ref, int const start, int const end, bool const verbose)
 {
-    BinList rslt;
-    unsigned size = 1 << 29;
-    unsigned offset = 0;
-    unsigned i;
-    
-    for (i = 0; i < 6; ++i) {
-        rslt.range[i].beg = offset + refBeg / size;
-        rslt.range[i].end = 1 + offset + (refEnd - 1) / size;
-        offset += 1 << (3 * i);
-        size >>= 3;
+    AlignAccess::Database const db(AlignAccess::Manager::make().open(path));
+    AlignAccess::AlignmentEnumerator e = db.slice(ref, start, end);
+    int first = 0;
+    int last = 0;
+    int records = 0;
+    while (e.next()) {
+        last = e.position() + 1;
+        if (first == 0)
+            first = last;
+        if (verbose)
+            std::cout << "# " << last << std::endl;
+        ++records;
     }
-    assert(rslt.range[0].beg == 0 && rslt.range[0].end == 1);
-    return rslt;
+    std::cout << path << ' ' << ref << ':' << start << '-' << end << ' ' << records << ' ' << first << ' ' << last << std::endl;
 }
 
-#define MAX_BIN (((1<<18)-1)/7)
-unsigned reg2bins(unsigned beg, unsigned end, uint16_t list[MAX_BIN])
+static int testMain(int argc, char *argv[])
 {
-    unsigned i = 0, k;
-    --end;
-    list[i++] = 0;
-    for (k =    1 + (beg>>26); k <=    1 + (end>>26); ++k) list[i++] = k;
-    for (k =    9 + (beg>>23); k <=    9 + (end>>23); ++k) list[i++] = k;
-    for (k =   73 + (beg>>20); k <=   73 + (end>>20); ++k) list[i++] = k;
-    for (k =  585 + (beg>>17); k <=  585 + (end>>17); ++k) list[i++] = k;
-    for (k = 4681 + (beg>>14); k <= 4681 + (end>>14); ++k) list[i++] = k;
-    return i;
-}
-
-bool testBinList(unsigned const beg, unsigned const end) {
-    BinRange const expected[] = {
-        {    0            ,    1                 },
-        {    1 + (beg>>26),    2 + ((end-1)>>26) },
-        {    9 + (beg>>23),   10 + ((end-1)>>23) },
-        {   73 + (beg>>20),   74 + ((end-1)>>20) },
-        {  585 + (beg>>17),  586 + ((end-1)>>17) },
-        { 4681 + (beg>>14), 4682 + ((end-1)>>14) },
-    };
-    BinList const bins = calcBinList(beg, end);
-    
-    for (unsigned i = 0; i < 6; ++i) {
-        if (expected[i].beg != bins.range[i].beg || expected[i].end != bins.range[i].end) {
-            std::cerr << "Layer " << (i + 1) << ": " << bins.range[i].beg << " - " << bins.range[i].end << "; expected " << expected[i].beg << " - " << expected[i].end << std::endl;
-        }
+    if (argc >= 5) {
+        test1Range(argv[1], argv[2], atoi(argv[3]), atoi(argv[4]), argc > 5);
+        return 0;
     }
-    return true;
+    return IndexTestSuite(argc, argv);
 }
-#endif
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>
@@ -387,7 +355,7 @@ rc_t CC Usage( const Args* args )
 
 rc_t CC KMain ( int argc, char *argv [] )
 {
-    return IndexTestSuite(argc, argv);
+    return testMain(argc, argv);
 }
 
 }
