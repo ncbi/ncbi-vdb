@@ -2596,7 +2596,7 @@ LIB_EXPORT rc_t CC BAMAlignmentGetPosition(const BAMAlignment *cself, int64_t *r
 
 LIB_EXPORT bool CC BAMAlignmentIsMapped(const BAMAlignment *cself)
 {
-    if (((getFlags(cself) & BAMFlags_SelfIsUnmapped) == 0) && getRefSeqId(cself) >= 0 && getPosition(cself) >= 0)
+    if (((getFlags(cself) & BAMFlags_SelfIsUnmapped) == 0) && getRefSeqId(cself) >= 0 && getPosition(cself) >= 0 && getCigarCount(cself) > 0)
         return true;
     return false;
 }
