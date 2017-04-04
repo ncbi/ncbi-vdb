@@ -9,8 +9,13 @@ my $testfile = "/netmnt/traces04/giab05/ftp/data/AshkenazimTrio/HG002_NA24385_so
 my $chrom = "chr1";
 my $chrLength = 248956422;
 
-my $tester = "/home/durbrowk/ncbi-outdir/ncbi-vdb/linux/gcc/x86_64/dbg/test-bin/test-align-access";
 chomp (my $samtools = `which samtools`);
+chomp (my $tester = `which test-align-access`);
+
+die "add samtools to PATH\n" unless $samtools;
+die "add test-align-access to PATH\n" unless $tester;
+die "can't read test file $testfile\n" unless -r $testfile;
+die "can't read test index $testfile.bai\n" unless -f "$testfile.bai";
 
 sub gold($$)
 {
