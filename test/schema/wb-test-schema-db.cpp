@@ -79,14 +79,7 @@ public:
 
     DbAccess ParseDatabase ( const char * p_source, const char * p_name, uint32_t p_idx = 0 )
     {
-        if ( m_newParse )
-        {
-            MakeAst ( p_source );
-        }
-        else if ( ! OldParse ( p_source ) )
-        {
-            throw std :: logic_error ( "AST_Db_Fixture::ParseDatabase : OldParse() failed" );
-        }
+        MakeAst ( p_source );
 
         const SDatabase * ret = static_cast < const SDatabase* > ( VectorGet ( & GetSchema () -> db, p_idx ) );
         if ( ret == 0 )

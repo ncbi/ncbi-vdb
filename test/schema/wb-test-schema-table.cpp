@@ -135,14 +135,7 @@ public:
 
     TableAccess ParseTable ( const char * p_source, const char * p_name, uint32_t p_idx = 0 )
     {
-        if ( m_newParse )
-        {
-            MakeAst ( p_source );
-        }
-        else if ( ! OldParse ( p_source ) )
-        {
-            throw std :: logic_error ( "AST_Table_Fixture::ParseTable : OldParse() failed" );
-        }
+        MakeAst ( p_source );
 
         const STable * ret = static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, p_idx ) );
         if ( ret == 0 || ret -> name == 0 || string ( p_name ) != ToCppString ( ret -> name -> name ) )

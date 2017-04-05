@@ -88,12 +88,14 @@ public:
 
     bool OldParse ( const char* p_source );
 
-    const VSchema * GetSchema () const { return m_newParse ? m_builder . GetSchema () : m_schema; }
+    const VSchema * GetSchema () const { return m_newParse ? m_builder -> GetSchema () : m_schema; }
 
     uint32_t Version ( uint32_t p_major, uint32_t p_minor = 0, uint32_t p_release = 0 )
     {
         return ( p_major << 24 ) + ( p_minor << 16 ) + p_release;
     }
+
+    void CreateFile ( const char * p_name, const char * p_content );
 
     // set to true to control debugging output (all false by default)
     bool m_debugParse;
@@ -103,7 +105,7 @@ public:
 
     SchemaParser    m_parser;
     ParseTree *     m_parseTree;
-    ASTBuilder      m_builder;
+    ASTBuilder *    m_builder;
     AST*            m_ast;
 
     VSchema *   m_schema;

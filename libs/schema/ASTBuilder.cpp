@@ -29,6 +29,9 @@
 #include <klib/symbol.h>
 #include <klib/printf.h>
 
+#include <kfs/directory.h>
+#include <kfs/mmap.h>
+
 // hide an unfortunately named C function typename()
 #define typename __typename
 #include "../vdb/schema-parse.h"
@@ -37,32 +40,33 @@
 #include "../vdb/schema-priv.h"
 #include "../vdb/schema-expr.h"
 
+#include "SchemaParser.hpp"
+
 using namespace ncbi::SchemaParser;
 #define YYDEBUG 1
 #include "schema-ast-tokens.h"
 
 using namespace std;
 
-ASTBuilder :: ASTBuilder ()
-:   m_intrinsic ( 0 ),
-    m_schema ( 0 )
+ASTBuilder :: ASTBuilder ( VSchema * p_schema )
+:    m_schema ( p_schema )
 {
+    assert ( m_schema != 0 );
+    VSchemaAddRef ( m_schema );
+
     VectorInit ( & m_errors, 0, 1024 );
 
-    rc_t rc = VSchemaMakeIntrinsic ( & m_intrinsic );
+    rc_t rc = KSymTableInit ( & m_symtab, 0 );
     if ( rc != 0 )
     {
-        ReportRc ( "VSchemaMakeIntrinsic", rc  );
-        m_intrinsic = 0;
+        ReportRc ( "KSymTableInit", rc );
     }
     else
     {
-        rc = KSymTableInit ( & m_symtab, 0 );
+        rc = init_symtab ( & m_symtab, m_schema ); // this pushes the global scope
         if ( rc != 0 )
         {
-            ReportRc ( "KSymTableInit", rc );
-            VSchemaRelease ( m_intrinsic );
-            m_intrinsic = 0;
+            ReportRc ( "init_symtab", rc );
         }
     }
 }
@@ -78,7 +82,6 @@ ASTBuilder :: ~ASTBuilder ()
 {
     KSymTableWhack ( & m_symtab);
     VSchemaRelease ( m_schema );
-    VSchemaRelease ( m_intrinsic );
     VectorWhack ( & m_errors, WhackMessage, 0 );
 }
 
@@ -110,40 +113,9 @@ ASTBuilder :: ReportRc ( const char* p_msg, rc_t p_rc )
     ReportError ( "%s: rc=%R", p_msg, p_rc );
 }
 
-bool
-ASTBuilder :: Init()
-{
-    if ( m_schema != 0 )    // in case we are called more than once
-    {
-        KSymTableWhack ( & m_symtab);
-        VSchemaRelease ( m_schema );
-    }
-    rc_t rc = VSchemaMake ( & m_schema, m_intrinsic );
-    if ( rc != 0 )
-    {
-        ReportRc ( "VSchemaMake", rc );
-        m_schema = 0;
-        return false;
-    }
-
-    rc = init_symtab ( & m_symtab, m_schema ); // this pushes the global scope
-    if ( rc != 0 )
-    {
-        ReportRc ( "init_symtab", rc );
-        return false;
-    }
-
-    return true;
-}
-
 AST *
 ASTBuilder :: Build ( const ParseTree& p_root, bool p_debugParse )
 {
-    if ( m_intrinsic == 0 || ! Init () )
-    {
-        return 0;
-    }
-
     AST* ret = 0;
     AST_debug = p_debugParse;
     ParseTreeScanner scanner ( p_root );
@@ -952,6 +924,117 @@ ASTBuilder :: AliasDef  ( const Token* p_token, AST_FQN* p_name, AST_FQN* p_newN
     if ( sym != 0 )
     {
         VectorAppend ( m_schema -> alias, 0, CreateFqnSymbol ( * p_newName, sym -> type, sym -> u . obj ) );
+    }
+
+    return ret;
+}
+
+void
+ASTBuilder :: AddIncludePath ( const char * path )
+{
+    rc_t rc = VSchemaAddIncludePath ( m_schema, "%s", path );
+    if ( rc != 0 )
+    {
+        ReportRc ( "VSchemaAddIncludePath", rc );
+    }
+}
+
+const KFile *
+ASTBuilder :: OpenIncludeFile ( const char * p_fmt, ... )
+{
+    const KFile * ret = 0;
+    va_list args;
+    va_start ( args, p_fmt );
+
+    char path [ 4096 ];
+    rc_t rc = 0;
+    /* open file using include paths */
+    rc = VSchemaOpenFile ( m_schema, & ret, path, sizeof path, p_fmt, args );
+
+    if ( rc != 0 )
+    {   /* try to open the file according to current directory */
+        KDirectory *wd;
+        rc = KDirectoryNativeDir ( & wd );
+        if ( rc == 0 )
+        {
+            rc = VSchemaTryOpenFile ( m_schema, wd, & ret, path, sizeof path, p_fmt, args );
+            // ret == 0 if was included previously
+            KDirectoryRelease ( wd );
+        }
+        else
+        {
+            ReportRc ( "KDirectoryNativeDir", rc );
+        }
+    }
+
+    // if the file was found ...
+    if ( rc == 0 )
+    {
+        if ( ret != 0 ) // file was included for the 1st time
+        {
+            const KMMap *mm;
+            rc = KMMapMakeRead ( & mm, ret );
+            if ( rc == 0 )
+            {
+                size_t size;
+                const void *addr;
+                rc = KMMapAddrRead ( mm, & addr );
+                if ( rc == 0 )
+                {
+                    rc = KMMapSize ( mm, & size );
+                    if ( rc == 0 )
+                    {
+                        rc = VIncludedPathMake ( & m_schema -> paths, & m_schema -> file_count, path );
+                        if ( rc != 0 )
+                        {
+                            ReportRc ( "VIncludedPathMake", rc );
+                        }
+                    }
+                    else
+                    {
+                        ReportRc ( "KMMapSize", rc );
+                    }
+                }
+                else
+                {
+                    ReportRc ( "KMMapAddrRead", rc );
+                }
+
+                KMMapRelease ( mm );
+            }
+            else
+            {
+                ReportRc ( "KMMapMakeRead", rc );
+            }
+        }
+        // else: file was included previously, now ignored
+    }
+    else
+    {
+        ReportError ( "Could not open include file '%s'", path );
+    }
+
+    va_end ( args );
+    return ret;
+}
+
+AST *
+ASTBuilder :: Include ( const Token * p_token, const Token * p_filename )
+{
+    AST * ret = new AST ( p_token );
+    assert ( p_filename != 0 );
+    ret -> AddNode ( p_filename );
+
+    const char * quoted = p_filename -> GetValue ();
+    const KFile * f = OpenIncludeFile ( "%.*s", string_size ( quoted ) - 2, quoted + 1 );
+    if ( f != 0 )
+    {
+        SchemaParser parser;
+        if ( parser . ParseFile ( f ) )
+        {
+            delete Build ( * parser . GetParseTree (), false );
+        }
+        KFileRelease ( f );
     }
 
     return ret;

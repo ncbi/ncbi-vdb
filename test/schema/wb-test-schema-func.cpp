@@ -101,9 +101,9 @@ public:
     FunctionAccess ParseFunction ( const char * p_source, const char * p_name, uint32_t p_idx = 0, uint32_t p_type = eFunction )
     {
         const SFunction* ret = 0;
+        MakeAst ( p_source );
         if ( m_newParse )
         {
-            MakeAst ( p_source );
             const KSymbol* sym = VerifySymbol ( p_name, p_type );
 
             // for functions, sym points to an entry in the overloads table (schema->fname)
@@ -124,11 +124,6 @@ public:
         }
         else
         {
-            if ( ! OldParse ( p_source ) )
-            {
-                throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : VSchemaParseText() failed" );
-            }
-
             ret = static_cast < const SFunction* > ( VectorGet ( & m_schema -> func, p_idx ) );
 
             if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )

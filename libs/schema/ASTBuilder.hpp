@@ -44,6 +44,7 @@ struct SExpression;
 struct SDatabase;
 struct VTypedecl;
 struct SNameOverload;
+struct KFile;
 
 namespace ncbi
 {
@@ -52,8 +53,10 @@ namespace ncbi
         class ASTBuilder
         {
         public:
-            ASTBuilder ();
+            ASTBuilder ( VSchema * schema );
             ~ASTBuilder ();
+
+            void AddIncludePath ( const char * path );
 
             AST* Build ( const ParseTree& p_root, bool p_debugParse = false );
 
@@ -92,6 +95,7 @@ namespace ncbi
             AST * PhysicalDecl ( const Token *, AST * schema, AST * returnType, AST_FQN * name, AST_ParamSig * fact, AST * body );
             AST * TableDef ( const Token *, AST_FQN * name, AST * parents, AST * body );
             AST * DatabaseDef ( const Token *, AST_FQN * name, AST * parent, AST * body );
+            AST * Include ( const Token *, const Token * filename );
 
         public: // schema object construction helpers
             const KSymbol* CreateFqnSymbol ( const AST_FQN& fqn, uint32_t type, const void * obj );
@@ -155,8 +159,9 @@ namespace ncbi
 
             const void * SelectVersion ( const struct KSymbol & p_ovl, int64_t ( CC * p_cmp ) ( const void *item, const void *n ), uint32_t * p_version );
 
+            const struct KFile * OpenIncludeFile ( const char * p_fmt, ... );
+
         private:
-            VSchema*    m_intrinsic;
             VSchema*    m_schema;
             KSymTable   m_symtab;
 

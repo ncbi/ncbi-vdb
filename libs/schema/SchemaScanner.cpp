@@ -28,13 +28,25 @@
 
 #include <string.h>
 
+#include <klib/text.h>
+
 using namespace ncbi::SchemaParser;
 
 const SchemaScanner :: TokenType SchemaScanner :: EndSource;
 
-SchemaScanner :: SchemaScanner ( const char * source, bool p_debug )
+SchemaScanner :: SchemaScanner ( const char * p_source, size_t p_size, bool p_debug )
 {
-    SchemaScan_yylex_init ( & m_scanBlock, source );
+    SchemaScan_yylex_init ( & m_scanBlock, p_source, p_size );
+    if ( p_debug )
+    {
+        SchemaScan_set_debug ( & m_scanBlock, 1 );
+    }
+    memset ( & m_lastToken, 0, sizeof m_lastToken );
+}
+
+SchemaScanner :: SchemaScanner ( const char * p_source, bool p_debug )
+{
+    SchemaScan_yylex_init ( & m_scanBlock, p_source, string_size ( p_source ) );
     if ( p_debug )
     {
         SchemaScan_set_debug ( & m_scanBlock, 1 );

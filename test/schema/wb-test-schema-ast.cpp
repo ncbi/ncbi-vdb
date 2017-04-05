@@ -30,9 +30,13 @@
 
 #include "AST_Fixture.hpp"
 
+#include <cstdio>
+
 #include <ktst/unit_test.hpp>
 
 #include <klib/symbol.h>
+
+#include <kfs/directory.h>
 
 #include "../../libs/vdb/schema-expr.h"
 
@@ -193,12 +197,12 @@ FIXTURE_TEST_CASE(Intrinsic, AST_Fixture)
 FIXTURE_TEST_CASE(Builder_ErrorReporting, AST_Fixture)
 {
     AST_FQN * id = AST_Fixture :: MakeFqn ( "foo" );
-    REQUIRE_NULL ( m_builder . Resolve ( * id ) ); delete id;
+    REQUIRE_NULL ( m_builder -> Resolve ( * id ) ); delete id;
     id = AST_Fixture :: MakeFqn ( "bar" );
-    REQUIRE_NULL ( m_builder . Resolve ( * id ) ); delete id;
-    REQUIRE_EQ ( 2u, m_builder . GetErrorCount () );
-    REQUIRE_EQ ( string ( "Undeclared identifier: 'foo'" ), string ( m_builder . GetErrorMessage ( 0 ) ) );
-    REQUIRE_EQ ( string ( "Undeclared identifier: 'bar'" ), string ( m_builder . GetErrorMessage ( 1 ) ) );
+    REQUIRE_NULL ( m_builder -> Resolve ( * id ) ); delete id;
+    REQUIRE_EQ ( 2u, m_builder -> GetErrorCount () );
+    REQUIRE_EQ ( string ( "Undeclared identifier: 'foo'" ), string ( m_builder -> GetErrorMessage ( 0 ) ) );
+    REQUIRE_EQ ( string ( "Undeclared identifier: 'bar'" ), string ( m_builder -> GetErrorMessage ( 1 ) ) );
 }
 
 FIXTURE_TEST_CASE(NoVersion, AST_Fixture)
@@ -495,6 +499,43 @@ FIXTURE_TEST_CASE(AliasedTypesetInTypeset, AST_Fixture)
     MakeAst ( "typeset ts1 { U8 }; alias ts1 ats; typeset ts2 { ats };" );
     VerifySymbol ( "ts2", eTypeset );
 }
+
+// include
+FIXTURE_TEST_CASE(Include, AST_Fixture)
+{
+    CreateFile ( "inc", "typedef U8 t;" );
+    MakeAst ( "include \"inc\";" );
+    VerifySymbol ( "t", eDatatype );
+    remove ( "inc" );
+}
+
+FIXTURE_TEST_CASE(Include_SearchPath, AST_Fixture)
+{
+    CreateFile ( "./actual/inc", "typedef U8 t;" );
+    m_builder -> AddIncludePath ( "./actual" );
+    MakeAst ( "include \"inc\";" );
+    VerifySymbol ( "t", eDatatype );
+    remove ( "inc" );
+}
+
+FIXTURE_TEST_CASE(Include_MoreThanOnce, AST_Fixture)
+{
+    CreateFile ( "inc", "typedef U8 t;" );
+    MakeAst ( "include \"inc\"; include \"inc\";" );
+    VerifySymbol ( "t", eDatatype );
+    remove ( "inc" );
+}
+
+FIXTURE_TEST_CASE(Include_NotFound, AST_Fixture)
+{
+    KDirectory *wd;
+    REQUIRE_RC ( KDirectoryNativeDir ( & wd ) );
+    char path[1024];
+    REQUIRE_RC ( KDirectoryResolvePath_v1 ( wd, true, path, sizeof path, "./notinc" ) );
+    VerifyErrorMessage ( "include \"notinc\";", ( string ( "Could not open include file '" ) + path + "'" ) . c_str ()  );
+    KDirectoryRelease ( wd );
+}
+
 
 //TODO: array of arrays in typedef, typeset, constdef, return type
 //TODO: array of typeset: typeset ts { U8 }; typedef ts t[2];

@@ -224,7 +224,7 @@
 %type <node> col_modifier col_decl col_ident col_body col_stmt typed_col column_expr
 %type <node> factory_parms factory_parms_opt schema_parm schema_parms arrayspec
 %type <node> phys_enc_ref col_body_opt database opt_dbdad dbbody db_members
-%type <node> db_member template_opt
+%type <node> db_member template_opt include
 
 %type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
 
@@ -243,7 +243,7 @@
 %type <tok> KW_read KW_validate KW_limit PT_SCHEMAFORMAL PT_PRODSTMT PT_PRODTRIGGER
 %type <tok> PT_NOHEADER KW_decode KW_encode KW___row_length PT_COLDECL PT_TYPEDCOL PT_TYPEEXPR
 %type <tok> PT_PHYSENCEXPR PT_PHYSENCREF KW_column PT_TYPEDCOLEXPR PT_DATABASE PT_DBBODY
-%type <tok> KW_template KW_database PT_DBMEMBER PT_TBLMEMBER
+%type <tok> KW_template KW_database PT_DBMEMBER PT_TBLMEMBER PT_INCLUDE KW_include STRING
 
 %%
 
@@ -295,7 +295,7 @@ schema_decl
     | physical          { $$ = $1; }
     | table             { $$ = $1; }
     | database          { $$ = $1; }
-    /*TBD*/
+    | include           { $$ = $1; }
     | ';'               { $$ = new AST (); }
     ;
 
@@ -595,6 +595,46 @@ col_stmt
     | PT_COLSTMT '(' KW_limit '=' uint_expr ';' ')'     { $$ = new AST ( $1, new AST ( $3 ), $5 ); }
     ;
 
+/* database */
+
+database
+    : PT_DATABASE '(' KW_database fqn_vers opt_dbdad dbbody ')' { $$ = p_builder . DatabaseDef ( $1, $4, $5, $6 ); }
+    ;
+
+opt_dbdad
+    : PT_EMPTY                             { $$ = new AST ( $1 ); }
+    | PT_DBDAD '(' '=' fqn_opt_vers ')'    { $$ = $4; }
+
+dbbody
+    : PT_DBBODY '(' '{' PT_ASTLIST '(' db_members ')' '}' ')'   { $$ = $6; }
+    | PT_DBBODY '(' '{' '}' ')'                                 { $$ = new AST ( $1 ); }
+    ;
+
+db_members
+    : db_member               { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | ';'                       { $$ = new AST (); }
+    | db_members db_member    { $$ = $1; $$ -> AddNode ( $2 ); }
+    | db_members ';'            { $$ = $1; }
+    ;
+
+db_member
+    : PT_DBMEMBER '(' template_opt KW_database fqn_opt_vers ident ';' ')'
+        { $$ = new AST ( $1, $3, $5, $6 ); }
+    | PT_TBLMEMBER '(' template_opt KW_table fqn_opt_vers ident ';' ')'
+        { $$ = new AST ( $1, $3, $5, $6 ); }
+    ;
+
+template_opt
+    : PT_EMPTY      { $$ = new AST ( $1 ); }
+    | KW_template   { $$ = new AST ( $1 ); }
+    ;
+
+/* include */
+
+include
+    : PT_INCLUDE '(' KW_include STRING ')' { $$ = p_builder . Include ( $1, $4 ); }
+    ;
+
 /* expressions */
 
 expr
@@ -651,39 +691,6 @@ factory_parms_opt
 factory_parms
     : expr                      { $$ = new AST (); $$ -> AddNode ( $1 ); }
     | factory_parms ',' expr    { $$ = $1; $$ -> AddNode ( $3 ); }
-    ;
-
-/* database */
-database
-    : PT_DATABASE '(' KW_database fqn_vers opt_dbdad dbbody ')' { $$ = p_builder . DatabaseDef ( $1, $4, $5, $6 ); }
-    ;
-
-opt_dbdad
-    : PT_EMPTY                             { $$ = new AST ( $1 ); }
-    | PT_DBDAD '(' '=' fqn_opt_vers ')'    { $$ = $4; }
-
-dbbody
-    : PT_DBBODY '(' '{' PT_ASTLIST '(' db_members ')' '}' ')'   { $$ = $6; }
-    | PT_DBBODY '(' '{' '}' ')'                                 { $$ = new AST ( $1 ); }
-    ;
-
-db_members
-    : db_member               { $$ = new AST (); $$ -> AddNode ( $1 ); }
-    | ';'                       { $$ = new AST (); }
-    | db_members db_member    { $$ = $1; $$ -> AddNode ( $2 ); }
-    | db_members ';'            { $$ = $1; }
-    ;
-
-db_member
-    : PT_DBMEMBER '(' template_opt KW_database fqn_opt_vers ident ';' ')'
-        { $$ = new AST ( $1, $3, $5, $6 ); }
-    | PT_TBLMEMBER '(' template_opt KW_table fqn_opt_vers ident ';' ')'
-        { $$ = new AST ( $1, $3, $5, $6 ); }
-    ;
-
-template_opt
-    : PT_EMPTY      { $$ = new AST ( $1 ); }
-    | KW_template   { $$ = new AST ( $1 ); }
     ;
 
 /* commonly used productions */

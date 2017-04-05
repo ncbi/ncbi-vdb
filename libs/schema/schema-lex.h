@@ -49,7 +49,7 @@ typedef struct SchemaScanBlock
     char* whitespace;
 } SchemaScanBlock;
 
-extern void SchemaScan_yylex_init ( SchemaScanBlock* sb, const char *str );
+extern void SchemaScan_yylex_init ( SchemaScanBlock* sb, const char *str, size_t size );
 
 extern void SchemaScan_yylex_destroy ( SchemaScanBlock* sb );
 

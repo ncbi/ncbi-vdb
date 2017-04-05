@@ -27,6 +27,8 @@
 #ifndef _hpp_SchemaParser_
 #define _hpp_SchemaParser_
 
+#include <kfs/file.h>
+
 namespace ncbi
 {
     namespace SchemaParser
@@ -40,7 +42,7 @@ namespace ncbi
             ~SchemaParser ();
 
             bool ParseString ( const char * input, bool debug = false );
-            bool ParseFile ( const char * source_file );
+            bool ParseFile ( const struct KFile * file );
 
             const ParseTree* GetParseTree () const { return m_root; }
                   ParseTree* MoveParseTree (); // Transfer ownership to caller; destroy with delete

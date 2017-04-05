@@ -40,7 +40,8 @@ namespace ncbi
             static const TokenType EndSource = 0; // bison convention
 
         public:
-            SchemaScanner ( const char * source, bool p_debug = false );
+            SchemaScanner ( const char * source, bool p_debug = false ); // NUL-terminated
+            SchemaScanner ( const char * source, size_t p_size, bool p_debug );
             ~SchemaScanner ();
 
             :: SchemaScanBlock & GetScanBlock () { return m_scanBlock; }

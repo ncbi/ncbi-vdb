@@ -53,6 +53,13 @@ TEST_CASE ( Whitspace )
     REQUIRE_EQ ( string ( "    " ), string ( s . LastTokenValue () . leading_ws ) );
 }
 
+TEST_CASE ( NotNulTerminated )
+{
+    SchemaScanner s ( "  bad", 2, false ); // only first 2 bytes looked at
+    REQUIRE_EQ ( (int)END_SOURCE, s . Scan () );
+    REQUIRE_EQ ( string ( "  " ), string ( s . LastTokenValue () . leading_ws ) );
+}
+
 TEST_CASE ( Unrecognized )
 {
     REQUIRE_EQ ( (int)UNRECOGNIZED, SchemaScanner ( "ъ" ) . Scan () );

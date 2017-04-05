@@ -26,6 +26,10 @@
 
 #include "SchemaParser.hpp"
 
+#include <klib/text.h>
+
+#include <kfs/mmap.h>
+
 #include "SchemaScanner.hpp"
 #include "ParseTree.hpp"
 
@@ -46,7 +50,7 @@ SchemaParser :: ~SchemaParser ()
 bool
 SchemaParser :: ParseString ( const char * p_input, bool p_debug )
 {
-    SchemaScanner s ( p_input );
+    SchemaScanner s ( p_input, string_size ( p_input ), false );
     Schema_debug = p_debug;
     delete m_root;
     m_root = 0;
@@ -54,11 +58,35 @@ SchemaParser :: ParseString ( const char * p_input, bool p_debug )
 }
 
 bool
-SchemaParser :: ParseFile ( const char * source_file )
+SchemaParser :: ParseFile ( const struct KFile * p_file )
 {
     delete m_root;
-    m_root = 0;//TBD
-    return false;
+    m_root = 0;
+
+    assert ( p_file != 0 );
+
+    bool ret = false;
+    const KMMap *mm;
+    rc_t rc = KMMapMakeRead ( & mm, p_file );
+    if ( rc == 0 )
+    {
+        const char *addr;
+        rc = KMMapAddrRead ( mm, ( const void ** ) & addr );
+        if ( rc == 0 )
+        {
+            size_t size;
+            rc = KMMapSize ( mm, & size );
+            if ( rc == 0 )
+            {
+                SchemaScanner s ( addr, size, false );
+                ret = Schema_parse ( & m_root, & s . GetScanBlock () ) == 0;
+            }
+        }
+
+        KMMapRelease ( mm );
+    }
+
+    return ret;
 }
 
 ParseTree*

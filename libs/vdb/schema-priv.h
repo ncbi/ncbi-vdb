@@ -114,6 +114,8 @@ struct SExpression;
 struct SDumper;
 struct KSymTable;
 struct SchemaEnv;
+struct KFile;
+struct KDirectory;
 
 /*--------------------------------------------------------------------------
  * VCtxId
@@ -1338,6 +1340,25 @@ struct SDBMember
  */
 bool CC SDBMemberDefDump ( void *item, void *dumper );
 rc_t SDBMemberDump ( const SDBMember *self, struct SDumper *d );
+
+/*--------------------------------------------------------------------------
+ * Include files
+ */
+
+/* OpenFile
+ *  opens a file, using include paths
+ */
+rc_t CC VSchemaTryOpenFile ( const VSchema *self, const struct KDirectory *dir, const struct KFile **fp,
+    char *path, size_t path_max, const char *name, va_list args );
+
+/* OpenFile
+ */
+rc_t CC VSchemaOpenFile ( const VSchema *self, const struct KFile **fp,
+    char *path, size_t path_max, const char *name, va_list args );
+
+/* Make
+ */
+rc_t CC VIncludedPathMake ( BSTree *paths, uint32_t *count, const char *path );
 
 
 #ifdef __cplusplus

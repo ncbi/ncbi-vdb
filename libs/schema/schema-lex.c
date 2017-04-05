@@ -3214,10 +3214,10 @@ void schema_yyfree (void * ptr , yyscan_t yyscanner)
 #include <klib/text.h>
 
 void
-SchemaScan_yylex_init ( SchemaScanBlock* sb, const char *str )
+SchemaScan_yylex_init ( SchemaScanBlock* sb, const char *str, size_t len )
 {
     schema_yylex_init ( & sb -> scanner );
-    sb -> buffer = schema_yy_scan_string ( ( yyconst char * ) str, sb -> scanner );
+    sb -> buffer = schema_yy_scan_bytes ( ( yyconst char * ) str, len, sb -> scanner );
     sb -> whitespace = NULL;
     ( ( struct yyguts_t * ) sb -> scanner ) -> yyextra_r = sb; /* back pointer to the scan block, not touched by flex */
 }

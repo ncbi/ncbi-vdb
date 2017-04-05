@@ -34,6 +34,9 @@
 #include <fstream>
 #include <cstring>
 
+#include <kfs/directory.h>
+#include <kfs/file.h>
+
 #include "../../libs/schema/SchemaParser.hpp"
 #include "../../libs/schema/ParseTree.hpp"
 
@@ -137,16 +140,24 @@ TEST_CASE(SchemaParser_ParseString)
     REQUIRE_NOT_NULL ( p . GetParseTree () );
 }
 
-#if SHOW_UNIMPLEMENTED
 TEST_CASE(SchemaParser_ParseFile)
 {
     const string FileName = DataDir + "/" + GetName ();
-    ofstream ( FileName . c_str () ) << "" << ends;
+    {
+        ofstream out ( FileName . c_str () );
+        out << " ";
+    }
+
+    const KFile * f;
+    KDirectory *wd;
+    REQUIRE_RC ( KDirectoryNativeDir ( & wd ) );
+    REQUIRE_RC ( KDirectoryOpenFileRead ( wd, & f, "%s", FileName . c_str () ) );
+    KDirectoryRelease ( wd );
+
     SchemaParser p;
-    REQUIRE ( p . ParseFile ( FileName. c_str () ) );
+    REQUIRE ( p . ParseFile ( f ) );
     REQUIRE_NOT_NULL ( p . GetParseTree () );
 }
-#endif
 
 TEST_CASE(SchemaParser_MoveParseTree)
 {
@@ -644,7 +655,6 @@ TEST_CASE ( PhysicalIdent )
 {
     REQUIRE ( ParseAndVerify ( "function t f() { return .b; };" ) );
 }
-
 
 // Version 2
 
