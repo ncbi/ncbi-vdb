@@ -275,6 +275,12 @@ class VColumn :
     def __str__( self ) :
         return "%s.%s: (%d) %s %s"%( self.tabname, self.name, self.__id, self.tdec, self.tdes )
 
+    def __enter__( self ) :
+        return self
+
+    def __exit__( self, type, value, traceback ) :
+        pass
+
     def _update( self ) :
         rc = self.__mgr.VCursorDatatype( self.__cur._VCursor__ptr, self.__id, byref( self.__tdec ), byref( self.__tdes ) )
         if rc != 0 :
@@ -309,12 +315,12 @@ class VColumn :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "VCursorCellDataDirect( '%s.%s', #%d )"%( self.tabname, self.name, row ), self )
         if self.column_type == c_char :
-            return string_at( data, row_len.value ).decode()
+            return string_at( data, row_len.value )
         else :
-            ptr = cast( data, POINTER( self.column_type ) )
+            typed_ptr = cast( data, POINTER( self.column_type ) )
             l = list()
             for idx in xrange( 0, row_len.value ) :
-                l.append( ptr[ idx ] )        
+                l.append( typed_ptr[ idx ] )        
             return l
 
     def __write_values( self, data ) :
@@ -576,13 +582,33 @@ def first_none_static_col( cols ) :
 
 #------------------------------------------------------------------------------------------------------------
 def row_gen( cols, row_range = None ) :
-    first_col = first_none_static_col( cols )
-    if first_col != None :
+    if isinstance( cols, dict ) :
+        first_col = first_none_static_col( cols )
+        if first_col != None :
+            if row_range == None :
+                row_id = 1
+                while row_id != None :
+                    yield read_row( cols, row_id )
+                    row_id = first_col.next_row( row_id + 1 )
+            else :
+                range_idx = 0
+                try :
+                    row_id = row_range[ range_idx ]
+                except :
+                    row_id = None
+                while row_id != None :
+                    yield read_row( cols, row_id )
+                    range_idx += 1
+                    try :
+                        row_id = first_col.next_row( row_range[ range_idx ] )
+                    except :
+                        row_id = None
+    else :
         if row_range == None :
             row_id = 1
             while row_id != None :
-                yield read_row( cols, row_id )
-                row_id = first_col.next_row( row_id + 1 )
+                yield cols.Read( row_id )
+                row_id = cols.next_row( row_id + 1 )
         else :
             range_idx = 0
             try :
@@ -590,10 +616,10 @@ def row_gen( cols, row_range = None ) :
             except :
                 row_id = None
             while row_id != None :
-                yield read_row( cols, row_id )
+                yield cols.Read( row_id )
                 range_idx += 1
                 try :
-                    row_id = first_col.next_row( row_range[ range_idx ] )
+                    row_id = cols.next_row( row_range[ range_idx ] )
                 except :
                     row_id = None
 
@@ -609,6 +635,12 @@ class VCursor :
         rc = self.__mgr.VCursorRelease( self.__ptr )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "VCursorRelease( '%s' )"%( self.__tab.name ), self )
+
+    def __enter__( self ) :
+        return self
+
+    def __exit__( self, type, value, traceback ) :
+        pass
 
     def OpenColumns( self, col_names ) :
         if isinstance( col_names, list ) :
@@ -827,6 +859,12 @@ class KMDataNode :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "KMDataNodeRelease()", self )
 
+    def __enter__( self ) :
+        return self
+
+    def __exit__( self, type, value, traceback ) :
+        pass
+
     def OpenNode( self, path, open_mode = OpenMode.Read ) :
         node = c_void_p()
         if open_mode == OpenMode.Write :
@@ -1001,7 +1039,13 @@ class KMetadata :
         rc = self.__mgr.KMetadataRelease( self.__ptr )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "KMetadataRelease()", self )
-            
+
+    def __enter__( self ) :
+        return self
+
+    def __exit__( self, type, value, traceback ) :
+        pass
+
     def Version( self ) :
         vers = c_int()
         rc = self.__mgr.KMetadataVersion( self.__ptr, byref( vers ) )
@@ -1331,6 +1375,12 @@ class VSchema :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "VSchemaRelease()", self )
 
+    def __enter__( self ) :
+        return self
+
+    def __exit__( self, type, value, traceback ) :
+        pass
+
     def ParseText( self, schema_txt ) :
         txt = to_char_p( schema_txt )
         l = len( schema_txt )
@@ -1359,6 +1409,12 @@ class KRepository :
         rc = self.__mgr.KRepositoryRelease( self.__ptr )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "KRepositoryRelease()", self )
+
+    def __enter__( self ) :
+        return self
+
+    def __exit__( self, type, value, traceback ) :
+        pass
 
     def __str__( self ) :
         lst = [ "'%s'"%( self.Name() ) ]
@@ -1451,6 +1507,12 @@ class KRepositoryMgr :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "KRepositoryMgrRelease()", self )
 
+    def __enter__( self ) :
+        return self
+
+    def __exit__( self, type, value, traceback ) :
+        pass
+
     def HasRemoteAccess( self ) :
         return self.__mgr.KRepositoryMgrHasRemoteAccess( self.__ptr );
 
@@ -1504,6 +1566,12 @@ class KConfig :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "KConfigRelease()", self )
             
+    def __enter__( self ) :
+        return self
+
+    def __exit__( self, type, value, traceback ) :
+        pass
+
     def Commit( self ) :
         rc = self.__mgr.KConfigCommit( self.__ptr )
         if rc != 0 :
@@ -1611,6 +1679,12 @@ class VResolver :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "VResolverRelease()", self )
 
+    def __enter__( self ) :
+        return self
+
+    def __exit__( self, type, value, traceback ) :
+        pass
+
     def QueryLocal( self, path ) :
         loc = c_void_p()
         rc = self.__mgr.VResolverQuery( self.__ptr, c_int( 0 ), path.__ptr, byref( loc ), 0, 0 )
@@ -1649,6 +1723,12 @@ class VFSManager :
         if rc != 0 :
             self.__mgr.raise_rc( rc, "VFSManagerRelease()", self )
 
+    def __enter__( self ) :
+        return self
+
+    def __exit__( self, type, value, traceback ) :
+        pass
+
     def GetResolver( self ) :
         ptr = c_void_p()
         rc = self.__mgr.VFSManagerGetResolver( self.__ptr, byref( ptr ) )
@@ -1681,6 +1761,12 @@ class RefVariation :
         rc = self.__mgr.RefVariationRelease( self.__ptr )
         if rc != 0 :
             self.__mgr.raise_rc( rc, "RefVariationRelease()", self )
+
+    def __enter__( self ) :
+        return self
+
+    def __exit__( self, type, value, traceback ) :
+        pass
 
     def GetIUPACSearchQuery( self ) :
         txt = c_char_p()
@@ -1975,6 +2061,12 @@ class manager :
         if self.__dir != None :
             if self.KDirectoryRelease != None :
                 self.KDirectoryRelease( self.__dir )
+
+    def __enter__( self ) :
+        return self
+
+    def __exit__( self, type, value, traceback ) :
+        pass
 
     def string_whack( self, str ) :
         self.StringWhack( byref( str ) )
