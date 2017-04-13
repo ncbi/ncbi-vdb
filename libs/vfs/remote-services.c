@@ -102,8 +102,8 @@ typedef struct { char * s; } SRaw;
 #define VERSION_1_1 0x01010000
 #define VERSION_1_2 0x01020000
 #define VERSION_3_0 0x03000000
-#define VERSION_3_1 0x03010000
-#define VERSION_3_2 0x03020000
+/*#define VERSION_3_1 0x03010000
+#define VERSION_3_2 0x03020000*/
 
 
 /* version in server request / response */
@@ -132,7 +132,7 @@ static bool SVersionHasRefseqCtx ( const SVersion * self ) {
 
 static bool SVersionAccInRequest ( const SVersion * self ) {
     assert ( self );
-    return self -> version <= VERSION_3_0;
+    return self -> version < VERSION_3_0;
 }
 
 static bool SVersionTypInRequest ( const SVersion * self ) {
@@ -147,17 +147,17 @@ static bool SVersionHasMultpileObjects ( const SVersion * self ) {
 
 static bool SVersionSingleUrl ( const SVersion * self ) {
     assert ( self );
-    return self -> version < VERSION_3_1;
+    return self -> version < VERSION_3_0;
 }
 
 static bool SVersionResponseHasMultipeUrls ( const SVersion * self ) {
     assert ( self );
-    return self -> version >= VERSION_3_1;
+    return self -> version >= VERSION_3_0;
 }
 
 static bool SVersionResponseHasTimestamp ( const SVersion * self ) {
     assert ( self );
-    return self -> version >= VERSION_3_2;
+    return self -> version >= VERSION_3_0;
 }
 /******************************************************************************/
 
@@ -172,10 +172,7 @@ typedef struct {
 /* number of fields in different versions of name resolver protocol */
 #define N_NAMES1_0 5
 #define N_NAMES1_1 10
-#define N_NAMES3_0  9
-#define N_NAMES3_2 15
-#define N_NAMES3_1 N_NAMES3_2
-
+#define N_NAMES3_0  15
 
 /* md5 checksum */
 typedef struct {
@@ -232,7 +229,7 @@ typedef struct {
 /* response row parsed into array of Strings */
 typedef struct {
     int n;
-    String s [ N_NAMES3_1 ];
+    String s [ N_NAMES3_0 ];
 } SOrdered;
 
 
@@ -1200,73 +1197,8 @@ static const SConverters * SConvertersNames1_2Make ( void ) {
 }
 
 
-/* converter from current names-3.0 response row to STyped object  */
+/* converter from names-3.0 response row to STyped object  */
 static void * STypedGetFieldNames3_0 ( STyped * self, int n ) {
-    assert ( self);
-    switch ( n ) {
-        case  0: return & self -> objectType;
-        case  1: return & self -> objectId;
-        case  2: return & self -> size;
-        case  3: return & self -> date;
-        case  4: return & self -> md5;
-        case  5: return & self -> ticket;
-        case  6: return & self -> hUrl;
-        case  7: return & self -> code;
-        case  8: return & self -> message;
-    }
-    return 0;
-}
-
-
-static const SConverters * SConvertersNames3_0Make ( void ) {
-    static TConverter * f [ N_NAMES3_0 + 1 ] = {
-        EObjectTypeInit,
-#if 0
-        aStringInit,
-#endif
-        aStringInit,
-        size_tInit,
-        KTimeInitFromIso8601,
-        md5Init,
-        aStringInit,
-        aStringInit,
-        uint32_tInit,
-        aStringInit, NULL };
-    static const SConverters c = {
-        N_NAMES3_0,
-        STypedGetFieldNames3_0, f };
-    return & c;
-}
-
-
-/* converter from proposed names-3.0 response row to STyped object  *
-static void * STypedGetFieldNames3_1 ( STyped * self, int n ) {
-    assert ( self);
-    switch ( n ) {
-        case  0: return & self -> objectType;
-        case  1: return & self -> objectId;
-        case  2: return & self -> size;
-        case  3: return & self -> date;
-        case  4: return & self -> md5;
-        case  5: return & self -> ticket;
-        case  6: return & self -> hUrl;
-        case  7: return & self -> fpUrl;
-        case  8: return & self -> hsUrl;
-        case  9: return & self -> flUrl;
-        case 10: return & self -> hVdbcacheUrl;
-        case 11: return & self -> fpVdbcacheUrl;
-        case 12: return & self -> hsVdbcacheUrl;
-        case 13: return & self -> flVdbcacheUrl;
-        case 14: return & self -> expiration;
-        case 15: return & self -> code;
-        case 16: return & self -> message;
-    }
-    return 0;
-}*/
-
-
-/* converter from proposed names-3.0 response row to STyped object  */
-static void * STypedGetFieldNames3_2 ( STyped * self, int n ) {
     assert ( self);
     switch ( n ) {
         case  0: return & self -> ordId;
@@ -1289,8 +1221,8 @@ static void * STypedGetFieldNames3_2 ( STyped * self, int n ) {
 }
 
 
-static const SConverters * SConvertersNames3_2Make ( void ) {
-    static TConverter * f [ N_NAMES3_2 + 1 ] = {
+static const SConverters * SConvertersNames3_0Make ( void ) {
+    static TConverter * f [ N_NAMES3_0 + 1 ] = {
         uint32_tInit,        /*  0 ord-id */
         EObjectTypeInit,     /*  1 object-type */
         aStringInit,         /*  2 object-id */
@@ -1308,36 +1240,9 @@ static const SConverters * SConvertersNames3_2Make ( void ) {
         aStringInit,         /* 14 message */
         NULL };
     static const SConverters c = {
-        N_NAMES3_2,
-        STypedGetFieldNames3_2, f };
+        N_NAMES3_0,
+        STypedGetFieldNames3_0, f };
     return & c;
-}
-
-
-static const SConverters * SConvertersNames3_1Make ( void ) {
-    return SConvertersNames3_2Make ();
-    /*static TConverter * f [ N_NAMES3_1 + 1 ] = {
-        EObjectTypeInit,
-        aStringInit,
-        size_tInit,
-        KTimeInit,
-        md5Init,
-        aStringInit,
-        aStringInit,
-        aStringInit,
-        aStringInit,
-        aStringInit,
-        aStringInit,
-        aStringInit,
-        aStringInit,
-        aStringInit,
-        KTimeInit,
-        uint32_tInit,
-        aStringInit, NULL };
-    static const SConverters c = {
-        N_NAMES3_1,
-        STypedGetFieldNames3_1, f };
-    return & c;*/
 }
 
 
@@ -1358,12 +1263,6 @@ rc_t SConvertersMake ( const SConverters ** self, SHeader * header )
             return 0;
         case VERSION_3_0:
             * self = SConvertersNames3_0Make ();
-            return 0;
-        case VERSION_3_1:
-            * self = SConvertersNames3_1Make ();
-            return 0;
-        case VERSION_3_2:
-            * self = SConvertersNames3_2Make ();
             return 0;
         default:
             * self = NULL;
@@ -2754,7 +2653,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
                 prefs [ i ] = "https";
                 seps [ i ++ ] = ",";
                 break;
-            /* 3.1 protocols */
+            /* 3.0 protocols */
             case eProtocolFile:
                 prefs [ i ] = "file";
                 seps [ i ++ ] = ",";
@@ -3387,7 +3286,7 @@ rc_t KServiceNamesExecuteExtImpl ( KService * self, VRemoteProtocols protocols,
          return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
 
     if ( version == NULL )
-        version = "#3.1";
+        version = "#3.0";
 
     rc = KServiceInitNamesRequestWithVersion ( self, protocols, cgi, version,
         false );
@@ -3999,28 +3898,4 @@ rc_t KServiceSearchTest (
     RELEASE ( KStream, stream );
     return rc;
 }
-
-#if 0
 /******************************************************************************/
-/*   ResponseRow */
-rc_t ResponseRowGetType   ( const ResponseRow * self, const EObjectType * res );
-rc_t ResponseRowGetId     ( const ResponseRow * self, const String      * res );
-rc_t ResponseRowGetSize   ( const ResponseRow * self, const size_t      * res );
-rc_t ResponseRowGetDate   ( const ResponseRow * self, const KTime       * res );
-rc_t ResponseRowGetMd5    ( const ResponseRow * self, const uint8_t     * res );
-rc_t ResponseRowGetTicket ( const ResponseRow * self, const String      * res );
-rc_t ResponseRowGetUrl    ( const ResponseRow * self, const String      * res );
-rc_t ResponseRowGetCode   ( const ResponseRow * self, const uint32_t    * res );
-rc_t ResponseRowGetMessage( const ResponseRow * self, const String      * res );
-
-/*   VPath */
-rc_t VPathsInit ( const VPath * query );
-rc_t VPathsLocal ( const VPaths * self, const VPath * result );
-rc_t VPathsRemoteHttp ( const VPaths * self, const VPath * result );
-rc_t VPathsRemoteFasp ( const VPaths * self, const VPath * result );
-rc_t VPathsCache ( const VPaths * self, const VPath * result );
-rc_t VPathsQuery ( VPaths * self );
-
-rc_t Names3KStreamToResponseRowList ( const ServicesRequest * request,
-     const KStream * stream, replyStrList ** list );
-#endif

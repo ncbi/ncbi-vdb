@@ -96,14 +96,6 @@ static uint32_t NAME_SERVICE_MIN_VERS = NAME_SERVICE_MIN_VERS_;
 static uint32_t NAME_SERVICE_VERS
     = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MIN_VERS_ << 16;
 
-static void VFSManagerSetNameResolverVersion(uint32_t maj, uint32_t min) {
-    NAME_SERVICE_MAJ_VERS = maj;
-    NAME_SERVICE_MIN_VERS = min;
-    NAME_SERVICE_VERS
-        = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MIN_VERS_ << 16;
-}
-void VFSManagerSetNameResolverVersion3_0(void)
-{   VFSManagerSetNameResolverVersion(3, 0); }
 
 /*--------------------------------------------------------------------------
  * String
@@ -3663,10 +3655,9 @@ LIB_EXPORT
 rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
     const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache )
 {
-    const bool USE_HTTP_ONLY_PROTOCOL = false;
     rc_t rcs = -1;
     rc_t rc = rcs = VResolverQueryInt
-        ( self, protocols, query, local, remote, cache, "#3.1" );
+        ( self, protocols, query, local, remote, cache, "#3.0" );
     if ( rc == 0 )
     {
         /* the paths returned from resolver are highly reliable */
@@ -3725,141 +3716,6 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
         else if ( * local == NULL )
             assert ( l && * l == NULL && lath == NULL );
         else {
-            int notequal = ~ 0;
-            VPathMarkHighReliability ( ( VPath * ) lath, true );
-            assert ( ! VPathEqual ( * local, lath, & notequal ) );
-            assert ( ! notequal );
-        }
-        RELEASE ( VPath, lath );
-        RELEASE ( VPath, oath );
-        RELEASE ( VPath, cath );
-    }
-    if ( USE_HTTP_ONLY_PROTOCOL && protocols != 0
-                     && protocols !=  3 /*https*/
-                     && protocols != 25 /*https,http*/ )
-    {
-        const VPath * oath = NULL;
-        const VPath ** p = remote ? & oath : NULL;
-        const VPath * cath = NULL;
-        const VPath ** c = cache ? & cath : NULL;
-        const VPath * lath = NULL;
-        const VPath ** l = local ? & lath : NULL;
-        rc_t ro = VResolverQueryInt
-            ( self, protocols, query, l, p, c, "#1.0" );
-        assert ( rc == ro );
-        if ( remote == NULL ) {
-            assert ( p == NULL );
-        } else if ( * remote == NULL ) {
-            assert ( p && * p == NULL && oath == NULL );
-        } else {
-            int notequal = ~ 0;
-            assert ( ! VPathEqual ( * remote, oath, & notequal ) );
-            assert ( ! notequal );
-        }
-        if ( cache == NULL ) {
-            assert ( c == NULL );
-        } else if ( * cache == NULL )
-            assert ( c && * c == NULL && cath == NULL );
-        else {
-            int notequal = ~ 0;
-            VPathMarkHighReliability ( ( VPath * ) cath, true );
-            assert ( ! VPathEqual ( * cache, cath, & notequal ) );
-            assert ( ! notequal );
-        }
-        if ( local == NULL )
-            assert ( l == NULL );
-        else if ( * local == NULL )
-            assert ( l && * l == NULL && lath == NULL );
-        else {
-            int notequal = ~ 0;
-            VPathMarkHighReliability ( ( VPath * ) lath, true );
-            assert ( ! VPathEqual ( * local, lath, & notequal ) );
-            assert ( ! notequal );
-        }
-        RELEASE ( VPath, lath );
-        RELEASE ( VPath, oath );
-        RELEASE ( VPath, cath );
-    }
-    if ( USE_HTTP_ONLY_PROTOCOL && protocols != 0
-                     && protocols != 3 /*https*/
-                     && protocols != 25 /*https,http*/ )
-    {
-        const VPath * oath = NULL;
-        const VPath ** p = remote ? & oath : NULL;
-        const VPath * cath = NULL;
-        const VPath ** c = cache ? & cath : NULL;
-        const VPath * lath = NULL;
-        const VPath ** l = local ? & lath : NULL;
-        rc_t ro = VResolverQueryInt
-            ( self, protocols, query, l, p, c, "#1.1" );
-        assert ( rc == ro );
-        if ( remote == NULL ) {
-            assert ( p == NULL );
-        } else if ( * remote == NULL ) {
-            assert ( p && * p == NULL && oath == NULL );
-        } else {
-            int notequal = ~ 0;
-            assert ( ! VPathEqual ( * remote, oath, & notequal ) );
-            assert ( ! notequal );
-        }
-        if ( cache == NULL ) {
-            assert ( c == NULL );
-        } else if ( * cache == NULL ) {
-            assert ( c && * c == NULL && cath == NULL );
-        } else {
-            int notequal = ~ 0;
-            VPathMarkHighReliability ( ( VPath * ) cath, true );
-            assert ( ! VPathEqual ( * cache, cath, & notequal ) );
-            assert ( ! notequal );
-        }
-        if ( local == NULL ) {
-            assert ( l == NULL );
-        } else if ( * local == NULL ) {
-            assert ( l && * l == NULL && lath == NULL );
-        } else {
-            int notequal = ~ 0;
-            VPathMarkHighReliability ( ( VPath * ) lath, true );
-            assert ( ! VPathEqual ( * local, lath, & notequal ) );
-            assert ( ! notequal );
-        }
-        RELEASE ( VPath, lath );
-        RELEASE ( VPath, oath );
-        RELEASE ( VPath, cath );
-    }
-    if ( ! VPathHasRefseqContext ( query ) ) {
-        const VPath * oath = NULL;
-        const VPath ** p = remote ? & oath : NULL;
-        const VPath * cath = NULL;
-        const VPath ** c = cache ? & cath : NULL;
-        const VPath * lath = NULL;
-        const VPath ** l = local ? & lath : NULL;
-        rc_t ro = VResolverQueryInt
-            ( self, protocols, query, l, p, c, "#3.0" );
-        assert ( rcs == ro );
-        if ( remote == NULL ) {
-            assert ( p == NULL );
-        } else if ( * remote == NULL ) {
-            assert ( p && * p == NULL && oath == NULL );
-        } else {
-            int notequal = ~ 0;
-            assert ( ! VPathEqual ( * remote, oath, & notequal ) );
-            assert ( ! notequal );
-        }
-        if ( cache == NULL ) {
-            assert ( c == NULL );
-        } else if ( * cache == NULL ) {
-            assert ( c && * c == NULL && cath == NULL );
-        } else {
-            int notequal = ~ 0;
-            VPathMarkHighReliability ( ( VPath * ) cath, true );
-            assert ( ! VPathEqual ( * cache, cath, & notequal ) );
-            assert ( ! notequal );
-        }
-        if ( local == NULL ) {
-            assert ( l == NULL );
-        } else if ( * local == NULL ) {
-            assert ( l && * l == NULL && lath == NULL );
-        } else {
             int notequal = ~ 0;
             VPathMarkHighReliability ( ( VPath * ) lath, true );
             assert ( ! VPathEqual ( * local, lath, & notequal ) );

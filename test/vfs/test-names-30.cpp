@@ -125,7 +125,7 @@ TEST_CASE ( INCOMPLETE ) {
     REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( NULL, & response, 0 ) );
     REQUIRE_NULL ( response );
 
-    REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.1\n"
+    REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.0\n"
 "0|| object-id |90|1930-01-13T13:25:30|0123456789abcdefABCDEF0123456789|ticket|"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p||||"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
@@ -140,7 +140,7 @@ TEST_CASE ( SINGLE ) {
     const KSrvResponse * response = NULL;
 
     // incomplete string
-    REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.1\n"
+    REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.0\n"
         "SRR000001||http://dwnl.ncbi.nlm.nih.gov/srapub/SRR000001||||200|ok",
         & response, 0 ) );
     REQUIRE_NULL ( response );
@@ -161,7 +161,7 @@ TEST_CASE ( SINGLE ) {
     const VPath * p3 = Path . make ( "s3:p"               , date, md5, exp );
     const VPath * v3 = Path . make ( "s3:v"               , ""  , md5 );
 
-    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.1\n"
+    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.0\n"
 "0|| object-id |90|1980-01-13T13:25:30|0123456789abcdefABCDEF012345678a|ticket|"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p||||"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
@@ -286,7 +286,7 @@ TEST_CASE ( DOUBLE ) {
     const KTime_t exp = 1489700000  ;
     const string date1 (  "1981-01-13T13:25:31" );
     const KTime_t exp1 = 1489710000  ;
-    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.1\n"
+    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.0\n"
         "0|| object-id |90|1981-01-13T13:25:30||ticket|"
 "http://url/$fasp://frl/$https://hsl/$file:///p$s3:p||||"
 "http://vdbcacheUrl/$fasp://fvdbcache/$https://vdbcache/$file:///vdbcache$s3:v|"
@@ -339,7 +339,7 @@ TEST_CASE ( DOUBLE ) {
 
 TEST_CASE ( BAD_TYPE ) {
     const KSrvResponse * response = NULL;
-    REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.1\n"
+    REQUIRE_RC_FAIL ( KServiceNames3_0StreamTest ( "#3.0\n"
         "0|t| object-id |9|1981-01-13T13:25:30|0123456789abcdefABCDEF012345678b"
 		"|ticket|||1981-01-13T13:25:30||||200| mssg\n",
         & response, 1 ) );
@@ -348,7 +348,7 @@ TEST_CASE ( BAD_TYPE ) {
 
 TEST_CASE ( ERROR ) {
     const KSrvResponse * response = NULL;
-    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.1\n"
+    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.0\n"
         "0|| object-id |90|1981-01-13T13:25:30|0123456789abcdefABCDEF012345678c"
 		"|ticket||||||1489688000|500| mssg\n",
         & response, 1 ) );
@@ -371,7 +371,7 @@ TEST_CASE ( ERROR ) {
 
 TEST_CASE ( AND_ERROR ) {
     const KSrvResponse * response = NULL;
-    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.1\n"
+    REQUIRE_RC ( KServiceNames3_0StreamTest ( "#3.0\n"
 "0|na|object-0|90|1930-01-13T13:25:30|0123456789abcdefABCDEF012345678d|tckt0|||"
           "|||1489687900|503|e mssg\n"
 "1||objc1|10|1931-01-13T13:25:31|0123456789abcdefABCDEF012345678e|1|http://u/||"
@@ -447,7 +447,7 @@ if ( 1 )
 
     REQUIRE_RC ( KServiceAddId ( service, "SRR000001" ) );
 #if 0
-    REQUIRE_RC_FAIL ( KServiceTestNamesExecuteExt ( service, 0, NULL, "#3.1",
+    REQUIRE_RC_FAIL ( KServiceTestNamesExecuteExt ( service, 0, NULL, "#3.0",
         & response, "" ) );
     REQUIRE_RC ( KServiceTestNamesExecuteExt ( service, 0, NULL, "#1.2",
         & response, NULL ) );
@@ -476,8 +476,8 @@ if ( 1 )
     REQUIRE_RC ( KSrvResponseRelease ( response ));
 #endif
 
-    REQUIRE_RC ( KServiceTestNamesExecuteExt ( service, 0, NULL, "#3.1",
-        & response, "#3.2\n"
+    REQUIRE_RC ( KServiceTestNamesExecuteExt ( service, 0, NULL, "#3.0",
+        & response, "#3.0\n"
         "0|srapub|SRR000001|312527083|2015-04-07T21:54:15|"
         "9bde35fefa9d955f457e22d9be52bcd9||"
         "http://sra-download.ncbi.nlm.nih.gov/srapub/SRR000001||||||200|ok\n"
@@ -497,7 +497,7 @@ TEST_CASE ( TEST_KFG ) {
 extern "C" {
     ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] ) {
-        if ( 1 ) assert ( ! KDbgSetString ( "VFS" ) );
+        if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
         return Names3_0_TestSuite ( argc, argv );
     }
 }
