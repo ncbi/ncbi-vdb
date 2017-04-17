@@ -1833,7 +1833,7 @@ static rc_t STimestampInitCurrent ( STimestamp * self ) {
     self -> time = KTimeStamp ();
 
     if ( self -> time != 0 ) {
-        const size_t s = 21;
+        const size_t s = 32;
         self -> raw . s = calloc ( 1, s );
         if ( self -> raw . s == NULL )
             return RC ( rcVFS, rcQuery, rcExecuting, rcMemory, rcExhausted );
