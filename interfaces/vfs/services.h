@@ -47,6 +47,8 @@ typedef struct KSrvResponse KSrvResponse;
 
 
 /******************************************************************************/
+/* KService - EXTERNAL Service */
+
 /* Make KService object */
 rc_t KServiceMake ( KService ** self);
 
@@ -86,7 +88,7 @@ uint32_t KSrvResponseLength  ( const KSrvResponse * self );
 
 /* GetPath:
  * Get KSrvResponse element number "idx" for "protocol":
- * - "path"/"vdbcache",
+ * - remote "path"/"vdbcache",
  * or "error"
  */
 rc_t KSrvResponseGetPath ( const KSrvResponse * self, uint32_t idx,
