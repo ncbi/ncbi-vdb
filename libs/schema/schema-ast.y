@@ -205,7 +205,6 @@
 %token PT_VERSNAME
 %token PT_ARRAY
 %token PT_AT
-%token PT_PHYSENCEXPR
 %token PT_PHYSENCREF
 %token PT_TYPEDCOLEXPR
 
@@ -224,11 +223,11 @@
 %type <node> col_modifier col_decl col_ident col_body col_stmt typed_col column_expr
 %type <node> factory_parms factory_parms_opt schema_parm schema_parms arrayspec
 %type <node> phys_enc_ref col_body_opt database opt_dbdad dbbody db_members
-%type <node> db_member template_opt include
+%type <node> db_member template_opt include func_parms_opt expr_list schema_parts_opt
 
 %type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
 
-%type <expr> expr cond_expr cond_chain uint_expr
+%type <expr> expr cond_expr cond_chain uint_expr func_expr
 
 %type <paramSig> param_sig param_signature fact_sig
 
@@ -242,8 +241,9 @@
 %type <tok> KW_default KW_extern KW_readonly PHYSICAL_IDENTIFIER_1_0 HEX OCTAL PT_COLSTMT
 %type <tok> KW_read KW_validate KW_limit PT_SCHEMAFORMAL PT_PRODSTMT PT_PRODTRIGGER
 %type <tok> PT_NOHEADER KW_decode KW_encode KW___row_length PT_COLDECL PT_TYPEDCOL PT_TYPEEXPR
-%type <tok> PT_PHYSENCEXPR PT_PHYSENCREF KW_column PT_TYPEDCOLEXPR PT_DATABASE PT_DBBODY
+%type <tok> PT_PHYSENCREF KW_column PT_TYPEDCOLEXPR PT_DATABASE PT_DBBODY
 %type <tok> KW_template KW_database PT_DBMEMBER PT_TBLMEMBER PT_INCLUDE KW_include STRING
+%type <tok> PT_FUNCEXPR
 
 %%
 
@@ -271,7 +271,7 @@ schema_1
     ;
 
  schema_2:
-    %empty  { $$ = new AST_Schema (); }             /*TBD*/
+    %empty  { $$ = new AST_Schema (); }             /*TODO*/
     ;
 
 
@@ -523,6 +523,9 @@ tbl_stmt
     : production    { $$ = $1; }
     | column_decl   { $$ = $1; }
     | column_expr   { $$ = $1; }
+    | phys_column_decl  /*TBD*/
+    | untyped_col       /*TBD*/
+    | ';'               /*TBD { $$ = new AST (); }*/
     ;
 
 column_decl
@@ -553,9 +556,8 @@ col_modifier
     ;
 
 col_decl
-    : PT_COLDECL '(' typespec typed_col ')'         { $$ = new AST ( $1, $3, $4 ); }
-    | PT_COLDECL '(' phys_enc_ref typed_col ')'    { $$ = new AST ( $1, $3, $4 ); }
-    /*TBD*/
+    : PT_COLDECL '(' typespec typed_col ')'     { $$ = new AST ( $1, $3, $4 ); }
+    | PT_COLDECL '(' phys_enc_ref typed_col ')' { $$ = new AST ( $1, $3, $4 ); }
     ;
 
 phys_enc_ref
@@ -637,14 +639,6 @@ include
 
 /* expressions */
 
-expr
-    : uint_expr                 { $$ = $1; }
-    | fqn                       { $$ = new AST_Expr ( $1 ); }
-    | '@'                       { $$ = new AST_Expr ( PT_AT ); }
-    | PHYSICAL_IDENTIFIER_1_0   { $$ = new AST_Expr ( $1 ); }
-    /*| TBD */
-    ;
-
 cond_expr
     : PT_ASTLIST '(' cond_chain ')' { $$ = $3; }
     ;
@@ -654,23 +648,31 @@ cond_chain
     | cond_chain '|' expr    { $$ = $1; $$ -> AddNode ( $3 ); }
     ;
 
-type_expr
-    : typespec                          { $$ = $1; }
-    | PT_TYPEEXPR '(' fqn '/' fqn ')'   { $$ = new AST ( $1, $3, $5 ); }
-    ;
-
-uint_expr
-    : PT_UINT '(' DECIMAL ')'   { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
-    | PT_UINT '(' HEX ')'       { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
-    | PT_UINT '(' OCTAL ')'     { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
-    ;
-
-/*
-phys_enc_expr
-    : PT_PHYSENCEXPR '(' '<' PT_ASTLIST '(' schema_parms ')' '>' fqn_opt_vers factory_parms_opt ')'
-        { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $6 ); $$ -> AddNode ( $9 ); $$ -> AddNode ( $10 ); }
-    ;
+expr
+    : fqn                       { $$ = new AST_Expr ( $1 ); }
+    | PHYSICAL_IDENTIFIER_1_0   { $$ = new AST_Expr ( $1 ); }
+    | '@'                       { $$ = new AST_Expr ( PT_AT ); }
+    | func_expr                 { $$ = $1; }
+    | uint_expr                 { $$ = $1; }
+/*TODO
+    | float_expr_1_0            { $$ = $1; }
+    | string_expr_1_0           { $$ = $1; }
+    | const_vect_expr_1_0       { $$ = $1; }
+    | bool_expr_1_0             { $$ = $1; }
+    | negate_expr_1_0           { $$ = $1; }
+    | '+' expression_1_0        { $$ = $2; }
+    | cast_expr                 { $$ = $1; }
 */
+    ;
+
+func_expr
+    : PT_FUNCEXPR '(' schema_parts_opt fqn_opt_vers factory_parms_opt '(' func_parms_opt ')' ')'
+        { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); $$ -> AddNode ( $4 ); $$ -> AddNode ( $5 ); $$ -> AddNode ( $7 ); }
+    ;
+
+schema_parts_opt
+    : %empty                                    { $$ = new AST ( PT_EMPTY ); }
+    | '<' PT_ASTLIST '(' schema_parms ')' '>'   { $$ = $4; }
 
 schema_parms
     : schema_parm                   { $$ = new AST (); $$ -> AddNode ( $1 ); }
@@ -691,6 +693,27 @@ factory_parms_opt
 factory_parms
     : expr                      { $$ = new AST (); $$ -> AddNode ( $1 ); }
     | factory_parms ',' expr    { $$ = $1; $$ -> AddNode ( $3 ); }
+    ;
+
+func_parms_opt
+    : PT_EMPTY                      { $$ = new AST ( $1 ); }
+    | PT_ASTLIST '(' expr_list ')'  { $$ = $3; }
+    ;
+
+expr_list
+    : expr                  { $$ = new AST (); $$ -> AddNode ( $1 ); }
+    | expr_list ',' expr    { $$ = $1; $$ -> AddNode ( $3 ); }
+    ;
+
+uint_expr
+    : PT_UINT '(' DECIMAL ')'   { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
+    | PT_UINT '(' HEX ')'       { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
+    | PT_UINT '(' OCTAL ')'     { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
+    ;
+
+type_expr
+    : typespec                          { $$ = $1; }
+    | PT_TYPEEXPR '(' fqn '/' fqn ')'   { $$ = new AST ( $1, $3, $5 ); }
     ;
 
 /* commonly used productions */

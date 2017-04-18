@@ -170,9 +170,8 @@ extern int AST_debug;
     PT_VERSNAME = 379,
     PT_ARRAY = 380,
     PT_AT = 381,
-    PT_PHYSENCEXPR = 382,
-    PT_PHYSENCREF = 383,
-    PT_TYPEDCOLEXPR = 384
+    PT_PHYSENCREF = 382,
+    PT_TYPEDCOLEXPR = 383
   };
 #endif
 
@@ -190,7 +189,7 @@ union YYSTYPE
   AST_ParamSig* paramSig;
   bool          boolean;
 
-#line 194 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
+#line 193 "/home/boshkins/devel/ncbi-vdb/libs/schema/schema-ast-tokens.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

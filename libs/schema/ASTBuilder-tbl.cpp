@@ -227,27 +227,6 @@ ASTBuilder :: HandleTypedColumn ( STable & p_table, SColumn & p_col, const AST &
     return true;
 }
 
-const void *
-ASTBuilder :: SelectVersion ( const KSymbol & p_ovl, int64_t ( CC * p_cmp ) ( const void *item, const void *n ), uint32_t * p_version )
-{
-    const SNameOverload *name = static_cast < const SNameOverload * > ( p_ovl . u . obj );
-    assert ( p_version != 0 );
-    const void * ret = 0;
-    if ( * p_version != 0 )
-    {
-        ret = VectorFind ( & name -> items, p_version, NULL, p_cmp );
-        if ( ret == 0 )
-        {
-            ReportError ( "Requested version does not exist: '%S#%V'", & p_ovl . name, * p_version );
-        }
-    }
-    else
-    {
-        ret = VectorLast ( & name -> items );
-    }
-    return ret;
-}
-
 SExpression *
 ASTBuilder :: MakePhysicalEncodingSpec ( const KSymbol & p_sym,
                                          const AST_FQN & p_fqn,

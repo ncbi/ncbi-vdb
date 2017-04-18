@@ -301,6 +301,27 @@ ASTBuilder :: EvalConstExpr ( const AST_Expr & p_expr )
     return ret;
 }
 
+const void *
+ASTBuilder :: SelectVersion ( const KSymbol & p_ovl, int64_t ( CC * p_cmp ) ( const void *item, const void *n ), uint32_t * p_version )
+{
+    const SNameOverload *name = static_cast < const SNameOverload * > ( p_ovl . u . obj );
+    assert ( p_version != 0 );
+    const void * ret = 0;
+    if ( * p_version != 0 )
+    {
+        ret = VectorFind ( & name -> items, p_version, NULL, p_cmp );
+        if ( ret == 0 )
+        {
+            ReportError ( "Requested version does not exist: '%S#%V'", & p_ovl . name, * p_version );
+        }
+    }
+    else
+    {
+        ret = VectorLast ( & name -> items );
+    }
+    return ret;
+}
+
 void
 ASTBuilder :: DeclareType ( const AST_FQN& p_fqn, const KSymbol& p_super, const AST_Expr* p_dimension )
 {
@@ -331,7 +352,7 @@ ASTBuilder :: DeclareType ( const AST_FQN& p_fqn, const KSymbol& p_super, const 
         }
         else
         {
-            free ( dt );
+            SDatatypeWhack ( dt, 0 );
         }
     }
 }
@@ -557,14 +578,93 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
                 }
             }
             break;
+
         case PT_UINT :
-            assert ( false ); //TODO
+            VectorAppend ( p_v, 0, dynamic_cast < const AST_Expr & > ( parm ) . MakeUnsigned ( * this ) );
             break;
+
         case PT_ARRAY:
             assert ( false );  //TODO
             break;
+
         default:
             assert ( false );
+        }
+    }
+    return true;
+}
+
+bool
+ASTBuilder :: FillFactoryParms ( const AST & p_parms, Vector & p_v )
+{
+    uint32_t count = p_parms . ChildrenCount ();
+    for ( uint32_t i = 0; i < count; ++ i )
+    {
+        const AST_Expr * parm = dynamic_cast < const AST_Expr * > ( p_parms . GetChild ( i ) );
+        assert ( parm != 0 );
+        SExpression * expr = parm -> MakeExpression ( * this );
+        if ( expr != 0 )
+        {
+            // allowed:
+            // eConstExpr, eIndirectExpr, eVectorExpr, eCastExpr, eFuncParamExpr, eNegateExpr
+            switch ( expr -> var )
+            {
+            case eConstExpr:
+            case eIndirectExpr:
+            case eVectorExpr:
+            case eCastExpr:
+            case eFuncParamExpr:
+            case eNegateExpr:
+                if ( ! VectorAppend ( p_v, 0, expr ) )
+                {
+                    SExpressionWhack ( expr );
+                    return false;
+                }
+                break;
+            default:
+                ReportError ( "Cannot be used as a factory parameter" ); // TODO: identify the culprit
+                break;
+            }
+        }
+        else
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool
+ASTBuilder :: FillArguments ( const AST & p_parms, Vector & p_v )
+{
+    uint32_t count = p_parms . ChildrenCount ();
+    for ( uint32_t i = 0; i < count; ++ i )
+    {
+        const AST_Expr * parm = dynamic_cast < const AST_Expr * > ( p_parms . GetChild ( i ) );
+        assert ( parm != 0 );
+        // allowed tags: PT_AT, PHYSICAL_IDENTIFIER_1_0, PT_CAST, PT_IDENT
+        // for PT_IDENT, allowed object types: eFuncParam, eProduction, eIdent, eForward, eVirtual, eColumn, ePhysMember
+        SExpression * expr = 0;
+        switch ( parm -> GetTokenType () )
+        {
+        case PT_AT:
+            expr = parm -> MakeExpression ( * this );
+            break;
+        case PT_IDENT:
+            expr = parm -> MakeExpression ( * this );
+            break;
+        default:
+            ReportError ( "Cannot be used as a function call parameter" ); // TODO: identify the culprit
+            break;
+        }
+        if ( expr == 0 )
+        {
+            return false;
+        }
+        if ( ! VectorAppend ( p_v, 0, expr ) )
+        {
+            SExpressionWhack ( expr );
+            return false;
         }
     }
     return true;
@@ -625,7 +725,7 @@ ASTBuilder :: DeclareTypeSet ( const AST_FQN & p_fqn, const BSTree & p_types, ui
         }
         else
         {
-            free ( ts );
+            STypesetWhack ( ts, 0 );
         }
     }
 }
@@ -857,7 +957,7 @@ ASTBuilder :: FmtDef ( const Token* p_token, AST_FQN* p_fqn, AST_FQN* p_super_op
                 if ( super -> type != eFormat )
                 {
                     ReportError ( "Not a format", * p_super_opt );
-                    free ( fmt );
+                    SFormatWhack ( fmt, 0 );
                     return ret;
                 }
                 fmt -> super = static_cast < const SFormat * > ( super -> u . obj );
@@ -871,7 +971,7 @@ ASTBuilder :: FmtDef ( const Token* p_token, AST_FQN* p_fqn, AST_FQN* p_super_op
         }
         else
         {
-            free ( fmt );
+            SFormatWhack ( fmt, 0 );
         }
     }
 
@@ -902,13 +1002,13 @@ ASTBuilder :: ConstDef  ( const Token* p_token, AST* p_type, AST_FQN* p_fqn, AST
                 }
                 else
                 {
-                    free ( cnst );
+                    SConstantWhack ( cnst, 0 );
                 }
             }
         }
         else // fqn dim
         {
-            //TBD - use ArraySpec()
+            //TODO - use ArraySpec()
         }
     }
 

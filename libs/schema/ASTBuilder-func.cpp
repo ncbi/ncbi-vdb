@@ -121,6 +121,21 @@ FunctionDeclaration :: HandleFunctionOverload ( const KSymbol *  p_priorDecl )
 
     SNameOverload *name = ( SNameOverload* ) p_priorDecl -> u . obj;
     assert ( name != 0 );
+
+    SFunction *exist = static_cast < SFunction * > ( VectorGet ( & name -> items, 0 ) );
+    assert ( exist != 0 );
+    if ( exist -> script )
+    {
+        if ( ! m_self -> script)
+        {
+            m_builder . ReportError ( "Overload has to have a body: '%S'", & p_priorDecl -> name );
+        }
+    }
+    else if ( m_self -> script)
+    {
+        m_builder . ReportError ( "Overload cannot have a body: '%S'", & p_priorDecl -> name );
+    }
+
     uint32_t idx;
     rc_t rc = VectorInsertUnique ( & name -> items, m_self, & idx, SFunctionSort );
     if ( rc == 0 ) // overload added
@@ -201,7 +216,7 @@ FunctionDeclaration :: SetName ( const AST_FQN &  p_fqn,
     }
     else
     {
-        if ( priorDecl -> type != p_type || ! p_canOverload )
+        if ( ! p_canOverload  || priorDecl -> type == eFactory )
         {
             m_builder . ReportError ( "Declared earlier and cannot be overloaded", p_fqn );
             return false;
@@ -519,7 +534,7 @@ FunctionDeclaration :: SetPrologue ( const AST & p_prologue )
     switch ( p_prologue . GetTokenType () )
     {
     case PT_IDENT:
-        {
+        {   // renaming
             const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( p_prologue );
             const KSymbol * priorDecl = m_builder . Resolve ( fqn, false );
             if ( priorDecl != 0 )
@@ -540,16 +555,12 @@ FunctionDeclaration :: SetPrologue ( const AST & p_prologue )
         }
         break;
     case PT_EMPTY:
-        {
+        {   // function body
             if ( p_prologue . ChildrenCount () > 0 )
             {
                 if ( m_self -> fact . vararg )
                 {
                     m_builder . ReportError ( "Function with factory varargs cannot have a body: '%S'", & m_self -> name -> name );
-                }
-                else if ( ! m_self -> script )
-                {
-                    m_builder . ReportError ( "Overload canot have a body: '%S'", & m_self -> name -> name );
                 }
                 else
                 {
@@ -922,7 +933,10 @@ ASTBuilder :: FunctionDecl ( const Token*     p_token,
     bool isValidate = p_token -> GetType () == PT_VALIDATE;
 
     FunctionDeclaration func ( *this );
-    if ( func . SetName ( * p_name, p_script ? eScriptFunc : eFunction, true, isValidate ) )
+    if ( func . SetName ( * p_name,
+                          ( p_script || ( p_prologue -> GetTokenType () == PT_EMPTY && p_prologue -> ChildrenCount () > 0 ) )? eScriptFunc : eFunction,
+                          true,
+                          isValidate ) )
     {
         rc_t rc = 0;
         bool hasSchemaParms = p_schema -> ChildrenCount () != 0;

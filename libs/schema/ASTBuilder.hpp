@@ -126,11 +126,15 @@ namespace ncbi
             void AddProduction ( Vector & p_list, const char * p_name, const AST_Expr & p_expr, const AST * p_type );
 
             bool FillSchemaParms ( const AST & p_parms, Vector & p_v );
+            bool FillFactoryParms ( const AST & p_parms, Vector & p_v );
+            bool FillArguments ( const AST & p_parms, Vector & p_v );
             struct SExpression * MakePhysicalEncodingSpec ( const KSymbol & p_sym,
                                                             const AST_FQN & p_fqn,
                                                             const AST * p_schemaArgs,
                                                             const AST * p_factoryArgs,
                                                             VTypedecl & p_type );
+
+            const void * SelectVersion ( const struct KSymbol & p_ovl, int64_t ( CC * p_cmp ) ( const void *item, const void *n ), uint32_t * p_version );
 
         private:
             bool Init();
@@ -156,8 +160,6 @@ namespace ncbi
             void HandleDbBody ( SDatabase & p_db, const AST & p_body );
             void HandleDbMemberDb ( SDatabase & p_db, const AST & p_member );
             void HandleDbMemberTable ( SDatabase & p_db, const AST & p_member );
-
-            const void * SelectVersion ( const struct KSymbol & p_ovl, int64_t ( CC * p_cmp ) ( const void *item, const void *n ), uint32_t * p_version );
 
             const struct KFile * OpenIncludeFile ( const char * p_fmt, ... );
 

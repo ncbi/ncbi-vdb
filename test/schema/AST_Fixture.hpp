@@ -57,6 +57,7 @@ struct SDatatype;
 const uint32_t U8_id     = 9;
 const uint32_t U16_id    = 10;
 const uint32_t U32_id    = 11;
+const uint32_t U64_id    = 12;
 
 class AST_Fixture
 {

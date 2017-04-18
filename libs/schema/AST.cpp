@@ -301,7 +301,7 @@ AST_Expr :: AST_Expr ( Token :: TokenType p_type )    // '@' etc
 
 SExpression *
 AST_Expr :: EvaluateConst ( ASTBuilder & p_builder ) const
-{   //TBD. for now, only handles a literal int constant and a direct reference to a schema parameter
+{   //TODO. for now, only handles a literal int constant and a direct reference to a schema parameter
     SExpression * ret = MakeExpression ( p_builder );
     if ( ret != 0 )
     {
@@ -347,10 +347,44 @@ AST_Expr :: MakeSymExpr ( ASTBuilder & p_builder, const KSymbol* p_sym ) const
             return SSymExprMake ( p_builder, eProdExpr, p_sym );
         case eFuncParam :
             return SSymExprMake ( p_builder, eParamExpr, p_sym );
+        case eFunction :
+            p_builder . ReportError ( "Function expressions are not yet implemented" );
+            break;
+        case eColumn :
+            return SSymExprMake ( p_builder, eColExpr, p_sym );
         default:
-            p_builder . ReportError ( "Not yet implemented in an expression" );
+            p_builder . ReportError ( "Object cannot be used in this context: '%S'", & p_sym -> name );
             break;
         }
+    }
+    return 0;
+}
+
+SExpression *
+AST_Expr :: MakeUnsigned ( ASTBuilder & p_builder ) const
+{
+    assert ( GetTokenType () == PT_UINT );
+    SConstExpr * x = p_builder . Alloc < SConstExpr > ( sizeof * x - sizeof x -> u + sizeof x -> u . u64 [ 0 ] );
+    if ( x != 0 )
+    {   //TODO: support hex, oct
+        assert ( ChildrenCount () == 1 );
+        const char * val = GetChild ( 0 ) -> GetTokenValue ();
+        uint64_t i64 = 0;
+        uint32_t i = 0;
+        while ( val [ i ] != 0 )
+        {
+            i64 *= 10;
+            i64 += val [ i ] - '0';
+            ++ i;
+        }
+
+        x -> u . u64 [ 0 ] = i64;
+        x -> dad . var = eConstExpr;
+        atomic32_set ( & x -> dad . refcount, 1 );
+        x -> td . type_id = p_builder . IntrinsicTypeId ( "U64" );
+        x -> td . dim = 1;
+
+        return & x -> dad;
     }
     return 0;
 }
@@ -392,38 +426,17 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
 
             return xp;
         }
+
     case PT_UINT:
-        {
-            SConstExpr * x = p_builder . Alloc < SConstExpr > ( sizeof * x - sizeof x -> u + sizeof x -> u . u64 [ 0 ] );
-            if ( x != 0 )
-            {
-                assert ( ChildrenCount () == 1 );
-                const char * val = GetChild ( 0 ) -> GetTokenValue ();
-                uint64_t i64 = 0;
-                uint32_t i = 0;
-                while ( val [ i ] != 0 )
-                {
-                    i64 *= 10;
-                    i64 += val [ i ] - '0';
-                    ++ i;
-                }
+        return MakeUnsigned ( p_builder );
 
-                x -> u . u64 [ 0 ] = i64;
-                x -> dad . var = eConstExpr;
-                atomic32_set ( & x -> dad . refcount, 1 );
-                x -> td . type_id = p_builder . IntrinsicTypeId ( "U64" );
-                x -> td . dim = 1;
-
-                return & x -> dad;
-            }
-            break;
-        }
     case PT_IDENT:
         {
             const AST_FQN* fqn = dynamic_cast < const AST_FQN * > ( GetChild ( 0 ) );
             assert ( fqn != 0 );
             return MakeSymExpr ( p_builder, p_builder . Resolve ( * fqn ) );
         }
+
     case PHYSICAL_IDENTIFIER_1_0 :
         {
             const KSymbol * sym = p_builder . Resolve ( GetTokenValue (), false );
@@ -442,11 +455,69 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
                     x -> alt = false;
                     return & x -> dad;
                 }
-                free ( x );
+                SExpressionWhack ( & x -> dad );
             }
         }
+        break;
+
     case PT_AT:
         return MakeSymExpr ( p_builder, p_builder . Resolve ( "@" ) );
+
+    case PT_FUNCEXPR:
+        {   // schema_parms_opt fqn_opt_vers factory_parms_opt func_parms_opt
+            assert ( ChildrenCount () == 4 );
+
+            SFuncExpr * fx = p_builder . Alloc < SFuncExpr > ();
+            if ( fx != 0 )
+            {
+                /* initialize */
+                fx -> dad . var = eFuncExpr;
+                atomic32_set ( & fx -> dad . refcount, 1 );
+                fx -> func = NULL;
+                VectorInit ( & fx -> schem, 0, 4 );
+                VectorInit ( & fx -> pfact, 0, 8 );
+                VectorInit ( & fx -> pfunc, 0, 8 );
+                fx -> version = 0;
+                fx -> version_requested = false;
+                fx -> untyped = false;
+
+                if ( p_builder . FillSchemaParms ( * GetChild ( 0 ), fx -> schem ) &&
+                     p_builder . FillFactoryParms ( * GetChild ( 2 ), fx -> pfact ) &&
+                     p_builder . FillArguments ( * GetChild ( 3 ), fx -> pfunc) )
+                {
+                    assert ( GetChild ( 1 ) -> GetTokenType () == PT_IDENT );
+                    const AST_FQN * fqn = dynamic_cast < const AST_FQN * > ( GetChild ( 1 ) );
+                    assert ( fqn != 0 );
+                    const KSymbol * sym = p_builder . Resolve ( * fqn, true );
+                    if ( sym != 0 )
+                    {
+                        const SNameOverload * vf = static_cast < const SNameOverload * > ( sym -> u . obj );
+                        switch ( vf -> name -> type )
+                        {
+                        case eScriptFunc:
+                            fx -> dad . var = eScriptExpr;
+                            // fall through
+                        case eFunction:
+                            fx -> version = fqn -> GetVersion ();
+                            fx -> version_requested = fx -> version != 0;
+                            fx -> func = static_cast < const SFunction * > ( p_builder . SelectVersion ( * sym, SFunctionCmp, & fx -> version ) );
+                            if ( fx -> func != 0 )
+                            {
+                                return & fx -> dad;
+                            }
+                            break;
+
+                        default:
+                            p_builder . ReportError ( "Not a function", * fqn );
+                            break;
+                        }
+                    }
+                }
+                SExpressionWhack ( & fx -> dad );
+            }
+        }
+        break;
+
     default:
         p_builder . ReportError ( "Not yet implemented" );
         break;

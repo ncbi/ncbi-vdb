@@ -116,12 +116,12 @@ AST_Fixture :: PrintTree ( const ParseTree& p_tree )
             case_ ( PT_TYPEDCOL );
             case_ ( PT_COLUMN );
             case_ ( PT_COLDECL );
-            case_ ( PT_PHYSENCEXPR );
             case_ ( PT_FACTPARMS );
             case_ ( PT_PHYSENCREF );
             case_ ( PT_COLSTMT );
             case_ ( PT_DBBODY );
             case_ ( PT_DBMEMBER );
+            case_ ( PT_FUNCEXPR );
 
             default:
                 if ( tt < 256 )

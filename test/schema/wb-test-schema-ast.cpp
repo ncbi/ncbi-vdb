@@ -536,21 +536,237 @@ FIXTURE_TEST_CASE(Include_NotFound, AST_Fixture)
     KDirectoryRelease ( wd );
 }
 
-
 //TODO: array of arrays in typedef, typeset, constdef, return type
 //TODO: array of typeset: typeset ts { U8 }; typedef ts t[2];
 
-//TODO: function call: no arguments
+// Expressions
+
+FIXTURE_TEST_CASE(FuncCall_PlainNoArgs, AST_Fixture)
+{
+    MakeAst  ( "function U8 f (); table t#1 { column U8 i = f (); } " );
+    const STable * t = static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, 0 ) );
+    REQUIRE_NOT_NULL ( t );
+    const SColumn * c = static_cast < const SColumn * > ( VectorGet ( & t -> col, 0 ) );
+    REQUIRE_NOT_NULL ( c );
+    REQUIRE_NOT_NULL ( c -> read );
+
+    // verify the function call expression
+    REQUIRE_EQ ( ( uint32_t ) eFuncExpr, c -> read -> var );
+    const SFuncExpr * expr = reinterpret_cast < const SFuncExpr * > ( c -> read );
+    struct SFunction const * func = expr -> func;
+    REQUIRE_NOT_NULL ( func );
+
+    // verrify the expression's fields
+    REQUIRE_EQ ( 0u, VectorLength ( & expr -> schem ) );
+    REQUIRE_EQ ( string ("f"), ToCppString ( func -> name -> name ) );
+    REQUIRE_EQ ( 0u, VectorLength ( & expr -> pfact ) );
+    REQUIRE_EQ ( 0u, VectorLength ( & expr -> pfunc ) );
+    REQUIRE_EQ ( 0u, expr -> version );
+    REQUIRE ( ! expr -> version_requested );
+}
+
+FIXTURE_TEST_CASE(FuncCall_SchemaParams, AST_Fixture)
+{
+    MakeAst  ( "function <type T, U8 i> T f (); table t#1 { column U8 i = <U8, 1> f (); } " );
+    const STable * t = static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, 0 ) );
+    const SColumn * c = static_cast < const SColumn * > ( VectorGet ( & t -> col, 0 ) );
+
+    // verify the function call expression
+    REQUIRE_EQ ( ( uint32_t ) eFuncExpr, c -> read -> var );
+    const SFuncExpr * expr = reinterpret_cast < const SFuncExpr * > ( c -> read );
+
+    // verify the schema parameters
+    REQUIRE_EQ ( 2u, VectorLength ( & expr -> schem ) );
+    const SExpression * p1 = static_cast < const SExpression * > ( VectorGet ( & expr -> schem, 0 ) );
+    REQUIRE_NOT_NULL ( p1 );
+    REQUIRE_EQ ( ( uint32_t ) eTypeExpr, p1 -> var );
+    const STypeExpr * te1 =  reinterpret_cast < const STypeExpr * > ( p1 );
+    REQUIRE_NOT_NULL ( te1 );
+    REQUIRE_NOT_NULL ( te1 -> dt );
+    REQUIRE_EQ ( string ( "U8" ), ToCppString ( te1 -> dt -> name -> name ) );
+
+    const SExpression * p2 = static_cast < const SExpression * > ( VectorGet ( & expr -> schem, 1 ) );
+    REQUIRE_NOT_NULL ( p2 );
+    REQUIRE_EQ ( ( uint32_t ) eConstExpr, p2 -> var );
+    const SConstExpr * te2 =  reinterpret_cast < const SConstExpr * > ( p2 );
+    REQUIRE_NOT_NULL ( te2 );
+    REQUIRE_EQ ( U64_id, te2 -> td . type_id );
+    REQUIRE_EQ ( ( uint8_t )1u, te2 -> u . u8[0] );
+}
+
+FIXTURE_TEST_CASE(FuncCall_BadSchemaParam, AST_Fixture)
+{
+    VerifyErrorMessage  ( "function <type T> T f (); table t0#1 {}; table t#1 { column U8 i = <t0> f (); } ",
+                          "Cannot be used as a schema parameter: 't0'" );
+}
+
+FIXTURE_TEST_CASE(FuncCall_NotAFunction, AST_Fixture)
+{
+    VerifyErrorMessage  ( "table t0#1 {}; table t#1 { column U8 i = t0 (); } ", "Not a function: 't0'" );
+}
+
+FIXTURE_TEST_CASE(FuncCall_Script, AST_Fixture)
+{
+    MakeAst  ( "function U8 f () { return 1; }; table t#1 { column U8 i = f (); } " );
+    const STable * t = static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, 0 ) );
+    REQUIRE_NOT_NULL ( t );
+    const SColumn * c = static_cast < const SColumn * > ( VectorGet ( & t -> col, 0 ) );
+    REQUIRE_NOT_NULL ( c );
+    REQUIRE_NOT_NULL ( c -> read );
+
+    REQUIRE_EQ ( ( uint32_t ) eScriptExpr, c -> read -> var );
+}
+
+FIXTURE_TEST_CASE(FuncCall_VersionNotSpecified, AST_Fixture)
+{
+    MakeAst  ( "function U8 f#1 (); function U8 f#2 (); table t#1 { column U8 i = f (); } " );
+    const STable * t = static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, 0 ) );
+    const SColumn * c = static_cast < const SColumn * > ( VectorGet ( & t -> col, 0 ) );
+    const SFuncExpr * expr = reinterpret_cast < const SFuncExpr * > ( c -> read );
+
+    // highest version selected
+    REQUIRE_EQ ( 0u, expr -> version );
+    REQUIRE_EQ ( Version ( 2, 0, 0 ), expr -> func -> version );
+}
+
+FIXTURE_TEST_CASE(FuncCall_VersionSpecified, AST_Fixture)
+{
+    MakeAst  ( "function U8 f#1 (); function U8 f#2 (); table t#1 { column U8 i = f#1 (); } " );
+    const STable * t = static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, 0 ) );
+    const SColumn * c = static_cast < const SColumn * > ( VectorGet ( & t -> col, 0 ) );
+    const SFuncExpr * expr = reinterpret_cast < const SFuncExpr * > ( c -> read );
+
+    // correct version selected
+    REQUIRE ( expr -> version_requested );
+    REQUIRE_EQ ( Version ( 1, 0, 0 ), expr -> version );
+    REQUIRE_EQ ( expr -> version, expr -> func -> version );
+}
+
+FIXTURE_TEST_CASE(FuncCall_FactoryParams, AST_Fixture)
+{
+    MakeAst  ( "function U8 f <U16 i, U8 j> (); table t#1 { column U8 i =  f <1, 2> (); } " );
+    const STable * t = static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, 0 ) );
+    const SColumn * c = static_cast < const SColumn * > ( VectorGet ( & t -> col, 0 ) );
+
+    // verify the function call expression
+    REQUIRE_EQ ( ( uint32_t ) eFuncExpr, c -> read -> var );
+    const SFuncExpr * expr = reinterpret_cast < const SFuncExpr * > ( c -> read );
+
+    // verify the factory parameters
+    REQUIRE_EQ ( 2u, VectorLength ( & expr -> pfact ) );
+    const SExpression * p1 = static_cast < const SExpression * > ( VectorGet ( & expr -> pfact, 0 ) );
+    REQUIRE_NOT_NULL ( p1 );
+    REQUIRE_EQ ( ( uint32_t ) eConstExpr, p1 -> var );
+    const SConstExpr * te1 =  reinterpret_cast < const SConstExpr * > ( p1 );
+    REQUIRE_NOT_NULL ( te1 );
+    REQUIRE_EQ ( U64_id, te1 -> td . type_id );
+    REQUIRE_EQ ( ( uint8_t )1u, te1 -> u . u8[0] );
+
+    const SExpression * p2 = static_cast < const SExpression * > ( VectorGet ( & expr -> pfact, 1 ) );
+    REQUIRE_NOT_NULL ( p2 );
+    REQUIRE_EQ ( ( uint32_t ) eConstExpr, p2 -> var );
+    const SConstExpr * te2 =  reinterpret_cast < const SConstExpr * > ( p2 );
+    REQUIRE_NOT_NULL ( te2 );
+    REQUIRE_EQ ( U64_id, te2 -> td . type_id );
+    REQUIRE_EQ ( ( uint8_t )2u, te2 -> u . u8[0] );
+}
+
+FIXTURE_TEST_CASE(FuncCall_FunctionAsFactoryParam, AST_Fixture)
+{
+    if ( m_newParse )
+    {
+        VerifyErrorMessage ( "function U8 g(); function U8 f <U16 i> (); table t#1 { column U8 i =  f <g> (); } ",
+                             "Function expressions are not yet implemented" );
+    }
+    // the old parser accepts but errors out at run time
+}
+
+FIXTURE_TEST_CASE(FuncCall_BadFactoryParam, AST_Fixture)
+{
+    VerifyErrorMessage ( "table g#1{} function U8 f <U16 i> (); table t#1 { column U8 i =  f <g> (); } ",
+                         "Object cannot be used in this context: 'g'" );
+}
+
+//TODO: no tests on optional/variable factory parameters: the parser allows any number/type and (hopefully)
+// does some checking in the run time. Need to revisit when testing run time logic.
+
+FIXTURE_TEST_CASE(FuncCall_Params, AST_Fixture)
+{
+    MakeAst  ( "function U8 f (U16 i, U8 j); table t#1 { column U8 a; column U8 b; column U8 c = f (a, b); } " );
+    const STable * t = static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, 0 ) );
+    const SColumn * c = static_cast < const SColumn * > ( VectorGet ( & t -> col, 2 ) );
+
+    // verify the function call expression
+    REQUIRE_EQ ( ( uint32_t ) eFuncExpr, c -> read -> var );
+    const SFuncExpr * expr = reinterpret_cast < const SFuncExpr * > ( c -> read );
+
+    // verify the factory parameters
+    REQUIRE_EQ ( 2u, VectorLength ( & expr -> pfunc ) );
+    const SExpression * p1 = static_cast < const SExpression * > ( VectorGet ( & expr -> pfunc, 0 ) );
+    REQUIRE_NOT_NULL ( p1 );
+    REQUIRE_EQ ( ( uint32_t ) eColExpr, p1 -> var );
+    const SSymExpr * te1 =  reinterpret_cast < const SSymExpr * > ( p1 );
+    REQUIRE_NOT_NULL ( te1 );
+    REQUIRE_EQ ( string ( "a" ), ToCppString ( te1 -> _sym -> name ) );
+
+    const SExpression * p2 = static_cast < const SExpression * > ( VectorGet ( & expr -> pfunc, 1 ) );
+    REQUIRE_NOT_NULL ( p2 );
+    REQUIRE_EQ ( ( uint32_t ) eColExpr, p2 -> var );
+    const SSymExpr * te2 =  reinterpret_cast < const SSymExpr * > ( p2 );
+    REQUIRE_NOT_NULL ( te2 );
+    REQUIRE_EQ ( string ( "b" ), ToCppString ( te2 -> _sym -> name ) );
+}
+
+FIXTURE_TEST_CASE(FuncCall_Param_At, AST_Fixture)
+{
+    MakeAst  (
+        "extern function U8 f ( U8 in );"
+        "physical U8 ns:pf #1 = { return f ( @ ); }" // the old parser requires the namespace
+    );
+    const SPhysical * phys = static_cast < const SPhysical* > ( VectorGet ( & m_schema -> phys, 0 ) );
+    REQUIRE_NOT_NULL ( phys );
+    const SExpression * ret = phys -> decode . u . script . rtn;
+    REQUIRE_NOT_NULL ( ret );
+    REQUIRE_EQ ( (uint32_t) eFuncExpr, ret -> var );
+    const SFuncExpr * expr = reinterpret_cast < const SFuncExpr * > ( ret );
+    REQUIRE_EQ ( 1u, VectorLength ( & expr -> pfunc ) );
+    const SExpression * p1 = static_cast < const SExpression * > ( VectorGet ( & expr -> pfunc, 0 ) );
+    REQUIRE_NOT_NULL ( p1 );
+    REQUIRE_EQ ( (uint32_t) eParamExpr, p1 -> var );
+    const SSymExpr * sym = reinterpret_cast < const SSymExpr * > ( p1 );
+    REQUIRE_EQ ( string ( "@" ), ToCppString ( sym -> _sym -> name ) );
+}
+
+FIXTURE_TEST_CASE(FuncCall_Param_Physical, AST_Fixture)
+{
+    MakeAst  ( "function U8 f (U8 i); table t#1 { physical column U8 .a; column U8 b = f (.a); } " );
+    const STable * t = static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, 0 ) );
+    const SColumn * c = static_cast < const SColumn * > ( VectorGet ( & t -> col, 0 ) );
+
+    // verify the function call expression
+    REQUIRE_EQ ( ( uint32_t ) eFuncExpr, c -> read -> var );
+    const SFuncExpr * expr = reinterpret_cast < const SFuncExpr * > ( c -> read );
+
+    // verify the factory parameters
+    REQUIRE_EQ ( 1u, VectorLength ( & expr -> pfunc ) );
+    const SExpression * p1 = static_cast < const SExpression * > ( VectorGet ( & expr -> pfunc, 0 ) );
+    REQUIRE_NOT_NULL ( p1 );
+    REQUIRE_EQ ( ( uint32_t ) ePhysExpr, p1 -> var );
+    const SSymExpr * sym =  reinterpret_cast < const SSymExpr * > ( p1 );
+    REQUIRE_EQ ( string ( ".a" ), ToCppString ( sym -> _sym -> name ) );
+}
+
 //TODO: function call: optional parameters
 //TODO: function call: vararg
-
-//TODO: formatted type in production in a table (not allowed?)
 
 //TODO: expressions: hex, octal
 
 #include "wb-test-schema-func.cpp"
 #include "wb-test-schema-table.cpp"
 #include "wb-test-schema-db.cpp"
+
+//TODO: formatted type in production in a table (not allowed?)
+
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>

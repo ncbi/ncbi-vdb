@@ -585,6 +585,7 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_LimitTwice, AST_Table_Fixture)
 }
 
 #if WHEN_IMPLEMENTED_FUNCTION_CALL
+TODO
 FIXTURE_TEST_CASE(Table_ColumnDecl_LimitNonConst, AST_Table_Fixture)
 {
     ParseTable (
@@ -668,3 +669,7 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_Init, AST_Table_Fixture)
     REQUIRE_NOT_NULL ( c . read );
     REQUIRE ( ! c . simple );
 }
+
+//TODO: default view
+//TODO: static/physical column
+//TODO: untyped column

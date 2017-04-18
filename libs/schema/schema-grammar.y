@@ -267,7 +267,6 @@
 %token PT_VERSNAME
 %token PT_ARRAY
 %token PT_AT
-%token PT_PHYSENCEXPR
 %token PT_PHYSENCREF
 %token PT_TYPEDCOLEXPR
 
@@ -298,7 +297,7 @@ version_2_x
     ;
 
 schema_2_x
-    : '$'                       { $$ . subtree = T ( $1 ); }   /* TBD */
+    : '$'                       { $$ . subtree = T ( $1 ); }   /* TODO */
     ;
 
 /* schema-1.0
@@ -812,22 +811,19 @@ primary_expr_1_0
     ;
 
 func_expr_1_0
-    :   phys_enc_expr
+    :   '<' schema_parms_1_0 '>'
+        fqn_opt_vers
+        opt_factory_parms_1_0
         '('
         opt_func_1_0_parms
         ')'
-             { $$ . subtree = MakeTree ( PT_FUNCEXPR, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
+             { $$ . subtree = MakeTree ( PT_FUNCEXPR, T ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), P ( $5 ), T ( $6 ), P ( $7 ), T ( $8 ) ); }
     |   fqn_opt_vers
         opt_factory_parms_1_0
         '('
         opt_func_1_0_parms
         ')'
              { $$ . subtree = MakeTree ( PT_FUNCEXPR, P ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
-    ;
-
-phys_enc_expr
-    : '<' schema_parms_1_0 '>' fqn_opt_vers opt_factory_parms_1_0
-             { $$ . subtree = MakeTree ( PT_PHYSENCEXPR, T ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), P ( $5 ) ); }
     ;
 
 schema_parms_1_0

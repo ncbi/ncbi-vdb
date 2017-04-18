@@ -77,7 +77,7 @@ ASTBuilder :: HandleDbOverload ( const SDatabase *  p_db,
 
             if ( VectorAppend ( dbs, p_id, p_db ) )
             {
-                /* TBD - need to update parent/child relationships */
+                /* TODO - need to update parent/child relationships */
                 return true;
             }
         }

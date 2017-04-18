@@ -396,7 +396,11 @@ FIXTURE_TEST_CASE(Func_FactoryVarargsWithBody, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_Body_NonScript, AST_Function_Fixture)
 {
-    VerifyErrorMessage  ( "function U8 f#1(); function U8 f#2() { return 1; };", "Overload canot have a body: 'f'" );
+    VerifyErrorMessage  ( "function U8 f#1(); function U8 f#2() { return 1; };", "Overload cannot have a body: 'f'" );
+}
+FIXTURE_TEST_CASE(Func_Overload_NonScript, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "function U8 f#1() { return 1; } function U8 f#2();", "Overload has to have a body: 'f'" );
 }
 
 // schema signature
@@ -575,9 +579,15 @@ FIXTURE_TEST_CASE(Func_Script, AST_Function_Fixture)
     REQUIRE_EQ ( (uint64_t)1, reinterpret_cast < const SConstExpr * > ( ret ) -> u . u64 [ 0 ] );
 }
 
+FIXTURE_TEST_CASE(Func_ScriptWithouSchema, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "function U8 f() { return 1; };", "f", 0 , eScriptFunc );
+    REQUIRE ( fn . IsScript () );
+}
+
 FIXTURE_TEST_CASE(Func_ExternRedeclaredAsScript, AST_Function_Fixture)
 {
-    VerifyErrorMessage  ( "function U8 f(); schema function U8 f() { return 1; };", "Declared earlier and cannot be overloaded: 'f'" );
+    VerifyErrorMessage  ( "function U8 f(); schema function U8 f() { return 1; };", "Overload cannot have a body: 'f'" );
 }
 
 FIXTURE_TEST_CASE(Func_Script_FullVersion, AST_Function_Fixture)
@@ -838,8 +848,12 @@ FIXTURE_TEST_CASE(Func_Physical_NoHeaderWithEncode, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_Physical_At, AST_Function_Fixture)
 {
-    /*PhysicalAccess fn = */ParsePhysical  ( "physical U8 f#1.2 { decode { return @; } }", "f" );
-    //TODO:verify access to @
+    PhysicalAccess fn = ParsePhysical  ( "physical U8 f#1.2 { decode { return @; } }", "f" );
+    const SExpression * expr = fn . Decode () . ReturnExpr ();
+    REQUIRE_NOT_NULL ( expr );
+    REQUIRE_EQ ( (uint32_t) eParamExpr, expr -> var );
+    const SSymExpr * sym = reinterpret_cast < const SSymExpr * > ( expr );
+    REQUIRE_EQ ( string ( "@" ), ToCppString ( sym -> _sym -> name ) );
 }
 
 FIXTURE_TEST_CASE(Func_Physical_SchemaParams, AST_Function_Fixture)
