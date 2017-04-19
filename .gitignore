@@ -33,3 +33,4 @@ user.status
 core
 *.pyc
 .vscode
+.gdb_history

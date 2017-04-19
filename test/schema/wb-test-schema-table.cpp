@@ -68,7 +68,11 @@ public:
     }
 
     /* explicitly declared physical column members */
-    const Vector & PhysicalColumns () const { return m_self -> phys; }
+    uint32_t PhysicalColumnCount () const { return VectorLength ( & m_self -> phys ); }
+    const SPhysMember * GetPhysicalColumn ( uint32_t p_idx ) const
+    {
+        return static_cast < const SPhysMember * > ( VectorGet ( & m_self -> phys, p_idx ) );
+    }
 
     /* assignment statements */
     const Vector & Productions () const { return m_self -> prod; }
@@ -159,8 +163,8 @@ public:
         return ( p_major << 24 ) + ( p_minor << 16 ) + p_release;
     }
 
-#define THROW_ON_TRUE(cond) if ( cond ) throw logic_error ( "VerifyPhysicalColumn: " #cond );
-    void VerifyPhysicalColumn ( const SColumn & p_col )
+#define THROW_ON_TRUE(cond) if ( cond ) throw logic_error ( "VerifyImplicitPhysicalColumn: " #cond );
+    void VerifyImplicitPhysicalColumn ( const SColumn & p_col )
     {
         // a physical column is attached to p_col
         THROW_ON_TRUE ( p_col . read  == 0 );
@@ -362,7 +366,7 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_Simple, AST_Table_Fixture)
     REQUIRE ( c . simple );
 
     // since there is no explict ".c", an implicit physical column ".c" is generated
-    VerifyPhysicalColumn ( c );
+    VerifyImplicitPhysicalColumn ( c );
 }
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_SimpleColumn_Typeset, AST_Table_Fixture)
@@ -375,7 +379,7 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_PhysicalForwarded, AST_Table_Fixture)
 {
     TableAccess t = ParseTable ( "table t#1 { U8 i = .c; column U8 c; }", "t" );
     REQUIRE_EQ ( 1u, t . ColumnCount () );
-    VerifyPhysicalColumn ( * t . GetColumn ( 0 ) );
+    VerifyImplicitPhysicalColumn ( * t . GetColumn ( 0 ) );
 }
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_Virtual, AST_Table_Fixture)
@@ -393,7 +397,7 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_PhysicalVirtual, AST_Table_Fixture)
 {
     TableAccess t = ParseTable ( "table p#1 { U8 i = .c; } table t#1 = p#1 { column U8 c; }", "t", 1 );
     REQUIRE_EQ ( 1u, t . ColumnCount () );
-    VerifyPhysicalColumn ( * t . GetColumn ( 0 ) );
+    VerifyImplicitPhysicalColumn ( * t . GetColumn ( 0 ) );
 }
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_ModDefault, AST_Table_Fixture)
@@ -682,4 +686,144 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_Init, AST_Table_Fixture)
     const SColumn & c = * t . GetColumn ( 0 );
     REQUIRE_NOT_NULL ( c . read );
     REQUIRE ( ! c . simple );
+}
+
+FIXTURE_TEST_CASE(Table_PhysicalColumn_Static, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { static U8 .c; }", "t" );
+    REQUIRE_EQ ( 1u, t . PhysicalColumnCount () );
+    const SPhysMember * c = t . GetPhysicalColumn ( 0 );
+    REQUIRE_NOT_NULL ( c );
+    REQUIRE_NOT_NULL ( c -> name );
+    REQUIRE_EQ ( ( uint32_t ) ePhysMember, c -> name -> type );
+    REQUIRE_EQ ( string ( ".c" ), ToCppString ( c -> name -> name ) );
+    REQUIRE_NULL ( c -> type );
+    REQUIRE_EQ ( U8_id, c -> td . type_id );
+    REQUIRE_NULL ( c -> expr );
+    REQUIRE_EQ ( 1u, c -> td . dim);
+    REQUIRE_EQ ( 0u, c -> cid . ctx );
+    REQUIRE_EQ ( 0u, c -> cid . id );
+    REQUIRE ( c -> stat );
+    REQUIRE ( ! c -> simple );
+}
+FIXTURE_TEST_CASE(Table_PhysicalColumn_StaticColumn, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { static column U8 .c; }", "t" );
+    REQUIRE_EQ ( 1u, t . PhysicalColumnCount () );
+}
+
+FIXTURE_TEST_CASE(Table_PhysicalColumn_NonStatic, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { physical U8 .c; }", "t" );
+    REQUIRE_EQ ( 1u, t . PhysicalColumnCount () );
+    const SPhysMember * c = t . GetPhysicalColumn ( 0 );
+    REQUIRE ( ! c -> stat );
+}
+
+FIXTURE_TEST_CASE(Table_PhysicalColumn_StaticPhysical, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { static physical U8 .c; }", "t" );
+    REQUIRE_EQ ( 1u, t . PhysicalColumnCount () );
+    const SPhysMember * c = t . GetPhysicalColumn ( 0 );
+    REQUIRE ( c -> stat );
+}
+
+FIXTURE_TEST_CASE(Table_PhysicalColumnWithEncoding_Simple, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "physical U8 ph#1 = { return 1; }; table t#1 { physical ph .c; }", "t" );
+    REQUIRE_EQ ( 1u, t . PhysicalColumnCount () );
+    const SPhysMember * c = t . GetPhysicalColumn ( 0 );
+    REQUIRE_NOT_NULL ( c -> type );
+    REQUIRE_EQ ( U8_id, c -> td . type_id );
+    REQUIRE_NULL ( c -> expr );
+    REQUIRE_EQ ( 1u, c -> td . dim);
+    REQUIRE_EQ ( 0u, c -> cid . ctx );
+    REQUIRE_EQ ( 0u, c -> cid . id );
+    REQUIRE ( ! c -> stat );
+    REQUIRE ( ! c -> simple );
+
+    // verify the encoding spec
+    REQUIRE_EQ ( ( uint32_t ) ePhysEncExpr, c -> type -> var );
+    const SPhysEncExpr & enc = * reinterpret_cast < const SPhysEncExpr * > ( c -> type );
+    REQUIRE_EQ ( 0u, VectorLength ( & enc . schem ) );
+    REQUIRE ( ! enc . version_requested );
+    REQUIRE_NOT_NULL ( enc . phys );
+    REQUIRE_EQ ( string ( "ph" ), ToCppString ( enc . phys -> name -> name ) );
+    REQUIRE_EQ ( 0u, VectorLength ( & enc . pfact ) );
+}
+
+FIXTURE_TEST_CASE(Table_PhysicalColumnWithEncoding_SchemaArgs, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "physical <type T> T ph#1 = { return 1; }; table t#1 { physical <U8> ph .c; }", "t" );
+    const SPhysMember * c = t . GetPhysicalColumn ( 0 );
+    REQUIRE_EQ ( ( uint32_t ) ePhysEncExpr, c -> type -> var );
+    const SPhysEncExpr & enc = * reinterpret_cast < const SPhysEncExpr * > ( c -> type );
+    REQUIRE_EQ ( 1u, VectorLength ( & enc . schem ) );
+    REQUIRE_EQ ( 0u, VectorLength ( & enc . pfact ) );
+}
+
+FIXTURE_TEST_CASE(Table_PhysicalColumnWithEncoding_FactoryArgs, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "physical U8 ph#1 <U8 i> = { return i; }; table t#1 { physical ph <1> .c; }", "t" );
+    const SPhysMember * c = t . GetPhysicalColumn ( 0 );
+    REQUIRE_EQ ( ( uint32_t ) ePhysEncExpr, c -> type -> var );
+    const SPhysEncExpr & enc = * reinterpret_cast < const SPhysEncExpr * > ( c -> type );
+    REQUIRE_EQ ( 0u, VectorLength ( & enc . schem ) );
+    REQUIRE_EQ ( 1u, VectorLength ( & enc . pfact ) );
+}
+
+FIXTURE_TEST_CASE(Table_PhysicalColumn_Forward, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { column U8 c = .c; physical U8 .c; }", "t" );
+    REQUIRE_EQ ( 1u, t . PhysicalColumnCount () );
+    const SPhysMember * c = t . GetPhysicalColumn ( 0 );
+    REQUIRE_NOT_NULL ( c );
+    REQUIRE_NOT_NULL ( c -> name );
+    REQUIRE_EQ ( ( uint32_t ) ePhysMember, c -> name -> type );
+    REQUIRE_EQ ( string ( ".c" ), ToCppString ( c -> name -> name ) );
+}
+
+FIXTURE_TEST_CASE(Table_PhysicalColumn_Redefinition, AST_Table_Fixture)
+{
+    VerifyErrorMessage ( "table t#1 { physical U8 .c; physical U8 .c; }", "Physical column already defined: '.c'" );
+}
+
+FIXTURE_TEST_CASE(Table_PhysicalColumn_BadType, AST_Table_Fixture)
+{
+    VerifyErrorMessage ( "table t0#1 {} table t#1 { physical t0 .c; }", "Cannot be used as a physical column type: 't0'" );
+}
+
+FIXTURE_TEST_CASE(Table_PhysicalColumn_Static_Initialized, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { static U8 .c = 1; }", "t" );
+    REQUIRE_EQ ( 1u, t . PhysicalColumnCount () );
+    const SPhysMember * c = t . GetPhysicalColumn ( 0 );
+    REQUIRE_NOT_NULL ( c -> expr );
+    REQUIRE_EQ ( ( uint32_t ) eConstExpr, c -> expr -> var );
+}
+
+FIXTURE_TEST_CASE(Table_PhysicalColumn_StaticColumn_Initialized, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { static column U8 .c = 1; }", "t" );
+    REQUIRE_EQ ( 1u, t . PhysicalColumnCount () );
+    const SPhysMember * c = t . GetPhysicalColumn ( 0 );
+    REQUIRE_NOT_NULL ( c -> expr );
+    REQUIRE_EQ ( ( uint32_t ) eConstExpr, c -> expr -> var );
+}
+
+/* only for 1.1, not used anywhere - and broken.
+FIXTURE_TEST_CASE(Table_DefaultView, AST_Table_Fixture)
+{
+    m_newParse = false;
+    TableAccess t = ParseTable ( "version 1.1; table t#1 { default view \"V\"; }", "t" );
+}
+*/
+
+FIXTURE_TEST_CASE(Table_Untyped, AST_Table_Fixture)
+{
+    m_newParse = false;
+    TableAccess t = ParseTable ( "function __untyped f(); table t#1 { __untyped = f(); }", "t" );
+    const SFunction * f = t . Untyped ();
+    REQUIRE_NOT_NULL ( f );
+    REQUIRE_EQ ( string ( "f" ), ToCppString ( f -> name -> name ) );
 }
