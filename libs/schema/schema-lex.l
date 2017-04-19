@@ -171,12 +171,12 @@ alphanum    [a-zA-Z_0-9]
 "write"           { return KW_write; }
 
 {alpha}{alphanum}*         { return IDENTIFIER_1_0; }
-[0-9]{alpha}{alphanum}+    { return IDENTIFIER_1_0; } /* for things like 4na */
+[0-9]{alpha}{alphanum}+   { return IDENTIFIER_1_0; } /* for things like 4na */
 \.{alpha}{alphanum}*       { return PHYSICAL_IDENTIFIER_1_0; }
 
-#[0-9]+\.[0-9]+\.[0-9]+     { return VERSION; }
-#[0-9]+\.[0-9]+             { return VERSION; }
-#[0-9]+                     { return VERSION; }
+#\ *[0-9]+\.[0-9]+\.[0-9]+     { return VERSION; }
+#\ *[0-9]+\.[0-9]+             { return VERSION; }
+#\ *[0-9]+                     { return VERSION; }
 
  /* multi-line comments */
 <*>\/\*                                         { yy_push_state ( CMT_SLASH_STAR, yyscanner ); AddWs(); }

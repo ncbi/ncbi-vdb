@@ -298,7 +298,6 @@ ASTBuilder :: MakePhysicalEncodingSpec ( const KSymbol & p_sym,
     return 0;
 }
 
-
 static
 void
 HandleColumnModifiers ( const AST & p_modifiers, bool & p_default, bool & p_readonly )
@@ -480,6 +479,120 @@ ASTBuilder :: AddColumn ( STable & p_table, const AST & p_modifiers, const AST &
     }
 }
 
+bool
+ASTBuilder :: MakePhysicalColumnType ( const AST &      p_schemaArgs,
+                                       const AST_FQN &  p_fqn_opt_vers,
+                                       const AST &      p_factoryArgs,
+                                       SPhysMember &    p_col )
+{
+    const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( p_fqn_opt_vers );
+    const KSymbol * sym = Resolve ( fqn ); // will report unknown name
+    if ( sym != 0 )
+    {
+        switch ( sym -> type )
+        {
+        case eDatatype:
+            {
+                const SDatatype * typeDef = static_cast < const SDatatype * > ( sym -> u . obj );
+                p_col . td . type_id = typeDef -> id;
+                p_col . td . dim = 1;
+            }
+            return true;
+        case ePhysical:
+            p_col . type = MakePhysicalEncodingSpec ( * sym, p_fqn_opt_vers,
+                                                      & p_schemaArgs,
+                                                      & p_factoryArgs,
+                                                      p_col . td  );
+            return true;
+        default:
+            ReportError ( "Cannot be used as a physical column type", fqn );
+            break;
+        }
+    }
+    return false;
+}
+
+void
+ASTBuilder :: AddPhysicalColumn ( STable & p_table, const AST & p_decl, bool p_static )
+{
+    assert ( p_decl . GetTokenType () == PT_PHYSMBR );
+    assert ( p_decl . ChildrenCount () >= 2 );  // typespec typed_col [ init ]
+
+    SPhysMember * c = Alloc < SPhysMember > ();
+    if ( c != 0 )
+    {
+        const AST * colDef = p_decl . GetChild ( 0 ); //col_schema_parms_opt fqn_opt_vers factory_parms_opt
+        assert ( colDef != 0 );
+        assert ( colDef -> ChildrenCount () == 3 );
+
+        const AST_FQN * encoding = dynamic_cast < const AST_FQN * > ( colDef -> GetChild ( 1 ) );
+        assert ( encoding != 0 );
+        if ( MakePhysicalColumnType ( * colDef -> GetChild ( 0 ), * encoding, * colDef -> GetChild ( 2 ), * c ) )
+        {
+            const char * ident = p_decl . GetChild ( 1 ) -> GetTokenValue();
+            KSymbol * sym = Resolve ( ident, false ); // will not report unknown name
+            if ( sym == 0 )
+            {
+                String name;
+                StringInitCString ( & name, ident );
+                rc_t rc = KSymTableCreateConstSymbol ( & GetSymTab (), & c -> name, & name, ePhysMember, c);
+                if ( rc == 0 )
+                {
+
+                    if ( p_decl . ChildrenCount () == 3 )
+                    {
+                        const AST_Expr * expr = dynamic_cast < const AST_Expr * > ( p_decl . GetChild ( 2 ) );
+                        assert ( expr != 0 );
+                        c -> expr = expr -> MakeExpression ( * this );
+                    }
+
+                    c -> stat = p_static;
+
+                    if ( VectorAppend ( p_table . phys, & c -> cid . id, c ) )
+                    {
+                        return;
+                    }
+                }
+                ReportRc ( "KSymTableCreateConstSymbol", rc );
+            }
+            else if ( sym -> type == eForward )
+            {   // phys column was predeclared
+                c -> name = sym;
+                sym -> u . obj = c;
+                sym -> type = ePhysMember;
+                if ( VectorAppend ( p_table . phys, & c -> cid . id, c ) )
+                {
+                    return;
+                }
+            }
+            else
+            {   // redefinition
+                ReportError ( "Physical column already defined: '%s'", ident );
+            }
+        }
+
+        SPhysMemberWhack ( c, 0 );
+    }
+}
+
+void
+ASTBuilder :: AddUntyped ( STable & p_table, const AST_FQN & p_fqn )
+{
+    const KSymbol * sym = Resolve ( p_fqn );
+    if ( sym != 0 )
+    {
+        if ( sym -> type == eUntypedFunc )
+        {
+            const SNameOverload * name = static_cast < const SNameOverload * > ( sym -> u . obj );
+            p_table . untyped = static_cast < const SFunction * > ( VectorLast ( & name -> items ) );
+        }
+        else
+        {
+            ReportError ( "Not an untyped function", p_fqn );
+        }
+    }
+}
+
 void
 ASTBuilder :: HandleTableParents ( STable & p_table, const AST & p_parents )
 {
@@ -548,10 +661,12 @@ ASTBuilder :: HandleTableBody ( STable & p_table, const AST & p_body )
                                     datatype );
                 }
                 break;
+
             case PT_COLUMN:
                 // modifiers col_decl [ default ]
                 AddColumn ( p_table, * stmt . GetChild ( 0 ), * stmt . GetChild ( 1 ), stmt . GetChild ( 2 ) );
                 break;
+
             case PT_COLUMNEXPR:
                 if ( p_table . limit == 0 )
                 {
@@ -565,6 +680,26 @@ ASTBuilder :: HandleTableBody ( STable & p_table, const AST & p_body )
                     ReportError ( "Limit constraint already specified" );
                 }
                 break;
+
+            case KW_static:
+                assert ( stmt . ChildrenCount () == 1 );
+                AddPhysicalColumn ( p_table, * stmt . GetChild ( 0 ), true );
+                break;
+
+            case KW_physical:
+                assert ( stmt . ChildrenCount () == 1 );
+                AddPhysicalColumn ( p_table, * stmt . GetChild ( 0 ), false );
+                break;
+
+            case PT_COLUNTYPED:
+                {
+                    assert ( stmt . ChildrenCount () == 1 );
+                    const AST_FQN * fqn = dynamic_cast < const AST_FQN * > ( stmt . GetChild ( 0 ) );
+                    assert ( fqn != 0 );
+                    AddUntyped ( p_table, * fqn );
+                }
+                break;
+
             default:
                 assert ( false );
             }

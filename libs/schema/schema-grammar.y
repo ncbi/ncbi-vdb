@@ -650,12 +650,17 @@ tbl_1_0_stmt_seq
 
 tbl_1_0_stmt
     : production_1_0_stmt                       { $$ = $1; }
-    | column_1_0_decl                           { $$ = $1; }
-    | default_view_1_0_decl                     { $$ = $1; }
+    | col_1_0_modifiers col_1_0_decl            { $$ . subtree = MakeTree ( PT_COLUMN, P ( $1 ), P ( $2 ) ); }
+    | KW_column KW_limit '=' expression_1_0 ';'
+                        { $$ . subtree = MakeTree ( PT_COLUMNEXPR, T ( $1 ), T ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
+    | KW_column KW_default KW_limit '=' expression_1_0 ';'
+                        { $$ . subtree = MakeTree ( PT_COLUMNEXPR, T ( $1 ), T ( $2 ), T ( $3 ), T ( $4 ), P ( $5 ), T ( $6 ) ); }
     | KW_static physmbr_1_0_decl                { $$ . subtree = MakeTree ( PT_PHYSCOL, T ( $1 ), P ( $2 ) ); }
     | KW_physical physmbr_1_0_decl              { $$ . subtree = MakeTree ( PT_PHYSCOL, T ( $1 ), P ( $2 ) ); }
     | KW_static KW_physical physmbr_1_0_decl    { $$ . subtree = MakeTree ( PT_PHYSCOL, T ( $1 ), T ( $2 ), P ( $3 ) ); }
-    | KW___untyped '=' fqn_1_0 '(' ')' ';'      { $$ . subtree = MakeTree ( PT_COLUNTYPED, T ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ), T ( $5 ), T ( $6 ) ); }
+    | default_view_1_0_decl                     { $$ = $1; }
+    | KW___untyped '=' fqn_1_0 '(' ')' ';'
+                        { $$ . subtree = MakeTree ( PT_COLUNTYPED, T ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ), T ( $5 ), T ( $6 ) ); }
     | ';'                                       { $$ . subtree = T ( $1 ); }
     ;
 
@@ -664,15 +669,6 @@ production_1_0_stmt
                                      { $$ . subtree = MakeTree ( PT_PRODSTMT, P ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
     | KW_trigger ident_1_0 '=' cond_expr_1_0 ';'
                                      { $$ . subtree = MakeTree ( PT_PRODTRIGGER, T ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
-    ;
-
-column_1_0_decl
-    :   col_1_0_modifiers col_1_0_decl
-            { $$ . subtree = MakeTree ( PT_COLUMN, P ( $1 ), P ( $2 ) ); }
-    |   KW_column KW_limit '=' expression_1_0 ';'
-            { $$ . subtree = MakeTree ( PT_COLUMNEXPR, T ( $1 ), T ( $2 ), T ( $3 ), P ( $4 ), T ( $5 ) ); }
-    |   KW_column KW_default KW_limit '=' expression_1_0 ';'
-            { $$ . subtree = MakeTree ( PT_COLUMNEXPR, T ( $1 ), T ( $2 ), T ( $3 ), T ( $4 ), P ( $5 ), T ( $6 ) ); }
     ;
 
 col_1_0_modifiers

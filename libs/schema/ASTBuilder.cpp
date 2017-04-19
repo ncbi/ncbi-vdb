@@ -150,6 +150,7 @@ ASTBuilder :: CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const voi
         String name;
         StringInitCString ( & name, p_fqn . GetChild ( i ) -> GetTokenValue () );
         KSymbol *ns;
+        // will not re-create namespace if already exists
         rc = KSymTableCreateNamespace ( & m_symtab, & ns, & name );
         if ( rc == 0 )
         {
@@ -170,6 +171,7 @@ ASTBuilder :: CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const voi
     {
         String name;
         p_fqn . GetIdentifier ( name );
+        // will add to the current scope, which is the same as the innermost namespace
         rc = KSymTableCreateSymbol ( & m_symtab, & ret, & name, p_type, p_obj );
         if ( GetRCState ( rc ) == rcExists )
         {
@@ -189,12 +191,12 @@ ASTBuilder :: CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const voi
     return ret;
 }
 
-const KSymbol*
+KSymbol*
 ASTBuilder :: Resolve ( const char* p_ident, bool p_reportUnknown )
 {
     String name;
     StringInitCString ( & name, p_ident );
-    const KSymbol* ret = KSymTableFind ( & m_symtab, & name );
+    KSymbol* ret = KSymTableFind ( & m_symtab, & name );
     if ( ret == 0 && p_reportUnknown )
     {
         ReportError ( "Undeclared identifier: '%s'", p_ident ); //TODO: add location
@@ -648,9 +650,8 @@ ASTBuilder :: FillArguments ( const AST & p_parms, Vector & p_v )
         switch ( parm -> GetTokenType () )
         {
         case PT_AT:
-            expr = parm -> MakeExpression ( * this );
-            break;
         case PT_IDENT:
+        case PHYSICAL_IDENTIFIER_1_0:
             expr = parm -> MakeExpression ( * this );
             break;
         default:

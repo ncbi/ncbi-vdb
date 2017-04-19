@@ -700,7 +700,7 @@ FIXTURE_TEST_CASE(FuncCall_Params, AST_Fixture)
     REQUIRE_EQ ( ( uint32_t ) eFuncExpr, c -> read -> var );
     const SFuncExpr * expr = reinterpret_cast < const SFuncExpr * > ( c -> read );
 
-    // verify the factory parameters
+    // verify the function parameters
     REQUIRE_EQ ( 2u, VectorLength ( & expr -> pfunc ) );
     const SExpression * p1 = static_cast < const SExpression * > ( VectorGet ( & expr -> pfunc, 0 ) );
     REQUIRE_NOT_NULL ( p1 );
@@ -747,7 +747,7 @@ FIXTURE_TEST_CASE(FuncCall_Param_Physical, AST_Fixture)
     REQUIRE_EQ ( ( uint32_t ) eFuncExpr, c -> read -> var );
     const SFuncExpr * expr = reinterpret_cast < const SFuncExpr * > ( c -> read );
 
-    // verify the factory parameters
+    // verify the function parameters
     REQUIRE_EQ ( 1u, VectorLength ( & expr -> pfunc ) );
     const SExpression * p1 = static_cast < const SExpression * > ( VectorGet ( & expr -> pfunc, 0 ) );
     REQUIRE_NOT_NULL ( p1 );
@@ -756,8 +756,26 @@ FIXTURE_TEST_CASE(FuncCall_Param_Physical, AST_Fixture)
     REQUIRE_EQ ( string ( ".a" ), ToCppString ( sym -> _sym -> name ) );
 }
 
-//TODO: function call: optional parameters
-//TODO: function call: vararg
+FIXTURE_TEST_CASE(FuncCall_OptionalParams, AST_Fixture)
+{
+    MakeAst  ( "function U8 f (U16 i, * U8 j); table t#1 { column U8 a; column U8 b; column U8 c = f (a); } " );
+    const STable * t = static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, 0 ) );
+    const SColumn * c = static_cast < const SColumn * > ( VectorGet ( & t -> col, 2 ) );
+    REQUIRE_EQ ( ( uint32_t ) eFuncExpr, c -> read -> var );
+    const SFuncExpr * expr = reinterpret_cast < const SFuncExpr * > ( c -> read );
+    REQUIRE_EQ ( 1u, VectorLength ( & expr -> pfunc ) );
+}
+
+FIXTURE_TEST_CASE(FuncCall_Vararg, AST_Fixture)
+{
+    MakeAst  ( "function U8 f (U16 i, ...); table t#1 { column U8 a; column U8 b; column U8 c = f (a, a, a); } " );
+    const STable * t = static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, 0 ) );
+    const SColumn * c = static_cast < const SColumn * > ( VectorGet ( & t -> col, 2 ) );
+    REQUIRE_EQ ( ( uint32_t ) eFuncExpr, c -> read -> var );
+    const SFuncExpr * expr = reinterpret_cast < const SFuncExpr * > ( c -> read );
+    REQUIRE_EQ ( 3u, VectorLength ( & expr -> pfunc ) );
+}
+
 
 //TODO: expressions: hex, octal
 

@@ -347,11 +347,13 @@ AST_Expr :: MakeSymExpr ( ASTBuilder & p_builder, const KSymbol* p_sym ) const
             return SSymExprMake ( p_builder, eProdExpr, p_sym );
         case eFuncParam :
             return SSymExprMake ( p_builder, eParamExpr, p_sym );
+        case eColumn :
+            return SSymExprMake ( p_builder, eColExpr, p_sym );
+        case ePhysMember:
+            return SSymExprMake ( p_builder, ePhysExpr, p_sym );
         case eFunction :
             p_builder . ReportError ( "Function expressions are not yet implemented" );
             break;
-        case eColumn :
-            return SSymExprMake ( p_builder, eColExpr, p_sym );
         default:
             p_builder . ReportError ( "Object cannot be used in this context: '%S'", & p_sym -> name );
             break;
