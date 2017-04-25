@@ -1007,9 +1007,29 @@ ASTBuilder :: ConstDef  ( const Token* p_token, AST* p_type, AST_FQN* p_fqn, AST
                 }
             }
         }
-        else // fqn dim
+        else // fqn [ const-expr ]
         {
-            //TODO - use ArraySpec()
+            assert ( p_type -> GetTokenType () == PT_ARRAY );
+            assert ( p_type -> ChildrenCount () == 2 ); // fqn expr
+            const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( * p_type -> GetChild ( 0 ) );
+            const AST_Expr & dim = dynamic_cast < const AST_Expr & > ( * p_type -> GetChild ( 1 ) );
+            const KSymbol * sym = Resolve ( fqn ); // will report unknown name
+            if ( sym != 0 )
+            {
+                if ( sym -> type != eDatatype )
+                {
+                    ReportError ( "Not a datatype", fqn );
+                    return 0;
+                }
+                if ( VectorAppend ( m_schema -> cnst, & cnst -> id, cnst ) )
+                {
+                    cnst -> name = CreateFqnSymbol ( * p_fqn, eConstant, cnst );
+                    cnst -> expr = p_expr -> EvaluateConst ( *this ); // will report problems
+                    const SDatatype * typeDef = static_cast < const SDatatype * > ( sym -> u . obj );
+                    cnst -> td . type_id    = typeDef -> id;
+                    cnst -> td . dim        = EvalConstExpr ( dim );
+                }
+            }
         }
     }
 

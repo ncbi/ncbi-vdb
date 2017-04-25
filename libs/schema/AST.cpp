@@ -27,6 +27,8 @@
 #include "AST.hpp"
 
 #include <strtol.h>
+#include <ctype.h>
+#include <os-native.h>
 
 #include <klib/symbol.h>
 #include <klib/printf.h>
@@ -305,12 +307,18 @@ AST_Expr :: EvaluateConst ( ASTBuilder & p_builder ) const
     SExpression * ret = MakeExpression ( p_builder );
     if ( ret != 0 )
     {
-        if ( ret -> var != eConstExpr )
+        switch ( ret -> var )
         {
-            assert ( false );
-
+        case eConstExpr:
+            break;
+        case eVectorExpr:
+            //TODO: make sure all componenet are const
+            break;
+        default:
+            p_builder . ReportError ( "Not a constant expression" );
             SExpressionWhack ( ret );
             ret = 0;
+            break;
         }
     }
     return ret;
@@ -362,22 +370,72 @@ AST_Expr :: MakeSymExpr ( ASTBuilder & p_builder, const KSymbol* p_sym ) const
     return 0;
 }
 
+/* hex_to_int
+ *  where 'c' is known to be hex
+ */
+static
+unsigned int CC hex_to_int ( char c )
+{
+    int i = c - '0';
+    if ( c > '9' )
+    {
+        if ( c < 'a' )
+            i = c - 'A' + 10;
+        else
+            i = c - 'a' + 10;
+    }
+
+    assert ( i >= 0 && i < 16 );
+    return i;
+}
+
 SExpression *
 AST_Expr :: MakeUnsigned ( ASTBuilder & p_builder ) const
 {
     assert ( GetTokenType () == PT_UINT );
     SConstExpr * x = p_builder . Alloc < SConstExpr > ( sizeof * x - sizeof x -> u + sizeof x -> u . u64 [ 0 ] );
     if ( x != 0 )
-    {   //TODO: support hex, oct
+    {
         assert ( ChildrenCount () == 1 );
         const char * val = GetChild ( 0 ) -> GetTokenValue ();
         uint64_t i64 = 0;
-        uint32_t i = 0;
-        while ( val [ i ] != 0 )
+        switch ( GetChild ( 0 ) -> GetTokenType () )
         {
-            i64 *= 10;
-            i64 += val [ i ] - '0';
-            ++ i;
+        case DECIMAL:
+            {
+                uint32_t i = 0;
+                while ( val [ i ] != 0 )
+                {
+                    i64 *= 10;
+                    i64 += val [ i ] - '0';
+                    ++ i;
+                }
+            }
+            break;
+        case HEX:
+            {
+                uint32_t i = 2;
+                while ( val [ i ] != 0 )
+                {
+                    i64 <<= 4;
+                    i64 += hex_to_int ( val [ i ] );
+                    ++ i;
+                }
+            }
+            break;
+        case OCTAL:
+            {
+                uint32_t i = 1;
+                while ( val [ i ] != 0 )
+                {
+                    i64 <<= 3;
+                    i64 += val [ i ] - '0';
+                    ++ i;
+                }
+            }
+            break;
+        default:
+            assert ( 0 );
         }
 
         x -> u . u64 [ 0 ] = i64;
@@ -387,6 +445,193 @@ AST_Expr :: MakeUnsigned ( ASTBuilder & p_builder ) const
         x -> td . dim = 1;
 
         return & x -> dad;
+    }
+    return 0;
+}
+
+SExpression *
+AST_Expr :: MakeFloat ( ASTBuilder & p_builder ) const
+{
+    assert ( GetTokenType () == FLOAT || GetTokenType () == EXP_FLOAT );
+    SConstExpr * x = p_builder . Alloc < SConstExpr > ( sizeof * x - sizeof x -> u + sizeof x -> u . u64 [ 0 ] );
+    if ( x != 0 )
+    {
+        const char * val = GetTokenValue ();
+        char * end;
+        double f64 = strtod ( val, & end );
+        if ( ( end - val ) != ( int ) string_size ( val ) )
+        {
+            p_builder . ReportError ( "Invalid floating point constant" );
+            return 0;
+        }
+
+        x -> u . f64 [ 0 ] = f64;
+        x -> dad . var = eConstExpr;
+        atomic32_set ( & x -> dad . refcount, 1 );
+        x -> td . type_id = p_builder . IntrinsicTypeId ( "F64" );
+        x -> td . dim = 1;
+
+        return & x -> dad;
+    }
+    return 0;
+}
+
+SExpression *
+AST_Expr :: MakeString ( ASTBuilder & p_builder ) const
+{
+    assert ( GetTokenType () == STRING );
+    const char * val = GetTokenValue ();
+    size_t size = string_size ( val ) - 2; // minus quotes
+    SConstExpr * x = p_builder . Alloc < SConstExpr > ( sizeof * x - sizeof x -> u + size + 1 );
+    if ( x != 0 )
+    {
+        string_copy ( x -> u . utf8, size + 1, val + 1, size ); // add 1 for NUL
+        x -> dad . var = eConstExpr;
+        atomic32_set ( & x -> dad . refcount, 1 );
+        x -> td . type_id = p_builder . IntrinsicTypeId ( "ascii" );
+        x -> td . dim = ( uint32_t ) size;
+
+        return & x -> dad;
+    }
+    return 0;
+}
+
+SExpression *
+AST_Expr :: MakeEscapedString ( ASTBuilder & p_builder ) const
+{
+    assert ( GetTokenType () == ESCAPED_STRING );
+    const char * val = GetTokenValue ();
+    size_t size = string_size ( val ) - 2; // minus quotes
+    SConstExpr * x = p_builder . Alloc < SConstExpr > ( sizeof * x - sizeof x -> u + size + 1 );
+    if ( x != 0 )
+    {
+        char * buffer = x -> u . utf8;
+        uint32_t j = 0 ;
+        uint32_t i = 1; // skip the opening quote
+        while ( i <= size )
+        {
+            if ( val [ i ] == '\\' )
+            {
+                ++ i;
+                if ( i > size )
+                {
+                    break;
+                }
+
+                switch ( val [ i ] )
+                {
+                    /* control characters */
+                case 'n':
+                    buffer [ j ] = '\n';
+                    break;
+                case 't':
+                    buffer [ j ] = '\t';
+                    break;
+                case 'r':
+                    buffer [ j ] = '\r';
+                    break;
+                case '0':
+                    buffer [ j ] = '\0';
+                    break;
+
+                case 'a':
+                    buffer [ j ] = '\a';
+                    break;
+                case 'b':
+                    buffer [ j ] = '\b';
+                    break;
+                case 'v':
+                    buffer [ j ] = '\v';
+                    break;
+                case 'f':
+                    buffer [ j ] = '\f';
+                    break;
+
+                case 'x': case 'X':
+                    /* expect 2 additional hex characters */
+                    if ( ( i + 2 ) < size &&
+                        isxdigit ( val [ i + 1 ] ) &&
+                        isxdigit ( val [ i + 2 ] ) )
+                    {
+                        /* go ahead and convert */
+                        buffer [ j ] = ( char )
+                            ( ( hex_to_int ( val [ i + 1 ] ) << 4 ) |
+                                hex_to_int ( val [ i + 2 ] ) );
+                        i += 2;
+                        break;
+                    }
+                    /* no break */
+
+                    /* just quote self */
+                default:
+                    buffer [ j ] = val [ i ];
+                }
+            }
+            else
+            {
+                buffer [ j ] = val [ i ];
+            }
+
+            ++ j;
+            ++ i;
+        }
+        buffer [ j ] = 0;
+
+        x -> dad . var = eConstExpr;
+        atomic32_set ( & x -> dad . refcount, 1 );
+        x -> td . type_id = p_builder . IntrinsicTypeId ( "ascii" );
+        x -> td . dim = j;
+
+        return & x -> dad;
+    }
+    return 0;
+}
+
+SExpression *
+AST_Expr :: MakeVectorConstant ( ASTBuilder & p_builder ) const
+{
+    assert ( GetTokenType () == PT_CONSTVECT );
+    SVectExpr * x = p_builder . Alloc < SVectExpr > ();
+    if ( x != 0 )
+    {
+        x -> dad . var = eVectorExpr;
+        atomic32_set ( & x -> dad . refcount, 1 );
+        VectorInit ( & x -> expr, 0, 16 );
+
+        assert ( ChildrenCount () == 1 );
+        const AST & values = * GetChild ( 0 );
+        uint32_t count = values . ChildrenCount ();
+        bool good = true;
+        for ( uint32_t i = 0 ; i != count; ++i )
+        {
+            const AST_Expr * v = dynamic_cast < const AST_Expr * > ( values . GetChild ( i ) );
+            assert ( v != 0 );
+            SExpression * vx = v -> EvaluateConst ( p_builder );
+            if ( vx == 0 )
+            {
+                good = false;
+                break;
+            }
+            if ( vx -> var == eVectorExpr )
+            {
+                p_builder . ReportError ( "Nested vector constants are not allowed" );
+                good = false;
+                break;
+            }
+            if ( ! p_builder . VectorAppend ( x -> expr, 0, vx ) )
+            {
+                SExpressionWhack ( vx );
+                good = false;
+                break;
+            }
+        }
+
+        if ( good )
+        {
+            return & x -> dad;
+        }
+
+        SExpressionWhack ( & x -> dad );
     }
     return 0;
 }
@@ -431,6 +676,19 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
 
     case PT_UINT:
         return MakeUnsigned ( p_builder );
+
+    case FLOAT:
+    case EXP_FLOAT:
+        return MakeFloat ( p_builder );
+
+    case STRING:
+        return MakeString ( p_builder );
+    case ESCAPED_STRING:
+        return MakeEscapedString ( p_builder );
+
+    case PT_CONSTVECT:
+        return MakeVectorConstant ( p_builder );
+        break;
 
     case PT_IDENT:
         {

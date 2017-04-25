@@ -58,6 +58,10 @@ const uint32_t U8_id     = 9;
 const uint32_t U16_id    = 10;
 const uint32_t U32_id    = 11;
 const uint32_t U64_id    = 12;
+const uint32_t F32_id    = 17;
+const uint32_t F64_id    = 18;
+const uint32_t ASCII_id  = 23;
+const uint32_t UTF8_id   = 24;
 
 class AST_Fixture
 {

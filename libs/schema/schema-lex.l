@@ -107,10 +107,10 @@ alphanum    [a-zA-Z_0-9]
 "..." { return ELLIPSIS; }
 
 [1-9][0-9]*                 { return DECIMAL; }
-0[0-9]*                     { return OCTAL; }
-0[xX][0-9a-fA-F]+        { return HEX; }
-[0-9]+\.[0-9]*[eE][0-9]+   { return EXP_FLOAT; }
-\.[0-9]+[eE][0-9]+         { return EXP_FLOAT; }
+0[0-7]*                     { return OCTAL; }
+0[xX][0-9a-fA-F]+           { return HEX; }
+[0-9]+\.[0-9]*[eE][0-9]+    { return EXP_FLOAT; }
+\.[0-9]+[eE][0-9]+          { return EXP_FLOAT; }
 [0-9]+\.[0-9]*              { return FLOAT; }
 \.[0-9]+                    { return FLOAT; }
 

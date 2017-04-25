@@ -229,7 +229,7 @@
 
 %type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
 
-%type <expr> expr cond_expr cond_chain uint_expr func_expr
+%type <expr> expr cond_expr cond_chain uint_expr func_expr float_expr string_expr const_vect_expr
 
 %type <paramSig> param_sig param_signature fact_sig
 
@@ -246,7 +246,7 @@
 %type <tok> PT_PHYSENCREF KW_column PT_TYPEDCOLEXPR PT_DATABASE PT_DBBODY
 %type <tok> KW_template KW_database PT_DBMEMBER PT_TBLMEMBER PT_INCLUDE KW_include STRING
 %type <tok> PT_FUNCEXPR PT_COLSCHEMAPARMS KW_static PT_PHYSMBR PT_PHYSCOLDEF PT_COLSCHEMAPARAM
-%type <tok> KW_physical PT_COLUNTYPED
+%type <tok> KW_physical PT_COLUNTYPED EXP_FLOAT ESCAPED_STRING PT_CONSTVECT
 
 %%
 
@@ -684,10 +684,10 @@ expr
     | '@'                       { $$ = new AST_Expr ( PT_AT ); }
     | func_expr                 { $$ = $1; }
     | uint_expr                 { $$ = $1; }
-/*TODO
-    | float_expr_1_0            { $$ = $1; }
-    | string_expr_1_0           { $$ = $1; }
-    | const_vect_expr_1_0       { $$ = $1; }
+    | float_expr                { $$ = $1; }
+    | string_expr               { $$ = $1; }
+    | const_vect_expr           { $$ = $1; }
+/*
     | bool_expr_1_0             { $$ = $1; }
     | negate_expr_1_0           { $$ = $1; }
     | '+' expression_1_0        { $$ = $2; }
@@ -739,6 +739,20 @@ uint_expr
     : PT_UINT '(' DECIMAL ')'   { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
     | PT_UINT '(' HEX ')'       { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
     | PT_UINT '(' OCTAL ')'     { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $3 ); }
+    ;
+
+float_expr
+    : FLOAT     { $$ = new AST_Expr ( $1 ); }
+    | EXP_FLOAT { $$ = new AST_Expr ( $1 ); }
+    ;
+
+string_expr
+    : STRING            { $$ = new AST_Expr ( $1 ); }
+    | ESCAPED_STRING    { $$ = new AST_Expr ( $1 ); }
+    ;
+
+const_vect_expr
+    : PT_CONSTVECT '(' '[' PT_ASTLIST '(' expr_list ')' ']' ')'     { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $6 ); }
     ;
 
 type_expr

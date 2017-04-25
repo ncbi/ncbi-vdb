@@ -109,7 +109,7 @@ TEST_CASE ( name ) \
 }
 
 REQUIRE_TERMINAL ( Decimal,             DECIMAL,        "123456789" )
-REQUIRE_TERMINAL ( Octal,               OCTAL,          "0123456789" )
+REQUIRE_TERMINAL ( Octal,               OCTAL,          "01234567" )
 REQUIRE_TERMINAL ( Hex_0x,              HEX,            "0x01abCDef23" )
 REQUIRE_TERMINAL ( Hex1_0X,             HEX,            "0X01abCDef23" )
 REQUIRE_TERMINAL ( Float,               FLOAT,          ".1415" )
@@ -118,9 +118,9 @@ REQUIRE_TERMINAL ( Float_NoTrailDigits, FLOAT,          "3." )
 REQUIRE_TERMINAL ( ExpFloat_e,          EXP_FLOAT,      "3.14e1" )
 REQUIRE_TERMINAL ( ExpFloat_E,          EXP_FLOAT,      "3.14E1" )
 REQUIRE_TERMINAL ( DoubleQuotedString,  STRING,         "\"qwerty\"" )
-REQUIRE_TERMINAL ( EscapedDQString,     ESCAPED_STRING, "\"q\\werty\"" )
+REQUIRE_TERMINAL ( EscapedDQString,     ESCAPED_STRING, "\"q\\w\\nerty\"" )
 REQUIRE_TERMINAL ( SingleQuotedString,  STRING,         "'qwerty'" )
-REQUIRE_TERMINAL ( EscapedSQString,     ESCAPED_STRING, "'q\\werty'" )
+REQUIRE_TERMINAL ( EscapedSQString,     ESCAPED_STRING, "\"q\\w\\nerty\"" )
 
 REQUIRE_TERMINAL ( Identifier_OneChar,  IDENTIFIER_1_0, "T" )
 REQUIRE_TERMINAL ( Identifier,          IDENTIFIER_1_0, "abc123_" )

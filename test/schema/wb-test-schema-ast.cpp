@@ -449,21 +449,95 @@ FIXTURE_TEST_CASE(Format_SuperWrong, AST_Fixture)
 
 ///////// const
 
-FIXTURE_TEST_CASE(Const_Simple, AST_Fixture)
+class ConstFixture : public AST_Fixture
 {
-    MakeAst ( "const U8 c = 1;" );
-    const KSymbol* sym = VerifySymbol ( "c", eConstant );
-    const SConstant* c = static_cast < const SConstant* > ( sym -> u . obj );
-    REQUIRE_NOT_NULL ( c );
-    REQUIRE_EQ ( string ( "c" ), ToCppString ( c -> name -> name ) );
-    REQUIRE_EQ ( U8_id, c -> td . type_id );
-    REQUIRE_NOT_NULL ( c -> expr );
-    REQUIRE_EQ ( ( uint32_t ) eConstExpr, c -> expr -> var );
-    const SConstExpr & expr =  * reinterpret_cast < const SConstExpr * > ( c -> expr );
-    REQUIRE_EQ ( ( uint64_t ) 1, expr . u . u64 [ 0 ] );
-    REQUIRE_EQ ( 12u, expr . td . type_id );
-    REQUIRE_EQ ( 1u, expr . td . dim );
+public:
+    const SExpression * VerifyConst ( const char * p_input, const char * p_id, uint32_t p_type )
+    {
+        MakeAst ( p_input );
+        const KSymbol* sym = VerifySymbol ( p_id, eConstant );
+        const SConstant* c = static_cast < const SConstant* > ( sym -> u . obj );
+        THROW_ON_FALSE ( c != 0 );
+        THROW_ON_FALSE ( string ( "c" ) == ToCppString ( c -> name -> name ) );
+        THROW_ON_FALSE ( p_type == c -> td . type_id );
+        THROW_ON_FALSE ( c -> expr != 0 );
+        return c -> expr;
+    }
+    void VerifyIntConst ( const char * p_input, const char * p_id, uint32_t p_type, uint64_t p_expectedValue )
+    {
+        const SExpression * c = VerifyConst ( p_input, p_id, p_type );
+        THROW_ON_FALSE ( ( uint32_t ) eConstExpr == c -> var );
+        const SConstExpr * expr = reinterpret_cast < const SConstExpr * > ( c );
+        THROW_ON_FALSE ( 1u == expr -> td . dim );
+        THROW_ON_FALSE ( p_expectedValue == expr -> u . u64 [ 0 ] );
+    }
+
+    void VerifyFloatConst ( const char * p_input, const char * p_id, uint32_t p_type, double p_expectedValue )
+    {
+        const SExpression * c = VerifyConst ( p_input, p_id, p_type );
+        THROW_ON_FALSE ( ( uint32_t ) eConstExpr == c -> var );
+        const SConstExpr * expr = reinterpret_cast < const SConstExpr * > ( c );
+        THROW_ON_FALSE ( 1u == expr -> td . dim );
+        THROW_ON_FALSE ( p_expectedValue == expr -> u . f64 [ 0 ] );
+    }
+
+    void VerifyStringConst ( const char * p_input, const char * p_id, const string & p_expectedValue, size_t p_expectedLength )
+    {
+        const SExpression * c = VerifyConst ( p_input, p_id, ASCII_id );
+        THROW_ON_FALSE ( ( uint32_t ) eConstExpr == c -> var );
+        const SConstExpr * expr = reinterpret_cast < const SConstExpr * > ( c );
+        THROW_ON_FALSE ( p_expectedLength == expr -> td . dim );
+        THROW_ON_FALSE ( p_expectedValue == expr -> u . ascii );
+    }
+};
+
+FIXTURE_TEST_CASE(Const_Decimal, ConstFixture)
+{
+    VerifyIntConst ( "const U8 c = 1;", "c", U8_id, 1 );
 }
+
+FIXTURE_TEST_CASE(Const_Hex, ConstFixture)
+{
+    VerifyIntConst ( "const U16 c = 0xF1;", "c", U16_id, 0xF1 );
+}
+
+FIXTURE_TEST_CASE(Const_Octal, ConstFixture)
+{
+    VerifyIntConst ( "const U32 c = 07070;", "c", U32_id, 07070 );
+}
+
+FIXTURE_TEST_CASE(Const_Float, ConstFixture)
+{
+    VerifyFloatConst ( "const F32 c = 1.0;", "c", F32_id, 1.0 );
+}
+
+FIXTURE_TEST_CASE(Const_ExpFloat, ConstFixture)
+{
+    VerifyFloatConst ( "const F64 c = 1.0e1;", "c", F64_id, 1.0e1 );
+}
+
+FIXTURE_TEST_CASE(Const_String, ConstFixture)
+{
+    VerifyStringConst ( "const ascii c = \"qq\";", "c", "qq", 2 );
+}
+
+FIXTURE_TEST_CASE(Const_EscapedString, ConstFixture)
+{
+    VerifyStringConst ( "const ascii c = \"qq\\n\\t\\r\\a\\b\\v\\f\\xFE\\X01\\0\";", "c", "qq\n\t\r\a\b\v\f\xfe\x01\0", 12 );
+}
+
+//TODO: unterminated string
+
+FIXTURE_TEST_CASE(Const_Vector, ConstFixture)
+{
+    const SExpression * c = VerifyConst ( "const U8 [2] c = [1,2];", "c", U8_id );
+    THROW_ON_FALSE ( ( uint32_t ) eVectorExpr == c -> var );
+    const SVectExpr * expr = reinterpret_cast < const SVectExpr * > ( c );
+    REQUIRE_EQ ( (uint32_t)2, VectorLength ( & expr -> expr ) );
+}
+
+//TODO: vector const with a vector const subvalue - error
+//TODO: vector const with a non-const subvalue - error
 
 //TODO: not a type: const U8 c = 1; const c cc = 1; - error
 //TODO: const U8 [2] c = [1,2];
@@ -775,9 +849,6 @@ FIXTURE_TEST_CASE(FuncCall_Vararg, AST_Fixture)
     const SFuncExpr * expr = reinterpret_cast < const SFuncExpr * > ( c -> read );
     REQUIRE_EQ ( 3u, VectorLength ( & expr -> pfunc ) );
 }
-
-
-//TODO: expressions: hex, octal
 
 #include "wb-test-schema-func.cpp"
 #include "wb-test-schema-table.cpp"

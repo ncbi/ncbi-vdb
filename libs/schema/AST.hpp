@@ -114,6 +114,12 @@ namespace ncbi
             SExpression * MakeExpression ( ASTBuilder & ) const;
             SExpression * MakeSymExpr ( ASTBuilder & , const KSymbol * p_sym ) const;
             SExpression * MakeUnsigned ( ASTBuilder & ) const;
+
+        private:
+            SExpression * MakeFloat ( ASTBuilder & ) const;
+            SExpression * MakeString ( ASTBuilder & p_builder ) const;
+            SExpression * MakeEscapedString ( ASTBuilder & p_builder ) const;
+            SExpression * MakeVectorConstant ( ASTBuilder & p_builder ) const;
         };
 
         class AST_ParamSig : public AST
