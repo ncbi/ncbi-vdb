@@ -448,11 +448,7 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
 {
     const char man [] = "/repository/remote/main/CGI/resolver-cgi";
     const char prt [] = "/repository/remote/protected/CGI/resolver-cgi";
-#ifndef TESTING_SERVICES_VS_OLD_RESOLVING
     const char cgi[]=     "https://www.ncbi.nlm.nih.gov/Traces/names/names.cgi";
-#else
-    const char cgi[]="https://sponomar.ncbi.nlm.nih.gov/Traces/names/names.cgi";
-#endif
     rc_t rc = 0;
     const char * path = aProtected ? prt : man;
     assert ( self );
