@@ -43,7 +43,7 @@
     void AST_error ( void* parser, ASTBuilder& p_builder, ParseTreeScanner&, const char* msg )
     {
         /*TODO: retrieve name/location data from the scanner, add to the report */
-        p_builder . ReportError ( "%s", msg );
+        p_builder . ReportError ( msg );
     }
 
 %}

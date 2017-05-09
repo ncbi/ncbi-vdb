@@ -24,56 +24,51 @@
  *
  */
 
-#include "SchemaScanner.hpp"
+#include "ErrorReport.hpp"
 
-#include <string.h>
+#include <klib/symbol.h>
+#include <klib/printf.h>
 
-#include <klib/text.h>
+#include <kfs/directory.h>
+#include <kfs/mmap.h>
 
 using namespace ncbi::SchemaParser;
+using namespace std;
 
-const SchemaScanner :: TokenType SchemaScanner :: EndSource;
-
-SchemaScanner :: SchemaScanner ( const char * p_source, size_t p_size, bool p_debug )
+ErrorReport :: ErrorReport ()
 {
-    SchemaScan_yylex_init ( & m_scanBlock, p_source, p_size );
-    if ( p_debug )
-    {
-        SchemaScan_set_debug ( & m_scanBlock, 1 );
-    }
-    memset ( & m_lastToken, 0, sizeof m_lastToken );
+    VectorInit ( & m_errors, 0, 1024 );
 }
 
-SchemaScanner :: SchemaScanner ( const char * p_source, bool p_debug )
+ErrorReport :: ~ErrorReport ()
 {
-    SchemaScan_yylex_init ( & m_scanBlock, p_source, string_size ( p_source ) );
-    if ( p_debug )
-    {
-        SchemaScan_set_debug ( & m_scanBlock, 1 );
-    }
-    memset ( & m_lastToken, 0, sizeof m_lastToken );
+    Clear();
 }
 
-SchemaScanner :: ~SchemaScanner ()
+static
+void CC
+WhackMessage ( void *item, void *data )
 {
-    SchemaScan_yylex_destroy ( & m_scanBlock );
+    free ( item );
 }
 
-// direct access to flex-generated scanner
-
-// need these declared for the following header to compile
-class ParseTree;
-class ErrorReport;
-#include "schema-tokens.h"
-
-extern "C" {
-    extern enum yytokentype SchemaScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, SchemaScanBlock* sb );
+void
+ErrorReport :: Clear ()
+{
+    VectorWhack ( & m_errors, WhackMessage, 0 );
 }
 
-SchemaScanner :: TokenType
-SchemaScanner :: Scan()
+void
+ErrorReport :: ReportError ( const char* p_fmt, ... )
 {
-    YYLTYPE loc; //TODO: make a data member, or place in SchemaToken
-    return SchemaScan_yylex ( & m_lastToken, & loc, & m_scanBlock );
+    const unsigned int BufSize = 1024;
+    char buf [ BufSize ];
+
+    va_list args;
+    va_start ( args, p_fmt );
+    string_vprintf ( buf, BufSize, 0, p_fmt, args );
+    va_end ( args );
+
+    :: VectorAppend ( & m_errors, 0, string_dup_measure ( buf, 0 ) );
 }
 

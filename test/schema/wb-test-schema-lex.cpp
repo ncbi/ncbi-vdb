@@ -33,7 +33,11 @@
 #include "../../libs/schema/SchemaScanner.hpp"
 
 using namespace ncbi::SchemaParser;
-typedef struct ParseTree ParseTree; // need this fake to make schema-tokens.h
+
+// need these fake to make schema-tokens.h compile
+typedef struct ParseTree ParseTree;
+typedef struct ErrorReport ErrorReport;
+
 #include "../../libs/schema/schema-tokens.h"
 
 using namespace std;
@@ -117,10 +121,16 @@ REQUIRE_TERMINAL ( Float_NoLeadDigits,  FLOAT,          "3.1415" )
 REQUIRE_TERMINAL ( Float_NoTrailDigits, FLOAT,          "3." )
 REQUIRE_TERMINAL ( ExpFloat_e,          EXP_FLOAT,      "3.14e1" )
 REQUIRE_TERMINAL ( ExpFloat_E,          EXP_FLOAT,      "3.14E1" )
-REQUIRE_TERMINAL ( DoubleQuotedString,  STRING,         "\"qwerty\"" )
-REQUIRE_TERMINAL ( EscapedDQString,     ESCAPED_STRING, "\"q\\w\\nerty\"" )
-REQUIRE_TERMINAL ( SingleQuotedString,  STRING,         "'qwerty'" )
-REQUIRE_TERMINAL ( EscapedSQString,     ESCAPED_STRING, "\"q\\w\\nerty\"" )
+
+REQUIRE_TERMINAL ( DoubleQuotedString,      STRING,         "\"qwerty\"" )
+REQUIRE_TERMINAL ( EscapedDQString,         ESCAPED_STRING, "\"q\\w\\nerty\"" )
+REQUIRE_TERMINAL ( UnterminatedDQString,    UNTERM_STRING, "\"qwerty" )
+REQUIRE_TERMINAL ( UnterminatedEDQString,   UNTERM_ESCAPED_STRING, "\"q\\w\\nerty" )
+
+REQUIRE_TERMINAL ( SingleQuotedString,      STRING,         "'qwerty'" )
+REQUIRE_TERMINAL ( EscapedSQString,         ESCAPED_STRING, "\"q\\w\\nerty\"" )
+REQUIRE_TERMINAL ( UnterminatedSQString,    UNTERM_STRING,         "'qwerty" )
+REQUIRE_TERMINAL ( UnterminatedESQString,   UNTERM_ESCAPED_STRING, "'q\\w\\nerty" )
 
 REQUIRE_TERMINAL ( Identifier_OneChar,  IDENTIFIER_1_0, "T" )
 REQUIRE_TERMINAL ( Identifier,          IDENTIFIER_1_0, "abc123_" )

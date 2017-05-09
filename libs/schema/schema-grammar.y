@@ -30,16 +30,22 @@
     #include <stdio.h>
 
     #include "ParseTree.hpp"
+    #include "ErrorReport.hpp"
+
     using namespace ncbi::SchemaParser;
 
     #include "schema-tokens.h"
     #include "schema-lex.h"
     #define Schema_lex SchemaScan_yylex
 
-    void Schema_error ( YYLTYPE *llocp, void* parser, struct SchemaScanBlock* sb, const char* msg )
+    void Schema_error ( YYLTYPE *                   p_llocp,
+                        ParseTree **                p_root,
+                        ErrorReport *               p_errors,
+                        struct SchemaScanBlock *    p_sb,
+                        const char *                p_msg )
     {
-        /*TODO: send message to the C++ parser for proper display and recovery */
-        printf("Line %i pos %i: %s\n", llocp -> first_line, llocp -> first_column, msg);
+        /* send message to the C++ parser for proper display and recovery */
+        p_errors -> ReportError ("Line %i pos %i: %s", p_llocp -> first_line, p_llocp -> first_column, p_msg);
     }
 
     extern "C"
@@ -119,7 +125,7 @@
 %}
 
 %name-prefix "Schema_"
-%parse-param { ParseTree** root }
+%parse-param { ParseTree** root } { ErrorReport * errors }
 %param { struct SchemaScanBlock* sb }
 
 %define api.value.type {SchemaToken}

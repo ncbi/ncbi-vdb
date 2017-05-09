@@ -133,7 +133,7 @@ ASTBuilder :: HandleTypedColumn ( STable & p_table, SColumn & p_col, const AST &
     if ( KSymTableFindShallow ( & GetSymTab (), & name ) != 0 ||
             KSymTableFindIntrinsic ( & GetSymTab (), & name ) )
     {
-        ReportError ( "Name already in use: '%s'", ident );
+        ReportError ( "Name already in use", ident );
         return false;
     }
     else
@@ -170,7 +170,7 @@ ASTBuilder :: HandleTypedColumn ( STable & p_table, SColumn & p_col, const AST &
     {
         if ( p_col . read_only )
         {
-            ReportError ( "Simple column cannot be readonly: '%s'", ident);
+            ReportError ( "Simple column cannot be readonly", ident);
             return false;
         }
 
@@ -188,18 +188,18 @@ ASTBuilder :: HandleTypedColumn ( STable & p_table, SColumn & p_col, const AST &
             /* check for explicit physical type */
             if ( p_col . ptype != 0 )
             {
-                ReportError ( "Implicit physical column previously declared: '%S'", & name );
+                ReportError ( "Implicit physical column previously declared", name );
                 return false;
             }
             else
             {
-                ReportError ( "Missing column read or validate expression: '%S'", & name );
+                ReportError ( "Missing column read or validate expression", name );
                 return false;
             }
         }
         else if ( ( p_col . td . type_id & 0xC0000000 ) != 0 )
         {
-            ReportError ( "Simple columns cannot have typeset as type: '%S'", & name );
+            ReportError ( "Simple columns cannot have typeset as type", name );
             return false;
         }
         else
@@ -567,7 +567,7 @@ ASTBuilder :: AddPhysicalColumn ( STable & p_table, const AST & p_decl, bool p_s
             }
             else
             {   // redefinition
-                ReportError ( "Physical column already defined: '%s'", ident );
+                ReportError ( "Physical column already defined", ident );
             }
         }
 

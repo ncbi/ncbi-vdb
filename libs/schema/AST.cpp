@@ -363,7 +363,7 @@ AST_Expr :: MakeSymExpr ( ASTBuilder & p_builder, const KSymbol* p_sym ) const
             p_builder . ReportError ( "Function expressions are not yet implemented" );
             break;
         default:
-            p_builder . ReportError ( "Object cannot be used in this context: '%S'", & p_sym -> name );
+            p_builder . ReportError ( "Object cannot be used in this context", p_sym -> name );
             break;
         }
     }

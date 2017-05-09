@@ -54,8 +54,6 @@ ASTBuilder :: ASTBuilder ( VSchema * p_schema )
     assert ( m_schema != 0 );
     VSchemaAddRef ( m_schema );
 
-    VectorInit ( & m_errors, 0, 1024 );
-
     rc_t rc = KSymTableInit ( & m_symtab, 0 );
     if ( rc != 0 )
     {
@@ -71,46 +69,48 @@ ASTBuilder :: ASTBuilder ( VSchema * p_schema )
     }
 }
 
-static
-void CC
-WhackMessage ( void *item, void *data )
-{
-    free ( item );
-}
-
 ASTBuilder :: ~ASTBuilder ()
 {
     KSymTableWhack ( & m_symtab);
     VSchemaRelease ( m_schema );
-    VectorWhack ( & m_errors, WhackMessage, 0 );
 }
 
 void
-ASTBuilder :: ReportError ( const char* p_fmt, ... )
+ASTBuilder :: ReportError ( const char * p_msg )
 {
-    const unsigned int BufSize = 1024;
-    char buf [ BufSize ];
-
-    va_list args;
-    va_start ( args, p_fmt );
-    string_vprintf ( buf, BufSize, 0, p_fmt, args );
-    va_end ( args );
-
-    :: VectorAppend ( & m_errors, 0, string_dup_measure ( buf, 0 ) );
+    m_errors . ReportError ( "%s", p_msg );
 }
 
 void
-ASTBuilder :: ReportError ( const char* p_msg, const AST_FQN& p_fqn )
+ASTBuilder :: ReportError ( const char * p_msg, const AST_FQN& p_fqn )
 {
     char buf [ 1024 ];
     p_fqn . GetFullName ( buf, sizeof buf );
-    ReportError ( "%s: '%s'", p_msg, buf ); //TODO: add location of the original declaration
+    m_errors . ReportError ( "%s: '%s'", p_msg, buf ); //TODO: add location of the original declaration
+}
+
+void
+ASTBuilder :: ReportError ( const char * p_msg, const String & p_str )
+{
+    m_errors . ReportError ( "%s: '%S'", p_msg, & p_str );
+}
+
+void
+ASTBuilder :: ReportError ( const char * p_msg, const char * p_str )
+{
+    m_errors . ReportError ( "%s: '%s'", p_msg, p_str );
+}
+
+void
+ASTBuilder :: ReportError ( const char * p_msg, int64_t p_val )
+{
+    m_errors . ReportError ( "%s: %l", p_msg, p_val );
 }
 
 void
 ASTBuilder :: ReportRc ( const char* p_msg, rc_t p_rc )
 {
-    ReportError ( "%s: rc=%R", p_msg, p_rc );
+    m_errors . ReportError ( "%s: rc=%R", p_msg, p_rc );
 }
 
 AST *
@@ -118,12 +118,12 @@ ASTBuilder :: Build ( const ParseTree& p_root, bool p_debugParse )
 {
     AST* ret = 0;
     AST_debug = p_debugParse;
+    m_errors . Clear ();
     ParseTreeScanner scanner ( p_root );
     if ( AST_parse ( ret, * this, scanner ) == 0 )
     {
         return ret;
     }
-    //TODO: report error(s)
     delete ret;
     return 0;
 }
@@ -199,7 +199,7 @@ ASTBuilder :: Resolve ( const char* p_ident, bool p_reportUnknown )
     KSymbol* ret = KSymTableFind ( & m_symtab, & name );
     if ( ret == 0 && p_reportUnknown )
     {
-        ReportError ( "Undeclared identifier: '%s'", p_ident ); //TODO: add location
+        ReportError ( "Undeclared identifier", p_ident ); //TODO: add location
     }
     return ret;
 }
@@ -227,7 +227,7 @@ ASTBuilder :: Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown )
         {
             if ( p_reportUnknown )
             {
-                ReportError ( "Namespace not found: %S", & name );
+                ReportError ( "Namespace not found", name );
             }
             count = i;
             ns_resolved = false;
@@ -295,7 +295,7 @@ ASTBuilder :: EvalConstExpr ( const AST_Expr & p_expr )
             }
             break;
         default:
-            ReportError ( "Unsupported in const expressions: %s%d", "", expr -> var ); // dont want the rc_t overload!
+            m_errors . ReportError ( "Unsupported in const expressions", expr -> var );
             break;
         }
         SExpressionWhack ( expr );
@@ -314,7 +314,7 @@ ASTBuilder :: SelectVersion ( const KSymbol & p_ovl, int64_t ( CC * p_cmp ) ( co
         ret = VectorFind ( & name -> items, p_version, NULL, p_cmp );
         if ( ret == 0 )
         {
-            ReportError ( "Requested version does not exist: '%S#%V'", & p_ovl . name, * p_version );
+            m_errors . ReportError ( "Requested version does not exist: '%S#%V'", & p_ovl . name, * p_version );
         }
     }
     else
@@ -398,7 +398,7 @@ TypeExprFillTypeId ( ASTBuilder & p_builder, STypeExpr & p_expr, const KSymbol &
         p_expr . resolved             = false;
         break;
     default:
-        p_builder . ReportError ( "Not a datatype: '%S'", & p_sym . name );
+        p_builder . ReportError ( "Not a datatype", p_sym . name );
         break;
     }
 }
@@ -457,7 +457,7 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
                             break;
                         }
                     default:
-                        ReportError ( "Not allowed in array subscripts: %s%d", "", expr -> var ); // dont want the rc_t overload!
+                        m_errors. ReportError ( "Not allowed in array subscripts", expr -> var );
                         SExpressionWhack ( expr );
                         break;
                     }
@@ -559,8 +559,8 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
                         }
                         else
                         {
-                            ReportError ( "Schema argument constant has to be an unsigned integer scalar: '%S'",
-                                            & sym -> name );
+                            ReportError ( "Schema argument constant has to be an unsigned integer scalar",
+                                          sym -> name );
                             return false;
                         }
                     }
@@ -575,7 +575,7 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
                     break;
 
                 default:
-                    ReportError ( "Cannot be used as a schema parameter: '%S'", & sym -> name );
+                    ReportError ( "Cannot be used as a schema parameter", sym -> name );
                     return false;
                 }
             }
@@ -1132,7 +1132,7 @@ ASTBuilder :: OpenIncludeFile ( const char * p_fmt, ... )
     }
     else
     {
-        ReportError ( "Could not open include file '%s'", path );
+        ReportError ( "Could not open include file", path );
     }
 
     va_end ( args );

@@ -24,38 +24,30 @@
  *
  */
 
-#ifndef _hpp_SchemaParser_
-#define _hpp_SchemaParser_
+#ifndef _hpp_ErrorReport_
+#define _hpp_ErrorReport_
 
-#include <kfs/file.h>
-
-#include "ErrorReport.hpp"
+#include <klib/vector.h>
 
 namespace ncbi
 {
     namespace SchemaParser
     {
-        class ParseTree;
-
-        class SchemaParser
+        class ErrorReport
         {
         public:
-            SchemaParser ();
-            ~SchemaParser ();
+            ErrorReport ();
+            ~ErrorReport ();
 
-            bool ParseString ( const char * input, bool debug = false );
-            bool ParseFile ( const struct KFile * file );
+            void ReportError ( const char* p_fmt, ... );
 
-            const ParseTree* GetParseTree () const { return m_root; }
-                  ParseTree* MoveParseTree (); // Transfer ownership to caller; destroy with delete
+            uint32_t GetCount() const { return VectorLength ( & m_errors ); }
+            const char* GetMessage ( uint32_t p_idx ) const { return ( const char * ) VectorGet ( & m_errors, p_idx ); }
 
-            const ErrorReport & GetErrors () const { return m_errors; }
+            void Clear ();
 
         private:
-            bool m_debug;
-            ParseTree* m_root;
-
-            ErrorReport m_errors;
+            Vector      m_errors;
         };
     }
 }

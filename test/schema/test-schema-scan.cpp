@@ -35,6 +35,9 @@
 using namespace std;
 using namespace ncbi::SchemaParser;
 
+// need this fake to make schema-tokens.h compile
+typedef struct ErrorReport ErrorReport;
+
 #include "../../libs/schema/schema-tokens.h"
 
 //////////////////////////////////////////// Main

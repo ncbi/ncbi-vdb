@@ -54,7 +54,7 @@ SchemaParser :: ParseString ( const char * p_input, bool p_debug )
     Schema_debug = p_debug;
     delete m_root;
     m_root = 0;
-    return Schema_parse ( & m_root, & s . GetScanBlock () ) == 0;
+    return Schema_parse ( & m_root, & m_errors, & s . GetScanBlock () ) == 0;
 }
 
 bool
@@ -79,7 +79,7 @@ SchemaParser :: ParseFile ( const struct KFile * p_file )
             if ( rc == 0 )
             {
                 SchemaScanner s ( addr, size, false );
-                ret = Schema_parse ( & m_root, & s . GetScanBlock () ) == 0;
+                ret = Schema_parse ( & m_root, & m_errors, & s . GetScanBlock () ) == 0;
             }
         }
 

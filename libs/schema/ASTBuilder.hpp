@@ -27,9 +27,10 @@
 #ifndef _hpp_ASTBuilder_
 #define _hpp_ASTBuilder_
 
-#include "AST.hpp"
-
 #include <klib/rc.h>
+
+#include "AST.hpp"
+#include "ErrorReport.hpp"
 
 struct KSymbol;
 struct BSTree;
@@ -66,13 +67,16 @@ namespace ncbi
 
             uint32_t IntrinsicTypeId ( const char * p_type ) const;
 
-            void ReportError ( const char* p_fmt, ... );
-            void ReportError ( const char* p_msg, const AST_FQN& p_fqn );
-            void ReportRc ( const char* p_msg, rc_t );
+            void ReportError ( const char * p_msg );
+            void ReportError ( const char * p_msg, const AST_FQN & p_fqn );
+            void ReportError ( const char * p_msg, const String & p_str );
+            void ReportError ( const char * p_msg, const char * p_str );
+            void ReportError ( const char * p_msg, int64_t p_val );
+            void ReportRc ( const char * p_msg, rc_t );
 
             // error list is cleared by a call to Build
-            uint32_t GetErrorCount() const { return VectorLength ( & m_errors ); }
-            const char* GetErrorMessage ( uint32_t p_idx ) const { return ( const char * ) VectorGet ( & m_errors, p_idx ); }
+            uint32_t GetErrorCount() const { return m_errors . GetCount (); }
+            const char* GetErrorMessage ( uint32_t p_idx ) const { return m_errors . GetMessage ( p_idx ); }
 
             // uses malloc(); reports allocation failure
             template < typename T > T* Alloc ( size_t p_size = sizeof ( T ) );
@@ -193,7 +197,7 @@ namespace ncbi
             VSchema*    m_schema;
             KSymTable   m_symtab;
 
-            Vector      m_errors;
+            ErrorReport m_errors;
         };
 
 
@@ -204,7 +208,7 @@ namespace ncbi
             T * ret = static_cast < T * > ( malloc ( p_size ) ); // VSchema's tables dispose of objects with free()
             if ( ret == 0 )
             {
-                ReportError ( "malloc failed: %R", RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted ) );
+                ReportRc ( "malloc", RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted ) );
             }
             memset ( ret, 0, p_size );
             return ret;

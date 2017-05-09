@@ -127,7 +127,7 @@ ASTBuilder :: HandleDbMemberDb ( SDatabase & p_db, const AST & p_member )
                     }
                     else if ( GetRCState ( rc ) == rcExists )
                     {
-                        ReportError ( "Member already exists: '%S'", & memName );
+                        ReportError ( "Member already exists", memName );
                     }
                     else
                     {
@@ -184,7 +184,7 @@ ASTBuilder :: HandleDbMemberTable ( SDatabase & p_db, const AST & p_member )
                 }
                 else if ( GetRCState ( rc ) == rcExists )
                 {
-                    ReportError ( "Member already exists: '%S'", & memName );
+                    ReportError ( "Member already exists", memName );
                 }
                 else
                 {

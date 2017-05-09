@@ -30,7 +30,10 @@
 
 #include "schema-lex.h"
 
-typedef struct ParseTree ParseTree; /* a fake declaration to make the scanner compile */
+/* fake declarations to make the schema-tokens.h compile */
+typedef struct ParseTree ParseTree;
+typedef struct ErrorReport ErrorReport;
+
 #include "schema-tokens.h"
 
 #define YY_USER_ACTION \
@@ -116,15 +119,15 @@ alphanum    [a-zA-Z_0-9]
 
  /* single quoted strings */
 '{sstr_char}*'              { return STRING; }
-'{sstr_char}*               { return STRING; } /*TODO: handle unterminated */
+'{sstr_char}*               { return UNTERM_STRING; }
 '(\\.|{sstr_char})+'        { return ESCAPED_STRING; }
-'(\\.|{sstr_char})+         { return ESCAPED_STRING; }  /*TODO: handle unterminated */
+'(\\.|{sstr_char})+         { return UNTERM_ESCAPED_STRING; }
 
  /* double quoted strings */
 \"{dstr_char}*\"            { return STRING; }
-\"{dstr_char}*              { return STRING; } /*TODO: handle unterminated */
+\"{dstr_char}*              { return UNTERM_STRING; }
 \"(\\.|{dstr_char})+\"      { return ESCAPED_STRING; }
-\"(\\.|{dstr_char})+        { return ESCAPED_STRING; }  /*TODO: handle unterminated */
+\"(\\.|{dstr_char})+        { return UNTERM_ESCAPED_STRING; }
 
  /* keywords */
 "__no_header"     { return KW___no_header; }

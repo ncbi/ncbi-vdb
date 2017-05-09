@@ -274,7 +274,7 @@ FIXTURE_TEST_CASE(Typedef_FQN_OneScalar, AST_Fixture)
 
 FIXTURE_TEST_CASE(Resolve_UndefinedNamespace, AST_Fixture)
 {
-    VerifyErrorMessage ( "typedef a:zz t;", "Namespace not found: a" );
+    VerifyErrorMessage ( "typedef a:zz t;", "Namespace not found: 'a'" );
 }
 FIXTURE_TEST_CASE(Resolve_UndefinedNameInNamespace, AST_Fixture)
 {
@@ -526,7 +526,10 @@ FIXTURE_TEST_CASE(Const_EscapedString, ConstFixture)
     VerifyStringConst ( "const ascii c = \"qq\\n\\t\\r\\a\\b\\v\\f\\xFE\\X01\\0\";", "c", "qq\n\t\r\a\b\v\f\xfe\x01\0", 12 );
 }
 
-//TODO: unterminated string
+FIXTURE_TEST_CASE(Const_UnterminatedString, ConstFixture)
+{
+    REQUIRE ( ! m_parser . ParseString ( "const ascii c = \"qq\\n\\t\\r\\a\\b\\v\\f\\xFE\\X01\\0;" ) );
+}
 
 FIXTURE_TEST_CASE(Const_Vector, ConstFixture)
 {
@@ -606,7 +609,7 @@ FIXTURE_TEST_CASE(Include_NotFound, AST_Fixture)
     REQUIRE_RC ( KDirectoryNativeDir ( & wd ) );
     char path[1024];
     REQUIRE_RC ( KDirectoryResolvePath_v1 ( wd, true, path, sizeof path, "./notinc" ) );
-    VerifyErrorMessage ( "include \"notinc\";", ( string ( "Could not open include file '" ) + path + "'" ) . c_str ()  );
+    VerifyErrorMessage ( "include \"notinc\";", ( string ( "Could not open include file: '" ) + path + "'" ) . c_str ()  );
     KDirectoryRelease ( wd );
 }
 

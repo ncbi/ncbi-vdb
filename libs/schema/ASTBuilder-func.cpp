@@ -128,12 +128,12 @@ FunctionDeclaration :: HandleFunctionOverload ( const KSymbol *  p_priorDecl )
     {
         if ( ! m_self -> script)
         {
-            m_builder . ReportError ( "Overload has to have a body: '%S'", & p_priorDecl -> name );
+            m_builder . ReportError ( "Overload has to have a body", p_priorDecl -> name );
         }
     }
     else if ( m_self -> script)
     {
-        m_builder . ReportError ( "Overload cannot have a body: '%S'", & p_priorDecl -> name );
+        m_builder . ReportError ( "Overload cannot have a body", p_priorDecl -> name );
     }
 
     uint32_t idx;
@@ -465,7 +465,7 @@ FunctionDeclaration :: SetSchemaParams ( const AST & p_sig )
                 {
                     String nameStr;
                     ident . GetIdentifier ( nameStr );
-                    m_builder . ReportError ( "Not a scalar unsigned integer: '%S'", & nameStr );
+                    m_builder . ReportError ( "Not a scalar unsigned integer", nameStr );
                 }
                 SExpressionWhack ( & type -> dad );
             }
@@ -489,7 +489,7 @@ FunctionDeclaration :: HandleStatement ( const AST & p_stmt )
             }
             else
             {
-                m_builder . ReportError ( "Multiple return statements in a function: '%S'", & m_self -> name -> name );
+                m_builder . ReportError ( "Multiple return statements in a function", m_self -> name -> name );
             }
         }
         break;
@@ -509,7 +509,7 @@ FunctionDeclaration :: HandleStatement ( const AST & p_stmt )
     case PT_EMPTY:
         break;
     default:
-        m_builder . ReportError ("Unsupported statement type: %i", p_stmt . GetTokenType () );
+        m_builder . ReportError ("Unsupported statement type", p_stmt . GetTokenType () );
         break;
     }
 }
@@ -524,7 +524,7 @@ FunctionDeclaration :: HandleScript ( const AST & p_body, const String & p_funcN
     }
     if ( m_self -> script && m_self -> u . script . rtn == 0 )
     {
-        m_builder . ReportError ( "Schema function does not contain a return statement: '%S'", & p_funcName );
+        m_builder . ReportError ( "Schema function does not contain a return statement", p_funcName );
     }
 }
 
@@ -560,7 +560,7 @@ FunctionDeclaration :: SetPrologue ( const AST & p_prologue )
             {
                 if ( m_self -> fact . vararg )
                 {
-                    m_builder . ReportError ( "Function with factory varargs cannot have a body: '%S'", & m_self -> name -> name );
+                    m_builder . ReportError ( "Function with factory varargs cannot have a body", m_self -> name -> name );
                 }
                 else
                 {
@@ -812,7 +812,7 @@ PhysicalDeclaration :: HandleRowLength ( const AST & p_body )
         }
         else
         {
-            m_builder . ReportError ( "Not a row_length function: '%S'", & rl -> name );
+            m_builder . ReportError ( "Not a row_length function", rl -> name );
         }
     }
 }
@@ -827,7 +827,7 @@ ASTBuilder :: CreateLocalSymbol ( const String & p_name, int p_type, void * p_ob
     if ( KSymTableFindShallow ( & GetSymTab (), & p_name ) != 0 ||
             KSymTableFindIntrinsic ( & GetSymTab (), & p_name ) )
     {
-        ReportError ( "Name already in use: '%S'", & p_name );
+        ReportError ( "Name already in use", p_name );
     }
     else
     {
