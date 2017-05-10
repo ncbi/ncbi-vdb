@@ -758,7 +758,7 @@ ASTBuilder :: TypeDef ( const Token * p_token, AST_FQN* p_baseType, AST* p_newTy
                 else // fqn [ const-expr ]
                 {
                     assert ( newType -> ChildrenCount () == 2 );
-                    const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( * newType -> GetChild ( 0 ) );
+                    const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( * newType -> GetChild ( 0 ) ); // TODO: replace everywhere with *-based cast
                     const AST_Expr & dim = dynamic_cast < const AST_Expr & > ( * newType -> GetChild ( 1 ) );
                     DeclareType ( fqn, * baseType, & dim ); // will report duplicate definition
                 }
