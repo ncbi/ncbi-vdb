@@ -41,7 +41,8 @@ clean: stdclean
 # test-load-index
 #
 TEST_INDEX_SRC = \
-	test
+	test \
+	main
 
 TEST_INDEX_OBJ = \
 	$(addsuffix .$(OBJX),$(TEST_INDEX_SRC))
