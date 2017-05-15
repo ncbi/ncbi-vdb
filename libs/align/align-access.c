@@ -366,7 +366,7 @@ rc_t CC AlignAccessDBWindowedAlignments(const AlignAccessDB *self,
         return RC(rcAlign, rcTable, rcConstructing, rcParam, rcInvalid);
     }
 
-    if (wsize == 0 || endpos > rs->length)
+    if (endpos > rs->length /* || wsize == 0 */)
         endpos = rs->length;
 
     rc = BAMFileMakeSlice(self->innerSelf, &slice, i, pos, endpos);
@@ -823,4 +823,9 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetBAMAlignment(const AlignAcce
 {
     *result = self->innerSelf;
     return BAMAlignmentAddRef(self->innerSelf);
+}
+
+LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetSAM(const AlignAccessAlignmentEnumerator *self, size_t *const actSize, size_t const maxsize, char *const buffer)
+{
+    return BAMAlignmentFormatSAM(self->innerSelf, actSize, maxsize, buffer);
 }
