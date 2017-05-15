@@ -35,155 +35,10 @@
 #include <string>
 #include <algorithm>
 
-extern "C" {
-#include <klib/rc.h>
-#include <align/bam.h>
-#include <align/align-access.h>
-#include <vfs/path.h>
-#include <vfs/manager.h>
-}
-
 #define VERY_VERBOSE (0)
 static bool const verbose = false;
 
-namespace AlignAccess {
-    class AlignmentEnumerator;
-    class Database;
-    class Manager;
-
-    class AlignmentEnumerator {
-        friend class Database;
-        AlignAccessAlignmentEnumerator *const self;
-        mutable bool skip;
-        explicit AlignmentEnumerator(AlignAccessAlignmentEnumerator *Self) : self(Self), skip(true) {}
-    public:
-        AlignmentEnumerator(AlignmentEnumerator const &rhs) : self(rhs.self) {
-            rc_t const rc = AlignAccessAlignmentEnumeratorAddRef(self);
-            if (rc) throw std::logic_error("AlignAccessAlignmentEnumeratorAddRef failed");
-        }
-        ~AlignmentEnumerator() {
-            AlignAccessAlignmentEnumeratorRelease(self);
-        }
-        bool next() const {
-            if (self) {
-                if (skip) {
-                    skip = false;
-                    return true;
-                }
-                rc_t const rc = AlignAccessAlignmentEnumeratorNext(self);
-                if (rc == 0) return true;
-                if ((int)GetRCObject(rc) == rcRow && (int)GetRCState(rc) == rcNotFound)
-                    return false;
-                throw std::runtime_error("AlignAccessAlignmentEnumeratorNext failed");
-            }
-            return false;
-        }
-        int position() const {
-            if (self) {
-                uint64_t p = 0;
-                AlignAccessAlignmentEnumeratorGetRefSeqPos(self, &p);
-                return (int)p;
-            }
-            return -1;
-        }
-    };
-    class Database {
-        friend class Manager;
-        AlignAccessDB const *const self;
-        explicit Database(AlignAccessDB const *Self) : self(Self) {}
-    public:
-        Database(Database const &rhs) : self(rhs.self) {
-            rc_t const rc = AlignAccessDBAddRef(self);
-            if (rc) throw std::logic_error("AlignAccessDBAddRef failed");
-        }
-        ~Database() {
-            AlignAccessDBRelease(self);
-        }
-
-        AlignmentEnumerator slice(std::string const &refName, int start, int end) const
-        {
-            AlignAccessAlignmentEnumerator *p = 0;
-            if (verbose) std::cerr << "Generating slice " << refName << ':' << (start + 1) << '-' << end << std::endl;
-            rc_t const rc = AlignAccessDBWindowedAlignments(self, &p, refName.c_str(), start, end - start);
-            if (rc == 0) return AlignmentEnumerator(p);
-            AlignAccessAlignmentEnumeratorRelease(p);
-            if ((int)GetRCObject(rc) == rcRow && (int)GetRCState(rc) == rcNotFound)
-                return AlignmentEnumerator(0);
-            throw std::logic_error("AlignAccessDBWindowedAlignments failed");
-        }
-    };
-    class Manager {
-        AlignAccessMgr const *const self;
-        explicit Manager(AlignAccessMgr const *Self) : self(Self) {}
-        Manager() : self(0) {}
-    public:
-        ~Manager() {
-            AlignAccessMgrRelease(self);
-        }
-
-        Database open(std::string const &path, std::string const &indexPath) const {
-            VPath *dbp = 0;
-            VPath *idxp = 0;
-            rc_t rc = 0;
-            {
-                VFSManager *fsm = 0;
-                
-                rc = VFSManagerMake(&fsm);
-                if (rc) throw std::logic_error("VFSManagerMake failed");
-            
-                rc = VFSManagerMakeSysPath(fsm, &dbp, path.c_str());
-                if (rc) throw std::logic_error("VFSManagerMakeSysPath failed");
-            
-                rc = VFSManagerMakeSysPath(fsm, &idxp, indexPath.c_str());
-                if (rc) throw std::logic_error("VFSManagerMakeSysPath failed");
-
-                VFSManagerRelease(fsm);
-            }
-            AlignAccessDB const *db = 0;
-            rc = AlignAccessMgrMakeIndexBAMDB(self, &db, dbp, idxp);
-            VPathRelease(dbp);
-            VPathRelease(idxp);
-            if (rc) throw std::runtime_error(std::string("failed to open ") + path + " with index " + indexPath);
-            if (verbose) std::cerr << "opened " << path << " with index " << indexPath << std::endl;
-            return Database(db);
-        }
-
-        Database open(std::string const &path) const {
-            try {
-                return open(path, path + ".bai");
-            }
-            catch (std::runtime_error const &e) {}
-            catch (...) { throw; }
-
-            VPath *dbp = 0;
-            rc_t rc = 0;
-            {
-                VFSManager *fsm = 0;
-
-                rc = VFSManagerMake(&fsm);
-                if (rc) throw std::logic_error("VFSManagerMake failed");
-            
-                rc = VFSManagerMakeSysPath(fsm, &dbp, path.c_str());
-                if (rc) throw std::logic_error("VFSManagerMakeSysPath failed");
-                VFSManagerRelease(fsm);
-            }
-            AlignAccessDB const *db = 0;
-            rc = AlignAccessMgrMakeBAMDB(self, &db, dbp);
-            VPathRelease(dbp);
-            if (rc) throw std::runtime_error(std::string("failed to open ") + path);
-            if (verbose) std::cerr << "opened " << path << std::endl;
-            return Database(db);
-        }
-
-        static Manager make() {
-            AlignAccessMgr const *mgr = 0;
-            rc_t rc = AlignAccessMgrMake(&mgr);
-            if (rc != 0)
-                throw std::logic_error("AlignAccessMgrMake failed");
-            return Manager(mgr);
-        }
-    };
-};
+#include "align-access.hpp"
 
 using namespace std;
 
@@ -313,50 +168,19 @@ static void test1Range(char const *path, char const *ref, int const start, int c
         if (first == 0)
             first = last;
         if (verbose)
-            std::cout << "# " << last << std::endl;
+            std::cout << "# " << e.SAM();
         ++records;
     }
     std::cout << path << ' ' << ref << ':' << start << '-' << end << ' ' << records << ' ' << first << ' ' << last << std::endl;
 }
 
-static int testMain(int argc, char *argv[])
+extern "C" int testMain(int, char **);
+int testMain(int argc, char *argv[])
 {
     if (argc >= 5) {
         test1Range(argv[1], argv[2], atoi(argv[3]), atoi(argv[4]), argc > 5);
         return 0;
     }
     return IndexTestSuite(argc, argv);
-}
-
-//////////////////////////////////////////// Main
-#include <kapp/args.h>
-#include <klib/out.h>
-#include <kfg/config.h>
-
-extern "C"
-{
-    
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-
-const char UsageDefaultName[] = "test-loader";
-
-rc_t CC UsageSummary (const char * progname)
-{
-    return KOutMsg ( "Usage:\n" "\t%s [options]\n\n", progname );
-}
-
-rc_t CC Usage( const Args* args )
-{
-    return 0;
-}
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
-    return testMain(argc, argv);
-}
-
 }
 
