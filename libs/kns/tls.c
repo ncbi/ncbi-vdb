@@ -135,6 +135,21 @@ const char * mbedtls_strerror2 ( int err )
  * KTLSGlobals
  */
 
+#if _DEBUGGING
+static
+void ktls_ssl_dbg_print ( void * obj, int level, const char * file, int line, const char * msg )
+{
+    ( void ) obj;
+
+    if ( file == NULL )
+        file = "mbedtls-file-unknown";
+    if ( msg == NULL )
+        msg = "<missing message>";
+
+    KDbgMsg ( "[%d]:%s:%d - %s\n", level, file, line, msg );
+}
+#endif
+
 static
 rc_t tlsg_seed_rng ( KTLSGlobals *self )
 {
@@ -416,6 +431,19 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, const KConfig * kfg )
     vdb_mbedtls_ctr_drbg_init ( &tlsg -> ctr_drbg );
     vdb_mbedtls_entropy_init ( &tlsg -> entropy );
     vdb_mbedtls_ssl_config_init ( &tlsg -> config );
+
+#if _DEBUGGING
+    if ( KDbgWriterGet () != NULL
+#if 1
+         && KDbgTestModConds ( DBG_KNS, -1 )
+#endif
+        )
+    {
+        /* temporary - replace this with a specific level for TLS */
+        vdb_mbedtls_debug_set_threshold ( ( int ) KLogLevelGet () );
+        vdb_mbedtls_ssl_conf_dbg ( &tlsg -> config, ktls_ssl_dbg_print, tlsg );
+    }
+#endif
 
     rc = tlsg_seed_rng ( tlsg );
     if ( rc == 0 )
