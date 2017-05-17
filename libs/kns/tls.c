@@ -146,7 +146,7 @@ void ktls_ssl_dbg_print ( void * obj, int level, const char * file, int line, co
     if ( msg == NULL )
         msg = "<missing message>";
 
-    KDbgMsg ( "[%d]:%s:%d - %s\n", level, file, line, msg );
+    KDbgMsg ( "[%d]:%s:%d - %s", level, file, line, msg );
 }
 #endif
 
