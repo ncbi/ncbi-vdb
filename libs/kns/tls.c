@@ -135,20 +135,38 @@ const char * mbedtls_strerror2 ( int err )
  * KTLSGlobals
  */
 
-#if _DEBUGGING
 static
 void ktls_ssl_dbg_print ( void * obj, int level, const char * file, int line, const char * msg )
 {
-    ( void ) obj;
+    KLogLevel l = klogDebug;
+    switch ( level ) {
+        case 0: /* No debug */
+            l = klogFatal;
+            break;
+        case 1: /* Error */
+            l = klogErr;
+            break;
+        case 2: /* State change */
+            l = klogWarn;
+            break;
+        case 3: /* Informational */
+            l = klogInfo;
+            break;
+        case 4: /* Verbose */
+        default:
+            l = klogDebug;
+            break;
+    }
 
     if ( file == NULL )
         file = "mbedtls-file-unknown";
     if ( msg == NULL )
         msg = "<missing message>";
 
-    KDbgMsg ( "[%d]:%s:%d - %s", level, file, line, msg );
+    PLOGMSG ( l, ( l, "[$(level)]:$(file):$(line) - $(msg)",
+                         "level=%d,file=%s,line=%d,msg=%s",
+                          level, file, line, msg ) );
 }
-#endif
 
 static
 rc_t tlsg_seed_rng ( KTLSGlobals *self )
@@ -421,6 +439,26 @@ rc_t tlsg_setup ( KTLSGlobals * self )
     return 0;
 }
 
+static int set_threshold ( void ) {
+    int threshold = 0;
+
+    const char * t = getenv ( "NCBI_VDB_TLS" );
+
+    if ( t != NULL ) {
+        for  ( ; * t != '\0'; ++ t ) {
+            char c = * t;
+            if ( c < '0' || c > '9' )
+                break;
+
+            threshold = threshold * 10 + c - '0';
+        }
+
+        vdb_mbedtls_debug_set_threshold ( threshold );
+    }
+
+    return threshold;
+}
+
 /* Init
  */
 rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, const KConfig * kfg )
@@ -432,18 +470,8 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, const KConfig * kfg )
     vdb_mbedtls_entropy_init ( &tlsg -> entropy );
     vdb_mbedtls_ssl_config_init ( &tlsg -> config );
 
-#if _DEBUGGING
-    if ( KDbgWriterGet () != NULL
-#if 1
-         && KDbgTestModConds ( DBG_KNS, -1 )
-#endif
-        )
-    {
-        /* temporary - replace this with a specific level for TLS */
-        vdb_mbedtls_debug_set_threshold ( ( int ) KLogLevelGet () );
+    if ( set_threshold () > 0 )
         vdb_mbedtls_ssl_conf_dbg ( &tlsg -> config, ktls_ssl_dbg_print, tlsg );
-    }
-#endif
 
     rc = tlsg_seed_rng ( tlsg );
     if ( rc == 0 )
