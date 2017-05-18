@@ -2224,7 +2224,7 @@ rc_t path_to_magic_file ( const KConfig *self, char *path, size_t buffer_size, s
 LIB_EXPORT rc_t CC KConfigCommit ( KConfig *self )
 {
     rc_t rc;
-    size_t path_size;
+    size_t path_size = 0;
     char magic_file_path [ 4096 ];
 
     if ( self == NULL )
