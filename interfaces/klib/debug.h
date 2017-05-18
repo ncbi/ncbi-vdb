@@ -149,7 +149,8 @@ extern "C" {
     _condition(KFS,POS)  _condition(KFS,PAGE)
 
 #define KNS_CONDITIONS() \
-    _condition(KNS,ERR) _condition(KNS,HTTP) _condition(KNS,MGR) _condition(KNS,SOCKET)
+    _condition(KNS,DNS) _condition(KNS,ERR)    _condition(KNS,HTTP) \
+    _condition(KNS,MGR) _condition(KNS,SOCKET) _condition(KNS,TLS)
 
 #define VFS_CONDITIONS() \
     _condition(VFS,MGR)     _condition(VFS,PATH)     _condition(VFS,SERVICE)
