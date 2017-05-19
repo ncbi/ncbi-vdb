@@ -89,6 +89,7 @@ KFG_EXTERN rc_t CC KartItemItemDesc(const KartItem *self, const String **elem);
 /* VERSION 2.0 ****************************************************************/
 KFG_EXTERN rc_t CC KartItemObjType (const KartItem *self, const String **elem );
 KFG_EXTERN rc_t CC KartItemPath (const KartItem *self, const String **elem );
+KFG_EXTERN rc_t CC KartItemSize (const KartItem *self, const String **elem );
 
 /* Kart object can be created:
  * - from a kart file,
