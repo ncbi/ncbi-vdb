@@ -1,3 +1,7 @@
+#ifndef _h_kfg_kart_priv_
+#define _h_kfg_kart_priv_
+
+
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -25,7 +29,21 @@
 */
 
 
-#include <klib/time.h> /* KSleep */
+#include <kfg/kart.h>
 
 
-LIB_EXPORT rc_t CC KSleep(uint32_t seconds) { return KSleepMs(seconds * 1000); }
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+LIB_EXPORT rc_t CC KartMake2  ( Kart ** kart );
+LIB_EXPORT rc_t CC KartAddRow ( Kart * self, const char * row, size_t size );
+
+
+#ifdef __cplusplus
+}
+#endif
+
+
+#endif /* _h_kfg_kart_priv_ */

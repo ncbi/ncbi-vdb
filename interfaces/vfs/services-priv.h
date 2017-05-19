@@ -1,3 +1,6 @@
+#ifndef _h_vfs_services_priv_
+#define _h_vfs_services_priv_
+
 /*===========================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
@@ -25,7 +28,38 @@
 */
 
 
-#include <klib/time.h> /* KSleep */
+#include <vfs/services.h> /* KService */
 
 
-LIB_EXPORT rc_t CC KSleep(uint32_t seconds) { return KSleepMs(seconds * 1000); }
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+struct KNSManager;
+
+
+rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols, 
+    const char * cgi, const char * version,
+    const struct KSrvResponse ** result );
+
+rc_t KServiceSearchExecuteExt ( KService * self,
+    const char * cgi, const char * version,
+    const struct Kart ** result );
+
+
+rc_t KServiceTestNamesExecuteExt ( KService * self, VRemoteProtocols protocols, 
+    const char * cgi, const char * version,
+    const struct KSrvResponse ** result, const char * expected );
+
+
+rc_t KService1Search ( const struct KNSManager * mgr, const char * cgi,
+    const char * acc, const struct Kart ** result );
+
+
+#ifdef __cplusplus
+}
+#endif
+
+
+#endif /* _h_vfs_services_priv_ */
