@@ -427,7 +427,7 @@ TEST_CASE ( AND_ERROR ) {
 #endif
 
 TEST_CASE ( FULL_TEST_NO_HTTP ) {
-    assert ( ! KDbgSetString ( "VFS" ) );
+//  assert ( ! KDbgSetString ( "VFS" ) );
 
     REQUIRE_RC_FAIL ( KServiceMake ( NULL ) );
 
