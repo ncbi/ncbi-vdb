@@ -36,6 +36,9 @@ extern "C" {
 #endif
 
 
+struct KNSManager;
+
+
 rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols, 
     const char * cgi, const char * version,
     const struct KSrvResponse ** result );
@@ -50,7 +53,7 @@ rc_t KServiceTestNamesExecuteExt ( KService * self, VRemoteProtocols protocols,
     const struct KSrvResponse ** result, const char * expected );
 
 
-rc_t KService1Search ( const KNSManager * mgr, const char * cgi,
+rc_t KService1Search ( const struct KNSManager * mgr, const char * cgi,
     const char * acc, const struct Kart ** result );
 
 
