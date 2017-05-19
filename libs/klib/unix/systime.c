@@ -167,9 +167,7 @@ LIB_EXPORT const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
     else
         return NULL;
 
-    if ( c == NULL )
-        return NULL;
-    if ( c - s != size )
+    if ( c != NULL && c - s != size )
         return NULL;
 
     memset ( kt, 0, sizeof * kt );
