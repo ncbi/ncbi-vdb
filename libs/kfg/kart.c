@@ -876,13 +876,15 @@ LIB_EXPORT rc_t CC KartAddRow ( Kart * self, const char * row, size_t size ) {
         return RC ( rcKFG, rcFile, rcUpdating, rcInterface, rcBadVersion );
 
     {
+        rc_t rc = 0;
+
         KartItem * item = NULL;
 
         const char * p = string_dup ( row, size );
         if ( p == NULL )
             return RC ( rcKFG, rcFile, rcUpdating, rcMemory, rcExhausted );
 
-        rc_t rc = KartItemMake2 ( & item, p, size );
+        rc = KartItemMake2 ( & item, p, size );
         if ( rc == 0 ) {
             rc = VectorAppend ( & self -> rows, NULL, item );
 
