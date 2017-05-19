@@ -328,6 +328,14 @@ LIB_EXPORT rc_t CC KartItemPath (const KartItem *self, const String **elem )
     }
     return rc;
 }
+LIB_EXPORT rc_t CC KartItemSize (const KartItem *self, const String **elem )
+{
+    rc_t rc = KartItemCheck(self, elem);
+    if (rc == 0) {
+        *elem = &self->size;
+    }
+    return rc;
+}
 /*LIB_EXPORT rc_t CC KartItemTypeId(const KartItem *self, const String **elem)
 {
     rc_t rc = KartItemCheck(self, elem);
@@ -499,14 +507,25 @@ static rc_t KartItemInitFromKartRow(const Kart *self, const KartItem **item,
 }
 
 LIB_EXPORT rc_t CC KartPrint(const Kart *self) {
-    uint32_t len = 0;
-
-    if (self == NULL) {
+    if (self == NULL)
         return RC(rcKFG, rcFile, rcLoading, rcSelf, rcNull);
-    }
 
-    len = (uint32_t)self->mem.elem_count;;
-    return OUTMSG(("%.*s", len, self->mem.base));
+    if ( self -> version == eVersion1 ) {
+        uint32_t l = ( uint32_t ) self -> mem . elem_count;
+        OUTMSG ( ( "%.*s", l, self -> mem.base ) );
+    }
+    else {
+        uint32_t i = 0;
+        uint32_t l = VectorLength ( & self -> rows );
+        for ( i = 0; i < l; ++ i ) {
+            KartItem * result = VectorGet ( & self -> rows, i );
+            assert ( result );
+            OUTMSG ( ( "%S|%S|%S|%S|%S|%S|%S\n", & result -> projId,
+                & result -> objType, & result -> itemId, & result -> name,
+                & result -> path, & result -> size, & result -> itemDesc ) );
+        }
+    }
+    return 0;
 }
 
 LIB_EXPORT rc_t CC KartPrintNumbered(const Kart *self) {
@@ -522,6 +541,9 @@ LIB_EXPORT rc_t CC KartPrintNumbered(const Kart *self) {
     if (self == NULL) {
         return RC(rcKFG, rcFile, rcLoading, rcSelf, rcNull);
     }
+
+    if ( self -> version > eVersion1 )
+        return RC ( rcKFG, rcFile, rcAccessing, rcInterface, rcBadVersion );
 
     remaining = (uint32_t)self->mem.elem_count;
     start = self->mem.base;
