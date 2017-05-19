@@ -61,6 +61,7 @@ enum SequenceTableColumn
     seq_GROUP,
     seq_PRIMARY_ALIGNMENT_ID,
     seq_SPOT_COUNT,
+    seq_CMP_READ,
 
     seq_NUM_COLS
 };  /* keep in sync with sequence_col_specs in SRA_Read.c */
