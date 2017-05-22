@@ -3944,9 +3944,9 @@ rc_t VPathClose ( const VPath * l, const VPath * r, int * notequal,
                   KTime_t expirationRange )
 {
     rc_t rc = 0;
-    char pbuffer [ 999 ] = "";;
+    char pbuffer [ 999 ] = "";
     size_t pnumred = 0;
-    char ebuffer [ 999 ] = "";;
+    char ebuffer [ 999 ] = "";
     size_t end = 0;
     rc_t rp = 0;
     rc_t re = 0;
