@@ -429,9 +429,9 @@ static rc_t SHelperInitRepoMgr ( SHelper * self ) {
 
 /* get from kfg, otherwise use hardcoded */
 static VRemoteProtocols SHelperDefaultProtocols ( SHelper * self ) {
-    assert ( self );
-
     VRemoteProtocols protocols = DEFAULT_PROTOCOLS;
+
+    assert ( self );
 
     SHelperInitKfg ( self );
 
@@ -776,23 +776,25 @@ rc_t STypedInit ( STyped * self, const SOrdered * raw, const SConverters * how,
             rc = RC ( rcVFS, rcQuery, rcResolving, rcMessage, rcCorrupt );
             break;
         }
-        TConverter * f = how -> f [ i ];
-        if ( f == NULL ) {
-            rc = RC ( rcVFS, rcQuery, rcResolving, rcFunction, rcNotFound );
-            break;
+        {
+            TConverter * f = how -> f [ i ];
+            if ( f == NULL ) {
+                rc = RC ( rcVFS, rcQuery, rcResolving, rcFunction, rcNotFound );
+                break;
+            }
+            rc = f ( dest, & raw -> s [ i ] );
+            if ( rc != 0 )
+                break;             /* BREAK */
         }
-        rc = f ( dest, & raw -> s [ i ] );
-        if ( rc != 0 )
-            break;             /* BREAK */
     }
 
     if ( rc == 0 )
         if ( SVersionResponseHasMultipeUrls ( version ) )
             rc = STypedInitUrls ( self );
 
-    if ( rc == 0 ) {
+    if ( rc == 0 )
         self -> inited = true;
-    }
+
     return rc;
 }
 
@@ -1985,8 +1987,8 @@ rc_t SKVMake ( const SKV ** self, const char * k, const char * v )
             p = NULL;
         }
         else {
-            assert ( sk );
             SKV * kv = ( SKV * ) malloc ( sizeof * kv );
+            assert ( sk );
             if ( kv == NULL ) {
                 free ( p );
                 p = NULL;
@@ -2428,11 +2430,16 @@ static void whack_free ( void * self, void * ignore ) {
 }
 
 static rc_t STicketsFini ( STickets * self ) {
+    rc_t rc = 0;
+
     assert ( self );
-    rc_t rc = KDataBufferWhack ( & self -> str );
+
+    rc = KDataBufferWhack ( & self -> str );
     VectorWhack ( & self -> tickets, whack_free, NULL );
     BSTreeWhack ( & self -> ticketsToProjects, BSTItemWhack, NULL );
+
     memset ( self, 0 , sizeof * self );
+
     return rc;
 }
 
@@ -2456,12 +2463,13 @@ static void TicketsAppendTicket ( void * item, void * data ) {
     }
     DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "  %s=%s\n",
         k, c ) );
-    rc_t rc = SKVMake ( & kv, k, c );
-    free ( c );
-    if ( rc == 0 ) {
-        rc_t rc = VectorAppend ( v -> v, NULL, kv );
-        if ( rc != 0 && v -> rc == 0) {
-            v -> rc = rc;
+    {
+        rc_t rc = SKVMake ( & kv, k, c );
+        free ( c );
+        if ( rc == 0 ) {
+            rc = VectorAppend ( v -> v, NULL, kv );
+            if ( rc != 0 && v -> rc == 0)
+                v -> rc = rc;
         }
     }
 }
@@ -2616,9 +2624,8 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         VectorForEach ( & request -> tickets .tickets , false,
             TicketsAppendTicket, & t );
         rc = t . rc;
-        if ( rc != 0 ) {
+        if ( rc != 0 )
             return rc;
-        }
     }
     {
         uint32_t i = 0;
