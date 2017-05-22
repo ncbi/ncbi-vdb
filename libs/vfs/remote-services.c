@@ -2009,16 +2009,17 @@ static
 rc_t SKVMakeObj ( const SKV ** self, const SObject * obj,
     const SVersion * version )
 {
+    rc_t rc = 0;
+    size_t sk = 0;
+    size_t num_writ = 0;
+    char tmp [] = "";
     bool old = SVersionAccInRequest ( version );
     char * p = NULL;
     const char * k = "object";
     if ( old )
         k = "acc";
 
-    char tmp [] = "";
-    size_t sk = string_size ( k );
-    rc_t rc = 0;
-    size_t num_writ = 0;
+    sk = string_size ( k );
 
     assert ( self && obj );
     * self = NULL;
