@@ -2049,8 +2049,8 @@ rc_t SKVMakeObj ( const SKV ** self, const SObject * obj,
         p = NULL;
     }
     else {
-        assert ( sk );
         SKV * kv = ( SKV * ) malloc ( sizeof * kv );
+        assert ( sk );
         if ( kv == NULL ) {
             free ( p );
             p = NULL;
