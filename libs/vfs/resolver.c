@@ -1310,7 +1310,8 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
     start = ( const void* ) result -> base;
     size = KDataBufferBytes ( result );
 
-    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (" Response = %.*s\n", size, start));
+    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+        (" Response = %.*s\n", ( int ) size, start));
 
     /* peel back buffer to significant bytes */
     while ( size > 0 && start [ size - 1 ] == 0 ) -- size;
@@ -2377,14 +2378,14 @@ rc_t VResolverFuseMountedResolve ( const VResolver * self,
             PathType = KDirectoryPathType (
                                         NativeDir,
                                         "%.*s",
-                                        accession -> size,
+                                        ( int ) accession -> size,
                                         accession -> addr
                                         );
             if ( PathType == kptFile ) {
                 rc = VPathMakeFmt (
                                 ( VPath ** ) path,
                                 "%.*s",
-                                accession -> size,
+                                ( int ) accession -> size,
                                 accession -> addr
                                 );
             }
@@ -3716,10 +3717,14 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
         else if ( * local == NULL )
             assert ( l && * l == NULL && lath == NULL );
         else {
-            int notequal = ~ 0;
             VPathMarkHighReliability ( ( VPath * ) lath, true );
-            assert ( ! VPathEqual ( * local, lath, & notequal ) );
-            assert ( ! notequal );
+#if _DEBUGGING
+            {
+                int notequal = ~ 0;
+                assert ( ! VPathEqual ( * local, lath, & notequal ) );
+                assert ( ! notequal );
+            }
+#endif
         }
         RELEASE ( VPath, lath );
         RELEASE ( VPath, oath );
@@ -3732,41 +3737,45 @@ rc_t CC VResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
         const VPath ** c = cache ? & cath : NULL;
         const VPath * lath = NULL;
         const VPath ** l = local ? & lath : NULL;
-        rc_t ro = VResolverQueryInt
-            ( self, protocols, query, l, p, c, "#1.2" );
+#if _DEBUGGING
+        rc_t ro =
+#endif
+            VResolverQueryInt ( self, protocols, query, l, p, c, "#1.2" );
         assert ( rcs == ro );
-        if ( remote == NULL ) {
+        if ( remote == NULL )
             assert ( p == NULL );
-        } else if ( * remote == NULL ) {
+        else if ( * remote == NULL )
             assert ( p && * p == NULL && oath == NULL );
-        } else {
+        else {
             int notequal = ~ 0;
             assert ( ! VPathEqual ( * remote, oath, & notequal ) );
-            if ( notequal ) {
+            if ( notequal )
                 assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
-            }
         }
-        if ( cache == NULL ) {
+        if ( cache == NULL )
             assert ( c == NULL );
-        } else if ( * cache == NULL ) {
+        else if ( * cache == NULL )
             assert ( c && * c == NULL && cath == NULL );
-        } else {
+        else {
             int notequal = ~ 0;
             VPathMarkHighReliability ( ( VPath * ) cath, true );
             assert ( ! VPathEqual ( * cache, cath, & notequal ) );
-            if ( notequal ) {
+            if ( notequal )
                 assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
-            }
         }
-        if ( local == NULL ) {
+        if ( local == NULL )
             assert ( l == NULL );
-        } else if ( * local == NULL ) {
+        else if ( * local == NULL )
             assert ( l && * l == NULL && lath == NULL );
-        } else {
-            int notequal = ~ 0;
+        else {
             VPathMarkHighReliability ( ( VPath * ) lath, true );
-            assert ( ! VPathEqual ( * local, lath, & notequal ) );
-            assert ( ! notequal );
+#if _DEBUGGING
+            {
+                int notequal = ~ 0;
+                assert ( ! VPathEqual ( * local, lath, & notequal ) );
+                assert ( ! notequal );
+            }
+#endif
         }
         RELEASE ( VPath, lath );
         RELEASE ( VPath, oath );
