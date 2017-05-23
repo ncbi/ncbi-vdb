@@ -463,7 +463,8 @@ rc_t KSrvResponseAddLocalAndCache ( KSrvResponse * self, uint32_t idx,
 }
 
 uint32_t KSrvResponseLength ( const KSrvResponse * self ) {
-    assert ( self );
+    if ( self == NULL )
+         return RC ( rcVFS, rcQuery, rcExecuting, rcSelf, rcNull );
 
     return VectorLength ( & self -> list );
 }

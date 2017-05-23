@@ -32,7 +32,7 @@
 #include <klib/rc.h> /* RC */
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/path.h> /* VFSManagerMakePath */
-#include <vfs/services.h> /* KServiceNamesQuery */
+#include <vfs/services-priv.h> /* KServiceNamesExecuteExt */
 
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
@@ -212,9 +212,9 @@ static rc_t VResolversQuery ( const VResolver * self, const VFSManager * mgr,
     return rc;
 }
 
-
-rc_t KServiceNamesQuery ( KService * self, VRemoteProtocols protocols,
-                          const KSrvResponse ** aResponse )
+rc_t KServiceNamesQueryExt ( KService * self, VRemoteProtocols protocols, 
+                             const char * cgi, const char * version,
+                             const KSrvResponse ** aResponse )
 {
     rc_t rc = 0;
     KSrvResponse * response = NULL;
@@ -224,7 +224,8 @@ rc_t KServiceNamesQuery ( KService * self, VRemoteProtocols protocols,
 
     {
         const KSrvResponse * r = NULL;
-        rc = KServiceNamesExecute ( self, protocols, & r );
+        rc = KServiceNamesExecuteExt ( self, protocols, cgi,
+                                       version, & r );
         if ( rc == 0 )
             response = ( KSrvResponse* ) r;
     }
@@ -273,3 +274,7 @@ rc_t KServiceNamesQuery ( KService * self, VRemoteProtocols protocols,
 
     return rc;
 }
+
+rc_t KServiceNamesQuery ( KService * self, VRemoteProtocols protocols,
+                          const KSrvResponse ** aResponse )
+{   return KServiceNamesQueryExt ( self, protocols, NULL, NULL, aResponse ); }

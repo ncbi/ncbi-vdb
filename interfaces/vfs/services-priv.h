@@ -39,6 +39,10 @@ extern "C" {
 struct KNSManager;
 
 
+rc_t KServiceNamesQueryExt ( KService * self, VRemoteProtocols protocols, 
+                             const char * cgi, const char * version,
+                             const KSrvResponse ** response );
+
 rc_t KServiceNamesExecuteExt ( KService * self, VRemoteProtocols protocols, 
     const char * cgi, const char * version,
     const struct KSrvResponse ** result );

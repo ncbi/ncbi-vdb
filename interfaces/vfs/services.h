@@ -50,7 +50,7 @@ typedef struct KSrvResponse KSrvResponse;
 /* KService - EXTERNAL Service */
 
 /* Make KService object */
-rc_t KServiceMake ( KService ** self);
+rc_t KServiceMake ( KService ** self );
 
 /* Release KService object */
 rc_t KServiceRelease ( KService * self );
