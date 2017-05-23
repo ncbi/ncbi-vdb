@@ -142,6 +142,7 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
         t . tm_isdst = self -> dst;
 
         ts = mktime ( &t );
+        ts -= timezone;
     }
 
     return ts;
