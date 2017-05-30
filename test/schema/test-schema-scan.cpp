@@ -70,23 +70,6 @@ rc_t CC Usage( const Args* args )
     return 0;
 }
 
-bool
-NextToken ( SchemaScanner & p_s)
-{
-    SchemaScanner :: TokenType t = p_s . Scan ();
-    if ( t == END_SOURCE )
-    {
-        return false;
-    }
-    if ( t == UNRECOGNIZED )
-    {
-        throw runtime_error ( string ( "Unrecognized token " ) +
-                        string ( p_s . LastTokenValue ()  . value, p_s . LastTokenValue ()  . value_len ) );
-    }
-    return true;
-}
-
-
 static
 bool
 MatchStrings ( const string& p_source, const string p_print )
@@ -138,13 +121,20 @@ rc_t CC KMain ( int argc, char *argv [] )
 
             stringstream out;
             SchemaScanner s ( buffer . str () . c_str () );
-            while ( NextToken ( s ) )
+            while ( true )
             {
-                Token t ( s . LastTokenValue () );
-                out << t . GetLeadingWhitespace () << t . GetValue ();
+                Token t = s . NextToken ();
+                out << t . GetLeadingWhitespace ();
+                if ( t . GetType () == END_SOURCE )
+                {
+                    break;
+                }
+                if ( t . GetType () == UNRECOGNIZED )
+                {
+                    throw runtime_error ( string ( "Unrecognized token " ) + t . GetValue () );
+                }
+                out << t . GetValue ();
             }
-            // print trailing whitespace
-            out << Token ( s . LastTokenValue () ) . GetLeadingWhitespace ();
 
             if ( ! MatchStrings ( buffer . str (), out . str () ) )
             {
@@ -164,7 +154,7 @@ rc_t CC KMain ( int argc, char *argv [] )
         cerr << " Unknown exception" << endl;
         return 3;
     }
-    return 0;
+    return failed == 0 ? 0 : 4;
 }
 
 }

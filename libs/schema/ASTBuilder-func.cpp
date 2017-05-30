@@ -253,11 +253,12 @@ FunctionDeclaration :: AddFactoryParams ( Vector& p_sig, const AST & p_params )
         {
             return;
         }
-        const AST_Formal & p = dynamic_cast < const AST_Formal & > ( * p_params . GetChild ( i ) );
+        const AST_Formal * p = dynamic_cast < const AST_Formal * > ( p_params . GetChild ( i ) );
+        assert ( p != 0 );
 
-        param -> name = m_builder . CreateLocalSymbol ( p . GetIdent (), eFactParam, param );
+        param -> name = m_builder . CreateLocalSymbol ( p -> GetIdent (), eFactParam, param );
 
-        STypeExpr * type = m_builder . MakeTypeExpr ( p . GetType () );
+        STypeExpr * type = m_builder . MakeTypeExpr ( p -> GetType () );
         if ( type != 0 )
         {
             param -> td = & type -> dad;
@@ -298,12 +299,13 @@ FunctionDeclaration :: AddFormalParams ( Vector& p_sig, const AST & p_params )
         {
             return;
         }
-        const AST_Formal & p = dynamic_cast < const AST_Formal & > ( * p_params . GetChild ( i ) );
+        const AST_Formal * p = dynamic_cast < const AST_Formal * > ( p_params . GetChild ( i ) );
+        assert ( p != 0 );
 
-        param -> control = p . HasControl ();
-        param -> name = m_builder . CreateLocalSymbol ( p . GetIdent (), eFuncParam, param );
+        param -> control = p -> HasControl ();
+        param -> name = m_builder . CreateLocalSymbol ( p -> GetIdent (), eFuncParam, param );
 
-        STypeExpr * type = m_builder . MakeTypeExpr ( p . GetType () );
+        STypeExpr * type = m_builder . MakeTypeExpr ( p -> GetType () );
         if ( type != 0 )
         {
             param -> fd = & type -> dad;
@@ -423,8 +425,7 @@ FunctionDeclaration :: SetSchemaParams ( const AST & p_sig )
         const AST & p = * p_sig . GetChild ( i );
         if ( p . ChildrenCount () == 1 ) // type
         {
-            const AST & typeNode = * p . GetChild ( 0 );
-            SIndirectType *formal = MakeSchemaParamType ( dynamic_cast < const AST_FQN & > ( typeNode ) );
+            SIndirectType * formal = MakeSchemaParamType ( * ToFQN ( p . GetChild ( 0 ) ) );
             if ( formal != 0 )
             {
                 /* record positional */
@@ -442,13 +443,13 @@ FunctionDeclaration :: SetSchemaParams ( const AST & p_sig )
             STypeExpr * type = m_builder . MakeTypeExpr ( * p . GetChild ( 0 ) );
             if ( type != 0 )
             {
-                const AST_FQN & ident = dynamic_cast < const AST_FQN & > ( * p . GetChild ( 1 ) );
+                const AST_FQN & ident = * ToFQN ( p . GetChild ( 1 ) );
                 // scalar unsigned int type required
                 if ( type -> dt != 0 &&
                     type -> dt -> domain == ddUint &&
                     type -> fd . td. dim == 1 )
                 {
-                    SIndirectConst *formal = MakeSchemaParamConst ( ident );
+                    SIndirectConst * formal = MakeSchemaParamConst ( ident );
                     if ( formal != 0 )
                     {
                         /* record positional */
@@ -484,8 +485,7 @@ FunctionDeclaration :: HandleStatement ( const AST & p_stmt )
             if ( m_self -> u . script . rtn == 0 )
             {
                 assert ( p_stmt . ChildrenCount () == 1 );
-                const AST_Expr & expr = * dynamic_cast < const AST_Expr * > ( p_stmt . GetChild ( 0 ) ) ;
-                m_self -> u . script . rtn = expr . MakeExpression ( m_builder );
+                m_self -> u . script . rtn = ToExpr ( p_stmt . GetChild ( 0 ) ) -> MakeExpression ( m_builder );
             }
             else
             {
@@ -498,11 +498,9 @@ FunctionDeclaration :: HandleStatement ( const AST & p_stmt )
             assert ( p_stmt . ChildrenCount () == 3 );
             const AST * ident = p_stmt . GetChild ( 1 );
             assert ( ident -> ChildrenCount () == 1 );
-            const AST_Expr * expr = dynamic_cast < const AST_Expr * > ( p_stmt . GetChild ( 2 ) ) ;
-            assert ( expr != 0 );
             m_builder . AddProduction (  m_self -> u . script . prod,
                                          ident -> GetChild ( 0 ) -> GetTokenValue (),
-                                         * expr,
+                                         * ToExpr ( p_stmt . GetChild ( 2 ) ),
                                          p_stmt . GetChild ( 0 ) );
         }
         break;
@@ -535,7 +533,7 @@ FunctionDeclaration :: SetPrologue ( const AST & p_prologue )
     {
     case PT_IDENT:
         {   // renaming
-            const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( p_prologue );
+            const AST_FQN & fqn = * ToFQN ( & p_prologue );
             const KSymbol * priorDecl = m_builder . Resolve ( fqn, false );
             if ( priorDecl != 0 )
             {
@@ -802,7 +800,8 @@ PhysicalDeclaration :: HandleBody ( const AST & p_body, FunctionDeclaration & p_
 void
 PhysicalDeclaration :: HandleRowLength ( const AST & p_body )
 {
-    const KSymbol * rl = m_builder . Resolve ( dynamic_cast < const AST_FQN & > ( p_body ), true );
+    const AST_FQN & b = * ToFQN ( & p_body );
+    const KSymbol * rl = m_builder . Resolve ( b, true );
     if ( rl != 0 )
     {
         if ( rl -> type == eRowLengthFunc )
@@ -978,10 +977,6 @@ ASTBuilder :: FunctionDecl ( const Token*     p_token,
         else if ( isVoid )
         {
             ReportError ( "Only validate functions can return void", * p_name );
-        }
-        else if ( p_returnType -> GetChild ( 0 ) -> GetTokenType () == PT_TYPEEXPR )
-        {
-            assert ( false ); //TODO: fqn / fqn
         }
         else
         {

@@ -38,7 +38,7 @@ typedef struct SchemaToken
     int type;
     const char* value; /* points into the flex's buffer, valid until the next call to lex() */
     size_t value_len;
-    char* leading_ws; /* NUL-terminated; the consumer of the token is responsible for free()ing */
+    char* leading_ws; /* NUL-terminated, owned */
     void* subtree; /* used by the parser */
 } SchemaToken;
 

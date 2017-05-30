@@ -27,7 +27,7 @@
 #ifndef _hpp_SchemaScanner_
 #define _hpp_SchemaScanner_
 
-#include "schema-lex.h"
+#include "Token.hpp"
 
 namespace ncbi
 {
@@ -36,10 +36,6 @@ namespace ncbi
         class SchemaScanner
         {
         public:
-            typedef int TokenType;
-            static const TokenType EndSource = 0; // bison convention
-
-        public:
             SchemaScanner ( const char * source, bool p_debug = false ); // NUL-terminated
             SchemaScanner ( const char * source, size_t p_size, bool p_debug );
             ~SchemaScanner ();
@@ -47,12 +43,10 @@ namespace ncbi
             :: SchemaScanBlock & GetScanBlock () { return m_scanBlock; }
 
         public: /* this is for testing only; bison-generated parser calls SchemaScan_yylex directly */
-            TokenType Scan();
-            const SchemaToken& LastTokenValue() const { return m_lastToken; } // valid until the next call to SchemaScan_yylex
+            Token NextToken ();
 
         private:
             :: SchemaScanBlock  m_scanBlock;
-            SchemaToken m_lastToken;
         };
     }
 }

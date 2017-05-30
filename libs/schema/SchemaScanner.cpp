@@ -32,8 +32,6 @@
 
 using namespace ncbi::SchemaParser;
 
-const SchemaScanner :: TokenType SchemaScanner :: EndSource;
-
 SchemaScanner :: SchemaScanner ( const char * p_source, size_t p_size, bool p_debug )
 {
     SchemaScan_yylex_init ( & m_scanBlock, p_source, p_size );
@@ -41,7 +39,6 @@ SchemaScanner :: SchemaScanner ( const char * p_source, size_t p_size, bool p_de
     {
         SchemaScan_set_debug ( & m_scanBlock, 1 );
     }
-    memset ( & m_lastToken, 0, sizeof m_lastToken );
 }
 
 SchemaScanner :: SchemaScanner ( const char * p_source, bool p_debug )
@@ -51,7 +48,6 @@ SchemaScanner :: SchemaScanner ( const char * p_source, bool p_debug )
     {
         SchemaScan_set_debug ( & m_scanBlock, 1 );
     }
-    memset ( & m_lastToken, 0, sizeof m_lastToken );
 }
 
 SchemaScanner :: ~SchemaScanner ()
@@ -70,10 +66,13 @@ extern "C" {
     extern enum yytokentype SchemaScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, SchemaScanBlock* sb );
 }
 
-SchemaScanner :: TokenType
-SchemaScanner :: Scan()
+Token
+SchemaScanner :: NextToken ()
 {
     YYLTYPE loc; //TODO: make a data member, or place in SchemaToken
-    return SchemaScan_yylex ( & m_lastToken, & loc, & m_scanBlock );
+    SchemaToken t;
+    memset ( & t, 0, sizeof t );
+    SchemaScan_yylex ( & t, & loc, & m_scanBlock );
+    return Token ( t );
 }
 

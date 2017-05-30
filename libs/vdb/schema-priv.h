@@ -1068,6 +1068,11 @@ struct STableScanData
 };
 bool CC table_fwd_scan ( BSTNode *n, void *data );
 
+/* table_set_context
+ * set the table id on all members
+ */
+void CC table_set_context ( STable *self );
+
 /*--------------------------------------------------------------------------
  * SColumn
  *  column declaration

@@ -27,7 +27,7 @@
 #ifndef _hpp_Token_
 #define _hpp_Token_
 
-#include "SchemaScanner.hpp"
+#include "schema-lex.h"
 
 namespace ncbi
 {
@@ -36,12 +36,13 @@ namespace ncbi
         class Token
         {
         public:
-            typedef SchemaScanner :: TokenType TokenType;
+            typedef int TokenType;
+            static const TokenType EndSource = 0; // bison convention
 
         public:
-            Token ( const SchemaToken& );
-            Token ( TokenType );
-            Token ( const Token& );
+            Token ( const SchemaToken & );
+            Token ( TokenType, const char * value = 0 );
+            Token ( const Token & );
             ~Token ();
 
             TokenType GetType () const { return m_type; }

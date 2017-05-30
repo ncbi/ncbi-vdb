@@ -52,10 +52,8 @@ using namespace std;
 
 // AST
 
-SchemaToken st = { PT_EMPTY, NULL, 0, 0, 0 };
-
 AST :: AST ()
-: ParseTree ( st )
+: ParseTree ( Token ( PT_EMPTY ) )
 {
 }
 
@@ -277,6 +275,24 @@ AST_FQN :: SetVersion ( const char* p_version )
     }
 }
 
+AST_FQN *
+ncbi :: SchemaParser :: ToFQN ( AST * p_ast)
+{
+    assert ( p_ast != 0 );
+    AST_FQN * ret = dynamic_cast < AST_FQN * > ( p_ast );
+    assert ( ret != 0 );
+    return ret;
+}
+
+const AST_FQN *
+ncbi :: SchemaParser :: ToFQN ( const AST * p_ast)
+{
+    assert ( p_ast != 0 );
+    const AST_FQN * ret = dynamic_cast < const AST_FQN * > ( p_ast );
+    assert ( ret != 0 );
+    return ret;
+}
+
 // AST_Expr
 
 AST_Expr :: AST_Expr ( const Token* p_token )
@@ -297,13 +313,12 @@ AST_Expr :: AST_Expr ( AST_Expr* p_fqn )
 
 AST_Expr :: AST_Expr ( Token :: TokenType p_type )    // '@' etc
 {
-    SchemaToken st = { p_type, NULL, 0, 0, 0 };
-    SetToken ( Token ( st ) );
+    SetToken ( Token ( p_type ) );
 }
 
 SExpression *
 AST_Expr :: EvaluateConst ( ASTBuilder & p_builder ) const
-{   //TODO. for now, only handles a literal int constant and a direct reference to a schema parameter
+{
     SExpression * ret = MakeExpression ( p_builder );
     if ( ret != 0 )
     {
@@ -312,7 +327,7 @@ AST_Expr :: EvaluateConst ( ASTBuilder & p_builder ) const
         case eConstExpr:
             break;
         case eVectorExpr:
-            //TODO: make sure all componenet are const
+            // MakeVectorConstant() makes sure all elements are const
             break;
         default:
             p_builder . ReportError ( "Not a constant expression" );
@@ -359,6 +374,13 @@ AST_Expr :: MakeSymExpr ( ASTBuilder & p_builder, const KSymbol* p_sym ) const
             return SSymExprMake ( p_builder, eColExpr, p_sym );
         case ePhysMember:
             return SSymExprMake ( p_builder, ePhysExpr, p_sym );
+        case eConstant:
+        {
+            const SConstant * cnst = reinterpret_cast < const SConstant * > ( p_sym -> u . obj );
+            assert ( cnst -> expr != NULL );
+            atomic32_inc ( & const_cast < SExpression * > ( cnst -> expr ) -> refcount );
+            return const_cast < SExpression * > ( cnst -> expr );
+        }
         case eFunction :
             p_builder . ReportError ( "Function expressions are not yet implemented" );
             break;
@@ -604,9 +626,7 @@ AST_Expr :: MakeVectorConstant ( ASTBuilder & p_builder ) const
         bool good = true;
         for ( uint32_t i = 0 ; i != count; ++i )
         {
-            const AST_Expr * v = dynamic_cast < const AST_Expr * > ( values . GetChild ( i ) );
-            assert ( v != 0 );
-            SExpression * vx = v -> EvaluateConst ( p_builder );
+            SExpression * vx = ToExpr ( values . GetChild ( i ) ) -> EvaluateConst ( p_builder );
             if ( vx == 0 )
             {
                 good = false;
@@ -637,22 +657,191 @@ AST_Expr :: MakeVectorConstant ( ASTBuilder & p_builder ) const
 }
 
 SExpression *
+AST_Expr :: MakeBool ( ASTBuilder & p_builder ) const
+{
+    SConstExpr * x = p_builder . Alloc < SConstExpr > ( sizeof * x - sizeof x -> u + sizeof x -> u . b [ 0 ] );
+    if ( x != 0 )
+    {
+        x -> u . b [ 0 ] = GetTokenType () == KW_true;
+        x -> dad . var = eConstExpr;
+        atomic32_set ( & x -> dad . refcount, 1 );
+        x -> td . type_id = p_builder . IntrinsicTypeId ( "bool" );
+        x -> td . dim = 1;
+
+        return & x -> dad;
+    }
+    return 0;
+}
+
+SExpression *
+AST_Expr :: MakeNegate ( ASTBuilder & p_builder ) const
+{
+    assert ( GetTokenType () == PT_NEGATE );
+    assert ( ChildrenCount () == 1 );
+
+    SExpression * xp = ToExpr ( GetChild ( 0 ) ) -> MakeExpression ( p_builder );
+    if ( xp != 0 )
+    {
+        switch ( xp -> var )
+        {
+        case eConstExpr:
+            {
+                SConstExpr * cx = reinterpret_cast < SConstExpr * > ( xp );
+                if ( cx -> td . dim < 2 )
+                {
+                    const SDatatype *dt = VSchemaFindTypeid ( p_builder . GetSchema(), cx -> td . type_id );
+                    if ( dt != NULL )
+                    {
+                        static atomic32_t s_I8_id;
+                        static atomic32_t s_I16_id;
+                        static atomic32_t s_I32_id;
+                        static atomic32_t s_I64_id;
+
+                        switch ( dt -> domain )
+                        {
+                        case vtdUint:
+                            switch ( dt -> size )
+                            {
+                            case 8:
+                                cx -> td . type_id  = VSchemaCacheIntrinsicTypeId ( p_builder . GetSchema(), & s_I8_id, "I8" );
+                                break;
+                            case 16:
+                                cx -> td . type_id  = VSchemaCacheIntrinsicTypeId ( p_builder . GetSchema(), & s_I16_id, "I16" );
+                                break;
+                            case 32:
+                                cx -> td . type_id  = VSchemaCacheIntrinsicTypeId ( p_builder . GetSchema(), & s_I32_id, "I32" );
+                                break;
+                            case 64:
+                                cx -> td . type_id  = VSchemaCacheIntrinsicTypeId ( p_builder . GetSchema(), & s_I64_id, "I64" );
+                                break;
+                            }
+                            /* no break */
+                        case vtdInt:
+                            switch ( dt -> size )
+                            {
+                            case 8:
+                                cx -> u . i8 [ 0 ] = - cx -> u . i8 [ 0 ];
+                                break;
+                            case 16:
+                                cx -> u . i16 [ 0 ] = - cx -> u . i16 [ 0 ];
+                                break;
+                            case 32:
+                                cx -> u . i32 [ 0 ] = - cx -> u . i32 [ 0 ];
+                                break;
+                            case 64:
+                                cx -> u . i64 [ 0 ] = - cx -> u . i64 [ 0 ];
+                                break;
+                            }
+                            break;
+                        case vtdFloat:
+                            switch ( dt -> size )
+                            {
+                            case 32:
+                                cx -> u . f32 [ 0 ] = - cx -> u . f32 [ 0 ];
+                                break;
+                            case 64:
+                                cx -> u . f64 [ 0 ] = - cx -> u . f64 [ 0 ];
+                                break;
+                            }
+                            break;
+                        }
+
+                        return xp;
+                    }
+                    // const expression of an unknown type, must have reported an error already
+                }
+                else
+                {
+                    p_builder . ReportError ( "Negation applied to a non-scalar" );
+                }
+            }
+            break;
+
+        case eIndirectExpr:
+            {   /* if type is known, at least verify domain */
+                const SSymExpr * sx = ( const SSymExpr* ) xp;
+                const SExpression * td = ( ( const SIndirectConst* ) sx -> _sym -> u . obj ) -> td;
+                if ( td != NULL )
+                {
+                    const STypeExpr *tx = ( const STypeExpr* ) td;
+                    if ( tx-> dad . var == eTypeExpr && tx -> resolved )
+                    {
+                        /* cannot have formats, but this is verified elsewhere */
+                        if ( tx -> fd . fmt == 0 && tx -> fd . td . dim < 2 )
+                        {
+                            /* determine domain */
+                            const SDatatype *dt = VSchemaFindTypeid ( p_builder . GetSchema(), tx -> fd . td . type_id );
+                            if ( dt != NULL && dt -> domain == vtdUint )
+                            {
+                                p_builder . ReportError ( "Negation applied to an unsigned integer" );
+                            }
+                        }
+                    }
+                }
+
+                SUnaryExpr * x = p_builder . Alloc < SUnaryExpr > ();
+                if ( x != 0 )
+                {
+                    x -> dad . var = eNegateExpr;
+                    atomic32_set ( & x -> dad . refcount, 1 );
+                    x -> expr = xp;
+                    return & x -> dad;
+                }
+            }
+            break;
+
+        default:
+            p_builder . ReportError ( "Negation applied to a non-const operand" );
+            break;
+        }
+        SExpressionWhack ( xp );
+    }
+
+    return 0;
+}
+
+SExpression *
+AST_Expr :: MakeCast ( ASTBuilder & p_builder ) const
+{
+    assert ( GetTokenType () == PT_CASTEXPR );
+    assert ( ChildrenCount () == 2 );
+
+    STypeExpr * type = p_builder . MakeTypeExpr ( * GetChild ( 0 ) );
+    if ( type != 0 )
+    {
+        SExpression * expr = ToExpr ( GetChild ( 1 ) ) -> MakeExpression ( p_builder );
+        if ( expr != 0 )
+        {
+            SBinExpr * x = p_builder . Alloc < SBinExpr > ();
+            if ( x != 0 )
+            {
+                x -> dad . var = eCastExpr;
+                atomic32_set ( & x -> dad . refcount, 1 );
+                x -> left = & type -> dad;
+                x -> right = expr;
+                return & x -> dad;
+            }
+            SExpressionWhack ( expr );
+        }
+        SExpressionWhack ( & type -> dad );
+    }
+
+    return 0;
+}
+
+SExpression *
 AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
-{   //TODO: complete
+{
     switch ( GetTokenType () )
     {
     case PT_EMPTY: // expr [ | expr | ... ]
         {
             uint32_t count = ChildrenCount ();
             assert ( count > 0 );
-            const AST_Expr * left = dynamic_cast < const AST_Expr * > (  GetChild ( 0 ) );
-            assert ( left != 0 );
 
-            SExpression * xp = left -> MakeExpression ( p_builder );
+            SExpression * xp = ToExpr (  GetChild ( 0 ) ) -> MakeExpression ( p_builder );
             for ( uint32_t i = 0; i < count - 1; ++i )
             {
-                const AST_Expr * right = dynamic_cast < const AST_Expr * > (  GetChild ( i + 1 ) );
-                assert ( right != 0 );
                 SBinExpr * x = p_builder . Alloc < SBinExpr > ();
                 if ( x == NULL )
                 {
@@ -662,7 +851,7 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
                 x -> dad . var = eCondExpr;
                 atomic32_set ( & x -> dad . refcount, 1 );
                 x -> left = xp;
-                x -> right = right -> MakeExpression ( p_builder );
+                x -> right = ToExpr (  GetChild ( i + 1 ) ) -> MakeExpression ( p_builder );
                 if ( x -> right == 0 )
                 {
                     SExpressionWhack ( xp );
@@ -688,14 +877,13 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
 
     case PT_CONSTVECT:
         return MakeVectorConstant ( p_builder );
-        break;
+
+    case KW_true:
+    case KW_false:
+        return MakeBool ( p_builder );
 
     case PT_IDENT:
-        {
-            const AST_FQN* fqn = dynamic_cast < const AST_FQN * > ( GetChild ( 0 ) );
-            assert ( fqn != 0 );
-            return MakeSymExpr ( p_builder, p_builder . Resolve ( * fqn ) );
-        }
+        return MakeSymExpr ( p_builder, p_builder . Resolve ( * ToFQN ( GetChild ( 0 ) ) ) );
 
     case PHYSICAL_IDENTIFIER_1_0 :
         {
@@ -746,9 +934,8 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
                      p_builder . FillArguments ( * GetChild ( 3 ), fx -> pfunc) )
                 {
                     assert ( GetChild ( 1 ) -> GetTokenType () == PT_IDENT );
-                    const AST_FQN * fqn = dynamic_cast < const AST_FQN * > ( GetChild ( 1 ) );
-                    assert ( fqn != 0 );
-                    const KSymbol * sym = p_builder . Resolve ( * fqn, true );
+                    const AST_FQN & fqn = * ToFQN ( GetChild ( 1 ) );
+                    const KSymbol * sym = p_builder . Resolve ( fqn, true );
                     if ( sym != 0 )
                     {
                         const SNameOverload * vf = static_cast < const SNameOverload * > ( sym -> u . obj );
@@ -758,7 +945,7 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
                             fx -> dad . var = eScriptExpr;
                             // fall through
                         case eFunction:
-                            fx -> version = fqn -> GetVersion ();
+                            fx -> version = fqn . GetVersion ();
                             fx -> version_requested = fx -> version != 0;
                             fx -> func = static_cast < const SFunction * > ( p_builder . SelectVersion ( * sym, SFunctionCmp, & fx -> version ) );
                             if ( fx -> func != 0 )
@@ -768,7 +955,7 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
                             break;
 
                         default:
-                            p_builder . ReportError ( "Not a function", * fqn );
+                            p_builder . ReportError ( "Not a function", fqn );
                             break;
                         }
                     }
@@ -778,12 +965,37 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
         }
         break;
 
+    case PT_NEGATE:
+        return MakeNegate ( p_builder );
+
+    case PT_CASTEXPR:
+        return MakeCast ( p_builder );
+
     default:
         p_builder . ReportError ( "Not yet implemented" );
         break;
     }
     return 0;
 }
+
+AST_Expr  *
+ncbi :: SchemaParser :: ToExpr ( AST * p_ast)
+{
+    assert ( p_ast != 0 );
+    AST_Expr * ret = dynamic_cast < AST_Expr * > ( p_ast );
+    assert ( ret != 0 );
+    return ret;
+}
+
+const AST_Expr *
+ncbi :: SchemaParser :: ToExpr ( const AST * p_ast)
+{
+    assert ( p_ast != 0 );
+    const AST_Expr * ret = dynamic_cast < const AST_Expr * > ( p_ast );
+    assert ( ret != 0 );
+    return ret;
+}
+
 
 // AST_ParamSig
 

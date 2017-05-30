@@ -2660,8 +2660,7 @@ void CC symbol_set_context ( void *item, void *data )
     self -> u . fwd . ctx = * ( const uint32_t* ) data;
 }
 
-static
-void table_set_context ( STable *self )
+void CC table_set_context ( STable *self )
 {
     VectorForEach ( & self -> col, false, column_set_context, & self -> id );
     VectorForEach ( & self -> cname, false, name_set_context, & self -> id );

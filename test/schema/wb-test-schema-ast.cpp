@@ -64,7 +64,7 @@ TEST_CASE(Construct_Empty)
     ParseTreeScanner scan ( * root );
     REQUIRE ( VerifyNextToken ( scan, PT_PARSE ) );
     REQUIRE ( VerifyNextToken ( scan, '(' ) );
-    REQUIRE ( VerifyNextToken ( scan, SchemaScanner::EndSource ) );
+    REQUIRE ( VerifyNextToken ( scan, Token :: EndSource ) );
     REQUIRE ( VerifyNextToken ( scan, ')' ) );
 
     delete root;
@@ -105,7 +105,7 @@ TEST_CASE(WalkParseTree)
 
         REQUIRE ( VerifyNextToken ( scan, ')' ) );
 
-    REQUIRE ( VerifyNextToken ( scan, SchemaScanner::EndSource ) );
+    REQUIRE ( VerifyNextToken ( scan, Token :: EndSource ) );
     REQUIRE ( VerifyNextToken ( scan, ')' ) );
 
     delete root;
@@ -174,8 +174,7 @@ TEST_CASE ( AST_FQN_WithVersionMajMinRel )
 
 TEST_CASE ( AST_ParamSig_Empty )
 {
-    SchemaToken id = { PT_FUNCPARAMS, 0, 0, 0, 0 };
-    Token tok ( id );
+    Token tok ( PT_FUNCPARAMS );
     AST_ParamSig* sig = new AST_ParamSig ( & tok, 0, 0, false );
     delete sig;
 }
@@ -452,13 +451,19 @@ FIXTURE_TEST_CASE(Format_SuperWrong, AST_Fixture)
 class ConstFixture : public AST_Fixture
 {
 public:
+    ConstFixture ()
+    {
+        // uncomment to run all const tests through the old parser
+        //m_newParse = false;
+    }
+
     const SExpression * VerifyConst ( const char * p_input, const char * p_id, uint32_t p_type )
     {
         MakeAst ( p_input );
         const KSymbol* sym = VerifySymbol ( p_id, eConstant );
         const SConstant* c = static_cast < const SConstant* > ( sym -> u . obj );
         THROW_ON_FALSE ( c != 0 );
-        THROW_ON_FALSE ( string ( "c" ) == ToCppString ( c -> name -> name ) );
+        THROW_ON_FALSE ( string ( p_id ) == ToCppString ( c -> name -> name ) );
         THROW_ON_FALSE ( p_type == c -> td . type_id );
         THROW_ON_FALSE ( c -> expr != 0 );
         return c -> expr;
@@ -528,7 +533,8 @@ FIXTURE_TEST_CASE(Const_EscapedString, ConstFixture)
 
 FIXTURE_TEST_CASE(Const_UnterminatedString, ConstFixture)
 {
-    REQUIRE ( ! m_parser . ParseString ( "const ascii c = \"qq\\n\\t\\r\\a\\b\\v\\f\\xFE\\X01\\0;" ) );
+    // valgrind will show a leak of 9 bytes in 2 blocks, this is a side effect of bison's error recovery
+    REQUIRE_THROW ( MakeAst ( "const ascii  c   =    \"qq\\n\\t\\r\\a\\b\\v\\f\\xFE\\X01\\0;" ) );
 }
 
 FIXTURE_TEST_CASE(Const_Vector, ConstFixture)
@@ -539,15 +545,64 @@ FIXTURE_TEST_CASE(Const_Vector, ConstFixture)
     REQUIRE_EQ ( (uint32_t)2, VectorLength ( & expr -> expr ) );
 }
 
+FIXTURE_TEST_CASE(Const_Vector_NonConstElement, ConstFixture)
+{
+    VerifyErrorMessage ( "function U8 f(); const U8 [2] c = [1,f()];", "Not a constant expression" );
+}
+
+FIXTURE_TEST_CASE(Const_Bool_True, ConstFixture)
+{
+    const SExpression * c = VerifyConst ( "const bool c = true;", "c", Bool_id );
+    THROW_ON_FALSE ( ( uint32_t ) eConstExpr == c -> var );
+    const SConstExpr * expr = reinterpret_cast < const SConstExpr * > ( c );
+    REQUIRE ( expr -> u . b [ 0 ] );
+}
+
+FIXTURE_TEST_CASE(Const_Bool_False, ConstFixture)
+{
+    const SExpression * c = VerifyConst ( "const bool c = false;", "c", Bool_id );
+    THROW_ON_FALSE ( ( uint32_t ) eConstExpr == c -> var );
+    const SConstExpr * expr = reinterpret_cast < const SConstExpr * > ( c );
+    REQUIRE ( ! expr -> u . b [ 0 ] );
+}
+
+FIXTURE_TEST_CASE(Const_Negative, ConstFixture)
+{
+    const SExpression * c = VerifyConst ( "const I8 c = - 1;", "c", I8_id );
+    THROW_ON_FALSE ( ( uint32_t ) eConstExpr == c -> var );
+    const SConstExpr * expr = reinterpret_cast < const SConstExpr * > ( c );
+    REQUIRE_EQ ( ( int8_t ) -1, expr -> u . i8 [ 0 ] );
+}
+
+FIXTURE_TEST_CASE(Const_DoubleNegativeLiteral, ConstFixture)
+{
+    const SExpression * c = VerifyConst ( "const I8 c = - - 1;", "c", I8_id );
+    THROW_ON_FALSE ( ( uint32_t ) eConstExpr == c -> var );
+    const SConstExpr * expr = reinterpret_cast < const SConstExpr * > ( c );
+    REQUIRE_EQ ( ( int8_t ) 1, expr -> u . i8 [ 0 ] );
+}
+
+FIXTURE_TEST_CASE(Const_DoubleNegative, ConstFixture)
+{
+    const SExpression * c = VerifyConst ( "const I8 c1 = 1; const I8 c2 = - - c1;", "c2", I8_id );
+    THROW_ON_FALSE ( ( uint32_t ) eConstExpr == c -> var );
+    const SConstExpr * expr = reinterpret_cast < const SConstExpr * > ( c );
+    REQUIRE_EQ ( ( int8_t ) 1, expr -> u . i8 [ 0 ] );
+}
+
+//TODO: const negate non-const expr - error
+
+//TODO: const I8 c = + 1;
+//TODO: const I8 c = (I8) 1;
+//TODO: const U8 c1; const U8 c2 = c1 + 1;
+
+// error cases:
 //TODO: vector const with a vector const subvalue - error
 //TODO: vector const with a non-const subvalue - error
-
 //TODO: not a type: const U8 c = 1; const c cc = 1; - error
-//TODO: const U8 [2] c = [1,2];
 //TODO: const U8 c = [1,2]; - error ( not an array )
 //TODO: const U8 c[2] = 1; - error ( not a scalar )
 //TODO: const U8 c = 1.0; - error ( wrong type ) ?
-//TODO: const U8 c1; const U8 c2 = c1 + 1;
 //TODO: extern function U8 f(); const U8 c2 = f(); - error ( not const )
 
 ///////// alias
@@ -669,6 +724,33 @@ FIXTURE_TEST_CASE(FuncCall_SchemaParams, AST_Fixture)
     REQUIRE_NOT_NULL ( te2 );
     REQUIRE_EQ ( U64_id, te2 -> td . type_id );
     REQUIRE_EQ ( ( uint8_t )1u, te2 -> u . u8[0] );
+}
+
+FIXTURE_TEST_CASE(FuncCall_SchemaParams_Array, AST_Fixture)
+{
+    MakeAst  ( "function <type T> T f (); table t#1 { column U8 i = <U8[2]> f (); } " );
+    const STable * t = static_cast < const STable* > ( VectorGet ( & GetSchema () -> tbl, 0 ) );
+    const SColumn * c = static_cast < const SColumn * > ( VectorGet ( & t -> col, 0 ) );
+    const SFuncExpr * expr = reinterpret_cast < const SFuncExpr * > ( c -> read );
+
+    // verify the schema parameter
+    REQUIRE_EQ ( 1u, VectorLength ( & expr -> schem ) );
+    const SExpression * p1 = static_cast < const SExpression * > ( VectorGet ( & expr -> schem, 0 ) );
+    REQUIRE_NOT_NULL ( p1 );
+    REQUIRE_EQ ( ( uint32_t ) eTypeExpr, p1 -> var );
+    const STypeExpr * te1 =  reinterpret_cast < const STypeExpr * > ( p1 );
+    REQUIRE_NOT_NULL ( te1 );
+    REQUIRE_NOT_NULL ( te1 -> dt );
+    REQUIRE_EQ ( string ( "U8" ), ToCppString ( te1 -> dt -> name -> name ) );
+    REQUIRE_EQ ( 1u, te1 -> dt -> dim );
+    REQUIRE_NOT_NULL ( te1 -> dim );
+    const SExpression * p2 = static_cast < const SExpression * > ( te1 -> dim );
+    REQUIRE_NOT_NULL ( p2 );
+    REQUIRE_EQ ( ( uint32_t ) eConstExpr, p2 -> var );
+    const SConstExpr * te2 =  reinterpret_cast < const SConstExpr * > ( p2 );
+    REQUIRE_NOT_NULL ( te2 );
+    REQUIRE_EQ ( U64_id, te2 -> td . type_id );
+    REQUIRE_EQ ( ( uint8_t )2u, te2 -> u . u8[0] );
 }
 
 FIXTURE_TEST_CASE(FuncCall_BadSchemaParam, AST_Fixture)
@@ -858,7 +940,6 @@ FIXTURE_TEST_CASE(FuncCall_Vararg, AST_Fixture)
 #include "wb-test-schema-db.cpp"
 
 //TODO: formatted type in production in a table (not allowed?)
-
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>

@@ -73,7 +73,7 @@ AST_Fixture :: PrintTree ( const ParseTree& p_tree )
 {
     ParseTreeScanner sc ( p_tree );
     const Token* tok;
-    SchemaScanner :: TokenType tt;
+    Token :: TokenType tt;
     unsigned int indent = 0;
     do
     {
@@ -151,8 +151,7 @@ AST_Fixture :: PrintTree ( const ParseTree& p_tree )
 AST_FQN *
 AST_Fixture :: MakeFqn ( const char* p_text ) // p_text = (ident:)+ident
 {
-    SchemaToken id = { PT_IDENT, 0, 0, 0, 0 };
-    Token ident ( id );
+    Token ident ( PT_IDENT );
     AST_FQN * ret = new AST_FQN ( & ident );
 
     std::string s ( p_text );
@@ -171,8 +170,7 @@ AST_Fixture :: MakeFqn ( const char* p_text ) // p_text = (ident:)+ident
             token = s;
             s . clear ();
         }
-        SchemaToken name = { IDENTIFIER_1_0, token . c_str () , token . length (), 0, 0 };
-        Token tname ( name );
+        Token tname ( IDENTIFIER_1_0, token . c_str () );
         ret -> AddNode ( & tname );
     }
 
@@ -257,27 +255,33 @@ AST_Fixture :: VerifyErrorMessage ( const char* p_source, const char* p_expected
 const KSymbol*
 AST_Fixture :: VerifySymbol ( const char* p_name, uint32_t p_type )
 {
-    AST_FQN * ast = MakeFqn ( p_name );
-    const KSymbol* sym = m_builder -> Resolve ( * ast );
-
-    if ( sym == 0 )
+    const KSymbol* sym = 0;
+    if ( m_newParse )
     {
-        throw std :: logic_error ( "AST_Fixture::VerifySymbol : symbol not found" );
-    }
-    else
-    {
+        AST_FQN * ast = MakeFqn ( p_name );
+        sym = m_builder -> Resolve ( * ast );
         if ( ToCppString ( sym -> name ) !=
                 ast -> GetChild ( ast -> ChildrenCount() - 1 ) -> GetTokenValue () )
         {
             throw std :: logic_error ( "AST_Fixture::VerifySymbol : object name mismatch" );
         }
-        else if ( sym -> type != p_type )
-        {
-            throw std :: logic_error ( "AST_Fixture::VerifySymbol : wrong object type" );
-        }
+        delete ast;
+    }
+    else // old parser
+    {
+        String name;
+        StringInitCString ( & name, p_name );
+        sym = ( const KSymbol* ) BSTreeFind ( & m_schema -> scope, & name, KSymbolCmp );
     }
 
-    delete ast;
+    if ( sym == 0 )
+    {
+        throw std :: logic_error ( "AST_Fixture::VerifySymbol : symbol not found" );
+    }
+    else if ( sym -> type != p_type )
+    {
+        throw std :: logic_error ( "AST_Fixture::VerifySymbol : wrong object type" );
+    }
 
     return sym;
 }

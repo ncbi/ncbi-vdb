@@ -55,7 +55,7 @@
 
     static
     ParseTree*
-    P ( YYSTYPE & p_prod )
+    P ( SchemaToken & p_prod )
     {
         assert ( p_prod . subtree );
         return ( ParseTree * ) p_prod . subtree;
@@ -63,7 +63,7 @@
 
     static
     ParseTree*
-    T ( YYSTYPE & p_term )
+    T ( SchemaToken & p_term )
     {
         assert ( p_term . subtree == 0 );
         return new ParseTree ( p_term );
@@ -83,8 +83,7 @@
                ParseTree * p_ch8 = 0
              )
     {
-        SchemaToken v = { p_token, NULL, 0, NULL, NULL };
-        ParseTree * ret = new ParseTree ( v );
+        ParseTree * ret = new ParseTree ( Token ( p_token ) );
         if ( p_ch1 != 0 ) ret -> AddChild ( p_ch1 );
         if ( p_ch2 != 0 ) ret -> AddChild ( p_ch2 );
         if ( p_ch3 != 0 ) ret -> AddChild ( p_ch3 );
@@ -99,10 +98,9 @@
     /* Create a flat list */
     static
     ParseTree *
-    MakeList ( YYSTYPE & p_prod )
+    MakeList ( SchemaToken & p_prod )
     {
-        SchemaToken v = { PT_ASTLIST, NULL, 0, NULL, NULL };
-        ParseTree * ret = new ParseTree ( v );
+        ParseTree * ret = new ParseTree ( Token ( PT_ASTLIST ) );
         ret -> AddChild ( P ( p_prod ) );
         return ret;
     }
@@ -134,7 +132,9 @@
 %locations
 
 %define api.pure full
-
+%destructor {
+    delete ( ParseTree * ) ( $$ . subtree );
+} <>
 
  /* !!! Keep token declarations in synch with schema-ast.y */
 
@@ -284,8 +284,8 @@
 %%
 
 parse
-    : END_SOURCE                { *root =  MakeTree ( PT_PARSE, T ( $1 ) ); }
-    | source END_SOURCE         { *root =  MakeTree ( PT_PARSE, P ( $1 ), T ( $2 ) ); }
+    : END_SOURCE                { *root = MakeTree ( PT_PARSE, T ( $1 ) );              $$ . subtree = 0; $$ . leading_ws = 0;  }
+    | source END_SOURCE         { *root = MakeTree ( PT_PARSE, P ( $1 ), T ( $2 ) );    $$ . subtree = 0; $$ . leading_ws = 0; }
     ;
 
 source
@@ -808,7 +808,7 @@ primary_expr_1_0
     | string_expr_1_0           { $$ = $1; }
     | const_vect_expr_1_0       { $$ = $1; }
     | bool_expr_1_0             { $$ = $1; }
-    | negate_expr_1_0           { $$ = $1; }
+    | '-' expression_1_0        { $$ . subtree = MakeTree ( PT_NEGATE, T ( $1 ), P ( $2 ) ); }
     | '+' expression_1_0        { $$ . subtree = MakeTree ( PT_UNARYPLUS, T ( $1 ), P ( $2 ) ); }
     ;
 
@@ -892,13 +892,6 @@ const_vect_exprlist_1_0
 bool_expr_1_0
     : KW_true                   { $$ . subtree = T ( $1 ); }
     | KW_false                  { $$ . subtree = T ( $1 ); }
-    ;
-
-negate_expr_1_0
-    : '-' fqn_1_0               { $$ . subtree = MakeTree ( PT_NEGATE, T ( $1 ), P ( $2 ) ); }
-    | '-' phys_ident            { $$ . subtree = MakeTree ( PT_NEGATE, T ( $1 ), P ( $2 ) ); }
-    | '-' uint_expr_1_0         { $$ . subtree = MakeTree ( PT_NEGATE, T ( $1 ), P ( $2 ) ); }
-    | '-' float_expr_1_0        { $$ . subtree = MakeTree ( PT_NEGATE, T ( $1 ), P ( $2 ) ); }
     ;
 
 type_expr_1_0

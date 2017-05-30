@@ -30,6 +30,8 @@
 
 using namespace ncbi :: SchemaParser;
 
+const Token :: TokenType Token :: EndSource;
+
 Token :: Token ( const SchemaToken& p_token )
 :   m_type ( p_token . type ),
     m_value ( string_dup ( p_token . value, p_token . value_len ) ),
@@ -37,9 +39,9 @@ Token :: Token ( const SchemaToken& p_token )
 {
 }
 
-Token :: Token ( TokenType p_type )
+Token :: Token ( TokenType p_type, const char * p_value )
 :   m_type ( p_type ),
-    m_value ( 0 ),
+    m_value ( string_dup_measure ( p_value, 0 ) ),
     m_ws ( 0 )
 {
 }

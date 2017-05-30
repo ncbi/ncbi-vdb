@@ -102,9 +102,8 @@ ASTBuilder :: HandleDbMemberDb ( SDatabase & p_db, const AST & p_member )
             m -> tmpl = true;
         }
 
-        const AST_FQN * type = dynamic_cast < const AST_FQN* > ( p_member . GetChild ( 1 ) );
-        assert ( type != 0 );
-        const KSymbol * dbName = Resolve ( * type );
+        const AST_FQN & type = * ToFQN ( p_member . GetChild ( 1 ) );
+        const KSymbol * dbName = Resolve ( type );
         if ( dbName != 0 )
         {
             if ( dbName -> type == eDatabase )
@@ -117,7 +116,7 @@ ASTBuilder :: HandleDbMemberDb ( SDatabase & p_db, const AST & p_member )
                     rc_t rc = KSymTableCreateConstSymbol ( & GetSymTab (), & m -> name, & memName, eDBMember, m );
                     if ( rc == 0 )
                     {
-                        uint32_t vers = type -> GetVersion ();
+                        uint32_t vers = type . GetVersion ();
                         m -> db = static_cast < const SDatabase * > ( SelectVersion ( * dbName, SDatabaseCmp, & vers ) );
                         if ( m -> db != 0 )
                         {
@@ -136,12 +135,12 @@ ASTBuilder :: HandleDbMemberDb ( SDatabase & p_db, const AST & p_member )
                 }
                 else
                 {
-                    ReportError ( "Database declared but not defined", * type );
+                    ReportError ( "Database declared but not defined", type );
                 }
             }
             else
             {
-                ReportError ( "Not a database", * type );
+                ReportError ( "Not a database", type );
             }
         }
         SDBMemberWhack ( m, 0 );
@@ -161,9 +160,8 @@ ASTBuilder :: HandleDbMemberTable ( SDatabase & p_db, const AST & p_member )
             m -> tmpl = true;
         }
 
-        const AST_FQN * type = dynamic_cast < const AST_FQN* > ( p_member . GetChild ( 1 ) );
-        assert ( type != 0 );
-        const KSymbol * tblName = Resolve ( * type );
+        const AST_FQN & type = * ToFQN ( p_member . GetChild ( 1 ) );
+        const KSymbol * tblName = Resolve ( type );
         if ( tblName != 0 )
         {
             if ( tblName -> type == eTable )
@@ -174,7 +172,7 @@ ASTBuilder :: HandleDbMemberTable ( SDatabase & p_db, const AST & p_member )
                 rc_t rc = KSymTableCreateConstSymbol ( & GetSymTab (), & m -> name, & memName, eDBMember, m );
                 if ( rc == 0 )
                 {
-                    uint32_t vers = type -> GetVersion ();
+                    uint32_t vers = type . GetVersion ();
                     m -> tbl = static_cast < const STable * > ( SelectVersion ( * tblName, STableCmp, & vers ) );
                     if ( m -> tbl != 0 )
                     {
@@ -193,7 +191,7 @@ ASTBuilder :: HandleDbMemberTable ( SDatabase & p_db, const AST & p_member )
             }
             else
             {
-                ReportError ( "Not a table", * type );
+                ReportError ( "Not a table", type );
             }
         }
         STblMemberWhack ( m, 0 );
@@ -285,16 +283,15 @@ ASTBuilder :: DatabaseDef ( const Token * p_token, AST_FQN * p_fqn, AST * p_pare
         /* look for inheritance */
         if ( p_parent -> GetTokenType () != PT_EMPTY )
         {
-            const AST_FQN * parent = dynamic_cast < const AST_FQN * > ( p_parent );
-            assert ( parent != 0 );
-            const KSymbol * parentDecl = Resolve ( * parent, true );
+            const AST_FQN & parent = * ToFQN ( p_parent );
+            const KSymbol * parentDecl = Resolve ( parent, true );
             if ( parentDecl -> type != eDatabase )
             {
-                ReportError ( "Not a database", * parent );
+                ReportError ( "Not a database", parent );
                 return ret;
             }
 
-            uint32_t vers = parent -> GetVersion ();
+            uint32_t vers = parent . GetVersion ();
             const SDatabase * dad = static_cast < const SDatabase * > ( SelectVersion ( * parentDecl, SDatabaseCmp, & vers ) );
             if ( dad != 0 )
             {

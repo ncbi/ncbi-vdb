@@ -644,6 +644,55 @@ FIXTURE_TEST_CASE(Func_Script_FormattedType_NotFormat, AST_Function_Fixture)
     VerifyErrorMessage ( "typedef U16 t; schema function U8 f() { t / U8 v = 1; return v; };", "Not a format: 't'" );
 }
 
+// Expressions
+// these test cases use script bodies for context
+
+FIXTURE_TEST_CASE(Negate_IndirectSymExpr, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "function I8 f <I8 i> () { return -i; }", "f", 0 , eScriptFunc );
+    REQUIRE_EQ ( ( uint32_t ) eNegateExpr, fn . ReturnExpr () -> var );
+    const SUnaryExpr * e = reinterpret_cast < const SUnaryExpr * > ( fn . ReturnExpr () );
+    REQUIRE_NOT_NULL ( e -> expr );
+    REQUIRE_EQ ( ( uint32_t ) eIndirectExpr, e -> expr -> var );
+}
+FIXTURE_TEST_CASE(Negate_Unsigned, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "function U8 f <U8 i> () { return -i; }", "Negation applied to an unsigned integer" );
+}
+FIXTURE_TEST_CASE(Negate_Double, AST_Function_Fixture)
+{
+    VerifyErrorMessage  ( "table t#1 { column U8 a; column U8 b = - - a; } ", "Negation applied to a non-const operand" );
+}
+
+FIXTURE_TEST_CASE(UnaryPlus, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "function I8 f <I8 i> () { return + i; }", "f", 0 , eScriptFunc );
+    REQUIRE_EQ ( ( uint32_t ) eIndirectExpr, fn . ReturnExpr () -> var );
+}
+
+FIXTURE_TEST_CASE(Cast, AST_Function_Fixture)
+{
+    FunctionAccess fn = ParseFunction  ( "function I8 f <U8 i> () { return ( I8 ) i; }", "f", 0 , eScriptFunc );
+    REQUIRE_EQ ( ( uint32_t ) eCastExpr, fn . ReturnExpr () -> var );
+    const SBinExpr * e = reinterpret_cast < const SBinExpr * > ( fn . ReturnExpr () );
+    REQUIRE_NOT_NULL ( e -> left );
+    REQUIRE_EQ ( ( uint32_t ) eTypeExpr, e -> left -> var);
+    {
+        const STypeExpr * te =  reinterpret_cast < const STypeExpr * > ( e -> left );
+        REQUIRE_NOT_NULL ( te );
+        REQUIRE_NOT_NULL ( te -> dt );
+        REQUIRE_EQ ( string ( "I8" ), ToCppString ( te -> dt -> name -> name ) );
+    }
+
+    REQUIRE_NOT_NULL ( e -> right );
+    REQUIRE_EQ ( ( uint32_t ) eIndirectExpr, e -> right -> var );
+    {
+        const SSymExpr * se =  reinterpret_cast < const SSymExpr * > ( e -> right );
+        REQUIRE_NOT_NULL ( se );
+        REQUIRE_EQ ( string ( "i" ), ToCppString ( se -> _sym -> name ) );
+    }
+}
+
 // Validate functions
 
 FIXTURE_TEST_CASE(Func_Validate, AST_Function_Fixture)

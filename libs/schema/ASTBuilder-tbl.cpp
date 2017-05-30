@@ -346,12 +346,12 @@ ASTBuilder :: AddColumn ( STable & p_table, const AST & p_modifiers, const AST &
                 {
                     case 3: // schema_parms fqn_opt_vers factory_parms_opt
                         schemaArgs = type . GetChild ( 0 );
-                        fqn = dynamic_cast < const AST_FQN * > ( type . GetChild ( 1 ) );
+                        fqn = ToFQN ( type . GetChild ( 1 ) );
                         assert ( fqn -> GetTokenType () == PT_IDENT );
                         factoryArgs = type . GetChild ( 2 );
                         break;
                     case 2: // fqn_vers_opt factory_parms_opt
-                        fqn = dynamic_cast < const AST_FQN * > ( type . GetChild ( 0 ) );
+                        fqn = ToFQN ( type . GetChild ( 0 ) );
                         assert ( fqn -> GetTokenType () == PT_IDENT );
                         factoryArgs = type . GetChild ( 1 );
                         break;
@@ -371,7 +371,7 @@ ASTBuilder :: AddColumn ( STable & p_table, const AST & p_modifiers, const AST &
             break;
         case PT_IDENT:
             {
-                const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( type );
+                const AST_FQN & fqn = * ToFQN ( & type );
                 const KSymbol * sym = Resolve ( fqn ); // will report unknown name
                 if ( sym != 0 )
                 {
@@ -426,8 +426,7 @@ ASTBuilder :: AddColumn ( STable & p_table, const AST & p_modifiers, const AST &
                         {
                             assert ( node . GetTokenType () == PT_COLSTMT );
                             assert ( node . ChildrenCount () == 2 );
-                            const AST_Expr * expr = dynamic_cast < const AST_Expr * > ( node . GetChild ( 1 ) );
-                            assert ( expr != 0 );
+                            const AST_Expr * expr = ToExpr ( node . GetChild ( 1 ) );
                             switch ( node . GetChild ( 0 ) -> GetTokenType () )
                             {
                             case KW_read:
@@ -456,9 +455,7 @@ ASTBuilder :: AddColumn ( STable & p_table, const AST & p_modifiers, const AST &
             case PT_TYPEDCOLEXPR: // ident = cond_expr
                 {
                     assert ( typedCol . ChildrenCount () == 2 );
-                    const AST_Expr * expr = dynamic_cast < const AST_Expr * > ( typedCol . GetChild ( 1 ) );
-                    assert ( expr != 0 );
-                    c -> read = expr -> MakeExpression ( * this );
+                    c -> read = ToExpr ( typedCol . GetChild ( 1 ) ) -> MakeExpression ( * this );
                     if ( ! HandleTypedColumn ( p_table, * c, typedCol ) )
                     {
                         SColumnWhack ( c, 0 );
@@ -485,8 +482,7 @@ ASTBuilder :: MakePhysicalColumnType ( const AST &      p_schemaArgs,
                                        const AST &      p_factoryArgs,
                                        SPhysMember &    p_col )
 {
-    const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( p_fqn_opt_vers );
-    const KSymbol * sym = Resolve ( fqn ); // will report unknown name
+    const KSymbol * sym = Resolve ( p_fqn_opt_vers ); // will report unknown name
     if ( sym != 0 )
     {
         switch ( sym -> type )
@@ -505,7 +501,7 @@ ASTBuilder :: MakePhysicalColumnType ( const AST &      p_schemaArgs,
                                                       p_col . td  );
             return true;
         default:
-            ReportError ( "Cannot be used as a physical column type", fqn );
+            ReportError ( "Cannot be used as a physical column type", p_fqn_opt_vers );
             break;
         }
     }
@@ -525,9 +521,10 @@ ASTBuilder :: AddPhysicalColumn ( STable & p_table, const AST & p_decl, bool p_s
         assert ( colDef != 0 );
         assert ( colDef -> ChildrenCount () == 3 );
 
-        const AST_FQN * encoding = dynamic_cast < const AST_FQN * > ( colDef -> GetChild ( 1 ) );
-        assert ( encoding != 0 );
-        if ( MakePhysicalColumnType ( * colDef -> GetChild ( 0 ), * encoding, * colDef -> GetChild ( 2 ), * c ) )
+        if ( MakePhysicalColumnType ( * colDef -> GetChild ( 0 ),
+                                      * ToFQN ( colDef -> GetChild ( 1 ) ),
+                                      * colDef -> GetChild ( 2 ),
+                                      * c ) )
         {
             const char * ident = p_decl . GetChild ( 1 ) -> GetTokenValue();
             KSymbol * sym = Resolve ( ident, false ); // will not report unknown name
@@ -541,9 +538,7 @@ ASTBuilder :: AddPhysicalColumn ( STable & p_table, const AST & p_decl, bool p_s
 
                     if ( p_decl . ChildrenCount () == 3 )
                     {
-                        const AST_Expr * expr = dynamic_cast < const AST_Expr * > ( p_decl . GetChild ( 2 ) );
-                        assert ( expr != 0 );
-                        c -> expr = expr -> MakeExpression ( * this );
+                        c -> expr = ToExpr ( p_decl . GetChild ( 2 ) ) -> MakeExpression ( * this );
                     }
 
                     c -> stat = p_static;
@@ -599,12 +594,11 @@ ASTBuilder :: HandleTableParents ( STable & p_table, const AST & p_parents )
     uint32_t parentCount = p_parents . ChildrenCount ();
     for ( uint32_t i = 0 ; i < parentCount; ++i )
     {
-        const AST_FQN * parent = dynamic_cast < const AST_FQN * > ( p_parents . GetChild ( i ) );
-        assert ( parent != 0 );
-        const KSymbol * parentDecl = Resolve ( * parent, true );
+        const AST_FQN & parent = * ToFQN ( p_parents . GetChild ( i ) );
+        const KSymbol * parentDecl = Resolve ( parent, true );
         if ( parentDecl != 0 )
         {
-            uint32_t vers = parent -> GetVersion ();
+            uint32_t vers = parent . GetVersion ();
             const STable * dad = static_cast < const STable * > ( SelectVersion ( * parentDecl, STableCmp, & vers ) );
             if ( dad != 0 )
             {
@@ -653,11 +647,9 @@ ASTBuilder :: HandleTableBody ( STable & p_table, const AST & p_body )
                         assert ( false );
                     }
                     assert ( ident -> ChildrenCount () == 1 );
-                    const AST_Expr * ex = dynamic_cast < const AST_Expr * > ( expr ) ;
-                    assert ( ex != 0 );
                     AddProduction ( p_table . prod,
                                     ident -> GetChild ( 0 ) -> GetTokenValue (),
-                                    * ex,
+                                    * ToExpr ( expr ),
                                     datatype );
                 }
                 break;
@@ -671,9 +663,7 @@ ASTBuilder :: HandleTableBody ( STable & p_table, const AST & p_body )
                 if ( p_table . limit == 0 )
                 {
                     assert ( stmt . ChildrenCount () == 1 );
-                    const AST_Expr * expr = dynamic_cast < const AST_Expr * > ( stmt . GetChild ( 0 ) );
-                    assert ( expr != 0 );
-                    p_table . limit = expr -> MakeExpression ( * this );
+                    p_table . limit = ToExpr ( stmt . GetChild ( 0 ) ) -> MakeExpression ( * this );
                 }
                 else
                 {
@@ -692,12 +682,8 @@ ASTBuilder :: HandleTableBody ( STable & p_table, const AST & p_body )
                 break;
 
             case PT_COLUNTYPED:
-                {
-                    assert ( stmt . ChildrenCount () == 1 );
-                    const AST_FQN * fqn = dynamic_cast < const AST_FQN * > ( stmt . GetChild ( 0 ) );
-                    assert ( fqn != 0 );
-                    AddUntyped ( p_table, * fqn );
-                }
+                assert ( stmt . ChildrenCount () == 1 );
+                AddUntyped ( p_table, * ToFQN ( stmt . GetChild ( 0 ) ) );
                 break;
 
             default:
@@ -763,7 +749,7 @@ ASTBuilder ::  TableDef ( const Token * p_token, AST_FQN * p_fqn, AST * p_parent
         HandleTableParents ( * table, * p_parents );
         HandleTableBody ( * table, * p_body );
 
-        //TODO: set table id on all members (see table_set_context())
+        table_set_context ( table );
     }
 
     return ret;

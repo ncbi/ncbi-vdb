@@ -418,7 +418,7 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
     {
     case PT_IDENT : // scalar
         {
-            fqn = dynamic_cast < const AST_FQN * > ( & p_type );
+            fqn = ToFQN ( & p_type );
             ret -> fd . td . dim = 1;
         }
         break;
@@ -426,7 +426,7 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
         {
             const AST & arrayType = p_type;
             assert ( arrayType . ChildrenCount () == 2 );
-            fqn = dynamic_cast < const AST_FQN * > ( arrayType . GetChild ( 0 ) );
+            fqn = ToFQN ( arrayType . GetChild ( 0 ) );
             const AST & dimension = * arrayType . GetChild ( 1 );
             if ( dimension . GetTokenType() == PT_EMPTY )
             {
@@ -434,8 +434,7 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
             }
             else
             {
-                const AST_Expr & dimExpr = dynamic_cast < const AST_Expr & > ( dimension );
-                SExpression * expr = dimExpr . MakeExpression ( * this ); // will report problems
+                SExpression * expr = ToExpr ( & dimension ) -> MakeExpression ( * this ); // will report problems
                 if ( expr != 0 )
                 {
                     switch ( expr -> var )
@@ -446,8 +445,8 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
                             // this may change as more kinds of const expressions are supported
                             assert ( cexpr -> td . type_id = IntrinsicTypeId ( "U64" ) );
                             ret -> fd . td . dim = cexpr -> u . u64 [ 0 ];
+                            ret -> dim = expr;
                         }
-                        SExpressionWhack ( expr );
                         break;
                     case eIndirectExpr:
                         {
@@ -467,7 +466,7 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
         break;
     case PT_TYPEEXPR :  // fqn (format) / fqn (type)
         {
-            fqn = dynamic_cast < const AST_FQN * > ( p_type . GetChild ( 0 ) );
+            fqn = ToFQN ( p_type . GetChild ( 0 ) );
             const KSymbol * fmt = Resolve ( * fqn ); // will report unknown name
             if ( fmt -> type != eFormat )
             {
@@ -480,7 +479,7 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
                 ret -> fd . fmt = ret -> fmt -> id;
                 ret -> fd . td . dim = 1;
 
-                fqn = dynamic_cast < const AST_FQN * > ( p_type . GetChild ( 1 ) ); // has to be a type!
+                fqn = ToFQN ( p_type . GetChild ( 1 ) ); // has to be a type!
             }
         }
         break;
@@ -570,7 +569,7 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
                 but may not yet be completely resolved */
                 case eSchemaParam:
                 case eFactParam:
-                    //return indirect_const_expr ( tbl, src, t, env, self, v );
+                    //TODO: return indirect_const_expr ( tbl, src, t, env, self, v );
                     assert ( false );
                     break;
 
@@ -582,11 +581,11 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
             break;
 
         case PT_UINT :
-            VectorAppend ( p_v, 0, dynamic_cast < const AST_Expr & > ( parm ) . MakeUnsigned ( * this ) );
+            VectorAppend ( p_v, 0, ToExpr ( & parm ) -> MakeUnsigned ( * this ) );
             break;
 
         case PT_ARRAY:
-            assert ( false );  //TODO
+            VectorAppend ( p_v, 0, MakeTypeExpr ( parm ) );
             break;
 
         default:
@@ -602,9 +601,7 @@ ASTBuilder :: FillFactoryParms ( const AST & p_parms, Vector & p_v )
     uint32_t count = p_parms . ChildrenCount ();
     for ( uint32_t i = 0; i < count; ++ i )
     {
-        const AST_Expr * parm = dynamic_cast < const AST_Expr * > ( p_parms . GetChild ( i ) );
-        assert ( parm != 0 );
-        SExpression * expr = parm -> MakeExpression ( * this );
+        SExpression * expr = ToExpr ( p_parms . GetChild ( i ) ) -> MakeExpression ( * this );
         if ( expr != 0 )
         {
             // allowed:
@@ -642,8 +639,7 @@ ASTBuilder :: FillArguments ( const AST & p_parms, Vector & p_v )
     uint32_t count = p_parms . ChildrenCount ();
     for ( uint32_t i = 0; i < count; ++ i )
     {
-        const AST_Expr * parm = dynamic_cast < const AST_Expr * > ( p_parms . GetChild ( i ) );
-        assert ( parm != 0 );
+        const AST_Expr * parm = ToExpr ( p_parms . GetChild ( i ) );
         // allowed tags: PT_AT, PHYSICAL_IDENTIFIER_1_0, PT_CAST, PT_IDENT
         // for PT_IDENT, allowed object types: eFuncParam, eProduction, eIdent, eForward, eVirtual, eColumn, ePhysMember
         SExpression * expr = 0;
@@ -752,15 +748,14 @@ ASTBuilder :: TypeDef ( const Token * p_token, AST_FQN* p_baseType, AST* p_newTy
                 const AST * newType = p_newTypes -> GetChild ( i );
                 if ( newType -> GetTokenType () == PT_IDENT )
                 {
-                    const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( * newType );
-                    DeclareType ( fqn, * baseType, 0 ); // will report duplicate definition
+                    DeclareType ( * ToFQN ( newType ), * baseType, 0 ); // will report duplicate definition
                 }
                 else // fqn [ const-expr ]
                 {
                     assert ( newType -> ChildrenCount () == 2 );
-                    const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( * newType -> GetChild ( 0 ) ); // TODO: replace everywhere with *-based cast
-                    const AST_Expr & dim = dynamic_cast < const AST_Expr & > ( * newType -> GetChild ( 1 ) );
-                    DeclareType ( fqn, * baseType, & dim ); // will report duplicate definition
+                    DeclareType ( * ToFQN ( newType -> GetChild ( 0 ) ),
+                                  * baseType,
+                                  ToExpr ( newType -> GetChild ( 1 ) ) ); // will report duplicate definition
                 }
             }
         }
@@ -799,7 +794,7 @@ ASTBuilder :: TypeSpec ( const AST & p_spec, VTypedecl & p_td )
     const KSymbol * ret = 0;
     if ( p_spec . GetTokenType () == PT_IDENT )
     {   // scalar
-        const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( p_spec );
+        const AST_FQN & fqn = * ToFQN ( & p_spec );
         ret = Resolve ( fqn ); // will report unknown name
         if ( ret != 0 )
         {
@@ -831,8 +826,7 @@ ASTBuilder :: TypeSpec ( const AST & p_spec, VTypedecl & p_td )
     {
         assert ( p_spec . GetTokenType () == PT_ARRAY );
         assert ( p_spec . ChildrenCount () == 2 ); // fqn expr
-        const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( * p_spec . GetChild ( 0 ) );
-        const AST_Expr & dim = dynamic_cast < const AST_Expr & > ( * p_spec . GetChild ( 1 ) );
+        const AST_FQN & fqn = * ToFQN ( p_spec . GetChild ( 0 ) );
         ret = Resolve ( fqn ); // will report unknown name
         if ( ret != 0 )
         {
@@ -843,7 +837,7 @@ ASTBuilder :: TypeSpec ( const AST & p_spec, VTypedecl & p_td )
             }
             const SDatatype * typeDef = static_cast < const SDatatype * > ( ret -> u . obj );
             p_td . type_id    = typeDef -> id;
-            p_td . dim        = EvalConstExpr ( dim );
+            p_td . dim        = EvalConstExpr ( * ToExpr ( p_spec . GetChild ( 1 ) ) );
         }
     }
     return ret;
@@ -989,8 +983,7 @@ ASTBuilder :: ConstDef  ( const Token* p_token, AST* p_type, AST_FQN* p_fqn, AST
     {
         if ( p_type -> GetTokenType () == PT_IDENT )
         {   // scalar
-            const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( * p_type );
-            const KSymbol * type = Resolve ( fqn ); // will report unknown name
+            const KSymbol * type = Resolve ( * ToFQN ( p_type ) ); // will report unknown name
             if ( type != 0 )
             {
                 if ( VectorAppend ( m_schema -> cnst, & cnst -> id, cnst ) )
@@ -1011,8 +1004,7 @@ ASTBuilder :: ConstDef  ( const Token* p_token, AST* p_type, AST_FQN* p_fqn, AST
         {
             assert ( p_type -> GetTokenType () == PT_ARRAY );
             assert ( p_type -> ChildrenCount () == 2 ); // fqn expr
-            const AST_FQN & fqn = dynamic_cast < const AST_FQN & > ( * p_type -> GetChild ( 0 ) );
-            const AST_Expr & dim = dynamic_cast < const AST_Expr & > ( * p_type -> GetChild ( 1 ) );
+            const AST_FQN & fqn = * ToFQN ( p_type -> GetChild ( 0 ) );
             const KSymbol * sym = Resolve ( fqn ); // will report unknown name
             if ( sym != 0 )
             {
@@ -1027,7 +1019,7 @@ ASTBuilder :: ConstDef  ( const Token* p_token, AST* p_type, AST_FQN* p_fqn, AST
                     cnst -> expr = p_expr -> EvaluateConst ( *this ); // will report problems
                     const SDatatype * typeDef = static_cast < const SDatatype * > ( sym -> u . obj );
                     cnst -> td . type_id    = typeDef -> id;
-                    cnst -> td . dim        = EvalConstExpr ( dim );
+                    cnst -> td . dim        = EvalConstExpr ( * ToExpr ( p_type -> GetChild ( 1 ) ) );
                 }
             }
         }

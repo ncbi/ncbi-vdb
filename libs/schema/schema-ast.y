@@ -230,6 +230,7 @@
 %type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
 
 %type <expr> expr cond_expr cond_chain uint_expr func_expr float_expr string_expr const_vect_expr
+%type <expr> bool_expr negate_expr cast_expr
 
 %type <paramSig> param_sig param_signature fact_sig
 
@@ -246,7 +247,8 @@
 %type <tok> PT_PHYSENCREF KW_column PT_TYPEDCOLEXPR PT_DATABASE PT_DBBODY
 %type <tok> KW_template KW_database PT_DBMEMBER PT_TBLMEMBER PT_INCLUDE KW_include STRING
 %type <tok> PT_FUNCEXPR PT_COLSCHEMAPARMS KW_static PT_PHYSMBR PT_PHYSCOLDEF PT_COLSCHEMAPARAM
-%type <tok> KW_physical PT_COLUNTYPED EXP_FLOAT ESCAPED_STRING PT_CONSTVECT
+%type <tok> KW_physical PT_COLUNTYPED EXP_FLOAT ESCAPED_STRING PT_CONSTVECT KW_true KW_false
+%type <tok> PT_NEGATE PT_CASTEXPR
 
 %%
 
@@ -679,20 +681,18 @@ cond_chain
     ;
 
 expr
-    : fqn                       { $$ = new AST_Expr ( $1 ); }
-    | PHYSICAL_IDENTIFIER_1_0   { $$ = new AST_Expr ( $1 ); }
-    | '@'                       { $$ = new AST_Expr ( PT_AT ); }
-    | func_expr                 { $$ = $1; }
-    | uint_expr                 { $$ = $1; }
-    | float_expr                { $$ = $1; }
-    | string_expr               { $$ = $1; }
-    | const_vect_expr           { $$ = $1; }
-/*
-    | bool_expr_1_0             { $$ = $1; }
-    | negate_expr_1_0           { $$ = $1; }
-    | '+' expression_1_0        { $$ = $2; }
-    | cast_expr                 { $$ = $1; }
-*/
+    : fqn                           { $$ = new AST_Expr ( $1 ); }
+    | PHYSICAL_IDENTIFIER_1_0       { $$ = new AST_Expr ( $1 ); }
+    | '@'                           { $$ = new AST_Expr ( PT_AT ); }
+    | func_expr                     { $$ = $1; }
+    | uint_expr                     { $$ = $1; }
+    | float_expr                    { $$ = $1; }
+    | string_expr                   { $$ = $1; }
+    | const_vect_expr               { $$ = $1; }
+    | bool_expr                     { $$ = $1; }
+    | negate_expr                   { $$ = $1; }
+    | PT_UNARYPLUS '(' '+' expr ')' { $$ = $4; }
+    | cast_expr                     { $$ = $1; }
     ;
 
 func_expr
@@ -753,6 +753,18 @@ string_expr
 
 const_vect_expr
     : PT_CONSTVECT '(' '[' PT_ASTLIST '(' expr_list ')' ']' ')'     { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $6 ); }
+    ;
+
+bool_expr
+    : KW_true   { $$ = new AST_Expr ( $1 ); }
+    | KW_false  { $$ = new AST_Expr ( $1 ); }
+    ;
+
+negate_expr
+    : PT_NEGATE '(' '-' expr ')' { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $4 ); }
+
+cast_expr
+    : PT_CASTEXPR '(' '(' type_expr ')' expr  ')' { $$ = new AST_Expr ( $1 ); $$ -> AddNode ( $4 ); $$ -> AddNode ( $6 ); }
     ;
 
 type_expr
