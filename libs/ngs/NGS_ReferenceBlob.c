@@ -113,7 +113,11 @@ struct NGS_ReferenceBlob * NGS_ReferenceBlobMake ( ctx_t ctx, const NGS_Cursor* 
                                                       & ret -> size,
                                                       & ret -> count ) )
                     {
-                        return ret;
+                        TRY ( VByteBlob_IdRange ( ret -> blob, ctx, & ret -> first, NULL ) )
+                        {
+                            assert ( ret -> first <= ret -> rowId );
+                            return ret;
+                        }
                     }
                     VBlobRelease ( ( VBlob * ) ret -> blob );
                 }
