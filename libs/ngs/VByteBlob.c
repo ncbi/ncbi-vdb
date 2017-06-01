@@ -76,12 +76,12 @@ VByteBlob_ContiguousChunk ( const VBlob*    p_blob,
             TRY ( VByteBlob_IdRange ( p_blob, ctx, & first, & count ) )
             {
                 if ( p_stopAtRepeat )
-                {
+                {   /* iterate until enough rows are collected, or a repeated row is seen, or we are out of rows in this blob */
                     PageMapIterator pmIt;
 
                     assert ( p_rowId >= first && p_rowId < first + (int64_t)count );
 
-                    if ( p_rowId - first + 1 < (int64_t)count ) /* more rows in the blob */
+                    if ( p_rowId - first + 1 < (int64_t)count ) /* more rows in the blob after p_rowId */
                     {   /* *p_size is the size of value on rowId. Increase size to include subsequent rows, until we see a repeat, p_maxRows is reached or the blob ends */
                         TRY ( VByteBlob_PageMapNewIterator ( p_blob, ctx, &pmIt, p_rowId - first, count - ( p_rowId - first ) ) ) /* here, rowId is relative to the blob */
                         {   /* there will always be at least one row */
@@ -107,7 +107,7 @@ VByteBlob_ContiguousChunk ( const VBlob*    p_blob,
                             }
                         }
                     }
-                    else
+                    else /* p_rowId is the last row of the blob; return the entire blob */
                     {
                         * p_size = row_len;
                         if ( p_rowCount != 0 )

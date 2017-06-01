@@ -239,7 +239,8 @@ void NGS_ReferenceBlobResolveOffset ( const struct NGS_ReferenceBlob * self, ctx
         INTERNAL_ERROR ( xcParamNull, "NULL return parameter" );
     }
     else
-    {
+    {   /* Iterate through the blob's page map to locate the chuink containing position p_inBlob. Once found, translate */
+        /* the offset inside the blob into offset on the reference. */
         PageMapIterator pmIt;
         TRY ( VByteBlob_PageMapNewIterator ( self->blob, ctx, &pmIt, self -> rowId - self -> first, self -> count ) )
         {
@@ -263,7 +264,8 @@ void NGS_ReferenceBlobResolveOffset ( const struct NGS_ReferenceBlob * self, ctx
                         * p_repeatCount = repeat;
                     }
                     if ( p_increment != NULL )
-                    {
+                    {   /* p_increment is only used when there is a repetition, specifies how much to increase p_inBlob by */
+                        /* in order to start the next call to NGS_ReferenceBlobResolveOffset() past the repeated rows */
                         * p_increment = repeat > 1 ? size : 0;
                     }
                     return;

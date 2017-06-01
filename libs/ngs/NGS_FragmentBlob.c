@@ -103,7 +103,7 @@ NGS_FragmentBlobMake ( ctx_t ctx, const NGS_String* run, const struct NGS_Cursor
             TRY ( NGS_RefcountInit ( ctx, & ret -> dad, & ITF_Refcount_vt . dad, & NGS_FragmentBlob_vt, "NGS_FragmentBlob", "" ) )
             {
                 TRY ( ret -> run = NGS_StringDuplicate ( run, ctx ) )
-                {
+                {   /* initialize cursors for READ, READ_LEN, READ_TYPE and retrieve their blobs containing rowId */
                     TRY ( ret -> blob_READ = NGS_CursorGetVBlob ( curs, ctx, rowId, seq_READ ) )
                     {
                         TRY ( ret -> blob_READ_LEN = NGS_CursorGetVBlob ( curs, ctx, rowId, seq_READ_LEN ) )
@@ -233,7 +233,7 @@ GetFragInfo ( const NGS_FragmentBlob * self, ctx_t ctx, int64_t p_rowId, uint64_
                                & base,
                                & boff,
                                & row_len ) )
-    {
+    {   /* use READ_LEN to determine fragments' lengths */
         uint32_t i = 0 ;
         uint64_t offset = 0;
         uint32_t bioFragNum = 0;
@@ -273,7 +273,7 @@ GetFragInfo ( const NGS_FragmentBlob * self, ctx_t ctx, int64_t p_rowId, uint64_
                 }
             }
 
-            {
+            {   /* use READ_TYPE to filter out technical fragments */
                 uint32_t frag_type_elem_bits;
                 const void *frag_type_base;
                 uint32_t frag_type_boff;
@@ -338,7 +338,7 @@ NGS_FragmentBlobInfoByOffset ( const struct NGS_FragmentBlob * self, ctx_t ctx, 
         int64_t first;
         uint64_t count;
         TRY ( VByteBlob_IdRange ( self -> blob_READ, ctx, & first, & count ) )
-        {
+        {   /* iterate over the blob's page map to locate the row corresponding to offsetInBases */
             PageMapIterator pmIt;
             TRY ( VByteBlob_PageMapNewIterator ( self->blob_READ, ctx, & pmIt, 0, count ) )
             {
@@ -349,12 +349,12 @@ NGS_FragmentBlobInfoByOffset ( const struct NGS_FragmentBlob * self, ctx_t ctx, 
                     elem_count_t offset = PageMapIteratorDataOffset ( &pmIt );
                     row_count_t  repeat = PageMapIteratorRepeatCount ( &pmIt );
                     if ( offsetInBases < offset + length * repeat )
-                    {
-                        while ( repeat > 1 )
+                    {   /* found the row containing offSetInBases */
+                        while ( repeat > 1 ) /* look deeper to account for possible repetitions */
                         {
                             if ( offsetInBases < offset + length )
                             {
-                                break;
+                                break; /* found */
                             }
                             offset += length;
                             ++rowInBlob;
