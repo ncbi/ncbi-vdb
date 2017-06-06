@@ -241,12 +241,12 @@ TEST_CASE ( testKDirectoryGetDiskFreeSpace ) {
             return;
         }
         else {
-            if ( abs ( available - free_bytes_available / 1024 ) < min )
-                min = abs ( available - free_bytes_available / 1024 );
+            if ( abs ( ( int64_t ) available - ( int64_t ) free_bytes_available / 1024 ) < min )
+                min = abs ( ( int64_t ) available - ( int64_t ) free_bytes_available / 1024 );
             cerr << i << " KDirectoryGetDiskFreeSpace="
                  << free_bytes_available / 1024
                  << " Available=" << available << " ( "
-                 << abs ( free_bytes_available / 1024 - available ) << " )\n";
+                 << abs ( ( int64_t ) free_bytes_available / 1024 - ( int64_t ) available ) << " )\n";
         }
     }
 
