@@ -160,6 +160,9 @@ TEST_NGS_CSRA1_READCOLLECTION_OBJ = \
 $(TEST_BINDIR)/test-ngs_csra1_readcollection: $(TEST_NGS_CSRA1_READCOLLECTION_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_NGS_LIB)
 
+csra1rc: test-ngs_csra1_readcollection
+	$(TEST_BINDIR)/$^
+
 #-------------------------------------------------------------------------------
 # test-ngs_csra1_refwin
 #

@@ -51,6 +51,8 @@
 #   define min(a,b) ( (a) < (b) ? (a) : (b) )
 #endif
 
+static bool CSRA1_ReadIteratorNext ( CSRA1_Read * self, ctx_t ctx );
+
 /*--------------------------------------------------------------------------
  * CSRA1_Read
  */
@@ -88,7 +90,7 @@ static NGS_Read_vt CSRA1_Read_vt_inst =
     SRA_ReadGetQualities,
     SRA_ReadNumFragments,
     CSRA1_ReadFragIsAligned,
-    SRA_ReadIteratorNext,
+    CSRA1_ReadIteratorNext,
     SRA_ReadIteratorGetCount,
 };
 
@@ -459,5 +461,102 @@ bool CSRA1_ReadFragIsAligned ( CSRA1_Read * cself, ctx_t ctx, uint32_t frag_idx 
     }
 
     CLEAR();
+    return false;
+}
+
+bool
+CSRA1_ReadIteratorNext ( CSRA1_Read * cself, ctx_t ctx )
+{
+    FUNC_ENTRY ( ctx, rcSRA, rcCursor, rcAccessing );
+    SRA_Read * self;
+
+    assert ( cself != NULL );
+
+    self = & cself -> dad;
+
+    if ( self -> wants_full )
+    {
+        return SRA_ReadIteratorNext ( cself, ctx );
+    }
+
+    /* to iterate over partially aligned and unaligned reads, use column CMP_READ */
+
+    self -> seen_first_frag = false;
+    self -> seen_last_frag = false;
+
+    self -> cur_frag = 0;
+    self -> bio_frags = 0;
+    self -> frag_idx = 0;
+    self -> frag_max = 0;
+    self -> frag_start = 0;
+    self -> frag_len = 0;
+
+    self -> READ_TYPE = NULL;
+    self -> READ_LEN = NULL;
+
+    if ( self -> seen_first )
+    {   /* move to next row */
+        ++ self -> cur_row;
+    }
+    else
+    {
+        self -> seen_first = true;
+    }
+
+    while ( self -> cur_row < self -> row_max )
+    {
+        NGS_String * read;
+        ON_FAIL ( read = NGS_CursorGetString ( self -> curs, ctx, self -> cur_row, seq_CMP_READ ) )
+            return false;
+
+        if ( NGS_StringSize ( read, ctx ) == 0 )
+        {   // aligned read - skip
+            ++ self -> cur_row;
+            continue;
+        }
+
+        /* work the category filter, we know wants_full is false */
+        enum NGS_ReadCategory cat;
+        ON_FAIL ( cat = SRA_ReadGetCategory ( cself, ctx ) )
+            return false;
+
+        if ( ( cat == NGS_ReadCategory_partiallyAligned && ! self -> wants_partial )
+                ||
+             ( cat == NGS_ReadCategory_unaligned && ! self -> wants_unaligned ) )
+        {
+            ++ self -> cur_row;
+            continue;
+        }
+
+        /* work the read group filter if required */
+        if ( self -> group_name != NULL )
+        {
+            uint32_t size;
+
+            ON_FAIL ( NGS_String* group = NGS_CursorGetString ( self -> curs, ctx, self -> cur_row, seq_GROUP ) )
+                return false;
+
+            size = ( uint32_t ) NGS_StringSize ( group, ctx );
+            if ( string_cmp ( NGS_StringData ( self -> group_name, ctx ),
+                              NGS_StringSize ( self -> group_name, ctx ),
+                              NGS_StringData ( group, ctx ),
+                              size,
+                              size ) != 0 )
+            {
+                NGS_StringRelease ( group, ctx );
+                ++ self -> cur_row;
+                continue;
+            }
+            NGS_StringRelease ( group, ctx );
+        }
+
+        TRY ( SRA_ReadIteratorInitFragment ( cself, ctx ) )
+        {
+            return true;
+        }
+
+        break;
+    }
+
     return false;
 }
