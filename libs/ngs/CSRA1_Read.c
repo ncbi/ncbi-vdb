@@ -505,6 +505,7 @@ CSRA1_ReadIteratorNext ( CSRA1_Read * cself, ctx_t ctx )
 
     while ( self -> cur_row < self -> row_max )
     {
+        enum NGS_ReadCategory cat;
         NGS_String * read;
         ON_FAIL ( read = NGS_CursorGetString ( self -> curs, ctx, self -> cur_row, seq_CMP_READ ) )
             return false;
@@ -516,7 +517,6 @@ CSRA1_ReadIteratorNext ( CSRA1_Read * cself, ctx_t ctx )
         }
 
         /* work the category filter, we know wants_full is false */
-        enum NGS_ReadCategory cat;
         ON_FAIL ( cat = SRA_ReadGetCategory ( cself, ctx ) )
             return false;
 
