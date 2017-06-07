@@ -446,7 +446,8 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     /* if the connection is open */
     if ( rc == 0 )
     {
-        STATUS ( STAT_USR, "%s - connected to %S\n", __func__, hostname );
+        STATUS ( STAT_USR, "%s - connected to %S (%s)\n", __func__, hostname,
+            self -> ep . ip_address );
         if ( self -> tls )
         {
             KTLSStream * tls_stream;
@@ -457,13 +458,15 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
             if ( rc != 0 )
             {
                 if ( ! proxy_ep )
-                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create TLS stream for '%S'\n", aHostname ) );
+                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_TLS ),
+                        ( "Failed to create TLS stream for '%S' (%s)\n",
+                          aHostname, self -> ep . ip_address ) );
                 else
                 {
                     STATUS ( STAT_PRG, "%s - retrying TLS wrapper on socket with proxy hostname\n", __func__ );
                     rc = KNSManagerMakeTLSStream ( mgr, & tls_stream, sock, hostname );
                     if ( rc != 0 )
-                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ), ( "Failed to create TLS stream for '%S'\n", hostname ) );
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_TLS ), ( "Failed to create TLS stream for '%S'\n", hostname ) );
                 }
             }
 
@@ -1175,7 +1178,7 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
             const char * buffer = ( char * ) self -> line_buffer . base;
             const char * end = buffer + self -> line_valid;
 
-            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("HTTP receive '%s'\n", buffer));
+            DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("HTTP receive '%s'\n", buffer));
 
             /* find the separation between name: value */
             sep = string_chr ( buffer, end - buffer, ':' );
@@ -1302,7 +1305,7 @@ rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, u
         const char * buffer = ( char * ) self -> line_buffer . base;
         const char * end = buffer + self -> line_valid;
 
-        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("HTTP receive '%s'\n", buffer));
+        DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("HTTP receive '%s'\n", buffer));
 
         /* Detect protocol
            expect HTTP/1.[01]<sp><digit>+<sp><msg>\r\n */
@@ -1318,7 +1321,7 @@ rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, u
             if ( strcase_cmp ( "http", 4, buffer, sep - buffer, 4 ) != 0 )
             {
                 rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcUnsupported );
-                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS), ("%s: protocol given as '%.*s'\n", __func__, ( uint32_t ) ( sep - buffer ), buffer ));
+                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("%s: protocol given as '%.*s'\n", __func__, ( uint32_t ) ( sep - buffer ), buffer ));
             }
             else
             {
@@ -1760,7 +1763,7 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     if ( KNSManagerIsVerbose ( self -> mgr ) )
         KOutMsg ( "KClientHttpSendReceiveMsg: '%.*s'\n", len, buffer );
 #endif
-    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS),
+    DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP),
         ("HTTP send '%S' '%.*s'\n\n", &self->hostname, len, buffer));
 
     /* reopen connection if NULL */
