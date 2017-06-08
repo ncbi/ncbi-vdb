@@ -32,8 +32,13 @@
 
 using namespace ncbi::SchemaParser;
 
-SchemaScanner :: SchemaScanner ( const char * p_source, size_t p_size, bool p_debug )
+void
+SchemaScanner :: Init ( const char * p_source, size_t p_size, bool p_debug )
 {
+    m_scanBlock . scanner = 0;
+    m_scanBlock . buffer = 0;
+    m_scanBlock . whitespace = 0;
+    m_scanBlock . file_name = "<unknown>";
     SchemaScan_yylex_init ( & m_scanBlock, p_source, p_size );
     if ( p_debug )
     {
@@ -41,13 +46,14 @@ SchemaScanner :: SchemaScanner ( const char * p_source, size_t p_size, bool p_de
     }
 }
 
+SchemaScanner :: SchemaScanner ( const char * p_source, size_t p_size, bool p_debug )
+{
+    Init ( p_source, p_size, p_debug );
+}
+
 SchemaScanner :: SchemaScanner ( const char * p_source, bool p_debug )
 {
-    SchemaScan_yylex_init ( & m_scanBlock, p_source, string_size ( p_source ) );
-    if ( p_debug )
-    {
-        SchemaScan_set_debug ( & m_scanBlock, 1 );
-    }
+    Init ( p_source, string_size ( p_source ), p_debug );
 }
 
 SchemaScanner :: ~SchemaScanner ()
@@ -69,7 +75,7 @@ extern "C" {
 Token
 SchemaScanner :: NextToken ()
 {
-    YYLTYPE loc; //TODO: make a data member, or place in SchemaToken
+    YYLTYPE loc;
     SchemaToken t;
     memset ( & t, 0, sizeof t );
     SchemaScan_yylex ( & t, & loc, & m_scanBlock );

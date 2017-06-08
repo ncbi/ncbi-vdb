@@ -29,6 +29,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 #include <klib/symbol.h>
 
@@ -222,7 +223,7 @@ AST_Fixture :: MakeAst ( const char* p_source )
 }
 
 void
-AST_Fixture :: VerifyErrorMessage ( const char* p_source, const char* p_expectedError )
+AST_Fixture :: VerifyErrorMessage ( const char* p_source, const char* p_expectedError, uint32_t p_line, uint32_t p_column )
 {
     if ( m_newParse )
     {
@@ -240,10 +241,23 @@ AST_Fixture :: VerifyErrorMessage ( const char* p_source, const char* p_expected
         {
             throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : no error" );
         }
-        if ( string ( m_builder -> GetErrorMessage ( 0 ) ) != string ( p_expectedError ) )
+        const ErrorReport :: Error * err = m_builder -> GetErrors () . GetError ( 0 );
+        if ( string ( err -> m_message ) != string ( p_expectedError ) )
         {
             throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : expected '" + string ( p_expectedError ) +
                                                                         "', received '" + string ( m_builder -> GetErrorMessage ( 0 ) ) + "'" );
+        }
+        if ( p_line != 0 && p_line != err -> m_line )
+        {
+            ostringstream out;
+            out << "AST_Fixture::VerifyErrorMessage : expected line " << p_line << ", received " << err -> m_line;
+            throw std :: logic_error ( out . str () );
+        }
+        if ( p_column != 0 && p_column != err -> m_column )
+        {
+            ostringstream out;
+            out << "AST_Fixture::VerifyErrorMessage : expected column " << p_column << ", received " << err -> m_column;
+            throw std :: logic_error ( out . str () );
         }
     }
     else if ( OldParse ( p_source ) )

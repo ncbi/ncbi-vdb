@@ -28,6 +28,8 @@
 * Unit tests for schema tokenizer
 */
 
+#include <sstream>
+
 #include <ktst/unit_test.hpp>
 
 #include "../../libs/schema/SchemaScanner.hpp"
@@ -45,9 +47,41 @@ using namespace ncbi::NK;
 
 TEST_SUITE ( SchemaLexTestSuite );
 
+void
+VerifyLocation ( const Token & p_token, uint32_t p_line, uint32_t p_column, const char * p_file = "" )
+{
+    return;//TODO
+    const Token :: Location & loc = p_token . GetLocation ();
+    if ( string ( p_file ) != string ( loc . m_file ) )
+    {
+        ostringstream out;
+        out << "VerifyLocation(): file name expected '" << p_file << "', actual '" << loc . m_file << "'" << endl;
+        throw std :: logic_error ( out . str () );
+    }
+    if ( p_line != loc . m_line )
+    {
+        ostringstream out;
+        out << "VerifyLocation(): line expected '" << p_line << "', actual '" << loc . m_line << "'" << endl;
+        throw std :: logic_error ( out . str () );
+    }
+    if ( p_column != loc . m_column )
+    {
+        ostringstream out;
+        out << "VerifyLocation(): column expected '" << p_column << "', actual '" << loc . m_column << "'" << endl;
+        throw std :: logic_error ( out . str () );
+    }
+}
+
 TEST_CASE ( EmptyInput )
 {
     REQUIRE_EQ ( (int)END_SOURCE, SchemaScanner ( "" ) . NextToken () . GetType () );
+}
+
+TEST_CASE ( Location )
+{
+    SchemaScanner s ( "" );
+    Token t = s . NextToken ();
+    VerifyLocation ( t, 1, 1 );
 }
 
 TEST_CASE ( Whitespace )
@@ -56,6 +90,7 @@ TEST_CASE ( Whitespace )
     Token t = s . NextToken ();
     REQUIRE_EQ ( (int)END_SOURCE, t. GetType () );
     REQUIRE_EQ ( string ( "    " ), string ( t . GetLeadingWhitespace () ) );
+    VerifyLocation ( t, 1, 4 );
 }
 
 TEST_CASE ( NotNulTerminated )
@@ -75,7 +110,6 @@ TEST_CASE ( Unrecognized )
     TEST_CASE ( name ) { REQUIRE_EQ ( ( Token :: TokenType ) lit [ 0 ], SchemaScanner ( lit ) . NextToken () . GetType () ); }
 
 REQUIRE_LITERAL ( Semicolon,     ";" )
-#if 0
 REQUIRE_LITERAL ( Dollar,        "$" )
 REQUIRE_LITERAL ( Comma,         "," )
 REQUIRE_LITERAL ( LeftBrace,     "{" )
@@ -99,20 +133,20 @@ REQUIRE_LITERAL ( At,            "@" )
 
 TEST_CASE ( Ellipsis )
 {
-    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) ELLIPSIS, SchemaScanner ( "..." ) . Scan () );
+    REQUIRE_EQ ( ( Token ::  TokenType ) ELLIPSIS, SchemaScanner ( "..." ) . NextToken () . GetType () );
 }
 
-#define REQUIRE_TOKEN(expected, scanner) \
-    REQUIRE_EQ ( string ( expected ), string ( scanner . LastToken () . value, scanner . LastToken () . value_len ) )
-#define REQUIRE_WS(expected, scanner) \
-    REQUIRE_EQ ( string ( expected ), string ( scanner . LastToken () . leading_ws ) )
+#define REQUIRE_TOKEN(expected, token) \
+    REQUIRE_EQ ( string ( expected ), string ( token . GetValue () ) )
+#define REQUIRE_WS(expected, token) \
+    REQUIRE_EQ ( string ( expected ), string ( token . GetLeadingWhitespace () ) )
 
 #define REQUIRE_TERMINAL(name, token, term) \
 TEST_CASE ( name ) \
 { \
-    SchemaScanner s ( term ); \
-    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) token, s . Scan () ); \
-    REQUIRE_TOKEN ( term, s ); \
+    Token t = SchemaScanner ( term ) . NextToken (); \
+    REQUIRE_EQ ( ( Token :: TokenType ) token, t . GetType () ); \
+    REQUIRE_TOKEN ( term, t ); \
 }
 
 REQUIRE_TERMINAL ( Decimal,             DECIMAL,        "123456789" )
@@ -147,9 +181,9 @@ REQUIRE_TERMINAL ( Version_MajMinRel,   VERSION, "#1.2.3" )
 #define REQUIRE_KEYWORD(word) \
 TEST_CASE ( kw_##word ) \
 { \
-    SchemaScanner s ( #word ); \
-    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) KW_##word, s . Scan () ); \
-    REQUIRE_TOKEN ( #word, s ); \
+    Token t = SchemaScanner ( #word ) . NextToken (); \
+    REQUIRE_EQ ( ( Token :: TokenType ) KW_##word, t . GetType () ); \
+    REQUIRE_TOKEN ( #word, t ); \
 }
 
 REQUIRE_KEYWORD(__no_header)
@@ -191,53 +225,52 @@ REQUIRE_KEYWORD(write)
 
 TEST_CASE ( Comment )
 {
-    SchemaScanner s ( "/**/abc" );
-    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) IDENTIFIER_1_0, s . Scan () );
-    REQUIRE_TOKEN ( "abc", s );
-    REQUIRE_WS ( "/**/", s );
+    Token t = SchemaScanner ( "/**/abc" ) . NextToken ();
+    REQUIRE_EQ ( ( Token :: TokenType ) IDENTIFIER_1_0, t . GetType () );
+    REQUIRE_TOKEN ( "abc", t );
+    REQUIRE_WS ( "/**/", t );
 }
 
 TEST_CASE ( LineComment )
 {
-    SchemaScanner s ( "//qed\nabc" );
-    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) IDENTIFIER_1_0, s . Scan () );
-    REQUIRE_TOKEN ( "abc", s ); \
-    REQUIRE_WS ( "//qed\n", s );
+    Token t = SchemaScanner ( "//qed\nabc" ) . NextToken ();
+    REQUIRE_EQ ( ( Token :: TokenType ) IDENTIFIER_1_0, t . GetType () );
+    VerifyLocation ( t, 1, 4 );
+    REQUIRE_TOKEN ( "abc", t );
+    REQUIRE_WS ( "//qed\n", t );
 }
 
 TEST_CASE ( MultiLineComment )
 {
-    SchemaScanner s ( "/*\n\n*/abc" );
-    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) IDENTIFIER_1_0, s . Scan () );
-    REQUIRE_TOKEN ( "abc", s ); \
-    REQUIRE_WS ( "/*\n\n*/", s );
+    Token t = SchemaScanner ( "/*\n\n*/abc" ) . NextToken ();
+    REQUIRE_EQ ( ( Token :: TokenType ) IDENTIFIER_1_0, t . GetType () );
+    REQUIRE_TOKEN ( "abc", t );
+    REQUIRE_WS ( "/*\n\n*/", t );
 }
 
 TEST_CASE ( WhiteSpace )
 {
-    SchemaScanner s ( " \t\f\v\r\nabc \t\f\v\r\n" );
-    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) IDENTIFIER_1_0, s . Scan () );
-    REQUIRE_TOKEN ( "abc", s ); \
+    Token t = SchemaScanner ( " \t\f\v\r\nabc \t\f\v\r\n" ) . NextToken ();
+    REQUIRE_EQ ( ( Token :: TokenType ) IDENTIFIER_1_0, t . GetType () );
+    REQUIRE_TOKEN ( "abc", t ); \
 }
 
 TEST_CASE ( VERS_1 )
 {
     SchemaScanner s ( "version 1;" );
-    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) KW_version, s . Scan () );
-    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) VERS_1_0, s . Scan () );
-    free ( s . LastToken () . leading_ws );
-    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) ';', s . Scan () );
+    REQUIRE_EQ ( ( Token :: TokenType ) KW_version, s . NextToken () . GetType () );
+    REQUIRE_EQ ( ( Token :: TokenType ) VERS_1_0, s . NextToken () . GetType () );
+    REQUIRE_EQ ( ( Token :: TokenType ) ';', s . NextToken () . GetType () );
 }
 
 TEST_CASE ( VERS_1_comment )
 {
     SchemaScanner s ( "version /*!!*/ 1;" );
-    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) KW_version, s . Scan () );
-    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) VERS_1_0, s . Scan () );
-    free ( s . LastToken () . leading_ws );
-    REQUIRE_EQ ( ( SchemaScanner ::  TokenType ) ';', s . Scan () );
+    REQUIRE_EQ ( ( Token :: TokenType ) KW_version, s . NextToken () . GetType () );
+    REQUIRE_EQ ( ( Token :: TokenType ) VERS_1_0, s . NextToken () . GetType () );
+    REQUIRE_EQ ( ( Token :: TokenType ) ';', s . NextToken () . GetType () );
 }
-#endif
+
 //////////////////////////////////////////// Main
 #include <kapp/args.h>
 #include <kfg/config.h>

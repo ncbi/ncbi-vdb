@@ -45,7 +45,8 @@
                         const char *                p_msg )
     {
         /* send message to the C++ parser for proper display and recovery */
-        p_errors -> ReportError ("Line %i pos %i: %s", p_llocp -> first_line, p_llocp -> first_column, p_msg);
+        Token :: Location loc ( p_sb -> file_name, p_llocp -> first_line, p_llocp -> first_column );
+        p_errors -> ReportError ( loc, "%s", p_msg);
     }
 
     extern "C"
@@ -272,7 +273,6 @@
 %token PT_UNARYPLUS
 %token PT_VERSNAME
 %token PT_ARRAY
-%token PT_AT
 %token PT_PHYSENCREF
 %token PT_TYPEDCOLEXPR
 

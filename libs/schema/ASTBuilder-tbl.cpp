@@ -82,7 +82,7 @@ ASTBuilder :: HandleTableOverload ( const STable *   p_table,
                 {
                     return true;
                 }
-                ReportError ( "schema_update_tbl_ref", rc);
+                ReportRc ( "schema_update_tbl_ref", rc );
             }
         }
     }
@@ -94,7 +94,7 @@ ASTBuilder :: HandleTableOverload ( const STable *   p_table,
 }
 
 void
-ASTBuilder :: AddProduction ( Vector & p_list, const char * p_name, const AST_Expr & p_expr, const AST * p_type )
+ASTBuilder :: AddProduction ( const AST & p_node, Vector & p_list, const char * p_name, const AST_Expr & p_expr, const AST * p_type )
 {
     SProduction * prod = Alloc < SProduction > ();
     if ( prod != 0 )
@@ -112,7 +112,7 @@ ASTBuilder :: AddProduction ( Vector & p_list, const char * p_name, const AST_Ex
             prod -> trigger = true;
         }
 
-        prod -> name = CreateLocalSymbol ( p_name, eProduction, prod );
+        prod -> name = CreateLocalSymbol ( p_node, p_name, eProduction, prod );
         prod -> expr = p_expr . MakeExpression ( *this ) ;
 
         if ( ! VectorAppend ( p_list, & prod -> cid . id, prod ) )
@@ -133,7 +133,7 @@ ASTBuilder :: HandleTypedColumn ( STable & p_table, SColumn & p_col, const AST &
     if ( KSymTableFindShallow ( & GetSymTab (), & name ) != 0 ||
             KSymTableFindIntrinsic ( & GetSymTab (), & name ) )
     {
-        ReportError ( "Name already in use", ident );
+        ReportError ( p_typedCol . GetLocation (), "Name already in use", ident );
         return false;
     }
     else
@@ -170,7 +170,7 @@ ASTBuilder :: HandleTypedColumn ( STable & p_table, SColumn & p_col, const AST &
     {
         if ( p_col . read_only )
         {
-            ReportError ( "Simple column cannot be readonly", ident);
+            ReportError ( p_typedCol . GetLocation (), "Simple column cannot be readonly", ident);
             return false;
         }
 
@@ -188,18 +188,18 @@ ASTBuilder :: HandleTypedColumn ( STable & p_table, SColumn & p_col, const AST &
             /* check for explicit physical type */
             if ( p_col . ptype != 0 )
             {
-                ReportError ( "Implicit physical column previously declared", name );
+                ReportError ( p_typedCol . GetLocation (), "Implicit physical column previously declared", name );
                 return false;
             }
             else
             {
-                ReportError ( "Missing column read or validate expression", name );
+                ReportError ( p_typedCol . GetLocation (), "Missing column read or validate expression", name );
                 return false;
             }
         }
         else if ( ( p_col . td . type_id & 0xC0000000 ) != 0 )
         {
-            ReportError ( "Simple columns cannot have typeset as type", name );
+            ReportError ( p_typedCol . GetLocation (), "Simple columns cannot have typeset as type", name );
             return false;
         }
         else
@@ -210,7 +210,7 @@ ASTBuilder :: HandleTypedColumn ( STable & p_table, SColumn & p_col, const AST &
             }
             else
             {
-                sym = CreateLocalSymbol ( physname, ePhysMember, 0 );
+                sym = CreateLocalSymbol ( p_typedCol, physname, ePhysMember, 0 );
             }
             if ( sym != 0 )
             {
@@ -252,9 +252,8 @@ ASTBuilder :: MakePhysicalEncodingSpec ( const KSymbol & p_sym,
 
         // capture requested version
         assert ( p_sym . type == ePhysical );
-        ret -> version = p_fqn . GetVersion ();
+        ret -> phys = static_cast < const SPhysical * > ( SelectVersion ( p_fqn, p_sym, SPhysicalCmp, & ret -> version ) );
         ret -> version_requested = ret -> version != 0;
-        ret -> phys = static_cast < const SPhysical * > ( SelectVersion ( p_sym, SPhysicalCmp, & ret -> version ) );
 
         /* evaluate type expression */
         if ( ret -> phys != 0 )
@@ -526,8 +525,9 @@ ASTBuilder :: AddPhysicalColumn ( STable & p_table, const AST & p_decl, bool p_s
                                       * colDef -> GetChild ( 2 ),
                                       * c ) )
         {
-            const char * ident = p_decl . GetChild ( 1 ) -> GetTokenValue();
-            KSymbol * sym = Resolve ( ident, false ); // will not report unknown name
+            const AST & physIdent = * p_decl . GetChild ( 1 );
+            const char * ident = physIdent . GetTokenValue();
+            KSymbol * sym = Resolve ( physIdent . GetLocation (), ident, false ); // will not report unknown name
             if ( sym == 0 )
             {
                 String name;
@@ -562,7 +562,7 @@ ASTBuilder :: AddPhysicalColumn ( STable & p_table, const AST & p_decl, bool p_s
             }
             else
             {   // redefinition
-                ReportError ( "Physical column already defined", ident );
+                ReportError ( physIdent . GetLocation (), "Physical column already defined", ident );
             }
         }
 
@@ -598,8 +598,7 @@ ASTBuilder :: HandleTableParents ( STable & p_table, const AST & p_parents )
         const KSymbol * parentDecl = Resolve ( parent, true );
         if ( parentDecl != 0 )
         {
-            uint32_t vers = parent . GetVersion ();
-            const STable * dad = static_cast < const STable * > ( SelectVersion ( * parentDecl, STableCmp, & vers ) );
+            const STable * dad = static_cast < const STable * > ( SelectVersion ( parent, * parentDecl, STableCmp ) );
             if ( dad != 0 )
             {
                 rc_t rc = STableExtend ( & m_symtab, & p_table, dad );
@@ -647,7 +646,8 @@ ASTBuilder :: HandleTableBody ( STable & p_table, const AST & p_body )
                         assert ( false );
                     }
                     assert ( ident -> ChildrenCount () == 1 );
-                    AddProduction ( p_table . prod,
+                    AddProduction ( * ident,
+                                    p_table . prod,
                                     ident -> GetChild ( 0 ) -> GetTokenValue (),
                                     * ToExpr ( expr ),
                                     datatype );
@@ -662,12 +662,11 @@ ASTBuilder :: HandleTableBody ( STable & p_table, const AST & p_body )
             case PT_COLUMNEXPR:
                 if ( p_table . limit == 0 )
                 {
-                    assert ( stmt . ChildrenCount () == 1 );
                     p_table . limit = ToExpr ( stmt . GetChild ( 0 ) ) -> MakeExpression ( * this );
                 }
                 else
                 {
-                    ReportError ( "Limit constraint already specified" );
+                    ReportError ( stmt . GetLocation (), "Limit constraint already specified" );
                 }
                 break;
 

@@ -238,7 +238,10 @@ SchemaScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, SchemaScanBlock* sb )
     lvalp -> value      = ( ( struct yyguts_t * ) sb -> scanner ) -> yytext_r;
     lvalp -> value_len  = ( ( struct yyguts_t * ) sb -> scanner ) -> yyleng_r;
     lvalp -> leading_ws = sb -> whitespace; /* will be freed by the new owner */
-    lvalp -> subtree = NULL;
+    lvalp -> file       = sb -> file_name;
+    lvalp -> line       = llocp -> first_line;
+    lvalp -> column     = llocp -> first_column;
+    lvalp -> subtree    = NULL;
 
     sb -> whitespace = NULL;
 

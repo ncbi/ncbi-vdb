@@ -271,6 +271,24 @@ FIXTURE_TEST_CASE(Typedef_FQN_OneScalar, AST_Fixture)
     VerifyDatatype ( "a:b:t", "U8", 1, 8 );
 }
 
+FIXTURE_TEST_CASE(LocationInErrorMessages, AST_Fixture)
+{
+    if ( m_newParse )
+    {
+        REQUIRE ( m_parser . ParseString ( "\n\ntypedef a:zz t;" ) );
+        m_parseTree = m_parser . MoveParseTree ();
+        REQUIRE_NOT_NULL ( m_parseTree );
+        delete m_builder -> Build ( * m_parseTree );
+        const ErrorReport & errors = m_builder -> GetErrors ();
+        REQUIRE_EQ ( 1u, errors . GetCount () );
+        const ErrorReport :: Error * err = errors . GetError ( 0 );
+        REQUIRE_EQ ( string ( "Namespace not found: 'a'" ), string ( err -> m_message ) );
+        REQUIRE_EQ ( 3u, err -> m_line );
+        REQUIRE_EQ ( 9u, err -> m_column );
+        REQUIRE_EQ ( string ( "<unknown>" ), string ( err -> m_file ) );
+    }
+}
+
 FIXTURE_TEST_CASE(Resolve_UndefinedNamespace, AST_Fixture)
 {
     VerifyErrorMessage ( "typedef a:zz t;", "Namespace not found: 'a'" );
@@ -309,12 +327,11 @@ FIXTURE_TEST_CASE(Typedef_DuplicateDefinition_2, AST_Fixture)
     VerifyErrorMessage ( "typedef U8 t, t;", "Object already declared: 't'" );
 }
 
-#if SHOW_UNIMPLEMENTED
 FIXTURE_TEST_CASE(Typedef_BaseNotAType, AST_Fixture)
 {
-    VerifyErrorMessage ( "table qq; typedef qq t;", "Not a datatype: 'qq'" );
+    VerifyErrorMessage ( "const U8 qq = 0; typedef qq t;", "Not a datatype: 'qq'", 1, 26 );
 }
-#endif
+
 //TODO: typedef U8 t[-1]; - error
 //TODO: typedef U8 t[1.1]; - error
 //TODO: typedef U8 t[non-const expr]; - error
@@ -547,7 +564,7 @@ FIXTURE_TEST_CASE(Const_Vector, ConstFixture)
 
 FIXTURE_TEST_CASE(Const_Vector_NonConstElement, ConstFixture)
 {
-    VerifyErrorMessage ( "function U8 f(); const U8 [2] c = [1,f()];", "Not a constant expression" );
+    VerifyErrorMessage ( "function U8 f(); const U8 [2] c = [1,f()];", "Not a constant expression", 1, 38 );
 }
 
 FIXTURE_TEST_CASE(Const_Bool_True, ConstFixture)
@@ -668,6 +685,8 @@ FIXTURE_TEST_CASE(Include_NotFound, AST_Fixture)
     KDirectoryRelease ( wd );
 }
 
+//TODO: eror message from within an include
+
 //TODO: array of arrays in typedef, typeset, constdef, return type
 //TODO: array of typeset: typeset ts { U8 }; typedef ts t[2];
 
@@ -756,7 +775,7 @@ FIXTURE_TEST_CASE(FuncCall_SchemaParams_Array, AST_Fixture)
 FIXTURE_TEST_CASE(FuncCall_BadSchemaParam, AST_Fixture)
 {
     VerifyErrorMessage  ( "function <type T> T f (); table t0#1 {}; table t#1 { column U8 i = <t0> f (); } ",
-                          "Cannot be used as a schema parameter: 't0'" );
+                          "Cannot be used as a schema parameter: 't0'", 1, 69 );
 }
 
 FIXTURE_TEST_CASE(FuncCall_NotAFunction, AST_Fixture)
@@ -834,8 +853,8 @@ FIXTURE_TEST_CASE(FuncCall_FunctionAsFactoryParam, AST_Fixture)
 {
     if ( m_newParse )
     {
-        VerifyErrorMessage ( "function U8 g(); function U8 f <U16 i> (); table t#1 { column U8 i =  f <g> (); } ",
-                             "Function expressions are not yet implemented" );
+        VerifyErrorMessage ( "function U8 g(); function U8 f <U16 i> (); table t#1 { column U8 i = f <g> (); } ",
+                             "Function expressions are not yet implemented", 1, 73 );
     }
     // the old parser accepts but errors out at run time
 }
@@ -843,7 +862,7 @@ FIXTURE_TEST_CASE(FuncCall_FunctionAsFactoryParam, AST_Fixture)
 FIXTURE_TEST_CASE(FuncCall_BadFactoryParam, AST_Fixture)
 {
     VerifyErrorMessage ( "table g#1{} function U8 f <U16 i> (); table t#1 { column U8 i =  f <g> (); } ",
-                         "Object cannot be used in this context: 'g'" );
+                         "Object cannot be used in this context: 'g'", 1, 69 );
 }
 
 //TODO: no tests on optional/variable factory parameters: the parser allows any number/type and (hopefully)
@@ -934,6 +953,10 @@ FIXTURE_TEST_CASE(FuncCall_Vararg, AST_Fixture)
     const SFuncExpr * expr = reinterpret_cast < const SFuncExpr * > ( c -> read );
     REQUIRE_EQ ( 3u, VectorLength ( & expr -> pfunc ) );
 }
+
+//TODO: invalid float
+//TODO: nested vector constants - error
+//TODO: negation applied to non-scalar - error
 
 #include "wb-test-schema-func.cpp"
 #include "wb-test-schema-table.cpp"

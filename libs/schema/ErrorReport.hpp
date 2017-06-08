@@ -29,6 +29,8 @@
 
 #include <klib/vector.h>
 
+#include "Token.hpp"
+
 namespace ncbi
 {
     namespace SchemaParser
@@ -36,13 +38,30 @@ namespace ncbi
         class ErrorReport
         {
         public:
+            typedef Token :: Location Location;
+
+            struct Error
+            {
+                char *    m_message;
+                char *    m_file;
+                uint32_t  m_line;
+                uint32_t  m_column;
+
+                Error( const char * p_message, const ErrorReport :: Location & p_location );
+                ~Error();
+            };
+
+        public:
             ErrorReport ();
             ~ErrorReport ();
 
-            void ReportError ( const char* p_fmt, ... );
+            void ReportError ( const Location & p_loc, const char* p_fmt, ... );
+            void ReportInternalError ( const char* p_fmt, ... );
 
             uint32_t GetCount() const { return VectorLength ( & m_errors ); }
-            const char* GetMessage ( uint32_t p_idx ) const { return ( const char * ) VectorGet ( & m_errors, p_idx ); }
+
+            const Error * GetError ( uint32_t p_idx ) const;
+            const char *  GetMessage ( uint32_t p_idx ) const; // if not interested in location
 
             void Clear ();
 

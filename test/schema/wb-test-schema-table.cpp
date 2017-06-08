@@ -415,12 +415,12 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_ModAll, AST_Table_Fixture)
 }
 FIXTURE_TEST_CASE(Table_ColumnDecl_ReadOnlyNoBody, AST_Table_Fixture)
 {
-    VerifyErrorMessage ( "table t#1 { readonly column U8 c; }", "Simple column cannot be readonly: 'c'" );
+    VerifyErrorMessage ( "table t#1 { readonly column U8 c; }", "Simple column cannot be readonly: 'c'", 1, 32 );
 }
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_ColumnExists, AST_Table_Fixture)
 {
-    VerifyErrorMessage ( "table t#1 { column U8 c; column U8 c; }", "Name already in use: 'c'" );
+    VerifyErrorMessage ( "table t#1 { column U8 c; column U8 c; }", "Name already in use: 'c'", 1, 36 );
 }
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_NotAType, AST_Table_Fixture)
@@ -534,10 +534,11 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_Physical_FormatAsSchemaArg, AST_Table_Fixture
 FIXTURE_TEST_CASE(Table_ColumnDecl_Physical_TypesetAsSchemaArg, AST_Table_Fixture)
 {
     VerifyErrorMessage (
-        "physical < type T > T ph #1 = { return 1; }"
-        "typeset ts { U8, U32 }; "
-        "table t#1 { column < ts > ph#1  c; }",
-        "Simple columns cannot have typeset as type: 'c'" );
+        "physical < type T > T ph #1 = { return 1; }\n"
+        "typeset ts { U8, U32 }; \n"
+        "table t#1 { column < ts > ph#1 c; }",
+        "Simple columns cannot have typeset as type: 'c'",
+        3, 32 );
 }
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_SymConstAsSchemaArg, AST_Table_Fixture)
@@ -558,10 +559,11 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_NonUintSymConstAsSchemaArg, AST_Table_Fixture
     if ( m_newParse ) // old parser does not check this condition, only mentions it in a comment
     {
         VerifyErrorMessage (
-            "physical < U8 C > U8 ph #1 = { return C; }"
-            "const I8 c1 = 1; "
+            "physical < U8 C > U8 ph #1 = { return C; }\n"
+            "const I8 c1 = 1; \n"
             "table t#1 { column < c1 > ph#1  c; }",
-            "Schema argument constant has to be an unsigned integer scalar: 'c1'" );
+            "Schema argument constant has to be an unsigned integer scalar: 'c1'",
+            3, 22 );
     }
 }
 
@@ -590,7 +592,7 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_Limit, AST_Table_Fixture)
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_LimitTwice, AST_Table_Fixture)
 {
-    VerifyErrorMessage ( "table t#1 { column limit = 1; column limit = 2; }", "Limit constraint already specified" );
+    VerifyErrorMessage ( "table t#1 { column limit = 1; column limit = 2; }", "Limit constraint already specified", 1, 46 );
 }
 
 #if WHEN_IMPLEMENTED_FUNCTION_CALL
@@ -776,7 +778,7 @@ FIXTURE_TEST_CASE(Table_PhysicalColumn_Forward, AST_Table_Fixture)
 
 FIXTURE_TEST_CASE(Table_PhysicalColumn_Redefinition, AST_Table_Fixture)
 {
-    VerifyErrorMessage ( "table t#1 { physical U8 .c; physical U8 .c; }", "Physical column already defined: '.c'" );
+    VerifyErrorMessage ( "table t#1 { physical U8 .c; physical U8 .c; }", "Physical column already defined: '.c'", 1, 41 );
 }
 
 FIXTURE_TEST_CASE(Table_PhysicalColumn_BadType, AST_Table_Fixture)
@@ -817,3 +819,7 @@ FIXTURE_TEST_CASE(Table_Untyped, AST_Table_Fixture)
     REQUIRE_NOT_NULL ( f );
     REQUIRE_EQ ( string ( "f" ), ToCppString ( f -> name -> name ) );
 }
+
+//TODO: Implicit physical column previously declared
+//TODO: Missing column read or validate expression
+

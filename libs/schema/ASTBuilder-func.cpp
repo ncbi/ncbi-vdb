@@ -70,7 +70,7 @@ public:
     SFunction * GetSFunction () { return m_self; }
 
 private:
-    bool HandleFunctionOverload ( const KSymbol *  p_priorDecl );
+    bool HandleFunctionOverload ( const AST_FQN &  p_fqn, const KSymbol *  p_priorDecl );
     void AddFactoryParams ( Vector& p_sig, const AST & p_params );
     void AddFormalParams ( Vector& p_sig, const AST & p_params );
     SIndirectType * MakeSchemaParamType ( const AST_FQN & p_name );
@@ -113,7 +113,7 @@ FunctionDeclaration :: ~FunctionDeclaration ()
 }
 
 bool
-FunctionDeclaration :: HandleFunctionOverload ( const KSymbol *  p_priorDecl )
+FunctionDeclaration :: HandleFunctionOverload ( const AST_FQN & p_fqn, const KSymbol *  p_priorDecl )
 {
     assert ( p_priorDecl != 0 );
 
@@ -128,12 +128,12 @@ FunctionDeclaration :: HandleFunctionOverload ( const KSymbol *  p_priorDecl )
     {
         if ( ! m_self -> script)
         {
-            m_builder . ReportError ( "Overload has to have a body", p_priorDecl -> name );
+            m_builder . ReportError ( p_fqn . GetLocation (), "Overload has to have a body", p_priorDecl -> name );
         }
     }
     else if ( m_self -> script)
     {
-        m_builder . ReportError ( "Overload cannot have a body", p_priorDecl -> name );
+        m_builder . ReportError ( p_fqn . GetLocation (), "Overload cannot have a body", p_priorDecl -> name );
     }
 
     uint32_t idx;
@@ -222,7 +222,7 @@ FunctionDeclaration :: SetName ( const AST_FQN &  p_fqn,
             return false;
         }
 
-        if ( HandleFunctionOverload ( priorDecl ) )
+        if ( HandleFunctionOverload ( p_fqn, priorDecl ) )
         {   // declared previously, this version not ignored
             m_self -> name = priorDecl;
             m_destroy = false;
@@ -256,7 +256,7 @@ FunctionDeclaration :: AddFactoryParams ( Vector& p_sig, const AST & p_params )
         const AST_Formal * p = dynamic_cast < const AST_Formal * > ( p_params . GetChild ( i ) );
         assert ( p != 0 );
 
-        param -> name = m_builder . CreateLocalSymbol ( p -> GetIdent (), eFactParam, param );
+        param -> name = m_builder . CreateLocalSymbol ( * p, p -> GetIdent (), eFactParam, param );
 
         STypeExpr * type = m_builder . MakeTypeExpr ( p -> GetType () );
         if ( type != 0 )
@@ -303,7 +303,7 @@ FunctionDeclaration :: AddFormalParams ( Vector& p_sig, const AST & p_params )
         assert ( p != 0 );
 
         param -> control = p -> HasControl ();
-        param -> name = m_builder . CreateLocalSymbol ( p -> GetIdent (), eFuncParam, param );
+        param -> name = m_builder . CreateLocalSymbol ( * p -> GetChild ( 1 ), p -> GetIdent (), eFuncParam, param );
 
         STypeExpr * type = m_builder . MakeTypeExpr ( p -> GetType () );
         if ( type != 0 )
@@ -466,7 +466,7 @@ FunctionDeclaration :: SetSchemaParams ( const AST & p_sig )
                 {
                     String nameStr;
                     ident . GetIdentifier ( nameStr );
-                    m_builder . ReportError ( "Not a scalar unsigned integer", nameStr );
+                    m_builder . ReportError ( ident . GetLocation (), "Not a scalar unsigned integer", nameStr );
                 }
                 SExpressionWhack ( & type -> dad );
             }
@@ -480,7 +480,7 @@ FunctionDeclaration :: HandleStatement ( const AST & p_stmt )
 {
     switch ( p_stmt . GetTokenType () )
     {
-    case PT_RETURN:
+    case KW_return:
         {
             if ( m_self -> u . script . rtn == 0 )
             {
@@ -489,7 +489,9 @@ FunctionDeclaration :: HandleStatement ( const AST & p_stmt )
             }
             else
             {
-                m_builder . ReportError ( "Multiple return statements in a function", m_self -> name -> name );
+                m_builder . ReportError ( p_stmt . GetLocation (),
+                                          "Multiple return statements in a function",
+                                          m_self -> name -> name );
             }
         }
         break;
@@ -498,16 +500,17 @@ FunctionDeclaration :: HandleStatement ( const AST & p_stmt )
             assert ( p_stmt . ChildrenCount () == 3 );
             const AST * ident = p_stmt . GetChild ( 1 );
             assert ( ident -> ChildrenCount () == 1 );
-            m_builder . AddProduction (  m_self -> u . script . prod,
-                                         ident -> GetChild ( 0 ) -> GetTokenValue (),
-                                         * ToExpr ( p_stmt . GetChild ( 2 ) ),
-                                         p_stmt . GetChild ( 0 ) );
+            m_builder . AddProduction ( * ident,
+                                        m_self -> u . script . prod,
+                                        ident -> GetChild ( 0 ) -> GetTokenValue (),
+                                        * ToExpr ( p_stmt . GetChild ( 2 ) ),
+                                        p_stmt . GetChild ( 0 ) );
         }
         break;
     case PT_EMPTY:
         break;
     default:
-        m_builder . ReportError ("Unsupported statement type", p_stmt . GetTokenType () );
+        m_builder . ReportError ( p_stmt . GetLocation (), "Unsupported statement type", p_stmt . GetTokenType () );
         break;
     }
 }
@@ -522,7 +525,7 @@ FunctionDeclaration :: HandleScript ( const AST & p_body, const String & p_funcN
     }
     if ( m_self -> script && m_self -> u . script . rtn == 0 )
     {
-        m_builder . ReportError ( "Schema function does not contain a return statement", p_funcName );
+        m_builder . ReportError ( p_body . GetLocation (), "Schema function does not contain a return statement", p_funcName );
     }
 }
 
@@ -558,7 +561,9 @@ FunctionDeclaration :: SetPrologue ( const AST & p_prologue )
             {
                 if ( m_self -> fact . vararg )
                 {
-                    m_builder . ReportError ( "Function with factory varargs cannot have a body", m_self -> name -> name );
+                    m_builder . ReportError ( p_prologue . GetLocation (),
+                                              "Function with factory varargs cannot have a body",
+                                              m_self -> name -> name );
                 }
                 else
                 {
@@ -811,7 +816,7 @@ PhysicalDeclaration :: HandleRowLength ( const AST & p_body )
         }
         else
         {
-            m_builder . ReportError ( "Not a row_length function", rl -> name );
+            m_builder . ReportError ( b . GetLocation (), "Not a row_length function", rl -> name );
         }
     }
 }
@@ -819,14 +824,14 @@ PhysicalDeclaration :: HandleRowLength ( const AST & p_body )
 // Function-related methods from ASTBuilder
 
 KSymbol *
-ASTBuilder :: CreateLocalSymbol ( const String & p_name, int p_type, void * p_obj )
+ASTBuilder :: CreateLocalSymbol ( const AST & p_node, const String & p_name, int p_type, void * p_obj )
 {
     KSymbol * ret = 0;
 
     if ( KSymTableFindShallow ( & GetSymTab (), & p_name ) != 0 ||
             KSymTableFindIntrinsic ( & GetSymTab (), & p_name ) )
     {
-        ReportError ( "Name already in use", p_name );
+        ReportError ( p_node . GetLocation (), "Name already in use", p_name );
     }
     else
     {
@@ -841,11 +846,11 @@ ASTBuilder :: CreateLocalSymbol ( const String & p_name, int p_type, void * p_ob
 }
 
 KSymbol *
-ASTBuilder :: CreateLocalSymbol ( const char* p_name, int p_type, void * p_obj )
+ASTBuilder :: CreateLocalSymbol ( const AST & p_node, const char* p_name, int p_type, void * p_obj )
 {
     String name;
     StringInitCString ( & name, p_name );
-    return CreateLocalSymbol ( name, p_type, p_obj );
+    return CreateLocalSymbol ( p_node, name, p_type, p_obj );
 }
 
 KSymbol *

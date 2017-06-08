@@ -50,13 +50,16 @@ namespace ncbi
             const ParseTree* GetChild ( uint32_t idx ) const;
                   ParseTree* GetChild ( uint32_t idx );
 
+            const Token :: Location & GetLocation () const { return * m_location; } // location of the leading real token
+
         protected:
             void MoveChildren ( ParseTree& );
             void SetToken ( const Token & p_token ) {  m_token = p_token; }
 
         private:
-            Token   m_token;
-            Vector  m_children;
+            Token                       m_token;
+            Vector                      m_children;
+            const Token :: Location *   m_location;
         };
 
         class ParseTreeScanner

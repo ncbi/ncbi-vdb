@@ -330,7 +330,7 @@ AST_Expr :: EvaluateConst ( ASTBuilder & p_builder ) const
             // MakeVectorConstant() makes sure all elements are const
             break;
         default:
-            p_builder . ReportError ( "Not a constant expression" );
+            p_builder . ReportError ( GetLocation (), "Not a constant expression" );
             SExpressionWhack ( ret );
             ret = 0;
             break;
@@ -382,10 +382,10 @@ AST_Expr :: MakeSymExpr ( ASTBuilder & p_builder, const KSymbol* p_sym ) const
             return const_cast < SExpression * > ( cnst -> expr );
         }
         case eFunction :
-            p_builder . ReportError ( "Function expressions are not yet implemented" );
+            p_builder . ReportError ( GetLocation (), "Function expressions are not yet implemented" );
             break;
         default:
-            p_builder . ReportError ( "Object cannot be used in this context", p_sym -> name );
+            p_builder . ReportError ( GetLocation (), "Object cannot be used in this context", p_sym -> name );
             break;
         }
     }
@@ -483,7 +483,7 @@ AST_Expr :: MakeFloat ( ASTBuilder & p_builder ) const
         double f64 = strtod ( val, & end );
         if ( ( end - val ) != ( int ) string_size ( val ) )
         {
-            p_builder . ReportError ( "Invalid floating point constant" );
+            p_builder . ReportError ( GetLocation (), "Invalid floating point constant" );
             return 0;
         }
 
@@ -634,7 +634,7 @@ AST_Expr :: MakeVectorConstant ( ASTBuilder & p_builder ) const
             }
             if ( vx -> var == eVectorExpr )
             {
-                p_builder . ReportError ( "Nested vector constants are not allowed" );
+                p_builder . ReportError ( GetLocation (), "Nested vector constants are not allowed" );
                 good = false;
                 break;
             }
@@ -752,7 +752,7 @@ AST_Expr :: MakeNegate ( ASTBuilder & p_builder ) const
                 }
                 else
                 {
-                    p_builder . ReportError ( "Negation applied to a non-scalar" );
+                    p_builder . ReportError ( GetLocation (), "Negation applied to a non-scalar" );
                 }
             }
             break;
@@ -773,7 +773,7 @@ AST_Expr :: MakeNegate ( ASTBuilder & p_builder ) const
                             const SDatatype *dt = VSchemaFindTypeid ( p_builder . GetSchema(), tx -> fd . td . type_id );
                             if ( dt != NULL && dt -> domain == vtdUint )
                             {
-                                p_builder . ReportError ( "Negation applied to an unsigned integer" );
+                                p_builder . ReportError ( GetLocation (), "Negation applied to an unsigned integer" );
                             }
                         }
                     }
@@ -791,7 +791,7 @@ AST_Expr :: MakeNegate ( ASTBuilder & p_builder ) const
             break;
 
         default:
-            p_builder . ReportError ( "Negation applied to a non-const operand" );
+            p_builder . ReportError ( GetLocation (), "Negation applied to a non-const operand" );
             break;
         }
         SExpressionWhack ( xp );
@@ -887,7 +887,7 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
 
     case PHYSICAL_IDENTIFIER_1_0 :
         {
-            const KSymbol * sym = p_builder . Resolve ( GetTokenValue (), false );
+            const KSymbol * sym = p_builder . Resolve ( GetLocation (), GetTokenValue (), false );
             if ( sym != 0 )
             {
                 return MakeSymExpr ( p_builder, sym );
@@ -908,8 +908,8 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
         }
         break;
 
-    case PT_AT:
-        return MakeSymExpr ( p_builder, p_builder . Resolve ( "@" ) );
+    case '@':
+        return MakeSymExpr ( p_builder, p_builder . Resolve ( GetLocation (), "@" ) );
 
     case PT_FUNCEXPR:
         {   // schema_parms_opt fqn_opt_vers factory_parms_opt func_parms_opt
@@ -945,11 +945,10 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
                             fx -> dad . var = eScriptExpr;
                             // fall through
                         case eFunction:
-                            fx -> version = fqn . GetVersion ();
-                            fx -> version_requested = fx -> version != 0;
-                            fx -> func = static_cast < const SFunction * > ( p_builder . SelectVersion ( * sym, SFunctionCmp, & fx -> version ) );
+                            fx -> func = static_cast < const SFunction * > ( p_builder . SelectVersion ( fqn, * sym, SFunctionCmp, & fx -> version ) );
                             if ( fx -> func != 0 )
                             {
+                                fx -> version_requested = fx -> version != 0;
                                 return & fx -> dad;
                             }
                             break;
@@ -972,7 +971,7 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
         return MakeCast ( p_builder );
 
     default:
-        p_builder . ReportError ( "Not yet implemented" );
+        p_builder . ReportError ( GetLocation (), "Not yet implemented" );
         break;
     }
     return 0;

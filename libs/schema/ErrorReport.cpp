@@ -26,6 +26,8 @@
 
 #include "ErrorReport.hpp"
 
+#include <stdexcept>
+
 #include <klib/symbol.h>
 #include <klib/printf.h>
 
@@ -34,6 +36,20 @@
 
 using namespace ncbi::SchemaParser;
 using namespace std;
+
+ErrorReport :: Error :: Error( const char * p_message, const ErrorReport :: Location & p_location )
+:   m_message ( string_dup_measure ( p_message, 0 ) )
+{
+    m_file = string_dup_measure ( p_location . m_file, 0 );
+    m_line = p_location . m_line;
+    m_column = p_location . m_column;
+}
+
+ErrorReport :: Error :: ~Error()
+{
+    free ( m_message );
+    free ( m_file );
+}
 
 ErrorReport :: ErrorReport ()
 {
@@ -47,19 +63,20 @@ ErrorReport :: ~ErrorReport ()
 
 static
 void CC
-WhackMessage ( void *item, void *data )
+WhackError ( void *item, void *data )
 {
-    free ( item );
+    ErrorReport :: Error * it = reinterpret_cast < ErrorReport :: Error * > ( item );
+    delete ( it );
 }
 
 void
 ErrorReport :: Clear ()
 {
-    VectorWhack ( & m_errors, WhackMessage, 0 );
+    VectorWhack ( & m_errors, WhackError, 0 );
 }
 
 void
-ErrorReport :: ReportError ( const char* p_fmt, ... )
+ErrorReport :: ReportError ( const Location & p_location, const char* p_fmt, ... )
 {
     const unsigned int BufSize = 1024;
     char buf [ BufSize ];
@@ -69,6 +86,42 @@ ErrorReport :: ReportError ( const char* p_fmt, ... )
     string_vprintf ( buf, BufSize, 0, p_fmt, args );
     va_end ( args );
 
-    :: VectorAppend ( & m_errors, 0, string_dup_measure ( buf, 0 ) );
+    rc_t rc = :: VectorAppend ( & m_errors, 0, new Error ( buf, p_location ) );
+    if ( rc != 0 )
+    {
+        throw logic_error ( "ReportError() : VectorAppend() failed" );
+    }
+}
+
+void
+ErrorReport :: ReportInternalError ( const char* p_fmt, ... )
+{
+    const unsigned int BufSize = 1024;
+    char buf [ BufSize ];
+
+    va_list args;
+    va_start ( args, p_fmt );
+    string_vprintf ( buf, BufSize, 0, p_fmt, args );
+    va_end ( args );
+
+    Location loc ( "", 0, 0 );
+    rc_t rc = :: VectorAppend ( & m_errors, 0, new Error ( buf, loc ) );
+    if ( rc != 0 )
+    {
+        throw logic_error ( "ReportError() : VectorAppend() failed" );
+    }
+}
+
+const ErrorReport :: Error *
+ErrorReport :: GetError ( uint32_t p_idx ) const
+{
+    return reinterpret_cast < const Error * > ( VectorGet ( & m_errors, p_idx ) );
+}
+
+const char *
+ErrorReport :: GetMessage ( uint32_t p_idx ) const
+{
+    const Error * err = reinterpret_cast < const Error * > ( VectorGet ( & m_errors, p_idx ) );
+    return err == 0 ? 0 : err -> m_message;
 }
 

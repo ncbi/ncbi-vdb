@@ -35,15 +35,14 @@
     #include "schema-ast-tokens.h"
 
     #define AST_lex NextToken
-    static int NextToken ( YYSTYPE* p_token, ParseTreeScanner& p_sb )
+    static int NextToken ( YYSTYPE * p_token, ParseTreeScanner & p_sb )
     {
         return p_sb . NextToken ( p_token -> tok );
     }
 
-    void AST_error ( void* parser, ASTBuilder& p_builder, ParseTreeScanner&, const char* msg )
+    void AST_error ( void * p_parser, ASTBuilder & p_builder, ParseTreeScanner & p_sb, const char * p_msg )
     {
-        /*TODO: retrieve name/location data from the scanner, add to the report */
-        p_builder . ReportError ( msg );
+        p_builder . ReportInternalError ( p_msg );
     }
 
 %}
@@ -204,7 +203,6 @@
 %token PT_UNARYPLUS
 %token PT_VERSNAME
 %token PT_ARRAY
-%token PT_AT
 %token PT_PHYSENCREF
 %token PT_TYPEDCOLEXPR
 
@@ -238,7 +236,7 @@
 
 %type <tok> END_SOURCE version_1 PT_VERSION_1_0 PT_VERSION_2 PT_SCHEMA_1_0 FLOAT version_2
 %type <tok> PT_TYPEDEF PT_IDENT IDENTIFIER_1_0 DECIMAL PT_ASTLIST PT_ARRAY PT_TYPESET
-%type <tok> PT_FORMAT PT_CONST PT_UINT PT_ALIAS PT_EMPTY PT_ELLIPSIS PT_RETURN
+%type <tok> PT_FORMAT PT_CONST PT_UINT PT_ALIAS PT_EMPTY PT_ELLIPSIS KW_return
 %type <tok> VERSION PT_UNTYPED PT_ROWLENGTH PT_FUNCDECL PT_FUNCPARAMS PT_FORMALPARAM
 %type <tok> PT_VALIDATE PT_PHYSICAL PT_PHYSSTMT PT_TABLE PT_COLUMN PT_COLUMNEXPR
 %type <tok> KW_default KW_extern KW_readonly PHYSICAL_IDENTIFIER_1_0 HEX OCTAL PT_COLSTMT
@@ -248,7 +246,7 @@
 %type <tok> KW_template KW_database PT_DBMEMBER PT_TBLMEMBER PT_INCLUDE KW_include STRING
 %type <tok> PT_FUNCEXPR PT_COLSCHEMAPARMS KW_static PT_PHYSMBR PT_PHYSCOLDEF PT_COLSCHEMAPARAM
 %type <tok> KW_physical PT_COLUNTYPED EXP_FLOAT ESCAPED_STRING PT_CONSTVECT KW_true KW_false
-%type <tok> PT_NEGATE PT_CASTEXPR
+%type <tok> PT_NEGATE PT_CASTEXPR '@'
 
 %%
 
@@ -434,7 +432,7 @@ script_stmts
     ;
 
 script_stmt
-    : PT_RETURN '(' KW_return cond_expr ';' ')'     { $$ = new AST ( $1, $4 ); }
+    : PT_RETURN '(' KW_return cond_expr ';' ')'     { $$ = new AST ( $3, $4 ); }
     | production                                    { $$ = $1; }
     ;
 
@@ -683,7 +681,7 @@ cond_chain
 expr
     : fqn                           { $$ = new AST_Expr ( $1 ); }
     | PHYSICAL_IDENTIFIER_1_0       { $$ = new AST_Expr ( $1 ); }
-    | '@'                           { $$ = new AST_Expr ( PT_AT ); }
+    | '@'                           { $$ = new AST_Expr ( $1 ); }
     | func_expr                     { $$ = $1; }
     | uint_expr                     { $$ = $1; }
     | float_expr                    { $$ = $1; }

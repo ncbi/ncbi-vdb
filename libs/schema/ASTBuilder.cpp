@@ -76,9 +76,9 @@ ASTBuilder :: ~ASTBuilder ()
 }
 
 void
-ASTBuilder :: ReportError ( const char * p_msg )
+ASTBuilder :: ReportError ( const ErrorReport :: Location & p_loc, const char * p_msg )
 {
-    m_errors . ReportError ( "%s", p_msg );
+    m_errors . ReportError ( p_loc, "%s", p_msg );
 }
 
 void
@@ -86,31 +86,38 @@ ASTBuilder :: ReportError ( const char * p_msg, const AST_FQN& p_fqn )
 {
     char buf [ 1024 ];
     p_fqn . GetFullName ( buf, sizeof buf );
-    m_errors . ReportError ( "%s: '%s'", p_msg, buf ); //TODO: add location of the original declaration
+    m_errors . ReportError ( p_fqn . GetChild ( 0 ) -> GetToken () . GetLocation (), "%s: '%s'", p_msg, buf );
+    //TODO: add location of the original declaration
 }
 
 void
-ASTBuilder :: ReportError ( const char * p_msg, const String & p_str )
+ASTBuilder :: ReportError ( const ErrorReport :: Location & p_loc, const char * p_msg, const String & p_str )
 {
-    m_errors . ReportError ( "%s: '%S'", p_msg, & p_str );
+    m_errors . ReportError ( p_loc, "%s: '%S'", p_msg, & p_str );
 }
 
 void
-ASTBuilder :: ReportError ( const char * p_msg, const char * p_str )
+ASTBuilder :: ReportError ( const ErrorReport :: Location & p_loc, const char * p_msg, const char * p_str )
 {
-    m_errors . ReportError ( "%s: '%s'", p_msg, p_str );
+    m_errors . ReportError ( p_loc, "%s: '%s'", p_msg, p_str );
 }
 
 void
-ASTBuilder :: ReportError ( const char * p_msg, int64_t p_val )
+ASTBuilder :: ReportError ( const ErrorReport :: Location & p_loc, const char * p_msg, int64_t p_val )
 {
-    m_errors . ReportError ( "%s: %l", p_msg, p_val );
+    m_errors . ReportError ( p_loc, "%s: %l", p_msg, p_val );
 }
 
 void
 ASTBuilder :: ReportRc ( const char* p_msg, rc_t p_rc )
 {
-    m_errors . ReportError ( "%s: rc=%R", p_msg, p_rc );
+    m_errors . ReportInternalError ( "%s: rc=%R", p_msg, p_rc );
+}
+
+void
+ASTBuilder :: ReportInternalError ( const char * p_msg )
+{
+    m_errors . ReportInternalError ( p_msg );
 }
 
 AST *
@@ -192,20 +199,20 @@ ASTBuilder :: CreateFqnSymbol ( const AST_FQN& p_fqn, uint32_t p_type, const voi
 }
 
 KSymbol*
-ASTBuilder :: Resolve ( const char* p_ident, bool p_reportUnknown )
+ASTBuilder :: Resolve ( const Token :: Location & p_loc, const char* p_ident, bool p_reportUnknown )
 {
     String name;
     StringInitCString ( & name, p_ident );
     KSymbol* ret = KSymTableFind ( & m_symtab, & name );
     if ( ret == 0 && p_reportUnknown )
     {
-        ReportError ( "Undeclared identifier", p_ident ); //TODO: add location
+        ReportError ( p_loc, "Undeclared identifier", p_ident );
     }
     return ret;
 }
 
 const KSymbol*
-ASTBuilder :: Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown )
+ASTBuilder :: Resolve ( const AST_FQN & p_fqn, bool p_reportUnknown )
 {
     uint32_t count = p_fqn . ChildrenCount ();
     assert ( count > 0 );
@@ -227,7 +234,7 @@ ASTBuilder :: Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown )
         {
             if ( p_reportUnknown )
             {
-                ReportError ( "Namespace not found", name );
+                ReportError ( p_fqn . GetChild ( i ) -> GetToken () . GetLocation (), "Namespace not found", name );
             }
             count = i;
             ns_resolved = false;
@@ -251,7 +258,8 @@ ASTBuilder :: Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown )
     const KSymbol * ret = 0;
     if ( ns_resolved )
     {
-        ret = Resolve ( p_fqn . GetChild ( count - 1 ) -> GetTokenValue (), p_reportUnknown );
+        const AST & ns = * p_fqn . GetChild ( count - 1 );
+        ret = Resolve ( ns . GetLocation (), ns . GetTokenValue (), p_reportUnknown );
     }
 
     if ( count > 0 )
@@ -295,7 +303,7 @@ ASTBuilder :: EvalConstExpr ( const AST_Expr & p_expr )
             }
             break;
         default:
-            m_errors . ReportError ( "Unsupported in const expressions", expr -> var );
+            ReportError ( p_expr . GetLocation (), "Unsupported in const expressions", expr -> var );
             break;
         }
         SExpressionWhack ( expr );
@@ -304,22 +312,31 @@ ASTBuilder :: EvalConstExpr ( const AST_Expr & p_expr )
 }
 
 const void *
-ASTBuilder :: SelectVersion ( const KSymbol & p_ovl, int64_t ( CC * p_cmp ) ( const void *item, const void *n ), uint32_t * p_version )
+ASTBuilder :: SelectVersion ( const AST_FQN & p_fqn,
+                              const KSymbol & p_ovl,
+                              int64_t ( CC * p_cmp ) ( const void *item, const void *n ),
+                              uint32_t * p_version )
 {
     const SNameOverload *name = static_cast < const SNameOverload * > ( p_ovl . u . obj );
-    assert ( p_version != 0 );
     const void * ret = 0;
-    if ( * p_version != 0 )
+    uint32_t version = p_fqn . GetVersion ();
+    if ( version != 0 )
     {
-        ret = VectorFind ( & name -> items, p_version, NULL, p_cmp );
+        ret = VectorFind ( & name -> items, & version, NULL, p_cmp );
         if ( ret == 0 )
         {
-            m_errors . ReportError ( "Requested version does not exist: '%S#%V'", & p_ovl . name, * p_version );
+            m_errors . ReportError ( p_fqn . GetLocation (),
+                                     "Requested version does not exist: '%S#%V'",
+                                     & p_ovl . name, version );
         }
     }
     else
     {
         ret = VectorLast ( & name -> items );
+    }
+    if ( p_version != 0 )
+    {
+        * p_version = version;
     }
     return ret;
 }
@@ -376,7 +393,7 @@ TypeExprInit ( STypeExpr & p_expr )
 
 static
 void
-TypeExprFillTypeId ( ASTBuilder & p_builder, STypeExpr & p_expr, const KSymbol & p_sym )
+TypeExprFillTypeId ( ASTBuilder & p_builder, const AST & p_node, STypeExpr & p_expr, const KSymbol & p_sym )
 {
     switch ( p_sym . type )
     {
@@ -398,7 +415,7 @@ TypeExprFillTypeId ( ASTBuilder & p_builder, STypeExpr & p_expr, const KSymbol &
         p_expr . resolved             = false;
         break;
     default:
-        p_builder . ReportError ( "Not a datatype", p_sym . name );
+        p_builder . ReportError ( p_node . GetLocation (), "Not a datatype", p_sym . name );
         break;
     }
 }
@@ -456,7 +473,7 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
                             break;
                         }
                     default:
-                        m_errors. ReportError ( "Not allowed in array subscripts", expr -> var );
+                        ReportError ( dimension . GetLocation (), "Not allowed in array subscripts", expr -> var );
                         SExpressionWhack ( expr );
                         break;
                     }
@@ -493,7 +510,7 @@ ASTBuilder :: MakeTypeExpr ( const AST & p_type )
         const KSymbol * type = Resolve ( * fqn ); // will report unknown name
         if ( type != 0 )
         {
-            TypeExprFillTypeId ( * this, * ret, * type );
+            TypeExprFillTypeId ( * this, * fqn, * ret, * type );
         }
     }
 
@@ -512,7 +529,7 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
         case PT_IDENT :
             {
                 assert ( parm . ChildrenCount () == 1 );
-                const KSymbol * sym = Resolve ( parm. GetChild ( 0 ) -> GetTokenValue () ); // will report unknown name
+                const KSymbol * sym = Resolve ( parm . GetLocation (), parm. GetChild ( 0 ) -> GetTokenValue () ); // will report unknown name
                 if ( sym == 0 )
                 {
                     return false;
@@ -532,7 +549,7 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
                             return false;
                         }
                         TypeExprInit ( * ret );
-                        TypeExprFillTypeId ( * this, * ret, * sym );
+                        TypeExprFillTypeId ( * this, parm, * ret, * sym );
                         if ( ! VectorAppend ( p_v, 0, ret ) )
                         {
                             SExpressionWhack ( & ret -> dad );
@@ -558,7 +575,8 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
                         }
                         else
                         {
-                            ReportError ( "Schema argument constant has to be an unsigned integer scalar",
+                            ReportError ( parm . GetLocation (),
+                                          "Schema argument constant has to be an unsigned integer scalar",
                                           sym -> name );
                             return false;
                         }
@@ -574,7 +592,7 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
                     break;
 
                 default:
-                    ReportError ( "Cannot be used as a schema parameter", sym -> name );
+                    ReportError ( parm. GetChild ( 0 ) -> GetLocation (), "Cannot be used as a schema parameter", sym -> name );
                     return false;
                 }
             }
@@ -621,7 +639,7 @@ ASTBuilder :: FillFactoryParms ( const AST & p_parms, Vector & p_v )
                 }
                 break;
             default:
-                ReportError ( "Cannot be used as a factory parameter" ); // TODO: identify the culprit
+                ReportError ( p_parms . GetChild ( i ) -> GetLocation (), "Cannot be used as a factory parameter" );
                 break;
             }
         }
@@ -645,13 +663,13 @@ ASTBuilder :: FillArguments ( const AST & p_parms, Vector & p_v )
         SExpression * expr = 0;
         switch ( parm -> GetTokenType () )
         {
-        case PT_AT:
+        case '@':
         case PT_IDENT:
         case PHYSICAL_IDENTIFIER_1_0:
             expr = parm -> MakeExpression ( * this );
             break;
         default:
-            ReportError ( "Cannot be used as a function call parameter" ); // TODO: identify the culprit
+            ReportError ( p_parms . GetChild ( i ) -> GetLocation (), "Cannot be used as a function call parameter" );
             break;
         }
         if ( expr == 0 )
@@ -737,8 +755,7 @@ ASTBuilder :: TypeDef ( const Token * p_token, AST_FQN* p_baseType, AST* p_newTy
     {
         if ( baseType -> type != eDatatype )
         {
-            ReportError ( "Not a datatype", p_baseType -> GetChild ( 0 ) -> GetTokenValue () ); //TODO: add location
-            //TODO: recover? pretend it is "any"?
+            ReportError ( "Not a datatype", * p_baseType );
         }
         else
         {
@@ -1053,7 +1070,7 @@ ASTBuilder :: AddIncludePath ( const char * path )
 }
 
 const KFile *
-ASTBuilder :: OpenIncludeFile ( const char * p_fmt, ... )
+ASTBuilder :: OpenIncludeFile ( const Token :: Location & p_loc, const char * p_fmt, ... )
 {
     const KFile * ret = 0;
     va_list args;
@@ -1124,7 +1141,7 @@ ASTBuilder :: OpenIncludeFile ( const char * p_fmt, ... )
     }
     else
     {
-        ReportError ( "Could not open include file", path );
+        ReportError ( p_loc, "Could not open include file", path );
     }
 
     va_end ( args );
@@ -1139,7 +1156,7 @@ ASTBuilder :: Include ( const Token * p_token, const Token * p_filename )
     ret -> AddNode ( p_filename );
 
     const char * quoted = p_filename -> GetValue ();
-    const KFile * f = OpenIncludeFile ( "%.*s", string_size ( quoted ) - 2, quoted + 1 );
+    const KFile * f = OpenIncludeFile ( p_token -> GetLocation (), "%.*s", string_size ( quoted ) - 2, quoted + 1 );
     if ( f != 0 )
     {
         SchemaParser parser;

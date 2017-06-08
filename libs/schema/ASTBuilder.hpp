@@ -63,20 +63,22 @@ namespace ncbi
             AST* Build ( const ParseTree& p_root, bool p_debugParse = false );
 
             const KSymbol* Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown = true );
-            KSymbol* Resolve ( const char* p_ident, bool p_reportUnknown = true );
+            KSymbol* Resolve ( const Token :: Location & p_loc, const char* p_ident, bool p_reportUnknown = true );
 
             uint32_t IntrinsicTypeId ( const char * p_type ) const;
 
-            void ReportError ( const char * p_msg );
-            void ReportError ( const char * p_msg, const AST_FQN & p_fqn );
-            void ReportError ( const char * p_msg, const String & p_str );
-            void ReportError ( const char * p_msg, const char * p_str );
-            void ReportError ( const char * p_msg, int64_t p_val );
+            void ReportError ( const Token :: Location & p_loc, const char * p_msg );
+            void ReportError ( const Token :: Location & p_loc, const char * p_msg, const String & p_str );
+            void ReportError ( const Token :: Location & p_loc, const char * p_msg, const char * p_str );
+            void ReportError ( const Token :: Location & p_loc, const char * p_msg, int64_t p_val );
+            void ReportError ( const char * p_msg, const AST_FQN & p_fqn ); // use location of p_fqn
+            void ReportInternalError ( const char * p_msg ); // no location
             void ReportRc ( const char * p_msg, rc_t );
 
             // error list is cleared by a call to Build
             uint32_t GetErrorCount() const { return m_errors . GetCount (); }
             const char* GetErrorMessage ( uint32_t p_idx ) const { return m_errors . GetMessage ( p_idx ); }
+            const ErrorReport & GetErrors () const { return m_errors; }
 
             // uses malloc(); reports allocation failure
             template < typename T > T* Alloc ( size_t p_size = sizeof ( T ) );
@@ -111,8 +113,10 @@ namespace ncbi
 
         public: // schema object construction helpers
             const KSymbol* CreateFqnSymbol ( const AST_FQN& fqn, uint32_t type, const void * obj );
-            KSymbol * CreateLocalSymbol ( const char* p_name, int p_type, void * p_obj );
-            KSymbol * CreateLocalSymbol ( const String & p_name, int p_type, void * p_obj );
+
+            KSymbol * CreateLocalSymbol ( const AST & p_node, const char* p_name, int p_type, void * p_obj );
+            KSymbol * CreateLocalSymbol ( const AST & p_node, const String & p_name, int p_type, void * p_obj );
+
             KSymbol * CreateConstSymbol ( const char* p_name, int p_type, void * p_obj );
 
             struct STypeExpr * MakeTypeExpr ( const AST & p_type );
@@ -147,7 +151,11 @@ namespace ncbi
                                     const KSymbol *              p_priorDecl,
                                     uint32_t *                   p_id );
 
-            void AddProduction ( Vector & p_list, const char * p_name, const AST_Expr & p_expr, const AST * p_type );
+            void AddProduction ( const AST &        p_node,
+                                 Vector &           p_list,
+                                 const char *       p_name,
+                                 const AST_Expr &   p_expr,
+                                 const AST *        p_type );
 
             bool FillSchemaParms ( const AST & p_parms, Vector & p_v );
             bool FillFactoryParms ( const AST & p_parms, Vector & p_v );
@@ -158,7 +166,10 @@ namespace ncbi
                                                             const AST * p_factoryArgs,
                                                             VTypedecl & p_type );
 
-            const void * SelectVersion ( const struct KSymbol & p_ovl, int64_t ( CC * p_cmp ) ( const void *item, const void *n ), uint32_t * p_version );
+            const void * SelectVersion ( const AST_FQN & fqn,
+                                         const struct KSymbol & p_ovl,
+                                         int64_t ( CC * p_cmp ) ( const void *item, const void *n ),
+                                         uint32_t * p_version = 0 ); // OUT, NULL OK
 
         private:
             bool Init();
@@ -191,7 +202,7 @@ namespace ncbi
             void HandleDbMemberDb ( SDatabase & p_db, const AST & p_member );
             void HandleDbMemberTable ( SDatabase & p_db, const AST & p_member );
 
-            const struct KFile * OpenIncludeFile ( const char * p_fmt, ... );
+            const struct KFile * OpenIncludeFile ( const Token :: Location & p_loc, const char * p_fmt, ... );
 
         private:
             VSchema*    m_schema;

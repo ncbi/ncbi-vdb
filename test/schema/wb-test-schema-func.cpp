@@ -298,7 +298,7 @@ FIXTURE_TEST_CASE(Func_BadParamType, AST_Function_Fixture)
 }
 FIXTURE_TEST_CASE(Func_BadParamName, AST_Function_Fixture)
 {
-    VerifyErrorMessage ( "function U8 f(U8 U16);", "Name already in use: 'U16'" );
+    VerifyErrorMessage ( "function U8 f(U8 U16);", "Name already in use: 'U16'", 1, 18 );
 }
 
 FIXTURE_TEST_CASE(Func_OneParamScalar, AST_Function_Fixture)
@@ -391,7 +391,9 @@ FIXTURE_TEST_CASE(Func_MandatoryOprionalAndVarargs, AST_Function_Fixture)
 }
 FIXTURE_TEST_CASE(Func_FactoryVarargsWithBody, AST_Function_Fixture)
 {
-    VerifyErrorMessage ( "function U8 f<U8 p, ...>() { return 1; }", "Function with factory varargs cannot have a body: 'f'" );
+    VerifyErrorMessage ( "function U8 f<U8 p, ...>() { return 1; }",
+                         "Function with factory varargs cannot have a body: 'f'",
+                         1, 30 );
 }
 
 FIXTURE_TEST_CASE(Func_Body_NonScript, AST_Function_Fixture)
@@ -400,7 +402,7 @@ FIXTURE_TEST_CASE(Func_Body_NonScript, AST_Function_Fixture)
 }
 FIXTURE_TEST_CASE(Func_Overload_NonScript, AST_Function_Fixture)
 {
-    VerifyErrorMessage  ( "function U8 f#1() { return 1; } function U8 f#2();", "Overload has to have a body: 'f'" );
+    VerifyErrorMessage  ( "function U8 f#1() { return 1; } function U8 f#2();", "Overload has to have a body: 'f'", 1, 45 );
 }
 
 // schema signature
@@ -439,7 +441,7 @@ FIXTURE_TEST_CASE(Func_SchemaParam_NotType, AST_Function_Fixture)
 }
 FIXTURE_TEST_CASE(Func_SchemaParam_NotInt, AST_Function_Fixture)
 {
-    VerifyErrorMessage ( "function < ascii X > U8 f ();", "Not a scalar unsigned integer: 'X'" );
+    VerifyErrorMessage ( "function < ascii X > U8 f ();", "Not a scalar unsigned integer: 'X'", 1, 18 );
 }
 FIXTURE_TEST_CASE(Func_SchemaParam_IntArray, AST_Function_Fixture)
 {
@@ -587,7 +589,7 @@ FIXTURE_TEST_CASE(Func_ScriptWithouSchema, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_ExternRedeclaredAsScript, AST_Function_Fixture)
 {
-    VerifyErrorMessage  ( "function U8 f(); schema function U8 f() { return 1; };", "Overload cannot have a body: 'f'" );
+    VerifyErrorMessage  ( "function U8 f(); schema function U8 f() { return 1; };", "Overload cannot have a body: 'f'", 1, 37 );
 }
 
 FIXTURE_TEST_CASE(Func_Script_FullVersion, AST_Function_Fixture)
@@ -598,7 +600,7 @@ FIXTURE_TEST_CASE(Func_Script_FullVersion, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_Script_MultipleReturns, AST_Function_Fixture)
 {
-    VerifyErrorMessage ( "schema function U8 f() { return 1; return 2; };", "Multiple return statements in a function: 'f'" );
+    VerifyErrorMessage ( "schema function U8 f() { return 1; return 2; };", "Multiple return statements in a function: 'f'", 1, 36 );
 }
 
 FIXTURE_TEST_CASE(Func_Script_SimpleProduction, AST_Function_Fixture)
@@ -624,7 +626,9 @@ FIXTURE_TEST_CASE(Func_Script_SimpleProduction, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_Script_NoReturn, AST_Function_Fixture)
 {
-    VerifyErrorMessage  ( "schema function U8 f() { U8 v = 1; };", "Schema function does not contain a return statement: 'f'" );
+    VerifyErrorMessage  ( "schema function U8 f() { U8 v = 1; };",
+                          "Schema function does not contain a return statement: 'f'",
+                          1, 26 );
 }
 
 FIXTURE_TEST_CASE(Func_Script_FormattedType, AST_Function_Fixture)
@@ -657,11 +661,11 @@ FIXTURE_TEST_CASE(Negate_IndirectSymExpr, AST_Function_Fixture)
 }
 FIXTURE_TEST_CASE(Negate_Unsigned, AST_Function_Fixture)
 {
-    VerifyErrorMessage  ( "function U8 f <U8 i> () { return -i; }", "Negation applied to an unsigned integer" );
+    VerifyErrorMessage  ( "function U8 f <U8 i> () { return -i; }", "Negation applied to an unsigned integer", 1, 35 );
 }
 FIXTURE_TEST_CASE(Negate_Double, AST_Function_Fixture)
 {
-    VerifyErrorMessage  ( "table t#1 { column U8 a; column U8 b = - - a; } ", "Negation applied to a non-const operand" );
+    VerifyErrorMessage  ( "table t#1 { column U8 a; column U8 b = - - a; } ", "Negation applied to a non-const operand", 1, 44 );
 }
 
 FIXTURE_TEST_CASE(UnaryPlus, AST_Function_Fixture)
@@ -867,7 +871,9 @@ FIXTURE_TEST_CASE(Func_Physical_DecodeRowLen, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_Physical_NotARowlen, AST_Function_Fixture)
 {
-    VerifyErrorMessage  ( "function U8 rl(); physical __no_header U8 f#1 { decode { return 1; } __row_length = rl() }", "Not a row_length function: 'rl'" );
+    VerifyErrorMessage  ( "function U8 rl(); physical __no_header U8 f#1 { decode { return 1; } __row_length = rl() }",
+                          "Not a row_length function: 'rl'",
+                          1, 85 );
 }
 
 FIXTURE_TEST_CASE(Func_Physical_EncodeNoDecode, AST_Function_Fixture)

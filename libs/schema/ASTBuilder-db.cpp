@@ -111,13 +111,13 @@ ASTBuilder :: HandleDbMemberDb ( SDatabase & p_db, const AST & p_member )
                 if ( dbName != p_db . name )
                 {
                     String memName;
-                    assert ( p_member . GetChild ( 2 ) -> GetChild ( 0 ) != 0 );
-                    StringInitCString ( & memName, p_member . GetChild ( 2 ) -> GetChild ( 0 ) -> GetTokenValue () );
+                    const AST & ident = * p_member . GetChild ( 2 );
+                    assert ( ident . GetChild ( 0 ) != 0 );
+                    StringInitCString ( & memName, ident . GetChild ( 0 ) -> GetTokenValue () );
                     rc_t rc = KSymTableCreateConstSymbol ( & GetSymTab (), & m -> name, & memName, eDBMember, m );
                     if ( rc == 0 )
                     {
-                        uint32_t vers = type . GetVersion ();
-                        m -> db = static_cast < const SDatabase * > ( SelectVersion ( * dbName, SDatabaseCmp, & vers ) );
+                        m -> db = static_cast < const SDatabase * > ( SelectVersion ( type, * dbName, SDatabaseCmp ) );
                         if ( m -> db != 0 )
                         {
                             VectorAppend ( p_db . db, & m -> cid . id, m );
@@ -126,7 +126,7 @@ ASTBuilder :: HandleDbMemberDb ( SDatabase & p_db, const AST & p_member )
                     }
                     else if ( GetRCState ( rc ) == rcExists )
                     {
-                        ReportError ( "Member already exists", memName );
+                        ReportError ( ident . GetLocation (), "Member already exists", memName );
                     }
                     else
                     {
@@ -172,8 +172,7 @@ ASTBuilder :: HandleDbMemberTable ( SDatabase & p_db, const AST & p_member )
                 rc_t rc = KSymTableCreateConstSymbol ( & GetSymTab (), & m -> name, & memName, eDBMember, m );
                 if ( rc == 0 )
                 {
-                    uint32_t vers = type . GetVersion ();
-                    m -> tbl = static_cast < const STable * > ( SelectVersion ( * tblName, STableCmp, & vers ) );
+                    m -> tbl = static_cast < const STable * > ( SelectVersion ( type, * tblName, STableCmp ) );
                     if ( m -> tbl != 0 )
                     {
                         VectorAppend ( p_db . tbl, & m -> cid . id, m );
@@ -182,7 +181,7 @@ ASTBuilder :: HandleDbMemberTable ( SDatabase & p_db, const AST & p_member )
                 }
                 else if ( GetRCState ( rc ) == rcExists )
                 {
-                    ReportError ( "Member already exists", memName );
+                    ReportError ( p_member . GetLocation (), "Member already exists", memName );
                 }
                 else
                 {
@@ -291,8 +290,7 @@ ASTBuilder :: DatabaseDef ( const Token * p_token, AST_FQN * p_fqn, AST * p_pare
                 return ret;
             }
 
-            uint32_t vers = parent . GetVersion ();
-            const SDatabase * dad = static_cast < const SDatabase * > ( SelectVersion ( * parentDecl, SDatabaseCmp, & vers ) );
+            const SDatabase * dad = static_cast < const SDatabase * > ( SelectVersion ( parent, * parentDecl, SDatabaseCmp ) );
             if ( dad != 0 )
             {
                 rc_t rc = SDatabaseExtend ( db, dad );

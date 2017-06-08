@@ -46,6 +46,8 @@ namespace ncbi
             Token NextToken ();
 
         private:
+            void Init ( const char * p_source, size_t p_size, bool p_debug );
+
             :: SchemaScanBlock  m_scanBlock;
         };
     }
