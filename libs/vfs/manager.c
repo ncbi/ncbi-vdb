@@ -1881,6 +1881,8 @@ LIB_EXPORT rc_t CC VFSManagerOpenDirectoryRead (const VFSManager *self,
                                                 KDirectory const **d,
                                                 const VPath * path)
 {
+    if ( self == NULL )
+        return RC (rcVFS, rcDirectory, rcOpening, rcSelf, rcNull);
     return VFSManagerOpenDirectoryReadDirectoryRelativeInt (self, self->cwd, d, path, false);
 }
 
