@@ -445,17 +445,19 @@ static int set_threshold ( const KConfig * kfg ) {
 
     int64_t threshold = 0;
     
+    const char * env = NULL;
+
     rc_t rc = KConfigReadI64 ( kfg, "/tls/NCBI_VDB_TLS", & threshold );
     if ( rc == 0 )
         set = true;
 
-    const char * t = getenv ( "NCBI_VDB_TLS" );
+    env = getenv ( "NCBI_VDB_TLS" );
 
-    if ( t != NULL ) {
+    if ( env != NULL ) {
         int NCBI_VDB_TLS = 0;
 
-        for  ( ; * t != '\0'; ++ t ) {
-            char c = * t;
+        for  ( ; * env != '\0'; ++ env ) {
+            char c = * env;
             if ( c < '0' || c > '9' )
                 break;
 
