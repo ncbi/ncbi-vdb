@@ -457,10 +457,17 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
 
             if ( rc != 0 )
             {
-                if ( ! proxy_ep )
-                    DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_TLS ),
-                        ( "Failed to create TLS stream for '%S' (%s)\n",
-                          aHostname, self -> ep . ip_address ) );
+                if ( ! proxy_ep ) {
+                    if ( LogNcbiVdbNetError () )
+                        PLOGERR ( klogSys, ( klogSys, rc,
+                            "Failed to create TLS stream for '$(host)' ($(ip))",
+                            "host=%S,ip=%s", aHostname, self -> ep . ip_address
+                        ) );
+                    else
+                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_TLS ),
+                            ( "Failed to create TLS stream for '%S' (%s)\n",
+                              aHostname, self -> ep . ip_address ) );
+                }
                 else
                 {
                     STATUS ( STAT_PRG, "%s - retrying TLS wrapper on socket with proxy hostname\n", __func__ );
