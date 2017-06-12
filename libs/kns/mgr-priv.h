@@ -81,6 +81,10 @@ struct KNSManager
     bool verbose;
 };
 
+
+bool LogNcbiVdbNetError ( void );
+
+
 /* test */
 struct KStream;
 void KStreamForceSocketClose ( struct KStream const * self );
