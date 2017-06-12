@@ -68,6 +68,8 @@ struct KTLSStream;
 #include <mbedtls/error.h>
 #include <mbedtls/certs.h>
 
+#define NCBI_VDB_NET 1 /* VDB-3399 : temporarily enable for internal testing */
+
 static const char ca_crt_ncbi1 [] =
     "-----BEGIN CERTIFICATE-----\r\n"
     "MIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh\r\n"
