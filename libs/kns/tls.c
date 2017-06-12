@@ -1051,8 +1051,8 @@ LIB_EXPORT rc_t CC KNSManagerMakeTLSStream ( const KNSManager * self,
                                 );
                             else
                                 PLOGERR ( klogSys, ( klogSys, rc,
-                                  "ktls_handshake failed while accessing '$(ip)"
-                                  , "ip=%s", ep . ip_address
+                                 "ktls_handshake failed while accessing '$(ip)'"
+                                 , "ip=%s", ep . ip_address
                                 ) );
                         }
                     }
