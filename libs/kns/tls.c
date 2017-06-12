@@ -68,8 +68,6 @@ struct KTLSStream;
 #include <mbedtls/error.h>
 #include <mbedtls/certs.h>
 
-#define NCBI_VDB_NET 1 /* VDB-3399 : temporarily enable for internal testing */
-
 static const char ca_crt_ncbi1 [] =
     "-----BEGIN CERTIFICATE-----\r\n"
     "MIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh\r\n"
@@ -1043,13 +1041,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeTLSStream ( const KNSManager * self,
                         return 0;
                     }
                     else {
-                        bool log = false;
-#ifdef NCBI_VDB_NET
-                        log = true;
-#endif
-                        if ( ! log )
-                            log = getenv ( "NCBI_VDB_NET" ) != NULL;
-                        if ( log ) {
+                        if ( LogNcbiVdbNetError () ) {
                             KEndPoint ep;
                             rc_t r2 = KSocketGetRemoteEndpoint ( ciphertext,
                                                                  & ep );
