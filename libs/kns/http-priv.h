@@ -59,6 +59,7 @@ struct KFile;
 struct KNSManager;
 struct KClientHttp;
 struct KClientHttpRequest;
+struct KEndPoint;
 struct KStream;
 struct timeout_t;
 struct URLBlock;
@@ -115,6 +116,9 @@ void KClientHttpForceSocketClose(const struct KClientHttp *self);
  */
 rc_t KClientHttpMakeRequestInt ( struct KClientHttp const *self,
     struct KClientHttpRequest **req, const struct URLBlock *block, const KDataBuffer *buf );
+
+
+void KClientHttpGetEndpoint ( const struct KClientHttp * self, struct KEndPoint * ep );
 
 
 /* exported private functions

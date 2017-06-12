@@ -2588,6 +2588,13 @@ LIB_EXPORT rc_t CC KClientHttpMakeRequest ( const KClientHttp *self,
     return rc;
 }
 
+void KClientHttpGetEndpoint ( const KClientHttp * self, KEndPoint * ep ) {
+    assert ( ep );
+    memset ( ep, 0, sizeof * ep );
+    if ( self != NULL )
+        * ep = self -> ep;
+}
+
 /* MakeRequest
  *  create a request that can be used to contact HTTP server
  *
