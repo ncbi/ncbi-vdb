@@ -440,22 +440,35 @@ rc_t tlsg_setup ( KTLSGlobals * self )
     return 0;
 }
 
-static int set_threshold ( void ) {
-    int threshold = 0;
+static int set_threshold ( const KConfig * kfg ) {
+    bool set = false;
+
+    int64_t threshold = 0;
+    
+    rc_t rc = KConfigReadI64 ( kfg, "/tls/NCBI_VDB_TLS", & threshold );
+    if ( rc == 0 )
+        set = true;
 
     const char * t = getenv ( "NCBI_VDB_TLS" );
 
     if ( t != NULL ) {
+        int NCBI_VDB_TLS = 0;
+
         for  ( ; * t != '\0'; ++ t ) {
             char c = * t;
             if ( c < '0' || c > '9' )
                 break;
 
-            threshold = threshold * 10 + c - '0';
+            NCBI_VDB_TLS = NCBI_VDB_TLS * 10 + c - '0';
+            set = true;
         }
 
-        vdb_mbedtls_debug_set_threshold ( threshold );
+        if ( NCBI_VDB_TLS > threshold )
+            threshold = NCBI_VDB_TLS;
     }
+
+    if ( set )
+        vdb_mbedtls_debug_set_threshold ( threshold );
 
     return threshold;
 }
@@ -471,7 +484,7 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, const KConfig * kfg )
     vdb_mbedtls_entropy_init ( &tlsg -> entropy );
     vdb_mbedtls_ssl_config_init ( &tlsg -> config );
 
-    if ( set_threshold () > 0 )
+    if ( set_threshold ( kfg ) > 0 )
         vdb_mbedtls_ssl_conf_dbg ( &tlsg -> config, ktls_ssl_dbg_print, tlsg );
 
     rc = tlsg_seed_rng ( tlsg );
