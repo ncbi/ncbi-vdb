@@ -407,8 +407,9 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
 
     STATUS ( STAT_QA, "%s - opening socket to %S:%u\n", __func__, aHostname, aPort );
 
-    assert ( self != NULL );
+    assert ( self );
     mgr = self -> mgr;
+    assert ( mgr );
 
     KEndPointArgsIteratorMake ( & it, mgr, aHostname, aPort  );
     while ( KEndPointArgsIteratorNext
@@ -458,7 +459,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
             if ( rc != 0 )
             {
                 if ( ! proxy_ep ) {
-                    if ( LogNcbiVdbNetError () )
+                    if ( LogNcbiVdbNetError ( mgr -> NCBI_VDB_NETkfgValue ) )
                         PLOGERR ( klogSys, ( klogSys, rc,
                             "Failed to create TLS stream for '$(host)' ($(ip))",
                             "host=%S,ip=%s", aHostname, self -> ep . ip_address

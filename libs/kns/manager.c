@@ -956,6 +956,25 @@ LIB_EXPORT bool CC KNSManagerSetHTTPProxyEnabled ( KNSManager * self, bool enabl
 }
 
 
+static bool KConfig_GetNCBI_VDB_NET ( const KConfig* self ) {
+    rc_t rc = 0;
+
+    const KConfigNode * node = NULL;
+
+    if ( self == NULL )
+        return false;
+
+    rc = KConfigOpenNodeRead ( self, & node, "/libs/kns/NCBI_VDB_NET" );
+    if ( rc != 0 )
+        return false;
+
+    KConfigNodeRelease ( node );
+    node = NULL;
+
+    return true;
+} 
+
+
 LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
 {
     rc_t rc;
@@ -997,7 +1016,11 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
                     {
                         KNSManagerLoadAWS ( mgr, kfg );
                         KNSManagerHttpProxyInit ( mgr, kfg );
+                        mgr -> NCBI_VDB_NETkfgValue
+                            = KConfig_GetNCBI_VDB_NET ( kfg );
+
                         * mgrp = mgr;
+
                         return 0;
                     }
                 }
@@ -1050,11 +1073,13 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char ** user_agent )
     return rc;
 }
 
-#define NCBI_VDB_NET 1 /* VDB-3399 : temporarily enable for internal testing */
+//#define NCBI_VDB_NET 1 /* VDB-3399 : temporarily enable for internal testing */
 
-bool LogNcbiVdbNetError ( void ) {
+bool LogNcbiVdbNetError ( bool force ) {
 #ifdef NCBI_VDB_NET
     return true;
 #endif
+    if ( force )
+        return true;
     return getenv ( "NCBI_VDB_NET" ) != NULL;
 }

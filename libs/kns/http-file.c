@@ -590,7 +590,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                                 else {
                                                     KEndPoint ep;
                                                     KClientHttpGetEndpoint ( http, & ep );
-                                                    if ( LogNcbiVdbNetError () ) {
+                                                    if ( LogNcbiVdbNetError ( self -> NCBI_VDB_NETkfgValue ) ) {
                                                         assert ( buf );
                                                         PLOGERR ( klogErr,
                                                             ( klogErr, rc,

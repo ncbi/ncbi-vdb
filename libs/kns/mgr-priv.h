@@ -79,10 +79,12 @@ struct KNSManager
     HttpProxy * http_proxy;
 
     bool verbose;
+
+    bool NCBI_VDB_NETkfgValue;
 };
 
 
-bool LogNcbiVdbNetError ( void );
+bool LogNcbiVdbNetError ( bool force );
 
 
 /* test */

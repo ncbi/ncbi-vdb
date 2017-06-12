@@ -1041,7 +1041,9 @@ LIB_EXPORT rc_t CC KNSManagerMakeTLSStream ( const KNSManager * self,
                         return 0;
                     }
                     else {
-                        if ( LogNcbiVdbNetError () ) {
+                        if ( LogNcbiVdbNetError
+                            ( self -> NCBI_VDB_NETkfgValue ) )
+                        {
                             KEndPoint ep;
                             rc_t r2 = KSocketGetRemoteEndpoint ( ciphertext,
                                                                  & ep );
