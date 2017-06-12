@@ -1073,7 +1073,7 @@ LIB_EXPORT rc_t CC KNSManagerGetUserAgent ( const char ** user_agent )
     return rc;
 }
 
-//#define NCBI_VDB_NET 1 /* VDB-3399 : temporarily enable for internal testing */
+#define NCBI_VDB_NET 1 /* VDB-3399 : temporarily enable for internal testing */
 
 bool LogNcbiVdbNetError ( bool force ) {
 #ifdef NCBI_VDB_NET
