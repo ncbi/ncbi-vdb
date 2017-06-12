@@ -587,10 +587,27 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                                         return 0;
                                                     }
                                                 }
+                                                else {
+                                                    KEndPoint ep;
+                                                    KClientHttpGetEndpoint ( http, & ep );
+                                                    if ( LogNcbiVdbNetError () ) {
+                                                        assert ( buf );
+                                                        PLOGERR ( klogErr,
+                                                            ( klogErr, rc,
+                                                            "Failed to KNSManagerVMakeHttpFileInt('$(path)' ($(ip)))",
+                                                            "path=%.*s,ip=%s",
+                                                            ( int ) buf -> elem_count, buf -> base, ep . ip_address
+                                                        ) );
+                                                    }
+                                                    else
+                                                        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+                                                            ( "Failed to KNSManagerVMakeHttpFileInt('%.*s' (%s))\n",
+                                                              ( int ) buf -> elem_count, buf -> base,
+                                                              ep . ip_address ) );
+                                                }
                                             }
                                         }
                                     }
-
                                     KClientHttpRelease ( http );
                                 }
                             }
@@ -609,6 +626,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
 
     return rc;
 }
+/******************************************************************************/
 
 LIB_EXPORT rc_t CC KNSManagerMakeHttpFile(const KNSManager *self,
     const KFile **file, struct KStream *conn, ver_t vers, const char *url, ...)
