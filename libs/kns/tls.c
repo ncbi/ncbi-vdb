@@ -28,6 +28,7 @@ struct KTLSStream;
 #define KSTREAM_IMPL struct KTLSStream
 
 #include <kns/extern.h>
+#include <kns/endpoint.h> /* KEndPoint */
 #include <kns/manager.h>
 #include <kns/tls.h>
 #include <kns/impl.h>
@@ -1038,6 +1039,28 @@ LIB_EXPORT rc_t CC KNSManagerMakeTLSStream ( const KNSManager * self,
                         ktls -> mgr = self;
                         *plaintext = ktls;
                         return 0;
+                    }
+                    else {
+                        bool log = false;
+#ifdef NCBI_VDB_NET
+                        log = true;
+#endif
+                        if ( ! log )
+                            log = getenv ( "NCBI_VDB_NET" ) != NULL;
+                        if ( log ) {
+                            KEndPoint ep;
+                            rc_t r2 = KSocketGetRemoteEndpoint ( ciphertext,
+                                                                 & ep );
+                            if ( r2 != 0 )
+                                LOGERR ( klogInt, r2
+                                    , "cannot KSocketGetRemoteEndpoint"
+                                );
+                            else
+                                PLOGERR ( klogSys, ( klogSys, rc,
+                                  "ktls_handshake failed while accessing '$(ip)"
+                                  , "ip=%s", ep . ip_address
+                                ) );
+                        }
                     }
                 }
 
