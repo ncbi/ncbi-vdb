@@ -479,7 +479,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
 
             KSocketRelease ( sock );
 
-            if ( rc == 0 )
+            if ( rc == 0 && mgr -> https_validate_server_cert )
             {
                 STATUS ( STAT_USR, "%s - verifying CA cert\n", __func__ );
                 rc = KTLSStreamVerifyCACert ( tls_stream );

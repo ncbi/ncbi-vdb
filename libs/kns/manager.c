@@ -618,6 +618,35 @@ LIB_EXPORT rc_t CC KNSManagerSetHTTPTimeouts ( KNSManager *self,
     return 0;
 }
 
+static
+void KNSManagerHttpsInit ( KNSManager * self, const KConfig * kfg )
+{
+    const char * env_str;
+
+    if ( self == NULL )
+        return;
+
+    self -> https_validate_server_cert = true;
+
+    if ( kfg == NULL )
+        return;
+
+    env_str = getenv ( "VDB_TLS_VALIDATE_SERVER_CERT" );
+    if ( env_str != NULL )
+    {
+        if ( env_str [ 0 ] == '0' && env_str [ 1 ] == 0 )
+            self -> https_validate_server_cert = false;
+    }
+    else
+    {
+        bool validate_cert = true;
+        rc_t rc = KConfigReadBool ( kfg, "/tls/validate-server-cert", & validate_cert );
+        if ( rc == 0 && ! validate_cert )
+            self -> https_validate_server_cert = false;
+    }
+}
+
+
 
 /* GetHTTPProxyPath
  *  returns path to HTTP proxy server ( if set ) or NULL.
@@ -997,6 +1026,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeConfig ( KNSManager **mgrp, KConfig* kfg )
                     {
                         KNSManagerLoadAWS ( mgr, kfg );
                         KNSManagerHttpProxyInit ( mgr, kfg );
+                        KNSManagerHttpsInit ( mgr, kfg );
                         * mgrp = mgr;
                         return 0;
                     }
