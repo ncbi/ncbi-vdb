@@ -1,6 +1,8 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.40629.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ncbi-vdb", "ncbi-vdb.vcxproj", "{A2B91665-2A2A-4D2C-8246-E01CD98FF673}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ktst", "ktst.vcxproj", "{BA319C68-17BF-461E-B018-5736BCDBBE5C}"
@@ -36,6 +38,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kapp-md", "kapp-md.vcxproj", "{6964A483-0F5F-459E-AA32-96927BDFB46F}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ktst-md", "ktst-md.vcxproj", "{87DB2B3E-916A-478C-AA47-A9907ABBBD54}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "diagnose", "diagnose.vcxproj", "{38EA68D5-B755-4645-B3D2-4BF6F227098D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -181,12 +185,20 @@ Global
 		{87DB2B3E-916A-478C-AA47-A9907ABBBD54}.Release|Win32.Build.0 = Release|Win32
 		{87DB2B3E-916A-478C-AA47-A9907ABBBD54}.Release|x64.ActiveCfg = Release|x64
 		{87DB2B3E-916A-478C-AA47-A9907ABBBD54}.Release|x64.Build.0 = Release|x64
+		{38EA68D5-B755-4645-B3D2-4BF6F227098D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{38EA68D5-B755-4645-B3D2-4BF6F227098D}.Debug|Win32.Build.0 = Debug|Win32
+		{38EA68D5-B755-4645-B3D2-4BF6F227098D}.Debug|x64.ActiveCfg = Debug|x64
+		{38EA68D5-B755-4645-B3D2-4BF6F227098D}.Debug|x64.Build.0 = Debug|x64
+		{38EA68D5-B755-4645-B3D2-4BF6F227098D}.Release|Win32.ActiveCfg = Release|Win32
+		{38EA68D5-B755-4645-B3D2-4BF6F227098D}.Release|Win32.Build.0 = Release|Win32
+		{38EA68D5-B755-4645-B3D2-4BF6F227098D}.Release|x64.ActiveCfg = Release|x64
+		{38EA68D5-B755-4645-B3D2-4BF6F227098D}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{D2685EFE-0758-4258-AD23-8C5AD47F2E05} = {B84E4CD3-557F-449A-9A28-4C7717A2A532}
 		{364EAD74-2052-4D9B-BC8B-43A968A599B0} = {B84E4CD3-557F-449A-9A28-4C7717A2A532}
+		{D2685EFE-0758-4258-AD23-8C5AD47F2E05} = {B84E4CD3-557F-449A-9A28-4C7717A2A532}
 	EndGlobalSection
 EndGlobal
