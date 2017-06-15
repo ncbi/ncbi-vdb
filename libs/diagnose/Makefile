@@ -22,69 +22,73 @@
 #
 # ===========================================================================
 
-by_default: default
+default: all
 
-TOP ?= $(abspath ..)
-MODULE = libs
+TOP ?= $(abspath ../..)
+MODULE = libs/diagnose
 
-include $(TOP)/build/Makefile.shell
+INT_LIBS = \
 
-include $(TOP)/build/Makefile.config
+EXT_LIBS = \
+	libdiagnose
+
+ALL_LIBS = \
+	$(INT_LIBS) \
+	$(EXT_LIBS)
+
+OBJFILES = \
+	$(KDIAGNOSE_OBJ)
+
+include $(TOP)/build/Makefile.env
 
 #-------------------------------------------------------------------------------
-# default
+# outer targets
 #
-SUBDIRS =    \
-	ext      \
-	kfc      \
-	klib     \
-	kproc    \
-	kfs      \
-	kns      \
-	kfg      \
-	krypto   \
-	vfs      \
-	kapp     \
-	kdb      \
-	vdb      \
-	vxf      \
-	search   \
-	sraxf    \
-	align    \
-	axf      \
-	wgsxf    \
-	ktst     \
-	loader   \
-	blast    \
-	ascp     \
-	sra      \
-	ngs      \
-	ngs-c++  \
-	ngs-jni  \
-	ngs-py   \
-	kxml     \
-	hdf5     \
-	ncbi-vdb \
+all std: makedirs compile
+	@ $(MAKE_CMD) $(TARGDIR)/std
+
+$(INT_LIBS): makedirs
+	@ $(MAKE_CMD) $(ILIBDIR)/$@
+
+$(EXT_LIBS): makedirs
+	@ $(MAKE_CMD) $(LIBDIR)/$@
+
+.PHONY: all std $(ALL_LIBS)
+
+#-------------------------------------------------------------------------------
+# std
+#
+$(TARGDIR)/std: \
+	$(addprefix $(ILIBDIR)/,$(INT_LIBS)) \
+	$(addprefix $(LIBDIR)/,$(EXT_LIBS))
+
+.PHONY: $(TARGDIR)/std
+
+#-------------------------------------------------------------------------------
+# clean
+#
+clean: stdclean
+
+.PHONY: clean
+
+#-------------------------------------------------------------------------------
+# diagnose
+#
+$(LIBDIR)/libdiagnose: $(addprefix $(LIBDIR)/libdiagnose.,$(LIBEXT))
+
+KDIAGNOSE_SRC = \
 	diagnose \
-	tui
+	endpoint \
 
-# common targets for non-leaf Makefiles; must follow a definition of SUBDIRS
-include $(TOP)/build/Makefile.targets
+KDIAGNOSE_OBJ = \
+	$(addsuffix .$(LOBX),$(KDIAGNOSE_SRC))
 
-$(SUBDIRS):
-	@ $(MAKE) -C $@
-	
-ncbi-vdb: $(patsubst ncbi-vdb,,$(SUBDIRS))	
+$(LIBDIR)/libdiagnose.$(SHLX): $(KDIAGNOSE_OBJ)
+	$(LD) --dlib --vers $(SRCDIR)/../ncbi-vdb/libncbi-vdb.vers -o $@ $^
 
-test:
-	@true
-    
-.PHONY: default $(SUBDIRS) test
+$(LIBDIR)/libdiagnose.$(LIBX): $(KDIAGNOSE_OBJ)
+	$(LD) --slib --vers $(SRCDIR)/../ncbi-vdb/libncbi-vdb.vers -o $@ $^
 
-#-------------------------------------------------------------------------------
-# pass-through
-#
-out debug profile release GCC ICC VC++:
-	@ $(MAKE) TOP=$(TOP) -f $(TOP)/build/Makefile.env $@
+compile: stdcompile
 
-.PHONY: out debug profile release GCC ICC VC++
+$(TARGDIR)/compile: $(OBJFILES)
