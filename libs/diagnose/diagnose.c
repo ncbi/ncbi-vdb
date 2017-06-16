@@ -146,11 +146,12 @@ static void STestFini ( STest * self ) {
 static rc_t STestVStart ( STest * self, bool checking,
                           const char * fmt, va_list args  )
 {
+    rc_t rc = 0;
     int i = 0;
+    char b [ 512 ] = "";
     KDataBuffer bf;
     memset ( & bf, 0, sizeof bf );
-    char b [ 512 ] = "";
-    rc_t rc = string_vprintf ( b, sizeof b, NULL, fmt, args );
+    rc = string_vprintf ( b, sizeof b, NULL, fmt, args );
     if ( rc != 0 ) {
         OUTMSG ( ( "CANNOT PRINT: %R\n", rc ) );
         return rc;
@@ -224,7 +225,10 @@ typedef enum {
 static rc_t STestVEnd ( STest * self, EOK ok,
                         const char * fmt, va_list args )
 {
+    rc_t rc = 0;
     bool failedWhileSilent = self -> failedWhileSilent;
+    bool print = false;
+    char b [ 512 ] = "";
 
     assert ( self );
 
@@ -241,8 +245,7 @@ static rc_t STestVEnd ( STest * self, EOK ok,
 #ifdef DEPURAR
 const char*c=self->msg.base;
 #endif
-    char b [ 512 ] = "";
-    rc_t rc = string_vprintf ( b, sizeof b, NULL, fmt, args );
+    rc = string_vprintf ( b, sizeof b, NULL, fmt, args );
     if ( rc != 0 ) {
         OUTMSG ( ( "CANNOT PRINT: %R", rc ) );
         return rc;
@@ -269,7 +272,7 @@ const char*c=self->msg.base;
         return rc;
     }
 
-    bool print = self -> level < self -> verbosity || failedWhileSilent;
+    print = self -> level < self -> verbosity || failedWhileSilent;
     if ( ok == eFAIL || ok == eOK || ok == eDONE ) {
         if ( print ) {
             int i = 0;
@@ -311,10 +314,12 @@ const char*c=self->msg.base;
 }
 
 static rc_t STestEnd ( STest * self, EOK ok, const char * fmt, ...  )  {
+    rc_t rc = 0;
+
     va_list args;
     va_start ( args, fmt );
 
-    rc_t rc = STestVEnd ( self, ok, fmt, args );
+    rc = STestVEnd ( self, ok, fmt, args );
 
     va_end ( args );
 
@@ -324,10 +329,12 @@ static rc_t STestEnd ( STest * self, EOK ok, const char * fmt, ...  )  {
 static rc_t STestStart ( STest * self, bool checking,
                          const char * fmt, ...  )
 {
+    rc_t rc = 0;
+
     va_list args;
     va_start ( args, fmt );
 
-    rc_t rc = STestVStart ( self, checking, fmt, args );
+    rc = STestVStart ( self, checking, fmt, args );
 
     va_end ( args );
 
@@ -342,11 +349,13 @@ typedef struct {
 static rc_t DataInit ( Data * self, const VFSManager * mgr,
                        const char * path )
 {
+    rc_t rc = 0;
+
     assert ( self );
 
     memset ( self, 0, sizeof * self );
 
-    rc_t rc = VFSManagerMakePath ( mgr, & self -> vpath, path );
+    rc = VFSManagerMakePath ( mgr, & self -> vpath, path );
     if ( rc != 0 )
         OUTMSG ( ( "VFSManagerMakePath(%s) = %R\n", path, rc ) );
     else {
@@ -369,11 +378,13 @@ static rc_t DataInit ( Data * self, const VFSManager * mgr,
 }
 
 static rc_t DataFini ( Data * self ) {
+    rc_t rc = 0;
+
     assert ( self );
 
     free ( ( void * ) self -> acc );
 
-    rc_t rc = VPathRelease ( self -> vpath );
+    rc = VPathRelease ( self -> vpath );
 
     memset ( self, 0, sizeof * self );
 
@@ -422,20 +433,26 @@ static rc_t STestCheckFileSize ( STest * self, const String * path,
 static
 rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
 {
-    assert ( self && data );
     rc_t rc = STestStart ( self, true, "Support of Range requests" );
+    uint64_t pos = 0;
+    size_t bytes = 4096;
+    size_t ebytes = bytes;
+    bool https = false;
+    char buffer [ 1024 ] = "";
+    size_t num_read = 0;
     KClientHttp * http = NULL;
-    assert ( self && data );
+    KHttpRequest * req = NULL;
+    KHttpResult * rslt = NULL;
     String host;
+    String scheme;
+    assert ( self && data );
     rc = VPathGetHost ( data -> vpath, & host );
     if ( rc != 0 )
         OUTMSG ( ( "Cannot VPathGetHost(%R)\n", rc ) );
-    String scheme;
     if ( rc == 0 )
         rc = VPathGetScheme ( data -> vpath, & scheme );
     if ( rc != 0 )
         OUTMSG ( ( "Cannot VPathGetScheme(%R)\n", rc ) );
-    bool https = false;
     if ( rc == 0 ) {
         String sHttps;
         String sHttp;
@@ -468,7 +485,6 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
         else
             STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
-    KHttpRequest * req = NULL;
     if ( rc == 0 ) {
         String path;
         rc = VPathGetPath ( data -> vpath, & path );
@@ -480,7 +496,6 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
                 OUTMSG ( ( "KHttpMakeRequest(%S) = %R\n", & path, rc ) );
         }
     }
-    KHttpResult * rslt = NULL;
     if ( rc == 0 ) {
         STestStart ( self, false, "KHttpResult = "
             "KHttpRequestHEAD(KHttpMakeRequest(KClientHttp)):" );
@@ -490,8 +505,6 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
         else
             STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
-    char buffer [ 1024 ] = "";
-    size_t num_read = 0;
     if ( rc == 0 ) {
         STestStart ( self, false,
                      "KHttpResultGetHeader(KHttpResult, Accept-Ranges) =" );
@@ -516,9 +529,6 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
     }
     KHttpResultRelease ( rslt );
     rslt = NULL;
-    uint64_t pos = 0;
-    size_t bytes = 4096;
-    size_t ebytes = bytes;
     if ( sz < ebytes )
         ebytes = sz;
     if ( sz > bytes * 2 )
@@ -585,8 +595,8 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
 {
     rc_t rc = 0;
     size_t total = 0;
-    STestStart ( self, false, "KStreamRead(KHttpResult):" );
     char buffer [ 1024 ] = "";
+    STestStart ( self, false, "KStreamRead(KHttpResult):" );
     while ( rc == 0 ) {
         size_t num_read = 0;
         rc = KStreamRead ( stream, buffer, sizeof buffer, & num_read );
@@ -648,16 +658,17 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
 static rc_t STestCheckHttpUrl ( STest * self, const Data * data, bool print,
                                 const char * exp, size_t esz )
 {
+    rc_t rc = 0;
     KHttpRequest * req = NULL;
     KHttpResult * rslt = NULL;
-    assert ( self && data );
     const String * full = NULL;
-    rc_t rc = VPathMakeString ( data -> vpath, & full );
+    uint64_t sz = 0;
+    assert ( self && data );
+    rc = VPathMakeString ( data -> vpath, & full );
     if ( rc != 0 )
         OUTMSG ( ( "CANNOT VPathMakeString: %R\n", rc ) );
     if ( rc == 0 )
         rc = STestStart ( self, true, "Access to '%S'", full );
-    uint64_t sz = 0;
     if ( rc == 0 )
         rc = STestCheckFileSize ( self, full, & sz );
     if ( rc == 0 )
@@ -724,19 +735,22 @@ static bool DataIsAccession ( const Data * self ) {
 }
 
 static rc_t STestCheckVfsUrl ( STest * self, const Data * data ) {
+    rc_t rc = 0;
+
+    const KDirectory * d = NULL;
+
+    String path;
+
     assert ( self && data );
 
     if ( ! DataIsAccession ( data ) )
         return 0;
 
-    String path;
-    rc_t rc = VPathGetPath ( data -> vpath, & path );
+    rc = VPathGetPath ( data -> vpath, & path );
     if ( rc != 0 ) {
         OUTMSG ( ( "Cannot VPathGetPath(%R)", rc ) );
         return rc;
     }
-
-    const KDirectory * d = NULL;
 
     STestStart ( self, false, "VFSManagerOpenDirectoryRead(%S):", & path );
     rc = VFSManagerOpenDirectoryRead ( self -> vmgr, & d, data -> vpath );
@@ -761,10 +775,13 @@ static rc_t STestCheckUrlImpl ( STest * self, const Data * data, bool print,
 static rc_t STestCheckUrl ( STest * self, const Data * data, bool print,
                             const char * exp, size_t esz )
 {
-    assert ( data );
+    rc_t rc = 0;
 
     String path;
-    rc_t rc = VPathGetPath ( data -> vpath, & path );
+
+    assert ( data );
+
+    rc = VPathGetPath ( data -> vpath, & path );
     if ( rc != 0 ) {
         OUTMSG ( ( "Cannot VPathGetPath(%R)", rc ) );
         return rc;
@@ -817,14 +834,22 @@ static int KConfig_Verbosity ( const KConfig * self ) {
 static const char * STestCallCgi ( STest * self, const String * acc,
     char * response, size_t response_sz, size_t * resp_read )
 {
+    rc_t rc = 0;
+
+    rc_t rs = 0;
     const char * url = NULL;
-    assert ( self );
     KHttpRequest * req = NULL;
+    const String * cgi = NULL;
+    KHttpResult * rslt = NULL;
+    KStream * stream = NULL;
+
+    assert ( self );
+
     STestStart ( self, true, "Access to '%S'", acc );
-    const String * cgi = KConfig_Resolver ( self -> kfg );
+    cgi = KConfig_Resolver ( self -> kfg );
     STestStart ( self, false,
         "KHttpRequest = KNSManagerMakeReliableClientRequest(%S):", cgi );
-    rc_t rc = KNSManagerMakeReliableClientRequest ( self -> kmgr, & req,
+    rc = KNSManagerMakeReliableClientRequest ( self -> kmgr, & req,
         HTTP_VERSION, NULL, "%S", cgi);
     if ( rc == 0 )
         STestEnd ( self, eEndOK, "OK"  );
@@ -848,7 +873,6 @@ static const char * STestCallCgi ( STest * self, const String * acc,
         if ( rc != 0 )
             OUTMSG ( ( "KHttpRequestAddPostParam() = %R\n", rc ) );
     }
-    KHttpResult * rslt = NULL;
     if ( rc == 0 ) {
         STestStart ( self, false, "KHttpRequestPOST(KHttpRequest(%S)):", cgi );
         rc = KHttpRequestPOST ( req, & rslt );
@@ -857,7 +881,6 @@ static const char * STestCallCgi ( STest * self, const String * acc,
         else
             STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
-    rc_t rs = 0;
     if ( rc == 0 ) {
         uint32_t code = 0;
         STestStart ( self, false, "KHttpResultStatus(KHttpResult(%S)) =", cgi );
@@ -874,7 +897,6 @@ static const char * STestCallCgi ( STest * self, const String * acc,
             }
         }
     }
-    KStream * stream = NULL;
     if ( rc == 0 ) {
         rc = KHttpResultGetInputStream ( rslt, & stream );
         if ( rc != 0 )
@@ -934,18 +956,20 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
                             bool print, const char * exp, size_t esz )
 {
     rc_t rc = 0;
-    assert ( self && data );
     char response [ 4096 ] = "";
     size_t resp_len = 0;
     const char * url = NULL;
     String acc;
+    bool checked = false;
+
+    assert ( self && data );
+
     memset ( & acc, 0, sizeof acc );
     if ( DataIsAccession ( data ) ) {
         acc = * data -> acc;
         url = STestCallCgi ( self, & acc,
                              response, sizeof response, & resp_len );
     }
-    bool checked = false;
     if ( url != NULL ) {
         char * p = string_chr ( url, resp_len - ( url - response ), '|' );
         if ( p == NULL ) {
@@ -955,9 +979,10 @@ static rc_t STestCheckAcc ( STest * self, const Data * data,
         else {
             const String * full = NULL;
             rc_t rc = VPathMakeString ( data -> vpath, & full );
+            char * d = NULL;
             if ( rc != 0 )
                 OUTMSG ( ( "CANNOT VPathMakeString: %R\n", rc ) );
-            char * d = string_chr ( url, resp_len - ( url - response ), '$' );
+            d = string_chr ( url, resp_len - ( url - response ), '$' );
             if ( d == NULL )
                 d = p;
             while ( d != NULL && d <= p ) {
@@ -1005,21 +1030,26 @@ static rc_t STestCheckNetwork ( STest * self, const Data * data,
     const char * exp, size_t esz, const Data * data2,
     const char * fmt, ... )
 {
+    rc_t rc = 0;
     KEndPoint ep;
+    char b [ 512 ] = "";
+    String host;
+
     va_list args;
     va_start ( args, fmt );
-    char b [ 512 ] = "";
-    rc_t rc = string_vprintf ( b, sizeof b, NULL, fmt, args );
+    rc = string_vprintf ( b, sizeof b, NULL, fmt, args );
     if ( rc != 0 )
         OUTMSG ( ( "CANNOT PREPARE MEGGAGE: %R\n", rc ) );
     va_end ( args );
+
     assert ( self && data );
+
     STestStart ( self, true, b );
-    String host;
     rc = VPathGetHost ( data -> vpath, & host );
     if ( rc != 0 )
         OUTMSG ( ( "Cannot VPathGetHost(%R)", rc ) );
     else {
+        rc_t r1 = 0;
         uint16_t port = 443;
         STestStart ( self, false, "KNSManagerInitDNSEndpoint(%S:%hu) =",
                                   & host, port );
@@ -1037,7 +1067,7 @@ static rc_t STestCheckNetwork ( STest * self, const Data * data,
         port = 80;
         STestStart ( self, false, "KNSManagerInitDNSEndpoint(%S:%hu) =",
                                   & host, port );
-        rc_t r1 = KNSManagerInitDNSEndpoint ( self -> kmgr, & ep,
+        r1 = KNSManagerInitDNSEndpoint ( self -> kmgr, & ep,
                                               & host, port );
         if ( r1 != 0 )
             STestEnd ( self, eEndFAIL, "FAILURE: %R", r1 );
@@ -1071,10 +1101,12 @@ LIB_EXPORT rc_t CC KDiagnoseMakeExt ( KDiagnose ** test, KConfig * kfg,
 {
     rc_t rc = 0;
 
+    KDiagnose * p = NULL;
+
     if ( test == NULL )
         return  RC ( rcRuntime, rcData, rcCreating, rcParam, rcNull );
 
-    KDiagnose * p = calloc ( 1, sizeof * p );
+    p = calloc ( 1, sizeof * p );
     if ( p == NULL )
         return RC ( rcRuntime, rcData, rcAllocating, rcMemory, rcExhausted );
 
@@ -1163,6 +1195,11 @@ LIB_EXPORT rc_t CC KDiagnoseRelease ( const KDiagnose * cself ) {
 LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self ) {
     rc_t rc = 0;
 
+    const char exp [] = "NCBI.sra\210\031\003\005\001\0\0\0";
+    rc_t r1 = 0;
+    rc_t r2 = 0;
+    STest t;
+
     if ( self == NULL )
         rc = KDiagnoseMakeExt ( & self, NULL, NULL, NULL );
     else
@@ -1172,18 +1209,16 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self ) {
 
     assert ( self );
 
-    const char exp [] = "NCBI.sra\210\031\003\005\001\0\0\0";
-    rc_t r1 = 0;
-    STest t;
     STestInit ( & t, self );
+
     rc = STestStart ( & t, true, "Network" );
     {
 #undef  HOST
 #define HOST "www.ncbi.nlm.nih.gov"
         String h;
-        CONST_STRING ( & h, HOST );
         Data d;
-        rc_t r2 = DataInit ( & d, self -> vmgr, "https://" HOST );
+        CONST_STRING ( & h, HOST );
+        r2 = DataInit ( & d, self -> vmgr, "https://" HOST );
         if ( r2 == 0 )
             r2 = STestCheckNetwork ( & t, & d, 0, 0,
                                      NULL, "Access to '%S'", & h );
@@ -1195,9 +1230,9 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self ) {
 #undef  HOST
 #define HOST "sra-download.ncbi.nlm.nih.gov"
         String h;
-        CONST_STRING ( & h, HOST );
         Data d;
-        rc_t r2 = DataInit ( & d, self -> vmgr,
+        CONST_STRING ( & h, HOST );
+        r2 = DataInit ( & d, self -> vmgr,
                              "https://" HOST "/srapub/SRR042846" );
         if ( r2 == 0 )
             r2 = STestCheckNetwork ( & t, & d, exp, sizeof exp - 1,
@@ -1210,10 +1245,10 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self ) {
 #undef  HOST
 #define HOST "ftp-trace.ncbi.nlm.nih.gov"
         String h;
-        CONST_STRING ( & h, HOST );
         Data d;
         Data v;
-        rc_t r2 = DataInit ( & d, self -> vmgr,
+        CONST_STRING ( & h, HOST );
+        r2 = DataInit ( & d, self -> vmgr,
             "https://" HOST "/sra/refseq/KC702174.1" );
         if ( r2 == 0 )
             r2 = DataInit ( & v, self -> vmgr,
@@ -1229,9 +1264,9 @@ LIB_EXPORT rc_t CC KDiagnoseRun ( KDiagnose * self ) {
 #undef  HOST
 #define HOST "gap-download.ncbi.nlm.nih.gov"
         String h;
-        CONST_STRING ( & h, HOST );
         Data d;
-        rc_t r2 = DataInit ( & d, self -> vmgr, "https://" HOST );
+        CONST_STRING ( & h, HOST );
+        r2 = DataInit ( & d, self -> vmgr, "https://" HOST );
         if ( r2 == 0 )
             r2 = STestCheckNetwork ( & t, & d, NULL, 0, 
                                      NULL, "Access to '%S'", & h );
