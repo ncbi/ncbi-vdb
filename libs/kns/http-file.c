@@ -378,7 +378,8 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
     
     if ( rc == 0 )
     {
-        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead(pos=%lu)\n", pos ) );
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+            ( "KHttpFileTimedRead(pos=%lu,size=%zu)...\n", pos, bsize ) );
         
         /* loop using existing KClientHttp object */
         while ( rc == 0 ) 
@@ -406,6 +407,10 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
             }
             if ( ! KHttpRetrierWait ( & retrier, http_status ) )
             {
+                assert ( num_read );
+                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
+                    ( "...KHttpFileTimedRead(pos=%lu,size=%zu)=%zu\n\n",
+                      pos, bsize, * num_read ) );
                 break;
             }
             rc = KClientHttpReopen ( self -> http );
