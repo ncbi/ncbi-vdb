@@ -42,8 +42,13 @@ typedef struct PileupEstimator
     const VCursor * ref_cursor;
     const VCursor * align_cursor;
 
+	uint32_t * coverage;
+	size_t coverage_len;
+	
     Vector reftable;
     
+	uint64_t cutoff_value;
+
     uint32_t ref_cursor_idx_SEQ_ID;
     uint32_t ref_cursor_idx_SEQ_LEN;
     uint32_t ref_cursor_idx_MAX_SEQ_LEN;
@@ -103,6 +108,8 @@ LIB_EXPORT rc_t CC ReleasePileupEstimator( struct PileupEstimator *self )
     rc_t rc = 0;
     if ( self != NULL )
     {
+		if ( self->coverage != NULL )
+			free( ( void * ) self->coverage );
         if ( self->ref_cursor != NULL )
             rc = VCursorRelease( self->ref_cursor );
         if ( rc == 0 && self->align_cursor != NULL )
@@ -174,7 +181,7 @@ static rc_t MakeAlignCursor( PileupEstimator *self, const VDatabase * db, size_t
     rc_t rc = VDatabaseOpenTableRead( db, &tbl, "%s", "PRIMARY_ALIGNMENT" );
     if ( rc == 0 )
     {
-        rc = VTableCreateCachedCursorRead( tbl, &self->ref_cursor, cursor_cache_size );
+        rc = VTableCreateCachedCursorRead( tbl, &self->align_cursor, cursor_cache_size );
         if ( rc == 0 )
             rc = VCursorAddColumn( self->align_cursor, &self->align_cursor_idx_REF_POS, "REF_POS" );
         if ( rc == 0 )
@@ -190,10 +197,12 @@ static rc_t InitializePileupEstimator( PileupEstimator *self,
         const char * source,
         size_t cursor_cache_size,
         const VCursor * ref_cursor,
-        const VCursor * align_cursor )
+        const VCursor * align_cursor,
+		uint64_t cutoff_value )
 {
     rc_t rc = 0;
     VectorInit( &self->reftable, 0, 25 );
+	self->cutoff_value = cutoff_value;
     if ( ref_cursor == NULL || align_cursor == NULL )
     {
         if ( source == NULL )
@@ -243,7 +252,8 @@ LIB_EXPORT rc_t CC MakePileupEstimator( struct PileupEstimator **self,
         const char * source,
         size_t cursor_cache_size,
         const struct VCursor * ref_cursor,
-        const struct VCursor * align_cursor )
+        const struct VCursor * align_cursor,
+		uint64_t cutoff_value )
 {
     rc_t rc = 0;
     if ( self == NULL )
@@ -256,7 +266,8 @@ LIB_EXPORT rc_t CC MakePileupEstimator( struct PileupEstimator **self,
             rc = RC( rcAlign, rcQuery, rcConstructing, rcMemory, rcExhausted );
         else
         {
-            rc = InitializePileupEstimator( o, source, cursor_cache_size, ref_cursor, align_cursor );
+            rc = InitializePileupEstimator( o, source, cursor_cache_size,
+											ref_cursor, align_cursor, cutoff_value );
             if ( rc == 0 )
                 *self = o;
             else
@@ -363,41 +374,70 @@ static rc_t FindRefEntry( PileupEstimator *self, RefEntry ** entry, const String
 
 static rc_t PerformEstimation( PileupEstimator *self,
                                RefEntry * entry,
-                               uint64_t startpos,
-                               uint32_t len,
+                               uint64_t slice_start,
+                               uint32_t slice_len,
+                               uint64_t slice_end,
                                uint64_t * result )
 {
     rc_t rc = 0;
-    uint32_t * coverage = calloc( len, sizeof *coverage );
-    if ( coverage == NULL )
+
+	if ( self->coverage == NULL )
+	{
+		self->coverage = calloc( slice_len, sizeof *( self->coverage ) );
+		self->coverage_len = slice_len;
+	}
+	else if ( self->coverage_len < slice_len )
+	{
+		free( ( void * ) self->coverage );
+		self->coverage = calloc( slice_len, sizeof *( self->coverage ) );
+		self->coverage_len = slice_len;
+	}
+	else
+	{
+		memset( self->coverage, 0, self->coverage_len );
+	}
+	
+    if ( self->coverage == NULL )
         rc = RC( rcAlign, rcQuery, rcConstructing, rcMemory, rcExhausted );
     else
     {
-        uint64_t slice_end = startpos + len - 1;
+		uint64_t cutoff_sum = 0;
         int64_t ref_row_id = entry->start_row_id;
         uint32_t ref_row_count, prim_id_count, prim_id_idx, ref_pos_count, ref_len_count, elem_bits, boff;
         int64_t * prim_ids;
         uint32_t * ref_pos_ptr;
         uint32_t * ref_len_ptr;
-        
+        bool done = false;
+		
         /* adjust start_ref_row and ref_row_count to the given slice... */
         {
-            int64_t start_offset = startpos / self->max_seq_len;
-            int64_t end_offset = startpos + len - 1;
-            end_offset /= self->max_seq_len;
+            int64_t start_offset = slice_start / self->max_seq_len;
+            int64_t end_offset = slice_end / self->max_seq_len;
             if ( start_offset > 0 ) start_offset--;
             ref_row_id += start_offset;
             ref_row_count = ( end_offset - start_offset ) + 1;
         }
 
         /* for each row in REFERENCE that matches the given slice... */
-        for( ; rc == 0 && ref_row_id < ref_row_count; ref_row_id++ )
+        for( ; rc == 0 && !done && ref_row_count > 0; ref_row_id++, ref_row_count-- )
         {
             /* get the primary alignment-id's */
             rc = VCursorCellDataDirect( self->ref_cursor, ref_row_id, self->ref_cursor_idx_PRIMARY_ALIGNMENT_IDS,
                                         &elem_bits, ( const void ** )&prim_ids, &boff, &prim_id_count );
+			
+			/* doing the cutoff-check */
+			if ( self->cutoff_value > 0 )
+			{
+				cutoff_sum += prim_id_count;
+				if ( cutoff_sum >= self->cutoff_value )
+				{
+					*result = UINTMAX_MAX;
+					done = true;
+				}
+			}
+			
             /* for each alignment-id found */
-            for ( prim_id_idx = 0; rc == 0 && prim_id_idx < prim_id_count; prim_id_idx++ )
+            for ( prim_id_idx = 0; rc == 0 && !done && prim_id_idx < prim_id_count; prim_id_idx++ )
             {
                 /* get REF_POS */
                 int64_t prim_id = prim_ids[ prim_id_idx ];
@@ -420,42 +460,39 @@ static rc_t PerformEstimation( PileupEstimator *self,
                 {
                     uint32_t ref_pos = ref_pos_ptr[ 0 ];
                     uint32_t ref_len = ref_len_ptr[ 0 ];
-                    if ( ( ( ref_pos + ref_len - 1 ) >= startpos ) &&
-                          ref_pos < slice_end )
+                    if ( ( ( ref_pos + ref_len - 1 ) >= slice_start ) && ( ref_pos <= slice_end ) )
                     {
-                        int32_t rel_start = ( ref_pos - ( uint32_t )startpos );
-                        int32_t i;
+                        int32_t rel_start = ( ref_pos - ( uint32_t )slice_start );
+                        int32_t i, j;
                         
                         if ( rel_start < 0 )
                         {
                             ref_len += rel_start;
                             rel_start = 0;
                         }
-                        for ( i = rel_start; i < ref_len && i < len; ++i )
-                            coverage[ i ]++; /* <==== */
+                        for ( i = rel_start, j = 0; j < ref_len && i < slice_len; ++i, ++j )
+                            self->coverage[ i ]++; /* <==== */
                     }
-                
                 }
             }
         }
 
         /* sum up the bases in the slice */
-        if ( rc == 0 )
+        if ( rc == 0 && !done )
         {
             uint32_t idx;
             uint64_t sum = 0;
-            for ( idx = 0; idx < len; ++ idx ) sum += coverage[ idx ];
+            for ( idx = 0; idx < slice_len; ++idx ) sum += self->coverage[ idx ];
             *result = sum;
         }
-        free( ( void * ) coverage );
     }
     return rc;
 }
 
 LIB_EXPORT rc_t CC RunPileupEstimator( struct PileupEstimator *self,
         const String * refname,
-        uint64_t startpos,
-        uint32_t len,
+        uint64_t slice_start,
+        uint32_t slice_len,
         uint64_t * result )
 {
     rc_t rc = 0;
@@ -463,6 +500,8 @@ LIB_EXPORT rc_t CC RunPileupEstimator( struct PileupEstimator *self,
         rc = RC( rcAlign, rcQuery, rcAccessing, rcSelf, rcNull );
     else if ( refname == NULL || result == NULL )
         rc = RC( rcAlign, rcQuery, rcAccessing, rcParam, rcNull );
+    else if ( slice_len == 0 )
+        rc = RC( rcAlign, rcQuery, rcAccessing, rcParam, rcInvalid );
     else
     {
         *result = 0;
@@ -475,11 +514,11 @@ LIB_EXPORT rc_t CC RunPileupEstimator( struct PileupEstimator *self,
             rc = FindRefEntry( self, &ref_entry, refname );
             if ( rc == 0 )
             {
-                if ( startpos >= ref_entry->reflen ||
-                     ( startpos + len ) - 1 >= ref_entry->reflen )
+                uint64_t slice_end = slice_start + slice_len - 1;
+                if ( slice_start >= ref_entry->reflen || slice_end >= ref_entry->reflen )
                     rc = RC( rcAlign, rcQuery, rcAccessing, rcItem, rcInvalid );
                 else
-                    rc = PerformEstimation( self, ref_entry, startpos, len, result );
+                    rc = PerformEstimation( self, ref_entry, slice_start, slice_len, slice_end, result );
             }
         }
     }

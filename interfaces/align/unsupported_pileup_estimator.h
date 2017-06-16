@@ -31,6 +31,10 @@
 extern "C" {
 #endif
 
+#ifndef _h_align_extern_
+#include <align/extern.h>
+#endif
+
 #ifndef _h_klib_text_
 #include <klib/text.h>
 #endif
@@ -75,12 +79,21 @@ struct PilepuEstimator;
  *                          - REF_LEN
  *                      we expect this cursor to be opened
  *
+ *
+ *		cutoff_value [ IN ] - how many alignments per touched REFERENCE-table
+ *                            are too much, it this value is reached while
+ *                            running the estimator - a value of MAX_UINT64 is
+ *                            returned as result. This should avoid the
+ *                            situation that collecting the estimation will
+ *                            take too long...
+ *                            0 ... no cutoff-check performed
  */
 ALIGN_EXTERN rc_t CC MakePileupEstimator( struct PileupEstimator **self,
         const char * source,
         size_t cursor_cache_size,
         const struct VCursor * ref_cursor,
-        const struct VCursor * align_cursor );
+        const struct VCursor * align_cursor,
+		uint64_t cutoff_value );
 
 /*--------------------------------------------------------------------------
  * ReleasePileupEstimator

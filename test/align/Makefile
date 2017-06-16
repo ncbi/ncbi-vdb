@@ -30,13 +30,15 @@ MODULE = test/align
 
 TEST_TOOLS = \
 	test-load-index \
-
+	test-estimator \
+    
 include $(TOP)/build/Makefile.env
 
 $(TEST_TOOLS): makedirs
 	@ $(MAKE_CMD) $(TEST_BINDIR)/$@
 
 clean: stdclean
+
 #-------------------------------------------------------------------------------
 # test-load-index
 #
@@ -54,3 +56,20 @@ TEST_INDEX_LIB = \
 $(TEST_BINDIR)/test-load-index: $(TEST_INDEX_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_INDEX_LIB)
 
+
+#-------------------------------------------------------------------------------
+# test-estimator
+#
+TEST_ESTIMATOR_SRC = \
+	pileup_estimator
+
+TEST_ESTIMATOR_OBJ = \
+	$(addsuffix .$(OBJX),$(TEST_ESTIMATOR_SRC))
+
+TEST_ESTIMATOR_LIB = \
+	-skapp \
+	-sktst \
+	-sncbi-vdb
+
+$(TEST_BINDIR)/test-estimator: $(TEST_ESTIMATOR_OBJ)
+	$(LP) --exe -o $@ $^ $(TEST_ESTIMATOR_LIB)
