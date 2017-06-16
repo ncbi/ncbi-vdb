@@ -444,8 +444,14 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
         }
     }
 
+    if ( rc != 0 ) {
+        if ( LogNcbiVdbNetError ( mgr -> NCBI_VDB_NETkfgValue ) )
+            PLOGERR ( klogSys, ( klogSys, rc, "Failed to Make Connection "
+                "in KClientHttpOpen to '$(host):$(port)",
+                "host=%S,port=%hd", aHostname, aPort ) );
+    }
     /* if the connection is open */
-    if ( rc == 0 )
+    else
     {
         STATUS ( STAT_USR, "%s - connected to %S (%s)\n", __func__, hostname,
             self -> ep . ip_address );
