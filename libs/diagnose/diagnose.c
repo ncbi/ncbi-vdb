@@ -32,6 +32,7 @@
 #include <kfs/directory.h> /* KDirectoryRelease */
 #include <kfs/file.h> /* KFile */
 
+#include <klib/data-buffer.h> /* KDataBuffer */
 #include <klib/out.h> /* KOutMsg */
 #include <klib/printf.h> /* string_vprintf */
 #include <klib/rc.h>
@@ -79,15 +80,19 @@ rc_t KDiagnoseSetVerbosity ( KDiagnose * self, int verbosity ) {
 
 typedef struct {
     int n [ 6 ];
-    bool ended;
     int level;
+    bool ended;
+    bool started;           /*  TestStart did not terminale string by EOL */
+    bool failedWhileSilent;
 
-    int verbosity; /* -3    none
-                      -2    error
-                      -1    info
-                       0... last printed index of n[] */
+    int verbosity; /* -3    none  ( KVERBOSITY_NONE  )
+                      -2    error ( KVERBOSITY_ERROR )
+                      -1    info  ( KVERBOSITY_INFO  )
+                       0... last printed index of n [] */
 
     int total;
+
+    KDataBuffer msg;
 
     const KConfig * kfg;
     const KNSManager * kmgr;
@@ -107,14 +112,29 @@ static void STestInit ( STest * self, const KDiagnose * test )
     self -> vmgr = test -> vmgr;
 
     self -> verbosity = test -> verbosity;
-    if ( self -> verbosity == -1 )
-        self -> verbosity = sizeof self -> n / sizeof self -> n [ 0 ] - 1;
-    else
-        -- self -> verbosity;
+    switch ( self -> verbosity ) {
+        case -3: /* none  ( KVERBOSITY_NONE  ) */
+        case -2: /* error ( KVERBOSITY_ERROR ) */
+        case -1: /* info  ( KVERBOSITY_INFO  ) */
+            break;
+        case 0: /* max */
+            self -> verbosity = sizeof self -> n / sizeof self -> n [ 0 ] - 1;
+            break;
+        default:
+            if ( self -> verbosity >= 0 )
+                -- self -> verbosity;
+            else
+                self -> verbosity
+                    = sizeof self -> n / sizeof self -> n [ 0 ] - 1;
+            break;
+    }
 }
 
 static void STestFini ( STest * self ) {
     assert ( self );
+
+    if ( self -> level < KVERBOSITY_INFO )
+        return;
 
     if ( self -> n [ 0 ] == 0 || self -> n [ 1 ] != 0 || self -> level != 0 )
         OUTMSG ( ( "= TEST WAS NOT COMPLETED\n" ) );
@@ -126,6 +146,9 @@ static void STestFini ( STest * self ) {
 static rc_t STestVStart ( STest * self, bool checking,
                           const char * fmt, va_list args  )
 {
+    int i = 0;
+    KDataBuffer bf;
+    memset ( & bf, 0, sizeof bf );
     char b [ 512 ] = "";
     rc_t rc = string_vprintf ( b, sizeof b, NULL, fmt, args );
     if ( rc != 0 ) {
@@ -145,8 +168,29 @@ static rc_t STestVStart ( STest * self, bool checking,
 
     ++ self -> n [ self -> level ];
 
+    if ( self -> msg . elem_count > 0 ) {
+        assert ( self -> msg . base );
+        ( ( char * ) self -> msg . base)  [ 0 ] = '\0';
+        self -> msg . elem_count = 0;
+    }
+    rc = KDataBufferPrintf ( & self -> msg,  "< %d", self -> n [ 0 ] );
+#ifdef DEPURAR
+const char*c=self->msg.base;
+#endif
+    if ( rc != 0 )
+        OUTMSG ( ( "CANNOT PRINT: %R\n", rc ) );
+    else 
+        for ( i = 1; rc == 0 && i <= self -> level; ++ i ) {
+            rc = KDataBufferPrintf ( & self -> msg, ".%d", self -> n [ i ] );
+            if ( rc != 0 )
+                OUTMSG ( ( "CANNOT PRINT: %R\n", rc ) );
+        }
+    if ( rc == 0 )
+        rc = KDataBufferPrintf ( & self -> msg, " %s: ", b );
+        if ( rc != 0 )
+            OUTMSG ( ( "CANNOT PRINT: %R\n", rc ) );
+
     if ( self -> level <= self -> verbosity ) {
-        int i = 0;
         OUTMSG ( ( "> %d", self -> n [ 0 ] ) );
         for ( i = 1; i <= self -> level; ++ i )
             OUTMSG ( ( ".%d", self -> n [ i ] ) );
@@ -154,10 +198,14 @@ static rc_t STestVStart ( STest * self, bool checking,
         rc = OUTMSG ( ( " %s%s%s", checking ? "Checking " : "", b,
                         checking ? "..." : " " ) );
         if ( checking ) {
-            if ( self -> level < self -> verbosity )
+            if ( self -> level < self -> verbosity ) {
                 OUTMSG ( ( "\n" ) );
-            else
+                self -> started = false;
+            }
+            else {
                 OUTMSG ( ( " " ) );
+                self -> started = true;
+            }
         }
     }
 
@@ -168,13 +216,16 @@ typedef enum {
     eFAIL,
     eOK,
     eMSG,
-    eEND,
+    eEndFAIL,
+    eEndOK,
     eDONE,
 } EOK;
 
 static rc_t STestVEnd ( STest * self, EOK ok,
                         const char * fmt, va_list args )
 {
+    bool failedWhileSilent = self -> failedWhileSilent;
+
     assert ( self );
 
     if ( ok != eMSG ) {
@@ -187,49 +238,74 @@ static rc_t STestVEnd ( STest * self, EOK ok,
     }
 
     assert ( self -> level >= 0 );
-    if ( self -> level > self -> verbosity )
-        return 0;
-
+#ifdef DEPURAR
+const char*c=self->msg.base;
+#endif
     char b [ 512 ] = "";
     rc_t rc = string_vprintf ( b, sizeof b, NULL, fmt, args );
-
-    if ( rc != 0 )
+    if ( rc != 0 ) {
         OUTMSG ( ( "CANNOT PRINT: %R", rc ) );
-    else {
-        bool print = self -> level < self -> verbosity;
-        if ( ok == eFAIL || ok == eOK || ok == eDONE ) {
-            if ( print ) {
-                int i = 0;
-                rc = OUTMSG ( ( "< %d", self -> n [ 0 ] ) );
-                for ( i = 1; i <= self -> level; ++ i )
-                    OUTMSG ( ( ".%d", self -> n [ i ] ) );
-                OUTMSG ( ( " " ) );
+        return rc;
+    }
+
+    if ( self -> level > self -> verbosity ) {
+        if ( ok == eEndFAIL ) {
+            rc = KDataBufferPrintf ( & self -> msg,  "%s\n", b );
+            if ( rc != 0 )
+                OUTMSG ( ( "CANNOT PRINT: %R", rc ) );
+            else {
+                if ( self -> started ) {
+                    OUTMSG ( ( "\n" ) );
+                    self -> failedWhileSilent = true;
+                    self -> started = false;
+                }
+                if ( self -> level >= KVERBOSITY_ERROR )
+                    OUTMSG ( ( "%s", self -> msg . base ) );
+                assert ( self -> msg . base );
+                ( ( char * ) self -> msg . base)  [ 0 ] = '\0';
+                self -> msg . elem_count = 0;
             }
         }
-        if ( print ||
-             ( self -> level == self -> verbosity &&
-               ( ok == eEND || ok == eDONE || ok == eMSG ) ) )
-        {
-            OUTMSG ( ( b ) );
+        return rc;
+    }
+
+    bool print = self -> level < self -> verbosity || failedWhileSilent;
+    if ( ok == eFAIL || ok == eOK || ok == eDONE ) {
+        if ( print ) {
+            int i = 0;
+            rc = OUTMSG ( ( "< %d", self -> n [ 0 ] ) );
+            for ( i = 1; i <= self -> level; ++ i )
+                OUTMSG ( ( ".%d", self -> n [ i ] ) );
+            OUTMSG ( ( " " ) );
+        }
+    }
+    if ( print ||
+            ( self -> level == self -> verbosity &&
+              ok != eFAIL && ok != eOK ) )
+    {
+        OUTMSG ( ( b ) );
+    }
+
+    if ( print )
+        switch ( ok ) {
+            case eFAIL: OUTMSG ( ( ": FAILURE\n" ) ); break;
+            case eOK  : OUTMSG ( ( ": OK\n"      ) ); break;
+            case eEndFAIL:
+            case eEndOK :
+            case eDONE: OUTMSG ( (     "\n"      ) ); break;
+            default   :                               break;
+        }
+    else if ( self -> level == self -> verbosity )
+        switch ( ok ) {
+            case eFAIL: OUTMSG ( ( "FAILURE\n" ) ); break;
+            case eOK  : OUTMSG ( ( "OK\n"      ) ); break;
+            case eEndFAIL:
+            case eEndOK :
+            case eDONE: OUTMSG ( (   "\n"      ) ); break;
+            default   :                             break;
         }
 
-        if ( print )
-            switch ( ok ) {
-                case eFAIL: OUTMSG ( ( ": FAILURE\n" ) ); break;
-                case eOK  : OUTMSG ( ( ": OK\n"      ) ); break;
-                case eEND :
-                case eDONE: OUTMSG ( (     "\n"      ) ); break;
-                default   :                               break;
-            }
-        else if ( self -> level == self -> verbosity )
-            switch ( ok ) {
-                case eFAIL: OUTMSG ( ( "FAILURE\n" ) ); break;
-                case eOK  : OUTMSG ( ( "OK\n"      ) ); break;
-                case eEND :
-                case eDONE: OUTMSG ( (   "\n"      ) ); break;
-                default   :                             break;
-            }
-    }
+    self -> failedWhileSilent = false;
 
     return rc;
 }
@@ -321,20 +397,20 @@ static rc_t STestCheckFileSize ( STest * self, const String * path,
     rc = KNSManagerMakeReliableHttpFile ( self -> kmgr, & file, NULL,
                                           HTTP_VERSION, "%S", path );
     if ( rc != 0 )
-        STestEnd ( self, eEND, "FAILURE: %R", rc );
+        STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     else {
         if ( rc == 0 ) {
-            STestEnd ( self, eEND, "OK" );
+            STestEnd ( self, eEndOK, "OK" );
 
             rc = STestStart ( self, false, "KFileSize(KFile(%S)) =", path );
             rc = KFileSize ( file, sz );
             if ( rc == 0 )
-                STestEnd ( self, eEND, "%lu: OK", * sz );
+                STestEnd ( self, eEndOK, "%lu: OK", * sz );
             else
-                STestEnd ( self, eEND, "FAILURE: %R", rc );
+                STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
         }
         else
-            STestEnd ( self, eEND, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
 
     KFileRelease ( file );
@@ -388,9 +464,9 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
                                             HTTP_VERSION, & host, 0 );
         }
         if ( rc == 0 )
-            STestEnd ( self, eEND, "OK" );
+            STestEnd ( self, eEndOK, "OK" );
         else
-            STestEnd ( self, eEND, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
     KHttpRequest * req = NULL;
     if ( rc == 0 ) {
@@ -410,9 +486,9 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
             "KHttpRequestHEAD(KHttpMakeRequest(KClientHttp)):" );
         rc = KHttpRequestHEAD ( req, & rslt );
         if ( rc == 0 )
-            STestEnd ( self, eEND, "OK" );
+            STestEnd ( self, eEndOK, "OK" );
         else
-            STestEnd ( self, eEND, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
     char buffer [ 1024 ] = "";
     size_t num_read = 0;
@@ -426,17 +502,17 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
             if ( string_cmp ( buffer, num_read, bytes, sizeof bytes - 1,
                               sizeof bytes - 1 ) == 0 )
             {
-                STestEnd ( self, eEND, "'%.*s': OK",
+                STestEnd ( self, eEndOK, "'%.*s': OK",
                                         ( int ) num_read, buffer );
             }
             else {
-                STestEnd ( self, eEND, "'%.*s': FAILURE",
+                STestEnd ( self, eEndFAIL, "'%.*s': FAILURE",
                                         ( int ) num_read, buffer );
                 rc = RC ( rcExe, rcFile, rcOpening, rcFunction, rcUnsupported );
             }
         }
         else
-            STestEnd ( self, eEND, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
     KHttpResultRelease ( rslt );
     rslt = NULL;
@@ -452,18 +528,18 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
                         "(KHttpMakeRequest, %lu, %zu):", pos, bytes );
         rc = KHttpRequestByteRange ( req, pos, bytes );
         if ( rc == 0 )
-            STestEnd ( self, eEND, "OK" );
+            STestEnd ( self, eEndOK, "OK" );
         else
-            STestEnd ( self, eEND, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
     if ( rc == 0 ) {
         STestStart ( self, false,
             "KHttpResult = KHttpRequestGET(KHttpMakeRequest(KClientHttp)):" );
         rc = KHttpRequestGET ( req, & rslt );
         if ( rc == 0 )
-            STestEnd ( self, eEND, "OK" );
+            STestEnd ( self, eEndOK, "OK" );
         else
-            STestEnd ( self, eEND, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
     if ( rc == 0 ) {
         uint64_t po = 0;
@@ -473,14 +549,14 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
             if ( po != pos || ( ebytes > 0 && byte != ebytes ) ) {
                 STestStart ( self, false,
                              "KClientHttpResultRange(KHttpResult,&p,&b):" );
-                STestEnd ( self, eEND, "FAILURE: expected:{%lu,%zu}, "
+                STestEnd ( self, eEndFAIL, "FAILURE: expected:{%lu,%zu}, "
                             "got:{%lu,%zu}", pos, ebytes, po, byte );
                 rc = RC ( rcExe, rcFile, rcReading, rcRange, rcOutofrange );
             }
         }
         else {
             STestStart ( self, false, "KClientHttpResultRange(KHttpResult):" );
-            STestEnd ( self, eEND, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
         }
     }
     if ( rc == 0 ) {
@@ -489,10 +565,10 @@ rc_t STestCheckRanges ( STest * self, const Data * data, uint64_t sz )
         rc = KHttpResultGetHeader ( rslt, "Content-Range",
                                     buffer, sizeof buffer, & num_read );
         if ( rc == 0 )
-            STestEnd ( self, eEND, "'%.*s': OK",
+            STestEnd ( self, eEndOK, "'%.*s': OK",
                                     ( int ) num_read, buffer );
         else
-            STestEnd ( self, eEND, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
     KHttpResultRelease ( rslt );
     rslt = NULL;
@@ -515,7 +591,7 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
         size_t num_read = 0;
         rc = KStreamRead ( stream, buffer, sizeof buffer, & num_read );
         if ( rc != 0 )
-            STestEnd ( self, eEND, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
         else if ( num_read != 0 ) {
             if ( total == 0 && esz > 0 ) {
                 int i = 0;
@@ -534,7 +610,7 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
                 }
                 STestEnd ( self, eMSG, "': " );
                 if ( string_cmp ( buffer, num_read, exp, esz, esz ) != 0 ) {
-                    STestEnd ( self, eEND, " FAILURE: bad content" );
+                    STestEnd ( self, eEndFAIL, " FAILURE: bad content" );
                     rc = RC ( rcExe, rcFile, rcReading, rcString, rcUnequal );
                 }
             }
@@ -558,10 +634,11 @@ static rc_t STestCheckStreamRead ( STest * self, const KStream * stream,
                     }
                     STestEnd ( self, eMSG, "%s: ", buffer );
                 }
-                STestEnd ( self, eEND, "OK" );
+                STestEnd ( self, eEndOK, "OK" );
             }
             else
-                STestEnd ( self, eEND, "%s: SIZE DO NOT MATCH (%zu)\n", total );
+                STestEnd ( self, eEndFAIL, "%s: SIZE DO NOT MATCH (%zu)\n",
+                                           total );
             break;
         }
     }
@@ -591,31 +668,31 @@ static rc_t STestCheckHttpUrl ( STest * self, const Data * data, bool print,
         rc = KNSManagerMakeRequest ( self -> kmgr, & req,
                                      HTTP_VERSION, NULL, "%S", full );
         if ( rc == 0 )
-            STestEnd ( self, eEND, "OK"  );
+            STestEnd ( self, eEndOK, "OK"  );
         else
-            STestEnd ( self, eEND, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
     if ( rc == 0 ) {
         STestStart ( self, false,
                      "KHttpResult = KHttpRequestGET(KHttpRequest):" );
         rc = KHttpRequestGET ( req, & rslt );
         if ( rc == 0 )
-            STestEnd ( self, eEND, "OK" );
+            STestEnd ( self, eEndOK, "OK" );
         else
-            STestEnd ( self, eEND, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
     if ( rc == 0 ) {
         uint32_t code = 0;
         STestStart ( self, false, "KHttpResultStatus(KHttpResult) =" );
         rc = KHttpResultStatus ( rslt, & code, NULL, 0, NULL );
         if ( rc != 0 )
-            STestEnd ( self, eEND, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
         else {
             STestEnd ( self, eMSG, "%u: ", code );
             if ( code == 200 )
-                STestEnd ( self, eEND, "OK" );
+                STestEnd ( self, eEndOK, "OK" );
             else {
-                STestEnd ( self, eEND, "FAILURE" );
+                STestEnd ( self, eEndFAIL, "FAILURE" );
                 rc = RC ( rcExe, rcFile, rcReading, rcFile, rcInvalid );
             }
         }
@@ -664,9 +741,9 @@ static rc_t STestCheckVfsUrl ( STest * self, const Data * data ) {
     STestStart ( self, false, "VFSManagerOpenDirectoryRead(%S):", & path );
     rc = VFSManagerOpenDirectoryRead ( self -> vmgr, & d, data -> vpath );
     if ( rc == 0 )
-        STestEnd ( self, eEND, "OK"  );
+        STestEnd ( self, eEndOK, "OK"  );
     else
-        STestEnd ( self, eEND, "FAILURE: %R", rc );
+        STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
 
     RELEASE ( KDirectory, d );
 
@@ -750,9 +827,9 @@ static const char * STestCallCgi ( STest * self, const String * acc,
     rc_t rc = KNSManagerMakeReliableClientRequest ( self -> kmgr, & req,
         HTTP_VERSION, NULL, "%S", cgi);
     if ( rc == 0 )
-        STestEnd ( self, eEND, "OK"  );
+        STestEnd ( self, eEndOK, "OK"  );
     else
-        STestEnd ( self, eEND, "FAILURE: %R", rc );
+        STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     if ( rc == 0 ) {
         const char param [] = "accept-proto";
         rc = KHttpRequestAddPostParam ( req, "%s=https,http,fasp", param );
@@ -776,9 +853,9 @@ static const char * STestCallCgi ( STest * self, const String * acc,
         STestStart ( self, false, "KHttpRequestPOST(KHttpRequest(%S)):", cgi );
         rc = KHttpRequestPOST ( req, & rslt );
         if ( rc == 0 )
-            STestEnd ( self, eEND, "OK"  );
+            STestEnd ( self, eEndOK, "OK"  );
         else
-            STestEnd ( self, eEND, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
     }
     rc_t rs = 0;
     if ( rc == 0 ) {
@@ -786,13 +863,13 @@ static const char * STestCallCgi ( STest * self, const String * acc,
         STestStart ( self, false, "KHttpResultStatus(KHttpResult(%S)) =", cgi );
         rc = KHttpResultStatus ( rslt, & code, NULL, 0, NULL );
         if ( rc != 0 )
-            STestEnd ( self, eEND, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
         else {
             STestEnd ( self, eMSG, "%u: ", code );
             if ( code == 200 )
-                STestEnd ( self, eEND, "OK" );
+                STestEnd ( self, eEndOK, "OK" );
             else {
-                STestEnd ( self, eEND, "FAILURE" );
+                STestEnd ( self, eEndFAIL, "FAILURE" );
                 rs = RC ( rcExe, rcFile, rcReading, rcFile, rcInvalid );
             }
         }
@@ -808,7 +885,7 @@ static const char * STestCallCgi ( STest * self, const String * acc,
         STestStart ( self, false, "KStreamRead(KHttpResult(%S)) =", cgi );
         rc = KStreamRead ( stream, response, response_sz, resp_read );
         if ( rc != 0 )
-            STestEnd ( self, eEND, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
         else {
             if ( * resp_read > response_sz - 4 ) {
                 response [ response_sz - 4 ] = '.';
@@ -825,7 +902,7 @@ static const char * STestCallCgi ( STest * self, const String * acc,
                     response [ * resp_read ] = '\0';
                 }
             }
-            STestEnd ( self, eEND, "'%s': OK", response );
+            STestEnd ( self, eEndOK, "'%s': OK", response );
             if ( rs == 0 ) {
                 int i = 0;
                 int p = 0;
@@ -948,14 +1025,14 @@ static rc_t STestCheckNetwork ( STest * self, const Data * data,
                                   & host, port );
         rc = KNSManagerInitDNSEndpoint ( self -> kmgr, & ep, & host, port );
         if ( rc != 0 )
-            STestEnd ( self, eEND, "FAILURE: %R", rc );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", rc );
         else {
             char endpoint [ 1024 ] = "";
             rc_t rx = endpoint_to_string ( endpoint, sizeof endpoint, & ep );
             if ( rx != 0 )
-                STestEnd ( self, eEND, "CANNOT CONVERT TO STRING" );
+                STestEnd ( self, eEndFAIL, "CANNOT CONVERT TO STRING" );
             else
-                STestEnd ( self, eEND, "'%s': OK", endpoint );
+                STestEnd ( self, eEndOK, "'%s': OK", endpoint );
         }
         port = 80;
         STestStart ( self, false, "KNSManagerInitDNSEndpoint(%S:%hu) =",
@@ -963,14 +1040,14 @@ static rc_t STestCheckNetwork ( STest * self, const Data * data,
         rc_t r1 = KNSManagerInitDNSEndpoint ( self -> kmgr, & ep,
                                               & host, port );
         if ( r1 != 0 )
-            STestEnd ( self, eEND, "FAILURE: %R", r1 );
+            STestEnd ( self, eEndFAIL, "FAILURE: %R", r1 );
         else {
             char endpoint [ 1024 ] = "";
             rc_t rx = endpoint_to_string ( endpoint, sizeof endpoint, & ep );
             if ( rx != 0 )
-                STestEnd ( self, eEND, "CANNOT CONVERT TO STRING" );
+                STestEnd ( self, eEndFAIL, "CANNOT CONVERT TO STRING" );
             else
-                STestEnd ( self, eEND, "'%s': OK", endpoint );
+                STestEnd ( self, eEndOK, "'%s': OK", endpoint );
         }
         if ( rc == 0 ) {
             rc = STestCheckAcc ( self, data, false, exp, esz );
