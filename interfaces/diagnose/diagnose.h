@@ -51,6 +51,11 @@ typedef struct KDiagnose KDiagnose;
 DIAGNOSE_EXTERN rc_t CC KDiagnoseMakeExt ( KDiagnose ** test,
     struct KConfig * kfg, struct KNSManager * kmg, struct VFSManager * vmgr );
 DIAGNOSE_EXTERN rc_t CC KDiagnoseRelease ( const KDiagnose * self );
+
+#define KVERBOSITY_NONE  -3
+#define KVERBOSITY_ERROR -2
+#define KVERBOSITY_INFO  -1
+#define KVERBOSITY_MAX    0
 DIAGNOSE_EXTERN rc_t CC KDiagnoseSetVerbosity ( KDiagnose * self,
                                                 int verbosity );
 DIAGNOSE_EXTERN rc_t CC KDiagnoseRun ( KDiagnose * self );
