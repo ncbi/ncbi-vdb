@@ -58,7 +58,7 @@ class LoaderFixture1
     }
     int test1Range(char const *ref, int const start, int const length) const {
         int alignments = 0;
-        AlignAccess::AlignmentEnumerator e = db.slice(ref, start, start + length);
+        AlignAccess::AlignmentEnumerator e = db.slice(ref, start - 1, (start - 1) + length);
         while (e.next()) {
             ++alignments;
         }
@@ -76,15 +76,15 @@ public:
             int expected;
             int result;
         } test[] = {
-            { "chr1", 100000000, 1, 348, -1 },
-            { "chr1", 141484029, 11733, 0, -1 },
+            { "chr1", 100000001, 1, 347, -1 },
+            { "chr1", 141484030, 11733, 0, -1 },
         };
         int const n = 2;
         bool failed = false;
         for (int i = 0; i < n; ++i)
             test[i].result = test1Range(test[i].ref, test[i].start, test[i].length);
         for (int i = 0; i < n; ++i) {
-            std::cout << "slice " << test[i].ref << ':' << test[i].start + 1 << '-' << test[i].start + test[i].length << " should have " << test[i].expected << " alignments, got " << test[i].result << std::endl;
+            std::cout << "slice " << test[i].ref << ':' << test[i].start << '-' << (test[i].start - 1) + test[i].length << " should have " << test[i].expected << " alignments, got " << test[i].result << std::endl;
             if (test[i].result != test[i].expected) {
                 failed = true;
             }
@@ -132,15 +132,15 @@ public:
             int expected;
             int result;
         } test[] = {
-            { "1", 1100000, 100000, 10387, -1 },
-            { "1", 1200000, 100000, 14957, -1 },
+            { "1", 1100001, 100000, 10387, -1 },
+            { "1", 1200001, 100000, 14957, -1 },
         };
         int const n = 2;
         bool failed = false;
         for (int i = 0; i < n; ++i)
             test[i].result = test1Range(test[i].ref, test[i].start, test[i].length);
         for (int i = 0; i < n; ++i) {
-            std::cout << "slice " << test[i].ref << ':' << test[i].start + 1 << '-' << test[i].start + test[i].length << " should have " << test[i].expected << " alignments, got " << test[i].result << std::endl;
+            std::cout << "slice " << test[i].ref << ':' << test[i].start << '-' << (test[i].start - 1) + test[i].length << " should have " << test[i].expected << " alignments, got " << test[i].result << std::endl;
             if (test[i].result != test[i].expected) {
                 failed = true;
             }
@@ -159,7 +159,7 @@ FIXTURE_TEST_CASE ( LoadIndex2, LoaderFixture2 )
 static void test1Range(char const *path, char const *ref, int const start, int const end, bool const verbose)
 {
     AlignAccess::Database const db(AlignAccess::Manager::make().open(path));
-    AlignAccess::AlignmentEnumerator e = db.slice(ref, start, end);
+    AlignAccess::AlignmentEnumerator e = db.slice(ref, start - 1, end);
     int first = 0;
     int last = 0;
     int records = 0;
