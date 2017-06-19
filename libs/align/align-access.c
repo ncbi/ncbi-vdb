@@ -441,7 +441,7 @@ AGAIN:
         }
         else {
             int64_t const endpos = pos + length;
-            if (endpos < self->startpos)
+            if (endpos <= self->startpos)
                 goto AGAIN;
         }
     }
