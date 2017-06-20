@@ -366,7 +366,7 @@ rc_t CC AlignAccessDBWindowedAlignments(const AlignAccessDB *self,
         return RC(rcAlign, rcTable, rcConstructing, rcParam, rcInvalid);
     }
 
-    if (endpos > rs->length /* || wsize == 0 */)
+    if (endpos > rs->length || wsize == 0)
         endpos = rs->length;
 
     rc = BAMFileMakeSlice(self->innerSelf, &slice, i, pos, endpos);
