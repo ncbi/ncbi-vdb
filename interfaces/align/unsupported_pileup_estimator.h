@@ -126,6 +126,12 @@ ALIGN_EXTERN rc_t CC RunPileupEstimator( struct PileupEstimator *self,
                                          uint64_t * result );
 
 
+ALIGN_EXTERN rc_t CC RunCoverage( struct PileupEstimator *self,
+                                  const String * refname,
+                                  uint64_t startpos,
+                                  uint32_t len,
+                                  uint32_t * coverage );
+
 #ifdef __cplusplus
 }
 #endif
