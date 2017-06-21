@@ -60,7 +60,7 @@ namespace ncbi
 
             void AddIncludePath ( const char * path );
 
-            AST* Build ( const ParseTree& p_root, bool p_debugParse = false );
+            AST* Build ( const ParseTree& p_root, const char * p_source = "", bool p_debugParse = false );
 
             const KSymbol* Resolve ( const AST_FQN& p_fqn, bool p_reportUnknown = true );
             KSymbol* Resolve ( const Token :: Location & p_loc, const char* p_ident, bool p_reportUnknown = true );
@@ -72,7 +72,7 @@ namespace ncbi
             void ReportError ( const Token :: Location & p_loc, const char * p_msg, const char * p_str );
             void ReportError ( const Token :: Location & p_loc, const char * p_msg, int64_t p_val );
             void ReportError ( const char * p_msg, const AST_FQN & p_fqn ); // use location of p_fqn
-            void ReportInternalError ( const char * p_msg ); // no location
+            void ReportInternalError ( const char * p_msg, const char * p_source = "" ); // no line/col
             void ReportRc ( const char * p_msg, rc_t );
 
             // error list is cleared by a call to Build
@@ -124,13 +124,12 @@ namespace ncbi
             // false - failed, error reported
             bool VectorAppend ( Vector & self, uint32_t *idx, const void *item );
 
-            const KSymbol * CreateOverload ( const AST_FQN & p_name,
-                                             const void * p_object,
-                                             int p_type,
-                                             int64_t CC (*p_sort)(const void *, const void *),
-                                             Vector & p_objects,
-                                             Vector & p_names,
-                                             uint32_t * p_id );
+            bool CreateOverload ( const KSymbol * p_name,
+                                  const void * p_object,
+                                  int64_t CC (*p_sort)(const void *, const void *),
+                                  Vector & p_objects,
+                                  Vector & p_names,
+                                  uint32_t * p_id );
 
             bool HandleFunctionOverload ( const void * p_object, uint32_t p_version, const KSymbol * p_priorDecl, uint32_t * p_id );
             bool HandlePhysicalOverload ( const void * p_object, uint32_t p_version, const KSymbol * p_priorDecl, uint32_t * p_id );

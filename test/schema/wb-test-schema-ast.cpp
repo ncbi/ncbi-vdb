@@ -282,17 +282,13 @@ FIXTURE_TEST_CASE(LocationInErrorMessages, AST_Fixture)
         const ErrorReport & errors = m_builder -> GetErrors ();
         REQUIRE_EQ ( 1u, errors . GetCount () );
         const ErrorReport :: Error * err = errors . GetError ( 0 );
-        REQUIRE_EQ ( string ( "Namespace not found: 'a'" ), string ( err -> m_message ) );
+        REQUIRE_EQ ( string ( "Undeclared identifier: 'zz'" ), string ( err -> m_message ) );
         REQUIRE_EQ ( 3u, err -> m_line );
-        REQUIRE_EQ ( 9u, err -> m_column );
+        REQUIRE_EQ ( 11u, err -> m_column );
         REQUIRE_EQ ( string ( "<unknown>" ), string ( err -> m_file ) );
     }
 }
 
-FIXTURE_TEST_CASE(Resolve_UndefinedNamespace, AST_Fixture)
-{
-    VerifyErrorMessage ( "typedef a:zz t;", "Namespace not found: 'a'" );
-}
 FIXTURE_TEST_CASE(Resolve_UndefinedNameInNamespace, AST_Fixture)
 {
     VerifyErrorMessage ( "typedef U8 a:t; typedef a:zz t;", "Undeclared identifier: 'zz'" );
@@ -735,6 +731,8 @@ FIXTURE_TEST_CASE(FuncCall_SchemaParams, AST_Fixture)
     REQUIRE_NOT_NULL ( te1 );
     REQUIRE_NOT_NULL ( te1 -> dt );
     REQUIRE_EQ ( string ( "U8" ), ToCppString ( te1 -> dt -> name -> name ) );
+    REQUIRE_NULL ( te1 -> dim );
+    REQUIRE_EQ ( 1u, te1 -> fd . td . dim );
 
     const SExpression * p2 = static_cast < const SExpression * > ( VectorGet ( & expr -> schem, 1 ) );
     REQUIRE_NOT_NULL ( p2 );

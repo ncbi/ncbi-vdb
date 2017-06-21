@@ -260,8 +260,14 @@ ASTBuilder :: DatabaseDef ( const Token * p_token, AST_FQN * p_fqn, AST * p_pare
         const KSymbol * priorDecl = Resolve ( * p_fqn, false );
         if ( priorDecl == 0 )
         {
-            db -> name = CreateOverload ( * p_fqn, db, eDatabase, SDatabaseSort, m_schema -> db, m_schema -> dname, & db -> id );
-            if ( db -> name == 0 )
+            db -> name = CreateFqnSymbol ( * p_fqn, eDatabase, db );
+            if ( db -> name == 0 ||
+                 ! CreateOverload ( db -> name,
+                                    db,
+                                    SDatabaseSort,
+                                    m_schema -> db,
+                                    m_schema -> dname,
+                                    & db -> id ) )
             {
                 SDatabaseWhack ( db, 0 );
                 return ret;

@@ -108,7 +108,8 @@ ParseTree :: MoveChildren ( ParseTree& p_source )
 
 static const uint32_t StackBlockSize    = 1024; //TODO: pick a good initial size
 
-ParseTreeScanner :: ParseTreeScanner ( const ParseTree& p_root )
+ParseTreeScanner :: ParseTreeScanner ( const ParseTree& p_root, const char * p_source )
+: m_source ( string_dup ( p_source, string_size (p_source ) ) )
 {
     VectorInit ( & m_stack, 0, StackBlockSize );
     PushNode ( & p_root );
@@ -116,6 +117,7 @@ ParseTreeScanner :: ParseTreeScanner ( const ParseTree& p_root )
 
 ParseTreeScanner :: ~ParseTreeScanner ()
 {
+    free ( m_source );
     VectorWhack ( & m_stack, NULL, NULL );
 }
 

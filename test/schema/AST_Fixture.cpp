@@ -204,7 +204,7 @@ AST_Fixture :: MakeAst ( const char* p_source )
         {
             delete m_ast;
         }
-        m_ast = m_builder -> Build ( * m_parseTree, m_debugAst );
+        m_ast = m_builder -> Build ( * m_parseTree, "", m_debugAst );
         if ( m_builder -> GetErrorCount() != 0)
         {
             throw std :: logic_error ( string ( "AST_Fixture::MakeAst : ASTBuilder::Build() failed: " ) + string ( m_builder -> GetErrorMessage ( 0 ) ) );
@@ -274,7 +274,7 @@ AST_Fixture :: VerifySymbol ( const char* p_name, uint32_t p_type )
     {
         AST_FQN * ast = MakeFqn ( p_name );
         sym = m_builder -> Resolve ( * ast );
-        if ( ToCppString ( sym -> name ) !=
+        if ( sym != 0 && ToCppString ( sym -> name ) !=
                 ast -> GetChild ( ast -> ChildrenCount() - 1 ) -> GetTokenValue () )
         {
             throw std :: logic_error ( "AST_Fixture::VerifySymbol : object name mismatch" );

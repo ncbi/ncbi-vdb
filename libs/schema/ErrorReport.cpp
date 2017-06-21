@@ -94,7 +94,7 @@ ErrorReport :: ReportError ( const Location & p_location, const char* p_fmt, ...
 }
 
 void
-ErrorReport :: ReportInternalError ( const char* p_fmt, ... )
+ErrorReport :: ReportInternalError ( const char * p_source, const char* p_fmt, ... )
 {
     const unsigned int BufSize = 1024;
     char buf [ BufSize ];
@@ -104,7 +104,7 @@ ErrorReport :: ReportInternalError ( const char* p_fmt, ... )
     string_vprintf ( buf, BufSize, 0, p_fmt, args );
     va_end ( args );
 
-    Location loc ( "", 0, 0 );
+    Location loc ( p_source, 0, 0 );
     rc_t rc = :: VectorAppend ( & m_errors, 0, new Error ( buf, loc ) );
     if ( rc != 0 )
     {

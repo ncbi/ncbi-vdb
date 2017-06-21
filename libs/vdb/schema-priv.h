@@ -1073,6 +1073,17 @@ bool CC table_fwd_scan ( BSTNode *n, void *data );
  */
 void CC table_set_context ( STable *self );
 
+/* ScanVirtuals
+ * scan override tables for virtual symbols
+ */
+bool CC STableScanVirtuals ( void *item, void *data );
+
+/* table_fix_forward_refs
+ * fix forward references to newly resolved productions
+ */
+rc_t
+table_fix_forward_refs ( const STable *table );
+
 /*--------------------------------------------------------------------------
  * SColumn
  *  column declaration

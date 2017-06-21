@@ -70,7 +70,7 @@ public:
     SFunction * GetSFunction () { return m_self; }
 
 private:
-    bool HandleFunctionOverload ( const AST_FQN &  p_fqn, const KSymbol *  p_priorDecl );
+    bool HandleOverload ( const AST_FQN &  p_fqn, const KSymbol *  p_priorDecl );
     void AddFactoryParams ( Vector& p_sig, const AST & p_params );
     void AddFormalParams ( Vector& p_sig, const AST & p_params );
     SIndirectType * MakeSchemaParamType ( const AST_FQN & p_name );
@@ -113,7 +113,7 @@ FunctionDeclaration :: ~FunctionDeclaration ()
 }
 
 bool
-FunctionDeclaration :: HandleFunctionOverload ( const AST_FQN & p_fqn, const KSymbol *  p_priorDecl )
+FunctionDeclaration :: HandleOverload ( const AST_FQN & p_fqn, const KSymbol *  p_priorDecl )
 {
     assert ( p_priorDecl != 0 );
 
@@ -201,17 +201,19 @@ FunctionDeclaration :: SetName ( const AST_FQN &  p_fqn,
 
     if ( priorDecl == 0 )
     {
-        m_self -> name = m_builder . CreateOverload ( p_fqn,
-                                                      m_self,
-                                                      p_type,
-                                                      SFunctionSort,
-                                                      m_builder . GetSchema () -> func,
-                                                      m_builder . GetSchema () -> fname,
-                                                      & m_self -> id );
+        m_self -> name = m_builder . CreateFqnSymbol ( p_fqn, p_type, m_self );
         if ( m_self -> name != 0 )
         {
-            m_destroy = false;
-            return true;
+            if ( m_builder . CreateOverload ( m_self -> name,
+                                              m_self,
+                                              SFunctionSort,
+                                              m_builder . GetSchema () -> func,
+                                              m_builder . GetSchema () -> fname,
+                                              & m_self -> id ) )
+            {
+                m_destroy = false;
+                return true;
+            }
         }
     }
     else
@@ -222,7 +224,7 @@ FunctionDeclaration :: SetName ( const AST_FQN &  p_fqn,
             return false;
         }
 
-        if ( HandleFunctionOverload ( p_fqn, priorDecl ) )
+        if ( HandleOverload ( p_fqn, priorDecl ) )
         {   // declared previously, this version not ignored
             m_self -> name = priorDecl;
             m_destroy = false;
@@ -664,7 +666,7 @@ PhysicalDeclaration :: HandleOverload ( const KSymbol * p_priorDecl )
     SNameOverload *name = ( SNameOverload* ) p_priorDecl -> u . obj;
     assert ( name != 0 );
     uint32_t idx;
-    rc_t rc = VectorInsertUnique ( & name -> items, m_self, & idx, SFunctionSort );
+    rc_t rc = VectorInsertUnique ( & name -> items, m_self, & idx, SPhysicalSort );
     if ( rc == 0 ) // overload added
     {
         if ( m_builder . VectorAppend ( functions, & m_self -> id, m_self ) )
@@ -709,17 +711,19 @@ PhysicalDeclaration :: SetName ( const AST_FQN &  p_name )
     const KSymbol* priorDecl = m_builder . Resolve ( p_name, false );
     if ( priorDecl == 0 )
     {
-        m_self -> name = m_builder . CreateOverload ( p_name,
-                                                     m_self,
-                                                     ePhysical,
-                                                     SPhysicalSort,
-                                                     m_builder . GetSchema () -> phys,
-                                                     m_builder . GetSchema () -> pname,
-                                                     & m_self -> id );
-        if ( m_self -> name == 0 )
+        m_self -> name = m_builder . CreateFqnSymbol ( p_name, ePhysical, m_self );
+        if ( m_self -> name != 0 )
         {
-            m_delete = true;
-            return false;
+            if ( ! m_builder . CreateOverload ( m_self -> name,
+                                                m_self,
+                                                SPhysicalSort,
+                                                m_builder . GetSchema () -> phys,
+                                                m_builder . GetSchema () -> pname,
+                                                & m_self -> id ) )
+            {
+                m_delete = true;
+                return false;
+            }
         }
     }
     else
@@ -867,29 +871,27 @@ ASTBuilder :: CreateConstSymbol ( const char* p_name, int p_type, void * p_obj )
     return ret;
 }
 
-const KSymbol *
-ASTBuilder :: CreateOverload ( const AST_FQN &  p_name,
+bool
+ASTBuilder :: CreateOverload ( const KSymbol *  p_name,
                                const void *     p_object,
-                               int              p_type,
                                int64_t CC       (*p_sort)(const void *, const void *),
                                Vector &         p_objects,
                                Vector &         p_names,
                                uint32_t *       p_id )
 {
-    const KSymbol * ret = CreateFqnSymbol ( p_name, p_type, p_object );
-
-    SNameOverload *name;
-    rc_t rc = SNameOverloadMake ( & name, ret, 0, 4 );
+    assert ( p_name != 0 );
+    SNameOverload * ovl;
+    rc_t rc = SNameOverloadMake ( & ovl, p_name, 0, 4 );
     if ( rc == 0 )
     {
-        rc = VectorInsertUnique ( & name -> items, p_object, 0, p_sort );
+        rc = VectorInsertUnique ( & ovl -> items, p_object, 0, p_sort );
         if ( rc == 0 )
         {
             if ( VectorAppend ( p_objects, p_id, p_object ) )
             {
-                if ( VectorAppend ( p_names, & name -> cid . id, name ) )
+                if ( VectorAppend ( p_names, & ovl -> cid . id, ovl ) )
                 {
-                    return ret;
+                    return true;
                 }
             }
         }
@@ -897,13 +899,13 @@ ASTBuilder :: CreateOverload ( const AST_FQN &  p_name,
         {
             ReportRc ( "VectorInsertUnique", rc );
         }
-        SNameOverloadWhack ( name, 0 );
+        SNameOverloadWhack ( ovl, 0 );
     }
     else
     {
         ReportRc ( "SNameOverloadMake", rc );
     }
-    return 0;
+    return false;
 }
 
 AST *

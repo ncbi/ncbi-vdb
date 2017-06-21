@@ -42,7 +42,7 @@
 
     void AST_error ( void * p_parser, ASTBuilder & p_builder, ParseTreeScanner & p_sb, const char * p_msg )
     {
-        p_builder . ReportInternalError ( p_msg );
+        p_builder . ReportInternalError ( p_msg, p_sb . GetSource () );
     }
 
 %}
@@ -223,7 +223,7 @@
 %type <node> phys_enc_ref col_body_opt database opt_dbdad dbbody db_members
 %type <node> db_member template_opt include func_parms_opt expr_list schema_parts_opt
 %type <node> physmbr_decl col_schema_parms_opt col_schema_parms
-%type <node> col_schema_value col_schema_parm phys_coldef
+%type <node> col_schema_value col_schema_parm phys_coldef factory_parms_list
 
 %type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
 
@@ -243,7 +243,7 @@
 %type <tok> KW_read KW_validate KW_limit PT_SCHEMAFORMAL PT_PRODSTMT PT_PRODTRIGGER
 %type <tok> PT_NOHEADER KW_decode KW_encode KW___row_length PT_COLDECL PT_TYPEDCOL PT_TYPEEXPR
 %type <tok> PT_PHYSENCREF KW_column PT_TYPEDCOLEXPR PT_DATABASE PT_DBBODY
-%type <tok> KW_template KW_database PT_DBMEMBER PT_TBLMEMBER PT_INCLUDE KW_include STRING
+%type <tok> KW_template KW_database PT_DBMEMBER PT_TBLMEMBER KW_include STRING
 %type <tok> PT_FUNCEXPR PT_COLSCHEMAPARMS KW_static PT_PHYSMBR PT_PHYSCOLDEF PT_COLSCHEMAPARAM
 %type <tok> KW_physical PT_COLUNTYPED EXP_FLOAT ESCAPED_STRING PT_CONSTVECT KW_true KW_false
 %type <tok> PT_NEGATE PT_CASTEXPR '@'
@@ -531,6 +531,7 @@ tbl_stmt
     | PT_PHYSCOL '(' KW_physical physmbr_decl ')'                       { $$ = new AST ( $3, $4 ); }
     | PT_PHYSCOL '(' KW_static KW_physical physmbr_decl ')'             { $$ = new AST ( $3, $5 ); }
     | PT_COLUNTYPED '(' KW___untyped '=' fqn '(' ')' ';' ')'            { $$ = new AST ( $1, $5 ); }
+    | ';'                                                               { $$ = new AST (); }
 ;
 
 column_decl
@@ -562,7 +563,7 @@ phys_enc_ref
     : PT_PHYSENCREF '(' '<' PT_ASTLIST '(' schema_parms ')' '>' fqn_opt_vers factory_parms_opt ')'
                                                         { $$ = new AST ( $1, $6, $9, $10 ); }
     | PT_PHYSENCREF '(' fqn_vers factory_parms_opt ')'  { $$ = new AST ( $1, $3, $4 ); }
-    | PT_PHYSENCREF '(' fqn '<' factory_parms '>' ')'   { $$ = new AST ( $1, $3, $5 ); }
+    | PT_PHYSENCREF '(' fqn factory_parms_list ')'      { $$ = new AST ( $1, $3, $4 ); }
     ;
 
 typed_col
@@ -664,7 +665,7 @@ template_opt
 /* include */
 
 include
-    : PT_INCLUDE '(' KW_include STRING ')' { $$ = p_builder . Include ( $1, $4 ); }
+    : PT_INCLUDE '(' KW_include STRING ')' { $$ = p_builder . Include ( $3, $4 ); }
     ;
 
 /* expressions */
@@ -714,8 +715,12 @@ schema_parm
     ;
 
 factory_parms_opt
-    : PT_EMPTY                                                          { $$ = new AST ( $1 ); }
-    | PT_FACTPARMS '(' '<' PT_ASTLIST '(' factory_parms ')' '>' ')'     { $$ = $6; }
+    : PT_EMPTY              { $$ = new AST ( $1 ); }
+    | factory_parms_list    { $$ = $1; }
+    ;
+
+factory_parms_list
+    : PT_FACTPARMS '(' '<' PT_ASTLIST '(' factory_parms ')' '>' ')'     { $$ = $6; }
     ;
 
 factory_parms

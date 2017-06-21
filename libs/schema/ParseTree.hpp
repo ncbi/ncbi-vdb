@@ -65,17 +65,20 @@ namespace ncbi
         class ParseTreeScanner
         {
         public:
-            ParseTreeScanner ( const ParseTree& p_root );
+            ParseTreeScanner ( const ParseTree& p_root, const char * p_source = "" );
             ~ParseTreeScanner ();
 
             // returns token type, SchemaScanner::EndSource at the end of the walk; the token itself is in p_token
             // for container nodes, this will create a bracketed TAG '(' contents ')' sequence.
             Token :: TokenType NextToken ( const Token*& p_token );
 
+            const char * GetSource () const { return m_source; }
+
         private:
             void PushNode ( const ParseTree* );
 
         private:
+            char *  m_source;
             Vector  m_stack;
         };
     }

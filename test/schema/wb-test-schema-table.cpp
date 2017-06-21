@@ -54,6 +54,8 @@ public:
     /* overrides ( inherited virtual productions )
        contents are grouped by introducing parent */
     const Vector & Overrides () const { return m_self -> overrides; }
+    uint32_t OverrideCount () const { return VectorLength ( & m_self -> overrides ); }
+    uint32_t OverrideStart () const { return VectorStart ( & m_self -> overrides ); }
 
     /* columns */
     uint32_t ColumnCount () const { return VectorLength ( & m_self -> col ); }
@@ -315,6 +317,37 @@ FIXTURE_TEST_CASE(Table_ParentRedeclared, AST_Table_Fixture)
     REQUIRE_EQ ( Version ( 1, 2 ), p. Version () );
 }
 
+FIXTURE_TEST_CASE(Table_Parent_Override, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table dad#1 { U8 a = c; } table t#1 = dad#1 { U16 b = 1; }", "t", 1 );
+    // c is inherited and is added to Overrides
+    REQUIRE_EQ ( 1u, t . ProductionCount () );
+    REQUIRE_EQ ( 1u, t . OverrideCount () );
+}
+
+FIXTURE_TEST_CASE(Table_Parent_InheritedVirtualProduction, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table dad#1 { U8 a = c; } table t#1 = dad#1 { U16 b = c; }", "t", 1 );
+    // c is not seen as introduced in child table
+    REQUIRE_EQ ( 0u, t . VirtualProductionCount () );
+}
+
+FIXTURE_TEST_CASE(Table_Parent_MultuipleInheritedOverride, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable (
+        "table dad1#1 { U8 a1 = c; }\n"
+        "table dad2#1 { U8 a2 = c; }\n"
+        "table t#1 = dad1#1, dad2#1 { U16 b = c; }",
+        "t",
+        2 );
+    // c is inherited twice and is added to Overrides twice
+    REQUIRE_EQ ( 2u, t . OverrideCount () );
+    REQUIRE_EQ ( 0u, t . VirtualProductionCount () ); // c is not seen as introduced in child table
+}
+
+//TODO: introduce in one parent, resolve in another
+//TODO: introduce in parent, resolve in child, make sure forward reference in parent is fixed
+
 //TODO: parent not a table
 
 // table body
@@ -324,6 +357,26 @@ FIXTURE_TEST_CASE(Table_Production, AST_Table_Fixture)
     TableAccess t = ParseTable ( "table t#1 { U8 i = 1; }", "t" );
     REQUIRE_EQ ( 1u, VectorLength ( & t . Productions () ) );
     REQUIRE ( ! t . GetProduction ( 0 ) -> trigger );
+}
+
+FIXTURE_TEST_CASE(Table_Production_ForwardReference, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { extern default column U8 c = prod; U8 prod = 1; }", "t" );
+    REQUIRE_EQ ( 1u, VectorLength ( & t . Productions () ) );
+    REQUIRE ( ! t . GetProduction ( 0 ) -> trigger );
+}
+
+FIXTURE_TEST_CASE(Table_Production_ForwardReference_Bad, AST_Table_Fixture)
+{
+    VerifyErrorMessage ( "table t#1 { extern default column U8 c; U8 c = 1; }", "Production name is already in use: 'c'" );
+}
+
+FIXTURE_TEST_CASE(Table_Production_ForwardReference_Defined, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { U16 a = b; U16 b = 1; }", "t" );
+    REQUIRE_EQ ( 2u, t . ProductionCount () );
+    // once defined, b is not virtual anymore
+    REQUIRE_EQ ( 0u, t . VirtualProductionCount () );
 }
 
 FIXTURE_TEST_CASE(Table_Trigger, AST_Table_Fixture)
@@ -420,7 +473,19 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_ReadOnlyNoBody, AST_Table_Fixture)
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_ColumnExists, AST_Table_Fixture)
 {
-    VerifyErrorMessage ( "table t#1 { column U8 c; column U8 c; }", "Name already in use: 'c'", 1, 36 );
+    VerifyErrorMessage ( "table t#1 { column U8 c; column U8 c; }", "Column already defined: 'c'", 1, 36 );
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_PhysicalColumnOverload, AST_Table_Fixture)
+{
+    MakeAst ( "table t#1 { column U8 c { read = 1; }; column U16 c { read = 2; }; column U32 c { read = 3; } }" );
+    //TODO: verify
+}
+
+FIXTURE_TEST_CASE(Table_ColumnDecl_PhysicalColumn_PredefineAndOverload, AST_Table_Fixture)
+{
+    MakeAst ( "table t#1 { column U8 c0 { read = c1; }; column U16 c1 { read = 2; }; column U32 c1 { read = 3; } }" );
+    //TODO: verify
 }
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_NotAType, AST_Table_Fixture)
@@ -786,6 +851,24 @@ FIXTURE_TEST_CASE(Table_PhysicalColumn_BadType, AST_Table_Fixture)
     VerifyErrorMessage ( "table t0#1 {} table t#1 { physical t0 .c; }", "Cannot be used as a physical column type: 't0'" );
 }
 
+FIXTURE_TEST_CASE(Table_PhysicalColumn_Initialized, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { physical column U8 .c = 1; }", "t" );
+    REQUIRE_EQ ( 1u, t . PhysicalColumnCount () );
+    const SPhysMember * c = t . GetPhysicalColumn ( 0 );
+    REQUIRE_NOT_NULL ( c -> expr );
+    REQUIRE_EQ ( ( uint32_t ) eConstExpr, c -> expr -> var );
+}
+
+FIXTURE_TEST_CASE(Table_PhysicalColumn_ForwardedAndInitialized, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table t#1 { column U8 c = .c; physical column U8 .c = c; }", "t" );
+    REQUIRE_EQ ( 1u, t . PhysicalColumnCount () );
+    const SPhysMember * c = t . GetPhysicalColumn ( 0 );
+    REQUIRE_NOT_NULL ( c -> expr );
+    REQUIRE_EQ ( ( uint32_t ) eColExpr, c -> expr -> var );
+}
+
 FIXTURE_TEST_CASE(Table_PhysicalColumn_Static_Initialized, AST_Table_Fixture)
 {
     TableAccess t = ParseTable ( "table t#1 { static U8 .c = 1; }", "t" );
@@ -798,6 +881,15 @@ FIXTURE_TEST_CASE(Table_PhysicalColumn_Static_Initialized, AST_Table_Fixture)
 FIXTURE_TEST_CASE(Table_PhysicalColumn_StaticColumn_Initialized, AST_Table_Fixture)
 {
     TableAccess t = ParseTable ( "table t#1 { static column U8 .c = 1; }", "t" );
+    REQUIRE_EQ ( 1u, t . PhysicalColumnCount () );
+    const SPhysMember * c = t . GetPhysicalColumn ( 0 );
+    REQUIRE_NOT_NULL ( c -> expr );
+    REQUIRE_EQ ( ( uint32_t ) eConstExpr, c -> expr -> var );
+}
+
+FIXTURE_TEST_CASE(Table_PhysicalColumn_Inherited, AST_Table_Fixture)
+{
+    TableAccess t = ParseTable ( "table dad #1 { U8 c = .X; }; table t #1 = dad #1 { physical U8 .X = 1; }", "t", 1 );
     REQUIRE_EQ ( 1u, t . PhysicalColumnCount () );
     const SPhysMember * c = t . GetPhysicalColumn ( 0 );
     REQUIRE_NOT_NULL ( c -> expr );
@@ -823,3 +915,7 @@ FIXTURE_TEST_CASE(Table_Untyped, AST_Table_Fixture)
 //TODO: Implicit physical column previously declared
 //TODO: Missing column read or validate expression
 
+FIXTURE_TEST_CASE(Table_segfault, AST_Table_Fixture)
+{   // segfault caused by a bug in ASTBuilder :: Resolve ( const AST_FQN & p_fqn )
+    MakeAst ( "typedef ascii n:p:t; table n:t:s #1 {}; table n:t:p #1 {};" );
+}

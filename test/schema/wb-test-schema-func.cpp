@@ -775,9 +775,9 @@ AST_Function_Fixture :: ParsePhysical ( const char * p_source, const char * p_na
 
         // for physical functions, sym points to an entry in the overloads table (schema->pname)
         const SNameOverload* name = static_cast < const SNameOverload* > ( sym -> u . obj );
-        if ( 1u != VectorLength ( & name -> items ) )
+        if ( 0 == VectorLength ( & name -> items ) )
         {
-            throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : too many overloads" );
+            throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : no overloads" );
         }
         ret = static_cast < const SPhysical* > ( VectorGet ( & name -> items, 0 ) );
         if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )
@@ -820,15 +820,25 @@ FIXTURE_TEST_CASE(Func_Physical_Redeclared, AST_Function_Fixture)
 FIXTURE_TEST_CASE(Func_Physical_OverloadSameVersion, AST_Function_Fixture)
 {
     PhysicalAccess fn = ParsePhysical  ( "physical U8 f#1.2 = { return 1; } physical U16 f#1.2 = { return 2; }", "f" );
+    REQUIRE_EQ ( 1u, VectorLength ( & m_schema -> phys ) );
     REQUIRE_NOT_NULL ( fn . ReturnType () );
     REQUIRE_EQ ( U8_id, fn . ReturnType () -> fd . td . type_id ); // 2nd version ignored
 }
 FIXTURE_TEST_CASE(Func_Physical_OverloadOlderVersion, AST_Function_Fixture)
 {
     PhysicalAccess fn = ParsePhysical  ( "physical U8 f#1.2 = { return 1; } physical U16 f#1.1 = { return 2; }", "f" );
+    REQUIRE_EQ ( 1u, VectorLength ( & m_schema -> phys ) );
+
     REQUIRE_NOT_NULL ( fn . ReturnType () );
-    REQUIRE_EQ ( U8_id, fn . ReturnType () -> fd . td . type_id ); // 2nd version ignored
+    REQUIRE_EQ ( U8_id, fn . ReturnType () -> fd . td . type_id ); // 2nd version ignored (lower minor)
 }
+
+FIXTURE_TEST_CASE(Func_Physical_OverloadOlderMajorVersion, AST_Function_Fixture)
+{
+    ParsePhysical  ("physical U8  f#2 = { return 1; } physical U16 f#1 = { return 2; }\n", "f" );
+    REQUIRE_EQ ( 2u, VectorLength ( & m_schema -> phys ) ); // both major versions present
+}
+
 FIXTURE_TEST_CASE(Func_Physical_OverloadNewerVersion, AST_Function_Fixture)
 {
     if ( m_newParse ) // the old parser fails here!
@@ -913,7 +923,6 @@ FIXTURE_TEST_CASE(Func_Physical_At, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_Physical_SchemaParams, AST_Function_Fixture)
 {
-    //m_newParse = false;
     PhysicalAccess fn = ParsePhysical  ( "physical <type T> T f#1.2 { decode { return 1; } }", "f" );
     REQUIRE_EQ ( 1u, fn . Decode () . SchemaTypeParamCount () );
 }

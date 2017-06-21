@@ -374,6 +374,9 @@ AST_Expr :: MakeSymExpr ( ASTBuilder & p_builder, const KSymbol* p_sym ) const
             return SSymExprMake ( p_builder, eColExpr, p_sym );
         case ePhysMember:
             return SSymExprMake ( p_builder, ePhysExpr, p_sym );
+        case eForward:
+        case eVirtual:
+            return SSymExprMake ( p_builder, eFwdExpr, p_sym );
         case eConstant:
         {
             const SConstant * cnst = reinterpret_cast < const SConstant * > ( p_sym -> u . obj );
@@ -883,7 +886,30 @@ AST_Expr :: MakeExpression ( ASTBuilder & p_builder ) const
         return MakeBool ( p_builder );
 
     case PT_IDENT:
-        return MakeSymExpr ( p_builder, p_builder . Resolve ( * ToFQN ( GetChild ( 0 ) ) ) );
+        {
+            const AST_FQN * fqn = ToFQN ( GetChild ( 0 ) );
+            if ( fqn != 0 )
+            {
+                const KSymbol * sym = p_builder . Resolve ( * fqn, false );
+                if ( sym != 0 )
+                {
+                    return MakeSymExpr ( p_builder, sym );
+                }
+                else
+                {   // Resolve() has created all the required namespaces; create the identifier as a forward reference
+                    SSymExpr * x = p_builder . Alloc < SSymExpr > ();
+                    x -> _sym = p_builder . CreateFqnSymbol ( * fqn, eForward, NULL );
+                    if (x -> _sym != 0 )
+                    {
+                        x -> dad . var = eFwdExpr;
+                        atomic32_set ( & x -> dad . refcount, 1 );
+                        x -> alt = false;
+                        return & x -> dad;
+                    }
+                    SExpressionWhack ( & x -> dad );
+                }
+            }
+        }
 
     case PHYSICAL_IDENTIFIER_1_0 :
         {

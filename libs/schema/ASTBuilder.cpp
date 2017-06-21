@@ -111,22 +111,21 @@ ASTBuilder :: ReportError ( const ErrorReport :: Location & p_loc, const char * 
 void
 ASTBuilder :: ReportRc ( const char* p_msg, rc_t p_rc )
 {
-    m_errors . ReportInternalError ( "%s: rc=%R", p_msg, p_rc );
+    m_errors . ReportInternalError ( "", "%s: rc=%R", p_msg, p_rc );
 }
 
 void
-ASTBuilder :: ReportInternalError ( const char * p_msg )
+ASTBuilder :: ReportInternalError ( const char * p_msg, const char * p_source )
 {
-    m_errors . ReportInternalError ( p_msg );
+    m_errors . ReportInternalError ( p_source, "%s", p_msg );
 }
 
 AST *
-ASTBuilder :: Build ( const ParseTree& p_root, bool p_debugParse )
+ASTBuilder :: Build ( const ParseTree& p_root, const char * p_source, bool p_debugParse )
 {
     AST* ret = 0;
     AST_debug = p_debugParse;
-    m_errors . Clear ();
-    ParseTreeScanner scanner ( p_root );
+    ParseTreeScanner scanner ( p_root, p_source );
     if ( AST_parse ( ret, * this, scanner ) == 0 )
     {
         return ret;
@@ -216,52 +215,66 @@ ASTBuilder :: Resolve ( const AST_FQN & p_fqn, bool p_reportUnknown )
 {
     uint32_t count = p_fqn . ChildrenCount ();
     assert ( count > 0 );
+
+    if ( count == 1 )
+    {   // plain identifier
+        return Resolve ( p_fqn .GetLocation (), p_fqn . GetChild ( 0 ) -> GetTokenValue (), p_reportUnknown );
+    }
+
+    // work the namespaces
     bool ns_resolved = true;
     for ( uint32_t i = 0 ; i < count - 1; ++ i )
     {
         String name;
         StringInitCString ( & name, p_fqn . GetChild ( i ) -> GetTokenValue () );
-        KSymbol *ns;
+        KSymbol *ns = 0;
         if ( i == 0 )
         {
             ns = KSymTableFindGlobal ( & m_symtab, & name );
         }
-        else
+        else if ( ns_resolved )
         {
-            ns = KSymTableFind ( & m_symtab, & name );
+            ns = KSymTableFindShallow ( & m_symtab, & name );
         }
+
         if ( ns == 0 )
         {
-            if ( p_reportUnknown )
+            ns_resolved = false; // no need to do any lookup from now on
+            // create a new namespace
+            rc_t rc = KSymTableCreateNamespace ( & m_symtab, & ns, & name );
+            if ( rc != 0 )
             {
-                ReportError ( p_fqn . GetChild ( i ) -> GetToken () . GetLocation (), "Namespace not found", name );
+                ReportRc ( "KSymTableCreateNamespace", rc );
+                count = i;
+                break;
             }
+        }
+
+        rc_t rc = KSymTablePushNamespace ( & m_symtab, ns );
+        if ( rc != 0 )
+        {
+            ReportRc ( "KSymTablePushNamespace", rc );
             count = i;
             ns_resolved = false;
             break;
         }
-
-        rc_t rc = 0;
-        if ( rc == 0 )
-        {
-            rc = KSymTablePushNamespace ( & m_symtab, ns );
-            if ( rc != 0 )
-            {
-                ReportRc ( "KSymTablePushNamespace", rc );
-                count = i;
-                ns_resolved = false;
-                break;
-            }
-        }
     }
+
+    // we pushed all the namespaces; if all of them existed we can look for the identifier in the innermost namespace
+    String name;
+    p_fqn . GetIdentifier ( name );
 
     const KSymbol * ret = 0;
     if ( ns_resolved )
     {
-        const AST & ns = * p_fqn . GetChild ( count - 1 );
-        ret = Resolve ( ns . GetLocation (), ns . GetTokenValue (), p_reportUnknown );
+        ret = KSymTableFindShallow ( & m_symtab, & name );
+    }
+    if ( ret == 0 && p_reportUnknown )
+    {
+        ReportError ( p_fqn . GetChild ( p_fqn . ChildrenCount () - 1 ) -> GetLocation (), "Undeclared identifier", name );
     }
 
+    // pop the namespaces, count is how many to pop
     if ( count > 0 )
     {
         for ( uint32_t i = 0 ; i < count - 1; ++ i )
@@ -528,8 +541,7 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
         {
         case PT_IDENT :
             {
-                assert ( parm . ChildrenCount () == 1 );
-                const KSymbol * sym = Resolve ( parm . GetLocation (), parm. GetChild ( 0 ) -> GetTokenValue () ); // will report unknown name
+                const KSymbol * sym = Resolve ( * ToFQN ( & parm ) ); // will report unknown name
                 if ( sym == 0 )
                 {
                     return false;
@@ -549,6 +561,7 @@ ASTBuilder :: FillSchemaParms ( const AST & p_parms, Vector & p_v )
                             return false;
                         }
                         TypeExprInit ( * ret );
+                        ret -> fd . td . dim = 1;
                         TypeExprFillTypeId ( * this, parm, * ret, * sym );
                         if ( ! VectorAppend ( p_v, 0, ret ) )
                         {
@@ -1156,15 +1169,24 @@ ASTBuilder :: Include ( const Token * p_token, const Token * p_filename )
     ret -> AddNode ( p_filename );
 
     const char * quoted = p_filename -> GetValue ();
-    const KFile * f = OpenIncludeFile ( p_token -> GetLocation (), "%.*s", string_size ( quoted ) - 2, quoted + 1 );
-    if ( f != 0 )
+    char * unquoted = string_dup ( quoted + 1, string_size ( quoted ) - 2 );
+    if ( unquoted != 0 )
     {
-        SchemaParser parser;
-        if ( parser . ParseFile ( f ) )
+        const KFile * f = OpenIncludeFile ( p_token -> GetLocation (), "%s", unquoted );
+        if ( f != 0 )
         {
-            delete Build ( * parser . GetParseTree (), false );
+            SchemaParser parser;
+            if ( parser . ParseFile ( f, unquoted ) )
+            {
+                delete Build ( * parser . GetParseTree (), unquoted, false );
+            }
+            KFileRelease ( f );
         }
-        KFileRelease ( f );
+        free ( unquoted );
+    }
+    else
+    {
+        ReportInternalError ( "ASTBuilder :: Include () : string_dup() failed" );
     }
 
     return ret;

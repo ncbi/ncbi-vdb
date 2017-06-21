@@ -56,7 +56,7 @@ namespace ncbi
             ~ErrorReport ();
 
             void ReportError ( const Location & p_loc, const char* p_fmt, ... );
-            void ReportInternalError ( const char* p_fmt, ... );
+            void ReportInternalError ( const char * p_source, const char* p_fmt, ... );
 
             uint32_t GetCount() const { return VectorLength ( & m_errors ); }
 

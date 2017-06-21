@@ -112,7 +112,21 @@ ASTBuilder :: AddProduction ( const AST & p_node, Vector & p_list, const char * 
             prod -> trigger = true;
         }
 
-        prod -> name = CreateLocalSymbol ( p_node, p_name, eProduction, prod );
+        prod -> name = Resolve ( p_node . GetLocation (), p_name, false );
+        if ( prod -> name == 0 )
+        {
+            prod -> name = CreateLocalSymbol ( p_node, p_name, eProduction, prod );
+        }
+        else if ( prod -> name -> type != eForward && prod -> name -> type != eVirtual )
+        {
+            ReportError ( p_node . GetLocation (), "Production name is already in use", p_name );
+            SProductionWhack ( prod, NULL );
+            return;
+        }
+        KSymbol * sym = const_cast < KSymbol * > ( prod -> name );
+        sym -> type = eProduction;
+        sym -> u . obj = prod;
+
         prod -> expr = p_expr . MakeExpression ( *this ) ;
 
         if ( ! VectorAppend ( p_list, & prod -> cid . id, prod ) )
@@ -130,95 +144,131 @@ ASTBuilder :: HandleTypedColumn ( STable & p_table, SColumn & p_col, const AST &
     const char * ident = p_typedCol . GetChild ( 0 ) -> GetChild ( 0 ) -> GetTokenValue ();
     String name;
     StringInitCString ( & name, ident );
-    if ( KSymTableFindShallow ( & GetSymTab (), & name ) != 0 ||
-            KSymTableFindIntrinsic ( & GetSymTab (), & name ) )
-    {
-        ReportError ( p_typedCol . GetLocation (), "Name already in use", ident );
-        return false;
-    }
-    else
-    {
-        rc_t rc = KSymTableCreateConstSymbol ( & GetSymTab (), & p_col . name, & name, eColumn, 0 );
+
+    KSymbol * priorDecl = const_cast < KSymbol * > ( Resolve ( p_typedCol . GetLocation (), ident, false ) );
+    if ( priorDecl == 0 )
+    {   // new column: add p_col to p_table . col, a new overload to p_table . cname
+        rc_t rc = KSymTableCreateConstSymbol ( & GetSymTab (), & p_col . name, & name, eColumn, & p_col );
         if ( rc != 0 )
         {
             ReportRc ( "KSymTableCreateConstSymbol", rc );
             return false;
         }
-    }
-
-    // add column name to p_table . cname
-    SNameOverload *ovl;
-    rc_t rc = SNameOverloadMake ( & ovl, p_col . name, 0, 4 );
-    if ( rc == 0 )
-    {
-        ovl -> cid . ctx = -1;
-        if ( ! VectorAppend ( p_table . cname, & ovl -> cid . id, ovl ) )
+        if ( ! CreateOverload ( p_col . name,
+                                & p_col,
+                                SColumnSort,
+                                p_table . col,
+                                p_table . cname,
+                                0 ) )
         {
-            SNameOverloadWhack ( ovl, 0 );
-            ReportRc ( "SNameOverloadWhack", rc);
             return false;
         }
-        rc = VectorInsertUnique ( & ovl -> items, & p_col, 0, SColumnSort );
-        if ( rc != 0 )
+    }
+    else // column name seen before
+    {
+        switch ( priorDecl -> type )
         {
-           ReportRc ( "VectorInsertUnique", rc);
-           return false;
+        case eForward:
+        case eVirtual:
+            /* if column was forwarded, give it a type */
+            p_col . name = priorDecl;
+            priorDecl -> type = eColumn;
+            if ( ! CreateOverload ( p_col . name,
+                                    & p_col,
+                                    SColumnSort,
+                                    p_table . col,
+                                    p_table . cname,
+                                    0 ) )
+            {
+                return false;
+            }
+            break;
+        case eColumn:
+            {
+                SNameOverload *name = ( SNameOverload* ) priorDecl -> u . obj;
+                if ( VectorFind ( & name -> items, & p_col . td, NULL, SColumnCmp ) != NULL )
+                {
+                    ReportError ( p_typedCol . GetLocation (), "Column already defined", ident );
+                    return false;
+                }
+                p_col . name = priorDecl;
+                // add column to p_table . col
+                if ( ! VectorAppend ( p_table . col, 0, & p_col ) )
+                {
+                    return false;
+                }
+            }
+            break;
+        case eIdent:
+            /* allow names defined in scopes other than table and intrinsic */
+            {
+                rc_t rc = KSymTableCreateConstSymbol ( & GetSymTab (), & p_col . name, & name, eColumn, 0 );
+                if ( rc != 0 )
+                {
+                    ReportRc ( "KSymTableCreateConstSymbol", rc );
+                    return false;
+                }
+            }
+            break;
+        default:
+            ReportError ( p_typedCol . GetLocation (), "Columne name is already in use", ident );
+            return false;
         }
     }
 
+    // at this point, p_col has been added to the schema structures and should not be destroyed,
+    // so below we return true even we report an error
     if ( p_col . simple )
     {
         if ( p_col . read_only )
         {
             ReportError ( p_typedCol . GetLocation (), "Simple column cannot be readonly", ident);
-            return false;
-        }
-
-        // generate and attach the corresponding physical column
-        String physname;
-        char physnamebuff [ 256 ];
-        /* tack a dot onto the beginning and look up the symbol */
-        physnamebuff [ 0 ] = '.';
-        memcpy ( & physnamebuff [ 1 ], p_col . name -> name . addr, p_col . name -> name . size );
-        StringInit ( & physname, physnamebuff, p_col . name -> name . size + 1, p_col . name -> name . len + 1 );
-        KSymbol * sym = KSymTableFind ( & m_symtab, & physname );
-        /* if the symbol exists, then this CANNOT be a simple column */
-        if ( sym != 0 && ! ( sym -> type == eForward || sym -> type == eVirtual ) )
-        {
-            /* check for explicit physical type */
-            if ( p_col . ptype != 0 )
-            {
-                ReportError ( p_typedCol . GetLocation (), "Implicit physical column previously declared", name );
-                return false;
-            }
-            else
-            {
-                ReportError ( p_typedCol . GetLocation (), "Missing column read or validate expression", name );
-                return false;
-            }
-        }
-        else if ( ( p_col . td . type_id & 0xC0000000 ) != 0 )
-        {
-            ReportError ( p_typedCol . GetLocation (), "Simple columns cannot have typeset as type", name );
-            return false;
         }
         else
         {
-            if ( sym != 0 )
+            // generate and attach the corresponding physical column
+            String physname;
+            char physnamebuff [ 256 ];
+            /* tack a dot onto the beginning and look up the symbol */
+            physnamebuff [ 0 ] = '.';
+            memcpy ( & physnamebuff [ 1 ], p_col . name -> name . addr, p_col . name -> name . size );
+            StringInit ( & physname, physnamebuff, p_col . name -> name . size + 1, p_col . name -> name . len + 1 );
+            KSymbol * sym = KSymTableFind ( & m_symtab, & physname );
+            /* if the symbol exists, then this CANNOT be a simple column */
+            if ( sym != 0 && ! ( sym -> type == eForward || sym -> type == eVirtual ) )
             {
-                sym -> type = ePhysMember;
+                /* check for explicit physical type */
+                if ( p_col . ptype != 0 )
+                {
+                    ReportError ( p_typedCol . GetLocation (), "Implicit physical column previously declared", name );
+                }
+                else
+                {
+                    ReportError ( p_typedCol . GetLocation (), "Missing column read or validate expression", name );
+                }
+            }
+            else if ( ( p_col . td . type_id & 0xC0000000 ) != 0 )
+            {
+                ReportError ( p_typedCol . GetLocation (), "Simple columns cannot have typeset as type", name );
             }
             else
             {
-                sym = CreateLocalSymbol ( p_typedCol, physname, ePhysMember, 0 );
-            }
-            if ( sym != 0 )
-            {
-                rc = implicit_physical_member ( & m_symtab, 0, & p_table, & p_col, sym );
-                if ( rc != 0 )
+                if ( sym != 0 )
                 {
-                    ReportRc ( "implicit_physical_member", rc);
-                    return false;
+                    sym -> type = ePhysMember;
+                }
+                else
+                {
+                    sym = CreateLocalSymbol ( p_typedCol, physname, ePhysMember, 0 );
+                }
+
+                if ( sym != 0 )
+                {
+                    rc_t rc = implicit_physical_member ( & m_symtab, 0, & p_table, & p_col, sym );
+                    if ( rc != 0 )
+                    {
+                        ReportRc ( "implicit_physical_member", rc);
+                    }
                 }
             }
         }
@@ -358,13 +408,16 @@ ASTBuilder :: AddColumn ( STable & p_table, const AST & p_modifiers, const AST &
                         assert ( false );
                 }
                 const KSymbol * sym = Resolve ( * fqn ); // will report unknown name
-                if ( sym -> type == ePhysical )
+                if ( sym != 0 )
                 {
-                    c -> ptype = MakePhysicalEncodingSpec ( * sym, * fqn, schemaArgs, factoryArgs, c -> td  );
-                }
-                else
-                {
-                    ReportError ( "Not a physical encoding", * fqn);
+                    if ( sym -> type == ePhysical )
+                    {
+                        c -> ptype = MakePhysicalEncodingSpec ( * sym, * fqn, schemaArgs, factoryArgs, c -> td  );
+                    }
+                    else
+                    {
+                        ReportError ( "Not a physical encoding", * fqn);
+                    }
                 }
             }
             break;
@@ -467,11 +520,6 @@ ASTBuilder :: AddColumn ( STable & p_table, const AST & p_modifiers, const AST &
             }
         }
 
-        if ( VectorAppend ( p_table . col, & c -> cid . id, c ) )
-        {
-            return;
-        }
-        SColumnWhack ( c, 0 );
     }
 }
 
@@ -550,11 +598,18 @@ ASTBuilder :: AddPhysicalColumn ( STable & p_table, const AST & p_decl, bool p_s
                 }
                 ReportRc ( "KSymTableCreateConstSymbol", rc );
             }
-            else if ( sym -> type == eForward )
+            else if ( sym -> type == eForward || sym -> type == eVirtual )
             {   // phys column was predeclared
                 c -> name = sym;
                 sym -> u . obj = c;
                 sym -> type = ePhysMember;
+                if ( p_decl . ChildrenCount () == 3 )
+                {
+                    c -> expr = ToExpr ( p_decl . GetChild ( 2 ) ) -> MakeExpression ( * this );
+                }
+
+                c -> stat = p_static;
+
                 if ( VectorAppend ( p_table . phys, & c -> cid . id, c ) )
                 {
                     return;
@@ -615,92 +670,121 @@ ASTBuilder :: HandleTableParents ( STable & p_table, const AST & p_parents )
 void
 ASTBuilder :: HandleTableBody ( STable & p_table, const AST & p_body )
 {
-    rc_t rc = KSymTablePushScope ( & GetSymTab (), & p_table . scope );
+    rc_t rc = push_tbl_scope ( & m_symtab, & p_table );
     if ( rc == 0 )
     {
-        uint32_t count = p_body . ChildrenCount ();
-        for ( uint32_t i = 0 ; i < count; ++ i )
+        /* scan override tables for virtual symbols */
+        if ( VectorDoUntil ( & p_table . overrides, false, STableScanVirtuals, & m_symtab ) == 0 )
         {
-            const AST & stmt = * p_body . GetChild ( i );
-            switch ( stmt . GetTokenType () )
+            /* handle table declarations */
+            uint32_t count = p_body . ChildrenCount ();
+            for ( uint32_t i = 0 ; i < count; ++ i )
             {
-            case PT_PRODSTMT:
-            case PT_PRODTRIGGER:
+                const AST & stmt = * p_body . GetChild ( i );
+                switch ( stmt . GetTokenType () )
                 {
-                    const AST * datatype;
-                    const AST * ident;
-                    const AST * expr;
-                    switch ( stmt . ChildrenCount () )
+                case PT_PRODSTMT:
+                case PT_PRODTRIGGER:
                     {
-                    case 2: // trigger
-                        datatype    = 0;
-                        ident       = stmt . GetChild ( 0 );
-                        expr        = stmt . GetChild ( 1 );
-                        break;
-                    case 3: // has datatype
-                        datatype    = stmt . GetChild ( 0 );
-                        ident       = stmt . GetChild ( 1 );
-                        expr        = stmt . GetChild ( 2 );
-                        break;
-                    default:
-                        assert ( false );
+                        const AST * datatype;
+                        const AST * ident;
+                        const AST * expr;
+                        switch ( stmt . ChildrenCount () )
+                        {
+                        case 2: // trigger
+                            datatype    = 0;
+                            ident       = stmt . GetChild ( 0 );
+                            expr        = stmt . GetChild ( 1 );
+                            break;
+                        case 3: // has datatype
+                            datatype    = stmt . GetChild ( 0 );
+                            ident       = stmt . GetChild ( 1 );
+                            expr        = stmt . GetChild ( 2 );
+                            break;
+                        default:
+                            assert ( false );
+                        }
+                        assert ( ident -> ChildrenCount () == 1 );
+                        AddProduction ( * ident,
+                                        p_table . prod,
+                                        ident -> GetChild ( 0 ) -> GetTokenValue (),
+                                        * ToExpr ( expr ),
+                                        datatype );
                     }
-                    assert ( ident -> ChildrenCount () == 1 );
-                    AddProduction ( * ident,
-                                    p_table . prod,
-                                    ident -> GetChild ( 0 ) -> GetTokenValue (),
-                                    * ToExpr ( expr ),
-                                    datatype );
+                    break;
+
+                case PT_COLUMN:
+                    // modifiers col_decl [ default ]
+                    AddColumn ( p_table, * stmt . GetChild ( 0 ), * stmt . GetChild ( 1 ), stmt . GetChild ( 2 ) );
+                    break;
+
+                case PT_COLUMNEXPR:
+                    if ( p_table . limit == 0 )
+                    {
+                        p_table . limit = ToExpr ( stmt . GetChild ( 0 ) ) -> MakeExpression ( * this );
+                    }
+                    else
+                    {
+                        ReportError ( stmt . GetLocation (), "Limit constraint already specified" );
+                    }
+                    break;
+
+                case KW_static:
+                    assert ( stmt . ChildrenCount () == 1 );
+                    AddPhysicalColumn ( p_table, * stmt . GetChild ( 0 ), true );
+                    break;
+
+                case KW_physical:
+                    assert ( stmt . ChildrenCount () == 1 );
+                    AddPhysicalColumn ( p_table, * stmt . GetChild ( 0 ), false );
+                    break;
+
+                case PT_COLUNTYPED:
+                    assert ( stmt . ChildrenCount () == 1 );
+                    AddUntyped ( p_table, * ToFQN ( stmt . GetChild ( 0 ) ) );
+                    break;
+
+                case PT_EMPTY:
+                    break;
+
+                default:
+                    assert ( false );
                 }
-                break;
+            }
 
-            case PT_COLUMN:
-                // modifiers col_decl [ default ]
-                AddColumn ( p_table, * stmt . GetChild ( 0 ), * stmt . GetChild ( 1 ), stmt . GetChild ( 2 ) );
-                break;
+            STableScanData pb;
+            pb . self = & p_table;
+            pb . rc = 0;
 
-            case PT_COLUMNEXPR:
-                if ( p_table . limit == 0 )
-                {
-                    p_table . limit = ToExpr ( stmt . GetChild ( 0 ) ) -> MakeExpression ( * this );
-                }
-                else
-                {
-                    ReportError ( stmt . GetLocation (), "Limit constraint already specified" );
-                }
-                break;
+            /* scan table scope for unresolved forward references */
+            if ( BSTreeDoUntil ( & p_table . scope, false, table_fwd_scan, & pb ) )
+            {
+                ReportRc ( "table_fwd_scan", pb . rc );
+            }
+        }
+        else
+        {
+            rc = RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );
+            ReportRc ( "STableScanVirtuals", rc );
+        }
 
-            case KW_static:
-                assert ( stmt . ChildrenCount () == 1 );
-                AddPhysicalColumn ( p_table, * stmt . GetChild ( 0 ), true );
-                break;
+        pop_tbl_scope ( & m_symtab, & p_table );
 
-            case KW_physical:
-                assert ( stmt . ChildrenCount () == 1 );
-                AddPhysicalColumn ( p_table, * stmt . GetChild ( 0 ), false );
-                break;
-
-            case PT_COLUNTYPED:
-                assert ( stmt . ChildrenCount () == 1 );
-                AddUntyped ( p_table, * ToFQN ( stmt . GetChild ( 0 ) ) );
-                break;
-
-            default:
-                assert ( false );
+        /* fix forward references */
+        if ( rc == 0 )
+        {
+            rc = table_fix_forward_refs ( & p_table );
+            if ( rc != 0 )
+            {
+                ReportRc ( "table_fix_forward_refs", rc );
             }
         }
 
-        STableScanData pb;
-        pb . self = & p_table;
-        pb . rc = 0;
-
-        /* scan table scope for unresolved forward references */
-        if ( BSTreeDoUntil ( & p_table . scope, false, table_fwd_scan, & pb ) )
-        {
-            ReportRc ( "table_fwd_scan", pb . rc );
-        }
-
-        KSymTablePopScope ( & GetSymTab () );
+        table_set_context ( & p_table );
+    }
+    else
+    {
+        ReportRc ( "push_tbl_scope", rc );
     }
 }
 
@@ -727,8 +811,14 @@ ASTBuilder ::  TableDef ( const Token * p_token, AST_FQN * p_fqn, AST * p_parent
         const KSymbol * priorDecl = Resolve ( * p_fqn, false );
         if ( priorDecl == 0 )
         {
-            table -> name = CreateOverload ( * p_fqn, table, eTable, STableSort, m_schema -> tbl, m_schema -> tname, & table -> id );
-            if ( table -> name == 0 )
+            table -> name = CreateFqnSymbol ( * p_fqn, eTable, table );
+            if ( table -> name == 0 ||
+                 ! CreateOverload ( table -> name,
+                                    table,
+                                    STableSort,
+                                    m_schema -> tbl,
+                                    m_schema -> tname,
+                                    & table -> id ) )
             {
                 STableWhack ( table, 0 );
                 return ret;
@@ -747,8 +837,6 @@ ASTBuilder ::  TableDef ( const Token * p_token, AST_FQN * p_fqn, AST * p_parent
 
         HandleTableParents ( * table, * p_parents );
         HandleTableBody ( * table, * p_body );
-
-        table_set_context ( table );
     }
 
     return ret;

@@ -705,8 +705,8 @@ phys_enc_ref
             { $$ . subtree = MakeTree ( PT_PHYSENCREF, T ( $1 ), P ( $2 ), T ( $3 ), P ( $4 ), P ( $5 ) ); }
     | fqn_vers opt_factory_parms_1_0
             { $$ . subtree = MakeTree ( PT_PHYSENCREF, P ( $1 ), P ( $2 ) ); }
-    | fqn_1_0 '<' factory_parms_1_0 '>'
-            { $$ . subtree = MakeTree ( PT_PHYSENCREF, P ( $1 ), T ( $2 ), P ( $3 ), T ( $4 ) ); }
+    | fqn_1_0 factory_parms_1_0
+            { $$ . subtree = MakeTree ( PT_PHYSENCREF, P ( $1 ), P ( $2 ) ); }
     ;
 
 typed_column_decl_1_0
@@ -840,13 +840,17 @@ schema_parm_1_0
     ;
 
 opt_factory_parms_1_0
-    : empty                                 { $$ = $1; }
-    | '<' factory_parms_1_0 '>'             { $$ . subtree = MakeTree ( PT_FACTPARMS, T ( $1 ), P ( $2 ), T ( $3 ) ); }
+    : empty             { $$ = $1; }
+    | factory_parms_1_0 { $$ = $1; }
     ;
 
 factory_parms_1_0
-    : expression_1_0                          { $$ . subtree = MakeList ( $1 ); }
-    | factory_parms_1_0 ',' expression_1_0    { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
+    : '<' factory_parms '>' { $$ . subtree = MakeTree ( PT_FACTPARMS, T ( $1 ), P ( $2 ), T ( $3 ) ); }
+    ;
+
+factory_parms
+    : expression_1_0                    { $$ . subtree = MakeList ( $1 ); }
+    | factory_parms ',' expression_1_0  { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     ;
 
 opt_func_1_0_parms
@@ -957,17 +961,17 @@ include_directive
 /* other stuff
  */
 fqn_1_0
-    : ident_1_0                                     { $$ . subtree = MakeTree ( PT_FQN, P ( $1 ) ); }
-    | fqn_1_0 ':' ident_1_0                         { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
+    : ident_1_0                 { $$ . subtree = MakeTree ( PT_FQN, P ( $1 ) ); }
+    | fqn_1_0 ':' ident_1_0     { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), P ( $3 ) ); }
     /* a hack to handle keywords used as namespace identifiers in existing 1.0 schemas */
-    | fqn_1_0 ':' KW_database                       { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }
-    | fqn_1_0 ':' KW_decode                         { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }
-    | fqn_1_0 ':' KW_encode                         { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }
-    | fqn_1_0 ':' KW_read                           { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }
-    | fqn_1_0 ':' KW_table                          { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }
-    | fqn_1_0 ':' KW_type                           { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }
-    | fqn_1_0 ':' KW_view                           { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }
-    | fqn_1_0 ':' KW_write                          { $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), T ( $3 ) ); }
+    | fqn_1_0 ':' KW_database   { $3 . type = IDENTIFIER_1_0; $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), MakeTree ( PT_IDENT, T ( $3 ) ) ); }
+    | fqn_1_0 ':' KW_decode     { $3 . type = IDENTIFIER_1_0; $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), MakeTree ( PT_IDENT, T ( $3 ) ) ); }
+    | fqn_1_0 ':' KW_encode     { $3 . type = IDENTIFIER_1_0; $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), MakeTree ( PT_IDENT, T ( $3 ) ) ); }
+    | fqn_1_0 ':' KW_read       { $3 . type = IDENTIFIER_1_0; $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), MakeTree ( PT_IDENT, T ( $3 ) ) ); }
+    | fqn_1_0 ':' KW_table      { $3 . type = IDENTIFIER_1_0; $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), MakeTree ( PT_IDENT, T ( $3 ) ) ); }
+    | fqn_1_0 ':' KW_type       { $3 . type = IDENTIFIER_1_0; $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), MakeTree ( PT_IDENT, T ( $3 ) ) ); }
+    | fqn_1_0 ':' KW_view       { $3 . type = IDENTIFIER_1_0; $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), MakeTree ( PT_IDENT, T ( $3 ) ) ); }
+    | fqn_1_0 ':' KW_write      { $3 . type = IDENTIFIER_1_0; $$ . subtree = AddToList ( P ( $1 ), T ( $2 ), MakeTree ( PT_IDENT, T ( $3 ) ) ); }
     ;
 
 ident_1_0
