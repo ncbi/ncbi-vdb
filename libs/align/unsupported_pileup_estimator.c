@@ -524,3 +524,118 @@ LIB_EXPORT rc_t CC RunPileupEstimator( struct PileupEstimator *self,
     }
     return rc;
 }
+
+
+static rc_t PerformCoverage( PileupEstimator *self,
+                             RefEntry * entry,
+                             uint64_t slice_start,
+                             uint32_t slice_len,
+                             uint64_t slice_end,
+                             uint32_t * coverage )
+{
+    rc_t rc = 0;
+
+    int64_t ref_row_id = entry->start_row_id;
+    uint32_t ref_row_count, prim_id_count, prim_id_idx, ref_pos_count, ref_len_count, elem_bits, boff;
+    int64_t * prim_ids;
+    uint32_t * ref_pos_ptr;
+    uint32_t * ref_len_ptr;
+		
+    /* adjust start_ref_row and ref_row_count to the given slice... */
+    {
+        int64_t start_offset = slice_start / self->max_seq_len;
+        int64_t end_offset = slice_end / self->max_seq_len;
+        if ( start_offset > 0 ) start_offset--;
+        ref_row_id += start_offset;
+        ref_row_count = ( end_offset - start_offset ) + 1;
+    }
+
+    /* for each row in REFERENCE that matches the given slice... */
+    for( ; rc == 0 &&  ref_row_count > 0; ref_row_id++, ref_row_count-- )
+    {
+        /* get the primary alignment-id's */
+        rc = VCursorCellDataDirect( self->ref_cursor, ref_row_id, self->ref_cursor_idx_PRIMARY_ALIGNMENT_IDS,
+                                    &elem_bits, ( const void ** )&prim_ids, &boff, &prim_id_count );
+        
+        /* for each alignment-id found */
+        for ( prim_id_idx = 0; rc == 0 && prim_id_idx < prim_id_count; prim_id_idx++ )
+        {
+            /* get REF_POS */
+            int64_t prim_id = prim_ids[ prim_id_idx ];
+            rc = VCursorCellDataDirect( self->align_cursor, prim_id, self->align_cursor_idx_REF_POS,
+                        &elem_bits, ( const void ** )&ref_pos_ptr, &boff, &ref_pos_count );
+            if ( ref_pos_count != 1 )
+                rc = RC( rcAlign, rcQuery, rcAccessing, rcItem, rcInvalid );
+            
+            /* get REF_LEN */
+            if ( rc == 0 )
+            {
+                rc = VCursorCellDataDirect( self->align_cursor, prim_id, self->align_cursor_idx_REF_LEN,
+                            &elem_bits, ( const void ** )&ref_len_ptr, &boff, &ref_len_count );
+                if ( ref_len_count != 1 )
+                    rc = RC( rcAlign, rcQuery, rcAccessing, rcItem, rcInvalid );
+            }
+
+            /* enter the coverage */
+            if ( rc == 0 )
+            {
+                uint32_t ref_pos = ref_pos_ptr[ 0 ];
+                uint32_t ref_len = ref_len_ptr[ 0 ];
+                if ( ( ( ref_pos + ref_len - 1 ) >= slice_start ) && ( ref_pos <= slice_end ) )
+                {
+                    int32_t rel_start = ( ref_pos - ( uint32_t )slice_start );
+                    int32_t i, j;
+                    
+                    if ( rel_start < 0 )
+                    {
+                        ref_len += rel_start;
+                        rel_start = 0;
+                    }
+                    for ( i = rel_start, j = 0; j < ref_len && i < slice_len; ++i, ++j )
+                        coverage[ i ]++; /* <==== */
+                }
+            }
+        }
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC RunCoverage( struct PileupEstimator *self,
+                                const String * refname,
+                                uint64_t slice_start,
+                                uint32_t slice_len,
+                                uint32_t * coverage )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC( rcAlign, rcQuery, rcAccessing, rcSelf, rcNull );
+    else if ( refname == NULL || coverage == NULL )
+        rc = RC( rcAlign, rcQuery, rcAccessing, rcParam, rcNull );
+    else if ( slice_len == 0 )
+        rc = RC( rcAlign, rcQuery, rcAccessing, rcParam, rcInvalid );
+    else
+    {
+        /* we are using max_seq_len as a flag to determine if we have to scan the reference-table */
+        if ( self->max_seq_len == 0 )
+            rc = ScanRefTable( self );
+        if ( rc == 0 )
+        {
+            RefEntry * ref_entry;
+            rc = FindRefEntry( self, &ref_entry, refname );
+            if ( rc == 0 )
+            {
+                uint64_t slice_end = slice_start + slice_len - 1;
+                if ( slice_start >= ref_entry->reflen || slice_end >= ref_entry->reflen )
+                    rc = RC( rcAlign, rcQuery, rcAccessing, rcItem, rcInvalid );
+                else
+                {
+                    memset( coverage, 0, slice_len );
+                    rc = PerformCoverage( self, ref_entry, slice_start, slice_len, slice_end, coverage );
+                }
+            }
+        }
+    
+    }
+    return rc;
+}

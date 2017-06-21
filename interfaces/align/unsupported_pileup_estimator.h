@@ -113,23 +113,38 @@ ALIGN_EXTERN rc_t CC ReleasePileupEstimator( struct PileupEstimator *self );
  *
  *      refname [ IN ] - the name of the reference ( matches values in SEQ_ID )
  *
- *      startpos [ IN ] - the zero-based startposition on the reference
+ *      slice_start [ IN ] - the zero-based start-position of the slice on the reference
  *
- *      len [ IN ] - the length of the slice
+ *      slice_len [ IN ] - the length of the slice
  *
  *      result [ OUT ] - how many alignment-bases would be loaded
  */
 ALIGN_EXTERN rc_t CC RunPileupEstimator( struct PileupEstimator *self,
                                          const String * refname,
-                                         uint64_t startpos,
-                                         uint32_t len,
+                                         uint64_t slice_start,
+                                         uint32_t slice_len,
                                          uint64_t * result );
 
-
+/* RunCoverage
+ *
+ *      runs the PileupEstimator-object to enter the depth on each position
+ *      of the requested slice into the coverage-vector
+ *
+ *      self [ IN ] - the prepared PileupEstimator
+ *
+ *      refname [ IN ] - the name of the reference ( matches values in SEQ_ID )
+ *
+ *      slice_start [ IN ] - the zero-based start-position of the slice on the reference
+ *
+ *      slice_len [ IN ] - the length of the slice
+ *
+ *      coverage [ OUT ] - the caller-allocated vector of coverage-depth's
+ *                         it has to have at least the length of the requested slice
+ */
 ALIGN_EXTERN rc_t CC RunCoverage( struct PileupEstimator *self,
                                   const String * refname,
-                                  uint64_t startpos,
-                                  uint32_t len,
+                                  uint64_t slice_start,
+                                  uint32_t slice_len,
                                   uint32_t * coverage );
 
 #ifdef __cplusplus
