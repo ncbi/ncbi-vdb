@@ -630,7 +630,7 @@ LIB_EXPORT rc_t CC RunCoverage( struct PileupEstimator *self,
                     rc = RC( rcAlign, rcQuery, rcAccessing, rcItem, rcInvalid );
                 else
                 {
-                    memset( coverage, 0, slice_len );
+                    memset( coverage, 0, slice_len * ( sizeof *coverage ) );
                     rc = PerformCoverage( self, ref_entry, slice_start, slice_len, slice_end, coverage );
                 }
             }

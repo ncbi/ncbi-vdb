@@ -138,6 +138,90 @@ static rc_t calc_coverage_sum_using_ref_iter( const char * acc, const char * ref
     return rc;
 }
 
+static rc_t calc_coverage_using_ref_iter( const char * acc, const char * refname,
+                                          uint64_t slice_start, uint32_t slice_len, uint32_t * coverage )
+{
+    const VDBManager *mgr;
+    rc_t rc = VDBManagerMakeRead( &mgr, NULL );
+    if ( rc == 0 )
+    {
+        const VDatabase *db;
+        rc = VDBManagerOpenDBRead( mgr, &db, NULL, "%s", acc );
+        if ( rc == 0 )
+        {
+            const VTable * tbl;
+            rc = VDatabaseOpenTableRead( db, &tbl, "%s", "PRIMARY_ALIGNMENT" );
+            if ( rc == 0 )
+            {
+                const VCursor * prim_curs;
+                rc = VTableCreateCursorRead( tbl, &prim_curs );
+                if ( rc == 0 )
+                {
+                    const ReferenceList *ref_list;
+                    uint32_t reflist_options =  ereferencelist_usePrimaryIds;
+                    rc = ReferenceList_MakeDatabase( &ref_list, db, reflist_options, 0, NULL, 0 ); /* align/reference.h */
+                    if ( rc == 0 )
+                    {
+                        const ReferenceObj * ref_obj;
+                        rc = ReferenceList_Find( ref_list, &ref_obj, refname, string_size( refname ) ); /* align/reference.h */
+                        {
+                            const AlignMgr * a_mgr;
+                            rc = AlignMgrMakeRead( &a_mgr );   /* align/manager.h */
+                            if ( rc == 0 )
+                            {
+                                ReferenceIterator * ref_iter;
+                                rc = AlignMgrMakeReferenceIterator( a_mgr, &ref_iter, NULL, 0 );
+                                if ( rc == 0 )
+                                {
+                                    uint32_t idx = 0;
+                                    memset( coverage, 0, slice_len * ( sizeof *coverage ) );
+                                    rc = ReferenceIteratorAddPlacements( ref_iter,       /* the outer ref-iter */
+                                                                         ref_obj,        /* the ref-obj for this chromosome */
+                                                                         slice_start,    /* start ( zero-based ) */
+                                                                         slice_len,      /* length */
+                                                                         NULL,          /* ref-cursor */
+                                                                         prim_curs,     /* align-cursor */
+                                                                         primary_align_ids,    /* which id's */
+                                                                         NULL,         /* what read-group */
+                                                                         NULL );       /* placement-context */
+                                    while ( rc == 0 )
+                                    {
+                                        rc = ReferenceIteratorNextReference( ref_iter, NULL, NULL, NULL );
+                                        rc_t rc1 = 0;
+                                        while ( rc == 0 && rc1 == 0 )
+                                        {
+                                            INSDC_coord_zero first_pos;
+                                            INSDC_coord_len len;
+                                            rc1 = ReferenceIteratorNextWindow( ref_iter, &first_pos, &len );
+                                            rc_t rc2 = 0;
+                                            while ( rc1 == 0 && rc2 == 0 )
+                                            {
+                                                rc2 = ReferenceIteratorNextPos( ref_iter, true ); /* do skip empty positions */
+                                                if ( rc2 == 0 )
+                                                    rc2 = ReferenceIteratorPosition( ref_iter, NULL, &coverage[ idx++ ], NULL );
+                                            }
+                                        }
+                                    }
+                                    if ( GetRCState( rc ) == rcDone ) rc = 0;
+                                    ReferenceIteratorRelease( ref_iter );
+                                }
+                                AlignMgrRelease( a_mgr );
+                            }
+                            ReferenceObj_Release( ref_obj );
+                        }
+                        ReferenceList_Release( ref_list );
+                    }
+                    VCursorRelease( prim_curs );
+                }
+                VTableRelease ( tbl );
+            }
+            VDatabaseRelease( db );
+        }
+        VDBManagerRelease( mgr );
+    }
+    return rc;
+}
+
 const char * ACC1 = "SRR341578";
 const char * ACC1_REF = "NC_011748.1";
 const uint64_t slice1_start = 3000002;
@@ -603,6 +687,39 @@ TEST_CASE ( Estimator_15 )
         REQUIRE_RC( rc );
         std::cout << "result: " << res << std::endl;
  
+        rc = ReleasePileupEstimator( estim );
+        REQUIRE_RC( rc );
+    } 
+}
+
+TEST_CASE ( Estimator_16 )
+{
+    std::cout << "Estimator-Test #16 ( RunCoverage )" << std::endl;
+
+    struct PileupEstimator * estim;
+    rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, NULL, 0 );
+    REQUIRE_RC( rc );
+    if ( rc == 0 )
+    {
+        const uint32_t coverage_len = 10;
+		uint32_t coverage1[ coverage_len ];
+		uint32_t coverage2[ coverage_len ];
+        
+        String rname;
+        StringInitCString( &rname, ACC1_REF );
+        
+        rc = RunCoverage( estim, &rname, slice1_start, coverage_len, coverage1 );
+        REQUIRE_RC( rc );
+
+        rc = calc_coverage_using_ref_iter( ACC1, ACC1_REF, slice1_start, coverage_len, coverage2 );
+        REQUIRE_RC( rc );
+        
+        for ( uint32_t pos = 0; pos < coverage_len; pos++ )
+        {
+            std::cout << ( slice1_start + pos ) << " : " << coverage1[ pos ] << " , " << coverage2[ pos ] << std::endl;
+            REQUIRE_EQUAL( coverage1[ pos ], coverage2[ pos ] );
+        }
+        
         rc = ReleasePileupEstimator( estim );
         REQUIRE_RC( rc );
     } 
