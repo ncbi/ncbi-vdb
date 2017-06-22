@@ -493,8 +493,8 @@ LIB_EXPORT rc_t CC CopyVNamelist ( VNamelist ** list, const VNamelist * src )
         rc = RC ( rcCont, rcNamelist, rcParsing, rcSelf, rcNull );
     else
     {
-        *list = NULL;
         const KNamelist * casted;
+        *list = NULL;
         rc = VNamelistToConstNamelist ( src, &casted );
         if ( rc == 0 )
             rc = VNamelistFromKNamelist ( list, casted );
