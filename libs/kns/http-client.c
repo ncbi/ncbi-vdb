@@ -445,7 +445,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     }
 
     if ( rc != 0 ) {
-        if ( LogNcbiVdbNetError ( mgr -> NCBI_VDB_NETkfgValue ) )
+        if ( KNSManagerLogNcbiVdbNetError ( mgr ) )
             PLOGERR ( klogSys, ( klogSys, rc, "Failed to Make Connection "
                 "in KClientHttpOpen to '$(host):$(port)",
                 "host=%S,port=%hd", aHostname, aPort ) );
@@ -465,7 +465,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
             if ( rc != 0 )
             {
                 if ( ! proxy_ep ) {
-                    if ( LogNcbiVdbNetError ( mgr -> NCBI_VDB_NETkfgValue ) )
+                    if ( KNSManagerLogNcbiVdbNetError ( mgr ) )
                         PLOGERR ( klogSys, ( klogSys, rc,
                             "Failed to create TLS stream for '$(host)' ($(ip))",
                             "host=%S,ip=%s", aHostname, self -> ep . ip_address
