@@ -429,9 +429,18 @@ static
 rc_t CC KHttpFileRead ( const KHttpFile *self, uint64_t pos,
      void *buffer, size_t bsize, size_t *num_read )
 {
+    rc_t rc = 0;
     struct timeout_t tm;
     TimeoutInit ( & tm, self -> kns -> http_read_timeout );
-    return KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
+    rc = KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
+    if ( rc != 0 && KNSManagerLogNcbiVdbNetError ( self -> kns ) ) {
+        KEndPoint ep;
+        KClientHttpGetEndpoint ( self -> http, & ep );
+        PLOGERR ( klogErr, ( klogErr, rc,
+            "Failed to KHttpFileRead('$(path)' ($(ip)))", "path=%s,ip=%s",
+            self -> url_buffer . base, ep . ip_address ) );
+    }
+    return rc;
 }
 
 static
