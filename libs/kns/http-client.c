@@ -3533,7 +3533,7 @@ static bool GovSiteByHttp ( const char * path ) {
              strcase_cmp ( path, size, http . addr, size, size ) == 0 )
         {
             EUrlParseState state = eUPSBegin;
-            int i = 0;
+            unsigned i = 0;
             for ( i = 7; i < path_size && state != eUPSDone; ++i ) {
                 switch ( state ) {
                     case eUPSBegin:
