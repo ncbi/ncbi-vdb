@@ -173,7 +173,6 @@ static rc_t calc_coverage_using_ref_iter( const char * acc, const char * refname
                                 rc = AlignMgrMakeReferenceIterator( a_mgr, &ref_iter, NULL, 0 );
                                 if ( rc == 0 )
                                 {
-                                    uint32_t idx = 0;
                                     memset( coverage, 0, slice_len * ( sizeof *coverage ) );
                                     rc = ReferenceIteratorAddPlacements( ref_iter,       /* the outer ref-iter */
                                                                          ref_obj,        /* the ref-obj for this chromosome */
@@ -198,7 +197,16 @@ static rc_t calc_coverage_using_ref_iter( const char * acc, const char * refname
                                             {
                                                 rc2 = ReferenceIteratorNextPos( ref_iter, true ); /* do skip empty positions */
                                                 if ( rc2 == 0 )
-                                                    rc2 = ReferenceIteratorPosition( ref_iter, NULL, &coverage[ idx++ ], NULL );
+                                                {
+                                                    uint32_t depth;
+                                                    INSDC_coord_zero this_pos;
+                                                    rc2 = ReferenceIteratorPosition( ref_iter, &this_pos, &depth, NULL );
+                                                    if ( rc == 0 )
+                                                    {
+                                                        int64_t ofs = ( this_pos - slice_start );
+                                                        coverage[ ofs ] = depth;
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -692,33 +700,161 @@ TEST_CASE ( Estimator_15 )
     } 
 }
 
+const char * ACC3 = "SRR543323";
+const char * ACC3_REF = "NC_000077.5";
+const uint64_t slice3_start = 0;
+const uint64_t slice3_len = 121843856;
+const uint32_t max_depth = 32;
+
 TEST_CASE ( Estimator_16 )
 {
-    std::cout << "Estimator-Test #16 ( RunCoverage )" << std::endl;
+    std::cout << "Estimator-Test #16 ( RunCoverage, whole reference at once )" << std::endl;
 
     struct PileupEstimator * estim;
-    rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, NULL, 0 );
+    rc_t rc = MakePileupEstimator( &estim, ACC3, 0, NULL, NULL, 0 );
     REQUIRE_RC( rc );
     if ( rc == 0 )
     {
-        const uint32_t coverage_len = 10;
-		uint32_t coverage1[ coverage_len ];
-		uint32_t coverage2[ coverage_len ];
+        uint32_t * coverage1 = ( uint32_t * )calloc( slice3_len, sizeof * coverage1 );
+        uint32_t * coverage2 = ( uint32_t * )calloc( slice3_len, sizeof * coverage2 );
+        uint32_t depths1[ max_depth ];
+        uint32_t depths2[ max_depth ];
+        
+        memset( depths1, 0, sizeof depths1 );
+        memset( depths2, 0, sizeof depths2 );
         
         String rname;
-        StringInitCString( &rname, ACC1_REF );
+        StringInitCString( &rname, ACC3_REF );
         
-        rc = RunCoverage( estim, &rname, slice1_start, coverage_len, coverage1 );
+        rc = RunCoverage( estim, &rname, slice3_start, slice3_len, coverage1 );
         REQUIRE_RC( rc );
 
-        rc = calc_coverage_using_ref_iter( ACC1, ACC1_REF, slice1_start, coverage_len, coverage2 );
+        rc = calc_coverage_using_ref_iter( ACC3, ACC3_REF, slice3_start, slice3_len, coverage2 );
         REQUIRE_RC( rc );
         
-        for ( uint32_t pos = 0; pos < coverage_len; pos++ )
+        uint32_t differences1 = 0;
+        for ( uint32_t pos = 0; pos < slice3_len; pos++ )
         {
-            std::cout << ( slice1_start + pos ) << " : " << coverage1[ pos ] << " , " << coverage2[ pos ] << std::endl;
-            REQUIRE_EQUAL( coverage1[ pos ], coverage2[ pos ] );
+            if ( coverage1[ pos ] != coverage2[ pos ] )
+            {
+                std::cout << ( slice3_start + pos ) << " : " << coverage1[ pos ] << " , " << coverage2[ pos ] << std::endl;
+                differences1++;
+            }
+            
+            if ( coverage1[ pos ] >= max_depth )
+                depths1[ max_depth - 1 ] += 1;
+            else
+                depths1[ coverage1[ pos ] ] += 1;
+
+            if ( coverage2[ pos ] >= max_depth )
+                depths2[ max_depth - 1 ] += 1;
+            else
+                depths2[ coverage2[ pos ] ] += 1;
+                
         }
+        
+        uint32_t differences2 = 0;        
+        for ( uint32_t pos = 0; pos < max_depth; pos++ )
+        {
+            if ( depths1[ pos ] != depths2[ pos ] )
+            {
+                std::cout << pos << " : " << depths1[ pos ] << " , " << depths2[ pos ] << std::endl;
+                differences2++;
+            }
+        }
+        
+        REQUIRE_EQUAL( differences1, (uint32_t)0 );
+        REQUIRE_EQUAL( differences2, (uint32_t)0 );
+        
+        rc = ReleasePileupEstimator( estim );
+        REQUIRE_RC( rc );
+        
+        free( ( void * ) coverage1 );
+        free( ( void * ) coverage2 );
+    } 
+}
+
+const uint32_t block_size = 1024 * 1024;
+
+TEST_CASE ( Estimator_17 )
+{
+    std::cout << "Estimator-Test #17 ( RunCoverage, 1024 positions at a time )" << std::endl;
+
+    struct PileupEstimator * estim;
+    rc_t rc = MakePileupEstimator( &estim, ACC3, 0, NULL, NULL, 0 );
+    REQUIRE_RC( rc );
+    if ( rc == 0 )
+    {
+        uint32_t coverage1[ block_size ];
+        uint32_t coverage2[ block_size ];
+        uint32_t depths1[ max_depth ];
+        uint32_t depths2[ max_depth ];
+        
+        memset( depths1, 0, sizeof depths1 );
+        memset( depths2, 0, sizeof depths2 );
+        
+        String rname;
+        StringInitCString( &rname, ACC3_REF );
+
+        bool done = false;
+        uint64_t slice_end = slice3_start + slice3_len - 1;
+        uint64_t pocket_start = slice3_start;
+        uint64_t pocket_len = block_size;
+        
+        uint32_t differences1 = 0;
+        
+        while ( !done )
+        {
+            std::cout << pocket_start << std::endl;
+            
+            rc = RunCoverage( estim, &rname, pocket_start, pocket_len, coverage1 );
+            REQUIRE_RC( rc );
+
+            rc = calc_coverage_using_ref_iter( ACC3, ACC3_REF, pocket_start, pocket_len, coverage2 );
+            REQUIRE_RC( rc );
+            
+            for ( uint32_t pos = 0; pos < pocket_len; pos++ )
+            {
+                if ( coverage1[ pos ] != coverage2[ pos ] )
+                {
+                    std::cout << ( pocket_start + pos ) << " : " << coverage1[ pos ] << " , " << coverage2[ pos ] << std::endl;
+                    differences1++;
+                }
+                
+                if ( coverage1[ pos ] >= max_depth )
+                    depths1[ max_depth - 1 ] += 1;
+                else
+                    depths1[ coverage1[ pos ] ] += 1;
+
+                if ( coverage2[ pos ] >= max_depth )
+                    depths2[ max_depth - 1 ] += 1;
+                else
+                    depths2[ coverage2[ pos ] ] += 1;
+            }
+            
+            pocket_start += block_size;
+            done = ( pocket_start > slice_end );
+            if ( !done )
+            {
+                if ( ( pocket_start + pocket_len - 1 ) > slice_end )
+                {
+                    pocket_len = slice_end - pocket_start;
+                }
+            }
+        }
+        
+        uint32_t differences2 = 0;        
+        for ( uint32_t pos = 0; pos < max_depth; pos++ )
+        {
+            if ( depths1[ pos ] != depths2[ pos ] )
+            {
+                std::cout << pos << " : " << depths1[ pos ] << " , " << depths2[ pos ] << std::endl;
+                differences2++;
+            }
+        }
+        
+        REQUIRE_EQUAL( differences1, (uint32_t)0 );
+        REQUIRE_EQUAL( differences2, (uint32_t)0 );
         
         rc = ReleasePileupEstimator( estim );
         REQUIRE_RC( rc );

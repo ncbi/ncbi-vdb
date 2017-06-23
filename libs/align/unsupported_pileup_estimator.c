@@ -579,20 +579,22 @@ static rc_t PerformCoverage( PileupEstimator *self,
             /* enter the coverage */
             if ( rc == 0 )
             {
-                uint32_t ref_pos = ref_pos_ptr[ 0 ];
-                uint32_t ref_len = ref_len_ptr[ 0 ];
+                uint64_t ref_pos = ref_pos_ptr[ 0 ];
+                uint64_t ref_len = ref_len_ptr[ 0 ];
                 if ( ( ( ref_pos + ref_len - 1 ) >= slice_start ) && ( ref_pos <= slice_end ) )
                 {
-                    int32_t rel_start = ( ref_pos - ( uint32_t )slice_start );
-                    int32_t i, j;
+                    int64_t j;
+                    int64_t rel_pos = ref_pos;
+                    rel_pos -= slice_start;
                     
-                    if ( rel_start < 0 )
+                    if ( rel_pos < 0 )
                     {
-                        ref_len += rel_start;
-                        rel_start = 0;
+                        ref_len += rel_pos;
+                        rel_pos = 0;
                     }
-                    for ( i = rel_start, j = 0; j < ref_len && i < slice_len; ++i, ++j )
-                        coverage[ i ]++; /* <==== */
+
+                    for ( j = 0; j < ref_len && rel_pos < slice_len; ++rel_pos, ++j )
+                        coverage[ rel_pos ]++; /* <==== */
                 }
             }
         }
