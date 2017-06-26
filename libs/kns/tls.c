@@ -440,22 +440,37 @@ rc_t tlsg_setup ( KTLSGlobals * self )
     return 0;
 }
 
-static int set_threshold ( void ) {
-    int threshold = 0;
+static int set_threshold ( const KConfig * kfg ) {
+    bool set = false;
 
-    const char * t = getenv ( "NCBI_VDB_TLS" );
+    int64_t threshold = 0;
+    
+    const char * env = NULL;
 
-    if ( t != NULL ) {
-        for  ( ; * t != '\0'; ++ t ) {
-            char c = * t;
+    rc_t rc = KConfigReadI64 ( kfg, "/tls/NCBI_VDB_TLS", & threshold );
+    if ( rc == 0 )
+        set = true;
+
+    env = getenv ( "NCBI_VDB_TLS" );
+
+    if ( env != NULL ) {
+        int NCBI_VDB_TLS = 0;
+
+        for  ( ; * env != '\0'; ++ env ) {
+            char c = * env;
             if ( c < '0' || c > '9' )
                 break;
 
-            threshold = threshold * 10 + c - '0';
+            NCBI_VDB_TLS = NCBI_VDB_TLS * 10 + c - '0';
+            set = true;
         }
 
-        vdb_mbedtls_debug_set_threshold ( threshold );
+        if ( NCBI_VDB_TLS > threshold )
+            threshold = NCBI_VDB_TLS;
     }
+
+    if ( set )
+        vdb_mbedtls_debug_set_threshold ( threshold );
 
     return threshold;
 }
@@ -471,7 +486,7 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg, const KConfig * kfg )
     vdb_mbedtls_entropy_init ( &tlsg -> entropy );
     vdb_mbedtls_ssl_config_init ( &tlsg -> config );
 
-    if ( set_threshold () > 0 )
+    if ( set_threshold ( kfg ) > 0 )
         vdb_mbedtls_ssl_conf_dbg ( &tlsg -> config, ktls_ssl_dbg_print, tlsg );
 
     rc = tlsg_seed_rng ( tlsg );
@@ -1041,7 +1056,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeTLSStream ( const KNSManager * self,
                         return 0;
                     }
                     else {
-                        if ( LogNcbiVdbNetError () ) {
+                        if ( KNSManagerLogNcbiVdbNetError ( self ) ) {
                             KEndPoint ep;
                             rc_t r2 = KSocketGetRemoteEndpoint ( ciphertext,
                                                                  & ep );

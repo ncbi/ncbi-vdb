@@ -184,7 +184,7 @@ rc_t KClientHttpWhack ( KClientHttp * self )
 {
     if ( self -> close_connection )
     {
-        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+        DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ),
             ("*** closing connection ***\n"));
         KClientHttpClose ( self );
         self -> close_connection = false;
@@ -407,8 +407,9 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
 
     STATUS ( STAT_QA, "%s - opening socket to %S:%u\n", __func__, aHostname, aPort );
 
-    assert ( self != NULL );
+    assert ( self );
     mgr = self -> mgr;
+    assert ( mgr );
 
     KEndPointArgsIteratorMake ( & it, mgr, aHostname, aPort  );
     while ( KEndPointArgsIteratorNext
@@ -443,8 +444,14 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
         }
     }
 
+    if ( rc != 0 ) {
+        if ( KNSManagerLogNcbiVdbNetError ( mgr ) )
+            PLOGERR ( klogSys, ( klogSys, rc, "Failed to Make Connection "
+                "in KClientHttpOpen to '$(host):$(port)",
+                "host=%S,port=%hd", aHostname, aPort ) );
+    }
     /* if the connection is open */
-    if ( rc == 0 )
+    else
     {
         STATUS ( STAT_USR, "%s - connected to %S (%s)\n", __func__, hostname,
             self -> ep . ip_address );
@@ -458,7 +465,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
             if ( rc != 0 )
             {
                 if ( ! proxy_ep ) {
-                    if ( LogNcbiVdbNetError () )
+                    if ( KNSManagerLogNcbiVdbNetError ( mgr ) )
                         PLOGERR ( klogSys, ( klogSys, rc,
                             "Failed to create TLS stream for '$(host)' ($(ip))",
                             "host=%S,ip=%s", aHostname, self -> ep . ip_address
@@ -1177,8 +1184,12 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
     if ( rc == 0 )
     {
         /* blank = empty line_buffer = separation between headers and body of response */
-        if ( self -> line_valid == 0 )
+        if ( self -> line_valid == 0 ) {
             * blank = true;
+
+            /* print an empty string to separate response headers */
+            DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "\n"  ) );
+        }
         else
         {
             char * sep;
@@ -1231,7 +1242,7 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
                             if ( strcase_cmp ( name . addr, name . size, "Connection", name . size, ( uint32_t ) name . size ) == 0 &&
                                  strcase_cmp ( value . addr, value . size, "close", value . size, ( uint32_t ) value . size ) == 0 )
                             {
-                                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS),
+                                DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ),
                                        ("*** seen connection close ***\n"));
                                 * close_connection = true;
                             }
@@ -3522,7 +3533,7 @@ static bool GovSiteByHttp ( const char * path ) {
              strcase_cmp ( path, size, http . addr, size, size ) == 0 )
         {
             EUrlParseState state = eUPSBegin;
-            int i = 0;
+            unsigned i = 0;
             for ( i = 7; i < path_size && state != eUPSDone; ++i ) {
                 switch ( state ) {
                     case eUPSBegin:
