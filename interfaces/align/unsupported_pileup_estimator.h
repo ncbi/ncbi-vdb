@@ -77,6 +77,7 @@ struct PilepuEstimator;
  *                      if the cursor is given it has to contain these columns:
  *                          - REF_POS
  *                          - REF_LEN
+                            - READ_FILTER ( if user_read_filter == true )
  *                      we expect this cursor to be opened
  *
  *
@@ -87,13 +88,23 @@ struct PilepuEstimator;
  *                            situation that collecting the estimation will
  *                            take too long...
  *                            0 ... no cutoff-check performed
+ *
+ *		use_read_filter [ IN ] - adds the READ_FILTER - column
+ *                            to the list of required columns for the
+ *                            align_cursor ( if used )
+ *                            and uses the column to filter out alignments
+ *                            with SRA_READ_FILTER_REJECT or
+ *                            SRA_READ_FILTER_CRITERIA values in this
+ *                            column
+ *
  */
 ALIGN_EXTERN rc_t CC MakePileupEstimator( struct PileupEstimator **self,
         const char * source,
         size_t cursor_cache_size,
         const struct VCursor * ref_cursor,
         const struct VCursor * align_cursor,
-		uint64_t cutoff_value );
+		uint64_t cutoff_value,
+        bool use_read_filter );
 
 /*--------------------------------------------------------------------------
  * ReleasePileupEstimator
@@ -146,6 +157,35 @@ ALIGN_EXTERN rc_t CC RunCoverage( struct PileupEstimator *self,
                                   uint64_t slice_start,
                                   uint32_t slice_len,
                                   uint32_t * coverage );
+
+/* EstimatorRefCount
+ *
+ *      how many references are in the run given to the PileupEstimator
+ *
+ *      self [ IN ] - the prepared PileupEstimator
+ *
+ *      count [ OUT ] - the number of references
+ */
+ALIGN_EXTERN rc_t CC EstimatorRefCount( struct PileupEstimator *self, uint32_t * count );
+
+
+/* EstimatorRefInfo
+ *
+ *      return information about one reference in the PileupEstimator
+ *
+ *      self [ IN ] - the prepared PileupEstimator
+ *
+ *      idx [ IN ] - index of the reference ( 0 ... count-1 )
+ *
+ *      refname [ OUT ] - pointer to String-struct, will be initialized, do not free
+ *
+ *      reflen [ OUT ] - length of the reference
+ */
+ALIGN_EXTERN rc_t CC EstimatorRefInfo( struct PileupEstimator *self,
+                                       uint32_t idx,
+                                       String * refname,
+                                       uint64_t * reflen );
+
 
 #ifdef __cplusplus
 }

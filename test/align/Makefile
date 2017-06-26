@@ -69,7 +69,10 @@ TEST_ESTIMATOR_OBJ = \
 TEST_ESTIMATOR_LIB = \
 	-skapp \
 	-sktst \
-	-sncbi-vdb
+	-sncbi-ngs-c++ \
+	-sncbi-vdb \
+    -L$(NGS_LIBDIR) \
+	-sngs-c++
 
 $(TEST_BINDIR)/test-estimator: $(TEST_ESTIMATOR_OBJ)
 	$(LP) --exe -o $@ $^ $(TEST_ESTIMATOR_LIB)

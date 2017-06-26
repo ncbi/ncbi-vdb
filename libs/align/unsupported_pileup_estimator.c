@@ -35,6 +35,8 @@
 #include <vdb/table.h>
 #include <vdb/cursor.h>
 
+#include <insdc/sra.h>
+
 #define DFLT_CACHE_SIZE 1024 * 1024 * 32
 
 typedef struct PileupEstimator
@@ -56,8 +58,10 @@ typedef struct PileupEstimator
     
     uint32_t align_cursor_idx_REF_POS;
     uint32_t align_cursor_idx_REF_LEN;
-
+    uint32_t align_cursor_idx_READ_FILTER;
+    
     uint32_t max_seq_len;
+    bool use_read_filter;
 } PileupEstimator;
 
 
@@ -172,6 +176,8 @@ static rc_t AddAlignCursor( PileupEstimator *self, const VCursor * align_cursor 
         rc = VCursorGetColumnIdx( align_cursor, &self->align_cursor_idx_REF_POS, "REF_POS" );
     if ( rc == 0 )
         rc = VCursorGetColumnIdx( align_cursor, &self->align_cursor_idx_REF_LEN, "REF_LEN" );
+    if ( rc == 0 && self->use_read_filter )
+        rc = VCursorGetColumnIdx( align_cursor, &self->align_cursor_idx_READ_FILTER, "READ_FILTER" );        
     return rc;
 }
 
@@ -186,6 +192,8 @@ static rc_t MakeAlignCursor( PileupEstimator *self, const VDatabase * db, size_t
             rc = VCursorAddColumn( self->align_cursor, &self->align_cursor_idx_REF_POS, "REF_POS" );
         if ( rc == 0 )
             rc = VCursorAddColumn( self->align_cursor, &self->align_cursor_idx_REF_LEN, "REF_LEN" );
+        if ( rc == 0 && self->use_read_filter )
+            rc = VCursorAddColumn( self->align_cursor, &self->align_cursor_idx_READ_FILTER, "READ_FILTER" );
         if ( rc == 0 )
             rc = VCursorOpen( self->align_cursor );
         VTableRelease( tbl );
@@ -198,11 +206,13 @@ static rc_t InitializePileupEstimator( PileupEstimator *self,
         size_t cursor_cache_size,
         const VCursor * ref_cursor,
         const VCursor * align_cursor,
-		uint64_t cutoff_value )
+		uint64_t cutoff_value,
+        bool use_read_filter )
 {
     rc_t rc = 0;
     VectorInit( &self->reftable, 0, 25 );
 	self->cutoff_value = cutoff_value;
+    self->use_read_filter = use_read_filter;
     if ( ref_cursor == NULL || align_cursor == NULL )
     {
         if ( source == NULL )
@@ -253,7 +263,8 @@ LIB_EXPORT rc_t CC MakePileupEstimator( struct PileupEstimator **self,
         size_t cursor_cache_size,
         const struct VCursor * ref_cursor,
         const struct VCursor * align_cursor,
-		uint64_t cutoff_value )
+		uint64_t cutoff_value,
+        bool use_read_filter )
 {
     rc_t rc = 0;
     if ( self == NULL )
@@ -267,7 +278,8 @@ LIB_EXPORT rc_t CC MakePileupEstimator( struct PileupEstimator **self,
         else
         {
             rc = InitializePileupEstimator( o, source, cursor_cache_size,
-											ref_cursor, align_cursor, cutoff_value );
+											ref_cursor, align_cursor,
+                                            cutoff_value, use_read_filter );
             if ( rc == 0 )
                 *self = o;
             else
@@ -403,12 +415,14 @@ static rc_t PerformEstimation( PileupEstimator *self,
     {
 		uint64_t cutoff_sum = 0;
         int64_t ref_row_id = entry->start_row_id;
-        uint32_t ref_row_count, prim_id_count, prim_id_idx, ref_pos_count, ref_len_count, elem_bits, boff;
+        uint32_t ref_row_count, prim_id_count, prim_id_idx, ref_pos_count, ref_len_count, read_filter_len, elem_bits, boff;
         int64_t * prim_ids;
         uint32_t * ref_pos_ptr;
         uint32_t * ref_len_ptr;
+        uint8_t * read_filter_ptr;
         bool done = false;
-		
+		bool filtered_out;
+        
         /* adjust start_ref_row and ref_row_count to the given slice... */
         {
             int64_t start_offset = slice_start / self->max_seq_len;
@@ -441,6 +455,7 @@ static rc_t PerformEstimation( PileupEstimator *self,
             {
                 /* get REF_POS */
                 int64_t prim_id = prim_ids[ prim_id_idx ];
+                filtered_out = false;
                 rc = VCursorCellDataDirect( self->align_cursor, prim_id, self->align_cursor_idx_REF_POS,
                             &elem_bits, ( const void ** )&ref_pos_ptr, &boff, &ref_pos_count );
                 if ( ref_pos_count != 1 )
@@ -455,8 +470,18 @@ static rc_t PerformEstimation( PileupEstimator *self,
                         rc = RC( rcAlign, rcQuery, rcAccessing, rcItem, rcInvalid );
                 }
 
+                /* get READ_FILTER */
+                if ( rc == 0 && self->use_read_filter )
+                {
+                    rc = VCursorCellDataDirect( self->align_cursor, prim_id, self->align_cursor_idx_READ_FILTER,
+                                &elem_bits, ( const void ** )&read_filter_ptr, &boff, &read_filter_len );
+                    if ( read_filter_len > 0 )
+                        filtered_out = ( ( read_filter_ptr[ 0 ] == SRA_READ_FILTER_REJECT )||
+                                         ( read_filter_ptr[ 0 ] == SRA_READ_FILTER_CRITERIA ) );
+                }
+
                 /* enter the coverage */
-                if ( rc == 0 )
+                if ( rc == 0 && !filtered_out )
                 {
                     uint32_t ref_pos = ref_pos_ptr[ 0 ];
                     uint32_t ref_len = ref_len_ptr[ 0 ];
@@ -536,11 +561,13 @@ static rc_t PerformCoverage( PileupEstimator *self,
     rc_t rc = 0;
 
     int64_t ref_row_id = entry->start_row_id;
-    uint32_t ref_row_count, prim_id_count, prim_id_idx, ref_pos_count, ref_len_count, elem_bits, boff;
+    uint32_t ref_row_count, prim_id_count, prim_id_idx, ref_pos_count, ref_len_count, read_filter_len, elem_bits, boff;
     int64_t * prim_ids;
     uint32_t * ref_pos_ptr;
     uint32_t * ref_len_ptr;
-		
+    uint8_t * read_filter_ptr;
+    bool filtered_out;
+    
     /* adjust start_ref_row and ref_row_count to the given slice... */
     {
         int64_t start_offset = slice_start / self->max_seq_len;
@@ -562,6 +589,7 @@ static rc_t PerformCoverage( PileupEstimator *self,
         {
             /* get REF_POS */
             int64_t prim_id = prim_ids[ prim_id_idx ];
+            filtered_out = false;
             rc = VCursorCellDataDirect( self->align_cursor, prim_id, self->align_cursor_idx_REF_POS,
                         &elem_bits, ( const void ** )&ref_pos_ptr, &boff, &ref_pos_count );
             if ( ref_pos_count != 1 )
@@ -576,8 +604,18 @@ static rc_t PerformCoverage( PileupEstimator *self,
                     rc = RC( rcAlign, rcQuery, rcAccessing, rcItem, rcInvalid );
             }
 
+            /* get READ_FILTER */
+            if ( rc == 0 && self->use_read_filter )
+            {
+                rc = VCursorCellDataDirect( self->align_cursor, prim_id, self->align_cursor_idx_READ_FILTER,
+                            &elem_bits, ( const void ** )&read_filter_ptr, &boff, &read_filter_len );
+                if ( read_filter_len > 0 )
+                    filtered_out = ( ( read_filter_ptr[ 0 ] == SRA_READ_FILTER_REJECT )||
+                                     ( read_filter_ptr[ 0 ] == SRA_READ_FILTER_CRITERIA ) );
+            }
+
             /* enter the coverage */
-            if ( rc == 0 )
+            if ( rc == 0 && !filtered_out )
             {
                 uint64_t ref_pos = ref_pos_ptr[ 0 ];
                 uint64_t ref_len = ref_len_ptr[ 0 ];
@@ -638,6 +676,55 @@ LIB_EXPORT rc_t CC RunCoverage( struct PileupEstimator *self,
             }
         }
     
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC EstimatorRefCount( struct PileupEstimator *self, uint32_t * count )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC( rcAlign, rcQuery, rcAccessing, rcSelf, rcNull );
+    else if ( count == NULL )
+        rc = RC( rcAlign, rcQuery, rcAccessing, rcParam, rcNull );
+    else
+    {
+        /* we are using max_seq_len as a flag to determine if we have to scan the reference-table */
+        if ( self->max_seq_len == 0 )
+            rc = ScanRefTable( self );
+        if ( rc == 0 )
+            *count = VectorLength( &self->reftable );
+    }
+    return rc;
+}
+
+
+LIB_EXPORT rc_t CC EstimatorRefInfo( struct PileupEstimator *self,
+                                     uint32_t idx,
+                                     String * refname,
+                                     uint64_t * reflen )
+{
+    rc_t rc = 0;
+    if ( self == NULL )
+        rc = RC( rcAlign, rcQuery, rcAccessing, rcSelf, rcNull );
+    else if ( refname == NULL || reflen == NULL )
+        rc = RC( rcAlign, rcQuery, rcAccessing, rcParam, rcNull );
+    else
+    {
+        if ( self->max_seq_len == 0 )
+            rc = ScanRefTable( self );
+        if ( rc == 0 )
+        {
+            RefEntry * e = VectorGet( &self->reftable, idx );
+            if ( e == NULL )
+                rc = RC( rcAlign, rcQuery, rcAccessing, rcItem, rcInvalid );
+            else
+            {
+                StringInit( refname, e->rname->addr, e->rname->size, e->rname->len );
+                *reflen = e->reflen;
+            }
+        }
     }
     return rc;
 }

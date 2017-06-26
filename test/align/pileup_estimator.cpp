@@ -49,6 +49,13 @@
 
 #include <align/unsupported_pileup_estimator.h>
 
+#include <ngs/ncbi/NGS.hpp> // openReadCollection
+#include <ngs/ErrorMsg.hpp>
+#include <ngs/ReadCollection.hpp>
+#include <ngs/Reference.hpp>
+#include <ngs/Alignment.hpp>
+#include <ngs/PileupIterator.hpp>
+
 using namespace std;
 
 static rc_t calc_coverage_sum_using_ref_iter( const char * acc, const char * refname,
@@ -230,6 +237,39 @@ static rc_t calc_coverage_using_ref_iter( const char * acc, const char * refname
     return rc;
 }
 
+
+static void calc_coverage_using_ngs( ngs::String acc, ngs::String refname,
+                                     uint64_t slice_start, uint32_t slice_len, uint32_t * coverage )
+{
+    try
+    {
+        ngs::ReadCollection run( ncbi::NGS::openReadCollection( acc ) );
+        ngs::Reference ref = run.getReference ( refname );
+        ngs::PileupIterator it = ref.getPileupSlice( slice_start, slice_len );
+        while ( it.nextPileup() )
+        {
+            uint32_t depth( it.getPileupDepth() );
+            if ( depth > 0 )
+            {
+                uint64_t pos( it.getReferencePosition() );
+                int64_t ofs = ( pos - slice_start );
+                if ( ofs >= 0 && ofs < slice_len )
+                    coverage[ ofs ] = depth;
+            }
+        }
+    }
+    
+    catch ( ngs::ErrorMsg & e ) {
+        cerr << "Error: " << e . toString () << endl;
+    }
+    catch ( std::exception & e ) {
+        cerr << "Error: " << e . what () << endl;
+    }
+    catch ( ... ) {
+        cerr << "Error: unknown exception" << endl;
+    }
+}
+
 const char * ACC1 = "SRR341578";
 const char * ACC1_REF = "NC_011748.1";
 const uint64_t slice1_start = 3000002;
@@ -245,7 +285,7 @@ TEST_CASE ( Estimator_1 )
     uint64_t res1 = 0;
     
     struct PileupEstimator * estim;
-    rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, NULL, 0 );
+    rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, NULL, 0, false );
     REQUIRE_RC( rc );
     if ( rc == 0 )
     {
@@ -255,7 +295,7 @@ TEST_CASE ( Estimator_1 )
         rc = RunPileupEstimator( estim, &rname, slice1_start, slice1_len, &res1 );
         REQUIRE_RC( rc );
         
-        std::cout << "result ( using RunPileupEstimator ) : " << res1 << std::endl;
+        //std::cout << "result ( using RunPileupEstimator ) : " << res1 << std::endl;
         
         rc = ReleasePileupEstimator( estim );
         REQUIRE_RC( rc );
@@ -266,7 +306,7 @@ TEST_CASE ( Estimator_1 )
     rc = calc_coverage_sum_using_ref_iter( ACC1, ACC1_REF, slice1_start, slice1_len, &res2 );
     REQUIRE_RC( rc );
 
-    std::cout << "result ( using ReferenceIterator ) : " << res2 << std::endl;    
+    //std::cout << "result ( using ReferenceIterator ) : " << res2 << std::endl;    
     
     REQUIRE_EQUAL( res1, res2 );
 }
@@ -277,7 +317,7 @@ TEST_CASE ( Estimator_2 )
     
     // MakePileupEstimator has to fail when source and the cursors are NULL
     struct PileupEstimator * estim;
-    rc_t rc = MakePileupEstimator( &estim, NULL, 0, NULL, NULL, 0 );
+    rc_t rc = MakePileupEstimator( &estim, NULL, 0, NULL, NULL, 0, false );
     REQUIRE_RC_FAIL( rc );
 }
 
@@ -286,7 +326,7 @@ TEST_CASE ( Estimator_3 )
     std::cout << "Estimator-Test #3 ( no self-ptr )" << std::endl;
         
     // MakePileupEstimator has to fail when given a NULL-ptr as *self
-    rc_t rc = MakePileupEstimator( NULL, ACC1, 0, NULL, NULL, 0 );
+    rc_t rc = MakePileupEstimator( NULL, ACC1, 0, NULL, NULL, 0, false );
     REQUIRE_RC_FAIL( rc );
 }
 
@@ -342,7 +382,7 @@ TEST_CASE ( Estimator_4 )
                 if ( rc == 0 )
                 {
                     struct PileupEstimator * estim;
-                    rc_t rc = MakePileupEstimator( &estim, NULL, 0, ref_curs, prim_curs, 0 );
+                    rc_t rc = MakePileupEstimator( &estim, NULL, 0, ref_curs, prim_curs, 0, false );
                     REQUIRE_RC( rc );
                     if ( rc == 0 )
                     {
@@ -354,7 +394,7 @@ TEST_CASE ( Estimator_4 )
                         rc = RunPileupEstimator( estim, &rname, slice1_start, slice1_len, &res );
                         REQUIRE_RC( rc );
                         
-                        std::cout << "result: " << res << std::endl;
+                        //std::cout << "result: " << res << std::endl;
                         
                         rc = ReleasePileupEstimator( estim );
                         REQUIRE_RC( rc );
@@ -394,7 +434,7 @@ TEST_CASE ( Estimator_5 )
                 if ( rc == 0 )
                 {
                     struct PileupEstimator * estim;
-                    rc_t rc = MakePileupEstimator( &estim, NULL, 0, ref_curs, prim_curs, 0 );
+                    rc_t rc = MakePileupEstimator( &estim, NULL, 0, ref_curs, prim_curs, 0, false );
                     REQUIRE_RC_FAIL( rc );
                     if ( rc == 0 )
                         ReleasePileupEstimator( estim );
@@ -432,7 +472,7 @@ TEST_CASE ( Estimator_6 )
                 if ( rc == 0 )
                 {
                     struct PileupEstimator * estim;
-                    rc_t rc = MakePileupEstimator( &estim, NULL, 0, ref_curs, prim_curs, 0 );
+                    rc_t rc = MakePileupEstimator( &estim, NULL, 0, ref_curs, prim_curs, 0, false );
                     REQUIRE_RC_FAIL( rc );
                     if ( rc == 0 )
                         ReleasePileupEstimator( estim );
@@ -465,7 +505,7 @@ TEST_CASE ( Estimator_7 )
             if ( rc == 0 )
             {
                 struct PileupEstimator * estim;
-                rc_t rc = MakePileupEstimator( &estim, ACC1, 0, ref_curs, NULL, 0 );
+                rc_t rc = MakePileupEstimator( &estim, ACC1, 0, ref_curs, NULL, 0, false );
                 REQUIRE_RC( rc );
                 if ( rc == 0 )
                 {
@@ -477,7 +517,7 @@ TEST_CASE ( Estimator_7 )
                     rc = RunPileupEstimator( estim, &rname, slice1_start, slice1_len, &res );
                     REQUIRE_RC( rc );
                     
-                    std::cout << "result: " << res << std::endl;
+                    //std::cout << "result: " << res << std::endl;
                     
                     rc = ReleasePileupEstimator( estim );
                     REQUIRE_RC( rc );
@@ -509,7 +549,7 @@ TEST_CASE ( Estimator_8 )
             if ( rc == 0 )
             {
                 struct PileupEstimator * estim;
-                rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, prim_curs, 0 );
+                rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, prim_curs, 0, false );
                 REQUIRE_RC( rc );
                 if ( rc == 0 )
                 {
@@ -521,7 +561,7 @@ TEST_CASE ( Estimator_8 )
                     rc = RunPileupEstimator( estim, &rname, slice1_start, slice1_len, &res );
                     REQUIRE_RC( rc );
                     
-                    std::cout << "result: " << res << std::endl;
+                    //std::cout << "result: " << res << std::endl;
                     
                     rc = ReleasePileupEstimator( estim );
                     REQUIRE_RC( rc );
@@ -539,7 +579,7 @@ TEST_CASE ( Estimator_9 )
     std::cout << "Estimator-Test #9 ( reference-name missing )" << std::endl;
     
     struct PileupEstimator * estim;
-    rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, NULL, 0 );
+    rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, NULL, 0, false );
     REQUIRE_RC( rc );
     if ( rc == 0 )
     {
@@ -557,7 +597,7 @@ TEST_CASE ( Estimator_10 )
     std::cout << "Estimator-Test #10 ( slice-length is zero )" << std::endl;
     
     struct PileupEstimator * estim;
-    rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, NULL, 0 );
+    rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, NULL, 0, false );
     REQUIRE_RC( rc );
     if ( rc == 0 )
     {
@@ -578,7 +618,7 @@ TEST_CASE ( Estimator_11 )
     std::cout << "Estimator-Test #11 ( slice-start beyond end of reference )" << std::endl;
     
     struct PileupEstimator * estim;
-    rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, NULL, 0 );
+    rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, NULL, 0, false );
     REQUIRE_RC( rc );
     if ( rc == 0 )
     {
@@ -599,7 +639,7 @@ TEST_CASE ( Estimator_12 )
     std::cout << "Estimator-Test #12 ( slice-length beyond end of reference )" << std::endl;
     
     struct PileupEstimator * estim;
-    rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, NULL, 0 );
+    rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, NULL, 0, false );
     REQUIRE_RC( rc );
     if ( rc == 0 )
     {
@@ -620,7 +660,7 @@ TEST_CASE ( Estimator_13 )
     std::cout << "Estimator-Test #13 ( result-ptr missing )" << std::endl;
     
     struct PileupEstimator * estim;
-    rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, NULL, 0 );
+    rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, NULL, 0, false );
     REQUIRE_RC( rc );
     if ( rc == 0 )
     {
@@ -644,7 +684,7 @@ TEST_CASE ( Estimator_14 )
     std::cout << "Estimator-Test #14 ( cutoff-value on expensive accession ) " << std::endl;
     
     struct PileupEstimator * estim;
-    rc_t rc = MakePileupEstimator( &estim, ACC2, 0, NULL, NULL, 1000000 );
+    rc_t rc = MakePileupEstimator( &estim, ACC2, 0, NULL, NULL, 1000000, false );
     REQUIRE_RC( rc );
     if ( rc == 0 )
     {
@@ -656,7 +696,7 @@ TEST_CASE ( Estimator_14 )
         rc = RunPileupEstimator( estim, &rname, slice2_start, slice2_len, &res );
         REQUIRE_RC( rc );
         
-        std::cout << "result: " << res << std::endl;
+        //std::cout << "result: " << res << std::endl;
      
 		REQUIRE_EQUAL( res, std::numeric_limits<uint64_t>::max() );
 	 
@@ -670,7 +710,7 @@ TEST_CASE ( Estimator_15 )
     std::cout << "Estimator-Test #15 ( multiple invocations with different slices )" << std::endl;
 
     struct PileupEstimator * estim;
-    rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, NULL, 0 );
+    rc_t rc = MakePileupEstimator( &estim, ACC1, 0, NULL, NULL, 0, false );
     REQUIRE_RC( rc );
     if ( rc == 0 )
     {
@@ -681,19 +721,19 @@ TEST_CASE ( Estimator_15 )
         
         rc = RunPileupEstimator( estim, &rname, slice1_start, slice1_len, &res );
         REQUIRE_RC( rc );
-        std::cout << "result: " << res << std::endl;
+        //std::cout << "result: " << res << std::endl;
 
         rc = RunPileupEstimator( estim, &rname, slice1_start + 100, slice1_len * 10, &res );
         REQUIRE_RC( rc );
-        std::cout << "result: " << res << std::endl;
+        //std::cout << "result: " << res << std::endl;
 
         rc = RunPileupEstimator( estim, &rname, slice1_start + 1000, slice1_len * 100, &res );
         REQUIRE_RC( rc );
-        std::cout << "result: " << res << std::endl;
+        //std::cout << "result: " << res << std::endl;
 
         rc = RunPileupEstimator( estim, &rname, slice1_start + 6000, slice1_len, &res );
         REQUIRE_RC( rc );
-        std::cout << "result: " << res << std::endl;
+        //std::cout << "result: " << res << std::endl;
  
         rc = ReleasePileupEstimator( estim );
         REQUIRE_RC( rc );
@@ -711,7 +751,7 @@ TEST_CASE ( Estimator_16 )
     std::cout << "Estimator-Test #16 ( RunCoverage, whole reference at once )" << std::endl;
 
     struct PileupEstimator * estim;
-    rc_t rc = MakePileupEstimator( &estim, ACC3, 0, NULL, NULL, 0 );
+    rc_t rc = MakePileupEstimator( &estim, ACC3, 0, NULL, NULL, 0, false );
     REQUIRE_RC( rc );
     if ( rc == 0 )
     {
@@ -774,19 +814,18 @@ TEST_CASE ( Estimator_16 )
     } 
 }
 
-const uint32_t block_size = 1024 * 1024;
 
 TEST_CASE ( Estimator_17 )
 {
-    std::cout << "Estimator-Test #17 ( RunCoverage, 1024 positions at a time )" << std::endl;
+    std::cout << "Estimator-Test #17 ( RunCoverage vs ngs-pileup )" << std::endl;
 
     struct PileupEstimator * estim;
-    rc_t rc = MakePileupEstimator( &estim, ACC3, 0, NULL, NULL, 0 );
+    rc_t rc = MakePileupEstimator( &estim, ACC3, 0, NULL, NULL, 0, true );
     REQUIRE_RC( rc );
     if ( rc == 0 )
     {
-        uint32_t coverage1[ block_size ];
-        uint32_t coverage2[ block_size ];
+        uint32_t * coverage1 = ( uint32_t * )calloc( slice3_len, sizeof * coverage1 );
+        uint32_t * coverage2 = ( uint32_t * )calloc( slice3_len, sizeof * coverage2 );
         uint32_t depths1[ max_depth ];
         uint32_t depths2[ max_depth ];
         
@@ -795,52 +834,31 @@ TEST_CASE ( Estimator_17 )
         
         String rname;
         StringInitCString( &rname, ACC3_REF );
+        
+        rc = RunCoverage( estim, &rname, slice3_start, slice3_len, coverage1 );
+        REQUIRE_RC( rc );
 
-        bool done = false;
-        uint64_t slice_end = slice3_start + slice3_len - 1;
-        uint64_t pocket_start = slice3_start;
-        uint64_t pocket_len = block_size;
+        calc_coverage_using_ngs( ACC3, ACC3_REF, slice3_start, slice3_len, coverage2 );
         
         uint32_t differences1 = 0;
-        
-        while ( !done )
+        for ( uint32_t pos = 0; pos < slice3_len; pos++ )
         {
-            std::cout << pocket_start << std::endl;
-            
-            rc = RunCoverage( estim, &rname, pocket_start, pocket_len, coverage1 );
-            REQUIRE_RC( rc );
-
-            rc = calc_coverage_using_ref_iter( ACC3, ACC3_REF, pocket_start, pocket_len, coverage2 );
-            REQUIRE_RC( rc );
-            
-            for ( uint32_t pos = 0; pos < pocket_len; pos++ )
+            if ( coverage1[ pos ] != coverage2[ pos ] )
             {
-                if ( coverage1[ pos ] != coverage2[ pos ] )
-                {
-                    std::cout << ( pocket_start + pos ) << " : " << coverage1[ pos ] << " , " << coverage2[ pos ] << std::endl;
-                    differences1++;
-                }
+                std::cout << ( slice3_start + pos ) << " : " << coverage1[ pos ] << " , " << coverage2[ pos ] << std::endl;
+                differences1++;
+            }
+            
+            if ( coverage1[ pos ] >= max_depth )
+                depths1[ max_depth - 1 ] += 1;
+            else
+                depths1[ coverage1[ pos ] ] += 1;
+
+            if ( coverage2[ pos ] >= max_depth )
+                depths2[ max_depth - 1 ] += 1;
+            else
+                depths2[ coverage2[ pos ] ] += 1;
                 
-                if ( coverage1[ pos ] >= max_depth )
-                    depths1[ max_depth - 1 ] += 1;
-                else
-                    depths1[ coverage1[ pos ] ] += 1;
-
-                if ( coverage2[ pos ] >= max_depth )
-                    depths2[ max_depth - 1 ] += 1;
-                else
-                    depths2[ coverage2[ pos ] ] += 1;
-            }
-            
-            pocket_start += block_size;
-            done = ( pocket_start > slice_end );
-            if ( !done )
-            {
-                if ( ( pocket_start + pocket_len - 1 ) > slice_end )
-                {
-                    pocket_len = slice_end - pocket_start;
-                }
-            }
         }
         
         uint32_t differences2 = 0;        
@@ -858,8 +876,44 @@ TEST_CASE ( Estimator_17 )
         
         rc = ReleasePileupEstimator( estim );
         REQUIRE_RC( rc );
+        
+        free( ( void * ) coverage1 );
+        free( ( void * ) coverage2 );
     } 
+   
 }
+
+
+TEST_CASE ( Estimator_18 )
+{
+    std::cout << "Estimator-Test #18 ( loop through the references )" << std::endl;
+    struct PileupEstimator * estim;
+    rc_t rc = MakePileupEstimator( &estim, ACC3, 0, NULL, NULL, 0, false );
+    REQUIRE_RC( rc );
+    if ( rc == 0 )
+    {
+        uint32_t count;
+        rc = EstimatorRefCount( estim, &count );
+        REQUIRE_RC( rc );
+        
+        //std::cout << "count : " << count << std::endl;
+        REQUIRE_EQUAL( count, (uint32_t)21 );
+        
+        for ( uint32_t idx = 0; rc == 0 && idx < count; ++idx )
+        {
+            String refname;
+            uint64_t reflen;
+            
+            rc = EstimatorRefInfo( estim, idx, &refname, &reflen );
+            REQUIRE_RC( rc );
+            //std::cout << " [" << idx << "] : " << refname.addr << " . " << reflen << std::endl;    
+        }
+        
+        rc = ReleasePileupEstimator( estim );
+        REQUIRE_RC( rc );
+    }
+}
+
 
 //////////////////////////////////////////// Main
 #include <kapp/args.h>
