@@ -80,11 +80,12 @@ struct KNSManager
 
     bool verbose;
 
+    bool NCBI_VDB_NETkfgValueSet;
     bool NCBI_VDB_NETkfgValue;
 };
 
 
-bool LogNcbiVdbNetError ( bool force );
+bool KNSManagerLogNcbiVdbNetError ( const struct KNSManager * self );
 
 
 /* test */

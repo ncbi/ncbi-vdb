@@ -3019,7 +3019,7 @@ static rc_t _KConfigFixRepeatedDrives(KConfig *self,
     const KDirectory *pdir, bool *updated)
 {
     rc_t rc = 0;
-    const KDirectory *dir = pdir;
+    KDirectory * dir = ( KDirectory * ) pdir;
     KConfigNode *user = NULL;
     if (dir == NULL) {
         rc = KDirectoryNativeDir(&dir);
