@@ -294,14 +294,14 @@ LIB_EXPORT rc_t CC MakePileupEstimator( struct PileupEstimator **self,
 static rc_t ScanRefTable( PileupEstimator *self )
 {
     int64_t row;
-    uint64_t count;
+    uint64_t row_idx, count;
     RefEntry * ref_entry = NULL;
     String rname;
     uint32_t * ptr;
     uint32_t elem_bits, boff, row_len;
     
     rc_t rc = VCursorIdRange( self->ref_cursor, self->ref_cursor_idx_SEQ_ID, &row, &count );
-    for( ; rc == 0 && row < count; ++row )
+    for( row_idx = 0; rc == 0 && row_idx < count; ++row, ++row_idx )
     {
         /* get max_seq_len if we do not have it yet */
         if ( self->max_seq_len == 0 )
@@ -360,8 +360,9 @@ static rc_t ScanRefTable( PileupEstimator *self )
     }
     /* insert the last entry */
     if ( rc == 0 && ref_entry != NULL )
+    {
         rc = VectorAppend( &self->reftable, NULL, ref_entry );
-
+    }
     return rc;
 }
 

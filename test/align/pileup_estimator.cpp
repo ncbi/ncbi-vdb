@@ -890,28 +890,62 @@ TEST_CASE ( Estimator_18 )
     struct PileupEstimator * estim;
     rc_t rc = MakePileupEstimator( &estim, ACC3, 0, NULL, NULL, 0, false );
     REQUIRE_RC( rc );
-    if ( rc == 0 )
+
+    const ReferenceList *reflist;
+    const VDBManager *mgr;
+    rc = VDBManagerMakeRead( &mgr, NULL );
+    REQUIRE_RC( rc );
+    
+    rc = ReferenceList_MakePath( &reflist, mgr, ACC3, ereferencelist_usePrimaryIds, 0, NULL, 0 );
+    REQUIRE_RC( rc );
+    
+    uint32_t count1, count2;
+    rc = EstimatorRefCount( estim, &count1 );
+    REQUIRE_RC( rc );
+    
+    rc = ReferenceList_Count( reflist, &count2 );
+    REQUIRE_RC( rc );    
+    
+    REQUIRE_EQUAL( count1, count2 );    
+    std::cout << "count1 : " << count1 << "  count2 : " << count2 << std::endl;
+    
+    for ( uint32_t idx = 0; rc == 0 && idx < count1; ++idx )
     {
-        uint32_t count;
-        rc = EstimatorRefCount( estim, &count );
+        String refname;
+        uint64_t reflen;
+        
+        rc = EstimatorRefInfo( estim, idx, &refname, &reflen );
         REQUIRE_RC( rc );
         
-        //std::cout << "count : " << count << std::endl;
-        REQUIRE_EQUAL( count, (uint32_t)21 );
-        
-        for ( uint32_t idx = 0; rc == 0 && idx < count; ++idx )
-        {
-            String refname;
-            uint64_t reflen;
-            
-            rc = EstimatorRefInfo( estim, idx, &refname, &reflen );
-            REQUIRE_RC( rc );
-            //std::cout << " [" << idx << "] : " << refname.addr << " . " << reflen << std::endl;    
-        }
-        
-        rc = ReleasePileupEstimator( estim );
+        const ReferenceObj *refobj;
+        rc = ReferenceList_Get( reflist, &refobj, idx );        
         REQUIRE_RC( rc );
+        
+        const char * seqid;
+        rc = ReferenceObj_SeqId( refobj, &seqid );
+        REQUIRE_RC( rc );
+        
+        String SeqId;
+        StringInitCString( &SeqId, seqid );
+        
+        int cmp = StringCompare( &refname, &SeqId );
+        REQUIRE_EQUAL( cmp, (int)0 );
+        
+        INSDC_coord_len seqlen;
+        rc = ReferenceObj_SeqLength( refobj, &seqlen );
+        REQUIRE_RC( rc );
+        REQUIRE_EQUAL( (uint64_t)seqlen, reflen );
+        
+        ReferenceObj_Release( refobj );
+        //std::cout << " [" << idx << "] : " << refname.addr << " . " << reflen << std::endl;    
     }
+    
+    ReferenceList_Release( reflist ); // has no return-value!
+    rc = VDBManagerRelease( mgr );
+    REQUIRE_RC( rc );
+    
+    rc = ReleasePileupEstimator( estim );
+    REQUIRE_RC( rc );
 }
 
 
